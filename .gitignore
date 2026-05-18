@@ -16,6 +16,10 @@ Thumbs.db
 # Secrets (defense-in-depth — credentials never belong in this repo)
 .env
 .env.*
+!.env.local.example
 *.key
 *.pem
 secrets/
+
+# Deploy backups (binary archives, never version-control)
+_backups/
