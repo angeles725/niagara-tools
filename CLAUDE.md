@@ -130,3 +130,17 @@ Key observation IDs (honeywell-mx60-chihuahua project):
 See [docs/GOTCHAS.md](docs/GOTCHAS.md) for:
 - Cross-project anti-patterns table (symptom / fix / reference)
 - Links to all KB topic files
+
+## 9. Release process
+
+When a change touches `scripts/ng-deploy.sh`'s flag/exit/env surface (or you've accumulated
+2+ MINOR features), bump the version:
+
+1. Edit `VERSION` per the SemVer rules in `CONTRIBUTING.md §4`.
+2. Add a `## [vX.Y.Z] - YYYY-MM-DD` section to the top of `CHANGELOG.md` (Keep a Changelog
+   format + SDD-slug + engram-obs references).
+3. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh tests/*.bats`.
+4. Commit (Conventional Commits) and `git tag vX.Y.Z`.
+
+Full recipe: see [CONTRIBUTING.md §5 Release process](CONTRIBUTING.md). Do NOT edit
+`SCRIPT_VERSION` in the script — it's read from `VERSION` at runtime.

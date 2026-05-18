@@ -52,6 +52,11 @@ niagara-tools/
 Before and after each real station deploy, run through:
 [tests/smoke-checklist.md](tests/smoke-checklist.md)
 
+## Versioning
+
+See [CHANGELOG.md](CHANGELOG.md) for release history. Current version in [VERSION](VERSION).
+Versioning policy and bump rules in [CONTRIBUTING.md §4](CONTRIBUTING.md).
+
 ## Next steps
 
 - **Agents**: read [CLAUDE.md](CLAUDE.md) — decision rules, engram conventions,

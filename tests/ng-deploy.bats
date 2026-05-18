@@ -275,3 +275,23 @@ ENVEOF
     run bash "$SCRIPT" --banana
     [ "$status" -ne 0 ]
 }
+
+# ---------------------------------------------------------------------------
+# Test 16: --version exits 0 and prints semver
+# ---------------------------------------------------------------------------
+@test "--version exits 0 and prints semver" {
+    run bash "$SCRIPT" --version
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
+
+# ---------------------------------------------------------------------------
+# Test 17: --version output equals VERSION file content (anti-drift)
+# ---------------------------------------------------------------------------
+@test "--version output equals VERSION file content (anti-drift)" {
+    run bash "$SCRIPT" --version
+    [ "$status" -eq 0 ]
+    expected="$(<"$SCRIPT_DIR/VERSION")"
+    expected="${expected%$'\n'}"
+    [ "$output" = "$expected" ]
+}

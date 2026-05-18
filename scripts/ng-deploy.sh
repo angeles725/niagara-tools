@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
 # Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup --i-know-what-im-doing]
-#        ng-deploy.sh [--no-deploy] [--help]
+#        ng-deploy.sh [--no-deploy] [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.
 
 set -euo pipefail
 IFS=$'\n\t'
+
+# ---------------------------------------------------------------------------
+# Version (resolved CWD-agnostically from VERSION file next to the script)
+# ---------------------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+readonly VERSION_FILE="${SCRIPT_DIR}/../VERSION"
+SCRIPT_VERSION="$(cat "${VERSION_FILE}" 2>/dev/null || echo "unknown")"
+readonly SCRIPT_VERSION
 
 # ---------------------------------------------------------------------------
 # Globals (resolved by parse_args + load_env_file + validate_required)
@@ -35,6 +44,7 @@ Options:
   --no-backup              WARNING: skip backup step (dangerous — live station has no rollback)
   --i-know-what-im-doing   Required companion for --no-backup
   --help                   Print this help and exit 0
+  --version                Print SCRIPT_VERSION and exit 0
 
 Required env vars (from .env.local or --env-file):
   MODULE_NAME, GRADLEW_PATH, NIAGARA_HOME, NIAGARA_USER_HOME,
@@ -53,6 +63,13 @@ Exit codes:
   40  copy of jar to STATION_MODULES_DIR failed
   50  verify failed: type count mismatch or BUILD_ID not found in index.html
 EOF
+}
+
+# ---------------------------------------------------------------------------
+# print_version — print SCRIPT_VERSION to stdout (does NOT exit)
+# ---------------------------------------------------------------------------
+print_version() {
+    printf '%s\n' "${SCRIPT_VERSION}"
 }
 
 # ---------------------------------------------------------------------------
@@ -86,6 +103,10 @@ parse_args() {
         case "$1" in
             --help)
                 print_usage
+                exit 0
+                ;;
+            --version)
+                print_version
                 exit 0
                 ;;
             --mode)
