@@ -25,7 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 - `toolbelt/stored-repack.sh`: STORED repackage for the Workbench re-sign path (B7 recipe);
   manifest-first ordering, `zip -0`, verifiable with `verify-module.sh --stored`.
 - `tests/verify-module.bats`, `tests/build-sh.bats`, `tests/mirror-niagara-home.bats`,
-  `tests/stored-repack.bats`, `tests/kit-links.bats`: 5 bats suites (29 tests) with generated-jar
+  `tests/stored-repack.bats`, `tests/kit-links.bats`: 5 bats suites (27 tests; 53 total with ng-deploy.bats) with generated-jar
   fixtures helper `tests/helpers/n4-fixtures.bash`.
 
 ### Changed — `build-n4-module-kit-v0.2`
