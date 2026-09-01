@@ -18,12 +18,20 @@ the KB topic with full detail and workaround.
 | JS/CSS change without bumping `?v=N` cache-buster | Browser serves cached old version (HTTP 304) | Bump `?v=N` in `index.html`; `ng-deploy.sh` checks this when `BUILD_ID` is set | [hot-reload-rules.md](knowledge-base/hot-reload-rules.md) |
 | `BQL WHERE ackState = 'unacked' OR ackState = 'ackPending' AND timestamp > $T` without parentheses | Returns ALL unacked regardless of timestamp (AND binds tighter than OR) | Parenthesize OR groups; place time filter last in WHERE clause | [bql-gotchas.md](knowledge-base/bql-gotchas.md) |
 | Deploy with stale slotomatic (annotation changed but slotomatic not run) | Station loads module but `@NiagaraProperty`/`@NiagaraType` slot is missing or mismatched; may cause silent BComponent errors | Use `--with-slotomatic` flag or run `:MODULE-rt:slotomatic` before deploy; or use `SLOTOMATIC_DETECTION=strict` to abort on detection | [slotomatic.md](knowledge-base/slotomatic.md#card-4-ng-deploysh-integration-v030) |
+| Re-signing a gradle-built jar in Workbench | `JarFileSigner … ZipException: invalid entry compressed size (expected N but got M)`; clean rebuild recurs, local `jarsigner -verify` says "verified" (false negative) | Repackage STORED before the re-sign: `build-n4-module-kit/toolbelt/stored-repack.sh in.jar out.jar` (manifest first, SF/RSA next, `zip -0`); check with `verify-module.sh --stored out.jar` | [build-verify.md](../build-n4-module-kit/build-verify.md) |
+| Building with `-Pniagara_home=<live install>` while the station runs | `Unable to delete file …/modules/<module>.jar` from `clean`/`jar` (the station locks the jar); temptation to stop a live supervisor | Build against a mirror with a writable `modules/`: `build-n4-module-kit/toolbelt/mirror-niagara-home.sh <install> <mirror> <module>.jar` (refuses the real install or any non-mirror dir, exit 20) | [build-verify.md](../build-n4-module-kit/build-verify.md) |
+| Deploying a jar that only "built OK" | Station rejects or boot-loops: major-65 bytecode (default JDK 21), unsigned jar, `module.xml` type with no class, baja `vendorVersion` newer than the station | Run the gate on every jar before it leaves `build/libs`: `build-n4-module-kit/toolbelt/verify-module.sh --src <module-dir> --target-version 4.14 *.jar` (exit 0 only when every check passes); `build.sh` runs it automatically | [build-verify.md](../build-n4-module-kit/build-verify.md) |
 
 ---
 
 ## Knowledge base index
 
 Topic files with full detail, examples, and back-links to this index:
+
+- [build-n4-module-kit build & verify](../build-n4-module-kit/build-verify.md) —
+  The verify gate (`toolbelt/verify-module.sh`), the recommended WSL build (`toolbelt/build.sh`),
+  the running-station mirror (`toolbelt/mirror-niagara-home.sh`) and the STORED repack for the
+  Workbench re-sign path (`toolbelt/stored-repack.sh`). Suites: `tests/{verify-module,build-sh,mirror-niagara-home,stored-repack}.bats`.
 
 - [BQL gotchas in Niagara N4.14](knowledge-base/bql-gotchas.md) —
   3 confirmed N4.14 bugs (`ackState` transitory, `sourceState` frozen snapshot,
