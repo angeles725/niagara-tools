@@ -20,6 +20,9 @@ Use when: Java changes in either rt or ux subproject, OR both.
 ```bash
 cd /path/to/chihuahua
 /path/to/niagara-tools/scripts/ng-deploy.sh --mode A
+
+# Optional: if you added/modified @Niagara* annotations, include slotomatic:
+/path/to/niagara-tools/scripts/ng-deploy.sh --mode A --with-slotomatic
 ```
 
 ### Expected stdout
@@ -58,6 +61,7 @@ See [docs/GOTCHAS.md](../docs/GOTCHAS.md) for root cause guidance.
 ## Mode B — UX-only deploy (ux jar only)
 
 Use when: Only JS, CSS, HTML assets changed (no Java changes in any subproject).
+Note: `--with-slotomatic` is a no-op in mode B (WARN printed, slotomatic not invoked).
 
 ### Prereqs
 - [ ] `.env.local` populated (all required vars + `EXPECTED_UX_TYPES`)

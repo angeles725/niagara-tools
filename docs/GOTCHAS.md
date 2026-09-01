@@ -17,6 +17,7 @@ the KB topic with full detail and workaround.
 | Java change deployed without station restart | New class never loaded; feature silently non-functional | Restart station (classloader re-init required) | [hot-reload-rules.md](knowledge-base/hot-reload-rules.md) |
 | JS/CSS change without bumping `?v=N` cache-buster | Browser serves cached old version (HTTP 304) | Bump `?v=N` in `index.html`; `ng-deploy.sh` checks this when `BUILD_ID` is set | [hot-reload-rules.md](knowledge-base/hot-reload-rules.md) |
 | `BQL WHERE ackState = 'unacked' OR ackState = 'ackPending' AND timestamp > $T` without parentheses | Returns ALL unacked regardless of timestamp (AND binds tighter than OR) | Parenthesize OR groups; place time filter last in WHERE clause | [bql-gotchas.md](knowledge-base/bql-gotchas.md) |
+| Deploy with stale slotomatic (annotation changed but slotomatic not run) | Station loads module but `@NiagaraProperty`/`@NiagaraType` slot is missing or mismatched; may cause silent BComponent errors | Use `--with-slotomatic` flag or run `:MODULE-rt:slotomatic` before deploy; or use `SLOTOMATIC_DETECTION=strict` to abort on detection | [slotomatic.md](knowledge-base/slotomatic.md#card-4-ng-deploysh-integration-v030) |
 
 ---
 

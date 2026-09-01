@@ -100,4 +100,71 @@ from the annotation to generated methods, which can vary if comments change.
 
 ---
 
+---
+
+## Card 4: ng-deploy.sh integration (v0.3.0+)
+
+From v0.3.0, `ng-deploy.sh` integrates slotomatic as an opt-in step and adds
+a passive annotation-change heuristic.
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--with-slotomatic` | Run `:MODULE-rt:slotomatic` BEFORE `build_jars` (modes A/C only; ignored on mode B) |
+| `--strict-slotomatic` | Abort with exit 15 if annotation changes are detected without `--with-slotomatic` |
+
+### SLOTOMATIC_DETECTION env var
+
+Controls the passive heuristic (`warn`|`strict`|`off`, default: `warn`):
+
+| Value | Behavior |
+|-------|----------|
+| `warn` | WARN to stderr if `@Niagara*` annotation changes detected (no abort) |
+| `strict` | Abort exit 15 if annotation changes detected without `--with-slotomatic` |
+| `off` | Disable detection entirely (no WARN, no abort) |
+
+### Detection mechanics
+
+`detect_annotation_changes()` runs before `build_jars` (modes A/C only):
+1. Reads `.last-deploy-sha` (written post-verify) as the baseline commit.
+2. Falls back to `HEAD~1` if the file is absent, empty, or contains an invalid SHA.
+3. Runs `git diff <baseline>..HEAD -- '*/src/com/**/*.java'` and filters with
+   `grep -E '^[+-][[:space:]]*@Niagara(Type|Property|Action|Topic|Singleton)'`.
+4. Returns 0 if matches found (annotation change detected), 1 otherwise.
+
+**False-positive edge case**: comment-only lines beginning with `@Niagara*`
+(e.g., in javadoc) will trigger the heuristic. The `warn` default is intentionally
+non-aborting for this reason. If your project has many `@Niagara*` comments, set
+`SLOTOMATIC_DETECTION=off` and rely on `--with-slotomatic` explicitly.
+
+### .last-deploy-sha
+
+Written to `$(pwd)/.last-deploy-sha` after every successful verify. Silent if
+git is absent. **Add this to your consumer module's `.gitignore`**:
+```
+.last-deploy-sha
+```
+
+If the consumer's `.gitignore` does not exclude it, the file will show as
+untracked on every deploy. It cannot be enforced upstream but is documented here.
+
+### Decision table (detection × flags)
+
+| Changes detected | --with-slotomatic | --strict-slotomatic | Action |
+|---|---|---|---|
+| no | 0 | 0 | nada |
+| no | 1 | 0 | run slotomatic (idempotent) |
+| no | * | 1 | nada (strict sin findings) |
+| sí | 0 | 0 | WARN + continúa |
+| sí | 1 | 0 | run slotomatic (sin WARN — ya corrigen) |
+| sí | 0 | 1 | exit 15 |
+| sí | 1 | 1 | run slotomatic (sin WARN) |
+
+### Mode B behavior
+
+Mode B is ux-only (no rt subproject is built). Detection is skipped entirely
+and `--with-slotomatic` is silently ignored with a WARN:
+`[ng-deploy] WARN --with-slotomatic ignored for mode B (ux-only)`.
+
 ← Back to [GOTCHAS index](../GOTCHAS.md)

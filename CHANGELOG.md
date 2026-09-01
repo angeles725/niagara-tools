@@ -6,6 +6,52 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.3.0] - 2026-05-18
+
+### Added — `niagara-tools-slotomatic-integration`
+
+- `scripts/ng-deploy.sh`: `--with-slotomatic` flag — invoca `:MODULE-rt:slotomatic` con los
+  3 overrides `-P` ANTES de `build_jars` (modos A/C; ignorado en modo B con WARN).
+- `scripts/ng-deploy.sh`: `--strict-slotomatic` flag — aborta con exit 15 si se detectan
+  cambios de anotación sin `--with-slotomatic`. No implica `--with-slotomatic` (cero magia).
+- `scripts/ng-deploy.sh`: `SLOTOMATIC_DETECTION` env var (`warn`|`strict`|`off`, default `warn`) —
+  controla la heurística pasiva de detección de cambios en anotaciones `@Niagara*`.
+- `scripts/ng-deploy.sh`: `detect_annotation_changes()` — heurística pasiva que corre entre
+  backup y build. Lee `.last-deploy-sha` como baseline (fallback `HEAD~1`); filtra diff con
+  `grep -E '^[+-][[:space:]]*@Niagara(Type|Property|Action|Topic|Singleton)'`.
+- `scripts/ng-deploy.sh`: `run_slotomatic()` — invoca gradlew con los mismos 3 `-P` overrides
+  que `build_jars`; `die 15` si gradlew retorna distinto de cero.
+- `scripts/ng-deploy.sh`: `write_last_deploy_sha()` — escribe `git rev-parse HEAD` en
+  `.last-deploy-sha` post-verify exitoso; silencioso si git falla.
+- `scripts/ng-deploy.sh`: `read_baseline_sha()` — lee `.last-deploy-sha`, valida con
+  `git cat-file -e`, fallback a `HEAD~1` si ausente/vacío/SHA inválido.
+- `scripts/ng-deploy.sh`: `warn_slotomatic_recommended()` — heredoc multi-línea a stderr.
+- `scripts/ng-deploy.sh`: exit code 15 nuevo — slotomatic falló O cambios de anotación
+  detectados en modo strict. Ningún code path existente (0-50) fue modificado.
+- `tests/ng-deploy.bats`: 9 tests nuevos (T18–T26), total 26. git fakebin en setup().
+  Refactor gradlew stub: `gradlew.calls.log` (log acumulativo) + `gradlew.args` (backward-compat).
+- `.env.local.example`: sección `SLOTOMATIC_DETECTION` + nota sobre `.last-deploy-sha` en `.gitignore`.
+- `docs/knowledge-base/slotomatic.md`: Card 4 — ng-deploy.sh integration (flags, detection
+  mechanics, decision table, false-positive edge case, `.last-deploy-sha` gitignore note).
+- `docs/GOTCHAS.md`: fila anti-pattern "Deploy with stale slotomatic".
+- `tests/smoke-checklist.md`: paso opcional `--with-slotomatic` en modo A; nota no-op en modo B.
+
+### Changed — `niagara-tools-slotomatic-integration`
+
+- `scripts/ng-deploy.sh` `print_usage()`: documenta `--with-slotomatic`, `--strict-slotomatic`,
+  `SLOTOMATIC_DETECTION` env var, y exit code 15.
+- `CLAUDE.md` §1 tabla: fila "Slot/Property/Type/Action" actualizada →
+  `A --with-slotomatic (or :slotomatic separately first)`.
+- `scripts/ng-deploy.sh` header comment: añade `--with-slotomatic`, `--strict-slotomatic` a Usage.
+
+### References
+
+- SDD slug: `niagara-tools-slotomatic-integration`
+- Engram: spec #1927, design #1928, tasks #1929.
+- Tag: `v0.3.0` (pendiente de commit del operador).
+
+---
+
 ## [v0.2.0] - 2026-05-18
 
 ### Added — `niagara-tools-versioning-and-contributing`

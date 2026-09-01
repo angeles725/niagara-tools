@@ -10,7 +10,7 @@ Agent-facing companion. Read this before taking any deploy or build action.
 | Java in `*-ux/src/com/...` (servlets, handlers) | B (or A if also touching rt) | Yes |
 | JS / CSS / HTML in `*-ux/src/rc/...` | B | No — browser hard-reload only |
 | Both rt and ux | A | Yes |
-| Slot / Property / Type / Action add or modify | A + run `:slotomatic` separately first | Yes |
+| Slot / Property / Type / Action add or modify | A `--with-slotomatic` (or `:slotomatic` separately first) | Yes |
 | Doc-only / SDD artifacts | n/a — do NOT run ng-deploy.sh | n/a |
 
 Invocation pattern (from consumer module root):

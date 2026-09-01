@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
 # Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup --i-know-what-im-doing]
-#        ng-deploy.sh [--no-deploy] [--help] [--version]
+#        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic]
+#        ng-deploy.sh [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.
 
 set -euo pipefail
@@ -24,6 +25,8 @@ NO_BACKUP=0
 NO_DEPLOY=0
 IKWID=0      # i-know-what-im-doing companion flag
 ENV_FILE=".env.local"
+WITH_SLOTOMATIC=0
+STRICT_SLOTOMATIC=0
 
 # ---------------------------------------------------------------------------
 # print_usage — print help text to stdout (does NOT exit)
@@ -43,6 +46,8 @@ Options:
   --no-deploy              Build only; do not copy or verify (jars stay in build/libs/)
   --no-backup              WARNING: skip backup step (dangerous — live station has no rollback)
   --i-know-what-im-doing   Required companion for --no-backup
+  --with-slotomatic        Run :MODULE-rt:slotomatic BEFORE build_jars (opt-in; ignored on mode B)
+  --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
   --help                   Print this help and exit 0
   --version                Print SCRIPT_VERSION and exit 0
 
@@ -53,11 +58,13 @@ Required env vars (from .env.local or --env-file):
   EXPECTED_UX_TYPES  (required for mode A or B)
 
 Optional:
-  BUILD_ID  — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
+  BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
+  SLOTOMATIC_DETECTION — warn|strict|off (default: warn); controls annotation-change heuristic
 
 Exit codes:
   0   success (or --help)
   10  missing required env var or invalid path
+  15  slotomatic failed, or annotation changes detected in strict mode
   20  backup failed, or --no-backup without --i-know-what-im-doing
   30  build (gradlew) returned non-zero
   40  copy of jar to STATION_MODULES_DIR failed
@@ -127,6 +134,12 @@ parse_args() {
                 shift ;;
             --no-deploy)
                 NO_DEPLOY=1
+                shift ;;
+            --with-slotomatic)
+                WITH_SLOTOMATIC=1
+                shift ;;
+            --strict-slotomatic)
+                STRICT_SLOTOMATIC=1
                 shift ;;
             *)
                 printf '[ng-deploy] ERROR unknown flag: %s\n' "$1" >&2
@@ -310,6 +323,103 @@ print_restart_reminder() {
 }
 
 # ---------------------------------------------------------------------------
+# read_baseline_sha — reads .last-deploy-sha, validates with cat-file, fallback HEAD~1
+# Always returns 0. Sets BASELINE_SHA global.
+# ---------------------------------------------------------------------------
+read_baseline_sha() {
+    local sha_file
+    sha_file="$(pwd)/.last-deploy-sha"
+    BASELINE_SHA=""
+    if [[ -f "$sha_file" ]]; then
+        local candidate
+        candidate="$(cat "$sha_file" 2>/dev/null || true)"
+        candidate="${candidate%$'\n'}"
+        if [[ -n "$candidate" ]] && git cat-file -e "${candidate}^{commit}" 2>/dev/null; then
+            BASELINE_SHA="$candidate"
+            return 0
+        fi
+    fi
+    # fallback: HEAD~1
+    BASELINE_SHA="HEAD~1"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# warn_slotomatic_recommended — multi-line WARN to stderr
+# ---------------------------------------------------------------------------
+warn_slotomatic_recommended() {
+    cat >&2 << 'WARN'
+[ng-deploy] WARN: annotation changes detected in Java sources.
+[ng-deploy] WARN: Run with --with-slotomatic to regenerate slot code, or
+[ng-deploy] WARN: set SLOTOMATIC_DETECTION=off to suppress this warning.
+[ng-deploy] WARN: Deploying without slotomatic may cause BComponent type errors.
+WARN
+}
+
+# ---------------------------------------------------------------------------
+# detect_annotation_changes — heuristic: git diff baseline..HEAD on *.java
+# Returns 0 if @Niagara* annotation changes found, 1 otherwise.
+# Respects SLOTOMATIC_DETECTION=off.  Never calls die directly.
+# ---------------------------------------------------------------------------
+detect_annotation_changes() {
+    # off-guard: env var
+    if [[ "${SLOTOMATIC_DETECTION:-warn}" == "off" ]]; then
+        return 1
+    fi
+
+    # git availability guard
+    if ! command -v git > /dev/null 2>&1; then
+        printf '[ng-deploy] NOTICE: git not found; skipping annotation change detection\n' >&2
+        return 1
+    fi
+
+    # repo guard: must be inside a git working tree
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        printf '[ng-deploy] NOTICE: not a git repository; skipping annotation change detection\n' >&2
+        return 1
+    fi
+
+    read_baseline_sha
+
+    local diff_output
+    # why: glob in git diff path spec is intentional; no brace expansion needed
+    # shellcheck disable=SC2086
+    diff_output="$(git diff "${BASELINE_SHA}..HEAD" -- '*/src/com/**/*.java' 2>/dev/null || true)"
+    if printf '%s\n' "$diff_output" | grep -qE '^[+-][[:space:]]*@Niagara(Type|Property|Action|Topic|Singleton)'; then
+        return 0   # annotation changes found
+    fi
+    return 1       # no annotation changes
+}
+
+# ---------------------------------------------------------------------------
+# run_slotomatic — invoke gradlew :MODULE_NAME-rt:slotomatic with 3 -P overrides
+# die 15 on non-zero gradlew exit.
+# ---------------------------------------------------------------------------
+run_slotomatic() {
+    printf '[ng-deploy] slotomatic: running :%s-rt:slotomatic\n' "${MODULE_NAME}"
+    "${GRADLEW_PATH}" \
+        -Pniagara_home="${NIAGARA_HOME}" \
+        "-Pniagara_user_home=${NIAGARA_USER_HOME}" \
+        -Porg.gradle.java.installations.paths="${JAVA_HOME}" \
+        ":${MODULE_NAME}-rt:slotomatic" \
+        || die 15 "slotomatic failed (gradlew exited non-zero); deploy aborted"
+    printf '[ng-deploy] slotomatic ok\n'
+}
+
+# ---------------------------------------------------------------------------
+# write_last_deploy_sha — write git rev-parse HEAD to .last-deploy-sha
+# Silent on any git error (non-critical).
+# ---------------------------------------------------------------------------
+write_last_deploy_sha() {
+    local sha
+    sha="$(git rev-parse HEAD 2>/dev/null || true)"
+    sha="${sha%$'\n'}"
+    if [[ -n "$sha" ]]; then
+        printf '%s\n' "$sha" > "$(pwd)/.last-deploy-sha" 2>/dev/null || true
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # main — orchestrator
 # ---------------------------------------------------------------------------
 main() {
@@ -321,6 +431,23 @@ main() {
     # Step 2: Backup (skippable with IKWID-guarded --no-backup)
     if [[ "$NO_BACKUP" -eq 0 ]]; then
         backup
+    fi
+
+    # Step 2.4: Annotation change detection (mode A/C only; skipped in mode B — ux-only)
+    if [[ "$MODE" != "B" ]]; then
+        if detect_annotation_changes; then
+            if [[ "$STRICT_SLOTOMATIC" -eq 1 || "${SLOTOMATIC_DETECTION:-warn}" == "strict" ]]; then
+                die 15 "annotation changes detected; --with-slotomatic required (strict mode)"
+            elif [[ "$WITH_SLOTOMATIC" -eq 0 ]]; then
+                warn_slotomatic_recommended
+            fi
+        fi
+        # Step 2.5: Run slotomatic (opt-in via --with-slotomatic)
+        if [[ "$WITH_SLOTOMATIC" -eq 1 ]]; then
+            run_slotomatic
+        fi
+    elif [[ "$WITH_SLOTOMATIC" -eq 1 ]]; then
+        printf '[ng-deploy] WARN --with-slotomatic ignored for mode B (ux-only)\n' >&2
     fi
 
     # Step 3: Build (always; --no-deploy stops AFTER build)
@@ -355,7 +482,10 @@ main() {
             ;;
     esac
 
-    # Step 6: Post-deploy hint
+    # Step 6: Write deploy SHA (after successful verify; silent if git absent)
+    write_last_deploy_sha
+
+    # Step 7: Post-deploy hint
     print_restart_reminder "$MODE"
     exit 0
 }

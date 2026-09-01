@@ -2,6 +2,10 @@
 # tests/ng-deploy.bats — pure-logic unit tests for scripts/ng-deploy.sh
 # Stub strategy: PATH-injected fakebin with controlled exit codes via env vars.
 # No real gradlew, no real unzip to /mnt/c, no station dependency.
+# why: SC2030/SC2031 — each @test runs in a subshell; export is the correct
+# mechanism to pass env vars to run-spawned subprocesses in bats. These are
+# not real subshell-loss bugs.
+# shellcheck disable=SC2030,SC2031
 
 SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SCRIPT="$SCRIPT_DIR/scripts/ng-deploy.sh"
@@ -12,12 +16,44 @@ setup() {
     mkdir -p "$TMPDIR_T/fakebin" "$TMPDIR_T/modules"
 
     # --- fake gradlew ---
+    # Writes every invocation to gradlew.calls.log (one line per call, args space-separated)
+    # and overwrites gradlew.args with the last invocation (backward-compat for T1-T17).
     cat > "$TMPDIR_T/fakebin/gradlew" << 'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "${TMPDIR_T}/gradlew.args"
+printf '%s\n' "$*" >> "${TMPDIR_T}/gradlew.calls.log"
 exit "${FAKE_GRADLEW_EXIT:-0}"
 STUB
     chmod +x "$TMPDIR_T/fakebin/gradlew"
+
+    # --- fake git ---
+    # Dispatches by $1: diff → FAKE_GIT_DIFF_OUTPUT; rev-parse (--git-dir) → exit 0;
+    # rev-parse HEAD → FAKE_GIT_REV_PARSE_OUTPUT; cat-file → FAKE_GIT_CAT_FILE_EXIT.
+    cat > "$TMPDIR_T/fakebin/git" << 'STUB'
+#!/usr/bin/env bash
+case "$1" in
+    diff)
+        printf '%s\n' "${FAKE_GIT_DIFF_OUTPUT:-}"
+        exit 0
+        ;;
+    rev-parse)
+        if [[ "$2" == "--git-dir" ]]; then
+            printf '%s\n' ".git"
+            exit 0
+        fi
+        # rev-parse HEAD (or any other ref)
+        printf '%s\n' "${FAKE_GIT_REV_PARSE_OUTPUT:-deadbeef1234567890abcdef1234567890abcdef}"
+        exit 0
+        ;;
+    cat-file)
+        exit "${FAKE_GIT_CAT_FILE_EXIT:-0}"
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+STUB
+    chmod +x "$TMPDIR_T/fakebin/git"
 
     # --- fake unzip ---
     # Outputs FAKE_UNZIP_TYPES lines containing "<type" (default 9)
@@ -294,4 +330,186 @@ ENVEOF
     expected="$(<"$SCRIPT_DIR/VERSION")"
     expected="${expected%$'\n'}"
     [ "$output" = "$expected" ]
+}
+
+# ---------------------------------------------------------------------------
+# T18: --with-slotomatic invoca slotomatic ANTES de build_jars
+# La llamada a :test-rt:slotomatic debe aparecer en gradlew.calls.log
+# ANTES de la llamada que contiene :test-rt:jar.
+# ---------------------------------------------------------------------------
+@test "T18: --with-slotomatic runs slotomatic before build_jars" {
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --no-deploy \
+        --mode A \
+        --with-slotomatic
+    [ "$status" -eq 0 ]
+    # The calls log must exist
+    [ -f "$TMPDIR_T/gradlew.calls.log" ]
+    # slotomatic line must appear before the build line in the log
+    slotomatic_line=$(grep -n "slotomatic" "$TMPDIR_T/gradlew.calls.log" | head -1 | cut -d: -f1)
+    build_line=$(grep -n ":test-rt:jar" "$TMPDIR_T/gradlew.calls.log" | head -1 | cut -d: -f1)
+    [ -n "$slotomatic_line" ]
+    [ -n "$build_line" ]
+    [ "$slotomatic_line" -lt "$build_line" ]
+}
+
+# ---------------------------------------------------------------------------
+# T19: gradlew slotomatic falla → exit 15, sin build
+# ---------------------------------------------------------------------------
+@test "T19: slotomatic failure exits 15 and does not build" {
+    # gradlew exits 1 only for the slotomatic invocation
+    # We make all gradlew calls fail so we can assert exit 15 specifically
+    export FAKE_GRADLEW_EXIT=1
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --mode A \
+        --with-slotomatic
+    [ "$status" -eq 15 ]
+    # build must NOT have been invoked after slotomatic fail
+    # gradlew.calls.log should have exactly 1 line (the slotomatic call)
+    [ -f "$TMPDIR_T/gradlew.calls.log" ]
+    [ "$(wc -l < "$TMPDIR_T/gradlew.calls.log")" -eq 1 ]
+    [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"slotomatic"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# T20: detección WARN — cambios de anotación sin --with-slotomatic → WARN en stderr, exit 0
+# ---------------------------------------------------------------------------
+@test "T20: annotation detection WARN when changes detected without --with-slotomatic" {
+    export FAKE_GIT_DIFF_OUTPUT='+    @NiagaraType'
+    export FAKE_GIT_CAT_FILE_EXIT=0
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --no-deploy \
+        --mode A
+    [ "$status" -eq 0 ]
+    [[ "${output}${stderr}" == *"slotomatic"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# T21: --strict-slotomatic + cambios detectados → exit 15
+# ---------------------------------------------------------------------------
+@test "T21: --strict-slotomatic aborts with exit 15 when annotation changes detected" {
+    export FAKE_GIT_DIFF_OUTPUT='+    @NiagaraProperty'
+    export FAKE_GIT_CAT_FILE_EXIT=0
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --mode A \
+        --strict-slotomatic
+    [ "$status" -eq 15 ]
+}
+
+# ---------------------------------------------------------------------------
+# T22: mode B + --with-slotomatic → WARN en stderr, slotomatic NO invocado, ux build normal
+# ---------------------------------------------------------------------------
+@test "T22: mode B + --with-slotomatic warns and skips slotomatic" {
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --no-deploy \
+        --mode B \
+        --with-slotomatic
+    [ "$status" -eq 0 ]
+    # WARN must appear in output (save output before any inner run call)
+    local saved_output="$output"
+    [[ "$saved_output" == *"slotomatic"* ]]
+    # slotomatic must NOT appear in any gradlew invocation
+    if [ -f "$TMPDIR_T/gradlew.calls.log" ]; then
+        # why: using grep exit code only; not capturing output
+        ! grep -q "slotomatic" "$TMPDIR_T/gradlew.calls.log"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# T23: git ausente → skip detección silencioso, deploy continúa, exit 0
+# ---------------------------------------------------------------------------
+@test "T23: git absent — detection skipped silently, deploy continues" {
+    # Replace fakebin/git with a stub that does not exist (remove it)
+    rm -f "$TMPDIR_T/fakebin/git"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --no-deploy \
+        --mode A
+    [ "$status" -eq 0 ]
+}
+
+# ---------------------------------------------------------------------------
+# T24: deploy exitoso → .last-deploy-sha escrito con HEAD SHA post-verify
+# ---------------------------------------------------------------------------
+@test "T24: successful deploy writes .last-deploy-sha after verify" {
+    export FAKE_GIT_REV_PARSE_OUTPUT="abc1234abc1234abc1234abc1234abc1234abc1234"
+    export FAKE_UNZIP_TYPES=9
+    # Need to touch fake jar files so copy_jars and verify_jar succeed
+    # gradlew path in .env.local points to TMPDIR_T/fakebin/gradlew
+    # src_dir = dirname(GRADLEW_PATH) = TMPDIR_T/fakebin
+    mkdir -p "$TMPDIR_T/fakebin/test/test-rt/build/libs" \
+             "$TMPDIR_T/fakebin/test/test-ux/build/libs"
+    touch "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    touch "$TMPDIR_T/fakebin/test/test-ux/build/libs/test-ux.jar"
+    # Use a custom env that sets EXPECTED_RT_TYPES=9, EXPECTED_UX_TYPES=9 to match fake unzip
+    cat > "$TMPDIR_T/env_t24" << ENVEOF
+MODULE_NAME=test
+GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
+NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+STATION_MODULES_DIR=$TMPDIR_T/modules
+EXPECTED_RT_TYPES=9
+EXPECTED_UX_TYPES=9
+ENVEOF
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/env_t24" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --mode A
+    [ "$status" -eq 0 ]
+    [ -f "$TMPDIR_T/.last-deploy-sha" ]
+    [ "$(cat "$TMPDIR_T/.last-deploy-sha")" = "abc1234abc1234abc1234abc1234abc1234abc1234" ]
+}
+
+# ---------------------------------------------------------------------------
+# T25: verify falla → .last-deploy-sha NO escrito
+# ---------------------------------------------------------------------------
+@test "T25: failed verify does not write .last-deploy-sha" {
+    export FAKE_UNZIP_TYPES=99  # mismatched type count → verify fails
+    local fake_src="$TMPDIR_T/fakebin"
+    mkdir -p "$fake_src/test/test-rt/build/libs" "$fake_src/test/test-ux/build/libs"
+    touch "$fake_src/test/test-rt/build/libs/test-rt.jar"
+    touch "$fake_src/test/test-ux/build/libs/test-ux.jar"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --mode A
+    [ "$status" -eq 50 ]
+    [ ! -f "$TMPDIR_T/.last-deploy-sha" ]
+}
+
+# ---------------------------------------------------------------------------
+# T26: SLOTOMATIC_DETECTION=off desactiva detección completamente
+# ---------------------------------------------------------------------------
+@test "T26: SLOTOMATIC_DETECTION=off disables annotation detection" {
+    export FAKE_GIT_DIFF_OUTPUT='+    @NiagaraType'
+    export SLOTOMATIC_DETECTION=off
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --i-know-what-im-doing \
+        --no-deploy \
+        --mode A
+    [ "$status" -eq 0 ]
+    # No WARN about slotomatic in output when detection is off
+    [[ "${output}${stderr}" != *"annotation"* ]]
 }
