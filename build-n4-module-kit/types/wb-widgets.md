@@ -6,7 +6,9 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 
 - **`-wb` profile** only; register the view type + an `@AgentOn` (agent-on the component type) so it opens from the tree. `requiredPermissions` on the agent = view VISIBILITY only, never security.
 - **PX views:** authored in Workbench PxEditor (GUI), shipped as module resources + registered as an agent view on a type; the same `.px` renders in the browser via the Hx/HTML5 profile. Editable fields via kitPx field editors; background image as a module resource. (Corpus B180/B194/B202/B203.)
-- **PX vs custom servlet dashboard:** PX = declarative, Workbench-authored, native. A `BWebServlet` + SPA (type-dashboard.md) = custom HTML5, no PxEditor. Pick per need; an HMI that just points a browser at a URL takes either.
-- Same build (Java 8 + slotomatic) and checklist-common rules.
+- **PX vs custom servlet dashboard:** PX = declarative, Workbench-authored, native. A `BWebServlet` + SPA (types/dashboard.md) = custom HTML5, no PxEditor. Pick per need; an HMI that just points a browser at a URL takes either.
+- Same build (Java 8 + slotomatic) and METHODOLOGY rules.
 
 TODO: flesh out WB view registration, the PxEditor authoring flow, and packaging from a real build.
+
+See also: `docs/module-best-practices.md` (rt/ux/wb do & don't).

@@ -14,7 +14,7 @@ A `gradle :jar` with the default JDK is NOT a valid N4 build: it can use the wro
 
 `verify-module.sh` default checks are conservative (major 52, NIAGARA4.SF, module.xml types resolve); `--target-version`, `--stored` and `--src` are opt-in.
 
-## Primary: `ng-deploy.sh` (the established wrapper)
+## Station deploy: `ng-deploy.sh` (the established wrapper)
 
 Use `niagara-tools/scripts/ng-deploy.sh` — it already does backup → build → (slotomatic) → copy-to-station → verify, and knows the flags:
 ```
@@ -25,7 +25,7 @@ scripts/ng-deploy.sh --no-deploy --with-slotomatic     # build-only (jars stay i
 Set env in `.env.local` (or `--env-file`): `MODULE_NAME, GRADLEW_PATH, NIAGARA_HOME, NIAGARA_USER_HOME, JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64, STATION_MODULES_DIR`.
 `--strict-slotomatic` is the guard that catches the annotation-vs-generated bug automatically — prefer it.
 
-## Fallback: raw gradle (quick WSL iteration, no deploy)
+## Raw gradle (quick WSL iteration, no deploy)
 ```
 cd <module-root>
 J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm

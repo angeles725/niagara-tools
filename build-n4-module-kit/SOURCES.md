@@ -9,6 +9,7 @@ The 90% rule: before investigating anything, search the corpus. Most of module-b
 - **module-navigator** — code queries over `organized/`.
 
 ## Distilled guides (niagara-research/docs)
+`docs/` = `/home/cristian/niagara-research/docs/` — narrative reference; the kit points, never copies.
 - `docs/module-best-practices.md` — rt/ux/wb do & don't, §2 has the X-Requested-With rule + the CSRF-guard↔header pairing.
 - `docs/module-dev-workflow.md` — toolchain, codegen round-trip, dev loop, testing.
 - `docs/how-to-create-coldroom-module.md` — end-to-end module creation walk-through.
@@ -20,7 +21,7 @@ The 90% rule: before investigating anything, search the corpus. Most of module-b
 
 ## Exemplar source (READ, do not re-derive)
 - Dashboard: `/home/cristian/modulos_niagara_n4/Cliente/Honeywell/MX60/chihuahua/chihuahua/` (chihuahua-rt/ux/wb).
-- Control: `/mnt/c/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/`.
+- Control: `/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/` (WSL primary — holds ColdRoomPan-rt + gradlew at the Paccadia level; the same tree under the `/mnt/c` Windows mount is a fallback only).
 - Dashboard (this project's clean build): `/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/`.
 - Original Tridium javadoc: `organized/docSource/docSource-doc/extracted/`.
 

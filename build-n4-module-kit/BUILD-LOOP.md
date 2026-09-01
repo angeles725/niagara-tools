@@ -7,6 +7,11 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 
+### 0.b Preflight (before the first build)
+- **JDK 8** present (`ls /usr/lib/jvm`).
+- **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
+- **Station live?** A running station LOCKS its `modules/<mod>.jar` — build against a mirror (`toolbelt/mirror-niagara-home.sh`), never stop a live supervisor.
+
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
@@ -20,12 +25,13 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Open `http://localhost:<port>/hmi` (1280×800 frame). Iterate design here — refresh, no build.
 
 ## 4. Build — the ONLY valid build
-- Primary: `niagara-tools/scripts/ng-deploy.sh --strict-slotomatic` (backup→build→slotomatic→deploy→verify; strict aborts if annotations changed without slotomatic). Fallback for quick WSL iteration: `toolbelt/build.sh`. See build-verify.md.
+- Three roles (build-verify.md §Doctrine): `toolbelt/build.sh` is the recommended WSL build (clean + slotomatic for every profile with sources + jar, then it calls the gate); `scripts/ng-deploy.sh --strict-slotomatic` is the station deploy wrapper (backup→build→copy→verify; strict aborts if annotations changed without slotomatic, and its slotomatic guard is rt-only); `toolbelt/verify-module.sh` is THE gate, run on the built jars.
 - Confirm: bytecode major **52**, jars **signed**, no raw-double facet. (build-verify.md)
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
+- The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station.
 
 ## 6. Deploy (station) — operator
 - Sign (auto), stop station, replace jars in `<niagara_home>/modules/`, start. Place components at their fixed ORDs; link points. Open the URL.
