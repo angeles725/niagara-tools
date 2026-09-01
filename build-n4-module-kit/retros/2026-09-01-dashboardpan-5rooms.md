@@ -1,3 +1,5 @@
+<!-- review-status: folded v0.2 · 2026-09-01 -->
+
 # Retro — DashboardPan 3→5 rooms + deploy/signing (2026-09-01) — PROPOSED kit deltas
 
 Status: **propose-never-apply**. A human folds these into `types/dashboard.md` / `build-verify.md` / `METHODOLOGY.md`.

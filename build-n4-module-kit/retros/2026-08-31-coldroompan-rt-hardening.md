@@ -1,3 +1,5 @@
+<!-- review-status: folded v0.2 · 2026-09-01 -->
+
 # Retro — ColdRoomPan `-rt` hardening (2026-08-31) — PROPOSED kit deltas
 
 Status: **propose-never-apply**. A human folds these into `types/logic.md` / `METHODOLOGY.md`.

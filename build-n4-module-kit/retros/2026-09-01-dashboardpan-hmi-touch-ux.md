@@ -1,3 +1,5 @@
+<!-- review-status: folded v0.2 · 2026-09-01 -->
+
 # Retro — DashboardPan HMI touch UX + chart (2026-09-01) — PROPOSED kit deltas
 
 Status: **propose-never-apply**. A human folds these into `types/dashboard.md` / `METHODOLOGY.md`.
