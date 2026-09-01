@@ -14,6 +14,8 @@ A `gradle :jar` with the default JDK is NOT a valid N4 build: it can use the wro
 
 `verify-module.sh` default checks are conservative (major 52, NIAGARA4.SF, module.xml types resolve); `--target-version`, `--stored` and `--src` are opt-in.
 
+`build.sh` usage: `build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] <module-root> <MOD> [niagara_home]` — exits **0** build+gate passed · **2** usage · **10** environment (no JDK 8, not a niagara_home, no profile) · **30** gradle failed · **50** gate failed. It runs `verify-module.sh --src <module-root>/<MOD>` on every produced jar; `--plugin-version` (or `$NIAGARA_PLUGIN_VERSION`) forwards `-PniagaraPluginVersion` (each install ships one: 4.13.2→7.3.40, 4.14→7.6.17, 4.15.3→7.6.22).
+
 ## Station deploy: `ng-deploy.sh` (the established wrapper)
 
 Use `niagara-tools/scripts/ng-deploy.sh` — it already does backup → build → (slotomatic) → copy-to-station → verify, and knows the flags:
@@ -57,7 +59,7 @@ Building on WSL against `niagara_home=C:\...` breaks the m2 repo (see §Build ta
 
 ## Building against a running station: mirror
 - **A running station LOCKS `<niagara_home>/modules/<mod>.jar` — never stop a live supervisor to build:** with `station`/`niagarad` running, the plugin's `clean`/`jar` fails deleting the deployed jar (`IOException: Unable to delete file …/modules/<mod>.jar`). Build against a read-only MIRROR: symlink every top-level entry + every `modules/*.jar` EXCEPT the one being built into a dir with a WRITABLE `modules/`, and build with `-Pniagara_home=<mirror>`. The jar lands in `build/libs` (deliverable) + `<mirror>/modules` (throwaway); the real install is never written. [ev: retro rt-hardening #8]
-- Use `toolbelt/mirror-niagara-home.sh <source_niagara_home> <mirror_dir> [exclude-jar ...]`. Two guards protect you: it refuses when the mirror equals or sits inside the source (exit 20), and refuses to wipe an existing dir that lacks a `.niagara-mirror` marker (exit 20); it writes `.niagara-mirror` on creation.
+- Use `toolbelt/mirror-niagara-home.sh <source_niagara_home> <mirror_dir> [exclude-jar ...]`. Two guards protect you: it refuses when the mirror equals, sits inside, or contains the source (exit 20), and refuses to wipe an existing dir that lacks a `.niagara-mirror` marker (exit 20); it writes `.niagara-mirror` on creation.
 
 ## Verify
 ```
