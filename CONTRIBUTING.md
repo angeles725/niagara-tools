@@ -13,7 +13,7 @@ governance) is deliberately out of scope until the repo has a GitHub remote AND 
 ## 1. Quick path (4 steps)
 
 1. Make your change (edit code, docs, KB topic, etc.).
-2. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh tests/*.bats`. Both must exit 0.
+2. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`. Both must exit 0.
 3. Commit using Conventional Commits (see §6 Pre-commit checklist).
 4. If the change touches `scripts/ng-deploy.sh`'s flag/exit/env surface OR you've accumulated
    2+ MINOR features, run the Release process (§5).
@@ -35,6 +35,26 @@ script in `scripts/` follows red → green → refactor:
 The PATH-injected fakebin pattern (see `tests/ng-deploy.bats setup()`) is the standard for
 stubbing external commands (`gradlew`, `unzip`, `tar`, etc.). Do not call real commands that
 touch a station, a build, or the filesystem outside `$TMPDIR_T`.
+
+The same rules apply to the kit toolbelt (`build-n4-module-kit/toolbelt/*.sh`): its suites are
+`tests/verify-module.bats`, `tests/build-sh.bats`, `tests/mirror-niagara-home.bats`,
+`tests/stored-repack.bats` and `tests/kit-links.bats`. Jar/class/`niagara_home` fixtures are
+generated at test time by `tests/helpers/n4-fixtures.bash` (`load helpers/n4-fixtures`) — never
+commit a binary fixture. `tests/ng-deploy.bats` does not load the helpers.
+
+### 2.1 Test runner setup
+
+The gate needs `bats` (bats-core) and `shellcheck` on `PATH`. Install once:
+
+```bash
+# Debian / Ubuntu (WSL default)
+sudo apt-get install -y bats shellcheck
+
+# linuxbrew (no sudo; the form used on the dev WSL, bats-core 1.14)
+brew install bats-core shellcheck
+```
+
+Check: `bats --version` prints `Bats 1.x` and `bats tests/ng-deploy.bats` reports 26 cases.
 
 ---
 
@@ -93,7 +113,7 @@ When a release is warranted (per §1 step 4):
    newest section. Populate `### Added` / `### Changed` / `### Fixed` / `### Removed` /
    `### Deprecated` / `### Security` subsections that apply (omit the others). Include the
    `### References` subsection with SDD slug + engram observation IDs (mirrors chihuahua style).
-3. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh tests/*.bats`. Both must exit 0.
+3. Run the gate: `bats tests/*.bats && shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`. Both must exit 0.
 4. Commit the version bump + CHANGELOG entry + any code that motivated the bump together.
    Conventional commit subject: `chore(release): vX.Y.Z` if release-only; otherwise fold into
    the `feat:` / `fix:` commit that motivated the release.
@@ -113,7 +133,7 @@ is enough. The bats anti-drift test guards the resolution logic against regressi
 Before `git commit`:
 
 - [ ] `bats tests/*.bats` exits 0 (all tests green).
-- [ ] `shellcheck scripts/*.sh tests/*.bats` exits 0 (no warnings on changed lines).
+- [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
 - [ ] Commit message is Conventional Commits (`feat:` / `fix:` / `chore:` / `docs:` /
       `refactor:` / etc.).
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
