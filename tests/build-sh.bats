@@ -72,3 +72,11 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 30 ]
   [ ! -e "$TMPDIR_T/verify.args" ]
 }
+
+@test "B7: --help prints only the header comment, no code line leaks (usage sed range drift)" {
+  run "$B" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage:"* ]]
+  [[ "$output" != *"set -euo pipefail"* ]]
+  [[ "$output" != *"usage()"* ]]
+}

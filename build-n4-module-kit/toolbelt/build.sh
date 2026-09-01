@@ -15,7 +15,7 @@
 # Exit: 0 build + gate passed · 2 usage · 10 environment (no JDK 8, not a niagara_home, no profile) · 30 gradle failed · 50 gate failed (ng-deploy.sh 50 = verify failed)
 set -euo pipefail
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
