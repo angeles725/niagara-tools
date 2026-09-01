@@ -6,6 +6,61 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.4.0] - 2026-09-01
+
+### Added — `build-n4-module-kit-v0.2`
+
+- `build-n4-module-kit`: fold-in of 41 proven lessons from 3 retros (ColdRoomPan rt-hardening,
+  DashboardPan 5-rooms, DashboardPan HMI touch UX) and the concurrent session bitácora into
+  7 kit files (`types/dashboard.md`, `types/logic.md`, `build-verify.md`, `METHODOLOGY.md`,
+  `BUILD-LOOP.md`, `SOURCES.md`, `types/wb-widgets.md`). Evidence markers (`[CERT]`,
+  `[CERT-live]`, `[INFER]`) preserved from source retros.
+- `toolbelt/verify-module.sh`: THE verify gate — bytecode major 52, `NIAGARA4.SF` presence,
+  `module.xml` type-to-class resolution; opt-in `--target-version`, `--stored`, `--src` checks.
+  POSIX-only (no JDK). Exit codes 0/1/2/3.
+- `toolbelt/build.sh`: rewrite — source-based profile selection (skips stub `-wb`), Java 8 +
+  clean + slotomatic + jar, runs `verify-module.sh` on every produced jar. Exit codes 2/10/30/50.
+- `toolbelt/mirror-niagara-home.sh`: safe writable mirror of a live Niagara install for builds
+  against a running station (refuses real install or any non-mirror dir, exit 20).
+- `toolbelt/stored-repack.sh`: STORED repackage for the Workbench re-sign path (B7 recipe);
+  manifest-first ordering, `zip -0`, verifiable with `verify-module.sh --stored`.
+- `tests/verify-module.bats`, `tests/build-sh.bats`, `tests/mirror-niagara-home.bats`,
+  `tests/stored-repack.bats`, `tests/kit-links.bats`: 5 bats suites (29 tests) with generated-jar
+  fixtures helper `tests/helpers/n4-fixtures.bash`.
+
+### Changed — `build-n4-module-kit-v0.2`
+
+- Kit doctrine rewritten to three explicit roles: `verify-module.sh` (THE gate),
+  `build.sh` (recommended WSL build, runs the gate), `ng-deploy.sh` (station deploy wrapper —
+  backup → build → copy → type-count verify; slotomatic guard rt-only). Replaces the ambiguous
+  primary/fallback framing in `build-verify.md` and `BUILD-LOOP.md`.
+- `toolbelt/build.sh` exit codes: 2 usage error, 10 env/path error, 30 gradle failure,
+  50 verify-module gate failure (supersedes previous informal codes).
+- `CONTRIBUTING.md`: bats-core install step added to the test-runner prerequisites section.
+
+### Fixed — `build-n4-module-kit-v0.2`
+
+- Dangling kit links (`checklist-common.md` → `METHODOLOGY.md`;
+  `type-dashboard.md` → `types/dashboard.md`) removed from kit files.
+- `build.sh`: stub-profile selection now skips profiles with a `build.gradle` but no source files
+  (was silently including them).
+- `build.sh`: all-classes bytecode major check now correctly catches a later `.class` at major 65
+  when the first `.class` in the jar is major 52 (false-pass fixed).
+
+### Notes
+
+- Launcher `~/.claude/skills/build-n4-module/SKILL.md` updated to v0.2 (three-role doctrine,
+  verify-module.sh in Output Contract). This file lives outside the git repository; it is not
+  included in this tag but is documented in the PR3 body and in engram.
+
+### References
+
+- SDD slug: `build-n4-module-kit-v0.2`
+- Engram: explore #7937, proposal #7938, spec #7939, design #7940, tasks #7943.
+- Tag: `v0.4.0`.
+
+---
+
 ## [v0.3.0] - 2026-05-18
 
 ### Added — `niagara-tools-slotomatic-integration`
