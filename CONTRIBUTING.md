@@ -6,7 +6,9 @@ procedure manual ("how to bump version", "how to add a KB topic", "how to commit
 overlap, `CLAUDE.md` carries one-liners and pointers; this file carries the full recipe.
 
 **Scope**: solo developer + AI agents. External-contributor formalism (CoC, issue/PR templates,
-governance) is deliberately out of scope until the repo has a GitHub remote AND public consumers.
+governance) is deliberately out of scope while the project is solo. The GitHub remote now exists
+(`origin` = github.com/angeles725/niagara-tools) and work lands via pull request (§8), but there
+are no public consumers yet, so that formalism stays deferred.
 
 ---
 
@@ -119,8 +121,8 @@ When a release is warranted (per §1 step 4):
    the `feat:` / `fix:` commit that motivated the release.
 5. Tag the commit: `git tag vX.Y.Z`. Tag name uses `v` prefix; the `VERSION` file holds raw
    semver (no `v`).
-6. Push deferred until `niagara-tools-github-remote` change unlocks the remote:
-   `git push && git push --tags`. Until then, tags are local-only — see §8 Limitations.
+6. Push to `origin`: `git push && git push --tags` (tags after the release commit is on `main`).
+   Changes reach `main` via pull request, not direct pushes — see §8 for the branch → PR → ff-only flow.
 
 `SCRIPT_VERSION` does NOT need to be edited manually. The script reads `VERSION` at startup via
 `cat "${SCRIPT_DIR}/../VERSION"` (CWD-agnostic, `BASH_SOURCE[0]`-relative). Editing `VERSION`
@@ -170,12 +172,14 @@ Before `git commit`:
 
 ---
 
-## 8. Limitations (current solo phase)
+## 8. Workflow & limitations (current solo phase)
 
-- **No GitHub remote yet**. Tags are local-only; if the machine is lost, tag history goes with
-  it. Unlock condition: `niagara-tools-github-remote` SDD change. Until then, the release
-  process (§5) ends at step 5 (tag locally); step 6 (push tags) is deferred.
+- **GitHub remote + PR workflow (active)**. `origin` = github.com/angeles725/niagara-tools.
+  Changes land as pull requests, not direct commits to `main`: branch off `main` → open a PR
+  (`gh pr create --base main`) → merge **ff-only / rebase** (no squash, no merge commits — keep a
+  linear history). Tags (§5 step 6) are pushed with `git push --tags` after the release commit is on
+  `main`.
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
-  checklist + agent discipline. Future unlock: pre-commit hook in `niagara-tools-github-remote`.
+  checklist + agent discipline. Future: a pre-commit hook.
 - **No CI**. The bats + shellcheck gate is human/agent-run (manual or via the SDD apply/verify
-  phases). Future unlock: GitHub Actions in `niagara-tools-github-remote`.
+  phases). Future: GitHub Actions on `origin`.
