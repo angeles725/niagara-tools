@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
 # Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup --i-know-what-im-doing]
-#        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic]
+#        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic] [--no-gate]
 #        ng-deploy.sh [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.
 
@@ -14,6 +14,8 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 readonly VERSION_FILE="${SCRIPT_DIR}/../VERSION"
+# verify-module gate binary — env-overridable (tests point it at a stub)
+VERIFY_MODULE_BIN="${VERIFY_MODULE_BIN:-${SCRIPT_DIR}/../build-n4-module-kit/toolbelt/verify-module.sh}"
 SCRIPT_VERSION="$(cat "${VERSION_FILE}" 2>/dev/null || echo "unknown")"
 readonly SCRIPT_VERSION
 
@@ -27,6 +29,7 @@ IKWID=0      # i-know-what-im-doing companion flag
 ENV_FILE=".env.local"
 WITH_SLOTOMATIC=0
 STRICT_SLOTOMATIC=0
+NO_GATE=0
 
 # ---------------------------------------------------------------------------
 # print_usage — print help text to stdout (does NOT exit)
@@ -46,8 +49,9 @@ Options:
   --no-deploy              Build only; do not copy or verify (jars stay in build/libs/)
   --no-backup              WARNING: skip backup step (dangerous — live station has no rollback)
   --i-know-what-im-doing   Required companion for --no-backup
-  --with-slotomatic        Run :MODULE-rt:slotomatic BEFORE build_jars (opt-in; ignored on mode B)
+  --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
+  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C)
   --help                   Print this help and exit 0
   --version                Print SCRIPT_VERSION and exit 0
 
@@ -68,7 +72,7 @@ Exit codes:
   20  backup failed, or --no-backup without --i-know-what-im-doing
   30  build (gradlew) returned non-zero
   40  copy of jar to STATION_MODULES_DIR failed
-  50  verify failed: type count mismatch or BUILD_ID not found in index.html
+  50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed
 EOF
 }
 
@@ -140,6 +144,9 @@ parse_args() {
                 shift ;;
             --strict-slotomatic)
                 STRICT_SLOTOMATIC=1
+                shift ;;
+            --no-gate)
+                NO_GATE=1
                 shift ;;
             *)
                 printf '[ng-deploy] ERROR unknown flag: %s\n' "$1" >&2
@@ -392,16 +399,53 @@ detect_annotation_changes() {
 }
 
 # ---------------------------------------------------------------------------
+# ux_has_annotations — true (0) if the -ux profile source tree holds a
+# @Niagara(Type|Property|Action|Topic|Singleton) annotation. Presence-based,
+# not git-diff: a fresh checkout has no diff but its -ux slots still need regen.
+# ---------------------------------------------------------------------------
+ux_has_annotations() {
+    local ux_src
+    ux_src="$(dirname "$GRADLEW_PATH")/${MODULE_NAME}/${MODULE_NAME}-ux/src"
+    [[ -d "$ux_src" ]] || return 1
+    grep -rqE '@Niagara(Type|Property|Action|Topic|Singleton)' "$ux_src" --include='*.java' 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# run_gate — run the verify-module.sh gate on the built jars (die 50 on fail).
+# Skipped by --no-gate and for mode B; a missing gate binary warns, not blocks.
+# ---------------------------------------------------------------------------
+run_gate() {
+    local jars=( "$@" )
+    if [[ ! -x "$VERIFY_MODULE_BIN" ]]; then
+        printf '[ng-deploy] WARN gate skipped: verify-module not executable at %s\n' "$VERIFY_MODULE_BIN" >&2
+        return 0
+    fi
+    local module_dir
+    module_dir="$(dirname "$GRADLEW_PATH")/${MODULE_NAME}"
+    printf '[ng-deploy] gate: verify-module on %s\n' "${jars[*]##*/}"
+    "$VERIFY_MODULE_BIN" --src "$module_dir" "${jars[@]}" \
+        || die 50 "verify-module gate failed; jars not fit to deploy (use --no-gate to override)"
+    printf '[ng-deploy] gate ok\n'
+}
+
 # run_slotomatic — invoke gradlew :MODULE_NAME-rt:slotomatic with 3 -P overrides
 # die 15 on non-zero gradlew exit.
 # ---------------------------------------------------------------------------
 run_slotomatic() {
-    printf '[ng-deploy] slotomatic: running :%s-rt:slotomatic\n' "${MODULE_NAME}"
+    local tasks=( ":${MODULE_NAME}-rt:slotomatic" )
+    # P2: a -ux profile carrying @Niagara annotations needs its slots regenerated too
+    # (only meaningful in mode A — mode C is rt-only, mode B never reaches here).
+    if [[ "$MODE" == "A" ]] && ux_has_annotations; then
+        tasks+=( ":${MODULE_NAME}-ux:slotomatic" )
+        printf '[ng-deploy] slotomatic: running :%s-rt:slotomatic :%s-ux:slotomatic (-ux has @Niagara annotations)\n' "${MODULE_NAME}" "${MODULE_NAME}"
+    else
+        printf '[ng-deploy] slotomatic: running :%s-rt:slotomatic\n' "${MODULE_NAME}"
+    fi
     "${GRADLEW_PATH}" \
         -Pniagara_home="${NIAGARA_HOME}" \
         "-Pniagara_user_home=${NIAGARA_USER_HOME}" \
         -Porg.gradle.java.installations.paths="${JAVA_HOME}" \
-        ":${MODULE_NAME}-rt:slotomatic" \
+        "${tasks[@]}" \
         || die 15 "slotomatic failed (gradlew exited non-zero); deploy aborted"
     printf '[ng-deploy] slotomatic ok\n'
 }
@@ -447,7 +491,8 @@ main() {
             run_slotomatic
         fi
     elif [[ "$WITH_SLOTOMATIC" -eq 1 ]]; then
-        printf '[ng-deploy] WARN --with-slotomatic ignored for mode B (ux-only)\n' >&2
+        printf '[ng-deploy] WARN --with-slotomatic ignored for mode B (ux-only): ng-deploy runs slotomatic for -rt only.\n' >&2
+        printf '[ng-deploy] WARN to regenerate -ux slots, deploy with --mode A --with-slotomatic, or build via toolbelt/build.sh.\n' >&2
     fi
 
     # Step 3: Build (always; --no-deploy stops AFTER build)
@@ -482,7 +527,15 @@ main() {
             ;;
     esac
 
-    # Step 6: Write deploy SHA (after successful verify; silent if git absent)
+    # Step 5.5: verify-module gate (default on for mode A/C; --no-gate to skip; mode B has none)
+    if [[ "$NO_GATE" -eq 0 ]]; then
+        case "$MODE" in
+            A) run_gate "$rt_jar" "$ux_jar" ;;
+            C) run_gate "$rt_jar" ;;
+        esac
+    fi
+
+    # Step 6: Write deploy SHA (after successful verify + gate; silent if git absent)
     write_last_deploy_sha
 
     # Step 7: Post-deploy hint
