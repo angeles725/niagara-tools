@@ -473,7 +473,8 @@ ENVEOF
         --env-file "$TMPDIR_T/env_t24" \
         --no-backup \
         --i-know-what-im-doing \
-        --mode A
+        --mode A \
+        --no-gate
     [ "$status" -eq 0 ]
     [ -f "$TMPDIR_T/.last-deploy-sha" ]
     [ "$(cat "$TMPDIR_T/.last-deploy-sha")" = "abc1234abc1234abc1234abc1234abc1234abc1234" ]
@@ -492,7 +493,8 @@ ENVEOF
         --env-file "$TMPDIR_T/dot_env_local" \
         --no-backup \
         --i-know-what-im-doing \
-        --mode A
+        --mode A \
+        --no-gate
     [ "$status" -eq 50 ]
     [ ! -f "$TMPDIR_T/.last-deploy-sha" ]
 }
@@ -512,4 +514,130 @@ ENVEOF
     [ "$status" -eq 0 ]
     # No WARN about slotomatic in output when detection is off
     [[ "${output}${stderr}" != *"annotation"* ]]
+}
+
+# ===========================================================================
+# P2 — ng-deploy runs :MOD-ux:slotomatic when the -ux profile has @Niagara
+# annotations (today only :MOD-rt:slotomatic runs). Presence-based scan of the
+# -ux source tree; requires --with-slotomatic and mode A (mode C has no ux).
+# ===========================================================================
+
+# T27: mode A + --with-slotomatic + annotated -ux source → :test-ux:slotomatic runs
+@test "T27: ux slotomatic runs when the -ux profile carries a @Niagara annotation" {
+    mkdir -p "$TMPDIR_T/fakebin/test/test-ux/src/com/x"
+    printf 'package com.x;\n@NiagaraType\npublic class BFoo {}\n' \
+        > "$TMPDIR_T/fakebin/test/test-ux/src/com/x/BFoo.java"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup --i-know-what-im-doing --no-deploy \
+        --mode A --with-slotomatic
+    [ "$status" -eq 0 ]
+    grep -q ":test-ux:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+    grep -q ":test-rt:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+}
+
+# T28: mode A + --with-slotomatic + NO annotation in -ux → :test-ux:slotomatic NOT run
+@test "T28: ux slotomatic is skipped when the -ux profile has no @Niagara annotation" {
+    mkdir -p "$TMPDIR_T/fakebin/test/test-ux/src/com/x"
+    printf 'package com.x;\npublic class Plain {}\n' \
+        > "$TMPDIR_T/fakebin/test/test-ux/src/com/x/Plain.java"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup --i-know-what-im-doing --no-deploy \
+        --mode A --with-slotomatic
+    [ "$status" -eq 0 ]
+    run grep -q ":test-ux:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+    [ "$status" -ne 0 ]
+    grep -q ":test-rt:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+}
+
+# T29: mode C (rt-only) never runs :test-ux:slotomatic even if a ux tree exists
+@test "T29: mode C never runs ux slotomatic (no ux profile in scope)" {
+    mkdir -p "$TMPDIR_T/fakebin/test/test-ux/src/com/x"
+    printf 'package com.x;\n@NiagaraType\npublic class BFoo {}\n' \
+        > "$TMPDIR_T/fakebin/test/test-ux/src/com/x/BFoo.java"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup --i-know-what-im-doing --no-deploy \
+        --mode C --with-slotomatic
+    [ "$status" -eq 0 ]
+    run grep -q ":test-ux:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+    [ "$status" -ne 0 ]
+    grep -q ":test-rt:slotomatic" "$TMPDIR_T/gradlew.calls.log"
+}
+
+# ===========================================================================
+# P1 — ng-deploy runs the verify-module.sh gate on the built jars (default on
+# for mode A/C, --no-gate to skip); a failing gate is exit 50. The gate binary
+# is stubbed via VERIFY_MODULE_BIN so these test ng-deploy's wiring, not the
+# gate's internals (verify-module.sh has its own suite).
+# ===========================================================================
+
+# helper: write a fake verify-module that logs its args and exits $1
+_fake_gate() {   # _fake_gate <exit-code>
+    cat > "$TMPDIR_T/fake-vm.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" > "$TMPDIR_T/gate.args"
+exit ${1:-0}
+STUB
+    chmod +x "$TMPDIR_T/fake-vm.sh"
+    export VERIFY_MODULE_BIN="$TMPDIR_T/fake-vm.sh"
+}
+
+_gate_env() {   # env whose expected type counts match the fake unzip (9) so verify_jar passes
+    cat > "$TMPDIR_T/env_gate" <<ENVEOF
+MODULE_NAME=test
+GRADLEW_PATH=$TMPDIR_T/fakebin/gradlew
+NIAGARA_HOME=/mnt/c/Niagara/iC-Niagara-4.13.2.18
+NIAGARA_USER_HOME=/mnt/c/Users/equipo/Niagara4.13/test
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+STATION_MODULES_DIR=$TMPDIR_T/modules
+EXPECTED_RT_TYPES=9
+EXPECTED_UX_TYPES=9
+ENVEOF
+    mkdir -p "$TMPDIR_T/fakebin/test/test-rt/build/libs" "$TMPDIR_T/fakebin/test/test-ux/build/libs"
+    touch "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" \
+          "$TMPDIR_T/fakebin/test/test-ux/build/libs/test-ux.jar"
+}
+
+# T30: gate default-on for mode A; a failing gate makes ng-deploy exit 50
+@test "T30: a failing verify-module gate aborts the deploy with exit 50" {
+    _gate_env; _fake_gate 1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" \
+        --no-backup --i-know-what-im-doing --mode A
+    [ "$status" -eq 50 ]
+    [ -f "$TMPDIR_T/gate.args" ]
+    grep -q -- "--src" "$TMPDIR_T/gate.args"
+    grep -q "test-rt.jar" "$TMPDIR_T/gate.args"
+    grep -q "test-ux.jar" "$TMPDIR_T/gate.args"
+}
+
+# T31: gate passes → deploy succeeds and the gate was invoked
+@test "T31: a passing verify-module gate lets the deploy complete" {
+    _gate_env; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" \
+        --no-backup --i-know-what-im-doing --mode A
+    [ "$status" -eq 0 ]
+    [ -f "$TMPDIR_T/gate.args" ]
+}
+
+# T32: --no-gate skips the gate entirely (binary never invoked), deploy proceeds
+@test "T32: --no-gate skips the verify-module gate" {
+    _gate_env; _fake_gate 1   # would fail IF invoked
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" \
+        --no-backup --i-know-what-im-doing --mode A --no-gate
+    [ "$status" -eq 0 ]
+    [ ! -f "$TMPDIR_T/gate.args" ]
+}
+
+# T33: mode C gates the rt jar only (no ux jar passed)
+@test "T33: mode C runs the gate on the rt jar only" {
+    _gate_env; _fake_gate 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" \
+        --no-backup --i-know-what-im-doing --mode C
+    [ "$status" -eq 0 ]
+    [ -f "$TMPDIR_T/gate.args" ]
+    grep -q "test-rt.jar" "$TMPDIR_T/gate.args"
+    run grep -q "test-ux.jar" "$TMPDIR_T/gate.args"
+    [ "$status" -ne 0 ]
 }
