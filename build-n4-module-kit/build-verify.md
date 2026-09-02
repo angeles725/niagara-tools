@@ -81,6 +81,9 @@ grep -rnE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' <module> --include='*.ja
 unzip -p <jar> META-INF/module.xml | grep baja
 ```
 
+## Pre-release real-jar smoke test
+Before shipping a kit or toolbelt change, run `toolbelt/verify-module.sh` over at least one known-good and one known-bad real module jar — the bats suites use generated fixtures, which only simulate a malformed jar; a real one proves the gate catches a live defect. Worked known-bad: `ColdRoomPan-rt.jar` fails the `types` check because `module-include.xml` still declares `com.angeles.ColdRoomPan.BHoaMode` after that class was deleted — the live "Missing class ColdRoomPan:HoaMode" defect. DashboardPan's jars pass `--src` clean. Usage: see §Verify above.
+
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 
