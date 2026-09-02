@@ -19,6 +19,8 @@ cd /path/to/chihuahua
 /path/to/niagara-tools/scripts/ng-deploy.sh --mode A
 ```
 
+The `verify-module` gate runs by default on mode A and mode C; pass `--no-gate` to skip it (see `build-n4-module-kit/build-verify.md`).
+
 ## 2. Invariants (non-negotiable)
 
 - **Order is non-negotiable**: backup → build → copy → verify. Never reorder.
