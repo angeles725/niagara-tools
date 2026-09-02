@@ -6,6 +6,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.5.0] - 2026-09-01
+
+### Added — ng-deploy verify-module gate and `-ux` slotomatic
+
+- `scripts/ng-deploy.sh`: runs the `build-n4-module-kit/toolbelt/verify-module.sh` gate on the
+  built jars during the verify step, default ON for mode A/C. New `--no-gate` flag to skip it and
+  `VERIFY_MODULE_BIN` env var to override the gate binary (used by the tests).
+- `scripts/ng-deploy.sh`: runs `:MODULE-ux:slotomatic` (in addition to `:MODULE-rt:slotomatic`)
+  under `--with-slotomatic` in mode A when the `-ux` profile source carries a
+  `@Niagara(Type|Property|Action|Topic|Singleton)` annotation (presence-based scan).
+- `tests/ng-deploy.bats`: 7 new cases — T27–T29 (`-ux` slotomatic) and T30–T33 (verify-module
+  gate). Each was mutation-checked to fail when its target behavior is broken. 33 total.
+
+### Changed — ng-deploy verify-module gate and `-ux` slotomatic
+
+- `scripts/ng-deploy.sh`: exit 50 ("verify failed") now also covers a failed `verify-module.sh`
+  gate, alongside the existing type-count mismatch and missing-BUILD_ID cases.
+- `scripts/ng-deploy.sh`: mode-B `--with-slotomatic` warning enriched to point at
+  `--mode A --with-slotomatic` or `toolbelt/build.sh` for regenerating `-ux` slots (behavior
+  unchanged — mode B still warns and skips).
+
+### References
+
+- SDD context: build-n4-module-kit v0.2 retro §6 follow-ups P1 (ng-deploy gate) + P2 (`-ux` slotomatic).
+- Engram: #7953 (this change).
+
+---
+
 ## [v0.4.0] - 2026-09-01
 
 ### Added — `build-n4-module-kit-v0.2`
