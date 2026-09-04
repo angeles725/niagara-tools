@@ -37,6 +37,11 @@ has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/BUILD-STAT
 has_retro=$(printf '%s\n' "$changed" | grep -E '^build-n4-module-kit/retros/[^/]+\.md$' | grep -vE '/INDEX\.md$' | head -1 || true)
 has_index=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/retros/INDEX\.md$' || true)
 
+# promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
+# also moves the registry (an in-range retros/INDEX.md diff), so the trailer alone is NOT a blanket
+# escape; a promotion trailer with no INDEX diff falls through to the FAIL below.
+if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' && [ "${has_index:-0}" -ge 1 ]; then exit 0; fi
+
 if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ] && [ "${has_index:-0}" -ge 1 ]; then
   # content half: the ledger + index must actually cohere
   bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \

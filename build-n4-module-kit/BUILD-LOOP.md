@@ -48,7 +48,8 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - **Kit-infrastructure work** (changing the kit itself — toolbelt, type guides, methodology — not building a module) has no module build to record: update the `kit` self-section of `BUILD-STATE.md` instead, under the same close gate.
 - A session that changed KIT files is NOT "done" until ONE of:
   - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
-  - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope.
+  - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope; OR
+  - (c) it is a PROMOTION of already-filed lessons into the core: `Retro: promotion (folds <ids> from existing retros)` in the commit trailer AND an in-range `retros/INDEX.md` change (flipping folded/pending marks). The registry move is REQUIRED — the trailer alone is not a blanket escape; a promotion PR folds existing retros, so it owes no NEW retro.
 - The **Output Contract MUST print** `retro: <path> (N deltas, review-status: pending)` — or `retro: none (trivial: <reason>)` — as an explicit line. A written-but-invisible retro reads as a missing one.
 - Do NOT silently rewrite METHODOLOGY — propose; a human folds it in. This is how the kit matures from seed to solid.
 - Machine enforcement (opt-in): `toolbelt/sweep-build-state.sh` validates the ledger + `retros/INDEX.md`; `.githooks/pre-push` blocks a build-relevant push that skips them (enable with `git config core.hooksPath .githooks`).

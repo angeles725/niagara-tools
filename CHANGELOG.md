@@ -6,6 +6,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.9.0] - 2026-09-04
+
+### Added — §7 close-gate third exit: `Retro: promotion` (MINOR)
+
+- `.githooks/pre-push`: a THIRD accepted close for a build-relevant kit change, parallel to the
+  new-retro path and the trivial waiver — a `Retro: promotion (folds <ids> from existing retros)`
+  commit trailer, valid ONLY when the range also carries a `retros/INDEX.md` diff (the registry move).
+  A promotion trailer with no INDEX diff is rejected (fail-closed), so it cannot be a blanket escape.
+  Closes the gap where a lesson-promotion PR (Campaign 2) matched neither existing exit and would
+  otherwise be forced into a FALSE `trivial` label. `sweep-build-state.sh` is unchanged (VCS-free,
+  kit-links L2) — the trailer is a commit/diff concept the hook owns.
+- `build-n4-module-kit/BUILD-LOOP.md` §7: documents exit (c).
+- `tests/build-retro-sync.bats`: H8 (promotion + INDEX diff → pass) / H9 (promotion, no INDEX → fail),
+  RED-first, mutation-checked. 18 cases total.
+- Retro `2026-09-04-gate-exit-taxonomy-promotion.md` (+ INDEX row) captures the exit-taxonomy lesson.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 (gate hardening; MINOR — a new hook behavior).
+- Engram: #8114 (Campaign 1 complete). Sequenced after PR-A (0.8.2); PR-A2/B/C follow as 0.9.1/0.9.2/0.9.3.
+
+---
+
 ## [v0.8.2] - 2026-09-04
 
 ### Changed — Campaign 2 PR-A: fold logic-group lessons L3–L14 into the core
