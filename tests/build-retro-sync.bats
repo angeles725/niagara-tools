@@ -233,8 +233,11 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
 }
 
 # --- third §7 exit: promotion (a fold-only PR fits neither "new retro" nor "trivial") ---
-# A promotion trailer is a valid close ONLY when it moves the registry (a retros/INDEX.md
-# diff in range flips folded/pending marks). The trailer alone must NOT be a blanket escape.
+# A promotion trailer is a valid close ONLY when it moves the registry with a STRUCTURAL ANCHOR in
+# range — either a retros/INDEX.md diff (a FULL promotion flips folded/pending marks) OR a
+# BUILD-STATE.md diff (a PARTIAL promotion folds content + narrows the owed open_issue list without
+# flipping a row, because the source retro stays pending). The trailer with NEITHER anchor must NOT
+# be a blanket escape. Both anchored paths still run sweep for ledger coherence.
 @test "H8: a kit change + 'Retro: promotion (folds …)' trailer AND an INDEX.md diff PASSES" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
   printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/INDEX.md\n' > "$BATS_TEST_TMPDIR/changed"
@@ -243,10 +246,25 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 0 ]
 }
 
-@test "H9: a promotion trailer WITHOUT an INDEX.md diff in range FAILS (no blanket escape)" {
+@test "H9: a promotion trailer with NEITHER an INDEX diff NOR a BUILD-STATE diff FAILS (no blanket escape)" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
-  printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"   # kit file only: no anchor
   printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -ne 0 ]
+}
+
+# H10 drives the AG-PR1 fix: a PARTIAL promotion (folds content, source retro stays pending, so it
+# flips NO INDEX row) anchors on an in-range BUILD-STATE.md diff instead — the shape C4-PR2 shipped.
+# RED today: the current hook (.githooks/pre-push line 43) requires an INDEX diff (has_index>=1), so
+# a BUILD-STATE-only promotion falls through to the FAIL. The fix accepts a BUILD-STATE diff as an
+# ALTERNATIVE structural anchor and still runs sweep for ledger coherence.
+# MUTATION (run post-green): drop the BUILD-STATE alt-anchor acceptance in the hook → H10 flips back
+# to FAIL, proving the acceptance clause (not sweep) is what carries it.
+@test "H10: a promotion trailer + an in-range BUILD-STATE.md diff (no INDEX) PASSES (partial promotion)" {
+  [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold B737 composition\n\nRetro: promotion (folds B737 into logic.md; source retro stays pending for the owed halves)\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
 }
