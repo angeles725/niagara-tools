@@ -6,6 +6,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.9.4] - 2026-09-04
+
+### Added — Campaign 2 close retro (promotion-process meta-lessons)
+
+- `retros/2026-09-04-campaign2-promotion-process-meta-lessons.md` (+ INDEX row): captures the three
+  process lessons Campaign 2 proved — (a) the fold-vs-revert (split-retro) rule; (b) the doc-vs-script
+  folded-completeness rule (a script/gate lesson is only partly folded by documenting its rule; impl owed
+  → `pending` + open_issue); (c) conservative adversarial fidelity grading catches folded over-claims a
+  green bats suite alone misses (5 caught across the promotion PRs). The mechanism documenting its own
+  process — the honest Campaign 2 close.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 close. New-retro exit; documentation only → PATCH.
+- Engram: #8120 (Campaign 2 complete).
+
+---
+
 ## [v0.9.3] - 2026-09-04
 
 ### Changed — Campaign 2 PR-C: fold build/deploy/schema lessons (Campaign 2 complete)

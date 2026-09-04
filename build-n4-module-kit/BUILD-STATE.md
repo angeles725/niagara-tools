@@ -145,8 +145,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.9.3                       # current kit VERSION
-last_change: 2026-09-04              # Campaign 2 PR-C: fold build/deploy/schema; Campaign 2 complete
+version: 0.9.4                       # current kit VERSION
+last_change: 2026-09-04              # Campaign 2 CLOSE: filed the promotion-process meta-lessons retro
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS (rule folded, impl pending — future MINOR feature PRs, test-first; Campaign 3 candidates): B4 (verify-module.sh WARN on non-asset files under rc/), B6 (build.sh auto-detect the module's own gradle target), B7 (build.sh detect the gradle root / accept :project:task), B8 (ng-deploy.sh grep `<type ` with a space so EXPECTED_*_TYPES matches the gate), B10 (ng-deploy.sh default no-backup + keep-N purge); soft-start build.sh (print ONE actionable line on the `modules/<jar>` clean-lock failure, not the raw stacktrace). Their retros stay review-status pending until implemented.
@@ -155,5 +155,5 @@ open_issues:
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · Campaign 2 PR-C folded build/deploy/schema (D1/D2/D3/B9 + S2/S3/S4); Campaign 2 COMPLETE. next: Campaign 3 — the 5 owed script-impls (B4/B6/B7/B8/B10), then the T/process group; both tracked in open_issues above
+last_session: 2026-09-04 · Campaign 2 CLOSED (0.9.3) + filed the promotion-process meta-lessons retro (0.9.4). next: Campaign 3 — the 6 owed script-impls (B4/B6/B7/B8/B10 + soft-start build.sh) grouped by target file (verify-module.sh / build.sh / ng-deploy.sh), then the T/process group; tracked in open_issues above
 <!-- /build-state.v1 -->
