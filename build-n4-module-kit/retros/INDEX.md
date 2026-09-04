@@ -43,3 +43,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-04-campaign2-promotion-process-meta-lessons.md | kit | 2026-09-04 | folded | 0 |
 | 2026-09-04-campaign3-close-process-meta-lessons.md | kit | 2026-09-04 | pending | 0 |
 | 2026-09-04-campaign4-close-process-meta-lessons.md | kit | 2026-09-04 | pending | 0 |
+| 2026-09-04-campaign5-gate-activation.md | kit | 2026-09-04 | pending | 0 |
