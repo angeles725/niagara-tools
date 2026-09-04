@@ -133,15 +133,18 @@ ENVEOF
 }
 
 # ---------------------------------------------------------------------------
-# Test 3: --no-backup alone runs — gate REMOVED (Campaign 3 B10, ng-deploy-backup)
-# The --i-know-what-im-doing companion gate is dropped: the DEFAULT is now a safe lightweight
-# backup, so --no-backup is a plain opt-in. RED-first: today it exits 20 with the gate message.
-# SAFETY NOTE: this weakens the accidental-no-backup guard; mitigated by the safe default backup.
+# Test 3: --no-backup runs trivially but WARNS (Campaign 3 B10 iii, ng-deploy-backup)
+# The --i-know-what-im-doing gate is dropped (default is now a safe lightweight backup, so
+# --no-backup is a plain opt-in) — BUT it prints a one-line safety WARN instead of silently
+# skipping. This is the WARN compromise: frictionless + a zero-cost rollback reminder, not a
+# silent removal of a safety behavior. RED-first: today it exits 20 with the gate message.
 # ---------------------------------------------------------------------------
-@test "--no-backup alone runs without a gate (--i-know-what-im-doing no longer required) (B10 iii)" {
+@test "--no-backup runs without a gate but prints a safety WARN (B10 iii)" {
     run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --no-deploy --mode A
     [ "$status" -ne 20 ]                                     # gate removed (was exit 20)
-    [[ "${output}${stderr}" != *"i-know-what-im-doing"* ]]   # no gate message
+    [[ "${output}${stderr}" != *"i-know-what-im-doing"* ]]   # no gate message / no companion required
+    [[ "${output}${stderr}" == *"backup skipped"* ]]         # the WARN fires
+    [[ "${output}${stderr}" == *"rollback"* ]]               # ...and points at git rollback (mutation: drop the WARN → red)
 }
 
 # ---------------------------------------------------------------------------
