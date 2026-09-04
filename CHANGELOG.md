@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.13.0] - 2026-09-04
+
+### Added — verify-module.sh: empty-palette gate check (Campaign 3 C3-PR4)
+
+- `build-n4-module-kit/toolbelt/verify-module.sh` (stays VCS-free):
+  - **palette check** (default-on, no `--src`) — a module that declares types but ships an **empty
+    `module.palette`** (only the `b:Folder` root, zero `<p n=…>` component entries) builds, passes the whole
+    gate, deploys, and then shows **nothing to drag in Workbench** — commissioning is silently broken.
+    The check now WARNs (or FAILs under `--strict`), naming the empty palette and the declared type count.
+    It SKIPs when the jar has no `module.palette`, and PASSes a populated one. A **typeless** module with an
+    empty palette does NOT warn (the type-count guard keeps it high-signal, not a nag).
+- `tests/verify-module.bats`: V13–V17 (QA, RED-first) now green; V1–V12 unchanged.
+- `retros/INDEX.md`: flipped **module-palette-and-build-target** → `folded` — its last pending half (the gate
+  check) is now implemented; the palette authoring rule (B5, METHODOLOGY) and the per-module build target
+  (B6, build.sh) were already folded.
+- This closes the owed-script-implementation backlog: B4, B6, B7, B8, B10, soft-start, and palette are all
+  implemented and folded.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 C3-PR4. New default-on gate check → MINOR.
+
+---
+
 ## [v0.12.0] - 2026-09-04
 
 ### Changed — ng-deploy.sh: type-count fix, lightweight-backup default, --no-backup WARN (Campaign 3 C3-PR3)

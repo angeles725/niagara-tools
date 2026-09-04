@@ -12,6 +12,8 @@
 #   typecount packaged <type> count == <module-dir>/<jar-basename>/module-include.xml count.     [--src]
 #   facets    no BFacets.make(BFacets.MIN|MAX, <raw number>) under <module-dir>/<jar-basename>/src. [--src]
 #   rcbackup  no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
+#   palette   a module that declares types must not ship an EMPTY module.palette (nothing to drag in
+#             Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.        [default]
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
@@ -112,6 +114,19 @@ check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable)
   if [ "$STRICT" -eq 1 ]; then row FAIL rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 1; fi
   row WARN rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 0
 }
+check_palette() {  # an EMPTY module.palette on a module that declares types = nothing to drag in Workbench. WARN by default; FAIL under --strict.
+  local jar="$1" pal entries types
+  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP palette "$jar" "no module.palette"; return 0; }
+  pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
+  # component entries carry a name (<p n="..."/>); the b:Folder root has no n= so it is naturally excluded
+  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  types=$(printf '%s' "$MX" | grep -c '<type ' || true)
+  if [ "$entries" -eq 0 ] && [ "$types" -ge 1 ]; then
+    if [ "$STRICT" -eq 1 ]; then row FAIL palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 1; fi
+    row WARN palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 0
+  fi
+  row PASS palette "$jar" "module.palette has $entries component entries"; return 0
+}
 
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
@@ -121,7 +136,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_rc_backup; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_rc_backup check_palette; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done
