@@ -1,6 +1,6 @@
 # Type: pure logic (rt control) — GROWING (control core proven on ColdRoomPan, 2026-08-31)
 
-A control module: `BComponent`s with real control logic, no UI. Exemplar to READ before building: ColdRoomPan-rt (`BColdRoom`, `BEvaporatorUnit`, `BDefrostController`).
+A control module: `BComponent`s with real control logic, no UI. Exemplar to READ before building: ColdRoomPan-rt (`BColdRoom`, `BEvaporatorUnit`, `BDefrostController`). Start-here reading for rt: **`corpus-index.md`** → B744 (what an RT block is) + B737 (composition) + B730/B729 (idioms/timers), all P0.
 
 Seed pointers for the surface not yet proven; the sections below are proven from the ColdRoomPan-rt build:
 

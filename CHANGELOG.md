@@ -6,6 +6,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.14.0] - 2026-09-04
+
+### Added — corpus-index.md: a curated map of the authoring corpus (Campaign 4 C4-PR3, terminal)
+
+- **NEW `build-n4-module-kit/corpus-index.md`** (T7a) — a curated nav of the niagara-research authoring
+  corpus (B729–B760): one row per block (block → what it gives the builder → layer), grouped **priority-first**
+  (P0 read-before-building → P1 → P2) with layer as the sub-sort, plus a "start here" pointer (B744 rt / B760
+  our-module / B751 -wb / B752 -ux). It serves the `corpus-nav FIRST` hard rule: `corpus-nav` for a term, this
+  index for what to read by layer/priority. It is a curated pointer, not a dump — each block lives in
+  niagara-research and is cited, not copied.
+- **Wired in-repo** (minimal, no churn): a one-line pointer from BUILD-LOOP §2, METHODOLOGY top, and
+  types/logic.md start-here.
+- `retros/INDEX.md`: **corpus-index-rt-authoring-and-organization-blocks → `folded`** — all eight of its
+  proposed deltas are now in core (corpus-index + pointers here; WB/UX growth in C4-PR2; lexicon in C4-PR1;
+  composition B737 at logic.md §Composition · L21; schema/versioning B739/B754 at METHODOLOGY §Schema/upgrade
+  safety · S1/S2/S3; build-target B756 at build-verify.md). This flips the row cleanly (in-range INDEX diff).
+- **This closes Campaign 4 and exhausts the 42-lesson mined corpus.** Every mined lesson (logic L, UX U,
+  build/deploy/schema B/S/D, testing/process T) is now folded, and every promotion was fidelity-graded.
+- Companion (out-of-repo, not gated/CHANGELOG'd): the launcher `~/.claude/skills/build-n4-module/SKILL.md`
+  `corpus-nav FIRST` rule + step 2 point at `$KIT/corpus-index.md` and at B760 for our-module work.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 4 C4-PR3 (terminal). New KB artifact + wiring → MINOR.
+
+---
+
 ## [v0.13.4] - 2026-09-04
 
 ### Changed — T7 b/c: grow the two weakest type guides from the WB/UX corpus (Campaign 4 C4-PR2)

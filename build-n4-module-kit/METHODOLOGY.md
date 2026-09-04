@@ -2,6 +2,8 @@
 
 Applies to all module types. Each item is proven from real builds (DashboardPan/ColdRoomPan/chihuahua, 2026-08). Run this against the built module before "done".
 
+> Background reading, by layer and priority: **`corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; the index for what to read (P0 before building).
+
 ## rt (components)
 - [ ] **Slot flags** on every `@NiagaraProperty`: `Flags.SUMMARY` for visible; `SUMMARY|OPERATOR` for operator-writable config; `TRANSIENT|SUMMARY|READONLY` for computed outputs; `HIDDEN` for internal. (control-rt `BNumericWritable` is the exemplar.)
 - [ ] **Facets / units.** Temperatures carry a Celsius facet: `BFacets.make(BFacets.UNITS, BUnit.getUnit("celsius"))`. A MIN/MAX facet wraps its number in `BDouble.make(...)` — `BFacets.make(BFacets.MIN, 0d)` does NOT compile (no `make(String,double)` overload).

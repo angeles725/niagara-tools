@@ -26,6 +26,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 2. Build the layers
 - Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb.
+- **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
 
 ## 3. Preview (UI types) — BEFORE compiling
