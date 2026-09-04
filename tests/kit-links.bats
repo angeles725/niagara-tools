@@ -20,13 +20,15 @@ kit_refs() {
   missing=()
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue
-    # resolve: kit root, kit types/, kit retros/ (a bare retro name is a first-class
-    # kit citation — e.g. types/logic.md:14 cites a self-firing-timer retro), the
-    # niagara-tools repo root (scripts/ng-deploy.sh), or the launcher dir (SKILL.md
-    # lives outside the repo, in ~/.claude/skills/build-n4-module/).
-    # NOTE: this stays biting — a renamed or deleted retro resolves NOWHERE and still fails.
-    if [ -e "$ref" ] || [ -e "types/$ref" ] || [ -e "retros/$ref" ] || [ -e "../$ref" ] \
-       || [ -e "$HOME/.claude/skills/build-n4-module/$ref" ]; then continue; fi
+    # SKILL.md is the launcher — it lives OUTSIDE the repo (~/.claude/skills/build-n4-module/) by
+    # design, so it is a known external pointer, always OK. Skip it unconditionally; do NOT probe a
+    # machine-specific $HOME path (that made L1 pass only where the launcher happened to be installed,
+    # and fail in CI / any clean checkout — an environment coupling CI surfaced).
+    if [ "$ref" = "SKILL.md" ]; then continue; fi
+    # resolve: kit root, kit types/, kit retros/ (a bare retro name is a first-class kit citation —
+    # e.g. types/logic.md:14 cites a self-firing-timer retro), or the niagara-tools repo root
+    # (scripts/ng-deploy.sh). NOTE: this stays biting — a renamed or deleted retro resolves NOWHERE.
+    if [ -e "$ref" ] || [ -e "types/$ref" ] || [ -e "retros/$ref" ] || [ -e "../$ref" ]; then continue; fi
     missing+=("$ref")
   done < <(kit_refs ./*.md types/*.md)
   if [ ${#missing[@]} -gt 0 ]; then printf 'dangling reference: %s\n' "${missing[@]}" >&2; return 1; fi
