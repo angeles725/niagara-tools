@@ -40,3 +40,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
+
+## Kit maintenance — retro promotion discipline (not a per-module build step)
+- **Doc-vs-script folded-completeness:** a retro lesson whose whole content is a rule/checklist item is FULLY folded by documenting it (INDEX row → `folded`). A lesson that asks for a SCRIPT or GATE behavior change is only PARTLY folded by its prose — the implementation is still owed, so its row STAYS `pending` and the impl is logged as a `kit` self-section `open_issue` in `BUILD-STATE.md` (a tracked future MINOR PR). Never mark a retro `folded` just because its prose landed. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 2]
+- **Adversarial fidelity grading beats a green suite:** a promotion is a documentation act whose correctness is faithfulness-to-source + fold-completeness — neither is a runtime property, so a passing bats gate cannot verify it. Budget an independent per-lesson fidelity pass on every promotion PR (diff each fold against its source retro); it catches folded over-claims a green suite misses. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 3]

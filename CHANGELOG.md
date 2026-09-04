@@ -6,6 +6,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.13.1] - 2026-09-04
+
+### Changed — kit doc tidy pass (Campaign 3 close, doc-only)
+
+- **METHODOLOGY.md**: added a new "Kit maintenance — retro promotion discipline" section folding two
+  process rules from the Campaign 2 close retro — the **doc-vs-script folded-completeness** rule (a
+  script/gate lesson is only PARTLY folded by its prose; the impl stays owed and tracked) and the
+  **adversarial fidelity-grading** rule (a promotion's correctness is faithfulness-to-source +
+  fold-completeness, so budget an independent per-lesson fidelity pass — a green suite can't verify it).
+- **types/dashboard.md** (U1): spelled out the detail-render height nuance — give the frame a definite
+  `height:100%` (not `height:auto`), else a near-square image overflows and `overflow:hidden` clips the
+  bottom zone label; the SVG `meet` then letterboxes inside a definite height.
+- **Tag-convention normalization**: the two mixed-format retro citations that put a retro-local `#N` after
+  the `·` separator (`comppan-fase3 · #2`, `process-timers · #2 + L16`) now use the full retro slug — neither
+  lesson has a global L/U/B tag (fase3 #2 emerged during folding; process-timers #2 folds under L16), so the
+  honest fix is the slug, not an invented tag. The ~16 `rt-hardening #N` / `5rooms #N` citations are
+  legitimately pre-global-tag and left as-is.
+- `retros/INDEX.md`: flipped **campaign2-promotion-process-meta-lessons** → `folded` (its three meta-lessons
+  are now all in core: split-retro rule in BUILD-STATE, doc-vs-script + fidelity-grading in METHODOLOGY).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 close (tidy pass). Doc-only → PATCH.
+
+---
+
 ## [v0.13.0] - 2026-09-04
 
 ### Added — verify-module.sh: empty-palette gate check (Campaign 3 C3-PR4)
