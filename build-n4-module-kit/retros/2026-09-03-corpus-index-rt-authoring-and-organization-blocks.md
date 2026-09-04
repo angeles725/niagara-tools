@@ -1,14 +1,15 @@
 # Retro (PROPOSED delta — propose-never-apply) — a curated corpus index for build-n4-module: the RT-authoring + organization blocks the skill should take into account
 
 - **Date**: 2026-09-03
-- **Origin**: a niagara-research `/research-sdd` run that reconstructed the RT block model, the Wire Sheet, and the Honeywell module-organization taxonomy (corpus blocks **B729–B750**). Operator asked: survey the documentation and tell build-n4-module which docs serve it, which blocks, what logic to take into account.
+- **Origin**: a niagara-research `/research-sdd` run that reconstructed the RT block model, the Wire Sheet, the Honeywell module-organization taxonomy, and the WB/UX authoring taxonomy (corpus blocks **B729–B753**). Operator asked: survey the documentation and tell build-n4-module which docs serve it, which blocks, what logic to take into account.
+- **Update 2026-09-04**: extended to cover the WB/UX authoring campaign (**B751–B753**) — added to the index table and the rules below; these feed `types/wb-widgets.md` [seed] and `types/dashboard.md` [mature].
 - **Status**: PROPOSED. This retro adds no rule and edits no methodology; it proposes a curated block index + specific wiring so a human can accept it. Following the skill's own step 6 (append PROVEN lessons as PROPOSED deltas).
 
 ---
 
 ## Finding
 
-The kit already tells the builder "**corpus-nav FIRST**" and references a handful of blocks (B166, B179, B180, B194, B202, B203, B213, B636, B724, **B729, B730**). But the niagara-research corpus now carries a COMPLETE RT-authoring body — the campaign **B729–B746** plus the Wire-Sheet + organization work **B747–B750** — and only **B729/B730** of it are wired into the kit. That is the single largest block of directly-relevant documentation the skill is not yet pointing the builder at.
+The kit already tells the builder "**corpus-nav FIRST**" and references a handful of blocks (B166, B179, B180, B194, B202, B203, B213, B636, B724, **B729, B730**). But the niagara-research corpus now carries a COMPLETE authoring body — the RT campaign **B729–B746**, the Wire-Sheet + organization work **B747–B750**, and the WB/UX authoring taxonomy **B751–B753** — and only **B729/B730** of it are wired into the kit. That is the single largest block of directly-relevant documentation the skill is not yet pointing the builder at. The WB/UX blocks matter especially for the two type guides the kit marks weakest: `types/wb-widgets.md` (seed) and `types/dashboard.md` (mature).
 
 "corpus-nav FIRST" is necessary but not sufficient: lexical search finds a block only if the builder already knows the term. A CURATED INDEX (block → what it gives → when to read it) turns the corpus from "searchable if you know the word" into "the reading list for building a module."
 
@@ -40,6 +41,9 @@ A curated map. Priority = how load-bearing it is for a correct build (P0 = read 
 | **B733** | Modulating (0-10V) outputs, `kitControl.BLoopPoint` PID, the math block family | `types/logic.md` (when adding PID/AO) | P2 | no |
 | **B741** | The 4-layer QA/test stack; what's testable in WSL | `build-verify.md` | P1 | **yes** (retro) |
 | **B743** | Testing timer-arming/lifecycle — the scheduler seam + `BTestNgStation` | `build-verify.md` | P2 | no |
+| **B751** | **WB authoring: the "how much wb is enough" ladder** (rung 0 nothing → 1 FieldEditor → 2 Manager → 3 custom View) + the Manager/View/FieldEditor/Command recipes + the Honeywell device-model plugin | `types/wb-widgets.md` (seed → grow it) | **P0 for a -wb build** | no |
+| **B752** | **UX authoring: the three serving recipes** (servlet-SPA / bajaux @AgentOn view / PX), the two bajaux data-channel dialects, PX bindings, and the RBAC contrast | `types/dashboard.md` (mature) | **P0 for a -ux build** | no |
+| **B753** | The WB/UX playbook applied to OUR modules — our components sit at wb rung 0; keep the servlet-SPA + `OPERATOR_WRITE` RBAC | `types/wb-widgets.md` + `types/dashboard.md` | P1 | no |
 | **B731** / **B742** | Our own modules' audit + the consolidated deploy-safe refactor backlog | reference | P2 | no |
 
 ## The LOGIC the skill must take into account (the non-obvious rules)
@@ -57,16 +61,26 @@ These are the rules a builder gets wrong without the docs — the "qué lógica"
 9. **Tag components for BQL discoverability** as a semantic overlay, not by nesting (B749 P9).
 10. **Grouping folders are TYPED and self-validate** via `isParentLegal`/`isChildLegal` (B749 P4) — the tree rejects a wrong child.
 
+### WB/UX rules (from B751–B753)
+
+11. **Author the LEAST wb the ladder allows** (B751): rung 0 = nothing (the default property/wire-sheet views render standard slots — kitControl ships 152 rt types with only 2 wb FEs). Climb only when needed: rung 1 a `BWbFieldEditor @AgentOn(value type)` for ONE composite value that renders badly; rung 2 a `BAbstractManager`/`BDeviceManager` ONLY if the component is a container of learned/discovered children; rung 3 a `BWbComponentView` ONLY for non-tabular interaction. **Our ColdRoomPan/CompPan components sit at rung 0 — do not build a Manager.**
+12. **FieldEditor recipe** (B751): ctor builds widgets → `linkTo(widget, textModified, setModified)` → override `doLoadValue`/`doSaveValue`/`doSetReadonly`; child editors via `BWbFieldEditor.makeFor(value)`. Register with `@AgentOn(that value type)`.
+13. **A Honeywell "Wizard" is usually a tabbed `BWbComponentView`, not a `BWizard`** (B751) — step-panes = tabs, backed by rt `BJob`s launched from an agent `BMenu`. Mutation always through the space (`newTransaction`/`tx.commit`); undo is inherited, never hand-rolled.
+14. **Pick the right UX serving recipe** (B752): a bespoke dashboard + custom JSON API → **servlet-SPA** (`BWebServlet` self-registers by `getServletName()`); a view bound to a component type → **bajaux `@AgentOn` + `BIJavaScript`** (`getJsInfo` → `module://…/rc/X.js`); engineer-authored equipment graphics → **PX** (XML bound to slot ords, no Java). Our DashboardPan is servlet-SPA — the correct choice; do not migrate to bajaux.
+15. **Enforce REAL server RBAC — the vendors don't** (B752): gate every write on `BPermissions.OPERATOR_WRITE` (the permission BIT, not role-name matching), fail-closed (no user → 401, lacks-write → 403), as the FIRST line of the handler. The Honeywell React SPAs ship `permissions="unrestricted"` RPCs with no server check — do NOT copy that. Add a CSRF `X-Requested-With` gate + an audit trail (our chihuahua/DashboardPan pattern).
+16. **Servlet-SPA footguns** (B752): keep routing in a PURE `route()` function (Niagara-free, WSL-unit-testable); serve statics from `rc/` with a traversal guard; **never set a user Home Page to a servlet path** (a raw path is not a resolvable ORD → `SyntaxException: Missing scheme name` → every login fails — bookmark the URL instead); don't hardcode the service ORD if it may be relocated.
+
 ## Proposed deltas (propose-never-apply — for human review)
 
 1. **Create `$KIT/corpus-index.md`** = the table above (the curated reading list), and add one line to SKILL step 2 and to `types/logic.md`: "Before building, skim `corpus-index.md` — the P0 blocks (B744, B737, B730, B729, B739, B740, B749) are the reading list."
 2. **Add a "Composition & organization" section to `types/logic.md`** pointing at B737 + B749/B750 (the file today is flat-slot oriented; it teaches idioms but not the tree shape). Include the one-line rule: distribute by containment with fixed roles; one child per domain; config separate from state.
 3. **Optionally add `$KIT/types/organization.md`** if the organization body (B749/B750) grows past a section — the 10 patterns + the applied playbook are a distinct concern from per-layer idioms.
 4. **Add to `METHODOLOGY.md`** two check items already grounded in P0 blocks: (a) "Compose concerns into child components above ~12–15 slots (B737)"; (b) the schema-safety line "ADD slots, never retype one with saved data (B739)" (currently only a retro).
+5. **Grow the two weakest type guides from the WB/UX blocks**: fold B751 (the "how much wb" ladder + FieldEditor/Manager/View recipes) into `types/wb-widgets.md` (today a seed), and B752 (the three serving recipes + the RBAC rule) + B753 (our servlet-SPA is the chosen recipe) into `types/dashboard.md` (today mature but pre-dating the RBAC census). Add the "author the least wb the ladder allows" one-liner to SKILL step 3.
 
-No file above is edited by this retro — these are proposals. B739/B729/B741/B746 lessons already have retros; this consolidates the map and adds the missing composition/organization/reference blocks.
+No file above is edited by this retro — these are proposals. B739/B729/B741/B746 lessons already have retros; this consolidates the map and adds the missing composition/organization/wb/ux/reference blocks.
 
 ## Evidence
-- Kit inspected: `SKILL.md`, `METHODOLOGY.md`, `types/logic.md`, `retros/` (2026-09-03). Existing block refs: B166/B179/B180/B194/B202/B203/B213/B636/B724/B729/B730.
-- Corpus blocks surveyed: B729–B750 (niagara-research), read/cited this session; organization taxonomy from a 5-sweep Honeywell census (B749).
+- Kit inspected: `SKILL.md`, `METHODOLOGY.md`, `types/logic.md`, `types/wb-widgets.md`, `types/dashboard.md`, `retros/` (2026-09-03). Existing block refs: B166/B179/B180/B194/B202/B203/B213/B636/B724/B729/B730.
+- Corpus blocks surveyed: B729–B753 (niagara-research), read/cited this session; organization taxonomy from a 5-sweep Honeywell census (B749); WB/UX authoring from a 4-sweep census (B751–B753).
 - Cross-checked which lessons already have kit retros to avoid duplicate proposals.
