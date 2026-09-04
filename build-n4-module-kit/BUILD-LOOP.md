@@ -7,6 +7,13 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 
+### 0.a Orient from BUILD-STATE (before touching anything)
+- Read `BUILD-STATE.md` for the module you are about to build. From its `build-state.v1` envelope + prose, tell the operator in ONE line:
+  `<module> · built <last_build>/gate <verify_gate>/deployed <deployed> · next: <last_session tail> · open_issues=N · retro_pending=Y/N`.
+- If `retro_pending: true`, the previous session left an OWED retro — writing it is the FIRST task unless the operator redirects.
+- If the module has no section, this is a first build — say so, and add its section at close.
+- **Meta-work exemption:** auditing the kit / tooling / a retro, or a single one-off question, does NOT gate on orient — say so and proceed (mirrors the research-sdd PASO 0 exemption).
+
 ### 0.b Preflight (before the first build)
 - **JDK 8** present (`ls /usr/lib/jvm`).
 - **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
@@ -36,5 +43,11 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ## 6. Deploy (station) — operator
 - Sign (auto), stop station, replace jars in `<niagara_home>/modules/`, start. Place components at their fixed ORDs; link points. Open the URL.
 
-## 7. Retro (propose-never-apply)
-- Append what this build PROVED (a new gotcha, a corrected fact, a type-guide gap you filled) to `retros/<date>-<module>.md` as PROPOSED kit deltas. Do NOT silently rewrite METHODOLOGY — propose; a human folds it in. This is how the kit matures from seed to solid.
+## 7. Retro + close (HARD close gate — not optional)
+- **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
+- A session that changed KIT files is NOT "done" until ONE of:
+  - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
+  - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope.
+- The **Output Contract MUST print** `retro: <path> (N deltas, review-status: pending)` — or `retro: none (trivial: <reason>)` — as an explicit line. A written-but-invisible retro reads as a missing one.
+- Do NOT silently rewrite METHODOLOGY — propose; a human folds it in. This is how the kit matures from seed to solid.
+- (The MACHINE enforcement of this gate lands in build-n4-retro-gate / PR2; this section is the wording + the `retro_pending` field it enforces.)

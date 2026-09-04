@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.6.0] - 2026-09-04
+
+### Added — build-session continuity ledger (BUILD-STATE.md)
+
+- `build-n4-module-kit/BUILD-STATE.md` (NEW): a "where did we leave off" registry for the build
+  loop — one `build-state.v1` envelope per module (ColdRoomPan, CompPan, DashboardPan, chihuahua),
+  seeded from evidence. The build-loop analog of research-sdd's FOCUSES + RESEARCH-STATE registries,
+  collapsed into one file. Fields split GATED (`retro_required`, `retro_pending` — kit-local only)
+  vs DECLARED (jar/module/src state, which lives in separate repos and is recorded, not gated).
+- `build-n4-module-kit/BUILD-LOOP.md`: new `§0.a Orient from BUILD-STATE` (prints a one-line
+  leave-off per module, with the meta-work exemption) and a reworded `§7` HARD close gate — update
+  BUILD-STATE and write a retro, or declare `Retro: none (trivial: <reason>)`; print the `retro:`
+  line in the Output Contract.
+- Launcher `SKILL.md` (in `~/.claude/skills/build-n4-module/`, outside this repo): orient from
+  BUILD-STATE at step 1, update it at step 6, print the retro line in the Output Contract.
+
+### References
+
+- SDD change: `build-n4-module-continuity` (PR1 of 3 — continuity registry; PR2 = retro-enforcement
+  gate, PR3 = promote proven lessons). Tasks: `openspec/changes/build-n4-module-continuity/tasks.md`.
+- Engram: #8095 (campaign kickoff), #8101 (recon: continuity design + 42-lesson mining), #8105 (tasks).
+
+---
+
 ## [v0.5.0] - 2026-09-01
 
 ### Added — ng-deploy verify-module gate and `-ux` slotomatic
