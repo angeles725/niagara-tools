@@ -6,6 +6,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.9.1] - 2026-09-04
+
+### Changed — Campaign 2 PR-A2: fold logic-group lessons L16–L22 into the core
+
+- `types/logic.md`: promoted 7 [CERT] control-logic lessons — a polled-UI time is a READONLY `BAbsTime`
+  anchor, not a stored `BRelTime` (L16); reserve `Flags.HIDDEN` for engine callbacks, expose a public
+  force/run action for operator/oBIX (L17); guard a link-reachable `Clock.schedule` with
+  `if(!Sys.atSteadyState())return`, set the anchor before scheduling, `period>0` (L18); an internal-only
+  discrete selector is a `BFrozenEnum`, the double rule is cross-module only (L19); a time-gated auto
+  control needs a run-now action + surfaced preconditions + an anchored first fire (L20); a new
+  §Composition & organization — compose past ~12–15 slots, config separate from live-state (L21); the HOA
+  manual-override slot pattern (L22).
+- Flipped `retros/INDEX.md` to `folded` for the 3 retros now fully in core (hidden-actions,
+  self-firing-timer, hoa-manual-override); process-timers stays `pending` (its logic lessons L16/L20 are
+  folded here, but its dashboard/reader AbsTime lesson #2 folds in PR-B). kit self-section open_issue
+  narrowed to the U / B / D / S groups.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 PR-A2 (logic group complete: L3-L22). Promotion of
+  already-filed lessons → `Retro: promotion` exit; documentation only → PATCH.
+- Engram: #8118 (Campaign 2 progress), #8101 (42-lesson mining).
+
+---
+
 ## [v0.9.0] - 2026-09-04
 
 ### Added — §7 close-gate third exit: `Retro: promotion` (MINOR)
