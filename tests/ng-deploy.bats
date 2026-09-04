@@ -133,12 +133,15 @@ ENVEOF
 }
 
 # ---------------------------------------------------------------------------
-# Test 3: --no-backup alone exits 20
+# Test 3: --no-backup alone runs — gate REMOVED (Campaign 3 B10, ng-deploy-backup)
+# The --i-know-what-im-doing companion gate is dropped: the DEFAULT is now a safe lightweight
+# backup, so --no-backup is a plain opt-in. RED-first: today it exits 20 with the gate message.
+# SAFETY NOTE: this weakens the accidental-no-backup guard; mitigated by the safe default backup.
 # ---------------------------------------------------------------------------
-@test "--no-backup alone exits 20" {
-    run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --mode A
-    [ "$status" -eq 20 ]
-    [[ "${output}${stderr}" == *"i-know-what-im-doing"* ]]
+@test "--no-backup alone runs without a gate (--i-know-what-im-doing no longer required) (B10 iii)" {
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/dot_env_local" --no-backup --no-deploy --mode A
+    [ "$status" -ne 20 ]                                     # gate removed (was exit 20)
+    [[ "${output}${stderr}" != *"i-know-what-im-doing"* ]]   # no gate message
 }
 
 # ---------------------------------------------------------------------------
@@ -665,4 +668,60 @@ STUB
         verify_jar 'fake.jar' 3
     "
     [ "$status" -eq 0 ]   # 3 real <type entries; the <types> wrapper must NOT be counted (buggy grep finds 4 → exit 50)
+}
+
+# ---------------------------------------------------------------------------
+# Campaign 3 C3-PR3 — lesson B10 (ng-deploy-backup-liviano-y-autopurga)
+# Promoted rule: lightweight backup DEFAULT (module's own jars only) + keep-N autopurge,
+# with --no-backup (opt-in, gate removed above) and --full-backup (old whole-dir) as flags.
+# NOTE: setup() fakes `tar` to a no-op; these tests set a REAL PATH so backup actually
+# archives + is listable (the suite's other backup tests assert the message/argv, not contents).
+# ---------------------------------------------------------------------------
+
+@test "backup DEFAULT is lightweight — only the module's own jars, NOT a sibling module's jar (B10 i)" {
+    mkdir -p "$TMPDIR_T/modules"
+    : > "$TMPDIR_T/modules/test-rt.jar"; : > "$TMPDIR_T/modules/test-ux.jar"
+    : > "$TMPDIR_T/modules/Other-rt.jar"      # a sibling module's jar — must NOT be in the backup
+    BATS_TEST_MODE=1 run bash -c "
+        export PATH=/usr/bin:/bin:/usr/local/bin
+        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules'
+        cd '$TMPDIR_T'
+        source '$SCRIPT'
+        backup
+        tar tzf _backups/test-pre-*.tar.gz
+    "
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"test-rt.jar"* ]] && [[ "$output" == *"test-ux.jar"* ]]
+    [[ "$output" != *"Other-rt.jar"* ]]          # RED today: whole-dir tar includes the sibling
+}
+
+@test "backup auto-purges to keep-N (default 3) — 5 backups collapse to the 3 newest, oldest gone (B10 ii)" {
+    mkdir -p "$TMPDIR_T/modules" "$TMPDIR_T/_backups"; : > "$TMPDIR_T/modules/test-rt.jar"
+    for n in 1 2 3 4; do touch -t "2026010${n}0000.00" "$TMPDIR_T/_backups/test-pre-2026010${n}-000000.tar.gz"; done
+    BATS_TEST_MODE=1 run bash -c "
+        export PATH=/usr/bin:/bin:/usr/local/bin
+        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules'
+        cd '$TMPDIR_T'
+        source '$SCRIPT'
+        backup                                   # the 5th; purge should keep only the 3 newest
+        ls _backups/test-pre-*.tar.gz | wc -l
+    "
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s' "$output" | tail -1 | tr -d ' ')" -eq 3 ]                 # RED today: no purge → 5 remain
+    [ ! -e "$TMPDIR_T/_backups/test-pre-20260101-000000.tar.gz" ]             # oldest purged
+}
+
+@test "--full-backup restores the whole-modules-dir backup (a sibling jar IS included) (B10 iv)" {
+    mkdir -p "$TMPDIR_T/modules"
+    : > "$TMPDIR_T/modules/test-rt.jar"; : > "$TMPDIR_T/modules/Other-rt.jar"
+    BATS_TEST_MODE=1 run bash -c "
+        export PATH=/usr/bin:/bin:/usr/local/bin
+        export MODULE_NAME=test STATION_MODULES_DIR='$TMPDIR_T/modules' FULL_BACKUP=1
+        cd '$TMPDIR_T'
+        source '$SCRIPT'
+        backup
+        tar tzf _backups/test-pre-*.tar.gz
+    "
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"test-rt.jar"* ]] && [[ "$output" == *"Other-rt.jar"* ]]  # full = sibling included (guard; bites if --full-backup ignored)
 }
