@@ -94,3 +94,45 @@ good_dir() {
   run "$VM" "$TMPDIR_T/notajar.txt"; [ "$status" -eq 2 ]
   run "$VM" "$TMPDIR_T/missing.jar"; [ "$status" -eq 3 ]
 }
+
+# --- B4 (Campaign 3 C3-PR1): editor-backup files shipped under rc/ ---
+# rc/ backup files (*~, *.bak/.bak2, *.orig) are packaged by processResources — they ship,
+# are servable, and bloat the jar (DashboardPan-ux shipped index.html.bak/.bak2). A default WARN
+# (does NOT fail — the jar still boots); --strict promotes it to FAIL. Detail NAMES the offenders
+# (house style, cf. V1 naming the bad class). RED-first: no rcbackup check exists yet.
+
+@test "V10: an rc/ editor-backup file emits a WARN row naming it, but exit stays 0 (jar otherwise valid)" {
+  good_dir "$TMPDIR_T/d"; mkdir -p "$TMPDIR_T/d/rc"
+  : > "$TMPDIR_T/d/rc/index.html.bak"; : > "$TMPDIR_T/d/rc/index.html.bak2"
+  : > "$TMPDIR_T/d/rc/notes~";         : > "$TMPDIR_T/d/rc/merge.orig"
+  : > "$TMPDIR_T/d/rc/icon16.png"      # a real asset — must NOT be flagged
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]                                  # WARN does not fail the gate
+  [[ "$output" == *"WARN  rcbackup"* ]]
+  # globs covered: *.bak, *.bak2 (*.bak*), *~, *.orig — all named; the real asset is not
+  [[ "$output" == *"index.html.bak"* ]]
+  [[ "$output" == *"notes~"* ]]
+  [[ "$output" == *"merge.orig"* ]]
+  [[ "$output" != *"icon16.png"* ]]
+}
+
+@test "V11: a clean rc/ (only real assets) emits NO rcbackup WARN, exit 0" {
+  good_dir "$TMPDIR_T/d"; mkdir -p "$TMPDIR_T/d/rc"
+  : > "$TMPDIR_T/d/rc/index.html"; : > "$TMPDIR_T/d/rc/icon16.png"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN  rcbackup"* ]]
+  [[ "$output" == *"ALL PASS"* ]]
+}
+
+@test "V12: --strict promotes the rc/ backup WARN to FAIL (exit 1)" {
+  good_dir "$TMPDIR_T/d"; mkdir -p "$TMPDIR_T/d/rc"
+  : > "$TMPDIR_T/d/rc/index.html.bak"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" --strict "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rcbackup"* ]]
+  [[ "$output" == *"index.html.bak"* ]]
+}
