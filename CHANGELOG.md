@@ -18,6 +18,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
   run `scripts/install-hooks.sh` bypasses it); CI runs server-side for everyone on every PR, so the same
   checks cannot be bypassed. Client hook + server CI = enforcement that is both immediate (local) and
   un-bypassable (remote). Repo-infra only — no kit behavior change.
+- **shellcheck pinned to v0.10.0** (downloaded in the workflow) so CI is reproducible and does not drift with
+  the runner's apt package; `actions/checkout@v5` (Node 24).
+- Fixes the first CI run surfaced (all no behavior change, calibrated to the pinned shellcheck):
+  `verify-module.sh` disables `SC2317` alongside `SC2329` (the indirectly-invoked `check_*` false positive);
+  `build.sh` uses an explicit `if` arg-guard (clears `SC2015`); `ng-deploy.bats` disables `SC2154`
+  (`$stderr` is a bats `run` var); and **`tests/kit-links.bats` L1 no longer resolves `SKILL.md` via a
+  machine-specific `$HOME/.claude/skills/` path** — the launcher is external by design, so L1 now treats it
+  as a known external pointer (this removed an environment coupling that made L1 pass locally but fail on a
+  clean checkout — exactly what CI is for).
 
 ### References
 
