@@ -4,8 +4,9 @@
 # No real gradlew, no real unzip to /mnt/c, no station dependency.
 # why: SC2030/SC2031 — each @test runs in a subshell; export is the correct
 # mechanism to pass env vars to run-spawned subprocesses in bats. These are
-# not real subshell-loss bugs.
-# shellcheck disable=SC2030,SC2031
+# not real subshell-loss bugs. SC2154 — `$stderr` is a bats-provided `run` variable,
+# not an unassigned reference.
+# shellcheck disable=SC2030,SC2031,SC2154
 
 SCRIPT_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SCRIPT="$SCRIPT_DIR/scripts/ng-deploy.sh"

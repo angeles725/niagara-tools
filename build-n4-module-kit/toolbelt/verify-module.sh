@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2329
-# why: the check_* functions are invoked indirectly by name from the loop `"$chk" "$JAR"` (file-wide directive)
+# shellcheck disable=SC2329,SC2317
+# why: the check_* functions are invoked indirectly by name from the loop `"$chk" "$JAR"` (file-wide directive).
+# SC2329 (never invoked) and SC2317 (unreachable) are the same false positive — shellcheck can't see the
+# indirect `"$chk" "$JAR"` call, so it flags the function bodies. Both disabled file-wide.
 # verify-module.sh — THE gate for built N4 module jars. A jar that has not passed it does not go to a station.
 #
 # Checks (each guards a failure seen on a real build — build-n4-module-kit/retros/):

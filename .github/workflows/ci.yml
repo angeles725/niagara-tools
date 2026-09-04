@@ -19,8 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bats + shellcheck
-        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Install shellcheck (pinned — reproducible, no version drift)
+        run: |
+          SC=v0.10.0
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SC}/shellcheck-${SC}.linux.x86_64.tar.xz" | tar -xJf -
+          sudo install "shellcheck-${SC}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version
 
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
         run: shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash

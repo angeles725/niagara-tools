@@ -27,7 +27,7 @@ while [ $# -gt 0 ]; do
     *) break ;;
   esac
 done
-[ $# -ge 2 ] && [ $# -le 3 ] || { usage >&2; exit 2; }
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then usage >&2; exit 2; fi
 ROOT="$1"; MOD="$2"
 NIAGARA_HOME="${3:-${niagara_home:-}}"
 J8="${JAVA8:-/usr/lib/jvm/java-8-openjdk-amd64}"
