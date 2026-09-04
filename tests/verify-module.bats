@@ -136,3 +136,55 @@ good_dir() {
   [[ "$output" == *"FAIL  rcbackup"* ]]
   [[ "$output" == *"index.html.bak"* ]]
 }
+
+# --- C3-PR4 (module-palette Delta 1, the gate half): empty module.palette + declared types ---
+# The retro defect: a jar with declared @NiagaraType(s) but a TOTALLY EMPTY module.palette builds,
+# passes the gate, deploys — and Workbench shows nothing to drag. check_palette (default-on, reads the
+# packaged module.palette + module.xml): palette entries = `<p n=` count (the b:Folder root has no n=);
+# declared types = `<type ` count (B8 convention). Empty (0) + types(>=1) → WARN / --strict FAIL.
+# SCOPE: empty-palette-with-types (high-signal), NOT one-<p>-per-type (would noise on internal types).
+
+@test "V13 (palette): an EMPTY module.palette with declared types → WARN, exit 0 (names the empty palette)" {
+  good_dir "$TMPDIR_T/d"                                   # module.xml declares 1 type (com.x.A)
+  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"   # root only — 0 <p n= entries
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]                                      # WARN does not fail the gate
+  [[ "$output" == *"WARN  palette"* ]]
+}
+
+@test "V14 (palette): --strict promotes the empty-palette WARN to FAIL (exit 1)" {
+  good_dir "$TMPDIR_T/d"
+  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" --strict "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette"* ]]
+}
+
+@test "V15 (palette): a POPULATED palette (>=1 <p n=) + types → PASS, no palette WARN" {
+  good_dir "$TMPDIR_T/d"
+  printf '<p t="b:Folder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN  palette"* ]]
+  [[ "$output" == *"PASS  palette"* ]]
+}
+
+@test "V16 (palette): a jar with NO module.palette reports SKIP (nothing to check)" {
+  good_dir "$TMPDIR_T/d"                                   # no module.palette added
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP  palette"* ]]
+}
+
+@test "V17 (palette): a TYPELESS module with an empty palette must NOT warn (guard: only bites with types)" {
+  good_dir "$TMPDIR_T/d"; make_module_xml "$TMPDIR_T/d" 4.14   # rewrite module.xml with ZERO declared types
+  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN  palette"* ]]                     # 0 types → empty palette is legitimate (mutation: drop the type guard → warns here → red)
+}
