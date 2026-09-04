@@ -60,3 +60,13 @@ JAVA
   run "$RUN" "$BATS_TEST_TMPDIR/nope" com.example.demo.AdderTest
   [ "$status" -eq 3 ]
 }
+
+@test "P6: an empty ~/.gradle cache (no junit) exits 3 with an actionable message" {
+  # GREEN path needs junit in ~/.gradle; this asserts the RED path (empty cache) is a
+  # clean env error, never a false pass. Point HOME at an empty dir so the script's
+  # `find $HOME/.gradle` finds nothing.
+  make_test "Adder.add(2,2) == 4"
+  run env HOME="$BATS_TEST_TMPDIR/emptyhome" "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"junit-4.13.2.jar not in"* ]]
+}
