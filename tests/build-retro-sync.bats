@@ -135,12 +135,15 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
 }
 
 @test "S8: a prose-embedded marker (indented/backticked) is NOT counted as an envelope" {
-  # The real BUILD-STATE.md 'How to read' prose quotes the marker string inside backticks,
-  # indented. Sweep must anchor envelope detection to ^<!-- build-state.v1 -->$ (col-0), or
-  # it miscounts the prose as a malformed 5th envelope. Here the ONLY real envelope is valid,
-  # so a col-0-anchored sweep exits 0; a naive grep -c would see 2 opens / 1 close and fail.
+  # The real BUILD-STATE.md 'How to read' prose quotes the OPEN and CLOSE markers on SEPARATE
+  # indented+backticked lines (not one line). Reproduce that exact shape: a col-0-anchored sweep
+  # ignores both prose lines and validates only the real envelope → exit 0. A parser that matched
+  # the marker as a SUBSTRING would treat the prose open line as an envelope start and the prose
+  # close line as its end → no module → fail. Verified: this fixture stays green on the anchored
+  # sweep and goes RED under a substring-match mutation (so S8 bites the anchor independently of H3).
   { echo "## How to read"
-    echo "- one \`<!-- build-state.v1 -->\` … \`<!-- /build-state.v1 -->\` per module"
+    echo "- one \`<!-- build-state.v1 -->\`"
+    echo "  \`<!-- /build-state.v1 -->\` per module"
     echo
     echo "<!-- build-state.v1 -->"
     echo "module: DemoPan"
