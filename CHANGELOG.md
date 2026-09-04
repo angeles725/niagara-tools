@@ -6,6 +6,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.9.3] - 2026-09-04
+
+### Changed — Campaign 2 PR-C: fold build/deploy/schema lessons (Campaign 2 complete)
+
+- `BUILD-LOOP.md`: §0.b free-the-lock-first (B2 — folding the last mirror-first instance) + read THIS
+  module's gradle target (B6); §6 -ux-only = no restart (D1), station-on-another-device → verify live via
+  oBIX (D2), power-cycle the panel after redeploy (D3), cd to the gradle root before ng-deploy (B9), the
+  ng-deploy no-backup-default rule (B10), EXPECTED_*_TYPES = real+1 (B8).
+- `build-verify.md`: nested/multi-project gradle layout — run :project:task from the gradle root (B7);
+  keep src/rc asset-only (B4); a new §Module versioning & release (S4).
+- `METHODOLOGY.md` §Schema/upgrade safety: the SAFE/LOSSY/OUTAGE saved-data survival matrix + bump
+  vendorVersion / back up config.bog (S2); an additive slot change needs a version bump to auto-install (S3).
+- Flipped 3 retros to `folded` (pure-doc, fully in core): ux-only-deploy, station-corre-en-atlas-snap,
+  coldroompan-fan-mode-defrost (S3 + the delete-type-and-registration rule B12). soft-start stays
+  `pending` (its build.sh clean-lock-message delta is owed). SIX rule-folded lessons whose IMPLEMENTATION
+  is a script/gate change (B4/B6/B7/B8/B10 + soft-start build.sh) stay `pending`, tracked as kit
+  self-section open_issues (future MINOR PRs); the T/process group stays pending (out of Campaign 2 scope).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 PR-C (build/deploy/schema — Campaign 2 complete).
+  Promotion of already-filed lessons → `Retro: promotion` exit; documentation only → PATCH.
+- Engram: #8118 (Campaign 2 progress), #8101 (42-lesson mining).
+
+---
+
 ## [v0.9.2] - 2026-09-04
 
 ### Changed — Campaign 2 PR-B: fold UX lessons U1–U9 into the core

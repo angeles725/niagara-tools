@@ -45,6 +45,8 @@ J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm
 - **The gradle plugin version pinned in `settings.gradle.kts` MUST exist in `<niagara_home>/etc/m2` — each install ships exactly ONE (table below):** Tridium plugins are not on the public portal, so a version the install lacks fails "plugin not found". Make it overridable — `val gradlePluginVersion = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")` + `-PniagaraPluginVersion=<v>`. This override is MANDATORY, not optional. [ev: retro rt-hardening #7]
 - **`gradle.properties` can LIE about the real target:** the true target = intersection(the `niagara_home` that has the pinned plugin, the station that accepts the stamped `baja`). Check `settings.gradle.kts` and `ls <niagara_home>/etc/m2/repository/com/tridium/niagara-module/...` before trusting `gradle.properties`. [ev: retro 5rooms #6]
 - **A Windows `niagara_home` path breaks the m2 repo under WSL:** gradle resolves `maven(file:/C:/...)` → "plugin not found"; always use the `/mnt/c/...` mount. [ev: retro 5rooms #7]
+- **A nested / multi-project gradle layout breaks the `<root>/<MOD>-<profile>` assumption — run `./gradlew :<MOD>-<profile>:jar` from the GRADLE ROOT, then verify `build/libs`:** e.g. DashboardPan's `gradlew` is at `Dashboard/` while the profiles are `Dashboard/DashboardPan/DashboardPan-{rt,ux,wb}` addressed as `:DashboardPan-ux:jar`. [ev: retro dashboardpan-ux-direct-build · B7]
+- **Keep `src/rc/` asset-only — `processResources` copies ALL of `rc/` into the jar, so `index.html.bak` / `.orig` / scratch files ship as dead weight (~MB) AND are servable at `/<prefix>/index.html.bak`:** label-editing is preview-only, never committed; an orphan `img/plano.png` also ships when the real image is base64. [ev: retro dashboardpan-ux-direct-build · B4]
 
 | `niagara_home` | niagara-module plugin (only one per install) |
 |---|---|
@@ -53,6 +55,9 @@ J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm
 | 4.15.3 | 7.6.22 |
 
 There is no version common to all installs — this table supersedes the earlier "shared common set" claim. Always pass `-PniagaraPluginVersion` matching the chosen target.
+
+## Module versioning & release
+- **The MODULE's own version lives in `defaultModuleVersion("X.Y.Z")` in each module's `build.gradle.kts` `vendor{}` block → stamped as `vendorVersion` at build; a bump REQUIRES a rebuild to reach the jar.** Per-module version skew is fine (rebuild only the changed modules); the repo tracks `build/libs/*.jar`; tag `vX.Y.Z`. [ev: retro soft-start · S4]
 
 ## niagara_home on WSL
 Building on WSL against `niagara_home=C:\...` breaks the m2 repo (see §Build target & plugin version); and when a `-ux` depends on `-rt`, the plugin's auto-copy of the built jar into a station-locked `modules/` fails. That copy failure is irrelevant — free the lock, or use the already-assembled `build/libs` jar (§Building against a running station: free the lock first, mirror only when you can't); the mirror is only for a live production supervisor.

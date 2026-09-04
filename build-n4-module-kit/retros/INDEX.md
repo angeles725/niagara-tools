@@ -11,7 +11,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-01-dashboardpan-5rooms.md | DashboardPan | 2026-09-01 | folded | 0 |
 | 2026-09-01-dashboardpan-hmi-touch-ux.md | DashboardPan | 2026-09-01 | folded | 0 |
 | 2026-09-01-dashboardpan-ux-direct-build.md | DashboardPan | 2026-09-01 | pending | 0 |
-| 2026-09-02-coldroompan-fan-mode-defrost.md | ColdRoomPan | 2026-09-02 | pending | 0 |
+| 2026-09-02-coldroompan-fan-mode-defrost.md | ColdRoomPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-comppan-fase1-staging.md | CompPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-comppan-fase2-pressure-modulation.md | CompPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-comppan-fase3-floating-suction.md | CompPan | 2026-09-02 | folded | 0 |
@@ -32,8 +32,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-03-self-retro-preview-gate-wsl-tests-live-verify.md | kit | 2026-09-03 | pending | 0 |
 | 2026-09-03-slot-type-change-rompe-bog-station-no-arranca.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-soft-start-staggered-startup.md | kit | 2026-09-03 | pending | 0 |
-| 2026-09-03-station-corre-en-atlas-snap-no-en-el-pc-de-deploy.md | kit | 2026-09-03 | pending | 0 |
-| 2026-09-03-ux-only-deploy-no-station-restart.md | kit | 2026-09-03 | pending | 0 |
+| 2026-09-03-station-corre-en-atlas-snap-no-en-el-pc-de-deploy.md | kit | 2026-09-03 | folded | 0 |
+| 2026-09-03-ux-only-deploy-no-station-restart.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-04-editing-base64-heavy-spa-and-the-preview-screenshot-pdf-pipeline.md | kit | 2026-09-04 | folded | 0 |
 | 2026-09-04-hoa-manual-override-slots-pattern.md | kit | 2026-09-04 | folded | 0 |
 | 2026-09-04-junit-standalone-cached-jar-locations-for-wsl-pure-tests.md | kit | 2026-09-04 | folded | 0 |

@@ -17,7 +17,8 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ### 0.b Preflight (before the first build)
 - **JDK 8** present (`ls /usr/lib/jvm`).
 - **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
-- **Station live?** A running station LOCKS its `modules/<mod>.jar` — build against a mirror (`toolbelt/mirror-niagara-home.sh`), never stop a live supervisor.
+- **Station live?** A running station LOCKS its `modules/<mod>.jar`. Free the lock FIRST (close Workbench, or stop a non-production station) and build directly; use a mirror (`toolbelt/mirror-niagara-home.sh`) ONLY for a live production supervisor you must not stop — see build-verify.md §Building against a running station. [ev: retro coldroompan-dashboardpan-freeze-stat-leds · B2]
+- **This module's build target may differ from the last one's — read THIS module's `gradle.properties` + `settings.gradle.kts`:** a sibling in the same client repo can target a different `niagara_home` + plugin (e.g. ColdRoomPan → PowerB 4.15.3 / 7.6.22 vs CompPan → Honeywell 4.14 / 7.6.17); never carry over the previous module's target. [ev: retro module-palette-and-build-target · B6]
 
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
@@ -42,6 +43,12 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 6. Deploy (station) — operator
 - Sign (auto), stop station, replace jars in `<niagara_home>/modules/`, start. Place components at their fixed ORDs; link points. Open the URL.
+- **A `-ux`-only change needs NO station restart — browser hard-reload only; `-rt`/`-wb` needs a restart:** the servlet serves `rc/` from the classloader per request, so a new `-ux` jar is picked up on reload, but Java classes need a restart. Batch rt changes; iterating UI in production is cheap. [ev: retro ux-only-deploy-no-station-restart · D1]
+- **The production station may run on a DIFFERENT device (e.g. an ATLAS snap) at a different NRE than the build PC — verify what runs via LIVE slots (oBIX / Slot Sheet), not the PC's `modules/` jar:** identify the station's real `niagara_home` from its boot log first; a PC `modules/` jar is only what Workbench can push. Device-side deploy = push to the device (Software Manager / Provisioning) + restart the device's station. [ev: retro station-corre-en-atlas-snap · D2]
+- **After a panel redeploy, power-cycle the HMI (the WebView caches the old page) before suspecting code:** a "blank after redeploy" is usually stale WebView state — disconnect/reconnect the panel first. [ev: retro dashboardpan-detail-render-doors · D3]
+- **Before running `ng-deploy.sh`, `cd` to the gradle root** (where `gradlew` / `settings.gradle` live — e.g. `Paccadia/` or `Dashboard/`): it runs gradlew from the CWD, not from `GRADLEW_PATH`'s dir. [ev: retro ng-deploy-type-count-and-cwd · B9]
+- **`ng-deploy.sh` should default to NO backup (git is the rollback — jars are in GitHub):** its `backup()` tars the WHOLE modules dir (~240 MB) every deploy and never purges (8 deploys → ~1.9 GB); if you must back up, back up only the module's own jars and keep the last N. [ev: retro ng-deploy-backup-liviano-y-autopurga · B10]
+- **`ng-deploy.sh`'s `EXPECTED_*_TYPES` counts `<type` and so matches the `<types>` wrapper too → set it to real-types + 1 (it differs from verify-module.sh, which counts `<type ` with a space):** real counts are ColdRoomPan-rt 7, DashboardPan-rt 3, DashboardPan-ux 2. [ev: retro ng-deploy-type-count-and-cwd · B8]
 
 ## 7. Retro + close (HARD close gate — not optional)
 - **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
