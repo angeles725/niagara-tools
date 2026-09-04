@@ -80,3 +80,50 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" != *"set -euo pipefail"* ]]
   [[ "$output" != *"usage()"* ]]
 }
+
+# ================= Campaign 3 C3-PR2 (RED-first) =================
+# Three owed build.sh impls. Each mutation-bites; fake gradlew logs argv (setup), verify-module stubbed.
+
+@test "B8 (lesson B6, module-palette-and-build-target): auto-detect the plugin version from the module's OWN gradle files" {
+  # gradle.properties can lie about the target, but the pinned niagara plugin version is the module's own
+  # config — build.sh must read it and forward -PniagaraPluginVersion WITHOUT requiring --plugin-version.
+  printf 'niagaraPluginVersion=7.6.22\n' > "$ROOT/gradle.properties"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"                       # NO --plugin-version
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.6.22"* ]]   # detected, not empty
+  # explicit --plugin-version still WINS over the detected one (precedence)
+  : > "$TMPDIR_T/gradlew.calls.log"
+  run "$B" --plugin-version 7.3.40 "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"-PniagaraPluginVersion=7.3.40"* ]]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" != *"7.6.22"* ]]
+}
+
+@test "B9 (lesson B7, dashboardpan-ux-direct-build): walk UP to the gradle root when ROOT has no ./gradlew (nested multi-project)" {
+  # A client repo keeps ./gradlew at the repo root; the module dir passed as ROOT has none.
+  # Today build.sh exits 10 'no executable ./gradlew'; it must walk up to find gradlew + settings.gradle*.
+  proj="$TMPDIR_T/proj"; mkdir -p "$proj"; make_fake_gradlew "$proj"; : > "$proj/settings.gradle.kts"
+  root2="$proj/client"; mkdir -p "$root2"; make_profile "$root2" Foo rt 1
+  run "$B" "$root2" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *":Foo-rt:jar"* ]]   # gradle ran from the resolved root
+}
+
+@test "B10 (lesson soft-start): a modules/<jar> clean-lock prints an ACTIONABLE message + distinct exit 31, not a raw exit 30" {
+  # A running station locks modules/<mod>.jar so :clean fails with an IOException. build.sh must detect
+  # that specific failure and tell the operator how to fix it (free the lock / build/libs / mirror),
+  # instead of the generic 'gradle failed' exit 30.
+  cat > "$ROOT/gradlew" <<'GRADLEW'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$TMPDIR_T/gradlew.calls.log"
+echo "> Task :Foo-rt:clean FAILED" >&2
+echo "Unable to delete file '$TMPDIR_T/nh/modules/Foo-rt.jar'" >&2
+exit 1
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 31 ]                                   # distinct from generic gradle-fail 30
+  { [[ "$output" == *"locked"* ]] || [[ "$output" == *"Unable to delete"* ]]; }
+  { [[ "$output" == *"Workbench"* ]] || [[ "$output" == *"mirror"* ]] || [[ "$output" == *"build/libs"* ]]; }
+  [ ! -e "$TMPDIR_T/verify.args" ]                       # gate not reached on a failed build
+}
