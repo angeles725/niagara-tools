@@ -31,6 +31,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ## 3. Preview (UI types) — BEFORE compiling
 - `python3 /home/cristian/niagara-research/tools/dashboard-preview.py --rc <mod>/src/rc --prefix /<mount>`
 - Open `http://localhost:<port>/hmi` (1280×800 frame). Iterate design here — refresh, no build.
+- **Operator preview + explicit OK is a REQUIRED gate before building any `-ux` change (not optional):** seed the mock with the state that triggers the new behavior (e.g. `Cuarto3/evapNValveState` to exercise the output LEDs), so the operator actually sees it. The mock does NOT run `-rt` logic, so the preview approves the DASHBOARD's behavior, not the physical rt effect — say that to the operator. An `-rt`/`-wb`-only change has no preview (approved by design + pure tests). [ev: retro self-retro-preview-gate · T5]
 
 ## 4. Build — the ONLY valid build
 - Three roles (build-verify.md §Doctrine): `toolbelt/build.sh` is the recommended WSL build (clean + slotomatic for every profile with sources + jar, then it calls the gate); `scripts/ng-deploy.sh --strict-slotomatic` is the station deploy wrapper (backup→build→copy→verify; strict aborts if annotations changed without slotomatic, and its slotomatic guard is rt-only); `toolbelt/verify-module.sh` is THE gate, run on the built jars.

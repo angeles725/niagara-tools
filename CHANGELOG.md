@@ -6,6 +6,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.13.3] - 2026-09-04
+
+### Changed — T-group doc folds T5/T6/T8 (Campaign 4 C4-PR1)
+
+- **BUILD-LOOP.md §3** (T5): operator preview + explicit OK is now a REQUIRED gate before building any
+  `-ux` change — seed the mock with the state that triggers the new behavior, and note the mock does NOT run
+  `-rt` logic (the preview approves the DASHBOARD, not the physical rt effect).
+- **METHODOLOGY.md** new "Debugging" section (T6): on a log WARNING, classify caught-and-cosmetic
+  (swallowed by `changed()`/`try`) vs propagates-and-aborts before treating it as the root cause — a captured
+  stack trace up to `Station.startStation` is not itself a failure.
+- **METHODOLOGY.md** lexicon item (T8): reinforced — a missing `module.lexicon` key silently renders raw
+  camelCase via `toFriendly`; keys are module-global (shared slot names collide).
+- `retros/INDEX.md`: **self-retro-preview-gate-wsl-tests-live-verify** → `folded` — its four lessons are now
+  all in core (T5 §3 here, the pure-test recipe at build-verify.md, T4 live-anchor smoke already at
+  build-verify.md, T6 here). **corpus-index-rt-authoring-and-organization-blocks stays `pending`** — its T8
+  half is folded but its T7 body (corpus-index + WB/serving folds) is owed to C4-PR2/PR3.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 4 C4-PR1. Doc folds → PATCH.
+
+---
+
 ## [v0.13.2] - 2026-09-04
 
 ### Added — Campaign 3 close retro (process meta-lessons)

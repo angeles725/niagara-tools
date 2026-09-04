@@ -8,7 +8,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   - **delta vs absolute:** a *difference* (e.g. a hysteresis `differential`, a deadband) is in *degrees*, not absolute Celsius (offset 273.15). Show it as a band, label it as such.
 - [ ] **@NiagaraProperty edits in 3 places:** the annotation `@Facet(...)`, the generated `newProperty(...)` region, AND the imports. Prove with `slotomatic` (it regenerates from the annotation — a fix only in the generated region reverts on the next regen). `import javax.baja.sys.BDouble` if the annotation uses `BDouble.make`.
 - [ ] **Status flags.** Read/propagate `BStatus` (fault/down/stale/disabled/null/overridden/alarm) — do not collapse everything to null. Guard control decisions on `getStatus().isValid()`.
-- [ ] **module.lexicon** populated (type + user-facing slot display names); format `key=value` (see control-rt.lexicon).
+- [ ] **module.lexicon** populated (type + user-facing slot display names); format `key=value` (see control-rt.lexicon). A MISSING key silently renders the raw camelCase via `toFriendly` — every exported type + slot needs one, or the slot shows its bare name in Workbench/the property sheet. Keys are module-global, so shared slot names collide. [ev: retro corpus-index · T8]
 - [ ] **Icon:** a 16×16 PNG in `src/rc/` + `getIcon()` returning `BIcon.make(BOrd.make("module://<mod>/rc/icon16.png"))`.
 - [ ] **Permissions:** delete the empty `type="all"` wizard scaffold in module-permissions.xml → `<permissions/>` (a component/dashboard module needs the base grant). [module-anatomy B636 deviation #1]
 - [ ] **`module.palette` has one `<p n=… t=…>` entry per exposed `@NiagaraType`:** a scaffold-only palette (just `<p t="b:Folder">`) passes the ENTIRE verify gate and deploys, yet Workbench shows nothing to drag — commissioning is silently broken. [ev: retro module-palette · B5]
@@ -40,6 +40,9 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
+
+## Debugging
+- **On a log WARNING, first classify caught-and-cosmetic vs propagates-and-aborts before treating it as the root cause:** does a `changed()`/`try` swallow it (log-and-continue, not re-thrown)? A captured stack trace shows the full path up to `Station.startStation` even when the throw is caught — that depth alone is NOT evidence of a failure. Example: an `applyRunCmd` `NotRunningException` during `activateLinks` looked like the dead-defrost cause but was cosmetic (caught by `changed()`); the real cause was a missing `started()`. Separate noise from cause before investing effort. [ev: retro self-retro-preview-gate · T6]
 
 ## Kit maintenance — retro promotion discipline (not a per-module build step)
 - **Doc-vs-script folded-completeness:** a retro lesson whose whole content is a rule/checklist item is FULLY folded by documenting it (INDEX row → `folded`). A lesson that asks for a SCRIPT or GATE behavior change is only PARTLY folded by its prose — the implementation is still owed, so its row STAYS `pending` and the impl is logged as a `kit` self-section `open_issue` in `BUILD-STATE.md` (a tracked future MINOR PR). Never mark a retro `folded` just because its prose landed. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 2]

@@ -29,7 +29,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-03-process-timers-and-defrost-audit.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-qa-stack-pure-tests-and-defrost-untested-gap.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-self-firing-timer-needs-started-not-only-atsteadystate.md | kit | 2026-09-03 | folded | 0 |
-| 2026-09-03-self-retro-preview-gate-wsl-tests-live-verify.md | kit | 2026-09-03 | pending | 0 |
+| 2026-09-03-self-retro-preview-gate-wsl-tests-live-verify.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-slot-type-change-rompe-bog-station-no-arranca.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-soft-start-staggered-startup.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-station-corre-en-atlas-snap-no-en-el-pc-de-deploy.md | kit | 2026-09-03 | folded | 0 |
