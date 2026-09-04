@@ -641,3 +641,28 @@ ENVEOF
     run grep -q "test-ux.jar" "$TMPDIR_T/gate.args"
     [ "$status" -ne 0 ]
 }
+
+# ---------------------------------------------------------------------------
+# Campaign 3 C3-PR3 (RED-first) — lesson B8 (ng-deploy-type-count)
+# A real module.xml wraps N <type .../> in a <types> element. verify_jar counts with
+# grep "<type" (NO space), which ALSO matches the <types> wrapper → off-by-one (found N+1),
+# so a correct jar fails "expected N, found N+1". Fix: grep "<type " (WITH a space).
+# Bite: put a <types> wrapper in the fake unzip output; a fixed count matches, the buggy one over-counts.
+# ---------------------------------------------------------------------------
+@test "verify_jar counts <type entries, NOT the <types> wrapper (lesson B8, off-by-one)" {
+    # fake unzip that emits the real shape: a <types> wrapper around 3 <type .../> entries
+    cat > "$TMPDIR_T/fakebin/unzip" <<'STUB'
+#!/usr/bin/env bash
+echo '<types>'
+for i in 1 2 3; do printf '<type name="FakeType%s"/>\n' "$i"; done
+echo '</types>'
+exit 0
+STUB
+    chmod +x "$TMPDIR_T/fakebin/unzip"
+    BATS_TEST_MODE=1 run bash -c "
+        export PATH=\"\${TMPDIR_T}/fakebin:\${PATH}\"
+        source '$SCRIPT'
+        verify_jar 'fake.jar' 3
+    "
+    [ "$status" -eq 0 ]   # 3 real <type entries; the <types> wrapper must NOT be counted (buggy grep finds 4 → exit 50)
+}
