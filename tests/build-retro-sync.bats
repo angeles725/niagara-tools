@@ -134,6 +134,42 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 3 ]
 }
 
+@test "S8: a prose-embedded marker (indented/backticked) is NOT counted as an envelope" {
+  # The real BUILD-STATE.md 'How to read' prose quotes the marker string inside backticks,
+  # indented. Sweep must anchor envelope detection to ^<!-- build-state.v1 -->$ (col-0), or
+  # it miscounts the prose as a malformed 5th envelope. Here the ONLY real envelope is valid,
+  # so a col-0-anchored sweep exits 0; a naive grep -c would see 2 opens / 1 close and fail.
+  { echo "## How to read"
+    echo "- one \`<!-- build-state.v1 -->\` … \`<!-- /build-state.v1 -->\` per module"
+    echo
+    echo "<!-- build-state.v1 -->"
+    echo "module: DemoPan"
+    echo "retro_required: false"
+    echo "retro_pending: false"
+    echo "<!-- /build-state.v1 -->"
+  } > "$STATE"
+  write_index
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
+
+@test "S9: a multi-line open_issues list is tolerated (matches the real file shape) exits 0" {
+  { echo "<!-- build-state.v1 -->"
+    echo "module: DemoPan"
+    echo "retro_required: true"
+    echo "retro_pending: false"
+    echo "open_issues:"
+    echo "  - DefrostController.java has zero pure tests (HIGH)."
+    echo "  - suction-2 sensor stuck at 130.5342 psi."
+    echo "last_commit: abc1234"
+    echo "<!-- /build-state.v1 -->"
+  } > "$STATE"
+  write_retro "2026-09-04-demo.md" "<!-- review-status: pending -->"
+  write_index "2026-09-04-demo.md|pending"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
+
 # ============================ CLASSIFICATION (hook) ==========================
 
 @test "H1: a KIT-file change with NO state/retro update and NO trivial trailer FAILS" {
