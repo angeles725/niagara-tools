@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/ng-deploy.sh — Niagara N4 module deploy wrapper
-# Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup --i-know-what-im-doing]
+# Usage: ng-deploy.sh [--mode A|B|C] [--env-file PATH] [--no-backup] [--full-backup] [--keep N]
 #        ng-deploy.sh [--no-deploy] [--with-slotomatic] [--strict-slotomatic] [--no-gate]
 #        ng-deploy.sh [--help] [--version]
 # See docs/GOTCHAS.md and CLAUDE.md for decisions and invariants.
@@ -25,11 +25,14 @@ readonly SCRIPT_VERSION
 MODE="A"
 NO_BACKUP=0
 NO_DEPLOY=0
-IKWID=0      # i-know-what-im-doing companion flag
 ENV_FILE=".env.local"
 WITH_SLOTOMATIC=0
 STRICT_SLOTOMATIC=0
 NO_GATE=0
+# Backup policy (Campaign 3 B10): lightweight-by-default + keep-N autopurge.
+# env-respecting so `FULL_BACKUP=1 backup` and `KEEP_N=N` work when sourced.
+KEEP_N="${KEEP_N:-3}"          # backups to retain per module (--keep N)
+FULL_BACKUP="${FULL_BACKUP:-0}"  # 1 = whole modules dir (--full-backup / FULL_BACKUP=1)
 
 # ---------------------------------------------------------------------------
 # print_usage — print help text to stdout (does NOT exit)
@@ -47,8 +50,13 @@ Options:
                              C = rt jar only  (Java BComponent changes)
   --env-file <PATH>        Source env from PATH instead of .env.local
   --no-deploy              Build only; do not copy or verify (jars stay in build/libs/)
-  --no-backup              WARNING: skip backup step (dangerous — live station has no rollback)
-  --i-know-what-im-doing   Required companion for --no-backup
+  --no-backup              Skip the backup step (opt-in; prints a one-line rollback WARN).
+                             No companion flag required — the default backup is a safe
+                             lightweight one, so skipping it is a plain choice.
+  --full-backup            Back up the WHOLE modules dir (every sibling module), old behavior.
+                             Default is lightweight: only this module's own -rt/-ux/-wb jars.
+  --keep <N>               Backups to retain per module (default 3); older ones auto-purged.
+  --i-know-what-im-doing   Accepted no-op (kept for backward compatibility; --no-backup no longer gates)
   --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
   --no-gate                Skip the verify-module.sh gate (default: on for mode A/C)
@@ -64,12 +72,14 @@ Required env vars (from .env.local or --env-file):
 Optional:
   BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
   SLOTOMATIC_DETECTION — warn|strict|off (default: warn); controls annotation-change heuristic
+  FULL_BACKUP=1        — same as --full-backup (whole modules dir)
+  KEEP_N               — same as --keep N (backups to retain per module; default 3)
 
 Exit codes:
   0   success (or --help)
   10  missing required env var or invalid path
   15  slotomatic failed, or annotation changes detected in strict mode
-  20  backup failed, or --no-backup without --i-know-what-im-doing
+  20  backup failed (tar returned non-zero)
   30  build (gradlew) returned non-zero
   40  copy of jar to STATION_MODULES_DIR failed
   50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed
@@ -134,7 +144,7 @@ parse_args() {
                 NO_BACKUP=1
                 shift ;;
             --i-know-what-im-doing)
-                IKWID=1
+                # accepted no-op (kept for backward compat; --no-backup no longer gates)
                 shift ;;
             --no-deploy)
                 NO_DEPLOY=1
@@ -148,6 +158,13 @@ parse_args() {
             --no-gate)
                 NO_GATE=1
                 shift ;;
+            --full-backup)
+                FULL_BACKUP=1
+                shift ;;
+            --keep)
+                [[ $# -ge 2 ]] || die 10 "--keep requires an argument"
+                KEEP_N="$2"
+                shift 2 ;;
             *)
                 printf '[ng-deploy] ERROR unknown flag: %s\n' "$1" >&2
                 print_usage
@@ -197,16 +214,35 @@ validate_required() {
 }
 
 # ---------------------------------------------------------------------------
-# guard_no_backup — refuse --no-backup without companion
+# guard_no_backup — B10 iii: --no-backup is a plain opt-in (the danger-gate is
+# gone, now the default backup is a safe lightweight one). It is frictionless
+# but prints a one-line rollback WARN — a zero-cost reminder, not a silent
+# removal of safety. --i-know-what-im-doing stays as an accepted no-op.
 # ---------------------------------------------------------------------------
 guard_no_backup() {
-    if [[ "$NO_BACKUP" -eq 1 && "$IKWID" -eq 0 ]]; then
-        die 20 "--no-backup requires --i-know-what-im-doing; refusing to skip backup without it"
+    if [[ "$NO_BACKUP" -eq 1 ]]; then
+        printf '[ng-deploy] WARN backup skipped (--no-backup); ensure the module jars are committed to git for rollback.\n' >&2
     fi
 }
 
 # ---------------------------------------------------------------------------
-# backup — tar deployed jars from STATION_MODULES_DIR into _backups/
+# purge_backups — B10 ii: keep the KEEP_N newest backups for this module,
+# remove older. ts in the name sorts identically by name and by mtime, so
+# `ls -t` and a name-sort agree on which are oldest.
+# ---------------------------------------------------------------------------
+purge_backups() {
+    # why: SC2012 — ls -t is intentional; module-jar names never contain spaces,
+    # and mtime ordering is exactly what keep-N needs.
+    # shellcheck disable=SC2012
+    ls -t "_backups/${MODULE_NAME}-pre-"*.tar.gz 2>/dev/null \
+        | tail -n +$((KEEP_N + 1)) \
+        | xargs -r rm -f || true
+}
+
+# ---------------------------------------------------------------------------
+# backup — B10: lightweight DEFAULT (only THIS module's own jars) + keep-N
+# autopurge. --full-backup / FULL_BACKUP=1 restores the whole-modules-dir tar.
+# The old whole-dir default grew _backups/ without bound (~240 MB/deploy).
 # ---------------------------------------------------------------------------
 backup() {
     local ts
@@ -214,11 +250,30 @@ backup() {
     local bk="_backups/${MODULE_NAME}-pre-${ts}.tar.gz"
     mkdir -p _backups
     printf '[ng-deploy] backup: %s\n' "$bk"
-    # why: glob intentional — matches module jars by pattern; brace would be needed for portability
-    # shellcheck disable=SC2086
-    tar -czf "$bk" -C "$(dirname "$STATION_MODULES_DIR")" \
-        "$(basename "$STATION_MODULES_DIR")" 2>/dev/null \
-        || die 20 "backup failed: $bk"
+
+    if [[ "$FULL_BACKUP" -eq 1 ]]; then
+        # opt-in: whole modules dir (old behavior — every sibling module included)
+        tar -czf "$bk" -C "$(dirname "$STATION_MODULES_DIR")" \
+            "$(basename "$STATION_MODULES_DIR")" 2>/dev/null \
+            || die 20 "backup failed: $bk"
+    else
+        # default: only this module's own <MODULE>-{rt,ux,wb}.jar that exist
+        local -a jars=()
+        local suffix
+        for suffix in rt ux wb; do
+            [[ -f "${STATION_MODULES_DIR}/${MODULE_NAME}-${suffix}.jar" ]] \
+                && jars+=("${MODULE_NAME}-${suffix}.jar")
+        done
+        if [[ "${#jars[@]}" -eq 0 ]]; then
+            printf '[ng-deploy] backup: no existing %s-{rt,ux,wb}.jar in %s; nothing to archive\n' \
+                "$MODULE_NAME" "$STATION_MODULES_DIR"
+            return 0
+        fi
+        tar -czf "$bk" -C "$STATION_MODULES_DIR" "${jars[@]}" 2>/dev/null \
+            || die 20 "backup failed: $bk"
+    fi
+
+    purge_backups
     printf '[ng-deploy] backup ok: %s\n' "$bk"
 }
 
@@ -292,7 +347,10 @@ verify_jar() {
     local jar="$1"
     local expected="$2"
     local actual
-    actual="$(unzip -p "$jar" META-INF/module.xml | grep -c "<type")"
+    # why: trailing space is load-bearing — module.xml wraps N <type .../> in a
+    # <types> element; "<type" (no space) also matches that wrapper → off-by-one
+    # (B8, ng-deploy-type-count). "<type " counts only real entries.
+    actual="$(unzip -p "$jar" META-INF/module.xml | grep -c "<type ")"
     if [[ "$actual" -ne "$expected" ]]; then
         die 50 "verify failed: expected $expected <type entries in $jar, found $actual"
     fi
@@ -472,7 +530,7 @@ main() {
     validate_required
     guard_no_backup
 
-    # Step 2: Backup (skippable with IKWID-guarded --no-backup)
+    # Step 2: Backup (lightweight by default; skippable with --no-backup, which WARNs)
     if [[ "$NO_BACKUP" -eq 0 ]]; then
         backup
     fi

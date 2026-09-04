@@ -6,6 +6,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.12.0] - 2026-09-04
+
+### Changed — ng-deploy.sh: type-count fix, lightweight-backup default, --no-backup WARN (Campaign 3 C3-PR3)
+
+- `scripts/ng-deploy.sh`:
+  - **B8** (`ng-deploy-type-count`) — `verify_jar` counted module.xml `<type` entries with `grep "<type"`,
+    which ALSO matched the `<types>` wrapper element → off-by-one (a correct jar reported N+1 and failed).
+    Fixed to `grep "<type "` (trailing space): only real entries count.
+  - **B10** (`ng-deploy-backup-liviano-y-autopurga`) — backup is now **lightweight by default**: it archives
+    only this module's own `<MODULE>-{rt,ux,wb}.jar` present in `STATION_MODULES_DIR`, not the whole modules
+    dir (the old default grew `_backups/` ~240 MB/deploy without bound). A **keep-N autopurge** (default 3,
+    `--keep N`) prunes older backups after each successful one.
+  - **`--no-backup` gate removed → WARN** — no longer requires `--i-know-what-im-doing`; it is a plain opt-in
+    that prints a one-line rollback reminder (`backup skipped … committed to git for rollback`).
+    `--i-know-what-im-doing` stays as an accepted no-op for backward compatibility.
+  - **`--full-backup` / `FULL_BACKUP=1`** restores the old whole-modules-dir backup.
+  - Exit code **20** now means a genuine backup failure only (no longer the removed gate).
+- `tests/ng-deploy.bats`: B8 + B10 i/ii/iii/iv (QA, RED-first) now green; T1–T33 unchanged.
+- `retros/INDEX.md`: flipped **ng-deploy-type-count** (B8) and **ng-deploy-backup-liviano-y-autopurga** (B10,
+  promoted rule = lightweight-default + keep-N autopurge + `--no-backup` opt-in + `--full-backup`) → `folded`.
+  kit self-section: owed B8/B10 → DONE; last owed = the verify-module palette check (→ C3-PR4).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 C3-PR3. New ng-deploy.sh behavior → MINOR.
+
+---
+
 ## [v0.11.0] - 2026-09-04
 
 ### Added — build.sh: auto-detect plugin, gradle-root walk-up, clean-lock message (Campaign 3 C3-PR2)

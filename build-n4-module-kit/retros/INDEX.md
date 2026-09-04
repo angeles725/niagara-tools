@@ -24,8 +24,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-03-default-zero-limit-blocks-instead-of-disabling.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-hidden-actions-not-invocable-and-runtime-anchor-verification.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-hmi-1280x800-control-panel-2col-no-scroll.md | kit | 2026-09-03 | folded | 0 |
-| 2026-09-03-ng-deploy-backup-liviano-y-autopurga.md | kit | 2026-09-03 | pending | 0 |
-| 2026-09-03-ng-deploy-type-count-and-cwd.md | kit | 2026-09-03 | pending | 0 |
+| 2026-09-03-ng-deploy-backup-liviano-y-autopurga.md | kit | 2026-09-03 | folded | 0 |
+| 2026-09-03-ng-deploy-type-count-and-cwd.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-process-timers-and-defrost-audit.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-qa-stack-pure-tests-and-defrost-untested-gap.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-self-firing-timer-needs-started-not-only-atsteadystate.md | kit | 2026-09-03 | folded | 0 |
