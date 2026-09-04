@@ -50,4 +50,4 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope.
 - The **Output Contract MUST print** `retro: <path> (N deltas, review-status: pending)` — or `retro: none (trivial: <reason>)` — as an explicit line. A written-but-invisible retro reads as a missing one.
 - Do NOT silently rewrite METHODOLOGY — propose; a human folds it in. This is how the kit matures from seed to solid.
-- (The MACHINE enforcement of this gate lands in build-n4-retro-gate / PR2; this section is the wording + the `retro_pending` field it enforces.)
+- Machine enforcement (opt-in): `toolbelt/sweep-build-state.sh` validates the ledger + `retros/INDEX.md`; `.githooks/pre-push` blocks a build-relevant push that skips them (enable with `git config core.hooksPath .githooks`).

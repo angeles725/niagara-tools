@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# pre-push — the continuity + retro enforcement gate (build-n4-module campaign PR2).
+#
+# git IS allowed here: a git hook is not a toolbelt/*.sh, so the kit-links.bats L2 rule
+# ("no toolbelt script invokes git") does not apply. This hook owns the git-diff half of the
+# gate and delegates the content half to toolbelt/sweep-build-state.sh.
+#
+# Opt-in: enable with `git config core.hooksPath .githooks`. When active it BLOCKS a push that
+# changes build-relevant kit files unless the SAME range also carries a BUILD-STATE.md update +
+# a pending retro + its INDEX row, OR a `Retro: none (trivial: <reason>)` commit trailer.
+#
+# stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
+set -u
+
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+sweep="$toplevel/build-n4-module-kit/toolbelt/sweep-build-state.sh"
+
+# range from the first ref line; fields 1/3 (refs) are unused
+read -r _ lsha _ rsha || exit 0
+[ -n "${lsha:-}" ] || exit 0
+if [[ "${rsha:-}" =~ ^0*$ ]]; then range="$lsha"; else range="$rsha..$lsha"; fi
+
+changed=$(git diff --name-only "$range" 2>/dev/null)
+log=$(git log --format=%B "$range" 2>/dev/null)
+
+# build-relevant = kit files EXCEPT BUILD-STATE.md and retros/**, PLUS scripts/**
+relevant=$(printf '%s\n' "$changed" \
+  | grep -E '^(build-n4-module-kit/|scripts/)' \
+  | grep -vE '^build-n4-module-kit/BUILD-STATE\.md$' \
+  | grep -vE '^build-n4-module-kit/retros/' || true)
+[ -n "$relevant" ] || exit 0     # nothing build-relevant → nothing to gate
+
+# trivial waiver short-circuits
+if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then exit 0; fi
+
+has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/BUILD-STATE\.md$' || true)
+has_retro=$(printf '%s\n' "$changed" | grep -E '^build-n4-module-kit/retros/[^/]+\.md$' | grep -vE '/INDEX\.md$' | head -1 || true)
+has_index=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/retros/INDEX\.md$' || true)
+
+if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ] && [ "${has_index:-0}" -ge 1 ]; then
+  # content half: the ledger + index must actually cohere
+  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
+                "$toplevel/build-n4-module-kit/retros" \
+                "$toplevel/build-n4-module-kit/retros/INDEX.md"
+  exit $?
+fi
+
+echo "pre-push: build-relevant kit files changed without a BUILD-STATE.md update + a pending retro" >&2
+echo "          + its INDEX row, and no 'Retro: none (trivial: <reason>)' trailer. See BUILD-LOOP.md §7." >&2
+exit 1

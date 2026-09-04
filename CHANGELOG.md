@@ -6,6 +6,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.7.0] - 2026-09-04
+
+### Added — retro-enforcement gate (sweep + pre-push hook + retro index)
+
+- `build-n4-module-kit/toolbelt/sweep-build-state.sh` (NEW): content-only validator (VCS-free —
+  kit-links L2) for BUILD-STATE.md + retros/INDEX.md. Exit 0 clean / 1 named integrity violation /
+  3 usage. Checks column-0-anchored `build-state.v1` markers, required boolean fields
+  (module/retro_required/retro_pending), a tolerated multi-line `open_issues` list, and INDEX
+  integrity (every retro has a row, every row a real file, review-status ∈ {pending,folded}).
+- `.githooks/pre-push` (NEW): opt-in gate (enable with `git config core.hooksPath .githooks`).
+  Blocks a push that changes build-relevant kit files (`build-n4-module-kit/**` except BUILD-STATE.md
+  and `retros/`, plus `scripts/**`) unless the range also carries a BUILD-STATE.md update + a pending
+  retro + its INDEX row, or a `Retro: none (trivial: <reason>)` trailer. Delegates the content half
+  to `sweep-build-state.sh` (the diff half owns the only VCS calls).
+- `build-n4-module-kit/retros/INDEX.md` (NEW): the promotion registry — one row per retro (30
+  seeded; 3 folded, 27 pending), with a `deltas` count column.
+- `tests/build-retro-sync.bats` (NEW, RED-first): 16 cases (9 sweep + 7 hook), each
+  mutation-checked to bite.
+- `build-n4-module-kit/BUILD-LOOP.md` §7: parenthetical updated to point at the now-live gate.
+
+### References
+
+- SDD change: `build-n4-module-continuity` (PR2 of 3; follows PR1 v0.6.0 continuity ledger).
+- Engram: #8095 (campaign), #8101 (recon), #8105 (tasks), #8107 (PR1 landed).
+
+---
+
 ## [v0.6.0] - 2026-09-04
 
 ### Added — build-session continuity ledger (BUILD-STATE.md)
