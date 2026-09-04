@@ -41,6 +41,16 @@ activates the gate: the PR that turns the gate on passes its own gate.
    the content-fold-audit open_issue in the `kit` self-section; a future gate/check enhancement, separate
    from this PR's structural-anchor hardening.
 
+4. **The "never silently clobber" ethos shows up at three layers, and a guardrail refusing a peer-driven
+   rewrite is the same design.** This PR's own delivery dogfooded it: an attempt to `--amend` + force-push
+   the already-published impl commit (a peer-requested history rewrite) was REFUSED by the session's
+   permission guard — rewriting published history is the human owner's call to authorize, not a peer's to
+   request nor an agent's to work around. The non-destructive fix was to add the feature-retro as a new
+   fast-forward commit (3 clean commits, no rewrite). That guard is the same principle as
+   `install-hooks.sh` refusing to overwrite a pre-existing custom `core.hooksPath` without `--force`, and as
+   `ng-deploy.sh --no-backup` printing a WARN instead of silently skipping: never destroy or override
+   someone's state silently — refuse loud, or leave a trace, and let the owner decide.
+
 ## Cost / evidence
 - Inert-gate evidence: `git config core.hooksPath` returned `(none set)` on the working clone through all of
   Campaigns 1-4 while the hook + sweep + ledger were fully built and tested.
