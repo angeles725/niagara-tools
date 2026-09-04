@@ -31,8 +31,11 @@ testfqcn=$2
 command -v javac >/dev/null 2>&1 || die 3 "javac not on PATH (need a JDK 8)"
 
 # JUnit 4.13.2 + Hamcrest 1.3 live in the Gradle cache/dist, not the repo or the N4 install.
-JU=$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1)
-HC=$(find "$HOME/.gradle" -name 'hamcrest-core-1.3.jar' 2>/dev/null | head -1)
+# `|| true`: with `set -e -o pipefail`, find exits non-zero when ~/.gradle is absent
+# (empty-cache path) and would abort HERE, before the actionable die 3 below — swallow it
+# so the missing-jar case reports its real message instead of a bare exit 1.
+JU=$(find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | head -1) || true
+HC=$(find "$HOME/.gradle" -name 'hamcrest-core-1.3.jar' 2>/dev/null | head -1) || true
 [ -n "$JU" ] || die 3 "junit-4.13.2.jar not in ~/.gradle — run one './gradlew :<mod>-rt:compileTestJava' to fetch it"
 [ -n "$HC" ] || die 3 "hamcrest-core-1.3.jar not in ~/.gradle — run one gradle build to fetch it"
 
