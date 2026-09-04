@@ -6,6 +6,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.8.0] - 2026-09-04
+
+### Added — one-command pure-test runner (`run-pure-test.sh`)
+
+- `build-n4-module-kit/toolbelt/run-pure-test.sh` (NEW): runs a ZERO-Baja pure decision class +
+  its JUnit test standalone in WSL, resolving junit-4.13.2 + hamcrest-1.3 from `~/.gradle` and
+  compiling into a TEMP dir (never the module tree — a parallel session's working tree is
+  off-limits). Removes the per-session jar hunt documented in the
+  `2026-09-04-junit-standalone-cached-jar-locations` retro. Exit 0 pass / 1 test failed / 2 usage /
+  3 env. Proven against the real CompPan `CompressorControlTest`: 31 tests OK in 0.015s.
+- `tests/run-pure-test.bats` (NEW): 6 cases, each mutation-checked to bite — P2 (a failing pure
+  test must exit non-zero, i.e. the runner does not swallow a JUnit failure) and P6 (an empty
+  `~/.gradle` cache exits 3 with an actionable message) both caught real behaviour, the latter a
+  `set -e`/pipefail bug in the runner itself.
+
+---
+
 ## [v0.7.0] - 2026-09-04
 
 ### Added — retro-enforcement gate (sweep + pre-push hook + retro index)
