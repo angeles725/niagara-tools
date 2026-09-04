@@ -145,8 +145,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.13.1                      # current kit VERSION
-last_change: 2026-09-04              # Campaign 3 close: doc tidy pass (METHODOLOGY promotion-discipline section, dashboard U1 height nuance, tag normalization)
+version: 0.13.2                      # current kit VERSION
+last_change: 2026-09-04              # Campaign 3 close retro filed (campaign3-close-process-meta-lessons) — Campaign 3 fully closed
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS: ALL DONE — the backlog is cleared. (B4, B6, B7, B8, B10, soft-start, palette all implemented and folded.)
@@ -157,5 +157,5 @@ open_issues:
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · Campaign 3 CLOSE tidy pass (v0.13.1): folded the doc-vs-script + fidelity-grading rules into METHODOLOGY, added the dashboard U1 height nuance, normalized the two mixed-format tag citations, flipped campaign2-promotion-process-meta-lessons → folded. All owed-script impls (B4/B6/B7/B8/B10/soft-start/palette) done and every pending kit-doc retro folded. next: Mejoras runs the Campaign 3 close report + retro.
+last_session: 2026-09-04 · Campaign 3 CLOSED (v0.13.2): filed the close retro campaign3-close-process-meta-lessons (3 new process lessons — gate signal-vs-noise, safety-WARN-over-silent-removal, marker-based retro reading; review-status pending, a future campaign may fold them). Campaign 3 = all 7 owed script-impls done+mutation-proven (B4→0.10.0, B6/B7/soft-start→0.11.0, B8/B10→0.12.0, palette→0.13.0, tidy→0.13.1) + every kit-doc retro folded. next: Mejoras runs the Campaign 3 close report.
 <!-- /build-state.v1 -->

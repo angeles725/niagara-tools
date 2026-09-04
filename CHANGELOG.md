@@ -6,6 +6,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.13.2] - 2026-09-04
+
+### Added — Campaign 3 close retro (process meta-lessons)
+
+- `retros/2026-09-04-campaign3-close-process-meta-lessons.md` (+ INDEX row, `pending`): captures the three
+  genuinely-new process lessons Campaign 3 surfaced — (1) a new gate/verify check must be high-signal /
+  low-false-positive, scoped to the reported defect (empty-palette-with-types, rc/-backup files), not a
+  literal completeness rule; (2) when a lesson removes a safety guard, prefer a frictionless WARN over a
+  silent removal; (3) when a retro's prose and its PROPOSED-delta marker disagree, the propose-never-apply
+  marker is what promotes. This closes Campaign 3.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 close. New retro filed → PATCH.
+
+---
+
 ## [v0.13.1] - 2026-09-04
 
 ### Changed — kit doc tidy pass (Campaign 3 close, doc-only)

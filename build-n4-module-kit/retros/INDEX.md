@@ -41,3 +41,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-04-run-pure-test-set-e-empty-cache.md | kit | 2026-09-04 | pending | 1 |
 | 2026-09-04-gate-exit-taxonomy-promotion.md | kit | 2026-09-04 | pending | 1 |
 | 2026-09-04-campaign2-promotion-process-meta-lessons.md | kit | 2026-09-04 | folded | 0 |
+| 2026-09-04-campaign3-close-process-meta-lessons.md | kit | 2026-09-04 | pending | 0 |
