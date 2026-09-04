@@ -45,6 +45,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 7. Retro + close (HARD close gate — not optional)
 - **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
+- **Kit-infrastructure work** (changing the kit itself — toolbelt, type guides, methodology — not building a module) has no module build to record: update the `kit` self-section of `BUILD-STATE.md` instead, under the same close gate.
 - A session that changed KIT files is NOT "done" until ONE of:
   - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
   - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope.

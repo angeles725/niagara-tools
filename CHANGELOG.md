@@ -6,6 +6,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.8.1] - 2026-09-04
+
+### Changed — promote proven retro lessons into the kit core (PR3)
+
+- **Lesson folds (documentation):** promoted the highest-value [CERT]-grade lessons trapped in `retros/`
+  into the living kit files —
+  - `METHODOLOGY.md`: never retype a live slot / bog boot crash (S1) + NEW-safety-slot-defaults-SAFE
+    carve-out (L15) under a new §Schema/upgrade safety; `0`-means-DISABLED on a protection limit (L2);
+    `module.palette` one entry per `@NiagaraType` (B5); the timer `started()`+`atSteadyState()` pointer;
+    the 4-layer assurance pointer.
+  - `types/logic.md`: `Long.MIN_VALUE` sentinel guard (L1); the slot-default SAFE carve-out (L15); a
+    §Pure-class extraction section (extract-test-then-wire, stateful `step()` adapter · T2/L6); cross-refs.
+  - `types/dashboard.md`: a generic write endpoint must whitelist / check `Flags.OPERATOR` (U5).
+  - `build-verify.md`: free-the-lock-first vs mirror-fallback (B2) + build/libs-still-signed (B1) +
+    first-build-no-stop (B3); the `find ~/.gradle` + `run-pure-test.sh` recipe and niagaraTest-is-docs
+    (B11); a §How you know it's good 4-layer assurance stack (T1/T3/T4).
+- **Contradictions resolved to ONE rule each:** jar-lock (free the lock first; mirror only for a live
+  production station) → `build-verify.md`; slot default (preserve current on a deployed path, but a NEW
+  safety-gating slot defaults SAFE) → `METHODOLOGY.md` + `types/logic.md`.
+- **`kit` self-section** added to `BUILD-STATE.md` (`module: kit`) so kit-infrastructure work has a row to
+  update; `BUILD-LOOP.md` §7 notes it. Dogfood: this campaign filed TWO retros (the campaign retro + the
+  run-pure-test `set -e` empty-cache lesson) with `retros/INDEX.md` rows, and marked 4 fully-folded retros
+  `folded` — the mechanism recording its own evolution.
+
+### References
+
+- SDD change: `build-n4-module-continuity` (PR3 of 3; follows PR1 v0.6.0 ledger, PR2 v0.7.0 gate, v0.8.0
+  run-pure-test). Documentation + schema-section only, no new script → PATCH.
+- Engram: #8095 (campaign), #8101 (42-lesson mining), #8105 (tasks), #8111 (chain status).
+
+---
+
 ## [v0.8.0] - 2026-09-04
 
 ### Added — one-command pure-test runner (`run-pure-test.sh`)

@@ -29,6 +29,7 @@ modules, not sixty focuses.
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | unknown | yes | no | 2 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
+| kit | niagara-tools | self | 2026-09-04 | n/a | n/a | no | 2 |
 
 ---
 
@@ -132,4 +133,23 @@ retro_required: false
 retro_pending: false
 last_commit: unknown
 last_session: unknown · imported as the build exemplar; see SOURCES.md
+<!-- /build-state.v1 -->
+
+## kit — the kit's own evolution (self-section)
+
+Kit-infrastructure work (changing the kit itself, not building a module) has no module build to
+record, so it updates THIS `kit` self-section. Same `build-state.v1` envelope and same `BUILD-LOOP.md`
+§7 close gate — this is the kit's no-registro fix applied to its own evolution.
+
+<!-- build-state.v1 -->
+module: kit                          # the kit itself — the module_repo/build fields do not apply
+version: 0.8.1                       # current kit VERSION
+last_change: 2026-09-04              # PR3: promote proven retro lessons into the kit core
+open_issues:
+  - A second promotion pass is owed: ~30 mined lessons (L3-L14/L16-L22, U1-U4/U6-U9, B4/B6-B10, D1-D3, S2-S4) are in retros/ (review-status pending) but not yet folded into the core.
+  - CompPan-rt/module.lexicon is empty (T8) — slots render raw camelCase; the rule is in METHODOLOGY, the module fix is out of scope.
+retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
+retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
+last_commit: unknown                 # set at PR3 merge
+last_session: 2026-09-04 · campaign build-n4-module-continuity — continuity ledger (PR12) + retro gate (PR13) + lesson promotion (PR3); next: a second promotion pass for the remaining L/U/B/D/S lessons
 <!-- /build-state.v1 -->
