@@ -6,6 +6,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.15.0] - 2026-09-04
+
+### Added / Changed — activate the retro-enforcement gate (Campaign 5 AG-PR1)
+
+- **`.githooks/pre-push` hardened** — the promotion exit now accepts a `Retro: promotion (folds …)` trailer
+  when there is an in-range `retros/INDEX.md` diff (a full promotion flips a row) **OR** an in-range
+  `BUILD-STATE.md` diff (a PARTIAL promotion folds content while its source retro stays `pending`, so it
+  flips no row — it stamps the owed `open_issue` instead). This fixes the false-negative on legitimate
+  partial promotions found dogfooding C4-PR2. The blanket-escape guard is kept: a promotion trailer with
+  NEITHER anchor still FAILS. Either anchored path now runs `sweep-build-state.sh` for ledger coherence.
+- **NEW `scripts/install-hooks.sh`** — opt-in, per-clone, reversible activation of the gate: sets
+  `git config --local core.hooksPath .githooks` (idempotent); `--uninstall` restores the default; it
+  REFUSES to clobber a pre-existing custom `core.hooksPath` (your own hooks are never silently overwritten)
+  unless `--force`. It lives under `scripts/` (not `toolbelt/`) because it uses git — the kit-links L2 rule
+  bans git only in `toolbelt/*.sh`.
+- **Docs** — activation documented in `build-n4-module-kit/BUILD-LOOP.md` §7 and `CONTRIBUTING.md` §6.1;
+  the §7 promotion-exit contract updated to the INDEX-OR-BUILD-STATE structural anchor.
+- `tests/build-retro-sync.bats`: H8/H9/H10 (QA, RED-first) green — H10 proves a BUILD-STATE-anchored partial
+  promotion PASSES. `tests/install-hooks.bats`: I1-I4 (git-real on a throwaway repo) green.
+- The gate still ships **inert** — this PR makes activation a one-command step; the live activation is a
+  deliberate operator action (`scripts/install-hooks.sh`), not automatic.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 5 AG-PR1 (gate activation). New behavior + new script → MINOR.
+
+---
+
 ## [v0.14.1] - 2026-09-04
 
 ### Added — Campaign 4 close retro (process meta-lessons)

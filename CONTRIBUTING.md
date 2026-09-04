@@ -145,6 +145,22 @@ Before `git commit`:
 - [ ] No accidentally committed `.env.local` files (`.gitignore` covers `.env.*` with explicit
       `!.env.local.example` exception — verify `git status` is clean of personal env files).
 
+### 6.1 Enabling the retro-enforcement gate (opt-in, per-clone, reversible)
+
+The `build-n4-module` kit ships a pre-push gate (`.githooks/pre-push`) that blocks a push touching
+build-relevant kit files unless it also records continuity (a `BUILD-STATE.md` update + a pending retro +
+its INDEX row), carries a `Retro: none (trivial: <reason>)` trailer, or is a promotion with a structural
+anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff). It ships **inert** — nothing runs until you enable it:
+
+```sh
+scripts/install-hooks.sh              # activate: git config core.hooksPath .githooks
+scripts/install-hooks.sh --uninstall  # deactivate: restore the default hooks
+```
+
+It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-existing custom
+`core.hooksPath` (your own hooks are never silently clobbered) — pass `--force` to override. See
+`build-n4-module-kit/BUILD-LOOP.md` §7 for the close-gate contract the hook enforces.
+
 ---
 
 ## 7. Content boundary (CLAUDE.md vs CONTRIBUTING.md vs README.md)
