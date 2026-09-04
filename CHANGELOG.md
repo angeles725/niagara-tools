@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.13.4] - 2026-09-04
+
+### Changed — T7 b/c: grow the two weakest type guides from the WB/UX corpus (Campaign 4 C4-PR2)
+
+- **types/wb-widgets.md** (T7b, B751) — folded the "how much wb is enough" ladder (rung 0 nothing → 1
+  FieldEditor → 2 Manager → 3 custom View; our components sit at rung 0), the FieldEditor recipe, and the
+  "a Honeywell Wizard is a tabbed `BWbComponentView`, not a `BWizard`" rule. The seed guide now carries the
+  authoring ladder.
+- **types/dashboard.md** (T7c, B752/B753) — folded the three-way serving-recipe decision (servlet-SPA vs
+  bajaux `@AgentOn` vs PX; our DashboardPan is servlet-SPA, don't migrate) and the vendor-contrast RBAC
+  caveat (Honeywell React SPAs ship `permissions="unrestricted"` — don't copy; the browser is never the
+  security boundary). The RBAC core, pure router, traversal guard, and Home-Page footgun of B752 were
+  ALREADY in the guide, so only the new parts were folded (no double-fold).
+- `retros/INDEX.md`: unchanged — **corpus-index-rt-authoring-and-organization-blocks stays `pending`**
+  (split-retro: its T8 half folded in C4-PR1, T7 b/c here, and T7a's corpus-index nav doc is owed to C4-PR3;
+  the retro flips to `folded` only when T7a lands).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 4 C4-PR2. Doc folds → PATCH. (Partial promotion — no
+  INDEX flip yet; the source retro flips in C4-PR3.)
+
+---
+
 ## [v0.13.3] - 2026-09-04
 
 ### Changed — T-group doc folds T5/T6/T8 (Campaign 4 C4-PR1)
