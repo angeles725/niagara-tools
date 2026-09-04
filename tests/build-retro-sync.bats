@@ -231,3 +231,22 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -ne 0 ]
 }
+
+# --- third §7 exit: promotion (a fold-only PR fits neither "new retro" nor "trivial") ---
+# A promotion trailer is a valid close ONLY when it moves the registry (a retros/INDEX.md
+# diff in range flips folded/pending marks). The trailer alone must NOT be a blanket escape.
+@test "H8: a kit change + 'Retro: promotion (folds …)' trailer AND an INDEX.md diff PASSES" {
+  [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/INDEX.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3,L4 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
+@test "H9: a promotion trailer WITHOUT an INDEX.md diff in range FAILS (no blanket escape)" {
+  [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
+  printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -ne 0 ]
+}
