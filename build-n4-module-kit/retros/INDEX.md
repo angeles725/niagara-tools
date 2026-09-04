@@ -12,9 +12,9 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-01-dashboardpan-hmi-touch-ux.md | DashboardPan | 2026-09-01 | folded | 0 |
 | 2026-09-01-dashboardpan-ux-direct-build.md | DashboardPan | 2026-09-01 | pending | 0 |
 | 2026-09-02-coldroompan-fan-mode-defrost.md | ColdRoomPan | 2026-09-02 | pending | 0 |
-| 2026-09-02-comppan-fase1-staging.md | CompPan | 2026-09-02 | pending | 0 |
-| 2026-09-02-comppan-fase2-pressure-modulation.md | CompPan | 2026-09-02 | pending | 0 |
-| 2026-09-02-comppan-fase3-floating-suction.md | CompPan | 2026-09-02 | pending | 0 |
+| 2026-09-02-comppan-fase1-staging.md | CompPan | 2026-09-02 | folded | 0 |
+| 2026-09-02-comppan-fase2-pressure-modulation.md | CompPan | 2026-09-02 | folded | 0 |
+| 2026-09-02-comppan-fase3-floating-suction.md | CompPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-dashboardpan-detail-render-doors.md | DashboardPan | 2026-09-02 | pending | 0 |
 | 2026-09-02-module-palette-and-build-target.md | kit | 2026-09-02 | pending | 0 |
 | 2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md | ColdRoomPan | 2026-09-03 | pending | 0 |

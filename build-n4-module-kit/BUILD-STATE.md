@@ -143,13 +143,13 @@ record, so it updates THIS `kit` self-section. Same `build-state.v1` envelope an
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.8.1                       # current kit VERSION
-last_change: 2026-09-04              # PR3: promote proven retro lessons into the kit core
+version: 0.8.2                       # current kit VERSION
+last_change: 2026-09-04              # Campaign 2 PR-A: fold logic lessons L3-L14 into the core
 open_issues:
-  - A second promotion pass is owed: ~30 mined lessons (L3-L14/L16-L22, U1-U4/U6-U9, B4/B6-B10, D1-D3, S2-S4) are in retros/ (review-status pending) but not yet folded into the core.
+  - Promotion in progress (Campaign 2): the remaining mined lessons L16-L22, U1-U4/U6-U9, B4/B6-B10, D1-D3, S2-S4 are in retros/ (review-status pending), not yet folded. L3-L14 were folded in PR-A.
   - CompPan-rt/module.lexicon is empty (T8) — slots render raw camelCase; the rule is in METHODOLOGY, the module fix is out of scope.
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · campaign build-n4-module-continuity — continuity ledger (PR12) + retro gate (PR13) + lesson promotion (PR3); next: a second promotion pass for the remaining L/U/B/D/S lessons
+last_session: 2026-09-04 · Campaign 2 PR-A folded logic lessons L3-L14 into types/logic.md; next: PR-A2 (L16-L22), then PR-B (UX), PR-C (build/deploy/schema)
 <!-- /build-state.v1 -->

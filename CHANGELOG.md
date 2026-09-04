@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.8.2] - 2026-09-04
+
+### Changed — Campaign 2 PR-A: fold logic-group lessons L3–L14 into the core
+
+- `types/logic.md`: promoted 11 [CERT] control-logic lessons from `retros/` into the living guide —
+  invalid-reading-vs-bad-value / assume-commanded on a dead sensor (L3); latched fault + operator
+  `faultReset`, never auto-retry rotating equipment (L4); proof-of-run + stuck-contactor alarms (L5);
+  persist-only-survival + `resetTransient()` in `stopped()` (L7); arm the heartbeat tick in its own try
+  before the first `execute()` (L8); the no-reentrancy invariant — outputs ∉ `changed()` filter (L9);
+  cancel every ticket on one shared path at both edges + mode enter/exit (L10); a decoupled output needs
+  its own apply method wired into every setter (L11); ship an additive phase dormant behind a default,
+  old tests guard for free (L12); stub an unvalidated safety-critical data function to NaN, never invented
+  numbers (L13); self-order by a guarded sibling tree-walk, not a coordinator component (L14); and the input-only-phase boundary rule (fase3 #2) — a phase changing only an INPUT pushes new logic to the adapter boundary, leaving the proven core and its tests untouched.
+- Flipped `retros/INDEX.md` to `folded` for the 3 retros now fully in core (comppan-fase1/2/3); updated the
+  `kit` self-section open_issue to the remaining L16-L22 / U / B / D / S groups. Excludes L6 (already folded
+  in Campaign 1).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 (PR-A of PR-A/A2/B/C). Documentation only → PATCH.
+- Engram: #8114 (Campaign 1 complete), #8101 (42-lesson mining).
+
+---
+
 ## [v0.8.1] - 2026-09-04
 
 ### Changed — promote proven retro lessons into the kit core (PR3)
