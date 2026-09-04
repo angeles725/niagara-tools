@@ -6,6 +6,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.10.0] - 2026-09-04
+
+### Added — verify-module.sh rc/ editor-backup check + `--strict` (Campaign 3 C3-PR1, B4 impl)
+
+- `build-n4-module-kit/toolbelt/verify-module.sh`: new default-on `rcbackup` check — editor/backup files
+  (`*~`, `*.orig`, `*.bak*`) packaged under `rc/` (bloat + servable) emit a `WARN rcbackup` row NAMING the
+  offenders; the WARN does NOT increment the failure count (exit stays 0 for an otherwise-valid jar). New
+  `--strict` flag promotes it to `FAIL rcbackup` (exit 1). A `WARN` severity was added to the reporter and
+  a `warned` count to the summary. Implements the owed B4 (its rule was folded into build-verify.md in
+  Campaign 2 PR-C).
+- `tests/verify-module.bats`: V10 (WARN, exit 0) / V11 (clean rc silent) / V12 (`--strict` → FAIL), RED-first.
+- `retros/INDEX.md`: `dashboardpan-detail-render-doors` → `folded` (its last owed lesson B4 is now
+  implemented; U1/U4/D3 were folded in Campaign 2). kit self-section: B4 moved owed → DONE (5 impls owed).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 C3-PR1. New capability (WARN check + `--strict` flag) → MINOR.
+- Engram: #8120 (Campaign 2 complete).
+
+---
+
 ## [v0.9.4] - 2026-09-04
 
 ### Added — Campaign 2 close retro (promotion-process meta-lessons)

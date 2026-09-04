@@ -11,8 +11,9 @@
 #   stored    zero Deflated entries — required only when the jar must be re-signed in Workbench. [--stored]
 #   typecount packaged <type> count == <module-dir>/<jar-basename>/module-include.xml count.     [--src]
 #   facets    no BFacets.make(BFacets.MIN|MAX, <raw number>) under <module-dir>/<jar-basename>/src. [--src]
+#   rcbackup  no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
 #
-# Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] <jar>...
+# Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
 #   derived from each jar's basename (DashboardPan-rt.jar -> DashboardPan-rt/).
 # Report: one row per check per jar: PASS|FAIL|SKIP  <check>  <jar>  <detail>; a summary line closes it.
@@ -20,12 +21,13 @@
 # Needs only unzip, od, grep, awk, sort — no JDK.
 set -euo pipefail
 
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
-TARGET=""; STORED=0; SRC=""; JARS=()
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
+TARGET=""; STORED=0; SRC=""; STRICT=0; JARS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --target-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; TARGET="$2"; shift 2 ;;
     --stored) STORED=1; shift ;;
+    --strict) STRICT=1; shift ;;
     --src) [ $# -ge 2 ] || { usage >&2; exit 2; }; SRC="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "verify-module: unknown flag $1" >&2; usage >&2; exit 2 ;;
@@ -37,8 +39,8 @@ for t in unzip od awk grep sort; do command -v "$t" >/dev/null || { echo "verify
 [ -z "$SRC" ] || [ -d "$SRC" ] || { echo "verify-module: --src is not a directory: $SRC" >&2; exit 2; }
 for j in "${JARS[@]}"; do case "$j" in *.jar) ;; *) echo "verify-module: not a jar: $j" >&2; exit 2 ;; esac; done
 
-FAILED=0; NPASS=0; NFAIL=0; NSKIP=0
-row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; case "$1" in PASS) NPASS=$((NPASS+1));; FAIL) NFAIL=$((NFAIL+1));; SKIP) NSKIP=$((NSKIP+1));; esac; }
+FAILED=0; NPASS=0; NFAIL=0; NSKIP=0; NWARN=0
+row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; case "$1" in PASS) NPASS=$((NPASS+1));; FAIL) NFAIL=$((NFAIL+1));; SKIP) NSKIP=$((NSKIP+1));; WARN) NWARN=$((NWARN+1));; esac; }
 # version compare: 0 when $1 <= $2 (dot-separated numeric)
 ver_le() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
 
@@ -103,6 +105,13 @@ check_raw_double_facets() {
   if [ -z "$hits" ]; then row PASS facets "$jar" "no raw-number MIN/MAX facet under $pd/src"; return 0; fi
   row FAIL facets "$jar" "raw-number MIN/MAX facet (wrap in BDouble.make): $hits"; return 1
 }
+check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable). WARN by default; FAIL under --strict.
+  local jar="$1" names
+  names=$(printf '%s\n' "$LIST" | awk -F/ '/^rc\//{ b=$NF; if (b ~ /~$/ || b ~ /\.orig$/ || b ~ /\.bak.*$/) print $0 }' | tr '\n' ' ' | sed 's/ *$//')
+  [ -n "$names" ] || return 0   # clean rc/ → silent, no row
+  if [ "$STRICT" -eq 1 ]; then row FAIL rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 1; fi
+  row WARN rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 0
+}
 
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
@@ -112,9 +121,9 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_rc_backup; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done
-printf 'verify-module: %d passed, %d failed, %d skipped -> %s\n' "$NPASS" "$NFAIL" "$NSKIP" "$([ "$FAILED" -eq 0 ] && echo ALL PASS || echo FAILED)"
+printf 'verify-module: %d passed, %d failed, %d skipped, %d warned -> %s\n' "$NPASS" "$NFAIL" "$NSKIP" "$NWARN" "$([ "$FAILED" -eq 0 ] && echo ALL PASS || echo FAILED)"
 exit "$FAILED"
