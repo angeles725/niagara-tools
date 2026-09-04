@@ -1,0 +1,34 @@
+name: CI
+
+# Server-side enforcement of the same checks the pre-commit checklist (CONTRIBUTING.md §6)
+# and the pre-push gate cover — runs on GitHub for every push/PR, so it cannot be bypassed
+# by a clone that did not opt into the client-side hook (scripts/install-hooks.sh).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: shellcheck + bats + ledger sweep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats + shellcheck
+        run: sudo apt-get update && sudo apt-get install -y bats shellcheck
+
+      - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
+        run: shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash
+
+      - name: bats (all unit tests)
+        run: bats tests/*.bats
+
+      - name: sweep-build-state (BUILD-STATE ↔ retros/INDEX coherence)
+        run: |
+          K=build-n4-module-kit
+          bash "$K/toolbelt/sweep-build-state.sh" "$K/BUILD-STATE.md" "$K/retros" "$K/retros/INDEX.md"

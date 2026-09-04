@@ -6,6 +6,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.15.1] - 2026-09-04
+
+### Added — CI: server-side enforcement of the checks (Campaign 5 AG-PR2)
+
+- **NEW `.github/workflows/ci.yml`** — a GitHub Actions workflow that runs on every push to `main` and every
+  pull request: `shellcheck` (scripts + toolbelt + tests, matching CONTRIBUTING §6), `bats tests/*.bats`
+  (all 104 unit tests), and `sweep-build-state.sh` (BUILD-STATE ↔ retros/INDEX coherence). Least-privilege
+  `permissions: contents: read`.
+- **Why it complements the pre-push hook** (AG-PR1): the hook is client-side and opt-in (a clone that did not
+  run `scripts/install-hooks.sh` bypasses it); CI runs server-side for everyone on every PR, so the same
+  checks cannot be bypassed. Client hook + server CI = enforcement that is both immediate (local) and
+  un-bypassable (remote). Repo-infra only — no kit behavior change.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 5 AG-PR2 (CI). Repo-infra addition → PATCH.
+
+---
+
 ## [v0.15.0] - 2026-09-04
 
 ### Added / Changed — activate the retro-enforcement gate (Campaign 5 AG-PR1)

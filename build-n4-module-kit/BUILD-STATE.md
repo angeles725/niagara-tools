@@ -145,8 +145,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.15.0                      # current kit VERSION
-last_change: 2026-09-04              # Campaign 5 AG-PR1: harden pre-push (partial-promotion anchor) + scripts/install-hooks.sh + activation docs
+version: 0.15.1                      # current kit VERSION
+last_change: 2026-09-04              # Campaign 5 AG-PR2: CI (.github/workflows/ci.yml) — server-side shellcheck+bats+sweep on every PR, complements the client-side hook
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS: ALL DONE — the backlog is cleared. (B4, B6, B7, B8, B10, soft-start, palette all implemented and folded.)
@@ -159,5 +159,5 @@ open_issues:
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · Campaign 5 AG-PR1 (v0.15.0): hardened pre-push (promotion exit accepts INDEX OR BUILD-STATE anchor, guard kept, sweep on both paths) + scripts/install-hooks.sh (opt-in, --uninstall, refuse-custom-without-force) + activation docs (BUILD-LOOP §7, CONTRIBUTING §6.1). Tests H8/H9/H10 + I1-I4 green. AG-PR1 carries its own feature-retro campaign5-gate-activation (new-retro exit a — a feature PR is not a 4th gate shape) → Campaign 5 close consolidated into this PR. next: the LIVE ACTIVATION smoke (installer + blocked-push proof). CI (AG-PR2) awaits the user's explicit call.
+last_session: 2026-09-04 · Campaign 5 AG-PR1 (v0.15.0): hardened pre-push (promotion exit accepts INDEX OR BUILD-STATE anchor, guard kept, sweep on both paths) + scripts/install-hooks.sh (opt-in, --uninstall, refuse-custom-without-force) + activation docs (BUILD-LOOP §7, CONTRIBUTING §6.1). Tests H8/H9/H10 + I1-I4 green. AG-PR1 carries its own feature-retro campaign5-gate-activation (new-retro exit a — a feature PR is not a 4th gate shape). LIVE ACTIVATION done: gate smoke-proved (retro-less kit push BLOCKED exit 1 / with-trailer PASS exit 0, isolated scratch clone) + activated in the primary checkout (core.hooksPath=.githooks). AG-PR2 (v0.15.1): added CI (.github/workflows/ci.yml) running shellcheck+bats+sweep on every push/PR — server-side, un-bypassable, complements the opt-in client hook (user Cristian approved CI directly). Campaign 5 COMPLETE (gate live + CI). next: Mejoras runs the Campaign 5 close report.
 <!-- /build-state.v1 -->
