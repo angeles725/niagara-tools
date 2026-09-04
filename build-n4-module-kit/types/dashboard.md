@@ -13,18 +13,24 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **Adding one operator config field is an end-to-end path, not a UI edit:** facade `@NiagaraProperty(SUMMARY|OPERATOR)` → reader field list (e.g. `BOOL_CONFIG_SLOTS`) → SPA field descriptor (`SP_COMMON`) → a linkmark facade→control. Miss any layer and the field is invisible or unwired. [ev: bitácora 5cuartos §11]
 - **Expose operator-runtime config on the HMI; leave commissioning-time enums in Workbench:** setpoints/limits/modes belong on the dashboard, but one-time commissioning choices (staging mode, defrost trigger mode) stay in Workbench unless the operator asks to surface them. [ev: bitácora 5cuartos §11]
 
+- **A per-room link-in boolean alarm (e.g. door-open) is a `SUMMARY` slot — an INPUT, not OPERATOR config:** one `boolean` on the facade (SUMMARY link-in), one entry in the reader's boolean loop, one generic frontend read; the zone polygon force-reds via a CSS class. Keep it on every room so the frontend stays generic. [ev: retro dashboardpan-detail-render-doors · U4]
+- **A process/defrost timer shown on the dashboard is a facade+reader path — the facade gains the anchor as a READONLY link-in slot AND the reader gains a `BAbsTime` type-reader (without the reader entry the slot is invisible):** store the event instant as `TRANSIENT|SUMMARY|READONLY` `BAbsTime`; the reader emits DERIVED keys (elapsed/remaining ms from a single `Clock.millis()`) so the SPA ticks between polls. [ev: retro process-timers · #2 + L16]
+
 ## ux — servlet + SPA
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
 - `doGet/doPost` delegate to a **pure router** (WSL-unit-testable, no Niagara deps). Guards in order: path-traversal→404; **XHR guard** on `/api/*` (missing `X-Requested-With: XMLHttpRequest` → 302); unknown `/api/*`→404; static fallback (`/`→index.html).
 - **Reader**: walk the facade → flat JSON keyed by slot-path, each value `{"v":num|bool|null,"st":"<status>"}`, fault-aware, `Locale.ROOT` doubles, escaped strings.
 - **RBAC**: `checkCanWrite` first line of every write: `BPermissions.has(OPERATOR_WRITE)` (bit, not role name), fail-closed, `SlotPath.unescape` the username. Audit each mutation.
 - **A generic per-ORD write endpoint MUST gate on more than the global RBAC bit — whitelist writable slots AND/OR check the target's `Flags.OPERATOR` before `set()`:** `POST /api/setpoint` doing `parent.set(prop, coerce(...))` on ANY settable property under the service ORD, guarded only by the single global `OPERATOR_WRITE` bit + the XHR header + anti-traversal, lets anyone with that bit write display/state slots the HMI treats as read-only — the write-surface is wider than the read-surface. Before `set()`, whitelist the writable slots or check `getFlags().contains(Flags.OPERATOR)` on the target, and declare the single-global-bit RBAC as an explicit decision. [ev: retro dashboard-servlet-write-surface · U5]
+- **The reader's group arrays are the AUTHORITY for what a dashboard shows/controls — not the property sheet or the facade class:** a slot is on the HMI only if it appears in `DashboardReader`'s arrays (`TEMP_SLOTS`, `NUM/RELTIME/BOOL_CONFIG_SLOTS`, `DOOR_SLOTS`, `STATE_SLOTS`, `HOA_MODE_SLOTS`). Read those to document/verify a dashboard's surface; flag 1→N facade slots (e.g. `startDelay` fanning to N evaporators) for the wirer. [ev: retro dashboard-servlet-write-surface · U6]
 - Static assets in `src/rc/`; gradle copies `src/rc→rc/`; served via `getClassLoader().getResourceAsStream("rc/"+path)`.
 - Frontend: ES5 + `fetch`, REST poll. **Every fetch (reads too) sends `X-Requested-With`** or the guard 302s it → page loads but data shows "--". Use ABSOLUTE `/<prefix>/...` URLs (relative break without a trailing slash). Write via `POST /api/setpoint {ord,value}`.
 
 ## Extending an existing dashboard
 - **Before hand-editing a dashboard SPA, decide DATA vs CODE:** a data-driven render (`CUARTOS.forEach`, `SENSORS.map`) is entity-count-agnostic, so scaling 3→5 rooms is swapping the DATA arrays (`CUARTOS`/`SENSORS`/`FANS`, the plano src, `viewBox`/`IMG_W`/`IMG_H`) with zero change to the render functions. Verify with `node --check` on the extracted `<script>` blocks after. [ev: retro 5rooms #1]
 - **The module is the SKELETON; the operator's standalone HTML is only the DATA:** splice the operator's calibrated data blocks into the module's `index.html` (which already carries kiosk CSS, `/api/*` wiring, status classes, alarms, setpoint save) and remap sim ords to the module's Niagara ords — never rebuild the module from the standalone, which loses the integration layer. See `METHODOLOGY.md` §editing technique for navigating the giant single-file source. [ev: retro 5rooms #2]
+
+- **The reusable add-a-tab + wire-data recipe for extending the SPA (no servlet change):** a top-level tab = one `nav-item` + one `<section>` toggled by id (order pages by id, NOT DOM order); render read-only values from the last `/api/equipment` JSON, keyed by ord (`{v,st,nm}`); add a control row via the shared HOA-row helper and append a non-entity segment to the control selector. [ev: retro editing-base64-heavy-spa · U10]
 
 ## Config panel UX on a fixed touch panel
 > These build on the `## HMI kiosk` budget below (≥44px targets, no page scroll at 1280×800).
@@ -34,6 +40,9 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **A dense secondary feature gets its own full-width page with an entity selector, not a cramped corner of the per-room panel:** e.g. HOA control moved to a full-width page with a room selector — the same partition principle as sub-tabs, at page scale. [ev: bitácora 5cuartos §4]
 - **Writable ranges (min/max/step/decimals) live in the SPA field-descriptor array, not Java — but check the facade and control facets too:** a "-40 floor" was a frontend `SP_COMMON min:-40`, not a servlet clamp; confirm the facade/control facets impose no MIN before concluding the link won't re-clamp. [ev: retro hmi-touch-ux Δ4]
 - **Sync config across viewers: run prefill on EVERY poll but SKIP dirty (unsaved-editing) fields, and rebuild an open sub-panel each poll:** otherwise telemetry syncs on the 5s poll but config/HOA load once, so a change by one operator is invisible to the others until reload. [ev: bitácora 5cuartos §10]
+
+- **The 2-column no-scroll rule applies to the Control/HOA panel too — build indivisible group units, not CSS columns over sibling rows:** wrap each group (subheader + rows) in a `.hoa-group` (`break-inside:avoid`) via an `addGroup(fillSub, fillRows)` helper laid out in `grid-template-columns:1fr 1fr`; CSS columns over sibling rows split a header from its rows. [ev: retro hmi-1280x800 · U2]
+- **A reusable output row must allow custom buttons + a special-cased prefill — don't assume 0/1/2 from a `*Mode` name:** an AUTO/OFF exchanger (AUTO=1/OFF=0) needs `hoaRow(..., {buttons, valueMap})`; a key ending in `Mode` otherwise falls into the generic `["auto","on","off"][ordinal]` prefill and shows the wrong state — special-case its prefill before the generic branch. [ev: retro hmi-1280x800 · U3]
 
 ## Charts on an HMI
 - **Size the SVG chart's `viewBox` to the MEASURED box in real px each render — do not carry a fixed art-board viewBox with `preserveAspectRatio="none"`:** measure `getBoundingClientRect()` (guard width>60) and set `viewBox="0 0 <w> <h>"` so 1 unit = 1px and strokes/axis text stop distorting. [ev: retro hmi-touch-ux Δ5]
@@ -45,6 +54,8 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **Fix a label/polygon-centroid collision with an optional per-room `lbl:[x,y]` (in %) override, not by re-drawing geometry:** adjacent or concave rooms get near-identical centroids; `cu.lbl ? cu.lbl : centroid` is minimal and reversible. [ev: retro 5rooms #5]
 - **Read the REAL `#plano` src before trusting an on-disk file — it may be an inline base64 image, and `rc/img/plano.png` may be orphaned:** the current build's plano is an embedded base64 (1248×891), not the stray on-disk `plano.png` (1247×771). [ev: retro hmi-touch-ux Δ10]
 
+- **Overlay a raster and its vectors in a SINGLE `<svg viewBox>` (`<image xlink:href>` + shapes, `preserveAspectRatio="xMidYMid meet"`), never a raster `<img>` + a separately JS-fitted SVG:** the panel WebView (i.MX8M) ignores CSS `aspect-ratio`/`object-fit`, so a JS-fitted overlay is right in the desktop `/hmi` sim but wrong on the panel. Use `xlink:href` (SVG2 `href` renders blank on old WebKit); size HTML label overlays to the SVG `<image>` rect, not the frame; reproduce the panel path in the sim with `#frame{aspect-ratio:auto}`. [ev: retro dashboardpan-detail-render-doors · U1]
+
 ## Triage — a UI element is "missing"
 - **Before debugging a "missing" control, rule out a stale deployed `-ux` in this order: (a) confirm it renders in the CURRENT `src/rc` on `/hmi`, (b) `unzip -p` the deployable jar and grep for it, (c) THEN suspect the deployed build — do not touch code until the live-vs-source gap is ruled out.** [ev: retro hmi-touch-ux Δ3]
 
@@ -52,11 +63,16 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **Never set a raw servlet path as a User's Home Page on a JACE:** `/dashboardpan/` is not a valid ORD → `SyntaxException "Missing scheme name"` → `BUser.getHomePage` throws → `AuthenticationException: Login Failed`. Land the operator with a browser bookmark or a redirect ORD/PX instead. [CERT-live 2026-09-01 · bitácora 5cuartos §9]
 - **Dashboard write access on a JACE is DEPLOY-side config, not code:** `checkCanWrite` is fail-closed and needs `OPERATOR_WRITE` GLOBAL + a non-null Web Profile + a category granting operatorRead on the service; the log line `[<mod>] checkCanWrite:` states the reason (401/403/user-not-found). [ev: bitácora 5cuartos §8]
 
+## Dashboard as an external API (port spec)
+- **A dashboard's reusable CONTRACT is a first-class deliverable when consumed off-station (e.g. a 3D viewer over oBIX):** document the port spec once — the flat `CuartoN/slot → {v,st}` map (identical between `/api/equipment` and oBIX), which slots are OPERATOR-writable vs display, and per-type encoding (°C / HOA 0-1-2 / bool / RelTime in ms). Hand off a big single-file SPA as a line-range map, not a paste, and warn about the embedded base64. [ev: retro dashboard-contract-port-spec · U7]
+
 ## HMI kiosk (e.g. WEB-HMI10/CF, 1280×800 capacitive Chromium — see corpus B724)
 - **No page scroll** at the panel resolution. Chrome (header+nav+footer) ≈180px → page content ≤ ~620px. If an entity has many fields, use a **per-entity selector** (one at a time) + a 2-column grid, not all side-by-side.
 - **Touch:** targets ≥44px (52px for primary); edit via **+/− steppers**, not type-a-number (no keyboard); toggle switch for booleans; one "Guardar cambios" per entity. Neutralize hover-only states.
 - Kiosk meta: `user-scalable=no`, `touch-action:manipulation`, `overscroll-behavior:none`.
 - Verify every page fits at exactly 1280×800 (headless Chrome or dashboard-preview.py `/hmi`).
+
+- **`dashboard-preview.py` has `--editor` (a preview-only overlay label editor — drag + live rx/ry readout, the sanctioned way to reposition overlays without touching the module) and `--mock <json>` (seeds `/api/*` with realistic `{v,st,nm}`); for an off-site operator, deliver a screenshot/PDF via a Playwright script (`page.click('[data-page=X]')` for a non-default tab) + `chrome --headless --print-to-pdf` with a `@page A4` block.** [ev: retro editing-base64-heavy-spa · U9]
 
 ## Real alarms (Phase B — see corpus B6/B8, chihuahua B166)
 - A `BAlarmSourceExt` can only host on a **control point** (`BNumericPoint`), not a plain `BComponent` → add child points fed from the display slots; attach `BAlarmSourceExt`(`offnormalAlgorithm=BOutOfRangeAlgorithm`, a fault algorithm). Limits configured from the dashboard = writable config slots (per-role-per-room) linked/fed into the algorithm.

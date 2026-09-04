@@ -6,6 +6,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.9.2] - 2026-09-04
+
+### Changed — Campaign 2 PR-B: fold UX lessons U1–U9 into the core
+
+- `types/dashboard.md`: promoted the dashboard/UX [CERT] lessons — overlay raster + vectors as ONE SVG
+  (the WebView ignores CSS aspect-ratio/object-fit · U1); the 2-column no-scroll rule for the Control/HOA
+  panel (U2); a reusable output row with custom buttons + special-cased prefill (U3); a per-room link-in
+  boolean is SUMMARY not OPERATOR (U4); the reader's group arrays are the authority for the HMI surface
+  (U6); the dashboard contract as an external port spec (U7); `dashboard-preview.py` --editor/--mock + the
+  preview→Playwright→PDF loop (U9); the reusable add-a-tab + wire-data SPA recipe (U10); and the
+  process/defrost timer facade+reader path — a READONLY BAbsTime
+  anchor + a reader AbsTime type-reader emitting derived elapsed/remaining keys (process-timers #2 + L16).
+- `METHODOLOGY.md`: the anchored-Python-`str.replace` edit method for a base64-heavy SPA (U8).
+- Flipped `retros/INDEX.md` to `folded` for the 5 retros now fully in core (hmi-1280x800,
+  dashboard-servlet-write-surface, dashboard-contract-port-spec, editing-base64-heavy-spa, and
+  process-timers — its split completed). kit self-section open_issue narrowed to the remaining B / D / S groups.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 2 PR-B (UX group complete: U1-U9; U5 was folded in
+  Campaign 1). Promotion of already-filed lessons → `Retro: promotion` exit; documentation only → PATCH.
+- Engram: #8118 (Campaign 2 progress), #8101 (42-lesson mining).
+
+---
+
 ## [v0.9.1] - 2026-09-04
 
 ### Changed — Campaign 2 PR-A2: fold logic-group lessons L16–L22 into the core
