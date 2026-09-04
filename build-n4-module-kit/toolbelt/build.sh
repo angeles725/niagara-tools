@@ -12,7 +12,7 @@
 # Profiles: by default every <MOD>-<p> dir that has a gradle file AND sources under src/ is built; a scaffold
 #   (gradle file, no sources) is reported "skipped". --profiles replaces auto-detection entirely.
 # After gradle, verify-module.sh (same dir) runs on every produced jar with --src <module-root>/<MOD>.
-# Exit: 0 build + gate passed · 2 usage · 10 environment (no JDK 8, not a niagara_home, no profile) · 30 gradle failed · 50 gate failed (ng-deploy.sh 50 = verify failed)
+# Exit: 0 build + gate passed · 2 usage · 10 environment (no JDK 8, not a niagara_home, no profile) · 30 gradle failed · 31 :clean blocked by a station lock on modules/<jar> · 50 gate failed (ng-deploy.sh 50 = verify failed)
 set -euo pipefail
 
 usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
@@ -34,7 +34,10 @@ J8="${JAVA8:-/usr/lib/jvm/java-8-openjdk-amd64}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
 [ -d "$ROOT" ] || { echo "build.sh: module root not found: $ROOT" >&2; exit 10; }
-[ -x "$ROOT/gradlew" ] || { echo "build.sh: no executable ./gradlew in $ROOT (the module needs the gradle wrapper)" >&2; exit 10; }
+# B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
+GRADLE_ROOT="$ROOT"
+while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do GRADLE_ROOT="$(dirname "$GRADLE_ROOT")"; done
+[ -x "$GRADLE_ROOT/gradlew" ] || { echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2; exit 10; }
 [ -d "$J8" ] || { echo "build.sh: Java 8 not found at $J8 — check 'ls /usr/lib/jvm' or set JAVA8" >&2; exit 10; }
 [ -n "$NIAGARA_HOME" ] || { echo "build.sh: pass niagara_home (arg 3) or export niagara_home" >&2; exit 10; }
 [ -d "$NIAGARA_HOME/etc/m2/repository" ] || { echo "build.sh: not a niagara_home (no etc/m2/repository): $NIAGARA_HOME" >&2; exit 10; }
@@ -58,12 +61,33 @@ TASKS=(); for p in "${SEL[@]}"; do
   [ -d "$ROOT/$MOD/$MOD-$p" ] || { echo "build.sh: profile dir missing: $ROOT/$MOD/$MOD-$p" >&2; exit 10; }
   TASKS+=(":$MOD-$p:clean" ":$MOD-$p:slotomatic" ":$MOD-$p:jar")
 done
+# B6: when no plugin version was given (flag/env), auto-detect the module's OWN pinned niagara plugin version.
+if [ -z "$PLUGIN" ]; then
+  if [ -f "$ROOT/gradle.properties" ]; then
+    PLUGIN=$(grep -E '^[[:space:]]*niagaraPluginVersion[[:space:]]*=' "$ROOT/gradle.properties" | head -1 | sed -E 's/.*=[[:space:]]*//; s/[[:space:]]+$//' || true)
+  fi
+  if [ -z "$PLUGIN" ] && [ -f "$ROOT/settings.gradle.kts" ]; then
+    PLUGIN=$(grep -oE 'niagaraPluginVersion[^)]*getOrElse\("[0-9][0-9.]*"\)' "$ROOT/settings.gradle.kts" | grep -oE '[0-9][0-9.]+' | head -1 || true)
+  fi
+  [ -z "$PLUGIN" ] || echo "==> detected niagaraPluginVersion=$PLUGIN from the module's gradle config"
+fi
 GARGS=(-Pniagara_home="$NIAGARA_HOME" -Porg.gradle.java.installations.paths="$J8")
 [ -z "$PLUGIN" ] || GARGS+=(-PniagaraPluginVersion="$PLUGIN")
 
 echo "==> build (Java 8 + slotomatic): ${TASKS[*]}"
-if ! ( cd "$ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ); then
-  echo "build.sh: gradle failed" >&2; exit 30
+GLOG="$(mktemp)"
+if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$GLOG"; then
+  rm -f "$GLOG"
+else
+  # soft-start: a running station LOCKS modules/<mod>.jar so :clean fails — tell the operator how to fix it.
+  if grep -qE 'Unable to delete .*modules/.*\.jar' "$GLOG"; then
+    echo "build.sh: :clean could not delete a modules/<jar> — a running station has it locked." >&2
+    echo "  Free the lock first: close Workbench, or stop the station, then build directly; or build against a" >&2
+    echo "  mirror (mirror-niagara-home.sh); or just use the already-assembled build/libs jar (the modules/ copy" >&2
+    echo "  is irrelevant when you are not deploying to that supervisor)." >&2
+    rm -f "$GLOG"; exit 31
+  fi
+  echo "build.sh: gradle failed" >&2; rm -f "$GLOG"; exit 30
 fi
 
 echo "==> verify gate (verify-module.sh):"

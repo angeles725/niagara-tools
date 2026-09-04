@@ -145,16 +145,17 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.10.0                      # current kit VERSION
-last_change: 2026-09-04              # Campaign 3 C3-PR1: implement B4 (verify-module rc/ backup WARN + --strict)
+version: 0.11.0                      # current kit VERSION
+last_change: 2026-09-04              # Campaign 3 C3-PR2: implement B6+B7+soft-start clean-lock in build.sh
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
-  - OWED SCRIPT/GATE IMPLEMENTATIONS (rule folded, impl pending — Campaign 3, test-first MINOR PRs): B6 (build.sh auto-detect the module's own gradle target), B7 (build.sh detect the gradle root / accept :project:task), B8 (ng-deploy.sh grep `<type ` with a space so EXPECTED_*_TYPES matches the gate), B10 (ng-deploy.sh default no-backup + keep-N purge); soft-start build.sh (print ONE actionable line on the `modules/<jar>` clean-lock failure, not the raw stacktrace). Their retros stay review-status pending until implemented.
-  - DONE: B4 (verify-module.sh rc/ editor-backup WARN + `--strict`→FAIL) implemented in Campaign 3 C3-PR1 (v0.10.0) — dashboardpan-detail-render-doors thereby fully folded; ux-direct-build still owes B7.
+  - OWED SCRIPT/GATE IMPLEMENTATIONS (rule folded, impl pending — test-first): B8 (ng-deploy.sh grep `<type ` with a space so EXPECTED_*_TYPES matches the gate) + B10 (ng-deploy.sh default no-backup + keep-N purge) → C3-PR3; a verify-module.sh palette check — WARN (or `--strict`→FAIL) when module.palette lacks a `<p>` per exposed @NiagaraType (module-palette #1's gate half) → C3-PR4. Their retros stay review-status pending until implemented.
+  - DONE: B4 (verify-module rc/ WARN + --strict, C3-PR1 v0.10.0 → detail-render-doors folded); B6 (build.sh auto-detect module gradle target) + B7 (build.sh gradle-root walk-up) + soft-start build.sh clean-lock message exit 31 (all C3-PR2 v0.11.0 → dashboardpan-ux-direct-build + soft-start folded). B6 is done, but module-palette stays pending — its retro also owes the verify-module palette check (above).
+  - FINAL-TIDY-PASS checklist (end of Campaign 3): (1) tag-convention nit — some fold citations use a retro-local `#N` (e.g. fase3 #2) vs the global `L<n>`/`U<n>` convention; normalize. (2) fold the doc-vs-script folded-completeness rule + the fidelity-grading discipline from the campaign2 close retro into METHODOLOGY as durable rules, then flip that retro's INDEX row to folded. (3) spell out detail-render #5's `height:100% (not auto), else the SVG overflow clips the bottom labels` nuance in types/dashboard.md U1 (currently only implicit via preserveAspectRatio=meet).
   - UNFOLDED T/process group (out of Campaign 2 scope, Campaign 3 candidate): T5/T6 (self-retro preview gate + WARNING classification), T7 (curated corpus-index), T8 (module.lexicon empty renders raw camelCase).
   - CompPan-rt/module.lexicon is empty (T8) — slots render raw camelCase; the rule is in METHODOLOGY, the module fix is out of scope.
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · Campaign 3 C3-PR1 implemented B4 (verify-module.sh rc/ backup WARN + --strict) → folds dashboardpan-detail-render-doors. next: C3-PR2 (build.sh — B6+B7+soft-start clean-lock msg), C3-PR3 (ng-deploy.sh — B8+B10), then the T/process group; tracked in open_issues above
+last_session: 2026-09-04 · Campaign 3 C3-PR2 implemented B6+B7+soft-start clean-lock in build.sh → folds module-palette, ux-direct-build, soft-start. next: C3-PR3 (ng-deploy.sh — B8+B10), then the final tidy pass (3 items above)
 <!-- /build-state.v1 -->

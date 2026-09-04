@@ -6,6 +6,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.11.0] - 2026-09-04
+
+### Added — build.sh: auto-detect plugin, gradle-root walk-up, clean-lock message (Campaign 3 C3-PR2)
+
+- `build-n4-module-kit/toolbelt/build.sh` (stays git-free):
+  - **B6** — when no `--plugin-version` / `$NIAGARA_PLUGIN_VERSION` is given, auto-detect the module's own
+    pinned `niagaraPluginVersion` from its `gradle.properties` (or `settings.gradle.kts` getOrElse) and
+    forward it; an explicit flag/env still wins.
+  - **B7** — if `<ROOT>/gradlew` is absent, walk UP to the gradle root (client multi-project layout) and run
+    the `:MOD-p:` tasks there; profiles stay resolved under `<ROOT>/<MOD>/<MOD>-p`.
+  - **soft-start** — capture gradle output; a `:clean` failure matching `Unable to delete …/modules/…jar`
+    (a running-station lock) prints an actionable message (free the lock / mirror / use build/libs) and exits
+    a distinct **31** (documented in the header), instead of the generic 30.
+- `tests/build-sh.bats`: B8/B9/B10 (QA, RED-first) now green; B1–B7 unchanged.
+- `retros/INDEX.md`: flipped **dashboardpan-ux-direct-build** (B7) and **soft-start-staggered-startup** (its
+  build.sh clean-lock delta) → `folded`. **module-palette-and-build-target stays `pending`** — B6 is done, but
+  its retro also owes a verify-module palette check (→ C3-PR4). kit self-section: B6/B7/soft-start owed → DONE;
+  owed now B8/B10 (ng-deploy → C3-PR3) + the palette check (→ C3-PR4).
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 3 C3-PR2. New build.sh behavior → MINOR.
+- Engram: #8120 (Campaign 2 complete).
+
+---
+
 ## [v0.10.0] - 2026-09-04
 
 ### Added — verify-module.sh rc/ editor-backup check + `--strict` (Campaign 3 C3-PR1, B4 impl)
