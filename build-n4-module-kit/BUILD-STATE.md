@@ -145,8 +145,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.14.0                      # current kit VERSION
-last_change: 2026-09-04              # Campaign 4 C4-PR3 (terminal): corpus-index.md curated nav + wiring — flips corpus-index → folded, EXHAUSTS the 42-lesson corpus
+version: 0.14.1                      # current kit VERSION
+last_change: 2026-09-04              # Campaign 4 close retro filed (campaign4-close-process-meta-lessons) — Campaign 4 fully closed, corpus exhausted
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS: ALL DONE — the backlog is cleared. (B4, B6, B7, B8, B10, soft-start, palette all implemented and folded.)
@@ -158,5 +158,5 @@ open_issues:
 retro_required: true                 # GATED — PR3 (and PRs 12/13) changed kit files
 retro_pending: false                 # GATED — the two owed retros (campaign + run-pure-test) are FILED this session; their fold-status lives in retros/INDEX.md as review-status: pending
 last_commit: unknown                 # set at PR3 merge
-last_session: 2026-09-04 · Campaign 4 C4-PR3 (v0.14.0, TERMINAL): added corpus-index.md curated nav (B729-B760) + in-repo pointers + SKILL wiring companion; corpus-index-rt-authoring → folded (all 8 deltas verified in core). CAMPAIGN 4 COMPLETE — 42-lesson corpus EXHAUSTED. next: file the C4 close retro (genuinely-new C4 lessons: stale-checkout trap, partial-promotion 4th-gate-shape, grep-the-base-before-folding double-fold avoidance), then Mejoras runs the C4 close report.
+last_session: 2026-09-04 · Campaign 4 CLOSED (v0.14.1): filed campaign4-close-process-meta-lessons (3 new lessons — stale-checkout trap, partial-promotion 4th-gate-shape, grep-every-kit-file-before-folding; review-status pending). The 42-lesson mined corpus is EXHAUSTED; every mined lesson folded + fidelity-graded. next: Campaign 5 (activate the retro-enforcement gate — it's built but inert): AG-PR1 harden pre-push for partial-promotion + add a hook-installer under scripts (git-using, so NOT under toolbelt per L2) + docs, then the live activation smoke. Then Mejoras runs the C4 close report.
 <!-- /build-state.v1 -->

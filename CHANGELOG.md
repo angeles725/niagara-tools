@@ -6,6 +6,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.14.1] - 2026-09-04
+
+### Added — Campaign 4 close retro (process meta-lessons)
+
+- `retros/2026-09-04-campaign4-close-process-meta-lessons.md` (+ INDEX row, `pending`): captures the three
+  genuinely-new process lessons Campaign 4 surfaced — (1) the **stale-checkout trap** (verify coverage against
+  a worktree off origin/main, never a local `main` that can sit a whole campaign stale; a line-number mismatch
+  is the tell); (2) the **partial-promotion 4th-gate-shape** (a fold that flips no INDEX row is legitimate but
+  the §7 promotion exit false-negatives it — accept a BUILD-STATE diff as an alternative anchor, tracked as a
+  gate-hardening open_issue); (3) **grep every kit file before folding** (a lesson's mined target isn't the
+  only place it may live — T4 was nearly double-folded because only its target file was grepped). This closes
+  Campaign 4; the 42-lesson mined corpus is exhausted.
+
+### References
+
+- SDD change: `build-n4-module-continuity` Campaign 4 close. New retro filed → PATCH.
+
+---
+
 ## [v0.14.0] - 2026-09-04
 
 ### Added — corpus-index.md: a curated map of the authoring corpus (Campaign 4 C4-PR3, terminal)
