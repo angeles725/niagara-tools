@@ -20,9 +20,12 @@ kit_refs() {
   missing=()
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue
-    # resolve: kit root, kit types/, the niagara-tools repo root (scripts/ng-deploy.sh),
-    # or the launcher dir (SKILL.md lives outside the repo, in ~/.claude/skills/build-n4-module/)
-    if [ -e "$ref" ] || [ -e "types/$ref" ] || [ -e "../$ref" ] \
+    # resolve: kit root, kit types/, kit retros/ (a bare retro name is a first-class
+    # kit citation — e.g. types/logic.md:14 cites a self-firing-timer retro), the
+    # niagara-tools repo root (scripts/ng-deploy.sh), or the launcher dir (SKILL.md
+    # lives outside the repo, in ~/.claude/skills/build-n4-module/).
+    # NOTE: this stays biting — a renamed or deleted retro resolves NOWHERE and still fails.
+    if [ -e "$ref" ] || [ -e "types/$ref" ] || [ -e "retros/$ref" ] || [ -e "../$ref" ] \
        || [ -e "$HOME/.claude/skills/build-n4-module/$ref" ]; then continue; fi
     missing+=("$ref")
   done < <(kit_refs ./*.md types/*.md)
