@@ -45,3 +45,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-04-campaign4-close-process-meta-lessons.md | kit | 2026-09-04 | pending | 0 |
 | 2026-09-04-campaign5-gate-activation.md | kit | 2026-09-04 | pending | 0 |
 | 2026-09-04-ci-server-side-enforcement.md | kit | 2026-09-04 | pending | 0 |
+| 2026-09-05-campaign6-marker-index-sweep.md | kit | 2026-09-05 | pending | 3 |
