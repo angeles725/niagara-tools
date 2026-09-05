@@ -1,0 +1,5 @@
+<types>
+  <type name="CompPanStatus" class="com.angeles.CompPan.BCompPanStatus"/>
+  <type name="CompressorControl" class="com.angeles.CompPan.BCompressorControl"/>
+  <type name="CompressorPan" class="com.angeles.CompPan.BCompressorPan"/>
+</types>

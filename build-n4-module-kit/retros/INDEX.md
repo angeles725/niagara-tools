@@ -49,3 +49,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign6-doctrine-fold.md | kit | 2026-09-05 | pending | 0 |
 | 2026-09-05-campaign6-types-fold.md | kit | 2026-09-05 | pending | 5 |
 | 2026-09-05-campaign6-fold-audit-and-coverage.md | kit | 2026-09-05 | pending | 0 |
+| 2026-09-05-campaign6-preflight-and-slot-coverage.md | kit | 2026-09-05 | pending | 0 |

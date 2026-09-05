@@ -82,3 +82,48 @@ setup() {
   [ "$status" -eq 2 ]
   [[ "$output" == *"usage: slot-coverage.sh set-coverage"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Parse subcommand tests (CompPan T8 fixture: empty lexicon + declared types)
+# ---------------------------------------------------------------------------
+# Fixture: tests/fixtures/slot-coverage/comppan-t8/
+#   module-include.xml  — 3 types (CompPanStatus, CompressorControl, CompressorPan)
+#   module.lexicon      — empty file (T8 footgun: slots render raw camelCase)
+#
+# Named mutation for SC6-parse: return N/A (or 100) when lexicon empty -> SC6-parse flips
+# (pct must be 0.0 to prove denominator is |required|, not 0)
+
+setup_parse_fixtures() {
+  FIXDIR="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage"
+}
+
+@test "SC6-parse: empty lexicon + 3 types -> pct=0.0 + WARN, exit 0 (CompPan-T8 fixture)" {
+  setup_parse_fixtures
+  XML="$FIXDIR/comppan-t8/module-include.xml"
+  LEX="$FIXDIR/comppan-t8/module.lexicon"
+  run "$SC" "$XML" "$LEX"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slot-coverage: WARN"* ]]
+  [[ "$output" == *"pct=0.0"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# Dup-keys detection (operationalizes B759/B780 — duplicate bare keys in lexicon)
+# ---------------------------------------------------------------------------
+# Fixture: tests/fixtures/slot-coverage/dup-keys/
+#   module-include.xml  — 1 type (FanMode)
+#   module.lexicon      — has 'fan' twice (duplicate bare key)
+#
+# Named mutation: drop dup-keys detection block -> WARN disappears -> test flips
+
+@test "dup-keys: duplicate bare key in lexicon emits WARN (exit 0; --strict -> exit 1)" {
+  setup_parse_fixtures
+  XML="$FIXDIR/dup-keys/module-include.xml"
+  LEX="$FIXDIR/dup-keys/module.lexicon"
+  run "$SC" "$XML" "$LEX"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slot-coverage: WARN dup-keys:"* ]]
+
+  run "$SC" --strict "$XML" "$LEX"
+  [ "$status" -eq 1 ]
+}

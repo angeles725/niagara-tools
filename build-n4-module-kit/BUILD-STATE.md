@@ -29,7 +29,7 @@ modules, not sixty focuses.
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
-| kit | niagara-tools | self | 2026-09-05 | n/a | n/a | yes | 2 |
+| kit | niagara-tools | self | 2026-09-05 | n/a | n/a | yes | 3 |
 
 ---
 
@@ -157,8 +157,8 @@ open_issues:
   - CAMPAIGN 5 (activate the retro-enforcement gate — built but inert): AG-PR1 (v0.15.0) DONE — hardened `.githooks/pre-push` so the promotion exit accepts an in-range INDEX.md diff OR an in-range BUILD-STATE.md diff (fixes the partial-promotion FALSE-NEGATIVE found in C4-PR2), with the blanket-escape guard kept (trailer + NEITHER anchor → FAIL) and `sweep` run on both anchored paths; added `scripts/install-hooks.sh` (idempotent opt-in activation, `--uninstall`, refuses to clobber a custom hooksPath without `--force`); documented activation in BUILD-LOOP §7 + CONTRIBUTING §6.1. Tests: build-retro-sync H8/H9/H10 + install-hooks I1-I4. This closed the earlier gate-hardening open_issue. AG-PR1 carries its OWN feature-retro (campaign5-gate-activation) via the new-retro exit (a) — a pure feature PR is NOT a 4th gate shape, it uses exit (a); so the PR that activates the gate passes its own gate, and the Campaign 5 close is consolidated into this PR (no separate close-retro PR). NEXT: the LIVE ACTIVATION smoke (run the installer in this repo + prove a trivial kit-file push without a retro/trailer is BLOCKED, then passes with the trailer); CI (AG-PR2) awaits the user's explicit call.
   - CONTENT FOLD-AUDIT open_issue (#3, future — NOT AG-PR1): verify that a folded `[ev: retro X]` citation actually APPEARS in a core kit file (not merely claimed folded in the ledger). A future gate/check enhancement, separate from AG-PR1's structural-anchor hardening. QA's fidelity grading catches this manually today; a machine check would make it durable.
   - CompPan-rt/module.lexicon is empty (T8) — slots render raw camelCase; the rule is in METHODOLOGY, the module fix is out of scope.
-retro_required: true                 # GATED — Campaign 6 PR5a added sweep-fold-audit.sh + verify-module.sh coverage subcommand
-retro_pending: false                 # GATED — campaign6-fold-audit-and-coverage retro FILED; fold-status in retros/INDEX.md as review-status: pending
-last_commit: Campaign 6 PR5a         # updated at PR5a push (feat/c6-tools-audit)
-last_session: 2026-09-05 · Campaign 6 PR5a (tools audit): sweep-fold-audit.sh D3 fold-citation audit (6 bats F1–F6, 3 named mutations F3/F4/F6); verify-module.sh coverage D2 (8 QA pins MM1–MM8, N/A sentinel mutation MM3); real-tree 38 folded / 36 cited / 2 uncited (follow-up PR7); shellcheck 0.10.0 clean; 124 bats pass. Retro: 2026-09-05-campaign6-fold-audit-and-coverage.md (exit a).
+retro_required: true                 # GATED — Campaign 6 PR5b added preflight.sh + slot-coverage.sh
+retro_pending: false                 # GATED — campaign6-preflight-and-slot-coverage retro FILED; fold-status in retros/INDEX.md as review-status: pending
+last_commit: Campaign 6 PR5b         # updated at PR5b push (feat/c6-tools-env)
+last_session: 2026-09-05 · Campaign 6 PR5b (tools env): preflight.sh (4 checks: win-path, jdk8, plugin-pin, jar-lock; 4 bats PF1–PF4, 3 named mutations); slot-coverage.sh MM2 (pure set-coverage + parse; 8 bats SC1–SC6/SC6-parse/dup-keys, 4 QA mutations + 3 named); real-tree CompPan-rt 100.0% / DashboardPan-rt 100.0%; shellcheck 0.10.0 clean; 136 bats pass. Retro: 2026-09-05-campaign6-preflight-and-slot-coverage.md (exit a). T5b.5 (--plano) deferred.
 <!-- /build-state.v1 -->
