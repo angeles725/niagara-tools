@@ -58,10 +58,10 @@ setup() {
   # nesting → the -rt artifact is at $OUT/MinimalPan/MinimalPan/MinimalPan-rt.
   ROOT="$OUT/MinimalPan"; RT="$ROOT/MinimalPan/MinimalPan-rt"
   # scaffold -> the emitted module builds signed (build.sh runs slotomatic first, D3) + passes the gate + the timer lint.
-  run bash "$KIT/toolbelt/build.sh" "$ROOT"
+  # build.sh usage: <module-root> <MOD> [niagara_home]; it runs slotomatic + jar + the verify gate itself.
+  run bash "$KIT/toolbelt/build.sh" "$ROOT" MinimalPan "$NIAGARA_HOME"
   [ "$status" -eq 0 ]
-  run bash "$KIT/toolbelt/verify-module.sh" --src "$RT" "$RT"/build/libs/*.jar
-  [ "$status" -eq 0 ] && [[ "$output" == *"ALL PASS"* ]]
+  [[ "$output" == *"ALL PASS"* ]]
   run bash "$KIT/toolbelt/lint-timers.sh" "$RT/src"
   [ "$status" -eq 0 ]
 }
