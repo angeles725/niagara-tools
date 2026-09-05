@@ -62,3 +62,24 @@ All 10/10 green. Shellcheck 0 warnings.
    documenting explicitly (D4a).
 4. **Real-module verdicts**: Both CompPan-rt and ColdRoomPan-rt returned SAFE across the recent
    commits (docs-only and add-slot-only changes). The classifier correctly identifies add_slot as SAFE.
+
+## Post-merge fix: parse_slots whitespace-around-= (2026-09-05)
+
+**Defect**: `extract_attr` matched `name="x"` but not `name = "x"` (space around `=`).
+Real modules (CompPan-rt, ColdRoomPan-rt, fixtures/MinimalPan) use the spaced form.
+Result: `parse_slots` returned 0 slots on every real-module snapshot, producing a
+false `verdict=SAFE` with no rows — the worst possible failure for a pre-deploy guard.
+
+**Root cause**: The regex was written for the compact fixture form used in SR1-SR7
+(`@NiagaraProperty(name="setpoint",type="double")`). Real Niagara sources generate
+multi-line annotations with spaces (`name = "setpoint"`) per Java annotation style.
+
+**Fix**: Regex `attr "[[:space:]]*=[[:space:]]*\"[^\"]*\""`, value extracted with
+`index()` to find the first `"` inside the match span (no brittle offset math).
+
+**Lesson**: Fixtures must use the shape real modules write. A parser test on a
+synthetic compact form can be green while the tool is blind to production annotations.
+Verify any new parser with at least one real-module smoke before merging.
+
+**SR10**: Added real-shape fixture pair (MinimalPan production form, spaced multi-line
+annotations). Named mutation: revert to unspaced regex → 0 rows → false SAFE → SR10 bites.
