@@ -30,6 +30,24 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **DWS2 — Pure RBAC test seam `canWrite(boolean)` (HIGH):** extract the auth DECISION as a Baja-free `canWrite(boolean)` / `getRole` / `buildForbiddenJson` seam so write-auth is unit-testable off-station. `DashboardRbacHelper`'s collapsed Baja-only form (no pure `canWrite`) is the anti-pattern; chihuahua's `ChiRbacHelper` ADR D1 is the proven seam. [ev: corpus B763]
 - **A generic per-ORD write endpoint MUST gate on more than the global RBAC bit — whitelist writable slots AND/OR check the target's `Flags.OPERATOR` before `set()`:** `POST /api/setpoint` doing `parent.set(prop, coerce(...))` on ANY settable property under the service ORD, guarded only by the single global `OPERATOR_WRITE` bit + the XHR header + anti-traversal, lets anyone with that bit write display/state slots the HMI treats as read-only — the write-surface is wider than the read-surface. Before `set()`, whitelist the writable slots or check `getFlags().contains(Flags.OPERATOR)` on the target, and declare the single-global-bit RBAC as an explicit decision. [ev: retro dashboard-servlet-write-surface · U5]
 - **The reader's group arrays are the AUTHORITY for what a dashboard shows/controls — not the property sheet or the facade class:** a slot is on the HMI only if it appears in `DashboardReader`'s arrays (`TEMP_SLOTS`, `NUM/RELTIME/BOOL_CONFIG_SLOTS`, `DOOR_SLOTS`, `STATE_SLOTS`, `HOA_MODE_SLOTS`). Read those to document/verify a dashboard's surface; flag 1→N facade slots (e.g. `startDelay` fanning to N evaporators) for the wirer. [ev: retro dashboard-servlet-write-surface · U6]
+### Reference exemplar (our own module) — DashboardPan-ux `[ev: corpus B796]`
+
+Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux is the reference (B791 THIN verdict). [ev: corpus B791]
+
+**Routing seam (DUX1):** `DashboardDispatch` is `package-private final` (`DashboardDispatch.java:30`); `route()` returns a sealed `RouteAction` hierarchy (`:41-43`); servlet (`BDashboardServlet.java:91-102,132-153`) is a thin `instanceof` adapter. `DashboardDispatchTest`: 14 `@Test`, 0 Baja imports, 0 station needed. [ev: corpus B796]
+
+**DUX2 anti-pattern (same module):** `DashboardReader.java:66` is `public final` but impure — 15+ `javax.baja.*` imports (`:6-20`); `buildEquipmentResponse(BComponent)` takes a live component (`:143`). The exemplar exposes both seams side by side. [ev: corpus B796]
+
+**Five DWS1 gates scored on real code:**
+
+| # | Gate | Status | File:line |
+|---|---|---|---|
+| 1 | `checkCanWrite` first — `OPERATOR_WRITE` fail-closed (no-user / exception → deny) | ✅ met | `BDashboardServlet.java:198`; `DashboardRbacHelper.java:33,40-46,55-61,98,100-104` |
+| 2 | `X-Requested-With` guard inside pure `route()` | ✅ met | `DashboardDispatch.java:123-126` (POST), `:144-147` (/api GET) |
+| 3 | ORD pinned under `SERVICE_ORD` + traversal reject | ✅ met | `BDashboardServlet.java:222-223,241,247-248` |
+| 4 | per-Ord lock → HTTP **423** on contention | ❌ REQUIRED-but-absent → issue #49 | no 423/lock in `BDashboardServlet.java` (grep 0 hits) [ev: corpus B763] |
+| 5 | audit fire-and-forget; failure never fails the write | ✅ met | `BDashboardServlet.java:286-301` |
+
 - Static assets in `src/rc/`; gradle copies `src/rc→rc/`; served via `getClassLoader().getResourceAsStream("rc/"+path)`.
 - Frontend: ES5 + `fetch`, REST poll. **Every fetch (reads too) sends `X-Requested-With`** or the guard 302s it → page loads but data shows "--". Use ABSOLUTE `/<prefix>/...` URLs (relative break without a trailing slash). Write via `POST /api/setpoint {ord,value}`.
 
