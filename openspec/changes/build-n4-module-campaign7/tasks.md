@@ -112,15 +112,15 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-plano` | **QA hook**: `qa/c7-plano` tip `c49504f` | **Gate exit**: R6.1–R6.6
 
-- [ ] 6.1 Re-read QA RED `qa/c7-plano` tip `c49504f` before writing (CD4).
-- [ ] 6.2 Extend `toolbelt/verify-module.sh` with `--plano <index.html|jar>` mode dispatched before the flag loop (D6a): extract Rc = `IMG_W/IMG_H` from `const` declarations, Ri = intrinsic PNG size via `base64 -d | od -An -tu1 -N24` (verify 8-byte PNG sig + IHDR; bytes 17-20 BE width, 21-24 BE height), Rv = first `viewBox` non-zero dimensions; integer cross-multiplication only; `auto` exempt; unparseable value → FAIL; `.jar` operand → `unzip -p rc/**/index.html` to temp file (R6.1–R6.4).
-- [ ] 6.3 Guard `base64`, `od`, `unzip` via `command -v || exit 3`.
-- [ ] 6.4 Copy `tests/plano-check.bats` from `qa/c7-plano` tip (PL1–PL4 verbatim) + add PL5 (`aspect-ratio: var(--x)` → FAIL, not exempt) + PL6 (`.jar` operand yields same verdict as HTML form).
-- [ ] 6.5 Create `tests/fixtures/plano/ok/index.html` (inline 2×3 base64 PNG fixture; Rc=Ri=Rv=2/3).
-- [ ] 6.6 Add CI step: `verify-module.sh --plano tests/fixtures/plano/ok/index.html` → exit 0.
-- [ ] 6.7 Named mutations: count-only check → PL2+PL4 lose FAIL; treat unparseable as exempt → PL5 passes (R6.5).
-- [ ] 6.8 `shellcheck` exits 0 on modified `verify-module.sh` (R6.6).
-- [ ] 6.9 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 6.1 Re-read QA RED `qa/c7-plano` tip `c49504f` before writing (CD4).
+- [x] 6.2 Extend `toolbelt/verify-module.sh` with `--plano <index.html|jar>` mode dispatched before the flag loop (D6a): extract Rc = `IMG_W/IMG_H` from `const` declarations, Ri = intrinsic PNG size via `base64 -d | od -An -tu1 -N24` (verify 8-byte PNG sig + IHDR; bytes 17-20 BE width, 21-24 BE height), Rv = first `viewBox` non-zero dimensions; integer cross-multiplication only; `auto` exempt; unparseable value → FAIL; `.jar` operand → `unzip -p rc/**/index.html` to temp file (R6.1–R6.4).
+- [x] 6.3 Guard `base64`, `od`, `unzip` via `command -v || exit 3`.
+- [x] 6.4 Copy `tests/plano-check.bats` from `qa/c7-plano` tip (PL1–PL4 verbatim) + add PL5 (`aspect-ratio: var(--x)` → FAIL, not exempt) + PL6 (`.jar` operand yields same verdict as HTML form).
+- [x] 6.5 Create `tests/fixtures/plano/ok/index.html` (inline 2×3 base64 PNG fixture; Rc=Ri=Rv=2/3).
+- [x] 6.6 Add CI step: `verify-module.sh --plano tests/fixtures/plano/ok/index.html` → exit 0.
+- [x] 6.7 Named mutations: count-only check → PL2+PL4 lose FAIL; treat unparseable as exempt → PL5 passes (R6.5).
+- [x] 6.8 `shellcheck` exits 0 on modified `verify-module.sh` (R6.6).
+- [x] 6.9 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 
 ---
 

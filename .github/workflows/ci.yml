@@ -122,3 +122,8 @@ jobs:
             fi
           done
           [ "$fail" -eq 0 ]
+
+      - name: plano-ok fixture (verify-module.sh --plano ok/index.html -> exit 0 — Campaign 7 PR6)
+        run: |
+          # PL1 fixture: Rc=Ri=Rv=2/3, one agreeing numeric aspect-ratio -> PASS (exit 0).
+          bash build-n4-module-kit/toolbelt/verify-module.sh --plano tests/fixtures/plano/ok/index.html

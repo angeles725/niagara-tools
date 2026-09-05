@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — Campaign 7 PR4 retro owed
-retro_pending: true                  # GATED — campaign7-scaffold FILED as review-status: pending; fold-status in retros/INDEX.md
-last_commit: Campaign 7 PR5 fix-forward
-last_session: 2026-09-05 · Campaign 7 PR5 fix-forward: parse_slots extract_attr regex fixed (attr = "x" whitespace); SR10 real-shape fixture added; 11/11 green (SR1-SR10+SR-CSV); smoke CompPan-rt 3 SAFE add_slot rows; shellcheck 0. Next: PR6 feat/c7-plano.
+retro_pending: true                  # GATED — campaign7-plano FILED as review-status: pending; fold-status in retros/INDEX.md
+last_commit: Campaign 7 PR6 feat/c7-plano
+last_session: 2026-09-05 · Campaign 7 PR6: verify-module.sh --plano added (B797 §797.2); PL1-PL6 green; mutation (full count-only) PL2+PL4 lose FAIL; real DashboardPan-ux smoke FAIL 1247/771!=Rc(1248/891); shellcheck 0; 174 bats green. Next: PR7 feat/c7-logic-split.
 <!-- /build-state.v1 -->

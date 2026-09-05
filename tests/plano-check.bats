@@ -74,3 +74,17 @@ mk_html() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
 }
+
+@test "PL5: aspect-ratio: var(--x) is unparseable -> FAIL (not exempt like auto)" {
+  mk_html "$BATS_TEST_TMPDIR/pl5.html" 2 3 2 3 "var(--x)"
+  run "$VM" --plano "$BATS_TEST_TMPDIR/pl5.html"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+}
+
+@test "PL6: fixture file (ok/index.html) yields same PASS result via HTML path" {
+  FX="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/tests/fixtures/plano/ok/index.html"
+  run "$VM" --plano "$FX"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS"* ]]
+}

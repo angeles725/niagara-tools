@@ -58,6 +58,101 @@ if [ $# -ge 1 ] && [ "$1" = "coverage" ]; then
   exit 0
 fi
 
+# --plano subcommand — dispatched before the flag loop so '--plano <file>' is
+# never mistaken for a jar operand. Mode: verify Rc==Rv==Ri and every numeric
+# aspect-ratio==Rc (B797 §797.2, integer cross-multiplication only; auto exempt).
+#   Rc = IMG_W/IMG_H constants; Ri = #planoImg intrinsic PNG; Rv = zones viewBox.
+# Usage: verify-module.sh --plano <index.html|jar>
+# Exits: 0 PASS · 1 FAIL · 2 usage · 3 env (tool missing, file unreadable).
+# VCS-free by design. No $HOME.
+if [ $# -ge 1 ] && [ "$1" = "--plano" ]; then
+  shift
+  if [ $# -ne 1 ]; then
+    echo "usage: verify-module.sh --plano <index.html|jar>" >&2; exit 2
+  fi
+  PLANO_IN="$1"
+  for _pt in base64 od; do
+    command -v "$_pt" >/dev/null || { echo "verify-module: missing tool: $_pt" >&2; exit 3; }
+  done
+  PLANO_TMP=""
+  if [ "${PLANO_IN%.jar}" != "$PLANO_IN" ]; then
+    command -v unzip >/dev/null || { echo "verify-module: missing tool: unzip" >&2; exit 3; }
+    [ -f "$PLANO_IN" ] || { echo "verify-module: file not readable: $PLANO_IN" >&2; exit 3; }
+    PLANO_TMP=$(mktemp -d)
+    _html="$PLANO_TMP/index.html"
+    unzip -p "$PLANO_IN" 'rc/index.html' > "$_html" 2>/dev/null \
+      || { rm -rf "$PLANO_TMP"; echo "verify-module: no rc/index.html in: $PLANO_IN" >&2; exit 3; }
+  else
+    _html="$PLANO_IN"
+    [ -f "$_html" ] || { echo "verify-module: file not readable: $_html" >&2; exit 3; }
+  fi
+  _plano_cleanup() { [ -z "$PLANO_TMP" ] || rm -rf "$PLANO_TMP"; }
+  trap _plano_cleanup EXIT
+  _prow() { printf '%-4s  %-9s  %s  %s\n' "$1" "plano" "$PLANO_IN" "$2"; }
+  _ceq() { local a="$1" b="$2" c="$3" d="$4"; [ "$(( a * d ))" = "$(( b * c ))" ]; }
+  # Parse Rc = IMG_W / IMG_H
+  _rc_w=$(grep -oE 'IMG_W[[:space:]]*=[[:space:]]*[0-9]+' "$_html" | grep -oE '[0-9]+$' | head -1 || true)
+  _rc_h=$(grep -oE 'IMG_H[[:space:]]*=[[:space:]]*[0-9]+' "$_html" | grep -oE '[0-9]+$' | head -1 || true)
+  if [ -z "$_rc_w" ] || [ -z "$_rc_h" ]; then
+    _prow FAIL "Rc: IMG_W/IMG_H not found"; exit 1
+  fi
+  # Parse Rv = zones viewBox width / height (id="zonas" element; >=2 distinct -> FAIL)
+  _vb=$(grep 'id="zonas"' "$_html" | grep -oE 'viewBox="[^"]*"' | head -1 \
+    | sed 's/viewBox="//;s/"//' | awk '{if(NF>=4)print $3" "$4}' | sort -u || true)
+  if [ -z "$_vb" ]; then _prow FAIL "Rv: no id=\"zonas\" viewBox found"; exit 1; fi
+  _vb_n=$(printf '%s\n' "$_vb" | wc -l | tr -d ' ')
+  if [ "$_vb_n" -gt 1 ]; then _prow FAIL "Rv: ambiguous — multiple distinct viewBox dimensions"; exit 1; fi
+  _rv_w=$(printf '%s' "$_vb" | awk '{print $1}')
+  _rv_h=$(printf '%s' "$_vb" | awk '{print $2}')
+  # Parse Ri = #planoImg intrinsic PNG size via IHDR decode (first 64 b64 chars)
+  _b64=$(grep 'id="planoImg"' "$_html" \
+    | grep -oE 'data:image/png;base64,[A-Za-z0-9+/=]+' | head -1 \
+    | sed 's/data:image\/png;base64,//' | head -c 64 || true)
+  if [ -z "$_b64" ]; then _prow FAIL "Ri: no #planoImg with data:image/png;base64 found"; exit 1; fi
+  _ri_w="0"; _ri_h="0"
+  read -r _ri_w _ri_h <<< "$(printf '%s' "$_b64" | base64 -d 2>/dev/null | od -An -tu1 -N24 | \
+    awk '{for(i=1;i<=NF;i++)a[++n]=$i} END{
+      if(n<24){print "0 0";exit}
+      if(a[1]!=137||a[2]!=80||a[3]!=78||a[4]!=71||a[5]!=13||a[6]!=10||a[7]!=26||a[8]!=10){print "0 0";exit}
+      if(a[13]!=73||a[14]!=72||a[15]!=68||a[16]!=82){print "0 0";exit}
+      print a[17]*16777216+a[18]*65536+a[19]*256+a[20]" "a[21]*16777216+a[22]*65536+a[23]*256+a[24]
+    }' || true)" || true
+  if [ -z "$_ri_w" ] || [ "$_ri_w" -eq 0 ] || [ -z "$_ri_h" ] || [ "$_ri_h" -eq 0 ]; then
+    _prow FAIL "Ri: #planoImg PNG header invalid or unreadable"; exit 1
+  fi
+  PFAIL=0
+  # Rc == Ri and Rc == Rv (cross-multiplication: a/b==c/d iff a*d==b*c)
+  if ! _ceq "$_rc_w" "$_rc_h" "$_ri_w" "$_ri_h"; then
+    _prow FAIL "Rc(${_rc_w}/${_rc_h}) != Ri(${_ri_w}/${_ri_h}): IMG_W/IMG_H vs intrinsic PNG"; PFAIL=1
+  fi
+  if ! _ceq "$_rc_w" "$_rc_h" "$_rv_w" "$_rv_h"; then
+    _prow FAIL "Rv(${_rv_w}/${_rv_h}) != Rc(${_rc_w}/${_rc_h}): viewBox vs IMG_W/IMG_H"; PFAIL=1
+  fi
+  # Every numeric aspect-ratio must equal Rc; auto is exempt; anything else -> FAIL
+  while IFS= read -r _ar_ln; do
+    [ -n "$_ar_ln" ] || continue
+    _ar_raw=$(printf '%s' "$_ar_ln" | grep -oE 'aspect-ratio:[[:space:]]*[^;{}]+' \
+      | sed 's/aspect-ratio:[[:space:]]*//' | sed 's/[[:space:]]*$//' || true)
+    [ -n "$_ar_raw" ] || continue
+    _ar_v=$(printf '%s' "$_ar_raw" | tr -d ' \t')
+    [ "$_ar_v" != "auto" ] || continue
+    case "$_ar_v" in
+      [0-9]*/[0-9]*)
+        _ar_n="${_ar_v%%/*}"; _ar_d="${_ar_v##*/}"
+        case "$_ar_n" in ''|*[!0-9]*) _prow FAIL "unparseable aspect-ratio: ${_ar_v}"; PFAIL=1; continue ;; esac
+        case "$_ar_d" in ''|*[!0-9]*) _prow FAIL "unparseable aspect-ratio: ${_ar_v}"; PFAIL=1; continue ;; esac
+        if ! _ceq "$_ar_n" "$_ar_d" "$_rc_w" "$_rc_h"; then
+          _prow FAIL "aspect-ratio ${_ar_v} != Rc(${_rc_w}/${_rc_h})"; PFAIL=1
+        fi ;;
+      *) _prow FAIL "unparseable aspect-ratio: ${_ar_v}"; PFAIL=1 ;;
+    esac
+  done <<< "$(grep -E 'aspect-ratio:' "$_html" || true)"
+  if [ "$PFAIL" -eq 0 ]; then
+    _prow PASS "Rc=${_rc_w}/${_rc_h} Ri=${_ri_w}/${_ri_h} Rv=${_rv_w}/${_rv_h} — all agree"
+  fi
+  exit "$PFAIL"
+fi
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --target-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; TARGET="$2"; shift 2 ;;

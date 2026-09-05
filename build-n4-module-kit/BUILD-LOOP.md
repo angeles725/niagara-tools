@@ -43,7 +43,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
-- **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `--plano <index.html|jar>` when available.
+- **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present).
 - The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station.
 
 ## 6. Deploy (station) — operator

@@ -59,3 +59,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign7-dashboard-exemplar.md | kit | 2026-09-05 | pending | 0 |
 | 2026-09-05-campaign7-scaffold.md | kit | 2026-09-05 | pending | 4 |
 | 2026-09-05-campaign7-schema-risk.md | kit | 2026-09-05 | pending | 5 |
+| 2026-09-05-campaign7-plano.md | kit | 2026-09-05 | pending | 5 |

@@ -254,3 +254,95 @@ None — implementation matches design. The exemplar block is 18 authored lines 
 - CI: non-strict fixtures step (each pair asserts its expected exit); fix-forward 8dc3834 for `bash -e` capturing a non-zero exit (`got_exit=0; out=$(cmd) || got_exit=$?`).
 - Retro: `retros/2026-09-05-campaign7-schema-risk.md` (pending) + INDEX row + kit self-envelope.
 
+
+### PR5 Fix-forward: parse_slots whitespace (post-QA rejection)
+
+**Defect**: extract_attr regex `attr="value"` did not match `attr = "value"` (spaces around =). Real modules produce 0 slots → false SAFE.
+**Fix**: `attr[[:space:]]*=[[:space:]]*"[^"]*"` + index() extraction. Commit `a63c3c5`.
+**SR10**: Added real-shape fixture (MinimalPan production form). Named mutation: unspaced regex → 0 rows → false SAFE → SR10 fails.
+**Smoke (post-fix)**: CompPan-rt HEAD~5→HEAD: 3 SAFE add_slot rows (condenser1/2/3Mode), exit 0. ColdRoomPan-rt: no changes in range, verdict=SAFE, exit 0.
+**Final**: 168/168 bats green. PR #56 CI green. Head: `f4d2f32`.
+
+---
+
+## PR6 — feat/c7-plano (2026-09-05)
+
+**Status**: complete
+**Mode**: Strict TDD
+**Branch**: feat/c7-plano
+**Worker**: sdd-apply (Claude Sonnet 4.6)
+**QA RED**: `qa/c7-plano` tip `c49504f` cherry-picked
+
+### TDD Cycle Evidence
+
+| Task | RED | GREEN | REFACTOR |
+|---|---|---|---|
+| PL1 PASS (all agree) | `bats tests/plano-check.bats` → 4 not ok (exit 2, no --plano flag) | `--plano` block added, PL1 passes | No refactor needed |
+| PL2 FAIL names 1247/771 | same RED | PL2 passes; output contains 1247/771 | viewBox: targeted id="zonas" grep |
+| PL3 auto exempt | same RED | PL3 passes | — |
+| PL4 Rv!=Ri FAIL | same RED | PL4 passes | — |
+
+### Named Mutation
+
+Full count-only mutation (remove all three `_ceq` checks — Rc==Ri, Rc==Rv, and aspect-ratio vs Rc):
+- **PL2** loses its FAIL: single `1247/771` is trivially equal to itself → PASS (wrong, should FAIL)
+- **PL4** loses its FAIL: no Rv vs Rc check → PASS (wrong, should FAIL)
+Proves cross-source equality (all values against Rc/Ri/Rv ground truth) is load-bearing, not intra-aspect-ratio equality. Reverted.
+
+### Real Smoke (DashboardPan-ux)
+
+```
+bash build-n4-module-kit/toolbelt/verify-module.sh --plano \
+  /home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/DashboardPan/DashboardPan-ux/src/rc/index.html
+FAIL  plano      .../index.html  aspect-ratio 1247/771 != Rc(1248/891)
+Exit: 1
+```
+Confirms issue #49: `.frame{aspect-ratio:1247/771}` is stale, masked by `#frame{aspect-ratio:auto}` at :96.
+
+### Completed Tasks
+
+- [x] 6.1 Re-read QA RED `qa/c7-plano` tip `c49504f` before writing (CD4)
+- [x] 6.2 --plano mode added to verify-module.sh dispatched before flag loop (D6a): Rc/Ri/Rv/A parsed, cross-multiplication, auto exempt
+- [x] 6.3 Guard `base64`, `od` via `command -v || exit 3`; `unzip` guarded on .jar operand
+- [x] 6.4 PL5 (var(--x) → FAIL) + PL6 (fixture PASS via HTML path) added to plano-check.bats
+- [x] 6.5 `tests/fixtures/plano/ok/index.html` created (inline 2×3 PNG; Rc=Ri=Rv=2/3)
+- [x] 6.6 CI step: `--plano tests/fixtures/plano/ok/index.html` → exit 0 added to ci.yml
+- [x] 6.7 Named mutations recorded and reverted (full count-only: PL2+PL4 lose FAIL)
+- [x] 6.8 shellcheck exit 0 on modified verify-module.sh
+- [x] 6.9 Retro `retros/2026-09-05-campaign7-plano.md` + INDEX row + BUILD-STATE.md kit envelope updated
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/toolbelt/verify-module.sh` | Modified | Added --plano subcommand (~80 lines) between coverage block and flag loop |
+| `tests/plano-check.bats` | Cherry-pick + append | PL1-PL4 from qa/c7-plano c49504f; PL5+PL6 appended |
+| `tests/fixtures/plano/ok/index.html` | Created | 2×3 PNG fixture; Rc=Ri=Rv=2/3; one agreeing aspect-ratio |
+| `.github/workflows/ci.yml` | Modified | Added plano-ok fixture CI step (exit 0) |
+| `build-n4-module-kit/BUILD-LOOP.md` | Modified | §5 pre-gate: hedge → real invocation |
+| `build-n4-module-kit/skill/SKILL.md` | Modified | §References: hedge → real invocation |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-plano.md` | Created | PR6 retro (review-status: pending) |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | PR6 retro row added |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | Kit self-envelope: retro_pending + last_commit/session updated |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command | `bats tests/plano-check.bats` → 6/6 ok (PL1-PL6) |
+| Full bats | `bats tests/*.bats` → 174/174 passing, 0 failing |
+| Shellcheck | `shellcheck build-n4-module-kit/toolbelt/verify-module.sh` → exit 0 |
+| Sweep guards | `sweep-build-state.sh` → exit 0; `sweep-fold-audit.sh --strict` → exit 0 (47 cited) |
+| Real smoke | `--plano DashboardPan-ux/src/rc/index.html` → FAIL "1247/771 != Rc(1248/891)" exit 1 ✓ |
+| Rollback boundary | Revert --plano block from verify-module.sh; remove plano-check.bats, fixtures/plano/, CI step; revert BUILD-LOOP/SKILL hedges; remove retro+INDEX row; restore BUILD-STATE envelope |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, stacked-to-main)
+- Current work unit: PR6 feat/c7-plano
+- Boundary: starts at PR5 head (f4d2f32), ends with --plano + tests + fixture + CI + docs + retro
+- Estimated review budget: ~140 authored lines (within single-PR budget)
+
+### Status
+
+9/9 PR6 tasks complete. Ready for verify.

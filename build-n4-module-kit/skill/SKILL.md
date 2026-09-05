@@ -55,4 +55,4 @@ Report: kit path, type chosen, layers built, preview + build outcome (bytecode 5
 ## References
 
 - `$KIT/METHODOLOGY.md`, `$KIT/BUILD-LOOP.md`, `$KIT/build-verify.md`, `$KIT/types/*.md`, `$KIT/SOURCES.md`, `$KIT/scripts/install-skill.sh`.
-- Toolbelt: `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh` (+ coverage, + --plano when available), `$KIT/toolbelt/run-pure-test.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`, `$KIT/toolbelt/preflight.sh`, `$KIT/toolbelt/slot-coverage.sh`, `$KIT/toolbelt/lint-timers.sh`, `$KIT/toolbelt/sweep-build-state.sh` (+ --age), `$KIT/toolbelt/sweep-fold-audit.sh`.
+- Toolbelt: `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh` (+ coverage, + --plano <ux-profile>/src/rc/index.html), `$KIT/toolbelt/run-pure-test.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`, `$KIT/toolbelt/preflight.sh`, `$KIT/toolbelt/slot-coverage.sh`, `$KIT/toolbelt/lint-timers.sh`, `$KIT/toolbelt/sweep-build-state.sh` (+ --age), `$KIT/toolbelt/sweep-fold-audit.sh`.
