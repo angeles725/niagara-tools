@@ -97,13 +97,17 @@ setup_parse_fixtures() {
   FIXDIR="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage"
 }
 
-@test "SC6-parse: empty lexicon + 3 types -> pct=0.0 + WARN, exit 0 (CompPan-T8 fixture)" {
+@test "SC6-parse: empty lexicon + >=1 declared type -> pct=0.0 + FAIL, exit 1 (CompPan-T8 fixture)" {
+  # CAMPAIGN 8 PR5 AMENDMENT (was exit 0/WARN): an empty lexicon with >=1 declared type is not a
+  # warning — every operator slot renders raw camelCase (the T8 footgun is a ship-blocker), so it is
+  # now a FAIL/exit 1. RED until PR5 lands the promotion; PR5 carries the CHANGELOG line. pct stays
+  # 0.0 (denominator is |required|, never 0). Type-level output otherwise unchanged.
   setup_parse_fixtures
   XML="$FIXDIR/comppan-t8/module-include.xml"
   LEX="$FIXDIR/comppan-t8/module.lexicon"
   run "$SC" "$XML" "$LEX"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"slot-coverage: WARN"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"empty lexicon"* ]]
   [[ "$output" == *"pct=0.0"* ]]
 }
 
@@ -126,4 +130,46 @@ setup_parse_fixtures() {
 
   run "$SC" --strict "$XML" "$LEX"
   [ "$status" -eq 1 ]
+}
+
+# ---------------------------------------------------------------------------
+# CAMPAIGN 8 PR5 — per-slot mode (@NiagaraProperty OPERATOR slots vs lexicon keys).
+# Type-level (parse) output is unchanged; this is a NEW mode. Real shapes: ColdRoomPan 19 missing
+# operator keys, DashboardPan-rt stale `differential`, chihuahua empty lexicon (SC6-parse amendment).
+#
+# SURFACE (design D6, confirmed):
+#   slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>  (design D6, design.md:136-139)
+#     prints `pct=<n.n> (per-slot)` plus:
+#     MISSING <slot>  an OPERATOR @NiagaraProperty slot with no lexicon key (raw camelCase in UI)
+#     STALE   <key>   a lexicon key that matches no declared slot (dead translation)
+#   Non-operator slots are NOT required to have a key (the OPERATOR gate).
+#
+# RED today: no per-slot mode -> the MISSING/STALE rows never appear -> each pin fails for the right
+# reason (mode absent). NAMED MUTATION (post-green): drop the stale-key diff -> STALE rows vanish (SP2).
+FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
+
+@test "SP1: per-slot flags an OPERATOR slot with no lexicon key as MISSING (naming the slot)" {
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"MISSING"* ]] && [[ "$output" == *"setpoint"* ]]
+}
+
+@test "SP2: per-slot flags a lexicon key matching no slot as STALE (differential) [mutation target]" {
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"STALE"* ]] && [[ "$output" == *"differential"* ]]
+}
+
+@test "SP3: a covered operator slot AND a non-operator slot are NOT flagged (coverage + OPERATOR gate)" {
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"setpoint"* ]]          # anchor: per-slot analysis ran (setpoint is MISSING)
+  [[ "$output" != *"fanMode"* ]]           # fanMode has slot+key -> covered, not reported
+  [[ "$output" != *"internalState"* ]]     # READONLY (non-operator) -> not required to have a key
+}
+
+@test "SP4: an OPERATOR slot under src/.deploy-baseline/ is NOT counted MISSING (D9b dot-dir prune)" {
+  # Anchored on setpoint (the real MISSING slot in the live src) so this is RED today (mode absent),
+  # not a trivial pass. RED until per-slot lands + prunes dot-dirs. NAMED MUTATION (post-green):
+  # remove the dot-dir prune -> staleKnob (no lexicon key) is scanned and reported MISSING -> SP4 flips.
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"setpoint"* ]]        # anchor: per-slot analysis ran on the live src
+  [[ "$output" != *"staleKnob"* ]]       # the .deploy-baseline slot is pruned, never counted
 }
