@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Set up Java 8 (Temurin) — required by run-pure-test.sh javac -source 8
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '8'

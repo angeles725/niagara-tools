@@ -23,3 +23,6 @@ secrets/
 
 # Deploy backups (binary archives, never version-control)
 _backups/
+
+# SDD runtime state (instance IDs/tokens, per-session; not repository content)
+openspec/**/.gentle-ai-instance

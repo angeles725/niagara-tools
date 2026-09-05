@@ -6,6 +6,56 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.16.0] - 2026-09-05
+
+### Added / Changed — Campaign 6 close: tracked launcher, openspec durability, toolbelt completion (PR1–PR6)
+
+**PR1 — Marker-index coherence sweep**
+- `toolbelt/sweep-build-state.sh` reads `<!-- review-status: … -->` markers on line 1 of retro files and checks them against the INDEX row status; exit 1 on mismatch; absent marker tolerated. Named mutation M1/M4/M5/M6 proved. CI runs this on every push.
+- Tests: `tests/build-retro-sync.bats` (25 tests, merged from QA branch `cb0dd7d`). PR1 retro filed.
+
+**PR2 — CI pure-test enforcement**
+- `.github/workflows/ci.yml` now runs `run-pure-test.bats` with the Java 8 Temurin JDK and pre-fetched JUnit 4.13.2 + hamcrest-core 1.3 (pinned sha256); `grep "# skip"` log step to make zero-SKIPs visible. CI cannot be bypassed by a clone that skipped hook installation.
+- `tests/run-pure-test.bats`: `${CI:-}` guard converts skip→fail when `$CI` is set (P1–P6 produce zero-SKIPs in CI). Named mutation P2 proved.
+
+**PR3 — Doctrine: K1–K10, M1/M2, LC7**
+- `METHODOLOGY.md`: K1–K9 kit-maintenance rules (gate-exit taxonomy, mutation-prove discipline, high-signal/promotable-unit criteria, worktree origin/main pattern, grep-kit-before-fold, HOME-nonexistent, set-e empty-cache lessons); §Multi-session-coordination (M1); §Live-verify-safety (M2); LC7 what-to-test-where table by module type.
+- `CONTRIBUTING.md`: K10/A10 (pin any linter a CI gate depends on); §8 "No CI" fixed (CI exists since campaign 5).
+- 7 retros flipped `pending`→`folded` in the same commit that folds their content. PR3 retro filed.
+
+**PR4 — Types fold: LC1–LC6, B762/B763 seams, mode-B slotomatic gap, ledger corrections**
+- `types/logic.md`: A1/L1 annotation-only sufficient; A13/L2 MOUNT/ORD is integrator-placed; LC1–LC5 (corpus B536–B552); LC6 scheduler seam DI `Sched{at(delayMs);cancel(t)}`; "GROWING" header removed.
+- `types/dashboard.md`: A15/D1 off-station derived keys; DUX1 route()→RouteAction -ux servlet seam; DUX2 purity gradient; DWS1 5-gate write-surface checklist; DWS2 canWrite(boolean) pure-RBAC test seam; DJS1 inline SPA JS + module.exports shim.
+- `types/wb-widgets.md`: DWB1 wb/model Predicate-injection seam (turns seed into exemplar-backed).
+- `build-verify.md`: "Known gap" retitled; A17/V1–V4 mode-B slotomatic gap documented. `build-verify.md` now carries zero "rt only" occurrences.
+- `SOURCES.md` + `corpus-index.md`: A18/S1–S2.
+- DashboardPan ledger: `handleSetpointWrite` gated by `DashboardRbacHelper.checkCanWrite` (B763); `profiles: rt,ux` (not `rt,ux,wb`); DashboardPan-wb scaffold noted. PR4 retro filed.
+
+**PR5a — sweep-fold-audit.sh + verify-module coverage%**
+- `toolbelt/sweep-fold-audit.sh`: audits that every folded INDEX.md row has an `[ev: retro <slug>]` citation in a core kit file; hyphen-aligned token matching; `retros/` excluded from corpus; exit 1 under `--strict`; CI runs non-strict (visible WARN, not blocking). Named mutations F3/F4/F6 proved.
+- `toolbelt/verify-module.sh coverage <P> <F> <W> <S>`: integer-tenths gate-coverage percentage; `N-A` when all counts zero. Named mutations MM1–MM8 proved.
+- Tests: `tests/sweep-fold-audit.bats` (F1/F2 + named mutations); `tests/verify-coverage.bats` (8 pins, merged from QA `d7e52a8`). PR5a retro filed.
+
+**PR5b — preflight.sh + slot-coverage.sh**
+- `toolbelt/preflight.sh`: JDK-8 check (under `--jvm-dir`/`JAVA_HOME`, never `$HOME`), plugin-pin in `etc/m2`, jar-lock via lsof (SKIP if absent), Windows-path FAIL with `/mnt/c/…` remedy. Named mutations PF1/PF2 proved.
+- `toolbelt/slot-coverage.sh`: MM2 exposed-set coverage; pure `set-coverage <declared-csv> <required-csv>` subcommand (exact pin vectors SC1–SC5); parse subcommand reads `module-include.xml` + `module.lexicon`; empty-lexicon WARN (CompPan T8 footgun); dup-keys detection (B759/B780). Named mutations SC1–SC5 denominator/extra/N-A proved; SC6-parse mutation proved. PR5b retro filed.
+
+**PR6 — Tracked launcher + openspec durability + v0.16.0 (this release)**
+- **NEW `build-n4-module-kit/skill/SKILL.md`** — tracked canonical copy of the Claude skill launcher. Edits vs v0.3: `state` column removed from decision table (growing/mature/seed not actionable); explicit wb-builder note pointing to corpus B751–B753 and B762/B780 (`types/wb-widgets.md` is exemplar-backed but still thin); §Execution step 1 aligned with BUILD-LOOP §0 orient-then-corpus-nav order; frontmatter version bumped to "0.4".
+- **NEW `scripts/install-skill.sh`** — copies the tracked skill into `<home>/.claude/skills/build-n4-module/SKILL.md` with sha256 comparison; `--home`/`--dry-run`/`--force` flags; exits 0/1/2/3; VCS-free. Tests IS1–IS4 + named mutation proved (drop last line → cmp fails). Suite identical under `HOME=/nonexistent`.
+- **`openspec/` tracked** — the entire `openspec/` directory is committed for the first time (hybrid-store durability). `openspec/changes/niagara-tools-slotomatic-integration/` moved to `openspec/changes/archive/` with `archive-report.md` (100% superseded as of v0.15.1; all 40 tasks live in ng-deploy.sh + ng-deploy.bats; 0 applied through the openspec flow). `.gentle-ai-instance` added to `.gitignore` (runtime state, not repository content).
+- **`ci.yml`** — `actions/setup-java@v4` → `@v5` (deprecation notice from PR2 CI run 33956501710).
+- **`slot-coverage.sh`** — parse mode pct= line labeled `(type-set)` so `100.0` cannot be misread as per-slot coverage (B788: DashboardPan-rt type-set 100% but per-slot ~25%).
+- **`BUILD-STATE.md`** — ledger correction: the false "CompPan-rt/module.lexicon is empty (T8)" open_issue replaced with real B788 findings (ColdRoomPan-rt partial 32 keys; DashboardPan-rt ~25% per-slot; DashboardPan-wb palette empty scaffold). Kit self-envelope updated: version 0.16.0, last_commit Campaign 6 PR6. `[ev: corpus B788]`.
+
+### References
+
+- SDD change: `build-n4-module-campaign6`; campaigns 1–5 closed prior releases (v0.13.x/v0.14.0/v0.15.x).
+- Engram topic: `sdd/build-n4-module-campaign6/*`
+- PRs: #35 (PR1) · #36 (PR2) · #37 (PR3) · #38 (PR4) · #39 (PR5a) · #40 (PR5b) · this PR (PR6)
+
+---
+
 ## [v0.15.1] - 2026-09-04
 
 ### Added — CI: server-side enforcement of the checks (Campaign 5 AG-PR2)

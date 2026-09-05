@@ -113,7 +113,7 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 4. **Adversarial pure-logic review BEFORE compile** — a second reader of the pure class catches control-logic defects the gate cannot (the `Long.MIN_VALUE` overflow and the dead-sensor false-fault both compiled and passed the gate). [ev: retro comppan-fase1 · T3]
 
 ## Known gap — mode B ignores `--with-slotomatic`
-- **Modes A and C regenerate `-ux` slots when `-ux` is annotated** (`scripts/ng-deploy.sh` lines ~493-500: `run_slotomatic` is called for every profile with sources); **mode B never runs slotomatic** (lines ~552-553). So a `-ux` annotation edit under mode B silently skips regeneration — build with `toolbelt/build.sh` (runs slotomatic for every profile) or with `--mode A --with-slotomatic` instead. The blanket "-rt only" wording was stale for modes A/C, correct for mode B only. [ev: QA audit · ng-deploy.sh]
+- **Modes A and C regenerate `-ux` slots when `-ux` is annotated** (`scripts/ng-deploy.sh` lines ~493-500: `run_slotomatic` is called for every profile with sources); **mode B never runs slotomatic** (lines ~552-553). So a `-ux` annotation edit under mode B silently skips regeneration — build with `toolbelt/build.sh` (runs slotomatic for every profile) or with `--mode A --with-slotomatic` instead. Mode B is the exception: slotomatic is skipped for all profiles, not just the runtime profile. [ev: QA audit · ng-deploy.sh]
 
 ## Verify — useful patterns
 - **V1 / Consumer-absence delta proof:** to prove "what changed since X" when same-day timestamps don't discriminate, `grep -c <symbol>` the CONSUMER artifact — 0 hits = genuine delta; present = already consumed. Beats pinning a commit/deploy boundary by date. [ev: retro dashboardpan-2d-to-3d-port Δ1]

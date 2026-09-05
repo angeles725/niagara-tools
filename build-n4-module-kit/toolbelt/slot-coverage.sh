@@ -181,9 +181,13 @@ if [ "$lex_has_keys" -eq 0 ] && [ "$R_COUNT" -ge 1 ]; then
   HAS_WARN=1
 fi
 
-# Run the pure function and print the 3 coverage lines
+# Run the pure function and print the 3 coverage lines.
+# The parse mode measures TYPE-set coverage (a registered type counts as declared when it
+# has >=1 lexicon key), NOT per-slot completeness. Label the pct= line accordingly so
+# "100.0" cannot be misread as full per-slot coverage (B788 measured ~25% per-slot on
+# DashboardPan-rt despite 100% type-set coverage). [ev: corpus B788; T6.11]
 sc_out=$(run_set_coverage "$declared_csv" "$required_csv")
-printf '%s\n' "$sc_out"
+printf '%s\n' "$sc_out" | sed 's/^pct=\(.*\)$/pct=\1 (type-set)/'
 
 # --strict: exit 1 when missing is non-empty or WARN was emitted
 if [ "$STRICT" -eq 1 ]; then
