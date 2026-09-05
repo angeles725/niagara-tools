@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Campaign 6 PR5b — preflight.sh + slot-coverage.sh: environment preflight and MM2 exposed-set coverage
 
 **Date:** 2026-09-05

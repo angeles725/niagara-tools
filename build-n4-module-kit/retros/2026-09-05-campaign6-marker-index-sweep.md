@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Campaign 6 PR1: marker-aware sweep-build-state — the marker↔INDEX contract (2-lite)
 

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro — Campaign 6 PR4: types fold — LC1–LC6, B762/B763 seams, mode-B slotomatic gap, DashboardPan ledger · 2026-09-05
 
 PR4 of 8 in `build-n4-module-campaign6`. Doc-only fold: zero new bats tests. Branch: `feat/c6-types`.

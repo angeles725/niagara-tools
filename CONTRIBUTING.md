@@ -198,3 +198,13 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
   checklist + agent discipline. Future: a pre-commit hook.
 - **CI active** (`ci.yml`, since Campaign 5): GitHub Actions on `origin` runs shellcheck + bats + sweep on every push and PR — server-side, un-bypassable complement to the opt-in client hook. **Pin every tool the CI gate depends on** (shellcheck version, Java version, junit sha256); an unpinned tool drifts newer on the runner and turns green→red with no code change. [ev: retro ci-server-side-enforcement] (K10/A10)
+
+---
+
+## 9. SDD ledger discipline
+
+- **One active attempt per change** regardless of work-unit label: the ledger is serial — a new acquire blocks while a prior attempt for the same change is open.
+- **Evidence goal = one short line:** `--evidence-goal` must be a single terse sentence parseable at a glance.
+- **Inventory sha from the error, not cached:** the untracked inventory sha changes whenever files appear; always read it from the error output, never from a prior run.
+- **Doc-store commits early or budget sized to content:** a large openspec commit blows a code-sized `--max-changed-lines` budget; commit docs early or pass a budget that matches the PR's real content. [ev: retro close-process-meta-lessons]
+- **Two independent reads for every research fold:** author fidelity read + a mechanical gate with verbatim spot-checks of each correction — one read cannot catch what two can. [ev: retro research-fold] [ev: retro close-process-meta-lessons]

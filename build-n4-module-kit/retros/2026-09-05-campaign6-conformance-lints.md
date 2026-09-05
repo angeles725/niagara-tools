@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 
 # Retro — Campaign 6 PR8: Conformance Lints + Retro-Debt Aging
 

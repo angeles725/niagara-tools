@@ -68,6 +68,16 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - **K7 — Feature PR = exit (a), not a 4th shape:** a pure feature PR uses the close-gate NEW-RETRO exit (a); it is not a 4th unclassified gate shape. [ev: retro campaign5-gate-activation L2]
 - **K8 — No $HOME coupling in gate checks:** a gate/check resolves references against the repo (or a declared external), never dev-machine state (`$HOME`); prove it bites under `HOME=/nonexistent`. [ev: retro ci-server-side-enforcement L3]
 - **K9 — set -e probe isolation:** a `set -e` toolbelt script that must report a specific exit code must isolate its probe (`|| true`) so `die <code>` runs instead of a bare abort. [ev: retro run-pure-test-set-e-empty-cache]
+- **K11 — Check attribution before publishing:** grep commit bodies and the PR body for `co-authored|generated with|claude` before opening a PR; amend locally if found, never after publishing. [ev: retro close-process-meta-lessons]
+- **K12 — Workers write only in their worktree:** live docs are merged, never overwritten; `git diff --numstat origin/main..branch | sort -rn` surfaces large deletions before opening a PR. [ev: retro close-process-meta-lessons]
+- **K13 — Cite QA RED branches by name, re-read tip at apply time:** hard-pinned commit hashes in a design go stale within hours; the branch name is the durable reference. [ev: retro close-process-meta-lessons]
+- **K14 — A metric's name states what it measures:** label `pct=` output as `(type-set)` or `(per-slot)` so readers cannot assign the wrong meaning to a number. [ev: retro close-process-meta-lessons]
+- folded as code: sweep-build-state.sh marker↔INDEX first-5-line window, column-0 anchor, first-word domain check. [ev: retro marker-index-sweep]
+- folded as code: sweep-fold-audit.sh abbreviated-citation convention, hyphen-segment alignment, 6-char token floor. [ev: retro fold-audit]
+- folded as code: toolbelt/preflight.sh (env preflight) + toolbelt/slot-coverage.sh (type-set coverage + dup-keys). [ev: retro preflight-and-slot-coverage]
+- folded as code: toolbelt/lint-timers.sh (timer-ticket/stopped() lint) + sweep-build-state.sh --age (retro-debt aging). [ev: retro conformance-lints]
+- folded as code: build-n4-module-kit/skill/SKILL.md (tracked launcher) + scripts/install-skill.sh. [ev: retro campaign6-close]
+- Code-folded retros need a "folded as code: <script> [ev: retro <token>]" note in a prose kit file to be credited by the citation audit. [ev: retro research-fold]
 
 ## Multi-session coordination
 - **Before editing a file in a shared repo, check the tree first:** run `git status`/`git diff` on the target — a dirty working tree is a peer's live uncommitted work and is off-limits; coordinate with the owning session instead of duplicating or clobbering. [ev: retro dashboardpan-2d-to-3d-port, retro research-sdd-module-authoring-mega-campaign]

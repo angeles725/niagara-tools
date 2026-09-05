@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Campaign 6 close: retro harvest, research lanes, and the kit's own meta-lessons
 
