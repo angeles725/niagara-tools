@@ -106,11 +106,33 @@ if [ -d "$JVM_DIR" ]; then
   done
 fi
 
+# WSL fallback: some Debian/Ubuntu openjdk-8 packages omit the release file.
+# If still not found, re-scan for bin/java candidates that report 1.8 via -version.
+# This covers the WSL openjdk-8 false-negative (research retro companero B792-B793).
+if [ "$JDK8_FOUND" -eq 0 ] && [ -d "$JVM_DIR" ]; then
+  for jvm_candidate in "$JVM_DIR"/*/; do
+    [ -f "$jvm_candidate/release" ] && continue  # already checked above
+    [ -x "$jvm_candidate/bin/java" ] || continue
+    if "$jvm_candidate/bin/java" -version 2>&1 | grep -q '"1\.8\.'; then
+      JDK8_FOUND=1
+      JDK8_PATH="$jvm_candidate"
+      break
+    fi
+  done
+fi
+
 # Fallback: JAVA_HOME environment variable (not $HOME — different variable)
 if [ "$JDK8_FOUND" -eq 0 ] && [ -n "${JAVA_HOME:-}" ]; then
   if [ -f "$JAVA_HOME/release" ] && grep -q 'JAVA_VERSION="1\.8\.' "$JAVA_HOME/release" 2>/dev/null; then
     JDK8_FOUND=1
     JDK8_PATH="$JAVA_HOME"
+  fi
+  # WSL fallback for JAVA_HOME too — no release file but bin/java reports 1.8
+  if [ "$JDK8_FOUND" -eq 0 ] && [ ! -f "$JAVA_HOME/release" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    if "$JAVA_HOME/bin/java" -version 2>&1 | grep -q '"1\.8\.'; then
+      JDK8_FOUND=1
+      JDK8_PATH="$JAVA_HOME"
+    fi
   fi
 fi
 

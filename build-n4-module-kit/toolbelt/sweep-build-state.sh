@@ -5,10 +5,21 @@
 # version control (these scripts run inside worktrees and on stations); the diff half of the
 # retro gate lives in .githooks/pre-push, which calls this script for the content half.
 #
-# usage: sweep-build-state.sh <BUILD-STATE.md> <retros-dir> <INDEX.md>
-# exit:  0 clean · 1 named integrity violation · 3 usage/env
+# usage (content check):
+#   sweep-build-state.sh <BUILD-STATE.md> <retros-dir> <INDEX.md>
+#   exit:  0 clean · 1 named integrity violation · 3 usage/env
 #
-# checks:
+# usage (retro-debt aging — E5 contract):
+#   sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age <N>] <retros-dir> <INDEX.md>
+#   exit:  0 always (non-strict); use --strict (not implemented) to exit 1 on escalation
+#   stdout (three lines):
+#     total_pending=<n>
+#     escalated_count=<n>
+#     oldest_age=<n|N/A>
+#   Only pending rows age; folded rows are excluded.  Age is derived from the retro's FILENAME
+#   date prefix (YYYY-MM-DD-…), never from the file body.  Today is INJECTED via --today.
+#
+# content checks:
 #   - build-state.v1 markers are balanced, anchored at column 0 (a marker quoted in prose,
 #     inside backticks or indented, is NOT an envelope);
 #   - each envelope carries module + retro_required + retro_pending, both booleans;
@@ -30,6 +41,61 @@ marker_of() {
     | awk '{print $1}'
 }
 
+# ---------------------------------------------------------------------------
+# --age mode: retro-debt aging report (E5 contract)
+# ---------------------------------------------------------------------------
+if [ "${1:-}" = "--age" ]; then
+  shift
+  TODAY="" MAX_AGE=30
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --today)    [ $# -ge 2 ] || { printf 'usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] <retros-dir> <INDEX.md>\n' >&2; exit 3; }; TODAY="$2"; shift 2 ;;
+      --max-age)  [ $# -ge 2 ] || { printf 'usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] <retros-dir> <INDEX.md>\n' >&2; exit 3; }; MAX_AGE="$2"; shift 2 ;;
+      --) shift; break ;;
+      -*) printf 'usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] <retros-dir> <INDEX.md>\n' >&2; exit 3 ;;
+      *) break ;;
+    esac
+  done
+  [ -n "$TODAY" ] || { printf 'sweep-build-state: --today <YYYY-MM-DD> is required\n' >&2; exit 3; }
+  [ $# -eq 2 ] || { printf 'usage: sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age N] <retros-dir> <INDEX.md>\n' >&2; exit 3; }
+  retrodir="$1"; index="$2"
+  [ -d "$retrodir" ] || { printf 'sweep-build-state: no retros dir: %s\n' "$retrodir" >&2; exit 3; }
+  [ -f "$index" ]    || { printf 'sweep-build-state: no INDEX file: %s\n' "$index"   >&2; exit 3; }
+
+  today_epoch=$(date -d "$TODAY" +%s)
+  total_pending=0 escalated_count=0 oldest_age=-1
+
+  while IFS= read -r line; do
+    case "$line" in \|*) : ;; *) continue ;; esac
+    printf '%s\n' "$line" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}[^|]*\.md' || continue
+    fname=$(printf '%s\n' "$line" | grep -oE '[A-Za-z0-9._-]+\.md' | grep -vx 'INDEX.md' | head -1)
+    [ -n "$fname" ] || continue
+    rstatus=$(printf '%s\n' "$line" | awk -F'|' '{for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="pending"||$i=="folded"){print $i; exit}}}')
+    [ "$rstatus" = "pending" ] || continue
+    total_pending=$(( total_pending + 1 ))
+    # Extract YYYY-MM-DD from the filename prefix (first 10 chars)
+    file_date="${fname:0:10}"
+    file_epoch=$(date -d "$file_date" +%s 2>/dev/null) || continue
+    age_days=$(( (today_epoch - file_epoch) / 86400 ))
+    if [ "$age_days" -gt "$oldest_age" ]; then oldest_age=$age_days; fi
+    if [ "$age_days" -gt "$MAX_AGE" ]; then
+      escalated_count=$(( escalated_count + 1 ))
+    fi
+  done < "$index"
+
+  printf 'total_pending=%d\n' "$total_pending"
+  printf 'escalated_count=%d\n' "$escalated_count"
+  if [ "$total_pending" -eq 0 ]; then
+    printf 'oldest_age=N/A\n'
+  else
+    printf 'oldest_age=%d\n' "$oldest_age"
+  fi
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Default mode: content-integrity check (BUILD-STATE.md + retros/INDEX.md)
+# ---------------------------------------------------------------------------
 [ "$#" -eq 3 ] || { echo "usage: sweep-build-state.sh <BUILD-STATE.md> <retros-dir> <INDEX.md>" >&2; exit 3; }
 state=$1; retrodir=$2; index=$3
 [ -f "$state" ]    || { echo "sweep: no BUILD-STATE file: $state" >&2; exit 3; }

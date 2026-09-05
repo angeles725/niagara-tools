@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Fakebin: simulates WSL openjdk-8 that has no release file but reports 1.8 via -version.
+printf 'openjdk version "1.8.0_412" 2020-04-14\nOpenJDK Runtime Environment (build 1.8.0_412-8u412-b08-0ubuntu1~22.04-b08)\n' >&2
+exit 0

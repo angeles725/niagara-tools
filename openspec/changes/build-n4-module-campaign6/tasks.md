@@ -181,12 +181,12 @@ Runtime harness: N/A for all slices — no station, jar, or operator data is tou
 
 ## PR8 — feat/c6-conformance-lints (slot; from the own-modules-vs-exemplars audit + models)
 
-- [ ] **T8.1** Timer-ticket lint: a Java class owning a `Clock.Ticket` field / calling `Clock.schedule*` without a `stopped()` that cancels it → FAIL (verify-module `--src` check or `toolbelt/lint-timers.sh`). Fixtures from the real shapes (BEvaporatorUnit FAIL; BDefrostController/BCompressorControl PASS; no timers → PASS). QA RED: qa/c6-timer-ticket-lint. Named mutation: drop the stopped()-presence check → FAIL case passes. `[ev: corpus B787]` · ~60 lines
-- [ ] **T8.2** Discarded `Clock.schedule` return-value grep (cheap regression guard) inside T8.1. · ~10 lines
-- [ ] **T8.3** Empty-palette WARN scoped to modules WITH components (verify-module palette check refinement) — B788 DashboardPan-wb scaffold case; mutation: scope check removed → typeless module warns. `[ev: corpus B788]` · ~15 lines
-- [ ] **T8.4** Retro-debt aging: `sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age 30]` (or `sweep-retro-debt.sh`) per contract `openspec/changes/build-n4-module-campaign6/math-models-e5.md` (age from filename date, strictly > max-age → ESCALATED, 0 pending → N/A, injected today). QA RED off the pin vectors (2026-08-06 → 30 not escalated; 2026-08-05 → 31 escalated). Non-strict CI step. · ~50 lines
-- [ ] **T8.5** METHODOLOGY "human-review checklist" rules stay ADVISORY (action-without-OPERATOR, order-sensitive container without legality, poll-that-should-subscribe): NO lint; already folded as doctrine in PR7 — verify no hard-fail was added. · 0 lines
-- [ ] **T8.6** PR8 retro + kit self-envelope (exit a).
+- [x] **T8.1** Timer-ticket lint: a Java class owning a `Clock.Ticket` field / calling `Clock.schedule*` without a `stopped()` that cancels it → FAIL (verify-module `--src` check or `toolbelt/lint-timers.sh`). Fixtures from the real shapes (BEvaporatorUnit FAIL; BDefrostController/BCompressorControl PASS; no timers → PASS). QA RED: qa/c6-timer-ticket-lint. Named mutation: drop the stopped()-presence check → FAIL case passes. `[ev: corpus B787]` · ~60 lines
+- [x] **T8.2** Discarded `Clock.schedule` return-value grep (cheap regression guard) inside T8.1. · ~10 lines
+- [x] **T8.3** Empty-palette WARN scoped to modules WITH components (verify-module palette check refinement) — B788 DashboardPan-wb scaffold case; mutation: scope check removed → typeless module warns. `[ev: corpus B788]` · ~15 lines
+- [x] **T8.4** Retro-debt aging: `sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age 30]` (or `sweep-retro-debt.sh`) per contract `openspec/changes/build-n4-module-campaign6/math-models-e5.md` (age from filename date, strictly > max-age → ESCALATED, 0 pending → N/A, injected today). QA RED off the pin vectors (2026-08-06 → 30 not escalated; 2026-08-05 → 31 escalated). Non-strict CI step. · ~50 lines
+- [x] **T8.5** METHODOLOGY "human-review checklist" rules stay ADVISORY (action-without-OPERATOR, order-sensitive container without legality, poll-that-should-subscribe): NO lint; already folded as doctrine in PR7 — verify no hard-fail was added. · 0 lines
+- [x] **T8.6** PR8 retro + kit self-envelope (exit a).
 
 ---
 

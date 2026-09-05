@@ -90,3 +90,18 @@ teardown() {
   [[ "$out" == *"SKIP"* ]]
   [[ "$out" != *"PASS  jar-lock"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# PF5 — JDK 8 with no release file, bin/java reports 1.8 -> PASS (WSL fallback)
+# Fixture: tests/fixtures/preflight/jvm-no-release/java-8-openjdk-wsl/bin/java
+#          (fakebin printing openjdk version "1.8.0_412"; NO release file)
+# Named mutation: remove the bin/java fallback scan -> PF5 exits 1 (FAIL jdk8)
+# ---------------------------------------------------------------------------
+@test "PF5: JDK 8 with no release file but bin/java reports 1.8 -> PASS jdk8 (WSL fallback)" {
+  JVM_NO_RELEASE="$FIXDIR/jvm-no-release"
+  run "$PREFLIGHT" --jvm-dir "$JVM_NO_RELEASE" "$NH" "$GR"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS"* ]]
+  [[ "$output" == *"jdk8"* ]]
+  [[ "$output" != *"FAIL  jdk8"* ]]
+}

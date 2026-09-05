@@ -80,3 +80,31 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
 }
+
+@test "TL4: a Clock.schedule call with discarded return value FAILs (discarded-ticket)" {
+  # Discard.java: owns a periodic ticket (properly cancelled in stopped), but also
+  # fires a one-shot Clock.schedule without assigning the return value — discarded.
+  # This fixture isolates discarded-ticket: timer-ticket would PASS (stopped cancels),
+  # so only the discarded-ticket check carries the FAIL, making the mutation proof clean.
+  cat > "$SRC/Discard.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class Discard extends BComponent {
+  private Clock.Ticket periodic;
+  public void start() {
+    periodic = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), refresh, null);
+    // fire-and-forget one-shot — discarded ticket:
+    Clock.schedule(this, BRelTime.makeSeconds(1), init, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (periodic != null) periodic.cancel();
+  }
+}
+JAVA
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"discarded-ticket"* ]]
+}

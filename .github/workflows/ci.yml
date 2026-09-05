@@ -80,3 +80,12 @@ jobs:
         run: |
           K=build-n4-module-kit
           bash "$K/toolbelt/sweep-fold-audit.sh" --strict "$K/retros/INDEX.md" "$K"
+
+      - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
+        run: |
+          bash build-n4-module-kit/toolbelt/lint-timers.sh tests/fixtures/lint-timers
+
+      - name: sweep-retro-debt (aging report — non-strict, Campaign 6 PR8)
+        run: |
+          K=build-n4-module-kit
+          bash "$K/toolbelt/sweep-build-state.sh" --age --today "$(date -u +%F)" "$K/retros" "$K/retros/INDEX.md"
