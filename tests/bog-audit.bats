@@ -192,13 +192,28 @@ JAVA
 }
 
 # ---- Real-bog local smokes (SKIP-gated; local bless evidence, never a fake PASS) -------------------
-@test "BA-smoke-panccadia: the real PANCCADIA bog -> exactly one CHECK2 WARN, 0 CHECK5/7/9/10 (SKIP if absent)" {
+# to_bog <path>: echo a .bog zip path, wrapping an extracted file.xml when needed.
+to_bog() { case "$1" in *.xml) ( cd "$(dirname "$1")" && cp "$(basename "$1")" "$T/file.xml" ) && ( cd "$T" && zip -q real.bog file.xml && rm -f file.xml ); echo "$T/real.bog" ;; *) echo "$1" ;; esac; }
+
+@test "BA-smoke-check11: PANCCADIA -> exactly 17 CHECK11 FAIL (own-linked writables with no explicit fallback), 0 CHECK9/10 (bog-alone)" {
   RB="${C8_PANCCADIA_BOG:-$BOGX/panccadia/file.xml}"
-  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG to a real config.bog)"
-  # accept either a .bog zip or an extracted file.xml (bog-audit unzips a .bog; wrap the xml if needed)
-  BF="$RB"; case "$RB" in *.xml) BF="$T/panccadia.bog"; ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/file.xml" ) && ( cd "$T" && zip -q panccadia.bog file.xml && rm -f file.xml ) ;; esac
-  run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan --source-dir "$T/src"
+  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG)"
+  BF="$(to_bog "$RB")"
+  # CHECK11 is bog-alone (no --source-dir). Count fixed by the corrected parser: 22 own-linked targets,
+  # 5 with an explicit non-null fallback, 17 without -> 17 FAIL. The class-default fallback is NULL and
+  # does NOT count as safe (the relay holds last state on a null command); writeOnUp is a separate path.
+  run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK11  FAIL')" -eq 17 ]
+  [[ "$output" != *"CHECK9  FAIL"* ]] && [[ "$output" != *"CHECK10  FAIL"* ]]
+}
+
+@test "BA-smoke-check2: PANCCADIA + real source -> exactly one CHECK2 WARN, 0 CHECK5/7 (SKIP without a real source-dir)" {
+  RB="${C8_PANCCADIA_BOG:-$BOGX/panccadia/file.xml}"
+  SRC="${C8_PANCCADIA_SRC:-}"
+  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine"
+  [ -n "$SRC" ] && [ -d "$SRC" ] || skip "no real PANCCADIA source-dir (set C8_PANCCADIA_SRC; synthetic src would false-flag CHECK5)"
+  BF="$(to_bog "$RB")"
+  run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan --source-dir "$SRC"
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK2  WARN')" -eq 1 ]
   [[ "$output" != *"CHECK5  FAIL"* ]] && [[ "$output" != *"CHECK7  FAIL"* ]]
-  [[ "$output" != *"CHECK9  FAIL"* ]] && [[ "$output" != *"CHECK10  FAIL"* ]]
 }
