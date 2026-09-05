@@ -90,12 +90,17 @@ parse_slots() {
       }
       return d
     }
-    function extract_attr(buf, attr,    patstr, pos, val) {
-      patstr = attr "=\"[^\"]*\""
+    function extract_attr(buf, attr,    patstr, matchstr, q1, q2) {
+      # Accept optional whitespace around = (real modules write: name = "x")
+      patstr = attr "[[:space:]]*=[[:space:]]*\"[^\"]*\""
       if (match(buf, patstr)) {
-        pos = RSTART + length(attr) + 2
-        val = substr(buf, pos, RLENGTH - length(attr) - 3)
-        return val
+        matchstr = substr(buf, RSTART, RLENGTH)
+        q1 = index(matchstr, "\"")
+        if (q1 == 0) return ""
+        matchstr = substr(matchstr, q1 + 1)
+        q2 = index(matchstr, "\"")
+        if (q2 == 0) return ""
+        return substr(matchstr, 1, q2 - 1)
       }
       return ""
     }

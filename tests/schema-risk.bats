@@ -68,6 +68,14 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   rm -rf "$tmp"
   [ "$status" -eq 4 ]
 }
+@test "SR10 real-shape (spaced = and multi-line annotations) -> OUTAGE; rows show add_slot + retype_simple" {
+  pair real_shape
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"verdict=OUTAGE"* ]]
+  [[ "$output" == *"retype_simple"* ]]
+  [[ "$output" == *"add_slot"* ]]
+}
+
 @test "SR-CSV embedded CSV_TABLE heredoc byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
   local script="$SR"
   local oracle="$FX/b795-795.4.csv"
