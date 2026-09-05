@@ -1,0 +1,25 @@
+INFO [16:20:03 02-Sep-26 CST][web.warmup] web:WebWarmupConfig warmup completed in 3.640 seconds
+INFO [16:20:05 02-Sep-26 CST][fox] FOXS server started on port [4911]
+WARNING [16:20:10 02-Sep-26 CST][coldRoomPan] coldRoom: atSteadyState
+  java.lang.IllegalArgumentException: time <= 0
+  	at com.tridium.sys.engine.EngineManager.schedule(EngineManager.java:497)
+  	at javax.baja.sys.Clock.schedule(Clock.java:173)
+  	at com.angeles.ColdRoomPan.BDefrostController.armTrigger(BDefrostController.java:431)
+  	at com.angeles.ColdRoomPan.BDefrostController.atSteadyState(BDefrostController.java:378)
+  	at com.tridium.sys.engine.EngineUtil.atSteadyState(EngineUtil.java:250)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)
+INFO [17:00:00 02-Sep-26 CST][sys] routine tick
+WARNING [18:58:19 03-Sep-26 CST][coldRoomPan] coldRoom: changed
+  java.lang.IllegalArgumentException: time <= 0
+  	at com.tridium.sys.engine.EngineManager.schedule(EngineManager.java:497)
+  	at javax.baja.sys.Clock.schedule(Clock.java:173)
+  	at com.angeles.ColdRoomPan.BDefrostController.armTrigger(BDefrostController.java:431)
+  	at com.angeles.ColdRoomPan.BDefrostController.changed(BDefrostController.java:395)
+  	at com.tridium.sys.engine.EngineManager.doRun(EngineManager.java:300)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)
+SEVERE [19:05:00 03-Sep-26 CST][web] jetty request failure (no own frame)
+  java.lang.NullPointerException: Cannot invoke handler
+  	at org.eclipse.jetty.server.HttpChannel.handle(HttpChannel.java:501)
+  	at org.eclipse.jetty.io.ManagedSelector.run(ManagedSelector.java:210)
+  	at java.base/java.lang.Thread.run(Thread.java:834)
+INFO [19:10:00 03-Sep-26 CST][sys] routine tick

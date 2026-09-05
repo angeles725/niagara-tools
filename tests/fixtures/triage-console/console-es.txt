@@ -1,0 +1,5 @@
+INFORMACIÓN [19:19:00 03-Sep-26 CST][chihuahua] arranque completado
+ADVERTENCIA [19:20:01 03-Sep-26 CST][chihuahua] BChiDashboardService: failed to unschedule controlTick 1: access denied ("java.lang.RuntimePermission" "modifyThread")
+ADVERTENCIA [19:20:02 03-Sep-26 CST][chihuahua] BChiDashboardService: failed to unschedule controlTick 2: access denied ("java.lang.RuntimePermission" "modifyThread")
+ADVERTENCIA [19:21:00 03-Sep-26 CST][chihuahua] BChiRbacHelper: user sin permiso de escritura
+INFORMACIÓN [19:22:00 03-Sep-26 CST][sys] tick
