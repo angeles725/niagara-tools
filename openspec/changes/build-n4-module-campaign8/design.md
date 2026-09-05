@@ -61,6 +61,20 @@ Pass 2 classifies the `BRelTime` argument of every `Clock.schedule*(` call site:
 Local binding resolution scans backwards from the call site to the enclosing method's opening brace only
 — one method, one file, no cross-file inference.
 
+**D2b — cross-file helper resolution (lead addendum, PR1 finisher).** The production fix for the PANCCADIA
+defrost bug routes every delay through `ColdRoomControl.positiveDelayMs(long ms)` — a `static long` helper in
+a separate file — rather than an inline `Math.max`. A lint that only recognises inline `Math.max` cannot
+see that floor. When the delay expression is a call `<Class>.<fn>(…)` or `<fn>(…)`, the lint resolves the
+helper one level: it collects all `static (final )? long <fn>(` method bodies from every `.java` file under
+the scanned src root (dot-dirs pruned) via a single pre-pass awk invocation, and marks a function as a
+strictly-positive floor if its body contains any of: `Math.max(…, N)` with `N ≥ 1`, a `>= 1` comparison
+(`ms >= 1L ? ms : 1L` shape), a `< 1 ? 1 : x` shape, or `return 1L` on the non-positive branch. If the
+extracted function name is found in this registry the call-site PASSES (no row); otherwise the lint emits
+`FAIL zero-floor  helper <fn> has no visible strictly-positive floor`. The same registry lookup applies when
+the local variable binding scan (case 3) finds `varname = <Class>.<fn>(…)`: the function name is extracted
+and resolved the same way. No magic comments and no allowlists. The pre-pass awk resets state at `FNR==1`
+so method bodies never bleed across files.
+
 **D2a — the spec's LD-FAIL line list is wrong; the real pre-fix tree is the oracle.** `spec.md` says FAIL
 at `BDefrostController.java:566,622,664`. The pre-fix tree at
 `~/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/ColdRoomPan-rt/src` actually carries
@@ -398,3 +412,12 @@ A second agent validates this design against `spec.md` and the three landed REDs
       `~/modulos_niagara_n4/Leon-Guanjuato-worktrees/fix-defrost/`, so SC1's PASS half is provable.
 
 **Validation**: fresh-context validator FAIL → 6 fixes applied → re-validated by lead.
+
+### D9b — `.deploy-baseline` exclusion (lead addendum after QA's RM6 flag)
+
+`<artifact>/.deploy-baseline/` lives INSIDE the artifact, so every source scanner in the kit — `lint-timers.sh`,
+`lint-delays.sh`, `verify-module.sh --src`, `slot-coverage.sh per-slot`, `rc-scan.sh`, and `schema-risk.sh`'s after-dir
+walk — MUST prune dot-directories (`find … -type d -name '.*' -prune -o … -print`, or `-not -path '*/.*/*'`). Without it
+the after snapshot carries duplicate slots and the lints double-count the baseline. Applies to PR1-PR8 as they land;
+existing scripts gain the prune in the PR that first touches them (lint-timers in PR3, verify/slot-coverage in PR4/PR5,
+schema-risk in PR8). QA's RM6 fixture expects the exclusion.

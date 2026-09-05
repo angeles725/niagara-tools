@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: false                 # campaign7-close-process-meta-lessons folded in this commit
-last_commit: Campaign 7 CLOSE chore/c7-close
-last_session: 2026-09-05 · Campaign 7 CLOSE: fold 9 campaign-7 retros (K15-K20 + logic-split + report-module lessons), close retro filed+folded, contract refresh (--src vs jar-mode), CHANGELOG v0.18.0, VERSION 0.18.0; bats 179/179; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; pending 0. Campaign 7 CLOSED.
+retro_pending: true                  # campaign8-lint-delays filed (pending); 4 proposed deltas
+last_commit: Campaign 8 PR1 feat/c8-lint-delays
+last_session: 2026-09-05 · Campaign 8 PR1: lint-delays.sh (new, 11.5 KB), tests/lint-delays.bats LD1-LD10, design.md D2b+D9b, BUILD-LOOP.md §5 routing, SKILL.md v0.7→0.8 routing+References; bats 189/189; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; kit-links L4/L5 green. D2b helper resolution: positiveDelayMs/intervalDelayMs resolved cross-file; BDefrostController clean in fixed tree c66e412; BEvaporatorUnit MIN=0 slots separately tracked.
 <!-- /build-state.v1 -->

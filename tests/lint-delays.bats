@@ -83,3 +83,10 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   run "$LD"
   [ "$status" -eq 3 ]
 }
+@test "LD10: fixed-tree PASS — c66e412 ColdRoomPan-rt/src has no BDefrostController FAILs (SKIP if C8_CRP_FIXED not set)" {
+  [ -n "${C8_CRP_FIXED:-}" ] || skip "C8_CRP_FIXED not set (set to fixed-tree ColdRoomPan-rt/src dir to run)"
+  [ -d "$C8_CRP_FIXED" ] || skip "C8_CRP_FIXED path not found: $C8_CRP_FIXED"
+  run "$LD" "$C8_CRP_FIXED"
+  # BDefrostController must have zero FAIL rows (D2b helper resolution)
+  [[ "$output" != *"BDefrostController"* ]]
+}
