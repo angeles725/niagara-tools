@@ -175,3 +175,73 @@ None — implementation matches design. The exemplar block is 18 authored lines 
 ### Status
 
 5/5 PR3 tasks complete. Ready for verify (all guards passed; PR #54 open, investigador1 second read pending on task 3.3).
+
+---
+
+## PR4 — feat/c7-scaffold (2026-09-05)
+
+**Status**: complete (T4.1–T4.9)
+**Mode**: Strict TDD (RED→GREEN→mutations→revert)
+**Branch**: feat/c7-scaffold
+**Head SHA**: 7062ad4
+**PR**: https://github.com/angeles725/niagara-tools/pull/55
+**Worker**: sdd-apply (Claude Sonnet 4.6)
+
+### Completed Tasks
+
+- [x] 4.1 Re-read QA RED `qa/c7-scaffold` tip `54636ca`; cherry-picked onto worktree HEAD → deb9bf6
+- [x] 4.2 Commit 1 (899af8c): `fixtures/MinimalPan/**` — pre-slotomatic tree, no AUTO region, no operator paths in gradle.properties (commented placeholders), English lexicon (Minimal Panel/Setpoint/Interval), gradlew binary verbatim, gradle-wrapper.jar 60 KB bundled (under 100 KB threshold, D3)
+- [x] 4.3 Commit 2 (7062ad4): `toolbelt/scaffold-module.sh` — BASH_SOURCE-relative fixture path (never $HOME, K8), emitted root `<out-dir>/<ModuleName>` (D2), full D3 substitution table, set -u, exits 0/2/3, no VCS, shellcheck 0
+- [x] 4.4 tests/scaffold-module.bats from QA RED verbatim (TC1/TC2/TC3/TC-K8/TC4); TC4 SKIP-gated on NIAGARA_HOME
+- [x] 4.5 CI step: scaffold MinimalPan into $RUNNER_TEMP, diff -r vs fixture excluding build/.gradle; TC4 SKIP in CI (D9)
+- [x] 4.6 Named mutations confirmed+reverted: skip .gradle.kts (TC3+TC-K8 FAIL); remap module-include.xml→module.xml (TC3+TC-K8 FAIL); use $HOME in fixture path (TC-K8 FAIL); drop stopped() cancel (lint-timers FAIL)
+- [x] 4.7 TC4 local round-trip: scaffold→preflight (3 PASS)→build.sh (slotomatic+jar BUILD SUCCESSFUL)→verify-module (7 PASS / 0 FAIL / 1 SKIP → ALL PASS)→lint-timers (PASS); exit 0 all steps
+- [x] 4.8 shellcheck 0.10.0 exits 0 on toolbelt/scaffold-module.sh
+- [x] 4.9 Commit 2 includes retro (campaign7-scaffold, pending) + INDEX row + BUILD-STATE.md self-envelope (Campaign 7 PR4)
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/fixtures/MinimalPan/**` (15 files) | Created | Pre-slotomatic B790/B793 skeleton: no AUTO region, commented gradle.properties, English lexicon |
+| `build-n4-module-kit/toolbelt/scaffold-module.sh` | Created | ~150 lines; BASH_SOURCE fixture resolution, validation, file-by-file copy+rename+substitute |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-scaffold.md` | Created | PR4 retro (review-status: pending) |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | PR4 retro row added |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | Kit self-envelope updated (Campaign 7 PR4) |
+| `.github/workflows/ci.yml` | Modified | scaffold-diff step added |
+| `openspec/changes/build-n4-module-campaign7/tasks.md` | Modified | PR4 tasks 4.1–4.9 marked [x] |
+| `tests/scaffold-module.bats` | Created (cherry-pick) | QA RED TC1/TC2/TC3/TC-K8/TC4 verbatim |
+
+### TDD Cycle Evidence
+
+| TC | RED | GREEN | Named Mutation | Reverted |
+|---|---|---|---|---|
+| TC1: no args → exit 2 | exit 127 (script absent) | exit 2 + usage | — | — |
+| TC2: 1bad → exit 2 | exit 127 | exit 2 | drop name-validation → exits 0 (conceptual; TC2 uses the validated code) | ✓ |
+| TC3: diff -r byte-equal fixture | exit 127 | exit 0 | skip .gradle.kts (TC3+TC-K8 FAIL); module.xml remap (TC3+TC-K8 FAIL) | ✓ |
+| TC-K8: HOME=/nonexistent | exit 127 | exit 0 | use $HOME in FIXTURE_ROOT (TC-K8 FAIL) | ✓ |
+| TC4: round-trip local | SKIP | SKIP (no NIAGARA_HOME in CI); local: ALL PASS | drop stopped() cancel → lint-timers FAIL | ✓ |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command | `bats tests/scaffold-module.bats` → 4/4 PASS + 1 SKIP; `bats tests/*.bats` → 157/157 |
+| Runtime harness | TC4 local: scaffold→preflight→build.sh (slotomatic+jar BUILD SUCCESSFUL)→verify-module (7 PASS)→lint-timers (PASS); exit 0 all |
+| Rollback boundary | `git revert` the two additive commits (script + fixture) removes all PR4 work without affecting earlier PRs |
+
+### Deviations from Design
+
+- **Pre-slotomatic fix not in design**: D3 described stripping the AUTO region "hash block" while keeping `//region … //endregion` markers. Real implementation: remove the entire `//region … //endregion` block — slotomatic errors ("Found multiple metadata blocks") with empty markers. Correct pre-slotomatic state = no region block at all (B793 §793.4 prototype confirms). This is K15 in the retro.
+- TC5 and TC6 not added: orchestrator apply instruction says "plus nothing beyond what it pins except TC-K8 if absent"; TC-K8 is already pinned in QA RED. Followed orchestrator over tasks.md to keep the QA contract unmodified.
+
+### Workload / PR Boundary
+
+- Mode: size:exception (declared in tasks.md §PR4; ~700–880 authored lines in fixture+script)
+- Current work unit: PR4 feat/c7-scaffold
+- Boundary: starts at PR3 head (4f20967), ends with scaffold-module.sh + fixtures/MinimalPan + CI + retro + envelope (head 7062ad4)
+- CI: PASS (shellcheck + bats + ledger sweep — 35s)
+
+### Status
+
+9/9 PR4 tasks complete. PR #55 OPEN, CI green. Ready for verify.
