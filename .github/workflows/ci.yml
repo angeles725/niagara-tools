@@ -110,7 +110,8 @@ jobs:
           for pair in add_slot:0:SAFE remove_slot:1:LOSSY retype_simple:2:OUTAGE \
                       reorder:0:SAFE rename_slot:1:LOSSY unknown_kind:2:OUTAGE mixed:2:OUTAGE; do
             name="${pair%%:*}"; rest="${pair#*:}"; want_exit="${rest%%:*}"; want_v="${rest##*:}"
-            out=$(bash "$SR" "$FX/$name/before" "$FX/$name/after" 2>&1); got_exit=$?
+            got_exit=0
+            out=$(bash "$SR" "$FX/$name/before" "$FX/$name/after" 2>&1) || got_exit=$?
             if [ "$got_exit" -ne "$want_exit" ]; then
               printf 'FAIL %s: exit %d != expected %d\n' "$name" "$got_exit" "$want_exit"
               fail=1
