@@ -159,6 +159,6 @@ open_issues:
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — Campaign 7 PR4 retro owed
 retro_pending: true                  # GATED — campaign7-scaffold FILED as review-status: pending; fold-status in retros/INDEX.md
-last_commit: Campaign 7 PR5
-last_session: 2026-09-05 · Campaign 7 PR5: schema-risk.sh B795/B799 table-driven classifier; 10/10 green (SR1-SR9+SR-CSV); 5 named mutations confirmed+reverted; shellcheck 0; real-module smoke (CompPan-rt+ColdRoomPan-rt SAFE); CI step added. PR5 retro filed (campaign7-schema-risk, pending). Next: PR6 feat/c7-plano.
+last_commit: Campaign 7 PR5 fix-forward
+last_session: 2026-09-05 · Campaign 7 PR5 fix-forward: parse_slots extract_attr regex fixed (attr = "x" whitespace); SR10 real-shape fixture added; 11/11 green (SR1-SR10+SR-CSV); smoke CompPan-rt 3 SAFE add_slot rows; shellcheck 0. Next: PR6 feat/c7-plano.
 <!-- /build-state.v1 -->
