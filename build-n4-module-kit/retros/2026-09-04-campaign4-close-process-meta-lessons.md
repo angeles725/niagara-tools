@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Campaign 4 close: the corpus-exhaustion campaign's own meta-lessons
 

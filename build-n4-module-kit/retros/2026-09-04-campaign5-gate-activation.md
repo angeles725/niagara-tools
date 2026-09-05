@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Campaign 5: activating the retro-enforcement gate — and a feature PR carries its own retro
 

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Campaign 3 close: the script-implementation campaign's own meta-lessons
 

@@ -39,6 +39,13 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
 - [ ] `toolbelt/verify-module.sh` passed on the built jars.
 - [ ] **The 4-layer assurance stack ran** for any decision/safety logic: pure JUnit (`toolbelt/run-pure-test.sh`) → the verify gate → a live cold-boot smoke → an adversarial pure-logic review. Pure tests are mandatory for decision/safety logic; `niagaraTest` is documentation, not a WSL gate. Detail in `build-verify.md`. [ev: retro qa-stack · T1]
+- **What to test, where — by module type** [ev: corpus B743/B12]:
+
+  | Module type | Pure JUnit (WSL) | Verify gate | Live smoke |
+  |---|---|---|---|
+  | rt (logic) | Math seam (time as param); scheduler-seam DI for arm-path + cancel (`Sched{at(delayMs);cancel(t)}`) | `verify-module.sh` | Cold-boot: anchor populates, timer fires |
+  | dashboard (ux) | Pure model/router (no Baja runtime needed) | `verify-module.sh` | oBIX probe; RBAC write smoke |
+  | wb-widget | `BTestNgStation` needs kernel+license — not WSL-runnable; no pure seam equivalent today | `verify-module.sh` | WB mount + property-sheet smoke |
 
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
@@ -49,3 +56,19 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 ## Kit maintenance — retro promotion discipline (not a per-module build step)
 - **Doc-vs-script folded-completeness:** a retro lesson whose whole content is a rule/checklist item is FULLY folded by documenting it (INDEX row → `folded`). A lesson that asks for a SCRIPT or GATE behavior change is only PARTLY folded by its prose — the implementation is still owed, so its row STAYS `pending` and the impl is logged as a `kit` self-section `open_issue` in `BUILD-STATE.md` (a tracked future MINOR PR). Never mark a retro `folded` just because its prose landed. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 2]
 - **Adversarial fidelity grading beats a green suite:** a promotion is a documentation act whose correctness is faithfulness-to-source + fold-completeness — neither is a runtime property, so a passing bats gate cannot verify it. Budget an independent per-lesson fidelity pass on every promotion PR (diff each fold against its source retro); it catches folded over-claims a green suite misses. [ev: retro campaign2-promotion-process-meta-lessons · meta-lesson 3]
+- **K1 — Gate exits cover every change class:** a gate's exit set must cover every legitimate change class it will see; when a real workflow fits no exit, add a typed exit with its own proof-of-work guard — never stretch an existing label. [ev: retro gate-exit-taxonomy-promotion]
+- **K2 — High-signal, low-FP gate checks:** a new gate/verify check is scoped to the reported defect (not a blanket completeness rule); mutation-prove it bites only on a real case. [ev: retro campaign3-close-process-meta-lessons L1]
+- **K3 — WARN over silent guard removal:** when a lesson removes a safety guard, prefer a frictionless WARN that leaves a trace over silent removal. [ev: retro campaign3-close-process-meta-lessons L2]
+- **K4 — Marker over prose:** when a retro's prose and its PROPOSED-delta marker disagree, the marker promotes; read the source retro verbatim, not from memory or a mining note. [ev: retro campaign3-close-process-meta-lessons L3]
+- **K5 — Coverage checks against origin/main worktree:** run kit-coverage checks in a worktree off `origin/main`, never against a stale local `main`; ff-only sync after each origin merge. [ev: retro campaign4-close-process-meta-lessons L1]
+- **K6 — Grep every kit file before folding:** grep every kit file (and its `[ev:]` tag) for a rule before folding — the mined target file is a suggestion; the rule may already live elsewhere. [ev: retro campaign4-close-process-meta-lessons L3]
+- **K7 — Feature PR = exit (a), not a 4th shape:** a pure feature PR uses the close-gate NEW-RETRO exit (a); it is not a 4th unclassified gate shape. [ev: retro campaign5-gate-activation L2]
+- **K8 — No $HOME coupling in gate checks:** a gate/check resolves references against the repo (or a declared external), never dev-machine state (`$HOME`); prove it bites under `HOME=/nonexistent`. [ev: retro ci-server-side-enforcement L3]
+- **K9 — set -e probe isolation:** a `set -e` toolbelt script that must report a specific exit code must isolate its probe (`|| true`) so `die <code>` runs instead of a bare abort. [ev: retro run-pure-test-set-e-empty-cache]
+
+## Multi-session coordination
+- **Before editing a file in a shared repo, check the tree first:** run `git status`/`git diff` on the target — a dirty working tree is a peer's live uncommitted work and is off-limits; coordinate with the owning session instead of duplicating or clobbering. [ev: retro dashboardpan-2d-to-3d-port, retro research-sdd-module-authoring-mega-campaign]
+
+## Live-verify safety
+- **Never perform a state-changing write on a production station during verification:** do read-only prod checks + an out-of-band negative check (no-token → 401). [ev: retro live-cutover-and-authenticated-control, retro obix-and-loginless-dashboard-runbooks]
+- **Test credentials from a file outside the repo** (`chmod 600`), never pasted in a channel or embedded in an artifact; cite a secret's structure (filename, format, purpose), never its value. [ev: retro live-cutover-and-authenticated-control]

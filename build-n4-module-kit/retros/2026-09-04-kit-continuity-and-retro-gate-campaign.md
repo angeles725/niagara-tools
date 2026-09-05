@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # Kit self-improvement campaign: continuity ledger + retro-enforcement gate + lesson promotion
 

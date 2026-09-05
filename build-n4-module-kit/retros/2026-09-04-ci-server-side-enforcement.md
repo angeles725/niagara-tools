@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # CI: server-side enforcement — and the two coupling lessons its first run earned
 

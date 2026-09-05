@@ -197,5 +197,4 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
   `main`.
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
   checklist + agent discipline. Future: a pre-commit hook.
-- **No CI**. The bats + shellcheck gate is human/agent-run (manual or via the SDD apply/verify
-  phases). Future: GitHub Actions on `origin`.
+- **CI active** (`ci.yml`, since Campaign 5): GitHub Actions on `origin` runs shellcheck + bats + sweep on every push and PR — server-side, un-bypassable complement to the opt-in client hook. **Pin every tool the CI gate depends on** (shellcheck version, Java version, junit sha256); an unpinned tool drifts newer on the runner and turns green→red with no code change. [ev: retro ci-server-side-enforcement] (K10/A10)

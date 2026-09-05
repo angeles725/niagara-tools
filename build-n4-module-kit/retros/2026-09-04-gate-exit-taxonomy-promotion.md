@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- kit-retro -->
 # §7 close-gate exit taxonomy: a PROMOTION is neither a new retro nor a trivial change
 
