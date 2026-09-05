@@ -46,3 +46,46 @@ kit_refs() {
   [ -n "$def" ]
   [ -f "$def/METHODOLOGY.md" ] && [ -f "$def/BUILD-LOOP.md" ] && [ -d "$def/types" ] && [ -d "$def/toolbelt" ]
 }
+
+@test "L4: every types/*.md named in skill/SKILL.md decision table exists on disk" {
+  # Regression: a new types/*.md added to the routing table must also exist on disk
+  # Named mutation: add a row to the table pointing at a non-existent file -> L4 fails
+  skill="$KIT/skill/SKILL.md"
+  [ -f "$skill" ] || skip "skill/SKILL.md not found in kit"
+  cd "$KIT"
+  missing=()
+  # SC2016: single-quoted $KIT is intentional — we match the literal string "$KIT/types/" in SKILL.md
+  # shellcheck disable=SC2016
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    [ -e "types/$ref" ] || missing+=("types/$ref")
+  done < <(grep -oE '\$KIT/types/[A-Za-z0-9_.-]+\.md' "$skill" | sed 's|\$KIT/types/||')
+  if [ ${#missing[@]} -gt 0 ]; then printf 'missing types doc: %s\n' "${missing[@]}" >&2; return 1; fi
+}
+
+@test "L5: every toolbelt/*.sh is named in BUILD-LOOP.md or skill/SKILL.md (D10 routing guard)" {
+  # Regression: a new toolbelt script must appear in at least one routing doc
+  # Named mutation: delete a script name from both BUILD-LOOP.md and skill/SKILL.md -> L5 fails
+  [ -f "$KIT/skill/SKILL.md" ] || skip "skill/SKILL.md not found in kit (launcher path)"
+  cd "$KIT"
+  missing=()
+  for sh in toolbelt/*.sh; do
+    name=$(basename "$sh")
+    if ! grep -qF "$name" BUILD-LOOP.md && ! grep -qF "$name" skill/SKILL.md; then
+      missing+=("$name")
+    fi
+  done
+  if [ ${#missing[@]} -gt 0 ]; then printf 'toolbelt script not in BUILD-LOOP.md or skill/SKILL.md: %s\n' "${missing[@]}" >&2; return 1; fi
+}
+
+@test "L6: types/logic.md and types/logic-authoring.md exist and cite each other" {
+  # Regression: the split creates two companion files; both must exist and point at each other
+  # Named mutation: remove the cross-reference from either file -> L6 fails
+  cd "$KIT"
+  [ -f "types/logic.md" ] || { echo "types/logic.md missing" >&2; return 1; }
+  [ -f "types/logic-authoring.md" ] || { echo "types/logic-authoring.md missing" >&2; return 1; }
+  grep -q 'logic-authoring' types/logic.md \
+    || { echo "types/logic.md does not cite logic-authoring.md" >&2; return 1; }
+  grep -q 'logic\.md' types/logic-authoring.md \
+    || { echo "types/logic-authoring.md does not cite logic.md" >&2; return 1; }
+}

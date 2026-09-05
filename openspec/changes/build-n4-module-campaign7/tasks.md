@@ -128,14 +128,14 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-logic-split` | **QA hook**: `tests/kit-links.bats` | **Gate exit**: R7.1–R7.8
 
-- [ ] 7.1 grep-before-fold: `rg 'Author-side SPIs|logic-authoring' build-n4-module-kit/types/logic.md build-n4-module-kit/skill/SKILL.md build-n4-module-kit/BUILD-LOOP.md` — confirm 0 hits (CD3).
-- [ ] 7.2 Remove lines 91–136 (`## Author-side SPIs` through EOF) from `types/logic.md`; add cross-reference to `types/logic-authoring.md` at the split boundary (R7.1, D8).
-- [ ] 7.3 Create `types/logic-authoring.md` with removed lines 91–136; add cross-reference back to `types/logic.md` (R7.2, D8).
-- [ ] 7.4 Update `skill/SKILL.md` decision table to reference both files; update `BUILD-LOOP.md` §2 references — in the same commit range as file creation (R7.3–R7.4).
-- [ ] 7.5 Extend `tests/kit-links.bats` with L4 (every `toolbelt/*.sh` named in BUILD-LOOP.md), L5 (same for `skill/SKILL.md`; skip when launcher not installed, mirroring L3), L6 (both `types/logic.md` and `types/logic-authoring.md` exist and cite each other) (D10).
-- [ ] 7.6 Run `tests/kit-links.bats`; assert exit 0 (R7.6).
-- [ ] 7.7 Named mutation in PR body: break one moved link (e.g. `types/logic-authoring.md` → wrong path) → `kit-links.bats` FAIL (R7.7). Two-reads: investigador1 confirms line 91 boundary is correct and no content is lost.
-- [ ] 7.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 7.1 grep-before-fold: `rg 'Author-side SPIs|logic-authoring' build-n4-module-kit/types/logic.md build-n4-module-kit/skill/SKILL.md build-n4-module-kit/BUILD-LOOP.md` — confirm 0 hits (CD3).
+- [x] 7.2 Remove lines 91–136 (`## Author-side SPIs` through EOF) from `types/logic.md`; add cross-reference to `types/logic-authoring.md` at the split boundary (R7.1, D8).
+- [x] 7.3 Create `types/logic-authoring.md` with removed lines 91–136; add cross-reference back to `types/logic.md` (R7.2, D8).
+- [x] 7.4 Update `skill/SKILL.md` decision table to reference both files; update `BUILD-LOOP.md` §2 references — in the same commit range as file creation (R7.3–R7.4).
+- [x] 7.5 Extend `tests/kit-links.bats` with L4 (every `toolbelt/*.sh` named in BUILD-LOOP.md), L5 (same for `skill/SKILL.md`; skip when launcher not installed, mirroring L3), L6 (both `types/logic.md` and `types/logic-authoring.md` exist and cite each other) (D10).
+- [x] 7.6 Run `tests/kit-links.bats`; assert exit 0 (R7.6).
+- [x] 7.7 Named mutation in PR body: break one moved link (e.g. `types/logic-authoring.md` → wrong path) → `kit-links.bats` FAIL (R7.7). Two-reads: investigador1 confirms line 91 boundary is correct and no content is lost.
+- [x] 7.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 - [ ] 7.9 After merge: orchestrator re-runs `scripts/install-skill.sh` (R7.8, CD6).
 
 ---

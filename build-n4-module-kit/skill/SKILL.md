@@ -4,7 +4,7 @@ description: "Trigger: build/create/extend a Niagara N4 module — rt logic, ux 
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.5"
+  version: "0.6"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (methodology, per-type guides, toolbelt, retros) — read it, don't restate it from memory.
@@ -31,6 +31,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 | Building | Read |
 |----------|------|
 | Pure logic (rt control) | `$KIT/types/logic.md` |
+| Framework extension (service, ORD scheme, point ext, analytics node, job, watchdog, provider) | `$KIT/types/logic-authoring.md` |
 | Dashboard (facade + servlet + SPA) | `$KIT/types/dashboard.md` |
 | Logic + dashboard | both |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` |
@@ -45,7 +46,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 2. corpus-nav the topic; read the exemplar source.
 3. Build the layers; preview the UI.
 4. Build with `toolbelt/build.sh` (Java 8 + slotomatic); verify major-52 + signed.
-5. Pre-gate checks before `verify-module.sh`: run `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL) and `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); then run the verify gate (`toolbelt/verify-module.sh`) with `--plano <index.html|jar>` when available.
+5. Pre-gate checks before `verify-module.sh`: run `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL) and `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); run `toolbelt/schema-risk.sh <before-dir> <after-dir>` before deploy (two-snapshot slot diff; verdict SAFE/LOSSY/OUTAGE — OUTAGE means a deployed change breaks saved data) [ev: retro tool-integration]; then run the verify gate (`toolbelt/verify-module.sh`) with `--plano <index.html|jar>` when available.
 6. Retro + close (HARD gate): append PROVEN lessons as PROPOSED deltas (`$KIT/retros/`, propose-never-apply) AND update `$KIT/BUILD-STATE.md` (envelope + `retro_pending`) — or declare `Retro: none (trivial: <reason>)`. This is how the kit grows and stays continuous.
 
 ## Output Contract
@@ -54,5 +55,5 @@ Report: kit path, type chosen, layers built, preview + build outcome (bytecode 5
 
 ## References
 
-- `$KIT/METHODOLOGY.md`, `$KIT/BUILD-LOOP.md`, `$KIT/build-verify.md`, `$KIT/types/*.md`, `$KIT/SOURCES.md`, `$KIT/scripts/install-skill.sh`.
-- Toolbelt: `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh` (+ coverage, + --plano <ux-profile>/src/rc/index.html), `$KIT/toolbelt/run-pure-test.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`, `$KIT/toolbelt/preflight.sh`, `$KIT/toolbelt/slot-coverage.sh`, `$KIT/toolbelt/lint-timers.sh`, `$KIT/toolbelt/sweep-build-state.sh` (+ --age), `$KIT/toolbelt/sweep-fold-audit.sh`.
+- `$KIT/METHODOLOGY.md`, `$KIT/BUILD-LOOP.md`, `$KIT/build-verify.md`, `$KIT/types/logic.md`, `$KIT/types/logic-authoring.md`, `$KIT/types/dashboard.md`, `$KIT/types/wb-widgets.md`, `$KIT/SOURCES.md`, `$KIT/scripts/install-skill.sh`.
+- Toolbelt: `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh` (+ coverage, + --plano <ux-profile>/src/rc/index.html), `$KIT/toolbelt/run-pure-test.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`, `$KIT/toolbelt/preflight.sh`, `$KIT/toolbelt/slot-coverage.sh`, `$KIT/toolbelt/lint-timers.sh`, `$KIT/toolbelt/sweep-build-state.sh` (+ --age), `$KIT/toolbelt/sweep-fold-audit.sh`, `$KIT/toolbelt/scaffold-module.sh` (skeleton from fixtures/MinimalPan; exits 0/2/3) [ev: retro tool-integration], `$KIT/toolbelt/schema-risk.sh` (two-snapshot slot diff; verdict=SAFE/LOSSY/OUTAGE; exits 0/1/2/3/4) [ev: retro tool-integration].

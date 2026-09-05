@@ -25,9 +25,10 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
+- **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir>` to emit a pre-slotomatic tree from `fixtures/MinimalPan`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro tool-integration]
 
 ## 2. Build the layers
-- Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb.
+- Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb. For framework-extension authoring (custom service, ORD scheme, point extension, analytics node, job, watchdog): see `types/logic-authoring.md` (companion to `types/logic.md`).
 - **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
 
@@ -43,7 +44,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
-- **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present).
+- **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro tool-integration]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present).
 - The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station.
 
 ## 6. Deploy (station) — operator

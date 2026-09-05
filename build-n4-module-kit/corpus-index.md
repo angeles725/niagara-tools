@@ -69,9 +69,9 @@ Before concluding a topic is undocumented: a tool returning zero results is not 
 
 ## Campaign 6 — exemplars + own-modules focus (B762–B791)
 
-Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three instances of ONE Niagara extension idiom — *subclass a framework base + register a `<type>`/agent in `module.xml` + hand back a self-describing SPI object; there is no central registry the author edits.* Teach it once; the per-surface blocks are instances. See `types/logic.md` §Author-side SPIs.
+Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three instances of ONE Niagara extension idiom — *subclass a framework base + register a `<type>`/agent in `module.xml` + hand back a self-describing SPI object; there is no central registry the author edits.* Teach it once; the per-surface blocks are instances. See `types/logic-authoring.md` §Author-side SPIs.
 
-### → `types/logic.md`
+### → `types/logic-authoring.md`
 
 | Block | What it gives the builder | Priority | Layer |
 |---|---|---|---|
