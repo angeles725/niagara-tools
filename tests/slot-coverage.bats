@@ -197,3 +197,14 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   [[ "$output" == *"setpoint"* ]]        # anchor: per-slot analysis ran on the live src
   [[ "$output" != *"staleKnob"* ]]       # the .deploy-baseline slot is pruned, never counted
 }
+
+# ---------------------------------------------------------------------------
+# CAMPAIGN 8 PR11 WB-LEX1: slot-coverage runs on a -wb include+lexicon; a MISSING lexicon file with
+# >=1 declared type is a FAIL (exit 1), not an env fault (exit 3) — the wb types have no translations
+# at all (real shape chihuahua-wb: 1 type, no module.lexicon). RED today: a missing lexicon file
+# currently exits 3 (env). NAMED MUTATION (post-green): treat a missing lexicon as env-3 again -> flips.
+@test "WB-LEX1: a -wb module-include with 1 type and NO module.lexicon FAILs (exit 1), not env-3" {
+  WB="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/wb"
+  run "$SC" "$WB/module-include.xml" "$WB/module.lexicon"   # module.lexicon does not exist
+  [ "$status" -eq 1 ]
+}

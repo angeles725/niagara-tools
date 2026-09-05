@@ -188,3 +188,43 @@ good_dir() {
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN  palette"* ]]                     # 0 types → empty palette is legitimate (mutation: drop the type guard → warns here → red)
 }
+
+# ---------------------------------------------------------------------------
+# CAMPAIGN 8 PR11 — two verify-module wb checks. Fixtures generated in-test (n4-fixtures), no binaries.
+#   wb-scaffold  a -wb jar (profile from basename) with 0 .class AND 0 palette entries -> WARN, --strict FAIL
+#                (closes the :245-257 dead angle; real shape DashboardPan-wb empty scaffold).
+#   phantom-dep  verify --src: a built module.xml <dependency name=X> not declared api(":X")/nre(":X")
+#                in the profile .gradle.kts -> WARN per undeclared entry (real shape chihuahua-wb schedule-rt).
+# RED today: neither check exists -> the row token is absent -> each pin fails for the right reason.
+# Named mutations (post-green): remove wb-scaffold detection -> WB-SCAFFOLD1's WARN vanishes (a 0-class
+# jar reverts to a bytecode FAIL only); drop the gradle.kts diff -> WB-DEP1's phantom-dep WARN vanishes.
+
+@test "WB-SCAFFOLD1: a -wb jar with 0 .class AND 0 palette entries WARNs wb-scaffold (--strict FAILs)" {
+  d="$TMPDIR_T/wbd"; add_manifest "$d"; add_signature "$d"
+  make_module_xml "$d" 4.14                                   # baja dep, 0 types, and (below) 0 classes
+  printf '<?xml version="1.0"?>\n<bajaObjectGraph version="4.0"/>\n' > "$d/module.palette"  # 0 <p n= entries
+  make_jar "$TMPDIR_T/Scaffold-wb.jar" "$d"
+  run "$VM" "$TMPDIR_T/Scaffold-wb.jar"
+  [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"WARN"* ]]
+  run "$VM" --strict "$TMPDIR_T/Scaffold-wb.jar"
+  [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "WB-DEP1: a module.xml dependency absent from the profile gradle.kts api()/nre() WARNs phantom-dep" {
+  d="$TMPDIR_T/dep"; add_manifest "$d"; add_signature "$d"; make_class_file "$d/com/x/A.class" 52
+  cat > "$d/META-INF/module.xml" <<'XML'
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/><dependency name="schedule-rt" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+XML
+  make_jar "$TMPDIR_T/Foo-wb.jar" "$d"
+  mkdir -p "$TMPDIR_T/mod/Foo-wb"
+  make_module_include "$TMPDIR_T/mod/Foo-wb" com.x.A
+  cat > "$TMPDIR_T/mod/Foo-wb/Foo-wb.gradle.kts" <<'KTS'
+niagaraModule { runtimeProfile.set(wb); moduleName.set("Foo") }
+dependencies { nre(":nre"); api(":baja") }   // schedule-rt is NOT declared -> phantom
+KTS
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-wb.jar"
+  [[ "$output" == *"phantom-dep"* ]] && [[ "$output" == *"WARN"* ]] && [[ "$output" == *"schedule-rt"* ]]
+}
