@@ -245,3 +245,12 @@ None — implementation matches design. The exemplar block is 18 authored lines 
 ### Status
 
 9/9 PR4 tasks complete. PR #55 OPEN, CI green. Ready for verify.
+
+## PR5 — feat/c7-schema-risk (PR #56)
+
+- Commits: 146e24d (QA RED qa/c7-schema-risk cherry-picked: SR1–SR8 + 7 B799 fixture pairs) → a50de85 feature → 8dc3834 ci fix → openspec commit.
+- `toolbelt/schema-risk.sh <before-dir> <after-dir>`: parses `@NiagaraProperty`/`@NiagaraAction` declarations + `module-include.xml` from both snapshots, diffs slots by name (retype = `type=` attribute; reorder = declaration order; rename heuristic per design D4 with limits L1–L3), classifies each change from the embedded B795 §795.4 CSV (table-driven), prints `<VERDICT>  <change_kind>  <slot>: <detail (row id)>` rows and a final `verdict=<SAFE|LOSSY|OUTAGE>`; exits 0 SAFE / 1 LOSSY / 2 OUTAGE / 3 usage / 4 env; unknown kind → OUTAGE.
+- Tests: SR1–SR8 GREEN (QA pins unchanged) + SR9 (unreadable module-include.xml → exit 4) + SR-CSV (heredoc byte-equals tests/fixtures/schema-risk/b795-795.4.csv). Named mutations proven and reverted: worst-cell→first-cell (SR7), unknown→SAFE (SR6), retype-off (SR3), rename-off (SR5 label), one CSV cell (SR-CSV).
+- CI: non-strict fixtures step (each pair asserts its expected exit); fix-forward 8dc3834 for `bash -e` capturing a non-zero exit (`got_exit=0; out=$(cmd) || got_exit=$?`).
+- Retro: `retros/2026-09-05-campaign7-schema-risk.md` (pending) + INDEX row + kit self-envelope.
+

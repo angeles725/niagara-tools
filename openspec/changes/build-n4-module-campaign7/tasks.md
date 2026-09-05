@@ -97,14 +97,14 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-schema-risk` | **QA hook**: `qa/c7-schema-risk` tip `6d27ff0` | **Gate exit**: R5.1–R5.9
 
-- [ ] 5.1 Re-read QA RED `qa/c7-schema-risk` tip `6d27ff0` before writing (CD4).
-- [ ] 5.2 Write `toolbelt/schema-risk.sh`: embed B795 §795.4 CSV verbatim as `CSV_TABLE=$(cat <<'CSV'…CSV)` (D5); awk lookup on `kind`; fail-safe UNKNOWN row; worst-cell verdict (OUTAGE > LOSSY > SAFE); output format `verdict=<V>` (D4a); row shape `<verdict>  <change_kind>  <Type>.<slot>: <detail>`; exits 0 SAFE/1 LOSSY/2 OUTAGE/3 usage/4 env; `set -u`; no VCS; `shellcheck` clean.
-- [ ] 5.3 Copy `tests/schema-risk.bats` from `qa/c7-schema-risk` tip (SR1–SR8 verbatim) + add SR9 (unreadable `module-include.xml` → exit 4) + SR-CSV (embedded heredoc byte-equals `tests/fixtures/schema-risk/b795-795.4.csv`).
-- [ ] 5.4 Copy B799 fixture pairs from `qa/c7-schema-risk` into `tests/fixtures/schema-risk/` (7 before/after/expected.txt pairs + `b795-795.4.csv` oracle).
-- [ ] 5.5 Add CI step: loop 7 fixture pairs; assert mapped exit (0/1/2) and `verdict=<V>` token matches `expected.txt` (D4a — `expected.txt` is oracle for token only, not byte-golden).
-- [ ] 5.6 Named mutations in PR body: worst-cell → first-cell (mixed reads SAFE not OUTAGE); drop UNKNOWN fail-safe; map usage exit to 2 (SR8 reads as OUTAGE); edit one CSV cell (SR-CSV fails).
-- [ ] 5.7 `shellcheck` exits 0 on `toolbelt/schema-risk.sh` (R5.8).
-- [ ] 5.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 5.1 Re-read QA RED `qa/c7-schema-risk` tip `6d27ff0` before writing (CD4).
+- [x] 5.2 Write `toolbelt/schema-risk.sh`: embed B795 §795.4 CSV verbatim as `CSV_TABLE=$(cat <<'CSV'…CSV)` (D5); awk lookup on `kind`; fail-safe UNKNOWN row; worst-cell verdict (OUTAGE > LOSSY > SAFE); output format `verdict=<V>` (D4a); row shape `<verdict>  <change_kind>  <Type>.<slot>: <detail>`; exits 0 SAFE/1 LOSSY/2 OUTAGE/3 usage/4 env; `set -u`; no VCS; `shellcheck` clean.
+- [x] 5.3 Copy `tests/schema-risk.bats` from `qa/c7-schema-risk` tip (SR1–SR8 verbatim) + add SR9 (unreadable `module-include.xml` → exit 4) + SR-CSV (embedded heredoc byte-equals `tests/fixtures/schema-risk/b795-795.4.csv`).
+- [x] 5.4 Copy B799 fixture pairs from `qa/c7-schema-risk` into `tests/fixtures/schema-risk/` (7 before/after/expected.txt pairs + `b795-795.4.csv` oracle).
+- [x] 5.5 Add CI step: loop 7 fixture pairs; assert mapped exit (0/1/2) and `verdict=<V>` token matches `expected.txt` (D4a — `expected.txt` is oracle for token only, not byte-golden).
+- [x] 5.6 Named mutations in PR body: worst-cell → first-cell (mixed reads SAFE not OUTAGE); drop UNKNOWN fail-safe; map usage exit to 2 (SR8 reads as OUTAGE); edit one CSV cell (SR-CSV fails).
+- [x] 5.7 `shellcheck` exits 0 on `toolbelt/schema-risk.sh` (R5.8).
+- [x] 5.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 
 ---
 
