@@ -426,3 +426,114 @@ Revert:
 |------|-----|-------|-----------------|
 | T5b.1+T5b.2 (preflight) | 4/4 fail (script absent) | 4/4 pass | PF1 always-PASS, PF2 HOME-embed, PF4 SKIP→PASS |
 | T5b.3+T5b.4 (slot-coverage) | cherry-pick 08a8b93 → 6/6 RED | implementation GREEN 8/8 | SC2 denominator, SC3 extra-in-num, SC5 0/0→100, SC2/SC3 swap |
+
+---
+
+## PR6 — feat/c6-close (Campaign 6 close)
+
+**Status**: complete
+**Date**: 2026-09-05
+**Commit**: 080d41185bd2ec068da5c6a23b8f0d575730d1ad (feat/c6-close)
+
+### Tasks completed
+
+- [x] T6.1 — `build-n4-module-kit/skill/SKILL.md` (tracked canonical copy v0.4): state column removed, wb-builder corpus note, step-1 aligned with BUILD-LOOP orient order
+- [x] T6.2 — `scripts/install-skill.sh` (~85 lines): sha256 comparison, --home/--dry-run/--force, exits 0/1/2/3, VCS-free, HOME=/nonexistent identical
+- [x] T6.3 — `tests/install-skill.bats` (5 tests): IS1 byte-parity, IS2 already-current, IS3a/IS3b diverge+force, IS4 dry-run; named mutation proved (drop last line → cmp fails)
+- [x] T6.4 — DRY-RUN: diverged sha (tracked 4a138e7b vs live 33b6c9a8); orchestrator installs after merge
+- [x] T6.5 — `openspec/` tracked; slotomatic → archive/ with archive-report.md; .gentle-ai-instance in .gitignore
+- [x] T6.7 — VERSION 0.15.1 → 0.16.0; CHANGELOG.md new top section v0.16.0 (PR1–PR6 summary + References)
+- [x] T6.8 — PR6 retro `2026-09-05-campaign6-close.md` (5 lessons); INDEX row; all guards green
+- [x] T6.9 — ci.yml setup-java @v4 → @v5
+- [x] T6.10 — BUILD-STATE.md: replaced false CompPan empty-lexicon open_issue with real B788 findings; kit version 0.16.0, last_commit Campaign 6 PR6 [ev: corpus B788]
+- [x] T6.11 — slot-coverage.sh parse mode pct= labeled '(type-set)'; pure set-coverage output unchanged (SC1–SC5 pins unaffected)
+
+### Gates passed
+
+- bats: 141/141 green (≥140)
+- shellcheck 0.10.0: exit 0 (all scripts, toolbelt, tests, helpers)
+- sweep-build-state.sh: exit 0; pending = 6 (campaign retros PR1/PR3/PR4/PR5a/PR5b/PR6; original 8 = 0)
+- rg "rt only" build-n4-module-kit/build-verify.md: 0 matches
+- kit-links.bats: 3/3 pass
+- HOME=/nonexistent: suite identical
+
+### TDD Cycle Evidence (Strict TDD)
+
+| Task | RED | GREEN | Named mutations |
+|------|-----|-------|-----------------|
+| T6.3 (install-skill) | 5/5 fail (script absent) | 5/5 pass | Drop last line → IS1 cmp fails → revert → 5/5 green |
+
+### Branch pushed
+
+Branch `feat/c6-close` pushed to origin. PR creation requires network access (gh api unreachable from worker).
+Open PR: `gh pr create --base main --title "feat(build-n4-module): campaign 6 close — tracked launcher, openspec durability, v0.16.0 (PR6)"` from the HEAD SHA above.
+
+---
+
+## PR7 — feat/c6-research-fold (research fold)
+
+**Branch**: feat/c6-research-fold
+**Base**: origin/main @ 080d411 (PR6 HEAD, stacked)
+**Status**: committed; push pending
+
+### Tasks completed
+
+- [x] T7.1 — Research fold: 27 deltas from B772–B791 into types/logic.md (10 new sections), types/dashboard.md (palette/lexicon + DUX-WEB1/DUX-WEB2), types/wb-widgets.md (dual-surface @AgentOn), METHODOLOGY.md (B784 profile conventions + B777 permissions inline + B775 watchdog note + lintable-vs-advisory + human-review checklist), corpus-index.md (27-row Campaign 6 delta)
+- [x] T7.2 — NOTE: post-merge action for investigador1 (stamp research retros in niagara-research); kit: PR7 retro row + BUILD-STATE kit self-envelope done
+- [x] T7.4 — sweep-build-state exit 0; PR7 retro filed (2026-09-05-campaign6-research-fold.md, exit a); INDEX row added; BUILD-STATE kit self-envelope updated
+- [x] T7.5 — junit-standalone: fixed citation in build-verify.md (proper `[ev: retro junit-standalone]` bracket); kit-continuity: added "folded as code" line in METHODOLOGY.md §Conformance rules with `[ev: retro kit-continuity]`; sweep-fold-audit.sh --strict exits 0 (38 folded, 38 cited, 0 uncited); ci.yml fold-audit step switched to --strict
+
+### Grep-before-fold audit
+
+| Destination | Pattern | Pre-existing hits |
+|---|---|---|
+| types/logic.md §Author-side SPIs | `self-describing SPI\|Author-side SPIs` | 0 |
+| types/logic.md §Authoring a point extension | `BPointExtension\|point extension` | 0 |
+| types/logic.md §Child-tree containers | `BComponentList\|child-tree\|isChildLegal` | 0 |
+| types/logic.md §Grouping/relating | `BCategoryService\|BRelation\|BLevelDef` | 0 |
+| types/logic.md §Query/search/index | `BQuery\|BITable\|query/search/index` | 0 |
+| types/logic.md §Templates | `BTemplateConfig\|\.ntpl\|BTemplateService` | 0 |
+| types/logic.md §Background jobs | `BSimpleJob\|BJobService\|background job` | 0 |
+| types/logic.md §Watchdogs and timers | `BAbstractMonitor\|schedulePeriodically` (new watchdog section) | 0 new; existing L18 line about schedulePeriodically guard is different content |
+| types/logic.md §Action protection | `doPrivileged\|action protection` | 0 |
+| types/logic.md §Minimal module | `minimal module` | 0 |
+| types/dashboard.md palette/lexicon | `bare-Type\|module\.palette\|lexicon.*prefix` | 0 |
+| types/dashboard.md DUX-WEB1 | `DUX-WEB1\|web-tier exemplar\|pointer table` | 0 |
+| types/dashboard.md DUX-WEB2 | `DUX-WEB2\|DELIBERATE\|STRONGER-than-vendor` | 0 |
+| types/wb-widgets.md dual-surface | `Dual-surface\|NiagaraType.*agent.*AgentOn` | 0 |
+| METHODOLOGY.md module.xml conventions | `runtimeProfile\|3-part\|vendorVersion.*FLOOR` | 0 |
+| METHODOLOGY.md lintable-vs-advisory | `lintable\|advisory rule\|human-review checklist` | 0 |
+
+### Fidelity spot-checks
+
+| Block | Claim | Block verdict |
+|---|---|---|
+| B772 | No `BAbstractPointExt`, no `onExtended`/`onRetracted` | [CERT] — confirmed absent in 2603 source files |
+| B775 | NOT a 2s poll; cadence = BIntervalTriggerMode 15 min; NO `javax.baja.sys.BTimer` (only cl.hvac) | [CERT] |
+| B784 | `-doc` is SEPARATE module; dep `vendorVersion` 3-part FLOOR; bajaVersion="0" constant | [CERT] |
+| B791 | CSRF divergence DELIBERATE, STRONGER-than-vendor | [CERT] from B763/B752 |
+
+### Guard results
+
+| Check | Result |
+|---|---|
+| `sweep-build-state.sh` | exit 0 |
+| `sweep-fold-audit.sh --strict` | exit 0 — 38 folded, 38 cited, 0 uncited |
+| `bats tests/*.bats` | 141/141 pass |
+| `shellcheck 0.10.0` | exit 0 |
+| `HOME=/nonexistent bats tests/kit-links.bats` | 3/3 pass |
+
+### Rollback boundary
+
+Revert:
+- `build-n4-module-kit/types/logic.md` (remove 10 new sections after kitControl)
+- `build-n4-module-kit/types/dashboard.md` (remove §Module packaging + DUX-WEB1 + DUX-WEB2)
+- `build-n4-module-kit/types/wb-widgets.md` (remove dual-surface @AgentOn bullet)
+- `build-n4-module-kit/METHODOLOGY.md` (remove B784/B777 from Build section; remove watchdog note; remove §Conformance rules)
+- `build-n4-module-kit/build-verify.md` (restore old citation format)
+- `build-n4-module-kit/corpus-index.md` (remove Campaign 6 B762–B791 section)
+- `build-n4-module-kit/retros/2026-09-05-campaign6-research-fold.md` (remove)
+- `build-n4-module-kit/retros/INDEX.md` (remove PR7 retro row)
+- `build-n4-module-kit/BUILD-STATE.md` (restore PR6 kit self-envelope)
+- `.github/workflows/ci.yml` (restore non-strict fold-audit step)
+- `openspec/changes/build-n4-module-campaign6/tasks.md` (restore T7.1/T7.2/T7.4/T7.5 to [ ])

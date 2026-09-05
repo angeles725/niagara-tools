@@ -17,6 +17,7 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 ## wb/model testable seam — exemplar-backed
 
 - **DWB1 — `-wb` is off-station testable via a `model/` lambda-injection seam (HIGH):** keep the business logic in a Baja-free `model/` package; inject the slot-availability check as a `Predicate<String>` so the model has zero Baja imports. The `BWidget` view stays the thin adapter. `chihuahua-wb`'s `LinkSlotNameUtil` + 33 pure `@Test` cases are the proven pattern. **This upgrades `-wb` from seed to exemplar-backed for the model layer.** [ev: corpus B762]
+- **Dual-surface `@AgentOn` registration:** write `@NiagaraType(agent={@AgentOn(types={"mod:Type"}, requiredPermissions="r")})` on the view/FE; Slot-o-Matic emits `<type><agent><on type=…/></agent></type>`; multi-type `types={…}` = one view over several source types. `[ev: corpus B780]`
 
 TODO: flesh out the PxEditor authoring flow + packaging from a real build (the wb ladder, FieldEditor recipe, and Wizard pattern are now folded above).
 

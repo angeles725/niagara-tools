@@ -67,6 +67,53 @@ Before concluding a topic is undocumented: a tool returning zero results is not 
 
 ---
 
+## Campaign 6 — exemplars + own-modules focus (B762–B791)
+
+Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three instances of ONE Niagara extension idiom — *subclass a framework base + register a `<type>`/agent in `module.xml` + hand back a self-describing SPI object; there is no central registry the author edits.* Teach it once; the per-surface blocks are instances. See `types/logic.md` §Author-side SPIs.
+
+### → `types/logic.md`
+
+| Block | What it gives the builder | Priority | Layer |
+|---|---|---|---|
+| **B790** | The MINIMAL correct N4 module skeleton (copy-start): `module.xml` header + 3-part dep floor + non-empty palette + prefixed lexicon + one `BComponent` with one OPERATOR property + one HIDDEN engine action + one `Clock.Ticket` (started/atSteadyState arm, stopped cancel) + signed jar — verify-gate-green + biting-check-green by construction | P0 | rt / scaffold |
+| **B772** | Authoring a point EXTENSION: extend `javax.baja.control.BPointExtension` (NO `BAbstractPointExt`, NO `onExtended`/`onRetracted`); implement the sole abstract `onExecute(BStatusValue out, Context cx)` (mutate `out`, or leave it for notification-only); `requiresPointSubscription()`→true to see every change; `final getParentPoint()`; legality via `isParentLegal`/`isSiblingLegal`; execution = slot-declaration order, proxyExt always first | P2 | rt / extensions |
+| **B779** | Child-tree containers, pick by cardinality: frozen `@NiagaraProperty` (fixed) / runtime `add(name,BValue)` + `reorder(Property[])` (data-driven) / typed `BFolder` (growable). NO `BComponentList`; typed-tree legality via `isChildLegal`/`isParentLegal` `instanceof` vetoes | P1 | rt / children |
+| **B778** | Author-side SPIs: a custom SERVICE (`extends BAbstractService`, `getServiceTypes()` = registration-by-placement, `serviceStarted()`); a new ORD SCHEME (`extends BOrdScheme` + `@NiagaraType(ordScheme)` + `resolve()`); a SERVER-side subscription (`extends Subscriber`, `event(BComponentEvent)`) | P2 | rt / service |
+| **B781** | Grouping/relating author postures (three, distinct): categories = NO author scaffold (runtime-only); relations = never subclass `BRelation`, define a type via `RelationInfo`/`BCustomRelation`; hierarchy = compose `BHierarchy`+`BLevelDef` under `BHierarchyService` | P2 | rt / relations |
+| **B782** | Build a query/search/index surface with ONE recipe: a typed `BQuery`/NEQL payload + the matching `BIAgent` provider (`BQueryEngine`/`BColumnsProvider`/`BISearchProvider`/`BSystemIndexer`) discovered by the agent registry → a `BITable` | P2 | rt / data |
+| **B783** | Template author path = ARTIFACT production, not type registration: a "template type" is an `.ntpl` ZIP made by a job from a `BTemplateConfig`-marked subtree — do NOT scaffold a `BTemplate` subclass (no SPI) | P2 | rt / template |
+| **B785** | Extend a framework via a Device + a self-describing SPI object — the rdb dialect exemplar: `B<X>Database extends BRdbms` + 3 abstract methods; `getRdbmsContext()` → a `RdbmsDialect`; register a manifest `<type>`; no central registry | P2 | rt / data |
+| **B777** | SECURITY-MODULE skeleton: `BAbstractService` → `BAuthenticationScheme` subclass wired via `getLoginConfiguration`; permissions INLINE in `module.xml` `<permissions>` (NOT `module-permissions.xml`); jar-signed `NIAGARA4.RSA/SF` is MANDATORY; register `@AgentOn "baja:AuthenticationScheme"` | P2 | rt / security |
+| **B776** | ACTION PROTECTION: gate declaratively — `@NiagaraAction(flags=Flags.OPERATOR=256)` → operator-invoke, OMIT → admin-invoke (DEFAULT), enforced by `BComponent.canInvoke` + fox/box `PermissionException`; `doPrivileged` = JVM permission ONLY (never wrap a Niagara RBAC check) | P2 | rt / security |
+| **B775** | Authoring a WATCHDOG/monitor + choosing a timer: subclass `BAbstractAlarmMonitor` (override `doRunCheck`, `raiseAlarm` edge-latch); timer = `Clock.schedule` (one-shot) vs `Clock.schedulePeriodically` + keep the `Clock.Ticket` (NO `javax.baja.sys.BTimer` — cl.hvac only); cadence is a configurable `BIntervalTriggerMode` (15-min default), not a 2s poll; native `EngineWatchdog` is a separate layer | P2 | rt / watchdog+timer |
+| **B774** | Authoring a background JOB: subclass `BSimpleJob` + `run(Context)` for the normal async case; submit via `BJobService.submit(job,cx)` → an ORD handle (poll, no join); multi-step = `BJobStep` under a `BBatchJob` | P2 | rt / jobs |
+| **B773** | Authoring an analytics compute NODE: `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock`; inputs = `BBlockPin` `@NiagaraProperty` + `BLink` DAG edges; register by `module.xml <type>` (NO @AgentOn — EXCEPTION to the idiom) | P2 | rt / analytics |
+
+### → `types/dashboard.md`
+
+| Block | What it gives the builder | Priority | Layer |
+|---|---|---|---|
+| **B780** | `module.palette` + `module.lexicon` copy-ready conventions: palette `<p n= t= m=>` (bare-Type-minus-`B` names, plural folders, `m="alias=module"` once, nested pre-seed); lexicon is flat/module-global → PREFIX keys (`parent.child`) to dodge the B759 collision | P1 | palette / lexicon |
+| **B763** | The `-ux` servlet WRITE-surface, five gates: OPERATOR_WRITE fail-closed → hand-rolled `X-Requested-With` guard IN the pure `route()` → `SERVICE_ORD` pinning/allowlist → per-Ord lock + HTTP 423 → audit. Plus the pure RBAC test seam (`canWrite(boolean)`) | P1 | ux / security |
+| **B762** | Off-station testing seams for `-ux`: the pure `route()`→`RouteAction` seam, the purity gradient (inject Baja as a `Function`), and the SPA-JS limit (`node --check` = syntax only) | P1 | ux / test |
+| **B791** | Web-tier exemplars audit: servlet routing → B29; hx → B433; `module://` rc → B5/B752; `@AgentOn` web agent → B752/B421; Tridium CSRF → B58; plus DashboardPan divergences (CSRF via hand-rolled X-Requested-With = DELIBERATE, STRONGER-than-vendor; RBAC seam COLLAPSED = punch-list) | P2 | ux / web-tier |
+
+### → `types/wb-widgets.md`
+
+| Block | What it gives the builder | Priority | Layer |
+|---|---|---|---|
+| **B762** | Off-station testing of `-wb`: the `wb/model/` lambda-injection seam — a Baja-free `model/` package with the slot check injected as a `Predicate<String>`; the `BWidget` view stays the adapter | P1 | wb / test |
+| **B780** | Dual-surface `@AgentOn` registration: write `@NiagaraType(agent={@AgentOn(types={"mod:Type"},requiredPermissions="r")})` on the view/FE; Slot-o-Matic emits `<type><agent><on/></agent></type>`; multi-type = one view over several source types | P1 | wb / agent |
+
+### → `METHODOLOGY.md`
+
+| Block | What it gives the builder | Priority | Layer |
+|---|---|---|---|
+| **B784** | Real `module.xml` conventions: profile split `-rt`/`-ux`/`-wb`/`-se` (server), `-doc` is a SEPARATE `runtimeProfile="doc"` module; `<dependency>` `vendorVersion` = 3-part Tridium FLOOR (`4.14.0`) vs the module's own 4-part build stamp (`4.14.0.162`); header attribute roster | P1 | build / module.xml |
+| **B787/B788/B789** | Conformance rules: lintable (statically decidable: lexicon dup-keys, Clock.Ticket without stopped-cancel, empty palette, coverage-%) vs advisory (human-review: action operator-vs-admin intent, container order-sensitivity, poll-vs-subscribe) | P2 | build / verify |
+
+---
+
 Maintenance: this index is a curated pointer, not a copy — when a block's content is folded into a kit guide
 (METHODOLOGY, BUILD-LOOP, `types/*.md`, build-verify), that guide carries the rule and cites the block; this
 index stays the "what to read" map. Source: retro `corpus-index-rt-authoring-and-organization-blocks`.

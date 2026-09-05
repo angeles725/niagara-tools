@@ -76,7 +76,7 @@ jobs:
           K=build-n4-module-kit
           bash "$K/toolbelt/sweep-build-state.sh" "$K/BUILD-STATE.md" "$K/retros" "$K/retros/INDEX.md"
 
-      - name: sweep-fold-audit (folded retros citation coverage — non-strict, WARNs visible)
+      - name: sweep-fold-audit (folded retros citation coverage — strict, all folded must be cited)
         run: |
           K=build-n4-module-kit
-          bash "$K/toolbelt/sweep-fold-audit.sh" "$K/retros/INDEX.md" "$K"
+          bash "$K/toolbelt/sweep-fold-audit.sh" --strict "$K/retros/INDEX.md" "$K"

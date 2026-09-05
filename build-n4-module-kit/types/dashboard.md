@@ -86,4 +86,18 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - Read via `GET /api/alarms` = BQL over `station:|alarm:|bql:select * where sourceState='offnormal' or 'fault' order by timestamp desc`. Station needs a `BAlarmService` + `BAlarmClass`.
 - ACK from a plain servlet is the hard part (chihuahua only got it via BajaScript) — spike `svc.getAlarmDb().getDbConnection().getRecord(uuid)` → `svc.ackAlarm(live)` before committing.
 
+## Module packaging (palette + lexicon)
+
+- **`module.palette` convention:** bare-Type-minus-`B` instance names, plural category folders, `m="alias=module"` declared once, nested `<p>` to pre-seed ext/config child slots. `[ev: corpus B780]`
+- **`module.lexicon` prefixing:** the lexicon is flat + MODULE-GLOBAL — PREFIX keys (`parent.child`, `Type.slot`) to dodge the B759 collision; a missing key renders raw camelCase via `toFriendly`. `[ev: corpus B780]`
+
+## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
+
+This section documents the web tier from OUR modules; the Tridium exemplar for each aspect is in the corpus — reach for it, do not re-derive: servlet routing (`BWebServlet`/`BServletView`) → B29; hx views (`BHxView`/`BHxProfile`/`HxOp`) → B433; module `rc/` web resources + `module://<mod>/rc/…` ORDs → B5/B752; `@AgentOn` web agents (`BIJavaScript`+`JsInfo`) → B752/B421; Tridium-servlet CSRF (`CsrfGuard`/`CsrfProtectedFilter`) → B58 (vs our hand-rolled `X-Requested-With` guard, B763); JSON/REST response shaping → B16/B66, B361–B364, B604, B509. `[ev: corpus B791]`
+
+## DashboardPan divergences from the Tridium web pattern (DUX-WEB2)
+
+- **CSRF via a hand-rolled `X-Requested-With` check inside the pure `route()`** (B763) rather than the framework `CsrfProtectedFilter`/`CsrfGuard` (B58) — a DELIBERATE, STRONGER-than-vendor divergence (vendor bajaux treats `requiredPermissions` as visibility-only and skips server RBAC, B752); keep it, note it as intentional. `[ev: corpus B791/B763]`
+- **PUNCH-LIST: the RBAC decision is COLLAPSED into a Baja-bound helper** (DashboardPan) where chihuahua-ux keeps a pure-vs-Baja seam — re-split so the write-auth decision is Niagara-free/unit-testable. `[ev: corpus B763]`
+
 See also: `docs/module-best-practices.md` §2 (the X-Requested-With rule + the CSRF-guard↔header pairing).

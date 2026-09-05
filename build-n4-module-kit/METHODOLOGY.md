@@ -15,6 +15,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] **Permissions:** delete the empty `type="all"` wizard scaffold in module-permissions.xml → `<permissions/>` (a component/dashboard module needs the base grant). [module-anatomy B636 deviation #1]
 - [ ] **`module.palette` has one `<p n=… t=…>` entry per exposed `@NiagaraType`:** a scaffold-only palette (just `<p t="b:Folder">`) passes the ENTIRE verify gate and deploys, yet Workbench shows nothing to drag — commissioning is silently broken. [ev: retro module-palette · B5]
 - [ ] **A self-armed timer arms in BOTH `started()` and `atSteadyState()`** — never only `atSteadyState()` (it skips a late commissioning mount and the timer never fires; the anti-pattern has ZERO hits in the entire Tridium first-party corpus). Full idiom in `types/logic.md` §Safety fail-modes. [ev: retro self-firing-timer]
+- **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B775]`
 
 ## Domain correctness
 - [ ] Compare a value only against a limit that APPLIES to it: setpoint/deviation/alarm belong to zone sensors, NOT to evaporator/resistance temps (those alarm against their own high/low limits). Wrong comparisons = false alarms.
@@ -34,6 +35,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - **To EDIT (not just read) an asset-laden single-file SPA, use an anchored Python `str.replace` that asserts the anchor occurs exactly once before writing the whole file back — `Read`/`Edit` fail even with offset/limit because one base64 line is enormous:** `sed -n 'A,Bp'` to view a region, then the all-or-nothing Python replace (`assert content.count(anchor)==1`), then `node --check` on the extracted `<script>`. [ev: retro editing-base64-heavy-spa · U8]
 
 ## Build (see build-verify.md)
+- **`module.xml` profile + dependency conventions:** split code by part `-rt`/`-ux`/`-wb`/`-se` (server); `-doc` is a SEPARATE `runtimeProfile="doc"` module, NEVER a part of a code module. A `<dependency>` `vendorVersion` is a 3-part Tridium FLOOR (`4.14.0`), distinct from the module's own 4-part build stamp (`4.14.0.162`). Header roster: author fills `vendor/vendorVersion/description/preferredSymbol/moduleName/runtimeProfile`; `bajaVersion` is const `"0"`. `[ev: corpus B784]`
+- **Security-module permissions are INLINE (correction):** grant permissions in `module.xml` `<permissions><java-permissions type="station">` — NOT a separate `module-permissions.xml`; jar-signing (`NIAGARA4.RSA/SF`) is mandatory for the privileged grants. `[ev: corpus B777]`
 - [ ] Built with **Java 8** + **clean + slotomatic + jar**. Bytecode major version **52**.
 - [ ] Both/all profile jars **signed** (`META-INF/NIAGARA4.SF`).
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
@@ -68,6 +71,12 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 ## Multi-session coordination
 - **Before editing a file in a shared repo, check the tree first:** run `git status`/`git diff` on the target — a dirty working tree is a peer's live uncommitted work and is off-limits; coordinate with the owning session instead of duplicating or clobbering. [ev: retro dashboardpan-2d-to-3d-port, retro research-sdd-module-authoring-mega-campaign]
+
+## Conformance rules — lintable vs advisory
+
+- **A `verify-module.sh`/lint may HARD-FAIL only on a statically-decidable rule:** lexicon dup-bare-keys, a `Clock.Ticket` field with no `stopped()`-cancel, an empty palette on a component module, type/slot lexicon coverage-%. Rules needing semantic judgment (an action's operator-vs-admin intent, a container's order-sensitivity, poll-vs-subscribe) stay a HUMAN-REVIEW checklist item — never a hard fail. `[ev: corpus B787/B788/B789]`
+- **Human-review checklist (advisory rules, not lintable):** (a) does each non-HIDDEN `@NiagaraAction` intend its operator/admin gating? (b) does an order-sensitive container guard its children with `isChildLegal`? (c) does any fixed-interval poll of a sibling slot want a `Subscriber` instead? `[ev: corpus B776/B789]`
+- folded as code: sweep-build-state.sh + BUILD-STATE.md + BUILD-LOOP.md §7 + retros/INDEX.md [ev: retro kit-continuity]
 
 ## Live-verify safety
 - **Never perform a state-changing write on a production station during verification:** do read-only prod checks + an out-of-band negative check (no-token → 401). [ev: retro live-cutover-and-authenticated-control, retro obix-and-loginless-dashboard-runbooks]
