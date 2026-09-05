@@ -480,3 +480,61 @@ Confirms issue #49: `.frame{aspect-ratio:1247/771}` is stale, masked by `#frame{
 ### Status
 
 8/8 PR8 tasks complete. Ready for verify. Campaign 7 code PRs complete (PR1-PR8 of 8).
+
+---
+
+## CLOSE — Campaign 7 Close (2026-09-05)
+
+**Unit**: CLOSE tasks C.1–C.4 + deliverables A–H
+**Mode**: Standard (doc-only, no new tests per spec)
+
+### Completed Tasks
+
+- [x] C.1 CHANGELOG.md `## [v0.18.0] - 2026-09-05` added (PR1–PR8 bullets + References)
+- [x] C.2 VERSION → 0.18.0
+- [x] C.3 Campaign-7 close retro filed + folded; 9 INDEX rows pending→folded; sweep-fold-audit --strict exit 0
+- [x] C.4 SC sweep: pending=0; bats 179/179; shellcheck 0; no attribution trailers
+- [x] 2.6 Marked with lead note (launcher v0.5 after PR2, v0.6 after PR7, v0.7 after PR8)
+- [x] 7.9 Marked with lead note (launcher v0.6 after PR7)
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/METHODOLOGY.md` | Modified | K15–K20 added; K6/K8/K11-K14 tokens appended; §Tradeoffs + §Editing technique new rules; logic-split lessons; new folded-as-code lines |
+| `build-n4-module-kit/BUILD-LOOP.md` | Modified | `[ev: retro campaign7-plano]` + `[ev: retro campaign7-retro-fold]` appended to existing lines |
+| `CONTRIBUTING.md` | Modified | Binary TEST fixture rule scoped; gawk/heredoc/shellcheck disable rules added §2; SDD ledger tokens appended |
+| `build-n4-module-kit/types/dashboard.md` | Modified | `[ev: retro dashboard-exemplar]` token appended; SVG viewBox targeting rule added §Plano |
+| `build-n4-module-kit/build-verify.md` | Modified | Parser smoke rule; toolbelt authoring section with row-level aggregation + dup-keys count |
+| `build-n4-module-kit/skill/SKILL.md` | Modified | `[ev: retro campaign7-plano]` appended to step 5 --plano |
+| `build-n4-module-kit/toolbelt/report-module.sh` | Modified | Header comment: --src vs jar-mode mode note (doc comment only) |
+| `openspec/changes/build-n4-module-campaign7/report-module-contract.md` | Modified | Jar-mode baseline relabeled (B798); --src mode output block added; dup-keys escalation note |
+| `openspec/changes/build-n4-module-campaign7/design.md` | Modified | D7a count updated (7→9 PASS + 1 SKIP); dup-keys escalation note added |
+| `openspec/changes/build-n4-module-campaign7/tasks.md` | Modified | C.1–C.4 marked [x]; 2.6 + 7.9 marked [x] with lead note |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | 8 campaign-7 rows pending→folded; close retro row added (folded) |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-*.md` (8 files) | Modified | `<!-- review-status: pending -->` → `<!-- review-status: folded -->` |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-close-process-meta-lessons.md` | Created | Campaign 7 close retro (5 meta-lessons, folded) |
+| `VERSION` | Modified | 0.17.0 → 0.18.0 |
+| `CHANGELOG.md` | Modified | `## [v0.18.0] - 2026-09-05` entry added with PR1–PR8 bullets + References |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | Kit self-envelope: version 0.18.0, last_change, retro_pending: false |
+| `openspec/changes/build-n4-module-campaign7/apply-progress.md` | Modified | CLOSE section appended (this entry) |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test | `grep -c '| pending |' retros/INDEX.md` == 0; `bats tests/*.bats` 179/179 |
+| Shellcheck | `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exit 0 |
+| sweep-build-state | exit 0 |
+| sweep-fold-audit --strict | exit 0 |
+| Rollback boundary | `git revert HEAD` removes all close edits; kit returns to PR8 state |
+
+### Deviations from Design
+
+- CHANGELOG.md had no existing `## [Unreleased]` section (per sdd-verify W1 addendum) — entry created from scratch; no rename needed.
+- tasks.md 2.6 and 7.9 were done by lead (per sdd-verify W2 addendum) — marked with lead note.
+- Investigador1 addendum: report-module-contract.md updated to show both jar-mode baseline (B798) and shipped --src output; design.md D7a and bless evidence count updated accordingly; header comment added to report-module.sh.
+
+### Status
+
+All CLOSE tasks (C.1–C.4) complete. All 9 campaign-7 retros folded. Pending count = 0. Ready for commit.

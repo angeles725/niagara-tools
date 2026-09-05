@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 7 PR3 — DashboardPan-ux as the write-surface reference exemplar (B796)
 
 **Date**: 2026-09-05  

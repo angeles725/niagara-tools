@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: campaign7-report-module — report-module.sh aggregated conformance report
 
 **Session**: Campaign 7 PR8 (stretch) · 2026-09-05  

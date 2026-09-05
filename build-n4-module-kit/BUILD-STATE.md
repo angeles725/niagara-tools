@@ -146,8 +146,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.16.0                      # current kit VERSION
-last_change: 2026-09-05              # Campaign 6 PR6: tracked skill/SKILL.md + install-skill.sh, openspec archived, setup-java v5, slot-coverage type-set label, v0.16.0
+version: 0.18.0                      # current kit VERSION
+last_change: 2026-09-05              # Campaign 7 CLOSE: fold 9 C7 retros, CHANGELOG v0.18.0, close retro, contract refresh
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS: ALL DONE — the backlog is cleared. (B4, B6, B7, B8, B10, soft-start, palette all implemented and folded.)
@@ -157,8 +157,8 @@ open_issues:
   - CAMPAIGN 5 (activate the retro-enforcement gate — built but inert): AG-PR1 (v0.15.0) DONE — hardened `.githooks/pre-push` so the promotion exit accepts an in-range INDEX.md diff OR an in-range BUILD-STATE.md diff (fixes the partial-promotion FALSE-NEGATIVE found in C4-PR2), with the blanket-escape guard kept (trailer + NEITHER anchor → FAIL) and `sweep` run on both anchored paths; added `scripts/install-hooks.sh` (idempotent opt-in activation, `--uninstall`, refuses to clobber a custom hooksPath without `--force`); documented activation in BUILD-LOOP §7 + CONTRIBUTING §6.1. Tests: build-retro-sync H8/H9/H10 + install-hooks I1-I4. This closed the earlier gate-hardening open_issue. AG-PR1 carries its OWN feature-retro (campaign5-gate-activation) via the new-retro exit (a) — a pure feature PR is NOT a 4th gate shape, it uses exit (a); so the PR that activates the gate passes its own gate, and the Campaign 5 close is consolidated into this PR (no separate close-retro PR). NEXT: the LIVE ACTIVATION smoke (run the installer in this repo + prove a trivial kit-file push without a retro/trailer is BLOCKED, then passes with the trailer); CI (AG-PR2) awaits the user's explicit call.
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
-retro_required: true                 # GATED — Campaign 7 PR8 retro filed
-retro_pending: true                  # GATED — campaign7-report-module FILED as review-status: pending; fold-status in retros/INDEX.md
-last_commit: Campaign 7 PR8 feat/c7-report-module
-last_session: 2026-09-05 · Campaign 7 PR8 (stretch): toolbelt/report-module.sh — aggregated conformance report composing verify-module --src + slot-coverage + dup-keys + lint-timers + --plano per profile artifact; BUILD-LOOP §5 punch-list step + SKILL.md v0.7 routing; RM1-RM3 bats GREEN (179/179); shellcheck 0; sweep-build-state 0; sweep-fold-audit 0; real-tree smoke: ColdRoomPan-rt 9 PASS · 1 FAIL · 1 WARN · 1 SKIP → ISSUES exit 1 (BEvaporatorUnit timer-ticket FAIL + slot-coverage WARN @ 50%). Campaign 7 COMPLETE. Next: CLOSE — VERSION 0.18.0.
+retro_required: true                 # GATED — close retro filed and folded
+retro_pending: false                 # campaign7-close-process-meta-lessons folded in this commit
+last_commit: Campaign 7 CLOSE chore/c7-close
+last_session: 2026-09-05 · Campaign 7 CLOSE: fold 9 campaign-7 retros (K15-K20 + logic-split + report-module lessons), close retro filed+folded, contract refresh (--src vs jar-mode), CHANGELOG v0.18.0, VERSION 0.18.0; bats 179/179; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; pending 0. Campaign 7 CLOSED.
 <!-- /build-state.v1 -->

@@ -60,7 +60,7 @@ Chain strategy: stacked-to-main
 - [x] 2.3 Add all 10 toolbelt scripts to `build-n4-module-kit/skill/SKILL.md` §References; route step 5 to pre-gate checks (R2.4–R2.5).
 - [x] 2.4 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 - [x] 2.5 Gate: `grep -c 'preflight' BUILD-LOOP.md` >= 1 and same for `lint-timers`, `slot-coverage`, `sweep-build-state` in both files (R2.6). Paste grep evidence in PR body.
-- [ ] 2.6 After merge: orchestrator re-runs `scripts/install-skill.sh` (R2.7, CD6).
+- [x] 2.6 After merge: orchestrator re-runs `scripts/install-skill.sh` (R2.7, CD6). [run by lead: launcher v0.5 after PR2, v0.6 after PR7, v0.7 after PR8]
 
 ---
 
@@ -136,7 +136,7 @@ Chain strategy: stacked-to-main
 - [x] 7.6 Run `tests/kit-links.bats`; assert exit 0 (R7.6).
 - [x] 7.7 Named mutation in PR body: break one moved link (e.g. `types/logic-authoring.md` → wrong path) → `kit-links.bats` FAIL (R7.7). Two-reads: investigador1 confirms line 91 boundary is correct and no content is lost.
 - [x] 7.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
-- [ ] 7.9 After merge: orchestrator re-runs `scripts/install-skill.sh` (R7.8, CD6).
+- [x] 7.9 After merge: orchestrator re-runs `scripts/install-skill.sh` (R7.8, CD6). [run by lead: launcher v0.6 after PR7]
 
 ---
 
@@ -159,10 +159,10 @@ Chain strategy: stacked-to-main
 
 **Gate exit**: SC8 | doc-only, no new bats
 
-- [ ] C.1 Rename `## [Unreleased]` → `## [v0.18.0] - YYYY-MM-DD` in `CHANGELOG.md`; add `### References` block (SDD slug + engram IDs) (SC8).
-- [ ] C.2 Set `VERSION` = `0.18.0`.
-- [ ] C.3 Close campaign-7 retro: mark final state in `retros/INDEX.md`; `sweep-fold-audit.sh --strict` exits 0 (SC1).
-- [ ] C.4 Final SC sweep: `grep -c '| pending |' retros/INDEX.md` == 0; bats total >= 175 passing; `shellcheck` exit 0 across all new scripts; SC9 (no attribution trailers in PR bodies).
+- [x] C.1 Rename `## [Unreleased]` → `## [v0.18.0] - YYYY-MM-DD` in `CHANGELOG.md`; add `### References` block (SDD slug + engram IDs) (SC8).
+- [x] C.2 Set `VERSION` = `0.18.0`.
+- [x] C.3 Close campaign-7 retro: mark final state in `retros/INDEX.md`; `sweep-fold-audit.sh --strict` exits 0 (SC1).
+- [x] C.4 Final SC sweep: `grep -c '| pending |' retros/INDEX.md` == 0; bats total >= 175 passing; `shellcheck` exit 0 across all new scripts; SC9 (no attribution trailers in PR bodies).
 
 ---
 

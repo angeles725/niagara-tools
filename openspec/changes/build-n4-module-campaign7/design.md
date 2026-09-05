@@ -142,10 +142,10 @@ the artifact is scaffold-only / has no jar).
 **D7a — the exit is keyed on the aggregated FAIL count, with member exit codes as a second, ORed
 signal.** The contract's expected ColdRoomPan output is the authority and it *requires* row-level
 aggregation: `slot-coverage.sh` exits 0 while printing a WARN, so an exit-code-only design cannot
-produce `7 PASS · 1 FAIL · 1 WARN`. Row parsing is therefore the primary signal; a member exiting 2
+produce `9 PASS · 1 FAIL · 1 WARN · 1 SKIP` (--src mode adds typecount/facets PASS + stored SKIP). Row parsing is therefore the primary signal; a member exiting 2
 or 3 additionally emits an `ERROR` row and forces exit 3, so a member that dies without printing rows
 can never be read as clean. Alternative (exit codes only, as first drafted) rejected for the WARN gap
-above; alternative (rows only) rejected because a crashed member prints nothing. `spec.md`'s
+above; alternative (rows only) rejected because a crashed member prints nothing. **Note on dup-keys:** `slot-coverage.sh` emits per-key WARN lines but exits 0; `report-module.sh` collapses them into a single `dup-keys N` row, escalated to FAIL when N>0 by campaign-6 dup-lexicon-keys doctrine — intentional severity promotion, not a mapping bug. `spec.md`'s
 `report-module.sh <jar> [--src <module-dir>]` signature is superseded by the contract's
 `<module-root>` form, which is what the pending `qa/c7-report-module` will pin.
 
@@ -245,7 +245,7 @@ occurrences in the tree (test TC5).
 | 8 | RM1 | clean rt-only fixture tree → exit 0 + `report-module: CLEAN` summary | aggregation drops sub-tool rows → summary still CLEAN but member FAIL lost (see RM2) |
 | 8 | RM2 | leak fixture (clean + a `BLeak` timer-leak class) → the lint-timers FAIL row surfaces, exit 1 | aggregation drops sub-tool FAILs → RM2 exits 0 |
 | 8 | RM3 | rt-only tree → NO `--plano` row (gated on `<mod>-ux/src/rc/index.html`), anchored on the tool having run (exit 0 + summary) | always-run plano → a plano row appears on an rt-only tree |
-| 8 | (apply extras beyond the RED) | slot-coverage <100 % stays WARN and does not flip the exit (mutation: promote WARN→FAIL); a member exiting 3 emits an `ERROR` row and the report exits 3 (mutation: swallow member env faults) | the ColdRoomPan-rt B798 report (7 PASS · 1 FAIL · 1 WARN → ISSUES, exit 1) is LOCAL bless evidence, not a CI pin |
+| 8 | (apply extras beyond the RED) | slot-coverage <100 % stays WARN and does not flip the exit (mutation: promote WARN→FAIL); a member exiting 3 emits an `ERROR` row and the report exits 3 (mutation: swallow member env faults) | the ColdRoomPan-rt B798 report (9 PASS · 1 FAIL · 1 WARN · 1 SKIP → ISSUES, exit 1 via --src) is LOCAL bless evidence, not a CI pin; jar-mode baseline B798: 7·1·1·0 |
 
 ## File Changes
 

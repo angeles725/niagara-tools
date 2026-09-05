@@ -26,6 +26,9 @@ usage_exit() {
   exit 2
 }
 
+# Mode note: report-module.sh invokes verify-module.sh with --src, which adds typecount, facets,
+# and stored rows beyond the jar-mode baseline. A clean jar-mode run (B798: 7 PASS · 1 FAIL · 1 WARN)
+# expands to 9 PASS · 1 FAIL · 1 WARN · 1 SKIP when --src is active — the FAIL and WARN are invariant.
 while [ $# -gt 0 ]; do
   case "$1" in
     --target-version)

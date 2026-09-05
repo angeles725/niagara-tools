@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 7 PR5 — schema-risk.sh (B795/B799)
 
 **Date**: 2026-09-05 | **PR**: feat/c7-schema-risk | **Issue**: #46

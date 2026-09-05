@@ -23,7 +23,7 @@ report-module: <N> artifacts · <p> PASS · <f> FAIL · <w> WARN · <s> SKIP  ->
 ```
 Exit: **0** clean (zero FAIL) · **1** any FAIL · **3** env (no JDK 8 / not a niagara_home).
 
-## Expected report — ColdRoomPan TODAY (real-tree evidence, B798 @ kit v0.17.0, the QA pin)
+## Expected report — ColdRoomPan jar-mode baseline (B798 @ kit v0.17.0)
 ```
 ColdRoomPan-rt  PASS  bytecode      8 classes, all major 52
 ColdRoomPan-rt  PASS  signed        META-INF/NIAGARA4.SF present
@@ -36,5 +36,28 @@ ColdRoomPan-rt  FAIL  timer-ticket  BEvaporatorUnit.java: schedules a Clock tick
 ColdRoomPan-rt  WARN  slot-coverage 50.0% (missing DefrostMode,FanMode,StagingMode)
 report-module: 1 artifact · 7 PASS · 1 FAIL · 1 WARN · 0 SKIP  ->  ISSUES   (exit 1)
 ```
-QA pins `qa/c7-report-module` on this exact ColdRoomPan-rt output; dropping the BEvaporatorUnit FAIL or the
-slot-coverage WARN flips it. (DashboardPan-ux adds a `--plano FAIL` once #47 lands — B797.)
+This is the B798 jar-mode run (without `--src`). The shipped script runs `verify-module.sh --src`, which adds
+typecount (PASS), facets (PASS), and stored (SKIP) rows — legitimately expanding the jar-mode baseline.
+
+## Shipped `--src` mode output (ColdRoomPan-rt, kit v0.18.0, 2026-09-05)
+```
+ColdRoomPan-rt  PASS  bytecode  8 classes, all major 52
+ColdRoomPan-rt  PASS  signed  META-INF/NIAGARA4.SF present
+ColdRoomPan-rt  PASS  types  6 declared types resolve to classes
+ColdRoomPan-rt  PASS  baja  stamped baja 4.14 <= target 4.14
+ColdRoomPan-rt  SKIP  stored  no --stored
+ColdRoomPan-rt  PASS  typecount  jar declares 6 types == module-include.xml
+ColdRoomPan-rt  PASS  facets  no raw-number MIN/MAX facet under .../ColdRoomPan-rt/src
+ColdRoomPan-rt  PASS  palette  module.palette has 3 component entries
+ColdRoomPan-rt  PASS  dup-keys  0
+ColdRoomPan-rt  WARN  slot-coverage  50.0% (missing DefrostMode,FanMode,StagingMode)
+ColdRoomPan-rt  PASS  timer-ticket  BDefrostController.java: timer cancelled in stopped()
+ColdRoomPan-rt  FAIL  timer-ticket  BEvaporatorUnit.java: schedules a Clock ticket but stopped() does not cancel it
+report-module: 1 artifact · 9 PASS · 1 FAIL · 1 WARN · 1 SKIP  ->  ISSUES
+```
+QA pins `qa/c7-report-module` on BEvaporatorUnit FAIL and slot-coverage WARN (exit 1); dropping either flips the pin.
+(DashboardPan-ux adds a `--plano FAIL` once #47 lands — B797.)
+
+**Note on dup-keys escalation:** `slot-coverage.sh` emits per-key WARN lines but exits 0; `report-module.sh`
+collapses them into a single `dup-keys N` row escalated to FAIL when N>0 (campaign-6 doctrine: lexicon dup keys = hard fail).
+This is not a mapping bug — it is intentional severity promotion by the aggregator.

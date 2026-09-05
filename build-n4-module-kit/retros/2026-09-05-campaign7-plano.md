@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 7 PR6 — verify-module.sh --plano (B797 aspect-ratio agreement check)
 
 **Date**: 2026-09-05 | **Module**: kit | **PR**: feat/c7-plano | **Change**: build-n4-module-campaign7

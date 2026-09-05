@@ -6,6 +6,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.18.0] - 2026-09-05
+
+### Added — Campaign 7 close: 9 retros folded, scaffold/schema-risk/plano/logic-split/report tools (PR1–PR8 #52–#59)
+
+- **Retro fold (PR1 #52):** 9 campaign-6 retros folded into METHODOLOGY.md (K11–K14), BUILD-LOOP.md §7, CONTRIBUTING.md §SDD-ledger; all 9 INDEX rows flipped pending→folded; `sweep-fold-audit.sh --strict` promoted in CI.
+- **Tool integration (PR2 #53):** BUILD-LOOP.md §0.b/§5/§7 and `skill/SKILL.md` §References updated for all 10 toolbelt scripts (preflight, lint-timers, slot-coverage, sweep-build-state, sweep-fold-audit, scaffold-module, schema-risk, verify-module+plano, report-module); launcher v0.5 installed.
+- **Dashboard B796 exemplar (PR3 #54):** `types/dashboard.md` gains DashboardPan-ux write-surface 4/5 gate score; gate 4 REQUIRED-but-absent cited as issue #49.
+- **scaffold-module.sh + fixtures (PR4 #55, size:exception):** `toolbelt/scaffold-module.sh` emits a pre-slotomatic module tree from `fixtures/MinimalPan`; TC1–TC6 + TC-K8 RED-first with named mutations. Tests: scaffold-module.bats.
+- **schema-risk.sh (PR5 #56):** `toolbelt/schema-risk.sh` two-snapshot slot diff; verdict SAFE/LOSSY/OUTAGE (B795 CSV embedded as heredoc); SR1–SR9+SR-CSV bats; 7 B799 fixture pairs.
+- **verify-module --plano (PR6 #57):** `verify-module.sh --plano <index.html|jar>` aspect-ratio cross-multiplication (Rc/Ri/Rv); PL1–PL5 bats; `tests/fixtures/plano/ok/index.html` 2×3 inline PNG.
+- **types/logic-authoring.md split (PR7 #58):** `types/logic.md` lines 91–136 (Author-side SPIs) extracted to `types/logic-authoring.md`; kit-links L4/L5/L6 guards added; corpus-index.md retargeted; launcher v0.6 installed.
+- **report-module.sh (PR8 #59, stretch):** `toolbelt/report-module.sh <module-root>` aggregated conformance report composing verify-module --src + slot-coverage + dup-keys + lint-timers + --plano per profile; RM1–RM3 bats; real-tree smoke ColdRoomPan-rt 9 PASS · 1 FAIL · 1 WARN · 1 SKIP → ISSUES exit 1; launcher v0.7 installed.
+
+### References
+
+- SDD change: `build-n4-module-campaign7` (PR1 #52 … PR8 #59; v0.17.0 → v0.18.0).
+- Engram topics `sdd/build-n4-module-campaign7/*`; research block B798 (ColdRoomPan-rt real-tree smoke).
+
+---
+
 ## [v0.17.0] - 2026-09-05
 
 ### Added — Campaign 6 close: research fold + conformance lints (PR7 #42, PR8 #43, close PR)

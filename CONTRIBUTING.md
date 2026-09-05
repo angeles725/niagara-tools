@@ -42,7 +42,13 @@ The same rules apply to the kit toolbelt (`build-n4-module-kit/toolbelt/*.sh`): 
 `tests/verify-module.bats`, `tests/build-sh.bats`, `tests/mirror-niagara-home.bats`,
 `tests/stored-repack.bats` and `tests/kit-links.bats`. Jar/class/`niagara_home` fixtures are
 generated at test time by `tests/helpers/n4-fixtures.bash` (`load helpers/n4-fixtures`) — never
-commit a binary fixture. `tests/ng-deploy.bats` does not load the helpers.
+commit a binary TEST fixture (generate via `tests/helpers/n4-fixtures.bash`); a scaffolder's shipped
+template under `build-n4-module-kit/fixtures/` may carry the gradle wrapper jar when ≤100 KB
+[ev: retro campaign7-scaffold]. `tests/ng-deploy.bats` does not load the helpers.
+
+- **In a gawk toolbelt script, call `delete arr` in `BEGIN` before `length(arr)`:** checking array length without initializing triggers a gawk warning on some platforms; `delete arr` at the top of `BEGIN` ensures a clean start. [ev: retro schema-risk]
+- **Diff heredoc-embedded reference tables against an oracle file as a named mutation:** embed the reference CSV/table as a heredoc, store the same bytes in `tests/fixtures/<name>.csv`, and assert byte equality as a named mutation — the oracle file is the contract. [ev: retro schema-risk]
+- **Place `shellcheck disable` directives BEFORE the entire compound command, not inside its body:** a disable inside a `while ... done` body triggers SC1123 ("ShellCheck directives are only valid in front of complete compound commands"); the correct form is one line immediately before `while ... do`. [ev: retro logic-split]
 
 ### 2.1 Test runner setup
 
@@ -203,8 +209,8 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
 
 ## 9. SDD ledger discipline
 
-- **One active attempt per change** regardless of work-unit label: the ledger is serial — a new acquire blocks while a prior attempt for the same change is open.
+- **One active attempt per change** regardless of work-unit label: the ledger is serial — a new acquire blocks while a prior attempt for the same change is open. [ev: retro campaign7-retro-fold]
 - **Evidence goal = one short line:** `--evidence-goal` must be a single terse sentence parseable at a glance.
 - **Inventory sha from the error, not cached:** the untracked inventory sha changes whenever files appear; always read it from the error output, never from a prior run.
 - **Doc-store commits early or budget sized to content:** a large openspec commit blows a code-sized `--max-changed-lines` budget; commit docs early or pass a budget that matches the PR's real content. [ev: retro close-process-meta-lessons]
-- **Two independent reads for every research fold:** author fidelity read + a mechanical gate with verbatim spot-checks of each correction — one read cannot catch what two can. [ev: retro research-fold] [ev: retro close-process-meta-lessons]
+- **Two independent reads for every research fold:** author fidelity read + a mechanical gate with verbatim spot-checks of each correction — one read cannot catch what two can. [ev: retro research-fold] [ev: retro close-process-meta-lessons] [ev: retro campaign7-retro-fold]

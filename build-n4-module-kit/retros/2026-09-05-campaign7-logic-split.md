@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- Campaign 7 PR7: types/logic.md split — framework-extension authoring moves to types/logic-authoring.md -->
 
 # Retro — Campaign 7 PR7: types/logic-authoring.md split

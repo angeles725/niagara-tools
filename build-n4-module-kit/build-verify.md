@@ -94,6 +94,8 @@ unzip -p <jar> META-INF/module.xml | grep baja
 ## Pre-release real-jar smoke test
 Before shipping a kit or toolbelt change, run `toolbelt/verify-module.sh` over at least one known-good and one known-bad real module jar — the bats suites use generated fixtures, which only simulate a malformed jar; a real one proves the gate catches a live defect. Worked known-bad: `ColdRoomPan-rt.jar` fails the `types` check because `module-include.xml` still declares `com.angeles.ColdRoomPan.BHoaMode` after that class was deleted — the live "Missing class ColdRoomPan:HoaMode" defect. DashboardPan's jars pass `--src` clean. Usage: see §Verify above.
 
+- **Smoke every new parser on ≥1 real module before merge:** bats fixtures are synthetic and may miss edge cases (field ordering, encoding, missing files) that a real module tree exposes; use at least one known-good and one known-bad real module as the final gate. [ev: retro schema-risk]
+
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 
@@ -125,3 +127,7 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 Stop station → replace the jars in `<niagara_home>/modules/` → start (the jar is locked while the station runs; to avoid stopping a live supervisor, build against a mirror per §Building against a running station and copy `build/libs` → station). Signing per target: §Signing per deploy target. **A jar that has not passed `toolbelt/verify-module.sh` does not go to a station.**
 
 See also: `docs/module-dev-workflow.md` (toolchain, codegen round-trip, dev loop, testing).
+
+## Toolbelt authoring — composition conventions
+- **Prefer row-level output parsing over exit-code-only aggregation when composing toolbelt scripts:** a member tool that exits 0 may still emit WARN rows that must propagate (e.g. `slot-coverage.sh` exits 0 on <100% coverage); exit codes are a secondary ORed guard for crashed members. [ev: retro report-module]
+- **Emit a single count row (PASS N=0 / FAIL N>0) when relaying dup-count checks from a composed tool:** relaying individual WARN lines per duplicate key adds noise in multi-artifact reports; a count row is cleaner and machine-parseable. [ev: retro report-module]
