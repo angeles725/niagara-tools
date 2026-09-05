@@ -99,3 +99,25 @@ jobs:
           mkdir -p "$OUT"
           bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalPan "$OUT"
           diff -r --exclude=build --exclude=.gradle "$OUT/MinimalPan" build-n4-module-kit/fixtures/MinimalPan
+
+      - name: schema-risk fixtures (B799 pairs — non-strict, asserts mapped exit + verdict token — Campaign 7 PR5)
+        run: |
+          # Non-strict run: OUTAGE fixtures EXIT 2 but we assert the EXPECTED exit, not fail CI on it.
+          # The mixed pair (OUTAGE) is the key worst-cell proof; add_slot and reorder (SAFE) prove exit 0.
+          SR=build-n4-module-kit/toolbelt/schema-risk.sh
+          FX=tests/fixtures/schema-risk
+          fail=0
+          for pair in add_slot:0:SAFE remove_slot:1:LOSSY retype_simple:2:OUTAGE \
+                      reorder:0:SAFE rename_slot:1:LOSSY unknown_kind:2:OUTAGE mixed:2:OUTAGE; do
+            name="${pair%%:*}"; rest="${pair#*:}"; want_exit="${rest%%:*}"; want_v="${rest##*:}"
+            out=$(bash "$SR" "$FX/$name/before" "$FX/$name/after" 2>&1); got_exit=$?
+            if [ "$got_exit" -ne "$want_exit" ]; then
+              printf 'FAIL %s: exit %d != expected %d\n' "$name" "$got_exit" "$want_exit"
+              fail=1
+            fi
+            if ! echo "$out" | grep -q "verdict=$want_v"; then
+              printf 'FAIL %s: verdict token not found (expected verdict=%s)\n' "$name" "$want_v"
+              fail=1
+            fi
+          done
+          [ "$fail" -eq 0 ]

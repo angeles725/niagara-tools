@@ -52,3 +52,26 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
 @test "SR8 missing args -> exit 3 (usage/env)" {
   run "$SR"; [ "$status" -eq 3 ]
 }
+@test "SR9 unreadable module-include.xml -> exit 4 (env)" {
+  local tmp
+  tmp=$(mktemp -d)
+  mkdir -p "$tmp/before/com/angeles/MinimalPan" "$tmp/after/com/angeles/MinimalPan"
+  cp "$FX/add_slot/before/com/angeles/MinimalPan/BMinimalPan.java" \
+     "$tmp/before/com/angeles/MinimalPan/"
+  cp "$FX/add_slot/before/module-include.xml" "$tmp/before/"
+  cp "$FX/add_slot/after/com/angeles/MinimalPan/BMinimalPan.java" \
+     "$tmp/after/com/angeles/MinimalPan/"
+  touch "$tmp/after/module-include.xml"
+  chmod 000 "$tmp/after/module-include.xml"
+  run "$SR" "$tmp/before" "$tmp/after"
+  chmod 644 "$tmp/after/module-include.xml"
+  rm -rf "$tmp"
+  [ "$status" -eq 4 ]
+}
+@test "SR-CSV embedded CSV_TABLE heredoc byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
+  local script="$SR"
+  local oracle="$FX/b795-795.4.csv"
+  local extracted
+  extracted=$(awk '/^CSV_TABLE=\$\(cat <</{f=1;next} f&&/^CSV$/{exit} f{print}' "$script")
+  [ "$extracted" = "$(cat "$oracle")" ]
+}
