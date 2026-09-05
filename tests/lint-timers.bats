@@ -108,3 +108,249 @@ JAVA
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"discarded-ticket"* ]]
 }
+
+# ===========================================================================
+# CAMPAIGN 8 EXTENSION — lint-timers.sh gains three lifecycle checks, all from
+# [CERT-live] PANCCADIA/chihuahua production shapes. RED today: lint-timers.sh
+# has only timer-ticket + discarded-ticket, so each FAIL pin sees the current
+# tool return exit 0 (it does not implement these checks) → fails for the right
+# reason (check absent). Each new test writes its fixture into its OWN dir so
+# TL1–TL4's shared $SRC is never touched (they stay green). Fixtures are
+# self-contained, sanitized Java (real shapes cited per check).
+#
+# NEW CHECK LABELS (contract the GREEN impl must emit in the row's <check> column):
+#   companion-flag   TC-A   a boolean flag set true beside a Clock.schedule*
+#                           assignment, not set false in stopped()
+#   jdk-thread       TC-B   a JDK concurrency primitive inside a B* component/service
+#   changed-sched    TC-C   a Clock.schedule* reachable from changed()/started()
+#                           (≤1 level deep) with no isRunning()/atSteadyState() guard
+#
+# NAMED MUTATIONS (run post-green, one per check — proves each check carries its
+# own bite, not an unrelated grep):
+#   TC-A  accept ANY stopped() that cancels the ticket → companion-flag stops
+#         firing → TC-A FAIL pin flips green.
+#   TC-B  whitelist ScheduledExecutorService → jdk-thread stops firing → TC-B flips.
+#   TC-C  drop the one-level-deep call following (only scan changed()/started()
+#         bodies directly) → the indirect applyRunCmd() schedule is no longer
+#         reachable → changed-sched stops firing → TC-C flips.
+# ---------------------------------------------------------------------------
+
+# ---- TC-A: companion-flag -------------------------------------------------
+# Real shape: CompPan BCompressorControl.java — :1760 `startingUp = true;` next to
+# :1764 `powerOnTicket = Clock.schedule(...)`; stopped() (:1799–1802) cancels the
+# ticket only. The flag IS set false at :1864 but in the expiry handler, NOT in
+# stopped()/started(); a component stop→start cycle (disable/enable, move, parent
+# stop) keeps the same object, so if the stop lands mid-stagger the flag stays true.
+# Decision (lead, first principles): a clear ONLY in the expiry path does NOT count;
+# it must be cleared in stopped() (or started() — either breaks the carry-over).
+# BStaggerHold reproduces the expiry-path-only clear exactly, so this pin also
+# forces the impl to scope the clear to the lifecycle callbacks (a bare grep for
+# `startingUp = false` anywhere would wrongly PASS it).
+@test "TC-A: a flag cleared only in the expiry path (not stopped/started) FAILs naming the field" {
+  D="$BATS_TEST_TMPDIR/tca"; mkdir -p "$D"
+  cat > "$D/BStaggerHold.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BStaggerHold extends BComponent {
+  private boolean startingUp = false;
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void doPowerOnExpired() {
+    startingUp = false;   // cleared ONLY in the expiry path (real BCompressorControl:1864) — does NOT count
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+    // BUG: startingUp is NOT cleared here; a stop mid-stagger leaves it stuck true for this run.
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"companion-flag"* ]]
+  [[ "$output" == *"startingUp"* ]]     # names the offending field
+}
+
+@test "TC-A companion: the same flag CLEARED in stopped() does NOT FAIL (proves the check bites on the clear-location)" {
+  D="$BATS_TEST_TMPDIR/tca_ok"; mkdir -p "$D"
+  cat > "$D/BStaggerClean.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BStaggerClean extends BComponent {
+  private boolean startingUp = false;
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+    startingUp = false;   // cleared on stop — conformant
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+@test "TC-A companion: the flag cleared in started() (not stopped) does NOT FAIL (either lifecycle callback counts)" {
+  # Lead decision: started() breaks the carry-over just as stopped() does, so a clear
+  # there must also count. If the impl only accepts stopped(), this pin FAILs — it
+  # forces started() into the accepted set. The real fix branch (fix/power-on-hold-vs-defrost
+  # 268d70f) clears startingUp in stopped(); this companion pins the started() variant too.
+  D="$BATS_TEST_TMPDIR/tca_started"; mkdir -p "$D"
+  cat > "$D/BStaggerStarted.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BStaggerStarted extends BComponent {
+  private boolean startingUp = false;
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void started() throws Exception {
+    super.started();
+    startingUp = false;   // cleared on (re)start — breaks the carry-over just as stopped() would
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+# ---- TC-B: jdk-thread -----------------------------------------------------
+# Real shape: chihuahua BChiDashboardService.java — :89 `extends BAbstractService`,
+# :229 `ScheduledExecutorService _tickScheduler`, :305 Executors.new*, :309 new Thread.
+# A B* component/service must schedule via Clock, not a raw JDK thread pool (the pool
+# is not tied to station lifecycle and survives stop). Isolated to ScheduledExecutorService
+# as the sole trigger so the whitelist mutation flips this cleanly.
+@test "TC-B: a ScheduledExecutorService inside a B* service FAILs (jdk-thread)" {
+  D="$BATS_TEST_TMPDIR/tcb"; mkdir -p "$D"
+  cat > "$D/BThreadSvc.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+public class BThreadSvc extends BAbstractService {
+  private ScheduledExecutorService _tickScheduler = null;
+  public void serviceStarted() throws Exception {
+    _tickScheduler = Executors.newSingleThreadScheduledExecutor();
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"jdk-thread"* ]]
+  [[ "$output" == *"BThreadSvc"* ]]
+}
+
+@test "TC-B companion: a plain (non-B*) helper using ScheduledExecutorService does NOT FAIL (the B* gate)" {
+  D="$BATS_TEST_TMPDIR/tcb_ok"; mkdir -p "$D"
+  cat > "$D/PlainPool.java" <<'JAVA'
+package demo;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+public final class PlainPool {
+  private final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+# ---- TC-C: changed-sched --------------------------------------------------
+# Real shape: ColdRoomPan BEvaporatorUnit.java — changed() (:849) → applyRunCmd()
+# (:876, one level deep) → Clock.schedule (:900/:913). Pre-fix applyRunCmd had NO
+# steady-state guard → the engine rejected the schedule during changed() before
+# steady state (NotRunningException ×6 in PANCCADIA logs). The fix adds
+# :885 `if (!Sys.atSteadyState()) return;`. Both fixtures cancel their tickets in
+# stopped() so timer-ticket PASSes — only changed-sched can carry the FAIL.
+@test "TC-C: Clock.schedule reachable from changed() via a private method with no steady-state guard FAILs" {
+  D="$BATS_TEST_TMPDIR/tcc"; mkdir -p "$D"
+  cat > "$D/BUnitPre.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BUnitPre extends BComponent {
+  private Clock.Ticket startDelayTicket;
+  public void changed(Property p, Context cx) {
+    if (!isRunning()) return;
+    applyRunCmd();                 // one level deep -> schedules with no steady-state guard
+  }
+  void applyRunCmd() {
+    startDelayTicket = Clock.schedule(this, BRelTime.makeSeconds(5), startDelayExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (startDelayTicket != null) { startDelayTicket.cancel(); startDelayTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"changed-sched"* ]]
+}
+
+@test "TC-C companion: the SAME chain guarded by !Sys.atSteadyState() return does NOT FAIL (the fix shape)" {
+  D="$BATS_TEST_TMPDIR/tcc_ok"; mkdir -p "$D"
+  cat > "$D/BUnitFixed.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BUnitFixed extends BComponent {
+  private Clock.Ticket startDelayTicket;
+  public void changed(Property p, Context cx) {
+    if (!isRunning()) return;
+    applyRunCmd();
+  }
+  void applyRunCmd() {
+    if (!Sys.atSteadyState()) return;   // the fix — no schedule before steady state
+    startDelayTicket = Clock.schedule(this, BRelTime.makeSeconds(5), startDelayExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (startDelayTicket != null) { startDelayTicket.cancel(); startDelayTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+# ---- TC-D: D9b dot-dir prune ----------------------------------------------
+# Design addendum D9b: every kit source scanner prunes dot-directories (.deploy-baseline snapshots,
+# .git, etc.). A real defect that lives ONLY under a dot-dir must NOT be flagged — else report-module's
+# schema-risk baseline (kept at <artifact>/.deploy-baseline) makes lint-timers double-count the previous
+# deploy's classes. RED today: lint-timers.sh does `find <root> -name '*.java'` with NO prune, so it
+# DOES flag the leak under .deploy-baseline/ -> the pin fails for the right reason (prune not yet added).
+# NAMED MUTATION (post-green): remove the dot-dir prune -> BStale's leak is flagged again -> TC-D flips.
+@test "TC-D: a timer leak under .deploy-baseline/ is NOT flagged (dot-dir pruned)" {
+  D="$BATS_TEST_TMPDIR/tcd"; mkdir -p "$D/.deploy-baseline/com/x"
+  cat > "$D/.deploy-baseline/com/x/BStale.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BStale extends BComponent {
+  private Clock.Ticket t;
+  public void arm() { t = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() cancel -> a real leak, but it lives under .deploy-baseline/ so it must be pruned
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" != *"BStale"* ]]
+}
