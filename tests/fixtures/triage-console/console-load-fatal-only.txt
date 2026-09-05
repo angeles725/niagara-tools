@@ -1,0 +1,7 @@
+INFO [08:14:01 03-Sep-26 CST][sys] Station starting: Paccadia
+SEVERE [08:14:07 03-Sep-26 CST][sys] Cannot load station
+  java.lang.ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex
+  	at com.tridium.sys.schema.ComponentSlotMap.decode(ComponentSlotMap.java:812)
+  	at com.tridium.sys.station.Station.loadBog(Station.java:1102)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)
+INFO [08:14:20 03-Sep-26 CST][sys] fault state; awaiting operator

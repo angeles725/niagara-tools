@@ -1,0 +1,7 @@
+INFORMACION [08:14:01 03-Sep-26 CST][sys] Iniciando estacion: Paccadia
+GRAVE [08:14:07 03-Sep-26 CST][sys] No se puede cargar la estacion
+  java.lang.ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex
+  	at com.tridium.sys.schema.ComponentSlotMap.decode(ComponentSlotMap.java:812)
+  	at com.tridium.sys.station.Station.loadBog(Station.java:1102)
+ADVERTENCIA [08:14:07 03-Sep-26 CST][sys.xml] No se puede asignar la propiedad RoomPanel.setpoint: java.lang.ClassCastException
+ADVERTENCIA [08:14:08 03-Sep-26 CST][sys.xml] Propiedad congelada ausente: differentialUp en RoomPanel

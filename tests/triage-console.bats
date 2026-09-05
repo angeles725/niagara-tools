@@ -68,3 +68,48 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"modifyThread"* ]]
 }
+
+# ===========================================================================
+# THIRD ATTRIBUTION CHANNEL — load-time failures with NO own frame and NO own
+# logger tag. [CERT-live] PANCCADIA: after the ColdRoomPan-rt reload a slot type
+# drifted (BRelTime vs BComplex in the saved .bog), so the station NEVER STARTED.
+# The failure surfaces only as framework loggers — SEVERE [sys] "Cannot load
+# station" (the ClassCastException on the following line) and WARNING [sys.xml]
+# lines naming our types/slots — with a com.tridium-only stack. Channels 1 (own
+# frame, TR1-2) and 2 (own logger, TR5) BOTH miss it: the outage is invisible.
+# This is exactly the class of defect the kit must not swallow.
+#
+# The channel is shape-based, not package-based (there is no own frame to match):
+# a [sys] "Cannot load station" SEVERE carries its exception; [sys.xml] "Cannot
+# set property" / "Missing frozen property" / "Cannot decode slot" are saved-bog
+# schema-drift symptoms (the MM3/B795 survival matrix in log form).
+#
+# NAMED MUTATION (post-green): drop the third channel -> the fatal ClassCastException
+# row vanishes. The load-fail fixtures are PURE third-channel (no own frame, no own
+# logger), so with nothing else to carry a row the exit flips 1 -> 0. TR8 pins that
+# flip on a fatal-only fixture where the [sys] row is the single row.
+
+@test "TR7: a load-failure console (no own frame, no own logger) surfaces the fatal + sys.xml drift, exit 1" {
+  run "$TC" --package com.angeles "$FX/console-load-fail.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ClassCastException"* ]]             # the previously-invisible fatal is now surfaced
+  [[ "$output" == *"BRelTime"* ]] && [[ "$output" == *"BComplex"* ]]
+  [[ "$output" == *"RoomPanel"* ]] || [[ "$output" == *"differentialUp"* ]]   # a sys.xml drift row grouped in
+  [[ "$output" != *"com.tridium.sys.station.Station"* ]]  # the tridium boot frame is noise, not a row
+}
+
+@test "TR8: a fatal-only load failure -> exactly the [sys] row, exit 1 (the mutation flips this 1->0)" {
+  run "$TC" --package com.angeles "$FX/console-load-fatal-only.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ClassCastException"* ]]
+  # This fixture has NO own frame, NO own logger, NO sys.xml — the [sys] fatal is the ONLY row.
+  # Dropping the third channel therefore yields zero rows -> exit 0: a clean green<-RED mutation proof.
+}
+
+@test "TR9: Spanish load-failure levels are normalized in the output (GRAVE->SEVERE, ADVERTENCIA->WARNING)" {
+  run "$TC" --package com.angeles "$FX/console-load-fail-es.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ClassCastException"* ]]   # the exception is language-independent — the real signal
+  [[ "$output" == *"SEVERE"* ]]               # GRAVE normalized
+  [[ "$output" == *"WARNING"* ]]              # ADVERTENCIA normalized
+}

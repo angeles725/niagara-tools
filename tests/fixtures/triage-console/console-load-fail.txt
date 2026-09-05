@@ -1,0 +1,13 @@
+INFO [08:14:01 03-Sep-26 CST][sys] Station starting: Paccadia
+INFO [08:14:03 03-Sep-26 CST][sys] loading modules
+SEVERE [08:14:07 03-Sep-26 CST][sys] Cannot load station
+  java.lang.ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex
+  	at com.tridium.sys.schema.ComponentSlotMap.decode(ComponentSlotMap.java:812)
+  	at com.tridium.sys.station.Station.loadBog(Station.java:1102)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)
+WARNING [08:14:07 03-Sep-26 CST][sys.xml] Cannot set property RoomPanel.setpoint: java.lang.ClassCastException: BRelTime cannot be cast to BComplex
+WARNING [08:14:07 03-Sep-26 CST][sys.xml] Missing frozen property: differentialUp on RoomPanel
+WARNING [08:14:07 03-Sep-26 CST][sys.xml] Cannot set property EvaporatorUnit.startDelay: type mismatch (BComplex vs BRelTime)
+WARNING [08:14:07 03-Sep-26 CST][sys.xml] Missing frozen property: staggerDelay on CompressorControl
+WARNING [08:14:08 03-Sep-26 CST][sys.xml] Cannot decode slot DefrostController.interval: java.lang.ClassCastException
+SEVERE [08:14:09 03-Sep-26 CST][sys] Station failed to start; entering fault state
