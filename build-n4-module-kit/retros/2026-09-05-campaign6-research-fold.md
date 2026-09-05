@@ -39,3 +39,7 @@ None — all 10 types/logic.md sections and all dashboard.md/wb-widgets.md/METHO
 2. Code-folded retros (shipped as scripts rather than prose rules) need a "folded as code: <script> [ev: retro <token>]" line in a prose kit file to be credited by the citation audit.
 3. The B773 analytics-node exception (NO @AgentOn — registered by plain `<type>`) is a critical distinction that breaks the "one idiom for all SPIs" assumption — explicitly folded as a named EXCEPTION.
 4. The strict fold-audit gate is a valid CI promotion: 38 folded, 38 cited, 0 uncited, exit 0.
+
+## Lesson added at review time — source file vs inlined artifact
+
+QA's independent spot-check found METHODOLOGY line 15 (B636: neutralize the wizard's `module-permissions.xml` scaffold) in tension with the promoted B777 row ("permissions are inline in module.xml, not a separate file"). Verified on DashboardPan-ux: the SOURCE tree carries `module-permissions.xml` (`<permissions/>`), and the BUILT jar's `META-INF/module.xml` line 15 carries the same `<permissions/>` inlined by the gradle plugin; the jar contains no separate permissions file. Both statements are true at different levels; the kit row now states the source→artifact relationship. B777's "corrects B721" claim needs a §14 addendum in niagara-research (B721 described the source level correctly). [ev: DashboardPan-ux jar META-INF/module.xml:15; corpus B777]
