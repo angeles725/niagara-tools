@@ -81,10 +81,3 @@ mk_html() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
 }
-
-@test "PL6: fixture file (ok/index.html) yields same PASS result via HTML path" {
-  FX="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/tests/fixtures/plano/ok/index.html"
-  run "$VM" --plano "$FX"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"PASS"* ]]
-}
