@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+bats_require_minimum_version 1.5.0
 # RED-FIRST enforcement test for the continuity + retro gate (campaign PR2).
 # Frozen contract (Mejoras, 2026-09-04), split in two because kit-links.bats L2 forbids
 # a toolbelt/*.sh from invoking git:
