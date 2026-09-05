@@ -346,3 +346,71 @@ Confirms issue #49: `.frame{aspect-ratio:1247/771}` is stale, masked by `#frame{
 ### Status
 
 9/9 PR6 tasks complete. Ready for verify.
+
+---
+
+## PR7 — docs/c7-logic-split (2026-09-05)
+
+**Status**: complete
+**Mode**: Standard (TDD RED→GREEN for L4/L5/L6)
+**Branch**: docs/c7-logic-split
+**Head SHA**: c0e1744
+**PR**: https://github.com/angeles725/niagara-tools/pull/58
+**CI**: pass (51s)
+**Worker**: sdd-apply (Claude Sonnet 4.6)
+
+### Completed Tasks
+
+- [x] 7.1 grep-before-fold: 1 hit (logic.md heading itself); 0 hits in SKILL.md and BUILD-LOOP.md — CD3 satisfied
+- [x] 7.2 types/logic.md: lines 1-90 kept verbatim; line 91 = cross-reference to logic-authoring.md (91 lines, ≤ 91 ✓)
+- [x] 7.3 types/logic-authoring.md created: 3-line HTML comment header + verbatim lines 91-136 from original (49 lines)
+- [x] 7.4 skill/SKILL.md: v0.5→v0.6; framework-ext row added to decision table; scaffold-module.sh + schema-risk.sh added to refs+step5; BUILD-LOOP.md: §1 scaffold-module.sh, §2 logic-authoring.md sibling, §5 schema-risk.sh pre-gate
+- [x] 7.5 kit-links.bats L4/L5/L6 added; L5 was naturally RED (scaffold+schema missing from both docs before this PR)
+- [x] 7.6 bats tests/kit-links.bats → 6/6 GREEN; bats tests/*.bats → 176/176 GREEN
+- [x] 7.7 Named mutation: delete schema-risk.sh from BUILD-LOOP.md + SKILL.md → L5 fails (schema-risk.sh missing); reverted
+- [x] 7.8 Retro 2026-09-05-campaign7-logic-split.md + INDEX row + BUILD-STATE.md kit envelope (Campaign 7 PR7)
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/types/logic.md` | Modified | Lines 91-136 removed; cross-reference to logic-authoring.md added at line 91 (91 lines ≤ 91) |
+| `build-n4-module-kit/types/logic-authoring.md` | Created | 3-line HTML header + verbatim lines 91-136 from original logic.md (49 lines) |
+| `build-n4-module-kit/skill/SKILL.md` | Modified | v0.5→v0.6; framework-ext row; scaffold+schema refs added; step 5 updated |
+| `build-n4-module-kit/BUILD-LOOP.md` | Modified | §1 scaffold-module.sh; §2 logic-authoring.md sibling; §5 schema-risk.sh |
+| `build-n4-module-kit/corpus-index.md` | Modified | §Campaign 6 retargeted: logic.md → logic-authoring.md (2 changes) |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | PR7 retro row added |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-logic-split.md` | Created | PR7 retro (review-status: pending; 5 lessons: audience boundary, invariant, L5 gap, shellcheck directive, corpus-index) |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | Kit envelope: Campaign 7 PR7 last_commit/last_session |
+| `tests/kit-links.bats` | Modified | L4/L5/L6 added (43 new lines; shellcheck 0) |
+| `openspec/changes/build-n4-module-campaign7/tasks.md` | Modified | PR7 tasks 7.1-7.8 marked [x] |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command | `bats tests/kit-links.bats` → 6/6 ok (L1-L6) |
+| Full bats | `bats tests/*.bats` → 176/176 passing, 0 failing |
+| Shellcheck | `shellcheck toolbelt/*.sh tests/*.bats tests/helpers/*.bash` → exit 0 |
+| Sweep guards | `sweep-build-state.sh` → exit 0; `sweep-fold-audit.sh --strict` → 47 folded/cited, exit 0 |
+| Split invariant | `wc -l logic.md = 91 ≤ 91`; 0 lost lines; 0 duplicates; 4 new infra lines (3 header + 1 cross-ref) |
+| L5 mutation | Delete schema-risk.sh from both docs → `not ok L5: toolbelt script not in BUILD-LOOP.md or skill/SKILL.md: schema-risk.sh`; reverted |
+| CI | PR #58 pass (shellcheck + bats + ledger sweep) 51s |
+| Rollback boundary | Revert split: `git revert` commit c0e1744 — removes logic-authoring.md, restores logic.md, reverts all refs; kit returns to PR6 state |
+
+### Deviations from Design
+
+- **L4 implementation differs from tasks.md §7.5**: tasks.md says "L4 = every toolbelt/*.sh named in BUILD-LOOP.md"; orchestrator instruction says "L4 = every types/*.md named in SKILL.md decision table exists". Implemented per orchestrator (types/*.md check) as it directly validates the new logic-authoring.md routing. L5 (the toolbelt routing guard, OR-combined across both docs) covers the toolbelt coverage requirement from D10. L5 was naturally RED for scaffold-module.sh and schema-risk.sh.
+- **scaffold-module.sh and schema-risk.sh not yet documented in routing docs**: These PR4/PR5 scripts were added to BUILD-LOOP.md and SKILL.md in this PR (PR7) rather than PR2, per coordinator instruction. Tagged `[ev: retro tool-integration]`.
+- **corpus-index.md §Campaign 6 retargeted**: The section heading `### → types/logic.md` and its prose reference both updated to `types/logic-authoring.md`. This is a mandatory consequence of the split (all blocks in that section describe content now in logic-authoring.md).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, stacked-to-main)
+- Current work unit: PR7 docs/c7-logic-split
+- Boundary: starts at PR6 head (69270aa), ends with split + tests + routing refs + retro + envelope (head c0e1744)
+- Estimated review budget: ~76 authored lines (within 400-line budget)
+
+### Status
+
+8/9 PR7 tasks complete (7.9 is post-merge orchestrator action). PR #58 OPEN, CI green. Ready for verify.
