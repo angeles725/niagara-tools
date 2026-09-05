@@ -1,0 +1,11 @@
+#
+# Lexicon for the MinimalPan module.
+# Display names shown in Workbench. Key = type or slot name.
+#
+
+# --- Component type display names ---
+MinimalPan=Minimal Panel
+
+# --- MinimalPan slots ---
+MinimalPan.setpoint=Setpoint
+MinimalPan.interval=Interval
