@@ -47,3 +47,7 @@ campaign5-gate-activation, ci-server-side-enforcement. All pending→folded, mar
 
 Connections: [[2026-09-04-kit-continuity-and-retro-gate-campaign]], [[2026-09-04-campaign5-gate-activation]];
 build-n4-module-campaign6 PR3 tasks T3.1–T3.6.
+
+## Lesson added at merge time — the close gate anchors on BUILD-STATE too
+
+The PR3 branch push passed the pre-push hook, but the fast-forward push of `main` was BLOCKED: the hook (`.githooks/pre-push` line 54) requires, in the SAME push range, a `BUILD-STATE.md` update AND a pending retro AND its INDEX row. A promotion PR that flips rows still changes build-relevant kit files (METHODOLOGY.md, CONTRIBUTING.md), so it owes the kit self-envelope update exactly like a feature PR. **Proposed delta (BUILD-LOOP §7):** state explicitly that every exit — (a) new retro, (b) trailer, (c) promotion — pairs its retro/INDEX anchor with the kit `BUILD-STATE.md` self-envelope update in the same commit range, and that a branch push is not proof: the range the hook sees on `main` is the whole PR. [ev: this PR, blocked push 2026-09-05]
