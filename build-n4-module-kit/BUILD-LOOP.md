@@ -46,6 +46,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
 - **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro tool-integration]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present).
 - The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station.
+- **Aggregated punch-list before hand-off:** `toolbelt/report-module.sh <module-root> [--target-version x.y]` composes all the above per profile artifact and prints one aggregated report; exit 1 = punch-list has FAILs that block hand-off. [ev: retro campaign7-report-module]
 
 ## 6. Deploy (station) — operator
 - Sign (auto), stop station, replace jars in `<niagara_home>/modules/`, start. Place components at their fixed ORDs; link points. Open the URL.

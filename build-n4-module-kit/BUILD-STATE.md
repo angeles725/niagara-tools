@@ -29,7 +29,7 @@ modules, not sixty focuses.
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
-| kit | niagara-tools | self | 2026-09-05 | n/a | n/a | yes | 3 |
+| kit | niagara-tools | self | 2026-09-05 | n/a | n/a | yes | 0 |
 
 ---
 
@@ -157,8 +157,8 @@ open_issues:
   - CAMPAIGN 5 (activate the retro-enforcement gate — built but inert): AG-PR1 (v0.15.0) DONE — hardened `.githooks/pre-push` so the promotion exit accepts an in-range INDEX.md diff OR an in-range BUILD-STATE.md diff (fixes the partial-promotion FALSE-NEGATIVE found in C4-PR2), with the blanket-escape guard kept (trailer + NEITHER anchor → FAIL) and `sweep` run on both anchored paths; added `scripts/install-hooks.sh` (idempotent opt-in activation, `--uninstall`, refuses to clobber a custom hooksPath without `--force`); documented activation in BUILD-LOOP §7 + CONTRIBUTING §6.1. Tests: build-retro-sync H8/H9/H10 + install-hooks I1-I4. This closed the earlier gate-hardening open_issue. AG-PR1 carries its OWN feature-retro (campaign5-gate-activation) via the new-retro exit (a) — a pure feature PR is NOT a 4th gate shape, it uses exit (a); so the PR that activates the gate passes its own gate, and the Campaign 5 close is consolidated into this PR (no separate close-retro PR). NEXT: the LIVE ACTIVATION smoke (run the installer in this repo + prove a trivial kit-file push without a retro/trailer is BLOCKED, then passes with the trailer); CI (AG-PR2) awaits the user's explicit call.
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
-retro_required: true                 # GATED — Campaign 7 PR7 retro owed
-retro_pending: true                  # GATED — campaign7-logic-split FILED as review-status: pending; fold-status in retros/INDEX.md
-last_commit: Campaign 7 PR7 docs/c7-logic-split
-last_session: 2026-09-05 · Campaign 7 PR7: types/logic.md split — ## Author-side SPIs through EOF moved to types/logic-authoring.md (49 lines = 3-line header + 46 verbatim); logic.md 91 lines ≤ 91 invariant; corpus-index.md §Campaign 6 retargeted; SKILL.md v0.6 (framework-ext row + scaffold/schema refs); BUILD-LOOP §1/§2/§5 sibling refs; kit-links L4/L5/L6 green (176/176 bats); shellcheck 0; sweep-build-state 0; sweep-fold-audit 0 (47 folded/cited). L5 mutation proof: delete schema-risk from both docs → fails. Next: PR8 feat/c7-report (stretch).
+retro_required: true                 # GATED — Campaign 7 PR8 retro filed
+retro_pending: true                  # GATED — campaign7-report-module FILED as review-status: pending; fold-status in retros/INDEX.md
+last_commit: Campaign 7 PR8 feat/c7-report-module
+last_session: 2026-09-05 · Campaign 7 PR8 (stretch): toolbelt/report-module.sh — aggregated conformance report composing verify-module --src + slot-coverage + dup-keys + lint-timers + --plano per profile artifact; BUILD-LOOP §5 punch-list step + SKILL.md v0.7 routing; RM1-RM3 bats GREEN (179/179); shellcheck 0; sweep-build-state 0; sweep-fold-audit 0; real-tree smoke: ColdRoomPan-rt 9 PASS · 1 FAIL · 1 WARN · 1 SKIP → ISSUES exit 1 (BEvaporatorUnit timer-ticket FAIL + slot-coverage WARN @ 50%). Campaign 7 COMPLETE. Next: CLOSE — VERSION 0.18.0.
 <!-- /build-state.v1 -->

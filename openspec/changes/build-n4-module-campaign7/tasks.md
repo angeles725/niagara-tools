@@ -144,14 +144,14 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-report` | **QA hook**: `qa/c7-report-module` tip `412ee8e` | **Gate exit**: R8.1–R8.6
 
-- [ ] 8.1 Re-read QA RED `qa/c7-report-module` tip `412ee8e` before writing (CD4); confirm `<module-root> [--target-version x.y]` signature and exits 0/1/3 (D7a).
-- [ ] 8.2 Write `toolbelt/report-module.sh <module-root> [--target-version x.y]`: discover profile artifacts `<MOD>-{rt,ux,wb,…}`; per artifact invoke `verify-module.sh --src` (SKIP no jar), `slot-coverage.sh`, `lint-timers.sh <artifact>/src`, `--plano` when `<artifact>/src/rc/index.html` exists; aggregate rows + member exits (D7a severity map); exit 0 CLEAN / 1 FAIL / 3 env; `set -u`; `shellcheck` clean (R8.6).
-- [ ] 8.3 Copy `tests/report-module.bats` from `qa/c7-report-module` tip (RM1–RM3 verbatim) + add: slot-coverage WARN stays WARN (not FAIL) mutation; member-exiting-3 emits ERROR row + report exits 3.
-- [ ] 8.4 Create `tests/fixtures/report/` clean rt-only fixture + leak fixture (`BLeak.java` with timer-cancel omitted).
-- [ ] 8.5 Add CI step: `report-module.sh tests/fixtures/report/<mod>` → exit 0.
-- [ ] 8.6 Named mutations in PR body: drop lint-timers aggregation → RM2 exits 0; promote WARN → FAIL flip; swallow member env faults (R8.5).
-- [ ] 8.7 Local bless: run ColdRoomPan-rt B798 report (7 PASS · 1 FAIL · 1 WARN → ISSUES, exit 1); paste output in PR body. Not a CI pin.
-- [ ] 8.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 8.1 Re-read QA RED `qa/c7-report-module` tip `412ee8e` before writing (CD4); confirm `<module-root> [--target-version x.y]` signature and exits 0/1/3 (D7a).
+- [x] 8.2 Write `toolbelt/report-module.sh <module-root> [--target-version x.y]`: discover profile artifacts `<MOD>-{rt,ux,wb,…}`; per artifact invoke `verify-module.sh --src` (SKIP no jar), `slot-coverage.sh`, `lint-timers.sh <artifact>/src`, `--plano` when `<artifact>/src/rc/index.html` exists; aggregate rows + member exits (D7a severity map); exit 0 CLEAN / 1 FAIL / 3 env; `set -u`; `shellcheck` clean (R8.6).
+- [x] 8.3 Copy `tests/report-module.bats` from `qa/c7-report-module` tip (RM1–RM3 verbatim) + add: slot-coverage WARN stays WARN (not FAIL) mutation; member-exiting-3 emits ERROR row + report exits 3.
+- [x] 8.4 Create `tests/fixtures/report/` clean rt-only fixture + leak fixture (`BLeak.java` with timer-cancel omitted).
+- [x] 8.5 Add CI step: `report-module.sh tests/fixtures/report/<mod>` → exit 0.
+- [x] 8.6 Named mutations in PR body: drop lint-timers aggregation → RM2 exits 0; promote WARN → FAIL flip; swallow member env faults (R8.5).
+- [x] 8.7 Local bless: run ColdRoomPan-rt B798 report (7 PASS · 1 FAIL · 1 WARN → ISSUES, exit 1); paste output in PR body. Not a CI pin.
+- [x] 8.8 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 
 ---
 

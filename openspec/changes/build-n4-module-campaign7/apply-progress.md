@@ -414,3 +414,69 @@ Confirms issue #49: `.frame{aspect-ratio:1247/771}` is stale, masked by `#frame{
 ### Status
 
 8/9 PR7 tasks complete (7.9 is post-merge orchestrator action). PR #58 OPEN, CI green. Ready for verify.
+
+---
+
+## PR8 — feat/c7-report-module (Campaign 7 PR8, 2026-09-05)
+
+**Mode**: Strict TDD | **Branch**: feat/c7-report-module | **Ledger token**: sha256:2bc83baec7834a446a8592df3b25060fa11f2cadee10904f0ce5e94bbee2681c
+
+### TDD Cycle Evidence
+
+| Task | RED | GREEN | REFACTOR |
+|------|-----|-------|----------|
+| RM1-RM3 (bats tests/report-module.bats) | Confirmed: exit 127 (script absent), 3 not ok | `report-module.sh` written, all 3 pass | `set -u`, no `set -e`, shellcheck 0 |
+
+### Completed Tasks
+
+- [x] 8.1 Re-read QA RED before writing; signature + exits confirmed (D7a)
+- [x] 8.2 Write `toolbelt/report-module.sh` — discovers artifacts, composes 4 tools, aggregates rows + member exits; exit 0 CLEAN / 1 FAIL / 3 env; `set -u`; shellcheck 0
+- [x] 8.3 `tests/report-module.bats` was already present (RED commit 3d5f8ea); RM1-RM3 verbatim confirmed
+- [x] 8.4 Fixtures `tests/fixtures/report-module/{clean,leak}/DemoPan-rt` already present (RED commit)
+- [x] 8.5 No separate CI step added (RM1 covers the clean-exit path)
+- [x] 8.6 Named mutation verified: drop lint-timers aggregation → RM2 fails (and RM1/RM3 also fail due to `set -u` error on unset `lt_out`)
+- [x] 8.7 Real-tree smoke: ColdRoomPan-rt `NIAGARA_HOME=/mnt/c/Honeywell/OptimizerSupervisor-N4.14.0.162` → 9 PASS · 1 FAIL · 1 WARN · 1 SKIP → ISSUES, exit 1 (BEvaporatorUnit timer-ticket FAIL + slot-coverage WARN @ 50%)
+- [x] 8.8 Retro `retros/2026-09-05-campaign7-report-module.md` + INDEX row + BUILD-STATE.md self-envelope committed
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/toolbelt/report-module.sh` | Created | 208-line aggregated report composer |
+| `build-n4-module-kit/BUILD-LOOP.md` | Modified | §5 punch-list step `[ev: retro campaign7-report-module]` |
+| `build-n4-module-kit/skill/SKILL.md` | Modified | version 0.7; step 5 + References entry |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-report-module.md` | Created | 3 proposed deltas; review-status: pending |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | +1 row for campaign7-report-module |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | kit self-envelope updated for PR8 close |
+| `openspec/changes/build-n4-module-campaign7/tasks.md` | Modified | PR8 tasks 8.1-8.8 marked [x] |
+| `openspec/changes/build-n4-module-campaign7/apply-progress.md` | Modified | PR8 section appended |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command | `bats tests/report-module.bats` → 3/3 ok (RM1-RM3) |
+| Full bats | `bats tests/*.bats` → 179/179 passing, 0 failing |
+| Shellcheck | `shellcheck ... report-module.sh` → exit 0 |
+| Sweep guards | `sweep-build-state.sh` → exit 0; `sweep-fold-audit.sh --strict` → 47 folded/cited, exit 0 |
+| Mutation test | Drop lint-timers aggregation → RM2 fails (exits 0 instead of 1); reverted |
+| Real-tree smoke | `report-module.sh ColdRoomPan --target-version 4.14` → 9 PASS · 1 FAIL · 1 WARN · 1 SKIP; exit 1 (B798 confirmed) |
+| Attribution check | `git log --format=%B b79c7da..HEAD \| grep -iE co-authored\|generated with\|claude` → 0 matches |
+| Rollback boundary | `git revert HEAD` removes report-module.sh; reverts BUILD-LOOP.md/SKILL.md routing entries; kit returns to PR7 state |
+
+### Deviations from Design / Contract
+
+- **B798 expected shows 7 PASS · 1 FAIL · 1 WARN · 0 SKIP vs actual 9 PASS · 1 FAIL · 1 WARN · 1 SKIP**: the contract's expected output was from an earlier run without `--src` (typecount/facets/stored rows absent). With `--src MODULE_ROOT`, verify-module adds typecount (PASS), facets (PASS), and stored (SKIP) rows. BEvaporatorUnit FAIL and slot-coverage WARN both appear as required; exit 1 confirmed. The contract's B798 block is a pruned snapshot, not a byte-golden — the QA pins (RM1-RM3) are the real contract.
+- **tasks.md 8.3/8.4**: tests/fixtures were already present in the RED commit (3d5f8ea); task description said "copy/create" but they were already there.
+- **tasks.md 8.5**: No additional CI step needed beyond RM1 (which proves clean-exit on the fixture).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (auto-chain, stacked-to-main), size within 500-line budget
+- Current work unit: PR8 feat/c7-report-module (last code PR of Campaign 7)
+- Authored diff: 271 insertions, 8 deletions = 279 changed lines (within 500-line budget)
+- Rollback: `git revert` the PR8 commit removes report-module.sh and all routing docs
+
+### Status
+
+8/8 PR8 tasks complete. Ready for verify. Campaign 7 code PRs complete (PR1-PR8 of 8).
