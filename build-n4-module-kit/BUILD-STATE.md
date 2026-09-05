@@ -159,6 +159,6 @@ open_issues:
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
 retro_pending: true                  # campaign8-lint-delays filed (pending); 4 proposed deltas
-last_commit: Campaign 8 PR1 feat/c8-lint-delays
-last_session: 2026-09-05 · Campaign 8 PR1: lint-delays.sh (new, 11.5 KB), tests/lint-delays.bats LD1-LD11, openspec-design D2b+D9b+D2c, BUILD-LOOP.md §5 routing, skill/SKILL.md v0.7→0.8 routing+References; D2b cross-file helper resolution, D2c same-method guard recognition; bats 191/191; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; kit-links L1-L6 green. BDefrostController+BEvaporatorUnit clean in fixed tree c66e412.
+last_commit: Campaign 8 PR1 feat/c8-lint-delays (D2c fixup + LD11 cherry-pick)
+last_session: 2026-09-05 · Campaign 8 PR1 complete: lint-delays.sh (D2b+D2c+D9b), LD1-LD11 (191/191 green). D2c: find_guard() backward scan recognises same-expression positivity guards; comment-strip prevents false matches; expression-specific (MisGuarded stays FAIL). Fixed c66e412 exits 0 (BDefrostController D2b, BEvaporatorUnit D2c). Pre-fix 4f5f1c7 exits 1 ({556,566,620,664}).
 <!-- /build-state.v1 -->
