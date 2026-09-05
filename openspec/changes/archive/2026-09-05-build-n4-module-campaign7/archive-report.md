@@ -94,7 +94,7 @@ Per proposal §2.2 and final-state facts, all out-of-scope and deferred work is 
 - **#46** schema-risk.sh → PR5 delivered
 - **#47** verify-module --plano → PR6 delivered
 - **#48** campaign-6 retro fold → PR1 delivered
-- **#49** report-module.sh punch-list mode → PR8 delivered
+- **#49** report-module.sh punch-list mode → PR8 delivered the kit side; issue stays OPEN for the client module-repo fixes (DashboardPan-ux gate 4)
 
 ---
 
