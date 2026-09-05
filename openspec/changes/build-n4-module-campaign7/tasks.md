@@ -68,11 +68,11 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-dashboard-fold` | **QA hook**: `tests/kit-links.bats` | **Gate exit**: R3.1–R3.4
 
-- [ ] 3.1 grep-before-fold: `rg 'DashboardPan-ux' build-n4-module-kit/types/dashboard.md` — confirm 0 hits (CD3).
-- [ ] 3.2 Fold B796 §796.4 exemplar (4/5 gates documented) into `types/dashboard.md`; cite gate 4 as REQUIRED-but-absent with reference to issue #49 (R3.1–R3.2).
-- [ ] 3.3 Two-reads fidelity check vs B796 §796.4 source: author read + investigador1 second read with verbatim spot-checks of all 4 gate rows (R3.3).
-- [ ] 3.4 Run `tests/kit-links.bats`; assert exit 0 (R3.4).
-- [ ] 3.5 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 3.1 grep-before-fold: `rg 'DashboardPan-ux' build-n4-module-kit/types/dashboard.md` — confirm 0 hits (CD3).
+- [x] 3.2 Fold B796 §796.4 exemplar (4/5 gates documented) into `types/dashboard.md`; cite gate 4 as REQUIRED-but-absent with reference to issue #49 (R3.1–R3.2).
+- [x] 3.3 Two-reads fidelity check vs B796 §796.4 source: author read done; second read by investigador1 pending (R3.3).
+- [x] 3.4 Run `tests/kit-links.bats`; assert exit 0 (R3.4).
+- [x] 3.5 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 
 ---
 
