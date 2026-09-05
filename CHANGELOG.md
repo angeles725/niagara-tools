@@ -6,6 +6,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.17.0] - 2026-09-05
+
+### Added — Campaign 6 close: research fold + conformance lints (PR7 #42, PR8 #43, close PR)
+
+- **Research fold (PR7 #42):** 27 exemplar-backed deltas from the `/research-sdd` lanes into `types/logic.md`
+  (author-side SPIs idiom + instances B778/B782/B785 with the B773 analytics exception; point-extension authoring B772;
+  child-tree containers B779; grouping/relating surfaces B781; templates are artifact production B783; background jobs
+  B774; watchdogs and timers B775; action protection B776; minimal module B790 proven by the B793 build),
+  `types/dashboard.md` + `types/wb-widgets.md` (B780 palette/lexicon/@AgentOn; web-tier pointer table B791),
+  `METHODOLOGY.md` (B784 profile/dependency conventions; B775 watchdog note; permissions reconciled — one source
+  `module-permissions.xml`, one inlined `<permissions>` element, two child kinds [B777/B636]; lintable-vs-advisory rule +
+  human-review checklist), `corpus-index.md` (27 rows). `sweep-fold-audit.sh` promoted to `--strict` in CI after the two
+  legacy uncited folds were cited (T7.5).
+- **Conformance lints (PR8 #43):** `toolbelt/lint-timers.sh` (a class owning a `Clock.Ticket` / calling
+  `Clock.schedule*` without a cancelling `stopped()` → FAIL; discarded `Clock.schedule*` return → FAIL) — fires today on
+  ColdRoomPan `BEvaporatorUnit` [B787]; `sweep-build-state.sh --age --today <date> [--max-age N]` retro-debt aging
+  (E5 model; ESCALATED strictly past the threshold, N/A on zero pending); `preflight.sh` JDK 8 detection falls back to
+  `bin/java -version` when the JDK ships no `release` file (WSL openjdk-8, B793). Tests 104 → 152, every new check
+  RED-first with a named mutation.
+- **Close:** campaign-6 close retro (`retros/2026-09-05-campaign6-close-process-meta-lessons.md`, 11 meta-lessons),
+  sdd-verify report, final openspec state.
+
+### References
+
+- SDD change: `build-n4-module-campaign6` (PR1 #35 … PR8 #43; v0.16.0 tagged at PR6 #41, this entry covers what landed after it).
+- Engram topics `sdd/build-n4-module-campaign6/*`; research blocks B762–B793 (niagara-research).
+
+---
+
 ## [v0.16.0] - 2026-09-05
 
 ### Added / Changed — Campaign 6 close: tracked launcher, openspec durability, toolbelt completion (PR1–PR6)

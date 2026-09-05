@@ -186,6 +186,7 @@ Runtime harness: N/A for all slices — no station, jar, or operator data is tou
 - [x] **T8.3** Empty-palette WARN scoped to modules WITH components (verify-module palette check refinement) — B788 DashboardPan-wb scaffold case; mutation: scope check removed → typeless module warns. `[ev: corpus B788]` · ~15 lines
 - [x] **T8.4** Retro-debt aging: `sweep-build-state.sh --age --today <YYYY-MM-DD> [--max-age 30]` (or `sweep-retro-debt.sh`) per contract `openspec/changes/build-n4-module-campaign6/math-models-e5.md` (age from filename date, strictly > max-age → ESCALATED, 0 pending → N/A, injected today). QA RED off the pin vectors (2026-08-06 → 30 not escalated; 2026-08-05 → 31 escalated). Non-strict CI step. · ~50 lines
 - [x] **T8.5** METHODOLOGY "human-review checklist" rules stay ADVISORY (action-without-OPERATOR, order-sensitive container without legality, poll-that-should-subscribe): NO lint; already folded as doctrine in PR7 — verify no hard-fail was added. · 0 lines
+- [x] **T8.6a** `build-n4-module-kit/toolbelt/preflight.sh` — WSL jdk8 false-negative (no `release` file) fixed with a `bin/java -version` fallback; PF5 RED-first + named mutation (fallback removed → PF5 flips). Landed in PR8 #43 (91690fb). `[ev: corpus B793 §793.3]`
 - [x] **T8.6** PR8 retro + kit self-envelope (exit a).
 
 ---
