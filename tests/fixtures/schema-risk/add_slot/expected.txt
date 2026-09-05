@@ -1,0 +1,4 @@
+verdict: SAFE
+change_kind: add_slot
+b795_row: B754-754.6-r1 (new-default)
+note: after adds @NiagaraProperty hysteresis; old .bog has no entry -> new default. SAFE.

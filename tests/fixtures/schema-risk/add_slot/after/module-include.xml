@@ -1,0 +1,4 @@
+<types>
+  <!--com.angeles.MinimalPan-->
+  <type class="com.angeles.MinimalPan.BMinimalPan" name="MinimalPan"/>
+</types>

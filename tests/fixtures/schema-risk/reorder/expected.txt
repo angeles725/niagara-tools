@@ -1,0 +1,4 @@
+verdict: SAFE
+change_kind: reorder_slot
+b795_row: B754-754.6-r2 (byName.get, index-free)
+note: same slot set, declaration order swapped (setpoint<->interval). .bog binds by name. SAFE.

@@ -1,0 +1,4 @@
+verdict: LOSSY
+change_kind: rename_slot
+b795_row: B754-754.6-r9 (orphaned/warn-skip, not auto-migrated)
+note: 'setpoint' renamed to 'targetTemp' (same type). By-name keying sees remove(setpoint)+add(targetTemp); either classification is LOSSY (old data orphaned).

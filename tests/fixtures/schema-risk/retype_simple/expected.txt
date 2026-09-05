@@ -1,0 +1,4 @@
+verdict: OUTAGE
+change_kind: retype_simple
+b795_row: B754-754.6-r11 / B739 (decodePrimitive unwrapped)
+note: 'setpoint' simple type double->int; saved v= cannot parse, throw propagates past failFast guard. OUTAGE.

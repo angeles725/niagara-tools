@@ -1,0 +1,4 @@
+verdict: LOSSY
+change_kind: remove_slot_simple
+b795_row: B754-754.6-r7 (warningAndSkip 'Missing frozen property')
+note: after removes the simple double 'setpoint'; saved v= dropped, station boots. LOSSY.

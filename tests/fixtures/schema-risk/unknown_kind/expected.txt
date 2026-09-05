@@ -1,0 +1,4 @@
+verdict: OUTAGE
+change_kind: UNKNOWN
+b795_row: B795-795.2 fail-safe (no CSV row for a property->action slot-kind swap)
+note: 'setpoint' changes SLOT KIND property->action at the same name; the classifier has no change_kind row for a kind-swap -> UNKNOWN -> OUTAGE (never downgrade on uncertainty).

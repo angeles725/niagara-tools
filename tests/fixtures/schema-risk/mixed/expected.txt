@@ -1,0 +1,4 @@
+verdict: OUTAGE
+change_kind: add_slot=SAFE + retype_simple=OUTAGE
+b795_row: worst-cell (OUTAGE>LOSSY>SAFE)
+note: two changes: add hysteresis (SAFE, r1) + retype setpoint double->int (OUTAGE, r11). Module verdict = worst cell = OUTAGE.
