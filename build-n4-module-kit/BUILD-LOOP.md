@@ -12,9 +12,11 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   `<module> · built <last_build>/gate <verify_gate>/deployed <deployed> · next: <last_session tail> · open_issues=N · retro_pending=Y/N`.
 - If `retro_pending: true`, the previous session left an OWED retro — writing it is the FIRST task unless the operator redirects.
 - If the module has no section, this is a first build — say so, and add its section at close.
+- `toolbelt/sweep-build-state.sh --age --today <YYYY-MM-DD> <retros-dir> INDEX.md` — retro-debt aging; call at orient and again at close.
 - **Meta-work exemption:** auditing the kit / tooling / a retro, or a single one-off question, does NOT gate on orient — say so and proceed (mirrors the research-sdd PASO 0 exemption).
 
 ### 0.b Preflight (before the first build)
+- Run **`toolbelt/preflight.sh <niagara_home> <gradle-root>`** — automates win-path, jdk8, plugin-pin, jar-lock checks; exit 0 = all clear.
 - **JDK 8** present (`ls /usr/lib/jvm`).
 - **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
 - **Station live?** A running station LOCKS its `modules/<mod>.jar`. Free the lock FIRST (close Workbench, or stop a non-production station) and build directly; use a mirror (`toolbelt/mirror-niagara-home.sh`) ONLY for a live production supervisor you must not stop — see build-verify.md §Building against a running station. [ev: retro coldroompan-dashboardpan-freeze-stat-leds · B2]
@@ -41,6 +43,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
+- **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); `--plano <index.html|jar>` when available.
 - The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station.
 
 ## 6. Deploy (station) — operator
@@ -62,4 +65,5 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - **Envelope-pairing rule (all exits):** every close-exit — (a) new retro, (b) trivial trailer, (c) promotion — MUST pair its retro/INDEX anchor with the kit `BUILD-STATE.md` self-envelope in the SAME push range; a branch push is not proof — the hook evaluates the whole PR on `main`. [ev: retro doctrine-fold] [ev: retro types-fold] [ev: retro close-process-meta-lessons]
 - The **Output Contract MUST print** `retro: <path> (N deltas, review-status: pending)` — or `retro: none (trivial: <reason>)` — as an explicit line. A written-but-invisible retro reads as a missing one.
 - Do NOT silently rewrite METHODOLOGY — propose; a human folds it in. This is how the kit matures from seed to solid.
+- **Sweep at close:** `toolbelt/sweep-build-state.sh <BUILD-STATE.md> <retros-dir> INDEX.md` (envelope content check); `toolbelt/sweep-fold-audit.sh --strict INDEX.md <kit-root>` (fold-citation audit).
 - Machine enforcement (opt-in, per-clone, reversible): activate with **`scripts/install-hooks.sh`** (sets `git config core.hooksPath .githooks`; `--uninstall` restores the default; it REFUSES to clobber a pre-existing custom `hooksPath` unless `--force`). Once active, `.githooks/pre-push` blocks a build-relevant push that skips the close gate, delegating the ledger check to `toolbelt/sweep-build-state.sh`.

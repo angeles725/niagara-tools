@@ -4,7 +4,7 @@ description: "Trigger: build/create/extend a Niagara N4 module — rt logic, ux 
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.4"
+  version: "0.5"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (methodology, per-type guides, toolbelt, retros) — read it, don't restate it from memory.
@@ -45,7 +45,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 2. corpus-nav the topic; read the exemplar source.
 3. Build the layers; preview the UI.
 4. Build with `toolbelt/build.sh` (Java 8 + slotomatic); verify major-52 + signed.
-5. Run the verify gate.
+5. Pre-gate checks before `verify-module.sh`: run `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL) and `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); then run the verify gate (`toolbelt/verify-module.sh`) with `--plano <index.html|jar>` when available.
 6. Retro + close (HARD gate): append PROVEN lessons as PROPOSED deltas (`$KIT/retros/`, propose-never-apply) AND update `$KIT/BUILD-STATE.md` (envelope + `retro_pending`) — or declare `Retro: none (trivial: <reason>)`. This is how the kit grows and stays continuous.
 
 ## Output Contract
@@ -54,4 +54,5 @@ Report: kit path, type chosen, layers built, preview + build outcome (bytecode 5
 
 ## References
 
-- `$KIT/METHODOLOGY.md`, `$KIT/BUILD-LOOP.md`, `$KIT/build-verify.md`, `$KIT/types/*.md`, `$KIT/SOURCES.md`, `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`.
+- `$KIT/METHODOLOGY.md`, `$KIT/BUILD-LOOP.md`, `$KIT/build-verify.md`, `$KIT/types/*.md`, `$KIT/SOURCES.md`, `$KIT/scripts/install-skill.sh`.
+- Toolbelt: `$KIT/toolbelt/build.sh`, `$KIT/toolbelt/verify-module.sh` (+ coverage, + --plano when available), `$KIT/toolbelt/run-pure-test.sh`, `$KIT/toolbelt/mirror-niagara-home.sh`, `$KIT/toolbelt/stored-repack.sh`, `$KIT/toolbelt/preflight.sh`, `$KIT/toolbelt/slot-coverage.sh`, `$KIT/toolbelt/lint-timers.sh`, `$KIT/toolbelt/sweep-build-state.sh` (+ --age), `$KIT/toolbelt/sweep-fold-audit.sh`.

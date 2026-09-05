@@ -55,11 +55,11 @@ Chain strategy: stacked-to-main
 
 **Branch**: `feat/c7-tool-integration` | **QA hook**: none (doc-only) | **Gate exit**: R2.1–R2.7
 
-- [ ] 2.1 grep-before-fold: `rg 'preflight|lint-timers|slot-coverage|sweep-build-state' build-n4-module-kit/BUILD-LOOP.md build-n4-module-kit/skill/SKILL.md` — record hit counts before edit.
-- [ ] 2.2 Add §0.b preflight step (`toolbelt/preflight.sh`), §5 pre-gate listing (`lint-timers.sh` + `slot-coverage.sh` before `verify-module.sh`), §7 `--age` orient/close calls to `BUILD-LOOP.md` (R2.1–R2.3).
-- [ ] 2.3 Add all 10 toolbelt scripts to `build-n4-module-kit/skill/SKILL.md` §References; route step 5 to pre-gate checks (R2.4–R2.5).
-- [ ] 2.4 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
-- [ ] 2.5 Gate: `grep -c 'preflight' BUILD-LOOP.md` >= 1 and same for `lint-timers`, `slot-coverage`, `sweep-build-state` in both files (R2.6). Paste grep evidence in PR body.
+- [x] 2.1 grep-before-fold: `rg 'preflight|lint-timers|slot-coverage|sweep-build-state' build-n4-module-kit/BUILD-LOOP.md build-n4-module-kit/skill/SKILL.md` — record hit counts before edit.
+- [x] 2.2 Add §0.b preflight step (`toolbelt/preflight.sh`), §5 pre-gate listing (`lint-timers.sh` + `slot-coverage.sh` before `verify-module.sh`), §7 `--age` orient/close calls to `BUILD-LOOP.md` (R2.1–R2.3).
+- [x] 2.3 Add all 10 toolbelt scripts to `build-n4-module-kit/skill/SKILL.md` §References; route step 5 to pre-gate checks (R2.4–R2.5).
+- [x] 2.4 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 2.5 Gate: `grep -c 'preflight' BUILD-LOOP.md` >= 1 and same for `lint-timers`, `slot-coverage`, `sweep-build-state` in both files (R2.6). Paste grep evidence in PR body.
 - [ ] 2.6 After merge: orchestrator re-runs `scripts/install-skill.sh` (R2.7, CD6).
 
 ---

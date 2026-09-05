@@ -66,3 +66,57 @@ All PR2–CLOSE tasks (2.1–C.4) remain pending for subsequent PR apply phases.
 ### Status
 
 8/8 PR1 tasks complete. Ready for verify (sweep guards ran; commit pending).
+
+---
+
+## PR2 — docs/c7-tool-integration (2026-09-05)
+
+**Status**: complete (T2.1–T2.5; T2.6 pending post-merge orchestrator action)
+**Mode**: Standard
+**Branch**: docs/c7-tool-integration
+**Worker**: sdd-apply (Claude Sonnet 4.6)
+
+### Completed Tasks
+
+- [x] 2.1 grep-before-fold: preflight=0, lint-timers=0, slot-coverage=0 in both files; sweep-build-state=1 in BUILD-LOOP.md (footer note only) — no double-fold risk.
+- [x] 2.2 Added §0.b preflight.sh line, §5 pre-gate bullet (lint-timers + slot-coverage + --plano when available), §0.a --age line, §7 sweep-at-close bullet to BUILD-LOOP.md (R2.1–R2.3).
+- [x] 2.3 Bumped SKILL.md version to 0.5; §References expanded to all 10 toolbelt scripts; §Execution step 5 routed to pre-gate checks (R2.4–R2.5).
+- [x] 2.4 PR2 retro filed (2026-09-05-campaign7-tool-integration.md, pending); INDEX row added; BUILD-STATE.md kit envelope updated (Campaign 7 PR2).
+- [x] 2.5 Routing check → nothing printed; grep evidence: preflight BUILD-LOOP=1/SKILL=1, lint-timers BUILD-LOOP=1/SKILL=2, slot-coverage BUILD-LOOP=1/SKILL=2, sweep-build-state BUILD-LOOP=3/SKILL=1, sweep-fold-audit BUILD-LOOP=1/SKILL=1.
+- [ ] 2.6 After merge: orchestrator re-runs `scripts/install-skill.sh` (R2.7, CD6).
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `build-n4-module-kit/BUILD-LOOP.md` | Modified | §0.a --age line; §0.b preflight.sh bullet; §5 pre-gate bullet; §7 sweep-at-close bullet (+4 lines) |
+| `build-n4-module-kit/skill/SKILL.md` | Modified | Version 0.4→0.5; step 5 routed; §References all 10 toolbelt scripts |
+| `build-n4-module-kit/retros/2026-09-05-campaign7-tool-integration.md` | Created | PR2 retro (review-status: pending) |
+| `build-n4-module-kit/retros/INDEX.md` | Modified | PR2 retro row added |
+| `build-n4-module-kit/BUILD-STATE.md` | Modified | Kit self-envelope updated (Campaign 7 PR2) |
+| `openspec/changes/build-n4-module-campaign7/tasks.md` | Modified | PR2 tasks 2.1–2.5 marked [x] |
+| `openspec/changes/build-n4-module-campaign7/explore.md` | Tracked | Copied from main + git added |
+| `openspec/changes/build-n4-module-campaign7/proposal.md` | Tracked | Copied from main + git added |
+| `openspec/changes/build-n4-module-campaign7/report-module-contract.md` | Tracked | Copied from main + git added |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command | `bats tests/*.bats` → 152/152; kit-links.bats L1-L3 → 3/3 |
+| Routing check | `for s in .../*.sh; do n=$(basename $s); grep -q "$n" BUILD-LOOP.md skill/SKILL.md \|\| echo "UNROUTED $n"; done` → nothing printed |
+| sweep-build-state | exit 0 |
+| sweep-fold-audit --strict | exit 0 (47 folded, 47 cited, 0 uncited) |
+| shellcheck 0.10.0 | exit 0 |
+| Rollback boundary | Revert BUILD-LOOP.md +4 lines, SKILL.md version/step5/refs; remove PR2 retro + INDEX row; restore BUILD-STATE.md; unstage 3 openspec files |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main, PR2 of 8)
+- Current work unit: PR2 docs/c7-tool-integration
+- Boundary: starts at PR1 head (924e083), ends with BUILD-LOOP + SKILL.md routing + PR2 retro + envelope
+- Estimated review budget impact: ~25 authored lines (doc-only, well within 400)
+
+### Status
+
+5/6 PR2 tasks complete. T2.6 is post-merge orchestrator action. Ready for verify.
