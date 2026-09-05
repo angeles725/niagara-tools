@@ -17,7 +17,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-02-comppan-fase3-floating-suction.md | CompPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-dashboardpan-detail-render-doors.md | DashboardPan | 2026-09-02 | folded | 0 |
 | 2026-09-02-module-palette-and-build-target.md | kit | 2026-09-02 | folded | 0 |
-| 2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md | ColdRoomPan | 2026-09-03 | pending | 0 |
+| 2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md | ColdRoomPan | 2026-09-03 | folded | 0 |
 | 2026-09-03-corpus-index-rt-authoring-and-organization-blocks.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-dashboard-contract-port-spec.md | DashboardPan | 2026-09-03 | folded | 0 |
 | 2026-09-03-dashboard-servlet-write-surface-and-reader-authority.md | DashboardPan | 2026-09-03 | folded | 0 |
@@ -47,3 +47,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-04-ci-server-side-enforcement.md | kit | 2026-09-04 | folded | 0 |
 | 2026-09-05-campaign6-marker-index-sweep.md | kit | 2026-09-05 | pending | 3 |
 | 2026-09-05-campaign6-doctrine-fold.md | kit | 2026-09-05 | pending | 0 |
+| 2026-09-05-campaign6-types-fold.md | kit | 2026-09-05 | pending | 5 |

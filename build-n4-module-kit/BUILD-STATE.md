@@ -27,9 +27,9 @@ modules, not sixty focuses.
 |---|---|---|---|---|---|---|---|
 | ColdRoomPan | Cliente/Leon-Guanjuato | logic | 2026-09-03 | pass | yes | no | 1 |
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
-| DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | unknown | yes | no | 2 |
+| DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
-| kit | niagara-tools | self | 2026-09-04 | n/a | n/a | no | 2 |
+| kit | niagara-tools | self | 2026-09-05 | n/a | n/a | yes | 2 |
 
 ---
 
@@ -91,19 +91,20 @@ module: DashboardPan
 module_repo: Cliente/Leon-Guanjuato
 module_root: /home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/DashboardPan
 type: dashboard
-profiles: rt,ux,wb
+profiles: rt,ux
 target_version: 4.14
 plugin_version: 7.6.17
 last_build: 2026-09-04
 bytecode_major: 52
 signed: yes
-verify_gate: unknown
+verify_gate: pass                   # 2026-09-05 · verify-module.sh --src . --target-version 4.14 on repo HEAD 4f5f1c7; rt 7/7, ux 7/7
 deployed: yes
 target_station: Leon-JACE
 pure_tests: 14
 open_issues:
-  - servlet generic write endpoint lacks an OPERATOR-flag / whitelist check (U5) — the write-surface is wider than the read-surface; the RULE is promoted into types/dashboard.md in PR3, the code fix is OUT of scope.
+  - U5 residue: `handleSetpointWrite` IS gated fail-closed by `DashboardRbacHelper.checkCanWrite` (BDashboardServlet.java:198) [ev: corpus B763]; residue = lost pure-RBAC test seam (DWS2), no per-Ord lock/423, optional slot allowlist (client punch-list, not kit).
   - DashboardPan-rt and DashboardPan-wb ship empty srcTest — the pure_tests count is the -ux DashboardDispatch suite only.
+  - DashboardPan-wb is a scaffold (gradle/lexicon/palette/permissions, zero .java, never built); build or delete before declaring it.
 retro_required: true
 retro_pending: false
 last_commit: 6b9b085
@@ -156,8 +157,8 @@ open_issues:
   - CAMPAIGN 5 (activate the retro-enforcement gate — built but inert): AG-PR1 (v0.15.0) DONE — hardened `.githooks/pre-push` so the promotion exit accepts an in-range INDEX.md diff OR an in-range BUILD-STATE.md diff (fixes the partial-promotion FALSE-NEGATIVE found in C4-PR2), with the blanket-escape guard kept (trailer + NEITHER anchor → FAIL) and `sweep` run on both anchored paths; added `scripts/install-hooks.sh` (idempotent opt-in activation, `--uninstall`, refuses to clobber a custom hooksPath without `--force`); documented activation in BUILD-LOOP §7 + CONTRIBUTING §6.1. Tests: build-retro-sync H8/H9/H10 + install-hooks I1-I4. This closed the earlier gate-hardening open_issue. AG-PR1 carries its OWN feature-retro (campaign5-gate-activation) via the new-retro exit (a) — a pure feature PR is NOT a 4th gate shape, it uses exit (a); so the PR that activates the gate passes its own gate, and the Campaign 5 close is consolidated into this PR (no separate close-retro PR). NEXT: the LIVE ACTIVATION smoke (run the installer in this repo + prove a trivial kit-file push without a retro/trailer is BLOCKED, then passes with the trailer); CI (AG-PR2) awaits the user's explicit call.
   - CONTENT FOLD-AUDIT open_issue (#3, future — NOT AG-PR1): verify that a folded `[ev: retro X]` citation actually APPEARS in a core kit file (not merely claimed folded in the ledger). A future gate/check enhancement, separate from AG-PR1's structural-anchor hardening. QA's fidelity grading catches this manually today; a machine check would make it durable.
   - CompPan-rt/module.lexicon is empty (T8) — slots render raw camelCase; the rule is in METHODOLOGY, the module fix is out of scope.
-retro_required: true                 # GATED — Campaign 6 PR3 changed METHODOLOGY.md + CONTRIBUTING.md (doctrine fold)
-retro_pending: false                 # GATED — campaign6-doctrine-fold retro FILED; fold-status in retros/INDEX.md as review-status: pending
-last_commit: Campaign 6 PR3          # updated at PR3 merge (feat/c6-doctrine)
-last_session: 2026-09-05 · Campaign 6 PR3 (doctrine fold): METHODOLOGY.md 51→74 — K1–K9 §Kit-maintenance, §Multi-session coordination (M1), §Live-verify safety (M2), LC7 what-to-test-where table; CONTRIBUTING.md K10 + CI-active fix; 7 pending retros folded (INDEX rows + line-1 markers in one commit); grep-before-fold 0 pre-existing hits; sweep 0, bats 110/110, shellcheck 0.10.0 clean. Retro: 2026-09-05-campaign6-doctrine-fold.md (exit a). Lesson: the kit self-envelope update is part of the close gate even for a promotion PR — the branch push passed but the main push was blocked until this anchor landed.
+retro_required: true                 # GATED — Campaign 6 PR4 changed types/logic.md + dashboard.md + wb-widgets.md + build-verify.md + SOURCES.md + corpus-index.md (types fold)
+retro_pending: false                 # GATED — campaign6-types-fold retro FILED; fold-status in retros/INDEX.md as review-status: pending
+last_commit: Campaign 6 PR4          # updated at PR4 merge (feat/c6-types)
+last_session: 2026-09-05 · Campaign 6 PR4 (types fold): logic.md GROWING→exemplar-backed (L1 annotation-only, L2 integrator ORD, LC1-LC6 kitControl patterns); dashboard.md +8 rules (A15/D1 off-station derived keys, DUX1/DUX2 servlet+purity seams, DJS1 SPA testability, DWS1 5-gate write-surface, DWS2 RBAC seam); wb-widgets.md DWB1 model seam; build-verify.md mode-B slotomatic gap retitle + V1-V4; SOURCES.md + corpus-index.md A18 S1/S2; freeze-stat folded (Δ2/L1 in logic.md, Δ1/Δ4 already present, Δ3 METHODOLOGY:9,11); DashboardPan ledger: verify_gate pass rt 7/7 ux 7/7, profiles rt,ux, U5 reworded, wb scaffold noted; grep-before-fold 0 pre-existing hits for new deltas; kit-links green; sweep 0. Retro: 2026-09-05-campaign6-types-fold.md (exit a).
 <!-- /build-state.v1 -->

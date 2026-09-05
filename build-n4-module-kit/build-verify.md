@@ -112,8 +112,14 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 3. **A live cold-boot smoke** — for a timer-based control, read the live anchor slot (oBIX / Slot Sheet) after boot: anchor populated = the hook armed; anchor null in an arming mode = the hook did NOT run. Correct source ≠ correct behavior; this catches what a pure test cannot. [ev: retro hidden-actions · T4]
 4. **Adversarial pure-logic review BEFORE compile** — a second reader of the pure class catches control-logic defects the gate cannot (the `Long.MIN_VALUE` overflow and the dead-sensor false-fault both compiled and passed the gate). [ev: retro comppan-fase1 · T3]
 
-## Known gap — ng-deploy.sh runs slotomatic for -rt only
-- **`scripts/ng-deploy.sh` runs slotomatic for `-rt` only, not `-ux` — documented, not fixed:** when you edit `@NiagaraProperty` annotations in a `-ux` profile, build with `toolbelt/build.sh` (it runs slotomatic for every profile with sources) so the `-ux` annotation change is actually regenerated. [ev: QA audit · ng-deploy.sh]
+## Known gap — mode B ignores `--with-slotomatic`
+- **Modes A and C regenerate `-ux` slots when `-ux` is annotated** (`scripts/ng-deploy.sh` lines ~493-500: `run_slotomatic` is called for every profile with sources); **mode B never runs slotomatic** (lines ~552-553). So a `-ux` annotation edit under mode B silently skips regeneration — build with `toolbelt/build.sh` (runs slotomatic for every profile) or with `--mode A --with-slotomatic` instead. The blanket "-rt only" wording was stale for modes A/C, correct for mode B only. [ev: QA audit · ng-deploy.sh]
+
+## Verify — useful patterns
+- **V1 / Consumer-absence delta proof:** to prove "what changed since X" when same-day timestamps don't discriminate, `grep -c <symbol>` the CONSUMER artifact — 0 hits = genuine delta; present = already consumed. Beats pinning a commit/deploy boundary by date. [ev: retro dashboardpan-2d-to-3d-port Δ1]
+- **V2 / Live-vs-doc precedence:** for behavior the live system arbitrates (e.g. is a setpoint writable?), verify live and let it override the doc — then fix the doc. A PORT-SPEC said "setpoint writable"; live oBIX `PUT` returned 400; the spec was wrong. [ev: retro live-cutover-and-authenticated-control Δ2]
+- **V3 / Verify freshness before labeling "live":** probe max `ts` is advancing ≈ now; if frozen, label honestly (SNAPSHOT / última lectura `<ts>`). [ev: retro live-cutover-and-authenticated-control Δ1]
+- **V4 / Headless-QA/CORS boundary:** a headless-from-localhost e2e cannot cross a browser CORS origin by design — confirm the backend with `curl` and verify `Access-Control-Allow-Origin` separately; a CORS block is not a code bug. [ev: retro live-cutover-and-authenticated-control Δ3]
 
 ## Deploy (station)
 Stop station → replace the jars in `<niagara_home>/modules/` → start (the jar is locked while the station runs; to avoid stopping a live supervisor, build against a mirror per §Building against a running station and copy `build/libs` → station). Signing per target: §Signing per deploy target. **A jar that has not passed `toolbelt/verify-module.sh` does not go to a station.**

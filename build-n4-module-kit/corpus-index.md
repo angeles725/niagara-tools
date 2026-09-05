@@ -58,6 +58,10 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B757** | Station integration — authoring a `BAbstractService` (register-by-placement) + the nav tree | rt / service |
 | **B732** | Authoring real alarms — `BAlarmSourceExt` is a point extension; the offnormal/fault algorithm family | rt / alarms |
 | **B733** | Modulating (0-10V) outputs, `kitControl.BLoopPoint` PID, the math block family | rt / control |
+
+## Research-tooling caveats (A18)
+
+Before concluding a topic is undocumented: a tool returning zero results is not proof of absence — run a control query or fall back to `rg`/`mem_context`/the source (S1 [ev: retro rt-authoring-campaign Δ4]). Never mark a claim `[CERT]` from a mangled decompiled body — prefer the vineflower/procyon tree or mark `[INFER]` (S2 [ev: retro rt-authoring-campaign Δ3]).
 | **B758** | Tags/relations authoring + northbound data exposure (tag dictionary, oBIX agent, Fox/BOX, BQL-from-code cursor) | ux / data |
 | **B731** / **B742** | Our own modules' audit + the consolidated deploy-safe refactor backlog | reference |
 

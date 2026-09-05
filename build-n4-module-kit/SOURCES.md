@@ -27,3 +27,7 @@ The 90% rule: before investigating anything, search the corpus. Most of module-b
 
 ## Memory
 Engram topic `research/niagara/coldroom-ux/progress` holds this project's build log + every hard lesson.
+
+## Research-tooling caveats
+- **S1 / Tool-zero is not absence:** a `corpus-nav` / `mem_search` returning zero results is NOT proof that something is undocumented — run a control query or fall back to `rg` / `mem_context` / the source before concluding "not found." [ev: retro rt-authoring-campaign Δ4]
+- **S2 / No `[CERT]` from a mangled decompile:** never mark a claim `[CERT]` when derived from an `ln`/`n`-corrupted decompiled body; prefer the vineflower/procyon tree, else mark `[INFER]` or decline. [ev: retro rt-authoring-campaign Δ3]

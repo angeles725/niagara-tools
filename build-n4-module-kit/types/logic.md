@@ -1,4 +1,4 @@
-# Type: pure logic (rt control) — GROWING (control core proven on ColdRoomPan, 2026-08-31)
+# Type: pure logic (rt control) (control core proven on ColdRoomPan, 2026-08-31)
 
 A control module: `BComponent`s with real control logic, no UI. Exemplar to READ before building: ColdRoomPan-rt (`BColdRoom`, `BEvaporatorUnit`, `BDefrostController`). Start-here reading for rt: **`corpus-index.md`** → B744 (what an RT block is) + B737 (composition) + B730/B729 (idioms/timers), all P0.
 
@@ -8,6 +8,7 @@ Seed pointers for the surface not yet proven; the sections below are proven from
 - **Links, not polling:** inputs arrive via Niagara links; read input `BStatus` and fail safe on invalid/null.
 - **Slots:** computed outputs = `TRANSIENT|SUMMARY|READONLY`; config = `SUMMARY|OPERATOR`. Same facet/BDouble rules as METHODOLOGY.md.
 - **No servlet, no `-ux`** unless paired with a dashboard (then also read types/dashboard.md).
+- **A control `BComponent`'s station MOUNT/ORD is integrator-placed config, NOT derivable from module source:** a `BComponent` does not live at a fixed path by default — the path (`Programacion/CompresorControl`) is what the integrator chose at commissioning. Do not fabricate a plausible path; state it is unknown and get it from a live oBIX nav or the operator. [ev: retro dashboardpan-2d-to-3d-port Δ4]
 
 ## Safety fail-modes & timers
 - **Anchor a free-running interval to a persistent clock, not to `atSteadyState`:** hold the last event time in a `HIDDEN` `BAbsTime` slot (`defaultValue = BAbsTime.NULL`, NOT transient); on re-arm compute `elapsed = Clock.millis() - getLastEventTime().getMillis()` and schedule `max(interval - elapsed, 0)` (`isNull()` → full interval). Rescheduling the full interval on every `atSteadyState` starves the timer across restarts. Clock/BAbsTime API [CERT] (`javax/baja/sys/Clock.java`, `BAbsTime.java`); the restart re-arm [INFER · pending station smoke-test] [ev: retro rt-hardening #2].
@@ -54,6 +55,7 @@ Seed pointers for the surface not yet proven; the sections below are proven from
 
 ## Regenerating slots
 - **Adding a slot to an already-generated component regenerates cleanly:** hand-write the annotation + a matching AUTO stub that only has to compile, then run `slotomatic` — it re-derives the AUTO region and updates the type hash. Slotomatic is authoritative; a fix only in the generated region reverts on the next regen. [ev: retro rt-hardening #1]
+- **In the `build.sh`/slotomatic flow, annotation-ONLY is sufficient — no AUTO stub required:** `build.sh` runs slotomatic BEFORE javac, so a facade's 26 new `@NiagaraProperty` annotations compile with zero hand-written stubs. The AUTO stub is needed only when compiling WITHOUT slotomatic (IDE partial builds). Keep "annotation + stub" as belt-and-suspenders, not the requirement. [ev: retro freeze-stat-leds Δ2]
 
 ## Pure-class extraction — test the decision before you wire it
 - **Extract any inline timing/safety/decision logic in a BComponent into a ZERO-Baja pure class FIRST, test it (with bite assertions), confirm it compiles, THEN wire it into the BComponent:** the untested inline subsystem is exactly what ships the field bug — `BDefrostController`'s interval/interlock/terminate math was inline with no pure class and shipped the `started()`/interval defrost bug; a `nextDelayMs()` unit test (with a `|elapsed| > 3·interval → interval` future-clock guard) would have caught it. [ev: retro qa-stack · T2]
@@ -74,5 +76,14 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
 - **GOTCHA**: `catch(Throwable)+log` is NOT automatic — the framework only wraps `BControlPoint.executeExtensions`. In your OWN `changed()`/timer handlers you MUST self-guard or one exception corrupts engine state. (Our modules already do.)
 
 Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `changed()` cycle timing and multi-stage coordination from further builds.
+
+## kitControl patterns — exemplar-backed
+
+- **LC1 / Writable priority array (16-level arbitration):** `WritableSupport.onExecute` scans levels 1→16 first-valid-wins; relinquish-default = ordinal 17 (`BPriorityLevel.fallback`), used only when all 16 are null; only levels 1 and 8 raise `OVERRIDDEN`; to make a config slot oBIX-writable add a NEW slot + link, never re-type the existing point. [ev: corpus B536]
+- **LC2 / BLoopPoint PID:** ramp = rate-limiter + ramp-aware anti-windup; `executeTime` clamped [100ms, 60s]; `direct` action = cooling, `reverse` = heating; `disableAction` triggers bumpless pre-load; recommended tuning: `kP = (maxOut − minOut) / throttlingRange`; PI is recommended, PID seldom justified. [ev: corpus B539]
+- **LC3 / Multi-input null contract:** nulls are SKIPPED, not zeroed (`BQuadMath.nonNullCount`, `BAnd.nullOnInactive`); latch = rising-edge vs latch-action both-edges; `switch`/`select` invalid → hold + invalid-flag. [ev: corpus B537]
+- **LC4 / Control-logic fail-safe checklist (the 6 unsafe-unless-configured defaults):** `disableAction=hold` freezes the last command; `propagateFlags=0` lets a bad sensor drive the loop with no fault; `rampTime=0` = no anti-slam; alarm-ext is notification-only (no interlock); `999` sentinel is convention not framework; `clHVAC` strips Baja status. Operator recs: set `disableAction`/`Fallback` to safe posture, `propagateFlags=fault|stale|down`, `rampTime>0`, emergency L1 for interlocks. [ev: corpus B543]
+- **LC5 / Point-extension chain (alarm + history):** `BAlarmSourceExt` → offnormal/fault algorithm (`BOutOfRange`/`FloatingLimit`/`TwoState`) + `AlarmService`; `BIntervalHistoryExt` (timer, default 15 min) vs `BCovHistoryExt` (COV `changeTolerance` deadband); alarm-ext NEVER writes the value/priority-array — it is notification-only. [ev: corpus B552]
+- **LC6 / Scheduler seam DI:** instead of calling `Clock.schedule` directly in the arming method, inject a tiny interface `interface Sched { Object at(long delayMs); void cancel(Object t); }` — production wires a `Clock`-backed impl; a test wires a fake that records `at(delayMs)` calls. This makes "which path arms, with what delay, cancel-before-reschedule" unit-testable without a station. [ev: corpus B743 §743.3]
 
 See also: `docs/how-to-create-coldroom-module.md` (end-to-end ColdRoomPan build); corpus **B729** (timer lifecycle: started/atSteadyState/clockChanged) + **B730** (rt idioms catalog).
