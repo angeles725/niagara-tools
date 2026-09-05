@@ -2,7 +2,7 @@
 # Retro: campaign8-lint-delays — lint-delays.sh Clock.schedule delay-floor lint
 
 **Session**: Campaign 8 PR1 · 2026-09-05
-**Change**: toolbelt/lint-delays.sh (new), tests/lint-delays.bats (LD1-LD10), BUILD-LOOP.md §5, skill/SKILL.md v0.7→0.8, design.md D2b+D9b
+**Change**: toolbelt/lint-delays.sh (new), tests/lint-delays.bats (LD1-LD11), BUILD-LOOP.md §5, skill/SKILL.md v0.7→0.8, openspec-design D2b+D9b+D2c
 **Delta count**: 4 proposed deltas
 
 ## Context
@@ -13,9 +13,10 @@ a PRODUCTION incident: PANCCADIA ColdRoom_3 (2026-09-04) lost defrost silently 5
 `BDefrostController.armTrigger()` computed `d = Math.max(delayMs, 0L)` — overdue → d=0 →
 EngineManager threw "time <= 0" at runtime, the catch swallowed it. Campaign-8 spec B801.
 
-Real smokes: pre-fix tree 4f5f1c7 exits 1 (BDefrostController :556/:566/:620/:664 FAIL).
-Fixed tree c66e412 exits 0 for BDefrostController (D2b helper resolution works). Residual
-BEvaporatorUnit FAILs in the fixed tree are MIN=0 facets pre-dating this PR and separately tracked.
+Real smokes: pre-fix tree 4f5f1c7 exits 1 (BDefrostController :556/:566/:620/:664 FAIL;
+BEvaporatorUnit :825/:900/:913/:1091 PASS guarded). Fixed tree c66e412 exits 0: BDefrostController
+clean (D2b resolves positiveDelayMs as proven floor); BEvaporatorUnit :825/:923/:936/:1123 all
+PASS (D2c guard recognition — guarded at :818/:920/:935/:1113).
 
 ## Proven Lessons
 
@@ -61,15 +62,21 @@ re-reading the whole scope.
 rather than restart. Workers should commit incrementally (WIP commit after GREEN) so a stop leaves
 the worktree cleanly resumable with `git stash` or just a commit of the current work.
 
-### Delta 4 — CompPan/BEvaporatorUnit real-smoke spec discrepancy
+### Delta 4 — same-method guard recognition (D2c): a positivity guard on the same expression proves the floor
 
-**Observation**: the spec said "CompPan-rt/src :1764 WARN facet-floor or PASS" and
-"fixed ColdRoomPan-rt/src exits 0". Actual results: CompPan :1764 is FAIL facet-min-zero
-(no MIN facet, not MIN≥1), and the fixed tree exits 1 due to BEvaporatorUnit MIN=0 slots
-that are NOT in the defrost-fix scope. The lint correctly identifies these as unproven floors.
+**Observation**: BEvaporatorUnit (fixed tree c66e412) has 4 Clock.schedule calls that are
+each preceded by a same-method positivity guard on the SAME delay expression: `:818` guards
+`delayMs > 0L` before `:825`; `:920` guards `getStartDelay().getMillis() == 0L` (zero-branch
+takes the else) before `:923`; `:935` guards `getStopDelay().getMillis() > 0L` before `:936`;
+`:1113` guards `getFanOffDelay().getMillis() == 0L` (zero handled) before `:1123`. The first
+lint cut FAILed all four as "facet-min-zero" — true false positives. A guard on a DIFFERENT
+expression (MisGuarded: `getOther()` guards the schedule for `getStartDelay()`) does NOT count.
 
-**Lesson**: spec expectations about real-tree smoke outputs must be re-verified at apply time
-against the actual source. Static lints are more conservative than runtime guards; a
-`if (delayMs > 0L)` guard before Clock.schedule is invisible to the lint and produces a
-true FAIL that is a false positive at runtime. Document the discrepancy rather than bending
-the tool.
+**Lesson**: a delay-floor lint must recognize within-method positivity guards on the EXACT
+same delay expression. Guard forms accepted: `<expr> > 0`, `<expr> >= 1`, `<expr>.getMillis() > 0`,
+`<expr>().getMillis() > 0`, `<expr>().getMillis() >= 1`, or `<expr>().getMillis() == 0` (zero-branch
+does not reach the schedule). Detection is backward-scanning from the schedule line (up to 80 lines).
+Single-line comments are stripped before pattern matching — otherwise comment text like
+`// delayMs > 0L` would false-positively trigger the guard and mask a missing guard. The guard
+lookup is EXPRESSION-SPECIFIC: `find_guard(lnum, expr)` checks `index(line, expr)` first, so
+a guard on `getOther` never covers a schedule on `getStartDelay`.

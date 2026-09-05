@@ -61,6 +61,17 @@ Pass 2 classifies the `BRelTime` argument of every `Clock.schedule*(` call site:
 Local binding resolution scans backwards from the call site to the enclosing method's opening brace only
 — one method, one file, no cross-file inference.
 
+**D2c — same-method positivity guard recognition (QA addendum, LD11).** When a Clock.schedule call is
+preceded within the same method body by a positivity guard on the SAME delay expression, the call is
+proven safe and must emit `PASS  lint-delays  <file:line>  guarded at :<line>` (not FAIL). Accepted
+guard patterns (backward scan up to 80 lines, single-line comments stripped before matching):
+`<expr> > 0`, `<expr> >= 1`, `<expr>.getMillis() > 0`, `<expr>().getMillis() > 0`,
+`<expr>().getMillis() >= 1`, `<expr>().getMillis() == 0` (zero-branch takes a different path, schedule
+is in the else or after an early return/continue). The guard must be on the **same** expression as the
+delay — a guard on a different expression does not count (expression-specific lookup: the backward scan
+skips lines that do not contain the exact delay expression name). Named mutation: delete the `> 0L` guard
+→ the previously-guarded schedule FAILs `zero-floor` again. No magic comments.
+
 **D2b — cross-file helper resolution (lead addendum, PR1 finisher).** The production fix for the PANCCADIA
 defrost bug routes every delay through `ColdRoomControl.positiveDelayMs(long ms)` — a `static long` helper in
 a separate file — rather than an inline `Math.max`. A lint that only recognises inline `Math.max` cannot

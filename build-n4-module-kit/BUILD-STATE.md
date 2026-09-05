@@ -160,5 +160,5 @@ open_issues:
 retro_required: true                 # GATED — close retro filed and folded
 retro_pending: true                  # campaign8-lint-delays filed (pending); 4 proposed deltas
 last_commit: Campaign 8 PR1 feat/c8-lint-delays
-last_session: 2026-09-05 · Campaign 8 PR1: lint-delays.sh (new, 11.5 KB), tests/lint-delays.bats LD1-LD10, design.md D2b+D9b, BUILD-LOOP.md §5 routing, SKILL.md v0.7→0.8 routing+References; bats 189/189; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; kit-links L4/L5 green. D2b helper resolution: positiveDelayMs/intervalDelayMs resolved cross-file; BDefrostController clean in fixed tree c66e412; BEvaporatorUnit MIN=0 slots separately tracked.
+last_session: 2026-09-05 · Campaign 8 PR1: lint-delays.sh (new, 11.5 KB), tests/lint-delays.bats LD1-LD11, openspec-design D2b+D9b+D2c, BUILD-LOOP.md §5 routing, skill/SKILL.md v0.7→0.8 routing+References; D2b cross-file helper resolution, D2c same-method guard recognition; bats 191/191; shellcheck 0; sweep-build-state 0; sweep-fold-audit --strict 0; kit-links L1-L6 green. BDefrostController+BEvaporatorUnit clean in fixed tree c66e412.
 <!-- /build-state.v1 -->

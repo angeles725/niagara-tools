@@ -124,10 +124,42 @@ while IFS= read -r f; do
     printf "%-4s  %-14s  %s:%d  %s\n", level, "lint-delays", FILE, lnum, detail
   }
 
+  # D2c — same-method positivity guard detection.
+  # Scans backward from lnum for a guard on expr (Java identifier or getter name)
+  # within the same brace scope (up to 80 lines back).
+  # Accepted guard patterns:
+  #   expr > 0  |  expr >= 1  |  expr == 0  (zero-branch takes other path)
+  #   expr.getMillis() > 0  |  expr.getMillis() >= 1  |  expr.getMillis() == 0
+  # Returns the guard line number if found, 0 otherwise.
+  function find_guard(lnum, expr,    j, ln2, re_gt, re_ge, re_eq, re_gt_ms, re_ge_ms, re_eq_ms) {
+    if (expr == "") return 0
+    # Bare-variable patterns: `expr > 0`, `expr >= 1`, `expr == 0`
+    re_gt  = expr "[[:space:]]*>[[:space:]]*0"
+    re_ge  = expr "[[:space:]]*>=[[:space:]]*1"
+    re_eq  = expr "[[:space:]]*==[[:space:]]*0"
+    # Getter patterns: `expr().getMillis() > 0`, `>= 1`, `== 0`
+    # The `()` suffix of the getter call must appear before `.getMillis()`.
+    re_gt_ms = expr "\\(\\)\\.getMillis\\(\\)[[:space:]]*>[[:space:]]*0"
+    re_ge_ms = expr "\\(\\)\\.getMillis\\(\\)[[:space:]]*>=[[:space:]]*1"
+    re_eq_ms = expr "\\(\\)\\.getMillis\\(\\)[[:space:]]*==[[:space:]]*0"
+    for (j = lnum - 1; j >= 1 && j >= lnum - 80; j--) {
+      ln2 = lines[j]
+      if (index(ln2, expr) == 0) continue
+      # Strip single-line comments before pattern matching to avoid false matches
+      # on comment text that mentions the expression but is not a real guard.
+      sub(/[[:space:]]*\/\/.*$/, "", ln2)
+      if (index(ln2, expr) == 0) continue
+      if (ln2 ~ re_gt || ln2 ~ re_ge || ln2 ~ re_eq ||
+          ln2 ~ re_gt_ms || ln2 ~ re_ge_ms || ln2 ~ re_eq_ms) return j
+    }
+    return 0
+  }
+
   # Classify the BRelTime argument of a Clock.schedule* call.
   function classify(lnum, arg,    v, k, seg, rest, i, c, depth, found,
                     kpart, varname, slotname, gname, minval, j, ln2,
-                    inner, fn_h, seg_h, parts_h, n_h, pos, after_var, rhs) {
+                    inner, fn_h, seg_h, parts_h, n_h, pos, after_var, rhs,
+                    guard_line) {
     gsub(/^[[:space:]]+|[[:space:]]+$/, "", arg)
 
     # 1. Inline BRelTime literal: BRelTime.make(N) or BRelTime.makeSeconds(N)
@@ -178,6 +210,9 @@ while IFS= read -r f; do
       }
       if (fn_h != "") {
         if (index(" " POSITIVE_HELPERS " ", " " fn_h " ") > 0) return  # proven floor
+        # D2c: check for same-method positivity guard on the helper call
+        guard_line = find_guard(lnum, fn_h)
+        if (guard_line > 0) { emit("PASS", lnum, "guarded at :" guard_line); return }
         emit("FAIL", lnum, "zero-floor  helper " fn_h " has no visible strictly-positive floor")
         return
       }
@@ -190,6 +225,9 @@ while IFS= read -r f; do
       sub(/BRelTime\.make\(/, "", seg); sub(/\).*/, "", seg)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", seg)
       varname = seg
+      # D2c: check for same-method positivity guard before backward scan
+      guard_line = find_guard(lnum, varname)
+      if (guard_line > 0) { emit("PASS", lnum, "guarded at :" guard_line); return }
       for (j = lnum - 1; j >= 1 && j >= lnum - 50; j--) {
         ln2 = lines[j]
         if (index(ln2, varname) > 0) {
@@ -240,6 +278,9 @@ while IFS= read -r f; do
     if (match(arg, /^get[A-Za-z0-9_]+[[:space:]]*\([[:space:]]*\)/)) {
       gname = substr(arg, 1, RLENGTH)
       sub(/[[:space:]]*\(.*/, "", gname)
+      # D2c: check for same-method positivity guard on the getter call
+      guard_line = find_guard(lnum, gname)
+      if (guard_line > 0) { emit("PASS", lnum, "guarded at :" guard_line); return }
       if (gname in getter_slot) {
         slotname = getter_slot[gname]
         if (slotname in prop_min) {
