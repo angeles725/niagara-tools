@@ -1,4 +1,4 @@
-<!-- review-status: fresh · 2026-09-02 -->
+<!-- review-status: folded -->
 
 # Retro — CompPan `-rt` FASE 1: rack de compresores (staging) — PROPOSED kit deltas
 

@@ -304,7 +304,7 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   # 2-lite MUST NOT over-reach: the ~25 legacy folded retros carry no marker and stay clean.
   write_state true false
   write_retro "2026-09-04-demo.md" ""                          # body carries no review-status marker
-  ! grep -q 'review-status' "$RETRODIR/2026-09-04-demo.md"     # fixture guard: really no marker
+  run ! grep -q 'review-status' "$RETRODIR/2026-09-04-demo.md"     # fixture guard: really no marker
   write_index "2026-09-04-demo.md|folded"
   run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
   [ "$status" -eq 0 ]

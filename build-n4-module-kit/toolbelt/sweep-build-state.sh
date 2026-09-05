@@ -19,6 +19,17 @@ set -u
 
 fail() { echo "sweep: $*" >&2; exit 1; }
 
+# marker_of <retro-file> — print the first whitespace-delimited word after "review-status:"
+# from a column-0 anchored "<!-- review-status: …" comment within the first 5 lines.
+# Returns the empty string when no such line exists (absent marker is tolerated).
+# This script is VCS-free; the word is extracted without invoking version control.
+marker_of() {
+  sed -n '1,5p' "$1" \
+    | grep -m1 -E '^<!--[[:space:]]*review-status:' \
+    | sed -E 's/^<!--[[:space:]]*review-status:[[:space:]]*//' \
+    | awk '{print $1}'
+}
+
 [ "$#" -eq 3 ] || { echo "usage: sweep-build-state.sh <BUILD-STATE.md> <retros-dir> <INDEX.md>" >&2; exit 3; }
 state=$1; retrodir=$2; index=$3
 [ -f "$state" ]    || { echo "sweep: no BUILD-STATE file: $state" >&2; exit 3; }
@@ -76,6 +87,14 @@ while IFS= read -r line; do
   rstatus=$(echo "$line" | awk -F'|' '{for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="pending"||$i=="folded"){print $i; exit}}}')
   [ -n "$rstatus" ] || fail "INDEX row for $fname has no valid review-status (pending|folded)"
   [ -f "$retrodir/$fname" ] || fail "INDEX row points at a missing retro: $fname"
+  m=$(marker_of "$retrodir/$fname")
+  if [ -n "$m" ]; then
+    case "$m" in
+      pending|folded) ;;
+      *) fail "retro marker out of domain: $fname has review-status '$m' (pending|folded)" ;;
+    esac
+    [ "$m" = "$rstatus" ] || fail "retro marker disagrees with INDEX row: $fname marker='$m' INDEX='$rstatus'"
+  fi
   rowseen["$fname"]=1
 done < "$index"
 
