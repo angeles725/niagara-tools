@@ -57,3 +57,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign7-retro-fold.md | kit | 2026-09-05 | pending | 0 |
 | 2026-09-05-campaign7-tool-integration.md | kit | 2026-09-05 | pending | 1 |
 | 2026-09-05-campaign7-dashboard-exemplar.md | kit | 2026-09-05 | pending | 0 |
+| 2026-09-05-campaign7-scaffold.md | kit | 2026-09-05 | pending | 4 |

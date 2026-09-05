@@ -81,15 +81,15 @@ Chain strategy: stacked-to-main
 **Branch**: `feat/c7-scaffold` | **QA hook**: `qa/c7-scaffold` tip `54636ca` | **Gate exit**: R4.1–R4.9
 **Two commits**: commit 1 = fixtures only; commit 2 = scaffold-module.sh; commit 3 = tests
 
-- [ ] 4.1 Re-read QA RED `qa/c7-scaffold` tip `54636ca` before writing (CD4).
-- [ ] 4.2 **Commit 1**: create `fixtures/MinimalPan/**` — pre-slotomatic tree, no AUTO region, no operator paths in `gradle.properties`, English lexicon in `module.lexicon`; mark binary files (gradlew*, gradle-wrapper.jar) as copy-only (D3). Confirm with companero that lexicon normalization bytes are aligned.
-- [ ] 4.3 **Commit 2**: write `toolbelt/scaffold-module.sh`: skeleton via `"${BASH_SOURCE[0]%/*}/../fixtures/MinimalPan"` (never `$HOME`, K8); emitted root = `<out-dir>/<ModuleName>` (D2); apply D3 substitution table (MinimalPan→ModuleName, angeles→vendor, 7.6.17→plugin-version, 4.14→target-version, etc.); `set -u`; typed exits 0/2/3; no VCS; `shellcheck` clean (R4.9).
-- [ ] 4.4 **Commit 3**: copy `tests/scaffold-module.bats` from `qa/c7-scaffold` tip (TC1/TC2/TC3/TC-K8 verbatim) + add TC5 (residue guard: ScaffoldPan --vendor Acme leaves zero `MinimalPan|angeles` occurrences) + TC6 (existing `<out>/<Mod>` → exit 3, destination untouched).
-- [ ] 4.5 Add CI step: fixture diff loop over `fixtures/MinimalPan` (scaffold → diff -r, assert exit 0); TC4 guarded by `[ -n "${NIAGARA_HOME:-}" ] || skip` (D9, R4.7).
-- [ ] 4.6 Record named mutations in PR body: TC2 (drop name-validation → exits 0); TC-K8 (reintroduce `$HOME` → exits 3); TC3 (drop MOD-rt.gradle.kts or swap module-include.xml → diff fails); TC5 (drop vendor substitution → residue found); TC4 (drop `stopped()` cancel → `lint-timers.sh` FAIL) (R4.6).
-- [ ] 4.7 TC4 run locally before bless: exact command + output pasted in PR body (R4.7).
-- [ ] 4.8 `shellcheck` exits 0 on `toolbelt/scaffold-module.sh` (R4.9).
-- [ ] 4.9 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] 4.1 Re-read QA RED `qa/c7-scaffold` tip `54636ca` before writing (CD4).
+- [x] 4.2 **Commit 1**: create `fixtures/MinimalPan/**` — pre-slotomatic tree, no AUTO region, no operator paths in `gradle.properties`, English lexicon in `module.lexicon`; mark binary files (gradlew*, gradle-wrapper.jar) as copy-only (D3). Confirm with companero that lexicon normalization bytes are aligned.
+- [x] 4.3 **Commit 2**: write `toolbelt/scaffold-module.sh`: skeleton via `"${BASH_SOURCE[0]%/*}/../fixtures/MinimalPan"` (never `$HOME`, K8); emitted root = `<out-dir>/<ModuleName>` (D2); apply D3 substitution table (MinimalPan→ModuleName, angeles→vendor, 7.6.17→plugin-version, 4.14→target-version, etc.); `set -u`; typed exits 0/2/3; no VCS; `shellcheck` clean (R4.9).
+- [x] 4.4 **Commit 3**: copy `tests/scaffold-module.bats` from `qa/c7-scaffold` tip (TC1/TC2/TC3/TC-K8 verbatim) + add TC5 (residue guard: ScaffoldPan --vendor Acme leaves zero `MinimalPan|angeles` occurrences) + TC6 (existing `<out>/<Mod>` → exit 3, destination untouched).
+- [x] 4.5 Add CI step: fixture diff loop over `fixtures/MinimalPan` (scaffold → diff -r, assert exit 0); TC4 guarded by `[ -n "${NIAGARA_HOME:-}" ] || skip` (D9, R4.7).
+- [x] 4.6 Record named mutations in PR body: TC2 (drop name-validation → exits 0); TC-K8 (reintroduce `$HOME` → exits 3); TC3 (drop MOD-rt.gradle.kts or swap module-include.xml → diff fails); TC5 (drop vendor substitution → residue found); TC4 (drop `stopped()` cancel → `lint-timers.sh` FAIL) (R4.6).
+- [x] 4.7 TC4 run locally before bless: exact command + output pasted in PR body (R4.7).
+- [x] 4.8 `shellcheck` exits 0 on `toolbelt/scaffold-module.sh` (R4.9).
+- [x] 4.9 Commit includes retro + INDEX row + `BUILD-STATE.md` self-envelope (CD1).
 
 ---
 

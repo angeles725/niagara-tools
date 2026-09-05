@@ -89,3 +89,13 @@ jobs:
         run: |
           K=build-n4-module-kit
           bash "$K/toolbelt/sweep-build-state.sh" --age --today "$(date -u +%F)" "$K/retros" "$K/retros/INDEX.md"
+
+      - name: scaffold-diff (scaffold MinimalPan → diff -r vs fixture — Campaign 7 PR4)
+        run: |
+          # TC4 round-trip (preflight+build+verify) requires JDK 8 + niagara_home and is local-only (SKIP in CI, D9).
+          # This step verifies only the scaffold emission itself: scaffold MinimalPan into RUNNER_TEMP,
+          # then diff -r the output against the bundled fixture (excluding build/ and .gradle/).
+          OUT="$RUNNER_TEMP/scaffold-ci"
+          mkdir -p "$OUT"
+          bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalPan "$OUT"
+          diff -r --exclude=build --exclude=.gradle "$OUT/MinimalPan" build-n4-module-kit/fixtures/MinimalPan

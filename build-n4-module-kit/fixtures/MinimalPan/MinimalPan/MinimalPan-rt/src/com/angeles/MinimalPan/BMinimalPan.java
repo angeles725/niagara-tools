@@ -44,8 +44,13 @@ import javax.baja.sys.Type;
 public class BMinimalPan
   extends BComponent
 {
-//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
-//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  /*
+   * Pre-slotomatic state: the AUTO region is absent.
+   * Run build.sh — it invokes :slotomatic before :jar and generates the
+   * //region … //endregion block (slot fields, accessors, Type) from the
+   * @NiagaraType / @NiagaraProperty / @NiagaraAction annotations above.
+   * [ev: B793 §793.3 C1 — pre-slotomatic scaffold convention]
+   */
 
   public BMinimalPan() {}
 
