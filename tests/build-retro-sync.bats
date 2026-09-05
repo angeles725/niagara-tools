@@ -268,3 +268,81 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
 }
+
+# ============ MARKER<->INDEX CONSISTENCY (campaign 6, Option 2-lite) ==========
+# Frozen contract (investigador, 2026-09-05): when a retro file carries a
+# `<!-- review-status: X -->` marker, X MUST equal that retro's INDEX row status;
+# a MISSING marker is tolerated (the legacy folded retros stay untouched), and X
+# must be a valid domain word {pending,folded}.
+#
+# RED-FIRST: sweep-build-state.sh today is MARKER-BLIND — Section 2 reads
+# review-status only from the INDEX row (awk over row cells, line ~76) and never
+# opens the retro file except for existence (line ~78). So M1 and M4 FAIL now
+# (sweep returns 0 where 2-lite wants 1); they turn GREEN when the impl PR
+# (campaign task 1) makes the sweep read + reconcile the in-file marker.
+# MUTATION (run post-green): revert the marker-read clause in the sweep -> M1
+# (disagree) flips back to exit 0, proving the marker-read clause — not the
+# pre-existing INDEX-row check — is what carries the new bite.
+
+@test "M1: marker disagrees with INDEX row (marker=folded, row=pending) FAILS (2-lite)" {
+  write_state true false
+  write_retro "2026-09-04-demo.md" "<!-- review-status: folded -->"
+  write_index "2026-09-04-demo.md|pending"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+}
+
+@test "M2: marker AGREES with INDEX row (both pending) stays clean (exit 0)" {
+  write_state true false
+  write_retro "2026-09-04-demo.md" "<!-- review-status: pending -->"
+  write_index "2026-09-04-demo.md|pending"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
+
+@test "M3: a MISSING marker is tolerated (INDEX row folded, no in-file marker) exit 0" {
+  # 2-lite MUST NOT over-reach: the ~25 legacy folded retros carry no marker and stay clean.
+  write_state true false
+  write_retro "2026-09-04-demo.md" ""                          # body carries no review-status marker
+  ! grep -q 'review-status' "$RETRODIR/2026-09-04-demo.md"     # fixture guard: really no marker
+  write_index "2026-09-04-demo.md|folded"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
+
+@test "M4: an out-of-domain marker in the REAL shape ('fresh . DATE') FAILS (2-lite)" {
+  # Mirrors the actual drift on the tree: retros/2026-09-02-comppan-fase1-staging.md and
+  # 2026-09-02-dashboardpan-detail-render-doors.md carry `review-status: fresh . 2026-09-02`
+  # while INDEX says folded. The trailing ` . DATE` suffix forces the impl to parse the FIRST
+  # word after the colon, not exact-match the whole marker line — otherwise the real markers
+  # (all suffixed) would never be seen and the drift would go undetected.
+  write_state true false
+  write_retro "2026-09-02-demo.md" "<!-- review-status: fresh . 2026-09-02 -->"
+  write_index "2026-09-02-demo.md|folded"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+}
+
+@test "M5: the sweep on the REAL kit tree exits 0 (forces the 2 'fresh' files re-stamped in the impl PR)" {
+  # GREEN today (marker-blind). When the impl reads markers this goes RED until the two real
+  # 'fresh' retros are reconciled to 'folded' (INDEX is right — they were promoted in campaign 2),
+  # forcing that reconciliation into the same PR and guarding future strays (ci.yml runs sweep on
+  # the real tree).
+  run "$SWEEP" "$KIT/BUILD-STATE.md" "$KIT/retros" "$KIT/retros/INDEX.md"
+  [ "$status" -eq 0 ]
+}
+
+@test "M6: a review-status mention only in prose PAST line 5 is NOT a marker (INDEX folded) exit 0" {
+  # design D1: the marker is column-0 anchored within the FIRST 5 LINES. A retro whose only
+  # `review-status:` occurrence is a prose/table mention further down (real shape: the kit-continuity
+  # retro cites it in a table cell ~line 40) must be treated as NO marker -> 2-lite tolerates it -> 0.
+  # This bites a naive `grep -m1 review-status:` impl: it would grab the prose word 'pending', see it
+  # != the INDEX 'folded' row, and wrongly FAIL. Green under the first-5-lines column-0 parse.
+  write_state true false
+  { echo "# Retro: something"; echo; echo "## Context"; echo; echo "Body line."; echo
+    echo "Earlier the review-status: pending marker was discussed here in prose."; } \
+    > "$RETRODIR/2026-09-05-prose.md"
+  write_index "2026-09-05-prose.md|folded"
+  run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
