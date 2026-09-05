@@ -90,3 +90,33 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   # BDefrostController must have zero FAIL rows (D2b helper resolution)
   [[ "$output" != *"BDefrostController"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# LD11 (campaign 8, design D2c) — GUARD RECOGNITION. On the FIXED client tree c66e412 the first
+# lint-delays cut emitted 4 false positives: BEvaporatorUnit schedules that ARE protected by a
+# same-method positivity guard on the same delay expression. A schedule guarded by `> 0L`,
+# `.getMillis() > 0L`, `>= 1`, or an `== 0L` check whose zero-branch does not reach the schedule
+# must PASS "guarded at :N", NOT FAIL. The guard must be on the SAME expression as the delay —
+# a guard on a different expression does not count (else a genuinely unfloored delay false-PASSes).
+#
+# RED today: lint-delays.sh does not exist on this branch (whole-branch RED, tool absent), same as
+# LD1-LD9. When cherry-picked onto the impl branch pre-D2c, LD11 stays RED (the 4 guarded shapes
+# FAIL) and drives the guard-recognition implementation.
+#
+# NAMED MUTATION (post-green): delete the `> 0L` guard from a Guarded site -> that schedule is no
+# longer protected -> it FAILs zero-floor / facet-min-zero (proves guard recognition carries the bite).
+
+@test "LD11: four same-expression-guarded schedules PASS (guarded at), no FAIL, exit 0" {
+  only Guarded.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" == *"guarded"* ]]
+}
+
+@test "LD11-misguard: a positivity guard on a DIFFERENT expression does not count -> still FAIL facet-min-zero" {
+  only MisGuarded.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"facet-min-zero"* ]]
+}
