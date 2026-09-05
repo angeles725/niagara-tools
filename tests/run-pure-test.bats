@@ -7,9 +7,16 @@
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RUN="$KIT/toolbelt/run-pure-test.sh"
-  # Skip the whole suite (don't fake a pass) if JUnit isn't fetched on this machine.
-  find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | grep -q . \
-    || skip "junit-4.13.2 not in ~/.gradle cache (run one gradle build to fetch it)"
+  # Skip locally (don't fake a pass) when JUnit isn't fetched; fail in CI so a missing
+  # pre-fetch step is loud instead of silent.
+  if ! find "$HOME/.gradle" -name 'junit-4.13.2.jar' 2>/dev/null | grep -q .; then
+    if [ -n "${CI:-}" ]; then
+      echo "CI: junit-4.13.2.jar not in ~/.gradle — ci.yml pre-fetch step is required" >&2
+      false
+    else
+      skip "junit-4.13.2 not in ~/.gradle cache (run one gradle build to fetch it)"
+    fi
+  fi
 
   RT="$BATS_TEST_TMPDIR/mod-rt"
   PKG=com/example/demo
