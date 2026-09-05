@@ -1,0 +1,9 @@
+<!doctype html><html><body><script>
+function write(v) {
+  fetch("/api/write", { method: "POST", body: JSON.stringify(v) }).catch(() => {});
+}
+function render(p, dt) {
+  const elap = (p.dElapsedMs == null) ? null : p.dElapsedMs + dt;  // blanks the display on fault
+  return elap;
+}
+</script></body></html>

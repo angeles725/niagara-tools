@@ -1,0 +1,10 @@
+<!doctype html><html><body><script>
+function write(v, ord) {
+  fetch(ord, { method: "POST", body: JSON.stringify(v) })
+    .catch(err => console.error("write failed", err));
+}
+function render(p, dt) {
+  const elap = (p.dElapsedMs == null) ? p.dElapsedMs : p.dElapsedMs + dt;
+  return elap;
+}
+</script></body></html>
