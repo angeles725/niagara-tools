@@ -27,6 +27,37 @@ set -euo pipefail
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
 TARGET=""; STORED=0; SRC=""; STRICT=0; JARS=()
+
+# coverage subcommand — dispatched before the flag loop so 'coverage' is never
+# mistaken for a jar path. Pure function: exits 0 (value printed) or 2 (bad args).
+# Usage: verify-module.sh coverage <npass> <nfail> <nwarn> <nskip>
+#   applicable = npass + nfail + nwarn  (SKIP is structurally not-applicable)
+#   covered    = npass                  (only clean passes count as covered)
+#   result     = integer-tenths rounding via t=(1000*P+A/2)/A; prints P.Q format
+#              = "N/A" when applicable == 0 (never 100, that would be a false pass)
+# No version control invoked; VCS-free by design.
+if [ $# -ge 1 ] && [ "$1" = "coverage" ]; then
+  shift
+  if [ $# -ne 4 ]; then
+    echo "usage: verify-module.sh coverage <npass> <nfail> <nwarn> <nskip>" >&2
+    exit 2
+  fi
+  P="$1"; F="$2"; W="$3"; S="$4"
+  for cov_arg in "$P" "$F" "$W" "$S"; do
+    case "$cov_arg" in
+      ''|*[!0-9]*) echo "usage: verify-module.sh coverage <npass> <nfail> <nwarn> <nskip>" >&2; exit 2 ;;
+    esac
+  done
+  A=$(( P + F + W ))
+  if [ "$A" -eq 0 ]; then
+    echo "N/A"
+  else
+    t=$(( (1000 * P + A / 2) / A ))
+    echo "$((t / 10)).$((t % 10))"
+  fi
+  exit 0
+fi
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --target-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; TARGET="$2"; shift 2 ;;
