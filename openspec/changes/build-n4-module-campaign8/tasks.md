@@ -259,11 +259,11 @@ Chain strategy: stacked-to-main
 
 **RED**: none (CD2) | **Gate**: R13.1-R13.2, SC9
 
-- [ ] 13.1 grep-before-fold: `rg 'post-deploy|snapshot.*triage-console.*bog-audit' build-n4-module-kit/BUILD-LOOP.md` → confirm 0 hits (K6).
-- [ ] 13.2 Add `BUILD-LOOP.md` §6 post-deploy checklist: snapshot → `triage-console` → `bog-audit` → `report-module` → keep snapshot as deploy baseline; one line per step naming its script; include: "proxy-link safety row (CHECK11) must be clean before operator hand-off" (B810).
-- [ ] 13.3 Extend `tests/kit-links.bats` L4/L5: assert every §6 step script is named (R13.2).
-- [ ] 13.4 `kit-links.bats` exits 0; `sweep-fold-audit.sh --strict` exits 0.
-- [ ] 13.5 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 13.1 grep-before-fold: `rg 'post-deploy|snapshot.*triage-console.*bog-audit' build-n4-module-kit/BUILD-LOOP.md` → confirm 0 hits (K6).
+- [x] 13.2 Add `BUILD-LOOP.md` §6 post-deploy checklist: snapshot → `triage-console` → `bog-audit` → `report-module` → keep snapshot as deploy baseline; one line per step naming its script; include: "proxy-link safety row (CHECK11) must be clean before operator hand-off" (B810).
+- [x] 13.3 Extend `tests/kit-links.bats` L4/L5: assert every §6 step script is named (R13.2).
+- [x] 13.4 `kit-links.bats` exits 0; `sweep-fold-audit.sh --strict` exits 0.
+- [x] 13.5 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** Guards green; merge ff-only; ledger settle `--max-changed-lines 160`. No install-skill.
 
 ---

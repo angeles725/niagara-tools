@@ -64,7 +64,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ### 6.a Post-deploy verification (after hot module reload or station restart)
 
-Ordered steps — run within ≤5 min of a hot module reload (Out-of-date: Module changed):
+Ordered steps — run within ≤5 min of a hot module reload (Out-of-date: Module changed). `[ev: corpus B811]`
 
 1. `toolbelt/station-snapshot.sh <station-dir> <out-dir>` — snapshot the station before the deploy; keep `<out-dir>` as the deploy baseline (`schema-risk.sh <out-dir> <post-deploy-snapshot>` compares before vs. after). `[ev: corpus B811]`
 2. `toolbelt/triage-console.sh --package <com.vendor> <station-dir>/console*.txt` — scan for own-module load failures ("Cannot load station", "Missing frozen property", "ClassCastException", "Missing class for \"<own-prefix>:\""); exit 1 = rows found, investigate before calling the deploy clean. `[ev: corpus B800]`
