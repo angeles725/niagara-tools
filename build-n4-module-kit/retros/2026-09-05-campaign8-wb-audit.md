@@ -62,27 +62,35 @@ Three tools extended and one created to operationalize the five wb-audit checks
 | (b) drop traversal rule | Removed `_AWK_THREAD` section and its awk invocation from lint-wb-threading.sh | WBT1 | No output, exit 0 — `ui-thread-traversal` row absent |
 | (c) drop invokeLater exemption | Set `has_guard = 0` in `_AWK_THREAD` awk | WBT1c | `ui-thread-traversal  WARN  GuardedTraversal.java:4  doInvoke body calls nav traversal…` |
 | (d) drop dot-dir prune | Replaced `find … -type d -name '.*' -prune -o … -print` with `find … -name '*.java'` | WBT-prune | `ui-thread-traversal  WARN  .deploy-baseline/Stale.java:4  …` |
+| (e) drop depth-3 callee expansion | Reverted `expand_body` and `chain_from` to direct-body-only check (pre-WBT1d code) | WBT1d | `DeepTraversal.java` not flagged — doInvoke body has only `helperA()`, nav is 3 levels deep |
 
 ### Real smokes (read-only; mktemp copies used for smoke 1)
 
-**Smoke 1 — `lint-wb-threading.sh` on BBatchLinkEditor-shaped source:**
+**Smoke 1 — `lint-wb-threading.sh` on chihuahua-wb `BBatchLinkEditor.java` (real source):**
 
-Corpus BBatchLinkEditor.java absent from vineflower dirs
+Corpus Niagara BBatchLinkEditor.java absent from vineflower dirs
 (`find /home/cristian/niagara-research/organized/ -name 'BBatchLinkEditor.java'` → no output).
-Used chihuahua-wb source as the "BBatchLinkEditor-shaped source"
-(`/home/cristian/modulos_niagara_n4/Cliente/Honeywell/MX60/chihuahua/chihuahua/chihuahua-wb/src/com/angeles/chihuahua/wb/BBatchLinkEditor.java`).
+Used chihuahua-wb `BBatchLinkEditor.java` (angeles-authored, same 3-level traversal shape as the design corpus):
+`chihuahua/chihuahua-wb/src/com/angeles/chihuahua/wb/BBatchLinkEditor.java`
 
 ```
+ui-thread-traversal  WARN  BBatchLinkEditor.java:303  doInvoke -> searchNavTree() -> collectNavMatches() -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
 agent-breadth  WARN  BBatchLinkEditor.java:67  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
 Exit: 0
 ```
 
-`ui-thread-traversal` is NOT flagged. The traversal is in `collectNavMatches():745`,
-called via `searchNavTree()` from `doInvoke:303` — 3 levels of indirection, beyond
-the heuristic's direct-body scope. This is a **correct true negative**: the lint flags
-only the obvious pattern (direct call in doInvoke body) per B809 (heuristic, human review).
+`ui-thread-traversal` WARN at :303: `findCmd.doInvoke()` calls `searchNavTree()` (line 684), which calls
+`collectNavMatches()` (line 738), which calls `node.getNavChildren()` (line 745). The depth-3 callee
+expansion (WBT1d) catches this chain. Detail column shows the full path.
 
-`agent-breadth` WARN at :67 is a **correct true positive**: `@NiagaraType(agent = @AgentOn(types = "baja:Component", ...)` at line 67 has no `justif|why|broad` comment in the 3 lines above (lines 64–66 contain `reveals chosen entry...`, `*/`, `@NiagaraType(`).
+`agent-breadth` WARN at :67: `@NiagaraType(agent = @AgentOn(types = "baja:Component", ...)`
+has no `justif|why|broad` comment in the 3 lines above.
+
+**Prior behaviour (before WBT1d):** the initial implementation checked only the direct doInvoke body.
+`searchNavTree()` is called from doInvoke but `getNavChildren()` is 3 levels deep; the lint produced
+only the `agent-breadth` WARN and no `ui-thread-traversal` WARN. This was filed in the lead
+review as "fixture-green, real-red" (the exemplar that B809 was written from was not being caught).
+The WBT1d fix resolves this.
 
 **Smoke 2 — `slot-coverage.sh` on chihuahua-wb (missing module.lexicon):**
 
@@ -93,7 +101,8 @@ Exit: 1 (expected 1) — was exit 3 before WB-LEX1 fix
 
 **Smoke 3a — `verify-module.sh` on DashboardPan-wb (synthetic jar, --src):**
 
-DashboardPan-wb jar not yet built (empty `src/`); synthetic jar created from actual
+`Dashboard/DashboardPan/DashboardPan-wb/build/libs/DashboardPan-wb.jar` does NOT exist in any
+client checkout (`find` returned no output). Jar used: **synthetic** — created from the actual
 `module.palette` (b:Folder root only, 0 `<p n=` entries) + minimal module.xml (0 types).
 
 ```
@@ -145,16 +154,19 @@ exit 0. K13 makes the RED authoritative: `ui-thread-traversal` is WARN (exit 0; 
 promotes to exit 1). B809 explicitly categorises this as a heuristic for human review, not
 a hard gate. Tasks.md records the discrepancy with WARN wording.
 
-### D2: smoke 1 produces no `ui-thread-traversal` WARN on chihuahua-wb BBatchLinkEditor
+### D2: initial implementation missed the 3-level BBatchLinkEditor chain; WBT1d fix closes the gap
 
-The design referenced `BBatchLinkEditor.java:684–720` from the Niagara decompiled corpus
-(vineflower). That class does not exist in
-`/home/cristian/niagara-research/organized/` vineflower dirs. The chihuahua-wb
-`BBatchLinkEditor.java` is an angeles-authored class with the same name but a different
-structure: the `getNavChildren()` call is 3 levels deep
-(`doInvoke:303` → `searchNavTree():684` → `collectNavMatches():739` → `getNavChildren():745`).
-The lint's direct-body heuristic correctly does not flag this — it is a true negative.
-The `agent-breadth` WARN at :67 IS produced and is correct.
+The design corpus referenced `BBatchLinkEditor.java:684–720` (vineflower). That class is absent from
+`organized/` vineflower dirs. The chihuahua-wb `BBatchLinkEditor.java` has the same 3-level chain:
+`doInvoke:303` → `searchNavTree():684` → `collectNavMatches():738` → `getNavChildren():745`.
+
+**Initial implementation** only checked the direct doInvoke body — `searchNavTree()` was there but
+`getNavChildren()` was not. No `ui-thread-traversal` WARN was produced ("fixture-green, real-red").
+
+**WBT1d fix** adds same-class callee expansion to depth 3 (recursive, brace-counted, cycle-safe).
+After the fix, smoke 1 produces the `ui-thread-traversal` WARN at :303 with the full chain in the
+detail column. The fix is tested by WBT1d (DeepTraversal.java, 3-level chain WARNs) and WBT1d-guard
+(DeepGuardedTraversal.java, same chain but helperB runs via `invokeLater`, does NOT WARN).
 
 ### D3: DashboardPan-wb jar created as a synthetic copy for smoke 3a
 

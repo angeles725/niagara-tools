@@ -71,3 +71,17 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"WARN"* ]]
   [[ "$output" != *"Stale"* ]]
 }
+
+@test "WBT1d: doInvoke -> helperA -> helperB -> getNavChildren (3-level chain) WARNs ui-thread-traversal" {
+  only DeepTraversal.java
+  run "$LW" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"ui-thread-traversal"* ]] && [[ "$output" == *"DeepTraversal"* ]]
+}
+
+@test "WBT1d-guard: same 3-level chain where helperB runs via invokeLater does NOT WARN" {
+  only DeepGuardedTraversal.java
+  run "$LW" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}

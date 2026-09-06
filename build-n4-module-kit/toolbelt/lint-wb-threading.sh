@@ -2,11 +2,13 @@
 # lint-wb-threading.sh — Workbench Swing-thread and agent-breadth checks (Campaign 8 PR11).
 #
 # Two checks over a -wb src tree (B809 §809.7):
-#   ui-thread-traversal  WARN  a doInvoke body that directly calls
+#   ui-thread-traversal  WARN  a doInvoke body (or any same-class private/protected
+#                               method reachable within 3 call levels) calls
 #                               getNavChildren|getNavNodes|BqlQuery without an
-#                               invokeLater|BJobService|JobThread in the SAME body.
-#                               Heuristic only: flags the obvious direct pattern for
-#                               human review; deep call chains are out of scope (B809).
+#                               invokeLater|BJobService|JobThread anywhere on the
+#                               expanded chain.  Bodies are extracted by brace-counting;
+#                               the expansion is cycle-safe (visited set).
+#                               Heuristic only: WARN for human review (B809).
 #   agent-breadth        WARN  @AgentOn(types="baja:Component") with no comment
 #                               containing 'justif', 'why', or 'broad' within 3 lines above.
 #
@@ -61,43 +63,123 @@ touch "$_ROWS"
 
 # ---------------------------------------------------------------------------
 # awk program: ui-thread-traversal
-# Extracts each doInvoke method body by brace-counting, then checks whether
-# the body calls getNavChildren|getNavNodes|BqlQuery without an off-load guard.
-# Brace counting is heuristic (strings/comments are not parsed) — acceptable
-# for a WARN-level B809 check that exists for human review, not a hard gate.
+#
+# Phase 1 — extract bodies of all private/protected methods in the file into
+#   mb[name].  Brace-counted from the signature line (Allman and K&R safe).
+#
+# Phase 2 — for each doInvoke method:
+#   a. Extract the method body by brace-counting.
+#   b. Recursively expand same-class callee bodies (methods found in mb[])
+#      up to depth 3.  Expansion is cycle-safe via a visited set.
+#   c. If the expanded body contains getNavChildren|getNavNodes|BqlQuery
+#      AND no invokeLater|BJobService|JobThread appears anywhere, WARN.
+#   d. Compute the call chain for the detail column via a DFS (chain_from).
+#
+# NOTE: 'sub' is a built-in awk name; local variables use distinct names
+# (mbody, callee) throughout to avoid awk syntax errors.
 # ---------------------------------------------------------------------------
 _AWK_THREAD="$_TMP/thread.awk"
 cat > "$_AWK_THREAD" <<'AWK'
-{
-  lines[NR] = $0
+{ lines[NR] = $0 }
+
+# brace_body: extract the method body starting at line 'start' by counting {/}.
+# Sets global g_end to the last line included.
+function brace_body(start,    j,depth,body,brace_seen,oc,cc) {
+  depth=0; body=""; brace_seen=0; j=start
+  while (j <= NR) {
+    body = body "\n" lines[j]
+    oc = lines[j]; gsub(/[^{]/,"",oc)
+    cc = lines[j]; gsub(/[^}]/,"",cc)
+    depth += length(oc) - length(cc)
+    if (index(lines[j],"{") > 0) brace_seen=1
+    if (brace_seen && depth <= 0) break
+    j++
+  }
+  g_end = j
+  return body
 }
+
+# get_ids: extract all lowercase-starting identifier tokens from src into out[].
+function get_ids(src, out,    tmp, n, arr, i, w) {
+  delete out
+  tmp = src; gsub(/[^a-zA-Z_0-9]/," ",tmp)
+  n = split(tmp,arr)
+  for (i=1; i<=n; i++) {
+    w = arr[i]
+    if (w ~ /^[a-z][a-zA-Z0-9_]+$/) out[w] = 1
+  }
+}
+
+# expand_body: return body augmented with callee bodies reachable within d levels.
+# vis[] is the visited set (passed by reference; modified in-place).
+# NOTE: 'sub' is reserved in awk; local var is named 'mbody'.
+function expand_body(body, d, vis,    ids, callee, mbody) {
+  if (d <= 0) return body
+  get_ids(body,ids)
+  for (callee in ids) {
+    if ((callee in mb) && !(callee in vis)) {
+      vis[callee] = 1
+      mbody = expand_body(mb[callee],d-1,vis)
+      body = body "\n" mbody
+    }
+  }
+  return body
+}
+
+# chain_from: DFS to find the call path from body to a nav call.
+# Returns "getNavChildren" when nav is directly in body,
+#   "callee() -> ..." when reached via a callee, or "?" when not reachable.
+function chain_from(body, d, vis,    ids, callee, mbody) {
+  if (body ~ /getNavChildren|getNavNodes|BqlQuery/) return "getNavChildren"
+  if (d <= 0) return "?"
+  get_ids(body,ids)
+  for (callee in ids) {
+    if ((callee in mb) && !(callee in vis)) {
+      vis[callee] = 1
+      mbody = chain_from(mb[callee],d-1,vis)
+      if (mbody != "?") return callee "() -> " mbody
+    }
+  }
+  return "?"
+}
+
 END {
-  for (i = 1; i <= NR; i++) {
-    # Match a doInvoke method signature line (handles both
-    # "void doInvoke(..." and "CommandArtifact doInvoke() throws ..."
+  # --- Phase 1: collect private/protected method bodies into mb[] ----------
+  for (i=1; i<=NR; i++) {
+    if (lines[i] !~ /^[[:space:]]+(private|protected)[[:space:]]/) continue
+    # Extract method name: last word before the first '('
+    n = split(lines[i],pts,"(")
+    if (n < 2) continue
+    n2 = split(pts[1],wds)
+    if (n2 == 0) continue
+    mname = wds[n2]
+    # Method names start lowercase (skip constructors and type names)
+    if (mname !~ /^[a-z][a-zA-Z0-9_]*$/) continue
+    mb[mname] = brace_body(i)
+  }
+
+  # --- Phase 2: check each doInvoke body -----------------------------------
+  for (i=1; i<=NR; i++) {
     if (lines[i] !~ /[[:space:]]doInvoke[[:space:]]*\(/) continue
-    # Extract the full method body by brace counting
-    depth = 0
-    body = ""
     start_line = i
-    brace_seen = 0
-    j = i
-    while (j <= NR) {
-      body = body "\n" lines[j]
-      open_copy = lines[j]; gsub(/[^{]/, "", open_copy)
-      clos_copy = lines[j]; gsub(/[^}]/, "", clos_copy)
-      depth += length(open_copy) - length(clos_copy)
-      if (index(lines[j], "{") > 0) brace_seen = 1
-      if (brace_seen && depth <= 0) break
-      j++
-    }
-    # Check: nav traversal call without an off-load guard in the same body?
-    has_nav   = (body ~ /getNavChildren|getNavNodes|BqlQuery/)
-    has_guard = (body ~ /invokeLater|BJobService|JobThread/)
+    body = brace_body(i)
+    j = g_end
+
+    # Expand same-class callees to depth 3 (cycle-safe)
+    delete vis; vis["doInvoke"] = 1
+    expanded = expand_body(body,3,vis)
+
+    has_nav   = (expanded ~ /getNavChildren|getNavNodes|BqlQuery/)
+    has_guard = (expanded ~ /invokeLater|BJobService|JobThread/)
+
     if (has_nav && !has_guard) {
-      printf "ui-thread-traversal  WARN  %s:%d  doInvoke body calls nav traversal on the UI thread without invokeLater/BJobService (B809: flag for human review)\n", FILE, start_line
+      # Compute call chain for the detail column
+      delete vis2
+      ch = chain_from(body,3,vis2)
+      if (ch == "?") ch = "..."
+      printf "ui-thread-traversal  WARN  %s:%d  doInvoke -> %s without invokeLater/BJobService (B809: flag for human review)\n",
+             FILE, start_line, ch
     }
-    # Advance past this method to avoid re-scanning its inner lambdas/classes
     i = j
   }
 }
