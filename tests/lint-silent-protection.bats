@@ -176,18 +176,65 @@ JAVA
   [ "$(printf '%s\n' "$output" | grep -c 'WARN')" -eq 1 ]
 }
 
+# ===========================================================================
+# S23 (C10 lint-precision RED): a protection trip is SURFACED when the module also
+# carries a Pattern-B alarm adapter — `implements BIAlarmSource` + `newOffnormalAlarm`
+# (parallel to the existing BAlarmSourceExt/BAlarmRecord check, which only sees
+# Pattern A). Real gap on df8c7ec: the CP-1 low-suction shed in CompressorControl.java
+# is flagged because its surface (newOffnormalAlarm) lives in the sibling
+# BCompressorControl.java adapter, which the lint does not recognise.
+# RED-for-the-right-reason: S23-pos + the CompPan-rt-0 line in SP-smoke FAIL on df8c7ec.
+# ---------------------------------------------------------------------------
+@test "S23-pos: a trip whose module has a BIAlarmSource + newOffnormalAlarm adapter is CLEAN (Pattern-B surface)" {
+  D="$BATS_TEST_TMPDIR/s23pos"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    return target;
+  }
+}
+JAVA
+  cat > "$D/com/x/BCompressorControl.java" <<'JAVA'
+package com.x;
+public class BCompressorControl extends BComponent implements BIAlarmSource {
+  void raise() { alarmSupport.newOffnormalAlarm(mkData()); }   // Pattern-B surface for the core's trip
+}
+JAVA
+  run "$LSP" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}
+
+@test "S23-neg: the SAME trip with NO surface anywhere in the module still WARNs (proves S23 keys on a real adapter)" {
+  D="$BATS_TEST_TMPDIR/s23neg"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // trip, NO surface -> silent
+    return target;
+  }
+}
+JAVA
+  run "$LSP" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+}
+
 # ---- SP-smoke: the REAL client trees must flag CP-1 + CR-3 and NOT flag CP-2 (SKIP if absent) ----
 # R3<->R8 re-pin: this smoke reads a FIXED post-PR8 client baseline (7071b93 = PR8 merge) via
 # C9_CLIENT_ROOT, where CR-3 is surfaced (Pattern A) so ColdRoomPan-rt = 0. On a109249 (pre-PR8)
 # ColdRoomPan-rt is still 1 — do NOT point this at a109249. COUPLING: PR9 (CP-1 AlarmEdge) will
 # surface the CP-1 low-suction trip, so CompPan-rt goes 1 -> 0 after PR9 merges; re-pin the CompPan
 # count and advance the baseline SHA then (same shape as this R3<->R8 re-pin).
-@test "SP-smoke: EXACT contract at post-PR8/PR9 client main ff1b659 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:294, CP-1 — line moved by PR1; stays 1 after PR9: the lint does not recognise the BIAlarmSource/AlarmSupport surface, C10 seed S23), ColdRoomPan-rt 0 (CR-3 surfaced by PR8 Pattern A), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
+@test "SP-smoke: EXACT contract at post-PR8/PR9 client main ff1b659 (C9_CLIENT_ROOT) — CompPan-rt 0 (CP-1 low-suction shed SURFACED by the BIAlarmSource/newOffnormalAlarm adapter — S23), ColdRoomPan-rt 0 (CR-3 surfaced by PR8 Pattern A), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
   [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] && [ -d "$ROOT/Dashboard" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$LSP" "$ROOT/Compresores/CompPan/CompPan-rt/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
-  [[ "$output" == *"CompressorControl.java:294"* ]]           # CP-1 low-suction shed (ff1b659 anchor)
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]    # CP-1 surfaced by the Pattern-B adapter (BIAlarmSource + newOffnormalAlarm) — S23
+  [[ "$output" != *"CompressorControl.java:294"* ]]
   [[ "$output" != *"dischargeHighAlarm"* ]]                    # CP-2 is surfaced -> never a subject
   [[ "$output" != *"BCompressorControl"* ]]                    # adapter getters are not trips
   run "$LSP" "$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
