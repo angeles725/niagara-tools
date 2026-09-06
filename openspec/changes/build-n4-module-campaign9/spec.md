@@ -72,11 +72,11 @@ Real-tree smoke (CD10): `lint-demand-scope.sh`, `lint-silent-protection.sh`, `li
 
 | ID | Requirement |
 |----|-------------|
-| R2.1 | `lint-demand-scope.sh` MUST emit `FAIL` for every `step`/staging body that computes a target value with no zero-demand short-circuit (a zero-demand idle branch that returns or continues before the target computation). `[ev: corpus B820]` |
-| R2.2 | A `step` body containing a zero-demand guard before the target computation MUST produce no FAIL row (PASS). |
-| R2.3 | Row grammar: `FAIL  lint-demand-scope  <file>:<line>  <reason>`; WARN rows follow the same format. |
-| R2.4 | Exit codes: 0 = no FAIL; 1 = any FAIL; 3 = no sources found or usage error (K20 disjoint). |
-| R2.5 | The script MUST iterate from the module root through all profiles; a root with no Java sources MUST exit 3, never a silent 0. |
+| R2.1 | `lint-demand-scope.sh` MUST emit `WARN` (advisory — never a hard FAIL, B820 §820.3; `--strict` promotes WARN to exit 1) for every `step`/staging body that computes a target value with no zero-demand short-circuit (a zero-demand idle branch that returns or continues before the target computation). `[ev: corpus B820]` `[ev: RED qa/c9-demand-in-scope 2916954 DS2/DS5]` |
+| R2.2 | A `step` body containing a zero-demand guard before the target computation MUST produce no WARN row (PASS). |
+| R2.3 | Row grammar: `WARN  demand-in-scope  <file>:<line>  <reason>` (the lint-name column is `demand-in-scope`, asserted by DS2; the script file is `lint-demand-scope.sh` per the kit `lint-*.sh` convention — QA re-issues the RED's setup path). |
+| R2.4 | Exit codes: 0 = WARN-only or clean; 1 = any WARN under `--strict` (DS5); 3 = no sources found or usage error (K20 disjoint). |
+| R2.5 | CLI is `[--strict] <java-src-dir>` (single source dir, the lint-delays shape, as the RED pins); a dir with no Java sources MUST exit 3, never a silent 0. Module-root profile discovery is a LATER additive flag — no RED pin may depend on it. |
 | R2.6 | The script MUST prune dot-directories during traversal (D9b). |
 | R2.7 | `lint-demand-scope.sh` MUST be named in both `BUILD-LOOP.md` §5 and `skill/SKILL.md` in PR2 (K19). |
 | R2.8 | `report-module.sh` MUST gain a member row for `lint-demand-scope`; a FAIL from this lint MUST surface as an aggregate FAIL. |
