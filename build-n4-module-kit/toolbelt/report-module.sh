@@ -288,6 +288,45 @@ for ADIR in "${ARTIFACTS[@]}"; do
   fi
 
   # ----------------------------------------------------------------
+  # 5.5. lint-silent-protection.sh <artifact>/src (Campaign 9 PR3; D9b: SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    lsp_exit=0
+    lsp_out=$("$TOOLBELT/lint-silent-protection.sh" "$ADIR/src" 2>&1) || lsp_exit=$?
+    if [ "$lsp_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-silent-protection "env fault (exit 3)"; HAD_ENV=1
+    else
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          FAIL*|WARN*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+          ;;
+        esac
+      done <<< "$lsp_out"
+    fi
+  else
+    emit "$ANAME" SKIP lint-silent-protection "no src/"
+  fi
+
+  # ----------------------------------------------------------------
   # 6. schema-risk.sh <artifact>/.deploy-baseline <artifact>
   #    (Campaign 8 PR8 / D9a; SKIP if no .deploy-baseline/ snapshot)
   # ----------------------------------------------------------------
