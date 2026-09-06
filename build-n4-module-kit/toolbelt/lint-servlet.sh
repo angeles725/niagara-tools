@@ -29,6 +29,7 @@
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro campaign8-lint-servlet]
+# Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
 set -u
 
 FAILED=0

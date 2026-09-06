@@ -28,6 +28,9 @@
 # Dot-directories pruned (D9b). VCS-free by design.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: corpus B816]
+# Mutation: WP-stale-concept-decoy -- moves concept marker strip after the test, making an HTML-comment [concept] produce a false STALE
+# Mutation: WP-stale-perrow -- removes per-row check, allowing a [concept]-marked row to exempt a co-resident plain stale row
+# Mutation: WP-drift-decoy -- removes HTML-comment strip, causing a commented [concept] to produce a false DRIFT
 set -u
 
 FAILED=0

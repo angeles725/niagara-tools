@@ -19,6 +19,8 @@
 # Exits: 0 no WARN (or WARN without --strict) | 1 any WARN under --strict | 3 usage/env
 # Dot-dirs excluded (D9b). VCS-free by design.
 # [ev: corpus B824]  [ev: retro campaign9-silent-protection]
+# Mutation: S23-pos -- removes Pattern-B alarm-adapter exemption, causing false-WARN on alarmed trips
+# Mutation: S23-and -- removes the BIAlarmSource check, allowing bare newOffnormalAlarm to suppress WARN
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"

@@ -44,6 +44,8 @@
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
+# Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
+# Mutation: S21-misparse -- drops max_d>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"

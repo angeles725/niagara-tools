@@ -22,6 +22,7 @@
 # Dot-directories (e.g. .deploy-baseline/) are excluded per D9b.
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # [ev: retro campaign8-wb-audit]
+# Mutation: WBT1c -- changes the invokeLater exemption, making an invokeLater-wrapped traversal false-WARN
 set -u
 LC_ALL=C
 export LC_ALL

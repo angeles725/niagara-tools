@@ -30,6 +30,7 @@
 # only as a filesystem sentinel (stop-marker) for the L10 upward walk; no VCS
 # commands are ever executed. kit-links.bats L2 enforces this on all toolbelt scripts.
 # [ev: retro campaign8-structure]
+# Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 set -u
 LC_ALL=C
 export LC_ALL

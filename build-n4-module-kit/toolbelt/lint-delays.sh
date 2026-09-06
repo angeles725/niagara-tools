@@ -22,6 +22,7 @@
 # baseline snapshots under an artifact dir are never double-counted (D9b).
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
+# Mutation: LD1 -- removes delay-floor check, allowing Math.max(x,0L) pattern to pass instead of FAIL
 set -u
 
 FAILED=0

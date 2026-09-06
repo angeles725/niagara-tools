@@ -28,6 +28,8 @@
 #
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2).
 # [ev: corpus B823 §823.2]  [ev: corpus B826]  [ev: kit types/logic-authoring.md:62-70]
+# Mutation: EW-s22-neg2 -- removes per-slot do-body check, allowing a do<X> writing a different slot to exempt another
+# Mutation: EW-s22-nondo -- widens scope past do<Action> bodies, allowing execute() to exempt OPERATOR slots
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"

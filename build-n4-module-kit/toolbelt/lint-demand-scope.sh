@@ -16,6 +16,7 @@
 # driven by an upstream demand gate would false-positive on a hard FAIL.
 # Advisory: bare *count (e.g. onCount) is the weakest demand signal; kept per B820 but the
 # matched token is named in the row so a reviewer sees which term cleared it.
+# Mutation: DS2 -- removes demand-shaped input check, allowing pressure-without-demand methods to pass silently
 set -u
 LC_ALL=C
 export LC_ALL
