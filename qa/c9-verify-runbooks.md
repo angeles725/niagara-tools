@@ -67,9 +67,9 @@ DashboardPan-ux `DashboardDispatchTest`, `JsonUtilTest`). Schema: `$TB/schema-ri
 → verdict `SAFE` (add_slot only; snapshot dir = module-include.xml + java tree, see tool header).
 **Tunnel common gate** (`REPO=$TUN WT=$TWT`): `node --test --test-reporter=tap --test-force-exit <test file>` → `# fail 0`;
 `node --check` on every touched `.mjs`; no port bound after the run (`ss -ltnp | grep -c node` → 0; tests set WRITE_PORT=0).
-**Real-tree smokes:** the three lint REDs hardcode the STALE local checkout (`$CLI/…` @4f5f1c7). Run the tool ALSO against
-`$CWT/main-a109249/<profile>/src` (or the current origin/main worktree) and record both; when they differ the a109249 run is
-the evidence (RP1).
+**Real-tree smokes:** the three lint REDs read `C9_CLIENT_ROOT` (default `$CWT/main-a109249`, the blessed tip; RP1 done
+2026-09-06). At verify export `C9_CLIENT_ROOT=$CWT/<current-main-worktree>` so the smoke reads the post-merge tree, never the
+local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 
 ---
 
