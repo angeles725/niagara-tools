@@ -105,7 +105,7 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
 
 @test "SC-13 (client vendorVersion, schema-risk-cleared): CompPan-rt 2.2.0, ColdRoomPan-rt 2.1.0, DashboardPan-ux 2.2.0" {
   _close
-  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"
+  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   # the version lives in each GROUP's build.gradle.kts as defaultModuleVersion("X.Y.Z") (not in the module .kts)
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
