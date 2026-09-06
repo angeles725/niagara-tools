@@ -8,6 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
+### Added — Campaign 9 Wave 1: demand-in-scope lint (PR2)
+
+- **`lint-demand-scope.sh` (PR2):** `toolbelt/lint-demand-scope.sh [--strict] <java-src-dir>` — demand-in-scope lint; a control/staging method that reads a process variable (suction/pressure/discharge/temp/cv/coil/head) in a comparison with NO demand-shaped input ({demand*, *call*, enable, loopEnable, *count, BStatusBoolean in*}) in its parameters or enclosing-class fields → WARN "pressure without demand"; WARN-only (--strict promotes to exit 1); two-pass awk: Pass 1 collects class-level demand fields, Pass 2 applies rules 1-4 with brace-balanced body extraction; dot-dirs pruned (D9b); DS1-DS7 + DS-smoke bats; real PASS: CompressorControl.step(demandCount) gates demand — zero WARN.*step rows confirmed [ev: corpus B820 §820.2-820.4; retro campaign9-demand-scope].
+
 ---
 
 ## [v0.19.0] - 2026-09-05

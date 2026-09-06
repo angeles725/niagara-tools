@@ -85,3 +85,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign8-write-path.md | kit | 2026-09-06 | folded | 5 | <!-- Δ1 lint-write-path.sh; Δ2 logic.md §write-path; Δ3 logic-authoring.md §write-path-matrix; Δ4 CHECK12-pin; Δ5 K19 routing -->
 | 2026-09-06-campaign8-station-logic.md | kit | 2026-09-06 | folded | 4 |
 | 2026-09-06-campaign8-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 11 | <!-- D1 CHECK16 vice-versa deferred (BA5 conflict); D2 self-closing bug; D3 relay clean fixture; D4 f-string !r syntax fix -->
+| 2026-09-06-campaign9-demand-scope.md | kit | 2026-09-06 | pending | 0 |

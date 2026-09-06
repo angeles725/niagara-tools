@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: false                 # all 20 campaign-8 retros + close-process-meta-lessons folded in the close PR
+retro_pending: true                 # all 20 campaign-8 retros + close-process-meta-lessons folded in the close PR
 last_commit: 9ba4329 — PR20 station-logic CHECK13-19 (Campaign 8 PR20)
 last_session: 2026-09-06 · Campaign 8 CLOSE: fold 20 retros + close-process-meta-lessons, extend CHANGELOG v0.19.0 (PR9-PR20), retro_pending=false. Guards: sweep-build-state pending=0, sweep-fold-audit --strict clean, bats 326 green. Rebase on 17af2ed (tests/station-logic.bats dropped; bog-audit.bats owns SL pins). Cherry-pick 7ef2b22 (c8-close.bats).
 2026-09-06 · Campaign 8 PR15: RT doctrine fold from corpus B804/B805/B808/B822/B823/B825/B826/B828. Folded: §RT-control-logic (logic.md), §history-ext B804 (logic-authoring.md), §slot-types-for-ext-writes B823 (logic-authoring.md), dashboard.md pointer. Guards: 56/56 cited, 258/258 bats, sweep-build-state exit 0, sweep-fold-audit --strict exit 0. Retro + INDEX + BUILD-STATE filed.
