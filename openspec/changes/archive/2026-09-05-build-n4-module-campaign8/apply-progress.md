@@ -252,7 +252,6 @@ kit-links.bats L4/L5         : 6/6 green (lint-wb-threading.sh in BUILD-LOOP.md 
 
 ---
 
-<<<<<<< HEAD
 ## PR16 — feat/c8-retro-loop
 
 **Branch**: `feat/c8-retro-loop`
@@ -327,7 +326,6 @@ kit-ticket exit: 0
 
 1. BUILD-STATE sed flips ALL `retro_pending: false` → `true` (not scoped to the section for the given module). For the test the single entry flips correctly; for the real kit the module sections also get flipped. Harmless when the kit section was already `true`. Future Δ5: awk section-aware update.
 2. Task 16.4 wording says "write tests/retro-loop.bats" but that bats file was already on the branch (RED commit 452a840). Interpreted as "verify RL1-RL6 verbatim from RED" — done (file unchanged, assertions match).
-=======
 ## PR17 — docs/c8-orchestration
 
 **Branch**: `docs/c8-orchestration`
@@ -375,4 +373,3 @@ Added `<!-- MUTATION-PROOF: fake-extra.sh -->` to ORCHESTRATION.md → L8 failed
 1. **L8 label**: wave3.md says "L7 extension" but L7 exists on main (PR13 §6.a step scripts). Added as L8. Recorded in retro Δ1.
 2. **Draft `toolbelt/` prefix**: `new-retro.sh` and `kit-ticket.sh` references drop the `toolbelt/` path prefix in ORCHESTRATION.md to avoid L1 failures before PR16 merges. Process content is identical. Recorded in retro Δ2.
 3. **Section count**: Draft body has 4 sections covering all 8 conceptual areas (some merged); placed verbatim per Excavador Técnico profile ("paste the READY body verbatim").
->>>>>>> 4660f83 (chore(sdd): tick PR17 tasks 17.1-17.6 complete + apply-progress (C8 PR17))
