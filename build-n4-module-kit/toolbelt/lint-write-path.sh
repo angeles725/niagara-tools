@@ -31,19 +31,16 @@
 set -u
 
 FAILED=0
+STRICT=0
+STALE=0
 BOG_FILE=""
 MATRIX_OVERRIDE=""
 
 # ---------------------------------------------------------------------------
-# Usage guard (exit 3 when no module-root given — K20 disjoint exit codes)
+# Argument parsing.  --strict may appear before or after <module-root>.
+# Exit 3 when no module-root is provided (K20 disjoint exit codes).
 # ---------------------------------------------------------------------------
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>]\n' >&2
-    exit 3
-fi
-
-MODULE_ROOT="$1"
-shift
+MODULE_ROOT=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -65,12 +62,28 @@ while [ $# -gt 0 ]; do
             MATRIX_OVERRIDE="$1"
             shift
             ;;
-        *)
+        --strict)
+            STRICT=1; shift ;;
+        -*)
             printf 'lint-write-path: unknown option: %s\n' "$1" >&2
             exit 3
             ;;
+        *)
+            if [ -z "$MODULE_ROOT" ]; then
+                MODULE_ROOT="$1"
+                shift
+            else
+                printf 'lint-write-path: unexpected argument: %s\n' "$1" >&2
+                exit 3
+            fi
+            ;;
     esac
 done
+
+if [ -z "$MODULE_ROOT" ]; then
+    printf 'usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>] [--strict]\n' >&2
+    exit 3
+fi
 
 if [ ! -d "$MODULE_ROOT" ]; then
     printf 'lint-write-path: not a directory: %s\n' "$MODULE_ROOT" >&2
@@ -123,6 +136,31 @@ else
             "$MODULE_ROOT" "$_looked"
         exit 3
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# Matrix root: the directory whose docs/write-path-matrix.md was found.
+# = dirname(dirname(MATRIX)) since MATRIX = <root>/docs/write-path-matrix.md.
+# Used for matrix-root-wide covered-set harvest (STALE direction).
+# ---------------------------------------------------------------------------
+MATRIX_ROOT="$(dirname "$(dirname "$MATRIX")")"
+
+# ---------------------------------------------------------------------------
+# Matrix-root-wide covered set (for STALE detection only).
+# Includes ALL @NiagaraProperty and @NiagaraAction names (any flag) from
+# EVERY Java source under the matrix root, build/ and dot-dirs pruned (D9b).
+# Multi-line annotations put name = "X" on its own line — match the field,
+# not @Niagara… on the same line.  NOT the per-module OPERATOR-only scanner.
+# ---------------------------------------------------------------------------
+_all_matrix_java=$(find "$MATRIX_ROOT" \
+    -type d \( -name '.*' -o -name 'build' \) -prune \
+    -o -name '*.java' -print \
+    2>/dev/null)
+_covered_names=""
+if [ -n "$_all_matrix_java" ]; then
+    _covered_names=$(printf '%s\n' "$_all_matrix_java" | \
+        xargs grep -hoE 'name[[:space:]]*=[[:space:]]*"[A-Za-z][A-Za-z0-9_]*"' 2>/dev/null | \
+        sed -E 's/.*"([^"]+)".*/\1/' | sort -u)
 fi
 
 # ---------------------------------------------------------------------------
@@ -380,4 +418,47 @@ $_op_slots
 EOF
 done
 
-exit "$FAILED"
+# ---------------------------------------------------------------------------
+# Per-row STALE pass.  For each data row in the matrix, extract the
+# backtick-inner slot name (^[a-z][A-Za-z0-9]*$ only; prose/multi-word
+# cells are not slots).  Skip rows carrying the literal [concept] token
+# (checked on the comment-stripped row; <!-- --> stripped before matching).
+# A [concept] marker exempts only its own row — never another row with the
+# same name (per-row, not per-name).  The covered set is the matrix-root-wide
+# @NiagaraProperty|Action harvest ∪ --bog extras (NOT the OPERATOR-only
+# per-module scanner).  STALE rows are advisory (exit 0) unless --strict.
+# Row grammar: STATUS-first, same shape as the FAIL row at :374.
+# ---------------------------------------------------------------------------
+_covered_flat=" $(printf '%s\n%s\n' "$_covered_names" "$_bog_extra" | tr '\n' ' ') "
+_ln=0
+while IFS= read -r _mline; do
+    _ln=$(( _ln + 1 ))
+    # Only data rows (start with |)
+    case "$_mline" in '|'*) : ;; *) continue ;; esac
+    # Strip markdown comments <!-- … --> from the row before [concept] check.
+    _row=$(printf '%s' "$_mline" | sed 's/<!--[^>]*-->//g')
+    # Skip rows carrying the literal [concept] token.
+    case "$_row" in *'[concept]'*) continue ;; esac
+    # Extract backtick-inner content of the first cell.
+    _cell=$(printf '%s' "$_row" | awk -F'|' 'NR==1{cell=$2; gsub(/^[[:space:]]+|[[:space:]]+$/,"",cell); print cell}')
+    case "$_cell" in '`'*) : ;; *) continue ;; esac
+    # shellcheck disable=SC2016
+    _name=$(printf '%s' "$_cell" | sed -E 's/^`([^`]+)`.*/\1/')
+    # Must match slot name pattern: ^[a-z][A-Za-z0-9]*$
+    printf '%s' "$_name" | grep -qE '^[a-z][A-Za-z0-9]*$' || continue
+    # Skip if the name is in the covered set.
+    case "$_covered_flat" in *" $_name "*) continue ;; esac
+    # Emit STALE advisory (STATUS-first, same column order as FAIL row).
+    printf 'STALE  lint-write-path  %s:%d  slot %s: no source slot with that name\n' \
+        "$MATRIX" "$_ln" "$_name"
+    STALE=1
+done < "$MATRIX"
+
+# ---------------------------------------------------------------------------
+# Exit: uncovered FAIL always exits 1 (unchanged, with and without --strict).
+# --strict promotes STALE to exit 1.  Otherwise exit 0.
+# Exit 3 (usage/env/missing-matrix) is handled above — range {0,1}∪{3} (K20).
+# ---------------------------------------------------------------------------
+[ "$FAILED" -eq 1 ] && exit 1
+[ "$STRICT" -eq 1 ] && [ "$STALE" -eq 1 ] && exit 1
+exit 0
