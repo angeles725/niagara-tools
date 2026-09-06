@@ -8,9 +8,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
-### Added — Campaign 9 Wave 1: demand-in-scope lint (PR2)
+### Added — Campaign 9 Wave 1: kit lints (PR2, PR3)
 
 - **`lint-demand-scope.sh` (PR2):** `toolbelt/lint-demand-scope.sh [--strict] <java-src-dir>` — demand-in-scope lint; a control/staging method that reads a process variable (suction/pressure/discharge/temp/cv/coil/head) in a comparison with NO demand-shaped input ({demand*, *call*, enable, loopEnable, *count, BStatusBoolean in*}) in its parameters or enclosing-class fields → WARN "pressure without demand"; WARN-only (--strict promotes to exit 1); two-pass awk: Pass 1 collects class-level demand fields, Pass 2 applies rules 1-4 with brace-balanced body extraction; dot-dirs pruned (D9b); DS1-DS7 + DS-smoke bats; real PASS: CompressorControl.step(demandCount) gates demand — zero WARN.*step rows confirmed [ev: corpus B820 §820.2-820.4; retro campaign9-demand-scope].
+- **`lint-silent-protection.sh` (PR3):** `toolbelt/lint-silent-protection.sh [--strict] <java-src-dir>` — silent-protection lint (B824): a protection trip (a boolean latch that inhibits an output) with no SUMMARY/alarm/adapter surface → `WARN  lint-silent-protection  <file>:<line>  <reason>`, exactly one per trip site; effect-slot exemption, one-level field→slot adapter follow, private fields never a surface; WARN-only (`--strict` → 1), exit 3 on usage/no sources (K20), D9b prune. Real tree at a109249: CP-1 `CompressorControl.java:215` and CR-3 `BEvaporatorUnit.java:1287` flagged, CP-2/defrostSkipped clean, DashboardPan 0/0. RED `qa/c9-silent-protection` 3b281e0 (SP1-SP9 + exact-count SP-smoke). Routed in BUILD-LOOP §5 + SKILL; `report-module.sh` §5.5 member row.
 
 ---
 
