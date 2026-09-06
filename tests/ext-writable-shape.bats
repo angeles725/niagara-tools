@@ -223,3 +223,21 @@ JAVA
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
 }
 
+
+@test "EW-s22-neg2: an @NiagaraAction whose do-body writes a DIFFERENT slot does NOT exempt the OPERATOR slot (B831-G1 doAckAlarm shape)" {
+  D="$BATS_TEST_TMPDIR/s22neg2"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/BAckWriter.java" <<'JAVA'
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="alarmAck",   type="BStatusBoolean", flags=Flags.SUMMARY|Flags.READONLY)
+@NiagaraAction(name="ackAlarm")
+public class BAckWriter extends BComponent {
+  // action→do<Action>: ackAlarm's write lives in doAckAlarm, but it writes alarmAck, NOT faultReset.
+  public void doAckAlarm() { setAlarmAck(new BStatusBoolean(true)); }
+}
+JAVA
+  run "$EW" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
+}
