@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: true                  # campaign8-lint-delays + campaign8-triage-console + campaign8-lint-timers-ext + campaign8-slot-per-slot (all pending fold)
-last_commit: 6b9a00a — slot-coverage.sh per-slot subcommand + empty-lexicon FAIL escalation (Campaign 8 PR5)
-last_session: 2026-09-05 · Campaign 8 PR5: slot-coverage.sh per-slot subcommand added (OPERATOR-slot vs lexicon diff; paren-balance awk; D9b dot-dir prune); empty-lexicon WARN→FAIL escalation (D6a). RED deviation: OPERATOR gate follows RED (ab194a5) not D6 text. 214/214 bats green. Smokes: ColdRoomPan 9 MISSING (design said ~19), chihuahua exits 1 FAIL, CompPan pct=100.0 exit 0. 4 named mutations confirmed. Retro filed.
+retro_pending: true                  # campaign8-lint-delays + campaign8-triage-console + campaign8-lint-timers-ext + campaign8-facets-lint + campaign8-slot-per-slot + campaign8-rc-scan (all pending fold)
+last_commit: WIP — rc-scan.sh browser-resource lint (Campaign 8 PR6): RC1-RC9 green, K19 routing, retro filed
+last_session: 2026-09-05 · Campaign 8 PR6: rc-scan.sh implemented (ord-literal, host-literal, bare-catch, null-branch checks; D9b dot-dir prune; W3C namespace exemption). RC1-RC9 green, 227/227 total. Real smoke: DashboardPan-ux FAIL :701 (host) + WARN :852+853 (null-branch, shifted from predicted :863) + WARN :1298 (bare-catch). K19 routing to BUILD-LOOP.md + skill/SKILL.md. Retro + INDEX + BUILD-STATE filed.
 <!-- /build-state.v1 -->

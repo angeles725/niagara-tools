@@ -134,16 +134,16 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED — re-read tip at apply | **Gate**: R6.1-R6.6, SC5 K19/CD5
 
-- [ ] 6.1 Create `qa/c8-rc-scan`; write failing bats: ORD literal under `rc/` → FAIL; host literal → FAIL; bare catch → WARN; null branch → WARN; record tip SHA.
-- [ ] 6.2 Write `toolbelt/rc-scan.sh <artifact-dir> [--strict] [--servlet]`: scan `**/rc/**` `*.html *.js *.css` only (D7); check table per D7; excludes `rc/ext/**`, `*.min.js`, `srcTest/**`, comment-only; exits 0/1/3.
-- [ ] 6.3 Copy sanitised fixtures `tests/fixtures/rc-scan/{clean,ords,host,catch,null}/` from real DashboardPan shapes.
-- [ ] 6.4 Write `tests/rc-scan.bats` (RED pins verbatim).
-- [ ] 6.5 Add CI step to `ci.yml`: `rc-scan.sh tests/fixtures/rc-scan/clean` → exit 0.
-- [ ] 6.6 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `rc-scan.sh [ev: retro c8-rc-scan]` (CD5).
-- [ ] 6.7 **Named mutations**: (a) remove ORD rule → ORDFAIL exits 0; (b) restore bare `.catch(()=>{})` → WARN row appears. Record in PR body (R6.6).
-- [ ] 6.8 Real smoke: `rc-scan.sh` on DashboardPan artifact → FAIL `index.html:701` (host) + WARN `:1298` (bare catch) + WARN `:863` (null branch). Paste output.
-- [ ] 6.9 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 6.10 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 6.1 Create `qa/c8-rc-scan`; write failing bats: ORD literal under `rc/` → FAIL; host literal → FAIL; bare catch → WARN; null branch → WARN; record tip SHA.
+- [x] 6.2 Write `toolbelt/rc-scan.sh <artifact-dir> [--strict] [--servlet]`: scan `**/rc/**` `*.html *.js *.css` only (D7); check table per D7; excludes `rc/ext/**`, `*.min.js`, `srcTest/**`, comment-only; exits 0/1/3.
+- [x] 6.3 Copy sanitised fixtures `tests/fixtures/rc-scan/{clean,ords,host,catch,null}/` from real DashboardPan shapes.
+- [x] 6.4 Write `tests/rc-scan.bats` (RED pins verbatim).
+- [x] 6.5 Add CI step to `ci.yml`: `rc-scan.sh tests/fixtures/rc-scan/clean` → exit 0.
+- [x] 6.6 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `rc-scan.sh [ev: retro c8-rc-scan]` (CD5).
+- [x] 6.7 **Named mutations**: (a) remove ORD rule → ORDFAIL exits 0; (b) restore bare `.catch(()=>{})` → WARN row appears. Record in PR body (R6.6).
+- [x] 6.8 Real smoke: `rc-scan.sh` on DashboardPan artifact → FAIL `index.html:701` (host) + WARN `:1298` (bare catch) + WARN `:863` (null branch). Paste output.
+- [x] 6.9 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 6.10 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** RED green; merge ff-only; `install-skill.sh --force`; ledger settle `--max-changed-lines 440`.
 
 ---

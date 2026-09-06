@@ -77,7 +77,7 @@ cat > "$_TMP/scan.awk" << 'AWKEOF'
     while (match(rest, /http:\/\/[^ \t"',;)>]+/)) {
         url = substr(rest, RSTART, RLENGTH)
         if (url !~ /^http:\/\/www\.w3\.org\//) {
-            print "FAIL  rc-scan  " rel ":" NR "  host-literal: hardcoded HTTP host"
+            print "FAIL  rc-scan  " rel ":" NR "  host-literal: " url
             found = 1
             break
         }
