@@ -49,6 +49,10 @@ v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" | head -1 | grep -oE '[
 **V7 after the lead's ff merge:** `git -C $REPO fetch -q && [ "$(git -C $REPO rev-parse origin/main)" = "$TIP" ] && echo "tip == blessed"`
 — if main != TIP the lead merged something else or squashed: do not settle.
 
+**Tool freshness (learned the hard way):** always invoke a kit lint from the PR's OWN detached worktree
+(`$WT/v-<pr>/build-n4-module-kit/toolbelt/...`) or a current-main worktree — NEVER from the `c9-runbooks`
+qa worktree's toolbelt: it lags kit main and gave a wrong ColdRoomPan count (0 vs the real 1) during the R8 check.
+
 **Kit common gate** (PR2/PR3/PR10/PR12/PR13; `REPO=$KIT WT=$KWT`):
 ```
 bats tests/                                     # 0 failures (32 files on main + this PR's file(s))
@@ -107,8 +111,7 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - SP-smoke is EXACT at a109249 (`C9_CLIENT_ROOT`): CompPan-rt exactly 1 WARN whose subject is `CompressorControl.java:215` (CP-1),
   ColdRoomPan-rt exactly 1 whose subject is `BEvaporatorUnit.java:1287` (CR-3), DashboardPan-rt 0, DashboardPan-ux 0; never `dischargeHighAlarm`,
   `defrostSkipped` or `BCompressorControl` (getters). Total 2 rows on the four roots. (First GREEN c315aae produced 113 — rejected by the lead.)
-- **Coupling R3↔R8:** if PR8 is already in client main, the CR-3 row must be ABSENT and the SP-smoke assertion must say so
-  (whichever merges second updates the pin). Check `git -C $CLI log --oneline origin/main | grep -c 'c9-alarm-cr3\|CR-3'`.
+- **Coupling R3↔R8↔R9 (HELD):** the SP-smoke ColdRoomPan row goes 1→0 once PR8 (CR-3 Pattern A) is in the client baseline, and CompPan 1→0 once PR9 (CP-1 AlarmEdge) surfaces the low-suction trip. Decision: ONE re-pin after PR9 merges, against a fixed `main-<post-PR9 sha>` baseline (final counts CompPan 0 / ColdRoomPan 0 / DashPan-rt 0 / ux 0). Draft staged on `qa/c9-silent-protection-r8-repin` a373041 (currently pinned at 7071b93 = post-PR8; re-point + re-count at PR9).
 - V4: M3a (SP8 + SP-smoke), M3b (SP-smoke) — MANUAL.
 - Harness-only: none. V6/V7.
 
