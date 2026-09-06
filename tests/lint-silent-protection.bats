@@ -188,3 +188,15 @@ JAVA
   [[ "$output" == *"BEvaporatorUnit.java"* ]]        # CR-3 freezeTripped flagged
   [[ "$output" != *"dischargeHighAlarm"* ]]          # CP-2 surfaced -> not a WARN subject
 }
+
+# --- SP9: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
+@test "SP9: no-sources-exit-3 (empty dir and a dir with only a non-Java file -> exit 3 + ERROR row, no WARN)" {
+  E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
+  run "$LSP" "$E"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"lint-silent-protection"* ]] && [[ "$output" != *"WARN"* ]]
+  N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
+  run "$LSP" "$N"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
+}
