@@ -241,3 +241,25 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
 }
+
+@test "EW-s22-nondo: an OPERATOR complex slot whose ONLY writer is a NON-do body (execute()) still WARNs — do<Action> scope is not 'any method body' (B831 §831.2, client execute() setFaultReset)" {
+  D="$BATS_TEST_TMPDIR/s22nondo"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/BNonDoWriter.java" <<'JAVA'
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="alarmAck",   type="BStatusBoolean", flags=Flags.SUMMARY|Flags.READONLY)
+@NiagaraAction(name="ackAlarm")
+public class BNonDoWriter extends BComponent {
+  // do-body writes alarmAck (exempt). faultReset's ONLY writer is execute() — a NON-do body,
+  // OUT of the do<Action> scan scope, so faultReset must still WARN. "scan all method bodies"
+  // would find setFaultReset in execute() and wrongly exempt it.
+  public void doAckAlarm() { setAlarmAck(new BStatusBoolean(true)); }
+  public void execute() { setFaultReset(new BStatusBoolean(false)); }
+}
+JAVA
+  run "$EW" "$D"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
+}
