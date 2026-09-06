@@ -62,6 +62,16 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - **After a reload (rt or full station restart), triage the console before closing the session:** `toolbelt/triage-console.sh --package com.vendor <station-dir>/console*.txt` surfaces own-module exceptions and load-time failures that the framework swallows silently (three attribution channels: own frame, own logger tag, [sys]/[sys.xml] load-fail shape). exit 1 = rows found; investigate before calling the deploy clean. [ev: retro campaign8-triage-console]
 - **Audit the station bog for ghost slots, dangling links, orphan handles, and proxy-link safety:** `toolbelt/bog-audit.sh <config.bog|file.xml> --module <MOD> [--source-dir <src-dir>] [--strict]` (CHECK1-CHECK12; exit 1 = any FAIL). Runs from the bog alone for CHECK1/8/9/10/11/12; add `--source-dir` for the source-coupled checks (CHECK2-7). Proxy-link-safety (CHECK11) fires when an own-module output is linked to a BooleanWritable/NumericWritable with no explicit fallback — the writable holds last state on station stop/reload, masking the fault. [ev: retro campaign8-bog-audit]
 
+### 6.a Post-deploy verification (after hot module reload or station restart)
+
+Ordered steps — run within ≤5 min of a hot module reload (Out-of-date: Module changed):
+
+1. `toolbelt/station-snapshot.sh <station-dir> <out-dir>` — snapshot the station before the deploy; keep `<out-dir>` as the deploy baseline (`schema-risk.sh <out-dir> <post-deploy-snapshot>` compares before vs. after). `[ev: corpus B811]`
+2. `toolbelt/triage-console.sh --package <com.vendor> <station-dir>/console*.txt` — scan for own-module load failures ("Cannot load station", "Missing frozen property", "ClassCastException", "Missing class for \"<own-prefix>:\""); exit 1 = rows found, investigate before calling the deploy clean. `[ev: corpus B800]`
+3. `toolbelt/bog-audit.sh <config.bog|file.xml> --module <MOD>` — ghost slots, dangling links, orphan handles, proxy-link safety (CHECK11); exit 1 = any FAIL. `[ev: corpus B795]`
+4. `toolbelt/report-module.sh <module-root> --console-dir <console-dir>` — aggregated punch-list; exit 1 = FAILs block hand-off. `[ev: retro campaign7-report-module]`
+- The proxy-link safety row (CHECK11) must be clean before operator hand-off. `[ev: corpus B810]`
+
 ## 7. Retro + close (HARD close gate — not optional)
 - **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
 - **Kit-infrastructure work** (changing the kit itself — toolbelt, type guides, methodology — not building a module) has no module build to record: update the `kit` self-section of `BUILD-STATE.md` instead, under the same close gate.

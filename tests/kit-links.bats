@@ -78,6 +78,20 @@ kit_refs() {
   if [ ${#missing[@]} -gt 0 ]; then printf 'toolbelt script not in BUILD-LOOP.md or skill/SKILL.md: %s\n' "${missing[@]}" >&2; return 1; fi
 }
 
+@test "L7: every §6.a post-deploy step script is named in BUILD-LOOP.md (PR13 pin)" {
+  # Regression guard for BUILD-LOOP.md §6.a — every post-deploy step script must stay named.
+  # Named mutation: remove any script name from BUILD-LOOP.md -> L7 fails.
+  cd "$KIT"
+  ok=1
+  for script in station-snapshot.sh triage-console.sh bog-audit.sh report-module.sh schema-risk.sh; do
+    if ! grep -qF "$script" BUILD-LOOP.md; then
+      echo "§6.a step script missing from BUILD-LOOP.md: $script" >&2
+      ok=0
+    fi
+  done
+  [ "$ok" -eq 1 ]
+}
+
 @test "L6: types/logic.md and types/logic-authoring.md exist and cite each other" {
   # Regression: the split creates two companion files; both must exist and point at each other
   # Named mutation: remove the cross-reference from either file -> L6 fails
