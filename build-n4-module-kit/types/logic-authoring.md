@@ -50,3 +50,54 @@
 ## Minimal module (copy-start)
 
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
+
+## Logging a point to history `[ev: corpus B804]`
+
+- **`BHistoryExt` IS a point extension** (`extends BPointExtension`), not a service or component child. Drop it as a child of a `BControlPoint` (e.g. `BNumericPoint`); it intercepts `onExecute` and records the point's value on every applicable event. `[ev: corpus B804]`
+- **Interval vs COV** — `BIntervalHistoryExt` records on a timer (default 15 min; configure `interval`); `BCovHistoryExt` records on Change-Of-Value above a `changeTolerance` deadband. Pick COV for setpoints and slow-moving analog values that change infrequently; use Interval for continuous telemetry where a regular time-series is required. `[ev: corpus B804]`
+- **`BHistoryConfig` capacity + `fullPolicy`** — `capacity` is the ring-buffer depth (record count, not bytes); `fullPolicy` is `roll` (overwrite oldest, default) or `stop` (reject new records when full). For an always-running production module, use `roll` so the history never silently stops accumulating. `[ev: corpus B804]`
+- **One ext per logged slot** — attach exactly ONE `BHistoryExt` child per logged slot; two extensions on the same point log duplicate records and double the storage cost. `[ev: corpus B804]`
+- **B804-G1 OPEN (requires-execution):** `BHistoryExt` on a custom `BComponent` (vs a `BControlPoint`) needs a live station smoke to confirm the extension mechanism works with a non-point parent. `[ev: corpus B804]`
+
+## Slot types for externally written values `[ev: corpus B823]`
+When a value is written by an EXTERNAL client (oBIX/write-server, the -ux servlet, a fox/BajaScript client), the slot
+TYPE decides whether the write is even possible and whether it lands safely. Pick by value class:
+
+| Value class | Recommended slot | Flags | How it is written externally | Audit path | Anti-pattern |
+|---|---|---|---|---|---|
+| numeric setpoint / config | plain `double` (if oBIX writes it) — or `BStatusNumeric` ONLY when the status must display | `SUMMARY\|OPERATOR` | `double`: oBIX bare `<real val="..">`. `BStatusNumeric`: the WRAPPED body `<obj is="…:StatusNumeric"><real name="value" val=".."/></obj>` (LIVE-verified) — NEVER attr-only `<obj … val>` (200 but writes 0.0); OR the servlet `POST /api/setpoint`; OR an OPERATOR action | servlet `auditLog` / write-server audit / a Niagara event when via an action | a bare `BStatusNumeric` written by external clients → the silent-zero footgun `[ev: retro obix-statusnumeric-wrapped-put]` |
+| timing / delay | `BRelTime` | `SUMMARY\|OPERATOR` | oBIX `<reltime val="PT..S"/>` | as above | a `double` seconds field that skips the reltime unit `[ev: corpus B823]` |
+| switch / on-off | `boolean` | `SUMMARY\|OPERATOR` | oBIX `<bool val="true">` | as above | a `BStatusBoolean` (complex) written bare → "Cannot translate" `[ev: corpus B823]` |
+| mode / HOA | today `double` 0/1/2 written as `<real>`; for future modules a **FROZEN enum** (`BFrozenEnum` via `@NiagaraEnum`/`@Range`, e.g. a `BHoaMode` auto/hand/off = 0/1/2) carries its range INTRINSICALLY — no explicit facet needed | `SUMMARY\|OPERATOR` | `double`: `<real val="2"/>`. FROZEN enum: renders `<enum val="hand" display=… range=…/>` and decodes `<enum val="hand"/>` with NO explicit `BFacets.RANGE` — the encoder (`ObixUtils:358`) and decoder (`ObixDecoder:184/245/333`, `setFromVal`) fall back to the value's `getRange()`. A DYNAMIC enum is the only case that needs an explicit range facet. The `@Range` tags need `module.lexicon` keys (SP6 known set). `[ev: corpus B828]` | as above | a `double`→enum switch is a LOSSY retype (OUTAGE) → future modules only; existing RoomPanel modes stay `double` 0/1/2 `[ev: corpus B828]` |
+| button / command | an OPERATOR `@NiagaraAction` | `Flags.OPERATOR` | oBIX `<op>` — POST → `BComponent.invoke` under `OPERATOR_INVOKE`, arg from `<real>`/`<bool>` `[ev: corpus B822]` | the Niagara invoke event (attributed) | a `HIDDEN` action (0 oBIX exposure) or a boolean "pulse" slot |
+
+**The rule:** a slot that EXTERNAL clients write is **either a SIMPLE value or has an ACTION — never a bare complex
+property.** A bare complex (`BStatusNumeric`/`BStatusBoolean`/`BStatusEnum`) either rejects the write ("Cannot
+translate") or, via the wrapped-`obj` shorthand, silently writes a DEFAULT (the live silent-zero: a setpoint set to
+0.0 on a 200 OK). If the status MUST be displayed (so the slot has to be complex), expose an `OPERATOR` action that
+writes it, or accept the exact wrapped-`obj` contract in the client — never leave a bare complex OPERATOR property as
+the write target. `[ev: corpus B823]` `[ev: retro obix-statusnumeric-wrapped-put]`
+
+**Cleaner alternative — now PREFERRED `[CERT-live]` (B826-G1/G2 CLOSED):** the child ORD `…/setpoint/value` is NOT
+advertised (the agent collapses the struct to a leaf `<real>`) but IS structurally resolvable
+(`BStationLobbyAgent.decodeSlotPath`) — and the façade DOES serve it: a GET returns `200 <real … writable="true"/>` on
+BOTH the RoomPanel and the ColdRoom (B826-G1, record §8 `b4e6d8a4f`), and a bare `<real val="N"/>` PUT to it writes AND
+propagates to control in ~1.5 s (B826-G2, record §9 `f99f2e45b`), via the nested-child bubbling path (B825 §825.3, now
+live-proven end-to-end). So the child bare-`<real>` is a `BSimple` write with NO silent-zero hazard, and is the
+PREFERRED external write for a `BStatusNumeric`; the wrapped-`obj`-to-parent-slot form (B825) is the proven FALLBACK.
+Rule: **a complex property is writable externally through its child leaf ORD (bare `<real>`); the parent slot needs the
+wrapped `<obj>` and carries the silent-zero hazard.** `[ev: corpus B826]` `[ev: corpus B825]`
+
+**Propagates through links? YES, synchronously (mechanism settled by [Block 825]):** an external write that lands as a
+TOP-SLOT REPLACEMENT (an oBIX wrapped `<obj>` PUT, the servlet, or fox — all decode into a detached copy then
+`parent.set(slot, copy)`, `ObixUtils.java:543/:558`) fires the slot's outgoing links SYNCHRONOUSLY on the writing
+thread (`SlotKnobs.propagate:31-46`, <1 ms). So a write to the façade SOURCE (`Cuarto1/setpoint`) propagates to the
+control TARGET (`ColdRoom_1/setpoint`) in <1 ms — the read-back "settle" is the READER's poll cadence (~1 s a
+control-slot poll / ~6 s the dashboard poller), NOT a propagation delay. Rule: an external write must land on the slot
+the control READS (or its link SOURCE), or on an action — a write to a display-only mirror with no link, or to the
+link-TARGET side (which the next source propagation overwrites, B816 §816.2), does not move the plant.
+`[ev: corpus B823]` `[ev: corpus B825]` `[ev: retro obix-statusnumeric-wrapped-put]`
+
+**Overlap caveat:** if the written slot is a link TARGET (driven BY a link, not a source), the external write is
+EPHEMERAL — the next propagation overwrites it (B816 §816.2). Confirm write-source vs write-target before relying on
+the write sticking. `[ev: corpus B816]`
