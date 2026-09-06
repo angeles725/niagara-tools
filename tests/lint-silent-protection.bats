@@ -28,8 +28,6 @@ setup() {
   LSP="$KIT/toolbelt/lint-silent-protection.sh"
   S="$BATS_TEST_TMPDIR/src"
   ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
-  CP1="$ROOT/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan"
-  CR3="$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan"
 }
 fresh() { rm -rf "$S"; mkdir -p "$S/com/x"; }
 
@@ -178,15 +176,25 @@ JAVA
 }
 
 # ---- SP-smoke: the REAL client trees must flag CP-1 + CR-3 and NOT flag CP-2 (SKIP if absent) ----
-@test "SP-smoke: real trees flag CP-1 low-suction + CR-3 freezeTripped, NOT CP-2 dischargeHigh" {
-  [ -d "$CP1" ] && [ -d "$CR3" ] || skip "client CompPan/ColdRoomPan trees not on this machine"
-  D="$BATS_TEST_TMPDIR/real"; mkdir -p "$D"
-  cp "$CP1/CompressorControl.java" "$CP1/BCompressorControl.java" "$D/"
-  cp "$CR3/BEvaporatorUnit.java" "$D/"
-  run "$LSP" "$D"
-  [[ "$output" == *"CompressorControl.java"* ]]      # CP-1 low-suction shed flagged
-  [[ "$output" == *"BEvaporatorUnit.java"* ]]        # CR-3 freezeTripped flagged
-  [[ "$output" != *"dischargeHighAlarm"* ]]          # CP-2 surfaced -> not a WARN subject
+@test "SP-smoke: EXACT contract at a109249 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:215, CP-1), ColdRoomPan-rt exactly 1 (BEvaporatorUnit.java:1287, CR-3), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
+  [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] && [ -d "$ROOT/Dashboard" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
+  run "$LSP" "$ROOT/Compresores/CompPan/CompPan-rt/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"CompressorControl.java:215"* ]]           # CP-1 low-suction shed, a109249 anchor
+  [[ "$output" != *"dischargeHighAlarm"* ]]                    # CP-2 is surfaced -> never a subject
+  [[ "$output" != *"BCompressorControl"* ]]                    # adapter getters are not trips
+  run "$LSP" "$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"BEvaporatorUnit.java:1287"* ]]            # CR-3 freezeTripped private latch (ABSENT once PR8 wires Pattern A: re-pin to 0 then, R3<->R8)
+  [[ "$output" != *"defrostSkipped"* ]]                        # surfaced via slot -> never a subject
+  run "$LSP" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
+  run "$LSP" "$ROOT/Dashboard/DashboardPan/DashboardPan-ux/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
 }
 
 # --- SP9: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
