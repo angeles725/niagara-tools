@@ -47,7 +47,7 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
   grep -qE '^\#\# \[v?0\.20\.0\]' "$REPO/CHANGELOG.md"
 }
 
-@test "CLOSE-no-trailers (SC-12): no attribution trailer across the campaign range 48fb210..HEAD" {
+@test "CLOSE-no-trailers (SC-12): no attribution trailer across the campaign range c0447c2..HEAD" {
   _close
   [ "$(git -C "$REPO" log ${BASE}..HEAD --format=%B | grep -ciE 'co-authored|generated with|claude-session|noreply@anthropic')" -eq 0 ]
 }
@@ -84,7 +84,7 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
 # (SC1/SC2/SC3/SC16 also carry a REAL smoke, env-guarded below.)
 # ===========================================================================
 
-@test "CLOSE-tool-pins (SC1,3,4,8,9,11-16): every campaign pin file passes on main" {
+@test "CLOSE-tool-pins (SC-1..SC-10): every campaign pin file passes on main" {
   _close
   # The FINAL pin set: the campaign-8 set plus the C9 kit lints (S19 ext-writable-shape, S18
   # lint-silent-protection, S7 demand-in-scope — SC-8). (C8 note: all present once wave 3 — PR18 lint-structure, PR19 lint-write-path,
