@@ -54,9 +54,9 @@ Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux i
 ## Critical-write step-up auth `[ev: corpus B803]`
 - Niagara ships NO core credential step-up — `Flags.CONFIRM_REQUIRED` is a UX-only confirm; the `electronicSignature` module is the only true sign-before-invoke. Step-up is MODULE-level code. `[ev: corpus B803]`
 - A mutating `-ux` endpoint whose target is a CRITICAL control adds, ON TOP of the B763 five gates: (1) a SERVER-SIDE criticality allowlist of target ORDs/actions that REQUIRE step-up (never client-decided); (2) re-verify the session user through their auth scheme SERVER-SIDE; (3) issue a fresh short-TTL step-up TOKEN (2–5 min) bound to `(sessionId + user + target ORD + purpose)`, checked server-side on the write — NEVER client-only. `[ev: corpus B803]`
-- SAML/SSO caveat: a SAML user CANNOT be re-verified mid-session (browser→IdP redirect, no in-request re-verify) — either reject with "re-login required" or trust the session + a short TTL. `[ev: corpus B803]`
+- SAML/SSO caveat: a SAML user cannot be re-verified server-side mid-session (the browser→IdP redirect hierarchy is [CERT]; the "no in-request re-verify" runtime block is [INFER], B803-G1 pending a live-station confirm) — either reject with "re-login required" or trust the session + a short TTL. `[ev: corpus B803]`
 - CSRF: verify the REAL token `x-niagara-csrfToken` (`CsrfUtil.CSRF_TOKEN_HTTP_HEADER`; double-submit against the session token), not `X-Requested-With` alone. `[ev: corpus B803]`
-- The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, `dashboard.md:48`). `[ev: corpus B803]`
+- The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, `dashboard.md:48`). `[ev: corpus B763]`
 - OPEN (requires-execution): **B803-G1** (confirm the live SAML mid-session re-auth block on a station) and **B803-G2** (whether gauth's `BPasswordCache.validate` accepts a TOTP token mid-session). `[ev: corpus B803]`
 
 ## Extending an existing dashboard
