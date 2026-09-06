@@ -134,3 +134,70 @@ FAIL  triage-console  console_backup_260903_1704.txt  1x 17:04:32 03-Sep-26 -> 1
 **HoneywellMX605132026**: modifyThread 9x (C2 [chihuahua]); cannot force-load ChiAlarmHelper 1x
 
 **REFLOW**: modifyThread 12x; cert-chain BChiDashboardService.class 7x (C2 [loader] — NOT C3; [loader] tag is not in the framework denylist)
+
+---
+
+## PR3 — feat/c8-lint-timers-ext
+
+**Branch**: `feat/c8-lint-timers-ext`
+**Status**: COMPLETE — all 8 tasks done; guards green; commit + push + PR ready
+**TDD mode**: strict (RED cherry-picked by QA at 2e35218; GREEN implemented here)
+
+### TDD Evidence
+
+| Phase | Commit / evidence | Result |
+|-------|-------------------|--------|
+| RED   | `2e35218` (QA cherry-pick) — TC-A/B/C/D bats failing before impl | RED confirmed |
+| GREEN | lint-timers.sh extended; 210/210 bats pass (12 new + TL1-TL4 not regressed) | GREEN |
+| REFACTOR | shellcheck exit 0 on all toolbelt/*.sh + tests/*.bats | Clean |
+
+### Work Unit Evidence
+
+| Task | Done | Evidence |
+|------|------|----------|
+| 3.1 Re-read qa/c8-lint-timers-ext RED | x | TC-A BStaggerHold clears in expiry path (not stopped); TC-C changed() has isRunning() but applyRunCmd() has no steady-state guard — FAIL expected |
+| 3.2 RED already in branch at tip 2e35218 | x | `git show HEAD --stat` confirmed QA cherry-pick |
+| 3.3 Extend lint-timers.sh | x | companion-flag (same-method body extraction — dev D4 deviation); jdk-thread (grep-based); changed-sched (1-level callee awk); D9b find prune |
+| 3.4 Bats for TC-A/B/C/D | x | Already in RED commit; TC-A FAIL + 2 companions; TC-B FAIL + companion; TC-C FAIL + companion; TC-D FAIL |
+| 3.5 Named mutations | x | (a) remove body-scoped flag extraction → TC-A flips; (b) whitelist ScheduledExecutorService → TC-B flips; (c) drop callee following → TC-C flips; (d) remove dot-dir prune → TC-D fails. Documented in PR body and retro |
+| 3.6 Real smokes | x | Smoke 1: chihuahua FAIL jdk-thread ✓; Smoke 2a: CompPan pre-fix FAIL companion-flag startingUp ✓; Smoke 2b: CompPan fixed PASS ✓; Smoke 3: ColdRoomPan 4f5f1c7 — changed-sched NOT fired (code already post-fix; reported in retro) |
+| 3.7 Guards | x | 210/210 bats; shellcheck exit 0; sweep-build-state exit 0; sweep-fold-audit --strict exit 0 (56 folded, 56 cited, 0 uncited) |
+| 3.8 Retro + INDEX + BUILD-STATE | x | retros/2026-09-05-campaign8-lint-timers-ext.md; INDEX row added; BUILD-STATE updated |
+
+### Guard Results (PR3)
+
+```
+bats tests/*.bats            : 210/210 passed
+shellcheck                   : exit 0
+sweep-build-state.sh         : exit 0
+sweep-fold-audit.sh --strict : exit 0 (56 folded, 56 cited, 0 uncited)
+```
+
+### Real Smoke Results
+
+**Smoke 1: chihuahua jdk-thread**
+```
+FAIL  jdk-thread  ChiAlarmHelper.java: ChiAlarmHelper uses JDK concurrency — use Clock.schedule instead (SecurityManager denies modifyThread)
+```
+Exit 1. Correct.
+
+**Smoke 2a: CompPan pre-fix (4f5f1c7) — companion-flag FAIL**
+```
+FAIL  companion-flag  BCompressorControl.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+```
+Exit 1. Correct — `startingUp` cleared only in `doPowerOnExpired()` expiry handler, not in `stopped()`.
+
+**Smoke 2b: CompPan fixed (deed38c) — companion-flag PASS**
+No companion-flag FAIL row. Exit 0. Correct.
+
+**Smoke 3: ColdRoomPan (4f5f1c7) — tool correct, spec pin stale**
+```
+FAIL  timer-ticket    BEvaporatorUnit.java: schedules a Clock ticket but stopped() does not cancel it
+FAIL  companion-flag  BEvaporatorUnit.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+```
+No `changed-sched` FAIL. Exit 1 (other FAILs). The spec expected changed-sched FAIL, but the local checkout at 4f5f1c7 already has `if (!Sys.atSteadyState()) return;` at line 885 of applyRunCmd(). Tool is correct — TC-C fixture validates the check.
+
+### Design Deviation (PR3)
+
+**D4 ±3 line window → same-method body extraction:**
+CompPan BCompressorControl.java has `startingUp = true;` at :1760 and `Clock.schedule` at :1764 (4-line gap). The ±3 window missed this. Changed to brace-counted awk that extracts the full method body and looks for BOTH patterns in the same body. Documented in retro and logic.md.

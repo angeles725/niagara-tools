@@ -86,14 +86,14 @@ Chain strategy: stacked-to-main
 
 **RED**: `qa/c8-lint-timers-ext` `ce6ee5c` (TC-A/B/C + 4 companions) | **Gate**: R3.C/K/N, SC3
 
-- [ ] 3.1 Re-read `qa/c8-lint-timers-ext` tip `ce6ee5c`: confirm TC-A `BStaggerHold` clears flag in expiry path (bare grep must not pass); TC-C `changed()` has `isRunning()` yet must FAIL (guard must be in scheduling body, D4).
-- [ ] 3.2 Cherry-pick / merge RED branch into `feat/c8-lint-timers-ext`.
-- [ ] 3.3 Extend `toolbelt/lint-timers.sh`: append `companion-flag` (±3 lines + `stopped()`/`started()` body scan), `jdk-thread` (BComponent + `ScheduledExecutorService|Executors\.|new Thread(`), `changed-sched` (one-level callee body; guard-in-scheduling-body is the contract). No existing line edited — TL1-TL4 must not regress (D4).
-- [ ] 3.4 Extend `tests/lint-timers.bats` with TC-A (BCompressorControl `:1799-1805`), TC-B (BChiDashboardService `:305`), TC-C (BEvaporatorUnit `:519`) heredoc cases.
-- [ ] 3.5 **Named mutations**: (a) accept any `stopped()` cancel → TC-A no FAIL; (b) whitelist `ScheduledExecutorService` → TC-B no FAIL; (c) drop 1-level following → TC-C no FAIL. Record in PR body.
-- [ ] 3.6 Real smoke: `lint-timers.sh` on CompPan `:1799-1805`, chihuahua `:305`, CRP `BEvaporatorUnit` pre-fix → FAIL rows for all three. Paste output.
-- [ ] 3.7 Guards: bats all green (TL1-TL4 not regressed); `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`.
-- [ ] 3.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 3.1 Re-read `qa/c8-lint-timers-ext` tip `ce6ee5c`: confirm TC-A `BStaggerHold` clears flag in expiry path (bare grep must not pass); TC-C `changed()` has `isRunning()` yet must FAIL (guard must be in scheduling body, D4).
+- [x] 3.2 Cherry-pick / merge RED branch into `feat/c8-lint-timers-ext`.
+- [x] 3.3 Extend `toolbelt/lint-timers.sh`: append `companion-flag` (±3 lines + `stopped()`/`started()` body scan), `jdk-thread` (BComponent + `ScheduledExecutorService|Executors\.|new Thread(`), `changed-sched` (one-level callee body; guard-in-scheduling-body is the contract). No existing line edited — TL1-TL4 must not regress (D4).
+- [x] 3.4 Extend `tests/lint-timers.bats` with TC-A (BCompressorControl `:1799-1805`), TC-B (BChiDashboardService `:305`), TC-C (BEvaporatorUnit `:519`) heredoc cases.
+- [x] 3.5 **Named mutations**: (a) accept any `stopped()` cancel → TC-A no FAIL; (b) whitelist `ScheduledExecutorService` → TC-B no FAIL; (c) drop 1-level following → TC-C no FAIL. Record in PR body.
+- [x] 3.6 Real smoke: `lint-timers.sh` on CompPan `:1799-1805`, chihuahua `:305`, CRP `BEvaporatorUnit` pre-fix → FAIL rows for all three. Paste output.
+- [x] 3.7 Guards: bats all green (TL1-TL4 not regressed); `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`.
+- [x] 3.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** TC-A/B/C green; TL1-TL4 not regressed; merge ff-only; ledger settle `--max-changed-lines 350`. No install-skill.
 
 ---

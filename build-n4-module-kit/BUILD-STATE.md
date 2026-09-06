@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: true                  # campaign8-lint-delays (pending); campaign8-triage-console (pending); 4+4 proposed deltas
-last_commit: 41611bf — triage-console.sh B818 registry flexible match + real-smoke fix
-last_session: 2026-09-05 · Campaign 8 PR2 fix: real-smoke failures fixed — C2 whitelist (no foreign rows), cross-file grouping (5x/6x not 1x-per-file), ts bracket bug, lowercase month table. TR10-TR11 RED cherry-picked and GREEN. D5 retro: fixture-green real-red lesson. All guards 202/202, smokes verified on PANCCADIA/MX60/REFLOW.
+retro_pending: true                  # campaign8-lint-delays + campaign8-triage-console + campaign8-lint-timers-ext (all pending fold)
+last_commit: 2e35218 — lint-timers.sh companion-flag, jdk-thread, changed-sched checks + dot-dir prune (Campaign 8 PR3)
+last_session: 2026-09-05 · Campaign 8 PR3: lint-timers.sh extended with companion-flag (same-method body extraction, deviates from ±3 spec), jdk-thread (grep-based), changed-sched (1-level callee). D9b dot-dir prune applied. 210/210 bats green. Real smokes: chihuahua jdk-thread FAIL ✓; CompPan companion-flag FAIL/PASS ✓; ColdRoomPan at 4f5f1c7 already post-fix (changed-sched guard present) — tool correct, spec pin stale. Retro filed.
 <!-- /build-state.v1 -->
