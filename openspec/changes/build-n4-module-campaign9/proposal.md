@@ -50,7 +50,7 @@ Campaign 8 gave the kit eyes on the deployed station (bog audit, console triage,
 | **R8** | **S18/S13** alarm PoC Pattern A — CR-3 freeze: child `BBooleanPoint` + `BAlarmSourceExt` + `BBooleanChangeOfStateAlgorithm` | client (ColdRoomPan-rt) | B827 §827.3 copy-ready; schema-SAFE additive |
 | **R9** | **S18/S13** alarm PoC Pattern B — CP-1 low suction: `BIAlarmSource` + `AlarmSupport.newOffnormalAlarm` on the offnormal EDGE | client (CompPan-rt) | B827 §827.4; one source scales to CompPan's ~5 trips |
 | **R10** | **S19** ext-writable-shape lint | kit | RED authored (EW1-EW10, EW10 = real `BRoomPanel.setpoint` WARN) |
-| **R11** | **S5-cont** write-path matrix rows W14-W22 against the real writable set | kit | `lint-write-path.sh` shipped in C8 PR19 and has no rows past W13 |
+| **R11** | **S5-cont** write-path matrix — the MEASURED uncovered set (13 ColdRoomPan-rt + 15 CompPan-rt at C8 close, re-measured at apply; "W14-W22" was an estimate) in the CLIENT repo `docs/write-path-matrix.md` (the kit has no `docs/`; `lint-write-path.sh` walks up to it) | client | `lint-write-path.sh` shipped in C8 PR19 and has no rows past W13 |
 | **R12** | **Doctrine fold** — slot types for externally written values, alarm authoring patterns A/B, BUILD-LOOP §5 one-module-root, METHODOLOGY K22 | kit | The durable half of R3/R8/R9/R10 and of C8 lesson 11 |
 | **R13** | **Close** — `tests/c9-close.bats` (`C9_CLOSE=1`), VERSION `0.20.0`, CHANGELOG, retro fold to pending = 0, BUILD-STATE envelope | kit | Hard close gate (BUILD-LOOP §7) |
 
@@ -84,7 +84,7 @@ Campaign 8 gave the kit eyes on the deployed station (bog audit, console triage,
 
 - `kit-module-report`: `report-module.sh` gains member rows for the three new lints; a member FAIL must surface as an aggregate FAIL.
 - `build-n4-module-kit-doctrine`: `types/logic-authoring.md` gains "Slot types for externally written values"; `types/logic.md` gains alarm authoring patterns A/B; `types/dashboard.md` gains the slot-type one-liner; `BUILD-LOOP.md` §5 gains the ONE module-root/profile convention; `METHODOLOGY.md` gains K22.
-- `module-write-path-matrix`: `docs/write-path-matrix.md` extends to rows W14-W22 against the real writable set.
+- `module-write-path-matrix`: the CLIENT repo `docs/write-path-matrix.md` extends by the measured uncovered set (13 + 15 at C8 close, re-measured at apply), not a fixed W14-W22.
 - `dashboard-servlet-write` *(client)*: the servlet write moves from `parent.set(prop, toSet, null)` to a real request-user Context and gains an explicit `DashboardWriteGuards.evaluate` seam.
 
 ---
@@ -105,7 +105,7 @@ Wave order is fixed by the user. Each PR is one destination-file group. Every co
 | **PR8** | R8 | `feat/c9-alarm-cr3` | client (ColdRoomPan-rt) | **RED to be authored** — `qa/c9-alarm-cr3` from B827 §827.3 | ~260 | Alarm fires on the freeze trip and clears on recovery; `sourceState = offnormal`; `schema-risk.sh` = SAFE (additive child point); OBSERVED flip; ColdRoomPan-rt 2.0.7 → **2.1.0** |
 | **PR9** | R9 | `feat/c9-alarm-cp1` | client (CompPan-rt) | **RED to be authored** — `qa/c9-alarm-cp1` from B827 §827.4/§827.6 | ~280 | EDGE-only pin (B827-G1): fires once on normal→offnormal, `toNormal` on recovery, `started()` re-seeds `wasOffnormal[]`, no re-fire across repeated executes; `schema-risk.sh` = SAFE; CompPan-rt 2.1.0 → **2.2.0** |
 | **PR10** | R10 | `feat/c9-ext-writable-shape` | kit | `qa/c9-ext-writable-shape` **`3726722`** `[CERT]` | ~230 | EW1-EW10 green; EW10 = the real `BRoomPanel.setpoint` WARN with subject asserted; real-tree smoke on all four module roots; K19 routing; `kit-links.bats` |
-| **PR11** | R11 | `docs/c9-write-path-w14-w22` | kit | `qa/c8-write-path` **`5e357d1`** `[CERT]` (extends to W14-W22) | ~150 | `lint-write-path.sh` exits 0 on every client module root after the rows land, and exit **3** (never a silent 0) on a root with no matrix; each row cites the real writable slot |
+| **PR11** | R11 | `docs/c9-write-path-measured-rows` | client | `qa/c8-write-path` **`5e357d1`** `[CERT]` (extends to W14-W22) | ~150 | `lint-write-path.sh` exits 0 on every client module root after the rows land, and exit **3** (never a silent 0) on a root with no matrix; each row cites the real writable slot |
 | **PR12** | R12 | `docs/c9-doctrine` | kit | none (doc-only) | ~200 | `sweep-fold-audit.sh --strict` green; `kit-links.bats` green; one `[ev:]` per paragraph/row; every folded lesson names its retro anchor |
 | **PR13** | R13 | `chore/c9-close` | kit | none | ~180 | `tests/c9-close.bats` green under `C9_CLOSE=1`; `sweep-build-state.sh` green; `retros/INDEX.md` pending = 0; VERSION `0.20.0` + CHANGELOG per CONTRIBUTING §4-5; 0 attribution trailers in the whole PR range |
 
@@ -158,7 +158,7 @@ One `[ev:]` token per paragraph/row is mandatory; `sweep-fold-audit.sh --strict`
 | `build-n4-module-kit/toolbelt/{lint-demand-scope,lint-silent-protection,lint-ext-writable-shape}.sh` | New | Three static lints (R2, R3, R10) |
 | `build-n4-module-kit/toolbelt/report-module.sh` | Modified | Three new member rows; member FAIL → aggregate FAIL |
 | `build-n4-module-kit/{BUILD-LOOP.md,METHODOLOGY.md,types/logic.md,types/logic-authoring.md,types/dashboard.md,skill/SKILL.md}` | Modified | §6 doctrine deltas + K19 routing |
-| `build-n4-module-kit/docs/write-path-matrix.md` | Modified | Rows W14-W22 (R11) |
+| `<client-repo>/docs/write-path-matrix.md` | Modified | measured uncovered rows (R11); the kit has no docs/ |
 | `tests/*.bats` + `tests/fixtures/**`, `tests/c9-close.bats` | New/Modified | Per-lint suites + the `C9_CLOSE=1` close gate |
 | `build-n4-module-kit/retros/INDEX.md`, `BUILD-STATE.md`, `VERSION`, `CHANGELOG.md` | Modified | One retro per kit-changing push; `0.19.0 → 0.20.0` |
 | client `CompPan-rt/src/**/{BCompressorControl,CompressorControl}.java` + `srcTest` | Modified | R1 rotation slots + logic; R9 `BIAlarmSource` |
@@ -208,7 +208,7 @@ No station write, no operator data mutation, and no live jar deploy is performed
 - QA RED branches, blessed at the tip the chain builds on: `qa/c9-demand-in-scope` `2916954`, `qa/c9-silent-protection` `e38e503`, `qa/c9-ext-writable-shape` `3726722`, `qa/c9-s12-servlet` `4c18837`, `qa/c9-s12-write-server` `24adcba` (rebase to `9acb47c`), `qa/c8-write-path` `5e357d1`. **To be authored**: `qa/c9-comppan-rotation`, `qa/c9-alarm-cr3`, `qa/c9-alarm-cp1`, plus the R5 schema pins and the R7 mirror pins.
 - Real trees for smokes: all four client module roots at the chain's client tip (`a109249` or later) — ColdRoomPan-rt, CompPan-rt, DashboardPan-rt, DashboardPan-ux.
 - Requires-execution gates, none of which block a PR: **B822-G1** (`applySetpoint` invoke — informational, phase 2 only), **B827-G2** (routed alarm reaches the console + panel — closes the alarm PoC), **B828-G2** (frozen-enum on a NEW non-linked deploy — informational for `rotationMode`), **B829 live** (both trails merge on the shared schema — gates the R7 mirror's live enablement). All run read-only-first, only with Cristian's direct authorization, routed through him.
-- Chain-start confirmation: the exact K-number for the conventions delta is `[INFER]` K22 — settle at apply orient.
+- Chain-start confirmation CLOSED: `METHODOLOGY.md:85` ends at K21, so the conventions delta is K22 `[CERT]` (design D12).
 
 ---
 
