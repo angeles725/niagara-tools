@@ -269,8 +269,143 @@ XML
   [ "$status" -eq 1 ]
 }
 
+<<<<<<< HEAD
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"
   grep -qF 'LINK_TARGET' "$KIT/toolbelt/bog-audit.sh"
+=======
+# ================================================================
+# CHECK13-CHECK19 station-logic pins (campaign 8 PR20, wave3 R20/D17)
+# Folded from tests/station-logic.bats (kept self-contained there).
+# mkbog helper: creates a .bog zip from stdin XML in $T/<name>.bog.
+# ================================================================
+_mkbog() { cat > "$T/$1.xml"; ( cd "$T" && cp "$1.xml" file.xml && zip -q "$1.bog" file.xml && rm -f file.xml ); }
+
+@test "SL13: CHECK13 — two distinct sources into the same relay slot FAIL (relay-double-source)" {
+  _mkbog c13sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='NrioNet' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
+  <p n='ro1' h='r1' t='c:BooleanWritable'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:s1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in10"/></p>
+   <p n='L2' t='b:Link'><p n="sourceOrd" v="h:s2"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in10"/></p>
+  </p>
+ </p>
+ <p n='SrcA' h='s1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="evapOut" t="b:StatusBoolean" v="false"/>
+ </p>
+ <p n='SrcB' h='s2' t='CRP:EvaporatorUnit'>
+  <p n="evapOut" t="b:StatusBoolean" v="false"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c13sl.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK13"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL14: CHECK14 — an OPERATOR output slot with no outgoing relay link WARNs (own-output-unlinked)" {
+  _mkbog c14sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_5' h='cr5' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit2' h='e5' t='CRP:EvaporatorUnit'>
+   <p n="evapOut" f="o" t="b:StatusBoolean" v="false"/>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c14sl.bog" --module ColdRoomPan
+  [[ "$output" == *"CHECK14"* ]] && [[ "$output" == *"WARN"* ]] && [[ "$output" == *"evapOut"* ]]
+}
+
+@test "SL15: CHECK15 — C-room-labeled slot sourced from a different unit index WARNs (sensor-crossed-by-name)" {
+  _mkbog c15sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='Station' h='st' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_3' h='e3' t='CRP:EvaporatorUnit'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:e3"/><p n="sourceSlotName" v="C1_temperature"/><p n="targetSlotName" v="tempOut"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c15sl.bog" --module ColdRoomPan
+  [[ "$output" == *"CHECK15"* ]] && [[ "$output" == *"WARN"* ]]
+}
+
+@test "SL16: CHECK16 — hasDefrost=true with no DefrostController sibling FAILs" {
+  _mkbog c16sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_2' h='cr2' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='Evap' h='ev2' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="true"/>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c16sl.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK16"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL17: CHECK17 — ColdRoom_1 whose link names address evap3* (index mismatch) FAILs" {
+  _mkbog c17sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='cr1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='hoaLink' t='b:Link'><p n="sourceOrd" v="h:cr1"/><p n="sourceSlotName" v="hoa"/><p n="targetSlotName" v="evap3Hoa"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c17sl.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK17"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL18: CHECK18 — an evap unit whose HOA tile (evap3) != freeze tile (evap1) FAILs (tile-number)" {
+  _mkbog c18sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='cr1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_1' h='eu1' t='CRP:EvaporatorUnit'>
+   <p n='hoaL'    t='b:Link'><p n="sourceOrd" v="h:cr1"/><p n="sourceSlotName" v="hoa"/><p n="targetSlotName" v="evap3Hoa"/></p>
+   <p n='freezeL' t='b:Link'><p n="sourceOrd" v="h:cr1"/><p n="sourceSlotName" v="frz"/><p n="targetSlotName" v="evap1Freeze"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c18sl.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK18"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL19: CHECK19 — control component writing to a setpoint slot WARNs (reverse link-direction)" {
+  _mkbog c19sl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='DashPanel_1' h='dp1' m='DPan=DashboardPan' t='DPan:DashUnit'>
+  <p n='SpLink' t='b:Link'><p n="sourceOrd" v="h:crp1"/><p n="sourceSlotName" v="temperatureOut"/><p n="targetSlotName" v="temperatureSetpoint"/></p>
+ </p>
+ <p n='Ctrl_1' h='crp1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="temperatureOut" f="o" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c19sl.bog" --module ColdRoomPan --module DashboardPan
+  [[ "$output" == *"CHECK19"* ]] && [[ "$output" == *"WARN"* ]]
+}
+
+@test "SL-smoke-panccadia: PANCCADIA -> CHECK18 FAIL x2 (ColdRoom_1 EvapUnit_1 and _3), CHECK14 WARN ColdRoom_5, others clean (SKIP if absent)" {
+  RB="${C8_PANCCADIA_BOG:-/nonexistent}"
+  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG)"
+  BF="$RB"
+  case "$RB" in
+    *.xml) ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/file.xml" ) \
+           && ( cd "$T" && zip -q pan_sl.bog file.xml && rm -f file.xml )
+           BF="$T/pan_sl.bog" ;;
+  esac
+  run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]
+  [[ "$output" == *"CHECK14"* ]] && [[ "$output" == *"WARN"* ]]
+  [[ "$output" != *"CHECK13  FAIL"* ]]
+  [[ "$output" != *"CHECK16  FAIL"* ]]
+  [[ "$output" != *"CHECK17  FAIL"* ]]
+>>>>>>> 5f0f377 (feat(bog-audit): K19 routing + SL fixtures + bog-audit.bats extension (campaign 8 PR20))
 }
