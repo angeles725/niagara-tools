@@ -91,7 +91,7 @@ END {
 
     # -----------------------------------------------------------------------
     # Method-body extraction: handler methods only (doGet / doPost / service)
-    # Runs auth + unbounded-set + log-in-handler per handler body.
+    # Runs auth + unbounded-set + log-in-handler + catch-no-400 per handler body.
     # -----------------------------------------------------------------------
     for (start = 1; start <= n; start++) {
         ln = lines[start]
@@ -99,21 +99,22 @@ END {
 
         # Extract the handler body by brace counting.
         # Strip // single-line comments to prevent comment text from matching checks.
-        depth = 0; body = ""
-        for (j = start; j <= n; j++) {
+        # Use a done flag so body_end tracks the actual closing line.
+        depth = 0; body = ""; body_end = start; done = 0
+        for (j = start; j <= n && !done; j++) {
             l = lines[j]
             # Strip single-line comments: remove // and everything after
             stripped = l
             if (match(stripped, /\/\//)) stripped = substr(stripped, 1, RSTART - 1)
+            body = body " " stripped
             for (c = 1; c <= length(l); c++) {
                 ch = substr(l, c, 1)
                 if (ch == "{") depth++
                 if (ch == "}" && depth > 0) {
                     depth--
-                    if (depth == 0) { j = n + 1; break }
+                    if (depth == 0) { body_end = j; done = 1; break }
                 }
             }
-            body = body " " stripped
         }
 
         # --- auth check ---
@@ -141,6 +142,64 @@ END {
             v = (strict+0 == 1) ? "FAIL" : "WARN"
             printf "%s  log-in-handler  %s:%d  LOG.info inside request handler (per-request log spam)\n",
                    v, rel, start
+        }
+
+    }
+
+    # -----------------------------------------------------------------------
+    # catch-no-400: a catch block around a parse call (parseDouble/parseInt/
+    # Long.parseLong/Double.valueOf) whose catch body has no 400 indicator.
+    # File-level scan (all methods in the servlet class). Reports at catch line.
+    # 400 indicators: "400", SC_BAD_REQUEST, sendError(, setStatus(,
+    #                 jsonError(, or sendJson(.
+    # -----------------------------------------------------------------------
+    if (is_servlet) {
+        ci = 1
+        while (ci <= n) {
+            if (lines[ci] !~ /(^|[[:space:]])try[[:space:]]*\{/) { ci++; continue }
+            try_start = ci
+            tdepth = 0; try_body = ""; try_end = try_start; tdone = 0
+            for (tj = try_start; tj <= n && !tdone; tj++) {
+                sl = lines[tj]
+                if (match(sl, /\/\//)) sl = substr(sl, 1, RSTART - 1)
+                try_body = try_body " " sl
+                for (tc = 1; tc <= length(lines[tj]); tc++) {
+                    tch = substr(lines[tj], tc, 1)
+                    if (tch == "{") tdepth++
+                    if (tch == "}" && tdepth > 0) {
+                        tdepth--
+                        if (tdepth == 0) { try_end = tj; tdone = 1; break }
+                    }
+                }
+            }
+            has_parse = (try_body ~ /Double\.parseDouble\(|Integer\.parseInt\(|Long\.parseLong\(|Double\.valueOf\(/)
+            if (!has_parse) { ci++; continue }
+            catch_start = 0
+            for (ck = try_end + 1; ck <= n && ck <= try_end + 4; ck++) {
+                if (lines[ck] ~ /catch[[:space:]]*\(/) { catch_start = ck; break }
+            }
+            if (catch_start == 0) { ci++; continue }
+            cdepth = 0; catch_body = ""; cfound_open = 0; cdone = 0
+            for (ck = catch_start; ck <= n && !cdone; ck++) {
+                sl = lines[ck]
+                if (match(sl, /\/\//)) sl = substr(sl, 1, RSTART - 1)
+                catch_body = catch_body " " sl
+                for (tc = 1; tc <= length(lines[ck]); tc++) {
+                    tch = substr(lines[ck], tc, 1)
+                    if (tch == "{") { cdepth++; cfound_open = 1 }
+                    if (tch == "}" && cfound_open && cdepth > 0) {
+                        cdepth--
+                        if (cdepth == 0) { cdone = 1; break }
+                    }
+                }
+            }
+            has_400 = (catch_body ~ /[^0-9]400[^0-9]|SC_BAD_REQUEST|sendError\(|setStatus\(|jsonError\(|sendJson\(/)
+            if (!has_400) {
+                v = (strict+0 == 1) ? "FAIL" : "WARN"
+                printf "%s  catch-no-400  %s:%d  catch around parse without 400 response (silent default may write bad value)\n",
+                       v, rel, catch_start
+            }
+            ci++
         }
     }
 
@@ -175,12 +234,19 @@ END {
 
     # -----------------------------------------------------------------------
     # csrf-xrw-only: X-Requested-With guard without CsrfUtil/csrfToken.
-    # Reports once per file (line 1 as anchor).
+    # Anchor at the first X-Requested-With line (not :1).
     # -----------------------------------------------------------------------
     if (file_has_xhr && !file_has_csrf) {
         v = (strict+0 == 1) ? "FAIL" : "WARN"
-        printf "%s  csrf-xrw-only  %s:1  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]\n",
-               v, rel
+        for (i = 1; i <= n; i++) {
+            sl = lines[i]
+            if (match(sl, /\/\//)) sl = substr(sl, 1, RSTART - 1)
+            if (sl ~ /X-Requested-With/) {
+                printf "%s  csrf-xrw-only  %s:%d  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]\n",
+                       v, rel, i
+                break
+            }
+        }
     }
 }
 AWKEOF

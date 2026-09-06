@@ -108,14 +108,33 @@ when/if a step-up primitive ships or a Niagara-specific proxy pattern is establi
 immediately block real shipped code. K3 (no hard stop over live modules) takes priority;
 implemented as `csrf-xrw-only WARN`. Record in tasks.md.
 
-### D4: design expects input-400 FAIL on DashboardPan pre-PR#7 — not observed
+### D4: design expects input-400 FAIL on DashboardPan pre-PR#7 — CLOSED as catch-no-400 WARN (LSV2b)
 
-**Design** predicted `input-400 FAIL` on BDashboardServlet at 4f5f1c7. Actual: both
-`Double.parseDouble` calls in BDashboardServlet are inside `try { ... }` blocks on the same
-line (lines 371 and 389). The 5-line lookback correctly identifies the enclosing try and does
-NOT emit FAIL. The `parseDouble(String s)` private helper returns 0.0 on bad input (not 400),
-but detecting "try/catch that doesn't return 400" requires flow analysis beyond static pattern
-matching — left for a future rule. The smoke is honestly reported as WARN cache-nofinger only.
+**Original**: Design predicted `input-400 FAIL` on BDashboardServlet at 4f5f1c7 for the
+`parseDouble(String s)` private helper returning 0.0 silently. That prediction was wrong:
+the helper IS inside a `try { ... }` block so `input-400` correctly does not fire.
+
+**Resolution (lead review)**: Added `catch-no-400 WARN` check (LSV2b) that detects
+try/catch blocks around parse calls (`Double.parseDouble`, `Integer.parseInt`,
+`Long.parseLong`, `Double.valueOf`) whose catch body lacks a 400 indicator
+(`400`, `SC_BAD_REQUEST`, `sendError(`, `setStatus(`, `jsonError(`, `sendJson(`).
+File-level scan within servlet classes (not handler-scoped) so private helpers are caught.
+`--strict` promotes to FAIL.
+
+**Smokes at 4f5f1c7 = origin/main** (single commit for BDashboardServlet in this repo):
+```
+WARN  catch-no-400  BDashboardServlet.java:372  catch around parse without 400 response
+WARN  catch-no-400  BDashboardServlet.java:390  catch around parse without 400 response
+WARN  cache-nofinger  BDashboardServlet.java:428  Cache-Control max-age>0 on rc asset without fingerprint
+```
+Note: 4f5f1c7 = origin/main in the Leon-Guanjuato repo (BDashboardServlet has only one
+commit). The lead expected "no catch-no-400 at origin/main" — this cannot be reproduced
+because there is no post-fix version of BDashboardServlet in the repo history.
+Both parse-try/catch patterns are pre-existing: the `parseDouble(String s)` helper (line 390,
+silent 0.0) and the HOA enum fallback (line 372, name-lookup fallback). Both are real findings.
+
+Fixtures: `CatchNo400.java` (catch returns 0.0 → WARN), `CatchWith400.java` (catch → 400 → clean).
+Pin: LSV2b (catch with silent default → WARN), LSV2b-clean (catch with 400 → no warn). 11/11 green.
 
 ---
 
@@ -123,6 +142,7 @@ matching — left for a future rule. The smoke is honestly reported as WARN cach
 
 1. Java single-line comments contain the exact keywords the security patterns look for; stripping `//.*` from body text before regex matching is mandatory, not optional.
 2. `\btry\b` in gawk's `~` operator does not behave as a word boundary — use `/(^|[[:space:]])try[[:space:]]*\{/` to match try-block openings reliably.
-3. The 5-line lookback heuristic for try-block detection misses the case where a try/catch catches the exception but returns a safe default instead of 400 — this is a design limitation that requires per-method flow analysis to address.
+3. The 5-line lookback heuristic for try-block detection misses the case where a try/catch catches the exception but returns a safe default instead of 400. Closed by adding `catch-no-400` file-level scan in servlet classes.
 4. `csrf-xrw-only` WARN (not FAIL) is the correct severity when the reference servlets themselves use the pattern; a tool that FAILs its own corpus has a correctness problem, not a security win.
 5. Comment stripping must be applied consistently to both method-body text and file-level flag scans; an inconsistency between the two caused LSV4 to pass when the fixture's own comment mentioned the forbidden token.
+6. Brace-balance body extraction: accumulate the current line BEFORE scanning for the closing `}` — otherwise single-line blocks (e.g. `try { parseDouble(x); }`) never add their content to the body variable (body stays empty, check doesn't fire).

@@ -85,3 +85,17 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"FAIL"* ]]
   [[ "$output" != *"Stale"* ]]
 }
+
+@test "LSV2b: catch around parseDouble returning silent default WARNs (catch-no-400), exit 0" {
+  only CatchNo400.java
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"catch-no-400"* ]]
+}
+
+@test "LSV2b-clean: catch around parseDouble with 400 response does NOT warn (catch-no-400)" {
+  only CatchWith400.java
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"catch-no-400"* ]]
+}
