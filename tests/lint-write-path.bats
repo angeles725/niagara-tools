@@ -334,3 +334,19 @@ MD
   run "$LW" "$d";          [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
   run "$LW" --strict "$d"; [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
 }
+
+@test "WP-stale-smoke: at main-ff1b659, --strict on any module root reports EXACTLY 5 STALE rows (hoaMode ×3, inhibit, freezeEnabled) — matrix-root scope, same from a second root; PR6 marks them -> 0" {
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  [ -d "$ROOT/Paccadia" ] && [ -f "$ROOT/docs/write-path-matrix.md" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
+  # STALE is evaluated against the MATRIX ROOT (all modules under docs/), so the count is
+  # independent of which module root is invoked.
+  run "$LW" --strict "$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 5 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^STALE.*hoaMode')" -eq 3 ]
+  [[ "$output" == *"STALE"*"inhibit"* ]]
+  [[ "$output" == *"STALE"*"freezeEnabled"* ]]
+  # matrix-root scope: a DIFFERENT module root gives the SAME 5 STALE rows
+  run "$LW" --strict "$ROOT/Compresores/CompPan/CompPan-rt"
+  [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 5 ]
+}
