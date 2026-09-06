@@ -82,6 +82,7 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - Schema: `schema-risk.sh` → SAFE; new slots exactly `rotationInterval`, `rotationMode` (+ `BRotationMode` frozen enum): `git diff origin/main..HEAD -- '*.java' | grep -cE '^\+.*@NiagaraProperty'` → 2.
 - Matrix: PR1 owns its 2 rows: `grep -cE '^\| *(rotationInterval|rotationMode)' docs/write-path-matrix.md` → 2. `$TB/lint-write-path.sh Compresores/CompPan/CompPan-rt --matrix docs/write-path-matrix.md` may still exit 1 until PR11 (record the FAIL count; it must not include the two S20 slots).
 - V4: M1a, M1b, M1c (all MANUAL; flips ROT7_/ROT7b_, ROT4_/ROT11_, ROT16_).
+  **Deviation watch (worker-reported):** `rotSinceMs` is stamped by a feedback loop ONE `stageDelay` after the stage-up write, not at the write. ROT16 (no swap on the first step; wait a full interval) and ROT5 (golden) must still be GREEN as shipped — confirm they are, then M1c's anchor is `rotSinceMs` at the stamping site: if the anchor moved, hand-mutate the actual clock source and re-prove ROT16 flips. If ROT16/ROT5 are anything but exact-GREEN, that is a REJECT, not a deviation.
 - V5: `v Compresores/build.gradle.kts` → **2.1.0** (2.0.3 → 2.1.0; PR9 bumps to 2.2.0 later — PR1 sets ONLY 2.1.0).
 - Harness-only: none. Coupling: PR9 requires this PR merged first; PR11 requires its two rows.
 - V6/V7.
@@ -111,8 +112,8 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V4: M3a (SP8 + SP-smoke), M3b (SP-smoke) — MANUAL.
 - Harness-only: none. V6/V7.
 
-## PR4 — `feat/c9-s12-config-login` (tunnel, base 9acb47c) · RED `qa/c9-s12-write-server` e7e6615 · worktree `c9-s12-config-login`
-- V0: `git -C $TUN fetch -q origin && git -C $TUN worktree add --detach $TWT/v-pr4 origin/feat/c9-s12-config-login && cd $TWT/v-pr4`; base check against `origin/main` (9acb47c at authoring).
+## PR4 — `feat/c9-s12-config-login` (tunnel, base **872c64c** — main gained one SQL trigger after 9acb47c) · RED `qa/c9-s12-write-server` e7e6615 · worktree `c9-s12-config-login`
+- V0: `git -C $TUN fetch -q origin && git -C $TUN worktree add --detach $TWT/v-pr4 origin/feat/c9-s12-config-login && cd $TWT/v-pr4`; base check against `origin/main` (872c64c — one SQL trigger ahead of the RED base 9acb47c; the RED is base-agnostic).
 - V2: `git diff e7e6615 HEAD -- instalacion/pipeline/test/write-server.config-login.test.mjs` → empty.
 - V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/write-server.config-login.test.mjs`
   → `# pass N`, `# fail 0` on the PR4 set. Required `ok` at PR4: **S12A-1, S12A-2, S12A-3, S12A-5, S12A-7** (token gate + seam + §10 bare `<real>` PUT).
