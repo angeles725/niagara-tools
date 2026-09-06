@@ -81,3 +81,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-rt-doctrine.md | kit | 2026-09-05 | pending | 4 | <!-- Δ1 §RT-control-logic logic.md; Δ2 §history-ext logic-authoring.md; Δ3 §slot-types-ext-writes logic-authoring.md; Δ4 dashboard.md pointer -->
 | 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | pending | 5 |
 | 2026-09-06-campaign8-orchestration.md | kit | 2026-09-06 | pending | 3 | <!-- L8 numbering deviation (L7 existed); new-retro.sh/kit-ticket.sh prefix drop for L1; step 5b placement -->
+| 2026-09-06-campaign8-structure.md | kit | 2026-09-06 | pending | 3 | <!-- Δ1 module-root=project-root note for L10; Δ2 L2 Javadoc anchor; Δ3 L5/L9 <p n= not <p -->
