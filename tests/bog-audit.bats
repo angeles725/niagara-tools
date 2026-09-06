@@ -217,3 +217,54 @@ to_bog() { case "$1" in *.xml) ( cd "$(dirname "$1")" && cp "$(basename "$1")" "
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK2  WARN')" -eq 1 ]
   [[ "$output" != *"CHECK5  FAIL"* ]] && [[ "$output" != *"CHECK7  FAIL"* ]]
 }
+
+# ---- CHECK5 inherited frozen slot disambiguation (BA12) ---------------------
+# A frozen bog slot (no t= attribute) on a class that extends a framework superclass
+# outside the source tree is WARN "possibly inherited", not FAIL.
+# A frozen bog slot on a class extending BComponent (or an own-module class) is FAIL.
+# NAMED MUTATION: change the extends clause from BWebServlet to BComponent -> WARN becomes FAIL.
+@test "BA12: CHECK5 — frozen slot on a framework-extending class is WARN not FAIL; BComponent-extending ghost stays FAIL" {
+  local T12="$T/ba12"
+  mkdir -p "$T12/src/com/company/MyMod"
+
+  # BFoo extends BWebServlet (framework class, not in our source tree)
+  cat > "$T12/src/com/company/MyMod/BFoo.java" <<'JAVA'
+package com.company.MyMod;
+@NiagaraProperty(name="myProp", type="BString", defaultValue="BString.make(\"\")")
+public class BFoo extends BWebServlet {}
+JAVA
+
+  # BBar extends BComponent — a ghost frozen slot here must still be FAIL
+  cat > "$T12/src/com/company/MyMod/BBar.java" <<'JAVA'
+package com.company.MyMod;
+@NiagaraProperty(name="realProp", type="BString", defaultValue="BString.make(\"\")")
+public class BBar extends BComponent {}
+JAVA
+
+  # bog: BFoo has 'servletName' (frozen, no t=) + BBar has 'ghostFrozen' (frozen, no t=)
+  local BOG12="$T12/test12.bog"
+  local XML12="$T12/file.xml"
+  cat > "$XML12" <<'XML'
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='Foo1' h='f1' m='MM=MyMod' t='MM:Foo'>
+  <p n="myProp" t="b:String" v="hello"/>
+  <p n="servletName" v="myfoo"/>
+ </p>
+ <p n='Bar1' h='b1' m='MM=MyMod' t='MM:Bar'>
+  <p n="realProp" t="b:String" v="world"/>
+  <p n="ghostFrozen" v="ghost"/>
+ </p>
+</bajaObjectGraph>
+XML
+  ( cd "$T12" && cp file.xml file.xml.bak && zip -q test12.bog file.xml && rm -f file.xml )
+
+  run "$BA" "$BOG12" --module MyMod --source-dir "$T12/src"
+  # servletName (frozen, BFoo extends BWebServlet) -> WARN on its own line, no FAIL line for it
+  grep -qE '^CHECK5[[:space:]]+WARN.*servletName' <<< "$output"
+  ! grep -qE '^CHECK5[[:space:]]+FAIL.*servletName' <<< "$output"
+  # ghostFrozen (frozen, BBar extends BComponent) -> FAIL on its own line
+  grep -qE '^CHECK5[[:space:]]+FAIL.*ghostFrozen' <<< "$output"
+  # Exit must be 1 (at least one FAIL)
+  [ "$status" -eq 1 ]
+}

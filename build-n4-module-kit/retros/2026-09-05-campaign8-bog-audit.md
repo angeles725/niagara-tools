@@ -99,3 +99,43 @@ HoneywellMX605132026 (`config.bog`, chihuahua module):
 ---
 
 retro: retros/2026-09-05-campaign8-bog-audit.md (5 deltas, review-status: pending)
+
+---
+
+## D6 — CHECK5 inherited frozen slots are WARN, not ghost FAIL (BA12)
+
+**Root cause**: CHECK5 compared the bog against @NiagaraProperty annotations of OUR class
+only. Slots inherited from a framework superclass (e.g. `BDashboardServlet extends BWebServlet`
+inheriting `servletName`) have no entry in our source but appear in the bog as frozen slots
+(no `t=` attribute). Hard-coding slot names is not a root-cause fix.
+
+**Rule implemented**: for a component whose source class `extends` something other than
+`BComponent` (or an own-module type), a bog slot that (a) is not declared in our source AND
+(b) has no `t=` attribute (frozen, not dynamic) → `CHECK5  WARN … possibly inherited from
+<Superclass> (not statically decidable)`. A dynamic slot (`t=` present) or a frozen slot on
+a BComponent-extending class stays FAIL.
+
+**BA12 RED (pre-fix, on mktemp copy of the script):**
+```
+CHECK5  FAIL  Bar1/ghostFrozen  slot in bog not in source BBar (ghost/orphan)
+CHECK5  FAIL  Foo1/servletName  slot in bog not in source BFoo (ghost/orphan)
+exit=1
+```
+BA12 assertion: `grep -qE '^CHECK5[[:space:]]+WARN.*servletName' <<< "$output"` → FAIL.
+
+**BA12 GREEN (after fix):**
+```
+CHECK5  FAIL  Bar1/ghostFrozen  slot in bog not in source BBar (ghost/orphan)
+CHECK5  WARN  Foo1/servletName  frozen slot not in source BFoo — possibly inherited from BWebServlet…
+exit=1
+```
+BA12 assertion: passes. BBar (extends BComponent) stays FAIL; BFoo (extends BWebServlet) becomes WARN.
+
+**PANCCADIA smoke with --source-dir after fix:**
+- CHECK2 WARN: 1 (intervalExpired flag-drift) ✓
+- CHECK5 FAIL: 0 ✓
+- CHECK5 WARN: 1 (DashboardServlet/servletName — frozen, inherited from BWebServlet) ✓
+- CHECK7 FAIL: 0 ✓
+
+**Assertion fix**: the bats glob `*"CHECK5  FAIL"*"servletName"*` was a cross-line false pass;
+replaced with line-precise `grep -qE '^CHECK5[[:space:]]+FAIL.*servletName'` assertions.

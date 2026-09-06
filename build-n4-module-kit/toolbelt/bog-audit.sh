@@ -123,6 +123,7 @@ def ga(text, name):
 # ================================================================
 src_slots   = defaultdict(dict)  # class_name -> {slot: {type, min, flags}}
 src_actions = defaultdict(dict)  # class_name -> {action: flags_char}
+src_extends = {}                 # class_name -> superclass_name (direct extends clause)
 servlet_writes = set()           # slot names written by servlet .set("SLOT", ...)
 
 if SRC_DIR:
@@ -137,6 +138,12 @@ if SRC_DIR:
                                encoding='utf-8', errors='replace').read()
             except Exception:
                 continue
+
+            # Capture extends clause: `class BFoo extends BWebServlet`
+            ext_m = re.search(
+                r'\bclass\s+' + re.escape(cls) + r'\s+extends\s+(\w+)', content)
+            if ext_m:
+                src_extends[cls] = ext_m.group(1)
 
             # CHECK12: servlet writes — .set("SLOT", ...)
             for m in re.finditer(r'\.set\(\s*"([^"]+)"\s*,', content):
@@ -527,6 +534,13 @@ else:
                          'TRANSIENT slot has persisted value in bog')
 
         # CHECK5: bog-extra (slot in bog not in source) — skip READONLY platform slots
+        # Superclass awareness: if the class extends a framework superclass (not declared
+        # in our own source tree), a FROZEN bog slot (no t= attribute, i.e. type=='') may
+        # be inherited from that superclass and is not statically decidable — emit WARN.
+        # A DYNAMIC slot (t= present) or a slot on a BComponent-extending class is FAIL.
+        _own_classes = set(src_slots.keys()) | set(src_actions.keys())
+        _super = src_extends.get(cls, '')
+        _extends_own = _super in _own_classes or _super in ('', 'BComponent', 'BAbstractService')
         for slot_n, slot_v in comp.slots.items():
             if slot_n in s_slts:
                 continue
@@ -534,8 +548,16 @@ else:
             # Skip platform-managed READONLY slots (wsAnnotation f="r" etc.)
             if 'r' in bog_flags.lower():
                 continue
-            emit('CHECK5', 'FAIL', comp.path + '/' + slot_n,
-                 f'slot in bog not in source {cls} (ghost/orphan)')
+            bog_type = slot_v.get('type') or ''
+            # Frozen slot (no t= in bog) on a class extending a framework superclass:
+            # the slot may be inherited — not statically decidable, emit WARN
+            if not bog_type and not _extends_own and _super:
+                emit('CHECK5', 'WARN', comp.path + '/' + slot_n,
+                     f'frozen slot not in source {cls} — possibly inherited from {_super} '
+                     f'(not statically decidable; add @NiagaraProperty override to suppress)')
+            else:
+                emit('CHECK5', 'FAIL', comp.path + '/' + slot_n,
+                     f'slot in bog not in source {cls} (ghost/orphan)')
 
         # CHECK6: src-missing (slot in source not in bog)
         for slot_n in s_slts:
