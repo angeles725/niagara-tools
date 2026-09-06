@@ -233,14 +233,14 @@ python3 invocation that already costs ~0.1 s.
 
 **RED**: `qa/c8-station-logic` (SL13–SL19) — re-read tip at apply | **Gate**: R20.1–R20.9, SC16
 
-- [ ] 20.1 Create `qa/c8-station-logic`; write failing bats: SL13–SL19 (one per check + per-mutation); record tip SHA.
-- [ ] 20.2 Extend `toolbelt/bog-audit.sh` python3 block: append CHECK13–CHECK19 as post-processing passes over the existing handle-graph and link-graph (no new parser state, D17); CHECK14 reads `hasDefrost` from parsed component dict; CHECK16 reuses component-index from CHECK9.
-- [ ] 20.3 Write synthetic per-check fixtures `tests/fixtures/bog/station-logic-CHECK{13..19}.bog` + named-mutation variants; clean fixture exits 0. No customer config.bog committed (D11).
-- [ ] 20.4 Write `tests/bog-audit.bats` extension: SL13–SL19 pins verbatim from RED + per-check mutations (R20.9).
-- [ ] 20.5 **Named mutations**: CHECK13 add second source → FAIL; CHECK18 swap freeze links → FAIL; CHECK16 set `hasDefrost=true` without sibling → FAIL; CHECK14 remove relay link → WARN. Record in PR body.
-- [ ] 20.6 Real smoke: `bog-audit.sh` on PANCCADIA `config.bog` → CHECK18 FAIL ColdRoom_1 EvaporatorUnit_1 and EvaporatorUnit_3; CHECK14 WARN ColdRoom_5/EvaporatorUnit2 evapOut; all other new checks clean; exits 1. Paste output.
-- [ ] 20.7 Guards: bats all green; `shellcheck` exit 0 (bash driver unchanged, only python3 inner block extended); `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 20.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
+- [x] 20.1 Create `qa/c8-station-logic`; write failing bats: SL13–SL19 (one per check + per-mutation); record tip SHA.
+- [x] 20.2 Extend `toolbelt/bog-audit.sh` python3 block: append CHECK13–CHECK19 as post-processing passes over the existing handle-graph and link-graph (no new parser state, D17); CHECK14 reads `hasDefrost` from parsed component dict; CHECK16 reuses component-index from CHECK9.
+- [x] 20.3 Write synthetic per-check fixtures `tests/fixtures/bog/station-logic-CHECK{13..19}.bog` + named-mutation variants; clean fixture exits 0. No customer config.bog committed (D11).
+- [x] 20.4 Write `tests/bog-audit.bats` extension: SL13–SL19 pins verbatim from RED + per-check mutations (R20.9).
+- [x] 20.5 **Named mutations**: CHECK13 add second source → FAIL; CHECK18 swap freeze links → FAIL; CHECK16 set `hasDefrost=true` without sibling → FAIL; CHECK14 remove relay link → WARN. Record in PR body.
+- [x] 20.6 Real smoke: `bog-audit.sh` on PANCCADIA `config.bog` → CHECK18 FAIL ColdRoom_1 EvaporatorUnit_1 and EvaporatorUnit_3; CHECK14 WARN ColdRoom_5/EvaporatorUnit2 evapOut; all other new checks clean; exits 1. Paste output.
+- [x] 20.7 Guards: bats all green; `shellcheck` exit 0 (bash driver unchanged, only python3 inner block extended); `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 20.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
 - [ ] **[lead]** SL13–SL19 green; merge ff-only; ledger settle `--max-changed-lines 320`. No install-skill (SKILL.md unchanged).
 
 ---
