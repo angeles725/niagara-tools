@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — verify-module facets-req + ord-literal sub-checks (facets-lint)
 
 **Date:** 2026-09-05

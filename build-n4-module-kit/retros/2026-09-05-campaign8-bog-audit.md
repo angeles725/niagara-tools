@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Campaign 8 PR10 — bog-audit retro
 
 Session: 2026-09-05, branch feat/c8-bog-audit, kit PR10.

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Campaign 8 — RT control doctrine fold (PR15)
 
 **Module:** kit

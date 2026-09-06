@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: campaign8-build-pipeline
 
 **Session**: 2026-09-05 · Campaign 8 PR14 — Build pipeline + module versioning doctrine  

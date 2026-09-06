@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — wb checks (WB-LEX1/SCAFFOLD1/THREAD1/AGENT1/DEP1, Campaign 8 PR11)
 
 **Date:** 2026-09-05

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — rc-scan.sh browser-resource lint (Campaign 8 PR6)
 
 **Date:** 2026-09-05

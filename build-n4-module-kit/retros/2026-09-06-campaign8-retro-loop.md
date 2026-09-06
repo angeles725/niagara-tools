@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign8-retro-loop
 
 **Session**: Campaign 8 PR16 — feat/c8-retro-loop (new-retro.sh + kit-ticket.sh)

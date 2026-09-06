@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — lint-write-path.sh OPERATOR-slot write-path matrix coverage (Campaign 8 PR19, B816)
 
 **Date:** 2026-09-06

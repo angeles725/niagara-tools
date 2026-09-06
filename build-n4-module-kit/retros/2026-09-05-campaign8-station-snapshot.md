@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — station-snapshot.sh local audit-surface snapshot (Campaign 8 PR9)
 
 **Date:** 2026-09-05

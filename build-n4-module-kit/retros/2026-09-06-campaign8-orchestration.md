@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # campaign8-orchestration
 
 **Date**: 2026-09-06

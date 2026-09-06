@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — lint-servlet.sh BWebServlet security lint (Campaign 8 PR12, B813)
 
 **Date:** 2026-09-05

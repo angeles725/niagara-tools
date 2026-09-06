@@ -1,3 +1,4 @@
+<!-- review-status: folded -->
 # Retro: Campaign 8 — lint-timers.sh extension (companion-flag, jdk-thread, changed-sched, dot-dir prune)
 
 **Date:** 2026-09-05

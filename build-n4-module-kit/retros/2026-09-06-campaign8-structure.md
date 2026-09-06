@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — lint-structure.sh module source-tree structure lint (Campaign 8 PR18, B817)
 
 **Date:** 2026-09-06

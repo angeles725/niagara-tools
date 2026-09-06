@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: campaign8-triage-console — triage-console.sh station log exception triage
 
 **Session**: Campaign 8 PR2 · 2026-09-05

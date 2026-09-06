@@ -63,24 +63,25 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign7-logic-split.md | kit | 2026-09-05 | folded | 5 |
 | 2026-09-05-campaign7-report-module.md | kit | 2026-09-05 | folded | 3 |
 | 2026-09-05-campaign7-close-process-meta-lessons.md | kit | 2026-09-05 | folded | 5 |
-| 2026-09-05-campaign8-lint-delays.md | kit | 2026-09-05 | pending | 4 | <!-- D2b+D2c+D9b -->
-| 2026-09-05-campaign8-triage-console.md | kit | 2026-09-05 | pending | 5 | <!-- D1-D5; B818 registry flexible match -->
-| 2026-09-05-campaign8-lint-timers-ext.md | kit | 2026-09-05 | pending | 3 | <!-- D4→same-method body; jdk-thread; changed-sched -->
-| 2026-09-05-campaign8-facets-lint.md | kit | 2026-09-05 | pending | 5 | <!-- WARN not FAIL (K13); DashboardPan-ux path; false-positive fix; MIN=0 correct; profile_dir naming -->
-| 2026-09-05-campaign8-slot-per-slot.md | kit | 2026-09-05 | pending | 4 | <!-- D6 per-slot; D6a empty-lex FAIL; OPERATOR gate; paren-balance awk -->
-| 2026-09-05-campaign8-rc-scan.md | kit | 2026-09-05 | pending | 5 | <!-- h:/ vs h: CSS FP; multi-line ternary; URL in detail; dot-dir prune order; awk heredoc quoting -->
-| 2026-09-05-campaign8-doctrine-fold.md | kit | 2026-09-05 | pending | 10 |
-| 2026-09-05-campaign8-report-integration.md | kit | 2026-09-05 | pending | 4 | <!-- D9a OUTAGE->FAIL; dot-dir -mindepth 1; console-dir once-per-run; console.txt own-frame fix -->
-| 2026-09-05-campaign8-station-snapshot.md | kit | 2026-09-05 | pending | 4 | <!-- manifest.json not .txt (K13); flat output not nested dir (K13); find-newer source-write check; cp -p NTFS mtime -->
-| 2026-09-05-campaign8-wb-audit.md | kit | 2026-09-05 | pending | 5 | <!-- WB-LEX1 exit1; SCAFFOLD1 dead-angle; THREAD1/AGENT1 WARN-only (K13); DEP1 phantom; DWB1 doctrine -->
+| 2026-09-05-campaign8-lint-delays.md | kit | 2026-09-05 | folded | 4 | <!-- D2b+D2c+D9b -->
+| 2026-09-05-campaign8-triage-console.md | kit | 2026-09-05 | folded | 5 | <!-- D1-D5; B818 registry flexible match -->
+| 2026-09-05-campaign8-lint-timers-ext.md | kit | 2026-09-05 | folded | 3 | <!-- D4→same-method body; jdk-thread; changed-sched -->
+| 2026-09-05-campaign8-facets-lint.md | kit | 2026-09-05 | folded | 5 | <!-- WARN not FAIL (K13); DashboardPan-ux path; false-positive fix; MIN=0 correct; profile_dir naming -->
+| 2026-09-05-campaign8-slot-per-slot.md | kit | 2026-09-05 | folded | 4 | <!-- D6 per-slot; D6a empty-lex FAIL; OPERATOR gate; paren-balance awk -->
+| 2026-09-05-campaign8-rc-scan.md | kit | 2026-09-05 | folded | 5 | <!-- h:/ vs h: CSS FP; multi-line ternary; URL in detail; dot-dir prune order; awk heredoc quoting -->
+| 2026-09-05-campaign8-doctrine-fold.md | kit | 2026-09-05 | folded | 10 |
+| 2026-09-05-campaign8-report-integration.md | kit | 2026-09-05 | folded | 4 | <!-- D9a OUTAGE->FAIL; dot-dir -mindepth 1; console-dir once-per-run; console.txt own-frame fix -->
+| 2026-09-05-campaign8-station-snapshot.md | kit | 2026-09-05 | folded | 4 | <!-- manifest.json not .txt (K13); flat output not nested dir (K13); find-newer source-write check; cp -p NTFS mtime -->
+| 2026-09-05-campaign8-wb-audit.md | kit | 2026-09-05 | folded | 5 | <!-- WB-LEX1 exit1; SCAFFOLD1 dead-angle; THREAD1/AGENT1 WARN-only (K13); DEP1 phantom; DWB1 doctrine -->
 
-| 2026-09-05-campaign8-bog-audit.md | kit | 2026-09-05 | pending | 6 | <!-- CHECK11 FAIL not WARN (K13); CHECK12 WARN; direct-parent slot tracking; compound-type sub-slots; wsAnnotation READONLY skip; BA12 inherited frozen slots WARN -->
-| 2026-09-05-campaign8-lint-servlet.md | kit | 2026-09-05 | pending | 5 | <!-- D1 lint-servlet not rc-scan --servlet (K13); D2 R12.2 deferred B803; D3 csrf WARN not FAIL (B813); D4 input-400 prediction wrong; comment-strip both body+flags -->
-| 2026-09-05-campaign8-post-deploy-checklist.md | kit | 2026-09-05 | pending | 2 |
-| 2026-09-05-campaign8-build-pipeline.md | kit | 2026-09-05 | pending | 3 | <!-- Gradle task matrix §4.a; version-bump checklist §4.b; exit-31 regression pin BS-lock/BS-lock-hint -->
-| 2026-09-05-campaign8-rt-doctrine.md | kit | 2026-09-05 | pending | 4 | <!-- Δ1 §RT-control-logic logic.md; Δ2 §history-ext logic-authoring.md; Δ3 §slot-types-ext-writes logic-authoring.md; Δ4 dashboard.md pointer -->
-| 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | pending | 5 |
-| 2026-09-06-campaign8-orchestration.md | kit | 2026-09-06 | pending | 3 | <!-- L8 numbering deviation (L7 existed); new-retro.sh/kit-ticket.sh prefix drop for L1; step 5b placement -->
-| 2026-09-06-campaign8-structure.md | kit | 2026-09-06 | pending | 3 | <!-- Δ1 module-root=project-root note for L10; Δ2 L2 Javadoc anchor; Δ3 L5/L9 <p n= not <p -->
-| 2026-09-06-campaign8-write-path.md | kit | 2026-09-06 | pending | 5 | <!-- Δ1 lint-write-path.sh; Δ2 logic.md §write-path; Δ3 logic-authoring.md §write-path-matrix; Δ4 CHECK12-pin; Δ5 K19 routing -->
-| 2026-09-06-campaign8-station-logic.md | kit | 2026-09-06 | pending | 4 | <!-- D1 CHECK16 vice-versa deferred (BA5 conflict); D2 self-closing bug; D3 relay clean fixture; D4 f-string !r syntax fix -->
+| 2026-09-05-campaign8-bog-audit.md | kit | 2026-09-05 | folded | 6 | <!-- CHECK11 FAIL not WARN (K13); CHECK12 WARN; direct-parent slot tracking; compound-type sub-slots; wsAnnotation READONLY skip; BA12 inherited frozen slots WARN -->
+| 2026-09-05-campaign8-lint-servlet.md | kit | 2026-09-05 | folded | 5 | <!-- D1 lint-servlet not rc-scan --servlet (K13); D2 R12.2 deferred B803; D3 csrf WARN not FAIL (B813); D4 input-400 prediction wrong; comment-strip both body+flags -->
+| 2026-09-05-campaign8-post-deploy-checklist.md | kit | 2026-09-05 | folded | 2 |
+| 2026-09-05-campaign8-build-pipeline.md | kit | 2026-09-05 | folded | 3 | <!-- Gradle task matrix §4.a; version-bump checklist §4.b; exit-31 regression pin BS-lock/BS-lock-hint -->
+| 2026-09-05-campaign8-rt-doctrine.md | kit | 2026-09-05 | folded | 4 | <!-- Δ1 §RT-control-logic logic.md; Δ2 §history-ext logic-authoring.md; Δ3 §slot-types-ext-writes logic-authoring.md; Δ4 dashboard.md pointer -->
+| 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | folded | 5 |
+| 2026-09-06-campaign8-orchestration.md | kit | 2026-09-06 | folded | 3 | <!-- L8 numbering deviation (L7 existed); new-retro.sh/kit-ticket.sh prefix drop for L1; step 5b placement -->
+| 2026-09-06-campaign8-structure.md | kit | 2026-09-06 | folded | 3 | <!-- Δ1 module-root=project-root note for L10; Δ2 L2 Javadoc anchor; Δ3 L5/L9 <p n= not <p -->
+| 2026-09-06-campaign8-write-path.md | kit | 2026-09-06 | folded | 5 | <!-- Δ1 lint-write-path.sh; Δ2 logic.md §write-path; Δ3 logic-authoring.md §write-path-matrix; Δ4 CHECK12-pin; Δ5 K19 routing -->
+| 2026-09-06-campaign8-station-logic.md | kit | 2026-09-06 | folded | 4 |
+| 2026-09-06-campaign8-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 11 | <!-- D1 CHECK16 vice-versa deferred (BA5 conflict); D2 self-closing bug; D3 relay clean fixture; D4 f-string !r syntax fix -->

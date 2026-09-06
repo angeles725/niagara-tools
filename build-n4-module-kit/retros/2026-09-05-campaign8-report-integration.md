@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — report-module.sh integration + v0.19.0 (Campaign 8 PR8)
 
 **Date:** 2026-09-05

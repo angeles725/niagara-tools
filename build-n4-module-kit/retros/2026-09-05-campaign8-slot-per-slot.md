@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # Retro: Campaign 8 — slot-coverage.sh per-slot mode + empty-lexicon FAIL escalation (PR5)
 
 **Date:** 2026-09-05
