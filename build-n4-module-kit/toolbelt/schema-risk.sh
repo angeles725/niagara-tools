@@ -78,7 +78,7 @@ type_name() {
 parse_slots() {
   local dir="$1"
   local -a java_files
-  mapfile -t java_files < <(find "$dir" -name "*.java" | sort)
+  mapfile -t java_files < <(find "$dir" -mindepth 1 -type d -name '.*' -prune -o -name "*.java" -print | sort)
   [ "${#java_files[@]}" -eq 0 ] && return
   awk '
     function count_depth(s,    i, n, ch, d) {
