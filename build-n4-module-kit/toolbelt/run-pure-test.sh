@@ -59,4 +59,4 @@ javac -source 8 -target 8 -nowarn -cp "$JU" \
   -sourcepath "$rt/src:$testroot" \
   -d "$tmp" "$testroot/$pkgpath/$testsimple.java"
 
-java -cp "$tmp:$JU:$HC" org.junit.runner.JUnitCore "$testfqcn"
+( cd "$rt" && java -cp "$tmp:$JU:$HC" org.junit.runner.JUnitCore "$testfqcn" )

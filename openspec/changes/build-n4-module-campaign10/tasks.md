@@ -113,7 +113,7 @@ Chain strategy: stacked-to-main
 **D-ids**: D4, D4a-c · **Gate**: SC-4, SC-7, SC-10
 **Rationale**: the cwd-sensitive part is the RUNTIME test read — `WiringTests` read `Paths.get("src/…")` and `../../build.gradle.kts` relative to JVM cwd. `-sourcepath` is NOT broken (coordinator validator §Claim 3). Fix is runner-side only, ONE edit (the absolutise edit was dropped: inert under the subshell structure and unpinnable by `a792d7a`, whose tests pass an absolute `$RT` — tasks read 896846176). No client test file touched (K12/K13). `[ev: apply-package S24 4d5e6092c §Claim 3; 896846176 §PR4]`
 
-- [ ] 4.1 Re-read `git diff --name-only origin/main...origin/qa/c10-structural-cwd` — confirm no client test file in the set (K13). Confirm S24-cwd: `run-pure-test.sh <rt> <fqcn>` from a non-profile cwd (kit root or `/tmp`) FAILs today; S24-cwd-regression: from `<rt>` dir (`.`) passes today. `[ev: K13; D4c]`
+- [x] 4.1 Re-read `git diff --name-only origin/main...origin/qa/c10-structural-cwd` — confirm no client test file in the set (K13). Confirm S24-cwd: `run-pure-test.sh <rt> <fqcn>` from a non-profile cwd (kit root or `/tmp`) FAILs today; S24-cwd-regression: from `<rt>` dir (`.`) passes today. `[ev: K13; D4c]`
 - [ ] 4.2 Create worktree: `git worktree add ../niagara-tools-worktrees/c10-cwd -b feat/c10-cwd-independent-reds f90b8d1`. `[ev: D worktree map]`
 - [ ] 4.3 Merge RED as commit 1; run structural RED from kit root → S24-cwd FAIL; record RED-for-the-right-reason. `[ev: K13]`
 - [x] 4.4 DROPPED — no absolutise edit (`rt=$(cd "$rt" && pwd)`): inert under 4.5 and unpinnable by `a792d7a` (both S24 tests pass an absolute `$RT`); a change no RED can bite is would-flip prose. `[ev: D4b (dropped); 896846176 §PR4]`
