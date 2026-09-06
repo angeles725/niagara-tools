@@ -88,10 +88,12 @@ _close() { [ -n "${C8_CLOSE:-}" ] || skip "campaign-8 close gate — run with C8
 @test "CLOSE-tool-pins (SC1,3,4,8,9,11-16): every campaign pin file passes on main" {
   _close
   # The FINAL pin set (all present once wave 3 — PR18 lint-structure, PR19 lint-write-path,
-  # PR20 station-logic — has merged). An absent pin at close is itself a failure.
+  # PR20 station-logic checks CHECK13-19 — has merged). PR20's SL13-19 + SL-smoke pins live in
+  # bog-audit.bats (station-logic.bats was the standalone RED file, removed once folded). An absent
+  # pin at close is itself a failure.
   for f in lint-delays triage-console lint-timers report-module schema-risk facets-lint \
            slot-coverage rc-scan station-snapshot bog-audit lint-wb-threading verify-module \
-           lint-servlet retro-loop lint-structure lint-write-path station-logic; do
+           lint-servlet retro-loop lint-structure lint-write-path; do
     [ -f "$REPO/tests/$f.bats" ] || { echo "ABSENT pin (campaign not complete): $f.bats"; false; }
     run bats "$REPO/tests/$f.bats"
     [ "$status" -eq 0 ] || { echo "FAILED pin: $f.bats"; false; }
