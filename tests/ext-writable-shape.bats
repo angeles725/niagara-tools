@@ -148,12 +148,16 @@ JAVA
 }
 
 # --- EW10: EXACT contract at a109249 (C9_CLIENT_ROOT): the only complex OPERATOR slot without an action is BRoomPanel.setpoint ---
-@test "EW10: real trees exact — DashboardPan-rt exactly 1 WARN (BRoomPanel.setpoint), CompPan-rt 0 (faultReset has an action), ColdRoomPan-rt 0, DashboardPan-ux 0" {
+@test "EW10: real trees exact — DashboardPan-rt exactly 1 WARN (BRoomPanel.setpoint), CompPan-rt 0 (class-level @NiagaraAction exemption), ColdRoomPan-rt 0, DashboardPan-ux 0" {
   [ -d "$ROOT/Dashboard" ] && [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$EW" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
   [[ "$output" == *"BRoomPanel"* ]] && [[ "$output" == *"setpoint"* ]]
+  # CompPan-rt is 0 because BCompressorControl declares a class-level @NiagaraAction (the HIDDEN
+  # powerOnExpired/tick), so the coarse class-level exemption applies — NOT because faultReset itself
+  # has a writing action (faultReset is a BStatusBoolean SUMMARY|OPERATOR complex slot with none).
+  # A per-slot writing-action rule is C10 seed S22.
   for r in Compresores/CompPan/CompPan-rt Paccadia/ColdRoomPan/ColdRoomPan-rt Dashboard/DashboardPan/DashboardPan-ux; do
     run "$EW" "$ROOT/$r/src"
     [ "$status" -eq 0 ]
