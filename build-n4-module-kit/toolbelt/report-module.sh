@@ -254,7 +254,7 @@ for ADIR in "${ARTIFACTS[@]}"; do
     emit "$ANAME" SKIP schema-risk "no .deploy-baseline"
   else
     sr_exit=0
-    sr_out=$("$TOOLBELT/schema-risk.sh" "$SR_BASELINE" "$ADIR" 2>&1) || sr_exit=$?
+    "$TOOLBELT/schema-risk.sh" "$SR_BASELINE" "$ADIR" >/dev/null 2>&1 || sr_exit=$?
     case "$sr_exit" in
       0) emit "$ANAME" PASS schema-risk "verdict=SAFE" ;;
       1) emit "$ANAME" WARN schema-risk "verdict=LOSSY" ;;

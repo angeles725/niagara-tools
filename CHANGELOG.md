@@ -8,13 +8,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ## [Unreleased]
 
-### Changed
+---
+
+## [v0.19.0] - 2026-09-05
+
+### Changed — Campaign 8 close Wave 1: delay lint, console triage, timer extensions, facets, per-slot, rc-scan, report integration (PR1–PR8)
 
 - **`slot-coverage.sh` empty-lexicon escalation (D6a):** an empty `module.lexicon` with at least one declared type now exits **1** (FAIL) instead of 0 (WARN/`--strict`-only). Every operator slot renders raw camelCase in operator views (T8 footgun is a ship-blocker); a `--strict`-only gate left the very module that motivated the check (`chihuahua`) passing the aggregate. `report-module.sh` renders this as a `FAIL  slot-coverage  empty lexicon` row [ev: corpus B788; D6a].
 
 ### Added
 
-- **`slot-coverage.sh per-slot` subcommand (D6):** `slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` compares `OPERATOR`-flagged `@NiagaraProperty` slots against lexicon keys; emits `pct=<n.n> (per-slot)`, `MISSING <slot>`, and `STALE <key>` rows; exits 1 when any slot is missing. Dot-dirs pruned (D9b) so `.deploy-baseline/` is never scanned [ev: corpus B788; D6].
+- **`lint-delays.sh` (PR1):** `toolbelt/lint-delays.sh <java-src-dir>` — Clock.schedule/schedulePeriodically delay-floor lint; detects call sites with no strictly-positive (>0) floor (e.g. `Math.max(x, 0L)`); D2b cross-file helper resolution; exits 0/1/3; LD1–LD9 bats; real smoke: BDefrostController `:556/:566/:620/:664` FAIL on pre-fix ColdRoomPan-rt [ev: retro campaign8-lint-delays].
+- **`triage-console.sh` (PR2):** `toolbelt/triage-console.sh [--package PKG] [--console-dir DIR] <console.txt>…` — own-module exception triage over station console logs; three attribution channels C1 (own frame), C2 (own logger tag), C3 ([sys]/[sys.xml]/[sys.registry]); digit-normalised dedup; exits 0/1/3; TR1–TR9 bats; real smoke: PANCCADIA/REFLOW/MX60 SEVERE + WARN rows [ev: retro campaign8-triage-console].
+- **`lint-timers.sh` C/K/N extensions (PR3):** appended three new checks — `companion-flag` (uncleared companion in `stopped()` path), `jdk-thread` (raw `ScheduledExecutorService`/`new Thread()` in BComponent), `changed-sched` (Clock.schedule in `changed()` without guard in scheduling body); TC-A/B/C bats; TL1–TL4 not regressed [ev: retro campaign8-lint-timers-ext].
+- **`verify-module.sh --src` facets-req + ord-literal (PR4):** `facets-req` WARN: OPERATOR numeric slot without facets key, or name-pattern slot without UNITS/PRECISION; `ord-literal` WARN: hardcoded `station:|local:|slot:/` string under src; F1–F8 bats; 218/218 total [ev: retro campaign8-facets-lint].
+- **`slot-coverage.sh per-slot` subcommand (PR5 / D6):** `slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` compares `OPERATOR`-flagged `@NiagaraProperty` slots against lexicon keys; emits `pct=<n.n> (per-slot)`, `MISSING <slot>`, and `STALE <key>` rows; exits 1 when any slot is missing; dot-dirs pruned (D9b) [ev: corpus B788; D6].
+- **`rc-scan.sh` (PR6):** `toolbelt/rc-scan.sh <artifact-dir> [--strict] [--servlet]` — browser-resource lint over `rc/` assets (`*.html *.js *.css`); checks: `ord-literal` (FAIL), `host-literal` (FAIL), `bare-catch` (WARN/`--strict` FAIL), `null-branch` (WARN/`--strict` FAIL); excludes `rc/ext/**`, `*.min.js`, `srcTest/**`, dot-dirs; RC1–RC9 bats; 227/227 total [ev: retro campaign8-rc-scan].
+- **`report-module.sh --console-dir` integration (PR8):** `toolbelt/report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]` gains three new member integrations: per-artifact `lint-delays.sh <artifact>/src` (SKIP when no `src/`; FAIL rows aggregate to exit 1); per-artifact `schema-risk.sh <artifact>/.deploy-baseline <artifact>` (SKIP when no `.deploy-baseline/`; exit 2 OUTAGE maps to FAIL row per D9a); once-per-run `triage-console.sh --console-dir <dir>` (SKIP row when flag absent; FAIL rows aggregate); dot-dir pruning fix in `schema-risk.sh` parse_slots; RM1–RM8 bats; 234/234 total [ev: retro campaign8-report-integration].
+
+### References
+
+- SDD change: `build-n4-module-campaign8` (PR1 … PR8; v0.18.0 → v0.19.0).
+- Engram topics `sdd/build-n4-module-campaign8/*`; research blocks B788/B795/B800/B801/B803 (niagara-research); retros: campaign8-lint-delays, campaign8-triage-console, campaign8-lint-timers-ext, campaign8-facets-lint, campaign8-slot-per-slot, campaign8-rc-scan, campaign8-report-integration.
 
 ---
 

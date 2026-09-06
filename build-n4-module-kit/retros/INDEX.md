@@ -70,3 +70,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-slot-per-slot.md | kit | 2026-09-05 | pending | 4 | <!-- D6 per-slot; D6a empty-lex FAIL; OPERATOR gate; paren-balance awk -->
 | 2026-09-05-campaign8-rc-scan.md | kit | 2026-09-05 | pending | 5 | <!-- h:/ vs h: CSS FP; multi-line ternary; URL in detail; dot-dir prune order; awk heredoc quoting -->
 | 2026-09-05-campaign8-doctrine-fold.md | kit | 2026-09-05 | pending | 10 |
+| 2026-09-05-campaign8-report-integration.md | kit | 2026-09-05 | pending | 4 | <!-- D9a OUTAGE->FAIL; dot-dir -mindepth 1; console-dir once-per-run; console.txt own-frame fix -->

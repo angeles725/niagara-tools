@@ -171,14 +171,14 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED — re-read tip at apply | **Gate**: R8.1-R8.5, SC4, SC7, D9a, D12
 
-- [ ] 8.1 Create `qa/c8-report-integration`; write failing bats: lint-delays FAIL in member → aggregate FAIL (AggFAIL); `triage-console` FAIL → aggregate FAIL; `schema-risk` exit 2 → FAIL row (not ERROR, D9a); record tip SHA.
-- [ ] 8.2 Extend `toolbelt/report-module.sh` with `--console-dir <dir>` flag; append per-artifact `lint-delays.sh <artifact>/src` (SKIP when no `src/`) and `schema-risk.sh`; once-per-run `triage-console.sh --console-dir`; map schema-risk exit 2 → FAIL row (D9a).
-- [ ] 8.3 Extend `tests/report-module.bats` (RED pins verbatim + AggFAIL scenario).
-- [ ] 8.4 Bump `VERSION` → `0.19.0`; rename `## [Unreleased]` → `## [v0.19.0] - YYYY-MM-DD` in `CHANGELOG.md`; add `### References` block; include entry for `--console-dir` new flag (D12).
-- [ ] 8.5 **Named mutation**: drop `lint-delays` aggregation → report exits 0 on a delay-FAIL module (R8.5). Record in PR body.
-- [ ] 8.6 Real smoke: `report-module.sh` on CRP pre-fix tree 4f5f1c7 → exits 1, aggregate FAIL row for `lint-delays`. Paste output.
-- [ ] 8.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`.
-- [ ] 8.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 8.1 Create `qa/c8-report-integration`; write failing bats: lint-delays FAIL in member → aggregate FAIL (AggFAIL); `triage-console` FAIL → aggregate FAIL; `schema-risk` exit 2 → FAIL row (not ERROR, D9a); record tip SHA. [RED commit d8322d4 already on branch per K13]
+- [x] 8.2 Extend `toolbelt/report-module.sh` with `--console-dir <dir>` flag; append per-artifact `lint-delays.sh <artifact>/src` (SKIP when no `src/`) and `schema-risk.sh`; once-per-run `triage-console.sh --console-dir`; map schema-risk exit 2 → FAIL row (D9a).
+- [x] 8.3 Extend `tests/report-module.bats` (RED pins verbatim + AggFAIL scenario). [Already in RED commit d8322d4; RM1-RM8 all green]
+- [x] 8.4 Bump `VERSION` → `0.19.0`; rename `## [Unreleased]` → `## [v0.19.0] - 2026-09-05` in `CHANGELOG.md`; add `### References` block; include entry for `--console-dir` new flag (D12).
+- [x] 8.5 **Named mutation**: drop `lint-delays` aggregation → report exits 0 on a delay-FAIL module (R8.5). Observed: exit=0 CLEAN; RM4 flips. Recorded in retro.
+- [x] 8.6 Real smoke: `report-module.sh` on CRP pre-fix tree 4f5f1c7 → exits 1, 4 FAIL lint-delays rows (:556/:566/:620/:664) + 2 FAIL timer rows; ISSUES. With --console-dir HoneywellMX605132026: 3 triage-console FAIL rows.
+- [x] 8.7 Guards: bats 239/239 green; `shellcheck` exit 0; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0; `kit-links.bats` 6/6 green.
+- [x] 8.8 Retro `2026-09-05-campaign8-report-integration.md` + INDEX row + `BUILD-STATE.md` envelope (CD1); openspec tasks.md ticked (this edit).
 - [ ] **[lead]** RED green; merge ff-only; ledger settle `--max-changed-lines 220`. No install-skill.
 
 ---
