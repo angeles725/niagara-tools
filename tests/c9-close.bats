@@ -113,3 +113,27 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
   [ "$(v "$R/Paccadia/build.gradle.kts")"    = "2.1.0" ]   # ColdRoomPan (R8)
   [ "$(v "$R/Dashboard/build.gradle.kts")"   = "2.2.0" ]   # DashboardPan (R6)
 }
+
+# ---- Added 2026-09-06 (terrain item 3): D12 K22 guard, R13.5 CHANGELOG lint entries, harness-run record ----
+
+@test "CLOSE-K22-once (D12 idempotent guard): exactly ONE '**K22 —' line in METHODOLOGY.md" {
+  _close
+  [ "$(grep -c '^- \*\*K22 —' "$REPO/build-n4-module-kit/METHODOLOGY.md")" -eq 1 ]
+}
+
+@test "CLOSE-changelog-lints (R13.5): the [v0.20.0] section names lint-demand-scope.sh, lint-silent-protection.sh, lint-ext-writable-shape.sh" {
+  _close
+  sec="$(awk '/^## \[v0\.20\.0\]/{f=1; next} /^## \[/{f=0} f' "$REPO/CHANGELOG.md")"
+  [ -n "$sec" ] || { echo "no [v0.20.0] section"; false; }
+  for s in lint-demand-scope.sh lint-silent-protection.sh lint-ext-writable-shape.sh; do
+    printf '%s\n' "$sec" | grep -q "$s" || { echo "CHANGELOG [v0.20.0] lacks $s"; false; }
+  done
+}
+
+@test "CLOSE-harness-run (harness-only pins CRA1/2/3 live, CPB5, R14 lockout+AuditEvent): qa/c9-harness-run.md records three 'Failures: 0, Skips: 0' runs" {
+  _close
+  f="$REPO/qa/c9-harness-run.md"
+  [ -f "$f" ] || { echo "no harness run record — a SKIP is not a PASS (qa/c9-harness-procedure.md §5)"; false; }
+  [ "$(grep -cE '^Total tests run: [1-9][0-9]*, Failures: 0, Skips: 0' "$f")" -eq 3 ]
+  ! grep -qE 'Skips: [1-9]' "$f"
+}
