@@ -54,7 +54,7 @@ shared file — a dirty working tree is a peer's live work, off-limits.** `[ev: 
 3. **RED → apply (GREEN).** `sdd-apply` (sonnet) implements to green; the automated half of the gate is
    `verify-module.sh` — a jar that has not passed it does not go to a station. `[ev: BUILD-LOOP.md §5]`
 4. **Apply → retro.** The run writes its retro via `new-retro.sh` (the per-run precondition, below), capturing the
-   proposed kit delta as `propose-never-apply`. `[ev: retro research-sdd-retro-automation; PR16 draft]`
+   proposed kit delta as `propose-never-apply`. `[ev: retro research-sdd-retro-automation] [ev: retro campaign8-retro-loop]`
 
 ## 6. Keep-from-kit
 
@@ -79,12 +79,12 @@ research-sdd [CERT] block  →  gentle-SDD spec requirement  →  QA RED test  �
 
 Every run ENDS by writing its retro; the retro is a precondition for "done", not an at-STOP afterthought.
 
-- `new-retro.sh <module|kit> <slug>` emits the retro stub (What happened / Evidence / Proposed kit deltas
-  table / Lessons) and appends its `retros/INDEX.md` row (`pending`). `[ev: PR16 draft §1/§2]`
+- `toolbelt/new-retro.sh <module|kit> <slug>` emits the retro stub (What happened / Evidence / Proposed kit deltas
+  table / Lessons) and appends its `retros/INDEX.md` row (`pending`). `[ev: retro campaign8-retro-loop]`
 - A defect in a KIT CHECK or DOCTRINE (a lint that misses/over-fires, a stale rule) additionally opens
-  `kit-ticket.sh "<one line>"` (labels `kit`/`from-run`/`campaign-9`). `[ev: PR16 draft §3]`
+  `toolbelt/kit-ticket.sh "<one line>"` (labels `kit`/`from-run`/`campaign-9`). `[ev: retro campaign8-retro-loop]`
 - `toolbelt/sweep-build-state.sh --age` at orient (BUILD-LOOP §0.a) surfaces the accrued retro DEBT so it cannot
-  be skipped across a continuous chain. `[ev: PR16 draft §4]`
+  be skipped across a continuous chain. `[ev: retro campaign8-retro-loop]`
 
 WHY this is a hard loop and not a manual habit: §-close retros fire only at STOP / focus-close, but a continuous
 lead-delegated chain (one unit → next task → next unit) NEVER reaches a STOP, so the trigger never arms — observed
