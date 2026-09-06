@@ -189,14 +189,14 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED — re-read tip at apply | **Gate**: R9.1, SC8 (O.1)
 
-- [ ] 9.1 Create `qa/c8-station-snapshot`; write failing bats: read-only-source pin (`chmod a-w` source → snapshot still exits 0; source dir unmodified); manifest sha256 present; record tip SHA.
-- [ ] 9.2 Write `toolbelt/station-snapshot.sh <station-dir> <out-dir>`: `cp` config.bog + console*.txt + db pointers; sorted `manifest.txt` (sha256 + relpath + bytes); no station connection; refuse `<out-dir>` inside station-dir; never sets `+x`; exits 0/1/3 (D10).
-- [ ] 9.3 Write `tests/station-snapshot.bats` (RED pins verbatim).
-- [ ] 9.4 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `station-snapshot.sh [ev: retro c8-station-snapshot]` (CD5).
-- [ ] 9.5 **Named mutation**: make snapshot write to source dir → read-only pin FAILs. Record in PR body.
-- [ ] 9.6 Real smoke: `station-snapshot.sh` on PANCCADIA station dir copy → exits 0, manifest lists config.bog + consoles, source dir unchanged. Paste output.
-- [ ] 9.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 9.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 9.1 Create `qa/c8-station-snapshot`; write failing bats: read-only-source pin (`chmod a-w` source → snapshot still exits 0; source dir unmodified); manifest sha256 present; record tip SHA. [RED: 823c032 — SN1-SN4 all failing (exit 127); QA cherry-pick 58ba76e already incorporated]
+- [x] 9.2 Write `toolbelt/station-snapshot.sh <station-dir> <out-dir>`: `cp` config.bog + console*.txt + db pointers; `manifest.json` (sha256 + relpath + bytes; K13: RED wins — manifest.json not .txt; flat $OUT not nested dir); no station connection; refuse `<out-dir>` inside station-dir; never sets `+x`; exits 0/1/3 (D10).
+- [x] 9.3 Write `tests/station-snapshot.bats` (RED pins verbatim). [Already in RED commit 823c032: SN1-SN4]
+- [x] 9.4 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `station-snapshot.sh [ev: retro campaign8-station-snapshot]` (CD5). [kit-links.bats L4/L5 green]
+- [x] 9.5 **Named mutations** (3 total, all proven): (a) write to source → SN3 flips; (b) constant sha256 → SN2 flips; (c) copy history/ → SN1 flips. Each isolated and restored.
+- [x] 9.6 Real smoke: `station-snapshot.sh` on PANCCADIA → exit 0; 11 files (config.bog 35 KB + 10 console_backup_*.txt); source unchanged (`find -newer` = empty). Temp out-dir deleted.
+- [x] 9.7 Guards: 238/238 bats green; shellcheck exit 0; sweep-build-state exit 0; sweep-fold-audit --strict exit 0; kit-links.bats 6/6.
+- [x] 9.8 Retro `2026-09-05-campaign8-station-snapshot.md` + INDEX row + BUILD-STATE envelope (CD1).
 - [ ] **[lead]** RED green; merge ff-only; `install-skill.sh --force`; ledger settle `--max-changed-lines 340`.
 
 ---

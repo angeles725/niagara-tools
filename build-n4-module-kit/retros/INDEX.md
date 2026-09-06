@@ -71,3 +71,5 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-rc-scan.md | kit | 2026-09-05 | pending | 5 | <!-- h:/ vs h: CSS FP; multi-line ternary; URL in detail; dot-dir prune order; awk heredoc quoting -->
 | 2026-09-05-campaign8-doctrine-fold.md | kit | 2026-09-05 | pending | 10 |
 | 2026-09-05-campaign8-report-integration.md | kit | 2026-09-05 | pending | 4 | <!-- D9a OUTAGE->FAIL; dot-dir -mindepth 1; console-dir once-per-run; console.txt own-frame fix -->
+| 2026-09-05-campaign8-station-snapshot.md | kit | 2026-09-05 | pending | 4 | <!-- manifest.json not .txt (K13); flat output not nested dir (K13); find-newer source-write check; cp -p NTFS mtime -->
+
