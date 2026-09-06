@@ -122,9 +122,9 @@ while IFS= read -r _inc; do
             if [ ! -f "$_PAL" ]; then
                 _prel="${_PDIR#"$MODULE_ROOT/"}"
                 _row FAIL "$_prel" "L5: module.palette missing for -rt profile"
-            elif ! LC_ALL=C grep -q '<p ' "$_PAL" 2>/dev/null; then
+            elif ! LC_ALL=C grep -q '<p n=' "$_PAL" 2>/dev/null; then
                 _palrel="${_PAL#"$MODULE_ROOT/"}"
-                _row FAIL "$_palrel" "L5: module.palette has no component entries (empty palette — see B788)"
+                _row FAIL "$_palrel" "L5: module.palette has no named component entries (empty palette — see B788)"
             fi
             ;;
     esac
@@ -155,7 +155,7 @@ while IFS= read -r _inc; do
     case "$_PNAME" in
         *-wb | *-ux)
             _PAL_EMPTY=1
-            if [ -f "$_PAL" ] && LC_ALL=C grep -q '<p ' "$_PAL" 2>/dev/null; then
+            if [ -f "$_PAL" ] && LC_ALL=C grep -q '<p n=' "$_PAL" 2>/dev/null; then
                 _PAL_EMPTY=0
             fi
             if [ "$_JAVA_COUNT" -eq 0 ] && [ "$_PAL_EMPTY" -eq 1 ]; then
