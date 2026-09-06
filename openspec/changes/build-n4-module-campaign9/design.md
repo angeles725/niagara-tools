@@ -137,11 +137,11 @@ already collapsed the candidate set to a single index.
 | 5 | `!dischargeHigh` | a swap adds a stage; `:213` already forbids adding on high head |
 | 6 | `!(suctionValid && c.suctionLowLimit > 0d && suction < c.suctionLowLimit)` | LP floor at `:215` sheds, never adds — **note the `> 0d` term**: a limit of 0 means the LP safety is DISABLED, and omitting it makes the gate always-true on real R404A readings |
 | 7 | `available >= 2` | `available` computed at `:173-174`; a single available unit cannot rotate |
-| 8 | outgoing `out >= 0`, `modes[out] == MODE_AUTO`, `(now - cmdSince[out]) >= max(rotationIntervalMs, minOnMs)` | HAND/`MODE_ON` untouched — a `MODE_ON` unit is re-forced ON at `:264-270` anyway, so swapping it is a guaranteed no-op write |
+| 8 | outgoing `out >= 0`, `modes[out] == MODE_AUTO`, `(now - rotSinceMs[out]) >= rotationIntervalMs && (now - cmdSince[out]) >= minOnMs` (second read: the interval MUST be measured on the rotation clock — with `cmdSince` a lead unit already running 5 h would pass the gate the instant rotation is enabled, the exact ROT16 failure) | HAND/`MODE_ON` untouched — a `MODE_ON` unit is re-forced ON at `:264-270` anyway, so swapping it is a guaranteed no-op write |
 | 9 | incoming `in = pickLeastHoursOffAuto(now, c.minOffMs) >= 0` | inherits **min-off + HOA-OFF + HOA-HAND** by construction (skip on `cmd[k] \|\| modes[k] != MODE_AUTO`) — ROT7 |
 | 10 | `hours[in] < hours[out]` | a swap into a unit with MORE hours increases divergence — the opposite of the ask |
 
-**Arm action** (one write): `cmd[in] = true; cmdSince[in] = now; lastStageMs = now; rotOut = out; rotArmedMs = now;`.
+**Arm action** (one write): `cmd[in] = true; cmdSince[in] = now; rotSinceMs[in] = now; lastStageMs = now; rotOut = out; rotArmedMs = now;`. The ordinary stage-up write (`:229`) also stamps `rotSinceMs[k] = now` (rule: stamped whenever a unit is commanded ON, by staging or by arm). Neither `rotSinceMs` nor `rotArmedMs` is in the trace line, so ROT5 (golden) still holds.
 **Completion action** one or more cycles later, when `rotOut >= 0 && (now - rotArmedMs) >= c.stageDelayMs`:
 `cmd[rotOut] = false; cmdSince[rotOut] = now; lastStageMs = now; rotOut = -1; swaps++;`. The two pending-state fields
 (`rotOut`, `rotArmedMs`) are private internals — the RED does not name them, so they may be renamed freely — but they
@@ -172,8 +172,8 @@ plain `int` in the pure core — the `BRotationMode` frozen enum lives only in t
 
 **Hours ledger unaffected.** `hours[k]` integrates on the COMMANDED state at `:158` (`if (cmd[k]) hours[k] += dtH;`),
 inside the feedback loop that runs BEFORE both new blocks. A swap therefore changes which unit accrues from the NEXT
-cycle onward and never rewrites accrued hours — `condenserNHours` (`:1975-1977` in the adapter) stay monotonic.
-`[ev: client CompressorControl.java:145-168]` `[ev: client BCompressorControl.java:1975-1977]`
+cycle onward and never rewrites accrued hours — `condenserNHours` stay monotonic (slot decls `:1372`/`:1395`, setter `:1384`; the `ctl.hours` write-back call site is located at apply — `:1975-1977` is the relay output `getCondenserN().setValue(ctl.cmd[k])`, not the ledger).
+`[ev: client CompressorControl.java:145-168]` `[ev: client BCompressorControl.java:1372, :1384, :1395]`
 
 **New slots on `BCompressorControl` (additive, schema-risk SAFE).**
 
@@ -204,17 +204,17 @@ numeric OPERATOR slot carrying only one of them; `MIN = 0` is correct here becau
 
 **`rotationMode` is a NEW, non-linked frozen enum — B828 §828.7-safe.** The existing HOA slots are
 `condenser1Mode`/`condenser2Mode`/`condenser3Mode`, declared `type = "double"` at `:392-409` and read back as
-`(int)Math.round(getCondenserNMode())` at `:1952-1956`; they are dashboard-linked and MUST NOT be retrofitted to a
+`(int)Math.round(getCondenserNMode())` at `:1965-1967`; they are dashboard-linked and MUST NOT be retrofitted to a
 frozen enum (that is exactly the live "Missing class" trap). `rotationMode` is new, has no link, and therefore takes the
-frozen-enum form legally. `[ev: client BCompressorControl.java:392-409, :1952-1956]` `[ev: corpus B828 §828.7]`
+frozen-enum form legally. `[ev: client BCompressorControl.java:392-409, :1965-1967]` `[ev: corpus B828 §828.7]`
 
-**Adapter wiring** (two lines beside `:1892-1902`): `cfg.rotationIntervalMs = getRotationInterval().getMillis();` and
+**Adapter wiring** (two lines beside the `cfg.minOnMs/minOffMs/stageDelayMs` trio at `:1907-1909`, block `:1903-1940`): `cfg.rotationIntervalMs = getRotationInterval().getMillis();` and
 `cfg.rotationMode = getRotationMode().getOrdinal();` — the `BRotationMode` ordinals are declared to match
 `ROTATION_MAKE_BEFORE_BREAK = 0` / `ROTATION_BREAK_BEFORE_MAKE = 1` so the conversion is an ordinal read, not a switch.
-No change to the `ctl.step(...)` call at `:1959-1960` — both fields ride the existing `Cfg` object (`:2042`). A third
+No change to the `ctl.step(...)` call at `:1971` — both fields ride the existing `Cfg` object (`:2054`). A third
 optional line surfaces the counter as a READONLY status slot (`setRotationSwaps(ctl.swaps)`); the RED does not require
 the slot, only the `ctl.swaps` field, so the slot is a design add and costs one more matrix row (D11).
-`[ev: client BCompressorControl.java:1892-1902, :1959-1960, :2042]` `[ev: RED qa/c9-comppan-rotation 5955a89]`
+`[ev: client BCompressorControl.java:1907-1909, :1971, :2054]` `[ev: RED qa/c9-comppan-rotation 5955a89]`
 
 **D1a — the byte-identical golden (SC-1 / ROT5), as QA actually captured it.** The oracle is **already embedded in RED
 `5955a89`**, generated from the **unmodified `a109249`** class before PR1 touches the file — so the apply worker
@@ -456,6 +456,8 @@ framework path, not the helper. Schema-neutral; `schema-risk.sh` SAFE. The fire-
 `svc.appendAudit(...)` at **`:312-313`** inside `catch (Exception auditEx)` is preserved unchanged.
 `[ev: corpus B830 §830.4]` `[ev: corpus B829 §829.1/§829.2]` `[ev: client a109249 BDashboardServlet.java:291, :312-313, DashboardRbacHelper.java:90-98, :97]`
 
+**Decision (guard order 1→2→3→6→4→5).** Guard 3 evaluates the CONFIG-SESSION user's `OPERATOR_WRITE` when a config session is present (falls through to guard 6 → 403 `config_login_required` when absent), never the kiosk user's — so the kiosk account can be deployed VIEWER-ONLY (the safer deployment) and operators still write; CL10 (framework `checkWrite` on the write path) remains the authoritative gate. `[ev: corpus B830 §830.4]`
+
 ### D8c — surface-B **in-module config login** (NEW user decision; work-unit **R14**)
 
 > Numbered **D8c** because D8b (the real-Context `set`) already exists above and is cross-referenced; renumbering it
@@ -652,6 +654,8 @@ reported as green from a WSL run. They are `skip`-gated and belong to the Window
 a PASS (campaign-7 D9). What gates PR8 off-station is the structural set plus CRA4's additive-only proof.
 `[ev: RED qa/c9-alarm-cr3 70a357b (relayed, not read here)]` `[ev: retro campaign7 D9 skip-is-not-pass]`
 
+CRA5 (WSL mutation pin): remove the `BAlarmSourceExt` → CRA3s flips OBSERVED. `[ev: RED qa/c9-alarm-cr3 70a357b]`
+
 ### D10 — R9 alarm Pattern B (CP-1 low suction, programmatic) and its edge state machine
 
 `BCompressorControl` implements `BIAlarmSource`, declares `@NiagaraAction BBoolean ackAlarm(BAlarmRecord)`, builds a
@@ -679,7 +683,7 @@ the inline sketch above.** The contract is `CompressorControl.AlarmEdge`:
 
 ```java
 new AlarmEdge(trips)                                             // trips = number of trip channels
-Decision decide(int trip, boolean nowOffnormal, boolean recoveredPastDeadband)   // -> FIRE | CLEAR | NONE
+int decide(int trip, boolean nowOffnormal, boolean recoveredPastDeadband)   // -> FIRE | CLEAR | NONE (static final int, per the RED's compile contract)
 void     reseed(boolean[] current)                               // started(): seed, never fire
 boolean  wasOffnormal(int trip)
 ```
@@ -807,7 +811,7 @@ rule once already, which is the whole argument for the idempotent presence guard
 |---|---|---|---|
 | Untrusted content decode | **Applicable** — the three lints read customer Java; the mirror reads an AuditHistory export | `LC_ALL=C` byte reading, `grep`/`awk` only, no `eval`, no interpolation of file content into a command; malformed input → exit 3, never a crash | a malformed-source fixture per lint |
 | Routing / auth boundary | **Applicable** — `/config/login`, `/config/logout`, the token gate on `/write` and `/alarms/ack`, and the servlet's four guards | Server-held token bound to `(email, purpose)`, absolute TTL + sliding window, server-held ORD allowlist, fail-closed guards in a fixed order, no user+password store | S12A-1..7; guard1-5 + guard4b |
-| Input validation / silent coercion | **Applicable** — `parseDouble` returns 0.0 on any parse failure (`BDashboardServlet.java:386-391`) | Guard 4 rejects before `coerceValue`; a non-numeric is 400, never a 200 that writes 0.0 | guard4 / guard4b no-silent-zero |
+| Input validation / silent coercion | **Applicable** — `parseDouble` returns 0.0 on any parse failure (`BDashboardServlet.java:403-407`) | Guard 4 rejects before `coerceValue`; a non-numeric is 400, never a 200 that writes 0.0 | guard4 / guard4b no-silent-zero |
 | Filesystem write | **Applicable** — the tunnel failure spool | Appends only to a configured spool path; drained, never executed; never `+x` | spool-append pin |
 | Subprocess / external tool | **Applicable** — `python3` only in the pre-existing `--bog` helper | The three new lints add no subprocess; `command -v python3 \|\| exit 3` stays where it is | unchanged |
 | Git / VCS automation | **N/A** — every toolbelt script is VCS-free; `kit-links.bats` L2 fails the suite if any names `git` | — | L2 (existing) |
