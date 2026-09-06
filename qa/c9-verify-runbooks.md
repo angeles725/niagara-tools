@@ -86,10 +86,10 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - Harness-only: none. Coupling: PR9 requires this PR merged first; PR11 requires its two rows.
 - V6/V7.
 
-## PR2 — `feat/c9-demand-scope` (kit) · RED `qa/c9-demand-in-scope` d0f5942 · file `tests/demand-in-scope.bats` · tool `toolbelt/lint-demand-scope.sh` · worktree `c9-demand-scope`
-- V2: `git diff d0f5942 HEAD -- tests/demand-in-scope.bats` → empty.
-- V3: kit common gate; `bats tests/demand-in-scope.bats` → **8/8** (DS1-DS7 + DS-smoke). The client tree is on this machine, so a DS-smoke `skip` = REJECT.
-- Exit taxonomy: `$TB/lint-demand-scope.sh` → 3 (DS6); `--strict` on a WARNing tree → 1 (DS5); WARN without `--strict` → 0.
+## PR2 — `feat/c9-demand-scope` (kit) · RED `qa/c9-demand-in-scope` 37ce005 · file `tests/demand-in-scope.bats` · tool `toolbelt/lint-demand-scope.sh` · worktree `c9-demand-scope`
+- V2: `git diff 37ce005 HEAD -- tests/demand-in-scope.bats` → empty.
+- V3: kit common gate; `bats tests/demand-in-scope.bats` → **9/9** (DS1-DS7 + DS-smoke + DS9). The client tree is on this machine, so a DS-smoke `skip` = REJECT.
+- Exit taxonomy: `$TB/lint-demand-scope.sh` → 3 (DS6); empty/no-Java dir → 3 + `ERROR` row, no WARN (DS9); `--strict` on a WARNing tree → 1 (DS5); WARN without `--strict` → 0.
 - Real-tree rows (record verbatim, WARN-only tool):
   ```
   for m in Compresores/CompPan/CompPan-rt Paccadia/ColdRoomPan/ColdRoomPan-rt Dashboard/DashboardPan/DashboardPan-rt; do
@@ -100,9 +100,9 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V4: M2a (DS3), M2b (DS4) — MANUAL. tasks 2.7 says DS2: DS2 is the fixture-level mutant already executable.
 - Harness-only: none. V6/V7.
 
-## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` e38e503 · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
-- V2: `git diff e38e503 HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
-- V3: kit common gate; `bats tests/lint-silent-protection.bats` → **9/9** (SP1-SP8 + SP-smoke).
+## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` 41127e4 · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
+- V2: `git diff 41127e4 HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
+- V3: kit common gate; `bats tests/lint-silent-protection.bats` → **10/10** (SP1-SP8 + SP-smoke + SP9 no-sources → exit 3 + ERROR).
 - SP-smoke expected rows (a109249 trees): a WARN naming `CompressorControl.java` (CP-1 low-suction shed), a WARN naming
   `BEvaporatorUnit.java` (CR-3 `freezeTripped`), and NO row containing `dischargeHighAlarm` (CP-2 is surfaced).
   Also run `$TB/lint-silent-protection.sh $CWT/main-a109249/<profile>/src` for CompPan-rt and ColdRoomPan-rt; record rows.
@@ -181,10 +181,10 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V5: `v Compresores/build.gradle.kts` → **2.2.0**.
 - Harness-only: CPB5 `sourceState` on the routed record → H2. V6/V7.
 
-## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **28feb42** (path re-issue) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
-- V2: `git diff 28feb42 HEAD -- tests/ext-writable-shape.bats` → empty.
-- V3: kit common gate; `bats tests/ext-writable-shape.bats` → **10/10** EW1-EW10 (EW10 real: `BRoomPanel.setpoint` WARNs; the client tree is present, a `skip` = REJECT).
-- Exit taxonomy: no arg → 3 (EW9); `--strict` with a WARN → 1 (EW7); WARN alone → 0.
+## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **3387c58** (path + root + EW11 re-issues) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
+- V2: `git diff 3387c58 HEAD -- tests/ext-writable-shape.bats` → empty.
+- V3: kit common gate; `bats tests/ext-writable-shape.bats` → **11/11** EW1-EW11 (EW10 real: `BRoomPanel.setpoint` WARNs; the client tree is present, a `skip` = REJECT).
+- Exit taxonomy: no arg → 3 (EW9); empty/no-Java dir → 3 + `ERROR` row (EW11); `--strict` with a WARN → 1 (EW7); WARN alone → 0.
 - Real-tree rows: `$TB/lint-ext-writable-shape.sh $CWT/main-a109249/Dashboard/DashboardPan/DashboardPan-rt/src` → one WARN row for
   `BRoomPanel.setpoint` (BStatusNumeric SUMMARY|OPERATOR, no `@NiagaraAction`) carrying the child `…/value` note; run CompPan-rt and ColdRoomPan-rt too and record rows
   (cross-check with `python3 ~/niagara-research/tools/module-find.py <src> ext-writable`).
