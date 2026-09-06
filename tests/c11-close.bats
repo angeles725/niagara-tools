@@ -21,6 +21,8 @@
 # Run post-hoc:  C11_CLOSE=1 C11_CLOSE_COMMIT=<close sha> C9_CLIENT_REPO=<post-C11 client main worktree> \
 #                bats tests/c11-close.bats
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   BASE="dab0807"                       # C11 base = the C10 close commit (tag v0.21.0); no-trailer sweep range base
@@ -107,7 +109,7 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
 
 @test "SC-13 (client group defaultModuleVersion): C11 carry-over 2.2.0/2.1.0/2.2.0 (kit-only campaign — no client bump)" {
   _close
-  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  R="$C9_CLIENT_REPO"   # via client-root.bash; env override wins [ev: design.md D3c site 7]
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
   # C11 is kit-only (no client module bumped a version) -> versions carry over from C10 (verified).
