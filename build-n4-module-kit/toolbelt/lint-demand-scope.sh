@@ -27,6 +27,15 @@ SRC="$1"
 [ -d "$SRC" ] || { printf 'lint-demand-scope: not a directory: %s\n' "$SRC" >&2; exit 3; }
 
 WARNED=0
+
+# K20 / R2.5: a source dir with no *.java files is a configuration error -> exit 3.
+# Never emit a silent 0 (C8 lesson; WP9b shape). Row contains ERROR + demand-in-scope.
+_nj=$(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | wc -l)
+if [ "$_nj" -eq 0 ]; then
+  printf 'ERROR  demand-in-scope  %s  no *.java sources found\n' "$SRC"
+  exit 3
+fi
+
 # shellcheck disable=SC2016  # awk program in single quotes — no shell expansion intended
 while IFS= read -r f; do
   out=$(awk -v FILE="$f" '
