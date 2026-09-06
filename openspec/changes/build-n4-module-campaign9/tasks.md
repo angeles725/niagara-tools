@@ -86,17 +86,17 @@ Chain strategy: stacked-to-main
 **D-ids**: D2, D2a, D2b, D3 · **Gate**: R2.1-R2.9, SC-8, SC-10
 **Apply-package input**: `950a1da06` (S7 package; cites RED tip `d0f5942`) — re-read at apply.
 
-- [ ] 2.1 Re-read RED tip `d0f5942` (K13): confirm row column order `WARN  lint-demand-scope  <file>:<line>  <reason>` (D2a `STATUS check subject detail`); confirm DS2 = WARN row + exit 0 NOT exit 1 (D2b); confirm CLI shape `[--strict] <java-src-dir>` (D2, lint-delays shape); confirm inline heredoc fixtures — no `tests/fixtures/` dir.
-- [ ] 2.2 Cherry-pick / merge RED branch into `feat/c9-demand-scope` as commit 1.
-- [ ] 2.3 Write `toolbelt/lint-demand-scope.sh`: two-pass grep/awk (Pass 1 control-decision methods, Pass 2 demand-shaped inputs in scope); `LC_ALL=C`; `set -u`; dot-dirs pruned (D9b/CD9); exits 0 (WARN-only or clean) / 1 (FAIL under `--strict`) / 3 (usage or no source, K20 disjoint); no `eval`; `shellcheck 0.10.0` clean (CD6).
-- [ ] 2.4 Write `tests/demand-in-scope.bats` (DS1-DS7 + DS-smoke verbatim from RED; inline heredoc fixtures written into `$BATS_TEST_TMPDIR`; D2 shape).
-- [ ] 2.5 Add K19 routing: one line in `BUILD-LOOP.md` §5 + one line in `skill/SKILL.md` for `lint-demand-scope.sh [ev: retro c9-demand-scope]` (CD5, R2.7).
-- [ ] 2.6 Extend `toolbelt/report-module.sh`: append member row for `lint-demand-scope`; a FAIL from this lint surfaces as aggregate FAIL (R2.8).
-- [ ] 2.7 **Named mutation** (OBSERVED): drop the field-scan demand-input check → a class-field demand input stops counting; DS2 flips PASS→FAIL. Record verbatim output (R2.9).
-- [ ] 2.8 DS-smoke (CD10): `lint-demand-scope.sh` on ColdRoomPan-rt · CompPan-rt · DashboardPan-rt · DashboardPan-ux at the chain's client tip — exact count + at minimum `CompressorControl.step` flagged as named subject + absence assertions (no false positives on guardian-exempt paths); no dot-dir traversed.
-- [ ] 2.9 Guards: `bats tests/demand-in-scope.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers (K11); rebase onto kit main before QA ping; verify `git log -1` before settle.
-- [ ] 2.10 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope in same push range (CD1).
-- [ ] **[lead]** DS1-DS7 + DS-smoke green; OBSERVED DS2 flip recorded in PR body; K19 routing in both `BUILD-LOOP.md` + `skill/SKILL.md`; `kit-links.bats` green; merge ff-only; ledger acquire + settle `--max-changed-lines 200`.
+- [x] 2.1 Re-read RED tip `d0f5942` (K13): confirm row column order `WARN  lint-demand-scope  <file>:<line>  <reason>` (D2a `STATUS check subject detail`); confirm DS2 = WARN row + exit 0 NOT exit 1 (D2b); confirm CLI shape `[--strict] <java-src-dir>` (D2, lint-delays shape); confirm inline heredoc fixtures — no `tests/fixtures/` dir.
+- [x] 2.2 Cherry-pick / merge RED branch into `feat/c9-demand-scope` as commit 1.
+- [x] 2.3 Write `toolbelt/lint-demand-scope.sh`: two-pass grep/awk (Pass 1 control-decision methods, Pass 2 demand-shaped inputs in scope); `LC_ALL=C`; `set -u`; dot-dirs pruned (D9b/CD9); exits 0 (WARN-only or clean) / 1 (FAIL under `--strict`) / 3 (usage or no source, K20 disjoint); no `eval`; `shellcheck 0.10.0` clean (CD6).
+- [x] 2.4 Write `tests/demand-in-scope.bats` (DS1-DS7 + DS-smoke verbatim from RED; inline heredoc fixtures written into `$BATS_TEST_TMPDIR`; D2 shape).
+- [x] 2.5 Add K19 routing: one line in `BUILD-LOOP.md` §5 + one line in `skill/SKILL.md` for `lint-demand-scope.sh [ev: retro c9-demand-scope]` (CD5, R2.7).
+- [x] 2.6 Extend `toolbelt/report-module.sh`: append member row for `lint-demand-scope`; a FAIL from this lint surfaces as aggregate FAIL (R2.8).
+- [x] 2.7 **Named mutation** (OBSERVED): drop the field-scan demand-input check → a class-field demand input stops counting; DS2 flips PASS→FAIL. Record verbatim output (R2.9).
+- [x] 2.8 DS-smoke (CD10): `lint-demand-scope.sh` on ColdRoomPan-rt · CompPan-rt · DashboardPan-rt · DashboardPan-ux at the chain's client tip — exact count + at minimum `CompressorControl.step` flagged as named subject + absence assertions (no false positives on guardian-exempt paths); no dot-dir traversed.
+- [x] 2.9 Guards: `bats tests/demand-in-scope.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers (K11); rebase onto kit main before QA ping; verify `git log -1` before settle.
+- [x] 2.10 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope in same push range (CD1).
+- [x] **[lead]** DS1-DS7 + DS-smoke green; OBSERVED DS2 flip recorded in PR body; K19 routing in both `BUILD-LOOP.md` + `skill/SKILL.md`; `kit-links.bats` green; merge ff-only; ledger acquire + settle `--max-changed-lines 200`.
 
 ---
 
