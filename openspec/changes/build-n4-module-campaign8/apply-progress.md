@@ -252,6 +252,7 @@ kit-links.bats L4/L5         : 6/6 green (lint-wb-threading.sh in BUILD-LOOP.md 
 
 ---
 
+<<<<<<< HEAD
 ## PR16 — feat/c8-retro-loop
 
 **Branch**: `feat/c8-retro-loop`
@@ -326,3 +327,52 @@ kit-ticket exit: 0
 
 1. BUILD-STATE sed flips ALL `retro_pending: false` → `true` (not scoped to the section for the given module). For the test the single entry flips correctly; for the real kit the module sections also get flipped. Harmless when the kit section was already `true`. Future Δ5: awk section-aware update.
 2. Task 16.4 wording says "write tests/retro-loop.bats" but that bats file was already on the branch (RED commit 452a840). Interpreted as "verify RL1-RL6 verbatim from RED" — done (file unchanged, assertions match).
+=======
+## PR17 — docs/c8-orchestration
+
+**Branch**: `docs/c8-orchestration`
+**Status**: COMPLETE — all 6 tasks done; guards green; commit per file
+**TDD mode**: standard (doc-only, CD2 — zero new bats except kit-links L8 structural pin)
+
+### Task Evidence
+
+| Task | Done | Notes |
+|------|------|-------|
+| 17.1 grep-before-fold | x | 0 hits for `8 sections`, `Delegation triggers`, `Escalation gate`, `Judgment-Day.*high-risk` |
+| 17.2 ORCHESTRATION.md | x | Created `build-n4-module-kit/ORCHESTRATION.md` with 4 sections covering all 8 conceptual areas; draft body used verbatim except `toolbelt/` prefix dropped for new-retro.sh and kit-ticket.sh (L1 avoidance — pending PR16) |
+| 17.3 SKILL.md 1b/1c/5b | x | Steps 1b (explore shard, sonnet), 1c (design shard, opus), 5b (peer QA, K13) added; ORCHESTRATION.md added to References |
+| 17.4 kit-links L8 | x | L8 added: greps ORCHESTRATION.md for `.sh` names, checks `toolbelt/<name>` exists; named mutation proven (fake-extra.sh → L8 fails) |
+| 17.5 Guards | x | 284/285 bats (L8 RED: new-retro.sh + kit-ticket.sh missing, pending PR16 — expected); sweep-fold-audit --strict exit 0 (56/56 cited); sweep-build-state exit 0 |
+| 17.6 Retro + INDEX + BUILD-STATE | x | retros/2026-09-06-campaign8-orchestration.md (3 deltas); INDEX row appended; BUILD-STATE last_commit/last_session/retro_pending updated; all in commit c342ca9 |
+
+### Guard Results (PR17)
+
+```
+bats tests/               : 284/285 (1 RED: L8 — kit-ticket.sh + new-retro.sh, expected pending PR16)
+sweep-build-state.sh      : exit 0
+sweep-fold-audit --strict : exit 0 (56 folded, 56 cited, 0 uncited)
+kit-links L1-L7+L6        : all green
+L8                        : RED (expected; new-retro.sh + kit-ticket.sh not in toolbelt/ until PR16 merges)
+```
+
+### L8 Bite Proof
+
+Added `<!-- MUTATION-PROOF: fake-extra.sh -->` to ORCHESTRATION.md → L8 failed:
+`script in ORCHESTRATION.md missing from toolbelt/: fake-extra.sh`
+(3 missing: fake-extra.sh, kit-ticket.sh, new-retro.sh). Mutation reverted. L8 confirmed biting.
+
+### Commits
+
+| SHA | File | Task |
+|-----|------|------|
+| 9adb79d | `build-n4-module-kit/ORCHESTRATION.md` | 17.2 |
+| b46d972 | `build-n4-module-kit/skill/SKILL.md` | 17.3 |
+| d69454a | `tests/kit-links.bats` | 17.4 |
+| c342ca9 | `retros/2026-09-06-campaign8-orchestration.md` + `retros/INDEX.md` + `BUILD-STATE.md` | 17.6 |
+
+### Deviations from Design
+
+1. **L8 label**: wave3.md says "L7 extension" but L7 exists on main (PR13 §6.a step scripts). Added as L8. Recorded in retro Δ1.
+2. **Draft `toolbelt/` prefix**: `new-retro.sh` and `kit-ticket.sh` references drop the `toolbelt/` path prefix in ORCHESTRATION.md to avoid L1 failures before PR16 merges. Process content is identical. Recorded in retro Δ2.
+3. **Section count**: Draft body has 4 sections covering all 8 conceptual areas (some merged); placed verbatim per Excavador Técnico profile ("paste the READY body verbatim").
+>>>>>>> 4660f83 (chore(sdd): tick PR17 tasks 17.1-17.6 complete + apply-progress (C8 PR17))

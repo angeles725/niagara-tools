@@ -184,12 +184,12 @@ python3 invocation that already costs ~0.1 s.
 
 **RED**: none (CD2) | **Gate**: R17.1–R17.5
 
-- [ ] 17.1 grep-before-fold: `rg '8 sections|Delegation triggers|Escalation gate|Judgment-Day.*high-risk' build-n4-module-kit/` → confirm 0 hits (K6).
-- [ ] 17.2 Create `build-n4-module-kit/ORCHESTRATION.md` (8 sections per R17.1 and orchestration.md shard); model table; escalation gate (multi-PR / new module / S1–S2 → `gentle-sdd-ff`); adopt-list (ledger, typed gate, JD); keep-from-kit list (RED-first, real-module smokes, fold-audit).
-- [ ] 17.3 Extend `skill/SKILL.md`: step 1b (Explore shard >3 files, sonnet), step 1c (opus design shard for schema/new slot), step 5b (peer QA session — RED by branch name K13).
-- [ ] 17.4 Extend `tests/kit-links.bats` L7: assert every script named in ORCHESTRATION.md exists at `toolbelt/<script>.sh`.
-- [ ] 17.5 `sweep-fold-audit.sh --strict` exits 0; `kit-links.bats` (incl. L7) exits 0.
-- [ ] 17.6 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
+- [x] 17.1 grep-before-fold: `rg '8 sections|Delegation triggers|Escalation gate|Judgment-Day.*high-risk' build-n4-module-kit/` → confirm 0 hits (K6).
+- [x] 17.2 Create `build-n4-module-kit/ORCHESTRATION.md` (8 sections per R17.1 and orchestration.md shard); model table; escalation gate (multi-PR / new module / S1–S2 → `gentle-sdd-ff`); adopt-list (ledger, typed gate, JD); keep-from-kit list (RED-first, real-module smokes, fold-audit).
+- [x] 17.3 Extend `skill/SKILL.md`: step 1b (Explore shard >3 files, sonnet), step 1c (opus design shard for schema/new slot), step 5b (peer QA session — RED by branch name K13).
+- [x] 17.4 Extend `tests/kit-links.bats` L7: assert every script named in ORCHESTRATION.md exists at `toolbelt/<script>.sh`.
+- [x] 17.5 `sweep-fold-audit.sh --strict` exits 0; `kit-links.bats` (incl. L7) exits 0.
+- [x] 17.6 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
 - [ ] **[lead]** Guards green; merge ff-only; `install-skill.sh --force` (SKILL.md changed); ledger settle `--max-changed-lines 180`.
 
 ---
