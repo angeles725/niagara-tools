@@ -15,14 +15,27 @@
 `@NiagaraProperty` with `Flags.OPERATOR` has a ROW in `docs/write-path-matrix.md`
 (D16: row-presence only; CHECK12 in bog-audit.sh handles link-target WARN separately).
 
-Matrix resolution: looks in `<module-root>/docs/` first, then walks up parent directories
-until `docs/write-path-matrix.md` is found or a `.git` directory (repo root) or filesystem
-root is reached. If no matrix is found, exits 3 with an ERROR line (never silent exit 0).
-The `--matrix <path>` flag provides an explicit override for CI environments. This is
-required for real client repos (e.g. Leon-Guanjuato) where a single shared matrix lives
-at `<repo>/docs/write-path-matrix.md` and module roots are `Paccadia/ColdRoomPan-rt`, etc.
-Pins WP7 (no matrix → exit 3 + ERROR) and WP8 (matrix found 2 levels up; correct coverage)
-prove the walk-up. Total bats: 294/294.
+Matrix resolution: walks up from `<module-root>` looking for a `docs/write-path-matrix.md`
+that contains at least one table row (empty/stale files not counted — they keep walking).
+Walk stops at the nearest `.git` directory or filesystem root. If no valid matrix is found,
+exits 3 with an ERROR line (never silent exit 0). The `--matrix <path>` flag provides an
+explicit override for CI environments. Required for real client repos (e.g. Leon-Guanjuato)
+where one shared matrix lives at `<repo>/docs/write-path-matrix.md`.
+
+Profile-dir discovery: if `<root>/src` is absent, the lint iterates `*-rt`, `*-ux`, `*-wb`,
+`*-se` profile subdirs immediately under the root, linting each against the shared matrix and
+reporting with the profile name as the FAIL subject. If no profile has a `src/` directory,
+exits 3 with `ERROR … no src found`. This matches the kit module-root convention used by
+`report-module.sh` (profiles = immediate subdirs). The client layout `Paccadia/ColdRoomPan`
+(containing `ColdRoomPan-rt/src/`) now produces identical results whether called as
+`lint-write-path Paccadia/ColdRoomPan` or `lint-write-path Paccadia/ColdRoomPan/ColdRoomPan-rt`.
+
+Bog-linked slots are added only to profiles that already have OPERATOR annotations
+(prevents false FAILs on -ux/-wb profiles that have no runtime slot annotations).
+
+WP7 (pure mktemp, no .git, no matrix → exit 3 + ERROR), WP8 (matrix 2 levels up; walk-up
+confirmed), WP9a (module root with 2 profiles → both linted), WP9b (no src found → exit 3).
+Total bats: 306/306.
 
 The paren-balance multi-line awk parser from `slot-coverage.sh per-slot` was reused
 verbatim for the `@NiagaraProperty` + OPERATOR extraction. The matrix row parser
@@ -158,7 +171,7 @@ completion (W14–W22) as an open item.
 
 | # | File | Delta |
 |---|------|-------|
-| Δ1 | `toolbelt/lint-write-path.sh` | NEW — OPERATOR-slot matrix coverage lint; walk-up matrix resolution; `--matrix` override; ERROR exit 3 when absent |
+| Δ1 | `toolbelt/lint-write-path.sh` | NEW — OPERATOR-slot matrix coverage lint; walk-up matrix resolution (non-empty files only); profile-dir discovery; `--matrix` override; ERROR exit 3 when absent or no src found |
 | Δ2 | `types/logic.md` | NEW §Write-path & overlap [ev: corpus B816] |
 | Δ3 | `types/logic-authoring.md` | NEW §Write-path test matrix [ev: corpus B816] |
 | Δ4 | `tests/bog-audit.bats` | CHECK12-pin (idempotent guard) |
@@ -173,3 +186,5 @@ completion (W14–W22) as an open item.
 3. The correct per-module uncovered counts (ColdRoomPan=6/13, CompPan=15) differ from the original estimates because the initial smoke ran on the repo root, which inflated the OPERATOR slot set to cover all modules at once and accidentally found the shared matrix in a non-standard location. Smokes must be run per MODULE root with `git archive` to get honest numbers.
 4. Pushing every non-self-closing `<p>` to the stack (not just components) is required for correct `</p>` balance when the bog has complex nested structures; bog-audit.sh relies on this for its `in_link` tracking.
 5. Real-tree client layout: a single shared `docs/write-path-matrix.md` at the repo root serves multiple module roots (Paccadia/ColdRoomPan-rt, Compresores/CompPan-rt). The lint MUST walk up to find it; a fixed `<module-root>/docs/` path is a silent false negative. Walk stops at the nearest `.git` directory or filesystem root. The `--matrix <path>` override enables CI environments where the walk is impractical.
+6. The "found" test must require the matrix file to have at least one table row — an empty or row-free file (e.g. a stale artifact in `/tmp/docs/`) silently zeroes coverage and turns all OPERATOR slots into false FAILs without triggering the ERROR exit. Using `grep -q '^|'` before accepting the file closes this.
+7. The kit module-root convention (`Paccadia/ColdRoomPan` contains `ColdRoomPan-rt/`) differs from the profile-root convention (`Paccadia/ColdRoomPan/ColdRoomPan-rt`). A lint that only scans `<root>/src` silently exits 0 when passed the module root, because there is no `src/` there. Profile-dir discovery (`find -maxdepth 1 *-rt/*-ux/*-wb/*-se`) is required to handle both conventions identically.

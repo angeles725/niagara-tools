@@ -61,16 +61,28 @@ setup() {
 }
 
 @test "WP7: no write-path-matrix.md found anywhere -> exit 3 + ERROR line" {
-  # Module root with OPERATOR slots but no docs/write-path-matrix.md anywhere up to git/fs root.
-  # We create a fresh git repo with no docs/ at any level; the walk should error out.
-  TMPREPO7="$(mktemp -d)"
-  git init -q "$TMPREPO7"
-  mkdir -p "$TMPREPO7/mod/src/com/x"
+  # Pure mktemp root: no .git above, no docs/write-path-matrix.md (with table rows) anywhere.
+  # Skip if any ancestor already has a valid matrix (would invalidate the premise on this host).
+  TMPMOD7="$(mktemp -d)"
+  _check="$TMPMOD7"
+  _found_valid_matrix=0
+  while true; do
+    if [ -f "$_check/docs/write-path-matrix.md" ] && grep -q '^\|' "$_check/docs/write-path-matrix.md" 2>/dev/null; then
+      _found_valid_matrix=1; break
+    fi
+    _up="$(dirname "$_check")"
+    [ "$_up" = "$_check" ] && break
+    _check="$_up"
+  done
+  if [ "$_found_valid_matrix" -eq 1 ]; then
+    rm -rf "$TMPMOD7"
+    skip "ancestor path already has a valid docs/write-path-matrix.md — WP7 premise not testable on this host"
+  fi
+  mkdir -p "$TMPMOD7/src/com/x"
   printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\npublic class BT extends BComponent {}\n' \
-    > "$TMPREPO7/mod/src/com/x/BT.java"
-  # No docs/write-path-matrix.md anywhere in the repo.
-  run "$LW" "$TMPREPO7/mod"
-  rm -rf "$TMPREPO7"
+    > "$TMPMOD7/src/com/x/BT.java"
+  run "$LW" "$TMPMOD7"
+  rm -rf "$TMPMOD7"
   [ "$status" -eq 3 ]
   [[ "$output" == *"ERROR"* ]]
   [[ "$output" == *"no write-path-matrix.md"* ]]
@@ -78,9 +90,8 @@ setup() {
 
 @test "WP8: matrix two levels up in <repo-root>/docs/ is found; module-root run reports only truly uncovered slots" {
   # Simulates: <repo>/.git + <repo>/docs/write-path-matrix.md (shared matrix with setpoint row).
-  # Module root: <repo>/Paccadia/ColdRoomPan with OPERATOR slots fanMode (not in matrix) + setpoint (in matrix).
-  # BROKEN script (no walk-up): both slots FAIL (matrix empty).
-  # FIXED script (walk-up): only fanMode FAIL; setpoint covered by shared matrix.
+  # Module root: <repo>/Paccadia/ColdRoomPan/src with OPERATOR slots fanMode (not in matrix) + setpoint (in matrix).
+  # Walk-up finds the shared matrix; only fanMode should FAIL.
   TMPREPO8="$(mktemp -d)"
   git init -q "$TMPREPO8"
   mkdir -p "$TMPREPO8/docs"
@@ -97,4 +108,48 @@ setup() {
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"fanMode"* ]]
   [[ "$output" != *"setpoint"* ]]
+}
+
+@test "WP9a: module root with two profile dirs (both have OPERATOR slots) -> rows for both profiles required" {
+  # Simulates Paccadia/ColdRoomPan with ColdRoomPan-rt/ and ColdRoomPan-wb/ inside.
+  # The shared matrix covers setpoint (in -rt). fanMode (-rt) and wbParam (-wb) are uncovered.
+  TMPREPO9="$(mktemp -d)"
+  git init -q "$TMPREPO9"
+  mkdir -p "$TMPREPO9/docs"
+  printf '# Write-Path Matrix\n| Slot | Writer | Timing | Test |\n|---|---|---|---|\n| setpoint | Dashboard | mid-cycle | w1 |\n' \
+    > "$TMPREPO9/docs/write-path-matrix.md"
+  # Profile 1: ColdRoomPan-rt
+  mkdir -p "$TMPREPO9/ColdRoomPan/ColdRoomPan-rt/src/com/x"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n@NiagaraProperty(name="fanMode", flags=Flags.OPERATOR)\npublic class BCrp extends BComponent {}\n' \
+    > "$TMPREPO9/ColdRoomPan/ColdRoomPan-rt/src/com/x/BCrp.java"
+  # Profile 2: ColdRoomPan-wb (writeback — also has an OPERATOR slot)
+  mkdir -p "$TMPREPO9/ColdRoomPan/ColdRoomPan-wb/src/com/x"
+  printf '@NiagaraProperty(name="wbParam", flags=Flags.OPERATOR)\npublic class BWb extends BComponent {}\n' \
+    > "$TMPREPO9/ColdRoomPan/ColdRoomPan-wb/src/com/x/BWb.java"
+  MOD9="$TMPREPO9/ColdRoomPan"
+  run "$LW" "$MOD9"
+  rm -rf "$TMPREPO9"
+  # fanMode (-rt) and wbParam (-wb) uncovered; setpoint (-rt) covered
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ColdRoomPan-rt"* ]]
+  [[ "$output" == *"fanMode"* ]]
+  [[ "$output" == *"ColdRoomPan-wb"* ]]
+  [[ "$output" == *"wbParam"* ]]
+  [[ "$output" != *"setpoint"* ]]
+}
+
+@test "WP9b: module root with no src anywhere -> ERROR exit 3" {
+  # Module root has profile-like subdirs but none has a src/; ERROR + exit 3.
+  TMPREPO9b="$(mktemp -d)"
+  git init -q "$TMPREPO9b"
+  mkdir -p "$TMPREPO9b/docs"
+  printf '# Write-Path Matrix\n| Slot | Writer | Timing | Test |\n|---|---|---|---|\n| setpoint | Dashboard | mid-cycle | w1 |\n' \
+    > "$TMPREPO9b/docs/write-path-matrix.md"
+  mkdir -p "$TMPREPO9b/ColdRoomPan/ColdRoomPan-rt"   # no src/
+  MOD9b="$TMPREPO9b/ColdRoomPan"
+  run "$LW" "$MOD9b"
+  rm -rf "$TMPREPO9b"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"no src found"* ]]
 }
