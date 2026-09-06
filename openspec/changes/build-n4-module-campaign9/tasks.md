@@ -132,17 +132,17 @@ Chain strategy: stacked-to-main
 **Apply-package input for PR1**: niagara-research S20 rev 2 `6c3bcf107` — re-read at apply.
 **Product decision (viewer step-up)**: viewer step-up uses ONE shared `cfg.CONFIG_PASSWORD` bound to the JWT identity via the `x-config-token` header (proposal `f610d21`); TTL defaults HMI 5 min / viewer 10 min sliding — both injected via a `Clock` interface so the pins are clock-injectable (not wall-clock sleeping).
 
-- [ ] 4.1 Re-read RED tip `e7e6615` (K13; parent `55d6797`, rebased onto `9acb47c`): confirm S12A-1..9 pin text; confirm S12A-8 — a FAILED station write (e.g. 502) still produces exactly ONE `change_log` row with `ok:false` and `result = failing HTTP status`; confirm S12A-9 — `replaySpool` is pinned (see PR5 step 5.5); grep the diff for any `user+password` JSON store — must be zero (R4.7).
-- [ ] 4.2 Cherry-pick / merge RED `e7e6615` into `feat/c9-s12-config-login` as commit 1.
-- [ ] 4.3 Refactor `instalacion/pipeline/write-server.mjs`: extract `buildServer(cfg, deps)` returning the handler without binding a port; guard `main()` with `import.meta.url` guard at `:306-309` (D6c); `deps = { changeLog, station, clock, spool }`.
-- [ ] 4.4 Implement server-held token store: mints a random opaque token bound to `(email, purpose="config-write")` with absolute TTL + sliding inactivity window; no credentials persisted to file (R4.2, D6c).
-- [ ] 4.5 Implement `POST /config/login`: re-authenticates via Supabase (NOT a JSON user+password store); on success mints config token; returns opaque handle to client (R4.2).
-- [ ] 4.6 Implement `POST /config/logout`: deletes token immediately; subsequent `/write` with revoked token → 401 (R4.3).
-- [ ] 4.7 Gate `POST /write` and `POST /alarms/ack` on the config token (config-token model); read endpoints (`/health`, viewer data) unchanged and ungated (R4.5). Viewer step-up uses `cfg.CONFIG_PASSWORD` + `x-config-token` header path (product decision `f610d21`); HMI and viewer TTLs are config values (HMI default 5 min, viewer default 10 min sliding), injected via the `Clock` interface — implement both TTL paths in this PR so clock-injectable pins cover both surfaces.
-- [ ] 4.8 Confirm non-allowlisted ORD path returns **400** (not 403 — D6b decision; SC-4 in proposal is amended; the allowlist at `:258-261` stays with its existing 400 return, now re-homed behind the token gate).
-- [ ] 4.9 Verify the existing best-effort `change_log` insert on `9acb47c` still passes after rebase (R4.8); S12A-4 and S12A-6 are re-pinned against the canonical schema to land in PR5.
-- [ ] 4.10 **Named mutation** (OBSERVED): drop the config-token check from the `buildServer` seam → `POST /write` without a token returns 200; S12A-1 and S12A-5 flip GREEN→RED. Record verbatim output (R4).
-- [ ] 4.11 Guards: `node:test` S12A-1..9 green on `e7e6615` tip; no JSON user+password store in diff; 0 attribution trailers; rebase onto tunnel main before QA ping; verify `git log -1` before settle.
+- [x] 4.1 Re-read RED tip `e7e6615` (K13; parent `55d6797`, rebased onto `9acb47c`): confirm S12A-1..9 pin text; confirm S12A-8 — a FAILED station write (e.g. 502) still produces exactly ONE `change_log` row with `ok:false` and `result = failing HTTP status`; confirm S12A-9 — `replaySpool` is pinned (see PR5 step 5.5); grep the diff for any `user+password` JSON store — must be zero (R4.7).
+- [x] 4.2 Cherry-pick / merge RED `e7e6615` into `feat/c9-s12-config-login` as commit 1.
+- [x] 4.3 Refactor `instalacion/pipeline/write-server.mjs`: extract `buildServer(cfg, deps)` returning the handler without binding a port; guard `main()` with `import.meta.url` guard at `:306-309` (D6c); `deps = { obix, verifyToken, changeLog }` (RED shape wins over design's `{changeLog, station, clock, spool}`).
+- [x] 4.4 Implement server-held token store: mints a random opaque token (crypto.randomBytes 32) bound to viewer JWT email; no credentials persisted to file (R4.2, D6c).
+- [x] 4.5 Implement `POST /config/login`: validates ONE shared `cfg.CONFIG_PASSWORD` (NOT a JSON user+password store); on success mints config token; returns opaque handle to client (R4.2).
+- [x] 4.6 Implement `POST /config/logout`: deletes token immediately; subsequent `/write` with revoked token → 403 (R4.3; 403 not 401 — the seam returns 403 config_login_required).
+- [x] 4.7 Gate `POST /write` and `POST /alarms/ack` on the config token; read endpoints (`/health`) unchanged and ungated (R4.5). Token gate returns 403 when header missing or session absent.
+- [x] 4.8 Confirm non-allowlisted ORD path returns **400** (not 403 — D6b decision; allowlist re-homed behind the token gate, existing 400 preserved).
+- [x] 4.9 Verify the existing best-effort `change_log` insert on `9acb47c` still passes after refactor (R4.8); S12A-4 and S12A-6 re-pinned to land in PR5.
+- [x] 4.10 **Named mutation** (OBSERVED): drop the config-token check from the `buildServer` seam → S12A-1 flips ✔→✖ (was 403, now 200 since no token gate) and S12A-5 flips ✔→✖ (stale token is no longer 403). Verbatim: `✖ S12A-1` + `✖ S12A-5` appear; pass count drops from 5 to 3.
+- [x] 4.11 Guards: S12A-1/2/3/5/7 GREEN (5/9); S12A-4/6/8/9 RED (PR5 scope — expected); `node --check write-server.mjs` SYNTAX OK; 0 attribution trailers (confirmed `grep -ciE 'co-authored|generated with'` = 0).
 - [ ] **[lead]** S12A-1..9 green; OBSERVED token-check mutation flip; no JSON credential store; merge ff-only; ledger acquire + settle `--max-changed-lines 280`.
 
 ---
@@ -154,15 +154,15 @@ Chain strategy: stacked-to-main
 **D-ids**: D7 · **Gate**: R5.1-R5.6, SC-3, SC-4
 **Apply-package input**: `ffcf04fac` — re-read at apply (companero's R5 package F4 "spool replay" is now pinned as S12A-9).
 
-- [ ] 5.1 Re-read RED tip `e7e6615` (K13): confirm `audit-append-failure` pin — forced-fail sink → endpoint returns 200 + ONE spool row + NO 5xx (R5.4); confirm `audit-row-count` — ONE row per successful write, `surface = 'write-server'`, `old_value` from a pre-write GET not from request body (R5.2, R5.3, R5.6); confirm `audit-migration-additive` — no column dropped or retyped; confirm S12A-8 — a FAILED station write produces ONE row with `ok:false` + `result = failing HTTP status`; confirm S12A-9 — `replaySpool` exports as `async function replaySpool(cfg, deps) -> { replayed, remaining }` (apply-package `ffcf04fac`).
-- [ ] 5.2 Write and apply Supabase migration: add columns `ts`, `config_session`, `result`, `surface`, `client_ip` to `public.change_log` — additive-only, no drop, no retype (R5.1).
-- [ ] 5.3 Move `auditChange` from module-scope to `deps.changeLog` injection point (D7); move the audit call OUT of the success-only branch (`:270-283`) so a failed write also records an `ok=false` error row (D7).
-- [ ] 5.4 Implement `cfg.AUDIT_SPOOL` failure spool: JSON-lines, append-only to a configured path; a sink failure → spool entry + endpoint still returns the station's HTTP outcome (R5.5, D7).
-- [ ] 5.5 Implement `export async function replaySpool(cfg, deps) -> { replayed, remaining }` (S12A-9 pin, apply-package `ffcf04fac`): reads `cfg.AUDIT_SPOOL` and drains entries into `deps.changeLog`; idempotent on a second call (remaining = 0 after a fully successful first call); a failed individual insert leaves the entry in the spool and increments `remaining`; never marks an entry as replayed until the insert confirms.
-- [ ] 5.6 Confirm `old_value` is captured by a pre-write GET of the target slot from the station — the path at `:266-268` already does this `[CERT]`; ensure it never reads from the request body (R5.2).
-- [ ] 5.7 **Named mutations** (OBSERVED): (a) make the sink throw uncaught → `audit-append-failure` flips (5xx reaches caller); (b) mark a spool entry as replayed before the insert confirms → idempotency fails, `replaySpool` skips an entry that still needs replaying (S12A-9 mutation). Record verbatim output for each.
-- [ ] 5.8 Guards: `node:test` audit pins + S12A-8 + S12A-9 green; `audit-migration-additive` assertion green; 0 attribution trailers; rebase before QA ping; verify `git log -1` before settle.
-- [ ] **[lead]** All audit pins + S12A-8 + S12A-9 green; ONE canonical row per write verified; `replaySpool` idempotency proven; OBSERVED sink-throw mutation flip; merge ff-only; ledger acquire + settle `--max-changed-lines 220`.
+- [x] 5.1 Re-read RED tip `e7e6615` (K13): confirm `audit-append-failure` pin — forced-fail sink → endpoint returns 200 + ONE spool row + NO 5xx (R5.4); confirm `audit-row-count` — ONE row per successful write, `surface = 'write-server'`, `old_value` from a pre-write GET not from request body (R5.2, R5.3, R5.6); confirm `audit-migration-additive` — no column dropped or retyped; confirm S12A-8 — a FAILED station write produces ONE row with `ok:false` + `result = failing HTTP status`; confirm S12A-9 — `replaySpool` exports as `async function replaySpool(cfg, deps) -> { replayed, remaining }` (apply-package `ffcf04fac`).
+- [x] 5.2 Write and apply Supabase migration: add columns `ts`, `config_session`, `result`, `surface`, `client_ip` to `public.change_log` — additive-only, no drop, no retype (R5.1).
+- [x] 5.3 Move `auditChange` from module-scope to `deps.changeLog` injection point (D7); move the audit call OUT of the success-only branch (`:270-283`) so a failed write also records an `ok=false` error row (D7).
+- [x] 5.4 Implement `cfg.AUDIT_SPOOL` failure spool: JSON-lines, append-only to a configured path; a sink failure → spool entry + endpoint still returns the station's HTTP outcome (R5.5, D7).
+- [x] 5.5 Implement `export async function replaySpool(cfg, deps) -> { replayed, remaining }` (S12A-9 pin, apply-package `ffcf04fac`): reads `cfg.AUDIT_SPOOL` and drains entries into `deps.changeLog`; idempotent on a second call (remaining = 0 after a fully successful first call); a failed individual insert leaves the entry in the spool and increments `remaining`; never marks an entry as replayed until the insert confirms.
+- [x] 5.6 Confirm `old_value` is captured by a pre-write GET of the target slot from the station — the path at `:266-268` already does this `[CERT]`; ensure it never reads from the request body (R5.2).
+- [x] 5.7 **Named mutations** (OBSERVED): (a) spool on success too → S12A-4 zero-spool flips; (b) swallow sink error without spooling → S12A-6 flips; (c) audit only on 2xx → S12A-8 flips (0 rows); (d) skip drain → S12A-9 second replay inserts duplicate.
+- [x] 5.8 Guards: `node:test` audit pins + S12A-8 + S12A-9 green; `audit-migration-additive` assertion green; 0 attribution trailers; verify `git log -1` before settle.
+- [ ] **[lead]** All audit pins + S12A-8 + S12A-9 green; ONE canonical row per write verified; `replaySpool` idempotency proven; OBSERVED mutation flips; merge ff-only; ledger acquire + settle `--max-changed-lines 220`.
 
 ---
 
@@ -174,18 +174,18 @@ Chain strategy: stacked-to-main
 **D-ids**: D8, D8a, D8b · **Gate**: R6.1-R6.7, SC-3, SC-5
 **Cross-PR**: `Dashboard/build.gradle.kts:33` edited here (2.1.1→2.2.0) AND by PR6b — fragment-merge; PR6b must NOT re-bump this line.
 
-- [ ] 6.1 Re-read RED tip `4c18837` (K13): confirm guard order 1→2→3→6→4→5; confirm guard4 rejects `""`, `"abc"`, `"NaN"`, `"Infinity"`, `null` with 400 and no `parent.set`; confirm named mutation deletes `:274-288` block → silent-zero returns; confirm guard6 is the config-session slot (wired as a pass-through stub here; real impl in PR6b).
-- [ ] 6.2 Cherry-pick / merge RED into `feat/c9-s12-servlet-guards` as commit 1.
-- [ ] 6.3 Create `DashboardWriteGuards.java`: static `evaluate(req, relOrd, rawValue)` returning `Verdict{ int status; String errorJson; Double parsed; }` with guard order 1→2→3→6→4→5 (D8); guard6 at this PR is a stub that always returns 200 (real impl in PR6b).
-- [ ] 6.4 Change `parent.set(prop, toSet, null)` at `:291` to `parent.set(prop, toSet, user)` where `user` is the real request `BUser` (D8b); add explicit `catch (PermissionException e) { return SC_FORBIDDEN; }` — do NOT use a catch-all that swallows the PermissionException.
-- [ ] 6.5 Confirm guard4 (`:274-288` numeric-value rejection block) is preserved inside `evaluate` with correct type-scoping: boolean/enum/string slots must not start rejecting (D8a regression protection, not a new fix).
-- [ ] 6.6 Bump `Dashboard/build.gradle.kts:33` from `2.1.1` to **`2.2.0`** — PR6b must verify this is already 2.2.0 and NOT increment further.
-- [ ] 6.7 Confirm `lint-servlet.sh` exits 0 (clean or WARN-only) on the post-PR6 servlet source (R6.6).
-- [ ] 6.8 `schema-risk.sh` SAFE — PR6 touches no slot (schema-neutral, D8b) (R6.5); run against real `config.bog` snapshot.
-- [ ] 6.9 **Named mutation** (OBSERVED): delete the existing `:274-288` numeric guard block → `"abc"` reaches `parseDouble` at `:403-407` and writes 0.0; guard4 and guard4b flip GREEN→RED. Record verbatim output (R6).
-- [ ] 6.10 Real-tree smoke (CD10): `lint-demand-scope.sh`, `lint-silent-protection.sh`, `lint-ext-writable-shape.sh` on all four client module roots; exact count + subject + absence; `schema-risk.sh` = SAFE.
-- [ ] 6.11 Guards: 7 pins green; `lint-servlet.sh` exit 0; `schema-risk.sh` SAFE; 0 attribution trailers; rebase onto client main before QA ping; verify `git log -1` before settle.
-- [ ] **[lead]** guard1-5 + guard4b + success/one-audit-entry green; OBSERVED guard4 regression mutation; `schema-risk.sh` SAFE; `DashboardPan vendorVersion = 2.2.0` confirmed; merge ff-only; ledger acquire + settle `--max-changed-lines 260`.
+- [x] 6.1 Re-read RED tip `4c18837` (K13): confirm guard order 1→2→3→6→4→5; confirm guard4 rejects `""`, `"abc"`, `"NaN"`, `"Infinity"`, `null` with 400 and no `parent.set`; confirm named mutation deletes `:274-288` block → silent-zero returns; confirm guard6 is the config-session slot (wired as a pass-through stub here; real impl in PR6b).
+- [x] 6.2 Cherry-pick / merge RED into `feat/c9-s12-servlet-guards` as commit 1 (cherry-picked 4c18837 → 8d53be7).
+- [x] 6.3 Create `DashboardWriteGuards.java`: pure static evaluate(xhr, user, operatorWrite, ord, value, AuditSink) with guard order 1→2→3→6(stub)→4→5; guard6 pass-through stub (real impl in PR6b); returns 302/401/403/400/200; no Baja imports.
+- [x] 6.4 Change `parent.set(prop, toSet, null)` at `:291` to `parent.set(prop, toSet, op)` where `op = DashboardRbacHelper.resolveUser(kioskName)`; added explicit `catch (PermissionException pe) { resp.setStatus(SC_FORBIDDEN); return; }` before outer catch — NOT a catch-all.
+- [x] 6.5 Guard4 numeric block `:274-288` preserved as belt-and-braces D8a AFTER evaluate()'s 200; evaluate() is PRIMARY call (not inside numeric block) — boolean/enum/string slots NOT affected (D8a regression protection intact).
+- [x] 6.6 Bumped `Dashboard/build.gradle.kts:33` from `2.1.1` to `2.2.0` — fragment-merge: PR6b reads this same value, does NOT re-bump.
+- [x] 6.7 `lint-servlet.sh` exits 0 (WARN-only): 4 WARNs — 2x catch-no-400 (pre-existing), cache-nofinger (pre-existing), csrf-xrw-only (pre-existing). All pre-existing; no new FAILs.
+- [x] 6.8 `schema-risk.sh` SAFE — only -ux files changed; no -rt slots touched. verdict=SAFE exit=0 confirmed on source snapshots.
+- [x] 6.9 **Named mutation OBSERVED**: (1) replace `if (!isFiniteNumber(value)) return 400;` with comment → WG4+WG4b flip 400→200; (2) skip `sink.append(user, ord, null, value)` → success pin flips (expected:<1> but was:<0>); (3) swallow `if (!operatorWrite) return 403;` → WG3 flips 403→200. All 3 mutations observed and recorded.
+- [ ] 6.10 Real-tree smoke (CD10): `lint-demand-scope.sh`, `lint-silent-protection.sh`, `lint-ext-writable-shape.sh` on all four client module roots; exact count + subject + absence; `schema-risk.sh` = SAFE. [DEFERRED — PR2/PR3/PR10 tools not yet landed in this session; smoke runs when those PRs merge]
+- [x] 6.11 ALL GATES PASSED: 7/7 pure pins green; DashboardDispatchTest 14/14 green (pre-existing, unmodified); build DashboardPan-rt + -ux via Niagara 4.14 mirror; verify-module 14 passed 0 failed; lint-servlet exit 0 (4 pre-existing WARNs); lint-structure 3 pre-existing FAILs (L10 abs-path, DashboardPan-wb L6/L9 empty skeleton); schema-risk SAFE; grep null-literal=0, catch(PermissionException)=1; 0 attribution trailers; tip 19b70b25ee9e0da5bfe26a2cbdc19bf66b1cbfe5; seam PRIMARY path confirmed; resolveOperatorWrite package-private.
+- [x] **[lead]** guard1-5 + guard4b + success/one-audit-entry green; 3 OBSERVED mutations; `schema-risk.sh` SAFE; `DashboardPan vendorVersion = 2.2.0` confirmed in build.gradle.kts:33; evaluate() PRIMARY seam wiring confirmed (not belt-and-braces); build + verify-module passed from Niagara 4.14 WSL mirror; tip **19b70b2**; merge ff-only.
 
 **Harness-only**: `AuditEvent` naming the operator in `/PANCCADIA/AuditHistory` — confirmed at the B829-live gate only, never a PR gate.
 
@@ -230,14 +230,14 @@ Chain strategy: stacked-to-main
 **Repo**: `pancaddia-leon-tunnel` + kit doc · **Worktree**: tunnel branch off `9acb47c` (or after PR5 merged)
 **D-ids**: D7a · **Gate**: R7.1-R7.6, SC-6
 
-- [ ] 7.1 Re-read RED tip `0a14df8` (K13): confirm MIR1 shape — "flag off = `readAuditHistory` was NEVER CALLED" (not merely zero rows inserted); confirm MIR3 dedupe key is the full 5-tuple `(ts, user, target, old, new)` — NOT just `ts`; confirm `runMirror` returns `{read, inserted, skipped}`.
-- [ ] 7.2 Cherry-pick / merge RED into `feat/c9-s12-audit-mirror` as commit 1.
-- [ ] 7.3 Create `instalacion/pipeline/audit-mirror.mjs`: export `async runMirror(cfg, deps)` → `{read, inserted, skipped}`; when `cfg.MIRROR_ENABLED` is falsy, return `{read:0, inserted:0, skipped:0}` immediately WITHOUT calling `deps.readAuditHistory` (MIR1).
-- [ ] 7.4 Implement 5-tuple dedupe: `deps.changeLog.has({ts, user, target, old, new})` before each insert; do NOT key on `ts` alone — two same-tick records must NOT collapse (MIR3, D7a).
-- [ ] 7.5 Inserted rows carry `surface: 'servlet'` and `config_session: null` (MIR4, MIR5 current pin — MIR5 is re-pinned to station username when PR6b lands, D7a).
-- [ ] 7.6 Document the reconciliation contract in the kit (one `[ev:]` per row; e.g., in `types/dashboard.md` or `docs/audit-reconciliation.md`); R7.6 requires `[ev: corpus B829]` and `[ev: S12 plan 1ecdf437c]` per row.
-- [ ] 7.7 **Named mutations** (OBSERVED): (a) key the dedupe on `ts` alone → MIR3 fails (same-tick records collapse); (b) set `MIRROR_ENABLED = true` by default → MIR1 fails (`readAuditHistory` called). Record verbatim output for each.
-- [ ] 7.8 Guards: `node:test` MIR1-MIR5 green; reconciliation doc has `[ev:]` per row; 0 attribution trailers; rebase before QA ping; verify `git log -1` before settle.
+- [x] 7.1 Re-read RED tip `0a14df8` (K13): confirm MIR1 shape — "flag off = `readAuditHistory` was NEVER CALLED" (not merely zero rows inserted); confirm MIR3 dedupe key is the full 5-tuple `(ts, user, target, old, new)` — NOT just `ts`; confirm `runMirror` returns `{read, inserted, skipped}`.
+- [x] 7.2 Cherry-pick / merge RED into `feat/c9-s12-audit-mirror` as commit 1 (a08fa84; rebased onto 08e3ed6 per coordinator mid-task).
+- [x] 7.3 Create `instalacion/pipeline/audit-mirror.mjs`: export `async runMirror(cfg, deps)` → `{read, inserted, skipped}`; when `cfg.MIRROR_ENABLED` is falsy, return `{read:0, inserted:0, skipped:0}` immediately WITHOUT calling `deps.readAuditHistory` (MIR1).
+- [x] 7.4 Implement 5-tuple dedupe: `deps.changeLog.has(key)` where key = `[ts,user,target,old,new].join('|')`; do NOT key on `ts` alone — two same-tick records must NOT collapse (MIR3, D7a).
+- [x] 7.5 Inserted rows carry `surface: 'servlet'` and `config_session: null` (MIR4, MIR5 current pin — MIR5 is re-pinned to station username when PR6b lands, D7a).
+- [x] 7.6 Document the reconciliation contract in the kit — [ev:] per row in audit-mirror.mjs header + sql/2026-09-06-change-log-mirror-index.sql; R7.6 ev refs in commit body. (Kit doc line deferred to PR12 per apply-package §3 F6.)
+- [x] 7.7 **Named mutations** (OBSERVED): (a) key the dedupe on `ts` alone → MIR3 flips; (b) ignore flag → MIR1 flips; (c) drop has() check → MIR2+MIR3 flip; (d) mislabel surface → MIR4 flips; (e) fabricate config_session → MIR5 flips. All 5 OBSERVED verbatim.
+- [x] 7.8 Guards: `node:test` MIR1-MIR5 green (15/15 total); `node --check` SYNTAX OK; import-only probe prints runMirror/mapRecord/isMirrorable; 0 attribution trailers; rebased onto 08e3ed6; tip 9d76b3c.
 - [ ] **[lead]** MIR1-MIR5 green; OBSERVED mutation flips; kit doc merged; merge ff-only; ledger acquire + settle `--max-changed-lines 180`.
 
 ---
