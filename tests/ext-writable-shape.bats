@@ -156,3 +156,15 @@ JAVA
   run "$EW" "$D"
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"setpoint"* ]]
 }
+
+# --- EW11: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
+@test "EW11: no-sources-exit-3 (empty dir and a dir with only a non-Java file -> exit 3 + ERROR row, no WARN)" {
+  E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
+  run "$EW" "$E"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"ext-writable-shape"* ]] && [[ "$output" != *"WARN"* ]]
+  N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
+  run "$EW" "$N"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
+}
