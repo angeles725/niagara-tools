@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign9-ext-writable-shape
 
 **Session**: Campaign 9 PR10 — lint-ext-writable-shape.sh (S19, B823/B826 slot-type doctrine)

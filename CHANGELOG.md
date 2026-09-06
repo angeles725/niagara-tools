@@ -6,13 +6,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
-## [Unreleased]
+## [v0.20.0] - 2026-09-06
 
-### Added — Campaign 9 Wave 1: kit lints (PR2, PR3, PR10)
+### Added — Campaign 9: kit lints + doctrine (PR2, PR3, PR10, PR12)
 
 - **`lint-demand-scope.sh` (PR2):** `toolbelt/lint-demand-scope.sh [--strict] <java-src-dir>` — demand-in-scope lint; a control/staging method that reads a process variable (suction/pressure/discharge/temp/cv/coil/head) in a comparison with NO demand-shaped input ({demand*, *call*, enable, loopEnable, *count, BStatusBoolean in*}) in its parameters or enclosing-class fields → WARN "pressure without demand"; WARN-only (--strict promotes to exit 1); two-pass awk: Pass 1 collects class-level demand fields, Pass 2 applies rules 1-4 with brace-balanced body extraction; dot-dirs pruned (D9b); DS1-DS7 + DS-smoke bats; real PASS: CompressorControl.step(demandCount) gates demand — zero WARN.*step rows confirmed [ev: corpus B820 §820.2-820.4; retro campaign9-demand-scope].
 - **`lint-silent-protection.sh` (PR3):** `toolbelt/lint-silent-protection.sh [--strict] <java-src-dir>` — silent-protection lint (B824): a protection trip (a boolean latch that inhibits an output) with no SUMMARY/alarm/adapter surface → `WARN  lint-silent-protection  <file>:<line>  <reason>`, exactly one per trip site; effect-slot exemption, one-level field→slot adapter follow, private fields never a surface; WARN-only (`--strict` → 1), exit 3 on usage/no sources (K20), D9b prune. Real tree at a109249: CP-1 `CompressorControl.java:215` and CR-3 `BEvaporatorUnit.java:1287` flagged, CP-2/defrostSkipped clean, DashboardPan 0/0. RED `qa/c9-silent-protection` 3b281e0 (SP1-SP9 + exact-count SP-smoke). Routed in BUILD-LOOP §5 + SKILL; `report-module.sh` §5.5 member row.
 - **`lint-ext-writable-shape.sh` (PR10):** `toolbelt/lint-ext-writable-shape.sh [--strict] <java-src-dir>` — ext-writable-shape lint (B823/B826): a `BStatusNumeric`, `BStatusBoolean`, or `BStatusEnum` OPERATOR property whose declaring class has no `@NiagaraAction` → WARN with child-leaf note; a conformant oBIX PUT is rejected for complex slots and a hand-crafted wrapped-`<obj>` PUT silently writes 0.0 when the `value` child is absent; the safe write path is the oBIX child-leaf bare `<real>` at `…/<slot>/value` (B826-G2, LIVE-CONFIRMED); WARN-only (`--strict` → 1), exit 3 on usage/no sources (K20), D9b prune. Real tree a109249: DashboardPan-rt 1 WARN (`BRoomPanel.setpoint` line 124), CompPan-rt/ColdRoomPan-rt/DashboardPan-ux 0. RED `qa/c9-ext-writable-shape` 269be48 (EW1-EW11). Routed in BUILD-LOOP §5 + SKILL; `report-module.sh` §5.6 member row [ev: corpus B823 §823.2; corpus B826; retro campaign9-ext-writable-shape].
+- **Doctrine fold (PR12):** `types/logic.md` §Protection anatomy (alarm patterns A/B), `types/logic-authoring.md` ext-writable anti-shape line, `BUILD-LOOP.md §5` lint routing + §K22 real-tree smoke cross-ref, unified write-audit doctrine line [ev: retro campaign9-doctrine-fold].
+
+### Client / tunnel (referenced; not in this repo)
+
+- PANCCADIA client (angeles725/niagara-panccadia-leon): rotation PR#12 (S20 — time-slice compressor rotation, CompPan 2.0.3→2.1.0), servlet guards PR#10 (DashboardWriteGuards real-Context audited write, Dashboard 2.1.1→2.2.0), config login PR#13 (in-module station re-auth + sliding session, Dashboard 2.2.0), alarm CR-3 PR#11 (freeze alarm BAlarmSourceExt Pattern A, ColdRoomPan 2.0.7→2.1.0), alarm CP-1 PR#15 (low-suction BIAlarmSource+AlarmSupport Pattern B, CompPan 2.1.0→2.2.0), write-path rows PR#14 — CompPan 2.0.3→2.2.0, ColdRoomPan 2.0.7→2.1.0, Dashboard 2.1.1→2.2.0.
+- Tunnel write-server (angeles725/pancaddia-leon-tunnel): config login w/ TTL PR#1 (buildServer seam + step-up login/logout), change_log canonical row + spool + replaySpool PR#2, AuditHistory mirror flag OFF PR#3 (blessed, awaiting Cristian's merge).
+
+### Tests
+
+- Suite: **382 @test across 36 files** (368 at a45fea1 + 14 from cherry-picked `tests/c9-close.bats`).
+
+### References
+
+- SDD change: `build-n4-module-campaign9` (PR2 #86, PR3 #87, PR10 #88, PR12 #90 + SP-smoke re-pin #91; v0.19.0 → v0.20.0).
+- Engram topics `sdd/build-n4-module-campaign9/*`.
+- Retros (campaign-9): campaign9-demand-scope, -silent-protection, -ext-writable-shape, -doctrine-fold, -close-process-meta-lessons.
 
 ---
 
