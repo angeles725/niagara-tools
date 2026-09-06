@@ -82,3 +82,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign8-retro-loop.md | kit | 2026-09-06 | pending | 5 |
 | 2026-09-06-campaign8-orchestration.md | kit | 2026-09-06 | pending | 3 | <!-- L8 numbering deviation (L7 existed); new-retro.sh/kit-ticket.sh prefix drop for L1; step 5b placement -->
 | 2026-09-06-campaign8-structure.md | kit | 2026-09-06 | pending | 3 | <!-- Δ1 module-root=project-root note for L10; Δ2 L2 Javadoc anchor; Δ3 L5/L9 <p n= not <p -->
+| 2026-09-06-campaign8-write-path.md | kit | 2026-09-06 | pending | 5 | <!-- Δ1 lint-write-path.sh; Δ2 logic.md §write-path; Δ3 logic-authoring.md §write-path-matrix; Δ4 CHECK12-pin; Δ5 K19 routing -->
