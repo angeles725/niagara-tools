@@ -15,11 +15,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 - **`lint-silent-protection.sh` recognises Pattern B surfaces (S23):** Pass 0b ALARM_CLASSES index + adapter→pure follow (`"B"+this_class` naming pair); CP-1 low-suction shed in CompressorControl no longer false-WARNs — the `BCompressorControl` adapter (implements `BIAlarmSource`, `newOffnormalAlarm`, `AlarmSupport`) is now visible to the lint via the cross-file class-name index. Real-tree CompPan-rt: 0 WARN; ColdRoomPan-rt Pattern A intact. `[ev: retro campaign10-silent-protection-pattern-b]`
 - **`run-pure-test.sh` cwd-independent + 2-arg usage fix (S24):** the `java` call at `:62` now runs in a subshell `( cd "$rt" && java … )`, making the runner cwd-independent; `Paths.get("src/…")` in structural WiringTests resolves regardless of caller cwd. Usage doc corrected to 2-arg form `<module-rt-dir> <pkg.TestClass>`. `[ev: retro campaign10-run-pure-test-cwd]`
 - **`lint-write-path.sh` STALE advisory + `[concept]` exemption (S25):** STALE advisory class (per-row) flags matrix rows whose slot name is absent from all source `@NiagaraProperty`/`@NiagaraAction` names in the matrix root; `[concept]` on a row exempts that row only; `--strict` promotes STALE to exit 1 (uncovered FAIL exit unchanged); covered set is matrix-root-wide. Real-tree: 5 STALE rows at ff1b659 resolve after S26 `[concept]` marks. `[ev: retro campaign10-write-path-stale]`
-- **Client hygiene: gitignore build caches + 5 `[concept]` matrix marks (S26, docs-only):** `.gitignore` extended with `**/*.class` and `**/tmp/` patterns (51 untracked cache files removed from tracking); 5 `[concept]` rows added to `docs/write-path-matrix.md` (hoaMode ×3, inhibit, freezeEnabled); no `build.gradle.kts` change, no version bump — client module versions carry over (Compresores 2.2.0, Paccadia 2.1.0, Dashboard 2.2.0). `[ev: retro campaign10-close-process-meta-lessons]`
+- **Client hygiene: gitignore build caches + 5 `[concept]` matrix marks (S26, docs-only):** `.gitignore` extended with `**/build/classes/` and `**/build/tmp/` patterns (51 untracked cache files removed from tracking); 5 `[concept]` rows added to `docs/write-path-matrix.md` (hoaMode ×3, inhibit, freezeEnabled); no `build.gradle.kts` change, no version bump — client module versions carry over (Compresores 2.2.0, Paccadia 2.1.0, Dashboard 2.2.0). `[ev: retro campaign10-close-process-meta-lessons]`
 
 ### Tests
 
-- Suite: **see c10-close.bats measured total** (393 at S25 + c10-close.bats + any additional S21-S24 REDs).
+- Suite: **418/418** (`bats tests/` with `C9_CLIENT_ROOT=Leon-Guanjuato-worktrees/main-ff1b659`; c10-close.bats 10/12 pre-tag — CLOSE-tag and CLOSE-harness-run pending).
 
 ### References
 
