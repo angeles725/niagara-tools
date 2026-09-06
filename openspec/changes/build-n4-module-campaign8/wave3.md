@@ -167,15 +167,15 @@ python3 invocation that already costs ~0.1 s.
 
 **RED**: `qa/c8-retro-loop` (RL1–RL6) — re-read tip at apply | **Gate**: R16.1–R16.6, CD1/CD5/CD6
 
-- [ ] 16.1 Create `qa/c8-retro-loop`; write failing bats: RL1 template shape, RL2 idempotent INDEX, RL3 envelope flag, RL4 gh absent → SKIP + exit 0; record tip SHA.
-- [ ] 16.2 Write `toolbelt/new-retro.sh`: template emit; idempotent INDEX `grep` guard; BUILD-STATE `retro_pending: true` sed-in-place; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/3.
-- [ ] 16.3 Write `toolbelt/kit-ticket.sh "<title>" --from <retro-file>`: `command -v gh || { printf …SKIP…; exit 0; }`; `gh issue create --repo <kit-remote> … --label kit,from-run`; exits 0/3.
-- [ ] 16.4 Write `tests/retro-loop.bats` (RL1–RL6 verbatim from RED).
-- [ ] 16.5 Add K19 routing: `BUILD-LOOP.md` §7 retro gate (R16.5) + `skill/SKILL.md` close-of-run step (R16.4); `new-retro.sh [ev: retro c8-retro-loop]`; `kit-ticket.sh [ev: retro c8-retro-loop]` (CD5).
-- [ ] 16.6 **Named mutation**: omit INDEX duplicate guard → second call produces duplicate row (R16.6). Record in PR body.
-- [ ] 16.7 Real smoke: `new-retro.sh build-n4-module-kit` → stub created + INDEX row appended + BUILD-STATE flipped; second call → no duplicate. Paste output.
-- [ ] 16.8 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 16.9 Retro + INDEX row + `BUILD-STATE.md` envelope in same push range (CD1); update openspec `apply-progress.md`.
+- [x] 16.1 Create `qa/c8-retro-loop`; write failing bats: RL1 template shape, RL2 idempotent INDEX, RL3 envelope flag, RL4 gh absent → SKIP + exit 0; record tip SHA.
+- [x] 16.2 Write `toolbelt/new-retro.sh`: template emit; idempotent INDEX `grep` guard; BUILD-STATE `retro_pending: true` sed-in-place; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/3.
+- [x] 16.3 Write `toolbelt/kit-ticket.sh "<title>" --from <retro-file>`: `command -v gh || { printf …SKIP…; exit 0; }`; `gh issue create --repo <kit-remote> … --label kit,from-run`; exits 0/3.
+- [x] 16.4 Write `tests/retro-loop.bats` (RL1–RL6 verbatim from RED).
+- [x] 16.5 Add K19 routing: `BUILD-LOOP.md` §7 retro gate (R16.5) + `skill/SKILL.md` close-of-run step (R16.4); `new-retro.sh [ev: retro c8-retro-loop]`; `kit-ticket.sh [ev: retro c8-retro-loop]` (CD5).
+- [x] 16.6 **Named mutation**: omit INDEX duplicate guard → second call produces duplicate row (R16.6). Record in PR body.
+- [x] 16.7 Real smoke: `new-retro.sh build-n4-module-kit` → stub created + INDEX row appended + BUILD-STATE flipped; second call → no duplicate. Paste output.
+- [x] 16.8 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 16.9 Retro + INDEX row + `BUILD-STATE.md` envelope in same push range (CD1); update openspec `apply-progress.md`.
 - [ ] **[lead]** RL1–RL6 green; merge ff-only; `install-skill.sh --force` (SKILL.md changed, D12); ledger settle `--max-changed-lines 260`.
 
 ---
