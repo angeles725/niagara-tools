@@ -66,3 +66,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-lint-delays.md | kit | 2026-09-05 | pending | 4 | <!-- D2b+D2c+D9b -->
 | 2026-09-05-campaign8-triage-console.md | kit | 2026-09-05 | pending | 5 | <!-- D1-D5; B818 registry flexible match -->
 | 2026-09-05-campaign8-lint-timers-ext.md | kit | 2026-09-05 | pending | 3 | <!-- D4→same-method body; jdk-thread; changed-sched -->
+| 2026-09-05-campaign8-facets-lint.md | kit | 2026-09-05 | pending | 5 | <!-- WARN not FAIL (K13); DashboardPan-ux path; false-positive fix; MIN=0 correct; profile_dir naming -->

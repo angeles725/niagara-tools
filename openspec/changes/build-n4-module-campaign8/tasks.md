@@ -102,14 +102,14 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED (`facets-req` + `ord-literal`) — re-read tip at apply (K13) | **Gate**: R4.1-R4.3, D5/D7a
 
-- [ ] 4.1 Create `qa/c8-facets-lint`; write failing bats for `facets-req` (OPERATOR double without MIN/MAX → FAIL) and `ord-literal` (`SERVICE_ORD` → WARN); record tip SHA in PR body.
-- [ ] 4.2 Extend `toolbelt/verify-module.sh` with `check_facet_presence` (label `facets-req`, D5): OPERATOR numeric without MIN+MAX → FAIL; name-pattern without UNITS/PRECISION/RANGE → FAIL; presence-only — no value read (R4.2 false-positive control). Add `ord-literal` WARN sub-check: Java string `"(station:|local:|slot:/)` under `<profile>/src`; three exemptions per D5.
-- [ ] 4.3 Copy sanitised fixtures `tests/fixtures/facets/` (CompPan 12 OPERATOR doubles; `DashboardReader`-shaped ORD holder).
-- [ ] 4.4 Extend `tests/verify-module.bats` (RED pins verbatim).
-- [ ] 4.5 **Named mutations**: (a) strip facet annotation → FAIL; (b) enum `MIN=0` stays clean; (c) drop `OrdConstants`+comment exemption → WARN on sanctioned holder. Record in PR body.
-- [ ] 4.6 Real smoke: `verify-module.sh --src` on CompPan (12 OPERATOR doubles → FAIL rows) + DashboardPan `DashboardReader.java:75` (→ WARN). Paste output.
-- [ ] 4.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`.
-- [ ] 4.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 4.1 Create `qa/c8-facets-lint`; write failing bats for `facets-req` (RED tip 9cb3168 pins WARN — see 4.2) and `ord-literal` (`SERVICE_ORD` → WARN); record tip SHA in PR body.
+- [x] 4.2 Extend `toolbelt/verify-module.sh` with `check_facet_presence` (label `facets-req`, D5): OPERATOR numeric without facets key → **WARN** (NOT FAIL — RED tip 9cb3168 pins WARN; tasks.md originally said FAIL but K13 makes RED authoritative; deviation recorded in retro 2026-09-05-campaign8-facets-lint.md); name-pattern without UNITS/PRECISION → WARN; presence-only — no value read (R4.2 false-positive control). Add `ord-literal` **WARN** sub-check: Java string `"(station:|local:|slot:/)` under `<profile>/src`; three exemptions per D5.
+- [x] 4.3 Copy sanitised fixtures `tests/fixtures/facets/` via inline `mksrc` helper in bats (no committed fixture files — inline generation is the pattern established by other bats in this suite).
+- [x] 4.4 Extend `tests/facets-lint.bats` (F1-F8, RED pins verbatim from 9cb3168); 218/218 total green.
+- [x] 4.5 **Named mutations**: (a) strip facet annotation → facets-req WARN fires; (b) MIN=0 facet present → check passes (presence-only); (c) drop `OrdConstants`+comment exemption → WARN on sanctioned holder; (d) revert pass-1 `seen[]` to WARN-only marking → false-positive on boolean OPERATOR slots. All recorded in retro.
+- [x] 4.6 Real smoke: `verify-module.sh --src` on CompPan (25 WARN rows — design estimated 12; real count higher) + DashboardPan-ux `DashboardReader.java:75` (→ WARN; ran on -ux not -rt — path deviation D2 in retro) + ColdRoomPan-rt (11 WARN; MIN=0 slots NOT flagged). Output verbatim in retro.
+- [x] 4.7 Guards: 218/218 bats green; `shellcheck` exit 0; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0; `kit-links.bats` 6/6.
+- [x] 4.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); tasks.md updated (this file).
 - [ ] **[lead]** RED green; merge ff-only; ledger settle `--max-changed-lines 320`. No install-skill.
 
 ---
