@@ -422,3 +422,34 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" != *"companion-flag"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# S21-misparse (Phase-2 brace_depth>=2 method-detect guard, from investigador1's
+# BMisparse): a class-level @NiagaraProperty whose defaultValue holds a constructor
+# call ("new BAlarmRecord()") sits at depth 1. Without the depth guard the
+# annotation's parens are mis-read as a method open, merging armA (FIELD flag) and
+# armB (Clock.schedule) into one pseudo-method -> a false companion-flag FAIL. The
+# guard (only depth>=2 opens a method) keeps armA/armB separate -> CLEAN. RED on
+# df8c7ec (pre-guard mis-parse false-FAILs); the fix is clean, and dropping the
+# guard re-introduces the false FAIL.
+# ---------------------------------------------------------------------------
+@test "S21-misparse: a depth-1 @NiagaraProperty(defaultValue=\"new BAlarmRecord()\") does NOT mis-parse into a method; cross-method flag/schedule stay CLEAN" {
+  D="$BATS_TEST_TMPDIR/s21mis"; mkdir -p "$D"
+  cat > "$D/BMisparse.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty( name = "ackAlarm", type = "BAlarmRecord", defaultValue = "new BAlarmRecord()" )
+public final class BMisparse extends BComponent
+{
+  private boolean startingUp = false;
+  private Clock.Ticket t;
+  public void armA() { startingUp = true; }                                              // FIELD flag, method A
+  public void armB() { t = Clock.schedule(this, BRelTime.makeSeconds(5), exp, null); }    // schedule, method B
+  public void stopped() throws Exception { super.stopped(); if (t != null) { t.cancel(); t = null; } }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"companion-flag"* ]]
+}
