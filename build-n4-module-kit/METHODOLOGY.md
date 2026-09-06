@@ -91,6 +91,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - folded as code: toolbelt/scaffold-module.sh (module skeleton from fixtures/MinimalPan). [ev: retro campaign7-scaffold]
 - folded as code: toolbelt/schema-risk.sh (two-snapshot slot diff; verdict=SAFE/LOSSY/OUTAGE). [ev: retro schema-risk]
 - folded as code: toolbelt/triage-console.sh (own-module exception triage over station consoles; three attribution channels C1/C2/C3; console triage after every reload). [ev: corpus B800] [ev: retro campaign8-triage-console]
+- triage-console.sh attribution contract = **C1** own frame · **C2** own tag · **C3** bog-drift (`Missing class "<prefix>:` / `Cannot load station` / `Missing frozen property`); locale = `LC_ALL=C`, byte-safe (`grep -a`/awk), EN + ES level names (mojibake-safe latin-1). PR7 states this CONTRACT; PR13 states the operator STEPS (non-duplicative). `[ev: corpus B800]` `[ev: retro campaign8-triage-console]`
 - Code-folded retros need a "folded as code: <script> [ev: retro <token>]" note in a prose kit file to be credited by the citation audit. [ev: retro research-fold]
 
 ## Multi-session coordination
@@ -98,7 +99,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 ## Conformance rules — lintable vs advisory
 
-- **A `verify-module.sh`/lint may HARD-FAIL only on a statically-decidable rule:** lexicon dup-bare-keys, a `Clock.Ticket` field with no `stopped()`-cancel, an empty palette on a component module, type/slot lexicon coverage-%. Rules needing semantic judgment (an action's operator-vs-admin intent, a container's order-sensitivity, poll-vs-subscribe) stay a HUMAN-REVIEW checklist item — never a hard fail. `[ev: corpus B787/B788/B789]`
+- **A `verify-module.sh`/lint may HARD-FAIL only on a statically-decidable rule:** lexicon dup-bare-keys, a `Clock.Ticket` field with no `stopped()`-cancel, an empty palette on a component module, type/slot lexicon coverage-%, and **a non-positive `Clock.schedule`/`schedulePeriodically` delay floor** (`toolbelt/lint-delays.sh`, exit 1) — a `≤ 0` delay throws `IllegalArgumentException` and silently kills the timer at runtime, statically decidable from the delay expression `[ev: corpus B801]`. Rules needing semantic judgment (an action's operator-vs-admin intent, a container's order-sensitivity, poll-vs-subscribe) stay a HUMAN-REVIEW checklist item — never a hard fail. `[ev: corpus B787/B788/B789]`
 - **Human-review checklist (advisory rules, not lintable):** (a) does each non-HIDDEN `@NiagaraAction` intend its operator/admin gating? (b) does an order-sensitive container guard its children with `isChildLegal`? (c) does any fixed-interval poll of a sibling slot want a `Subscriber` instead? `[ev: corpus B776/B789]`
 - folded as code: sweep-build-state.sh + BUILD-STATE.md + BUILD-LOOP.md §7 + retros/INDEX.md [ev: retro kit-continuity]
 
