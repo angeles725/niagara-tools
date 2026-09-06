@@ -104,15 +104,17 @@ _close() { [ -n "${C8_CLOSE:-}" ] || skip "campaign-8 close gate — run with C8
 
 # ---- Real local smokes (env-guarded; SKIP is honest "could not run", never a silent pass) ----
 
-@test "SC1-smoke: lint-delays.sh exits 1 on the pre-fix ColdRoomPan tree, 0 on the fixed tree" {
+@test "SC1-smoke: lint-delays is CLEAN on the blessed tree (main-ff1b659 ColdRoomPan-rt: exit 0, 0 FAIL rows; defrost time<=0 bug fixed post-C9)" {
   _close
   R="$C8_CLIENT_REPO"   # via client-root.bash default=main-ff1b659; env override wins [ev: design.md D3c site 8]
   CRP="$R/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
   [ -d "$CRP" ] || skip "client ColdRoomPan tree not on this machine (set C8_CLIENT_REPO)"
   run "$KIT/toolbelt/lint-delays.sh" "$CRP"
-  # pre-fix tree FAILs (>=1); the assertion the close records is: the tool runs and its verdict matches the tree state
-  [ "$status" -eq 1 ] || [ "$status" -eq 0 ]
-  echo "lint-delays exit=$status on $CRP (1=pre-fix FAILs present, 0=fixed)"
+  # R-T2.10: pin the blessed-tree verdict, not "either tree". The delay-floor RULE stays
+  # pinned by the synthetic LD1/LD3/LD6 (non-positive floor -> FAIL); this smoke asserts the
+  # real blessed tree is clean, so it can no longer rot green against a stale pre-fix checkout.
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^FAIL')" -eq 0 ]
 }
 
 @test "SC16-smoke: bog-audit CHECK13-19 exact rows on PANCCADIA + CHECK13-19 clean on MX60" {
