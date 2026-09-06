@@ -192,11 +192,15 @@ function handle_sysxml(ts, msg) {
          ts, "WARNING", msg, "[sys.xml]")
 }
 
-# C3c — [sys.registry] Missing class for "OwnPrefix:Type" (immediate, no block)
+# C3c — [sys.registry] Missing class( for)? "?OwnPrefix:Type (B818: both forms)
 function handle_registry(ts, msg,    p, rest, colon, prefix) {
-  p = index(msg, "Missing class for \"")
+  p = index(msg, "Missing class")
   if (p == 0) return
-  rest  = substr(msg, p + 19)
+  rest = substr(msg, p + 13)
+  while (substr(rest, 1, 1) ~ /[ \t]/) rest = substr(rest, 2)
+  if (substr(rest, 1, 3) == "for")      rest = substr(rest, 4)
+  while (substr(rest, 1, 1) ~ /[ \t]/) rest = substr(rest, 2)
+  if (substr(rest, 1, 1) == "\"")      rest = substr(rest, 2)
   colon = index(rest, ":")
   if (colon == 0) return
   prefix = substr(rest, 1, colon - 1)
