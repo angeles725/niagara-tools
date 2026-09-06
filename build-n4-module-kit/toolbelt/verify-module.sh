@@ -8,6 +8,12 @@
 # Checks (each guards a failure seen on a real build — build-n4-module-kit/retros/):
 #   bytecode    every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
 #   signed      META-INF/NIAGARA4.SF present (gradle niagara-signing ran).                       [default]
+#               NOTE: `signed` checks PRESENCE only — the signer's cert may not be in the
+#               station's trust store. A self-signed/untrusted-CA jar PASSES this gate yet a
+#               station enforcing cert-chain validation loads it UNSIGNED (`Could not validate
+#               cert chain`). Signed = jar has NIAGARA4.SF; trusted = station-side policy.
+#               `[ev: corpus B800 §800.8]`
+#               folded as code: verify-module.sh signed-check (cert-chain trust caveat, D8, R7.6).
 #   types       every <type class=...> in META-INF/module.xml exists as a .class in the jar.     [default]
 #   baja        module.xml baja vendorVersion <= --target-version (a 4.15 jar is rejected by 4.14). [--target-version]
 #   stored      zero Deflated entries — required only when the jar must be re-signed in Workbench. [--stored]
