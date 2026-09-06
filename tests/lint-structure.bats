@@ -58,12 +58,33 @@ setup() {
   [ "$status" -eq 3 ]
 }
 
+@test "LS9-real: profile dir with build.gradle.kts but no module-include.xml fires L6+L9" {
+  run "$LS" "$FX/skeleton-wb"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L6"* ]]
+  [[ "$output" == *"L9"* ]]
+}
+
+@test "LS10-real: gradle.properties two levels above module root fires L10" {
+  local ROOT
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git"                                  # .git sentinel — upward walk stops here
+  printf 'niagara_home=C:\\Honeywell\\Niagara-4.14.0\n' > "$ROOT/gradle.properties"
+  mkdir -p "$ROOT/proj/Mod/Foo-wb"
+  printf 'plugins { id("com.tridium.niagara-module") }\n' > "$ROOT/proj/Mod/Foo-wb/build.gradle.kts"
+  run "$LS" "$ROOT/proj/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L10"* ]]
+}
+
 @test "LS-PASS: scaffold-module.sh output passes L1-L11 -> exit 0 (SKIP if scaffold absent)" {
   SC="$KIT/toolbelt/scaffold-module.sh"
   [ -x "$SC" ] || skip "scaffold-module.sh not present"
   OUT="$BATS_TEST_TMPDIR/out"; mkdir -p "$OUT"
   run "$SC" MinimalPan "$OUT"
   [ "$status" -eq 0 ]
-  run "$LS" "$OUT/MinimalPan"
+  # The scaffold emits MinimalPan/<module-subdir>/MinimalPan-rt; pass the module subdir as root
+  run "$LS" "$OUT/MinimalPan/MinimalPan"
   [ "$status" -eq 0 ]                         # a scaffolded module is structurally clean (R18.4/R18.6)
 }

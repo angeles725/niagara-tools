@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # lint-structure.sh — module-structure lint for Niagara N4 source trees (Campaign 8 PR18, B817).
 #
-# Iterates every profile under <module-root> by finding each module-include.xml.
-# Source-tree-only; L8 (signed-jar check) stays in verify-module.sh (D15). Dot-directories
-# are pruned (D9b). Reports per-check rows.
+# Discovers profiles as every direct child dir of <module-root> that is named
+# *-(rt|ux|wb|se|doc), or directly contains build.gradle.kts / build.gradle /
+# module-include.xml.  Dot-directories are excluded (D9b).  A profile without
+# module-include.xml gets L6 (missing) and still runs L9 and all checks that do
+# not need the include file.  Source-tree-only; L8 (signed-jar check) stays in
+# verify-module.sh (D15).
 #
 # Checks:
 #   L1  FAIL  package naming — every .java package is com.<vendor>.*, never javax.baja.*
 #   L2  FAIL  one @NiagaraType per .java file (max one public type per file)
-#   L3  WARN  pure-model package (src/.../model/) has tests and no baja imports (advisory)
+#   L3  WARN  pure-model package (src/.../model/) has javax.baja.* imports (advisory)
 #   L4  FAIL  module.lexicon non-empty (>=1 key=value) when >=1 type is declared
 #   L5  FAIL  module.palette non-empty for -rt profile
 #   L6  FAIL  module-include.xml present; no hand-authored META-INF/module.xml in source
 #   L7  FAIL  dependency version is a 3-part floor (4.14.0), not 2-part (4.14)
 #   L9  FAIL  no empty skeleton artifact: -wb/-ux with 0 Java classes AND empty palette
-#   L10 FAIL  no absolute host paths in tracked gradle.properties
+#   L10 FAIL  no absolute host paths in gradle.properties (module root + upward to .git root)
 #   L11 FAIL  mixed srcTest (BTest+JUnit) without both :test-wb AND junit gradle declarations
 #   (L8 signed-jar check is in verify-module.sh)
 #
@@ -23,8 +26,9 @@
 #   Row format:  FAIL|WARN  lint-structure  <path>  L<n>: <reason>
 #   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20)
 #
-# This script is VCS-free by design; version control is never invoked.
-# kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
+# VCS-free by design; version control is never invoked. The .git directory is used
+# only as a filesystem sentinel (stop-marker) for the L10 upward walk; no VCS
+# commands are ever executed. kit-links.bats L2 enforces this on all toolbelt scripts.
 # [ev: retro campaign8-structure]
 set -u
 LC_ALL=C
@@ -63,59 +67,108 @@ _find_java() {
 }
 
 # ---------------------------------------------------------------------------
-# L10: no absolute host paths in tracked gradle.properties (module-root level)
-# Dot-directories pruned, so .deploy-baseline/ is excluded (D9b)
-# Patterns: niagara_home=C:\..., niagara_user_home=C:\..., nodeHome=C:\...
+# L10: no absolute host paths in gradle.properties
+# (a) Recursively under module root (dot-dirs pruned, D9b) — catches per-profile files
+# (b) Walk parent dirs up to the nearest .git sentinel — catches project-level
+#     gradle.properties kept above the module subdir (e.g. Dashboard/gradle.properties)
+# Patterns: niagara_home, niagara_user_home, user_home, nodeHome with Windows drive path
 # ---------------------------------------------------------------------------
-while IFS= read -r _gp; do
+_l10_check() {
+    local _f="$1"
+    [ -f "$_f" ] || return 0
     if LC_ALL=C grep -qE '^(niagara_home|niagara_user_home|user_home|nodeHome)=[A-Za-z]:[\\/]' \
-            "$_gp" 2>/dev/null; then
-        _row FAIL "$_gp" "L10: absolute host path in tracked gradle.properties"
+            "$_f" 2>/dev/null; then
+        _row FAIL "$_f" "L10: absolute host path in tracked gradle.properties"
     fi
+}
+
+# (a) within module root
+while IFS= read -r _gp; do
+    _l10_check "$_gp"
 done < <(_find_files "$MODULE_ROOT" "gradle.properties" | LC_ALL=C sort)
 
+# (b) upward walk — start from parent of module root, stop at .git or filesystem root
+_WALK="$MODULE_ROOT"
+while true; do
+    _PARENT="$(dirname "$_WALK")"
+    [ "$_PARENT" = "$_WALK" ] && break          # filesystem root reached
+    _WALK="$_PARENT"
+    _l10_check "$_WALK/gradle.properties"
+    [ -d "$_WALK/.git" ] && break               # repo root reached
+done
+
 # ---------------------------------------------------------------------------
-# Per-profile checks: each module-include.xml defines one profile
+# Profile discovery: every direct child dir of <module-root> that is:
+#   • named *-(rt|ux|wb|se|doc), OR
+#   • directly contains build.gradle.kts / build.gradle / module-include.xml.
+# Dot-directories excluded (D9b).
 # ---------------------------------------------------------------------------
-while IFS= read -r _inc; do
-    _PDIR="$(dirname "$_inc")"
+_PROFILES="$_TMP/profiles.txt"
+for _cand in "$MODULE_ROOT"/*/; do
+    [ -d "$_cand" ] || continue
+    _cand="${_cand%/}"
+    _cn="$(basename "$_cand")"
+    case "$_cn" in .*) continue ;; esac         # dot-dir guard (D9b)
+    _pick=0
+    case "$_cn" in
+        *-rt | *-ux | *-wb | *-se | *-doc) _pick=1 ;;
+    esac
+    if [ "$_pick" -eq 0 ]; then
+        if [ -f "$_cand/build.gradle.kts" ] || [ -f "$_cand/build.gradle" ] \
+                || [ -f "$_cand/module-include.xml" ]; then
+            _pick=1
+        fi
+    fi
+    [ "$_pick" -eq 1 ] && printf '%s\n' "$_cand"
+done | LC_ALL=C sort > "$_PROFILES"
+
+# ---------------------------------------------------------------------------
+# Per-profile checks
+# ---------------------------------------------------------------------------
+while IFS= read -r _PDIR; do
     _PNAME="$(basename "$_PDIR")"
+    _INC="$_PDIR/module-include.xml"
     _LEX="$_PDIR/module.lexicon"
     _PAL="$_PDIR/module.palette"
     _META="$_PDIR/META-INF/module.xml"
     _SRC="$_PDIR/src"
     _SRCTEST="$_PDIR/srcTest"
+    _HAS_INC=0
+    [ -f "$_INC" ] && _HAS_INC=1
 
     # -----------------------------------------------------------------------
-    # L6: hand-authored META-INF/module.xml in source — the gradle plugin generates it
+    # L6: module-include.xml must be present; if present, no hand-authored META-INF/module.xml
+    # (the gradle plugin generates META-INF/module.xml from module-include.xml)
     # -----------------------------------------------------------------------
-    if [ -f "$_META" ]; then
+    if [ "$_HAS_INC" -eq 0 ]; then
+        _prel="${_PDIR#"$MODULE_ROOT/"}"
+        _row FAIL "$_prel" "L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)"
+    elif [ -f "$_META" ]; then
         _rel="${_META#"$MODULE_ROOT/"}"
-        _row FAIL "$_rel" "L6: hand-authored META-INF/module.xml found; author module-include.xml, not the generated manifest"
+        _row FAIL "$_rel" "L6: hand-authored META-INF/module.xml found; author module-include.xml instead"
     fi
 
     # -----------------------------------------------------------------------
-    # Count declared types in module-include.xml (used by L4)
+    # L4: module.lexicon non-empty when >=1 type is declared (requires module-include.xml)
     # -----------------------------------------------------------------------
-    _TYPE_COUNT=0
-    _TYPE_COUNT=$(LC_ALL=C grep -c '<type ' "$_inc" 2>/dev/null || true)
-    [ -z "$_TYPE_COUNT" ] && _TYPE_COUNT=0
-
-    # -----------------------------------------------------------------------
-    # L4: module.lexicon non-empty when >=1 type is declared
-    # -----------------------------------------------------------------------
-    if [ "${_TYPE_COUNT:-0}" -gt 0 ]; then
-        if [ ! -f "$_LEX" ]; then
-            _prel="${_PDIR#"$MODULE_ROOT/"}"
-            _row FAIL "$_prel" "L4: module.lexicon missing ($_TYPE_COUNT type(s) declared in module-include.xml)"
-        elif ! LC_ALL=C grep -qE '^[^#[:space:]][^=]*=' "$_LEX" 2>/dev/null; then
-            _lrel="${_LEX#"$MODULE_ROOT/"}"
-            _row FAIL "$_lrel" "L4: lexicon empty ($_TYPE_COUNT type(s) declared, zero key=value entries)"
+    if [ "$_HAS_INC" -eq 1 ]; then
+        _TYPE_COUNT=0
+        _TYPE_COUNT=$(LC_ALL=C grep -c '<type ' "$_INC" 2>/dev/null || true)
+        [ -z "$_TYPE_COUNT" ] && _TYPE_COUNT=0
+        if [ "${_TYPE_COUNT:-0}" -gt 0 ]; then
+            if [ ! -f "$_LEX" ]; then
+                _prel="${_PDIR#"$MODULE_ROOT/"}"
+                _row FAIL "$_prel" "L4: module.lexicon missing ($_TYPE_COUNT type(s) declared in module-include.xml)"
+            elif ! LC_ALL=C grep -qE '^[^#[:space:]][^=]*=' "$_LEX" 2>/dev/null; then
+                _lrel="${_LEX#"$MODULE_ROOT/"}"
+                _row FAIL "$_lrel" "L4: lexicon empty ($_TYPE_COUNT type(s) declared, zero key=value entries)"
+            fi
         fi
     fi
 
     # -----------------------------------------------------------------------
-    # L5: module.palette non-empty for -rt profiles
+    # L5: module.palette non-empty for -rt profiles (does not require module-include.xml)
+    # A palette with only a Folder container but no <p n= named entries is empty (Δ3)
     # -----------------------------------------------------------------------
     case "$_PNAME" in
         *-rt)
@@ -131,8 +184,7 @@ while IFS= read -r _inc; do
 
     # -----------------------------------------------------------------------
     # L7: dependency version must be a 3-part floor (X.Y.Z), not 2-part (X.Y)
-    # Scans *.gradle.kts in the profile directory for patterns like ":baja:4.14"
-    # (the closing " prevents matching ":baja:4.14.0")
+    # Scans *.gradle.kts in the profile dir; closing " prevents matching X.Y.Z
     # -----------------------------------------------------------------------
     while IFS= read -r _gkts; do
         _grel="${_gkts#"$MODULE_ROOT/"}"
@@ -142,7 +194,7 @@ while IFS= read -r _inc; do
     done < <(_find_files "$_PDIR" "*.gradle.kts" | LC_ALL=C sort)
 
     # -----------------------------------------------------------------------
-    # Count Java source files under src/ (used by L9)
+    # Count Java source files under src/ (used by L9, L1, L2, L3)
     # -----------------------------------------------------------------------
     _JAVA_COUNT=0
     if [ -d "$_SRC" ]; then
@@ -150,7 +202,8 @@ while IFS= read -r _inc; do
     fi
 
     # -----------------------------------------------------------------------
-    # L9: empty skeleton artifact — -wb/-ux profile with 0 Java files AND empty palette
+    # L9: empty skeleton artifact — -wb/-ux with 0 Java files AND empty palette
+    # Runs even when L6 fires (profile without module-include.xml is still checked)
     # -----------------------------------------------------------------------
     case "$_PNAME" in
         *-wb | *-ux)
@@ -166,21 +219,17 @@ while IFS= read -r _inc; do
     esac
 
     # -----------------------------------------------------------------------
-    # L1, L2: Java source checks (src/ only, dot-dirs pruned)
-    # L1: package must never declare javax.baja.* (that is the framework namespace)
-    # L2: at most one @NiagaraType annotation per file
+    # L1, L2: Java source checks (does not require module-include.xml)
+    # L1: package must not declare javax.baja.* (framework namespace)
+    # L2: at most one annotation-position @NiagaraType per file (anchored: ^[[:space:]]*@NiagaraType)
     # -----------------------------------------------------------------------
     if [ -d "$_SRC" ]; then
         while IFS= read -r _jf; do
             _jrel="${_jf#"$MODULE_ROOT/"}"
-
-            # L1
-            if LC_ALL=C grep -qE '^[[:space:]]*package[[:space:]]+javax\.baja\.' "$_jf" 2>/dev/null; then
+            if LC_ALL=C grep -qE '^[[:space:]]*package[[:space:]]+javax\.baja\.' \
+                    "$_jf" 2>/dev/null; then
                 _row FAIL "$_jrel" "L1: package declares javax.baja.* (framework namespace; OEM modules use com.<vendor>.*)"
             fi
-
-            # L2: count only annotation-position lines (^[[:space:]]*@NiagaraType),
-            # not occurrences in Javadoc comments like " * @NiagaraType / ..."
             _NT=0
             _NT=$(LC_ALL=C grep -cE '^[[:space:]]*@NiagaraType' "$_jf" 2>/dev/null || true)
             [ -z "$_NT" ] && _NT=0
@@ -191,15 +240,15 @@ while IFS= read -r _inc; do
     fi
 
     # -----------------------------------------------------------------------
-    # L3: pure-model package advisory — src/.../model/ with javax.baja.* imports (WARN)
-    # Advisory only: the only WARN in the checks; --strict is not implemented for this tool.
+    # L3: pure-model package advisory (does not require module-include.xml)
     # -----------------------------------------------------------------------
     if [ -d "$_SRC" ]; then
         while IFS= read -r _mdir; do
             _mrel="${_mdir#"$MODULE_ROOT/"}"
             _found_baja=0
             while IFS= read -r _mf; do
-                if LC_ALL=C grep -qE '^[[:space:]]*import[[:space:]]+javax\.baja\.' "$_mf" 2>/dev/null; then
+                if LC_ALL=C grep -qE '^[[:space:]]*import[[:space:]]+javax\.baja\.' \
+                        "$_mf" 2>/dev/null; then
                     _found_baja=1
                     break
                 fi
@@ -212,6 +261,7 @@ while IFS= read -r _inc; do
 
     # -----------------------------------------------------------------------
     # L11: mixed srcTest (BTest + JUnit) must declare BOTH :test-wb AND junit
+    # Does not require module-include.xml
     # -----------------------------------------------------------------------
     if [ -d "$_SRCTEST" ]; then
         _HAS_BTEST=0
@@ -229,7 +279,6 @@ while IFS= read -r _inc; do
         done < <(_find_java "$_SRCTEST" | LC_ALL=C sort)
 
         if [ "$_HAS_BTEST" -eq 1 ] && [ "$_HAS_JUNIT" -eq 1 ]; then
-            # Mixed test sources: both :test-wb and junit must appear in gradle.kts
             _HAS_TESTWB=0
             _HAS_JUNITDEP=0
             while IFS= read -r _gkts; do
@@ -248,8 +297,7 @@ while IFS= read -r _inc; do
         fi
     fi
 
-done < <(find "$MODULE_ROOT" \( -type d -name '.*' -prune \) \
-             -o \( -type f -name 'module-include.xml' -print \) | LC_ALL=C sort)
+done < "$_PROFILES"
 
 # ---------------------------------------------------------------------------
 # Output rows and exit based on whether any FAIL was emitted

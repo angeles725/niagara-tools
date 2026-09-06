@@ -112,7 +112,7 @@ Scaffold output passes L1–L11 at exit 0. LS-PASS bats pin green.
 
 | ID | Target | Delta |
 |----|--------|-------|
-| Δ1 | `lint-structure.sh` + campaign-9 seed | DashboardPan-wb false negative: when the module root is a subdir of the gradle project and `gradle.properties` is at the project level (parent dir), L10 does not fire. Likewise, a `-wb` profile without `module-include.xml` is invisible to the tool. Mitigation: document in the tool's usage notes that `<module-root>` should be the gradle project root (containing `gradle.properties`), not a module subdir. Candidate campaign-9 follow-up: walk up to find the nearest `gradle.properties` and `settings.gradle.kts`. |
+| Δ1 ✓ | `lint-structure.sh` profile discovery + L10 upward walk | **CLOSED in same PR (lead review).** Two root causes: (1) the original discover-by-`module-include.xml` strategy made a profile without that file (real DashboardPan-wb) invisible to L9/L6; (2) L10 only scanned under the module root, missing `gradle.properties` kept at the parent project dir (`Dashboard/gradle.properties`). Fix: profile discovery changed to direct-child dirs matching `*-(rt|ux|wb|se|doc)` or containing `build.gradle.kts`/`build.gradle`/`module-include.xml`; a profile without `module-include.xml` fires L6 and still runs L9; L10 walks parent dirs up to the `.git` sentinel. New pins: `LS9-real` + `LS10-real`. Real smokes all correct: chihuahua L4+L10; DashboardPan L6+L9+L10; ColdRoomPan L10; CompPan L10; scaffold exit 0. |
 | Δ2 | `lint-structure.sh` L2 | Javadoc comment anchor: `@NiagaraType` in Javadoc `* @NiagaraType` lines is NOT an annotation. Fixed by anchoring to `^[[:space:]]*@NiagaraType`. Add a fixture comment explaining this in `tests/fixtures/lint-structure/` if a new fixture covers it. |
 | Δ3 | `lint-structure.sh` L5/L9 | Empty palette must be `<p n=` (named component), not `<p ` (any tag). A palette with only a `<p m="b=baja" t="b:Folder">` outer container is empty. Fixed in this PR. |
 
@@ -122,6 +122,6 @@ Scaffold output passes L1–L11 at exit 0. LS-PASS bats pin green.
 
 1. `grep -c '@NiagaraType'` matches Javadoc text; anchor to `^[[:space:]]*@NiagaraType` to detect only annotation-position occurrences.
 2. A Niagara palette is FUNCTIONALLY empty when it has no `<p n=` named component entries, even if it has a Folder container element (`<p m="b=baja" t="b:Folder">`).
-3. The "module root" for `lint-structure.sh` must be the gradle project root (holding `gradle.properties`), not a module subdir; otherwise L10 misses project-level absolute paths.
-4. Sanitized fixtures prove the design rules correctly even when the real trees have non-standard layouts (e.g., DashboardPan-wb without `module-include.xml`).
-5. LS-PASS bats pin (scaffold output → exit 0) is the self-hosting proof for the linter; a scaffold that fails its own lint is a RED signal that a rule has a false positive.
+3. A profile without `module-include.xml` must still be discovered (by name pattern `*-(rt|ux|wb|se|doc)` or by containing `build.gradle.kts`/`build.gradle`) and checked for L6 (missing) and L9 (empty skeleton). Discover-by-include-file alone is insufficient.
+4. L10 must walk up parent dirs to the repo root (`/.git` sentinel) because client projects commonly keep `gradle.properties` (with absolute host paths) at the project level above the module subdir. Walking within the module root alone misses these.
+5. Sanitized fixtures prove the design rules; a scaffold that fails its own lint is a RED signal that a rule has a false positive (`LS-PASS` pin).
