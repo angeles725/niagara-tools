@@ -134,6 +134,6 @@ CompPan-rt has all OPERATOR slots covered (pct=100.0), exits 0. Large STALE list
 ## Lessons
 
 1. The paren-balance awk technique from `lint-delays.sh` is reusable for any multi-line Java annotation: accumulate into a buffer, count `(` and `)`, emit when `depth <= 0`.
-2. "Required = every OPERATOR slot" and "stale = every lexicon key with no OPERATOR match" produces a large STALE list for modules whose lexicon covers non-OPERATOR slots — this is technically correct but can be noisy; the MISSING list is the actionable signal.
+2. STALE must compare lexicon keys against ALL `@NiagaraProperty` annotations (any flags), not just OPERATOR ones. A lexicon key that translates a READONLY or SUMMARY slot is live context in the operator view, not a dead translation. Using OPERATOR-only as the stale reference inflated counts from legitimate non-OPERATOR keys (ColdRoomPan: 28→6; CompPan: 35→1 after fix). SP5 pin proves the correct behavior; the defect was caught in lead review and fixed before merge.
 3. Design estimates for missing slot counts ("~19") were off (real: 9) because only `BEvaporatorUnit` has OPERATOR slots; the design likely counted all `@NiagaraProperty` slots without gating on OPERATOR.
 4. D6a: gating empty-lexicon FAIL on `--strict` only defeats the purpose when the motivating module (`chihuahua`) is always run without `--strict` in the normal workflow.

@@ -21,8 +21,9 @@
 #   required   <- OPERATOR-flagged @NiagaraProperty slots from *.java under <src-dir>
 #                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key)
 #   declared   <- lexicon slot names: bare key "fan" -> "fan"; "FanMode.fan" -> "fan" (after dot)
-#   MISSING    <- required slot with no matching lexicon key (renders raw camelCase in operator views)
-#   STALE      <- lexicon key with no matching required slot (dead translation, T8 variant)
+#   MISSING    <- OPERATOR slot with no lexicon key (renders raw camelCase in operator views)
+#   STALE      <- lexicon key with no matching @NiagaraProperty annotation (any flags) — truly dead
+#                 A key for a READONLY/SUMMARY slot is live context in the view, NOT stale.
 #   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot> and STALE <key> lines
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
@@ -133,12 +134,18 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   [ -f "$PS_LEX" ] || { printf 'slot-coverage: not found: %s\n' "$PS_LEX" >&2; exit 3; }
   [ -d "$PS_SRC" ] || { printf 'slot-coverage: not a directory: %s\n' "$PS_SRC" >&2; exit 3; }
 
-  # Extract OPERATOR @NiagaraProperty slot names from Java files (dot-dirs pruned, D9b).
+  # Extract @NiagaraProperty slot names from Java files (dot-dirs pruned, D9b).
   # Uses paren-balance multi-line state machine — same technique as lint-delays.sh Pass 1.
-  # Matches Flags.OPERATOR (and "o" flag string) to gate per-slot requirement (RED/K13).
-  # shellcheck disable=SC2016  # awk program intentionally in single quotes (no shell expansion needed)
-  op_slots_raw=$(find "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
-    xargs awk '
+  # Two outputs:
+  #   op_slots_raw  — OPERATOR-flagged only (Flags.OPERATOR or "o"); gates MISSING (RED/K13)
+  #   all_slots_raw — every @NiagaraProperty name, any flags; gates STALE (D6: dead translation)
+  # STALE = lex_keys - all_annotation_slots (not lex_keys - op_slots): a lexicon key that
+  # translates a legitimate non-OPERATOR slot (READONLY state, SUMMARY read-back, etc.) is NOT
+  # a dead translation — it is live context in the operator view.
+  # shellcheck disable=SC2016  # awk programs intentionally in single quotes (no shell expansion needed)
+  _java_files=$(find "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+  # shellcheck disable=SC2016
+  op_slots_raw=$(printf '%s\n' "$_java_files" | xargs awk '
     BEGIN { in_prop=0; prop_buf=""; prop_name=""; prop_op=0 }
     {
       ln = $0
@@ -150,18 +157,15 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
         prop_buf = prop_buf " " ln
       }
       if (in_prop) {
-        # Extract name= when not yet found
         if (prop_name == "" && match(prop_buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
           seg = substr(prop_buf, RSTART)
           sub(/name[[:space:]]*=[[:space:]]*"/, "", seg)
           sub(/".*/, "", seg)
           prop_name = seg
         }
-        # Check for OPERATOR flag (Flags.OPERATOR or flags = "o")
         if (!prop_op && (index(prop_buf, "OPERATOR") > 0 || index(prop_buf, "\"o\"") > 0)) {
           prop_op = 1
         }
-        # Paren-balance: count all ( and ) to detect end of annotation block
         depth=0; n=length(prop_buf)
         for (ci=1; ci<=n; ci++) {
           c = substr(prop_buf, ci, 1)
@@ -175,16 +179,54 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
       }
     }
     ' 2>/dev/null)
+  # All annotated slots (any flags) — used for STALE computation only
+  # shellcheck disable=SC2016
+  all_slots_raw=$(printf '%s\n' "$_java_files" | xargs awk '
+    BEGIN { in_prop=0; prop_buf=""; prop_name="" }
+    {
+      ln = $0
+      if (!in_prop) {
+        if (index(ln, "@NiagaraProperty") > 0) {
+          in_prop=1; prop_buf=ln; prop_name=""
+        }
+      } else {
+        prop_buf = prop_buf " " ln
+      }
+      if (in_prop) {
+        if (prop_name == "" && match(prop_buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+          seg = substr(prop_buf, RSTART)
+          sub(/name[[:space:]]*=[[:space:]]*"/, "", seg)
+          sub(/".*/, "", seg)
+          prop_name = seg
+        }
+        depth=0; n=length(prop_buf)
+        for (ci=1; ci<=n; ci++) {
+          c = substr(prop_buf, ci, 1)
+          if      (c == "(") depth++
+          else if (c == ")") depth--
+        }
+        if (depth <= 0 && index(prop_buf, "@NiagaraProperty") > 0) {
+          if (prop_name != "") print prop_name
+          in_prop=0; prop_buf=""; prop_name=""
+        }
+      }
+    }
+    ' 2>/dev/null)
 
   # Lexicon slot keys: bare "fan" -> "fan"; "FanMode.fan" -> "fan" (part after last dot)
   lex_slots_raw=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" \
     | grep '=' | cut -d'=' -f1 | sed 's/.*\.//' | sort -u)
 
-  # Sort and deduplicate operator slot names
+  # Sort and deduplicate slot name sets
   if [ -n "$op_slots_raw" ]; then
     op_sorted=$(printf '%s\n' "$op_slots_raw" | sort -u)
   else
     op_sorted=""
+  fi
+  if [ -n "$all_slots_raw" ]; then
+    all_sorted=$(printf '%s\n' "$all_slots_raw" | sort -u)
+  else
+    all_sorted=""
   fi
 
   # MISSING = required OPERATOR slots with no lexicon key
@@ -198,11 +240,13 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
     missing_slots=""
   fi
 
-  # STALE = lexicon keys with no matching OPERATOR slot (dead translation)
-  if [ -n "$lex_slots_raw" ] && [ -n "$op_sorted" ]; then
+  # STALE = lexicon keys with no matching @NiagaraProperty annotation (any flags).
+  # Uses all_sorted (every annotated slot), NOT op_sorted — a lexicon key that translates
+  # a READONLY or SUMMARY slot is live context, not a dead translation (D6: design fix).
+  if [ -n "$lex_slots_raw" ] && [ -n "$all_sorted" ]; then
     stale_slots=$(comm -23 \
       <(printf '%s\n' "$lex_slots_raw") \
-      <(printf '%s\n' "$op_sorted"))
+      <(printf '%s\n' "$all_sorted"))
   elif [ -n "$lex_slots_raw" ]; then
     stale_slots="$lex_slots_raw"
   else

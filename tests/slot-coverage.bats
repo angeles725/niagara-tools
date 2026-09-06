@@ -158,6 +158,17 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   [[ "$output" == *"STALE"* ]] && [[ "$output" == *"differential"* ]]
 }
 
+@test "SP5: a lexicon key for a non-OPERATOR slot is NOT STALE (translation of a READONLY slot is live)" {
+  # Fixture per-slot-sp5: same xml+src as per-slot, but lexicon adds internalState=Internal State.
+  # internalState is @NiagaraProperty(flags=READONLY|TRANSIENT) — NOT operator-required, but it IS
+  # a valid @NiagaraProperty annotation, so its lexicon key is live (not a dead translation).
+  # RED on the pre-fix script (internalState appears as STALE); GREEN after fix (all_slots gate).
+  FX_SP5="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot-sp5"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_SP5/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"MISSING"* ]]         # anchor: per-slot ran (setpoint is MISSING)
+  [[ "$output" != *"internalState"* ]]   # internalState has an annotation -> key is live, not STALE
+}
+
 @test "SP3: a covered operator slot AND a non-operator slot are NOT flagged (coverage + OPERATOR gate)" {
   run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
   [[ "$output" == *"setpoint"* ]]          # anchor: per-slot analysis ran (setpoint is MISSING)
