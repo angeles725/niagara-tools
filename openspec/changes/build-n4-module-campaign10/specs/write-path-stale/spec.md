@@ -2,7 +2,7 @@
 
 **Capability**: `module-write-path-matrix` — `lint-write-path.sh` STALE class + `--strict`
 **PR**: PR5 (`feat/c10-write-path-stale`)
-**QA RED**: `qa/c10-write-path-strict` **`a56a72e`** (base `df8c7ec`, final S25 contract) — `lint-write-path.bats` pins WP-stale-neg, -strict, -regression, -concept, -concept-decoy, -perrow, -prose, -action, -summary, -smoke, plus WP-uncovered-strict; WP1/WP2 unchanged. The RED is the contract (K13).
+**QA RED**: `qa/c10-write-path-strict` **`db130a7`** (base `df8c7ec`, final S25 contract; `a56a72e` + header grammar align) — `lint-write-path.bats` pins WP-stale-neg, -strict, -regression, -concept, -concept-decoy, -perrow, -prose, -action, -summary, -smoke, plus WP-uncovered-strict; WP1/WP2 unchanged. The RED is the contract (K13).
 **Repo**: `niagara-tools` (kit)
 **Cross-cutting**: see `../cross-cutting.md` (K11/K12/K13/K14/K19/K20/D9b/comment-strip/observed-flip/real-tree-smoke)
 **Seams** (per companero `fb3bece`): `:161` matrix-slot awk, `:310` scanner, `:374` FAIL emit, `:383` exit.
