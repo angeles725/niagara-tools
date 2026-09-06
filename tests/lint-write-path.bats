@@ -237,11 +237,10 @@ MD
 @test "WP-stale-concept-decoy: [concept] inside a markdown comment on another row does NOT exempt a stale row (strip comments)" {
   d="$BATS_TEST_TMPDIR/staledecoy"; _mk_wp "$d" <<'MD'
 # M
-<!-- note: [concept] rows are exempt -->
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
 | `setpoint` | D | mid | w1 |
-| `ghostSlot` | D | mid | wX |
+| `ghostSlot` | D | mid <!-- [concept] --> | wX |
 MD
   run "$LW" --strict "$d"
   [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
@@ -254,11 +253,11 @@ MD
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
 | `setpoint` | D | mid | w1 |
-| `hoaMode` | Engine link [concept] | n/a | — |
 | `hoaMode` | dashboard write | mid | wY |
+| `hoaMode` | engine link | mid | wZ |
 MD
   run "$LW" --strict "$d"
-  [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 2 ]   # per-row: two rows, same missing name -> 2 STALE (dedupe-by-name would give 1)
   [ "$status" -eq 1 ]
 }
 
