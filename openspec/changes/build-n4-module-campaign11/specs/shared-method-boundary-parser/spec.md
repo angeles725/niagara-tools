@@ -55,17 +55,17 @@
 
 Each case is a fixture or fixture pair run against **all three lints** in the same PR. The expected verdict per lint column describes WHAT the lint MUST produce; HOW is design territory.
 
-| Case | Fixture description | lint-timers expected | lint-silent-protection expected | lint-ext-writable-shape expected |
-|------|--------------------|-----------------------|----------------------------------|----------------------------------|
-| **G-multiline** | A multi-line method body containing the relevant pattern (e.g. a method that sets a companion flag and schedules, spanning 3+ lines); annotation on the preceding line (tests the Case-B `@`-stop) | FAIL (companion-flag or clock-schedule) | WARN (trip write detected) | WARN (OPERATOR complex property, no writing action) |
-| **G-samemethod** | A method-local boolean set and a `Clock.schedule*` call in the **same method body**, all within a multi-line body (the `anyNoHardware` shape) | FAIL (companion-flag) | WARN (trip write) | WARN (OPERATOR complex, no writing action) |
-| **G-adapter** | The CP-1 adapter pattern — a method that both arms a protection and calls a schedule within a single enclosing method | FAIL | WARN | WARN |
-| **G-oneliner-timers** | A one-liner method `void arm() { flag=true; Clock.schedule(this, t, null); }` on a single line | **FAIL** (was exit 0 on `dab0807` — the one-liner false negative) | 0 rows (no trip write in this fixture) | 0 rows (no OPERATOR complex in this fixture) |
-| **G-oneliner-silent** | A one-liner method containing a protection-trip write `status = StatusEnum.FAULT;` on a single line | 0 rows (no `Clock.schedule*`) | **WARN** (was exit 0 on `dab0807` — the one-liner false negative) | 0 rows (no OPERATOR complex) |
-| **G-oneliner-extwritable** | A one-liner method where an OPERATOR complex property (`BStatusNumeric`/`BStatusBoolean`/`BStatusEnum`) has no writing action — body on a single line | 0 rows (no `Clock.schedule*`) | 0 rows (no trip write) | WARN (the canonical PEAK-depth parser already caught this; behavior UNCHANGED — the extraction must not regress it) |
-| **G-accessor** | A one-line `setInhibited(BBoolean v) { status.set(v); }` accessor (prefix `set`, body on single line) | **0 WARN** (accessor skip) | **0 WARN** (accessor skip) | **0 WARN** (accessor skip: R-T1.16) |
+| Case | Fixture (from `tests/golden-parser.bats` @ ed2088f) | Lint exercised | Expected verdict | Status on dab0807 |
+|------|------|------|------|------|
+| **G-multiline** | BMisparse — depth-1 `@NiagaraProperty(` with `defaultValue = "new BAlarmRecord()"` on its OWN line, FIELD flag set in `armA()`, `Clock.schedule` in `armB()` (the Case-B misparse shape) | lint-timers | exit 0, no companion-flag row (guard: `brace_depth >= 2` + Case-B `@`-stop) | GREEN (guard) |
+| **G-samemethod** | `anyNoHardware` shape — a method-LOCAL boolean set true beside `Clock.schedule` in the same method | lint-timers | exit 0, does NOT FAIL (field-scope guard) | GREEN (guard) |
+| **G-adapter** | CP-1 — pure class trip + `B<Pure>` adapter `implements BIAlarmSource` + `newOffnormalAlarm` | lint-silent-protection | 0 WARN (Pattern B surface via the adapter→pure follow) | GREEN (guard) |
+| **G-oneliner-timers** | FIELD flag set true beside `Clock.schedule` inside a ONE-LINER method `void arm(){ … }` | lint-timers | FAIL companion-flag (exit 1) | **RED** (NET depth misses the one-liner) |
+| **G-oneliner-silent** | a detected trip (`Math.min` shape) inside a ONE-LINER `step()` with no surface | lint-silent-protection | 1 WARN | **RED** (NET depth misses the one-liner) |
+| **G-oneliner-extwritable** | an `@NiagaraAction` whose `do<Action>` body is a ONE-LINER writing the slot | lint-ext-writable-shape | slot exempt, 0 WARN — the PEAK reference the fragment must preserve | GREEN (canonical) |
+| **G-accessor** | ONE-LINER accessor `setInhibited(...)` with a guarded boolean write | lint-silent-protection | 0 WARN (get/set/is one-line accessor skip; flips a PEAK-only fix without the skip) | GREEN on dab0807 (missed by NET), must stay GREEN under PEAK+skip |
 
-`[ev: proposal §PR1 — 7 cases named]` `[ev: QA d88af78 C11-tl-oneliner, C11-sp-oneliner, C11-g1-setter]` `[ev: QA ed2088f golden set]`
+`[ev: QA ed2088f tests/golden-parser.bats @test titles; d88af78 C11-tl-oneliner / C11-sp-oneliner / C11-g1-setter]`
 
 Every golden case fixture file MUST strip `//` and `/* */` before any identifier or WARN-string match, and MUST include at least one comment-only decoy that does NOT satisfy any assertion. `[ev: ../cross-cutting.md — comment-strip rule]`
 
