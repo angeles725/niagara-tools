@@ -39,14 +39,15 @@ _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 t
   [ "$(cat "$REPO/VERSION")" = "$VERSION_TARGET" ]
 }
 
-@test "CLOSE-changelog: CHANGELOG.md has a [v<target>] section naming the C10 lint-precision fixes (S21/S22/S23)" {
+@test "CLOSE-changelog: CHANGELOG.md has a [v<target>] section naming all five C10 kit lint fixes (S21-S25)" {
   _close
   sec="$(awk -v t="## [v${VERSION_TARGET}]" 'index($0,t)==1{f=1;next} /^## \[/{f=0} f' "$REPO/CHANGELOG.md")"
   [ -n "$sec" ] || { echo "no [v${VERSION_TARGET}] section"; false; }
-  # TODO(freeze): assert the three precision fixes are named (companion-flag field-scope, ext-writable per-slot, silent-protection Pattern-B surface)
   printf '%s\n' "$sec" | grep -qiE 'lint-timers|companion-flag' || { echo "CHANGELOG missing the lint-timers S21 entry"; false; }
   printf '%s\n' "$sec" | grep -qiE 'ext-writable|per-slot'      || { echo "CHANGELOG missing the ext-writable S22 entry"; false; }
   printf '%s\n' "$sec" | grep -qiE 'silent-protection|BIAlarmSource' || { echo "CHANGELOG missing the silent-protection S23 entry"; false; }
+  printf '%s\n' "$sec" | grep -qiE 'run-pure-test|structural'  || { echo "CHANGELOG missing the run-pure-test S24 entry"; false; }
+  printf '%s\n' "$sec" | grep -qiE 'lint-write-path|write-path|STALE' || { echo "CHANGELOG missing the lint-write-path S25 entry"; false; }
 }
 
 @test "CLOSE-no-trailers: no attribution trailer across the campaign range (BASE..HEAD)" {
@@ -72,11 +73,12 @@ _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 t
 
 @test "CLOSE-tool-pins: every campaign pin file passes on main (C9 set — S21/S22/S23 edit existing lints, no new tool files)" {
   _close
-  # TODO(freeze): if C10 adds a NEW toolbelt/*.sh, add its bats basename here.
+  # C10 added no new toolbelt/*.sh; run-pure-test added below — S24 fixed run-pure-test.sh's cwd
+  # and its pin (tests/run-pure-test.bats) was missing from this loop.
   for f in lint-delays triage-console lint-timers report-module schema-risk facets-lint \
            slot-coverage rc-scan station-snapshot bog-audit lint-wb-threading verify-module \
            lint-servlet retro-loop lint-structure lint-write-path \
-           ext-writable-shape lint-silent-protection demand-in-scope; do
+           ext-writable-shape lint-silent-protection demand-in-scope run-pure-test; do
     [ -f "$REPO/tests/$f.bats" ] || { echo "ABSENT pin: $f.bats"; false; }
     run bats "$REPO/tests/$f.bats"
     [ "$status" -eq 0 ] || { echo "FAILED pin: $f.bats"; false; }
