@@ -108,17 +108,17 @@ Chain strategy: stacked-to-main
 **Apply-package input**: `950a1da06` (S18-lint package; shares the same apply-package with PR2) — re-read at apply.
 **Cross-PR**: R3↔R8 COUPLED on CR-3 smoke pin — whichever of PR3/PR8 merges second must update the SP-smoke CR-3 subject assertion (absent once Pattern A ext is wired in PR8).
 
-- [ ] 3.1 Re-read RED tip `e38e503` (K13): confirm SP1/SP3/SP8 each emit exactly ONE WARN (dedupe per trip site — a trip reached by several guard branches is one row, not one per branch); confirm SP2 is the cross-file one-level field→slot follow resolved within the same source directory; confirm SP8 pins that a private field is never a surface; confirm row grammar `WARN  lint-silent-protection  <file>:<line>  <reason>` (D2a).
-- [ ] 3.2 Cherry-pick / merge RED branch into `feat/c9-silent-protection` as commit 1.
-- [ ] 3.3 Write `toolbelt/lint-silent-protection.sh`: two-part scan per D4 — TRIPS detection + SURFACES resolution; one-level field→adapter follow (SP2); effect-slot exemption (SP3); name allowlist advisory seam; `LC_ALL=C`; `set -u`; dot-dirs pruned (D9b); exits 0/1/3 (K20); no `eval`; `shellcheck 0.10.0` clean (CD6).
-- [ ] 3.4 Write `tests/lint-silent-protection.bats` (SP1-SP7 verbatim from RED; SP8 mutation pin; SP-smoke; inline heredoc fixtures into `$BATS_TEST_TMPDIR`).
-- [ ] 3.5 Add K19 routing: `BUILD-LOOP.md` §5 + `skill/SKILL.md` for `lint-silent-protection.sh [ev: retro c9-silent-protection]` (CD5, R3.8).
-- [ ] 3.6 Extend `toolbelt/report-module.sh`: append member row for `lint-silent-protection`; FAIL surfaces as aggregate FAIL (R3.9).
-- [ ] 3.7 **Named mutations** (OBSERVED): (a) treat a private field as a surface → CR-3 (`freezeTripped` private at `BEvaporatorUnit.java:1287`) WARN disappears; SP8 flips; (b) drop the field→slot follow → CP-2 `dischargeHighAlarm` (written at `:1994`) starts WARNing — false positive. Record verbatim output for each (R3.10).
-- [ ] 3.8 SP-smoke (CD10): `lint-silent-protection.sh` on ColdRoomPan-rt · CompPan-rt · DashboardPan-rt · DashboardPan-ux — CP-1 and CR-3 MUST appear as named subjects; CP-2 and `defrostSkipped` MUST be absent; exact count matches expected. **If PR8 has already merged** (CR-3 alarm ext wired), update the pin: CR-3 is now absent from the smoke; record the updated expectation.
-- [ ] 3.9 Guards: `bats tests/lint-silent-protection.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers; rebase onto kit main before QA ping; verify `git log -1` before settle.
-- [ ] 3.10 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope (CD1).
-- [ ] **[lead]** SP1-SP8 + SP-smoke green (CR-3 pin updated if PR8 merged first); OBSERVED SP8 flip recorded; K19 routing; `kit-links.bats` green; merge ff-only; ledger acquire + settle `--max-changed-lines 220`.
+- [x] 3.1 Re-read RED tip `e38e503` (K13): confirm SP1/SP3/SP8 each emit exactly ONE WARN (dedupe per trip site — a trip reached by several guard branches is one row, not one per branch); confirm SP2 is the cross-file one-level field→slot follow resolved within the same source directory; confirm SP8 pins that a private field is never a surface; confirm row grammar `WARN  lint-silent-protection  <file>:<line>  <reason>` (D2a).
+- [x] 3.2 Cherry-pick / merge RED branch into `feat/c9-silent-protection` as commit 1.
+- [x] 3.3 Write `toolbelt/lint-silent-protection.sh`: two-part scan per D4 — TRIPS detection + SURFACES resolution; one-level field→adapter follow (SP2); effect-slot exemption (SP3); name allowlist advisory seam; `LC_ALL=C`; `set -u`; dot-dirs pruned (D9b); exits 0/1/3 (K20); no `eval`; `shellcheck 0.10.0` clean (CD6).
+- [x] 3.4 Write `tests/lint-silent-protection.bats` (SP1-SP7 verbatim from RED; SP8 mutation pin; SP-smoke; inline heredoc fixtures into `$BATS_TEST_TMPDIR`).
+- [x] 3.5 Add K19 routing: `BUILD-LOOP.md` §5 + `skill/SKILL.md` for `lint-silent-protection.sh [ev: retro c9-silent-protection]` (CD5, R3.8).
+- [x] 3.6 Extend `toolbelt/report-module.sh`: append member row for `lint-silent-protection`; FAIL surfaces as aggregate FAIL (R3.9).
+- [x] 3.7 **Named mutations** (OBSERVED): (a) treat a private field as a surface → CR-3 (`freezeTripped` private at `BEvaporatorUnit.java:1287`) WARN disappears; SP8 flips; (b) drop the field→slot follow → CP-2 `dischargeHighAlarm` (written at `:1994`) starts WARNing — false positive. Record verbatim output for each (R3.10).
+- [x] 3.8 SP-smoke (CD10): `lint-silent-protection.sh` on ColdRoomPan-rt · CompPan-rt · DashboardPan-rt · DashboardPan-ux — CP-1 and CR-3 MUST appear as named subjects; CP-2 and `defrostSkipped` MUST be absent; exact count matches expected. **If PR8 has already merged** (CR-3 alarm ext wired), update the pin: CR-3 is now absent from the smoke; record the updated expectation.
+- [x] 3.9 Guards: `bats tests/lint-silent-protection.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers; rebase onto kit main before QA ping; verify `git log -1` before settle.
+- [x] 3.10 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope (CD1).
+- [x] **[lead]** SP1-SP8 + SP-smoke green (CR-3 pin updated if PR8 merged first); OBSERVED SP8 flip recorded; K19 routing; `kit-links.bats` green; merge ff-only; ledger acquire + settle `--max-changed-lines 220`.
 
 ---
 
