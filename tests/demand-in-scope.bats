@@ -151,3 +151,15 @@ JAVA
   [ "$status" -eq 0 ]                                  # the tool ran (RED now: absent -> 127)
   [ "$(printf '%s\n' "$output" | grep -c 'WARN.*step')" -eq 0 ]   # real step: demand in scope, not flagged
 }
+
+# --- DS9: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
+@test "DS9: no-sources-exit-3 (empty dir and a dir with only a non-Java file -> exit 3 + ERROR row, no WARN)" {
+  E="$BATS_TEST_TMPDIR/empty"; rm -rf "$E"; mkdir -p "$E"
+  run "$DIS" "$E"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" == *"demand-in-scope"* ]] && [[ "$output" != *"WARN"* ]]
+  N="$BATS_TEST_TMPDIR/nojava"; rm -rf "$N"; mkdir -p "$N/com/x"; printf 'not java\n' > "$N/com/x/README.txt"
+  run "$DIS" "$N"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
+}
