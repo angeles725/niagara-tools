@@ -1,0 +1,13 @@
+INFO [08:00:00 03-Sep-26 CST][sys] Station starting: Paccadia
+SEVERE [08:14:02 03-Sep-26 CST][bacnet.transport] Transaction Timed out
+  javax.baja.bacnet.BacnetException: Transaction Timed out
+  	at com.tridium.bacnet.stack.transport.Transaction.timeout(Transaction.java:210)
+  	at com.tridium.bacnet.stack.network.NetworkLayer.run(NetworkLayer.java:501)
+  	at java.base/java.lang.Thread.run(Thread.java:834)
+WARNING [08:14:03 03-Sep-26 CST][authentication] Could not authenticate user 'guest'
+WARNING [08:14:04 03-Sep-26 CST][platDataRecovery.service] Recovery data detected
+WARNING [16:20:10 02-Sep-26 CST][coldRoomPan] coldRoom: changed
+  java.lang.IllegalArgumentException: time <= 0
+  	at com.tridium.sys.engine.EngineManager.schedule(EngineManager.java:497)
+  	at com.angeles.ColdRoomPan.BDefrostController.armTrigger(BDefrostController.java:431)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)

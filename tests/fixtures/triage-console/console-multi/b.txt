@@ -1,0 +1,5 @@
+WARNING [18:58:19 03-Sep-26 CST][coldRoomPan] coldRoom: changed
+  java.lang.IllegalArgumentException: time <= 0
+  	at com.tridium.sys.engine.EngineManager.schedule(EngineManager.java:497)
+  	at com.angeles.ColdRoomPan.BDefrostController.armTrigger(BDefrostController.java:431)
+  	at com.tridium.sys.engine.EngineManager.doRun(EngineManager.java:300)

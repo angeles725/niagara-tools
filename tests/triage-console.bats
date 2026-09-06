@@ -113,3 +113,28 @@ setup() {
   [[ "$output" == *"SEVERE"* ]]               # GRAVE normalized
   [[ "$output" == *"WARNING"* ]]              # ADVERTENCIA normalized
 }
+
+# ===========================================================================
+# CAMPAIGN 8 PR2 hardening — from the real PANCCADIA smoke, which leaked FOREIGN rows (bacnet
+# timeouts, [authentication], [platDataRecovery.service]) and failed to GROUP the own exception
+# across files. Attribution filter (worker fix): a row is OURS iff it has an own frame OR an own
+# logger tag OR a bog-drift shape ([sys.registry] Missing class for "ColdRoomPan:…"). Cross-file
+# grouping keys on level + exception class + digit-normalized message + own frame.
+
+@test "TR10: a mixed console (bacnet/auth/recovery foreign + one own time<=0) -> exactly the own row, NO foreign rows" {
+  run "$TC" --package com.angeles "$FX/console-foreign.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"time <= 0"* ]] && [[ "$output" == *"BDefrostController"* ]]   # the own row is present
+  [[ "$output" != *"Transaction Timed out"* ]]     # bacnet SEVERE, com.tridium-only stack -> excluded
+  [[ "$output" != *"authenticate"* ]]              # [authentication] -> excluded
+  [[ "$output" != *"Recovery data"* ]]             # [platDataRecovery.service] -> excluded
+}
+
+@test "TR11: the same own exception in two files under a dir -> ONE row, count 2, first from A, last from B, subject=dir" {
+  run "$TC" --package com.angeles "$FX/console-multi"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"time <= 0"* ]]
+  [[ "$output" == *"2"* ]]                         # cross-file count = 2 (one row, not one-per-file)
+  [[ "$output" == *"16:20:10"* ]] && [[ "$output" == *"18:58:19"* ]]   # first ts from a.txt, last from b.txt
+  [[ "$output" == *"console-multi"* ]]             # subject is the directory basename when a dir is passed
+}
