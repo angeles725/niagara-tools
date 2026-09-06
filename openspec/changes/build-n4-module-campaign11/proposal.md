@@ -204,7 +204,7 @@ No station write, no operator data mutation, and no live jar deploy is performed
 ## 12. Review Workload Note
 
 `delivery_strategy` = **auto-chain**.
-`Decision needed before apply: No` — **`size:exception` GRANTED for PR1** by the lead under Cristian's standing delegation (2026-09-06 "sigan trabajando … preparar el terreno"): the three-lint cut is atomic by design (§Alternatives), the review load is mitigated by the 7-case golden set + 3×3 real-tree baselines, and investigador1's second read is mandatory before merge. Cristian may revoke; if revoked, PR1 rolls to C12 as a whole, never split. `[ev: proposal §Size; explore §5.1]`
+`Decision needed before apply: No` — **`size:exception` GRANTED for PR1 with a CEILING of 700 changed lines** (design D1k measured ≈663 changed / ~353 authored; above 700 the lead re-requests, never splits) by the lead under Cristian's standing delegation (2026-09-06 "sigan trabajando … preparar el terreno"): the three-lint cut is atomic by design (§Alternatives), the review load is mitigated by the 7-case golden set + 3×3 real-tree baselines, and investigador1's second read is mandatory before merge. Cristian may revoke; if revoked, PR1 rolls to C12 as a whole, never split. `[ev: proposal §Size; explore §5.1]`
 `Chained PRs recommended: Yes` — one wave, 5 slices, ordered T1 → T3 → T2 → T4 → close; PR5 opens only after PR1-PR4 merge.
 `400-line budget risk: High` — PR1 is estimated at **~500-600 changed lines** and cannot be split without leaving two parsers live between merges (§5). PR2 ~120, PR3 ~140, PR4 ~220, PR5 ~180 are all under budget.
 
