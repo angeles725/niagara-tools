@@ -51,7 +51,7 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
   _close
   sec="$(awk -v t="## [v${VERSION_TARGET}]" 'index($0,t)==1{f=1;next} /^## \[/{f=0} f' "$REPO/CHANGELOG.md")"
   [ -n "$sec" ] || { echo "no [v${VERSION_TARGET}] section"; false; }
-  # TODO(freeze): confirm the wording; these greps pin that each unit is named.
+  # Frozen: the four C11 units, each named in the [v0.22.0] section (greps below).
   printf '%s\n' "$sec" | grep -qiE 'shared parser|PEAK|one-liner|accessor'    || { echo "CHANGELOG missing the T1 shared-parser entry"; false; }
   printf '%s\n' "$sec" | grep -qiE 'client-root|single-source|client tree'     || { echo "CHANGELOG missing the T2 client-root entry"; false; }
   printf '%s\n' "$sec" | grep -qiE 'concept-drift|DRIFT'                        || { echo "CHANGELOG missing the T3 concept-drift entry"; false; }
@@ -92,7 +92,8 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
   _close
   # C11 adds a NEW toolbelt/*.sh: lint-guard-pins.sh -> its pin (guard-pins) joins the loop,
   # alongside the T1/T2/T3 pin bats (golden-parser, parser-oneliner, client-root-single-source,
-  # write-path-drift). TODO(freeze): confirm this is the full C11 pin set on main.
+  # write-path-drift). Frozen: the C10 set (20) + the new tool's pin guard-pins + the four
+  # C11 pin bats = the full C11 pin set on main.
   for f in lint-delays triage-console lint-timers report-module schema-risk facets-lint \
            slot-coverage rc-scan station-snapshot bog-audit lint-wb-threading verify-module \
            lint-servlet retro-loop lint-structure lint-write-path \
@@ -109,7 +110,7 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
   R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
-  # C11 is kit-only -> client module versions carry over from C10. TODO(freeze): update if a client PR bumps them.
+  # C11 is kit-only (no client module bumped a version) -> versions carry over from C10 (verified).
   [ "$(v "$R/Compresores/build.gradle.kts")" = "2.2.0" ]
   [ "$(v "$R/Paccadia/build.gradle.kts")"    = "2.1.0" ]
   [ "$(v "$R/Dashboard/build.gradle.kts")"   = "2.2.0" ]
