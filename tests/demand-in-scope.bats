@@ -12,17 +12,17 @@
 # Real PASS shape: CompressorControl.step(long now, int demandCount, ... double suction ...) with
 #   `if (demandCount <= 0) target = 0;` — demand gates, pressure only modulates. [ev: corpus B820 §820.4]
 #
-# SURFACE: demand-in-scope.sh [--strict] <java-src-dir>
+# SURFACE: lint-demand-scope.sh [--strict] <java-src-dir>
 #   Row:  WARN  demand-in-scope  <file>:<line>  <method> reads <pv> with no demand-shaped input in scope
 #   Exits: 0 no WARN (or WARN without --strict) · 1 any WARN under --strict · 3 usage/env
 #
-# RED today: demand-in-scope.sh does not exist -> every pin fails for the right reason (tool absent).
+# RED today: lint-demand-scope.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (§820.4, DS2): remove the demandCount param + the `if (demandCount<=0) target=0` gate,
 #   leaving staging on suction alone -> the method WARNs ("pressure without demand").
 
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
-  DIS="$KIT/toolbelt/demand-in-scope.sh"
+  DIS="$KIT/toolbelt/lint-demand-scope.sh"
   S="$BATS_TEST_TMPDIR/src"
   REAL="/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/CompressorControl.java"
 }
