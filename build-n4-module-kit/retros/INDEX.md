@@ -91,3 +91,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign9-doctrine-fold.md | kit | 2026-09-06 | folded | 7 |
 | 2026-09-06-campaign9-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 25 | <!-- 19 investigador1 lessons + 6 W2/W3 lead additions: stale-checkout, re-anchor, RED-wins, harness-pins, design-re-apply, null-Context-security, BUser-is-Context, lockout-accounting, scheme-leak, tool-failure, repo-visibility, identity-vs-session, second-read, repo-fixed≠deployed, resume-from-tree, negative-claim-grep, fixture-fitting, golden-axis, conservative-lag; TTL-never-compared, comment-pins, HashMap-servlet, BUILD-STATE-pairing, K13-QA-REDs, K12-worktree-scope -->
 | 2026-09-06-campaign10-run-pure-test-cwd.md | kit | 2026-09-06 | pending | 1 |
+| 2026-09-06-campaign10-lint-timers-scope.md | kit | 2026-09-06 | pending | 4 |

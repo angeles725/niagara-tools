@@ -120,77 +120,144 @@ done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | 
 
 # ---------------------------------------------------------------------------
 # Check: companion-flag
-# A boolean/int flag assigned true in the SAME METHOD BODY as a Clock.schedule*
-# call must be assigned false inside stopped() OR started(); clearing it only
-# in the expiry handler does not protect a stop/restart cycle — the same object
-# is reused and the flag stays stuck.
-# Real shape: CompPan BCompressorControl atSteadyState() :1760 startingUp=true
-# beside :1764 powerOnTicket=Clock.schedule; stopped() :1799-1805 cancels the
-# ticket only. Note: the gap is 4 lines — the same-method scope (not ±3) is
-# the correct rule; ±3 was the design draft but misses the real shape.
-# [ev: corpus B801] [ev: corpus B812]
+# A boolean/int CLASS FIELD assigned true in the SAME METHOD BODY as a
+# Clock.schedule* call must be assigned false inside stopped() OR started();
+# a clear only in the expiry handler does not protect a stop/restart cycle —
+# the same object is reused and the flag stays stuck.
+# Only CLASS-SCOPE FIELDs (declared at brace depth 1, outside any method body)
+# are candidates — a method-local boolean is re-initialised every call and
+# cannot stay stuck across a stop/restart cycle.
+# Real shape: CompPan BCompressorControl :1760 startingUp=true beside
+# :1764 powerOnTicket=Clock.schedule; stopped() :1799-1805 cancels only.
+# Root cause of pre-fix FP (anyNoHardware): Pass 1's candidate regex matched
+# @NiagaraProperty( as a method signature and forward-walked the class body,
+# pulling in Clock.schedule calls from unrelated methods.
+# Fix: port the section-D method-boundary parser from lint-silent-protection.sh
+# (net-brace-open detection + brace_depth >= 2 guard so the class body at
+# depth 1 is never named as a method) + a class-scope FIELD pass.
+# [ev: D1a; D1b; D1c; D1d; corpus B831 §S21]
 # ---------------------------------------------------------------------------
 while IFS= read -r f; do
   _cf=$(awk '
     BEGIN { n = 0 }
     { lines[++n] = $0 }
     END {
-      n_kw = split("if for while switch catch try finally return new assert synchronized throw else do instanceof super this void boolean int long double float String abstract final static public private protected class interface enum Clock Sys BRelTime BComponent BAbstractService", KW_STR, " ")
-      for (k = 1; k <= n_kw; k++) kw[KW_STR[k]] = 1
+      # --- Comment strip: blank // and /* */ content; line numbers preserved ---
+      in_bc = 0
+      for (i = 1; i <= n; i++) {
+        ln = lines[i]; out = ""; j = 1
+        while (j <= length(ln)) {
+          if (in_bc) {
+            if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 }
+            else j++
+          } else {
+            c2 = substr(ln, j, 2)
+            if (c2 == "/*") { in_bc = 1; j += 2 }
+            else if (c2 == "//") break
+            else { out = out substr(ln, j, 1); j++ }
+          }
+        }
+        slines[i] = out
+      }
 
-      flag_name = ""
+      # --- Phase 1: collect class-scope FIELD declarations (brace_depth == 1) ---
+      # A boolean/int declared while the surrounding brace depth is exactly 1
+      # (inside the class body, before any method opens) is a FIELD.
+      # The same shape at depth >= 2 is a LOCAL and is not a candidate.
+      n_fields = 0; brace_depth = 0
+      for (i = 1; i <= n; i++) {
+        ln = slines[i]; prev_depth = brace_depth
+        for (ci = 1; ci <= length(ln); ci++) {
+          c = substr(ln, ci, 1)
+          if (c == "{") brace_depth++
+          else if (c == "}") brace_depth--
+        }
+        if (prev_depth == 1 && \
+            ln ~ /[[:space:]](boolean|int|long)[[:space:]][a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*[;=]/) {
+          tmp = ln; gsub(/^[[:space:]]+/, "", tmp)
+          while (tmp ~ /^(private|protected|public|static|final|volatile|transient)[[:space:]]/)
+            sub(/^[a-z]+[[:space:]]+/, "", tmp)
+          sub(/^(boolean|int|long)[[:space:]]+/, "", tmp)
+          if (match(tmp, /^[a-zA-Z_][a-zA-Z0-9_]*/)) {
+            fields[substr(tmp, 1, RLENGTH)] = 1; n_fields++
+          }
+        }
+      }
+      if (n_fields == 0) exit 0
 
-      # Pass 1: find a method body that contains both Clock.schedule and an = true; assignment
-      i = 1
-      while (i <= n && flag_name == "") {
-        line = lines[i]
-        if (match(line, /[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(/)) {
-          cand = substr(line, RSTART, RLENGTH)
-          sub(/[[:space:]]*\($/, "", cand)
-          if (cand != "" && !(cand in kw)) {
-            j = i; in_b = 0; depth = 0; body = ""; done_j = 0
-            while (j <= n && !done_j) {
-              ln = lines[j]
-              for (c = 1; c <= length(ln); c++) {
-                ch = substr(ln, c, 1)
-                if (!in_b) {
-                  if (ch == "{") { in_b = 1; depth = 1 }
-                  else if (ch == ";") { done_j = 1; break }
-                } else {
-                  if (ch == "{") depth++
-                  else if (ch == "}") {
-                    depth--
-                    if (depth == 0) { i = j; done_j = 1; break }
+      # --- Phase 2: method-boundary parser (section D, brace_depth >= 2 guard) ---
+      # Ported from lint-silent-protection.sh:250-320 with the added guard:
+      # accept a method open only when the post-open brace_depth >= 2.
+      # The class body opens at depth 1; any real method body opens at depth >= 2.
+      # This kills the @NiagaraProperty( false-positive by construction:
+      # that annotation line has net brace change 0, so it never fires the guard.
+      n_meth = 0; brace_depth = 0; in_m = 0; m_start = 0; m_dep = 0
+      for (i = 1; i <= n; i++) {
+        ln = slines[i]; old_d = brace_depth
+        for (ci = 1; ci <= length(ln); ci++) {
+          c = substr(ln, ci, 1)
+          if (c == "{") brace_depth++
+          else if (c == "}") brace_depth--
+        }
+        if (!in_m && brace_depth > old_d && brace_depth >= 2) {
+          mname = ""
+          # Case A: single-line signature — identifier(...) [throws ...] {
+          if (match(ln, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
+            seg = substr(ln, RSTART)
+            match(seg, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); mname = substr(seg, 1, RLENGTH)
+            if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
+          }
+          # Case B: { alone on its line — scan backward for identifier(
+          # Stop: annotation (@), prior statement (;$), prior block open ({).
+          # Exclude class/interface/enum to avoid naming the class body.
+          if (mname == "") {
+            bonly = ln; gsub(/[[:space:]]/, "", bonly)
+            if (bonly == "{") {
+              for (k = i-1; k >= 1 && k >= i-20; k--) {
+                lk = slines[k]; lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
+                if (substr(lk_t, 1, 1) == "@") break
+                if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
+                if (match(lk, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\(/)) {
+                  seg2 = substr(lk, RSTART)
+                  match(seg2, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); cn = substr(seg2, 1, RLENGTH)
+                  if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
+                    mname = cn; break
                   }
-                  body = body ch
-                }
-              }
-              if (!done_j) { body = body " "; j++ }
-            }
-            if (in_b && body ~ /Clock\.schedule/) {
-              tmp = body
-              while (match(tmp, /[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*=[[:space:]]*true[[:space:]]*;/)) {
-                frag = substr(tmp, RSTART, RLENGTH)
-                ident = frag
-                sub(/[[:space:]]*=.*$/, "", ident)
-                gsub(/[[:space:]]/, "", ident)
-                tmp = substr(tmp, RSTART + RLENGTH)
-                if (ident != "" && ident !~ /^(this|super|Clock|return|new|null)$/) {
-                  flag_name = ident; break
                 }
               }
             }
           }
+          if (mname != "") { in_m = 1; m_start = i; m_dep = brace_depth }
         }
-        i++
+        if (in_m && brace_depth < m_dep) {
+          meth_start[n_meth] = m_start; meth_end[n_meth] = i; n_meth++; in_m = 0
+        }
       }
 
+      # --- Phase 3: same-method binding (D1d) ---
+      # FAIL only when a Clock.schedule* lies within [meth_start[m], meth_end[m]]
+      # of the same method m that also contains the X = true assignment, and X is
+      # a class FIELD. Binding is by line-range containment, not by proximity.
+      flag_name = ""
+      for (mi = 0; mi < n_meth && flag_name == ""; mi++) {
+        ms = meth_start[mi]; me = meth_end[mi]
+        body = ""
+        for (i = ms; i <= me; i++) body = body " " slines[i]
+        if (body !~ /Clock\.schedule/) continue
+        tmp = body
+        while (match(tmp, /[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*=[[:space:]]*true[[:space:]]*;/)) {
+          frag = substr(tmp, RSTART, RLENGTH)
+          ident = frag; sub(/[[:space:]]*=.*/, "", ident); gsub(/[[:space:]]/, "", ident)
+          tmp = substr(tmp, RSTART + RLENGTH)
+          if (ident != "" && ident in fields) { flag_name = ident; break }
+        }
+      }
       if (flag_name == "") exit 0
 
-      # Pass 2: check stopped() and started() bodies for flag_name = false
+      # --- Pass 2 (unchanged): check stopped()/started() bodies for flag_name = false ---
       in_lc = 0; depth = 0; cleared = 0
       for (i = 1; i <= n; i++) {
-        line = lines[i]
+        line = slines[i]
         if (!in_lc && line ~ /void[[:space:]]+(stopped|started)[[:space:]]*\(/) {
           in_lc = 1; depth = 0
         }
@@ -199,10 +266,7 @@ while IFS= read -r f; do
           for (c = 1; c <= length(line); c++) {
             ch = substr(line, c, 1)
             if (ch == "{") depth++
-            if (ch == "}" && depth > 0) {
-              depth--
-              if (depth == 0) { in_lc = 0; break }
-            }
+            if (ch == "}" && depth > 0) { depth--; if (depth == 0) { in_lc = 0; break } }
           }
         }
       }
