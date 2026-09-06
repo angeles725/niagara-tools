@@ -157,7 +157,7 @@ setup() {
 # ===========================================================================
 # S25 (C10): NEW advisory class STALE — a matrix row whose slot name matches no
 # @NiagaraProperty (or --bog link-traced slot) in the source.
-#   Row:   STALE  lint-write-path  <slot>  no source slot with that name
+#   Row:   STALE  lint-write-path  <matrix-path>:<line>  slot <name>: no source slot with that name (STATUS-first, same shape as the FAIL row at :374; the :line distinguishes the three hoaMode rows)
 #   Exit:  0 = all covered AND (no STALE OR STALE without --strict);
 #          1 = any uncovered FAIL (UNCHANGED) OR any STALE under --strict;
 #          3 = usage/no sources/no matrix (unchanged).
