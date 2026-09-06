@@ -424,6 +424,7 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" != *"companion-flag"* ]]
 }
+
 # ---------------------------------------------------------------------------
 # S21-misparse (Phase-2 brace_depth>=2 method-detect guard, from investigador1's
 # BMisparse): a class-level @NiagaraProperty whose defaultValue holds a constructor
@@ -433,6 +434,7 @@ JAVA
 # guard (only depth>=2 opens a method) keeps armA/armB separate -> CLEAN. RED on
 # df8c7ec (pre-guard mis-parse false-FAILs); the fix is clean, and dropping the
 # guard re-introduces the false FAIL.
+# ---------------------------------------------------------------------------
 @test "S21-misparse: a depth-1 @NiagaraProperty(defaultValue=\"new BAlarmRecord()\") does NOT mis-parse into a method; cross-method flag/schedule stay CLEAN" {
   D="$BATS_TEST_TMPDIR/s21mis"; mkdir -p "$D"
   cat > "$D/BMisparse.java" <<'JAVA'
