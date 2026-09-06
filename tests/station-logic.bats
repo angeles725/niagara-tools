@@ -96,13 +96,47 @@ XML
   [[ "$output" == *"CHECK18"* ]] && [[ "$output" == *"FAIL"* ]]
 }
 
-@test "SL-smoke-panccadia: PANCCADIA -> CHECK18 FAIL on ColdRoom_1 EvaporatorUnit_1 and _3, CHECK14 WARN ColdRoom_5, else clean (SKIP if absent)" {
+@test "SL-smoke-panccadia: EXACT per-check counts + subjects — a presence-only pass cannot recur (SKIP if absent)" {
+  # Tightened after a presence-only pin let four rule defects through (CHECK14 47 vs 1 — config INPUTS
+  # treated as outputs; CHECK19 16 vs 0 — direction inverted; CHECK18 reported at the PANEL not per unit,
+  # the count-2 trap where two WRONG Cuarto rows satisfied a count-only assertion; MX60 CHECK13 3 vs 0).
   RB="${C8_PANCCADIA_BOG:-$BOGX/panccadia/file.xml}"
-  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine"
+  [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG)"
   BF="$RB"; case "$RB" in *.xml) ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/file.xml" ) && ( cd "$T" && zip -q pan.bog file.xml && rm -f file.xml ); BF="$T/pan.bog" ;; esac
   run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan
   [ "$status" -eq 1 ]
-  [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]   # EvaporatorUnit_1 and _3
-  [[ "$output" == *"CHECK14"* ]] && [[ "$output" == *"WARN"* ]]      # ColdRoom_5/EvaporatorUnit2 evapOut
-  [[ "$output" != *"CHECK13  FAIL"* ]] && [[ "$output" != *"CHECK16  FAIL"* ]] && [[ "$output" != *"CHECK17  FAIL"* ]]
+  # CHECK11 proxy-link-safety: exactly 17 (already correct)
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK11  FAIL')" -eq 17 ]
+  # CHECK13 relay-double-source: writable proxy points ONLY -> 0 on PANCCADIA
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK13  FAIL')" -eq 0 ]
+  # CHECK14 own-output-unlinked: EXACTLY 1, and it is ColdRoom_5/EvaporatorUnit2 evapOut.
+  #   config INPUTS (fanMode/freezeDiffStop/*Setpoint/*Limit/*Mode) are not outputs -> must not fire.
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK14  WARN')" -eq 1 ]
+  [[ "$output" == *"CHECK14  WARN"*"EvaporatorUnit2"*"evapOut"* ]]
+  # CHECK15 sensor-crossed / CHECK16 sibling / CHECK17 room-index: 0
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK15  ')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK16  FAIL')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK17  FAIL')" -eq 0 ]
+  # CHECK18 tile-number: EXACTLY 2, per UNIT (EvaporatorUnit_1 and _3 under ColdRoom_1), NOT at the panel.
+  #   count==2 alone is insufficient (two wrong Cuarto rows also count 2) -> the subject checks are load-bearing.
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_1"* ]]
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_3"* ]]
+  [ "$(printf '%s\n' "$output" | grep 'CHECK18' | grep -c 'Cuarto')" -eq 0 ]   # no panel-level subject; Cuarto3 clean
+  # CHECK19 link-direction: panel->control config is FORWARD, not reverse -> 0
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK19  WARN')" -eq 0 ]
+}
+
+@test "SL-smoke-mx60: chihuahua supervisor -> CHECK13-19 all 0 (routeAlarm fan-in is NOT a relay double-source; SKIP if absent)" {
+  # A real supervisor with no CRP/CompPan/DashboardPan must be silent on the station-logic checks.
+  # Regression pin for the CHECK13 false positive: AlarmService 'routeAlarm' fan-in (7-8 sources) is alarm
+  # routing, not a writable proxy point — CHECK13 must target c:BooleanWritable/NumericWritable only.
+  RB="${C8_MX60_BOG:-}"
+  [ -n "$RB" ] && [ -f "$RB" ] || skip "MX60 bog not on this machine (set C8_MX60_BOG)"
+  BF="$RB"; case "$RB" in *.xml) ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/mx.xml" ) && ( cd "$T" && zip -q mx.bog mx.xml && rm -f mx.xml ); BF="$T/mx.bog" ;; *) cp "$RB" "$T/mx.bog"; BF="$T/mx.bog" ;; esac
+  run "$BA" "$BF" --module chihuahua
+  for c in CHECK13 CHECK14 CHECK15 CHECK16 CHECK17 CHECK18 CHECK19; do
+    [ "$(printf '%s\n' "$output" | grep -c "$c  FAIL")" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | grep -c "$c  WARN")" -eq 0 ]
+  done
 }
