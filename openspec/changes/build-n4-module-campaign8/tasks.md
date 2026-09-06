@@ -152,17 +152,17 @@ Chain strategy: stacked-to-main
 
 **RED**: none (CD2) | **Gate**: R7.1-R7.10, SC5 K6, SC10, SC11
 
-- [ ] 7.1 grep-before-fold: `rg '8-layer|Excavador|schema-risk.*mandatory|inter-module.*service|step-up.*auth|BHistoryExt|station load budget' build-n4-module-kit/` → confirm 0 hits for new content (K6).
-- [ ] 7.2 Extend `types/logic.md` §Safety: 8-layer timer SM defense (layers 1-8, R7.1) + "folded as code: `lint-delays.sh`" line `[ev: corpus B775]` `[ev: corpus B801]`.
-- [ ] 7.3 Extend `types/logic-authoring.md` with §"talking to another module" (R7.3): `BLink`/service-discovery/`Subscriber`; `fox:` hop boundary; anti-pattern: bespoke bus; B802-G1 OPEN `[ev: corpus B802]`.
-- [ ] 7.4 Extend `types/dashboard.md`: step-up auth section (R7.4/R7.5) + CsrfUtil correction to DWS1 gate 2 + #49 client guidance; B803-G1/G2 OPEN `[ev: corpus B803]`.
-- [ ] 7.5 Extend `toolbelt/triage-console.sh` header + `METHODOLOGY.md` §Conformance: triple-attribution + locale contract + "folded as code: `triage-console.sh`" (R2.6, D7) `[ev: corpus B800]`.
-- [ ] 7.6 Extend `toolbelt/verify-module.sh` header §Checks: cert-chain trust note + "folded as code:" line (R7.6, D8) `[ev: corpus B800]`.
-- [ ] 7.7 Extend `BUILD-LOOP.md` §5: `schema-risk.sh` mandatory pre-deploy; exit-2 blocks deploy (R7.2) `[ev: corpus B795]` + CERT-live.
-- [ ] 7.8 Extend `METHODOLOGY.md` §0 + `skill/SKILL.md`: Excavador Tecnico working-profile (R7.9); decompiled-line-numbers note (R7.7); station load budget table + §806.9 8-count checklist (R7.10) — all lines `[ev: corpus B806]`. Investigador1 fidelity read of station-load-budget section.
-- [ ] 7.9 `kit-links.bats` L4/L5 green (routing already shipped with PR1/2/6 — PR7 adds no new routing line, D8).
-- [ ] 7.10 `sweep-fold-audit.sh --strict` exits 0; every `[ev:]` token resolvable; all doc delta lines carry `[ev: corpus B…]` (R7.8).
-- [ ] 7.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 7.1 grep-before-fold: `rg '8-layer|Excavador|schema-risk.*mandatory|inter-module.*service|step-up.*auth|BHistoryExt|station load budget' build-n4-module-kit/` → confirm 0 hits for new content (K6).
+- [x] 7.2 Extend `types/logic.md` §Safety: 8-layer timer SM defense (layers 1-8, R7.1) + "folded as code: `lint-delays.sh`" line `[ev: corpus B775]` `[ev: corpus B801]`.
+- [x] 7.3 Extend `types/logic-authoring.md` with §"talking to another module" (R7.3): `BLink`/service-discovery/`Subscriber`; `fox:` hop boundary; anti-pattern: bespoke bus; B802-G1 OPEN `[ev: corpus B802]`.
+- [x] 7.4 Extend `types/dashboard.md`: step-up auth section (R7.4/R7.5) + CsrfUtil correction to DWS1 gate 2 + #49 client guidance; B803-G1/G2 OPEN `[ev: corpus B803]`.
+- [x] 7.5 Extend `toolbelt/triage-console.sh` header + `METHODOLOGY.md` §Conformance: triple-attribution + locale contract + "folded as code: `triage-console.sh`" (R2.6, D7) `[ev: corpus B800]`.
+- [x] 7.6 Extend `toolbelt/verify-module.sh` header §Checks: cert-chain trust note + "folded as code:" line (R7.6, D8) `[ev: corpus B800]`.
+- [x] 7.7 Extend `BUILD-LOOP.md` §5: `schema-risk.sh` mandatory pre-deploy; exit-2 blocks deploy (R7.2) `[ev: corpus B795]` + CERT-live.
+- [x] 7.8 Extend `METHODOLOGY.md` §0 + `skill/SKILL.md`: Excavador Tecnico working-profile (R7.9); decompiled-line-numbers note (R7.7); station load budget table + §806.9 8-count checklist (R7.10) — all lines `[ev: corpus B806]`. Investigador1 fidelity read of station-load-budget section.
+- [x] 7.9 `kit-links.bats` L4/L5 green (routing already shipped with PR1/2/6 — PR7 adds no new routing line, D8).
+- [x] 7.10 `sweep-fold-audit.sh --strict` exits 0; every `[ev:]` token resolvable; all doc delta lines carry `[ev: corpus B…]` (R7.8).
+- [x] 7.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** `kit-links.bats` + `sweep-fold-audit.sh --strict` green; merge ff-only; `install-skill.sh --force` (SKILL.md changed, D12); ledger settle `--max-changed-lines 300`.
 
 ---
