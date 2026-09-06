@@ -59,3 +59,42 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
 }
+
+@test "WP7: no write-path-matrix.md found anywhere -> exit 3 + ERROR line" {
+  # Module root with OPERATOR slots but no docs/write-path-matrix.md anywhere up to git/fs root.
+  # We create a fresh git repo with no docs/ at any level; the walk should error out.
+  TMPREPO7="$(mktemp -d)"
+  git init -q "$TMPREPO7"
+  mkdir -p "$TMPREPO7/mod/src/com/x"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\npublic class BT extends BComponent {}\n' \
+    > "$TMPREPO7/mod/src/com/x/BT.java"
+  # No docs/write-path-matrix.md anywhere in the repo.
+  run "$LW" "$TMPREPO7/mod"
+  rm -rf "$TMPREPO7"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"* ]]
+  [[ "$output" == *"no write-path-matrix.md"* ]]
+}
+
+@test "WP8: matrix two levels up in <repo-root>/docs/ is found; module-root run reports only truly uncovered slots" {
+  # Simulates: <repo>/.git + <repo>/docs/write-path-matrix.md (shared matrix with setpoint row).
+  # Module root: <repo>/Paccadia/ColdRoomPan with OPERATOR slots fanMode (not in matrix) + setpoint (in matrix).
+  # BROKEN script (no walk-up): both slots FAIL (matrix empty).
+  # FIXED script (walk-up): only fanMode FAIL; setpoint covered by shared matrix.
+  TMPREPO8="$(mktemp -d)"
+  git init -q "$TMPREPO8"
+  mkdir -p "$TMPREPO8/docs"
+  printf '# Write-Path Matrix\n| Slot | Writer | Timing | Test |\n|---|---|---|---|\n| setpoint | Dashboard | mid-cycle | w1 |\n' \
+    > "$TMPREPO8/docs/write-path-matrix.md"
+  mkdir -p "$TMPREPO8/Paccadia/ColdRoomPan/src/com/x"
+  printf '@NiagaraProperty(name="fanMode", flags=Flags.OPERATOR)\n@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\npublic class BCrp extends BComponent {}\n' \
+    > "$TMPREPO8/Paccadia/ColdRoomPan/src/com/x/BCrp.java"
+  MOD8="$TMPREPO8/Paccadia/ColdRoomPan"
+  run "$LW" "$MOD8"
+  rm -rf "$TMPREPO8"
+  # fanMode uncovered -> FAIL; setpoint covered in shared matrix -> NOT flagged
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"fanMode"* ]]
+  [[ "$output" != *"setpoint"* ]]
+}

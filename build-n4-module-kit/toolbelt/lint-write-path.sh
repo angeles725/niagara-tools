@@ -6,10 +6,17 @@
 # docs/write-path-matrix.md (D16: row-presence only; CHECK12 is bog-audit's concern).
 # With --bog, adds link-traced dashboard/RoomPanel target slots to the required set.
 #
-# Usage:  lint-write-path.sh <module-root> [--bog <config.bog>]
+# Usage:  lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>]
+#
+# Matrix resolution (when --matrix is not given):
+#   1. <module-root>/docs/write-path-matrix.md
+#   2. Walk up parent directories until a docs/write-path-matrix.md is found OR
+#      a .git directory is encountered (repo root) OR the filesystem root is reached.
+#   If no matrix is found: ERROR exit 3.
 #
 #   Row format:  FAIL  lint-write-path  <module>  slot <name>: no matrix row
-#   Exits:       0  all covered · 1  any uncovered · 3  usage/env (K20)
+#   Error format: lint-write-path  ERROR  <module-root>  no write-path-matrix.md found (looked in <paths>)
+#   Exits:       0  all covered · 1  any uncovered · 3  usage/env/missing-matrix (K20)
 #
 # A comment mention of a slot name does NOT satisfy the matrix row requirement (R19.3).
 # Dot-directories pruned (D9b). VCS-free by design.
@@ -19,12 +26,13 @@ set -u
 
 FAILED=0
 BOG_FILE=""
+MATRIX_OVERRIDE=""
 
 # ---------------------------------------------------------------------------
 # Usage guard (exit 3 when no module-root given — K20 disjoint exit codes)
 # ---------------------------------------------------------------------------
 if [ $# -lt 1 ]; then
-    printf 'usage: lint-write-path.sh <module-root> [--bog <config.bog>]\n' >&2
+    printf 'usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>]\n' >&2
     exit 3
 fi
 
@@ -42,6 +50,15 @@ while [ $# -gt 0 ]; do
             BOG_FILE="$1"
             shift
             ;;
+        --matrix)
+            shift
+            if [ $# -lt 1 ]; then
+                printf 'lint-write-path: --matrix requires a file argument\n' >&2
+                exit 3
+            fi
+            MATRIX_OVERRIDE="$1"
+            shift
+            ;;
         *)
             printf 'lint-write-path: unknown option: %s\n' "$1" >&2
             exit 3
@@ -54,8 +71,50 @@ if [ ! -d "$MODULE_ROOT" ]; then
     exit 3
 fi
 
-MATRIX="$MODULE_ROOT/docs/write-path-matrix.md"
 SRC_DIR="$MODULE_ROOT/src"
+
+# ---------------------------------------------------------------------------
+# Matrix resolution: --matrix override, or walk up to find docs/write-path-matrix.md.
+# Stops at .git (repo root) or filesystem root. Exits 3 with ERROR if not found.
+# ---------------------------------------------------------------------------
+if [ -n "$MATRIX_OVERRIDE" ]; then
+    MATRIX="$MATRIX_OVERRIDE"
+    if [ ! -f "$MATRIX" ]; then
+        printf 'lint-write-path  ERROR  %s  --matrix file not found: %s\n' "$MODULE_ROOT" "$MATRIX"
+        exit 3
+    fi
+else
+    MATRIX=""
+    _looked=""
+    _dir="$MODULE_ROOT"
+    while true; do
+        _candidate="$_dir/docs/write-path-matrix.md"
+        if [ -z "$_looked" ]; then
+            _looked="$_candidate"
+        else
+            _looked="$_looked, $_candidate"
+        fi
+        if [ -f "$_candidate" ]; then
+            MATRIX="$_candidate"
+            break
+        fi
+        # Stop at vcs root (.git directory found)
+        if [ -d "$_dir/.git" ]; then
+            break
+        fi
+        _parent=$(dirname "$_dir")
+        # Stop at filesystem root
+        if [ "$_parent" = "$_dir" ]; then
+            break
+        fi
+        _dir="$_parent"
+    done
+    if [ -z "$MATRIX" ]; then
+        printf 'lint-write-path  ERROR  %s  no write-path-matrix.md found (looked in %s)\n' \
+            "$MODULE_ROOT" "$_looked"
+        exit 3
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # 1. Collect OPERATOR-flagged slot names from @NiagaraProperty annotations.
@@ -117,33 +176,23 @@ fi
 #    A row is a |..| line whose first cell begins with a lowercase letter (camelCase).
 #    Comment lines and header/separator rows are not data rows (R19.3).
 # ---------------------------------------------------------------------------
-_matrix_slots=""
-if [ -f "$MATRIX" ]; then
-    # Extract slot name from the first pipe-delimited cell of every |..| table row.
-    # The slot name is the FIRST backtick-quoted identifier in the cell, or the bare word
-    # if no backticks are present.  Only pure Java identifiers (^[a-z][A-Za-z0-9]+?$)
-    # are emitted; this filters out header rows ("Slot", "Writable Slot"), separator rows
-    # (---), comment lines (not |..| lines), and descriptive prose cells like
-    # "coil sensor" or "both suction sensors = NaN invalid".
-    # Accepts ≥ 4 columns; matches on slot-name column only (D16).
-    # shellcheck disable=SC2016
-    _matrix_slots=$(awk -F'|' '
-        /^\|/ {
-            cell = $2
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "", cell)
-            # If first char is a backtick: extract the content of the first `...` pair.
-            if (substr(cell,1,1) == "`") {
-                sub(/^`/, "", cell)
-                sub(/`.*/, "", cell)
-            } else {
-                # No backtick: take only the leading word (stop at space, backtick, or punctuation).
-                sub(/[[:space:]`\/(].*$/, "", cell)
-            }
-            # Keep only pure Java identifiers: starts with lowercase letter, alphanumeric only.
-            if (cell ~ /^[a-z][A-Za-z0-9]*$/) print cell
+# shellcheck disable=SC2016
+_matrix_slots=$(awk -F'|' '
+    /^\|/ {
+        cell = $2
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", cell)
+        # If first char is a backtick: extract the content of the first `...` pair.
+        if (substr(cell,1,1) == "`") {
+            sub(/^`/, "", cell)
+            sub(/`.*/, "", cell)
+        } else {
+            # No backtick: take only the leading word (stop at space, backtick, or punctuation).
+            sub(/[[:space:]`\/(].*$/, "", cell)
         }
-    ' "$MATRIX" 2>/dev/null | sort -u)
-fi
+        # Keep only pure Java identifiers: starts with lowercase letter, alphanumeric only.
+        if (cell ~ /^[a-z][A-Za-z0-9]*$/) print cell
+    }
+' "$MATRIX" 2>/dev/null | sort -u)
 
 # ---------------------------------------------------------------------------
 # 3. If --bog: add link-traced dashboard/RoomPanel target slots to required set.
