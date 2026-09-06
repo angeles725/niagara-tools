@@ -510,10 +510,55 @@ LDAP / SAML / OAuth / gauth users are **not locally re-verifiable** through `val
 `instanceof BPasswordCache` guard (`[INFER]`, B803-G1, gauth → B830-G3).
 
 **Session.** `WebOp.getRequest().getSession()` (`WebOp.java:185-188`) supplies the container session id; the config
-token lives in a **module-held map** keyed by that id → `{username, issuedAt, lastActivity}`, with the module's **own**
-short absolute TTL and sliding inactivity — shorter than the station auto-logoff (`BUserService.defaultAutoLogoffPeriod`
-= 15 min, MIN 2 min, MAX 4 h). **Never touch `WebOp.getUser()`**: the kiosk identity must stay the kiosk's, and the
-second identity must never be installed into the container session as "the user".
+token lives in a **module-held map** keyed by that id, with the module's **own** short absolute TTL and sliding
+inactivity — shorter than the station auto-logoff (`BUserService.defaultAutoLogoffPeriod` = 15 min, MIN 2 min,
+MAX 4 h). **Never touch `WebOp.getUser()`**: the kiosk identity must stay the kiosk's, and the second identity must
+never be installed into the container session as "the user".
+
+**D8c-1 — the pure-core contract, fixed by RED `qa/c9-s12-config-login` `cc1c948`** (parent `a109249`,
+DashboardPan-ux). The decision layer is Baja-free and exhaustively unit-testable off-station; the servlet keeps only
+the adapter. These names are the contract:
+
+```java
+ConfigLoginGuard(users, sessions)
+  login(...)          -> 200 | 401
+  logout(...)
+  requireSession(...) -> 200 (RENEWS the session) | 403
+  reason(403)         -> "config_login_required"
+  static statusForWrite(boolean permissionDenied, boolean auditFailed) -> 403 | 200
+
+interface Clock      { now(); }
+interface UserLookup { find(name); }                       // = svc.getUser, null on unknown
+interface UserHandle { username(); canLogin(); isPasswordCache(); validate(pw);
+                       authenticateOk(); authenticateFailed(); }
+
+ConfigSession(Clock, ttlMs)
+  issue(httpSessionId, username)
+  userFor(httpSessionId)   // null if absent or expired; TOUCHES on hit -> sliding window
+  revoke(httpSessionId)
+```
+
+**Adapter mapping** (the only Baja-aware code): `UserLookup.find` → `svc.getUser`; `UserHandle.canLogin` →
+`svc.canLogin(u)`; `isPasswordCache` → `authenticator instanceof BPasswordCache`; `validate` →
+`BPasswordCache.validate`; `authenticateOk` / `authenticateFailed` → `u.authenticateOk(svc)` /
+`u.authenticateFailed(svc)`. The injected `Clock` is what makes CL8's TTL expiry and sliding renewal testable without
+sleeping.
+
+**`ConfigSession` stores the USERNAME; the servlet re-resolves the `BUser` per request and never caches it.** A cached
+`BUser` goes stale against an account disabled, locked or deleted mid-session and would keep writing with a Context
+the station no longer honours. `requireSession` **renews on success** — `userFor` touching on hit is where the sliding
+window actually lives, a mechanism rather than an optimisation.
+
+**`statusForWrite(permissionDenied, auditFailed)` folds CL10 and CL11 into one pure function**, so
+audit-fail-never-fails-the-write cannot drift on this surface: `permissionDenied → 403`, `auditFailed → 200`. That
+asymmetry is the contract, now a two-argument truth table instead of scattered `catch` blocks.
+
+**Decision — CL6 answers 401, NOT B830 §830.7's 400.** A non-`BPasswordCache` authenticator (LDAP / SAML / OAuth /
+gauth) returns the **same 401** as a wrong password. B830 sketched `400 "unsupported scheme"`, but a distinct status
+or message tells an attacker **which accounts use which authentication scheme** — a free enumeration oracle over the
+user base. Uniform 401 leaks nothing and costs nothing operationally, since that operator cannot use the panel login
+either way. **This design deliberately diverges from B830 here**, and the RED encodes 401.
+`[ev: RED qa/c9-s12-config-login cc1c948]` `[ev: corpus B830 §830.7 (400 — not adopted)]`
 
 **Non-negotiables.** **No credential storage in the module** — it never persists a username/password pair; the JSON
 user+password store is retracted on this surface exactly as on the tunnel (D6c). The session holds a station
@@ -541,25 +586,32 @@ and needs no placeholder column.
 | CL10 | a user missing `OPERATOR_WRITE` → the **framework** raises `PermissionException`, surfaced as 403 (not the helper) |
 | CL11 | an **audit failure never fails the write** — same contract as R5/R6 |
 
-Plus the build pin: Dashboard `defaultModuleVersion("2.2.0")`. Guard order becomes 1 XHR-302 → 2 auth-401 →
-3 OPERATOR-403 → **6 config-session-403** → 4 value-400 → 5 ORD-400 — the session check sits with the other
-authorisation gates, before any body interpretation.
+CL1-CL11 run against the pure core (D8c-1) with fakes. Guard order becomes 1 XHR-302 → 2 auth-401 → 3 OPERATOR-403 →
+**6 config-session-403** → 4 value-400 → 5 ORD-400 — the session check sits with the other authorisation gates,
+before any body interpretation.
 
-**RED contract (executable RED wins): client `qa/c9-s12-config-login` @ `cc1c948` (parent a109249, DashboardPan-ux).**
-Pure core `ConfigLoginGuard(users, sessions)` — `login → 200|401`, `logout`, `requireSession → 200 (renews) | 403`,
-`reason(403) = "config_login_required"`, `static statusForWrite(permissionDenied, auditFailed) → 403|200`;
-`interface Clock{now()}`; `interface UserHandle{username(), canLogin(), isPasswordCache(), validate(pw),
-authenticateOk(), authenticateFailed()}` (adapter = `svc.canLogin` / `authenticator instanceof BPasswordCache` /
-`BPasswordCache.validate` / `u.authenticateOk(svc)` / `u.authenticateFailed(svc)`); `interface UserLookup{find(name)}`
-(= `svc.getUser`, null on unknown); `ConfigSession(Clock, ttlMs)` with `issue(httpSessionId, username)` /
-`userFor(httpSessionId)` (null if none/expired, touch on hit = sliding) / `revoke` — stores the USERNAME and re-resolves
-the `BUser` per request, never caches it. Wiring pins (`ConfigLoginWiringTest`): CLW1 `DashboardDispatch` routes
-`POST /api/config/login` + `/api/config/logout`; CLW2 the legal-path tokens present; CLW3 `parent.set(prop, toSet, null)`
-(`:291`) is REMOVED and `parent.set(prop, toSet, <BUser>)` exists; CLW4 explicit `catch (PermissionException …) →
-SC_FORBIDDEN` (a catch-all that swallows it is the mutation); CLW5 `requireSession` / `config_login_required` on the
-write path; SC-13 Dashboard `defaultModuleVersion("2.2.0")`. Harness-only: the AuditEvent naming the second operator;
-real lockout after 5 bad logins. Decision: CL6 = **401** (never leak the scheme; B830 §830.7's 400 is superseded for
-the servlet contract). `[ev: RED qa/c9-s12-config-login cc1c948]`
+**Wiring pins CLW1-CLW5 (`ConfigLoginWiringTest`) — structural, over the servlet source.** The pure core (D8c-1) can
+be perfect and the feature still absent if nothing calls it; these assert the seam is actually wired:
+
+| Pin | Asserts |
+|---|---|
+| CLW1 | `DashboardDispatch` routes `POST /api/config/login` **and** `POST /api/config/logout` |
+| CLW2 | the legal-path tokens are present (`getUser` → `canLogin` → `instanceof BPasswordCache` → `validate` → `authenticateOk`/`authenticateFailed`) |
+| CLW3 | `parent.set(prop, toSet, null)` at `:291` is **REMOVED**, and `parent.set(prop, toSet, <BUser>)` exists |
+| CLW4 | an **explicit** `catch (PermissionException …) → SC_FORBIDDEN` — the named mutation is a catch-all that swallows it |
+| CLW5 | `requireSession` / `config_login_required` is on the **write** path, not only on the routes |
+| SC-13 | Dashboard `defaultModuleVersion("2.2.0")` (group file — see the version-location correction above) |
+
+**CLW3 is a REMOVAL pin, which is rarer and stronger than an addition pin**: asserting only that
+`parent.set(..., <BUser>)` *exists* would pass a servlet that still carries the null-Context call on some other
+branch — the exact bypass D8b exists to close. **CLW4 exists because the framework's 403 arrives as an exception**: a
+`catch (Exception e)` mapping everything to 500 would turn a permission denial into a server error and silently lose
+CL10.
+
+**Harness-only (Windows `niagaraTest`), never green from WSL**: the `AuditEvent` naming the second operator, and real
+lockout after 5 bad logins. Off-station, CL3/CL4 assert that `authenticateFailed`/`authenticateOk` **were called on
+the fake `UserHandle`**; that the station then enforces lockout is B830-read behaviour confirmed in the harness, not a
+WSL assertion. `[ev: RED qa/c9-s12-config-login cc1c948 CLW1-CLW5]` `[ev: retro campaign7 D9 skip-is-not-pass]`
 
 **CL3, CL5 and CL6 are the ones a plausible implementation fails**: calling `validate` before `canLogin` leaks whether
 a locked account's password is right (CL5); casting before the `instanceof` guard throws instead of answering
@@ -738,7 +790,7 @@ rule once already, which is the whole argument for the idempotent presence guard
 | 4 | R4 | `feat/c9-s12-config-login` | tunnel | `qa/c9-s12-write-server` **`55d6797`** (re-pinned; rebase → `9acb47c`) | `write-server.mjs` `buildServer(cfg,deps)` seam + token store, tests | drop the config-token check → S12A-1/S12A-5 flip |
 | 5 | R5 | `feat/c9-s12-audit-schema` | tunnel | extends the same RED (S12A-4, S12A-6) | migration, `deps.changeLog` writer, `cfg.AUDIT_SPOOL` | make the sink throw → **S12A-6**: still 200 + exactly ONE spool row |
 | 6 | R6 | `feat/c9-s12-servlet-guards` | client | `qa/c9-s12-servlet` `4c18837` | `DashboardWriteGuards.java` (new), `BDashboardServlet.java`, `srcTest` | delete the existing `:274-288` numeric guard → `"abc"` reaches `parseDouble` (`:403-407`) and writes 0.0 again — a **regression** pin |
-| 6b | **R14** (D8c) | `feat/c9-config-login-servlet` | client | **CL1-CL11** (B830 `[CERT]` call path; RED to author) | `BDashboardServlet` `/config/login` + `/config/logout`, config-session map, `DashboardWriteGuards` guard6, SPA modal, `Dashboard/build.gradle.kts:33` → `2.2.0`, **MIR5 re-pin** | remove guard6 → a write with no config session succeeds and audits to the kiosk (CL1/CL9); drop `authenticateFailed` → lockout never engages (CL3); cast before the `instanceof` guard → CL6 throws instead of answering unsupported |
+| 6b | **R14** (D8c) | `feat/c9-config-login-servlet` | client | **`qa/c9-s12-config-login` `cc1c948`** — CL1-CL11 (pure core) + CLW1-CLW5 (`ConfigLoginWiringTest`) + SC-13 | `ConfigLoginGuard` / `ConfigSession` / `Clock` / `UserHandle` / `UserLookup` (new, Baja-free), `BDashboardServlet` `/api/config/login` + `/logout`, guard6, SPA modal, `Dashboard/build.gradle.kts:33` → `2.2.0`, **MIR5 re-pin** | replace the explicit `catch (PermissionException)` with a catch-all → **CLW4** flips (403 becomes 500); leave the null-Context `parent.set` on any branch → **CLW3** flips; drop `authenticateFailed` → **CL3** flips |
 | 7 | R7 | `feat/c9-s12-audit-mirror` | tunnel + kit doc | **`qa/c9-s12-audit-mirror` `0a14df8`** (MIR1-MIR5) | new `instalacion/pipeline/audit-mirror.mjs` (`runMirror(cfg, deps)`), dedupe on the 5-tuple, kit reconciliation doc | key the dedupe on `ts` alone → **MIR3** fails (two same-tick records collapse); default `MIRROR_ENABLED` on → **MIR1** fails (`readAuditHistory` called) |
 | 8 | R8 | `feat/c9-alarm-cr3` | client | **`qa/c9-alarm-cr3` `70a357b`** (structural; CRA1s/2s/3s/CRA4/CRA6 + harness-only live routing) | `BEvaporatorUnit.java` child point + ext, `Paccadia/build.gradle.kts:33` → `2.1.0` | drop `alarmValue = true` → CRA3s fails; add a slot outside the ext → CRA4 additive-only fails |
 | 9 | R9 | `feat/c9-alarm-cp1` | client | **`qa/c9-alarm-cp1` `8b43488`** (pure `AlarmEdge` contract + wiring pins; CPB5 harness-only) | `CompressorControl.AlarmEdge` (new nested class), `BCompressorControl.java` `BIAlarmSource` + transient `AlarmSupport`, `Compresores/build.gradle.kts:33` → `2.2.0` | make `decide` level-triggered (return `FIRE` whenever `nowOffnormal`) → the once-only pin fails; drop the `started()` `reseed(` → restart re-fires |
@@ -839,6 +891,8 @@ at `4f5f1c7` and already produced three wrong findings in an earlier draft of th
 - [x] **Version location** — RESOLVED. `defaultModuleVersion` is GROUP-scoped in `<Group>/build.gradle.kts:33`, not per module; `Compresores` and `Dashboard` become client-side always-conflict files (PR1/PR9 and PR6/PR6b).
 - [ ] **Windows `niagaraTest` harness** — CRA1/2/3 live routing and CPB5 `sourceState` cannot run in WSL. The harness run is a lead gate for PR8/PR9 and must be recorded as a real run, never as a SKIP counted green. Who runs it and when is unsettled.
 - [x] **B830** — RESOLVED (`niagara-research 778d3b64b`). D8c's call path is `[CERT]`: `getUser` → `canLogin` → `getAuthenticator` → `instanceof BPasswordCache` → `validate` → module-owned `authenticateOk`/`authenticateFailed`. B830 also **extends B829**: the null Context bypasses `checkWrite` (permission enforcement), not only the audit — folded into D8b.
+- [x] **R14 RED** — RESOLVED. Authored at `qa/c9-s12-config-login` `cc1c948`; the `ConfigLoginGuard` / `ConfigSession` / `Clock` / `UserHandle` / `UserLookup` shape and CLW1-CLW5 are contract, not design preference. R14 no longer waits on anything.
+- [x] **CL6 status code** — RESOLVED as a **deliberate divergence from B830 §830.7**: 401, not 400. A distinct code for "unsupported scheme" is a user-base enumeration oracle over authentication schemes.
 - [ ] **B830-G2 / B830-G3** — the `getLogoffPeriod()` resolution chain inside `NiagaraSuperSession` was not read (G2), and gauth second-factor behaviour under `validate()` is unsettled (G3). Neither blocks R14: the module holds its own shorter TTL, and non-`BPasswordCache` schemes fall out at CL6.
 - [x] **D7a vs D8c** — RESOLVED as a **re-pin, not a supersession**. MIR5 (`config_session = null`) is the correct current pin; when D8c lands as **R14** it updates MIR5 to the station username as part of its own change. R7 may therefore ship before R14 with no placeholder column.
 - [x] **R7 RED** — RESOLVED. Authored at `qa/c9-s12-audit-mirror` `0a14df8` (MIR1-MIR5), so the `runMirror(cfg, deps)` shape and the 5-tuple dedupe are contract, not design preference.
