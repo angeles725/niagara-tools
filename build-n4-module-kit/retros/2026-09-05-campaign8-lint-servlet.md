@@ -121,17 +121,28 @@ try/catch blocks around parse calls (`Double.parseDouble`, `Integer.parseInt`,
 File-level scan within servlet classes (not handler-scoped) so private helpers are caught.
 `--strict` promotes to FAIL.
 
-**Smokes at 4f5f1c7 = origin/main** (single commit for BDashboardServlet in this repo):
+**Smoke — pre-PR#7 (4f5f1c7, local checkout, BDashboardServlet at 7d017f7):**
 ```
 WARN  catch-no-400  BDashboardServlet.java:372  catch around parse without 400 response
 WARN  catch-no-400  BDashboardServlet.java:390  catch around parse without 400 response
 WARN  cache-nofinger  BDashboardServlet.java:428  Cache-Control max-age>0 on rc asset without fingerprint
 ```
-Note: 4f5f1c7 = origin/main in the Leon-Guanjuato repo (BDashboardServlet has only one
-commit). The lead expected "no catch-no-400 at origin/main" — this cannot be reproduced
-because there is no post-fix version of BDashboardServlet in the repo history.
-Both parse-try/catch patterns are pre-existing: the `parseDouble(String s)` helper (line 390,
-silent 0.0) and the HOA enum fallback (line 372, name-lookup fallback). Both are real findings.
+At 4f5f1c7 the `parseDouble(String s)` helper (line 390) returns 0.0 silently and
+`handleSetpointWrite` has no upstream 400 guard for malformed input — the WARNs mark the
+real defect path.
+
+**Smoke — post-PR#7 (origin/main a109249, BDashboardServlet at 4106d7c — "400 on invalid writes with UI feedback"):**
+```
+WARN  catch-no-400  BDashboardServlet.java:389  catch around parse without 400 response
+WARN  catch-no-400  BDashboardServlet.java:407  catch around parse without 400 response
+WARN  cache-nofinger  BDashboardServlet.java:445  Cache-Control max-age>0 on rc asset without fingerprint
+```
+The same two helper WARNs remain. This is expected and correct: PR#7 introduced an upstream
+400 guard in `handleSetpointWrite` (`JsonUtil.parseFiniteDouble(value).isPresent()` at :281
+answers 400 before the helper runs), so the helper catches are now defense-in-depth, not the
+live defect path. `catch-no-400` is a WARN (not FAIL) precisely for this reason (K3): a
+flow-unaware static check cannot distinguish "dead catch" from "live catch" without tracing
+callers — that is a C9 candidate for a flow-aware version.
 
 Fixtures: `CatchNo400.java` (catch returns 0.0 → WARN), `CatchWith400.java` (catch → 400 → clean).
 Pin: LSV2b (catch with silent default → WARN), LSV2b-clean (catch with 400 → no warn). 11/11 green.
