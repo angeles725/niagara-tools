@@ -29,7 +29,7 @@
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2).
 # [ev: corpus B823 §823.2]  [ev: corpus B826]  [ev: kit types/logic-authoring.md:62-70]
 set -u
-# shellcheck source=lib/method-boundary.sh
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL

@@ -45,7 +45,7 @@
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
-# shellcheck source=lib/method-boundary.sh
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 
 FAILED=0
