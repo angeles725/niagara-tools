@@ -55,7 +55,7 @@ The following ADD the STALE advisory class and `--strict` flag to `lint-write-pa
 
 **When** `lint-write-path.sh` runs (default, no `--strict`).
 
-**Then** exits **0** with exactly one `write-path  STALE  hoaMode  no source slot with that name` row printed.
+**Then** exits **0** with exactly one `STALE  lint-write-path  <matrix-path>:<line>  slot hoaMode: no source slot with that name` row printed.
 
 `[ev: proposal R5 WP-stale-neg]`
 
