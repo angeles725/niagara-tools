@@ -111,9 +111,9 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - **Test credentials from a file outside the repo** (`chmod 600`), never pasted in a channel or embedded in an artifact; cite a secret's structure (filename, format, purpose), never its value. [ev: retro live-cutover-and-authenticated-control]
 
 ## Station load budget `[ev: corpus B806]`
-COUNT before deploying an rt module to a JACE (full budget table + cited limits: corpus B806 §806.8):
-- engine-thread cost = Σ(periodic callbacks × frequency); each `execute()`/tick must run ≪ 20 ms.
-- every `Clock.Ticket` cancelled in `stopped()`; every delay floored `> 0` (see §Conformance / `lint-delays.sh`).
-- no `java.util.concurrent` executor (use `Clock`); no large PERSISTED `String` slot rewritten per action (mark `Flags.TRANSIENT`).
-- globalCapacity budget: proxy points < 500 · histories < 125 (incl Audit + Log) · links < 400 · devices < 25 — **> 110 % = the station will NOT boot** (`[CERT-doc]`: Tridium's documented boot semantic, `docPlatform.txt:2458-2459`; the JACE-8000/9000 kRU cap stays OPEN, B806 §806.11).
+COUNT before deploying an rt module to a JACE (full budget table + cited limits: corpus B806 §806.8): [ev: corpus B806]
+- engine-thread cost = Σ(periodic callbacks × frequency); each `execute()`/tick must run ≪ 20 ms. [ev: corpus B806]
+- every `Clock.Ticket` cancelled in `stopped()`; every delay floored `> 0` (see §Conformance / `lint-delays.sh`). [ev: corpus B806]
+- no `java.util.concurrent` executor (use `Clock`); no large PERSISTED `String` slot rewritten per action (mark `Flags.TRANSIENT`). [ev: corpus B806]
+- globalCapacity budget: proxy points < 500 · histories < 125 (incl Audit + Log) · links < 400 · devices < 25 — **> 110 % = the station will NOT boot** (`[CERT-doc]`: Tridium's documented boot semantic, `docPlatform.txt:2458-2459`; the JACE-8000/9000 kRU cap stays OPEN, B806 §806.11). [ev: corpus B806]
 - guard servlet / linked writes with `isRunning()`; poll with backoff. `[ev: corpus B806 §806.9]`
