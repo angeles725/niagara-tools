@@ -273,12 +273,12 @@ XML
   [ "$status" -eq 1 ]
 }
 
-<<<<<<< HEAD
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"
   grep -qF 'LINK_TARGET' "$KIT/toolbelt/bog-audit.sh"
-=======
+}
+
 # ================================================================
 # CHECK13-CHECK19 station-logic pins (campaign 8 PR20, wave3 R20/D17)
 # Folded from tests/station-logic.bats (kept self-contained there).
@@ -434,13 +434,6 @@ XML
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK16  FAIL')" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK17  FAIL')" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]
-<<<<<<< HEAD
-  [[ "$output" == *"CHECK14"* ]] && [[ "$output" == *"WARN"* ]]
-  [[ "$output" != *"CHECK13  FAIL"* ]]
-  [[ "$output" != *"CHECK16  FAIL"* ]]
-  [[ "$output" != *"CHECK17  FAIL"* ]]
->>>>>>> 5f0f377 (feat(bog-audit): K19 routing + SL fixtures + bog-audit.bats extension (campaign 8 PR20))
-=======
   [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_1"* ]]
   [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_3"* ]]
   [ "$(printf '%s\n' "$output" | grep 'CHECK18' | grep -c 'Cuarto')" -eq 0 ]
@@ -462,5 +455,4 @@ XML
     [ "$(printf '%s\n' "$output" | grep -c "$c  FAIL")" -eq 0 ]
     [ "$(printf '%s\n' "$output" | grep -c "$c  WARN")" -eq 0 ]
   done
->>>>>>> e31dab4 (wip(bog-audit): CHECK13/16/18/19 green; CHECK14 evapOut src-scan WIP (campaign 8 PR20))
 }
