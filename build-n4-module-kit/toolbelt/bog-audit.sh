@@ -38,7 +38,6 @@
 set -u
 LC_ALL=C; export LC_ALL
 
-FAILED=0
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 
@@ -173,12 +172,12 @@ if SRC_DIR:
                     # MIN facet: BDouble.make(N) or BRelTime.makeSeconds(N)
                     min_val = None
                     mm = re.search(
-                        r'BFacets\.MIN[^,)]*,\s*BDouble\.make\(\s*(-?[0-9.]+)\s*\)', buf)
+                        r'BFacets\.MIN[^,)]*,\s*BDouble\.make\(\s*(-?[0-9.]+)[dDfFlL]?\s*\)', buf)
                     if mm:
                         try: min_val = float(mm.group(1))
                         except ValueError: pass
                     mm2 = re.search(
-                        r'BFacets\.MIN[^,)]*,\s*BRelTime\.makeSeconds\(\s*([0-9]+)\s*\)', buf)
+                        r'BFacets\.MIN[^,)]*,\s*BRelTime\.makeSeconds\(\s*([0-9]+)[lL]?\s*\)', buf)
                     if mm2 and min_val is None:
                         try: min_val = float(mm2.group(1)) * 1000
                         except ValueError: pass
@@ -354,11 +353,20 @@ try:
                     continue
 
                 # --- Self-closing value property: <p n="slot" t="..." v="..." f="..."/> ---
-                # Track when v= is present OR f= is present (for mode-type entries)
+                # Track when v= is present OR f= is present (for mode-type entries).
+                # Only record direct children of the component; sub-slots of compound
+                # properties (e.g. StatusNumeric.value) live inside an 'other' frame.
+                # Also skip platform-managed slot names (wsAnnotation, status sub-slots).
+                _PLATFORM_SLOTS = frozenset({'wsAnnotation', 'value', 'status', 'displayName'})
                 if is_self_cls and (v is not None or f_attr):
-                    comp = nearest_comp()
-                    if comp and n:
-                        comp.slots[n] = {'type': t, 'value': v, 'flags': f_attr}
+                    # Only record if immediate parent is the comp itself (not a nested 'other')
+                    _parent = stack[-1] if stack else None
+                    if _parent and _parent['type'] == 'comp' and n not in _PLATFORM_SLOTS:
+                        _parent['comp'].slots[n] = {'type': t, 'value': v, 'flags': f_attr}
+                    elif _parent and _parent['type'] != 'comp':
+                        pass  # sub-slot of compound property; ignore for CHECK5/6
+                    elif _parent and _parent['type'] == 'comp' and n in _PLATFORM_SLOTS:
+                        pass  # platform-managed; skip
                     continue
 
                 # --- Non-self-closing composite property (in8, BackupRecord, etc.) ---
