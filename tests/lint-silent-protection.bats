@@ -177,7 +177,7 @@ JAVA
 }
 
 # ---- SP-smoke: the REAL client trees must flag CP-1 + CR-3 and NOT flag CP-2 (SKIP if absent) ----
-@test "SP-smoke: EXACT contract at a109249 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:215, CP-1), ColdRoomPan-rt exactly 1 (BEvaporatorUnit.java:1287, CR-3), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
+@test "SP-smoke: EXACT contract at a109249 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:215, CP-1), ColdRoomPan-rt 0 (CR-3 surfaced by PR8 Pattern A), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
   [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] && [ -d "$ROOT/Dashboard" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$LSP" "$ROOT/Compresores/CompPan/CompPan-rt/src"
   [ "$status" -eq 0 ]
@@ -187,8 +187,8 @@ JAVA
   [[ "$output" != *"BCompressorControl"* ]]                    # adapter getters are not trips
   run "$LSP" "$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
-  [[ "$output" == *"BEvaporatorUnit.java:1287"* ]]            # CR-3 freezeTripped private latch (ABSENT once PR8 wires Pattern A: re-pin to 0 then, R3<->R8)
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]    # CR-3 is SURFACED since PR8 (Pattern A: freezeAlarmPt + BAlarmSourceExt) — R3<->R8 re-pin, was 1 at a109249
+  [[ "$output" != *"BEvaporatorUnit.java:1287"* ]]            # the private freezeTripped latch no longer WARNs
   [[ "$output" != *"defrostSkipped"* ]]                        # surfaced via slot -> never a subject
   run "$LSP" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
   [ "$status" -eq 0 ]
