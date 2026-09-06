@@ -19,11 +19,13 @@
 # NAMED MUTATION (post-green): treat a complex OPERATOR slot as plain (drop the BStatusX recognizer)
 #   -> EW1/EW6 stop WARNing (the setpoint_statusnumeric_no_action regression goes unseen).
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   EW="$KIT/toolbelt/lint-ext-writable-shape.sh"
   SRC="$BATS_TEST_TMPDIR/src"; mkdir -p "$SRC/com/x"
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"   # RP1: blessed read tree, never the local working copy
+  ROOT="$C9_CLIENT_ROOT"   # RP1: via client-root.bash; env override wins [ev: design.md D3c site 1]
 }
 only() { rm -rf "$SRC"; mkdir -p "$SRC/com/x"; cat > "$SRC/com/x/$1"; }
 

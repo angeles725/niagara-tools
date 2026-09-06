@@ -20,11 +20,13 @@
 # NAMED MUTATION (§820.4, DS2): remove the demandCount param + the `if (demandCount<=0) target=0` gate,
 #   leaving staging on suction alone -> the method WARNs ("pressure without demand").
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   DIS="$KIT/toolbelt/lint-demand-scope.sh"
   S="$BATS_TEST_TMPDIR/src"
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"   # RP1: blessed read tree, never the local working copy
+  ROOT="$C9_CLIENT_ROOT"   # RP1: via client-root.bash; env override wins [ev: design.md D3c site 2]
   REAL="$ROOT/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/CompressorControl.java"
 }
 only() { rm -rf "$S"; mkdir -p "$S/com/x"; cat > "$S/com/x/$1"; }

@@ -23,11 +23,13 @@
 # NAMED MUTATION (§824.5, post-green, on mktemp copies): remove the *Skip*/*Reason* writes from the clean
 #   fixture -> the previously-clean skip path emits exactly 1 WARN (SP8 pins this directly).
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LSP="$KIT/toolbelt/lint-silent-protection.sh"
   S="$BATS_TEST_TMPDIR/src"
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"   # RP1: blessed read tree, never the local working copy
+  ROOT="$C9_CLIENT_ROOT"   # RP1: via client-root.bash; env override wins [ev: design.md D3c site 3]
 }
 fresh() { rm -rf "$S"; mkdir -p "$S/com/x"; }
 

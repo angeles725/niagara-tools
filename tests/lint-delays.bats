@@ -17,6 +17,8 @@
 # NAMED MUTATION (post-green): accept Math.max(x, 0L) as a valid floor (>=0 instead of >0) -> LD1 and
 # LD3 stop failing — the exact real-bug shape would pass, which is the whole point of the check.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LD="$KIT/toolbelt/lint-delays.sh"
@@ -49,12 +51,17 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
 }
-@test "LD5: real smoke — the current ColdRoomPan-rt src FAILs naming BDefrostController (SKIP if not present)" {
-  CRP="$HOME/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
-  [ -d "$CRP" ] || skip "ColdRoomPan-rt src not on this machine (local-only real smoke)"
+@test "LD5: real smoke — ColdRoomPan-rt at main-ff1b659 is CLEAN (exit 0, no FAIL; defrost bug fixed post-C9)" {
+  # C11 T2 retarget (D3d): on 4f5f1c7 this asserted exit 1 + FAIL BDefrostController (the defrost
+  # time<=0 bug). On main-ff1b659 (ff1b659) the bug is fixed: exit 0, no FAIL rows, BDefrostController absent.
+  # The delay-floor rule is pinned by synthetic fixtures LD1 (:28), LD3 (:40), LD6 (:64) and LD11-misguard (:117)
+  # which must stay green in the same run; LD5 is a tree-state smoke that asserts the tree's current correct verdict.
+  # [ev: design.md D3d; spec R-T2.6; R-T2.7]
+  CRP="$C9_CLIENT_ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"   # via client-root.bash [ev: design.md D3c site 9]
+  [ -d "$CRP" ] || skip "ColdRoomPan-rt src not on this machine (set C9_CLIENT_ROOT)"
   run "$LD" "$CRP"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"BDefrostController"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
 }
 
 # B801 [CERT]: Niagara rejects delay/period <= 0 (strictly positive) in Clock.schedule AND

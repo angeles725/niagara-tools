@@ -21,6 +21,8 @@
 # NAMED MUTATION (run post-green): drop the stopped()-presence check → TL1's owner-without-stopped
 # case no longer FAILs (exit 0), proving that check — not an unrelated grep — carries the bite.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LINT="$KIT/toolbelt/lint-timers.sh"
@@ -415,7 +417,7 @@ JAVA
 }
 
 @test "S21-smoke: real ColdRoomPan-rt (main-ff1b659) is companion-flag CLEAN -> lint-timers exit 0" {
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  ROOT="$C9_CLIENT_ROOT"   # via client-root.bash; env override wins [ev: design.md D3c site 4]
   RT="$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
   [ -d "$RT" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$LINT" "$RT"
