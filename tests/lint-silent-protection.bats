@@ -95,7 +95,7 @@ JAVA
 }
 
 # ---- SP4: a *Skip*/*Reason* SUMMARY surface on the trip path -> clean (allowlist) ----
-@test "SP4: allowlist_reason_slot_makes_it_clean (0 WARN)" {
+@test "SP4: allowlist_reason_slot_makes_it_clean (0 WARN; same private-latch trip shape as SP8 + a *Reason SUMMARY write -> the allowlist is what clears it)" {
   fresh
   cat > "$S/com/x/BDefrostController.java" <<'JAVA'
 package com.x;
@@ -103,8 +103,9 @@ public class BDefrostController extends BComponent {
   @NiagaraProperty(name="defrostSkipped", type="BStatusBoolean", defaultValue="new BStatusBoolean(false)", flags=Flags.SUMMARY|Flags.READONLY)
   @NiagaraProperty(name="lastSkipReason", type="BString", defaultValue="BString.make(\"\")", flags=Flags.SUMMARY|Flags.READONLY)
   void maybeSkip(boolean overdue, boolean doorOpen) {
-    if (doorOpen) { getDefrostSkipped().setValue(true); setLastSkipReason("door open"); return; } // surfaced trip
+    if (doorOpen) { this.defrostSkipped = true; setLastSkipReason("door open"); return; } // private latch + surfaced reason
   }
+  private boolean defrostSkipped = false;
 }
 JAVA
   run "$LSP" "$S"
