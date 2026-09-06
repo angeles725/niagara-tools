@@ -105,10 +105,11 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
 
 @test "SC-13 (client vendorVersion, schema-risk-cleared): CompPan-rt 2.2.0, ColdRoomPan-rt 2.1.0, DashboardPan-ux 2.2.0" {
   _close
-  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato}"
+  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
-  v() { grep -ohE 'vendorVersion[[:space:]]*=[[:space:]]*"[0-9.]+"' "$@" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
-  [ "$(v "$R"/Compresores/CompPan/CompPan-rt/*.gradle.kts)"         = "2.2.0" ]
-  [ "$(v "$R"/Paccadia/ColdRoomPan/ColdRoomPan-rt/*.gradle.kts)"    = "2.1.0" ]
-  [ "$(v "$R"/Dashboard/DashboardPan/DashboardPan-ux/*.gradle.kts)" = "2.2.0" ]
+  # the version lives in each GROUP's build.gradle.kts as defaultModuleVersion("X.Y.Z") (not in the module .kts)
+  v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
+  [ "$(v "$R/Compresores/build.gradle.kts")" = "2.2.0" ]   # CompPan: 2.0.3 -> 2.1.0 (R1) -> 2.2.0 (R9)
+  [ "$(v "$R/Paccadia/build.gradle.kts")"    = "2.1.0" ]   # ColdRoomPan (R8)
+  [ "$(v "$R/Dashboard/build.gradle.kts")"   = "2.2.0" ]   # DashboardPan (R6)
 }
