@@ -354,3 +354,71 @@ JAVA
   [[ "$output" != *"FAIL"* ]]
   [[ "$output" != *"BStale"* ]]
 }
+
+# ===========================================================================
+# S21 (C10 lint-precision RED): companion-flag must key on a FIELD flag, not a
+# method-LOCAL boolean. A local `boolean x = false; … x = true;` is re-initialised
+# every call, so it cannot stay stuck across a stop/restart — only a class FIELD
+# can. Real FP on main df8c7ec: BDefrostController.java `anyNoHardware` (a method
+# local) FAILs beside a Clock.schedule in the same method.
+# RED-for-the-right-reason on df8c7ec: S21-neg + S21-smoke FAIL (the tool FPs on a
+# local); the existing field-flag TC-A pins stay FAIL (regression guard).
+# ---------------------------------------------------------------------------
+@test "S21-neg: a method-LOCAL boolean set true beside Clock.schedule* does NOT FAIL (not a stuck-flag hazard)" {
+  D="$BATS_TEST_TMPDIR/s21neg"; mkdir -p "$D"
+  cat > "$D/BLocalFlag.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BLocalFlag extends BComponent {
+  private Clock.Ticket durationTicket;
+  public void armDefrost() {
+    boolean anyQueued     = false;   // METHOD-LOCAL — re-init each call, cannot stay stuck
+    boolean anyNoHardware = false;
+    for (int i = 0; i < 3; i++) { anyNoHardware = true; }   // local set true …
+    durationTicket = Clock.schedule(this, BRelTime.makeSeconds(5), durationExpired, null); // … beside a schedule
+    if (anyQueued) { /* … */ }
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (durationTicket != null) { durationTicket.cancel(); durationTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"companion-flag"* ]]
+  [[ "$output" != *"anyNoHardware"* ]]
+}
+
+@test "S21-pos: a FIELD flag set true beside Clock.schedule*, cleared only off-lifecycle, STILL FAILs (regression guard)" {
+  D="$BATS_TEST_TMPDIR/s21pos"; mkdir -p "$D"
+  cat > "$D/BFieldFlag.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BFieldFlag extends BComponent {
+  private boolean startingUp = false;   // class FIELD — CAN stay stuck across stop/restart
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void doPowerOnExpired() { startingUp = false; }   // cleared only in expiry — does NOT count
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"companion-flag"* ]] && [[ "$output" == *"startingUp"* ]]
+}
+
+@test "S21-smoke: real ColdRoomPan-rt (main-ff1b659) is companion-flag CLEAN -> lint-timers exit 0" {
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  RT="$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
+  [ -d "$RT" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
+  run "$LINT" "$RT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"companion-flag"* ]]
+}
