@@ -161,9 +161,13 @@ setup() {
 #   Exit:  0 = all covered AND (no STALE OR STALE without --strict);
 #          1 = any uncovered FAIL (UNCHANGED) OR any STALE under --strict;
 #          3 = usage/no sources/no matrix (unchanged).
-# A row is exempt from STALE ONLY when it carries the literal token `[concept]`
-# (no implicit exemption); the token must be real code, not inside a markdown
-# comment (strip comments first). Seams (cb79676): :161 matrix-slot awk, :310
+# STALE is PER-ROW: one STALE per matrix ROW whose backtick-inner slot name (only the
+# `\x60slot\x60` form matching ^[a-z][A-Za-z0-9]*$; a prose/multi-word cell like
+# "primary sensor" is NOT a slot) is absent from (source @NiagaraProperty ∪ --bog).
+# A row is exempt ONLY when THAT row carries the literal token `[concept]` (a marked
+# row never exempts another row with the same name); the token must be real text, not
+# inside a markdown comment (strip comments first). Exit: FAIL always wins; else
+# --strict && STALE -> 1; else 0. Seams (cb79676): :161 matrix-slot awk, :310
 # scanner, :374 FAIL emit, :383 exit expression.
 # RED-for-the-right-reason on df8c7ec: STALE class absent + --strict is an unknown
 # option (exit 3), so every STALE/concept/--strict pin fails; covered+uncovered
@@ -184,8 +188,8 @@ JAVA
 # M
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
-| setpoint | D | mid | w1 |
-| ghostSlot | D | mid | wX |
+| `setpoint` | D | mid | w1 |
+| `ghostSlot` | D | mid | wX |
 MD
   run "$LW" "$d"
   [ "$status" -eq 0 ]
@@ -198,8 +202,8 @@ MD
 # M
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
-| setpoint | D | mid | w1 |
-| ghostSlot | D | mid | wX |
+| `setpoint` | D | mid | w1 |
+| `ghostSlot` | D | mid | wX |
 MD
   run "$LW" --strict "$d"
   [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
@@ -211,7 +215,7 @@ MD
 # M
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
-| setpoint | D | mid | w1 |
+| `setpoint` | D | mid | w1 |
 MD
   run "$LW" "$d";          [ "$status" -eq 0 ]; [[ "$output" != *"STALE"* ]]
   run "$LW" --strict "$d"; [[ "$output" != *"STALE"* ]]; [ "$status" -eq 0 ]
@@ -222,8 +226,8 @@ MD
 # M
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
-| setpoint | D | mid | w1 |
-| hoaMode | Engine link [concept] | n/a | — |
+| `setpoint` | D | mid | w1 |
+| `hoaMode` | Engine link [concept] | n/a | — |
 MD
   run "$LW" --strict "$d"
   [[ "$output" != *"STALE"* ]]
@@ -236,12 +240,40 @@ MD
 <!-- note: [concept] rows are exempt -->
 | Slot | Writer | Timing | Test |
 |--|--|--|--|
-| setpoint | D | mid | w1 |
-| ghostSlot | D | mid | wX |
+| `setpoint` | D | mid | w1 |
+| `ghostSlot` | D | mid | wX |
 MD
   run "$LW" --strict "$d"
   [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
   [ "$status" -eq 1 ]
+}
+
+@test "WP-stale-perrow: two rows with the SAME missing name, one [concept]-marked and one not, emit EXACTLY 1 STALE row (per-row, a marked row does not exempt the other)" {
+  d="$BATS_TEST_TMPDIR/perrow"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `hoaMode` | Engine link [concept] | n/a | — |
+| `hoaMode` | dashboard write | mid | wY |
+MD
+  run "$LW" --strict "$d"
+  [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 1 ]
+  [ "$status" -eq 1 ]
+}
+
+@test "WP-stale-prose: a prose / multi-word col-1 cell is NOT a slot and never emits STALE" {
+  d="$BATS_TEST_TMPDIR/prose"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| primary sensor | note | n/a | — |
+| coil TD | note | n/a | — |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" != *"STALE"* ]]
+  [ "$status" -eq 0 ]
 }
 
 @test "WP-uncovered-strict: an uncovered OPERATOR slot stays exit 1 WITH and WITHOUT --strict (FAIL contract unchanged)" {
@@ -251,7 +283,12 @@ package com.x;
 @NiagaraProperty(name="hoaMode", flags=Flags.SUMMARY | Flags.OPERATOR)
 public class BThing extends BComponent {}
 JAVA
-  printf '# M\n| Slot | Writer | Timing | Test |\n|--|--|--|--|\n| setpoint | D | mid | w1 |\n' > "$d/docs/write-path-matrix.md"
+  cat > "$d/docs/write-path-matrix.md" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+MD
   run "$LW" "$d";          [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
   run "$LW" --strict "$d"; [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
 }
