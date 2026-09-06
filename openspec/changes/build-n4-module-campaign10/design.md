@@ -188,9 +188,13 @@ is already absolute — `$tmp` from `mktemp -d` (`:53`), `$JU`/`$HC` from `find 
 keeps the parent's cwd and its `trap 'rm -rf "$tmp"' EXIT` (`:54`); under `set -euo pipefail` (`:22`) the subshell is
 the last command, so JUnit's non-zero status still propagates as the exit-1 **bite** (`:19`).
 
-**D4b — the second edit, without which S24-cwd-regression breaks.** `$rt` may be given **relative** (`.` from the
-module-rt dir, which is exactly the regression case). Once anything `cd`s, `-sourcepath "$rt/src:$testroot"` at `:59`
-would resolve against the new cwd. **Chosen: normalise once, right after the `[ -d "$rt" ]` guard at `:30` —
+**D4b — the second edit (defensive, not load-bearing — validator correction 47453742b).** `$rt` may be given
+**relative** (`.` from the module-rt dir, the regression case). With the java-only subshell of D4a, `javac` and its
+`-sourcepath "$rt/src:$testroot"` at `:59` run OUTSIDE the subshell, so a relative `$rt` is NOT broken by the fix —
+investigador1 reproduced the current script with a relative `$rt` from `/tmp` returning `OK (37 tests)`. The
+cwd-sensitive part is only the RUNTIME test read (`Paths.get("src/…")`). The absolutise edit is kept because it is
+cheap and makes `$rt` safe for any future edit that moves `javac` inside the subshell. **Chosen: normalise once, right
+after the `[ -d "$rt" ]` guard at `:30` —
 `rt=$(cd "$rt" && pwd)`** — so `$testroot` (derived at `:48-50`) and both the `javac` (`:58-60`) and `java` (`:62`)
 invocations are cwd-independent. Two edits, both in the runner, ~4 lines.
 
