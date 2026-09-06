@@ -22,8 +22,10 @@
 #                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key)
 #   declared   <- lexicon slot names: bare key "fan" -> "fan"; "FanMode.fan" -> "fan" (after dot)
 #   MISSING    <- OPERATOR slot with no lexicon key (renders raw camelCase in operator views)
-#   STALE      <- lexicon key with no matching @NiagaraProperty annotation (any flags) — truly dead
-#                 A key for a READONLY/SUMMARY slot is live context in the view, NOT stale.
+#   STALE      <- lexicon key matching no "known key" — a truly dead translation.
+#                 known keys = @NiagaraProperty slots (any flags) ∪ type display-name keys
+#                 (from module-include.xml <type name="X">) ∪ @Range enum-tag values.
+#                 A key for a READONLY slot, a type name, or a frozen-enum tag is live, NOT stale.
 #   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot> and STALE <key> lines
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
@@ -138,10 +140,9 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   # Uses paren-balance multi-line state machine — same technique as lint-delays.sh Pass 1.
   # Two outputs:
   #   op_slots_raw  — OPERATOR-flagged only (Flags.OPERATOR or "o"); gates MISSING (RED/K13)
-  #   all_slots_raw — every @NiagaraProperty name, any flags; gates STALE (D6: dead translation)
-  # STALE = lex_keys - all_annotation_slots (not lex_keys - op_slots): a lexicon key that
-  # translates a legitimate non-OPERATOR slot (READONLY state, SUMMARY read-back, etc.) is NOT
-  # a dead translation — it is live context in the operator view.
+  #   all_slots_raw — every @NiagaraProperty name, any flags; used to build known_sorted
+  # STALE = lex_keys - known_sorted; known_sorted = all_annotation_slots ∪ type names ∪ @Range tags.
+  # Type display-name keys and frozen-enum tag keys are live translations, not dead.
   # shellcheck disable=SC2016  # awk programs intentionally in single quotes (no shell expansion needed)
   _java_files=$(find "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
   # shellcheck disable=SC2016
@@ -217,16 +218,38 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   lex_slots_raw=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" \
     | grep '=' | cut -d'=' -f1 | sed 's/.*\.//' | sort -u)
 
-  # Sort and deduplicate slot name sets
+  # Type names from module-include.xml: <type name="X" ...> -> "X"
+  # These appear as top-level lexicon keys by Niagara convention (TypeName=Display Name).
+  type_names_raw=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$PS_XML" \
+    | grep -oE '\bname="[^"]*"' | sed 's/^name="//;s/"$//')
+
+  # @Range enum tags from Java sources (dot-dirs pruned): @Range("tag") -> "tag"
+  # Frozen-enum types declare tags with @Range annotations; the tag names appear as
+  # lexicon keys (e.g. "schedule=Schedule") for operator display of enum values.
+  range_tags_raw=$(printf '%s\n' "$_java_files" \
+    | xargs grep -ohE '@Range\("[^"]+"\)' 2>/dev/null \
+    | sed 's/@Range("//;s/")//')
+
+  # Sort and deduplicate each set
   if [ -n "$op_slots_raw" ]; then
     op_sorted=$(printf '%s\n' "$op_slots_raw" | sort -u)
   else
     op_sorted=""
   fi
-  if [ -n "$all_slots_raw" ]; then
-    all_sorted=$(printf '%s\n' "$all_slots_raw" | sort -u)
+
+  # known_sorted = @NiagaraProperty slots (any flags) ∪ type names ∪ @Range tags
+  # This is the complete set of "live" lexicon keys — anything in lex_keys - known_sorted
+  # is a genuinely dead translation (no matching annotation or type declaration).
+  _known_parts=""
+  [ -n "$all_slots_raw"  ] && _known_parts="$all_slots_raw"
+  [ -n "$type_names_raw" ] && _known_parts="$_known_parts
+$type_names_raw"
+  [ -n "$range_tags_raw" ] && _known_parts="$_known_parts
+$range_tags_raw"
+  if [ -n "$_known_parts" ]; then
+    known_sorted=$(printf '%s\n' "$_known_parts" | grep -v '^$' | sort -u)
   else
-    all_sorted=""
+    known_sorted=""
   fi
 
   # MISSING = required OPERATOR slots with no lexicon key
@@ -240,13 +263,13 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
     missing_slots=""
   fi
 
-  # STALE = lexicon keys with no matching @NiagaraProperty annotation (any flags).
-  # Uses all_sorted (every annotated slot), NOT op_sorted — a lexicon key that translates
-  # a READONLY or SUMMARY slot is live context, not a dead translation (D6: design fix).
-  if [ -n "$lex_slots_raw" ] && [ -n "$all_sorted" ]; then
+  # STALE = lex_keys - known_sorted (truly dead translations only).
+  # known_sorted = @NiagaraProperty slots (any flags) ∪ type names ∪ @Range enum tags.
+  # A key for a READONLY slot, a type display name, or a frozen-enum value tag is live.
+  if [ -n "$lex_slots_raw" ] && [ -n "$known_sorted" ]; then
     stale_slots=$(comm -23 \
       <(printf '%s\n' "$lex_slots_raw") \
-      <(printf '%s\n' "$all_sorted"))
+      <(printf '%s\n' "$known_sorted"))
   elif [ -n "$lex_slots_raw" ]; then
     stale_slots="$lex_slots_raw"
   else

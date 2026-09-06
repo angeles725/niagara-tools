@@ -14,7 +14,7 @@
 
 Two additive changes to `slot-coverage.sh`:
 
-1. **`per-slot` subcommand (D6):** `slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` compares `OPERATOR`-flagged `@NiagaraProperty` slots against lexicon keys. Uses a paren-balance multi-line awk state machine (same technique as `lint-delays.sh` Pass 1) to handle multi-line annotations. Dot-dirs pruned via `-type d -name '.*' -prune` (D9b). Emits `pct=<n.n> (per-slot)`, `MISSING <slot>` (no lexicon key), `STALE <key>` (no matching OPERATOR slot). Exits 1 on any MISSING, 0 when clean.
+1. **`per-slot` subcommand (D6):** `slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` compares `OPERATOR`-flagged `@NiagaraProperty` slots against lexicon keys. Uses a paren-balance multi-line awk state machine (same technique as `lint-delays.sh` Pass 1) to handle multi-line annotations. Dot-dirs pruned via `-type d -name '.*' -prune` (D9b). Emits `pct=<n.n> (per-slot)`, `MISSING <slot>` (no lexicon key), `STALE <key>` (key matches no known annotation, type name, or enum tag — truly dead). Exits 1 on any MISSING, 0 when clean.
 
 2. **Empty-lexicon FAIL escalation (D6a):** empty `module.lexicon` with `>=1` declared type now exits 1 (FAIL) unconditionally instead of exit 0/WARN-only (or exit 1 only with `--strict`). The T8 footgun (`chihuahua`) passed the aggregate before this change despite every slot rendering raw camelCase.
 
@@ -57,41 +57,10 @@ MISSING freezeSetpoint
 MISSING powerOnDelay
 MISSING resistanceMode
 MISSING valveMode
-STALE ColdRoom
-STALE DefrostController
-STALE EvaporatorUnit
-STALE coilTemp
-STALE cooling
-STALE differentialDown
-STALE differentialUp
-STALE duration
-STALE evapHighAlarmLimit
-STALE evapLowAlarmLimit
-STALE evapOut
-STALE hasDefrost
-STALE interval
-STALE mode
-STALE resistanceOut
-STALE resistanceTemp
-STALE resistanceTempThreshold
-STALE roomHighAlarmLimit
-STALE runCmd
-STALE schedule
-STALE scheduleInput
-STALE setpoint
-STALE single
-STALE staged
-STALE staggerDelay
-STALE stagingMode
-STALE startDelay
-STALE terminateOnResistanceTemp
-STALE valveOut
-STALE zone1
-STALE zone2
 Exit: 1
 ```
 
-**Real count: 9 MISSING** (design estimated 19 — see deviation below). STALE list is large because the lexicon covers many non-OPERATOR slots (display names for read-only and summary slots), which are all STALE from the per-slot perspective (no matching OPERATOR annotation).
+**Real count: 9 MISSING / 0 STALE** (design estimated 19 — see deviation below). Zero STALE because the known-keys set (fix 2: all slots ∪ type names ∪ @Range tags) now covers all legitimate lexicon entries.
 
 #### Smoke 2: chihuahua parse mode (empty lexicon — SC6-parse shape)
 
@@ -111,14 +80,10 @@ Exits 1 with FAIL row (was exit 0/WARN before D6a).
 ```
 $ slot-coverage.sh per-slot CompPan-rt/module-include.xml CompPan-rt/module.lexicon CompPan-rt/src
 pct=100.0 (per-slot)
-STALE CompressorControl
-STALE amps1
-STALE amps2
-[... 33 STALE rows for non-OPERATOR slots with lexicon keys ...]
 Exit: 0
 ```
 
-CompPan-rt has all OPERATOR slots covered (pct=100.0), exits 0. Large STALE list for the same reason as ColdRoomPan (lexicon keys for non-OPERATOR slots).
+CompPan-rt has all OPERATOR slots covered (pct=100.0), exits 0. Zero STALE: every lexicon key matches a known slot, type name, or enum tag.
 
 ---
 
@@ -126,7 +91,7 @@ CompPan-rt has all OPERATOR slots covered (pct=100.0), exits 0. Large STALE list
 
 | Delta | File | Description |
 |-------|------|-------------|
-| D6a-behaviour-doc | `types/logic-authoring.md` | Document that per-slot mode STALE list includes all non-OPERATOR lexicon keys; recommend using `missing=` list focus, not STALE, for module fix tracking |
+| D6a-behaviour-doc | `types/logic-authoring.md` | Document the STALE known-keys set (slots ∪ type names ∪ @Range tags) and recommend using MISSING list for module fix tracking |
 | Per-slot workflow | `BUILD-LOOP.md` §5 | Already updated: per-slot mode listed beside parse mode; `[ev: retro campaign8-slot-per-slot]` |
 
 ---
@@ -137,3 +102,4 @@ CompPan-rt has all OPERATOR slots covered (pct=100.0), exits 0. Large STALE list
 2. STALE must compare lexicon keys against ALL `@NiagaraProperty` annotations (any flags), not just OPERATOR ones. A lexicon key that translates a READONLY or SUMMARY slot is live context in the operator view, not a dead translation. Using OPERATOR-only as the stale reference inflated counts from legitimate non-OPERATOR keys (ColdRoomPan: 28→6; CompPan: 35→1 after fix). SP5 pin proves the correct behavior; the defect was caught in lead review and fixed before merge.
 3. Design estimates for missing slot counts ("~19") were off (real: 9) because only `BEvaporatorUnit` has OPERATOR slots; the design likely counted all `@NiagaraProperty` slots without gating on OPERATOR.
 4. D6a: gating empty-lexicon FAIL on `--strict` only defeats the purpose when the motivating module (`chihuahua`) is always run without `--strict` in the normal workflow.
+5. The STALE known-keys set must include type display-name keys (`module-include.xml <type name="X">`) and frozen-enum tag keys (`@Range("tag")` annotations) — both are live translations by Niagara convention, not dead. Omitting them inflated STALE with legitimate entries (ColdRoomPan: 6 fake-STALE cleared; CompPan: 1 cleared). SP6 pin proves the correct behavior; the defect was caught in lead review and fixed before merge.

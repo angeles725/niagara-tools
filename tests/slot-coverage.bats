@@ -169,6 +169,19 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   [[ "$output" != *"internalState"* ]]   # internalState has an annotation -> key is live, not STALE
 }
 
+@test "SP6: a type-name key and a @Range enum-tag key are NOT STALE" {
+  # Fixture per-slot-sp6: module-include.xml declares <type name="BThing">, lexicon has BThing=Thing
+  # display and fast=Fast; src/BMode.java has @NiagaraEnum + @Range("fast") + @Range("slow").
+  # BThing is a type display-name key (Niagara convention: TypeName=Display) and fast is a frozen-enum
+  # value tag — both are live translations, NOT dead.
+  # RED on the pre-fix script (BThing and fast appear as STALE); GREEN after this fix (known_sorted).
+  FX_SP6="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot-sp6"
+  run "$SC" per-slot "$FX_SP6/module-include.xml" "$FX_SP6/module.lexicon" "$FX_SP6/src"
+  [[ "$output" == *"MISSING"* ]]   # anchor: setpoint is MISSING (not in lexicon) — per-slot ran
+  [[ "$output" != *"BThing"* ]]    # BThing is a type name -> live, not STALE
+  [[ "$output" != *"fast"* ]]      # fast is a @Range tag -> live, not STALE
+}
+
 @test "SP3: a covered operator slot AND a non-operator slot are NOT flagged (coverage + OPERATOR gate)" {
   run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
   [[ "$output" == *"setpoint"* ]]          # anchor: per-slot analysis ran (setpoint is MISSING)
