@@ -210,7 +210,7 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
   ```
   → every `exit=0`, zero `FAIL lint-write-path` rows. Row count: `grep -cE '^\| ' docs/write-path-matrix.md` minus the 2 header lines = **84** (20 C8 + 2 PR1 + 62); record the exact number.
 - Doc-only: `git diff --stat origin/main..HEAD -- '*.java' '*.kts'` → empty.
-- V4: M11a — sed `/rotationInterval/d` on the matrix, fmt `exit` → `lint-write-path.sh` exits 1 naming `rotationInterval`.
+- V4: M11a — delete a slot row (rows are BACKTICK-wrapped, e.g. `` `condenser1Mode` ``) → `lint-write-path.sh <root>` exits 1 + `FAIL … slot <name>: no matrix row`. SC-9 is the exit 1→0 gate; the lint has NO `--strict` (`--strict` → exit 3 unknown option). VERIFIED on f1137fd: before 15/6/41 = 62 FAILs, after 0.
 - Kit side: `tests/lint-write-path.bats` WP-smoke reads `C8_WRITEPATH_ROOT` (a deed38c root) — unaffected. Harness-only: none. V6/V7.
 
 ## PR12 — `docs/c9-doctrine` (kit, no RED) · worktree `c9-doctrine` · after PR3/PR10 and the campaign9 retros
