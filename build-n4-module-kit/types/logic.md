@@ -99,7 +99,7 @@ Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `ch
 
 A protection is a latch (`freezeTripped`; or the CP-1 LP-floor shed, which is inline with NO named field — the silent case B824 flags) that OVERRIDES the normal command path. It has four tiers, and each
 tier that exists must be VISIBLE — a protection that silently holds an output is indistinguishable from a broken relay
-(`lint-silent-protection.sh`, `[ev: retro campaign9-silent-protection]`):
+(`lint-silent-protection.sh`, `[ev: retro campaign9-silent-protection]`); the lint recognises BOTH patterns' surfaces — Pattern A: `BAlarmSourceExt` on a child control point; Pattern B: the B-adapter implementing `BIAlarmSource` + `newOffnormalAlarm`/`AlarmSupport`, identified via the `B<Pure>` naming pair. `[ev: retro campaign10-silent-protection-pattern-b]`):
 
 1. **Setpoint + hysteresis** — the trip and the restart thresholds are two slots (`freezeSetpoint`/`freezeDiffStop`/`freezeDiffRestart`), never one. `[ev: corpus B821]`
 2. **Latch** — a private boolean assigned in ONE pure function (`ColdRoomControl.freezeTrip(...)`), tested without Baja.

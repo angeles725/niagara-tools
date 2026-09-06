@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign10-run-pure-test-cwd
 
 **Session**: C10 PR4 — S24 cwd-independent structural REDs
@@ -34,4 +34,4 @@ single subshell wrapping the `java` call: `( cd "$rt" && java -cp … )`.
 - Structural WiringTests that read relative paths must be documented as requiring a runner that controls the JVM cwd — not a test-side fix per module file.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign10-run-pure-test-cwd.md | kit | 2026-09-06 | pending | 1 |`
+**Status**: FOLDED — build-verify.md §Unit tests run-pure-test.sh line updated to 2-arg form + cwd-independence note (PR4 landed it). `[ev: retro campaign10-run-pure-test-cwd]`

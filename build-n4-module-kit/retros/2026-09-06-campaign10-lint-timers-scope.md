@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign10-lint-timers-scope
 
 **Session**: Campaign 10 PR1 — S21 companion-flag false positive fix (anyNoHardware on BDefrostController)
@@ -42,4 +42,4 @@ The root cause was twofold: Pass 1's candidate regex `[a-zA-Z_][a-zA-Z0-9_]*[[:s
 - The brace_depth >= 2 guard for method-open acceptance is a cheap, exact, proof-by-invariant fix: a top-level class body opens at depth 1 and any real method opens at depth >= 2 — no token blacklist can be exhaustive. [ev: retro campaign10-lint-timers-scope]
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign10-lint-timers-scope.md | kit | 2026-09-06 | pending | 4 |`
+**Status**: FOLDED — METHODOLOGY.md K24 item 6 captures the method-boundary parser lesson; BUILD-LOOP.md §5 lint-timers bullet already carries `[ev: retro campaign10-lint-timers-scope]` (PR1). `[ev: retro campaign10-lint-timers-scope]`

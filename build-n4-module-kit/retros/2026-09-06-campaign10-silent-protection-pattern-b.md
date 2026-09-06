@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign10-silent-protection-pattern-b
 
 **Session**: Campaign 10 PR3 — S23 lint-silent-protection Pattern B surface (BIAlarmSource/AlarmSupport adapter→pure follow)
@@ -32,5 +32,7 @@
 - [ev: D1b] The `brace_depth >= 2` guard in section D (method-boundary parser) is a prerequisite for any caller of the parser: without it, a class body opening at depth 1 can be misidentified as a method when Case B's backward scan matches `defaultValue = "new BAlarmRecord()"`.
 - [ev: K13] The RED commit is the contract: cherry-pick it as commit 1 and never merge it — a merge commit in a ff-only kit repo breaks the linear history required by the delivery contract.
 
+**Note (fold)**: SP-smoke's CompPan 1→0 result comes from module-wide surface application — the Pattern-B token bites S23-pos; S23-and pins the AND (implements BIAlarmSource AND newOffnormalAlarm/AlarmSupport). `[ev: retro campaign10-silent-protection-pattern-b]`
+
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign10-silent-protection-pattern-b.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — types/logic.md §Protection anatomy lint mention updated with both-patterns note. `[ev: retro campaign10-silent-protection-pattern-b]`

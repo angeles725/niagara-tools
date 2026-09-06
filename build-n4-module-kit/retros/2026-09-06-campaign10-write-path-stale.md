@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign10-write-path-stale
 
 **Session**: Campaign 10 PR5 — S25 lint-write-path STALE advisory + --strict flag
@@ -33,4 +33,4 @@ The write-path matrix lint only checked the FAIL direction (source OPERATOR slot
 - Multi-line annotation harvest requires matching the name="X" FIELD LINE, not a single-line @Niagara…name= pattern; the single-line approach undercounts and produces false STALE. [ev: apply-package S25 §covered-side]
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign10-write-path-stale.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — BUILD-LOOP.md §5 lint-write-path routing bullet extended with STALE + --strict facts (PR5 landed it). `[ev: retro campaign10-write-path-stale]`

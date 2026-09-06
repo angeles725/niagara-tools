@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign10-ext-writable-per-slot
 
 **Session**: C10 PR2 — S22 lint-ext-writable-shape per-slot writing-action exemption
@@ -45,5 +45,7 @@ generated `Property faultReset` at :1612). This is a false-negative fix, not a r
 - B831-G1: a `doAckAlarm` body that writes `alarmAck` must NOT exempt `faultReset`; the write-target must match the OPERATOR slot being checked, not any slot.
 - EW10 contract changes (0→1) require a QA RED re-cut; without re-reading the RED at apply time (K13), a worker shipping "0 WARN" would pass the old pin and miss the real defect.
 
+**Note (fold)**: The `brace_depth>=2` depth guard in the do<Action> body scanner is redundant given the `do_methods` gate (which already restricts to `doX()` entry points); kept defensive. The adapter→pure follow is the `B<Pure>` naming pair only (prepend `"B"` to the pure class name). `[ev: retro campaign10-ext-writable-per-slot]`
+
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign10-ext-writable-per-slot.md | kit | 2026-09-06 | pending | 0 |`
+**Status**: FOLDED — types/logic-authoring.md :105 anti-shape line updated. `[ev: retro campaign10-ext-writable-per-slot]`
