@@ -58,13 +58,19 @@ fi
 # Pass-0 awk: collect @NiagaraProperty declarations from all files.
 # Outputs: <name>|<flags_string>  one per property.
 cat > "$_TMP/pass0.awk" << 'AWKEOF'
-BEGIN { in_prop = 0; prop_buf = ""; prop_name = "" }
-FNR == 1 { in_prop = 0; prop_buf = ""; prop_name = "" }
+# Parse @NiagaraProperty annotations (single-line and multi-line).
+# Emits: <name>|<flags_string>  one per property.
+# Fix: use prop_first flag so the opening line is NOT also appended by the
+# accumulation rule (which was doubling the first line and breaking multi-line
+# depth tracking for annotations whose ( and ) are on separate lines).
+BEGIN { in_prop = 0; prop_buf = ""; prop_name = ""; prop_first = 0 }
+FNR == 1 { in_prop = 0; prop_buf = ""; prop_name = ""; prop_first = 0 }
 !in_prop && index($0, "@NiagaraProperty") > 0 {
-    in_prop = 1; prop_buf = $0; prop_name = ""
+    in_prop = 1; prop_buf = $0; prop_name = ""; prop_first = 1
 }
-in_prop && FNR > 1 { prop_buf = prop_buf " " $0 }
+in_prop && !prop_first { prop_buf = prop_buf " " $0 }
 in_prop {
+    prop_first = 0
     if (prop_name == "" && match(prop_buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
         seg = substr(prop_buf, RSTART)
         sub(/name[[:space:]]*=[[:space:]]*"/, "", seg); sub(/".*/, "", seg)
@@ -83,7 +89,7 @@ in_prop {
             match(seg2, /^[^,)]*/); prop_flags = substr(seg2, 1, RLENGTH)
         }
         if (prop_name != "") print prop_name "|" prop_flags
-        in_prop = 0; prop_buf = ""; prop_name = ""
+        in_prop = 0; prop_buf = ""; prop_name = ""; prop_first = 0
     }
 }
 AWKEOF
@@ -171,15 +177,42 @@ function cap1(s) { return toupper(substr(s,1,1)) substr(s,2) }
 function getter(s) { return "get" cap1(s) }
 function setter(s) { return "set" cap1(s) }
 
+# Extract the single-identifier condition from an if(...) on this line.
+# Returns the identifier, or "" when the condition is compound / absent.
+# Used for criterion (ii-B): if the condition field is itself surfaced via
+# SURF_WRITE_FIELDS (cross-file follow) the trip is considered CLEAN.
+function extract_cond_field(stripped,    rest, paren_depth, ci, ch, cond) {
+    if (!match(stripped, /(^|[^A-Za-z0-9_])if[[:space:]]*\(/)) return ""
+    # advance to the opening "("
+    rest = substr(stripped, RSTART + RLENGTH - 1)
+    rest = substr(rest, 2)          # skip "("
+    paren_depth = 1; cond = ""
+    for (ci = 1; ci <= length(rest); ci++) {
+        ch = substr(rest, ci, 1)
+        if      (ch == "(") { paren_depth++; cond = cond ch }
+        else if (ch == ")") { paren_depth--; if (paren_depth == 0) break; cond = cond ch }
+        else                 { cond = cond ch }
+    }
+    # strip leading ! and whitespace (handles "!fieldName" negations)
+    gsub(/^[[:space:]!]*/, "", cond)
+    gsub(/[[:space:]]*$/, "", cond)
+    # accept only a pure identifier: no operators, spaces, dots, parens
+    if (!match(cond, /^[A-Za-z_][A-Za-z0-9_]*$/)) return ""
+    return cond
+}
+
 END {
-    # --- A: collect private boolean fields ---
+    # --- A: collect private boolean fields and their declaration lines ---
     for (i = 1; i <= NR; i++) {
         ln = lines[i]
         if (match(ln, /private[[:space:]]+(final[[:space:]]+)?boolean[[:space:]]+/)) {
             rest = substr(ln, RSTART + RLENGTH)
             match(rest, /^[A-Za-z_][A-Za-z0-9_]*/)
             fname = substr(rest, 1, RLENGTH)
-            if (fname != "") private_fields[fname] = 1
+            if (fname != "") {
+                private_fields[fname] = 1
+                private_field_line[fname] = i   # declaration line (used by Pattern 7)
+            }
         }
     }
 
@@ -200,8 +233,7 @@ END {
             g = getter(sname); s = setter(sname)
             if (index(ln, g "().setValue") > 0 || index(ln, s "(") > 0) {
                 surf_write_line[i] = 1
-                # extract argument for cross-file follow (already covered by pass1,
-                # but also capture here for same-file SP2 cases)
+                # extract argument for same-file follow
                 pos = index(ln, g "().setValue(")
                 if (pos > 0) {
                     arg = substr(ln, pos + length(g "().setValue("))
@@ -215,7 +247,12 @@ END {
         }
     }
 
-    # --- D: parse method boundaries and find trips ---
+    # --- D: parse method boundaries ---
+    # Key invariant: a method is detected only when the line's NET brace change is > 0
+    # (i.e. the line opens a block that is not closed on the same line).
+    # This correctly skips single-line methods like `Type get() { return x; }` whose
+    # { and } both appear on one line (net change = 0), preventing the method-open
+    # event from being attached to a post-close depth that spans until the class closes.
     n_meth = 0
     brace_depth = 0
     in_m = 0; m_name = ""; m_start = 0; m_depth_at_open = 0
@@ -224,6 +261,7 @@ END {
         ln = lines[i]
         stripped = ln; sub(/\/\/.*$/, "", stripped)
 
+        old_depth = brace_depth
         # count braces
         for (ci = 1; ci <= length(stripped); ci++) {
             c = substr(stripped, ci, 1)
@@ -231,15 +269,41 @@ END {
             else if (c == "}") brace_depth--
         }
 
-        if (!in_m && brace_depth > 0) {
-            # detect method open: identifier( ... ) [throws ...] { on this line
+        # Method open: only when net depth INCREASES (block opened but not closed on this line)
+        if (!in_m && brace_depth > old_depth) {
+            mname = ""
+            # Case A: single-line signature — identifier( ... ) [throws ...] { on one line
             if (match(stripped, /[A-Za-z_][A-Za-z0-9_<>[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
                 seg = substr(stripped, RSTART)
                 match(seg, /^[A-Za-z_][A-Za-z0-9_<>[\]]*/); mname = substr(seg, 1, RLENGTH)
-                if (mname !~ /^(if|for|while|switch|catch|try|else|do|new)$/) {
-                    in_m = 1; m_name = mname; m_start = i
-                    m_depth_at_open = brace_depth
+                if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
+            }
+            # Case B: multi-line signature — { is on its own line; scan backward for identifier(
+            # Stop conditions: annotation line (@), prior statement (;), prior block open ({).
+            # Exclude class/interface/enum to avoid detecting class body as a method.
+            if (mname == "") {
+                bonly = stripped; gsub(/[[:space:]]/, "", bonly)
+                if (bonly == "{") {
+                    for (k = i-1; k >= 1 && k >= i-20; k--) {
+                        lk = lines[k]; sub(/\/\/.*$/, "", lk)
+                        lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
+                        # stop at annotation line (@Annotation before class/method body)
+                        if (substr(lk_t, 1, 1) == "@") break
+                        # stop at previous statement end or block open
+                        if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
+                        if (match(lk, /[A-Za-z_][A-Za-z0-9_<>[\]]*[[:space:]]*\(/)) {
+                            seg2 = substr(lk, RSTART)
+                            match(seg2, /^[A-Za-z_][A-Za-z0-9_<>[\]]*/); cn = substr(seg2, 1, RLENGTH)
+                            if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
+                                mname = cn; break
+                            }
+                        }
+                    }
                 }
+            }
+            if (mname != "") {
+                in_m = 1; m_name = mname; m_start = i
+                m_depth_at_open = brace_depth   # depth AFTER the opening brace
             }
         }
 
@@ -256,14 +320,16 @@ END {
     }
 
     # --- E: for each method, find TRIPS guarded by if() ---
-    # Strategy: for each line with a trip action, scan backward within the method
-    # to find a guarding if( within 10 lines. Handles both single-line if and
-    # multi-line if blocks without brace-depth complexity.
+    # Patterns detected (B824 §824.2):
+    #   P1: Math.min(target, ...) inside if()
+    #   P3: getEffectSlot().setValue(false) inside if()  [effect-slot exemption: NOT a surface]
+    #   P4: this.<privateBoolField> = true/false inside if()
+    #   P7: return X || <privateField> in *Inhibited/*Trip method  (no if guard needed)
+    # Patterns 2 (target=0) and 6 (return in if block) are intentionally absent:
+    #   P2 fired on demand gates and bounds clamps (false positives)
+    #   P6 fired on every early-guard return (113 false positives in real trees)
     n_trips = 0
 
-    # Helper: given line i in method [ms..me], return 1 if guarded by an if()
-    # by scanning backward up to 10 lines within the method.
-    # We store the result in has_if_guard[i].
     for (mi = 0; mi < n_meth; mi++) {
         ms = meth_start[mi]; me = meth_end[mi]; mn = meth_name[mi]
 
@@ -271,7 +337,8 @@ END {
             ln = lines[i]
             stripped = ln; sub(/\/\/.*$/, "", stripped)
 
-            # Pattern 7: *Inhibited/*Trip method with return X || Y (no if guard required)
+            # Pattern 7: *Inhibited/*Trip method — return lhs || <private field>
+            # Report at the FIELD DECLARATION line (private_field_line[rhs]), not the return line.
             if ((mn ~ /[Ii]nhibited$/ || mn ~ /[Tt]rip$/) &&
                 match(stripped, /(^|[[:space:]])return[[:space:]]+[A-Za-z_][A-Za-z0-9_. ]*\|\|[[:space:]]*[A-Za-z_][A-Za-z0-9_]*/)) {
                 seg = substr(stripped, RSTART)
@@ -281,26 +348,26 @@ END {
                 rhs = substr(seg, 1, RLENGTH)
                 if (rhs in private_fields) {
                     n_trips++
-                    trip_line[n_trips] = i; trip_meth[n_trips] = mn
+                    trip_line[n_trips] = private_field_line[rhs]   # field declaration line
+                    trip_meth[n_trips] = mn
                     trip_ms[n_trips] = ms; trip_me[n_trips] = me; trip_out[n_trips] = rhs
+                    trip_cond_field[n_trips] = ""   # P7 has no if-condition
                 }
                 continue
             }
 
             # --- check if this line has any trip action ---
-            has_trip = 0; tout = ""
+            has_trip = 0; tout = ""; p4_fname = ""
 
             # Pattern 1: Math.min(target, ...)
             if (!has_trip && (index(stripped, "Math.min(target,") > 0 || index(stripped, "Math.min(target ,") > 0)) {
                 has_trip = 1; tout = "stage"
             }
-            # Pattern 2: target = 0 / target-- / target = target - 1
-            if (!has_trip && (match(stripped, /target[[:space:]]*=[[:space:]]*0[^0-9]/) ||
-                match(stripped, /target--/) ||
-                match(stripped, /target[[:space:]]*=[[:space:]]*target[[:space:]]*-[[:space:]]*1/))) {
-                has_trip = 1; tout = "stage"
-            }
-            # Pattern 3: getEffectSlot().setValue(false)
+            # Pattern 3: getEffectSlot().setValue(false) with an inline if(condition) on the same line.
+            # Restricting to same-line if avoids false positives where setValue(false) is inside a
+            # multi-line block opened by an if() on a different line (e.g. power-on stagger guards,
+            # state-reset sequences). The condition must also be a single-identifier boolean field
+            # (extract_cond_field returns non-empty).
             if (!has_trip) {
                 n_es = split(EFFECT_SLOTS, es_arr, " ")
                 for (k = 1; k <= n_es; k++) {
@@ -308,26 +375,25 @@ END {
                     eg = getter(ename)
                     if (index(stripped, eg "().setValue(false)") > 0 ||
                         index(stripped, eg "().setValue( false )") > 0) {
-                        has_trip = 1; tout = ename; break
+                        p3_cond = extract_cond_field(stripped)
+                        if (p3_cond != "") { has_trip = 1; tout = ename; break }
                     }
                 }
             }
-            # Pattern 6: return inside a brace-delimited if-block.
-            # Only fire when the return line itself contains a { before the return
-            # (i.e. the if-block opens on the same line) OR the if( is on the same line.
-            # This avoids false positives on post-if plain returns like `return target;`.
-            if (!has_trip && match(stripped, /(^|[[:space:]])return([[:space:];{]|$)/)) {
-                ret_pos = RSTART
-                has_brace_before = (index(substr(stripped, 1, ret_pos), "{") > 0)
-                has_if_same = match(stripped, /(^|[^A-Za-z0-9_])if[[:space:]]*\(/)
-                if (has_brace_before || has_if_same) {
-                    has_trip = 1; tout = "skip"
+            # Pattern 4: this.<privateBoolField> = true/false
+            if (!has_trip && match(stripped, /this\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(true|false)/)) {
+                seg = substr(stripped, RSTART)
+                sub(/this\./, "", seg)
+                match(seg, /^[A-Za-z_][A-Za-z0-9_]*/)
+                p4_fname = substr(seg, 1, RLENGTH)
+                if (p4_fname in private_fields) {
+                    has_trip = 1; tout = p4_fname
                 }
             }
 
             if (!has_trip) continue
 
-            # Verify guarded by an if() — scan backward up to 10 lines
+            # Verify guarded by an if() — scan backward up to 10 lines within the method
             guarded = 0
             for (j = i; j >= ms && j >= i - 10; j--) {
                 ln2 = lines[j]; sub(/\/\/.*$/, "", ln2)
@@ -335,9 +401,15 @@ END {
             }
             if (!guarded) continue
 
+            # Extract condition field for criterion (ii-B): if the if(...) condition on
+            # this line is a single named boolean field that appears in SURF_WRITE_FIELDS
+            # (written to a surface slot somewhere in the module), the trip is CLEAN.
+            cond_field = extract_cond_field(stripped)
+
             n_trips++
             trip_line[n_trips] = i; trip_meth[n_trips] = mn
             trip_ms[n_trips] = ms; trip_me[n_trips] = me; trip_out[n_trips] = tout
+            trip_cond_field[n_trips] = cond_field
         }
     }
 
@@ -349,10 +421,15 @@ END {
         tms = trip_ms[t]; tme = trip_me[t]
         surfaced = 0
 
-        # (1) file has alarm ext
+        # (1) file has BAlarmSourceExt
         if (file_has_alarm) { surfaced = 1 }
 
-        # (2) same method has a SURF_WRITE
+        # (ii-B) condition field is surfaced via cross-file field->slot follow
+        if (!surfaced && trip_cond_field[t] != "" && in_list(trip_cond_field[t], SURF_WRITE_FIELDS)) {
+            surfaced = 1
+        }
+
+        # (2) same method contains a SURF_WRITE
         if (!surfaced) {
             for (i = tms; i <= tme; i++) {
                 if (i in surf_write_line) { surfaced = 1; break }
@@ -360,15 +437,13 @@ END {
         }
 
         # (3) cross-file field->slot follow:
-        #     a non-private field is assigned in the guarded block (near tl),
-        #     AND that field name appears in SURF_WRITE_FIELDS (from any file)
+        #     a non-private field is assigned near the trip line AND appears in SURF_WRITE_FIELDS
         if (!surfaced && n_swf > 0) {
             for (j = tl; j <= tl + 8 && j <= tme; j++) {
                 ln3 = lines[j]; sub(/\/\/.*$/, "", ln3)
                 for (k = 1; k <= n_swf; k++) {
                     fld = swf_arr[k]; if (fld == "") continue
                     if (fld in private_fields) continue
-                    # check if fld is assigned (= but not ==) anywhere in this window
                     pos = index(ln3, fld)
                     if (pos > 0) {
                         rest = substr(ln3, pos + length(fld))
