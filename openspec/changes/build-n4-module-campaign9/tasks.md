@@ -336,18 +336,18 @@ Chain strategy: stacked-to-main
 **D-ids**: D12 · **Gate**: R12.1-R12.10, SC-11
 **K22 already present at `METHODOLOGY.md:86`** — PR12 adds idempotent presence guard ONLY; NEVER re-folds or duplicates K22.
 
-- [ ] 12.1 `grep-before-fold` (K6): `rg 'Protection anatomy|BIAlarmSource|AlarmSupport|fragment-merge|OBSERVED flip|module-root.*profile' build-n4-module-kit/` → confirm 0 hits for genuinely new content; `grep -n 'K22' METHODOLOGY.md` → expect exactly `:86` (K22 exists; do NOT author it again).
-- [ ] 12.2 Add `types/logic.md` §"Protection anatomy" (NEW §): Pattern A (declarative child `BBooleanPoint` + `BAlarmSourceExt`); Pattern B (`BIAlarmSource` + `AlarmSupport.newOffnormalAlarm` on the offnormal EDGE only); both route `sourceState = offnormal`; both `add_slot`-SAFE; "folded as code: `lint-silent-protection.sh`" prose line; `[ev: corpus B827]` `[ev: corpus B821 §821.4]` per R12.2.
-- [ ] 12.3 Add `types/logic-authoring.md` §"Slot types for externally written values" (R12.1): a slot written by external clients MUST be a simple value or carry a `@NiagaraAction`; bare `Flags.OPERATOR` complex either rejects or writes a default; `[ev: corpus B823]` `[ev: corpus B826]`.
-- [ ] 12.4 Add `types/dashboard.md` one-liner cross-reference to slot-type doctrine in `types/logic-authoring.md` (R12.3); add unified write-audit reconciliation contract (one canonical sink, two writers, dedupe key, audit-fail never fails the write) in `types/dashboard.md` and `BUILD-LOOP.md` §6 note (R12.9); `[ev: corpus B829]` `[ev: S12 plan 1ecdf437c]`.
-- [ ] 12.5 Add `BUILD-LOOP.md` §5 ONE module-root/profile routing line referencing K22 (§5 carries no module-root/profile text today); do NOT restate K22 — one cross-reference only (R12.4).
-- [ ] 12.6 Add `METHODOLOGY.md` §Kit maintenance: (a) mutation tables record OBSERVED flips (verbatim RED-then-GREEN), never "would flip" prose (R12.6); (b) four-always-conflict-files + fragment-merge rule (append, keep both rows, dedupe by script name, never overwrite) (R12.7).
-- [ ] 12.7 Add `BUILD-LOOP.md` §7 lead merge/settle order: merge ff-only → verify `git log -1` = blessed tip → THEN settle; rebase a parallel branch before the QA ping (R12.8).
-- [ ] 12.8 Add presence guard to `tests/c9-close.bats` (or a separate verifier): assert exactly ONE `**K22 —` line in `METHODOLOGY.md` (D12 idempotent guard; avoids a future double-fold).
-- [ ] 12.9 `sweep-fold-audit.sh --strict` exits 0 (every `[ev:]` token resolvable; R12.10); `kit-links.bats` exits 0 (verifies all three new scripts routed in both `BUILD-LOOP.md` §5 and `skill/SKILL.md`; R12.10); K19 routing lines for all three lints were already placed in PR2/PR3/PR10 — PR12 DOES NOT add them (D12 `[CERT]`).
-- [ ] 12.10 Guards: `sweep-fold-audit.sh --strict` green; `kit-links.bats` green; 0 attribution trailers; rebase before QA ping; verify `git log -1` before settle.
-- [ ] 12.11 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope (CD1).
-- [ ] **[lead]** Doctrine sections land with `[ev:]` per paragraph; `sweep-fold-audit.sh --strict` green; `kit-links.bats` green; K22 presence guard passes; merge ff-only; ledger acquire + settle `--max-changed-lines 200`.
+- [x] 12.1 `grep-before-fold` (K6): `rg 'Protection anatomy|BIAlarmSource|AlarmSupport|fragment-merge|OBSERVED flip|module-root.*profile' build-n4-module-kit/` → confirm 0 hits for genuinely new content; `grep -n 'K22' METHODOLOGY.md` → expect exactly `:86` (K22 exists; do NOT author it again).
+- [x] 12.2 Add `types/logic.md` §"Protection anatomy" (NEW §): Pattern A (declarative child `BBooleanPoint` + `BAlarmSourceExt`); Pattern B (`BIAlarmSource` + `AlarmSupport.newOffnormalAlarm` on the offnormal EDGE only); both route `sourceState = offnormal`; both `add_slot`-SAFE; "folded as code: `lint-silent-protection.sh`" prose line; `[ev: corpus B827]` `[ev: corpus B821 §821.4]` per R12.2.
+- [x] 12.3 VERIFY ONLY — slot-type doctrine already at `types/logic-authoring.md:62-70` (C8 PR15); added lint-ext-writable-shape.sh cross-ref at end of section (PR10 landed). No duplicate text authored.
+- [x] 12.4 Add `types/dashboard.md` one-canonical-sink unified write audit doctrine (B829/B830); cross-reference to `types/logic-authoring.md` §Slot types already in the slot-type line at :33 (R12.3/R12.9).
+- [x] 12.5 Add `BUILD-LOOP.md` §5 ONE K22 cross-reference bullet (module-root/profile convention; exit 3 no silent 0). K22 text at METHODOLOGY.md:86 untouched (R12.4).
+- [x] 12.6 Add `METHODOLOGY.md` §Kit maintenance: (a) OBSERVED-flip mutation table rule [ev: retro campaign8-close-process-meta-lessons]; (b) fragment-merge protocol for the four always-conflict kit files [ev: retro campaign8-close-process-meta-lessons] (R12.6/R12.7).
+- [x] 12.7 Add `BUILD-LOOP.md` §7 lead merge/settle order: merge ff-only → verify `git log -1` = blessed tip → THEN settle; rebase parallel workers before QA ping (R12.8).
+- [ ] 12.8 Add presence guard to `tests/c9-close.bats`: assert exactly ONE `**K22 —` line in `METHODOLOGY.md` — DEFERRED to PR13 (PR12 = CD2 zero new bats tests; this guard belongs in the close-gate suite).
+- [x] 12.9 `sweep-fold-audit.sh --strict` exits 0 (77 folded, 77 cited, 0 uncited); `kit-links.bats` exits 0 (L1-L8 all pass); dangling `campaign9-s12-write-audit` = 0; K19 routing lines NOT re-added (already in PR2/PR3/PR10) (R12.10).
+- [x] 12.10 Guards: `sweep-fold-audit.sh --strict` exit 0; `kit-links.bats` 8/8; 0 attribution trailers; bats 368/368 green; tip commit `41d1003` on branch `feat/c9-pr12`.
+- [x] 12.11 Retro `campaign9-doctrine-fold` filed (7 deltas); `retros/INDEX.md` row appended; `BUILD-STATE.md` retro_pending: true (CD1). C10 seeds S21/S22 in retro body.
+- [x] **[lead]** Doctrine sections land with `[ev:]` per paragraph; `sweep-fold-audit.sh --strict` exit 0; `kit-links.bats` 8/8; K22 NOT duplicated (presence at :86 verified). Tip: `41d1003`. Gate outputs below.
 
 ---
 
