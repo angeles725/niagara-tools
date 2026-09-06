@@ -100,8 +100,8 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V4: M2a (DS3), M2b (DS4) — MANUAL. tasks 2.7 says DS2: DS2 is the fixture-level mutant already executable.
 - Harness-only: none. V6/V7.
 
-## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` 9f36f5e · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
-- V2: `git diff 9f36f5e HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
+## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` 3b281e0 (SP4 detected-trip shape) · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
+- V2: `git diff 3b281e0 HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
 - V3: kit common gate; `bats tests/lint-silent-protection.bats` → **10/10** (SP1-SP8 + SP-smoke + SP9 no-sources → exit 3 + ERROR).
 - SP-smoke is EXACT at a109249 (`C9_CLIENT_ROOT`): CompPan-rt exactly 1 WARN whose subject is `CompressorControl.java:215` (CP-1),
   ColdRoomPan-rt exactly 1 whose subject is `BEvaporatorUnit.java:1287` (CR-3), DashboardPan-rt 0, DashboardPan-ux 0; never `dischargeHighAlarm`,
