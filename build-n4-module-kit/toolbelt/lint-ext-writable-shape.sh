@@ -29,6 +29,8 @@
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2).
 # [ev: corpus B823 §823.2]  [ev: corpus B826]  [ev: kit types/logic-authoring.md:62-70]
 set -u
+# shellcheck source=lib/method-boundary.sh
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -58,7 +60,7 @@ WARNED=0
 
 # shellcheck disable=SC2016  # awk program in single quotes — no shell expansion intended
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" '
+  out=$(awk -v FILE="$f" "$MB_AWK"'
   { lines[NR] = $0 }
 
   END {
@@ -126,62 +128,17 @@ while IFS= read -r f; do
     }
 
     # -------------------------------------------------------------------------
-    # Pass 2: method-boundary parser + write detection (do_method bodies only).
-    # Ported from lint-silent-protection.sh:250-320 with brace_depth>=2 guard
-    # (D1b applied to S22): the class body opens at depth 1; any real method
-    # opens at depth >= 2. execute(), changed(), and slotomatic-generated setters
-    # fall out by construction — none is named do<Action>.
-    # [ev: D2b step 3; D2a; B831 §831.2; client BCompressorControl.java:2025 @ ff1b659]
+    # Pass 2: shared fragment (PEAK depth) — do_method bodies via mb_parse (D1f).
+    # execute(), changed(), and slotomatic-generated setters fall out by construction
+    # — none is named do<Action>. [ev: D1f; lib/method-boundary.sh mb_parse]
     # -------------------------------------------------------------------------
     if (length(do_methods) > 0) {
-      brace_depth = 0; in_m = 0; m_start = 0; m_dep = 0
-      for (i = 1; i <= NR; i++) {
-        ln = slines[i]; old_d = brace_depth; max_d = brace_depth
-        for (ci = 1; ci <= length(ln); ci++) {
-          c = substr(ln, ci, 1)
-          if (c == "{") { brace_depth++; if (brace_depth > max_d) max_d = brace_depth }
-          else if (c == "}") brace_depth--
-        }
-        # Use max_d (peak depth during line) so one-liner methods { ... } on one line
-        # are detected correctly even when net brace change is 0. [ev: D2b step 3]
-        if (!in_m && max_d > old_d && max_d >= 2) {
-          mname = ""
-          # Case A: single-line signature — identifier(...) [throws ...] {
-          if (match(ln, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
-            seg = substr(ln, RSTART)
-            match(seg, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); mname = substr(seg, 1, RLENGTH)
-            if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
-          }
-          # Case B: { alone on line — backward scan for identifier(
-          # Stop at annotation (@), prior statement (;$), or prior block ({).
-          # Exclude class/interface/enum — never name the class body as a method.
-          if (mname == "") {
-            bonly = ln; gsub(/[[:space:]]/, "", bonly)
-            if (bonly == "{") {
-              for (k = i-1; k >= 1 && k >= i-20; k--) {
-                lk = slines[k]; lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
-                if (substr(lk_t, 1, 1) == "@") break
-                if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
-                if (match(lk, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\(/)) {
-                  seg2 = substr(lk, RSTART)
-                  match(seg2, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); cn = substr(seg2, 1, RLENGTH)
-                  if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
-                    mname = cn; break
-                  }
-                }
-              }
-            }
-          }
-          if (mname != "" && mname in do_methods) {
-            in_m = 1; m_start = i; m_dep = max_d
-          }
-        }
-        if (in_m && brace_depth < m_dep) {
-          body = ""
-          for (bi = m_start; bi <= i; bi++) body = body " " slines[bi]
-          _scan_writes(body)
-          in_m = 0
-        }
+      _n = mb_parse(slines, NR, ms, me, mn)
+      for (k = 0; k < _n; k++) {
+        if (!(mn[k] in do_methods)) continue
+        body = ""
+        for (bi = ms[k]; bi <= me[k]; bi++) body = body " " slines[bi]
+        _scan_writes(body)
       }
     }
 

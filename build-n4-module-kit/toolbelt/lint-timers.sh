@@ -45,6 +45,8 @@
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
+# shellcheck source=lib/method-boundary.sh
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 
 FAILED=0
 
@@ -138,27 +140,11 @@ done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | 
 # [ev: D1a; D1b; D1c; D1d; corpus B831 §S21]
 # ---------------------------------------------------------------------------
 while IFS= read -r f; do
-  _cf=$(awk '
+  _cf=$(awk "$MB_AWK"'
     BEGIN { n = 0 }
     { lines[++n] = $0 }
     END {
-      # --- Comment strip: blank // and /* */ content; line numbers preserved ---
-      in_bc = 0
-      for (i = 1; i <= n; i++) {
-        ln = lines[i]; out = ""; j = 1
-        while (j <= length(ln)) {
-          if (in_bc) {
-            if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 }
-            else j++
-          } else {
-            c2 = substr(ln, j, 2)
-            if (c2 == "/*") { in_bc = 1; j += 2 }
-            else if (c2 == "//") break
-            else { out = out substr(ln, j, 1); j++ }
-          }
-        }
-        slines[i] = out
-      }
+      mb_strip(lines, n, slines)
 
       # --- Phase 1: collect class-scope FIELD declarations (brace_depth == 1) ---
       # A boolean/int declared while the surrounding brace depth is exactly 1
@@ -185,54 +171,8 @@ while IFS= read -r f; do
       }
       if (n_fields == 0) exit 0
 
-      # --- Phase 2: method-boundary parser (section D, brace_depth >= 2 guard) ---
-      # Ported from lint-silent-protection.sh:250-320 with the added guard:
-      # accept a method open only when the post-open brace_depth >= 2.
-      # The class body opens at depth 1; any real method body opens at depth >= 2.
-      # This kills the @NiagaraProperty( false-positive by construction:
-      # that annotation line has net brace change 0, so it never fires the guard.
-      n_meth = 0; brace_depth = 0; in_m = 0; m_start = 0; m_dep = 0
-      for (i = 1; i <= n; i++) {
-        ln = slines[i]; old_d = brace_depth
-        for (ci = 1; ci <= length(ln); ci++) {
-          c = substr(ln, ci, 1)
-          if (c == "{") brace_depth++
-          else if (c == "}") brace_depth--
-        }
-        if (!in_m && brace_depth > old_d && brace_depth >= 2) {
-          mname = ""
-          # Case A: single-line signature — identifier(...) [throws ...] {
-          if (match(ln, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
-            seg = substr(ln, RSTART)
-            match(seg, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); mname = substr(seg, 1, RLENGTH)
-            if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
-          }
-          # Case B: { alone on its line — scan backward for identifier(
-          # Stop: annotation (@), prior statement (;$), prior block open ({).
-          # Exclude class/interface/enum to avoid naming the class body.
-          if (mname == "") {
-            bonly = ln; gsub(/[[:space:]]/, "", bonly)
-            if (bonly == "{") {
-              for (k = i-1; k >= 1 && k >= i-20; k--) {
-                lk = slines[k]; lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
-                if (substr(lk_t, 1, 1) == "@") break
-                if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
-                if (match(lk, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\(/)) {
-                  seg2 = substr(lk, RSTART)
-                  match(seg2, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); cn = substr(seg2, 1, RLENGTH)
-                  if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
-                    mname = cn; break
-                  }
-                }
-              }
-            }
-          }
-          if (mname != "") { in_m = 1; m_start = i; m_dep = brace_depth }
-        }
-        if (in_m && brace_depth < m_dep) {
-          meth_start[n_meth] = m_start; meth_end[n_meth] = i; n_meth++; in_m = 0
-        }
-      }
+      # --- Phase 2: method-boundary parser (shared fragment, PEAK depth) ---
+      n_meth = mb_parse(slines, n, meth_start, meth_end, meth_name)
 
       # --- Phase 3: same-method binding (D1d) ---
       # FAIL only when a Clock.schedule* lies within [meth_start[m], meth_end[m]]

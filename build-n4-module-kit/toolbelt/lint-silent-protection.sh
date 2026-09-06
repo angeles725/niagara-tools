@@ -20,6 +20,8 @@
 # Dot-dirs excluded (D9b). VCS-free by design.
 # [ev: corpus B824]  [ev: retro campaign9-silent-protection]
 set -u
+# shellcheck source=lib/method-boundary.sh
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -201,7 +203,9 @@ ALARM_CLASSES=$(tr '\n' ' ' < "$_TMP/alarm_classes.txt")
 
 # ---------------------------------------------------------------------------
 # Main awk: per-file trip detection and surface resolution.
+# Write the shared method-boundary fragment; consumed via a second -f below.
 # ---------------------------------------------------------------------------
+printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
 cat > "$_TMP/main.awk" << 'AWKEOF'
 # Called with: -v FILE=path -v SURF_SLOTS="..." -v EFFECT_SLOTS="..."
 #              -v SURF_WRITE_FIELDS="..." -v ALARM_CLASSES="..."
@@ -299,78 +303,12 @@ END {
         }
     }
 
-    # --- D: parse method boundaries ---
-    # Key invariant: a method is detected only when the line's NET brace change is > 0
-    # (i.e. the line opens a block that is not closed on the same line).
-    # This correctly skips single-line methods like `Type get() { return x; }` whose
-    # { and } both appear on one line (net change = 0), preventing the method-open
-    # event from being attached to a post-close depth that spans until the class closes.
-    n_meth = 0
-    brace_depth = 0
-    in_m = 0; m_name = ""; m_start = 0; m_depth_at_open = 0
-
-    for (i = 1; i <= NR; i++) {
-        ln = lines[i]
-        stripped = ln; sub(/\/\/.*$/, "", stripped)
-
-        old_depth = brace_depth
-        # count braces
-        for (ci = 1; ci <= length(stripped); ci++) {
-            c = substr(stripped, ci, 1)
-            if (c == "{") brace_depth++
-            else if (c == "}") brace_depth--
-        }
-
-        # Method open: only when net depth INCREASES (block opened but not closed on this line)
-        # D1b guard: depth must be >= 2; a class body opens at depth 1 and is never a method.
-        if (!in_m && brace_depth > old_depth && brace_depth >= 2) {
-            mname = ""
-            # Case A: single-line signature — identifier( ... ) [throws ...] { on one line
-            if (match(stripped, /[A-Za-z_][A-Za-z0-9_<>[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
-                seg = substr(stripped, RSTART)
-                match(seg, /^[A-Za-z_][A-Za-z0-9_<>[\]]*/); mname = substr(seg, 1, RLENGTH)
-                if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
-            }
-            # Case B: multi-line signature — { is on its own line; scan backward for identifier(
-            # Stop conditions: annotation line (@), prior statement (;), prior block open ({).
-            # Exclude class/interface/enum to avoid detecting class body as a method.
-            if (mname == "") {
-                bonly = stripped; gsub(/[[:space:]]/, "", bonly)
-                if (bonly == "{") {
-                    for (k = i-1; k >= 1 && k >= i-20; k--) {
-                        lk = lines[k]; sub(/\/\/.*$/, "", lk)
-                        lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
-                        # stop at annotation line (@Annotation before class/method body)
-                        if (substr(lk_t, 1, 1) == "@") break
-                        # stop at previous statement end or block open
-                        if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
-                        if (match(lk, /[A-Za-z_][A-Za-z0-9_<>[\]]*[[:space:]]*\(/)) {
-                            seg2 = substr(lk, RSTART)
-                            match(seg2, /^[A-Za-z_][A-Za-z0-9_<>[\]]*/); cn = substr(seg2, 1, RLENGTH)
-                            if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
-                                mname = cn; break
-                            }
-                        }
-                    }
-                }
-            }
-            if (mname != "") {
-                in_m = 1; m_name = mname; m_start = i
-                m_depth_at_open = brace_depth   # depth AFTER the opening brace
-            }
-        }
-
-        if (in_m) {
-            if (brace_depth < m_depth_at_open) {
-                # method closed
-                meth_start[n_meth] = m_start
-                meth_end[n_meth]   = i
-                meth_name[n_meth]  = m_name
-                n_meth++
-                in_m = 0; m_name = ""; m_start = 0
-            }
-        }
-    }
+    # --- D: parse method boundaries (shared fragment, PEAK depth) ---
+    # PEAK depth: open ⟺ max_d > old_d && max_d >= 2; close ⟺ brace_depth < m_dep,
+    # tested in the SAME iteration. A one-liner opens AND closes on one line;
+    # the class-FIELD guard (>= 2) prevents the class body from ever being entered.
+    # [ev: design D1g; lib/method-boundary.sh mb_parse]
+    n_meth = mb_parse(lines, NR, meth_start, meth_end, meth_name)
 
     # --- E: for each method, find TRIPS guarded by if() ---
     # Patterns detected (B824 §824.2):
@@ -535,7 +473,7 @@ while IFS= read -r f; do
         -v EFFECT_SLOTS="$EFFECT_SLOTS" \
         -v SURF_WRITE_FIELDS="$SURF_WRITE_FIELDS" \
         -v ALARM_CLASSES="$ALARM_CLASSES" \
-        -f "$_TMP/main.awk" "$f" 2>/dev/null >> "$_WARN_FILE"
+        -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" "$f" 2>/dev/null >> "$_WARN_FILE"
 done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
 
 # Dedupe by <file>:<line> (first WARN per site wins)
