@@ -63,6 +63,15 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
   [ "$(git -C "$REPO" log --format=%B "${BASE}..HEAD" | grep -ciE 'co-authored|generated with|claude-session|noreply@anthropic')" -eq 0 ]
 }
 
+@test "CLOSE-no-conflict-markers: no leftover git conflict markers in tracked .md/.sh/.bats/.bash" {
+  _close
+  # A rebase fragment-merge (C11 PR2) can leave <<<<<<< / >>>>>>> markers; real ones were
+  # found committed in a C8 archive doc. Line-anchored, marker + space, .git excluded.
+  offenders=$(grep -rlE '^(<<<<<<< |>>>>>>> )' --include='*.md' --include='*.sh' --include='*.bats' --include='*.bash' --exclude-dir='.git' "$REPO" || true)
+  n=$(printf '%s' "$offenders" | grep -c . || true)
+  [ "$n" -eq 0 ] || { echo "conflict markers in $n file(s):"; printf '%s\n' "$offenders"; false; }
+}
+
 @test "CLOSE-kit-links: kit-links.bats all green" { _close; run bats "$REPO/tests/kit-links.bats"; [ "$status" -eq 0 ]; }
 
 @test "CLOSE-install-skill: install-skill --dry-run exit 0" { _close; run "$REPO/scripts/install-skill.sh" --dry-run; [ "$status" -eq 0 ]; }
