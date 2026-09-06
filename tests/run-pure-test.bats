@@ -77,3 +77,53 @@ JAVA
   [ "$status" -eq 3 ]
   [[ "$output" == *"junit-4.13.2.jar not in"* ]]
 }
+
+# ===========================================================================
+# S24 (C10): run-pure-test.sh must run the JVM with cwd = the module-rt-dir, so a
+# SOURCE-STRUCTURAL test (one that reads `src/…` via Paths.get, e.g. FreezeAlarm-
+# WiringTest / ConfigLoginWiringTest) resolves its relative paths regardless of
+# where the runner was invoked. On df8c7ec the runner runs `java …` from the
+# caller's cwd (toolbelt/run-pure-test.sh:62, no `cd "$rt"`), so from a non-profile
+# cwd the structural test's `Paths.get("src/…")` misses and it FAILs.
+# RED-for-the-right-reason: S24-cwd FAILs on df8c7ec (runner uses the caller cwd).
+# ---------------------------------------------------------------------------
+@test "S24-cwd: a source-structural test (Paths.get(\"src/…\")) passes via run-pure-test.sh from a NON-profile cwd" {
+  cat > "$RT/src/$PKG/Widget.java" <<'JAVA'
+package com.example.demo;
+final class Widget { static int v() { return 7; } }
+JAVA
+  cat > "$RT/srcTest/test/com/example/demo/WidgetStructTest.java" <<'JAVA'
+package com.example.demo;
+import org.junit.Test; import static org.junit.Assert.*;
+import java.nio.file.*;
+public class WidgetStructTest {
+  @Test public void reads_its_own_source_relative_to_the_module_root() {
+    // resolves ONLY when the JVM cwd is the module-rt-dir (like the real wiring tests)
+    assertTrue("src/ must resolve from the module root", Files.exists(Paths.get("src/com/example/demo/Widget.java")));
+  }
+}
+JAVA
+  # invoke the runner from a NON-profile cwd; on the fix it cd's into $RT, so Paths.get("src/…") resolves
+  mkdir -p "$BATS_TEST_TMPDIR/elsewhere"; cd "$BATS_TEST_TMPDIR/elsewhere"
+  run "$RUN" "$RT" com.example.demo.WidgetStructTest
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OK (1 test)"* ]]
+}
+
+@test "S24-cwd-regression: the same runner call from the module-rt-dir itself still passes (unchanged)" {
+  cat > "$RT/src/$PKG/Widget2.java" <<'JAVA'
+package com.example.demo;
+final class Widget2 { static int v() { return 9; } }
+JAVA
+  cat > "$RT/srcTest/test/com/example/demo/Widget2StructTest.java" <<'JAVA'
+package com.example.demo;
+import org.junit.Test; import static org.junit.Assert.*;
+import java.nio.file.*;
+public class Widget2StructTest {
+  @Test public void t() { assertTrue(Files.exists(Paths.get("src/com/example/demo/Widget2.java"))); }
+}
+JAVA
+  cd "$RT"
+  run "$RUN" "$RT" com.example.demo.Widget2StructTest
+  [ "$status" -eq 0 ]
+}
