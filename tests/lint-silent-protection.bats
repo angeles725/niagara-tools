@@ -27,7 +27,7 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LSP="$KIT/toolbelt/lint-silent-protection.sh"
   S="$BATS_TEST_TMPDIR/src"
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-7071b93}"   # RP1: blessed read tree, never the local working copy
 }
 fresh() { rm -rf "$S"; mkdir -p "$S/com/x"; }
 
@@ -177,7 +177,12 @@ JAVA
 }
 
 # ---- SP-smoke: the REAL client trees must flag CP-1 + CR-3 and NOT flag CP-2 (SKIP if absent) ----
-@test "SP-smoke: EXACT contract at a109249 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:215, CP-1), ColdRoomPan-rt 0 (CR-3 surfaced by PR8 Pattern A), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
+# R3<->R8 re-pin: this smoke reads a FIXED post-PR8 client baseline (7071b93 = PR8 merge) via
+# C9_CLIENT_ROOT, where CR-3 is surfaced (Pattern A) so ColdRoomPan-rt = 0. On a109249 (pre-PR8)
+# ColdRoomPan-rt is still 1 — do NOT point this at a109249. COUPLING: PR9 (CP-1 AlarmEdge) will
+# surface the CP-1 low-suction trip, so CompPan-rt goes 1 -> 0 after PR9 merges; re-pin the CompPan
+# count and advance the baseline SHA then (same shape as this R3<->R8 re-pin).
+@test "SP-smoke: EXACT contract at post-PR8 client main 7071b93 (C9_CLIENT_ROOT) — CompPan-rt exactly 1 WARN (CompressorControl.java:215, CP-1), ColdRoomPan-rt 0 (CR-3 surfaced by PR8 Pattern A), DashboardPan-rt 0, DashboardPan-ux 0; CP-2/defrostSkipped/getters never" {
   [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] && [ -d "$ROOT/Dashboard" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$LSP" "$ROOT/Compresores/CompPan/CompPan-rt/src"
   [ "$status" -eq 0 ]
