@@ -2,7 +2,7 @@
 
 Five lint-precision fixes (S21-S25) + the PR6 client concept-marking + the close. Base kit main **df8c7ec**
 (the RED base; kit main is now 2ff4a6e — the archive/spec commits are doc-only, the lints are byte-identical).
-RED tips: S21 52ebd11 · S22 954ebd7 · S23 f981754 · S24 a792d7a · S25 a56a72e. PR map (natural order; confirm
+RED tips: S21 52ebd11 · S22 954ebd7 · S23 f981754 · S24 a792d7a · S25 db130a7 (a56a72e + STALE grammar header). PR map (natural order; confirm
 at freeze): PR1=S21 PR2=S22 PR3=S23 PR4=S24 PR5=S25 PR6=client-concept PR7=close.
 
 ## Conventions (every kit PR)
@@ -12,7 +12,9 @@ B=~/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659   # matrix/
 ```
 - V0 fresh detached worktree at the tip; V1 base (`merge-base --is-ancestor origin/main HEAD`), 0 merges/markers,
   0 attribution trailers (`git log <base>..HEAD --format=%B | grep -ciE 'co-authored|generated with|claude'`).
-- V2 the RED bats file is byte-identical to the cited RED tip (a PR may only ADD/GREEN, never edit the RED).
+- V2 the RED bats file is byte-identical to the cited RED tip. Read the RED from the ORIGIN TIP, never a worktree
+  (a worktree is never a contract — the design executor once read a stale-branch worktree): `git show origin/qa/c10-<x>:tests/<file>`.
+  A PR may only ADD/GREEN, never edit the RED.
 - V3 `bats tests/` all green; the S-item's new pins are now GREEN; shellcheck 0; sweeps 0/0; kit-links 8/8.
 - V4 the named mutation (qa/c10-mutations.tsv) on a mktemp copy of the FIXED toolbelt/<lint>.sh → the flip OBSERVED, restore.
 - V6 BLESS @ tip; V7 `origin/main == tip` after the ff merge.
@@ -38,7 +40,7 @@ B=~/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659   # matrix/
   `( cd / && $KIT/build-n4-module-kit/toolbelt/run-pure-test.sh $B/Paccadia/ColdRoomPan/ColdRoomPan-rt com.angeles.ColdRoomPan.FreezeAlarmWiringTest )` → OK (5 tests) [needs the client srcTest + junit jars].
 - V4: M-S24 (remove the cd) → S24-cwd FAILs.
 
-## PR5 — S25 lint-write-path STALE + --strict · RED a56a72e
+## PR5 — S25 lint-write-path STALE + --strict · RED db130a7
 - V3: `bats tests/lint-write-path.bats` green incl. WP-stale-neg/-strict/-regression/-concept/-concept-decoy/-perrow/-prose/-action/-summary/-smoke + WP-uncovered-strict; WP1/WP2 unchanged.
 - Real-tree exact at ff1b659 (STALE is matrix-root-scoped): `lint-write-path.sh --strict $B/Paccadia/ColdRoomPan/ColdRoomPan-rt` → **exit 1, exactly 5 STALE** (hoaMode ×3 :31/:32/:52, inhibit :33, freezeEnabled :36); a SECOND root (`…/Compresores/CompPan/CompPan-rt`) → same 5. Without `--strict` the exit is the per-module FAIL contract (0 covered / 1 uncovered), unchanged.
   Reference (companero bcd02efe6, VERIFIED here): covered = 177 names via the MULTI-LINE-safe `name = "X"` field match (a single-line @Niagara regex under-counts). :40 first backtick is `setpoint` (covered); :64/:65 intervalExpired/forceDefrost are actions (covered); inhibit is NOT --bog-traced.
