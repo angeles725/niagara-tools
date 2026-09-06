@@ -32,7 +32,7 @@ B=~/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659   # matrix/
 ## PR3 — S23 silent-protection Pattern-B surface · RED f981754
 - V3: `bats tests/lint-silent-protection.bats` green incl. S23-pos (trip + BIAlarmSource adapter → clean), S23-neg (trip, no surface → WARN), SP-smoke.
 - Real-tree exact at ff1b659: `lint-silent-protection.sh $B/Compresores/CompPan/CompPan-rt/src` → **0 WARN** (CP-1 :294 surfaced by the adapter; was 1); ColdRoomPan-rt 0, DashboardPan-rt/ux 0.
-- V4: M-S23 (remove the BIAlarmSource/newOffnormalAlarm token from file_has_alarm) → SP-smoke CompPan back to 1, S23-pos WARNs.
+- V4: M-S23 (rename the BIAlarmSource token) → **S23-pos** WARNs (Pattern-B recognition). NOTE: M-S23 does NOT flip SP-smoke — BCompressorControl also has `BAlarmRecord` (ha=Pattern A), and the rule is `(ha || (bi && (bn||bc)))`, so it is a surface via ha alone. SP-smoke's CompPan 1→0 is driven by S23's **module-wide surface application** (a surface class now surfaces a trip in a sibling file); the SP-smoke-flipping mutation is "revert to per-file surface scan". S23-and isolates the Pattern-B AND (drop `bi && (bn||bc)` → `bi || (bn||bc)` flips it).
 
 ## PR4 — S24 run-pure-test cwd-independence · RED a792d7a
 - V3: `bats tests/run-pure-test.bats` green incl. S24-cwd (structural test via the runner from a non-profile cwd → pass), S24-cwd-regression.
