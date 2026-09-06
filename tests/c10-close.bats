@@ -13,6 +13,8 @@
 # Run post-hoc:  C10_CLOSE=1 C10_CLOSE_COMMIT=<close sha> C9_CLIENT_REPO=<post-C10 client main worktree> \
 #                bats tests/c10-close.bats
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   BASE="1fb63d6"                       # C10 base = the C9 close commit (tag v0.20.0); no-trailer sweep range base
@@ -87,7 +89,7 @@ _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 t
 
 @test "SC-13 (client group defaultModuleVersion): C10 carry-over 2.2.0/2.1.0/2.2.0 (S26 bumped nothing — verified)" {
   _close
-  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  R="$C9_CLIENT_REPO"   # via client-root.bash; env override wins [ev: design.md D3c site 7]
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
   # C10 client work (S26) bumped no module version -> versions carry over from C9 (verified at ff1b659/00e7118).

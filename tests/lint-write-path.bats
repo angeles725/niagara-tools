@@ -10,6 +10,8 @@
 # RED today: lint-write-path.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (post-green, R19.6): remove a covered slot's matrix row -> that slot appears in FAIL.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LW="$KIT/toolbelt/lint-write-path.sh"
@@ -335,7 +337,7 @@ MD
 }
 
 @test "WP-stale-smoke: at main-ff1b659, --strict on any module root reports EXACTLY 5 STALE rows (hoaMode ×3, inhibit, freezeEnabled) — matrix-root scope, same from a second root; PR6 marks them -> 0" {
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  ROOT="$C9_CLIENT_ROOT"   # via client-root.bash; env override wins [ev: design.md D3c site 5]
   [ -d "$ROOT/Paccadia" ] && [ -f "$ROOT/docs/write-path-matrix.md" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   # STALE is evaluated against the MATRIX ROOT (all modules under docs/), so the count is
   # independent of which module root is invoked.

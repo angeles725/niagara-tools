@@ -13,6 +13,8 @@
 # pending grows as C9 retros land. So CLOSE-version / CLOSE-changelog / CLOSE-tag / CLOSE-index-pending are RED
 # until the C9 close PR + tag; that is the gate doing its job. Run post-hoc with C9_CLOSE_COMMIT=<close sha>.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   KIT="$REPO/build-n4-module-kit"
@@ -105,7 +107,7 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
 
 @test "SC-13 (client vendorVersion, schema-risk-cleared): CompPan-rt 2.2.0, ColdRoomPan-rt 2.1.0, DashboardPan-ux 2.2.0" {
   _close
-  R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
+  R="$C9_CLIENT_REPO"   # via client-root.bash; env override wins [ev: design.md D3c site 6]
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   # the version lives in each GROUP's build.gradle.kts as defaultModuleVersion("X.Y.Z") (not in the module .kts)
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }

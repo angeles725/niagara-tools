@@ -14,6 +14,8 @@
 # v0.19.0 not yet cut. So CLOSE-index-pending and CLOSE-tag are RED until the close PR + tag; that is the
 # gate doing its job.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   KIT="$REPO/build-n4-module-kit"
@@ -104,7 +106,7 @@ _close() { [ -n "${C8_CLOSE:-}" ] || skip "campaign-8 close gate — run with C8
 
 @test "SC1-smoke: lint-delays.sh exits 1 on the pre-fix ColdRoomPan tree, 0 on the fixed tree" {
   _close
-  R="${C8_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato}"
+  R="$C8_CLIENT_REPO"   # via client-root.bash default=main-ff1b659; env override wins [ev: design.md D3c site 8]
   CRP="$R/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
   [ -d "$CRP" ] || skip "client ColdRoomPan tree not on this machine (set C8_CLIENT_REPO)"
   run "$KIT/toolbelt/lint-delays.sh" "$CRP"

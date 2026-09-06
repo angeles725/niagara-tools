@@ -19,6 +19,8 @@
 #   - remove the ORD rule            -> RC1's ord FAIL vanishes; ord fixture is ord-only so exit 1 -> 0.
 #   - drop the bare-catch WARN check -> RC3's WARN row vanishes.
 
+load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RS="$KIT/toolbelt/rc-scan.sh"
@@ -71,8 +73,8 @@ setup() {
   [ "$status" -eq 3 ]
 }
 
-@test "RC8: real smoke — DashboardPan-ux rc FAILs on the :701 host literal (SKIP if not present)" {
-  UX="$HOME/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/DashboardPan/DashboardPan-ux"
+@test "RC8: real smoke — DashboardPan-ux rc FAILs on host literal (SKIP if not present)" {
+  UX="$C9_CLIENT_ROOT/Dashboard/DashboardPan/DashboardPan-ux"   # via client-root.bash [ev: design.md D3c site 10]
   [ -d "$UX/src/rc" ] || skip "DashboardPan-ux rc not on this machine (local-only real smoke)"
   run "$RS" "$UX"
   [ "$status" -eq 1 ]
