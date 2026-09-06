@@ -159,9 +159,40 @@ if [ "$INDEX_SKIP" -eq 0 ]; then
         || { printf 'new-retro: failed to stage INDEX row\n' >&2; exit 1; }
 fi
 
-# --- Stage 3: BUILD-STATE retro_pending flip ---
+# --- Stage 3: BUILD-STATE retro_pending flip (scoped to the named section) ---
+# Uses the same delimiters as sweep-build-state.sh:
+#   <!-- build-state.v1 --> / <!-- /build-state.v1 --> mark each section;
+#   the section that carries 'module: <MODULE>' (or '## <MODULE>' in the minimal
+#   test fixture format which has no explicit module: field) is the only one whose
+#   retro_pending: false line is changed to true.  All other sections are emitted
+#   byte-for-byte unchanged.
 BUILD_TMP="$_TMP/build-state.md"
-sed 's/retro_pending:[[:space:]]*false/retro_pending: true/' "$BUILD_STATE" > "$BUILD_TMP" \
+awk -v mod="$MODULE" '
+  /^<!-- build-state\.v1 -->$/ {
+    in_s=1; target=0; got_mod=0; flipped=0
+    print; next
+  }
+  /^<!-- \/build-state\.v1 -->$/ {
+    in_s=0; target=0; got_mod=0
+    print; next
+  }
+  in_s && /^module:/ {
+    got_mod=1
+    v=$0; sub(/^module:[[:space:]]*/,"",v); sub(/[[:space:]]*#.*$/,"",v); sub(/[[:space:]]+$/,"",v)
+    if (v==mod) target=1
+    print; next
+  }
+  in_s && !got_mod && /^## / {
+    # fallback for the minimal test fixture format (no module: field)
+    v=$0; sub(/^## /,"",v); sub(/[[:space:]]+$/,"",v)
+    if (v==mod) target=1
+    print; next
+  }
+  in_s && target && !flipped && /^retro_pending:[[:space:]]*false/ {
+    sub(/false/,"true"); flipped=1
+  }
+  { print }
+' "$BUILD_STATE" > "$BUILD_TMP" \
     || { printf 'new-retro: failed to stage BUILD-STATE.md\n' >&2; exit 1; }
 
 # ---------------------------------------------------------------------------

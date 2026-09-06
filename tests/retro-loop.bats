@@ -70,3 +70,46 @@ kt() { run env -C "$TK" KIT="$TK" "$@"; }   # first vararg is the command (for P
   nr kit rl6slug
   grep -qE "^\|[[:space:]]*$DATE-rl6slug\.md[[:space:]]*\|[[:space:]]*kit[[:space:]]*\|[[:space:]]*$DATE[[:space:]]*\|[[:space:]]*pending[[:space:]]*\|[[:space:]]*[0-9]+[[:space:]]*\|" "$TK/retros/INDEX.md"
 }
+
+@test "RL7: retro_pending flip is scoped to the named section; other sections stay false" {
+  # 3-section BUILD-STATE fixture — all retro_pending: false
+  _bs_fixture="<!-- build-state.v1 -->
+module: kit
+retro_required: true
+retro_pending: false
+<!-- /build-state.v1 -->
+<!-- build-state.v1 -->
+module: ColdRoomPan
+retro_required: true
+retro_pending: false
+<!-- /build-state.v1 -->
+<!-- build-state.v1 -->
+module: CompPan
+retro_required: true
+retro_pending: false
+<!-- /build-state.v1 -->"
+  # helper: extract retro_pending value for a given module name
+  _pend() { local mod="$1" f="$2"
+    awk -v m="$mod" '/^<!-- build-state\.v1 -->$/{s=1;hit=0;next} /^<!-- \/build-state\.v1 -->$/{s=0;next} s&&/^module:/{v=$0;sub(/^module:[[:space:]]*/,"",v);sub(/[[:space:]]*#.*$/,"",v);sub(/[[:space:]]+$/,"",v);if(v==m)hit=1} s&&hit&&/^retro_pending:/{v=$0;sub(/^retro_pending:[[:space:]]*/,"",v);sub(/[[:space:]]*#.*$/,"",v);sub(/[[:space:]]+$/,"",v);print v;hit=0}' "$f"
+  }
+
+  # Case 1: new-retro.sh kit <slug> → kit section flips; ColdRoomPan + CompPan stay false
+  TK1="$BATS_TEST_TMPDIR/rl7kit"; mkdir -p "$TK1/retros"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK1/retros/INDEX.md"
+  printf '%s\n' "$_bs_fixture" > "$TK1/BUILD-STATE.md"
+  run env -C "$TK1" KIT="$TK1" "$NR" kit rl7-kit-slug
+  [ "$status" -eq 0 ]
+  [ "$(_pend kit "$TK1/BUILD-STATE.md")" = "true" ]
+  [ "$(_pend ColdRoomPan "$TK1/BUILD-STATE.md")" = "false" ]
+  [ "$(_pend CompPan "$TK1/BUILD-STATE.md")" = "false" ]
+
+  # Case 2 (symmetric): new-retro.sh ColdRoomPan <slug> → ColdRoomPan flips; kit + CompPan stay false
+  TK2="$BATS_TEST_TMPDIR/rl7crp"; mkdir -p "$TK2/retros"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK2/retros/INDEX.md"
+  printf '%s\n' "$_bs_fixture" > "$TK2/BUILD-STATE.md"
+  run env -C "$TK2" KIT="$TK2" "$NR" ColdRoomPan rl7-crp-slug
+  [ "$status" -eq 0 ]
+  [ "$(_pend kit "$TK2/BUILD-STATE.md")" = "false" ]
+  [ "$(_pend ColdRoomPan "$TK2/BUILD-STATE.md")" = "true" ]
+  [ "$(_pend CompPan "$TK2/BUILD-STATE.md")" = "false" ]
+}
