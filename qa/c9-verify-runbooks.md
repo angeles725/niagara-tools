@@ -117,12 +117,12 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V2: `git diff e7e6615 HEAD -- instalacion/pipeline/test/write-server.config-login.test.mjs` → empty.
 - V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/write-server.config-login.test.mjs`
   → `# pass N`, `# fail 0` on the PR4 set. Required `ok` at PR4: **S12A-1, S12A-2, S12A-3, S12A-5, S12A-7** (token gate + seam + §10 bare `<real>` PUT).
-  S12A-4, S12A-6, S12A-8, S12A-9 belong to PR5 (record their state; all **9** `ok` if PR4 and PR5 land together).
+  S12A-4, S12A-6, S12A-8, S12A-9 belong to PR5; **S12A-10 (sliding-TTL expiry) is PR4's own** and is RED until PR4 enforces the TTL. So PR4 alone = pass 5 / red 5 (4 PR5 + S12A-10), and 6/4 once PR4 adds expiry. PF1: PR4 and PR5 land in ONE push range — bless the stacked tip at 10/10 (S12A-1..10).
 - Seam facts the RED drives (`startServer` helper, test :55-72): `import('../write-server.mjs')` must not bind or exit (dummy `OBIX_BASE/OBIX_USER/OBIX_PASS/SUPABASE_URL`, `WRITE_PORT=0` set before import; main() guarded by an `import.meta.url` check);
   `export function buildServer(cfg, deps)` returns a non-listening `http.Server`; `cfg = {WRITE_PORT:0, CONFIG_PASSWORD, AUDIT_SPOOL}`; `deps = {obix(method, path, body), verifyToken(bearer)->{email,sub}, changeLog(row)->{ok}}`.
   Header `x-config-token` (proposal f610d21); `/config/login {password}` → 200 `{token}` | 401 no token; `/write` without/with stale token → 403; `/config/logout` revokes.
 - `node --check instalacion/pipeline/write-server.mjs`; after the run `ss -ltnp | grep -c node` → 0.
-- V4: `$QA/mutate.sh --worktree $TWT/v-pr4 --table $QA/c9-mutations.tsv --pr PR4` → M4s (seam absent → all 9 fail), M4a (token gate dropped → S12A-1, S12A-5), M4b (header name drifted → S12A-4 + the 403 pins). Content-anchored on the RED contract; an ANCHOR-MISSING row is hand-mutated on the same worktree.
+- V4 (scope split → mutate.sh's green-baseline guard doesn't fit; measure red-set DELTAS by hand on the throwaway worktree): M4s rename `buildServer` export → all 9 red; M4a drop the `if (!session) return 403` gate → red gains S12A-1, S12A-5; M4b drift `x-config-token` → red gains S12A-7; M4ttl remove the expiry check → S12A-10 stays red (that is the gap). All VERIFIED on b077ad4.
 - No real smoke possible (Supabase/oBIX injected). Harness-only: none. V6/V7 (`origin/main` of the TUNNEL repo == TIP).
 
 ## PR5 — `feat/c9-s12-audit-schema` (tunnel) · same RED e7e6615 · worktree `c9-s12-audit-schema` · after/with PR4
