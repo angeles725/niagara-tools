@@ -116,16 +116,16 @@ Chain strategy: stacked-to-main
 
 ### PR5 — feat/c8-slot-per-slot (~160 authored, ledger 340)
 
-**RED**: needs RED — re-read tip at apply | **Gate**: R5.1-R5.3, SC6 (D6a: SC6-parse pin amended exit 0→1)
+**RED**: `qa/c8-slot-per-slot` tip `ab194a5` (SP1-SP4 + SC6-parse amended) | **Gate**: R5.1-R5.3, SC6 (D6a: SC6-parse pin amended exit 0→1)
 
-- [ ] 5.1 Create `qa/c8-slot-per-slot`; write failing bats: per-slot missing keys → exit 1; empty lexicon + types → exit 1; stale key → row emitted; record tip SHA.
-- [ ] 5.2 Extend `toolbelt/slot-coverage.sh` with `per-slot` subcommand (dispatched before flag loop, D6): compare `@NiagaraProperty(name=)` vs lexicon keys; emit `missing=` + `stale=` rows; escalate empty-lexicon WARN→FAIL in parse mode.
-- [ ] 5.3 Amend SC6-parse pin in `tests/slot-coverage.bats`: expected exit 0 → 1 (chihuahua empty lexicon, R5.3).
-- [ ] 5.4 Add CHANGELOG line under `## [Unreleased]`: empty-lexicon WARN→FAIL escalation (D6a behaviour change).
-- [ ] 5.5 **Named mutations**: (a) drop one slot key → FAIL; (b) revert empty-lexicon to exit 0 → SC6-parse fails. Record in PR body.
-- [ ] 5.6 Real smoke: per-slot on CRP → 19 missing rows; `slot-coverage.sh` on chihuahua → exits 1. Paste output.
-- [ ] 5.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`.
-- [ ] 5.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 5.1 RED confirmed: `ab194a5` on branch; SC6-parse/SP1/SP2/SP3/SP4 red before impl; SC1–SC6/dup-keys green. Fixtures under `tests/fixtures/slot-coverage/per-slot/` present in RED commit.
+- [x] 5.2 Extend `toolbelt/slot-coverage.sh` with `per-slot` subcommand (dispatched before flag loop, D6): required = every OPERATOR-flagged `@NiagaraProperty` slot (RED/K13 gate — D6 text says "every @NiagaraProperty" but RED pins OPERATOR only; implementation follows RED; deviation documented in retro and here per K13 cite RED tip `ab194a5`); emits `pct=<n.n> (per-slot)`, `MISSING <slot>`, `STALE <key>`; escalate empty-lexicon WARN→FAIL in parse mode (D6a, always exits 1); dot-dir prune D9b; 4 named mutations confirmed.
+- [x] 5.3 SC6-parse pin was already amended in the RED commit (ab194a5): `[ "$status" -eq 1 ]`. Implementation makes it green.
+- [x] 5.4 CHANGELOG.md `## [Unreleased]` section added with D6a behaviour change entry and per-slot Added entry.
+- [x] 5.5 Named mutations all confirmed: (a) add setpoint key → SP1 FAILS; (b) EMPTY_LEX_FAIL=0 → chihuahua exit 0, SC6-parse FAILS; (c) remove STALE printf → SP2 FAILS; (d) remove dot-dir prune → staleKnob MISSING, SP4 FAILS.
+- [x] 5.6 Real smokes: ColdRoomPan 9 MISSING (design said ~19 — deviation documented; only BEvaporatorUnit has OPERATOR slots), chihuahua exits 1 FAIL, CompPan pct=100.0 exit 0. Outputs in retro.
+- [x] 5.7 Guards: 214/214 bats green; shellcheck exit 0; sweep-build-state.sh exit 0; sweep-fold-audit.sh --strict exit 0; kit-links.bats 6/6 green.
+- [x] 5.8 Retro `2026-09-05-campaign8-slot-per-slot.md` + INDEX row + BUILD-STATE envelope in same commit.
 - [ ] **[lead]** RED green; merge ff-only; ledger settle `--max-changed-lines 340`. No install-skill.
 
 ---

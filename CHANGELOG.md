@@ -6,6 +6,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **`slot-coverage.sh` empty-lexicon escalation (D6a):** an empty `module.lexicon` with at least one declared type now exits **1** (FAIL) instead of 0 (WARN/`--strict`-only). Every operator slot renders raw camelCase in operator views (T8 footgun is a ship-blocker); a `--strict`-only gate left the very module that motivated the check (`chihuahua`) passing the aggregate. `report-module.sh` renders this as a `FAIL  slot-coverage  empty lexicon` row [ev: corpus B788; D6a].
+
+### Added
+
+- **`slot-coverage.sh per-slot` subcommand (D6):** `slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` compares `OPERATOR`-flagged `@NiagaraProperty` slots against lexicon keys; emits `pct=<n.n> (per-slot)`, `MISSING <slot>`, and `STALE <key>` rows; exits 1 when any slot is missing. Dot-dirs pruned (D9b) so `.deploy-baseline/` is never scanned [ev: corpus B788; D6].
+
+---
+
 ## [v0.18.0] - 2026-09-05
 
 ### Added — Campaign 7 close: 9 retros folded, scaffold/schema-risk/plano/logic-split/report tools (PR1–PR8 #52–#59)
