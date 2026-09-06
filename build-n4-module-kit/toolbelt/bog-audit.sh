@@ -589,13 +589,19 @@ else:
 # No new parser state — post-processing only. [ev: retro campaign8-station-logic]
 
 # ---- CHECK13: relay-double-source FAIL ----
-# Two distinct source handles drive the same target slot on the same container component.
+# Two distinct source handles drive the same target slot on the same WRITABLE PROXY container.
+# Restricted to c:BooleanWritable / c:NumericWritable / c:EnumWritable — the CHECK11 target set.
+# Alarm routing (a:AlarmClass routeAlarm fan-in) is NOT a relay double-source.
+_WRITABLE_RE = re.compile(r'(Boolean|Numeric|Enum)Writable', re.IGNORECASE)
 _relay_tgt_srcs = defaultdict(lambda: defaultdict(set))
 for lk in link_list:
     ch  = lk.get('container_h')
     tgt = lk.get('tgt_slot')
     src = lk.get('src_h')
     if ch and tgt and src:
+        _ct13 = handle_map.get(ch)
+        if not _ct13 or not _WRITABLE_RE.search(_ct13.type_ or ''):
+            continue  # only writable proxy points are relay targets
         _relay_tgt_srcs[ch][tgt].add(src)
 
 for _ch in sorted(_relay_tgt_srcs):
@@ -609,9 +615,12 @@ for _ch in sorted(_relay_tgt_srcs):
              f'relay slot {_tgt_slot!r} driven by {len(_src_set)} distinct sources: {_srcs}')
 
 # ---- CHECK14: own-output-unlinked WARN ----
-# Own-module component has an OPERATOR-flagged (f="o") slot with no outgoing relay link.
+# Own-module component has an OPERATOR output slot with no outgoing relay link.
+# Restricted to true OUTPUT slots: name ends with 'Out' or matches 'condenser[0-9]+'.
+# Config inputs (fanMode, valveMode, *Setpoint, *Limit, *Mode) are excluded by name pattern.
 # Suppressed for defrost-specific outputs when hasDefrost is absent/false on the component.
-_DEFROST_RE = re.compile(r'defrost', re.IGNORECASE)
+_DEFROST_RE  = re.compile(r'defrost', re.IGNORECASE)
+_OUT_SLOT_RE = re.compile(r'(Out$|condenser\d+$)', re.IGNORECASE)
 _used_outputs = {(lk['src_h'], lk['src_slot'])
                  for lk in link_list
                  if lk.get('src_h') and lk.get('src_slot')}
@@ -624,17 +633,19 @@ for _h, _comp in sorted(handle_map.items(), key=lambda x: x[1].path):
     for _sn, _si in sorted(_comp.slots.items()):
         if 'o' not in (_si.get('flags') or ''):
             continue
+        if not _OUT_SLOT_RE.search(_sn):
+            continue   # exclude config inputs — only pure output slots by name
         if (_h, _sn) in _used_outputs:
             continue
         if _DEFROST_RE.search(_sn) and _hd_off:
             continue   # suppress defrost-specific output when hasDefrost is off/absent
         emit('CHECK14', 'WARN', _comp.path,
-             f'OPERATOR output slot {_sn!r} has no outgoing relay link (own-output-unlinked)')
+             f'output slot {_sn!r} has no outgoing relay link (own-output-unlinked)')
 
 # ---- CHECK15: sensor-crossed-by-name WARN ----
 # A link whose sourceSlotName contains C{n} (cold-room label) originates from a component
 # whose name carries a different numeric suffix (E-unit index mismatch).
-_C_NUM_RE   = re.compile(r'C(\d+)', re.IGNORECASE)
+_C_NUM_RE    = re.compile(r'C(\d+)', re.IGNORECASE)
 _COMP_IDX_RE = re.compile(r'[_-](\d+)$')
 
 for lk in link_list:
@@ -660,9 +671,9 @@ for lk in link_list:
         emit('CHECK15', 'WARN', _cp2,
              f'slot {_src_slt!r} (C-room {_c_n}) sourced from {_sc.name!r} (unit index {_e_n}) — label mismatch')
 
-# ---- CHECK16: hasDefrost <-> DefrostController sibling FAIL ----
-# Forward direction: an own-module component with hasDefrost=true must have a
-# DefrostController sibling under the same parent path.
+# ---- CHECK16: hasDefrost <-> DefrostController sibling FAIL (BOTH directions) ----
+# Forward: own-module component with hasDefrost=true must have a DefrostController sibling.
+# Reverse: own-module DefrostController must have a hasDefrost=true unit sibling.
 _par_children = defaultdict(list)
 for _h, _comp in handle_map.items():
     _pparts = _comp.path.rsplit('/', 1)
@@ -677,13 +688,21 @@ for _ppath, _children in _par_children.items():
     ]
     _dc_comps = [
         c for c in _children
-        if 'DefrostController' in c.name or 'DefrostController' in c.type_
+        if 'DefrostController' in (c.name or '') or 'DefrostController' in (c.type_ or '')
     ]
+    _plabel = repr(_ppath) if _ppath else '(root)'
+    # Forward: hasDefrost=true without DefrostController sibling
     for _comp in _hd_comps:
         if not _dc_comps:
-            _plabel = repr(_ppath) if _ppath else '(root)'
             emit('CHECK16', 'FAIL', _comp.path,
                  f'hasDefrost=true but no DefrostController sibling under {_plabel}')
+    # Reverse: DefrostController without hasDefrost=true unit sibling
+    if _dc_comps and not _hd_comps:
+        for _dc in _dc_comps:
+            if _dc.module not in own_modules:
+                continue
+            emit('CHECK16', 'FAIL', _dc.path,
+                 f'DefrostController without hasDefrost=true unit sibling under {_plabel}')
 
 # ---- CHECK17: roomN-index-mismatch FAIL ----
 # A ColdRoom component directly contains a link whose targetSlotName carries an evap
@@ -700,7 +719,7 @@ for lk in link_list:
     _ct3 = handle_map.get(_ch3)
     if not _ct3 or _ct3.module not in own_modules:
         continue
-    if not _COLDROOM_TYPE_RE.search(_ct3.type_):
+    if not _COLDROOM_TYPE_RE.search(_ct3.type_ or ''):
         continue
     _rm  = _SUFFIX_NUM_RE.search(_ct3.name)
     if not _rm:
@@ -714,47 +733,97 @@ for lk in link_list:
         emit('CHECK17', 'FAIL', _ct3.path,
              f'link {_ts3!r} carries evap-index {_evap_idx} but room suffix is {_room_idx}')
 
-# ---- CHECK18: dashboard tile-number consistency FAIL ----
-# All evap* tile numbers referenced in a component's links must agree.
-_evap_tiles = defaultdict(set)
-for lk in link_list:
-    _ch4 = lk.get('container_h')
-    _ts4 = lk.get('tgt_slot') or ''
-    if not _ch4 or not _ts4:
-        continue
-    _em4 = _EVAP_NUM_RE.search(_ts4)
-    if _em4:
-        _evap_tiles[_ch4].add(int(_em4.group(1)))
+# ---- CHECK18: evaporator unit tile-number consistency FAIL ----
+# For each own-module EvaporatorUnit with a numeric suffix N, every evap-tile reference
+# appearing in its links (incoming: stored in the unit as container; outgoing: unit is source)
+# must carry the same tile number.  Crossing EvaporatorUnit_1 ↔ _3 produces two distinct
+# tile numbers in the same unit's link set — FAIL.
+_EVAP_UNIT_TYPE_RE = re.compile(r':EvaporatorUnit\b', re.IGNORECASE)
+_unit_tile_sets = defaultdict(set)  # unit_handle -> set of tile numbers observed in links
 
-for _ch4, _tiles in sorted(_evap_tiles.items()):
-    if len(_tiles) < 2:
+for lk in link_list:
+    _ss18 = lk.get('src_slot') or ''
+    _ts18 = lk.get('tgt_slot') or ''
+
+    # Case A: unit is the CONTAINER (incoming link stored in unit, e.g. panel/ColdRoom → unit).
+    # Tile number may appear in either src_slot (panel slot: 'evap3ValveMode') or
+    # tgt_slot (unit slot: 'evap3Hoa') depending on where the encoding lives.
+    _ch18 = lk.get('container_h')
+    if _ch18:
+        _cu18 = handle_map.get(_ch18)
+        if (_cu18 and _cu18.module in own_modules
+                and _EVAP_UNIT_TYPE_RE.search(_cu18.type_ or '')):
+            for _slotname in (_ss18, _ts18):
+                _em18 = _EVAP_NUM_RE.search(_slotname)
+                if _em18:
+                    _unit_tile_sets[_ch18].add(int(_em18.group(1)))
+
+    # Case B: unit is the SOURCE (outgoing link, e.g. unit → panel state slot 'evap3FanState').
+    # Tile number is in the target slot name.
+    _src_h18 = lk.get('src_h')
+    if _src_h18:
+        _su18 = handle_map.get(_src_h18)
+        if (_su18 and _su18.module in own_modules
+                and _EVAP_UNIT_TYPE_RE.search(_su18.type_ or '')):
+            _em18b = _EVAP_NUM_RE.search(_ts18)
+            if _em18b:
+                _unit_tile_sets[_src_h18].add(int(_em18b.group(1)))
+
+for _uh18, _tiles18 in sorted(_unit_tile_sets.items()):
+    if len(_tiles18) < 2:
         continue
-    _ct4 = handle_map.get(_ch4)
-    if not _ct4 or _ct4.module not in own_modules:
+    _uc18 = handle_map.get(_uh18)
+    if not _uc18:
         continue
-    _ts_str = ', '.join(str(n) for n in sorted(_tiles))
-    emit('CHECK18', 'FAIL', _ct4.path,
-         f'evap tile numbers inconsistent across links: {_ts_str} (tile-number mismatch)')
+    _sm18 = _SUFFIX_NUM_RE.search(_uc18.name)
+    if not _sm18:
+        continue   # skip units with no numeric suffix
+    _tiles_str = ', '.join(str(n) for n in sorted(_tiles18))
+    emit('CHECK18', 'FAIL', _uc18.path,
+         f'link tile numbers {_tiles_str} disagree across HOA/state/freeze links (tile-number mismatch)')
 
 # ---- CHECK19: link-direction WARN ----
-# An own-module control component writes to a setpoint/config slot (reverse direction).
-# Expected direction: panel writes setpoints -> control; control writes state -> panel.
-_SETPOINT_RE = re.compile(r'setpoint', re.IGNORECASE)
+# Expected wiring: panel → control for CONFIG slots (setpoints, modes);
+#                  control → panel for STATE slots (readbacks, outputs).
+# WARN when: (a) a CONTROL source writes a config slot INTO a PANEL container, or
+#            (b) a PANEL source writes a state slot INTO a CONTROL container.
+# CONTROL types: ColdRoom, EvaporatorUnit, DefrostController, CompressorControl (-rt).
+# PANEL types:   RoomPanel, DashboardService, or module == DashboardPan.
+# Panel→control config (normal) and control→control (any) are NOT flagged.
+_CTRL_TYPE_RE   = re.compile(r'(ColdRoom|EvaporatorUnit|DefrostController|CompressorControl)',
+                              re.IGNORECASE)
+_PANEL_TYPE_RE  = re.compile(r'(RoomPanel|DashboardService)', re.IGNORECASE)
+_CONFIG_SLOT_RE = re.compile(r'(setpoint|mode|limit|protect|diff)', re.IGNORECASE)
+_STATE_SLOT_RE  = re.compile(r'(State|Out|Temp|status)$', re.IGNORECASE)
+
+def _is_ctrl(c):
+    return bool(_CTRL_TYPE_RE.search(c.type_ or '') or _CTRL_TYPE_RE.search(c.name or ''))
+
+def _is_panel(c):
+    return (bool(_PANEL_TYPE_RE.search(c.type_ or ''))
+            or 'dashboardpan' in (c.module or '').lower())
 
 for lk in link_list:
-    _src_h5  = lk.get('src_h')
-    _ts5     = lk.get('tgt_slot') or ''
+    _src_h5 = lk.get('src_h')
+    _ts5    = lk.get('tgt_slot') or ''
     if not _src_h5 or not _ts5:
         continue
     _sc5 = handle_map.get(_src_h5)
     if not _sc5 or _sc5.module not in own_modules:
         continue
-    if _SETPOINT_RE.search(_ts5):
-        _ch5 = lk.get('container_h')
-        _ct5 = handle_map.get(_ch5)
-        _cp5 = _ct5.path if _ct5 else f'h:{_ch5}'
+    _ch5 = lk.get('container_h')
+    _ct5 = handle_map.get(_ch5)
+    if not _ct5:
+        continue
+    _cp5 = _ct5.path
+    # (a) control writes config slot into panel container — backward
+    if _is_ctrl(_sc5) and _is_panel(_ct5) and _CONFIG_SLOT_RE.search(_ts5):
         emit('CHECK19', 'WARN', _cp5,
-             f'control component {_sc5.path!r} writes to config slot {_ts5!r} (reverse direction)')
+             f'control {_sc5.path!r} writes config slot {_ts5!r} into panel container (reverse direction)')
+    # (b) panel writes state slot into control container — backward
+    elif _is_panel(_sc5) and _is_ctrl(_ct5) and _STATE_SLOT_RE.search(_ts5):
+        emit('CHECK19', 'WARN', _cp5,
+             f'panel {_sc5.path!r} writes state slot {_ts5!r} into control container (reverse direction)')
 
 elapsed = time.time() - START
 print(f'# bog-audit: parse time {elapsed:.3f}s', flush=True)

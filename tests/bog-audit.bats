@@ -77,6 +77,9 @@ XML
   <p n='DefrostController' h='44b84' t='CRP:DefrostController'>
    <p n="interval" t="b:RelTime" v="1800000"/>
   </p>
+  <p n='Evap1' h='e1' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="true"/>
+  </p>
  </p>
 </bajaObjectGraph>
 XML
@@ -100,6 +103,7 @@ JAVA
   cat > "$T/src/com/angeles/ColdRoomPan/BEvaporatorUnit.java" <<'JAVA'
 package com.angeles.ColdRoomPan;
 @NiagaraProperty(name="evapOut", type="BStatusBoolean", defaultValue="new BStatusBoolean()")
+@NiagaraProperty(name="hasDefrost", type="boolean", defaultValue="false")
 public class BEvaporatorUnit {}
 JAVA
   # real bogs (local-only smokes): C8_PANCCADIA_BOG overrides; else the extracted copy in the shard scratchpad
@@ -332,7 +336,7 @@ XML
   [[ "$output" == *"CHECK15"* ]] && [[ "$output" == *"WARN"* ]]
 }
 
-@test "SL16: CHECK16 — hasDefrost=true with no DefrostController sibling FAILs" {
+@test "SL16: CHECK16 — hasDefrost=true with no DefrostController sibling FAILs (forward)" {
   _mkbog c16sl <<'XML'
 <?xml version='1.0'?><bajaObjectGraph version='4.0'>
  <p n='ColdRoom_2' h='cr2' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
@@ -343,6 +347,26 @@ XML
 </bajaObjectGraph>
 XML
   run "$BA" "$T/c16sl.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK16"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL16r: CHECK16 — DefrostController without hasDefrost=true unit sibling FAILs (reverse)" {
+  # Reverse direction: DefrostController exists but no unit declares hasDefrost=true -> FAIL.
+  # RED-proven on mktemp copy of pre-fix script: produced no CHECK16 output.
+  _mkbog c16rsl <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='cr1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='DefrostController' h='dc1' t='CRP:DefrostController'>
+   <p n="interval" t="b:RelTime" v="1800000"/>
+  </p>
+  <p n='Evap' h='ev1' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="false"/>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c16rsl.bog" --module ColdRoomPan
   [ "$status" -eq 1 ]
   [[ "$output" == *"CHECK16"* ]] && [[ "$output" == *"FAIL"* ]]
 }
@@ -391,7 +415,7 @@ XML
   [[ "$output" == *"CHECK19"* ]] && [[ "$output" == *"WARN"* ]]
 }
 
-@test "SL-smoke-panccadia: PANCCADIA -> CHECK18 FAIL x2 (ColdRoom_1 EvapUnit_1 and _3), CHECK14 WARN ColdRoom_5, others clean (SKIP if absent)" {
+@test "SL-smoke-panccadia: EXACT per-check counts + subjects — a presence-only pass cannot recur (SKIP if absent)" {
   RB="${C8_PANCCADIA_BOG:-/nonexistent}"
   [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG)"
   BF="$RB"
@@ -402,10 +426,41 @@ XML
   esac
   run "$BA" "$BF" --module ColdRoomPan --module CompPan --module DashboardPan
   [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK11  FAIL')" -eq 17 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK13  FAIL')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK14  WARN')" -eq 1 ]
+  [[ "$output" == *"CHECK14  WARN"*"EvaporatorUnit2"*"evapOut"* ]]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK15  ')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK16  FAIL')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK17  FAIL')" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c 'CHECK18  FAIL')" -eq 2 ]
+<<<<<<< HEAD
   [[ "$output" == *"CHECK14"* ]] && [[ "$output" == *"WARN"* ]]
   [[ "$output" != *"CHECK13  FAIL"* ]]
   [[ "$output" != *"CHECK16  FAIL"* ]]
   [[ "$output" != *"CHECK17  FAIL"* ]]
 >>>>>>> 5f0f377 (feat(bog-audit): K19 routing + SL fixtures + bog-audit.bats extension (campaign 8 PR20))
+=======
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_1"* ]]
+  [[ "$output" == *"CHECK18  FAIL"*"EvaporatorUnit_3"* ]]
+  [ "$(printf '%s\n' "$output" | grep 'CHECK18' | grep -c 'Cuarto')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK19  WARN')" -eq 0 ]
+}
+
+@test "SL-smoke-mx60: chihuahua supervisor -> CHECK13-19 all 0 (routeAlarm fan-in is NOT a relay double-source; SKIP if absent)" {
+  RB="${C8_MX60_BOG:-}"
+  [ -n "$RB" ] && [ -f "$RB" ] || skip "MX60 bog not on this machine (set C8_MX60_BOG)"
+  BF="$RB"
+  case "$RB" in
+    *.xml) ( cd "$(dirname "$RB")" && cp "$(basename "$RB")" "$T/mx.xml" ) \
+           && ( cd "$T" && zip -q mx_sl.bog mx.xml && rm -f mx.xml )
+           BF="$T/mx_sl.bog" ;;
+    *) cp "$RB" "$T/mx.bog"; BF="$T/mx.bog" ;;
+  esac
+  run "$BA" "$BF" --module chihuahua
+  for c in CHECK13 CHECK14 CHECK15 CHECK16 CHECK17 CHECK18 CHECK19; do
+    [ "$(printf '%s\n' "$output" | grep -c "$c  FAIL")" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | grep -c "$c  WARN")" -eq 0 ]
+  done
+>>>>>>> e31dab4 (wip(bog-audit): CHECK13/16/18/19 green; CHECK14 evapOut src-scan WIP (campaign 8 PR20))
 }
