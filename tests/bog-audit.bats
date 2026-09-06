@@ -281,7 +281,8 @@ XML
 
 # ================================================================
 # CHECK13-CHECK19 station-logic pins (campaign 8 PR20, wave3 R20/D17)
-# Folded from tests/station-logic.bats (kept self-contained there).
+# Station-logic pins (CHECK13-19). QA's standalone RED file tests/station-logic.bats (qa/c8-station-logic 1a31cf4)
+# was folded here and deleted: bog-audit.bats owns CHECK1-19; the exact-count smokes below are its pins.
 # mkbog helper: creates a .bog zip from stdin XML in $T/<name>.bog.
 # ================================================================
 _mkbog() { cat > "$T/$1.xml"; ( cd "$T" && cp "$1.xml" file.xml && zip -q "$1.bog" file.xml && rm -f file.xml ); }
@@ -416,6 +417,11 @@ XML
 }
 
 @test "SL-smoke-panccadia: EXACT per-check counts + subjects — a presence-only pass cannot recur (SKIP if absent)" {
+  # Tightened after a presence-only pin let four rule defects through (CHECK14 47 vs 1 — config INPUTS
+  # treated as outputs; CHECK19 16 vs 0 — direction inverted; CHECK18 reported at the PANEL not per unit,
+  # the count-2 trap where two WRONG Cuarto rows satisfied a count-only assertion; MX60 CHECK13 3 vs 0).
+  # CHECK14 must be EXACTLY 1 = ColdRoom_5/EvaporatorUnit2 evapOut; CHECK18 EXACTLY 2 per UNIT
+  # (EvaporatorUnit_1 and _3 under ColdRoom_1), never at the panel: the subject checks are load-bearing.
   RB="${C8_PANCCADIA_BOG:-/nonexistent}"
   [ -f "$RB" ] || skip "PANCCADIA bog not on this machine (set C8_PANCCADIA_BOG)"
   BF="$RB"
@@ -441,6 +447,9 @@ XML
 }
 
 @test "SL-smoke-mx60: chihuahua supervisor -> CHECK13-19 all 0 (routeAlarm fan-in is NOT a relay double-source; SKIP if absent)" {
+  # A real supervisor with no CRP/CompPan/DashboardPan must be silent on the station-logic checks.
+  # Regression pin for the CHECK13 false positive: AlarmService 'routeAlarm' fan-in (7-8 sources) is alarm
+  # routing, not a writable proxy point — CHECK13 must target c:BooleanWritable/NumericWritable only.
   RB="${C8_MX60_BOG:-}"
   [ -n "$RB" ] && [ -f "$RB" ] || skip "MX60 bog not on this machine (set C8_MX60_BOG)"
   BF="$RB"
