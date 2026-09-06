@@ -92,6 +92,23 @@ kit_refs() {
   [ "$ok" -eq 1 ]
 }
 
+@test "L8: every script named in ORCHESTRATION.md exists at toolbelt/<script>.sh (PR17 pin; RED pending PR16)" {
+  # Regression guard: every *.sh name referenced in ORCHESTRATION.md must exist at toolbelt/<name>.
+  # Named mutation: add any non-existent <name>.sh to ORCHESTRATION.md -> L8 fails.
+  # Expected RED until PR16 merges: new-retro.sh and kit-ticket.sh are not yet in toolbelt/.
+  [ -f "$KIT/ORCHESTRATION.md" ] || skip "ORCHESTRATION.md not found in kit"
+  cd "$KIT"
+  missing=()
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    [ -e "toolbelt/$name" ] || missing+=("$name")
+  done < <(grep -ohE '[a-z][a-z0-9-]+\.sh' ORCHESTRATION.md | sort -u)
+  if [ ${#missing[@]} -gt 0 ]; then
+    printf 'script in ORCHESTRATION.md missing from toolbelt/: %s\n' "${missing[@]}" >&2
+    return 1
+  fi
+}
+
 @test "L6: types/logic.md and types/logic-authoring.md exist and cite each other" {
   # Regression: the split creates two companion files; both must exist and point at each other
   # Named mutation: remove the cross-reference from either file -> L6 fails
