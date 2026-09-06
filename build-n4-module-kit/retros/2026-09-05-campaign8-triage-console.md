@@ -79,3 +79,9 @@ The real smoke is the non-negotiable contract: run triage-console.sh on at least
 real CERT-live stations before declaring GREEN. Fixture-only passes miss multi-file
 behaviour, foreign-logger leakage, and locale quirks that only appear in real logs.
 Add a TR for each class of real-data failure to lock in the fix. [ev: corpus B800]
+
+
+### D5 addendum — B818 registry pattern robustness
+`[sys.registry] Missing class` appears as both `Missing class for "Prefix:Type"` and
+`Missing class "Prefix:Type"` (no "for"). The handler now strips the optional "for"
+and optional leading quote before extracting the prefix. [ev: corpus B818]
