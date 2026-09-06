@@ -261,3 +261,31 @@ JAVA
   [ "$status" -eq 3 ]
   [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
 }
+
+# S23-and (isolates the Pattern-B AND): the surface requires `implements BIAlarmSource`
+# AND (newOffnormalAlarm OR new AlarmSupport()). A module that raises newOffnormalAlarm
+# and constructs an AlarmSupport but does NOT `implements BIAlarmSource` is NOT a
+# BIAlarmSource — its trip is still silent → WARN. On df8c7ec (no Pattern B) → WARN;
+# on the fix → WARN; relaxing the AND to OR wrongly clears it (this pin catches that).
+@test "S23-and: newOffnormalAlarm + new AlarmSupport( WITHOUT 'implements BIAlarmSource' does NOT surface -> still WARNs" {
+  D="$BATS_TEST_TMPDIR/s23and"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor trip
+    return target;
+  }
+}
+JAVA
+  cat > "$D/com/x/BCompressorControl.java" <<'JAVA'
+package com.x;
+public class BCompressorControl extends BComponent {   // NOTE: does NOT implement BIAlarmSource
+  private AlarmSupport as = new AlarmSupport(this);
+  void raise() { as.newOffnormalAlarm(mkData()); }
+}
+JAVA
+  run "$LSP" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+}
