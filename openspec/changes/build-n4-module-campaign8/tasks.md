@@ -272,12 +272,12 @@ Chain strategy: stacked-to-main
 
 **RED**: none (CD2); exit-31 pin is a code addition | **Gate**: R14.1-R14.4
 
-- [ ] 14.1 grep-before-fold: `rg 'Gradle task matrix|mirror-niagara-home|vendorVersion.*bajaVersion' build-n4-module-kit/BUILD-LOOP.md` → confirm 0 hits (K6).
-- [ ] 14.2 Add `BUILD-LOOP.md` §4 Gradle task matrix: clean/slotomatic/compileJava/jar/build/moduleTestJar/niagaraTest/bajadoc — what each touches, safe combos, mirror-niagara-home.sh trick.
-- [ ] 14.3 Add `BUILD-LOOP.md` version-bump checklist: `vendorVersion` vs `bajaVersion`, station reload behaviour, restart mandate, `schema-risk.sh` required before any slot-touching bump.
-- [ ] 14.4 Write `tests/build-sh.bats` pin: `build.sh` exits 31 and stderr contains the mirror-niagara-home.sh recipe text (R14.3 regression pin; behaviour already live at `build.sh:84-88`).
-- [ ] 14.5 `bats tests/build-sh.bats` exits 0; `sweep-fold-audit.sh --strict` exits 0.
-- [ ] 14.6 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 14.1 grep-before-fold: `rg 'Gradle task matrix|mirror-niagara-home|vendorVersion.*bajaVersion' build-n4-module-kit/BUILD-LOOP.md` → confirm 0 hits (K6).
+- [x] 14.2 Add `BUILD-LOOP.md` §4 Gradle task matrix: clean/slotomatic/compileJava/jar/build/moduleTestJar/niagaraTest/bajadoc — what each touches, safe combos, mirror-niagara-home.sh trick.
+- [x] 14.3 Add `BUILD-LOOP.md` version-bump checklist: `vendorVersion` vs `bajaVersion`, station reload behaviour, restart mandate, `schema-risk.sh` required before any slot-touching bump.
+- [x] 14.4 Write `tests/build-sh.bats` pin: `build.sh` exits 31 and stderr contains the mirror-niagara-home.sh recipe text (R14.3 regression pin; behaviour already live at `build.sh:84-88`).
+- [x] 14.5 `bats tests/build-sh.bats` exits 0; `sweep-fold-audit.sh --strict` exits 0.
+- [x] 14.6 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** Guards green; merge ff-only; ledger settle `--max-changed-lines 200`. No install-skill.
 
 ---
