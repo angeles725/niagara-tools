@@ -1,5 +1,7 @@
 # Common checklist — every N4 module (the verify gate)
 
+> **Working profile:** do kit/module work as an *Excavador Técnico* — first-principles, every check bites, only what ran. Full text: `skill/SKILL.md` § Working profile. `[ev: corpus B801]` `[ev: corpus B815]`
+
 Applies to all module types. Each item is proven from real builds (DashboardPan/ColdRoomPan/chihuahua, 2026-08). Run this against the built module before "done".
 
 > Background reading, by layer and priority: **`corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; the index for what to read (P0 before building).
@@ -80,6 +82,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - **K18 — TC3 byte-equality (`scaffold → diff -r` vs fixture) pins the fixture as the module contract:** the diff catches any incomplete substitution; adding a new template variable without updating the oracle makes TC3 RED. [ev: retro campaign7-scaffold]
 - **K19 — A toolbelt script is not done until named in BOTH `BUILD-LOOP.md` and `skill/SKILL.md`; `kit-links.bats` L4/L5 are the guards:** new scripts that land in a PR without routing entries turn L4/L5 RED — the coverage gap is closed in that PR or the next one. [ev: retro tool-integration]
 - **K20 — Verdict exits (0/1/2) and usage/env exits (3/4) are disjoint ranges:** callers distinguish a content verdict from a bad invocation without inspecting output; keep the ranges separate in every toolbelt script with a meaningful verdict. [ev: retro schema-risk]
+- **K21 — A cite into a MOVING tree carries its commit; a decompiled line number names its build:** a `file:line` into a CLIENT module tree or a decompiled install goes stale the moment the tree moves — pin the commit SHA for a client-tree cite, and NAME the build for a decompiled one (the PANCCADIA Linux-snap `Clock.java` line ≠ the `organized/` Windows build's — SAME check, different compile). [ev: corpus B801 §801.4] [ev: corpus B815 §815.10]
 - **Anchor a file split at a heading that marks a clear audience change, not an approximate line count:** explore-phase estimates name a range; confirm at the section headings — content belonging to the pre-split audience stays in the original file. [ev: retro logic-split]
 - **Verify a file split with the sort-comm invariant before committing:** `comm -23 <(cat HALF1 HALF2 | grep . | sort) <(grep . ORIGINAL | sort)` (placeholders, not kit files) must yield only infrastructure lines (headers, cross-references); zero original lines may be lost or duplicated. [ev: retro logic-split]
 - **Retarget `corpus-index.md` section pointers atomically with the split:** a pointer that survives the move while its content has moved turns `corpus-index.md` into a dangling guide; commit the retarget in the same push range as the file split. [ev: retro logic-split]
@@ -106,3 +109,11 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 ## Live-verify safety
 - **Never perform a state-changing write on a production station during verification:** do read-only prod checks + an out-of-band negative check (no-token → 401). [ev: retro live-cutover-and-authenticated-control, retro obix-and-loginless-dashboard-runbooks]
 - **Test credentials from a file outside the repo** (`chmod 600`), never pasted in a channel or embedded in an artifact; cite a secret's structure (filename, format, purpose), never its value. [ev: retro live-cutover-and-authenticated-control]
+
+## Station load budget `[ev: corpus B806]`
+COUNT before deploying an rt module to a JACE (full budget table + cited limits: corpus B806 §806.8):
+- engine-thread cost = Σ(periodic callbacks × frequency); each `execute()`/tick must run ≪ 20 ms.
+- every `Clock.Ticket` cancelled in `stopped()`; every delay floored `> 0` (see §Conformance / `lint-delays.sh`).
+- no `java.util.concurrent` executor (use `Clock`); no large PERSISTED `String` slot rewritten per action (mark `Flags.TRANSIENT`).
+- globalCapacity budget: proxy points < 500 · histories < 125 (incl Audit + Log) · links < 400 · devices < 25 — **> 110 % = the station will NOT boot** (`[CERT-doc]`: Tridium's documented boot semantic, `docPlatform.txt:2458-2459`; the JACE-8000/9000 kRU cap stays OPEN, B806 §806.11).
+- guard servlet / linked writes with `isRunning()`; poll with backoff. `[ev: corpus B806 §806.9]`
