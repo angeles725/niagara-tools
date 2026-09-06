@@ -77,3 +77,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-bog-audit.md | kit | 2026-09-05 | pending | 6 | <!-- CHECK11 FAIL not WARN (K13); CHECK12 WARN; direct-parent slot tracking; compound-type sub-slots; wsAnnotation READONLY skip; BA12 inherited frozen slots WARN -->
 | 2026-09-05-campaign8-lint-servlet.md | kit | 2026-09-05 | pending | 5 | <!-- D1 lint-servlet not rc-scan --servlet (K13); D2 R12.2 deferred B803; D3 csrf WARN not FAIL (B813); D4 input-400 prediction wrong; comment-strip both body+flags -->
 | 2026-09-05-campaign8-post-deploy-checklist.md | kit | 2026-09-05 | pending | 2 |
+| 2026-09-05-campaign8-build-pipeline.md | kit | 2026-09-05 | pending | 3 | <!-- Gradle task matrix §4.a; version-bump checklist §4.b; exit-31 regression pin BS-lock/BS-lock-hint -->

@@ -42,6 +42,29 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Confirm: bytecode major **52**, jars **signed**, no raw-double facet. (build-verify.md)
 - A `gradle :jar` with the default JDK is NOT a build.
 
+### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each
+
+| Task | Touches | When required |
+|------|---------|---------------|
+| `clean` | deletes `build/` outputs | always before a deploy build; exits 31 if station holds `modules/<jar>` lock — see station-lock recipe below |
+| `slotomatic` | generates slot registry, dispatch, and `_BProxy` sources from `@NiagaraProperty`/`@NiagaraAction`/`@NiagaraType` | any annotation change; `build.sh` always runs it before `jar`; skipping compiles against a stale proxy |
+| `compileJava` | compiles `.java` sources (incl. slotomatic output) | implicit; depends on `slotomatic` |
+| `jar` | packages compiled classes into the profile jar | always (kit default; `build.sh` uses this, not `build`) |
+| `build` | `jar` + `test` (JUnit) | only when JUnit tests must run alongside compile; heavier than `jar` alone |
+| `moduleTestJar` | packages test classes for the `niagaraTest` framework | combined with `niagaraTest` only |
+| `niagaraTest` | runs tests inside a live Niagara container | only when Niagara-framework tests exist; requires a running station; rare in WSL |
+| `bajadoc` | Baja API docs | release/on-demand only; not part of the normal build loop |
+
+Safe combinations: `clean slotomatic jar` — the only correct kit build (`build.sh` default, per-profile). `clean slotomatic build` if JUnit tests must run alongside. Avoid `jar` without `clean` (stale class outputs). `[ev: corpus B807]`
+
+**Station-lock recipe (exit 31):** `:clean` fails with "Unable to delete `<niagara_home>/modules/<jar>`" when a running station holds the lock (`toolbelt/build.sh:15,:82-88`). Fix: `toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>` creates a writable mirror so the plugin can copy freely without touching the live install (see §0.b). `[ev: corpus B807]`
+
+### 4.b Version-bump checklist (before any slot-touching commit)
+- `vendorVersion` (in `module.xml` / `gradle.properties`) MUST be bumped on every schema change — slot add, remove, retype, or rename. On reload the station re-decodes `config.bog` against the new module's type/slot registry; a retype or remove is a schema-risk OUTAGE. `[ev: corpus B807]` `[ev: corpus B795]`
+- `bajaVersion` is the Niagara platform API target set in `gradle.properties` / `settings.gradle.kts`; do NOT bump it between normal builds — it follows the `niagara_home` chosen at build time and is managed by the plugin.
+- Restart mandatory for any `-rt` or `-wb` jar change (Java classes loaded at boot); a `-ux`-only change needs no restart — browser hard-reload only (§6).
+- Run `toolbelt/schema-risk.sh` before any bump that touches slots; see §6 for the MANDATORY deploy gate. `[ev: corpus B795]`
+
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
 - **Pre-gate (run before `verify-module.sh`):** `toolbelt/lint-delays.sh <src>` (Clock.schedule delay-floor lint; exit 1 = any FAIL — a non-positive floor silently kills the timer at runtime) [ev: retro campaign8-lint-delays]; `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL); `toolbelt/lint-wb-threading.sh <wb-src-dir>` (Swing-thread traversal and agent-breadth heuristic over a -wb src tree; WARN rows for human review; exit 0 WARN-only / 1 under --strict; run on any -wb profile with Java sources) [ev: retro campaign8-wb-audit]; `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (type-set lexicon coverage; empty or missing lexicon with declared types exits 1); `toolbelt/slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>` (per-OPERATOR-slot diff: MISSING = slot with no key, STALE = key with no slot; exit 1 = any MISSING) [ev: retro campaign8-slot-per-slot]; `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro tool-integration] [ev: retro campaign7-plano]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present); `toolbelt/rc-scan.sh <ux-artifact-dir>` (browser-resource lint over rc/ assets: hardcoded ORD/host literals, bare .catch(()=>{}), null display branches; exit 1 = FAIL) [ev: retro campaign8-rc-scan].; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present).; `toolbelt/lint-servlet.sh <ux-profile>/src` (BWebServlet security lint: auth gate, input-400, unbounded-set, cache-nofinger, log-in-handler, csrf-xrw-only; exit 0 clean or WARN-only / 1 any FAIL / 3 usage; run on any -ux profile that has BWebServlet subclasses) [ev: retro campaign8-lint-servlet]
