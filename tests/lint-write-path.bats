@@ -276,6 +276,48 @@ MD
   [ "$status" -eq 0 ]
 }
 
+@test "WP-stale-action: a matrix row naming an @NiagaraAction is COVERED (no STALE) — covered set includes action names, not just OPERATOR properties" {
+  d="$BATS_TEST_TMPDIR/staleact"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/BThing.java" <<'JAVA'
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+@NiagaraAction(name="forceDefrost")
+public class BThing extends BComponent {
+  public void doForceDefrost() { /* … */ }
+}
+JAVA
+  cat > "$d/docs/write-path-matrix.md" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `forceDefrost` | Operator action | any | wA |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" != *"STALE"* ]]
+  [ "$status" -eq 0 ]
+}
+
+@test "WP-stale-summary: a matrix row naming a SUMMARY-only (non-OPERATOR) property is COVERED (covered set is ALL @NiagaraProperty, any flag)" {
+  d="$BATS_TEST_TMPDIR/stalesum"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/BThing.java" <<'JAVA'
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+@NiagaraProperty(name="statusLabel", flags=Flags.SUMMARY | Flags.READONLY)
+public class BThing extends BComponent {}
+JAVA
+  cat > "$d/docs/write-path-matrix.md" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `statusLabel` | engine | n/a | wS |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" != *"STALE"* ]]
+  [ "$status" -eq 0 ]
+}
+
 @test "WP-uncovered-strict: an uncovered OPERATOR slot stays exit 1 WITH and WITHOUT --strict (FAIL contract unchanged)" {
   d="$BATS_TEST_TMPDIR/uncov"; mkdir -p "$d/src/com/x" "$d/docs"
   cat > "$d/src/com/x/BThing.java" <<'JAVA'
