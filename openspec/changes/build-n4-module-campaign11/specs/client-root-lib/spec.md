@@ -39,7 +39,7 @@
 
 | ID | Requirement | ev |
 |----|-------------|-----|
-| R-T2.10 | After PR3, **no** real-tree smoke in `tests/*.bats` MAY assert a FAIL (exit 1 or a FAIL row) without either: (a) the rule being separately covered by at least one synthetic fixture that always flags that pattern (and the smoke therefore asserts the current clean state), or (b) a named issue ticket documenting the known defect the smoke pins. RC8 satisfies (b) implicitly — the host literal is a documented known issue, not an accidentally failing rule. All retargeted smokes MUST be verified to satisfy (a) or (b) at apply time. | `[ev: ../cross-cutting.md — smoke-assertion-class]` `[ev: proposal RK5]` |
+| R-T2.10 | After PR3, every retargeted real-tree smoke asserts the tree's current CORRECT verdict at main-ff1b659: LD5 → exit 0 / no FAIL (the defrost time<=0 defect it used to pin is fixed; the delay-floor rule stays pinned by LD1/LD3/LD6); RC8 → 1 FAIL `:701` host literal (the rc-scan rule's steady-state detection on DashboardPan-ux — a pinned rule, not a defect pin, no ticket needed); c8-close SC1-smoke → the ff1b659 verdict recorded in the RED. A smoke whose asserted FAIL/WARN is a fixable defect (not a steady-state detection) MUST cite the defect and the synthetic fixture carrying the rule (cross-cutting smoke-assertion-class). | `[ev: ../cross-cutting.md — smoke-assertion-class]` `[ev: QA 54078f6 commit body]` |
 
 ---
 
@@ -128,6 +128,6 @@ The delay-floor rule remains pinned by LD1 (`Math.max(x, 0L)` → FAIL), LD3 (`B
 - [ ] LD5: exits **0**, **0 FAIL rows**, `BDefrostController` ABSENT (retargeted to `ff1b659` — was exit 1 + FAIL on `4f5f1c7`).
 - [ ] c8-close SC1-smoke: re-pinned to `ff1b659` clean state.
 - [ ] RC8: **1 FAIL row**, subject `host`, exit 1 — **UNCHANGED** from `dab0807` behavior.
-- [ ] No real-tree smoke in the suite asserts FAIL without a named ticket or an existing synthetic rule carrier (R-T2.10).
+- [ ] Every retargeted real-tree smoke asserts the ff1b659 correct verdict; any defect-caused FAIL/WARN cites the defect + its synthetic rule carrier (R-T2.10).
 - [ ] No toolbelt script is touched by PR3.
 - [ ] `shellcheck 0.10.0` exits 0; 0 attribution trailers (K11).
