@@ -198,17 +198,17 @@ python3 invocation that already costs ~0.1 s.
 
 **RED**: `qa/c8-structure` (LS1–LS11) — re-read tip at apply | **Gate**: R18.1–R18.5, CD4/CD5/CD6
 
-- [ ] 18.1 Create `qa/c8-structure`; write failing bats: LS4 (chihuahua L4), LS9 (DashboardPan-wb L9), LS10 (client gradle.properties L10), LS11 (ColdRoomPan/CompPan L11), LS-PASS (scaffold output → exit 0); record tip SHA.
-- [ ] 18.2 Create `types/structure.md` (B817 layout + naming + good-module checklist L1–L11 summary; `[ev: corpus B817]`).
-- [ ] 18.3 Write `toolbelt/lint-structure.sh <module-root>`: iterate profiles; implement L1–L7, L9–L11 per R18.2; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/1/3.
-- [ ] 18.4 Copy sanitised fixtures `tests/fixtures/lint-structure/{chihuahua-rt,dashboardpan-wb,client-gradleprops,coldroompan-rt}/` (real shapes, CD4).
-- [ ] 18.5 Write `tests/lint-structure.bats` (LS1–LS11 verbatim from RED).
-- [ ] 18.6 Update `toolbelt/scaffold-module.sh` to emit L1–L11-passing structure; add scaffold-output bats pin.
-- [ ] 18.7 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `lint-structure.sh [ev: retro c8-structure]` (CD5).
-- [ ] 18.8 **Named mutation**: remove one dependency 3-part floor → L7 FAIL on that entry (R18.5). Record in PR body.
-- [ ] 18.9 Real smoke: `lint-structure.sh` on chihuahua (L4 fires) + DashboardPan-wb (L9 fires); `lint-structure.sh` on scaffold output → exits 0. Paste output.
-- [ ] 18.10 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 18.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
+- [x] 18.1 Create `qa/c8-structure`; write failing bats: LS4 (chihuahua L4), LS9 (DashboardPan-wb L9), LS10 (client gradle.properties L10), LS11 (ColdRoomPan/CompPan L11), LS-PASS (scaffold output → exit 0); record tip SHA.
+- [x] 18.2 Create `types/structure.md` (B817 layout + naming + good-module checklist L1–L11 summary; `[ev: corpus B817]`).
+- [x] 18.3 Write `toolbelt/lint-structure.sh <module-root>`: iterate profiles; implement L1–L7, L9–L11 per R18.2; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/1/3.
+- [x] 18.4 Copy sanitised fixtures `tests/fixtures/lint-structure/{chihuahua-rt,dashboardpan-wb,client-gradleprops,coldroompan-rt}/` (real shapes, CD4).
+- [x] 18.5 Write `tests/lint-structure.bats` (LS1–LS11 verbatim from RED).
+- [x] 18.6 Update `toolbelt/scaffold-module.sh` to emit L1–L11-passing structure; add scaffold-output bats pin.
+- [x] 18.7 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `lint-structure.sh [ev: retro c8-structure]` (CD5).
+- [x] 18.8 **Named mutation**: remove one dependency 3-part floor → L7 FAIL on that entry (R18.5). Record in PR body.
+- [x] 18.9 Real smoke: `lint-structure.sh` on chihuahua (L4 fires) + DashboardPan-wb (L9 fires); `lint-structure.sh` on scaffold output → exits 0. Paste output.
+- [x] 18.10 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 18.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
 - [ ] **[lead]** LS1–LS11 green; merge ff-only; `install-skill.sh --force` (SKILL.md changed); ledger settle `--max-changed-lines 290`.
 
 ---
