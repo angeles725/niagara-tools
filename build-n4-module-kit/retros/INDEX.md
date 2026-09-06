@@ -87,3 +87,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign8-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 11 | <!-- D1 CHECK16 vice-versa deferred (BA5 conflict); D2 self-closing bug; D3 relay clean fixture; D4 f-string !r syntax fix -->
 | 2026-09-06-campaign9-demand-scope.md | kit | 2026-09-06 | pending | 0 |
 | 2026-09-06-campaign9-silent-protection.md | kit | 2026-09-06 | pending | 3 |
+| 2026-09-06-campaign9-ext-writable-shape.md | kit | 2026-09-06 | pending | 3 |
