@@ -159,6 +159,6 @@ open_issues:
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
 retro_pending: true                  # campaign8-lint-delays (pending); campaign8-triage-console (pending); 4+4 proposed deltas
-last_commit: Campaign 8 PR2 feat/c8-triage-console — triage-console.sh station log triage
-last_session: 2026-09-05 · Campaign 8 PR2 complete: triage-console.sh (C1/C2/C3), TR1-TR9 green (200/200 bats). Key: three channels required (C3 catches load-fail with zero own frames — CERT-live PANCCADIA). LC_ALL=C + ASCII prefix for Spanish/mojibake consoles. Bare exception class (NotRunningException) fix added. REFLOW cert-chain caught by C2 ([loader] tag not in denylist). Smokes: PANCCADIA 5x time<=0 + 6x NotRunning + [sys]/[sys.xml] load-fail; MX60 9x modifyThread; REFLOW 12x modifyThread + 7x cert-chain.
+last_commit: ea13310 — triage-console.sh real-smoke fix (attribution filter, cross-file grouping, ts parse)
+last_session: 2026-09-05 · Campaign 8 PR2 fix: real-smoke failures fixed — C2 whitelist (no foreign rows), cross-file grouping (5x/6x not 1x-per-file), ts bracket bug, lowercase month table. TR10-TR11 RED cherry-picked and GREEN. D5 retro: fixture-green real-red lesson. All guards 202/202, smokes verified on PANCCADIA/MX60/REFLOW.
 <!-- /build-state.v1 -->
