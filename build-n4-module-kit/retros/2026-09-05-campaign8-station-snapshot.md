@@ -41,7 +41,34 @@ K19 routing: one line in `BUILD-LOOP.md` (post-deploy section) and one line in
 | (b) constant sha256 | Replaced `sha=$(sha256sum …)` with `sha="deadbeef…"` (64 hex zeros) | SN2 only | `not ok 2 SN2: manifest.json carries the real sha256` — grep finds constant, not the file's actual hash |
 | (c) copy history/ | Added `cp -r "$STATION_ABS/history" "$OUT_DIR/history"` after mkdir | SN1 only | `not ok 1 SN1: … NOTHING else (history/ decoy excluded)` — `$OUT/history` exists, `[ ! -e "$OUT/history" ]` fails |
 
-### Real smoke — PANCCADIA station (Windows mount, read-only)
+### SN5 RED → GREEN proof (lead fix for NTFS/0777 mount defect)
+
+**Defect found:** `cp -p` preserves source mode; all 11 PANCCADIA outputs were executable
+(`find <out> -perm -u+x -type f` = 11) because every file under `/mnt/c` is 0777 on WSL.
+Contract D10 says outputs are never +x.
+
+**SN5 RED** (mktemp copy of original script, before fix):
+```
+$ chmod +x "$ST/config.bog" "$ST/console_1.txt" "$ST/console_2.txt"
+$ "$SNAP_ORIG" "$ST" "$OUT"
+$ find "$OUT" -type f -perm -u+x | wc -l
+2
+```
+`not ok 5 SN5: no output file is executable even when source files are +x`
+
+**Fix:** added `chmod 0644 "$OUT_DIR/$rel"` immediately after `cp -p` in `_snap_file()`.
+`cp -p` preserves mtime; the subsequent chmod strips the executable bit without touching timestamps.
+
+**SN5 GREEN** (fixed script):
+```
+$ find "$OUT" -type f -perm -u+x | wc -l
+0
+$ stat -c %Y "$ST/config.bog"   # == stat -c %Y "$OUT/config.bog"  (mtime preserved)
+1788667832
+```
+`ok 5 SN5: no output file is executable even when source files are +x (NTFS/0777 mount guard); mtimes preserved`
+
+### Real smoke — PANCCADIA station re-run (fixed script; Windows mount, read-only)
 
 Station: `/mnt/c/Users/equipo/Niagara4.14/OptimizerSupervisor/stations/PANCCADIA`
 Out-dir: `mktemp -d` (temp; deleted after run)
@@ -58,10 +85,12 @@ PASS  station-snap    console_backup_260903_1704.txt  sha256=d6fcc1e727a76e15958
 PASS  station-snap    console_backup_260903_1858.txt  sha256=619a367571342b508c8351682cc6d06b0ae7047d6a813f291f5ffb535d62f196 bytes=262143
 PASS  station-snap    console_backup_260903_1916.txt  sha256=663b233ae079d0ea08b902ad1d42311a32f87223b5b4f8358775f39d00a03931 bytes=262143
 PASS  station-snap    console_backup_260904_0028.txt  sha256=a6e9febfde7c7d3259f21f2bcb78696084f526de4c515fa62a1f779bbee4f593 bytes=262143
-station-snapshot: 11 file(s) copied; manifest.json written to /tmp/tmp.lB2CK5cobA
+station-snapshot: 11 file(s) copied; manifest.json written to /tmp/tmp.oLs91hEag2
 ```
 
 Exit: 0. Files: 1 × config.bog (35 KB) + 10 × console_backup_*.txt (4 KB–256 KB each).
+Executable outputs: `find <out> -type f -perm -u+x | wc -l` = **0** (fixed).
+File modes: `-rw-r--r--` (0644) on all 11 outputs.
 Source unchanged: `find PANCCADIA -newer manifest.json` = empty (no writes).
 No history/ directory in this station → pointers array empty.
 Temp out-dir deleted afterwards; nothing written under `/mnt/c`.

@@ -56,3 +56,15 @@ setup() {
   run "$SNAP" "$ST"
   [ "$status" -eq 3 ]
 }
+
+@test "SN5: no output file is executable even when source files are +x (NTFS/0777 mount guard); mtimes preserved" {
+  chmod +x "$ST/config.bog" "$ST/console_1.txt" "$ST/console_2.txt"
+  run "$SNAP" "$ST" "$OUT"
+  [ "$status" -eq 0 ]
+  exec_count=$(find "$OUT" -type f -perm -u+x | wc -l)
+  [ "$exec_count" -eq 0 ]                                  # no output is executable
+  # mtimes preserved despite mode strip
+  src_mtime=$(stat -c %Y "$ST/config.bog")
+  dst_mtime=$(stat -c %Y "$OUT/config.bog")
+  [ "$src_mtime" = "$dst_mtime" ]
+}

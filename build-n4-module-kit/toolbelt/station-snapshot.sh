@@ -100,6 +100,9 @@ _snap_file() {
         FAILED=1
         return
     fi
+    # Strip executable bit: cp -p preserves mtimes but copies source mode, which on NTFS/0777
+    # WSL mounts makes every output executable. Contract (D10): outputs are never +x.
+    chmod 0644 "$OUT_DIR/$rel"
     local sha bytes
     sha=$(sha256sum "$OUT_DIR/$rel" | cut -d' ' -f1)
     bytes=$(wc -c < "$OUT_DIR/$rel" | tr -d ' \t')
