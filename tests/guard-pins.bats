@@ -78,11 +78,15 @@ _mklint() {  # dir  script-basename  mutation-id(or "")  defined-test-id(or "")
   [[ "$output" == *"WARN"* ]]
 }
 
-@test "T4-smoke: after PR4 the real kit has 10 lint-*.sh each with a resolved # Mutation: (>=10 MATCH rows over 10 distinct scripts, 0 WARN, lint-timers S21-misparse -> tests/lint-timers.bats:436). RED on dab0807 (0 lints declare a mutation)." {
+@test "T4-smoke: after PR4 the real kit has 10 lint-*.sh each with a resolved # Mutation: (>=10 MATCH rows over 10 distinct scripts, 0 WARN; lint-timers S21-misparse resolves to its actual @test line). RED on dab0807 (0 lints declare a mutation)." {
   run "$GP" "$REPO"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
   [ "$(printf '%s\n' "$output" | grep -c '^MATCH')" -ge 10 ]
   [ "$(printf '%s\n' "$output" | grep '^MATCH' | awk '{print $3}' | cut -d: -f1 | sort -u | grep -c .)" -eq 10 ]
-  [[ "$output" == *"mutation S21-misparse -> tests/lint-timers.bats:436"* ]]
+  # Compute the line rather than hardcode it: a QA pin must never pressure a worker to move a
+  # source @test to satisfy it (K13). The row must resolve to wherever S21-misparse actually is.
+  ln="$(grep -n '^@test "S21-misparse' "$REPO/tests/lint-timers.bats" | head -1 | cut -d: -f1)"
+  [ -n "$ln" ]
+  [[ "$output" == *"mutation S21-misparse -> tests/lint-timers.bats:$ln"* ]]
 }
