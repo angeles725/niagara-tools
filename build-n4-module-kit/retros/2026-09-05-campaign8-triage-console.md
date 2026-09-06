@@ -66,3 +66,16 @@ FAIL  triage-console  console_backup_260903_1704.txt  1x 17:04:32 03-Sep-26 -> 1
   → **caught by C2 (own logger channel)**: the [loader] tag is not in the framework denylist
   (sys/sys.xml/fox/box/driver/station/alarm/history/jetty). Class-name content in the message
   path (com/angeles/) is coincidental; C2 fires on the tag, not the message.
+
+### D5 — Fixture-green, real-red: the smoke is the contract
+TR1-TR11 were green but the tool failed on real PANCCADIA data in three ways:
+(a) C2 used a denylist, so foreign loggers (bacnet.transport, authentication,
+platDataRecovery.service) leaked through — the fixture never exercised a mixed console.
+(b) Grouping was per-file; the same exception in five separate console files appeared
+as five rows instead of one (count=N, first/last across all files).
+(c) Timestamp had a leading `[` (parse-offset bug) so ts_key ordering was incorrect.
+
+The real smoke is the non-negotiable contract: run triage-console.sh on at least two
+real CERT-live stations before declaring GREEN. Fixture-only passes miss multi-file
+behaviour, foreign-logger leakage, and locale quirks that only appear in real logs.
+Add a TR for each class of real-data failure to lock in the fix. [ev: corpus B800]
