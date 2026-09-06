@@ -100,12 +100,12 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V4: M2a (DS3), M2b (DS4) — MANUAL. tasks 2.7 says DS2: DS2 is the fixture-level mutant already executable.
 - Harness-only: none. V6/V7.
 
-## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` 41127e4 · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
-- V2: `git diff 41127e4 HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
+## PR3 — `feat/c9-silent-protection` (kit) · RED `qa/c9-silent-protection` 9f36f5e · `tests/lint-silent-protection.bats` · tool `toolbelt/lint-silent-protection.sh` · worktree `c9-silent-protection`
+- V2: `git diff 9f36f5e HEAD -- tests/lint-silent-protection.bats` → empty (unless the R3↔R8 re-pin below applies).
 - V3: kit common gate; `bats tests/lint-silent-protection.bats` → **10/10** (SP1-SP8 + SP-smoke + SP9 no-sources → exit 3 + ERROR).
-- SP-smoke expected rows (a109249 trees): a WARN naming `CompressorControl.java` (CP-1 low-suction shed), a WARN naming
-  `BEvaporatorUnit.java` (CR-3 `freezeTripped`), and NO row containing `dischargeHighAlarm` (CP-2 is surfaced).
-  Also run `$TB/lint-silent-protection.sh $CWT/main-a109249/<profile>/src` for CompPan-rt and ColdRoomPan-rt; record rows.
+- SP-smoke is EXACT at a109249 (`C9_CLIENT_ROOT`): CompPan-rt exactly 1 WARN whose subject is `CompressorControl.java:215` (CP-1),
+  ColdRoomPan-rt exactly 1 whose subject is `BEvaporatorUnit.java:1287` (CR-3), DashboardPan-rt 0, DashboardPan-ux 0; never `dischargeHighAlarm`,
+  `defrostSkipped` or `BCompressorControl` (getters). Total 2 rows on the four roots. (First GREEN c315aae produced 113 — rejected by the lead.)
 - **Coupling R3↔R8:** if PR8 is already in client main, the CR-3 row must be ABSENT and the SP-smoke assertion must say so
   (whichever merges second updates the pin). Check `git -C $CLI log --oneline origin/main | grep -c 'c9-alarm-cr3\|CR-3'`.
 - V4: M3a (SP8 + SP-smoke), M3b (SP-smoke) — MANUAL.
@@ -181,9 +181,10 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V5: `v Compresores/build.gradle.kts` → **2.2.0**.
 - Harness-only: CPB5 `sourceState` on the routed record → H2. V6/V7.
 
-## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **3387c58** (path + root + EW11 re-issues) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
-- V2: `git diff 3387c58 HEAD -- tests/ext-writable-shape.bats` → empty.
-- V3: kit common gate; `bats tests/ext-writable-shape.bats` → **11/11** EW1-EW11 (EW10 real: `BRoomPanel.setpoint` WARNs; the client tree is present, a `skip` = REJECT).
+## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **269be48** (path + root + EW11 + exact EW10 re-issues) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
+- V2: `git diff 269be48 HEAD -- tests/ext-writable-shape.bats` → empty.
+- V3: kit common gate; `bats tests/ext-writable-shape.bats` → **11/11** EW1-EW11 (EW10 is EXACT at a109249: DashboardPan-rt 1 WARN `BRoomPanel.setpoint`, CompPan-rt 0 —
+  `faultReset` has an action —, ColdRoomPan-rt 0, DashboardPan-ux 0; the client tree is present, a `skip` = REJECT).
 - Exit taxonomy: no arg → 3 (EW9); empty/no-Java dir → 3 + `ERROR` row (EW11); `--strict` with a WARN → 1 (EW7); WARN alone → 0.
 - Real-tree rows: `$TB/lint-ext-writable-shape.sh $CWT/main-a109249/Dashboard/DashboardPan/DashboardPan-rt/src` → one WARN row for
   `BRoomPanel.setpoint` (BStatusNumeric SUMMARY|OPERATOR, no `@NiagaraAction`) carrying the child `…/value` note; run CompPan-rt and ColdRoomPan-rt too and record rows
