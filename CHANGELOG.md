@@ -6,6 +6,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.22.0] - 2026-09-06
+
+### Changed — Campaign 11: lint precision (T1-T4)
+
+- **T1** shared `lib/method-boundary.sh` (function-only `MB_AWK`, PEAK depth via `BASH_SOURCE`) — fixes the one-liner method false-negative; shared parser + accessor skip across lint-timers / lint-silent-protection / lint-ext-writable-shape via three awk invocation mechanisms (inline, adjacent-quote, second `-f`). [ev: retro campaign11-shared-method-boundary]
+- **T2** `tests/lib/client-root.bash` single-sources the client read tree — 10 hardcoded sites → 0 (5 C9_CLIENT_ROOT + 2 C9_CLIENT_REPO + 3 live-checkout); LD5 flips to exit 0 and c8-close SC1-smoke verdict tightened (both pinned a bug/vacuity, not a rule). [ev: retro campaign11-client-root]
+- **T3** `lint-write-path.sh` DRIFT advisory — a `[concept]` marker on a slot that became real is flagged; true concept rows (slot absent from source) stay silent; `--strict` promotes STALE or DRIFT to exit 1. [ev: retro campaign11-concept-row-drift]
+- **T4** `toolbelt/lint-guard-pins.sh` — every lint header's `# Mutation: <id> -- <desc>` declaration must name an existing bats fixture (9 lints + itself, 15 `# Mutation:` lines total); 'clean' = MATCH count == lint count, never 0 found. [ev: retro campaign11-lint-guard-pins]
+
+### Tests
+
+- Suite: **454/454** (`bats tests/` env-unset; c11-close.bats 11/13 pre-tag — CLOSE-tag and CLOSE-harness-run pending).
+
+### References
+
+- SDD change: `build-n4-module-campaign11` (PR1 T1, PR2 T3, PR3 T2, PR4 T4, PR5 close; v0.21.0 → v0.22.0; kit-only — no client jar bump).
+- Engram topics `sdd/build-n4-module-campaign11/*`.
+
+---
+
 ## [v0.21.0] - 2026-09-06
 
 ### Changed — Campaign 10: lint precision (S21-S25) + client hygiene (S26)

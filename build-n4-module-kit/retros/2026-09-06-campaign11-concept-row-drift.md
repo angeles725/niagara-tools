@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign11-concept-row-drift
 
 **Session**: <campaign/PR context — one line>
@@ -18,4 +18,4 @@
 - <≤5 bullets; each a durable rule, not a narration>
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign11-concept-row-drift.md | kit | 2026-09-06 | pending | 0 |`
+**Status**: FOLDED — BUILD-LOOP.md + skill/SKILL.md lint-write-path bullets (DRIFT advisory) updated by PR2. INDEX row: folded.

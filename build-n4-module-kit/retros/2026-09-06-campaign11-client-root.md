@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign11-client-root
 
 **Session**: C11 PR3 — centralise client-tree defaults in tests/lib/client-root.bash (T2)
@@ -30,4 +30,4 @@ A second defect was unmasked: LD5 was asserting `exit 1 + FAIL BDefrostControlle
 - The delay-floor rule is carried by synthetic fixtures (LD1/LD3/LD6); LD5 was only a tree-state witness and should never have been the rule carrier.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign11-client-root.md | kit | 2026-09-06 | pending | 0 |`
+**Status**: FOLDED — METHODOLOGY.md K26 (single-source the client read tree; a real-tree smoke pins the current correct verdict). INDEX row: folded.

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign11-lint-guard-pins
 
 **Session**: C11 PR4 — lint-guard-pins.sh meta-check + # Mutation: header retrofit of 10 lints (T4)
@@ -35,4 +35,4 @@ with 15 `# Mutation:` lines so the real-kit smoke asserts MATCH count ≥ 10, no
 - The kit had zero `# Mutation:` lines before C11 T4; adding the meta-check and the retrofit in the same PR is the only shape that makes the smoke non-vacuous.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign11-lint-guard-pins.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — METHODOLOGY.md K24(7) guard-pin grammar sub-bullet + K20 lint-timers exit-2 note; BUILD-LOOP.md + skill/SKILL.md routing by PR4. INDEX row: folded.

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-06 · kit · campaign11-shared-method-boundary
 
 **Session**: C11 PR1 — shared method-boundary awk fragment (`toolbelt/lib/method-boundary.sh`)
@@ -34,4 +34,4 @@
 - [ev: second read ad2121b69] Only three fragment invariants have a biting fixture (depth guard → S21-misparse; PEAK vs NET → the four one-liner pins; accessor skip → G-accessor/C11-g1-setter). The Case-B `@`-stop and the keyword exclusion are redundant for lint output under PEAK (the depth guard rejects the depth-1 class body before Case B runs; nested keywords are dead under `!in_m`) — kept as documented defensive code, pinned only by the aggregate golden set + 3×3 baselines, never carried as OBSERVED mutations (K24(7)).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-06-campaign11-shared-method-boundary.md | kit | 2026-09-06 | pending | 3 |`
+**Status**: FOLDED — METHODOLOGY.md K25 (shared method-boundary parser; PEAK depth; function-only fragment via BASH_SOURCE); BUILD-LOOP.md + skill/SKILL.md lint bullets updated by PR1. INDEX row: folded.

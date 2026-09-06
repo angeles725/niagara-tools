@@ -96,7 +96,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign10-write-path-stale.md | kit | 2026-09-06 | folded | 3 |
 | 2026-09-06-campaign10-ext-writable-per-slot.md | kit | 2026-09-06 | folded | 4 |
 | 2026-09-06-campaign10-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 7 |
-| 2026-09-06-campaign11-shared-method-boundary.md | kit | 2026-09-06 | pending | 0 |
-| 2026-09-06-campaign11-concept-row-drift.md | kit | 2026-09-06 | pending | 0 |
-| 2026-09-06-campaign11-client-root.md | kit | 2026-09-06 | pending | 0 |
-| 2026-09-06-campaign11-lint-guard-pins.md | kit | 2026-09-06 | pending | 3 |
+| 2026-09-06-campaign11-shared-method-boundary.md | kit | 2026-09-06 | folded | 0 |
+| 2026-09-06-campaign11-concept-row-drift.md | kit | 2026-09-06 | folded | 0 |
+| 2026-09-06-campaign11-client-root.md | kit | 2026-09-06 | folded | 0 |
+| 2026-09-06-campaign11-lint-guard-pins.md | kit | 2026-09-06 | folded | 3 |
+| 2026-09-06-campaign11-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 6 |
