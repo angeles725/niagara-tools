@@ -439,7 +439,11 @@ JAVA
 package demo;
 import javax.baja.sys.*;
 @NiagaraType
-@NiagaraProperty( name = "ackAlarm", type = "BAlarmRecord", defaultValue = "new BAlarmRecord()" )
+@NiagaraProperty(
+  name = "ackAlarm",
+  type = "BAlarmRecord",
+  defaultValue = "new BAlarmRecord()"
+)
 public final class BMisparse extends BComponent
 {
   private boolean startingUp = false;
