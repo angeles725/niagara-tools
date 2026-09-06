@@ -2,12 +2,13 @@
 # Campaign-10 CLOSE gate — SKELETON (mirror of tests/c9-close.bats). Env-guarded on C10_CLOSE so it is
 # inert in the normal suite; the close worker fills the TODOs when the C10 scope is frozen.
 #
-# C10 scope so far (lint-precision, kit-only): S21 lint-timers companion-flag keys on a FIELD not a
-# method-local; S22 ext-writable per-slot @NiagaraAction exemption; S23 silent-protection recognises a
-# Pattern-B (BIAlarmSource + newOffnormalAlarm) adapter surface. No new tool FILES — the three fixes edit
-# existing toolbelt scripts, so the tool-pins loop is unchanged from C9. TODO at freeze: VERSION target
-# (PATCH 0.20.1 if kit-only lint fixes, or MINOR 0.21.0 if client work is added), tag, SC-13 client
-# versions (only if any client module version bumps this campaign).
+# C10 scope (FROZEN): kit lint-precision — S21 lint-timers companion-flag keys on a FIELD not a
+# method-local; S22 ext-writable per-slot @NiagaraAction exemption; S23 silent-protection Pattern-B
+# (BIAlarmSource + newOffnormalAlarm) adapter surface; S24 run-pure-test.sh cd "$rt" before java
+# (structural cwd); S25 lint-write-path STALE advisory. Plus client S26 (gitignore build cache +
+# [concept] rows). No new tool FILES — the kit fixes edit existing toolbelt scripts, so the tool-pins
+# loop is the C9 set. VERSION: MINOR 0.21.0 (client work S26 landed, so not a kit-only PATCH). SC-13
+# client versions carry over 2.2.0/2.1.0/2.2.0 (S26 bumped no module version — verified).
 #
 # Run post-hoc:  C10_CLOSE=1 C10_CLOSE_COMMIT=<close sha> C9_CLIENT_REPO=<post-C10 client main worktree> \
 #                bats tests/c10-close.bats
@@ -15,7 +16,7 @@
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   BASE="1fb63d6"                       # C10 base = the C9 close commit (tag v0.20.0); no-trailer sweep range base
-  VERSION_TARGET="${C10_VERSION:-0.21.0}"   # TODO(freeze): confirm PATCH vs MINOR
+  VERSION_TARGET="${C10_VERSION:-0.21.0}"   # frozen: MINOR 0.21.0 — client work S26 landed, not a kit-only PATCH
   TAG="v${VERSION_TARGET}"
 }
 _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 to run"; }
@@ -82,12 +83,12 @@ _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 t
   done
 }
 
-@test "SC-13 (client group defaultModuleVersion): TODO(freeze) — only if a client module bumps this campaign" {
+@test "SC-13 (client group defaultModuleVersion): C10 carry-over 2.2.0/2.1.0/2.2.0 (S26 bumped nothing — verified)" {
   _close
   R="${C9_CLIENT_REPO:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"
   [ -d "$R" ] || skip "client repo not on this machine (set C9_CLIENT_REPO)"
   v() { grep -ohE 'defaultModuleVersion\("[0-9.]+"\)' "$1" 2>/dev/null | head -1 | grep -oE '[0-9.]+'; }
-  # C10 is kit-lint-only so far -> versions carry over from C9. TODO(freeze): update if a client PR bumps them.
+  # C10 client work (S26) bumped no module version -> versions carry over from C9 (verified at ff1b659/00e7118).
   [ "$(v "$R/Compresores/build.gradle.kts")" = "2.2.0" ]
   [ "$(v "$R/Paccadia/build.gradle.kts")"    = "2.1.0" ]
   [ "$(v "$R/Dashboard/build.gradle.kts")"   = "2.2.0" ]
