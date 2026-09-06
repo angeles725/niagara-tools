@@ -6,16 +6,18 @@
 # verify-module.sh — THE gate for built N4 module jars. A jar that has not passed it does not go to a station.
 #
 # Checks (each guards a failure seen on a real build — build-n4-module-kit/retros/):
-#   bytecode  every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
-#   signed    META-INF/NIAGARA4.SF present (gradle niagara-signing ran).                        [default]
-#   types     every <type class=...> in META-INF/module.xml exists as a .class in the jar.      [default]
-#   baja      module.xml baja vendorVersion <= --target-version (a 4.15 jar is rejected by 4.14). [--target-version]
-#   stored    zero Deflated entries — required only when the jar must be re-signed in Workbench. [--stored]
-#   typecount packaged <type> count == <module-dir>/<jar-basename>/module-include.xml count.     [--src]
-#   facets    no BFacets.make(BFacets.MIN|MAX, <raw number>) under <module-dir>/<jar-basename>/src. [--src]
-#   rcbackup  no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
-#   palette   a module that declares types must not ship an EMPTY module.palette (nothing to drag in
-#             Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.        [default]
+#   bytecode    every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
+#   signed      META-INF/NIAGARA4.SF present (gradle niagara-signing ran).                       [default]
+#   types       every <type class=...> in META-INF/module.xml exists as a .class in the jar.     [default]
+#   baja        module.xml baja vendorVersion <= --target-version (a 4.15 jar is rejected by 4.14). [--target-version]
+#   stored      zero Deflated entries — required only when the jar must be re-signed in Workbench. [--stored]
+#   typecount   packaged <type> count == <module-dir>/<jar-basename>/module-include.xml count.    [--src]
+#   facets      no BFacets.make(BFacets.MIN|MAX, <raw number>) under <module-dir>/<jar-basename>/src. [--src]
+#   facets-req  OPERATOR numeric slot without a facets key (WARN); setpoint/count-like slot without UNITS/PRECISION (WARN). [--src]
+#   ord-literal Java string literal matching station:|local:|slot:/ under src (WARN); exempt: *OrdConstants*+comment, defaultValue=, srcTest/**. [--src]
+#   rcbackup    no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
+#   palette     a module that declares types must not ship an EMPTY module.palette (nothing to drag in
+#               Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.     [default]
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
@@ -227,13 +229,121 @@ check_type_count() {
   row FAIL typecount "$jar" "jar declares $tn types, $inc declares $sn (stale build or missing slotomatic)"; return 1
 }
 check_raw_double_facets() {
-  local jar="$1" pd hits
+  local jar="$1" pd hits f
   [ -n "$SRC" ] || { row SKIP facets "$jar" "no --src"; return 0; }
   pd=$(profile_dir "$jar")
   [ -d "$pd/src" ] || { row SKIP facets "$jar" "no $pd/src"; return 0; }
-  hits=$(grep -rnE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' "$pd/src" --include='*.java' 2>/dev/null | head -1 || true)
+  # D9b: prune dot-dirs (e.g. .deploy-baseline) so stale snapshots are never scanned.
+  hits=""
+  while IFS= read -r f; do
+    h=$(grep -nE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' "$f" 2>/dev/null | head -1 || true)
+    if [ -n "$h" ]; then hits="$f:$h"; break; fi
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
   if [ -z "$hits" ]; then row PASS facets "$jar" "no raw-number MIN/MAX facet under $pd/src"; return 0; fi
   row FAIL facets "$jar" "raw-number MIN/MAX facet (wrap in BDouble.make): $hits"; return 1
+}
+check_facet_presence() {
+  # D5 (campaign 8 PR4): WARN when an OPERATOR numeric @NiagaraProperty or newProperty slot
+  # has no facets key at all, or when a setpoint/count-like slot lacks UNITS/PRECISION.
+  # Presence-only: never reads a facet value (MIN=0 is a real MIN — slots with a facets key
+  # are not flagged, even if only MIN is set). WARN never changes exit code (K20).
+  # D9b: dot-dirs pruned.
+  local jar="$1" pd warned=0 f hit
+  [ -n "$SRC" ] || { row SKIP facets-req "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP facets-req "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      row WARN facets-req "$jar" "$hit"
+      warned=1
+    done < <(awk -v FILE="$f" '
+      {lines[NR]=$0}
+      END {
+        delete seen
+        # pass 1: @NiagaraProperty annotations (handle single-line and multi-line)
+        for (l=1; l<=NR; l++) {
+          if (lines[l] !~ /@NiagaraProperty/) continue
+          s = lines[l]; lstart = l
+          if (lines[l] !~ /\)/) {
+            for (j=l+1; j<=NR && j<=l+40; j++) {
+              s = s " " lines[j]
+              if (lines[j] ~ /^[[:space:]]*\)[[:space:]]*$/) break
+            }
+          }
+          nm = ""
+          if (match(s, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+            nm = substr(s, RSTART, RLENGTH)
+            sub(/name[[:space:]]*=[[:space:]]*"/, "", nm); sub(/".*/, "", nm)
+          }
+          if (nm == "" || (nm in seen)) continue
+          typ = ""
+          if (match(s, /type[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+            typ = substr(s, RSTART, RLENGTH)
+            sub(/type[[:space:]]*=[[:space:]]*"/, "", typ); sub(/".*/, "", typ)
+          }
+          has_op = (s ~ /OPERATOR/)
+          has_fc = (s ~ /[[:space:],]facets[[:space:]]*=/)
+          reason = ""
+          if (has_op && !has_fc) {
+            if (typ == "" || typ ~ /^(double|float|BDouble|BFloat|BInteger|BLong|BRelTime|BStatusNumeric)$/)
+              reason = "OPERATOR numeric without facets (slot=" nm ")"
+          }
+          if (reason == "" && nm ~ /[Ss]etpoint|Temp|[Ll]imit|[Bb]and|[Pp]si/) {
+            if (!(s ~ /UNITS/)) reason = "setpoint-like slot " nm " missing UNITS"
+          }
+          if (reason == "" && nm ~ /demand|[Cc]ount|stages/) {
+            if (!(s ~ /PRECISION/)) reason = "count-like slot " nm " missing PRECISION"
+          }
+          if (reason != "") { seen[nm]=1; print FILE ":" lstart " " reason }
+        }
+        # pass 2: old-style newProperty(... OPERATOR ..., value, null)
+        for (l=1; l<=NR; l++) {
+          if (lines[l] !~ /newProperty\(/ || lines[l] !~ /OPERATOR/) continue
+          s = lines[l]
+          for (j=l+1; j<=NR && j<=l+5 && s !~ /;/; j++) s = s " " lines[j]
+          if (s !~ /, *null *[);]/) continue
+          nm = s
+          sub(/.*Property[[:space:]]+/, "", nm)
+          sub(/[[:space:]]*=.*/, "", nm)
+          gsub(/[[:space:]]/, "", nm)
+          if (nm !~ /^[A-Za-z_][A-Za-z0-9_]*$/ || (nm in seen)) continue
+          seen[nm]=1
+          print FILE ":" l " OPERATOR numeric null facets (slot=" nm ")"
+        }
+      }
+    ' "$f")
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS facets-req "$jar" "no missing required facets under $pd/src"
+  return 0
+}
+check_ord_literal() {
+  # D5 (campaign 8 PR4): WARN on a Java string literal matching station:|local:|slot:/ under
+  # <profile>/src. Three exemptions (D5, K2): (a) file name matches *OrdConstants* carrying a
+  # justification comment, (b) the literal is inside a @NiagaraProperty defaultValue= attribute,
+  # (c) the file is under srcTest/**. WARN never changes exit code (K20). D9b: dot-dirs pruned.
+  local jar="$1" pd warned=0 f fname skip hit
+  [ -n "$SRC" ] || { row SKIP ord-literal "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP ord-literal "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    case "$f" in */srcTest/*) continue ;; esac
+    fname="$(basename "$f" .java)"
+    skip=0
+    case "$fname" in
+      *OrdConstants*)
+        if grep -qE '(/\*|//)' "$f" 2>/dev/null; then skip=1; fi ;;
+    esac
+    [ "$skip" -eq 1 ] && continue
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      case "$hit" in *defaultValue*) continue ;; esac
+      row WARN ord-literal "$jar" "$f:$hit"
+      warned=1
+    done < <(grep -nE '"(station:|local:|slot:/)' "$f" 2>/dev/null || true)
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS ord-literal "$jar" "no hardcoded ORD literals under $pd/src"
+  return 0
 }
 check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable). WARN by default; FAIL under --strict.
   local jar="$1" names
@@ -264,7 +374,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_rc_backup check_palette; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done
