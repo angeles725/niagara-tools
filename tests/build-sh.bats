@@ -127,3 +127,25 @@ GRADLEW
   { [[ "$output" == *"Workbench"* ]] || [[ "$output" == *"mirror"* ]] || [[ "$output" == *"build/libs"* ]]; }
   [ ! -e "$TMPDIR_T/verify.args" ]                       # gate not reached on a failed build
 }
+
+# ---------------------------------------------------------------------------
+# Campaign 8 PR14 — exit-31 regression pin: a running station holds a lock on modules/<jar>, so gradle
+# :clean cannot delete it. build.sh (:82-88) detects the "Unable to delete ...modules/...jar" gradle
+# message and exits 31 with a mirror-niagara-home.sh hint (never a bare 30). Green-on-arrival regression
+# guard; the named mutation below proves it bites. The lock is SIMULATED via a fake gradlew — the real
+# Niagara home is never touched.
+@test "BS-lock: :clean blocked by a station lock on modules/<jar> -> exit 31 (not 30)" {
+  printf '#!/usr/bin/env bash\necho "Unable to delete %s/modules/Foo-rt.jar"\nexit 1\n' "$TMPDIR_T/nh" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 31 ]
+  [[ "$output" == *"locked"* ]]
+  # NAMED MUTATION: delete the `Unable to delete ...` branch in build.sh -> this exits 30, so BS-lock fails.
+}
+
+@test "BS-lock-hint: the exit-31 message points the operator at mirror-niagara-home.sh" {
+  printf '#!/usr/bin/env bash\necho "Unable to delete %s/modules/Foo-rt.jar"\nexit 1\n' "$TMPDIR_T/nh" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [[ "$output" == *"mirror-niagara-home.sh"* ]]
+}
