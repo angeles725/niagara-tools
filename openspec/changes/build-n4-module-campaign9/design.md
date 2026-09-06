@@ -46,22 +46,22 @@ Rejected: placing the whole thing after the HOA loop — the operator override a
 `[ev: client CompressorControl.java:212-245 (read 2026-09-06)]` `[ev: corpus S20]`
 
 **Why COMPLETION runs before the stage move.** During the pending window `onCount` is `target + 1`. If ordinary staging
-ran first it would see `onCount > target` and shed through `pickMostHoursOn` (`:230`, `:304-314`), which selects by
+ran first it would see `onCount > target` and shed through `pickMostHoursOn` (`:230`, `:365-376`), which selects by
 hours and could drop the INCOMING unit instead of the outgoing one. Evaluating the pending completion first drops the
 intended outgoing unit and leaves step 3 seeing `onCount == target`. This ordering is a correctness requirement, not a
-style choice. `[ev: client CompressorControl.java:223-232, :304-314]`
+style choice. `[ev: client CompressorControl.java:223-232, :365-376]`
 
 **Per-compressor clock.** `cmdSince[k]` (`:71`) already records the ms of the last command change and is seeded at
-`atSteadyState` by `seedRestart` (`:285-288`), so a station restart cannot make a just-stopped unit look eligible. The
+`atSteadyState` by `seedRestart` (`:346-350`), so a station restart cannot make a just-stopped unit look eligible. The
 continuous-run clock is therefore `now - cmdSince[k]` with **no new state field**. Outgoing candidate = the running unit
 with the LARGEST `now - cmdSince[k]` (longest continuous run), tie-broken by most `hours`. Rejected: selecting the
 outgoing unit by hours alone — that is what `pickMostHoursOn` already does at stage-down, and it does not implement a
-*time-slice*. `[ev: client CompressorControl.java:71, :285-288]` `[ev: corpus S20]`
+*time-slice*. `[ev: client CompressorControl.java:71, :346-350]` `[ev: corpus S20]`
 
-**Incoming selection reuses `pickLeastHoursOff(now, c.minOffMs)` verbatim** (`:291-301`). That single reuse inherits
+**Incoming selection reuses `pickLeastHoursOff(now, c.minOffMs)` verbatim** (`:352-363`). That single reuse inherits
 three required gates for free: HOA OFF exclusion (`modes[k] == MODE_OFF continue`, `:296`), min-off respect (`:297`),
 and least-hours lead selection (`:298`). Rejected: a new picker — a second selection function is a second place for the
-HOA-OFF rule to drift. `[ev: client CompressorControl.java:291-301]`
+HOA-OFF rule to drift. `[ev: client CompressorControl.java:352-363]`
 
 **Arm gates (ALL must hold, evaluated in this order).**
 
@@ -81,10 +81,10 @@ HOA-OFF rule to drift. `[ev: client CompressorControl.java:291-301]`
 **Arm action** (one write): `cmd[in] = true; cmdSince[in] = now; lastStageMs = now; rotOut = out; rotArmedMs = now;`.
 **Completion action** one or more cycles later, when `rotOut >= 0 && (now - rotArmedMs) >= c.stageDelayMs`:
 `cmd[rotOut] = false; cmdSince[rotOut] = now; lastStageMs = now; rotOut = -1;`. Two new transient fields (`rotOut`,
-`rotArmedMs`) join the transient block at `:66-75` and are cleared in `resetTransient()` (`:267-274`) — otherwise a
+`rotArmedMs`) join the transient block at `:66-75` and are cleared in `resetTransient()` (`:328-344`) — otherwise a
 disable→enable leaves a phantom pending swap. `rotationMode = breakBefore` inverts the two actions (drop first, then
 add after `stageDelay`); `makeBefore` is the default because break-before-make surrenders a stage for a full `minOff`
-on a rack whose entire purpose is holding suction. `[ev: client CompressorControl.java:66-75, :267-274]` `[ev: corpus S20]`
+on a rack whose entire purpose is holding suction. `[ev: client CompressorControl.java:66-75, :328-344]` `[ev: corpus S20]`
 
 **Hours ledger unaffected.** `hours[k]` integrates on the COMMANDED state at `:158` (`if (cmd[k]) hours[k] += dtH;`),
 inside the feedback loop that runs BEFORE both new blocks. A swap therefore changes which unit accrues from the NEXT
