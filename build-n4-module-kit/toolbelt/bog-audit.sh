@@ -615,30 +615,48 @@ for _ch in sorted(_relay_tgt_srcs):
              f'relay slot {_tgt_slot!r} driven by {len(_src_set)} distinct sources: {_srcs}')
 
 # ---- CHECK14: own-output-unlinked WARN ----
-# Own-module component has an OPERATOR output slot with no outgoing relay link.
+# Own-module component has an output slot with no outgoing relay link.
 # Restricted to true OUTPUT slots: name ends with 'Out' or matches 'condenser[0-9]+'.
 # Config inputs (fanMode, valveMode, *Setpoint, *Limit, *Mode) are excluded by name pattern.
-# Suppressed for defrost-specific outputs when hasDefrost is absent/false on the component.
-_DEFROST_RE  = re.compile(r'defrost', re.IGNORECASE)
-_OUT_SLOT_RE = re.compile(r'(Out$|condenser\d+$)', re.IGNORECASE)
-_used_outputs = {(lk['src_h'], lk['src_slot'])
-                 for lk in link_list
-                 if lk.get('src_h') and lk.get('src_slot')}
+# Suppressed for defrost/resistance-specific outputs when hasDefrost is absent/false.
+#
+# Detection strategy: union of
+#   (a) bog-stored OPERATOR slots matching _OUT_SLOT_RE, and
+#   (b) type-inferred slots — *Out slots observed as link SOURCES on other instances of
+#       the same own-module type within this station.  This catches TRANSIENT output slots
+#       (e.g. evapOut on EvaporatorUnit) that are never persisted to the bog but are
+#       linked on all compliant instances; a unit missing the link is the defect.
+_DEFROST_SLOT_RE = re.compile(r'(defrost|resistance)', re.IGNORECASE)
+_OUT_SLOT_RE     = re.compile(r'(Out$|condenser\d+$)', re.IGNORECASE)
+_used_outputs    = {(lk['src_h'], lk['src_slot'])
+                    for lk in link_list
+                    if lk.get('src_h') and lk.get('src_slot')}
+
+# Build per-type registry of *Out slots seen as link sources in this station
+_type_out_slots = defaultdict(set)  # comp.type_ -> set of slot names
+for _lk14 in link_list:
+    _sh14 = _lk14.get('src_h'); _ss14 = _lk14.get('src_slot') or ''
+    if not _sh14 or not _OUT_SLOT_RE.search(_ss14): continue
+    _sc14 = handle_map.get(_sh14)
+    if _sc14 and _sc14.module in own_modules:
+        _type_out_slots[_sc14.type_].add(_ss14)
 
 for _h, _comp in sorted(handle_map.items(), key=lambda x: x[1].path):
     if _comp.module not in own_modules:
         continue
     _hd_val = (_comp.slots.get('hasDefrost') or {}).get('value', '')
     _hd_off  = _hd_val.lower() in ('false', '0', '')
-    for _sn, _si in sorted(_comp.slots.items()):
-        if 'o' not in (_si.get('flags') or ''):
-            continue
-        if not _OUT_SLOT_RE.search(_sn):
-            continue   # exclude config inputs — only pure output slots by name
+    # Candidate output slots: bog-stored OPERATOR outputs + type-inferred *Out slots
+    _cand_slots = set()
+    for _sn, _si in _comp.slots.items():
+        if 'o' in (_si.get('flags') or '') and _OUT_SLOT_RE.search(_sn):
+            _cand_slots.add(_sn)
+    _cand_slots |= _type_out_slots.get(_comp.type_, set())
+    for _sn in sorted(_cand_slots):
         if (_h, _sn) in _used_outputs:
             continue
-        if _DEFROST_RE.search(_sn) and _hd_off:
-            continue   # suppress defrost-specific output when hasDefrost is off/absent
+        if _DEFROST_SLOT_RE.search(_sn) and _hd_off:
+            continue   # suppress defrost/resistance output when hasDefrost is off/absent
         emit('CHECK14', 'WARN', _comp.path,
              f'output slot {_sn!r} has no outgoing relay link (own-output-unlinked)')
 
@@ -794,7 +812,9 @@ _CTRL_TYPE_RE   = re.compile(r'(ColdRoom|EvaporatorUnit|DefrostController|Compre
                               re.IGNORECASE)
 _PANEL_TYPE_RE  = re.compile(r'(RoomPanel|DashboardService)', re.IGNORECASE)
 _CONFIG_SLOT_RE = re.compile(r'(setpoint|mode|limit|protect|diff)', re.IGNORECASE)
-_STATE_SLOT_RE  = re.compile(r'(State|Out|Temp|status)$', re.IGNORECASE)
+_STATE_SLOT_RE  = re.compile(r'(State|Out|status)$', re.IGNORECASE)
+# Note: 'Temp' intentionally omitted — config thresholds like terminateOnResistanceTemp
+# also end in Temp and are valid panel→control setpoints, not state readbacks (R20.8).
 
 def _is_ctrl(c):
     return bool(_CTRL_TYPE_RE.search(c.type_ or '') or _CTRL_TYPE_RE.search(c.name or ''))
