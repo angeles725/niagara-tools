@@ -153,3 +153,105 @@ setup() {
   [[ "$output" == *"ERROR"* ]]
   [[ "$output" == *"no src found"* ]]
 }
+
+# ===========================================================================
+# S25 (C10): NEW advisory class STALE — a matrix row whose slot name matches no
+# @NiagaraProperty (or --bog link-traced slot) in the source.
+#   Row:   STALE  lint-write-path  <slot>  no source slot with that name
+#   Exit:  0 = all covered AND (no STALE OR STALE without --strict);
+#          1 = any uncovered FAIL (UNCHANGED) OR any STALE under --strict;
+#          3 = usage/no sources/no matrix (unchanged).
+# A row is exempt from STALE ONLY when it carries the literal token `[concept]`
+# (no implicit exemption); the token must be real code, not inside a markdown
+# comment (strip comments first). Seams (cb79676): :161 matrix-slot awk, :310
+# scanner, :374 FAIL emit, :383 exit expression.
+# RED-for-the-right-reason on df8c7ec: STALE class absent + --strict is an unknown
+# option (exit 3), so every STALE/concept/--strict pin fails; covered+uncovered
+# (no --strict) stay as today. Assertions are the LAST line so bats enforces them.
+# ---------------------------------------------------------------------------
+_mk_wp() {  # $1 dir ; src (setpoint OPERATOR) + matrix from stdin
+  local d="$1"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/BThing.java" <<'JAVA'
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+JAVA
+  cat > "$d/docs/write-path-matrix.md"
+}
+
+@test "WP-stale-neg: a matrix row with no source slot prints STALE but exit stays 0 (advisory, no --strict)" {
+  d="$BATS_TEST_TMPDIR/staleneg"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| setpoint | D | mid | w1 |
+| ghostSlot | D | mid | wX |
+MD
+  run "$LW" "$d"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
+}
+
+@test "WP-stale-strict: the SAME stale tree under --strict exits 1 (STALE promoted)" {
+  d="$BATS_TEST_TMPDIR/stalestrict"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| setpoint | D | mid | w1 |
+| ghostSlot | D | mid | wX |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
+  [ "$status" -eq 1 ]
+}
+
+@test "WP-stale-regression: a fully-matching matrix has NO STALE and exits 0 (with and without --strict)" {
+  d="$BATS_TEST_TMPDIR/staleok"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| setpoint | D | mid | w1 |
+MD
+  run "$LW" "$d";          [ "$status" -eq 0 ]; [[ "$output" != *"STALE"* ]]
+  run "$LW" --strict "$d"; [[ "$output" != *"STALE"* ]]; [ "$status" -eq 0 ]
+}
+
+@test "WP-stale-concept: a row carrying the literal [concept] token with no source slot is EXEMPT (no STALE, exit 0 even under --strict)" {
+  d="$BATS_TEST_TMPDIR/staleconcept"; _mk_wp "$d" <<'MD'
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| setpoint | D | mid | w1 |
+| hoaMode | Engine link [concept] | n/a | — |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" != *"STALE"* ]]
+  [ "$status" -eq 0 ]
+}
+
+@test "WP-stale-concept-decoy: [concept] inside a markdown comment on another row does NOT exempt a stale row (strip comments)" {
+  d="$BATS_TEST_TMPDIR/staledecoy"; _mk_wp "$d" <<'MD'
+# M
+<!-- note: [concept] rows are exempt -->
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| setpoint | D | mid | w1 |
+| ghostSlot | D | mid | wX |
+MD
+  run "$LW" --strict "$d"
+  [[ "$output" == *"STALE"* && "$output" == *"ghostSlot"* ]]
+  [ "$status" -eq 1 ]
+}
+
+@test "WP-uncovered-strict: an uncovered OPERATOR slot stays exit 1 WITH and WITHOUT --strict (FAIL contract unchanged)" {
+  d="$BATS_TEST_TMPDIR/uncov"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/BThing.java" <<'JAVA'
+package com.x;
+@NiagaraProperty(name="hoaMode", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+JAVA
+  printf '# M\n| Slot | Writer | Timing | Test |\n|--|--|--|--|\n| setpoint | D | mid | w1 |\n' > "$d/docs/write-path-matrix.md"
+  run "$LW" "$d";          [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
+  run "$LW" --strict "$d"; [[ "$output" == *"FAIL"* && "$output" == *"hoaMode"* ]]; [ "$status" -eq 1 ]
+}
