@@ -15,13 +15,13 @@
 #   Row:  WARN  ext-writable-shape  <file>:<line>  <slot>: OPERATOR <type> with no writing action ...
 #   Exits: 0 no WARN (or WARN without --strict) · 1 any WARN under --strict · 3 usage/env
 #
-# RED today: ext-writable-shape.sh does not exist -> every pin fails for the right reason (tool absent).
+# RED today: lint-ext-writable-shape.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (post-green): treat a complex OPERATOR slot as plain (drop the BStatusX recognizer)
 #   -> EW1/EW6 stop WARNing (the setpoint_statusnumeric_no_action regression goes unseen).
 
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
-  EW="$KIT/toolbelt/ext-writable-shape.sh"
+  EW="$KIT/toolbelt/lint-ext-writable-shape.sh"
   SRC="$BATS_TEST_TMPDIR/src"; mkdir -p "$SRC/com/x"
   CLIENT="/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/DashboardPan/DashboardPan-rt/src/com/angeles/DashboardPan/BRoomPanel.java"
 }
