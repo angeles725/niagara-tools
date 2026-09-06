@@ -180,7 +180,7 @@ one-WARN-per-site dedupe (`:483-493`) are **unchanged**. `[ev: proposal RK6]`
 via Pattern A since C9 PR8). A "0 → 0" pin is only evidence when the mutation table shows the pin can move: the named
 mutation is *drop Pattern A from Pass 0b* ⇒ ColdRoomPan-rt returns to 1.
 
-### D4 — S24 `run-pure-test.sh`: the fix is runner-side, and it needs TWO edits
+### D4 — S24 `run-pure-test.sh`: the fix is runner-side, ONE edit (D4b dropped — tasks read 896846176)
 
 **D4a — Chosen: `cd "$rt"` in a subshell around the `java` call at `:62`.**
 `( cd "$rt" && java -cp "$tmp:$JU:$HC" org.junit.runner.JUnitCore "$testfqcn" )`. Safe because every classpath element
@@ -188,15 +188,14 @@ is already absolute — `$tmp` from `mktemp -d` (`:53`), `$JU`/`$HC` from `find 
 keeps the parent's cwd and its `trap 'rm -rf "$tmp"' EXIT` (`:54`); under `set -euo pipefail` (`:22`) the subshell is
 the last command, so JUnit's non-zero status still propagates as the exit-1 **bite** (`:19`).
 
-**D4b — the second edit (defensive, not load-bearing — validator correction 47453742b).** `$rt` may be given
-**relative** (`.` from the module-rt dir, the regression case). With the java-only subshell of D4a, `javac` and its
-`-sourcepath "$rt/src:$testroot"` at `:59` run OUTSIDE the subshell, so a relative `$rt` is NOT broken by the fix —
-investigador1 reproduced the current script with a relative `$rt` from `/tmp` returning `OK (37 tests)`. The
-cwd-sensitive part is only the RUNTIME test read (`Paths.get("src/…")`). The absolutise edit is kept because it is
-cheap and makes `$rt` safe for any future edit that moves `javac` inside the subshell. **Chosen: normalise once, right
-after the `[ -d "$rt" ]` guard at `:30` —
-`rt=$(cd "$rt" && pwd)`** — so `$testroot` (derived at `:48-50`) and both the `javac` (`:58-60`) and `java` (`:62`)
-invocations are cwd-independent. Two edits, both in the runner, ~4 lines.
+**D4b — DROPPED (investigador1 tasks read 896846176, after validator 47453742b).** The absolutise edit
+`rt=$(cd "$rt" && pwd)` after `:30` was first justified by a `-sourcepath` break that does not exist (`javac` at
+`:58-60` runs OUTSIDE the D4a subshell; a relative `$rt` from `/tmp` reproduces `OK (37 tests)` today), then kept as
+"defensive". Under D4a's structure it is provably inert: the only `cd` is the subshell's own, which starts at the
+caller's cwd where a relative `$rt` already resolves. The RED `a792d7a` invokes the runner with an ABSOLUTE `$RT`
+in both S24 tests, so no pin can flip on that edit — a mutation "revert the absolutise" cannot produce a RED, and a
+change that no RED can bite is would-flip prose (SC-7). PR4 is therefore ONE edit (D4a), one OBSERVED mutation
+(revert the subshell `cd` → S24-cwd FAIL). `[ev: 896846176 §PR4 finding; a792d7a tests/run-pure-test.bats]`
 
 **D4c — why runner-side, not test-side.** The structural WiringTests read `Paths.get("src/…")` and
 `../../build.gradle.kts` **relative to cwd** (companero `4d5e6092c`). Those files live in the **client** repo and on
