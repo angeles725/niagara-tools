@@ -161,12 +161,50 @@ find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
     sort -u > "$_TMP/surf_write_fields.txt"
 SURF_WRITE_FIELDS=$(tr '\n' ' ' < "$_TMP/surf_write_fields.txt")
 
+# Pass 0b: build dir-wide ALARM_CLASSES index (D3b).
+# Pattern A (existing): file contains BAlarmSourceExt OR BAlarmRecord.
+# Pattern B (NEW): file contains "implements" + BIAlarmSource AND (newOffnormalAlarm OR new AlarmSupport().
+# Comments are stripped (// only; /* */ block stripping kept in the per-file awk below) before token match.
+# Output: one class name per line → joined into ALARM_CLASSES space-separated string.
+while IFS= read -r _p0b_f; do
+    awk '
+    BEGIN { cn=""; ha=0; bi=0; bn=0; bc=0; in_bc=0 }
+    {
+        s = $0
+        # strip /* */ block comments (state carries across lines)
+        out = ""; j = 1; L = length(s)
+        while (j <= L) {
+            if (in_bc) {
+                if (substr(s,j,2) == "*/") { in_bc = 0; j += 2 }
+                else j++
+            } else {
+                t2 = substr(s,j,2)
+                if (t2 == "//") { break }
+                else if (t2 == "/*") { in_bc = 1; j += 2 }
+                else { out = out substr(s,j,1); j++ }
+            }
+        }
+        s = out
+        if (cn == "" && match(s, /class[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+            t = substr(s, RSTART); sub(/class[[:space:]]+/, "", t)
+            match(t, /^[A-Za-z_][A-Za-z0-9_]*/); cn = substr(t, 1, RLENGTH)
+        }
+        if (!ha && (index(s,"BAlarmSourceExt")>0 || index(s,"BAlarmRecord")>0)) ha=1
+        if (!bi && index(s,"implements")>0 && index(s,"BIAlarmSource")>0) bi=1
+        if (!bn && index(s,"newOffnormalAlarm")>0) bn=1
+        if (!bc && index(s,"new AlarmSupport(")>0) bc=1
+    }
+    END { if (cn!="" && (ha || (bi && (bn||bc)))) print cn }
+    ' "$_p0b_f" 2>/dev/null
+done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort) | sort -u > "$_TMP/alarm_classes.txt"
+ALARM_CLASSES=$(tr '\n' ' ' < "$_TMP/alarm_classes.txt")
+
 # ---------------------------------------------------------------------------
 # Main awk: per-file trip detection and surface resolution.
 # ---------------------------------------------------------------------------
 cat > "$_TMP/main.awk" << 'AWKEOF'
 # Called with: -v FILE=path -v SURF_SLOTS="..." -v EFFECT_SLOTS="..."
-#              -v SURF_WRITE_FIELDS="..."
+#              -v SURF_WRITE_FIELDS="..." -v ALARM_CLASSES="..."
 { lines[NR] = $0 }
 
 function in_list(word, lst,    padded) {
@@ -202,6 +240,24 @@ function extract_cond_field(stripped,    rest, paren_depth, ci, ch, cond) {
 }
 
 END {
+    # --- D6: strip // and /* */ comments from lines[] (blank, not delete; line numbers preserved) ---
+    in_bc = 0
+    for (i = 1; i <= NR; i++) {
+        ln = lines[i]; out = ""; j = 1; L = length(ln)
+        while (j <= L) {
+            if (in_bc) {
+                if (substr(ln,j,2) == "*/") { in_bc = 0; j += 2 }
+                else j++
+            } else {
+                t2 = substr(ln,j,2)
+                if (t2 == "//") { break }
+                else if (t2 == "/*") { in_bc = 1; j += 2 }
+                else { out = out substr(ln,j,1); j++ }
+            }
+        }
+        lines[i] = out
+    }
+
     # --- A: collect private boolean fields and their declaration lines ---
     for (i = 1; i <= NR; i++) {
         ln = lines[i]
@@ -216,13 +272,9 @@ END {
         }
     }
 
-    # --- B: file-level alarm ext check ---
-    file_has_alarm = 0
-    for (i = 1; i <= NR; i++) {
-        if (index(lines[i], "BAlarmSourceExt") > 0 || index(lines[i], "BAlarmRecord") > 0) {
-            file_has_alarm = 1; break
-        }
-    }
+    # --- B: determine this_class from FILE for ALARM_CLASSES lookup (D3c) ---
+    # Java class name is the filename without the directory path and .java extension.
+    this_class = FILE; sub(/.*\//, "", this_class); sub(/\.java$/, "", this_class)
 
     # --- C: collect SURF_WRITE lines in this file ---
     n_ss = split(SURF_SLOTS, ss_arr, " ")
@@ -270,7 +322,8 @@ END {
         }
 
         # Method open: only when net depth INCREASES (block opened but not closed on this line)
-        if (!in_m && brace_depth > old_depth) {
+        # D1b guard: depth must be >= 2; a class body opens at depth 1 and is never a method.
+        if (!in_m && brace_depth > old_depth && brace_depth >= 2) {
             mname = ""
             # Case A: single-line signature — identifier( ... ) [throws ...] { on one line
             if (match(stripped, /[A-Za-z_][A-Za-z0-9_<>[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
@@ -421,8 +474,12 @@ END {
         tms = trip_ms[t]; tme = trip_me[t]
         surfaced = 0
 
-        # (1) file has BAlarmSourceExt
-        if (file_has_alarm) { surfaced = 1 }
+        # (1) this class or its B<Pure> adapter is in ALARM_CLASSES (Pattern A or B, D3c)
+        # Pattern A: class itself in ALARM_CLASSES (BAlarmSourceExt/BAlarmRecord in this file)
+        # Pattern B adapter->pure follow: B+this_class in ALARM_CLASSES (BIAlarmSource + alarm method)
+        if (in_list(this_class, ALARM_CLASSES) || in_list("B" this_class, ALARM_CLASSES)) {
+            surfaced = 1
+        }
 
         # (ii-B) condition field is surfaced via cross-file field->slot follow
         if (!surfaced && trip_cond_field[t] != "" && in_list(trip_cond_field[t], SURF_WRITE_FIELDS)) {
@@ -477,6 +534,7 @@ while IFS= read -r f; do
         -v SURF_SLOTS="$SURF_SLOTS" \
         -v EFFECT_SLOTS="$EFFECT_SLOTS" \
         -v SURF_WRITE_FIELDS="$SURF_WRITE_FIELDS" \
+        -v ALARM_CLASSES="$ALARM_CLASSES" \
         -f "$_TMP/main.awk" "$f" 2>/dev/null >> "$_WARN_FILE"
 done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
 
