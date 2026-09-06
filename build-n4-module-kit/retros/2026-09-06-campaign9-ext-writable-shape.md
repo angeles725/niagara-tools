@@ -19,8 +19,10 @@ following the EW1-EW11 RED contract pinned at `269be48` with the four-root EXACT
 - Real regression: `BRoomPanel.setpoint` (`BStatusNumeric`, `SUMMARY|OPERATOR`, no action) at
   `a109249` (DashboardPan-rt) — WARN at line 124 confirmed by smoke. `[ev: RED 269be48 EW10]`
 - CompPan-rt 0 WARNs: `BCompressorControl.faultReset` (`BStatusBoolean`, `SUMMARY|OPERATOR`)
-  exempt because the class exposes actions `tick`/`powerOnExpired` (class-level action check,
-  same rule as `tools/module-find.py ext-writable`). `[ev: corpus B823]`
+  exempt ONLY because the CLASS declares actions (`tick`/`powerOnExpired`, hidden, unrelated) — the
+  class-level exemption is a COARSE proxy with parity to `tools/module-find.py ext-writable`; `faultReset`
+  itself has NO writing action, so under B823 it is a genuine hazard the C9 rule does not flag (known
+  false negative; per-slot writing-action rule = C10 seed S22, kit #89 cluster). `[ev: corpus B823]`
 - EW3 positive pin: a `@NiagaraAction(name="setSetpoint", ...)` makes the slot clean. `[ev: RED 269be48 EW3]`
 - EW11: empty dir / README-only dir → exit 3 + ERROR row (K20 no-silent-0 rule). `[ev: RED 269be48 EW11]`
 
