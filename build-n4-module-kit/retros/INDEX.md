@@ -78,3 +78,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign8-lint-servlet.md | kit | 2026-09-05 | pending | 5 | <!-- D1 lint-servlet not rc-scan --servlet (K13); D2 R12.2 deferred B803; D3 csrf WARN not FAIL (B813); D4 input-400 prediction wrong; comment-strip both body+flags -->
 | 2026-09-05-campaign8-post-deploy-checklist.md | kit | 2026-09-05 | pending | 2 |
 | 2026-09-05-campaign8-build-pipeline.md | kit | 2026-09-05 | pending | 3 | <!-- Gradle task matrix §4.a; version-bump checklist §4.b; exit-31 regression pin BS-lock/BS-lock-hint -->
+| 2026-09-05-campaign8-rt-doctrine.md | kit | 2026-09-05 | pending | 4 | <!-- Δ1 §RT-control-logic logic.md; Δ2 §history-ext logic-authoring.md; Δ3 §slot-types-ext-writes logic-authoring.md; Δ4 dashboard.md pointer -->
