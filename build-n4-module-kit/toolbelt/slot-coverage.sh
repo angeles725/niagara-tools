@@ -345,7 +345,21 @@ done
 
 XML="$1"; LEX="$2"
 [ -f "$XML" ] || { printf 'slot-coverage: not found: %s\n' "$XML" >&2; exit 3; }
-[ -f "$LEX" ] || { printf 'slot-coverage: not found: %s\n' "$LEX" >&2; exit 3; }
+
+# WB-LEX1: a -wb module-include.xml with >=1 declared type and a MISSING lexicon
+# is a FAIL (exit 1), not an env fault (exit 3). A missing lexicon means every
+# operator-facing type name renders as raw camelCase — same severity as an empty
+# lexicon (D6a). NAMED MUTATION: restore the exit-3 path here -> WB-LEX1 flips.
+if [ ! -f "$LEX" ]; then
+  _req_count=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$XML" 2>/dev/null \
+    | grep -cE '\bname="' || true)
+  if [ "${_req_count:-0}" -ge 1 ]; then
+    printf 'slot-coverage: FAIL missing lexicon with %d declared type(s)\n' "$_req_count"
+    exit 1
+  fi
+  printf 'slot-coverage: not found: %s\n' "$LEX" >&2
+  exit 3
+fi
 
 # Extract required type names from module-include.xml
 # Pattern: <type ... name="TypeName" ...> — extract the name= attribute value

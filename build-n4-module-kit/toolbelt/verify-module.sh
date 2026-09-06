@@ -375,6 +375,59 @@ check_palette() {  # an EMPTY module.palette on a module that declares types = n
   fi
   row PASS palette "$jar" "module.palette has $entries component entries"; return 0
 }
+check_wb_scaffold() {
+  # WB-SCAFFOLD1: a -wb jar with 0 .class entries AND 0 palette entries is an
+  # empty scaffold — nothing packaged at all. WARN by default; FAIL under --strict.
+  # Closes the :245-257 dead angle (the palette check only fires when types >=1;
+  # a 0-class 0-palette jar with 0 declared types slips through silently otherwise).
+  # Real shape: DashboardPan-wb (pure PX delegation, no compiled types, empty palette).
+  # NAMED MUTATION: remove this check -> WB-SCAFFOLD1's WARN vanishes (a 0-class jar
+  # reverts to a bytecode FAIL only, which does not carry the wb-scaffold label).
+  local jar="$1" base n_classes pal entries
+  base=$(basename "$jar" .jar)
+  case "$base" in *-wb) ;; *) row SKIP wb-scaffold "$jar" "not a -wb jar"; return 0 ;; esac
+  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
+  n_classes=$(printf '%s\n' "$LIST" | grep -c '\.class$' || true)
+  pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
+  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  if [ "$n_classes" -eq 0 ] && [ "$entries" -eq 0 ]; then
+    if [ "$STRICT" -eq 1 ]; then row FAIL wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 1; fi
+    row WARN wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 0
+  fi
+  row PASS wb-scaffold "$jar" "ok ($n_classes classes, $entries palette entries)"
+  return 0
+}
+check_phantom_dep() {
+  # WB-DEP1 (--src): a <dependency> declared in META-INF/module.xml that has no
+  # corresponding api(":X") or nre(":X") in the profile .gradle.kts is a phantom
+  # dependency — it was pulled transitively during build but is not an explicit
+  # contract; it may disappear after a Gradle upgrade and cause runtime CNFE.
+  # NAMED MUTATION: drop this check -> WB-DEP1's phantom-dep WARN vanishes.
+  local jar="$1" pd gkt dep gkt_deps phantom_list
+  [ -n "$SRC" ] || { row SKIP phantom-dep "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  gkt=$(find "$pd" -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1)
+  [ -n "$gkt" ] || { row SKIP phantom-dep "$jar" "no *.gradle.kts in $pd"; return 0; }
+  [ -n "$MX" ]  || { row SKIP phantom-dep "$jar" "no META-INF/module.xml"; return 0; }
+  # Dependency names declared in the gradle.kts (api, nre, or implementation)
+  gkt_deps=$(grep -oE '(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"' "$gkt" \
+    | grep -oE '":[^"]*"' | sed 's/^"://;s/"$//' | sort -u)
+  # Dependency names from module.xml <dependency name="X">
+  phantom_list=""
+  while IFS= read -r dep; do
+    [ -z "$dep" ] && continue
+    if ! printf '%s\n' "$gkt_deps" | grep -qxF "$dep"; then
+      phantom_list="${phantom_list:+$phantom_list, }$dep"
+    fi
+  done < <(printf '%s' "$MX" | grep -oE '<dependency[[:space:]]+[^>]*\bname="[^"]*"' \
+    | grep -oE '\bname="[^"]*"' | sed 's/^name="//;s/"$//' | sort -u)
+  if [ -n "$phantom_list" ]; then
+    row WARN phantom-dep "$jar" "module.xml dependency not declared in gradle.kts api()/nre(): $phantom_list"
+    return 0  # WARN never changes exit code
+  fi
+  row PASS phantom-dep "$jar" "all module.xml dependencies declared in gradle.kts"
+  return 0
+}
 
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
@@ -384,7 +437,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

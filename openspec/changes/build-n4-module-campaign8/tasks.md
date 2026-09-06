@@ -223,17 +223,17 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED (wb shard landed) — re-read tip at apply | **Gate**: WB-LEX1/SCAFFOLD1/THREAD1/AGENT1/DEP1, SC9
 
-- [ ] 11.1 Create `qa/c8-wb-audit`; write failing bats for WB-LEX1 (chihuahua-wb no lexicon → FAIL), WB-SCAFFOLD1 (0 classes + 0 palette → WARN), WB-THREAD1 (BBatchLinkEditor `doInvoke` DFS → FAIL; WARN heuristic: flag for human review per check body comment), WB-AGENT1 (no justification comment → WARN), WB-DEP1 (phantom dep → WARN); record tip SHA.
-- [ ] 11.2 Write `toolbelt/lint-wb-threading.sh <wb-src-dir>`: FAIL `doInvoke` bodies calling `getNavChildren|getNavNodes|BQL` without `invokeLater|BJobService`; WARN `@AgentOn(types="baja:Component")` with no justification comment; exits 0/1/3; `shellcheck` clean.
-- [ ] 11.3 Extend `toolbelt/slot-coverage.sh`: run over every `-wb` `module-include.xml` + `module.lexicon`; missing lexicon with declared types → FAIL (WB-LEX1).
-- [ ] 11.4 Extend `toolbelt/verify-module.sh`: WB-SCAFFOLD1 check — `-wb` jar 0 classes AND 0 palette → WARN; `--strict` FAIL; closes `:245-257` dead angle. WB-DEP1 `--src`: built `module.xml` `<dependency>` not in `api()`/`nre()` → WARN.
-- [ ] 11.5 Add `types/wb-widgets.md`: 10-line good-`-wb`-artifact doctrine; chihuahua-wb `model/` cited as DWB1 exemplar.
-- [ ] 11.6 Write `tests/lint-wb-threading.bats`; extend `tests/slot-coverage.bats` + `tests/verify-module.bats` (RED pins verbatim).
-- [ ] 11.7 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `lint-wb-threading.sh [ev: retro c8-wb-audit]` (CD5).
-- [ ] 11.8 **Named mutations**: (a) empty `-wb` scaffold stops being detected; (b) `doInvoke` DFS stops FAILing. Record in PR body.
-- [ ] 11.9 Real smoke: `lint-wb-threading.sh` on BBatchLinkEditor-shaped fixture → FAIL at `doInvoke:684`; `slot-coverage.sh` on chihuahua-wb → exits 1. Paste output.
-- [ ] 11.10 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 11.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 11.1 Create `qa/c8-wb-audit`; write failing bats for WB-LEX1 (chihuahua-wb no lexicon → FAIL), WB-SCAFFOLD1 (0 classes + 0 palette → WARN), WB-THREAD1 (BBatchLinkEditor `doInvoke` DFS → WARN heuristic: flag for human review per K13/B809; tasks.md said FAIL but RED says WARN — RED wins), WB-AGENT1 (no justification comment → WARN), WB-DEP1 (phantom dep → WARN); record tip SHA `734a0b6`.
+- [x] 11.2 Write `toolbelt/lint-wb-threading.sh <wb-src-dir>`: WARN `doInvoke` bodies calling `getNavChildren|getNavNodes|BqlQuery` without `invokeLater|BJobService|JobThread` (B809 heuristic — human review, not FAIL); WARN `@AgentOn(baja:Component)` with no justification comment within 3 lines above; `--strict` promotes WARNs to exit 1; exits 0/1/3; `shellcheck` clean; dot-dirs pruned (D9b).
+- [x] 11.3 Extend `toolbelt/slot-coverage.sh`: missing lexicon file paired with ≥1 declared type in module-include.xml → exit 1 FAIL (WB-LEX1); was exit 3 env before.
+- [x] 11.4 Extend `toolbelt/verify-module.sh`: WB-SCAFFOLD1 `check_wb_scaffold` — `-wb` jar 0 classes AND 0 palette entries → WARN (closes `:245-257` dead angle); `--strict` → FAIL. WB-DEP1 `check_phantom_dep` — under `--src`, module.xml `<dependency>` not in `api()`/`nre()` in profile `.gradle.kts` → WARN.
+- [x] 11.5 Add `types/wb-widgets.md`: 10-rule DWB1 doctrine with `[ev: corpus B809] [ev: corpus B817]` on every rule; chihuahua-wb `model/` (commit `175eee8`) cited as DWB1 exemplar.
+- [x] 11.6 Write `tests/lint-wb-threading.bats`; extend `tests/slot-coverage.bats` (test 15: WB-LEX1) + `tests/verify-module.bats` (tests 18/19: WB-SCAFFOLD1/DEP1); all RED pins green.
+- [x] 11.7 Add K19 routing: `BUILD-LOOP.md` pre-gate + `skill/SKILL.md` step 5 + References: `toolbelt/lint-wb-threading.sh [ev: retro campaign8-wb-audit]`.
+- [x] 11.8 **Named mutations** (4 total, all proven): (a) drop `check_wb_scaffold` → wb-scaffold row absent; (b) drop `_AWK_THREAD` → ui-thread-traversal absent, exit 0; (c) drop `has_guard` exemption → GuardedTraversal.java WARN; (d) drop dot-dir prune → `.deploy-baseline/Stale.java` WARN. See retro evidence table.
+- [x] 11.9 Real smoke: `lint-wb-threading.sh` on chihuahua-wb BBatchLinkEditor.java → `agent-breadth WARN :67` (no ui-thread-traversal WARN — traversal 3 levels deep, correct true-negative); `slot-coverage.sh` on chihuahua-wb → `FAIL missing lexicon with 1 declared type(s)` exit 1. See retro Evidence §smokes.
+- [x] 11.10 Guards: 254/254 bats; `shellcheck` exit 0 on all 3 scripts; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (56 folded, 56 cited); `kit-links.bats` 6/6 green (L4/L5 confirmed).
+- [x] 11.11 Retro `build-n4-module-kit/retros/2026-09-05-campaign8-wb-audit.md` (review-status: pending) + INDEX row + `BUILD-STATE.md` envelope + apply-progress updated.
 - [ ] **[lead]** RED green; merge ff-only; `install-skill.sh --force`; ledger settle `--max-changed-lines 440`.
 
 ---

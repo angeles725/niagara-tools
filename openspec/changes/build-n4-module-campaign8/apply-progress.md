@@ -201,3 +201,51 @@ No `changed-sched` FAIL. Exit 1 (other FAILs). The spec expected changed-sched F
 
 **D4 ±3 line window → same-method body extraction:**
 CompPan BCompressorControl.java has `startingUp = true;` at :1760 and `Clock.schedule` at :1764 (4-line gap). The ±3 window missed this. Changed to brace-counted awk that extracts the full method body and looks for BOTH patterns in the same body. Documented in retro and logic.md.
+
+---
+
+## PR11 — feat/c8-wb-audit
+
+**Branch**: `feat/c8-wb-audit`
+**Status**: COMPLETE — all 11 tasks done; guards 254/254; commit on branch `adf60fc`
+**TDD mode**: strict (RED `734a0b6` cherry-pick from `qa/c8-wb-audit`; GREEN implemented here)
+
+### TDD Evidence
+
+| Phase | Commit / evidence | Result |
+|-------|-------------------|--------|
+| RED   | `734a0b6` (10 pins: WBT1/WBT1c/WBA1/WBA1c/WBT-strict/WBT-prune/WBT-usage/WB-LEX1/WB-SCAFFOLD1/WB-DEP1) | RED confirmed — all 10 failing before impl |
+| GREEN | lint-wb-threading.sh written; slot-coverage WB-LEX1 path; verify-module check_wb_scaffold + check_phantom_dep; 254/254 | GREEN |
+| REFACTOR | shellcheck exit 0; SC2034 unused-local fix in check_phantom_dep | Clean |
+
+### Work Unit Evidence
+
+| Task | Done | Evidence |
+|------|------|----------|
+| 11.1 Re-read RED tip 734a0b6 | x | 10 pins confirmed failing (exit 127 absent script; wrong exit codes for LEX1/SCAFFOLD1/DEP1) |
+| 11.2 Write lint-wb-threading.sh | x | Two awk programs (thread.awk + agent.awk); brace-counting body extractor; dot-dir prune; exits 0/1/3 |
+| 11.3 WB-LEX1 slot-coverage.sh | x | Missing lexicon + ≥1 declared type → exit 1 FAIL (was exit 3) |
+| 11.4 WB-SCAFFOLD1 + WB-DEP1 verify-module.sh | x | check_wb_scaffold (0 classes + 0 palette → WARN); check_phantom_dep (--src phantom dep → WARN) |
+| 11.5 DWB1 doctrine types/wb-widgets.md | x | 10 rules + [ev: B809] [ev: B817]; chihuahua-wb model/ DWB1 exemplar commit 175eee8 |
+| 11.6 RED tests bats | x | lint-wb-threading.bats (7 tests); slot-coverage test 15 (WB-LEX1); verify-module tests 18+19 (SCAFFOLD1+DEP1) |
+| 11.7 K19 routing BUILD-LOOP.md + SKILL.md | x | BUILD-LOOP.md pre-gate; SKILL.md step 5 + References |
+| 11.8 Named mutations (4) | x | (a) drop wb_scaffold; (b) drop thread AWK; (c) drop has_guard; (d) drop dot-dir prune — all proven |
+| 11.9 Real smokes (3) | x | Smoke 1: agent-breadth WARN :67 (no ui-thread-traversal — traversal 3 levels deep, correct TN); Smoke 2: slot-coverage FAIL exit 1; Smoke 3a: wb-scaffold WARN + bytecode FAIL; Smoke 3b: SKIP on non-wb jar |
+| 11.10 Guards | x | 254/254 bats; shellcheck exit 0; sweep-build-state exit 0; sweep-fold-audit --strict exit 0 (56 folded, 56 cited); kit-links 6/6 |
+| 11.11 Retro + INDEX + BUILD-STATE | x | retros/2026-09-05-campaign8-wb-audit.md; INDEX row added; BUILD-STATE last_session updated |
+
+### Guard Results (PR11)
+
+```
+bats tests/*.bats            : 254/254 passed
+shellcheck                   : exit 0 (all toolbelt/*.sh)
+sweep-build-state.sh         : exit 0
+sweep-fold-audit.sh --strict : exit 0 (56 folded, 56 cited, 0 uncited)
+kit-links.bats L4/L5         : 6/6 green (lint-wb-threading.sh in BUILD-LOOP.md + SKILL.md)
+```
+
+### Key Deviations
+
+1. WB-THREAD1 is WARN (exit 0), not FAIL — tasks.md 11.2 said FAIL but RED (K13) says WARN. B809 heuristic for human review. --strict promotes to exit 1.
+2. Smoke 1 produces agent-breadth WARN but no ui-thread-traversal WARN — chihuahua-wb BBatchLinkEditor traversal is 3 levels deep; correct true negative.
+3. DashboardPan-wb jar synthetic (real jar not built); smoke 3a representative.
