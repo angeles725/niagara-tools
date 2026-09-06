@@ -286,11 +286,11 @@ Chain strategy: stacked-to-main
 
 **RED**: none (CD2) | **Gate**: R15.1-R15.4, B805 landed (`ccd8ab95d`), B804 available
 
-- [ ] 15.1 grep-before-fold: `rg 'PID.*anti-windup|errorSum|BHistoryExt|BLatch.*edge' build-n4-module-kit/types/` → confirm 0 hits (K6).
-- [ ] 15.2 Extend `types/logic.md` §RT-control-logic: §805.10 — PID anti-windup (`errorSum` clamp), NaN → fault + hold + bumpless transfer, deadband latch-on-cross; `execute()`/`changed()` split; §805.9 flowchart template (STATES/INPUTS/TIMERS/CONTROL/PROTECTIONS/OUTPUTS/FEEDBACK); health/feedback checklist (R15.2); `BLatch` edge-only note; `[CERT-negative]` no ODE facility `[ev: corpus B805]`.
-- [ ] 15.3 Extend `types/logic-authoring.md` §"logging a point to history": `BHistoryExt` as point extension, Interval vs COV, `BHistoryConfig` capacity + `fullPolicy`, one ext per logged slot; B804-G1 OPEN `[ev: corpus B804]`.
-- [ ] 15.4 `sweep-fold-audit.sh --strict` exits 0; every `[ev: corpus B805]` + `[ev: corpus B804]` token resolvable.
-- [ ] 15.5 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 15.1 grep-before-fold: `rg 'PID.*anti-windup|errorSum|BHistoryExt|BLatch.*edge' build-n4-module-kit/types/` → confirm 0 hits (K6).
+- [x] 15.2 Extend `types/logic.md` §RT-control-logic: §805.10 — PID anti-windup (`errorSum` clamp), NaN → fault + hold + bumpless transfer, deadband latch-on-cross; `execute()`/`changed()` split; §805.9 flowchart template (STATES/INPUTS/TIMERS/CONTROL/PROTECTIONS/OUTPUTS/FEEDBACK); health/feedback checklist (R15.2); `BLatch` edge-only note; `[CERT-negative]` no ODE facility `[ev: corpus B805]`.
+- [x] 15.3 Extend `types/logic-authoring.md` §"logging a point to history": `BHistoryExt` as point extension, Interval vs COV, `BHistoryConfig` capacity + `fullPolicy`, one ext per logged slot; B804-G1 OPEN `[ev: corpus B804]`.
+- [x] 15.4 `sweep-fold-audit.sh --strict` exits 0; every `[ev: corpus B805]` + `[ev: corpus B804]` token resolvable.
+- [x] 15.5 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** `sweep-fold-audit.sh --strict` green; merge ff-only; ledger settle `--max-changed-lines 280`. No install-skill.
 
 ---
