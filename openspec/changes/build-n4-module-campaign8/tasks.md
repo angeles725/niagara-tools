@@ -242,15 +242,15 @@ Chain strategy: stacked-to-main
 
 **RED**: needs RED (fixture shapes contract-gated) — re-read tip at apply | **Gate**: R12.1-R12.5, SC9
 
-- [ ] 12.1 Create `qa/c8-ux-servlet`; write failing bats: API branch no auth → FAIL; critical write without step-up re-auth → FAIL; `X-Requested-With`-only CSRF → FAIL; invalid value → 400 no write; missing cache headers → WARN; record tip SHA.
-- [ ] 12.2 Extend `toolbelt/rc-scan.sh` with `--servlet` mode: scan `BWebServlet` subclasses; FAIL on missing `getRemoteUser()`/RBAC; FAIL on write without validated value; FAIL on `X-Requested-With`-only; FAIL on critical write without short-TTL step-up token `[ev: corpus B803 §803.6]`; WARN on missing cache headers.
-- [ ] 12.3 Copy sanitised fixtures from `BDashboardServlet.handleSetpointWrite:239-274` + `BChiServlet:613` shapes.
-- [ ] 12.4 Extend `tests/rc-scan.bats` with `--servlet` cases (RED pins verbatim).
-- [ ] 12.5 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `rc-scan.sh --servlet [ev: retro c8-ux-servlet]` (CD5).
-- [ ] 12.6 **Named mutations**: (a) remove auth check from one branch → FAIL; (b) `X-Requested-With`-only → FAIL; (c) step-up token absent → FAIL. Record in PR body.
-- [ ] 12.7 Real smoke: `rc-scan.sh --servlet` on DashboardServlet fixture → FAIL rows; clean servlet → exits 0. Paste output.
-- [ ] 12.8 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 12.9 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 12.1 RED tip 6d4afaf on `qa/c8-lint-servlet` (K13: tool is `lint-servlet.sh`, not `rc-scan --servlet`); LSV1/LSV1c/LSV2/LSV3/LSV5/LSV6/LSV-usage/LSV-prune pins; fixture shapes: NoAuth, WithAuth, BadParse, UnboundedSet, CacheNoFinger, LogInHandler.
+- [x] 12.2 Write `toolbelt/lint-servlet.sh <src> [--strict]` (K13 RED wins: standalone script, not --servlet mode). Checks: auth FAIL, input-400 FAIL, unbounded-set WARN, cache-nofinger WARN, log-in-handler WARN, csrf-xrw-only WARN. R12.2 step-up re-auth deferred to C9 S12 (B803 — no static primitive). R12.3 CSRF → WARN not FAIL (B813/K3 — reference servlets use XHR-only guard today).
+- [x] 12.3 Fixtures in RED (NoAuth/WithAuth/BadParse/UnboundedSet/CacheNoFinger/LogInHandler). Added CsrfXrwOnly.java for LSV4 (XHR-only CSRF WARN).
+- [x] 12.4 Extended `tests/lint-servlet.bats` (K13: RED bats file, not rc-scan.bats). Added LSV4 pin for csrf-xrw-only WARN. 9/9 LSV pins green.
+- [x] 12.5 K19 routing: `BUILD-LOOP.md` §5 pre-gate block + `skill/SKILL.md` toolbelt list, both tagged `[ev: retro campaign8-lint-servlet]` for `lint-servlet.sh` (not rc-scan --servlet — K13 RED wins).
+- [x] 12.6 Named mutations: (a) remove auth rule → LSV1 no FAIL, exit 0; (b) comment out csrf-xrw-only output → LSV4 no WARN; (c) disable try-check → LSV2 no FAIL, exit 0; (d) remove dot-dir prune → LSV-prune FAIL, exit 1. All four flip as expected.
+- [x] 12.7 Real smokes: (1) DashboardPan pre-PR#7 → WARN cache-nofinger only, exit 0; (2) DashboardPan origin/main → WARN cache-nofinger only, exit 0; (3) chihuahua-ux → WARN cache-nofinger + csrf-xrw-only, exit 0. No false positives.
+- [x] 12.8 Guards: bats 253/253 green; shellcheck exit 0; sweep-build-state exit 0; sweep-fold-audit --strict exit 0; kit-links.bats 6/6 (L5 green).
+- [x] 12.9 Retro 2026-09-05-campaign8-lint-servlet.md (5 deltas, review-status: pending) + INDEX row + BUILD-STATE kit self-envelope updated (campaign8-lint-servlet added to retro_pending list).
 - [ ] **[lead]** RED green; merge ff-only; `install-skill.sh --force`; ledger settle `--max-changed-lines 420`.
 
 ---

@@ -79,12 +79,14 @@ END {
     if (!is_servlet) exit
 
     # -----------------------------------------------------------------------
-    # File-level flags (computed once)
+    # File-level flags (computed once, on comment-stripped lines)
     # -----------------------------------------------------------------------
     file_has_xhr = 0; file_has_csrf = 0
     for (i = 1; i <= n; i++) {
-        if (lines[i] ~ /X-Requested-With/) file_has_xhr = 1
-        if (lines[i] ~ /CsrfUtil|x-niagara-csrfToken|csrfToken/) file_has_csrf = 1
+        sl = lines[i]
+        if (match(sl, /\/\//)) sl = substr(sl, 1, RSTART - 1)
+        if (sl ~ /X-Requested-With/) file_has_xhr = 1
+        if (sl ~ /CsrfUtil|x-niagara-csrfToken|csrfToken/) file_has_csrf = 1
     }
 
     # -----------------------------------------------------------------------
@@ -151,7 +153,7 @@ END {
         in_try = 0
         lo = (i - 5 > 1) ? i - 5 : 1
         for (k = lo; k <= i; k++) {
-            if (lines[k] ~ /\btry\b/) { in_try = 1; break }
+            if (lines[k] ~ /(^|[[:space:]])try[[:space:]]*\{/) { in_try = 1; break }
         }
         if (!in_try) {
             printf "FAIL  input-400  %s:%d  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input\n",

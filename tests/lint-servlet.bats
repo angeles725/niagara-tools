@@ -64,6 +64,13 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"log-in-handler"* ]]
 }
 
+@test "LSV4: X-Requested-With guard without CsrfUtil/csrfToken WARNs (csrf-xrw-only), exit 0" {
+  only CsrfXrwOnly.java
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"csrf-xrw-only"* ]]
+}
+
 @test "LSV-usage: no <src> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]
