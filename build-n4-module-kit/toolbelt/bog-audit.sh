@@ -582,6 +582,180 @@ else:
             emit('CHECK7', 'FAIL', container.path,
                  f'link targetSlotName "{tgt_slot}" not in source {cls} (dangling)')
 
+# ================================================================
+# 4. Station-logic post-processing checks (CHECK13-CHECK19, D17)
+# ================================================================
+# These run over the handle-graph and link-graph built above.
+# No new parser state — post-processing only. [ev: retro campaign8-station-logic]
+
+# ---- CHECK13: relay-double-source FAIL ----
+# Two distinct source handles drive the same target slot on the same container component.
+_relay_tgt_srcs = defaultdict(lambda: defaultdict(set))
+for lk in link_list:
+    ch  = lk.get('container_h')
+    tgt = lk.get('tgt_slot')
+    src = lk.get('src_h')
+    if ch and tgt and src:
+        _relay_tgt_srcs[ch][tgt].add(src)
+
+for _ch in sorted(_relay_tgt_srcs):
+    _container = handle_map.get(_ch)
+    _cpath = _container.path if _container else f'h:{_ch}'
+    for _tgt_slot, _src_set in sorted(_relay_tgt_srcs[_ch].items()):
+        if len(_src_set) < 2:
+            continue
+        _srcs = ', '.join(f'h:{s}' for s in sorted(_src_set))
+        emit('CHECK13', 'FAIL', _cpath,
+             f'relay slot {_tgt_slot!r} driven by {len(_src_set)} distinct sources: {_srcs}')
+
+# ---- CHECK14: own-output-unlinked WARN ----
+# Own-module component has an OPERATOR-flagged (f="o") slot with no outgoing relay link.
+# Suppressed for defrost-specific outputs when hasDefrost is absent/false on the component.
+_DEFROST_RE = re.compile(r'defrost', re.IGNORECASE)
+_used_outputs = {(lk['src_h'], lk['src_slot'])
+                 for lk in link_list
+                 if lk.get('src_h') and lk.get('src_slot')}
+
+for _h, _comp in sorted(handle_map.items(), key=lambda x: x[1].path):
+    if _comp.module not in own_modules:
+        continue
+    _hd_val = (_comp.slots.get('hasDefrost') or {}).get('value', '')
+    _hd_off  = _hd_val.lower() in ('false', '0', '')
+    for _sn, _si in sorted(_comp.slots.items()):
+        if 'o' not in (_si.get('flags') or ''):
+            continue
+        if (_h, _sn) in _used_outputs:
+            continue
+        if _DEFROST_RE.search(_sn) and _hd_off:
+            continue   # suppress defrost-specific output when hasDefrost is off/absent
+        emit('CHECK14', 'WARN', _comp.path,
+             f'OPERATOR output slot {_sn!r} has no outgoing relay link (own-output-unlinked)')
+
+# ---- CHECK15: sensor-crossed-by-name WARN ----
+# A link whose sourceSlotName contains C{n} (cold-room label) originates from a component
+# whose name carries a different numeric suffix (E-unit index mismatch).
+_C_NUM_RE   = re.compile(r'C(\d+)', re.IGNORECASE)
+_COMP_IDX_RE = re.compile(r'[_-](\d+)$')
+
+for lk in link_list:
+    _src_h   = lk.get('src_h')
+    _src_slt = lk.get('src_slot') or ''
+    if not _src_h or not _src_slt:
+        continue
+    _sc = handle_map.get(_src_h)
+    if not _sc or _sc.module not in own_modules:
+        continue
+    _cm = _C_NUM_RE.search(_src_slt)
+    if not _cm:
+        continue
+    _c_n = int(_cm.group(1))
+    _em = _COMP_IDX_RE.search(_sc.name)
+    if not _em:
+        continue
+    _e_n = int(_em.group(1))
+    if _c_n != _e_n:
+        _ch2 = lk.get('container_h')
+        _ct2 = handle_map.get(_ch2)
+        _cp2 = _ct2.path if _ct2 else f'h:{_ch2}'
+        emit('CHECK15', 'WARN', _cp2,
+             f'slot {_src_slt!r} (C-room {_c_n}) sourced from {_sc.name!r} (unit index {_e_n}) — label mismatch')
+
+# ---- CHECK16: hasDefrost <-> DefrostController sibling FAIL ----
+# Forward direction: an own-module component with hasDefrost=true must have a
+# DefrostController sibling under the same parent path.
+_par_children = defaultdict(list)
+for _h, _comp in handle_map.items():
+    _pparts = _comp.path.rsplit('/', 1)
+    _ppath  = _pparts[0] if len(_pparts) > 1 else ''
+    _par_children[_ppath].append(_comp)
+
+for _ppath, _children in _par_children.items():
+    _hd_comps = [
+        c for c in _children
+        if c.module in own_modules
+        and (c.slots.get('hasDefrost') or {}).get('value', '').lower() == 'true'
+    ]
+    _dc_comps = [
+        c for c in _children
+        if 'DefrostController' in c.name or 'DefrostController' in c.type_
+    ]
+    for _comp in _hd_comps:
+        if not _dc_comps:
+            _plabel = repr(_ppath) if _ppath else '(root)'
+            emit('CHECK16', 'FAIL', _comp.path,
+                 f'hasDefrost=true but no DefrostController sibling under {_plabel}')
+
+# ---- CHECK17: roomN-index-mismatch FAIL ----
+# A ColdRoom component directly contains a link whose targetSlotName carries an evap
+# tile index that differs from the ColdRoom's own numeric suffix.
+_COLDROOM_TYPE_RE = re.compile(r':ColdRoom$', re.IGNORECASE)
+_EVAP_NUM_RE      = re.compile(r'evap(\d+)', re.IGNORECASE)
+_SUFFIX_NUM_RE    = re.compile(r'[_-](\d+)$')
+
+for lk in link_list:
+    _ch3 = lk.get('container_h')
+    _ts3 = lk.get('tgt_slot') or ''
+    if not _ch3 or not _ts3:
+        continue
+    _ct3 = handle_map.get(_ch3)
+    if not _ct3 or _ct3.module not in own_modules:
+        continue
+    if not _COLDROOM_TYPE_RE.search(_ct3.type_):
+        continue
+    _rm  = _SUFFIX_NUM_RE.search(_ct3.name)
+    if not _rm:
+        continue
+    _room_idx = int(_rm.group(1))
+    _em3 = _EVAP_NUM_RE.search(_ts3)
+    if not _em3:
+        continue
+    _evap_idx = int(_em3.group(1))
+    if _room_idx != _evap_idx:
+        emit('CHECK17', 'FAIL', _ct3.path,
+             f'link {_ts3!r} carries evap-index {_evap_idx} but room suffix is {_room_idx}')
+
+# ---- CHECK18: dashboard tile-number consistency FAIL ----
+# All evap* tile numbers referenced in a component's links must agree.
+_evap_tiles = defaultdict(set)
+for lk in link_list:
+    _ch4 = lk.get('container_h')
+    _ts4 = lk.get('tgt_slot') or ''
+    if not _ch4 or not _ts4:
+        continue
+    _em4 = _EVAP_NUM_RE.search(_ts4)
+    if _em4:
+        _evap_tiles[_ch4].add(int(_em4.group(1)))
+
+for _ch4, _tiles in sorted(_evap_tiles.items()):
+    if len(_tiles) < 2:
+        continue
+    _ct4 = handle_map.get(_ch4)
+    if not _ct4 or _ct4.module not in own_modules:
+        continue
+    _ts_str = ', '.join(str(n) for n in sorted(_tiles))
+    emit('CHECK18', 'FAIL', _ct4.path,
+         f'evap tile numbers inconsistent across links: {_ts_str} (tile-number mismatch)')
+
+# ---- CHECK19: link-direction WARN ----
+# An own-module control component writes to a setpoint/config slot (reverse direction).
+# Expected direction: panel writes setpoints -> control; control writes state -> panel.
+_SETPOINT_RE = re.compile(r'setpoint', re.IGNORECASE)
+
+for lk in link_list:
+    _src_h5  = lk.get('src_h')
+    _ts5     = lk.get('tgt_slot') or ''
+    if not _src_h5 or not _ts5:
+        continue
+    _sc5 = handle_map.get(_src_h5)
+    if not _sc5 or _sc5.module not in own_modules:
+        continue
+    if _SETPOINT_RE.search(_ts5):
+        _ch5 = lk.get('container_h')
+        _ct5 = handle_map.get(_ch5)
+        _cp5 = _ct5.path if _ct5 else f'h:{_ch5}'
+        emit('CHECK19', 'WARN', _cp5,
+             f'control component {_sc5.path!r} writes to config slot {_ts5!r} (reverse direction)')
+
 elapsed = time.time() - START
 print(f'# bog-audit: parse time {elapsed:.3f}s', flush=True)
 sys.exit(1 if FAILED else 0)

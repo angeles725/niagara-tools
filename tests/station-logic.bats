@@ -21,6 +21,8 @@ setup() {
 mkbog() { cat > "$T/$1.xml"; ( cd "$T" && cp "$1.xml" file.xml && zip -q "$1.bog" file.xml && rm -f file.xml ); }
 
 @test "SL13: CHECK13 — two distinct sources into the same relay slot FAIL (relay-double-source)" {
+  # Named mutation (R20.9): two sources on the same relay slot -> FAIL.
+  # SrcA/SrcB are non-self-closing so they register in handle_map (needed for CHECK1 to find the module).
   mkbog c13 <<'XML'
 <?xml version='1.0'?><bajaObjectGraph version='4.0'>
  <p n='NrioNet' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
@@ -29,8 +31,12 @@ mkbog() { cat > "$T/$1.xml"; ( cd "$T" && cp "$1.xml" file.xml && zip -q "$1.bog
    <p n='L2' t='b:Link'><p n="sourceOrd" v="h:s2"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in10"/></p>
   </p>
  </p>
- <p n='SrcA' h='s1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'/>
- <p n='SrcB' h='s2' t='CRP:EvaporatorUnit'/>
+ <p n='SrcA' h='s1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="evapOut" t="b:StatusBoolean" v="false"/>
+ </p>
+ <p n='SrcB' h='s2' t='CRP:EvaporatorUnit'>
+  <p n="evapOut" t="b:StatusBoolean" v="false"/>
+ </p>
 </bajaObjectGraph>
 XML
   run "$BA" "$T/c13.bog" --module ColdRoomPan
@@ -94,6 +100,39 @@ XML
   run "$BA" "$T/c18.bog" --module ColdRoomPan
   [ "$status" -eq 1 ]
   [[ "$output" == *"CHECK18"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "SL15: CHECK15 — C-room-labeled slot sourced from a component with a different unit index WARNs (sensor-crossed-by-name)" {
+  # Lead pin (R20.4): slot name C1_temperature from EvaporatorUnit_3 (index 3 != C-room 1) -> WARN.
+  # RED-proven: running without CHECK15 rule produces no CHECK15 in output.
+  mkbog c15 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='Station' h='st' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_3' h='e3' t='CRP:EvaporatorUnit'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:e3"/><p n="sourceSlotName" v="C1_temperature"/><p n="targetSlotName" v="tempOut"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c15.bog" --module ColdRoomPan
+  [[ "$output" == *"CHECK15"* ]] && [[ "$output" == *"WARN"* ]]
+}
+
+@test "SL19: CHECK19 — control component writing to a setpoint slot WARNs (reverse link-direction)" {
+  # Lead pin (R20.8): own-module source writes to temperatureSetpoint -> WARN (expected: panel->control).
+  # RED-proven: running without CHECK19 rule produces no CHECK19 in output.
+  mkbog c19 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='DashPanel_1' h='dp1' m='DPan=DashboardPan' t='DPan:DashUnit'>
+  <p n='SpLink' t='b:Link'><p n="sourceOrd" v="h:crp1"/><p n="sourceSlotName" v="temperatureOut"/><p n="targetSlotName" v="temperatureSetpoint"/></p>
+ </p>
+ <p n='Ctrl_1' h='crp1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="temperatureOut" f="o" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c19.bog" --module ColdRoomPan --module DashboardPan
+  [[ "$output" == *"CHECK19"* ]] && [[ "$output" == *"WARN"* ]]
 }
 
 @test "SL-smoke-panccadia: PANCCADIA -> CHECK18 FAIL on ColdRoom_1 EvaporatorUnit_1 and _3, CHECK14 WARN ColdRoom_5, else clean (SKIP if absent)" {
