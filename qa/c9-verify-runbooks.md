@@ -112,23 +112,25 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - Harness-only: none. V6/V7.
 
 ## PR4 — `feat/c9-s12-config-login` (tunnel, base 9acb47c) · RED `qa/c9-s12-write-server` e7e6615 · worktree `c9-s12-config-login`
+- V0: `git -C $TUN fetch -q origin && git -C $TUN worktree add --detach $TWT/v-pr4 origin/feat/c9-s12-config-login && cd $TWT/v-pr4`; base check against `origin/main` (9acb47c at authoring).
 - V2: `git diff e7e6615 HEAD -- instalacion/pipeline/test/write-server.config-login.test.mjs` → empty.
-- V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/write-server.config-login.test.mjs`.
-  Required `ok` at PR4: **S12A-1, S12A-2, S12A-3, S12A-5, S12A-7** (token gate + `buildServer(cfg,deps)` seam + §10 bare `<real>` PUT).
-  S12A-4, S12A-6, S12A-8, S12A-9 (change_log/spool) belong to PR5: record their state; if PR4 and PR5 land together, all 9 `ok`.
-- Seam: `buildServer(cfg, {obix, verifyToken, changeLog})` exported; `main()` does not bind a port under test (`ss -ltnp | grep -c node` → 0 after the run).
-- Header token per proposal f610d21: `x-config-token`; missing/stale token → 403 on `/write` (S12A-1, S12A-5).
-- V4: M4a (S12A-1, S12A-5) — MANUAL.
-- No real smoke possible (Supabase/oBIX are injected). Harness-only: none. V6/V7.
+- V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/write-server.config-login.test.mjs`
+  → `# pass N`, `# fail 0` on the PR4 set. Required `ok` at PR4: **S12A-1, S12A-2, S12A-3, S12A-5, S12A-7** (token gate + seam + §10 bare `<real>` PUT).
+  S12A-4, S12A-6, S12A-8, S12A-9 belong to PR5 (record their state; all **9** `ok` if PR4 and PR5 land together).
+- Seam facts the RED drives (`startServer` helper, test :55-72): `import('../write-server.mjs')` must not bind or exit (dummy `OBIX_BASE/OBIX_USER/OBIX_PASS/SUPABASE_URL`, `WRITE_PORT=0` set before import; main() guarded by an `import.meta.url` check);
+  `export function buildServer(cfg, deps)` returns a non-listening `http.Server`; `cfg = {WRITE_PORT:0, CONFIG_PASSWORD, AUDIT_SPOOL}`; `deps = {obix(method, path, body), verifyToken(bearer)->{email,sub}, changeLog(row)->{ok}}`.
+  Header `x-config-token` (proposal f610d21); `/config/login {password}` → 200 `{token}` | 401 no token; `/write` without/with stale token → 403; `/config/logout` revokes.
+- `node --check instalacion/pipeline/write-server.mjs`; after the run `ss -ltnp | grep -c node` → 0.
+- V4: `$QA/mutate.sh --worktree $TWT/v-pr4 --table $QA/c9-mutations.tsv --pr PR4` → M4s (seam absent → all 9 fail), M4a (token gate dropped → S12A-1, S12A-5), M4b (header name drifted → S12A-4 + the 403 pins). Content-anchored on the RED contract; an ANCHOR-MISSING row is hand-mutated on the same worktree.
+- No real smoke possible (Supabase/oBIX injected). Harness-only: none. V6/V7 (`origin/main` of the TUNNEL repo == TIP).
 
-## PR5 — `feat/c9-s12-audit-schema` (tunnel) · same RED e7e6615 · worktree `c9-s12-audit-schema`
-- V2 as PR4. V3: all **9/9** S12A `ok`. S12A-4: exactly ONE `change_log` row per successful write carrying
-  `ts, config_session, result, surface='write-server', client_ip` + `user_email, room, slot, old_value, new_value`, zero spool rows.
-  S12A-6: insert failure → still 200 + exactly ONE JSON-lines row in `cfg.AUDIT_SPOOL`. S12A-8: station write 500 → 502 + one row `ok:false, result:502`.
-  S12A-9: `replaySpool(cfg, deps)` drains once; second replay inserts nothing.
-- Migration: the SQL adding the extended columns exists and names each of `ts config_session result surface client_ip`
-  (`grep -lE 'config_session' instalacion/pipeline/*.sql instalacion/**/*.sql`); additive columns only (no DROP).
-- V4: M5a (S12A-6), M5b (S12A-9) — MANUAL. Harness-only: none. V6/V7.
+## PR5 — `feat/c9-s12-audit-schema` (tunnel) · same RED e7e6615 · worktree `c9-s12-audit-schema` · after/with PR4
+- V0/V2 as PR4 (`$TWT/v-pr5`, branch `feat/c9-s12-audit-schema`). V3: the same `node --test` line → **9/9** `ok`, `# fail 0`.
+  Rows the RED pins: S12A-4 exactly ONE `change_log` row per successful write with `ts, config_session, result, surface:'write-server', client_ip` + `user_email, room, slot, old_value, new_value`, and `AUDIT_SPOOL` absent/empty;
+  S12A-6 `changeLog` throws → still 200 + exactly ONE JSON line in `cfg.AUDIT_SPOOL`; S12A-8 `deps.obix` → `{status:500}` → HTTP 502 + ONE row `ok:false, result:502`;
+  S12A-9 `replaySpool({AUDIT_SPOOL}, {changeLog})` → first `{replayed:1, remaining:0}`, second inserts nothing.
+- Migration: `grep -rlE 'config_session' instalacion --include='*.sql'` → the additive migration naming `ts config_session result surface client_ip` (no DROP).
+- V4: `--pr PR5` → M5a (spool on success → S12A-4), M5b (spool append no-op → S12A-6, S12A-9), M5c (failed write audited ok:true → S12A-8), M5d (replaySpool seam absent → S12A-9). Harness-only: none. V6/V7.
 
 ## PR6 — `feat/c9-s12-servlet-guards` (client DashboardPan-ux) · RED `qa/c9-s12-servlet` 4c18837 · worktree `c9-s12-servlet`
 - V2: `git diff 4c18837 HEAD -- Dashboard/DashboardPan/DashboardPan-ux/srcTest/test/com/angeles/DashboardPan/ux/DashboardWriteGuardsTest.java` → empty.
@@ -138,7 +140,7 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - Servlet: `$TB/lint-servlet.sh Dashboard/DashboardPan/DashboardPan-ux/src --strict` → exit 0. The null-Context write
   `parent.set(prop, toSet, null)` (a109249 :291) is GONE: `grep -c 'parent.set(prop, toSet, null)' Dashboard/DashboardPan/DashboardPan-ux/src/com/angeles/DashboardPan/ux/BDashboardServlet.java` → 0.
 - V4: M6a (guard4_, guard4b_) — sed, anchor `parseFiniteDouble`.
-- V5: `v Dashboard/build.gradle.kts` → **2.2.0** (2.1.1 → 2.2.0; R14 must NOT re-bump).
+- V5: `v Dashboard/build.gradle.kts` → **2.2.0** (2.1.1 → 2.2.0). Fragment-merge: `git log --oneline origin/main..HEAD -- Dashboard/build.gradle.kts | wc -l` → 1 (PR6 owns the bump; R14 must show 0).
 - Harness-only: AuditEvent naming the operator in AuditHistory → harness H3 (`qa/c9-harness-procedure.md`). V6/V7.
 
 ## R14 — `feat/c9-s12-hmi-config-login` (client DashboardPan-ux) · RED `qa/c9-s12-config-login` cc1c948 · worktree `c9-config-login` · after PR6
@@ -148,15 +150,17 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - Wiring facts: `/api/config/login` + `/api/config/logout` routed (CLW1); legal re-auth path `BUserService.getUser → canLogin → BPasswordCache.validate → authenticateOk/Failed` (CLW2);
   `parent.set(prop, toSet, <user>)` and no null-Context (CLW3); `catch (PermissionException …) → SC_FORBIDDEN` (CLW4); `config_login_required` 403 before the write (CLW5).
 - V4: M6b1 (CLW4_), M6b2 (CLW3_), M6b3 (CL3_) — all sed, content-anchored.
-- V5: `v Dashboard/build.gradle.kts` → 2.2.0 and unchanged by this PR: `git log -p origin/main..HEAD -- Dashboard/build.gradle.kts` → empty.
+- V5 fragment-merge: `v Dashboard/build.gradle.kts` → 2.2.0 (already from PR6) and `git log --oneline origin/main..HEAD -- Dashboard/build.gradle.kts | wc -l` → 0 (no double bump). If PR6 and R14 are verified together, exactly ONE commit in the union touches the line and the value is 2.2.0.
+- Greps (SV=`Dashboard/DashboardPan/DashboardPan-ux/src/com/angeles/DashboardPan/ux/BDashboardServlet.java`): CLW3 removal `grep -c 'parent.set(prop, toSet, null)' $SV` → 0 and `grep -cE 'parent\.set\(prop, toSet, [A-Za-z_]+\)' $SV` → ≥1; CLW4 `grep -A4 'catch (PermissionException' $SV | grep -c 'SC_FORBIDDEN'` → 1 and no flat `catch (Exception` between the write and that catch (`grep -nE 'catch \((Exception|Throwable)' $SV` reviewed by hand: none may swallow the PermissionException first); CLW5 `grep -c 'config_login_required' $SV` → ≥1.
 - **Coupling MIR5:** after R14 merges, MIR5 in `qa/c9-s12-audit-mirror` re-pins from `config_session IS NULL` to the station username (PR7's owner). If PR7 already merged, file the re-pin as a follow-up and note it in the BLESS.
 - Harness-only: real station lockout (5 / 30 s / 10 s) and AuditEvent attribution → H3. V6/V7.
 
 ## PR7 — `feat/c9-s12-audit-mirror` (tunnel + kit doc line via PR12) · RED `qa/c9-s12-audit-mirror` 0a14df8 · worktree `c9-s12-audit-mirror` · after PR5
 - V2: `git diff 0a14df8 HEAD -- instalacion/pipeline/test/audit-mirror.test.mjs` → empty (unless the MIR5 re-pin applies after R14).
-- V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/audit-mirror.test.mjs` → **5/5** MIR1-MIR5.
+- V0: `git -C $TUN worktree add --detach $TWT/v-pr7 origin/feat/c9-s12-audit-mirror`. V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/audit-mirror.test.mjs` → **5/5** MIR1-MIR5, `# fail 0`; `node --check instalacion/pipeline/audit-mirror.mjs`.
+  Injection points (test :34-38, :50-90): `runMirror(cfg, deps)`; `cfg.MIRROR_ENABLED` absent/false → `{read:0, inserted:0}` and `readAuditHistory` never called; `deps.readAuditHistory()` → fixture of 3 records, two sharing a `ts`; `deps.changeLog = {rows, insert(row), has(key)}` with `key = [ts,user,target,old,new].join('|')`.
   `runMirror(cfg, deps) -> {read, inserted, skipped}`; `cfg.MIRROR_ENABLED` default OFF (MIR1 reads nothing); dedupe key `(ts,user,target,old,new)`; rows carry `surface:'servlet'`, `config_session:null` (MIR5 as pinned).
-- V4: M7a (MIR3) — MANUAL; M7b (MIR1) — sed, anchor `MIRROR_ENABLED`.
+- V4: `--pr PR7` → M7s (seam absent → all 5), M7a (key → ts only → MIR3), M7b (`cfg.MIRROR_ENABLED` → true → MIR1), M7c (`changeLog.has(` → false → MIR2, MIR3), M7d (surface mislabeled → MIR4), M7e (config_session fabricated → MIR5). All content-anchored seds.
 - Harness-only: none. V6/V7.
 
 ## PR8 — `feat/c9-alarm-cr3` (client ColdRoomPan-rt) · RED `qa/c9-alarm-cr3` 70a357b · worktree `c9-alarm-cr3`
