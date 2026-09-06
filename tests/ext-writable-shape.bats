@@ -24,7 +24,6 @@ setup() {
   EW="$KIT/toolbelt/lint-ext-writable-shape.sh"
   SRC="$BATS_TEST_TMPDIR/src"; mkdir -p "$SRC/com/x"
   ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
-  CLIENT="$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src/com/angeles/DashboardPan/BRoomPanel.java"
 }
 only() { rm -rf "$SRC"; mkdir -p "$SRC/com/x"; cat > "$SRC/com/x/$1"; }
 
@@ -148,13 +147,18 @@ JAVA
   [ "$status" -eq 3 ]
 }
 
-# --- EW10: the REAL BRoomPanel.setpoint (BStatusNumeric SUMMARY|OPERATOR, no action) WARNs ---
-@test "EW10: real BRoomPanel.setpoint WARNs (SKIP if the client tree is absent)" {
-  [ -f "$CLIENT" ] || skip "DashboardPan-rt client tree not on this machine"
-  D="$BATS_TEST_TMPDIR/real"; mkdir -p "$D/com/angeles/DashboardPan"
-  cp "$CLIENT" "$D/com/angeles/DashboardPan/"
-  run "$EW" "$D"
-  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"setpoint"* ]]
+# --- EW10: EXACT contract at a109249 (C9_CLIENT_ROOT): the only complex OPERATOR slot without an action is BRoomPanel.setpoint ---
+@test "EW10: real trees exact — DashboardPan-rt exactly 1 WARN (BRoomPanel.setpoint), CompPan-rt 0 (faultReset has an action), ColdRoomPan-rt 0, DashboardPan-ux 0" {
+  [ -d "$ROOT/Dashboard" ] && [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
+  run "$EW" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"BRoomPanel"* ]] && [[ "$output" == *"setpoint"* ]]
+  for r in Compresores/CompPan/CompPan-rt Paccadia/ColdRoomPan/ColdRoomPan-rt Dashboard/DashboardPan/DashboardPan-ux; do
+    run "$EW" "$ROOT/$r/src"
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
+  done
 }
 
 # --- EW11: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
