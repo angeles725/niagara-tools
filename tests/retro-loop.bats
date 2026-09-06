@@ -113,3 +113,33 @@ retro_pending: false
   [ "$(_pend ColdRoomPan "$TK2/BUILD-STATE.md")" = "true" ]
   [ "$(_pend CompPan "$TK2/BUILD-STATE.md")" = "false" ]
 }
+
+@test "RL8: slug shorter than 6 chars is rejected with exit 3; exactly 6 chars is accepted" {
+  # 5-char slug must fail (sweep-fold-audit.sh drops tokens < 6 chars, making retros unfoldable)
+  run env -C "$TK" KIT="$TK" "$NR" kit abcde
+  [ "$status" -eq 3 ]
+  [[ "$output" =~ "slug must be" ]]
+  # 6-char slug must succeed
+  run env -C "$TK" KIT="$TK" "$NR" kit abcdef
+  [ "$status" -eq 0 ]
+}
+
+@test "RL9: INDEX duplicate guard fires when retro FILE is absent but INDEX row exists (defense-in-depth)" {
+  # Fixture: retro file ABSENT, INDEX row PRE-SEEDED for the same slug
+  TK9="$BATS_TEST_TMPDIR/rl9kit"; mkdir -p "$TK9/retros"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK9/retros/INDEX.md"
+  printf '| %s-rl9slug.md | kit | %s | pending | 0 |\n' "$DATE" "$DATE" >> "$TK9/retros/INDEX.md"
+  printf '<!-- build-state.v1 -->\n## kit\nretro_required: true\nretro_pending: false\n' > "$TK9/BUILD-STATE.md"
+  # Retro file must not exist (primary guard cannot fire; secondary INDEX guard must carry it)
+  [ ! -f "$TK9/retros/$DATE-rl9slug.md" ]
+  run env -C "$TK9" KIT="$TK9" "$NR" kit rl9slug
+  [ "$status" -eq 0 ]
+  # Stub must be written
+  [ -f "$TK9/retros/$DATE-rl9slug.md" ]
+  # Output must report SKIP for the index row
+  [[ "$output" =~ index.*SKIP ]]
+  # Envelope must flip
+  grep -q 'retro_pending: true' "$TK9/BUILD-STATE.md"
+  # INDEX must still have exactly ONE row for rl9slug (no duplicate)
+  [ "$(grep -c 'rl9slug' "$TK9/retros/INDEX.md")" -eq 1 ]
+}

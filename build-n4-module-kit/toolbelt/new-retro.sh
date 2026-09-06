@@ -51,7 +51,7 @@ SLUG="$1";   shift
 
 # Validate slug: [A-Za-z0-9][A-Za-z0-9._-]+  length >= 6
 case "$SLUG" in
-    [A-Za-z0-9][A-Za-z0-9._-][A-Za-z0-9._-][A-Za-z0-9._-][A-Za-z0-9._-]*)
+    [A-Za-z0-9][A-Za-z0-9._-][A-Za-z0-9._-][A-Za-z0-9._-][A-Za-z0-9._-][A-Za-z0-9._-]*)
         ;;  # at least 6 chars, valid charset
     *)
         printf 'new-retro: slug must be [A-Za-z0-9][A-Za-z0-9._-]+ and >= 6 chars: %s\n' "$SLUG" >&2
