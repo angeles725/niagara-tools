@@ -27,8 +27,9 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LSP="$KIT/toolbelt/lint-silent-protection.sh"
   S="$BATS_TEST_TMPDIR/src"
-  CP1="/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan"
-  CR3="/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan"
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
+  CP1="$ROOT/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan"
+  CR3="$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan"
 }
 fresh() { rm -rf "$S"; mkdir -p "$S/com/x"; }
 
