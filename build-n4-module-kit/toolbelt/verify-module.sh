@@ -295,9 +295,13 @@ check_facet_presence() {
           if (reason == "" && nm ~ /demand|[Cc]ount|stages/) {
             if (!(s ~ /PRECISION/)) reason = "count-like slot " nm " missing PRECISION"
           }
-          if (reason != "") { seen[nm]=1; print FILE ":" lstart " " reason }
+          # Mark ALL annotation-defined slots in seen so pass 2 (newProperty) never
+          # double-fires on the same slot (prevents false-positive on non-numeric
+          # OPERATOR slots like boolean/BStatusBoolean that pass 1 correctly skips).
+          seen[nm]=1
+          if (reason != "") print FILE ":" lstart " " reason
         }
-        # pass 2: old-style newProperty(... OPERATOR ..., value, null)
+        # pass 2: old-style newProperty(... OPERATOR ..., value, null) with NO @NiagaraProperty
         for (l=1; l<=NR; l++) {
           if (lines[l] !~ /newProperty\(/ || lines[l] !~ /OPERATOR/) continue
           s = lines[l]
