@@ -24,7 +24,8 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   DIS="$KIT/toolbelt/lint-demand-scope.sh"
   S="$BATS_TEST_TMPDIR/src"
-  REAL="/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/CompressorControl.java"
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
+  REAL="$ROOT/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/CompressorControl.java"
 }
 only() { rm -rf "$S"; mkdir -p "$S/com/x"; cat > "$S/com/x/$1"; }
 
