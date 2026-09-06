@@ -161,7 +161,7 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V0: `git -C $TUN worktree add --detach $TWT/v-pr7 origin/feat/c9-s12-audit-mirror`. V3: `node --test --test-reporter=tap --test-force-exit instalacion/pipeline/test/audit-mirror.test.mjs` → **5/5** MIR1-MIR5, `# fail 0`; `node --check instalacion/pipeline/audit-mirror.mjs`.
   Injection points (test :34-38, :50-90): `runMirror(cfg, deps)`; `cfg.MIRROR_ENABLED` absent/false → `{read:0, inserted:0}` and `readAuditHistory` never called; `deps.readAuditHistory()` → fixture of 3 records, two sharing a `ts`; `deps.changeLog = {rows, insert(row), has(key)}` with `key = [ts,user,target,old,new].join('|')`.
   `runMirror(cfg, deps) -> {read, inserted, skipped}`; `cfg.MIRROR_ENABLED` default OFF (MIR1 reads nothing); dedupe key `(ts,user,target,old,new)`; rows carry `surface:'servlet'`, `config_session:null` (MIR5 as pinned).
-- V4: `--pr PR7` → M7s (seam absent → all 5), M7a (key → ts only → MIR3), M7b (`cfg.MIRROR_ENABLED` → true → MIR1), M7c (`changeLog.has(` → false → MIR2, MIR3), M7d (surface mislabeled → MIR4), M7e (config_session fabricated → MIR5). All content-anchored seds.
+- V4: `--pr PR7` → all OBSERVED on 9d76b3c: M7s (remove runMirror export → all 5), M7a (key → ts only → MIR3), M7b (`cfg.MIRROR_ENABLED` → true → MIR1), M7c (`changeLog.has(` → false → MIR2+MIR3), M7d (surface → 'mirror' → MIR4), M7e (config_session fabricated → MIR5). All content-anchored seds, VERIFIED.
 - Harness-only: none. V6/V7.
 
 ## PR8 — `feat/c9-alarm-cr3` (client ColdRoomPan-rt) · RED `qa/c9-alarm-cr3` 70a357b · worktree `c9-alarm-cr3`
