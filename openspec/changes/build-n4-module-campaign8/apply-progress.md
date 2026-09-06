@@ -74,3 +74,63 @@ Cross-file helper resolution: pre-pass awk collects all `static long <fn>(` meth
 *.java in src root (dot-dirs pruned). Four is_floor patterns: `Math.max(x,N≥1)`, `>=1` comparison,
 `<1?1:x`, `return 1L`. Function names proven as floors stored in POSITIVE_HELPERS. Per-file awk
 checks helpers for case 2.5 (BRelTime.make(<call>)) and case 3 backward scan (variable assignment RHS).
+
+---
+
+## PR2 — feat/c8-triage-console
+
+**Branch**: `feat/c8-triage-console`
+**Status**: COMPLETE — all 11 tasks done; guards 200/200; commit + push pending
+**TDD mode**: strict (RED already committed by QA; GREEN implemented here)
+
+### TDD Evidence
+
+| Phase | Commit / evidence | Result |
+|-------|-------------------|--------|
+| RED   | `199c83e` (TR1-TR6) + `9495df7` (TR7-TR9) — bats fail before triage-console.sh | RED confirmed |
+| GREEN | triage-console.sh written; TR1-TR9 all passing | GREEN |
+| REFACTOR | bare-exception fix (NotRunningException); shellcheck exit 0 | Refactored |
+
+### Work Unit Evidence
+
+| Task | Done | Evidence |
+|------|------|----------|
+| 2.1 Re-read qa/c8-triage-console tip | x | TR1 confirmed (1 row count 2, no jetty); TR8 [sys] fatal-only; TR9 Spanish levels normalized |
+| 2.2 Cherry-pick RED into feat/c8-triage-console | x | RED commits 199c83e + 9495df7 already on branch |
+| 2.3 Write triage-console.sh | x | 3 channels C1/C2/C3; LC_ALL=C; norm(msg); EN+ES month table; exits 0/1/3; bare-exception fix |
+| 2.4 Copy 5 fixture files | x | Already in RED commit: console.txt, console-es.txt, console-load-fail.txt, console-load-fatal-only.txt, console-load-fail-es.txt |
+| 2.5 Write triage-console.bats | x | Already in RED commits; TR1-TR9 pass |
+| 2.6 CI step | x | .github/workflows/ci.yml — triage-console basic smoke |
+| 2.7 K19 routing BUILD-LOOP.md + SKILL.md | x | BUILD-LOOP.md §6 post-deploy; SKILL.md step 6 + References; version 0.8→0.9 |
+| 2.8 Named mutations | x | (a) drop C1 → jetty row appears; (b) drop C3 → TR8 exits 1→0; documented in PR body |
+| 2.9 Real smokes | x | PANCCADIA: 5x time<=0 + 6x NotRunning + load-fail [sys]/[sys.xml]; MX60: 9x modifyThread; REFLOW: 12x modifyThread + 7x cert-chain (C2 channel, [loader] not in denylist) |
+| 2.10 Guards | x | 200/200 bats; shellcheck exit 0; sweep-build-state exit 0; sweep-fold-audit --strict exit 0; kit-links L4/L5 green |
+| 2.11 Retro + INDEX + BUILD-STATE | x | retros/2026-09-05-campaign8-triage-console.md; INDEX row; BUILD-STATE retro_pending: true |
+
+### Guard Results (PR2)
+
+```
+bats tests/*.bats            : 200/200 passed
+shellcheck                   : exit 0
+sweep-build-state.sh         : exit 0
+sweep-fold-audit.sh --strict : exit 0 (56 folded, 56 cited, 0 uncited)
+kit-links.bats L4/L5         : green (triage-console.sh in BUILD-LOOP.md + SKILL.md)
+```
+
+### Real Smoke Results
+
+**PANCCADIA console_backup_260903_1704.txt** (load-fail — C3 channel):
+```
+FAIL  triage-console  console_backup_260903_1704.txt  1x 17:04:32 03-Sep-26 -> 17:04:32 03-Sep-26  SEVERE ClassCastException: javax.baja.sys.BRelTime cannot be cast to javax.baja.sys.BComplex @ [sys]
+FAIL  triage-console  console_backup_260903_1704.txt  1x 17:04:32 03-Sep-26 -> 17:04:32 03-Sep-26  WARNING Cannot set property RoomPanel.setpoint: java.lang.ClassCastException: javax.baja.status.BStatusNumeric cannot be cast to javax.baja.sys.BDouble [943:40] @ [sys.xml]
+FAIL  triage-console  console_backup_260903_1704.txt  1x 17:04:32 03-Sep-26 -> 17:04:32 03-Sep-26  WARNING Missing frozen property: differentialUp [944:35] @ [sys.xml]
+(+3 more sys.xml drift rows)
+```
+
+**PANCCADIA all consoles** — own-code exceptions:
+- IllegalArgumentException: time <= 0 @ BDefrostController.armTrigger: 5 total occurrences (1+1+2+1 across 4 files; first 16:20:10 02-Sep-26, last 18:58:19 03-Sep-26)
+- NotRunningException @ BEvaporatorUnit.applyRunCmd: 6 total occurrences
+
+**HoneywellMX605132026**: modifyThread 9x (C2 [chihuahua]); cannot force-load ChiAlarmHelper 1x
+
+**REFLOW**: modifyThread 12x; cert-chain BChiDashboardService.class 7x (C2 [loader] — NOT C3; [loader] tag is not in the framework denylist)

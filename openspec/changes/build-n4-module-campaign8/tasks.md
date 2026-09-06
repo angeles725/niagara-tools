@@ -67,17 +67,17 @@ Chain strategy: stacked-to-main
 
 **RED**: `qa/c8-triage-console` `6492b2d` (TR1-TR9) | **Gate**: R2.1-R2.7, SC2
 
-- [ ] 2.1 Re-read `qa/c8-triage-console` tip `6492b2d`: confirm TR1 (jetty NPE → no row), TR8 (`[sys.xml]` row), TR9 (Spanish level normalize, exit 0).
-- [ ] 2.2 Cherry-pick / merge RED branch into `feat/c8-triage-console`.
-- [ ] 2.3 Write `toolbelt/triage-console.sh`: three attribution channels C1/C2/C3 per D3; `LC_ALL=C grep -a`; `norm(msg)` digit-normalise; timestamp month table EN+ES; exits 0/1/3.
-- [ ] 2.4 Copy 5 fixture files `tests/fixtures/triage-console/{console,console-es,console-load-fail,console-load-fatal-only,console-load-fail-es}.txt`.
-- [ ] 2.5 Write `tests/triage-console.bats` (TR1-TR9 verbatim from RED).
-- [ ] 2.6 Add CI step to `ci.yml`: `triage-console.sh --package com.angeles tests/fixtures/triage-console/console.txt` → exit 1 + grouped row.
-- [ ] 2.7 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `triage-console.sh [ev: retro c8-triage-console]` (CD5).
-- [ ] 2.8 **Named mutations**: (a) drop C1 own-frame filter → jetty NPE row appears (TR1 flips); (b) drop C3 channel → TR8 exits 0. Record both in PR body (R2.7).
-- [ ] 2.9 Real smoke: `triage-console.sh` on PANCCADIA `console_backup_260903_1704.txt`, REFLOW, MX60 → SEVERE `Cannot load station` FAIL + `modifyThread` WARN rows. Paste output.
-- [ ] 2.10 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 2.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
+- [x] 2.1 Re-read `qa/c8-triage-console` tip `6492b2d`: confirm TR1 (jetty NPE → no row), TR8 (`[sys.xml]` row), TR9 (Spanish level normalize, exit 0).
+- [x] 2.2 Cherry-pick / merge RED branch into `feat/c8-triage-console`.
+- [x] 2.3 Write `toolbelt/triage-console.sh`: three attribution channels C1/C2/C3 per D3; `LC_ALL=C grep -a`; `norm(msg)` digit-normalise; timestamp month table EN+ES; exits 0/1/3.
+- [x] 2.4 Copy 5 fixture files `tests/fixtures/triage-console/{console,console-es,console-load-fail,console-load-fatal-only,console-load-fail-es}.txt`.
+- [x] 2.5 Write `tests/triage-console.bats` (TR1-TR9 verbatim from RED).
+- [x] 2.6 Add CI step to `ci.yml`: `triage-console.sh --package com.angeles tests/fixtures/triage-console/console.txt` → exit 1 + grouped row.
+- [x] 2.7 Add K19 routing: `BUILD-LOOP.md` + `skill/SKILL.md` `triage-console.sh [ev: retro c8-triage-console]` (CD5).
+- [x] 2.8 **Named mutations**: (a) drop C1 own-frame filter → jetty NPE row appears (TR1 flips); (b) drop C3 channel → TR8 exits 0. Record both in PR body (R2.7).
+- [x] 2.9 Real smoke: `triage-console.sh` on PANCCADIA `console_backup_260903_1704.txt`, REFLOW, MX60 → SEVERE `Cannot load station` FAIL + `modifyThread` WARN rows. Paste output.
+- [x] 2.10 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 2.11 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec apply-progress.
 - [ ] **[lead]** TR1-TR9 green; merge ff-only; `install-skill.sh --force`; ledger settle `--max-changed-lines 440`.
 
 ---

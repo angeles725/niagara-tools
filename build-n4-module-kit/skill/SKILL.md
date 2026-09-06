@@ -4,7 +4,7 @@ description: "Trigger: build/create/extend a Niagara N4 module — rt logic, ux 
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.8"
+  version: "0.9"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (methodology, per-type guides, toolbelt, retros) — read it, don't restate it from memory.
@@ -46,8 +46,9 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 2. corpus-nav the topic; read the exemplar source.
 3. Build the layers; preview the UI.
 4. Build with `toolbelt/build.sh` (Java 8 + slotomatic); verify major-52 + signed.
-5. Pre-gate checks before `verify-module.sh`: run `toolbelt/lint-delays.sh <src>` (Clock.schedule delay-floor lint; exit 1 = any FAIL — a non-positive floor silently kills the timer at runtime) [ev: retro campaign8-lint-delays]; run `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL) and `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); run `toolbelt/schema-risk.sh <before-dir> <after-dir>` before deploy (two-snapshot slot diff; verdict SAFE/LOSSY/OUTAGE — OUTAGE means a deployed change breaks saved data) [ev: retro tool-integration]; then run the verify gate (`toolbelt/verify-module.sh`) with `--plano <index.html|jar>` when available [ev: retro campaign7-plano]; finally run `toolbelt/report-module.sh <module-root> [--target-version x.y]` for one aggregated punch-list — exit 1 = FAILs block hand-off [ev: retro campaign7-report-module].
-6. Retro + close (HARD gate): append PROVEN lessons as PROPOSED deltas (`$KIT/retros/`, propose-never-apply) AND update `$KIT/BUILD-STATE.md` (envelope + `retro_pending`) — or declare `Retro: none (trivial: <reason>)`. This is how the kit grows and stays continuous.
+5. Pre-gate checks before `verify-module.sh`: run `toolbelt/lint-delays.sh <src>` (Clock.schedule delay-floor lint; exit 1 = any FAIL — a non-positive floor silently kills the timer at runtime) [ev: retro campaign8-lint-delays]; run `toolbelt/lint-timers.sh <src>` (timer-ticket/discarded-ticket; exit 1 = FAIL) and `toolbelt/slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>` (lexicon coverage); run `toolbelt/schema-risk.sh <before-dir> <after-dir>` before deploy (two-snapshot slot diff; verdict SAFE/LOSSY/OUTAGE — OUTAGE means a deployed change breaks saved data) [ev: retro tool-integration]; then run the verify gate (`toolbelt/verify-module.sh`) with `--plano <index.html|jar>` when available [ev: retro campaign7-plano]; finally run `toolbelt/report-module.sh <module-root> [--target-version x.y]` for one aggregated punch-list — exit 1 = FAILs block hand-off [ev: retro campaign7-report-module], `$KIT/toolbelt/triage-console.sh` (own-module exception triage over station console logs; three attribution channels C1/C2/C3; exit 0 clean / 1 rows / 3 usage; run after reload — see step 6) [ev: retro campaign8-triage-console].
+6. After a reload (rt or full station restart), triage the console: `toolbelt/triage-console.sh --package com.vendor <station-dir>/console*.txt` surfaces own-module exceptions and load-time failures invisible to C1/C2 alone (three channels: own frame, own logger tag, [sys]/[sys.xml] load-fail shape); exit 1 = rows found — investigate before calling the deploy clean. [ev: retro campaign8-triage-console]
+7. Retro + close (HARD gate): append PROVEN lessons as PROPOSED deltas (`$KIT/retros/`, propose-never-apply) AND update `$KIT/BUILD-STATE.md` (envelope + `retro_pending`) — or declare `Retro: none (trivial: <reason>)`. This is how the kit grows and stays continuous.
 
 ## Output Contract
 

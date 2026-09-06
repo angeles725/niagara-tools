@@ -90,6 +90,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - folded as code: build-n4-module-kit/skill/SKILL.md (tracked launcher) + scripts/install-skill.sh. [ev: retro campaign6-close]
 - folded as code: toolbelt/scaffold-module.sh (module skeleton from fixtures/MinimalPan). [ev: retro campaign7-scaffold]
 - folded as code: toolbelt/schema-risk.sh (two-snapshot slot diff; verdict=SAFE/LOSSY/OUTAGE). [ev: retro schema-risk]
+- folded as code: toolbelt/triage-console.sh (own-module exception triage over station consoles; three attribution channels C1/C2/C3; console triage after every reload). [ev: corpus B800] [ev: retro campaign8-triage-console]
 - Code-folded retros need a "folded as code: <script> [ev: retro <token>]" note in a prose kit file to be credited by the citation audit. [ev: retro research-fold]
 
 ## Multi-session coordination

@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: true                  # campaign8-lint-delays filed (pending); 4 proposed deltas
-last_commit: Campaign 8 PR1 feat/c8-lint-delays (D2c fixup + LD11 cherry-pick)
-last_session: 2026-09-05 · Campaign 8 PR1 complete: lint-delays.sh (D2b+D2c+D9b), LD1-LD11 (191/191 green). D2c: find_guard() backward scan recognises same-expression positivity guards; comment-strip prevents false matches; expression-specific (MisGuarded stays FAIL). Fixed c66e412 exits 0 (BDefrostController D2b, BEvaporatorUnit D2c). Pre-fix 4f5f1c7 exits 1 ({556,566,620,664}).
+retro_pending: true                  # campaign8-lint-delays (pending); campaign8-triage-console (pending); 4+4 proposed deltas
+last_commit: Campaign 8 PR2 feat/c8-triage-console — triage-console.sh station log triage
+last_session: 2026-09-05 · Campaign 8 PR2 complete: triage-console.sh (C1/C2/C3), TR1-TR9 green (200/200 bats). Key: three channels required (C3 catches load-fail with zero own frames — CERT-live PANCCADIA). LC_ALL=C + ASCII prefix for Spanish/mojibake consoles. Bare exception class (NotRunningException) fix added. REFLOW cert-chain caught by C2 ([loader] tag not in denylist). Smokes: PANCCADIA 5x time<=0 + 6x NotRunning + [sys]/[sys.xml] load-fail; MX60 9x modifyThread; REFLOW 12x modifyThread + 7x cert-chain.
 <!-- /build-state.v1 -->

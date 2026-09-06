@@ -64,3 +64,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-05-campaign7-report-module.md | kit | 2026-09-05 | folded | 3 |
 | 2026-09-05-campaign7-close-process-meta-lessons.md | kit | 2026-09-05 | folded | 5 |
 | 2026-09-05-campaign8-lint-delays.md | kit | 2026-09-05 | pending | 4 | <!-- D2b+D2c+D9b -->
+| 2026-09-05-campaign8-triage-console.md | kit | 2026-09-05 | pending | 4 | <!-- D3 locale/encoding, bare-exception, digit-norm, C3 third-channel -->

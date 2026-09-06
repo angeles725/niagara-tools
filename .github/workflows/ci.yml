@@ -127,3 +127,8 @@ jobs:
         run: |
           # PL1 fixture: Rc=Ri=Rv=2/3, one agreeing numeric aspect-ratio -> PASS (exit 0).
           bash build-n4-module-kit/toolbelt/verify-module.sh --plano tests/fixtures/plano/ok/index.html
+
+      - name: triage-console basic smoke (Campaign 8 PR2)
+        run: |
+          bash build-n4-module-kit/toolbelt/triage-console.sh --package com.angeles \
+            tests/fixtures/triage-console/console.txt | grep -q 'IllegalArgumentException'
