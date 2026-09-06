@@ -148,17 +148,20 @@ JAVA
 }
 
 # --- EW10: EXACT contract at a109249 (C9_CLIENT_ROOT): the only complex OPERATOR slot without an action is BRoomPanel.setpoint ---
-@test "EW10: real trees exact — DashboardPan-rt exactly 1 WARN (BRoomPanel.setpoint), CompPan-rt 0 (class-level @NiagaraAction exemption), ColdRoomPan-rt 0, DashboardPan-ux 0" {
+@test "EW10: real trees exact — DashboardPan-rt exactly 1 WARN (BRoomPanel.setpoint), CompPan-rt 1 (faultReset — per-slot S22: no action writes it), ColdRoomPan-rt 0, DashboardPan-ux 0" {
   [ -d "$ROOT/Dashboard" ] && [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$EW" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
   [[ "$output" == *"BRoomPanel"* ]] && [[ "$output" == *"setpoint"* ]]
-  # CompPan-rt is 0 because BCompressorControl declares a class-level @NiagaraAction (the HIDDEN
-  # powerOnExpired/tick), so the coarse class-level exemption applies — NOT because faultReset itself
-  # has a writing action (faultReset is a BStatusBoolean SUMMARY|OPERATOR complex slot with none).
-  # A per-slot writing-action rule is C10 seed S22.
-  for r in Compresores/CompPan/CompPan-rt Paccadia/ColdRoomPan/ColdRoomPan-rt Dashboard/DashboardPan/DashboardPan-ux; do
+  # S22 (C10): per-slot exemption. CompPan-rt is 1 — faultReset (BStatusBoolean SUMMARY|OPERATOR) has NO
+  # @NiagaraAction that writes it (the class only has HIDDEN tick/powerOnExpired + ackAlarm, none writing
+  # faultReset). ColdRoomPan-rt/DashboardPan-ux stay 0.
+  run "$EW" "$ROOT/Compresores/CompPan/CompPan-rt/src"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"faultReset"* ]]
+  for r in Paccadia/ColdRoomPan/ColdRoomPan-rt Dashboard/DashboardPan/DashboardPan-ux; do
     run "$EW" "$ROOT/$r/src"
     [ "$status" -eq 0 ]
     [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
@@ -175,4 +178,66 @@ JAVA
   run "$EW" "$N"
   [ "$status" -eq 3 ]
   [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
+}
+
+# ===========================================================================
+# S22 (C10 lint-precision RED): the @NiagaraAction exemption must be PER-SLOT — a
+# complex OPERATOR slot is exempt only when SOME @NiagaraAction body WRITES THAT
+# slot (setX / X.set), not merely because the class exposes ANY action. Real gap
+# on df8c7ec: BCompressorControl.faultReset (BStatusBoolean SUMMARY|OPERATOR) is
+# exempted only because the class has HIDDEN tick/powerOnExpired/ackAlarm actions,
+# none of which writes faultReset. RED-for-the-right-reason: EW-s22-neg + the
+# CompPan-rt-1 smoke FAIL on df8c7ec (the class-level exemption suppresses them).
+# ---------------------------------------------------------------------------
+@test "EW-s22-pos: a complex OPERATOR slot whose value an @NiagaraAction body WRITES is exempt (no WARN)" {
+  D="$BATS_TEST_TMPDIR/s22pos"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/BWithWriter.java" <<'JAVA'
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraAction(name="bumpSetpoint")
+public class BWithWriter extends BComponent {
+  public void doBumpSetpoint() { setSetpoint(new BStatusNumeric(getSetpoint().getValue()+1)); } // writes THAT slot
+}
+JAVA
+  run "$EW" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}
+
+@test "EW-s22-neg: a complex OPERATOR slot with an @NiagaraAction that does NOT write it WARNs (per-slot, not class-level)" {
+  D="$BATS_TEST_TMPDIR/s22neg"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/BUnrelatedAction.java" <<'JAVA'
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraAction(name="tick", flags=Flags.HIDDEN)
+@NiagaraAction(name="ackAlarm")
+public class BUnrelatedAction extends BComponent {
+  public void doTick() { /* housekeeping — does not write faultReset */ }
+  public void doAckAlarm() { /* clears an alarm — does not write faultReset */ }
+}
+JAVA
+  run "$EW" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
+}
+
+
+@test "EW-s22-neg2: an @NiagaraAction whose do-body writes a DIFFERENT slot does NOT exempt the OPERATOR slot (B831-G1 doAckAlarm shape)" {
+  D="$BATS_TEST_TMPDIR/s22neg2"; mkdir -p "$D/com/x"
+  cat > "$D/com/x/BAckWriter.java" <<'JAVA'
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="alarmAck",   type="BStatusBoolean", flags=Flags.SUMMARY|Flags.READONLY)
+@NiagaraAction(name="ackAlarm")
+public class BAckWriter extends BComponent {
+  // action→do<Action>: ackAlarm's write lives in doAckAlarm, but it writes alarmAck, NOT faultReset.
+  public void doAckAlarm() { setAlarmAck(new BStatusBoolean(true)); }
+}
+JAVA
+  run "$EW" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
 }
