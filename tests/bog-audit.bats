@@ -268,3 +268,9 @@ XML
   # Exit must be 1 (at least one FAIL)
   [ "$status" -eq 1 ]
 }
+
+@test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
+  # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
+  grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"
+  grep -qF 'LINK_TARGET' "$KIT/toolbelt/bog-audit.sh"
+}

@@ -119,16 +119,28 @@ fi
 # ---------------------------------------------------------------------------
 _matrix_slots=""
 if [ -f "$MATRIX" ]; then
-    # Extract first pipe-delimited cell from |..| lines; keep only camelCase slot names.
-    # - Separator rows: first cell is only [-:] chars => filtered by /^[a-z]/ gate.
-    # - Header rows: first cell starts with uppercase (e.g. "Slot", "Writable Slot") => filtered.
-    # - Comment lines: do not start with | => not matched.
+    # Extract slot name from the first pipe-delimited cell of every |..| table row.
+    # The slot name is the FIRST backtick-quoted identifier in the cell, or the bare word
+    # if no backticks are present.  Only pure Java identifiers (^[a-z][A-Za-z0-9]+?$)
+    # are emitted; this filters out header rows ("Slot", "Writable Slot"), separator rows
+    # (---), comment lines (not |..| lines), and descriptive prose cells like
+    # "coil sensor" or "both suction sensors = NaN invalid".
+    # Accepts ≥ 4 columns; matches on slot-name column only (D16).
     # shellcheck disable=SC2016
     _matrix_slots=$(awk -F'|' '
         /^\|/ {
             cell = $2
-            gsub(/^[[:space:]`"]+|[[:space:]`"]+$/, "", cell)
-            if (cell ~ /^[a-z]/) print cell
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", cell)
+            # If first char is a backtick: extract the content of the first `...` pair.
+            if (substr(cell,1,1) == "`") {
+                sub(/^`/, "", cell)
+                sub(/`.*/, "", cell)
+            } else {
+                # No backtick: take only the leading word (stop at space, backtick, or punctuation).
+                sub(/[[:space:]`\/(].*$/, "", cell)
+            }
+            # Keep only pure Java identifiers: starts with lowercase letter, alphanumeric only.
+            if (cell ~ /^[a-z][A-Za-z0-9]*$/) print cell
         }
     ' "$MATRIX" 2>/dev/null | sort -u)
 fi
@@ -147,83 +159,131 @@ if [ -n "$BOG_FILE" ]; then
 
     # Extract targetSlotName of links: SOURCE is a Dashboard/RoomPanel component,
     # TARGET is an own-module component. Those target slots need matrix rows.
+    # Reuses the same bog grammar (line-based attribute regex) as bog-audit.sh (D16).
     _bog_slots=$(BOG_FILE="$BOG_FILE" MODULE_ROOT="$MODULE_ROOT" python3 <<'PYEOF' 2>/dev/null
 """
 lint-write-path --bog helper: extract link target slots from dashboard into own-module components.
-Reuses the same bog grammar (attribute regex) as bog-audit.sh (D16 — no second parser).
+Line-based bog grammar — same approach as bog-audit.sh (D16 — no second parser).
 """
 import sys, os, re, zipfile
-from xml.etree import ElementTree as ET
 
-bog_file  = os.environ.get('BOG_FILE', '')
-mod_root  = os.environ.get('MODULE_ROOT', '').rstrip('/')
+bog_file = os.environ.get('BOG_FILE', '')
+mod_root = os.environ.get('MODULE_ROOT', '').rstrip('/')
 
-# ---- load bog XML ----
-xml_content = None
+# fallback own-module name from directory (strip -rt/-wb/-ux profile suffix)
+own_mod = re.sub(r'-(rt|wb|ux)$', '', os.path.basename(mod_root))
+
+# ---- load bog XML as lines ----
 try:
     if zipfile.is_zipfile(bog_file):
         with zipfile.ZipFile(bog_file) as z:
-            for name in z.namelist():
-                if name == 'file.xml' or name.endswith('/file.xml'):
-                    xml_content = z.read(name).decode('utf-8', errors='replace')
+            for entry in z.namelist():
+                if entry == 'file.xml' or entry.endswith('/file.xml'):
+                    lines = z.read(entry).decode('utf-8', errors='replace').splitlines()
                     break
+            else:
+                sys.exit(0)
     else:
-        xml_content = open(bog_file, encoding='utf-8', errors='replace').read()
+        with open(bog_file, encoding='utf-8', errors='replace') as fh:
+            lines = fh.read().splitlines()
 except Exception:
     sys.exit(0)
 
-if not xml_content:
-    sys.exit(0)
+TAG_RE = re.compile(r'<(/?)([A-Za-z]\w*)\b([^>]*?)(/?)>')
 
-def ga(text, name):
-    """Get XML attribute — same helper as bog-audit.py."""
-    m = re.search(rf"\b{re.escape(name)}='([^']*)'", text)
+def ga(full, name):
+    """Get XML attribute — same helper as bog-audit.sh embedded engine."""
+    m = re.search(rf"\b{re.escape(name)}='([^']*)'", full)
     if m: return m.group(1)
-    m = re.search(rf'\b{re.escape(name)}="([^"]*)"', text)
+    m = re.search(rf'\b{re.escape(name)}="([^"]*)"', full)
     return m.group(1) if m else None
 
-# ---- find own-module name from module-include.xml ----
-own_mod = None
-import glob
-for xf in sorted(glob.glob(os.path.join(mod_root, '**', 'module-include.xml'), recursive=True)):
-    if any(part.startswith('.') for part in xf.split(os.sep)):
-        continue
-    try:
-        tree = ET.parse(xf)
-        name_attr = (tree.getroot().get('name') or
-                     tree.getroot().get('moduleName'))
-        if name_attr:
-            own_mod = name_attr
-            break
-    except Exception:
-        continue
-if not own_mod:
-    # fallback: strip profile suffix from directory name
-    own_mod = re.sub(r'-(rt|wb|ux)$', '', os.path.basename(mod_root))
-
-# ---- build handle->module map ----
-comp_module = {}  # handle -> module name
-for m in re.finditer(r'<[^>]+>', xml_content):
-    tag = m.group(0)
-    h   = ga(tag, 'handle')
-    mod = ga(tag, 'module')
-    if h and mod:
-        comp_module[h] = mod
-
-# ---- collect targetSlotNames of dashboard->own-module links ----
+# ---- line-based parse (same structure as bog-audit.sh) ----
+prefix_map   = {}   # pfx -> module_name
+handle_mod   = {}   # handle -> module_name
+# Stack: every non-self-closing <p> is pushed (with module='' when unknown)
+# so that </p> pops always balance.
+stack        = []   # list of dicts: {'mod': str, 'h': str|None}
+in_link      = False
+link_buf     = {}
 dashboard_re = re.compile(r'Dashboard|RoomPanel|DashPanel', re.I)
 target_slots = set()
-for m in re.finditer(r'<link\b[^>]*/?\s*>', xml_content, re.DOTALL):
-    tag      = m.group(0)
-    src_h    = ga(tag, 'sourceOrd')
-    tgt_h    = ga(tag, 'targetOrd')
-    tgt_slot = ga(tag, 'targetSlotName')
-    if not (src_h and tgt_h and tgt_slot):
+
+for raw in lines:
+    line = raw.strip()
+    if not line:
         continue
-    src_mod = comp_module.get(src_h, '')
-    tgt_mod = comp_module.get(tgt_h, '')
-    if dashboard_re.search(src_mod) and tgt_mod == own_mod:
-        target_slots.add(tgt_slot)
+    for m in TAG_RE.finditer(line):
+        is_closing = bool(m.group(1))
+        tag_name   = m.group(2)
+        is_self    = bool(m.group(4)) or m.group(0).endswith('/>')
+        full       = m.group(0)
+
+        # ---- module prefix registration ----
+        m_attr = ga(full, 'm') or ''
+        if m_attr:
+            for part in m_attr.split():
+                if '=' in part:
+                    pk, mv = part.split('=', 1)
+                    prefix_map[pk] = mv
+
+        # ---- closing tag: pop stack ----
+        if is_closing:
+            if tag_name in ('p', 'a') and stack:
+                popped = stack.pop()
+                if popped.get('link'):
+                    # finalize link
+                    src_h    = link_buf.get('src_h')
+                    tgt_slot = link_buf.get('tgt_slot')
+                    if src_h and tgt_slot:
+                        src_mod     = handle_mod.get(src_h, '')
+                        # nearest enclosing component = target module
+                        tgt_mod = next(
+                            (fr['mod'] for fr in reversed(stack) if fr.get('mod')), '')
+                        if dashboard_re.search(src_mod) and tgt_mod == own_mod:
+                            target_slots.add(tgt_slot)
+                    in_link  = False
+                    link_buf = {}
+            continue
+
+        if tag_name not in ('p', 'a'):
+            continue
+
+        # ---- action <a> ----
+        if tag_name == 'a':
+            continue
+
+        n      = ga(full, 'n') or ''
+        h      = ga(full, 'h')
+        t      = ga(full, 't') or ''
+        v      = ga(full, 'v')
+
+        # ---- link child elements ----
+        if in_link and is_self:
+            if n == 'sourceOrd' and v and v.startswith('h:'):
+                link_buf['src_h'] = v[2:]
+            elif n == 'sourceSlotName' and v:
+                link_buf['src_slot'] = v
+            elif n == 'targetSlotName' and v:
+                link_buf['tgt_slot'] = v
+            continue
+
+        # ---- link wrapper <p t='b:Link'> ----
+        if t == 'b:Link' and not is_self:
+            in_link  = True
+            link_buf = {'src_h': None, 'src_slot': None, 'tgt_slot': None}
+            stack.append({'mod': '', 'h': None, 'link': True})
+            continue
+
+        # ---- component or property node ----
+        if not is_self:
+            mod = ''
+            if h is not None:
+                pfx = t.split(':')[0] if ':' in t else ''
+                mod = prefix_map.get(pfx, '')
+                if mod:
+                    handle_mod[h] = mod
+            stack.append({'mod': mod, 'h': h, 'link': False})
 
 for s in sorted(target_slots):
     print(s)

@@ -101,3 +101,18 @@ link-TARGET side (which the next source propagation overwrites, B816 §816.2), d
 **Overlap caveat:** if the written slot is a link TARGET (driven BY a link, not a source), the external write is
 EPHEMERAL — the next propagation overwrites it (B816 §816.2). Confirm write-source vs write-target before relying on
 the write sticking. `[ev: corpus B816]`
+
+## Write-path test matrix `[ev: corpus B816]`
+Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
+
+| Writable slot | Writer | Timing | Invariant | Test |
+|---|---|---|---|---|
+| `setpoint` | Dashboard / Workbench | mid-cycle (latched) | cv in new band → HOLD, no chatter; crosses → flip exactly once; INVALID status → fail-safe HOLD | `w1_setpointChangeWhileLatched` |
+| `hoaMode` | Dashboard operator | mid-cycle | HAND→ON, OFF→OFF, AUTO→autoValue | `w3_hoaFlipMidCycle` |
+| `defrostInterval` | Workbench | mid-cycle, shortened → overdue | new interval < elapsed → `1L`, never `Clock.schedule(0)` | `w6_intervalWriteMidCycleOverdue` |
+| a LINK-TARGET slot | Dashboard | any | write is EPHEMERAL (overwritten next propagation) — UI must not imply it stuck | `TODO(test)` |
+| `resistanceMode` (HOA) | Dashboard operator | mid-defrost | OFF LOCKS OUT the heater even during the defrost sequence (OFF > sequence > HAND > AUTO); re-applies after exitDefrost | `❌ C9` |
+
+(All rows above credited to `[ev: corpus B816]` — the section header token covers the table.)
+
+**Coverage legend for the Test cell:** a real `srcTest/` test name (lint checks it exists); `🔶` an earlier-campaign test; `❌ C9` for an invariant that needs the rt-lifecycle seam (issue #815 — `changed()`-ordering, minOff/minOn, seedRestart). `[ev: corpus B816]`
