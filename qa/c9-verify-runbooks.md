@@ -186,8 +186,8 @@ local working copy `$CLI` (stale @4f5f1c7, carries uncommitted docs).
 - V5: `v Compresores/build.gradle.kts` → **2.2.0**.
 - Harness-only: CPB5 `sourceState` on the routed record → H2. V6/V7.
 
-## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **269be48** (path + root + EW11 + exact EW10 re-issues) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
-- V2: `git diff 269be48 HEAD -- tests/ext-writable-shape.bats` → empty.
+## PR10 — `feat/c9-ext-writable-shape` (kit) · RED `qa/c9-ext-writable-shape` **213647d** (EW10 comment: CompPan-rt 0 = class-level exemption, not a faultReset action; C10 seed S22) · `tests/ext-writable-shape.bats` · tool `toolbelt/lint-ext-writable-shape.sh` · worktree `c9-ext-writable-shape`
+- V2: `git diff 213647d HEAD -- tests/ext-writable-shape.bats` → empty.
 - V3: kit common gate; `bats tests/ext-writable-shape.bats` → **11/11** EW1-EW11 (EW10 is EXACT at a109249: DashboardPan-rt 1 WARN `BRoomPanel.setpoint`, CompPan-rt 0 —
   `faultReset` has an action —, ColdRoomPan-rt 0, DashboardPan-ux 0; the client tree is present, a `skip` = REJECT).
 - Exit taxonomy: no arg → 3 (EW9); empty/no-Java dir → 3 + `ERROR` row (EW11); `--strict` with a WARN → 1 (EW7); WARN alone → 0.
