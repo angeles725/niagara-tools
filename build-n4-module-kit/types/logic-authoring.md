@@ -61,7 +61,7 @@
 
 ## Slot types for externally written values `[ev: corpus B823]`
 When a value is written by an EXTERNAL client (oBIX/write-server, the -ux servlet, a fox/BajaScript client), the slot
-TYPE decides whether the write is even possible and whether it lands safely. Pick by value class:
+TYPE decides whether the write is even possible and whether it lands safely. Pick by value class: `[ev: corpus B823]`
 
 | Value class | Recommended slot | Flags | How it is written externally | Audit path | Anti-pattern |
 |---|---|---|---|---|---|
