@@ -217,14 +217,14 @@ python3 invocation that already costs ~0.1 s.
 
 **RED**: `qa/c8-write-path` (WP1–WP6) — re-read tip at apply | **Gate**: R19.1–R19.6, CD4/CD5/CD6
 
-- [ ] 19.1 Create `qa/c8-write-path`; write failing bats: WP1 (covered slot → exit 0), WP2 (9 uncovered → FAIL), WP3 (`--bog` adds bog-linked slots → FAIL if uncovered), WP4 (comment-only mention not a valid row), WP5 (named mutation: remove row → FAIL); record tip SHA.
-- [ ] 19.2 Write `toolbelt/lint-write-path.sh <module-root> [--bog <config.bog>]`: scan `@NiagaraProperty` with `Flags.OPERATOR`; require row in `docs/write-path-matrix.md`; `--bog` adds link-traced dashboard slots; `FAIL  lint-write-path  <module>  slot <name>: no matrix row`; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/1/3.
-- [ ] 19.3 Extend `types/logic.md` §write-path and `types/logic-authoring.md` §write-path-matrix: LINK_TARGET ephemeral writes, callback interleave, matrix template; every new line `[ev: corpus B816]`.
-- [ ] 19.4 CHECK12 guard: if PR10 not yet merged, add CHECK12 to `bog-audit.sh` here; if merged, add bats pin asserting CHECK12 present (idempotent guard — no re-add).
-- [ ] 19.5 **Named mutation**: remove one matrix row for a covered OPERATOR slot → that slot appears in FAIL output (R19.6). Record in PR body.
-- [ ] 19.6 Real smoke: `lint-write-path.sh` on client module (CompPan or ColdRoomPan) → FAIL for 9 uncovered slots, exits 1; covered-only fixture → exits 0. Paste output.
-- [ ] 19.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
-- [ ] 19.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
+- [x] 19.1 Create `qa/c8-write-path`; write failing bats: WP1 (covered slot → exit 0), WP2 (9 uncovered → FAIL), WP3 (`--bog` adds bog-linked slots → FAIL if uncovered), WP4 (comment-only mention not a valid row), WP5 (named mutation: remove row → FAIL); record tip SHA.
+- [x] 19.2 Write `toolbelt/lint-write-path.sh <module-root> [--bog <config.bog>]`: scan `@NiagaraProperty` with `Flags.OPERATOR`; require row in `docs/write-path-matrix.md`; `--bog` adds link-traced dashboard slots; `FAIL  lint-write-path  <module>  slot <name>: no matrix row`; `set -u`; VCS-free; `shellcheck 0.10.0` clean; exits 0/1/3.
+- [x] 19.3 Extend `types/logic.md` §write-path and `types/logic-authoring.md` §write-path-matrix: LINK_TARGET ephemeral writes, callback interleave, matrix template; every new line `[ev: corpus B816]`.
+- [x] 19.4 CHECK12 guard: if PR10 not yet merged, add CHECK12 to `bog-audit.sh` here; if merged, add bats pin asserting CHECK12 present (idempotent guard — no re-add).
+- [x] 19.5 **Named mutation**: remove one matrix row for a covered OPERATOR slot → that slot appears in FAIL output (R19.6). Record in PR body.
+- [x] 19.6 Real smoke: `lint-write-path.sh` on client module (CompPan or ColdRoomPan) → FAIL for 9 uncovered slots, exits 1; covered-only fixture → exits 0. Paste output.
+- [x] 19.7 Guards: bats all green; `shellcheck` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats` L4/L5.
+- [x] 19.8 Retro + INDEX row + `BUILD-STATE.md` envelope (CD1); update openspec `apply-progress.md`.
 - [ ] **[lead]** WP1–WP6 green; merge ff-only; `install-skill.sh --force` (SKILL.md changed); ledger settle `--max-changed-lines 250`.
 
 ---
