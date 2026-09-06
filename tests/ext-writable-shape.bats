@@ -23,7 +23,7 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   EW="$KIT/toolbelt/lint-ext-writable-shape.sh"
   SRC="$BATS_TEST_TMPDIR/src"; mkdir -p "$SRC/com/x"
-  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-a109249}"   # RP1: blessed read tree, never the local working copy
+  ROOT="${C9_CLIENT_ROOT:-/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato-worktrees/main-ff1b659}"   # RP1: blessed read tree, never the local working copy
 }
 only() { rm -rf "$SRC"; mkdir -p "$SRC/com/x"; cat > "$SRC/com/x/$1"; }
 
