@@ -28,7 +28,7 @@ Chain strategy: stacked-to-main
 | Unit | PR | Goal | Est. lines | Focused test | Rollback |
 |------|----|------|-----------|-------------|---------|
 | 1 | PR1 | S20 rotation: `rotationInterval`/`rotationMode` + step 2b/3b | ~300 | `CompressorRotationTest` 17 pins | `rotationInterval=0` byte-identical — safe feature-flag |
-| 2 | PR2 | `lint-demand-scope.sh` + DS1-DS7 + DS-smoke | ~200 | `bats tests/lint-demand-scope.bats` | new paths; `git revert` |
+| 2 | PR2 | `lint-demand-scope.sh` + DS1-DS7 + DS-smoke | ~200 | `bats tests/demand-in-scope.bats` | new paths; `git revert` |
 | 3 | PR3 | `lint-silent-protection.sh` + SP1-SP8 + SP-smoke | ~220 | `bats tests/lint-silent-protection.bats` | new paths; `git revert` |
 | 4 | PR4 | `buildServer(cfg,deps)` seam + `/config/login` token gate | ~280 | `node:test` S12A-1..7 | revert seam; JWT-bearer path intact |
 | 5 | PR5 | `change_log` schema extension + failure spool | ~220 | `node:test` audit pins | additive columns; spool append-only |
@@ -89,12 +89,12 @@ Chain strategy: stacked-to-main
 - [ ] 2.1 Re-read RED tip `d0f5942` (K13): confirm row column order `WARN  lint-demand-scope  <file>:<line>  <reason>` (D2a `STATUS check subject detail`); confirm DS2 = WARN row + exit 0 NOT exit 1 (D2b); confirm CLI shape `[--strict] <java-src-dir>` (D2, lint-delays shape); confirm inline heredoc fixtures — no `tests/fixtures/` dir.
 - [ ] 2.2 Cherry-pick / merge RED branch into `feat/c9-demand-scope` as commit 1.
 - [ ] 2.3 Write `toolbelt/lint-demand-scope.sh`: two-pass grep/awk (Pass 1 control-decision methods, Pass 2 demand-shaped inputs in scope); `LC_ALL=C`; `set -u`; dot-dirs pruned (D9b/CD9); exits 0 (WARN-only or clean) / 1 (FAIL under `--strict`) / 3 (usage or no source, K20 disjoint); no `eval`; `shellcheck 0.10.0` clean (CD6).
-- [ ] 2.4 Write `tests/lint-demand-scope.bats` (DS1-DS7 + DS-smoke verbatim from RED; inline heredoc fixtures written into `$BATS_TEST_TMPDIR`; D2 shape).
+- [ ] 2.4 Write `tests/demand-in-scope.bats` (DS1-DS7 + DS-smoke verbatim from RED; inline heredoc fixtures written into `$BATS_TEST_TMPDIR`; D2 shape).
 - [ ] 2.5 Add K19 routing: one line in `BUILD-LOOP.md` §5 + one line in `skill/SKILL.md` for `lint-demand-scope.sh [ev: retro c9-demand-scope]` (CD5, R2.7).
 - [ ] 2.6 Extend `toolbelt/report-module.sh`: append member row for `lint-demand-scope`; a FAIL from this lint surfaces as aggregate FAIL (R2.8).
 - [ ] 2.7 **Named mutation** (OBSERVED): drop the field-scan demand-input check → a class-field demand input stops counting; DS2 flips PASS→FAIL. Record verbatim output (R2.9).
 - [ ] 2.8 DS-smoke (CD10): `lint-demand-scope.sh` on ColdRoomPan-rt · CompPan-rt · DashboardPan-rt · DashboardPan-ux at the chain's client tip — exact count + at minimum `CompressorControl.step` flagged as named subject + absence assertions (no false positives on guardian-exempt paths); no dot-dir traversed.
-- [ ] 2.9 Guards: `bats tests/lint-demand-scope.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers (K11); rebase onto kit main before QA ping; verify `git log -1` before settle.
+- [ ] 2.9 Guards: `bats tests/demand-in-scope.bats` all green; `shellcheck 0.10.0` exit 0; `sweep-build-state.sh`; `sweep-fold-audit.sh --strict`; `kit-links.bats`; 0 attribution trailers (K11); rebase onto kit main before QA ping; verify `git log -1` before settle.
 - [ ] 2.10 Retro file + `retros/INDEX.md` row + `BUILD-STATE.md` self-envelope in same push range (CD1).
 - [ ] **[lead]** DS1-DS7 + DS-smoke green; OBSERVED DS2 flip recorded in PR body; K19 routing in both `BUILD-LOOP.md` + `skill/SKILL.md`; `kit-links.bats` green; merge ff-only; ledger acquire + settle `--max-changed-lines 200`.
 
@@ -381,3 +381,5 @@ Chain strategy: stacked-to-main
 | K22 idempotent guard | PR12, PR13 | `METHODOLOGY.md:86` already has K22; PR12 adds presence guard; PR13 close bats verifies exactly one occurrence. |
 | `/alarms/ack` requireSession | PR6b | Additive verify pin: a request to `/alarms/ack` without a config session must return 403. |
 | Harness-only never green from WSL | PR8 (CRA1/2/3), PR9 (CPB5), PR6b (AuditEvent + real lockout) | These pins are `skip`-gated in WSL; they require Windows `niagaraTest`; a SKIP is not a PASS. |
+
+> Pin-name note (RED wins, per QA 2026-09-06): the field-scan mutation is **DS3** (not DS2), the reseed-drop mutation is **CPB_W4**, the `@NiagaraAction` exemption is **EW3**; the S7 bats file is `tests/demand-in-scope.bats`; the client version key is `defaultModuleVersion(...)` in the GROUP `build.gradle.kts`. QA's executable mutation table (`qa/c9-verify-runbooks` a406f6e, `c9-mutations.tsv`) names the authoritative pins. The lint REDs' real-tree smoke root is `C9_CLIENT_ROOT` (default: the a109249 worktree), never the stale `Cliente/Leon-Guanjuato` checkout.
