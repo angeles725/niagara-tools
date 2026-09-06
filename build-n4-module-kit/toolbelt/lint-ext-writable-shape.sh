@@ -3,7 +3,7 @@
 # Usage: lint-ext-writable-shape.sh [--strict] <java-src-dir>
 #
 # A COMPLEX property (BStatusNumeric / BStatusBoolean / BStatusEnum) with Flags.OPERATOR and
-# NO @NiagaraAction on its declaring class is a hazardous external-write target:
+# NO writing action on its declaring class is a hazardous external-write target:
 #   - a conformant oBIX PUT is rejected ("Cannot translate" — the slot is not BIObixWritable)
 #   - a hand-crafted wrapped-<obj> PUT silently writes DEFAULT (0.0 for numeric) on a 200 OK
 #     when the "value" child is omitted (the live silent-zero hazard, B823 §823.2)
@@ -11,15 +11,15 @@
 #   (a) write the oBIX child-leaf bare <real> at …/<slot>/value (B826-G2, LIVE-CONFIRMED)
 #   (b) add an OPERATOR @NiagaraAction that writes the slot (B822 additive-action doctrine)
 #
-# Exemption rule: a class that already exposes ANY @NiagaraAction provides at least one
-# intentional external-action surface; the developer has thought about the action model.
-# Accepted writing-action name patterns (EW3 is the only positive pin; B822):
-#   set<Slot>  |  apply<Slot>  |  <slot>Cmd  (case-insensitive on the first letter)
-# A class that exposes NO @NiagaraAction at all is the WARN case.
-#
-# Plain types (double, boolean, BRelTime, enum ordinal, String) are advertised writable="true"
-# by the oBIX encoder — they accept a bare <real>/<bool> and need no child-leaf workaround.
-# Only BStatus(Numeric|Boolean|Enum) (complex BStruct subtypes) are in scope here.
+# Exemption rule (S22 / C10 D2b — per-slot writing-action check):
+#   A slot X is exempt when:
+#     (1) Some @NiagaraAction's do<Action>() body writes X via setX(, getX().setValue(, or
+#         .set(X, — scoped only to do<Action> bodies (brace_depth>=2 guard); execute(),
+#         changed(), and slotomatic-generated setters are excluded by construction.
+#     (2) An @NiagaraAction name directly encodes the write: name matches set<X>/apply<X>/<x>Cmd
+#         (B822 naming convention; EW3 positive pin).
+#   Replacement for the C9 class-level has_action: an @NiagaraAction that does not write X
+#   does NOT exempt X. [ev: corpus B831 §831.2; retro campaign10-ext-writable-per-slot]
 #
 # Row:  WARN  ext-writable-shape  <file>:<line>  <slot>: OPERATOR <type> with no writing action
 #             — external oBIX write must use the child leaf …/<slot>/value (bare <real>, B826)
@@ -65,54 +65,139 @@ while IFS= read -r f; do
     if (NR == 0) exit
 
     # -------------------------------------------------------------------------
-    # Pass 1: collect @NiagaraAction names (paren-balanced join, same technique
-    # as lint-silent-protection.sh pass0 and bog-audit.sh annotation scanner).
-    # We only need to know IF the file has any action (class-level action check).
-    # Presence of ANY @NiagaraAction — including HIDDEN callbacks — means the
-    # developer has thought about the action surface for this class; the complex
-    # OPERATOR slots are considered intentionally handled (B822 additive doctrine).
+    # Comment strip (D6): blank // and /* */ content; line numbers preserved.
+    # Runs over lines[] before every pass. A commented @NiagaraAction or
+    # @NiagaraProperty must NOT trigger any pattern. [ev: retro campaign9-close lesson 21]
     # -------------------------------------------------------------------------
-    has_action = 0
-    in_ann = 0; buf = ""; depth = 0; prop_first = 0
-
+    in_bc = 0
     for (i = 1; i <= NR; i++) {
-      ln = lines[i]
+      ln = lines[i]; out = ""; j = 1
+      while (j <= length(ln)) {
+        if (in_bc) {
+          if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 }
+          else j++
+        } else {
+          c2 = substr(ln, j, 2)
+          if (c2 == "/*") { in_bc = 1; j += 2 }
+          else if (c2 == "//") break
+          else { out = out substr(ln, j, 1); j++ }
+        }
+      }
+      slines[i] = out
+    }
 
+    # -------------------------------------------------------------------------
+    # Pass 1: harvest @NiagaraAction names (paren-balanced join, ALL actions).
+    # Replaces the C9 class-level has_action flag.
+    # action_names{x}           — raw annotation name, for name-pattern exemption (EW3).
+    # do_methods{"do"+cap1(x)}  — handler method names, for body-scan scope filter.
+    # Handles single-line and multi-line annotation forms. [ev: D2b step 1]
+    # [ev: client BCompressorControl.java:435-444 @ ff1b659]
+    # -------------------------------------------------------------------------
+    in_ann = 0; buf = ""; depth = 0
+    for (i = 1; i <= NR; i++) {
+      ln = slines[i]
       if (!in_ann) {
         if (index(ln, "@NiagaraAction") > 0) {
-          in_ann = 1; buf = ln; depth = 0; prop_first = 1
-          # count parens on this first line
-          tmp = ln
-          for (ci = 1; ci <= length(tmp); ci++) {
-            c = substr(tmp, ci, 1)
+          in_ann = 1; buf = ln; depth = 0
+          for (ci = 1; ci <= length(ln); ci++) {
+            c = substr(ln, ci, 1)
             if (c == "(") depth++
-            else if (c == ")") { depth--; if (depth <= 0 && index(buf, "(") > 0) { in_ann = 0; has_action = 1; break } }
+            else if (c == ")") {
+              depth--
+              if (depth <= 0 && index(buf, "(") > 0) {
+                _harvest_action(buf); in_ann = 0; buf = ""; break
+              }
+            }
           }
-          if (depth <= 0 && in_ann) { in_ann = 0; has_action = 1 }
+          if (in_ann && depth <= 0) { _harvest_action(buf); in_ann = 0; buf = "" }
         }
       } else {
         buf = buf " " ln
         for (ci = 1; ci <= length(ln); ci++) {
           c = substr(ln, ci, 1)
           if (c == "(") depth++
-          else if (c == ")") { depth--; if (depth <= 0) { in_ann = 0; has_action = 1; break } }
+          else if (c == ")") {
+            depth--
+            if (depth <= 0) { _harvest_action(buf); in_ann = 0; buf = ""; break }
+          }
         }
       }
-      if (has_action) break   # one action is enough
     }
 
     # -------------------------------------------------------------------------
-    # Pass 2: collect @NiagaraProperty annotations (paren-balanced multi-line
+    # Pass 2: method-boundary parser + write detection (do_method bodies only).
+    # Ported from lint-silent-protection.sh:250-320 with brace_depth>=2 guard
+    # (D1b applied to S22): the class body opens at depth 1; any real method
+    # opens at depth >= 2. execute(), changed(), and slotomatic-generated setters
+    # fall out by construction — none is named do<Action>.
+    # [ev: D2b step 3; D2a; B831 §831.2; client BCompressorControl.java:2025 @ ff1b659]
+    # -------------------------------------------------------------------------
+    if (length(do_methods) > 0) {
+      brace_depth = 0; in_m = 0; m_start = 0; m_dep = 0
+      for (i = 1; i <= NR; i++) {
+        ln = slines[i]; old_d = brace_depth; max_d = brace_depth
+        for (ci = 1; ci <= length(ln); ci++) {
+          c = substr(ln, ci, 1)
+          if (c == "{") { brace_depth++; if (brace_depth > max_d) max_d = brace_depth }
+          else if (c == "}") brace_depth--
+        }
+        # Use max_d (peak depth during line) so one-liner methods { ... } on one line
+        # are detected correctly even when net brace change is 0. [ev: D2b step 3]
+        if (!in_m && max_d > old_d && max_d >= 2) {
+          mname = ""
+          # Case A: single-line signature — identifier(...) [throws ...] {
+          if (match(ln, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\([^)]*\)[[:space:]]*(throws[^{]*)?\{/)) {
+            seg = substr(ln, RSTART)
+            match(seg, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); mname = substr(seg, 1, RLENGTH)
+            if (mname ~ /^(if|for|while|switch|catch|try|else|do|new)$/) mname = ""
+          }
+          # Case B: { alone on line — backward scan for identifier(
+          # Stop at annotation (@), prior statement (;$), or prior block ({).
+          # Exclude class/interface/enum — never name the class body as a method.
+          if (mname == "") {
+            bonly = ln; gsub(/[[:space:]]/, "", bonly)
+            if (bonly == "{") {
+              for (k = i-1; k >= 1 && k >= i-20; k--) {
+                lk = slines[k]; lk_t = lk; gsub(/^[[:space:]]*/, "", lk_t)
+                if (substr(lk_t, 1, 1) == "@") break
+                if (match(lk, /;[[:space:]]*$/) || index(lk, "{") > 0) break
+                if (match(lk, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]*\(/)) {
+                  seg2 = substr(lk, RSTART)
+                  match(seg2, /^[A-Za-z_][A-Za-z0-9_<>\[\]]*/); cn = substr(seg2, 1, RLENGTH)
+                  if (cn !~ /^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$/) {
+                    mname = cn; break
+                  }
+                }
+              }
+            }
+          }
+          if (mname != "" && mname in do_methods) {
+            in_m = 1; m_start = i; m_dep = max_d
+          }
+        }
+        if (in_m && brace_depth < m_dep) {
+          body = ""
+          for (bi = m_start; bi <= i; bi++) body = body " " slines[bi]
+          _scan_writes(body)
+          in_m = 0
+        }
+      }
+    }
+
+    # -------------------------------------------------------------------------
+    # Pass 3: collect @NiagaraProperty annotations (paren-balanced multi-line
     # join as in C8 D9b / bog-audit; handles nested @Facet(...) parens).
     # For each: extract name, type, flags; emit WARN when:
     #   type ~ BStatus(Numeric|Boolean|Enum) (complex)  AND
-    #   flags contain OPERATOR                          AND
-    #   has_action == 0 (class exposes no @NiagaraAction)
+    #   flags contain OPERATOR                           AND
+    #   slot NOT exempt (body-check + name-pattern check)
+    # [ev: D2b step 4; D2c; D2d; D2e]
     # -------------------------------------------------------------------------
     in_prop = 0; buf = ""; depth = 0; prop_first = 0; prop_line = 0
 
     for (i = 1; i <= NR; i++) {
-      ln = lines[i]
+      ln = slines[i]
 
       if (!in_prop) {
         if (index(ln, "@NiagaraProperty") > 0 && index(ln, "(") > 0) {
@@ -123,7 +208,6 @@ while IFS= read -r f; do
             else if (c == ")") depth--
           }
           if (depth <= 0) {
-            # single-line annotation — process immediately
             _check_prop(buf, prop_line)
             in_prop = 0; buf = ""
           }
@@ -143,7 +227,54 @@ while IFS= read -r f; do
     }
   }
 
-  function _check_prop(buf, lineno,    pname, ptype, pflags) {
+  # Harvest one @NiagaraAction buffer: extract name="x", store in action_names{x}
+  # and compute do_methods{"do"+cap1(x)}. [ev: D2b step 1+2; B831-G1]
+  function _harvest_action(buf,    aname, seg) {
+    aname = ""
+    if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+      seg = substr(buf, RSTART)
+      sub(/name[[:space:]]*=[[:space:]]*"/, "", seg)
+      sub(/".*/, "", seg)
+      aname = seg
+    }
+    if (aname == "") return
+    action_names[aname] = 1
+    # Resolve: action x -> "do" + toupper(first letter) + rest. [ev: D2b step 2; B831-G1]
+    do_methods["do" toupper(substr(aname, 1, 1)) substr(aname, 2)] = 1
+  }
+
+  # Scan a do<Action> body for writes; add found slot names to exempt_slot{}.
+  # Pattern 1: setX(           — standard setter (X = slot with capitalized first letter)
+  # Pattern 2: getX().setValue( — BSimple/BComplex setValue path
+  # Pattern 3: .set(prop,      — property-constant form (slotomatic generated region)
+  # [ev: D2b step 4]
+  function _scan_writes(body,    tmp, frag, slot) {
+    tmp = body
+    while (match(tmp, /set[A-Z][A-Za-z0-9_]*\(/)) {
+      frag = substr(tmp, RSTART, RLENGTH)
+      sub(/^set/, "", frag); sub(/\($/, "", frag)
+      slot = tolower(substr(frag, 1, 1)) substr(frag, 2)
+      exempt_slot[slot] = 1
+      tmp = substr(tmp, RSTART + RLENGTH)
+    }
+    tmp = body
+    while (match(tmp, /get[A-Z][A-Za-z0-9_]*\(\)\.setValue\(/)) {
+      frag = substr(tmp, RSTART, RLENGTH)
+      sub(/^get/, "", frag); sub(/\(\)\.setValue\($/, "", frag)
+      slot = tolower(substr(frag, 1, 1)) substr(frag, 2)
+      exempt_slot[slot] = 1
+      tmp = substr(tmp, RSTART + RLENGTH)
+    }
+    tmp = body
+    while (match(tmp, /\.set\([a-zA-Z_][a-zA-Z0-9_]*,/)) {
+      frag = substr(tmp, RSTART, RLENGTH)
+      sub(/^\.set\(/, "", frag); sub(/,$/, "", frag)
+      exempt_slot[frag] = 1
+      tmp = substr(tmp, RSTART + RLENGTH)
+    }
+  }
+
+  function _check_prop(buf, lineno,    pname, ptype, pflags, seg, uc, an) {
     # Extract name
     pname = ""; ptype = ""; pflags = ""
     if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
@@ -176,8 +307,18 @@ while IFS= read -r f; do
     }
     if (pflags !~ /OPERATOR/ && pflags !~ /"o"/) return
 
-    # If class has any action -> exempt
-    if (has_action) return
+    # Per-slot body-check exemption (D2b step 4; D2c):
+    # slot X is exempt when some do<Action> body was found to write X.
+    if (pname in exempt_slot) return
+
+    # Name-pattern exemption (B822 / EW3 compatibility):
+    # An @NiagaraAction whose name encodes the write convention — set<X>/apply<X>/<x>Cmd
+    # — is itself a writing action without requiring the method body to be present.
+    # [ev: B822 additive-action doctrine]
+    uc = toupper(substr(pname, 1, 1)) substr(pname, 2)
+    for (an in action_names) {
+      if (an == "set" uc || an == "apply" uc || an == pname "Cmd") return
+    }
 
     printf "WARN  ext-writable-shape  %s:%d  %s: OPERATOR %s with no writing action" \
            " -- external oBIX write must use the child leaf .../%s/value (bare <real>, B826)" \

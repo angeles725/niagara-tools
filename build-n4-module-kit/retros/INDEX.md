@@ -94,3 +94,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign10-lint-timers-scope.md | kit | 2026-09-06 | pending | 4 |
 | 2026-09-06-campaign10-silent-protection-pattern-b.md | kit | 2026-09-06 | pending | 0 |
 | 2026-09-06-campaign10-write-path-stale.md | kit | 2026-09-06 | pending | 0 |
+| 2026-09-06-campaign10-ext-writable-per-slot.md | kit | 2026-09-06 | pending | 0 |
