@@ -33,6 +33,7 @@ set -u
 FAILED=0
 STRICT=0
 STALE=0
+DRIFT=0
 BOG_FILE=""
 MATRIX_OVERRIDE=""
 
@@ -437,8 +438,9 @@ while IFS= read -r _mline; do
     case "$_mline" in '|'*) : ;; *) continue ;; esac
     # Strip markdown comments <!-- … --> from the row before [concept] check.
     _row=$(printf '%s' "$_mline" | sed 's/<!--[^>]*-->//g')
-    # Skip rows carrying the literal [concept] token.
-    case "$_row" in *'[concept]'*) continue ;; esac
+    # Capture the [concept] marker (do not skip yet — fall through to name filter).
+    _is_concept=0
+    case "$_row" in *'[concept]'*) _is_concept=1 ;; esac
     # Extract backtick-inner content of the first cell.
     _cell=$(printf '%s' "$_row" | awk -F'|' 'NR==1{cell=$2; gsub(/^[[:space:]]+|[[:space:]]+$/,"",cell); print cell}')
     case "$_cell" in '`'*) : ;; *) continue ;; esac
@@ -446,8 +448,17 @@ while IFS= read -r _mline; do
     _name=$(printf '%s' "$_cell" | sed -E 's/^`([^`]+)`.*/\1/')
     # Must match slot name pattern: ^[a-z][A-Za-z0-9]*$
     printf '%s' "$_name" | grep -qE '^[a-z][A-Za-z0-9]*$' || continue
-    # Skip if the name is in the covered set.
-    case "$_covered_flat" in *" $_name "*) continue ;; esac
+    # DRIFT: [concept]-marked row whose slot IS in the covered set -> marker is stale.
+    # True concept: [concept]-marked row whose slot is NOT covered -> stay silent.
+    case "$_covered_flat" in *" $_name "*)
+        if [ "$_is_concept" -eq 1 ]; then
+            printf 'DRIFT  lint-write-path  %s:%d  slot %s: concept marker but a source slot exists\n' \
+                "$MATRIX" "$_ln" "$_name"
+            DRIFT=1
+        fi
+        continue ;;
+    esac
+    [ "$_is_concept" -eq 1 ] && continue    # true concept row: name absent from source -> silent
     # Emit STALE advisory (STATUS-first, same column order as FAIL row).
     printf 'STALE  lint-write-path  %s:%d  slot %s: no source slot with that name\n' \
         "$MATRIX" "$_ln" "$_name"
@@ -456,9 +467,9 @@ done < "$MATRIX"
 
 # ---------------------------------------------------------------------------
 # Exit: uncovered FAIL always exits 1 (unchanged, with and without --strict).
-# --strict promotes STALE to exit 1.  Otherwise exit 0.
+# --strict promotes STALE or DRIFT to exit 1.  Otherwise exit 0.
 # Exit 3 (usage/env/missing-matrix) is handled above — range {0,1}∪{3} (K20).
 # ---------------------------------------------------------------------------
 [ "$FAILED" -eq 1 ] && exit 1
-[ "$STRICT" -eq 1 ] && [ "$STALE" -eq 1 ] && exit 1
+[ "$STRICT" -eq 1 ] && { [ "$STALE" -eq 1 ] || [ "$DRIFT" -eq 1 ]; } && exit 1
 exit 0
