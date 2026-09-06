@@ -2,6 +2,8 @@
 # Columns (TAB): id  pr  file  fmt  suite  flips  anchor  kind  expr  note     — see qa/mutate.sh.
 # kind=sed rows carry a CONTENT anchor (never a line number); mutate.sh refuses to apply when the anchor is absent
 # and reports NO-OP when the sed changes nothing, so a speculative expr can never fake a flip.
+# expr is a `sed -E` script: escape ( ) | [ ] $ when they are literal (a bare `|` is alternation and silently breaks the
+# script; a bare `(` never matches) — mutate.sh reports NO-OP-MUTATION or a whole-suite failure when that happens (PR3 lesson).
 # kind=manual rows name the mutation for code that does not exist until GREEN; apply by hand on the SAME detached
 # worktree, run the same suite, paste the verbatim failure lines. Flips name the executable pins of the RED files,
 # not the tasks.md prose where the two differ (noted).
