@@ -3,7 +3,8 @@
 #
 # Scans **/rc/** *.html *.js *.css under <artifact-dir> for defects the
 # Java-side lints never see (from the real DashboardPan-ux rc/index.html):
-#   ord-literal   FAIL  hardcoded station:|local:|slot:/|h:/ ORD string
+#   ord-literal   FAIL  hardcoded station:|local:|slot:/ ORD string, or
+#                       handle ORD h:<hex> anchored at segment start
 #   host-literal  FAIL  http:// non-namespace host OR bare IPv4 literal
 #   bare-catch    WARN  .catch(() => {}) swallowing write errors [--strict FAIL]
 #   null-branch   WARN  ? null : display branch on process field [--strict FAIL]
@@ -12,9 +13,10 @@
 #             comment-only lines (// /* * <!--).
 # W3C namespace URIs (http://www.w3.org/) are NOT flagged as hosts (root cause:
 #   xmlns/w3.org namespace strings are not network hosts — exempted by type).
-# NOTE: ORD pattern uses h:/ (not h:) to avoid false positives from CSS
-#   properties ending in 'h' followed by ':' (e.g. width:). Niagara history
-#   ORDs always carry a path component: h:/station/HistoryService/path.
+# Handle ORD pattern: h: is the Niagara HANDLE scheme (h:<hex>, e.g. h:45ef7).
+#   Matched only when preceded by |, ", ', or ` (ORD segment boundary) and
+#   followed by 1+ hex digits. This avoids CSS false positives: width:100px
+#   has h: preceded by 't', not a segment-boundary character.
 #
 # Usage:  rc-scan.sh <artifact-dir> [--strict]
 #
@@ -61,10 +63,12 @@ cat > "$_TMP/scan.awk" << 'AWKEOF'
 # * block-comment interior, and <!-- HTML comment opener.
 /^[[:space:]]*(\/\/|\/\*|\*+|<!--)/ { next }
 
-# ord-literal: hardcoded Niagara ORD token in a string literal.
-# Uses h:/ (not h:) to avoid false positives from CSS shorthand properties
-# ending in 'h' (e.g. width:, depth:) — history ORDs always begin h:/path.
-/(station:|local:|slot:\/|h:\/)/ {
+# ord-literal: hardcoded Niagara ORD token.
+# station:|local:|slot:/ — broad ORD scheme prefixes (always distinctive).
+# h:<hex> — the Niagara HANDLE scheme; anchored at ORD segment boundary
+#   (preceded by |, ", ', or `) so CSS width:100px (h preceded by 't') is
+#   never matched. The handle payload is 1+ hex digits [0-9a-fA-F].
+/(station:|local:|slot:\/)|(^|[|"'`])h:[0-9a-fA-F]+/ {
     print "FAIL  rc-scan  " rel ":" NR "  ord-literal: hardcoded ORD literal"
     next
 }

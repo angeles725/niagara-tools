@@ -91,3 +91,19 @@ setup() {
   [[ "$output" != *"FAIL"* ]]
   [[ "$output" != *"config.js"* ]]   # the stale baseline copy is never read
 }
+
+# ---- RC10: h: handle ORD anchored at segment start, hex payload ---------------
+# Lead correction: h: is the Niagara HANDLE scheme (h:<hex>, e.g. h:45ef7), not h:/path.
+# The old h:/ pattern was a false NEGATIVE for every handle literal.
+# Fix: match h: only when preceded by |, ", ', or ` (ORD segment boundary) and followed
+# by 1+ hex digits: (^|[|"'`])h:[0-9a-fA-F]+
+# This also avoids CSS false positives: width:100px has h: preceded by 't', not a segment char.
+@test "RC10: a handle ORD h:<hex> FAILs (ord-literal, segment-start anchored), CSS width:/depth: does NOT" {
+  run "$RS" "$FX/handle"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"ord"* ]]
+  [[ "$output" == *"handle.js"* ]]
+  # CSS and HTML width:/height: must NOT be flagged as handle ORDs:
+  [[ "$output" != *"style.css"* ]]
+  [[ "$output" != *"page.html"* ]]
+}

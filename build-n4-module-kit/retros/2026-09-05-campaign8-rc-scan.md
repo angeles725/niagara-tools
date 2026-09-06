@@ -15,7 +15,7 @@
 
 | Check | Label | Verdict | Description |
 |-------|-------|---------|-------------|
-| `ord-literal` | `ord-literal` | FAIL | String matching `station:|local:|slot:/|h:/` under `rc/` assets |
+| `ord-literal` | `ord-literal` | FAIL | `station:|local:|slot:/` or handle `(^|[|"'`])h:[0-9a-fA-F]+` under `rc/` assets |
 | `host-literal` | `host-literal` | FAIL | `http://` URI not starting with `www.w3.org/`, or bare IPv4 |
 | `bare-catch` | `bare-catch` | WARN (`--strict` FAIL) | `.catch(() => {})` pattern swallowing fetch errors |
 | `null-branch` | `null-branch` | WARN (`--strict` FAIL) | `? null :` ternary branch on a process field |
@@ -37,16 +37,22 @@ File scope: `**/rc/**` `*.html *.js *.css`, excludes `rc/ext/**`, `*.min.js`, `s
 
 ## Design deviations
 
-### D1: ORD pattern uses `h:/` (not `h:`) to avoid CSS false positives
+### D1: ORD `h:` pattern — handle scheme, segment-start anchored (lead correction)
 
-**D7 design** specifies pattern `(station:|local:|slot:/|h:)`.
+**D7 design** specifies pattern `h:`. Initial implementation used `h:/` (false assumption: history ORDs carry a slash). Lead review (ea19275) identified this as a false NEGATIVE for every Niagara handle literal.
 
-**Root cause:** the two-character sequence `h:` is a substring of `width:` (`w-i-d-t-h-:`), `length:`, `depth:`, and similar CSS shorthand properties that end in the letter `h` followed by `:`. The real `DashboardPan-ux/src/rc/index.html` has over 20 CSS declarations using `width:` and `height:`. Using `h:` as the pattern would produce false positives on every such CSS property.
+**Root cause (corrected):** `h:` is the Niagara **HANDLE** ORD scheme (`h:<hex>`, e.g. `h:45ef7`), not a history path prefix. Handles are station-specific hex identifiers that change per JACE deployment — the most brittle ORD type. They appear after ORD segment separators (`station:|h:45ef7`) or as quoted standalone strings (`"h:45ef7"`). The `h:/` pattern misses ALL handle literals.
 
-**Fix (by root cause):** Niagara history ORDs always carry a path component — the canonical form is `h:/station/HistoryService/name`. The `h:/` pattern (with mandatory slash) correctly identifies history ORD literals without triggering on CSS shorthand properties. No fixture or real smoke contains a bare `h:` ORD without a path slash; the fix is conservative and has no false negatives in scope.
+**CSS false-positive root cause and fix:** `h:` is a substring of CSS property names ending in `h` (`width:`, `depth:`). In any ORD context, `h:` is always preceded by a segment-boundary character: `|`, `"`, `'`, or a backtick. In CSS, `h:` is always preceded by a letter. The fix anchors the match: `(^|[|"'\`])h:[0-9a-fA-F]+`. `width:100px` has `h:` preceded by `t` — no match. `"h:45ef7"` has `h:` preceded by `"` — FAIL.
 
-**Deviation recorded:** implementation uses `h:/`; D7 spec says `h:`. The root-cause exemption principle (K2 low false positives) justifies the tighter pattern.
+**Awk pattern (corrected):**
+```
+/(station:|local:|slot:\/)|(^|[|"'\`])h:[0-9a-fA-F]+/
+```
 
+**RC10 RED -> GREEN proof (mktemp copies):**
+- RED (old `h:/` script): `rc-scan.sh handle-fixture` -> exit 0, no output (handle `"h:45ef7"` missed — false negative confirmed)
+- GREEN (segment-anchored pattern): `rc-scan.sh handle-fixture` -> `FAIL  rc-scan  rc/handle.js:2  ord-literal: hardcoded ORD literal`, exit 1; `style.css` (`.x{width:100px;depth:1}`) and `page.html` (`<div style="width:100px">`) produce no row (no false positive)
 ### D2: null-branch WARNs at lines 852–853, not :863 as predicted
 
 **Design predicted** (tasks.md 6.8): `WARN :863 (null branch)`.
@@ -95,7 +101,7 @@ exit: 1
 - **FAIL at :701**: hardcoded `http://127.0.0.1/obix/config/Nave_Panccadia/Puntos/` — design predicted, confirmed.
 - **WARN at :852 and :853**: two single-line `? null :` display branches — design predicted `:863` but that line is a multi-line expression (`:` on next line); :852 and :853 are the actual matches. Lines moved from design prediction; noted in D2 above.
 - **WARN at :1298**: bare `.catch(() => {})` — design predicted, confirmed.
-- No ORD literal FAILs: real `index.html` has no `station:` or `slot:/` or `h:/` literals.
+- No ORD literal FAILs: real `index.html` has no `station:` or `slot:/` or handle `h:<hex>` literals.
 - W3C namespace URIs at lines 542, 567, 791, 1443 correctly NOT flagged.
 
 Merged-tree smoke (`git show origin/main:<path>`) not run — `git` is VCS-only tooling not available in the `rc/` scan path, and the local checkout is the live artifact used for commissioning. Not run; noted here.
@@ -116,7 +122,7 @@ tests/kit-links.bats            : 6/6 passed (L5: rc-scan.sh now in BUILD-LOOP.m
 
 ## Lessons
 
-1. CSS shorthand properties ending in `h` (e.g. `width:`, `depth:`) contain the two-char sequence `h:` as a substring, so ORD pattern `h:` must be tightened to `h:/` to avoid systematic false positives in any HTML/CSS file.
+1. `h:` in Niagara is the HANDLE ORD scheme (`h:<hex>`, e.g. `h:45ef7`), never `h:/path` — using `h:/` is a false negative for every handle literal. The correct fix anchors `h:` at ORD segment boundaries (`|`, `"`, `'`, backtick) with a hex payload, since CSS property names ending in `h` (e.g. `width:`) are always preceded by a letter, not a segment-boundary character.
 2. A multi-line ternary (`? null` with `:` on the next line) does not match a single-line `\?\s*null\s*:` pattern; this is a separate detection shape requiring either a multi-line awk accumulation or a relaxed pattern with known false-positive risk.
 3. Including the matched URL in the host-literal row detail (not just a generic label) makes the W3C-exemption named mutation observable via substring assertions, without requiring the test to parse row structure.
 4. Dot-directory pruning via `-type d -name '.*' -prune` must be the first branch in the `find` expression; placing it after path-based conditions allows `find` to descend into dot-dirs before the prune fires.
