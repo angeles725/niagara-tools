@@ -9,6 +9,9 @@
 - **Server-side SUBSCRIPTION:** subclass `javax.baja.sys.Subscriber`, override `event(BComponentEvent)`, call `subscribe(component, depth, cx)` and `unsubscribeAll()` on stop (the SERVER complement to the BOX client). `[ev: corpus B778]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
 
+## Inter-module communication `[ev: corpus B802]`
+- **Within a station, runtime comms is module-AGNOSTIC:** `BLink`, service discovery (`Sys.getService(Type)`), and `Subscriber` NEVER check the source module — a cross-module link / lookup / subscription is identical to a same-module one. The only real boundaries are (a) the COMPILE-TIME `<dependency>` on the other module's `Type`, and (b) the `fox:` ORD hop to a SEPARATE station (a real JVM boundary). Extends B778 (same-space services + `Subscriber.event`) with the cross-module + distributed picture. `[ev: corpus B802]`
+
 ## Authoring a point extension
 
 - **Extend `javax.baja.control.BPointExtension`** (there is NO `BAbstractPointExt`, no `onExtended`/`onRetracted`); implement the sole abstract `onExecute(BStatusValue out, Context cx)` — mutate `out` (control), or leave it (notification-only). Override `requiresPointSubscription()`→true only to see every change; reach the point via `final getParentPoint()`; restrict hosting with `isParentLegal`/`isSiblingLegal`; execution is slot-declaration order, proxyExt always first. `[ev: corpus B772]`
