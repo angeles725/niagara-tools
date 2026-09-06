@@ -95,6 +95,38 @@ Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `ch
 - **Health / feedback surface (R15.2)** — every rt component MUST expose: (1) a `status` slot (`SUMMARY|READONLY`) reflecting the current phase (OK / FAULT / STALL), (2) a `lastError` string slot updated when a fault is latched, (3) a health flag or score visible to the operator. Set `status` on every state transition; **a silent FAIL with no status update is FORBIDDEN**. Route logic faults to the operator via `BAlarmSourceExt` on a control-point child (alarm/fault/unacked → `BAlarmRecord` → `BAlarmService.routeAlarm` → console → ack). `[ev: corpus B808]` `[ev: corpus B827]`
 - **Protection ownership** — the protection layer that RAISES a latch owns it: it sets the latch, holds the alarmed state, and waits for the operator reset. The SAFETY layer WATCHES (reads the latch) and does not raise. Never let two subsystems both write the same latch — that creates an un-auditable race. `[ev: corpus B805]`
 
+## Protection anatomy `[ev: corpus B821]``[ev: corpus B827]`
+
+A protection is a latch (`freezeTripped`; or the CP-1 LP-floor shed, which is inline with NO named field — the silent case B824 flags) that OVERRIDES the normal command path. It has four tiers, and each
+tier that exists must be VISIBLE — a protection that silently holds an output is indistinguishable from a broken relay
+(`lint-silent-protection.sh`, `[ev: retro campaign9-silent-protection]`):
+
+1. **Setpoint + hysteresis** — the trip and the restart thresholds are two slots (`freezeSetpoint`/`freezeDiffStop`/`freezeDiffRestart`), never one.
+2. **Latch** — a private boolean assigned in ONE pure function (`ColdRoomControl.freezeTrip(...)`), tested without Baja.
+3. **Override** — the latch wins over HOA/mode at the apply stage (`valveInhibited()`), and the override is logged once per edge.
+4. **Alarm** — the latch is SURFACED as an alarm record, one per edge, using one of two patterns:
+
+   - **Pattern A — child point + `BAlarmSourceExt`** (when the latch can be expressed as a boolean point): declare a frozen
+     child `BBooleanPoint` on the unit, hang a `BAlarmSourceExt` with `BBooleanChangeOfStateAlgorithm(alarmValue=true)` on
+     it, and write the point's `out` from the latch in the recompute. The ext owns the edge (raises on false→true, clears on
+     true→false) — the module keeps NO alarm state. Legality: the ext's PARENT must be a `BControlPoint`
+     (`BPointExtension.isParentLegal` :64-66, narrowed by `BAlarmSourceExt.isParentLegal` :1073-1078) and the ALGORITHM's
+     grandparent must be a `BBooleanPoint` (`BBooleanChangeOfStateAlgorithm.isGrandparentLegal` :86-89), so the ext cannot sit
+     on the unit itself. `[ev: corpus B827 §827.3]`
+   - **Pattern B — `BIAlarmSource` + transient `AlarmSupport`** (when the source is not a point, or several trips share one
+     source): the component implements `BIAlarmSource` (a VISIBLE `@NiagaraAction BBoolean ackAlarm(BAlarmRecord)` whose
+     `doAckAlarm` delegates to `support.ackAlarm` — never hidden: the console must invoke it and hidden actions are not
+     invocable `[ev: retro hidden-actions-not-invocable-and-runtime-anchor-verification]`), creates
+     `new AlarmSupport(this, alarmClass)` in `started()`, and calls `newOffnormalAlarm(alarmData)` / `toNormal(...)` ONLY on
+     the edge computed by a pure edge machine (`AlarmEdge.decide(trip, nowOffnormal, recoveredPastDeadband) → FIRE|CLEAR|NONE`)
+     that is re-seeded from the CURRENT condition in `started()` (a restart never re-fires). `[ev: corpus B827 §827.4 §827.6]`
+
+   Both route a `BAlarmRecord` with `sourceState = offnormal`; high/low is an `alarmData` key, never a sourceState. The
+   dashboard's alarm strip selects `sourceState = 'offnormal' or 'fault'`. The live routing is HARNESS-ONLY (station);
+   WSL tests pin the structure (child declared, ext + algorithm present, drive line in the recompute; `implements
+   BIAlarmSource`, `new AlarmSupport(` in `started()`, `newOffnormalAlarm` inside the FIRE branch) and the pure edge machine.
+   `[ev: RED qa/c9-alarm-cr3 70a357b]``[ev: RED qa/c9-alarm-cp1 8b43488]``[ev: corpus B827 §827.3 §827.4]`
+
 ## kitControl patterns — exemplar-backed
 
 - **LC1 / Writable priority array (16-level arbitration):** `WritableSupport.onExecute` scans levels 1→16 first-valid-wins; relinquish-default = ordinal 17 (`BPriorityLevel.fallback`), used only when all 16 are null; only levels 1 and 8 raise `OVERRIDDEN`; to make a config slot oBIX-writable add a NEW slot + link, never re-type the existing point. [ev: corpus B536]

@@ -102,6 +102,8 @@ link-TARGET side (which the next source propagation overwrites, B816 §816.2), d
 EPHEMERAL — the next propagation overwrites it (B816 §816.2). Confirm write-source vs write-target before relying on
 the write sticking. `[ev: corpus B816]`
 
+`toolbelt/lint-ext-writable-shape.sh <src>` flags the anti-shape (an OPERATOR complex property with no writing action). `[ev: retro campaign9-ext-writable-shape]`
+
 ## Write-path test matrix `[ev: corpus B816]`
 Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
 
