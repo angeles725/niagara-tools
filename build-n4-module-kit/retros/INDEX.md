@@ -101,3 +101,11 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-06-campaign11-client-root.md | kit | 2026-09-06 | folded | 0 |
 | 2026-09-06-campaign11-lint-guard-pins.md | kit | 2026-09-06 | folded | 3 |
 | 2026-09-06-campaign11-close-process-meta-lessons.md | kit | 2026-09-06 | folded | 6 |
+| 2026-09-07-per-evap-independent-control.md | ColdRoomPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-air-defrost-off-cycle.md | ColdRoomPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-freeze-stat-silent-surface.md | ColdRoomPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-condensadoras-facade-crashsafe.md | DashboardPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-r14-second-login.md | DashboardPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-per-evap-config-ui-hmi-noscroll.md | DashboardPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-two-differential-fase2.md | CompPan | 2026-09-07 | pending | 0 |
+| 2026-09-07-tree-selection-and-schema-risk-baseline.md | kit | 2026-09-07 | pending | 0 |

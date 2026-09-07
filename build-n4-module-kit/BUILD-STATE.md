@@ -53,7 +53,7 @@ pure_tests: 22                      # DECLARED — pure-Java JUnit count (ColdRo
 open_issues:
   - DefrostController.java (742 lines) has ZERO pure tests — QA HIGH gap; extract a pure DefrostControl class + tests (a module change, OUT of this campaign's scope). It shipped the started()/interval production bug.
 retro_required: true                # GATED (kit-local) — did the last session change kit behavior / prove a lesson?
-retro_pending: false                # GATED — the enforcement hook: true until the owed retro exists; false here, its retros were written
+retro_pending: true                # GATED — the enforcement hook: true until the owed retro exists; false here, its retros were written
 last_commit: f89e44e                # DECLARED — short sha in module_repo of the last build's commit
 last_session: 2026-09-03 · self-firing-timer defrost fix confirmed live [CERT-live]; next: extract DefrostControl pure class + tests
 <!-- /build-state.v1 -->
@@ -79,7 +79,7 @@ open_issues:
   - suctionPressure2 sensor stuck/frozen at 130.5342 psi — control UNAFFECTED (selectSuction uses the healthy primary); monitor / replace the sensor.
   - amps2 / amps3 read low or zero while the compressors physically run — an amperage-sensor issue, not equipment; amperage is visual-only and control does not depend on it.
 retro_required: true
-retro_pending: false
+retro_pending: true
 last_commit: d6eccaf
 last_session: 2026-09-04 · HOA manual override per compressor + dischargeHighLimit 0=disabled deployed live [CERT-live]; next: watch the stuck suction-2 sensor
 <!-- /build-state.v1 -->
@@ -106,7 +106,7 @@ open_issues:
   - DashboardPan-rt and DashboardPan-wb ship empty srcTest — the pure_tests count is the -ux DashboardDispatch suite only.
   - DashboardPan-wb is a scaffold (gradle/lexicon/palette/permissions, zero .java, never built); build or delete before declaring it.
 retro_required: true
-retro_pending: false
+retro_pending: true
 last_commit: 6b9b085
 last_session: 2026-09-04 · Condensadoras tab + HOA control (preview -ux); next: wire live pressure/amps data into the -ux
 <!-- /build-state.v1 -->
@@ -158,7 +158,7 @@ open_issues:
   - CONTENT FOLD-AUDIT open_issue (#3, CLOSED by Campaign 6 PR7): the `sweep-fold-audit.sh --strict` gate now verifies every folded retro has a `[ev: retro <token>]` citation in a core kit file. 38 folded, 38 cited, exit 0.
   - B788 (own-modules-vs-exemplars OMV4): ColdRoomPan-rt lexicon partial (32 keys; fanMode/valveMode/freeze* missing — likely camelCase mismatch); DashboardPan-rt type-set coverage 100% but per-slot ~25% (many slots without lexicon keys); DashboardPan-wb palette is an empty scaffold (`<p t="b:Folder">` only). Module fixes are out of niagara-tools scope. [ev: corpus B788]
 retro_required: true                 # GATED — close retro filed and folded
-retro_pending: false
+retro_pending: true
 last_commit: TBD — chore/c11-close merge sha (fill post-merge)
 last_session: 2026-09-06 · Campaign 11 CLOSE v0.22.0 — shared parser (T1 PEAK/BASH_SOURCE), DRIFT advisory (T3), client-root lib (T2), guard-pins meta-check (T4); 5 retros folded; kit-only (no client jar bump); client versions carry over 2.2.0/2.1.0/2.2.0.
 2026-09-06 · Campaign 10 PR3: S23 lint-silent-protection Pattern B surface — brace_depth>=2 guard (D1b) + Pass 0b ALARM_CLASSES index + adapter→pure follow "B"+class. Depth-guard baseline: no C9 pin shifted. After Pattern B: CompPan-rt 0 (CP-1 surfaced via BIAlarmSource/newOffnormalAlarm), ColdRoomPan-rt 0 (Pattern A intact), DashboardPan 0. 12/12 bats GREEN, shellcheck 0, kit-links 8/8, full 384/384 bats. Retro campaign10-silent-protection-pattern-b pending.
