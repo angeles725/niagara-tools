@@ -97,6 +97,43 @@ teardown() {
 #          (fakebin printing openjdk version "1.8.0_412"; NO release file)
 # Named mutation: remove the bin/java fallback scan -> PF5 exits 1 (FAIL jdk8)
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# version-drift — sibling checkout at higher version triggers WARN; exit stays 0
+# Named mutation: version-drift -- remove the sort -V compare -> PF-drift exits 0 silently
+# ---------------------------------------------------------------------------
+@test "version-drift: sibling dir at higher version -> WARN row + exit 0" {
+  # Build a temp gradle-root hierarchy with two siblings.
+  # module-a uses the real gradle-root fixture (has settings.gradle.kts + plugin pin)
+  # but also adds build.gradle.kts with a low version; module-b only needs a kts with a higher version.
+  DRIFT_ROOT="$TMPDIR_T/drift_test"
+  mkdir -p "$DRIFT_ROOT/parent/module-a" "$DRIFT_ROOT/parent/module-b"
+  # Copy the real gradle-root fixture so plugin-pin + settings.gradle.kts work
+  cp -r "$FIXDIR/gradle-root/." "$DRIFT_ROOT/parent/module-a/"
+  # module-a version: 1.0.0
+  printf 'defaultModuleVersion("1.0.0")\n' >> "$DRIFT_ROOT/parent/module-a/settings.gradle.kts"
+  # module-b: higher version sibling (no settings.gradle.kts needed — only build.gradle.kts)
+  printf 'defaultModuleVersion("1.0.1")\n' > "$DRIFT_ROOT/parent/module-b/build.gradle.kts"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$DRIFT_ROOT/parent/module-a"
+  # exit must be 0 (WARN does not flip FAILED; jdk8/plugin-pin come from real fixtures)
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"version-drift"* ]]
+  [[ "$output" == *"1.0.0"* ]]
+  [[ "$output" == *"1.0.1"* ]]
+}
+
+@test "version-drift: no sibling with higher version -> no version-drift row" {
+  DRIFT_ROOT2="$TMPDIR_T/drift_test2"
+  mkdir -p "$DRIFT_ROOT2/parent/module-a" "$DRIFT_ROOT2/parent/module-b"
+  cp -r "$FIXDIR/gradle-root/." "$DRIFT_ROOT2/parent/module-a/"
+  # Both siblings at the same version
+  printf 'defaultModuleVersion("2.1.0")\n' >> "$DRIFT_ROOT2/parent/module-a/settings.gradle.kts"
+  printf 'defaultModuleVersion("2.1.0")\n' > "$DRIFT_ROOT2/parent/module-b/build.gradle.kts"
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$DRIFT_ROOT2/parent/module-a"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"version-drift"* ]]
+}
+
 @test "PF5: JDK 8 with no release file but bin/java reports 1.8 -> PASS jdk8 (WSL fallback)" {
   JVM_NO_RELEASE="$FIXDIR/jvm-no-release"
   run "$PREFLIGHT" --jvm-dir "$JVM_NO_RELEASE" "$NH" "$GR"

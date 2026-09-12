@@ -19,6 +19,8 @@
 #   L9  FAIL  no empty skeleton artifact: -wb/-ux with 0 Java classes AND empty palette
 #   L10 FAIL  no absolute host paths in gradle.properties (module root + upward to .git root)
 #   L11 FAIL  mixed srcTest (BTest+JUnit) without both :test-wb AND junit gradle declarations
+#   L12 FAIL  org.gradle.java.installations.paths/.auto-detect absent or commented in gradle.properties
+#   L13 FAIL  >=2 sibling gradle.properties under group dir with divergent niagara_home=
 #   (L8 signed-jar check is in verify-module.sh)
 #
 # Usage:  lint-structure.sh <module-root>
@@ -299,6 +301,58 @@ while IFS= read -r _PDIR; do
     fi
 
 done < "$_PROFILES"
+
+# ---------------------------------------------------------------------------
+# L12: org.gradle.java.installations.paths and .auto-detect must be present
+#       and uncommented in the module-root gradle.properties.
+# A commented-out or absent block means Gradle auto-discovers JDKs from JAVA_HOME
+# rather than the pinned JDK 8, which silently breaks Niagara builds.
+# Additive check: mirrors _l10_check find+grep shape. Mutation: LS7.
+# ---------------------------------------------------------------------------
+_GP_ROOT="$MODULE_ROOT/gradle.properties"
+if [ -f "$_GP_ROOT" ]; then
+    _L12_PATHS=0
+    _L12_AUTO=0
+    if LC_ALL=C grep -qE '^[[:space:]]*org\.gradle\.java\.installations\.paths[[:space:]]*=' \
+            "$_GP_ROOT" 2>/dev/null; then
+        _L12_PATHS=1
+    fi
+    if LC_ALL=C grep -qE '^[[:space:]]*org\.gradle\.java\.installations\.auto-detect[[:space:]]*=' \
+            "$_GP_ROOT" 2>/dev/null; then
+        _L12_AUTO=1
+    fi
+    if [ "$_L12_PATHS" -eq 0 ] || [ "$_L12_AUTO" -eq 0 ]; then
+        _gp_rel="${_GP_ROOT#"$MODULE_ROOT/"}"
+        _row FAIL "$_gp_rel" "L12: absent/commented org.gradle.java.installations block (add paths + auto-detect=false to pin JDK 8)"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# L13: >=2 sibling gradle.properties under the same group directory must not
+#      declare divergent niagara_home= values.  A divergent niagara_home causes
+#      builds to pick up different Niagara installations depending on which
+#      module is built first.
+# Looks one level up from MODULE_ROOT for sibling dirs with gradle.properties.
+# Additive check. Mutation: LS7.
+# ---------------------------------------------------------------------------
+_GROUP_DIR="$(dirname "$MODULE_ROOT")"
+if [ -d "$_GROUP_DIR" ] && [ "$_GROUP_DIR" != "$MODULE_ROOT" ]; then
+    _L13_VALUES="$_TMP/l13_values.txt"
+    : > "$_L13_VALUES"
+    for _sib_gp in "$_GROUP_DIR"/*/gradle.properties; do
+        [ -f "$_sib_gp" ] || continue
+        _val=$(LC_ALL=C grep -E '^niagara_home=' "$_sib_gp" 2>/dev/null | head -1 | cut -d= -f2-)
+        [ -n "$_val" ] && printf '%s\t%s\n' "$_val" "$_sib_gp" >> "$_L13_VALUES"
+    done
+    _L13_UNIQUE=$(LC_ALL=C awk -F'\t' '{print $1}' "$_L13_VALUES" | LC_ALL=C sort -u | wc -l | tr -d ' ')
+    _L13_COUNT=$(wc -l < "$_L13_VALUES" | tr -d ' ')
+    if [ "${_L13_UNIQUE:-0}" -gt 1 ] && [ "${_L13_COUNT:-0}" -ge 2 ]; then
+        while IFS='	' read -r _v13 _p13; do
+            _p13_rel="${_p13#"$_GROUP_DIR/"}"
+            _row FAIL "$_p13_rel" "L13: divergent niagara_home across sibling gradle.properties (value: $_v13)"
+        done < "$_L13_VALUES"
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Output rows and exit based on whether any FAIL was emitted

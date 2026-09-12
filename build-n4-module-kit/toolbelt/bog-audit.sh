@@ -20,6 +20,9 @@
 #   CHECK10 duplicate-handle       FAIL  same handle on multiple components
 #   CHECK11 proxy-link-safety      FAIL  own-module output -> writable, no fallback  [ev: corpus B810]
 #   CHECK12 dashboard-write-link   WARN  servlet-written slot is also a link target  [ev: corpus B816]
+#   CHECK20 numeric-to-bool-direct FAIL  Mode/Command/Cmd slot -> BOrLogic/BAndLogic/BNotLogic, no Equal() intermediate
+#           Limitation: name heuristic only — type reflection not available from bog XML.
+#                       False negative when the numeric source slot does not carry Mode/Command/Cmd in its name.
 #
 # Checks that need --source-dir (emits SKIP rows without it):
 #   CHECK2  action-flag-drift      WARN  (--strict -> FAIL)
@@ -844,6 +847,31 @@ for lk in link_list:
     elif _is_panel(_sc5) and _is_ctrl(_ct5) and _STATE_SLOT_RE.search(_ts5):
         emit('CHECK19', 'WARN', _cp5,
              f'panel {_sc5.path!r} writes state slot {_ts5!r} into control container (reverse direction)')
+
+# ---- CHECK20: numeric-to-boolean direct link trap ----
+# FAIL when a link connects a multi-state/enum numeric source slot (name contains
+# Mode, Command, or Cmd) directly into a boolean gate consumer (BOrLogic,
+# BAndLogic, BNotLogic) with no Equal(x, N) intermediate.
+# A proper wiring inserts an Equal component between the numeric source and the
+# boolean gate so the !=0-as-true implicit coercion does not mask false negatives.
+# Limitation: detection is by palette/name heuristic — bog XML does not carry slot
+# type info for links; false negatives are possible when the source slot name does
+# not contain Mode/Command/Cmd.
+_NUMERIC_SRC_RE = re.compile(r'(Mode|Command|Cmd)', re.IGNORECASE)
+_BOOL_GATE_RE   = re.compile(r'(BOrLogic|BAndLogic|BNotLogic)', re.IGNORECASE)
+
+for lk in link_list:
+    _src_slot_c20 = lk.get('src_slot') or ''
+    if not _NUMERIC_SRC_RE.search(_src_slot_c20):
+        continue
+    _ch20 = lk.get('container_h')
+    _ct20 = handle_map.get(_ch20)
+    if not _ct20:
+        continue
+    if _BOOL_GATE_RE.search(_ct20.type_ or ''):
+        emit('CHECK20', 'FAIL', _ct20.path,
+             f'numeric/enum slot {_src_slot_c20!r} links directly into boolean gate '
+             f'{_ct20.type_!r} with no Equal(x,N) intermediate (!=0-as-true trap)')
 
 elapsed = time.time() - START
 print(f'# bog-audit: parse time {elapsed:.3f}s', flush=True)

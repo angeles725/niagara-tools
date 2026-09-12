@@ -416,6 +416,64 @@ XML
   [[ "$output" == *"CHECK19"* ]] && [[ "$output" == *"WARN"* ]]
 }
 
+# ---------------------------------------------------------------------------
+# CHECK20 — numeric-to-boolean direct link trap
+# Named mutation: CHECK20 -- remove the _BOOL_GATE_RE check -> SL20 exits 0 instead of 1
+# ---------------------------------------------------------------------------
+@test "CHECK20: Mode slot linking directly into BOrLogic -> FAIL (numeric-to-bool trap)" {
+  _mkbog c20sl_fail <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='Logic_1' h='lg1' m='OWN=MyModule' t='OWN:BOrLogic'>
+  <p n='ModeLink' t='b:Link'><p n="sourceOrd" v="h:ctrl1"/><p n="sourceSlotName" v="heatMode"/><p n="targetSlotName" v="in1"/></p>
+ </p>
+ <p n='Ctrl_1' h='ctrl1' m='OWN=MyModule' t='OWN:HeatController'>
+  <p n="heatMode" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c20sl_fail.bog" --module MyModule
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK20"* ]]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"heatMode"* ]]
+}
+
+@test "CHECK20: Command slot linking directly into BAndLogic -> FAIL (numeric-to-bool trap)" {
+  _mkbog c20sl_cmd <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='AndLogic_1' h='al1' m='OWN=MyModule' t='OWN:BAndLogic'>
+  <p n='CmdLink' t='b:Link'><p n="sourceOrd" v="h:ctrl2"/><p n="sourceSlotName" v="compCommand"/><p n="targetSlotName" v="in1"/></p>
+ </p>
+ <p n='Ctrl_2' h='ctrl2' m='OWN=MyModule' t='OWN:CompControl'>
+  <p n="compCommand" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c20sl_cmd.bog" --module MyModule
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK20"* ]]
+  [[ "$output" == *"FAIL"* ]]
+}
+
+@test "CHECK20: Mode slot -> Equal(x,N) intermediate, then BOrLogic -> clean (no CHECK20 FAIL)" {
+  # Equal() component is in the chain; the Mode slot links to Equal, not to the gate directly.
+  _mkbog c20sl_clean <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='EqualComp' h='eq1' m='OWN=MyModule' t='OWN:BEqual'>
+  <p n='ModeLink' t='b:Link'><p n="sourceOrd" v="h:ctrl3"/><p n="sourceSlotName" v="heatMode"/><p n="targetSlotName" v="in1"/></p>
+ </p>
+ <p n='Logic_2' h='lg2' m='OWN=MyModule' t='OWN:BOrLogic'>
+  <p n='EqualLink' t='b:Link'><p n="sourceOrd" v="h:eq1"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in1"/></p>
+ </p>
+ <p n='Ctrl_3' h='ctrl3' m='OWN=MyModule' t='OWN:HeatController'>
+  <p n="heatMode" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/c20sl_clean.bog" --module MyModule
+  [ "$(printf '%s\n' "$output" | grep -c 'CHECK20.*FAIL')" -eq 0 ]
+}
+
 @test "SL-smoke-panccadia: EXACT per-check counts + subjects — a presence-only pass cannot recur (SKIP if absent)" {
   # Tightened after a presence-only pin let four rule defects through (CHECK14 47 vs 1 — config INPUTS
   # treated as outputs; CHECK19 16 vs 0 — direction inverted; CHECK18 reported at the PANEL not per unit,
