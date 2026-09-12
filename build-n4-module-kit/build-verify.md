@@ -96,6 +96,16 @@ Before shipping a kit or toolbelt change, run `toolbelt/verify-module.sh` over a
 
 - **Smoke every new parser on ≥1 real module before merge:** bats fixtures are synthetic and may miss edge cases (field ordering, encoding, missing files) that a real module tree exposes; use at least one known-good and one known-bad real module as the final gate. [ev: retro schema-risk]
 
+## Schema-risk deploy workflow `[ev: retro tree-selection-and-schema-risk-baseline Δ2]`
+
+The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the current work tree:
+1. Extract the deployed baseline from the station backup or the original RAR/ZIP: the result must be a layout with `module-include.xml` + `*.java` source files (the same layout `schema-risk.sh` expects).
+2. Run `toolbelt/schema-risk.sh <before-dir> <after-dir>` where `<after-dir>` is the current build tree.
+3. **A LOSSY verdict (`remove_slot_*`) must be cross-checked against the live bog before treating it as a blocker:** a slot that was removed but never saved in the `.bog` (0 persisted instances) is non-dangerous. Use `toolbelt/bog-audit.sh <config.bog> --module <MOD>` or grep the raw `config.bog` XML for the removed slot name to confirm no live instance persists it. A LOSSY + live instances = blocker; a LOSSY + 0 instances = safe for this station (but note it for other stations).
+4. An OUTAGE verdict is always a blocker regardless of bog state — a retype crash has no safe-persistence case.
+
+**Why the work-tree snapshot is wrong:** the current work tree is the BUILD baseline, not the DEPLOYED baseline. Version drift between the work tree and the live station (e.g. Dashboard 2.0 live vs 2.2.0 in the tree) makes the schema-risk diff report the wrong deltas — it sees code changes that were already deployed as new schema changes.
+
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 

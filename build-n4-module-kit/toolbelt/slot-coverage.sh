@@ -41,9 +41,9 @@
 #                 Both forms name the same type; the part before the first dot is the type name.
 #   |required|==0   -> N/A
 #   empty lexicon + |required|>=1 -> pct=0.0 + "slot-coverage: FAIL empty lexicon ..." on stdout + exit 1
-#   duplicate keys in lexicon -> "slot-coverage: WARN dup-keys: <key>" on stdout (B759/B780)
-#   --strict   -> exit 1 when missing is non-empty
-#   exit 0   clean or WARN-only (empty-lexicon FAIL always exits 1 regardless of --strict)
+#   duplicate keys in lexicon -> "slot-coverage: FAIL dup-keys: <key>" on stdout + exit 1 (A1/B792)
+#   --strict   -> exit 1 when missing is non-empty or WARN was emitted
+#   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL or empty-lexicon FAIL or strict WARN
 #   exit 2   wrong argc
 #   exit 3   env (file missing / unreadable)
 #
@@ -375,14 +375,17 @@ declared_csv=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
   | grep '=' | cut -d'=' -f1 | sed 's/\..*//' | sort -u | paste -sd ',' -)
 
 # Dup-key detection: duplicate raw keys before dot-stripping (operationalizes B759/B780)
+# A1 (B792): upgraded from WARN/exit-0 to FAIL/exit-1 — a duplicate key silently overrides a
+# translation (57/662 corpus modules affected; our own code is clean; this is a ship-blocker).
 dup_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
   | grep '=' | cut -d'=' -f1 | sort | uniq -d)
 HAS_WARN=0
+HAS_FAIL=0
 if [ -n "$dup_keys" ]; then
   while IFS= read -r dk; do
-    printf 'slot-coverage: WARN dup-keys: %s\n' "$dk"
+    printf 'slot-coverage: FAIL dup-keys: %s\n' "$dk"
   done <<< "$dup_keys"
-  HAS_WARN=1
+  HAS_FAIL=1
 fi
 
 # Empty-lexicon FAIL when required is non-empty (D6a, Campaign 8 PR5).
@@ -407,6 +410,11 @@ fi
 # DashboardPan-rt despite 100% type-set coverage). [ev: corpus B788; T6.11]
 sc_out=$(run_set_coverage "$declared_csv" "$required_csv")
 printf '%s\n' "$sc_out" | sed 's/^pct=\(.*\)$/pct=\1 (type-set)/'
+
+# Dup-key FAIL always exits 1 — not gated on --strict (A1/B792: ship-blocker, mirrors EMPTY_LEX_FAIL).
+if [ "$HAS_FAIL" -eq 1 ]; then
+  exit 1
+fi
 
 # Empty-lexicon FAIL always exits 1 — not gated on --strict (D6a: ship-blocker behaviour change).
 if [ "$EMPTY_LEX_FAIL" -eq 1 ]; then

@@ -143,3 +143,21 @@ See also: `docs/how-to-create-coldroom-module.md` (end-to-end ColdRoomPan build)
 - **A companion boolean/int flag set in the same method body as `Clock.schedule*` MUST be cleared in `stopped()` or `started()`, not only in the expiry handler:** if `stopped()` returns without clearing the flag, a disable→enable cycle (same object, no new instance) carries the stale `true` forward; the flag read after the re-arm is wrong. Cleared only in the expiry path does NOT count — clearing it in `stopped()` (or `started()`) is the only safe lifetime. [ev: corpus B801] [ev: corpus B812]
 - **Schedule through `Clock.schedule*` only — never via `ScheduledExecutorService`, `Executors.*`, or `new Thread(...)` in a BComponent subclass:** the station `SecurityManager` denies `modifyThread` to module code; any JDK thread primitive throws at runtime and leaves the unit in a broken state. [ev: corpus B800 §800.3] [ev: corpus B806]
 - **Guard every scheduling body reachable from `changed()` or `started()` (directly or one level deep) with `isRunning()|atSteadyState()`:** `changed()` fires during `activateLinks` before the engine fully accepts `Clock.schedule`; without a guard the schedule call throws `NotRunningException` and the timer is silently skipped for the whole session (observed ×6 in PANCCADIA logs). [ev: corpus B816]
+
+## Liveness watchdog recipe `[ev: corpus B812]`
+
+An independent monitor on the producer's `lastTick` is the layer Tridium does NOT ship; the author must build it. This is timer defense-in-depth layer 4 (see §Safety fail-modes & timers above).
+
+- **Producer side:** add a `TRANSIENT|SUMMARY|READONLY` `BAbsTime` slot `lastTick` to the producing component; set it to `Clock.now()` on every real execution cycle (NOT in the liveness monitor — the monitor only reads it). TRANSIENT = resets to NULL on every restart, which is the intended behavior (a fresh restart is not a stall).
+- **Monitor side:** a separate scheduled or alarm-monitor component reads `producer.getLastTick()` at a configured cadence; computes `stall = now − lastTick`; triggers a `BStatus` fault and a `BAlarmRecord` when `stall > max(1, N) × period` (recommended N = 3; floor `max(1,...)` prevents divide-by-zero). Use `BAbstractAlarmMonitor` as the scaffold (periodic check, configurable interval, alarm edge-latch).
+- **Why separate:** the monitor cannot sit in the same component it watches — a stuck engine thread leaves the monitor stuck too. A second component on its own cadence (or a `BAbstractAlarmMonitor`) remains independent.
+- **Do not wait on wall-clock timers** in a WSL test — inject the `Sched` interface (see LC6 above) or test the pure stall-detection math (stall threshold, floor) off-station.
+
+## Ship a tag dictionary `[ev: corpus B814]`
+
+A module can auto-tag every component of its types with semantic tags using `BSmartTagDictionary` and `BNamespace`, so NEQL queries, navigation hierarchies, and Haystack tooling see the components with zero integrator effort.
+
+- **`BSmartTagDictionary`** is the mechanism: declare a `@NiagaraType` subclass, register it as an agent under `TagDictionaryService`, and override `getRules()` to return `SmartTagRule[]` — each rule maps a Baja `Type` to a set of tag names/values. Components matching that type are auto-tagged on insert.
+- **`BNamespace`** (optional): declare a named namespace in `module-include.xml` to own tag names that don't collide with the Haystack or Baja built-in namespaces.
+- **Palette placement:** drag the dictionary instance under `TagDictionaryService` at commissioning (or auto-install it in `serviceStarted()`). NEQL queries that use `tag::` operators and the Hierarchy/Navigation view become addressable immediately.
+- **Key rule:** tag names live in the lexicon (they are user-visible strings); keep them short, scope-stable, and consistent with the Haystack marker convention (no CamelCase in tag names).

@@ -39,6 +39,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - **Operator preview + explicit OK is a REQUIRED gate before building any `-ux` change (not optional):** seed the mock with the state that triggers the new behavior (e.g. `Cuarto3/evapNValveState` to exercise the output LEDs), so the operator actually sees it. The mock does NOT run `-rt` logic, so the preview approves the DASHBOARD's behavior, not the physical rt effect — say that to the operator. An `-rt`/`-wb`-only change has no preview (approved by design + pure tests). [ev: retro self-retro-preview-gate · T5]
 
 ## 4. Build — the ONLY valid build
+- **`build.sh` argument order:** `toolbelt/build.sh <module-root=GROUP dir> <MOD> [niagara_home]`. The first argument is the GROUP directory (the gradle root, e.g. `Cliente/Leon-Guanjuato/Paccadia`), NOT the module sub-directory. `niagara_home` (arg 3 or the env var `NIAGARA_HOME`) is REQUIRED — the script exits 10 (env) when it cannot resolve it. A client multi-project layout places `./gradlew` at the GROUP ancestor, so always pass the GROUP dir, not a profile dir. `[ev: retro tree-selection-and-schema-risk-baseline Δ3]`
 - Three roles (build-verify.md §Doctrine): `toolbelt/build.sh` is the recommended WSL build (clean + slotomatic for every profile with sources + jar, then it calls the gate); `scripts/ng-deploy.sh --strict-slotomatic` is the station deploy wrapper (backup→build→copy→verify; strict aborts if annotations changed without slotomatic, and its slotomatic guard is rt-only); `toolbelt/verify-module.sh` is THE gate, run on the built jars.
 - Confirm: bytecode major **52**, jars **signed**, no raw-double facet. (build-verify.md)
 - A `gradle :jar` with the default JDK is NOT a build.
@@ -60,7 +61,27 @@ Safe combinations: `clean slotomatic jar` — the only correct kit build (`build
 
 **Station-lock recipe (exit 31):** `:clean` fails with "Unable to delete `<niagara_home>/modules/<jar>`" when a running station holds the lock (`toolbelt/build.sh:15,:82-88`). Fix: `toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>` creates a writable mirror so the plugin can copy freely without touching the live install (see §0.b). `[ev: corpus B807]`
 
-### 4.b Version-bump checklist (before any slot-touching commit)
+### 4.b Test layer — BTestNg station-lifecycle tests `[ev: corpus B815]`
+
+A `moduleTest` / `BTestNg` station-lifecycle test exercises the compiled rt code inside a real Niagara container. This is the DOCUMENTATION layer — it proves that the compiled classes load and behave correctly in a station context, but it does NOT run from WSL (see `build-verify.md §Unit tests in WSL`).
+
+**When to write one:** any rt component whose correctness depends on the Niagara lifecycle (started/stopped/atSteadyState, Clock.Ticket arming, slot-change propagation) and whose pure-JUnit test cannot reach those hooks.
+
+**Recipe (grounded in `BEvaporatorUnit` / ColdRoomPan c66e412):**
+1. Create `src<Test>/com/<vendor>/<Module>/BMyComponentTest.java` extending `BTestNg`.
+2. Open a station: `try (BTestStation station = createTestStation()) { ... }` (try-with-resources — the station tears down automatically).
+3. Add the component under test to the station tree and call `start()` or wait for `atSteadyState()`.
+4. Drive slots via `component.set(slotName, value)` and read results via `component.get(slotName)`.
+5. To assert a `Clock.Ticket` was armed: read the field via reflection (`Field f = ... f.setAccessible(true); Clock.Ticket t = (Clock.Ticket)f.get(component)`) — NEVER wait on wall-clock timers (a `Thread.sleep` is a flaky gate).
+6. Assert the invariants the pure test cannot reach (e.g. defrost PRESERVES the powerOnTicket; `stopped()` cancels all tickets AND clears companion flags).
+
+**Build gate:** in WSL, add a `moduleTestJar` compile-gate step (`build.sh` variant or `./gradlew :MOD-rt:moduleTestJar`). This compiles the test classes inside the Niagara container's compile classpath — a compile failure surfaces annotation bugs early. `niagaraTest` runs native/JACE only.
+
+**Scaffold gradle:** the `-rt` profile gradle must declare `testImplementation(project(":test-wb"))` (or `moduleTestImplementation(...)` per the plugin version) so `BTestNg` resolves. Lint L11 (`lint-structure.sh`) flags a module that mixes pure-JUnit + Baja test deps without both declarations.
+
+**WSL limitation (honest):** `niagaraTest` discovers 0 tests from WSL (plugin 7.6.17; requires native `bin/test` + dev license). WSL can COMPILE the test jar as a gate; only a native/JACE run produces a test result.
+
+### 4.c Version-bump checklist (before any slot-touching commit)
 - `vendorVersion` (in `module.xml` / `gradle.properties`) MUST be bumped on every schema change — slot add, remove, retype, or rename. On reload the station re-decodes `config.bog` against the new module's type/slot registry; a retype or remove is a schema-risk OUTAGE. `[ev: corpus B807]` `[ev: corpus B795]`
 - `bajaVersion` is the Niagara platform API target set in `gradle.properties` / `settings.gradle.kts`; do NOT bump it between normal builds — it follows the `niagara_home` chosen at build time and is managed by the plugin. `[ev: corpus B807]`
 - Restart mandatory for any `-rt` or `-wb` jar change (Java classes loaded at boot); a `-ux`-only change needs no restart — browser hard-reload only (§6). `[ev: corpus B807]`
@@ -96,6 +117,19 @@ Ordered steps — run within ≤5 min of a hot module reload (Out-of-date: Modul
 3. `toolbelt/bog-audit.sh <config.bog|file.xml> --module <MOD>` — ghost slots, dangling links, orphan handles, proxy-link safety (CHECK11); exit 1 = any FAIL. `[ev: corpus B795]`
 4. `toolbelt/report-module.sh <module-root> --console-dir <console-dir>` — aggregated punch-list; exit 1 = FAILs block hand-off. `[ev: retro campaign7-report-module]`
 - The proxy-link safety row (CHECK11) must be clean before operator hand-off. `[ev: corpus B810]`
+
+## 6.b Commissioning-verify requirement (modules needing station rewiring) `[ev: retro live-commissioning-verification-gaps Δ7]`
+
+The kit verify gate (§5) is **code-level and blind to live commissioning.** It confirms: bytecode 52, signed jars, types resolve, lint rules pass, pure JUnit green. It does NOT verify: facade↔rt link wiring, config values, per-instance control/status parity, or whether the station actually controls the plant correctly.
+
+**A module that requires station rewiring is NOT "done" until a commissioning-verify pass confirms the following:**
+1. Every facade display slot is linked from its corresponding control point (`bog-audit.sh CHECK11`, `obix-nav.py` batch link audit).
+2. Every facade config/setpoint slot is linked TO the corresponding control slot (not to a display slot or a link-target side).
+3. Config values make physical sense: `interval > duration`, setpoint ≠ 0 on a cooling unit, `hasDefrost=true` AND `airDefrost=true` on an air-defrost unit, `duration` above a floor (e.g. ≥ 60 s).
+4. Per-instance control/config surfaces have matching per-instance status slots (N configs → N status slots, not 1 scalar).
+5. After a hot reload: `triage-console.sh` clean + `bog-audit.sh` CHECK11 clean.
+
+**The kit — not the operator — owns the watchdog role.** If the operator must direct each verification check, the kit has a gap. Add commissioning-verify tooling (step-by-step `obix-nav.py`-style auditor) for any module needing wiring rather than shipping the wiring verification as implicit operator knowledge.
 
 ## 7. Retro + close (HARD close gate — not optional)
 - **Lead merge/settle order:** merge ff-only → verify `git log -1` equals the blessed tip → THEN settle the ledger; a ledger settle on a reported-but-unverified merge records the wrong evidence revision. For parallel workers: rebase onto the new main tip before the QA ping so the blessed tip is the one that merges, not the pre-rebase base. `[ev: retro campaign8-close-process-meta-lessons]`

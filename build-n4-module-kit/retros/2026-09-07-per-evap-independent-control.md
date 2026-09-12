@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · ColdRoomPan · per-evap-independent-control
 
 **Session**: PANCCADIA per-evaporator rearchitect — PR1a/b/c chained slices, build+verify each.

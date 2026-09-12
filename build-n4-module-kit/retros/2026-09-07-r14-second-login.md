@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · DashboardPan · r14-second-login
 
 **Session**: PANCCADIA — second login (individual Niagara credentials) required before any dashboard write.

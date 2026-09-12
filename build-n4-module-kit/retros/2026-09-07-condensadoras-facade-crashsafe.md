@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · DashboardPan · condensadoras-facade-crashsafe
 
 **Session**: PANCCADIA — back the Condensadoras tab with a facade, crash-safety first.

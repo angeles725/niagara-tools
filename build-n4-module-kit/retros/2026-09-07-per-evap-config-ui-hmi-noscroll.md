@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · DashboardPan · per-evap-config-ui-hmi-noscroll
 
 **Session**: PANCCADIA PR2 — per-evaporator Configuración; fit the 10" HMI (1280×800, no scroll).

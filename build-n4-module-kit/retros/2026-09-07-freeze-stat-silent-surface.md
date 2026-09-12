@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · ColdRoomPan · freeze-stat-silent-surface
 
 **Session**: PANCCADIA — surface the freeze-stat trip (was silent) as a per-evaporator status, mirroring defrost-active.
