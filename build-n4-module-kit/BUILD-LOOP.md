@@ -8,6 +8,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 
 ### 0.a Orient from BUILD-STATE (before touching anything)
+- Run **`toolbelt/orient-guard.sh <module-root>`** — asserts that the module root is under the sole legal build prefix `/home/cristian/modulos_niagara_n4/Cliente/`; exit 1 = wrong location, abort; exit 0 (PASS or WARN) = proceed. Set `BUILD_N4_CLIENTE_OVERRIDE=1` to warn-and-pass on an exceptional path. `[ev: retro module-worktree-location-retro]`
 - Read `BUILD-STATE.md` for the module you are about to build. From its `build-state.v1` envelope + prose, tell the operator in ONE line:
   `<module> · built <last_build>/gate <verify_gate>/deployed <deployed> · next: <last_session tail> · open_issues=N · retro_pending=Y/N`.
 - If `retro_pending: true`, the previous session left an OWED retro — writing it is the FIRST task unless the operator redirects.

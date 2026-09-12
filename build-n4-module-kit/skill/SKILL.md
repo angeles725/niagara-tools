@@ -51,7 +51,8 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 
 ## Execution Steps
 
-1. Orient from `$KIT/BUILD-STATE.md` (BUILD-LOOP §0.a) — state the module's one-line leave-off; then read `METHODOLOGY.md` + `BUILD-LOOP.md` + the type guide; skim `$KIT/corpus-index.md` for the P0 blocks of the layer you are building.
+1. **Orient guard (FIRST):** run `$KIT/toolbelt/orient-guard.sh <module-root>` — asserts that the module root is under the sole legal build prefix `/home/cristian/modulos_niagara_n4/Cliente/`; exit 1 = unauthorized location, stop; exit 0 = proceed. Set `BUILD_N4_CLIENTE_OVERRIDE=1` only for an explicitly authorized exceptional path. `[ev: retro module-worktree-location-retro]`
+1a. Orient from `$KIT/BUILD-STATE.md` (BUILD-LOOP §0.a) — state the module's one-line leave-off; then read `METHODOLOGY.md` + `BUILD-LOOP.md` + the type guide; skim `$KIT/corpus-index.md` for the P0 blocks of the layer you are building.
 1b. Explore shard: when the change touches > 3 files, open a `sdd-explore` shard (sonnet) to map the affected symbol set before writing; audit-first prevents fold errors on renamed or moved files. `[ev: METHODOLOGY.md K6]`
 1c. Design shard: when the change introduces a schema annotation, a new slot, or a new façade type, open a `sdd-design` shard (opus) before writing; these are high blast-radius changes that need architectural scoping (`gentle-sdd-ff` path). `[ev: ORCHESTRATION.md §Which model runs each phase; CLAUDE.md Model Assignments]`
 2. corpus-nav the topic; read the exemplar source.
