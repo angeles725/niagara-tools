@@ -118,15 +118,16 @@ setup_parse_fixtures() {
 #   module-include.xml  — 1 type (FanMode)
 #   module.lexicon      — has 'fan' twice (duplicate bare key)
 #
-# Named mutation: drop dup-keys detection block -> WARN disappears -> test flips
+# A1 (B792): severity upgraded from WARN/exit-0 to FAIL/exit-1 (non-strict too).
+# Named mutation: drop dup-keys detection block -> FAIL disappears -> test flips
 
-@test "dup-keys: duplicate bare key in lexicon emits WARN (exit 0; --strict -> exit 1)" {
+@test "dup-keys: duplicate bare key in lexicon emits FAIL (exit 1; non-strict too)" {
   setup_parse_fixtures
   XML="$FIXDIR/dup-keys/module-include.xml"
   LEX="$FIXDIR/dup-keys/module.lexicon"
   run "$SC" "$XML" "$LEX"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"slot-coverage: WARN dup-keys:"* ]]
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"slot-coverage: FAIL dup-keys:"* ]]
 
   run "$SC" --strict "$XML" "$LEX"
   [ "$status" -eq 1 ]

@@ -42,6 +42,17 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
 
+## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
+
+L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niagara_home=`, `user_home=`, `nodeHome=`). The correct pattern is:
+
+1. **Commit a template** `gradle.properties` with paths commented out (or with a safe placeholder), so a fresh checkout builds without host-path edits.
+2. **Git-ignore a local override** `gradle.properties.local` (or `local.properties`) where each developer stores their actual `niagara_home`, `org.gradle.java.installations.paths`, etc. The build script reads the local override if present; Gradle's `gradle.properties` in `$GRADLE_USER_HOME` also works.
+3. **`build.sh` overrides `niagara_home` via arg 3** — so a WSL build always gets the correct path from the operator regardless of what `gradle.properties` says. But a Windows `gradlew` build reads `gradle.properties` directly and will fail if it still points at a Windows path that differs on the build machine.
+4. **`org.gradle.java.installations.paths` / `auto-detect`:** commit `auto-detect=false` + a commented-out `paths=` line in the template. A commented-out or absent block means auto-detect, which is machine-dependent and can pick the wrong JDK major (the "gradle :jar with the default JDK is NOT a build" hazard). The local override sets the real path.
+
+**Why this matters:** three modules in the same group deploying to ONE station had three different `niagara_home` versions in committed `gradle.properties`. A WSL `build.sh` build (which overrides niagara_home) masked the divergence — all jars were major-52. A Windows `gradlew` build would have picked up the divergent paths and built against different API versions. [ev: retro gradle-properties-consistency Δ3]
+
 ## PASS state + scaffold `[ev: corpus B817]`
 `scaffold-module.sh <MOD>` output passes L1–L11 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes

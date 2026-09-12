@@ -45,6 +45,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
 - [ ] `toolbelt/verify-module.sh` passed on the built jars.
 - [ ] **The 4-layer assurance stack ran** for any decision/safety logic: pure JUnit (`toolbelt/run-pure-test.sh`) → the verify gate → a live cold-boot smoke → an adversarial pure-logic review. Pure tests are mandatory for decision/safety logic; `niagaraTest` is documentation, not a WSL gate. Detail in `build-verify.md`. [ev: retro qa-stack · T1]
+- [ ] **If this module requires station rewiring: a commissioning-verify pass must run BEFORE hand-off** — confirm facade↔rt links wired, config values sane, per-instance status surfaces match control arity, and `triage-console.sh` + `bog-audit.sh CHECK11` are clean after a hot reload. The verify gate is code-level and BLIND to commissioning correctness (no facade, no live station, no config values). `[ev: retro live-commissioning-verification-gaps Δ7]` See BUILD-LOOP §6.b for the full commissioning-verify checklist.
 - **What to test, where — by module type** [ev: corpus B743/B12]:
 
   | Module type | Pure JUnit (WSL) | Verify gate | Live smoke |

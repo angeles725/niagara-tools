@@ -104,6 +104,70 @@ the write sticking. `[ev: corpus B816]`
 
 `toolbelt/lint-ext-writable-shape.sh <src>` flags the anti-shape (an OPERATOR complex property with no `@NiagaraAction` whose body writes the slot). The exemption is per-slot: action `x` maps to `doX()` (B831-G1 convention); a `doAckAlarm` body writing `alarmAck` must NOT exempt `faultReset` — the write-target must match the OPERATOR slot being checked. The adapter→pure follow uses the `B<Pure>` naming pair only (prepend `"B"` to the pure class name). `[ev: retro campaign9-ext-writable-shape]` `[ev: retro campaign10-ext-writable-per-slot]`
 
+## Control model limits and design patterns `[ev: retro control-model-limits-live-commissioning]`
+
+### Split / sequenced-unit pattern (fan-first, reverse shutdown) `[ev: retro control-model-limits-live-commissioning Δ1]`
+
+The `BEvaporatorUnit` model is **refrigeration-shaped** (valve-first: open the expansion valve, then start the fans, then call compressors). A split A/C unit or fan-coil unit is the **opposite**: fans must start BEFORE the compressor, and the compressor must stop BEFORE the fans (fan outlasts the compressor to clear residual heat).
+
+**Pattern:** build a wire-sheet sequencer in the Niagara station (not in code): use timed gates and comparators (`COMPdelay`, `FANruns`) to: (1) prove fans are running before enabling the compressor, (2) stop the compressor N seconds before stopping the fans. This cannot be done through the `BEvaporatorUnit` slots — it requires a standalone sequencer component or a parallel override relay. State this in the module design up front so the integrator knows they need the sequencer.
+
+**Multi-stage by demand = per-stage thresholds:** to stage two units by temperature, define per-stage setpoints/differentials. The second stage's differential must be DERIVED from the first (via `Add`/`Subtract` kitControl blocks linked into the second stage's `diffUp`/`diffDown`) so operator edits to the first stage automatically propagate — never hardcode the second stage's differential as a constant offset.
+
+### Derived-differential staging `[ev: retro control-model-limits-live-commissioning Δ2]`
+
+- **Pattern:** `stageUpDiff = Add(stage1.evapDifferentialUp, offsetUp)` and `stageDownDiff = Subtract(stage1.evapDifferentialDown, offsetDown)` linked into `EvaporatorUnit2.diffUp`/`diffDown`. The operator only edits the primary stage's band; the secondary tracks it automatically.
+- **Anti-pattern:** hardcoding the secondary stage's thresholds. An operator edit to the primary breaks the staging relationship silently.
+
+### Defrost has priority over HOA — there is no disable `[ev: retro control-model-limits-live-commissioning Δ5]`
+
+- **Defrost overrides HOA unconditionally:** while a `BDefrostController` is active (`inDefrost=true`), `applyHoaOutputs` returns early — the HOA setting is ignored. This is by design: defrost must complete to prevent ice buildup.
+- **There is no `enabled` slot on `BDefrostController`:** `BDefrostMode` has only `interval` and `schedule` variants (no `off`). "Turn off defrost" requires a code change (add a `defrostEnable` slot) or an out-of-band relay OR to keep the valve open.
+- **Integrators must know this upfront:** a "keep the valve open" requirement during defrost cannot be solved through HOA. The options are: (a) add a per-evaporator `defrostEnable` slot to `BDefrostController`/`BEvaporatorUnit` (code change); (b) use an out-of-band valve OR relay; (c) gate the defrost schedule to never fire when the operator needs the valve open.
+- **Relay-OR trap:** feeding a multi-state `valveMode` (double 0=auto/1=on/2=off) directly into a boolean `Or` block converts `!=0` to `true`, so BOTH `Encender(1)` AND `Apagar(2)` force the valve ON. Always use `Equal(valveMode, 1)` to isolate the ON state.
+
+## Cross-field invariants and transient-flag recovery `[ev: retro live-commissioning-verification-gaps]`
+
+### Cross-field invariants must be enforced in code or a lint `[ev: retro live-commissioning-verification-gaps Δ4]`
+
+A constraint that relates two or more configuration fields (e.g. `hasDefrost` + `airDefrost` must both be `true` to enable air defrost; `interval` must exceed `duration`) is a **cross-field invariant**. Leaving it ONLY in a code comment is a commissioning hazard: there is no signal when the constraint is violated, and the defect is silent (defrost silently disabled, or defrosts non-stop).
+
+**Enforce at one of these layers (in preference order):**
+1. **Code derivation:** derive one field from the other so the invalid combination is structurally impossible (e.g. `airDefrostEnabled = hasDefrost && airDefrost` computed in the engine, not stored separately).
+2. **Code rejection:** validate in the `changed()` handler and reset the field to a safe value, logging the reason.
+3. **Lint:** add a `lint-config-sanity.sh` rule that detects the bad combination in source or in the live bog via `bog-audit.sh`.
+4. **NEVER:** leave it in a comment only. `BEvaporatorUnit.java:182` is the live example — `hasDefrost=false` + `airDefrost=true` silently disabled air defrost on 3 rooms.
+
+### Transient mode flag gating output writers must have unconditional recovery `[ev: retro live-commissioning-verification-gaps Δ5]`
+
+A boolean flag that gates ALL output writers (e.g. `if(inDefrost) return;` at the top of `applyRunCmd` and `applyHoaOutputs`) creates a recovery gap: if the module stops while the flag is `true`, the outputs are left in their last state, and no subsequent code path writes them back because the flag still reads `true` from the stale transient.
+
+**Rule:** any output writer that the module owns must have a guaranteed recovery path that does NOT depend on the flag:
+- Clear protection/heater outputs unconditionally in `started()` and/or when the guarded flag is cleared, regardless of the flag's current value.
+- The ONLY safe exit for a mode flag is: when the mode ends (e.g. `exitDefrost()`), clear the flag AND drive all guarded outputs to their safe default in one atomic step.
+- `stopped()` must NOT be the sole recovery path for a flag that can be `true` when the module stops — `stopped()` deliberately skips output writes in some patterns (e.g. ColdRoomPan's `stopped()` clears `inDefrost` but does NOT write `resistanceOut`), leaving the output stuck ON until the next `started()` + `execute()` cycle.
+
+**Lint candidate:** `lint-recovery-path.sh` — flag any transient boolean field set by an enter-mode method whose corresponding exit-mode method does NOT unconditionally write the guarded output(s). Until that lint exists, review every `if(flagField) return;` guard manually to confirm an exit path writes the output.
+
+## Authoring a driver `[ev: corpus B810]`
+
+When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable` that sits above a driver point), follow these rules to avoid silent command loss and stuck relays.
+
+- **Write to `in8`, not `in1`:** Niagara's priority-16 array arbitrates commands; level 8 is the MANUAL/OPERATOR write level (persisted across restarts). Writing to `in1` (supervisor override) can lock out the operator; writing to `in8` is the correct level for our own module's command. (`BBooleanWritable.java:490` — `in8` is the persisted manual level.)
+- **Set a non-null `fallback`:** the `fallback` slot is the value the writable holds when ALL 16 priority levels are null (the relinquished state). If `fallback` is null on a `BBooleanWritable`, the relay HOLDS its last command on station stop/reload — 22 PANCCADIA relays exhibited this until the fallback was set. (`BBooleanWritable.java:726`: `fallback = newProperty(0, new BStatusBoolean(false, ...))`.)
+- **`writeOnUp=true` (verify it is set):** `BTuningPolicy.writeOnUp` defaults `true` (`BTuningPolicy.java:206`), so a proxy point whose TuningPolicy uses the default is self-correcting — on device-UP it replays the last desired write. If `writeOnUp` is `false`, a write that was issued while the device was DOWN is silently dropped and the relay never receives the command. (`Tuning.java:201-204`.) Do NOT override `writeOnUp=false`.
+- **Verify the write landed — read the DOWN/STALE status bit:** `set()` returning normally does NOT mean the device received the command; it means Niagara queued it. Always check the proxy point's `BStatus.isDown()` / `isStale()` bit after a write and surface it via an alarm or a health-status slot.
+- **Device-side `relinquishDefault`:** configure the field device's own relinquish-default so the device falls back safely (e.g. valve closed) when the network drops, independent of the Niagara priority array.
+- **`pingEnabled` monitor:** enable `pingEnabled` on the device network to get prompt DOWN detection; a stale ping-less point stays UP in Niagara while the physical relay is unresponsive.
+
+**Lints (from `verify-module.sh --src` + `bog-audit.sh`):**
+- HARD — null `fallback` on an own-module-driven `BBooleanWritable` / `BNumericWritable` (CHECK11 in `bog-audit.sh`): the writable holds last command on stop/reload, masking the fault.
+- HARD — no `pingEnabled` on the device network / no `tuningPolicies` slot referencing our policy.
+- WARN — `writeOnUp=false` on any tuning policy we control (defaults true; explicit false is a hazard).
+- REVIEW — synchronous I/O in the write path (a `write()` callback that blocks on device I/O can freeze the engine thread).
+
+**NOTE:** `writeOnUp`, `writeOnStart`, and `writeOnEnabled` all default `true` in `BTuningPolicy` — the DOWN self-correction behavior is ON by default. A fresh out-of-box proxy point is self-correcting; do not override these flags unless you understand the consequence.
+
 ## Write-path test matrix `[ev: corpus B816]`
 Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
 
