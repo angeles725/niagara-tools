@@ -109,6 +109,17 @@ kit_refs() {
   fi
 }
 
+@test "L9: orient-guard.sh is named in BOTH BUILD-LOOP.md §0.a AND skill/SKILL.md step 1 (K19 routing pin)" {
+  # Regression guard: orient-guard.sh must be explicitly cited in both routing docs.
+  # Named mutation: remove orient-guard.sh from either doc -> L9 fails.
+  cd "$KIT"
+  [ -f "toolbelt/orient-guard.sh" ] || { echo "toolbelt/orient-guard.sh missing" >&2; return 1; }
+  grep -qF "orient-guard.sh" BUILD-LOOP.md \
+    || { echo "orient-guard.sh not found in BUILD-LOOP.md" >&2; return 1; }
+  grep -qF "orient-guard.sh" skill/SKILL.md \
+    || { echo "orient-guard.sh not found in skill/SKILL.md" >&2; return 1; }
+}
+
 @test "L6: types/logic.md and types/logic-authoring.md exist and cite each other" {
   # Regression: the split creates two companion files; both must exist and point at each other
   # Named mutation: remove the cross-reference from either file -> L6 fails
