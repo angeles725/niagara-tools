@@ -192,5 +192,52 @@ if [ "$WIN_PATH_FAIL" -eq 0 ]; then
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# Check 5 — version-drift: sibling module tree has a higher defaultModuleVersion
+# Scans siblings of the chosen gradle-root parent (2-3 dir levels up) for any
+# *.gradle.kts declaring defaultModuleVersion("X.Y.Z") that is higher than the
+# version declared in <gradle-root>. WARN only; exit stays 0.
+#
+# Row format: WARN  version-drift  <chosen-root> version <v1> < sibling <sib-root> version <v2>
+#
+# Limitation: parent-dir walk is capped at 3 levels to avoid noise on machines
+# with many module checkouts. Sort order uses `sort -V` (version-aware).
+# [ev: retro B832]
+# ---------------------------------------------------------------------------
+if [ "$WIN_PATH_FAIL" -eq 0 ] && [ -d "$GR" ]; then
+  _ver_from_kts() {
+    # Extract the first defaultModuleVersion("X.Y.Z") string from *.gradle.kts
+    # under directory $1. Returns empty string if none found.
+    find "$1" -maxdepth 3 -name '*.gradle.kts' -print \
+      | xargs grep -h 'defaultModuleVersion' 2>/dev/null \
+      | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' \
+      | head -1 \
+      | tr -d '"'
+  }
+  MY_VER=$(_ver_from_kts "$GR")
+  if [ -n "$MY_VER" ]; then
+    # Walk up to 3 parent levels looking for siblings
+    _SCAN_PARENT="$(dirname "$GR")"
+    for _lvl in 1 2 3; do
+      [ -d "$_SCAN_PARENT" ] || break
+      for _sib in "$_SCAN_PARENT"/*/; do
+        _sib="${_sib%/}"
+        [ -d "$_sib" ] || continue
+        [ "$_sib" = "$GR" ] && continue
+        _sib_ver=$(_ver_from_kts "$_sib")
+        [ -n "$_sib_ver" ] || continue
+        # Higher when sort -V places MY_VER before _sib_ver
+        _highest=$(printf '%s\n%s\n' "$MY_VER" "$_sib_ver" | sort -V | tail -1)
+        if [ "$_highest" != "$MY_VER" ] && [ "$_highest" = "$_sib_ver" ]; then
+          row WARN "version-drift" "$GR version $MY_VER < sibling $_sib version $_sib_ver"
+        fi
+      done
+      _NEXT_PARENT="$(dirname "$_SCAN_PARENT")"
+      [ "$_NEXT_PARENT" = "$_SCAN_PARENT" ] && break
+      _SCAN_PARENT="$_NEXT_PARENT"
+    done
+  fi
+fi
+
 [ "$FAILED" -eq 1 ] && exit 1
 exit 0

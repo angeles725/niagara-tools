@@ -58,6 +58,77 @@ setup() {
   [ "$status" -eq 3 ]
 }
 
+# ---------------------------------------------------------------------------
+# L12 — absent/commented org.gradle.java.installations block -> FAIL
+# Named mutation: LS7 -- remove the L12 check -> LS12 exits 0
+# ---------------------------------------------------------------------------
+@test "LS12: gradle.properties missing org.gradle.java.installations block -> FAIL L12" {
+  ROOT=$(mktemp -d)
+  # Minimal module root with a profile and gradle.properties WITHOUT the JDK installation block
+  mkdir -p "$ROOT/Foo-rt/src"
+  printf 'niagara_home=/opt/niagara\n' > "$ROOT/gradle.properties"
+  printf '<module><type name="Foo"/></module>\n' > "$ROOT/Foo-rt/module-include.xml"
+  printf 'test\n' > "$ROOT/Foo-rt/module.lexicon"
+  printf 'test\n' > "$ROOT/Foo-rt/module.palette"
+  run "$LS" "$ROOT"
+  rm -rf "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L12"* ]]
+}
+
+@test "LS12-clean: gradle.properties with both installations keys -> no L12" {
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/Foo-rt/src"
+  printf 'org.gradle.java.installations.paths=/usr/lib/jvm/java-8\norg.gradle.java.installations.auto-detect=false\n' \
+    > "$ROOT/gradle.properties"
+  printf '<module><type name="Foo"/></module>\n' > "$ROOT/Foo-rt/module-include.xml"
+  printf 'test\n' > "$ROOT/Foo-rt/module.lexicon"
+  printf 'test\n' > "$ROOT/Foo-rt/module.palette"
+  run "$LS" "$ROOT"
+  rm -rf "$ROOT"
+  [[ "$output" != *"L12"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# L13 — divergent niagara_home across sibling gradle.properties -> FAIL
+# Named mutation: LS7 -- remove the L13 check -> LS13 exits 0
+# ---------------------------------------------------------------------------
+@test "LS13: >=2 sibling gradle.properties with divergent niagara_home -> FAIL L13" {
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/ModA/Foo-rt" "$ROOT/ModB/Bar-rt"
+  # Both siblings under ROOT/group-parent/Module
+  GROUP="$ROOT/group-parent"
+  mkdir -p "$GROUP/ModA/Foo-rt" "$GROUP/ModB/Bar-rt"
+  printf 'org.gradle.java.installations.paths=/jdk\norg.gradle.java.installations.auto-detect=false\nniagara_home=/opt/niagara-A\n' \
+    > "$GROUP/ModA/gradle.properties"
+  printf 'org.gradle.java.installations.paths=/jdk\norg.gradle.java.installations.auto-detect=false\nniagara_home=/opt/niagara-B\n' \
+    > "$GROUP/ModB/gradle.properties"
+  printf '<module><type name="Foo"/></module>\n' > "$GROUP/ModA/Foo-rt/module-include.xml"
+  printf 'test\n' > "$GROUP/ModA/Foo-rt/module.lexicon"
+  printf 'test\n' > "$GROUP/ModA/Foo-rt/module.palette"
+  # lint-structure takes ModA as the module root; looks one level up (group-parent) for siblings
+  run "$LS" "$GROUP/ModA"
+  rm -rf "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L13"* ]]
+}
+
+@test "LS13-clean: sibling gradle.properties all share the same niagara_home -> no L13" {
+  ROOT=$(mktemp -d)
+  GROUP="$ROOT/group-parent"
+  mkdir -p "$GROUP/ModA/Foo-rt" "$GROUP/ModB"
+  SAME_HOME='/opt/niagara-same'
+  printf 'org.gradle.java.installations.paths=/jdk\norg.gradle.java.installations.auto-detect=false\nniagara_home=%s\n' \
+    "$SAME_HOME" > "$GROUP/ModA/gradle.properties"
+  printf 'niagara_home=%s\n' "$SAME_HOME" > "$GROUP/ModB/gradle.properties"
+  printf '<module><type name="Foo"/></module>\n' > "$GROUP/ModA/Foo-rt/module-include.xml"
+  printf 'test\n' > "$GROUP/ModA/Foo-rt/module.lexicon"
+  printf 'test\n' > "$GROUP/ModA/Foo-rt/module.palette"
+  run "$LS" "$GROUP/ModA"
+  rm -rf "$ROOT"
+  [[ "$output" != *"L13"* ]]
+}
+
 @test "LS9-real: profile dir with build.gradle.kts but no module-include.xml fires L6+L9" {
   run "$LS" "$FX/skeleton-wb"
   [ "$status" -eq 1 ]
