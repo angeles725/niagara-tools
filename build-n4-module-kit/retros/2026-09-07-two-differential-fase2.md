@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · CompPan · two-differential-fase2
 
 **Session**: PANCCADIA — express Fase-2 staging as two independent differentials (single slice, build+verify).
