@@ -131,3 +131,17 @@ kit_refs() {
   grep -q 'logic\.md' types/logic-authoring.md \
     || { echo "types/logic-authoring.md does not cite logic.md" >&2; return 1; }
 }
+
+@test "L10: all 3 Wave 3 lint scripts named in BUILD-LOOP.md (K19 routing pin)" {
+  # Regression guard: every new Wave 3 lint script must be named in BUILD-LOOP.md §5 pre-gate.
+  # Named mutation: remove any of the 3 script names from BUILD-LOOP.md -> L10 fails.
+  cd "$KIT"
+  ok=1
+  for script in lint-recovery-path.sh lint-status-parity.sh lint-config-sanity.sh; do
+    if ! grep -qF "$script" BUILD-LOOP.md; then
+      echo "Wave 3 script missing from BUILD-LOOP.md: $script" >&2
+      ok=0
+    fi
+  done
+  [ "$ok" -eq 1 ]
+}
