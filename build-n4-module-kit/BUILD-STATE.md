@@ -28,6 +28,7 @@ modules, not sixty focuses.
 | ColdRoomPan | Cliente/Leon-Guanjuato | logic | 2026-09-03 | pass | yes | no | 1 |
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
+| UmbrellaDashboard | Cliente/Juarez/Umbrella | dashboard | 2026-09-16 | pass | no | no | 4 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
 | kit | niagara-tools | self | 2026-09-06 | n/a | n/a | no  | 0 |
 
@@ -109,6 +110,34 @@ retro_required: true
 retro_pending: true
 last_commit: 6b9b085
 last_session: 2026-09-04 · Condensadoras tab + HOA control (preview -ux); next: wire live pressure/amps data into the -ux
+<!-- /build-state.v1 -->
+
+## UmbrellaDashboard — new dashboard module (Juárez/Umbrella "Productos de Agua" 3D HMI)
+
+<!-- build-state.v1 -->
+module: UmbrellaDashboard
+module_repo: Cliente/Juarez/Umbrella
+module_root: /home/cristian/modulos_niagara_n4/Cliente/Juarez/Umbrella/UmbrellaDashboard
+type: dashboard
+profiles: rt,ux
+target_version: 4.14
+plugin_version: 7.6.17              # settings.gradle.kts gradlePluginVersion (settingsPluginVersion 7.6.3); coupled to the SDK family — re-check on version change (retro Δ4)
+last_build: 2026-09-16             # build.sh --profiles rt,ux --target-version 4.14
+bytecode_major: 52
+signed: yes
+verify_gate: pass                  # 2026-09-16 · verify-module 17 passed / 0 failed / 3 warned (benign ord-literal SERVICE_ORD + phantom-dep project-dep); rt 2 classes, ux 13 classes; baja 4.14 <= target 4.14
+deployed: no                       # build+verify only; no station access this session
+target_station: Juarez-Umbrella    # pending — station point list not yet available (B1015-G1)
+pure_tests: 14                     # UmbrellaDispatchTest (router guards, 0 Baja imports) → OK (14 tests)
+open_issues:
+  - B1015-G1 real point wiring — Juárez/Umbrella station point list pending; live mode maps UP-0N→UnitN by ordinal; integrator links Unit1..Unit8 slots at commissioning.
+  - B1015-G2 no writable config slots — WRITABLE_SLOTS empty, POST /api/setpoint always 400 until config slots added.
+  - B1015-G3 unit status derived from BStatus (normal/offline/alarma) — richer states need a status slot or alarm-service.
+  - B1015-G4 not deployed — ng-deploy.sh + commissioning + triage-console remain.
+retro_required: false
+retro_pending: true               # retro written: retros/2026-09-16-umbrelladashboard-module-creation.md (4 deltas, review-status: pending)
+last_commit: unknown               # client repo; not committed this session
+last_session: 2026-09-16 · created from DashboardPan exemplar (B1015); rt+ux green @4.14, 3D SPA wired to /api/equipment; next: real point wiring + deploy
 <!-- /build-state.v1 -->
 
 ## chihuahua (reference exemplar — not built from this kit)
