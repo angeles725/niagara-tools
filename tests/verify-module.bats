@@ -228,3 +228,34 @@ KTS
   run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-wb.jar"
   [[ "$output" == *"phantom-dep"* ]] && [[ "$output" == *"WARN"* ]] && [[ "$output" == *"schedule-rt"* ]]
 }
+
+# WB-DEP2: a module.xml dependency declared via api(project(":X")) must NOT WARN phantom-dep.
+# Real shape: UmbrellaDashboard-ux uses api(project(":UmbrellaDashboard-rt")) to depend on the
+# rt profile; this form was previously not recognised, producing a false WARN.
+# Named mutation: remove the project(":X") extraction from phantom-dep -> WB-DEP2 produces WARN instead of PASS.
+@test "WB-DEP2: api(project(':X')) in gradle.kts is accepted as declared — no phantom-dep WARN" {
+  d="$TMPDIR_T/proj"; add_manifest "$d"; add_signature "$d"; make_class_file "$d/com/x/A.class" 52
+  cat > "$d/META-INF/module.xml" <<'XML'
+<module name="Foo" vendor="Angeles">
+<dependencies>
+  <dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>
+  <dependency name="Foo-rt" vendor="Angeles" vendorVersion="1.0"/>
+</dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+XML
+  make_jar "$TMPDIR_T/Foo-ux.jar" "$d"
+  mkdir -p "$TMPDIR_T/mod/Foo-ux"
+  make_module_include "$TMPDIR_T/mod/Foo-ux" com.x.A
+  cat > "$TMPDIR_T/mod/Foo-ux/Foo-ux.gradle.kts" <<'KTS'
+dependencies {
+  nre(":nre")
+  api(":baja")
+  api(project(":Foo-rt"))   // project dep — must be recognised as declaring Foo-rt
+}
+KTS
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-ux.jar"
+  # Foo-rt is declared via project(":Foo-rt") -> no phantom-dep WARN
+  [[ "$output" == *"PASS  phantom-dep"* ]]
+  [[ "$output" != *"WARN"*"phantom-dep"* ]]
+}

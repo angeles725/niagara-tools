@@ -102,6 +102,14 @@ if [ $# -ge 1 ] && [ "$1" = "--plano" ]; then
   _rc_w=$(grep -oE 'IMG_W[[:space:]]*=[[:space:]]*[0-9]+' "$_html" | grep -oE '[0-9]+$' | head -1 || true)
   _rc_h=$(grep -oE 'IMG_H[[:space:]]*=[[:space:]]*[0-9]+' "$_html" | grep -oE '[0-9]+$' | head -1 || true)
   if [ -z "$_rc_w" ] || [ -z "$_rc_h" ]; then
+    # If no plano overlay markers at all (no IMG_W/IMG_H, no id="zonas"/id="plano"),
+    # this is a self-contained SPA (e.g. a 3D three.js dashboard) — not a plano module.
+    # SKIP instead of FAIL so non-plano modules are not penalised. (D: plano-skip, B797-retro)
+    _has_overlay=0
+    grep -qE 'id="zonas"|id="plano"' "$_html" 2>/dev/null && _has_overlay=1
+    if [ "$_has_overlay" -eq 0 ]; then
+      _prow SKIP "not a plano dashboard (3D/self-contained SPA) — IMG_W/IMG_H and overlay markers absent"; exit 0
+    fi
     _prow FAIL "Rc: IMG_W/IMG_H not found"; exit 1
   fi
   # Parse Rv = zones viewBox width / height (id="zonas" element; >=2 distinct -> FAIL)
@@ -409,9 +417,20 @@ check_phantom_dep() {
   gkt=$(find "$pd" -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1)
   [ -n "$gkt" ] || { row SKIP phantom-dep "$jar" "no *.gradle.kts in $pd"; return 0; }
   [ -n "$MX" ]  || { row SKIP phantom-dep "$jar" "no META-INF/module.xml"; return 0; }
-  # Dependency names declared in the gradle.kts (api, nre, or implementation)
-  gkt_deps=$(grep -oE '(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"' "$gkt" \
-    | grep -oE '":[^"]*"' | sed 's/^"://;s/"$//' | sort -u)
+  # Dependency names declared in the gradle.kts (api, nre, or implementation).
+  # Two forms are supported:
+  #   api(":X")  / nre(":X")  — direct string dep
+  #   api(project(":X")) / implementation(project(":X")) — project dep (multi-project layout)
+  # Both forms declare the same runtime dependency; only the first was previously matched,
+  # causing false phantom-dep WARNs for normal rt->ux client modules. (D: phantom-dep-project, C)
+  gkt_deps=$(
+    {
+      grep -oE '(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"' "$gkt" \
+        | grep -oE '":[^"]*"' | sed 's/^"://;s/"$//'
+      grep -oE '(api|nre|implementation)[[:space:]]*\([[:space:]]*project[[:space:]]*\([[:space:]]*":[^"]*"' "$gkt" \
+        | grep -oE '":[^"]*"' | sed 's/^"://;s/"$//'
+    } | sort -u
+  )
   # Dependency names from module.xml <dependency name="X">
   phantom_list=""
   while IFS= read -r dep; do

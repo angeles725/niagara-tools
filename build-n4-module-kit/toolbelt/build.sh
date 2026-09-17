@@ -37,11 +37,33 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
 GRADLE_ROOT="$ROOT"
 while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do GRADLE_ROOT="$(dirname "$GRADLE_ROOT")"; done
-[ -x "$GRADLE_ROOT/gradlew" ] || { echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2; exit 10; }
+[ -x "$GRADLE_ROOT/gradlew" ] || {
+    echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2
+    echo "  try: chmod +x $ROOT/gradlew" >&2
+    exit 10
+}
 [ -d "$J8" ] || { echo "build.sh: Java 8 not found at $J8 — check 'ls /usr/lib/jvm' or set JAVA8" >&2; exit 10; }
 [ -n "$NIAGARA_HOME" ] || { echo "build.sh: pass niagara_home (arg 3) or export niagara_home" >&2; exit 10; }
 [ -d "$NIAGARA_HOME/etc/m2/repository" ] || { echo "build.sh: not a niagara_home (no etc/m2/repository): $NIAGARA_HOME" >&2; exit 10; }
 [ -x "$HERE/verify-module.sh" ] || { echo "build.sh: gate not found next to this script: $HERE/verify-module.sh" >&2; exit 10; }
+
+# D: plugin-m2-warn — WARN (non-fatal) when the gradlePluginVersion declared in
+# settings.gradle.kts is absent from <niagara_home>/etc/m2.  A mismatch causes Gradle
+# to fail looking up the plugin when retargeting to a different Niagara installation.
+# This is advisory only and never blocks the build. (D-build-hardening)
+_SETTINGS_KTS="$GRADLE_ROOT/settings.gradle.kts"
+if [ -f "$_SETTINGS_KTS" ]; then
+    _GPLUG_VER=$(LC_ALL=C grep -oE 'gradlePluginVersion[[:space:]]*:[[:space:]]*String[[:space:]]*=[[:space:]]*"[0-9][^"]*"' \
+        "$_SETTINGS_KTS" 2>/dev/null | grep -oE '"[0-9][^"]*"' | tr -d '"' | head -1 || true)
+    if [ -n "$_GPLUG_VER" ]; then
+        _PLUG_IN_M2=$(find "$NIAGARA_HOME/etc/m2/repository" -maxdepth 8 -type d -name "$_GPLUG_VER" 2>/dev/null | head -1 || true)
+        if [ -z "$_PLUG_IN_M2" ]; then
+            echo "build.sh: WARN — gradlePluginVersion=$_GPLUG_VER not found under $NIAGARA_HOME/etc/m2/repository" >&2
+            echo "  SDK/plugin mismatch: the module was pinned for a different Niagara installation." >&2
+            echo "  If the build fails to resolve the niagara-module plugin, point niagara_home at the matching installation." >&2
+        fi
+    fi
+fi
 
 # profile selection: a gradle file alone is not a buildable profile (the DashboardPan-wb scaffold has one)
 has_gradle()  { [ -f "$1/build.gradle" ] || [ -f "$1/build.gradle.kts" ] || compgen -G "$1/*.gradle.kts" >/dev/null; }

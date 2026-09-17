@@ -189,7 +189,7 @@ for ADIR in "${ARTIFACTS[@]}"; do
     else
       while IFS= read -r _ln; do
         case "$_ln" in
-          PASS*|FAIL*)
+          PASS*|FAIL*|SKIP*|WARN*)
             # Row: STATUS(%-4s)  plano(%-9s)  path  detail
             _parsed=$(printf '%s' "$_ln" | awk '{
               st=$1; chk=$2; det="";
@@ -201,6 +201,38 @@ for ADIR in "${ARTIFACTS[@]}"; do
           ;;
         esac
       done <<< "$pl_out"
+    fi
+  fi
+
+  # ----------------------------------------------------------------
+  # 4b. lint-lexicon-ascii.sh <artifact> (D: lexicon-ascii, SKIP if no *.lexicon)
+  #     Checks every *.lexicon under the artifact dir for non-ASCII bytes.
+  #     Niagara reads lexicons as Latin-1; UTF-8 accents cause on-station mojibake.
+  # ----------------------------------------------------------------
+  _HAS_LEX=$(find "$ADIR" -maxdepth 2 -name '*.lexicon' -print -quit 2>/dev/null || true)
+  if [ -z "$_HAS_LEX" ]; then
+    emit "$ANAME" SKIP lint-lexicon-ascii "no *.lexicon under $ANAME"
+  else
+    la_exit=0
+    la_out=$("$TOOLBELT/lint-lexicon-ascii.sh" "$ADIR" 2>&1) || la_exit=$?
+    if [ "$la_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-lexicon-ascii "env fault (exit 3)"; HAD_ENV=1
+    else
+      _la_had_fail=0
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          FAIL*)
+            _st="${_ln%%  *}"
+            _rest="${_ln#*  }"
+            _chk="${_rest%%  *}"
+            _det="${_rest#*  }"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+            _la_had_fail=1
+          ;;
+        esac
+      done <<< "$la_out"
+      [ "$_la_had_fail" -eq 0 ] && emit "$ANAME" PASS lint-lexicon-ascii "all lexicon files are ASCII-clean"
     fi
   fi
 

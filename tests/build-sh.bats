@@ -149,3 +149,26 @@ GRADLEW
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [[ "$output" == *"mirror-niagara-home.sh"* ]]
 }
+
+# BS-gradlew-hint: when no executable gradlew is found, the error message must include
+# a "try: chmod +x" hint pointing at the module root, so the operator knows what to fix.
+# Named mutation: remove the hint echo line -> BS-gradlew-hint fails (hint absent from output).
+@test "BS-gradlew-hint: no-gradlew error prints chmod +x hint (D-build-hardening)" {
+  rm "$ROOT/gradlew"    # remove the fake gradlew so the check triggers
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"chmod +x"* ]]
+}
+
+# BS-plugin-m2-warn: when the gradlePluginVersion in settings.gradle.kts is absent from
+# the niagara_home etc/m2 tree, build.sh must print a WARN (never fail the build).
+# make_niagara_home creates the m2 dir for a specific plugin version (7.6.17 in setup);
+# a settings.gradle.kts with a different version (9.9.9) will not be found.
+# Named mutation: remove the plugin m2 WARN block -> BS-plugin-m2-warn fails (WARN absent).
+@test "BS-plugin-m2-warn: settings.gradle.kts gradlePluginVersion absent from m2 emits WARN (non-fatal)" {
+  # Write a settings.gradle.kts with a version NOT in the m2 (setup installs 7.6.17)
+  printf 'val gradlePluginVersion: String = "9.9.9"\n' > "$ROOT/settings.gradle.kts"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]   # WARN only — build is not failed
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"9.9.9"* ]]
+}

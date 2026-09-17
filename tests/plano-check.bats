@@ -81,3 +81,16 @@ mk_html() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
 }
+
+# PL6: a 3D / self-contained SPA (no IMG_W/IMG_H, no id="zonas"/id="plano") must SKIP,
+# not FAIL, so non-plano modules are not penalised by the plano check.
+# Named mutation: remove the no-overlay SKIP guard -> PL6 exits 1 FAIL instead of 0 SKIP.
+@test "PL6: an HTML with no IMG_W/IMG_H and no overlay markers SKIPs (3D/self-contained SPA)" {
+  # three.js SPA: no plano constants, no id="zonas", no id="plano"
+  printf '<!doctype html><html><body><canvas id="app"></canvas><script>// three.js SPA</script></body></html>\n' \
+    > "$BATS_TEST_TMPDIR/pl6.html"
+  run "$VM" --plano "$BATS_TEST_TMPDIR/pl6.html"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP"* ]]
+  [[ "$output" != *"FAIL"* ]]
+}
