@@ -5,6 +5,7 @@ The kit behind the `build-n4-module` skill (research-sdd pattern: the skill is a
 Building a Niagara N4 module — control logic (rt), a browser dashboard for an HMI (facade + servlet + SPA), a Workbench view (wb), or a mix — with an enforced checklist, the correct Java-8 + slotomatic build, and a verify gate.
 
 ## Layout
+- `docs/how-to-create-an-n4-module.md` in the niagara-research repo — the master end-to-end guide; read BEFORE any B-block.
 - `METHODOLOGY.md` — the rules + the common per-layer checklist (the verify gate).
 - `BUILD-LOOP.md` — the operational cycle the launcher runs.
 - `build-verify.md` — the Java-8 + slotomatic build command and how to verify.

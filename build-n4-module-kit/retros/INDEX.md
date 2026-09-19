@@ -117,7 +117,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-16-umbrelladashboard-module-creation.md | UmbrellaDashboard | 2026-09-16 | pending | 4 |
 | 2026-09-16-n4-client-build-config-standard.md | kit | 2026-09-16 | pending | 3 |
 | 2026-09-17-dashboard-status-state-modeling.md | UmbrellaDashboard | 2026-09-17 | pending | 4 |
-| 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | pending | 26 |
+| 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | folded | 26 |
 | 2026-09-18-authoring-exemplars-deltas.md | kit | 2026-09-18 | pending | 8 |
 | 2026-09-18-sdk-examples-kit-deltas.md | kit | 2026-09-18 | pending | 8 |
 | 2026-09-18-resource-threading-consumption-deltas.md | kit | 2026-09-18 | pending | 6 |

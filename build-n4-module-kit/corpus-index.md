@@ -31,6 +31,9 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B754** | Module versioning + the saved-data survival matrix — which schema changes are SAFE / LOSSY / OUTAGE over an existing `.bog` (generalizes B739); no per-module migration hook | schema |
 | **B751** | WB authoring: the "how much wb is enough" ladder (rung 0 nothing → 1 FieldEditor → 2 Manager → 3 custom View) + the Manager/View/FieldEditor/Command recipes | wb |
 | **B752** | UX authoring: the three serving recipes (servlet-SPA / bajaux `@AgentOn` view / PX), the bajaux data-channel dialects, PX bindings, and the RBAC contrast | ux |
+| **`docs/how-to-create-an-n4-module.md`** | **START HERE** — master end-to-end guide: scaffold → deps → slots → sign → test → deploy. Written from first principles; every step traces to a B-block. Lives in `niagara-research/docs/`. | reference |
+| **B817** | The N4 module STRUCTURE STANDARD — how Tridium/Honeywell lay out rt/ux/wb/doc profiles; a lintable conformance checklist for our four modules | organization |
+| **B960** | The canonical N4 module build scaffold from the first-party SDK examples — the Gradle layout, module.xml header, signing wiring, and Slotomatic hook as Tridium ships them | build / scaffold |
 
 ## P1 — read for the layer you are touching
 
@@ -47,6 +50,13 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B746** | Module palette authoring (BOG XML) + pre-wired assembly templates so commissioning is drag-one-thing | palette |
 | **B750** | The organization taxonomy applied to OUR modules — actionable gaps + a deploy-safe sequence | organization |
 | **B753** | The WB/UX playbook applied to OUR modules — our components sit at wb rung 0; keep the servlet-SPA + `OPERATOR_WRITE` RBAC | wb / ux |
+| **`docs/module-dev-workflow.md`** | Module dev runbook — the edit→build→sign→deploy→test loop with exact tool steps; every step cites the relevant B-block. Lives in `niagara-research/docs/`. | reference |
+| **`docs/module-best-practices.md`** | Evidence-grounded best-practices guide — rules distilled from reference modules and corpus audits (B705+). Lives in `niagara-research/docs/`. | reference |
+| **B961** | SDK dev-examples SYNTHESIS — what the four SDK examples collectively teach + the deltas for our module work; read after B960 | reference |
+| **B955** | envCtrlDriver SDK example (rt) — a complete minimal N4 field driver, first-party source; the rt SPI contract in a real build | rt / exemplar |
+| **B956** | envCtrlDriver SDK example (wb) — the Workbench device/point manager UI for the SDK driver exemplar | wb / exemplar |
+| **B957** | typeExtensionDemo SDK example (ux) — a browser type-extension with JS build + Jasmine tests; the ux SPI patterns in a real build | ux / exemplar |
+| **B1015** | Building `UmbrellaDashboard` — a dashboard-type N4 module (facade + servlet + 3D SPA), rt+ux built green @4.14; the DashboardPan exemplar in a second module | reference / dashboard |
 
 ## P2 — read when that feature/decision comes up
 
@@ -58,6 +68,14 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B757** | Station integration — authoring a `BAbstractService` (register-by-placement) + the nav tree | rt / service |
 | **B732** | Authoring real alarms — `BAlarmSourceExt` is a point extension; the offnormal/fault algorithm family | rt / alarms |
 | **B733** | Modulating (0-10V) outputs, `kitControl.BLoopPoint` PID, the math block family | rt / control |
+| **B958** | componentLinks SDK example — link-lifecycle callbacks + the `BTestNg` moduleTest framework; the correct seam for station-level tests (WSL-unsafe, documents the boundary) | test |
+| **B867** | Server-side TYPE-LEVEL component subscription (`BComponentSpace.subscribe(Type[], TypeSubscriber)`) — the SPI for observing every live instance of a type from a service | rt / service |
+| **B869** | Directional vs bidirectional communication in N4 — links, writeback, and "who respects whom"; pick the correct direction before wiring a facade→rt slot | rt |
+| **B871** | The `converters` type-bridge graph — 104 converter classes over ~17 core value types; read when two heterogeneous slot types need to wire across a link | rt / build |
+| **B892** | `driverUpgrade` — the WB per-driver component-upgrade SPI (`upgradeClass`, BOG rewrite); relevant when providing a WB migration path on a schema change | wb / build |
+| **B894** | `dashboard-wb` — the multi-target render agents for a `DashboardPane` (`@AgentOn` HX-bootstrap + PDF-paint via one model) | wb |
+| **B895** | `uxBuilder` — rendering Workbench Px as browser bajaux widgets (embed a JS widget in Px by ORD; the agent-filter gate + the Px-serving servlet) | ux |
+| **B900** | The `BComponentEvent` id catalog — 21 named component-event ids (0–20) + 4 reserved slots; read before writing a `Subscriber.event()` handler | rt |
 
 ## Research-tooling caveats (A18)
 
@@ -111,6 +129,19 @@ Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three insta
 |---|---|---|---|
 | **B784** | Real `module.xml` conventions: profile split `-rt`/`-ux`/`-wb`/`-se` (server), `-doc` is a SEPARATE `runtimeProfile="doc"` module; `<dependency>` `vendorVersion` = 3-part Tridium FLOOR (`4.14.0`) vs the module's own 4-part build stamp (`4.14.0.162`); header attribute roster | P1 | build / module.xml |
 | **B787/B788/B789** | Conformance rules: lintable (statically decidable: lexicon dup-keys, Clock.Ticket without stopped-cancel, empty palette, coverage-%) vs advisory (human-review: action operator-vs-admin intent, container order-sensitivity, poll-vs-subscribe) | P2 | build / verify |
+
+## P2 — distribution (read when shipping a module or targeting a specific N4 release)
+
+| Block | What it gives the builder | Layer |
+|---|---|---|
+| **B1020** | N4 Distribution ND1 — the Installer Contract (`install.properties`, `version.properties`, EULA/licensing): what the customer's installer reads when deploying your module | distribution |
+| **B1021** | N4 Distribution ND2 — shipped default config (`nre.properties`, `system.properties`, `units.xml`) vs installed values; how OEM defaults layer over stock N4 (refines B31) | distribution |
+| **B1022** | N4 Distribution ND3 — Honeywell OEM overlay anatomy over stock 4.13.2.18 (branding, versioning, overlay extras); understand what an OEM bundle adds vs the stock install | distribution |
+| **B1023** | N4 Distribution ND4 — the dist/ payload tree: JRE bundles, framework versions, Supervisor-as-installer mode | distribution |
+| **B1024** | N4 Distribution ND5 — install-time transfer & migration (`conversion/`, AX→N4 path, `cleanDist`, station templates) | distribution |
+| **B1025** | N4 Distribution ND6 — the shipped modules set: 721 jars, the 4.13.2.18.5 manifest, OEM-vs-stock families (vs the installed N4.14 corpus) | distribution |
+| **B1026** | N4 Distribution ND7 — Installer mechanics: `Installer_x64.exe`, overlay-merge sequence, `niagarad`/Service setup | distribution |
+| **B1027** | N4 Distribution ND8 — SDK dev examples (`dev/`) and default security material (`overlay/security/`) — file layout and what is shipped | distribution |
 
 ---
 
