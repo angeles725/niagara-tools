@@ -435,6 +435,72 @@ JAVA
 # df8c7ec (pre-guard mis-parse false-FAILs); the fix is clean, and dropping the
 # guard re-introduces the false FAIL.
 # ---------------------------------------------------------------------------
+# ===========================================================================
+# ATSS — atSteadyState-only-timer WARN (retro 2026-09-18-insights-issues-catalog-deltas Δ2)
+# A class that arms a timer ONLY in atSteadyState() but never overrides started()
+# silently fails to arm the timer on commissioning-time mounts (the component
+# receives started() but NOT atSteadyState() when dragged onto an already-running
+# station).  Live case: BDefrostController, PANCCADIA León.  [ev: corpus B729 §729.4]
+#
+# Check label: atSteadyState-only-timer
+# Severity: WARN (exit 0 even when emitted — a BTimeTrigger subclass may rely on
+#           the parent's started()); FAIL is NOT set.
+#
+# ATSS1 — class with atSteadyState() timer + no started() override → WARN row emitted, exit 0
+# ATSS2 — same shape WITH started() override → no WARN, exit 0 (clean)
+# ===========================================================================
+
+@test "ATSS1: a class with Clock.schedulePeriodically in atSteadyState() and NO started() override emits WARN atSteadyState-only-timer (exit 0)" {
+  D="$BATS_TEST_TMPDIR/atss1"; mkdir -p "$D"
+  cat > "$D/BAtssOnly.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BAtssOnly extends BComponent {
+  private Clock.Ticket pollTicket;
+  @Override public void atSteadyState() throws Exception {
+    super.atSteadyState();
+    pollTicket = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), doPoll, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (pollTicket != null) { pollTicket.cancel(); pollTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"atSteadyState-only-timer"* ]]
+}
+
+@test "ATSS2: same class WITH a started() override does NOT emit atSteadyState-only-timer (clean)" {
+  D="$BATS_TEST_TMPDIR/atss2"; mkdir -p "$D"
+  cat > "$D/BAtssFixed.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class BAtssFixed extends BComponent {
+  private Clock.Ticket pollTicket;
+  @Override public void started() throws Exception {
+    super.started();
+    if (Sys.atSteadyState()) {
+      pollTicket = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), doPoll, null);
+    }
+  }
+  @Override public void atSteadyState() throws Exception {
+    super.atSteadyState();
+    pollTicket = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), doPoll, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (pollTicket != null) { pollTicket.cancel(); pollTicket = null; }
+  }
+}
+JAVA
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"atSteadyState-only-timer"* ]]
+}
+
 @test "S21-misparse: a depth-1 @NiagaraProperty(defaultValue=\"new BAlarmRecord()\") does NOT mis-parse into a method; cross-method flag/schedule stay CLEAN" {
   D="$BATS_TEST_TMPDIR/s21mis"; mkdir -p "$D"
   cat > "$D/BMisparse.java" <<'JAVA'

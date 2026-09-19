@@ -22,7 +22,8 @@
 - [x] T13 — permissions-security-model (8Δ) → `dashboard.md` (BPermissions 6-bit) + `structure.md` (module-permissions.xml source/inlining/profile-scope) + `build-verify.md` (verificationMode/skipModuleValidation/exemptions.tes; Δ4 already-folded) — DONE (FULL, doc-only)
 - [x] T14 — organization-tags-grouping (6Δ) → `logic.md` (tag constructor-seed/auto-tagging, UX ranked checklist, our-modules tag recipe) + `logic-authoring.md` (BCustomRelation, BQL consumer cursor) — DONE (FULL, doc-only)
 - [x] T15 — resource-threading-consumption (6Δ) → `logic.md` (HogsPage, poll-limits, GC-timer-drift, BWorker off-engine) + `METHODOLOGY.md` (watchdog dead/hung-vs-slow) + `verify-module.sh` (check_slot_wall SLOTWALL1-2) — DONE (FULL; 36/36)
-- [ ] T16 — insights-issues-catalog (3Δ) → new `types/issues-and-gotchas.md` + `lint-timers.sh` + `METHODOLOGY.md`
+- [x] T16 — insights-issues-catalog (3Δ) → new `types/issues-and-gotchas.md` (14-entry catalog) + `lint-timers.sh` (atSteadyState-only-timer ATSS1-2) + `METHODOLOGY.md` pointer — DONE (FULL; lint-timers 18/18)
+- [x] T17 — math-control-library-layer (4Δ) → new `types/math-control-libraries.md` + `logic.md` xref (Δ4 check downgraded: check_compact3_imports already enforces) — DONE (FULL, doc-only)
 
 ## New retros discovered mid-campaign (operator-driven library/gap topics)
 - [x] T19 — third-party-library-integration (3Δ) → new `types/third-party-libraries.md` + `build-verify.md` — DONE (FULL, doc-only)

@@ -311,5 +311,49 @@ while IFS= read -r f; do
   [ -n "$_cs" ] && row FAIL "changed-sched" "$f: Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body"
 done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
 
+# ---------------------------------------------------------------------------
+# Check: atSteadyState-only-timer
+# A class that arms a timer (Clock.schedule/schedulePeriodically) inside
+# atSteadyState() but never overrides started() will silently fail to arm
+# the timer when mounted onto an already-running station (commissioning
+# drag-drop, component enable, parent start after initial bootstrap).
+# atSteadyState() fires ONCE during station bootstrap; a late-mounted
+# component receives started() but NOT atSteadyState().
+# Emit WARN (exit 0) — not FAIL: a BTimeTrigger subclass may legitimately
+# rely on the parent's started() override.  Only flag when no started()
+# override is present anywhere in the file.
+# Live case: BDefrostController (ColdRoomPan-rt), PANCCADIA León.
+# [ev: corpus B729 §729.4; retro 2026-09-18-insights-issues-catalog-deltas Δ2]
+# ---------------------------------------------------------------------------
+while IFS= read -r f; do
+  _atss=$(awk '
+    BEGIN { n = 0 }
+    { lines[++n] = $0 }
+    END {
+      in_atss = 0; depth = 0; atss_has_sched = 0; has_started = 0
+      for (i = 1; i <= n; i++) {
+        ln = lines[i]
+        if (ln ~ /void[[:space:]]+started[[:space:]]*\(/) has_started = 1
+        if (!in_atss && ln ~ /void[[:space:]]+atSteadyState[[:space:]]*\(/) {
+          in_atss = 1; depth = 0
+        }
+        if (in_atss) {
+          if (ln ~ /Clock\.schedule/) atss_has_sched = 1
+          for (ci = 1; ci <= length(ln); ci++) {
+            c = substr(ln, ci, 1)
+            if (c == "{") depth++
+            else if (c == "}") {
+              depth--
+              if (depth == 0) { in_atss = 0 }
+            }
+          }
+        }
+      }
+      if (atss_has_sched && !has_started) print "warn"
+    }
+  ' "$f")
+  [ -n "$_atss" ] && row WARN "atSteadyState-only-timer" "$f: timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer"
+done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+
 [ "$FAILED" -eq 1 ] && exit 1
 exit 0
