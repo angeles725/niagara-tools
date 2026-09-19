@@ -11,6 +11,7 @@
 #   Row:  FAIL  lint-agent-on-shape  <file>:<line>  malformed agent-on target (need module:Type): <value>
 #   Exit: 0  clean · 1  any FAIL · 3  usage/env
 # VCS-free by design.
+# Mutation: AOS2 -- relax the module:Type regex and AOS2 stops failing on a missing module prefix
 set -u
 LC_ALL=C
 export LC_ALL

@@ -11,6 +11,7 @@
 #   Row:  WARN  lint-clock-zero-floor  <file>:<line>  zero-floor: <source>
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: CZF2 -- drop the Math.max(0 match and CZF2 stops warning on a zero-floor near Clock.schedule
 set -u
 LC_ALL=C
 export LC_ALL

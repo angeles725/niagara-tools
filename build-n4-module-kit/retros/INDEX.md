@@ -152,3 +152,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-gotchas-tier-a.md | kit | 2026-09-19 | folded | 6 | <!-- issues-and-gotchas: Clock<=0 floor, lifecycle seam, Missing-class, ux-Jasmine, EC-Net set(value), GET-destructive -->
 | 2026-09-19-logic-authoring-spis.md | kit | 2026-09-19 | folded | 8 | <!-- logic-authoring expand: BSingleton/@AgentOn, lifecycle guard, BProgram, BBatchRoutine, BEmailService, BIRestrictedComponent, provider-in-service, Fox file-channel job -->
 | 2026-09-19-new-lints.md | kit | 2026-09-19 | folded | 9 | <!-- 9 toolbelt lints (+bats): no-system-out, se-display, jasmine-ux, clock-zero-floor, null-context-write, bql-string-concat, agent-on-shape, uberjar-api-conflict, arbitrary-ord -->
+| 2026-09-19-ci-green.md | kit | 2026-09-19 | folded | 5 | <!-- green the CI: .shellcheckrc + 2 bats error fixes + Mutation-pin headers (10 lints) + BUILD-LOOP lint-listing + dangling-ref fixes -->

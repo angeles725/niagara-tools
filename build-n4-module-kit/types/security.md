@@ -201,7 +201,7 @@ public final Feature getLicenseFeature() {
 [ev: code BAaPhpNetwork.java `getLicenseFeature()`; code BBacnetAwsNetwork.java; corpus B507 §SEC-07]
 
 A fuller treatment of license file format, DSA signing, and OEM trust certs belongs in
-a future `types/licensing.md`.
+a future dedicated licensing doc.
 
 ---
 

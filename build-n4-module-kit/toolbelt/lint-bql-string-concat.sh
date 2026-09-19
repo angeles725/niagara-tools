@@ -11,6 +11,7 @@
 #   Row:  WARN  lint-bql-string-concat  <file>:<line>  bql concat: <source>
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: BSC2 -- drop the concat-operator test and BSC2 stops warning on a concatenated bql: string
 set -u
 LC_ALL=C
 export LC_ALL

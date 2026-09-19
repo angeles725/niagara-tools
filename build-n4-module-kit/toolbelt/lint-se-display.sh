@@ -11,6 +11,7 @@
 #   Row:  FAIL  lint-se-display  <file>:<line>  display class: <source>
 #   Exit: 0  clean · 1  any FAIL · 3  usage/env
 # VCS-free by design.
+# Mutation: SED2 -- drop the JFrame import case and SED2 stops flagging a display import
 set -u
 LC_ALL=C
 export LC_ALL

@@ -21,6 +21,7 @@
 # VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro 2026-09-17-umbrelladashboard-module-creation]
+# Mutation: LA2 -- remove the non-ASCII byte scan and LA2 stops failing on a UTF-8 accented lexicon
 set -u
 LC_ALL=C
 export LC_ALL

@@ -11,6 +11,7 @@
 #   Row:  WARN  lint-null-context-write  <file>:<line>  null-Context write: <source>
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: NCW2 -- drop the ,null match and NCW2 stops warning on set(...,null)
 set -u
 LC_ALL=C
 export LC_ALL
