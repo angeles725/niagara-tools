@@ -143,3 +143,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-value-types.md | kit | 2026-09-19 | folded | 8 | <!-- new types/value-types.md: BFrozenEnum/BDynamicEnum/BSimple/BStruct/BFacets/BUnit + persistence -->
 | 2026-09-19-security-model.md | kit | 2026-09-19 | folded | 11 | <!-- new types/security.md: null-Context audit hazard + RBAC + CSRF/BPassword + anti-injection + anti-patterns -->
 | 2026-09-19-observability.md | kit | 2026-09-19 | folded | 7 | <!-- new types/observability.md: logging conventions + spy pages + fault surfacing + audit-vs-log -->
+| 2026-09-19-distribution.md | kit | 2026-09-19 | folded | 9 | <!-- new types/distribution.md: .dist/dist.xml, OEM overlay+trust certs, BOG schema-safety, version floor, .ntpl, AX->N4 -->
+| 2026-09-19-theme-module.md | kit | 2026-09-19 | folded | 3 | <!-- new types/theme.md: zero-Java ux theme, themeName def, asset layout, imageOverrides, NSS -->
+| 2026-09-19-utility-lib.md | kit | 2026-09-19 | folded | 3 | <!-- new types/utility-lib.md: pure lib bundle (jtds) + helper-type lib (clUtils) + protocol-split -->
+| 2026-09-19-cloud-connector.md | kit | 2026-09-19 | folded | 4 | <!-- new types/cloud-connector.md: BCloudConnectionService SPI maps + transport dual model + KeyRing auth + backend plugin chain -->
