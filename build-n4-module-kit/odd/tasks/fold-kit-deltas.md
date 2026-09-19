@@ -19,7 +19,7 @@
 - [x] T10 — watcher-subscription-livedata (7Δ) → `types/logic-authoring.md` (SubscribeCallbacks/subscribed/TypeSubscriber-scope/BOX-chain) + `dashboard.md` (BOX rate-limit, live-data matrix) + `verify-module.sh` (check_subscription_leak SUBLEAK1-2) + `METHODOLOGY.md` — DONE (FULL; 34/34)
 - [ ] T11 — factory-composition-new-types (8Δ) → `types/logic-authoring.md` + `types/logic.md` + `METHODOLOGY.md`
 - [ ] T12 — ord-path-nav (9Δ) → `types/logic-authoring.md` + `types/structure.md`
-- [ ] T13 — permissions-security-model (8Δ) → `types/dashboard.md` + `types/structure.md` + `build-verify.md`
+- [x] T13 — permissions-security-model (8Δ) → `dashboard.md` (BPermissions 6-bit) + `structure.md` (module-permissions.xml source/inlining/profile-scope) + `build-verify.md` (verificationMode/skipModuleValidation/exemptions.tes; Δ4 already-folded) — DONE (FULL, doc-only)
 - [ ] T14 — organization-tags-grouping (6Δ) → `types/logic.md` + `types/logic-authoring.md`
 - [ ] T15 — resource-threading-consumption (6Δ) → `types/logic.md` + `verify-module.sh` + `METHODOLOGY.md`
 - [ ] T16 — insights-issues-catalog (3Δ) → new `types/issues-and-gotchas.md` + `lint-timers.sh` + `METHODOLOGY.md`
