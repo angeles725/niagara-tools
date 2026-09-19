@@ -8,7 +8,7 @@
 # Annotation blocks are joined until parens balance (handles single-line fixtures AND
 # multi-line real-module annotations identically — D4 requirement).
 #
-# Documented limits (D4 L1-L3):
+# Documented limits (D4 L1-L4):
 #   L1  Multiple simultaneous renames (>=2 removed + >=2 added) are not paired; they surface
 #       as separate remove_slot_unknown + add_slot rows. Verdict unchanged (LOSSY-or-worse).
 #   L2  remove_slot_complex (SAFE) and retype_complex (LOSSY) are unreachable by design:
@@ -16,6 +16,7 @@
 #       retype_unknown (OUTAGE). Never downgrade on uncertainty (B795 §795.2).
 #   L3  Unparseable/unbalanced annotations and slot-kind swaps (property<->action at same name)
 #       emit UNKNOWN -> OUTAGE. No silent skips.
+#   L4  @Range enum-tag changes (add/remove/rename tag on a BFrozenEnum @Range) are NOT auto-detected from snapshots; parse_slots harvests @NiagaraProperty only. Manually diff @Range declarations before deploy.
 #
 # Exit: 0=SAFE  1=LOSSY  2=OUTAGE  3=usage  4=env (unreadable snapshot / missing tool)
 # Exit-code justification: usage (3) and env (4) sit ABOVE the verdict domain (0-2) so that a
@@ -260,6 +261,15 @@ while IFS=$'\t' read -r ck slot_lbl _; do
 
   printf '%s  %s  %s.%s: %s (%s)\n' \
     "$verdict" "$ck" "$TYPE_NAME" "$slot_lbl" "$evidence" "$note"
+
+  # renumber_enum_ordinals is SAFE for .bog (tag-based) but UNSAFE for Fox links (ordinal-encoded);
+  # emit an additional WARN row so the hazard is visible. This branch is currently UNREACHABLE
+  # from snapshots: parse_slots harvests @NiagaraProperty only (L4), so renumber_enum_ordinals is
+  # never emitted by the classifier in practice — documented-unreachable per L2 precedent.
+  if [ "$ck" = "renumber_enum_ordinals" ]; then
+    printf 'WARN  fox-sync  %s.%s  renumbered enum ordinals decode wrong over Fox links\n' \
+      "$TYPE_NAME" "$slot_lbl"
+  fi
 
   score=$(verdict_score "$verdict")
   if [ "$score" -gt "$worst" ]; then

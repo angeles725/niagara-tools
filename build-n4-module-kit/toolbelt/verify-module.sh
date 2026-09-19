@@ -469,6 +469,41 @@ check_moduletest_present() {
   row PASS moduletest "$jar" "moduleTest-include.xml present"; return 0
 }
 
+check_cross_module_type() {
+  # CROSSMOD1 (--src): a @NiagaraProperty type= value that is a Java FQN whose
+  # package is not javax.baja.*, com.tridium.*, com.tridiumx.*, com.honeywell.*,
+  # nor the module's own packages (directories present under src/) compiles with
+  # compileOnly(files(...)) but fails at station load as Missing class <mod>:<Type>.
+  # WARN severity (may be intentional with a correct runtime dep). [ev: corpus B740 §740.2]
+  # NAMED MUTATION: drop this check -> CROSSMOD1's cross-module-type WARN vanishes.
+  local jar="$1" pd warned=0 t pkg pkg_path
+  [ -n "$SRC" ] || { row SKIP cross-module-type "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP cross-module-type "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r t; do
+    [ -n "$t" ] || continue
+    # FQN: must contain a dot; last segment must start with an uppercase letter
+    case "$t" in *.* ) ;; *) continue ;; esac
+    case "${t##*.}" in [A-Z]*) ;; *) continue ;; esac
+    # Known-safe vendor prefixes
+    case "$t" in javax.baja.*|com.tridium.*|com.tridiumx.*|com.honeywell.*) continue ;; esac
+    # Own-package check: type's package dir exists under src/ -> not cross-module
+    pkg="${t%.*}"; pkg_path="${pkg//.//}"
+    [ -d "$pd/src/$pkg_path" ] && continue
+    row WARN cross-module-type "$jar" "foreign type in @NiagaraProperty: $t"
+    warned=1
+  done < <(
+    find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print \
+    | while IFS= read -r _f; do
+        grep -oE 'type[[:space:]]*=[[:space:]]*"[^"]*"' "$_f" 2>/dev/null || true
+      done \
+    | sed -E 's/type[[:space:]]*=[[:space:]]*"([^"]*)"/\1/' \
+    | sort -u
+  )
+  [ "$warned" -eq 0 ] && row PASS cross-module-type "$jar" "no cross-module type references in $pd/src"
+  return 0
+}
+
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
   LIST=$(unzip -Z1 "$JAR" 2>/dev/null) || { echo "verify-module: not a zip: $JAR" >&2; exit 3; }
@@ -477,7 +512,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

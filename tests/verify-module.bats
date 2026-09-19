@@ -300,3 +300,41 @@ KTS
   run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-ux.jar"
   [[ "$output" == *"SKIP  moduletest"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# CROSSMOD — check_cross_module_type: a @NiagaraProperty type= whose package is
+# neither javax.baja.*, com.tridium.*, com.tridiumx.*, com.honeywell.*, nor a dir
+# under src/ compiles with compileOnly(files(...)) but fails at station load as
+# Missing class <mod>:<Type>. WARN severity (exit 0). [ev: corpus B740 §740.2]
+# Named mutation: drop check_cross_module_type -> CROSSMOD1's WARN row vanishes.
+@test "CROSSMOD1: @NiagaraProperty type from a foreign package WARNs cross-module-type (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # Foreign type: com.other.mod.ForeignEnum — package com.other.mod has no dir under src/
+  printf '@NiagaraProperty(name = "mode", type = "com.other.mod.ForeignEnum")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  cross-module-type"* ]] && [[ "$output" == *"com.other.mod.ForeignEnum"* ]]
+}
+
+@test "CROSSMOD2: baja and own-package types pass cross-module-type (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # javax.baja.* -> excluded; com.x.LocalMode -> own package (com/x dir present under src/)
+  printf '@NiagaraProperty(name = "status", type = "javax.baja.status.BStatusNumeric")\n@NiagaraProperty(name = "local", type = "com.x.LocalMode")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  cross-module-type"* ]]
+  [[ "$output" != *"WARN  cross-module-type"* ]]
+}
+
+@test "CROSSMOD3: no --src skips cross-module-type check" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP  cross-module-type"* ]]
+}
