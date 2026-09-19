@@ -278,6 +278,77 @@ At startup, Workbench and the station discover `.nav` files in both locations an
 
 **Design rule for development:** ship the `.nav` as a resource in `rc/nav/` inside the module JAR, not as an editable file outside it. This way the only way to change it is to rebuild and redeploy the JAR — which forces a Workbench reconnect and clears the cache naturally. An editable `.nav` file outside the JAR is a dev-time footgun: changes appear silent ("why doesn't my nav update?") until the session is restarted.
 
+## The `-se` (Java SE) runtime profile
+
+A `-se` part is needed when code requires Java SE APIs that Niagara's Compact 3 profile does not
+provide: `java.awt` / `javax.swing`, `java.sql` (JDBC), or native libraries linked via JNI.
+It is built against Java 8 SE — NOT synonymous with "JACE-exclusive".
+`[ev: devguide modules.txt]`
+
+### Load profile on each host type
+
+| Host | Profiles loaded at startup |
+|------|---------------------------|
+| Station daemon (JACE **and** Supervisor) launched with `-rp:se` | `{rt, se}` — rt is always prepended |
+| Workbench | `{rt, ux, wb}` (+ `se` when `-rp:se` passed) |
+
+A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags.
+`[ev: corpus B630]`
+
+### Dependency trap — `-wb` deps in a `-se` module.xml
+
+A `-se` `module.xml` may legitimately declare dependencies on `-wb` modules (they satisfy the
+compiler). Example: `alarm-se` at 4.14.0 lists `alarm-wb`, `bajaui-wb`, and `export-wb` as
+dependencies. Those classes are **not loaded** on a headless daemon (`-rp:se` loads only `{rt,se}`),
+so any `-se` code path that calls into a `-wb` class at runtime on a JACE or Supervisor throws
+`ClassNotFoundException`. `[ev: code alarm-se module.xml; corpus B630]`
+
+**Rule:** guard every `-wb` class reference in a `-se` part behind a runtime `Sys.getProfile()`
+check, or move the wb-dependent code into the `-wb` part and keep `-se` wb-free.
+
+### JACE headless AWT trap
+
+`-se` modules load on JACE (headless OpenJDK on QNX ARM). Display-dependent classes
+(`JFrame`, `JDialog`, any component that opens a native window) fail at runtime with
+`HeadlessException`. Headless-safe AWT is fine: `java.awt.print`, `Font`, image I/O,
+`java.awt.AWTPermission` (clipboard, window-without-warning-banner) — `obix-se` uses exactly
+these. `[ev: code obix-se module.xml; code alarm-se BPrinterRecipient.java vs obix-se Shell.java]`
+
+### `plat moduleinstall` mechanics (JACE install)
+
+`plat moduleinstall` stops **all** stations, overwrites the jar in place — no atomic rename,
+no backup, no rollback. If `NIAGARA_HOME` is read-only it falls back to
+`NIAGARA_USER_HOME/modules`. **Back up `modules/` before any production update.**
+`[ev: corpus B633]`
+
+### Adding a `-se` sibling to an existing module
+
+Three places to touch (beyond the new `-se` source tree):
+
+1. `<Mod>-se.gradle.kts` — `runtimeProfile.set("se")`
+2. `niagara-module.xml` (module root) — add `se` to the `runtimeProfiles` list
+3. `<Mod>-rt`'s `module-include.xml` — add the `-se` part in `<moduleParts>`
+
+`[ev: corpus B784]`
+
+### JACE resource limits
+
+JACE hardware (1 GB DDR3, ARM, QNX): avoid OrientDB, Swing UI components, and heavy JNI
+libraries in any `-se` part destined for JACE. `[ev: corpus B473]`
+
+### Real `-se` modules for reference (Tridium 4.14)
+
+| Module | Notable Java SE usage |
+|--------|-----------------------|
+| `alarm-se` | Printer recipients — `java.awt.print`, `javax.print` |
+| `obix-se` | Swing shell (`Shell.java`) — display-optional, JACE-unsafe |
+| `orientSystemDb-se` | Embedded OrientDB — heavyweight JNI, Supervisor-only |
+| `test-se` | SE-profile test fixtures |
+
+Theme modules and lexicon-only / `-doc` profiles are a separate resource-only module class;
+see `types/theme.md` for theme modules and the `-doc help profile authoring recipe` section
+above for doc-profile modules.
+
 ## Recommendations for our modules (impact ÷ cost) `[ev: corpus B817]`
 R1 chihuahua — populate rt+ux `module.lexicon` (10 types unlocalized; cheap, operator-visible). R2 DashboardPan-wb
 — delete the empty skeleton OR fill it + add its JUnit dep. R3 DashboardPan — test `DashboardReader` (14-baja, the
