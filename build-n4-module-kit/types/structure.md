@@ -86,6 +86,16 @@ L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niag
    using a system JDK risks a different major version and produces a jar the NRE rejects.
    `[ev: corpus B960 §960.3]`
 
+7. **New-module bring-up — align to a sibling of the same SDK:** a fresh scaffold's
+   `gradle.properties` JDK/node block is COMMENTED (auto-detect). Before the first build, copy
+   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths`
+   from an existing sibling module that deploys to the same station and SDK family — all modules
+   in the group must target one consistent `niagara_home`. For a **ux/JS module** (`-ux` profile)
+   the node and JDK path lines are REQUIRED (points 5–6 above); a logic-only module with no `-ux`
+   profile may leave them commented. Also align `gradlePluginVersion` and `settingsPluginVersion`
+   in `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
+   plugin version — see `build-verify.md`). `[ev: corpus B1016]`
+
 ## PASS state + scaffold `[ev: corpus B817]`
 `scaffold-module.sh <MOD>` output passes L1–L11 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes

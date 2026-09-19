@@ -28,6 +28,28 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
 - **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir>` to emit a pre-slotomatic tree from `fixtures/MinimalPan`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro tool-integration]
 
+### 1.a New-module bring-up (before the first build)
+
+After `scaffold-module.sh` generates the skeleton, three steps MUST happen before running
+`toolbelt/build.sh` for the first time:
+
+1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
+   bit; `./gradlew` is non-functional without it.
+2. **Align `gradle.properties` + `settings.gradle.kts` to a SIBLING module of the same SDK family:**
+   copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
+   `org.gradle.java.installations.paths` from an existing sibling that deploys to the same
+   station. Do NOT leave the scaffold's commented-out (auto-detect) JDK/node block: a commented
+   block builds in WSL (where `build.sh` overrides the path via `-P`) but fails reproducibility
+   on a Windows `gradlew` build. Also align `gradlePluginVersion` / `settingsPluginVersion` in
+   `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
+   plugin version — see `build-verify.md §Build target & plugin version`). For a logic-only
+   module with no `-ux` profile the node/JDK lines may stay commented.
+3. **Run `toolbelt/preflight.sh` + first build:** `preflight.sh <niagara_home> <gradle-root>`
+   validates the environment (§0.b); then `toolbelt/build.sh <group-dir> <MOD>` runs the first
+   full clean+slotomatic+jar+verify cycle.
+
+`[ev: corpus B1016]`
+
 ## 2. Build the layers
 - Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb. For framework-extension authoring (custom service, ORD scheme, point extension, analytics node, job, watchdog): see `types/logic-authoring.md` (companion to `types/logic.md`).
 - **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).

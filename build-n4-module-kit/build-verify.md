@@ -39,6 +39,15 @@ J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm
 ```
 - `slotomatic` = "Run Slot-o-matic on a module" — regenerates the AUTO region from `@NiagaraProperty` annotations. Run it so a regen can't reintroduce a fixed bug.
 - On WSL, `gradle.properties` may pin a Windows JDK path (`C:\Program Files\Zulu\zulu-8`) — that breaks WSL (`Illegal character ... C:\`). Override with `-Porg.gradle.java.installations.paths=$J8`. On Windows the pinned Zulu 8 is correct.
+- **`build.sh`↔`gradle.properties` JDK split:** `toolbelt/build.sh` line 74 sets
+  `GARGS=(-Pniagara_home=… -Porg.gradle.java.installations.paths="$J8")` — the WSL gate
+  **overrides** whatever `installations.paths` says in `gradle.properties`. The
+  `gradle.properties` JDK path therefore governs the **Windows Workbench build only**; the
+  WSL gate ignores it. A **commented** (auto-detect) `org.gradle.java.installations.paths`
+  block still produces a major-52 WSL build (build.sh supplies the path) — but is **not
+  reproducible on a Windows `gradlew` build**, where Gradle falls back to auto-detect and
+  may pick the wrong JDK major. Pin an explicit JDK path matching a sibling module before
+  shipping the `gradle.properties`. `[ev: build.sh:74]` `[ev: corpus B1016]`
 
 ## Build target & plugin version
 - **Build against the `niagara_home` of the LOWEST target version you must support:** the manifest stamps its `baja` dependency version, and a 4.14 station REJECTS a jar built against 4.15. Check `unzip -p <jar> META-INF/module.xml | grep baja`. [ev: retro rt-hardening #6]

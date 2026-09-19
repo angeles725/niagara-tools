@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-16 · kit · n4-client-build-config-standard
 
 **Session**: `/build-n4-module` UmbrellaDashboard bring-up surfaced the client's canonical build-config files (gradle.properties + settings.gradle.kts).

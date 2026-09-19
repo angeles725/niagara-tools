@@ -115,7 +115,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-07-control-model-limits-live-commissioning.md | kit | 2026-09-07 | pending | 5 |
 | 2026-09-11-module-worktree-location-guard.md | kit | 2026-09-11 | folded | 5 | <!-- Δ1 orient-guard.sh; Δ2 BUILD-LOOP §0.a; Δ3 SKILL.md step1; Δ4 orient-guard.bats; Δ5 kit-links L9 -->
 | 2026-09-16-umbrelladashboard-module-creation.md | UmbrellaDashboard | 2026-09-16 | pending | 4 |
-| 2026-09-16-n4-client-build-config-standard.md | kit | 2026-09-16 | pending | 3 |
+| 2026-09-16-n4-client-build-config-standard.md | kit | 2026-09-16 | folded | 3 |
 | 2026-09-17-dashboard-status-state-modeling.md | UmbrellaDashboard | 2026-09-17 | pending | 4 |
 | 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | folded | 26 |
 | 2026-09-18-authoring-exemplars-deltas.md | kit | 2026-09-18 | folded | 8 |
