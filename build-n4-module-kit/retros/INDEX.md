@@ -154,3 +154,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-new-lints.md | kit | 2026-09-19 | folded | 9 | <!-- 9 toolbelt lints (+bats): no-system-out, se-display, jasmine-ux, clock-zero-floor, null-context-write, bql-string-concat, agent-on-shape, uberjar-api-conflict, arbitrary-ord -->
 | 2026-09-19-ci-green.md | kit | 2026-09-19 | folded | 5 | <!-- green the CI: .shellcheckrc + 2 bats error fixes + Mutation-pin headers (10 lints) + BUILD-LOOP lint-listing + dangling-ref fixes -->
 | 2026-09-19-wire-lints.md | kit | 2026-09-19 | folded | 2 | <!-- issue #113: 9 new lints wired into report-module.sh (per-artifact 5.7-5.13 + module-root 8-9) + RM7-RM11 bats -->
+| 2026-09-19-skill-trigger.md | kit | 2026-09-19 | folded | 1 | <!-- issue #116: expand SKILL.md trigger (driver/service/utility-lib/theme/cloud) + sync installed via install-skill.sh --force -->
