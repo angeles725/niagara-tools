@@ -128,7 +128,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-palette-lexicon-assets-images-deltas.md | kit | 2026-09-18 | folded | 5 |
 | 2026-09-18-spa-library-integration-deltas.md | kit | 2026-09-18 | folded | 6 |
 | 2026-09-18-watcher-subscription-livedata-deltas.md | kit | 2026-09-18 | folded | 7 |
-| 2026-09-18-factory-composition-new-types-deltas.md | kit | 2026-09-18 | pending | 8 |
+| 2026-09-18-factory-composition-new-types-deltas.md | kit | 2026-09-18 | folded | 8 |
 | 2026-09-18-ord-path-nav-deltas.md | kit | 2026-09-18 | pending | 9 |
 | 2026-09-18-permissions-security-model-deltas.md | kit | 2026-09-18 | folded | 8 |
 | 2026-09-18-organization-tags-grouping-deltas.md | kit | 2026-09-18 | pending | 6 |

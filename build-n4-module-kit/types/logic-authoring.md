@@ -127,6 +127,94 @@ with a few module-specific rules:
 
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
 
+## New-type authoring checklists `[ev: corpus B4 §4.2.3 §4.2.7]`
+
+**Three-question decision rule** — answer in order, stop at the first yes:
+
+1. Atomic and indivisible (a single value, no sub-slots)? → **`BSimple`**
+2. Compound but no actions, no lifecycle, no dynamic children at runtime? → **`BStruct`**
+3. Needs actions, children, or lifecycle (`started`/`stopped`)? → **`BComponent`**
+
+### BSimple boilerplate
+
+```java
+public final class BMyValue extends BSimple {
+    public static final BMyValue DEFAULT = new BMyValue(0);
+    public static final Type TYPE = ...;  // Slot-o-matic emits this region
+
+    private int raw;
+
+    private BMyValue(int raw) { this.raw = raw; }
+
+    public static BMyValue make(int raw) { return new BMyValue(raw); }
+
+    @Override public void encode(DataOutput out)  throws IOException { out.writeInt(raw); }
+    @Override public void decode(DataInput in)    throws IOException { raw = in.readInt(); }
+
+    @Override public String encodeToString()              { return String.valueOf(raw); }
+    @Override public BMyValue decodeFromString(String s)  { return make(Integer.parseInt(s)); }
+
+    @Override public boolean equals(Object o) { return o instanceof BMyValue && ((BMyValue)o).raw == raw; }
+    @Override public int    hashCode()        { return raw; }
+
+    @Override public Type getType() { return TYPE; }
+}
+```
+
+Rules: private constructor + static `make()` factory; must implement `encode`/`decode`, `encodeToString`/`decodeFromString`, `equals`/`hashCode`, and a `DEFAULT` constant.
+
+### BStruct boilerplate
+
+```java
+public class BMyConfig extends BStruct {
+    public static final Type TYPE = ...;
+
+    // frozen @NiagaraProperty slots only — NO dynamic slots, NO @NiagaraAction, NO topics
+    public BMyConfig() {}  // public no-arg constructor required
+
+    @Override public Type getType() { return TYPE; }
+}
+```
+
+Rules: extend `BStruct`; frozen `@NiagaraProperty` slots only; `add(name, value)` is FORBIDDEN (no dynamic slots); no `@NiagaraAction` or topics; public no-arg constructor.
+
+### BFrozenEnum boilerplate
+
+```java
+public final class BMyEnum extends BFrozenEnum {
+    // EXPLICIT ordinals — never rely on auto-numbering; inserting a new value
+    // later shifts subsequent ordinals and corrupts serialized .bog data.
+    public static final int ORD_OFF    = 0;
+    public static final int ORD_AUTO   = 1;
+    public static final int ORD_MANUAL = 2;
+
+    public static final BMyEnum OFF    = new BMyEnum(ORD_OFF);
+    public static final BMyEnum AUTO   = new BMyEnum(ORD_AUTO);
+    public static final BMyEnum MANUAL = new BMyEnum(ORD_MANUAL);
+
+    public static final Type TYPE = ...;
+
+    private BMyEnum(int ordinal) { super(ordinal); }
+
+    public static BMyEnum make(int ordinal) {
+        switch (ordinal) {
+            case ORD_OFF:    return OFF;
+            case ORD_AUTO:   return AUTO;
+            case ORD_MANUAL: return MANUAL;
+            default: throw new IllegalArgumentException("invalid ordinal: " + ordinal);
+        }
+    }
+
+    public static BMyEnum make(String tag) {
+        return (BMyEnum) BFrozenEnum.make(TYPE, tag);
+    }
+
+    @Override public Type getType() { return TYPE; }
+}
+```
+
+Rules: static `int ORD_*` constants with EXPLICIT ordinals; one static instance per ordinal; private constructor `super(ordinal)`; `make(int)` + `make(String)` factories; register the type in `module-include.xml`; declare `@Range` entries in the type annotation with matching ordinal values. `@Range` keys must be in `module.lexicon` (SP6 known set). Use `BFrozenEnum` for an INTERNAL, single-module discrete selector — a value shared across custom modules via a link stays a plain `double` (see `logic.md §Linking across custom modules`).
+
 ## Logging a point to history `[ev: corpus B804]`
 
 - **`BHistoryExt` IS a point extension** (`extends BPointExtension`), not a service or component child. Drop it as a child of a `BControlPoint` (e.g. `BNumericPoint`); it intercepts `onExecute` and records the point's value on every applicable event. `[ev: corpus B804]`
@@ -239,6 +327,14 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 - **Demand-based native-COV subscription via `SubscribeCallbacks`:** when the driver should register a native device COV subscription only while at least one client is watching a space component, implement `SubscribeCallbacks` and set it via `space.setSubscribeCallbacks(impl)`. Override `subscribe(BComponent[] c, int depth)` to register the native subscription when subscriber count goes 0→1; override `unsubscribe(BComponent[] c)` to deregister on 1→0. Use `BComponentSpace.update(c, depth)` for a one-time snapshot (no ongoing subscription). Rule: the framework tracks the subscriber count — one `subscribe()` call per 0→1 crossing, not per individual client joining. `[ev: corpus B408 §408.4]`
 - **DDF driver: pick the transaction manager to match device concurrency:** DDF comm splits solicited (request→response) from unsolicited via two SPI managers. **`defaultComm`** (serialized, one-outstanding-at-a-time, `Clock.Ticket` timeout, blocking-queue dequeue) is for devices that cannot handle overlapping requests. **`multipleTransaction`** (tag-correlated concurrent, `Hashtable<tag, requests>` two-level map) is for capable protocols that can pipeline. Wrong pick = poll jams (serialized device overwhelmed by pipelined requests) or framing errors (pipelined device receiving one request at a time in the wrong order). `[ev: corpus B909 §909.1-3]`
 - **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network; (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
+
+- **Type-factory hooks: a `BPointDeviceExt` subclass must override three hooks** to tell the framework which concrete types to instantiate for the driver subtree: `getDeviceType()→BMyDevice.TYPE`, `getProxyExtType()→BMyProxyExt.TYPE`, `getPointFolderType()→BMyPointFolder.TYPE`. Pair these with trivial `extends BDeviceFolder` / `extends BPointFolder` subclasses (empty body + generated `TYPE`) — they exist solely to supply a driver-specific concrete `Type` handle; copy them verbatim, no business logic belongs in them. Without these hooks the framework cannot build the driver-specific subtree. `[ev: corpus B955 §955.1]`
+
+- **Discovery learn-entry: discovery jobs `extend BSimpleJob`; each discovered entity is a `B<X>LearnEntry extends BStruct`** (fields: deviceName/deviceId or pointName/pointId/pointType) added to a `HIDDEN|READONLY|TRANSIENT BFolder` held on the job itself. The wb manager reads this transient folder after the job completes and calls `addDevice(entry, cx)` to build the real component tree. **Rule:** the learn-entry must carry enough state to reconstruct the full device/point representation at instantiation time — device address, type discriminator, and any runtime-fixed config the wizard dialog cannot infer. `[ev: corpus B955 §955.2]`
+
+- **Async write via `CoalesceQueue`:** `write(Context)` posts an `ASYNC` action (`postWrite`) and returns `false` — NEVER block the engine thread in `write()`. Override `post(Action, BValue, Context)` to wrap each incoming action as an `Invocation` and route it to `getWriteHandler().postWork(...)`. The handler is a `BWorker` subclass holding a `CoalesceQueue(1000)` backed by a background `Worker` thread; `CoalesceQueue` collapses duplicate-key pending writes that have not yet been sent, so rapid setpoint changes coalesce instead of flooding the wire. This is the canonical "never block the calling thread" write pattern. `[ev: corpus B955 §955.5]`
+
+- **Value-type-agnostic proxy poll:** in `poll()`, inspect `getParentPoint().getOutStatusValue() instanceof BStatusNumeric|BStatusBoolean|BStatusString|BStatusEnum` to select the matching `readOk(...)` overload. The proxy ext MUST be value-type-agnostic — the parent control point owns the output type; never hardcode a single response type in the proxy ext. A hardcoded type forces a specific control point kind, breaks the generic proxy pattern, and produces type errors silently when the parent is a different point type. `[ev: corpus B955 §955.6]`
 
 **Lints (from `verify-module.sh --src` + `bog-audit.sh`):**
 - HARD — null `fallback` on an own-module-driven `BBooleanWritable` / `BNumericWritable` (CHECK11 in `bog-audit.sh`): the writable holds last command on stop/reload, masking the fault.
