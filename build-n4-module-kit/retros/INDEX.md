@@ -138,3 +138,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | folded | 3 |
 | 2026-09-18-ml-libraries-deltas.md | kit | 2026-09-18 | folded | 4 |
 | 2026-09-19-actions-authoring.md | kit | 2026-09-19 | folded | 6 | <!-- new types/actions.md §1-6: doX dispatch law; ASYNC engine-thread; flags CONFIRM_REQUIRED/NO_AUDIT; typed-args defaultValue; actions-vs-@NiagaraTopic; @NiagaraRpc-vs-@NiagaraAction boundary -->
+| 2026-09-19-module-wiring.md | kit | 2026-09-19 | folded | 7 | <!-- new types/module-wiring.md: gradle dep table + type/agent-on registration + cross-module refs -->
+| 2026-09-19-driver-authoring.md | kit | 2026-09-19 | folded | 9 | <!-- new types/driver-authoring.md: network/device/BProxyExt SPI + tuning/ping/poll + KNX/Z-Wave twists -->
+| 2026-09-19-value-types.md | kit | 2026-09-19 | folded | 8 | <!-- new types/value-types.md: BFrozenEnum/BDynamicEnum/BSimple/BStruct/BFacets/BUnit + persistence -->
+| 2026-09-19-security-model.md | kit | 2026-09-19 | folded | 11 | <!-- new types/security.md: null-Context audit hazard + RBAC + CSRF/BPassword + anti-injection + anti-patterns -->
+| 2026-09-19-observability.md | kit | 2026-09-19 | folded | 7 | <!-- new types/observability.md: logging conventions + spy pages + fault surfacing + audit-vs-log -->
