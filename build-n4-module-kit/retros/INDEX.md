@@ -147,3 +147,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-theme-module.md | kit | 2026-09-19 | folded | 3 | <!-- new types/theme.md: zero-Java ux theme, themeName def, asset layout, imageOverrides, NSS -->
 | 2026-09-19-utility-lib.md | kit | 2026-09-19 | folded | 3 | <!-- new types/utility-lib.md: pure lib bundle (jtds) + helper-type lib (clUtils) + protocol-split -->
 | 2026-09-19-cloud-connector.md | kit | 2026-09-19 | folded | 4 | <!-- new types/cloud-connector.md: BCloudConnectionService SPI maps + transport dual model + KeyRing auth + backend plugin chain -->
+| 2026-09-19-se-profile.md | kit | 2026-09-19 | folded | 7 | <!-- structure.md §-se: Java-SE profile, JACE load {rt,se}, wb-dep + headless AWT traps, install no-rollback -->
+| 2026-09-19-moduletest-patterns.md | kit | 2026-09-19 | folded | 8 | <!-- moduleTest.md expand: BTestNgStation fixture, waitFor, DataProvider, retry, @Requires, StationRunner, palette assert -->
+| 2026-09-19-gotchas-tier-a.md | kit | 2026-09-19 | folded | 6 | <!-- issues-and-gotchas: Clock<=0 floor, lifecycle seam, Missing-class, ux-Jasmine, EC-Net set(value), GET-destructive -->
+| 2026-09-19-logic-authoring-spis.md | kit | 2026-09-19 | folded | 8 | <!-- logic-authoring expand: BSingleton/@AgentOn, lifecycle guard, BProgram, BBatchRoutine, BEmailService, BIRestrictedComponent, provider-in-service, Fox file-channel job -->
