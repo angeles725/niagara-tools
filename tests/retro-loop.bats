@@ -68,7 +68,7 @@ kt() { run env -C "$TK" KIT="$TK" "$@"; }   # first vararg is the command (for P
 
 @test "RL6: the appended INDEX row matches the fixed column format" {
   nr kit rl6slug
-  grep -qE "^\|[[:space:]]*$DATE-rl6slug\.md[[:space:]]*\|[[:space:]]*kit[[:space:]]*\|[[:space:]]*$DATE[[:space:]]*\|[[:space:]]*pending[[:space:]]*\|[[:space:]]*[0-9]+[[:space:]]*\|" "$TK/retros/INDEX.md"
+  grep -qE "^\|[[:space:]]*${DATE}-rl6slug\.md[[:space:]]*\|[[:space:]]*kit[[:space:]]*\|[[:space:]]*${DATE}[[:space:]]*\|[[:space:]]*pending[[:space:]]*\|[[:space:]]*[0-9]+[[:space:]]*\|" "$TK/retros/INDEX.md"
 }
 
 @test "RL7: retro_pending flip is scoped to the named section; other sections stay false" {

@@ -10,6 +10,7 @@
 #   Row:  WARN  lint-jasmine-ux  <root>  ux ships src/rc but no srcTest/rc/spec/*.js
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: JUX2 -- drop the empty-specs check and JUX2 stops warning on a rc/ module without specs
 set -u
 LC_ALL=C
 export LC_ALL

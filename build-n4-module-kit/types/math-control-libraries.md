@@ -34,7 +34,7 @@ risks (dynamic bytecode, native JNI) separately here; they are not statically
 detectable and must be identified per-library at design time.
 
 > **Δ4 note — COMPACT3-GATE-SCRIPT1 downgraded:** the retro proposed a new
-> `toolbelt/check-compact3.sh` stub. Because `check_compact3_imports` in
+> standalone `check-compact3` script. Because `check_compact3_imports` in
 > `verify-module.sh` already enforces the static SE-API constraint, a standalone
 > script would be redundant. The doc note above is the canonical pointer; no new
 > script has been created.

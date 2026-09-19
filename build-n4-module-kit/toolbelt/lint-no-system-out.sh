@@ -15,6 +15,7 @@
 #
 # Known limitation: a `//` inside a string literal on the same line as a System.out call
 # can hide it (rare). VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
+# Mutation: NSO2 -- drop the System.out.print case and NSO2 stops flagging System.out.println
 set -u
 LC_ALL=C
 export LC_ALL

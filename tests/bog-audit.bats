@@ -266,7 +266,7 @@ XML
   run "$BA" "$BOG12" --module MyMod --source-dir "$T12/src"
   # servletName (frozen, BFoo extends BWebServlet) -> WARN on its own line, no FAIL line for it
   grep -qE '^CHECK5[[:space:]]+WARN.*servletName' <<< "$output"
-  ! grep -qE '^CHECK5[[:space:]]+FAIL.*servletName' <<< "$output"
+  if grep -qE '^CHECK5[[:space:]]+FAIL.*servletName' <<< "$output"; then false; fi
   # ghostFrozen (frozen, BBar extends BComponent) -> FAIL on its own line
   grep -qE '^CHECK5[[:space:]]+FAIL.*ghostFrozen' <<< "$output"
   # Exit must be 1 (at least one FAIL)

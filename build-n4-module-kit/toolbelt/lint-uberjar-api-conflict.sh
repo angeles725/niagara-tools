@@ -11,6 +11,7 @@
 #   Row:  WARN  lint-uberjar-api-conflict  <file>  <group:artifact> is both uberjar()'d and api()'d
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: UAC2 -- skip the intersection and UAC2 stops warning on a lib both uberjar'd and api'd
 set -u
 LC_ALL=C
 export LC_ALL

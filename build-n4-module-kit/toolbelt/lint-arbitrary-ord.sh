@@ -11,6 +11,7 @@
 #   Row:  WARN  lint-arbitrary-ord  <file>:<line>  BOrd.make from a variable: <source>
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
+# Mutation: AO2 -- require a leading quote and AO2 stops warning on BOrd.make(variable)
 set -u
 LC_ALL=C
 export LC_ALL

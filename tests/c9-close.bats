@@ -137,5 +137,5 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
   f="$REPO/qa/c9-harness-run.md"
   [ -f "$f" ] || { echo "no harness run record — a SKIP is not a PASS (qa/c9-harness-procedure.md §5)"; false; }
   [ "$(grep -cE '^Total tests run: [1-9][0-9]*, Failures: 0, Skips: 0' "$f")" -eq 3 ]
-  ! grep -qE 'Skips: [1-9]' "$f"
+  if grep -qE 'Skips: [1-9]' "$f"; then false; fi
 }
