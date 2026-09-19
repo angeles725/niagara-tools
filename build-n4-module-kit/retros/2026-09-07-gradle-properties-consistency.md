@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · kit · gradle-properties-consistency
 
 **Session**: PANCCADIA multi-module session — operator noticed CompPan's gradle.properties differs from the others.

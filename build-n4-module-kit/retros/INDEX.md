@@ -109,7 +109,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-07-per-evap-config-ui-hmi-noscroll.md | DashboardPan | 2026-09-07 | folded | 0 |
 | 2026-09-07-two-differential-fase2.md | CompPan | 2026-09-07 | folded | 0 |
 | 2026-09-07-tree-selection-and-schema-risk-baseline.md | kit | 2026-09-07 | folded | 3 |
-| 2026-09-07-gradle-properties-consistency.md | kit | 2026-09-07 | pending | 3 |
+| 2026-09-07-gradle-properties-consistency.md | kit | 2026-09-07 | folded | 3 |
 | 2026-09-07-live-commissioning-verification-gaps.md | kit | 2026-09-07 | pending | 7 |
 | 2026-09-07-coldroompan-indefrost-resistance-recovery.md | ColdRoomPan | 2026-09-07 | folded | 2 |
 | 2026-09-07-control-model-limits-live-commissioning.md | kit | 2026-09-07 | folded | 5 |
