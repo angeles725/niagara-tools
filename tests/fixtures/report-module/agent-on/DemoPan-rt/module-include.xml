@@ -1,0 +1,6 @@
+<types>
+  <type class="com.x.BFoo" name="Foo"/>
+  <agent class="com.x.BFooAgent">
+    <on type="FooService"/>
+  </agent>
+</types>

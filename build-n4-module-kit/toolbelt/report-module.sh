@@ -398,6 +398,284 @@ for ADIR in "${ARTIFACTS[@]}"; do
   fi
 
   # ----------------------------------------------------------------
+  # 5.7. lint-no-system-out.sh <artifact>/src (FAIL; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    nso_exit=0
+    nso_out=$("$TOOLBELT/lint-no-system-out.sh" "$ADIR/src" 2>&1) || nso_exit=$?
+    if [ "$nso_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-no-system-out "env fault (exit 3)"; HAD_ENV=1
+    else
+      _nso_had_fail=0
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          FAIL*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+            _nso_had_fail=1
+          ;;
+        esac
+      done <<< "$nso_out"
+      [ "$_nso_had_fail" -eq 0 ] && emit "$ANAME" PASS lint-no-system-out "clean"
+    fi
+  else
+    emit "$ANAME" SKIP lint-no-system-out "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.8. lint-clock-zero-floor.sh <artifact>/src (WARN; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    czf_exit=0
+    czf_out=$("$TOOLBELT/lint-clock-zero-floor.sh" "$ADIR/src" 2>&1) || czf_exit=$?
+    if [ "$czf_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-clock-zero-floor "env fault (exit 3)"; HAD_ENV=1
+    else
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          WARN*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+          ;;
+        esac
+      done <<< "$czf_out"
+    fi
+  else
+    emit "$ANAME" SKIP lint-clock-zero-floor "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.9. lint-null-context-write.sh <artifact>/src (WARN; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    ncw_exit=0
+    ncw_out=$("$TOOLBELT/lint-null-context-write.sh" "$ADIR/src" 2>&1) || ncw_exit=$?
+    if [ "$ncw_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-null-context-write "env fault (exit 3)"; HAD_ENV=1
+    else
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          WARN*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+          ;;
+        esac
+      done <<< "$ncw_out"
+    fi
+  else
+    emit "$ANAME" SKIP lint-null-context-write "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.10. lint-bql-string-concat.sh <artifact>/src (WARN; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    bsc_exit=0
+    bsc_out=$("$TOOLBELT/lint-bql-string-concat.sh" "$ADIR/src" 2>&1) || bsc_exit=$?
+    if [ "$bsc_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-bql-string-concat "env fault (exit 3)"; HAD_ENV=1
+    else
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          WARN*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+          ;;
+        esac
+      done <<< "$bsc_out"
+    fi
+  else
+    emit "$ANAME" SKIP lint-bql-string-concat "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.11. lint-arbitrary-ord.sh <artifact>/src (WARN; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    ao_exit=0
+    ao_out=$("$TOOLBELT/lint-arbitrary-ord.sh" "$ADIR/src" 2>&1) || ao_exit=$?
+    if [ "$ao_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-arbitrary-ord "env fault (exit 3)"; HAD_ENV=1
+    else
+      while IFS= read -r _ln; do
+        [ -z "$_ln" ] && continue
+        case "$_ln" in
+          WARN*)
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              st = (n >= 1) ? a[1] : ""
+              chk = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            emit "$ANAME" "$_st" "$_chk" "$_det"
+          ;;
+        esac
+      done <<< "$ao_out"
+    fi
+  else
+    emit "$ANAME" SKIP lint-arbitrary-ord "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.12. lint-se-display.sh <artifact>/src (FAIL; only -se artifacts; SKIP if no src/)
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-se)
+      if [ -d "$ADIR/src" ]; then
+        sed_exit=0
+        sed_out=$("$TOOLBELT/lint-se-display.sh" "$ADIR/src" 2>&1) || sed_exit=$?
+        if [ "$sed_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-se-display "env fault (exit 3)"; HAD_ENV=1
+        else
+          _sed_had_fail=0
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              FAIL*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+                _sed_had_fail=1
+              ;;
+            esac
+          done <<< "$sed_out"
+          [ "$_sed_had_fail" -eq 0 ] && emit "$ANAME" PASS lint-se-display "clean"
+        fi
+      else
+        emit "$ANAME" SKIP lint-se-display "no src/"
+      fi
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
+  # 5.13. lint-jasmine-ux.sh <artifact> (WARN; only -ux artifacts)
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-ux)
+      jux_exit=0
+      jux_out=$("$TOOLBELT/lint-jasmine-ux.sh" "$ADIR" 2>&1) || jux_exit=$?
+      if [ "$jux_exit" -eq 3 ]; then
+        emit "$ANAME" ERROR lint-jasmine-ux "env fault (exit 3)"; HAD_ENV=1
+      else
+        while IFS= read -r _ln; do
+          [ -z "$_ln" ] && continue
+          case "$_ln" in
+            WARN*)
+              _parsed=$(printf '%s' "$_ln" | awk '{
+                n = split($0, a, /[[:space:]]{2,}/)
+                st = (n >= 1) ? a[1] : ""
+                chk = (n >= 2) ? a[2] : ""
+                det = ""
+                for (i = 4; i <= n; i++) det = (det == "" ? "" : det "  ") a[i]
+                print st "|" chk "|" det
+              }')
+              _st="${_parsed%%|*}"
+              _r="${_parsed#*|}"
+              _chk="${_r%%|*}"
+              _det="${_r#*|}"
+              emit "$ANAME" "$_st" "$_chk" "$_det"
+            ;;
+          esac
+        done <<< "$jux_out"
+      fi
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
   # 6. schema-risk.sh <artifact>/.deploy-baseline <artifact>
   #    (Campaign 8 PR8 / D9a; SKIP if no .deploy-baseline/ snapshot)
   # ----------------------------------------------------------------
@@ -417,6 +695,76 @@ for ADIR in "${ARTIFACTS[@]}"; do
   fi
 
 done
+
+# ----------------------------------------------------------------
+# 8. lint-agent-on-shape.sh <module-root> — once per run (FAIL)
+# ----------------------------------------------------------------
+aos_exit=0
+aos_out=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1) || aos_exit=$?
+if [ "$aos_exit" -eq 3 ]; then
+  emit "(module)" ERROR lint-agent-on-shape "env fault (exit 3)"; HAD_ENV=1
+else
+  _aos_had_fail=0
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      FAIL*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          colon = index(site, ":")
+          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+          lno = (colon > 0) ? substr(site, colon + 1) : ""
+          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn ":" lno "  " reason
+        }')
+        _st="${_parsed%%|*}"
+        _r="${_parsed#*|}"
+        _chk="${_r%%|*}"
+        _det="${_r#*|}"
+        emit "(module)" "$_st" "$_chk" "$_det"
+        _aos_had_fail=1
+      ;;
+    esac
+  done <<< "$aos_out"
+  [ "$_aos_had_fail" -eq 0 ] && emit "(module)" PASS lint-agent-on-shape "clean"
+fi
+
+# ----------------------------------------------------------------
+# 9. lint-uberjar-api-conflict.sh <module-root> — once per run (WARN)
+# ----------------------------------------------------------------
+uac_exit=0
+uac_out=$("$TOOLBELT/lint-uberjar-api-conflict.sh" "$MODULE_ROOT" 2>&1) || uac_exit=$?
+if [ "$uac_exit" -eq 3 ]; then
+  emit "(module)" ERROR lint-uberjar-api-conflict "env fault (exit 3)"; HAD_ENV=1
+else
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      WARN*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          nsplit = split(site, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn "  " reason
+        }')
+        _st="${_parsed%%|*}"
+        _r="${_parsed#*|}"
+        _chk="${_r%%|*}"
+        _det="${_r#*|}"
+        emit "(module)" "$_st" "$_chk" "$_det"
+      ;;
+    esac
+  done <<< "$uac_out"
+fi
 
 # ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)

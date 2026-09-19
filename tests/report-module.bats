@@ -100,3 +100,54 @@ setup() {
   [[ "$output" == *"verdict=OUTAGE"* ]] || [[ "$output" == *"OUTAGE"* ]]
   [[ "$output" != *"ERROR"* ]]     # exit 2 (OUTAGE) is a finding, not an env fault
 }
+
+# ===========================================================================
+# CAMPAIGN 10 — 9 new lints (2026-09-19). RM1-6 stay intact.
+#   Per-artifact src scanners: lint-no-system-out (FAIL), lint-clock-zero-floor (WARN),
+#     lint-null-context-write (WARN), lint-bql-string-concat (WARN), lint-arbitrary-ord (WARN).
+#   Profile-conditional: lint-se-display (FAIL, -se only), lint-jasmine-ux (WARN, -ux only).
+#   Module-root once-per-run: lint-agent-on-shape (FAIL), lint-uberjar-api-conflict (WARN).
+# Fixtures: system-out, se-display, agent-on, bql-warn, ux-no-specs (see tests/fixtures/report-module/).
+# Named mutations (post-green):
+#   - drop System.out check → RM7 no longer exits 1.
+#   - drop JFrame check → RM8 no longer exits 1.
+#   - drop agent-on validation → RM9 no longer exits 1.
+#   - drop BQL concat passthrough → RM10 loses WARN row.
+#   - drop jasmine-ux passthrough → RM11 loses WARN row.
+
+@test "RM7: System.out call surfaces lint-no-system-out FAIL row and exits 1" {
+  # system-out/DemoPan-rt/src/com/x/BOut.java has System.out.println
+  run "$RM" "$FX/system-out"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-no-system-out"* ]] && [[ "$output" == *"BOut.java"* ]]
+}
+
+@test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
+  # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
+  run "$RM" "$FX/se-display"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-se-display"* ]] && [[ "$output" == *"BPanel.java"* ]]
+}
+
+@test "RM9: malformed agent-on type in module-include.xml surfaces lint-agent-on-shape FAIL row and exits 1" {
+  # agent-on/DemoPan-rt/module-include.xml has <on type="FooService"/> — missing module: prefix
+  run "$RM" "$FX/agent-on"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-agent-on-shape"* ]] && [[ "$output" == *"module-include.xml"* ]]
+}
+
+@test "RM10: BQL string-concat produces lint-bql-string-concat WARN row but exit stays 0 (WARN does not block)" {
+  # bql-warn/DemoPan-rt/src/com/x/BQuery.java concatenates into a bql: string
+  run "$RM" "$FX/bql-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-bql-string-concat"* ]] && [[ "$output" == *"BQuery.java"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM11: -ux artifact with src/rc/ but no JS specs surfaces lint-jasmine-ux WARN row, exit stays 0" {
+  # ux-no-specs/DemoPan-ux/src/rc/index.html exists but srcTest/rc/spec/ is absent
+  run "$RM" "$FX/ux-no-specs"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-jasmine-ux"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
