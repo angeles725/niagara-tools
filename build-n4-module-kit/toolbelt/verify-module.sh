@@ -469,6 +469,52 @@ check_moduletest_present() {
   row PASS moduletest "$jar" "moduleTest-include.xml present"; return 0
 }
 
+check_transient_operator() {
+  # Δ9 (transient-operator-warn, --src): a @NiagaraProperty slot declared with BOTH
+  # Flags.TRANSIENT and Flags.OPERATOR is almost certainly a bug — TRANSIENT means NOT
+  # persisted to the .bog; OPERATOR means operator-writable config; together the operator
+  # sets a setpoint, the station restarts, and the setpoint silently reverts to default.
+  # WARN; SKIP without --src or no src/. D9b: dot-dirs pruned.
+  # NAMED MUTATION: drop this check -> TRANSOP1's WARN vanishes.
+  # [ev: corpus B755 §755.5, B4 §4.1.2]
+  local jar="$1" pd warned=0 f hit
+  [ -n "$SRC" ] || { row SKIP transient-operator "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP transient-operator "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      row WARN transient-operator "$jar" "$f:$hit"
+      warned=1
+    done < <(grep -nE 'TRANSIENT[^;]*OPERATOR|OPERATOR[^;]*TRANSIENT' "$f" 2>/dev/null || true)
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS transient-operator "$jar" "no TRANSIENT+OPERATOR slot combination under $pd/src"
+  return 0
+}
+check_compact3_imports() {
+  # Δ11 (compact3-imports, --src): rt/ux source that imports java.awt.*, javax.swing.*, or
+  # java.sql.* compiles under a full JDK 8 but throws NoClassDefFoundError on the station —
+  # the NRE ships the Compact 3 JRE subset, which excludes these packages. wb/se run the
+  # full SE JRE and are exempt. WARN; SKIP without --src, no src/, or non-rt/ux profiles.
+  # D9b: dot-dirs pruned.
+  # NAMED MUTATION: drop this check -> CPT3-1's WARN vanishes.
+  # [ev: corpus B756 §756.2]
+  local jar="$1" base pd warned=0 f hit
+  base=$(basename "$jar" .jar)
+  case "$base" in *-rt|*-ux) ;; *) row SKIP compact3-import "$jar" "not an -rt or -ux jar"; return 0 ;; esac
+  [ -n "$SRC" ] || { row SKIP compact3-import "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP compact3-import "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      row WARN compact3-import "$jar" "$f:$hit"
+      warned=1
+    done < <(grep -nE 'import (java\.awt|javax\.swing|java\.sql)\.' "$f" 2>/dev/null || true)
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS compact3-import "$jar" "no Compact3 non-safe imports under $pd/src"
+  return 0
+}
 check_cross_module_type() {
   # CROSSMOD1 (--src): a @NiagaraProperty type= value that is a Java FQN whose
   # package is not javax.baja.*, com.tridium.*, com.tridiumx.*, com.honeywell.*,
@@ -512,7 +558,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type check_transient_operator check_compact3_imports; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

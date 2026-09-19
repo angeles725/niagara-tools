@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-18 · kit · slots-flags-status-units-java8-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas from the slot/property mechanics + bit-models + Java-8 discipline vein).

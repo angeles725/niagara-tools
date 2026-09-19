@@ -338,3 +338,67 @@ KTS
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP  cross-module-type"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# TRANSOP — check_transient_operator (Δ9): a @NiagaraProperty slot combining both
+# Flags.TRANSIENT and Flags.OPERATOR is a silent config-loss bug — TRANSIENT = not
+# persisted; OPERATOR = operator-writable config; the setpoint reverts on every restart.
+# WARN severity (exit 0); SKIP without --src or no src/.
+# Named mutation: drop check_transient_operator -> TRANSOP1's WARN row vanishes.
+# [ev: corpus B755 §755.5, B4 §4.1.2]
+
+@test "TRANSOP1: TRANSIENT+OPERATOR on the same slot WARNs transient-operator (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # TRANSIENT + OPERATOR together: operator sets a setpoint, restart silently reverts it
+  printf '@NiagaraProperty(name = "setpoint", flags = Flags.TRANSIENT | Flags.OPERATOR, value = "0.0")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  transient-operator"* ]]
+}
+
+@test "TRANSOP2: OPERATOR without TRANSIENT passes transient-operator (correct persisted setpoint)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # SUMMARY|OPERATOR only — no TRANSIENT — correct for a persisted operator-writable slot
+  printf '@NiagaraProperty(name = "setpoint", flags = Flags.SUMMARY | Flags.OPERATOR, value = "0.0")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  transient-operator"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# CPT3 — check_compact3_imports (Δ11): rt/ux source that imports java.awt.*,
+# javax.swing.*, or java.sql.* compiles under JDK 8 but throws NoClassDefFoundError
+# on the station (NRE ships the Compact 3 JRE subset). wb/se are exempt.
+# WARN severity (exit 0); SKIP for non-rt/ux or without --src.
+# Named mutation: drop check_compact3_imports -> CPT3-1's WARN row vanishes.
+# [ev: corpus B756 §756.2]
+
+@test "CPT3-1: import java.awt.* in -rt source WARNs compact3-import (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # java.awt is absent from the NRE Compact 3 subset — compiles fine on JDK 8, crashes live
+  printf 'import java.awt.Color;\nclass A {}\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  compact3-import"* ]]
+}
+
+@test "CPT3-2: no Compact3-unsafe imports in -rt source passes compact3-import (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # javax.baja.* is Compact3-safe; no forbidden import
+  printf 'import javax.baja.sys.BObject;\nclass A {}\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  compact3-import"* ]]
+}

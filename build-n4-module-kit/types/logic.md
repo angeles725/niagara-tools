@@ -120,6 +120,7 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 
 - **A value linked ACROSS two custom modules is a plain `double` (0/1/2), never a shared frozen-enum type:** an enum link requires the identical type on both ends, which forces module-B-rt to depend on module-A-rt, and the custom-module dependency DSL is non-trivial (`compileOnly(files(...))` does not reach the plugin classpath; the plugin auto-includes only Tridium modules). A `double` links with zero dependency; Workbench shows 0/1/2. The deleted `BHoaMode` was such an enum — a leftover reference surfaced live on the JACE as `Missing class ColdRoomPan:HoaMode`. [ev: bitácora 5cuartos §5]
 - **A discrete selector used ONLY as an internal slot is a `BFrozenEnum` (registered in `module-include.xml`), NOT a double — the plain-double rule above is for values linked ACROSS custom modules only:** e.g. `BFanMode` internal config is a frozen enum. [ev: retro coldroompan-fan-mode-defrost · L19]
+- **`BIUnlinkableSlotsContainer`: implement to keep specific child slots operator-writable but never a link source or target** — `HIDDEN` removes a slot from ALL UI; `BIUnlinkableSlotsContainer` keeps it visible in the property sheet and writable by an operator but excluded from the wiresheet link picker. Use case: a setpoint or HOA override slot that an operator must set by hand and must never be driven by a link. `[ev: corpus B735 §735.4]`
 
 ### BConverter and cross-type link STRIP pattern `[ev: corpus B871, B928]`
 
@@ -152,11 +153,38 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
 - **`changed()` = `super` + `if(!isRunning())return` + dispatch on WHICH slot + a deadband/significance guard before writing a slot back** (kills relay chatter through a feedback link).
 - **Timer callbacks are `HIDDEN|ASYNC` actions; cancel-before-reschedule; cancel+null every ticket in `stopped()`.**
 - **Flags**: `TRANSIENT` runtime state · `READONLY` computed outputs (pair both for live outputs) · `SUMMARY`/`OPERATOR` tunables · `DEFAULT_ON_CLONE` for calc state (so a cloned room/evaporator doesn't inherit stale numbers) · `ASYNC` timer actions · `FAN_IN` multi-link inputs.
+  - **TRANSIENT trap:** never combine `TRANSIENT` with `OPERATOR` on the same slot — `TRANSIENT` means not persisted to the `.bog`; `OPERATOR` means operator-writable config. The operator sets a setpoint, the station restarts, the setpoint silently reverts to default. `verify-module.sh --src` WARN: `transient-operator`. `[ev: corpus B755 §755.5, B4 §4.1.2]`
 - **`getSlotFacets` projection** of a `facets` config slot onto outputs (units/precision once) + **range facets** on inputs, still clamp defensively in code.
 - **Pure-logic split for reusable formulas** (like `ColdRoomControl.decideCall`) — the only part that gets real unit tests; everyday logic stays inline.
 - **GOTCHA**: `catch(Throwable)+log` is NOT automatic — the framework only wraps `BControlPoint.executeExtensions`. In your OWN `changed()`/timer handlers you MUST self-guard or one exception corrupts engine state. (Our modules already do.)
 
 Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `changed()` cycle timing and multi-stage coordination from further builds.
+
+## Slots — BStatus producers `[ev: corpus B736 §736.2–736.4]`
+
+**8-bit BStatus reference** (BStatus.java:46–53; ok = 0, no bits set):
+
+| Flag | Value |
+|------|-------|
+| `DISABLED` | 0x01 |
+| `FAULT` | 0x02 |
+| `DOWN` | 0x04 |
+| `STALE` | 0x08 |
+| `OVERRIDDEN` | 0x10 |
+| `NULL` | 0x20 |
+| `UNACKED_ALARM` | 0x80 |
+
+Typed factory family (BStatus.java:51–140) — never construct a raw `BStatus(int)`:
+`makeFault(s)`, `makeDown(s)`, `makeNull(s, addNull)`, `makeStale(s)`, `makeOverridden(s, addOverridden)`, `makeDisabled(s, state)`.
+
+- **Set `makeOverridden(s, true)` on an output when it is forced by a HOA HAND or writable override** so the HMI and any subscriber can distinguish a forced value from an auto-computed one. The existing kit documents reading `OVERRIDDEN`; this is the producer side — the component applying the override must set the bit. `[ev: corpus B736 §736.4]`
+- **Use `BStatus.makeNull(s, true)` when a sensor is absent or the computation is indeterminate** — write a NULL-status output, not a `0.0` with ok-status. A `0.0/ok` lie is a valid reading downstream; it can drive a false control decision (e.g. a 0 °C reading from a disconnected probe triggers unnecessary cooling). `[ev: corpus B736 §736.4]`
+
+## Propagation — `propagateFlags` on custom components `[ev: corpus B738 §738.3]`
+
+**Add a `propagateFlags BStatus` slot (`SUMMARY|OPERATOR`, default `BStatus.ok`) to custom control components** to let operators tune which status bits (fault/stale/down/null) flow through to outputs — mirrors the `BKitNumeric` pattern (BKitNumeric.java:35). Without it the component hardcodes propagation unconditionally.
+
+Recipe: `out.setStatus(getPropagateFlags().and(aggregatedInputStatus))` — AND the aggregated input status with the mask before setting the output. A `BStatus.ok` mask blocks all propagation; a mask with `FAULT` lets only fault bits through. The `SUMMARY|OPERATOR` flag exposes it in the property sheet; operators can tune per-site without a code change.
 
 ## RT control logic `[ev: corpus B805]`
 

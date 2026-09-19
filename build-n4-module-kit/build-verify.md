@@ -58,6 +58,7 @@ There is no version common to all installs — this table supersedes the earlier
 
 ## Module versioning & release
 - **The MODULE's own version lives in `defaultModuleVersion("X.Y.Z")` in each module's `build.gradle.kts` `vendor{}` block → stamped as `vendorVersion` at build; a bump REQUIRES a rebuild to reach the jar.** Per-module version skew is fine (rebuild only the changed modules); the repo tracks `build/libs/*.jar`; tag `vX.Y.Z`. [ev: retro soft-start · S4]
+- **`BVersion.MEETS_MINIMUM` mask = 115** (bits: `LATER|SAME|EQUIVALENT|MORE_SPECIFIC|LESS_SPECIFIC`; excludes `EARLIER=4` and `DIFFERENT=8`) — this is why `<dependency vendorVersion="4.14">` (a minimum floor) is satisfied by 4.15 but NOT by 4.13 and NOT by a different vendor, and why the `--target-version` gate FAILS on a jar stamped above the target. (BVersion.java:58–66.) `[ev: corpus B755 §755.4]`
 
 ## niagara_home on WSL
 Building on WSL against `niagara_home=C:\...` breaks the m2 repo (see §Build target & plugin version); and when a `-ux` depends on `-rt`, the plugin's auto-copy of the built jar into a station-locked `modules/` fails. That copy failure is irrelevant — free the lock, or use the already-assembled `build/libs` jar (§Building against a running station: free the lock first, mirror only when you can't); the mirror is only for a live production supervisor.
@@ -109,6 +110,20 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 - **OEM / Honeywell modules use `SERVER1.SF` / `SERVER1.RSA` instead of `NIAGARA4.*`:** this is expected and correct for Honeywell-signed jars — they are signed under a different CA.  If you ever run `verify-module.sh` against a third-party OEM jar (e.g. for toolchain testing), the `signed` check will FAIL because it looks only for `META-INF/NIAGARA4.SF`.  That failure is expected for OEM jars.  **Our own modules MUST always use `NIAGARA4.*`** regardless of whether the target station is a Honeywell OEM supervisor — the OEM tier does not change the signing requirement for author-built modules.  `[ev: corpus B817 §817.6]`
+- **`ACCESS_CLASS`, `REFLECTION`, and `MBEAN_PERMISSION` permission groups are a hard signing gate regardless of `niagara.moduleVerificationMode`** — `requiresSignature()=true` for these three groups forces cert-chain validation even in LOW mode. A module requesting any of them fails to load unsigned (`ValidationException`) even when the station runs in LOW verification mode. The general "sign both jars" rule is necessary but not sufficient: a module with these groups also needs a cert-chain-trusted signer, not just a local DEV cert. `[ev: corpus B18 §18.3.1, §18.4.4]`
+
+## Profile constraints — rt/ux Compact 3 `[ev: corpus B756 §756.2]`
+
+The NRE ships the **Compact 3** JRE subset: `java.awt`, `javax.swing`, and `java.sql` are absent from the station classpath. Profile rules:
+
+| Profile | JRE | Compact 3 required? |
+|---------|-----|---------------------|
+| `-rt` | NRE Compact 3 | **yes** — `java.awt`, `javax.swing`, `java.sql` absent |
+| `-ux` | NRE Compact 3 | **yes** |
+| `-wb` | Workbench full SE | no restriction |
+| `-se` | full SE | no restriction |
+
+An `-rt` class that imports `java.awt.*` compiles cleanly under JDK 8 (full SE) but throws `NoClassDefFoundError` on the station. `toolbelt/verify-module.sh --src` runs `check_compact3_imports` to WARN on these imports in `-rt`/`-ux` source.
 
 ## Workbench re-sign: STORED repackage
 - **Workbench `JarFileSigner` "invalid entry compressed size (expected N got M)" is a deflater mismatch (WSL OpenJDK 8 vs Windows Zulu 8), NOT a build-state fluke a clean rebuild fixes — it recurs:** the same WSL deflater re-derives the same size, so `clean + slotomatic + jar` does not help. The fix is to repackage the jar STORED (uncompressed) so the mismatch is impossible by construction. [ev: retro 5rooms #10]

@@ -12,7 +12,7 @@
 - [x] T3 — authoring-exemplars (8Δ) → `types/logic.md` (zero-demand/NaN) + `types/logic-authoring.md` (link-lifecycle ptr + security-module skeleton) + `BUILD-LOOP.md §4.b` + `build-verify.md` (OEM SF); Δ5/Δ8 already-folded in T2 — DONE (FULL)
 - [x] T4 — module-mechanics (7Δ) → `types/logic-authoring.md` (TypeSubscriber, BEventService, Schedule, DDF, BPollScheduler) + `types/logic.md` (BConverter STRIP) — DONE (FULL)
 - [x] T5 — schema-versioning (6Δ) → `METHODOLOGY.md` + `types/logic.md` (docs) + `schema-risk.sh` (L4 + fox-sync WARN) + `verify-module.sh` (check_cross_module_type, bats CROSSMOD1-3) — DONE (FULL; 27/27 + 11/11 green)
-- [ ] T6 — slots-flags-status-units-java8 (13Δ) → `types/logic.md` + `METHODOLOGY.md` + `verify-module.sh` + `build-verify.md`
+- [x] T6 — slots-flags-status-units-java8 (13Δ) → `types/logic.md` (BStatus/propagateFlags/unlinkable/TRANSIENT) + `METHODOLOGY.md` (facets/BIcon) + `verify-module.sh` (check_transient_operator, check_compact3_imports) + `build-verify.md` (Compact3/signing/BVersion) — DONE (FULL; 31/31 green)
 - [ ] T7 — ux-wb-writesurface-rbac (4Δ) → `wb-widgets.md` + `dashboard.md`
 - [ ] T8 — palette-lexicon-assets-images (5Δ) → `verify-module.sh` + `types/structure.md` + `types/logic-authoring.md` + `report-module.sh` (dup-keys bug fix)
 - [ ] T9 — spa-library-integration (6Δ) → `types/dashboard.md`
