@@ -110,7 +110,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-07-two-differential-fase2.md | CompPan | 2026-09-07 | folded | 0 |
 | 2026-09-07-tree-selection-and-schema-risk-baseline.md | kit | 2026-09-07 | folded | 3 |
 | 2026-09-07-gradle-properties-consistency.md | kit | 2026-09-07 | folded | 3 |
-| 2026-09-07-live-commissioning-verification-gaps.md | kit | 2026-09-07 | pending | 7 |
+| 2026-09-07-live-commissioning-verification-gaps.md | kit | 2026-09-07 | folded | 7 |
 | 2026-09-07-coldroompan-indefrost-resistance-recovery.md | ColdRoomPan | 2026-09-07 | folded | 2 |
 | 2026-09-07-control-model-limits-live-commissioning.md | kit | 2026-09-07 | folded | 5 |
 | 2026-09-11-module-worktree-location-guard.md | kit | 2026-09-11 | folded | 5 | <!-- Δ1 orient-guard.sh; Δ2 BUILD-LOOP §0.a; Δ3 SKILL.md step1; Δ4 orient-guard.bats; Δ5 kit-links L9 -->
