@@ -135,4 +135,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-insights-issues-catalog-deltas.md | kit | 2026-09-18 | pending | 3 |
 | 2026-09-18-math-control-library-layer-deltas.md | kit | 2026-09-18 | pending | 4 |
 | 2026-09-18-wiresheet-control-library-deltas.md | kit | 2026-09-18 | pending | 1 |
-| 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | pending | 3 |
+| 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | folded | 3 |

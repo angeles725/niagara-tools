@@ -125,6 +125,8 @@ The NRE ships the **Compact 3** JRE subset: `java.awt`, `javax.swing`, and `java
 
 An `-rt` class that imports `java.awt.*` compiles cleanly under JDK 8 (full SE) but throws `NoClassDefFoundError` on the station. `toolbelt/verify-module.sh --src` runs `check_compact3_imports` to WARN on these imports in `-rt`/`-ux` source.
 
+- For guidance on bundling external Maven libraries (packaging paths, signing, the Java-8 ceiling, and a per-library viability table) see `types/third-party-libraries.md`.
+
 ## Workbench re-sign: STORED repackage
 - **Workbench `JarFileSigner` "invalid entry compressed size (expected N got M)" is a deflater mismatch (WSL OpenJDK 8 vs Windows Zulu 8), NOT a build-state fluke a clean rebuild fixes — it recurs:** the same WSL deflater re-derives the same size, so `clean + slotomatic + jar` does not help. The fix is to repackage the jar STORED (uncompressed) so the mismatch is impossible by construction. [ev: retro 5rooms #10]
 - **Local `jarsigner` is a FALSE NEGATIVE for this defect:** WSL `jarsigner` re-deflates with the SAME deflater that built the jar and reports "jar verified" while Workbench still fails — never use it to claim Workbench-signability. Only an operator's live Workbench sign proves it. [CERT-live 2026-09-01 — operator signed both STORED jars with no ZipException]
