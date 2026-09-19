@@ -1,6 +1,6 @@
 ---
 name: build-n4-module
-description: "Trigger: build/create/extend a Niagara N4 module — rt logic, ux dashboard, wb widget (ColdRoomPan/DashboardPan/chihuahua-style). Enforces the layered checklist, the Java-8 + slotomatic build, and a verify gate."
+description: "Trigger: build/create/extend a Niagara N4 module — rt control logic, ux dashboard/servlet, wb widget/view, driver/network (BDeviceNetwork/BProxyExt), station service, utility/library module, theme/branding module, or cloud connector (ColdRoomPan/DashboardPan/chihuahua-style and beyond). Enforces the layered checklist, the Java-8 + slotomatic build, and a verify gate."
 license: Apache-2.0
 metadata:
   author: angeles725
