@@ -47,6 +47,19 @@ CSV entry `renumber_enum_ordinals,SAFE` is technically correct for .bog but hide
 **Proposed check:** `schema-risk.sh` WARN row for this kind (schema-versioning Δ6 PENDING)
 [ev: corpus B754 §754.6] — **Kit coverage: schema-versioning-upgrade-safety-deltas Δ6 (PENDING)**
 
+### A5 · Missing class at station start: class-name/module-version mismatch
+**Symptom:** `SEVERE sys.registry: Missing class for "Module:Type"` logged at station start
+after a module deploy; affected components fail to instantiate or the station loads only
+partially.
+**Root cause:** the deployed jar carries a different class name or module version than the
+`.bog` file that references it; the registry cannot resolve the type at runtime.  Distinct
+from A3 (compile-only dep not bundled): here the class exists in the jar but the symbolic
+identity does not match what the .bog stored.
+**Fix:** after every deploy, grep the station log for `Missing class` before marking the
+deploy complete.  A post-deploy gate (currently manual) should block commissioning until the
+log is clean.
+[ev: mem panccadia-station-audit-log] — **Kit coverage: none (post-deploy gate = PENDING)**
+
 ---
 
 ## B — Timer / clock lifecycle
@@ -94,6 +107,18 @@ the display anchor slot (e.g., `nextDefrostTime`) remains null/uninitialized per
 [ev: corpus B729 §729.4, retro self-firing-timer item 3] — **Kit coverage: retro self-firing-timer
 (FOLDED); not yet a lint check**
 
+### B4 · Clock.schedule zero-delay: Math.max(0L, delay) floor at 0 is still rejected
+**Symptom:** a self-firing timer silently never arms despite a `Math.max(0L, delay)` guard;
+the component appears healthy (running, no fault) and logs nothing.
+**Root cause:** the Niagara EngineManager rejects `time <= 0` the same as a negative delay;
+`Math.max(0L, delay)` floors at 0, which the engine still rejects.  A naive zero-floor is
+NOT equivalent to "validate delay > 0" (B2): the safe minimum is 1 ms, not 0.
+**Fix:** replace `Math.max(0L, delay)` with `Math.max(1L, delay)` before every
+`Clock.schedule` / `schedulePeriodically` call.  Enforce at the property level with a
+`min >= 1` facet so the UI prevents zero entry.
+[ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: METHODOLOGY.md S139 +
+lint-delays.sh FAIL check (B2 sibling; FOLDED)**
+
 ---
 
 ## C — Test infrastructure
@@ -124,6 +149,31 @@ from `javax.baja.*`).  Test those with plain `org.junit.Test` in WSL.  For lifec
 link-graph tests, use BTestNg + a test station (Windows only, requires niagaraTest fix).
 [ev: corpus B741, B1028 §1028.5, memory baja-offline-instantiation-boundary] —
 **Kit coverage: retro qa-stack (FOLDED)**
+
+### C3 · rt lifecycle seam (cancelRunTickets vs cancelTicket) invisible to pure JUnit
+**Symptom:** outputs lock OFF (or ON) permanently after a refactor; all lint checks and pure
+JUnit tests stay GREEN; the defect surfaces only on a live station.
+**Root cause:** the choice between `cancelRunTickets()` (cancels ALL tickets) and
+`cancelTicket(t)` (cancels ONE ticket) inside a lifecycle method (`stopped`, `atSteadyState`,
+etc.) is not observable by static lint or by pure JUnit — there is no live NRE seam in WSL.
+The incorrect cancel intent silently passes every offline check.
+**Fix:** include a read-level review step that audits ticket-cancel intent against the
+described lifecycle contract; supplement with a live-harness or BTestNg station check on
+Windows.
+[ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: none (gap; live harness check
+recommended per retro C9-QA)**
+
+### C4 · -ux modules missing Jasmine → silent browser-side test failures
+**Symptom:** no JavaScript/Jasmine tests run for a `-ux` module; the build stays GREEN;
+`niagaraTest` may also report 0 tests (see C1 for the Java-side plugin 7.6.17 bug).
+**Root cause:** `-ux` module scaffolding does not add Jasmine as a devDependency by default,
+so browser-side test suites are never discovered or executed.  The two issues are independent:
+the missing Jasmine dep silences ux tests even when the plugin bug (C1) is resolved.
+**Fix:** add Jasmine (and any required test runner) to the `-ux` module's `package.json` or
+build config; see `types/dashboard.md` DUX-TEST1 for the required devDeps.  Also pin the
+plugin away from 7.6.17 as described in C1.
+[ev: corpus B1028] — **Kit coverage: types/dashboard.md DUX-TEST1; C1 covers the Java-side
+plugin angle**
 
 ---
 
@@ -156,3 +206,33 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
 **Fix:** keep `gradlePluginVersion` in `settings.gradle.kts` aligned with the SDK family in
 `gradle.properties niagara_home`.  Changing the SDK requires a matching plugin version change.
 [ev: corpus B1016 §1016.2] — **Kit coverage: n4-client-build-config-standard Δ2 (PENDING)**
+
+---
+
+## E — Client / HMI compatibility
+
+### E1 · EC-Net 4.3/Hx browser: BooleanWritable set(value) fails silently
+**Symptom:** calling `set(value)` on a writable point in the EC-Net 4.3/Hx browser HMI
+silently has no effect; the output value does not change and no error is reported.
+**Root cause:** EC-Net 4.3/Hx browser incompatibility with the standard Niagara `set(value)`
+call path for writable points.
+**Fix:** model the control as a `BooleanWritable` HOA with states `active` / `inactive` /
+`auto` (empty Override); drive the point through the `/set` dialog and use
+"Paste Special → Keep all links" when wiring.  Do not rely on a direct `set(value)` call
+from EC-Net 4.3/Hx.
+[ev: mem harbor-greenmax-b851-pilot] — **Kit coverage: none**
+
+---
+
+## F — Security
+
+### F1 · Destructive HTTP GET endpoints → CSRF / accidental data loss
+**Symptom:** a configuration or dataset can be wiped by loading a URL (e.g., via a stray
+browser pre-fetch, an `<img src="…/reset">` tag, or a link click) because a state-changing
+operation is exposed over HTTP GET with no CSRF protection.
+**Root cause:** state-changing operations (delete, reset, overwrite) exposed as GET endpoints
+carry no CSRF protection; any same-origin `<img>`, link, or redirect can trigger them without
+user intent.
+**Fix:** require HTTP POST + a CSRF token for every endpoint that mutates state.  Audit all
+`GET` routes in web-facing module servlets and move destructive actions to POST handlers.
+[ev: mem nmodsreflow] — **Kit coverage: none (security audit = PENDING)**
