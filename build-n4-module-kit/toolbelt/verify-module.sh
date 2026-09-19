@@ -26,6 +26,7 @@
 #               Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.     [default]
 #   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
+#   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN.              [--src]
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
@@ -583,6 +584,30 @@ check_subscription_leak() {
   return 0
 }
 
+check_slot_wall() {
+  # SLOT-WALL-LINT1 (--src): a single @NiagaraType class with more than 15
+  # @NiagaraProperty declarations is a flat slot wall — the property sheet and
+  # Link picker sprawl above that count; group concerns into child BComponents
+  # instead (logic.md L21). WARN; SKIP without --src or no src/. D9b: dot-dirs pruned.
+  # NAMED MUTATION: drop this check -> SLOTWALL1's WARN vanishes.
+  # [ev: corpus B737 §B.2-B.3]
+  local jar="$1" pd warned=0 f count classname
+  [ -n "$SRC" ] || { row SKIP slot-wall "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP slot-wall "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    count=$(grep -c '@NiagaraProperty' "$f" 2>/dev/null || true)
+    [ "$count" -gt 15 ] || continue
+    classname=$(grep -oE '(public[[:space:]]+)?(class|interface)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$f" 2>/dev/null \
+      | head -1 | awk '{print $NF}' || true)
+    [ -z "$classname" ] && classname="$(basename "$f" .java)"
+    row WARN slot-wall "$jar" "$count properties in class $classname ($f) — compose into child BComponents (logic.md L21)"
+    warned=1
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS slot-wall "$jar" "no flat slot wall (>15 @NiagaraProperty per class) under $pd/src"
+  return 0
+}
+
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
   LIST=$(unzip -Z1 "$JAR" 2>/dev/null) || { echo "verify-module: not a zip: $JAR" >&2; exit 3; }
@@ -591,7 +616,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type check_transient_operator check_compact3_imports check_subscription_leak; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type check_transient_operator check_compact3_imports check_subscription_leak check_slot_wall; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

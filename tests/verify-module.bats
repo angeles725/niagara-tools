@@ -451,3 +451,43 @@ KTS
   [ "$status" -eq 0 ]
   [[ "$output" == *"PASS  subscription-leak"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# SLOTWALL — check_slot_wall (SLOT-WALL-LINT1): a single class with more than 15
+# @NiagaraProperty declarations is a flat slot wall — property sheet and Link picker
+# sprawl above that count; compose into child BComponents (logic.md L21).
+# WARN severity (exit 0); SKIP without --src.
+# Named mutation: drop check_slot_wall -> SLOTWALL1's WARN vanishes.
+# [ev: corpus B737 §B.2-B.3]
+
+@test "SLOTWALL1: >15 @NiagaraProperty in one class WARNs slot-wall (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # 16 @NiagaraProperty annotations on one class — exceeds the 15-slot threshold
+  {
+    printf 'class A {\n'
+    for i in $(seq 1 16); do printf '  @NiagaraProperty(name = "slot%d", value = "0.0")\n' "$i"; done
+    printf '}\n'
+  } > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  slot-wall"* ]]
+  [[ "$output" == *"16 properties in class A"* ]]
+}
+
+@test "SLOTWALL2: <=15 @NiagaraProperty in one class passes slot-wall (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # 15 @NiagaraProperty annotations — at the threshold, not over
+  {
+    printf 'class A {\n'
+    for i in $(seq 1 15); do printf '  @NiagaraProperty(name = "slot%d", value = "0.0")\n' "$i"; done
+    printf '}\n'
+  } > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  slot-wall"* ]]
+  [[ "$output" != *"WARN  slot-wall"* ]]
+}

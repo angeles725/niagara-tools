@@ -120,7 +120,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-corpus-index-refresh-b761-b1028.md | kit | 2026-09-18 | folded | 26 |
 | 2026-09-18-authoring-exemplars-deltas.md | kit | 2026-09-18 | folded | 8 |
 | 2026-09-18-sdk-examples-kit-deltas.md | kit | 2026-09-18 | folded | 8 |
-| 2026-09-18-resource-threading-consumption-deltas.md | kit | 2026-09-18 | pending | 6 |
+| 2026-09-18-resource-threading-consumption-deltas.md | kit | 2026-09-18 | folded | 6 |
 | 2026-09-18-module-mechanics-deltas.md | kit | 2026-09-18 | folded | 7 |
 | 2026-09-18-schema-versioning-upgrade-safety-deltas.md | kit | 2026-09-18 | folded | 6 |
 | 2026-09-18-slots-flags-status-units-java8-deltas.md | kit | 2026-09-18 | folded | 13 |

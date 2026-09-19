@@ -21,7 +21,7 @@
 - [x] T12 — ord-path-nav (9Δ) → `logic-authoring.md` (§ORD resolution: BOrd.resolve, scheme typology, service:/h:/nav:/hierarchy:, cross-station pipe, nav-tree ordering) + `structure.md` (§Nav file packaging) — DONE (FULL, doc-only)
 - [x] T13 — permissions-security-model (8Δ) → `dashboard.md` (BPermissions 6-bit) + `structure.md` (module-permissions.xml source/inlining/profile-scope) + `build-verify.md` (verificationMode/skipModuleValidation/exemptions.tes; Δ4 already-folded) — DONE (FULL, doc-only)
 - [ ] T14 — organization-tags-grouping (6Δ) → `types/logic.md` + `types/logic-authoring.md`
-- [ ] T15 — resource-threading-consumption (6Δ) → `types/logic.md` + `verify-module.sh` + `METHODOLOGY.md`
+- [x] T15 — resource-threading-consumption (6Δ) → `logic.md` (HogsPage, poll-limits, GC-timer-drift, BWorker off-engine) + `METHODOLOGY.md` (watchdog dead/hung-vs-slow) + `verify-module.sh` (check_slot_wall SLOTWALL1-2) — DONE (FULL; 36/36)
 - [ ] T16 — insights-issues-catalog (3Δ) → new `types/issues-and-gotchas.md` + `lint-timers.sh` + `METHODOLOGY.md`
 
 ## New retros discovered mid-campaign (operator-driven library/gap topics)
