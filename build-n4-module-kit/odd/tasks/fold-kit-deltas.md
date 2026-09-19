@@ -29,7 +29,9 @@
 - [x] T19 — third-party-library-integration (3Δ) → new `types/third-party-libraries.md` + `build-verify.md` — DONE (FULL, doc-only)
 - [ ] T17 — math-control-library-layer (4Δ) → new `types/math-control-libraries.md` + `logic.md` xref (+ check-compact3.sh recipe sketch)
 - [x] T18 — wiresheet-control-library (1Δ) → `types/logic.md` §wire-sheet live-view recipe — DONE (FULL, doc-only)
-- [ ] T20 — ml-libraries (pending gen) → ML for N4 (Weka/Smile/ONNX/XGBoost; Supervisor-only; propose-validate architecture; GPL caveat)
+- [x] T20 — ml-libraries (4Δ) → new `types/ml-libraries.md` (Supervisor-only placement, Weka-GPL/Smile-preferred, ONNX inference, PROPOSE-VALIDATE architecture, op-mode data discipline) + xrefs in `logic.md`/`third-party-libraries.md`/`math-control-libraries.md` — DONE (FULL, doc-only)
+
+ALL 20 FOLDED (16 original + 4 new topics). 6 new verify/lint checks shipped with bats.
 
 ## Evidence (commit identities recorded as tasks close)
 - (pending)

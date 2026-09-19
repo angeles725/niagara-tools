@@ -144,3 +144,9 @@ smoke-test on the target JACE.
   third-party JAR into an N4 module.
 - **Frontend / ux JavaScript libraries:** `types/dashboard.md` (JS libs loaded
   from `rc/` resource folders are a separate mechanism entirely).
+- **ML / predictive-model libraries (tabular classifiers/regressors, ONNX
+  inference, DL4J, Weka, Smile, XGBoost4J, PROPOSE-VALIDATE safety architecture,
+  train-offline/infer-ONNX pattern, operating-mode data discipline):**
+  `types/ml-libraries.md`. That document covers the ML layer; this document covers
+  the non-ML control-math layer (PID, stats, linear algebra, state machines). The
+  two serve different authors and are intentionally split.

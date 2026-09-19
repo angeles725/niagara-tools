@@ -175,5 +175,14 @@ a Tridium-trusted cert is required at install time. `[ev: corpus B18 §18.3.1]`
 | RxJava2 | `io.reactivex.rxjava2:rxjava:2.2.21` | **Yes** | No | No | Bundle; ~900 KB; fine for complex async orchestration |
 | H2 | `com.h2database:h2:2.2.x` | **No** (`java.sql` throughout) | **Supervisor-only** (-wb or -se profile) | No | `java.sql`-BLOCKED on rt/ux (station Compact3 has no `java.sql`); Supervisor only; use Niagara's native rdb module for database needs |
 | SQLite-JDBC | `org.xerial:sqlite-jdbc:3.x` | **No** (JNI + `java.sql`) | Neither (no QNX .so) | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE (no QNX .so) AND `java.sql`-blocked on rt/ux; neither path works on JACE; use Niagara's rdb driver |
+| **Weka 3.8.x** | `nz.ac.waikato.cms.weka:weka-stable:3.8.6` | Yes (core; shade if GUI code paths touch AWT — absent on Compact3) | No (core algos) | No | **GPL-3.0 — NOT safe for distributed closed-source module.** Viable for offline training only (dev env; never ships in module). See `types/ml-libraries.md`. |
+| **Smile 2.6.x** | `com.github.haifengl:smile-core:2.6.0` | Yes — core tabular algos (RF, logistic, k-means, SVM, LDA) are pure Java; avoid `smile-nlp` (native) | No (tabular core; JACE: BWorker required for heavy models) | No | Apache 2.0; Java 8 compat. **Pin to 2.x — Smile 3.x+ requires Java 11+.** Preferred tabular ML library. Bundle + shade. See `types/ml-libraries.md`. |
+| **Deeplearning4j (DL4J) 1.0-M2.1+** | `org.deeplearning4j:deeplearning4j-core:*` | Yes (API) | **No — JNI (ND4J native backend)** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; Apache 2.0; Supervisor-only. See `types/ml-libraries.md`. |
+| **ONNX Runtime Java** | `com.microsoft.onnxruntime:onnxruntime:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; MIT; Supervisor-only. **Preferred inference path** for offline-trained Python models. See `types/ml-libraries.md`. |
+| **XGBoost4J** | `ml.dmlc:xgboost4j:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; Apache 2.0; Supervisor-only. Train in Python, export to ONNX, infer via ONNX Runtime Java. See `types/ml-libraries.md`. |
 
-`[ev: corpus B617, B347, B1023, B26, B18, B756]`
+**ML libraries:** see `types/ml-libraries.md` for the placement rule
+(Supervisor vs. JACE-rt), the full library verdict table with safety architecture,
+the train-offline/infer-ONNX pattern, and data / operating-mode discipline.
+
+`[ev: corpus B617, B347, B1023, B26, B18, B756, B67]`
