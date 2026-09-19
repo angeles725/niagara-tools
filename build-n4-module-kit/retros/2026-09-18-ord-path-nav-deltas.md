@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-18 · kit · ord-path-nav-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas — ORD/path/nav).

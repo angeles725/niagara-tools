@@ -18,7 +18,7 @@
 - [x] T9 — spa-library-integration (6Δ) → `types/dashboard.md` (JS embed recipe, injection, grunt-decision table, JS-vs-JVM distinction) — DONE (FULL, doc-only)
 - [x] T10 — watcher-subscription-livedata (7Δ) → `types/logic-authoring.md` (SubscribeCallbacks/subscribed/TypeSubscriber-scope/BOX-chain) + `dashboard.md` (BOX rate-limit, live-data matrix) + `verify-module.sh` (check_subscription_leak SUBLEAK1-2) + `METHODOLOGY.md` — DONE (FULL; 34/34)
 - [x] T11 — factory-composition-new-types (8Δ) → `logic-authoring.md` (new-type checklists, driver factory hooks/discovery/CoalesceQueue/type-agnostic poll) + `logic.md` (REMOVE_ON_CLONE); Δ2 icon + Δ3 propagateFlags already-folded — DONE (FULL, doc-only)
-- [ ] T12 — ord-path-nav (9Δ) → `types/logic-authoring.md` + `types/structure.md`
+- [x] T12 — ord-path-nav (9Δ) → `logic-authoring.md` (§ORD resolution: BOrd.resolve, scheme typology, service:/h:/nav:/hierarchy:, cross-station pipe, nav-tree ordering) + `structure.md` (§Nav file packaging) — DONE (FULL, doc-only)
 - [x] T13 — permissions-security-model (8Δ) → `dashboard.md` (BPermissions 6-bit) + `structure.md` (module-permissions.xml source/inlining/profile-scope) + `build-verify.md` (verificationMode/skipModuleValidation/exemptions.tes; Δ4 already-folded) — DONE (FULL, doc-only)
 - [ ] T14 — organization-tags-grouping (6Δ) → `types/logic.md` + `types/logic-authoring.md`
 - [ ] T15 — resource-threading-consumption (6Δ) → `types/logic.md` + `verify-module.sh` + `METHODOLOGY.md`

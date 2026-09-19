@@ -232,6 +232,42 @@ F1-accessible help; `bajadoc-module` adds the API documentation layer.
 
 `[ev: corpus B759 §759.6]`
 
+## Nav file packaging `[ev: corpus B35 §35.5.3]`
+
+A module can ship a static nav tree by bundling one or more `.nav` files as JAR resources.
+
+### File locations
+
+| Location | When used |
+|---|---|
+| `rc/nav/<name>.nav` inside the module JAR | Module-packaged static nav tree (ships with the module) |
+| `~/stations/<stationName>/nav/<name>.nav` | Station-local nav file (operator-placed, not in the JAR) |
+
+At startup, Workbench and the station discover `.nav` files in both locations and merge them into the nav sidebar.
+
+### XML schema
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<nav>
+  <node name="My Module" ord="slot:/Services/MyService" icon="module://mymod/icons/x16/service.png">
+    <node name="Status"  ord="slot:/Services/MyService/status"/>
+    <node name="Config"  ord="slot:/Services/MyService/config"/>
+  </node>
+</nav>
+```
+
+- `name` — display label in the nav sidebar.
+- `ord` — the target ORD the node resolves to; supports any registered scheme (`slot:`, `service:`, `nav:`, etc.).
+- `icon` — optional `module://` ORD pointing to a 16×16 PNG icon.
+- Nodes nest arbitrarily; children are listed in declaration order (same as slot-order rule for `BINavNode`).
+
+### Static-cache gotcha
+
+`NavFileDecoder.cache` is a **JVM-static `Map`** keyed by ORD. Editing a `.nav` file on disk while Workbench is running does **NOT** refresh the nav sidebar — Workbench reads each file once and caches it for the session lifetime. The sidebar shows the stale tree until the user does **Ctrl+R (station reload)** or reconnects.
+
+**Design rule for development:** ship the `.nav` as a resource in `rc/nav/` inside the module JAR, not as an editable file outside it. This way the only way to change it is to rebuild and redeploy the JAR — which forces a Workbench reconnect and clears the cache naturally. An editable `.nav` file outside the JAR is a dev-time footgun: changes appear silent ("why doesn't my nav update?") until the session is restarted.
+
 ## Recommendations for our modules (impact ÷ cost) `[ev: corpus B817]`
 R1 chihuahua — populate rt+ux `module.lexicon` (10 types unlocalized; cheap, operator-visible). R2 DashboardPan-wb
 — delete the empty skeleton OR fill it + add its JUnit dep. R3 DashboardPan — test `DashboardReader` (14-baja, the

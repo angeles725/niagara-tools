@@ -15,6 +15,14 @@
 - **`BEventService` routing — routing IS the Baja link graph, no imperative registry:** `BEventSource.routeTo(name, routable)` = `add(name, consumer)` + `linkTo(source.event → consumer.process)`. `BEventFilter` chains (consumer = process action, producer = event topic). `BEventRecipient` is terminal async delivery via `ThreadPoolWorker`. The event envelope is a uniform `BEvent` (uuid / timestamp / source ORD / open value). Cross-station delivery uses `BStationRecipient` (Fox `EventChannel`). `BComponentEventSource` wraps a `Subscriber.event(BComponentEvent)` into a `BEvent`; `BComponentTypeEventSource` uses `TypeSubscriber` internally — the event module is an OVERLAY on the B867 subscription primitives. **License required:** `tridium:eventService`. `[ev: corpus B873 §873.1-4]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
 
+### Nav-tree ordering and visibility `[ev: corpus B757 §757.3–757.4]`
+
+Two independent levers control whether a slot appears in the nav sidebar:
+
+- **`isNavChild()→false`** hides the component from the nav sidebar ONLY. The slot still exists, is wireable, and is visible everywhere else (property sheet, wireboard). Override this when a child should not clutter the nav tree but must remain accessible for configuration. Contrast with `Flags.HIDDEN`, which removes the slot from ALL UI (nav, property sheet, wireboard) — use `HIDDEN` only for truly internal machinery.
+- **Nav order = slot declaration order:** the nav tree lists `getNavChildren()` in the same order as slots are declared with `@NiagaraProperty`. Reorder the field declarations to reorder the nav sidebar entries. There is no separate nav-order property.
+- **Virtual nav node recipe:** to expose a nav node that has no backing `@NiagaraProperty` slot (e.g. a synthetic grouping folder), implement `BINavNode` manually — override `getNavChildren()`, `getNavOrd()` (must return a stable `BOrd`), and `getNavIcon()`. Return the synthetic instance from the parent's `getNavChildren()` alongside its real child components. Canonical example: `BModulePaletteNode`. `getNavOrd()` must be stable across renames and restarts; a `BOrd` based on a constant string or handle is preferred over a computed slot path.
+
 ## Link lifecycle callbacks `[ev: corpus B958 §958.1–958.2]`
 
 The full `doCheckLink` / `added` / `removed` / INDIRECT-link recipe lives in `types/logic.md
@@ -40,6 +48,95 @@ so a station restart that starts the target before the source does not leave the
 
 ## Inter-module communication `[ev: corpus B802]`
 - **Within a station, runtime comms is module-AGNOSTIC:** `BLink`, service discovery (`Sys.getService(Type)`), and `Subscriber` NEVER check the source module — a cross-module link / lookup / subscription is identical to a same-module one. The only real boundaries are (a) the COMPILE-TIME `<dependency>` on the other module's `Type`, and (b) the `fox:` ORD hop to a SEPARATE station (a real JVM boundary). Extends B778 (same-space services + `Subscriber.event`) with the cross-module + distributed picture. `[ev: corpus B802]`
+
+## ORD resolution — calling BOrd from rt/ux code `[ev: corpus B5 §5.1.4–5.1.5]`
+
+### Call-site recipe
+
+```java
+BOrd ord = BOrd.make("slot:/MyComp/mySlot");   // parse once; store in a field if reused
+BObject result = ord.resolve(base, cx).get();  // base may be null for absolute ORDs
+```
+
+- `BOrd.make(string)` parses and normalizes the ORD string.
+- `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget.get()` → `BObject`.
+- **Absolute ORD** (host-anchored, starts with a host-type scheme): `base` may be `null`.
+- **Relative ORD**: requires a non-null `base` component; resolution starts from the base context.
+- **Normalization rule:** when a host-query fragment is encountered mid-chain, all prior fragments are trimmed — `slot:/a|ip:host|slot:/b` resolves as `ip:host|slot:/b` (the `ip:` fragment resets the root). Build cross-station ORDs from the host query outward. `[ev: corpus B5 §5.1.5]`
+
+### Error types
+
+| Exception | Meaning in practice |
+|---|---|
+| `UnresolvedException` | Target not reachable (access denied or node not found) |
+| `UnknownSchemeException` | Scheme module not loaded in the JVM |
+| `InvalidOrdBaseException` | Wrong or missing base for a relative ORD |
+| `SyntaxException` | Malformed ORD string |
+| `NullOrdException` | Empty (null) ORD supplied |
+
+### ORD scheme typology `[ev: corpus B5 §5.1.1; B38 §38.1]`
+
+29 registered schemes; 5 categories:
+
+| Type | Description | Key examples |
+|---|---|---|
+| **host** | Identifies a network node (absolute; no base needed) | `local:`, `ip:host`, `fox:host` |
+| **session** | Identifies a connected session | `fox:` (after host), `station:` |
+| **space** | Navigates within a space (component tree, file system, JAR) | `slot:/path`, `h:N`, `module://mod/path` |
+| **lookup** | Resolves a named service or type instance | `service:baja:AlarmManager`, `type:baja:Component` |
+| **query** | Runs a search or query | `bql:`, `neql:`, `hierarchy:`, `nav:` |
+
+Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side SPIs for the authoring recipe.
+
+### `service:` lookup scheme `[ev: corpus B5 §5.1.1; B38 §38.1]`
+
+`service:baja:AlarmManager` resolves the running service instance by type. Use this as a **configurable ORD pointer** stored in a `@NiagaraProperty` instead of a hardcoded `Sys.getService(Type)` call:
+
+```java
+// property: BOrd serviceRef = "service:mymod:FooService"
+// at resolve time (null base OK — service: is a lookup scheme, hence absolute):
+BObject svc = serviceRef.resolve(null, cx).get();
+```
+
+Warning: resolves the **first-registered** instance — same semantics as `Sys.getService`. Avoid if multiple instances may be registered and you need a specific one.
+
+### `h:` handle scheme — BOG-document-local links `[ev: corpus B5 §5.2.4]`
+
+- A handle (`h:N`) is **unique per BOG document, not globally** — the same `h:5` in two BOG files refers to two distinct entities.
+- `BOrd` properties that link to another component in the same BOG file serialize as `v="h:N"`.
+- `h:` ORDs are **path-independent**: rename or move the target component within the document without breaking the reference — contrasts with `slot:` which breaks on rename.
+- Use `h:` for palette template intra-document links; use `slot:` for human-readable cross-document references.
+
+### Cross-station ORD pipe composition `[ev: corpus B5 §5.1.1, §5.1.5]`
+
+Chain fragments left-to-right with `|`:
+
+```
+ip:192.168.1.10|fox:|station:|slot:/MyComp/mySlot
+```
+
+- `ip:host` — establishes the TCP connection (host scheme; resets the chain root)
+- `fox:` — opens the N4 tunneled Fox session (the real JVM boundary)
+- `station:` — enters the remote station component space
+- `slot:/path` — navigates the remote component tree
+
+Compose programmatically with string concatenation or `BOrd.make(base, suffix)`. Because the normalization rule trims prior fragments when `ip:` appears, always build cross-station ORDs from the host query outward; do not prepend a `slot:` path before `ip:`. This extends the `fox:` boundary concept from §Inter-module communication with the full fragment pipe form.
+
+### `nav:` ORD scheme — nav tree walk `[ev: corpus B35 §35.5.2]`
+
+`BNavScheme` resolves `nav:Station/Floor1/Zone` by walking `getNavChild()` segment-by-segment:
+
+- Each path segment calls `getNavChild(name)` on the current node until the leaf is reached.
+- Permission enforcement is **inline**: a denied node raises `UnresolvedException` — the UI silently fails to expand that branch with **no error shown to the user**.
+- A `nav:` ORD in a PX graphics binding targets a nav-file node, not a station component directly; the nav node's `getNavOrd()` provides the onward ORD to the actual component.
+
+### `hierarchy:` ORD — stable cross-tree references `[ev: corpus B587 §587.1]`
+
+`BHierarchyScheme extends BSpaceScheme` (`ordScheme="hierarchy"`); body parses as `HierarchyQuery extends SlotPath`.
+
+- A `hierarchy:` ORD **survives component-tree reorganisation** — it resolves through tags/relations to the real component, not through slot paths. Prefer over `slot:` when a module must hold a reference to a component that operators may reorganize.
+- The last path segment encoded as `station$3a$7c` (URL-escaped `station:|`) is the **ENTITY seam**: it dereferences to the real station component with an inline permission check.
+- Choose `hierarchy:` when the reference must be stable across renames and tree moves; choose `slot:` when you control the component path and human readability of the ORD matters more than stability.
 
 ## Authoring a point extension
 
