@@ -149,12 +149,46 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 ## Grouping and relating declaration surfaces (three postures)
 
 - **Categories:** author NOTHING — every `BComponent` is `BICategorizable`; categories are operator-runtime via `BCategoryService`. Emit NO category scaffold. `[ev: corpus B781]`
-- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. `[ev: corpus B781]`
+- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. Full `BCustomRelation` recipe — declare a `BCustomRelation extends BRelationInfo` with source scope (`entity` or `station`), target `BTypeSpec`, and inbound/outbound relation-id facet maps; override `addRelations(entity, cx)` to resolve targets via an ORD/NEQL query:
+
+  ```java
+  BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from module:BTargetType where ...")
+                                  .get(cx);
+  TableCursor<?> c = t.cursor();
+  while (c.next()) {
+      BComponent target = (BComponent) c.cell(0);
+      cx.add(new BasicRelation(relationId, target, /*inbound=*/false));
+  }
+  c.close();
+  ```
+
+  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register the custom relation in the tag dictionary's constructor alongside the tag defs (it participates in the same `BSmartTagDictionary` registration; see `types/logic.md §Ship a tag dictionary`). `[ev: corpus B758 §758.2]`
 - **Hierarchy:** compose a `BHierarchy` root + ordered `BLevelDef` children (`BQueryLevelDef`/`BRelationLevelDef` entity levels, `BGroupLevelDef`/`BListLevelDef` grouping) under `BHierarchyService`; subclass `BLevelDef`+`getElements` only for a bespoke level. `[ev: corpus B781]`
 
 ## Query/search/index surface
 
 - Declare a typed `BQuery`/NEQL payload + plug the matching `BIAgent` provider (`BQueryEngine` execute / `BColumnsProvider` table columns / `BISearchProvider` station search [`@AgentOn` scope×scheme] / `BSystemIndexer`+`BIIndexQueryProvider` station index [scope = a `BOrdList` of NEQL queries]) → read the resulting `BITable` cursor. `[ev: corpus B782]`
+
+## BQL from code — consumer cursor pattern `[ev: corpus B758 §758.4]`
+
+The CONSUMER side of BQL — used by a dashboard servlet or service method that runs a query from code:
+
+```java
+BITable<?> t = (BITable<?>) BOrd.make(
+        "station:|slot:/|bql:select * from <module:Type> where …")
+    .get(Sys.getStation());
+TableCursor<?> c = t.cursor();
+while (c.next()) {
+    BObject cell = (BObject) c.cell(columnIndex);
+    // … process cell …
+}
+c.close();   // always close — leaks a resource if skipped
+```
+
+- `from <module:Type>` is the select-by-registered-type mechanism — it finds every mounted instance of `module:Type` in the station space.
+- Always close the cursor in a `finally` block; a leaked cursor holds a read lock on the space.
+- oBIX exposes the same query as `/obix/bql/<url-encoded-query>` — the same BQL string works over HTTP from a browser client.
+- **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
 ## Templates are artifact production, not a type SPI
 

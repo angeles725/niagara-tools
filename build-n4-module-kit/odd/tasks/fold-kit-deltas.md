@@ -20,7 +20,7 @@
 - [x] T11 — factory-composition-new-types (8Δ) → `logic-authoring.md` (new-type checklists, driver factory hooks/discovery/CoalesceQueue/type-agnostic poll) + `logic.md` (REMOVE_ON_CLONE); Δ2 icon + Δ3 propagateFlags already-folded — DONE (FULL, doc-only)
 - [x] T12 — ord-path-nav (9Δ) → `logic-authoring.md` (§ORD resolution: BOrd.resolve, scheme typology, service:/h:/nav:/hierarchy:, cross-station pipe, nav-tree ordering) + `structure.md` (§Nav file packaging) — DONE (FULL, doc-only)
 - [x] T13 — permissions-security-model (8Δ) → `dashboard.md` (BPermissions 6-bit) + `structure.md` (module-permissions.xml source/inlining/profile-scope) + `build-verify.md` (verificationMode/skipModuleValidation/exemptions.tes; Δ4 already-folded) — DONE (FULL, doc-only)
-- [ ] T14 — organization-tags-grouping (6Δ) → `types/logic.md` + `types/logic-authoring.md`
+- [x] T14 — organization-tags-grouping (6Δ) → `logic.md` (tag constructor-seed/auto-tagging, UX ranked checklist, our-modules tag recipe) + `logic-authoring.md` (BCustomRelation, BQL consumer cursor) — DONE (FULL, doc-only)
 - [x] T15 — resource-threading-consumption (6Δ) → `logic.md` (HogsPage, poll-limits, GC-timer-drift, BWorker off-engine) + `METHODOLOGY.md` (watchdog dead/hung-vs-slow) + `verify-module.sh` (check_slot_wall SLOTWALL1-2) — DONE (FULL; 36/36)
 - [ ] T16 — insights-issues-catalog (3Δ) → new `types/issues-and-gotchas.md` + `lint-timers.sh` + `METHODOLOGY.md`
 

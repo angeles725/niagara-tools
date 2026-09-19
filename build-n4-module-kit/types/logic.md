@@ -134,6 +134,21 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 ## Composition & organization
 - **Above ~12–15 flat slots, compose into child components (one per concern) and keep config separate from live-state — don't sprawl a flat slot wall:** Honeywell modules distribute by containment (one child BComponent per concern: timing / outputs / hoa / freeze), tunables in a frozen `config` child, value + `BStatus` on the component; a 25-slot flat `BEvaporatorUnit` is the smell. [ev: corpus B737/B749/B750 · L21]
 
+### UX/legibility ranked checklist `[ev: corpus B748 §748.2]`
+
+Six changes that fix wire-sheet and property-sheet overload, ordered by impact ÷ cost:
+
+| # | Change | Cost | Notes |
+|---|--------|------|-------|
+| 1 | **SUMMARY pin curation** — real I/O = `SUMMARY`, internal state = non-summary, engine callbacks = `HIDDEN` | trivial · flag-only | Declutters the wire sheet immediately; no structural change. Do items 1 + 3 in the same pass. |
+| 2 | **Compose flat slots into child components** (one child per concern) | medium · structural | One careful pass per module; the structural change that reduces the flat-slot wall permanently. |
+| 3 | **Units/precision facets on every temp / pressure / percent slot** | low · facet-only | Applies to all SUMMARY-flagged numeric pins; pairs with item 1. |
+| 4 | **Distinct icon per block type** | low · one SVG resource | See `types/logic-authoring.md §Adding a block icon`. Polish — do after items 1–3 are done. |
+| 5 | **Pre-wired palette assembly templates** | low · resource-only | A `.ntpl` zip covering the most common wiring; see §Templates. Discoverability improvement. |
+| 6 | **Semantic tag dictionary** | medium | See §Ship a tag dictionary above; enables NEQL queries and navigation. |
+
+**Sequencing rule:** 1 + 3 are same-day flag/facet passes; 5 is a resource add; 2 is the structural one (plan carefully); 4 + 6 are polish and discoverability improvements.
+
 ## Logging
 - **A plain non-`BObject` helper class compiles and bundles into the jar — use one for logging:** N4 has no `BLoggingService`; a shared `java.util.logging.Logger.getLogger("<module>")` lets an engine-thread handler log-and-swallow a throwable instead of discarding it. [ev: retro rt-hardening #3]
 
@@ -273,6 +288,19 @@ An independent monitor on the producer's `lastTick` is the layer Tridium does NO
 A module can auto-tag every component of its types with semantic tags using `BSmartTagDictionary` and `BNamespace`, so NEQL queries, navigation hierarchies, and Haystack tooling see the components with zero integrator effort.
 
 - **`BSmartTagDictionary`** is the mechanism: declare a `@NiagaraType` subclass, register it as an agent under `TagDictionaryService`, and override `getRules()` to return `SmartTagRule[]` — each rule maps a Baja `Type` to a set of tag names/values. Components matching that type are auto-tagged on insert.
+- **Constructor-seed API (alternative to `getRules`):** seed individual marker tags directly in the subclass constructor via `tagInfoList.add(SlotPath.escape(name), new BSimpleTagInfo(BMarker.DEFAULT))`, guarded by `if (get(name) == null)` for idempotency across re-runs. This is the Honeywell "seed in constructor" pattern; the `getRules()/SmartTagRule[]` pattern (B814) is the Haystack discovery path. Both extend `BSmartTagDictionary`; choose one per dictionary. `[ev: corpus B758 §758.1]`
+- **Rule-based auto-tagging:** implement `BTagRule` + `BTagRuleCondition` to classify components automatically without per-instance annotation. The `getImpliedTag`/`addAllImpliedTags` engine in `BSmartTagDictionary` iterates `getTagRules()` and applies matching rules. Override `test(entity)` → `true/false` and return tag names/values from `getTags()`. `BEquipmentTypeTag` maps a folder's `displayName` to an equip-type tag via a `lookupTable` facet. `BIsPointProxyTypeRule` + `BIsPointProxyTypeCondition` match a driver point by its proxyExt `TYPE`. `[ev: corpus B758 §758.1]`
 - **`BNamespace`** (optional): declare a named namespace in `module-include.xml` to own tag names that don't collide with the Haystack or Baja built-in namespaces.
 - **Palette placement:** drag the dictionary instance under `TagDictionaryService` at commissioning (or auto-install it in `serviceStarted()`). NEQL queries that use `tag::` operators and the Hierarchy/Navigation view become addressable immediately.
 - **Key rule:** tag names live in the lexicon (they are user-visible strings); keep them short, scope-stable, and consistent with the Haystack marker convention (no CamelCase in tag names).
+
+### Our-modules tag recipe (namespace `angeles`) `[ev: corpus B750 §750.2, B758 §758.5]`
+
+Concrete application of the dictionary for our cold-chain modules:
+
+- **Namespace:** `angeles` (declare in `module-include.xml` as a `<namespace>` entry).
+- **Marker tags:** `room`, `evaporator`, `compressor`, `defrost`.
+- **Keying strategy:** one `BTagRule` per component TYPE (e.g. `entity instanceof BEvaporatorUnit`) — not by folder name, since our components are well-typed.
+- **Auto-install:** place the dictionary instance under `TagDictionaryService` in `serviceStarted()` — no integrator drag required.
+- **Result:** `station:|slot:/|neql:select * where tag::room` reaches all cold-room components with zero integrator effort after module deploy.
+- **Deploy safety note:** this overlay is additive — no schema change, no containment change; deploy on an existing station is safe.
