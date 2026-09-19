@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · kit · control-model-limits-live-commissioning
 
 **Session**: PANCCADIA León live commissioning over oBIX (Cuarto 5 split unit + valve-hold override). Limits of the ColdRoomPan control model surfaced when the operator's real requirements didn't fit the built-in evaporator logic. Companion to `live-commissioning-verification-gaps`.
