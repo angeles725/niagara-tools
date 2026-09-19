@@ -419,3 +419,35 @@ KTS
   [ "$status" -eq 0 ]
   [[ "$output" == *"PASS  compact3-import"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# SUBLEAK — check_subscription_leak (Δ6): a class that extends TypeSubscriber but
+# has no stopped() override never calls unsubscribeAll(); typeSubscriptionMap holds
+# strong refs per type per event-id on the space = leak until station restart.
+# WARN severity (exit 0); SKIP without --src or no src/.
+# Named mutation: drop check_subscription_leak -> SUBLEAK1's WARN row vanishes.
+# [ev: corpus B867 §867.2, B408 §408.4]
+
+@test "SUBLEAK1: TypeSubscriber without stopped() WARNs subscription-leak (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # extends TypeSubscriber with no stopped() override — subscriptions never torn down
+  printf 'class A extends TypeSubscriber { public void event(BComponentEvent e){} }\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  subscription-leak"* ]]
+}
+
+@test "SUBLEAK2: TypeSubscriber with stopped() passes subscription-leak (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  # extends TypeSubscriber AND overrides stopped() with unsubscribeAll() — clean
+  printf 'class A extends TypeSubscriber { public void event(BComponentEvent e){} public void stopped() { unsubscribeAll(); } }\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  subscription-leak"* ]]
+}

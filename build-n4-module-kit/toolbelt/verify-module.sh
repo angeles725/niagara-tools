@@ -24,6 +24,8 @@
 #   rcbackup    no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
 #   palette     a module that declares types must not ship an EMPTY module.palette (nothing to drag in
 #               Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.     [default]
+#   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
+#               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
 #
 # Usage: verify-module.sh [--target-version X.Y] [--stored] [--src <module-dir>] [--strict] <jar>...
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
@@ -558,6 +560,29 @@ check_cross_module_type() {
   return 0
 }
 
+check_subscription_leak() {
+  # Δ6 (subscription-leak, --src): a class that extends or uses TypeSubscriber but
+  # has no stopped() override — subscriptions are never torn down (typeSubscriptionMap
+  # holds strong refs per type per event-id on the space) = leak until station restart.
+  # WARN (not FAIL: valid architectures exist where the owning space is torn down on stop
+  # before the subscriber component). Companion to the existing Clock.Ticket cancel FAIL.
+  # SKIP without --src or no src/. D9b: dot-dirs pruned.
+  # NAMED MUTATION: drop this check -> SUBLEAK1's WARN row vanishes.
+  # [ev: corpus B867 §867.2, B408 §408.4]
+  local jar="$1" pd warned=0 f
+  [ -n "$SRC" ] || { row SKIP subscription-leak "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd/src" ] || { row SKIP subscription-leak "$jar" "no $pd/src"; return 0; }
+  while IFS= read -r f; do
+    grep -qE '(extends[[:space:]]+TypeSubscriber|TypeSubscriber[[:space:]]+)' "$f" 2>/dev/null || continue
+    grep -qE 'void[[:space:]]+stopped[[:space:]]*\(' "$f" 2>/dev/null && continue
+    row WARN subscription-leak "$jar" "$f: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart"
+    warned=1
+  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  [ "$warned" -eq 0 ] && row PASS subscription-leak "$jar" "no TypeSubscriber without stopped() under $pd/src"
+  return 0
+}
+
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
   LIST=$(unzip -Z1 "$JAR" 2>/dev/null) || { echo "verify-module: not a zip: $JAR" >&2; exit 3; }
@@ -566,7 +591,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type check_transient_operator check_compact3_imports; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present check_cross_module_type check_transient_operator check_compact3_imports check_subscription_leak; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

@@ -16,7 +16,7 @@
 - [x] T7 — ux-wb-writesurface-rbac (4Δ) → `wb-widgets.md` (device-model plugin, bajaux dialects, PX taxonomy) + `dashboard.md` (PX complement) — DONE (FULL, doc-only)
 - [x] T8 — palette-lexicon-assets-images (5Δ) → `report-module.sh` (dup-keys BUGFIX) + `verify-module.sh` (check_palette root WARN, V18) + `types/structure.md` (palette template + -doc help) + `types/logic-authoring.md`/`METHODOLOGY.md` (icon recipe) — DONE (FULL; 32/32 + 8/8)
 - [x] T9 — spa-library-integration (6Δ) → `types/dashboard.md` (JS embed recipe, injection, grunt-decision table, JS-vs-JVM distinction) — DONE (FULL, doc-only)
-- [ ] T10 — watcher-subscription-livedata (7Δ) → `types/logic-authoring.md` + `dashboard.md` + `verify-module.sh` + `METHODOLOGY.md`
+- [x] T10 — watcher-subscription-livedata (7Δ) → `types/logic-authoring.md` (SubscribeCallbacks/subscribed/TypeSubscriber-scope/BOX-chain) + `dashboard.md` (BOX rate-limit, live-data matrix) + `verify-module.sh` (check_subscription_leak SUBLEAK1-2) + `METHODOLOGY.md` — DONE (FULL; 34/34)
 - [ ] T11 — factory-composition-new-types (8Δ) → `types/logic-authoring.md` + `types/logic.md` + `METHODOLOGY.md`
 - [ ] T12 — ord-path-nav (9Δ) → `types/logic-authoring.md` + `types/structure.md`
 - [ ] T13 — permissions-security-model (8Δ) → `types/dashboard.md` + `types/structure.md` + `build-verify.md`
