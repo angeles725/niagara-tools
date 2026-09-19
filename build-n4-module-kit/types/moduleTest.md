@@ -160,3 +160,233 @@ See also: `types/structure.md §PASS state + scaffold` (scaffold emits a stub `m
 that moduleTests are best suited to verify). `[ev: corpus B958 §958.3–958.4, B961 §961.3]`
 
 <!-- source: promoted from retro 2026-09-18-sdk-examples-kit-deltas [ev: retro sdk-examples-kit-deltas] -->
+
+---
+
+## TEST-G1 — `BTestNgStation`: full-services fixture
+
+Use `BTestNgStation` (extends `BTestNg`) when the test needs a station with real services pre-wired.
+Override `configureTestStation()` to add module-specific services on top of the defaults.
+
+```java
+@NiagaraType
+@Test(groups = { "yourmod" })
+public class BYourIntegrationTest extends BTestNgStation {
+
+    @BeforeTest
+    public void setupStation() throws Exception {
+        // BTestNgStation.setupStation() starts the station and wires:
+        //   RoleService, UserService (TestSuper/TestAdmin/TestOperator, pw Test@1234_5678),
+        //   AlarmService, HistoryService, JobService, FoxService (port 1911)
+        // Override isWebServiceEnabled() → true to also add WebService.
+        super.setupStation();
+    }
+
+    @Override
+    protected boolean isWebServiceEnabled() { return false; }   // default; set true when needed
+}
+```
+
+**When to use:**
+- Alarm routing, FOX round-trips, history writes, job scheduling — anything that requires real services.
+- Use bare `createTestStation()` (from `BTestNg`) when you only need the NRE with no pre-configured services.
+
+`[ev: code BTestNgStation.java :96-270]`
+
+---
+
+## TEST-G2 — Async assertions (`TestHelper.waitFor` / `assertWillBeTrue`)
+
+Never use `Thread.sleep` for async component/station behaviour.  Use:
+
+```java
+import javax.baja.test.TestHelper;
+
+// Polls every 10 ms for up to 5 000 ms (defaults):
+TestHelper.assertWillBeTrue(() -> myComp.getStatus().isOk(), "status should be OK");
+
+// Custom timeout (ms) + message:
+TestHelper.assertWillBeTrue(() -> myComp.getOut().getDouble() > 0, 10_000L, "output > 0 after 10 s");
+
+// Raw boolean helper — returns true/false without asserting:
+boolean settled = TestHelper.waitFor(() -> myComp.isRunning(), 3_000L, 50L);
+```
+
+Signature: `waitFor(BooleanSupplier condition, long timeout, long interval)`.
+`assertWillBeTrue` delegates to `waitFor` and calls `Assert.assertTrue` on the result.
+
+`[ev: code TestHelper.java :97-145]`
+
+---
+
+## TEST-G3 — Parameterized tests (`@DataProvider` + `BTridiumTestNg`)
+
+```java
+import com.tridium.testng.BTridiumTestNg;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
+@DataProvider(name = "inputs")
+public Object[][] inputs() {
+    // Simple: wrap an Iterable or varargs into Object[][]
+    return BTridiumTestNg.toDataProviderArray(List.of("a", "b", "c"));
+}
+
+@Test(dataProvider = "inputs")
+public void testWithParam(String value) throws Exception {
+    Assert.assertNotNull(value);
+}
+```
+
+For richer cases (named parameters, multiple columns), use the `DataProviderResults` builder:
+
+```java
+return StreamSupport.stream(cases.spliterator(), false)
+    .collect(
+        () -> new BTridiumTestNg.DataProviderResults(signature),
+        (acc, t) -> processor.processInputValue(acc::add, acc::newCase, t),
+        BTridiumTestNg.DataProviderResults::combine
+    ).toArray();
+```
+
+`[ev: code BTridiumTestNg.java :49-233]`
+
+---
+
+## TEST-G4 — Flaky-test retry (`NRetryAnalyzer`)
+
+```java
+import com.tridium.testng.NRetryAnalyzer;
+import org.testng.annotations.Test;
+
+@Test(retryAnalyzer = NRetryAnalyzer.class)
+public void sometimesFlaky() throws Exception { ... }
+```
+
+- Default: **3 attempts** (`MAX_ATTEMPTS = 3`).
+- Override per-run: `-Dniagara.testng.retryAnalyzer.maxAttempts=N` on the JVM.
+- Use sparingly — only for genuinely non-deterministic timing issues.  Fix the flakiness first; add the
+  retry only when timing is inherent (e.g., network-dependent FOX handshake).
+
+`[ev: code NRetryAnalyzer.java :30-40]`
+
+---
+
+## TEST-G5 — OS-conditional tests (`@Requires`)
+
+```java
+import com.tridium.testng.annotation.Requires;
+
+// Skip the test on non-Linux platforms:
+@Requires(os = { Requires.OsType.LINUX })
+@Test
+public void linuxOnlyBehaviour() throws Exception { ... }
+
+// Optional: a predicate method name (must return boolean, no args):
+@Requires(predicate = "isPlatformReady")
+@Test
+public void conditionalTest() throws Exception { ... }
+
+public boolean isPlatformReady() { return ...; }
+```
+
+`Requires.OsType` values: `LINUX`, `WINDOWS`, `MAC` (from the decompiled enum).  The listener
+(`RequiresListener`) is wired into the TestNG suite by `test-wb`; no extra setup needed.
+
+`[ev: code RequiresListener.java :10-111, annotation/Requires.java :14-20]`
+
+---
+
+## TEST-G6 — Out-of-process integration (`StationRunner`)
+
+`StationRunner` launches a **real station in a separate JVM** and connects via FOX.  Use for file-system,
+certificate, or session-level integration tests that cannot run in-process.  Do NOT use for routine CI —
+the cost is high (separate process + FOX handshake).
+
+```java
+import com.tridium.testng.StationRunner;
+
+StationRunner runner = StationRunner.make()
+    .withBogFile(Path.of("src/test/resources/test-station.bog"))
+    .start();   // blocks until "FOX server started on port [N]" appears in stdout
+
+// connect via FOX, run tests…
+
+runner.stop();
+```
+
+Use `StationRunner.make(debugPort)` to attach a debugger to the spawned JVM.
+
+`[ev: code StationRunner.java :66-164]`
+
+---
+
+## TEST-G7 — Palette assertions (`TestHelper.loadPaletteItem`)
+
+Verify that a palette entry is present and instantiable without a running station:
+
+```java
+import javax.baja.test.TestHelper;
+import javax.baja.sys.BModule;
+
+@Test
+public void paletteEntryPresent() throws Exception {
+    BModule module = Sys.loadModule("yourvendor-yourmod");
+    Object item = TestHelper.loadPaletteItem(module, "YourComponent");
+    Assert.assertNotNull(item, "palette entry YourComponent must exist");
+}
+```
+
+`loadPaletteItem(BModule, String...)` accepts a vararg path for nested palette folders.
+Pair with the known gap: `-ux` modules lack Jasmine palette coverage (see R6 / DUX-TEST1).
+
+`[ev: code TestHelper.java :494]`
+
+---
+
+## TEST-G8 — Layout, registration, and known gotchas
+
+### File layout
+
+```
+<part>/
+  srcTest/
+    com/<vendor>/<mod>/test/
+      BYourModuleTest.java          # @NiagaraType, extends BTestNg or BTestNgStation
+  moduleTest-include.xml            # registers test types — NOT in module-include.xml
+  <part>.gradle.kts                 # moduleTestImplementation(":test-wb")
+```
+
+### `moduleTest-include.xml` registration
+
+Every test class needs `@NiagaraType` + a `TYPE` constant, and must be declared in
+`moduleTest-include.xml` (separate from the production `module-include.xml`):
+
+```xml
+<moduleInclude>
+  <types>
+    <type name="YourModuleTest"
+          class="com.yourvendor.yourmod.test.BYourModuleTest"/>
+  </types>
+</moduleInclude>
+```
+
+### Gradle dependency
+
+```kotlin
+moduleTestImplementation("Tridium:test-wb")
+```
+
+`bajaui-wb` is required when the test station needs UI services (common in practice; already noted in
+the main Gradle section above).
+
+### Known gotchas (R6)
+
+- **`niagaraTest` task bug (sdk 7.6.17):** the Gradle `niagaraTest` task has a known plugin bug and cannot
+  run `moduleTest` suites.  Run tests from Workbench → **Tools → Run Tests** until the task is fixed.
+- **`-ux` modules lack Jasmine:** JS-side palette/component tests for dashboard UX modules must use the
+  Jasmine harness documented in `types/dashboard.md §DUX-TEST1` — `moduleTest` covers the Java side only.
+
+`[ev: corpus B1028 SDE7-G1; code BTestNgStation.java, TestHelper.java]`
+
+<!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro 2026-09-19-test-wb-extension] -->
