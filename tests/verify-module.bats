@@ -259,3 +259,44 @@ KTS
   [[ "$output" == *"PASS  phantom-dep"* ]]
   [[ "$output" != *"WARN"*"phantom-dep"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# MODULETEST1 — verify --src: an -rt module with production src/**.java but no
+# moduleTest-include.xml declares zero BTestNg station-integration tests -> WARN
+# (--strict FAIL). Real shape: our CompPan-rt/ColdRoomPan-rt (B1028/B958). Named
+# mutation: drop check_moduletest_present -> MT1 loses its WARN row.
+@test "MT1: -rt with src java but no moduleTest-include.xml WARNs moduletest (exit 0)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"; : > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  moduletest"* ]] && [[ "$output" == *"no moduleTest-include.xml"* ]]
+}
+
+@test "MT2: -rt with src java AND moduleTest-include.xml passes moduletest" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"; : > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  printf '<moduleTest><types/></moduleTest>\n' > "$TMPDIR_T/mod/Foo-rt/moduleTest-include.xml"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  moduletest"* ]]
+}
+
+@test "MT3: --strict promotes the missing moduleTest-include.xml to FAIL (exit 1)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"; : > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  run "$VM" --strict --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  moduletest"* ]]
+}
+
+@test "MT4: a -ux jar is skipped by moduletest (check is -rt-only)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-ux.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-ux/src/com/x"; : > "$TMPDIR_T/mod/Foo-ux/src/com/x/A.java"
+  make_module_include "$TMPDIR_T/mod/Foo-ux" com.x.A
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-ux.jar"
+  [[ "$output" == *"SKIP  moduletest"* ]]
+}

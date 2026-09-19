@@ -447,6 +447,27 @@ check_phantom_dep() {
   row PASS phantom-dep "$jar" "all module.xml dependencies declared in gradle.kts"
   return 0
 }
+check_moduletest_present() {
+  # MODULETEST1 (--src): an -rt module whose source tree has production Java (src/**.java)
+  # but NO moduleTest-include.xml declares zero BTestNg station-integration tests — the exact
+  # gap found in our own CompPan-rt/ColdRoomPan-rt (see types/moduleTest.md). WARN by default;
+  # FAIL under --strict. Requires --src (moduleTest-include.xml is a source file, not in the jar).
+  # NAMED MUTATION: drop this check -> MODULETEST1's WARN vanishes. [ev: corpus B958 §958.4]
+  local jar="$1" base pd njava mti
+  base=$(basename "$jar" .jar)
+  case "$base" in *-rt) ;; *) row SKIP moduletest "$jar" "not an -rt jar"; return 0 ;; esac
+  [ -n "$SRC" ] || { row SKIP moduletest "$jar" "no --src"; return 0; }
+  pd=$(profile_dir "$jar")
+  [ -d "$pd" ] || { row SKIP moduletest "$jar" "no source dir $pd"; return 0; }
+  njava=$(find "$pd/src" -name '*.java' 2>/dev/null | grep -c . || true)
+  [ "$njava" -ge 1 ] || { row SKIP moduletest "$jar" "no production .java under src/"; return 0; }
+  mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1)
+  if [ -z "$mti" ]; then
+    if [ "$STRICT" -eq 1 ]; then row FAIL moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 1; fi
+    row WARN moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 0
+  fi
+  row PASS moduletest "$jar" "moduleTest-include.xml present"; return 0
+}
 
 for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
@@ -456,7 +477,7 @@ for JAR in "${JARS[@]}"; do
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
-  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep; do
+  for chk in check_bytecode_major check_signed check_types_have_classes check_baja_version check_stored check_type_count check_raw_double_facets check_facet_presence check_ord_literal check_rc_backup check_palette check_wb_scaffold check_phantom_dep check_moduletest_present; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done

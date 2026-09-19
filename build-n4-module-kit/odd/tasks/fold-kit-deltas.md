@@ -8,7 +8,7 @@
 ## Tasks (one work-unit commit per retro)
 
 - [x] T1 — corpus-index-refresh (26Δ) → `corpus-index.md` rows (P0/P1/P2 + new §distribution) + README.md §Layout + METHODOLOGY.md P0 ref line — DONE (all 8 edits applied; INDEX folded)
-- [ ] T2 — sdk-examples (8Δ) → new `types/moduleTest.md` + `verify-module.sh` moduletest WARN + `types/dashboard.md` + `types/structure.md`
+- [x] T2 — sdk-examples (8Δ) → new `types/moduleTest.md` + `verify-module.sh` check_moduletest_present (bats MT1-MT4 green) + `types/dashboard.md` + `types/logic.md` + `types/structure.md` — DONE (FULL)
 - [ ] T3 — authoring-exemplars (8Δ) → `types/logic.md` + `types/logic-authoring.md` + `BUILD-LOOP.md §4.b` + `verify-module.sh` + `build-verify.md`
 - [ ] T4 — module-mechanics (7Δ) → `types/logic-authoring.md` + `types/logic.md`
 - [ ] T5 — schema-versioning (6Δ) → `METHODOLOGY.md` + `types/logic.md` + `toolbelt/schema-risk.sh` + `verify-module.sh`

@@ -51,6 +51,49 @@ Seed pointers for the surface not yet proven; the sections below are proven from
 - **HOA manual-override pattern for a control component:** one `double` `@NiagaraProperty` per output (`SUMMARY|OPERATOR`, `0=auto / 1=on / 2=off`), passed into the pure core via an overload with an all-AUTO array (keeps prior tests unchanged); apply the override LAST — OFF excludes from rotation, ON forces true ONLY if `(now − cmdSince) >= minOff` (never short-cycle); add the mode slots to `changed()`. [ev: retro hoa-manual-override · L22]
 
 ## Linking across custom modules
+
+### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]`
+
+- **`doCheckLink` gates incoming links before creation:** override
+  `doCheckLink(BComponent source, Slot sourceSlot, Slot targetSlot, Context cx)` in your component to
+  validate whether a proposed link is legal.  Return `LinkCheck.makeInvalid("reason")` to block it;
+  `LinkCheck.makeValid()` to allow it.  The framework calls this before any link is created in the
+  wiresheet or programmatically.
+
+  ```java
+  @Override
+  protected LinkCheck doCheckLink(BComponent source, Slot sourceSlot,
+                                  Slot targetSlot, Context cx) {
+      if (targetSlot == myInputSlot) {
+          if (!source.getType().is(BRequiredType.TYPE))
+              return LinkCheck.makeInvalid("source must be a BRequiredType");
+      }
+      return LinkCheck.makeValid();
+  }
+  ```
+
+- **`added(Property, Context)` / `removed(Property, BValue, Context)` react to link creation/removal:**
+  these callbacks fire whenever a link is added to or removed from the component.  Guard with
+  `bValue instanceof BLink && isRunning()` so you only react to link additions during a running session
+  (not slot loads at startup). Use `removed(Property, BValue, Context)` symmetrically to tear down
+  anything `added()` set up.
+
+- **INDIRECT-link rule — a programmatically added reciprocal link MUST use the `true` (indirect) flag:**
+  when `added()` creates a back-link (e.g. wiring the source's offset back into this component), use:
+
+  ```java
+  BOrd sessionOrd = sourceComponent.getOrdInSession();
+  add(null, new BLink(sessionOrd, sourceSlot.getName(), mySlot.getName(), true));
+  //                                                                       ^^^^
+  //                                         true = INDIRECT (ORD-resolved)
+  ```
+
+  **Why indirect?** A direct link embeds a hard reference — if the target component starts before the
+  source during a station restart, the link is unresolvable and silently breaks.  An indirect link holds
+  the source as an ORD and resolves it lazily, surviving any startup ordering.  The first-party comment
+  in `componentLinks-rt` states this verbatim: "we cannot guarantee the order in which the components
+  will start when the station is restarted." `[ev: corpus B958 §958.2]`
+
 - **A value linked ACROSS two custom modules is a plain `double` (0/1/2), never a shared frozen-enum type:** an enum link requires the identical type on both ends, which forces module-B-rt to depend on module-A-rt, and the custom-module dependency DSL is non-trivial (`compileOnly(files(...))` does not reach the plugin classpath; the plugin auto-includes only Tridium modules). A `double` links with zero dependency; Workbench shows 0/1/2. The deleted `BHoaMode` was such an enum — a leftover reference surfaced live on the JACE as `Missing class ColdRoomPan:HoaMode`. [ev: bitácora 5cuartos §5]
 - **A discrete selector used ONLY as an internal slot is a `BFrozenEnum` (registered in `module-include.xml`), NOT a double — the plain-double rule above is for values linked ACROSS custom modules only:** e.g. `BFanMode` internal config is a frozen enum. [ev: retro coldroompan-fan-mode-defrost · L19]
 

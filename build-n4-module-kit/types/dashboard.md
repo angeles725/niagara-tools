@@ -24,6 +24,23 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **DUX1 — `-ux` servlet testable seam (route() → RouteAction):** extract routing into a package-private `final` class taking `Function` header/param lookups and returning a sealed `RouteAction`; the servlet becomes a thin `instanceof` adapter. Test the router with plain JUnit + `HashMap` — no station required. `DashboardDispatch` (14 `@Test`, 0 Baja imports) is the proven pattern. [ev: corpus B762]
 - **DUX2 — purity gradient:** keep data-shapers pure by injecting the Baja touch as a `Function`/`Predicate`; `DashboardReader.buildEquipmentResponse(BComponent)` (takes a live component) is the anti-pattern — `JsonUtil` (0 Baja imports) is the target shape. [ev: corpus B762]
 - **DJS1 — testable SPA JS:** split inline JS into files + add a dual-export shim (`if(typeof module!=='undefined')module.exports=…`) + a Node harness for logic tests; `node --check` proves syntax only. DashboardPan's 2300-line inline `index.html` is the anti-pattern. [ev: corpus B762]
+- **DUX-TEST1 — browser test harness (Jasmine + Karma + grunt-niagara):** the first-party pattern for
+  executable browser-side assertions on ux code — entirely absent from our kit until now; `dashboard-preview.py`
+  runs a layout preview but asserts nothing. Pattern from `typeExtensionDemo-ux` (B957 §957.5):
+  - **Specs:** `srcTest/rc/spec/DemoSizeSpec.js` — Jasmine `describe/it` blocks; `require` the type under
+    test via `baja!` so the type-extension registration fires, then assert codec + type resolution.
+  - **Aggregator:** `srcTest/rc/spec/allSpecs.js` — a plain AMD module listing every spec as a dep; add
+    new specs here.
+  - **Karma entry:** `srcTest/rc/browserMain.js` — calls `setupAndRunSpecs({user,pass,specs:[…]})`;
+    critically, it **stubs the built bundle** (`define('…moduleName.built.min', {})`) so Karma loads
+    unminified sources instead of the minified artifact — without this stub Karma cannot resolve the AMD
+    module and the specs fail before any assertion.
+  - **Test station:** `srcTest/rc/stations/<name>/config.bog` — a minimal bog deployed by `grunt-niagara`
+    so `baja!` can authenticate and resolve types against a real NRE.
+  - **Gruntfile.js:** wire `niagara.station { stationName: '<name>', sourceStationFolder: './srcTest/rc/stations/…' }`.
+  - **`package.json` devDeps:** `grunt-niagara` (provides karma/requirejs/babel/eslint tasks),
+    `babel`, `babel-plugin-istanbul` (coverage).
+  `[ev: corpus B957 §957.5–957.6]`
 - **Reader**: walk the facade → flat JSON keyed by slot-path, each value `{"v":num|bool|null,"st":"<status>"}`, fault-aware, `Locale.ROOT` doubles, escaped strings.
 - **RBAC**: `checkCanWrite` first line of every write: `BPermissions.has(OPERATOR_WRITE)` (bit, not role name), fail-closed, `SlotPath.unescape` the username. Audit each mutation. **Enforce this server-side even though the vendors don't** — the Honeywell React SPAs ship `permissions="unrestricted"` RPCs with NO server check; do NOT copy that, the browser is never the security boundary. [ev: retro corpus-index · B752]
 - **DWS1 — Write-surface: five gates (HIGH — apply to every mutating endpoint):** (1) `checkCanWrite` first line = `OPERATOR_WRITE` fail-closed (deny on no-user / no-service / `catch(Exception)`); (2) hand-rolled `X-Requested-With` guard IN the pure `route()` (framework CSRF filter covers `/rpc/*` only) — a CRITICAL-write endpoint should ALSO verify the real x-niagara-csrfToken token (CsrfUtil double-submit), not rely on X-Requested-With alone. [ev: corpus B803]; (3) pin the write ORD under a `SERVICE_ORD` facade + traversal reject OR an explicit slot allowlist; (4) mutate under a per-Ord lock → HTTP **423** on contention; (5) audit every mutation (who/what/when/old→new), fire-and-forget, audit-failure never fails the write. [ev: corpus B763]
@@ -123,6 +140,27 @@ Tridium ships no vendor exemplar for the SPA/servlet split — DashboardPan-ux i
 ## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
 
 This section documents the web tier from OUR modules; the Tridium exemplar for each aspect is in the corpus — reach for it, do not re-derive: servlet routing (`BWebServlet`/`BServletView`) → B29; hx views (`BHxView`/`BHxProfile`/`HxOp`) → B433; module `rc/` web resources + `module://<mod>/rc/…` ORDs → B5/B752; `@AgentOn` web agents (`BIJavaScript`+`JsInfo`) → B752/B421; Tridium-servlet CSRF (`CsrfGuard`/`CsrfProtectedFilter`) → B58 (vs our hand-rolled `X-Requested-With` guard, B763); JSON/REST response shaping → B16/B66, B361–B364, B604, B509. `[ev: corpus B791]`
+
+**B957 — `BBajaScriptTypeExt` type-extension recipe (custom `BSimple` values):**
+
+A dashboard does NOT need this unless it has custom typed values (e.g. a `BSimple` with a non-trivial
+codec that must round-trip between Java and the browser). When it does, the wiring is:
+
+- **Java bridge:** a `@NiagaraSingleton` class `extends BBajaScriptTypeExt implements BIOffline`, annotated
+  with `@AgentOn(types="moduleName:TypeName")`. Override `getTypeExtJs(Context)` to return
+  `JsInfo.make(BOrd.make("module://…/rc/baja/Type.js"), BMyModuleJsBuild.TYPE)`. `BIOffline` makes the type
+  usable in the browser even with no live station behind it.
+- **Build singleton:** a companion `@NiagaraSingleton` class `extends BJsBuild`, passing
+  `super("moduleName", BOrd.make("module://…/rc/moduleName.built.min.js"))` — names the minified bundle.
+- **JS side** (`rc/baja/Type.js`): `define(['baja!'], function(baja) { class MyType extends baja.Simple
+  { … } })`. Registration is **implicit** — driven by `@AgentOn` in Java; never call `baja.registerType()`
+  by hand.
+- **Build deps:** `api("Tridium:bajaScript-ux")`, `api("Tridium:js-ux")`, `api("Tridium:web-rt")` (the last
+  provides `BIOffline`/`JsInfo`/`BJsBuild`).
+- **Gradle→Grunt bridge:**
+  `tasks.named<GruntBuildTask>("gruntBuild") { tasks("babel:dist","copy:dist","requirejs") }`.
+
+`[ev: corpus B957 §957.1–957.4, §957.6]`
 
 ## DashboardPan divergences from the Tridium web pattern (DUX-WEB2)
 
