@@ -119,8 +119,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
     if [ "$cov_exit" -eq 3 ]; then
       emit "$ANAME" ERROR slot-coverage "env fault (exit 3)"; HAD_ENV=1
     else
-      # dup-keys: slot-coverage emits "slot-coverage: WARN dup-keys: <key>" per dup
-      dup_ct=$(printf '%s\n' "$cov_out" | grep -c '^slot-coverage: WARN dup-keys:' || true)
+      # dup-keys: slot-coverage emits "slot-coverage: FAIL dup-keys: <key>" per dup (upgraded from WARN in A1/B792)
+      dup_ct=$(printf '%s\n' "$cov_out" | grep -c '^slot-coverage: FAIL dup-keys:' || true)
       if [ "$dup_ct" -gt 0 ]; then
         emit "$ANAME" FAIL dup-keys "$dup_ct"
       else

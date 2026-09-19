@@ -164,7 +164,8 @@ good_dir() {
 
 @test "V15 (palette): a POPULATED palette (>=1 <p n=) + types → PASS, no palette WARN" {
   good_dir "$TMPDIR_T/d"
-  printf '<p t="b:Folder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here.
+  printf '<p t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
@@ -182,11 +183,27 @@ good_dir() {
 
 @test "V17 (palette): a TYPELESS module with an empty palette must NOT warn (guard: only bites with types)" {
   good_dir "$TMPDIR_T/d"; make_module_xml "$TMPDIR_T/d" 4.14   # rewrite module.xml with ZERO declared types
-  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here,
+  # keeping the assertion clean: only the empty-palette type-guard is exercised.
+  printf '<p t="b:UnrestrictedFolder"></p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN  palette"* ]]                     # 0 types → empty palette is legitimate (mutation: drop the type guard → warns here → red)
+}
+
+@test "V18 (palette-root): module.palette root t=\"b:Folder\" → WARN palette-root; populated entries → PASS palette" {
+  # Δ1/B746 §746.1: b:Folder is gated (access-controlled); b:UnrestrictedFolder is the idiomatic ungated root.
+  # Using b:Folder causes "access denied" palette expansion for engineers without the folder's category permission.
+  good_dir "$TMPDIR_T/d"
+  printf '<p t="b:Folder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]                                        # WARN never changes exit code
+  [[ "$output" == *"WARN  palette-root"* ]]                  # b:Folder fires the root check
+  [[ "$output" == *"b:Folder"* ]]
+  [[ "$output" == *"b:UnrestrictedFolder"* ]]                # the remedy is named in the message
+  [[ "$output" == *"PASS  palette"* ]]                       # entries check still passes (>= 1 <p n=)
 }
 
 # ---------------------------------------------------------------------------

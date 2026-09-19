@@ -109,6 +109,126 @@ file, the build silently omits the test from `moduleTestJar` and `niagaraTest` /
 it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
 `[ev: corpus B961 §961.3, B958 §958.4]`
 
+## Palette assembly templates `[ev: corpus B746 §746.3]`
+
+A `module.palette` `<p>` entry can nest child `<p>` elements with property overrides to form
+pre-configured, commissioning-ready **assembly templates**. Dragging one component from the palette
+drops the correct sub-tree with every flag already set — no manual wiring required.
+
+### Authoring workflow
+
+1. **Build the assembly correctly in a scratch station** — create the component, add its children
+   (`BDefrostController`, sub-evaporators, etc.), and configure every slot to its intended default.
+2. **Copy it into the palette:** in Workbench, open the module's palette view, drag the assembled
+   component into it, then **Save** (`File › Save All`). The Workbench serialises the live component
+   subtree into BOG XML inside `module.palette`.
+3. **Alternatively, hand-edit `module.palette`:** nest child `<p>` elements inside the parent `<p>`,
+   then set property overrides as attributes, e.g. `hasDefrost="true"`. This is faster for simple
+   boolean flags but harder to verify visually.
+
+### Example: defrost-enabled cold-room template
+
+This template bakes out the B731 trap (`hasDefrost=false` + `airDefrost=true` → defrost silently
+disabled) by setting both flags correctly in the palette entry so every drag-drop starts correct:
+
+```xml
+<p t="b:UnrestrictedFolder">
+  <!-- Note: use b:UnrestrictedFolder (not b:Folder) — b:Folder is access-controlled and
+       causes "access denied" palette expansion for engineers without the folder's category permission.
+       [ev: corpus B746 §746.1] -->
+  <p n="ColdRoom" t="com.angeles.coldroomrt.BColdRoomPan"
+     hasDefrost="true" airDefrost="true">
+    <!-- Child entries: pre-wired sub-components appear as nested <p> -->
+    <p n="defrost" t="com.angeles.coldroomrt.BDefrostController"
+       interval="PT4H" duration="PT30M"/>
+  </p>
+</p>
+```
+
+### Key rules
+
+- The palette root MUST use `t="b:UnrestrictedFolder"`, never `t="b:Folder"`. The latter is
+  access-controlled and causes silent "access denied" palette expansion in Workbench for engineers
+  who lack the folder's category permission. `verify-module.sh` warns on `b:Folder`.
+  `[ev: corpus B746 §746.1]`
+- Property overrides in the palette are XML attributes on the `<p>` tag; they set the slot value
+  at drag-drop time and are not persisted unless the component itself persists them.
+- Assembly templates are **pure resource additions** — no code change, no class risk.
+- Every child `<p n=…>` that should appear in the Workbench drag-palette at the top level needs its
+  own `n=` attribute; nested children are part of the parent template only, not individually draggable.
+
+## -doc help profile authoring recipe `[ev: corpus B759 §759.6]`
+
+A `-doc` module is a **separate runtime profile** (`runtimeProfile="doc"`) with an empty `<types/>`.
+It is NEVER a part of a code module. Its sole job is to ship HTML help pages that Workbench's
+F1 help system discovers via the `help.guide.base` lexicon key.
+
+Our modules ship none today — that is architecturally correct. This recipe documents the path for
+any future help investment.
+
+### File layout
+
+```
+<Mod>-doc/
+├── <Mod>-doc.gradle.kts         # runtimeProfile = "doc"
+├── module-include.xml           # <types/> — intentionally empty [ev: corpus B784 §784.1]
+├── module.lexicon               # contains help.guide.base key (see below)
+└── src/
+    └── doc/
+        ├── toc.xml              # JavaHelp 1.0 TOC descriptor
+        └── <mod>-<TypeName>.html  # Guide-on-Target HTML, one per type
+```
+
+### toc.xml structure (JavaHelp 1.0 TOC DTD)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE toc PUBLIC "-//Sun Microsystems Inc.//DTD JavaHelp TOC Version 1.0//EN"
+  "http://java.sun.com/products/javahelp/toc_1_0.dtd">
+<toc version="1.0">
+  <tocitem text="My Module Guide" target="mymod-overview" image="topic">
+    <tocitem text="BColdRoomPan" target="mymod-BColdRoomPan"/>
+    <tocitem text="BDefrostController" target="mymod-BDefrostController"/>
+  </tocitem>
+</toc>
+```
+
+The `target=` value maps to a filename in `src/doc/` without the `.html` suffix.
+
+### HTML naming conventions
+
+| Purpose | File name |
+|---------|-----------|
+| Guide-on-Target (type help) | `doc/<mod>-<TypeName>.html` |
+| On-View (view help) | `doc/<mod>-<ViewTypeName>.html` |
+
+Example: help for `BColdRoomPan` in module `coldroomrt` → `doc/coldroomrt-BColdRoomPan.html`.
+
+### Lexicon key
+
+Add to `module.lexicon`:
+
+```
+help.guide.base=module://docUser/doc
+```
+
+This key points Workbench's F1 help resolver at the `doc/` directory inside the `-doc` module jar.
+The type name is appended to the base to form the full HTML path.
+
+### Build plugins
+
+Two Gradle plugins cooperate:
+
+| Plugin | Role |
+|--------|------|
+| `com.tridium.niagara-doc` | Packages help HTML + TOC into the `-doc` jar |
+| `com.tridium.bajadoc-module` | Generates API Javadoc pages from type annotations |
+
+Both are applied in `<Mod>-doc.gradle.kts`. The `niagara-doc` plugin is the mandatory one for
+F1-accessible help; `bajadoc-module` adds the API documentation layer.
+
+`[ev: corpus B759 §759.6]`
+
 ## Recommendations for our modules (impact ÷ cost) `[ev: corpus B817]`
 R1 chihuahua — populate rt+ux `module.lexicon` (10 types unlocalized; cheap, operator-visible). R2 DashboardPan-wb
 — delete the empty skeleton OR fill it + add its JUnit dep. R3 DashboardPan — test `DashboardReader` (14-baja, the

@@ -244,6 +244,79 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 
 **NOTE:** `writeOnUp`, `writeOnStart`, and `writeOnEnabled` all default `true` in `BTuningPolicy` — the DOWN self-correction behavior is ON by default. A fresh out-of-box proxy point is self-correcting; do not override these flags unless you understand the consequence.
 
+## Adding a block icon `[ev: corpus B738 §738.4]`
+
+Every `BComponent` subclass can override `getIcon()` to return a custom icon shown in Workbench's
+component tree, property sheet, and palette.
+
+### Directory convention
+
+| Path | Usage |
+|------|-------|
+| `icons/x16/` | 16×16 raster PNG — the normal Workbench icon size |
+| `icons/x32/` | 32×32 raster PNG — high-DPI / larger-format views |
+| `icons/<file>.svg` | Single scalable file, replaces both raster sizes |
+
+These are **module resource directories** (bundled into the jar root), distinct from `rc/` which
+holds servlet static web assets (HTML/JS/CSS for the `-ux` browser view). Using `rc/icon16.png`
+works at runtime because `module://` ORDs resolve any packaged path, but it conflates two different
+resource purposes. **Use `icons/x16/` for component icons; use `rc/` for browser assets.**
+
+### Raster icon recipe (two sizes)
+
+```java
+// Cache in a static final field — NEVER construct per-call (BIcon is not free to build).
+private static final BIcon ICON = BIcon.std("myicon.png");
+// BIcon.std(fileName) resolves to module://icons/x16/<fileName> (BIcon.java:69-71).
+
+@Override
+public BIcon getIcon() { return ICON; }
+```
+
+Place `myicon.png` (16×16) in `icons/x16/` and `myicon.png` (32×32) in `icons/x32/`. The
+framework automatically picks the appropriate size.
+
+### SVG icon recipe (single scalable file)
+
+When a single vector file is preferred over raster pairs:
+
+```java
+private static final BIcon ICON =
+    BIcon.make(BOrd.make("module://mymod/icons/myicon.svg"));
+
+@Override
+public BIcon getIcon() { return ICON; }
+```
+
+Place `myicon.svg` in `icons/` (module root, not in a sub-directory). SVG scales to any display
+density without separate raster pairs. `BIcon.make(BOrd)` is the path for any non-`icons/x16/`
+ORD. `[ev: BIcon.java:40-56]`
+
+### Layered / badge icons
+
+To compose a base icon with an overlay badge (e.g. a small lock for read-only, an alarm badge):
+
+```java
+private static final BIcon ICON = BIcon.make(
+    new BOrdList(new BOrd[]{
+        BOrd.make("module://mymod/icons/x16/base.png"),
+        BOrd.make("module://mymod/icons/x16/badge-alarm.png")
+    })
+);
+```
+
+`BIcon.make(BOrdList)` renders the ORDs as stacked layers (base first, overlay on top).
+`[ev: corpus B738 §738.4]`
+
+### Static-final caching rule
+
+A `BIcon` instance must be held in a `private static final` field. Constructing a new `BIcon` on
+every `getIcon()` call creates unnecessary object churn and, for SVG/ORD-resolved icons, triggers a
+module resource lookup on every call. The `static final` pattern is enforced by the idiomatic
+`BIcon.std(fileName)` shorthand, which itself returns a cached instance.
+
+`[ev: corpus B738 §738.4]`
+
 ## Write-path test matrix `[ev: corpus B816]`
 Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
 

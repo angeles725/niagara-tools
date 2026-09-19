@@ -371,9 +371,17 @@ check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable)
   row WARN rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 0
 }
 check_palette() {  # an EMPTY module.palette on a module that declares types = nothing to drag in Workbench. WARN by default; FAIL under --strict.
+  # Also WARNs (palette-root) when the root <p> uses t="b:Folder" (gated) instead of t="b:UnrestrictedFolder" (idiomatic).
+  # [Δ1/B746 §746.1]
   local jar="$1" pal entries types
   printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP palette "$jar" "no module.palette"; return 0; }
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
+  # Δ1/B746 §746.1: b:Folder is access-controlled (gated by category permission) — engineers without the
+  # folder's category permission get "access denied" on expansion. b:UnrestrictedFolder is the idiomatic
+  # ungated palette root. WARN independently of the entries count.
+  if printf '%s' "$pal" | grep -qF 't="b:Folder"'; then
+    row WARN palette-root "$jar" "module.palette root uses t=\"b:Folder\" (access-controlled) — use t=\"b:UnrestrictedFolder\" for ungated palette expansion [ev: corpus B746 §746.1]"
+  fi
   # component entries carry a name (<p n="..."/>); the b:Folder root has no n= so it is naturally excluded
   entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
   types=$(printf '%s' "$MX" | grep -c '<type ' || true)
