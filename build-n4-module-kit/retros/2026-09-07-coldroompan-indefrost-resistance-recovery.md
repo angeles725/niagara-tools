@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-07 · ColdRoomPan · coldroompan-indefrost-resistance-recovery
 
 **Session**: PANCCADIA León live commissioning (per-evap rearchitect, ColdRoomPan v2.1.x) on the JACE-9000 over oBIX. Bug found live; code fix owed. Companion to the kit retro `2026-09-07-live-commissioning-verification-gaps`.
