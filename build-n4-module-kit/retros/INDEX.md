@@ -124,7 +124,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-module-mechanics-deltas.md | kit | 2026-09-18 | folded | 7 |
 | 2026-09-18-schema-versioning-upgrade-safety-deltas.md | kit | 2026-09-18 | folded | 6 |
 | 2026-09-18-slots-flags-status-units-java8-deltas.md | kit | 2026-09-18 | folded | 13 |
-| 2026-09-18-ux-wb-writesurface-rbac-deltas.md | kit | 2026-09-18 | pending | 4 |
+| 2026-09-18-ux-wb-writesurface-rbac-deltas.md | kit | 2026-09-18 | folded | 4 |
 | 2026-09-18-palette-lexicon-assets-images-deltas.md | kit | 2026-09-18 | pending | 5 |
 | 2026-09-18-spa-library-integration-deltas.md | kit | 2026-09-18 | pending | 6 |
 | 2026-09-18-watcher-subscription-livedata-deltas.md | kit | 2026-09-18 | pending | 7 |
