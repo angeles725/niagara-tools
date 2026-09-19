@@ -15,7 +15,7 @@
 - [x] T6 — slots-flags-status-units-java8 (13Δ) → `types/logic.md` (BStatus/propagateFlags/unlinkable/TRANSIENT) + `METHODOLOGY.md` (facets/BIcon) + `verify-module.sh` (check_transient_operator, check_compact3_imports) + `build-verify.md` (Compact3/signing/BVersion) — DONE (FULL; 31/31 green)
 - [x] T7 — ux-wb-writesurface-rbac (4Δ) → `wb-widgets.md` (device-model plugin, bajaux dialects, PX taxonomy) + `dashboard.md` (PX complement) — DONE (FULL, doc-only)
 - [ ] T8 — palette-lexicon-assets-images (5Δ) → `verify-module.sh` + `types/structure.md` + `types/logic-authoring.md` + `report-module.sh` (dup-keys bug fix)
-- [ ] T9 — spa-library-integration (6Δ) → `types/dashboard.md`
+- [x] T9 — spa-library-integration (6Δ) → `types/dashboard.md` (JS embed recipe, injection, grunt-decision table, JS-vs-JVM distinction) — DONE (FULL, doc-only)
 - [ ] T10 — watcher-subscription-livedata (7Δ) → `types/logic-authoring.md` + `dashboard.md` + `verify-module.sh` + `METHODOLOGY.md`
 - [ ] T11 — factory-composition-new-types (8Δ) → `types/logic-authoring.md` + `types/logic.md` + `METHODOLOGY.md`
 - [ ] T12 — ord-path-nav (9Δ) → `types/logic-authoring.md` + `types/structure.md`
