@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MinimalDash</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    #status { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>MinimalDash</h1>
+  <p>Dashboard placeholder. Replace this page with your SPA.</p>
+  <p>Status: <span id="status">loading…</span></p>
+  <script>
+    // Minimal REST-poll — fetches /api/status every 5 s.
+    // Every fetch sends X-Requested-With so the XHR guard passes.
+    function poll() {
+      fetch('/minimaldash/api/status', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        document.getElementById('status').textContent = JSON.stringify(d);
+      })
+      .catch(function(e) {
+        document.getElementById('status').textContent = 'error: ' + e;
+      });
+    }
+    poll();
+    setInterval(poll, 5000);
+  </script>
+</body>
+</html>

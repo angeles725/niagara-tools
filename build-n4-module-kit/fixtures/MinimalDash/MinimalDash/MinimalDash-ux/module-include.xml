@@ -1,0 +1,4 @@
+<types>
+  <!--com.angeles.MinimalDash.ux-->
+  <type class="com.angeles.MinimalDash.ux.BMinimalDashServlet" name="MinimalDashServlet"/>
+</types>

@@ -1,0 +1,11 @@
+#
+# Lexicon for the MinimalDash module (rt).
+# Display names shown in Workbench. Key = type or slot name.
+#
+
+# --- Component type display names ---
+MinimalDash=Minimal Dashboard
+
+# --- MinimalDash slots ---
+MinimalDash.setpoint=Setpoint
+MinimalDash.status=Status
