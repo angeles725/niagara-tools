@@ -9,6 +9,29 @@
 - **Server-side SUBSCRIPTION:** subclass `javax.baja.sys.Subscriber`, override `event(BComponentEvent)`, call `subscribe(component, depth, cx)` and `unsubscribeAll()` on stop (the SERVER complement to the BOX client). `[ev: corpus B778]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
 
+## Link lifecycle callbacks `[ev: corpus B958 §958.1–958.2]`
+
+The full `doCheckLink` / `added` / `removed` / INDIRECT-link recipe lives in `types/logic.md
+§Linking across custom modules → Link lifecycle — gating and reacting`.  That section is the
+canonical reference (with code examples) and is not duplicated here.
+
+**Summary of the three hooks:**
+
+- `doCheckLink(source, sourceSlot, targetSlot, cx)` — return `LinkCheck.makeInvalid("reason")` to
+  reject a proposed link before it is created; `LinkCheck.makeValid()` to accept.
+- `added(Property, Context)` — fires when a link is added to the component (guard: `bValue instanceof
+  BLink && isRunning()`).
+- `removed(Property, BValue, Context)` — fires when a link is removed; use symmetrically to tear down
+  any state `added()` set up.
+
+**INDIRECT-link rule (see `logic.md` for the full code snippet):** a back-link created inside
+`added()` MUST pass `true` as the `indirect` flag — `new BLink(sessionOrd, srcSlot, mySlot, true)` —
+so a station restart that starts the target before the source does not leave the link dangling.
+`[ev: corpus B958 §958.2]`
+
+→ See `types/moduleTest.md` for the station-test recipe that covers `doCheckLink` and `added`/`removed`
+  (the only tier that can exercise these hooks in WSL-equivalent isolation with a real NRE).
+
 ## Inter-module communication `[ev: corpus B802]`
 - **Within a station, runtime comms is module-AGNOSTIC:** `BLink`, service discovery (`Sys.getService(Type)`), and `Subscriber` NEVER check the source module — a cross-module link / lookup / subscription is identical to a same-module one. The only real boundaries are (a) the COMPILE-TIME `<dependency>` on the other module's `Type`, and (b) the `fox:` ORD hop to a SEPARATE station (a real JVM boundary). Extends B778 (same-space services + `Subscriber.event`) with the cross-module + distributed picture. `[ev: corpus B802]`
 
@@ -48,6 +71,44 @@
 - Gate an action DECLARATIVELY: `@NiagaraAction(name="…", flags=Flags.OPERATOR)` = operator-invoke (256); OMIT the flag = admin-invoke (the DEFAULT); enforced by `BComponent.canInvoke` + the fox/box `PermissionException` — no permission code in the body. Reserve operator for low-privilege writes; config/emergency stay admin-only. Use `AccessController.doPrivileged` ONLY for a JVM permission (read a `BPassword`, `setDefault` an authenticator, set a system property) — NEVER wrap a Niagara RBAC check. `[ev: corpus B776]`
 
 ## Minimal module (copy-start)
+
+### Security module skeleton `[ev: corpus B777 §777.2–777.4]`
+
+A **security module** provides a custom authentication scheme (e.g. LDAP, RADIUS, custom SSO) as a
+first-class Niagara service.  The pattern is the same N4-extension idiom — subclass + register — but
+with a few module-specific rules:
+
+1. **Class hierarchy:** `extends BAbstractService` and `implements BAuthenticationScheme`.  `BAbstractService`
+   makes the scheme auto-discoverable under `/Services`; the `BAuthenticationScheme` interface is the
+   SPI contract that `AuthenticationService` calls.
+
+2. **Permissions file (`module-permissions.xml`):** declare the scheme's required permissions in a
+   `module-permissions.xml` alongside `module-include.xml` in the source tree.  The Gradle plugin
+   **INLINES this file's content into the generated `META-INF/module.xml`** at build time — do NOT
+   author a `META-INF/module.xml` manually, and do NOT ship `module-permissions.xml` as a separate
+   resource; the plugin merges it.  Example:
+
+   ```xml
+   <!-- <part>/module-permissions.xml -->
+   <?xml version="1.0" encoding="UTF-8"?>
+   <modulePermissions>
+     <permission name="javax.baja.sys.BajaPermission"
+                 actions="authenticationScheme"/>
+   </modulePermissions>
+   ```
+
+3. **`@AgentOn` registration:** in `module-include.xml`, register the scheme as an agent on
+   `"baja:AuthenticationScheme"` so `AuthenticationService` discovers it:
+
+   ```xml
+   <type name="MyAuthScheme"
+         class="com.vendor.mymod.BMyAuthScheme"
+         agentOn="baja:AuthenticationScheme"/>
+   ```
+
+4. **Signing:** a security module MUST be signed with `NIAGARA4.RSA` / `NIAGARA4.SF` — same signing
+   path as any production jar.  The station's `SecurityManager` enforces this; an unsigned or
+   OEM-signed scheme is rejected at load time.
 
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
 

@@ -9,7 +9,7 @@
 
 - [x] T1 — corpus-index-refresh (26Δ) → `corpus-index.md` rows (P0/P1/P2 + new §distribution) + README.md §Layout + METHODOLOGY.md P0 ref line — DONE (all 8 edits applied; INDEX folded)
 - [x] T2 — sdk-examples (8Δ) → new `types/moduleTest.md` + `verify-module.sh` check_moduletest_present (bats MT1-MT4 green) + `types/dashboard.md` + `types/logic.md` + `types/structure.md` — DONE (FULL)
-- [ ] T3 — authoring-exemplars (8Δ) → `types/logic.md` + `types/logic-authoring.md` + `BUILD-LOOP.md §4.b` + `verify-module.sh` + `build-verify.md`
+- [x] T3 — authoring-exemplars (8Δ) → `types/logic.md` (zero-demand/NaN) + `types/logic-authoring.md` (link-lifecycle ptr + security-module skeleton) + `BUILD-LOOP.md §4.b` + `build-verify.md` (OEM SF); Δ5/Δ8 already-folded in T2 — DONE (FULL)
 - [ ] T4 — module-mechanics (7Δ) → `types/logic-authoring.md` + `types/logic.md`
 - [ ] T5 — schema-versioning (6Δ) → `METHODOLOGY.md` + `types/logic.md` + `toolbelt/schema-risk.sh` + `verify-module.sh`
 - [ ] T6 — slots-flags-status-units-java8 (13Δ) → `types/logic.md` + `METHODOLOGY.md` + `verify-module.sh` + `build-verify.md`

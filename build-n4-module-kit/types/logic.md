@@ -50,6 +50,27 @@ Seed pointers for the surface not yet proven; the sections below are proven from
 
 - **HOA manual-override pattern for a control component:** one `double` `@NiagaraProperty` per output (`SUMMARY|OPERATOR`, `0=auto / 1=on / 2=off`), passed into the pure core via an overload with an all-AUTO array (keeps prior tests unchanged); apply the override LAST — OFF excludes from rotation, ON forces true ONLY if `(now − cmdSince) >= minOff` (never short-cycle); add the mode slots to `changed()`. [ev: retro hoa-manual-override · L22]
 
+## Zero-demand / idle state `[ev: corpus B819 §819.4–819.5]`
+
+Six-point doctrine for any staged or modulated control component. Author the idle/demand gate before writing the staging or modulation logic.
+
+1. **Demand is a first-class gate — never skip it on a valid setpoint.** If the process variable is in-band and demand is zero, the actuator is off. Do not conflate "a setpoint is present" with "there is demand."
+2. **NaN / invalid setpoint ≠ demand — guard with `Double.isFinite` or `getStatus().isValid()`.** See anti-pattern below.
+3. **Every staged process declares an explicit idle state.** The idle state is a named phase in the phase machine (see §RT control logic §805.9 STATES layer), not a side-effect of demand being zero. Calling it out prevents control-path fallthrough.
+4. **Expose a "why running" surface.** A `TRANSIENT|SUMMARY|READONLY` `String` slot (e.g. `activeReason`) updated on every demand transition lets an operator know whether the rack is running because of demand, manual override, or pre-cooling. A `null` / empty string on idle.
+5. **HOA OFF lockout dominates — respect it even when demand is non-zero.** Off lockout overrides demand; a demand that would stage up while OFF is held must NOT fire.  The dominant order is: OFF lockout > demand gate > staging logic.
+6. **minOn / stageDelay guards apply in BOTH staging directions.** A minOn floor prevents short-cycling on stage-up; an equivalent stage-down timer prevents hunting. Author them together — a stage-up guard with no stage-down guard ships half the protection.
+
+**The NaN setpoint hazard (B819 §819.3):** an unguarded numeric setpoint (`suctionSetpoint`, `tempSetpoint`) causes a silent modulation freeze. The demand gate turns the rack off, but the PID / band logic silently continues emitting control signals because demand was never NaN-gated. Always guard before entering the staging / modulation path:
+
+```java
+if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
+    // → idle: turn off, clear demand, return
+}
+```
+
+`getStatus().isValid()` covers `BStatus.NULL` / `BStatus.FAULT` / `BStatus.STALE`; `Double.isFinite` covers NaN and ±Infinity from a detached link. Both guards are needed — a linked slot can carry a finite value with an INVALID status when the source is faulted.
+
 ## Linking across custom modules
 
 ### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]`

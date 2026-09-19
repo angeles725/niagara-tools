@@ -77,9 +77,23 @@ A `moduleTest` / `BTestNg` station-lifecycle test exercises the compiled rt code
 
 **Build gate:** in WSL, add a `moduleTestJar` compile-gate step (`build.sh` variant or `./gradlew :MOD-rt:moduleTestJar`). This compiles the test classes inside the Niagara container's compile classpath — a compile failure surfaces annotation bugs early. `niagaraTest` runs native/JACE only.
 
-**Scaffold gradle:** the `-rt` profile gradle must declare `testImplementation(project(":test-wb"))` (or `moduleTestImplementation(...)` per the plugin version) so `BTestNg` resolves. Lint L11 (`lint-structure.sh`) flags a module that mixes pure-JUnit + Baja test deps without both declarations.
+**Scaffold gradle:** the `-rt` profile gradle must declare `moduleTestImplementation("Tridium:test-wb")`
+so `BTestNg` resolves.  The correct dep key is `moduleTestImplementation` (NOT `testImplementation`) —
+using the plain `testImplementation` key makes the dep visible to the standard JUnit runner, not to
+`niagaraTest`, so the Niagara framework cannot resolve `BTestNg` at test-container startup.  Lint L11
+(`lint-structure.sh`) flags a module that mixes pure-JUnit + Baja test deps without both declarations.
 
-**WSL limitation (honest):** `niagaraTest` discovers 0 tests from WSL (plugin 7.6.17; requires native `bin/test` + dev license). WSL can COMPILE the test jar as a gate; only a native/JACE run produces a test result.
+**`moduleTest-include.xml` — separate descriptor for test types:**  test classes annotated with
+`@NiagaraType` must be registered in a `<part>/moduleTest-include.xml`, NOT in the production
+`module-include.xml`.  The plugin builds a separate `moduleTestJar` from this file; production types and
+test types never mix.  A WSL gate step to compile the test jar: `./gradlew :<MOD>-rt:moduleTestJar`
+(fails on annotation bugs without needing a running station).  See `types/moduleTest.md` for the full
+file schema and gradle dep block. `[ev: corpus B958 §958.3–958.4]`
+
+**WSL limitation (honest):** `niagaraTest` discovers 0 tests from WSL (plugin 7.6.17 bug — needs native
+`bin/test` + dev license; cannot run inside a WSL JUnit context).  WSL can COMPILE the `moduleTestJar`
+as an early gate; only a native/JACE Workbench run (Tools → Run Tests) produces an actual test result.
+Do not count the compile-only pass as test execution.  `[ev: corpus B961 §961.3]`
 
 ### 4.c Version-bump checklist (before any slot-touching commit)
 - `vendorVersion` (in `module.xml` / `gradle.properties`) MUST be bumped on every schema change — slot add, remove, retype, or rename. On reload the station re-decodes `config.bog` against the new module's type/slot registry; a retype or remove is a schema-risk OUTAGE. `[ev: corpus B807]` `[ev: corpus B795]`
