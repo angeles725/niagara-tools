@@ -548,6 +548,296 @@ module resource lookup on every call. The `static final` pattern is enforced by 
 
 `[ev: corpus B738 §738.4]`
 
+## BSingleton + @NiagaraSingleton + @AgentOn — general agent pattern `[ev: code BLocalAlarmResolver.java]`
+
+When the framework needs an implementation for a given target type (resolvers, providers, search agents), it looks up a registered `BIAgent` via `@AgentOn`. The canonical shape:
+
+```java
+@NiagaraType(agent = {@AgentOn(types = {"baja:LocalHost"})})
+@NiagaraSingleton
+public final class BLocalAlarmResolver extends BSingleton
+        implements BIAlarmResolver, BIAgent {
+
+    public static final BLocalAlarmResolver INSTANCE = new BLocalAlarmResolver();
+    public static final Type TYPE = Sys.loadType(BLocalAlarmResolver.class);
+
+    @Override public Type getType() { return TYPE; }
+
+    private BLocalAlarmResolver() {}   // private constructor — singleton only
+
+    @Override
+    public OrdTarget resolve(BISession session, OrdTarget base, AlarmQuery query) {
+        // implementation …
+    }
+}
+```
+
+Rules:
+- **`extends BSingleton`** — `BIAgent` implementors that have no state extend `BSingleton`; stateful agents that need a lifecycle extend `BComponent` or `BAbstractService` instead.
+- **`@NiagaraSingleton`** — tells Slot-o-Matic to emit the singleton registration; required alongside `BSingleton`.
+- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. The framework finds the agent by iterating mounted instances that `is(BIAgent.TYPE)` and comparing the registered target type.
+- **Private constructor + static `INSTANCE`** — enforces single-instance contract; the framework calls `INSTANCE` directly, never `new`.
+- **Does NOT appear in a palette** — a `BSingleton` cannot be dropped by the operator; it is registered in `module.xml` only. `[ev: code BLocalAlarmResolver.java]`
+
+## Lifecycle guard contract `[ev: code BColdRoom.java, BCompressorControl.java]`
+
+Every `changed` / `added` / `removed` override in a `BComponent` subclass must follow the same guard contract:
+
+```java
+@Override
+public void changed(Property p, Context cx) {
+    super.changed(p, cx);       // (1) ALWAYS call super FIRST
+    if (!isRunning()) return;   // (2) guard — do nothing if not running
+    try {
+        // (3) business logic here
+    } catch (Throwable t) {
+        logError("changed", t); // (4) NEVER let an exception escape to the engine thread
+    }
+}
+
+@Override
+public void added(Property property, Context context) {
+    super.added(property, context);   // super FIRST
+    if (!isRunning()) return;
+    // react to the newly added child / link
+}
+
+@Override
+public void removed(Property property, BValue oldValue, Context context) {
+    super.removed(property, oldValue, context);   // super FIRST
+    if (!isRunning()) return;
+    // tear down whatever added() set up
+}
+```
+
+`stopped()` inverts the order — cancel tickets FIRST, call super LAST:
+
+```java
+@Override
+public void stopped() throws Exception {
+    if (tickTicket != null) { tickTicket.cancel(); tickTicket = null; }
+    // release any other resources / clear transient state
+    super.stopped();            // super LAST in stopped()
+}
+```
+
+Summary of the three rules:
+1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
+2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
+3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
+
+## BProgram / BRobotCode scripting SPI `[ev: corpus B-program]`
+
+`BProgram` is a `BComponent` that hosts a signed `BProgramCode` (which hosts `BRobotCode`). The execution entry point is `BProgramService`:
+
+```java
+// Look up the service and run a robot synchronously (blocks until done):
+BProgramService svc = (BProgramService) Sys.getService(BProgramService.TYPE);
+BRobotResult result = svc.runRobot(myRobotCode);  // superuser only
+
+// Or run a batch routine (returns a log string):
+BString log = svc.runBatchRoutine(myBatchRoutine);
+```
+
+Security model:
+- **`BRobotCode` class bytes must be signed** — `BCode.newInstance()` verifies the class signature via `CertUtils` / `SigningUtil` before loading. An unsigned class blob is rejected at instantiation with `CertificateNotTrustedException`.
+- **`compactProfile` = `"compact3"` (default)** — the sandbox ClassLoader enforces the Java SE compact3 API subset; classes that reference SE APIs outside compact3 fail to load.
+- **`allowProgramRuntimeExec` gate** — `BProgramService` has a `HIDDEN` boolean property `allowProgramRuntimeExec` (default `false`). When `false`, the sandbox SecurityManager denies `Runtime.exec()` calls; when `true`, the station administrator has explicitly opened that gate. Leave it `false` for normal automation scripts.
+- **`doRunRobot` checks `cx.getUser().getPermissions().isSuperUser()`** — only a super-user may invoke `runRobot`; all other users get `PermissionException`.
+- **`BProgramService` is `BIRestrictedComponent`** — it can only be placed under `/Services` (see `§BIRestrictedComponent` below). `[ev: corpus B-program]`
+
+## BBatchRoutine mass-edit SPI `[ev: code BRenameBatchRoutine.java]`
+
+`BBatchRoutine` is the SPI for mass-edit operations that apply a transformation to a list of target components. Distinct from `BJobStep` (which is part of a sequenced job) — a batch routine is submitted as one atomic action against a `BOrdList` of targets.
+
+```java
+// 1. Subclass BBatchRoutine — declare your config slots + implement run():
+public class BMyBatchRoutine extends BBatchRoutine {
+    // @NiagaraProperty config slots here (e.g. String find, String replace)
+    public static final Type TYPE = Sys.loadType(BMyBatchRoutine.class);
+
+    @Override
+    public void run(BComponent component, PrintWriter log, Lexicon lex, Context cx) {
+        // called once per resolved target; log.println() for the report;
+        // throw to skip and continue (runAll catches per-target exceptions)
+    }
+}
+
+// 2. Populate targets and submit via ProgramService:
+BMyBatchRoutine routine = new BMyBatchRoutine();
+routine.setTargets(BOrdList.make(new BOrd[]{ ... }));
+BProgramService svc = (BProgramService) Sys.getService(BProgramService.TYPE);
+BString report = svc.runBatchRoutine(routine);  // returns the log as a string
+```
+
+Contract:
+- **`targets: BOrdList`** (the one property inherited from `BBatchRoutine`) holds the component ORDs to iterate.
+- **`runAll(BObject base, PrintWriter log, Context cx)`** resolves each ORD against `base`, calls `run(component, log, lex, cx)` for each; errors per target are logged but do not abort the remaining targets.
+- **Abstract `run(BComponent, PrintWriter, Lexicon, Context)`** is the only method you must implement; log each action to `PrintWriter` so the returned report is useful.
+- **`runBatchRoutine` is `HIDDEN` on `BProgramService`** (flags = 4); invoke it programmatically, not from a Workbench action. `[ev: code BRenameBatchRoutine.java]`
+
+## BEmailService.send(BEmail) `[ev: code BEmailService.java]`
+
+Send an email from a `BSimpleJob` or service method:
+
+```java
+BEmailService emailSvc = (BEmailService) Sys.getService(BEmailService.TYPE);
+
+BEmail email = new BEmail();
+email.setAddressList("ops@example.com");
+email.setSubject("Alarm notification");
+email.setTextPart("Sensor fault detected on room 3.");
+// Optional: email.setBlobPart(BBlob.make(pdfBytes));
+
+emailSvc.send(email);  // queues the message; delivery is async via the outgoing account
+```
+
+Rules:
+- **`BEmailService` is license-gated** — `getLicenseFeature()` returns `"tridium:email"`. If the license is absent the service starts but `doSend` throws at delivery time.
+- **`send(BEmail)` is an `@NiagaraAction`** — it calls `invoke(send, email, null)` internally; the actual delivery runs in `doSend(BEmail, Context)` through the first registered `BOutgoingAccount`.
+- **Exactly one `BOutgoingAccount` child must be configured** under the service; if none exists `doSend` throws `BajaRuntimeException`.
+- **`BEmailService` is `BIRestrictedComponent`** — it may only be placed under `/Services`; any other parent rejects the add with a framework diagnostic (see `§BIRestrictedComponent` below). `[ev: code BEmailService.java]`
+
+## BIRestrictedComponent — placement constraint `[ev: code BEmailService.java]`
+
+Implement `BIRestrictedComponent` on any service or component that must only live in a specific parent context (e.g., directly under `/Services`). The framework calls `checkParentForRestrictedComponent(parent, cx)` on every `add` — a mis-drop fails with a diagnostic before the component is attached.
+
+```java
+public class BMyRestrictedService extends BAbstractService
+        implements BIRestrictedComponent {
+
+    @Override
+    public final void checkParentForRestrictedComponent(BComponent parent, Context cx) {
+        // Delegate to the static helper; it throws a descriptive runtime exception
+        // if parent is not the expected container type.
+        BIRestrictedComponent.checkParentForRestrictedComponent(parent, this);
+    }
+}
+```
+
+Rules:
+- **Always delegate to the static `BIRestrictedComponent.checkParentForRestrictedComponent(parent, this)`** unless you need a custom placement rule — the static form checks that `parent` is a `BIService` container (i.e., the `/Services` subtree).
+- **The check is `final` by convention** — mark `checkParentForRestrictedComponent` as `final` so subclasses cannot accidentally remove the constraint.
+- **No explicit placement description needed** — the framework exception message names the required parent type automatically.
+- Used by: `BEmailService`, `BProgramService`, and any service whose mis-placement would cause a silent malfunction. `[ev: code BEmailService.java]`
+
+## Provider-in-service pattern `[ev: code BWeatherService.java]`
+
+When a service needs to manage a growable set of typed children that each perform periodic or on-demand work, use the provider-in-service shape: the service holds a `BFolder` of typed provider children and dispatches work to them via `CoalesceQueue` + `Worker` + a periodic `Clock.Ticket`.
+
+```java
+public class BWeatherService extends BAbstractService {
+    // slots: updatePeriod (BRelTime), provider children live in the default BFolder
+    private final CoalesceQueue queue = new CoalesceQueue();
+    private Worker worker;
+    private Clock.Ticket updateTicket;
+
+    @Override
+    public void serviceStarted() throws Exception {
+        if (worker == null) {
+            worker = new Worker(queue);
+            worker.start("WeatherService");   // names the background thread
+        }
+    }
+
+    @Override
+    public void stationStarted() {
+        if (getEnabled()) {
+            updateTicket = Clock.schedulePeriodically(
+                this, getUpdatePeriod(), updateWeatherReports, null);
+        }
+    }
+
+    @Override
+    public void serviceStopped() throws Exception {
+        if (updateTicket != null) { updateTicket.cancel(); updateTicket = null; }
+        if (worker != null) { worker.stop(); worker = null; }
+        super.serviceStopped();
+    }
+
+    @Override
+    public void changed(Property property, Context context) {
+        super.changed(property, context);
+        if (isRunning()) {
+            if (property.equals(enabled) || property.equals(updatePeriod)) {
+                if (updateTicket != null) { updateTicket.cancel(); updateTicket = null; }
+                if (getEnabled() && getUpdatePeriod().getMillis() != 0L)
+                    updateTicket = Clock.schedulePeriodically(
+                        this, getUpdatePeriod(), updateWeatherReports, null);
+            }
+        }
+    }
+
+    public void doUpdateWeatherReports() {
+        if (getEnabled()) {
+            for (BWeatherReport report : getReports()) {
+                // CoalesceQueue collapses duplicate-key pending work
+                queue.enqueue(new Invocation(report, BWeatherReport.updateWeatherReport, null, null));
+            }
+        }
+    }
+}
+```
+
+Key decisions in this pattern:
+- **`serviceStarted` vs `stationStarted`** — start the `Worker` thread in `serviceStarted` (runs early, before the station is fully up); arm the periodic `Clock.Ticket` in `stationStarted` so it fires only after all services are running.
+- **`CoalesceQueue`** — collapses pending work items with the same key; if a provider is slow and a new tick fires before the previous dispatch completes, the duplicate is merged rather than queued twice. Use `Queue` (unbounded) when coalescing is not needed.
+- **`changed()` re-arms the ticket** — cancels and re-creates the ticket when `updatePeriod` or `enabled` changes so the new interval takes effect immediately.
+- **Provider children in a `BFolder`** — retrieve via `getChildren(BProviderType.class)` or by walking sub-folders; each provider handles its own HTTP/network call or polling logic independently.
+- **`serviceStopped()` must cancel the ticket AND stop the worker** — in that order; failing to stop the worker leaves a daemon thread running after the service is torn down. `[ev: code BWeatherService.java]`
+
+## BSimpleJob + Fox file-channel streaming `[ev: code BFoxBackupJob.java]`
+
+To stream large output (e.g., a backup archive) to a remote file space over an existing Fox session — without opening a new connection — use `BFileChannel.write(BFoxFileStore)`:
+
+```java
+public class BFoxBackupJob extends BSimpleJob {
+    // HIDDEN slots: postSessionId (String), postPath (String)
+
+    @Override
+    public void run(Context cx) throws Exception {
+        BBackupService service = (BBackupService) Sys.getService(BBackupService.TYPE);
+
+        // 1. Retrieve the caller's existing Fox session by its opaque ID
+        FoxSession session = Fox.getSession(getPostSessionId());
+        if (session == null) throw new Exception("Invalid fox session id");
+
+        Object pauseToken = null;
+        try {
+            pauseToken = session.pauseSessionTimeout(); // prevent idle timeout during transfer
+
+            // 2. Navigate to the file channel on the already-connected Fox session
+            BFoxConnection conn = (BFoxConnection) session.conn();
+            BFileChannel chan = conn.getChannels().getFileChannel();
+            Context sessionCx = chan.getSessionContext();
+
+            // 3. Permission check using the session's credentials
+            if (!service.getPermissions(sessionCx).has(48 /*backup-read|backup-write*/))
+                throw new PermissionException();
+
+            FilePath path = new FilePath(getPostPath());
+
+            // 4. Create the target file on the REMOTE file space, then open a write stream
+            chan.makeFile(null, path);
+            OutputStream out = chan.write(new BFoxFileStore(null, path));
+
+            // 5. Stream the content — here a ZIP backup — directly into the Fox channel
+            service.zip(this, out, true /*includeStation*/, null);
+
+        } finally {
+            session.resumeSessionTimeout(pauseToken); // always restore the timeout
+        }
+    }
+}
+```
+
+Rules:
+- **Reuse an existing Fox session, never open a new one** — `Fox.getSession(id)` finds an already-authenticated session by an opaque string ID the caller embedded in the job; the job does not authenticate, so no credentials are stored in the job itself.
+- **`session.pauseSessionTimeout()` / `resumeSessionTimeout()`** — a long-running stream can exceed the session idle timeout; pause it for the duration of the transfer and restore it in a `finally` block.
+- **`chan.write(new BFoxFileStore(null, path))`** returns an `OutputStream` backed by the remote file; write any `byte[]` or stream directly into it; the Fox channel handles chunking and delivery.
+- **Permission check via `sessionCx`** — check permissions using the session's `Context`, not the job's `Context`; the job runs under the scheduler's context, not the remote caller's credentials.
+- **`BSimpleJob` provides the thread + progress + log infrastructure** — `this.log().message(...)` records to the job's progress log; `progress(pct)` is optional but useful for large transfers. `[ev: code BFoxBackupJob.java]`
+
 ## Write-path test matrix `[ev: corpus B816]`
 Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
 
