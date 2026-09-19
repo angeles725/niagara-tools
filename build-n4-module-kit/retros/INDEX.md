@@ -137,3 +137,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-18-wiresheet-control-library-deltas.md | kit | 2026-09-18 | folded | 1 |
 | 2026-09-18-third-party-library-integration-deltas.md | kit | 2026-09-18 | folded | 3 |
 | 2026-09-18-ml-libraries-deltas.md | kit | 2026-09-18 | folded | 4 |
+| 2026-09-19-actions-authoring.md | kit | 2026-09-19 | folded | 6 | <!-- new types/actions.md §1-6: doX dispatch law; ASYNC engine-thread; flags CONFIRM_REQUIRED/NO_AUDIT; typed-args defaultValue; actions-vs-@NiagaraTopic; @NiagaraRpc-vs-@NiagaraAction boundary -->
