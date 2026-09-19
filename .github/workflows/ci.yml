@@ -100,6 +100,15 @@ jobs:
           bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalPan "$OUT"
           diff -r --exclude=build --exclude=.gradle "$OUT/MinimalPan" build-n4-module-kit/fixtures/MinimalPan
 
+      - name: scaffold-diff (dashboard — scaffold MinimalDash → diff -r vs fixture — issue #115)
+        run: |
+          # TC-DASH1 round-trip: scaffold MinimalDash with --type dashboard into RUNNER_TEMP,
+          # then diff -r the output against the bundled MinimalDash fixture (excluding build/ and .gradle/).
+          OUT="$RUNNER_TEMP/scaffold-ci-dash"
+          mkdir -p "$OUT"
+          bash build-n4-module-kit/toolbelt/scaffold-module.sh MinimalDash "$OUT" --type dashboard
+          diff -r --exclude=build --exclude=.gradle "$OUT/MinimalDash" build-n4-module-kit/fixtures/MinimalDash
+
       - name: schema-risk fixtures (B799 pairs — non-strict, asserts mapped exit + verdict token — Campaign 7 PR5)
         run: |
           # Non-strict run: OUTAGE fixtures EXIT 2 but we assert the EXPECTED exit, not fail CI on it.

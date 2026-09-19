@@ -155,3 +155,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-ci-green.md | kit | 2026-09-19 | folded | 5 | <!-- green the CI: .shellcheckrc + 2 bats error fixes + Mutation-pin headers (10 lints) + BUILD-LOOP lint-listing + dangling-ref fixes -->
 | 2026-09-19-wire-lints.md | kit | 2026-09-19 | folded | 2 | <!-- issue #113: 9 new lints wired into report-module.sh (per-artifact 5.7-5.13 + module-root 8-9) + RM7-RM11 bats -->
 | 2026-09-19-skill-trigger.md | kit | 2026-09-19 | folded | 1 | <!-- issue #116: expand SKILL.md trigger (driver/service/utility-lib/theme/cloud) + sync installed via install-skill.sh --force -->
+| 2026-09-19-dashboard-scaffold.md | kit | 2026-09-19 | folded | 3 | <!-- issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->

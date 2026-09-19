@@ -21,6 +21,7 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   SC="$KIT/toolbelt/scaffold-module.sh"
   FIXTURE="$KIT/fixtures/MinimalPan"
+  FIXTURE_DASH="$KIT/fixtures/MinimalDash"
   OUT="$BATS_TEST_TMPDIR/out"
   mkdir -p "$OUT"
 }
@@ -48,6 +49,18 @@ setup() {
   [ "$status" -eq 0 ]
   run diff -r --exclude=build --exclude=.gradle "$OUT/MinimalPan" "$FIXTURE"
   [ "$status" -eq 0 ]
+}
+
+@test "TC-DASH1: --type dashboard emits MinimalDash tree byte-equals the bundled fixture (diff -r, minus build/.gradle)" {
+  run "$SC" MinimalDash "$OUT" --type dashboard
+  [ "$status" -eq 0 ]
+  run diff -r --exclude=build --exclude=.gradle "$OUT/MinimalDash" "$FIXTURE_DASH"
+  [ "$status" -eq 0 ]
+}
+
+@test "TC-DASH2: invalid --type exits 2" {
+  run "$SC" MyModule "$OUT" --type unknown
+  [ "$status" -eq 2 ]
 }
 
 @test "TC4: round-trip preflight->build.sh->verify-module ALL PASS->lint-timers PASS (SKIP without niagara_home/JDK8)" {

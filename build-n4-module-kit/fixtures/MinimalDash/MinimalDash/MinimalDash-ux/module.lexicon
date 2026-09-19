@@ -1,0 +1,7 @@
+#
+# Lexicon for the MinimalDash module (ux).
+# Format verified against control-rt.lexicon (Java properties: key=value).
+#
+
+# --- Type display names ---
+MinimalDashServlet=MinimalDash Servlet
