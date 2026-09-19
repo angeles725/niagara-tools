@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-17 · UmbrellaDashboard · dashboard-status-state-modeling
 
 **Session**: `/build-n4-module` — after deploy, the operator asked how the dashboard knows normal/paro/reserva/alarma and whether fault/override on a link-mark is reflected.
