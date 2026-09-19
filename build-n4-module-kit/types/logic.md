@@ -158,6 +158,16 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
 - **Pure-logic split for reusable formulas** (like `ColdRoomControl.decideCall`) — the only part that gets real unit tests; everyday logic stays inline.
 - **GOTCHA**: `catch(Throwable)+log` is NOT automatic — the framework only wraps `BControlPoint.executeExtensions`. In your OWN `changed()`/timer handlers you MUST self-guard or one exception corrupts engine state. (Our modules already do.)
 
+### Wire-sheet live-view recipe `[ev: corpus B747 §747.2]`
+
+Three authoring choices determine the wire-sheet rendering and together produce a live, color-coded flow debugger at no extra cost:
+
+1. **`SUMMARY` flag on a slot → visible pin row** — `SlotBarGlyph` gates pin-row visibility on `Flags.isSummary()` (SUMMARY=8, `Flags.java:12`); a slot without SUMMARY is invisible on the wire sheet regardless of type. Curate SUMMARY on real I/O slots; do not set it on every internal state slot.
+2. **Units + precision facets on that slot → formatted live value in the pin row** — `PropertyBarGlyph.updateValueString()` reads the slot's facets and renders the live value in the pin row with the configured units and decimal precision. Add units/precision facets to every numeric slot that appears as a pin (the `getSlotFacets` projection, covered in the Flags bullet above).
+3. **`BStatus` on the slot's value → pin row tinted by status color** — the same `PropertyBarGlyph` tints the row by the status color (fault=red, stale=yellow, override=magenta) via `getShowStatusColors()`. Refresh is push-on-change (`WsController.handleComponentEvent → glyph.changed(slot)`, `WsController.java:544-574`) — no poll.
+
+**Practical rule:** curate SUMMARY on every real I/O slot, add units facets to every numeric pin slot, set `BStatus` on every output. All three are already best-practice for independent reasons; together they make the wire sheet a live diagnostic surface for free.
+
 Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `changed()` cycle timing and multi-stage coordination from further builds.
 
 ## Slots — BStatus producers `[ev: corpus B736 §736.2–736.4]`
