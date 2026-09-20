@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · wb-manager-framework-deltas
 
 **Session**: niagara-research focus `wb-manager-framework` (B1088–B1093, commit e4121d38d) — the `BAbstractManager`/`MgrController`/`MgrModel`/`MgrColumn`/`MgrLearn`/`MgrEdit` framework that every driver device/point manager extends, and how our hand-built `BWbComponentView`+`BTable` managers compare.
