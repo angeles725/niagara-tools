@@ -157,12 +157,16 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-skill-trigger.md | kit | 2026-09-19 | folded | 1 | <!-- issue #116: expand SKILL.md trigger (driver/service/utility-lib/theme/cloud) + sync installed via install-skill.sh --force -->
 | 2026-09-19-dashboard-scaffold.md | kit | 2026-09-19 | folded | 3 | <!-- issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->
 | 2026-09-19-commissioning-verify.md | kit | 2026-09-19 | folded | 2 | <!-- issue #114: new commissioning-verify.sh (orchestrates config-sanity/status-parity/recovery-path + bog-audit CHECK11/13-19/20 + MANUAL footer) closes BUILD-LOOP §6.b -->
+| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- issue #122: BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas — proposal awaiting build trigger -->
 | 2026-09-19-apillm-headless-servlet-rt-4.14-deltas.md | kit | 2026-09-19 | pending | 24 |
 | 2026-09-20-wb-vendor-ux-rt-wb-pattern-deltas.md | kit | 2026-09-20 | pending | 25 |
 | 2026-09-20-honeywell-wb-rt-wb-deltas.md | kit | 2026-09-20 | pending | 8 |
 | 2026-09-20-wb-manager-framework-deltas.md | kit | 2026-09-20 | pending | 4 |
-| 2026-09-20-wb-field-editors-deltas.md | kit | 2026-09-20 | pending | 3 |
+| 2026-09-20-wb-field-editors-deltas.md | kit | 2026-09-20 | folded | 3 |
 | 2026-09-20-our-dashboard-audit-deltas.md | kit | 2026-09-20 | pending | 5 |
 | 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit | 2026-09-20 | pending | 14 |
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit | 2026-09-20 | pending | 8 |
 | 2026-09-20-module-hardening-failure-modes-deltas.md | kit | 2026-09-20 | pending | 16 |
+| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit | 2026-09-20 | pending | 7 |
+| APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
+

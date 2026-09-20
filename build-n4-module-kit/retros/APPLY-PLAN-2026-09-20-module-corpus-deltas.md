@@ -23,7 +23,8 @@ failure-modes retro) are complete and committed; their Δ tokens are categorized
 | 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit / wb-vendor-ux wave-3 | 14 | pending |
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit / hardening REF cluster | 8 | pending |
 | **2026-09-20-module-hardening-failure-modes-deltas.md** | kit / hardening failure-modes | **16** | **pending review (retro COMPLETE + committed)** |
-| **TOTAL (8 retros read + 1 placeholder)** | | **107** | |
+| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit / hardening reqexec-closed (UXS1/UXS4/BLD7/RUN5/PER1/PER4/PER7) | 7 | pending (added 2026-09-20, see §4 addendum) |
+| **TOTAL (10 retros)** | | **114** | |
 
 ---
 
@@ -215,3 +216,32 @@ Group by kit file so a reviewer can apply all deltas to one file in a single pas
   both have lint candidates that prevent silent failure in future modules.
 - **Superseded delta**: apillm Δ19 (D5) is superseded by apillm Δ20 / PD-FE1 (C15).
   Fold it with a forward-reference note, do not implement it.
+
+---
+
+## 4. Addendum — module-hardening reqexec-closed deltas (added 2026-09-20)
+
+The `2026-09-20-module-hardening-reqexec-closed-deltas.md` retro (5 deltas) closes the
+hardening gaps previously parked as "requires-execution" (UXS1, UXS4, BLD7, RUN5, PER1),
+answered from framework source + the install's signing plugin (no live station needed).
+Ranked into the existing tiers below; per-Δ target files are in that retro. Original
+worklist ranks (A1–C43) are unchanged.
+
+| Rank | Delta (PD token) | Tier | Target kit file / § | Why this tier |
+|---|---|---|---|---|
+| A8 | PD-MH-UXS4 (Δ2) | A — SECURITY | `types/security.md` | CORS recipe: static ACAO via a `BGenericHttpHeaderProvider` under `WebService/httpHeaderProviders`; `BProfileFilterFactory` is closed to third parties; dynamic Origin reflection = servlet body. First supported-path answer for CORS in the kit |
+| A9 | PD-MH-UXS1 (Δ1) | A — SECURITY | `types/security.md`; `toolbelt/lint-servlet.sh` (note) | Refines the A1/PD-ODA1 header deltas: `TridiumSecurityFilter` applies configured header providers to EVERY servlet context (incl. custom `/api/`); servlet-level `setApiHeaders()` is the defense-in-depth fallback, not the sole control — **read alongside A1/A2** |
+| B8 | PD-MH-BLD7 (Δ3) | B — SILENT/DEFERRED FAILURE | `types/distribution.md`; `types/issues-and-gotchas.md` | A missing signing alias on the default dev `LocalSigningProfile` AUTO-GENERATES a self-signed cert → build succeeds but the jar dies at station load (untrusted-cert ValidationException, BLD1); `RestrictedSigningProfile` fails the build. Deferred-failure trap; **pair with PD-MH-BLD1 (C-tier build-triage)** |
+| C44 | PD-MH-RUN5 (Δ4) | C — ACTIONABLE-CORRECTNESS | `types/driver-authoring.md` | configFatal is permanent until station restart (licensing/parentage only); configFail/readFail/writeFail are transient (cleared by configOk/readOk/writeOk). Driver-authoring reference card so `configFatal()` is not misused on transient faults |
+| C45 | PD-MH-PER1 (Δ5) | C — ACTIONABLE-CORRECTNESS + lint | `types/logic-authoring.md`; `lint/` candidate `dynamic-slot-orphan-prune` | No framework prune-orphans utility; a component adding dynamic slots must prune orphans in `started()`; non-transient orphans persist in `.bog` and reload (silent bloat). Lint candidate flags dynamic-slot add with no prune path |
+| C46 | PD-MH-PER4 (Δ6) | C — ACTIONABLE-CORRECTNESS | `types/logic-authoring.md` (schema-evolution) | Worked `started()` slot-migration recipe (closes B754-G2): detect orphan → copy → remove, idempotent; batch form snapshots first. Applied companion to C45 — **fold the two together** |
+| C47 | PD-MH-PER7 (Δ7) | C — DELIVERY/BOOT-RECOVERY | `types/distribution.md`; `types/issues-and-gotchas.md` | Station-stuck-at-boot recovery runbook via Platform Software Manager (station down): Downgrade/Uninstall/Import/Rebuild-Signatures → Commit; never File Transfer Client for modules. Delivery-side counterpart to B8/PD-MH-BLD7 |
+
+Addendum lessons:
+- **B8 (PD-MH-BLD7) is the highest-value new item** — it converts a "build looks clean" into a
+  station-load failure; it belongs next to the existing BLD1 signature-triage delta and shares its
+  root (the untrusted/unsigned distinction in the load log).
+- **A8/A9 extend the servlet-header mini-campaign** (A1 + A2 + C42): A9 clarifies the framework
+  already applies configured headers globally, and A8 adds the CORS recipe — apply the four together.
+- **C45 adds one lint candidate** (`dynamic-slot-orphan-prune`), consistent with the failure-modes
+  retro's lint-candidate additions.
