@@ -167,6 +167,6 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit | 2026-09-20 | pending | 14 |
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit | 2026-09-20 | pending | 8 |
 | 2026-09-20-module-hardening-failure-modes-deltas.md | kit | 2026-09-20 | pending | 16 |
-| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit | 2026-09-20 | pending | 7 |
+| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit | 2026-09-20 | folded | 7 |
 | APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
 

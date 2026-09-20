@@ -227,6 +227,15 @@ Do not reproduce them.
 
 ## 7 · Servlet response-header checklist
 
+**Platform-level filter note** (`TridiumSecurityFilter`): the station's `WebService/httpHeaderProviders`
+are applied globally to EVERY servlet context — including every custom `BWebServlet` at `/api/` — by
+`TridiumSecurityFilter`, installed on `/*` of every context by `configureNiagaraWebApp()`. When the
+station has header providers configured and enabled, a custom JSON API servlet receives the configured
+headers automatically with no per-servlet wiring. `setApiHeaders()` and the `lint-servlet.sh` check are
+therefore a **defense-in-depth fallback layer** for deployments where the station-level providers are
+absent or disabled; a servlet-level `resp.setHeader()` call OVERRIDES the filter value for the same
+header name. `[ev: retro module-hardening-reqexec-closed-deltas Δ1]`
+
 Every `BWebServlet` API response path **must** call a `setApiHeaders()` helper (or
 equivalent) that sets at minimum the following security headers:
 
@@ -269,6 +278,59 @@ curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass \
 Both headers must appear in the response. A missing header is an ODA2-G2-style gap
 detectable in minutes — the static code fix (`setApiHeaders()`) is equally low-effort.
 `[ev: retro our-dashboard-audit-deltas Δ5]`
+
+---
+
+---
+
+## 8 · CORS recipe
+
+To allow cross-origin access from a browser SPA served from a different origin than the station, there
+are two paths — a static global route and a dynamic per-request route.
+
+### Static ACAO via `BGenericHttpHeaderProvider` (recommended for fixed-origin deployments)
+
+Add a `BGenericHttpHeaderProvider` under `WebService/httpHeaderProviders`:
+
+| Slot | Value |
+|---|---|
+| `headerName` | `Access-Control-Allow-Origin` |
+| `headerValue` | the allowed origin (e.g. `https://myapp.example.com`); `*` for open |
+| `appendHeader` | `false` |
+
+The provider is managed entirely in the station BOG; no code change is required.
+`TridiumSecurityFilter` emits the header on every response via `applyHeaders()`. `[ev: corpus B1134]`
+
+**Gotcha — `BProfileFilterFactory` is closed to third parties:** the platform mechanism for registering
+a custom servlet `Filter` enforces a hard-coded 2-entry allowlist (`BProfileFilterFactory.java:17-18`).
+A custom CORS `Filter` submitted via `BProfileFilterFactory` silently fails to register. The supported
+CORS paths are: (a) the station BOG `BGenericHttpHeaderProvider` (static ACAO); (b) the servlet body.
+`[ev: corpus B1134]`
+
+### Dynamic per-request Origin reflection (for multi-origin or preflight handling)
+
+When a static `Access-Control-Allow-Origin` is insufficient — multiple allowed origins, preflight
+`OPTIONS` handling — implement the CORS logic in the servlet body:
+
+```java
+String origin = req.getHeader("Origin");
+if (isAllowedOrigin(origin)) {            // your explicit allowlist check
+    resp.setHeader("Access-Control-Allow-Origin", origin);
+    resp.setHeader("Access-Control-Allow-Credentials", "true");
+}
+if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
+    resp.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+    resp.setHeader("Access-Control-Allow-Headers", "Content-Type, x-niagara-csrfToken");
+    resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
+    return;
+}
+// … normal handler follows …
+```
+
+**Rule:** never reflect the `Origin` header without an explicit allowlist check. A servlet-level
+`resp.setHeader(...)` OVERRIDES the station-level filter value for the same header name.
+
+`[ev: retro module-hardening-reqexec-closed-deltas Δ2]`
 
 ---
 

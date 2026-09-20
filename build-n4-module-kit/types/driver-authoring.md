@@ -142,15 +142,30 @@ public BObject doPing(Context cx) throws Exception {
 `BDevice.updateStatus()` → `BPointDeviceExt.updateStatus()` → `BProxyExt.updateStatus()` sets
 `BStatus.DOWN`. [ev: code BDevice.java:400; BProxyExt.java:475; corpus B810 §810.2]
 
-Two recoverable vs permanent fault levels:
+### `configFatal` vs `configFail` — recovery reference card
 
-| Call | Status bit | Recovery |
-|---|---|---|
-| `configFail(cause)` | FAULT | Recoverable; next ping attempt will clear it |
-| `configFatal(cause)` | FAULT + DISABLED | Permanent until component restart |
+| Call | Status bit | Recovery | Cleared by |
+|---|---|---|---|
+| `configFail(cause)` | FAULT | **Transient** — cleared on next successful operation | `configOk()` |
+| `readFail(cause)` | FAULT | Transient | `readOk(value)` |
+| `writeFail(cause)` | FAULT | Transient | `writeOk()` |
+| `configFatal(cause)` | FAULT + DISABLED | **Permanent** — cleared ONLY by a full station restart | station restart |
 
-Use `configFatal` for missing credentials or protocol-version mismatch — conditions that survive
-a transient comm loss.
+**`configFatal` is permanent:** `configOk()` clears `configFault` but returns early before
+`fatalFault` (`BDevice.java:425,431`); no code path resets `fatalFault`; `checkFatalFault()`
+short-circuits component restart (`:577-578`); the `FATAL_FAULT` flag is locked until station stop.
+The following do NOT clear a fatal fault: `configOk()`, a config-slot change, a re-ping, an enable
+cycle, or a component restart. A point in `fatalFault` is permanently unoperational — tuning stops
+dispatching to it.
+
+**Valid uses for `configFatal`:** licensing failure, invalid parentage. Do NOT call `configFatal`
+for transient comm conditions (device unreachable, timeout, protocol error) — those belong to
+`configFail()` / `pingFail()` so the point self-recovers when the device returns.
+
+**Neither `configFail` nor `configFatal` sets `DOWN`** — `DOWN` is exclusively ping-owned
+(`pingFail()` propagates DOWN to every `BProxyExt` under the device).
+
+`[ev: retro module-hardening-reqexec-closed-deltas Δ4]`
 
 ---
 

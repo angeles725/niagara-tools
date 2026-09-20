@@ -118,6 +118,26 @@ to LOW mode.
 
 `[ev: corpus B1027 §1027.4, B18 §18.3-18.4]`
 
+### Signing-profile build-triage
+
+A missing or renamed signing alias does NOT fail the build uniformly — the outcome is
+**profile-type-dependent** (bytecode-corroborated in `niagara-plugins-7.6.17.jar`):
+
+| Profile type (`niagara.signing.profileType`) | Missing alias behavior | Build result | Station load result |
+|---|---|---|---|
+| `LocalSigningProfile` (dev default) | auto-generates a self-signed dev cert | **SUCCEEDS** — jar signed but untrusted | **FAILS** — `ValidationException` (BLD1 trust failure) |
+| `RestrictedSigningProfile` (CI/release) | `IllegalArgumentException` | **FAILS** at build time | — |
+| Any profile, profile FILE missing | `ProfileNotFoundException` | **FAILS** at build time | — |
+| `requireSigning=false` (default), no aliases | UNSIGNED jar | SUCCEEDS | succeeds on DEV station, fails on production JACE |
+
+**Deferred-failure trap:** a `LocalSigningProfile` with a missing alias ships a jar that the build
+reports as GREEN but the station rejects at load time with an untrusted-cert `ValidationException`
+(BLD1). The tell-tale symptom is "build signed OK, station refuses the module". Verify
+`niagara.signing.profileType` in `~/.tridium/security/niagara.signing.xml` and confirm the intended
+alias is present in the keystore before a release build.
+
+`[ev: retro module-hardening-reqexec-closed-deltas Δ3]`
+
 ---
 
 ## 6 · BOG schema-safety matrix on module upgrade
@@ -227,6 +247,43 @@ The migration tool is an **offline tool operation**, not a runtime hook. Key rul
 | What does NOT migrate | Driver points, schedule DBs, alarm routing full, graphics/PX bound to AX-only widgets |
 
 `[ev: corpus B1024 §1024.3-1024.5, B405]`
+
+---
+
+---
+
+## 10 · Station stuck at boot — Platform Software Manager recovery
+
+When a station refuses to boot because of a bad or wrong-version module (unsigned/untrusted per
+BLD1/BLD7, bad manifest, incompatible version), recovery is a **Platform-level operation** performed
+while the **station is DOWN** (the platform daemon must be running):
+
+### Recovery procedure
+
+1. Connect Workbench to the **Platform node** (not the station node).
+2. Open **Platform > Software Manager**.
+3. Identify the offending module — it appears as:
+   - **"Bad Target"** — bad manifest or otherwise unusable (incompatible/corrupt).
+   - **"Out of Date"** — module version does not match the installed platform family.
+4. Select the module and choose a remediation action:
+
+| Action | When to use |
+|---|---|
+| **Downgrade** | roll back a newer-than-expected module to a known-good lower version |
+| **Uninstall** | remove a module with no dependents; the station will boot without it |
+| **Import + Re-Install** | install the correct build via a fresh JAR upload |
+| **Rebuild Module Signatures** | repair the BLD1/BLD7 trust failure (signs the existing JAR against the station's current cert chain); **station must be not-running** |
+
+5. Click **Commit** after selecting the action; the platform applies the change.
+6. Restart the station.
+
+**Critical gotcha — NEVER use the File Transfer Client for modules:** the Niagara File Transfer
+Client copies raw bytes only; it does NOT apply runtime profiles or signing chains. A module
+deployed this way bypasses the Software Manager's installation pipeline and will fail the station's
+module-verification check on next boot, even if the JAR bytes are correct.
+`[ev: corpus B1139]`
+
+`[ev: retro module-hardening-reqexec-closed-deltas Δ7]`
 
 ---
 
