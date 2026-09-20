@@ -52,3 +52,5 @@ Per retro folded:
 
 ## Progress log
 - 2026-09-20: campaign authorized + set up; fold contract confirmed (pre-push hook installed). Starting T1.
+- 2026-09-20: T0 (pre-req) — found main CI ALREADY RED (commits 4cd274b, 887e6bb): two non-retro docs in retros/ (cxf-to-n4 proposal, APPLY-PLAN worklist) had no INDEX row → sweep-build-state exit 1 → M5/H3/H8/H10 bats + ledger-sweep step failed. Fixed by adding both INDEX rows (pending, 0 deltas). Full suite now 583/583, both sweeps exit 0. Bundled into T1 PR #124 to green main.
+- 2026-09-20: T1 FOLDED (wb-field-editors, 3Δ) — PR #124.
