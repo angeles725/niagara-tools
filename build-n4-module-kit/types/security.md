@@ -225,5 +225,52 @@ Do not reproduce them.
 
 ---
 
+## 7 · Servlet response-header checklist
+
+Every `BWebServlet` API response path **must** call a `setApiHeaders()` helper (or
+equivalent) that sets at minimum the following security headers:
+
+| Header | Required value | Scope |
+|---|---|---|
+| `X-Content-Type-Options` | `nosniff` | **all** API responses |
+| `X-Frame-Options` | `SAMEORIGIN` | **all** API responses |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'` | HTML responses only |
+
+`DashboardPan`'s `setApiHeaders()` (v2026-08-31, `BDashboardServlet.java:540–543`) omits
+both `X-Content-Type-Options` and `X-Frame-Options`, and ships no `Content-Security-Policy`
+anywhere in the module — gaps ODA2-G1/G2. The two-line fix is:
+
+```java
+// Inside setApiHeaders() — add after any existing header calls
+resp.setHeader("X-Content-Type-Options", "nosniff");
+resp.setHeader("X-Frame-Options", "SAMEORIGIN");
+// HTML endpoint only:
+resp.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'");
+```
+
+**Proposed lint check** (not yet in `toolbelt/lint-servlet.sh`):
+- `api-response-headers` — flag a `doGet`/`doPost` handler that writes a response but
+  does NOT call a method name containing `setHeader` with `X-Content-Type-Options` in
+  the same method or a helper it delegates to.
+
+`[ev: retro our-dashboard-audit-deltas Δ1]`
+
+**Post-deploy header probe** (see also `toolbelt/commissioning-verify.sh`
+`servlet-response-headers` MANUAL step):
+After deploying a `BWebServlet`-based module, verify the live endpoint returns the required
+headers:
+
+```bash
+curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass \
+     'http://<station>/<module>/api/equipment' \
+  | grep -iE 'x-content-type-options|x-frame-options'
+```
+
+Both headers must appear in the response. A missing header is an ODA2-G2-style gap
+detectable in minutes — the static code fix (`setApiHeaders()`) is equally low-effort.
+`[ev: retro our-dashboard-audit-deltas Δ5]`
+
+---
+
 **See also:** `types/actions.md` §3 (ADMIN_INVOKE flag), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).

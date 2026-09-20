@@ -36,7 +36,7 @@ Per retro folded:
 ## Task checklist (one PR per retro, ascending size)
 - [x] T1 · wb-field-editors-deltas (3) → types/wb-widgets.md — FOLDED (PD-FE1/2/3), INDEX+marker+BUILD-STATE flipped, sweeps green. Tracking issue #123.
 - [x] T2 · wb-manager-framework-deltas (4) → types/wb-widgets.md — FOLDED (PD-WMF1-4: Manager recipe §), sweeps green.
-- [ ] T3 · our-dashboard-audit-deltas (5) → types/security.md, MBP, lint-servlet
+- [x] T3 · our-dashboard-audit-deltas (5) → types/security.md §7 + types/dashboard.md + commissioning-verify.sh MANUAL step — FOLDED (PD-ODA1-5), shellcheck+bats+sweeps green.
 - [ ] T4 · module-hardening-reqexec-closed-deltas (7) → types/security.md, distribution.md, driver-authoring.md, logic-authoring.md, issues-and-gotchas.md
 - [ ] T5 · module-hardening-reference-cards-deltas (8) → types/logic.md, logic-authoring.md
 - [ ] T6 · honeywell-wb-rt-wb-deltas (8) → types/wb-widgets.md, structure.md
