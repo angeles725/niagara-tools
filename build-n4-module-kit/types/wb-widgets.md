@@ -45,6 +45,7 @@ Two dialects for delivering data to a bajaux `@AgentOn` view:
 8. **No `getNavChildren` in `doInvoke`**: if a search or tree-walk is needed, extract it into a named method called via `invokeLater`; the `doInvoke` body stays a one-liner. [ev: corpus B809] [ev: corpus B817]
 9. **Non-empty scaffold gate**: ship a `-wb` jar only when it has ≥1 `.class` OR ≥1 palette `<p n=` entry; an all-empty scaffold (`verify-module.sh` `wb-scaffold` WARN) means nothing was compiled or registered. [ev: corpus B809] [ev: corpus B817]
 10. **Declare every transitive dep**: every `<dependency>` in `META-INF/module.xml` MUST appear as `api(":X")` or `nre(":X")` in the profile `.gradle.kts`; phantom deps (`verify-module.sh` `phantom-dep` WARN) disappear silently after Gradle updates. [ev: corpus B809] [ev: corpus B817]
+11. **Fail-closed authorization for WB controls:** a control whose authorization mixin or PIN is absent must be DISABLED **and** HIDDEN by default — never open-by-default. Default authorization slots/PINs to `-1` (no assignment = no access). On `loadValue()`, check the pin; if the user lacks the required permission call `widget.setEnabled(false)` **and** `widget.setVisible(false)`. A missing mixin ≠ "unprotected" — it equals "no access". `[ev: retro honeywell-wb-rt-wb-deltas Δ3]` `[ev: corpus B1079]`
 
 **DWB1 exemplar — chihuahua-wb `model/` tree** (commit `175eee8`, `angeles725/chihuahua`):
 ```
@@ -115,6 +116,41 @@ Our Apillm importer/exporter managers use the hand-built `BWbComponentView`+`BTa
 
 `[ev: corpus B1091]`
 
+### Plugin-extensible device-type manager via SPI (Honeywell recipe) [ev: retro honeywell-wb-rt-wb-deltas Δ1]
+
+When multiple device families share one manager container, use the **plugin SPI** instead of subclassing `BAbstractManager` for each family. Implement only `BIHonDeviceModel` (or `BIHonBacnetDeviceModel`); the plugin contributes columns, supported model specs, and commands. The shared framework discovers plugins at runtime via `NiagaraRegistryUtil.getImplementersOfTypeSpec(BIHonDeviceModel.TYPE)` — zero Manager subclass code per device-family module.
+
+Key responsibilities of a `BIHonDeviceModel` implementer:
+- `getSupportedModelSpecs()` — returns the `BTypeSpec[]` this plugin handles.
+- `createColumns()` — returns the `MgrColumn[]` the plugin contributes to the shared table.
+- `createCommands()` — returns any toolbar commands scoped to devices this plugin owns.
+
+Register each plugin via a plain `<type>` in `module.xml`; no `@AgentOn` is required. Prefer this recipe over a Manager subclass when a shared framework already exists and you are adding a new device family on top of it; prefer the Tridium subclass recipe (rung-2(a) above) only when no shared framework exists. `[ev: corpus B1077]`
+
+### Static State for manager view continuity [ev: retro honeywell-wb-rt-wb-deltas Δ8]
+
+When a manager must survive a close/reopen without losing subscription or discovery state (e.g. a scan still in progress), hold that domain state in a `static` inner class scoped to the manager class:
+
+```java
+public class BMyDeviceManager extends BAbstractManager {
+
+    // Survives manager close/reopen: the static class lives with the classloader,
+    // not with the Swing panel instance.
+    private static class State {
+        volatile boolean discoveryInProgress;
+        final List<DiscoveredDevice> found = Collections.synchronizedList(new ArrayList<>());
+    }
+    private static final State STATE = new State();
+
+    @Override
+    protected void doLoadValue(BObject value, Context cx) {
+        // read STATE.found — may already be populated by a background scan
+    }
+}
+```
+
+**Anti-pattern:** do NOT make Swing *widgets* (e.g. a `JList` or `BTable` model) static — only DOMAIN STATE. Widget singletons across two simultaneously open manager windows cause threading violations. The static field must hold only value-typed or thread-safe domain state. `[ev: corpus B1078]`
+
 ### Minimal non-driver custom-manager template [ev: retro wb-manager-framework-deltas Δ4]
 
 Use this template when a **service or container** (not a driver) needs a manager view — e.g. a service that owns a set of configuration records with an Add/Delete UI. For the driver-centric recipe with full `makeLearn()` + network discovery, see `envCtrlDriver` (B956).
@@ -151,6 +187,37 @@ public class BMyServiceManager extends BAbstractManager {
 ```
 
 `[ev: corpus B1091]`
+
+## WB user preferences — per-user JSON under userHome/ [ev: retro honeywell-wb-rt-wb-deltas Δ2]
+
+For remembered WB state (visible columns, selected commands, last-used values) that is per-user and must survive a manager close/reopen, store a small JSON file under `userHome/<username>/<module>/prefs.json`. No rt slots are needed — the WB view reads/writes the file directly on load/save, keeping the slot schema clean.
+
+```java
+// Persist per-user WB prefs — manager open → read; manager close → write
+File home  = new File(Sys.getUserHome(), getUsername());   // Sys.getUserHome() → userHome/
+File prefs = new File(home, "myModule/prefs.json");
+// write: new ObjectMapper().writeValue(prefs, myPrefsObject);
+// read:  myPrefsObject = new ObjectMapper().readValue(prefs, MyPrefs.class);
+```
+
+Guard every read with `try/catch` — the file may not exist on the first open. This pattern avoids adding transient or per-user state to the rt component model. `[ev: corpus B1077]`
+
+## Integer `visibilityPin`/`actionPin` authorization for PX widgets and manager rows [ev: retro honeywell-wb-rt-wb-deltas Δ4]
+
+Add a `visibilityPin` (int, default `-1`) and an `actionPin` (int, default `-1`) as `@NiagaraProperty` slots on a PX widget or manager-row type. At render time:
+- If `visibilityPin` check fails → `widget.setVisible(false)`.
+- If `actionPin` check fails → `widget.setEnabled(false)`.
+- Default of `-1` means no pin assigned → control is closed (fail-closed rule above).
+
+```java
+// Example pin check (integer maps to a BPermissions mask or role ordinal)
+boolean hasVis = session.getPermissions().has(visibilityPin);
+boolean hasAct = session.getPermissions().has(actionPin);
+widget.setVisible(hasVis);
+widget.setEnabled(hasVis && hasAct);
+```
+
+Reusable across manager rows and PX widgets without per-type auth boilerplate. `[ev: corpus B1079]`
 
 ## Field editors — station-component pickers, the null-ord gotcha, and point-creation from WB
 

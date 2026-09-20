@@ -73,6 +73,17 @@ Slots without `OPERATOR` default to the admin tier.
 an operator panel calls, add `Flags.OPERATOR` to reduce the required permission
 to `operatorInvoke`. [ev: code Flags.java; corpus B507 §SEC-05]
 
+### 2.3 Fail-closed authorization default for WB controls and PX widgets [ev: retro honeywell-wb-rt-wb-deltas Δ3]
+
+A control whose authorization mixin or PIN slot is absent must be **DISABLED and HIDDEN** by default — never open-by-default. The rule applies to both Workbench manager rows and PX widgets:
+
+1. Default the authorization slot/PIN to `-1` (no assignment = no access).
+2. On `loadValue()` or render, check the pin against the current session's permissions.
+3. If absent or insufficient: call `widget.setEnabled(false)` **and** `widget.setVisible(false)`.
+4. Never fall through with `setEnabled(true)` when the authorization check returns an inconclusive or missing result.
+
+A missing mixin ≠ "unprotected"; it equals "no access". See `types/wb-widgets.md §Integer visibilityPin/actionPin` for the integer-pin slot pattern and `types/wb-widgets.md §Good -wb artifact doctrine` rule 11. `[ev: corpus B1079]`
+
 ---
 
 ## 3 · CSRF + secrets
@@ -134,6 +145,29 @@ try (SecretChars sc = SecretChars.of(plain)) {
 ```
 
 [ev: devguide security; corpus B507 §SEC-06]
+
+### 3.3 Credential header redaction in structured logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
+
+Redact `Authorization`, `X-Api-Key`, and similar credential headers **at every log level, including `FINEST`**. A cloud/HTTP connector that logs the full `HttpURLConnection` request properties at FINEST leaks Bearer tokens to the station log history:
+
+```java
+// WRONG — logs the Authorization header value at FINEST
+LOG.finest("request headers: " + conn.getRequestProperties());
+
+// CORRECT — redact before logging
+private static final Set<String> REDACT_HEADERS =
+    Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        "Authorization", "X-Api-Key", "X-Auth-Token")));
+
+Map<String, List<String>> safe = new LinkedHashMap<>();
+for (Map.Entry<String, List<String>> e : conn.getRequestProperties().entrySet()) {
+    safe.put(e.getKey(),
+             REDACT_HEADERS.contains(e.getKey()) ? Collections.singletonList("***") : e.getValue());
+}
+LOG.finest("request headers: " + safe);
+```
+
+The production log level is typically INFO, but a support engineer enabling FINEST for diagnostics must not accidentally capture credentials. Add this guard to any code that iterates HTTP headers or logs connection state. `[ev: corpus B1082]`
 
 ---
 

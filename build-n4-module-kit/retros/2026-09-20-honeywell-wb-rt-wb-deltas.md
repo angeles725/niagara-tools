@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · honeywell-wb-rt-wb-deltas
 
 **Session**: niagara-research focus `honeywell-wb` (B1077–B1083) — how Honeywell's own N4 modules (Spyder/Centraline/Galileo/EagleHawk/PlantController/cloudLinkSbp) build RT+WB. Synthesis B1083 recorded 20 proposed deltas; the 8 highest-value are folded here for build-n4-module, plus 5 anti-patterns to avoid.
