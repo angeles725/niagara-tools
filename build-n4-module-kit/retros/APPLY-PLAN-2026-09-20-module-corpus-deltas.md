@@ -23,8 +23,8 @@ failure-modes retro) are complete and committed; their Δ tokens are categorized
 | 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit / wb-vendor-ux wave-3 | 14 | pending |
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit / hardening REF cluster | 8 | pending |
 | **2026-09-20-module-hardening-failure-modes-deltas.md** | kit / hardening failure-modes | **16** | **pending review (retro COMPLETE + committed)** |
-| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit / hardening reqexec-closed (UXS1/UXS4/BLD7/RUN5/PER1) | 5 | pending (added 2026-09-20, see §4 addendum) |
-| **TOTAL (10 retros)** | | **112** | |
+| 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit / hardening reqexec-closed (UXS1/UXS4/BLD7/RUN5/PER1/PER4/PER7) | 7 | pending (added 2026-09-20, see §4 addendum) |
+| **TOTAL (10 retros)** | | **114** | |
 
 ---
 
@@ -234,6 +234,8 @@ worklist ranks (A1–C43) are unchanged.
 | B8 | PD-MH-BLD7 (Δ3) | B — SILENT/DEFERRED FAILURE | `types/distribution.md`; `types/issues-and-gotchas.md` | A missing signing alias on the default dev `LocalSigningProfile` AUTO-GENERATES a self-signed cert → build succeeds but the jar dies at station load (untrusted-cert ValidationException, BLD1); `RestrictedSigningProfile` fails the build. Deferred-failure trap; **pair with PD-MH-BLD1 (C-tier build-triage)** |
 | C44 | PD-MH-RUN5 (Δ4) | C — ACTIONABLE-CORRECTNESS | `types/driver-authoring.md` | configFatal is permanent until station restart (licensing/parentage only); configFail/readFail/writeFail are transient (cleared by configOk/readOk/writeOk). Driver-authoring reference card so `configFatal()` is not misused on transient faults |
 | C45 | PD-MH-PER1 (Δ5) | C — ACTIONABLE-CORRECTNESS + lint | `types/logic-authoring.md`; `lint/` candidate `dynamic-slot-orphan-prune` | No framework prune-orphans utility; a component adding dynamic slots must prune orphans in `started()`; non-transient orphans persist in `.bog` and reload (silent bloat). Lint candidate flags dynamic-slot add with no prune path |
+| C46 | PD-MH-PER4 (Δ6) | C — ACTIONABLE-CORRECTNESS | `types/logic-authoring.md` (schema-evolution) | Worked `started()` slot-migration recipe (closes B754-G2): detect orphan → copy → remove, idempotent; batch form snapshots first. Applied companion to C45 — **fold the two together** |
+| C47 | PD-MH-PER7 (Δ7) | C — DELIVERY/BOOT-RECOVERY | `types/distribution.md`; `types/issues-and-gotchas.md` | Station-stuck-at-boot recovery runbook via Platform Software Manager (station down): Downgrade/Uninstall/Import/Rebuild-Signatures → Commit; never File Transfer Client for modules. Delivery-side counterpart to B8/PD-MH-BLD7 |
 
 Addendum lessons:
 - **B8 (PD-MH-BLD7) is the highest-value new item** — it converts a "build looks clean" into a
