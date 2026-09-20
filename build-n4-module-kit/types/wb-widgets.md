@@ -399,4 +399,52 @@ WB-side complement to `types/driver-authoring.md §9.6`. The WB view layer for a
 - **Lazy-browse expansion:** implement a `TreeModel` whose `getChildCount(node)` and `getChildren(node)` methods call the driver via an `invokeLater`-guarded async fetch. Show a "Loading…" placeholder node until the response arrives.
 - **Security-gated state column:** add a `MgrColumn.Prop` for `securityState` with states `READY` / `FAULT` / `UNKNOWN`; render `FAULT` in red and disable write-action toolbar buttons when the state is not `READY`. The WB manager must enforce the gate — do not rely solely on the driver layer to refuse writes.
 
+---
+
+## -ux module JS toolchain reference `[ev: retro module-hardening-failure-modes-deltas Δ16]`
+
+A `-ux` module that authors its own AMD/RequireJS JavaScript (a bajaux `@AgentOn` view or a custom widget type-extension) uses the Niagara-standard JS toolchain. Raw `rc/` content without this toolchain requires **ES5** — see `types/dashboard.md §JS build strategy` (UXS2/B1119 ES6/ES5 decision).
+
+### Standard stack
+
+| Component | Role |
+|---|---|
+| **`grunt-niagara`** | Grunt task library — provides `babel:dist`, `copy:dist`, `requirejs`, `karma` tasks |
+| **Gradle `com.tridium.niagara-grunt` plugin** | Wires the Gradle build to `grunt`: `gruntBuild` task → runs grunt tasks in order |
+| **RequireJS/AMD** | Module loader at runtime — modules are referenced by `nmodule/<module>/rc/<path>` IDs |
+| **Babel** | ES6→ES5 transpilation (the `babel:dist` grunt task) |
+
+### Gradle wiring in `<mod>-ux.gradle.kts`
+
+```kotlin
+plugins {
+    id("com.tridium.niagara-module")
+    id("com.tridium.niagara-grunt")        // adds gruntBuild task
+}
+
+tasks.named<GruntBuildTask>("gruntBuild") {
+    tasks("babel:dist", "copy:dist", "requirejs")   // standard task order
+}
+```
+
+### RequireJS AMD module ID convention
+
+All `-ux` RC resources are addressed via RequireJS using the `nmodule/` prefix:
+
+```javascript
+// Inside a .js AMD module in this module's rc/ directory:
+define(["nmodule/mymod/rc/myWidget", "nmodule/bajaui/rc/bajaui"], function(myWidget, bajaui) {
+    // …
+});
+```
+
+`nmodule/<module>/rc/<path>` resolves to the jar's `rc/<path>` resource of the named module. Never use a bare relative path — it breaks across module boundaries.
+
+### When grunt IS required vs. when it must be removed
+
+- **Keep `niagara-grunt`** when: the module AUTHORS its own AMD modules (bajaux type-extension, custom widget with its own `.js` files that need `babel:dist` + `requirejs` bundling).
+- **Remove `niagara-grunt` entirely** when: the module only serves a pre-built static bundle (three.js, Chart.js, etc.) from `src/rc/` with no authored AMD modules — a leftover `niagara-grunt` dep adds a phantom `nodeHome` requirement and a no-op build step on every compile.
+
+See `types/dashboard.md §JS build strategy` for the full decision matrix. `[ev: corpus B1132]`
+
 [ev: corpus B1103]

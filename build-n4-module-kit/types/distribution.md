@@ -138,6 +138,35 @@ alias is present in the keystore before a release build.
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ3]`
 
+### Signature-failure triage pivot `[ev: retro module-hardening-failure-modes-deltas Δ10]`
+
+A `ClassNotFoundException` during module load frequently has a ROOT cause of `ValidationException` deeper in the log. When you see a `ClassNotFoundException` on a module class, **grep the station log for `ValidationException`** FIRST before diagnosing a missing class:
+
+| Log message | Root cause | Fix |
+|---|---|---|
+| `"No code signers found"` | jar is **unsigned** | sign the jar; check `requireSigning` in `niagara.signing.xml` |
+| `"Error validating cert path"` | signer cert is **not trusted** by the station | import the cert into the station's trust store, or use Rebuild Module Signatures in Platform Software Manager |
+
+**Triage pivot:** compare `moduleVerificationMode` across the failing station and a working station. If one is `low` (skip validation) and the other is `medium` or `high` (enforce trust chain), the failure is a trust mismatch, not a missing class. Fix the trust chain; do not lower the verification mode in production.
+
+---
+
+## 5b · `runtimeProfile` valid-set and corrupt-module trap `[ev: retro module-hardening-failure-modes-deltas Δ14]`
+
+`runtimeProfile` in `module.xml` (generated from `<MOD>-rt.gradle.kts` by the plugin) is a **Java enum** — `RuntimeProfile.valueOf(string)` parses it case-sensitively. The EXACT valid values are:
+
+| Value | Meaning |
+|---|---|
+| `rt` | real-time station profile |
+| `ux` | browser/HMI profile |
+| `wb` | Workbench profile |
+| `se` | service edition profile |
+| `doc` | documentation profile |
+
+**Silent failure mode:** an invalid or misspelled value (e.g. `"RT"`, `"runtime"`, `"wb-rt"`) causes `RuntimeProfile.valueOf()` to throw `IllegalArgumentException`; the manifest parser swallows it into `BModuleStatus.corrupt` — the **only visible symptom at station boot is "module corrupt"** with the typo cause buried in the log. Always grep the module-load log for `IllegalArgumentException` before concluding that a module is mysteriously corrupt.
+
+**Rule:** validate `runtimeProfile` in `module-include.xml` against the five exact lowercase values above before a production build. The Gradle plugin copies the string verbatim; it does NOT validate enum membership.
+
 ---
 
 ## 6 · BOG schema-safety matrix on module upgrade
@@ -173,6 +202,17 @@ Rule of thumb: **ADD, never retype.**
 ```
 
 `[ev: corpus B754 §754.5-754.7]`
+
+### Restore direction rule `[ev: retro module-hardening-failure-modes-deltas Δ9]`
+
+`verifyDependencies` is a **FLOOR check**: it validates that the installed module version is ≥ the manifest's declared minimum, NOT that the versions exactly match.
+
+| Restore direction | Result |
+|---|---|
+| OLDER `.dist` onto a NEWER station | **SAFE** — installed version ≥ manifest minimum; restore proceeds |
+| NEWER `.dist` onto an OLDER station | **FAILS** — installed version < manifest minimum; dependency check rejects the restore |
+
+**Rule:** deploy in the older-onto-newer direction only. Document the intended deploy direction in module release notes. Never validate restores in only one direction — a NEW `.dist` onto an OLD station is the typical field failure. `ignoreDependencies` bypasses the check (emergency use only; document why).
 
 ---
 

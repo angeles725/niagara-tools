@@ -84,6 +84,23 @@ A control whose authorization mixin or PIN slot is absent must be **DISABLED and
 
 A missing mixin ≠ "unprotected"; it equals "no access". See `types/wb-widgets.md §Integer visibilityPin/actionPin` for the integer-pin slot pattern and `types/wb-widgets.md §Good -wb artifact doctrine` rule 11. `[ev: corpus B1079]`
 
+### 2.4 `post()` drops the caller's RBAC context — always check permission before post() `[ev: retro module-hardening-failure-modes-deltas Δ4]`
+
+`BComponent.invoke(action, arg, context)` enforces permission via `checkInvoke` on the caller's `context` (operator = bit 4 `operatorInvoke`; admin = bit 64 `adminInvoke`; a null context skips the check and is **system-privileged**).
+
+**`post()` is DIFFERENT:** `post(action, arg)` enqueues the dispatch asynchronously. The enqueued invocation runs with **NO RBAC enforcement** — the caller's `Context` is dropped entirely. The dispatched action executes as system-privileged regardless of who posted it.
+
+**Security rule:** check the caller's permission yourself **before** calling `post()` for any action that requires `OPERATOR` or `ADMIN` authority. Pattern:
+
+```java
+// Before posting a privileged action
+Context cx = SessionManager.getCurrentNiagaraContext(); // or pass cx from the caller
+cx.checkPermission(BPermissions.operatorInvoke, myComponent, myAction);  // throws PermissionException if denied
+post(myAction, arg);  // safe to post after the check
+```
+
+Never rely on the framework to enforce RBAC across the `post()` boundary. This complements §1.1 (null-Context write hazard): that rule covers `set()`/`invoke()` with explicit null; this rule covers `post()` which implicitly drops context on every call.
+
 ---
 
 ## 3 · CSRF + secrets

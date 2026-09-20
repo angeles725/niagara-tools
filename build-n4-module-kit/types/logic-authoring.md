@@ -12,6 +12,21 @@
 - **TYPE-LEVEL SUBSCRIPTION (`TypeSubscriber`) — watch every instance of a type across the space:** to receive events for EVERY mounted instance of a `BComponent` subtype T (vs instance-depth `Subscriber` which watches one component tree): (1) subclass `TypeSubscriber`; constructor receives `ComponentSpace` — call `super(space)` and store it; (2) override `abstract void event(BComponentEvent)` to handle each event; (3) in `started()`, call `subscribe(new Type[]{T.TYPE}, cx)` — the framework validates `t.is(BComponent.TYPE)` (throws on a non-component type) and calls `space.subscribe(t, this)`; (4) call `unsubscribeAll()` in `stopped()`. `[ev: corpus B867 §867.2-3]`
 - **`TypeSubscriber` supertype-walk gotcha — subscribing to a BASE type catches ALL subtypes across the space:** `BComponentSpace.event()` recurses up `getSuperType()` — a `TypeSubscriber` on a BASE type (e.g., `BNumericPoint.TYPE`) catches ALL subtype instances' events across the ENTIRE space; subscribing to `BComponent.TYPE` = "watch everything" for the masked event-ids. Rule: be specific about the Type; profile event volume before subscribing to ANY framework base type; a too-broad base type causes a silent event flood with no compile-time warning. `[ev: corpus B867 §867.3]`
 - **`TypeSubscriber` event-mask gotcha — default `SELF_EVENTS` covers lifecycle ONLY, not value changes:** `BComponentEventMask.SELF_EVENTS` (= 1 701 888) covers component lifecycle event ids 11–20 (`parented`, `started`, `stopped`, …). It does **NOT** include `PROPERTY_CHANGED` (id = 0) or the `PROPERTY_EVENTS` set (mask 395 263). A default-mask `TypeSubscriber` receives **no** value-change callbacks. To receive value-change notifications, call `setMask(BComponentEventMask.PROPERTY_EVENTS)` (or compose masks with bitwise OR) before subscribing. Using the default mask while expecting value changes is a **silent miss**: compiles, passes the verify gate, never fires. `[ev: corpus B867 §867.4, B900 §900.1]`
+### Subscribe / unsubscribe symmetry rule `[ev: retro module-hardening-failure-modes-deltas Δ3]`
+
+Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or `unsubscribeAll()`) in `stopped()`. Omitting the teardown has three compounding effects:
+
+1. **Memory leak** — `subscribe()` holds a **bidirectional reference** between the observer and the watched component; neither can be GC'd while the reference exists.
+2. **Handler fires after removal** — the subscriber continues receiving events even after the component is removed from the station tree.
+3. **Duplicate subscriptions on re-enable** — each `started()` adds another subscription; `enable → disable → enable` stacks duplicate subscriptions with no error.
+
+**Preferred alternatives:**
+- Use `lease()` for a transient one-time read (self-manages its subscription; no teardown needed).
+- Prefer `BLink` for value propagation across slots (self-manages its subscription; correct by design).
+- Use `TypeSubscriber.subscribe(...)` / `unsubscribeAll()` (see §Author-side SPIs) when watching all instances of a type.
+
+**Lint candidate:** `subscribe-without-unsubscribe` — flag a `subscribe()` call in `started()` with no paired `unsubscribe()` or `unsubscribeAll()` in `stopped()` in the same class.
+
 - **`BEventService` routing — routing IS the Baja link graph, no imperative registry:** `BEventSource.routeTo(name, routable)` = `add(name, consumer)` + `linkTo(source.event → consumer.process)`. `BEventFilter` chains (consumer = process action, producer = event topic). `BEventRecipient` is terminal async delivery via `ThreadPoolWorker`. The event envelope is a uniform `BEvent` (uuid / timestamp / source ORD / open value). Cross-station delivery uses `BStationRecipient` (Fox `EventChannel`). `BComponentEventSource` wraps a `Subscriber.event(BComponentEvent)` into a `BEvent`; `BComponentTypeEventSource` uses `TypeSubscriber` internally — the event module is an OVERLAY on the B867 subscription primitives. **License required:** `tridium:eventService`. `[ev: corpus B873 §873.1-4]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
 
@@ -198,6 +213,24 @@ c.close();   // always close — leaks a resource if skipped
 
 - Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit via `BJobService.submit(job,cx)` and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]`
 
+### BJob submission safety rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
+
+`BJobs.submit(job, cx)` posts to a `ForkJoinPool` sized `availableProcessors × niagara.job.threadsPerCPU`. Violations:
+
+- **Never submit from a high-frequency callback (`changed()`, timer tick):** each submission drains one thread from the shared pool. A 1 s timer that submits a new job every tick can saturate the pool in seconds.
+- **`submit()` itself is an `invoke` action (RUN6 RBAC rule applies):** the job runs under the submitted context. If the caller uses `post()` to defer submission, the RBAC context is dropped (see `types/security.md §2` for the post()-drops-context rule).
+- **A saturated or shutting-down pool throws `RejectedExecutionException` as an unhandled `RuntimeException`** directly into the calling callback (the bare-callback death path — see logic.md §Tridium rt idioms). This exception is NOT a checked exception and is NOT caught by `catch(Exception)`.
+- **Wrap `submit()` in `try/catch(RejectedExecutionException)`** and log or surface the failure; do not let it escape to the engine thread.
+
+**Pattern:**
+```java
+try {
+    BJobService.submit(myJob, cx);
+} catch (RejectedExecutionException e) {
+    logWarning("job-submit rejected (pool saturated)", e);
+}
+```
+
 ## Watchdogs and timers
 
 - **Watchdog/monitor:** subclass `BAbstractAlarmMonitor` (override `doRunCheck()`/domain `checkX()` + `getToNormal/OffnormalText`; maintain `status`/`lastAlarmTime`; edge-latch via `raiseAlarm(...)`). Cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; distinguish from the native `EngineWatchdog` (engine/process heartbeat, a separate layer). `[ev: corpus B775]`
@@ -256,6 +289,7 @@ with a few module-specific rules:
    path as any production jar.  The station's `SecurityManager` enforces this; an unsigned or
    OEM-signed scheme is rejected at load time.
 
+- **Every class listed as a `<type>` in `module-include.xml` MUST carry `@NiagaraType`** (so Slotomatic generates `TYPE = Sys.loadType(…)`). A class listed as a `<type>` without `@NiagaraType` is caught at registry-build time with a named SEVERE: `"Missing Sys.loadType()"` — it is NOT a silent NPE, but it BLOCKS the module from loading at station start. Fix: add `@NiagaraType` to the class. `[ev: retro module-hardening-failure-modes-deltas Δ15]`
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
 
 ## New-type authoring checklists `[ev: corpus B4 §4.2.3 §4.2.7]`
@@ -720,6 +754,16 @@ Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
 3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
+
+### Lifecycle callback contract `[ev: retro module-hardening-failure-modes-deltas Δ2]`
+
+The full lifecycle callback contract for a `BComponent` subclass:
+
+- **`started()` / `stopped()` pair fires on BOTH enable/disable AND mount/unmount transitions.** A station start fires `started()`; a component enable fires `started()`; a component drop onto a running station fires `started()`. Both directions are symmetric: `stopped()` fires on component disable, on station stop, and on unmount.
+- **`save` (bog serialize) does NOT fire `stopped()` / `started()`** — a save writes the component to disk without touching the lifecycle. There is no `saving()` / `saved()` callback.
+- **`started()` runs on EVERY enable cycle, so it must be IDEMPOTENT.** It may run multiple times per station session (stop/start, enable/disable). Arm timers in exactly ONE place (`started()` only); do NOT use `atSteadyState()` as the sole arm point (see issues-and-gotchas.md §B1).
+- **Tear down in `stopped()` — match every acquire in `started()` with a release in `stopped()`:** cancel `Clock.Ticket`s, call `unsubscribeAll()`, release resources. If the acquire path in `started()` is conditional, make the release in `stopped()` unconditional (null-safe cancel).
+- **super order:** `super.started()` FIRST; cancel resources BEFORE `super.stopped()` (super LAST in stopped).
 
 ## Dynamic-slot lifecycle — orphan hygiene and schema migration
 
