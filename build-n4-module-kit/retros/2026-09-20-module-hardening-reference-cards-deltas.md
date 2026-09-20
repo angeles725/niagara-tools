@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · module-hardening-reference-cards-deltas
 
 **Session**: niagara-research focus `module-hardening` reference-card cluster + first failure-mode block (B1106–B1113, commits 90656597a..bad6661dc) — the complete BFacets key catalogue (REF3), BStatus 8-bit reference + isOk()/isValid() distinction (REF2), BQL function catalogue + custom-fn registration (REF1), BEnumRange authoring grammar + non-contiguous-ordinal gotcha (REF4), SlotPath slot-name grammar + escape rule (REF7), BRelTime wire-format = raw milliseconds (REF6), BFormat pattern language + FormatDenylist security note (REF5), and the framework try/catch wrapper boundary that silently rots timer state (RUN1).
