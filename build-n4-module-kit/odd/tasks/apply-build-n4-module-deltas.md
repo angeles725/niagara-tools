@@ -41,7 +41,7 @@ Per retro folded:
 - [x] T5 · module-hardening-reference-cards-deltas (8) → types/logic.md + logic-authoring.md — FOLDED (REF1-7 + RUN1), sweeps green.
 - [x] T6 · honeywell-wb-rt-wb-deltas (8) → wb-widgets/driver-authoring/security/logic-authoring/distribution/observability — FOLDED (8Δ), sweeps green.
 - [x] T7 · wb-vendor-ux-wave3-vendor-drivers-deltas (14) → driver-authoring §9, wb-widgets, security §9, issues H1 — FOLDED (14Δ), sweeps green.
-- [ ] T8 · module-hardening-failure-modes-deltas (16) → types/logic-authoring.md, distribution.md, issues-and-gotchas.md, lint candidates
+- [x] T8 · module-hardening-failure-modes-deltas (16) → logic.md, logic-authoring.md, security.md, distribution.md, issues-and-gotchas.md, wb-widgets.md — FOLDED (16Δ RUN/PER/BLD/UXS6 + lint candidates), sweeps green.
 - [ ] T9 · apillm-headless-servlet-rt-4.14-deltas (24) → types/security.md, structure.md, lint-servlet
 - [ ] T10 · wb-vendor-ux-rt-wb-pattern-deltas (25) → types/security.md, driver-authoring.md, wb-widgets.md
 

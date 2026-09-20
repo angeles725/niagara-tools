@@ -207,6 +207,30 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
 `gradle.properties niagara_home`.  Changing the SDK requires a matching plugin version change.
 [ev: corpus B1016 §1016.2] — **Kit coverage: n4-client-build-config-standard Δ2 (PENDING)**
 
+### D4c · Split-package first-dependency-wins silent shadow `[ev: retro module-hardening-failure-modes-deltas Δ12]`
+
+**Symptom:** a class from module B is silently replaced by a same-named class from module A; no error or warning is logged; behavior differs between stations with different module deployment orders.
+
+**Root cause:** N4 is **NOT OSGi** — there is no package-level isolation between modules. When the same Java package (e.g. `com.vendor.common`) appears in two modules (A-rt and B-rt), the `ModuleClassLoader` uses **first-dependency-wins** (resolved by declaration order in `module.xml` + a `lastModuleScanned` cache). The second module's version of any class in that package is **silently shadowed** — no error, no warning, no diagnostic.
+
+**Rule:** one Java package belongs to exactly one module. If a class must be shared, put it in a dedicated shared module and list it as a dependency (`nre()` dep), never copy it into two modules.
+
+**Lint candidate:** `split-package-check` — flag a Java package name that appears in `module-include.xml` (or `src/…` source trees) of more than one module in the same project.
+
+[ev: corpus B1125] — **Kit coverage: see types/structure.md `module-include.xml` authoring**
+
+### D4b · Bytecode version > Java 8 (major > 52) → raw `UnsupportedClassVersionError` bypasses catch(Exception) `[ev: retro module-hardening-failure-modes-deltas Δ11]`
+
+**Symptom:** station log shows `UnsupportedClassVersionError: Unsupported major.minor version` on module load; no `Exception` is caught by the module's own error handlers; the module fails to load entirely. The build succeeds with no warning.
+
+**Root cause:** N4's `ModuleClassLoader` does NOT wrap `UnsupportedClassVersionError`. This error is a `LinkageError` (extends `Error`, NOT `Exception`) — `catch(Exception)` does not catch it. Any class compiled with Java 9+ (major ≥ 53) in the module jar or in a bundled ext-jar triggers this error at class-load time. A module compiled at Java 8 (major 52) that bundles a third-party ext-jar compiled at Java 11+ (major 55) fails the same way.
+
+**Fix:** pin `sourceCompatibility = JavaVersion.VERSION_1_8` (major 52) in the module's `build.gradle.kts`. For bundled ext-jars: verify the class-file major version of each bundled jar (`javap -verbose <path>/Foo.class | grep major`) before bundling. Reject any bundled jar with major > 52.
+
+**Lint candidate:** `bundled-jar-class-version` — check the class-file major version of every bundled ext-jar in `src/`, not just the module's own compiled classes.
+
+[ev: corpus B1124] — **Kit coverage: see distribution.md §7 `sourceCompatibility`**
+
 ### D4 · `LocalSigningProfile` auto-generates a dev cert on missing alias → silent station load failure
 **Symptom:** `gradlew build` succeeds and the jar is signed, but the station rejects the module at
 load time with a `ValidationException` (BLD1 trust failure).  No build error.
@@ -275,6 +299,16 @@ it copies raw bytes without applying runtime profiles or signing chains, produci
 BLD1 trust failure on next boot even with a correct JAR.
 [ev: corpus B1139] — `[ev: retro module-hardening-reqexec-closed-deltas Δ7]` —
 **Kit coverage: types/distribution.md §10 (FOLDED)**
+
+### G2 · wb-profile component in an rt-station .bog → silently dropped or load failure `[ev: retro module-hardening-failure-modes-deltas Δ7]`
+
+**Symptom:** a component that works in Workbench is missing from the station tree after a cross-target deploy or restore; no error is shown to the operator; the station appears healthy.
+
+**Root cause:** a component whose type belongs to a `wb`-profile (or `ux`/`se`-only) module is loaded by an `rt`-station's BOG decoder. The `rt` station does not have the `wb` module installed. The decoder either (a) SILENTLY DROPS the element (logs at FINE — not visible in default log level) or (b) fails the ENTIRE station load with `failFast` enabled. `BOnMissingType` does NOT stub wb-profile components — they are simply absent.
+
+**Fix:** keep all components that must exist on an rt station in `rt`-profile modules. Before a cross-target deploy (rt station ← wb-authored bog), verify that every component type in the bog is present on the target station. Use `bog-nav types` to enumerate component types in the bog and cross-check against the target station's installed modules.
+
+**Lint candidate:** `cross-target-profile-component` — flag a component in a `.bog` destined for an rt station whose module declares a non-`rt` runtimeProfile.
 
 ---
 

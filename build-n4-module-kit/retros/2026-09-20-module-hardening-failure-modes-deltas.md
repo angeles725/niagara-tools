@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · module-hardening-failure-modes-deltas
 
 **Session**: niagara-research focus `module-hardening` failure-mode blocks B1114–B1132 (commits bad6661dc..eb43f2b9e) — the complete RUN/PER/BLD/UXS failure-mode sub-series: changed() synchronous re-entrancy (RUN2), lifecycle callback contract (RUN3), subscriber leak (RUN4), post()-drops-RBAC-context (RUN6), ForkJoinPool job saturation (RUN7), dangling-link silent degradation (PER2), wb-profile component drop on rt station (PER3), BConversionLink stale converter (PER5), restore floor semantics (PER6), signature-failure ClassNotFoundException/ValidationException pivot (BLD1), bytecode-version UnsupportedClassVersionError (BLD2), split-package first-dep-wins shadow (BLD3), Slotomatic verbatim-expression gotcha (BLD4), runtimeProfile corrupt-module trap (BLD5), `<type>`-without-@NiagaraType SEVERE (BLD6), and the -ux JS toolchain reference (UXS6). B1113 (RUN1, framework wrapper boundary) was covered in the preceding retro (`module-hardening-reference-cards-deltas`, Δ8 = PD-MH-RUN1).
