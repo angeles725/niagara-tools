@@ -278,5 +278,107 @@ device template files are bundled inside the jar under `rc/` and served at runti
 
 ---
 
+---
+
+## 9 · Vendor/platform driver reference patterns (wave-3 survey)
+
+Reference archetypes from obixDriver, lonworks, honBACnetUtilities, niagaraDriver, mbus, and opc modules. Our own modules stay at rung 0–1; these sections exist for scope discussions and as copy references only.
+
+### 9.1 · oBIX driver vs. servlet — local-export-discover idiom [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ1]
+
+**Driver vs. servlet decision:** use the Network/Device/ProxyExt driver pattern for bidirectional telemetry where the external system initiates reads/writes and the driver provides subscription + polling. Use a `BWebServlet` / SPA when you need a browser-facing UI on top of data that already lives in the station.
+
+**Local-export-discover idiom** (pushing local N4 data outward, e.g. oBIX export): resolve the `slot:/` ORD to the station component space, then filter children by `BIWritablePoint` to discover exportable points. Iterate the filtered set to build the export payload; no separate Network subclass is needed for a pure-export path.
+
+```java
+// Resolve local station space and collect all writable points for export
+BOrd root = BOrd.make("slot:/");
+BComponent space = (BComponent) root.get(cx);
+for (BObject child : space.getChildObjects()) {
+    if (child instanceof BIWritablePoint) {
+        BIWritablePoint wp = (BIWritablePoint) child;
+        // push wp.getOut() to the external system
+    }
+}
+```
+
+Separate the discovery walk from the push loop — discovery is a one-time enumeration; push is per-cycle. [ev: corpus B1094]
+
+### 9.2 · LonWorks — NV-binding UX is not a point list [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ2]
+
+LonWorks commissioning requires three **distinct** manager patterns — do NOT collapse them into a single point-list table:
+
+| Phase | Pattern |
+|-------|---------|
+| **XIF/LNML typing** | Load the `.xif` / `.lnml` descriptor; type each network variable (NV) from the device template, not from a live poll. A manager that shows raw poll values before typing is misleading. |
+| **Changeable-NV discovery** | Some NV slots are dynamically changeable; a separate Discover manager enumerates them from the device and lets the user bind them. |
+| **Service-pin commissioning** | Physical button press on the device triggers a service-pin message; the manager listens for this event to associate the node address — not a scripted API call. |
+
+NV-binding UX is a separate workflow from point-list monitoring. Merging them into one manager produces a table that is either incomplete (pre-typing) or misleading (post-typing polluted by unbound NVs). [ev: corpus B1095]
+
+### 9.3 · OEM-on-stock-driver patterns (honBACnetUtilities) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ3]
+
+When building an OEM module on top of a stock Tridium driver (e.g. the stock BACnet driver), four patterns avoid duplicating the stock driver's architecture:
+
+| Pattern | Mechanism |
+|---------|-----------|
+| **Type-float slot** | Add a `@NiagaraProperty BTypeSpec deviceModel` slot to the device subclass; the WB manager reads this slot to determine which OEM device-model plugin to activate — enables polymorphic behaviour without a Manager subclass per device family. |
+| **Two-anchor manager mount** | The shared manager container registers two `@AgentOn` anchors: one on the stock base type (e.g. `bacnet:BacnetDevice`) and one on the OEM type; only the OEM anchor activates OEM columns/commands. |
+| **Dual FE registration** | The OEM module registers its own `BWbFieldEditor` on the OEM slot type; the stock FE remains registered on the stock slot type. Both coexist without conflict — Workbench dispatches by the exact type match. |
+| **ORD-carrier navigation** | ORDs that carry a type annotation (`ord|view:module:MyView`) let the WB tree navigate directly to the OEM view for devices that match the OEM type spec, without touching the stock driver's navigation. |
+
+See also `types/wb-widgets.md §Plugin-extensible device-type manager via SPI` for the complementary WB-side pattern. [ev: corpus B1096]
+
+### 9.4 · Command-driven manager SPI — BStationMgrCommand registry discovery [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ4]
+
+`BStationMgrCommand` is a registry-discovered command SPI for adding toolbar commands to a station-navigation manager (e.g. the Drivers Manager). Key points:
+
+- Implementers register via a plain `<type>` in `module.xml`; the framework discovers all registered `BStationMgrCommand` implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()` — no static registration call required.
+- **Session-keyed learn state:** each learn session holds its progress in a per-session map keyed by `Context.getSessionId()`. On manager close/reopen the session key is different; old state is GC'd automatically. Do NOT use a static map for session learn state — it causes cross-session contamination.
+- **Offline `.bog` guard:** before executing any command that modifies the station model, check `Sys.isOnline()` / `BStation.isRunning()`. Commands that run against an offline `.bog` snapshot must be read-only; write-mode operations must be gated with a "Station must be running" error.
+- **`CredentialsColumn` lease + `newCopy`:** when a manager column carries credentials, call `column.getCredentials().lease()` to get a snapshot and `snapshot.newCopy()` to produce a safe copy for the background thread — never hold a reference to the live `BCredentials` object across a thread boundary.
+- **Shorthand `HistoryId`:** use `BHistoryId.make(stationName, historyName)` rather than constructing the ORD string manually; the shorthand handles the namespace separator rules correctly across Fox links.
+
+[ev: corpus B1097]
+
+### 9.5 · Field-bus protocol driver archetype — dual-addressing discovery wizard (M-Bus) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ7]
+
+M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard** — a two-phase discovery manager that handles both address spaces:
+
+| Phase | Address type | Range | Manager pattern |
+|-------|-------------|-------|----------------|
+| **Primary scan** | Primary address (1 byte, 0–250) | Linear; one request per address | Progress bar; abort on first valid response per address |
+| **Secondary scan** | Secondary address (8 bytes: manufacturer + ident + medium + version) | 2³² filtered bitmask walk | Wildcarded broadcast; narrows on each confirmed response |
+
+Additional patterns for field-bus protocol drivers:
+- **Multi-baud scan:** the wizard must iterate across supported baud rates (300/600/1200/2400/4800/9600) if the device baud rate is unknown at commissioning; cache the confirmed baud on the device component.
+- **Manufacturer-specific data model:** `DataRecord` (DIF + VIF + data) is decoded differently per manufacturer extension code; keep the decoder table in a separate `ManufacturerDecoder` registry, not inlined in the proxy ext — this allows new manufacturer codes to be added without touching the polling path.
+- **Hardcoded-facet lint candidate:** when a history import assigns `facet precision=4` independently of the proxy point's `-exponent` facet, the two can diverge silently. Flag this mismatch in import-learn flows (see `types/issues-and-gotchas.md §H1` for the proposed lint). [ev: corpus B1100]
+
+[ev: corpus B1100]
+
+### 9.6 · Protocol-adapter manager — action-slot bridge and structured error decode (OPC) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ10]
+
+OPC and similar protocol-adapter drivers expose three recurring WB patterns that differ from standard BACnet/Modbus drivers:
+
+**Action-slot bridge:** OPC items are exposed as Niagara action slots rather than as proxy points; invoking the action calls the underlying COM/native OPC operation. Keep the COM/native error handling inside the driver layer — never let `COMException` or `NativeException` propagate to the WB view. Decode the HRESULT/native error code into a Niagara `BFacets` display string before reporting to the manager.
+
+```java
+// Inside the driver comm layer — structured COM error decode
+try {
+    opcServer.write(itemId, value);
+} catch (COMException e) {
+    String decoded = OpcErrorDecoder.decode(e.getHResult()); // map HRESULT → human string
+    throw new DriverException("OPC write failed: " + decoded); // stripped of COM type
+}
+// WB view receives only DriverException — no COM imports needed in -wb
+```
+
+**Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. Implement `isLeaf(node)` and `getChildren(node)` on demand (on node expand only); cache expanded nodes in a `WeakHashMap` keyed by node path.
+
+**Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. Model this as a distinct `SECURITY_FAULT` status separate from `COMM_FAULT` — display a locked-padlock column in the manager and gate write actions on `isSecurityReady()`. The WB manager must never expose a write path when the security state is not fully resolved. [ev: corpus B1103]
+
+---
+
 **See also:** `types/logic.md` (BStatus bits, BControlPoint), `types/logic-authoring.md`
 (§Authoring a driver — write-path safety checklist, writeOnUp/fallback lints).
