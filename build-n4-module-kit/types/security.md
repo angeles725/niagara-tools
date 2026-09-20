@@ -368,5 +368,40 @@ if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
 
 ---
 
+---
+
+## 9 · Credential digest strength — prefer SHA-256+ over MD5 [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ13]
+
+When a Niagara module stores a credential digest (e.g. a password hash, a PIN hash, or a device challenge-response seed) inside its own component slots or configuration files, use **SHA-256 or stronger**. MD5 is broken for collision resistance and must not be used for credential storage.
+
+**Observed pattern to avoid (honAdvWirelessCfg, corpus B1104):** the WB Platform-tab credential storage computes an MD5 digest of the credential string and stores it as a hex slot value:
+```java
+// WRONG — MD5 is not suitable for credential storage
+MessageDigest md = MessageDigest.getInstance("MD5");
+byte[] digest = md.digest(credential.getBytes(StandardCharsets.UTF_8));
+// ... store hex(digest) in a slot
+```
+
+**Correct pattern — SHA-256 with a random salt:**
+```java
+// CORRECT — SHA-256 with a random 16-byte salt
+SecureRandom rng = new SecureRandom();
+byte[] salt = new byte[16];
+rng.nextBytes(salt);
+MessageDigest sha = MessageDigest.getInstance("SHA-256");
+sha.update(salt);
+byte[] digest = sha.digest(credential.getBytes(StandardCharsets.UTF_8));
+// store Base64(salt) + ":" + Base64(digest) in the slot
+```
+
+If the protocol requires a specific digest algorithm (e.g. a device that mandates MD5 for its own challenge), isolate that to the comm layer and do NOT reuse MD5 for any in-station storage. Document the protocol constraint as a known limitation.
+
+**Proposed lint check** (not yet in `toolbelt/`):
+- `no-md5-credential-digest` — flag `MessageDigest.getInstance("MD5")` in a module that also contains `BPassword`, `BCredentials`, or slot names matching `*password*` / `*credential*` / `*pin*`.
+
+**See also:** `types/security.md §3.2` (`BPassword` safe handling), `types/issues-and-gotchas.md §H1` (precision-consistency lint). [ev: corpus B1104]
+
+---
+
 **See also:** `types/actions.md` §3 (ADMIN_INVOKE flag), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).

@@ -14,6 +14,7 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 - **Rung-2 has two authoring recipes — pick by context:** (a) **Tridium subclass recipe** — extend `BAbstractManager`/`BDeviceManager`, override `makeModel`/`makeController`/`makeLearn` (`BDriverManager.java:33-85`); use for a standalone driver that owns its own Manager container. (b) **Honeywell device-model PLUGIN recipe** — implement only `BIHonDeviceModel` (or `BIHonBacnetDeviceModel`); the plugin contributes columns, supported models, and commands (`BThermostatDeviceModel.java:22-53`); the shared `HonDeviceModel` framework (`HonDeviceModel.java:23`) discovers plugins from the registry — **zero Manager subclass code**. Prefer (b) for a device-family module that slots into an existing Manager framework; prefer (a) only when no shared framework exists. [ev: corpus B751 §751.3]
 - **FieldEditor recipe (rung 1):** ctor builds the widgets → `linkTo(widget, textModified, setModified)` → override `doLoadValue`/`doSaveValue`/`doSetReadonly`; compose child editors via `BWbFieldEditor.makeFor(value)`; register with `@AgentOn(<that value type>)`. [ev: retro corpus-index · B751]
 - **A Honeywell "Wizard" is usually a tabbed `BWbComponentView`, not a `BWizard`:** step-panes = tabs, backed by rt `BJob`s launched from an agent `BMenu`. Always mutate through the space (`newTransaction` / `tx.commit`); undo is inherited from the space, never hand-rolled. [ev: retro corpus-index · B751]
+- **Rung 4+ (reference ceiling — do NOT imitate):** a "vendor programming environment" tier exists above rung 3 in the Honeywell `ace` module: own wire sheet + app wizard + catalog palette + opcode expression editor. This is the ceiling of the rung ladder, documented here as a concrete upper bound for scope and code-review discussions. Our modules stay at rung 0–1. Reaching rung 4 implies owning a custom Baja domain language runtime — not a practical target for our use cases. `[ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ5]` `[ev: corpus B1098]`
 
 ## wb/model testable seam — exemplar-backed
 
@@ -260,3 +261,142 @@ PX files are XML authored in the Workbench PxEditor, shipped as module resources
 See also: `types/dashboard.md §serving recipe` for the PX-vs-servlet decision and the PX complement use case.
 
 See also: `docs/module-best-practices.md` (rt/ux/wb do & don't).
+
+---
+
+## WB view-target taxonomy — three axes [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ12]
+
+The wave-3 survey (B1094–B1105) identified a second axis that extends the rung ladder: **where** the WB view is anchored, not just how complex it is. Three named targets:
+
+| Target axis | `@AgentOn` anchor | Lifecycle / contract | Typical `@NiagaraType` base |
+|-------------|-------------------|----------------------|-----------------------------|
+| **station-component / driver** | A `BComponent`, `BNetwork`, `BDevice`, or `BService` subclass in the station component space | Opened from the Workbench Nav tree; participates in the normal station lifecycle | `BWbComponentView`, `BAbstractManager`, `BWbFieldEditor` |
+| **platform-service-plugin** | A `platform:*Service` agent (e.g. `PlatformServiceAgent`) resolved via `@AgentOn` | Opened from the **Platform tab**; accesses the Platform daemon via `poll`/`lease`/`savePlatformServiceProperties` — NOT the station daemon | `BPlatformServiceView` or equivalent |
+| **platform-daemon-file** | A `BDaemonSessionView` with a `DaemonFileUtil` file-push contract | Opened from the **Platform tab** alongside the platform-service-plugin; pushes files to the host OS via the Platform daemon; feature tabs are NRE-version-gated | `BDaemonSessionView` |
+
+This taxonomy extends B751's rung ladder with a second "target" axis — ladder rung says HOW MUCH WB, target axis says WHERE. All three targets can appear at any rung (rung 1 FE or rung 2 Manager). [ev: corpus B1105]
+
+### PlatformServicePlugin WB view target [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ6]
+
+`PlatformServicePlugin` is a distinct WB view-target pattern for Platform-tab integration. It differs from the station-component pattern:
+
+- **`@AgentOn` anchor:** the platform service agent (`platform:*Service`) — NOT a `BComponent` in the station space.
+- **API contract:** the view must implement `poll()` (one-shot data refresh from the platform daemon), `lease()` (keep-alive while the view is open), and optionally `savePlatformServiceProperties()` (write config back to the daemon).
+- **No station-space writes:** mutations go through the Platform daemon pathway, not through `BComponent.set()` with a station Context.
+- **Commissioning note:** the Platform tab is only accessible when connected to the Platform node (not the station node); views registered here are invisible when connected to the station node only.
+
+```java
+// Skeleton — platform service view that polls the daemon for status
+@NiagaraType(agent = @AgentOn(types = {"platform:MyPlatformService"}, requiredPermissions = "r"))
+public class BMyPlatformServiceView extends BWbComponentView {
+    @Override public void doLoadValue(BObject value, Context cx) {
+        poll();   // fetch current state from the platform daemon
+    }
+    private void poll() { /* call platform daemon API, update widgets */ }
+    private void lease() { /* keep-alive ping to the daemon while the view is open */ }
+}
+```
+
+[ev: corpus B1099]
+
+### Platform-daemon-file WB view target — BDaemonSessionView [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ11]
+
+The `BDaemonSessionView` + `DaemonFileUtil` pair is the Niagara Platform pattern for pushing host-OS configuration files from the WB Platform tab:
+
+- **`BDaemonSessionView`** opens a session to the platform daemon and provides an API to read/write files on the host OS (not in the station BOG).
+- **`DaemonFileUtil.pushFile(session, localFile, remotePath)`** copies a local temp file to the host OS path via the daemon session — the correct path for config files that live outside the station (e.g. `/etc/network/interfaces`, driver license files).
+- **NRE-version-gated feature tabs:** when a feature requires a minimum NRE version, check `Sys.getNiagaraVersion()` at tab-render time and call `tab.setEnabled(false)` + tooltip explanation if the version is insufficient. Never silently hide tabs — always explain why they are disabled.
+
+```java
+// NRE-version gate on a Platform tab
+Version minVersion = Version.make("4.14.0");
+if (Sys.getNiagaraVersion().compareTo(minVersion) < 0) {
+    advancedTab.setEnabled(false);
+    advancedTab.setToolTipText("Requires Niagara 4.14 or later");
+}
+```
+
+**Security note:** `BDaemonSessionView` carries MD5-digested credential storage in the `honAdvWirelessCfg` reference module (corpus B1104). When implementing a daemon-file view that stores credentials, use SHA-256 or stronger (see `types/security.md §9`). [ev: corpus B1104]
+
+### OEM-on-stock-driver WB side notes [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ3]
+
+For the full OEM-on-stock-driver pattern (type-float slot, two-anchor manager mount, dual-FE registration, ORD-carrier navigation), see `types/driver-authoring.md §9.3`. WB-specific notes:
+
+- **Dual-FE registration** is safe: Workbench dispatches by the exact `BTypeSpec` match; the OEM FE and the stock FE coexist without conflict as long as the OEM FE is `@AgentOn` the OEM type (not the stock base type).
+- **Two-anchor manager mount:** register the shared OEM manager with `@AgentOn(types={"bacnet:BacnetDevice", "myOem:MyOemDevice"})` — the framework opens the OEM manager for both; the type-float slot discriminates which OEM plugin activates.
+- **ORD-carrier navigation:** `ord|view:myOem:MyOemDeviceView` in a `<b-hyperlink>` PX widget opens the OEM view only for devices whose type matches `myOem:MyOemDevice`; the stock view remains active for untyped BACnet devices.
+
+[ev: corpus B1096]
+
+### Session-keyed learn state in command-driven managers [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ4]
+
+For the full `BStationMgrCommand` command SPI (registry discovery, CredentialsColumn lease+newCopy, HistoryId shorthand), see `types/driver-authoring.md §9.4`. WB-specific note for session-keyed state:
+
+The `Static State for manager view continuity` pattern (see `§Static State` above) applies to **domain state that must survive a close/reopen**. For **learn/discovery state scoped to one session**, use a session key instead:
+
+```java
+// Per-session learn state — cleared automatically when the session ends
+private static final Map<String, LearnState> SESSION_STATES =
+    Collections.synchronizedMap(new WeakHashMap<>());
+
+private LearnState getLearnState(Context cx) {
+    return SESSION_STATES.computeIfAbsent(cx.getSessionId(), k -> new LearnState());
+}
+```
+
+`WeakHashMap` keyed by session ID allows old sessions to be GC'd without an explicit cleanup hook. Do NOT use a `HashMap` with no eviction — it leaks one `LearnState` per Workbench session. [ev: corpus B1097]
+
+### Thin non-driver CRUD manager template — SNMP pattern [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ8]
+
+When a **service** (not a driver) needs a table-manager CRUD view with credential support, the nSnmp module (~50–70 lines) is the reference archetype. It is smaller than the `BAbstractManager` non-driver template (`wb-widgets.md §Minimal non-driver custom-manager template`) because it needs no Discover:
+
+Key structural rules:
+- `@AgentOn` the service type (not a network or device).
+- Use `MgrColumn.Prop` only — no `MgrColumn.PropPath`, no discover columns.
+- Credential variant: add a `BPassword` prop column; in `MgrEdit.validate()` check `BPasswordStrength.DEFAULT` — reject credentials that do not meet the minimum strength:
+
+```java
+// Inside MgrEdit.validate() — credential strength check
+BPassword pw = (BPassword) record.get(passwordProp);
+if (!BPasswordStrength.DEFAULT.isSatisfiedBy(pw)) {
+    throw new ValidationException("Password does not meet minimum strength requirements");
+}
+```
+
+- `isLearnable() = false`, `makeLearn() = null`.
+- Override `getNewTypes()` to restrict the allowed row type to the credential record type.
+
+The ~50–70 line target is achievable only if column definitions and the MgrModel inner class are kept flat. Split into a separate `MgrModel` inner class as soon as it exceeds 3 columns. [ev: corpus B1101]
+
+### Multi-perspective managers over one object graph [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ9]
+
+The Z-Wave module (corpus B1102) demonstrates the **multi-perspective manager** pattern: two or more `BAbstractManager` subclasses that present DIFFERENT VIEWS over the SAME underlying object graph (the `BZWaveNetwork` device subtree).
+
+Key design rules for this pattern:
+
+- **One source of truth:** all managers read and write the SAME `BZWaveDevice` components in the station space. Never duplicate data across manager-local state and the component tree.
+- **Firmware-capability-gated columns:** show/hide manager columns based on a per-device capability flag (e.g. `device.supportsSecureCommands()`). Implement gating in `MgrModel.getColumnCount()` and `MgrModel.getColumnAt(i)` — return a shorter column array when the capability is absent. Never show a column that the device cannot support.
+- **Raw-payload byte FE:** for columns that carry raw byte-array payloads (e.g. Z-Wave command-class data), register a custom `BWbFieldEditor` for `BByteArray` (or equivalent) that renders the bytes as hex with a length counter. Keep the byte FE in the `-wb` profile; never decode raw command-class data in the rt.
+- **Device power-state column:** expose `devicePowerState` (mains / battery / unknown) as a dedicated `MgrColumn.Prop` with a custom `MgrCellRenderer` that renders a battery/plug icon. This column is always present regardless of firmware capability — power state is never gated.
+
+```java
+// Firmware-capability-gated column in MgrModel
+@Override public int getColumnCount() {
+    return device.supportsSecureCommands() ? FULL_COLUMNS.length : BASE_COLUMNS.length;
+}
+@Override public MgrColumn getColumnAt(int i) {
+    return device.supportsSecureCommands() ? FULL_COLUMNS[i] : BASE_COLUMNS[i];
+}
+```
+
+[ev: corpus B1102]
+
+### OPC WB view layer — action-slot bridge and structured error display [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ10]
+
+WB-side complement to `types/driver-authoring.md §9.6`. The WB view layer for a protocol-adapter manager must:
+
+- **Never import COM/native types.** The `-wb` jar must not reference `COMException`, `NativeException`, or any native-interop class. All COM/native error decode happens in the driver `-rt` layer; the WB view receives only a `DriverException` (or equivalent `BException`) with a human-readable message.
+- **Lazy-browse expansion:** implement a `TreeModel` whose `getChildCount(node)` and `getChildren(node)` methods call the driver via an `invokeLater`-guarded async fetch. Show a "Loading…" placeholder node until the response arrives.
+- **Security-gated state column:** add a `MgrColumn.Prop` for `securityState` with states `READY` / `FAULT` / `UNKNOWN`; render `FAULT` in red and disable write-action toolbar buttons when the state is not `READY`. The WB manager must enforce the gate — do not rely solely on the driver layer to refuse writes.
+
+[ev: corpus B1103]

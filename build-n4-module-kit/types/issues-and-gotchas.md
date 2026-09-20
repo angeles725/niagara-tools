@@ -275,3 +275,23 @@ it copies raw bytes without applying runtime profiles or signing chains, produci
 BLD1 trust failure on next boot even with a correct JAR.
 [ev: corpus B1139] — `[ev: retro module-hardening-reqexec-closed-deltas Δ7]` —
 **Kit coverage: types/distribution.md §10 (FOLDED)**
+
+---
+
+## H — Driver / import-learn
+
+### H1 · Import-learn precision-facet mismatch → silent history value skew [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ14]
+**Symptom:** imported history records display values with a different number of decimal places than the live proxy point; no error is logged; the mismatch is visible only by comparing the history view with the point's live value.
+**Root cause:** the history import hardcodes `facet precision=N` (e.g. `precision=4` for M-Bus meter values) independently of the proxy point's `-exponent` facet (e.g. `-exponent=2`). When the two diverge, the history renders at a different precision than the live value — a silent skew. The M-Bus `mbus` driver (corpus B1100) is the observed instance: `precision=4` history vs. proxy `-exponent` mismatch.
+**Fix:** in a `BHistoryImport` subclass or the `BHistoryDeviceExt` learn path, derive the history precision from the same source as the proxy ext's exponent facet:
+```java
+// Derive history precision from the proxy ext's exponent facet — keeps them in sync
+BNumericPoint proxy = (BNumericPoint) getParent();
+int exponent = proxy.getFacets().getInt(BFacets.UNITS_EXPONENT, 0);
+int precision = (exponent < 0) ? -exponent : 0;  // exponent=-2 → precision=2
+BFacets histFacets = BFacets.make(BFacets.PRECISION, BInteger.make(precision));
+histImport.setFacets(histFacets);
+```
+**Proposed lint check** (not yet in `toolbelt/`):
+- `precision-facet-learn-mismatch` — flag a `BHistoryImport` subclass that hardcodes `BFacets.PRECISION` to a literal integer without reading the parent proxy ext's `UNITS_EXPONENT` facet.
+[ev: corpus B1100] — **Kit coverage: none (lint candidate; actionable for mbus/field-bus drivers)**

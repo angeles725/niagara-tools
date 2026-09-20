@@ -164,7 +164,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-20-wb-manager-framework-deltas.md | kit | 2026-09-20 | folded | 4 |
 | 2026-09-20-wb-field-editors-deltas.md | kit | 2026-09-20 | folded | 3 |
 | 2026-09-20-our-dashboard-audit-deltas.md | kit | 2026-09-20 | folded | 5 |
-| 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit | 2026-09-20 | pending | 14 |
+| 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit | 2026-09-20 | folded | 14 |
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit | 2026-09-20 | folded | 8 |
 | 2026-09-20-module-hardening-failure-modes-deltas.md | kit | 2026-09-20 | pending | 16 |
 | 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit | 2026-09-20 | folded | 7 |

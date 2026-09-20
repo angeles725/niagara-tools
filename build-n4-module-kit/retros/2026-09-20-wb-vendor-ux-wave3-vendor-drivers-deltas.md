@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · wb-vendor-ux-wave3-vendor-drivers-deltas
 
 **Session**: niagara-research focus `wb-vendor-ux` wave-3 (B1094–B1105) — survey of 11 vendor/platform `-wb` modules not covered by wave-1/2 (obixDriver, lonworks, honBACnetUtilities, niagaraDriver, ace, platPower, mbus, nSnmp, zwave, opc, honAdvWirelessCfg) plus the B1105 synthesis that emitted the consolidated PD-WV3-* table and the WB target taxonomy. Commits 6da8005..e9bc8b2 on main.
