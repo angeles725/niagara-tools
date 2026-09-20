@@ -31,6 +31,16 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 **Gotcha:** `BBasicNetwork` ships **no TCP transport**. TCP is each driver's own `Comm` subclass.
 [ev: corpus B517 §517.5]
 
+### 1.3 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
+
+When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()`.
+
+- Each SPI implementer declares `getSupportedModelSpecs()`, `createColumns()`, and `createCommands()`.
+- Register via a plain `<type>` in `module.xml` — no `@AgentOn`.
+- Prefer this over a Manager subclass when the manager framework already exists and you are contributing a new device-family module on top of it.
+
+Full wb-side recipe in `types/wb-widgets.md §Plugin-extensible device-type manager via SPI`. `[ev: corpus B1077]`
+
 ---
 
 ## 2 · `BProxyExt` point SPI

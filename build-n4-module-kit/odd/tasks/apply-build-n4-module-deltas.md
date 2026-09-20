@@ -39,7 +39,7 @@ Per retro folded:
 - [x] T3 · our-dashboard-audit-deltas (5) → types/security.md §7 + types/dashboard.md + commissioning-verify.sh MANUAL step — FOLDED (PD-ODA1-5), shellcheck+bats+sweeps green.
 - [x] T4 · module-hardening-reqexec-closed-deltas (7) → security.md §7/§8, distribution.md §5/§10, driver-authoring.md §5, logic-authoring.md (dynamic-slot §), issues-and-gotchas.md D4/G1 — FOLDED (PD-MH-UXS1/UXS4/BLD7/RUN5/PER1/PER4/PER7), sweeps green.
 - [x] T5 · module-hardening-reference-cards-deltas (8) → types/logic.md + logic-authoring.md — FOLDED (REF1-7 + RUN1), sweeps green.
-- [ ] T6 · honeywell-wb-rt-wb-deltas (8) → types/wb-widgets.md, structure.md
+- [x] T6 · honeywell-wb-rt-wb-deltas (8) → wb-widgets/driver-authoring/security/logic-authoring/distribution/observability — FOLDED (8Δ), sweeps green.
 - [ ] T7 · wb-vendor-ux-wave3-vendor-drivers-deltas (14) → types/driver-authoring.md, wb-widgets.md
 - [ ] T8 · module-hardening-failure-modes-deltas (16) → types/logic-authoring.md, distribution.md, issues-and-gotchas.md, lint candidates
 - [ ] T9 · apillm-headless-servlet-rt-4.14-deltas (24) → types/security.md, structure.md, lint-servlet

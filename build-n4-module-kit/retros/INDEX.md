@@ -160,7 +160,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- issue #122: BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas — proposal awaiting build trigger -->
 | 2026-09-19-apillm-headless-servlet-rt-4.14-deltas.md | kit | 2026-09-19 | pending | 24 |
 | 2026-09-20-wb-vendor-ux-rt-wb-pattern-deltas.md | kit | 2026-09-20 | pending | 25 |
-| 2026-09-20-honeywell-wb-rt-wb-deltas.md | kit | 2026-09-20 | pending | 8 |
+| 2026-09-20-honeywell-wb-rt-wb-deltas.md | kit | 2026-09-20 | folded | 8 |
 | 2026-09-20-wb-manager-framework-deltas.md | kit | 2026-09-20 | folded | 4 |
 | 2026-09-20-wb-field-editors-deltas.md | kit | 2026-09-20 | folded | 3 |
 | 2026-09-20-our-dashboard-audit-deltas.md | kit | 2026-09-20 | folded | 5 |

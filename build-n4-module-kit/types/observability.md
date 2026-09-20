@@ -194,6 +194,45 @@ find "$SRC" -name "*.java" | xargs grep -l "System\.out\.print" \
 
 ---
 
+---
+
+## Credential header redaction in logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
+
+Redact `Authorization`, `X-Api-Key`, and similar credential headers **at every log level, including `FINEST`**. Cloud/HTTP connectors that log the full `HttpURLConnection` request properties at FINEST leak Bearer tokens to the station log history, where they are visible to anyone with `BLogHistoryService` read access.
+
+```java
+private static final Set<String> REDACT_HEADERS = new HashSet<>(Arrays.asList(
+    "Authorization", "X-Api-Key", "X-Auth-Token"));
+
+// Build a safe copy before logging
+Map<String, List<String>> safe = new LinkedHashMap<>();
+for (Map.Entry<String, List<String>> e : conn.getRequestProperties().entrySet()) {
+    safe.put(e.getKey(),
+             REDACT_HEADERS.contains(e.getKey())
+                 ? Collections.singletonList("***")
+                 : e.getValue());
+}
+if (LOG.isLoggable(Level.FINEST)) LOG.finest("request headers: " + safe);
+```
+
+Add this guard to any code that iterates HTTP headers or logs connection state — even at FINEST, because a support engineer enabling fine tracing must not accidentally capture credentials. See `types/security.md §3.3` for the full security context. `[ev: corpus B1082]`
+
+## AtomicBoolean guard for UI-triggered async jobs — observability note [ev: retro honeywell-wb-rt-wb-deltas Δ6]
+
+When a WB button or manager command launches a background job, use an `AtomicBoolean` to prevent duplicate submissions and log the guard firing at `WARNING` so duplicate triggers are visible in the log history:
+
+```java
+if (!running.compareAndSet(false, true)) {
+    LOG.warning("Job already running — ignoring duplicate trigger from user " +
+                (cx != null ? cx.getUser() : "unknown"));
+    return;
+}
+```
+
+Log the guard trip at `WARNING` (not FINE): `BLogHistoryService` captures WARNING+ automatically, so a repeated trigger shows up in the station log without requiring fine tracing to be enabled. See `types/logic-authoring.md §AtomicBoolean single-run guard` for the full recipe. `[ev: corpus B1082]`
+
+---
+
 **See also:** `types/actions.md` (`Flags.NO_AUDIT` on internal callback actions),
 `types/logic-authoring.md` (`BHistoryExt` point logging), `types/driver-authoring.md`
 (`configFail`/`doPing`, poll health counters).

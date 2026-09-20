@@ -1007,6 +1007,64 @@ Rules:
 - **Permission check via `sessionCx`** — check permissions using the session's `Context`, not the job's `Context`; the job runs under the scheduler's context, not the remote caller's credentials.
 - **`BSimpleJob` provides the thread + progress + log infrastructure** — `this.log().message(...)` records to the job's progress log; `progress(pct)` is optional but useful for large transfers. `[ev: code BFoxBackupJob.java]`
 
+## Chunked Base64 transfer for firmware/file OTA [ev: retro honeywell-wb-rt-wb-deltas Δ5]
+
+When an rt action can accept only small strings (e.g. a `BString` action argument with a platform cap near 4–8 KB), split the binary payload into ≈5 000-character Base64-encoded segments and invoke the action once per segment. The rt side accumulates segments, reassembles on a terminal sentinel, then Base64-decodes and writes the binary to disk.
+
+```java
+// WB side — split and send (in a BSimpleJob or manager command)
+private static final int CHUNK = 5_000;
+
+byte[] fw = Files.readAllBytes(fwPath);
+String b64 = Base64.getEncoder().encodeToString(fw);
+for (int i = 0; i < b64.length(); i += CHUNK) {
+    String seg = b64.substring(i, Math.min(i + CHUNK, b64.length()));
+    component.invoke(UPLOAD_CHUNK_ACTION, BString.make(seg), cx);
+}
+component.invoke(UPLOAD_CHUNK_ACTION, BString.make("END"), cx);
+```
+
+```java
+// rt side — accumulate in a StringBuilder field
+@Override
+public BObject uploadChunk(BString chunk, Context cx) {
+    if ("END".equals(chunk.getString())) {
+        byte[] data = Base64.getDecoder().decode(buf.toString());
+        writeFirmwareToFlash(data);  // platform-specific
+        buf.setLength(0);
+    } else {
+        buf.append(chunk.getString());
+    }
+    return null;
+}
+```
+
+`CHUNK` ≈ 5 000 characters leaves headroom under typical Niagara action-arg limits. For large transfers wrap the WB loop in a `BSimpleJob` so it runs off the EDT and reports progress. `[ev: corpus B1080]`
+
+See also: `types/distribution.md §11` for the distribution-side note on this pattern.
+
+## AtomicBoolean single-run guard for UI-triggered async jobs [ev: retro honeywell-wb-rt-wb-deltas Δ6]
+
+When a WB button or action triggers a background job (firmware upload, device discovery, OTA), guard entry with an `AtomicBoolean` to prevent duplicate submissions from rapid clicks or concurrent manager opens:
+
+```java
+private final AtomicBoolean running = new AtomicBoolean(false);
+
+public void startJob(Context cx) throws Exception {
+    if (!running.compareAndSet(false, true)) {
+        LOG.warning("Job already running — ignoring duplicate trigger");
+        return;
+    }
+    try {
+        doHeavyWork(cx);
+    } finally {
+        running.set(false);   // always reset, even on exception
+    }
+}
+```
+
+`compareAndSet(false, true)` is atomic — if two threads race, exactly one proceeds; the other returns immediately. Reset in `finally` so the guard resets even on exception. For jobs launched from a manager toolbar button, also disable the button while `running.get()` is true and re-enable in the job's completion callback. `[ev: corpus B1082]`
+
 ## Write-path test matrix `[ev: corpus B816]`
 Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × writer × timing) → the invariant it must hold, and the TEST that proves it. The template is 5 columns — slot · writer · timing · invariant · test. `lint-write-path.sh` parses only the 4 STRUCTURAL columns (slot · writer · timing · test); **`Invariant` is a human-facing column the lint does NOT parse** (a lint cannot decide a semantic invariant). The `≤0`-delay class is OWNED by `lint-delays.sh` (PR1, B820 §820.1c) — `lint-write-path.sh` does NOT re-implement the `Clock.schedule` ≤0 scan; it cross-references it so the two lints never double-bite the same site. For the LINK_TARGET ephemeral-write fact that motivates the WARN row, see §Slot types for externally written values above. `[ev: corpus B816]`
 

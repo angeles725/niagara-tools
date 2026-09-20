@@ -287,6 +287,16 @@ module-verification check on next boot, even if the JAR bytes are correct.
 
 ---
 
+---
+
+## 11 · Firmware/file OTA via chunked Base64 action invocations [ev: retro honeywell-wb-rt-wb-deltas Δ5]
+
+When an rt action can accept only small strings and you need to push a firmware image or large file from the WB to a device, use ≈5 000-character Base64 segments sent as repeated action invocations, terminated by a sentinel string `"END"`. The rt side accumulates segments in a `StringBuilder`, Base64-decodes on the sentinel, then writes the binary. This avoids any single-payload size limit without a custom Fox file channel.
+
+See `types/logic-authoring.md §Chunked Base64 transfer for firmware/file OTA` for the full WB + rt code recipe. `[ev: corpus B1080]`
+
+---
+
 **See also:** `build-verify.md` (signing gate, `verify-module.sh`, JACE vs Win Supervisor
 verification modes), `types/structure.md` (module-include.xml, permission groups),
 `types/logic-authoring.md` (started() lifecycle seam for migrations).
