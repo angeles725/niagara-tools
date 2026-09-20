@@ -207,6 +207,20 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
 `gradle.properties niagara_home`.  Changing the SDK requires a matching plugin version change.
 [ev: corpus B1016 §1016.2] — **Kit coverage: n4-client-build-config-standard Δ2 (PENDING)**
 
+### D4 · `LocalSigningProfile` auto-generates a dev cert on missing alias → silent station load failure
+**Symptom:** `gradlew build` succeeds and the jar is signed, but the station rejects the module at
+load time with a `ValidationException` (BLD1 trust failure).  No build error.
+**Root cause:** under the default `LocalSigningProfile` a missing or renamed signing alias triggers
+`generateCert()` which auto-creates a self-signed dev cert — the build SUCCEEDS with a
+signed-but-untrusted jar.  Under `RestrictedSigningProfile` (CI/release) the same condition throws
+`IllegalArgumentException` and FAILS the build.  A missing profile FILE fails with
+`ProfileNotFoundException` regardless of profile type.
+**Fix:** before a release build, verify `niagara.signing.profileType` in
+`~/.tridium/security/niagara.signing.xml` and confirm the intended alias exists in the keystore.
+Treat "build signed OK but station rejects" as the tell-tale of a dev-profile auto-generated cert.
+[ev: corpus B1135] — `[ev: retro module-hardening-reqexec-closed-deltas Δ3]` —
+**Kit coverage: types/distribution.md §5 signing-profile build-triage (FOLDED)**
+
 ---
 
 ## E — Client / HMI compatibility
@@ -236,3 +250,28 @@ user intent.
 **Fix:** require HTTP POST + a CSRF token for every endpoint that mutates state.  Audit all
 `GET` routes in web-facing module servlets and move destructive actions to POST handlers.
 [ev: mem nmodsreflow] — **Kit coverage: none (security audit = PENDING)**
+
+---
+
+## G — Boot and deployment recovery
+
+### G1 · Station stuck at boot due to bad/wrong-version module → Platform Software Manager recovery
+**Symptom:** station will not boot after a module deploy; log shows `App Failed` or a
+`MissingClass` / `ValidationException` for the deployed module; the station cannot be started
+from Workbench.
+**Root cause:** the deployed module is incompatible — wrong version, unsigned/untrusted (BLD1/BLD7),
+or a bad manifest (BLD5).  The station cannot load the module at boot; it halts.
+**Fix:** recover at the PLATFORM level while the station is DOWN (platform daemon must be running):
+
+1. Connect to the **Platform node** in Workbench (NOT the station node).
+2. Open **Platform > Software Manager**.
+3. Identify the offending module by status: "Bad Target" (bad manifest or unusable) or "Out of Date".
+4. Choose a remediation action — Downgrade, Uninstall, Import+Re-Install, or
+   **Rebuild Module Signatures** (repairs the trust failure; station must be not-running).
+5. Click **Commit**; restart the station.
+
+**Critical gotcha:** NEVER use the File Transfer Client to deploy or replace module JARs —
+it copies raw bytes without applying runtime profiles or signing chains, producing the same
+BLD1 trust failure on next boot even with a correct JAR.
+[ev: corpus B1139] — `[ev: retro module-hardening-reqexec-closed-deltas Δ7]` —
+**Kit coverage: types/distribution.md §10 (FOLDED)**

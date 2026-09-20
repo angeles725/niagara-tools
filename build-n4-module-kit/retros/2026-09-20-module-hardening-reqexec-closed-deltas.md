@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · module-hardening-reqexec-closed-deltas
 
 **Session**: niagara-research focus `module-hardening`, blocks **B1133–B1139** (commits eca88e52b..(B1139) on `niagara-research` main). These close ALL SEVEN gaps the earlier hardening phase had parked as "requires-execution" (UXS1, UXS4, BLD7, RUN5, PER1, PER4, PER7) after re-testing that scope-out: each had a READ-ONLY code/docs core the framework source / official Platform guide answers without a live station (SCOPING-JUDGMENTS-ARE-HYPOTHESES). Only NAMED live child gaps (`*-G1`) remain, parked for a station session.

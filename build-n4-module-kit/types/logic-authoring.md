@@ -626,6 +626,80 @@ Summary of the three rules:
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
 3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
 
+## Dynamic-slot lifecycle — orphan hygiene and schema migration
+
+### Dynamic-slot orphan hygiene rule `[ev: retro module-hardening-reqexec-closed-deltas Δ5]`
+
+If a component adds **dynamic slots** at runtime (`add(name, value)` → a non-frozen slot), its
+`started()` **MUST** prune orphans — dynamic slots that the current schema no longer recognizes.
+
+**Why orphans accumulate silently:** non-transient dynamic slots are persisted in the `.bog` and
+re-instantiate on every station start. There is **NO framework prune-orphans utility** — the only
+bulk removal is `removeAll()` (`BComponent.java:976`), which drops ALL dynamic slots
+non-selectively. Orphans silently bloat the `DynamicTable` (memory + BOG size) with no error or
+warning.
+
+**Iteration API (safe snapshot):**
+
+```java
+// getDynamicPropertiesArray() returns a snapshot — safe to remove during the loop
+for (Property p : getDynamicPropertiesArray()) {          // BComplex.java:606
+    if (!isKnownSlot(p.getName())) {                      // your schema check
+        try { remove(p); } catch (FrozenSlotException e) { /* skip frozen */ }
+    }
+}
+```
+
+- `getDynamicPropertiesArray()` returns a defensive copy; mutating during the iteration is safe.
+- `remove(Property)` (`BComponent.java:957`) throws `FrozenSlotException` on a frozen slot —
+  guard with try/catch or check `p.isDynamic()` first.
+- `removeAll()` (`:976`) removes ALL dynamic slots; use only when a full reset is intended.
+
+**Mark ephemeral dynamic slots `TRANSIENT`:** if a dynamic slot carries only in-memory state that
+need not survive a restart, create it with `Flags.TRANSIENT` (`0x00000002`) — the BOG encoder
+skips transient slots (`Flags.java:184,389`), so they are never persisted and never become orphans.
+
+**Proposed lint candidate:** `dynamic-slot-orphan-prune` — flag a component that calls `add(name,
+value)` without a corresponding orphan-prune loop in `started()`.
+
+`[ev: corpus B1137]`
+
+### `started()` slot-migration recipe (schema-evolution) `[ev: retro module-hardening-reqexec-closed-deltas Δ6]`
+
+To migrate a renamed or restructured dynamic slot across module versions — without an OUTAGE — use
+this pattern in `started()`:
+
+```java
+@Override
+public void started() throws Exception {
+    super.started();
+    // Detect the orphan by old name (null if already migrated or never existed)
+    Property orphan = getProperty("oldSlotName");         // BComplex.java:527
+    if (orphan != null && orphan.isDynamic()) {           // Slot.java:59
+        Object oldValue = get(orphan);                    // BComplex.java:666
+        set(newSlotProperty, (BValue) oldValue);          // BComponent.java:854 — copy to new frozen slot
+        remove(orphan);                                   // BComponent.java:957 — prune the orphan
+    }
+}
+```
+
+**Contract:**
+- `getProperty(name)` returns `null` after the first migration — the block is **idempotent** (no-op
+  on subsequent enable cycles).
+- `started()` runs on every enable cycle (station start, component enable, re-enable after a fault),
+  so idempotence is a requirement, not just a convenience.
+- For **many slots**, snapshot `getDynamicPropertiesArray()` FIRST — never remove a slot while
+  iterating a live cursor.
+- **Type-guard the copy** when the migration also changes the slot's value type; a direct cast
+  without checking will throw `ClassCastException` silently if the stored type differs.
+
+**Pairing with the orphan-hygiene rule:** run the migration step BEFORE the orphan-prune loop so
+that a renamed slot's value is safely copied before it is pruned as "unknown".
+
+`[ev: corpus B1138]`
+
+---
+
 ## BProgram / BRobotCode scripting SPI `[ev: corpus B-program]`
 
 `BProgram` is a `BComponent` that hosts a signed `BProgramCode` (which hosts `BRobotCode`). The execution entry point is `BProgramService`:
