@@ -60,6 +60,98 @@ chihuahua-wb/src/com/angeles/chihuahua/wb/
 ```
 The `model/` package has zero Baja imports; all station access is injected via `Predicate<String>` at construction time. 33 `@Test` cases run without a station. [ev: corpus B809] [ev: corpus B817]
 
+## Manager recipe — `BAbstractManager` wiring reference [ev: retro wb-manager-framework-deltas Δ1]
+
+> Rung-2 detail (extends the ladder above): reach here only when the component is a container of discovered/learned children. Our ColdRoomPan/CompPan panels sit at rung 0 — do not build a Manager unless the ladder says so.
+
+### 6-object anatomy and boolean gates
+
+Every `BAbstractManager` subclass is wired by six support objects plus three boolean gates on the container class:
+
+| Object | Role |
+|--------|------|
+| `BAbstractManager` | The Swing panel — top of the stack; owns `BTable` + toolbar; calls `makeModel`/`makeController`/`makeLearn` |
+| `MgrModel` | Table model — owns `cols[]` (the database/display columns) |
+| `MgrController` | Actions — New, Delete, Edit, Discover; owns `promptForNew()` / `promptForEdit()` |
+| `MgrLearn` | Discover/learn contract — returns its own `cols[]` **independent** of `MgrModel.cols[]` (separate column sets); called from the Discover toolbar button |
+| `MgrColumn` | Column descriptor — see taxonomy below |
+| `BMgrEditDialog` | Cell-edit bridge — `ColumnInput` inner class routes cell edits to the slot pathway (`BAbstractManagerFE` is NOT a class; "FE" is a driver-naming convention only) |
+
+Three boolean gates on the `BAbstractManager` subclass drive pane visibility:
+
+| Gate method | Controls |
+|-------------|---------|
+| `isLearnable()` | Shows/hides the Discover button |
+| `isTaggable()` | Shows/hides the Tags pane |
+| `isTemplatable()` | Shows/hides the Template pane |
+
+`[ev: corpus B1088]`
+
+### `MgrColumn` taxonomy reference card [ev: retro wb-manager-framework-deltas Δ2]
+
+| Column type | When to use | Key attribute |
+|-------------|-------------|---------------|
+| `MgrColumn.Name` | Display name of the child component | — |
+| `MgrColumn.Type` | Tridium type spec of the child (e.g. `"mod:MyPoint"`) | `typeSpec` |
+| `MgrColumn.Prop` | A **flat** slot on the child component (accessible directly via `slot.asProperty()`) | `prop` name |
+| `MgrColumn.PropPath` | A **nested** slot via a dot-path (e.g. `"proxyExt.precision"`); traverses the child component tree | `propPath` dot string |
+
+Use `Prop` for direct slots; use `PropPath` for mixin or extension slots. The discover table (`MgrLearn.cols[]`) and database table (`MgrModel.cols[]`) carry **independent** column arrays — do not share or reuse the same `MgrColumn` instances across both.
+
+`[ev: corpus B1089]`
+
+### `BAbstractManager` vs `BWbComponentView` — decision table [ev: retro wb-manager-framework-deltas Δ3]
+
+| Criterion | Use `BAbstractManager` | Use `BWbComponentView` + `BTable` |
+|-----------|------------------------|-----------------------------------|
+| Children discovered/learned from the network | YES | No |
+| Need Discover/New/Delete toolbar | YES | No |
+| Need paging, column sort, inline cell-edit via `BMgrEditDialog` | YES | Optional |
+| Non-tabular interaction (forms, wizards, status dashboards) | No | YES |
+| Simple container with hand-curated children (our Apillm importers/exporters) | No | YES (hand-built BTable suffices) |
+| Standalone driver that owns its Manager container | YES (Tridium subclass recipe) | No |
+
+Our Apillm importer/exporter managers use the hand-built `BWbComponentView`+`BTable` recipe: no discovery, no learn, hand-curated children — the full `BAbstractManager` framework adds no value there.
+
+`[ev: corpus B1091]`
+
+### Minimal non-driver custom-manager template [ev: retro wb-manager-framework-deltas Δ4]
+
+Use this template when a **service or container** (not a driver) needs a manager view — e.g. a service that owns a set of configuration records with an Add/Delete UI. For the driver-centric recipe with full `makeLearn()` + network discovery, see `envCtrlDriver` (B956).
+
+Key constraints for a non-driver custom manager:
+- `@AgentOn` the **container/service** type, NOT a `BNetwork`/`BDevice`.
+- Use `MgrColumn.Prop` only (no `PropPath`, no Discover) — keep it flat.
+- Do NOT override `makeLearn()`; return `null` and `isLearnable() = false`.
+- Transaction: always mutate via `MgrController.promptForNew()` → `MgrEdit.commit()` → `Mark.moveTo(container)` — never call `BComponent.add()` directly.
+
+```java
+// -wb profile only
+@NiagaraType(agent = @AgentOn(types = {"myMod:MyService"}, requiredPermissions = "r"))
+public class BMyServiceManager extends BAbstractManager {
+    @Override protected MgrModel      makeModel()      { return new MyModel(); }
+    @Override protected MgrController makeController() { return new MgrController(this); }
+    @Override protected MgrLearn      makeLearn()      { return null; }   // no discovery
+
+    @Override public boolean isLearnable()   { return false; }
+    @Override public boolean isTaggable()    { return false; }
+    @Override public boolean isTemplatable() { return false; }
+
+    private static class MyModel extends MgrModel {
+        MyModel() {
+            cols = new MgrColumn[] {
+                new MgrColumn.Name(),                          // display name column
+                new MgrColumn.Prop("enabled", "Enabled"),     // flat boolean slot
+                new MgrColumn.Prop("priority", "Priority"),   // flat int slot
+            };
+            newTypes = new Type[] { BMyRecord.TYPE };         // allowed New types
+        }
+    }
+}
+```
+
+`[ev: corpus B1091]`
+
 ## Field editors — station-component pickers, the null-ord gotcha, and point-creation from WB
 
 > Rung-1 detail (extends the FieldEditor recipe above): most modules need NO custom field editor (rung 0). Reach here only when an rt slot must pick a station component, or an importer-style Manager must create points from WB. [ev: retro wb-field-editors-deltas]
