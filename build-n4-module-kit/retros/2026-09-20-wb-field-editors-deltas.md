@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · wb-field-editors-deltas
 
 **Session**: niagara-research focus `wb-field-editors` (B1084–B1087, commit 8a79fbaac) — the `BWbFieldEditor` framework: class hierarchy, `@AgentOn` registry, `makeFor()` resolution, `BOrdFE` anatomy and the null-ord file-chooser gotcha, `BIPopupEditor` / `dialog()` / `FIELD_EDITOR` facet, and the custom FE recipe with `BComponentChooser` + `BComponent.add()`.

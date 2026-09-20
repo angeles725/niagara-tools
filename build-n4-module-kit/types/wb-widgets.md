@@ -60,6 +60,14 @@ chihuahua-wb/src/com/angeles/chihuahua/wb/
 ```
 The `model/` package has zero Baja imports; all station access is injected via `Predicate<String>` at construction time. 33 `@Test` cases run without a station. [ev: corpus B809] [ev: corpus B817]
 
+## Field editors — station-component pickers, the null-ord gotcha, and point-creation from WB
+
+> Rung-1 detail (extends the FieldEditor recipe above): most modules need NO custom field editor (rung 0). Reach here only when an rt slot must pick a station component, or an importer-style Manager must create points from WB. [ev: retro wb-field-editors-deltas]
+
+- **`targetType` facet — zero-code station-component picker for a `BOrd` slot (PD-FE1):** a `BOrd` slot whose value is null has no scheme, so `BOrdFE` stays on the file-system chooser (`BFileOrdChooser`) — the null-ord gotcha, by design (a null value has no `BIOrdChooser` scheme override to fire). To browse the station component tree instead, put a `targetType` facet on the property (`facets=BFacets.make("targetType", BString.make("baja:Component"))`, or the equivalent `@Facets`); `BOrdFE` then selects `BComponentChooser` automatically, even for a null ord. No `-wb` code required — prefer this over a custom FE for `BOrd`→component slots. [ev: retro wb-field-editors-deltas Δ1]
+- **Point-creation from WB — use the Manager plumbing, not `BComponent.add()` (PD-FE2):** for an importer-style `BAbstractManager`, override `getNewTypes()` to return the writable types you allow, then rely on `MgrController.promptForNew()` → `MgrEdit.commit()` → `Mark.moveTo(container)`. Do NOT call `BComponent.add()` manually from the WB view — the manager's transaction plumbing owns the station relay and undo; a hand-rolled `add` bypasses both. [ev: retro wb-field-editors-deltas Δ2]
+- **Filtered sub-type chooser — subclass `BComponentChooser`, NEVER override `baja:Ord` (PD-FE3):** when a slot must pick only a subtype (e.g. only `BNumericWritable`), subclass `BComponentChooser` with a `selectFilter` `RefFilter` — `(parent, slot) -> slot.isProperty() && parent.get(slot.asProperty()).getType().is(BTargetType.TYPE)` — and register it via `@AgentOn(types={"myModule:MyOrdAlias"})` on a **custom** ord type. Never override the global `baja:Ord` agent — that would hijack every ord slot in the station. The `FIELD_EDITOR` facet is the alternative when you cannot change the slot type; for `BOrd`→component prefer the `targetType` facet (Δ1). [ev: retro wb-field-editors-deltas Δ3]
+
 ## PX authoring — binding taxonomy
 
 PX files are XML authored in the Workbench PxEditor, shipped as module resources, and rendered in the browser via the Hx/HTML5 profile. The corpus contains 270+ `.px` files; the binding patterns below are the recurring skeleton. [ev: corpus B752 §752.3]
