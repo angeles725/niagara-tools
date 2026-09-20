@@ -346,6 +346,99 @@ public final class BMyEnum extends BFrozenEnum {
 
 Rules: static `int ORD_*` constants with EXPLICIT ordinals; one static instance per ordinal; private constructor `super(ordinal)`; `make(int)` + `make(String)` factories; register the type in `module-include.xml`; declare `@Range` entries in the type annotation with matching ordinal values. `@Range` keys must be in `module.lexicon` (SP6 known set). Use `BFrozenEnum` for an INTERNAL, single-module discrete selector — a value shared across custom modules via a link stays a plain `double` (see `logic.md §Linking across custom modules`).
 
+### BEnumRange authoring grammar `[ev: corpus B1109]`
+
+`BEnumRange` carries the {ordinal → tag} map for a **dynamic enum slot** — one whose value set is configured at runtime or driven by protocol metadata (DIFFERENT from `BFrozenEnum`, which bakes ordinals into the class at compile time). Use it when the options vary by hardware or installation.
+
+**Inline BNF (BOG `E:` prefix form):**
+```
+rangeExpr  ::= ["frozen+"] "{" pairs "}" ["?" opts]
+pairs      ::= pair ("," pair)*
+pair       ::= integer ":" identifier
+opts       ::= optEntry ("," optEntry)*
+optEntry   ::= "def=" integer | "null=" integer
+```
+
+Example: `E:{0:auto,1:hand,2:off}` — three ordinals, not frozen.  
+Frozen example: `frozen+{0:off,1:stage1,2:stage2}` — operator cannot add/remove entries.
+
+**`make()` overload catalogue:**
+
+| Overload | When to use |
+|----------|-------------|
+| `BEnumRange.make(String[] tags)` | Sequential ordinals 0..n-1 — ONLY when ordinals are truly contiguous |
+| `BEnumRange.make(int[] ordinals, String[] tags)` | Non-contiguous ordinals — REQUIRED for protocol enums with gaps |
+| `BEnumRange.make(int count)` | Placeholder range of `count` ordinals (default tag names) |
+
+**Non-contiguous-ordinal gotcha:** `make(String[])` FORCES ordinals 0..n-1. If a BACnet Multi-state object or Modbus register defines non-sequential codes (e.g. values 1, 3, 7), you MUST use `make(int[], String[])` — using `make(String[])` silently remaps ordinals and breaks any control logic that compares them. `[ev: retro module-hardening-reference-cards-deltas Δ4]`
+
+## Programmatic slot-name rules `[ev: corpus B1110]`
+
+When adding dynamic slots (`add(name, value)`) or forming `SlotPath` strings from external data (BACnet device names, meter IDs, spreadsheet rows), the name must satisfy the slot-name grammar or the slot is created in a broken state with NO error at creation time.
+
+**Grammar:**
+- First character: MUST be alphabetic (`[a-zA-Z]`) — no leading digit, no leading underscore, no space
+- Subsequent characters: `[a-zA-Z0-9_]` — only underscore is allowed unescaped
+- `$` prefix: used to escape special characters (e.g. `$20` for space)
+
+**Silent failure mode:** a slot name with a leading digit or space is accepted by `add()` without exception, but the resulting `SlotPath` is malformed — ORD resolution fails, Workbench cannot navigate it, and links break silently.
+
+**Rule:** always call `SlotPath.escape(name)` on any name derived from external data before passing it to `add()` or embedding it in a `SlotPath`:
+
+```java
+String escaped = SlotPath.escape(bacnetDeviceName);  // handles spaces, leading digits, special chars
+add(escaped, BDouble.DEFAULT);
+```
+
+**Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
+
+## BFacets key reference card `[ev: corpus B1106]`
+
+`BFacets` is the property-metadata map; keys are string literals. The 31 known keys (B49 listed 11; B1106 completes the catalogue):
+
+| Key | Purpose |
+|-----|---------|
+| `"units"` | Engineering unit (`BUnit`); shown in slot value display |
+| `"precision"` | Decimal places for numeric display (int) |
+| `"min"` | Minimum allowed value (numeric) |
+| `"max"` | Maximum allowed value (numeric) |
+| `"range"` | Enum range (`BEnumRange`); required for dynamic enums |
+| `"fieldWidth"` | Character-width hint for text fields |
+| `"radix"` | Display radix for integers (2=binary, 8=octal, 10=decimal, 16=hex) |
+| `"showSeconds"` | Show seconds in time display (boolean) |
+| `"showUnits"` | Append engineering-unit string to the formatted value (boolean) |
+| `"unitConversion"` | Unit-conversion factor when bridging unit systems |
+| `"maxOverrideDuration"` | Maximum HOA override duration (`BRelTime`) |
+| `"targetType"` | Type constraint for ORD/link pickers (`BTypeSpec`) |
+| `"editorTemplate"` | Workbench editor template name |
+| `"editorClass"` | Custom editor class name |
+| `"editorArgs"` | Arguments forwarded to the custom editor |
+| `"editorColumns"` | Column definitions for a table editor |
+| `"editorRows"` | Row definitions for a table editor |
+| `"trueText"` | Display string for `true` (boolean slots) |
+| `"falseText"` | Display string for `false` (boolean slots) |
+| `"nullText"` | Display string for null/invalid values |
+| `"format"` | A `BFormat` pattern for display formatting |
+| `"icon"` | Icon ORD for Workbench display |
+| `"help"` | Help URL or key for context-sensitive help |
+| `"category"` | Default category tag |
+| `"history"` | History configuration hint |
+| `"alarm"` | Alarm configuration hint |
+| `"trended"` | Whether the slot is trended by default (boolean) |
+| `"locked"` | Whether the slot is locked from operator edit |
+| `"persistent"` | Override persistence behavior |
+| `"sparse"` | Sparse rendering hint for large tables |
+| `"summary"` | Summary display hint |
+
+**Factory methods** (all on `BFacets`):
+- `BFacets.make(String key, BValue value)` — single key-value pair
+- `BFacets.make(String[] keys, BValue[] values)` — multiple pairs (parallel arrays)
+- `BFacets.makeDouble(BUnit unit, int precision)` — convenience for a numeric slot
+- `BFacets.makeBoolean(String trueText, String falseText)` — convenience for a boolean slot
+- `BFacets.makeEnum(BEnumRange range)` — convenience for a dynamic-enum slot
+
+**Rule:** always use factory methods, never `new BFacets(Map)` directly. For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
+
 ## Logging a point to history `[ev: corpus B804]`
 
 - **`BHistoryExt` IS a point extension** (`extends BPointExtension`), not a service or component child. Drop it as a child of a `BControlPoint` (e.g. `BNumericPoint`); it intercepts `onExecute` and records the point's value on every applicable event. `[ev: corpus B804]`
@@ -396,6 +489,8 @@ link-TARGET side (which the next source propagation overwrites, B816 §816.2), d
 **Overlap caveat:** if the written slot is a link TARGET (driven BY a link, not a source), the external write is
 EPHEMERAL — the next propagation overwrites it (B816 §816.2). Confirm write-source vs write-target before relying on
 the write sticking. `[ev: corpus B816]`
+
+**`BRelTime` wire encoding is raw milliseconds, NOT ISO-8601:** `BRelTime.encodeToString()` emits `String.valueOf(millis)` — a plain decimal integer. This is ASYMMETRIC with `BAbsTime` (which uses `"13,<ISO-8601Z>"`). An external client (oBIX/REST/JSON) receiving a `BRelTime` value must explicitly convert: divide by 1000 for seconds, by 60000 for minutes, etc. Never assume ISO-8601 duration format (`PT30M` etc.) from a `BRelTime`. When exposing a duration slot to external clients, document the unit in the slot's facets or in the API contract. `[ev: retro module-hardening-reference-cards-deltas Δ6]`
 
 `toolbelt/lint-ext-writable-shape.sh <src>` flags the anti-shape (an OPERATOR complex property with no `@NiagaraAction` whose body writes the slot). The exemption is per-slot: action `x` maps to `doX()` (B831-G1 convention); a `doAckAlarm` body writing `alarmAck` must NOT exempt `faultReset` — the write-target must match the OPERATOR slot being checked. The adapter→pure follow uses the `B<Pure>` naming pair only (prepend `"B"` to the pure class name). `[ev: retro campaign9-ext-writable-shape]` `[ev: retro campaign10-ext-writable-per-slot]`
 

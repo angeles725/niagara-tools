@@ -175,6 +175,7 @@ Distilled from a docSource survey of control-rt/kitControl-rt (BControlPoint, BQ
 - **`getSlotFacets` projection** of a `facets` config slot onto outputs (units/precision once) + **range facets** on inputs, still clamp defensively in code.
 - **Pure-logic split for reusable formulas** (like `ColdRoomControl.decideCall`) — the only part that gets real unit tests; everyday logic stays inline.
 - **GOTCHA**: `catch(Throwable)+log` is NOT automatic — the framework only wraps `BControlPoint.executeExtensions`. In your OWN `changed()`/timer handlers you MUST self-guard or one exception corrupts engine state. (Our modules already do.)
+- **Wrap every callback body and re-arm timers in `finally`:** `changed()`, timer callbacks, and lifecycle overrides are BARE — a thrown exception aborts the invocation and silently drops any `Clock.schedule` re-arm that follows. Pattern: `try { /* logic */ } catch (Throwable t) { logError("tick", t); } finally { rearmTick(); }` — the `finally` block guarantees the re-arm even on exception. A self-rescheduling timer that throws before re-arm silently stops for the rest of the session with no log entry, causing the control to degrade to reactive-only. `[ev: retro module-hardening-reference-cards-deltas Δ8]`
 
 ### Wire-sheet live-view recipe `[ev: corpus B747 §747.2]`
 
@@ -207,6 +208,7 @@ Typed factory family (BStatus.java:51–140) — never construct a raw `BStatus(
 
 - **Set `makeOverridden(s, true)` on an output when it is forced by a HOA HAND or writable override** so the HMI and any subscriber can distinguish a forced value from an auto-computed one. The existing kit documents reading `OVERRIDDEN`; this is the producer side — the component applying the override must set the bit. `[ev: corpus B736 §736.4]`
 - **Use `BStatus.makeNull(s, true)` when a sensor is absent or the computation is indeterminate** — write a NULL-status output, not a `0.0` with ok-status. A `0.0/ok` lie is a valid reading downstream; it can drive a false control decision (e.g. a 0 °C reading from a disconnected probe triggers unnecessary cooling). `[ev: corpus B736 §736.4]`
+- **Gate control math on `isValid()`, not `isOk()`:** `isOk()` returns `false` whenever ANY status bit is set — including OVERRIDDEN and UNACKED_ALARM — so it drops control output even when the sensor value is numerically usable. `isValid()` returns `true` when bits = 0 OR when only override/unacked-alarm bits are set: the value is trustworthy for a control decision. Rule: use `isOk()` only for the strictest "no bits at all" check (e.g. a safety-latch gate); use `isValid()` as the control gate for all sensor reads and setpoint checks. Confusing the two silently drops control output on every manual HOA override — the fail-to-danger pattern B730/B650/B655 warns about. `[ev: retro module-hardening-reference-cards-deltas Δ2]`
 
 ## Propagation — `propagateFlags` on custom components `[ev: corpus B738 §738.3]`
 
@@ -306,3 +308,44 @@ Concrete application of the dictionary for our cold-chain modules:
 - **Auto-install:** place the dictionary instance under `TagDictionaryService` in `serviceStarted()` — no integrator drag required.
 - **Result:** `station:|slot:/|neql:select * where tag::room` reaches all cold-room components with zero integrator effort after module deploy.
 - **Deploy safety note:** this overlay is additive — no schema change, no containment change; deploy on an existing station is safe.
+
+## BQL function reference card `[ev: corpus B1108]`
+
+Three function families are available in BQL expressions. Resolution is reflective — names are not greppable from source; this card is the lookup surface.
+
+**5 aggregate functions** (defined as `Type[]` fields on `BBqlLibrary`):
+`count`, `sum`, `avg`, `min`, `max`
+
+**7 expression scalar functions** (public static methods on `BBqlLibrary`):
+`abs`, `ceil`, `floor`, `round`, `max`, `min`, `mod`
+
+**24 `BBqlTime` library functions** (time/range helpers; call as `time.<fn>()` in a BQL expression):
+`now`, `today`, `yesterday`, `thisWeek`, `lastWeek`, `thisMonth`, `lastMonth`, `thisQuarter`, `lastQuarter`, `thisYear`, `lastYear`, `startOf`, `endOf`, `add`, `subtract`, `between`, `before`, `after`, `atMidnight`, `atNoon`, `daysAgo`, `hoursAgo`, `minutesAgo`, `secondsAgo`
+
+**Registering a custom BQL function:**
+1. Declare a `public static` method on a `BObject` subclass (your library class).
+2. Register it in `module-include.xml` via `moduleSpec::fnName()`.
+3. Call it in BQL as `moduleName::fnName(args)`.
+
+`[ev: retro module-hardening-reference-cards-deltas Δ3]`
+
+## BFormat pattern reference `[ev: corpus B1112]`
+
+`BFormat` is the display-name / annotation / history-label pattern language. Understand it before writing a format expression or processing user-supplied templates.
+
+**Pattern syntax:**
+- `%slot%` — resolve `slot` on the current context component via reflection
+- `%a.b.c%` — chain access with `.` (traverse slots/methods left-to-right)
+- `%slot?default%` — use literal `default` when `slot` resolves to null or throws
+- `%time(<fmt>)%` — current date/time with a Java `SimpleDateFormat` pattern
+- `%user%` — current user's display name
+- `%substring(<slot>,<start>,<end>)%` — substring of a resolved slot value
+
+**Reflection resolution order** (inside a `%…%` block):
+1. Baja slot by name
+2. Public zero-arg Java method (getter shape)
+3. `ReflectionException` if neither resolves
+
+**`FormatDenylist`:** N4 maintains a station-version-specific denylist that blocks known-dangerous reflection targets. The list limits the attack surface but does not eliminate it.
+
+**SECURITY rule:** a `BFormat` pattern is reflective code execution. **NEVER construct a `BFormat` pattern from untrusted input** (user-supplied strings, BACnet device names, oBIX payloads). An attacker who controls the pattern string can traverse the component tree and read sensitive slots. Always author `BFormat` patterns at design time; treat them as code. `[ev: retro module-hardening-reference-cards-deltas Δ7]`
