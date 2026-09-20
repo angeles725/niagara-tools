@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · our-dashboard-audit-deltas
 
 **Session**: niagara-research focus `our-dashboard-audit` (B1062–B1065) — a rigorous audit of OUR OWN `DashboardPan` module (rt+ux+wb) against the kit documentation and the full corpus. Subject: `Cliente/Leon-Guanjuato/Dashboard/DashboardPan/`, main branch, build date 2026-08-31.
