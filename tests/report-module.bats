@@ -256,3 +256,13 @@ setup() {
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-no-md5-credential-digest"* ]] && [[ "$output" == *"BAuth.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
+
+@test "RM22: -wb artifact with dialog(...BOrd.NULL) and no chooser surfaces lint-wb-file-chooser WARN row, exit stays 0" {
+  # wb-file-chooser-warn/DemoPan-wb/src/com/x/BChooser.java calls dialog(BOrd.NULL) with no BComponentChooser/targetType
+  run "$RM" "$FX/wb-file-chooser-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-wb-file-chooser"* ]]
+  [[ "$output" == *"BChooser.java"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}

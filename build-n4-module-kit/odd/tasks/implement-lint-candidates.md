@@ -17,8 +17,8 @@ no INDEX flip — the source retro stays folded). One lint per PR, chained, CI g
 - [x] L1 · `lint-subscribe-without-unsubscribe` (rt src; WARN) — from failure-modes Δ3 (RUN4). PR pending.
 - [x] L2 · `lint-no-md5-credential-digest` (src; WARN) — DONE, auto-wired report-module §5.21 + RM21.
 - [ ] L3 · `lint-bundled-jar-class-version` (src; FAIL) — from failure-modes Δ11 (BLD2).
-- [ ] L4 · `lint-split-package-check` (project; WARN) — from failure-modes Δ12 (BLD3).
-- [ ] L5 · `lint-wb-file-chooser` (-wb src; WARN) — from apillm Δ8.
+- [~] L4 · `split-package-check` — DEFERRED to project/CI bucket (cross-module: same package in 2 modules; not a per-module report-module lint). Pair with lint-guard-pins CI.
+- [x] L5 · `lint-wb-file-chooser` (-wb; WARN) — DONE, auto-wired report-module §5.22 + RM22.
 
 **DEFER (semantic / needs .bog or cross-facet join → false-positive-prone; a noisy lint regresses the kit's precision doctrine, Campaigns 10/11):**
 - `dangling-link-watchdog` (needs cross-station link + heartbeat analysis; .bog)
