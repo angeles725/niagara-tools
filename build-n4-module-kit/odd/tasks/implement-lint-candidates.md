@@ -17,7 +17,7 @@ no INDEX flip — the source retro stays folded). One lint per PR, chained, CI g
 - [x] L1 · `lint-subscribe-without-unsubscribe` (rt src; WARN) — from failure-modes Δ3 (RUN4). PR pending.
 - [x] L2 · `lint-no-md5-credential-digest` (src; WARN) — DONE, auto-wired report-module §5.21 + RM21.
 - [x] L3 · `lint-bundled-jar-class-version` (src; FAIL) — DONE, auto-wired report-module §12 + RM23.
-- [~] L4 · `split-package-check` — DEFERRED to project/CI bucket (cross-module: same package in 2 modules; not a per-module report-module lint). Pair with lint-guard-pins CI.
+- [~] L4 · `split-package-check` — DEFERRED (operator decision, tracked in issue #142): cross-module (same package in 2 modules); home = client-repo CI, out of this kit's scope. Not an orphan — issue #142 carries the implement-and-auto-wire-in-client-CI plan.
 - [x] L5 · `lint-wb-file-chooser` (-wb; WARN) — DONE, auto-wired report-module §5.22 + RM22.
 
 **DEFER (semantic / needs .bog or cross-facet join → false-positive-prone; a noisy lint regresses the kit's precision doctrine, Campaigns 10/11):**
@@ -35,3 +35,6 @@ lint PR stays minimal and CI-green.
 
 ## Progress log
 - 2026-09-20: L1 authored — lint-subscribe-without-unsubscribe.sh + bats (7/7), SWU2 guard-pin MATCH, shellcheck clean.
+
+## Campaign close (2026-09-20)
+HIGH-confidence per-module lint candidates DONE and auto-wired into report-module.sh (run by build.sh): L1 #135, L2 #138 (§5.21), L5 #139 (§5.22), L3 #140 (§12). Kit self-check lint-guard-pins wired into CI (#141). L4 split-package deferred → issue #142. Low-confidence heuristic candidates (dangling-link-watchdog, dynamic-slot-orphan-prune, lint-wb-refresh, lint-wb-usability, precision-facet-learn-mismatch) intentionally NOT implemented (false-positive-prone → would regress the kit's precision doctrine).
