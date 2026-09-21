@@ -6,6 +6,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.23.0] - 2026-09-20
+
+### Changed — apply-deltas campaign (#123): fold all 114 pending kit deltas into the core
+
+The 10 propose-never-apply delta retros from the 2026-09-19/20 module-corpus research campaign
+(114 Δ tokens) were folded into the kit guidance, one FULL-promotion PR per retro (#124–#133),
+each with a `Retro: promotion` trailer + INDEX/marker/BUILD-STATE anchors, `sweep-fold-audit --strict`
+clean, and CI green. `retros/INDEX.md` now shows **0 pending delta-retros**.
+
+- **T1** wb-field-editors (3Δ) → `types/wb-widgets.md` Field-editors § (targetType facet, Manager point-creation, filtered BComponentChooser). Also greened pre-existing red CI: `cxf-to-n4-translator-proposal.md` + `APPLY-PLAN-*.md` were non-retro docs in `retros/` with no INDEX row (`sweep-build-state.sh` requires one). [PR #124]
+- **T2** wb-manager-framework (4Δ) → `types/wb-widgets.md` Manager-recipe § (6-object anatomy, MgrColumn taxonomy, Manager-vs-BWbComponentView table, non-driver template). [PR #125]
+- **T3** our-dashboard-audit (5Δ) → `types/security.md` §7 header checklist, `types/dashboard.md` (SERVICE_ORD/ROOMS portability, palette, WSL-test contract), `commissioning-verify.sh` MANUAL step. [PR #126]
+- **T4** module-hardening-reqexec-closed (7Δ) → security §7/§8 (global header filter, CORS), distribution §5/§10 (signing-profile triage, boot recovery), driver-authoring §5 (configFatal/configFail card), logic-authoring (dynamic-slot prune + started()-migration), issues D4/G1. [PR #127]
+- **T5** module-hardening-reference-cards (8Δ) → `types/logic.md` (BQL card, BFormat security, isValid-vs-isOk gate, timer-rearm) + `types/logic-authoring.md` (BFacets/BEnumRange/SlotPath/BRelTime). [PR #128]
+- **T6** honeywell-wb-rt-wb (8Δ) → wb-widgets/driver-authoring/security/logic-authoring/distribution/observability (device-model plugin SPI, per-user prefs, fail-closed auth, credential redaction, chunked OTA, AtomicBoolean guard). [PR #129]
+- **T7** wb-vendor-ux-wave3-vendor-drivers (14Δ) → driver-authoring §9 (oBIX/LonWorks/OEM-on-stock/BStationMgrCommand/M-Bus/OPC), wb-widgets (view-target taxonomy, platform-service/daemon-file/SNMP), security §9 (SHA-256 digest + lint), issues §H1. [PR #130]
+- **T8** module-hardening-failure-modes (16Δ) → logic/logic-authoring/security §2.4/distribution/issues/wb-widgets (RUN2-7, PER2/3/5/6, BLD1-6, UXS6; 4 documented lint candidates). [PR #131]
+- **T9** apillm-headless-servlet-rt-4.14 (24Δ) → dashboard/security/wb-widgets/structure/logic/logic-authoring (servlet-in-rt contract, facet-JSON, dual-path live view, UnrestrictedFolder scaffold, JDK-pin, poller gate; Δ19 folded as forward-reference to superseding Δ20/PD-FE1). [PR #132]
+- **T10** wb-vendor-ux-rt-wb-pattern (25Δ) → wb-widgets/driver-authoring/logic-authoring/security §10/`METHODOLOGY.md` (WB archetypes table)/dashboard/cloud-connector §7-8/issues §H2 (rt↔wb data channels, outbound-vs-inbound security axes, COV columns, cloud-connector SPI). [PR #133]
+
+### References
+
+- Umbrella issue #123 (closed); feature doc `build-n4-module-kit/odd/tasks/apply-build-n4-module-deltas.md`.
+- kit-docs promotion only — no toolbelt logic behavior change, no client jar bump; `sweep-fold-audit --strict` = 159 folded / 159 cited / 0 uncited.
+- Engram topic `research/niagara/build-n4-module/apply-deltas-campaign`.
+
+---
+
 ## [v0.22.0] - 2026-09-06
 
 ### Changed — Campaign 11: lint precision (T1-T4)
