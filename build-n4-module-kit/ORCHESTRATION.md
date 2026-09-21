@@ -47,6 +47,11 @@ research-sdd; a multi-file change with real ambiguity earns a gentle-SDD proposa
 Boundaries between concurrent lanes are enforced by the multi-session rule: **check the tree before editing a
 shared file — a dirty working tree is a peer's live work, off-limits.** `[ev: retro dashboardpan-2d-to-3d-port · METHODOLOGY.md §Multi-session coordination]`
 
+The concurrent-lane roles here (coordinator / researcher / QA) are the build-n4-module half of a shared
+three-session template. The research-sdd half lives in `angeles725/sdd-investigacion` issue #867
+(*METHODOLOGY: three-session coordinator/researcher/QA template for kit changes*); the two halves are
+cross-referenced — the §7 pipeline below is this side's concrete instance.
+
 ## 5. Adopt-list
 
 1. **Research block → spec requirement.** A `[CERT]` block's **Kit implication** names the target kit file/§ and
