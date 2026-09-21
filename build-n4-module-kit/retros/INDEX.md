@@ -177,3 +177,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-21-lint-servlet-api-response-headers.md | kit | 2026-09-21 | folded | 0 | <!-- api-response-headers check in lint-servlet (auto-wired §5.18) + 3 stale-doc fixes -->
 | APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
 
+| 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | pending | 5 |
