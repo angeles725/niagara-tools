@@ -16,7 +16,7 @@ no INDEX flip — the source retro stays folded). One lint per PR, chained, CI g
 **IMPLEMENT (HIGH confidence, low false-positive):**
 - [x] L1 · `lint-subscribe-without-unsubscribe` (rt src; WARN) — from failure-modes Δ3 (RUN4). PR pending.
 - [x] L2 · `lint-no-md5-credential-digest` (src; WARN) — DONE, auto-wired report-module §5.21 + RM21.
-- [ ] L3 · `lint-bundled-jar-class-version` (src; FAIL) — from failure-modes Δ11 (BLD2).
+- [x] L3 · `lint-bundled-jar-class-version` (src; FAIL) — DONE, auto-wired report-module §12 + RM23.
 - [~] L4 · `split-package-check` — DEFERRED to project/CI bucket (cross-module: same package in 2 modules; not a per-module report-module lint). Pair with lint-guard-pins CI.
 - [x] L5 · `lint-wb-file-chooser` (-wb; WARN) — DONE, auto-wired report-module §5.22 + RM22.
 

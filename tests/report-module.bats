@@ -266,3 +266,20 @@ setup() {
   [[ "$output" == *"BChooser.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
+
+@test "RM23: bundled jar containing a major-53 class surfaces lint-bundled-jar-class-version FAIL row and exits 1" {
+  if ! command -v zip >/dev/null 2>&1; then skip "zip not available"; fi
+  # Build a temporary module with a bundled ext-jar that contains a Java 9 class (major = 53)
+  local tmpmod
+  tmpmod="$(mktemp -d)"
+  mkdir -p "$tmpmod/DemoPan-rt/libs"
+  printf '\xca\xfe\xba\xbe\x00\x00\x00\x35\x00\x00' > "$tmpmod/Foo9.class"
+  (cd "$tmpmod" && zip -q DemoPan-rt/libs/java9.jar Foo9.class)
+  rm "$tmpmod/Foo9.class"
+  run "$RM" "$tmpmod"
+  rm -rf "$tmpmod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"lint-bundled-jar-class-version"* ]]
+  # Named mutation: drop the major > 52 check -> RM23 exits 0 (no FAIL row).
+}
