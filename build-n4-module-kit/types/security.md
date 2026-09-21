@@ -422,5 +422,20 @@ If the protocol requires a specific digest algorithm (e.g. a device that mandate
 
 ---
 
+---
+
+## 10 · Outbound vs inbound security axes — do not conflate (PD-23) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ23]`
+
+Two orthogonal security axes govern a module that makes HTTP calls AND accepts inbound auth — they are separate configuration surfaces and must NEVER be conflated:
+
+| Axis | Mechanism | What it controls | Module author action |
+|------|-----------|-----------------|----------------------|
+| **Outbound HTTP** | `httpClient-rt BHttpClientService.enableNonDriverClients` | Whether NON-DRIVER modules may use `BHttpClient` for outbound HTTP requests | Set `enableNonDriverClients=true` in the station's `httpClient-rt` service if a non-driver module needs outbound HTTP; raw `HttpURLConnection` / OkHttp bypass this gate entirely (see `types/issues-and-gotchas.md §H2`) |
+| **Inbound auth** | `BAuthenticationScheme` SPI | How the station verifies incoming credentials (user/password, certificate, SAML, API key) | Implement `BAuthenticationScheme` to add a custom inbound auth mechanism; see `types/security.md §5` (licensing) for the service-anchor |
+
+**Key rule:** the `enableNonDriverClients` gate is OUTBOUND-only. It has zero effect on who can connect TO the station. A module that sets `enableNonDriverClients=true` is opting into outbound HTTP, not opening inbound auth. Documenting both axes is mandatory in any module that touches either, so integrators do not mistake an outbound-gate change for an inbound auth weakening. `[ev: corpus B1075]`
+
+**See also:** `types/cloud-connector.md §2` (transport dual model + HTTP transport), `types/issues-and-gotchas.md §H2` (`enableNonDriverClients` gotcha).
+
 **See also:** `types/actions.md` §3 (ADMIN_INVOKE flag), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).

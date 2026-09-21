@@ -203,3 +203,15 @@ codec that must round-trip between Java and the browser). When it does, the wiri
 - **PUNCH-LIST: the RBAC decision is COLLAPSED into a Baja-bound helper** (DashboardPan) where chihuahua-ux keeps a pure-vs-Baja seam — re-split so the write-auth decision is Niagara-free/unit-testable. `[ev: corpus B763]`
 
 See also: `docs/module-best-practices.md` §2 (the X-Requested-With rule + the CSRF-guard↔header pairing).
+
+## RT↔UX↔WB triangle — same rt data, three surfaces (PD-12) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ12]`
+
+When a module ships a `-ux` profile, document the **RT↔UX↔WB triangle** explicitly: all three surfaces (rt slots, ux dashboard, wb manager/view) read/write the SAME rt data, but each surface has a different audience, protocol, and update path.
+
+| Surface | Audience | Protocol | Update path |
+|---------|----------|----------|-------------|
+| **RT (`-rt`)** | Control logic, station | Baja slot writes / `BLink` | In-process, synchronous |
+| **UX (`-ux`)** | Browser operator | REST-poll → JSON → SPA render | Servlet → `BComponent.get()` |
+| **WB (`-wb`)** | Engineering / commissioning | Baja property-sheet / manager view | `doLoadValue()` / `doSaveValue()` |
+
+**Rule:** the module README (or the facade Javadoc) MUST list which rt slots are exposed on EACH surface and why, so an integrator does not duplicate writes or miss a surface. A slot that is OPERATOR-writable on the UX dashboard but read-only in Workbench (or vice versa) is a deliberate policy choice that must be documented. `[ev: corpus B1061]`

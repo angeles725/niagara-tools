@@ -31,7 +31,13 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 **Gotcha:** `BBasicNetwork` ships **no TCP transport**. TCP is each driver's own `Comm` subclass.
 [ev: corpus B517 §517.5]
 
-### 1.3 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
+### 1.3 · WB device-manager presence rule and plugin-extensible SPI [ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]
+
+**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1057]`
+
+**Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
+
+### 1.4 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
 
 When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()`.
 
@@ -277,6 +283,21 @@ device template files are bundled inside the jar under `rc/` and served at runti
 `module://` ORDs. [ev: code BZWaveNetwork.java imports; corpus DR-02]
 
 ---
+
+### `getDeviceManagerSubscribeDepth()` — deep slot-tree discovery `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ20]`
+
+**Override `getDeviceManagerSubscribeDepth()` in a `BNNetwork` subclass to return >1 for deep slot trees (PD-20):** the default implementation is hardcoded to return `1`, which subscribes only the immediate children of the device manager. When a device exposes a multi-level slot hierarchy (e.g. zone → device → point), override this method to return the correct depth (e.g. `3`). Without the override, discover and poll only reach the first level and the deeper points are never subscribed.
+
+```java
+@Override
+public int getDeviceManagerSubscribeDepth() {
+    return 3;  // depth: network → device → proxy ext → point
+}
+```
+
+`[ev: corpus B1072]`
+
+**`NMgrControllerUtil.network.getAgents().filter()` is the NATIVE device-manager-agent extension point (PD-14):** the static utility `NMgrControllerUtil.getAgents(network)` returns the list of registered `BINDeviceMgrAgent` implementations that apply to the current network. Filter this list in `getAgents()` to include only the agents that are relevant to the current device type. This is NOT CCN-specific — any `BNNetwork` subclass may override `getAgents()` and use this filter. Registering a `BINDeviceMgrAgent` via a plain `<type>` in `module.xml` is sufficient; no `@AgentOn` is required. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ14]` `[ev: corpus B1066]`
 
 ---
 

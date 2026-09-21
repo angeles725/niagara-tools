@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-20 · kit · wb-vendor-ux-rt-wb-pattern-deltas
 
 **Session**: niagara-research focus `wb-vendor-ux` (B1054–B1061) — cross-vendor survey of how Honeywell/Tridium/Distech/OEM build their `-wb`, and the RT↔WB correlation. WV8 synthesis (B1061) emitted 13 proposed deltas (PD-01..PD-13) for this kit so our own modules match vendor-grade WB UX.

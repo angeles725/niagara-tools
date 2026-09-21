@@ -114,6 +114,27 @@ Use `Prop` for direct slots; use `PropPath` for mixin or extension slots. The di
 
 `[ev: corpus B1089]`
 
+**One `MgrColumn.Prop` per key `@NiagaraProperty` on the proxy ext (PD-02):** each key property on a `BProxyExt` subclass (e.g. `deviceAddress`, `pointOffset`, `scaling`) maps to exactly ONE `MgrColumn.Prop`; the column reads/writes that single slot — no compound columns or manual ORD construction. This ensures the Add/Edit dialog pre-fills the slot value without extra coding. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ2]`
+
+**`addDefault*Columns()` + `addCustom*Columns()` template hook (PD-16):** structure a manager's column definition as two protected methods: `addDefaultColumns(List<MgrColumn>)` (supplies the built-in columns every subclass gets) and `addCustomColumns(List<MgrColumn>)` (empty by default; subclasses override to extend). Call both from `makeModel()`. This lets a subclass add columns without replacing the default set. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ16]`
+
+**`isDefault` blank-suppression for polymorphic manager columns (PD-17):** when a manager row type can be one of several subtypes (e.g. digital vs analog vs enum proxy), some columns are irrelevant for certain row types. Override `MgrColumn.isDefault(BComponent row)` to return `false` for rows where the column does not apply — the manager hides the cell rather than showing a blank or a cast exception. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ17]`
+
+**Boolean-flag column-switch template (PD-22):** when a manager must show entirely different column sets based on a runtime flag (e.g. client mode vs slave mode), hold two `MgrColumn[]` arrays as private static finals and dispatch in `makeColumns()` via an `isX()` hook:
+
+```java
+private static final MgrColumn[] CLIENT_COLUMNS = { /* … */ };
+private static final MgrColumn[] SLAVE_COLUMNS  = { /* … */ };
+
+@Override
+protected MgrColumn[] makeColumns() {
+    return isClientMode() ? CLIENT_COLUMNS : SLAVE_COLUMNS;
+}
+protected boolean isClientMode() { return false; } // subclass overrides
+```
+
+Never collapse the two sets into one wide array with conditional visibility — swapping whole arrays is cheaper and cleaner. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ22]`
+
 ### `BAbstractManager` vs `BWbComponentView` — decision table [ev: retro wb-manager-framework-deltas Δ3]
 
 | Criterion | Use `BAbstractManager` | Use `BWbComponentView` + `BTable` |
@@ -126,6 +147,8 @@ Use `Prop` for direct slots; use `PropPath` for mixin or extension slots. The di
 | Standalone driver that owns its Manager container | YES (Tridium subclass recipe) | No |
 
 Our Apillm importer/exporter managers use the hand-built `BWbComponentView`+`BTable` recipe: no discovery, no learn, hand-curated children — the full `BAbstractManager` framework adds no value there.
+
+**`BWbComponentView` for non-table specialized UIs — terminals, schedule editors (PD-08):** use `BWbComponentView` (not a `BAbstractManager`) for any UI that is not a table of discovered/learned rows — VT100 terminals, job schedule editors, wizard flows, or any non-tabular interaction. These views live at the same rung-3 as a manager but serve fundamentally different UX patterns. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ8]` `[ev: corpus B1058]`
 
 `[ev: corpus B1091]`
 
@@ -164,6 +187,14 @@ public class BMyDeviceManager extends BAbstractManager {
 
 **Anti-pattern:** do NOT make Swing *widgets* (e.g. a `JList` or `BTable` model) static — only DOMAIN STATE. Widget singletons across two simultaneously open manager windows cause threading violations. The static field must hold only value-typed or thread-safe domain state. `[ev: corpus B1078]`
 
+### Dialog pre-population — live RT objects and toRow() [ev: retro wb-vendor-ux-rt-wb-pattern-deltas]
+
+**`toRow()` result carries ALL config slots so the add-dialog is pre-populated (PD-03):** the discover/learn path's `toRow()` result object MUST carry ALL config slots (address, name, type, scaling, ranges) — not just the discovery key. The `MgrController.promptForNew()` dialog reads these slots to pre-fill the Add dialog; a sparse `toRow()` forces the operator to fill fields manually that the driver already knows. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ3]` `[ev: corpus B1055]`
+
+**Dialogs accept live RT objects, not a re-fetch (PD-07):** when the Edit or Add dialog is pre-populated from an already-resolved RT component, pass the live object directly to the dialog rather than re-resolving from an ORD. Re-fetching inside the dialog introduces a race (the state may change between the manager render and the dialog open) and adds a latency flash. Accept the live RT component in the dialog constructor. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ7]` `[ev: corpus B1055]`
+
+**COV/capability-bit `toRow()` pre-population (PD-21):** when a protocol device advertises capabilities as a bitfield (e.g. `servicesSupported` in BACnet, capability flags in Modbus), decode the bitfield inside `toRow()` and set the corresponding pre-filled fields on the result object. The manager row then shows pre-checked capability boxes at discover time without a second round-trip. Bit decode belongs in `toRow()`, not in the Add dialog. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ21]` `[ev: corpus B1073]`
+
 ### Minimal non-driver custom-manager template [ev: retro wb-manager-framework-deltas Δ4]
 
 Use this template when a **service or container** (not a driver) needs a manager view — e.g. a service that owns a set of configuration records with an Add/Delete UI. For the driver-centric recipe with full `makeLearn()` + network discovery, see `envCtrlDriver` (B956).
@@ -200,6 +231,20 @@ public class BMyServiceManager extends BAbstractManager {
 ```
 
 `[ev: corpus B1091]`
+
+## Vendor-grade -wb UX patterns (cross-vendor survey PD-01..PD-10)
+
+> These rules come from the wb-vendor-ux cross-vendor survey (B1054–B1061). Apply to any driver or service that ships a `-wb` profile.
+
+- **Every `BBasicNetwork`/driver module ships a `@AgentOn` WB device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register at least a minimal `BAbstractManager` or `BWbComponentView` via `@AgentOn` on the network or device type. Relying solely on the default property-sheet view forces operators into raw slot editing — the vendor-grade bar is a table view at minimum. For the full manager recipe see `§Manager recipe`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1057]`
+
+- **Every long RT operation is a `BOrd` action on a job-bar (PD-04):** any operation whose RT side takes >1 s (firmware upload, device scan, config push) MUST follow the `submit → sync → resolve → registerForEvents → jobBar.load` recipe. The `BOrd` points at the `BJob`; `jobBar.load(ord)` attaches the progress UI; the button is disabled while `jobBar.isRunning()`. Never block the Swing EDT or poll in a `javax.swing.Timer`. See `types/logic-authoring.md §BSimpleJob + Fox file-channel streaming` for the RT job authoring side. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]` `[ev: corpus B1060]`
+
+- **Prune inapplicable inherited commands in `makeCommands()`/`getAgents()` (PD-05):** a WB view inherits all parent-type commands and agents by default. Override `getAgents()` to filter out agents that do not apply to the current type (e.g. the default property-sheet agent when a custom manager is the preferred view). Override `makeCommands()` to remove toolbar commands that would cause errors or have no effect on the current component. Remove, do not just disable, to keep the UX clean. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ5]` `[ev: corpus B1057]`
+
+- **Every `BOrd` ref slot needs a station-scoped WB picker — never the file-space default (PD-06):** any `-wb` form or manager that lets the operator configure a `BOrd` pointing at a station component MUST present a station-component chooser (`BComponentChooser` or the `targetType` facet; see `§Field editors — PD-FE1`). The default `BOrd.NULL` dialog opens a file-space chooser (`C:\`) — useless in a station context. This extends the `lint-wb-file-chooser` candidate from `§-wb station-space picker`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ6]` `[ev: corpus B1061]`
+
+- **Cross-cutting WB concerns use a `BWbService`, not per-component agents (PD-10):** when a `-wb` concern spans multiple component types in a session (e.g. a shared job scheduler, a session-keyed credential cache, or a global drag-and-drop coordinator), implement it as a `BWbService extends BAbstractService` registered under `/Services`. Per-component agents that share state across component instances via `static` fields is the anti-pattern — it creates invisible coupling and GC pressure. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ10]` `[ev: corpus B1060]`
 
 ## -wb station-space picker, table repaint, and view refresh rules
 
@@ -242,12 +287,49 @@ Reusable across manager rows and PX widgets without per-type auth boilerplate. `
 
 > Rung-1 detail (extends the FieldEditor recipe above): most modules need NO custom field editor (rung 0). Reach here only when an rt slot must pick a station component, or an importer-style Manager must create points from WB. [ev: retro wb-field-editors-deltas]
 
+- **Facet-driven field-editor selection — pick the FE from the slot's facets (PD-15):** instead of hard-coding a field editor class for a slot, store a facet key (e.g. `BFacets.make("fieldEditor", BString.make("module:TimeZoneSelectionFE"))`) on the property; the WB framework selects the matching registered FE by that facet. This allows operators to swap the FE per slot without code changes, and avoids a WB-profile compile dependency just to name a field-editor class. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ15]` `[ev: corpus B1067]`
+
 - **`targetType` facet — zero-code station-component picker for a `BOrd` slot (PD-FE1):** a `BOrd` slot whose value is null has no scheme, so `BOrdFE` stays on the file-system chooser (`BFileOrdChooser`) — the null-ord gotcha, by design (a null value has no `BIOrdChooser` scheme override to fire). To browse the station component tree instead, put a `targetType` facet on the property (`facets=BFacets.make("targetType", BString.make("baja:Component"))`, or the equivalent `@Facets`); `BOrdFE` then selects `BComponentChooser` automatically, even for a null ord. No `-wb` code required — prefer this over a custom FE for `BOrd`→component slots. [ev: retro wb-field-editors-deltas Δ1] `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ20]`
   - **Δ19 SUPERSEDED:** a previous approach proposed a custom registered `BWbFieldEditor` for station-ORD slots. That approach (Δ19) is superseded by the simpler `targetType` facet (PD-FE1 above). See `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ19]` for the original proposal; the facet-based fix requires zero `-wb` code. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ19]`
 - **`targetType=baja:ControlPoint` for pick/create a control point slot (PD-FE2):** use `targetType=baja:ControlPoint` (or a relevant subtype such as `baja:NumericWritable`) in the `@BFacets` annotation on a `BOrd` property that should refer to a control point — the chooser is then filtered to points only, not every component in the station. [ev: retro wb-field-editors-deltas Δ2] `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ21]`
 - **Point-creation from WB — use the Manager plumbing, not `BComponent.add()` (PD-FE2-create):** for an importer-style `BAbstractManager`, override `getNewTypes()` to return the writable types you allow, then rely on `MgrController.promptForNew()` → `MgrEdit.commit()` → `Mark.moveTo(container)`. Do NOT call `BComponent.add()` manually from the WB view — the manager's transaction plumbing owns the station relay and undo; a hand-rolled `add` bypasses both. [ev: retro wb-field-editors-deltas Δ2]
 - **Filtered sub-type chooser — subclass `BComponentChooser`, NEVER override `baja:Ord` (PD-FE3):** when a slot must pick only a subtype (e.g. only `BNumericWritable`), subclass `BComponentChooser` with a `selectFilter` `RefFilter` — `(parent, slot) -> slot.isProperty() && parent.get(slot.asProperty()).getType().is(BTargetType.TYPE)` — and register it via `@AgentOn(types={"myModule:MyOrdAlias"})` on a **custom** ord type. Never override the global `baja:Ord` agent — that would hijack every ord slot in the station. The `FIELD_EDITOR` facet is the alternative when you cannot change the slot type; for `BOrd`→component prefer the `targetType` facet (PD-FE1). For a station-subtree-filtered chooser, subclass `BComponentChooser` and call `BComponentChooser.prompt(root, path, displayFilter, selectFilter)` directly, or add new target types via `parent.add(name, point, cx)` for `[BNumericWritable/BBooleanWritable/BStringWritable/BEnumWritable]`. For `BEnumWritable`, set a minimal `BEnumRange` facet so it constructs without error. [ev: retro wb-field-editors-deltas Δ3] `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ22]`
 - **One-step "create the referenced component" in a manager (Δ23):** when a manager's rows reference station components (e.g. an importer mapping → writable point), the "Add…" flow SHOULD let the user CREATE the target component in one dialog — type dropdown (Numeric/Boolean/String/Enum), name, folder → `new B*Writable()` + `folder.add(uniqueName, point, cx)` + wire the ref ORD — with a "(use existing…)" fallback. NEVER force pre-creating points and hand-picking ORDs separately. For `BEnumWritable`, set a minimal `BEnumRange` facet on construction so it serializes. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ23]` `[ev: corpus B1087]`
+
+## Multi-part WB view — BTabbedPane+BLabelPane recipe (PD-19) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ19]`
+
+When a `-wb` view needs multiple sections (e.g. status tab + config tab + diagnostics tab), use Baja's native `BTabbedPane`+`BLabelPane` — NOT `javax.swing.JTabbedPane`. The native types participate in the Baja Swing lifecycle and fire `doLoadValue`/`doSaveValue` correctly per tab.
+
+**Recipe (`BTabbedPane` + one `createTPage*()` per tab):**
+
+```java
+private BTabbedPane tabs;
+
+@Override
+protected void buildImpl(BWbTablePane parent) {
+    tabs = new BTabbedPane();
+    tabs.add(createTPageStatus(),     "Status");
+    tabs.add(createTPageConfig(),     "Configuration");
+    tabs.add(createTPageDiagnostics(),"Diagnostics");
+    parent.add(tabs, BorderLayout.CENTER);
+}
+
+private BLabelPane createTPageStatus() {
+    BLabelPane p = new BLabelPane();
+    // … add widgets …
+    return p;
+}
+```
+
+**Rules:**
+- One `createTPage*()` factory method per tab — keeps the constructor compact.
+- **Conditional tab:** wrap in `if (childIsPresent())` before `tabs.add(...)` to hide a tab when the required child is absent.
+- **`doLoad`/`doSave` symmetry:** override `doLoadValue()` to set widget values from the loaded component; override `doSaveValue()` to write widget values back. Keep them paired — a missing `doSaveValue()` causes silent loss of edits.
+- **Status tab layout:** place a `BJobBar` in `NORTH` and a `BTable` in `CENTER` — the standard vendor layout for a status/command tab.
+
+`[ev: corpus B1070]`
+
+**`BTabbedPane.selection` is TRANSIENT — persist the tab by label text (PD-24):** `BTabbedPane.selection` is NOT annotated with `@NiagaraProperty`, so it is TRANSIENT — it does not survive a view close/reopen or a `doSaveValue()` call. To remember the selected tab across open/close, persist the tab's **label text** (not its index, which is unstable if tabs are added/removed) in a per-user pref file (see `§WB user preferences`) or in a `String` field. Restore in `doLoadValue()` with `tabs.setSelection(tabs.find(savedLabel))`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ24]` `[ev: corpus B1076]`
 
 ## PX authoring — binding taxonomy
 

@@ -329,3 +329,12 @@ histImport.setFacets(histFacets);
 **Proposed lint check** (not yet in `toolbelt/`):
 - `precision-facet-learn-mismatch` — flag a `BHistoryImport` subclass that hardcodes `BFacets.PRECISION` to a literal integer without reading the parent proxy ext's `UNITS_EXPONENT` facet.
 [ev: corpus B1100] — **Kit coverage: none (lint candidate; actionable for mbus/field-bus drivers)**
+
+### H2 · `BHttpClientService.enableNonDriverClients=false` blocks non-driver outbound HTTP `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ18]`
+
+**Symptom:** a non-driver module (plain `BAbstractService` or utility) that calls `BHttpClient.send(...)` throws a `ServiceException` at runtime with a message such as "Non-driver clients not permitted".
+**Root cause:** `httpClient-rt BHttpClientService.enableNonDriverClients` defaults to `false`. This gate blocks any module that is NOT a `BDeviceNetwork`/`BBasicNetwork` subclass from using `BHttpClient` for outbound HTTP requests.
+**Fix:** in the commissioning runbook, set `enableNonDriverClients=true` on the station's `httpClient-rt` service. Alternatively, use `HttpURLConnection` or OkHttp (from `net-rt`) directly — these bypass the gate entirely because they are plain JVM calls, not routed through `BHttpClientService`.
+**Key gotcha:** raw `HttpURLConnection` / OkHttp are NOT gated. Our Apillm importer uses `HttpURLConnection` exactly for this reason. Document the choice in the module README so integrators know whether the station-side gate applies.
+**See also:** `types/security.md §10` for the full outbound-vs-inbound security axis separation (PD-23). `types/cloud-connector.md §7` for the full gotcha with a commissioning note template.
+[ev: corpus B1069] — **Kit coverage: commissioning-note rule in `types/cloud-connector.md §7`**
