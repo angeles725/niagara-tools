@@ -18,6 +18,10 @@
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.
 #                       [ev: corpus B813]
+#   api-response-headers WARN  a doGet/doPost/service handler that calls getWriter()/getOutputStream()
+#                       but the class has no setHeader("X-Content-Type-Options",...) and no
+#                       setApiHeaders()/applyHeaders() helper call anywhere. Defense-in-depth only;
+#                       the global TridiumSecurityFilter usually covers it. [ev: corpus B1133 UXS1]
 #
 # WARN -> FAIL under --strict. Deferred: R12.2 step-up re-auth (B803 — no static primitive).
 #
@@ -30,6 +34,7 @@
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro campaign8-lint-servlet]
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
+# Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options does not WARN
 set -u
 
 FAILED=0
@@ -82,12 +87,13 @@ END {
     # -----------------------------------------------------------------------
     # File-level flags (computed once, on comment-stripped lines)
     # -----------------------------------------------------------------------
-    file_has_xhr = 0; file_has_csrf = 0
+    file_has_xhr = 0; file_has_csrf = 0; file_has_xcto = 0
     for (i = 1; i <= n; i++) {
         sl = lines[i]
         if (match(sl, /\/\//)) sl = substr(sl, 1, RSTART - 1)
         if (sl ~ /X-Requested-With/) file_has_xhr = 1
         if (sl ~ /CsrfUtil|x-niagara-csrfToken|csrfToken/) file_has_csrf = 1
+        if (sl ~ /X-Content-Type-Options/ || sl ~ /setApiHeaders[[:space:]]*\(/ || sl ~ /applyHeaders[[:space:]]*\(/) file_has_xcto = 1
     }
 
     # -----------------------------------------------------------------------
@@ -142,6 +148,16 @@ END {
         if (body ~ /LOG\.info\(/) {
             v = (strict+0 == 1) ? "FAIL" : "WARN"
             printf "%s  log-in-handler  %s:%d  LOG.info inside request handler (per-request log spam)\n",
+                   v, rel, start
+        }
+
+        # --- api-response-headers check ---
+        # Fire only when the handler clearly writes a response body (getWriter/getOutputStream)
+        # AND the class has no X-Content-Type-Options header set anywhere (not even via helper).
+        has_resp_write = (body ~ /getWriter\(\)/ || body ~ /getOutputStream\(\)/)
+        if (has_resp_write && !file_has_xcto) {
+            v = (strict+0 == 1) ? "FAIL" : "WARN"
+            printf "%s  api-response-headers  %s:%d  response handler with no X-Content-Type-Options (defense-in-depth; the global filter usually covers it — see security.md §7)\n",
                    v, rel, start
         }
 

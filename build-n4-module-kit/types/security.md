@@ -308,10 +308,11 @@ resp.setHeader("X-Frame-Options", "SAMEORIGIN");
 resp.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'");
 ```
 
-**Proposed lint check** (not yet in `toolbelt/lint-servlet.sh`):
-- `api-response-headers` — flag a `doGet`/`doPost` handler that writes a response but
-  does NOT call a method name containing `setHeader` with `X-Content-Type-Options` in
-  the same method or a helper it delegates to.
+**Lint check implemented** (`toolbelt/lint-servlet.sh`, check `api-response-headers`, WARN):
+- `api-response-headers` — flags a `doGet`/`doPost`/`service` handler that calls
+  `getWriter()`/`getOutputStream()` but whose class has no `setHeader("X-Content-Type-Options",…)`
+  and no `setApiHeaders()`/`applyHeaders()` helper call anywhere. Emitted as WARN (defense-in-depth;
+  the global `TridiumSecurityFilter` usually covers it). WARN → FAIL under `--strict`.
 
 `[ev: retro our-dashboard-audit-deltas Δ1]`
 
@@ -415,8 +416,8 @@ byte[] digest = sha.digest(credential.getBytes(StandardCharsets.UTF_8));
 
 If the protocol requires a specific digest algorithm (e.g. a device that mandates MD5 for its own challenge), isolate that to the comm layer and do NOT reuse MD5 for any in-station storage. Document the protocol constraint as a known limitation.
 
-**Proposed lint check** (not yet in `toolbelt/`):
-- `no-md5-credential-digest` — flag `MessageDigest.getInstance("MD5")` in a module that also contains `BPassword`, `BCredentials`, or slot names matching `*password*` / `*credential*` / `*pin*`.
+**Lint check implemented** (`toolbelt/lint-no-md5-credential-digest.sh`):
+- `no-md5-credential-digest` — flags `MessageDigest.getInstance("MD5")` in a module that also contains `BPassword`, `BCredentials`, or slot names matching `*password*` / `*credential*` / `*pin*`.
 
 **See also:** `types/security.md §3.2` (`BPassword` safe handling), `types/issues-and-gotchas.md §H1` (precision-consistency lint). [ev: corpus B1104]
 

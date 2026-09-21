@@ -99,3 +99,19 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"catch-no-400"* ]]
 }
+
+# shellcheck disable=SC2016
+@test "LSV7: doGet with getWriter() but no X-Content-Type-Options WARNs (api-response-headers), exit 0" {
+  only ApiRespNoHeader.java
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"api-response-headers"* ]]
+}
+
+# shellcheck disable=SC2016
+@test "LSV7-clean: doGet that sets X-Content-Type-Options does NOT warn (api-response-headers)" {
+  only ApiRespWithHeader.java
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"api-response-headers"* ]]
+}
