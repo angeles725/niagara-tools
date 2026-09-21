@@ -676,6 +676,312 @@ for ADIR in "${ARTIFACTS[@]}"; do
   esac
 
   # ----------------------------------------------------------------
+  # 5.14–5.17. rt-specific static-source lints
+  #    5.14 lint-subscribe-without-unsubscribe  WARN (called without --strict)
+  #    5.15 lint-recovery-path                  FAIL
+  #    5.16 lint-config-sanity                  FAIL (CS1/CS2) / WARN (CS3)
+  #    5.17 lint-status-parity                  WARN (called without --strict)
+  #    All gated to *-rt artifacts; SKIP if no src/.
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-rt)
+      # 5.14 lint-subscribe-without-unsubscribe
+      if [ -d "$ADIR/src" ]; then
+        swu_exit=0
+        swu_out=$("$TOOLBELT/lint-subscribe-without-unsubscribe.sh" "$ADIR/src" 2>&1) || swu_exit=$?
+        if [ "$swu_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-subscribe-without-unsubscribe "env fault (exit 3)"; HAD_ENV=1
+        else
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              WARN*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+              ;;
+            esac
+          done <<< "$swu_out"
+        fi
+      else
+        emit "$ANAME" SKIP lint-subscribe-without-unsubscribe "no src/"
+      fi
+
+      # 5.15 lint-recovery-path (FAIL; exit 1 = FAIL rows)
+      if [ -d "$ADIR/src" ]; then
+        lrp_exit=0
+        lrp_out=$("$TOOLBELT/lint-recovery-path.sh" "$ADIR/src" 2>&1) || lrp_exit=$?
+        if [ "$lrp_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-recovery-path "env fault (exit 3)"; HAD_ENV=1
+        else
+          _lrp_had_fail=0
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              FAIL*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+                _lrp_had_fail=1
+              ;;
+            esac
+          done <<< "$lrp_out"
+          [ "$_lrp_had_fail" -eq 0 ] && emit "$ANAME" PASS lint-recovery-path "clean"
+        fi
+      else
+        emit "$ANAME" SKIP lint-recovery-path "no src/"
+      fi
+
+      # 5.16 lint-config-sanity (CS1/CS2 FAIL; CS3 WARN)
+      if [ -d "$ADIR/src" ]; then
+        lcs_exit=0
+        lcs_out=$("$TOOLBELT/lint-config-sanity.sh" "$ADIR/src" 2>&1) || lcs_exit=$?
+        if [ "$lcs_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-config-sanity "env fault (exit 3)"; HAD_ENV=1
+        else
+          _lcs_had_fail=0
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              FAIL*|WARN*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+                [ "$_st" = "FAIL" ] && _lcs_had_fail=1
+              ;;
+            esac
+          done <<< "$lcs_out"
+          [ "$_lcs_had_fail" -eq 0 ] && emit "$ANAME" PASS lint-config-sanity "clean"
+        fi
+      else
+        emit "$ANAME" SKIP lint-config-sanity "no src/"
+      fi
+
+      # 5.17 lint-status-parity (WARN; called without --strict)
+      if [ -d "$ADIR/src" ]; then
+        lsp2_exit=0
+        lsp2_out=$("$TOOLBELT/lint-status-parity.sh" "$ADIR/src" 2>&1) || lsp2_exit=$?
+        if [ "$lsp2_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-status-parity "env fault (exit 3)"; HAD_ENV=1
+        else
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              WARN*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+              ;;
+            esac
+          done <<< "$lsp2_out"
+        fi
+      else
+        emit "$ANAME" SKIP lint-status-parity "no src/"
+      fi
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
+  # 5.18–5.19. ux-specific static-source lints
+  #    5.18 lint-servlet  FAIL rows block / WARN rows advisory;
+  #                       self-SKIPs when no BWebServlet; needs src/
+  #    5.19 rc-scan       FAIL; only when src/rc/ exists
+  #    Both gated to *-ux artifacts.
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-ux)
+      # 5.18 lint-servlet
+      if [ -d "$ADIR/src" ]; then
+        srv_exit=0
+        srv_out=$("$TOOLBELT/lint-servlet.sh" "$ADIR/src" 2>&1) || srv_exit=$?
+        if [ "$srv_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-servlet "env fault (exit 3)"; HAD_ENV=1
+        else
+          _srv_had_row=0
+          _srv_had_fail=0
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              FAIL*|WARN*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+                _srv_had_row=1
+                [ "$_st" = "FAIL" ] && _srv_had_fail=1
+              ;;
+            esac
+          done <<< "$srv_out"
+          if [ "$_srv_had_row" -eq 0 ]; then
+            emit "$ANAME" SKIP lint-servlet "no BWebServlet"
+          elif [ "$_srv_had_fail" -eq 0 ]; then
+            emit "$ANAME" PASS lint-servlet "clean"
+          fi
+        fi
+      else
+        emit "$ANAME" SKIP lint-servlet "no src/"
+      fi
+
+      # 5.19 rc-scan (FAIL; only when src/rc/ exists)
+      if [ -d "$ADIR/src/rc" ]; then
+        rcs_exit=0
+        rcs_out=$("$TOOLBELT/rc-scan.sh" "$ADIR" 2>&1) || rcs_exit=$?
+        if [ "$rcs_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR rc-scan "env fault (exit 3)"; HAD_ENV=1
+        else
+          _rcs_had_fail=0
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            case "$_ln" in
+              FAIL*|WARN*)
+                _parsed=$(printf '%s' "$_ln" | awk '{
+                  n = split($0, a, /[[:space:]]{2,}/)
+                  st = (n >= 1) ? a[1] : ""
+                  chk = (n >= 2) ? a[2] : ""
+                  site = (n >= 3) ? a[3] : ""
+                  reason = ""
+                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+                  colon = index(site, ":")
+                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+                  lno = (colon > 0) ? substr(site, colon + 1) : ""
+                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+                  print st "|" chk "|" bn ":" lno "  " reason
+                }')
+                _st="${_parsed%%|*}"
+                _r="${_parsed#*|}"
+                _chk="${_r%%|*}"
+                _det="${_r#*|}"
+                emit "$ANAME" "$_st" "$_chk" "$_det"
+                [ "$_st" = "FAIL" ] && _rcs_had_fail=1
+              ;;
+            esac
+          done <<< "$rcs_out"
+          [ "$_rcs_had_fail" -eq 0 ] && emit "$ANAME" PASS rc-scan "clean"
+        fi
+      else
+        emit "$ANAME" SKIP rc-scan "no src/rc/"
+      fi
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
+  # 5.20. lint-wb-threading.sh (WARN; only *-wb artifacts with src/)
+  #       Row format: <check>  WARN  <file>:<line>  <detail>
+  #       (check is field 1, status is field 2 — awk swaps for emit)
+  # ----------------------------------------------------------------
+  case "$ANAME" in
+    *-wb)
+      if [ -d "$ADIR/src" ]; then
+        wbt_exit=0
+        wbt_out=$("$TOOLBELT/lint-wb-threading.sh" "$ADIR/src" 2>&1) || wbt_exit=$?
+        if [ "$wbt_exit" -eq 3 ]; then
+          emit "$ANAME" ERROR lint-wb-threading "env fault (exit 3)"; HAD_ENV=1
+        else
+          while IFS= read -r _ln; do
+            [ -z "$_ln" ] && continue
+            _parsed=$(printf '%s' "$_ln" | awk '{
+              n = split($0, a, /[[:space:]]{2,}/)
+              chk  = (n >= 1) ? a[1] : ""
+              st   = (n >= 2) ? a[2] : ""
+              site = (n >= 3) ? a[3] : ""
+              reason = ""
+              for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+              colon = index(site, ":")
+              fp  = (colon > 0) ? substr(site, 1, colon - 1) : site
+              lno = (colon > 0) ? substr(site, colon + 1) : ""
+              nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+              print st "|" chk "|" bn ":" lno "  " reason
+            }')
+            _st="${_parsed%%|*}"
+            _r="${_parsed#*|}"
+            _chk="${_r%%|*}"
+            _det="${_r#*|}"
+            case "$_st" in
+              WARN) emit "$ANAME" "$_st" "$_chk" "$_det" ;;
+            esac
+          done <<< "$wbt_out"
+        fi
+      else
+        emit "$ANAME" SKIP lint-wb-threading "no src/"
+      fi
+    ;;
+  esac
+
+  # ----------------------------------------------------------------
   # 6. schema-risk.sh <artifact>/.deploy-baseline <artifact>
   #    (Campaign 8 PR8 / D9a; SKIP if no .deploy-baseline/ snapshot)
   # ----------------------------------------------------------------
@@ -764,6 +1070,101 @@ else
       ;;
     esac
   done <<< "$uac_out"
+fi
+
+# ----------------------------------------------------------------
+# 10. lint-structure.sh <module-root> — once per run (FAIL)
+# ----------------------------------------------------------------
+lst_exit=0
+lst_out=$("$TOOLBELT/lint-structure.sh" "$MODULE_ROOT" 2>&1) || lst_exit=$?
+if [ "$lst_exit" -eq 3 ]; then
+  emit "(module)" ERROR lint-structure "env fault (exit 3)"; HAD_ENV=1
+else
+  _lst_had_fail=0
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      FAIL*|WARN*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          colon = index(site, ":")
+          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+          lno = (colon > 0) ? substr(site, colon + 1) : ""
+          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn ":" lno "  " reason
+        }')
+        _st="${_parsed%%|*}"
+        _r="${_parsed#*|}"
+        _chk="${_r%%|*}"
+        _det="${_r#*|}"
+        emit "(module)" "$_st" "$_chk" "$_det"
+        [ "$_st" = "FAIL" ] && _lst_had_fail=1
+      ;;
+    esac
+  done <<< "$lst_out"
+  [ "$_lst_had_fail" -eq 0 ] && emit "(module)" PASS lint-structure "clean"
+fi
+
+# ----------------------------------------------------------------
+# 11. lint-write-path.sh <module-root> — once per run (FAIL on uncovered;
+#     STALE/DRIFT advisory rows mapped to WARN, never blocking)
+# ----------------------------------------------------------------
+lwp_exit=0
+lwp_out=$("$TOOLBELT/lint-write-path.sh" "$MODULE_ROOT" 2>&1) || lwp_exit=$?
+if [ "$lwp_exit" -eq 3 ]; then
+  emit "(module)" SKIP lint-write-path "no write-path-matrix.md"
+else
+  _lwp_had_fail=0
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      FAIL*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          colon = index(site, ":")
+          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+          lno = (colon > 0) ? substr(site, colon + 1) : ""
+          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn ":" lno "  " reason
+        }')
+        _st="${_parsed%%|*}"
+        _r="${_parsed#*|}"
+        _chk="${_r%%|*}"
+        _det="${_r#*|}"
+        emit "(module)" "$_st" "$_chk" "$_det"
+        _lwp_had_fail=1
+      ;;
+      STALE*|DRIFT*)
+        # Advisory rows: exit-0 but surface as WARN so they appear in the report
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          colon = index(site, ":")
+          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+          lno = (colon > 0) ? substr(site, colon + 1) : ""
+          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+          print chk "|" bn ":" lno "  " reason
+        }')
+        _chk="${_parsed%%|*}"
+        _det="${_parsed#*|}"
+        emit "(module)" WARN "$_chk" "$_det"
+      ;;
+    esac
+  done <<< "$lwp_out"
+  [ "$_lwp_had_fail" -eq 0 ] && emit "(module)" PASS lint-write-path "clean"
 fi
 
 # ----------------------------------------------------------------

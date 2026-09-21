@@ -168,5 +168,6 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-20-module-hardening-reference-cards-deltas.md | kit | 2026-09-20 | folded | 8 |
 | 2026-09-20-module-hardening-failure-modes-deltas.md | kit | 2026-09-20 | folded | 16 |
 | 2026-09-20-module-hardening-reqexec-closed-deltas.md | kit | 2026-09-20 | folded | 7 |
+| 2026-09-20-report-module-orphan-wiring.md | kit | 2026-09-20 | folded | 0 | <!-- automation-audit PR-A: wired 9 static-source orphan lints into report-module.sh (§5.14-5.20,§10,§11) + RM12-20 -->
 | APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
 
