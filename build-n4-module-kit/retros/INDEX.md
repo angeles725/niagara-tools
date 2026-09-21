@@ -179,3 +179,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 
 | 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | pending | 5 |
 | 2026-09-21-wb-mapping-ord-npe-and-wsl-windows-jdk.md | kit | 2026-09-21 | pending | 2 |
+| 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | pending | 6 |
