@@ -59,6 +59,17 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   | dashboard (ux) | Pure model/router (no Baja runtime needed) | `verify-module.sh` | oBIX probe; RBAC write smoke |
   | wb-widget | `BTestNgStation` needs kernel+license — not WSL-runnable; no pure seam equivalent today | `verify-module.sh` | WB mount + property-sheet smoke |
 
+**WB archetypes — four named patterns, pick before coding (PD-11):** the cross-vendor survey (B1054–B1061) identified four recurring `-wb` archetypes as a second axis alongside the rung ladder. Add the chosen archetype to the module feature document before authoring any `-wb` code. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ11]`
+
+| WB archetype | When to use | Key type | Rung range |
+|--------------|-------------|----------|-----------|
+| **pure-resource palette** | No Java: palette entries only (e.g. Centraline sensor types) — rung 0 | `module.palette` `<p>` entries | 0 |
+| **driver-managers** | Driver with discovered/learned devices (BACnet, Modbus, etc.) | `BAbstractManager` / `BDeviceManager` | 2 |
+| **specialized-view** | Non-tabular interaction: terminal emulators, schedule editors, wizard flows | `BWbComponentView` / `BWbComponentView` + `BTabbedPane` | 3 |
+| **rt-only negative** | Intentionally NO `-wb`: relies on base Niagara hx-wb (e.g. lonSchneider/lonDistech zero-Java .lnml) | none — must be documented explicitly (see `types/driver-authoring.md §1.3 PD-13`) | 0 |
+
+See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev: corpus B1054-B1061]`
+
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
 - **A 4/5 exemplar that names its missing gate is more trustworthy than an unqualified 5/5 aspiration:** documenting a gap (e.g. gate 4 REQUIRED-but-absent → issue #49) makes the exemplar auditable; an unqualified 5/5 claim invites over-trust. [ev: retro dashboard-exemplar]

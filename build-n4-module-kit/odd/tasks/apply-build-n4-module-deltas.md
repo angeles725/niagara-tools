@@ -43,7 +43,7 @@ Per retro folded:
 - [x] T7 · wb-vendor-ux-wave3-vendor-drivers-deltas (14) → driver-authoring §9, wb-widgets, security §9, issues H1 — FOLDED (14Δ), sweeps green.
 - [x] T8 · module-hardening-failure-modes-deltas (16) → logic.md, logic-authoring.md, security.md, distribution.md, issues-and-gotchas.md, wb-widgets.md — FOLDED (16Δ RUN/PER/BLD/UXS6 + lint candidates), sweeps green.
 - [x] T9 · apillm-headless-servlet-rt-4.14-deltas (24) → dashboard/security/wb-widgets/structure/logic/logic-authoring — FOLDED (24Δ; Δ19 superseded→forward-ref), sweeps green.
-- [ ] T10 · wb-vendor-ux-rt-wb-pattern-deltas (25) → types/security.md, driver-authoring.md, wb-widgets.md
+- [x] T10 · wb-vendor-ux-rt-wb-pattern-deltas (25) → wb-widgets/driver-authoring/logic-authoring/security/METHODOLOGY/dashboard/cloud-connector/issues — FOLDED (25Δ), sweeps green. CAMPAIGN COMPLETE — all 10 retros folded, 114 deltas.
 
 ## Acceptance criteria
 - Every retro row in INDEX.md is `folded`; every Δ cited in a kit file (`sweep-fold-audit --strict` clean).

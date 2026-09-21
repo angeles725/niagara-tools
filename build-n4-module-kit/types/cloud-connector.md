@@ -224,6 +224,59 @@ The `BCloudIdManager` service child assigns and persists `nc:cloudId` UUIDs.
 
 ---
 
+---
+
+## 7 · `enableNonDriverClients` outbound HTTP gate (PD-18 GOTCHA) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ18]`
+
+**GOTCHA:** `httpClient-rt BHttpClientService.enableNonDriverClients=false` blocks non-driver modules from using `BHttpClient` for outbound HTTP by default.
+
+- A module that is NOT a `BDeviceNetwork`/`BBasicNetwork` driver (i.e. a plain `BAbstractService` or utility module) and calls `BHttpClient.send(...)` will receive a `ServiceException` at runtime unless `enableNonDriverClients=true` is set on the station's `httpClient-rt` service.
+- **Raw `HttpURLConnection` / OkHttp BYPASS the gate entirely** — they are plain JVM calls and are not routed through `BHttpClientService`. Our Apillm importer uses `HttpURLConnection` for this reason (not gated). OkHttp from `net-rt` is also gate-free.
+- **Rule:** if your module uses `BHttpClient`, add a commissioning note: `httpClient-rt: set enableNonDriverClients=true`. If your module uses `HttpURLConnection` or OkHttp, document that the gate does NOT apply.
+- **Security axis note:** this gate is OUTBOUND-only — it does NOT affect inbound auth. See `types/security.md §10` for the full outbound-vs-inbound axis separation.
+
+`[ev: corpus B1069]`
+
+---
+
+## 8 · `BICloudConnector` — cloud integration entry point (PD-25) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ25]`
+
+`BICloudConnector` is the lightweight Niagara cloud-integration SPI for modules that do NOT need the full `cloudLink` stack (§1–§6). It provides a `CompletableFuture`-based API.
+
+**Implementation via `BConnectorImpl`:**
+
+```java
+public class BMyCloudConnector extends BConnectorImpl {
+
+    @Override protected CompletableFuture<Void> doConnect() {
+        // open the connection / authenticate
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Override protected CompletableFuture<Void> registerDevice(String deviceId) {
+        // register or claim the device in the cloud backend
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Override protected CompletableFuture<Void> doDisconnect() {
+        // graceful close
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Override protected CompletableFuture<Boolean> doPing() {
+        // liveness check; return true when the cloud endpoint is reachable
+        return CompletableFuture.completedFuture(true);
+    }
+
+    @Override protected CompletableFuture<Void> sendMessage(BCloudMessage msg) {
+        // serialize msg to the protocol format and POST/AMQP/MQTT send
+        return CompletableFuture.completedFuture(null);
+    }
+}
+```
+
+**`nCloudDriver` bridge — device/point tree:** when the cloud service must map to a standard Niagara device/point tree, add an `nCloudDriver` module that bridges the `BICloudConnector` service to a `BDeviceNetwork`/`BDevice`/`BProxyExt` hierarchy. This keeps the cloud connector stateless (session management only) and the driver side standard (tuning, poll, subscription). `[ev: corpus B1076]`
+
 **See also:** `types/module-wiring.md` (fat-jar vs api-dep decision),
 `types/third-party-libraries.md` (uberjar rules), `types/security.md` (KeyRing,
 KeyRingPermission, FilePermission), `types/structure.md` (BAbstractService lifecycle).

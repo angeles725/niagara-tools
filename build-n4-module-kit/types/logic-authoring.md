@@ -231,6 +231,39 @@ try {
 }
 ```
 
+### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
+
+Any operation whose RT side takes >1 s (firmware upload, device scan, mass config write) MUST be authored as a `BSimpleJob` (see `§Background jobs` above) and exposed via a `BOrd` action. The WB side then follows the job-bar recipe (`submit → sync → resolve → registerForEvents → jobBar.load`). See `types/wb-widgets.md §Vendor-grade -wb UX patterns PD-04` for the full WB implementation. `[ev: corpus B1060]`
+
+## @NiagaraTopic typed event payloads — live RT→WB state (PD-09) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ9]`
+
+When an RT component changes state in a way the WB view needs to reflect live (e.g. a device discovered, a scan completed, an alarm condition toggled), fire a typed `@NiagaraTopic` payload from the RT component rather than polling.
+
+**Pattern:**
+```java
+// RT side — declare a topic slot on the rt component
+@NiagaraType
+@NiagaraProperty(name="stateChanged", type="baja:TopicFunction",
+                 flags=Flags.HIDDEN|Flags.TRANSIENT)
+public class BMyNetwork extends BBasicNetwork {
+    // Fire a typed snapshot whenever relevant state changes
+    private void notifyStateChange(MyStateSummary snapshot) {
+        BMyStateSummary bSnapshot = BMyStateSummary.make(snapshot);
+        getStruct().get(stateChangedProp).fire(bSnapshot);   // fires the topic
+    }
+}
+
+// WB side — subscribe to the topic in doLoadValue() and update the UI
+component.getStruct().get(BMyNetwork.stateChangedProp).subscribe(topicListener, cx);
+```
+
+**Rules:**
+- The topic payload type (`BMyStateSummary`) must be a `BStruct` or `BSimple` serializable as Baja — no Java-only types.
+- Unsubscribe in `doUnloadValue()` — see `types/logic-authoring.md §Subscribe / unsubscribe symmetry rule`.
+- This is the correct alternative to a WB-side polling timer when the RT component already has the state; see `types/observability.md` for the observability angle.
+
+`[ev: corpus B1058]`
+
 ## Poller robustness `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ18]`
 
 A polling component (a service or rt component that calls a remote URL on a `Clock.Ticket`) MUST guard its outbound request on both a non-empty URL AND an `enabled` flag before attempting the poll:
