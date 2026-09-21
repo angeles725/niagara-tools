@@ -1,27 +1,32 @@
 #!/usr/bin/env bash
-# build.sh — the recommended WSL build of an N4 module: Java 8 + clean + slotomatic + jar, then THE gate.
+# build.sh — full automatic chain: preflight → gradle (Java 8 + clean + slotomatic + jar) → verify gate → report-module.
 # A `gradle :jar` with the default JDK is NOT a build (wrong bytecode major, slotomatic skipped).
 # Deploying to a station is ng-deploy.sh's job (backup -> build -> copy -> type-count verify).
 #
-# Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] <module-root> <MOD> [niagara_home]
+# Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--no-preflight] [--no-report] <module-root> <MOD> [niagara_home]
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/
 #   niagara_home    arg 3, else $niagara_home. On WSL use the /mnt/c/... mount or a mirror (mirror-niagara-home.sh).
 #   --plugin-version / $NIAGARA_PLUGIN_VERSION   forwarded as -PniagaraPluginVersion (each install ships ONE
 #                   niagara-module plugin: 4.13.2 -> 7.3.40, 4.14 -> 7.6.17, 4.15.3 -> 7.6.22)
+#   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
+#   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   $JAVA8          JDK 8 path (default /usr/lib/jvm/java-8-openjdk-amd64)
 # Profiles: by default every <MOD>-<p> dir that has a gradle file AND sources under src/ is built; a scaffold
 #   (gradle file, no sources) is reported "skipped". --profiles replaces auto-detection entirely.
 # After gradle, verify-module.sh (same dir) runs on every produced jar with --src <module-root>/<MOD>.
-# Exit: 0 build + gate passed · 2 usage · 10 environment (no JDK 8, not a niagara_home, no profile) · 30 gradle failed · 31 :clean blocked by a station lock on modules/<jar> · 50 gate failed (ng-deploy.sh 50 = verify failed)
+# Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) · 30 gradle failed · 31 :clean locked · 50 gate or report-module FAIL
 set -euo pipefail
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"
+SKIP_PREFLIGHT=0; SKIP_REPORT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --profiles)       [ $# -ge 2 ] || { usage >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
     --target-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; TARGET="$2"; shift 2 ;;
     --plugin-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; PLUGIN="$2"; shift 2 ;;
+    --no-preflight) SKIP_PREFLIGHT=1; shift ;;
+    --no-report)    SKIP_REPORT=1;    shift ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "build.sh: unknown flag $1" >&2; usage >&2; exit 2 ;;
     *) break ;;
@@ -46,6 +51,17 @@ while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT
 [ -n "$NIAGARA_HOME" ] || { echo "build.sh: pass niagara_home (arg 3) or export niagara_home" >&2; exit 10; }
 [ -d "$NIAGARA_HOME/etc/m2/repository" ] || { echo "build.sh: not a niagara_home (no etc/m2/repository): $NIAGARA_HOME" >&2; exit 10; }
 [ -x "$HERE/verify-module.sh" ] || { echo "build.sh: gate not found next to this script: $HERE/verify-module.sh" >&2; exit 10; }
+
+if [ "$SKIP_PREFLIGHT" -eq 0 ]; then
+  echo "==> preflight"
+  if "$HERE/preflight.sh" "$NIAGARA_HOME" "$GRADLE_ROOT"; then
+    :
+  else
+    _PF=$?
+    [ "$_PF" -eq 1 ] && echo "build.sh: preflight FAILed — fix the environment (or --no-preflight to skip)" >&2
+    exit 10
+  fi
+fi
 
 # D: plugin-m2-warn — WARN (non-fatal) when the gradlePluginVersion declared in
 # settings.gradle.kts is absent from <niagara_home>/etc/m2.  A mismatch causes Gradle
@@ -115,5 +131,21 @@ fi
 echo "==> verify gate (verify-module.sh):"
 JARS=(); for p in "${SEL[@]}"; do JARS+=("$ROOT/$MOD/$MOD-$p/build/libs/$MOD-$p.jar"); done
 VARGS=(--src "$ROOT/$MOD"); [ -z "$TARGET" ] || VARGS+=(--target-version "$TARGET")
-if "$HERE/verify-module.sh" "${VARGS[@]}" "${JARS[@]}"; then exit 0; fi
+if "$HERE/verify-module.sh" "${VARGS[@]}" "${JARS[@]}"; then
+  if [ "$SKIP_REPORT" -eq 0 ]; then
+    echo "==> report-module (hand-off punch-list)"
+    RARGS=("$ROOT/$MOD"); [ -z "$TARGET" ] || RARGS+=(--target-version "$TARGET")
+    if "$HERE/report-module.sh" "${RARGS[@]}"; then
+      exit 0
+    else
+      _RM=$?
+      if [ "$_RM" -eq 3 ]; then
+        echo "build.sh: report-module environment error (exit 3)" >&2; exit 10
+      fi
+      echo "build.sh: report-module punch-list has FAILs — not hand-off-ready (--no-report to skip)" >&2; exit 50
+    fi
+  else
+    exit 0
+  fi
+fi
 echo "build.sh: verify gate failed — do not deploy these jars" >&2; exit 50
