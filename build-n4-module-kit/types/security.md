@@ -315,6 +315,8 @@ resp.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'
 
 `[ev: retro our-dashboard-audit-deltas Δ1]`
 
+**Gap confirmed in Apillm BApillmServlet:** `setApiHeaders()` shipping only `Cache-Control` (no `X-Content-Type-Options`, no `X-Frame-Options`) is a recurring pattern, not a DashboardPan-specific oversight — every servlet that hand-rolls its header helper must explicitly include the security headers listed above. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ13]`
+
 **Post-deploy header probe** (see also `toolbelt/commissioning-verify.sh`
 `servlet-response-headers` MANUAL step):
 After deploying a `BWebServlet`-based module, verify the live endpoint returns the required
