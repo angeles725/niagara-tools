@@ -1255,6 +1255,44 @@ else
 fi
 
 # ----------------------------------------------------------------
+# 12. lint-bundled-jar-class-version.sh <module-root> — once per run (FAIL)
+#     Checks vendored/bundled ext-jars in the source tree for Java 9+ bytecode
+#     (class-file major > 52). A bundled jar with major > 52 throws a raw
+#     UnsupportedClassVersionError at module load, bypassing catch(Exception).
+# ----------------------------------------------------------------
+bjcv_exit=0
+bjcv_out=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1) || bjcv_exit=$?
+if [ "$bjcv_exit" -eq 3 ]; then
+  emit "(module)" ERROR lint-bundled-jar-class-version "env fault (exit 3)"; HAD_ENV=1
+else
+  _bjcv_had_fail=0
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      FAIL*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          det = ""
+          for (i = 4; i <= n; i++) det = (det == "" ? "" : det "  ") a[i]
+          site = (n >= 3) ? a[3] : ""
+          nsplit = split(site, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn "  " det
+        }')
+        _st="${_parsed%%|*}"
+        _r="${_parsed#*|}"
+        _chk="${_r%%|*}"
+        _det="${_r#*|}"
+        emit "(module)" "$_st" "$_chk" "$_det"
+        _bjcv_had_fail=1
+      ;;
+    esac
+  done <<< "$bjcv_out"
+  [ "$_bjcv_had_fail" -eq 0 ] && emit "(module)" PASS lint-bundled-jar-class-version "clean"
+fi
+
+# ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)
 #    Gated on --console-dir; SKIP row when flag is absent.
 # ----------------------------------------------------------------
