@@ -175,8 +175,8 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.18.0                      # current kit VERSION
-last_change: 2026-09-05              # Campaign 7 CLOSE: fold 9 C7 retros, CHANGELOG v0.18.0, close retro, contract refresh
+version: 0.23.0                      # current kit VERSION (was stale at 0.18.0; CHANGELOG had reached v0.22.0)
+last_change: 2026-09-20              # apply-deltas campaign #123 CLOSE: all 10 pending delta-retros folded (114Δ, PR #124-133), CHANGELOG v0.23.0
 open_issues:
   - Campaign 2 COMPLETE: logic L3-L22 (PR-A/A2), UX U1-U10 (PR-B), and the build/deploy/schema DOC lessons D1/D2/D3/B9 + S2/S3/S4 (PR-C) are folded into the core.
   - OWED SCRIPT/GATE IMPLEMENTATIONS: ALL DONE — the backlog is cleared. (B4, B6, B7, B8, B10, soft-start, palette all implemented and folded.)
