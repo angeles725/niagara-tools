@@ -13,6 +13,12 @@ setup() {
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
   chmod +x "$TMPDIR_T/kit/verify-module.sh"
+  # Stub preflight.sh + report-module.sh next to build.sh so the $HERE lookups resolve to
+  # stubs (isolate build.sh). Default exit 0; override with FAKE_PREFLIGHT_EXIT / FAKE_REPORT_EXIT.
+  printf '#!/usr/bin/env bash\nexit "${FAKE_PREFLIGHT_EXIT:-0}"\n' > "$TMPDIR_T/kit/preflight.sh"
+  chmod +x "$TMPDIR_T/kit/preflight.sh"
+  printf '#!/usr/bin/env bash\nexit "${FAKE_REPORT_EXIT:-0}"\n' > "$TMPDIR_T/kit/report-module.sh"
+  chmod +x "$TMPDIR_T/kit/report-module.sh"
   B="$TMPDIR_T/kit/build.sh"
   ROOT="$TMPDIR_T/mod"; mkdir -p "$ROOT"
   make_profile "$ROOT" Foo rt 1; make_profile "$ROOT" Foo ux 1; make_profile "$ROOT" Foo wb 0
@@ -171,4 +177,28 @@ GRADLEW
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]   # WARN only — build is not failed
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"9.9.9"* ]]
+}
+
+# Automation audit PR-B: build.sh auto-chains preflight (start) + report-module (end).
+@test "BS-preflight-fail: a preflight FAIL (exit 1) aborts before gradle with exit 10" {
+  FAKE_PREFLIGHT_EXIT=1 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]   # preflight blocks before gradle
+}
+
+@test "BS-preflight-skip: --no-preflight bypasses a failing preflight and the build proceeds" {
+  FAKE_PREFLIGHT_EXIT=1 run "$B" --no-preflight "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/gradlew.calls.log" ]      # gradle ran despite the failing preflight stub
+}
+
+@test "BS-report-fail: a report-module FAIL (exit 1) after a passing verify gate exits 50 (not hand-off-ready)" {
+  FAKE_REPORT_EXIT=1 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 50 ]
+  [[ "$output" == *"report-module"* ]]
+}
+
+@test "BS-report-skip: --no-report skips the report-module gate; a passing verify exits 0" {
+  FAKE_REPORT_EXIT=1 run "$B" --no-report "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
 }

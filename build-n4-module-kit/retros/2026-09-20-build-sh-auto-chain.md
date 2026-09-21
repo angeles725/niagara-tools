@@ -10,7 +10,7 @@
 - `preflight.sh "$NIAGARA_HOME" "$GRADLE_ROOT"` runs after the env checks, before gradle; preflight FAIL (exit 1) or env (exit 3) → build.sh exit 10.
 - `report-module.sh "$ROOT/$MOD"` runs after the verify gate passes; report FAILs → build.sh exit 50 ("not hand-off-ready"); report env → exit 10.
 - Bypasses for the inner rebuild loop: `--no-preflight`, `--no-report`.
-- Header/usage + exit-code table updated; `BUILD-LOOP.md` §4/§5 and `skill/SKILL.md` steps 4/5 rewritten to present the single-command flow (standalone tool references kept for kit-links L5). New `tests/build.bats` (5 toolchain-free tests — none existed before).
+- Header/usage + exit-code table updated; `BUILD-LOOP.md` §4/§5 and `skill/SKILL.md` steps 4/5 rewritten to present the single-command flow (standalone tool references kept for kit-links L5). Extended the existing `tests/build-sh.bats` with 4 stub-driven tests (BS-preflight-fail/skip, BS-report-fail/skip) — the setup() now stubs preflight.sh + report-module.sh next to build.sh (mirroring the verify-module.sh stub, FAKE_PREFLIGHT_EXIT/FAKE_REPORT_EXIT).
 
 ## Why this closes the operator concern
 Before: an agent following BUILD-LOOP had to remember to run preflight (start) and report-module (end) as separate steps — exactly the "mechanical function the user must activate/remember" flaw. After: one `build.sh` invocation does the whole mechanical chain; forgetting a step is no longer possible. The bypass flags exist only for the deliberate inner-loop case.
