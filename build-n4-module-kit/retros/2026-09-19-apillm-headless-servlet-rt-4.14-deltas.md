@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-19 · kit · apillm-headless-servlet-rt-4.14-deltas
 
 **Session**: Apillm client module (Cliente/LLM/Apillm) — headless no-Workbench build of an rt+wb read-only JSON gateway servlet on N4.14.0.162; scaffold→build→sign→verify proven from WSL.

@@ -96,6 +96,14 @@ L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niag
    in `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
    plugin version — see `build-verify.md`). `[ev: corpus B1016]`
 
+## JDK-pinning block in `gradle.properties` (REQUIRED for every module)
+
+**`gradle.properties` MUST carry the JDK-pinning block** (`org.gradle.java.installations.paths`, `org.gradle.jvm.toolchain.auto-detect=false`, `org.gradle.jvm.toolchain.auto-download=false`). A module without this block triggers `lint-structure` FAIL on every build. The scaffold MUST emit the pinning block (commented-out or with a placeholder) so a fresh checkout does not immediately fail the lint. For the full pinning recipe and what each key does, see §L10 doctrine above. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ16]`
+
+## Slotomatic checksum — use `0`, not `(auto)`
+
+When hand-adding a `@NiagaraProperty` to an already-generated class (outside Slotomatic's auto-region), set the auto-region checksum to the plain integer `0`, NOT the literal placeholder `(auto)`. The `(auto)` text causes a cosmetic Slotomatic parse error (the build still passes but emits a noisy WARNING about an unrecognized checksum token); `0` causes Slotomatic to regenerate the checksum cleanly on the next build. If Slotomatic's region comment shows `/* auto */ (auto)` after a hand-edit, replace it with `/* auto */ 0`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ24]`
+
 ## PASS state + scaffold `[ev: corpus B817]`
 `scaffold-module.sh <MOD>` output passes L1–L11 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes
@@ -163,7 +171,7 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
 - The palette root MUST use `t="b:UnrestrictedFolder"`, never `t="b:Folder"`. The latter is
   access-controlled and causes silent "access denied" palette expansion in Workbench for engineers
   who lack the folder's category permission. `verify-module.sh` warns on `b:Folder`.
-  `[ev: corpus B746 §746.1]`
+  **`scaffold-module.sh` MUST emit `t="b:UnrestrictedFolder"` as the palette root** (not the default `b:Folder` emitted by some scaffold versions) to ensure the `palette-root` WARN is never present on a freshly-scaffolded module. `[ev: corpus B746 §746.1]` `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
 - Property overrides in the palette are XML attributes on the `<p>` tag; they set the slot value
   at drag-drop time and are not persisted unless the component itself persists them.
 - Assembly templates are **pure resource additions** — no code change, no class risk.

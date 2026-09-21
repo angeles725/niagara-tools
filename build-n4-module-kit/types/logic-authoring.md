@@ -231,6 +231,27 @@ try {
 }
 ```
 
+## Poller robustness `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ18]`
+
+A polling component (a service or rt component that calls a remote URL on a `Clock.Ticket`) MUST guard its outbound request on both a non-empty URL AND an `enabled` flag before attempting the poll:
+
+```java
+// In the timer callback or poll() method
+if (!isEnabled()) return;                         // skip when component disabled
+String url = getUrl().trim();
+if (url.isEmpty()) {
+    setLastPollStatus(BPollStatus.UNCONFIGURED);  // or equivalent slot
+    logWarning("poller: url not configured — skipping");
+    return;
+}
+// ... perform the poll
+```
+
+- A blank `url` with no guard causes the poll to attempt a connection to `""` and log a bare `"poll error:"` with a null-message exception — unhelpful for triage.
+- An `enabled=false` component that still polls wastes I/O and may interfere with commissioning.
+- Set `lastPollStatus=UNCONFIGURED` (or equivalent) so operators can distinguish "not configured" from "working" or "faulted".
+- Observed LIVE: `[apillm] poll error:` (empty cause) at station boot 01:55 with a blank `url`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ18]`
+
 ## Watchdogs and timers
 
 - **Watchdog/monitor:** subclass `BAbstractAlarmMonitor` (override `doRunCheck()`/domain `checkX()` + `getToNormal/OffnormalText`; maintain `status`/`lastAlarmTime`; edge-latch via `raiseAlarm(...)`). Cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; distinguish from the native `EngineWatchdog` (engine/process heartbeat, a separate layer). `[ev: corpus B775]`
