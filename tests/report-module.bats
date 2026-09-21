@@ -248,3 +248,11 @@ setup() {
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-write-path"* ]]
 }
+
+@test "RM21: MD5+credential surfaces lint-no-md5-credential-digest WARN row but exit stays 0 (WARN does not block)" {
+  # md5-cred-warn/DemoPan-rt/src/com/x/BAuth.java uses MessageDigest.getInstance("MD5") + BPassword
+  run "$RM" "$FX/md5-cred-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-no-md5-credential-digest"* ]] && [[ "$output" == *"BAuth.java"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}

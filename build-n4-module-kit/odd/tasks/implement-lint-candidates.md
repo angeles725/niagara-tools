@@ -15,7 +15,7 @@ no INDEX flip — the source retro stays folded). One lint per PR, chained, CI g
 ## Feasibility triage
 **IMPLEMENT (HIGH confidence, low false-positive):**
 - [x] L1 · `lint-subscribe-without-unsubscribe` (rt src; WARN) — from failure-modes Δ3 (RUN4). PR pending.
-- [ ] L2 · `lint-no-md5-credential-digest` (src; WARN) — from wb-vendor-ux-wave3 Δ13 / security §9.
+- [x] L2 · `lint-no-md5-credential-digest` (src; WARN) — DONE, auto-wired report-module §5.21 + RM21.
 - [ ] L3 · `lint-bundled-jar-class-version` (src; FAIL) — from failure-modes Δ11 (BLD2).
 - [ ] L4 · `lint-split-package-check` (project; WARN) — from failure-modes Δ12 (BLD3).
 - [ ] L5 · `lint-wb-file-chooser` (-wb src; WARN) — from apillm Δ8.
