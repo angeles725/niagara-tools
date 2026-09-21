@@ -15,8 +15,12 @@ setup() {
   chmod +x "$TMPDIR_T/kit/verify-module.sh"
   # Stub preflight.sh + report-module.sh next to build.sh so the $HERE lookups resolve to
   # stubs (isolate build.sh). Default exit 0; override with FAKE_PREFLIGHT_EXIT / FAKE_REPORT_EXIT.
+  # shellcheck disable=SC2016
+  # why: ${FAKE_PREFLIGHT_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nexit "${FAKE_PREFLIGHT_EXIT:-0}"\n' > "$TMPDIR_T/kit/preflight.sh"
   chmod +x "$TMPDIR_T/kit/preflight.sh"
+  # shellcheck disable=SC2016
+  # why: ${FAKE_REPORT_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nexit "${FAKE_REPORT_EXIT:-0}"\n' > "$TMPDIR_T/kit/report-module.sh"
   chmod +x "$TMPDIR_T/kit/report-module.sh"
   B="$TMPDIR_T/kit/build.sh"
