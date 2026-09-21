@@ -151,3 +151,100 @@ setup() {
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-jasmine-ux"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
+
+# ===========================================================================
+# NEW LINTS (static-source) — RM12-RM20 (2026-09-20).
+#   Per-artifact *-rt: lint-subscribe-without-unsubscribe (WARN, RM12),
+#     lint-recovery-path (FAIL, RM13), lint-config-sanity (FAIL, RM14),
+#     lint-status-parity (WARN, RM15).
+#   Per-artifact *-ux: lint-servlet (FAIL, RM16), rc-scan (FAIL, RM17).
+#   Per-artifact *-wb: lint-wb-threading (WARN, RM18).
+#   Module-once: lint-structure (FAIL, RM19), lint-write-path (FAIL, RM20).
+# Named mutations (post-green):
+#   - drop subscribe guard -> RM12 loses WARN row.
+#   - drop recovery-path guard -> RM13 exits 0.
+#   - drop config-sanity CS1 check -> RM14 exits 0.
+#   - drop status-parity check -> RM15 loses WARN row.
+#   - drop servlet auth check -> RM16 exits 0.
+#   - drop rc-scan ord-literal check -> RM17 exits 0.
+#   - drop wb-threading traversal check -> RM18 loses WARN row.
+#   - drop structure L7 check -> RM19 exits 0.
+#   - drop write-path OPERATOR scan -> RM20 exits 0.
+
+@test "RM12: subscribe-without-unsubscribe surfaces WARN row in *-rt artifact, exit stays 0" {
+  # subscribe-warn/DemoPan-rt/src/com/x/BSub.java calls .subscribe( with no unsubscribe
+  run "$RM" "$FX/subscribe-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-subscribe-without-unsubscribe"* ]]
+  [[ "$output" == *"BSub.java"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM13: recovery-path guarded-only safe-off surfaces FAIL row and exits 1" {
+  # recovery-fail/DemoPan-rt/src/com/x/BHeat.java writes ResistanceOut only inside execute()
+  run "$RM" "$FX/recovery-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"lint-recovery-path"* ]]
+  [[ "$output" == *"BHeat.java"* ]]
+}
+
+@test "RM14: config-sanity CS1 (interval<=duration) surfaces FAIL row and exits 1" {
+  # config-sanity-fail/DemoPan-rt/src/com/x/BConfig.java has cycleInterval(300s) <= defrostDuration(600s)
+  run "$RM" "$FX/config-sanity-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"lint-config-sanity"* ]]
+  [[ "$output" == *"BConfig.java"* ]]
+}
+
+@test "RM15: status-parity asymmetric facade surfaces WARN row in *-rt artifact, exit stays 0" {
+  # status-parity-warn/DemoPan-rt/src/com/x/BFacade.java has 2 Interval slots, 0 status slots
+  run "$RM" "$FX/status-parity-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"lint-status-parity"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM16: servlet auth violation surfaces FAIL row in *-ux artifact and exits 1" {
+  # servlet-fail/DemoPan-ux/src/com/x/BMyServlet.java extends BWebServlet and writes without auth gate
+  run "$RM" "$FX/servlet-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"BMyServlet.java"* ]]
+}
+
+@test "RM17: hardcoded ORD in rc/ surfaces rc-scan FAIL row in *-ux artifact and exits 1" {
+  # rc-scan-fail/DemoPan-ux/src/rc/index.html has station:|slot:/ hardcoded ORD
+  run "$RM" "$FX/rc-scan-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"rc-scan"* ]]
+}
+
+@test "RM18: doInvoke getNavChildren without invokeLater surfaces WARN row in *-wb artifact, exit stays 0" {
+  # wb-threading-warn/DemoPan-wb/src/com/x/BPanel.java calls getNavChildren in doInvoke
+  run "$RM" "$FX/wb-threading-warn"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"ui-thread-traversal"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM19: 2-part dependency version surfaces lint-structure FAIL row and exits 1" {
+  # structure-fail/DemoPan-rt/DemoPan-rt.gradle.kts has api(\":baja:4.14\") — L7 violation
+  run "$RM" "$FX/structure-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"lint-structure"* ]]
+}
+
+@test "RM20: uncovered OPERATOR slot surfaces lint-write-path FAIL row and exits 1" {
+  # write-path-fail/DemoPan-rt/src/com/x/BControl.java has OPERATOR property \"setpoint\" not in matrix
+  run "$RM" "$FX/write-path-fail"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"lint-write-path"* ]]
+}
