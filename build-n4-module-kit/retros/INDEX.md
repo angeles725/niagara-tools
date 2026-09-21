@@ -173,5 +173,6 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-20-lint-no-md5-credential-digest.md | kit | 2026-09-20 | folded | 0 | <!-- L2: new WARN lint, auto-wired report-module §5.21 + RM21 -->
 | 2026-09-20-lint-wb-file-chooser.md | kit | 2026-09-20 | folded | 0 | <!-- L5: new WARN lint, auto-wired report-module §5.22 + RM22 -->
 | 2026-09-20-lint-bundled-jar-class-version.md | kit | 2026-09-20 | folded | 0 | <!-- L3: new FAIL lint, auto-wired report-module §12 (module-once) + RM23 -->
+| 2026-09-20-ci-lint-guard-pins.md | kit | 2026-09-20 | folded | 0 | <!-- wired lint-guard-pins --strict into ci.yml (kit self-check) -->
 | APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
 
