@@ -26,8 +26,8 @@ modules, not sixty focuses.
 
 | Module | Repo | Type | last_build | verify_gate | deployed | retro_pending | open_issues |
 |---|---|---|---|---|---|---|---|
-| ColdRoomPan | Cliente/Leon-Guanjuato | logic | 2026-09-03 | pass | yes | no | 1 |
-| CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
+| ColdRoomPan | Cliente/panccadia-leon | logic | 2026-09-24 | pass | yes (candidate 2.1.4 NOT deployed) | yes | 3 |
+| CompPan | Cliente/panccadia-leon | logic | 2026-09-24 | pass | yes (candidate 2.2.0 NOT deployed) | yes | 4 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
 | UmbrellaDashboard | Cliente/Juarez/Umbrella | dashboard | 2026-09-16 | pass | no | no | 4 |
 | chihuahua | Cliente/Honeywell/MX60 | logic | unknown | unknown | unknown | no | 1 |
@@ -39,55 +39,67 @@ modules, not sixty focuses.
 
 <!-- build-state.v1 -->
 module: ColdRoomPan                 # the module name (matches the -rt/-ux/-wb artifact prefix)
-module_repo: Cliente/Leon-Guanjuato # DECLARED — modules live in a SEPARATE repo, not niagara-tools
-module_root: /home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan  # DECLARED
+module_repo: Cliente/panccadia-leon # DECLARED — active working tree as of 2026-09-24 (supersedes the older Cliente/Leon-Guanjuato path, which was stale — see engram client-reads-use-a109249-worktree)
+module_root: /home/cristian/modulos_niagara_n4/Cliente/panccadia-leon/Paccadia/ColdRoomPan  # DECLARED
 type: logic                         # logic | dashboard | wb (the SKILL.md decision table)
 profiles: rt                        # which profiles have sources (rt,ux,wb)
-target_version: 4.14                # DECLARED — LOWEST niagara_home built against (settings.gradle.kts)
-plugin_version: 7.6.17              # DECLARED — com.tridium.niagara plugin; must exist in <niagara_home>/etc/m2
-last_build: 2026-09-03              # DECLARED — date of last successful build (unknown if never/uncertain)
+target_version: 4.15.3              # DECLARED — this session built ColdRoomPan-rt against PowerB-4.15.3.28 (2026-09-24 candidate)
+plugin_version: 7.6.22              # DECLARED — com.tridium.niagara plugin used for the 2.1.4 candidate build (-PniagaraPluginVersion=7.6.22); must exist in <niagara_home>/etc/m2
+last_build: 2026-09-24              # DECLARED — date of last successful build (unknown if never/uncertain)
 bytecode_major: 52                  # DECLARED — must be 52 (Java 8); any other value is a FAIL signal
 signed: yes                         # DECLARED — META-INF/NIAGARA4.SF present
 verify_gate: pass                   # DECLARED — toolbelt/verify-module.sh outcome (pass|fail|unknown)
-deployed: yes                       # DECLARED — reached a station (yes|no|unknown)
+deployed: yes                       # DECLARED — the STATION currently runs a deployed baseline (2.1.3, see deployed_* below); the 2026-09-24 2.1.4 candidate below is NOT deployed
 target_station: Leon-JACE           # DECLARED — where it runs; the station executes off the Atlas SNAP
-pure_tests: 22                      # DECLARED — pure-Java JUnit count (ColdRoomControlTest)
+pure_tests: 99                      # DECLARED — pure-Java JUnit count across all 8 ColdRoomPan-rt test classes (10 in RestartFanSequenceTest) as of 2026-09-24
 open_issues:
   - DefrostController.java (742 lines) has ZERO pure tests — QA HIGH gap; extract a pure DefrostControl class + tests (a module change, OUT of this campaign's scope). It shipped the started()/interval production bug.
+  - 2026-09-24 candidate 2.1.4 (restart-seq-comp-lockout-hours) BUILT + verified, NOT deployed — see candidate_* fields below. PRUEBAS station smoke test still owed before deploy (fanReleaseHeldByRestartGate lifecycle is BComponent-only, cannot be unit-tested in WSL — review advisory R3-held-flag-wiring-unproved).
+  - lint-structure/lint-write-path FAIL on this module (absolute host path in tracked gradle.properties; no docs/write-path-matrix.md) — pre-existing, verified against baseline via stash, NOT caused by this session's change, OUT of this campaign's scope.
 retro_required: true                # GATED (kit-local) — did the last session change kit behavior / prove a lesson?
 retro_pending: true                # GATED — the enforcement hook: true until the owed retro exists; false here, its retros were written
-last_commit: f89e44e                # DECLARED — short sha in module_repo of the last build's commit
+last_commit: f89e44e                # DECLARED — short sha in module_repo of the last DEPLOYED build's commit (see candidate_source_commit for the newer, undeployed candidate)
 deployed_jar_sha256: unknown         # DECLARED (optional, Δ3 template) — sha256 of the jar actually installed; unknown = deployed before this template existed
 deployed_build_millis: unknown       # DECLARED (optional) — installed jar's module.xml buildMillis (`unzip -p <jar> META-INF/module.xml`)
 deployed_source_commit: unknown      # DECLARED (optional) — module_repo commit that built the installed jar (may differ from last_commit if a later commit was never deployed)
-deployed_baseline_date: unknown      # DECLARED (optional) — date the above baseline was recorded
-last_session: 2026-09-03 · self-firing-timer defrost fix confirmed live [CERT-live]; next: extract DefrostControl pure class + tests
+deployed_baseline_date: unknown      # DECLARED (optional) — date the above baseline was recorded; known-good: vendorVersion 2.1.3 is the version currently on the station
+candidate_version: 2.1.4             # DECLARED (optional, new 2026-09-24) — built + verify-module.sh ALL PASS candidate, NOT yet installed on Leon-JACE
+candidate_jar_sha256: 69693350360e1609963658ce26e220200691c4ad998a4e2f63f6329109de0feb  # DECLARED (optional) — build/libs/ColdRoomPan-rt.jar sha256 (T7 final)
+candidate_source_commit: 96496a8     # DECLARED (optional) — module_repo (panccadia-leon) HEAD that built the candidate; branch feat/restart-seq-comp-lockout-hours
+candidate_built_date: 2026-09-24     # DECLARED (optional)
+last_session: 2026-09-24 · restart-only valve-first/fan-after-10s sequencing built+verified (2.1.4 candidate); 3 RDD review rounds (1 CRITICAL, bounded-corrected, acknowledged); NOT deployed — next: PRUEBAS smoke test, then schema-risk against the live config.bog, then deploy alongside CompPan 2.2.0
 <!-- /build-state.v1 -->
 
 ## CompPan
 
 <!-- build-state.v1 -->
 module: CompPan
-module_repo: Cliente/Leon-Guanjuato
-module_root: /home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Compresores/CompPan
+module_repo: Cliente/panccadia-leon # active working tree as of 2026-09-24 (supersedes the older Cliente/Leon-Guanjuato path, which was stale — see engram client-reads-use-a109249-worktree)
+module_root: /home/cristian/modulos_niagara_n4/Cliente/panccadia-leon/Compresores/CompPan
 type: logic
 profiles: rt
-target_version: 4.14
+target_version: 4.14                # this session's Compresores build used Honeywell OptimizerSupervisor-N4.14.0.162, plugin 7.6.17 (unchanged from baseline)
 plugin_version: 7.6.17
-last_build: 2026-09-04
+last_build: 2026-09-24
 bytecode_major: 52
 signed: yes
 verify_gate: pass
-deployed: yes
+deployed: yes                       # the STATION currently runs a deployed baseline (2.1.1); the 2026-09-24 2.2.0 candidate below is NOT deployed
 target_station: Leon-JACE
-pure_tests: 31
+pure_tests: 93                      # CompressorControlTest 46 + CompHoursBackupTest 42 + CompressorWritePathTest 5 (post-correction 1d4cb62 final count) as of 2026-09-24
 open_issues:
   - suctionPressure2 sensor stuck/frozen at 130.5342 psi — control UNAFFECTED (selectSuction uses the healthy primary); monitor / replace the sensor.
   - amps2 / amps3 read low or zero while the compressors physically run — an amperage-sensor issue, not equipment; amperage is visual-only and control does not depend on it.
+  - 2026-09-24 candidate 2.2.0 (restart-seq-comp-lockout-hours: opt-in auto-off lockout on sustained proof-of-run fault, AUTO-only; compressor-hours JSON backup with atomic dest/.bak/.tmp replace) BUILT + verified, NOT deployed — see candidate_* fields below. PRUEBAS station smoke test still owed (Windows rename-refuses-existing-destination semantics + the atomicReplace ordering; local Honeywell niagara_home also had a locked CompPan-rt.jar in T7, unrelated to repo state — close the local Workbench process before reusing that niagara_home).
+  - lint-structure/lint-write-path FAIL on this module (absolute host path in tracked gradle.properties; no docs/write-path-matrix.md) — pre-existing, verified against baseline via stash, NOT caused by this session's change, OUT of this campaign's scope.
 retro_required: true
 retro_pending: true
-last_commit: d6eccaf
-last_session: 2026-09-04 · HOA manual override per compressor + dischargeHighLimit 0=disabled deployed live [CERT-live]; next: watch the stuck suction-2 sensor
+last_commit: d6eccaf                # DECLARED — short sha of the last DEPLOYED build's commit (see candidate_source_commit for the newer, undeployed candidate)
+candidate_version: 2.2.0             # DECLARED (optional, new 2026-09-24) — built + verify-module.sh ALL PASS candidate, NOT yet installed on Leon-JACE
+candidate_jar_sha256: b972d5b928e797b043135a1035de67967e4fe971eeeae5f6c743f92fd6aed39d  # DECLARED (optional) — build/libs/CompPan-rt.jar sha256 (post-correction 1d4cb62)
+candidate_source_commit: 96496a8     # DECLARED (optional) — module_repo (panccadia-leon) HEAD that built the candidate; branch feat/restart-seq-comp-lockout-hours
+candidate_built_date: 2026-09-24     # DECLARED (optional)
+last_session: 2026-09-24 · opt-in AUTO-only auto-off lockout on sustained proof-of-run fault + compressor-hours JSON backup (dest/.bak/.tmp atomic replace) built+verified (2.2.0 candidate); 3 RDD review rounds (1 CRITICAL — stale-.bak-blocks-Windows-rename — bounded-corrected, acknowledged); NOT deployed — next: PRUEBAS smoke test, then schema-risk against the live config.bog, then deploy alongside ColdRoomPan 2.1.4
 <!-- /build-state.v1 -->
 
 ## DashboardPan
