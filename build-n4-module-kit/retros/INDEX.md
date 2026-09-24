@@ -178,7 +178,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
 
 | 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | pending | 5 |
-| 2026-09-21-wb-mapping-ord-npe-and-wsl-windows-jdk.md | kit | 2026-09-21 | pending | 2 |
+| 2026-09-21-wb-mapping-ord-npe-and-wsl-windows-jdk.md | kit | 2026-09-21 | folded | 2 |
 | 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | pending | 6 |
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | pending | 8 |
