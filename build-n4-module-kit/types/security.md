@@ -251,6 +251,43 @@ public final Feature getLicenseFeature() {
 
 [ev: code BAaPhpNetwork.java `getLicenseFeature()`; code BBacnetAwsNetwork.java; corpus B507 §SEC-07]
 
+### 5.1 · Ongoing-work gate — `serviceStarted()` only guards STARTUP `[ev: retro secure-authoring-isoperational-gate Δ1]`
+
+The framework's own license enforcement is **advisory, not blocking**: `BAbstractService`'s
+`checkLicense()` sets a fatal fault and logs SEVERE on an unlicensed/expired feature, but the
+engine caller (`ServiceManager.startService`) runs the subclass's `serviceStarted()`
+unconditionally right after — there is no fault guard between them, and the whole call is
+wrapped in a `catch(Throwable)` that logs and continues station boot. So relying on the
+framework to withhold start on its own is wrong: the `feature.check()` throw in
+`serviceStarted()` above only aborts **startup**. A service that does nothing further is
+protected. A service whose later callbacks (`changed()`, timers, servlet write handlers) keep
+acting is NOT — they still fire while the station displays a fault.
+
+A licensed service must therefore also gate its ONGOING work on `isOperational()`:
+
+```java
+@Override
+public void changed(Property p, Context cx) {
+    super.changed(p, cx);
+    if (!isOperational()) return;   // !isFatalFault() && !isDisabled() && !isFault()
+    // ... licensed work here ...
+}
+```
+
+This is exactly what the shipped Tridium services do by convention — `BAlarmService`,
+`BSearchService`, `BHierarchyService`, `BTagDictionaryService`, `BBatchJobService`, `BBoxService`,
+and `BCloudConnector` all gate ongoing work on `isOperational()` / `isFatalFault()` — but nothing
+in the framework forces it, so a module that skips the gate runs unlicensed under a fault icon.
+
+[ev: corpus B1143 §1143.2-3 — BAbstractService.java:332-393,519-523]
+[ev: corpus B1145 — ServiceManager.java:291-322]
+[ev: corpus B1146 — BAlarmService.java:289,397,448,578 et al.]
+
+Deferred lint candidate (not implemented): `lint-license-isoperational-gate` — flag a class with
+a non-null `getLicenseFeature()` whose `changed()`/timer/servlet-write callbacks act without an
+`isOperational()`/`isFault()` guard. Check for overlap with `lint-status-parity` and
+`lint-silent-protection` before implementing.
+
 A fuller treatment of license file format, DSA signing, and OEM trust certs belongs in
 a future dedicated licensing doc.
 
