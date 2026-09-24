@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-21 · kit · wb-mapping-ord-npe-and-wsl-windows-jdk
 
 **Session**: Live bidirectional-gateway testing of the Apillm client module (Cliente/LLM/Apillm). The operator tried to add a new DB→N4 key mapping (`demo2`) through the `-wb` "Add Mapping" wizard and hit a `NullPointerException`; fixing it surfaced a runtime ORD gotcha, and rebuilding surfaced a WSL Java-toolchain gotcha.
@@ -36,4 +36,6 @@ Two distinct, reproducible gotchas, both new as concrete symptoms:
 - Building with `build.sh` (which pins the JDK path) vs raw `gradlew` (which does not) is exactly why "before it took 5 s": the fast path is `gradlew` with the pin flag OR `build.sh`; raw `gradlew` without the pin fails on WSL.
 
 ---
-**Status**: PENDING — INDEX row appended.
+**Status**: FOLDED — types/issues-and-gotchas.md §H3 (Δ1) + §D5 (Δ2), types/wb-widgets.md cross-link
+(Δ1), INDEX row flipped. Optional `lint-set-null-ord` candidate DEFERRED (see BUILD-STATE.md kit
+open_issue) — not implemented in this fold.

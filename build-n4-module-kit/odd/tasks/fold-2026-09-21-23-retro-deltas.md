@@ -91,15 +91,20 @@ Per retro folded:
   servlet-write callbacks; deferred lint candidate `lint-license-isoperational-gate` recorded,
   NOT implemented — retro explicitly asks to check overlap with `lint-status-parity`/
   `lint-silent-protection` first, which is out of this task's bounded scope). INDEX row + retro
-  marker flipped to folded. BUILD-STATE.md kit envelope updated. Commit on branch
-  `odd/fold-secure-authoring` (sha recorded after commit below).
-- 2026-09-24: T2 FOLDED — `types/issues-and-gotchas.md` new gotcha entries: (a) new §B5 "a `-wb`
-  manager that maps `point.getSlotPathOrd()` into a `BOrd` `set()` can NPE on a null ORD" (Δ1);
-  (b) new §D5 "WSL `gradlew` run directly can auto-detect a Windows JDK and die with
-  `URISyntaxException`" (Δ2, points at `structure.md §L10`). `types/wb-widgets.md` field-editors §
-  cross-linked to the new gotcha. `lint-set-null-ord` optional candidate evaluated: DEFERRED, not
-  implemented — recorded as a BUILD-STATE.md kit open_issue (a single-purpose static-source
-  guard-body lint needs its own guard-pin/bats/report-module wiring pass; folding it in-line with
-  a doc task risked a rushed, under-tested lint). INDEX row + retro marker flipped to folded.
-  BUILD-STATE.md kit envelope updated. Commit on branch `odd/fold-wb-mapping-ord-npe` (branched
-  from the T1 commit; sha recorded below).
+  marker flipped to folded. BUILD-STATE.md kit envelope updated. Commit `72fcd33` on branch
+  `odd/fold-secure-authoring`. Gates: `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh
+  --strict` 167 folded/167 cited/0 uncited; shellcheck 0.10.0 exit 0; `bats tests/*.bats`
+  628 ok / 0 not-ok.
+- 2026-09-24: T2 FOLDED — `types/issues-and-gotchas.md` new §H3 "A `-wb` manager mapping
+  `point.getSlotPathOrd()` into a `BOrd` `set()` can NPE on a null ORD" (Δ1, distinguished from the
+  PD-FE1 picker gotcha) + new §D5 "WSL `gradlew` run directly can auto-detect a Windows JDK and die
+  with `URISyntaxException`" (Δ2, points at `structure.md §L10`). `types/wb-widgets.md`
+  field-editors § cross-linked to §H3. `lint-set-null-ord` optional candidate evaluated: DEFERRED,
+  not implemented — recorded as a `BUILD-STATE.md` kit open_issue (a single-purpose static-source
+  guard-body lint needs its own guard-pin/bats/report-module wiring pass; folding it in-line with a
+  doc task risked a rushed, under-tested lint). INDEX row + retro marker flipped to folded.
+  BUILD-STATE.md kit envelope updated (2 open_issue lines for both deferred lints from T1+T2).
+  Branch `odd/fold-wb-mapping-ord-npe`, branched from the T1 commit `72fcd33`. Gates:
+  `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 168 folded/168 cited/0 uncited;
+  shellcheck 0.10.0 exit 0; `bats tests/*.bats` 628 ok / 0 not-ok. Commit sha recorded in this same
+  commit's parent commit-message reference (see `git log` on this branch).

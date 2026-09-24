@@ -245,6 +245,32 @@ Treat "build signed OK but station rejects" as the tell-tale of a dev-profile au
 [ev: corpus B1135] — `[ev: retro module-hardening-reqexec-closed-deltas Δ3]` —
 **Kit coverage: types/distribution.md §5 signing-profile build-triage (FOLDED)**
 
+### D5 · WSL: running `gradlew` directly (not via `build.sh`) can auto-detect a Windows JDK and die with `URISyntaxException` `[ev: retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ2]`
+
+**Symptom:** a direct `./gradlew :Module-wb:jar` on WSL (bypassing the kit `build.sh`) fails in a
+couple of seconds with:
+```
+java.net.URISyntaxException: Illegal character in opaque part at index 2: C:\Program Files\Zulu\zulu-8
+```
+
+**Root cause:** Gradle's Java-toolchain auto-detection finds a **Windows** JDK 8 install (visible
+from WSL under `/mnt/c/...`); its backslash/colon Windows path is not a legal toolchain URI on
+Linux. `build.sh` never hits this because it always passes
+`-Porg.gradle.java.installations.paths=$J8` explicitly (a Linux JDK 8 path); a developer running
+`gradlew` by hand skips that pin.
+
+**Fix:** pass the toolchain pin yourself, or just use `build.sh`:
+```
+-Porg.gradle.java.installations.paths=/usr/lib/jvm/java-8-openjdk-amd64 \
+-Porg.gradle.java.installations.auto-detect=false
+```
+See `types/structure.md §L10` for the full JDK-pinning rule this symptom points back to — this
+entry only adds the recognizable WSL symptom string; the pinning fix itself was already documented
+there.
+
+[ev: gradle URISyntaxException 2026-09-21; structure.md §L10] — **Kit coverage: this entry
+(FOLDED); fix already in types/structure.md §L10**
+
 ---
 
 ## E — Client / HMI compatibility
@@ -338,3 +364,36 @@ histImport.setFacets(histFacets);
 **Key gotcha:** raw `HttpURLConnection` / OkHttp are NOT gated. Our Apillm importer uses `HttpURLConnection` exactly for this reason. Document the choice in the module README so integrators know whether the station-side gate applies.
 **See also:** `types/security.md §10` for the full outbound-vs-inbound security axis separation (PD-23). `types/cloud-connector.md §7` for the full gotcha with a commissioning note template.
 [ev: corpus B1069] — **Kit coverage: commissioning-note rule in `types/cloud-connector.md §7`**
+
+### H3 · A `-wb` manager mapping `point.getSlotPathOrd()` into a `BOrd` `set()` can NPE on a null ORD `[ev: retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ1]`
+
+**Symptom:** a `-wb` manager wizard (e.g. an importer's "Add Mapping" dialog) creates a writable
+point, adds it to the target folder, then reads `point.getSlotPathOrd()` to build a mapping's
+target-ORD property. A `NullPointerException` is thrown from inside `BComplex.set`, not from the
+manager's own code — no validation error, no fault.
+
+**Root cause:** `BComponent.getSlotPathOrd()` returns `null` when `getSlotPath()==null`, i.e. the
+component is not yet mounted/resolvable at that instant (a freshly-created point in a manager/view
+context is not guaranteed to be resolvable right after `parent.add(slotName, point)`). Passing that
+null straight into a `BOrd`-typed property setter (e.g. `BApillmImportMap.setTargetOrd(BOrd)`)
+reaches `BComplex.set`, which dereferences `value.getSlotMap()` and NPEs when `value==null`.
+
+**Fix:**
+1. Never pass a possibly-null ORD to `set()` — guard with `if (ord == null || ord.isNull()) { … }`.
+2. When `getSlotPathOrd()` is null, build the ORD from the resolved parent-folder ORD plus the new
+   slot name (`BOrd.make(folder.getSlotPathOrd() + "/" + slotName)`, with a `folderOrd` fallback if
+   the folder itself is unresolved).
+3. Mount the mapping component (`parent.add(name, mapping)`) BEFORE setting a `BOrd` property that
+   carries a `targetType` facet.
+
+**Distinct from the null-ORD *picker* gotcha** (`types/wb-widgets.md` § Field editors, PD-FE1) —
+that one is about `BOrdFE` falling back to the file-system chooser on a null value; this one is a
+runtime `set()` NPE, unrelated to any field editor.
+
+**Lint candidate `lint-set-null-ord`** (a `setXxxOrd(getSlotPathOrd())` / `set(<ordProp>, <expr
+that can be null>)` call with no null guard) was evaluated and **DEFERRED, not implemented** —
+see `BUILD-STATE.md` kit open_issue. Check for overlap with `lint-null-context-write` (§1.1 of
+`types/security.md` — that lint targets a null *Context*, not a null *value*) before implementing.
+
+[ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
+**Kit coverage: this entry (FOLDED); lint DEFERRED**
