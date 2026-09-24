@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- status: session closed 2026-09-23; deployed; HMI reload test pending -->
 # 2026-09-23 · kit · panccadia-defrost-sequencing-hmi-reload-deltas
 

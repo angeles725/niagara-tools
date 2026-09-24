@@ -77,13 +77,14 @@ Per retro folded:
 - [x] T5a · panccadia-defrost-sequencing-hmi-reload-deltas — Δ1, Δ3, Δ4, Δ5, Δ6 of 8 (partial
       promotion; retro STAYS `pending` — Δ2/Δ7/Δ8 owed to T5b). Route: delegated direct writer
       (2 new lints + bats + 4 doc sections across 3 files — writer trigger, 2+ non-trivial files).
-- [ ] T5b · panccadia-defrost-sequencing-hmi-reload-deltas — Δ2 (version-bump-on-every-change
+- [x] T5b · panccadia-defrost-sequencing-hmi-reload-deltas — Δ2 (version-bump-on-every-change
       rule widened + `preflight.sh`/`build.sh` last-deployed-baseline drift gate + bats), Δ7
       (`build.sh` WSL 9p/drvfs build-location precheck + `build-verify.md` doc + bats), Δ8
       (`preflight.sh` Check 4 jar-lock: single filtered `lsof -Fn` pass + 9p/drvfs SKIP + bats
-      timing guard). Completing these 3 lets the retro's INDEX row flip `pending → folded`
-      (FULL promotion). Route: delegated direct writer, likely 1-2 non-trivial script/doc files
-      per Δ. NOT started.
+      timing guard). Completing these 3 flips the retro's INDEX row `pending → folded`
+      (FULL promotion, Δ1-Δ8 all landed). Route: delegated direct writer (2 non-trivial script
+      files — build.sh, preflight.sh — plus a new shared lib and 3 doc files — writer trigger).
+      DONE — see progress log.
 
 ## Acceptance criteria
 - Every retro row in `INDEX.md` for the 5 target retros is `folded` (or explicitly left `pending`
@@ -217,3 +218,78 @@ Per retro folded:
   `.githooks/pre-push`), since no `INDEX.md` row flips. Branch
   `odd/fold-panccadia-docs-lints`, branched from the T4 branch tip
   (`odd/fold-apillm-wb-subscription`).
+- 2026-09-24: T5b FOLDED — the LAST task of this campaign; completes
+  panccadia-defrost-sequencing-hmi-reload-deltas (Δ1-Δ8 all landed). `retros/INDEX.md` row and
+  the retro file's own `<!-- review-status -->` marker both flipped `pending → folded`
+  (FULL promotion). Δ2: `METHODOLOGY.md` "Schema / upgrade safety" S3 widened — the
+  version-bump rule now covers ANY change to shipped bytes (Java logic, `rc/` assets,
+  resources), not only a schema change (slot add/remove/retype/rename); `BUILD-LOOP.md` §4.c
+  ("Version-bump checklist") retitled "before any shipped-bytes commit" and widened to match,
+  plus a new bullet documenting the automated gate below. New `toolbelt/build.sh` deployed-
+  baseline drift gate: before gradle's `:jar` task overwrites `<niagara_home>/modules/<jar>`
+  (the plugin auto-installs there as `:jar`'s LAST step), `build.sh` snapshots the currently-
+  installed jar's shipped-bytes content hash (every non-META-INF entry, sorted by name — META-
+  INF is excluded ON PURPOSE because `module.xml`'s `buildMillis`/manifest/signature bytes
+  change on every rebuild even when nothing shipped changed, which would otherwise false-fire
+  on every single rebuild) plus the module's OWN `vendorVersion` (the `<module ...>` root-tag
+  attribute — NOT the `<dependency name="baja" vendorVersion="...">` floor, a different number
+  entirely). After the build, a changed content hash at an UNCHANGED version FAILs (exit 51)
+  with the version-bump reminder instead of silently producing a jar Software Manager will
+  call "Up to Date" — the exact CompPan 2.1.0 leon-vs-leon2 trap this retro documents.
+  `--no-drift-check` opts out for a niagara_home that is not the real deploy target (mirrors
+  the existing `--no-preflight`/`--no-report` opt-out pattern). Δ7: the same `build.sh` run
+  gains a non-fatal WARN when the gradle root or `niagara_home` resolves to a WSL 9p/drvfs
+  mount; new shared `toolbelt/lib/fs-type.sh` (`fs_type_for`/`is_9p_or_drvfs`, `df -T`-based,
+  `N4_FSTYPE_MOUNTS_FILE` test override so bats never depends on the host's real mounts —
+  fragment rule, mirrors `lib/method-boundary.sh`, sourced by BOTH `build.sh` and
+  `preflight.sh`) + `build-verify.md` new "Build location — ext4 vs 9p/drvfs" section citing
+  the retro's measured 0.200s-vs-0.020s (10x) file-walk evidence. Δ8: `toolbelt/preflight.sh`
+  Check 4 jar-lock replaced the per-jar `lsof <jar>` loop (one fork per module jar — minutes on
+  a 1013-jar niagara_home) with a SINGLE filtered `lsof -Fn` pass matched by pathname string
+  against `<niagara_home>/modules/*.jar`, and now SKIPs the check entirely when `niagara_home`
+  is 9p/drvfs (lsof cannot see a Windows-side station lock there anyway — the check was moot on
+  WSL against `/mnt/c`, per the retro). Gates: `shellcheck` 0.10.0 exit 0 (build.sh,
+  preflight.sh, lib/fs-type.sh, tests/*.bats, tests/helpers/*.bash); `bats tests/*.bats` all
+  green — build-sh.bats grew from 18 to 26 tests (8 new: BS-9p-warn-root, BS-9p-warn-nh,
+  BS-9p-none, BS-drift-fail, BS-drift-pass, BS-drift-identical-content, BS-drift-no-baseline,
+  BS-drift-skip-flag), preflight.bats grew from 7 to 12 tests (5 new: PF-jarlock-single-call,
+  PF-jarlock-timing, PF-jarlock-detects-locked, PF-jarlock-skip-9p, PF-jarlock-no-9p); every
+  pre-existing test in both files stayed green UNCHANGED (backward compatible — verified by
+  diffing the passing-test list before/after). Mutation-flip proofs observed by hand: (1)
+  commented out the Δ2 post-build FAIL block in `build.sh` → BS-drift-fail went RED (exit 0
+  instead of 51), reverted, re-ran GREEN; (2) reverted the Δ8 single `lsof -Fn` pass back to a
+  `for jar in ...; do lsof "$jar"; done` loop → PF-jarlock-single-call went RED (call count 5
+  instead of 1), reverted, re-ran GREEN. `lint-guard-pins.sh --strict .` unaffected (scope is
+  `toolbelt/lint-*.sh` only — `build.sh`/`preflight.sh`/`lib/fs-type.sh` are non-lint scripts,
+  exempt per the fold contract). `kit-links.bats` L2 (no toolbelt script invokes git) and L5
+  (every `toolbelt/*.sh` named in `BUILD-LOOP.md` or `skill/SKILL.md`) both still pass — neither
+  new file needed a fresh L5 citation since `build.sh`/`preflight.sh` were already named and
+  `lib/fs-type.sh` sits under `toolbelt/lib/` (L5's glob is non-recursive, same as the
+  pre-existing `lib/method-boundary.sh`). BUILD-STATE.md kit envelope updated (T5b open_issue
+  replaced with a DONE entry; the T5a "OWED TO T5b" line removed). **CAMPAIGN COMPLETE — all 5
+  target retros (secure-authoring-isoperational-gate, wb-mapping-ord-npe-and-wsl-windows-jdk,
+  live-diagnosis-hardening-deltas, apillm-wb-subscription-refresh-and-points-deltas,
+  panccadia-defrost-sequencing-hmi-reload-deltas) are now `folded` in `retros/INDEX.md`.**
+  Branch `odd/fold-panccadia-build-gates`, branched from the T5a branch tip
+  (`odd/fold-panccadia-docs-lints`, PR #153 pending merge — this branch stacks on it and is NOT
+  pushed/PR'd by this writer per its bounded scope). Commit trailer:
+  `Retro: promotion (folds Δ2, Δ7, Δ8 from panccadia-defrost-sequencing-hmi-reload-deltas;
+  completes Δ1-Δ8)`.
+
+## RDD correction — R4-drift-gate-not-retry-safe (2026-09-24)
+Native RDD resilience review flagged that the T5b Δ2 drift gate (`build.sh:207-230`) failed
+open on a retry: gradle's `:jar` step installs the new-but-same-version jar into
+`niagara_home/modules/` as its last step, BEFORE the exit-51 FAIL fires, so a bare re-run would
+snapshot that new jar as its own baseline and silently pass — the exact "Up to Date" trap the
+gate exists to catch. Fixed by backing up the pre-build jar (part 1, `$DRIFT_DIR/$p.old.jar`)
+and restoring it into `modules/` on FAIL (part 2), with an `EXIT` trap replacing the manual
+`rm -rf "$DRIFT_DIR"` cleanup. Added `BS-drift-restore` (modules/ jar byte-identical to the
+pre-build baseline after a FAIL) and `BS-drift-retry-safe` (a second identical run still exits
+51) to `tests/build-sh.bats`, using a bespoke fake gradlew that actually installs the built jar
+into `modules/` (the stock stub does not). Mutation-proved by hand: removed the restore step —
+both new tests went RED (`BS-drift-restore` on the `Restored` message, `BS-drift-retry-safe`
+exiting 0 on the second run) — reverted, re-ran GREEN. Gates: shellcheck 0.10.0 exit 0; full
+`bats tests/*.bats` 689/689 green (`build-sh.bats` now 28 tests, +2); `sweep-build-state.sh`
+exit 0; `sweep-fold-audit.sh --strict` exit 0 (171 folded, 171 cited, 0 uncited); `lint-guard-
+pins.sh --strict .` exit 0. Commit trailer: `Retro: none (trivial: review correction
+R4-drift-gate-not-retry-safe within the T5b fold)`.

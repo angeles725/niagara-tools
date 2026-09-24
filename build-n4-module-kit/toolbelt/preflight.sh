@@ -18,14 +18,17 @@
 #               -> PASS|FAIL row; detail names the found path or search dir
 #   plugin-pin  settings.gradle.kts plugin version present in <niagara_home>/etc/m2
 #               -> PASS|FAIL; version extracted from first "x.y.z" quoted string
-#   jar-lock    lsof on <niagara_home>/modules/*.jar
-#               -> PASS|WARN(locked)|SKIP(lsof absent) — never a false PASS
+#   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
+#               -> PASS|WARN(locked)|SKIP(lsof absent, or niagara_home is 9p/drvfs) — never a false PASS
 #
 # Row format: PASS|FAIL|WARN|SKIP  <check>  <detail>
 # Exit: 0 all PASS/WARN/SKIP · 1 any FAIL · 2 usage · 3 env (path not found)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
+
+# shellcheck disable=SC1091
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/fs-type.sh"
 
 JVM_DIR="/usr/lib/jvm"
 FAILED=0
@@ -168,19 +171,31 @@ if [ "$WIN_PATH_FAIL" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Check 4 — jar lock via lsof
-# Checks whether any jar in <niagara_home>/modules/ is held open by a running
-# process (e.g. the station). Building over a locked jar can silently corrupt it.
-# SKIP when lsof is not in PATH — never emit a false PASS.
+# Check 4 — jar lock via a SINGLE filtered `lsof -Fn` pass
+# A per-jar `lsof <jar>` loop forks lsof once per module jar (~0.16s each on a
+# real box) — on a 1013-jar niagara_home that turns a 3-5s "stuck in preflight"
+# wait into ~5 minutes. One `lsof -Fn` call lists every process's open files
+# once; match each modules/*.jar path against that single output instead.
+# SKIP entirely when niagara_home is a WSL 9p/drvfs mount: on WSL against
+# /mnt/c, lsof only sees Linux-side processes, so it cannot detect a Windows
+# station holding the jar anyway — running the scan there is slow AND moot.
+# Trade-off (accepted for the speed win): this matches by PATHNAME STRING, not
+# device+inode identity — a bind-mount or a differently-canonicalized path to
+# the same jar will not match. Fall back to `lsof <jar>` directly if that is a
+# concern for a specific jar.
+# [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ8]
 # ---------------------------------------------------------------------------
 if [ "$WIN_PATH_FAIL" -eq 0 ]; then
-  if ! command -v lsof >/dev/null 2>&1; then
+  if is_9p_or_drvfs "$NH"; then
+    row SKIP "jar-lock" "niagara_home is on a 9p/drvfs mount (WSL) — lsof cannot see a Windows-side lock here"
+  elif ! command -v lsof >/dev/null 2>&1; then
     row SKIP "jar-lock" "lsof not in PATH — install lsof to enable jar-lock detection"
   else
     LOCKED=""
+    LSOF_OUT="$(lsof -Fn 2>/dev/null || true)"
     for jar in "$NH/modules/"*.jar; do
       [ -f "$jar" ] || continue
-      if lsof "$jar" >/dev/null 2>&1; then
+      if printf '%s\n' "$LSOF_OUT" | grep -qxF "n$jar"; then
         LOCKED="$LOCKED $(basename "$jar")"
       fi
     done

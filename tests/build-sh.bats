@@ -9,6 +9,9 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   # copy build.sh next to a stub gate so the sibling lookup resolves to the stub
   mkdir -p "$TMPDIR_T/kit"; cp "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
+  # build.sh sources lib/fs-type.sh (Δ7/Δ2) relative to its own dir — copy the real lib
+  # alongside the copied build.sh so that sibling lookup resolves too.
+  mkdir -p "$TMPDIR_T/kit/lib"; cp "$KIT/toolbelt/lib/fs-type.sh" "$TMPDIR_T/kit/lib/fs-type.sh"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -205,4 +208,157 @@ GRADLEW
 @test "BS-report-skip: --no-report skips the report-module gate; a passing verify exits 0" {
   FAKE_REPORT_EXIT=1 run "$B" --no-report "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
+}
+
+# ================= Δ7 (retro panccadia-defrost-sequencing-hmi-reload-deltas) =================
+# Build-location precheck: WARN (non-fatal) when gradle-root or niagara_home is on a WSL
+# 9p/drvfs mount. N4_FSTYPE_MOUNTS_FILE (toolbelt/lib/fs-type.sh) overrides `df -T` with a
+# /proc/mounts-formatted fixture so these tests never depend on the host's real mounts.
+
+@test "BS-9p-warn-root: gradle-root on a 9p/drvfs mount -> WARN (non-fatal), build still proceeds" {
+  MOUNTS="$TMPDIR_T/mounts-root"
+  printf '%s\n' "drvfs $ROOT drvfs rw 0 0" > "$MOUNTS"
+  N4_FSTYPE_MOUNTS_FILE="$MOUNTS" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"drvfs"* ]]
+  [[ "$output" == *"gradle-root"* ]]
+  [ -e "$TMPDIR_T/gradlew.calls.log" ]   # WARN is non-fatal — the build still ran
+}
+
+@test "BS-9p-warn-nh: niagara_home on a 9p mount -> WARN naming niagara_home" {
+  MOUNTS="$TMPDIR_T/mounts-nh"
+  printf '%s\n' "9p $TMPDIR_T/nh 9p rw 0 0" > "$MOUNTS"
+  N4_FSTYPE_MOUNTS_FILE="$MOUNTS" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"9p"* ]]
+  [[ "$output" == *"niagara_home"* ]]
+}
+
+@test "BS-9p-none: no 9p/drvfs mount -> no build-location WARN" {
+  MOUNTS="$TMPDIR_T/mounts-none"
+  printf '%s\n' "ext4 / ext4 rw 0 0" > "$MOUNTS"
+  N4_FSTYPE_MOUNTS_FILE="$MOUNTS" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"9p/drvfs mount"* ]]
+}
+
+# ================= Δ2 (retro panccadia-defrost-sequencing-hmi-reload-deltas) =================
+# Deployed-baseline drift gate: a rebuild that changes shipped bytes but leaves the module's
+# own vendorVersion unchanged FAILs (exit 51) before the verify gate runs. Software Manager
+# compares versions, not bytes, and would otherwise report "Up to Date" and skip the fix
+# (the exact CompPan 2.1.0 leon-vs-leon2 trap this retro documents).
+#
+# _mkjar_ver <jar> <vendorVersion> <payload> — a minimal N4-module-shaped jar with the
+# MODULE's OWN vendorVersion on the <module ...> root tag itself (not the <dependency
+# name="baja" vendorVersion="..."/> floor) plus one payload file whose content varies the
+# scenario. buildMillis is randomized every call, exactly like a real rebuild, to prove the
+# gate ignores META-INF noise and only reacts to an ACTUAL shipped-bytes change.
+_mkjar_ver() {
+  local jar="$1" ver="$2" payload="$3" d
+  d="$(mktemp -d)"
+  mkdir -p "$d/META-INF"
+  printf '<module name="X" vendor="Angeles" vendorVersion="%s" buildMillis="%s%s">\n<dependencies/>\n<types/>\n</module>\n' \
+    "$ver" "$RANDOM" "$RANDOM" > "$d/META-INF/module.xml"
+  printf '%s' "$payload" > "$d/payload.txt"
+  mkdir -p "$(dirname "$jar")"
+  (cd "$d" && zip -q -r "$jar" .)
+  rm -rf "$d"
+}
+
+@test "BS-drift-fail: rebuild changes shipped bytes but vendorVersion is unchanged -> exit 51 before verify-module runs" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"vendorVersion"* ]]
+  [[ "$output" == *"Up to Date"* ]]
+  [ ! -e "$TMPDIR_T/verify.args" ]   # the verify gate is never reached
+}
+
+@test "BS-drift-pass: rebuild changes shipped bytes AND vendorVersion is bumped -> no drift FAIL, verify gate reached" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.1" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-drift-identical-content: rebuild with IDENTICAL payload (only buildMillis differs) -> no drift FAIL (false-positive guard)" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "same-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "same-behavior"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-drift-no-baseline: no jar under modules/ yet (first deploy) -> no drift check, build proceeds" {
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "first-ever-build"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-drift-skip-flag: --no-drift-check bypasses a real drift condition" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  run "$B" --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+# ================= R4-drift-gate-not-retry-safe (RDD resilience correction) =================
+# The stock make_fake_gradlew stub above never touches modules/, so it cannot exercise the real
+# failure mode: gradle's :jar task installs the new jar into modules/ as its OWN last step (see
+# build.sh's Δ2 comment), BEFORE the drift FAIL below fires. These two tests use a fake gradlew
+# that also performs that install, so a rebuild-then-restore lifecycle can actually be observed.
+_mk_gradlew_installs_jar() {
+  # Simulates gradle's :jar step installing the already-built Foo-rt.jar (planted by the test via
+  # _mkjar_ver) into niagara_home/modules/ as its last step.
+  cat > "$ROOT/gradlew" <<GRADLEW
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$TMPDIR_T/gradlew.calls.log"
+cp -p "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/nh/modules/Foo-rt.jar"
+exit 0
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-drift-restore: a drift FAIL restores modules/<jar> byte-identical to the pre-build baseline" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  cp "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  _mk_gradlew_installs_jar
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"Restored"* ]]
+  cmp -s "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+}
+
+@test "BS-drift-retry-safe: a SECOND run after a drift FAIL still FAILs (R4-drift-gate-not-retry-safe)" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  _mk_gradlew_installs_jar
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  # SECOND run, same inputs, same not-actually-rebuilt build/libs jar (a deterministic rebuild
+  # reproduces identical non-META-INF bytes) — without the restore above, part 1 would snapshot
+  # the NEW jar gradle just installed as ITS OWN baseline and this would silently exit 0.
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"vendorVersion"* ]]
 }
