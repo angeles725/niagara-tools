@@ -22,11 +22,14 @@
 #   snapshots what is CURRENTLY installed there; after the build, if the new jar's shipped bytes differ from
 #   that snapshot but the module's own vendorVersion did not change, the build FAILs (exit 51) — Software
 #   Manager compares versions, not bytes, and would silently report "Up to Date" and skip installing the fix.
+#   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
+#   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
+#   OLD baseline and catches the same drift again, instead of silently "Up to Date"-passing on the retry.
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 50 gate or report-module FAIL · 51 deployed-baseline drift (Δ2)
 set -euo pipefail
 
-usage() { sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"
 SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0
 while [ $# -gt 0 ]; do
@@ -140,11 +143,16 @@ GARGS=(-Pniagara_home="$NIAGARA_HOME" -Porg.gradle.java.installations.paths="$J8
 [ -z "$PLUGIN" ] || GARGS+=(-PniagaraPluginVersion="$PLUGIN")
 
 # ---------------------------------------------------------------------------
-# Deployed-baseline drift gate (Δ2), part 1 — pre-build snapshot.
+# Deployed-baseline drift gate (Δ2), part 1 — pre-build snapshot + backup.
 # Gradle's :jar task auto-installs the new jar into <niagara_home>/modules/ as
 # its LAST step, so "what is currently deployed" must be captured BEFORE
 # gradle runs — by the time gradle exits, modules/ already holds the NEW
-# bytes and a post-build-only comparison would always see "no drift".
+# bytes and a post-build-only comparison would always see "no drift". A full
+# copy of the pre-build jar (not just its hash) is kept too, so a drift FAIL
+# below can restore modules/ to this exact baseline — without that restore, a
+# bare re-run would snapshot the NEW jar gradle just installed as its OWN
+# baseline, a deterministic rebuild would match it byte-for-byte, and the
+# gate would silently pass on the retry (R4-drift-gate-not-retry-safe).
 # [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]
 # ---------------------------------------------------------------------------
 _content_hash() {
@@ -172,11 +180,13 @@ _module_own_version() {
 DRIFT_DIR=""
 if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
   DRIFT_DIR="$(mktemp -d)"
+  trap 'rm -rf "$DRIFT_DIR"' EXIT
   for p in "${SEL[@]}"; do
     _old="$NIAGARA_HOME/modules/$MOD-$p.jar"
     [ -f "$_old" ] || continue
     _content_hash "$_old" > "$DRIFT_DIR/$p.old.hash"
     _module_own_version "$_old" > "$DRIFT_DIR/$p.old.ver"
+    cp -p "$_old" "$DRIFT_DIR/$p.old.jar"
   done
 fi
 
@@ -197,12 +207,16 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Deployed-baseline drift gate (Δ2), part 2 — post-build compare.
+# Deployed-baseline drift gate (Δ2), part 2 — post-build compare + restore.
 # If the new jar's shipped-bytes content hash differs from the pre-build
 # snapshot but the module's own vendorVersion is UNCHANGED, FAIL: Software
 # Manager compares versions, not bytes, and would report "Up to Date" and
 # silently skip installing this jar (the exact panccadia CompPan 2.1.0 leon
-# vs leon2 trap). [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]
+# vs leon2 trap). On FAIL, the backed-up pre-build jar (part 1) is restored
+# into modules/ so the deployed baseline stays truthful and a bare re-run
+# stays retry-safe (R4-drift-gate-not-retry-safe): it snapshots the SAME old
+# baseline again and catches the drift a second time instead of passing.
+# [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]
 # ---------------------------------------------------------------------------
 if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
   DRIFT_FAIL=0
@@ -219,10 +233,17 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
       echo "build.sh: FAIL — $MOD-$p shipped bytes changed but vendorVersion is still $_new_ver." >&2
       echo "  Software Manager compares versions, not bytes — it will report \"Up to Date\" and SKIP installing this jar." >&2
       echo "  Bump defaultModuleVersion(\"$_new_ver\") in $MOD-$p's build.gradle.kts (patch for a fix, minor for a feature), then rebuild." >&2
+      # Restore the pre-build baseline (part 1 backup) so a bare re-run stays retry-safe: without this,
+      # gradle's :jar step has already left the NEW jar in modules/, and a re-run would snapshot that as
+      # its own baseline and silently pass. [R4-drift-gate-not-retry-safe]
+      if cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null; then
+        echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules — a retry will catch this again." >&2
+      else
+        echo "  FAILED TO RESTORE the previously-deployed $MOD-$p.jar — $NIAGARA_HOME/modules now holds the NEW jar; restore it manually before retrying." >&2
+      fi
       DRIFT_FAIL=1
     fi
   done
-  rm -rf "$DRIFT_DIR"
   if [ "$DRIFT_FAIL" -eq 1 ]; then
     echo "build.sh: deployed-baseline drift detected — bump the version above, then rebuild (or --no-drift-check if this niagara_home is not the deploy target)." >&2
     exit 51

@@ -316,3 +316,49 @@ _mkjar_ver() {
   [ "$status" -eq 0 ]
   [ -e "$TMPDIR_T/verify.args" ]
 }
+
+# ================= R4-drift-gate-not-retry-safe (RDD resilience correction) =================
+# The stock make_fake_gradlew stub above never touches modules/, so it cannot exercise the real
+# failure mode: gradle's :jar task installs the new jar into modules/ as its OWN last step (see
+# build.sh's Δ2 comment), BEFORE the drift FAIL below fires. These two tests use a fake gradlew
+# that also performs that install, so a rebuild-then-restore lifecycle can actually be observed.
+_mk_gradlew_installs_jar() {
+  # Simulates gradle's :jar step installing the already-built Foo-rt.jar (planted by the test via
+  # _mkjar_ver) into niagara_home/modules/ as its last step.
+  cat > "$ROOT/gradlew" <<GRADLEW
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$TMPDIR_T/gradlew.calls.log"
+cp -p "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/nh/modules/Foo-rt.jar"
+exit 0
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-drift-restore: a drift FAIL restores modules/<jar> byte-identical to the pre-build baseline" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  cp "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  _mk_gradlew_installs_jar
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"Restored"* ]]
+  cmp -s "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+}
+
+@test "BS-drift-retry-safe: a SECOND run after a drift FAIL still FAILs (R4-drift-gate-not-retry-safe)" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  _mk_gradlew_installs_jar
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  # SECOND run, same inputs, same not-actually-rebuilt build/libs jar (a deterministic rebuild
+  # reproduces identical non-META-INF bytes) — without the restore above, part 1 would snapshot
+  # the NEW jar gradle just installed as ITS OWN baseline and this would silently exit 0.
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"vendorVersion"* ]]
+}

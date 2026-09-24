@@ -275,3 +275,21 @@ Per retro folded:
   pushed/PR'd by this writer per its bounded scope). Commit trailer:
   `Retro: promotion (folds Δ2, Δ7, Δ8 from panccadia-defrost-sequencing-hmi-reload-deltas;
   completes Δ1-Δ8)`.
+
+## RDD correction — R4-drift-gate-not-retry-safe (2026-09-24)
+Native RDD resilience review flagged that the T5b Δ2 drift gate (`build.sh:207-230`) failed
+open on a retry: gradle's `:jar` step installs the new-but-same-version jar into
+`niagara_home/modules/` as its last step, BEFORE the exit-51 FAIL fires, so a bare re-run would
+snapshot that new jar as its own baseline and silently pass — the exact "Up to Date" trap the
+gate exists to catch. Fixed by backing up the pre-build jar (part 1, `$DRIFT_DIR/$p.old.jar`)
+and restoring it into `modules/` on FAIL (part 2), with an `EXIT` trap replacing the manual
+`rm -rf "$DRIFT_DIR"` cleanup. Added `BS-drift-restore` (modules/ jar byte-identical to the
+pre-build baseline after a FAIL) and `BS-drift-retry-safe` (a second identical run still exits
+51) to `tests/build-sh.bats`, using a bespoke fake gradlew that actually installs the built jar
+into `modules/` (the stock stub does not). Mutation-proved by hand: removed the restore step —
+both new tests went RED (`BS-drift-restore` on the `Restored` message, `BS-drift-retry-safe`
+exiting 0 on the second run) — reverted, re-ran GREEN. Gates: shellcheck 0.10.0 exit 0; full
+`bats tests/*.bats` 689/689 green (`build-sh.bats` now 28 tests, +2); `sweep-build-state.sh`
+exit 0; `sweep-fold-audit.sh --strict` exit 0 (171 folded, 171 cited, 0 uncited); `lint-guard-
+pins.sh --strict .` exit 0. Commit trailer: `Retro: none (trivial: review correction
+R4-drift-gate-not-retry-safe within the T5b fold)`.
