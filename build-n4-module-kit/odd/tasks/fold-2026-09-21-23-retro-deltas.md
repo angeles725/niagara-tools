@@ -74,10 +74,16 @@ Per retro folded:
       path, Δ5 `types/wb-widgets.md` new §create-point-from-wb). Route: delegated direct writer
       (1 new script + 1 bats file + 3 doc sections across 2 files — writer trigger, 2+
       non-trivial files).
-- [ ] T5a/T5b · panccadia-defrost-sequencing-hmi-reload-deltas (8Δ: lints `spa-poll-no-recovery`,
-      `inert-coordination`; version-bump drift gate; deployed-baseline template; HOA contract;
-      cycle anchors; 9p build-location gate; preflight lsof perf). Route: delegated direct writer,
-      likely split T5a/T5b given size. NOT started by this writer.
+- [x] T5a · panccadia-defrost-sequencing-hmi-reload-deltas — Δ1, Δ3, Δ4, Δ5, Δ6 of 8 (partial
+      promotion; retro STAYS `pending` — Δ2/Δ7/Δ8 owed to T5b). Route: delegated direct writer
+      (2 new lints + bats + 4 doc sections across 3 files — writer trigger, 2+ non-trivial files).
+- [ ] T5b · panccadia-defrost-sequencing-hmi-reload-deltas — Δ2 (version-bump-on-every-change
+      rule widened + `preflight.sh`/`build.sh` last-deployed-baseline drift gate + bats), Δ7
+      (`build.sh` WSL 9p/drvfs build-location precheck + `build-verify.md` doc + bats), Δ8
+      (`preflight.sh` Check 4 jar-lock: single filtered `lsof -Fn` pass + 9p/drvfs SKIP + bats
+      timing guard). Completing these 3 lets the retro's INDEX row flip `pending → folded`
+      (FULL promotion). Route: delegated direct writer, likely 1-2 non-trivial script/doc files
+      per Δ. NOT started.
 
 ## Acceptance criteria
 - Every retro row in `INDEX.md` for the 5 target retros is `folded` (or explicitly left `pending`
@@ -165,3 +171,49 @@ Per retro folded:
   uncited; `shellcheck` 0.10.0 exit 0; `lint-guard-pins.sh --strict .` exit 0 (WEO2 MATCH);
   `bats tests/*.bats` 658 ok / 0 not-ok (7 new WEO tests); WEO2 guard-pin mutation manually
   flipped, confirmed RED, then reverted.
+- 2026-09-24: T5a PARTIAL PROMOTION — panccadia-defrost-sequencing-hmi-reload-deltas Δ1, Δ3, Δ4,
+  Δ5, Δ6 of 8 folded; Δ2, Δ7, Δ8 OWED to T5b (a later writer). Because the retro is only
+  partially folded, its `<!-- review-status -->` marker and `retros/INDEX.md` row both STAY
+  `pending` (fold contract: flip only on FULL promotion) — the owed Δs are recorded in
+  `BUILD-STATE.md`'s kit `open_issues` instead. New `toolbelt/lint-spa-poll-no-recovery.sh`
+  (Δ1: an rc/ `setInterval`/`setTimeout` poll loop with a catch and no `location.reload(`/
+  `location.href` recovery anywhere in the file; SPR2 guard-pin) + `types/dashboard.md`
+  "ux — servlet + SPA" new checklist bullet. New `toolbelt/lint-inert-coordination.sh` (Δ5: a
+  coordinator whose `units()` is structurally singleton — `singletonList(`/single-arg
+  `Arrays.asList(` — while queue/token/stagger state is still declared; ICO2 guard-pin).
+  `types/logic.md` "RT control logic" new "HOA precedence contract" bullet (Δ4: every HOA
+  output needs an explicit precedence matrix as a pure function + JUnit; default Hand/Off
+  dominates, safety inhibits are named exceptions) cross-referencing the already-folded
+  "Defrost has priority over HOA" section in `types/logic-authoring.md` (added a reverse
+  cross-link there too); `types/issues-and-gotchas.md` new §J "Control contracts &
+  requirements signals" / §J1 (Δ4: a field wire-sheet workaround is a requirements signal, not
+  a ticket to close). `types/logic.md` "Safety fail-modes & timers" new "Cycle-anchor
+  checklist" bullet (Δ6: declare duration-from-actuation-vs-from-request and
+  interval-from-end-vs-from-start explicitly). `BUILD-STATE.md` extended with an optional Δ3
+  "deployed-baseline" field template (`deployed_jar_sha256`/`deployed_build_millis`/
+  `deployed_source_commit`/`deployed_baseline_date`), documented in "How to read this file" and
+  demonstrated as `unknown` (honestly — no real deploy data fabricated) on the ColdRoomPan
+  canonical example. Both new lints named in `BUILD-LOOP.md` (kit-links L5).
+  **Real-tree validation (read-only, no client code edited):** `lint-spa-poll-no-recovery`
+  correctly WARNs on `Cliente/Leon-Guanjuato-worktrees/main-ff1b659/Dashboard/DashboardPan/
+  DashboardPan-ux/src/rc/index.html` (pre-fix 2.4.2 `poll()` shape) and stays clean on the
+  deployed `/mnt/c/Users/equipo/Downloads/niagara-panccadia-leon` tree (2.4.3, the watchdog fix
+  is already live there). `lint-inert-coordination` stays CLEAN on `main-ff1b659`'s
+  `ColdRoomPan-rt/BDefrostController.units()` (pre-PR1c: returns
+  `((BColdRoom)parent).getUnits()`, a real multi-unit list — a true negative on the OLDER
+  tree) and correctly WARNs on the DEPLOYED Downloads tree's `BDefrostController.units()`
+  (POST-PR1c singleton + `waitingQueue`/`staggerDelay`/`*Token` still declared) — **the
+  inverse of the task brief's assumption**: the inert-coordination defect lives in the NEWER
+  deployed tree (this retro's own PR1c refactor), not the older blessed test root; reported
+  honestly rather than confirmed by assumption. `tests/lint-spa-poll-no-recovery.bats` 8/8 and
+  `tests/lint-inert-coordination.bats` 8/8 green; both guard-pin mutations (SPR2, ICO2) were
+  APPLIED to the source, confirmed the pinned fixture flips RED, then reverted before commit.
+  Gates: `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 170 folded/170 cited/0
+  uncited (unchanged — citations to a still-pending retro do not count as folded);
+  `shellcheck` 0.10.0 exit 0; `lint-guard-pins.sh --strict .` exit 0 (SPR2 + ICO2 both MATCH);
+  `bats tests/*.bats` 674 ok / 0 not-ok (16 new tests). Commit trailer:
+  `Retro: promotion (folds Δ1,Δ3,Δ4,Δ5,Δ6 from panccadia-defrost-sequencing-hmi-reload-deltas)`
+  — the partial-promotion exit anchored by this same commit's `BUILD-STATE.md` diff (per
+  `.githooks/pre-push`), since no `INDEX.md` row flips. Branch
+  `odd/fold-panccadia-docs-lints`, branched from the T4 branch tip
+  (`odd/fold-apillm-wb-subscription`).
