@@ -301,6 +301,33 @@ user intent.
 `GET` routes in web-facing module servlets and move destructive actions to POST handlers.
 [ev: mem nmodsreflow] — **Kit coverage: none (security audit = PENDING)**
 
+### F2 · A `static` `-ux` session/token store evicted only lazily survives a servlet re-mount → session-fixation shape `[ev: retro live-diagnosis-hardening-deltas Δ6]`
+
+**Symptom:** no crash and, by itself, negligible heap growth (a session that never logs out is a
+small stranded entry, not the dominant leak class). The real risk surfaces on a servlet
+re-mount/redeploy cycle: a reused container session id (e.g. `JSESSIONID`) can inherit an
+already-authenticated WRITE session from before the remount.
+
+**Root cause:** a `-ux` session store implemented as a `static ConcurrentHashMap<sessionId,Entry>`
+inserts on login, removes on an explicit logout call, and evicts expired entries ONLY lazily —
+when the same id happens to be queried again. Being `static`, the map's lifecycle is the
+CLASSLOADER's, not the servlet instance's: it survives a servlet re-mount, so a stale or reused
+container session id can still resolve to a live, authenticated entry after the remount — a
+session-fixation shape, not primarily a memory leak.
+
+**Fix:** sweep expired entries ON INSERT (not lazy-only) or run a scheduled/size-bounded
+eviction; question whether the map needs to be `static` at all (instance scope tied to the
+servlet's own lifecycle closes the re-mount window); bind authentication to
+user-identity+issue-time rather than the bare container session id; audit the write path. A
+correctly INSTANCE-scoped store with the same put/remove shape (e.g. `ConfigSession`, R14) does
+not have the re-mount survival problem — `static` is the load-bearing distinction.
+
+**Lint check:** `lint-session-store-lazy-evict.sh` WARN — a `static Map<...>` field with a
+`.put(` call whose enclosing method has no same-method `.remove(` (sweep-on-insert) and no
+`Clock.schedule`-driven purge anywhere in the file.
+[ev: corpus B1160; DashboardConfigSession.java:31-126] — **Kit coverage:
+lint-session-store-lazy-evict.sh (FOLDED)**
+
 ---
 
 ## G — Boot and deployment recovery
@@ -397,3 +424,56 @@ see `BUILD-STATE.md` kit open_issue. Check for overlap with `lint-null-context-w
 
 [ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
 **Kit coverage: this entry (FOLDED); lint DEFERRED**
+
+---
+
+## I — Runtime & persistence discipline
+
+### I1 · A hot `changed()` re-runs a heavy control method at INPUT RATE and writes a persisted slot every call `[ev: retro live-diagnosis-hardening-deltas Δ2]`
+
+**Symptom:** a station restarts every 2–3 days from tenured-gen heap exhaustion (engine
+watchdog `terminate`). Nothing in the module looks wrong structurally — no growing collection,
+no subscriber leak, no uncancelled timer ticket. The class is otherwise disciplined.
+
+**Root cause:** a `changed(Property p, Context cx)` override re-runs the full control cycle
+(`execute()`) on ANY of a large fan-in of linked inputs (~30 `p == <prop>` branches), with no
+rate guard. Under a churning field bus (a flapping IO-34 relay drove ~18 msg/s), `execute()` ran
+25–90x over its intended tick rate on the single engine thread — a callback-RATE hazard, distinct
+from the timer-ticket-lifecycle shape `lint-timers.sh` already covers and the subscriber-retention
+shape `lint-subscribe-without-unsubscribe.sh` already covers. Each over-execution also wrote
+non-transient slots (see I2), compounding the cost.
+
+**Fix:** add a leading-edge time debounce on the callback path (`Clock.millis()` delta gate),
+with an explicit bypass for any input that must act immediately (e.g. a `faultReset` toggle).
+Time-based integration (`ctl.step(Clock.millis(), …)`) already costs nothing extra under
+throttling — only the CALL FREQUENCY needed bounding, not the math.
+
+**Lint check:** `lint-changed-hot-write.sh` WARN — a `changed(Property, …)` override with >=6
+`p ==` branches guarding `execute()`, no `Clock.millis()`/`Clock.schedule` rate guard in the
+callback body, AND a non-transient slot write reachable from it.
+[ev: corpus B1158; BCompressorControl.java:1850-1871,2019-2021] — **Kit coverage:
+lint-changed-hot-write.sh (FOLDED)**
+
+### I2 · A correctly non-transient accumulator is WRITTEN every cycle instead of on a checkpoint tick `[ev: retro live-diagnosis-hardening-deltas Δ4]`
+
+**Symptom:** the persistence half of I1's flood — the station config is marked dirty and every
+link off the accumulator slot fires on EVERY control cycle, not just when the value actually
+needs to survive a restart.
+
+**Root cause:** a run-hours (or similar) accumulator is correctly declared non-transient — it
+MUST survive a restart for fair lead/lag rotation or similar sequencing — but the code WRITES
+the persisted slot every cycle instead of only on a periodic checkpoint. The read side is often
+already correct (a `seedHours()`-style guard that seeds ONCE on start), which makes the write-side
+cadence bug easy to miss in review.
+
+**Fix:** integrate the accumulator in memory (a plain in-memory field or a pure-model struct);
+checkpoint the non-transient slot on a periodic tick (not every `changed()`/`execute()` call) AND
+in `stopped()` (so a clean shutdown does not lose partial accumulation); seed the in-memory value
+once on start from the persisted slot.
+
+**Lint check:** `lint-persist-hot-write.sh` WARN — a non-transient property setter called from
+`changed()` or its one-hop callee with no cadence guard (`Clock.millis()` comparison or a `%`
+counter test) within 5 lines of the call. Pairs with `lint-changed-hot-write.sh` (I1): both fire
+on the same real shape, from two different angles (callback fan-in vs. the setter call site).
+[ev: corpus B1159; BCompressorControl.java:326,1403,2019] — **Kit coverage:
+lint-persist-hot-write.sh (FOLDED)**

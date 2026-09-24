@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-21 · kit · live-diagnosis-hardening-deltas
 
 **Session**: niagara-research focus `module-hardening`, blocks **B1158–B1160** — a LIVE-DIAGNOSIS deepening of the hardening focus. The PANCCADIA JACE-9000 (client station, 4.15.3.28) was restarting every 2–3 days from tenured-gen heap exhaustion (engine watchdog `terminate`, rc=-119). A read-only oBIX diagnosis + a source review of the operator's three custom modules (DashboardPan v2.4.2, CompPan v2.1.0, ColdRoomPan v2.1.2) traced it to a control-callback anti-pattern, not a textbook growing-collection leak. This is the FIRST time the hardening focus closed `[CERT-live]` gaps against a real station (the focus had parked its live residues for exactly this).
@@ -44,4 +44,7 @@ Three net-new module-hardening failure modes, each backed by live-station eviden
 - Honesty: RUN8/PER8 are the strongest CODE seam and a confirmed 25–90× over-execution defect; the DOMINANT retained class still needs a live `jmap -histo` to attribute the heap definitively (JACE ships a JRE, blocked). UXS7 as a heap leak is negligible — its value is the session-fixation rule.
 
 ---
-**Status**: PENDING — INDEX row appended. Propose-never-apply: no kit core file edited; deltas await human review.
+**Status**: FOLDED — `toolbelt/lint-changed-hot-write.sh` (Δ1) + `types/issues-and-gotchas.md`
+§I1 (Δ2), `toolbelt/lint-persist-hot-write.sh` (Δ3) + §I2 (Δ4), `toolbelt/lint-session-store-
+lazy-evict.sh` (Δ5) + §F2 (Δ6). All three lints have bats coverage (fixtures + a `# Mutation:`
+guard-pin) and are named in `BUILD-LOOP.md`. INDEX row flipped.

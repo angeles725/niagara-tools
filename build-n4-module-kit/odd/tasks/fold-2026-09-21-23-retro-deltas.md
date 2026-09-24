@@ -64,9 +64,10 @@ Per retro folded:
       gotcha + §D symptom entry) + `types/wb-widgets.md` cross-link. Optional `lint-set-null-ord`
       candidate — evaluated and recorded DEFERRED (not implemented this task; see progress log).
       Route: delegated direct writer (2 non-trivial doc files — writer trigger).
-- [ ] T3 · live-diagnosis-hardening-deltas (6Δ: 3 lints `lint-changed-hot-write` /
+- [x] T3 · live-diagnosis-hardening-deltas (6Δ: 3 lints `lint-changed-hot-write` /
       `lint-persist-hot-write` / `lint-session-store-lazy-evict` + 3 gotcha docs RUN8/PER8/UXS7).
-      Route: delegated direct writer (script+bats+doc — writer trigger). NOT started by this writer.
+      Route: delegated direct writer (3 new scripts + 3 bats files + doc — writer trigger, 2+
+      non-trivial files).
 - [ ] T4 · apillm-wb-subscription-refresh-and-points-deltas (5Δ incl.
       `lint-wb-external-ord-value`). Route: delegated direct writer. NOT started by this writer.
 - [ ] T5a/T5b · panccadia-defrost-sequencing-hmi-reload-deltas (8Δ: lints `spa-poll-no-recovery`,
@@ -108,3 +109,25 @@ Per retro folded:
   `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 168 folded/168 cited/0 uncited;
   shellcheck 0.10.0 exit 0; `bats tests/*.bats` 628 ok / 0 not-ok. Commit sha recorded in this same
   commit's parent commit-message reference (see `git log` on this branch).
+- 2026-09-24: T3 FOLDED — full promotion, all 3 lint asks implemented, none deferred. New
+  `toolbelt/lint-changed-hot-write.sh` (Δ1 RUN8: `changed(Property,Context)` with >=6 `p ==`
+  branches guarding `execute()`, no `Clock.millis()`/`Clock.schedule` rate guard, writes a
+  non-transient slot reachable from it; CHW2 guard-pin) + `types/issues-and-gotchas.md` new §I1
+  (Δ2). New `toolbelt/lint-persist-hot-write.sh` (Δ3 PER8: a non-transient property setter
+  called from `changed()`/its one-hop callee with no cadence guard within 5 lines; pairs with
+  Δ1; PHW2 guard-pin) + §I2 (Δ4). New `toolbelt/lint-session-store-lazy-evict.sh` (Δ5 UXS7: a
+  `static` session/token `Map` inserted with no sweep-on-insert and no scheduled purge; SSL2
+  guard-pin) + §F2 (Δ6). All 3 named in `BUILD-LOOP.md` (kit-links L5). Validated against the
+  real `Cliente/Leon-Guanjuato-worktrees/main-ff1b659` checkout: `lint-changed-hot-write` and
+  `lint-persist-hot-write` both correctly WARN on `CompPan-rt/BCompressorControl.java`
+  (pre-debounce checkout — 35 `p ==` branches, 3 non-transient hour-slot writes + 1 `faultReset`
+  write with no cadence guard, matching the retro's live evidence exactly);
+  `lint-session-store-lazy-evict` correctly stays clean on `DashboardPan-ux/ConfigSession.java`
+  (instance-scope, not `static` — the already-fixed R14 shape). Each guard-pin mutation was
+  manually applied, confirmed the pinned bats test flips to RED, then reverted. INDEX row + retro
+  marker flipped to folded. BUILD-STATE.md kit envelope updated. Branch
+  `odd/fold-live-diagnosis-hardening`, branched from the T2 commit `b933af2`. Gates:
+  `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 169 folded/169 cited/0 uncited;
+  `shellcheck` 0.10.0 exit 0 (scripts/*.sh, toolbelt/*.sh, tests/*.bats, tests/helpers/*.bash);
+  `lint-guard-pins.sh --strict .` exit 0 (CHW2/PHW2/SSL2 all MATCH); `bats tests/*.bats` 651 ok /
+  0 not-ok.

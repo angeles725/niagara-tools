@@ -179,6 +179,6 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 
 | 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | pending | 5 |
 | 2026-09-21-wb-mapping-ord-npe-and-wsl-windows-jdk.md | kit | 2026-09-21 | folded | 2 |
-| 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | pending | 6 |
+| 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | folded | 6 |
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | pending | 8 |
