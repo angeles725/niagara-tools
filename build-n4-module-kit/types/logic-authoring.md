@@ -1177,3 +1177,27 @@ Every writable slot a dashboard/operator can hit gets a ROW: (writable slot × w
 (All rows above credited to `[ev: corpus B816]` — the section header token covers the table.)
 
 **Coverage legend for the Test cell:** a real `srcTest/` test name (lint checks it exists); `🔶` an earlier-campaign test; `❌ C9` for an invariant that needs the rt-lifecycle seam (issue #815 — `changed()`-ordering, minOff/minOn, seedRestart). `[ev: corpus B816]`
+
+## rt point READ path — reference card (Δ4) `[ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ4]`
+
+Reading a control point's current value/status from rt code (station-side, not `-wb`). `[ev: corpus B1141]`
+
+- **Generic accessor:** `BControlPoint.getOutStatusValue()` returns the type-erased `BStatusValue` — use it when you only hold a `BControlPoint` reference. Concrete subtypes narrow the return type via `getOut()`: `BNumericPoint`/`BNumericWritable` → `BStatusNumeric`, `BBooleanPoint`/`BBooleanWritable` → `BStatusBoolean`, `BEnumPoint`/`BEnumWritable` → `BStatusEnum`, `BStringPoint`/`BStringWritable` → `BStatusString`. `[ev: corpus B1141 §1141.1]`
+- **Typed value extraction:** `BStatusNumeric.getValue()` (or `.getNumeric()` / `point.getNumeric()`); `BStatusBoolean.getValue()` (or `.getBoolean()`); `BStatusString.getValue()`. For enum, `BStatusEnum.getValue()` returns a `BDynamicEnum`: `dyn.getOrdinal()`, `dyn.getTag()` (stable machine key, not locale-sensitive), `dyn.getDisplayTag(cx)` (locale-sensitive label). `[ev: corpus B1141 §1141.2]`
+- **`BStatus.isValid()` vs `isOk()` — do not use them interchangeably:** `isValid()` passes when the DATA-QUALITY bits are clear (fails on DISABLED/FAULT/DOWN/STALE/NULL); `isOk()` passes only when ALL bits are zero, including ALARM/OVERRIDDEN/UNACKED_ALARM. A point in ALARM but otherwise communicating normally is `isValid()==true`, `isOk()==false`. **Rule for rt code:** use `isValid()` to decide whether a value is usable for control logic; reserve `isOk()` for a case that genuinely needs a fully clean status (no override, no alarm). `[ev: corpus B1141 §1141.3]`
+- **`BOrd.get()` and dangling resolution:** `ord.get()` resolves against the local station root; `ord.get(myComponent)` resolves relative to `myComponent`. A dangling ORD (deleted/moved slot) throws `UnresolvedException` — always wrap a resolve in `try/catch` and log-and-skip rather than letting the exception propagate out of a control callback. `[ev: corpus B1141 §1141.5–1141.6]`
+
+```java
+// Canonical rt resolve + typed read + validity check
+BOrd ord = BOrd.make("station:|slot:/Services/CompControl/setpointOut");
+try {
+    BObject obj = ord.get();
+    BNumericPoint pt = (BNumericPoint) obj;
+    if (pt.getOut().getStatus().isValid()) {
+        double val = pt.getOut().getValue();
+        // ... use val
+    }
+} catch (UnresolvedException e) {
+    Sys.getLog().warning(getType(), "dangling ord: " + ord, e);
+}
+```
