@@ -6,6 +6,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.24.0] - 2026-09-24
+
+### Added / Changed — retro-fold campaign 2026-09-21/23: fold the 5 pending kit retros (22 Δ)
+
+Five retros from the 2026-09-21 module work and the 2026-09-23 PANCCADIA field session were landed
+(#145, #146, #147) and folded into the kit core in a chain of one PR per retro under ODD + RDD. Every
+executable change passed the native 4-lens review. `retros/INDEX.md` again shows **0 pending delta-retros**.
+
+- **T1** secure-authoring-isoperational-gate (1Δ) → `types/security.md` §5.1 ongoing-work `isOperational()` gate. [PR #148]
+- **T2** wb-mapping-ord-npe-and-wsl-windows-jdk (2Δ) → `types/issues-and-gotchas.md` §H3 null-ORD `set()` NPE, §D5 WSL gradlew picking a Windows JDK. [PR #149]
+- **T3** live-diagnosis-hardening (6Δ) → new lints `lint-changed-hot-write.sh`, `lint-persist-hot-write.sh`, `lint-session-store-lazy-evict.sh` + issues §I1/§I2/§F2 (the PANCCADIA CompPan hours-at-18/s case). [PR #150]
+- **T4** apillm-wb-subscription-refresh-and-points (5Δ) → `types/wb-widgets.md` `registerForComponentEvents`/subscribe-depth rules and create-point recipe, `types/logic-authoring.md` rt point read-path card, new lint `lint-wb-external-ord-value.sh`. [PR #152]
+- **T5a** panccadia-defrost-sequencing-hmi-reload Δ1/Δ3-Δ6 → new lints `lint-spa-poll-no-recovery.sh`, `lint-inert-coordination.sh`; BUILD-STATE deployed-baseline fields; HOA precedence contract; cycle-anchor checklist. [PR #153]
+- **T5b** panccadia Δ2/Δ7/Δ8 → `build.sh` deployed-baseline version drift gate (exit 51, retry-safe: restores the deployed jar), 9p/drvfs build-location WARN (`toolbelt/lib/fs-type.sh`), `preflight.sh` single-pass `lsof`. RDD found and bounded-corrected one CRITICAL (drift gate not retry-safe). [PR #154]
+
+Deferred (BUILD-STATE open_issues): optional `lint-license-isoperational-gate`, `lint-set-null-ord`.
+Follow-ups: #151 (43 non-blocking review advisories on the new lints/gates), #49 (the deployed ColdRoomPan
+defrost stagger is inert, found by `lint-inert-coordination`). Suite 628 → 689 bats.
+
 ## [v0.23.0] - 2026-09-20
 
 ### Changed — apply-deltas campaign (#123): fold all 114 pending kit deltas into the core

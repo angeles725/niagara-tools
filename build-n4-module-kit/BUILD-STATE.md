@@ -180,7 +180,7 @@ Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a L
 
 <!-- build-state.v1 -->
 module: kit                          # the kit itself — the module_repo/build fields do not apply
-version: 0.23.0                      # current kit VERSION (was stale at 0.18.0; CHANGELOG had reached v0.22.0)
+version: 0.24.0                      # current kit VERSION (retro-fold campaign 2026-09-21/23 close, PRs #148-#154)
 last_change: 2026-09-20              # apply-deltas campaign #123 CLOSE: all 10 pending delta-retros folded (114Δ, PR #124-133), CHANGELOG v0.23.0
 open_issues:
   - DEFERRED lint candidate `lint-license-isoperational-gate` (from retro secure-authoring-isoperational-gate Δ1, folded 2026-09-24): flag a class with a non-null `getLicenseFeature()` whose `changed()`/timer/servlet-write callbacks act without an `isOperational()`/`isFault()` guard. NOT implemented — check overlap with `lint-status-parity`/`lint-silent-protection` first.
