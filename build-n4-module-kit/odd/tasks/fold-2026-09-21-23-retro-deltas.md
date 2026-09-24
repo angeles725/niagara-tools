@@ -293,3 +293,7 @@ exiting 0 on the second run) — reverted, re-ran GREEN. Gates: shellcheck 0.10.
 exit 0; `sweep-fold-audit.sh --strict` exit 0 (171 folded, 171 cited, 0 uncited); `lint-guard-
 pins.sh --strict .` exit 0. Commit trailer: `Retro: none (trivial: review correction
 R4-drift-gate-not-retry-safe within the T5b fold)`.
+
+## Campaign close (2026-09-24)
+
+All 5 retros folded (22 Δ): PRs #148, #149, #150, #152, #153, #154 merged to main; retro-only PRs #145-#147 merged first. RDD: T1/T3/T4/T5a/T5b assessed high and reviewed natively (all approved; T5b after one bounded correction), T2 passive. Kit released as v0.24.0 (CHANGELOG + BUILD-STATE version). Follow-ups: issue #151 (non-blocking review advisories), issue #49 (inert defrost stagger in the deployed ColdRoomPan), deferred optional lints in BUILD-STATE open_issues. CAMPAIGN COMPLETE.
