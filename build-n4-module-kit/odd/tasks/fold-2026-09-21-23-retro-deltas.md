@@ -68,8 +68,12 @@ Per retro folded:
       `lint-persist-hot-write` / `lint-session-store-lazy-evict` + 3 gotcha docs RUN8/PER8/UXS7).
       Route: delegated direct writer (3 new scripts + 3 bats files + doc — writer trigger, 2+
       non-trivial files).
-- [ ] T4 · apillm-wb-subscription-refresh-and-points-deltas (5Δ incl.
-      `lint-wb-external-ord-value`). Route: delegated direct writer. NOT started by this writer.
+- [x] T4 · apillm-wb-subscription-refresh-and-points-deltas (5Δ, full promotion — all 5 asks
+      implemented, none deferred: Δ1/Δ2 `types/wb-widgets.md` "view refresh rules" §, Δ3 same §
+      + new `lint-wb-external-ord-value.sh`, Δ4 `types/logic-authoring.md` new §rt point READ
+      path, Δ5 `types/wb-widgets.md` new §create-point-from-wb). Route: delegated direct writer
+      (1 new script + 1 bats file + 3 doc sections across 2 files — writer trigger, 2+
+      non-trivial files).
 - [ ] T5a/T5b · panccadia-defrost-sequencing-hmi-reload-deltas (8Δ: lints `spa-poll-no-recovery`,
       `inert-coordination`; version-bump drift gate; deployed-baseline template; HOA contract;
       cycle anchors; 9p build-location gate; preflight lsof perf). Route: delegated direct writer,
@@ -131,3 +135,33 @@ Per retro folded:
   `shellcheck` 0.10.0 exit 0 (scripts/*.sh, toolbelt/*.sh, tests/*.bats, tests/helpers/*.bash);
   `lint-guard-pins.sh --strict .` exit 0 (CHW2/PHW2/SSL2 all MATCH); `bats tests/*.bats` 651 ok /
   0 not-ok.
+- 2026-09-24: T4 FOLDED — full promotion, all 5 asks implemented, none deferred. Before writing,
+  re-verified the retro's corpus evidence (B1140, B1140-G1, B1141, B1142) against the actual
+  `niagara-mental-model-bloque114{0,1,2}.md` block files in `niagara-research/` — every API
+  name/claim the retro cited matched exactly (no invention). `types/wb-widgets.md` "view refresh
+  rules" § extended: Δ1 gives the already-folded Δ17 refresh rule its concrete API
+  (`registerForComponentEvents(subject,depth)` + overridden `handleComponentEvent`, NOT
+  `sys.Subscriber`) and tightens the `lint-wb-refresh` candidate wording; Δ2 adds the
+  subscribe-depth rule (direct child = depth 1, folder-nested child = depth 2, cross-refs
+  `types/driver-authoring.md §getDeviceManagerSubscribeDepth()`); new Δ3 bullet documents that an
+  externally-resolved ORD needs its OWN `loadSlots()` + `registerForComponentEvents(target,0)`
+  lease, backed by new `toolbelt/lint-wb-external-ord-value.sh` (WEO2 guard-pin; PEAK-depth
+  method-boundary parser reused via `toolbelt/lib/method-boundary.sh`, not re-implemented).
+  `types/wb-widgets.md` new §"Create-point-from-wb — the consolidated recipe" (Δ5: direct
+  `container.add()` Path A + the existing MgrController/MgrEdit/Mark Path B consolidated,
+  `BEnumRange.make()` 3 overloads, `ObjectUtil.uniqueName()`). `types/logic-authoring.md` new
+  §"rt point READ path — reference card" (Δ4: `getOutStatusValue()`/typed `getOut()`,
+  `BStatus.isValid()` vs `isOk()`, `BOrd.get()`/`UnresolvedException`). Validated
+  `lint-wb-external-ord-value.sh` against the real, already-fixed
+  `Cliente/LLM/Apillm/Apillm/Apillm-wb/{BApillmManager,BApillmImporterManager}.java` (both
+  correctly stay CLEAN) and, to prove the check actually fires rather than silently missing the
+  shape, against a scratch copy with the `registerForComponentEvents(targetComp,0)` call removed
+  from `BApillmImporterManager.rowFor()` (correctly WARNs at the exact resolve line); also ran
+  clean against the real `Cliente/Leon-Guanjuato-worktrees/main-ff1b659` client tree (no
+  external-ORD-value shape present there — a true negative, not a miss). Named in `BUILD-LOOP.md`
+  (kit-links L5). INDEX row + retro marker flipped to folded. BUILD-STATE.md kit envelope updated.
+  Commits on branch `odd/fold-apillm-wb-subscription`, branched from the T3 commit `443f451`.
+  Gates: `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 170 folded/170 cited/0
+  uncited; `shellcheck` 0.10.0 exit 0; `lint-guard-pins.sh --strict .` exit 0 (WEO2 MATCH);
+  `bats tests/*.bats` 658 ok / 0 not-ok (7 new WEO tests); WEO2 guard-pin mutation manually
+  flipped, confirmed RED, then reverted.

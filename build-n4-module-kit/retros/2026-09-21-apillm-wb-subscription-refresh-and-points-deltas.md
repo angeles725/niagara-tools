@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-21 · kit · apillm-wb-subscription-refresh-and-points-deltas
 
 **Session**: Apillm client module (Cliente/LLM/Apillm) — live commissioning of the rt+wb N4↔DB bidirectional gateway on station LLM. A user-visible WB manager bug (stale table until re-open) was root-caused live, fixed, and deepened in the research corpus (B1140–B1142).
@@ -31,4 +31,10 @@ The `BApillmManager` / `BApillmImporterManager` views (`BWbComponentView` + `Tab
 - Closing a research focus at `gaps_remaining:0` without a named child-gap section over-declares "complete" — name what is left (this session's wb-manager-framework close missed the subscription mechanism entirely).
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | pending | 5 |`
+**Status**: FOLDED — `types/wb-widgets.md` "view refresh rules" § extended with Δ1 (concrete
+`registerForComponentEvents`/`handleComponentEvent` API) + Δ2 (subscribe-depth rule) + new Δ3
+bullet (external-ORD lease) + new `toolbelt/lint-wb-external-ord-value.sh` (Δ3); new
+`types/wb-widgets.md` §"Create-point-from-wb — the consolidated recipe" (Δ5); new
+`types/logic-authoring.md` §"rt point READ path — reference card" (Δ4). `lint-wb-external-ord-value.sh`
+has bats coverage (fixtures + a `# Mutation:` guard-pin) and is named in `BUILD-LOOP.md`.
+INDEX row flipped.
