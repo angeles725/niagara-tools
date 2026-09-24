@@ -477,3 +477,33 @@ counter test) within 5 lines of the call. Pairs with `lint-changed-hot-write.sh`
 on the same real shape, from two different angles (callback fan-in vs. the setter call site).
 [ev: corpus B1159; BCompressorControl.java:326,1403,2019] — **Kit coverage:
 lint-persist-hot-write.sh (FOLDED)**
+
+## J — Control contracts & requirements signals
+
+### J1 · A field wire-sheet workaround bypassing a module's rule is a requirements signal, not a support ticket to close `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ4]`
+
+**Symptom:** an integrator or operator builds kitControl `Equal`/`Not`/`And`/`Or` blocks on the
+wire sheet to defeat a module's own precedence rule from OUTSIDE the module — e.g. forcing an
+evaporator fan OFF during an air defrost when `BEvaporatorUnit`'s comment states "their HOA
+never overrides defrost" and the code has no `enabled`/disable slot for that path.
+
+**Root cause:** the module's HOA/automatic-mode precedence contract does not cover a case the
+field actually needs. Nothing in the module surfaces this as a gap — the wire-sheet bypass
+"works" well enough that it can sit unnoticed for a long time, and the module's own doc looks
+internally consistent (defrost overriding HOA is deliberate, documented behavior — see
+`types/logic-authoring.md` "Defrost has priority over HOA").
+
+**Why this matters:** a wire-sheet bypass is fragile (it depends on the integrator remembering
+the exact block wiring on every future site), invisible to code review, and — per the
+`Relay-OR trap` already documented in `types/logic-authoring.md` — easy to get subtly wrong
+(feeding a multi-state value into a boolean `Or` converts "not zero" to "true", forcing every
+non-default state ON instead of isolating the one state that should be).
+
+**Fix:** treat the wire-sheet workaround as a design review trigger, not noise to route around.
+Add the missing case to the module's HOA precedence contract (see `types/logic.md` "RT control
+logic" § HOA precedence contract) — either a code derivation/rejection at the source, or an
+explicit new slot (e.g. a per-unit `defrostEnable`) — and retire the wire-sheet bypass once the
+module itself supports the case.
+
+**Lint candidate:** none proposed — this is a design-review discipline, not a statically
+detectable code shape (the bypass lives on the wire sheet / in the bog, not in module source).

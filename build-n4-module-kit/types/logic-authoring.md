@@ -603,6 +603,7 @@ The `BEvaporatorUnit` model is **refrigeration-shaped** (valve-first: open the e
 - **There is no `enabled` slot on `BDefrostController`:** `BDefrostMode` has only `interval` and `schedule` variants (no `off`). "Turn off defrost" requires a code change (add a `defrostEnable` slot) or an out-of-band relay OR to keep the valve open.
 - **Integrators must know this upfront:** a "keep the valve open" requirement during defrost cannot be solved through HOA. The options are: (a) add a per-evaporator `defrostEnable` slot to `BDefrostController`/`BEvaporatorUnit` (code change); (b) use an out-of-band valve OR relay; (c) gate the defrost schedule to never fire when the operator needs the valve open.
 - **Relay-OR trap:** feeding a multi-state `valveMode` (double 0=auto/1=on/2=off) directly into a boolean `Or` block converts `!=0` to `true`, so BOTH `Encender(1)` AND `Apagar(2)` force the valve ON. Always use `Equal(valveMode, 1)` to isolate the ON state.
+- **This is the concrete instance of the general rule:** every output with an HOA needs an explicit precedence matrix, and a field wire-sheet bypass like the one above is a requirements signal, not a workaround to leave in place — see `types/logic.md` "RT control logic" § HOA precedence contract and `types/issues-and-gotchas.md` §J1. `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ4]`
 
 ## Cross-field invariants and transient-flag recovery `[ev: retro live-commissioning-verification-gaps]`
 
