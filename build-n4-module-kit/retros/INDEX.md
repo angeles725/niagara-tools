@@ -182,3 +182,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | folded | 6 |
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | folded | 8 |
+| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | pending | 8 |
