@@ -51,17 +51,17 @@ signed: yes                         # DECLARED — META-INF/NIAGARA4.SF present
 verify_gate: pass                   # DECLARED — toolbelt/verify-module.sh outcome (pass|fail|unknown)
 deployed: yes                       # DECLARED — reached a station (yes|no|unknown) — a PRIOR version is live on PANCCADIA; this session's 2.2.1 build was packaged for hand-off only, NOT deployed (see deployed_* fields below, all unknown for this build).
 target_station: PANCCADIA           # DECLARED — where it runs
-pure_tests: 112                     # DECLARED — pure-Java JUnit count across 10 classes in ColdRoomPan-rt/srcTest (was 22/ColdRoomControlTest only; recount 2026-09-25 sums every class, incl. the new PostDefrostFanDelayTest)
+pure_tests: 118                     # DECLARED — pure-Java JUnit count across 11 classes in ColdRoomPan-rt/srcTest (was 22/ColdRoomControlTest only; 112 after T1/T2 across 10 classes; 118 after T3 adds PostDefrostFanHoldTest and grows PostDefrostFanDelayTest 2->4)
 open_issues:
   - DefrostController.java (742 lines) has ZERO pure tests — QA HIGH gap; extract a pure DefrostControl class + tests (a module change, OUT of this campaign's scope). It shipped the started()/interval production bug.
 retro_required: true                # GATED (kit-local) — did the last session change kit behavior / prove a lesson?
 retro_pending: true                # GATED — the enforcement hook: true until the owed retro exists; set true 2026-09-25 by new-retro.sh for retros/2026-09-25-continuous-fan-post-defrost-delay.md
-last_commit: 4174bf6                # DECLARED — short sha in module_repo of the last build's commit (chore(ColdRoomPan): bump to 2.2.1; fix itself is 35f84ca)
-deployed_jar_sha256: unknown         # DECLARED (optional, Δ3 template) — this session's built jar is da08c1fa...ecc3ca9 (packaged, not installed); the CURRENTLY DEPLOYED jar's hash is unknown — no station read performed this session
+last_commit: f0cf0c5                # DECLARED — short sha in module_repo of the last build's commit (chore(ColdRoomPan): bump to 2.2.2; T3 fix itself is 027e085; superseded T1/T2 commits were 35f84ca/4174bf6 -> version 2.2.1, packaged as v6, NEVER installed, marked NO INSTALAR after the T3 regression was found)
+deployed_jar_sha256: unknown         # DECLARED (optional, Δ3 template) — this session's built jar (2.2.2) is 09829a8b...70de1fc4 (packaged as v7, not installed); the CURRENTLY DEPLOYED jar's hash is unknown — no station read performed this session
 deployed_build_millis: unknown       # DECLARED (optional) — installed jar's module.xml buildMillis (`unzip -p <jar> META-INF/module.xml`)
 deployed_source_commit: unknown      # DECLARED (optional) — module_repo commit that built the installed jar (may differ from last_commit if a later commit was never deployed)
 deployed_baseline_date: unknown      # DECLARED (optional) — date the above baseline was recorded
-last_session: 2026-09-25 · continuous-fan-post-defrost-delay: exitDefrost() now opens the restart-sequencing window before re-applying outputs (T1), so a continuous fan waits startDelay after the valve on defrost/drip exit, not just after a restart; version bumped 2.2.0->2.2.1; built+verified+packaged to PANCCADIA-modulos-2026-09-25-v6, NOT deployed; next: install on station + confirm live, then consider the DefrostController pure-test gap above
+last_session: 2026-09-25 · continuous-fan-post-defrost-delay: T1/T2 (2.2.1, v6) opened the restart-sequencing window unconditionally on exitDefrost() -- caught a same-day regression (T3) BEFORE deploy: air-defrost units (Cuartos 1/2/4, airDefrost=true+continuous+dripTime=0) had their already-running fan needlessly stopped/restarted. Fixed with ColdRoomControl.postDefrostFanHold(airDefrost, fromDrip) gating the hold; version bumped again 2.2.1->2.2.2 (v7) so a fixed and a regressed build never share one version. v6 marked NO INSTALAR, v7 is the version to install. Built+verified+packaged, NOT deployed; next: install v7 on station, confirm Cuarto 3 (electric) fan follows the valve by ~startDelay, confirm Cuartos 1/2/4 (air) fan shows no interruption; then consider the DefrostController pure-test gap above
 <!-- /build-state.v1 -->
 
 ## CompPan
