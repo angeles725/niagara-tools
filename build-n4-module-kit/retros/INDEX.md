@@ -183,3 +183,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | folded | 8 |
 | 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | pending | 14 |
+| 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 2 |

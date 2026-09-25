@@ -26,7 +26,7 @@ modules, not sixty focuses.
 
 | Module | Repo | Type | last_build | verify_gate | deployed | retro_pending | open_issues |
 |---|---|---|---|---|---|---|---|
-| ColdRoomPan | Cliente/Leon-Guanjuato | logic | 2026-09-03 | pass | yes | no | 1 |
+| ColdRoomPan | Cliente/panccadia-leon | logic | 2026-09-25 | pass | yes | yes | 1 |
 | CompPan | Cliente/Leon-Guanjuato | logic | 2026-09-04 | pass | yes | no | 2 |
 | DashboardPan | Cliente/Leon-Guanjuato | dashboard | 2026-09-04 | pass | yes | no | 3 |
 | UmbrellaDashboard | Cliente/Juarez/Umbrella | dashboard | 2026-09-16 | pass | no | no | 4 |
@@ -39,29 +39,29 @@ modules, not sixty focuses.
 
 <!-- build-state.v1 -->
 module: ColdRoomPan                 # the module name (matches the -rt/-ux/-wb artifact prefix)
-module_repo: Cliente/Leon-Guanjuato # DECLARED — modules live in a SEPARATE repo, not niagara-tools
-module_root: /home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan  # DECLARED
+module_repo: Cliente/panccadia-leon # DECLARED — modules live in a SEPARATE repo, not niagara-tools. UPDATED 2026-09-25: the module_repo moved from the retired Cliente/Leon-Guanjuato tree to Cliente/panccadia-leon; this envelope had not been re-pointed until this session (see retro 2026-09-25-continuous-fan-post-defrost-delay Δ2 — a module-repo move needs its module_root/module_repo corrected in the same session that notices the drift).
+module_root: /home/cristian/modulos_niagara_n4/Cliente/panccadia-leon/Paccadia/ColdRoomPan  # DECLARED
 type: logic                         # logic | dashboard | wb (the SKILL.md decision table)
 profiles: rt                        # which profiles have sources (rt,ux,wb)
-target_version: 4.14                # DECLARED — LOWEST niagara_home built against (settings.gradle.kts)
-plugin_version: 7.6.17              # DECLARED — com.tridium.niagara plugin; must exist in <niagara_home>/etc/m2
-last_build: 2026-09-03              # DECLARED — date of last successful build (unknown if never/uncertain)
+target_version: 4.15                # DECLARED — this session built against PowerB-4.15.3.28 (Paccadia/gradle.properties); the historical "lowest supported" target was never reverified against this repo, so treat this as "built against", not a confirmed floor.
+plugin_version: 7.6.22              # DECLARED — com.tridium.niagara plugin actually present in this niagara_home's etc/m2. NOTE: Paccadia/settings.gradle.kts's niagaraPluginVersion default is still 7.6.17 (kit gap — see retro Δ1: toolbelt/preflight.sh's plugin-pin check reads that stale default, not an override, and FAILs on this healthy environment; build.sh needs --plugin-version 7.6.22 --no-preflight here).
+last_build: 2026-09-25              # DECLARED — date of last successful build (unknown if never/uncertain)
 bytecode_major: 52                  # DECLARED — must be 52 (Java 8); any other value is a FAIL signal
 signed: yes                         # DECLARED — META-INF/NIAGARA4.SF present
 verify_gate: pass                   # DECLARED — toolbelt/verify-module.sh outcome (pass|fail|unknown)
-deployed: yes                       # DECLARED — reached a station (yes|no|unknown)
-target_station: Leon-JACE           # DECLARED — where it runs; the station executes off the Atlas SNAP
-pure_tests: 22                      # DECLARED — pure-Java JUnit count (ColdRoomControlTest)
+deployed: yes                       # DECLARED — reached a station (yes|no|unknown) — a PRIOR version is live on PANCCADIA; this session's 2.2.1 build was packaged for hand-off only, NOT deployed (see deployed_* fields below, all unknown for this build).
+target_station: PANCCADIA           # DECLARED — where it runs
+pure_tests: 112                     # DECLARED — pure-Java JUnit count across 10 classes in ColdRoomPan-rt/srcTest (was 22/ColdRoomControlTest only; recount 2026-09-25 sums every class, incl. the new PostDefrostFanDelayTest)
 open_issues:
   - DefrostController.java (742 lines) has ZERO pure tests — QA HIGH gap; extract a pure DefrostControl class + tests (a module change, OUT of this campaign's scope). It shipped the started()/interval production bug.
 retro_required: true                # GATED (kit-local) — did the last session change kit behavior / prove a lesson?
-retro_pending: true                # GATED — the enforcement hook: true until the owed retro exists; false here, its retros were written
-last_commit: f89e44e                # DECLARED — short sha in module_repo of the last build's commit
-deployed_jar_sha256: unknown         # DECLARED (optional, Δ3 template) — sha256 of the jar actually installed; unknown = deployed before this template existed
+retro_pending: true                # GATED — the enforcement hook: true until the owed retro exists; set true 2026-09-25 by new-retro.sh for retros/2026-09-25-continuous-fan-post-defrost-delay.md
+last_commit: 4174bf6                # DECLARED — short sha in module_repo of the last build's commit (chore(ColdRoomPan): bump to 2.2.1; fix itself is 35f84ca)
+deployed_jar_sha256: unknown         # DECLARED (optional, Δ3 template) — this session's built jar is da08c1fa...ecc3ca9 (packaged, not installed); the CURRENTLY DEPLOYED jar's hash is unknown — no station read performed this session
 deployed_build_millis: unknown       # DECLARED (optional) — installed jar's module.xml buildMillis (`unzip -p <jar> META-INF/module.xml`)
 deployed_source_commit: unknown      # DECLARED (optional) — module_repo commit that built the installed jar (may differ from last_commit if a later commit was never deployed)
 deployed_baseline_date: unknown      # DECLARED (optional) — date the above baseline was recorded
-last_session: 2026-09-03 · self-firing-timer defrost fix confirmed live [CERT-live]; next: extract DefrostControl pure class + tests
+last_session: 2026-09-25 · continuous-fan-post-defrost-delay: exitDefrost() now opens the restart-sequencing window before re-applying outputs (T1), so a continuous fan waits startDelay after the valve on defrost/drip exit, not just after a restart; version bumped 2.2.0->2.2.1; built+verified+packaged to PANCCADIA-modulos-2026-09-25-v6, NOT deployed; next: install on station + confirm live, then consider the DefrostController pure-test gap above
 <!-- /build-state.v1 -->
 
 ## CompPan
