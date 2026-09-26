@@ -43,10 +43,11 @@ proportional to the tier.
 - A budget only helps if overruns are recorded; an overrun is retro input, not a failure.
 - Native review risk is not the kit's to override; shape small, single-purpose candidates instead.
 
-## Measured run (to fill at feature close)
-- Writer wall-clock: _pending_
-- Review lenses / wall-clock: _pending_
-- Total vs P1 budget (25 min): _pending_
+## Measured run
+- Writer wall-clock: ~13.7 min (820 s, 97 tool calls). Most of it went to re-tracing the `compNNoStart` path and running two sequential group builds, which is exactly what Δ2 and Δ5 target.
+- Review: native assess rated it medium (`executable_change`, 656 lines) and selected 1 lens (review-reliability): ~47 s capture, APPROVED with 4 non-blocking findings. The estimate had assumed up to 4 lenses. `[ev: odd/tasks/comppan-auto-lock-indicator.md § Review]`
+- Total: ~20 min actual vs 45-75 min estimated, already inside the P1 budget (25 min). The estimate, not the run, was the outlier. Estimates must price the lens count native review is likely to select, not the worst case.
+- One review finding (R3-w35d, a test that passes vacuously with the option off) shows that the P1 "focused test" in Δ1 needs one rule: the test must run with the feature ENABLED.
 
 ---
 **Status**: PENDING — INDEX row appended: `| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 5 |`
