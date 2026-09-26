@@ -2,7 +2,7 @@
 # 2026-09-26 · kit · change-tier-time-budgets
 
 **Session**: PANCCADIA León, ODD feature `comppan-auto-lock-indicator` (panccadia-leon branch `feat/comppan-auto-lock-indicator`, doc commit `ae98e15`); user asked for time budgets so small additions ship faster without dropping test protection.
-**Delta count**: 5
+**Delta count**: 6
 
 ## What happened
 The user asked for a small, additive change: a latched read-only flag per
@@ -35,6 +35,7 @@ proportional to the tier.
 | Δ3 | **Scope the test run to the tier without dropping the floor.** In the loop, run only the touched module's pure tests: P0 runs build only, P1 runs the new latch test + that module's existing suite. Run full builds and the Δ12 non-skippable floor (build, `verify-module.sh`, `schema-risk.sh`) once at task close, not per edit. Speed comes from not re-running the unaffected suites mid-loop, never from skipping the floor. | `BUILD-LOOP.md` § `4.a Gradle task matrix` + § `5. Verify gate (before "done")` | `[ev: retro 2026-09-25-panccadia-commissioning-lessons.md Δ12]` |
 | Δ4 | **Make review cost follow the tier by shaping the candidate, not by overriding native risk.** Native RDD owns lens selection; the kit cannot and must not pick lenses. What the kit can do: keep a P1 change a single small additive commit (no refactor or unrelated churn in the same commit), so native assessment has the chance to rate it passive/medium. Also batch the display-only DashboardPan commit with its rt commit into one reviewed slice instead of two review cycles. | `ORCHESTRATION.md` § `7. Pipeline` | `[ev: odd/tasks/comppan-auto-lock-indicator.md T3]` |
 | Δ5 | **Parallelize independent group builds and give the writer the map instead of the mission.** The Compresores and Dashboard groups build independently, so run them concurrently (one Gradle invocation per group, both in background, then wait). The parent passes the recipe hops (Δ2) and the sibling slot name in the writer prompt, so the writer's first minutes go to the RED test, not to discovery. | `BUILD-LOOP.md` § `4. Build — the ONLY valid build` + `ORCHESTRATION.md` § `3. Delegation triggers` | `[ev: fast-build.sh per-group invocation]` |
+| Δ6 | **Price estimates from the likely native plan, not the worst case, and state the range's assumption.** The 45-75 min estimate assumed up to 4 lenses plus a correction; native assess rated the change medium and ran 1 lens in ~47 s. Before quoting time, run `gentle-ai review assess` on the planned diff shape (or a comparable past commit) and quote the P-tier budget plus "x lenses expected", so the user sees a realistic number and the assumption behind it. | `ORCHESTRATION.md` § `4. Escalation gate` | `[ev: odd/tasks/comppan-auto-lock-indicator.md § Timing]` |
 
 ## Lessons
 - Speed comes from classifying before writing and from reusing maps, not from dropping tests: the floor (build, verify, schema-risk, one focused RED/GREEN) stays in every tier.
@@ -50,4 +51,4 @@ proportional to the tier.
 - One review finding (R3-w35d, a test that passes vacuously with the option off) shows that the P1 "focused test" in Δ1 needs one rule: the test must run with the feature ENABLED.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 5 |`
+**Status**: PENDING — INDEX row appended: `| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |`
