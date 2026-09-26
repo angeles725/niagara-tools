@@ -186,3 +186,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 3 |
 | 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | pending | 7 |
+| 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |
