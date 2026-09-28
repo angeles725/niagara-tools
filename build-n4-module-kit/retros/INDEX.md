@@ -189,3 +189,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |
 | 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |
+| 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | pending | 3 |
