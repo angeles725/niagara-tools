@@ -208,6 +208,10 @@ class Journal(_JsonlFile):
         return {bid: self._merge(i, results.get(bid), relinks.get(bid), comps.get(bid))
                 for bid, i in intents.items()}
 
+    def views(self):
+        """Merged views of every journaled batch, in journal order."""
+        return list(self._views().values())
+
     def read(self, batch_id):
         """Merged intent+result view of one batch, or None when it was never journaled."""
         return self._views().get(batch_id)

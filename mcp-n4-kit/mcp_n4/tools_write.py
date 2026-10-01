@@ -14,10 +14,10 @@ import time
 import uuid
 from collections import namedtuple
 
-from . import box, safety
+from . import box, retro, safety
 from .tools_read import LINK_TYPES, Tool, ToolError, _schema, _str
 
-DEFAULT_STATE_DIR = "~/.local/state/mcp-n4"
+DEFAULT_STATE_DIR = retro.DEFAULT_STATE_DIR
 WRITE = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
 DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False}
 SNAPSHOT_DEPTH = 3
