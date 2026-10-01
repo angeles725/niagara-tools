@@ -75,7 +75,12 @@ class TestRemoveComponent(DestructiveCase):
 
     def test_missing_child_bad_name_and_scope_are_refused(self):
         self.assertIn("not found", self.err("n4_remove_component", parent_ord=FOLDER, name="Nope"))
-        self.err("n4_remove_component", parent_ord=FOLDER, name="../x")
+        before = self.children()
+        text = self.err("n4_remove_component", parent_ord=FOLDER, name="../x")
+        self.assertIn("name must be a plain slot name", text)
+        self.assertIn("'../x'", text)
+        self.assertEqual(self.children(), before)  # nothing was removed
+        self.assertEqual(self.lines("journal.jsonl"), [])  # and nothing was journaled
         self.assertIn("outside the write scope", self.err(
             "n4_remove_component", parent_ord="station:|slot:/", name="Folder"))
 
@@ -87,6 +92,93 @@ class TestRemoveComponent(DestructiveCase):
         out = self.ok("n4_remove_component", parent_ord=FOLDER, name="Keep", dry_run=False,
                       confirmation_token=plan["confirmation_token"])
         self.assertEqual(out["verdict"], "mismatch")
+
+
+class TestOutgoingLinks(DestructiveCase):
+    NOTE = "cannot be detected"
+
+    def outside(self, nn, name="Other"):
+        other, other_h = self.add(name, out=1.0)
+        src_h = self.box.load_tree(FOLDER + "/" + nn, depth=2, **NO_SLEEP)["Src"]["h"]
+        self.box.check_links(src_h, "out", other_h, "in10")
+        return other
+
+    def test_a_subtree_with_outputs_discloses_that_outgoing_links_cannot_be_seen(self):
+        nn, _ = self.group()
+        notes = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)["plan"]["notes"]
+        note = [n for n in notes if self.NOTE in n]
+        self.assertEqual(len(note), 1)
+        self.assertIn("outside the removed subtree", note[0])
+        self.assertIn("link_scan_ord", note[0])
+
+    def test_a_subtree_without_outputs_has_no_such_note(self):
+        nn, _ = self.add("Plain", "baja:Folder")
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)["plan"]
+        self.assertFalse([n for n in plan["notes"] if self.NOTE in n])
+        self.assertNotIn("outgoing_links_broken", plan)
+
+    def test_a_scan_root_lists_the_outgoing_links_that_the_remove_would_break(self):
+        nn, _ = self.group()
+        other = self.outside(nn)
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn,
+                        link_scan_ord=FOLDER)["plan"]
+        self.assertEqual(plan["outgoing_links_broken"], [{
+            "target": FOLDER + "/" + other, "target_slot": "in10",
+            "source_path": "Src", "source_slot": "out"}])
+        self.assertFalse([n for n in plan["notes"] if self.NOTE in n])
+        self.assertTrue(any("scanned" in n and FOLDER in n for n in plan["notes"]))
+
+    def test_links_inside_the_subtree_are_not_reported_as_outgoing(self):
+        nn, _ = self.group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn,
+                        link_scan_ord=FOLDER)["plan"]
+        self.assertNotIn("outgoing_links_broken", plan)
+        self.assertTrue(any("no outgoing links" in n for n in plan["notes"]))
+
+    def test_the_scan_root_must_be_inside_the_write_scope(self):
+        nn, _ = self.group()
+        text = self.err("n4_remove_component", parent_ord=FOLDER, name=nn,
+                        link_scan_ord="station:|slot:/")
+        self.assertIn("outside the write scope", text)
+
+    def test_the_scan_result_is_covered_by_the_plan_hash(self):
+        nn, _ = self.group()
+        plain = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.outside(nn)
+        scanned = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn,
+                           link_scan_ord=FOLDER)
+        self.assertNotEqual(plain["plan_hash"], scanned["plan_hash"])
+
+
+class TestPlannedDataGuards(DestructiveCase):
+    def test_a_plan_whose_data_is_not_a_dict_still_executes(self):
+        from mcp_n4 import tools_write
+        impl = tools_write._IMPLS["n4_create_component"]
+        orig = impl.plan
+
+        def plan(client, args):
+            p = orig(client, args)
+            return p._replace(data=None)
+        patched = impl._replace(
+            plan=plan, readback=lambda c, a, p, r, i: ({}, r[0], {}, "verified"),
+            inverse=lambda p, r: [])
+        with mock_impl("n4_create_component", patched):
+            out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                                 type="kitControl:NumericConst")
+        self.assertEqual(out["verdict"], "verified")
+
+
+class mock_impl:
+    def __init__(self, name, impl):
+        from mcp_n4 import tools_write
+        self.table, self.name, self.impl = tools_write._IMPLS, name, impl
+
+    def __enter__(self):
+        self.old = self.table[self.name]
+        self.table[self.name] = self.impl
+
+    def __exit__(self, *exc):
+        self.table[self.name] = self.old
 
 
 class TestRollback(DestructiveCase):
@@ -150,7 +242,9 @@ class TestRollback(DestructiveCase):
         self.assertEqual(link.child("targetSlotName").value, "in10")
         self.assertEqual(back["relinks"], {"restored": 1, "skipped": 0})
         view = self.journal().read(back["batch_id"])
-        self.assertEqual(view["inverse"], [{"nm": "v", "h": "3", "n": nn}])
+        tgt_h = grp.child("Tgt").handle
+        self.assertEqual(view["inverse"], [{"nm": "v", "h": tgt_h, "n": "Link"},
+                                           {"nm": "v", "h": "3", "n": nn}])
 
     def test_relinks_are_skipped_when_an_end_is_missing(self):
         nn, gh = self.group()
@@ -166,6 +260,131 @@ class TestRollback(DestructiveCase):
         self.fake._sync = drop_tgt
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1})
+
+    # ---- relinks are first-class planned ops (R3-relink-unjournaled-writes) ----
+
+    def removed_group(self):
+        nn, gh = self.group()
+        return nn, self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+
+    def test_relinks_are_journaled_with_intent_before_the_send_and_a_result(self):
+        nn, removed = self.removed_group()
+        back = self.rollback(removed["batch_id"])
+        phases = [(e["phase"], e["batch_id"]) for e in self.lines("journal.jsonl")
+                  if e["batch_id"] == back["batch_id"]]
+        self.assertEqual([p for p, _ in phases], ["intent", "relink-intent", "result"])
+        relink_intent = [e for e in self.lines("journal.jsonl")
+                         if e["phase"] == "relink-intent"][0]
+        self.assertEqual(len(relink_intent["ops"]), 1)
+        self.assertEqual(relink_intent["ops"][0]["ssc"], "checkLinks")
+        self.assertEqual(relink_intent["ops"][0]["arg"]["ss"], "out")
+        view = self.journal().read(back["batch_id"])
+        self.assertEqual(view["relink_ops"], relink_intent["ops"])
+        self.assertEqual(view["relinks"], {"restored": 1, "skipped": 0})
+
+    def test_the_relink_intent_is_on_disk_before_the_relink_is_sent(self):
+        nn, removed = self.removed_group()
+        seen = []
+        orig = self.fake._check_link
+
+        def spy(arg):
+            seen.append([e["phase"] for e in self.lines("journal.jsonl")])
+            return orig(arg)
+        self.fake._check_link = spy
+        self.rollback(removed["batch_id"])
+        self.assertIn("relink-intent", seen[-1])
+
+    def test_relinks_consume_the_write_budget(self):
+        nn, removed = self.removed_group()
+        before = self.srv.ctx.session.writes_executed
+        self.rollback(removed["batch_id"])
+        self.assertEqual(self.srv.ctx.session.writes_executed, before + 1 + 1)
+
+    def test_a_rollback_whose_relinks_exceed_the_budget_is_refused_before_sending(self):
+        self.start_server(max_writes=2)
+        self.connect_verified()
+        nn, removed = self.removed_group()
+        text = self.err("n4_rollback", batch_id=removed["batch_id"])
+        self.assertIn("--max-writes", text)
+        self.assertIn("relink", text)
+        self.assertNotIn(nn, self.children())  # nothing was re-created
+
+    def test_a_relink_end_outside_the_write_scope_is_refused_and_nothing_is_sent(self):
+        nn, removed = self.removed_group()
+        real = self.srv.ctx.write.scope
+
+        class Spy:
+            def check(self, ord_str):
+                if ord_str.endswith("/Tgt"):
+                    raise safety.SafetyError("ord %r is outside the write scope" % ord_str)
+                real.check(ord_str)
+
+            def require_any(self):
+                real.require_any()
+        self.srv.ctx.write.scope = Spy()
+        text = self.err("n4_rollback", batch_id=removed["batch_id"])
+        self.assertIn("outside the write scope", text)
+        self.assertNotIn(nn, self.children())
+
+    def test_relink_specs_are_hashed_by_path_not_by_handle(self):
+        nn, removed = self.removed_group()
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        self.assertEqual(plan["plan"]["relinks"], [{
+            "source_path": "Src", "source_slot": "out", "target_path": "Tgt",
+            "target_slot": "in10"}])
+
+    def test_the_rollback_journals_an_inverse_that_removes_the_links_it_created(self):
+        nn, removed = self.removed_group()
+        back = self.rollback(removed["batch_id"])
+        for op in self.journal().read(back["batch_id"])["inverse"]:
+            self.box.sync(op)  # what undoing the rollback means, link first
+        self.assertNotIn(nn, self.children())
+
+    def test_an_ambiguous_relink_reply_marks_the_batch_in_doubt(self):
+        nn, removed = self.removed_group()
+        self.fake._check_link = lambda arg: [{"r": "huh"}]  # no verdict, no link name
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1, "ambiguous": 1})
+        self.assertEqual(self.journal().read(back["batch_id"])["state"], "in-doubt")
+
+    # ---- retry after a failed rollback (R3-rollback-retry-duplicates) ----------
+
+    def break_readback_after_sync(self):
+        sent = []
+        orig_sync = self.fake._sync
+        self.fake._sync = lambda op: (sent.append(op), orig_sync(op))[1]
+        orig_load = self.box.load_tree
+
+        def flaky(*a, **k):
+            if sent:
+                raise box.BoxError("boom", box.CHANNEL, "loadSlots")
+            return orig_load(*a, **k)
+        self.box.load_tree = flaky
+        return lambda: setattr(self.box, "load_tree", orig_load)
+
+    def test_a_rollback_accepted_but_unverified_cannot_be_retried(self):
+        self.add("Pump")
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst")
+        heal = self.break_readback_after_sync()
+        failed = self.rollback(out["batch_id"])
+        heal()
+        self.assertEqual(failed["verdict"], "failed")
+        self.assertEqual(self.children(), ["Pump"])  # the remove was applied
+        text = self.err("n4_rollback", batch_id=out["batch_id"])
+        self.assertIn("in-doubt", text)
+        self.assertIn(failed["batch_id"], text)
+        self.assertIn("accepted", text)
+        self.assertEqual(len(self.lines("journal.jsonl")), 4)  # no retry was journaled
+
+    def test_a_failed_rollback_whose_ops_were_not_accepted_may_still_be_retried(self):
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst")
+        self.journal().append({"batch_id": "cd" * 16, "phase": "intent",
+                               "rollback_of": out["batch_id"]})
+        self.journal().append({"batch_id": "cd" * 16, "phase": "result", "verdict": "failed",
+                               "inverse": [], "accepted": None})
+        self.assertEqual(self.rollback(out["batch_id"])["verdict"], "verified")
 
     def test_unknown_batch_is_refused(self):
         self.assertIn("unknown batch", self.err("n4_rollback", batch_id="f" * 32))
