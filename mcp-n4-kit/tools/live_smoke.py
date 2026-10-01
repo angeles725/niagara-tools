@@ -253,9 +253,9 @@ class Scenario:
         return ("verified" if ok else "mismatch"), {"station_name": out.get("station_name")}
 
     def absent_before(self, entry):
-        present = SCRATCH in self.children()
-        return ("failed" if present else "verified"), \
-            {"detail": "%s already exists: refusing to touch it" % SCRATCH if present else "absent"}
+        if SCRATCH in self.children():
+            return "failed", {"detail": "%s already exists: refusing to touch it" % SCRATCH}
+        return "verified", {"detail": "absent"}
 
     def create(self, name, type_, ws, parent):
         def run(entry):
@@ -297,8 +297,8 @@ class Scenario:
                 if all(v is want for v in seen.values()) or time.monotonic() >= deadline:
                     break
                 time.sleep(0.25)
-            return ("verified" if all(v is want for v in seen.values()) else "mismatch"), \
-                {"expected": want, "observed": seen}
+            matches = all(v is want for v in seen.values())
+            return ("verified" if matches else "mismatch"), {"expected": want, "observed": seen}
         return run
 
     def save(self, folder_present):

@@ -5,6 +5,7 @@
 # using a sha256 comparison to detect divergence:
 #   --skill build-n4-module (default): build-n4-module-kit/skill/SKILL.md
 #   --skill mcp-n4:                    mcp-n4-kit/skill/SKILL.md
+# (the SKILLS table below is the single source of these names and paths)
 #
 # This script is VCS-free by design — version control is never invoked here.
 # The source of truth lives in the repository; this script only installs it.
@@ -30,7 +31,15 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-USAGE="usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--home <dir>] [--dry-run] [--force]"
+
+# The one place that names the skills: "<name>:<tracked launcher, relative to the repo>".
+# The usage text, the error messages and the lookup below are all derived from it.
+SKILLS="build-n4-module:build-n4-module-kit/skill/SKILL.md mcp-n4:mcp-n4-kit/skill/SKILL.md"
+SKILL_NAMES=""
+for entry in $SKILLS; do
+  SKILL_NAMES="${SKILL_NAMES:+$SKILL_NAMES|}${entry%%:*}"
+done
+USAGE="usage: install-skill.sh [--skill <$SKILL_NAMES>] [--home <dir>] [--dry-run] [--force]"
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -76,15 +85,17 @@ done
 # ---------------------------------------------------------------------------
 # Resolve the skill to its tracked source
 # ---------------------------------------------------------------------------
-case "$SKILL" in
-  build-n4-module) TRACKED="$REPO_ROOT/build-n4-module-kit/skill/SKILL.md" ;;
-  mcp-n4)          TRACKED="$REPO_ROOT/mcp-n4-kit/skill/SKILL.md" ;;
-  *)
-    printf 'install-skill: unknown skill: %s (expected build-n4-module or mcp-n4)\n' "$SKILL" >&2
-    printf '%s\n' "$USAGE" >&2
-    exit 2
-    ;;
-esac
+TRACKED=""
+for entry in $SKILLS; do
+  if [ "${entry%%:*}" = "$SKILL" ]; then
+    TRACKED="$REPO_ROOT/${entry#*:}"
+  fi
+done
+if [ -z "$TRACKED" ]; then
+  printf 'install-skill: unknown skill: %s (expected %s)\n' "$SKILL" "${SKILL_NAMES//|/ or }" >&2
+  printf '%s\n' "$USAGE" >&2
+  exit 2
+fi
 
 # ---------------------------------------------------------------------------
 # Validate tracked source

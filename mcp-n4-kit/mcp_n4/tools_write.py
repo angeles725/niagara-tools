@@ -14,10 +14,9 @@ import time
 import uuid
 from collections import namedtuple
 
-from . import box, retro, safety
+from . import box, safety
 from .tools_read import LINK_TYPES, Tool, ToolError, _schema, _str
 
-DEFAULT_STATE_DIR = retro.DEFAULT_STATE_DIR
 WRITE = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
 DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False}
 SNAPSHOT_DEPTH = 3
@@ -46,7 +45,7 @@ class WriteState:
 
     def __init__(self, scopes=(), state_dir=None, token_ttl=300, max_writes=200,
                  clock=time.time, station_homes=None):
-        state_dir = os.path.expanduser(state_dir or DEFAULT_STATE_DIR)
+        state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         safety.check_state_dir(state_dir)  # refuse a dir we do not own; never chmod it
         self.scope = safety.WriteScope(scopes)
         self.tokens = safety.ConfirmationTokens(token_ttl, clock)
@@ -56,6 +55,11 @@ class WriteState:
         self.station_homes = dict(station_homes or {})
         self.save_timeout, self.save_interval = 30.0, 0.5
         self.sleep, self.monotonic = time.sleep, time.monotonic
+
+    def check_state_files(self):
+        """Refuse a journal or audit file that became loose after startup."""
+        self.journal.check_private()
+        self.audit.check_private()
 
 
 # ---- value helpers -------------------------------------------------------
@@ -78,7 +82,7 @@ def _coerce(value_type, value, status="0"):
             raise ToolError("value must be a string for baja:String")
         norm = value
     else:
-        raise ToolError("value_type must be one of %s" % ", ".join(VALUE_TYPES))
+        raise ToolError("%s %s" % (safety.REASON_VALUE_TYPE, ", ".join(VALUE_TYPES)))
     if not value_type.startswith("baja:Status"):
         return norm
     if not isinstance(status, str) or not _STATUS.match(status):
@@ -128,6 +132,11 @@ def _name(label, value):
     return value
 
 
+def _inverse_list(inverse):
+    """The one place a missing inverse (None) becomes "no inverse ops" (`[]`)."""
+    return inverse or []
+
+
 def _data(planned):
     """A plan's private data as a dict, whatever a handler returned."""
     return planned.data if isinstance(planned.data, dict) else {}
@@ -157,7 +166,7 @@ def _create_component_plan(client, args):
     name = _name("name", args["name"])
     type_ = args["type"]
     if not _TYPE_SPEC.match(type_):
-        raise ToolError("type must look like module:Type, got %r" % type_)
+        raise ToolError("%s module:Type, got %r" % (safety.REASON_TYPE_SPEC, type_))
     ws = _wire_sheet(args.get("wire_sheet"))
     parent_h, _ = _handle(client, args["parent_ord"], 1)
     body = {"nm": "p", "t": type_, "s": [ws] if ws else []}
@@ -194,14 +203,15 @@ def _set_slot_plan(client, args):
     if not isinstance(slot, str) or not slot:
         raise ToolError("slot must be a non-empty slot name")
     if "/" in slot and slot.split("/")[-1] in ("value", "status"):
-        raise ToolError("refusing to write %r on its own: Status slots are written whole "
+        raise ToolError("refusing to write %r on its own: %s "
                         "(value and status together) because a value-only write leaves the "
                         "status null (B1199 section 1199.4); pass the Status slot itself with "
-                        "value_type baja:StatusNumeric or baja:StatusBoolean" % slot)
+                        "value_type baja:StatusNumeric or baja:StatusBoolean"
+                        % (slot, safety.REASON_PARTIAL_STATUS))
     for part in slot.split("/"):
         _name("slot", part)
     if value_type not in VALUE_TYPES:
-        raise ToolError("value_type must be one of %s" % ", ".join(VALUE_TYPES))
+        raise ToolError("%s %s" % (safety.REASON_VALUE_TYPE, ", ".join(VALUE_TYPES)))
     if "status" in args and not value_type.startswith("baja:Status"):
         raise ToolError("status only applies to baja:StatusNumeric / baja:StatusBoolean")
     requested = _coerce(value_type, args["value"], args.get("status", "0"))
@@ -240,8 +250,8 @@ def _invoke_plan(client, args):
     action = args["action"]
     if action not in ALLOWED_ACTIONS:
         hint = "; use n4_save_station" if action == "save" else ""
-        raise ToolError("action %r is not allowed in this version (allowed: %s)%s"
-                        % (action, ", ".join(ALLOWED_ACTIONS), hint))
+        raise ToolError("action %r %s (allowed: %s)%s" % (
+            action, safety.REASON_ACTION, ", ".join(ALLOWED_ACTIONS), hint))
     h, nodes = _handle(client, args["ord"], 2)
     arg = {"h": h, "a": action}
     if action != "set":
@@ -551,9 +561,9 @@ def _rollback_plan(client, args, ctx):
     planned_links = len(relinks) * len(own)
     need = 1 + len(components) + planned_links
     if sess.writes_executed + need > write.max_writes:
-        raise ToolError("write budget too small: this rollback needs %d write(s) (1 batch + %d "
+        raise ToolError("%s: this rollback needs %d write(s) (1 batch + %d "
                         "component(s) + %d relink(s)) but only %d remain (--max-writes %d)"
-                        % (need, len(components), planned_links,
+                        % (safety.REASON_BUDGET_SMALL, need, len(components), planned_links,
                            write.max_writes - sess.writes_executed, write.max_writes))
     for spec in components:  # every re-created component, under today's scope
         top = ops[spec["top"]]
@@ -826,8 +836,11 @@ def _rollback_readback(client, args, planned, replies, inverse):
         else:
             ok &= op["n"] in nodes and \
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
-    # every nested component is really there, with the recorded type and annotation
-    for spec, path in zip(planned.data.get("components", []), planned.data.get("created", [])):
+    # every nested component is really there, with the recorded type and annotation;
+    # the two lists are paired by position, so a length difference is itself a mismatch
+    specs, created = planned.data.get("components", []), planned.data.get("created", [])
+    ok &= len(specs) == len(created)
+    for spec, path in zip(specs, created):
         if path is None:  # a frozen child that already existed: nothing was re-created
             continue
         head, _, leaf = path.rpartition("/")
@@ -934,13 +947,13 @@ def _process(ctx, name, args):
     impl, write, sess = _IMPLS[name], ctx.write, ctx.session
     dry = args.get("dry_run", True)
     if sess is None:
-        raise ToolError("not connected: call n4_connect first")
+        raise ToolError(safety.REASON_NOT_CONNECTED + ": call n4_connect first")
     if not sess.identity_verified:
-        raise ToolError("station identity not verified: reconnect with n4_connect and pass "
+        raise ToolError(safety.REASON_IDENTITY + ": reconnect with n4_connect and pass "
                         "expected_station=<the station's stationName> before any write")
     if sess.writes_executed >= write.max_writes:
-        raise ToolError("write budget exhausted: %d writes already executed in this session "
-                        "(--max-writes)" % write.max_writes)
+        raise ToolError("%s: %d writes already executed in this session (--max-writes)"
+                        % (safety.REASON_BUDGET, write.max_writes))
     ords = impl.scope_ords(args)
     for ord_str in ords:
         write.scope.check(ord_str)
@@ -950,7 +963,7 @@ def _process(ctx, name, args):
         impl.plan(sess.client, args)
     if name == "n4_save_station":
         planned.data["write"] = write  # readback polls with the operator's timing
-    planned = planned._replace(inverse=planned.inverse or [])  # None means "no inverse"
+    planned = planned._replace(inverse=_inverse_list(planned.inverse))
     plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
     data = _data(planned)
     for key in ("relinks", "components", "outgoing_links_broken"):  # part of what the token authorizes
@@ -961,6 +974,8 @@ def _process(ctx, name, args):
         token, expires_at = write.tokens.issue(name, args, plan_hash)
         return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
                 "confirmation_token": token, "expires_at": expires_at}, None
+    write.check_state_files()  # a loose file fails here, before the token and any send
+    write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     batch_id = uuid.uuid4().hex
     intent = {"batch_id": batch_id, "ts": _now(), "tool": name, "ops": planned.ops,
@@ -993,7 +1008,7 @@ def _process(ctx, name, args):
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)
     try:
-        inverse = impl.inverse(planned, replies) or []  # None means "no inverse"
+        inverse = _inverse_list(impl.inverse(planned, replies))
     except Exception as exc:  # the station's reply cannot be trusted: outcome unknown
         why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
         observed, inverse = None, []
@@ -1017,7 +1032,7 @@ def _process(ctx, name, args):
             out.update(requested=None, accepted=replies[0] if replies else None,
                        observed=None, verdict="failed", readback_failed=True,
                        readback_error=ctx.scrub(why))
-    inverse = relink_inverse + (inverse or [])  # links first: undoing must precede removing their ends
+    inverse = relink_inverse + inverse  # links first: undoing must precede removing their ends
     out["inverse"] = inverse
     if isinstance(out.get("observed"), dict):  # promote the headline evidence of a tool
         out.update({k: out["observed"][k] for k in ("persisted", "evidence", "relinks")

@@ -47,7 +47,11 @@ class TestProtocol(unittest.TestCase):
                          ("2025-06-18", "2025-03-26", "2024-11-05"))
         res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
         self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
+
+    def test_doc_contract_states_the_supported_set_and_the_naming_heuristic(self):
+        """The one place that pins documentation wording (the operator-facing contract)."""
         self.assertIn("Only add a newer", server.__doc__)
+        self.assertIn("Heuristic", box.is_component_type.__doc__)
 
     def test_initialized_notification_gets_no_reply(self):
         self.assertIsNone(self.srv.dispatch(rpc("notifications/initialized", id_=None)))

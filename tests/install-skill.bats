@@ -22,8 +22,9 @@ bats_require_minimum_version 1.5.0
 # IS3: modify the installed copy -> exit 1 without --force; exit 0 + parity with --force.
 # IS4: --dry-run writes nothing (target absent) and exits 0.
 
-SCRIPT="$(git -C "$(dirname "$BATS_TEST_FILENAME")" rev-parse --show-toplevel)/scripts/install-skill.sh"
-TRACKED="$(git -C "$(dirname "$BATS_TEST_FILENAME")" rev-parse --show-toplevel)/build-n4-module-kit/skill/SKILL.md"
+REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"  # no git: works from an export too
+SCRIPT="$REPO_ROOT/scripts/install-skill.sh"
+TRACKED="$REPO_ROOT/build-n4-module-kit/skill/SKILL.md"
 
 setup() {
   TEST_HOME="$BATS_TEST_TMPDIR/home"
@@ -170,9 +171,25 @@ make_tree() {
   [ "$status" -eq 0 ]
   [ ! -e "$TEST_HOME/.claude" ]
   run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"installed"* ]]
   run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
   [ "$status" -eq 0 ]
   [[ "$output" == *"already current"* ]]
+}
+
+@test "SK10: the skills table is the single source of the names, paths and messages" {
+  make_tree
+  sed -i 's|^SKILLS="|SKILLS="extra:extra-kit/skill/SKILL.md |' "$TSCRIPT"
+  mkdir -p "$TREE/extra-kit/skill"
+  printf 'stub extra skill\n' > "$TREE/extra-kit/skill/SKILL.md"
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill extra
+  [ "$status" -eq 0 ]
+  cmp -s "$TREE/extra-kit/skill/SKILL.md" "$TEST_HOME/.claude/skills/extra/SKILL.md"
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill nope
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"extra or build-n4-module or mcp-n4"* ]]
+  [[ "$output" == *"extra|build-n4-module|mcp-n4"* ]]
 }
 
 @test "SK8: a missing tracked source for the chosen skill exits 3" {
@@ -183,7 +200,7 @@ make_tree() {
 }
 
 @test "SK9: the tracked mcp-n4 launcher installs byte-identical from the real repo" {
-  REAL="$(git -C "$(dirname "$BATS_TEST_FILENAME")" rev-parse --show-toplevel)/mcp-n4-kit/skill/SKILL.md"
+  REAL="$REPO_ROOT/mcp-n4-kit/skill/SKILL.md"
   run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
   [ "$status" -eq 0 ]
   cmp -s "$REAL" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"

@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KIT = os.path.dirname(HERE)
@@ -101,14 +102,56 @@ class TestNewRetro(unittest.TestCase):
                                "--out-dir", self.out], out=io.StringIO())
         self.assertEqual(code, 3)
 
+    def test_since_takes_effect_on_the_written_draft(self):
+        self.friction()
+        _, early = self.run_cli("--since", "2026-10-01T00:00:00Z", "--dry-run")
+        _, late = self.run_cli("--since", "2026-10-02T00:00:00Z", "--dry-run")
+        self.assertIn(B1, early)
+        self.assertNotIn(B1, late)
+        self.assertIn("no new deltas;", late)
+
+    def test_an_impossible_calendar_date_is_refused(self):
+        for bad in ("2026-13-45", "2026-02-30", "0000-00-00"):
+            code = new_retro.main(["--station", "LLM", "--state-dir", self.state,
+                                   "--out-dir", self.out, "--date", bad], out=io.StringIO())
+            self.assertEqual(code, 3, bad)
+        self.assertEqual(os.listdir(self.out), ["INDEX.md"])
+
+    def test_both_files_are_written_atomically_via_replace(self):
+        self.friction()
+        real = os.replace
+        calls = []
+        with mock.patch.object(os, "replace", side_effect=lambda a, b: (
+                calls.append(os.path.basename(b)), real(a, b))[1]):
+            self.assertEqual(self.run_cli()[0], 0)
+        self.assertEqual(sorted(calls), ["2026-10-01-LLM-session.md", "INDEX.md"])
+        self.assertEqual(sorted(os.listdir(self.out)), ["2026-10-01-LLM-session.md", "INDEX.md"])
+
+    def test_a_failed_index_replace_leaves_no_temp_file_and_the_old_index(self):
+        self.friction()
+        before = self.read(self.index)
+        real = os.replace
+
+        def flaky(src, dst):
+            if os.path.basename(dst) == "INDEX.md":
+                raise OSError("disk full")
+            real(src, dst)
+        with mock.patch.object(os, "replace", side_effect=flaky):
+            with self.assertRaises(OSError):
+                self.run_cli()
+        self.assertEqual(self.read(self.index), before)
+        self.assertEqual([n for n in os.listdir(self.out) if n.endswith(".tmp") or ".tmp" in n],
+                         [])
+
     def test_missing_index_is_exit_3(self):
         os.remove(self.index)
         code, _ = self.run_cli()
         self.assertEqual(code, 3)
         self.assertEqual(os.listdir(self.out), [])
 
-    def test_importing_the_module_has_no_side_effects_and_default_out_dir_is_the_kit(self):
+    def test_importing_the_module_only_prepends_the_kit_to_sys_path_and_default_out_dir_is_the_kit(self):
         self.assertEqual(new_retro.DEFAULT_OUT_DIR, os.path.join(KIT, "retros"))
+        self.assertIn(KIT, sys.path)
 
 
 class TestRetroStepIsDocumented(unittest.TestCase):
@@ -130,7 +173,7 @@ class TestRetroStepIsDocumented(unittest.TestCase):
     def test_the_template_and_index_exist_with_the_agreed_grammar(self):
         self.assertIn("| file | Station | Date | pending\\|folded | deltas |",
                       self.doc("retros", "INDEX.md"))
-        self.assertIn("## Proposed kit deltas", self.doc("templates", "retro.template.md"))
+        self.assertIn("## Proposed kit deltas", self.doc("mcp_n4", "templates", "retro.template.md"))
 
 
 if __name__ == "__main__":

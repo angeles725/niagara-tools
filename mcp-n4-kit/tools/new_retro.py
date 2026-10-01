@@ -8,13 +8,15 @@ GitHub issues (do that by hand). Idempotent: an existing retro is never overwrit
 without `--force`. `--dry-run` prints the retro and writes nothing.
 
 Exit codes: 0 ok, 2 usage, 3 refused (exists without --force, bad input, no INDEX).
-Importing this module has no side effects.
+Importing this module only prepends the kit directory to `sys.path` (so `mcp_n4` resolves);
+it reads and writes no files. Both outputs are written atomically (temp file + rename).
 """
 import argparse
 import datetime
 import os
 import re
 import sys
+import tempfile
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, KIT_DIR)
@@ -55,12 +57,29 @@ def _index_rows(index_text, name, row):
     return "\n".join(lines) + "\n"
 
 
+def _atomic_write(path, text):
+    """Write `text` to `path` through a temp file in the same directory and a rename."""
+    fd, tmp = tempfile.mkstemp(prefix=".new_retro-", suffix=".tmp", dir=os.path.dirname(path))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
 def run(args, out):
     if not _STATION.fullmatch(args.station):
         raise Refused("--station must match %s" % _STATION.pattern)
     date = args.date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-    if not _DATE.fullmatch(date):
-        raise Refused("--date must be YYYY-MM-DD")
+    try:
+        if not _DATE.fullmatch(date):
+            raise ValueError(date)
+        datetime.date.fromisoformat(date)
+    except ValueError:
+        raise Refused("--date must be a real calendar date, YYYY-MM-DD") from None
     try:
         result = retro.draft(args.state_dir, station=args.station, date=date, since=args.since)
     except ValueError as exc:
@@ -78,10 +97,8 @@ def run(args, out):
         raise Refused("%s already exists: pass --force to rewrite it" % path)
     with open(index, encoding="utf-8") as fh:
         new_index = _index_rows(fh.read(), name, row)
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(result["markdown"])
-    with open(index, "w", encoding="utf-8") as fh:
-        fh.write(new_index)
+    _atomic_write(path, result["markdown"])
+    _atomic_write(index, new_index)
     out.write("retro  %s  written (%d delta(s), pending)\n" % (path, deltas))
 
 

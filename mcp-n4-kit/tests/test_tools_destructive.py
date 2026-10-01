@@ -596,7 +596,7 @@ class TestRollback(DestructiveCase):
         self.assertIn("in-doubt", text)
         self.assertIn("%s/%s" % (FOLDER, nn), text)
         self.assertIn("%s/%s/Src" % (FOLDER, nn), text)
-        self.assertNotIn("/Tgt,", text)
+        self.assertNotIn("/Tgt", text)  # the failed add is not reported as created
         batch = [e["batch_id"] for e in self.lines("journal.jsonl")
                  if e.get("rollback_of") == removed["batch_id"]][0]
         self.assertEqual(self.journal().read(batch)["state"], "in-doubt")

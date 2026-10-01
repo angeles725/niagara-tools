@@ -615,6 +615,43 @@ class TestNoneInverse(WriteTestCase):
         self.assertEqual(result["inverse"], [])
 
 
+class TestLooseStateFileBeforeSend(WriteTestCase):
+    ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+        self.run_write("n4_create_component", parent_ord=FOLDER, name="Seed",
+                       type="kitControl:NumericConst")  # creates journal + audit, mode 0600
+
+    def test_a_state_file_loosened_while_running_fails_before_any_send(self):
+        for filename in ("journal.jsonl", "audit.jsonl"):
+            path = os.path.join(self.state_dir, filename)
+            plan = self.dry("n4_create_component", **self.ARGS)
+            os.chmod(path, 0o644)
+            kw = dict(dry_run=False, confirmation_token=plan["confirmation_token"], **self.ARGS)
+            before = (self.children(), self.srv.ctx.session.writes_executed)
+            self.assertIn("chmod 600", self.err("n4_create_component", **kw), filename)
+            self.assertEqual((self.children(), self.srv.ctx.session.writes_executed), before)
+            os.chmod(path, 0o600)
+            out = self.ok("n4_create_component", **kw)  # the token was not spent
+            self.assertEqual(out["verdict"], "verified")
+            self.box.remove_component("3", "Pump")
+
+
+class TestNestedReadbackPairing(WriteTestCase):
+    def test_mismatched_components_and_created_lists_are_a_verdict_mismatch(self):
+        spec = {"n": "K", "parent_path": "", "top": 0, "b": {"t": "kitControl:NumericConst"}}
+        planned = tools_write.Planned([], [], [], {
+            "ord_of": {}, "relinks": None, "rollback_of": "b1",
+            "components": [spec, dict(spec, n="L")], "created": [FOLDER + "/K"]})
+        client = mock.Mock()
+        client.load_tree.return_value = {"K": {"t": "kitControl:NumericConst"},
+                                         "K/wsAnnotation": {"v": None}}
+        *_, verdict = tools_write._rollback_readback(client, {}, planned, [], [])
+        self.assertEqual(verdict, "mismatch")
+
+
 class TestJournalAndAudit(WriteTestCase):
     ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
 

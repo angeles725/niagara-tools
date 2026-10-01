@@ -14,56 +14,54 @@ import re
 
 from . import safety
 
-DEFAULT_STATE_DIR = "~/.local/state/mcp-n4"
-TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "templates", "retro.template.md")
+#: Package data: it travels with `mcp_n4`, so it resolves whether the kit is run from the
+#: repository or installed.
+TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates",
+                        "retro.template.md")
 HONESTY = "no new deltas; the kit already covers this session."
 DELTA_HEADER = ("| # | Proposed change | Target (file · section) | "
                 "Evidence (batch_id / tool call / audit line) | Type | Priority |")
 _MAX_EVIDENCE = 5
 
-#: (key, substring of the refusal reason, proposed change, target, priority)
+#: (key, substrings of the refusal reason, proposed change, target, priority). The
+#: substrings are the shared `safety.REASON_*` constants, so a reworded refusal cannot
+#: silently stop being classified.
 _REFUSALS = [
-    ("token_missing", "confirmation_token is missing",
+    ("token_missing", (safety.REASON_TOKEN_MISSING,),
      "Make the dry-run -> token step impossible to skip in the skill/checklist wording",
      "METHODOLOGY.md · section 4", "MEDIUM"),
-    ("token_mismatch", "does not match this tool",
+    ("token_mismatch", (safety.REASON_TOKEN_MISMATCH,),
      "Warn that any argument change after the dry run invalidates the token",
      "METHODOLOGY.md · section 2 (L1)", "MEDIUM"),
-    ("token_expired", "confirmation_token expired",
+    ("token_expired", (safety.REASON_TOKEN_EXPIRED,),
      "Document the token lifetime and when to raise --token-ttl for slow human approval",
      "README.md · running the server", "LOW"),
-    ("token_reused", "already used",
+    ("token_reused", (safety.REASON_TOKEN_REUSED,),
      "State that a token is single use and a retry needs a fresh dry run",
      "METHODOLOGY.md · section 4 step 5", "LOW"),
-    ("identity", "identity not verified",
+    ("identity", (safety.REASON_IDENTITY,),
      "Put expected_station in the first checklist step so the connect is not repeated",
      "METHODOLOGY.md · section 4 step 1", "MEDIUM"),
-    ("scope", "write scope",
+    ("scope", (safety.REASON_SCOPE_NONE, safety.REASON_SCOPE_PLAIN,
+               safety.REASON_SCOPE_OUTSIDE),
      "Explain how to choose --write-scope prefixes before the session starts",
      "README.md · write scope", "MEDIUM"),
-    ("scope", "--write-scope",
-     "Explain how to choose --write-scope prefixes before the session starts",
-     "README.md · write scope", "MEDIUM"),
-    ("scope", "plain station ORD",
-     "Explain how to choose --write-scope prefixes before the session starts",
-     "README.md · write scope", "MEDIUM"),
-    ("budget", "write budget",
+    ("budget", (safety.REASON_BUDGET, safety.REASON_BUDGET_SMALL),
      "Document sizing --max-writes for rollbacks and multi-op batches",
      "README.md · write budget", "LOW"),
-    ("not_connected", "not connected",
+    ("not_connected", (safety.REASON_NOT_CONNECTED,),
      "Remind the agent to call n4_connect before any station tool",
      "skill/SKILL.md · session checklist", "LOW"),
-    ("partial_status", "Status slots are written whole",
+    ("partial_status", (safety.REASON_PARTIAL_STATUS,),
      "Teach that Status slots take value_type + status together in the write tool docs",
      "METHODOLOGY.md · section 3", "MEDIUM"),
-    ("unsupported", "is not allowed in this version",
+    ("unsupported", (safety.REASON_ACTION,),
      "Decide whether the refused action is worth supporting or documenting as unsupported",
      "mcp_n4/tools_write.py · allowed actions", "MEDIUM"),
-    ("unsupported", "value_type must be one of",
+    ("unsupported", (safety.REASON_VALUE_TYPE,),
      "Decide whether the refused value type is worth supporting or documenting",
      "mcp_n4/tools_write.py · VALUE_TYPES", "MEDIUM"),
-    ("unsupported", "type must look like",
+    ("unsupported", (safety.REASON_TYPE_SPEC,),
      "Document the module:Type spec expected for component creation",
      "README.md · write tools", "LOW"),
 ]
@@ -123,30 +121,37 @@ def _candidate(key, change, target, evidence, priority, type_="new"):
             "count": len(evidence), "type": type_, "priority": priority}
 
 
+def _window(audit, journal, since, observations):
+    """`(audit, journal views, observations)` at or after `since`: the one place it filters."""
+    keep = _since_filter(since)
+    return ([e for e in audit if keep(e.get("ts"))],
+            [v for v in journal if keep(v.get("ts"))],
+            [o for o in observations if isinstance(o, dict) and keep(o.get("ts"))])
+
+
 def derive(audit, journal, since=None, observations=()):
     """Candidate deltas (list of dicts) for the entries at or after `since`."""
-    keep = _since_filter(since)
-    audit = [e for e in audit if keep(e.get("ts"))]
-    views = [v for v in journal if keep(v.get("ts"))]
-    by_batch = {v.get("batch_id"): v for v in journal}
+    window = _window(audit, journal, since, observations)
+    return _derive(*window, by_batch={v.get("batch_id"): v for v in journal})
+
+
+def _derive(audit, views, observations, by_batch):
+    """Candidates for entries already restricted to the window; `by_batch` is unfiltered."""
     out = []
 
     groups = {}
     for entry in audit:
         reason = entry.get("reason") if isinstance(entry.get("reason"), str) else ""
         if entry.get("outcome") == "refused":
-            for key, needle, change, target, prio in _REFUSALS:
-                if needle in reason:
-                    groups.setdefault(("refusal:" + key, change, target, prio), []).append(
-                        "audit %s %s refused" % (_safe(entry.get("ts")), _safe(entry.get("tool"))))
+            for key, needles, change, target, prio in _REFUSALS:
+                if any(needle in reason for needle in needles):
+                    # the reasons of one class (and its first row's advice) share a candidate
+                    group = groups.setdefault("refusal:" + key, (change, target, prio, []))
+                    group[3].append("audit %s %s refused" % (_safe(entry.get("ts")),
+                                                              _safe(entry.get("tool"))))
                     break
-    for (key, change, target, prio), evidence in groups.items():
-        existing = next((c for c in out if c["key"] == key), None)
-        if existing:  # two needles of one class share a candidate
-            existing["evidence"] += evidence
-            existing["count"] = len(existing["evidence"])
-        else:
-            out.append(_candidate(key, change, target, evidence, prio))
+    for key, (change, target, prio, evidence) in groups.items():
+        out.append(_candidate(key, change, target, evidence, prio))
 
     for verdict, (change, target, prio) in _VERDICTS.items():
         evidence = ["batch %s (%s, %s)" % (_safe(v.get("batch_id")), _safe(v.get("tool")),
@@ -185,15 +190,13 @@ def derive(audit, journal, since=None, observations=()):
                               "op %s (cause and safe retry rule)" % op,
                               "METHODOLOGY.md · section 3", evidence, "MEDIUM"))
 
-    seen = [o for o in observations
-            if isinstance(o, dict) and keep(o.get("ts")) and o.get("count")]
+    seen = [o for o in observations if o.get("count")]
     if seen:
         evidence = ["audit-less read %s n4_find_dangling_outputs found %s" % (
             _safe(o.get("ts")), int(o["count"])) for o in seen]
         cand = _candidate("dangling", "Make the dangling-output check part of the plan "
                           "(link or remove the unused out slots it reports)",
                           "METHODOLOGY.md · section 4 step 7", evidence, "MEDIUM")
-        cand["count"] = sum(int(o["count"]) for o in seen)
         out.append(cand)
     return out
 
@@ -261,12 +264,10 @@ def draft(state_dir, station="unknown", date=None, since=None, observations=(),
           template=None):
     """`{"markdown", "candidates", "station", "date"}` for the entries in `state_dir`."""
     audit, journal = load(state_dir)
-    keep = _since_filter(since)
-    candidates = derive(audit, journal, since, observations)
+    windowed, views, seen = _window(audit, journal, since, observations)
+    candidates = _derive(windowed, views, seen, {v.get("batch_id"): v for v in journal})
     date = date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-    markdown = render(candidates, station, date,
-                      [e for e in audit if keep(e.get("ts"))],
-                      [v for v in journal if keep(v.get("ts"))], since, template)
+    markdown = render(candidates, station, date, windowed, views, since, template)
     return {"markdown": markdown, "candidates": candidates, "station": station, "date": date}
 
 

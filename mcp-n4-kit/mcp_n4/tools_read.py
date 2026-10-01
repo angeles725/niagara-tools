@@ -5,7 +5,7 @@ Importing this module has no side effects.
 import os
 from collections import namedtuple
 
-from . import __version__, box, retro
+from . import __version__, box, retro, safety
 
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 
@@ -54,6 +54,8 @@ class Context:
         self.state_dir = None
         #: In-memory read observations for the session retro (no audit line exists for reads).
         self.observations = []
+        #: When this server started: the default window of the session retro draft.
+        self.started_at = retro.now()
         self.write = None  # tools_write.WriteState, set by the server in writes-allowed mode
         self._secret = None
 
@@ -291,10 +293,15 @@ def n4_find_dangling_outputs(ctx, args):
 
 
 def n4_session_retro_draft(ctx, args):
-    """Draft the session retro for the server's state dir (reads only, never writes)."""
+    """Draft the session retro for the server's state dir (reads only, never writes).
+
+    The window starts at the server start unless `since` says otherwise, so a draft
+    covers this session and not the whole history of the state directory.
+    """
     station = ctx.session.station_name if ctx.session else "unknown"
-    return retro.draft(ctx.state_dir or retro.DEFAULT_STATE_DIR, station=station,
-                       since=args.get("since"), observations=ctx.observations)
+    return retro.draft(ctx.state_dir or safety.DEFAULT_STATE_DIR, station=station,
+                       since=args.get("since") or ctx.started_at,
+                       observations=ctx.observations)
 
 
 TOOLS = [
@@ -340,7 +347,9 @@ TOOLS = [
          "Draft the session retro: reads this server's audit and journal and returns markdown "
          "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "
          "batches, BOX errors, dangling outputs). Proposes only; never applies or stages "
-         "anything. Optional since (ISO-8601) limits the window.",
-         _schema({"since": _str("ISO-8601 timestamp; only newer entries are considered")}),
+         "anything. The window starts at the server start; pass since (ISO-8601, e.g. "
+         "1970-01-01T00:00:00Z for the whole history) to change it.",
+         _schema({"since": _str("ISO-8601 timestamp; only newer entries are considered "
+                                "(default: when this server started)")}),
          n4_session_retro_draft, needs_session=False),
 ]

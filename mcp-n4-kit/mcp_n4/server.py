@@ -70,7 +70,7 @@ class Server:
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
                                       insecure_tls=insecure_tls)
-        self.ctx.state_dir = os.path.expanduser(state_dir or tools_write.DEFAULT_STATE_DIR)
+        self.ctx.state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         if tools is None:
             tools = tools_read.TOOLS + (tools_write.TOOLS if allow_writes else [])
         if allow_writes:
@@ -161,7 +161,7 @@ class Server:
         _validate(tool.input_schema, args)
         try:
             if tool.needs_session and self.ctx.session is None:
-                raise tools_read.ToolError("not connected: call n4_connect first")
+                raise tools_read.ToolError(safety.REASON_NOT_CONNECTED + ": call n4_connect first")
             obj = tool.handler(self.ctx, args)
         except (tools_read.ToolError, box.BoxError, ValueError) as exc:
             return self._tool_error(str(exc))

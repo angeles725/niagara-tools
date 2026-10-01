@@ -21,6 +21,28 @@ _UNBOUND_ARGS = ("dry_run", "confirmation_token")
 _EXPIRY = re.compile(r"[0-9]{1,15}")
 
 
+#: Where the journal and audit live unless the operator passes --state-dir (one owner).
+DEFAULT_STATE_DIR = "~/.local/state/mcp-n4"
+
+#: Leading text of each refusal. The raise sites build their messages from these and the
+#: session retro classifies audit reasons with them, so the two cannot drift apart.
+REASON_TOKEN_MISSING = "confirmation_token is missing"
+REASON_TOKEN_MISMATCH = "confirmation_token does not match this tool"
+REASON_TOKEN_EXPIRED = "confirmation_token expired"
+REASON_TOKEN_REUSED = "confirmation_token already used"
+REASON_IDENTITY = "station identity not verified"
+REASON_SCOPE_NONE = "no --write-scope configured"
+REASON_SCOPE_PLAIN = "is not a plain station ORD"
+REASON_SCOPE_OUTSIDE = "is outside the write scope"
+REASON_BUDGET = "write budget exhausted"
+REASON_BUDGET_SMALL = "write budget too small"
+REASON_NOT_CONNECTED = "not connected"
+REASON_PARTIAL_STATUS = "Status slots are written whole"
+REASON_ACTION = "is not allowed in this version"
+REASON_VALUE_TYPE = "value_type must be one of"
+REASON_TYPE_SPEC = "type must look like"
+
+
 class SafetyError(Exception):
     """A refusal whose message is safe to show to the model (never holds a secret)."""
 
@@ -74,18 +96,18 @@ class ConfirmationTokens:
         parts = token.split(".") if isinstance(token, str) else []
         if len(parts) != 3 or not _EXPIRY.fullmatch(parts[0]) \
                 or not all(p.isascii() for p in parts):
-            raise SafetyError("confirmation_token is missing or malformed: run a dry run "
+            raise SafetyError(REASON_TOKEN_MISSING + " or malformed: run a dry run "
                               "first and pass the token it returns")
         expiry, nonce, mac = int(parts[0]), parts[1], parts[2]
         if not hmac.compare_digest(mac.encode(),
                                    self._mac(tool, args, plan_hash, expiry, nonce).encode()):
-            raise SafetyError("confirmation_token does not match this tool, these arguments "
+            raise SafetyError(REASON_TOKEN_MISMATCH + ", these arguments "
                               "and this plan: run the dry run again")
         if self.clock() >= expiry:
             self._pending.pop(nonce, None)
-            raise SafetyError("confirmation_token expired: run the dry run again")
+            raise SafetyError(REASON_TOKEN_EXPIRED + ": run the dry run again")
         if self._pending.pop(nonce, None) is None:
-            raise SafetyError("confirmation_token already used: run the dry run again")
+            raise SafetyError(REASON_TOKEN_REUSED + ": run the dry run again")
 
 
 class WriteScope:
@@ -97,17 +119,17 @@ class WriteScope:
     def require_any(self):
         """For writes that target the whole station rather than one ORD."""
         if not self.prefixes:
-            raise SafetyError("no --write-scope configured: every write is refused")
+            raise SafetyError(REASON_SCOPE_NONE + ": every write is refused")
 
     def check(self, ord_str):
         if not self.prefixes:
-            raise SafetyError("no --write-scope configured: every write is refused")
+            raise SafetyError(REASON_SCOPE_NONE + ": every write is refused")
         if not isinstance(ord_str, str) or not ord_str.startswith("station:") \
                 or ".." in ord_str.split("/"):
-            raise SafetyError("ord %r is not a plain station ORD" % (ord_str,))
+            raise SafetyError("ord %r %s" % (ord_str, REASON_SCOPE_PLAIN))
         target = ord_str.rstrip("/")
         if not any(target == p or target.startswith(p + "/") for p in self.prefixes):
-            raise SafetyError("ord %r is outside the write scope" % ord_str)
+            raise SafetyError("ord %r %s" % (ord_str, REASON_SCOPE_OUTSIDE))
 
 
 STATE_FILES = ("journal.jsonl", "audit.jsonl")
@@ -159,6 +181,17 @@ def check_state_dir(path):
 class _JsonlFile:
     def __init__(self, state_dir, filename):
         self.state_dir, self.path = state_dir, os.path.join(state_dir, filename)
+
+    def check_private(self):
+        """Raise `SafetyError` when the file exists and is loose (never chmods it)."""
+        try:
+            reason = loose_file_reason(os.stat(self.path))
+        except OSError:
+            return  # missing: append will create it private
+        if reason:
+            raise SafetyError("%s %s: run `chmod 600 %s` yourself (the server never changes "
+                              "the permissions of an existing file)"
+                              % (self.path, reason, self.path))
 
     def append(self, entry):
         if not os.path.isdir(self.state_dir):  # only a directory we create is chmodded
