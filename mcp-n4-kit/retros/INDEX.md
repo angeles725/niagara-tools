@@ -1,0 +1,9 @@
+# Retro index — usage retros for the mcp-n4 kit
+
+One row per session retro in this directory, written by `tools/new_retro.py` (or drafted with the
+`n4_session_retro_draft` server tool). `pending` = proposed deltas not yet reviewed or folded into the
+kit; `folded` = promoted. `deltas` = number of proposed delta rows (0 = honesty line `no new deltas`).
+Retros only propose: the kit is changed by a human, never by the retro.
+
+| file | Station | Date | pending\|folded | deltas |
+|---|---|---|---|---|

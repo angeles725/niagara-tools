@@ -208,6 +208,14 @@ runner refuses to run if `McpSmoke` already exists. After a failed required step
 the rest and removes the folder it created. Exit 0 only when every required step is
 `verified`; the JSON report lists each step, its verdict and `batch_id`.
 
+## Session retros
+
+Every session ends with a retro that proposes kit deltas (never applies them). The read-only
+tool `n4_session_retro_draft` (both modes) drafts it from the server's audit and journal;
+`python3 tools/new_retro.py --station NAME --state-dir DIR [--since TS] [--dry-run]` writes
+`retros/YYYY-MM-DD-<station>-session.md` and a `pending` row in `retros/INDEX.md`. It refuses to
+overwrite without `--force`. Nothing is staged as a GitHub issue automatically.
+
 ## Run the tests
 
 ```
