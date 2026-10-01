@@ -94,6 +94,11 @@ class WriteScope:
     def __init__(self, prefixes):
         self.prefixes = [p.rstrip("/") for p in prefixes]
 
+    def require_any(self):
+        """For writes that target the whole station rather than one ORD."""
+        if not self.prefixes:
+            raise SafetyError("no --write-scope configured: every write is refused")
+
     def check(self, ord_str):
         if not self.prefixes:
             raise SafetyError("no --write-scope configured: every write is refused")

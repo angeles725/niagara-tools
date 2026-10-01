@@ -1,5 +1,6 @@
 """In-memory fake Niagara BOX station for unit tests (plain HTTP on 127.0.0.1)."""
 import json
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -23,6 +24,10 @@ class FakeStation:
         self.user, self.password = user, password
         self.requests = 0
         self.saves = 0
+        # When set, `save` rewrites this file (like a station persisting config.bog);
+        # `save_rewrites=False` makes save a no-op on disk.
+        self.config_path = None
+        self.save_rewrites = True
         self.sessions = set()
         # Fault injection: hook(frame) -> None (serve normally) or (code, body_bytes, headers).
         self.hook = None
@@ -109,9 +114,13 @@ class FakeStation:
         node.value = bson.get("v")
         node.children = []
         for sub in bson.get("s", []):
-            child = _Node(sub["n"], sub["t"])
+            module = sub["t"].partition(":")[0]
+            if module != "baja" or sub["t"] == "baja:Folder":  # a nested component
+                child = self._component(node, sub["n"], sub["t"])
+            else:
+                child = _Node(sub["n"], sub["t"])
+                node.children.append(child)
             self._fill(child, sub)
-            node.children.append(child)
 
     def _resolve(self, ord_str):
         path = ord_str.split("slot:", 1)[1] if "slot:" in ord_str else ""
@@ -235,6 +244,11 @@ class FakeStation:
         node = self.by_handle[arg["h"]]
         if arg["a"] == "save" and node is self.root:
             self.saves += 1
+            if self.config_path and self.save_rewrites:
+                with open(self.config_path, "ab") as fh:
+                    fh.write(b"saved%d" % self.saves)
+                st = os.stat(self.config_path)
+                os.utime(self.config_path, (st.st_atime, st.st_mtime + 5))
             return None
         if arg["a"] == "set" and node.type.endswith("NumericWritable"):
             whole = {"t": "baja:StatusNumeric", "s": [

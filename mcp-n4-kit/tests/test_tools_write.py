@@ -13,6 +13,7 @@ import test_server  # noqa: E402  (module import: its test classes are not re-co
 from mcp_n4 import box, server, tools_write  # noqa: E402
 
 WRITE_TOOLS = ["n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"]
+DESTRUCTIVE_TOOLS = ["n4_remove_component", "n4_rollback", "n4_save_station"]
 FOLDER = "station:|slot:/Folder"
 NO_SLEEP = dict(sleep=lambda s: None)
 
@@ -87,7 +88,7 @@ class TestMode(WriteTestCase):
         self.start_server(allow_writes=False)
         names = [t["name"] for t in self.srv.dispatch(
             test_server.rpc("tools/list"))["result"]["tools"]]
-        for name in WRITE_TOOLS:
+        for name in WRITE_TOOLS + DESTRUCTIVE_TOOLS:
             self.assertNotIn(name, names)
             res = self.srv.dispatch(test_server.rpc(
                 "tools/call", {"name": name, "arguments": {}}))
@@ -102,6 +103,18 @@ class TestMode(WriteTestCase):
             self.assertFalse(ann["destructiveHint"], name)
             self.assertFalse(ann["openWorldHint"], name)
             self.assertEqual(ann.get("idempotentHint", False), name == "n4_set_slot", name)
+            props = tools[name]["inputSchema"]["properties"]
+            self.assertIn("dry_run", props)
+            self.assertIn("confirmation_token", props)
+
+    def test_destructive_tools_are_listed_with_destructive_annotations(self):
+        tools = {t["name"]: t for t in self.srv.dispatch(
+            test_server.rpc("tools/list"))["result"]["tools"]}
+        for name in DESTRUCTIVE_TOOLS:
+            ann = tools[name]["annotations"]
+            self.assertFalse(ann["readOnlyHint"], name)
+            self.assertTrue(ann["destructiveHint"], name)
+            self.assertFalse(ann["openWorldHint"], name)
             props = tools[name]["inputSchema"]["properties"]
             self.assertIn("dry_run", props)
             self.assertIn("confirmation_token", props)
@@ -435,6 +448,7 @@ class TestInvokeAction(WriteTestCase):
         for action in ("save", "restart", "emergencyOverride", "emergencyAuto", "x"):
             text = self.err("n4_invoke_action", ord=self.ord, action=action)
             self.assertIn("not allowed in this version", text)
+            self.assertEqual("n4_save_station" in text, action == "save", action)
         self.assertEqual(self.fake.invoked, [])
         self.assertEqual(self.fake.saves, 0)
 
@@ -598,7 +612,8 @@ class TestJournalAndAudit(WriteTestCase):
         out = self.run_write("n4_create_component", **self.ARGS)
         intent, result = self.lines("journal.jsonl")
         self.assertEqual(set(intent), {"batch_id", "ts", "tool", "ops", "inverse_plan",
-                                       "station_name", "phase"})
+                                       "station_name", "phase", "targets"})
+        self.assertEqual(intent["targets"], {FOLDER: "3"})
         self.assertEqual((intent["phase"], intent["batch_id"]), ("intent", out["batch_id"]))
         self.assertRegex(intent["batch_id"], r"^[0-9a-f]{32}$")
         self.assertEqual((intent["tool"], intent["station_name"]),

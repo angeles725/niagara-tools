@@ -91,7 +91,9 @@ subtree, is reported as dangling.
 
 Write tools exist only with `--allow-writes` (otherwise `tools/list` omits them
 and calling one returns JSON-RPC -32601): `n4_create_component`, `n4_set_slot`,
-`n4_invoke_action`, `n4_create_link`. Example:
+`n4_invoke_action`, `n4_create_link`, plus the destructive class
+(`destructiveHint: true`) `n4_remove_component`, `n4_rollback` and
+`n4_save_station`. Example:
 
 ```
 python3 -m mcp_n4.server --allow-writes --write-scope 'station:|slot:/Sandbox'
@@ -141,9 +143,33 @@ Tool rules:
   a plain slot at its type default is omitted by the station and is refused.
 - `n4_invoke_action` allows only `set`, `active`, `inactive` and `auto`. `set` restores
   the previous `fallback` as its inverse; the others have none and the plan says so.
-  Destructive actions (`emergency*`, `save`, `restart`) are not available yet.
+  `emergency*`, `save` and `restart` are refused; saving has its own tool,
+  `n4_save_station`.
 - `n4_create_component` follows a station rename on collision (the inverse and the
   read-back use the assigned name).
+
+Destructive tools use the same pipeline:
+
+- `n4_remove_component(parent_ord, name)` removes a child and its subtree. The plan
+  snapshots the subtree to depth 3 (type, plain slots, `wsAnnotation`, and the links
+  whose target is inside it) as data; it is the recorded inverse. Re-creation is
+  limited to that snapshot and is not a full restore: deeper levels, runtime state
+  and links coming from outside the subtree are not recreated (the plan says so).
+- `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
+  (`rollback_of` points to the original). It refuses an unknown batch, one already
+  rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled
+  intent so a human decides) and a batch from another station. The current
+  `--write-scope` is enforced on every ORD the batch touched, and each recorded
+  handle must still belong to its ORD. Inverses: remove a created component or
+  link, restore a slot or fallback, re-create a removed component from its
+  snapshot (links only when both ends exist; the reply reports
+  `relinks: {restored, skipped}`).
+- `n4_save_station` invokes `save` on the root. The BOX reply to `save` is `null`
+  and proves nothing, so with `--station-home NAME=PATH` (directory holding
+  `config.bog`, repeatable) the tool compares mtime and sha256 before and after,
+  polling up to 30 s, and returns `persisted: true|false|unknown` plus the
+  `evidence`. Without a station home it returns `unknown` and says how to configure
+  it. It needs at least one `--write-scope` like every write.
 
 ## Run the tests
 
