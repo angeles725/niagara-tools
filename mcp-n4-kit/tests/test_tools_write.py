@@ -1,0 +1,539 @@
+import json
+import os
+import stat
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
+from mcp_n4 import box, server, tools_write  # noqa: E402
+
+WRITE_TOOLS = ["n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"]
+FOLDER = "station:|slot:/Folder"
+NO_SLEEP = dict(sleep=lambda s: None)
+
+
+class WriteTestCase(test_server.ToolTestCase):
+    SCOPES = (FOLDER,)
+    MAX_WRITES = 200
+
+    def setUp(self):
+        super().setUp()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.state_dir = os.path.join(tmp.name, "state")
+        self.start_server()
+
+    def start_server(self, **kw):
+        opts = dict(allow_writes=True, allow_http=True, env=self.env, state_dir=self.state_dir,
+                    write_scopes=list(self.SCOPES), max_writes=self.MAX_WRITES)
+        opts.update(kw)
+        self.srv.ctx.close()
+        self.srv = server.Server(**opts)
+        self.addCleanup(self.srv.ctx.close)
+
+    def connect_verified(self):
+        self.connect(expected_station="FakeStation")
+        self.box = self.srv.ctx.session.client
+
+    def add(self, name, type_="kitControl:NumericConst", out=None):
+        nn = self.box.add_component("3", name, type_)["nn"]
+        h = self.box.load_tree(FOLDER, depth=2, **NO_SLEEP)[nn]["h"]
+        if out is not None:
+            self.box.set_slot(h, "out", box.bson_status_numeric(out))
+        return nn, h
+
+    def children(self):
+        return [c.name for c in self.fake.folder.children]
+
+    # Positional-only tool name: create_component has a `name` argument of its own.
+    def call(self, tool, /, **args):
+        res = self.srv.dispatch(test_server.rpc("tools/call", {"name": tool, "arguments": args}))
+        self.assertNotIn("error", res, res)
+        return res["result"]
+
+    def ok(self, tool, /, **args):
+        result = self.call(tool, **args)
+        self.assertFalse(result.get("isError", False), result)
+        return result["structuredContent"]
+
+    def err(self, tool, /, **args):
+        result = self.call(tool, **args)
+        self.assertTrue(result["isError"], result)
+        return result["content"][0]["text"]
+
+    def dry(self, tool, /, **args):
+        return self.ok(tool, **args)
+
+    def run_write(self, tool, /, **args):
+        plan = self.dry(tool, **args)
+        return self.ok(tool, dry_run=False, confirmation_token=plan["confirmation_token"], **args)
+
+    def lines(self, name):
+        path = os.path.join(self.state_dir, name)
+        if not os.path.exists(path):
+            return []
+        with open(path) as fh:
+            return [json.loads(line) for line in fh]
+
+
+class TestMode(WriteTestCase):
+    def test_read_only_server_has_no_write_tools_and_calling_one_is_32601(self):
+        self.start_server(allow_writes=False)
+        names = [t["name"] for t in self.srv.dispatch(
+            test_server.rpc("tools/list"))["result"]["tools"]]
+        for name in WRITE_TOOLS:
+            self.assertNotIn(name, names)
+            res = self.srv.dispatch(test_server.rpc(
+                "tools/call", {"name": name, "arguments": {}}))
+            self.assertEqual(res["error"]["code"], -32601, name)
+
+    def test_writes_allowed_server_lists_write_tools_with_annotations(self):
+        tools = {t["name"]: t for t in self.srv.dispatch(
+            test_server.rpc("tools/list"))["result"]["tools"]}
+        for name in WRITE_TOOLS:
+            ann = tools[name]["annotations"]
+            self.assertFalse(ann["readOnlyHint"], name)
+            self.assertFalse(ann["destructiveHint"], name)
+            self.assertFalse(ann["openWorldHint"], name)
+            self.assertEqual(ann.get("idempotentHint", False), name == "n4_set_slot", name)
+            props = tools[name]["inputSchema"]["properties"]
+            self.assertIn("dry_run", props)
+            self.assertIn("confirmation_token", props)
+
+    def test_flags_have_documented_defaults_and_scope_is_repeatable(self):
+        args = server.parse_args([])
+        self.assertEqual((args.write_scope, args.state_dir, args.token_ttl, args.max_writes),
+                         ([], None, 300, 200))
+        args = server.parse_args(["--write-scope", "a", "--write-scope", "b", "--state-dir", "/x",
+                                  "--token-ttl", "9", "--max-writes", "3"])
+        self.assertEqual((args.write_scope, args.state_dir, args.token_ttl, args.max_writes),
+                         (["a", "b"], "/x", 9, 3))
+
+    def test_default_state_dir_is_under_the_home_state_dir(self):
+        srv = server.Server(allow_writes=True)
+        self.assertEqual(srv.ctx.write.journal.state_dir,
+                         os.path.expanduser("~/.local/state/mcp-n4"))
+
+
+class TestIdentity(WriteTestCase):
+    def test_write_without_expected_station_is_refused_and_audited(self):
+        self.connect()
+        text = self.err("n4_create_component", parent_ord=FOLDER, name="Pump",
+                        type="kitControl:NumericConst")
+        self.assertIn("expected_station", text)
+        self.assertEqual(self.children(), [])
+        audit = self.lines("audit.jsonl")
+        self.assertEqual((audit[-1]["outcome"], audit[-1]["tool"]),
+                         ("refused", "n4_create_component"))
+
+    def test_write_without_a_session_is_refused(self):
+        self.assertIn("not connected", self.err(
+            "n4_create_component", parent_ord=FOLDER, name="Pump",
+            type="kitControl:NumericConst"))
+
+
+class TestScope(WriteTestCase):
+    def test_out_of_scope_parent_is_refused(self):
+        self.connect_verified()
+        text = self.err("n4_create_component", parent_ord="station:|slot:/",
+                        name="Pump", type="kitControl:NumericConst")
+        self.assertIn("outside the write scope", text)
+        self.assertEqual(self.children(), [])
+
+    def test_no_scope_configured_refuses_every_write(self):
+        self.start_server(write_scopes=[])
+        self.connect_verified()
+        self.assertIn("no --write-scope", self.err(
+            "n4_create_component", parent_ord=FOLDER, name="Pump",
+            type="kitControl:NumericConst"))
+
+    def test_prefix_boundary_is_respected(self):
+        self.start_server(write_scopes=["station:|slot:/Fold"])
+        self.connect_verified()
+        self.assertIn("outside the write scope", self.err(
+            "n4_create_component", parent_ord=FOLDER, name="Pump",
+            type="kitControl:NumericConst"))
+
+    def test_every_ord_of_a_link_must_be_in_scope(self):
+        self.connect_verified()
+        _, h = self.add("A", out=1)
+        for src, tgt in (("station:|slot:/Other", FOLDER + "/A"),
+                         (FOLDER + "/A", "station:|slot:/Other")):
+            text = self.err("n4_create_link", source_ord=src, source_slot="out",
+                            target_ord=tgt, target_slot="in10")
+            self.assertIn("outside the write scope", text)
+
+
+class TestTokenLayers(WriteTestCase):
+    ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+
+    def test_dry_run_is_the_default_and_sends_no_mutation(self):
+        plan = self.ok("n4_create_component", **self.ARGS)
+        self.assertTrue(plan["dry_run"])
+        self.assertEqual(self.children(), [])
+        self.assertEqual(plan["plan"]["tool"], "n4_create_component")
+        self.assertEqual(plan["plan"]["ops"], [{"nm": "a", "h": "3", "n": "Pump",
+                                                "b": {"nm": "p", "t": "kitControl:NumericConst",
+                                                      "s": []}}])
+        self.assertEqual(plan["plan"]["inverse"][0]["nm"], "v")
+        self.assertRegex(plan["plan_hash"], r"^[0-9a-f]{64}$")
+        self.assertTrue(plan["confirmation_token"])
+        self.assertGreater(plan["expires_at"], 0)
+        self.assertEqual(self.lines("journal.jsonl"), [])
+
+    def test_execute_without_a_token_is_refused(self):
+        self.assertIn("confirmation_token", self.err("n4_create_component", dry_run=False,
+                                                     **self.ARGS))
+        self.assertEqual(self.children(), [])
+
+    def test_a_token_is_single_use(self):
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.ok("n4_create_component", dry_run=False, confirmation_token=token, **self.ARGS)
+        self.assertIn("already used", self.err("n4_create_component", dry_run=False,
+                                               confirmation_token=token, **self.ARGS))
+        self.assertEqual(self.children(), ["Pump"])
+
+    def test_an_expired_token_is_refused(self):
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.srv.ctx.write.tokens.clock = lambda: 4e9
+        self.assertIn("expired", self.err("n4_create_component", dry_run=False,
+                                          confirmation_token=token, **self.ARGS))
+        self.assertEqual(self.children(), [])
+
+    def test_a_tampered_token_is_refused(self):
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        bad = token[:-1] + ("0" if token[-1] != "0" else "1")
+        self.err("n4_create_component", dry_run=False, confirmation_token=bad, **self.ARGS)
+        self.assertEqual(self.children(), [])
+
+    def test_args_changed_after_the_token_was_issued_are_refused(self):
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        changed = dict(self.ARGS, name="Other")
+        self.assertIn("does not match", self.err(
+            "n4_create_component", dry_run=False, confirmation_token=token, **changed))
+        self.assertEqual(self.children(), [])
+
+    def test_a_token_for_another_tool_is_refused(self):
+        _, h = self.add("A", out=1)
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.err("n4_set_slot", ord=FOLDER + "/A", slot="out", value=2.0,
+                 value_type="baja:StatusNumeric", dry_run=False, confirmation_token=token)
+
+    def test_station_state_changed_since_the_dry_run_is_refused(self):
+        _, h = self.add("A", out=1)
+        args = dict(ord=FOLDER + "/A", slot="out", value=5.0, value_type="baja:StatusNumeric")
+        token = self.dry("n4_set_slot", **args)["confirmation_token"]
+        self.box.set_slot(h, "out", box.bson_status_numeric(3))  # someone else writes
+        self.assertIn("this plan", self.err("n4_set_slot", dry_run=False,
+                                               confirmation_token=token, **args))
+
+
+class TestBudget(WriteTestCase):
+    MAX_WRITES = 1
+
+    def test_writes_beyond_the_session_budget_are_refused(self):
+        self.connect_verified()
+        self.run_write("n4_create_component", parent_ord=FOLDER, name="A",
+                       type="kitControl:NumericConst")
+        text = self.err("n4_create_component", parent_ord=FOLDER, name="B",
+                        type="kitControl:NumericConst")
+        self.assertIn("budget", text)
+        self.assertEqual(self.children(), ["A"])
+
+    def test_reconnecting_starts_a_new_budget(self):
+        self.connect_verified()
+        self.run_write("n4_create_component", parent_ord=FOLDER, name="A",
+                       type="kitControl:NumericConst")
+        self.connect_verified()
+        self.run_write("n4_create_component", parent_ord=FOLDER, name="B",
+                       type="kitControl:NumericConst")
+
+
+class TestCreateComponent(WriteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+
+    def test_happy_path_is_verified_with_annotation(self):
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst",
+                             wire_sheet={"x": 4, "y": 6, "w": 10})
+        self.assertEqual(out["verdict"], "verified")
+        self.assertEqual(out["accepted"]["nn"], "Pump")
+        self.assertEqual(out["observed"], {"name": "Pump", "type": "kitControl:NumericConst",
+                                           "wsAnnotation": "4,6,10"})
+        node = self.fake.folder.child("Pump")
+        self.assertEqual(node.child("wsAnnotation").value, "4,6,10")
+        self.assertEqual(out["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
+
+    def test_collision_rename_is_followed_in_read_back_and_inverse(self):
+        self.add("Pump")
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst")
+        self.assertEqual((out["accepted"]["nn"], out["verdict"]), ("Pump1", "verified"))
+        self.assertEqual(out["inverse"], [{"nm": "v", "h": "3", "n": "Pump1"}])
+
+    def test_bad_name_or_type_is_refused(self):
+        for kw in ({"name": "../x"}, {"name": "a b"}, {"name": ""}, {"type": "NoModule"},
+                   {"type": "a:b:c"}):
+            args = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+            args.update(kw)
+            self.err("n4_create_component", **args)
+        self.assertEqual(self.children(), [])
+
+    def test_bad_wire_sheet_is_refused(self):
+        for ws in ({"x": 1}, {"x": "a", "y": 1}, {"x": 1, "y": 2, "w": True}):
+            self.err("n4_create_component", parent_ord=FOLDER, name="P",
+                     type="kitControl:NumericConst", wire_sheet=ws)
+
+    def test_read_back_mismatch_is_reported_not_raised(self):
+        def drop_annotation(op):
+            node = self.fake.folder.child("Pump")
+            node.children = [c for c in node.children if c.name != "wsAnnotation"]
+        self.fake.on_sync = drop_annotation
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst", wire_sheet={"x": 1, "y": 2})
+        self.assertEqual(out["verdict"], "mismatch")
+        self.assertRegex(out["batch_id"], r"^[0-9a-f]{32}$")
+
+
+class TestSetSlot(WriteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+        self.nn, self.h = self.add("Calc", out=1.0)
+        self.ord = FOLDER + "/" + self.nn
+
+    def test_status_numeric_happy_path_and_inverse_restores_previous(self):
+        plan = self.dry("n4_set_slot", ord=self.ord, slot="out", value=5.5,
+                        value_type="baja:StatusNumeric")
+        self.assertEqual(plan["plan"]["ops"],
+                         [{"nm": "s", "h": self.h, "n": "out",
+                           "b": box.bson_status_numeric(5.5, "0")}])
+        self.assertEqual(plan["plan"]["inverse"],
+                         [{"nm": "s", "h": self.h, "n": "out",
+                           "b": box.bson_status_numeric(1.0, "0")}])
+        out = self.run_write("n4_set_slot", ord=self.ord, slot="out", value=5.5,
+                             value_type="baja:StatusNumeric")
+        self.assertEqual(out["verdict"], "verified")
+        self.assertEqual(out["requested"], {"value": 5.5, "status": "0"})
+        self.assertEqual(out["observed"], {"value": 5.5, "status": "0"})
+
+    def test_status_boolean_is_written_whole(self):
+        self.box.set_slot(self.h, "flag", box.bson_status_boolean(False))
+        out = self.run_write("n4_set_slot", ord=self.ord, slot="flag", value=True,
+                             value_type="baja:StatusBoolean")
+        self.assertEqual((out["verdict"], out["observed"]), ("verified",
+                                                              {"value": True, "status": "0"}))
+
+    def test_plain_types_happy_path(self):
+        for slot, type_, first, new in (("d", "baja:Double", box.bson_double(2), 3.5),
+                                        ("b", "baja:Boolean", box.bson_bool(True), False),
+                                        ("s", "baja:String", {"nm": "p", "t": "baja:String",
+                                                              "v": "old"}, "new")):
+            self.box.set_slot(self.h, slot, first)
+            out = self.run_write("n4_set_slot", ord=self.ord, slot=slot, value=new,
+                                 value_type=type_)
+            self.assertEqual((out["verdict"], out["observed"]), ("verified", new), slot)
+
+    def test_value_or_status_child_path_is_refused_with_the_reason(self):
+        for slot in ("out/value", "out/status"):
+            text = self.err("n4_set_slot", ord=self.ord, slot=slot, value=2.0,
+                            value_type="baja:Double")
+            self.assertIn("whole", text)
+            self.assertIn("status", text)
+        self.assertEqual(self.fake.by_handle[self.h].child("out").child("value").value, "1.0")
+
+    def test_bad_values_types_and_status_are_refused(self):
+        for kw in ({"value": True, "value_type": "baja:Double"},
+                   {"value": float("nan"), "value_type": "baja:Double"},
+                   {"value": "x", "value_type": "baja:Boolean"},
+                   {"value": 1, "value_type": "baja:String"},
+                   {"value": 1.0, "value_type": "baja:Int"},
+                   {"value": 1.0, "value_type": "baja:StatusNumeric", "status": "zz"}):
+            self.err("n4_set_slot", ord=self.ord, slot="out", **kw)
+
+    def test_slot_at_its_type_default_is_not_listed_by_the_station_so_it_is_refused(self):
+        self.box.set_slot(self.h, "zero", box.bson_double(0))  # default values are omitted
+        self.assertIn("not found", self.err("n4_set_slot", ord=self.ord, slot="zero",
+                                            value=1.0, value_type="baja:Double"))
+
+    def test_unknown_slot_and_type_mismatch_with_the_slot_are_refused(self):
+        self.assertIn("not found", self.err("n4_set_slot", ord=self.ord, slot="nope",
+                                            value=1.0, value_type="baja:Double"))
+        self.assertIn("baja:StatusNumeric", self.err(
+            "n4_set_slot", ord=self.ord, slot="out", value=True,
+            value_type="baja:StatusBoolean"))
+
+    def test_read_back_mismatch_is_reported_not_raised(self):
+        def tamper(op):
+            self.fake.by_handle[self.h].child("out").child("value").value = "99.0"
+        self.fake.on_sync = tamper
+        out = self.run_write("n4_set_slot", ord=self.ord, slot="out", value=5.0,
+                             value_type="baja:StatusNumeric")
+        self.assertEqual(out["verdict"], "mismatch")
+        self.assertEqual(out["observed"]["value"], 99.0)
+        self.assertEqual(len(self.lines("journal.jsonl")), 1)  # still journaled
+
+
+class TestInvokeAction(WriteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+        self.nn, self.h = self.add("Sp", "control:NumericWritable")
+        self.ord = FOLDER + "/" + self.nn
+
+    def test_actions_outside_the_allowlist_are_refused(self):
+        for action in ("save", "restart", "emergencyOverride", "emergencyAuto", "x"):
+            text = self.err("n4_invoke_action", ord=self.ord, action=action)
+            self.assertIn("not allowed in this version", text)
+        self.assertEqual(self.fake.invoked, [])
+        self.assertEqual(self.fake.saves, 0)
+
+    def test_set_happy_path_verifies_fallback_and_inverse_restores_it(self):
+        plan = self.dry("n4_invoke_action", ord=self.ord, action="set", arg=7.0,
+                        arg_type="baja:Double")
+        self.assertEqual(plan["plan"]["ops"][0]["arg"],
+                         {"h": self.h, "a": "set", "b": box.bson_double(7.0)})
+        self.assertEqual(plan["plan"]["inverse"],
+                         [{"nm": "s", "h": self.h, "n": "fallback",
+                           "b": box.bson_status_numeric(0.0, "0")}])
+        out = self.run_write("n4_invoke_action", ord=self.ord, action="set", arg=7.0,
+                             arg_type="baja:Double")
+        self.assertEqual((out["verdict"], out["observed"]), ("verified", {"fallback": 7.0}))
+        self.assertEqual(self.fake.invoked, [("set", self.h)])
+
+    def test_set_needs_an_arg_and_the_others_take_none(self):
+        self.err("n4_invoke_action", ord=self.ord, action="set")
+        self.err("n4_invoke_action", ord=self.ord, action="set", arg=1.0, arg_type="baja:Int")
+        self.err("n4_invoke_action", ord=self.ord, action="auto", arg=1.0, arg_type="baja:Double")
+
+    def test_active_has_no_inverse_and_the_plan_says_so(self):
+        plan = self.dry("n4_invoke_action", ord=self.ord, action="active")
+        self.assertEqual(plan["plan"]["inverse"], [])
+        self.assertTrue(any("no inverse" in n for n in plan["plan"]["notes"]))
+
+    def test_state_changing_actions_are_unverified_not_verified(self):
+        for action in ("active", "inactive", "auto"):
+            out = self.run_write("n4_invoke_action", ord=self.ord, action=action)
+            self.assertEqual(out["verdict"], "unverified", action)
+        self.assertEqual([a for a, _ in self.fake.invoked], ["active", "inactive", "auto"])
+
+    def test_set_read_back_mismatch_is_reported(self):
+        plan = self.dry("n4_invoke_action", ord=self.ord, action="set", arg=7.0,
+                        arg_type="baja:Double")
+        orig = self.fake._invoke
+
+        def lying(arg):
+            orig(arg)
+            self.fake.by_handle[self.h].child("fallback").child("value").value = "1.0"
+        self.fake._invoke = lying
+        out = self.ok("n4_invoke_action", ord=self.ord, action="set", arg=7.0,
+                      arg_type="baja:Double", dry_run=False,
+                      confirmation_token=plan["confirmation_token"])
+        self.assertEqual(out["verdict"], "mismatch")
+
+
+class TestCreateLink(WriteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+        self.src, self.src_h = self.add("Src", out=1.0)
+        self.tgt, self.tgt_h = self.add("Tgt")
+        self.args = dict(source_ord=FOLDER + "/" + self.src, source_slot="out",
+                         target_ord=FOLDER + "/" + self.tgt, target_slot="in10")
+
+    def test_happy_path_is_verified_and_inverse_removes_the_link(self):
+        plan = self.dry("n4_create_link", **self.args)
+        self.assertEqual(plan["plan"]["ops"], [{"ssc": "checkLinks", "arg": {
+            "s": self.src_h, "ss": "out", "t": self.tgt_h, "ts": "in10", "c": True}}])
+        self.assertEqual(self.fake.by_handle[self.tgt_h].child("Link"), None)
+        out = self.run_write("n4_create_link", **self.args)
+        self.assertEqual(out["verdict"], "verified")
+        self.assertEqual(out["observed"], {"link": "Link", "sourceOrd": "h:" + self.src_h,
+                                           "sourceSlotName": "out", "targetSlotName": "in10"})
+        self.assertEqual(out["inverse"], [{"nm": "v", "h": self.tgt_h, "n": "Link"}])
+
+    def test_bad_slot_names_are_refused(self):
+        self.err("n4_create_link", **dict(self.args, target_slot="in 10"))
+        self.assertIsNone(self.fake.by_handle[self.tgt_h].child("Link"))
+
+    def test_read_back_mismatch_is_reported(self):
+        orig = self.fake._check_link
+
+        def lying(arg):
+            res = orig(arg)
+            link = self.fake.by_handle[self.tgt_h].child(res[0]["s"])
+            link.child("sourceSlotName").value = "other"
+            return res
+        self.fake._check_link = lying
+        out = self.run_write("n4_create_link", **self.args)
+        self.assertEqual(out["verdict"], "mismatch")
+
+
+class TestJournalAndAudit(WriteTestCase):
+    ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+
+    def test_journal_entry_holds_batch_ops_and_the_real_inverse(self):
+        out = self.run_write("n4_create_component", **self.ARGS)
+        entry = self.lines("journal.jsonl")[0]
+        self.assertEqual(set(entry), {"batch_id", "ts", "tool", "ops", "inverse", "station_name"})
+        self.assertEqual(entry["batch_id"], out["batch_id"])
+        self.assertRegex(entry["batch_id"], r"^[0-9a-f]{32}$")
+        self.assertEqual(entry["tool"], "n4_create_component")
+        self.assertEqual(entry["station_name"], "FakeStation")
+        self.assertEqual(entry["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
+        self.assertEqual(entry["ops"][0]["nm"], "a")
+
+    def test_audit_records_planned_executed_and_refused_calls(self):
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.ok("n4_create_component", dry_run=False, confirmation_token=token, **self.ARGS)
+        self.err("n4_create_component", parent_ord="station:|slot:/", name="X",
+                 type="kitControl:NumericConst")
+        planned, executed, refused = self.lines("audit.jsonl")
+        self.assertEqual((planned["outcome"], planned["dry_run"], planned["batch_id"]),
+                         ("planned", True, None))
+        self.assertEqual((executed["outcome"], executed["dry_run"]), ("executed", False))
+        self.assertRegex(executed["batch_id"], r"^[0-9a-f]{32}$")
+        self.assertEqual((refused["outcome"], refused["batch_id"]), ("refused", None))
+        self.assertIn("outside the write scope", refused["reason"])
+        for line in (planned, executed, refused):
+            self.assertEqual(set(line), {"ts", "tool", "batch_id", "dry_run", "outcome",
+                                         "reason", "args_redacted"})
+
+    def test_audit_and_outputs_hold_no_secret_value(self):
+        extra = dict(password="hunter2", api_secret="s3cr3t-x")
+        plan = self.dry("n4_create_component", **dict(self.ARGS, **extra))
+        token = plan["confirmation_token"]
+        out = self.ok("n4_create_component", dry_run=False, confirmation_token=token,
+                      **dict(self.ARGS, **extra))
+        self.err("n4_create_component", dry_run=False, confirmation_token=token,
+                 **dict(self.ARGS, **extra))
+        with open(os.path.join(self.state_dir, "audit.jsonl")) as fh:
+            audit = fh.read()
+        for secret in ("hunter2", "s3cr3t-x", token, self.PASSWORD):
+            self.assertNotIn(secret, audit)
+        self.assertNotIn(self.PASSWORD, json.dumps([plan, out]))
+        self.assertIn(tools_write.safety.REDACTED, audit)
+
+    def test_state_files_are_private(self):
+        self.run_write("n4_create_component", **self.ARGS)
+        self.assertEqual(stat.S_IMODE(os.stat(self.state_dir).st_mode), 0o700)
+        for name in ("journal.jsonl", "audit.jsonl"):
+            mode = stat.S_IMODE(os.stat(os.path.join(self.state_dir, name)).st_mode)
+            self.assertEqual(mode, 0o600, name)
+
+
+if __name__ == "__main__":
+    unittest.main()

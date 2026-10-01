@@ -7,7 +7,7 @@ import argparse
 import json
 import sys
 
-from . import __version__, box, tools_read
+from . import __version__, box, tools_read, tools_write
 
 SERVER_NAME = "mcp-n4"
 SERVER_VERSION = __version__
@@ -24,6 +24,10 @@ class InvalidParams(Exception):
     pass
 
 
+class MethodNotFound(Exception):
+    pass
+
+
 def _validate(schema, args):
     """Check required keys, JSON types and integer ranges against `schema`."""
     props = schema.get("properties", {})
@@ -34,7 +38,9 @@ def _validate(schema, args):
         spec = props.get(key)
         if spec is None:
             continue
-        want = _JSON_TYPES[spec["type"]]
+        want = _JSON_TYPES.get(spec.get("type"))
+        if want is None:  # an untyped property accepts any JSON value
+            continue
         # bool is an int subclass in Python; an integer argument must not be a bool.
         if not isinstance(value, want) or (want is int and isinstance(value, bool)):
             raise InvalidParams("argument %s must be %s" % (key, spec["type"]))
@@ -46,10 +52,16 @@ def _validate(schema, args):
 
 class Server:
     def __init__(self, allow_writes=False, allow_http=False, env=None,
-                 client_factory=None, tools=None):
+                 client_factory=None, tools=None, write_scopes=(), state_dir=None,
+                 token_ttl=300, max_writes=200):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
                                       env=env, client_factory=client_factory)
-        self.tools = {t.name: t for t in (tools_read.TOOLS if tools is None else tools)}
+        if tools is None:
+            tools = tools_read.TOOLS + (tools_write.TOOLS if allow_writes else [])
+        if allow_writes:
+            self.ctx.write = tools_write.WriteState(write_scopes, state_dir, token_ttl,
+                                                    max_writes)
+        self.tools = {t.name: t for t in tools}
 
     # ---- framing ---------------------------------------------------------
     def handle_line(self, line):
@@ -97,6 +109,8 @@ class Server:
                 return self._error(id_, METHOD_NOT_FOUND, "method not found: %s" % method)
         except InvalidParams as exc:
             return self._error(id_, INVALID_PARAMS, str(exc))
+        except MethodNotFound as exc:
+            return self._error(id_, METHOD_NOT_FOUND, str(exc))
         return {"jsonrpc": "2.0", "id": id_, "result": result}
 
     def _initialize(self, params):
@@ -115,6 +129,8 @@ class Server:
         if not isinstance(params, dict) or not isinstance(params.get("name"), str):
             raise InvalidParams("tools/call needs a string 'name'")
         tool = self.tools.get(params["name"])
+        if tool is None and params["name"] in tools_write.NAMES:
+            raise MethodNotFound("write tools are disabled: start the server with --allow-writes")
         if tool is None:
             raise InvalidParams("unknown tool: %s" % params["name"])
         args = params.get("arguments", {})
@@ -141,7 +157,15 @@ class Server:
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(prog="mcp_n4.server", description=__doc__)
     parser.add_argument("--allow-writes", action="store_true",
-                        help="record writes-allowed mode (write tools arrive in a later task)")
+                        help="register the write tools (dry run + confirmation token each)")
+    parser.add_argument("--write-scope", action="append", default=[], metavar="ORD_PREFIX",
+                        help="ORD prefix writes may touch (repeatable); none = no writes")
+    parser.add_argument("--state-dir", default=None,
+                        help="journal/audit directory (default ~/.local/state/mcp-n4)")
+    parser.add_argument("--token-ttl", type=int, default=300, metavar="SECONDS",
+                        help="confirmation token lifetime (default 300)")
+    parser.add_argument("--max-writes", type=int, default=200, metavar="N",
+                        help="executed writes allowed per session (default 200)")
     parser.add_argument("--allow-http-for-tests", action="store_true",
                         help="permit http:// base URLs (fake station in tests only)")
     return parser.parse_args(argv)
@@ -149,8 +173,9 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
-    Server(allow_writes=args.allow_writes, allow_http=args.allow_http_for_tests).serve(
-        sys.stdin, sys.stdout)
+    Server(allow_writes=args.allow_writes, allow_http=args.allow_http_for_tests,
+           write_scopes=args.write_scope, state_dir=args.state_dir, token_ttl=args.token_ttl,
+           max_writes=args.max_writes).serve(sys.stdin, sys.stdout)
     return 0
 
 

@@ -26,6 +26,10 @@ class FakeStation:
         self.sessions = set()
         # Fault injection: hook(frame) -> None (serve normally) or (code, body_bytes, headers).
         self.hook = None
+        # Called with each applied syncTo op, so a test can tamper with the model
+        # afterwards (e.g. to simulate a read-back mismatch).
+        self.on_sync = None
+        self.invoked = []  # (action, handle) of every accepted invokeAction except save
         self._next_handle = 0x10
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
@@ -176,7 +180,10 @@ class FakeStation:
             ops = arg["ops"]
             if len(ops) != 1:
                 raise ValueError("exactly one op per syncTo")
-            return self._sync(ops[0])
+            reply = self._sync(ops[0])
+            if self.on_sync is not None:
+                self.on_sync(ops[0])
+            return reply
         if key == "checkLinks":
             return [self._check_link(arg)]
         if key == "invokeAction":
@@ -237,5 +244,9 @@ class FakeStation:
             if leaf not in node.children:
                 node.children.append(leaf)
             self._fill(leaf, whole)
+            self.invoked.append(("set", arg["h"]))
+            return None
+        if arg["a"] in ("active", "inactive", "auto"):
+            self.invoked.append((arg["a"], arg["h"]))
             return None
         raise ValueError("unsupported action %s" % arg["a"])

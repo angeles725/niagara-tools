@@ -22,9 +22,12 @@ class Tool(namedtuple("Tool", "name description input_schema handler needs_sessi
 
 
 class Session:
-    def __init__(self, client, station_name, base_url, root_handle):
+    def __init__(self, client, station_name, base_url, root_handle, identity_verified=False):
         self.client, self.station_name = client, station_name
         self.base_url, self.root_handle = base_url, root_handle
+        #: True only when the session was opened with an `expected_station` that matched.
+        self.identity_verified = identity_verified
+        self.writes_executed = 0
 
 
 class Context:
@@ -35,6 +38,7 @@ class Context:
         self.env = os.environ if env is None else env
         self.client_factory = client_factory or box.BoxClient
         self.session = None
+        self.write = None  # tools_write.WriteState, set by the server in writes-allowed mode
         self._secret = None
 
     @property
@@ -117,7 +121,8 @@ def n4_connect(ctx, args):
         client.close()
         raise ToolError("station identity mismatch: expected %r but connected to %r"
                         % (expected, name))
-    ctx.session = Session(client, name, client.base_url, root_h)
+    ctx.session = Session(client, name, client.base_url, root_h,
+                          identity_verified=expected is not None)
     return {"station_name": name, "base_url": client.base_url, "root_handle": root_h,
             "mode": ctx.mode}
 
