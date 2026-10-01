@@ -24,6 +24,8 @@ class FakeStation:
         self.requests = 0
         self.saves = 0
         self.sessions = set()
+        # Fault injection: hook(frame) -> None (serve normally) or (code, body_bytes, headers).
+        self.hook = None
         self._next_handle = 0x10
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
@@ -49,6 +51,17 @@ class FakeStation:
                     self.send_header("Content-Length", "0")
                     self.end_headers()
                     return
+                if station.hook is not None:
+                    injected = station.hook(json.loads(raw))
+                    if injected is not None:
+                        code, payload, headers = injected
+                        self.send_response(code)
+                        for name, value in headers.items():
+                            self.send_header(name, value)
+                        self.send_header("Content-Length", str(len(payload)))
+                        self.end_headers()
+                        self.wfile.write(payload)
+                        return
                 out = json.dumps(station.handle_frame(json.loads(raw))).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
