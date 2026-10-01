@@ -394,6 +394,162 @@ class TestReadWrite(BoxTestCase):
         self.assertNotIn("Gone", nodes)
 
 
+class TestLockoutSafeOpen(BoxTestCase):
+    def deletes(self):
+        return [f for f in self.seen if f["m"][0]["k"] == "del"]
+
+    def track(self, key, code):
+        self.seen = []
+
+        def hook(frame):
+            self.seen.append(frame)
+            m = frame["m"][0]
+            if m["k"] == key or (key == "loadRoot" and m["k"] == "callssc"
+                                 and m["b"]["sck"] == "loadRoot"):
+                return code, b"", {}
+        self.fake.hook = hook
+
+    def test_auth_failure_in_makessc_sends_no_cleanup_del(self):
+        self.track("makessc", 401)
+        c = self.client()
+        with self.assertRaises(box.AuthError):
+            c.open()
+        self.assertEqual(self.deletes(), [])
+        self.assertIsNone(c.sid)
+
+    def test_auth_failure_in_loadroot_sends_no_cleanup_del(self):
+        self.track("loadRoot", 403)
+        c = self.client()
+        with self.assertRaises(box.AuthError):
+            c.open()
+        self.assertEqual(self.deletes(), [])
+        self.assertIsNone(c.sid)
+
+    def test_non_auth_failure_still_cleans_up(self):
+        self.track("makessc", 500)
+        with self.assertRaises(box.BoxError):
+            self.client().open()
+        self.assertEqual(len(self.deletes()), 1)
+
+    def test_keyboard_interrupt_reraises_without_cleanup(self):
+        c = self.client()
+        calls = []
+        real = c.call
+
+        def fake_call(channel, key, body):
+            calls.append(key)
+            if key == "makessc":
+                raise KeyboardInterrupt
+            return real(channel, key, body)
+        with mock.patch.object(c, "call", side_effect=fake_call):
+            with self.assertRaises(KeyboardInterrupt):
+                c.open()
+        self.assertNotIn("del", calls)
+
+
+class TestHandleCache(BoxTestCase):
+    def test_remove_component_invalidates_child_and_descendants(self):
+        c = self.opened()
+        self.add(c, "Gone")
+        c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        c._handles["station:|slot:/Folder/Gone"] = "x1"
+        c._handles["station:|slot:/Folder/Gone/Kid"] = "x2"
+        c._handles["station:|slot:/Folder/GoneNot"] = "x3"
+        c.remove_component("3", "Gone")
+        self.assertNotIn("station:|slot:/Folder/Gone", c._handles)
+        self.assertNotIn("station:|slot:/Folder/Gone/Kid", c._handles)
+        self.assertIn("station:|slot:/Folder/GoneNot", c._handles)
+        self.assertIn("station:|slot:/Folder", c._handles)
+
+    def test_remove_component_with_unknown_parent_clears_cache(self):
+        c = self.opened()
+        self.add(c, "Gone")
+        c._handles["station:|slot:/Other/Gone"] = "x1"
+        c.remove_component("3", "Gone")  # parent "3" learned, child ord derived
+        c._handles["station:|slot:/Other"] = "x9"
+        with mock.patch.object(c, "sync", return_value=[]):
+            c.remove_component("unknown-handle", "Gone")
+        self.assertEqual(c._handles, {})
+
+    def test_invalidate_handles_prefix_and_all(self):
+        c = self.opened()
+        c._handles.update({"station:|slot:/A": "1", "station:|slot:/A/B": "2",
+                           "station:|slot:/C": "3"})
+        c.invalidate_handles("station:|slot:/A")
+        self.assertEqual(sorted(c._handles), ["station:", "station:|slot:/C"])
+        c.invalidate_handles()
+        self.assertEqual(c._handles, {})
+
+    def test_stale_cached_handle_is_retried_once_as_unknown(self):
+        c = self.opened()
+        c._handles["station:|slot:/Folder"] = "dead"
+        nodes = c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        self.assertEqual(nodes[""]["h"], "3")
+        self.assertEqual(c._handles["station:|slot:/Folder"], "3")
+
+    def test_explicit_handle_is_not_retried_as_unknown(self):
+        c = self.opened()
+        with self.assertRaises(box.BoxError):
+            c.load_tree("station:|slot:/Folder", handle="dead", attempts=2, **NO_SLEEP)
+
+    def test_stale_cached_handle_failure_still_gives_up(self):
+        c = self.opened()
+        c._handles["station:|slot:/Folder"] = "dead"
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", return_value=[]):
+            with self.assertRaises(box.BoxError):
+                c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
+
+
+class TestPendingEvents(BoxTestCase):
+    def test_drain_returns_and_clears(self):
+        c = self.opened()
+        other = {"evs": {"ops": [{"nm": "s", "h": "9"}]}}
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[[other], [{"evs": {"ops": [
+                    {"nm": "l", "h": "2", "b": {"nm": "p", "t": "baja:Station"}}]}}]]):
+            c.load_tree("station:", **NO_SLEEP)
+        drained = c.drain_pending_events()
+        self.assertEqual(drained, [other])
+        self.assertEqual(c.pending_events, ())
+        self.assertEqual(c.drain_pending_events(), [])
+
+    def test_pending_events_are_capped_oldest_dropped(self):
+        c = self.opened()
+        total = box.MAX_PENDING_EVENTS + 7
+        events = [{"evs": {"ops": [{"nm": "s", "h": str(i)}]}} for i in range(total)]
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[events, [{"evs": {"ops": [
+                    {"nm": "l", "h": "2", "b": {"nm": "p", "t": "baja:Station"}}]}}]]):
+            c.load_tree("station:", **NO_SLEEP)
+        self.assertEqual(len(c.pending_events), box.MAX_PENDING_EVENTS)
+        self.assertEqual(c.dropped_events, 7)
+        self.assertEqual(c.pending_events[0]["evs"]["ops"][0]["h"], "7")
+
+    def test_dropped_events_starts_at_zero(self):
+        self.assertEqual(self.client().dropped_events, 0)
+
+
+class TestErrorLabelsAndRedirectClose(BoxTestCase):
+    def test_malformed_reply_keys_use_session_component_key(self):
+        c = self.opened()
+        with mock.patch.object(c, "sync", return_value=None), \
+                self.assertRaises(box.BoxError) as cm:
+            c.add_component("3", "X", "kitControl:NumericConst")
+        self.assertEqual(cm.exception.key, "syncTo")
+        with mock.patch.object(c, "ssc", return_value=None), \
+                self.assertRaises(box.BoxError) as cm:
+            c.check_links("a", "b", "c", "d")
+        self.assertEqual(cm.exception.key, "checkLinks")
+
+    def test_redirect_handler_closes_response_before_raising(self):
+        fp = mock.Mock()
+        with self.assertRaises(box.BoxError):
+            box._NoRedirect().redirect_request(
+                mock.Mock(), fp, 302, "Found", {}, "https://evil.example/box/")
+        fp.close.assert_called_once_with()
+
+
 class TestPureHelpers(unittest.TestCase):
     def test_status_value_applies_type_defaults(self):
         nodes = {
