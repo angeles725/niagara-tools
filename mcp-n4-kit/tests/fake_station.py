@@ -21,6 +21,11 @@ class _Node:
         return next((c for c in self.children if c.name == name), None)
 
 
+#: Writables own a FROZEN `proxyExt` child (live N4.14, 2026-10-01): it exists as soon as
+#: the writable does, and adding another child of a ProxyExt type is illegal.
+_WRITABLES = ("control:NumericWritable", "control:BooleanWritable")
+
+
 class FakeStation:
     def __init__(self, user="admin", password="secret", station_name="FakeStation"):
         self.user, self.password = user, password
@@ -233,9 +238,15 @@ class FakeStation:
             if self._unencodable(op["b"]):
                 raise ValueError("Unable to process request. Please contact your system "
                                  "administrator.")
+            if parent.type in _WRITABLES and (
+                    op["n"] == "proxyExt" or "ProxyExt" in str(op["b"].get("t"))):
+                raise ValueError('Illegal child "%s" for parent "%s".'
+                                 % (op["b"].get("t"), parent.type))
             name = self._unique(parent, op["n"])
             node = self._component(parent, name, op["b"]["t"])
             self._fill(node, op["b"])
+            if node.type in _WRITABLES:  # the frozen slot, created with its parent
+                self._component(node, "proxyExt", "control:NullProxyExt")
             return [{"id": "a", "nn": name}]
         if nm == "s":
             node = self.by_handle[op["h"]]
