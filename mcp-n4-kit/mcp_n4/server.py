@@ -2,6 +2,11 @@
 
 Run from `mcp-n4-kit/` with `python3 -m mcp_n4.server`. Importing this module
 has no side effects; `main()` is only called under `__main__`.
+
+MCP protocol versions: this server speaks 2025-06-18, 2025-03-26 and 2024-11-05
+(`SUPPORTED_PROTOCOL_VERSIONS`). A client asking for a newer revision is answered
+with 2025-06-18. Only add a newer revision to that tuple once its semantics (new
+message shapes, capabilities, required fields) are implemented and tested here.
 """
 import argparse
 import json

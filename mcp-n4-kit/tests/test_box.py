@@ -458,20 +458,25 @@ class TestLockoutSafeOpen(BoxTestCase):
             self.client().open()
         self.assertEqual(len(self.deletes()), 1)
 
-    def test_keyboard_interrupt_reraises_without_cleanup(self):
-        c = self.client()
-        calls = []
-        real = c.call
+    def test_interrupt_after_make_still_closes_the_server_session(self):
+        for exc in (KeyboardInterrupt, SystemExit):
+            with self.subTest(exc=exc.__name__):
+                self.fake.sessions.clear()
+                c = self.client()
+                real = c.call
 
-        def fake_call(channel, key, body):
-            calls.append(key)
-            if key == "makessc":
-                raise KeyboardInterrupt
-            return real(channel, key, body)
-        with mock.patch.object(c, "call", side_effect=fake_call):
-            with self.assertRaises(KeyboardInterrupt):
-                c.open()
-        self.assertNotIn("del", calls)
+                def fake_call(channel, key, body, real=real, exc=exc):
+                    if key == "makessc":
+                        raise exc
+                    return real(channel, key, body)
+                with mock.patch.object(c, "call", side_effect=fake_call):
+                    with self.assertRaises(exc):
+                        c.open()
+                self.assertEqual(self.fake.sessions, set())
+                self.assertIsNone(c.sid)
+
+    def test_open_docstring_does_not_claim_an_interrupt_skips_cleanup(self):
+        self.assertNotIn("re-raised at once", box.BoxClient.open.__doc__)
 
 
 class TestHandleCache(BoxTestCase):
@@ -506,6 +511,24 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(sorted(c._handles), ["station:", "station:|slot:/C"])
         c.invalidate_handles()
         self.assertEqual(c._handles, {})
+
+    def test_invalidate_handles_is_boundary_aware(self):
+        c = self.opened()
+        c._handles.update({"station:|slot:/A": "1", "station:|slot:/A/B": "2",
+                           "station:|slot:/AB": "3", "station:|slot:/AB/C": "4"})
+        c.invalidate_handles("station:|slot:/A")
+        self.assertEqual(sorted(c._handles),
+                         ["station:", "station:|slot:/AB", "station:|slot:/AB/C"])
+        c.invalidate_handles("station:|slot:/AB/")  # a trailing slash is the same boundary
+        self.assertEqual(sorted(c._handles), ["station:"])
+
+    def test_a_stale_cached_handle_does_not_wait_a_second_polling_window(self):
+        c = self.opened()
+        c._handles["station:|slot:/Folder"] = "dead"
+        sleeps = []
+        nodes = c.load_tree("station:|slot:/Folder", sleep=sleeps.append)
+        self.assertEqual(nodes[""]["h"], "3")
+        self.assertEqual(sleeps, [])  # a load op with another handle proves it is stale
 
     def test_stale_cached_handle_is_retried_once_as_unknown(self):
         c = self.opened()
@@ -593,6 +616,14 @@ class TestPureHelpers(unittest.TestCase):
             "sb/status": {"t": "baja:Status", "v": "40"},
         }
         self.assertEqual(box.status_value(nodes, "sb"), {"value": "true", "status": "40"})
+
+    def test_is_component_type_is_the_shared_station_add_rule(self):
+        for type_ in ("kitControl:NumericConst", "control:NumericWritable", "baja:Folder"):
+            self.assertTrue(box.is_component_type(type_), type_)
+        for type_ in ("baja:Double", "baja:StatusNumeric", "baja:WsAnnotation", "baja:Link",
+                      "", None):
+            self.assertFalse(box.is_component_type(type_), type_)
+        self.assertIn("Heuristic", box.is_component_type.__doc__)
 
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}

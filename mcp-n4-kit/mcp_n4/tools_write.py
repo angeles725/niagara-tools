@@ -461,7 +461,8 @@ def _remove_plan(client, args):
                          "subtree into components outside it (see outgoing_links_broken); "
                          "they are not restored" % (scan_ord, LINK_SCAN_DEPTH, len(found)))
         else:
-            notes.append("scanned %s to depth %d: no outgoing links from this subtree found"
+            notes.append("scanned %s to depth %d: no outgoing links from this subtree found "
+                         "(components deeper than that were not scanned)"
                          % (scan_ord, LINK_SCAN_DEPTH))
     elif _has_outputs(nodes[""]):
         notes.append("outgoing links to components outside the removed subtree are stored on "
@@ -574,8 +575,9 @@ def _run_components(sess, write, batch_id, planned, replies):
     Each op is a member of the rollback's own batch: scope-checked, journaled (write-ahead,
     one `component-intent` record) before it is sent, and counted against the write budget.
     The parent's NEW handle is loaded through the client just before its children are
-    added. Returns the created paths per top op; a failure mid-way raises the batch
-    in-doubt error listing what was created so far.
+    added. Returns one flat list: the ORD of every nested component created, in creation
+    order (the top-level components are not in it; they come from the top ops' replies).
+    A failure mid-way raises the batch in-doubt error listing what was created so far.
     """
     data = planned.data
     base = {i: box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
@@ -616,16 +618,10 @@ def _partial(batch_id, base, created, exc):
     return err
 
 
-def _is_component(type_):
-    """True for a type the station must create with its own add op (not a plain slot value)."""
-    return isinstance(type_, str) and (
-        type_.partition(":")[0] != "baja" or type_ == "baja:Folder")
-
-
 def _own_slots(body):
     """`body` without its component children: plain slot values and wsAnnotation only."""
     out = {k: v for k, v in body.items() if k not in ("s", "n")}
-    kept = [c for c in body.get("s", []) if not _is_component(c.get("t"))]
+    kept = [c for c in body.get("s", []) if not box.is_component_type(c.get("t"))]
     if kept:
         out["s"] = kept
     return out
@@ -642,7 +638,7 @@ def _flatten(top, body):
     while queue:
         path, node = queue.pop(0)
         for kid in node.get("s", []):
-            if _is_component(kid.get("t")):
+            if box.is_component_type(kid.get("t")):
                 name = _name("component name", kid.get("n"))
                 specs.append({"top": top, "parent_path": path, "n": name,
                               "b": _own_slots(kid)})
@@ -692,7 +688,10 @@ def _run_relinks(sess, write, batch_id, planned, replies):
         if op["nm"] != "a":
             continue
         comp = box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
-        nodes = sess.client.load_tree(comp, depth=SNAPSHOT_DEPTH)
+        try:
+            nodes = sess.client.load_tree(comp, depth=SNAPSHOT_DEPTH)
+        except Exception as exc:  # components exist, their links were never attempted
+            raise _in_doubt(batch_id, exc) from None
         for spec in data["relinks"]:
             src, tgt = nodes.get(spec["source_path"]), nodes.get(spec["target_path"])
             try:
@@ -766,6 +765,11 @@ def _bson_value(b):
     return b.get("v") == "true" if t == "baja:Boolean" else (b.get("v") or "")
 
 
+def _annotation(body):
+    """The wsAnnotation value of a component body, or None."""
+    return next((c.get("v") for c in body.get("s", []) if c.get("n") == "wsAnnotation"), None)
+
+
 def _rollback_readback(client, args, planned, replies, inverse):
     ord_of, ok, relinks = planned.data["ord_of"], True, None
     for i, op in enumerate(planned.ops):
@@ -782,9 +786,12 @@ def _rollback_readback(client, args, planned, replies, inverse):
         else:
             ok &= op["n"] in nodes and \
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
-    for path in planned.data.get("created", []):  # every nested component is really there
+    # every nested component is really there, with the recorded type and annotation
+    for spec, path in zip(planned.data.get("components", []), planned.data.get("created", [])):
         head, _, leaf = path.rpartition("/")
-        ok &= leaf in client.load_tree(head, depth=1)
+        nodes = client.load_tree(head, depth=2)
+        ok &= leaf in nodes and nodes[leaf].get("t") == spec["b"].get("t") and \
+            nodes.get(leaf + "/wsAnnotation", {}).get("v") == _annotation(spec["b"])
     observed = {"restored": bool(ok)}
     if relinks is not None:
         observed["relinks"] = relinks
@@ -901,6 +908,7 @@ def _process(ctx, name, args):
         impl.plan(sess.client, args)
     if name == "n4_save_station":
         planned.data["write"] = write  # readback polls with the operator's timing
+    planned = planned._replace(inverse=planned.inverse or [])  # None means "no inverse"
     plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
     data = _data(planned)
     for key in ("relinks", "components", "outgoing_links_broken"):  # part of what the token authorizes
@@ -941,7 +949,7 @@ def _process(ctx, name, args):
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)
     try:
-        inverse = impl.inverse(planned, replies)
+        inverse = impl.inverse(planned, replies) or []  # None means "no inverse"
     except Exception as exc:  # the station's reply cannot be trusted: outcome unknown
         why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
         observed, inverse = None, []
@@ -965,7 +973,7 @@ def _process(ctx, name, args):
             out.update(requested=None, accepted=replies[0] if replies else None,
                        observed=None, verdict="failed", readback_failed=True,
                        readback_error=ctx.scrub(why))
-    inverse = relink_inverse + inverse  # links first: undoing must precede removing their ends
+    inverse = relink_inverse + (inverse or [])  # links first: undoing must precede removing their ends
     out["inverse"] = inverse
     if isinstance(out.get("observed"), dict):  # promote the headline evidence of a tool
         out.update({k: out["observed"][k] for k in ("persisted", "evidence", "relinks")

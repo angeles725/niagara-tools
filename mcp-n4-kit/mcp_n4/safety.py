@@ -110,6 +110,18 @@ class WriteScope:
             raise SafetyError("ord %r is outside the write scope" % ord_str)
 
 
+STATE_FILES = ("journal.jsonl", "audit.jsonl")
+
+
+def loose_file_reason(st):
+    """Why an existing journal/audit file (an `os.stat_result`) is not private, else None."""
+    if st.st_uid != os.getuid():
+        return "is owned by another user"
+    if st.st_mode & 0o077:
+        return "is readable or writable by group/others (mode %o)" % stat.S_IMODE(st.st_mode)
+    return None
+
+
 def check_state_dir(path):
     """Refuse a pre-existing state dir the server cannot trust; never chmod it.
 
@@ -132,6 +144,16 @@ def check_state_dir(path):
                           "%s` yourself or choose another directory (the server never changes "
                           "the permissions of a directory it did not create)"
                           % (path, stat.S_IMODE(st.st_mode), path))
+    for name in STATE_FILES:  # files we create are 0600; a loose one was changed by someone
+        file_path = os.path.join(path, name)
+        try:
+            reason = loose_file_reason(os.stat(file_path))
+        except OSError:
+            continue
+        if reason:
+            raise SafetyError("%s %s: run `chmod 600 %s` yourself or choose another "
+                              "--state-dir (the server never changes the permissions of an "
+                              "existing file)" % (file_path, reason, file_path))
 
 
 class _JsonlFile:
@@ -142,10 +164,16 @@ class _JsonlFile:
         if not os.path.isdir(self.state_dir):  # only a directory we create is chmodded
             os.makedirs(self.state_dir, mode=0o700, exist_ok=True)
             os.chmod(self.state_dir, 0o700)
-        try:  # a file we create is private from the start; an existing one is left as is
+        try:  # a file we create is private from the start
             fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_EXCL, 0o600)
-        except FileExistsError:
+        except FileExistsError:  # an existing one is never chmodded: it must already be private
             fd = os.open(self.path, os.O_WRONLY | os.O_APPEND)
+            reason = loose_file_reason(os.fstat(fd))
+            if reason:
+                os.close(fd)
+                raise PermissionError("%s %s: run `chmod 600 %s` yourself (the server never "
+                                      "changes the permissions of an existing file)"
+                                      % (self.path, reason, self.path))
         try:
             os.write(fd, (json.dumps(entry) + "\n").encode())
         finally:
@@ -183,9 +211,10 @@ class Journal(_JsonlFile):
     def _merge(intent, result, relink_ops=None, component_ops=None):
         view = {k: v for k, v in intent.items() if k != "phase"}
         view.update(inverse=None, accepted=None, verdict=None)
+        # Both are present exactly when their write-ahead record exists (even if empty).
         if relink_ops is not None:  # the second write-ahead record of a rollback's relinks
             view["relink_ops"] = relink_ops
-        if component_ops:  # write-ahead records of a rollback's nested component adds
+        if component_ops is not None:  # write-ahead records of a rollback's nested adds
             view["component_ops"] = component_ops
         if result is not None:
             view.update({k: v for k, v in result.items() if k not in ("phase", "ts")})
@@ -200,7 +229,7 @@ class Journal(_JsonlFile):
             if entry.get("phase") == "intent":
                 intents.setdefault(bid, entry)
             elif entry.get("phase") == "relink-intent":
-                relinks.setdefault(bid, entry.get("ops"))
+                relinks.setdefault(bid, entry.get("ops") or [])
             elif entry.get("phase") == "component-intent":
                 comps.setdefault(bid, []).extend(entry.get("ops") or [])
             elif entry.get("phase") == "result":

@@ -6,6 +6,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -599,6 +600,19 @@ class TestLinkReplies(WriteTestCase):
             view = self.journal_view(out)
             self.assertEqual((out["verdict"], view["state"]), ("unverified", "in-doubt"), junk)
             self.assertIn("readback_error", out)
+
+
+class TestNoneInverse(WriteTestCase):
+    def test_a_none_inverse_is_normalized_to_an_empty_list(self):
+        self.connect_verified()
+        nn, _ = self.add("Pump")
+        impl = tools_write._IMPLS["n4_invoke_action"]._replace(
+            inverse=lambda planned, replies: None)
+        with mock.patch.dict(tools_write._IMPLS, {"n4_invoke_action": impl}):
+            out = self.run_write("n4_invoke_action", ord=FOLDER + "/" + nn, action="auto")
+        self.assertEqual(out["inverse"], [])
+        result = [e for e in self.lines("journal.jsonl") if e["phase"] == "result"][-1]
+        self.assertEqual(result["inverse"], [])
 
 
 class TestJournalAndAudit(WriteTestCase):
