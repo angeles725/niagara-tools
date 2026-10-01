@@ -63,6 +63,9 @@ jobs:
       - name: bats (all unit tests)
         run: bats tests/*.bats
 
+      - name: mcp-n4-kit unittest
+        run: python3 -m unittest discover -s mcp-n4-kit/tests -v
+
       - name: run-pure-test.bats — confirm P1-P6 executed with zero SKIPs in CI
         run: |
           bats --formatter tap tests/run-pure-test.bats | tee /tmp/run-pure-test.tap
