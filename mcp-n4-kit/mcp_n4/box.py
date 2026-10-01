@@ -179,7 +179,9 @@ class BoxClient:
         self._seq = 0
         self.sid = None
         self._pending_events = []
-        self._saw_other_load = False  # set by _split: a load op for a different handle
+        #: loadSlots requests sent minus load ops seen: > 0 means an earlier request may
+        #: still be answered later, so an unexpected load op is not necessarily ours
+        self._loads_outstanding = 0
         self.dropped_events = 0  # events discarded because the pending list was full
         self._handles = {}  # ord -> node handle, learned from open() and load_tree()
 
@@ -307,13 +309,19 @@ class BoxClient:
         elif ops:
             self._keep(dict(event, evs=dict(evs, ops=ops)))
 
-    def _split(self, events, handle):
-        """Return the first `l` op matching `handle` (any `l` op if None).
+    def _settle(self, op):
+        """A load op was seen: one outstanding loadSlots request is answered."""
+        if isinstance(op, dict) and op.get("nm") == "l":
+            self._loads_outstanding = max(0, self._loads_outstanding - 1)
 
-        Every other event, and every other op of an event, is kept in pending.
+    def _split(self, events, handle):
+        """Return `(op, saw_other)`: the first `l` op matching `handle` (any if None).
+
+        `saw_other` is True when a load op carrying another handle was seen. Every other
+        event, and every other op of an event, is kept in pending. Each load op seen
+        settles one outstanding loadSlots request.
         """
-        found = None
-        self._saw_other_load = False
+        found, saw_other = None, False
         for event in events:
             evs = event.get("evs") if isinstance(event, dict) else None
             ops = evs.get("ops") if isinstance(evs, dict) else None
@@ -329,26 +337,34 @@ class BoxClient:
                 else:
                     if (handle is not None and isinstance(op, dict) and op.get("nm") == "l"
                             and isinstance(op.get("b"), dict) and op.get("h") != handle):
-                        self._saw_other_load = True
+                        saw_other = True
                     rest.append(op)
+                self._settle(op)
             self._keep_rest(event, rest)
-        return found
+        return found, saw_other
 
     def _load_once(self, ord_str, depth, attempts, delay, sleep, handle, cached=False):
         """Request `ord_str` and poll up to `attempts` times for its load op.
 
         With `cached=True` (the handle came from the cache, not the caller) a load op
         carrying another handle is taken as proof the cached one is stale, and the
-        wait ends at once instead of exhausting the polling window.
+        wait ends at once instead of exhausting the polling window. That proof holds only
+        when no earlier loadSlots request is still unanswered (a late reply to it would
+        also carry another handle); otherwise the full window is waited.
         """
         for event in self.poll():  # queued before the request: cannot be its reply
             self._keep(event)
+            evs = event.get("evs") if isinstance(event, dict) else None
+            for op in evs.get("ops") or [] if isinstance(evs, dict) else []:
+                self._settle(op)
+        trusted = self._loads_outstanding == 0
         self.ssc("loadSlots", {"o": ord_str, "d": depth})
+        self._loads_outstanding += 1
         for attempt in range(attempts):
-            op = self._split(self.poll(), handle)
+            op, saw_other = self._split(self.poll(), handle)
             if op is not None:
                 return op
-            if cached and self._saw_other_load:
+            if cached and trusted and saw_other:
                 return None
             if attempt < attempts - 1:
                 sleep(delay)

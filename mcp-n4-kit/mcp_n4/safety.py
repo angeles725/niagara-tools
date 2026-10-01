@@ -160,6 +160,17 @@ class _JsonlFile:
     def __init__(self, state_dir, filename):
         self.state_dir, self.path = state_dir, os.path.join(state_dir, filename)
 
+    def check_private(self):
+        """Raise `SafetyError` when the file exists and is loose (never chmods it)."""
+        try:
+            reason = loose_file_reason(os.stat(self.path))
+        except OSError:
+            return  # missing: append will create it private
+        if reason:
+            raise SafetyError("%s %s: run `chmod 600 %s` yourself (the server never changes "
+                              "the permissions of an existing file)"
+                              % (self.path, reason, self.path))
+
     def append(self, entry):
         if not os.path.isdir(self.state_dir):  # only a directory we create is chmodded
             os.makedirs(self.state_dir, mode=0o700, exist_ok=True)

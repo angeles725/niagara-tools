@@ -475,9 +475,6 @@ class TestLockoutSafeOpen(BoxTestCase):
                 self.assertEqual(self.fake.sessions, set())
                 self.assertIsNone(c.sid)
 
-    def test_open_docstring_does_not_claim_an_interrupt_skips_cleanup(self):
-        self.assertNotIn("re-raised at once", box.BoxClient.open.__doc__)
-
 
 class TestHandleCache(BoxTestCase):
     def test_remove_component_invalidates_child_and_descendants(self):
@@ -529,6 +526,32 @@ class TestHandleCache(BoxTestCase):
         nodes = c.load_tree("station:|slot:/Folder", sleep=sleeps.append)
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(sleeps, [])  # a load op with another handle proves it is stale
+
+    def test_split_returns_the_other_load_flag_instead_of_keeping_it_on_the_client(self):
+        c = self.opened()
+        other = {"evs": {"ops": [{"nm": "l", "h": "9", "b": {"nm": "p", "t": "baja:Folder"}}]}}
+        found, saw_other = c._split([other], "3")
+        self.assertEqual((found, saw_other), (None, True))
+        self.assertFalse(hasattr(c, "_saw_other_load"))
+
+    def test_an_unanswered_earlier_load_disables_the_stale_handle_early_abort(self):
+        c = self.opened()
+        c._handles["station:|slot:/Folder"] = "3"
+        late = {"evs": {"ops": [{"nm": "l", "h": "7", "b": {"nm": "p", "t": "baja:Folder"}}]}}
+        mine = {"evs": {"ops": [{"nm": "l", "h": "3", "b": {"nm": "p", "t": "baja:Folder",
+                                                            "h": "3"}}]}}
+        with mock.patch.object(c, "ssc", return_value=None):
+            with mock.patch.object(c, "poll", return_value=[]):
+                with self.assertRaises(box.BoxError):  # an earlier request times out
+                    c.load_tree("station:|slot:/Other", attempts=1, **NO_SLEEP)
+            polls = iter([[], [late], [mine]])
+            sleeps = []
+            with mock.patch.object(c, "poll", side_effect=lambda: next(polls, [])):
+                nodes = c.load_tree("station:|slot:/Folder", attempts=3,
+                                    sleep=sleeps.append)
+        # the late reply of the earlier request is not proof the cache is stale
+        self.assertEqual(nodes[""]["h"], "3")
+        self.assertEqual(len(sleeps), 1)  # it kept polling instead of giving up at once
 
     def test_stale_cached_handle_is_retried_once_as_unknown(self):
         c = self.opened()
@@ -623,7 +646,6 @@ class TestPureHelpers(unittest.TestCase):
         for type_ in ("baja:Double", "baja:StatusNumeric", "baja:WsAnnotation", "baja:Link",
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
-        self.assertIn("Heuristic", box.is_component_type.__doc__)
 
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}

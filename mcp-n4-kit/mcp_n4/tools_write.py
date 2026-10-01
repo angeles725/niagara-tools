@@ -57,6 +57,11 @@ class WriteState:
         self.save_timeout, self.save_interval = 30.0, 0.5
         self.sleep, self.monotonic = time.sleep, time.monotonic
 
+    def check_state_files(self):
+        """Refuse a journal or audit file that became loose after startup."""
+        self.journal.check_private()
+        self.audit.check_private()
+
 
 # ---- value helpers -------------------------------------------------------
 
@@ -126,6 +131,11 @@ def _name(label, value):
         raise ToolError("%s must be a plain slot name (letters, digits, underscore), got %r"
                         % (label, value))
     return value
+
+
+def _inverse_list(inverse):
+    """The one place a missing inverse (None) becomes "no inverse ops" (`[]`)."""
+    return inverse or []
 
 
 def _data(planned):
@@ -826,8 +836,11 @@ def _rollback_readback(client, args, planned, replies, inverse):
         else:
             ok &= op["n"] in nodes and \
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
-    # every nested component is really there, with the recorded type and annotation
-    for spec, path in zip(planned.data.get("components", []), planned.data.get("created", [])):
+    # every nested component is really there, with the recorded type and annotation;
+    # the two lists are paired by position, so a length difference is itself a mismatch
+    specs, created = planned.data.get("components", []), planned.data.get("created", [])
+    ok &= len(specs) == len(created)
+    for spec, path in zip(specs, created):
         if path is None:  # a frozen child that already existed: nothing was re-created
             continue
         head, _, leaf = path.rpartition("/")
@@ -950,7 +963,7 @@ def _process(ctx, name, args):
         impl.plan(sess.client, args)
     if name == "n4_save_station":
         planned.data["write"] = write  # readback polls with the operator's timing
-    planned = planned._replace(inverse=planned.inverse or [])  # None means "no inverse"
+    planned = planned._replace(inverse=_inverse_list(planned.inverse))
     plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
     data = _data(planned)
     for key in ("relinks", "components", "outgoing_links_broken"):  # part of what the token authorizes
@@ -961,6 +974,8 @@ def _process(ctx, name, args):
         token, expires_at = write.tokens.issue(name, args, plan_hash)
         return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
                 "confirmation_token": token, "expires_at": expires_at}, None
+    write.check_state_files()  # a loose file fails here, before the token and any send
+    write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     batch_id = uuid.uuid4().hex
     intent = {"batch_id": batch_id, "ts": _now(), "tool": name, "ops": planned.ops,
@@ -993,7 +1008,7 @@ def _process(ctx, name, args):
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)
     try:
-        inverse = impl.inverse(planned, replies) or []  # None means "no inverse"
+        inverse = _inverse_list(impl.inverse(planned, replies))
     except Exception as exc:  # the station's reply cannot be trusted: outcome unknown
         why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
         observed, inverse = None, []
@@ -1017,7 +1032,7 @@ def _process(ctx, name, args):
             out.update(requested=None, accepted=replies[0] if replies else None,
                        observed=None, verdict="failed", readback_failed=True,
                        readback_error=ctx.scrub(why))
-    inverse = relink_inverse + (inverse or [])  # links first: undoing must precede removing their ends
+    inverse = relink_inverse + inverse  # links first: undoing must precede removing their ends
     out["inverse"] = inverse
     if isinstance(out.get("observed"), dict):  # promote the headline evidence of a tool
         out.update({k: out["observed"][k] for k in ("persisted", "evidence", "relinks")
