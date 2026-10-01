@@ -1,9 +1,11 @@
 import importlib
+import json
 import os
 import socket
 import subprocess
 import sys
 import unittest
+import urllib.error
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,8 +32,35 @@ class BoxTestCase(unittest.TestCase):
         return c
 
     def add(self, c, name, type_="kitControl:NumericConst", **kw):
-        c.add_component("3", name, type_, **kw)
-        return c.load_tree("station:|slot:/Folder", depth=2, **NO_SLEEP)[name]["h"]
+        nn = c.add_component("3", name, type_, **kw)["nn"]  # server-assigned name
+        return c.load_tree("station:|slot:/Folder", depth=2, **NO_SLEEP)[nn]["h"]
+
+
+def hook_for(key, code=500, body=b"", headers=None):
+    """FakeStation hook that fails every frame whose first message has key `key`."""
+    def hook(frame):
+        if frame["m"][0]["k"] == key:
+            return code, body, headers or {}
+    return hook
+
+
+def reply_hook(builder):
+    """FakeStation hook answering every frame with HTTP 200 and builder(frame) as JSON."""
+    def hook(frame):
+        return 200, json.dumps(builder(frame)).encode(), {"Content-Type": "application/json"}
+    return hook
+
+
+def error_frame(frame, **kw):
+    return dict({"v": "2.3", "p": "box", "n": frame["n"]}, **kw)
+
+
+class RaisingOpener:
+    def __init__(self, exc):
+        self.exc = exc
+
+    def open(self, req, timeout=None):
+        raise self.exc
 
 
 class TestSecurity(BoxTestCase):
@@ -64,6 +93,98 @@ class TestSecurity(BoxTestCase):
         self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
 
 
+class TestRedirects(BoxTestCase):
+    def test_redirect_is_refused_and_credentials_never_reach_target(self):
+        target = FakeStation().start()
+        self.addCleanup(target.stop)
+        for code in (301, 302, 303, 307, 308):
+            self.fake.hook = lambda frame, code=code: (
+                code, b"", {"Location": target.url + "/box/"})
+            c = self.client()
+            with self.assertRaises(box.BoxError) as cm:
+                c.open()
+            self.assertIn(str(code), str(cm.exception))
+            self.assertIn("127.0.0.1", str(cm.exception))
+            self.assertNotIn("secret", str(cm.exception))
+            self.assertNotIn("YWRtaW46", str(cm.exception))
+        self.assertEqual(target.requests, 0)
+
+
+class TestTransportErrors(BoxTestCase):
+    def test_http_403_is_auth_error(self):
+        self.fake.hook = hook_for("make", 403)
+        with self.assertRaises(box.AuthError):
+            self.client().open()
+        self.assertEqual(self.fake.requests, 1)
+
+    def test_http_500_is_boxerror_not_autherror(self):
+        self.fake.hook = hook_for("make", 500)
+        with self.assertRaises(box.BoxError) as cm:
+            self.client().open()
+        self.assertNotIsInstance(cm.exception, box.AuthError)
+
+    def test_timeout_and_refused_and_oserror_are_boxerror(self):
+        for exc in (TimeoutError("timed out"),
+                    urllib.error.URLError(ConnectionRefusedError("refused")),
+                    OSError("network down")):
+            c = self.client(opener=RaisingOpener(exc))
+            with self.assertRaises(box.BoxError):
+                c.open()
+
+    def test_connection_refused_for_real(self):
+        c = box.BoxClient("http://127.0.0.1:1", "u", "p", allow_http=True, timeout=2)
+        with self.assertRaises(box.BoxError):
+            c.open()
+
+    def test_invalid_json_body_is_boxerror(self):
+        self.fake.hook = lambda frame: (200, b"<html>not json", {})
+        with self.assertRaises(box.BoxError):
+            self.client().open()
+
+    def test_malformed_reply_shapes_are_boxerror(self):
+        shapes = {
+            "missing m": lambda f: error_frame(f),
+            "empty m": lambda f: error_frame(f, m=[]),
+            "m not a list": lambda f: error_frame(f, m="x"),
+            "non-dict message": lambda f: error_frame(f, m=["x"]),
+            "reply not a dict": lambda f: [1, 2],
+            "error with non-dict b": lambda f: error_frame(f, m=[{"t": "e", "b": "boom"}]),
+            "error with null b": lambda f: error_frame(f, m=[{"t": "e", "b": None}]),
+        }
+        for label, builder in shapes.items():
+            self.fake.hook = reply_hook(builder)
+            c = self.client()
+            with self.subTest(label), self.assertRaises(box.BoxError):
+                c.open()
+
+    def test_error_frame_message_is_propagated(self):
+        self.fake.hook = reply_hook(
+            lambda f: error_frame(f, m=[{"t": "e", "b": {"m": "boom"}}]))
+        with self.assertRaises(box.BoxError) as cm:
+            self.client().open()
+        self.assertEqual(cm.exception.message, "boom")
+
+    def test_reply_seq_mismatch_is_boxerror(self):
+        self.fake.hook = reply_hook(
+            lambda f: error_frame(f, n=f["n"] + 41, m=[{"t": "rp", "b": "sess-1"}]))
+        with self.assertRaises(box.BoxError) as cm:
+            self.client().open()
+        self.assertIn("seq", str(cm.exception))
+
+    def test_reply_without_n_is_accepted(self):
+        self.fake.hook = reply_hook(
+            lambda f: {"v": "2.3", "p": "box", "m": [{"t": "rp", "b": "sess-1"}]})
+        c = self.client()
+        c.sid = None
+        self.assertEqual(c.call("ssession", "make", {}), "sess-1")
+
+    def test_close_swallows_any_exception(self):
+        c = self.opened()
+        with mock.patch.object(c, "call", side_effect=RuntimeError("password=secret")):
+            c.close()
+        self.assertIsNone(c.sid)
+
+
 class TestSession(BoxTestCase):
     def test_open_returns_root(self):
         c = self.client()
@@ -76,6 +197,36 @@ class TestSession(BoxTestCase):
             self.assertEqual(self.fake.sessions, {"sess-1"})
         self.assertEqual(self.fake.sessions, set())
 
+    def test_open_closes_session_when_makessc_fails(self):
+        self.fake.hook = hook_for("makessc", 500)
+        c = self.client()
+        with self.assertRaises(box.BoxError):
+            c.open()
+        self.assertEqual(self.fake.sessions, set())
+        self.assertIsNone(c.sid)
+
+    def test_open_closes_session_when_loadroot_fails(self):
+        def hook(frame):
+            m = frame["m"][0]
+            if m["k"] == "callssc" and m["b"]["sck"] == "loadRoot":
+                return 200, json.dumps(error_frame(
+                    frame, m=[{"t": "e", "b": {"m": "no root"}}])).encode(), {}
+        self.fake.hook = hook
+        with self.assertRaises(box.BoxError):
+            self.client().open()
+        self.assertEqual(self.fake.sessions, set())
+
+    def test_with_block_does_not_leak_on_open_failure(self):
+        self.fake.hook = hook_for("makessc", 500)
+        with self.assertRaises(box.BoxError):
+            with self.client():
+                pass
+        self.assertEqual(self.fake.sessions, set())
+
+    def test_constants(self):
+        self.assertEqual(box.SESSION_COMPONENT_ID, "cs1")
+        self.assertEqual(box.DEFAULT_ROOT_HANDLE, "2")
+
     def test_station_error_frame_raises_boxerror(self):
         c = self.opened()
         with self.assertRaises(box.BoxError):
@@ -86,10 +237,90 @@ class TestReadWrite(BoxTestCase):
     def test_add_component_visible_with_handle_and_annotation(self):
         c = self.opened()
         res = c.add_component("3", "Temp", "kitControl:NumericConst", ws=box.ws_annotation(10, 20))
+        self.assertEqual(set(res), {"id", "nn"})
         self.assertEqual(res["nn"], "Temp")
         nodes = c.load_tree("station:|slot:/Folder", **NO_SLEEP)
         self.assertTrue(nodes["Temp"]["h"])
         self.assertEqual(nodes["Temp/wsAnnotation"]["v"], "10,20,8")
+
+    def test_add_component_name_collision_yields_distinct_nn(self):
+        c = self.opened()
+        first = c.add_component("3", "Dup", "kitControl:NumericConst")
+        second = c.add_component("3", "Dup", "kitControl:NumericConst")
+        self.assertEqual(first["nn"], "Dup")
+        self.assertNotEqual(second["nn"], first["nn"])
+        nodes = c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        self.assertIn(first["nn"], nodes)
+        self.assertIn(second["nn"], nodes)
+
+    def test_add_component_malformed_reply_is_boxerror(self):
+        c = self.opened()
+        for bad in (None, [], ["x"], "x"):
+            with mock.patch.object(c, "sync", return_value=bad), \
+                    self.assertRaises(box.BoxError):
+                c.add_component("3", "X", "kitControl:NumericConst")
+
+    def test_load_tree_ignores_stale_load_for_other_ord(self):
+        c = self.opened()
+        c.ssc("loadSlots", {"o": "station:|slot:/Folder", "d": 1})  # stale, handle 3
+        nodes = c.load_tree("station:", **NO_SLEEP)
+        self.assertEqual(nodes[""]["h"], "2")
+        self.assertEqual(nodes[""]["t"], "baja:Station")
+        stale = [op for ev in c.pending_events for op in ev["evs"]["ops"]]
+        self.assertEqual([op["h"] for op in stale], ["3"])
+
+    def test_load_tree_unknown_handle_ignores_stale_event(self):
+        c = self.client()
+        c.open()
+        self.addCleanup(c.close)
+        c.ssc("loadSlots", {"o": "station:", "d": 1})  # stale root load
+        nodes = c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        self.assertEqual(nodes[""]["h"], "3")
+
+    def test_two_load_ops_are_never_merged(self):
+        c = self.opened()
+        root_op = {"nm": "l", "h": "2", "b": {"nm": "p", "t": "baja:Station", "h": "2",
+                                                "s": [{"n": "RootKid", "t": "baja:Folder"}]}}
+        folder_op = {"nm": "l", "h": "3", "b": {"nm": "p", "t": "baja:Folder", "h": "3",
+                                                  "s": [{"n": "FolderKid", "t": "baja:Folder"}]}}
+        event = {"evs": {"nm": "sync", "ops": [root_op, folder_op]}}
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[[], [event]]):
+            nodes = c.load_tree("station:|slot:/Folder", handle="3", **NO_SLEEP)
+        self.assertIn("FolderKid", nodes)
+        self.assertNotIn("RootKid", nodes)
+        kept = [op for ev in c.pending_events for op in ev["evs"]["ops"]]
+        self.assertEqual(kept, [root_op])
+
+    def test_pending_events_is_read_only_view(self):
+        c = self.opened()
+        self.assertEqual(len(c.pending_events), 0)
+        with self.assertRaises((TypeError, AttributeError)):
+            c.pending_events.append({})
+        with self.assertRaises(AttributeError):
+            c.pending_events = []
+
+    def test_non_load_events_are_kept(self):
+        c = self.opened()
+        other = {"evs": {"nm": "sync", "ops": [{"nm": "s", "h": "9", "n": "x"}]}}
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[[other], [{"evs": {"ops": [
+                    {"nm": "l", "h": "2", "b": {"nm": "p", "t": "baja:Station"}}]}}]]):
+            nodes = c.load_tree("station:", **NO_SLEEP)
+        self.assertEqual(nodes[""]["t"], "baja:Station")
+        self.assertEqual(list(c.pending_events), [other])
+
+    def test_load_tree_retries_n_empty_polls_then_succeeds(self):
+        c = self.opened()
+        good = {"evs": {"ops": [{"nm": "l", "h": "2",
+                                 "b": {"nm": "p", "t": "baja:Station", "h": "2"}}]}}
+        sleeps = []
+        # first poll is the pre-request drain, then 3 empty polls, then the event
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[[], [], [], [], [good]]):
+            nodes = c.load_tree("station:", attempts=6, delay=0.25, sleep=sleeps.append)
+        self.assertEqual(nodes[""]["h"], "2")
+        self.assertEqual(sleeps, [0.25, 0.25, 0.25])
 
     def test_load_tree_root_key_is_empty_path(self):
         c = self.opened()
@@ -131,6 +362,9 @@ class TestReadWrite(BoxTestCase):
         c = self.opened()
         a, b = self.add(c, "A"), self.add(c, "B")
         res = c.check_links(a, "out", b, "in10")
+        self.assertIsInstance(res, list)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(set(res[0]), {"v", "r", "s"})
         self.assertEqual(res[0]["s"], "Link")
         self.assertTrue(res[0]["v"])
         nodes = c.load_tree("station:|slot:/Folder/B", depth=2, **NO_SLEEP)
