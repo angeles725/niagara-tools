@@ -2,7 +2,7 @@
 # 2026-10-01 · kit · dashboard-frontend-standard
 
 **Session**: PANCCADIA HMI freeze triage → user-requested frontend standard (structure, naming, data, memory, transfer); read-only audit of DashboardPan-ux `rc/index.html`
-**Delta count**: 10
+**Delta count**: 12
 
 ## What happened
 The user asked for a complete frontend standard for dashboard modules (structure, distribution, organization,
@@ -42,6 +42,8 @@ backlog that needs explicit user authorization (decision-logic-decomposition Δ3
 | Δ8 | `dashboard-preview.py` reports bytes per `/api/*` response, requests per minute and page weight against a budget (proposed: shell HTML ≤ 200 KB, poll payload ≤ 16 KB, ≤ 1 request per poll per visible page); mocks must cover the full reader key set. | `tools/dashboard-preview.py` (niagara-research) + `types/dashboard.md` § `Deploy on a JACE` | `[ev: Cliente/panccadia-leon 42fa82e]` |
 | Δ9 | Layout shell for dashboards: header (identity, global status, active alarms, active write session) → nav → content; top nav bar on 1280×800 kiosks (side nav only for desktop dashboards with many sections); tabs named by site system; no orphan pages. | `types/dashboard.md` § `HMI kiosk (e.g. WEB-HMI10/CF, 1280×800 capacitive Chromium — see corpus B724)` | `[ev: Cliente/panccadia-leon 42fa82e]` |
 | Δ10 | Lint/format toolchain: an ESLint flat config in the kit (`ecmaVersion` matching the Chrome 83 floor, browser globals, `no-unused-vars`, `max-lines-per-function` 60 warn, `no-console` except `error`, `eqeqeq`) run with Node in WSL on `rc/js`; Prettier optional; wired into `report-module.sh` for `-ux` profiles. | `toolbelt/report-module.sh` + `types/frontend-standard.md` | `[ev: Cliente/panccadia-leon 42fa82e]` |
+| Δ11 | Component-oriented `rc/js/` layout (Appendix C §C1), mapping the React-style tree (`components/ pages/ services/ hooks/ types/`) onto plain classic scripts: `components/` render functions taking a model slice, `pages/` one per nav tab, `services/` one per API resource on top of `apiFetch`, `store.js` replacing hooks (poll loop + subscribe), `types.js` JSDoc typedefs checked with `tsc --checkJs --noEmit` in WSL. Refines S Δ1. | `types/frontend-standard.md` § A2 | `[ev: Cliente/panccadia-leon 42fa82e]` |
+| Δ12 | Technology decision table (Appendix C §C2): the station servlet stays the backend for on-station HMIs (no Spring Boot on a JACE: Java 8 Compact3); a framework build (Vite + TypeScript, optionally React/Preact) is allowed for NEW `-ux` SPAs only as a pre-built bundle in `src/rc/` with `build.target` = the panel engine (Chrome 83) and a bundle budget; Spring Boot/React/WebSocket stacks belong to off-station multi-site or cloud viewers, not inside the module. | `types/frontend-standard.md` (new § Technology choices) + `types/dashboard.md` § `JS build strategy — grunt vs. no grunt` | `[ev: corpus B1023 §ND4]` |
 
 ## Lessons
 - 95% of our HMI page was images; measure page weight before reasoning about performance.
@@ -123,6 +125,39 @@ Scope: servlet-SPA dashboards (`-ux` `src/rc/`), no framework, no bundler. S = r
 - Pure logic (classification, unit conversion, timing) is unit-tested in Node (DJS1); source-structural JUnit tests only for wiring.
 - `defaultModuleVersion` bump on any `rc/` change; the API contract is versioned and the SPA tolerates unknown keys.
 - No large change goes to a station without review, the verify gate and a preview pass.
+
+## Appendix C — adapting the React/Spring reference to Niagara modules
+
+**C1. `rc/js/` layout (classic scripts, no bundler)** — same separation as the React tree, without the build step:
+```
+rc/
+  index.html                 markup + ordered <script src="...?v=X.Y.Z">
+  css/ base.css (tokens) · layout.css · components.css
+  js/
+    config.js                pollMs, timeouts, base path (one object)
+    types.js                 JSDoc @typedef Room, Compressor, Alarm, WriteResult  (tsc --checkJs)
+    slots.js                 slot-key table generated from DashboardReader arrays (Δ6)
+    services/ api.js (apiFetch) · equipment.service.js · alarms.service.js · setpoint.service.js
+    store.js                 poll loop + validate + immutable model + subscribe()  (the "hooks" role)
+    components/ header.js · status-badge.js · metric-card.js · equipment-card.js
+                alarm-table.js · trend-chart.js · hoa-selector.js · toast.js
+    pages/ plano.js · sensores.js · condensadoras.js · alarmas.js · configuracion.js · control.js
+    main.js                  boot: wire store → visible page
+```
+Rules: a component is a pure function `(container, slice) → void` that patches DOM; a page composes components and subscribes to the store only while visible; services never touch the DOM; only `api.js` calls `fetch`.
+
+**C2. Technology choices**
+| Situation | Use | Why |
+|---|---|---|
+| On-station HMI / station web UI (JACE or Supervisor) | Niagara servlet (`BWebServlet`) as backend + static SPA in `-ux` `rc/` | The station already owns auth, alarms, histories and the points; the JACE JVM is Java 8 Compact3, so Spring Boot cannot run there `[ev: types/third-party-libraries.md:112]` |
+| Small/medium SPA (today's dashboards) | Plain JS classic scripts + JSDoc types + ESLint (C1) | No build step; loads on Chrome 83; testable with Node |
+| Large NEW SPA with many screens or 3D | Vite + TypeScript (React or Preact) built OUTSIDE gradle to a pre-built bundle in `src/rc/`, `build.target: 'chrome83'`, bundle budget enforced in preview (Δ8) | Components and typed contracts; the kit's pre-built bundle recipe already covers serving it `[ev: types/dashboard.md:82]` |
+| Charts on the panel | Hand-rolled SVG per `types/dashboard.md` § Charts on an HMI; ECharts only if the bundle budget allows | ECharts adds hundreds of KB to a panel that reloads the shell [INFER] |
+| Live data inside the station | REST polling (5 s) through the servlet | No BOX/Fox subscription in a plain `BWebServlet` `[ev: types/dashboard.md:27]` |
+| Off-station, multi-site or cloud viewer | Separate frontend (React/Three.js) + its own backend (Supabase/Spring Boot) reading oBIX; writes through one gated write service | Different trust boundary; never expose the station to browsers directly (PANCCADIA viewer pattern) |
+| Styling | CSS design tokens (A1); Tailwind/Material UI only with a framework build | Utility CSS needs a build step |
+
+Decision rule: React does not replace the backend — in a module the backend is the station. Pick the framework only when the SPA size justifies a build pipeline, and always target the panel engine.
 
 ## Appendix B — DashboardPan backlog from the audit (needs explicit authorization)
 | # | Finding | Evidence |
