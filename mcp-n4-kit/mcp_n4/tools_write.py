@@ -15,13 +15,16 @@ import uuid
 from collections import namedtuple
 
 from . import box, safety
-from .tools_read import Tool, ToolError, _schema, _str
+from .tools_read import LINK_TYPES, Tool, ToolError, _schema, _str
 
 DEFAULT_STATE_DIR = "~/.local/state/mcp-n4"
 WRITE = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
+DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False}
+SNAPSHOT_DEPTH = 3
 #: Actions `n4_invoke_action` may call. Destructive ones (emergency*, save, restart)
 #: arrive later under a separate class.
 ALLOWED_ACTIONS = ("set", "active", "inactive", "auto")
+_BATCH_ID = re.compile(r"^[0-9a-f]{32}$")
 VALUE_TYPES = ("baja:Double", "baja:Boolean", "baja:String",
                "baja:StatusNumeric", "baja:StatusBoolean")
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -37,13 +40,17 @@ class WriteState:
     """Per-process write machinery: scope, tokens, journal, audit and budget."""
 
     def __init__(self, scopes=(), state_dir=None, token_ttl=300, max_writes=200,
-                 clock=time.time):
+                 clock=time.time, station_homes=None):
         state_dir = os.path.expanduser(state_dir or DEFAULT_STATE_DIR)
         safety.check_state_dir(state_dir)  # refuse a dir we do not own; never chmod it
         self.scope = safety.WriteScope(scopes)
         self.tokens = safety.ConfirmationTokens(token_ttl, clock)
         self.journal, self.audit = safety.Journal(state_dir), safety.AuditLog(state_dir)
         self.max_writes = max_writes
+        #: station NAME -> directory holding config.bog (operator policy, for n4_save_station)
+        self.station_homes = dict(station_homes or {})
+        self.save_timeout, self.save_interval = 30.0, 0.5
+        self.sleep, self.monotonic = time.sleep, time.monotonic
 
 
 # ---- value helpers -------------------------------------------------------
@@ -119,7 +126,10 @@ def _name(label, value):
 def _send(client, op):
     if "ssc" in op:
         return client.ssc(op["ssc"], op["arg"])
-    return client.sync(op)
+    reply = client.sync(op)
+    if op.get("nm") == "v":  # cached handles of removed components are stale now
+        client.invalidate_handles()
+    return reply
 
 
 # ---- n4_create_component -------------------------------------------------
@@ -145,7 +155,8 @@ def _create_component_plan(client, args):
         [{"nm": "a", "h": parent_h, "n": name, "b": body}],
         [{"nm": "v", "h": parent_h, "n": name}],
         ["The station may rename on collision; the real inverse uses the assigned name."],
-        {"parent_h": parent_h, "ws": ws["v"] if ws else None})
+        {"parent_h": parent_h, "ws": ws["v"] if ws else None,
+         "targets": {args["parent_ord"]: parent_h}})
 
 
 def _create_component_inverse(planned, replies):
@@ -192,7 +203,7 @@ def _set_slot_plan(client, args):
     previous = _observe(nodes, slot, value_type)
     return Planned([{"nm": "s", "h": h, "n": slot, "b": _to_bson(value_type, requested)}],
                    [{"nm": "s", "h": h, "n": slot, "b": _to_bson(value_type, previous)}],
-                   [], {"requested": requested})
+                   [], {"requested": requested, "targets": {args["ord"]: h}})
 
 
 def _set_slot_readback(client, args, planned, replies, inverse):
@@ -218,8 +229,9 @@ def _fallback_type(nodes):
 def _invoke_plan(client, args):
     action = args["action"]
     if action not in ALLOWED_ACTIONS:
-        raise ToolError("action %r is not allowed in this version (allowed: %s)"
-                        % (action, ", ".join(ALLOWED_ACTIONS)))
+        hint = "; use n4_save_station" if action == "save" else ""
+        raise ToolError("action %r is not allowed in this version (allowed: %s)%s"
+                        % (action, ", ".join(ALLOWED_ACTIONS), hint))
     h, nodes = _handle(client, args["ord"], 2)
     arg = {"h": h, "a": action}
     if action != "set":
@@ -227,7 +239,7 @@ def _invoke_plan(client, args):
             raise ToolError("action %r takes no arg" % action)
         return Planned([{"ssc": "invokeAction", "arg": arg}], [],
                        ["no inverse: %s changes the control state and is not restored "
-                        "automatically" % action], {"h": h})
+                        "automatically" % action], {"h": h, "targets": {args["ord"]: h}})
     fb_type = _fallback_type(nodes)
     if fb_type not in _ARG_TYPES:
         raise ToolError("cannot tell the previous fallback of %s; refusing set" % args["ord"])
@@ -239,7 +251,8 @@ def _invoke_plan(client, args):
         {"value": 0.0 if fb_type.endswith("Numeric") else False, "status": "0"}
     return Planned([{"ssc": "invokeAction", "arg": arg}],
                    [{"nm": "s", "h": h, "n": "fallback", "b": _to_bson(fb_type, previous)}],
-                   [], {"h": h, "value": value, "fb_type": fb_type})
+                   [], {"h": h, "value": value, "fb_type": fb_type,
+                        "targets": {args["ord"]: h}})
 
 
 def _invoke_readback(client, args, planned, replies, inverse):
@@ -262,7 +275,8 @@ def _link_plan(client, args):
     return Planned([{"ssc": "checkLinks",
                      "arg": {"s": src_h, "ss": ss, "t": tgt_h, "ts": ts, "c": True}}],
                    [{"nm": "v", "h": tgt_h, "n": "<link name assigned by the station>"}],
-                   [], {"src_h": src_h, "tgt_h": tgt_h, "existing_links": existing})
+                   [], {"src_h": src_h, "tgt_h": tgt_h, "existing_links": existing,
+                    "targets": {args["target_ord"]: tgt_h}})
 
 
 def _link_result(replies):
@@ -326,10 +340,249 @@ def _link_readback(client, args, planned, replies, inverse):
         else "mismatch"
 
 
+# ---- n4_remove_component -------------------------------------------------
+
+def _snapshot(node, path, links, handles):
+    """Data-only copy of a loaded subtree: type, slot values, nested slots.
+
+    Handles are not kept; links are collected in `links` and their owner component
+    path is recorded, because a link cannot be re-created without both ends.
+    """
+    if node.get("h"):
+        handles[node["h"]] = path
+    out = {"nm": "p", "t": node.get("t")}
+    if path and "n" in node:
+        out["n"] = node["n"]
+    if node.get("v") is not None:
+        out["v"] = node["v"]
+    kids = []
+    for child in node.get("s", []):
+        child_path = child["n"] if not path else path + "/" + child["n"]
+        if child.get("t") in LINK_TYPES:
+            slots = {k.get("n"): k.get("v") for k in child.get("s", [])}
+            links.append({"target_path": path, "source_ord": slots.get("sourceOrd"),
+                          "source_slot": slots.get("sourceSlotName"),
+                          "target_slot": slots.get("targetSlotName")})
+            continue
+        kids.append(_snapshot(child, child_path, links, handles))
+    if kids:
+        out["s"] = kids
+    return out
+
+
+def _remove_plan(client, args):
+    name, parent_ord = _name("name", args["name"]), args["parent_ord"]
+    parent_h, parent_nodes = _handle(client, parent_ord, 1)
+    if name not in parent_nodes:
+        raise ToolError("component %r not found under %s" % (name, parent_ord))
+    _, nodes = _handle(client, parent_ord.rstrip("/") + "/" + name, SNAPSHOT_DEPTH)
+    links, handles = [], {}
+    body = _snapshot(nodes[""], "", links, handles)
+    inverse, notes = [{"nm": "a", "h": parent_h, "n": name, "b": body}], [
+        "Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots "
+        "and wsAnnotation to depth %d; it is not a full restore." % SNAPSHOT_DEPTH]
+    for link in links:
+        tail = (link["source_ord"] or "").rsplit("|", 1)[-1]
+        source = handles.get(tail[2:]) if tail.startswith("h:") else None
+        if source is None:
+            notes.append("link into %r (%s <- %s) comes from outside the removed subtree: "
+                         "not restored" % (link["target_path"] or name, link["target_slot"],
+                                           link["source_slot"]))
+            continue
+        inverse.append({"relink": {"source_path": source, "source_slot": link["source_slot"],
+                                   "target_path": link["target_path"],
+                                   "target_slot": link["target_slot"]}})
+    return Planned([{"nm": "v", "h": parent_h, "n": name}], inverse, notes,
+                   {"targets": {parent_ord: parent_h}})
+
+
+def _remove_readback(client, args, planned, replies, inverse):
+    _, nodes = _handle(client, args["parent_ord"], 1)
+    gone = args["name"] not in nodes
+    return {"removed": args["name"]}, replies[0], {"gone": gone}, \
+        "verified" if gone else "mismatch"
+
+
+# ---- n4_rollback ---------------------------------------------------------
+
+def _rollback_plan(client, args, ctx):
+    write, sess, bid = ctx.write, ctx.session, args["batch_id"]
+    if not isinstance(bid, str) or not _BATCH_ID.match(bid):
+        raise ToolError("batch_id must be a 32-character hex batch id")
+    view = write.journal.read(bid)
+    if view is None:
+        raise ToolError("unknown batch %s: it is not in the journal" % bid)
+    if view.get("rollback_of"):
+        raise ToolError("batch %s is itself a rollback of %s: roll forward by repeating the "
+                        "original write instead" % (bid, view["rollback_of"]))
+    if view["state"] == "in-doubt":
+        raise ToolError("batch %s is in-doubt (the station may or may not have applied it); "
+                        "rolling it back blindly could do harm, decide by hand. Journaled "
+                        "intent: %s" % (bid, safety.canonical(
+                            {k: view.get(k) for k in ("tool", "ops", "inverse_plan",
+                                                      "station_name", "targets")})))
+    if view.get("station_name") != sess.station_name:
+        raise ToolError("batch %s was recorded on station %r, this session is on %r"
+                        % (bid, view.get("station_name"), sess.station_name))
+    for earlier in write.journal.rollbacks_of(bid):
+        if earlier["state"] == "in-doubt":
+            raise ToolError("a rollback of batch %s (%s) is in-doubt: inspect the station"
+                            % (bid, earlier["batch_id"]))
+        if earlier.get("verdict") != "failed":
+            raise ToolError("batch %s was already rolled back by %s" % (bid, earlier["batch_id"]))
+    inverse = view.get("inverse") or []
+    ops = [e for e in inverse if isinstance(e, dict) and "nm" in e]
+    relinks = [e["relink"] for e in inverse if isinstance(e, dict) and "relink" in e]
+    if not ops:
+        raise ToolError("batch %s has no inverse recorded (verdict %s): nothing to roll back"
+                        % (bid, view.get("verdict")))
+    targets = view.get("targets") or {}
+    if not targets or any(op.get("h") not in targets.values() for op in ops):
+        raise ToolError("batch %s does not record which components its inverse touches: "
+                        "refusing" % bid)
+    for ord_str, recorded in targets.items():
+        write.scope.check(ord_str)  # today's scope, not the one the batch ran under
+        current, _ = _handle(client, ord_str, 1)
+        if current != recorded:
+            raise ToolError("%s now has handle %s but the batch recorded %s: the component "
+                            "was replaced, refusing" % (ord_str, current, recorded))
+    own = [{"nm": "v", "h": op["h"], "n": op["n"]} for op in ops if op["nm"] == "a"]
+    notes = ["rolls back batch %s (%s)" % (bid, view.get("tool"))]
+    if relinks:
+        notes.append("then re-creates %d link(s) between restored components, where both "
+                     "ends exist" % len(relinks))
+    if not own or len(own) != len(ops):
+        notes.append("the rollback itself has no automatic inverse for slot restores or "
+                     "removals")
+    return Planned(ops, own if len(own) == len(ops) else [], notes,
+                   {"rollback_of": bid, "targets": targets, "relinks": relinks,
+                    "ord_of": {h: o for o, h in targets.items()}})
+
+
+def _rollback_inverse(planned, replies):
+    out = []
+    for op, reply in zip(planned.ops, replies):
+        if op["nm"] == "a":
+            first = reply[0] if isinstance(reply, list) and reply else {}
+            nn = first.get("nn", op["n"]) if isinstance(first, dict) else op["n"]
+            out.append({"nm": "v", "h": op["h"], "n": nn})
+    return out if len(out) == len(planned.ops) else []
+
+
+def _bson_value(b):
+    t = b["t"]
+    if t.startswith("baja:Status"):
+        kids = {c.get("n"): c.get("v") for c in b.get("s", [])}
+        raw = kids.get("value")
+        value = float(raw or "0.0") if t.endswith("Numeric") else raw == "true"
+        return {"value": value, "status": kids.get("status", "0")}
+    if t == "baja:Double":
+        return float(b.get("v") or "0.0")
+    return b.get("v") == "true" if t == "baja:Boolean" else (b.get("v") or "")
+
+
+def _relink(client, parent_ord, name, relinks):
+    nodes = client.load_tree(parent_ord.rstrip("/") + "/" + name, depth=SNAPSHOT_DEPTH)
+    restored = 0
+    for r in relinks:
+        src, tgt = nodes.get(r["source_path"]), nodes.get(r["target_path"])
+        if not (src and tgt and src.get("h") and tgt.get("h")):
+            continue  # an end is missing: nothing to link
+        try:
+            res = client.check_links(src["h"], r["source_slot"], tgt["h"], r["target_slot"])
+        except box.BoxError:
+            continue
+        restored += bool(res and res[0].get("v") and res[0].get("s"))
+    return {"restored": restored, "skipped": len(relinks) - restored}
+
+
+def _rollback_readback(client, args, planned, replies, inverse):
+    ord_of, ok, relinks = planned.data["ord_of"], True, None
+    for i, op in enumerate(planned.ops):
+        where = ord_of[op["h"]]
+        nodes = client.load_tree(where, depth=2)
+        if op["nm"] == "v":
+            ok &= op["n"] not in nodes
+        elif op["nm"] == "a":
+            nn = inverse[i]["n"] if len(inverse) == len(planned.ops) else op["n"]
+            ok &= nn in nodes and nodes[nn].get("t") == op["b"]["t"]
+            if planned.data["relinks"]:
+                relinks = _relink(client, where, nn, planned.data["relinks"])
+                ok &= relinks["skipped"] == 0
+        else:
+            ok &= op["n"] in nodes and \
+                _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
+    observed = {"restored": bool(ok)}
+    if relinks is not None:
+        observed["relinks"] = relinks
+    return {"rolled_back": planned.data["rollback_of"]}, replies, observed, \
+        "verified" if ok else "mismatch"
+
+
+# ---- n4_save_station -----------------------------------------------------
+
+def _bog_state(home):
+    path = os.path.join(home, "config.bog")
+    try:
+        st = os.stat(path)
+        digest = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                digest.update(chunk)
+    except OSError:
+        return None
+    return {"mtime": st.st_mtime, "size": st.st_size, "sha256": digest.hexdigest()}
+
+
+def _save_plan(client, args, ctx):
+    home = ctx.write.station_homes.get(ctx.session.station_name)
+    note = "the BOX reply to save is null and proves nothing; "
+    note += ("persistence is checked on %s" % os.path.join(home, "config.bog") if home else
+             "no --station-home for this station, so persistence cannot be checked")
+    return Planned([{"ssc": "invokeAction",
+                     "arg": {"h": ctx.session.root_handle, "a": "save"}}], [],
+                   [note, "no inverse: a save cannot be undone"],
+                   {"home": home, "before": _bog_state(home) if home else None,
+                    "station": ctx.session.station_name})
+
+
+def _save_readback(client, args, planned, replies, inverse, ctx=None):
+    home, before = planned.data["home"], planned.data["before"]
+    name = planned.data["station"]
+    if not home:
+        hint = ("configure --station-home %s=<directory containing config.bog> to check "
+                "persistence" % name)
+        return {"action": "save"}, replies[0], {"persisted": "unknown",
+                                                "evidence": {"hint": hint}}, "unverified"
+    path = os.path.join(home, "config.bog")
+    if before is None:
+        return {"action": "save"}, replies[0], {"persisted": "unknown", "evidence": {
+            "hint": "config.bog was not readable at %s before the save; check that "
+                    "--station-home %s points at the station directory" % (path, name)}}, \
+            "unverified"
+    write = planned.data["write"]
+    deadline, after = write.monotonic() + write.save_timeout, None
+    while True:
+        after = _bog_state(home)
+        if after is None or after["sha256"] != before["sha256"] \
+                or after["mtime"] > before["mtime"] or write.monotonic() >= deadline:
+            break
+        write.sleep(write.save_interval)
+    evidence = {"path": path, "before": before, "after": after}
+    if after is None:
+        evidence["hint"] = "config.bog became unreadable after the save"
+        persisted, verdict = "unknown", "unverified"
+    elif after["sha256"] != before["sha256"] or after["mtime"] > before["mtime"]:
+        persisted, verdict = True, "verified"
+    else:
+        persisted, verdict = False, "mismatch"
+    return {"action": "save"}, replies[0], {"persisted": persisted, "evidence": evidence}, verdict
+
+
 # ---- pipeline ------------------------------------------------------------
 
-_Impl = namedtuple("_Impl", "scope_ords plan inverse readback recover")
-_Impl.__new__.__defaults__ = (None,)
+_Impl = namedtuple("_Impl", "scope_ords plan inverse readback recover needs_ctx")
+_Impl.__new__.__defaults__ = (None, False)
 
 
 def _static_inverse(planned, replies):
@@ -345,6 +598,12 @@ _IMPLS = {
                               _invoke_readback),
     "n4_create_link": _Impl(lambda a: [a["source_ord"], a["target_ord"]], _link_plan,
                             _link_inverse, _link_readback, _link_recover),
+    "n4_remove_component": _Impl(lambda a: [a["parent_ord"]], _remove_plan, _static_inverse,
+                                 _remove_readback),
+    "n4_rollback": _Impl(lambda a: [], _rollback_plan, _rollback_inverse, _rollback_readback,
+                         None, True),
+    "n4_save_station": _Impl(lambda a: [], _save_plan, _static_inverse, _save_readback,
+                             None, True),
 }
 
 
@@ -359,10 +618,18 @@ def _process(ctx, name, args):
     if sess.writes_executed >= write.max_writes:
         raise ToolError("write budget exhausted: %d writes already executed in this session "
                         "(--max-writes)" % write.max_writes)
-    for ord_str in impl.scope_ords(args):
+    ords = impl.scope_ords(args)
+    for ord_str in ords:
         write.scope.check(ord_str)
-    planned = impl.plan(sess.client, args)
+    if not ords:  # whole-station or journal-driven: at least one scope must be configured
+        write.scope.require_any()
+    planned = impl.plan(sess.client, args, ctx) if impl.needs_ctx else \
+        impl.plan(sess.client, args)
+    if name == "n4_save_station":
+        planned.data["write"] = write  # readback polls with the operator's timing
     plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
+    if isinstance(planned.data, dict) and planned.data.get("relinks"):
+        plan["relinks"] = planned.data["relinks"]
     plan_hash = hashlib.sha256(safety.canonical(plan).encode()).hexdigest()
     if dry:
         token, expires_at = write.tokens.issue(name, args, plan_hash)
@@ -372,8 +639,8 @@ def _process(ctx, name, args):
     batch_id = uuid.uuid4().hex
     intent = {"batch_id": batch_id, "ts": _now(), "tool": name, "ops": planned.ops,
               "inverse_plan": planned.inverse, "station_name": sess.station_name,
-              "phase": "intent"}
-    if isinstance(planned.data, dict) and planned.data.get("rollback_of"):
+              "phase": "intent", "targets": planned.data.get("targets", {})}
+    if planned.data.get("rollback_of"):
         intent["rollback_of"] = planned.data["rollback_of"]
     try:  # write-ahead: no intent on disk, no op on the wire
         write.journal.append(intent)
@@ -418,6 +685,9 @@ def _process(ctx, name, args):
             out.update(requested=None, accepted=replies[0] if replies else None,
                        observed=None, verdict="failed", readback_error=ctx.scrub(why))
     out["inverse"] = inverse
+    if isinstance(out.get("observed"), dict):  # promote the headline evidence of a tool
+        out.update({k: out["observed"][k] for k in ("persisted", "evidence", "relinks")
+                    if k in out["observed"]})
     result = {"batch_id": batch_id, "ts": _now(), "phase": "result",
               "accepted": out["accepted"], "inverse": inverse, "verdict": out["verdict"]}
     if out.get("in_doubt"):
@@ -516,5 +786,24 @@ TOOLS = [
           {"source_ord": _str("Source component ORD"), "source_slot": _str("Source slot name"),
            "target_ord": _str("Target component ORD"), "target_slot": _str("Target slot name")},
           ["source_ord", "source_slot", "target_ord", "target_slot"]),
+]
+TOOLS += [
+    _tool("n4_remove_component",
+          "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots "
+          "the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the "
+          "inverse; n4_rollback can re-create only that snapshot, not a full restore.",
+          {"parent_ord": _str("Parent component ORD"), "name": _str("Child slot name")},
+          ["parent_ord", "name"], DESTRUCTIVE),
+    _tool("n4_rollback",
+          "Undo a journaled batch by running its recorded inverse through the same dry run / "
+          "token pipeline, as a new batch linked to the original. Refuses unknown, "
+          "already rolled back, in-doubt and other-station batches.",
+          {"batch_id": _str("batch_id returned by an earlier write")}, ["batch_id"],
+          DESTRUCTIVE),
+    _tool("n4_save_station",
+          "Save the station (persist the running config to disk). The BOX reply proves "
+          "nothing; persisted is true/false/unknown from config.bog when the server has "
+          "--station-home for this station.",
+          {}, [], DESTRUCTIVE),
 ]
 NAMES = frozenset(t.name for t in TOOLS)

@@ -59,7 +59,7 @@ class Server:
     def __init__(self, allow_writes=False, allow_http=False, env=None,
                  client_factory=None, tools=None, write_scopes=(), state_dir=None,
                  token_ttl=300, max_writes=200, stations=None, credential_env="MCP_N4",
-                 insecure_tls=()):
+                 insecure_tls=(), station_homes=None):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
@@ -68,7 +68,8 @@ class Server:
             tools = tools_read.TOOLS + (tools_write.TOOLS if allow_writes else [])
         if allow_writes:
             self.ctx.write = tools_write.WriteState(write_scopes, state_dir, token_ttl,
-                                                    max_writes)
+                                                    max_writes,
+                                                    station_homes=station_homes)
         self.tools = {t.name: t for t in tools}
 
     # ---- framing ---------------------------------------------------------
@@ -181,6 +182,9 @@ def parse_args(argv=None):
     parser.add_argument("--station", action="append", default=[], metavar="NAME=URL",
                         help="station n4_connect may use (repeatable); NAME should equal the "
                              "station's stationName; URL must be https://")
+    parser.add_argument("--station-home", action="append", default=[], metavar="NAME=PATH",
+                        help="directory holding the config.bog of configured station NAME; lets "
+                             "n4_save_station prove persistence (repeatable)")
     parser.add_argument("--credential-env", default="MCP_N4", metavar="PREFIX",
                         help="env var prefix holding <PREFIX>_USER/<PREFIX>_PASSWORD "
                              "(default MCP_N4)")
@@ -201,10 +205,16 @@ def main(argv=None):
             if not sep or not name or not url:
                 raise ValueError("--station expects NAME=URL, got %r" % item)
             stations[name] = url
+        homes = {}
+        for item in args.station_home:
+            name, sep, path = item.partition("=")
+            if not sep or not name or not path:
+                raise ValueError("--station-home expects NAME=PATH, got %r" % item)
+            homes[name] = path
         srv = Server(allow_writes=args.allow_writes, allow_http=args.allow_http_for_tests,
                      write_scopes=args.write_scope, state_dir=args.state_dir,
                      token_ttl=args.token_ttl, max_writes=args.max_writes, stations=stations,
-                     credential_env=args.credential_env, insecure_tls=args.insecure_tls)
+                     credential_env=args.credential_env, insecure_tls=args.insecure_tls, station_homes=homes)
     except (ValueError, safety.SafetyError) as exc:
         print("mcp_n4.server: %s" % exc, file=sys.stderr)
         return 2
