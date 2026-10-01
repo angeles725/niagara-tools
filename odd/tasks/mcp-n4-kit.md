@@ -52,12 +52,13 @@ Out of scope:
 ## Tasks
 - [x] **T1 — kit scaffold + BOX client library.**
   - Content:
-    - `mcp-n4-kit/{README.md, METHODOLOGY.md}`;
+    - `mcp-n4-kit/README.md` (METHODOLOGY.md moved to T5);
     - `mcp-n4-kit/mcp_n4/box.py`: frame, session make/makessc/callssc, syncTo, checkLinks, invokeAction, pollchgs, tree walk, status helpers;
     - `mcp-n4-kit/tests/` with a fake BOX station (`http.server` on localhost, self-signed not required: plain HTTP allowed only for tests);
     - a CI step that runs unittest.
   - Route: delegated writer (2+ non-trivial files).
   - Checks: the unittest runner, plus `bats tests/*.bats` still green.
+- [ ] **T1b — harden the BOX client (RDD T1 follow-ups, lineage review-e2b9c59fdafb98d5).** Content: no redirect following with credentials (R1-001); malformed replies and transport errors → BoxError, reply seq check (R3/R4); open() cleans up its session on partial failure (R3/R4); load_tree filters load ops by requested handle/ord and does not drop unrelated events (R3/R4); named constants for `cs1` and the root handle, documented return shapes (R2-002..004); tests for 403/500/timeout/bad JSON/retry path and server-assigned names (R2-005, R3). Route: delegated writer. Checks: unittest.
 - [ ] **T2 — MCP stdio server core + read tools.**
   - Content:
     - JSON-RPC 2.0 over stdio: `initialize`, `tools/list`, `tools/call`;
@@ -83,8 +84,9 @@ Out of scope:
     - `save_station` (destructive class; optional persistence check by `config.bog` mtime/sha when a station home is configured).
   - Route: delegated writer.
   - Checks: unittest.
-- [ ] **T5 — skill + installer.**
+- [ ] **T5 — skill + installer + METHODOLOGY.**
   - Content:
+    - `mcp-n4-kit/METHODOLOGY.md`: safety layers L1-L8, live rules from B1199, route ladder;
     - `mcp-n4-kit/skill/SKILL.md` thin launcher (`$MCP_N4_KIT` → default path → fd) with the mandatory checklist;
     - `scripts/install-skill.sh --skill mcp-n4` support (bats-tested, no change to default behavior);
     - MCP client registration docs.
@@ -122,7 +124,7 @@ Out of scope:
 ## Progress
 | Task | Route (trigger) | Commit | Authored lines | RDD tier / outcome | Checks |
 |---|---|---|---|---|---|
-| T1 | delegated writer (2+ non-trivial files) | b4bf886 | 704 (size:exception — library + its fake station + tests are one cohesive unit; METHODOLOGY moved to T5) | pending | unittest 24 OK (writer + parent re-run); bats 689 OK (writer) |
+| T1 | delegated writer (2+ non-trivial files) | b4bf886 | 704 (size:exception — library + its fake station + tests are one cohesive unit; METHODOLOGY moved to T5) | high → granted → approved + acknowledged (lineage review-e2b9c59fdafb98d5; 7 WARNING + 5 SUGGESTION advisory → T1b) | unittest 24 OK (writer + parent re-run); bats 689 OK (writer) |
 
 ## Next step
 T1 RDD + PR, then T2.
