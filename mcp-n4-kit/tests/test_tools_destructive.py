@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
-from mcp_n4 import box, safety, server  # noqa: E402
+from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
 FOLDER = ttw.FOLDER
 NO_SLEEP = ttw.NO_SLEEP
@@ -47,7 +47,7 @@ class TestRemoveComponent(DestructiveCase):
         self.assertEqual((add["nm"], add["h"], add["n"], add["b"]["t"]), ("a", "3", nn, "baja:Folder"))
         slots = {c["n"]: c for c in add["b"]["s"]}
         self.assertEqual(slots["wsAnnotation"]["v"], "1,2,3")
-        self.assertEqual({c["n"] for c in slots["Src"]["s"]}, {"out"})
+        self.assertEqual([c["n"] for c in slots["Src"].get("s", [])], [])  # runtime out: dropped
         self.assertNotIn("Link", {c["n"] for c in slots["Tgt"].get("s", [])})  # links are separate
         self.assertNotIn("h", slots["Src"])  # handles are not data
         self.assertEqual(relink["relink"], {"source_path": "Src", "source_slot": "out",
@@ -237,7 +237,7 @@ class TestRollback(DestructiveCase):
         grp = self.fake.folder.child(nn)
         self.assertEqual(grp.type, "baja:Folder")
         self.assertEqual(grp.child("wsAnnotation").value, "1,2,3")
-        self.assertEqual(grp.child("Src").child("out").child("value").value, "4.5")
+        self.assertIsNone(grp.child("Src").child("out"))  # runtime output: not restored
         link = grp.child("Tgt").child("Link")
         self.assertEqual(link.child("targetSlotName").value, "in10")
         self.assertEqual(back["relinks"], {"restored": 1, "skipped": 0})
@@ -245,6 +245,46 @@ class TestRollback(DestructiveCase):
         tgt_h = grp.child("Tgt").handle
         self.assertEqual(view["inverse"], [{"nm": "v", "h": tgt_h, "n": "Link"},
                                            {"nm": "v", "h": "3", "n": nn}])
+
+    def test_the_snapshot_keeps_configuration_and_drops_runtime_output_slots(self):
+        nn, gh = self.group()
+        src_h = self.box.load_tree(FOLDER + "/%s/Src" % nn, depth=1, **NO_SLEEP)[""]["h"]
+        self.box.set_slot(src_h, "fallback", box.bson_status_numeric(7.0, "0;activeLevel=e_def"))
+        self.box.set_slot(src_h, "out", box.bson_status_numeric(4.5, "0;activeLevel=e_in16"))
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        self.rollback(removed["batch_id"])
+        src = [op for op in sent if op["nm"] == "a" and op["n"] == "Src"][0]
+        names = [c["n"] for c in src["b"]["s"]]
+        self.assertNotIn("out", names)
+        self.assertIn("fallback", names)
+        fallback = self.fake.folder.child(nn).child("Src").child("fallback")
+        self.assertEqual(fallback.child("value").value, "7.0")
+        self.assertEqual(fallback.child("status").value, "0")  # no runtime activeLevel facet
+        self.assertEqual(tools_write.RUNTIME_OUTPUT_SLOTS, ("out",))
+
+    def test_the_snapshot_keeps_configured_status_bits_and_drops_only_facets(self):
+        """Review R4-status-coercion: a null (0x40) fallback must not come back as ok."""
+        nn, gh = self.group()
+        src_h = self.box.load_tree(FOLDER + "/%s/Src" % nn, depth=1, **NO_SLEEP)[""]["h"]
+        self.box.set_slot(src_h, "fallback", box.bson_status_numeric(7.0, "40;activeLevel=e_def"))
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.rollback(removed["batch_id"])
+        fallback = self.fake.folder.child(nn).child("Src").child("fallback")
+        self.assertEqual(fallback.child("status").value, "40")  # null bit kept, facet dropped
+
+    def test_a_folder_removed_at_the_station_root_rolls_back(self):
+        """Live finding 2 (2026-10-01): `station:|slot:/` + `/` made `station:|slot://X`."""
+        self.start_server(write_scopes=["station:|slot:/"])
+        self.connect_verified()
+        top = self.box.add_component("2", "RootGrp", "baja:Folder")["nn"]
+        top_h = self.box.load_tree("station:|slot:/" + top, depth=1,
+                                   **NO_SLEEP)[""]["h"]
+        self.box.add_component(top_h, "Src", "kitControl:NumericConst")
+        removed = self.run_write("n4_remove_component", parent_ord="station:|slot:/", name=top)
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertIsNotNone(self.fake.root.child(top).child("Src"))
 
     def test_relinks_are_skipped_when_an_end_is_missing(self):
         nn, gh = self.group()
@@ -366,6 +406,11 @@ class TestRollback(DestructiveCase):
         self.assertIn("Unable to process request", str(caught.exception))
         plain = {"nm": "p", "t": "baja:Folder", "s": [box.ws_annotation(1, 2, 3)]}
         self.box.sync({"nm": "a", "h": "3", "n": "Ok", "b": plain})  # plain slots are fine
+
+    def test_the_station_model_rejects_double_slashes_like_the_live_station(self):
+        with self.assertRaises(box.BoxError) as caught:
+            self.box.load_tree("station:|slot://Folder", depth=1, **NO_SLEEP)
+        self.assertIn("Illegal double slashes", str(caught.exception))
 
     def test_rollback_adds_one_component_per_op_parents_first_with_the_new_handle(self):
         nn, gh = self.group()

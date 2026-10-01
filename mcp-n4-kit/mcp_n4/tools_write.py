@@ -21,6 +21,11 @@ DEFAULT_STATE_DIR = retro.DEFAULT_STATE_DIR
 WRITE = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
 DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False}
 SNAPSHOT_DEPTH = 3
+
+#: Re-create snapshots keep configuration only. These slots are runtime OUTPUTS the
+#: component computes (a Status* value, e.g. a NumericConst's `out`): restoring them
+#: writes a stale value the component recomputes. Dropped from every re-create body.
+RUNTIME_OUTPUT_SLOTS = ("out",)
 #: Actions `n4_invoke_action` may call. Destructive ones (emergency*, save, restart)
 #: arrive later under a separate class.
 ALLOWED_ACTIONS = ("set", "active", "inactive", "auto")
@@ -352,6 +357,11 @@ def _snapshot(node, path, links, handles):
 
     Handles are not kept; links are collected in `links` and their owner component
     path is recorded, because a link cannot be re-created without both ends.
+
+    Configuration only (the re-create rule): Status* slots named in RUNTIME_OUTPUT_SLOTS
+    are dropped, and a `baja:Status` value keeps its configured bits but loses its
+    runtime-only facets (`40;activeLevel=e_def` is restored as `40`). `fallback`, plain
+    values, wsAnnotation and slot facets are kept.
     """
     if node.get("h"):
         handles[node["h"]] = path
@@ -369,7 +379,15 @@ def _snapshot(node, path, links, handles):
                           "source_slot": slots.get("sourceSlotName"),
                           "target_slot": slots.get("targetSlotName")})
             continue
-        kids.append(_snapshot(child, child_path, links, handles))
+        if child.get("n") in RUNTIME_OUTPUT_SLOTS and \
+                str(child.get("t", "")).startswith("baja:Status"):
+            continue
+        kid = _snapshot(child, child_path, links, handles)
+        if kid.get("t") == "baja:Status" and "v" in kid:
+            # Keep the configured status bits (null, disabled, overridden...); drop only
+            # the runtime facets after ';' such as activeLevel.
+            kid["v"] = str(kid["v"]).split(";", 1)[0]
+        kids.append(kid)
     if kids:
         out["s"] = kids
     return out
@@ -405,7 +423,7 @@ def _outgoing_links(node, path, handles, found):
 def _scan_outgoing(client, scan_ord, handles):
     nodes = client.load_tree(scan_ord, depth=LINK_SCAN_DEPTH)
     found = _outgoing_links(nodes[""], "", handles, [])
-    return sorted(({"target": scan_ord.rstrip("/") + ("/" + f["path"] if f["path"] else ""),
+    return sorted(({"target": box.join_ord(scan_ord, f["path"]),
                     "target_slot": f["target_slot"], "source_path": f["source_path"],
                     "source_slot": f["source_slot"]} for f in found),
                   key=lambda f: (f["target"], f["target_slot"], f["source_path"]))
@@ -416,7 +434,7 @@ def _remove_plan(client, args):
     parent_h, parent_nodes = _handle(client, parent_ord, 1)
     if name not in parent_nodes:
         raise ToolError("component %r not found under %s" % (name, parent_ord))
-    _, nodes = _handle(client, parent_ord.rstrip("/") + "/" + name, SNAPSHOT_DEPTH)
+    _, nodes = _handle(client, box.child_ord(parent_ord, name), SNAPSHOT_DEPTH)
     links, handles = [], {}
     body = _snapshot(nodes[""], "", links, handles)
     inverse, notes = [{"nm": "a", "h": parent_h, "n": name, "b": body}], [
@@ -525,11 +543,11 @@ def _rollback_plan(client, args, ctx):
                            write.max_writes - sess.writes_executed, write.max_writes))
     for spec in components:  # every re-created component, under today's scope
         top = ops[spec["top"]]
-        write.scope.check(_end_ord(_ord_of(targets, top["h"]) + "/" + top["n"],
+        write.scope.check(_end_ord(box.child_ord(_ord_of(targets, top["h"]), top["n"]),
                                    _spec_path(spec)))
     for op in own:  # both ends of every relink, under today's scope (name as requested)
         for spec in relinks:
-            _check_ends(write.scope, "%s/%s" % (_ord_of(targets, op["h"]), op["n"]), spec)
+            _check_ends(write.scope, box.child_ord(_ord_of(targets, op["h"]), op["n"]), spec)
     notes = ["rolls back batch %s (%s)" % (bid, view.get("tool"))]
     if relinks:
         notes.append("then re-creates %d link(s) between restored components, where both "
@@ -560,14 +578,14 @@ def _run_components(sess, write, batch_id, planned, replies):
     in-doubt error listing what was created so far.
     """
     data = planned.data
-    base = {i: "%s/%s" % (data["ord_of"][op["h"]], _assigned_name(op, reply))
+    base = {i: box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
             for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
     actual = {(i, ""): base[i] for i in base}  # (top, spec path) -> assigned ORD
     created = []
     for spec in data["components"]:
         parent = actual[(spec["top"], spec["parent_path"])]
         try:
-            write.scope.check(parent + "/" + spec["n"])
+            write.scope.check(box.child_ord(parent, spec["n"]))
             parent_h, _ = _handle(sess.client, parent, 1)
         except Exception as exc:
             raise _partial(batch_id, base, created, exc) from None
@@ -584,8 +602,8 @@ def _run_components(sess, write, batch_id, planned, replies):
         except Exception as exc:
             raise _partial(batch_id, base, created, exc) from None
         name = _assigned_name(op, reply)
-        actual[(spec["top"], _spec_path(spec))] = parent + "/" + name
-        created.append(parent + "/" + name)
+        actual[(spec["top"], _spec_path(spec))] = box.child_ord(parent, name)
+        created.append(box.child_ord(parent, name))
     return created
 
 
@@ -648,7 +666,7 @@ def _ord_of(targets, handle):
 
 
 def _end_ord(comp_ord, path):
-    return comp_ord.rstrip("/") + ("/" + path if path else "")
+    return box.join_ord(comp_ord, path)
 
 
 def _check_ends(scope, comp_ord, spec):
@@ -673,7 +691,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
     for op, reply in zip(planned.ops, replies):
         if op["nm"] != "a":
             continue
-        comp = "%s/%s" % (data["ord_of"][op["h"]], _assigned_name(op, reply))
+        comp = box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
         nodes = sess.client.load_tree(comp, depth=SNAPSHOT_DEPTH)
         for spec in data["relinks"]:
             src, tgt = nodes.get(spec["source_path"]), nodes.get(spec["target_path"])

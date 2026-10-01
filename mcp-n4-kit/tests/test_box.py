@@ -16,6 +16,33 @@ from mcp_n4 import box  # noqa: E402
 NO_SLEEP = dict(sleep=lambda s: None)
 
 
+class TestChildOrd(unittest.TestCase):
+    def test_every_parent_form_joins_with_exactly_one_slash(self):
+        for parent, expected in (
+                ("station:", "station:|slot:/X"),
+                ("station:|slot:/", "station:|slot:/X"),
+                ("station:|slot:/A", "station:|slot:/A/X"),
+                ("station:|slot:/A/", "station:|slot:/A/X"),
+                ("station:|slot:/A/B", "station:|slot:/A/B/X")):
+            self.assertEqual(box.child_ord(parent, "X"), expected, parent)
+            self.assertNotIn("//", expected)
+
+    def test_bad_names_and_bad_parents_are_refused(self):
+        for bad in ("", "a/b", "a|b", "..", None, 5):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                box.child_ord("station:|slot:/", bad)
+        with self.assertRaises(ValueError):
+            box.child_ord("station:|slot://A", "X")  # an already-broken parent
+
+    def test_join_ord_walks_a_relative_path_and_allows_the_empty_path(self):
+        self.assertEqual(box.join_ord("station:|slot:/", "A/B"), "station:|slot:/A/B")
+        self.assertEqual(box.join_ord("station:|slot:/A/", "B"), "station:|slot:/A/B")
+        self.assertEqual(box.join_ord("station:|slot:/A/", ""), "station:|slot:/A")
+        self.assertEqual(box.join_ord("station:|slot:/", ""), "station:|slot:/")
+        with self.assertRaises(ValueError):
+            box.join_ord("station:|slot:/", "A//B")
+
+
 class BoxTestCase(unittest.TestCase):
     def setUp(self):
         self.fake = FakeStation().start()
