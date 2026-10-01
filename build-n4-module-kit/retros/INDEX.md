@@ -197,3 +197,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | pending | 16 |
 | 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
