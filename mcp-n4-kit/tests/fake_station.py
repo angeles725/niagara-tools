@@ -19,7 +19,7 @@ class _Node:
 
 
 class FakeStation:
-    def __init__(self, user="admin", password="secret"):
+    def __init__(self, user="admin", password="secret", station_name="FakeStation"):
         self.user, self.password = user, password
         self.requests = 0
         self.saves = 0
@@ -30,6 +30,7 @@ class FakeStation:
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
         self.by_handle = {"2": self.root}
+        self.root.children.append(_Node("stationName", "baja:String", station_name))
         self.folder = self._component(self.root, "Folder", "baja:Folder", "3")
         self._server = None
 
