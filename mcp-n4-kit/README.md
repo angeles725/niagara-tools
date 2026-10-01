@@ -31,6 +31,7 @@ scripts/install-skill.sh --skill mcp-n4
 - `mcp_n4/safety.py`: confirmation tokens, write scope, journal and audit log.
 - `mcp_n4/tools_write.py`: the write tools and their guard pipeline.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
+- `tools/live_smoke.py`: the live smoke runner (see Live smoke test).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
 - `tests/test_box.py`: unit tests.
 
@@ -182,6 +183,30 @@ Destructive tools use the same pipeline:
   polling up to 30 s, and returns `persisted: true|false|unknown` plus the
   `evidence`. Without a station home it returns `unknown` and says how to configure
   it. It needs at least one `--write-scope` like every write.
+
+## Live smoke test
+
+`tools/live_smoke.py` drives the real server over stdio (not the library) through the
+public tool interface: every write is dry run, token, execute, verdict. It runs the
+kitControl thermostat of B1199 inside a scratch folder `McpSmoke`, saves, removes the
+folder, rolls the removal back (probe-only: its verdict is recorded but does not gate
+the exit code), removes it again, saves and checks the folder is gone. Without
+`--apply` it only prints the scenario and contacts nothing.
+
+```
+MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
+  python3 mcp-n4-kit/tools/live_smoke.py --apply \
+    --station <NAME>=https://<host> --station-home <NAME>=<station home dir> \
+    --report smoke-report.json
+```
+
+Credentials are read only from the environment variables the server reads
+(`<PREFIX>_USER` / `<PREFIX>_PASSWORD`, `--credential-env PREFIX`, default `MCP_N4`) and
+their values are scrubbed from everything printed or written. The write scope is the
+scratch folder plus the station root (needed to create and remove the folder). The
+runner refuses to run if `McpSmoke` already exists. After a failed required step it skips
+the rest and removes the folder it created. Exit 0 only when every required step is
+`verified`; the JSON report lists each step, its verdict and `batch_id`.
 
 ## Run the tests
 

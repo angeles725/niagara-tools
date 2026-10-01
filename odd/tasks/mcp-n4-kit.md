@@ -85,7 +85,7 @@ Out of scope:
     - `save_station` (destructive class; optional persistence check by `config.bog` mtime/sha when a station home is configured).
   - Route: delegated writer.
   - Checks: unittest.
-- [ ] **T5 — METHODOLOGY + skill launcher + installer.**
+- [x] **T5 — METHODOLOGY + skill launcher + installer** (PR #168).
   - `mcp-n4-kit/METHODOLOGY.md`, concise. Each rule names the code or test that enforces it, or is marked "manual". Sections:
     1. **Route ladder:**
        - R-A BOX JSON (default, live-certified in niagara-research B1199);
@@ -134,11 +134,32 @@ Out of scope:
     - `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`
     - the unittest runner
 - [ ] **T6 — live smoke runner + release.**
-  - Content:
-    - `mcp-n4-kit/tools/live-smoke.py`: scratch folder → kitControl thermostat → logic read-back → rollback, off unless `--apply` + `--expected-station`;
-    - VERSION/CHANGELOG release.
-  - Route: inline or delegated.
-  - Checks: unittest; the live run only with an operator-supplied credential (pending if absent).
+  - `mcp-n4-kit/tools/live_smoke.py` drives the REAL MCP server over stdio (subprocess `python3 -m mcp_n4.server ...`), not the box library directly, so the whole stack is exercised.
+    - Mode:
+      - default: plan only, printing the scenario;
+      - `--apply`: executes, and requires `--station NAME=URL` and `--station-home NAME=PATH`;
+      - `--write-scope` is set to the scratch folder ORD plus the root for the folder create.
+    - Credentials: only through the env vars the server reads (`--credential-env`); the runner never prints them.
+    - Scenario: the kitControl thermostat from niagara-research B1199. Every step uses dry-run, then the token, then execute, and checks the verdict:
+      1. connect, with `expected_station` = NAME;
+      2. create the folder `McpSmoke`;
+      3. create `Temp` and `Setpoint` (NumericWritable), `Compare` (`kitControl:GreaterThan`) and `Cooling` (BooleanWritable), each with a wire-sheet position;
+      4. create 3 links: Temp.out→Compare.inA, Setpoint.out→Compare.inB, Compare.out→Cooling.in10;
+      5. `find_dangling_outputs` returns `[Cooling]` only, the expected terminal output;
+      6. set Temp=30 and Setpoint=25 through the `set` action, then read Compare.out=true and Cooling.out=true;
+      7. Temp=20, then read false;
+      8. save; `persisted` must be true;
+      9. remove the folder;
+      10. roll back the remove, which re-creates the nested subtree. This is the T4 claim that has not been proven live; record the observed verdict honestly;
+      11. remove it again;
+      12. save; `persisted` must be true;
+      13. check that the folder is absent.
+    - Output: a JSON report with each step, its verdict and its batch_id. Exit 0 only when every required step is `verified`.
+    - Probe-only elements are declared in the report (B1199 retro #3).
+  - Unit tests run the runner against the fake station. No live contact in tests.
+  - Release: `VERSION` and `CHANGELOG.md`, new section `[v0.25.0]` with `### Added` mcp-n4-kit (T1-T6 PRs) and a References subsection. Follow the CONTRIBUTING §5 order: tag `v0.25.0` after the merge, then push the tags.
+  - Live run (operator-authorized destination: the localhost station `LLM`, as in AM20): the parent runs it after the merge, with the credential in a 0600 file read into env for that command only and deleted afterward. The result is recorded in this document and in niagara-research.
+  - Route: delegated writer for the runner and tests; the parent does the live run and the release.
 
 - [ ] **T7 — usage retros and kit deltas (operator request 2026-10-01).** Every session that uses `mcp_n4` on a station ends with a retro that proposes kit deltas. This mirrors `/research-sdd` §18 and the build-n4-module `retros/` flow: propose, never apply.
   - Content:
@@ -157,7 +178,7 @@ Out of scope:
   - Route: delegated writer.
   - Checks: unittest, covering both a draft from a synthetic audit log and the honesty line when there is no friction.
 
-- [ ] **T8 — hygiene sweep of accumulated advisory findings.** Content: T1c advisory (KeyboardInterrupt/SystemExit cleanup and docstring, ord-grammar helper for child ORDs, invalidate_handles prefix boundary, stale-handle double wait, test names), plus T2+ advisory that is not fixed in its own slice. Also add MCP protocol versions 2025-11-25/2026-07-28 once their semantics are implemented (T2 declares up to 2025-06-18). Route: delegated writer. Checks: unittest.
+- [ ] **T8 — hygiene sweep of accumulated advisory findings.** Content: T1c advisory (KeyboardInterrupt/SystemExit cleanup and docstring, ord-grammar helper for child ORDs, invalidate_handles prefix boundary, stale-handle double wait, test names), plus T2+ advisory that is not fixed in its own slice. Also: a unittest that every `test_*` name cited in METHODOLOGY.md exists (T5 R3-003); explain or parameterize the default kit path in skill/SKILL.md (T5 R1-001/R2-002); one source of truth for skill names in install-skill.sh (R2-004); assert SK7 first-run status (R2-005/R3-001); T4a inverse None normalization + tighten existing journal/audit file modes. Also add MCP protocol versions 2025-11-25/2026-07-28 once their semantics are implemented (T2 declares up to 2025-06-18). Route: delegated writer. Checks: unittest.
 
 ## Acceptance criteria
 - All unittest + bats + shellcheck are green locally and in CI.
@@ -174,8 +195,9 @@ Out of scope:
 | T3a | delegated writer | eee825b (PR #163, merge d76e07d) | 345 | medium, under_budget → reviewed together with T3 | unittest 145 OK; CI pass |
 | T3 | delegated writer | 0acc462 (PR #164, merge 811d2ed) | 1106 (size:exception — shared pipeline) | medium slice_budget_reached (base 570a81f, covers T3a) → approved + acknowledged (review-9e93dcb1fdb7152a; send-before-journal → T4a) | unittest 191 OK; CI pass |
 | T3b | delegated writer | 72d2c70 (PR #165, merge fc64eda) | 515 | high → approved + acknowledged (review-a23ad5de00ce84eb; ambiguous link reply → T4a) | unittest 218 OK; CI pass; found real defect: refused link was journaled |
-| T4a | delegated writer | be62b8a (PR #166) | 555 | pending | unittest OK |
-| T4 | delegated writer | bac77b5 | 729 | pending | unittest 275 OK |
+| T4a | delegated writer | be62b8a (PR #166, merge 12ba86d) | 555 | medium → approved + acknowledged (review-eb1f15fef8474243) | unittest OK; CI pass |
+| T4 | delegated writer | bac77b5 (PR #167, merge f8be126) | 729 | medium → approved + acknowledged (review-ecd62053ad516359; relink/retry/outgoing → T4b) | unittest 275 OK; CI pass |
+| T5 | delegated writer | a11881c+dba5a64 (PR #168, merge 2c1291d) | 293 | high → approved + acknowledged (review-242f411d683addc9; suggestions → T8) | bats 14/14 + 698; unittest 275 |
 
 ## Next step
 T4a/T4 RDD + PR, then T5. Earlier: T2 RDD + PR, then T3 (write tools + safety layers). Previously: T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
