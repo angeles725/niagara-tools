@@ -6,6 +6,58 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.25.0] - 2026-10-01
+
+### Added — `mcp-n4-kit/`: an MCP server + skill that lets an AI agent read AND write any Niagara N4 station safely
+
+A new kit, sibling of `build-n4-module-kit/`, built under ODD + RDD as a chain of 20 work-unit PRs.
+Every executable slice passed the native review, one of them through a bounded correction cycle. The kit was
+validated live five times against a real N4.14 station: the full scenario, rollback included, passed on run 5.
+
+- **BOX JSON client** (`mcp_n4/box.py`, route R-A, no station module needed):
+  - HTTPS only; no login retry (lock-out safe);
+  - no redirects carrying credentials;
+  - one op per `syncTo`;
+  - a single ORD grammar (`child_ord`/`join_ord`).
+  [PRs #159, #160, #161, #175]
+- **MCP stdio server** (`mcp_n4/server.py`, stdlib JSON-RPC 2.0), read-only by default. The operator fixes the station
+  policy (`--station NAME=URL`, `--credential-env`, `--insecure-tls NAME`), and every session is identity-checked against
+  `stationName`. [PRs #162, #165]
+- **Read tools:** `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
+  `n4_find_dangling_outputs`, `n4_session_retro_draft`.
+- **Guarded write tools** (`--allow-writes`): `n4_create_component` (with wire-sheet placement), `n4_set_slot` (Status
+  written whole), `n4_invoke_action`, `n4_create_link`, `n4_remove_component`, `n4_rollback` and `n4_save_station`
+  (persistence proven by the `config.bog` sha256/mtime). Every write passes these layers:
+  - dry run → single-use HMAC confirmation token;
+  - identity check;
+  - ORD write scope;
+  - per-session budget;
+  - write-ahead journal;
+  - redacted audit;
+  - read-back verdict (`verified`/`mismatch`/`failed`/`unverified`).
+  [PRs #163, #164, #166, #167, #169, #171, #177]
+- **Live smoke runner** (`tools/live_smoke.py`): drives the real server end to end on a kitControl thermostat
+  scenario, with bounded writes, secret scrubbing and cleanup on any failure. [PRs #170, #172]
+- **Usage retros:** `retros/INDEX.md`, the `mcp_n4/templates/retro.template.md` template, `tools/new_retro.py` and an
+  evidence-backed draft from the session's audit and journal (propose, never apply). [PRs #173, #174]
+- **`METHODOLOGY.md`:** route ladder, safety layers mapped to code, live rules and the session checklist. A test gates
+  every cited test name. Plus the **`skill/SKILL.md`** launcher. [PRs #168, #178]
+- `scripts/install-skill.sh --skill <build-n4-module|mcp-n4>` (the default is unchanged). [PRs #168, #178]
+- Hygiene from accumulated review advisory. [PRs #176, #178]
+
+### Fixed — four live station rejections on the rollback re-create path, each modeled in the fake station first
+
+1. A nested-component `a` op is rejected → one op per component. [#171]
+2. `Illegal double slashes` → ORD grammar. [#175]
+3. `"t": null`, status facets and link-driven inputs → omitted. [#177]
+4. `Illegal child "control:NullProxyExt"` → frozen children are never re-added. [#177]
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-kit.md`.
+- Evidence: niagara-research blocks B1177, B1179, B1192, B1197, B1199 (AM20 PoC) and B1200 (live runs 1–5).
+- Engram: `odd/mcp-n4-kit/progress`, `research/niagara/n4-agent-mcp/progress`.
+- Follow-ups: #179.
+
 ## [v0.24.0] - 2026-09-24
 
 ### Added / Changed — retro-fold campaign 2026-09-21/23: fold the 5 pending kit retros (22 Δ)

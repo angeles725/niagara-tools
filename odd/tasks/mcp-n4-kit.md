@@ -178,7 +178,7 @@ Out of scope:
   - Route: delegated writer.
   - Checks: unittest, covering both a draft from a synthetic audit log and the honesty line when there is no friction.
 
-- [ ] **T8a — hygiene: write path and runtime (accumulated native-review advisory).**
+- [x] **T8a — hygiene: write path and runtime (accumulated native-review advisory).**
   - box (T1c):
     - KeyboardInterrupt/SystemExit after `make` must not leak the server session; fix the docstring;
     - `invalidate_handles` prefix must be boundary-aware (`/A` must not clear `/AB`);
@@ -193,7 +193,7 @@ Out of scope:
       - the nested read-back checks more than presence: type plus annotation.
   - server: support MCP protocol versions newer than 2025-06-18 only once their semantics are implemented; until then, document the supported set.
   - Route: delegated writer. Checks: unittest.
-- [ ] **T8b — hygiene: retros, tools, tests, docs.**
+- [x] **T8b — hygiene: retros, tools, tests, docs.**
   - retro (T7a):
     - ship the template as package data, so it resolves even when the kit is installed rather than run from the repo;
     - make `count` mean the same thing on every candidate;
@@ -241,4 +241,4 @@ Out of scope:
 | T5 | delegated writer | a11881c+dba5a64 (PR #168, merge 2c1291d) | 293 | high → approved + acknowledged (review-242f411d683addc9; suggestions → T8) | bats 14/14 + 698; unittest 275 |
 
 ## Next step
-T6c (this commit): live smoke runner hardening from the T6 native review (review-7cbd7c1ccb5695dd); then T6 RDD + PR, then T7/T8. Earlier steps (T1-T5) are merged; see the ledger above.
+Released v0.25.0. Feature complete: T1-T8 merged (#159-#178). Follow-ups: issue #179 (T6e+T8b advisory) and niagara-research B1200-G1..G3, B1199-G3 (other module families through the kit).
