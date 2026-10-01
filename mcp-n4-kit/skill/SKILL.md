@@ -13,7 +13,7 @@ Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, s
 
 `KIT` = the directory holding `METHODOLOGY.md` and `mcp_n4/server.py`. Resolve once:
 1. `$MCP_N4_KIT` if set and it contains `METHODOLOGY.md`.
-2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit` (confirm `METHODOLOGY.md` exists).
+2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit`, the author's checkout on the primary machine (confirm `METHODOLOGY.md` exists). The installed launcher is a copy under `~/.claude/skills/`, so its own location says nothing about the kit; on any other machine or checkout set `MCP_N4_KIT` to the `mcp-n4-kit` directory.
 3. Else locate it: `fd -t f server.py` under the user's module dirs and keep a hit whose parent is `mcp_n4/` next to a `METHODOLOGY.md`. Never search `$HOME` or `/` wholesale; if the result is missing or ambiguous, ask.
 
 Then read `$KIT/METHODOLOGY.md` FIRST and follow its session checklist.

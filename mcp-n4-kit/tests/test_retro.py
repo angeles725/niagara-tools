@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -124,10 +125,74 @@ class TestDerive(Fixture):
 
     def test_dangling_observations_become_a_candidate(self):
         out = self.draft(observations=[{"ts": "2026-10-01T12:00:00+00:00",
-                                        "ord": "station:|slot:/F", "count": 2}])
+                                        "ord": "station:|slot:/F", "count": 2},
+                                       {"ts": "2026-10-01T12:05:00+00:00",
+                                        "ord": "station:|slot:/F", "count": 3}])
         cand = self.keys(out)["dangling"]
-        self.assertEqual(cand["count"], 2)
+        self.assertEqual(cand["count"], 2)  # count is the number of evidence items, as elsewhere
+        self.assertEqual(len(cand["evidence"]), 2)
         self.assertIn("2026-10-01T12:00:00+00:00", " ".join(cand["evidence"]))
+        self.assertIn("found 3", cand["evidence"][1])  # the magnitude lives in the evidence
+
+    def test_count_means_the_number_of_evidence_items_on_every_candidate(self):
+        for i in range(2):
+            self.add_audit(audit_row("2026-10-01T10:00:0%d+00:00" % i, "n4_set_slot", "refused",
+                                     "ord 'x' is outside the write scope"))
+        self.add_journal(journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"))
+        out = self.draft(observations=[{"ts": "2026-10-01T12:00:00+00:00", "ord": "o",
+                                        "count": 9}])
+        for cand in out["candidates"]:
+            self.assertEqual(cand["count"], len(cand["evidence"]), cand["key"])
+
+    def test_the_three_scope_reasons_are_one_candidate(self):
+        for i, reason in enumerate(("no --write-scope configured: every write is refused",
+                                    "ord 'x' is not a plain station ORD",
+                                    "ord 'x' is outside the write scope")):
+            self.add_audit(audit_row("2026-10-01T10:00:0%d+00:00" % i, "n4_set_slot", "refused",
+                                     reason))
+        out = self.draft()
+        self.assertEqual([c["key"] for c in out["candidates"]], ["refusal:scope"])
+        self.assertEqual(out["candidates"][0]["count"], 3)
+        self.assertEqual(len([r for r in retro._REFUSALS if r[0] == "scope"]), 1)
+
+    def test_every_shared_refusal_reason_is_classified_by_the_retro(self):
+        needles = [n for r in retro._REFUSALS for n in r[1]]
+        for name, text in sorted(vars(safety).items()):
+            if name.startswith("REASON_"):
+                self.assertTrue(any(n in text for n in needles), name)
+
+    def test_the_raise_sites_use_the_shared_reason_constants(self):
+        scope = safety.WriteScope(["station:|slot:/A"])
+        for ord_str, reason in (("station:|slot:/B", safety.REASON_SCOPE_OUTSIDE),
+                                ("/etc", safety.REASON_SCOPE_PLAIN)):
+            with self.assertRaises(safety.SafetyError) as cm:
+                scope.check(ord_str)
+            self.assertIn(reason, str(cm.exception))
+        with self.assertRaises(safety.SafetyError) as cm:
+            safety.WriteScope([]).check("station:|slot:/A")
+        self.assertIn(safety.REASON_SCOPE_NONE, str(cm.exception))
+        tokens = safety.ConfirmationTokens(60, lambda: 1000)
+        with self.assertRaises(safety.SafetyError) as cm:
+            tokens.consume("t", {}, "h", None)
+        self.assertIn(safety.REASON_TOKEN_MISSING, str(cm.exception))
+
+    def test_draft_filters_by_since_once(self):
+        self.add_audit(audit_row("2026-10-01T10:00:00+00:00", "n4_set_slot", "refused",
+                                 "ord 'x' is outside the write scope"))
+        with mock.patch.object(retro, "_since_filter", wraps=retro._since_filter) as spy:
+            self.draft(since="2026-10-01T08:00:00Z")
+        self.assertEqual(spy.call_count, 1)
+
+    def test_the_state_dir_default_is_owned_by_safety_alone(self):
+        from mcp_n4 import tools_write
+        self.assertEqual(safety.DEFAULT_STATE_DIR, "~/.local/state/mcp-n4")
+        self.assertFalse(hasattr(retro, "DEFAULT_STATE_DIR"))
+        self.assertFalse(hasattr(tools_write, "DEFAULT_STATE_DIR"))
+
+    def test_the_template_ships_inside_the_package(self):
+        pkg = os.path.dirname(os.path.abspath(retro.__file__))
+        self.assertEqual(retro.TEMPLATE, os.path.join(pkg, "templates", "retro.template.md"))
+        self.assertTrue(os.path.isfile(retro.TEMPLATE))
 
     def test_since_filters_older_entries(self):
         self.add_audit(audit_row("2026-10-01T09:00:00+00:00", "n4_set_slot", "refused",
@@ -213,7 +278,8 @@ class TestServerTool(unittest.TestCase):
                 safety.Journal(state).append(r)
             srv = server.Server(state_dir=state)
             res = self.rpc(srv, "tools/call", {"name": "n4_session_retro_draft",
-                                               "arguments": {}})["result"]
+                                               "arguments": {"since": "2000-01-01T00:00:00Z"}}
+                           )["result"]
             out = res["structuredContent"]
             self.assertFalse(res.get("isError", False))
             self.assertEqual([c["key"] for c in out["candidates"]], ["verdict:mismatch"])
@@ -221,6 +287,17 @@ class TestServerTool(unittest.TestCase):
             res = self.rpc(srv, "tools/call", {"name": "n4_session_retro_draft",
                                                "arguments": {"since": "2026-10-02T00:00:00Z"}})
             self.assertEqual(res["result"]["structuredContent"]["candidates"], [])
+
+    def test_since_defaults_to_the_server_start_so_a_draft_covers_the_session(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = os.path.join(tmp, "s")
+            for r in journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"):
+                safety.Journal(state).append(r)  # written before this server started
+            srv = server.Server(state_dir=state)
+            call = lambda args: self.rpc(srv, "tools/call", {
+                "name": "n4_session_retro_draft", "arguments": args})["result"]["structuredContent"]
+            self.assertEqual(call({})["candidates"], [])
+            self.assertEqual(len(call({"since": "2000-01-01T00:00:00Z"})["candidates"]), 1)
 
     def test_bad_since_is_a_tool_error(self):
         with tempfile.TemporaryDirectory() as tmp:

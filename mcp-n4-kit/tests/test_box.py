@@ -519,6 +519,12 @@ class TestHandleCache(BoxTestCase):
         c.invalidate_handles("station:|slot:/AB/")  # a trailing slash is the same boundary
         self.assertEqual(sorted(c._handles), ["station:"])
 
+    def test_the_station_model_rejects_an_add_nesting_a_baja_folder(self):
+        c = self.opened()
+        nested = {"nm": "p", "t": "baja:Folder", "s": [{"nm": "p", "n": "Sub", "t": "baja:Folder"}]}
+        with self.assertRaises(box.BoxError):
+            c.sync({"nm": "a", "h": "3", "n": "Grp", "b": nested})
+
     def test_a_stale_cached_handle_does_not_wait_a_second_polling_window(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "dead"

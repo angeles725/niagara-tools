@@ -161,10 +161,10 @@ Out of scope:
   - Live run (operator-authorized destination: the localhost station `LLM`, as in AM20): the parent runs it after the merge, with the credential in a 0600 file read into env for that command only and deleted afterward. The result is recorded in this document and in niagara-research.
   - Route: delegated writer for the runner and tests; the parent does the live run and the release.
 
-- [x] **T7 — usage retros and kit deltas** (T7a #173, T7b #174) (operator request 2026-10-01).** Every session that uses `mcp_n4` on a station ends with a retro that proposes kit deltas. This mirrors `/research-sdd` §18 and the build-n4-module `retros/` flow: propose, never apply.
+- [x] **T7 — usage retros and kit deltas** (T7a #173, T7b #174) (operator request 2026-10-01). Every session that uses `mcp_n4` on a station ends with a retro that proposes kit deltas. This mirrors `/research-sdd` §18 and the build-n4-module `retros/` flow: propose, never apply.
   - Content:
     - `mcp-n4-kit/retros/` with `INDEX.md` (`| file | Station | Date | pending|folded | deltas |`);
-    - `mcp-n4-kit/templates/retro.template.md` with a `## Proposed kit deltas` table: change · target file · evidence (audit `batch_id` / tool call) · type · priority;
+    - `mcp-n4-kit/mcp_n4/templates/retro.template.md` (moved into the package by T8b) with a `## Proposed kit deltas` table: change · target file · evidence (audit `batch_id` / tool call) · type · priority;
     - a server tool `session_retro_draft`, which reads the session's audit/journal JSON-lines and drafts a retro pre-filled with evidence-backed candidate deltas:
       - refused writes (no token, identity mismatch, allowlist);
       - read-back verdict mismatches;
@@ -215,6 +215,9 @@ Out of scope:
     - make SK9 independent of git;
     - **a unittest that every `test_*` name cited in METHODOLOGY.md exists** (T5 R3-003, the mechanical gate).
   - install-skill.sh: one source of truth for the skill names.
+  - T1c items re-added (dropped when T8 was split, T8a review R2-005):
+    - the ord-grammar helper for child ORDs: closed by T6d (`box.child_ord`);
+    - T1c test-name cleanup: handled here for the tests the reviews named (docstring-wording tests replaced by behavior tests or one explicit doc-contract test; the misleading side-effect test renamed); no wider audit of T1c test names was done.
   - skill/SKILL.md: explain the default kit path, or derive it from the launcher location.
   - Route: delegated writer. Checks: unittest + `bats tests/install-skill.bats` + shellcheck on changed files.
 
