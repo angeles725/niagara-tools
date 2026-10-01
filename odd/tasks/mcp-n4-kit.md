@@ -200,4 +200,4 @@ Out of scope:
 | T5 | delegated writer | a11881c+dba5a64 (PR #168, merge 2c1291d) | 293 | high → approved + acknowledged (review-242f411d683addc9; suggestions → T8) | bats 14/14 + 698; unittest 275 |
 
 ## Next step
-T4a/T4 RDD + PR, then T5. Earlier: T2 RDD + PR, then T3 (write tools + safety layers). Previously: T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
+T6c (this commit): live smoke runner hardening from the T6 native review (review-7cbd7c1ccb5695dd); then T6 RDD + PR, then T7/T8. Earlier steps (T1-T5) are merged; see the ledger above.

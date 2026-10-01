@@ -29,6 +29,8 @@ READ_TOOLS = frozenset({"n4_connect", "n4_describe_session", "n4_navigate", "n4_
                         "n4_list_links", "n4_find_dangling_outputs"})
 NUMERIC, BOOLEAN, COMPARE = "control:NumericWritable", "control:BooleanWritable", \
     "kitControl:GreaterThan"
+# Wire-sheet x/y below (and the fixed width in create()) are cosmetic positions only;
+# no step checks them.
 COMPONENTS = [("Temp", NUMERIC, 1, 1), ("Setpoint", NUMERIC, 1, 6),
               ("Compare", COMPARE, 16, 3), ("Cooling", BOOLEAN, 32, 3)]
 LINKS = [("Temp", "out", "Compare", "inA"), ("Setpoint", "out", "Compare", "inB"),
@@ -38,14 +40,66 @@ PROBE_ONLY = ["n4_rollback of the folder removal re-creates a nested subtree: th
 
 
 def write_scopes():
-    """The scratch folder plus the root (the folder create/remove targets the root)."""
+    """The scratch folder plus the root.
+
+    The root scope is unavoidable: creating or removing the folder itself writes to its
+    parent (the station root) and the server matches scopes by ORD prefix, so it cannot
+    express "root, but only this child". The runner enforces the narrowing itself:
+    `assert_in_bounds` refuses any write that is not inside McpSmoke or the root
+    create/remove of McpSmoke.
+    """
     return [FOLDER_ORD, ROOT_ORD]
+
+
+def _inside_scratch(ord_str):
+    return isinstance(ord_str, str) and (ord_str == FOLDER_ORD
+                                         or ord_str.startswith(FOLDER_ORD + "/"))
+
+
+def assert_in_bounds(tool, args):
+    """Refuse any write outside McpSmoke (the only root writes are its create/remove)."""
+    for key in ("ord", "source_ord", "target_ord"):
+        if key in args and not _inside_scratch(args[key]):
+            raise SmokeError("refusing %s: %s %r is outside %s" % (tool, key, args[key], SCRATCH))
+    if "parent_ord" in args:
+        at_root = args["parent_ord"] == ROOT_ORD
+        ok = (at_root and args.get("name") == SCRATCH
+              and tool in ("n4_create_component", "n4_remove_component")) \
+            or _inside_scratch(args["parent_ord"])
+        if not ok:
+            raise SmokeError("refusing %s: %r/%r is outside %s"
+                             % (tool, args["parent_ord"], args.get("name"), SCRATCH))
 
 
 def scrub(text, secrets):
     for secret in sorted((s for s in secrets if s), key=len, reverse=True):
         text = text.replace(secret, "***")
     return text
+
+
+def scrub_value(value, secrets):
+    """Scrub every string (keys included) in a JSON-like structure, before encoding."""
+    if isinstance(value, str):
+        return scrub(value, secrets)
+    if isinstance(value, dict):
+        return {scrub_value(k, secrets): scrub_value(v, secrets) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [scrub_value(v, secrets) for v in value]
+    return value
+
+
+def render_report(report, secrets):
+    """JSON text of the report with no credential in it, raw or JSON-escaped.
+
+    Scrub the structure first (raw values), encode, then scrub the text again with the
+    escaped spellings as a second line of defense.
+    """
+    text = json.dumps(scrub_value(report, secrets), indent=2)
+    escaped = []
+    for secret in secrets:
+        if secret:
+            escaped += [json.dumps(secret)[1:-1], json.dumps(secret, ensure_ascii=False)[1:-1]]
+    return scrub(text, list(secrets) + escaped)
 
 
 class SmokeError(Exception):
@@ -142,25 +196,33 @@ class Scenario:
         else:
             try:
                 entry["verdict"], entry["detail"] = fn(entry)
-            except SmokeError as exc:
-                entry["verdict"], entry["detail"] = "failed", str(exc)
+            except Exception as exc:  # SmokeError, or a malformed server reply (KeyError...)
+                entry["verdict"], entry["detail"] = "failed", "%s: %s" % (type(exc).__name__, exc) \
+                    if not isinstance(exc, SmokeError) else str(exc)
             if required and entry["verdict"] != "verified":
                 self.aborted = True
         self.log("%-9s %s" % (entry["verdict"], name))
         return entry
 
-    def read(self, entry, tool, **args):
+    def read(self, tool, **args):
         err, out = self.client.call(tool, **args)
         if err:
             raise SmokeError("%s: %s" % (tool, out))
         return out
 
-    def write(self, entry, tool, **args):
-        """dry run -> token -> execute; returns the executed reply."""
+    def write(self, entry, tool, before_execute=None, **args):
+        """dry run -> token -> execute; returns the executed reply.
+
+        `before_execute` runs after the dry run succeeded and just before the execute call:
+        the point from which the station may hold the change even if no reply comes back.
+        """
+        assert_in_bounds(tool, args)
         err, plan = self.client.call(tool, **args)
         if err:
             raise SmokeError("dry run refused: %s" % plan)
         entry["dry_run_done"], entry["plan_hash"] = True, plan.get("plan_hash")
+        if before_execute:
+            before_execute()
         err, out = self.client.call(tool, dry_run=False,
                                     confirmation_token=plan["confirmation_token"], **args)
         if err:
@@ -172,23 +234,23 @@ class Scenario:
     def verdict_of(out, **extra):
         return out.get("verdict", "unverified"), dict(extra, observed=out.get("observed"))
 
-    def children(self, entry):
-        out = self.read(entry, "n4_navigate", ord=ROOT_ORD, depth=1)
+    def children(self):
+        out = self.read("n4_navigate", ord=ROOT_ORD, depth=1)
         return [c["name"] for c in out["children"]]
 
-    def slot_value(self, entry, comp, slot="out"):
-        out = self.read(entry, "n4_read_slots", ord="%s/%s" % (FOLDER_ORD, comp))
+    def slot_value(self, comp, slot="out"):
+        out = self.read("n4_read_slots", ord="%s/%s" % (FOLDER_ORD, comp))
         found = [s for s in out["slots"] if s["name"] == slot]
         return found[0]["value"] if found else None
 
     # ---- steps -----------------------------------------------------------
     def connect(self, entry):
-        out = self.read(entry, "n4_connect", station=self.station, expected_station=self.station)
+        out = self.read("n4_connect", station=self.station, expected_station=self.station)
         ok = out.get("station_name") == self.station
         return ("verified" if ok else "mismatch"), {"station_name": out.get("station_name")}
 
     def absent_before(self, entry):
-        present = SCRATCH in self.children(entry)
+        present = SCRATCH in self.children()
         return ("failed" if present else "verified"), \
             {"detail": "%s already exists: refusing to touch it" % SCRATCH if present else "absent"}
 
@@ -197,9 +259,10 @@ class Scenario:
             args = dict(parent_ord=parent, name=name, type=type_)
             if ws:
                 args["wire_sheet"] = {"x": ws[0], "y": ws[1], "w": 8}
-            out = self.write(entry, "n4_create_component", **args)
-            if name == SCRATCH:
-                self.created = True
+            # The folder may exist on the station from the moment the execute call is sent,
+            # even if its reply never arrives: mark it first so cleanup always looks.
+            mark = (lambda: setattr(self, "created", True)) if name == SCRATCH else None
+            out = self.write(entry, "n4_create_component", before_execute=mark, **args)
             return self.verdict_of(out)
         return run
 
@@ -212,7 +275,7 @@ class Scenario:
         return run
 
     def dangling(self, entry):
-        out = self.read(entry, "n4_find_dangling_outputs", ord=FOLDER_ORD, depth=1)
+        out = self.read("n4_find_dangling_outputs", ord=FOLDER_ORD, depth=1)
         names = sorted(d["path"].rsplit("/", 1)[-1] for d in out["dangling"])
         return ("verified" if names == ["Cooling"] else "mismatch"), {"dangling": names}
 
@@ -227,7 +290,7 @@ class Scenario:
         def run(entry):
             deadline, seen = time.monotonic() + self.settle, {}
             while True:
-                seen = {c: self.slot_value(entry, c) in (True, "true") for c in ("Compare", "Cooling")}
+                seen = {c: self.slot_value(c) in (True, "true") for c in ("Compare", "Cooling")}
                 if all(v is want for v in seen.values()) or time.monotonic() >= deadline:
                     break
                 time.sleep(0.25)
@@ -235,12 +298,12 @@ class Scenario:
                 {"expected": want, "observed": seen}
         return run
 
-    def save(self, label):
+    def save(self, folder_present):
         def run(entry):
             out = self.write(entry, "n4_save_station")
             if out.get("persisted") is True:
                 verdict = "verified"
-                self.saved_with_folder = label == "first"
+                self.saved_with_folder = folder_present
             else:
                 verdict = "mismatch" if out.get("persisted") is False else "unverified"
             return verdict, {"persisted": out.get("persisted"), "evidence": out.get("evidence")}
@@ -255,63 +318,66 @@ class Scenario:
         return run
 
     def rollback(self, entry):
+        if not self.removal_batch:
+            return "skipped", "no removal batch was recorded"
         out = self.write(entry, "n4_rollback", batch_id=self.removal_batch)
         return self.verdict_of(out, relinks=out.get("relinks"))
 
-    def remove_again(self):
-        present = SCRATCH in self.children({})
-        if not present:
-            self.steps.append({"name": "remove folder (again)", "tool": "n4_remove_component",
-                               "required": False, "probe": False, "dry_run_done": False,
-                               "batch_id": None, "verdict": "skipped",
-                               "detail": "folder absent after the rollback"})
-            self.log("skipped   remove folder (again)")
-            return
-        self.step("remove folder (again)", "n4_remove_component", self.remove())
+    def remove_again(self, entry):
+        if SCRATCH not in self.children():
+            return "skipped", "folder absent after the rollback"
+        return self.remove()(entry)
 
     def folder_absent(self, entry):
-        present = SCRATCH in self.children(entry)
+        present = SCRATCH in self.children()
         return ("failed" if present else "verified"), {"present": present}
 
     def cleanup(self):
-        """Best effort after an abort: remove the folder this run created."""
+        """Best effort after an abort: remove the folder the station may hold."""
         self.aborted = False
-        try:
-            present = SCRATCH in self.children({})
-        except SmokeError:
-            present = True
-        if present:
+        seen = {}
+
+        def probe(entry):
+            seen["present"] = SCRATCH in self.children()
+            return "verified", {"present": seen["present"]}
+        self.step("cleanup: folder present?", "n4_navigate", probe, required=False)
+        if seen.get("present", True):  # unknown (probe failed) counts as present
             self.step("cleanup", "n4_remove_component", self.remove(), required=False)
         if self.saved_with_folder:
-            self.step("cleanup save", "n4_save_station", self.save("cleanup"), required=False)
+            self.step("cleanup save", "n4_save_station", self.save(False), required=False)
 
-    # ---- the scenario ------------------------------------------------------
+    # ---- the scenario (single source: run() executes it, plan_rows() prints it) --------
+    def plan(self):
+        """Ordered (name, tool, fn, options) rows; builders are lazy, so this contacts nothing."""
+        rows = [("connect", "n4_connect", self.connect, {}),
+                ("folder absent before", "n4_navigate", self.absent_before, {}),
+                ("create Folder %s" % SCRATCH, "n4_create_component",
+                 self.create(SCRATCH, "baja:Folder", None, ROOT_ORD), {})]
+        rows += [("create %s" % name, "n4_create_component",
+                  self.create(name, type_, (x, y), FOLDER_ORD), {})
+                 for name, type_, x, y in COMPONENTS]
+        rows += [("link %s.%s->%s.%s" % link, "n4_create_link", self.link(*link), {})
+                 for link in LINKS]
+        rows += [("find_dangling_outputs == [Cooling]", "n4_find_dangling_outputs",
+                  self.dangling, {}),
+                 ("set Temp=30", "n4_invoke_action", self.set_value("Temp", 30), {}),
+                 ("set Setpoint=25", "n4_invoke_action", self.set_value("Setpoint", 25), {}),
+                 ("read outputs == true", "n4_read_slots", self.expect_outputs(True), {}),
+                 ("set Temp=20", "n4_invoke_action", self.set_value("Temp", 20), {}),
+                 ("read outputs == false", "n4_read_slots", self.expect_outputs(False), {}),
+                 ("save (folder present)", "n4_save_station", self.save(True), {}),
+                 ("remove folder", "n4_remove_component", self.remove(remember=True), {}),
+                 ("rollback folder removal", "n4_rollback", self.rollback,
+                  {"required": False, "probe": True}),
+                 ("remove folder (again)", "n4_remove_component", self.remove_again,
+                  {"required": False}),
+                 ("save (folder removed)", "n4_save_station", self.save(False), {}),
+                 ("folder absent", "n4_navigate", self.folder_absent, {})]
+        return rows
+
     def run(self):
-        self.step("connect", "n4_connect", self.connect)
-        self.step("folder absent before", "n4_navigate", self.absent_before)
-        self.step("create Folder %s" % SCRATCH, "n4_create_component",
-                  self.create(SCRATCH, "baja:Folder", None, ROOT_ORD))
-        for name, type_, x, y in COMPONENTS:
-            self.step("create %s" % name, "n4_create_component",
-                      self.create(name, type_, (x, y), FOLDER_ORD))
-        for src, sslot, dst, dslot in LINKS:
-            self.step("link %s.%s->%s.%s" % (src, sslot, dst, dslot), "n4_create_link",
-                      self.link(src, sslot, dst, dslot))
-        self.step("find_dangling_outputs == [Cooling]", "n4_find_dangling_outputs", self.dangling)
-        self.step("set Temp=30", "n4_invoke_action", self.set_value("Temp", 30))
-        self.step("set Setpoint=25", "n4_invoke_action", self.set_value("Setpoint", 25))
-        self.step("read outputs == true", "n4_read_slots", self.expect_outputs(True))
-        self.step("set Temp=20", "n4_invoke_action", self.set_value("Temp", 20))
-        self.step("read outputs == false", "n4_read_slots", self.expect_outputs(False))
-        self.step("save (folder present)", "n4_save_station", self.save("first"))
-        self.step("remove folder", "n4_remove_component", self.remove(remember=True))
-        if self.removal_batch:
-            self.step("rollback folder removal", "n4_rollback", self.rollback,
-                      required=False, probe=True)
-        if not self.aborted:
-            self.remove_again()
-        self.step("save (folder removed)", "n4_save_station", self.save("second"))
-        self.step("folder absent", "n4_navigate", self.folder_absent)
+        for name, tool, fn, opts in self.plan():
+            self.step(name, tool, fn, **opts)
         if self.aborted and self.created:
             self.cleanup()
 
@@ -323,34 +389,20 @@ def build_report(station, steps, error=None, server_stderr=()):
             "probe_only": PROBE_ONLY, "steps": steps, "server_stderr": list(server_stderr)}
 
 
+def plan_rows():
+    """(name, tool) of every step run() executes, from the same scenario definition."""
+    return [(name, tool) for name, tool, _fn, _opts in Scenario(None, "NAME", 0, None).plan()]
+
+
 def plan_text():
     lines = ["live_smoke: plan only (nothing is sent; pass --apply to execute)",
              "scratch folder: %s, write scopes: %s" % (FOLDER_ORD, ", ".join(write_scopes())),
+             "components: " + ", ".join("%s (%s)" % (n, t) for n, t, _, _ in COMPONENTS),
              "every write: dry run -> confirmation token -> execute -> verdict", ""]
     for i, (name, tool) in enumerate(plan_rows(), 1):
         lines.append("%2d. %-42s %s" % (i, name, tool))
     lines += ["", "probe-only (not required): " + "; ".join(PROBE_ONLY)]
     return "\n".join(lines) + "\n"
-
-
-def plan_rows():
-    rows = [("connect (expected_station = NAME)", "n4_connect"),
-            ("folder absent before", "n4_navigate"),
-            ("create Folder %s" % SCRATCH, "n4_create_component")]
-    rows += [("create %s (%s, wire sheet)" % (n, t), "n4_create_component")
-             for n, t, _, _ in COMPONENTS]
-    rows += [("link %s.%s->%s.%s" % l, "n4_create_link") for l in LINKS]
-    rows += [("find_dangling_outputs == [Cooling]", "n4_find_dangling_outputs"),
-             ("set Temp=30, Setpoint=25", "n4_invoke_action"),
-             ("read Compare.out and Cooling.out == true", "n4_read_slots"),
-             ("set Temp=20, read outputs == false", "n4_invoke_action"),
-             ("save, persisted must be true", "n4_save_station"),
-             ("remove folder", "n4_remove_component"),
-             ("rollback the removal (probe-only)", "n4_rollback"),
-             ("remove folder (again)", "n4_remove_component"),
-             ("save, persisted must be true", "n4_save_station"),
-             ("folder absent", "n4_navigate")]
-    return rows
 
 
 def parse_args(argv):
@@ -421,7 +473,7 @@ def main(argv=None, env=None, stdout=None, stderr=None):
             client.close()
     report = build_report(name, scenario.steps if scenario else [], error,
                           client.stderr_lines if client else ())
-    text = scrub(json.dumps(report, indent=2), secrets)
+    text = render_report(report, secrets)
     if args.report:
         with open(args.report, "w") as fh:
             fh.write(text + "\n")
