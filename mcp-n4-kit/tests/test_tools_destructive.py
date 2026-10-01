@@ -8,6 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import fake_station  # noqa: E402
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
 from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
@@ -274,6 +275,59 @@ class TestRollback(DestructiveCase):
         self.rollback(removed["batch_id"])
         fallback = self.fake.folder.child(nn).child("Src").child("fallback")
         self.assertEqual(fallback.child("status").value, "40")  # null bit kept, facet dropped
+
+    # ---- live finding 3: null types and link-driven inputs -------------------
+    def live_input(self, comp, name, value, status):
+        """A Status input as the live station loads it: frozen children carry no type."""
+        slot = fake_station._Node(name, "baja:StatusNumeric")
+        slot.children = [fake_station._Node("value", None, value),
+                         fake_station._Node("status", None, status)]
+        comp.children.append(slot)
+
+    def linked_group(self):
+        nn, gh = self.group()
+        tgt = self.fake.folder.child(nn).child("Tgt")
+        self.live_input(tgt, "in10", "4.5", "0;activeLevel=e:17@control:PriorityLevel")
+        self.live_input(tgt, "inB", "25.0", "0;activeLevel=e:17@control:PriorityLevel")
+        return nn
+
+    def test_the_station_model_rejects_null_types_and_status_facets(self):
+        for body in ({"nm": "p", "t": "baja:Folder", "s": [{"nm": "p", "t": None, "n": "v"}]},
+                     {"nm": "p", "t": "baja:Folder", "s": [
+                         {"nm": "p", "t": "baja:StatusNumeric", "n": "x", "s": [
+                             {"nm": "p", "n": "status", "v": "0;activeLevel=e:17"}]}]}):
+            with self.assertRaises(box.BoxError) as caught:
+                self.box.sync({"nm": "a", "h": "3", "n": "Bad", "b": body})
+            self.assertIn("Unable to process request", str(caught.exception))
+
+    def test_a_linked_group_rolls_back_without_null_types_or_link_driven_inputs(self):
+        nn = self.linked_group()
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertNotIn('"t": null', safety.canonical([op["b"] for op in sent]).replace(
+            '"t":null', '"t": null'))
+        tgt = [op for op in sent if op["nm"] == "a" and op["n"] == "Tgt"][0]
+        names = [c["n"] for c in tgt["b"].get("s", [])]
+        self.assertNotIn("in10", names)  # link target: the relink re-establishes it
+        self.assertIn("inB", names)      # plain configured input is kept
+        inb = [c for c in tgt["b"]["s"] if c["n"] == "inB"][0]
+        status = [c for c in inb["s"] if c["n"] == "status"][0]
+        self.assertEqual(status["v"], "0")  # bits kept, facet dropped
+        self.assertTrue(all("t" in c or c["n"] in ("value", "status") for c in inb["s"]))
+        value = [c for c in inb["s"] if c["n"] == "value"][0]
+        self.assertNotIn("t", value)
+        self.assertEqual(back["relinks"], {"restored": 1, "skipped": 0})
+        self.assertEqual(self.fake.folder.child(nn).child("Tgt").child("Link")
+                         .child("targetSlotName").value, "in10")
+
+    def test_snapshot_omits_t_for_typeless_nodes_and_recognizes_status_by_name(self):
+        node = {"t": "baja:StatusNumeric", "h": "9", "s": [
+            {"n": "value", "v": "1.0"}, {"n": "status", "v": "40;activeLevel=e:17"}]}
+        snap = tools_write._snapshot(node, "x", [], {})
+        self.assertEqual(snap["s"], [{"nm": "p", "n": "value", "v": "1.0"},
+                                     {"nm": "p", "n": "status", "v": "40"}])
 
     def test_a_folder_removed_at_the_station_root_rolls_back(self):
         """Live finding 2 (2026-10-01): `station:|slot:/` + `/` made `station:|slot://X`."""

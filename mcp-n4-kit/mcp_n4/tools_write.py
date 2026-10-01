@@ -361,16 +361,25 @@ def _snapshot(node, path, links, handles):
     Configuration only (the re-create rule): Status* slots named in RUNTIME_OUTPUT_SLOTS
     are dropped, and a `baja:Status` value keeps its configured bits but loses its
     runtime-only facets (`40;activeLevel=e_def` is restored as `40`). `fallback`, plain
-    values, wsAnnotation and slot facets are kept.
+    values, wsAnnotation and slot facets are kept. Slots that are the TARGET of a link inside
+    the snapshot (`inA`, `in10`...) are omitted too: they hold a value the link propagated
+    at runtime, stale on restore and rejected live ("Unable to process request", finding 3,
+    2026-10-01); the relink re-establishes them. Frozen slot children carry no type, so the
+    `t` key is omitted for them (never `"t": null`), and a `status` child of a `baja:Status*`
+    parent is recognized by name.
     """
     if node.get("h"):
         handles[node["h"]] = path
-    out = {"nm": "p", "t": node.get("t")}
+    out = {"nm": "p"}
+    if node.get("t") is not None:  # frozen slot children carry no type: never emit "t": null
+        out["t"] = node["t"]
     if path and "n" in node:
         out["n"] = node["n"]
     if node.get("v") is not None:
         out["v"] = node["v"]
     kids = []
+    driven = {k.get("v") for c in node.get("s", []) if c.get("t") in LINK_TYPES
+              for k in c.get("s", []) if k.get("n") == "targetSlotName"}
     for child in node.get("s", []):
         child_path = child["n"] if not path else path + "/" + child["n"]
         if child.get("t") in LINK_TYPES:
@@ -379,14 +388,18 @@ def _snapshot(node, path, links, handles):
                           "source_slot": slots.get("sourceSlotName"),
                           "target_slot": slots.get("targetSlotName")})
             continue
+        if child.get("n") in driven:
+            continue
         if child.get("n") in RUNTIME_OUTPUT_SLOTS and \
                 str(child.get("t", "")).startswith("baja:Status"):
             continue
         kid = _snapshot(child, child_path, links, handles)
-        if kid.get("t") == "baja:Status" and "v" in kid:
-            # Keep the configured status bits (null, disabled, overridden...); drop only
-            # the runtime facets after ';' such as activeLevel.
-            kid["v"] = str(kid["v"]).split(";", 1)[0]
+        if kid.get("t") == "baja:Status" or (
+                child.get("n") == "status" and str(node.get("t", "")).startswith("baja:Status")):
+            if "v" in kid:
+                # Keep the configured status bits (null, disabled, overridden...); drop
+                # only the runtime facets after ';' such as activeLevel.
+                kid["v"] = str(kid["v"]).split(";", 1)[0]
         kids.append(kid)
     if kids:
         out["s"] = kids
