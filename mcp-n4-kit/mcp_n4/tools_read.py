@@ -5,7 +5,7 @@ Importing this module has no side effects.
 import os
 from collections import namedtuple
 
-from . import __version__, box
+from . import __version__, box, retro
 
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 
@@ -50,6 +50,10 @@ class Context:
         self.env = os.environ if env is None else env
         self.client_factory = client_factory or box.BoxClient
         self.session = None
+        #: Where the journal/audit live (the server sets it; None = the default dir).
+        self.state_dir = None
+        #: In-memory read observations for the session retro (no audit line exists for reads).
+        self.observations = []
         self.write = None  # tools_write.WriteState, set by the server in writes-allowed mode
         self._secret = None
 
@@ -277,11 +281,20 @@ def n4_find_dangling_outputs(ctx, args):
             abs_path = _abs_path(ord_str, path)
             if (abs_path, "out") not in used:
                 dangling.append({"path": abs_path, "type": node.get("t")})
+    if dangling:  # reads leave no audit line: remember it for the session retro
+        ctx.observations.append({"ts": retro.now(), "ord": ord_str, "count": len(dangling)})
     return {"ord": ord_str, "dangling": dangling,
             "scope_note": "Components are reported up to depth levels below ord. "
                           "Links are seen when their target is at most one level below "
                           "depth; an out slot used only by a deeper target, or by a "
                           "target outside the subtree, is reported as dangling."}
+
+
+def n4_session_retro_draft(ctx, args):
+    """Draft the session retro for the server's state dir (reads only, never writes)."""
+    station = ctx.session.station_name if ctx.session else "unknown"
+    return retro.draft(ctx.state_dir or retro.DEFAULT_STATE_DIR, station=station,
+                       since=args.get("since"), observations=ctx.observations)
 
 
 TOOLS = [
@@ -323,4 +336,11 @@ TOOLS = [
                   "depth": _int("Component levels below ord to scan (1-4)", 1, 4, 2)},
                  ["ord"]),
          n4_find_dangling_outputs),
+    Tool("n4_session_retro_draft",
+         "Draft the session retro: reads this server's audit and journal and returns markdown "
+         "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "
+         "batches, BOX errors, dangling outputs). Proposes only; never applies or stages "
+         "anything. Optional since (ISO-8601) limits the window.",
+         _schema({"since": _str("ISO-8601 timestamp; only newer entries are considered")}),
+         n4_session_retro_draft, needs_session=False),
 ]

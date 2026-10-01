@@ -5,6 +5,7 @@ has no side effects; `main()` is only called under `__main__`.
 """
 import argparse
 import json
+import os
 import sys
 
 from . import __version__, box, safety, tools_read, tools_write
@@ -64,6 +65,7 @@ class Server:
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
                                       insecure_tls=insecure_tls)
+        self.ctx.state_dir = os.path.expanduser(state_dir or tools_write.DEFAULT_STATE_DIR)
         if tools is None:
             tools = tools_read.TOOLS + (tools_write.TOOLS if allow_writes else [])
         if allow_writes:
