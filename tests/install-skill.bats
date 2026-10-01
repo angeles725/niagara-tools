@@ -95,3 +95,89 @@ setup() {
   [ "$status" -eq 0 ]
   [ ! -f "$TARGET" ]  # must not exist after
 }
+
+# ---------------------------------------------------------------------------
+# --skill <build-n4-module|mcp-n4> (mcp-n4-kit T5)
+#
+# These tests run a COPY of the script inside a throwaway tree holding stub
+# skill sources, so they do not depend on the real mcp-n4 skill file.
+# Layout of the throwaway tree: <tree>/scripts/install-skill.sh and
+#   <tree>/build-n4-module-kit/skill/SKILL.md
+#   <tree>/mcp-n4-kit/skill/SKILL.md
+# ---------------------------------------------------------------------------
+make_tree() {
+  TREE="$BATS_TEST_TMPDIR/tree"
+  mkdir -p "$TREE/scripts" "$TREE/build-n4-module-kit/skill" "$TREE/mcp-n4-kit/skill"
+  cp "$SCRIPT" "$TREE/scripts/install-skill.sh"
+  printf 'stub build skill\n' > "$TREE/build-n4-module-kit/skill/SKILL.md"
+  printf 'stub mcp skill\n' > "$TREE/mcp-n4-kit/skill/SKILL.md"
+  TSCRIPT="$TREE/scripts/install-skill.sh"
+}
+
+@test "SK1: --skill mcp-n4 installs the mcp-n4 launcher byte-identical" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  cmp -s "$TREE/mcp-n4-kit/skill/SKILL.md" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+  [ ! -e "$TEST_HOME/.claude/skills/build-n4-module" ]
+}
+
+@test "SK2: --skill build-n4-module is the explicit form of the default" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill build-n4-module
+  [ "$status" -eq 0 ]
+  cmp -s "$TREE/build-n4-module-kit/skill/SKILL.md" "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md"
+  [ ! -e "$TEST_HOME/.claude/skills/mcp-n4" ]
+}
+
+@test "SK3: without --skill the default stays build-n4-module" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 0 ]
+  [ -f "$TEST_HOME/.claude/skills/build-n4-module/SKILL.md" ]
+  [ ! -e "$TEST_HOME/.claude/skills/mcp-n4" ]
+}
+
+@test "SK4: unknown --skill name exits 2 and writes nothing" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill nope
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unknown skill"* ]]
+  [ ! -e "$TEST_HOME/.claude" ]
+}
+
+@test "SK5: --skill without an argument exits 2" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill
+  [ "$status" -eq 2 ]
+}
+
+@test "SK6: mcp-n4 diverged copy exits 1 without --force, 0 and parity with --force" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  printf 'EXTRA\n' >> "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 1 ]
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4 --force
+  [ "$status" -eq 0 ]
+  cmp -s "$TREE/mcp-n4-kit/skill/SKILL.md" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+}
+
+@test "SK7: mcp-n4 second run is already current; --dry-run writes nothing" {
+  make_tree
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4 --dry-run
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_HOME/.claude" ]
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"already current"* ]]
+}
+
+@test "SK8: a missing tracked source for the chosen skill exits 3" {
+  make_tree
+  rm "$TREE/mcp-n4-kit/skill/SKILL.md"
+  run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 3 ]
+}
