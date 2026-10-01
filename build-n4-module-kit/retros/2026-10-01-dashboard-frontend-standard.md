@@ -2,7 +2,7 @@
 # 2026-10-01 · kit · dashboard-frontend-standard
 
 **Session**: PANCCADIA HMI freeze triage → user-requested frontend standard (structure, naming, data, memory, transfer); read-only audit of DashboardPan-ux `rc/index.html`
-**Delta count**: 12
+**Delta count**: 14
 
 ## What happened
 The user asked for a complete frontend standard for dashboard modules (structure, distribution, organization,
@@ -43,6 +43,8 @@ backlog that needs explicit user authorization (decision-logic-decomposition Δ3
 | Δ9 | Layout shell for dashboards: header (identity, global status, active alarms, active write session) → nav → content; top nav bar on 1280×800 kiosks (side nav only for desktop dashboards with many sections); tabs named by site system; no orphan pages. | `types/dashboard.md` § `HMI kiosk (e.g. WEB-HMI10/CF, 1280×800 capacitive Chromium — see corpus B724)` | `[ev: Cliente/panccadia-leon 42fa82e]` |
 | Δ10 | Lint/format toolchain: an ESLint flat config in the kit (`ecmaVersion` matching the Chrome 83 floor, browser globals, `no-unused-vars`, `max-lines-per-function` 60 warn, `no-console` except `error`, `eqeqeq`) run with Node in WSL on `rc/js`; Prettier optional; wired into `report-module.sh` for `-ux` profiles. | `toolbelt/report-module.sh` + `types/frontend-standard.md` | `[ev: Cliente/panccadia-leon 42fa82e]` |
 | Δ11 | Component-oriented `rc/js/` layout (Appendix C §C1), mapping the React-style tree (`components/ pages/ services/ hooks/ types/`) onto plain classic scripts: `components/` render functions taking a model slice, `pages/` one per nav tab, `services/` one per API resource on top of `apiFetch`, `store.js` replacing hooks (poll loop + subscribe), `types.js` JSDoc typedefs checked with `tsc --checkJs --noEmit` in WSL. Refines S Δ1. | `types/frontend-standard.md` § A2 | `[ev: Cliente/panccadia-leon 42fa82e]` |
+| Δ13 | Prototype-to-module rule: a standalone design HTML (sim data) is DECOMPOSED into the Appendix C §C1 layout when it becomes a module; live data enters as the `services/` + `store.js` layer, never as an appended block that reassigns the prototype's global functions; the sim mode survives only as a mock service selected by `config.js`. Complements the existing "module is the SKELETON" rule. | `types/dashboard.md` § `Extending an existing dashboard` | `[ev: Cliente/Juarez/Umbrella UmbrellaDashboard-ux index.html:3259-3295]` |
+| Δ14 | Vendored browser libraries live as separate files in `rc/vendor/<lib>-<version>.min.js` (+ its LICENSE file), pinned, loaded with `?v=`, never pasted inline into `index.html` and never fetched from a CDN at runtime; deprecated builds (e.g. three.js legacy `build/three.min.js`, deprecated since r150) are recorded with a migration note. | `types/dashboard.md` § `ux — servlet + SPA` (third-party browser library recipe) | `[ev: Cliente/Juarez/Umbrella UmbrellaDashboard-ux index.html:23-30]` |
 | Δ12 | Technology decision table (Appendix C §C2): the station servlet stays the backend for on-station HMIs (no Spring Boot on a JACE: Java 8 Compact3); a framework build (Vite + TypeScript, optionally React/Preact) is allowed for NEW `-ux` SPAs only as a pre-built bundle in `src/rc/` with `build.target` = the panel engine (Chrome 83) and a bundle budget; Spring Boot/React/WebSocket stacks belong to off-station multi-site or cloud viewers, not inside the module. | `types/frontend-standard.md` (new § Technology choices) + `types/dashboard.md` § `JS build strategy — grunt vs. no grunt` | `[ev: corpus B1023 §ND4]` |
 
 ## Lessons
@@ -158,6 +160,19 @@ Rules: a component is a pure function `(container, slice) → void` that patches
 | Styling | CSS design tokens (A1); Tailwind/Material UI only with a framework build | Utility CSS needs a build step |
 
 Decision rule: React does not replace the backend — in a module the backend is the station. Pick the framework only when the SPA size justifies a build pipeline, and always target the panel engine.
+
+## Appendix D — UmbrellaDashboard-ux audit (2026-10-01, parent-measured)
+| Item | Measured | Evidence |
+|---|---|---|
+| Shape | single `rc/index.html`, 2,734,850 B, 3,298 lines; 1 `<style>` (19 KB in 8 lines), 3 `<script>` blocks | `wc -lc`, python block split |
+| Base64 | 1,899,078 B = 69.4% (one line ≈ 1.78 MB in the app block) | python regex |
+| Embedded libraries | three.js legacy global build (669 KB, prints its own r150+ deprecation warning) + OrbitControls inline | `index.html:23-30` |
+| App code | ~293 lines, 47 over 400 chars, ~50 functions | awk on lines 2966-3258 |
+| Live wiring | appended block reassigns globals `reading`/`currentState`; `fetch` without timeout; `setInterval` polling; `.catch(function(){})`; `r.ok ? r.json() : null` drops errors silently; NO reload watchdog | `index.html:3259-3295` |
+| Slot keys | built by concatenation `'Unit' + n + '/supplyTemp'` | `index.html:3261, 3272-3280` |
+| Good practice to keep | CSS tokens in `:root`; central SVG `ICONS`; consistent status badges (fault/down/stale/overridden) and fail-closed `offline` when no data | style head; `index.html:2967` (ICONS); `index.html:3279` (offline) |
+
+Backlog (needs explicit authorization): U1 add fetch timeout + success watchdog (R Δ1-Δ3); U2 vendor three.js as files and plan the migration off the legacy build (Δ14); U3 move the 1.78 MB base64 asset to a separate file (Δ3); U4 decompose per Δ13 when the module is next extended.
 
 ## Appendix B — DashboardPan backlog from the audit (needs explicit authorization)
 | # | Finding | Evidence |
