@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# install-skill.sh — install build-n4-module/SKILL.md into the Claude skills directory.
+# install-skill.sh — install a skill launcher into the Claude skills directory.
 #
-# Copies the tracked canonical launcher from build-n4-module-kit/skill/SKILL.md into
-#   <home>/.claude/skills/build-n4-module/SKILL.md
-# using a sha256 comparison to detect divergence.
+# Copies the tracked canonical launcher into <home>/.claude/skills/<skill>/SKILL.md
+# using a sha256 comparison to detect divergence:
+#   --skill build-n4-module (default): build-n4-module-kit/skill/SKILL.md
+#   --skill mcp-n4:                    mcp-n4-kit/skill/SKILL.md
 #
 # This script is VCS-free by design — version control is never invoked here.
 # The source of truth lives in the repository; this script only installs it.
 #
 # Usage:
-#   install-skill.sh [--home <dir>] [--dry-run] [--force]
+#   install-skill.sh [--skill <build-n4-module|mcp-n4>] [--home <dir>] [--dry-run] [--force]
 #
 # Options:
+#   --skill <name> Skill to install: build-n4-module (default) or mcp-n4.
 #   --home <dir>   Base home directory (default: $HOME). Every test passes this flag
 #                  so no test ever touches the real $HOME.
 #   --dry-run      Print what would be done; write nothing. Exits 0.
@@ -20,7 +22,7 @@
 # Exit codes:
 #   0   Installed or already current (or --dry-run).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
-#   2   Usage error.
+#   2   Usage error (including an unknown --skill name).
 #   3   Environment error (target directory not creatable).
 #
 # shellcheck disable=SC2006  # not used; POSIX $() throughout
@@ -28,11 +30,12 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-TRACKED="$REPO_ROOT/build-n4-module-kit/skill/SKILL.md"
+USAGE="usage: install-skill.sh [--skill <build-n4-module|mcp-n4>] [--home <dir>] [--dry-run] [--force]"
 
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
+SKILL="build-n4-module"
 HOME_DIR=""
 DRY_RUN=0
 FORCE=0
@@ -45,17 +48,23 @@ while [ $# -gt 0 ]; do
       HOME_DIR="$1"
       shift
       ;;
+    --skill)
+      shift
+      [ $# -ge 1 ] || { printf 'install-skill: --skill requires an argument\n' >&2; exit 2; }
+      SKILL="$1"
+      shift
+      ;;
     --dry-run)  DRY_RUN=1; shift ;;
     --force)    FORCE=1;   shift ;;
     --)         shift; break ;;
     -*)
       printf 'install-skill: unknown option: %s\n' "$1" >&2
-      printf 'usage: install-skill.sh [--home <dir>] [--dry-run] [--force]\n' >&2
+      printf '%s\n' "$USAGE" >&2
       exit 2
       ;;
     *)
       printf 'install-skill: unexpected argument: %s\n' "$1" >&2
-      printf 'usage: install-skill.sh [--home <dir>] [--dry-run] [--force]\n' >&2
+      printf '%s\n' "$USAGE" >&2
       exit 2
       ;;
   esac
@@ -65,6 +74,19 @@ done
 [ -n "$HOME_DIR" ] || HOME_DIR="$HOME"
 
 # ---------------------------------------------------------------------------
+# Resolve the skill to its tracked source
+# ---------------------------------------------------------------------------
+case "$SKILL" in
+  build-n4-module) TRACKED="$REPO_ROOT/build-n4-module-kit/skill/SKILL.md" ;;
+  mcp-n4)          TRACKED="$REPO_ROOT/mcp-n4-kit/skill/SKILL.md" ;;
+  *)
+    printf 'install-skill: unknown skill: %s (expected build-n4-module or mcp-n4)\n' "$SKILL" >&2
+    printf '%s\n' "$USAGE" >&2
+    exit 2
+    ;;
+esac
+
+# ---------------------------------------------------------------------------
 # Validate tracked source
 # ---------------------------------------------------------------------------
 if [ ! -f "$TRACKED" ]; then
@@ -72,7 +94,7 @@ if [ ! -f "$TRACKED" ]; then
   exit 3
 fi
 
-TARGET_DIR="$HOME_DIR/.claude/skills/build-n4-module"
+TARGET_DIR="$HOME_DIR/.claude/skills/$SKILL"
 TARGET="$TARGET_DIR/SKILL.md"
 
 # ---------------------------------------------------------------------------
