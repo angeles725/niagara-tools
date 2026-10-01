@@ -361,16 +361,25 @@ def _snapshot(node, path, links, handles):
     Configuration only (the re-create rule): Status* slots named in RUNTIME_OUTPUT_SLOTS
     are dropped, and a `baja:Status` value keeps its configured bits but loses its
     runtime-only facets (`40;activeLevel=e_def` is restored as `40`). `fallback`, plain
-    values, wsAnnotation and slot facets are kept.
+    values, wsAnnotation and slot facets are kept. Slots that are the TARGET of a link inside
+    the snapshot (`inA`, `in10`...) are omitted too: they hold a value the link propagated
+    at runtime, stale on restore and rejected live ("Unable to process request", finding 3,
+    2026-10-01); the relink re-establishes them. Frozen slot children carry no type, so the
+    `t` key is omitted for them (never `"t": null`), and a `status` child of a `baja:Status*`
+    parent is recognized by name.
     """
     if node.get("h"):
         handles[node["h"]] = path
-    out = {"nm": "p", "t": node.get("t")}
+    out = {"nm": "p"}
+    if node.get("t") is not None:  # frozen slot children carry no type: never emit "t": null
+        out["t"] = node["t"]
     if path and "n" in node:
         out["n"] = node["n"]
     if node.get("v") is not None:
         out["v"] = node["v"]
     kids = []
+    driven = {k.get("v") for c in node.get("s", []) if c.get("t") in LINK_TYPES
+              for k in c.get("s", []) if k.get("n") == "targetSlotName"}
     for child in node.get("s", []):
         child_path = child["n"] if not path else path + "/" + child["n"]
         if child.get("t") in LINK_TYPES:
@@ -379,14 +388,18 @@ def _snapshot(node, path, links, handles):
                           "source_slot": slots.get("sourceSlotName"),
                           "target_slot": slots.get("targetSlotName")})
             continue
+        if child.get("n") in driven:
+            continue
         if child.get("n") in RUNTIME_OUTPUT_SLOTS and \
                 str(child.get("t", "")).startswith("baja:Status"):
             continue
         kid = _snapshot(child, child_path, links, handles)
-        if kid.get("t") == "baja:Status" and "v" in kid:
-            # Keep the configured status bits (null, disabled, overridden...); drop only
-            # the runtime facets after ';' such as activeLevel.
-            kid["v"] = str(kid["v"]).split(";", 1)[0]
+        if kid.get("t") == "baja:Status" or (
+                child.get("n") == "status" and str(node.get("t", "")).startswith("baja:Status")):
+            if "v" in kid:
+                # Keep the configured status bits (null, disabled, overridden...); drop
+                # only the runtime facets after ';' such as activeLevel.
+                kid["v"] = str(kid["v"]).split(";", 1)[0]
         kids.append(kid)
     if kids:
         out["s"] = kids
@@ -556,6 +569,9 @@ def _rollback_plan(client, args, ctx):
     if components:
         notes.append("re-creates %d nested component(s) one add per component, parents "
                      "first: the station rejects an add that nests components" % len(components))
+        notes.append("a child that already exists on a freshly created component is a frozen "
+                     "slot (e.g. a writable's proxyExt): it is never re-added and is listed "
+                     "as frozen_children_not_restored, its configuration is not restored")
     if not own or len(own) != len(ops):
         notes.append("the rollback itself has no automatic inverse for slot restores or "
                      "removals")
@@ -583,14 +599,32 @@ def _run_components(sess, write, batch_id, planned, replies):
     base = {i: box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
             for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
     actual = {(i, ""): base[i] for i in base}  # (top, spec path) -> assigned ORD
-    created = []
+    created, frozen, skipped = [], {}, set()  # created: ORD per spec, None when skipped
+    data["frozen_not_restored"] = []
     for spec in data["components"]:
-        parent = actual[(spec["top"], spec["parent_path"])]
+        key = (spec["top"], spec["parent_path"])
+        here = (spec["top"], _spec_path(spec))
+        if key in skipped:  # below a frozen child that was not re-created
+            skipped.add(here)
+            actual[here] = box.child_ord(actual[key], spec["n"])
+            data["frozen_not_restored"].append(_frozen_entry(actual, key, spec))
+            created.append(None)
+            continue
+        parent = actual[key]
         try:
             write.scope.check(box.child_ord(parent, spec["n"]))
-            parent_h, _ = _handle(sess.client, parent, 1)
+            parent_h, nodes = _handle(sess.client, parent, 1)
         except Exception as exc:
             raise _partial(batch_id, base, created, exc) from None
+        # The names a fresh parent already has BEFORE we add anything are its frozen
+        # slots: the station refuses to add them again (live finding 4, 2026-10-01).
+        frozen.setdefault(key, {k for k in nodes if k and "/" not in k})
+        if spec["n"] in frozen[key]:
+            skipped.add(here)
+            actual[here] = box.child_ord(parent, spec["n"])
+            data["frozen_not_restored"].append(_frozen_entry(actual, key, spec))
+            created.append(None)
+            continue
         op = {"nm": "a", "h": parent_h, "n": spec["n"], "b": spec["b"]}
         try:
             write.journal.append({"batch_id": batch_id, "ts": _now(),
@@ -604,15 +638,21 @@ def _run_components(sess, write, batch_id, planned, replies):
         except Exception as exc:
             raise _partial(batch_id, base, created, exc) from None
         name = _assigned_name(op, reply)
-        actual[(spec["top"], _spec_path(spec))] = box.child_ord(parent, name)
+        actual[here] = box.child_ord(parent, name)
         created.append(box.child_ord(parent, name))
     return created
+
+
+def _frozen_entry(actual, key, spec):
+    """A component of the snapshot that already exists (frozen) and was not re-created."""
+    return {"path": box.child_ord(actual[key], spec["n"]), "n": spec["n"],
+            "type": spec["b"].get("t")}
 
 
 def _partial(batch_id, base, created, exc):
     """The in-doubt error of a rollback that stopped mid-way, listing what exists now."""
     err = _in_doubt(batch_id, exc if isinstance(exc, Exception) else ToolError(exc))
-    done = sorted(base.values()) + created
+    done = sorted(base.values()) + [c for c in created if c]
     err.args = ("%s. Components already created by this batch (remove the top-level one "
                 "to clean up): %s" % (err.args[0], ", ".join(done)),)
     return err
@@ -788,6 +828,8 @@ def _rollback_readback(client, args, planned, replies, inverse):
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
     # every nested component is really there, with the recorded type and annotation
     for spec, path in zip(planned.data.get("components", []), planned.data.get("created", [])):
+        if path is None:  # a frozen child that already existed: nothing was re-created
+            continue
         head, _, leaf = path.rpartition("/")
         nodes = client.load_tree(head, depth=2)
         ok &= leaf in nodes and nodes[leaf].get("t") == spec["b"].get("t") and \
@@ -945,6 +987,8 @@ def _process(ctx, name, args):
     warnings, relink_inverse, relink_doubt = [], [], False
     if data.get("components"):  # nested components: one add per component, same batch
         data["created"] = _run_components(sess, write, batch_id, planned, replies)
+    if data.get("frozen_not_restored"):
+        out["frozen_children_not_restored"] = data["frozen_not_restored"]
     if data.get("relinks"):  # the rollback's links: same batch, same guards, journaled
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)

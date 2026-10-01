@@ -8,6 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import fake_station  # noqa: E402
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
 from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
@@ -275,6 +276,59 @@ class TestRollback(DestructiveCase):
         fallback = self.fake.folder.child(nn).child("Src").child("fallback")
         self.assertEqual(fallback.child("status").value, "40")  # null bit kept, facet dropped
 
+    # ---- live finding 3: null types and link-driven inputs -------------------
+    def live_input(self, comp, name, value, status):
+        """A Status input as the live station loads it: frozen children carry no type."""
+        slot = fake_station._Node(name, "baja:StatusNumeric")
+        slot.children = [fake_station._Node("value", None, value),
+                         fake_station._Node("status", None, status)]
+        comp.children.append(slot)
+
+    def linked_group(self):
+        nn, gh = self.group()
+        tgt = self.fake.folder.child(nn).child("Tgt")
+        self.live_input(tgt, "in10", "4.5", "0;activeLevel=e:17@control:PriorityLevel")
+        self.live_input(tgt, "inB", "25.0", "0;activeLevel=e:17@control:PriorityLevel")
+        return nn
+
+    def test_the_station_model_rejects_null_types_and_status_facets(self):
+        for body in ({"nm": "p", "t": "baja:Folder", "s": [{"nm": "p", "t": None, "n": "v"}]},
+                     {"nm": "p", "t": "baja:Folder", "s": [
+                         {"nm": "p", "t": "baja:StatusNumeric", "n": "x", "s": [
+                             {"nm": "p", "n": "status", "v": "0;activeLevel=e:17"}]}]}):
+            with self.assertRaises(box.BoxError) as caught:
+                self.box.sync({"nm": "a", "h": "3", "n": "Bad", "b": body})
+            self.assertIn("Unable to process request", str(caught.exception))
+
+    def test_a_linked_group_rolls_back_without_null_types_or_link_driven_inputs(self):
+        nn = self.linked_group()
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertNotIn('"t": null', safety.canonical([op["b"] for op in sent]).replace(
+            '"t":null', '"t": null'))
+        tgt = [op for op in sent if op["nm"] == "a" and op["n"] == "Tgt"][0]
+        names = [c["n"] for c in tgt["b"].get("s", [])]
+        self.assertNotIn("in10", names)  # link target: the relink re-establishes it
+        self.assertIn("inB", names)      # plain configured input is kept
+        inb = [c for c in tgt["b"]["s"] if c["n"] == "inB"][0]
+        status = [c for c in inb["s"] if c["n"] == "status"][0]
+        self.assertEqual(status["v"], "0")  # bits kept, facet dropped
+        self.assertTrue(all("t" in c or c["n"] in ("value", "status") for c in inb["s"]))
+        value = [c for c in inb["s"] if c["n"] == "value"][0]
+        self.assertNotIn("t", value)
+        self.assertEqual(back["relinks"], {"restored": 1, "skipped": 0})
+        self.assertEqual(self.fake.folder.child(nn).child("Tgt").child("Link")
+                         .child("targetSlotName").value, "in10")
+
+    def test_snapshot_omits_t_for_typeless_nodes_and_recognizes_status_by_name(self):
+        node = {"t": "baja:StatusNumeric", "h": "9", "s": [
+            {"n": "value", "v": "1.0"}, {"n": "status", "v": "40;activeLevel=e:17"}]}
+        snap = tools_write._snapshot(node, "x", [], {})
+        self.assertEqual(snap["s"], [{"nm": "p", "n": "value", "v": "1.0"},
+                                     {"nm": "p", "n": "status", "v": "40"}])
+
     def test_a_folder_removed_at_the_station_root_rolls_back(self):
         """Live finding 2 (2026-10-01): `station:|slot:/` + `/` made `station:|slot://X`."""
         self.start_server(write_scopes=["station:|slot:/"])
@@ -428,6 +482,55 @@ class TestRollback(DestructiveCase):
         self.assertEqual(adds[0]["h"], "3")
         self.assertEqual([op["h"] for op in adds[1:]], [grp.handle, grp.handle])
         self.assertEqual(adds[0]["b"]["s"][0]["n"], "wsAnnotation")
+
+    def writable_group(self):
+        """A group holding a NumericWritable and a BooleanWritable (frozen proxyExt each)."""
+        nn, gh = self.group()
+        self.box.add_component(gh, "Sp", "control:NumericWritable")
+        self.box.add_component(gh, "En", "control:BooleanWritable")
+        return nn, gh
+
+    def test_the_station_model_gives_writables_a_frozen_proxy_ext_and_rejects_another(self):
+        nn, gh = self.writable_group()
+        sp = self.fake.folder.child(nn).child("Sp")
+        self.assertEqual(sp.child("proxyExt").type, "control:NullProxyExt")
+        with self.assertRaises(box.BoxError) as caught:
+            self.box.add_component(sp.handle, "proxyExt", "control:NullProxyExt")
+        self.assertIn('Illegal child "control:NullProxyExt" for parent '
+                      '"control:NumericWritable".', str(caught.exception))
+
+    def test_a_group_with_writables_rolls_back_without_re_adding_frozen_children(self):
+        nn, gh = self.writable_group()
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        adds = [op for op in sent if op["nm"] == "a"]
+        self.assertEqual([op["n"] for op in adds], [nn, "Src", "Tgt", "Sp", "En"])
+        group = self.fake.folder.child(nn)
+        for name in ("Sp", "En"):
+            self.assertEqual([c.type for c in group.child(name).children
+                              if c.name == "proxyExt"], ["control:NullProxyExt"])
+        frozen = back["frozen_children_not_restored"]
+        self.assertEqual(sorted((f["n"], f["type"]) for f in frozen),
+                         [("proxyExt", "control:NullProxyExt")] * 2)
+        self.assertEqual(sorted(f["path"].rsplit("/", 2)[-2] for f in frozen), ["En", "Sp"])
+
+    def test_descendants_of_a_skipped_frozen_child_are_skipped_too(self):
+        nn, gh = self.writable_group()
+        sp = self.fake.folder.child(nn).child("Sp")
+        self.box.add_component(sp.child("proxyExt").handle, "Inner", "kitControl:NumericConst")
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertNotIn("Inner", [op["n"] for op in sent if op["nm"] == "a"])
+        self.assertIn(("Inner", "kitControl:NumericConst"),
+                      [(f["n"], f["type"]) for f in back["frozen_children_not_restored"]])
+
+    def test_a_rollback_without_frozen_children_reports_none(self):
+        nn, removed = self.removed_group()
+        self.assertNotIn("frozen_children_not_restored", self.rollback(removed["batch_id"]))
 
     def test_grandchildren_are_added_after_their_parent_breadth_first(self):
         nn, gh = self.group()

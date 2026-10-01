@@ -21,6 +21,11 @@ class _Node:
         return next((c for c in self.children if c.name == name), None)
 
 
+#: Writables own a FROZEN `proxyExt` child (live N4.14, 2026-10-01): it exists as soon as
+#: the writable does, and adding another child of a ProxyExt type is illegal.
+_WRITABLES = ("control:NumericWritable", "control:BooleanWritable")
+
+
 class FakeStation:
     def __init__(self, user="admin", password="secret", station_name="FakeStation"):
         self.user, self.password = user, password
@@ -118,10 +123,10 @@ class FakeStation:
         node.value = bson.get("v")
         node.children = []
         for sub in bson.get("s", []):
-            if self._is_component(sub["t"]):  # a nested component
+            if self._is_component(sub.get("t")):  # a nested component
                 child = self._component(node, sub["n"], sub["t"])
             else:
-                child = _Node(sub["n"], sub["t"])
+                child = _Node(sub["n"], sub.get("t"))
                 node.children.append(child)
             self._fill(child, sub)
 
@@ -209,6 +214,17 @@ class FakeStation:
             return self._invoke(arg)
         raise ValueError("unknown ssc key %s" % key)
 
+    @classmethod
+    def _unencodable(cls, body):
+        """Models live finding 3 (2026-10-01): an add whose body has a `"t": null` node or
+        a Status child carrying runtime facets (`;` in its value) is rejected."""
+        if "t" in body and body["t"] is None:
+            return True
+        if (body.get("n") == "status" or body.get("t") == "baja:Status") and \
+                ";" in str(body.get("v", "")):
+            return True
+        return any(cls._unencodable(sub) for sub in body.get("s", []))
+
     def _sync(self, op):
         nm = op["nm"]
         self._no_double_slashes(op.get("n"))
@@ -216,12 +232,21 @@ class FakeStation:
             parent = self.by_handle[op["h"]]
             # Real N4.14 station (2026-10-01): an add whose body nests COMPONENT children
             # fails with this generic error; plain slots and wsAnnotation are fine.
-            if any(self._is_component(sub["t"]) for sub in op["b"].get("s", [])):
+            if any(self._is_component(sub.get("t")) for sub in op["b"].get("s", [])):
                 raise ValueError("Unable to process request. Please contact your system "
                                  "administrator.")
+            if self._unencodable(op["b"]):
+                raise ValueError("Unable to process request. Please contact your system "
+                                 "administrator.")
+            if parent.type in _WRITABLES and (
+                    op["n"] == "proxyExt" or "ProxyExt" in str(op["b"].get("t"))):
+                raise ValueError('Illegal child "%s" for parent "%s".'
+                                 % (op["b"].get("t"), parent.type))
             name = self._unique(parent, op["n"])
             node = self._component(parent, name, op["b"]["t"])
             self._fill(node, op["b"])
+            if node.type in _WRITABLES:  # the frozen slot, created with its parent
+                self._component(node, "proxyExt", "control:NullProxyExt")
             return [{"id": "a", "nn": name}]
         if nm == "s":
             node = self.by_handle[op["h"]]
