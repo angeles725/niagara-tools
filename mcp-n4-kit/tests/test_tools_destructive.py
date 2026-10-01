@@ -272,7 +272,8 @@ class TestRollback(DestructiveCase):
         back = self.rollback(removed["batch_id"])
         phases = [(e["phase"], e["batch_id"]) for e in self.lines("journal.jsonl")
                   if e["batch_id"] == back["batch_id"]]
-        self.assertEqual([p for p, _ in phases], ["intent", "relink-intent", "result"])
+        self.assertEqual([p for p, _ in phases], ["intent", "component-intent", "component-intent",
+                                                  "relink-intent", "result"])
         relink_intent = [e for e in self.lines("journal.jsonl")
                          if e["phase"] == "relink-intent"][0]
         self.assertEqual(len(relink_intent["ops"]), 1)
@@ -298,7 +299,8 @@ class TestRollback(DestructiveCase):
         nn, removed = self.removed_group()
         before = self.srv.ctx.session.writes_executed
         self.rollback(removed["batch_id"])
-        self.assertEqual(self.srv.ctx.session.writes_executed, before + 1 + 1)
+        # 1 batch + 2 child components (Src, Tgt) + 1 relink
+        self.assertEqual(self.srv.ctx.session.writes_executed, before + 1 + 2 + 1)
 
     def test_a_rollback_whose_relinks_exceed_the_budget_is_refused_before_sending(self):
         self.start_server(max_writes=2)
@@ -346,6 +348,109 @@ class TestRollback(DestructiveCase):
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1, "ambiguous": 1})
         self.assertEqual(self.journal().read(back["batch_id"])["state"], "in-doubt")
+
+    # ---- one add per component (the live station rejects nested adds) ------------
+
+    def sent_adds(self):
+        sent = []
+        orig = self.fake._sync
+        self.fake._sync = lambda op: (sent.append(op), orig(op))[1]
+        return sent
+
+    def test_the_station_model_rejects_an_add_that_nests_components(self):
+        """Regression for the live failure of 2026-10-01 (N4.14 station LLM)."""
+        nested = {"nm": "p", "t": "baja:Folder", "s": [
+            {"nm": "p", "n": "Src", "t": "kitControl:NumericConst"}]}
+        with self.assertRaises(box.BoxError) as caught:
+            self.box.sync({"nm": "a", "h": "3", "n": "Grp", "b": nested})
+        self.assertIn("Unable to process request", str(caught.exception))
+        plain = {"nm": "p", "t": "baja:Folder", "s": [box.ws_annotation(1, 2, 3)]}
+        self.box.sync({"nm": "a", "h": "3", "n": "Ok", "b": plain})  # plain slots are fine
+
+    def test_rollback_adds_one_component_per_op_parents_first_with_the_new_handle(self):
+        nn, gh = self.group()
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        self.rollback(removed["batch_id"])
+        adds = [op for op in sent if op["nm"] == "a"]
+        self.assertEqual([op["n"] for op in adds], [nn, "Src", "Tgt"])
+        for op in adds:
+            self.assertEqual([c for c in op["b"].get("s", []) if c["t"].partition(":")[0]
+                              != "baja"], [])  # only plain slots and wsAnnotation
+        grp = self.fake.folder.child(nn)
+        self.assertEqual(adds[0]["h"], "3")
+        self.assertEqual([op["h"] for op in adds[1:]], [grp.handle, grp.handle])
+        self.assertEqual(adds[0]["b"]["s"][0]["n"], "wsAnnotation")
+
+    def test_grandchildren_are_added_after_their_parent_breadth_first(self):
+        nn, gh = self.group()
+        sub = self.box.add_component(gh, "Sub", "baja:Folder")["nn"]
+        sub_h = self.box.load_tree(FOLDER + "/%s/%s" % (nn, sub), depth=1, **NO_SLEEP)[""]["h"]
+        self.box.add_component(sub_h, "Deep", "kitControl:NumericConst")
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        sent = self.sent_adds()
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertEqual([op["n"] for op in sent if op["nm"] == "a"],
+                         [nn, "Src", "Tgt", "Sub", "Deep"])
+        self.assertIsNotNone(self.fake.folder.child(nn).child("Sub").child("Deep"))
+
+    def test_the_plan_lists_components_by_path_and_its_hash_is_stable(self):
+        nn, removed = self.removed_group()
+        first = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        second = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        self.assertEqual(first["plan_hash"], second["plan_hash"])
+        comps = first["plan"]["components"]
+        self.assertEqual([(c["parent_path"], c["n"]) for c in comps], [("", "Src"), ("", "Tgt")])
+        self.assertNotIn("h", comps[0])
+        self.assertEqual(first["plan"]["ops"][0]["h"], "3")
+
+    def test_the_component_budget_is_checked_before_anything_is_sent(self):
+        self.start_server(max_writes=4)  # remove 1 + rollback needs 1 + 2 components + 1 relink
+        self.connect_verified()
+        nn, removed = self.removed_group()
+        text = self.err("n4_rollback", batch_id=removed["batch_id"])
+        self.assertIn("2 component(s)", text)
+        self.assertNotIn(nn, self.children())
+
+    def test_each_component_is_journaled_before_it_is_sent_and_counts_against_the_budget(self):
+        nn, removed = self.removed_group()
+        seen = []
+        orig = self.fake._sync
+
+        def spy(op):
+            seen.append((op["n"], [e["phase"] for e in self.lines("journal.jsonl")]))
+            return orig(op)
+        self.fake._sync = spy
+        before = self.srv.ctx.session.writes_executed
+        back = self.rollback(removed["batch_id"])
+        src_seen = dict(seen)["Src"]
+        self.assertEqual(src_seen.count("component-intent"), 1)
+        self.assertEqual(dict(seen)["Tgt"].count("component-intent"), 2)
+        self.assertEqual(self.srv.ctx.session.writes_executed, before + 4)
+        view = self.journal().read(back["batch_id"])
+        self.assertEqual([op["n"] for op in view["component_ops"]], ["Src", "Tgt"])
+
+    def test_a_failure_mid_way_is_in_doubt_and_lists_what_was_created(self):
+        nn, removed = self.removed_group()
+        orig = self.fake._sync
+
+        def reject_tgt(op):
+            if op["nm"] == "a" and op["n"] == "Tgt":
+                raise ValueError("Unable to process request.")
+            return orig(op)
+        self.fake._sync = reject_tgt
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("in-doubt", text)
+        self.assertIn("%s/%s" % (FOLDER, nn), text)
+        self.assertIn("%s/%s/Src" % (FOLDER, nn), text)
+        self.assertNotIn("/Tgt,", text)
+        batch = [e["batch_id"] for e in self.lines("journal.jsonl")
+                 if e.get("rollback_of") == removed["batch_id"]][0]
+        self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
+        self.assertIsNone(self.fake.folder.child(nn).child("Tgt"))
 
     # ---- retry after a failed rollback (R3-rollback-retry-duplicates) ----------
 

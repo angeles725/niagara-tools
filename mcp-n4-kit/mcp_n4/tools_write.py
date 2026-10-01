@@ -509,13 +509,24 @@ def _rollback_plan(client, args, ctx):
         if current != recorded:
             raise ToolError("%s now has handle %s but the batch recorded %s: the component "
                             "was replaced, refusing" % (ord_str, current, recorded))
+    components = []
+    for i, op in enumerate(ops):  # one add per component: nested bodies are rejected live
+        if op["nm"] == "a":
+            ops[i] = dict(op)
+            ops[i]["b"], specs = _flatten(i, op["b"])
+            components += specs
     own = [{"nm": "v", "h": op["h"], "n": op["n"]} for op in ops if op["nm"] == "a"]
     planned_links = len(relinks) * len(own)
-    if sess.writes_executed + 1 + planned_links > write.max_writes:
+    need = 1 + len(components) + planned_links
+    if sess.writes_executed + need > write.max_writes:
         raise ToolError("write budget too small: this rollback needs %d write(s) (1 batch + %d "
-                        "relink(s)) but only %d remain (--max-writes %d)"
-                        % (1 + planned_links, planned_links,
+                        "component(s) + %d relink(s)) but only %d remain (--max-writes %d)"
+                        % (need, len(components), planned_links,
                            write.max_writes - sess.writes_executed, write.max_writes))
+    for spec in components:  # every re-created component, under today's scope
+        top = ops[spec["top"]]
+        write.scope.check(_end_ord(_ord_of(targets, top["h"]) + "/" + top["n"],
+                                   _spec_path(spec)))
     for op in own:  # both ends of every relink, under today's scope (name as requested)
         for spec in relinks:
             _check_ends(write.scope, "%s/%s" % (_ord_of(targets, op["h"]), op["n"]), spec)
@@ -523,12 +534,102 @@ def _rollback_plan(client, args, ctx):
     if relinks:
         notes.append("then re-creates %d link(s) between restored components, where both "
                      "ends exist" % len(relinks))
+    if components:
+        notes.append("re-creates %d nested component(s) one add per component, parents "
+                     "first: the station rejects an add that nests components" % len(components))
     if not own or len(own) != len(ops):
         notes.append("the rollback itself has no automatic inverse for slot restores or "
                      "removals")
     return Planned(ops, own if len(own) == len(ops) else [], notes,
                    {"rollback_of": bid, "targets": targets, "relinks": relinks,
+                    "components": components,
                     "ord_of": {h: o for o, h in targets.items()}})
+
+
+def _spec_path(spec):
+    return spec["n"] if not spec["parent_path"] else spec["parent_path"] + "/" + spec["n"]
+
+
+def _run_components(sess, write, batch_id, planned, replies):
+    """Create the nested components of a restored subtree, one add op each, parents first.
+
+    Each op is a member of the rollback's own batch: scope-checked, journaled (write-ahead,
+    one `component-intent` record) before it is sent, and counted against the write budget.
+    The parent's NEW handle is loaded through the client just before its children are
+    added. Returns the created paths per top op; a failure mid-way raises the batch
+    in-doubt error listing what was created so far.
+    """
+    data = planned.data
+    base = {i: "%s/%s" % (data["ord_of"][op["h"]], _assigned_name(op, reply))
+            for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
+    actual = {(i, ""): base[i] for i in base}  # (top, spec path) -> assigned ORD
+    created = []
+    for spec in data["components"]:
+        parent = actual[(spec["top"], spec["parent_path"])]
+        try:
+            write.scope.check(parent + "/" + spec["n"])
+            parent_h, _ = _handle(sess.client, parent, 1)
+        except Exception as exc:
+            raise _partial(batch_id, base, created, exc) from None
+        op = {"nm": "a", "h": parent_h, "n": spec["n"], "b": spec["b"]}
+        try:
+            write.journal.append({"batch_id": batch_id, "ts": _now(),
+                                  "phase": "component-intent", "ops": [op]})
+        except OSError:
+            raise _partial(batch_id, base, created, "the component intent could not be "
+                           "written, nothing more was sent") from None
+        sess.writes_executed += 1
+        try:
+            reply = _send(sess.client, op)
+        except Exception as exc:
+            raise _partial(batch_id, base, created, exc) from None
+        name = _assigned_name(op, reply)
+        actual[(spec["top"], _spec_path(spec))] = parent + "/" + name
+        created.append(parent + "/" + name)
+    return created
+
+
+def _partial(batch_id, base, created, exc):
+    """The in-doubt error of a rollback that stopped mid-way, listing what exists now."""
+    err = _in_doubt(batch_id, exc if isinstance(exc, Exception) else ToolError(exc))
+    done = sorted(base.values()) + created
+    err.args = ("%s. Components already created by this batch (remove the top-level one "
+                "to clean up): %s" % (err.args[0], ", ".join(done)),)
+    return err
+
+
+def _is_component(type_):
+    """True for a type the station must create with its own add op (not a plain slot value)."""
+    return isinstance(type_, str) and (
+        type_.partition(":")[0] != "baja" or type_ == "baja:Folder")
+
+
+def _own_slots(body):
+    """`body` without its component children: plain slot values and wsAnnotation only."""
+    out = {k: v for k, v in body.items() if k not in ("s", "n")}
+    kept = [c for c in body.get("s", []) if not _is_component(c.get("t"))]
+    if kept:
+        out["s"] = kept
+    return out
+
+
+def _flatten(top, body):
+    """Split a nested snapshot body into `(top_body, specs)`, one spec per descendant.
+
+    The real station rejects an add whose body nests components, so each component
+    becomes its own add, parents before children (breadth-first). Specs carry paths
+    relative to the top component, never handles, so the plan hash stays stable.
+    """
+    specs, queue = [], [("", body)]
+    while queue:
+        path, node = queue.pop(0)
+        for kid in node.get("s", []):
+            if _is_component(kid.get("t")):
+                name = _name("component name", kid.get("n"))
+                specs.append({"top": top, "parent_path": path, "n": name,
+                              "b": _own_slots(kid)})
+                queue.append((name if not path else path + "/" + name, kid))
+    return _own_slots(body), specs
 
 
 def _relink_spec(spec):
@@ -663,6 +764,9 @@ def _rollback_readback(client, args, planned, replies, inverse):
         else:
             ok &= op["n"] in nodes and \
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
+    for path in planned.data.get("created", []):  # every nested component is really there
+        head, _, leaf = path.rpartition("/")
+        ok &= leaf in client.load_tree(head, depth=1)
     observed = {"restored": bool(ok)}
     if relinks is not None:
         observed["relinks"] = relinks
@@ -781,7 +885,7 @@ def _process(ctx, name, args):
         planned.data["write"] = write  # readback polls with the operator's timing
     plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
     data = _data(planned)
-    for key in ("relinks", "outgoing_links_broken"):  # part of what the token authorizes
+    for key in ("relinks", "components", "outgoing_links_broken"):  # part of what the token authorizes
         if data.get(key):
             plan[key] = data[key]
     plan_hash = hashlib.sha256(safety.canonical(plan).encode()).hexdigest()
@@ -798,6 +902,8 @@ def _process(ctx, name, args):
         intent["rollback_of"] = data["rollback_of"]
     if data.get("relinks"):
         intent["relinks"] = data["relinks"]
+    if data.get("components"):
+        intent["components"] = data["components"]
     try:  # write-ahead: no intent on disk, no op on the wire
         write.journal.append(intent)
     except OSError:
@@ -811,6 +917,8 @@ def _process(ctx, name, args):
         raise _in_doubt(batch_id, exc) from None
     out = {"dry_run": False, "batch_id": batch_id}
     warnings, relink_inverse, relink_doubt = [], [], False
+    if data.get("components"):  # nested components: one add per component, same batch
+        data["created"] = _run_components(sess, write, batch_id, planned, replies)
     if data.get("relinks"):  # the rollback's links: same batch, same guards, journaled
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)

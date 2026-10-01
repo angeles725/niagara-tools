@@ -180,11 +180,13 @@ class Journal(_JsonlFile):
         super().__init__(state_dir, "journal.jsonl")
 
     @staticmethod
-    def _merge(intent, result, relink_ops=None):
+    def _merge(intent, result, relink_ops=None, component_ops=None):
         view = {k: v for k, v in intent.items() if k != "phase"}
         view.update(inverse=None, accepted=None, verdict=None)
         if relink_ops is not None:  # the second write-ahead record of a rollback's relinks
             view["relink_ops"] = relink_ops
+        if component_ops:  # write-ahead records of a rollback's nested component adds
+            view["component_ops"] = component_ops
         if result is not None:
             view.update({k: v for k, v in result.items() if k not in ("phase", "ts")})
             view["result_ts"] = result.get("ts")
@@ -192,16 +194,18 @@ class Journal(_JsonlFile):
         return view
 
     def _views(self):
-        intents, results, relinks = {}, {}, {}
+        intents, results, relinks, comps = {}, {}, {}, {}
         for entry in self.entries():
             bid = entry.get("batch_id")
             if entry.get("phase") == "intent":
                 intents.setdefault(bid, entry)
             elif entry.get("phase") == "relink-intent":
                 relinks.setdefault(bid, entry.get("ops"))
+            elif entry.get("phase") == "component-intent":
+                comps.setdefault(bid, []).extend(entry.get("ops") or [])
             elif entry.get("phase") == "result":
                 results[bid] = entry
-        return {bid: self._merge(i, results.get(bid), relinks.get(bid))
+        return {bid: self._merge(i, results.get(bid), relinks.get(bid), comps.get(bid))
                 for bid, i in intents.items()}
 
     def read(self, batch_id):
