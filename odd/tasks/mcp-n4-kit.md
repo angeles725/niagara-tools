@@ -67,7 +67,7 @@ Out of scope:
     - tools `connect`/`describe_session` (detects stationName, version tier), `navigate`, `read_slots`, `list_links`, `find_dangling_outputs`.
   - Route: delegated writer.
   - Checks: unittest with the fake station; an end-to-end stdio test.
-- [ ] **T3 — write tools with safety layers.**
+- [x] **T3 — write tools with safety layers** (delivered as T3a primitives #163 + T3 tools #164 + T3b station policy/lifecycle #165).
   - Content:
     - `dry_run` default true;
     - HMAC single-use confirmation token bound to tool + canonical args + plan hash + expiry;
@@ -79,20 +79,60 @@ Out of scope:
     - read-back verdict `{requested, accepted, observed, verdict}`.
   - Route: delegated writer.
   - Checks: red-then-green per safety layer.
-- [ ] **T4 — destructive tools + rollback + save.**
+- [x] **T4 — destructive tools + rollback + save** (delivered as T4a write-ahead journal hardening #166 + T4 tools).
   - Content:
     - `remove_component`, `rollback(batch_id)` from the journal;
     - `save_station` (destructive class; optional persistence check by `config.bog` mtime/sha when a station home is configured).
   - Route: delegated writer.
   - Checks: unittest.
-- [ ] **T5 — skill + installer + METHODOLOGY.**
-  - Content:
-    - `mcp-n4-kit/METHODOLOGY.md`: safety layers L1-L8, live rules from B1199, route ladder;
-    - `mcp-n4-kit/skill/SKILL.md` thin launcher (`$MCP_N4_KIT` → default path → fd) with the mandatory checklist;
-    - `scripts/install-skill.sh --skill mcp-n4` support (bats-tested, no change to default behavior);
-    - MCP client registration docs.
+- [ ] **T5 — METHODOLOGY + skill launcher + installer.**
+  - `mcp-n4-kit/METHODOLOGY.md`, concise. Each rule names the code or test that enforces it, or is marked "manual". Sections:
+    1. **Route ladder:**
+       - R-A BOX JSON (default, live-certified in niagara-research B1199);
+       - R-B Java Fox sidecar;
+       - R-F offline BOG-XML (niagara-research `tools/bog-nav.py`/`bog-write.py`);
+       - R-E oBIX for values only;
+       - R-D in-station module, last resort;
+       - always give a ladder, never a bare "cannot".
+    2. **Safety layers L1-L8** (B1197 §1197.4), mapped to their code: dedicated station user, server-side RBAC, dry-run, confirmation token, write scope and limits, write-ahead journal and rollback, audit, operator-controlled station policy (`--station`/`--credential-env`/`--insecure-tls`, HTTPS only, no login retry).
+    3. **Live rules (B1199):**
+       - one op per syncTo;
+       - read back every write;
+       - write Status slots whole;
+       - an absent value means the type default;
+       - check dangling outputs;
+       - lock-out is 5 failures in 30 s;
+       - no import side effects;
+       - confirm a save on disk;
+       - identity before writes;
+       - declare probe-only elements.
+    4. **Mandatory session checklist:** connect to a configured station, navigate/read, dry-run, show the plan to the human, execute with the token, read back, check dangling outputs, save with persistence evidence, keep the batch_id, write the session retro (T7).
+    5. **Version tiers** (B1197): A 4.13/4.14 full; B 4.15/4.3 start read-only; C others need a scratch write first.
+    6. **Evidence index:** B1177, B1179, B1192, B1197, B1199.
+  - `mcp-n4-kit/skill/SKILL.md`, a thin launcher modeled on `build-n4-module-kit/skill/SKILL.md`:
+    - Frontmatter: `name: mcp-n4`, `description: "Trigger: …"`, `license: Apache-2.0`, metadata `version "0.1"`.
+    - Kit resolution, in order:
+      1. `$MCP_N4_KIT` containing `METHODOLOGY.md`;
+      2. the default `/home/cristian/modulos_niagara_n4/niagara-tools/mcp-n4-kit`;
+      3. `fd`, requiring `mcp_n4/server.py`; never `$HOME` or `/`; ask when ambiguous.
+    - Body: read METHODOLOGY first, register the server (README), the checklist, and the hard rules:
+      - never write without showing the dry-run plan;
+      - no credentials in tool args or chat;
+      - never retry a failed login;
+      - report `mismatch`/`failed`/`unverified` honestly;
+      - close with the session retro.
+  - `scripts/install-skill.sh --skill <build-n4-module|mcp-n4>`:
+    - default `build-n4-module`, with behavior and exit codes unchanged;
+    - an unknown name exits 2;
+    - TDD in `tests/install-skill.bats`, RED first: install, current, diverged without `--force` (exit 1), `--force`, `--dry-run`, unknown;
+    - shellcheck stays clean.
+  - README: links to METHODOLOGY and the skill, plus the install command.
   - Route: delegated writer.
-  - Checks: bats + shellcheck.
+  - Checks:
+    - `bats tests/install-skill.bats`
+    - `bats tests/*.bats`
+    - `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`
+    - the unittest runner
 - [ ] **T6 — live smoke runner + release.**
   - Content:
     - `mcp-n4-kit/tools/live-smoke.py`: scratch folder → kitControl thermostat → logic read-back → rollback, off unless `--apply` + `--expected-station`;
@@ -130,7 +170,12 @@ Out of scope:
 | T1 | delegated writer (2+ non-trivial files) | b4bf886 | 704 (size:exception — library + its fake station + tests are one cohesive unit; METHODOLOGY moved to T5) | high → granted → approved + acknowledged (lineage review-e2b9c59fdafb98d5; 7 WARNING + 5 SUGGESTION advisory → T1b) | unittest 24 OK (writer + parent re-run); bats 689 OK (writer) |
 | T1b | delegated writer | ab15787 (PR #160, merge 3aaa717) | 402 | high → granted → approved + acknowledged (lineage review-236d2aad767b3300; advisory → T1c) | unittest 47 OK; CI pass |
 | T1c | delegated writer | cdb647f (PR #161, merge 7ab0526) | 298 | high → granted → approved + acknowledged (lineage review-78277d6addbdda3f; advisory → T8 hygiene) | unittest 62 OK; CI pass |
-| T2 | delegated writer | 386d5be | 965 (size:exception — one honest slicing pass: protocol vs tools splits each stay >400 because tests follow their code) | pending | unittest 118 OK (writer + parent); sourceOrd `h:xxxx` + root `stationName` certified against B1199 live transcript |
+| T2 | delegated writer | 386d5be (PR #162, merge 570a81f) | 965 (size:exception — one honest slicing pass: protocol vs tools splits each stay >400 because tests follow their code) | pending | unittest 118 OK (writer + parent); sourceOrd `h:xxxx` + root `stationName` certified against B1199 live transcript; RDD high → approved + acknowledged (review-7438fc563c04844a; R1-001 credential-exfil risk → T3b) |
+| T3a | delegated writer | eee825b (PR #163, merge d76e07d) | 345 | medium, under_budget → reviewed together with T3 | unittest 145 OK; CI pass |
+| T3 | delegated writer | 0acc462 (PR #164, merge 811d2ed) | 1106 (size:exception — shared pipeline) | medium slice_budget_reached (base 570a81f, covers T3a) → approved + acknowledged (review-9e93dcb1fdb7152a; send-before-journal → T4a) | unittest 191 OK; CI pass |
+| T3b | delegated writer | 72d2c70 (PR #165, merge fc64eda) | 515 | high → approved + acknowledged (review-a23ad5de00ce84eb; ambiguous link reply → T4a) | unittest 218 OK; CI pass; found real defect: refused link was journaled |
+| T4a | delegated writer | be62b8a (PR #166) | 555 | pending | unittest OK |
+| T4 | delegated writer | bac77b5 | 729 | pending | unittest 275 OK |
 
 ## Next step
-T2 RDD + PR, then T3 (write tools + safety layers). Previously: T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
+T4a/T4 RDD + PR, then T5. Earlier: T2 RDD + PR, then T3 (write tools + safety layers). Previously: T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
