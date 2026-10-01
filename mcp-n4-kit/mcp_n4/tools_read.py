@@ -33,8 +33,20 @@ class Session:
 class Context:
     """Per-process state: at most one active station session."""
 
-    def __init__(self, allow_writes=False, allow_http=False, env=None, client_factory=None):
+    def __init__(self, allow_writes=False, allow_http=False, env=None, client_factory=None,
+                 stations=None, credential_env="MCP_N4", insecure_tls=()):
         self.allow_writes, self.allow_http = allow_writes, allow_http
+        #: Operator policy, fixed at server start: the model can only pick a NAME.
+        self.stations = dict(stations or {})
+        self.credential_env = credential_env
+        self.insecure_tls = frozenset(insecure_tls)
+        for name, url in self.stations.items():
+            if not url.startswith("https://") and not (allow_http and url.startswith("http://")):
+                raise ValueError("station %s: URL must start with https://" % name)
+        unknown = self.insecure_tls - set(self.stations)
+        if unknown:
+            raise ValueError("--insecure-tls names unconfigured station(s): %s"
+                             % ", ".join(sorted(unknown)))
         self.env = os.environ if env is None else env
         self.client_factory = client_factory or box.BoxClient
         self.session = None
@@ -46,9 +58,12 @@ class Context:
         return "writes-allowed" if self.allow_writes else "read-only"
 
     def close(self):
-        if self.session is not None:
-            self.session.client.close()
-            self.session = None
+        sess, self.session = self.session, None  # cleared even if the close below raises
+        if sess is not None:
+            sess.client.close()
+
+    def set_secret(self, secret):
+        self._secret = secret
 
     def scrub(self, text):
         """Defence in depth: never let the secret appear in an output string."""
@@ -96,15 +111,24 @@ def _has_component_children(nodes, path):
 # ---- n4_connect ----------------------------------------------------------
 
 def n4_connect(ctx, args):
-    prefix = args.get("credential_env", "MCP_N4")
+    try:
+        ctx.close()  # first, so any failure below never leaves the old session active
+    except Exception:  # the old station may be unreachable; the session is cleared anyway
+        pass
+    name = args["station"]
+    if not ctx.stations:
+        raise ToolError("no station is configured: start the server with --station NAME=URL")
+    if name not in ctx.stations:
+        raise ToolError("unknown station %r: configured stations are %s (set with --station "
+                        "NAME=URL)" % (name, ", ".join(sorted(ctx.stations))))
+    prefix = ctx.credential_env
     user, secret = ctx.env.get(prefix + "_USER"), ctx.env.get(prefix + "_PASSWORD")
     if not user or not secret:
         raise ToolError("credentials missing: set env vars %s_USER and %s_PASSWORD"
                         % (prefix, prefix))
-    ctx.close()  # a failed connect must never leave the old session active
-    ctx._secret = secret
-    client = ctx.client_factory(args["base_url"], user, secret,
-                                insecure_tls=args.get("insecure_tls", False),
+    ctx.set_secret(secret)
+    client = ctx.client_factory(ctx.stations[name], user, secret,
+                                insecure_tls=name in ctx.insecure_tls,
                                 allow_http=ctx.allow_http)
     try:
         root = client.open()
@@ -115,15 +139,15 @@ def n4_connect(ctx, args):
     except BaseException:
         client.close()
         raise
-    name = nodes.get("stationName", {}).get("v")
-    expected = args.get("expected_station")
-    if expected is not None and expected != name:
+    station_name = nodes.get("stationName", {}).get("v")
+    expected = args.get("expected_station", name)  # defaults to the configured NAME
+    if expected != station_name:
         client.close()
         raise ToolError("station identity mismatch: expected %r but connected to %r"
-                        % (expected, name))
-    ctx.session = Session(client, name, client.base_url, root_h,
-                          identity_verified=expected is not None)
-    return {"station_name": name, "base_url": client.base_url, "root_handle": root_h,
+                        % (expected, station_name))
+    ctx.session = Session(client, station_name, client.base_url, root_h,
+                          identity_verified=True)
+    return {"station_name": station_name, "base_url": client.base_url, "root_handle": root_h,
             "mode": ctx.mode}
 
 
@@ -134,7 +158,8 @@ def n4_describe_session(ctx, args):
     return {"connected": sess is not None,
             "station_name": sess.station_name if sess else None,
             "base_url": sess.base_url if sess else None,
-            "mode": ctx.mode, "server_version": __version__}
+            "mode": ctx.mode, "server_version": __version__,
+            "configured_stations": sorted(ctx.stations)}
 
 
 # ---- n4_navigate ---------------------------------------------------------
@@ -197,36 +222,48 @@ def _abs_path(ord_str, path):
     return base + "/" + path if path else base or "/"
 
 
-def _scan(ctx, args):
-    """Load `ord` and return (ord, nodes, links) for components up to `depth` levels down.
+#: Source ORDs name a component by handle: `h:<handle>` (BOX handle ORD), possibly
+#: prefixed by the station as `...|h:<handle>`. Only the part after the last `|` is used.
+HANDLE_PREFIX = "h:"
 
-    A link sits one level below its target component and its slots one more, so
-    the load goes `depth + 2` deep and links of deeper components are dropped
-    (their slots would not be loaded).
+
+def _scan(ctx, args):
+    """Load `ord` and return (ord, nodes, links, depth).
+
+    `links` holds every link whose target component is at most `depth + 1`
+    levels below `ord`; each entry carries `target_level`. A link sits one level
+    below its target and its slots one more, so the load goes `depth + 3` deep.
+    Callers report components up to `depth` only; the extra level exists so that
+    an out slot feeding a target one level below `depth` is seen as used.
     """
     ord_str, depth = _ord_arg(args), args.get("depth", 2)
-    nodes = ctx.session.client.load_tree(ord_str, depth=depth + 2)
+    nodes = ctx.session.client.load_tree(ord_str, depth=depth + 3)
     by_handle = {n["h"]: _abs_path(ord_str, p) for p, n in nodes.items() if n.get("h")}
     links = []
     for path, node in nodes.items():
-        if node.get("t") not in LINK_TYPES or _level(path) - 1 > depth:
+        if node.get("t") not in LINK_TYPES or _level(path) - 1 > depth + 1:
             continue
         slots = {k: v.get("v") for k, v in box.children(nodes, path).items()}
         source_ord = slots.get("sourceOrd")
         handle = (source_ord or "").rsplit("|", 1)[-1]
         target = path.rpartition("/")[0]
+        is_handle = handle.startswith(HANDLE_PREFIX)
         links.append({"target_path": _abs_path(ord_str, target),
                       "link_name": path.rpartition("/")[2],
                       "source_ord": source_ord,
-                      "source_path": by_handle.get(handle[2:]) if handle.startswith("h:") else None,
+                      "source_path": by_handle.get(handle[len(HANDLE_PREFIX):])
+                      if is_handle else None,
                       "source_slot": slots.get("sourceSlotName"),
-                      "target_slot": slots.get("targetSlotName")})
+                      "target_slot": slots.get("targetSlotName"),
+                      "target_level": _level(target)})
     return ord_str, nodes, links, depth
 
 
 def n4_list_links(ctx, args):
-    ord_str, _, links, _ = _scan(ctx, args)
-    return {"ord": ord_str, "links": links}
+    ord_str, _, links, depth = _scan(ctx, args)
+    shown = [{k: v for k, v in l.items() if k != "target_level"}
+             for l in links if l["target_level"] <= depth]
+    return {"ord": ord_str, "links": shown}
 
 
 def n4_find_dangling_outputs(ctx, args):
@@ -241,22 +278,21 @@ def n4_find_dangling_outputs(ctx, args):
             if (abs_path, "out") not in used:
                 dangling.append({"path": abs_path, "type": node.get("t")})
     return {"ord": ord_str, "dangling": dangling,
-            "scope_note": "Only links inside the scanned subtree are seen; an out slot "
-                          "linked from outside the subtree is reported as dangling."}
+            "scope_note": "Components are reported up to depth levels below ord. "
+                          "Links are seen when their target is at most one level below "
+                          "depth; an out slot used only by a deeper target, or by a "
+                          "target outside the subtree, is reported as dangling."}
 
 
 TOOLS = [
     Tool("n4_connect",
-         "Open a session to a Niagara N4 station (replaces any previous session). "
-         "Credentials come from env vars <credential_env>_USER and <credential_env>_PASSWORD, "
-         "never from arguments. Pass expected_station to refuse the wrong station.",
-         _schema({"base_url": _str("Station URL, https://host[:port]"),
-                  "credential_env": _str("Env var prefix for credentials", default="MCP_N4"),
-                  "insecure_tls": {"type": "boolean", "default": False,
-                                   "description": "Skip TLS certificate verification "
-                                                  "(self-signed station certificates)"},
-                  "expected_station": _str("Required stationName; mismatch closes the session")},
-                 ["base_url"]),
+         "Open a session to one of the stations the operator configured at server start "
+         "(replaces any previous session). The URL, credentials and TLS policy are fixed by "
+         "the operator and cannot be chosen here. The station's real stationName must equal "
+         "expected_station (default: the configured station NAME), or the session is closed.",
+         _schema({"station": _str("Configured station NAME (see n4_describe_session)"),
+                  "expected_station": _str("Required stationName; default: the station NAME")},
+                 ["station"]),
          n4_connect, needs_session=False),
     Tool("n4_describe_session",
          "Report whether a station session is active, which station, and the server mode. "

@@ -28,6 +28,7 @@ class WriteTestCase(test_server.ToolTestCase):
 
     def start_server(self, **kw):
         opts = dict(allow_writes=True, allow_http=True, env=self.env, state_dir=self.state_dir,
+                    stations=self.stations,
                     write_scopes=list(self.SCOPES), max_writes=self.MAX_WRITES)
         opts.update(kw)
         self.srv.ctx.close()
@@ -119,8 +120,9 @@ class TestMode(WriteTestCase):
 
 
 class TestIdentity(WriteTestCase):
-    def test_write_without_expected_station_is_refused_and_audited(self):
+    def test_write_on_an_unverified_session_is_refused_and_audited(self):
         self.connect()
+        self.srv.ctx.session.identity_verified = False
         text = self.err("n4_create_component", parent_ord=FOLDER, name="Pump",
                         type="kitControl:NumericConst")
         self.assertIn("expected_station", text)
@@ -128,6 +130,10 @@ class TestIdentity(WriteTestCase):
         audit = self.lines("audit.jsonl")
         self.assertEqual((audit[-1]["outcome"], audit[-1]["tool"]),
                          ("refused", "n4_create_component"))
+
+    def test_default_connect_verifies_identity_so_writes_are_allowed(self):
+        self.connect()
+        self.assertTrue(self.srv.ctx.session.identity_verified)
 
     def test_write_without_a_session_is_refused(self):
         self.assertIn("not connected", self.err(
@@ -476,6 +482,22 @@ class TestCreateLink(WriteTestCase):
         self.fake._check_link = lying
         out = self.run_write("n4_create_link", **self.args)
         self.assertEqual(out["verdict"], "mismatch")
+
+
+class TestCreateLinkRejected(WriteTestCase):
+    def test_station_rejection_is_failed_with_reason_and_nothing_journaled(self):
+        self.connect_verified()
+        src, _ = self.add("Src", out=1.0)
+        tgt, tgt_h = self.add("Tgt")
+        self.fake._check_link = lambda arg: [{"v": False, "r": "type mismatch", "s": None}]
+        args = dict(source_ord=FOLDER + "/" + src, source_slot="out",
+                    target_ord=FOLDER + "/" + tgt, target_slot="in10")
+        out = self.run_write("n4_create_link", **args)
+        self.assertEqual(out["verdict"], "failed")
+        self.assertEqual(out["accepted"]["r"], "type mismatch")
+        self.assertIsNone(self.fake.by_handle[tgt_h].child("Link"))
+        self.assertEqual(out["inverse"], [])
+        self.assertEqual(self.lines("journal.jsonl"), [])
 
 
 class TestJournalAndAudit(WriteTestCase):

@@ -17,7 +17,8 @@ SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 
 PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS = -32700, -32600, -32601, -32602
 
-_JSON_TYPES = {"string": str, "boolean": bool, "integer": int, "object": dict}
+_JSON_TYPES = {"string": str, "boolean": bool, "integer": int, "number": (int, float),
+               "array": list, "object": dict}
 
 
 class InvalidParams(Exception):
@@ -38,11 +39,15 @@ def _validate(schema, args):
         spec = props.get(key)
         if spec is None:
             continue
-        want = _JSON_TYPES.get(spec.get("type"))
-        if want is None:  # an untyped property accepts any JSON value
+        kind = spec.get("type")
+        if kind is None:  # an untyped property accepts any JSON value
             continue
-        # bool is an int subclass in Python; an integer argument must not be a bool.
-        if not isinstance(value, want) or (want is int and isinstance(value, bool)):
+        if kind not in _JSON_TYPES:  # a server bug, never a client error
+            raise ValueError("schema for %s uses unsupported type %r" % (key, kind))
+        want = _JSON_TYPES[kind]
+        # bool is an int subclass in Python; a numeric argument must not be a bool.
+        if not isinstance(value, want) or (kind in ("integer", "number")
+                                           and isinstance(value, bool)):
             raise InvalidParams("argument %s must be %s" % (key, spec["type"]))
         if "minimum" in spec and value < spec["minimum"]:
             raise InvalidParams("argument %s must be >= %s" % (key, spec["minimum"]))
@@ -53,9 +58,12 @@ def _validate(schema, args):
 class Server:
     def __init__(self, allow_writes=False, allow_http=False, env=None,
                  client_factory=None, tools=None, write_scopes=(), state_dir=None,
-                 token_ttl=300, max_writes=200):
+                 token_ttl=300, max_writes=200, stations=None, credential_env="MCP_N4",
+                 insecure_tls=()):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
-                                      env=env, client_factory=client_factory)
+                                      env=env, client_factory=client_factory,
+                                      stations=stations, credential_env=credential_env,
+                                      insecure_tls=insecure_tls)
         if tools is None:
             tools = tools_read.TOOLS + (tools_write.TOOLS if allow_writes else [])
         if allow_writes:
@@ -77,12 +85,16 @@ class Server:
         return None if reply is None else json.dumps(reply)
 
     def serve(self, instream, outstream):
-        for line in instream:
-            reply = self.handle_line(line)
-            if reply is not None:
-                outstream.write(reply + "\n")
-                outstream.flush()
-        self.ctx.close()
+        try:
+            for line in instream:
+                reply = self.handle_line(line)
+                if reply is not None:
+                    outstream.write(reply + "\n")
+                    outstream.flush()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.ctx.close()
 
     # ---- dispatch --------------------------------------------------------
     @staticmethod
@@ -94,7 +106,7 @@ class Server:
             return self._error(None, INVALID_REQUEST, "request must be a JSON object")
         method, id_ = msg.get("method"), msg.get("id")
         params = msg.get("params")
-        if id_ is None:  # notification: never answered
+        if "id" not in msg:  # notification: never answered ("id": null is a request)
             return None
         try:
             if method == "initialize":
@@ -166,6 +178,15 @@ def parse_args(argv=None):
                         help="confirmation token lifetime (default 300)")
     parser.add_argument("--max-writes", type=int, default=200, metavar="N",
                         help="executed writes allowed per session (default 200)")
+    parser.add_argument("--station", action="append", default=[], metavar="NAME=URL",
+                        help="station n4_connect may use (repeatable); NAME should equal the "
+                             "station's stationName; URL must be https://")
+    parser.add_argument("--credential-env", default="MCP_N4", metavar="PREFIX",
+                        help="env var prefix holding <PREFIX>_USER/<PREFIX>_PASSWORD "
+                             "(default MCP_N4)")
+    parser.add_argument("--insecure-tls", action="append", default=[], metavar="NAME",
+                        help="skip TLS certificate verification for this configured station "
+                             "(self-signed); repeatable")
     parser.add_argument("--allow-http-for-tests", action="store_true",
                         help="permit http:// base URLs (fake station in tests only)")
     return parser.parse_args(argv)
@@ -173,9 +194,21 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
-    Server(allow_writes=args.allow_writes, allow_http=args.allow_http_for_tests,
-           write_scopes=args.write_scope, state_dir=args.state_dir, token_ttl=args.token_ttl,
-           max_writes=args.max_writes).serve(sys.stdin, sys.stdout)
+    try:
+        stations = {}
+        for item in args.station:
+            name, sep, url = item.partition("=")
+            if not sep or not name or not url:
+                raise ValueError("--station expects NAME=URL, got %r" % item)
+            stations[name] = url
+        srv = Server(allow_writes=args.allow_writes, allow_http=args.allow_http_for_tests,
+                     write_scopes=args.write_scope, state_dir=args.state_dir,
+                     token_ttl=args.token_ttl, max_writes=args.max_writes, stations=stations,
+                     credential_env=args.credential_env, insecure_tls=args.insecure_tls)
+    except ValueError as exc:
+        print("mcp_n4.server: %s" % exc, file=sys.stderr)
+        return 2
+    srv.serve(sys.stdin, sys.stdout)
     return 0
 
 

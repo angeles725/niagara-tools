@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import subprocess
@@ -78,9 +79,9 @@ class TestProtocol(unittest.TestCase):
             self.assertEqual(res["error"]["code"], -32602, params)
 
     def test_tools_call_validates_required_type_and_range(self):
-        for name, args in (("n4_connect", {}), ("n4_connect", {"base_url": 5}),
+        for name, args in (("n4_connect", {}), ("n4_connect", {"station": 5}),
                            ("n4_navigate", {"depth": 4}), ("n4_navigate", {"depth": "1"}),
-                           ("n4_connect", {"base_url": "x", "insecure_tls": "yes"})):
+                           ("n4_connect", {"station": "x", "expected_station": 7})):
             res = self.srv.dispatch(rpc("tools/call", {"name": name, "arguments": args}))
             self.assertEqual(res["error"]["code"], -32602, (name, args))
 
@@ -131,9 +132,93 @@ class TestProtocol(unittest.TestCase):
         args = server.parse_args(["--allow-writes", "--allow-http-for-tests"])
         self.assertTrue(args.allow_writes)
         self.assertTrue(args.allow_http_for_tests)
+        args = server.parse_args(["--station", "a=https://h1", "--station", "b=https://h2:8443",
+                                  "--insecure-tls", "b", "--credential-env", "LAB"])
+        self.assertEqual(args.station, ["a=https://h1", "b=https://h2:8443"])
+        self.assertEqual((args.insecure_tls, args.credential_env), (["b"], "LAB"))
+        self.assertEqual(server.parse_args([]).credential_env, "MCP_N4")
         args = server.parse_args([])
         self.assertFalse(args.allow_writes)
         self.assertFalse(args.allow_http_for_tests)
+
+
+class TestRobustness(unittest.TestCase):
+    def test_id_null_is_a_request_and_gets_a_reply(self):
+        srv = server.Server()
+        out = json.loads(srv.handle_line('{"jsonrpc":"2.0","id":null,"method":"ping"}'))
+        self.assertEqual(out, {"jsonrpc": "2.0", "id": None, "result": {}})
+
+    def test_message_without_id_is_still_a_notification(self):
+        srv = server.Server()
+        self.assertIsNone(srv.handle_line('{"jsonrpc":"2.0","method":"ping"}'))
+
+    def test_validate_supports_number_and_array(self):
+        schema = {"properties": {"n": {"type": "number", "minimum": 0},
+                                 "a": {"type": "array"}}}
+        server._validate(schema, {"n": 1.5, "a": [1]})
+        server._validate(schema, {"n": 2})
+        for args in ({"n": "x"}, {"n": True}, {"a": {}}, {"n": -1}):
+            with self.assertRaises(server.InvalidParams, msg=args):
+                server._validate(schema, args)
+
+    def test_validate_fails_clearly_on_an_unknown_schema_type(self):
+        with self.assertRaises(ValueError) as cm:
+            server._validate({"properties": {"x": {"type": "float"}}}, {"x": 1})
+        self.assertIn("float", str(cm.exception))
+
+    def test_every_registered_tool_schema_uses_a_known_type(self):
+        for tool in tools_read.TOOLS:
+            for spec in tool.input_schema["properties"].values():
+                self.assertIn(spec.get("type"), server._JSON_TYPES, tool.name)
+
+    def test_serve_closes_the_session_when_the_loop_raises(self):
+        srv = server.Server()
+        closed = []
+        srv.ctx.close = lambda: closed.append(1)
+
+        def lines():
+            yield '{"jsonrpc":"2.0","id":1,"method":"ping"}\n'
+            raise RuntimeError("stream broke")
+        with self.assertRaises(RuntimeError):
+            srv.serve(lines(), io.StringIO())
+        self.assertEqual(closed, [1])
+
+    def test_serve_exits_cleanly_on_keyboard_interrupt_and_closes(self):
+        srv = server.Server()
+        closed = []
+        srv.ctx.close = lambda: closed.append(1)
+
+        def lines():
+            raise KeyboardInterrupt
+            yield
+        srv.serve(lines(), io.StringIO())  # no exception
+        self.assertEqual(closed, [1])
+
+    def test_close_clears_the_session_even_when_the_client_close_raises(self):
+        class Boom:
+            def close(self):
+                raise OSError("unreachable")
+        ctx = tools_read.Context()
+        ctx.session = tools_read.Session(Boom(), "S", "https://h", "2")
+        with self.assertRaises(OSError):
+            ctx.close()
+        self.assertIsNone(ctx.session)
+
+    def test_set_secret_scrubs_outputs(self):
+        ctx = tools_read.Context()
+        ctx.set_secret("hunter2-value")
+        self.assertEqual(ctx.scrub("pw=hunter2-value!"), "pw=***!")
+
+    def test_connect_survives_a_failing_close_of_the_old_session(self):
+        class Boom:
+            def close(self):
+                raise OSError("unreachable")
+        srv = server.Server(env={}, stations={"S": "https://h"})
+        srv.ctx.session = tools_read.Session(Boom(), "S", "https://h", "2")
+        res = srv.dispatch(rpc("tools/call", {"name": "n4_connect",
+                                              "arguments": {"station": "S"}}))["result"]
+        self.assertTrue(res["isError"])
+        self.assertIsNone(srv.ctx.session)
 
 
 class ToolTestCase(unittest.TestCase):
@@ -143,7 +228,8 @@ class ToolTestCase(unittest.TestCase):
         self.fake = FakeStation(password=self.PASSWORD).start()
         self.addCleanup(self.fake.stop)
         self.env = {"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": self.PASSWORD}
-        self.srv = server.Server(allow_http=True, env=self.env)
+        self.stations = {"FakeStation": self.fake.url}
+        self.srv = server.Server(allow_http=True, env=self.env, stations=self.stations)
         self.addCleanup(self.srv.ctx.close)
 
     def call(self, name, **args):
@@ -162,7 +248,7 @@ class ToolTestCase(unittest.TestCase):
         return result["content"][0]["text"]
 
     def connect(self, **kw):
-        return self.ok("n4_connect", base_url=self.fake.url, **kw)
+        return self.ok("n4_connect", station="FakeStation", **kw)
 
 
 class TestConnect(ToolTestCase):
@@ -172,41 +258,112 @@ class TestConnect(ToolTestCase):
                                "root_handle": "2", "mode": "read-only"})
 
     def test_connect_reports_writes_allowed_mode(self):
-        self.srv = server.Server(allow_writes=True, allow_http=True, env=self.env)
+        self.srv = server.Server(allow_writes=True, allow_http=True, env=self.env,
+                                 stations=self.stations)
         self.addCleanup(self.srv.ctx.close)
         self.assertEqual(self.connect()["mode"], "writes-allowed")
 
-    def test_connect_reads_credentials_from_custom_env_prefix(self):
-        self.srv.ctx.env = {"LAB_USER": "admin", "LAB_PASSWORD": self.PASSWORD}
-        self.assertEqual(self.connect(credential_env="LAB")["station_name"], "FakeStation")
+    def test_credentials_come_from_the_operator_configured_env_prefix(self):
+        self.srv = server.Server(allow_http=True, stations=self.stations, credential_env="LAB",
+                                 env={"LAB_USER": "admin", "LAB_PASSWORD": self.PASSWORD})
+        self.addCleanup(self.srv.ctx.close)
+        self.assertEqual(self.connect()["station_name"], "FakeStation")
+
+    def test_credential_env_is_not_a_tool_argument(self):
+        props = [t for t in tools_read.TOOLS if t.name == "n4_connect"][0].input_schema
+        self.assertEqual(set(props["properties"]), {"station", "expected_station"})
+        self.assertEqual(props["required"], ["station"])
+        res = self.srv.dispatch(rpc("tools/call", {"name": "n4_connect", "arguments": {
+            "station": "FakeStation", "base_url": "https://evil.example"}}))
+        self.assertNotIn("error", res)  # unknown args are ignored, never used
+        self.assertEqual(res["result"]["structuredContent"]["base_url"], self.fake.url)
 
     def test_missing_env_vars_name_the_variables_not_values(self):
         self.srv.ctx.env = {}
-        text = self.err("n4_connect", base_url=self.fake.url)
+        text = self.err("n4_connect", station="FakeStation")
         self.assertIn("MCP_N4_USER", text)
         self.assertIn("MCP_N4_PASSWORD", text)
         self.assertEqual(self.fake.requests, 0)
 
     def test_wrong_password_is_an_error_without_leaking_the_secret(self):
         self.srv.ctx.env = {"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "wrong-pw-1234"}
-        text = self.err("n4_connect", base_url=self.fake.url)
+        text = self.err("n4_connect", station="FakeStation")
         self.assertNotIn("wrong-pw-1234", text)
         self.assertEqual(self.fake.requests, 1)  # no login retry (B1179)
         self.assertIn("not connected", self.err("n4_navigate"))
 
-    def test_http_is_refused_without_the_test_flag(self):
-        self.srv = server.Server(env=self.env)
-        text = self.err("n4_connect", base_url=self.fake.url)
-        self.assertIn("http", text)
-        self.assertNotIn(self.PASSWORD, text)
+    def test_http_station_is_refused_at_start_without_the_test_flag(self):
+        with self.assertRaises(ValueError) as cm:
+            server.Server(env=self.env, stations=self.stations)
+        self.assertIn("https", str(cm.exception))
         self.assertEqual(self.fake.requests, 0)
+
+    def test_unknown_station_name_is_refused_and_names_the_flag(self):
+        text = self.err("n4_connect", station="other")
+        self.assertIn("--station", text)
+        self.assertIn("FakeStation", text)
+        self.assertEqual(self.fake.requests, 0)
+
+    def test_no_configured_station_is_refused_and_names_the_flag(self):
+        self.srv = server.Server(allow_http=True, env=self.env)
+        text = self.err("n4_connect", station="FakeStation")
+        self.assertIn("--station NAME=URL", text)
+        self.assertEqual(self.fake.requests, 0)
+
+    def test_expected_station_defaults_to_the_station_name(self):
+        out = self.connect()
+        self.assertEqual(out["station_name"], "FakeStation")
+        self.assertTrue(self.srv.ctx.session.identity_verified)
+
+    def test_default_expected_name_mismatch_is_refused(self):
+        self.srv = server.Server(allow_http=True, env=self.env,
+                                 stations={"Other": self.fake.url})
+        self.addCleanup(self.srv.ctx.close)
+        text = self.err("n4_connect", station="Other")
+        self.assertIn("Other", text)
+        self.assertIn("FakeStation", text)
+        self.assertIsNone(self.srv.ctx.session)
+
+    def test_tls_is_verified_unless_the_operator_marks_the_station_insecure(self):
+        seen = []
+
+        def factory(url, user, secret, insecure_tls=False, allow_http=False):
+            seen.append(insecure_tls)
+            return box.BoxClient(url, user, secret, insecure_tls=insecure_tls,
+                                 allow_http=allow_http)
+        for insecure, want in (((), False), (("FakeStation",), True)):
+            srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
+                                insecure_tls=insecure, client_factory=factory)
+            self.addCleanup(srv.ctx.close)
+            res = srv.dispatch(rpc("tools/call", {"name": "n4_connect",
+                                                  "arguments": {"station": "FakeStation"}}))
+            self.assertNotIn("error", res)
+            self.assertEqual(seen[-1], want)
+
+    def test_insecure_tls_for_an_unconfigured_station_is_a_start_error(self):
+        with self.assertRaises(ValueError):
+            server.Server(allow_http=True, stations=self.stations, insecure_tls=("ghost",))
+
+    def test_failed_connect_on_unknown_station_closes_the_old_session(self):
+        self.connect()
+        self.err("n4_connect", station="ghost")
+        self.assertIsNone(self.srv.ctx.session)
+        self.assertEqual(self.fake.sessions, set())
+
+    def test_failed_connect_on_missing_credentials_closes_the_old_session(self):
+        self.connect()
+        self.srv.ctx.env = {}
+        self.err("n4_connect", station="FakeStation")
+        self.assertIsNone(self.srv.ctx.session)
+        self.assertEqual(self.fake.sessions, set())
+        self.assertIn("not connected", self.err("n4_navigate"))
 
     def test_expected_station_match_connects(self):
         self.assertEqual(self.connect(expected_station="FakeStation")["station_name"],
                          "FakeStation")
 
     def test_expected_station_mismatch_closes_session_and_names_both(self):
-        text = self.err("n4_connect", base_url=self.fake.url, expected_station="OtherStation")
+        text = self.err("n4_connect", station="FakeStation", expected_station="OtherStation")
         self.assertIn("OtherStation", text)
         self.assertIn("FakeStation", text)
         self.assertIsNone(self.srv.ctx.session)
@@ -223,7 +380,7 @@ class TestConnect(ToolTestCase):
     def test_failed_reconnect_leaves_no_session(self):
         self.connect()
         self.srv.ctx.env = {"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "wrong-pw-1234"}
-        self.err("n4_connect", base_url=self.fake.url)
+        self.err("n4_connect", station="FakeStation")
         self.assertIsNone(self.srv.ctx.session)
 
 
@@ -231,14 +388,24 @@ class TestDescribeSession(ToolTestCase):
     def test_describe_before_connect_reports_disconnected(self):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": False, "station_name": None, "base_url": None,
-                               "mode": "read-only", "server_version": server.SERVER_VERSION})
+                               "mode": "read-only", "server_version": server.SERVER_VERSION,
+                               "configured_stations": ["FakeStation"]})
 
     def test_describe_after_connect(self):
         self.connect()
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": True, "station_name": "FakeStation",
                                "base_url": self.fake.url, "mode": "read-only",
-                               "server_version": server.SERVER_VERSION})
+                               "server_version": server.SERVER_VERSION,
+                               "configured_stations": ["FakeStation"]})
+
+    def test_describe_lists_only_names_never_urls_or_credentials(self):
+        self.srv = server.Server(allow_http=True, env=self.env,
+                                 stations={"b": "http://user:pw@h/", "a": "http://h2/"})
+        self.addCleanup(self.srv.ctx.close)
+        out = self.ok("n4_describe_session")
+        self.assertEqual(out["configured_stations"], ["a", "b"])
+        self.assertNotIn("pw", json.dumps(out))
 
 
 class StationTestCase(ToolTestCase):
@@ -418,6 +585,37 @@ class TestDanglingOutputs(StationTestCase):
         self.assertEqual(sorted(paths), sorted(["/Folder/" + a[0], "/Folder/" + b[0]]))
 
 
+class TestDeepTargets(StationTestCase):
+    """A link whose target is deeper than `depth` must not cause false positives."""
+
+    def setUp(self):
+        super().setUp()
+        self.a = self.add_with_out("A")
+        self.c = self.add("C")
+        nn = self.box.add_component(self.c[1], "B", "kitControl:NumericConst")["nn"]
+        tree = self.box.load_tree("station:|slot:/Folder/" + self.c[0], depth=1, **NO_SLEEP)
+        self.b = (nn, tree[nn]["h"])
+        self.box.check_links(self.a[1], "out", self.b[1], "in10", add=True)
+
+    def test_output_feeding_a_deeper_target_is_not_dangling(self):
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder", depth=1)
+        self.assertNotIn("/Folder/" + self.a[0], [d["path"] for d in out["dangling"]])
+
+    def test_source_in_the_reported_range_resolves_for_a_deeper_target(self):
+        out = self.ok("n4_list_links", ord="station:|slot:/Folder", depth=2)
+        self.assertEqual([(l["source_path"], l["target_path"]) for l in out["links"]],
+                         [("/Folder/" + self.a[0], "/Folder/%s/%s" % (self.c[0], self.b[0]))])
+
+    def test_list_links_reports_only_links_of_components_within_depth(self):
+        self.assertEqual(self.ok("n4_list_links", ord="station:|slot:/Folder", depth=1)["links"],
+                         [])
+
+    def test_scope_note_states_what_is_and_is_not_seen(self):
+        note = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder")["scope_note"]
+        self.assertIn("one level below depth", note)
+        self.assertIn("outside the subtree", note)
+
+
 class TestStdioEndToEnd(unittest.TestCase):
     PASSWORD = "e2e-pw-value-77"
 
@@ -442,10 +640,10 @@ class TestStdioEndToEnd(unittest.TestCase):
             rpc("initialize", {"protocolVersion": "2025-06-18"}, 1),
             rpc("notifications/initialized", id_=None),
             rpc("tools/list", id_=2),
-            call(3, "n4_connect", base_url=fake.url),
+            call(3, "n4_connect", station="FakeStation"),
             call(4, "n4_navigate"),
             call(5, "n4_describe_session"),
-        ], ["--allow-http-for-tests"])
+        ], ["--station", "FakeStation=" + fake.url, "--allow-http-for-tests"])
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4, 5])
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "mcp-n4")
@@ -457,13 +655,20 @@ class TestStdioEndToEnd(unittest.TestCase):
         self.assertEqual(fake.sessions, set())  # closed when stdin ended
         self.assertNotIn(self.PASSWORD, proc.stdout + proc.stderr)
 
-    def test_http_is_refused_without_the_flag_over_stdio(self):
+    def test_http_station_is_refused_without_the_flag_over_stdio(self):
         fake = FakeStation(password=self.PASSWORD).start()
         self.addCleanup(fake.stop)
-        proc, replies = self.run_server([rpc("tools/call", {
-            "name": "n4_connect", "arguments": {"base_url": fake.url}}, 1)])
-        self.assertTrue(replies[0]["result"]["isError"])
+        proc, replies = self.run_server([], ["--station", "FakeStation=" + fake.url])
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertEqual(replies, [])
+        self.assertIn("https", proc.stderr)
         self.assertEqual(fake.requests, 0)
+
+    def test_connect_without_a_configured_station_is_refused_over_stdio(self):
+        proc, replies = self.run_server([rpc("tools/call", {
+            "name": "n4_connect", "arguments": {"station": "FakeStation"}}, 1)])
+        self.assertTrue(replies[0]["result"]["isError"])
+        self.assertIn("--station", replies[0]["result"]["content"][0]["text"])
 
 
 if __name__ == "__main__":
