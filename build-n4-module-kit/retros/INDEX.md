@@ -200,3 +200,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | pending | 3 |
