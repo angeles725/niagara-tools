@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import base64
 
+from mcp_n4 import box
+
 # Values equal to the type default are omitted from events, like the real station.
 _DEFAULTS = {"baja:Status": "0", "baja:Double": "0.0", "baja:Boolean": "false"}
 
@@ -109,17 +111,14 @@ class FakeStation:
             candidate = "%s%d" % (name, i)
         return candidate
 
-    @staticmethod
-    def _is_component(type_):
-        return type_.partition(":")[0] != "baja" or type_ == "baja:Folder"
+    _is_component = staticmethod(box.is_component_type)  # same rule as the write tools
 
     def _fill(self, node, bson):
         node.type = bson.get("t", node.type)
         node.value = bson.get("v")
         node.children = []
         for sub in bson.get("s", []):
-            module = sub["t"].partition(":")[0]
-            if module != "baja" or sub["t"] == "baja:Folder":  # a nested component
+            if self._is_component(sub["t"]):  # a nested component
                 child = self._component(node, sub["n"], sub["t"])
             else:
                 child = _Node(sub["n"], sub["t"])

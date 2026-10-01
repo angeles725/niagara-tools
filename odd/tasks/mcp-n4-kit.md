@@ -133,7 +133,7 @@ Out of scope:
     - `bats tests/*.bats`
     - `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash`
     - the unittest runner
-- [ ] **T6 — live smoke runner + release.**
+- [x] **T6 — live smoke runner + release** (runner #170; live findings fixed by T6b #171 per-component re-create, T6c #172 runner hardening, T6d ORD join; release pending live re-run 3).
   - `mcp-n4-kit/tools/live_smoke.py` drives the REAL MCP server over stdio (subprocess `python3 -m mcp_n4.server ...`), not the box library directly, so the whole stack is exercised.
     - Mode:
       - default: plan only, printing the scenario;
@@ -161,7 +161,7 @@ Out of scope:
   - Live run (operator-authorized destination: the localhost station `LLM`, as in AM20): the parent runs it after the merge, with the credential in a 0600 file read into env for that command only and deleted afterward. The result is recorded in this document and in niagara-research.
   - Route: delegated writer for the runner and tests; the parent does the live run and the release.
 
-- [ ] **T7 — usage retros and kit deltas (operator request 2026-10-01).** Every session that uses `mcp_n4` on a station ends with a retro that proposes kit deltas. This mirrors `/research-sdd` §18 and the build-n4-module `retros/` flow: propose, never apply.
+- [x] **T7 — usage retros and kit deltas** (T7a #173, T7b #174) (operator request 2026-10-01).** Every session that uses `mcp_n4` on a station ends with a retro that proposes kit deltas. This mirrors `/research-sdd` §18 and the build-n4-module `retros/` flow: propose, never apply.
   - Content:
     - `mcp-n4-kit/retros/` with `INDEX.md` (`| file | Station | Date | pending|folded | deltas |`);
     - `mcp-n4-kit/templates/retro.template.md` with a `## Proposed kit deltas` table: change · target file · evidence (audit `batch_id` / tool call) · type · priority;
@@ -178,7 +178,45 @@ Out of scope:
   - Route: delegated writer.
   - Checks: unittest, covering both a draft from a synthetic audit log and the honesty line when there is no friction.
 
-- [ ] **T8 — hygiene sweep of accumulated advisory findings.** Content: T1c advisory (KeyboardInterrupt/SystemExit cleanup and docstring, ord-grammar helper for child ORDs, invalidate_handles prefix boundary, stale-handle double wait, test names), plus T2+ advisory that is not fixed in its own slice. Also: a unittest that every `test_*` name cited in METHODOLOGY.md exists (T5 R3-003); explain or parameterize the default kit path in skill/SKILL.md (T5 R1-001/R2-002); one source of truth for skill names in install-skill.sh (R2-004); assert SK7 first-run status (R2-005/R3-001); T4a inverse None normalization + tighten existing journal/audit file modes. Also add MCP protocol versions 2025-11-25/2026-07-28 once their semantics are implemented (T2 declares up to 2025-06-18). Route: delegated writer. Checks: unittest.
+- [ ] **T8a — hygiene: write path and runtime (accumulated native-review advisory).**
+  - box (T1c):
+    - KeyboardInterrupt/SystemExit after `make` must not leak the server session; fix the docstring;
+    - `invalidate_handles` prefix must be boundary-aware (`/A` must not clear `/AB`);
+    - a stale cached handle must not wait two full polling windows.
+  - tools_write:
+    - T4a: normalize a None inverse to `[]`; tighten the mode of existing journal/audit files, or refuse when they are loose;
+    - T4b: guard the relink `load_tree` like the other read-backs; the outgoing-link scan must state its depth limit when it finds nothing;
+    - T6b/T6c:
+      - one shared component-type rule used by both `tools_write` and the fake station; document the heuristic and its limits;
+      - fix the `_run_components` docstring and return shape;
+      - consistent presence rules in `safety._merge` (`relink_ops` vs `component_ops`);
+      - the nested read-back checks more than presence: type plus annotation.
+  - server: support MCP protocol versions newer than 2025-06-18 only once their semantics are implemented; until then, document the supported set.
+  - Route: delegated writer. Checks: unittest.
+- [ ] **T8b — hygiene: retros, tools, tests, docs.**
+  - retro (T7a):
+    - ship the template as package data, so it resolves even when the kit is installed rather than run from the repo;
+    - make `count` mean the same thing on every candidate;
+    - merge the duplicated `scope` class;
+    - shared reason constants between the refusal sites and the classifier;
+    - `draft` must not duplicate the `since` filtering;
+    - `DEFAULT_STATE_DIR` owned by one module;
+    - **`n4_session_retro_draft` defaults `since` to the server start time**, so a draft covers the session, not the whole history.
+  - new_retro (T7b):
+    - atomic writes, temp file plus rename, for both the retro and INDEX;
+    - an honest import-side-effect docstring and test name;
+    - assert that the `--since` filtering takes effect;
+    - real date validation.
+  - live_smoke (T6c): rewrite the tuple-conditional assignment so it reads plainly.
+  - tests:
+    - fix the vacuous `/Tgt,` assertion;
+    - the adds filter must also catch a nested `baja:Folder`;
+    - assert the first-run status in SK7;
+    - make SK9 independent of git;
+    - **a unittest that every `test_*` name cited in METHODOLOGY.md exists** (T5 R3-003, the mechanical gate).
+  - install-skill.sh: one source of truth for the skill names.
+  - skill/SKILL.md: explain the default kit path, or derive it from the launcher location.
+  - Route: delegated writer. Checks: unittest + `bats tests/install-skill.bats` + shellcheck on changed files.
 
 ## Acceptance criteria
 - All unittest + bats + shellcheck are green locally and in CI.

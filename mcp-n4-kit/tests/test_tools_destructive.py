@@ -133,7 +133,9 @@ class TestOutgoingLinks(DestructiveCase):
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn,
                         link_scan_ord=FOLDER)["plan"]
         self.assertNotIn("outgoing_links_broken", plan)
-        self.assertTrue(any("no outgoing links" in n for n in plan["notes"]))
+        note = [n for n in plan["notes"] if "no outgoing links" in n][0]
+        self.assertIn("depth %d" % tools_write.LINK_SCAN_DEPTH, note)
+        self.assertIn("deeper", note)  # an empty scan must say what it could not see
 
     def test_the_scan_root_must_be_inside_the_write_scope(self):
         nn, _ = self.group()
@@ -496,6 +498,55 @@ class TestRollback(DestructiveCase):
                  if e.get("rollback_of") == removed["batch_id"]][0]
         self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
         self.assertIsNone(self.fake.folder.child(nn).child("Tgt"))
+
+    def test_a_failing_relink_load_is_in_doubt_not_a_crash(self):
+        nn, removed = self.removed_group()
+        orig = self.box.load_tree
+
+        def flaky(ord_str, depth=2, **kw):
+            if depth == tools_write.SNAPSHOT_DEPTH:  # only the relink phase loads this deep
+                raise box.BoxError("boom", box.CHANNEL, "loadSlots")
+            return orig(ord_str, depth=depth, **kw)
+        self.box.load_tree = flaky
+        self.addCleanup(setattr, self.box, "load_tree", orig)
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("in-doubt", text)
+        batch = [e["batch_id"] for e in self.lines("journal.jsonl")
+                 if e.get("rollback_of") == removed["batch_id"]][0]
+        self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
+
+    def test_the_nested_read_back_checks_type_and_annotation_not_just_presence(self):
+        nn, gh = self.group()
+        src_h = self.box.load_tree(FOLDER + "/" + nn, depth=2, **NO_SLEEP)["Src"]["h"]
+        self.box.set_slot(src_h, "wsAnnotation", box.ws_annotation(5, 6, 7))
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.assertEqual(self.rollback(removed["batch_id"])["verdict"], "verified")
+
+        def tamper(kind):
+            nn2, _ = self.group("Grp2")
+            h = self.box.load_tree(FOLDER + "/" + nn2, depth=2, **NO_SLEEP)["Src"]["h"]
+            self.box.set_slot(h, "wsAnnotation", box.ws_annotation(5, 6, 7))
+            gone = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn2)
+            orig = self.fake._sync
+
+            def wrapped(op):
+                res = orig(op)
+                if op["nm"] == "a" and op["n"] == "Src":
+                    node = self.fake.folder.child(nn2).child("Src")
+                    if kind == "type":
+                        node.type = "kitControl:BooleanConst"
+                    else:
+                        node.children = [c for c in node.children if c.name != "wsAnnotation"]
+                return res
+            self.fake._sync = wrapped
+            try:
+                return self.rollback(gone["batch_id"])["verdict"]
+            finally:
+                self.fake._sync = orig
+        self.assertEqual(tamper("type"), "mismatch")
+        self.assertEqual(tamper("annotation"), "mismatch")
 
     # ---- retry after a failed rollback (R3-rollback-retry-duplicates) ----------
 

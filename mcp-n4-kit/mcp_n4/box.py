@@ -131,6 +131,22 @@ def status_value(nodes, path):
             "status": kids.get("status", {}).get("v", "0")}
 
 
+def is_component_type(type_):
+    """True when the station must create `type_` with its own add op.
+
+    Heuristic, shared by the write tools and the test fake: every type outside the
+    `baja` module is a component (`kitControl:NumericConst`, `control:...`), and so is
+    `baja:Folder`; the other `baja:` types (`Double`, `StatusNumeric`, `WsAnnotation`,
+    `Link`, ...) are plain slot values. Limits: it is a naming rule, not a type-registry
+    lookup, so any other `baja:` type that is really a component (e.g. a `baja:`
+    container added later) would be treated as a slot value and nested into its
+    parent's body, which the station rejects. Extend the rule here when one shows up.
+    """
+    if not isinstance(type_, str) or ":" not in type_:
+        return False
+    return type_.partition(":")[0] != "baja" or type_ == "baja:Folder"
+
+
 def _flatten(node, path, out):
     out[path] = node
     for child in node.get("s", []):
@@ -163,6 +179,7 @@ class BoxClient:
         self._seq = 0
         self.sid = None
         self._pending_events = []
+        self._saw_other_load = False  # set by _split: a load op for a different handle
         self.dropped_events = 0  # events discarded because the pending list was full
         self._handles = {}  # ord -> node handle, learned from open() and load_tree()
 
@@ -228,11 +245,11 @@ class BoxClient:
     def open(self):
         """Open a session and return the `loadRoot` reply (`{"h": ..., "t": ...}`).
 
-        If a step after `make` fails with a non-auth error the server session is
-        closed (best effort) before the error propagates, so a failed
-        `with BoxClient(...)` never leaks. An `AuthError` skips that cleanup `del`
-        (it would be one more rejected login toward the 5-in-30-s lock-out) and a
-        KeyboardInterrupt is re-raised at once; the local `sid` is dropped either way.
+        If a step after `make` fails with anything but an `AuthError` (including
+        KeyboardInterrupt and SystemExit) the server session is closed (best effort)
+        before the exception propagates, so a failed `with BoxClient(...)` never
+        leaks. An `AuthError` skips that cleanup `del` (it would be one more rejected
+        login toward the 5-in-30-s lock-out); the local `sid` is dropped either way.
         """
         self.sid = self.call(CHANNEL, "make", {})
         try:
@@ -243,7 +260,7 @@ class BoxClient:
         except AuthError:
             self.sid = None
             raise
-        except Exception:
+        except BaseException:  # incl. KeyboardInterrupt/SystemExit: do not leak the session
             self.close()
             raise
         if isinstance(root, dict) and root.get("h"):
@@ -296,6 +313,7 @@ class BoxClient:
         Every other event, and every other op of an event, is kept in pending.
         """
         found = None
+        self._saw_other_load = False
         for event in events:
             evs = event.get("evs") if isinstance(event, dict) else None
             ops = evs.get("ops") if isinstance(evs, dict) else None
@@ -309,12 +327,20 @@ class BoxClient:
                         and (handle is None or op.get("h") == handle)):
                     found = op
                 else:
+                    if (handle is not None and isinstance(op, dict) and op.get("nm") == "l"
+                            and isinstance(op.get("b"), dict) and op.get("h") != handle):
+                        self._saw_other_load = True
                     rest.append(op)
             self._keep_rest(event, rest)
         return found
 
-    def _load_once(self, ord_str, depth, attempts, delay, sleep, handle):
-        """Request `ord_str` and poll up to `attempts` times for its load op."""
+    def _load_once(self, ord_str, depth, attempts, delay, sleep, handle, cached=False):
+        """Request `ord_str` and poll up to `attempts` times for its load op.
+
+        With `cached=True` (the handle came from the cache, not the caller) a load op
+        carrying another handle is taken as proof the cached one is stale, and the
+        wait ends at once instead of exhausting the polling window.
+        """
         for event in self.poll():  # queued before the request: cannot be its reply
             self._keep(event)
         self.ssc("loadSlots", {"o": ord_str, "d": depth})
@@ -322,6 +348,8 @@ class BoxClient:
             op = self._split(self.poll(), handle)
             if op is not None:
                 return op
+            if cached and self._saw_other_load:
+                return None
             if attempt < attempts - 1:
                 sleep(delay)
         return None
@@ -339,11 +367,13 @@ class BoxClient:
         op is kept in `pending_events` and two load ops are never merged.
 
         A handle taken from the cache (not passed in) may be stale; if no matching
-        op arrives, the request is repeated once with the handle treated as unknown.
+        op arrives (or a load op with another handle does, which proves it stale),
+        the request is repeated once with the handle treated as unknown.
         """
         explicit = handle is not None
         handle = handle if explicit else self._handles.get(ord_str)
-        op = self._load_once(ord_str, depth, attempts, delay, sleep, handle)
+        op = self._load_once(ord_str, depth, attempts, delay, sleep, handle,
+                             cached=handle is not None and not explicit)
         if op is None and handle is not None and not explicit:
             self._handles.pop(ord_str, None)
             op = self._load_once(ord_str, depth, attempts, delay, sleep, None)
@@ -357,11 +387,15 @@ class BoxClient:
         return nodes
 
     def invalidate_handles(self, ord_prefix=None):
-        """Forget cached handles for ords starting with `ord_prefix` (all if None)."""
+        """Forget cached handles of `ord_prefix` and its descendants (all if None).
+
+        The match is boundary-aware: `.../A` clears `.../A` and `.../A/B`, never `.../AB`.
+        """
         if ord_prefix is None:
             self._handles.clear()
             return
-        for key in [k for k in self._handles if k.startswith(ord_prefix)]:
+        base = ord_prefix.rstrip("/")
+        for key in [k for k in self._handles if k == base or k.startswith(base + "/")]:
             del self._handles[key]
 
     # -- writing (one op per syncTo)

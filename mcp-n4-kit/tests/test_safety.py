@@ -228,6 +228,63 @@ class TestJournal(StateFileCase):
                          [("r1", "completed"), ("r2", "in-doubt")])
 
 
+class TestJournalMergeRules(StateFileCase):
+    def view(self, *entries):
+        journal = safety.Journal(self.state_dir)
+        journal.append({"batch_id": "b1", "phase": "intent", "tool": "t"})
+        for entry in entries:
+            journal.append(dict(entry, batch_id="b1"))
+        return journal.read("b1")
+
+    def test_relink_and_component_ops_are_present_exactly_when_a_record_exists(self):
+        bare = self.view()
+        self.assertNotIn("relink_ops", bare)
+        self.assertNotIn("component_ops", bare)
+
+    def test_an_empty_record_is_present_for_both_kinds(self):
+        view = self.view({"phase": "relink-intent"}, {"phase": "component-intent", "ops": []})
+        self.assertEqual(view["relink_ops"], [])
+        self.assertEqual(view["component_ops"], [])
+
+    def test_recorded_ops_are_kept_for_both_kinds(self):
+        view = self.view({"phase": "relink-intent", "ops": [1]},
+                         {"phase": "component-intent", "ops": [2]})
+        self.assertEqual((view["relink_ops"], view["component_ops"]), ([1], [2]))
+
+
+class TestExistingStateFiles(StateFileCase):
+    def seed(self, mode):
+        os.makedirs(self.state_dir, mode=0o700)
+        path = os.path.join(self.state_dir, "journal.jsonl")
+        with open(path, "w"):
+            pass
+        os.chmod(path, mode)
+        return path
+
+    def test_append_refuses_a_loose_existing_file_and_leaves_it_alone(self):
+        path = self.seed(0o644)
+        with self.assertRaises(PermissionError) as cm:
+            safety.Journal(self.state_dir).append({"batch_id": "b1"})
+        self.assertIn("chmod 600", str(cm.exception))
+        self.assertEqual(self.mode(path), 0o644)
+        self.assertEqual(os.path.getsize(path), 0)
+
+    def test_append_still_accepts_a_private_existing_file(self):
+        path = self.seed(0o600)
+        safety.Journal(self.state_dir).append({"batch_id": "b1"})
+        self.assertGreater(os.path.getsize(path), 0)
+
+    def test_check_state_dir_names_a_loose_state_file_at_startup(self):
+        self.seed(0o664)
+        with self.assertRaises(safety.SafetyError) as cm:
+            safety.check_state_dir(self.state_dir)
+        self.assertIn("journal.jsonl", str(cm.exception))
+
+    def test_check_state_dir_accepts_private_state_files(self):
+        self.seed(0o600)
+        safety.check_state_dir(self.state_dir)
+
+
 class TestStateDirCheck(StateFileCase):
     def test_missing_dir_is_fine(self):
         safety.check_state_dir(self.state_dir)

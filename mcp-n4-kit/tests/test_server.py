@@ -41,6 +41,14 @@ class TestProtocol(unittest.TestCase):
         res = self.srv.dispatch(rpc("initialize"))
         self.assertEqual(res["result"]["protocolVersion"], server.SUPPORTED_PROTOCOL_VERSIONS[0])
 
+    def test_a_newer_protocol_version_is_not_echoed_until_its_semantics_exist(self):
+        """Pins the documented supported set: newer revisions are answered with 2025-06-18."""
+        self.assertEqual(server.SUPPORTED_PROTOCOL_VERSIONS,
+                         ("2025-06-18", "2025-03-26", "2024-11-05"))
+        res = self.srv.dispatch(rpc("initialize", {"protocolVersion": "2025-11-25"}))
+        self.assertEqual(res["result"]["protocolVersion"], "2025-06-18")
+        self.assertIn("Only add a newer", server.__doc__)
+
     def test_initialized_notification_gets_no_reply(self):
         self.assertIsNone(self.srv.dispatch(rpc("notifications/initialized", id_=None)))
 
