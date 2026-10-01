@@ -29,7 +29,8 @@ Follow `$KIT/README.md` ("Running the server" and the `.mcp.json` example). The 
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.
-6. Keep every `batch_id`; close with the session retro.
+6. Keep every `batch_id`.
+7. Close with the session retro: call `n4_session_retro_draft` (or run `$KIT/tools/new_retro.py --station NAME --state-dir DIR`), review the candidate deltas, keep or edit them (or leave the honesty line `no new deltas`). Propose, never apply; stage issues only by hand.
 
 ## Hard Rules (non-negotiable)
 
@@ -39,7 +40,7 @@ Follow `$KIT/README.md` ("Running the server" and the `.mcp.json` example). The 
 - Report `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success.
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
 - Never contact a station the operator did not configure and authorize.
-- Close with the session retro: proposed kit deltas, never applied unprompted.
+- Close with the session retro (`n4_session_retro_draft` / `tools/new_retro.py`): proposed kit deltas, never applied unprompted; never stage issues automatically.
 
 ## Output Contract
 
