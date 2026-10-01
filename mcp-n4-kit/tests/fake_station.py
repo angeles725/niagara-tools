@@ -109,6 +109,10 @@ class FakeStation:
             candidate = "%s%d" % (name, i)
         return candidate
 
+    @staticmethod
+    def _is_component(type_):
+        return type_.partition(":")[0] != "baja" or type_ == "baja:Folder"
+
     def _fill(self, node, bson):
         node.type = bson.get("t", node.type)
         node.value = bson.get("v")
@@ -203,6 +207,11 @@ class FakeStation:
         nm = op["nm"]
         if nm == "a":
             parent = self.by_handle[op["h"]]
+            # Real N4.14 station (2026-10-01): an add whose body nests COMPONENT children
+            # fails with this generic error; plain slots and wsAnnotation are fine.
+            if any(self._is_component(sub["t"]) for sub in op["b"].get("s", [])):
+                raise ValueError("Unable to process request. Please contact your system "
+                                 "administrator.")
             name = self._unique(parent, op["n"])
             node = self._component(parent, name, op["b"]["t"])
             self._fill(node, op["b"])
