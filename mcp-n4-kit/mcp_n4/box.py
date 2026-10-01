@@ -71,6 +71,35 @@ def ws_annotation(x, y, w=8):
     return {"nm": "p", "n": "wsAnnotation", "t": "baja:WsAnnotation", "v": "%s,%s,%s" % (x, y, w)}
 
 
+# ---- ORD grammar ---------------------------------------------------------
+
+def child_ord(parent_ord, name):
+    """The ORD of child `name` under `parent_ord`: the ONE place an ORD is joined.
+
+    `station:` -> `station:|slot:/X`; `station:|slot:/` -> `station:|slot:/X`;
+    `station:|slot:/A` (or `.../A/`) -> `station:|slot:/A/X`. Never produces `//`
+    (the real station refuses it: "Illegal double slashes"). `name` must be one plain
+    slot name: not empty, no `/`, no `|`, not `..`.
+    """
+    if not isinstance(name, str) or not name or "/" in name or "|" in name or name == "..":
+        raise ValueError("ORD child name must be one plain slot name, got %r" % (name,))
+    if not isinstance(parent_ord, str) or "//" in parent_ord:
+        raise ValueError("parent ORD is malformed (double slashes?): %r" % (parent_ord,))
+    if "|slot:" not in parent_ord:
+        parent_ord = parent_ord.rstrip("|") + "|slot:/"
+    return parent_ord.rstrip("/") + "/" + name
+
+
+def join_ord(parent_ord, rel_path):
+    """`child_ord` applied to each segment of a relative `a/b/c` path ("" -> the parent)."""
+    if not rel_path:
+        return parent_ord if parent_ord.endswith(":|slot:/") else parent_ord.rstrip("/")
+    out = parent_ord
+    for part in rel_path.split("/"):
+        out = child_ord(out, part)
+    return out
+
+
 # ---- readers -------------------------------------------------------------
 
 _DEFAULT_VALUE = {"baja:StatusBoolean": "false", "baja:StatusNumeric": "0.0"}
@@ -364,7 +393,11 @@ class BoxClient:
         if not parents:
             self._handles.clear()
         for parent in parents:
-            child = parent + ("/" if "|slot:" in parent else "|slot:/") + name
+            try:
+                child = child_ord(parent, name)
+            except ValueError:  # an unjoinable cached key: forget everything, stay safe
+                self._handles.clear()
+                break
             for key in [k for k in self._handles
                         if k == child or k.startswith(child + "/")]:
                 del self._handles[key]

@@ -126,7 +126,14 @@ class FakeStation:
                 node.children.append(child)
             self._fill(child, sub)
 
+    @staticmethod
+    def _no_double_slashes(path):
+        """Models the live N4.14 behavior (2026-10-01): `station:|slot://X` is refused."""
+        if isinstance(path, str) and "//" in path:
+            raise ValueError("Illegal double slashes")
+
     def _resolve(self, ord_str):
+        self._no_double_slashes(ord_str)
         path = ord_str.split("slot:", 1)[1] if "slot:" in ord_str else ""
         node = self.root
         for part in [p for p in path.split("/") if p]:
@@ -205,6 +212,7 @@ class FakeStation:
 
     def _sync(self, op):
         nm = op["nm"]
+        self._no_double_slashes(op.get("n"))
         if nm == "a":
             parent = self.by_handle[op["h"]]
             # Real N4.14 station (2026-10-01): an add whose body nests COMPONENT children

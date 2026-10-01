@@ -21,10 +21,13 @@ import threading
 import time
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, KIT_DIR)
+
+from mcp_n4.box import child_ord  # noqa: E402  (the one ORD join; stdlib-only module)
 
 SCRATCH = "McpSmoke"
 ROOT_ORD = "station:|slot:/"
-FOLDER_ORD = ROOT_ORD + SCRATCH
+FOLDER_ORD = child_ord(ROOT_ORD, SCRATCH)
 READ_TOOLS = frozenset({"n4_connect", "n4_describe_session", "n4_navigate", "n4_read_slots",
                         "n4_list_links", "n4_find_dangling_outputs"})
 NUMERIC, BOOLEAN, COMPARE = "control:NumericWritable", "control:BooleanWritable", \
@@ -239,7 +242,7 @@ class Scenario:
         return [c["name"] for c in out["children"]]
 
     def slot_value(self, comp, slot="out"):
-        out = self.read("n4_read_slots", ord="%s/%s" % (FOLDER_ORD, comp))
+        out = self.read("n4_read_slots", ord=child_ord(FOLDER_ORD, comp))
         found = [s for s in out["slots"] if s["name"] == slot]
         return found[0]["value"] if found else None
 
@@ -268,8 +271,8 @@ class Scenario:
 
     def link(self, src, sslot, dst, dslot):
         def run(entry):
-            out = self.write(entry, "n4_create_link", source_ord="%s/%s" % (FOLDER_ORD, src),
-                             source_slot=sslot, target_ord="%s/%s" % (FOLDER_ORD, dst),
+            out = self.write(entry, "n4_create_link", source_ord=child_ord(FOLDER_ORD, src),
+                             source_slot=sslot, target_ord=child_ord(FOLDER_ORD, dst),
                              target_slot=dslot)
             return self.verdict_of(out)
         return run
@@ -281,7 +284,7 @@ class Scenario:
 
     def set_value(self, comp, value):
         def run(entry):
-            out = self.write(entry, "n4_invoke_action", ord="%s/%s" % (FOLDER_ORD, comp),
+            out = self.write(entry, "n4_invoke_action", ord=child_ord(FOLDER_ORD, comp),
                              action="set", arg=value, arg_type="baja:Double")
             return self.verdict_of(out)
         return run
