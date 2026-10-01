@@ -359,9 +359,9 @@ def _snapshot(node, path, links, handles):
     path is recorded, because a link cannot be re-created without both ends.
 
     Configuration only (the re-create rule): Status* slots named in RUNTIME_OUTPUT_SLOTS
-    are dropped, and a `baja:Status` value (e.g. `0;activeLevel=e_def`, runtime-only
-    facets) is restored as plain `0`. `fallback`, plain values, wsAnnotation and slot
-    facets are kept.
+    are dropped, and a `baja:Status` value keeps its configured bits but loses its
+    runtime-only facets (`40;activeLevel=e_def` is restored as `40`). `fallback`, plain
+    values, wsAnnotation and slot facets are kept.
     """
     if node.get("h"):
         handles[node["h"]] = path
@@ -384,7 +384,9 @@ def _snapshot(node, path, links, handles):
             continue
         kid = _snapshot(child, child_path, links, handles)
         if kid.get("t") == "baja:Status" and "v" in kid:
-            kid["v"] = "0"
+            # Keep the configured status bits (null, disabled, overridden...); drop only
+            # the runtime facets after ';' such as activeLevel.
+            kid["v"] = str(kid["v"]).split(";", 1)[0]
         kids.append(kid)
     if kids:
         out["s"] = kids

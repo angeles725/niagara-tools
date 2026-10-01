@@ -263,6 +263,16 @@ class TestRollback(DestructiveCase):
         self.assertEqual(fallback.child("status").value, "0")  # no runtime activeLevel facet
         self.assertEqual(tools_write.RUNTIME_OUTPUT_SLOTS, ("out",))
 
+    def test_the_snapshot_keeps_configured_status_bits_and_drops_only_facets(self):
+        """Review R4-status-coercion: a null (0x40) fallback must not come back as ok."""
+        nn, gh = self.group()
+        src_h = self.box.load_tree(FOLDER + "/%s/Src" % nn, depth=1, **NO_SLEEP)[""]["h"]
+        self.box.set_slot(src_h, "fallback", box.bson_status_numeric(7.0, "40;activeLevel=e_def"))
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.rollback(removed["batch_id"])
+        fallback = self.fake.folder.child(nn).child("Src").child("fallback")
+        self.assertEqual(fallback.child("status").value, "40")  # null bit kept, facet dropped
+
     def test_a_folder_removed_at_the_station_root_rolls_back(self):
         """Live finding 2 (2026-10-01): `station:|slot:/` + `/` made `station:|slot://X`."""
         self.start_server(write_scopes=["station:|slot:/"])
