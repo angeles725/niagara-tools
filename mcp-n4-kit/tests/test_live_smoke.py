@@ -214,6 +214,223 @@ class TestNoCredentialLeak(RunnerCase):
         self.assertEqual(live_smoke.scrub("plain", []), "plain")
 
 
+class StubClient:
+    """Scripted in-memory stand-in for McpClient (Scenario-level tests, no subprocess)."""
+    WRITES = {"n4_create_component", "n4_create_link", "n4_invoke_action", "n4_save_station",
+              "n4_remove_component", "n4_rollback"}
+
+    def __init__(self, hook=None):
+        self.present, self.calls, self.vals, self.hook = False, [], {}, hook
+        self.counts = {}
+
+    def call(self, tool, **args):
+        executing = "confirmation_token" in args
+        key = (tool, executing)
+        self.counts[key] = self.counts.get(key, 0) + 1
+        self.calls.append((tool, executing, args))
+        if self.hook:
+            override = self.hook(self, tool, executing, args)
+            if override is not None:
+                return override
+        if tool in self.WRITES and not executing:
+            return False, {"confirmation_token": "t", "plan_hash": "h"}
+        ok = {"batch_id": "b-" + tool, "verdict": "verified", "observed": {}}
+        if tool == "n4_connect":
+            return False, {"station_name": args["station"]}
+        if tool == "n4_navigate":
+            return False, {"children": [{"name": "McpSmoke" if self.present else "Services"}]}
+        if tool == "n4_create_component":
+            self.present = self.present or args["name"] == live_smoke.SCRATCH
+        elif tool == "n4_remove_component":
+            self.present = False
+        elif tool == "n4_rollback":
+            self.present = True
+        elif tool == "n4_invoke_action":
+            self.vals[args["ord"].rsplit("/", 1)[-1]] = args["arg"]
+        elif tool == "n4_find_dangling_outputs":
+            return False, {"dangling": [{"path": live_smoke.FOLDER_ORD + "/Cooling"}]}
+        elif tool == "n4_read_slots":
+            hot = self.vals.get("Temp", 0) > self.vals.get("Setpoint", 0)
+            return False, {"slots": [{"name": "out", "value": hot}]}
+        elif tool == "n4_save_station":
+            return False, dict(ok, persisted=True, evidence="stub")
+        return False, ok
+
+
+def stub_scenario(hook=None):
+    client = StubClient(hook)
+    return client, live_smoke.Scenario(client, "SmokeStation", 0.2, lambda text: None)
+
+
+def names(scenario):
+    return [s["name"] for s in scenario.steps]
+
+
+def verdicts(scenario):
+    return {s["name"]: s["verdict"] for s in scenario.steps}
+
+
+class TestSecretScrubBeforeEncoding(unittest.TestCase):
+    NASTY = 'p"w\\x\n\x01caf\u00e9-unique'
+
+    def test_render_report_removes_raw_and_escaped_forms(self):
+        report = {"error": "bad " + self.NASTY, "steps": [{"detail": {"k": [self.NASTY]}}],
+                  "server_stderr": ["login " + self.NASTY], self.NASTY: 1}
+        text = live_smoke.render_report(report, [self.NASTY, ""])
+        for form in (self.NASTY, json.dumps(self.NASTY)[1:-1],
+                     json.dumps(self.NASTY, ensure_ascii=False)[1:-1]):
+            self.assertNotIn(form, text)
+        self.assertIn("***", text)
+        self.assertEqual(json.loads(text)["error"], "bad ***")
+
+    def test_scrub_value_walks_nested_structures(self):
+        out = live_smoke.scrub_value({"a": ["x S y", ("S",)], "n": 3, "b": None}, ["S"])
+        self.assertEqual(out, {"a": ["x *** y", ["***"]], "n": 3, "b": None})
+
+
+class TestWriteBounds(unittest.TestCase):
+    def test_every_write_in_a_full_run_targets_the_scratch_folder_or_its_root_create_remove(self):
+        client, sc = stub_scenario()
+        sc.run()
+        writes = [(t, a) for t, ex, a in client.calls if t in StubClient.WRITES and ex]
+        self.assertGreaterEqual(len(writes), 12)
+        for tool, args in writes:
+            ords = [args[k] for k in ("ord", "source_ord", "target_ord") if k in args]
+            ords += [args["parent_ord"].rstrip("/") + "/" + args["name"]] if "parent_ord" in args else []
+            for o in ords:
+                self.assertTrue(o == live_smoke.FOLDER_ORD
+                                or o.startswith(live_smoke.FOLDER_ORD + "/"), (tool, args))
+            if args.get("parent_ord") == live_smoke.ROOT_ORD:
+                self.assertEqual(args["name"], live_smoke.SCRATCH)
+                self.assertIn(tool, ("n4_create_component", "n4_remove_component"))
+
+    def test_the_runner_refuses_a_write_outside_the_scratch_folder(self):
+        client, sc = stub_scenario()
+        for tool, args in (("n4_create_component", dict(parent_ord=live_smoke.ROOT_ORD,
+                                                        name="Other", type="baja:Folder")),
+                           ("n4_remove_component", dict(parent_ord=live_smoke.ROOT_ORD, name="X")),
+                           ("n4_invoke_action", dict(ord="station:|slot:/Other", action="set")),
+                           ("n4_create_link", dict(source_ord=live_smoke.FOLDER_ORD + "/A",
+                                                   target_ord="station:|slot:/B"))):
+            with self.assertRaises(live_smoke.SmokeError):
+                sc.write({}, tool, **args)
+        self.assertEqual(client.calls, [])
+
+
+class TestUnknownCreateOutcome(unittest.TestCase):
+    def test_timeout_after_the_folder_create_applied_still_cleans_up(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_create_component" and executing and args["name"] == "McpSmoke":
+                client.present = True  # the station applied it, the reply never arrived
+                raise live_smoke.SmokeError("timeout waiting for tools/call")
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertFalse(client.present)
+        self.assertIn("cleanup", names(sc))
+        self.assertEqual(verdicts(sc)["cleanup"], "verified")
+        self.assertEqual(verdicts(sc)["create Folder McpSmoke"], "failed")
+
+    def test_a_refused_dry_run_marks_nothing_and_does_not_clean_up(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_create_component" and not executing:
+                return True, "refused"
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertFalse(any(n.startswith("cleanup") for n in names(sc)))
+
+
+class TestStepContainment(unittest.TestCase):
+    def test_a_malformed_reply_is_a_failed_step_not_an_exception(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_navigate":
+                return False, {"children": [{"nom": "x"}]}
+        client, sc = stub_scenario(hook)
+        sc.run()  # must not raise KeyError
+        self.assertEqual(verdicts(sc)["folder absent before"], "failed")
+
+    def test_a_failed_read_after_the_rollback_still_cleans_up(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_navigate" and client.counts.get(("n4_rollback", True)) \
+                    and not client.counts.get("failed_once"):
+                client.counts["failed_once"] = 1
+                raise live_smoke.SmokeError("timeout waiting for tools/call")
+        client, sc = stub_scenario(hook)
+        sc.run()  # must not raise
+        self.assertEqual(verdicts(sc)["remove folder (again)"], "failed")
+        self.assertFalse(client.present)
+        self.assertEqual(verdicts(sc)["cleanup"], "verified")
+
+    def test_cleanup_reads_are_recorded_steps(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_invoke_action" and executing:
+                raise live_smoke.SmokeError("boom")
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertIn("cleanup: folder present?", names(sc))
+
+    def test_cleanup_assumes_present_when_the_probe_fails(self):
+        state = {"after_abort": False}
+
+        def hook(client, tool, executing, args):
+            if tool == "n4_invoke_action" and executing:
+                state["after_abort"] = True
+                raise live_smoke.SmokeError("boom")
+            if tool == "n4_navigate" and state["after_abort"]:
+                raise live_smoke.SmokeError("navigate down")
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertEqual(verdicts(sc)["cleanup: folder present?"], "failed")
+        self.assertEqual(verdicts(sc)["cleanup"], "verified")
+        self.assertFalse(client.present)
+
+
+class TestCleanupSave(unittest.TestCase):
+    def test_abort_after_the_first_save_removes_and_saves_again(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_remove_component" and executing and \
+                    client.counts[("n4_remove_component", True)] == 1:
+                raise live_smoke.SmokeError("timeout waiting for tools/call")
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertFalse(client.present)
+        self.assertEqual(names(sc)[-2:], ["cleanup", "cleanup save"])
+        self.assertEqual(verdicts(sc)["cleanup save"], "verified")
+        self.assertEqual(client.counts[("n4_save_station", True)], 2)
+
+    def test_no_cleanup_save_when_the_folder_was_never_persisted(self):
+        def hook(client, tool, executing, args):
+            if tool == "n4_invoke_action" and executing:
+                raise live_smoke.SmokeError("boom")
+        client, sc = stub_scenario(hook)
+        sc.run()
+        self.assertNotIn("cleanup save", names(sc))
+
+
+class TestSingleScenarioSource(unittest.TestCase):
+    def test_plan_rows_equal_the_executed_step_names_and_tools(self):
+        client, sc = stub_scenario()
+        sc.run()
+        executed = [(s["name"], s["tool"]) for s in sc.steps]
+        self.assertEqual(live_smoke.plan_rows(), executed)
+        self.assertEqual(client.present, False)
+
+    def test_plan_text_lists_every_row_and_the_components(self):
+        text = live_smoke.plan_text()
+        for name, _tool in live_smoke.plan_rows():
+            self.assertIn(name, text)
+        self.assertIn("kitControl:GreaterThan", text)
+
+
+class TestSaveParameter(unittest.TestCase):
+    def test_save_takes_an_explicit_folder_present_flag(self):
+        client, sc = stub_scenario()
+        entry = {}
+        sc.save(folder_present=True)(entry)
+        self.assertTrue(sc.saved_with_folder)
+        sc.save(folder_present=False)(entry)
+        self.assertFalse(sc.saved_with_folder)
+
+
 class TestShape(unittest.TestCase):
     def test_import_has_no_side_effects_and_main_is_guarded(self):
         self.assertTrue(callable(live_smoke.main))
