@@ -202,3 +202,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | pending | 5 |
+| 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | pending | 7 |
