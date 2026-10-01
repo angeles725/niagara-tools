@@ -31,14 +31,28 @@ retry (5 failures in 30 s lock the account).
 From `mcp-n4-kit/`:
 
 ```
-MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> python3 -m mcp_n4.server
+MCP_N4_USER=<user> MCP_N4_PASSWORD=<secret> \
+  python3 -m mcp_n4.server --station MyStation=https://10.0.0.5
 ```
 
 The server speaks newline-delimited JSON-RPC 2.0 on stdin/stdout. Credentials are
-read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`, prefix
-`MCP_N4` by default, changeable per `n4_connect` call) and never appear in output.
+read from the environment only (`<prefix>_USER` / `<prefix>_PASSWORD`) and never
+appear in output.
+
+Connection policy belongs to the operator, not to the model. The model can only
+call `n4_connect station=<NAME>` with a NAME you configured at start; it cannot
+choose a URL, a credential prefix or TLS verification. Without any `--station`,
+`n4_connect` refuses.
 
 Flags:
+
+- `--station NAME=URL` (repeatable): the only stations `n4_connect` may open. `URL`
+  must be `https://`. Set NAME to the station's real `stationName`: `n4_connect`
+  checks it by default (override per call with `expected_station`).
+- `--credential-env PREFIX`: env var prefix for `<PREFIX>_USER` / `<PREFIX>_PASSWORD`
+  (default `MCP_N4`).
+- `--insecure-tls NAME` (repeatable): skip certificate verification for that
+  configured station (self-signed certificates). Without it TLS is always verified.
 
 - `--allow-writes`: registers the write tools; the default is read-only.
 - `--write-scope ORD_PREFIX` (repeatable): ORD prefixes writes may touch.
@@ -54,7 +68,8 @@ Example MCP client entry (Claude Code `.mcp.json`):
   "mcpServers": {
     "n4": {
       "command": "python3",
-      "args": ["-m", "mcp_n4.server"],
+      "args": ["-m", "mcp_n4.server", "--station", "MyStation=https://10.0.0.5",
+               "--insecure-tls", "MyStation"],
       "cwd": "/path/to/niagara-tools/mcp-n4-kit",
       "env": {"MCP_N4_USER": "<user>", "MCP_N4_PASSWORD": "<secret>"}
     }
@@ -64,9 +79,13 @@ Example MCP client entry (Claude Code `.mcp.json`):
 
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`. One station session
-is active per process; `n4_connect` replaces it. `n4_list_links` and
+is active per process; `n4_connect` replaces it (the old session is always closed
+first, so a failed reconnect leaves no session). `n4_describe_session` lists the
+configured station names. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
-(the ord itself is level 0) and only see links inside that subtree.
+(the ord itself is level 0). Links are seen when their target is at most one level
+below `depth`; an out slot used only by a deeper target, or from outside the
+subtree, is reported as dangling.
 
 ## Writing safely
 
@@ -80,8 +99,8 @@ python3 -m mcp_n4.server --allow-writes --write-scope 'station:|slot:/Sandbox'
 
 Every write call goes through these layers:
 
-1. **Identity.** Refused unless the session was opened with `expected_station`
-   and it matched; reconnect with `n4_connect expected_station=<stationName>`.
+1. **Identity.** Refused unless the session's real `stationName` matched
+   `expected_station` (default: the configured station NAME).
 2. **Budget.** At most `--max-writes` executed writes per session.
 3. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.

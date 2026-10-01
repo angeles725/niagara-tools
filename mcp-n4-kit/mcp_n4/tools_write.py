@@ -273,13 +273,13 @@ def _link_result(replies):
 def _link_inverse(planned, replies):
     result = _link_result(replies)
     if not result.get("v") or not result.get("s"):
-        return []
+        return None  # the station refused the link: nothing changed, nothing to journal
     return [{"nm": "v", "h": planned.data["tgt_h"], "n": result["s"]}]
 
 
 def _link_readback(client, args, planned, replies, inverse):
     result = _link_result(replies)
-    if not inverse:
+    if not inverse:  # refused by the station (see _link_inverse)
         return None, result, None, "failed"
     name = inverse[0]["n"]
     requested = {"link": name, "sourceOrd": "h:" + planned.data["src_h"],
@@ -342,15 +342,17 @@ def _process(ctx, name, args):
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     sess.writes_executed += 1  # counted once sent, whatever the station answers
     replies = [_send(sess.client, op) for op in planned.ops]
-    inverse = impl.inverse(planned, replies)
+    inverse = impl.inverse(planned, replies)  # None: the station refused, nothing changed
     batch_id = uuid.uuid4().hex
-    try:
-        write.journal.append({"batch_id": batch_id, "ts": _now(), "tool": name,
-                              "ops": planned.ops, "inverse": inverse,
-                              "station_name": sess.station_name})
-    except OSError:
-        raise ToolError("write executed (batch %s) but the journal could not be written; "
-                        "inverse ops: %s" % (batch_id, safety.canonical(inverse))) from None
+    if inverse is not None:
+        try:
+            write.journal.append({"batch_id": batch_id, "ts": _now(), "tool": name,
+                                  "ops": planned.ops, "inverse": inverse,
+                                  "station_name": sess.station_name})
+        except OSError:
+            raise ToolError("write executed (batch %s) but the journal could not be written; "
+                            "inverse ops: %s" % (batch_id, safety.canonical(inverse))) from None
+    inverse = inverse or []
     out = {"dry_run": False, "batch_id": batch_id, "inverse": inverse}
     try:
         requested, accepted, observed, verdict = impl.readback(
