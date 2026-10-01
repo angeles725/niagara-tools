@@ -60,7 +60,7 @@ Out of scope:
   - Checks: the unittest runner, plus `bats tests/*.bats` still green.
 - [x] **T1b — harden the BOX client (RDD T1 follow-ups, lineage review-e2b9c59fdafb98d5).** Content: no redirect following with credentials (R1-001); malformed replies and transport errors → BoxError, reply seq check (R3/R4); open() cleans up its session on partial failure (R3/R4); load_tree filters load ops by requested handle/ord and does not drop unrelated events (R3/R4); named constants for `cs1` and the root handle, documented return shapes (R2-002..004); tests for 403/500/timeout/bad JSON/retry path and server-assigned names (R2-005, R3). Route: delegated writer. Checks: unittest.
 - [x] **T1c — BOX client follow-ups (RDD T1b advisory, lineage review-236d2aad767b3300).** Content: no cleanup `del` after AuthError (lock-out), bounded/drainable pending events, handle-cache invalidation, docstring/label fixes. Route: delegated writer. Checks: unittest 62 OK.
-- [ ] **T2 — MCP stdio server core + read tools.**
+- [x] **T2 — MCP stdio server core + read tools.**
   - Content:
     - JSON-RPC 2.0 over stdio: `initialize`, `tools/list`, `tools/call`;
     - read-only default;
@@ -117,6 +117,8 @@ Out of scope:
   - Route: delegated writer.
   - Checks: unittest, covering both a draft from a synthetic audit log and the honesty line when there is no friction.
 
+- [ ] **T8 — hygiene sweep of accumulated advisory findings.** Content: T1c advisory (KeyboardInterrupt/SystemExit cleanup and docstring, ord-grammar helper for child ORDs, invalidate_handles prefix boundary, stale-handle double wait, test names), plus T2+ advisory that is not fixed in its own slice. Also add MCP protocol versions 2025-11-25/2026-07-28 once their semantics are implemented (T2 declares up to 2025-06-18). Route: delegated writer. Checks: unittest.
+
 ## Acceptance criteria
 - All unittest + bats + shellcheck are green locally and in CI.
 - The server lists tools, refuses writes without a token, refuses on a station-name mismatch, and writes + verifies against the fake station.
@@ -127,7 +129,8 @@ Out of scope:
 |---|---|---|---|---|---|
 | T1 | delegated writer (2+ non-trivial files) | b4bf886 | 704 (size:exception — library + its fake station + tests are one cohesive unit; METHODOLOGY moved to T5) | high → granted → approved + acknowledged (lineage review-e2b9c59fdafb98d5; 7 WARNING + 5 SUGGESTION advisory → T1b) | unittest 24 OK (writer + parent re-run); bats 689 OK (writer) |
 | T1b | delegated writer | ab15787 (PR #160, merge 3aaa717) | 402 | high → granted → approved + acknowledged (lineage review-236d2aad767b3300; advisory → T1c) | unittest 47 OK; CI pass |
-| T1c | delegated writer | cdb647f | 298 | pending | unittest 62 OK (writer + parent) |
+| T1c | delegated writer | cdb647f (PR #161, merge 7ab0526) | 298 | high → granted → approved + acknowledged (lineage review-78277d6addbdda3f; advisory → T8 hygiene) | unittest 62 OK; CI pass |
+| T2 | delegated writer | 386d5be | 965 (size:exception — one honest slicing pass: protocol vs tools splits each stay >400 because tests follow their code) | pending | unittest 118 OK (writer + parent); sourceOrd `h:xxxx` + root `stationName` certified against B1199 live transcript |
 
 ## Next step
-T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
+T2 RDD + PR, then T3 (write tools + safety layers). Previously: T1c RDD + PR, then T2 (spec drafted from scratch after a classifier cut the first T2 brief; operator said proceed on my recommendations).
