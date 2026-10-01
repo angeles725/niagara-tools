@@ -46,6 +46,16 @@ class TestConfirmationTokens(unittest.TestCase):
             with self.assertRaises(safety.SafetyError, msg=repr(bad)):
                 self.consume(bad)
 
+    def test_non_ascii_or_oversized_token_parts_raise_only_safety_error(self):
+        token, _ = self.issue()
+        expiry, nonce, mac = token.split(".")
+        for bad in ("\u00b2.%s.%s" % (nonce, mac), "%s.%s.\u00e9abc" % (expiry, nonce),
+                    "%s.\u00e9.%s" % (expiry, mac), "\u0663\u0661.a.b", "9" * 400 + ".a.b",
+                    "-5.a.b", "%s.%s.%s" % (expiry, nonce, mac) + "\u2166"):
+            with self.assertRaises(safety.SafetyError, msg=repr(bad)):
+                self.consume(bad)
+        self.consume(token)  # the genuine token is still spendable
+
     def test_expired_token_is_refused(self):
         token, _ = self.issue()
         self.clock.now = 1300
@@ -171,16 +181,85 @@ class TestJournal(StateFileCase):
         self.assertEqual(self.mode(self.state_dir), 0o700)
         self.assertEqual(self.mode(os.path.join(self.state_dir, "journal.jsonl")), 0o600)
 
-    def test_loose_existing_dir_and_file_are_tightened(self):
-        os.makedirs(self.state_dir, mode=0o755)
-        os.chmod(self.state_dir, 0o755)
-        path = os.path.join(self.state_dir, "journal.jsonl")
-        with open(path, "w"):
-            pass
-        os.chmod(path, 0o644)
+    def test_existing_dir_is_never_chmodded_by_append(self):
+        os.makedirs(self.state_dir, mode=0o750)
+        os.chmod(self.state_dir, 0o750)
+        safety.Journal(self.state_dir).append({"batch_id": "b1"})
+        self.assertEqual(self.mode(self.state_dir), 0o750)
+        self.assertEqual(self.mode(os.path.join(self.state_dir, "journal.jsonl")), 0o600)
+
+    def test_created_dir_is_0700_whatever_the_umask(self):
+        old = os.umask(0)
+        self.addCleanup(os.umask, old)
         safety.Journal(self.state_dir).append({"batch_id": "b1"})
         self.assertEqual(self.mode(self.state_dir), 0o700)
-        self.assertEqual(self.mode(path), 0o600)
+
+    def test_read_merges_intent_and_result_and_flags_in_doubt(self):
+        journal = safety.Journal(self.state_dir)
+        self.assertIsNone(journal.read("b1"))  # no file yet
+        journal.append({"batch_id": "b1", "phase": "intent", "tool": "t", "ops": [1],
+                        "inverse_plan": [2], "station_name": "S"})
+        view = journal.read("b1")
+        self.assertEqual((view["state"], view["inverse_plan"], view["tool"]),
+                         ("in-doubt", [2], "t"))
+        self.assertIsNone(view["inverse"])
+        journal.append({"batch_id": "b1", "phase": "result", "accepted": "ok",
+                        "inverse": [3], "verdict": "verified"})
+        view = journal.read("b1")
+        self.assertEqual((view["state"], view["inverse"], view["verdict"], view["accepted"]),
+                         ("completed", [3], "verified", "ok"))
+        self.assertIsNone(journal.read("nope"))
+
+    def test_read_ignores_torn_lines_and_flags_in_doubt_results(self):
+        journal = safety.Journal(self.state_dir)
+        journal.append({"batch_id": "b1", "phase": "intent", "tool": "t"})
+        with open(journal.path, "a") as fh:
+            fh.write("{torn\n")
+        journal.append({"batch_id": "b1", "phase": "result", "inverse": [],
+                        "verdict": "unverified", "in_doubt": True})
+        self.assertEqual(journal.read("b1")["state"], "in-doubt")
+
+    def test_rollbacks_of_lists_batches_that_roll_back_another(self):
+        journal = safety.Journal(self.state_dir)
+        journal.append({"batch_id": "r1", "phase": "intent", "rollback_of": "b1"})
+        journal.append({"batch_id": "r1", "phase": "result", "verdict": "failed", "inverse": []})
+        journal.append({"batch_id": "r2", "phase": "intent", "rollback_of": "b1"})
+        self.assertEqual([(v["batch_id"], v["state"]) for v in journal.rollbacks_of("b1")],
+                         [("r1", "completed"), ("r2", "in-doubt")])
+
+
+class TestStateDirCheck(StateFileCase):
+    def test_missing_dir_is_fine(self):
+        safety.check_state_dir(self.state_dir)
+
+    def test_owned_private_dir_is_fine(self):
+        os.makedirs(self.state_dir, mode=0o700)
+        safety.check_state_dir(self.state_dir)
+
+    def test_group_or_world_writable_dir_is_refused_and_not_chmodded(self):
+        os.makedirs(self.state_dir)
+        for mode in (0o775, 0o777, 0o722):
+            os.chmod(self.state_dir, mode)
+            with self.assertRaises(safety.SafetyError) as cm:
+                safety.check_state_dir(self.state_dir)
+            self.assertIn("--state-dir", str(cm.exception))
+            self.assertEqual(self.mode(self.state_dir), mode)
+
+    def test_dir_owned_by_another_user_is_refused(self):
+        os.makedirs(self.state_dir, mode=0o700)
+        real = os.getuid
+        safety.os.getuid = lambda: real() + 1
+        self.addCleanup(setattr, safety.os, "getuid", real)
+        with self.assertRaises(safety.SafetyError):
+            safety.check_state_dir(self.state_dir)
+
+    def test_a_file_in_place_of_the_dir_is_refused(self):
+        os.makedirs(os.path.dirname(self.state_dir))
+        with open(self.state_dir, "w"):
+            pass
+        with self.assertRaises(safety.SafetyError):
+            safety.check_state_dir(self.state_dir)
+
 
     def test_construction_has_no_filesystem_side_effect(self):
         safety.Journal(self.state_dir)

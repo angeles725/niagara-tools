@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import os
 import stat
@@ -117,6 +119,38 @@ class TestMode(WriteTestCase):
         srv = server.Server(allow_writes=True)
         self.assertEqual(srv.ctx.write.journal.state_dir,
                          os.path.expanduser("~/.local/state/mcp-n4"))
+
+
+class TestStateDirStartup(WriteTestCase):
+    def loose_dir(self):
+        os.makedirs(self.state_dir)
+        os.chmod(self.state_dir, 0o777)
+        return self.state_dir
+
+    def test_write_mode_refuses_a_loose_existing_state_dir_and_leaves_it_alone(self):
+        path = self.loose_dir()
+        with self.assertRaises(tools_write.safety.SafetyError):
+            server.Server(allow_writes=True, state_dir=path)
+        self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o777)
+
+    def test_read_only_mode_does_not_care_about_the_state_dir(self):
+        server.Server(allow_writes=False, state_dir=self.loose_dir())
+
+    def test_main_exits_2_with_a_clear_message(self):
+        path = self.loose_dir()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code = server.main(["--allow-writes", "--state-dir", path])
+        self.assertEqual(code, 2)
+        self.assertIn("--state-dir", err.getvalue())
+
+    def test_main_rejects_malformed_station_values(self):
+        for bad in ("nourl", "=https://h", "name=", ""):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code = server.main(["--station", bad])
+            self.assertEqual(code, 2, bad)
+            self.assertIn("--station expects NAME=URL", err.getvalue(), bad)
 
 
 class TestIdentity(WriteTestCase):
@@ -386,7 +420,8 @@ class TestSetSlot(WriteTestCase):
                              value_type="baja:StatusNumeric")
         self.assertEqual(out["verdict"], "mismatch")
         self.assertEqual(out["observed"]["value"], 99.0)
-        self.assertEqual(len(self.lines("journal.jsonl")), 1)  # still journaled
+        self.assertEqual([e["phase"] for e in self.lines("journal.jsonl")],
+                         ["intent", "result"])  # still journaled
 
 
 class TestInvokeAction(WriteTestCase):
@@ -497,7 +532,59 @@ class TestCreateLinkRejected(WriteTestCase):
         self.assertEqual(out["accepted"]["r"], "type mismatch")
         self.assertIsNone(self.fake.by_handle[tgt_h].child("Link"))
         self.assertEqual(out["inverse"], [])
-        self.assertEqual(self.lines("journal.jsonl"), [])
+        intent, result = self.lines("journal.jsonl")
+        self.assertEqual((intent["phase"], result["phase"], result["verdict"], result["inverse"]),
+                         ("intent", "result", "failed", []))
+        self.assertEqual(self.srv.ctx.write.journal.read(out["batch_id"])["state"], "completed")
+
+
+class TestLinkReplies(WriteTestCase):
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+        self.src, self.src_h = self.add("Src", out=1.0)
+        self.tgt, self.tgt_h = self.add("Tgt")
+        self.args = dict(source_ord=FOLDER + "/" + self.src, source_slot="out",
+                         target_ord=FOLDER + "/" + self.tgt, target_slot="in10")
+
+    def journal_view(self, out):
+        view = self.srv.ctx.write.journal.read(out["batch_id"])
+        self.assertIsNotNone(view, "every returned batch_id has a journal entry")
+        return view
+
+    def test_an_explicit_refusal_is_a_failed_result_with_an_empty_inverse(self):
+        self.fake._check_link = lambda arg: [{"v": False, "r": "type mismatch", "s": None}]
+        out = self.run_write("n4_create_link", **self.args)
+        view = self.journal_view(out)
+        self.assertEqual((out["verdict"], view["verdict"], view["inverse"], view["state"]),
+                         ("failed", "failed", [], "completed"))
+
+    def test_v_true_without_a_link_name_is_ambiguous_and_finds_the_link_by_its_slots(self):
+        orig = self.fake._check_link
+        self.fake._check_link = lambda arg: [dict(orig(arg)[0], s=None)]
+        out = self.run_write("n4_create_link", **self.args)
+        view = self.journal_view(out)
+        self.assertEqual((out["verdict"], view["verdict"], view["state"]),
+                         ("unverified", "unverified", "in-doubt"))
+        self.assertTrue(out["in_doubt"])
+        self.assertEqual(out["observed"]["link"], "Link")
+        self.assertEqual(out["inverse"], [{"nm": "v", "h": self.tgt_h, "n": "Link"}])
+        self.assertEqual(view["inverse"], out["inverse"])
+
+    def test_an_ambiguous_reply_with_no_link_found_records_an_empty_inverse(self):
+        self.fake._check_link = lambda arg: [{"v": True, "r": None, "s": ""}]
+        out = self.run_write("n4_create_link", **self.args)
+        view = self.journal_view(out)
+        self.assertEqual((out["verdict"], out["observed"], out["inverse"], view["state"]),
+                         ("unverified", None, [], "in-doubt"))
+
+    def test_a_malformed_reply_is_in_doubt_not_a_crash(self):
+        for junk in ("junk", [], [None], [[]]):
+            self.fake._check_link = lambda arg, j=junk: j
+            out = self.run_write("n4_create_link", **self.args)
+            view = self.journal_view(out)
+            self.assertEqual((out["verdict"], view["state"]), ("unverified", "in-doubt"), junk)
+            self.assertIn("readback_error", out)
 
 
 class TestJournalAndAudit(WriteTestCase):
@@ -507,16 +594,110 @@ class TestJournalAndAudit(WriteTestCase):
         super().setUp()
         self.connect_verified()
 
-    def test_journal_entry_holds_batch_ops_and_the_real_inverse(self):
+    def test_journal_holds_a_write_ahead_intent_and_a_result(self):
         out = self.run_write("n4_create_component", **self.ARGS)
-        entry = self.lines("journal.jsonl")[0]
-        self.assertEqual(set(entry), {"batch_id", "ts", "tool", "ops", "inverse", "station_name"})
-        self.assertEqual(entry["batch_id"], out["batch_id"])
-        self.assertRegex(entry["batch_id"], r"^[0-9a-f]{32}$")
-        self.assertEqual(entry["tool"], "n4_create_component")
-        self.assertEqual(entry["station_name"], "FakeStation")
-        self.assertEqual(entry["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
-        self.assertEqual(entry["ops"][0]["nm"], "a")
+        intent, result = self.lines("journal.jsonl")
+        self.assertEqual(set(intent), {"batch_id", "ts", "tool", "ops", "inverse_plan",
+                                       "station_name", "phase"})
+        self.assertEqual((intent["phase"], intent["batch_id"]), ("intent", out["batch_id"]))
+        self.assertRegex(intent["batch_id"], r"^[0-9a-f]{32}$")
+        self.assertEqual((intent["tool"], intent["station_name"]),
+                         ("n4_create_component", "FakeStation"))
+        self.assertEqual(intent["inverse_plan"], [{"nm": "v", "h": "3", "n": "Pump"}])
+        self.assertEqual(intent["ops"][0]["nm"], "a")
+        self.assertEqual(set(result), {"batch_id", "ts", "phase", "accepted", "inverse",
+                                       "verdict"})
+        self.assertEqual((result["phase"], result["batch_id"], result["verdict"]),
+                         ("result", out["batch_id"], "verified"))
+        self.assertEqual(result["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
+        self.assertEqual(result["accepted"], {"id": "a", "nn": "Pump"})
+
+    def test_the_result_records_the_server_assigned_name_not_the_planned_one(self):
+        self.add("Pump")
+        out = self.run_write("n4_create_component", **self.ARGS)
+        intent, result = self.lines("journal.jsonl")
+        self.assertEqual(intent["inverse_plan"][0]["n"], "Pump")
+        self.assertEqual(result["inverse"][0]["n"], "Pump1")
+        view = self.srv.ctx.write.journal.read(out["batch_id"])
+        self.assertEqual((view["state"], view["inverse"][0]["n"]), ("completed", "Pump1"))
+
+    def test_the_intent_is_on_disk_before_the_station_receives_the_op(self):
+        seen = []
+        self.fake.on_sync = lambda op: seen.append(self.lines("journal.jsonl"))
+        self.run_write("n4_create_component", **self.ARGS)
+        self.assertEqual([[e["phase"] for e in lines] for lines in seen], [["intent"]])
+
+    def test_an_intent_that_cannot_be_written_sends_nothing_and_keeps_the_token_spent(self):
+        plan = self.dry("n4_create_component", **self.ARGS)
+
+        def boom(entry):
+            raise OSError("disk full")
+        self.srv.ctx.write.journal.append = boom
+        kw = dict(dry_run=False, confirmation_token=plan["confirmation_token"], **self.ARGS)
+        self.assertIn("nothing was sent", self.err("n4_create_component", **kw))
+        self.assertEqual(self.children(), [])
+        self.assertEqual(self.srv.ctx.session.writes_executed, 0)
+        del self.srv.ctx.write.journal.append
+        self.assertIn("already used", self.err("n4_create_component", **kw))
+        self.assertEqual(self.children(), [])
+
+    def test_a_send_exception_after_the_token_was_spent_leaves_an_in_doubt_batch(self):
+        plan = self.dry("n4_create_component", **self.ARGS)
+        self.fake.hook = lambda frame: (500, b"boom", {}) if any(
+            m.get("b", {}).get("sck") == "syncTo" for m in frame["m"]) else None
+        kw = dict(dry_run=False, confirmation_token=plan["confirmation_token"], **self.ARGS)
+        text = self.err("n4_create_component", **kw)
+        self.assertIn("in-doubt", text)
+        intent = self.lines("journal.jsonl")[0]
+        self.assertIn(intent["batch_id"], text)
+        self.assertEqual([e["phase"] for e in self.lines("journal.jsonl")], ["intent"])
+        self.assertEqual(self.srv.ctx.write.journal.read(intent["batch_id"])["state"], "in-doubt")
+        self.fake.hook = None
+        self.assertIn("already used", self.err("n4_create_component", **kw))
+        self.assertEqual(self.lines("audit.jsonl")[-2]["batch_id"], intent["batch_id"])
+
+    def test_a_result_that_cannot_be_written_is_a_warning_with_the_inverse(self):
+        real = self.srv.ctx.write.journal.append
+
+        def flaky(entry):
+            if entry["phase"] == "result":
+                raise OSError("disk full")
+            real(entry)
+        self.srv.ctx.write.journal.append = flaky
+        out = self.run_write("n4_create_component", **self.ARGS)
+        self.assertEqual(out["verdict"], "verified")
+        self.assertTrue(any("in-doubt" in w for w in out["warnings"]), out)
+        self.assertEqual(out["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
+
+    def test_a_read_back_box_error_is_failed_with_the_batch_id(self):
+        def break_reads(op):
+            def boom(*a, **kw):
+                raise box.BoxError("no load event for x after 6 polls")
+            self.box.load_tree = boom
+        self.fake.on_sync = break_reads
+        out = self.run_write("n4_create_component", **self.ARGS)
+        self.assertEqual(out["verdict"], "failed")
+        self.assertIn("no load event", out["readback_error"])
+        self.assertRegex(out["batch_id"], r"^[0-9a-f]{32}$")
+        self.assertEqual(self.lines("journal.jsonl")[-1]["verdict"], "failed")
+
+    def test_a_read_back_that_raises_anything_else_is_failed_not_a_crash(self):
+        _, h = self.add("Calc", out=1.0)
+        self.fake.on_sync = lambda op: setattr(
+            self.fake.by_handle[h].child("out").child("value"), "value", "not-a-number")
+        out = self.run_write("n4_set_slot", ord=FOLDER + "/Calc", slot="out", value=2.0,
+                             value_type="baja:StatusNumeric")
+        self.assertEqual(out["verdict"], "failed")
+        self.assertIn("ValueError", out["readback_error"])
+        self.assertRegex(out["batch_id"], r"^[0-9a-f]{32}$")
+
+    def test_an_unwritable_audit_log_is_a_warning_not_an_error(self):
+        def boom(entry):
+            raise OSError("read-only")
+        self.srv.ctx.write.audit.append = boom
+        out = self.run_write("n4_create_component", **self.ARGS)
+        self.assertEqual(out["verdict"], "verified")
+        self.assertEqual(out["warnings"], ["the audit log could not be written"])
 
     def test_audit_records_planned_executed_and_refused_calls(self):
         token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]

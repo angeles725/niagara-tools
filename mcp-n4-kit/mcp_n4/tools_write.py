@@ -39,6 +39,7 @@ class WriteState:
     def __init__(self, scopes=(), state_dir=None, token_ttl=300, max_writes=200,
                  clock=time.time):
         state_dir = os.path.expanduser(state_dir or DEFAULT_STATE_DIR)
+        safety.check_state_dir(state_dir)  # refuse a dir we do not own; never chmod it
         self.scope = safety.WriteScope(scopes)
         self.tokens = safety.ConfirmationTokens(token_ttl, clock)
         self.journal, self.audit = safety.Journal(state_dir), safety.AuditLog(state_dir)
@@ -255,11 +256,13 @@ def _invoke_readback(client, args, planned, replies, inverse):
 def _link_plan(client, args):
     ss, ts = _name("source_slot", args["source_slot"]), _name("target_slot", args["target_slot"])
     src_h, _ = _handle(client, args["source_ord"], 1)
-    tgt_h, _ = _handle(client, args["target_ord"], 1)
+    tgt_h, tgt_nodes = _handle(client, args["target_ord"], 1)
+    existing = sorted(k for k, v in box.children(tgt_nodes, "").items()
+                      if v.get("t") == "baja:Link")
     return Planned([{"ssc": "checkLinks",
                      "arg": {"s": src_h, "ss": ss, "t": tgt_h, "ts": ts, "c": True}}],
                    [{"nm": "v", "h": tgt_h, "n": "<link name assigned by the station>"}],
-                   [], {"src_h": src_h, "tgt_h": tgt_h})
+                   [], {"src_h": src_h, "tgt_h": tgt_h, "existing_links": existing})
 
 
 def _link_result(replies):
@@ -271,10 +274,40 @@ def _link_result(replies):
 
 
 def _link_inverse(planned, replies):
+    """`[]` for an explicit refusal; raises BoxError when the reply cannot be trusted."""
     result = _link_result(replies)
-    if not result.get("v") or not result.get("s"):
-        return None  # the station refused the link: nothing changed, nothing to journal
+    if "v" not in result:
+        raise box.BoxError("ambiguous checkLinks reply: no verdict", box.CHANNEL, "checkLinks")
+    if not result["v"]:
+        return []  # the station refused the link: nothing changed
+    if not result.get("s"):
+        raise box.BoxError("ambiguous checkLinks reply: link accepted but not named",
+                           box.CHANNEL, "checkLinks")
     return [{"nm": "v", "h": planned.data["tgt_h"], "n": result["s"]}]
+
+
+def _link_slots(nodes, name):
+    slots = {k: v.get("v") for k, v in box.children(nodes, name).items()}
+    return {"link": name, "sourceOrd": slots.get("sourceOrd"),
+            "sourceSlotName": slots.get("sourceSlotName"),
+            "targetSlotName": slots.get("targetSlotName")}
+
+
+def _link_recover(client, args, planned, replies):
+    """After an ambiguous reply: find the new link by its source and target slots.
+
+    Returns `(observed, inverse)`; `(None, [])` unless exactly one new link matches.
+    """
+    _, nodes = _handle(client, args["target_ord"], 2)
+    found = [_link_slots(nodes, name) for name, node in box.children(nodes, "").items()
+             if node.get("t") == "baja:Link" and name not in planned.data["existing_links"]]
+    found = [f for f in found
+             if (f["sourceOrd"] or "").rsplit("|", 1)[-1] == "h:" + planned.data["src_h"]
+             and f["sourceSlotName"] == args["source_slot"]
+             and f["targetSlotName"] == args["target_slot"]]
+    if len(found) != 1:
+        return None, []
+    return found[0], [{"nm": "v", "h": planned.data["tgt_h"], "n": found[0]["link"]}]
 
 
 def _link_readback(client, args, planned, replies, inverse):
@@ -285,12 +318,7 @@ def _link_readback(client, args, planned, replies, inverse):
     requested = {"link": name, "sourceOrd": "h:" + planned.data["src_h"],
                  "sourceSlotName": args["source_slot"], "targetSlotName": args["target_slot"]}
     _, nodes = _handle(client, args["target_ord"], 2)
-    observed = None
-    if name in nodes:
-        slots = {k: v.get("v") for k, v in box.children(nodes, name).items()}
-        observed = {"link": name, "sourceOrd": slots.get("sourceOrd"),
-                    "sourceSlotName": slots.get("sourceSlotName"),
-                    "targetSlotName": slots.get("targetSlotName")}
+    observed = _link_slots(nodes, name) if name in nodes else None
 
     def tail(d):  # the station may prefix the handle ORD; compare only `h:<handle>`
         return d and dict(d, sourceOrd=(d["sourceOrd"] or "").rsplit("|", 1)[-1])
@@ -300,7 +328,8 @@ def _link_readback(client, args, planned, replies, inverse):
 
 # ---- pipeline ------------------------------------------------------------
 
-_Impl = namedtuple("_Impl", "scope_ords plan inverse readback")
+_Impl = namedtuple("_Impl", "scope_ords plan inverse readback recover")
+_Impl.__new__.__defaults__ = (None,)
 
 
 def _static_inverse(planned, replies):
@@ -315,7 +344,7 @@ _IMPLS = {
     "n4_invoke_action": _Impl(lambda a: [a["ord"]], _invoke_plan, _static_inverse,
                               _invoke_readback),
     "n4_create_link": _Impl(lambda a: [a["source_ord"], a["target_ord"]], _link_plan,
-                            _link_inverse, _link_readback),
+                            _link_inverse, _link_readback, _link_recover),
 }
 
 
@@ -340,27 +369,66 @@ def _process(ctx, name, args):
         return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
                 "confirmation_token": token, "expires_at": expires_at}, None
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
-    sess.writes_executed += 1  # counted once sent, whatever the station answers
-    replies = [_send(sess.client, op) for op in planned.ops]
-    inverse = impl.inverse(planned, replies)  # None: the station refused, nothing changed
     batch_id = uuid.uuid4().hex
-    if inverse is not None:
-        try:
-            write.journal.append({"batch_id": batch_id, "ts": _now(), "tool": name,
-                                  "ops": planned.ops, "inverse": inverse,
-                                  "station_name": sess.station_name})
-        except OSError:
-            raise ToolError("write executed (batch %s) but the journal could not be written; "
-                            "inverse ops: %s" % (batch_id, safety.canonical(inverse))) from None
-    inverse = inverse or []
-    out = {"dry_run": False, "batch_id": batch_id, "inverse": inverse}
+    intent = {"batch_id": batch_id, "ts": _now(), "tool": name, "ops": planned.ops,
+              "inverse_plan": planned.inverse, "station_name": sess.station_name,
+              "phase": "intent"}
+    if isinstance(planned.data, dict) and planned.data.get("rollback_of"):
+        intent["rollback_of"] = planned.data["rollback_of"]
+    try:  # write-ahead: no intent on disk, no op on the wire
+        write.journal.append(intent)
+    except OSError:
+        raise ToolError("nothing was sent: the journal intent could not be written (batch %s); "
+                        "the confirmation token is spent, run the dry run again"
+                        % batch_id) from None
+    sess.writes_executed += 1  # counted once sent, whatever the station answers
     try:
-        requested, accepted, observed, verdict = impl.readback(
-            sess.client, args, planned, replies, inverse)
-        out.update(requested=requested, accepted=accepted, observed=observed, verdict=verdict)
-    except box.BoxError as exc:
-        out.update(requested=None, accepted=replies[0] if replies else None, observed=None,
-                   verdict="failed", readback_error=ctx.scrub(str(exc)))
+        replies = [_send(sess.client, op) for op in planned.ops]
+    except Exception as exc:
+        why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
+        err = ToolError("station call failed after the intent was journaled: batch %s is "
+                        "in-doubt (the station may or may not have applied it; inspect it "
+                        "before retrying): %s" % (batch_id, why))
+        err.batch_id = batch_id
+        raise err from None
+    out = {"dry_run": False, "batch_id": batch_id}
+    warnings = []
+    try:
+        inverse = impl.inverse(planned, replies)
+    except Exception as exc:  # the station's reply cannot be trusted: outcome unknown
+        why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
+        observed, inverse = None, []
+        if impl.recover is not None:
+            try:
+                observed, inverse = impl.recover(sess.client, args, planned, replies)
+            except Exception:
+                observed, inverse = None, []
+        out.update(requested=None, accepted=replies[0] if replies else None,
+                   observed=observed, verdict="unverified", in_doubt=True,
+                   readback_error=ctx.scrub(why))
+    else:
+        try:
+            requested, accepted, observed, verdict = impl.readback(
+                sess.client, args, planned, replies, inverse)
+            out.update(requested=requested, accepted=accepted, observed=observed,
+                       verdict=verdict)
+        except Exception as exc:  # whatever the read-back hits, the write already happened
+            why = str(exc) if isinstance(exc, box.BoxError) else \
+                "%s: %s" % (type(exc).__name__, exc)
+            out.update(requested=None, accepted=replies[0] if replies else None,
+                       observed=None, verdict="failed", readback_error=ctx.scrub(why))
+    out["inverse"] = inverse
+    result = {"batch_id": batch_id, "ts": _now(), "phase": "result",
+              "accepted": out["accepted"], "inverse": inverse, "verdict": out["verdict"]}
+    if out.get("in_doubt"):
+        result["in_doubt"] = True
+    try:
+        write.journal.append(result)
+    except OSError:
+        warnings.append("the journal result could not be written: batch %s is in-doubt; "
+                        "inverse ops: %s" % (batch_id, safety.canonical(inverse)))
+    if warnings:
+        out["warnings"] = warnings
     return out, batch_id
 
 
@@ -384,7 +452,8 @@ def _make_handler(name):
         try:
             result, batch_id = _process(ctx, name, args)
         except (ToolError, safety.SafetyError) as exc:
-            _record(ctx, name, args, None, "refused", str(exc))
+            doubt = getattr(exc, "batch_id", None)  # station call failed after the intent
+            _record(ctx, name, args, doubt, "error" if doubt else "refused", str(exc))
             raise ToolError(str(exc)) from None
         except Exception as exc:
             _record(ctx, name, args, None, "error", "%s: %s" % (type(exc).__name__, exc))
@@ -395,7 +464,7 @@ def _make_handler(name):
             logged = _record(ctx, name, args, batch_id, "executed",
                              "verdict=%s" % result["verdict"])
         if not logged:
-            result["warnings"] = ["the audit log could not be written"]
+            result.setdefault("warnings", []).append("the audit log could not be written")
         return result
     return handler
 
