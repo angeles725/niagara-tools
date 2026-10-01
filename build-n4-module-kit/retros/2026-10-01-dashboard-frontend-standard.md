@@ -2,7 +2,7 @@
 # 2026-10-01 · kit · dashboard-frontend-standard
 
 **Session**: PANCCADIA HMI freeze triage → user-requested frontend standard (structure, naming, data, memory, transfer); read-only audit of DashboardPan-ux `rc/index.html`
-**Delta count**: 14
+**Delta count**: 16
 
 ## What happened
 The user asked for a complete frontend standard for dashboard modules (structure, distribution, organization,
@@ -45,6 +45,8 @@ backlog that needs explicit user authorization (decision-logic-decomposition Δ3
 | Δ11 | Component-oriented `rc/js/` layout (Appendix C §C1), mapping the React-style tree (`components/ pages/ services/ hooks/ types/`) onto plain classic scripts: `components/` render functions taking a model slice, `pages/` one per nav tab, `services/` one per API resource on top of `apiFetch`, `store.js` replacing hooks (poll loop + subscribe), `types.js` JSDoc typedefs checked with `tsc --checkJs --noEmit` in WSL. Refines S Δ1. | `types/frontend-standard.md` § A2 | `[ev: Cliente/panccadia-leon 42fa82e]` |
 | Δ13 | Prototype-to-module rule: a standalone design HTML (sim data) is DECOMPOSED into the Appendix C §C1 layout when it becomes a module; live data enters as the `services/` + `store.js` layer, never as an appended block that reassigns the prototype's global functions; the sim mode survives only as a mock service selected by `config.js`. Complements the existing "module is the SKELETON" rule. | `types/dashboard.md` § `Extending an existing dashboard` | `[ev: Cliente/Juarez/Umbrella UmbrellaDashboard-ux index.html:3259-3295]` |
 | Δ14 | Vendored browser libraries live as separate files in `rc/vendor/<lib>-<version>.min.js` (+ its LICENSE file), pinned, loaded with `?v=`, never pasted inline into `index.html` and never fetched from a CDN at runtime; deprecated builds (e.g. three.js legacy `build/three.min.js`, deprecated since r150) are recorded with a migration note. | `types/dashboard.md` § `ux — servlet + SPA` (third-party browser library recipe) | `[ev: Cliente/Juarez/Umbrella UmbrellaDashboard-ux index.html:23-30]` |
+| Δ15 | Add the vetted vendor catalog (Appendix E) to `types/frontend-standard.md`: one recommended library per need (3D, trends, gauges, plan pan/zoom, alarm table, sanitization, no-build components, icons), exact pinned version, Chrome 83 verdict, size, license; native `Intl` before any date library. | `types/frontend-standard.md` (new § Vendor catalog) | `[ev: research 2026-10-01 jsDelivr npm files + MDN browser-compat-data]` |
+| Δ16 | New gate `toolbelt/lint-vendor-floor.sh <rc-dir>`: parse every `rc/vendor/**/*.js` with acorn at `ecmaVersion: 2020` and scan for APIs above the panel floor (`??=` `\|\|=` `&&=` C85, `replaceAll` C85, private methods C84, top-level await C89, `.at()` C92, `Object.hasOwn` C93, static blocks C94, `findLast` C97, `structuredClone` C98, `AbortSignal.timeout` C103, `toSorted` C110); FAIL on syntax, WARN on API (may be feature-guarded); record the verdict next to the pin in `rc/vendor/THIRD-PARTY.md`. Run on every library bump. | `toolbelt/` (new) + `report-module.sh` | `[ev: research 2026-10-01 MDN browser-compat-data]` |
 | Δ12 | Technology decision table (Appendix C §C2): the station servlet stays the backend for on-station HMIs (no Spring Boot on a JACE: Java 8 Compact3); a framework build (Vite + TypeScript, optionally React/Preact) is allowed for NEW `-ux` SPAs only as a pre-built bundle in `src/rc/` with `build.target` = the panel engine (Chrome 83) and a bundle budget; Spring Boot/React/WebSocket stacks belong to off-station multi-site or cloud viewers, not inside the module. | `types/frontend-standard.md` (new § Technology choices) + `types/dashboard.md` § `JS build strategy — grunt vs. no grunt` | `[ev: corpus B1023 §ND4]` |
 
 ## Lessons
@@ -173,6 +175,28 @@ Decision rule: React does not replace the backend — in a module the backend is
 | Good practice to keep | CSS tokens in `:root`; central SVG `ICONS`; consistent status badges (fault/down/stale/overridden) and fail-closed `offline` when no data | style head; `index.html:2967` (ICONS); `index.html:3279` (offline) |
 
 Backlog (needs explicit authorization): U1 add fetch timeout + success watchdog (R Δ1-Δ3); U2 vendor three.js as files and plan the migration off the legacy build (Δ14); U3 move the 1.78 MB base64 asset to a separate file (Δ3); U4 decompose per Δ13 when the module is next extended.
+
+## Appendix E — vendor catalog for `rc/vendor/` (research 2026-10-01)
+
+Method: files pulled from the npm tarballs (jsDelivr mirror), sizes measured (raw / gzip -9, KB), syntax parsed with acorn, API floor from MDN browser-compat-data. "C83" = static scan only; NOTHING was run on the WEB-HMI10 panel yet (first use of each library needs a panel smoke test).
+
+| Need | Pick (pinned) | Size raw / gz | C83 | License | Notes |
+|---|---|---|---|---|---|
+| 3D | three.js **r160** `build/three.min.js` (global) | 670 / 166 | yes | MIT | Last global build (removed in r161). UmbrellaDashboard embeds exactly r160 (parent-verified footer "Three.js r160"). Later path: ESM ≤ r183 with addon `from 'three'` rewritten to relative paths (no import maps before C89); r184+ needs esbuild `target: chrome83`. r163+ needs WebGL2 — panel GPU support unverified. |
+| 3D models | GLB as separate file in `rc/models/`; meshopt decoder (29 KB) if compression needed | — | — | — | Base64 costs +33% and blocks caching; Draco decoder ≈ 1 MB, avoid on the panel. |
+| Trends | uPlot **1.6.22** IIFE + CSS | 45 / 19 | yes | MIT | 1.6.23+ uses `??=` (fails C83). |
+| Charts (desktop) | Chart.js 4.5.1 UMD | 209 / 70 | yes | MIT | ECharts 6.1 = 1,122 / 368, too big for the panel. |
+| Gauges | canvas-gauges 2.1.7 | 45 / 14 | yes | MIT | P&ID symbols (valves, pumps): hand-rolled SVG. |
+| Plan pan/zoom | svg-pan-zoom 3.6.2 | 30 / 8 | yes | BSD-2 | Use native Pointer Events, not Hammer.js (unmaintained). |
+| Alarm table | Grid.js 6.2.0 | 53 / 17 | yes | MIT | List.js 2.3.1 (19 / 6.5) for simple filters; Tabulator only on desktop. |
+| Sanitization | DOMPurify 3.4.16 | 29 / 11 | yes | MPL-2.0 OR Apache-2.0 | Record the Apache-2.0 election for closed deliverables. |
+| Components without build | Preact 10.x UMD + hooks + htm 3.1.1 | ≈ 28 / 12 | yes | MIT / Apache-2.0 | Preact 11 has no UMD; lit 3.x and model-viewer ≥ 4.1 use `??=` (fail C83). |
+| Icons | Lucide 1.49.0 sprite, trimmed to used icons | 517 KB full | — | ISC | Never ship the full sprite. |
+| Dates/numbers | native `Intl` (C83 has DateTimeFormat, RelativeTimeFormat, PluralRules, ListFormat, DisplayNames) | 0 | yes | — | dayjs 1.11.23 (7 / 3) only if Intl falls short. |
+
+Rejected for the HMI: Babylon.js (8.6 MB raw), ECharts (size), model-viewer ≥ 4.1 and lit 3 (syntax), petite-vue (unmaintained), zod (unmeasured; hand-roll contract validation).
+Budget proposal: whole `rc/vendor/` ≤ 600 KB gz on the panel (the full pick list ≈ 280 KB gz with three.js, ≈ 115 KB without).
+Not verified: runtime on the real panel, WebGL2 on i.MX8M, feature-guarded call sites (`replaceAll` in Tabulator, `toSorted` in Alpine), uPlot/Chart.js performance claims.
 
 ## Appendix B — DashboardPan backlog from the audit (needs explicit authorization)
 | # | Finding | Evidence |
