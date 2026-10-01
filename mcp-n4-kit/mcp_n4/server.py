@@ -7,7 +7,7 @@ import argparse
 import json
 import sys
 
-from . import __version__, box, tools_read, tools_write
+from . import __version__, box, safety, tools_read, tools_write
 
 SERVER_NAME = "mcp-n4"
 SERVER_VERSION = __version__
@@ -205,7 +205,7 @@ def main(argv=None):
                      write_scopes=args.write_scope, state_dir=args.state_dir,
                      token_ttl=args.token_ttl, max_writes=args.max_writes, stations=stations,
                      credential_env=args.credential_env, insecure_tls=args.insecure_tls)
-    except ValueError as exc:
+    except (ValueError, safety.SafetyError) as exc:
         print("mcp_n4.server: %s" % exc, file=sys.stderr)
         return 2
     srv.serve(sys.stdin, sys.stdout)

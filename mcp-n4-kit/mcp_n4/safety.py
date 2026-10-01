@@ -8,13 +8,17 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
+import stat
 import time
 
 REDACTED = "***"
 _SECRET_MARKERS = ("pass", "secret", "token", "credential")
 #: Args that are not part of what a confirmation token vouches for.
 _UNBOUND_ARGS = ("dry_run", "confirmation_token")
+#: ASCII digits only: str.isdigit() also accepts superscripts and other scripts.
+_EXPIRY = re.compile(r"[0-9]{1,15}")
 
 
 class SafetyError(Exception):
@@ -68,11 +72,13 @@ class ConfirmationTokens:
     def consume(self, tool, args, plan_hash, token):
         """Spend `token`; raise SafetyError unless it is authentic, bound, live and unused."""
         parts = token.split(".") if isinstance(token, str) else []
-        if len(parts) != 3 or not parts[0].isdigit():
+        if len(parts) != 3 or not _EXPIRY.fullmatch(parts[0]) \
+                or not all(p.isascii() for p in parts):
             raise SafetyError("confirmation_token is missing or malformed: run a dry run "
                               "first and pass the token it returns")
         expiry, nonce, mac = int(parts[0]), parts[1], parts[2]
-        if not hmac.compare_digest(mac, self._mac(tool, args, plan_hash, expiry, nonce)):
+        if not hmac.compare_digest(mac.encode(),
+                                   self._mac(tool, args, plan_hash, expiry, nonce).encode()):
             raise SafetyError("confirmation_token does not match this tool, these arguments "
                               "and this plan: run the dry run again")
         if self.clock() >= expiry:
@@ -99,26 +105,102 @@ class WriteScope:
             raise SafetyError("ord %r is outside the write scope" % ord_str)
 
 
+def check_state_dir(path):
+    """Refuse a pre-existing state dir the server cannot trust; never chmod it.
+
+    A missing dir is fine (the first append creates it as 0700). An existing one must
+    be a directory owned by the current user and not group/world-writable.
+    """
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise SafetyError("--state-dir %s cannot be inspected (%s)" % (path, exc.strerror))
+    if not stat.S_ISDIR(st.st_mode):
+        raise SafetyError("--state-dir %s exists and is not a directory" % path)
+    if st.st_uid != os.getuid():
+        raise SafetyError("--state-dir %s is owned by another user: choose a directory you "
+                          "own (the server never changes its permissions)" % path)
+    if st.st_mode & 0o022:
+        raise SafetyError("--state-dir %s is group/world-writable (mode %o): run `chmod 700 "
+                          "%s` yourself or choose another directory (the server never changes "
+                          "the permissions of a directory it did not create)"
+                          % (path, stat.S_IMODE(st.st_mode), path))
+
+
 class _JsonlFile:
     def __init__(self, state_dir, filename):
         self.state_dir, self.path = state_dir, os.path.join(state_dir, filename)
 
     def append(self, entry):
-        os.makedirs(self.state_dir, mode=0o700, exist_ok=True)
-        os.chmod(self.state_dir, 0o700)
-        fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        if not os.path.isdir(self.state_dir):  # only a directory we create is chmodded
+            os.makedirs(self.state_dir, mode=0o700, exist_ok=True)
+            os.chmod(self.state_dir, 0o700)
+        try:  # a file we create is private from the start; an existing one is left as is
+            fd = os.open(self.path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            fd = os.open(self.path, os.O_WRONLY | os.O_APPEND)
         try:
-            os.fchmod(fd, 0o600)
             os.write(fd, (json.dumps(entry) + "\n").encode())
         finally:
             os.close(fd)
 
+    def entries(self):
+        """Every parseable JSON object line; a missing file or a torn line is skipped."""
+        try:
+            with open(self.path) as fh:
+                lines = fh.readlines()
+        except OSError:
+            return []
+        out = []
+        for line in lines:
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(entry, dict):
+                out.append(entry)
+        return out
+
 
 class Journal(_JsonlFile):
-    """Append-only record of executed writes with the ops that undo them."""
+    """Append-only write-ahead record: an `intent` before each station op, a `result` after.
+
+    Entries of one batch share `batch_id`. An intent without a result, or a result
+    flagged `in_doubt`, means the station state is unknown (state `in-doubt`).
+    """
 
     def __init__(self, state_dir):
         super().__init__(state_dir, "journal.jsonl")
+
+    @staticmethod
+    def _merge(intent, result):
+        view = {k: v for k, v in intent.items() if k != "phase"}
+        view.update(inverse=None, accepted=None, verdict=None)
+        if result is not None:
+            view.update({k: v for k, v in result.items() if k not in ("phase", "ts")})
+            view["result_ts"] = result.get("ts")
+        view["state"] = "in-doubt" if result is None or result.get("in_doubt") else "completed"
+        return view
+
+    def _views(self):
+        intents, results = {}, {}
+        for entry in self.entries():
+            bid = entry.get("batch_id")
+            if entry.get("phase") == "intent":
+                intents.setdefault(bid, entry)
+            elif entry.get("phase") == "result":
+                results[bid] = entry
+        return {bid: self._merge(i, results.get(bid)) for bid, i in intents.items()}
+
+    def read(self, batch_id):
+        """Merged intent+result view of one batch, or None when it was never journaled."""
+        return self._views().get(batch_id)
+
+    def rollbacks_of(self, batch_id):
+        """Merged views of every batch recorded as rolling back `batch_id`."""
+        return [v for v in self._views().values() if v.get("rollback_of") == batch_id]
 
 
 class AuditLog(_JsonlFile):

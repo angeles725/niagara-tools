@@ -110,17 +110,29 @@ Every write call goes through these layers:
    It is single use, expires after `--token-ttl`, and is an HMAC under a per-process
    random key bound to the tool, the arguments, the plan and the expiry. If the
    station changed since the dry run the plan hash differs and the token is refused.
-6. **Journal.** Each executed write appends `{batch_id, ts, tool, ops, inverse,
-   station_name}` to `<state-dir>/journal.jsonl`, so it can be undone by hand.
+6. **Write-ahead journal.** Before any op is sent, an `intent` record
+   `{batch_id, ts, tool, ops, inverse_plan, station_name, phase}` is appended to
+   `<state-dir>/journal.jsonl`; if that fails nothing is sent (the token stays
+   spent). After the reply a `result` record `{batch_id, phase, accepted, inverse,
+   verdict}` follows, holding the real inverse (for example the server-assigned
+   name). An intent without a result, or a result flagged `in_doubt` (the station
+   reply was ambiguous or malformed), is an `in-doubt` batch: the station may or
+   may not have applied it, so inspect it before retrying.
 7. **Audit.** Every write call, dry, executed or refused, appends a line to
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.
 8. **Read-back.** After executing, the node is reloaded and the reply carries
    `{requested, accepted, observed, verdict}`: `verified`, `mismatch` (reported, not
-   raised), `failed`, or `unverified` for the state-changing actions (`active`,
-   `inactive`, `auto`) that have no slot to read back.
+   raised), `failed` (including any read-back error, reported as `readback_error`
+   next to the `batch_id`), or `unverified` for the state-changing actions
+   (`active`, `inactive`, `auto`) that have no slot to read back and for an
+   ambiguous `checkLinks` reply (`in_doubt: true`; the new link is searched by its
+   source and target slots).
 
-The state directory is created with mode 0700 and the files with 0600.
+The state directory is created with mode 0700 and the files with 0600, but only
+when the server creates them. An existing `--state-dir` that is owned by another
+user or is group/world-writable makes write mode refuse to start (exit 2); the
+server never chmods a directory it did not create.
 
 Tool rules:
 
