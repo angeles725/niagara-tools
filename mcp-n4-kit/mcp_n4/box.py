@@ -18,6 +18,8 @@ SESSION_COMPONENT_ID = "cs1"
 #: Default station root handle. It is the value `loadRoot` returns (`open()` result
 #: `["h"]`); callers should pass `root["h"]` rather than rely on this default.
 DEFAULT_ROOT_HANDLE = "2"
+#: Upper bound on events kept in `pending_events`; the oldest are dropped first.
+MAX_PENDING_EVENTS = 500
 
 
 class BoxError(Exception):
@@ -34,6 +36,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Refuse every redirect: urllib would re-send Authorization to the new target."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        fp.close()  # release the 3xx response before raising
         host = urllib.parse.urlsplit(newurl).hostname or "unknown host"
         raise BoxError("refusing HTTP %d redirect to host %s (credentials are never "
                        "forwarded)" % (code, host))
@@ -131,6 +134,7 @@ class BoxClient:
         self._seq = 0
         self.sid = None
         self._pending_events = []
+        self.dropped_events = 0  # events discarded because the pending list was full
         self._handles = {}  # ord -> node handle, learned from open() and load_tree()
 
     def __repr__(self):
@@ -163,7 +167,7 @@ class BoxClient:
             if exc.code in (401, 403):
                 raise AuthError("HTTP %d from station" % exc.code, channel, key) from None
             raise BoxError("HTTP %d from station" % exc.code, channel, key) from None
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, channel, key) from None
         return self._unwrap(reply, channel, key)
 
@@ -195,8 +199,11 @@ class BoxClient:
     def open(self):
         """Open a session and return the `loadRoot` reply (`{"h": ..., "t": ...}`).
 
-        If any step after `make` fails the server session is closed (best effort)
-        before the error propagates, so a failed `with BoxClient(...)` never leaks.
+        If a step after `make` fails with a non-auth error the server session is
+        closed (best effort) before the error propagates, so a failed
+        `with BoxClient(...)` never leaks. An `AuthError` skips that cleanup `del`
+        (it would be one more rejected login toward the 5-in-30-s lock-out) and a
+        KeyboardInterrupt is re-raised at once; the local `sid` is dropped either way.
         """
         self.sid = self.call(CHANNEL, "make", {})
         try:
@@ -204,7 +211,10 @@ class BoxClient:
                                            "scts": "box:ComponentSpaceSessionHandler",
                                            "scarg": "station:"})
             root = self.ssc("loadRoot", None)
-        except BaseException:
+        except AuthError:
+            self.sid = None
+            raise
+        except Exception:
             self.close()
             raise
         if isinstance(root, dict) and root.get("h"):
@@ -223,28 +233,45 @@ class BoxClient:
     # -- reading
     @property
     def pending_events(self):
-        """Read-only tuple of events set aside by `load_tree` (never dropped)."""
+        """Read-only tuple of events set aside by `load_tree`.
+
+        The list holds at most `MAX_PENDING_EVENTS` entries; when full the oldest
+        is dropped and `dropped_events` is incremented. Use `drain_pending_events`
+        to consume them.
+        """
         return tuple(self._pending_events)
 
-    def _stash(self, event, ops):
+    def drain_pending_events(self):
+        """Return the pending events as a list and clear them."""
+        drained, self._pending_events = self._pending_events, []
+        return drained
+
+    def _keep(self, event):
+        """Append `event` to the pending list, dropping the oldest when full."""
+        self._pending_events.append(event)
+        while len(self._pending_events) > MAX_PENDING_EVENTS:
+            del self._pending_events[0]
+            self.dropped_events += 1
+
+    def _keep_rest(self, event, ops):
         """Keep `event` minus the consumed ops (all of it when it has no ops)."""
-        if not isinstance(event, dict):
-            self._pending_events.append(event)
-            return
-        evs = event.get("evs")
+        evs = event.get("evs") if isinstance(event, dict) else None
         if ops is None or not isinstance(evs, dict):
-            self._pending_events.append(event)
+            self._keep(event)
         elif ops:
-            self._pending_events.append(dict(event, evs=dict(evs, ops=ops)))
+            self._keep(dict(event, evs=dict(evs, ops=ops)))
 
     def _split(self, events, handle):
-        """Pick the first `l` op matching `handle` (any `l` op if None); stash the rest."""
+        """Return the first `l` op matching `handle` (any `l` op if None).
+
+        Every other event, and every other op of an event, is kept in pending.
+        """
         found = None
         for event in events:
             evs = event.get("evs") if isinstance(event, dict) else None
             ops = evs.get("ops") if isinstance(evs, dict) else None
             if not isinstance(ops, list):
-                self._stash(event, None)
+                self._keep_rest(event, None)
                 continue
             rest = []
             for op in ops:
@@ -254,38 +281,59 @@ class BoxClient:
                     found = op
                 else:
                     rest.append(op)
-            self._stash(event, rest)
+            self._keep_rest(event, rest)
         return found
+
+    def _load_once(self, ord_str, depth, attempts, delay, sleep, handle):
+        """Request `ord_str` and poll up to `attempts` times for its load op."""
+        for event in self.poll():  # queued before the request: cannot be its reply
+            self._keep(event)
+        self.ssc("loadSlots", {"o": ord_str, "d": depth})
+        for attempt in range(attempts):
+            op = self._split(self.poll(), handle)
+            if op is not None:
+                return op
+            if attempt < attempts - 1:
+                sleep(delay)
+        return None
 
     def load_tree(self, ord_str, depth=2, attempts=6, delay=0.5, sleep=time.sleep,
                   handle=None):
         """Load `ord_str` and return a flat {path: node} dict (root key is "").
 
-        Only the load op for the requested target is returned, chosen by this rule:
-        events already queued before the request are drained into `pending_events`
-        (they cannot belong to it); then, when the node handle is known (the `handle`
-        argument, else one learned from `open()` or an earlier load of the same ord),
-        only an `l` op carrying that handle is accepted; when unknown, the first `l`
-        op arriving after the request is. Everything else is kept in `pending_events`
-        and two load ops are never merged into one tree.
+        Only the load op for the requested target is returned. Events already
+        queued before the request are kept in `pending_events` (they cannot belong
+        to it). When the node handle is known (the `handle` argument, else one
+        cached from `open()` or an earlier load of the same ord) only an `l` op
+        carrying that handle is accepted; when unknown, the first `l` op arriving
+        after the request is accepted, whatever its handle. Every other event or
+        op is kept in `pending_events` and two load ops are never merged.
+
+        A handle taken from the cache (not passed in) may be stale; if no matching
+        op arrives, the request is repeated once with the handle treated as unknown.
         """
-        handle = handle if handle is not None else self._handles.get(ord_str)
-        self._pending_events.extend(self.poll())
-        stale, self._pending_events = self._pending_events, []
-        self._split(stale, object())  # nothing matches: stash everything as pending
-        self.ssc("loadSlots", {"o": ord_str, "d": depth})
-        for attempt in range(attempts):
-            op = self._split(self.poll(), handle)
-            if op is not None:
-                nodes = {}
-                _flatten(op["b"], "", nodes)
-                if nodes.get("", {}).get("h"):
-                    self._handles[ord_str] = nodes[""]["h"]
-                return nodes
-            if attempt < attempts - 1:
-                sleep(delay)
-        raise BoxError("no load event for %s after %d polls" % (ord_str, attempts),
-                       CHANNEL, "loadSlots")
+        explicit = handle is not None
+        handle = handle if explicit else self._handles.get(ord_str)
+        op = self._load_once(ord_str, depth, attempts, delay, sleep, handle)
+        if op is None and handle is not None and not explicit:
+            self._handles.pop(ord_str, None)
+            op = self._load_once(ord_str, depth, attempts, delay, sleep, None)
+        if op is None:
+            raise BoxError("no load event for %s after %d polls" % (ord_str, attempts),
+                           CHANNEL, "loadSlots")
+        nodes = {}
+        _flatten(op["b"], "", nodes)
+        if nodes.get("", {}).get("h"):
+            self._handles[ord_str] = nodes[""]["h"]
+        return nodes
+
+    def invalidate_handles(self, ord_prefix=None):
+        """Forget cached handles for ords starting with `ord_prefix` (all if None)."""
+        if ord_prefix is None:
+            self._handles.clear()
+            return
+        for key in [k for k in self._handles if k.startswith(ord_prefix)]:
+            del self._handles[key]
 
     # -- writing (one op per syncTo)
     def sync(self, op):
@@ -306,7 +354,21 @@ class BoxClient:
         return res[0]
 
     def remove_component(self, parent_h, name):
-        return self.sync({"nm": "v", "h": parent_h, "n": name})
+        """Remove a child and forget cached handles of it and its descendants.
+
+        If `parent_h` is not a handle this client has cached, the child's ord
+        cannot be derived, so the whole handle cache is cleared (safe, just slower).
+        """
+        res = self.sync({"nm": "v", "h": parent_h, "n": name})
+        parents = [o for o, h in self._handles.items() if h == parent_h]
+        if not parents:
+            self._handles.clear()
+        for parent in parents:
+            child = parent + ("/" if "|slot:" in parent else "|slot:/") + name
+            for key in [k for k in self._handles
+                        if k == child or k.startswith(child + "/")]:
+                del self._handles[key]
+        return res
 
     def set_slot(self, h, path, bson, *, allow_partial_status=False):
         if path.split("/")[-1] in ("value", "status") and "/" in path \
@@ -324,7 +386,7 @@ class BoxClient:
         # per requested pair); we always send exactly one pair, so unwrap it.
         if not (isinstance(res, list) and res and isinstance(res[0], list)
                 and all(isinstance(r, dict) for r in res[0])):
-            raise BoxError("malformed checkLinks reply", CHANNEL, "callssc")
+            raise BoxError("malformed checkLinks reply", CHANNEL, "checkLinks")
         return res[0]
 
     def invoke_action(self, h, action, bson=None):
