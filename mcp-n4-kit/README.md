@@ -8,10 +8,22 @@ is needed: the client speaks to `POST <station>/box/` with HTTP Basic auth.
 
 T1: the stdlib-only BOX client library (`mcp_n4/box.py`) and its tests against
 an in-memory fake station. T2: the stdio MCP server with read-only station tools.
-T3: guarded write tools (`--allow-writes`). The skill comes in a later task.
+T3: guarded write tools (`--allow-writes`). T4: destructive tools, rollback and save. T5: METHODOLOGY and the skill launcher.
+
+## Methodology and skill
+
+- [METHODOLOGY.md](METHODOLOGY.md): route ladder, safety layers mapped to code and tests,
+  live rules, the mandatory session checklist and version tiers. Read it before writing.
+- [skill/SKILL.md](skill/SKILL.md): the Claude Code skill launcher. Install it with
+  (from the repository root; add `--dry-run` to preview, `--force` to overwrite a diverged copy):
+
+```
+scripts/install-skill.sh --skill mcp-n4
+```
 
 ## Layout
 
+- `METHODOLOGY.md`, `skill/SKILL.md`: see above.
 - `mcp_n4/box.py`: BOX frame, session, `syncTo`, `checkLinks`, `invokeAction`,
   `pollchgs`, tree loading and status helpers. No side effects at import.
 - `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()`.

@@ -181,3 +181,11 @@ make_tree() {
   run env HOME=/nonexistent bash "$TSCRIPT" --home "$TEST_HOME" --skill mcp-n4
   [ "$status" -eq 3 ]
 }
+
+@test "SK9: the tracked mcp-n4 launcher installs byte-identical from the real repo" {
+  REAL="$(git -C "$(dirname "$BATS_TEST_FILENAME")" rev-parse --show-toplevel)/mcp-n4-kit/skill/SKILL.md"
+  run env HOME=/nonexistent bash "$SCRIPT" --home "$TEST_HOME" --skill mcp-n4
+  [ "$status" -eq 0 ]
+  cmp -s "$REAL" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
+  grep -q '^name: mcp-n4$' "$REAL"
+}
