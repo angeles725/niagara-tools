@@ -12,13 +12,16 @@ Niagara `BWebServlet` as the only backend. Rules that only constrain one audienc
 ## Profiles — tag every rule `[ev: retro dashboard-deployment-profiles Δ1]` `[ev: retro dashboard-deployment-profiles Δ2]`
 
 One servlet dashboard can serve two audiences. Declare the module's `ui_profile` (BUILD-STATE row +
-module docs, see `BUILD-STATE.md` § How to read this file) before writing a rule or a line of CSS:
+module docs, see `BUILD-STATE.md` § How to read this file) before writing a rule or a line of CSS.
+This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `dashboard.md` reference it.
+`[ev: retro dashboard-deployment-profiles Δ1]`
 
 | `ui_profile` | Audience | Browser floor |
 |---|---|---|
 | `hmi` | the HMI panel: one kiosk WebView, touch, 1280×800, 24/7, nobody reloads it | Chromium 83 |
 | `lan` | anyone on the site LAN with their own browser (desktop/laptop/tablet/phone), several concurrent users, each with their own Niagara login, intermittent use | current evergreen Chrome/Edge/Firefox/Safari |
 | `both` | both of the above | see below |
+| `unknown` | a module that predates the field (honest, not a default); record the real value the first time its `-ux` is touched | not declared: the tools enforce no profile (`rc-scan.sh` browser-floor stays WARN) |
 
 - `both` with ONE build ⇒ the HMI floor governs everything (Chromium 83, the panel CSS rules in
   `dashboard.md` § HMI kiosk). Alternative: two entry points, `hmi.html` (panel) and `index.html`
@@ -152,14 +155,14 @@ rc/
     main.js                  boot only: wire store → visible page
 ```
 
-- A component is a pure function `(container, slice) → void` that patches the DOM.
-- A page composes components and subscribes to the store only while it is visible.
-- Services never touch the DOM; only `services/api.js` calls `fetch`.
-- `types.js` holds JSDoc typedefs checked with `tsc --checkJs --noEmit` in WSL (no TypeScript build).
+- [both] A component is a pure function `(container, slice) → void` that patches the DOM.
+- [both] A page composes components and subscribes to the store only while it is visible.
+- [both] Services never touch the DOM; only `services/api.js` calls `fetch`.
+- [both] `types.js` holds JSDoc typedefs checked with `tsc --checkJs --noEmit` in WSL (no TypeScript build).
 - [HMI] Classic scripts plus the DJS1 dual-export shim, not ES `type="module"`; load order is
   explicit in `index.html` (`dashboard.md` § HMI kiosk). [LAN] A LAN-only SPA may use ES modules.
   `[ev: retro dashboard-rc-file-split Δ4]`
-- Serving the split needs no Java change in a DashboardDispatch-style router — verify per module
+- [both] Serving the split needs no Java change in a DashboardDispatch-style router — verify per module
   (`dashboard.md` § ux — servlet + SPA). `[ev: retro dashboard-rc-file-split Δ3]`
 
 ## Technology choices `[ev: retro dashboard-frontend-standard Δ12]`
@@ -174,7 +177,7 @@ rc/
 | Off-station, multi-site or cloud viewer | Separate frontend + its own backend reading oBIX; writes through one gated write service | Different trust boundary; never expose the station to browsers directly |
 | Styling | CSS design tokens (§ 1); utility-CSS frameworks only with a framework build | Utility CSS needs a build step |
 
-- Decision rule: a framework does not replace the backend — in a module the backend is the station.
+- [both] Decision rule: a framework does not replace the backend — in a module the backend is the station.
   Pick a framework only when the SPA size justifies a build pipeline, and always target the panel
   engine. [LAN] A LAN-only SPA may target evergreen browsers.
 
@@ -213,11 +216,11 @@ smoke test. The pinned versions are the [HMI] picks; [LAN]-only modules may use 
 | Icons | Lucide 1.49.0 sprite, trimmed to the icons used | 517 KB full | — | ISC | Never ship the full sprite. |
 | Dates/numbers | native `Intl` (C83 has DateTimeFormat, RelativeTimeFormat, PluralRules, ListFormat, DisplayNames) | 0 | yes | — | dayjs 1.11.23 (7 / 3) only if `Intl` falls short. |
 
-- Rejected for the HMI: Babylon.js (8.6 MB raw), ECharts (size), model-viewer ≥ 4.1 and lit 3
+- [HMI] Rejected for the HMI: Babylon.js (8.6 MB raw), ECharts (size), model-viewer ≥ 4.1 and lit 3
   (syntax above C83), petite-vue (unmaintained), zod (unmeasured; hand-roll contract validation).
-- Budget proposal [HMI]: the whole `rc/vendor/` ≤ 600 KB gz (the full pick list ≈ 280 KB gz with
+- [HMI] Budget proposal: the whole `rc/vendor/` ≤ 600 KB gz (the full pick list ≈ 280 KB gz with
   three.js, ≈ 115 KB without).
-- Not verified: runtime on the real panel, WebGL2 on the panel SoC, feature-guarded call sites
+- [HMI] Not verified: runtime on the real panel, WebGL2 on the panel SoC, feature-guarded call sites
   (`replaceAll` in Tabulator, `toSorted` in Alpine), performance claims.
 
 ## LAN profile `[ev: retro dashboard-deployment-profiles Δ3]`

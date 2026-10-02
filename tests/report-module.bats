@@ -585,3 +585,40 @@ JAVA
   [ "$status" -eq 1 ]
   [[ "$output" == *"(wiring-map Table 2: $t/../docs/wiring-map.md)"* ]]
 }
+
+# polish-2026-10-02 P5 (#199 WU4): a frontend member with WARN rows and no FAIL is not "clean" —
+# the PASS detail counts the relayed rows; an eslint found only on PATH must be the flat-config
+# major (>= 9) the kit config needs, else a SKIP row naming its version.
+@test "RM47: rc-scan / eslint WARN-only -> PASS detail 'no FAIL (N WARN …)', never 'clean'" {
+  local t="$BATS_TEST_TMPDIR/rm47"; _ux_tree "$t"
+  printf '<!DOCTYPE html><html><head><style>\n.bg { inset: 0; }\n</style></head><body></body></html>\n' \
+    > "$t/DemoPan-ux/src/rc/index.html"
+  mkdir -p "$t/DemoPan-ux/src/rc/js"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  local stub="$BATS_TEST_TMPDIR/eslint-warn"
+  printf '#!/usr/bin/env bash\nprintf "WARN  eslint  js/app.js:9  max-lines-per-function: too long\\n"\nexit 0\n' > "$stub"
+  chmod +x "$stub"
+  KIT_ESLINT="$stub" run "$RM" "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-ux  WARN  rc-scan  index.html:2  browser-floor"* ]]
+  [[ "$output" == *"DemoPan-ux  PASS  rc-scan  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-ux  PASS  eslint  no FAIL (1 WARN row above)"* ]]
+  if [[ "$output" == *"PASS  rc-scan  clean"* ]]; then return 1; fi
+  if [[ "$output" == *"PASS  eslint  clean"* ]]; then return 1; fi
+}
+
+@test "RM48: an eslint found only on PATH below major 9 -> SKIP eslint row naming its version" {
+  if [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ]; then
+    skip "the pinned eslint is installed under toolbelt/eslint; the PATH fallback is not reached"
+  fi
+  local t="$BATS_TEST_TMPDIR/rm48"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js" "$BATS_TEST_TMPDIR/bin48"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  # shellcheck disable=SC2016  # literal stub script text, expanded by the stub, not here
+  printf '#!/usr/bin/env bash\n[ "${1:-}" = --version ] && { echo v8.57.0; exit 0; }\nprintf "FAIL  eslint  js/app.js:1  ran-with-old-eslint\\n"; exit 1\n' \
+    > "$BATS_TEST_TMPDIR/bin48/eslint"
+  chmod +x "$BATS_TEST_TMPDIR/bin48/eslint"
+  PATH="$BATS_TEST_TMPDIR/bin48:$PATH" KIT_ESLINT='' run "$RM" "$t"
+  [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is v8.57.0"* ]]
+  if [[ "$output" == *"ran-with-old-eslint"* ]]; then return 1; fi
+}

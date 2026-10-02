@@ -184,3 +184,33 @@ EOF
   [[ "$output" == *"no location.reload("* ]]
   # Named mutation: drop the reload/href recovery check -> SPR8 passes clean.
 }
+
+# polish-2026-10-02 P5 (#199 WU3): a lastOk* timestamp set only at load (never on a poll success)
+# is not a success-time key — the watchdog fires on the load time, not on the last success.
+@test "SPR9: a lastOkAt set only at load (never in the poll's success path) still WARNs (not keyed)" {
+  cat > "$TMPDIR_T/Mod/src/rc/index.html" << 'EOF2'
+<script>
+let lastOkAt = Date.now();
+function watchdog() {
+  if (Date.now() - lastOkAt > 30000) { location.reload(); }
+}
+async function poll() {
+  try {
+    await readJson();
+    paint("live");
+  } catch (err) {
+    paint("error");
+  } finally {
+    watchdog();
+    setTimeout(poll, 5000);
+  }
+}
+setTimeout(poll, 5000);
+</script>
+EOF2
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"time since the last success"* ]]
+  # Named mutation SPR9: count a clock assignment anywhere in the file -> SPR9 passes clean.
+}

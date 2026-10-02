@@ -288,3 +288,27 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [[ "$output" != *"inline-block-size"* ]]
   rm -rf "$T"
 }
+
+# polish-2026-10-02 P5 (#199 WU3): the login-gate mention matches auth as a word / camelCase start
+# (auth, Auth, authToken, isAuthenticated, AUTH_URL), not inside author / authority.
+@test "RC30: disabled-gate — author/authority do not make a file login-gated; isAuthenticated / authToken do" {
+  T="$(mktemp -d)"
+  mkdir -p "$T/a/rc" "$T/b/rc" "$T/c/rc"
+  printf '<!doctype html><html><head><meta name="author" content="Plant team"></head>\n<body><button id="b" disabled>Export</button><p>Data authority: plant</p></body></html>\n' > "$T/a/rc/index.html"
+  printf 'if (!session.isAuthenticated) { showGate(); }\nsaveBtn.disabled = true;\n' > "$T/b/rc/app.js"
+  printf 'const authToken = readToken();\nsaveBtn.disabled = true;\n' > "$T/c/rc/app.js"
+  run "$RS" "$T/a"
+  [ "$status" -eq 0 ]
+  if [[ "$output" == *"disabled-gate"* ]]; then return 1; fi
+  run "$RS" "$T/b"
+  [[ "$output" == *"rc/app.js:2  disabled-gate"* ]]
+  run "$RS" "$T/c"
+  [[ "$output" == *"rc/app.js:2  disabled-gate"* ]]
+  rm -rf "$T"
+}
+
+@test "RC31: --strict promotes the cross-file orphan-page WARN to FAIL (one severity source for both awk passes)" {
+  run "$RS" "$FX/orphan" --strict
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  "*"orphan-page"* ]]
+}

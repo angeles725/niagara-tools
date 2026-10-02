@@ -26,7 +26,10 @@
  *       [--api-match <substring>] [--nav <selector>] [--subtab <selector>]...
  *       [--target <selector>] [--allow-scroller <selector>]... [--settle-ms 80]
  *       [--screenshot-dir <dir>] [--chrome-path <chrome>]
- * Row:     PASS|FAIL|WARN  hmi-sweep  <scenario>/<view>  no-scroll|target|inner-scroller: <detail>
+ * Row:     PASS|FAIL|WARN  hmi-sweep  <scenario>/<view>  no-scroll|target|inner-scroller|subtab: <detail>
+ *          A --target that matches nothing (or only a hidden element) in a view is a FAIL row; a
+ *          sub-tab that is no longer visible after the previous click is a WARN row (not swept).
+ *          --settle-ms is a non-negative integer (ms).
  * Summary: hmi-sweep: N views · p PASS · f FAIL · w WARN  ->  CLEAN|ISSUES
  * Exit:    0 no FAIL · 1 any FAIL · 3 usage/env · 4 tool unavailable (puppeteer-core or Chrome
  *          missing — reported, never a pass)
@@ -77,7 +80,11 @@ function parseArgs(argv) {
       case '--subtab': out.subtabs.push(need(i)); i++; break;
       case '--target': out.target = need(i); i++; break;
       case '--allow-scroller': out.allowScrollers.push(need(i)); i++; break;
-      case '--settle-ms': out.settleMs = Number(need(i)); i++; break;
+      case '--settle-ms': {
+        const v = need(i); i++;
+        if (!/^\d+$/.test(v)) throw new UsageError('--settle-ms must be a non-negative integer (ms)');
+        out.settleMs = Number(v); break;
+      }
       case '--screenshot-dir': out.screenshotDir = need(i); i++; break;
       case '--chrome-path': out.chromePath = need(i); i++; break;
       default: throw new UsageError(`unknown argument: ${a}`);
@@ -95,18 +102,24 @@ function withQuery(url, query) {
 
 /*
  * Pure verdict for one measured view. m = { docScrollY, docScrollX,
- *   target: null | { present, visible, unoccluded }, scrollers: [{ sel, allowed }] }.
+ *   target: null (no --target) | { present: false, sel } | { present: true, visible, unoccluded },
+ *   scrollers: [{ sel, allowed }] }, or m = { gone: true } for a sub-tab that vanished before its click.
  */
 function rowsForView(scenario, label, m) {
   const id = `${scenario}/${label}`;
   const rows = [];
+  if (m.gone) {
+    return [`WARN  hmi-sweep  ${id}  subtab: no longer visible after the previous click (not swept)`];
+  }
   if (m.docScrollY || m.docScrollX) {
     const axes = [m.docScrollY ? 'vertical' : '', m.docScrollX ? 'horizontal' : ''].filter(Boolean);
     rows.push(`FAIL  hmi-sweep  ${id}  no-scroll: document scrolls (${axes.join('+')}) at the panel viewport`);
   } else {
     rows.push(`PASS  hmi-sweep  ${id}  no-scroll: document fits`);
   }
-  if (m.target && m.target.present) {
+  if (m.target && !m.target.present) {
+    rows.push(`FAIL  hmi-sweep  ${id}  target: ${m.target.sel} not found (no element, or only a hidden one)`);
+  } else if (m.target) {
     if (!m.target.visible) {
       rows.push(`FAIL  hmi-sweep  ${id}  target: present but not visible (zero box or off-screen)`);
     } else if (!m.target.unoccluded) {
@@ -157,6 +170,7 @@ function measureInPage(targetSel, allowSels) {
   };
   if (targetSel) {
     const t = document.querySelector(targetSel);
+    res.target = { present: false, sel: targetSel };
     if (t && !t.hidden) {
       const r = t.getBoundingClientRect();
       const visible = r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 &&
@@ -179,6 +193,16 @@ function measureInPage(targetSel, allowSels) {
     res.scrollers.push({ sel: describe(el), allowed: allowSels.some((s) => el.matches(s)) });
   }
   return res;
+}
+
+// Runs in the page (serialized by $$eval, so self-contained): click the i-th VISIBLE element and
+// return its label, or null when the visible set shrank after an earlier click (no click, no throw).
+function clickVisibleNth(els, i) {
+  const vis = els.filter((e) => e.getClientRects().length > 0);
+  const el = vis[i];
+  if (!el) return null;
+  el.click();
+  return (el.dataset && el.dataset.tab) || (el.textContent || '').trim() || String(i);
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -215,20 +239,24 @@ async function sweepScenario(browser, args, sc) {
   for (let n = 0; n < navCount; n++) {
     const navLabel = await page.$$eval(args.nav, (els, i) => {
       const el = els[i];
+      if (!el) return null;
       el.click();
       return el.dataset.page || (el.textContent || '').trim() || String(i);
     }, n);
+    if (navLabel === null) {
+      out.push({ label: `${args.nav}[${n}]`, m: { gone: true } });
+      continue;
+    }
     await sleep(args.settleMs);
     let subSeen = 0;
     for (const sel of args.subtabs) {
       const count = await page.$$eval(sel, (els) => els.filter((e) => e.getClientRects().length > 0).length);
       for (let s = 0; s < count; s++) {
-        const subLabel = await page.$$eval(sel, (els, i) => {
-          const vis = els.filter((e) => e.getClientRects().length > 0);
-          const el = vis[i];
-          el.click();
-          return el.dataset.tab || (el.textContent || '').trim() || String(i);
-        }, s);
+        const subLabel = await page.$$eval(sel, clickVisibleNth, s);
+        if (subLabel === null) {
+          out.push({ label: `${navLabel}#${sel}[${s}]`, m: { gone: true } });
+          continue;
+        }
         await sleep(args.settleMs);
         await measure(`${navLabel}#${subLabel}`);
         subSeen++;
@@ -290,4 +318,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, rowsForView, summarize, withQuery };
+module.exports = { parseArgs, rowsForView, summarize, withQuery, clickVisibleNth };

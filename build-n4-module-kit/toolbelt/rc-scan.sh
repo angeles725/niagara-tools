@@ -21,7 +21,10 @@
 #   disabled-gate      WARN  `.disabled = <not false>`, `setAttribute("disabled"` or a `disabled`
 #                            attribute on button/input/select/textarea, in a file that mentions a
 #                            login/auth/step-up gate (a disabled control dispatches no click, so the
-#                            gate never opens; mark it with a class / aria-disabled instead).
+#                            gate never opens; mark it with a class / aria-disabled instead). `auth`
+#                            counts only at a word or camelCase start (auth, Auth, authToken,
+#                            isAuthenticated, AUTH_URL, authorize) — never inside author/authority;
+#                            a lowercase-glued form (unauthorized) is not seen.
 #                            [ev: retro dashboard-frontend-reliability-rules Δ7]
 #                            [ev: retro panccadia-persistent-config-hoa Δ4]
 #   fetch-no-signal    WARN  `fetch(` whose argument list carries no `signal` (nor do the 3 lines
@@ -121,7 +124,7 @@ _ROWS="$_TMP/rows.txt"
 # ---------------------------------------------------------------------------
 cat > "$_TMP/scan.awk" << 'AWKEOF'
 BEGIN {
-    sevw = (strict + 0 == 1) ? "FAIL" : "WARN"
+    # sevw (WARN, FAIL under --strict) comes from the shell: one source for this pass and orphan.awk.
     sevfloor = (floorfail + 0 == 1) ? "FAIL" : "WARN"
     sevdata = (legacy + 0 == 1 && strict + 0 != 1) ? "WARN" : "FAIL"
     GAPRE = "(^|[;{[:space:]\"'])(row-|column-)?gap[[:space:]]*:"
@@ -131,8 +134,7 @@ BEGIN {
 
 # ---- pass 1: file-wide facts ------------------------------------------------
 FNR == NR {
-    low = tolower($0)
-    if (low ~ /login|auth|step-?up/) gated = 1
+    if (mentions_gate($0)) gated = 1
     t = $0
     while (match(t, /async[[:space:]]+function[[:space:]]*\*?[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*/)) {
         m = substr(t, RSTART, RLENGTH); sub(/^async[[:space:]]+function[[:space:]]*\*?[[:space:]]*/, "", m)
@@ -147,6 +149,20 @@ FNR == NR {
 }
 
 function allowed(id) { return index($0, "rc-scan: allow " id) > 0 }
+# A login/auth/step-up gate mention. `auth` only at a word or camelCase start, and not author/authority
+# (authorize/authorization still count).
+function mentions_gate(s,    t, pre, nxt, cap) {
+    if (tolower(s) ~ /login|step-?up/) return 1
+    t = s
+    while (match(t, /[Aa][Uu][Tt][Hh]/)) {
+        pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+        nxt = tolower(substr(t, RSTART + 4, 4))
+        cap = (substr(t, RSTART, 1) == "A")
+        if ((pre !~ /[A-Za-z0-9]/ || (cap && pre ~ /[a-z0-9]/)) && (nxt !~ /^or/ || nxt ~ /^ori[sz]/)) return 1
+        t = substr(t, RSTART + 4)
+    }
+    return 0
+}
 function emit_at(lno, sev, id, msg) { print sev "  rc-scan  " rel ":" lno "  " id ": " msg }
 function emit(sev, id, msg) { emit_at(FNR, sev, id, msg) }
 
@@ -412,8 +428,9 @@ _scan_files() {
               -print \)
 }
 
-_SEVW=WARN
-[ "$STRICT" -eq 1 ] && _SEVW=FAIL
+# WARN-row severity, one source for scan.awk (sevw) and orphan.awk (sev): FAIL under --strict.
+SEVW=WARN
+[ "$STRICT" -eq 1 ] && SEVW=FAIL
 _scan_files "$ARTIFACT_DIR" | LC_ALL=C sort > "$_TMP/files.txt"
 
 # ---------------------------------------------------------------------------
@@ -426,6 +443,7 @@ while IFS= read -r _file; do
         -v rel="$_rel" \
         -v ext="$_ext" \
         -v strict="$STRICT" \
+        -v sevw="$SEVW" \
         -v floorfail="$FLOORFAIL" \
         -v legacy="$LEGACY" \
         -f "$_TMP/scan.awk" \
@@ -437,7 +455,7 @@ while IFS= read -r _file; do
     case "$_file" in *.html|*.js) _orphan_files+=("$_file") ;; esac
 done < "$_TMP/files.txt"
 if [ "${#_orphan_files[@]}" -gt 0 ]; then
-    LC_ALL=C awk -v root="$ARTIFACT_DIR" -v sev="$_SEVW" \
+    LC_ALL=C awk -v root="$ARTIFACT_DIR" -v sev="$SEVW" \
         -f "$_TMP/orphan.awk" "${_orphan_files[@]}" >> "$_ROWS"
 fi
 

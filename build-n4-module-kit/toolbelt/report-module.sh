@@ -12,9 +12,12 @@
 # ESLint with toolbelt/eslint.config.mjs on src/rc js (SKIP "no rc js" when only vendor/ext/min);
 # lint-vendor-floor.sh on src/rc/vendor. A missing node/eslint/acorn is one SKIP row naming the
 # tool (never a silent pass, never an env fault for the whole report).
-# Tool resolution: KIT_ESLINT, else toolbelt/eslint/node_modules/.bin/eslint, else eslint on PATH;
+# Tool resolution: KIT_ESLINT, else toolbelt/eslint/node_modules/.bin/eslint, else eslint on PATH
+# (only at major >= 9, the flat-config major — an older PATH eslint is a SKIP row naming its version);
 # node/acorn as in lint-vendor-floor.sh (KIT_NODE, KIT_ACORN). Install once:
-# npm install --prefix build-n4-module-kit/toolbelt/eslint
+# npm install --prefix build-n4-module-kit/toolbelt/eslint   (exact-pinned direct deps; no lockfile
+# is committed — see toolbelt/eslint/.gitignore). A frontend member with WARN rows and no FAIL reports
+# PASS "no FAIL (N WARN row(s) above)", never "clean".
 # [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
 # Link endpoints (polish-2026-10-02 P1): lint-link-target-flags.sh <artifact>/src per artifact, with
 # --wiring-map <file> when given, else <module-root>/docs/wiring-map.md, else <module-root>/../docs/
@@ -108,10 +111,10 @@ emit() {
 
 # relay_rows <artifact> <member-output> — relay `FAIL|WARN|ADVISORY  <check>  <path>:<line>  <reason>` rows
 # (rc-scan / eslint / vendor-floor grammar) as `<artifact>  <ST>  <check>  <basename>:<line>  <reason>`.
-# Sets RELAY_FAIL=1 when any FAIL row was relayed.
+# Sets RELAY_FAIL=1 when any FAIL row was relayed; RELAY_WARN / RELAY_ADV count the WARN / ADVISORY rows.
 relay_rows() {
   local _aname="$1" _out="$2" _ln _parsed _st _r _chk _det
-  RELAY_FAIL=0
+  RELAY_FAIL=0; RELAY_WARN=0; RELAY_ADV=0
   while IFS= read -r _ln; do
     [ -z "$_ln" ] && continue
     case "$_ln" in
@@ -131,11 +134,28 @@ relay_rows() {
         }')
         _st="${_parsed%%|*}"; _r="${_parsed#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
         emit "$_aname" "$_st" "$_chk" "$_det"
-        [ "$_st" = "FAIL" ] && RELAY_FAIL=1
+        case "$_st" in
+          FAIL) RELAY_FAIL=1 ;;
+          WARN) RELAY_WARN=$((RELAY_WARN+1)) ;;
+          ADVISORY) RELAY_ADV=$((RELAY_ADV+1)) ;;
+        esac
       ;;
     esac
   done <<< "$_out"
   return 0
+}
+
+# pass_after_relay <artifact> <check> — the member verdict row after relay_rows: nothing when a FAIL row
+# was relayed (the FAIL speaks), PASS "clean" only when no row was relayed, else PASS "no FAIL (N WARN
+# row(s) above)" — a member with WARN rows is never reported "clean".
+pass_after_relay() {
+  local _n=$((RELAY_WARN + RELAY_ADV)) _what
+  [ "$RELAY_FAIL" -eq 0 ] || return 0
+  if [ "$_n" -eq 0 ]; then emit "$1" PASS "$2" "clean"; return 0; fi
+  _what="$RELAY_WARN WARN"
+  [ "$RELAY_ADV" -gt 0 ] && _what="$_what, $RELAY_ADV ADVISORY"
+  if [ "$_n" -eq 1 ]; then _what="$_what row above"; else _what="$_what rows above"; fi
+  emit "$1" PASS "$2" "no FAIL ($_what)"
 }
 
 # Discover profile artifacts (all immediate subdirectories, sorted)
@@ -1023,34 +1043,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
         if [ "$rcs_exit" -eq 3 ]; then
           emit "$ANAME" ERROR rc-scan "env fault (exit 3)"; HAD_ENV=1
         else
-          _rcs_had_fail=0
-          while IFS= read -r _ln; do
-            [ -z "$_ln" ] && continue
-            case "$_ln" in
-              FAIL*|WARN*)
-                _parsed=$(printf '%s' "$_ln" | awk '{
-                  n = split($0, a, /[[:space:]]{2,}/)
-                  st = (n >= 1) ? a[1] : ""
-                  chk = (n >= 2) ? a[2] : ""
-                  site = (n >= 3) ? a[3] : ""
-                  reason = ""
-                  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-                  colon = index(site, ":")
-                  fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-                  lno = (colon > 0) ? substr(site, colon + 1) : ""
-                  nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-                  print st "|" chk "|" bn ":" lno "  " reason
-                }')
-                _st="${_parsed%%|*}"
-                _r="${_parsed#*|}"
-                _chk="${_r%%|*}"
-                _det="${_r#*|}"
-                emit "$ANAME" "$_st" "$_chk" "$_det"
-                [ "$_st" = "FAIL" ] && _rcs_had_fail=1
-              ;;
-            esac
-          done <<< "$rcs_out"
-          [ "$_rcs_had_fail" -eq 0 ] && emit "$ANAME" PASS rc-scan "clean"
+          relay_rows "$ANAME" "$rcs_out"
+          pass_after_relay "$ANAME" rc-scan
         fi
       else
         emit "$ANAME" SKIP rc-scan "no src/rc/"
@@ -1064,11 +1058,22 @@ for ADIR in "${ARTIFACTS[@]}"; do
         if [ -z "$ESLINT_BIN" ] && [ -x "$TOOLBELT/eslint/node_modules/.bin/eslint" ]; then
           ESLINT_BIN="$TOOLBELT/eslint/node_modules/.bin/eslint"
         fi
-        [ -n "$ESLINT_BIN" ] || ESLINT_BIN="$(command -v eslint 2>/dev/null || true)"
+        _esl_old=""
+        if [ -z "$ESLINT_BIN" ]; then
+          # PATH fallback: any installed version — the kit flat config (eslint.config.mjs) needs ESLint >= 9.
+          ESLINT_BIN="$(command -v eslint 2>/dev/null || true)"
+          if [ -n "$ESLINT_BIN" ] && [ -n "$_own_js" ]; then
+            _esl_ver=$("$ESLINT_BIN" --version 2>/dev/null | head -1)
+            _esl_major=$(printf '%s' "$_esl_ver" | sed -n 's/^v\{0,1\}\([0-9][0-9]*\)\..*/\1/p')
+            if [ -z "$_esl_major" ] || [ "$_esl_major" -lt 9 ]; then _esl_old="${_esl_ver:-unknown version}"; fi
+          fi
+        fi
         if [ -z "$_own_js" ]; then
           emit "$ANAME" SKIP eslint "no rc js"
         elif [ -z "$ESLINT_BIN" ] || [ ! -x "$ESLINT_BIN" ]; then
           emit "$ANAME" SKIP eslint "unavailable: eslint not installed (npm install --prefix toolbelt/eslint, or set KIT_ESLINT)"
+        elif [ -n "$_esl_old" ]; then
+          emit "$ANAME" SKIP eslint "unavailable: eslint on PATH is $_esl_old; the kit flat config needs ESLint >= 9 (npm install --prefix toolbelt/eslint, or set KIT_ESLINT)"
         else
           esl_exit=0
           esl_out=$(cd "$ADIR/src/rc" && "$ESLINT_BIN" --config "$TOOLBELT/eslint.config.mjs" \
@@ -1077,7 +1082,7 @@ for ADIR in "${ARTIFACTS[@]}"; do
             emit "$ANAME" ERROR eslint "env fault (exit $esl_exit)"; HAD_ENV=1
           else
             relay_rows "$ANAME" "$esl_out"
-            [ "$RELAY_FAIL" -eq 0 ] && [ "$esl_exit" -eq 0 ] && emit "$ANAME" PASS eslint "clean"
+            [ "$esl_exit" -eq 0 ] && pass_after_relay "$ANAME" eslint
             [ "$RELAY_FAIL" -eq 0 ] && [ "$esl_exit" -eq 1 ] && emit "$ANAME" FAIL eslint "exit 1 with no parsable row"
           fi
         fi
@@ -1090,7 +1095,7 @@ for ADIR in "${ARTIFACTS[@]}"; do
         case "$lvf_exit" in
           0|1)
             relay_rows "$ANAME" "$lvf_out"
-            [ "$RELAY_FAIL" -eq 0 ] && emit "$ANAME" PASS vendor-floor "clean"
+            pass_after_relay "$ANAME" vendor-floor
             ;;
           4)
             _lvf_why=$(printf '%s\n' "$lvf_out" | sed -n 's/.*unavailable: /unavailable: /p' | head -1)
