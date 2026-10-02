@@ -40,7 +40,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 |----------|------|
 | Pure logic (rt control) | `$KIT/types/logic.md` |
 | Framework extension (service, ORD scheme, point ext, analytics node, job, watchdog, provider) | `$KIT/types/logic-authoring.md` |
-| Dashboard (facade + servlet + SPA) | `$KIT/types/dashboard.md` |
+| Dashboard (facade + servlet + SPA) | `$KIT/types/dashboard.md` (+ `$KIT/types/frontend-standard.md` for the SPA side) |
 | Logic + dashboard | both |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` |
 | New module scaffold / source layout audit | `$KIT/types/structure.md` |
