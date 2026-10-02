@@ -6,6 +6,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - `corpus-nav find "<topic>"` — read the matching blocks. 90% is already documented; don't re-derive.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
+- **Read the client's version ledger before the first write of a new session on that client:** `odd/VERSION-LEDGER.md` in the client repository (scaffold: `templates/VERSION-LEDGER.md`). Check its `Class` column against the classes the new work is likely to hit — a new automatic action → classes 2/4/5; a new persisted slot → class 3; a new facet/unit → class 1 — and read those rows' prevention deltas first. Verify a candidate against the CLIENT's own history, not just this session's. No ledger yet → create it from the template at this session's close. `[ev: retro panccadia-version-defect-ledger Δ2]`
 
 ### 0.a Orient from BUILD-STATE (before touching anything)
 - Run **`toolbelt/orient-guard.sh <module-root>`** — asserts that the module root is under the sole legal build prefix `/home/cristian/modulos_niagara_n4/Cliente/`; exit 1 = wrong location, abort; exit 0 (PASS or WARN) = proceed. Set `BUILD_N4_CLIENTE_OVERRIDE=1` to warn-and-pass on an exceptional path. `[ev: retro module-worktree-location-retro]`
@@ -27,12 +28,13 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ### 0.c Classify the change by blast radius — BEFORE the first write
 Pick the tier from what the change can MOVE in the plant, not from its file count or effort. Record the tier and
 its evidence (which slots control logic reads — staging, commands, modes — and whether the new ones are among them)
-as the FIRST line of the feature doc. The tier sets the ceremony and a wall-clock budget; the non-skippable check
-floor (§5) applies to every tier.
+as the FIRST line of the feature doc; a P0 change has no feature doc, so it records the tier and evidence as the
+first line of its commit message body instead. The tier sets the ceremony and a wall-clock budget; the
+non-skippable check floor (§5) applies to every tier.
 
 | Tier | What it covers | Budget | Ceremony |
 |---|---|---|---|
-| **P0 Cosmetic** | HMI copy, CSS, a default value, a comment; no slot/schema change | ≤ 10 min | inline, no feature doc, no delegated writer; build the one touched group; structural readback only |
+| **P0 Cosmetic** | HMI copy, CSS, a default value, a comment; no slot/schema change | ≤ 10 min | inline, no feature doc, no delegated writer; build the one touched group; structural readback replaces review and design ceremony — the §5 floor still runs (a pure copy/CSS/comment change records its RED/GREEN as `n/a (no behavior change)`; a default-value change gets its focused RED/GREEN) |
 | **P1 Additive indicator** | a new READONLY/alarm-only slot + its UI mirror, never read by staging/commands/modes | ≤ 25 min | feature doc, one writer given the recipe map (`skill/SKILL.md` § Recipe), one focused pure test of the new latch run with the feature ENABLED, touched groups built |
 | **P2 Control** | changes a state machine, staging, rotation, protection, defrost | ~45-60 min | the sequence restated in field terms and confirmed first (`types/logic.md` § RT control logic), the Behavior decisions gate (§1), the design-shard checklist (`ORCHESTRATION.md` §3), full TDD, native review |
 | **P3 Structural / deploy risk** | a facet/unit, persistence, schema rename, boot path, link-target flags | no cap | P2 + the structural checks before deploy (unit exists on the target, no `READONLY` on a link-in target, consumer-impact notice) + a boot smoke on the target distribution and version |
@@ -84,7 +86,7 @@ After `scaffold-module.sh` generates the skeleton, three steps MUST happen befor
 
 ## 2. Build the layers
 - Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb. For framework-extension authoring (custom service, ORD scheme, point extension, analytics node, job, watchdog): see `types/logic-authoring.md` (companion to `types/logic.md`).
-- **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
+- **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research corpus for module builders (B29–B1027). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
 - **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
   cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling
@@ -174,7 +176,8 @@ Do not count the compile-only pass as test execution.  `[ev: corpus B961 §961.3
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
 - **Non-skippable floor — survives an explicit request for maximum speed:** the build (`toolbelt/build.sh`),
-  `toolbelt/verify-module.sh`, `toolbelt/schema-risk.sh`, one focused RED/GREEN on the changed behavior, and — before
+  `toolbelt/verify-module.sh`, `toolbelt/schema-risk.sh`, one focused RED/GREEN on the changed behavior (a P0 change
+  with no behavior — copy, CSS, a comment — records `RED/GREEN: n/a (no behavior change)` instead), and — before
   a production deploy — the cold-boot smoke on a station of the target distribution and version. Every tier runs it
   (§0.c). Run it ONCE at task close, not per edit: speed comes from not re-running unaffected suites mid-loop, never
   from skipping the floor. A session under speed pressure records in the feature doc, under `## Checks skipped`,
@@ -245,6 +248,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
   user, or discovered late) is listed in the feature doc under `## Assumptions still open` and repeated in the close
   message as "Assumptions I made — confirm or change". An empty register is stated explicitly ("none"), never
   omitted. `[ev: retro behavior-decisions-ask-dont-assume Δ4]`
+- **Version ledger (client):** a feature doc does not close until it has appended its version row(s) — module, version, date, status, what changed, and any defect with its root cause, class and prevention — to the client's `odd/VERSION-LEDGER.md` (scaffold `templates/VERSION-LEDGER.md`), written at the build/deploy hand-off together with the `BUILD-STATE.md` deployed-baseline fields, never reconstructed later from `git log`. `[ev: retro panccadia-version-defect-ledger Δ1]`
+- **Repeated root-cause class = escalation:** when the ledger already holds a live hit of the class this session hit again on the same client, and that class's prevention delta has not shipped, the delta is PRIORITIZED — apply it in the current work or open it as the next work unit, ahead of its normal promotion queue; re-citing it as evidence is not enough. `[ev: retro panccadia-version-defect-ledger Δ3]`
+- **Operator manual in lockstep:** any operator-visible label, default, unit or behavior change updates the operator manual — its source and its rendered PDF — in the SAME commit, and the commit trailer or the retro states `manual: updated` or `manual: n/a (no operator-visible change)`. Before closing, run `toolbelt/lint-manual-labels.sh <manual.html|md> <ui-dir>...` (advisory: every quoted UI label of the manual must exist in the UI source; WARN-only, `--strict` promotes) and read each WARN. `[ev: retro operator-manual-lockstep Δ1]` `[ev: retro operator-manual-lockstep Δ3]`
 - **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
 - **Kit-infrastructure work** (changing the kit itself — toolbelt, type guides, methodology — not building a module) has no module build to record: update the `kit` self-section of `BUILD-STATE.md` instead, under the same close gate.
 - A session that changed KIT files is NOT "done" until ONE of:

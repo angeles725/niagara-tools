@@ -4,7 +4,7 @@
 # the index is now generated from each toolbelt/lint-*.sh header (description line, Usage:,
 # Exit:/Exits:, [ev: ...] tags) into toolbelt/INDEX.md, and `--check` fails when it is stale.
 # Exits: 0 written / fresh · 1 stale index or header-contract violation · 3 usage/env.
-# [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
+# [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T

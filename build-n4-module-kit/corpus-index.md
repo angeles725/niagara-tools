@@ -1,9 +1,11 @@
-# Corpus index — the curated map of the niagara-research authoring corpus (B729–B760)
+# Corpus index — the curated map of the niagara-research corpus for module builders (B29–B1027)
 
 The niagara-research corpus carries a COMPLETE N4 module-authoring body — the RT campaign (B729–B746),
 the Wire-Sheet + organization work (B747–B750), the WB/UX authoring taxonomy (B751–B753), and the
 module-authoring axes (B754–B760: versioning/upgrade-safety, bits, build/signing, integration, tags,
-lexicon, and a consolidated audit). This index points the builder at the block that answers each need.
+lexicon, and a consolidated audit). Later campaigns extended it with exemplar, own-module, distribution and
+platform blocks (B29–B1027), so the title names the full range it cites. This index points the builder at the
+block that answers each need. `[ev: retro kit-meta-hygiene-2026-10-01 Δ2]`
 
 **How to use it:** `corpus-nav FIRST` when you have a TERM to look up (`corpus-nav find "<topic>"`); use THIS
 index when you want to know WHAT TO READ for the layer you are building, in priority order. Blocks live in
@@ -76,6 +78,10 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B894** | `dashboard-wb` — the multi-target render agents for a `DashboardPane` (`@AgentOn` HX-bootstrap + PDF-paint via one model) | wb |
 | **B895** | `uxBuilder` — rendering Workbench Px as browser bajaux widgets (embed a JS widget in Px by ORD; the agent-filter gate + the Px-serving servlet) | ux |
 | **B900** | The `BComponentEvent` id catalog — 21 named component-event ids (0–20) + 4 reserved slots; read before writing a `Subscriber.event()` handler | rt |
+| **B33** | The history system — history extensions, collection and the batch editor; read before adding trend/history to a module's points | history |
+| **B34** | The alarm framework — alarm classes, recipients, the alarm database format; read before routing a module's alarms to the station alarm console | alarms |
+| **B39** | Provisioning, station backup, supervisor replication, operational HA and fleet management; read before a deploy that needs a backup or a fleet rollout | backup / fleet |
+| **B48** | RBAC visibility in the frontend — the server is the truth, client-side gating is UX only; read before hiding a control by role in a dashboard | ux / security |
 
 ## Research-tooling caveats (A18)
 

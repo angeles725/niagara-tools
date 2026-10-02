@@ -345,6 +345,11 @@ or a bad manifest (BLD5).  The station cannot load the module at boot; it halts.
 3. Identify the offending module by status: "Bad Target" (bad manifest or unusable) or "Out of Date".
 4. Choose a remediation action — Downgrade, Uninstall, Import+Re-Install, or
    **Rebuild Module Signatures** (repairs the trust failure; station must be not-running).
+   **Downgrade caveat:** it works only when the known-good lower version is still in the local
+   software database — with one jar file name for every version it usually is not (copying the
+   new jar overwrites it). For a module that boots but misbehaves, the kit default is ROLL-FORWARD
+   to a pre-built revert build under a higher version (`BUILD-LOOP.md` §4.c / §6,
+   `types/distribution.md` §10), not a downgrade. `[ev: retro roll-forward-recovery Δ1]`
 5. Click **Commit**; restart the station.
 
 **Critical gotcha:** NEVER use the File Transfer Client to deploy or replace module JARs —
