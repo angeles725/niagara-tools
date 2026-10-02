@@ -40,7 +40,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 - Never write without showing the dry-run plan to the human first.
 - No credentials in tool arguments or chat; they come from the operator's environment.
 - Never retry a failed login: 5 failures in 30 s lock the account. On a 401, have the operator check the user's Authentication Scheme Name = `HTTPBasicScheme`, then the password.
-- Report `partial`, `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success. A `partial` rollback lists `frozen_config_not_restored` / `link_inputs_not_restored`: show them to the operator.
+- Report `partial`, `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success. A `partial` rollback lists `frozen_config_not_restored` / `link_inputs_not_restored`: show them to the operator. A frozen child whose read-back failed carries `readback_error` and makes the verdict `unverified`, not `partial`: report it as "could not check", never as "missing".
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
 - Never contact a station the operator did not configure and authorize.
 - If the harness permission classifier blocks a live write, surface it to the operator and stop; never route around it (no other tool, subagent or peer session).
