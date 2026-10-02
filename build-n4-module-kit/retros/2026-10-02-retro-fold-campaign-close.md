@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-02 · kit · retro-fold-campaign-close
 
 **Session**: close of the 2026-10-02 retro-fold campaign (WU0-WU11, PRs #183-#206, release v0.29.0)
@@ -42,4 +42,4 @@ the MCP-kit releases).
 - Read `VERSION` and `git tag` before planning a release bump; a brief's version can be stale.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | pending | 4 |`
+**Status**: FOLDED (polish-2026-10-02 P6) — Δ1 `METHODOLOGY.md` § Kit maintenance, Δ2 `CONTRIBUTING.md` §6 + `ORCHESTRATION.md` §3.c, Δ3 `BUILD-LOOP.md` §7 (b), Δ4 `ORCHESTRATION.md` §7.

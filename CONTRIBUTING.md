@@ -149,7 +149,10 @@ is enough. The bats anti-drift test guards the resolution logic against regressi
 
 Before `git commit`:
 
-- [ ] `bats tests/*.bats` exits 0 (all tests green).
+- [ ] `bats tests/*.bats` exits 0 (all tests green). Run it serially. `bats -j <n>` needs GNU `parallel`; without it
+      bats 1.14 runs 0 tests (`parallel: command not found`, `Executed 0 instead of expected N tests`) and prints no
+      `not ok` line, so a check that greps for failures reads it as green. A parallel run must assert that its `ok`
+      count equals `bats --count tests/*.bats`. `[ev: retro retro-fold-campaign-close Δ2]`
 - [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
 - [ ] Commit message is Conventional Commits (`feat:` / `fix:` / `chore:` / `docs:` /
       `refactor:` / etc.).

@@ -96,13 +96,38 @@ age() { run "$SWEEP" --age --today 2026-09-05 "$RETRODIR" "$INDEX"; }
   # A 0-delta non-retro doc kept in retros/ (a BUILD proposal tracked by an issue, a completed
   # worklist) stays `pending` in the pending|folded domain but carries
   # `<!-- disposition: <why> -->` on its INDEX row: it never ages into escalated debt.
-  # Mutation: dropping the disposition skip ages the row -> total_pending=2, escalated_count=1.
+  # Mutation: D7 -- dropping the disposition skip ages the row (35 days) -> total_pending=2,
+  # escalated_count=2, oldest_age=35.
   # [ev: odd/tasks/fold-2026-10-02-pending-retros.md WU11]
   add_row "2026-08-05-esc" pending
-  printf '| 2026-08-01-proposal.md | pending | <!-- disposition: tracked-by-issue #1 -->\n' >> "$INDEX"
+  printf '| 2026-08-01-proposal.md | pending | 0 | <!-- disposition: tracked-by-issue #1 -->\n' >> "$INDEX"
   printf '<!-- review-status: pending -->\n\n# proposal\n' > "$RETRODIR/2026-08-01-proposal.md"
   age
   [ "${lines[0]}" = "total_pending=1" ]
   [ "${lines[1]}" = "escalated_count=1" ]
   [ "${lines[2]}" = "oldest_age=31" ]
+}
+
+@test "D8: a disposition comment on a row that enumerates deltas does not hide retro debt" {
+  # The skip is for 0-delta non-retro docs only: a real retro with deltas still ages.
+  # Mutation: D8 -- skipping on the comment alone (no 0-delta check) -> total_pending=0.
+  printf '| 2026-08-01-real.md | pending | 3 | <!-- disposition: tracked-by-issue #1 -->\n' >> "$INDEX"
+  printf '<!-- review-status: pending -->\n\n# retro\n' > "$RETRODIR/2026-08-01-real.md"
+  age
+  [ "${lines[0]}" = "total_pending=1" ]
+  [ "${lines[1]}" = "escalated_count=1" ]
+  [ "${lines[2]}" = "oldest_age=35" ]
+}
+
+@test "D9: a disposition value outside the allowed set does not hide retro debt" {
+  # Allowed: tracked-by-issue #<n> · worklist-complete. Anything else ("later") still ages.
+  # Mutation: D9 -- accepting any disposition value -> total_pending=0.
+  printf '| 2026-08-01-parked.md | pending | 0 | <!-- disposition: later -->\n' >> "$INDEX"
+  printf '| 2026-08-02-done.md | pending | 0 | <!-- disposition: worklist-complete — all applied -->\n' >> "$INDEX"
+  printf '<!-- review-status: pending -->\n\n# doc\n' > "$RETRODIR/2026-08-01-parked.md"
+  printf '<!-- review-status: pending -->\n\n# doc\n' > "$RETRODIR/2026-08-02-done.md"
+  age
+  [ "${lines[0]}" = "total_pending=1" ]
+  [ "${lines[1]}" = "escalated_count=1" ]
+  [ "${lines[2]}" = "oldest_age=35" ]
 }

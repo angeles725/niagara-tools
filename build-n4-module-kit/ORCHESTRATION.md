@@ -72,6 +72,9 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
   shared `odd/tasks/<feature-name>.md`, resolve by APPEND per the fragment-merge rule (`METHODOLOGY.md` § Kit
   maintenance) — keep both sections, never overwrite — or name one doc owner per checkout who applies every writer's
   section text serially. `[ev: retro comppan-fase2-amps-alarms Δ8]`
+- **Count what ran:** the writer runs `bats tests/*.bats` serially unless GNU `parallel` is installed. Without it,
+  `bats -j` runs 0 tests and prints no `not ok` line. A parallel run reports its `ok` count next to `bats --count`,
+  and the two must be equal. `[ev: retro retro-fold-campaign-close Δ2]`
 
 ### 3.d Shared working-tree git discipline
 Several sessions may commit in the SAME checkout. Every writer: run `git status --short` first; stage only its own
@@ -125,6 +128,13 @@ research-sdd [CERT] block  →  gentle-SDD spec requirement  →  QA RED test  �
 cannot and must not pick lenses. What the kit controls is the candidate: keep a P1 change one small additive commit
 (no refactor or unrelated churn in it), so native assessment can rate it on its real risk, and batch a display-only
 dashboard commit with its rt commit into ONE reviewed slice instead of two review cycles. `[ev: retro change-tier-time-budgets Δ4]`
+
+**Route advisories away from an approved candidate.** The informational findings of an APPROVED review never go
+into that candidate: an edit after approval invalidates its receipt and reopens the review. Record them in the
+feature doc and on a follow-up issue. Only a finding that shows a fail-open (a check that can report PASS on a
+real defect) or a regression introduced by the current feature becomes the next work unit. Every other finding
+is parked: list it under the feature doc's `## Parked advisories` with its reason. Without that limit, each fix
+draws new advisories and the feature never closes. `[ev: retro retro-fold-campaign-close Δ4]`
 
 ## 8. Per-run retro/ticket loop
 

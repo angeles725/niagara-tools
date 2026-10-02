@@ -205,4 +205,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | folded | 3 |
 | 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | folded | 5 |
 | 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | folded | 7 |
-| 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | pending | 4 |
+| 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | folded | 4 |
