@@ -411,3 +411,94 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  floor.js:2  parse"* ]]
   [[ "$output" != *"lib.js"* ]]
 }
+
+# ===========================================================================
+# polish-2026-10-02 P1 — report-module wiring owed since fold WU6b (#199 "WU4 tools").
+#   RM34  lint-link-target-flags is a per-artifact member: a READONLY link-in target (comment-block
+#         convention) -> FAIL row relayed, exit 1. [ev: retro panccadia-commissioning-lessons Δ1]
+#   RM35  the module wiring map is passed as --wiring-map: auto-discovered at <module-root>/../docs/
+#         wiring-map.md (the build.sh layout: <repo>/docs + <repo>/<MOD>) -> Table 2 READONLY FAILs.
+#   RM36  --wiring-map <file> explicit; a missing file -> exit 3 (env), like the other file inputs.
+#   RM37  a clean artifact gets one PASS lint-link-target-flags "clean" row.
+#   RM38  slot-coverage's facade FAIL (a *Panel type with no lexicon key) is a FAIL row, exit 1 — it
+#         was mapped to WARN by percentage. [ev: retro panccadia-commissioning-lessons Δ9]
+#   RM39  lint-silent-protection ADVISORY console-only rows are relayed with their own ADVISORY
+#         severity: counted in the summary apart from PASS/WARN/FAIL, verdict stays CLEAN, exit 0.
+#         [ev: retro alarm-console-design Δ3]
+# NAMED MUTATIONS (observed): RM-ltf (the lint-link-target-flags member output dropped) -> RM34 flips;
+#   RM-map (drop the --wiring-map pass-through) -> RM35 flips; RM-facade (drop the slot-coverage FAIL
+#   relay) -> RM38 flips; RM-advisory (drop the ADVISORY relay) -> RM39 flips.
+# ===========================================================================
+LTF_FX="$BATS_TEST_DIRNAME/fixtures/lint-link-target-flags"
+
+# _rt_tree <dir> — a copy of the clean rt-only module tree (one DemoPan-rt artifact)
+_rt_tree() { mkdir -p "$1"; cp -R "$FX/clean/DemoPan-rt" "$1/"; }
+
+@test "RM34: a READONLY link-in target (link comment) -> FAIL lint-link-target-flags row, exit 1" {
+  local t="$BATS_TEST_TMPDIR/rm34"; _rt_tree "$t"
+  cp "$LTF_FX/comment/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
+  run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  BRoomPanel.java:"*"LTF1"* ]]
+}
+
+@test "RM35: the wiring map beside the module (<root>/../docs/wiring-map.md) is passed -> Table 2 READONLY FAILs" {
+  local repo="$BATS_TEST_TMPDIR/rm35" t="$BATS_TEST_TMPDIR/rm35/DemoPan"; _rt_tree "$t"
+  cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
+  run "$RM" "$t"
+  [ "$status" -eq 0 ]                                   # no map yet: the mirror is not a known target
+  [[ "$output" != *"LTF1"* ]]
+  mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
+  run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-link-target-flags  BRoomPanel.java:"*"wiring-map Table 2"* ]]
+}
+
+@test "RM36: --wiring-map <file> is forwarded; a missing --wiring-map file -> exit 3" {
+  local t="$BATS_TEST_TMPDIR/rm36"; _rt_tree "$t"
+  cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
+  run "$RM" "$t" --wiring-map "$LTF_FX/map/docs/wiring-map.md"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"wiring-map Table 2"* ]]
+  run "$RM" "$t" --wiring-map "$BATS_TEST_TMPDIR/nope.md"
+  [ "$status" -eq 3 ]
+}
+
+@test "RM37: a clean artifact -> one PASS lint-link-target-flags clean row" {
+  run "$RM" "$FX/clean"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-link-target-flags  clean"* ]]
+}
+
+@test "RM38: a *Panel type with no lexicon key -> FAIL slot-coverage facade row, exit 1" {
+  local t="$BATS_TEST_TMPDIR/rm38"; _rt_tree "$t"
+  printf '<types>\n  <type class="com.x.BFoo" name="Foo"/>\n  <type class="com.x.BRoomPanel" name="RoomPanel"/>\n</types>\n' \
+    > "$t/DemoPan-rt/module-include.xml"
+  run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  slot-coverage  facade type without lexicon: RoomPanel"* ]]
+}
+
+@test "RM39: a console-only ADVISORY row is relayed as ADVISORY, counted apart, verdict CLEAN, exit 0" {
+  local t="$BATS_TEST_TMPDIR/rm39"; _rt_tree "$t"
+  cat > "$t/DemoPan-rt/src/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    return target;
+  }
+}
+JAVA
+  cat > "$t/DemoPan-rt/src/com/x/BCompressorControl.java" <<'JAVA'
+package com.x;
+public class BCompressorControl extends BComponent implements BIAlarmSource {
+  void raise() { alarmSupport.newOffnormalAlarm(mkData()); }
+}
+JAVA
+  run "$RM" "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  ADVISORY  lint-silent-protection  CompressorControl.java:"*"console-only:"* ]]
+  [[ "$output" != *"WARN  lint-silent-protection"* ]]
+  [[ "$output" == *"· 1 ADVISORY  ->  CLEAN"* ]]
+}

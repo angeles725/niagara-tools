@@ -7,12 +7,15 @@
 #
 # Usage:
 #   commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>]
-#                           [--values-owed <file>] [--strict]
+#                           [--values-owed <file>] [--wiring-map <file>] [--strict]
 #
 # Source checks (static, VCS-free, no station required):
 #   config-sanity:<rt>  lint-config-sanity.sh per -rt/src dir (CS1/CS2 FAIL, CS3 WARN)
 #   status-parity:<rt>  lint-status-parity.sh per -rt/src dir (WARN, or FAIL under --strict)
 #   recovery-path:<rt>  lint-recovery-path.sh per -rt/src dir (FAIL)
+#   link-target-flags:<rt>  lint-link-target-flags.sh per -rt/src dir (LTF1/LTF2 FAIL), with
+#                       --wiring-map <file> (default <module-root>/docs/wiring-map.md when present) so the
+#                       Table 2 link-in targets are known. [ev: retro panccadia-commissioning-lessons Δ1]
 #
 # Station checks (require --bog <config.bog> and --module <MOD>):
 #   proxy-link-safety        bog-audit.sh CHECK11
@@ -56,10 +59,11 @@ MODULE_ROOT=""
 BOG=""
 MOD=""
 OWED=""
+WMAP=""
 STRICT=0
 
 usage_exit() {
-  printf 'usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--strict]\n' >&2
+  printf 'usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--wiring-map <file>] [--strict]\n' >&2
   exit 3
 }
 
@@ -74,6 +78,9 @@ while [ $# -gt 0 ]; do
     --values-owed)
       [ $# -ge 2 ] || usage_exit
       OWED="$2"; shift 2 ;;
+    --wiring-map)
+      [ $# -ge 2 ] || usage_exit
+      WMAP="$2"; shift 2 ;;
     --strict) STRICT=1; shift ;;
     --) shift; break ;;
     -*) usage_exit ;;
@@ -91,6 +98,14 @@ if [ -n "$OWED" ] && [ ! -f "$OWED" ]; then
 fi
 if [ -z "$OWED" ] && [ -f "$MODULE_ROOT/docs/values-owed.md" ]; then
   OWED="$MODULE_ROOT/docs/values-owed.md"
+fi
+
+if [ -n "$WMAP" ] && [ ! -f "$WMAP" ]; then
+  printf 'commissioning-verify: wiring map not found: %s\n' "$WMAP" >&2
+  exit 3
+fi
+if [ -z "$WMAP" ] && [ -f "$MODULE_ROOT/docs/wiring-map.md" ]; then
+  WMAP="$MODULE_ROOT/docs/wiring-map.md"
 fi
 
 if [ -n "$BOG" ] && [ -z "$MOD" ]; then
@@ -183,6 +198,23 @@ for SRC in "${SRC_DIRS[@]}"; do
     done <<< "$rp_out"
   else
     emit PASS "recovery-path:$LABEL" "protection-output recovery path clean"
+  fi
+
+  # --- link-target-flags (LTF1 READONLY link-in target, LTF2 TRANSIENT operator mode/HOA: FAIL) ---
+  ltf_args=()
+  [ -n "$WMAP" ] && ltf_args+=("--wiring-map" "$WMAP")
+  ltf_exit=0
+  ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" "${ltf_args[@]}" "$SRC" 2>&1) || ltf_exit=$?
+  if [ "$ltf_exit" -eq 3 ]; then
+    emit SKIP "link-target-flags:$LABEL" "env fault (exit 3) — run lint-link-target-flags.sh manually"
+  elif printf '%s\n' "$ltf_out" | grep -q '^FAIL'; then
+    while IFS= read -r _ln; do
+      case "$_ln" in
+        FAIL*) emit FAIL "link-target-flags:$LABEL" "${_ln#FAIL  lint-link-target-flags  }" ;;
+      esac
+    done <<< "$ltf_out"
+  else
+    emit PASS "link-target-flags:$LABEL" "LTF1/LTF2 clean${WMAP:+ (wiring map: Table 2 targets checked)}"
   fi
 done
 
