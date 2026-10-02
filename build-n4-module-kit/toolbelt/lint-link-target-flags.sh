@@ -29,6 +29,7 @@
 # Mutation: LTF-map -- dropping the --wiring-map Table 2 harvest lets a mapped READONLY target pass
 # Mutation: LTF-selfset -- harvesting every Table 2 slot regardless of its source FAILs a self-set READONLY row
 # Mutation: LTF-srcname -- matching the sentinels as substrings drops a real fillLevel / selfTestOk source
+# Mutation: LTF-backtick -- matching the sentinels on the raw cell FAILs a backticked `self` row
 # Mutation: LTF-header -- detecting the header on any row drops a data row whose display name starts with Source
 # Mutation: LTF-transient -- dropping the TRANSIENT operator-mode check lets a non-persisted HOA pass
 #
@@ -75,10 +76,10 @@ fi
 # Table 2 (control -> facade) first-column slots of the wiring map that name a source: the facade
 # link-in targets. generate-wiring-map.sh scaffolds Table 2 from every SUMMARY/READONLY slot, including
 # slots the component sets itself, with a `_(fill)_` Source RT slot; such a row (or one whose WHOLE
-# source cell is empty, a dash, self, self-set, n/a or none, optionally parenthesised) is not a
-# link-in target; a source NAME containing "fill" or "self" (fillLevel, selfTestOk) is a real source.
+# source cell is empty, a dash, self, self-set, n/a or none, optionally parenthesised, after markdown
+# backticks are stripped) is not a link-in target; a source NAME containing "fill" or "self" (fillLevel, selfTestOk) is a real source.
 # The source column is the header-row cell that starts with "Source" (the first table row of the
-# section), else the third column. [polish-2026-10-02 P2b/P2c, #199 WU6b]
+# section), else the third column. [polish-2026-10-02 P2b/P2c/P2d, #199 WU6b]
 MAP_TARGETS=" "
 if [ -n "$MAP" ]; then
   MAP_TARGETS=" $(awk '
@@ -92,6 +93,7 @@ if [ -n "$MAP" ]; then
         next
       }
       slot = trim(c[2]); src = tolower(trim(c[scol + 1]))
+      gsub(/`/, "", src); src = trim(src)   # `self` in code formatting is still the self sentinel
       if (slot !~ /^`[A-Za-z_][A-Za-z0-9_]*`$/) next
       if (src !~ /[a-z]/ || src ~ /^_\(fill\)_$/ || src ~ /^\(?(self|self-set|n\/a|none)\)?$/) next
       gsub(/`/, "", slot); print slot

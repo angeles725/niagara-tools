@@ -107,6 +107,21 @@ MD
     printf '## Table 2 — SUMMARY display slots (control → facade)\n\n| Facade slot | Workbench display name | Source RT slot | Full ord | Notes |\n|---|---|---|---|---|\n| `evap2InDrip` | Drip | %s | | |\n' "$v" > "$m"
     run "$LTF" --wiring-map "$m" "$FX/map/src"
     [ "$status" -eq 1 ] || { echo "source $v -> $output"; return 1; }
+    [[ "$output" == *"LTF1: link-in target \"evap2InDrip\" (wiring-map Table 2"* ]] || { echo "source $v -> $output"; return 1; }
+  done
+}
+
+# polish-2026-10-02 P2d (#199, P2c review advisories): markdown backticks are stripped from the Source
+# cell before the whole-cell sentinel match, so `self`, `n/a` or `(self-set)` written in code formatting
+# (as the generator guidance prints it) is still self-set. Named mutation LTF-backtick (match the raw
+# cell again) -> LTF-backtick flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the generated map, not expansions
+@test "LTF-backtick: a backticked self / n/a / (self-set) Source RT cell is self-set -> exit 0" {
+  local m="$BATS_TEST_TMPDIR/bt.md" v
+  for v in '`self`' '`n/a`' '`(self-set)`' '`none`' '`_(fill)_`'; do
+    printf '## Table 2 — SUMMARY display slots (control → facade)\n\n| Facade slot | Workbench display name | Source RT slot | Full ord | Notes |\n|---|---|---|---|---|\n| `evap2InDrip` | Drip | %s | | |\n' "$v" > "$m"
+    run "$LTF" --wiring-map "$m" "$FX/map/src"
+    [ "$status" -eq 0 ] || { echo "source $v -> $output"; return 1; }
   done
 }
 # shellcheck disable=SC2016  # literal markdown backticks in the generated map, not expansions
