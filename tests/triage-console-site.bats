@@ -53,3 +53,22 @@ setup() {
   [ "$last_own" -lt "$first_site" ]
   [[ "$(printf '%s\n' "$output" | grep '^SITE' | head -1)" == *"device-offline  3x"* ]]
 }
+
+# polish-2026-10-02 P3 (#199 WU9): the duplicate-device-id class needs a whole-word device / instance /
+# address / id token; "valid", "invalid" and "idle" contain "id" but are not an id.
+# Named mutation TCS-dupid (unanchored token again) -> TCS-dupid flips.
+@test "TCS-dupid: 'duplicate ... invalid / valid / idle' is not a duplicate-device-id; 'duplicate device id 7' is" {
+  local c="$BATS_TEST_TMPDIR/console.txt"
+  cat > "$c" <<'TXT'
+INFO [06:00:00 01-Oct-26 CST][sys] Station starting
+WARNING [06:01:00 01-Oct-26 CST][web] Duplicate request rejected: token invalid
+WARNING [06:02:00 01-Oct-26 CST][web] Duplicate session marked valid
+WARNING [06:03:00 01-Oct-26 CST][sched] Duplicate worker idle
+TXT
+  run "$TC" --site --package com.vendor --tag plant "$c"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"duplicate-device-id"* ]] || { echo "$output"; return 1; }
+  printf 'SEVERE [06:04:00 01-Oct-26 CST][bacnet] Duplicate device id 7 on the network\n' >> "$c"
+  run "$TC" --site --package com.vendor --tag plant "$c"
+  [[ "$output" == *"SITE  triage-console  console.txt  duplicate-device-id  1x"* ]]
+}

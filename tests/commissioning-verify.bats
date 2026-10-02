@@ -107,6 +107,29 @@ setup() {
   [ "$status" -eq 3 ]
 }
 
+# polish-2026-10-02 P3 (#199 WU9): the values-owed parser fails closed. A table row with fewer than the
+# five cells (Slot | Owed by | Unit | Safe default | Status) is a MANUAL "malformed" row, never silently
+# skipped into a PASS; a markdown alignment row (`:---`, `:---:`, `---:`) is not an owed slot.
+# Named mutations: CV-owed-short (skip short rows again) -> CV-owed-short flips; CV-owed-align (treat
+# only plain dashes as the separator) -> CV-owed-align flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-short: a row missing its Status cell -> MANUAL malformed row, no PASS" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `stageDelay` | engineer | s | 30 | filled |\n| `lowPressureCutout` | technician | psig | 0 |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): | \`lowPressureCutout\` | technician | psig | 0 |"* ]]
+  [[ "$output" != *"PASS  commissioning  values-owed"* ]]
+}
+
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-align: alignment rows (:---, :---:, ---:) are not owed slots -> PASS when every value is filled" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|:---|:---:|---:|:--|---|\n| `stageDelay` | engineer | s | 30 | filled |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"PASS  commissioning  values-owed  "* ]]
+  [[ "$output" != *"MANUAL  commissioning  values-owed"* ]]
+}
+
 @test "CV-manual2: the MANUAL footer carries the persisted-state, alarm-routing, consumer-impact and link-source rows" {
   run "$CV" "$MINIMAL"
   [[ "$output" == *"MANUAL  commissioning  persisted-state-restart"* ]]

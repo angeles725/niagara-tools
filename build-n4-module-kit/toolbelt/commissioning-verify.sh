@@ -34,7 +34,8 @@
 #
 # Values owed by the field (BUILD-LOOP §6.b table; default <module-root>/docs/values-owed.md):
 #   values-owed  one MANUAL row per table row whose Status cell does not start with
-#                filled/provided (columns: Slot | Owed by | Unit | Safe default | Status);
+#                filled/provided (columns: Slot | Owed by | Unit | Safe default | Status); a row
+#                with fewer cells is a MANUAL "malformed" row (fails closed); alignment rows skip;
 #                one PASS row when every value is provided; one MANUAL row when no table exists.
 #   [ev: retro panccadia-commissioning-lessons Δ11] [ev: retro panccadia-version-defect-ledger Δ4]
 #
@@ -351,14 +352,28 @@ fi
 # until the table marks it filled/provided.
 # ----------------------------------------------------------------
 if [ -n "$OWED" ]; then
-  owed_rows=$(awk -F'|' '
-    NF < 7 { next }
-    {
-      for (i = 2; i <= 6; i++) { c[i] = $i; gsub(/^[ \t]+|[ \t]+$/, "", c[i]); gsub(/`/, "", c[i]) }
-      if (c[2] == "" || tolower(c[2]) == "slot" || c[2] ~ /^-+$/) next
-      st = tolower(c[6])
-      if (st ~ /^(filled|provided)/) next
-      printf "%s: owed by %s, unit %s, still at safe default %s\n", c[2], c[3], c[4], c[5]
+  # Fails closed [polish-2026-10-02 P3, #199 WU9]: every table row (a line starting with "|") is
+  # either the header, an alignment row (each cell dashes with optional colons: ---, :---, :---:,
+  # ---:), an all-empty row, a filled/provided row, or a MANUAL row; a row with fewer than five
+  # cells is a MANUAL "malformed" row, never skipped into the PASS.
+  owed_rows=$(awk '
+    function trim(x) { gsub(/^[ \t]+|[ \t]+$/, "", x); return x }
+    /^[ \t]*\|/ {
+      raw = trim($0); line = raw
+      sub(/^\|/, "", line); sub(/\|$/, "", line)
+      n = split(line, c, "|"); blank = 1; sep = 1
+      for (i = 1; i <= n; i++) {
+        c[i] = trim(c[i]); gsub(/`/, "", c[i])
+        if (c[i] != "") blank = 0
+        if (c[i] !~ /^:?-+:?$/) sep = 0
+      }
+      if (blank || sep || tolower(c[1]) == "slot") next
+      if (n < 5 || c[1] == "") {
+        printf "malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): %s\n", raw
+        next
+      }
+      if (tolower(c[5]) ~ /^(filled|provided)/) next
+      printf "%s: owed by %s, unit %s, still at safe default %s\n", c[1], c[2], c[3], c[4]
     }' "$OWED")
   if [ -n "$owed_rows" ]; then
     while IFS= read -r _ln; do
