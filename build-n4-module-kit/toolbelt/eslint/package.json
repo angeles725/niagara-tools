@@ -1,0 +1,9 @@
+{
+  "name": "build-n4-kit-frontend-lint",
+  "private": true,
+  "description": "Pinned Node tools for the kit's frontend lints: ESLint (report-module.sh -ux rows) and acorn (lint-vendor-floor.sh). Install with: npm install --prefix build-n4-module-kit/toolbelt/eslint",
+  "devDependencies": {
+    "acorn": "8.18.0",
+    "eslint": "10.11.0"
+  }
+}
