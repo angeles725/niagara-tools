@@ -182,6 +182,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | folded | 6 |
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | folded | 8 |
+| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | pending | 8 |
+| 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | pending | 10 |
 | 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | pending | 14 |
 | 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 3 |
 | 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |
@@ -189,5 +191,17 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |
 | 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |
+| 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | pending | 4 |
 | 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | pending | 3 |
 | 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | pending | 6 |
+| 2026-10-01-dashboard-rc-file-split.md | DashboardPan | 2026-10-01 | pending | 6 |
+| 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | pending | 9 |
+| 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | pending | 16 |
+| 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | pending | 5 |
+| 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | pending | 7 |
