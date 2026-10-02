@@ -17,8 +17,8 @@
 #
 #   CS4 WARN: a nonzero permanent-minimum floor default (...MinStagesOn / ...MinOn name on a
 #             camelCase boundary, NOT a BRelTime or *Time/*Delay/*Sec short-cycle timer) coexists in
-#             the same class with a *LowLimit* / *Cutout* (camelCase token, unit suffix allowed, timer
-#             suffix excluded) default of 0 (= protection disabled). Either default alone is fine; together one
+#             the same class with a *LowLimit* / *Cutout* (camelCase token, unit suffix allowed, timer and
+#             status/counter suffix excluded) numeric default of 0 (= protection disabled). Either default alone is fine; together one
 #             unit is held on with no LP cutout ("pulling with every solenoid closed").
 #             [ev: retro panccadia-commissioning-lessons Δ3]
 #
@@ -51,6 +51,7 @@
 # Mutation: LCS-interval -- removes interval<=duration comparison so CS1 shape passes instead of FAIL
 # Mutation: LCS-floor -- dropping the floor x disabled-cutout pairing lets the CS4 shape pass silently
 # Mutation: LCS-floor-name -- matching minon/cutout as substrings again WARNs on adminOnline / minOnTime / cutoutDelay
+# Mutation: LCS-floor-status -- dropping the status/counter suffix exclusion WARNs on cutoutCount / cutoutActive
 # Mutation: LCS-floor-suffix -- anchoring the cutout token to the name end misses lpCutoutPsi / lowLimitBar
 set -u
 LC_ALL=C
@@ -216,7 +217,13 @@ while IFS= read -r f; do
     sub(/[dDfFlL]$/, "", s)
     return (s ~ /^-?[0-9]+(\.[0-9]*)?$/) ? s : ""
   }
-  BEGIN { in_prop = 0; buf = ""; pline = 0; nf = 0; nc = 0 }
+  BEGIN {
+    in_prop = 0; buf = ""; pline = 0; nf = 0; nc = 0
+    # one timer-suffix rule for both the floor and the cutout names [polish-2026-10-02 P2d]
+    TIMER_SUFFIX = "(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$"
+    # a cutout status / counter slot is not a cutout floor (cutoutCount, cutoutActive, lowLimitReached)
+    STATUS_SUFFIX = "(Count|Counter|Cnt|Total|Active|Reached|Tripped|Trip|Alarm|Fault|State|Status|Flag|Event|Events|Log)[0-9]*$"
+  }
   !in_prop && index($0, "@NiagaraProperty") > 0 { in_prop = 1; buf = ""; pline = FNR }
   in_prop {
     buf = buf " " $0
@@ -240,13 +247,15 @@ while IFS= read -r f; do
     # min(Stages)On / ...Min(Stages)On (+ digits or a capitalised suffix), never a *Time/*Delay/*Sec
     # timer; an LP cutout floor carries a LowLimit / Cutout token (+ digits or a unit/qualifier suffix
     # such as Psi or Bar), never a *Time/*Delay/*Sec timer. adminOnline, minOnTime and cutoutDelay are
-    # not matched; lpCutoutPsi and lowLimitBar are. [polish-2026-10-02 P2b/P2c]
-    if ((pname ~ /(^min|Min)(Stages)?On([A-Z0-9]|$)/) && pname !~ /(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$/ &&
+    # not matched; lpCutoutPsi and lowLimitBar are. A status/counter suffix (Count, Active, Reached,
+    # State, ...) is not a cutout floor, and a non-numeric default (false, BBoolean.FALSE) never
+    # reaches here: num() returns "" for it. [polish-2026-10-02 P2b/P2c/P2d]
+    if ((pname ~ /(^min|Min)(Stages)?On([A-Z0-9]|$)/) && pname !~ TIMER_SUFFIX &&
         index(buf, "BRelTime") == 0 && dv + 0 != 0) {
       nf++; fname[nf] = pname; fline[nf] = pline; fval[nf] = dv
     }
     if (pname ~ /(^lowLimit|LowLimit|^cutout|Cutout)([A-Z0-9]|$)/ &&
-        pname !~ /(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$/ && dv + 0 == 0) { nc++; cname[nc] = pname }
+        pname !~ TIMER_SUFFIX && pname !~ STATUS_SUFFIX && dv + 0 == 0) { nc++; cname[nc] = pname }
   }
   END {
     for (i = 1; i <= nf; i++) for (j = 1; j <= nc; j++)
