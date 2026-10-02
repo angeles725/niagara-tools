@@ -518,6 +518,32 @@ class TestReadSlots(StationTestCase):
         slot = self.slots(nn)["txt"]
         self.assertEqual((slot["value"], slot["status"]), ("abc", "0"))
 
+    def test_complex_slot_without_a_value_falls_back_to_its_display_string(self):
+        nodes = {"": {"t": "modbusCore:ModbusClientNumericProxyExt"},
+                 "dataAddress": {"n": "dataAddress", "t": "modbusCore:FlexAddress",
+                                 "d": "Decimal:302"},
+                 "dataAddress/address": {"n": "address", "t": "baja:String", "v": "302",
+                                         "d": "302"},
+                 "address": {"n": "address", "t": "bacnet:BacnetAddress",
+                             "d": "1:<device-ip>:47808"}}
+        flex = tools_read._slot_entry(nodes, "dataAddress")
+        self.assertEqual((flex["value"], flex["value_display"]), ("Decimal:302", "Decimal:302"))
+        self.assertEqual(tools_read._slot_entry(nodes, "address")["value"], "1:<device-ip>:47808")
+
+    def test_a_decoded_value_is_kept_and_its_display_rides_along(self):
+        nodes = {"conversion": {"t": "driver:LinearConversion", "v": "0.1;0.0",
+                                "d": "Linear *0.10"}}
+        entry = tools_read._slot_entry(nodes, "conversion")
+        self.assertEqual((entry["value"], entry["value_display"]), ("0.1;0.0", "Linear *0.10"))
+
+    def test_read_slots_and_navigate_report_elapsed_ms(self):
+        nn, _ = self.add_with_out("Calc")
+        ticks = iter([10.0, 10.25, 20.0, 20.5])
+        self.srv.ctx.clock = lambda: next(ticks)
+        out = self.ok("n4_read_slots", ord="station:|slot:/Folder/" + nn)
+        self.assertEqual(out["elapsed_ms"], 250)
+        self.assertEqual(self.ok("n4_navigate")["elapsed_ms"], 500)
+
     def test_ord_is_required(self):
         res = self.srv.dispatch(rpc("tools/call", {"name": "n4_read_slots", "arguments": {}}))
         self.assertEqual(res["error"]["code"], -32602)
@@ -659,7 +685,7 @@ class TestStdioEndToEnd(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4, 5])
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "mcp-n4")
-        self.assertEqual(len(replies[1]["result"]["tools"]), 7)
+        self.assertEqual(len(replies[1]["result"]["tools"]), 9)  # 7 + n4_bql_query + n4_inventory
         self.assertEqual(replies[2]["result"]["structuredContent"]["station_name"], "FakeStation")
         names = [c["name"] for c in replies[3]["result"]["structuredContent"]["children"]]
         self.assertIn("Folder", names)

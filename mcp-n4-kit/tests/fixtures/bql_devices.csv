@@ -1,0 +1,6 @@
+﻿Slot Path,Name,Type
+slot:/Drivers/ModbusTcpNetwork/Meter$20A,Meter$20A,modbusTcp:ModbusTcpDevice
+slot:/Drivers/ModbusTcpNetwork/Plc$2d1,Plc$2d1,modbusTcp:ModbusTcpDevice
+slot:/Drivers/BacnetNetwork/Hvac$20Gateway,Hvac$20Gateway,bacnet:BacnetDevice
+slot:/Drivers/SnmpNetwork/localDevice,localDevice,snmp:SnmpAgent
+slot:/Drivers/SnmpNetwork/Ups$201,Ups$201,snmp:SnmpDevice

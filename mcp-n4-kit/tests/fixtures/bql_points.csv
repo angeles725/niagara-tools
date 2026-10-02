@@ -1,0 +1,6 @@
+﻿Slot Path,Name,Type,Out,Data Address
+slot:/Drivers/ModbusTcpNetwork/Meter$20A/points/kW,kW,control:NumericPoint,12.5 {ok},Decimal:302
+slot:/Drivers/ModbusTcpNetwork/Meter$20A/points/kWh,kWh,control:NumericPoint,"1,024.0 {ok}",Decimal:304
+slot:/Drivers/ModbusTcpNetwork/Plc$2d1/points/Temp$20R1,Temp$20R1,control:NumericPoint,20.2 {unackedAlarm},Decimal:8960
+slot:/Drivers/BacnetNetwork/Hvac$20Gateway/points/Fan,Fan,control:BooleanPoint,true {ok},
+slot:/Drivers/SnmpNetwork/Ups$201/points/Load,Load,control:NumericPoint,41.0 {ok},
