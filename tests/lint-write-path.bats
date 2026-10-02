@@ -378,3 +378,18 @@ MD
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+# polish-2026-10-02 P2b (#199 WU6b): the audit-pass comment stripper respects string literals. A "/*"
+# or "//" inside a literal ("*/*", "http://") no longer opens a comment that hides the audit call, and
+# a literal that mentions an audit call is not one. Named mutation WP-audit-str-ok (strip comments without
+# tracking literals) -> WP-audit-str-ok and WP-audit-str-decoy flip.
+@test "WP-audit-str-ok: \"*/*\" and \"http://\" literals do not hide the audit call -> no WARN under --strict" {
+  run "$LW" "$FX/audit-string" --strict
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}
+@test "WP-audit-str-decoy: an audit call named only inside a string literal still WARNs" {
+  run "$LW" "$FX/audit-string-decoy"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BPanelServlet.java:3  write handler doPost: no audit call"* ]]
+}

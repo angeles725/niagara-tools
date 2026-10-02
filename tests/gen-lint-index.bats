@@ -137,3 +137,13 @@ _mklint() {
   run bash "$GEN" --check
   [ "$status" -eq 0 ]
 }
+
+# polish-2026-10-02 P2b (#199 WU6b): the lint-write-path exit cell was cut mid-sentence ("· 1 any
+# uncovered, or any") because its Exits contract wrapped onto a second header line and the index keeps
+# the first line only (a general multi-line fix is P4). The header now holds the contract on one line.
+@test "GLI-wp: the committed INDEX row for lint-write-path carries the full exit contract (0 · 1 · 3)" {
+  # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
+  run grep -F '| `toolbelt/lint-write-path.sh` |' "$KIT/toolbelt/INDEX.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"under --strict · 3 usage/env/missing-matrix (K20) |"* ]]
+}

@@ -216,3 +216,14 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
 }
+
+# polish-2026-10-02 P2b (P2a review advisory R3-strip-apostrophe-in-block-comment): an apostrophe inside
+# an inline /* */ block comment does not open a char literal, so the trailing // comment is still
+# stripped and its text is not read as a guard. Named mutation LD24 (no block-comment skip in
+# strip_comment) -> LD24 flips.
+@test "LD24: an apostrophe in /* don't */ does not keep the trailing // comment as a guard -> FAIL unfloored" {
+  only BlockCommentApostrophe.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"BlockCommentApostrophe.java:7  unfloored"* ]]
+}

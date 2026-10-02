@@ -185,6 +185,8 @@ render() {
   printf '\n'
   printf 'These slots display telemetry linked FROM the control module.\n'
   printf 'Each facade slot must be **linked control→facade** (the control point is the SOURCE).\n'
+  printf 'A slot the component sets itself (timer anchor, computed status) is not linked: write `self` in its\n'
+  printf 'Source RT slot cell. lint-link-target-flags.sh treats a row as a link-in target only once its source is filled.\n'
   printf '\n'
   printf '| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |\n'
   printf '|-------------|------------------------|----------------|----------|-------------------------------------|\n'

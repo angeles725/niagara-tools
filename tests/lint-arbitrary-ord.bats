@@ -65,3 +65,11 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A { void f(String q){ String u = "a\\"//b"; BOrd.make(q); } }\n' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"BOrd.make from a variable"* ]]
 }
+
+# polish-2026-10-02 P2b (P2a review advisory): an apostrophe inside an inline /* */ block comment does
+# not open a char literal, so the trailing reviewed marker is still read from the // comment.
+# Named mutation AO12 (no block-comment skip in code_part) -> AO12 flips.
+@test "AO12: /* it's */ before the call does not hide the trailing reviewed marker" {
+  printf 'class A { void f(String q){ /* it%ss internal */ BOrd.make(q); // lint-arbitrary-ord: reviewed internal prefix only\n} }\n' "'" > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" != *"WARN"* ]]
+}

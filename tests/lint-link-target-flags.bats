@@ -66,3 +66,30 @@ setup() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"ERROR"* ]]
 }
+
+# polish-2026-10-02 P2b (#199 WU6b): generate-wiring-map.sh scaffolds Table 2 from every SUMMARY/READONLY
+# slot, including slots the component sets itself (timer anchors, computed status) with a `_(fill)_`
+# Source RT slot. Only a row that names a source slot is a link-in target; an unfilled scaffold row or a
+# Source cell marked self / n/a / — is not. Named mutation LTF-src (harvest every first-column slot
+# again) -> LTF-selfset flips.
+@test "LTF-selfset: Table 2 rows with an unfilled or self Source RT slot are not link-in targets -> exit 0" {
+  local m="$BATS_TEST_TMPDIR/selfset.md"
+  cat > "$m" <<'MD'
+## Table 2 — SUMMARY display slots (control → facade)
+
+| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |
+|-------------|------------------------|----------------|----------|-------------------------------------|
+| `evap2InDrip` | Evaporadora 2 en goteo | _(fill)_ | _(fill)_ | |
+MD
+  run "$LTF" --wiring-map "$m" "$FX/map/src"
+  [ "$status" -eq 0 ]
+  local v; for v in 'self' 'n/a' '—' '-' '(self-set)' ''; do
+    sed -i "s#^| \`evap2InDrip\` | Evaporadora 2 en goteo | [^|]* |#| \`evap2InDrip\` | Evaporadora 2 en goteo | $v |#" "$m"
+    run "$LTF" --wiring-map "$m" "$FX/map/src"
+    [ "$status" -eq 0 ] || { echo "source cell '$v' -> $output"; return 1; }
+  done
+  sed -i "s#^| \`evap2InDrip\` | Evaporadora 2 en goteo | [^|]* |#| \`evap2InDrip\` | Evaporadora 2 en goteo | \`inDrip\` |#" "$m"
+  run "$LTF" --wiring-map "$m" "$FX/map/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"LTF1: link-in target \"evap2InDrip\" (wiring-map Table 2)"* ]]
+}

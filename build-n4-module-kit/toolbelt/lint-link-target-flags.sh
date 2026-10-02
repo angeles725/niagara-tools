@@ -9,7 +9,8 @@
 #              "link-in", "linked from", "commissioning link" or "written by (a) BLink"
 #              (case-insensitive; the block ends at a blank line, code or another annotation),
 #              or (b) it is a backticked first-column slot of Table 2 (control -> facade) in the
-#              --wiring-map file (generate-wiring-map.sh layout).
+#              --wiring-map file (generate-wiring-map.sh layout) whose Source RT slot names a source
+#              (an unfilled `_(fill)_`, empty, self, n/a, none or dash source = the slot is self-set).
 #              READONLY stays legal for a slot the owning component/reader sets itself and no
 #              external Link targets (e.g. a timer anchor). [ev: retro panccadia-commissioning-lessons Δ1]
 #              [ev: retro panccadia-persistent-config-hoa Δ3]
@@ -26,6 +27,7 @@
 #
 # Mutation: LTF-comment -- dropping the link-comment detection lets a commented READONLY link target pass
 # Mutation: LTF-map -- dropping the --wiring-map Table 2 harvest lets a mapped READONLY target pass
+# Mutation: LTF-selfset -- harvesting every Table 2 slot regardless of its source FAILs a self-set READONLY row
 # Mutation: LTF-transient -- dropping the TRANSIENT operator-mode check lets a non-persisted HOA pass
 #
 # Row:    FAIL  lint-link-target-flags  <file>:<line>  LTF<n>: <reason>
@@ -68,14 +70,23 @@ if [ ! -s "$_TMP/files.txt" ]; then
   exit 3
 fi
 
-# Table 2 (control -> facade) first-column slots of the wiring map: the facade link-in targets.
+# Table 2 (control -> facade) first-column slots of the wiring map that name a source: the facade
+# link-in targets. generate-wiring-map.sh scaffolds Table 2 from every SUMMARY/READONLY slot, including
+# slots the component sets itself, with a `_(fill)_` Source RT slot; such a row (or one whose source
+# cell is empty, self / self-set, n/a, none or a dash) is not a link-in target. The source column is
+# the header cell that starts with "Source", else the third column. [polish-2026-10-02 P2b, #199 WU6b]
 MAP_TARGETS=" "
 if [ -n "$MAP" ]; then
   MAP_TARGETS=" $(awk '
-    /^##[[:space:]]/ { in2 = ($0 ~ /Table 2/) ; next }
+    function trim(x) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", x); return x }
+    /^##[[:space:]]/ { in2 = ($0 ~ /Table 2/); scol = 3; next }
     in2 && /^\|/ {
-      cell = $0; sub(/^\|[[:space:]]*/, "", cell); sub(/[[:space:]]*\|.*$/, "", cell)
-      if (cell ~ /^`[A-Za-z_][A-Za-z0-9_]*`$/) { gsub(/`/, "", cell); print cell }
+      n = split($0, c, /\|/)          # c[1] is the text before the leading pipe
+      for (k = 2; k <= n; k++) if (trim(c[k]) ~ /^Source/) { scol = k - 1; next }
+      slot = trim(c[2]); src = tolower(trim(c[scol + 1]))
+      if (slot !~ /^`[A-Za-z_][A-Za-z0-9_]*`$/) next
+      if (src !~ /[a-z]/ || src ~ /fill|self|^n\/a$|^none$/) next
+      gsub(/`/, "", slot); print slot
     }
   ' "$MAP" | sort -u | tr '\n' ' ') "
 fi

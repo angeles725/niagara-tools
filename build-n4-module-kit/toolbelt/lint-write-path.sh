@@ -22,7 +22,8 @@
 #
 # Audit-call check (WARN): every servlet write handler — a doPost / doPut / doDelete / doPatch
 # method declared in a scanned src file — must record the write in the audit store before it
-# answers success. Heuristic (file scope, comments stripped): the handler file must contain a call
+# answers success. Heuristic (file scope, comments stripped outside string literals, literal
+# contents blanked): the handler file must contain a call
 # to an identifier containing "audit" (e.g. appendAudit(, auditLog.record(, buildAuditEntry();
 # getters (get*/is*) and comment mentions do not count; a handler that delegates the write to
 # another class must audit there AND call it from the handler file. Advisory for legacy modules;
@@ -32,8 +33,7 @@
 #   Row format:  FAIL  lint-write-path  <module>  slot <name>: no matrix row
 #                WARN  lint-write-path  <file>:<line>  write handler <method>: no audit call
 #   Error format: lint-write-path  ERROR  <module-root>  <reason>
-#   Exits:       0  all covered (STALE/DRIFT/audit WARN advisory) · 1  any uncovered, or any
-#                STALE/DRIFT/audit WARN under --strict · 3  usage/env/missing-matrix (K20)
+#   Exits: 0 all covered (STALE/DRIFT/audit WARN advisory) · 1 any uncovered, or any STALE/DRIFT/audit WARN under --strict · 3 usage/env/missing-matrix (K20)
 #
 # A comment mention of a slot name does NOT satisfy the matrix row requirement (R19.3).
 # Dot-directories pruned (D9b). VCS-free by design.
@@ -44,6 +44,7 @@
 # Mutation: WP-drift-decoy -- removes HTML-comment strip, causing a commented [concept] to produce a false DRIFT
 # Mutation: WP-audit -- drops the audit-call WARN, so a servlet write handler that never records the write passes
 # Mutation: WP-audit-ok -- drops the audit-call search, so an audited handler gets a false WARN
+# Mutation: WP-audit-str-ok -- strips comments without tracking string literals, so "*/*" hides the audit call
 set -u
 
 FAILED=0
@@ -444,14 +445,25 @@ for _scan_src in "${_SCAN_SRCS[@]}"; do
     while IFS= read -r _jf; do
         [ -n "$_jf" ] || continue
         _arow=$(awk -v FILE="$_jf" '
-            BEGIN { in_bc = 0; hl = 0; audited = 0 }
+            BEGIN { in_bc = 0; hl = 0; audited = 0; DQ = "\""; SQ = "\047"; BS = "\\" }
             {
-                ln = $0; out = ""; j = 1; L = length(ln)
+                # Strip // and /* */ comments outside string/char literals and blank literal
+                # contents ("x" -> ""), so a "*/*" or "http://" literal opens no comment and a
+                # literal that names an audit call is not one. Sibling string-aware strippers:
+                # lint-delays.sh strip_comment (awk), lint-arbitrary-ord.sh code_part (bash).
+                # [polish-2026-10-02 P2b, #199 WU6b]
+                ln = $0; out = ""; j = 1; L = length(ln); q = ""
                 while (j <= L) {
+                    c = substr(ln, j, 1)
                     if (in_bc) { if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 } else j++ }
+                    else if (q != "") {
+                        if (c == BS) j += 2
+                        else { if (c == q) { out = out c; q = "" }; j++ }
+                    }
+                    else if (c == DQ || c == SQ) { q = c; out = out c; j++ }
                     else if (substr(ln, j, 2) == "//") break
                     else if (substr(ln, j, 2) == "/*") { in_bc = 1; j += 2 }
-                    else { out = out substr(ln, j, 1); j++ }
+                    else { out = out c; j++ }
                 }
                 if (!hl && match(out, /void[[:space:]]+do(Post|Put|Delete|Patch)[[:space:]]*\(/)) {
                     hl = FNR; hm = substr(out, RSTART, RLENGTH); sub(/^void[[:space:]]+/, "", hm); sub(/[[:space:]]*\($/, "", hm)
