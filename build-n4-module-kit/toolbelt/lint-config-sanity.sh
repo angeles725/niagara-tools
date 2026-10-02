@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint-config-sanity.sh — Unsafe @NiagaraProperty default patterns gate (Wave 3, LR3, B862).
 #
-# Detects three unsafe default patterns in @NiagaraProperty annotations:
+# Detects four unsafe default patterns in @NiagaraProperty annotations:
 #
 #   CS1 FAIL: *Interval default <= *Duration default in the same class.
 #             Physical impossibility: the cycle interval must exceed the defrost/heat duration.
@@ -15,10 +15,16 @@
 #             "only when" or "only valid" or "only if" — a comment-only enforcement rule
 #             that has no runtime gate. See documented limitation below.
 #
+#   CS4 WARN: a nonzero permanent-minimum floor default (*MinStagesOn* / *MinOn* name, NOT a
+#             BRelTime short-cycle timer) coexists in the same class with a *LowLimit* / *Cutout*
+#             default of 0 (= protection disabled). Either default alone is fine; together one
+#             unit is held on with no LP cutout ("pulling with every solenoid closed").
+#             [ev: retro panccadia-commissioning-lessons Δ3]
+#
 # Usage:  lint-config-sanity.sh <java-src-dir>
 #
 #   Scans all *.java recursively under <java-src-dir>.
-#   Emits FAIL (CS1/CS2) or WARN (CS3) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
+#   Emits FAIL (CS1/CS2) or WARN (CS3/CS4) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
 #
 # Row format:  FAIL|WARN  lint-config-sanity  <file>:<line>  CS<n>: <reason>
 # Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env (K20)
@@ -42,6 +48,7 @@
 #   with a documented `// lint-config-sanity: ok` comment.
 #
 # Mutation: LCS-interval -- removes interval<=duration comparison so CS1 shape passes instead of FAIL
+# Mutation: LCS-floor -- dropping the floor x disabled-cutout pairing lets the CS4 shape pass silently
 set -u
 LC_ALL=C
 export LC_ALL
@@ -195,6 +202,47 @@ while IFS= read -r f; do
     } else {
       prev_comment = ""
     }
+  }
+  ' "$f" >> "$_ROWS"
+
+  # ---- CS4: permanent-minimum floor + disabled LP cutout floor (WARN) ----
+  awk -v FILE="$f" '
+  function num(s) {   # numeric literal inside a defaultValue string, or "" when not numeric
+    sub(/^[[:space:]]*(BInteger|BDouble|BFloat|BLong)\.make\([[:space:]]*/, "", s)
+    sub(/[[:space:]]*\)[[:space:]]*$/, "", s)
+    sub(/[dDfFlL]$/, "", s)
+    return (s ~ /^-?[0-9]+(\.[0-9]*)?$/) ? s : ""
+  }
+  BEGIN { in_prop = 0; buf = ""; pline = 0; nf = 0; nc = 0 }
+  !in_prop && index($0, "@NiagaraProperty") > 0 { in_prop = 1; buf = ""; pline = FNR }
+  in_prop {
+    buf = buf " " $0
+    depth = 0
+    for (ci = 1; ci <= length(buf); ci++) {
+      c = substr(buf, ci, 1)
+      if (c == "(") depth++
+      else if (c == ")") depth--
+    }
+    if (depth > 0) next
+    in_prop = 0
+    pname = ""; dv = ""
+    if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]+"/)) {
+      seg = substr(buf, RSTART); sub(/name[[:space:]]*=[[:space:]]*"/, "", seg); sub(/".*/, "", seg); pname = seg
+    }
+    if (match(buf, /defaultValue[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+      seg = substr(buf, RSTART); sub(/defaultValue[[:space:]]*=[[:space:]]*"/, "", seg); sub(/".*/, "", seg); dv = num(seg)
+    }
+    if (pname == "" || dv == "") next
+    ln = tolower(pname)
+    if ((ln ~ /minstageson/ || ln ~ /minon/) && index(buf, "BRelTime") == 0 && dv + 0 != 0) {
+      nf++; fname[nf] = pname; fline[nf] = pline; fval[nf] = dv
+    }
+    if ((ln ~ /lowlimit/ || ln ~ /cutout/) && dv + 0 == 0) { nc++; cname[nc] = pname }
+  }
+  END {
+    for (i = 1; i <= nf; i++) for (j = 1; j <= nc; j++)
+      printf "WARN  lint-config-sanity  %s:%d  CS4: floor \"%s\"=%s with LP cutout \"%s\"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it\n",
+        FILE, fline[i], fname[i], fval[i], cname[j]
   }
   ' "$f" >> "$_ROWS"
 

@@ -4,6 +4,8 @@
 #   CS1 FAIL: *Interval default <= *Duration default (physical impossibility: interval must exceed duration)
 #   CS2 FAIL: *Setpoint/*Set OPERATOR slot with default=0 and no min>0 facet (zero setpoint on cooling unit)
 #   CS3 WARN: boolean flag combo enforced only in a comment (heuristic; see script header for limitation)
+#   CS4 WARN: nonzero permanent-minimum floor default (*MinStagesOn*/*MinOn*, not a BRelTime) beside a
+#             disabled (0) *LowLimit*/*Cutout* default in the same class [ev: retro panccadia-commissioning-lessons Δ3]
 #
 # Real commissioning defects (PANCCADIA): interval defaults smaller than duration defaults led to
 # "interval already elapsed" immediately on first execute; setpoint=0 on a -20C freezer ran warm.
@@ -50,6 +52,26 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   run "$LCS" "$ONE"
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
+}
+
+@test "LCS-floor: FloorNoCutout (minStagesOn default 1 + suctionLowLimit default 0) -> CS4 WARN exit 0" {
+  only FloorNoCutout.java
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"CS4"* ]]
+  [[ "$output" == *"minStagesOn"* ]] && [[ "$output" == *"suctionLowLimit"* ]]
+}
+
+@test "LCS-floor-neg: an enabled cutout (FloorWithCutout) or a BRelTime minOn timer (TimerNotFloor) -> no CS4" {
+  only FloorWithCutout.java
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CS4"* ]]
+  only TimerNotFloor.java
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CS4"* ]]
 }
 
 @test "LCS-usage: no argument -> exit 3 (usage)" {

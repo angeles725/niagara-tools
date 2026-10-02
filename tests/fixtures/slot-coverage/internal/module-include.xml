@@ -1,0 +1,4 @@
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="StagingCore" class="com.x.BStagingCore"/>
+</types>
