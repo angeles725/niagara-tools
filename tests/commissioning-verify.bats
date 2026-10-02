@@ -162,6 +162,32 @@ setup() {
   [[ "$output" != *"PASS  commissioning  values-owed"* ]]
 }
 
+# polish-2026-10-02 P3d (#199, P3c review residual fail-open): once the Slot table is seen, every block of five
+# or more columns is read as owed rows, so a split owed table that repeats a non-Slot header (Value ...) or
+# repeats the alignment row after its first data row keeps reporting its owed rows (the header-like row is
+# MANUAL noise: fail closed); a narrower table (revisions) stays foreign. A lone owed row at EOF is flushed.
+# Named mutations: CV-owed-wide (a wide block with an alignment second row is foreign again) ->
+# CV-owed-wide flips; CV-owed-eof (no END flush) -> CV-owed-eof flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-wide: after the Slot table a 5-column block is owed rows even with an alignment second row" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `stageDelay` | engineer | s | 30 | filled |\n\n| Value | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `lowPressureCutout` | technician | psig | 0 | owed |\n\n| `overCurrentLimit` | technician | A | 0 | owed |\n|---|---|---|---|---|\n\n| Date | Note |\n|---|---|\n| 2026-10-01 | draft |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  lowPressureCutout: owed by technician"* ]] || { echo "$output" | grep values-owed; return 1; }
+  [[ "$output" == *"MANUAL  commissioning  values-owed  overCurrentLimit: owed by technician"* ]]
+  [[ "$output" != *"values-owed  2026-10-01"* ]] && [[ "$output" != *"Date"* ]]
+  [[ "$output" != *"PASS  commissioning  values-owed"* ]]
+}
+
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-eof: a lone owed row after a break at end of file is still a MANUAL row" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `stageDelay` | engineer | s | 30 | filled |\n\n| `highLimit` | technician | psig | 400 | owed |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  highLimit: owed by technician, unit psig, still at safe default 400"* ]]
+  [[ "$output" != *"PASS  commissioning  values-owed"* ]]
+}
+
 @test "CV-manual2: the MANUAL footer carries the persisted-state, alarm-routing, consumer-impact and link-source rows" {
   run "$CV" "$MINIMAL"
   [[ "$output" == *"MANUAL  commissioning  persisted-state-restart"* ]]
