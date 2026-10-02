@@ -21,6 +21,10 @@
 #   L11 FAIL  mixed srcTest (BTest+JUnit) without both :test-wb AND junit gradle declarations
 #   L12 FAIL  org.gradle.java.installations.paths/.auto-detect absent or commented in gradle.properties
 #   L13 FAIL  >=2 sibling gradle.properties under group dir with divergent niagara_home=
+#   L14 FAIL  settings.gradle.kts (module root, else nearest ancestor up to the .git sentinel) hardcodes
+#             gradlePluginVersion as a string literal instead of
+#             providers.gradleProperty("niagaraPluginVersion").getOrElse(...) — -PniagaraPluginVersion
+#             (build.sh --plugin-version) is then silently ignored [ev: retro panccadia-restart-seq-comp-lockout-hours Δ2]
 #   (L8 signed-jar check is in verify-module.sh)
 #
 # Usage:  lint-structure.sh <module-root>
@@ -33,6 +37,7 @@
 # commands are ever executed. kit-links.bats L2 enforces this on all toolbelt scripts.
 # [ev: retro campaign8-structure]
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
+# Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
 set -u
 LC_ALL=C
 export LC_ALL
@@ -352,6 +357,30 @@ if [ -d "$_GROUP_DIR" ] && [ "$_GROUP_DIR" != "$MODULE_ROOT" ]; then
             _row FAIL "$_p13_rel" "L13: divergent niagara_home across sibling gradle.properties (value: $_v13)"
         done < "$_L13_VALUES"
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# L14: the gradle root's settings.gradle.kts must not hardcode gradlePluginVersion.
+#      Each niagara_home ships exactly ONE niagara plugin version (build-verify.md), so the pin MUST be
+#      overridable: `providers.gradleProperty("niagaraPluginVersion").getOrElse("x.y.z")`. A literal
+#      `val gradlePluginVersion: String = "x.y.z"` ignores -PniagaraPluginVersion, so a sibling gradle
+#      group silently builds against the wrong plugin. The settings file is the module root's own, else
+#      the nearest ancestor's (walk stops at the .git sentinel, like L10). Comment lines are ignored.
+#      Mutation: LS14. [ev: retro panccadia-restart-seq-comp-lockout-hours Δ2]
+# ---------------------------------------------------------------------------
+_L14_DIR="$MODULE_ROOT"
+_L14_SETTINGS=""
+while true; do
+    if [ -f "$_L14_DIR/settings.gradle.kts" ]; then _L14_SETTINGS="$_L14_DIR/settings.gradle.kts"; break; fi
+    [ -d "$_L14_DIR/.git" ] && break
+    _L14_UP="$(dirname "$_L14_DIR")"
+    [ "$_L14_UP" = "$_L14_DIR" ] && break
+    _L14_DIR="$_L14_UP"
+done
+if [ -n "$_L14_SETTINGS" ] \
+        && LC_ALL=C grep -qE '^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"' \
+            "$_L14_SETTINGS" 2>/dev/null; then
+    _row FAIL "$_L14_SETTINGS" "L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) so -PniagaraPluginVersion applies)"
 fi
 
 # ---------------------------------------------------------------------------

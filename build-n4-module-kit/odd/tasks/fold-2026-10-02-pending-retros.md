@@ -75,9 +75,18 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       commissioning-lessons Δ1, Δ3, Δ9; persistent-config Δ1/Δ3 (lint + dashboard halves); alarm-console Δ3;
       servlet-write-audit Δ1, Δ2 (retro FULLY folded, INDEX row + marker flipped). Route: delegated direct writer
       (1 new lint + 5 scripts + 6 bats + fixtures + 5 docs — writer trigger).
-- [ ] WU7 · build/preflight/source-of-truth.
-- [ ] WU8 · deploy, backup and release gates.
-- [ ] WU9 · commissioning and post-deploy triage (+ `obix-link-audit.sh` possibly split out).
+- [x] WU7 · build/preflight/source-of-truth — comppan-fase2-amps-alarms Δ2; panccadia-restart-seq-comp-lockout-hours Δ2, Δ3;
+      continuous-fan-post-defrost-delay Δ1; client-source-of-truth Δ1-Δ3 (retro FULLY folded, INDEX row + marker flipped);
+      change-tier-time-budgets Δ5 (BUILD-LOOP half); WU4 gap (build.sh --ui-profile/--legacy). Route: delegated direct writer
+      (3 toolbelt scripts + 2 new scripts/ helpers + 6 bats + 5 docs — writer trigger).
+- [x] WU8 · deploy, backup and release gates — roll-forward-recovery Δ1-Δ4; station-backup Δ1,Δ2; auto-lock Δ5,Δ7;
+      restart-seq Δ10; commissioning Δ10; kit-meta Δ4,Δ5; deployment-profiles Δ7; operator-manual Δ2. Route: delegated direct
+      writer (BUILD-LOOP + METHODOLOGY + build-verify + distribution + ledgers — writer trigger). FULL: roll-forward-recovery,
+      dashboard-deployment-profiles (flipped); the others stay `pending` with owed Δ in the kit BUILD-STATE open_issue.
+- [x] WU9 · commissioning and post-deploy triage — commissioning-lessons Δ4,Δ5,Δ8,Δ11; station-backup Δ3; alarm-console Δ2;
+      site-fault-triage Δ1,Δ2; ask-dont-assume Δ5; version-defect-ledger Δ4 (merged with commissioning Δ11). Route: delegated
+      direct writer (2 scripts + 1 new script + 3 bats + fixtures + 4 docs — writer trigger). `obix-link-audit.sh` kept in WU9
+      (142 lines, minimal). PARTIAL promotion of all 6 retros: no INDEX flip.
 - [x] WU10 · process: tiers, behavior questions, orchestration — commissioning Δ7, Δ12, Δ14; change-tier Δ1-Δ4, Δ6,
       Δ5 ORCHESTRATION half; behavior-decisions Δ1-Δ4, Δ6; auto-lock Δ1 SKILL half, Δ6; pressure-staging Δ1 (retro FULLY
       folded, flipped); amps-alarms Δ8; kit-meta Δ1 + WU0 K19/fragment-merge leftover (Δ3); site-fault Δ3; rc-file-split Δ5
@@ -247,6 +256,36 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     LD13, LD16 MATCH); `gen-lint-index.sh --check` exit 0; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0
     (172 folded, 172 cited).
   - No retro flipped: comppan-fase2-amps-alarms owes Δ2/Δ3/Δ6/Δ7/Δ8; restart-seq-comp-lockout-hours owes Δ2/Δ3/Δ5-Δ10.
+- 2026-10-02 WU9 (branch `feat/fold-wu9-commissioning-triage`, from `origin/main` ad928b0): new `toolbelt/obix-link-audit.sh`
+  (wiring-map source column vs the live links of one component; `--xml` offline or `--obix <base> --component <path>` one
+  read-only GET with credentials from `OBIX_USER`/`OBIX_PASS` fed to `curl -K -`, `--insecure` opt-in; `--table 1|2`;
+  MATCH/MISMATCH/MISSING/SKIP + summary; exit 0/1/3); `toolbelt/commissioning-verify.sh` `--values-owed <file>` (default
+  `<module-root>/docs/values-owed.md`; MANUAL row per owed slot, PASS when all provided, MANUAL ask when absent, exit 3 on a
+  missing named file) + MANUAL rows persisted-state-restart, alarm-routing, consumer-impact, link-source-audit;
+  `toolbelt/triage-console.sh --site` (SITE rows for device-offline / duplicate-device-id / comm-timeout / history-flood on
+  blocks no own channel claims; count, first/last seen, distinct raw messages; after own rows, count desc; never changes exit).
+  Docs: BUILD-LOOP §6.a attribute-before-fixing + scenario live check; §6.b item 1 rewritten to obix-link-audit, new items
+  6-9 (persisted state across first restart, alarm routing, consumer impact, values owed by the field); commissioning-verify
+  paragraph; METHODOLOGY Consumer impact table rule; `types/dashboard.md` wiring-map → obix-link-audit cross-reference.
+  Fixtures: new commissioning ones live in the existing `tests/fixtures/commissioning/values-owed/` (not
+  `tests/fixtures/commissioning-verify/`); triage ones in `tests/fixtures/triage-console/`.
+  Evidence:
+  - RED: `bats tests/triage-console-site.bats` TCS1, TCS3, TCS4, TCS6 not ok (unknown option, exit 3; TCS2/TCS5 negatives
+    vacuous); `bats tests/commissioning-verify.bats` CV-owed1-4 + CV-manual2 not ok (CV-owed5 vacuous: unknown option exit 3);
+    `bats tests/obix-link-audit.bats` OLA1-OLA6 not ok (script absent, exit 127). OLA7 added after GREEN (empty-link-set pin).
+  - GREEN: triage-console-site 6/6 + triage-console 11/11; commissioning-verify 11/11; obix-link-audit 7/7.
+  - Observed mutations (each flips its pin, restored byte-identical): drop the `if (SITE)` guard → TCS5; drop the offline
+    override → TCS1, TCS4, TCS6; drop the filled/provided skip → CV-owed1, CV-owed3; `NR == FNR` instead of the FILENAME
+    guard → OLA7; match any source → OLA1, OLA5; credentials on argv (`-u`) → OLA5.
+  - `bats tests/*.bats` (serial): 791 ok / 1 not ok (kit-links L1 — a backticked path to the not-yet-existing link-target
+    lint in BUILD-STATE; reworded) → `bats tests/kit-links.bats` 11/11 after the fix; 66 env skips.
+  - shellcheck 0.11.0 (CI pins 0.10.0): only the pre-existing SC2329 info in `lint-config-sanity.sh:58`; no `A && B || C`
+    in added lines. `lint-guard-pins.sh --strict .` exit 0; `gen-lint-index.sh --check` fresh (no lint header changed);
+    `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (175 folded, 175 cited).
+  - Gap: the link-target-flags lint (commissioning Δ1) is WU6b and absent on this base — `commissioning-verify.sh` does not
+    pass it `--wiring-map` yet. Commissioning Δ9 (wiring-map display-name column, slot-coverage facade FAIL) stays WU6b.
+  - Commit: the WU9 work-unit commit on this branch.
+
 - 2026-10-02 WU6b (branch `feat/fold-wu6b-rt-checks`, from `origin/main`): new `toolbelt/lint-link-target-flags.sh`
   (LTF1 READONLY on a link-in target — comment-block convention or `--wiring-map` Table 2; LTF2 TRANSIENT OPERATOR
   `*Mode`/`*Hoa` slot, placed in the same lint because both are flags on a link endpoint), `lint-config-sanity.sh` CS4
@@ -272,6 +311,52 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     `sweep-fold-audit.sh --strict` exit 0 (173 folded, 173 cited).
   Gaps: report-module.sh wiring (new lint, facade FAIL, console-only) → WU7; logic.md "HOA is TRANSIENT" bullet contradicts
   LTF2 → WU5a (persistent-config Δ1 doc half); METHODOLOGY conformance row (persistent-config Δ3) → WU10/WU11.
+- 2026-10-02 WU8 (branch `feat/fold-wu8-deploy-gates`, from origin/main 32bff11): `BUILD-LOOP.md` §4.c pre-built revert
+  build (roll-forward Δ2); §6 new MANDATORY pre-deploy gates — target-distribution boot smoke (commissioning Δ10), full station
+  backup before any -rt install (station-backup Δ1; the `--no-backup` bullet rewritten in place), versioned jar archive + sha256
+  (roll-forward Δ3), deploy checklist names the opt-in enabling slot + live value (auto-lock Δ5) and every BComponent-only flag
+  lifecycle as a station-smoke item (restart-seq Δ10), observed two-checkout handoff (auto-lock Δ7); roll-forward recovery
+  doctrine (roll-forward Δ1); remote-access preconditions (kit-meta Δ5); `niagara-tools/scripts/ng-deploy.sh` full path at first
+  use (kit-meta Δ4). `METHODOLOGY.md` 4-layer-stack cold-boot bullet REWRITTEN in place (target distribution/version,
+  commissioning Δ10; same in `build-verify.md` item 3) + Schema / upgrade safety roll-forward bullet. `types/distribution.md` §10
+  Downgrade row REWRITTEN in place (opposite-polarity rule) + new § 12 station backup/provisioning/fleet (station-backup Δ2, corpus
+  B39), § 13 release package (deployment-profiles Δ7), § 14 client documentation deliverable (operator-manual Δ2).
+  roll-forward Δ4: pointer added only on the slot-type-change retro's `retros/INDEX.md` row (retro bodies untouched); the outage
+  retro target does not exist — recorded as a note. FULL promotion + flip: roll-forward-recovery, dashboard-deployment-profiles.
+  No script: no WU8 delta asked for one. Evidence (passive docs, no RED applicable): see the WU8 commit body.
+  Gap (outside surface): `types/issues-and-gotchas.md` station-stuck-at-boot list still names Downgrade without the roll-forward
+  caveat (WU11).
+
+- 2026-10-02 WU7 (branch `feat/fold-wu7-build-preflight`, from origin/main): `toolbelt/build.sh` repo-root hint (exit 10 lists
+  gradle roots up to 3 levels below the argument), post-jar copy lock (`FileAlreadyExistsException` -> exit 32 naming each
+  `build/libs` jar rebuilt this run, stale ones "not rebuilt"), `--plugin-version`/env forwarded to `preflight.sh --plugin-version`
+  (and used by the m2 WARN), `--ui-profile hmi|lan|both|unknown` + `--legacy` forwarded to `report-module.sh`, header-only
+  `--help` via awk; `toolbelt/preflight.sh --plugin-version` (env fallback); `toolbelt/lint-structure.sh` L14 (hardcoded
+  `gradlePluginVersion` literal FAILs; pin LS14); new `scripts/check-client-source.sh` (git half of Δ1; kit-links L2 keeps git
+  out of toolbelt) and `scripts/check-skill-drift.sh` (Δ3; a scripts/ helper, not sweep-build-state.sh: CI has no installed
+  skill); `source_of_truth` DECLARED field (How to read + every module envelope, `unknown` where unconfirmed); kit-links L12
+  routes `scripts/check-*.sh` through BUILD-LOOP; BUILD-LOOP §0.b/§4/§7, build-verify.md, skill/SKILL.md step 4; regenerated
+  `toolbelt/INDEX.md`.
+  Evidence:
+  - RED: `bats tests/build-sh.bats` BS-repo-root-hint, BS-copy-lock, BS-copy-lock-stale, BS-preflight-plugin,
+    BS-preflight-plugin-env, BS-ui-profile not ok; `tests/preflight.bats` PF-plugin-override, PF-plugin-env,
+    PF-plugin-override-missing not ok; `tests/lint-structure.bats` LS14 not ok; `tests/check-client-source.bats` 14/14 and
+    `tests/check-skill-drift.bats` 6/7 not ok (scripts absent; SD7 vacuous); kit-links L12 not ok once the helpers existed.
+  - GREEN: build-sh 38/38, lint-structure 17/17, PF-plugin* 5/5, check-client-source 14/14, check-skill-drift 7/7, kit-links ok.
+  - Observed mutations (restored byte-identical): LS14 (L14 row disabled -> LS14 not ok), BS-copy-lock (signature regex
+    broken -> not ok), BS-ui-profile (--profile pass-through dropped -> not ok).
+  - Real smoke (read-only): check-client-source on the ColdRoomPan module root -> PASS (declared path, commit unknown);
+    on a non-git client tree -> WARN; check-skill-drift on this machine -> FAIL (installed launcher differs from the tracked one).
+  - `bats tests/*.bats`: 800 ok / 1 not ok (L1 dangling `toolbelt/lint-link-target-flags.sh` named in the new BUILD-STATE
+    entry; reworded, kit-links re-run 0 not ok), 66 skips.
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh:58`; `&& .* ||` in the diff: 0.
+  - `lint-guard-pins.sh --strict .` exit 0 (LS14 MATCH); `gen-lint-index.sh --check` fresh; `sweep-build-state.sh` exit 0;
+    `sweep-fold-audit.sh --strict` exit 0.
+  - Owed: continuous-fan-post-defrost-delay Δ2/Δ3 (WU5b); comppan-fase2-amps-alarms Δ1, Δ6-Δ8; restart-seq Δ1, Δ4-Δ10;
+    change-tier-time-budgets Δ1-Δ4, Δ6 + Δ5 ORCHESTRATION half (WU10); report-module.sh wiring handed off by WU6b
+    (link-target-flags relay, slot-coverage facade FAIL mapping, silent-protection ADVISORY rows) — outside the WU7 surface,
+    recorded in the kit BUILD-STATE open_issue.
+
 - 2026-10-02 WU10 (branch `feat/fold-wu10-process`, from `origin/main` 3bdbb02): `BUILD-LOOP.md` new §0.c blast-radius tier
   table P0-P3 (ONE rule = commissioning Δ14 + change-tier Δ1; both citations) + RDD candidate sizing (pressure-staging Δ1); §1
   Behavior decisions gate (behavior Δ1); §2 recipe pointer (change-tier Δ2); §4.a tier-scoped loop + §5 non-skippable floor (ONE
@@ -285,6 +370,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   (passive docs, no RED applicable): see the WU10 commit / PR body. Owed: change-tier Δ5 BUILD-LOOP half (WU7), behavior Δ5
   (WU9), auto-lock Δ5/Δ7 (WU8), amps-alarms Δ2 (WU7), kit-meta Δ2 (WU11)/Δ4/Δ5 (WU8), site-fault Δ1/Δ2 (WU9); persistent-config
   is now fully folded but its marker is outside the WU10 surface → WU11 flip.
+  - Merge of origin/main (WU7/WU8/WU9 merged first): conflicts in `BUILD-STATE.md`, `METHODOLOGY.md` and this doc resolved by
+    hand at entry granularity (ledger: main's entries kept, WU10's "LANDED WU10" edits re-applied per entry by a 3-way word
+    merge, WU10 entry added once; METHODOLOGY: both sides' bullets kept). The owed items above that WU7/WU8/WU9 carried are
+    now LANDED on main; only kit-meta Δ2 (WU11) stays owed. WU7/WU8/WU9 entries' "(WU10)" owed notes flipped to LANDED.
 
 ## Next step
-- WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
+- WU11 (close gate and ledgers; final INDEX flips; release) after WU10 merges.

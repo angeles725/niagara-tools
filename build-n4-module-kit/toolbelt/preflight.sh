@@ -5,9 +5,13 @@
 # gradle fails with a cryptic error. A FAIL row identifies the problem; the script
 # continues checking the rest so all issues are visible in one run.
 #
-# Usage: preflight.sh [--jvm-dir <d>] <niagara_home> <gradle-root>
+# Usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] <niagara_home> <gradle-root>
 #   --jvm-dir <d>   scan this directory for a JDK 8 release (default /usr/lib/jvm, read-only)
 #                   JAVA_HOME is also checked (fallback) — never $HOME
+#   --plugin-version <v>  the niagara plugin version the build will actually use (build.sh forwards its
+#                   --plugin-version / $NIAGARA_PLUGIN_VERSION here); plugin-pin checks <v> instead of
+#                   re-deriving the settings.gradle.kts default, which may have drifted from niagara_home.
+#                   Falls back to $NIAGARA_PLUGIN_VERSION. [ev: retro continuous-fan-post-defrost-delay Δ1]
 #   <niagara_home>  Niagara 4 installation root (must not be a Windows-style path)
 #   <gradle-root>   gradle project root containing settings.gradle.kts
 #
@@ -16,8 +20,8 @@
 #               -> FAIL + "use /mnt/c/... in WSL" remedy
 #   jdk8        JDK 8 found under --jvm-dir or JAVA_HOME (never $HOME)
 #               -> PASS|FAIL row; detail names the found path or search dir
-#   plugin-pin  settings.gradle.kts plugin version present in <niagara_home>/etc/m2
-#               -> PASS|FAIL; version extracted from first "x.y.z" quoted string
+#   plugin-pin  plugin version present in <niagara_home>/etc/m2: --plugin-version / $NIAGARA_PLUGIN_VERSION
+#               when given, else the first "x.y.z" quoted string in settings.gradle.kts -> PASS|FAIL
 #   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
 #               -> PASS|WARN(locked)|SKIP(lsof absent, or niagara_home is 9p/drvfs) — never a false PASS
 #
@@ -25,12 +29,16 @@
 # Exit: 0 all PASS/WARN/SKIP · 1 any FAIL · 2 usage · 3 env (path not found)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
+# Source-of-truth check (is the gradle root the declared checkout, not detached/stale?) needs version
+# control, so it lives OUTSIDE the toolbelt: run scripts/check-client-source.sh next to this preflight.
+# [ev: retro client-source-of-truth Δ1]
 set -u
 
 # shellcheck disable=SC1091
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/fs-type.sh"
 
 JVM_DIR="/usr/lib/jvm"
+PLUGIN_OVERRIDE="${NIAGARA_PLUGIN_VERSION:-}"
 FAILED=0
 
 row() {
@@ -40,7 +48,7 @@ row() {
 }
 
 usage_exit() {
-  printf 'usage: preflight.sh [--jvm-dir <d>] <niagara_home> <gradle-root>\n' >&2
+  printf 'usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] <niagara_home> <gradle-root>\n' >&2
   exit 2
 }
 
@@ -52,6 +60,10 @@ while [ $# -gt 0 ]; do
     --jvm-dir)
       [ $# -ge 2 ] || usage_exit
       JVM_DIR="$2"; shift 2
+      ;;
+    --plugin-version)
+      [ $# -ge 2 ] || usage_exit
+      PLUGIN_OVERRIDE="$2"; shift 2
       ;;
     --) shift; break ;;
     -*) usage_exit ;;
@@ -151,7 +163,16 @@ fi
 # then checks for a path matching that version under <niagara_home>/etc/m2.
 # A missing pin means the build will fail with a cryptic repository error.
 # ---------------------------------------------------------------------------
-if [ "$WIN_PATH_FAIL" -eq 0 ]; then
+if [ "$WIN_PATH_FAIL" -eq 0 ] && [ -n "$PLUGIN_OVERRIDE" ]; then
+  # continuous-fan-post-defrost-delay Δ1: check the version the build will actually use.
+  # Exact directory-name match (same rule as build.sh's m2 WARN): a prefix such as 7.6.2 must not
+  # pass on an install that only ships 7.6.22.
+  if find "$NH/etc/m2" -type d -name "$PLUGIN_OVERRIDE" 2>/dev/null | grep -q .; then
+    row PASS "plugin-pin" "plugin $PLUGIN_OVERRIDE (from --plugin-version) found in niagara_home/etc/m2"
+  else
+    row FAIL "plugin-pin" "plugin $PLUGIN_OVERRIDE (from --plugin-version) missing from $NH/etc/m2 — pick the version this install ships"
+  fi
+elif [ "$WIN_PATH_FAIL" -eq 0 ]; then
   SETTINGS="$GR/settings.gradle.kts"
   if [ ! -f "$SETTINGS" ]; then
     row FAIL "plugin-pin" "settings.gradle.kts not found in $GR"

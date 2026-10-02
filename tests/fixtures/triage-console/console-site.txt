@@ -1,0 +1,14 @@
+INFO [06:00:00 01-Oct-26 CST][sys] Station starting
+WARNING [06:01:10 01-Oct-26 CST][bacnet] Device 1201 offline: no response to ReadProperty
+WARNING [06:11:10 01-Oct-26 CST][bacnet] Device 1201 offline: no response to ReadProperty
+WARNING [07:21:10 01-Oct-26 CST][bacnet] Device 1202 offline: no response to ReadProperty
+SEVERE [06:02:00 01-Oct-26 CST][bacnet.network] Duplicate device instance 6 detected at two addresses
+SEVERE [06:30:00 01-Oct-26 CST][bacnet.network] Duplicate device instance 6 detected at two addresses
+WARNING [06:05:00 01-Oct-26 CST][modbus.tcp] Read timeout on unit 12 after 3000 ms
+WARNING [06:45:00 01-Oct-26 CST][modbus.tcp] Read timeout on unit 12 after 3001 ms
+WARNING [06:50:00 01-Oct-26 CST][history] History buffer full for point AHU1_SAT, records discarded
+WARNING [06:55:00 01-Oct-26 CST][web] Request took longer than expected
+WARNING [07:00:00 01-Oct-26 CST][plant] plant: changed
+  java.util.concurrent.TimeoutException: write timed out
+  	at com.vendor.plant.BDefrostController.armTrigger(BDefrostController.java:431)
+  	at com.tridium.sys.station.Station.main(Station.java:1273)

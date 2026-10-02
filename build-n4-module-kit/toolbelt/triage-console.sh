@@ -5,10 +5,17 @@
 #   C2  own logger  — WARNING/SEVERE with a tag in the own-tag WHITELIST (stack-less ok);
 #                     also: message contains the own-package path (e.g. [loader] cert-chain)
 #   C3  bog-drift   — [sys] fatal exception, [sys.xml] slot-drift, [sys.registry] Missing class
+# --site: a WARNING/SEVERE block attributed to NO own channel is classified into a separate
+#   site-issues list — device-offline, duplicate-device-id, comm-timeout, history-flood — one row
+#   per class + digit-normalized message, with count, first/last seen and distinct raw messages:
+#     SITE  triage-console  <subject>  <class>  <N>x <first> -> <last>  <LEVEL> [tag] <msg> (distinct K)
+#   SITE rows print after the own rows, count descending, and never change the exit code.
+#   An unclassified foreign warning is in neither list (unknown stays unknown).
 # Usage: triage-console.sh [--package PKG] [--tag TAG_LIST] [--module-prefix PFX_LIST]
-#                          [--console-dir DIR] <console.txt|dir>...
-# Exit: 0 no rows · 1 any row · 3 usage/env
+#                          [--site] [--console-dir DIR] <console.txt|dir>...
+# Exit: 0 no own rows · 1 any own row · 3 usage/env
 # [ev: corpus B800]  [ev: retro campaign8-triage-console]
+# [ev: retro site-fault-triage-and-incident-journal Δ1]
 set -u
 
 FAILED=0
@@ -19,6 +26,7 @@ PKG="com.angeles"
 OWN_TAGS="coldRoomPan,dashboardPan,dashboardpan,compPan,chihuahua"
 MOD_PREFIX="ColdRoomPan,DashboardPan,CompPan,chihuahua"
 CONSOLE_DIR=""
+SITE=0
 FILES=()
 _DIR_ARG=""
 
@@ -28,6 +36,7 @@ while [ $# -gt 0 ]; do
     --tag)           shift; OWN_TAGS="$1";   shift ;;
     --module-prefix) shift; MOD_PREFIX="$1"; shift ;;
     --console-dir)   shift; CONSOLE_DIR="$1"; shift ;;
+    --site)          SITE=1; shift ;;
     --) shift; break ;;
     -*) printf 'triage-console: unknown option: %s\n' "$1" >&2; exit 3 ;;
     *)  FILES+=("$1"); shift ;;
@@ -184,6 +193,36 @@ function flush_blk(    lvn, dmsg, key) {
     record(key, blk_ts, lvn, dmsg, "[" blk_tag "]")
     return
   }
+
+  # --site — not attributed to an own channel: classify a known site-fault shape
+  if (SITE) site_record(blk_ts, lvn, blk_tag, blk_hdr_msg, blk_ex_class " " blk_ex_msg)
+}
+
+# Site-fault class of a foreign message ("" = unclassified -> no row)
+function site_class(txt,    t) {
+  t = tolower(txt)
+  if (t ~ /duplicate/ && t ~ /(device|instance|address|id)/) return "duplicate-device-id"
+  if (t ~ /histor/ && t ~ /(full|overflow|flood|capacity|exceed|too many|discard)/) return "history-flood"
+  if (t ~ /(timeout|timed out|time out|no response|tiempo de espera|sin respuesta)/) return "comm-timeout"
+  if (t ~ /(offline|fuera de l.nea|unreachable|not responding|ping fail)/) return "device-offline"
+  return ""
+}
+
+function site_record(ts, lvn, tag, msg, extra,    cls, key, k) {
+  cls = site_class(msg " " extra)
+  if (cls == "") return
+  # offline wins over the "no response" timeout wording when the header says offline
+  if (cls == "comm-timeout" && tolower(msg) ~ /(offline|fuera de l.nea|unreachable)/) cls = "device-offline"
+  key = cls SUBSEP norm(msg)
+  k = ts_key(ts)
+  if (!(key in s_cnt)) {
+    s_cnt[key] = 0; s_cls[key] = cls; s_level[key] = lvn; s_tag[key] = tag; s_msg[key] = msg
+    s_first[key] = ts; s_first_k[key] = k; s_last[key] = ts; s_last_k[key] = k; s_dist[key] = 0
+  }
+  s_cnt[key]++
+  if (!((key SUBSEP msg) in s_raw)) { s_raw[key SUBSEP msg] = 1; s_dist[key]++ }
+  if (k < s_first_k[key]) { s_first_k[key] = k; s_first[key] = ts }
+  if (k > s_last_k[key])  { s_last_k[key]  = k; s_last[key]  = ts }
 }
 
 # C3b — [sys.xml] WARNING single-line bog-drift (immediate, no block)
@@ -292,6 +331,12 @@ END {
       SUBJECT, g_cnt[key], g_first[key], g_last[key],
       g_level[key], g_msg[key], g_frame[key]
   }
+  # Site rows carry a sortable "S<TAB>count<TAB>" prefix; the shell orders and strips it.
+  for (key in s_cnt) {
+    printf "S\t%d\tSITE  triage-console  %s  %s  %dx %s -> %s  %s [%s] %s (distinct %d)\n",
+      s_cnt[key], SUBJECT, s_cls[key], s_cnt[key], s_first[key], s_last[key],
+      s_level[key], s_tag[key], s_msg[key], s_dist[key]
+  }
 }
 ENDAWK
 
@@ -300,12 +345,19 @@ result=$(LC_ALL=C awk \
   -v OWN_TAGS="$OWN_TAGS" \
   -v MOD_PREFIX="$MOD_PREFIX" \
   -v SUBJECT="$SUBJECT" \
+  -v SITE="$SITE" \
   -f "$_TMP/triage.awk" \
   "${FILES[@]+"${FILES[@]}"}")
 
-if [ -n "$result" ]; then
-  printf '%s\n' "$result"
+own_rows=$(printf '%s\n' "$result" | grep -v $'^S\t' || true)
+site_rows=$(printf '%s\n' "$result" | grep $'^S\t' | sort -t $'\t' -k2,2nr -k3,3 | cut -f3- || true)
+
+if [ -n "$own_rows" ]; then
+  printf '%s\n' "$own_rows"
   FAILED=1
+fi
+if [ -n "$site_rows" ]; then
+  printf '%s\n' "$site_rows"
 fi
 
 [ "$FAILED" -eq 0 ] || exit 1
