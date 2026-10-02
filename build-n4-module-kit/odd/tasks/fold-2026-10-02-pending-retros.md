@@ -374,6 +374,14 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     hand at entry granularity (ledger: main's entries kept, WU10's "LANDED WU10" edits re-applied per entry by a 3-way word
     merge, WU10 entry added once; METHODOLOGY: both sides' bullets kept). The owed items above that WU7/WU8/WU9 carried are
     now LANDED on main; only kit-meta Δ2 (WU11) stays owed. WU7/WU8/WU9 entries' "(WU10)" owed notes flipped to LANDED.
+  - Checks after the merge: `bats tests/*.bats` 856 ok / 0 not ok (66 env skips); mcp-n4-kit unittest 456 OK; shellcheck
+    0.11.0 only the existing SC2329 info message; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 181/181 cited;
+    `lint-guard-pins.sh --strict` exit 0; `gen-lint-index.sh --check` fresh.
+  - Review: native RDD on the merge commit — consent envelope returned, granted; one lens (reliability), APPROVED and
+    acknowledged (authority burned). 4 informational, non-blocking findings for WU11: R3-tier-p0-no-feature-doc (§0.c says the
+    tier goes in the feature doc, but P0 has none), R3-floor-vs-p0-ceremony (§5 floor RED/GREEN vs the P0 structural-only
+    ceremony), R3-k19-guard-claim (K19 names only kit-links L5/L11; L4 coverage not shown), R3-ledger-wu2-stale-paren.
+  - PR #202 (https://github.com/angeles725/niagara-tools/pull/202); merge commit recorded in the WU11 entry.
 
 ## Next step
 - WU11 (close gate and ledgers; final INDEX flips; release) after WU10 merges.
