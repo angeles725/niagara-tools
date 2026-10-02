@@ -480,6 +480,12 @@ add(escaped, BDouble.DEFAULT);
 
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
 
+## `@NiagaraProperty` source comment → generated Javadoc (slotomatic keeps only the LAST line)
+
+slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(...)` field from the `//` comment block directly above the declaration, but keeps ONLY the LAST line of a multi-line block — every earlier line is discarded. A three-line comment whose last line is a sentence fragment ("compressors. 0 (default) = disabled, same convention as …") becomes a mid-sentence, near-meaningless Javadoc; it recurred on several slots in one feature before being recognized as structural.
+
+**Authoring rule:** write the LAST line of any multi-line source comment above a `@NiagaraProperty` as a complete, standalone sentence (what the slot is, its unit, what `0`/default means) — it is the only line slotomatic keeps. Put longer rationale ABOVE it, or in the class doc, knowing it will not reach the generated Javadoc. Check the regenerated AUTO region after slotomatic runs. `[ev: retro comppan-fase2-amps-alarms Δ7]`
+
 ## BFacets key reference card `[ev: corpus B1106]`
 
 `BFacets` is the property-metadata map; keys are string literals. The 31 known keys (B49 listed 11; B1106 completes the catalogue):

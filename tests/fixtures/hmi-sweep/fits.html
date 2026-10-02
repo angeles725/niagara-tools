@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>fits</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  .page { display: none; height: 600px; }
+  .page.on { display: block; }
+  #alarmBanner { position: fixed; top: 0; left: 0; width: 300px; height: 40px; background: #c00; }
+</style></head>
+<body>
+<div id="alarmBanner">ALARM</div>
+<nav style="margin-top:50px">
+  <a class="nav-item" data-page="home" onclick="go('home')">Home</a>
+  <a class="nav-item" data-page="rooms" onclick="go('rooms')">Rooms</a>
+</nav>
+<section class="page on" id="page-home">home</section>
+<section class="page" id="page-rooms">
+  <button class="sub-tab" onclick="this.dataset.done='1'">A</button>
+  <button class="sub-tab" onclick="this.dataset.done='1'">B</button>
+</section>
+<script>
+function go(p) {
+  document.querySelectorAll('.page').forEach(function (s) { s.classList.toggle('on', s.id === 'page-' + p); });
+}
+</script>
+</body></html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>overflow</title>
+<style>
+  body { margin: 0; }
+  .page { display: none; }
+  .page.on { display: block; }
+  #tall { height: 2000px; }
+  #alarmBanner { position: fixed; top: 0; left: 0; width: 300px; height: 40px; background: #c00; }
+  #cover { position: fixed; top: 0; left: 0; width: 400px; height: 60px; background: #333; display: none; }
+  .covered #cover { display: block; }
+</style></head>
+<body>
+<div id="alarmBanner">ALARM</div>
+<div id="cover"></div>
+<nav style="margin-top:70px">
+  <a class="nav-item" data-page="ok" onclick="go('ok')">Ok</a>
+  <a class="nav-item" data-page="long" onclick="go('long')">Long</a>
+  <a class="nav-item" data-page="hidden" onclick="go('hidden')">Hidden</a>
+</nav>
+<section class="page on" id="page-ok">ok</section>
+<section class="page" id="page-long"><div id="tall">tall</div></section>
+<section class="page" id="page-hidden">covered</section>
+<script>
+function go(p) {
+  document.querySelectorAll('.page').forEach(function (s) { s.classList.toggle('on', s.id === 'page-' + p); });
+  document.body.classList.toggle('covered', p === 'hidden');
+}
+</script>
+</body></html>

@@ -283,3 +283,131 @@ setup() {
   [[ "$output" == *"lint-bundled-jar-class-version"* ]]
   # Named mutation: drop the major > 52 check -> RM23 exits 0 (no FAIL row).
 }
+
+# ===========================================================================
+# WU4 (fold-2026-10-02-pending-retros) — frontend tooling in the aggregated report.
+#   --profile <hmi|lan|both|unknown> and --legacy pass through to rc-scan.sh (RM24-RM26);
+#   ESLint (toolbelt/eslint.config.mjs) rows relayed for *-ux src/rc js (RM27-RM29);
+#   lint-vendor-floor.sh relayed for *-ux src/rc/vendor (RM30-RM31).
+#   A missing tool (eslint / node / acorn) is a visible SKIP row naming it, never a silent pass
+#   and never an env fault for the whole report.
+# [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
+# Named mutations (post-green):
+#   - drop the --profile pass-through -> RM24 exits 0 (browser-floor stays WARN).
+#   - drop the --legacy pass-through -> RM25 exits 1 (datauri-budget stays FAIL).
+#   - relay no eslint rows -> RM27 exits 0.
+
+# _ux_tree <dir> — a copy of the clean ux-no-specs artifact; the caller replaces/adds files under src/rc.
+_ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
+
+@test "RM24: --profile hmi is passed to rc-scan -> a browser-floor row becomes FAIL (exit 1); default stays WARN (exit 0)" {
+  local t="$BATS_TEST_TMPDIR/rm24"; _ux_tree "$t"
+  printf '<!DOCTYPE html><html><head><style>\n.bg { inset: 0; }\n</style></head><body></body></html>\n' \
+    > "$t/DemoPan-ux/src/rc/index.html"
+  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  index.html:2  browser-floor"* ]]
+  KIT_ESLINT=/nonexistent run "$RM" "$t" --profile hmi
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  index.html:2  browser-floor"* ]]
+}
+
+@test "RM25: --legacy is passed to rc-scan -> an over-budget data URI is WARN (exit 0); default FAIL (exit 1)" {
+  local t="$BATS_TEST_TMPDIR/rm25"; _ux_tree "$t"
+  local big; big=$(head -c 21000 /dev/zero | tr '\0' 'A')
+  printf '<!DOCTYPE html><html><body><img src="data:image/png;base64,%s"></body></html>\n' "$big" \
+    > "$t/DemoPan-ux/src/rc/index.html"
+  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"datauri-budget"* ]]
+  KIT_ESLINT=/nonexistent run "$RM" "$t" --legacy
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"datauri-budget"* ]]
+}
+
+@test "RM26: an unknown --profile value -> usage exit 2" {
+  run "$RM" "$FX/clean" --profile kiosk
+  [ "$status" -eq 2 ]
+}
+
+@test "RM27: eslint rows are relayed for *-ux rc js (stub eslint): FAIL row -> exit 1" {
+  local t="$BATS_TEST_TMPDIR/rm27"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  local stub="$BATS_TEST_TMPDIR/eslint-stub"
+  printf '#!/usr/bin/env bash\nprintf "FAIL  eslint  js/app.js:3  eqeqeq: Expected ===\\n"\nprintf "WARN  eslint  js/app.js:9  max-lines-per-function: too long\\n"\nexit 1\n' > "$stub"
+  chmod +x "$stub"
+  KIT_ESLINT="$stub" run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:3  eqeqeq"* ]]
+  [[ "$output" == *"DemoPan-ux  WARN  eslint  app.js:9  max-lines-per-function"* ]]
+}
+
+@test "RM28: eslint unavailable -> one SKIP eslint row naming it; the report is not an env fault" {
+  local t="$BATS_TEST_TMPDIR/rm28"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  KIT_ESLINT=/nonexistent/eslint run "$RM" "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable"* ]]
+}
+
+@test "RM29: a *-ux rc with no own js (vendor only) -> SKIP eslint 'no rc js'" {
+  local t="$BATS_TEST_TMPDIR/rm29"; _ux_tree "$t"
+  printf '<!DOCTYPE html><html><body></body></html>\n' > "$t/DemoPan-ux/src/rc/index.html"
+  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  [[ "$output" == *"DemoPan-ux  SKIP  eslint  no rc js"* ]]
+}
+
+@test "RM30: vendor-floor tool unavailable (acorn forced missing) -> SKIP vendor-floor row, exit 0" {
+  command -v node >/dev/null 2>&1 || skip "node not installed"
+  local t="$BATS_TEST_TMPDIR/rm30"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/vendor"
+  printf 'var lib = 1;\n' > "$t/DemoPan-ux/src/rc/vendor/lib-1.0.0.min.js"
+  KIT_ESLINT=/nonexistent KIT_ACORN=/nonexistent/acorn run "$RM" "$t"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-ux  SKIP  vendor-floor"* ]] && [[ "$output" == *"acorn"* ]]
+}
+
+@test "RM31: a vendored lib above the ES2020 floor -> vendor-floor FAIL row relayed, exit 1" {
+  command -v node >/dev/null 2>&1 || skip "node not installed"
+  if [ -z "${KIT_ACORN:-}" ] && [ ! -d "$KIT/toolbelt/eslint/node_modules/acorn" ]; then
+    node -e 'require.resolve("acorn")' >/dev/null 2>&1 || skip "acorn not installed"
+  fi
+  local t="$BATS_TEST_TMPDIR/rm31"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/vendor"
+  printf 'var c = {};\nc.t ??= 1;\n' > "$t/DemoPan-ux/src/rc/vendor/bad-1.0.0.min.js"
+  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-ux  FAIL  vendor-floor  bad-1.0.0.min.js:2"* ]]
+}
+
+@test "RM32: the kit ESLint config loads and pins the Chromium 83 floor + the Δ10 rule set (node import)" {
+  command -v node >/dev/null 2>&1 || skip "node not installed"
+  run node --input-type=module -e '
+    const c = (await import(process.argv[1])).default;
+    const m = c.find((o) => o.rules);
+    console.log([m.languageOptions.ecmaVersion, m.languageOptions.sourceType,
+      m.rules["max-lines-per-function"][1].max, m.rules["no-console"][1].allow.join(),
+      m.rules.eqeqeq[0], m.rules["no-unused-vars"][0], c[0].ignores.join()].join("|"));
+  ' "$KIT/toolbelt/eslint.config.mjs"
+  [ "$status" -eq 0 ]
+  [ "$output" = "2020|script|60|error|error|warn|**/vendor/**,**/ext/**,**/*.min.js" ]
+}
+
+@test "RM33: real ESLint end-to-end (when installed): == and ES2021 syntax in rc js -> FAIL rows, vendor ignored" {
+  local bin="${KIT_ESLINT:-}"
+  [ -n "$bin" ] || { [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ] && bin="$KIT/toolbelt/eslint/node_modules/.bin/eslint"; }
+  [ -n "$bin" ] || bin="$(command -v eslint 2>/dev/null || true)"
+  [ -n "$bin" ] && [ -x "$bin" ] || skip "eslint not installed (npm install --prefix build-n4-module-kit/toolbelt/eslint)"
+  local t="$BATS_TEST_TMPDIR/rm33"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js" "$t/DemoPan-ux/src/rc/vendor"
+  printf 'function f(x) {\n  return x == 1;\n}\nf(1);\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  printf 'var c = {};\nc.t ??= 1;\n' > "$t/DemoPan-ux/src/rc/js/floor.js"
+  printf 'var v = 1 == 1;\n' > "$t/DemoPan-ux/src/rc/vendor/lib.js"
+  KIT_ESLINT="$bin" KIT_ACORN=/nonexistent/acorn run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:2  eqeqeq"* ]]
+  [[ "$output" == *"DemoPan-ux  FAIL  eslint  floor.js:2  parse"* ]]
+  [[ "$output" != *"lib.js"* ]]
+}
