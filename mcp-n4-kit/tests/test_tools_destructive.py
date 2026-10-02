@@ -1,6 +1,7 @@
 import contextlib
 import hashlib
 import io
+import json
 import os
 import sys
 import tempfile
@@ -663,6 +664,73 @@ class TestRollback(DestructiveCase):
         self.assertTrue(gaps and all("missing" not in g for g in gaps), gaps)
         self.assertTrue(all(g["readback_error"] == "HTTP 503 from station" for g in gaps))
         self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
+
+    def fail_frozen_reads(self, message, only=None):
+        """Make the frozen-child read-back (depth 7) raise; `only` limits it to ORDs ending so."""
+        client = self.srv.ctx.session.client
+        orig = client.load_tree
+
+        def failing(ord_str, depth=2, **kw):
+            if depth == 7 and (only is None or ord_str.endswith(only)):
+                raise box.BoxError(message, box.CHANNEL, "loadSlots")
+            return orig(ord_str, depth=depth, **kw)
+        client.load_tree = failing
+        return mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7)
+
+    def test_a_frozen_check_read_error_is_scrubbed_of_the_session_secret(self):
+        """The gap's readback_error goes through ctx.scrub (issue #190 R3-001)."""
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        message = "HTTP 401 from station: credentials %s rejected" % self.PASSWORD
+        with self.fail_frozen_reads(message):
+            back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "unverified", back)
+        gaps = back["frozen_config_not_restored"]
+        self.assertTrue(gaps, back)
+        for gap in gaps:
+            self.assertEqual(gap["readback_error"],
+                             "HTTP 401 from station: credentials *** rejected")
+        self.assertNotIn(self.PASSWORD, json.dumps(back))
+
+    def test_a_read_error_beside_a_real_frozen_gap_makes_the_rollback_unverified(self):
+        """Precedence: an unread frozen child outranks a real config gap (issue #190 R3-002)."""
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)  # Sp's proxyExt: a real, readable gap
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        with self.fail_frozen_reads("HTTP 503 from station", only="/En"):
+            back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "unverified", back)
+        gaps = {g["path"].rsplit("/", 2)[-2]: g for g in back["frozen_config_not_restored"]}
+        self.assertEqual(sorted(gaps), ["En", "Sp"])
+        self.assertEqual(gaps["En"]["readback_error"], "HTTP 503 from station")
+        self.assertNotIn("missing", gaps["En"])
+        self.assertEqual((gaps["Sp"]["slots"], gaps["Sp"]["missing"]),
+                         (["tuningPolicyName"], False))
+        self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
+
+    def test_a_skipped_relink_beside_a_read_error_makes_the_rollback_a_mismatch(self):
+        """Precedence: a skipped relink (mismatch) outranks an unread frozen child (#190 R3-002)."""
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        orig = self.fake._sync
+
+        def drop_src(op):
+            res = orig(op)
+            if op["nm"] == "a" and op["n"] == "Src":
+                node = self.fake.folder.child(nn)
+                node.children = [c for c in node.children if c.name != "Src"]
+            return res
+        self.fake._sync = drop_src
+        with self.fail_frozen_reads("HTTP 503 from station"):
+            back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "mismatch", back)
+        self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1})
+        gaps = back["frozen_config_not_restored"]
+        self.assertTrue(gaps and all(g["readback_error"] == "HTTP 503 from station"
+                                     for g in gaps), gaps)
+        self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "mismatch")
 
     # ---- link-targeted inputs (issue #179 R3-002 / B1200-G2) -------------------------
 
