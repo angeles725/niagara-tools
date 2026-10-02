@@ -54,7 +54,8 @@ reported by the 2026-10-02 remote inventory session that v0.26.0 did not encode 
   section 3 (permission-classifier block) and section 7 (progress file, never stdout through `tail`); README and
   SKILL updated. GREEN.
 - After T1-T3: `python3 -m unittest discover -s mcp-n4-kit/tests -v` -> 443 tests OK.
-- Release: VERSION 0.27.0, `mcp_n4.__version__` 0.3.0, CHANGELOG `[v0.27.0]`. RDD outcome: pending (parent).
+- Release: VERSION 0.27.0, `mcp_n4.__version__` 0.3.0, CHANGELOG `[v0.27.0]`. RDD outcome: assessed high (dangerous_sink, process_boundary); consent granted (operator pre-authorized); 4-lens review APPROVED and acknowledged (lineage review-3caa2e8cefaeef6e). START returned a false failure (gentle-ai 4.0.0 defect, reported as Gentleman-Programming/gentle-ai#5195); bound STATUS recovered the minted lineage.
+- Advisory (non-blocking) findings carried to T4: R2-001 `_types_arg` docstring says "set" but returns the list; R2-002 T2 task line says try/finally (code uses try/except + reset-on-answer); R3-001 `ssc` raising after the request was sent would under-count; R3-002 umask read is process-global; R3-003 `has_children` still counts filtered-out descendants; R4-001 reset-to-0 relies on in-order replies.
 
 ## Next step
-- Parent: RDD assess/review of the T1-T3 commits, push + PR (human decision). Then T4 (rollback fidelity) as a separate PR.
+- T4 (rollback fidelity) + the advisory findings above, as a separate PR.
