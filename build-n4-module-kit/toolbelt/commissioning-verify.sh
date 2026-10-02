@@ -6,7 +6,8 @@
 # or 1 any FAIL, 3 usage/env.
 #
 # Usage:
-#   commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--strict]
+#   commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>]
+#                           [--values-owed <file>] [--strict]
 #
 # Source checks (static, VCS-free, no station required):
 #   config-sanity:<rt>  lint-config-sanity.sh per -rt/src dir (CS1/CS2 FAIL, CS3 WARN)
@@ -22,10 +23,20 @@
 # Facade slot inventory note (PASS informational row):
 #   wiring-map  generate-wiring-map.sh scaffolds docs/wiring-map.md
 #
+# Values owed by the field (BUILD-LOOP §6.b table; default <module-root>/docs/values-owed.md):
+#   values-owed  one MANUAL row per table row whose Status cell does not start with
+#                filled/provided (columns: Slot | Owed by | Unit | Safe default | Status);
+#                one PASS row when every value is provided; one MANUAL row when no table exists.
+#   [ev: retro panccadia-commissioning-lessons Δ11] [ev: retro panccadia-version-defect-ledger Δ4]
+#
 # Manual-only footer (MANUAL rows — informational, never FAIL):
-#   hot-reload-console    triage-console.sh clean after station restart
-#   plant-control         station actually controlling the plant
-#   per-instance-values   per-instance runtime values match physical setpoints
+#   hot-reload-console       triage-console.sh clean after station restart
+#   plant-control            station actually controlling the plant
+#   per-instance-values      per-instance runtime values match physical setpoints
+#   persisted-state-restart  persisted operator state seeded/saved before the first restart, re-read after
+#   alarm-routing            alarm class + recipient per source; a test alarm reaches the console, acked
+#   consumer-impact          downstream consumers notified of every changed point meaning
+#   link-source-audit        obix-link-audit.sh: each declared link-in comes from its declared source
 #
 # Row format: STATUS  commissioning  <check>  <detail>
 # Summary:    commissioning-verify: P PASS · F FAIL · W WARN · S SKIP · M MANUAL  ->  CLEAN|ISSUES
@@ -44,10 +55,11 @@ HAD_FAIL=0
 MODULE_ROOT=""
 BOG=""
 MOD=""
+OWED=""
 STRICT=0
 
 usage_exit() {
-  printf 'usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--strict]\n' >&2
+  printf 'usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--strict]\n' >&2
   exit 3
 }
 
@@ -59,6 +71,9 @@ while [ $# -gt 0 ]; do
     --module)
       [ $# -ge 2 ] || usage_exit
       MOD="$2"; shift 2 ;;
+    --values-owed)
+      [ $# -ge 2 ] || usage_exit
+      OWED="$2"; shift 2 ;;
     --strict) STRICT=1; shift ;;
     --) shift; break ;;
     -*) usage_exit ;;
@@ -69,6 +84,14 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$MODULE_ROOT" ] || usage_exit
 [ -d "$MODULE_ROOT" ] || { printf 'commissioning-verify: not a directory: %s\n' "$MODULE_ROOT" >&2; exit 3; }
+
+if [ -n "$OWED" ] && [ ! -f "$OWED" ]; then
+  printf 'commissioning-verify: values-owed table not found: %s\n' "$OWED" >&2
+  exit 3
+fi
+if [ -z "$OWED" ] && [ -f "$MODULE_ROOT/docs/values-owed.md" ]; then
+  OWED="$MODULE_ROOT/docs/values-owed.md"
+fi
 
 if [ -n "$BOG" ] && [ -z "$MOD" ]; then
   printf 'commissioning-verify: --bog requires --module\n' >&2
@@ -275,6 +298,32 @@ else
 fi
 
 # ----------------------------------------------------------------
+# Values owed by the field — a disabled/no-value-yet default stays an open MANUAL row
+# until the table marks it filled/provided.
+# ----------------------------------------------------------------
+if [ -n "$OWED" ]; then
+  owed_rows=$(awk -F'|' '
+    NF < 7 { next }
+    {
+      for (i = 2; i <= 6; i++) { c[i] = $i; gsub(/^[ \t]+|[ \t]+$/, "", c[i]); gsub(/`/, "", c[i]) }
+      if (c[2] == "" || tolower(c[2]) == "slot" || c[2] ~ /^-+$/) next
+      st = tolower(c[6])
+      if (st ~ /^(filled|provided)/) next
+      printf "%s: owed by %s, unit %s, still at safe default %s\n", c[2], c[3], c[4], c[5]
+    }' "$OWED")
+  if [ -n "$owed_rows" ]; then
+    while IFS= read -r _ln; do
+      emit MANUAL "values-owed" "$_ln"
+    done <<< "$owed_rows"
+  else
+    emit PASS "values-owed" "every value owed by the field is provided ($OWED)"
+  fi
+else
+  emit MANUAL "values-owed" \
+    "no docs/values-owed.md — declare the values owed by the field (slot, owed by, unit, safe default, status) or state none (BUILD-LOOP §6.b)"
+fi
+
+# ----------------------------------------------------------------
 # Manual-only footer — live steps this tool cannot statically verify
 # ----------------------------------------------------------------
 emit MANUAL "hot-reload-console" \
@@ -283,6 +332,14 @@ emit MANUAL "plant-control" \
   "confirm the station actually controls the plant (runtime only — not statically verifiable)"
 emit MANUAL "per-instance-values" \
   "confirm per-instance runtime values match physical setpoints for every room/unit"
+emit MANUAL "persisted-state-restart" \
+  "persisted operator state (HOA modes, setpoints, run hours, backups) seeded or saved BEFORE the first restart and re-read after it (BUILD-LOOP §6.b)"
+emit MANUAL "alarm-routing" \
+  "each alarm source has an alarm class and at least one recipient; a test alarm reaches the console and is acknowledged (BUILD-LOOP §6.b)"
+emit MANUAL "consumer-impact" \
+  "every point whose meaning changed (feature doc Consumer impact table) was notified to its downstream consumers (BUILD-LOOP §6.b)"
+emit MANUAL "link-source-audit" \
+  "run obix-link-audit.sh --map docs/wiring-map.md against the live facade: every declared link-in comes from its declared source (MATCH)"
 emit MANUAL "servlet-response-headers" \
   "BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options' — both headers must appear (ODA2-G1/G2; see types/security.md §7)"
 

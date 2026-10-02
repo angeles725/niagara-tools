@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj href="https://station.example/obix/config/Plant/Rack/" is="obix:obj">
+  <obj name="Link" href="Link/" is="baja:Link" display="Indirect: slot:/Plant/Facade.setpoint &#x2192; slot:/Plant/Rack.suctionSetpoint"/>
+</obj>

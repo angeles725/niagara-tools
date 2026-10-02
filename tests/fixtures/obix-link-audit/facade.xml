@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj href="https://station.example/obix/config/Plant/Facade/" is="obix:obj" display="Facade">
+  <bool name="comp1State" href="comp1State/" val="true"/>
+  <bool name="comp2State" href="comp2State/" val="false"/>
+  <obj name="Link" href="Link/" is="baja:Link" display="Indirect: slot:/Plant/IO.relayOut1 &#x2192; slot:/Plant/Facade.comp1State"/>
+  <obj name="Link1" href="Link1/" is="baja:Link" display="Indirect: slot:/Plant/Rack.comp2Running &#x2192; slot:/Plant/Facade.comp2State"/>
+  <obj name="Link2" href="Link2/" is="baja:Link" display="Indirect: slot:/Plant/Rack.comp3Running &#x2192; slot:/Plant/Facade.comp3State"/>
+</obj>
