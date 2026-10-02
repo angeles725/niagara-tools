@@ -140,6 +140,21 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"lpCutoutPsi\"=0"* ]]
 }
 
+# polish-2026-10-02 P2e (#199, P2d review fail-open): Trip / Alarm / Fault also name cutout setpoints, so
+# they are not status suffixes; a setpoint-shaped lpCutoutTrip / lowLimitAlarm / cutoutFault = 0 beside a
+# nonzero floor still WARNs. Named mutation LCS-floor-trip (Trip|Alarm|Fault back in the status
+# suffixes) -> LCS-floor-trip flips.
+@test "LCS-floor-trip: comp2MinOn=1 beside lpCutoutTrip / lowLimitAlarm / cutoutFault =0 -> CS4 WARN" {
+  local v
+  for v in lpCutoutTrip lowLimitAlarm cutoutFault; do
+    only FloorCamelNames.java
+    sed -i "s/\"lpCutout\"/\"$v\"/" "$ONE/FloorCamelNames.java"
+    run "$LCS" "$ONE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"$v\"=0"* ]] || { echo "$v -> $output"; return 1; }
+  done
+}
+
 @test "LCS-usage: no argument -> exit 3 (usage)" {
   run "$LCS"
   [ "$status" -eq 3 ]
