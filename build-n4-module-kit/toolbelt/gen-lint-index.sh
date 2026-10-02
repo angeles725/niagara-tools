@@ -5,7 +5,7 @@
 # (a merge-conflict hotspot) and the prose drifted. The index is now DERIVED: one row per
 # toolbelt/lint-*.sh with its header description, Usage:, Exit contract, [ev: ...] tags and
 # whether report-module.sh runs it automatically. Prose never enumerates lints or counts them.
-# [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
+# [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 #
 # Header contract (lines 1-60 of every lint-*.sh):
 #   line 2      # <script-name> — <what it checks>   (continuation lines joined until a blank '#')
@@ -94,7 +94,7 @@ One row per `toolbelt/lint-*.sh`, derived from the script's own header: the desc
 build) already runs the lint; a `no` lint is run by hand on the profiles its usage names.
 
 To add a lint: write its header to this contract, regenerate, commit both. Never edit this file and
-never enumerate or count lints in BUILD-LOOP.md prose. [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
+never enumerate or count lints in BUILD-LOOP.md prose. [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 
 | Lint | What it checks | Usage | Exit contract | Auto | Evidence |
 |---|---|---|---|---|---|

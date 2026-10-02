@@ -105,7 +105,7 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     `gen-lint-index.sh --check` exit 0 (fresh).
   - Public-repo grep (customer/site/host/IP names) over added text: 0 hits.
   - Commit: the WU1 work-unit commit on `feat/fold-wu1-frontend-standard` (sha in the PR).
-  - Gap for WU11: WU0 cited `[ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]` (dated token), which
+  - Gap for WU11: WU0 cited `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]` (dated token), which
     sweep-fold-audit will NOT credit to stem `kit-meta-hygiene-2026-10-01` when that row flips to folded.
 
 ## Next step

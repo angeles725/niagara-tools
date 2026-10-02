@@ -8,7 +8,7 @@ One row per `toolbelt/lint-*.sh`, derived from the script's own header: the desc
 build) already runs the lint; a `no` lint is run by hand on the profiles its usage names.
 
 To add a lint: write its header to this contract, regenerate, commit both. Never edit this file and
-never enumerate or count lints in BUILD-LOOP.md prose. [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
+never enumerate or count lints in BUILD-LOOP.md prose. [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 
 | Lint | What it checks | Usage | Exit contract | Auto | Evidence |
 |---|---|---|---|---|---|
