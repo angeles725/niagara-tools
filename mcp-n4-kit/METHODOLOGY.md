@@ -61,7 +61,8 @@ Default mode is read-only: write tools exist only with `--allow-writes`
 ## 4. Mandatory session checklist
 
 1. `n4_describe_session`, then `n4_connect` to a station the operator configured.
-   Confirm the reported `stationName` and the version tier (section 5).
+   Confirm the reported `stationName`, `version` and `tier` (section 5); with
+   `tier_writes: refused` plan with dry runs only and follow the refusal's routes.
 2. `n4_navigate` and `n4_read_slots` the target subtree. **manual** For an inventory
    or any read wider than a few components, use `n4_bql_query` / `n4_inventory`
    first (section 7).
@@ -94,8 +95,31 @@ Never put credentials in tool arguments or chat.
 - **C** any other build: enable writes only after `reg.loadContract`, `loadRoot` and
   a harmless scratch write succeed.
 
-Print the detected version and tier at connect. The tier gate is **manual**;
-the server does not yet branch on it.
+The gate is **enforced** (v0.5.0). `n4_connect` reads the oBIX `productVersion` from
+`/obix/about/` (one GET, never retried) and reports `version`, `version_source`, `tier`
+and `tier_writes` (`allowed`, `allowed-by-opt-in`, `refused`); `n4_describe_session`
+repeats them. A version that cannot be read (no oBIX, no permission) is tier C, so a
+failed detection only makes the server stricter. Every mutating tool then branches on
+the tier, after the identity check and before the budget, scope and token:
+
+- Tier A: unchanged.
+- Tier B: an execution is refused unless the operator started the server with
+  `--allow-tier-b NAME` for that station, after a PoC matched the build.
+- Tier C: an execution is refused unless the operator started the server with
+  `--allow-tier-c NAME`, after `reg.loadContract`, `loadRoot` and a harmless scratch
+  write succeeded. The server has no probe tool; the opt-in records that the probe ran.
+- A dry run is always allowed; when the tier would block the execution its reply
+  carries `tier_gate` (`tier`, `version`, `would_block`, `reason`), outside the plan
+  hash. Reads are never gated.
+
+The refusal names its routes (review the dry run now, use Workbench, run the PoC or
+probe and restart with the opt-in) and starts with `safety.REASON_TIER`, which the
+session retro classifies. Enforced by `test_tier_table`,
+`test_execution_is_refused_without_opt_in`, `test_operator_opt_in_allows_writes`,
+`test_execution_is_refused_with_the_probe_steps`,
+`test_tier_a_writes_without_annotation`,
+`test_dry_run_is_allowed_and_says_the_tier_would_block`,
+`test_every_mutating_tool_is_gated` and `test_reads_are_unaffected`.
 
 ## 6. Evidence index (niagara-research)
 

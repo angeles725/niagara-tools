@@ -7,7 +7,7 @@ import os
 import time
 from collections import namedtuple
 
-from . import __version__, box, bql, retro, safety
+from . import __version__, box, bql, retro, safety, tiers
 
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 
@@ -24,9 +24,12 @@ class Tool(namedtuple("Tool", "name description input_schema handler needs_sessi
 
 
 class Session:
-    def __init__(self, client, station_name, base_url, root_handle, identity_verified=False):
+    def __init__(self, client, station_name, base_url, root_handle, identity_verified=False,
+                 version=None):
         self.client, self.station_name = client, station_name
         self.base_url, self.root_handle = base_url, root_handle
+        #: Detected product version (None when undetected) and its tier (METHODOLOGY 5).
+        self.version, self.tier = version, tiers.tier_of(version)
         #: True only when the session was opened with an `expected_station` that matched.
         self.identity_verified = identity_verified
         self.writes_executed = 0
@@ -36,7 +39,8 @@ class Context:
     """Per-process state: at most one active station session."""
 
     def __init__(self, allow_writes=False, allow_http=False, env=None, client_factory=None,
-                 stations=None, credential_env="MCP_N4", insecure_tls=()):
+                 stations=None, credential_env="MCP_N4", insecure_tls=(), allow_tier_b=(),
+                 allow_tier_c=()):
         self.allow_writes, self.allow_http = allow_writes, allow_http
         #: Operator policy, fixed at server start: the model can only pick a NAME.
         self.stations = dict(stations or {})
@@ -45,10 +49,15 @@ class Context:
         for name, url in self.stations.items():
             if not url.startswith("https://") and not (allow_http and url.startswith("http://")):
                 raise ValueError("station %s: URL must start with https://" % name)
-        unknown = self.insecure_tls - set(self.stations)
-        if unknown:
-            raise ValueError("--insecure-tls names unconfigured station(s): %s"
-                             % ", ".join(sorted(unknown)))
+        #: Operator opt-in per tier (station names): the only way past the tier gate.
+        self.tier_opt_in = {"B": frozenset(allow_tier_b), "C": frozenset(allow_tier_c)}
+        for flag, names in (("--insecure-tls", self.insecure_tls),
+                            (tiers.OPT_IN_FLAGS["B"], self.tier_opt_in["B"]),
+                            (tiers.OPT_IN_FLAGS["C"], self.tier_opt_in["C"])):
+            unknown = names - set(self.stations)
+            if unknown:
+                raise ValueError("%s names unconfigured station(s): %s"
+                                 % (flag, ", ".join(sorted(unknown))))
         self.env = os.environ if env is None else env
         self.client_factory = client_factory or box.BoxClient
         self.session = None
@@ -73,6 +82,22 @@ class Context:
         sess, self.session = self.session, None  # cleared even if the close below raises
         if sess is not None:
             sess.client.close()
+
+    def tier_block(self, sess):
+        """Why the session's version tier refuses writes, or None (see `tiers.write_block`)."""
+        return tiers.write_block(sess.tier, sess.version, sess.station_name, self.tier_opt_in)
+
+    def tier_report(self, sess):
+        """`version`, `version_source`, `tier`, `tier_writes` of a session (None: no session)."""
+        if sess is None:
+            return {"version": None, "version_source": None, "tier": None, "tier_writes": None}
+        if self.tier_block(sess):
+            writes = "refused"
+        else:
+            writes = "allowed" if sess.tier == "A" else "allowed-by-opt-in"
+        return {"version": sess.version,
+                "version_source": tiers.ABOUT_PATH if sess.version else None,
+                "tier": sess.tier, "tier_writes": writes}
 
     def set_secret(self, secret):
         self._secret = secret
@@ -158,9 +183,21 @@ def n4_connect(ctx, args):
         raise ToolError("station identity mismatch: expected %r but connected to %r"
                         % (expected, station_name))
     ctx.session = Session(client, station_name, client.base_url, root_h,
-                          identity_verified=True)
-    return {"station_name": station_name, "base_url": client.base_url, "root_handle": root_h,
-            "mode": ctx.mode}
+                          identity_verified=True, version=_detect_version(client))
+    return dict({"station_name": station_name, "base_url": client.base_url,
+                 "root_handle": root_h, "mode": ctx.mode}, **ctx.tier_report(ctx.session))
+
+
+def _detect_version(client):
+    """The station's oBIX productVersion, or None: detection never fails a connect.
+
+    One GET, never retried. An undetected version classifies as tier C (writes refused
+    until the operator opts in), so a failure here can only make the server stricter.
+    """
+    try:
+        return tiers.product_version(client.about())
+    except Exception:  # no oBIX, no permission, transport: unknown version
+        return None
 
 
 # ---- n4_describe_session -------------------------------------------------
@@ -171,7 +208,7 @@ def n4_describe_session(ctx, args):
             "station_name": sess.station_name if sess else None,
             "base_url": sess.base_url if sess else None,
             "mode": ctx.mode, "server_version": __version__,
-            "configured_stations": sorted(ctx.stations)}
+            "configured_stations": sorted(ctx.stations), **ctx.tier_report(sess)}
 
 
 # ---- n4_navigate ---------------------------------------------------------
@@ -441,13 +478,17 @@ TOOLS = [
          "Open a session to one of the stations the operator configured at server start "
          "(replaces any previous session). The URL, credentials and TLS policy are fixed by "
          "the operator and cannot be chosen here. The station's real stationName must equal "
-         "expected_station (default: the configured station NAME), or the session is closed.",
+         "expected_station (default: the configured station NAME), or the session is closed. "
+         "Reports the detected version (oBIX productVersion) and its tier: A (4.13/4.14) "
+         "writes; B (4.15/4.3) and C (other or unknown) refuse writes unless the operator "
+         "opted the station in.",
          _schema({"station": _str("Configured station NAME (see n4_describe_session)"),
                   "expected_station": _str("Required stationName; default: the station NAME")},
                  ["station"]),
          n4_connect, needs_session=False),
     Tool("n4_describe_session",
-         "Report whether a station session is active, which station, and the server mode. "
+         "Report whether a station session is active, which station, its version tier, "
+         "and the server mode. "
          "Works without a session.",
          _schema({}), n4_describe_session, needs_session=False),
     Tool("n4_navigate",

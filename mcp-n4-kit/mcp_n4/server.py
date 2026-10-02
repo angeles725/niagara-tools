@@ -65,11 +65,13 @@ class Server:
     def __init__(self, allow_writes=False, allow_http=False, env=None,
                  client_factory=None, tools=None, write_scopes=(), state_dir=None,
                  token_ttl=300, max_writes=200, stations=None, credential_env="MCP_N4",
-                 insecure_tls=(), station_homes=None, progress_file=None):
+                 insecure_tls=(), station_homes=None, progress_file=None,
+                 allow_tier_b=(), allow_tier_c=()):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
-                                      insecure_tls=insecure_tls)
+                                      insecure_tls=insecure_tls, allow_tier_b=allow_tier_b,
+                                      allow_tier_c=allow_tier_c)
         self.ctx.state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         self.ctx.progress_path = os.path.expanduser(progress_file) if progress_file else None
         if tools is None:
@@ -199,6 +201,14 @@ def parse_args(argv=None):
     parser.add_argument("--insecure-tls", action="append", default=[], metavar="NAME",
                         help="skip TLS certificate verification for this configured station "
                              "(self-signed); repeatable")
+    parser.add_argument("--allow-tier-b", action="append", default=[], metavar="NAME",
+                        help="let writes run on configured station NAME although its version "
+                             "is tier B (4.15/4.3); only after a PoC matched that build "
+                             "(METHODOLOGY section 5); repeatable")
+    parser.add_argument("--allow-tier-c", action="append", default=[], metavar="NAME",
+                        help="let writes run on configured station NAME although its version "
+                             "is tier C (other or unknown); only after reg.loadContract, "
+                             "loadRoot and a harmless scratch write succeeded; repeatable")
     parser.add_argument("--progress-file", default=None, metavar="PATH",
                         help="append JSON progress lines of long reads (n4_inventory) to PATH")
     parser.add_argument("--allow-http-for-tests", action="store_true",
@@ -225,7 +235,8 @@ def main(argv=None):
                      write_scopes=args.write_scope, state_dir=args.state_dir,
                      token_ttl=args.token_ttl, max_writes=args.max_writes, stations=stations,
                      credential_env=args.credential_env, insecure_tls=args.insecure_tls,
-                     station_homes=homes, progress_file=args.progress_file)
+                     station_homes=homes, progress_file=args.progress_file,
+                     allow_tier_b=args.allow_tier_b, allow_tier_c=args.allow_tier_c)
     except (ValueError, safety.SafetyError) as exc:
         print("mcp_n4.server: %s" % exc, file=sys.stderr)
         return 2

@@ -309,6 +309,24 @@ class BoxClient:
             text = text[:text.rfind("\n") + 1]
         return text, truncated
 
+    def about(self, timeout=None, max_bytes=64 * 1024):
+        """`GET /obix/about/` text (the oBIX About document), one attempt.
+
+        Same opener as BOX (no redirects); raises `AuthError`/`BoxError` like `get_ord`.
+        """
+        req = urllib.request.Request(self.base_url + "/obix/about/", method="GET",
+                                     headers={"Authorization": self._auth})
+        try:
+            with self._opener.open(req, timeout=timeout or self.timeout) as resp:
+                return resp.read(max_bytes).decode("utf-8", "replace")
+        except urllib.error.HTTPError as exc:
+            exc.close()
+            if exc.code in (401, 403):
+                raise AuthError(auth_message(exc.code), "obix", "about") from None
+            raise BoxError("HTTP %d from station" % exc.code, "obix", "about") from None
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            raise BoxError("transport failure: %s" % exc, "obix", "about") from None
+
     def _unwrap(self, reply, channel, key):
         """Validate a reply frame and return its first message body, else BoxError."""
         if not isinstance(reply, dict):

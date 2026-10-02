@@ -41,6 +41,7 @@ REASON_PARTIAL_STATUS = "Status slots are written whole"
 REASON_ACTION = "is not allowed in this version"
 REASON_VALUE_TYPE = "value_type must be one of"
 REASON_TYPE_SPEC = "type must look like"
+REASON_TIER = "version tier refuses writes"
 
 
 class SafetyError(Exception):
