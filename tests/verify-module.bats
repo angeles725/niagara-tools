@@ -543,3 +543,28 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  facets-req"* ]] && [[ "$output" == *"suctionSetpoint missing UNITS"* ]]
 }
+
+# polish-2026-10-02 P2a (#199 WU6a): a named-constant PRECISION is not a unit. makeNumeric(<int>) is the
+# only one-argument overload, so a lone identifier argument is a precision; a unit needs the
+# (<unit>, <precision>, ...) form or an argument that names a unit.
+@test "VMN4: a *Setpoint slot with a precision-only BFacets.makeNumeric(PRECISION) still WARNs missing UNITS" {
+  vmn_src <<'JAVA'
+package com.x;
+@NiagaraProperty(name = "suctionSetpoint", type = "double", defaultValue = "20d", flags = Flags.OPERATOR, facets = @Facet("BFacets.makeNumeric(PRECISION)"))
+public class A extends BComponent {}
+JAVA
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  facets-req"* ]] && [[ "$output" == *"suctionSetpoint missing UNITS"* ]]
+}
+
+@test "VMN5: a *Limit slot with BFacets.makeNumeric(AMPS, PRECISION) (named unit constant) does NOT WARN" {
+  vmn_src <<'JAVA'
+package com.x;
+@NiagaraProperty(name = "overAmpsLimit", type = "double", defaultValue = "30d", flags = Flags.OPERATOR, facets = @Facet("BFacets.makeNumeric(AMPS, PRECISION)"))
+public class A extends BComponent {}
+JAVA
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"missing UNITS"* ]]
+}

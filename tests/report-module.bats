@@ -18,6 +18,8 @@
 #   - aggregation drops sub-tool FAILs -> RM2 exits 0 (the BLeak lint FAIL no longer surfaces).
 #   - --plano always-run (not gated on index.html) -> RM3 sees a plano row on an rt-only tree.
 
+load helpers/stub-toolbelt   # stub_toolbelt <dir> <member> <body> (polish P1c)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RM="$KIT/toolbelt/report-module.sh"
@@ -520,18 +522,8 @@ JAVA
 #   RM-mapname (drop the map name from the detail) -> RM43 flips.
 # ===========================================================================
 
-# _stub_toolbelt <dir> <stub-body> — symlink every toolbelt entry into <dir>, then replace
-# lint-link-target-flags.sh with a stub script whose body is <stub-body>.
-_stub_toolbelt() {
-  mkdir -p "$1"
-  local f; for f in "$KIT/toolbelt"/*; do ln -s "$f" "$1/"; done
-  rm "$1/lint-link-target-flags.sh"
-  printf '#!/usr/bin/env bash\n%s\n' "$2" > "$1/lint-link-target-flags.sh"
-  chmod +x "$1/lint-link-target-flags.sh"
-}
-
 @test "RM40: member exit 127 with no FAIL row -> FAIL lint-link-target-flags row, never PASS clean, exit 1" {
-  local tb="$BATS_TEST_TMPDIR/rm40tb"; _stub_toolbelt "$tb" 'echo "lint: command not found" >&2; exit 127'
+  local tb="$BATS_TEST_TMPDIR/rm40tb"; stub_toolbelt "$tb" lint-link-target-flags.sh 'echo "lint: command not found" >&2; exit 127'
   run "$tb/report-module.sh" "$FX/clean"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  exited 127"* ]]
@@ -539,14 +531,14 @@ _stub_toolbelt() {
 }
 
 @test "RM41: member exit 1 with an unparsable row -> FAIL row naming the exit, exit 1" {
-  local tb="$BATS_TEST_TMPDIR/rm41tb"; _stub_toolbelt "$tb" 'echo "Traceback: boom"; exit 1'
+  local tb="$BATS_TEST_TMPDIR/rm41tb"; stub_toolbelt "$tb" lint-link-target-flags.sh 'echo "Traceback: boom"; exit 1'
   run "$tb/report-module.sh" "$FX/clean"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  exited 1"* ]]
 }
 
 @test "RM42: member exit 3 -> ERROR lint-link-target-flags row and report exit 3" {
-  local tb="$BATS_TEST_TMPDIR/rm42tb"; _stub_toolbelt "$tb" 'exit 3'
+  local tb="$BATS_TEST_TMPDIR/rm42tb"; stub_toolbelt "$tb" lint-link-target-flags.sh 'exit 3'
   run "$tb/report-module.sh" "$FX/clean"
   [ "$status" -eq 3 ]
   [[ "$output" == *"DemoPan-rt  ERROR  lint-link-target-flags  env fault (exit 3)"* ]]
@@ -580,4 +572,16 @@ _stub_toolbelt() {
   grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
   # shellcheck disable=SC2016  # literal source text, not an expansion
   grep -qF '${ltf_args[@]+"${ltf_args[@]}"}' "$KIT/toolbelt/commissioning-verify.sh"
+}
+
+# polish-2026-10-02 P1c (#199, P1b review advisories): the map path is a literal in the substituted
+# reason. Under bash 5.2 patsub_replacement an unquoted `&` in the replacement expands to the matched
+# text. Named mutation RM-amp (unquote the replacement) -> RM46 flips.
+@test "RM46: a wiring-map path holding & is named verbatim in the Table 2 FAIL reason" {
+  local repo="$BATS_TEST_TMPDIR/a&b" t="$BATS_TEST_TMPDIR/a&b/DemoPan"; _rt_tree "$t"
+  cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
+  mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
+  run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(wiring-map Table 2: $t/../docs/wiring-map.md)"* ]]
 }

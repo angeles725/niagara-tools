@@ -212,7 +212,10 @@ for SRC in "${SRC_DIRS[@]}"; do
   ltf_exit=0
   # ${A[@]+"${A[@]}"}: an empty "${A[@]}" is an unbound-variable error under set -u on bash < 4.4.
   ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" ${ltf_args[@]+"${ltf_args[@]}"} "$SRC" 2>&1) || ltf_exit=$?
-  [ -n "$WMAP" ] && ltf_out="${ltf_out//(wiring-map Table 2)/(wiring-map Table 2: $WMAP)}"
+  # "(wiring-map Table 2)" is a contract with the LTF1 reason text of lint-link-target-flags.sh (CV-ltf6
+  # pins it); pattern and replacement are quoted so an & in the path stays literal under bash 5.2
+  # patsub_replacement. [polish-2026-10-02 P1c]
+  [ -n "$WMAP" ] && ltf_out=${ltf_out//"(wiring-map Table 2)"/"(wiring-map Table 2: $WMAP)"}
   if [ "$ltf_exit" -eq 3 ]; then
     emit SKIP "link-target-flags:$LABEL" "env fault (exit 3) — run lint-link-target-flags.sh manually"
   elif printf '%s\n' "$ltf_out" | grep -q '^FAIL'; then

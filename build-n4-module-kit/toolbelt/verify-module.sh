@@ -21,9 +21,11 @@
 #   facets      no BFacets.make(BFacets.MIN|MAX, <raw number>) under <module-dir>/<jar-basename>/src. [--src]
 #   facets-req  OPERATOR numeric slot without a facets key (WARN); setpoint/count-like slot without UNITS/PRECISION (WARN). [--src]
 #               BFacets.makeNumeric(<unit>, ...) satisfies UNITS and any makeNumeric( satisfies PRECISION;
-#               a precision-only makeNumeric(<int>) still WARNs missing UNITS. [ev: retro comppan-fase2-amps-alarms Δ1]
+#               a precision-only makeNumeric(<int>) still WARNs missing UNITS, also when the precision is a
+#               named constant (makeNumeric(PRECISION)). [ev: retro comppan-fase2-amps-alarms Δ1]
 #               Mutation: VMN1 -- drop the makeNumeric(<unit>, ...) branch from the UNITS test -> VMN1 WARNs again
 #               Mutation: VMN3 -- accept ANY makeNumeric( as a unit -> the precision-only makeNumeric(1) stops WARNing
+#               Mutation: VMN4 -- accept a lone identifier argument as a unit -> makeNumeric(PRECISION) stops WARNing
 #   ord-literal Java string literal matching station:|local:|slot:/ under src (WARN); exempt: *OrdConstants*+comment, defaultValue=, srcTest/**. [--src]
 #   rcbackup    no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
 #   palette     a module that declares types must not ship an EMPTY module.palette (nothing to drag in
@@ -280,6 +282,26 @@ check_facet_presence() {
       warned=1
     done < <(awk -v FILE="$f" '
       {lines[NR]=$0}
+      # mn_has_unit(s): 1 when the first BFacets.makeNumeric( call in s carries a unit. makeNumeric(<int>)
+      # is the only one-argument overload, so a lone argument is a precision (a literal or a named
+      # constant such as PRECISION) unless it names a unit (BUnit..., *UNIT*); a first argument that
+      # starts with a letter followed by more arguments is the (<unit>, <precision>, ...) form.
+      # [polish-2026-10-02 P2a, #199 WU6a has_nu]
+      function mn_has_unit(s,    i, c, d, n, first, commas) {
+        if (!match(s, /makeNumeric\(/)) return 0
+        s = substr(s, RSTART + RLENGTH); n = length(s); d = 0; commas = 0; first = ""
+        for (i = 1; i <= n; i++) {
+          c = substr(s, i, 1)
+          if (c == "(") d++
+          else if (c == ")") { if (d == 0) break; d-- }
+          else if (c == "," && d == 0) commas++
+          if (commas == 0) first = first c
+        }
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", first)
+        if (first !~ /^[A-Za-z_]/) return 0
+        if (first ~ /[Uu]nit|UNIT/) return 1
+        return (commas >= 1)
+      }
       END {
         delete seen
         # pass 1: @NiagaraProperty annotations (handle single-line and multi-line)
@@ -313,7 +335,7 @@ check_facet_presence() {
           # BFacets.makeNumeric(<unit>, <precision>, ...) carries a unit without the UNITS token
           # and every makeNumeric overload carries a precision; a precision-only makeNumeric(<int>)
           # (first argument a number) still has no unit. [ev: retro comppan-fase2-amps-alarms Δ1]
-          has_nu = (s ~ /makeNumeric\([[:space:]]*[A-Za-z_]/)
+          has_nu = mn_has_unit(s)
           has_np = (s ~ /makeNumeric\(/)
           if (reason == "" && nm ~ /[Ss]etpoint|Temp|[Ll]imit|[Bb]and|[Pp]si/) {
             if (!(s ~ /UNITS/) && !has_nu) reason = "setpoint-like slot " nm " missing UNITS"
