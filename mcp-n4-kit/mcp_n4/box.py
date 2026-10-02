@@ -421,15 +421,23 @@ class BoxClient:
         for event in self.poll():  # queued before the request: cannot be its reply
             self._keep(event)
             evs = event.get("evs") if isinstance(event, dict) else None
-            for op in evs.get("ops") or [] if isinstance(evs, dict) else []:
+            for op in (evs.get("ops") or []) if isinstance(evs, dict) else []:
                 self._settle(op)
         trusted = self._loads_outstanding == 0
-        self.ssc("loadSlots", {"o": ord_str, "d": depth})
         self._loads_outstanding += 1
+        try:
+            self.ssc("loadSlots", {"o": ord_str, "d": depth})
+        except BaseException:  # rejected or never sent: no load op will answer it
+            self._loads_outstanding = max(0, self._loads_outstanding - 1)
+            raise
         delays = poll_delays(delay, MAX_POLL_DELAY, MAX_POLL_WAIT, attempts)
         while True:
             op, saw_other = self._split(self.poll(), handle)
             if op is not None:
+                # Replies come in request order: once this request is answered, an
+                # earlier one that timed out will not be answered any more, so the
+                # session is trusted again (issue #179 R4-001).
+                self._loads_outstanding = 0
                 return op
             if cached and trusted and saw_other:
                 return None

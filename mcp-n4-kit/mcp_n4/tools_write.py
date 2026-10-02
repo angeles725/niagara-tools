@@ -975,7 +975,6 @@ def _process(ctx, name, args):
         return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
                 "confirmation_token": token, "expires_at": expires_at}, None
     write.check_state_files()  # a loose file fails here, before the token and any send
-    write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     batch_id = uuid.uuid4().hex
     intent = {"batch_id": batch_id, "ts": _now(), "tool": name, "ops": planned.ops,
