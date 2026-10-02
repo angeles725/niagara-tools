@@ -189,5 +189,17 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |
 | 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |
+| 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | pending | 4 |
 | 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | pending | 3 |
 | 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | pending | 6 |
+| 2026-10-01-dashboard-rc-file-split.md | DashboardPan | 2026-10-01 | pending | 6 |
+| 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | pending | 9 |
+| 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | pending | 16 |
+| 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | pending | 5 |
+| 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | pending | 7 |
