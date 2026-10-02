@@ -33,6 +33,10 @@ reported by the 2026-10-02 remote inventory session that v0.26.0 did not encode 
 - [x] **T4 — rollback fidelity (MWU3)**: frozen-child config restore or explicit verdict downgrade; keep
   link-targeted slot values in `_snapshot`; type-contract lookup instead of the heuristic; the six #184
   advisory findings. Separate PR. Route: delegated (writer). Release: MINOR (new verdict `partial`).
+- [x] **T5 — v0.28.0 advisory review findings**: frozen-check read error surfaced as `readback_error`
+  (verdict `unverified`, never `missing`); omitted nested-default slot treated like the scalar rule;
+  finding-ID comments disambiguated; `_partial` helper renamed; `_link_input_values` simplified with a
+  shared `_prior_kind`. Branch `fix/mcp-n4-frozen-check-errors`. Route: delegated (writer). Release: PATCH.
 
 ## Acceptance
 - All mcp-n4-kit unit tests green; new tests fail before the fix.
@@ -90,6 +94,23 @@ reported by the 2026-10-02 remote inventory session that v0.26.0 did not encode 
   "confirmation_token does not match this tool, these arguments and this plan". GREEN: full suite
   453 tests OK; the T4 dry-run test now asserts the preview and that `prior` is absent from the plan.
 
+- T5 (route: delegated writer, branch `fix/mcp-n4-frozen-check-errors` from origin/main v0.28.0). Baseline
+  453 tests OK. RED first — 3 new tests failed before the fix:
+  `test_a_frozen_check_read_error_is_reported_distinctly_not_as_missing` (`'missing' unexpectedly found`),
+  `test_a_frozen_check_read_error_makes_the_rollback_unverified` (`'partial' != 'unverified'`),
+  `test_the_frozen_check_treats_an_omitted_nested_default_slot_as_equal` (gap `slots: ['readValue']`
+  instead of None). GREEN after the fix: 456 tests OK. Decisions:
+  - Read error -> verdict `unverified` (existing verdict for an outcome the read-back cannot establish), not
+    `partial` (which asserts a known loss) nor `mismatch` (which asserts an observed difference). Precedence
+    `mismatch` > `unverified` > `partial` > `verified`; documented in METHODOLOGY section 3 and README.
+    The `readback_error` text is scrubbed in `_process` like the top-level one.
+  - Omitted nested slot: the snapshot carries enough info (children's types follow from the parent type,
+    B1200 section 1200.3), so the scalar rule is applied recursively; an unknown default still differs.
+  - Comment IDs: box.py -> `PR #184 review R3-001`; `_hashed_inverse` and its tests/METHODOLOGY ->
+    `PR #187 blocking review R3-001`; new code -> `v0.28.0 advisory review R4-00x`.
+  - `_partial` -> `_in_doubt_with_created` (`_in_doubt_error` would read as a near-duplicate of `_in_doubt`).
+- Release: VERSION 0.28.1, `mcp_n4.__version__` 0.4.1, CHANGELOG `[v0.28.1]`.
+
 ## Next step
-- Open the T4 PR, run native review if due, merge after CI green, then close issue #179 (remaining live-only
-  follow-ups noted above).
+- Close issue #179 (all tasks landed); open follow-ups only for the live-station gaps (frozen-child restore
+  via set ops, live reg.loadContract lookup).

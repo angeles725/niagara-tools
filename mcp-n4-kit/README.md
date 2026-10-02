@@ -218,7 +218,9 @@ Destructive tools use the same pipeline:
   listed in `link_inputs_not_restored` with the value captured when the confirmed
   remove ran (the dry run previews it as `link_input_values`, outside the
   confirmation hash, because a link keeps changing it). Either
-  list makes the verdict `partial`, never `verified`.
+  list makes the verdict `partial`, never `verified`. A frozen child the read-back
+  could not load is listed with `readback_error` (no `missing`) and makes the verdict
+  `unverified`: a read error proves neither loss nor restore.
 - `n4_save_station` invokes `save` on the root. The BOX reply to `save` is `null`
   and proves nothing, so with `--station-home NAME=PATH` (directory holding
   `config.bog`, repeatable) the tool compares mtime and sha256 before and after,
