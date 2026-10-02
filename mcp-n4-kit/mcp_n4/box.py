@@ -20,6 +20,40 @@ SESSION_COMPONENT_ID = "cs1"
 DEFAULT_ROOT_HANDLE = "2"
 #: Upper bound on events kept in `pending_events`; the oldest are dropped first.
 MAX_PENDING_EVENTS = 500
+#: Load polling (retro 2026-10-02 D2): the first delay is short, then it doubles up to
+#: MAX_POLL_DELAY; the total sleep of one polling window never exceeds MAX_POLL_WAIT.
+FIRST_POLL_DELAY = 0.1
+MAX_POLL_DELAY = 0.8
+MAX_POLL_WAIT = 3.0
+#: Actionable auth hints (retro 2026-10-02 D5). A failed login is never retried.
+AUTH_HINTS = {
+    401: "check the user's Authentication Scheme Name = HTTPBasicScheme and the password; "
+         "do not retry (lockout: 5 failures in 30 s)",
+    403: "the user is authenticated but lacks permission on this resource; "
+         "do not retry (lockout: 5 failures in 30 s)",
+}
+
+
+def auth_message(code):
+    """The `AuthError` text for HTTP `code` (401/403): the status plus what to check."""
+    hint = AUTH_HINTS.get(code)
+    return "HTTP %d from station" % code + (": " + hint if hint else "")
+
+
+def poll_delays(first, cap, total, attempts):
+    """The sleeps between `attempts` polls: `first`, doubling, each <= `cap`, sum <= `total`.
+
+    Pure, so the schedule is testable without a clock: (0.1, 0.8, 3.0, 20) gives
+    0.1, 0.2, 0.4, 0.8, 0.8, 0.7. No sleep follows the last poll.
+    """
+    slept, delay = 0.0, first
+    for _ in range(max(0, attempts - 1)):
+        step = round(min(delay, cap, total - slept), 6)
+        if step <= 0:
+            return
+        yield step
+        slept += step
+        delay *= 2
 
 
 class BoxError(Exception):
@@ -213,11 +247,43 @@ class BoxClient:
         except urllib.error.HTTPError as exc:
             exc.close()
             if exc.code in (401, 403):
-                raise AuthError("HTTP %d from station" % exc.code, channel, key) from None
+                raise AuthError(auth_message(exc.code), channel, key) from None
             raise BoxError("HTTP %d from station" % exc.code, channel, key) from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, channel, key) from None
         return self._unwrap(reply, channel, key)
+
+    def get_ord(self, ord_text, timeout=None, max_bytes=32 * 1024 * 1024):
+        """`GET /ord/<url-encoded ORD>` (path form; `/ord?` answers 400): `(text, truncated)`.
+
+        Stateless HTTP Basic, no BOX session needed. The same opener refuses redirects,
+        a 401/403 raises `AuthError` once (never retried), and at most `max_bytes` are
+        read; `truncated` is True when the body was longer.
+        """
+        url = self.base_url + "/ord/" + urllib.parse.quote(ord_text, safe="")
+        req = urllib.request.Request(url, method="GET", headers={
+            "Authorization": self._auth, "Accept": "text/csv"})
+        try:
+            with self._opener.open(req, timeout=timeout or self.timeout) as resp:
+                raw = resp.read(max_bytes + 1)
+        except BoxError:
+            raise
+        except urllib.error.HTTPError as exc:
+            exc.close()
+            if exc.code in (401, 403):
+                raise AuthError(auth_message(exc.code), "ord", "get") from None
+            if exc.code == 400:
+                raise BoxError("HTTP 400 from station: the ORD or BQL query was rejected "
+                               "(check the type spec, column names and where clause)",
+                               "ord", "get") from None
+            raise BoxError("HTTP %d from station" % exc.code, "ord", "get") from None
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            raise BoxError("transport failure: %s" % exc, "ord", "get") from None
+        truncated = len(raw) > max_bytes
+        text = raw[:max_bytes].decode("utf-8", "replace")
+        if truncated:  # never hand back a torn last line
+            text = text[:text.rfind("\n") + 1]
+        return text, truncated
 
     def _unwrap(self, reply, channel, key):
         """Validate a reply frame and return its first message body, else BoxError."""
@@ -360,19 +426,25 @@ class BoxClient:
         trusted = self._loads_outstanding == 0
         self.ssc("loadSlots", {"o": ord_str, "d": depth})
         self._loads_outstanding += 1
-        for attempt in range(attempts):
+        delays = poll_delays(delay, MAX_POLL_DELAY, MAX_POLL_WAIT, attempts)
+        while True:
             op, saw_other = self._split(self.poll(), handle)
             if op is not None:
                 return op
             if cached and trusted and saw_other:
                 return None
-            if attempt < attempts - 1:
-                sleep(delay)
-        return None
+            pause = next(delays, None)
+            if pause is None:
+                return None
+            sleep(pause)
 
-    def load_tree(self, ord_str, depth=2, attempts=6, delay=0.5, sleep=time.sleep,
-                  handle=None):
+    def load_tree(self, ord_str, depth=2, attempts=12, delay=FIRST_POLL_DELAY,
+                  sleep=time.sleep, handle=None):
         """Load `ord_str` and return a flat {path: node} dict (root key is "").
+
+        Polling: at most `attempts` polls per window, sleeping `poll_delays(delay, ...)`
+        between them (short first delay, backoff, each capped at MAX_POLL_DELAY, total
+        sleep per window bounded by MAX_POLL_WAIT).
 
         Only the load op for the requested target is returned. Events already
         queued before the request are kept in `pending_events` (they cannot belong

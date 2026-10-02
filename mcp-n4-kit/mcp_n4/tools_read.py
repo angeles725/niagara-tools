@@ -2,10 +2,12 @@
 
 Importing this module has no side effects.
 """
+import json
 import os
+import time
 from collections import namedtuple
 
-from . import __version__, box, retro, safety
+from . import __version__, box, bql, retro, safety
 
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 
@@ -57,6 +59,10 @@ class Context:
         #: When this server started: the default window of the session retro draft.
         self.started_at = retro.now()
         self.write = None  # tools_write.WriteState, set by the server in writes-allowed mode
+        #: Monotonic clock for `elapsed_ms` (injectable in tests).
+        self.clock = time.monotonic
+        #: Operator-chosen file for progress lines of long reads (`--progress-file`), or None.
+        self.progress_path = None
         self._secret = None
 
     @property
@@ -182,11 +188,19 @@ def _tree_entries(nodes, path, levels):
     return entries
 
 
+def _timed_load(ctx, ord_str, depth):
+    """`(nodes, elapsed_ms)` of one `load_tree` (retro 2026-10-02 D2: latency is visible)."""
+    start = ctx.clock()
+    nodes = ctx.session.client.load_tree(ord_str, depth=depth)
+    return nodes, int(round((ctx.clock() - start) * 1000))
+
+
 def n4_navigate(ctx, args):
     ord_str, depth = _ord_arg(args), args.get("depth", 1)
     # one extra level so has_children is known for the deepest children returned
-    nodes = ctx.session.client.load_tree(ord_str, depth=depth + 1)
-    return {"ord": ord_str, "children": _tree_entries(nodes, "", depth)}
+    nodes, elapsed = _timed_load(ctx, ord_str, depth + 1)
+    return {"ord": ord_str, "children": _tree_entries(nodes, "", depth),
+            "elapsed_ms": elapsed}
 
 
 # ---- n4_read_slots -------------------------------------------------------
@@ -194,8 +208,15 @@ def n4_navigate(ctx, args):
 def _slot_entry(nodes, name):
     node = nodes[name]
     kind = node.get("t")
+    display = node.get("d")
     entry = {"name": name, "type": kind, "value": node.get("v"), "status": None}
+    if display is not None:
+        entry["value_display"] = display
     if not (kind or "").startswith("baja:Status"):
+        if entry["value"] is None and display is not None:
+            # a complex the reader does not decode (FlexAddress, BacnetAddress, ...):
+            # its display string beats a bare None (retro 2026-10-02 D4)
+            entry["value"] = display
         return entry
     try:
         entry.update(box.status_value(nodes, name))
@@ -211,9 +232,10 @@ def _slot_entry(nodes, name):
 def n4_read_slots(ctx, args):
     ord_str = _ord_arg(args)
     # depth 2: slots, plus the value/status children of Status complexes
-    nodes = ctx.session.client.load_tree(ord_str, depth=2)
+    nodes, elapsed = _timed_load(ctx, ord_str, 2)
     return {"ord": ord_str,
-            "slots": [_slot_entry(nodes, name) for name in box.children(nodes, "")]}
+            "slots": [_slot_entry(nodes, name) for name in box.children(nodes, "")],
+            "elapsed_ms": elapsed}
 
 
 # ---- links and dangling outputs -------------------------------------------
@@ -292,6 +314,87 @@ def n4_find_dangling_outputs(ctx, args):
                           "target outside the subtree, is reported as dangling."}
 
 
+# ---- bulk reads: n4_bql_query / n4_inventory (retro 2026-10-02 D1, D7, D8) ----
+
+def _record_read(ctx, tool, args, rows):
+    """A read leaves a session observation, plus an `audit.jsonl` line (outcome `read`)
+    when the write machinery (and so the audit log) is active. Never raises."""
+    ctx.observations.append({"ts": retro.now(), "tool": tool, "rows": rows,
+                             "ord": ctx.scrub(str(args.get("base", "")))})
+    if ctx.write is None:
+        return
+    try:
+        ctx.write.audit.append({"ts": retro.now(), "tool": tool, "batch_id": None,
+                                "dry_run": False, "outcome": "read",
+                                "reason": "rows=%d" % rows,
+                                "args_redacted": safety.redact_args(args)})
+    except OSError:
+        pass
+
+
+def _progress(ctx, tool, step, rows, elapsed_ms, log):
+    """Append one progress entry to `log` and, best effort, to the operator's file (D7)."""
+    entry = {"ts": retro.now(), "tool": tool, "step": step, "rows": rows,
+             "elapsed_ms": elapsed_ms}
+    log.append(entry)
+    if ctx.progress_path:
+        try:
+            with open(ctx.progress_path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry) + "\n")
+        except OSError:
+            pass
+
+
+def _bql(ctx, base, query, max_rows, timeout):
+    """`(columns, rows, truncated, elapsed_ms)` of one projected BQL GET."""
+    try:
+        ord_text = bql.compose_ord(base, query)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from None
+    start = ctx.clock()
+    text, cut = ctx.session.client.get_ord(ord_text, timeout=timeout,
+                                           max_bytes=bql.MAX_RESPONSE_BYTES)
+    columns, rows, capped = bql.parse_csv(text, max_rows)
+    return columns, rows, cut or capped, int(round((ctx.clock() - start) * 1000))
+
+
+def n4_bql_query(ctx, args):
+    base = args.get("base", "station:|slot:/")
+    columns, rows, truncated, elapsed = _bql(
+        ctx, base, args["query"], args.get("max_rows", bql.DEFAULT_MAX_ROWS),
+        args.get("timeout_s", 60))
+    _record_read(ctx, "n4_bql_query", args, len(rows))
+    return {"base": base, "query": args["query"].strip(), "columns": columns, "rows": rows,
+            "row_count": len(rows), "truncated": truncated, "elapsed_ms": elapsed}
+
+
+INVENTORY_QUERIES = (
+    ("networks", "select slotPath, name, type from driver:DeviceNetwork"),
+    ("devices", "select slotPath, name, type from driver:Device"),
+    ("points", "select slotPath, name, type, out from control:ControlPoint"),
+)
+
+
+def n4_inventory(ctx, args):
+    base = args.get("base", "station:|slot:/Drivers")
+    max_rows, timeout = args.get("max_rows", bql.DEFAULT_MAX_ROWS), args.get("timeout_s", 60)
+    results, progress, truncated, total = {}, [], False, 0
+    for step, query in INVENTORY_QUERIES:
+        _, rows, cut, elapsed = _bql(ctx, base, query, max_rows, timeout)
+        results[step], truncated, total = rows, truncated or cut, total + elapsed
+        _progress(ctx, "n4_inventory", step, len(rows), elapsed, progress)
+    try:
+        out = bql.summarize_inventory(base, results["networks"], results["devices"],
+                                      results["points"])
+    except ValueError as exc:
+        raise ToolError(str(exc)) from None
+    _record_read(ctx, "n4_inventory", args, sum(len(r) for r in results.values()))
+    out.update(base=base, truncated=truncated, progress=progress, elapsed_ms=total)
+    if args.get("include_points"):
+        out["point_rows"] = results["points"]
+    return out
+
+
 def n4_session_retro_draft(ctx, args):
     """Draft the session retro for the server's state dir (reads only, never writes).
 
@@ -320,13 +423,18 @@ TOOLS = [
          _schema({}), n4_describe_session, needs_session=False),
     Tool("n4_navigate",
          "List the children of a component (name, type, handle, has_children). "
-         "depth > 1 nests grandchildren under a 'children' key.",
+         "depth > 1 nests grandchildren under a 'children' key. elapsed_ms is the load "
+         "time. For a station inventory use n4_bql_query or n4_inventory instead: one "
+         "navigate is one round trip per component.",
          _schema({"ord": _str("Station ORD, default station:|slot:/", default=ROOT_ORD),
                   "depth": _int("Levels to list (1-3)", 1, 3, 1)}),
          n4_navigate),
     Tool("n4_read_slots",
          "Read all slots of one component as {name, type, value, status}. Status complexes "
-         "add status_ok/status_null; omitted values take the type default.",
+         "add status_ok/status_null; omitted values take the type default. value_display "
+         "carries the station's display string; a complex the reader cannot decode "
+         "(e.g. a Modbus FlexAddress) returns that display string as value. elapsed_ms "
+         "is the load time.",
          _schema({"ord": _str("Component ORD, e.g. station:|slot:/Folder/Pump")}, ["ord"]),
          n4_read_slots),
     Tool("n4_list_links",
@@ -343,6 +451,35 @@ TOOLS = [
                   "depth": _int("Component levels below ord to scan (1-4)", 1, 4, 2)},
                  ["ord"]),
          n4_find_dangling_outputs),
+    Tool("n4_bql_query",
+         "Bulk read: one projected BQL select over a subtree, returned as rows (one HTTP GET, "
+         "usually under a second, where a navigate crawl costs one round trip per "
+         "component). Use it FIRST for any inventory. Only 'select <cols> from <type> "
+         "[where ...]' is accepted; '|' is refused. Columns are the station's display "
+         "headers (e.g. 'Slot Path', 'Name'); 'Name' is decoded ($20 -> space), 'Slot Path' "
+         "stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. "
+         "proxyExt.dataAddress. Rows are capped (truncated=true when cut).",
+         _schema({"base": _str("Subtree ORD or slot path, e.g. station:|slot:/Drivers "
+                               "(default: the station root)"),
+                  "query": _str("select <columns> from <type> [where ...], e.g. select "
+                                "slotPath, name, out from control:ControlPoint"),
+                  "max_rows": _int("Row cap", 1, bql.MAX_ROWS_LIMIT, bql.DEFAULT_MAX_ROWS),
+                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60)},
+                 ["query"]),
+         n4_bql_query),
+    Tool("n4_inventory",
+         "Station inventory through three BQL queries: networks, devices and points below "
+         "base (default /Drivers), counted per network and per device. A network's built-in "
+         "local device slot (localDevice, e.g. SnmpNetwork's own agent) is flagged "
+         "local=true and counted apart from field devices. progress lists each step's row "
+         "count; the operator's --progress-file gets the same lines.",
+         _schema({"base": _str("Subtree ORD, default station:|slot:/Drivers"),
+                  "include_points": {"type": "boolean", "default": False,
+                                     "description": "Also return the point rows"},
+                  "max_rows": _int("Row cap per query", 1, bql.MAX_ROWS_LIMIT,
+                                   bql.DEFAULT_MAX_ROWS),
+                  "timeout_s": _int("HTTP timeout per query in seconds", 1, 600, 60)}),
+         n4_inventory),
     Tool("n4_session_retro_draft",
          "Draft the session retro: reads this server's audit and journal and returns markdown "
          "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "

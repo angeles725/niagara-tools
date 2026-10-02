@@ -138,6 +138,23 @@ class TestRedirects(BoxTestCase):
 
 
 class TestTransportErrors(BoxTestCase):
+    def test_http_401_names_the_auth_scheme_the_password_and_no_retry(self):
+        c = self.client(password="wrong")
+        with self.assertRaises(box.AuthError) as cm:
+            c.open()
+        text = str(cm.exception)
+        for needle in ("HTTP 401", "HTTPBasicScheme", "password", "do not retry"):
+            self.assertIn(needle, text)
+        self.assertNotIn("wrong", text)  # never echoes the password
+        self.assertEqual(self.fake.requests, 1)
+
+    def test_http_403_says_permission_and_no_retry(self):
+        self.fake.hook = hook_for("make", 403)
+        with self.assertRaises(box.AuthError) as cm:
+            self.client().open()
+        self.assertIn("HTTP 403", str(cm.exception))
+        self.assertIn("do not retry", str(cm.exception))
+
     def test_http_403_is_auth_error(self):
         self.fake.hook = hook_for("make", 403)
         with self.assertRaises(box.AuthError):
@@ -347,7 +364,34 @@ class TestReadWrite(BoxTestCase):
                 mock.patch.object(c, "poll", side_effect=[[], [], [], [], [good]]):
             nodes = c.load_tree("station:", attempts=6, delay=0.25, sleep=sleeps.append)
         self.assertEqual(nodes[""]["h"], "2")
-        self.assertEqual(sleeps, [0.25, 0.25, 0.25])
+        self.assertEqual(sleeps, [0.25, 0.5, 0.8])  # backoff from `delay`, capped at 0.8 s
+
+    def test_load_tree_polls_with_a_short_first_delay_and_backoff(self):
+        c = self.opened()
+        good = {"evs": {"ops": [{"nm": "l", "h": "2",
+                                 "b": {"nm": "p", "t": "baja:Station", "h": "2"}}]}}
+        sleeps = []
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", side_effect=[[], [], [], [], [], [good]]):
+            c.load_tree("station:", sleep=sleeps.append)
+        self.assertEqual(sleeps, [0.1, 0.2, 0.4, 0.8])
+
+    def test_load_tree_total_wait_is_bounded_and_each_delay_capped(self):
+        c = self.opened()
+        sleeps = []
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", return_value=[]):
+            with self.assertRaises(box.BoxError):
+                c.load_tree("station:", attempts=50, sleep=sleeps.append, handle="2")
+        self.assertLessEqual(max(sleeps), box.MAX_POLL_DELAY)
+        self.assertAlmostEqual(sum(sleeps), box.MAX_POLL_WAIT)
+        self.assertEqual(sleeps[:4], [0.1, 0.2, 0.4, 0.8])
+
+    def test_poll_delays_are_a_pure_bounded_schedule(self):
+        self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 20)),
+                         [0.1, 0.2, 0.4, 0.8, 0.8, 0.7])
+        self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 3)), [0.1, 0.2])
+        self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 1)), [])
 
     def test_load_tree_root_key_is_empty_path(self):
         c = self.opened()

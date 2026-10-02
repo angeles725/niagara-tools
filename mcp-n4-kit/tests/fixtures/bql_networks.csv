@@ -1,0 +1,5 @@
+﻿Slot Path,Name,Type
+slot:/Drivers/ModbusTcpNetwork,ModbusTcpNetwork,modbusTcp:ModbusTcpNetwork
+slot:/Drivers/BacnetNetwork,BacnetNetwork,bacnet:BacnetNetwork
+slot:/Drivers/SnmpNetwork,SnmpNetwork,snmp:SnmpNetwork
+slot:/Drivers/NiagaraNetwork,NiagaraNetwork,niagaraDriver:NiagaraNetwork
