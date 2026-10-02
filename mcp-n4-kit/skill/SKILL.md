@@ -4,7 +4,7 @@ description: "Trigger: read or write a live Niagara N4 station through the mcp_n
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.2"
+  version: "0.3"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, server code) — read it, don't restate it from memory.
@@ -23,11 +23,11 @@ Then read `$KIT/METHODOLOGY.md` FIRST and follow its session checklist.
 
 ## Register the server
 
-Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. The operator, not the model, chooses stations, credential env prefix and TLS policy (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. If no station is configured, stop and tell the operator which flag is missing.
+Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. The operator, not the model, chooses stations, credential env prefix and TLS policy (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
 
 ## Session checklist (full detail in METHODOLOGY section 4)
 
-1. `n4_describe_session`, `n4_connect` to a configured station; confirm the real station name and the version tier.
+1. `n4_describe_session`, `n4_connect` to a configured station; confirm the real station name, `version` and `tier`. With `tier_writes: refused`, plan with dry runs only (they carry `tier_gate`) and give the operator the refusal's routes.
 2. Inventory or wide reads: `n4_inventory` / `n4_bql_query` FIRST (METHODOLOGY section 7); `n4_navigate` (optional `types` filter) / `n4_read_slots` only for targeted components. A read or client expected to exceed ~1 min writes progress to a file and reports counts; never rely on stdout piped through `tail`.
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
@@ -41,6 +41,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 - No credentials in tool arguments or chat; they come from the operator's environment.
 - Never retry a failed login: 5 failures in 30 s lock the account. On a 401, have the operator check the user's Authentication Scheme Name = `HTTPBasicScheme`, then the password.
 - Report `partial`, `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success. A `partial` rollback lists `frozen_config_not_restored` / `link_inputs_not_restored`: show them to the operator. A frozen child whose read-back failed carries `readback_error` and makes the verdict `unverified`, not `partial`: report it as "could not check", never as "missing".
+- Never ask for or suggest a tier opt-in to get past a refused write without the PoC or probe that tier requires; the opt-in is the operator's record that it ran.
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
 - Never contact a station the operator did not configure and authorize.
 - If the harness permission classifier blocks a live write, surface it to the operator and stop; never route around it (no other tool, subagent or peer session).

@@ -267,7 +267,9 @@ class TestConnect(ToolTestCase):
     def test_connect_returns_station_identity_and_mode(self):
         out = self.connect()
         self.assertEqual(out, {"station_name": "FakeStation", "base_url": self.fake.url,
-                               "root_handle": "2", "mode": "read-only"})
+                               "root_handle": "2", "mode": "read-only",
+                               "version": "4.14.0.162", "version_source": "/obix/about/",
+                               "tier": "A", "tier_writes": "allowed"})
 
     def test_connect_reports_writes_allowed_mode(self):
         self.srv = server.Server(allow_writes=True, allow_http=True, env=self.env,
@@ -401,7 +403,8 @@ class TestDescribeSession(ToolTestCase):
         out = self.ok("n4_describe_session")
         self.assertEqual(out, {"connected": False, "station_name": None, "base_url": None,
                                "mode": "read-only", "server_version": server.SERVER_VERSION,
-                               "configured_stations": ["FakeStation"]})
+                               "configured_stations": ["FakeStation"], "version": None,
+                               "version_source": None, "tier": None, "tier_writes": None})
 
     def test_describe_after_connect(self):
         self.connect()
@@ -409,7 +412,9 @@ class TestDescribeSession(ToolTestCase):
         self.assertEqual(out, {"connected": True, "station_name": "FakeStation",
                                "base_url": self.fake.url, "mode": "read-only",
                                "server_version": server.SERVER_VERSION,
-                               "configured_stations": ["FakeStation"]})
+                               "configured_stations": ["FakeStation"],
+                               "version": "4.14.0.162", "version_source": "/obix/about/",
+                               "tier": "A", "tier_writes": "allowed"})
 
     def test_describe_lists_only_names_never_urls_or_credentials(self):
         self.srv = server.Server(allow_http=True, env=self.env,

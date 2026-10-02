@@ -79,6 +79,11 @@ Flags:
 - `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`).
 - `--token-ttl SECONDS`: confirmation token lifetime (default 300).
 - `--max-writes N`: executed writes allowed per session (default 200).
+- `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
+  its version is tier B (4.15, 4.3). Only after a PoC matched that build.
+- `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
+  version). Only after `reg.loadContract`, `loadRoot` and a harmless scratch write
+  succeeded on that build (METHODOLOGY section 5).
 - `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`) to PATH.
 - `--allow-http-for-tests`: permits `http://` base URLs; for the fake station only.
 
@@ -150,16 +155,21 @@ Every write call goes through these layers:
 
 1. **Identity.** Refused unless the session's real `stationName` matched
    `expected_station` (default: the configured station NAME).
-2. **Budget.** At most `--max-writes` executed writes per session.
-3. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
+2. **Version tier.** `n4_connect` detects the version (oBIX `productVersion`) and its
+   tier (METHODOLOGY section 5). On tier B or C an execution is refused unless the
+   operator opted the station in with `--allow-tier-b` / `--allow-tier-c`; a dry run
+   still works and carries `tier_gate` saying the execution would be refused. An
+   undetected version is tier C. Tier A (4.13, 4.14) is unaffected.
+3. **Budget.** At most `--max-writes` executed writes per session.
+4. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
-4. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
+5. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
    inverse, a `plan_hash` and a `confirmation_token`; nothing is sent to the station.
-5. **Token.** To execute, repeat the same call with `dry_run=false` and the token.
+6. **Token.** To execute, repeat the same call with `dry_run=false` and the token.
    It is single use, expires after `--token-ttl`, and is an HMAC under a per-process
    random key bound to the tool, the arguments, the plan and the expiry. If the
    station changed since the dry run the plan hash differs and the token is refused.
-6. **Write-ahead journal.** Before any op is sent, an `intent` record
+7. **Write-ahead journal.** Before any op is sent, an `intent` record
    `{batch_id, ts, tool, ops, inverse_plan, station_name, phase}` is appended to
    `<state-dir>/journal.jsonl`; if that fails nothing is sent (the token stays
    spent). After the reply a `result` record `{batch_id, phase, accepted, inverse,
@@ -167,10 +177,10 @@ Every write call goes through these layers:
    name). An intent without a result, or a result flagged `in_doubt` (the station
    reply was ambiguous or malformed), is an `in-doubt` batch: the station may or
    may not have applied it, so inspect it before retrying.
-7. **Audit.** Every write call, dry, executed or refused, appends a line to
+8. **Audit.** Every write call, dry, executed or refused, appends a line to
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.
-8. **Read-back.** After executing, the node is reloaded and the reply carries
+9. **Read-back.** After executing, the node is reloaded and the reply carries
    `{requested, accepted, observed, verdict}`: `verified`, `partial` (a rollback that
    did not bring back every piece of configuration, listed in the reply), `mismatch`
    (reported, not raised), `failed` (including any read-back error, reported as `readback_error`

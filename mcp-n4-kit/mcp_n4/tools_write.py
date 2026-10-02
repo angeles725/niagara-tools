@@ -1,6 +1,7 @@
 """Guarded write tools for the MCP server (registered only with `--allow-writes`).
 
-Every call runs the same pipeline: identity check, session write budget, write
+Every call runs the same pipeline: identity check, version-tier gate (a dry run
+passes and is annotated; an execution is refused), session write budget, write
 scope, plan (reads only), then either a dry run that issues a single-use token or
 an execution that spends it, journals the inverse ops, reads the result back and
 audits the call. Importing this module has no side effects.
@@ -1158,6 +1159,9 @@ def _process(ctx, name, args):
     if not sess.identity_verified:
         raise ToolError(safety.REASON_IDENTITY + ": reconnect with n4_connect and pass "
                         "expected_station=<the station's stationName> before any write")
+    tier_block = ctx.tier_block(sess)  # METHODOLOGY section 5: a dry run is still allowed
+    if tier_block and not dry:
+        raise ToolError(tier_block)
     if sess.writes_executed >= write.max_writes:
         raise ToolError("%s: %d writes already executed in this session (--max-writes)"
                         % (safety.REASON_BUDGET, write.max_writes))
@@ -1186,6 +1190,9 @@ def _process(ctx, name, args):
         preview = _link_input_values(planned.inverse)
         if preview:  # volatile: shown to the operator, outside what the token authorizes
             out["link_input_values"] = preview
+        if tier_block:  # outside the plan hash: the gate is policy, not part of the plan
+            out["tier_gate"] = {"tier": sess.tier, "version": sess.version,
+                                "would_block": True, "reason": tier_block}
         return out, None
     write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))

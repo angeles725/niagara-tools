@@ -42,6 +42,9 @@ class FakeStation:
         # afterwards (e.g. to simulate a read-back mismatch).
         self.on_sync = None
         self.invoked = []  # (action, handle) of every accepted invokeAction except save
+        #: What `GET /obix/about/` reports as productVersion; None answers 404 (no oBIX).
+        self.product_version = "4.14.0.162"
+        self.about_requests = 0  # GETs are not counted in `requests` (BOX POSTs only)
         self._next_handle = 0x10
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
@@ -57,6 +60,27 @@ class FakeStation:
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *args):
                 pass
+
+            def do_GET(self):
+                station.about_requests += 1
+                if not station._authorized(self.headers.get("Authorization", "")):
+                    code, out = 401, b""
+                elif self.path.rstrip("/") != "/obix/about" or station.product_version is None:
+                    code, out = 404, b""
+                else:  # shape of a live 4.14 answer (B457): one <str> per property
+                    code, out = 200, (
+                        '<?xml version="1.0" encoding="UTF-8"?>\n'
+                        '<obj is="obix:About" href="/obix/about/">\n'
+                        '  <str name="obixVersion" val="1.1"/>\n'
+                        '  <str name="serverName" val="fake-host"/>\n'
+                        '  <str name="vendorName" val="Tridium"/>\n'
+                        '  <str val="%s" name="productVersion"/>\n'
+                        '</obj>\n' % station.product_version).encode()
+                self.send_response(code)
+                self.send_header("Content-Type", "text/xml")
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                self.wfile.write(out)
 
             def do_POST(self):
                 station.requests += 1
