@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj href="https://station.example/obix/config/Plant/Facade/" is="obix:obj">
+  <obj name="Link" href="Link/" is="baja:Link" display="Indirect: slot:/Plant/Rack.comp1Running &#x2192; slot:/Plant/Facade.comp1State"/>
+  <obj name="Link1" href="Link1/" is="baja:Link" display="Indirect: slot:/Plant/Rack.comp2Running -> slot:/Plant/Facade.comp2State"/>
+  <obj name="Link2" href="Link2/" is="baja:Link" display="Indirect: slot:/Plant/Rack.comp3Running &#x2192; slot:/Plant/Facade.comp3State"/>
+  <obj name="Link3" href="Link3/" is="baja:Link" display="Direct: slot:/Plant/Rack.dripActive &#x2192; slot:/Plant/Facade.inDrip"/>
+</obj>

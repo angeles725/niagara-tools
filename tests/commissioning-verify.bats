@@ -64,3 +64,51 @@ setup() {
   [[ "$output" == *"CS1"* ]]
   [[ "$output" == *"ISSUES"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Values owed by the field (BUILD-LOOP §6.b table) — one MANUAL row per slot whose value the field
+# still owes, so a safety-adjacent "disabled, no value yet" default cannot silently age out once the
+# feature doc is archived. [ev: retro panccadia-commissioning-lessons Δ11]
+# [ev: retro panccadia-version-defect-ledger Δ4]
+# ---------------------------------------------------------------------------
+
+@test "CV-owed1: --values-owed table -> one MANUAL values-owed row per owed slot; filled slots are not listed; exit unchanged" {
+  run "$CV" "$MINIMAL" --values-owed "$CV_FX/values-owed/values-owed.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MANUAL  commissioning  values-owed  overCurrentLimit: owed by field technician (nameplate RLA), unit A, still at safe default 0 (disabled)"* ]]
+  [[ "$output" == *"MANUAL  commissioning  values-owed  lowPressureCutout: owed by refrigeration technician, unit psig, still at safe default 0 (disabled)"* ]]
+  [[ "$output" != *"values-owed  stageDelay"* ]]
+}
+
+@test "CV-owed2: <module-root>/docs/values-owed.md is read by default" {
+  root="$BATS_TEST_TMPDIR/mod"
+  cp -r "$MINIMAL" "$root"
+  mkdir -p "$root/docs"
+  cp "$CV_FX/values-owed/values-owed.md" "$root/docs/values-owed.md"
+  run "$CV" "$root"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  overCurrentLimit:"* ]]
+}
+
+@test "CV-owed3: every value provided -> one PASS values-owed row, no MANUAL values-owed row" {
+  run "$CV" "$MINIMAL" --values-owed "$CV_FX/values-owed/values-owed-none.md"
+  [[ "$output" == *"PASS  commissioning  values-owed  "* ]]
+  [[ "$output" != *"MANUAL  commissioning  values-owed"* ]]
+}
+
+@test "CV-owed4: no values-owed table -> MANUAL row asking to declare one (or state none)" {
+  run "$CV" "$MINIMAL"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  no docs/values-owed.md"* ]]
+}
+
+@test "CV-owed5: --values-owed naming a missing file -> exit 3" {
+  run "$CV" "$MINIMAL" --values-owed "$BATS_TEST_TMPDIR/absent.md"
+  [ "$status" -eq 3 ]
+}
+
+@test "CV-manual2: the MANUAL footer carries the persisted-state, alarm-routing, consumer-impact and link-source rows" {
+  run "$CV" "$MINIMAL"
+  [[ "$output" == *"MANUAL  commissioning  persisted-state-restart"* ]]
+  [[ "$output" == *"MANUAL  commissioning  alarm-routing"* ]]
+  [[ "$output" == *"MANUAL  commissioning  consumer-impact"* ]]
+  [[ "$output" == *"MANUAL  commissioning  link-source-audit"*"obix-link-audit.sh"* ]]
+}
