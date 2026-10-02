@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-27 · CompPan · comppan-pressure-staging
 
 **Session**: PANCCADIA CompPan 2.7.0 suction-pressure staging + DashboardPan 2.8.2, ODD + RDD (local commits on `feat/comppan-pressure-staging`, not deployed)

@@ -87,7 +87,11 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       site-fault-triage Δ1,Δ2; ask-dont-assume Δ5; version-defect-ledger Δ4 (merged with commissioning Δ11). Route: delegated
       direct writer (2 scripts + 1 new script + 3 bats + fixtures + 4 docs — writer trigger). `obix-link-audit.sh` kept in WU9
       (142 lines, minimal). PARTIAL promotion of all 6 retros: no INDEX flip.
-- [ ] WU10 · process: tiers, behavior questions, orchestration.
+- [x] WU10 · process: tiers, behavior questions, orchestration — commissioning Δ7, Δ12, Δ14; change-tier Δ1-Δ4, Δ6,
+      Δ5 ORCHESTRATION half; behavior-decisions Δ1-Δ4, Δ6; auto-lock Δ1 SKILL half, Δ6; pressure-staging Δ1 (retro FULLY
+      folded, flipped); amps-alarms Δ8; kit-meta Δ1 + WU0 K19/fragment-merge leftover (Δ3); site-fault Δ3; rc-file-split Δ5
+      METHODOLOGY pointer; persistent-config Δ3 METHODOLOGY row; METHODOLOGY rc-scan list pointer. Route: delegated direct
+      writer (4 doc files + BUILD-STATE + INDEX — writer trigger).
 - [ ] WU11 · close gate and ledgers; final INDEX flips; release.
 
 ## Progress / evidence
@@ -353,5 +357,31 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     (link-target-flags relay, slot-coverage facade FAIL mapping, silent-protection ADVISORY rows) — outside the WU7 surface,
     recorded in the kit BUILD-STATE open_issue.
 
+- 2026-10-02 WU10 (branch `feat/fold-wu10-process`, from `origin/main` 3bdbb02): `BUILD-LOOP.md` new §0.c blast-radius tier
+  table P0-P3 (ONE rule = commissioning Δ14 + change-tier Δ1; both citations) + RDD candidate sizing (pressure-staging Δ1); §1
+  Behavior decisions gate (behavior Δ1); §2 recipe pointer (change-tier Δ2); §4.a tier-scoped loop + §5 non-skippable floor (ONE
+  rule = change-tier Δ3 + commissioning Δ12); §7 assumption register (behavior Δ4). `ORCHESTRATION.md` §3.a-§3.d (tier topology,
+  design-shard checklist commissioning Δ7, writer prompt clauses change-tier Δ5 / behavior Δ3 / amps-alarms Δ8, shared working-tree
+  git discipline kit-meta Δ1), §4 estimate pricing (change-tier Δ6), §7 candidate shaping (Δ4), §8 per-phase timing (auto-lock Δ6),
+  new §9 Incident journal (site-fault Δ3). `skill/SKILL.md` behavior gate + classify rule, step 1c hard gate, step 1d question
+  format (behavior Δ6), auto-lock Δ1 design-checklist item, § Recipe (change-tier Δ2). `METHODOLOGY.md` behavior question catalog
+  (behavior Δ2), floor checkbox, K19 + fragment-merge rewritten to the generated-index doctrine (kit-meta Δ3), rc-scan list
+  pointer, persistent-config Δ3 lintable row, rc-file-split Δ5 pointer. Retro flipped: comppan-pressure-staging. Evidence
+  (passive docs, no RED applicable): see the WU10 commit / PR body. Owed: change-tier Δ5 BUILD-LOOP half (WU7), behavior Δ5
+  (WU9), auto-lock Δ5/Δ7 (WU8), amps-alarms Δ2 (WU7), kit-meta Δ2 (WU11)/Δ4/Δ5 (WU8), site-fault Δ1/Δ2 (WU9); persistent-config
+  is now fully folded but its marker is outside the WU10 surface → WU11 flip.
+  - Merge of origin/main (WU7/WU8/WU9 merged first): conflicts in `BUILD-STATE.md`, `METHODOLOGY.md` and this doc resolved by
+    hand at entry granularity (ledger: main's entries kept, WU10's "LANDED WU10" edits re-applied per entry by a 3-way word
+    merge, WU10 entry added once; METHODOLOGY: both sides' bullets kept). The owed items above that WU7/WU8/WU9 carried are
+    now LANDED on main; only kit-meta Δ2 (WU11) stays owed. WU7/WU8/WU9 entries' "(WU10)" owed notes flipped to LANDED.
+  - Checks after the merge: `bats tests/*.bats` 856 ok / 0 not ok (66 env skips); mcp-n4-kit unittest 456 OK; shellcheck
+    0.11.0 only the existing SC2329 info message; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` 181/181 cited;
+    `lint-guard-pins.sh --strict` exit 0; `gen-lint-index.sh --check` fresh.
+  - Review: native RDD on the merge commit — consent envelope returned, granted; one lens (reliability), APPROVED and
+    acknowledged (authority burned). 4 informational, non-blocking findings for WU11: R3-tier-p0-no-feature-doc (§0.c says the
+    tier goes in the feature doc, but P0 has none), R3-floor-vs-p0-ceremony (§5 floor RED/GREEN vs the P0 structural-only
+    ceremony), R3-k19-guard-claim (K19 names only kit-links L5/L11; L4 coverage not shown), R3-ledger-wu2-stale-paren.
+  - PR #202 (https://github.com/angeles725/niagara-tools/pull/202); merge commit recorded in the WU11 entry.
+
 ## Next step
-- WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
+- WU11 (close gate and ledgers; final INDEX flips; release) after WU10 merges.
