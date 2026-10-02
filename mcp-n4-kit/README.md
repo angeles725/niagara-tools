@@ -11,6 +11,8 @@ an in-memory fake station. T2: the stdio MCP server with read-only station tools
 T3: guarded write tools (`--allow-writes`). T4: destructive tools, rollback and save. T5: METHODOLOGY and the skill launcher.
 v0.2.0 (retro 2026-10-02): bulk reads with `n4_bql_query` / `n4_inventory`, adaptive load
 polling with `elapsed_ms`, display strings for complex slots, an actionable 401.
+v0.3.0 (issue #179): `n4_navigate` `types` filter, load-counter recovery after a timed-out load,
+retro files keep their mode.
 
 ## Methodology and skill
 
@@ -120,6 +122,8 @@ network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_q
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
 The query must be one `select`, `|` is refused, and rows are capped (default 5000).
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
+`n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
+children of those types plus the path to them, each kept entry marked `matched`.
 `n4_read_slots` adds `value_display` (the station's display string) and returns that string as
 `value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
