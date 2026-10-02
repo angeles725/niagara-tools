@@ -44,7 +44,7 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       Route: delegated direct writer (new script + bats + 4 doc/test files — writer trigger). PARTIAL
       promotion: kit-meta Δ1/Δ2/Δ4/Δ5 owed to later WUs, so its INDEX row stays `pending`; recorded in
       the kit BUILD-STATE self-envelope (open_issue + last_session).
-- [ ] WU0b · gen-lint-index advisory follow-ups from the WU0 review: Auto column must match an actual invocation (not a substring/comment); keep ALL Usage/Exit header lines (lint-timers exit 2/3, lint-write-path --strict); document/remove the NR<=5 join cap; treat an awk failure as an error; trim SKILL.md step-5 duplicate enumeration; amend METHODOLOGY K19 + fragment-merge rule to the index.
+- [ ] WU0b (→ issue #199, outside this campaign) · gen-lint-index advisory follow-ups from the WU0 review: Auto column must match an actual invocation (not a substring/comment); keep ALL Usage/Exit header lines (lint-timers exit 2/3, lint-write-path --strict); document/remove the NR<=5 join cap; treat an awk failure as an error; trim SKILL.md step-5 duplicate enumeration; amend METHODOLOGY K19 + fragment-merge rule to the index.
 - [x] WU1 · `types/frontend-standard.md` + dashboard/BUILD-STATE `ui_profile` — frontend-standard Δ1,Δ11-Δ15;
       deployment-profiles Δ1-Δ3; rc-file-split Δ1,Δ3,Δ4. Route: delegated direct writer (new type doc + 5 doc
       files — writer trigger). PARTIAL promotion of all three retros: INDEX rows stay `pending`; owed Δ recorded
@@ -92,7 +92,9 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       folded, flipped); amps-alarms Δ8; kit-meta Δ1 + WU0 K19/fragment-merge leftover (Δ3); site-fault Δ3; rc-file-split Δ5
       METHODOLOGY pointer; persistent-config Δ3 METHODOLOGY row; METHODOLOGY rc-scan list pointer. Route: delegated direct
       writer (4 doc files + BUILD-STATE + INDEX — writer trigger).
-- [ ] WU11 · close gate and ledgers; final INDEX flips; release.
+- [x] WU11 · close gate and ledgers; final INDEX flips; release. WU11a = remaining deltas (PR #204, merge 9321df3);
+      WU11b = ledger reconcile, 13 INDEX flips, disposition markers, close retro, v0.29.0 (PR #206). Route: inline
+      (parent writer of WU11; lint + bats + docs, then ledger/INDEX/release files).
 
 ## Progress / evidence
 - 2026-10-02: PR #183 merged (ed4a27b) — 25 pending retros on main; #156 closed superseded, #157 auto-merged.
@@ -406,5 +408,48 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     the pre-existing SC2329 info (`lint-config-sanity.sh`); `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh
     --strict` 181/181; `lint-guard-pins.sh --strict .` exit 0 (ML2/ML4/ML8 MATCH); `gen-lint-index.sh --check` fresh.
 
-## Next step
-- WU11 (close gate and ledgers; final INDEX flips; release) after WU10 merges.
+- WU11a review: native RDD, consent granted, 4 lenses (risk, resilience, readability, reliability) APPROVED and
+  acknowledged (lineage review-95af45cf0754b8ad, authority burned). 7 informational findings → issue #199:
+  R2-escalation-rule-divergent-copy (template vs BUILD-LOOP §7 wording), R2-ledger-class-map-drift (BUILD-LOOP §0 class
+  map vs template table), R2-row-format-doc-mismatch (lint-manual-labels header row format), R2-unexplained-exit-sentinel
+  (python exit 10), R3-ml-haystack-overbroad (*.json/*.xml in the haystack), R3-ml-strict-clean-unpinned (no `--strict`
+  clean pin), R3-ml-unreadable-file-aborts (an unreadable UI file aborts with exit 3). PR #204 CI green, merged 9321df3.
+
+- 2026-10-02 WU11b (branch `feat/fold-wu11b-release`, from 9321df3, merged with origin/main ac41750 = mcp-n4 #203/#205):
+  scripted check over all 23 campaign retros — every Δ1..Δn cited as `[ev: retro <stem> Δn]` in the kit core, 0
+  missing — so the 13 still-`pending` retros flip `folded` (INDEX rows + line-1 markers): comppan-fase2-amps-alarms,
+  panccadia-restart-seq-comp-lockout-hours, panccadia-commissioning-lessons, change-tier-time-budgets,
+  comppan-auto-lock-indicator, behavior-decisions-ask-dont-assume, panccadia-version-defect-ledger,
+  panccadia-persistent-config-hoa, operator-manual-lockstep, station-backup-before-deploy, alarm-console-design,
+  site-fault-triage-and-incident-journal, kit-meta-hygiene-2026-10-01. CXF proposal (#122) and the 2026-09-20 apply
+  worklist: INDEX `<!-- disposition: … -->` + a line-2 disposition comment; `sweep-build-state.sh --age` skips such
+  rows (RED D7 not ok → GREEN; mutation "skip dropped" flips D7). Ledger (`BUILD-STATE.md`, hand-edited per entry):
+  stale duplicate WU1 entry removed, WU2 stray parenthesis fixed, RECONCILED clause on the 13 campaign entries, CAMPAIGN
+  CLOSED + DEFERRED out-of-repo preview entries, module `retro_pending` cleared (ColdRoomPan, CompPan, DashboardPan,
+  UmbrellaDashboard — their retros are folded), kit envelope version/last_change/last_commit/last_session + index row.
+  Sanity: every `[ev:` closed, no duplicate list items, no entry outside a `build-state.v1` block. Close retro
+  `retros/2026-10-02-retro-fold-campaign-close.md` (4 proposed Δ). Release: VERSION 0.28.1 → 0.29.0 (the brief's
+  0.22.0 → 0.23.0 was stale: v0.23.0..v0.28.1 already exist), CHANGELOG v0.29.0 with WU0-WU11 and mcp-n4 #201/#203/#205.
+
+## Delivery record
+| WU | PR | Merge |
+|---|---|---|
+| retros landed | #183 | ed4a27b |
+| WU0 | #185 | bfeb9c4 |
+| WU1 | #186 | af2a4db |
+| WU2 | #188 | 6289617 |
+| WU3 | #191 | f4c8fec |
+| WU4 | #192 | e64187f |
+| WU5a/WU5b | #193 | 32bff11 |
+| WU6a | #194 | ad928b0 |
+| WU6b | #195 | 3bdbb02 |
+| WU8 | #196 | 2354eb0 |
+| WU7 | #197 | 5608866 |
+| WU9 | #198 | 8112c58 |
+| WU10 | #202 | a0a9b90 |
+| WU11a | #204 | 9321df3 |
+| WU11b | #206 | tag v0.29.0 |
+
+## Status: complete
+Campaign closed 2026-10-02. Open follow-ups: issue #199 (review advisories incl. WU0b), the close retro's 4 proposed
+deltas, the DEFERRED BUILD-STATE entries.

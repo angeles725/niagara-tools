@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · kit · site-fault-triage-and-incident-journal
 
 **Session**: PANCCADIA gap review — faults that are not in our module (device offline, duplicate ID) and incident history kept ad hoc

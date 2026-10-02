@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · kit · operator-manual-lockstep
 
 **Session**: PANCCADIA gap review — client-facing documentation goes stale when UI labels or behavior change

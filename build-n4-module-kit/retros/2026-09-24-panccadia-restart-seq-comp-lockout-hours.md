@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-24 · module · panccadia-restart-seq-comp-lockout-hours
 
 **Session**: PANCCADIA León field support. Feature doc

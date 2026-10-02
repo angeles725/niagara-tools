@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-26 · kit · panccadia-version-defect-ledger
 
 **Session**: `Cliente/panccadia-leon`, PANCCADIA León field support, git history
