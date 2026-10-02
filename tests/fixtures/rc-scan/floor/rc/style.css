@@ -1,0 +1,5 @@
+.modal { position: fixed; inset: 0; }
+.row { display: flex; gap: 8px; }
+.thumb { aspect-ratio: 16 / 9; }
+.w { width: min(100%, 600px); }
+.glass { backdrop-filter: blur(4px); }

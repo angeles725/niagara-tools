@@ -109,3 +109,182 @@ setup() {
   [[ "$output" != *"style.css"* ]]
   [[ "$output" != *"page.html"* ]]
 }
+
+# ===========================================================================
+# WU3 (fold-2026-10-02-pending-retros) — new checks. Each check id is pinned by a positive and a
+# negative fixture; the rc-scan.sh header names one mutation per check.
+#   browser-floor   [ev: retro dashboard-frontend-reliability-rules Δ5] [ev: retro panccadia-commissioning-lessons Δ6]
+#                   [ev: retro panccadia-persistent-config-hoa Δ4]
+#   disabled-gate   [ev: retro dashboard-frontend-reliability-rules Δ7] [ev: retro panccadia-persistent-config-hoa Δ4]
+#   fetch-no-signal [ev: retro dashboard-frontend-reliability-rules Δ1]
+#   setinterval-async [ev: retro dashboard-frontend-reliability-rules Δ2]
+#   innerhtml-server / datauri-budget / orphan-page [ev: retro dashboard-frontend-standard Δ2/Δ3/Δ5]
+#   inline-block-size [ev: retro dashboard-rc-file-split Δ6]
+# ===========================================================================
+
+@test "RC11: browser-floor WARNs every CSS/JS feature above the Chromium 83 panel floor, exit 0 by default" {
+  run "$RS" "$FX/floor"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" == *"WARN  rc-scan  rc/style.css:1  browser-floor"*"inset"* ]]
+  [[ "$output" == *"rc/style.css:2  browser-floor"*"gap"* ]]
+  [[ "$output" == *"rc/style.css:3  browser-floor"*"aspect-ratio"* ]]
+  [[ "$output" == *"rc/style.css:4  browser-floor"*"min("* ]]
+  [[ "$output" == *"rc/style.css:5  browser-floor"*"backdrop-filter"* ]]
+  [[ "$output" == *"rc/app.js:1  browser-floor"*"??="* ]]
+  [[ "$output" == *"rc/app.js:2  browser-floor"*"replaceAll"* ]]
+  # <style> block inside HTML and an inline style="" attribute are CSS context too:
+  [[ "$output" == *"rc/index.html:5  browser-floor"*"inset"* ]]
+  [[ "$output" == *"rc/index.html:9  browser-floor"*"gap"* ]]
+}
+
+@test "RC12: browser-floor --strict promotes every row to FAIL, exit 1" {
+  run "$RS" "$FX/floor" --strict
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  rc/style.css:1  browser-floor"* ]]
+  [[ "$output" != *"WARN"* ]]
+}
+
+@test "RC13: browser-floor FAILs under --profile hmi (and both), stays WARN under --profile lan" {
+  run "$RS" "$FX/floor" --profile hmi
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  rc/style.css:1  browser-floor"* ]]
+  run "$RS" "$FX/floor" --profile both
+  [ "$status" -eq 1 ]
+  run "$RS" "$FX/floor" --profile lan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"browser-floor"* ]] && [[ "$output" != *"FAIL"* ]]
+}
+
+@test "RC14: browser-floor negatives — grid gap, minmax(), min-width, @media (min-width), ?? and ?. and the allow marker stay clean" {
+  run "$RS" "$FX/floor-ok" --strict
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"browser-floor"* ]]
+}
+
+@test "RC15: an unknown --profile value or a missing --profile argument exits 3 (usage)" {
+  run "$RS" "$FX/clean" --profile kiosk
+  [ "$status" -eq 3 ]
+  run "$RS" "$FX/clean" --profile
+  [ "$status" -eq 3 ]
+}
+
+@test "RC16: disabled-gate WARNs a .disabled = true and a disabled attribute in a login-gated file" {
+  run "$RS" "$FX/gate"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/config.js:3  disabled-gate"* ]]
+  [[ "$output" == *"rc/index.html:2  disabled-gate"* ]]
+}
+
+@test "RC17: disabled-gate negatives — class/aria-disabled marking, .disabled = false, and an ungated file stay clean" {
+  run "$RS" "$FX/gate-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"disabled-gate"* ]]
+}
+
+@test "RC18: fetch-no-signal WARNs a multi-line fetch( with no signal and a window.fetch( probe" {
+  run "$RS" "$FX/fetch"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/api.js:2  fetch-no-signal"* ]]
+  [[ "$output" == *"rc/api.js:5  fetch-no-signal"* ]]
+}
+
+@test "RC19: fetch-no-signal negatives — the fetchT helper (signal on a later line), fetchT/apiFetch callers and the allow marker" {
+  run "$RS" "$FX/fetch-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"fetch-no-signal"* ]]
+}
+
+@test "RC20: setinterval-async WARNs setInterval over a named async function, an inline async fn and an async arrow const" {
+  run "$RS" "$FX/poll"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/main.js:2  setinterval-async"* ]]
+  [[ "$output" == *"rc/main.js:3  setinterval-async"* ]]
+  [[ "$output" == *"rc/main.js:5  setinterval-async"* ]]
+}
+
+@test "RC21: setinterval-async negatives — self-scheduled setTimeout poll and setInterval over a sync function" {
+  run "$RS" "$FX/poll-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"setinterval-async"* ]]
+}
+
+@test "RC22: innerhtml-server WARNs innerHTML / insertAdjacentHTML concatenating a member without esc(" {
+  run "$RS" "$FX/inner"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/alarms.js:2  innerhtml-server"* ]]
+  [[ "$output" == *"rc/alarms.js:3  innerhtml-server"* ]]
+}
+
+@test "RC23: innerhtml-server negatives — esc(), textContent and literal-only innerHTML stay clean" {
+  run "$RS" "$FX/inner-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"innerhtml-server"* ]]
+}
+
+_datauri_tree() {   # $1 = dir, $2 = payload length
+  mkdir -p "$1/rc"
+  { printf '.logo { background: url("data:image/png;base64,'
+    head -c "$2" /dev/zero | tr '\0' 'A'
+    printf '"); }\n'; } > "$1/rc/style.css"
+}
+
+@test "RC24: datauri-budget FAILs a data: URI over 20 KB (exit 1); --legacy downgrades it to WARN (exit 0)" {
+  T="$(mktemp -d)"
+  _datauri_tree "$T/big" 21000
+  run "$RS" "$T/big"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  rc/style.css:1  datauri-budget"* ]]
+  run "$RS" "$T/big" --legacy
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/style.css:1  datauri-budget"* ]]
+  rm -rf "$T"
+}
+
+@test "RC25: datauri-budget negative — a small data: URI is clean" {
+  T="$(mktemp -d)"
+  _datauri_tree "$T/small" 200
+  run "$RS" "$T/small"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"datauri-budget"* ]]
+  rm -rf "$T"
+}
+
+@test "RC26: orphan-page WARNs a section#page-<id> with no nav entry and a data-page with no section" {
+  run "$RS" "$FX/orphan"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/index.html:4  orphan-page"*"graficas"* ]]
+  [[ "$output" == *"rc/index.html:2  orphan-page"*"ghost"* ]]
+  [[ "$output" != *"rooms"* ]]
+}
+
+@test "RC27: orphan-page negative — every page section has its nav entry and vice versa" {
+  run "$RS" "$FX/orphan-ok"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"orphan-page"* ]]
+}
+
+_inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
+  mkdir -p "$1/rc"
+  { printf '<!doctype html><html><head>\n<script src="js/main.js?v=1"></script>\n<script>\n'
+    i=0; while [ "$i" -lt "$2" ]; do printf 'var x%d = %d;\n' "$i" "$i"; i=$((i + 1)); done
+    printf '</script>\n</head><body></body></html>\n'; } > "$1/rc/index.html"
+}
+
+@test "RC28: inline-block-size WARNs an inline <script> block over 300 lines (at its opening line)" {
+  T="$(mktemp -d)"
+  _inline_tree "$T/big" 320
+  run "$RS" "$T/big"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  rc-scan  rc/index.html:3  inline-block-size"* ]]
+  rm -rf "$T"
+}
+
+@test "RC29: inline-block-size negative — a short inline block and a <script src> stay clean" {
+  T="$(mktemp -d)"
+  _inline_tree "$T/small" 40
+  run "$RS" "$T/small"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"inline-block-size"* ]]
+  rm -rf "$T"
+}

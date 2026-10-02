@@ -1,0 +1,5 @@
+.grid { display: grid; gap: 8px; }
+.cols { grid-template-columns: minmax(0, 1fr) 200px; }
+.m { min-width: 100px; max-height: 40px; }
+@media (min-width: 800px) { .x { margin: 0; } }
+.row { display: flex; gap: 8px; } /* rc-scan: allow browser-floor */
