@@ -63,9 +63,26 @@ def _target_mode(path):
     try:
         return stat.S_IMODE(os.stat(path).st_mode)
     except FileNotFoundError:
-        umask = os.umask(0)
-        os.umask(umask)
-        return 0o644 & ~umask
+        return 0o644 & ~_current_umask()
+
+
+def _current_umask():
+    """The process umask, read without changing it where the OS allows (issue #179 R3-002).
+
+    Linux exposes it in /proc/self/status (`Umask:`); elsewhere the os.umask set-and-restore
+    pair is the only API, and it briefly changes the process-global umask, which is safe for
+    this single-threaded CLI.
+    """
+    try:
+        with open("/proc/self/status", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("Umask:"):
+                    return int(line.split()[1], 8)
+    except (OSError, ValueError, IndexError):
+        pass
+    umask = os.umask(0)
+    os.umask(umask)
+    return umask
 
 
 def _atomic_write(path, text):

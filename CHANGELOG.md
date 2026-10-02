@@ -6,6 +6,46 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.28.0] - 2026-10-02
+
+### Changed — `mcp-n4-kit` v0.4.0: rollback fidelity (issue #179 T4)
+
+- **New rollback verdict `partial`** (R4-002, B1200-G1): a rollback is `verified` only when it is faithful.
+  A frozen child of a re-created component (e.g. a writable's `proxyExt`) is still never re-added, but the
+  read-back now compares it with the snapshot (type, captured slots; a slot the station omits counts as its
+  default). Any difference, and any descendant of a frozen child that is missing, is listed in
+  `frozen_config_not_restored` (path, snapshot and live type, differing slots, captured config) and the
+  verdict is `partial`. Before, the rollback reported `verified`. The configuration is not written back:
+  a fresh frozen child can be of another type (`control:NullProxyExt` vs a driver proxy extension), which a
+  set op cannot change, and set ops on frozen children are not live-certified.
+- **Link-driven inputs are no longer lost silently** (R3-002, B1200-G2): `n4_remove_component` records the
+  last value of every input that is a link target (configuration form: status bits kept, facets dropped) on
+  its relink (`prior`), and records inputs linked from outside the removed subtree as `unlinked_input`
+  inverse entries. `n4_rollback` lists every input it did not restore in `link_inputs_not_restored`
+  (`target`, `target_slot`, `source_slot`, `reason`, `value`). A skipped relink stays `mismatch`; an input
+  linked from outside the subtree makes the verdict `partial`. The value is reported, not written: the live
+  station rejected link-target values in the re-create body (B1200 finding 3). Batches journaled before
+  v0.28.0 carry no recorded value (`value: null`).
+- **Type contract table** (B1200-G3): `box.COMPONENT_TYPES` maps type specs to component/value and wins over
+  the naming heuristic, which stays as the documented fallback. Seeded from the N4 declarations:
+  `baja:Component`, `baja:Folder`, `baja:UnrestrictedFolder`, `control:NullProxyExt` (components),
+  `control:PriorityLevel`, `baja:Link`, `baja:WsAnnotation` (values). A live `reg.loadContract` lookup is
+  not built: it needs a new BOX channel certified on a station.
+- `retro.py` turns a `partial` verdict into a MEDIUM candidate delta.
+
+### Fixed — #184 review advisory
+
+- `tools/new_retro.py` reads the umask from `/proc/self/status` without changing it, falling back to the
+  set-and-restore pair elsewhere (R3-002).
+- `n4_navigate`: `has_children` ignores the `types` filter, now stated in the tool description (R3-003);
+  `_types_arg` docstring says it returns the list (R2-001).
+- `box.py` documents the load-counter assumptions: `ssc` raises before send or on an error reply (R3-001),
+  and loads are answered in order (R4-001). No behavior change.
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-issue179-hygiene.md` (T4).
+- Issue: angeles725/niagara-tools#179; niagara-research B1200-G1/G2/G3.
+
 ## [v0.27.0] - 2026-10-02
 
 ### Added — `mcp-n4-kit` v0.3.0: navigate `types` filter, issue #179 hygiene

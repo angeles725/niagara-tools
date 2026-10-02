@@ -728,6 +728,16 @@ class TestPureHelpers(unittest.TestCase):
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
 
+    def test_the_type_table_wins_over_the_naming_heuristic(self):
+        """B1200-G3: an explicit entry decides; unknown types fall back to the heuristic."""
+        self.assertIs(box.COMPONENT_TYPES["control:PriorityLevel"], False)  # BFrozenEnum
+        self.assertFalse(box.is_component_type("control:PriorityLevel"))  # heuristic: True
+        self.assertIs(box.COMPONENT_TYPES["baja:UnrestrictedFolder"], True)  # extends BFolder
+        self.assertTrue(box.is_component_type("baja:UnrestrictedFolder"))  # heuristic: False
+        self.assertTrue(box.is_component_type("baja:Component"))
+        self.assertTrue(box.is_component_type("acme:UnknownWidget"))  # fallback
+        self.assertFalse(box.is_component_type("baja:RelTime"))  # fallback
+
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}
         self.assertEqual(sorted(box.children(nodes, "")), ["a", "c"])

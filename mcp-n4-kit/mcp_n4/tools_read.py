@@ -181,6 +181,8 @@ def _tree_entries(nodes, path, levels, types=None):
 
     With `types` (a set of type specs) an entry is kept when its type is in the set
     (`matched: true`) or when a nested entry is kept (`matched: false`, the path to it).
+    `has_children` is not filtered (issue #179 R3-003): it says whether the entry has any
+    component child, so a caller can still descend below the requested depth.
     """
     entries = []
     for name, node in box.children(nodes, path).items():
@@ -198,7 +200,10 @@ def _tree_entries(nodes, path, levels, types=None):
 
 
 def _types_arg(args):
-    """The `types` filter as a set, or None when absent or empty (no filter)."""
+    """The `types` filter as the given list, or None when absent or empty (no filter).
+
+    The caller turns it into a set for membership; the list is echoed in the reply as given.
+    """
     types = args.get("types") or None
     if types is None:
         return None
@@ -451,7 +456,8 @@ TOOLS = [
          "time. For a station inventory use n4_bql_query or n4_inventory instead: one "
          "navigate is one round trip per component. types (optional) keeps only children "
          "whose type is one of the given specs (e.g. bacnet:BacnetDevice) plus the path to "
-         "them; each kept entry then carries matched true/false.",
+         "them; each kept entry then carries matched true/false. has_children ignores the "
+         "types filter: it is true when the entry has any component child, matching or not.",
          _schema({"ord": _str("Station ORD, default station:|slot:/", default=ROOT_ORD),
                   "depth": _int("Levels to list (1-3)", 1, 3, 1),
                   "types": {"type": "array", "items": {"type": "string"},
