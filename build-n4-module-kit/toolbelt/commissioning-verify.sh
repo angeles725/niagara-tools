@@ -16,6 +16,12 @@
 #   link-target-flags:<rt>  lint-link-target-flags.sh per -rt/src dir (LTF1/LTF2 FAIL), with
 #                       --wiring-map <file> (default <module-root>/docs/wiring-map.md when present) so the
 #                       Table 2 link-in targets are known. [ev: retro panccadia-commissioning-lessons Δ1]
+#                       The default differs from report-module.sh (which also tries <module-root>/../docs)
+#                       because this tool takes the repo root while build.sh passes <repo>/<MOD> to
+#                       report-module; both resolve <repo>/docs/wiring-map.md. The chosen map is named in
+#                       the row detail. Exit 3 is SKIP here (this script's env convention for every source
+#                       lint; report-module maps it to ERROR + exit 3). A non-zero exit with no FAIL row is
+#                       a FAIL row, never PASS.
 #
 # Station checks (require --bog <config.bog> and --module <MOD>):
 #   proxy-link-safety        bog-audit.sh CHECK11
@@ -171,7 +177,7 @@ for SRC in "${SRC_DIRS[@]}"; do
   sp_args=()
   [ "$STRICT" -eq 1 ] && sp_args+=("--strict")
   sp_exit=0
-  sp_out=$("$TOOLBELT/lint-status-parity.sh" "${sp_args[@]}" "$SRC" 2>&1) || sp_exit=$?
+  sp_out=$("$TOOLBELT/lint-status-parity.sh" ${sp_args[@]+"${sp_args[@]}"} "$SRC" 2>&1) || sp_exit=$?
   if [ "$sp_exit" -eq 3 ]; then
     emit SKIP "status-parity:$LABEL" "env fault (exit 3) — run lint-status-parity.sh manually"
   elif printf '%s\n' "$sp_out" | grep -qE '^FAIL|^WARN'; then
@@ -204,7 +210,9 @@ for SRC in "${SRC_DIRS[@]}"; do
   ltf_args=()
   [ -n "$WMAP" ] && ltf_args+=("--wiring-map" "$WMAP")
   ltf_exit=0
-  ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" "${ltf_args[@]}" "$SRC" 2>&1) || ltf_exit=$?
+  # ${A[@]+"${A[@]}"}: an empty "${A[@]}" is an unbound-variable error under set -u on bash < 4.4.
+  ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" ${ltf_args[@]+"${ltf_args[@]}"} "$SRC" 2>&1) || ltf_exit=$?
+  [ -n "$WMAP" ] && ltf_out="${ltf_out//(wiring-map Table 2)/(wiring-map Table 2: $WMAP)}"
   if [ "$ltf_exit" -eq 3 ]; then
     emit SKIP "link-target-flags:$LABEL" "env fault (exit 3) — run lint-link-target-flags.sh manually"
   elif printf '%s\n' "$ltf_out" | grep -q '^FAIL'; then
@@ -213,8 +221,14 @@ for SRC in "${SRC_DIRS[@]}"; do
         FAIL*) emit FAIL "link-target-flags:$LABEL" "${_ln#FAIL  lint-link-target-flags  }" ;;
       esac
     done <<< "$ltf_out"
+  elif [ "$ltf_exit" -ne 0 ]; then
+    # Fail closed: a non-zero exit with no FAIL row (127 = lint missing, a crash) is never PASS.
+    # [polish-2026-10-02 P1b, R3-cv-ltf-fail-open-exit]
+    emit FAIL "link-target-flags:$LABEL" \
+      "lint-link-target-flags.sh exited $ltf_exit with no FAIL row (crash or unexpected output) -- run it manually"
   else
-    emit PASS "link-target-flags:$LABEL" "LTF1/LTF2 clean${WMAP:+ (wiring map: Table 2 targets checked)}"
+    _ltf_map="no wiring map"; [ -n "$WMAP" ] && _ltf_map="wiring map: $WMAP"
+    emit PASS "link-target-flags:$LABEL" "LTF1/LTF2 clean ($_ltf_map)"
   fi
 done
 
