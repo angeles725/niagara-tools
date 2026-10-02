@@ -206,7 +206,7 @@ public class BCompressorControl extends BComponent implements BIAlarmSource {
 JAVA
   run "$LSP" "$D"
   [ "$status" -eq 0 ]
-  [[ "$output" != *"WARN"* ]]
+  [[ "$output" != *"no status/reason/alarm surface"* ]]   # not SILENT (WU6b: a console-only advisory row may appear, see SP-console)
 }
 
 @test "S23-neg: the SAME trip with NO surface anywhere in the module still WARNs (proves S23 keys on a real adapter)" {
@@ -235,21 +235,26 @@ JAVA
   [ -d "$ROOT/Compresores" ] && [ -d "$ROOT/Paccadia" ] && [ -d "$ROOT/Dashboard" ] || skip "client read tree not on this machine (set C9_CLIENT_ROOT)"
   run "$LSP" "$ROOT/Compresores/CompPan/CompPan-rt/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]    # CP-1 surfaced by the Pattern-B adapter (BIAlarmSource + newOffnormalAlarm) — S23
-  [[ "$output" != *"CompressorControl.java:294"* ]]
+  [ "$(printf '%s\n' "$output" | grep '^WARN' | grep -vc 'console-only:')" -eq 0 ]    # CP-1 surfaced by the Pattern-B adapter (BIAlarmSource + newOffnormalAlarm) — S23
+  [[ "$output" != *"CompressorControl.java:294  step forces"* ]]   # no SILENT row (the console-only advisory is checked below)
   [[ "$output" != *"dischargeHighAlarm"* ]]                    # CP-2 is surfaced -> never a subject
   [[ "$output" != *"BCompressorControl"* ]]                    # adapter getters are not trips
+  # WU6b console-only advisory [ev: retro alarm-console-design Δ3]: CP-1 is surfaced ONLY by the console alarm
+  [ "$(printf '%s\n' "$output" | grep -c 'console-only:')" -eq 1 ]
+  [[ "$output" == *"CompressorControl.java:294  console-only:"* ]]
   run "$LSP" "$ROOT/Paccadia/ColdRoomPan/ColdRoomPan-rt/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]    # CR-3 is SURFACED since PR8 (Pattern A: freezeAlarmPt + BAlarmSourceExt) — R3<->R8 re-pin, was 1 at a109249
+  [ "$(printf '%s\n' "$output" | grep '^WARN' | grep -vc 'console-only:')" -eq 0 ]    # CR-3 is SURFACED since PR8 (Pattern A: freezeAlarmPt + BAlarmSourceExt) — R3<->R8 re-pin, was 1 at a109249
   [[ "$output" != *"BEvaporatorUnit.java:1287"* ]]            # the private freezeTripped latch no longer WARNs
   [[ "$output" != *"defrostSkipped"* ]]                        # surfaced via slot -> never a subject
+  [ "$(printf '%s\n' "$output" | grep -c 'console-only:')" -eq 1 ]   # WU6b: CR-3 freeze latch is alarm-only (Pattern A)
+  [[ "$output" == *"BEvaporatorUnit.java:1344  console-only:"* ]]
   run "$LSP" "$ROOT/Dashboard/DashboardPan/DashboardPan-rt/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep '^WARN' | grep -vc 'console-only:')" -eq 0 ]
   run "$LSP" "$ROOT/Dashboard/DashboardPan/DashboardPan-ux/src"
   [ "$status" -eq 0 ]
-  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep '^WARN' | grep -vc 'console-only:')" -eq 0 ]
 }
 
 # --- SP9: a source dir with NO Java files -> exit 3 + ERROR row, never a silent 0 (K20 / C8 silent-0 lesson; WP9b shape) ---
@@ -290,4 +295,73 @@ JAVA
   run "$LSP" "$D"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# SP-console (fold-2026-10-02-pending-retros WU6b) [ev: retro alarm-console-design Δ3]:
+# a trip whose ONLY sink is a console alarm (Pattern A/B) with no local status/reason slot has no
+# surface when the console is unattended -> one ADVISORY row tagged "console-only" (not WARN). Advisory:
+# it never promotes to exit 1 under --strict.
+# Named mutation SP-console: drop the console-only emission -> SP-console flips.
+# ---------------------------------------------------------------------------
+console_fixture() {  # $1 = dir, $2 = 1 to add a local *Reason slot written by the trip method
+  mkdir -p "$1/com/x"
+  if [ "${2:-0}" -eq 1 ]; then
+    cat > "$1/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    owner.setLowSuctionReason(reason);
+    return target;
+  }
+}
+JAVA
+    cat > "$1/com/x/BStatusSlots.java" <<'JAVA'
+package com.x;
+@NiagaraProperty(name = "lowSuctionReason", type = "String", defaultValue = "", flags = Flags.SUMMARY)
+public class BStatusSlots extends BComponent {}
+JAVA
+  else
+    cat > "$1/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    return target;
+  }
+}
+JAVA
+  fi
+  cat > "$1/com/x/BCompressorControl.java" <<'JAVA'
+package com.x;
+public class BCompressorControl extends BComponent implements BIAlarmSource {
+  void raise() { alarmSupport.newOffnormalAlarm(mkData()); }
+}
+JAVA
+}
+
+@test "SP-console: a trip surfaced ONLY by a console alarm emits exactly one ADVISORY console-only row, no WARN (exit 0)" {
+  D="$BATS_TEST_TMPDIR/console"; console_fixture "$D" 0
+  run "$LSP" "$D"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'console-only')" -eq 1 ]
+  [[ "$output" == *"ADVISORY  lint-silent-protection"*"CompressorControl.java"* ]]
+  [[ "$output" != *"WARN"* ]]
+  [[ "$output" != *"no status/reason/alarm surface"* ]]
+}
+
+@test "SP-console-strict: the console-only row is advisory -- --strict still exits 0 when it is the only row" {
+  D="$BATS_TEST_TMPDIR/console-strict"; console_fixture "$D" 0
+  run "$LSP" --strict "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"console-only"* ]]
+}
+
+@test "SP-console-neg: the same alarmed trip that ALSO writes a local *Reason SUMMARY slot has no console-only row" {
+  D="$BATS_TEST_TMPDIR/console-neg"; console_fixture "$D" 1
+  run "$LSP" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"console-only"* ]]
+  [[ "$output" != *"WARN"* ]]
 }

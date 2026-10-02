@@ -1,0 +1,3 @@
+# facade lexicon: CompressorPanel has NO keys (renders raw camelCase in Workbench)
+RoomPanel=Cuarto
+RoomPanel.temperatureSetpoint=Setpoint de temperatura

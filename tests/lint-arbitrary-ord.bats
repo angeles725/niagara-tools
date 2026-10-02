@@ -24,3 +24,24 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A { void f(){ BOrd.make(SERVICE_ORD); } }\n' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" != *"WARN"* ]]
 }
+
+# Reviewed call-site marker [ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]: a BOrd.make(var)
+# built from a sanitized internal value WARNed on every run with no way to record the review.
+# `// lint-arbitrary-ord: reviewed <reason>` on the same or the preceding line suppresses it; the
+# reason is mandatory — a bare marker still WARNs.
+@test "AO4: a same-line reviewed marker with a reason suppresses the WARN" {
+  printf 'class A { void f(){ BOrd.make(tmpOrd); // lint-arbitrary-ord: reviewed backup file name built from a sanitized internal string\n} }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" != *"WARN"* ]]
+}
+@test "AO5: a preceding-line reviewed marker with a reason suppresses the WARN" {
+  printf 'class A { void f(){\n  // lint-arbitrary-ord: reviewed ord assembled from a code-controlled constant prefix\n  BOrd.make(tmpOrd);\n} }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" != *"WARN"* ]]
+}
+@test "AO6: a reviewed marker with no reason still WARNs and names the missing reason" {
+  printf 'class A { void f(String q){ BOrd.make(q); // lint-arbitrary-ord: reviewed\n} }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"WARN"* ]]; [[ "$output" == *"reviewed marker without a reason"* ]]
+}
+@test "AO7: a reviewed marker two lines above does not cover the call site" {
+  printf 'class A { void f(String q){\n  // lint-arbitrary-ord: reviewed unrelated earlier call\n  int x = 1;\n  BOrd.make(q);\n} }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"WARN"* ]]
+}
