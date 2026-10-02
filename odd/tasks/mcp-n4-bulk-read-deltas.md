@@ -94,9 +94,9 @@ returned the same inventory in about 3 s.
 ## Progress
 | Task | Route (trigger) | Commit | Authored lines | RDD tier / outcome | Checks |
 |---|---|---|---|---|---|
-| D2+D4+D5 | delegated writer | pending (parent) | see the writer report | pending | unittest |
-| D1+D8+D7 | delegated writer | pending (parent) | see the writer report | pending | unittest |
-| D3+D6+D7 docs, close | delegated writer | pending (parent) | see the writer report | passive | unittest (citation gate) + bats install-skill |
+| D2+D4+D5 | delegated writer | b13747e (with D1/D7/D8; hunks shared box.py/tools_read.py) | 781 (shared with D1/D7/D8) | medium, granted, approved + acknowledged (review-18213260b4c048dd) | unittest 433 OK; live read-only: n4_inventory 507 points about 1.2 s, elapsed_ms, Decimal display |
+| D1+D8+D7 | delegated writer | b13747e | (in b13747e) | medium, granted, approved + acknowledged (same lineage) | unittest |
+| D3+D6+D7 docs, close | delegated writer | docs commit on this branch | 221 | covered by the same range review | unittest (citation gate) + bats install-skill |
 
 ## Next step
 The parent commits the suggested work units, runs the native review per unit, and fills the
