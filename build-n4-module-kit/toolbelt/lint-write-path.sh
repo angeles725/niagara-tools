@@ -20,9 +20,20 @@
 #   2. Walk stops at the first .git directory (vcs root) or filesystem root.
 #   3. If no valid matrix is found: ERROR + exit 3.
 #
+# Audit-call check (WARN): every servlet write handler — a doPost / doPut / doDelete / doPatch
+# method declared in a scanned src file — must record the write in the audit store before it
+# answers success. Heuristic (file scope, comments stripped): the handler file must contain a call
+# to an identifier containing "audit" (e.g. appendAudit(, auditLog.record(, buildAuditEntry();
+# getters (get*/is*) and comment mentions do not count; a handler that delegates the write to
+# another class must audit there AND call it from the handler file. Advisory for legacy modules;
+# --strict promotes it to exit 1. Contract: types/security.md § Servlet write audit.
+# [ev: retro servlet-write-audit Δ2]
+#
 #   Row format:  FAIL  lint-write-path  <module>  slot <name>: no matrix row
+#                WARN  lint-write-path  <file>:<line>  write handler <method>: no audit call
 #   Error format: lint-write-path  ERROR  <module-root>  <reason>
-#   Exits:       0  all covered · 1  any uncovered · 3  usage/env/missing-matrix (K20)
+#   Exits:       0  all covered (STALE/DRIFT/audit WARN advisory) · 1  any uncovered, or any
+#                STALE/DRIFT/audit WARN under --strict · 3  usage/env/missing-matrix (K20)
 #
 # A comment mention of a slot name does NOT satisfy the matrix row requirement (R19.3).
 # Dot-directories pruned (D9b). VCS-free by design.
@@ -31,10 +42,13 @@
 # Mutation: WP-stale-concept-decoy -- moves concept marker strip after the test, making an HTML-comment [concept] produce a false STALE
 # Mutation: WP-stale-perrow -- removes per-row check, allowing a [concept]-marked row to exempt a co-resident plain stale row
 # Mutation: WP-drift-decoy -- removes HTML-comment strip, causing a commented [concept] to produce a false DRIFT
+# Mutation: WP-audit -- drops the audit-call WARN, so a servlet write handler that never records the write passes
+# Mutation: WP-audit-ok -- drops the audit-call search, so an audited handler gets a false WARN
 set -u
 
 FAILED=0
 STRICT=0
+AUDIT=0
 STALE=0
 DRIFT=0
 BOG_FILE=""
@@ -423,6 +437,45 @@ EOF
 done
 
 # ---------------------------------------------------------------------------
+# Audit-call pass (WARN, advisory; --strict promotes). File scope: a file that declares a servlet
+# write handler must contain an audit-recording call. [ev: retro servlet-write-audit Δ2]
+# ---------------------------------------------------------------------------
+for _scan_src in "${_SCAN_SRCS[@]}"; do
+    while IFS= read -r _jf; do
+        [ -n "$_jf" ] || continue
+        _arow=$(awk -v FILE="$_jf" '
+            BEGIN { in_bc = 0; hl = 0; audited = 0 }
+            {
+                ln = $0; out = ""; j = 1; L = length(ln)
+                while (j <= L) {
+                    if (in_bc) { if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 } else j++ }
+                    else if (substr(ln, j, 2) == "//") break
+                    else if (substr(ln, j, 2) == "/*") { in_bc = 1; j += 2 }
+                    else { out = out substr(ln, j, 1); j++ }
+                }
+                if (!hl && match(out, /void[[:space:]]+do(Post|Put|Delete|Patch)[[:space:]]*\(/)) {
+                    hl = FNR; hm = substr(out, RSTART, RLENGTH); sub(/^void[[:space:]]+/, "", hm); sub(/[[:space:]]*\($/, "", hm)
+                }
+                t = out
+                while (match(t, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(/)) {
+                    id = substr(t, RSTART, RLENGTH); sub(/[[:space:]]*\($/, "", id)
+                    t = substr(t, RSTART + RLENGTH)
+                    if (tolower(id) ~ /audit/ && id !~ /^(get|is)[A-Z]/) audited = 1
+                }
+            }
+            END {
+                if (hl && !audited)
+                    printf "WARN  lint-write-path  %s:%d  write handler %s: no audit call (record user, ord, old, new, source before answering success)\n", FILE, hl, hm
+            }
+        ' "$_jf")
+        if [ -n "$_arow" ]; then
+            printf '%s\n' "$_arow"
+            AUDIT=1
+        fi
+    done < <(find "$_scan_src" -type d -name '.*' -prune -o -name '*.java' -print 2>/dev/null | sort)
+done
+
+# ---------------------------------------------------------------------------
 # Per-row STALE pass.  For each data row in the matrix, extract the
 # backtick-inner slot name (^[a-z][A-Za-z0-9]*$ only; prose/multi-word
 # cells are not slots).  Skip rows carrying the literal [concept] token
@@ -470,9 +523,13 @@ done < "$MATRIX"
 
 # ---------------------------------------------------------------------------
 # Exit: uncovered FAIL always exits 1 (unchanged, with and without --strict).
-# --strict promotes STALE or DRIFT to exit 1.  Otherwise exit 0.
+# --strict promotes STALE, DRIFT or an audit-call WARN to exit 1.  Otherwise exit 0.
 # Exit 3 (usage/env/missing-matrix) is handled above — range {0,1}∪{3} (K20).
 # ---------------------------------------------------------------------------
 [ "$FAILED" -eq 1 ] && exit 1
-[ "$STRICT" -eq 1 ] && { [ "$STALE" -eq 1 ] || [ "$DRIFT" -eq 1 ]; } && exit 1
+if [ "$STRICT" -eq 1 ]; then
+    if [ "$STALE" -eq 1 ] || [ "$DRIFT" -eq 1 ] || [ "$AUDIT" -eq 1 ]; then
+        exit 1
+    fi
+fi
 exit 0

@@ -69,6 +69,7 @@ Six-point doctrine for any staged or modulated control component. Author the idl
 4. **Expose a "why running" surface.** A `TRANSIENT|SUMMARY|READONLY` `String` slot (e.g. `activeReason`) updated on every demand transition lets an operator know whether the rack is running because of demand, manual override, or pre-cooling. A `null` / empty string on idle.
 5. **HOA OFF lockout dominates — respect it even when demand is non-zero.** Off lockout overrides demand; a demand that would stage up while OFF is held must NOT fire.  The dominant order is: OFF lockout > demand gate > staging logic.
 6. **minOn / stageDelay guards apply in BOTH staging directions.** A minOn floor prevents short-cycling on stage-up; an equivalent stage-down timer prevents hunting. Author them together — a stage-up guard with no stage-down guard ships half the protection.
+7. **A permanent-minimum floor needs an ENABLED low-pressure cutout that overrides it.** A "keep N units always on" floor (`minStagesOn` > 0) shipped while the LP floor (`suctionLowLimit`/`*Cutout`, 0 = disabled) stayed at 0 holds a compressor on with every solenoid closed. An LP "limit" that sheds ONE stage per `stageDelay` while respecting `minOn` is NOT a safety cutout: a true cutout overrides `minOn` and the floor and stops immediately. `lint-config-sanity.sh` CS4 WARNs the combination of defaults (nonzero floor + zero cutout in one class). `[ev: retro panccadia-commissioning-lessons Δ3]`
 
 **The NaN setpoint hazard (B819 §819.3):** an unguarded numeric setpoint (`suctionSetpoint`, `tempSetpoint`) causes a silent modulation freeze. The demand gate turns the rack off, but the PID / band logic silently continues emitting control signals because demand was never NaN-gated. Always guard before entering the staging / modulation path:
 
@@ -248,6 +249,8 @@ Recipe: `out.setStatus(getPropagateFlags().and(aggregatedInputStatus))` — AND 
 A protection is a latch (`freezeTripped`; or the CP-1 LP-floor shed, which is inline with NO named field — the silent case B824 flags) that OVERRIDES the normal command path. It has four tiers, and each
 tier that exists must be VISIBLE — a protection that silently holds an output is indistinguishable from a broken relay
 (`lint-silent-protection.sh`, `[ev: retro campaign9-silent-protection]`); the lint recognises BOTH patterns' surfaces — Pattern A: `BAlarmSourceExt` on a child control point; Pattern B: the B-adapter implementing `BIAlarmSource` + `newOffnormalAlarm`/`AlarmSupport`, identified via the `B<Pure>` naming pair. `[ev: retro campaign10-silent-protection-pattern-b]`):
+
+**A console alarm alone is not a local surface.** A latch whose ONLY sink is a console alarm (Pattern A or B below) is invisible while the alarm console is unattended — also write a local `*Status`/`*Reason` `SUMMARY` slot the HMI shows. `lint-silent-protection.sh` emits an `ADVISORY … console-only:` row for such a trip (not a WARN; never armed by `--strict`). `[ev: retro alarm-console-design Δ3]`
 
 1. **Setpoint + hysteresis** — the trip and the restart thresholds are two slots (`freezeSetpoint`/`freezeDiffStop`/`freezeDiffRestart`), never one. `[ev: corpus B821]`
 2. **Latch** — a private boolean assigned in ONE pure function (`ColdRoomControl.freezeTrip(...)`), tested without Baja.

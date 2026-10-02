@@ -61,7 +61,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
 - [ ] WU5a · logic persistence/restart/backup doctrine.
 - [ ] WU5b · logic safety/protection/structure doctrine.
 - [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
-- [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
+- [x] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only advisory, write audit) —
+      commissioning-lessons Δ1, Δ3, Δ9; persistent-config Δ1/Δ3 (lint + dashboard halves); alarm-console Δ3;
+      servlet-write-audit Δ1, Δ2 (retro FULLY folded, INDEX row + marker flipped). Route: delegated direct writer
+      (1 new lint + 5 scripts + 6 bats + fixtures + 5 docs — writer trigger).
 - [ ] WU7 · build/preflight/source-of-truth.
 - [ ] WU8 · deploy, backup and release gates.
 - [ ] WU9 · commissioning and post-deploy triage (+ `obix-link-audit.sh` possibly split out).
@@ -160,6 +163,32 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (172 folded, 172 cited).
   - Owed (recorded in the kit BUILD-STATE open_issue): `report-module.sh` passing `--profile`/`--legacy` to rc-scan
     (WU4/WU7); METHODOLOGY.md:131 rc-scan check list (WU10/WU11).
+
+- 2026-10-02 WU6b (branch `feat/fold-wu6b-rt-checks`, from `origin/main`): new `toolbelt/lint-link-target-flags.sh`
+  (LTF1 READONLY on a link-in target — comment-block convention or `--wiring-map` Table 2; LTF2 TRANSIENT OPERATOR
+  `*Mode`/`*Hoa` slot, placed in the same lint because both are flags on a link endpoint), `lint-config-sanity.sh` CS4
+  WARN, `slot-coverage.sh` facade default-FAIL (`*Panel`/`*Facade`, `--facade`), `generate-wiring-map.sh` display-name +
+  full-ord columns (`--lexicon`, auto-discovery; also fixed single-line annotations being dropped), `lint-silent-protection.sh`
+  `ADVISORY … console-only:` row (own severity so golden G-adapter "0 WARN" holds; never arms `--strict`), `lint-write-path.sh` audit-call WARN (`--strict` promotes);
+  docs: `types/dashboard.md`, `types/security.md` § 1.3, `types/logic.md`, BUILD-LOOP tool lines, regenerated INDEX.
+  Evidence:
+  - RED (before each change): LTF-* 6/6 not ok (script absent, exit 127); LCS-floor not ok; SC-facade + SC-facade-flag not ok;
+    GWM-display, GWM-display-auto, GWM-columns not ok; SP-console + SP-console-strict not ok; WP-audit + WP-audit-strict not ok.
+  - GREEN: lint-link-target-flags 6/6, lint-config-sanity 7/7, slot-coverage 18/18, generate-wiring-map 15/15,
+    lint-silent-protection 16/16, lint-write-path 25/25.
+  - Observed mutations (each flips its named test, restored byte-identical): LTF-comment, LTF-map, LTF-transient, LCS-floor,
+    SC-facade, GWM-display, SP-console, WP-audit, WP-audit-ok.
+  - Real smoke (read-only client trees): LTF2 flags the TRANSIENT HOA slots of the pre-fix facade + evaporator unit and LTF1
+    the READONLY defrost-skip link-in mirrors; CS4 flags the shipped floor/cutout combination on a copy with the floor set to 1
+    (clean on the fixed default 0); console-only flags exactly the two alarm-only trips (SP-smoke re-pinned); the audit
+    check is clean on the real servlet (audited); wiring map shows 170/192 rows with no lexicon key on the real facade.
+  - `bats tests/*.bats`: 756 ok / 0 not ok (58 env skips), exit 0 (first run caught golden-parser G-adapter pinning
+    "0 WARN" for an alarm-only trip → the console-only row got its own ADVISORY severity instead of WARN).
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh`; no new `A && B || C`.
+  - `lint-guard-pins.sh --strict .` exit 0; `gen-lint-index.sh --check` exit 0; `sweep-build-state.sh` exit 0;
+    `sweep-fold-audit.sh --strict` exit 0 (173 folded, 173 cited).
+  Gaps: report-module.sh wiring (new lint, facade FAIL, console-only) → WU7; logic.md "HOA is TRANSIENT" bullet contradicts
+  LTF2 → WU5a (persistent-config Δ1 doc half); METHODOLOGY conformance row (persistent-config Δ3) → WU10/WU11.
 
 ## Next step
 - WU4 (frontend tooling: `lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc) after WU3 merges;
