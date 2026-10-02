@@ -23,6 +23,12 @@
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # Mutation: LD1 -- removes delay-floor check, allowing Math.max(x,0L) pattern to pass instead of FAIL
+# Mutation: LD13 -- drop Minutes from the facet_min unit alternation -> makeMinutes MIN reads as unreadable, FAIL
+# Mutation: LD16 -- stop accumulating continuation lines -> a multi-line Clock.schedule( FAILs unfloored
+#
+# Units: BRelTime.make(ms) and makeSeconds/makeMinutes/makeHours/makeDays(N) literals are read in
+# both delay arguments and BFacets.MIN facets; a Clock.schedule*( call split over several lines is
+# accumulated to its closing paren (up to 12 lines). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
 set -u
 
 FAILED=0
@@ -87,19 +93,53 @@ while IFS= read -r f; do
   result=$(awk -v FILE="$f" -v POSITIVE_HELPERS="$POSITIVE_HELPERS" '
   { lines[NR] = $0 }
 
+  # Milliseconds per unit of a BRelTime.make<Unit>( factory ("" = make(ms)).
+  # [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
+  function unit_ms(u) {
+    if (u == "Seconds") return 1000
+    if (u == "Minutes") return 60000
+    if (u == "Hours")   return 3600000
+    if (u == "Days")    return 86400000
+    return 1
+  }
+
   # Return ms value for a BRelTime literal expression; -1 if not a simple literal.
-  function literal_ms(text,    seg) {
-    if (match(text, /BRelTime\.makeSeconds\([0-9]+\)/)) {
-      seg = substr(text, RSTART)
-      sub(/BRelTime\.makeSeconds\(/, "", seg); sub(/\).*/, "", seg)
-      return seg * 1000
-    }
-    if (match(text, /BRelTime\.make\([0-9]+\)/)) {
-      seg = substr(text, RSTART)
-      sub(/BRelTime\.make\(/, "", seg); sub(/\).*/, "", seg)
-      return seg + 0
+  # Recognizes make(N) (ms), makeSeconds/makeMinutes/makeHours/makeDays(N).
+  function literal_ms(text,    seg, u) {
+    if (match(text, /BRelTime\.make(Seconds|Minutes|Hours|Days)?\([0-9]+\)/)) {
+      seg = substr(text, RSTART, RLENGTH)
+      u = seg; sub(/^BRelTime\.make/, "", u); sub(/\(.*$/, "", u)
+      sub(/^[^(]*\(/, "", seg); sub(/\).*$/, "", seg)
+      return (seg + 0) * unit_ms(u)
     }
     return -1
+  }
+
+  # MIN facet value of a property declaration: seconds for the makeSeconds/Minutes/Hours/Days
+  # family, the raw ms count for make(N) (unchanged legacy unit); -1 when BFacets.MIN is present
+  # but unreadable; -2 when there is no BFacets.MIN at all.
+  function facet_min(text,    seg, u) {
+    if (match(text, /BFacets\.MIN,[[:space:]]*BRelTime\.make(Seconds|Minutes|Hours|Days)?\([0-9]+\)/)) {
+      seg = substr(text, RSTART, RLENGTH)
+      sub(/^BFacets\.MIN,[[:space:]]*/, "", seg)
+      u = seg; sub(/^BRelTime\.make/, "", u); sub(/\(.*$/, "", u)
+      sub(/^[^(]*\(/, "", seg); sub(/\).*$/, "", seg)
+      if (u == "") return seg + 0
+      return (seg + 0) * unit_ms(u) / 1000
+    }
+    if (index(text, "BFacets.MIN") > 0) return -1
+    return -2
+  }
+
+  # 1 when s (the text after the opening paren of a call) already holds the closing paren.
+  function call_closed(s,    depth, i, c) {
+    depth = 0
+    for (i = 1; i <= length(s); i++) {
+      c = substr(s, i, 1)
+      if      (c == "(") depth++
+      else if (c == ")") { if (depth == 0) return 1; depth-- }
+    }
+    return 0
   }
 
   # Extract second argument from a Clock.schedule*( argument string.
@@ -333,17 +373,8 @@ while IFS= read -r f; do
         rest = substr(ln, RSTART + RLENGTH)
         if (match(rest, /^[a-z][A-Za-z0-9_]*/)) {
           pname = substr(rest, 1, RLENGTH)
-          if (match(ln, /BFacets\.MIN,[[:space:]]*BRelTime\.makeSeconds\([0-9]+\)/)) {
-            seg = substr(ln, RSTART)
-            sub(/BFacets\.MIN,[[:space:]]*BRelTime\.makeSeconds\(/, "", seg)
-            sub(/\).*/, "", seg)
-            prop_min[pname] = seg + 0
-          } else if (match(ln, /BFacets\.MIN,[[:space:]]*BRelTime\.make\([0-9]+\)/)) {
-            seg = substr(ln, RSTART)
-            sub(/BFacets\.MIN,[[:space:]]*BRelTime\.make\(/, "", seg)
-            sub(/\).*/, "", seg)
-            prop_min[pname] = seg + 0
-          }
+          v = facet_min(ln)
+          if (v >= 0) prop_min[pname] = v
         }
       }
 
@@ -374,19 +405,8 @@ while IFS= read -r f; do
         if (depth <= 0 && index(prop_buf, "@NiagaraProperty") > 0) {
           # Property block complete — extract MIN facet value (in ms)
           if (prop_name != "") {
-            if (match(prop_buf, /BFacets\.MIN,[[:space:]]*BRelTime\.makeSeconds\([0-9]+\)/)) {
-              seg = substr(prop_buf, RSTART)
-              sub(/BFacets\.MIN,[[:space:]]*BRelTime\.makeSeconds\(/, "", seg)
-              sub(/\).*/, "", seg)
-              prop_min[prop_name] = seg + 0
-            } else if (match(prop_buf, /BFacets\.MIN,[[:space:]]*BRelTime\.make\([0-9]+\)/)) {
-              seg = substr(prop_buf, RSTART)
-              sub(/BFacets\.MIN,[[:space:]]*BRelTime\.make\(/, "", seg)
-              sub(/\).*/, "", seg)
-              prop_min[prop_name] = seg + 0
-            } else if (index(prop_buf, "BFacets.MIN") > 0) {
-              prop_min[prop_name] = -1  # MIN present but unreadable value
-            }
+            v = facet_min(prop_buf)   # -1 = MIN present but unreadable value
+            if (v != -2) prop_min[prop_name] = v
           }
           in_prop = 0; prop_buf = ""; prop_name = ""
         }
@@ -420,6 +440,14 @@ while IFS= read -r f; do
       if (!match(ln, /Clock\.schedule(Periodically)?\(/)) continue
 
       call_rest = substr(ln, RSTART + RLENGTH)
+      sub(/[[:space:]]*\/\/.*$/, "", call_rest)
+      # A call split over lines: accumulate continuation lines (comments stripped) up to the
+      # closing paren of the call, the same paren-balance technique as the @NiagaraProperty pass.
+      # [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
+      for (j = i + 1; !call_closed(call_rest) && j <= NR && j <= i + 12; j++) {
+        nxt = lines[j]; sub(/[[:space:]]*\/\/.*$/, "", nxt)
+        call_rest = call_rest " " nxt
+      }
       arg2 = skip_arg(call_rest)
       classify(i, arg2)
     }

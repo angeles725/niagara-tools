@@ -68,7 +68,9 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       commissioning Δ2,Δ13; persistent-config Δ6; auto-lock Δ1,Δ2; alarm-console Δ1; decision-logic Δ1-Δ3. Route: delegated
       direct writer (logic.md + logic-authoring.md + METHODOLOGY + BUILD-STATE + INDEX — writer trigger). decision-logic-decomposition
       FULLY folded (flipped; `lint-size.sh` recorded as a deferred lint candidate); the other retros stay `pending`.
-- [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
+- [x] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker) —
+      comppan-fase2-amps-alarms Δ1; panccadia-restart-seq-comp-lockout-hours Δ1, Δ4. Route: delegated direct writer
+      (3 scripts + 3 bats + fixtures + 4 docs — writer trigger). PARTIAL promotion of both retros: no INDEX flip.
 - [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
 - [ ] WU7 · build/preflight/source-of-truth.
 - [ ] WU8 · deploy, backup and release gates.
@@ -218,6 +220,26 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   near-miss (auto-lock Δ2), advisory size smell (decision-logic Δ2), no-restructure of deployed modules (decision-logic Δ3).
   INDEX + marker flip: decision-logic-decomposition → `folded`. Evidence in the WU5b commit body / PR (bats, sweeps,
   gen-lint-index, public-repo grep). Commit: WU5b work-unit commit on this branch.
+- 2026-10-02 WU6a (branch `feat/fold-wu6a-rt-lint-fp`, from `origin/main`): `toolbelt/verify-module.sh` facets-req treats
+  `BFacets.makeNumeric(<unit>, ...)` as a unit and any `makeNumeric(` as a precision (precision-only `makeNumeric(<int>)` still
+  WARNs missing UNITS); `toolbelt/lint-delays.sh` reads `makeSeconds`/`makeMinutes`/`makeHours`/`makeDays` in delay arguments and
+  `BFacets.MIN` facets (one `facet_min` helper replaces the four duplicated MIN parsers) and accumulates a multi-line
+  `Clock.schedule*(` call to its closing paren (12-line cap); `toolbelt/lint-arbitrary-ord.sh` honors
+  `// lint-arbitrary-ord: reviewed <reason>` on the same or the preceding comment line, reason mandatory. Docs: `types/logic.md`
+  § Safety fail-modes & timers, `build-verify.md` § Verify; regenerated `toolbelt/INDEX.md`; BUILD-STATE WU6a open_issue.
+  Evidence:
+  - RED: `bats -f VMN tests/verify-module.bats` VMN1, VMN2 not ok (VMN3 negative control passes); `bats -f "LD1[3-7]"
+    tests/lint-delays.bats` 5/5 not ok; `bats tests/lint-arbitrary-ord.bats` AO4, AO5, AO6 not ok (AO7 negative passes).
+  - GREEN: lint-delays 16 ok + 1 env skip (LD10); lint-arbitrary-ord 8/8; VMN 3/3; facets-lint unchanged green.
+  - Observed mutations (each flips its named test, restored from a scratch copy): VMN1, VMN3 (verify-module.sh, documentary),
+    LD13, LD16 (also flips LD17), AO4 (also flips AO5), AO6.
+  - Real smoke (client tree, read-only): lint-delays output byte-identical before/after on the deployed client source
+    (7 rows) — the author had already worked around both gaps by hand.
+  - `bats tests/*.bats`: 747 ok / 0 not ok (58 env skips), exit 0. shellcheck 0.11.0: only the pre-existing SC2329 info in
+    `lint-config-sanity.sh:58`; no new `A && B || C` (SC2015) in added lines. `lint-guard-pins.sh --strict .` exit 0 (AO4, AO6,
+    LD13, LD16 MATCH); `gen-lint-index.sh --check` exit 0; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0
+    (172 folded, 172 cited).
+  - No retro flipped: comppan-fase2-amps-alarms owes Δ2/Δ3/Δ6/Δ7/Δ8; restart-seq-comp-lockout-hours owes Δ2/Δ3/Δ5-Δ10.
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
