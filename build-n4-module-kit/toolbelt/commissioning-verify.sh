@@ -352,41 +352,54 @@ fi
 # until the table marks it filled/provided.
 # ----------------------------------------------------------------
 if [ -n "$OWED" ]; then
-  # Fails closed [polish-2026-10-02 P3/P3b, #199 WU9]. The values-owed table is the one whose header
-  # row starts with Slot; other tables in the doc (revisions, notes) are ignored, and a doc with
-  # table rows but no Slot header is one MANUAL row (no PASS). A doc with no table at all (prose
-  # "none owed") stays a PASS. Inside the owed table every row is the header, an alignment row
-  # (each cell dashes with optional colons: ---, :---, :---:, ---:), an all-empty row, a
-  # filled/provided row, or a MANUAL row; a row with fewer than five cells or an empty Slot cell is
-  # a MANUAL "malformed" row, never skipped into the PASS.
+  # Fails closed [polish-2026-10-02 P3/P3b/P3c, #199 WU9]. The values-owed table is the one whose
+  # header row starts with Slot. Another pipe block is a foreign table (revisions, notes: skipped)
+  # only when its SECOND row is an alignment row; any other headerless block (an owed table split
+  # by a blank line or a comment) is read as owed rows. A doc with table rows but no Slot header is
+  # one MANUAL row (no PASS); a doc with no table at all (prose "none owed") stays a PASS. An owed
+  # row is the header, an alignment row (each cell dashes with optional colons: ---, :---, :---:,
+  # ---:), an all-empty row, a filled/provided row, or a MANUAL row; a row with fewer than five
+  # cells or an empty Slot cell is a MANUAL "malformed" row, never skipped into the PASS.
   owed_rows=$(awk -v F="$OWED" '
+    BEGIN { OUT = 0; OWED = 1; FOREIGN = 2; PEND = 3; st = OUT; pend = "" }   # block states
     function trim(x) { gsub(/^[ \t]+|[ \t]+$/, "", x); return x }
-    !/^[ \t]*\|/ { intab = 0; next }
-    {
-      pipes = 1
-      if (!intab) {                    # first row of a table: its header decides the table
-        hc = trim($0); sub(/^\|/, "", hc); split(hc, h, "|"); hc = tolower(trim(h[1])); gsub(/`/, "", hc)
-        intab = (hc == "slot") ? 1 : 2; if (intab == 1) seen = 1
-        next
-      }
-      if (intab != 1) next
-      raw = trim($0); line = raw
-      sub(/^\|/, "", line); sub(/\|$/, "", line)
+    function cells(r,    line, i) {   # sets c[1..n], n, blank, sep
+      line = trim(r); sub(/^\|/, "", line); sub(/\|$/, "", line)
       n = split(line, c, "|"); blank = 1; sep = 1
       for (i = 1; i <= n; i++) {
         c[i] = trim(c[i]); gsub(/`/, "", c[i])
         if (c[i] != "") blank = 0
         if (c[i] !~ /^:?-+:?$/) sep = 0
       }
-      if (blank || sep) next
+    }
+    function owed(r) {
+      cells(r)
+      if (blank || sep) return
       if (n < 5 || c[1] == "") {
-        printf "malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): %s\n", raw
-        next
+        printf "malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): %s\n", trim(r)
+        return
       }
-      if (tolower(c[5]) ~ /^(filled|provided)/) next
+      if (tolower(c[5]) ~ /^(filled|provided)/) return
       printf "%s: owed by %s, unit %s, still at safe default %s\n", c[1], c[2], c[3], c[4]
     }
+    function flush() { if (pend != "") owed(pend); pend = "" }   # a lone buffered row is an owed row
+    !/^[ \t]*\|/ { flush(); st = OUT; next }
+    {
+      pipes = 1
+      if (st == OUT) {                 # first row of a block
+        cells($0)
+        if (tolower(c[1]) == "slot") { st = OWED; seen = 1; next }
+        pend = $0; st = PEND; next     # a foreign header or an owed row: the second row decides
+      }
+      if (st == PEND) {
+        cells($0)
+        if (sep) { pend = ""; st = FOREIGN; next }
+        flush(); st = OWED             # headerless block: owed rows (fail closed)
+      }
+      if (st == OWED) owed($0)
+    }
     END {
+      flush()
       if (pipes && !seen)
         printf "no values-owed table (header Slot | Owed by | Unit | Safe default | Status) in %s\n", F
     }' "$OWED")

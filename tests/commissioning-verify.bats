@@ -147,6 +147,21 @@ setup() {
   [[ "$output" != *"PASS  commissioning  values-owed"* ]]
 }
 
+# polish-2026-10-02 P3c (#199, P3b review fail-open): a pipe block is a foreign table only when its second
+# row is an alignment row; an owed table split by a blank line or a comment keeps reporting the rows after
+# the break (a one-row or a multi-row headerless block), never a silent PASS.
+# Named mutation CV-owed-split (every block after a break is a foreign table) -> CV-owed-split flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-split: owed rows after a blank line / comment inside the Slot table stay MANUAL rows" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `stageDelay` | engineer | s | 30 | filled |\n\n| `lowPressureCutout` | technician | psig | 0 | owed |\n<!-- more -->\n| `overCurrentLimit` | technician | A | 0 | |\n| `highLimit` | technician | psig | 400 | owed |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  lowPressureCutout: owed by technician, unit psig, still at safe default 0"* ]] || { echo "$output" | grep values-owed; return 1; }
+  [[ "$output" == *"MANUAL  commissioning  values-owed  overCurrentLimit: owed by technician, unit A, still at safe default 0"* ]]
+  [[ "$output" == *"MANUAL  commissioning  values-owed  highLimit: owed by technician, unit psig, still at safe default 400"* ]]
+  [[ "$output" != *"PASS  commissioning  values-owed"* ]]
+}
+
 @test "CV-manual2: the MANUAL footer carries the persisted-state, alarm-routing, consumer-impact and link-source rows" {
   run "$CV" "$MINIMAL"
   [[ "$output" == *"MANUAL  commissioning  persisted-state-restart"* ]]
