@@ -25,11 +25,13 @@ class Tool(namedtuple("Tool", "name description input_schema handler needs_sessi
 
 class Session:
     def __init__(self, client, station_name, base_url, root_handle, identity_verified=False,
-                 version=None):
+                 version=None, version_error=None):
         self.client, self.station_name = client, station_name
         self.base_url, self.root_handle = base_url, root_handle
         #: Detected product version (None when undetected) and its tier (METHODOLOGY 5).
         self.version, self.tier = version, tiers.tier_of(version)
+        #: Why the version is unknown (shown to the operator), None when it was detected.
+        self.version_error = version_error
         #: True only when the session was opened with an `expected_station` that matched.
         self.identity_verified = identity_verified
         self.writes_executed = 0
@@ -95,9 +97,12 @@ class Context:
             writes = "refused"
         else:
             writes = "allowed" if sess.tier == "A" else "allowed-by-opt-in"
-        return {"version": sess.version,
-                "version_source": tiers.ABOUT_PATH if sess.version else None,
-                "tier": sess.tier, "tier_writes": writes}
+        out = {"version": sess.version,
+               "version_source": tiers.ABOUT_PATH if sess.version else None,
+               "tier": sess.tier, "tier_writes": writes}
+        if sess.version_error:
+            out["version_error"] = sess.version_error
+        return out
 
     def set_secret(self, secret):
         self._secret = secret
@@ -182,22 +187,37 @@ def n4_connect(ctx, args):
         client.close()
         raise ToolError("station identity mismatch: expected %r but connected to %r"
                         % (expected, station_name))
+    version, version_error = _detect_version(client)
     ctx.session = Session(client, station_name, client.base_url, root_h,
-                          identity_verified=True, version=_detect_version(client))
+                          identity_verified=True, version=version,
+                          version_error=version_error and ctx.scrub(version_error))
     return dict({"station_name": station_name, "base_url": client.base_url,
                  "root_handle": root_h, "mode": ctx.mode}, **ctx.tier_report(ctx.session))
 
 
 def _detect_version(client):
-    """The station's oBIX productVersion, or None: detection never fails a connect.
+    """`(version, error)`: the oBIX productVersion, or None and why. Never fails a connect.
 
     One GET, never retried. An undetected version classifies as tier C (writes refused
-    until the operator opts in), so a failure here can only make the server stricter.
+    until the operator opts in), so a failure here can only make the server stricter. The
+    reason is reported, not swallowed: a 401/403 here may count as a failed login toward
+    the station's lock-out, so the operator must see it.
     """
+    about = getattr(client, "about", None)
+    if about is None:
+        return None, "this client cannot read %s" % tiers.ABOUT_PATH
     try:
-        return tiers.product_version(client.about())
-    except Exception:  # no oBIX, no permission, transport: unknown version
-        return None
+        version = tiers.product_version(about())
+    except box.AuthError as exc:
+        return None, ("%s refused: %s; the station may count it as a failed login, so check "
+                      "that this user may read oBIX before reconnecting" % (tiers.ABOUT_PATH, exc))
+    except box.BoxError as exc:
+        return None, "%s unreadable: %s" % (tiers.ABOUT_PATH, exc)
+    except Exception as exc:  # never fail the connect over the version probe
+        return None, "%s unreadable (%s)" % (tiers.ABOUT_PATH, type(exc).__name__)
+    if version is None:
+        return None, "%s has no productVersion" % tiers.ABOUT_PATH
+    return version, None
 
 
 # ---- n4_describe_session -------------------------------------------------

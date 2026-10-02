@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import test_server  # noqa: E402
 import test_tools_write  # noqa: E402
-from mcp_n4 import retro, safety, server, tiers, tools_write  # noqa: E402
+from mcp_n4 import box, retro, safety, server, tiers, tools_write  # noqa: E402
 
 FOLDER = test_tools_write.FOLDER
 #: Every mutating tool with arguments that pass schema validation.
@@ -84,6 +84,43 @@ class TestConnectReportsTier(test_server.ToolTestCase):
         out = self.connect()
         self.assertEqual((out["version"], out["version_source"], out["tier"],
                           out["tier_writes"]), (None, None, "C", "refused"))
+
+    def test_a_detected_version_carries_no_version_error(self):
+        self.assertNotIn("version_error", self.connect())
+
+    def test_an_about_auth_rejection_is_reported_not_swallowed(self):
+        orig = box.BoxClient.about
+
+        def about_401(client, *a, **kw):
+            raise box.AuthError(box.auth_message(401), "obix", "about")
+        box.BoxClient.about = about_401
+        self.addCleanup(setattr, box.BoxClient, "about", orig)
+        out = self.connect()
+        self.assertEqual((out["version"], out["tier"], out["tier_writes"]), (None, "C", "refused"))
+        self.assertIn("HTTP 401", out["version_error"])
+        self.assertIn("failed login", out["version_error"])
+        self.assertIsNotNone(self.srv.ctx.session)  # detection never fails the connect
+        self.assertIn("HTTP 401", self.ok("n4_describe_session")["version_error"])
+
+    def test_a_missing_about_endpoint_is_reported(self):
+        self.fake.product_version = None
+        self.assertIn("HTTP 404", self.connect()["version_error"])
+
+    def test_a_transport_failure_or_a_client_without_about_is_tier_c(self):
+        def broken(client, *a, **kw):
+            raise box.BoxError("transport failure: reset", "obix", "about")
+        for patch in (broken, None):
+            orig = box.BoxClient.about
+            if patch is None:
+                del box.BoxClient.about
+            else:
+                box.BoxClient.about = patch
+            try:
+                out = self.connect()
+            finally:
+                box.BoxClient.about = orig
+            self.assertEqual((out["tier"], out["version"]), ("C", None))
+            self.assertTrue(out["version_error"])
 
     def test_tier_b_station_reports_refused_without_opt_in(self):
         self.fake.product_version = "4.15.3.28"
