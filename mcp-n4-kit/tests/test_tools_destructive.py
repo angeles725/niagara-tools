@@ -620,9 +620,27 @@ class TestRollback(DestructiveCase):
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
         (relink,) = [e["relink"] for e in plan["plan"]["inverse"] if "relink" in e]
         self.assertEqual(relink["target_slot"], "in10")
-        self.assertEqual(relink["prior"]["t"], "baja:StatusNumeric")
-        self.assertEqual({c["n"]: c["v"] for c in relink["prior"]["s"]},
+        self.assertNotIn("prior", relink)  # volatile: never part of the hashed plan (R3-001)
+        self.assertTrue(any("captured when the confirmed remove runs" in n
+                            for n in plan["plan"]["notes"]), plan["plan"]["notes"])
+        (seen,) = plan["link_input_values"]  # the operator's preview, outside the hash
+        self.assertEqual((seen["target_path"], seen["target_slot"]), ("Tgt", "in10"))
+        self.assertEqual(seen["value"]["t"], "baja:StatusNumeric")
+        self.assertEqual({c["n"]: c["v"] for c in seen["value"]["s"]},
                          {"value": "4.5", "status": "0"})  # facets dropped, bits kept
+
+    def test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid(self):
+        """The link source keeps propagating between dry run and confirm (R3-001)."""
+        nn = self.linked_group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.fake.folder.child(nn).child("Tgt").child("in10").child("value").value = "7.25"
+        removed = self.ok("n4_remove_component", parent_ord=FOLDER, name=nn, dry_run=False,
+                          confirmation_token=plan["confirmation_token"])
+        self.assertNotIn(nn, self.children())
+        (relink,) = [e["relink"] for e in self.journal().read(removed["batch_id"])["inverse"]
+                     if "relink" in e]
+        self.assertEqual({c["n"]: c["v"] for c in relink["prior"]["s"]},
+                         {"value": "7.25", "status": "0"})  # the value seen at execution
 
     def test_a_skipped_relink_reports_the_captured_input_value(self):
         nn = self.linked_group()

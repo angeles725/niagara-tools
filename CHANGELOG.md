@@ -25,7 +25,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
   (`target`, `target_slot`, `source_slot`, `reason`, `value`). A skipped relink stays `mismatch`; an input
   linked from outside the subtree makes the verdict `partial`. The value is reported, not written: the live
   station rejected link-target values in the re-create body (B1200 finding 3). Batches journaled before
-  v0.28.0 carry no recorded value (`value: null`).
+  v0.28.0 carry no recorded value (`value: null`). The value is captured when the confirmed remove runs
+  and journaled from that re-plan; it is kept out of the confirmation hash (a link source keeps changing
+  it, so hashing it would reject a valid confirmation by timing alone, R3-001). The dry run shows it as a
+  `link_input_values` preview outside the hashed `plan`.
 - **Type contract table** (B1200-G3): `box.COMPONENT_TYPES` maps type specs to component/value and wins over
   the naming heuristic, which stays as the documented fallback. Seeded from the N4 declarations:
   `baja:Component`, `baja:Folder`, `baja:UnrestrictedFolder`, `control:NullProxyExt` (components),

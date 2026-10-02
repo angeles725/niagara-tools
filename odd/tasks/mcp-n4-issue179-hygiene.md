@@ -81,6 +81,15 @@ reported by the 2026-10-02 remote inventory session that v0.26.0 did not encode 
   `reg.loadContract` lookup (B1200-G3) both need a station run to certify; the rollback verdict now discloses
   the gap instead.
 
+- T4 review fix R3-001 (CRITICAL, route: delegated writer): `prior` made the confirmation hash depend on
+  a link-driven runtime value, so a dry run and its confirming re-plan could disagree by timing. Fix:
+  `_process` hashes `_hashed_inverse(inverse)` (`prior` stripped from `relink`/`unlinked_input`); the
+  journal keeps the full inverse from the confirm-time re-plan, so rollback reports the value seen at
+  execution; the dry run returns a `link_input_values` preview outside the hash plus a plan note. RED:
+  `test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid` failed with
+  "confirmation_token does not match this tool, these arguments and this plan". GREEN: full suite
+  453 tests OK; the T4 dry-run test now asserts the preview and that `prior` is absent from the plan.
+
 ## Next step
 - Open the T4 PR, run native review if due, merge after CI green, then close issue #179 (remaining live-only
   follow-ups noted above).

@@ -215,7 +215,9 @@ Destructive tools use the same pipeline:
   never re-added: the read-back compares it with the snapshot and lists any
   difference in `frozen_config_not_restored`. A link-driven input whose link is not
   re-created (an end is missing, or its source was outside the removed subtree) is
-  listed in `link_inputs_not_restored` with the value recorded at remove time. Either
+  listed in `link_inputs_not_restored` with the value captured when the confirmed
+  remove ran (the dry run previews it as `link_input_values`, outside the
+  confirmation hash, because a link keeps changing it). Either
   list makes the verdict `partial`, never `verified`.
 - `n4_save_station` invokes `save` on the root. The BOX reply to `save` is `null`
   and proves nothing, so with `--station-home NAME=PATH` (directory holding

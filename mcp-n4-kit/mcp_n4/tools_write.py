@@ -137,6 +137,39 @@ def _inverse_list(inverse):
     return inverse or []
 
 
+#: Inverse entries whose spec may carry `prior`, a link-driven input's runtime value.
+_PRIOR_KINDS = ("relink", "unlinked_input")
+
+
+def _hashed_inverse(inverse):
+    """The inverse as the confirmation token authorizes it: without `prior` values.
+
+    `prior` is the live value a link propagates into an input, so it changes whenever the
+    link source does; hashing it would make a dry run and its confirming re-plan disagree
+    by timing alone (issue #179 R3-001). The journal keeps the full inverse, `prior`
+    included, from the re-plan taken when the confirmed write runs.
+    """
+    out = []
+    for entry in inverse:
+        kind = next((k for k in _PRIOR_KINDS if isinstance(entry, dict) and
+                     isinstance(entry.get(k), dict) and "prior" in entry[k]), None)
+        if kind is None:
+            out.append(entry)
+            continue
+        out.append(dict(entry, **{kind: {k: v for k, v in entry[kind].items()
+                                         if k != "prior"}}))
+    return out
+
+
+def _link_input_values(inverse):
+    """The `prior` values an inverse carries, as a dry-run preview (never hashed)."""
+    return [{"target_path": spec["target_path"], "target_slot": spec["target_slot"],
+             "value": spec["prior"]}
+            for entry in inverse for kind in _PRIOR_KINDS
+            if isinstance(entry, dict) and isinstance(entry.get(kind), dict)
+            for spec in (entry[kind],) if "prior" in spec]
+
+
 def _data(planned):
     """A plan's private data as a dict, whatever a handler returned."""
     return planned.data if isinstance(planned.data, dict) else {}
@@ -491,6 +524,11 @@ def _remove_plan(client, args):
             inverse.append({"unlinked_input": spec})
             continue
         inverse.append({"relink": dict(spec, source_path=source)})
+    if any("prior" in link for link in links):
+        notes.append("link-driven input values are captured when the confirmed remove runs, "
+                     "not at this dry run (link_input_values is a preview) and are not part "
+                     "of the confirmation hash; they are never written back: n4_rollback "
+                     "reports them when it cannot re-establish their link")
     data = {"targets": {parent_ord: parent_h}}
     scan_ord = args.get("link_scan_ord")
     if scan_ord is not None:
@@ -1099,7 +1137,8 @@ def _process(ctx, name, args):
     if name == "n4_save_station":
         planned.data["write"] = write  # readback polls with the operator's timing
     planned = planned._replace(inverse=_inverse_list(planned.inverse))
-    plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
+    plan = {"tool": name, "ops": planned.ops, "inverse": _hashed_inverse(planned.inverse),
+            "notes": planned.notes}
     data = _data(planned)
     for key in ("relinks", "unlinked_inputs", "components",
                 "outgoing_links_broken"):  # part of what the token authorizes
@@ -1108,8 +1147,12 @@ def _process(ctx, name, args):
     plan_hash = hashlib.sha256(safety.canonical(plan).encode()).hexdigest()
     if dry:
         token, expires_at = write.tokens.issue(name, args, plan_hash)
-        return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
-                "confirmation_token": token, "expires_at": expires_at}, None
+        out = {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
+               "confirmation_token": token, "expires_at": expires_at}
+        preview = _link_input_values(planned.inverse)
+        if preview:  # volatile: shown to the operator, outside what the token authorizes
+            out["link_input_values"] = preview
+        return out, None
     write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     batch_id = uuid.uuid4().hex
