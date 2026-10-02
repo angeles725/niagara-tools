@@ -168,6 +168,69 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 - **V3 / Verify freshness before labeling "live":** probe max `ts` is advancing ≈ now; if frozen, label honestly (SNAPSHOT / última lectura `<ts>`). [ev: retro live-cutover-and-authenticated-control Δ1]
 - **V4 / Headless-QA/CORS boundary:** a headless-from-localhost e2e cannot cross a browser CORS origin by design — confirm the backend with `curl` and verify `Access-Control-Allow-Origin` separately; a CORS block is not a code bug. [ev: retro live-cutover-and-authenticated-control Δ3]
 
+## Frontend verify step (`-ux` dashboards)
+For every `-ux` change, after the build and before hand-off:
+1. `toolbelt/report-module.sh <module-root> --profile <ui_profile> [--legacy]` — the module's
+   `ui_profile` comes from its BUILD-STATE envelope (the caller passes it; the toolbelt never parses
+   BUILD-STATE). It relays `rc-scan.sh` (browser-floor FAIL for `hmi`/`both`), the kit ESLint config
+   on the artifact's own rc js, and `lint-vendor-floor.sh` on `rc/vendor`. `--legacy` only for a
+   deployed module not yet restructured (data-URI budget WARN instead of FAIL).
+   `[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ16]`
+2. **No-scroll at the panel resolution** (`ui_profile` `hmi` or `both`): run
+   `node toolbelt/hmi-sweep.js --url <preview-url> --target <alarm-banner selector>` (plus
+   `--subtab`/`--scenario`/`--api-match` as the SPA needs) against the preview server; exit 1 = a
+   view scrolls or the banner is covered. A text-only lint cannot see layout overflow, so this
+   sweep is the check, not `rc-scan.sh`. `[ev: retro panccadia-persistent-config-hoa Δ4]`
+   `[ev: retro comppan-fase2-amps-alarms Δ3]`
+- Tools, installed once per machine: `npm install --prefix build-n4-module-kit/toolbelt/eslint`
+  (pinned eslint + acorn, `toolbelt/eslint/package.json`); puppeteer-core + a Chrome for the sweep
+  (`KIT_PUPPETEER`/`NODE_PATH`, `KIT_CHROME`). A missing tool is a SKIP row naming it (exit 4 for
+  the standalone scripts) — report it as "not run", never as a pass.
+
+## Client repository CI `[ev: retro dashboard-deployment-profiles Δ5]`
+A client repository (private; module sources live there, not in the kit) gets CI by reusing this
+kit's workflow pattern: Java 8 Temurin, JUnit 4.13.2 + hamcrest-core 1.3 fetched with pinned
+sha256 (a mismatch is a hard stop, never a silent re-pin), then on every push the pure JUnit tests,
+`rc-scan.sh`, the frontend lints and `report-module.sh`. No station, no secrets: everything runs on
+sources. Check out the kit at a pinned tag, not a branch, so a kit change cannot break client CI
+silently. Skeleton (adapt paths; `<GROUP>/<Module>` is the module root):
+
+```yaml
+name: module-ci
+on: { push: { branches: [main] }, pull_request: {} }
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with: { repository: <owner>/niagara-tools, ref: <kit-tag>, path: kit }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '8' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '24' }
+      - name: JUnit + hamcrest (pinned sha256, same values as the kit CI)
+        run: |
+          set -eu
+          JU_DIR="$HOME/.gradle/caches/modules-2/files-2.1/junit/junit/4.13.2/8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12"
+          HC_DIR="$HOME/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/1.3/42a25dc3219429f0e5d060061f71acb49bf010a0"
+          mkdir -p "$JU_DIR" "$HC_DIR"
+          curl -fsSL -o "$JU_DIR/junit-4.13.2.jar" https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
+          curl -fsSL -o "$HC_DIR/hamcrest-core-1.3.jar" https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+          echo "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3  $JU_DIR/junit-4.13.2.jar" | sha256sum -c -
+          echo "66fdef91e9739348df7a096aa384a5685f4e875584cce89386a7a47251c4d8e9  $HC_DIR/hamcrest-core-1.3.jar" | sha256sum -c -
+      - name: Frontend lint tools (pinned)
+        run: npm install --no-audit --no-fund --prefix kit/build-n4-module-kit/toolbelt/eslint
+      - name: Pure tests
+        run: kit/build-n4-module-kit/toolbelt/run-pure-test.sh <GROUP>/<Module>/<Module>-rt <pkg.TestClass>
+      - name: Aggregated report (rc-scan, ESLint, vendor floor, rt lints)
+        run: kit/build-n4-module-kit/toolbelt/report-module.sh <GROUP>/<Module> --profile <ui_profile>
+```
+
+One `run-pure-test.sh` line per pure test class. The report needs no built jar (verify-module rows
+SKIP without one); the jar gate stays local where the Niagara SDK lives.
+
 ## Deploy (station)
 Stop station → replace the jars in `<niagara_home>/modules/` → start (the jar is locked while the station runs; to avoid stopping a live supervisor, build against a mirror per §Building against a running station and copy `build/libs` → station). Signing per target: §Signing per deploy target. **A jar that has not passed `toolbelt/verify-module.sh` does not go to a station.**
 

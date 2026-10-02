@@ -48,7 +48,8 @@ module docs, see `BUILD-STATE.md` § How to read this file) before writing a rul
   `main.js` (wiring). Render never fetches; services never touch the DOM.
 - [both] No free globals: each file exposes one namespace object; live state lives in one store.
 - [both] Functions stay under ~60 lines with one responsibility each; no dead code, no commented-out
-  code, no temporary `console.log`.
+  code, no temporary `console.log`. Gated by the kit ESLint config (§ Enforcement).
+  `[ev: retro dashboard-frontend-standard Δ4]`
 
 ### 3. Naming
 - [both] Identifiers in English (camelCase functions/variables, PascalCase constructors,
@@ -184,6 +185,12 @@ rc/
   from a CDN at runtime (the panel and many site LANs have no internet).
 - [both] A deprecated build (e.g. the three.js legacy global `build/three.min.js`, deprecated since
   r150) is recorded with a migration note next to its pin in `rc/vendor/THIRD-PARTY.md`.
+- [HMI] Every vendored file passes `toolbelt/lint-vendor-floor.sh <rc-dir>` on every library bump:
+  it must parse as an ES2020 classic script (FAIL otherwise — one unparsable file breaks the whole
+  page on the panel) and each API above the floor (WARN — it may be feature-guarded) is reviewed.
+  Record the verdict (`vendor-floor: clean` or the accepted WARN list with the reason) next to the
+  pin in `rc/vendor/THIRD-PARTY.md`. [LAN] A LAN-only build may record the WARNs as accepted.
+  `[ev: retro dashboard-frontend-standard Δ16]`
 
 ## Vendor catalog `[ev: retro dashboard-frontend-standard Δ15]`
 
@@ -246,7 +253,28 @@ silenced on its line with `rc-scan: allow <check-id>` plus a reason.
 reliability). `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
 `[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
 
-Still owed (later work units): function length / dead code via the ESLint config, the vendor-floor
-gate, the preview budgets, and `report-module.sh` passing the module's `ui_profile` (`--profile`)
-and `--legacy` to `rc-scan.sh` (today it runs the default: browser-floor WARN, datauri FAIL). Until
-then those rules are DECLARED, not GATED.
+`toolbelt/report-module.sh` passes the module's `ui_profile` (read by the caller from the module's
+BUILD-STATE envelope) as `--profile` and `--legacy` through to `rc-scan.sh`, so an `hmi`/`both`
+module gets browser-floor FAIL in the aggregated report. `[ev: retro dashboard-frontend-standard Δ10]`
+
+ESLint (§ 2 function size, § 11 quality): `toolbelt/eslint.config.mjs` is the kit flat config —
+`ecmaVersion: 2020` + `sourceType: "script"` (the Chromium 83 floor: syntax above it is a parse
+error, FAIL), browser globals, `no-unused-vars` (locals; classic scripts share one global scope, so
+a top-level symbol used by another file is not flagged), `max-lines-per-function` 60 (WARN),
+`no-console` except `console.error`, `eqeqeq`. `report-module.sh` runs it on every `-ux`
+artifact's own `src/rc` js (vendor/, ext/, `*.min.js` excluded) and relays its rows (error → FAIL,
+warning → WARN). This covers the function-length and dead-local rule; a dead TOP-LEVEL symbol and a
+`typeof` guard on an own symbol are not mechanized (review). Prettier is optional.
+`[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ4]`
+
+Vendored libraries: `toolbelt/lint-vendor-floor.sh` (§ Vendored libraries), also run by
+`report-module.sh` on `src/rc/vendor`. `[ev: retro dashboard-frontend-standard Δ16]`
+
+HMI layout fit: `toolbelt/hmi-sweep.js` sweeps every nav view (and declared sub-tabs) at 1280×800 for
+document scroll, unnamed inner scrollers and an occluded target such as the alarm banner
+(`build-verify.md` § Frontend verify step). `[ev: retro comppan-fase2-amps-alarms Δ3]`
+
+Tools: node + `npm install --prefix toolbelt/eslint` (pinned eslint + acorn); `hmi-sweep.js` needs
+puppeteer-core and a Chrome. A missing tool is one SKIP row naming it (exit 4 for the standalone
+scripts), never a silent pass. Still DECLARED, not gated: the preview budgets (out-of-repo preview
+harness, deferred).
