@@ -30,7 +30,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-03-qa-stack-pure-tests-and-defrost-untested-gap.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-self-firing-timer-needs-started-not-only-atsteadystate.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-self-retro-preview-gate-wsl-tests-live-verify.md | kit | 2026-09-03 | folded | 0 |
-| 2026-09-03-slot-type-change-rompe-bog-station-no-arranca.md | kit | 2026-09-03 | folded | 0 |
+| 2026-09-03-slot-type-change-rompe-bog-station-no-arranca.md | kit | 2026-09-03 | folded | 0 | <!-- line 45 "rollback = redeploy the previous jar + restart" is SUPERSEDED: recovery is roll-forward to a revert build under a higher version, see BUILD-LOOP §4.c/§6 and retro 2026-09-26-roll-forward-recovery Δ1/Δ2 -->
 | 2026-09-03-soft-start-staggered-startup.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-station-corre-en-atlas-snap-no-en-el-pc-de-deploy.md | kit | 2026-09-03 | folded | 0 |
 | 2026-09-03-ux-only-deploy-no-station-restart.md | kit | 2026-09-03 | folded | 0 |
@@ -188,7 +188,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 3 |
 | 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | pending | 7 |
-| 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | pending | 4 |
+| 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | folded | 4 |
 | 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |
 | 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | pending | 4 |
@@ -204,4 +204,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | pending | 5 |
-| 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | pending | 7 |
+| 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | folded | 7 |

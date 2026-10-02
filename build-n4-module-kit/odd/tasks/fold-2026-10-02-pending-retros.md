@@ -71,7 +71,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
 - [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
 - [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
 - [ ] WU7 · build/preflight/source-of-truth.
-- [ ] WU8 · deploy, backup and release gates.
+- [x] WU8 · deploy, backup and release gates — roll-forward-recovery Δ1-Δ4; station-backup Δ1,Δ2; auto-lock Δ5,Δ7;
+      restart-seq Δ10; commissioning Δ10; kit-meta Δ4,Δ5; deployment-profiles Δ7; operator-manual Δ2. Route: delegated direct
+      writer (BUILD-LOOP + METHODOLOGY + build-verify + distribution + ledgers — writer trigger). FULL: roll-forward-recovery,
+      dashboard-deployment-profiles (flipped); the others stay `pending` with owed Δ in the kit BUILD-STATE open_issue.
 - [ ] WU9 · commissioning and post-deploy triage (+ `obix-link-audit.sh` possibly split out).
 - [ ] WU10 · process: tiers, behavior questions, orchestration.
 - [ ] WU11 · close gate and ledgers; final INDEX flips; release.
@@ -218,6 +221,21 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   near-miss (auto-lock Δ2), advisory size smell (decision-logic Δ2), no-restructure of deployed modules (decision-logic Δ3).
   INDEX + marker flip: decision-logic-decomposition → `folded`. Evidence in the WU5b commit body / PR (bats, sweeps,
   gen-lint-index, public-repo grep). Commit: WU5b work-unit commit on this branch.
+- 2026-10-02 WU8 (branch `feat/fold-wu8-deploy-gates`, from origin/main 32bff11): `BUILD-LOOP.md` §4.c pre-built revert
+  build (roll-forward Δ2); §6 new MANDATORY pre-deploy gates — target-distribution boot smoke (commissioning Δ10), full station
+  backup before any -rt install (station-backup Δ1; the `--no-backup` bullet rewritten in place), versioned jar archive + sha256
+  (roll-forward Δ3), deploy checklist names the opt-in enabling slot + live value (auto-lock Δ5) and every BComponent-only flag
+  lifecycle as a station-smoke item (restart-seq Δ10), observed two-checkout handoff (auto-lock Δ7); roll-forward recovery
+  doctrine (roll-forward Δ1); remote-access preconditions (kit-meta Δ5); `niagara-tools/scripts/ng-deploy.sh` full path at first
+  use (kit-meta Δ4). `METHODOLOGY.md` 4-layer-stack cold-boot bullet REWRITTEN in place (target distribution/version,
+  commissioning Δ10; same in `build-verify.md` item 3) + Schema / upgrade safety roll-forward bullet. `types/distribution.md` §10
+  Downgrade row REWRITTEN in place (opposite-polarity rule) + new § 12 station backup/provisioning/fleet (station-backup Δ2, corpus
+  B39), § 13 release package (deployment-profiles Δ7), § 14 client documentation deliverable (operator-manual Δ2).
+  roll-forward Δ4: pointer added only on the slot-type-change retro's `retros/INDEX.md` row (retro bodies untouched); the outage
+  retro target does not exist — recorded as a note. FULL promotion + flip: roll-forward-recovery, dashboard-deployment-profiles.
+  No script: no WU8 delta asked for one. Evidence (passive docs, no RED applicable): see the WU8 commit body.
+  Gap (outside surface): `types/issues-and-gotchas.md` station-stuck-at-boot list still names Downgrade without the roll-forward
+  caveat (WU11).
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
