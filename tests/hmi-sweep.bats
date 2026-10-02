@@ -17,7 +17,7 @@ _need_node() { command -v node >/dev/null 2>&1 || skip "node not installed"; }
 _need_browser() {
   _need_node
   local chrome="${KIT_CHROME:-${PUPPETEER_EXECUTABLE_PATH:-}}"
-  [ -n "$chrome" ] && [ -x "$chrome" ] || skip "no Chrome (set KIT_CHROME or PUPPETEER_EXECUTABLE_PATH)"
+  if [ -z "$chrome" ] || [ ! -x "$chrome" ]; then skip "no Chrome (set KIT_CHROME or PUPPETEER_EXECUTABLE_PATH)"; fi
   if [ -n "${KIT_PUPPETEER:-}" ]; then return 0; fi
   node -e 'require.resolve("puppeteer-core")' >/dev/null 2>&1 || skip "puppeteer-core not installed"
 }
