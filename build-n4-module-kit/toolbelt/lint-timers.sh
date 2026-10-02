@@ -38,7 +38,6 @@
 #   Scans all *.java files recursively under <java-root> (dot-dirs pruned).
 #   Prints FAIL|PASS rows per owning class.
 #   A class with no timers emits no FAIL (silently skipped).
-#   Exit 0 (all PASS) or 1 (any FAIL).
 #
 # Row format: FAIL|PASS  <check>  <file>: <detail>
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env

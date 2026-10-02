@@ -6,7 +6,7 @@
 # docs/write-path-matrix.md (D16: row-presence only; CHECK12 is bog-audit's concern).
 # With --bog, adds link-traced dashboard/RoomPanel target slots to the required set.
 #
-# Usage:  lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>]
+# Usage:  lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>] [--strict]
 #
 # Module-root convention:
 #   - If <root>/src exists: scan it directly (single-profile mode).
@@ -57,7 +57,7 @@ MATRIX_OVERRIDE=""
 
 # ---------------------------------------------------------------------------
 # Argument parsing.  --strict may appear before or after <module-root>.
-# Exit 3 when no module-root is provided (K20 disjoint exit codes).
+# A missing module-root is a usage error: exit 3 (K20 disjoint exit codes).
 # ---------------------------------------------------------------------------
 MODULE_ROOT=""
 
