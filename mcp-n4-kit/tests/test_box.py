@@ -603,6 +603,37 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(len(sleeps), 1)  # it kept polling instead of giving up at once
 
+    def test_an_answered_load_clears_the_count_left_by_a_timed_out_one(self):
+        c = self.opened()
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", return_value=[]):
+            with self.assertRaises(box.BoxError):  # no reply: the request stays counted
+                c.load_tree("station:|slot:/Other", attempts=1, **NO_SLEEP)
+        self.assertEqual(c._loads_outstanding, 1)
+        c.load_tree("station:|slot:/Folder", **NO_SLEEP)  # its own reply arrives
+        # replies come in request order: the earlier request will not be answered now
+        self.assertEqual(c._loads_outstanding, 0)
+
+    def test_a_cached_handle_regains_the_early_abort_after_a_timed_out_load(self):
+        c = self.opened()
+        with mock.patch.object(c, "ssc", return_value=None), \
+                mock.patch.object(c, "poll", return_value=[]):
+            with self.assertRaises(box.BoxError):
+                c.load_tree("station:|slot:/Other", attempts=1, **NO_SLEEP)
+        c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        c._handles["station:|slot:/Folder"] = "dead"
+        sleeps = []
+        nodes = c.load_tree("station:|slot:/Folder", sleep=sleeps.append)
+        self.assertEqual(nodes[""]["h"], "3")
+        self.assertEqual(sleeps, [])  # the session is trusted again
+
+    def test_a_rejected_load_request_is_not_left_outstanding(self):
+        c = self.opened()
+        with mock.patch.object(c, "ssc", side_effect=box.BoxError("rejected")):
+            with self.assertRaises(box.BoxError):
+                c.load_tree("station:|slot:/Folder", **NO_SLEEP)
+        self.assertEqual(c._loads_outstanding, 0)
+
     def test_stale_cached_handle_is_retried_once_as_unknown(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "dead"
@@ -696,6 +727,16 @@ class TestPureHelpers(unittest.TestCase):
         for type_ in ("baja:Double", "baja:StatusNumeric", "baja:WsAnnotation", "baja:Link",
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
+
+    def test_the_type_table_wins_over_the_naming_heuristic(self):
+        """B1200-G3: an explicit entry decides; unknown types fall back to the heuristic."""
+        self.assertIs(box.COMPONENT_TYPES["control:PriorityLevel"], False)  # BFrozenEnum
+        self.assertFalse(box.is_component_type("control:PriorityLevel"))  # heuristic: True
+        self.assertIs(box.COMPONENT_TYPES["baja:UnrestrictedFolder"], True)  # extends BFolder
+        self.assertTrue(box.is_component_type("baja:UnrestrictedFolder"))  # heuristic: False
+        self.assertTrue(box.is_component_type("baja:Component"))
+        self.assertTrue(box.is_component_type("acme:UnknownWidget"))  # fallback
+        self.assertFalse(box.is_component_type("baja:RelTime"))  # fallback
 
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}

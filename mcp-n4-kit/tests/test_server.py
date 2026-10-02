@@ -474,6 +474,47 @@ class TestNavigate(StationTestCase):
         for child in self.ok("n4_navigate")["children"]:
             self.assertNotIn("children", child)
 
+    def test_types_filter_keeps_only_matching_children(self):
+        nn, h = self.add("Pump")
+        self.box.add_component("3", "Sub", "baja:Folder")
+        out = self.ok("n4_navigate", ord="station:|slot:/Folder",
+                      types=["kitControl:NumericConst"])
+        self.assertEqual([(c["name"], c["type"], c["matched"]) for c in out["children"]],
+                         [(nn, "kitControl:NumericConst", True)])
+        self.assertEqual(out["types"], ["kitControl:NumericConst"])
+
+    def test_types_filter_keeps_the_path_to_a_deeper_match(self):
+        nn, _ = self.add("Pump")
+        out = self.ok("n4_navigate", depth=2, types=["kitControl:NumericConst"])
+        self.assertEqual([c["name"] for c in out["children"]], ["Folder"])
+        folder = out["children"][0]
+        self.assertFalse(folder["matched"])
+        self.assertEqual([(c["name"], c["matched"]) for c in folder["children"]], [(nn, True)])
+
+    def test_types_filter_with_no_match_returns_no_children(self):
+        self.add("Pump")
+        out = self.ok("n4_navigate", depth=2, types=["bacnet:BacnetDevice"])
+        self.assertEqual(out["children"], [])
+
+    def test_no_types_filter_is_the_unfiltered_listing(self):
+        self.add("Pump")
+        for types in (None, []):
+            args = {} if types is None else {"types": types}
+            out = self.ok("n4_navigate", depth=2, **args)
+            self.assertNotIn("types", out)
+            for child in out["children"]:
+                self.assertNotIn("matched", child)
+            self.assertIn("Folder", [c["name"] for c in out["children"]])
+
+    def test_types_filter_rejects_non_string_entries(self):
+        self.assertIn("types", self.err("n4_navigate", types=["baja:Folder", 5]))
+        self.assertIn("types", self.err("n4_navigate", types=[""]))
+
+    def test_types_filter_must_be_an_array(self):
+        res = self.srv.dispatch(rpc("tools/call", {"name": "n4_navigate",
+                                                   "arguments": {"types": "baja:Folder"}}))
+        self.assertEqual(res["error"]["code"], -32602)
+
     def test_bad_ord_is_an_error(self):
         self.assertIn("ord", self.err("n4_navigate", ord="/Folder"))
 
