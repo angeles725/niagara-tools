@@ -49,9 +49,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       deployment-profiles Δ1-Δ3; rc-file-split Δ1,Δ3,Δ4. Route: delegated direct writer (new type doc + 5 doc
       files — writer trigger). PARTIAL promotion of all three retros: INDEX rows stay `pending`; owed Δ recorded
       in the kit BUILD-STATE self-envelope open_issue.
-- [ ] WU2 · dashboard runtime doctrine (`types/dashboard.md`) — reliability Δ1-Δ4,Δ6,Δ8,Δ9; frontend-standard
+- [x] WU2 · dashboard runtime doctrine (`types/dashboard.md`) — reliability Δ1-Δ4,Δ6,Δ8,Δ9; frontend-standard
       Δ6,Δ7,Δ9; amps-alarms Δ4,Δ5; auto-lock Δ3; rc-file-split Δ2; persistent-config Δ5; servlet-write-audit Δ3;
-      deployment-profiles Δ6.
+      deployment-profiles Δ6. Route: delegated direct writer (3 type docs + BUILD-STATE + feature doc — writer
+      trigger). PARTIAL promotion of all 8 retros: no INDEX flip; owed Δ in the kit BUILD-STATE open_issue.
 - [ ] WU3 · `rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats.
 - [ ] WU4 · frontend tooling (`lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc).
 - [ ] WU5a · logic persistence/restart/backup doctrine.
@@ -108,5 +109,26 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Gap for WU11: WU0 cited `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]` (dated token), which
     sweep-fold-audit will NOT credit to stem `kit-meta-hygiene-2026-10-01` when that row flips to folded.
 
+- 2026-10-02 WU2 (branch `feat/fold-wu2-dashboard-runtime`, chained on `feat/fold-wu1-frontend-standard`):
+  `types/dashboard.md` new § Poll loop reliability (fetchT timeout Δ1, self-scheduled polls Δ2, one timing
+  config Δ8, success-time watchdog Δ3 REWRITING the failure-count watchdog text in place — the
+  panccadia-defrost-sequencing Δ1 citation kept —, fail-visible read path = amps-alarms Δ5 + auto-lock Δ3
+  merged); `setInterval` mentions in the live-data matrix and the REST-poll bullet retargeted; facade
+  live-value-before-link (persistent-config Δ5); write confirmation + recent-changes view (frontend-standard
+  Δ7 + servlet-write-audit Δ3 merged); interaction safety (reliability Δ6); cache-bust `?v=` (rc-file-split Δ2);
+  `/api/version` (deployment-profiles Δ6, rt half in new `types/structure.md` § Deployed version
+  publication); slot-key contract (frontend-standard Δ6); HMI layout shell (frontend-standard Δ9), stale-data
+  visibility (reliability Δ9), recovery ladder (reliability Δ4); scenario-forwarding preview mock
+  (amps-alarms Δ4). `types/frontend-standard.md`: § 5/§ 7 pointers + owed-enforcement note updated.
+  Evidence (passive docs, no RED applicable):
+  - `bats tests/kit-links.bats tests/build-retro-sync.bats`: 36 ok / 0 not ok.
+  - `bats tests/*.bats`: 713 ok / 0 not ok (58 env skips), exit 0.
+  - `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (171 folded, 171 cited);
+    `gen-lint-index.sh --check` exit 0 (fresh).
+  - Public-repo grep over added lines: only retro-stem citation tokens match; 0 customer/site/host/IP hits.
+  - Commit: the WU2 work-unit commit on `feat/fold-wu2-dashboard-runtime` (sha in the PR).
+  Owed lint halves to WU3: rc-scan fetch-without-signal + `setInterval(async)` WARNs,
+  `lint-spa-poll-no-recovery.sh` success-time rework.
+
 ## Next step
-- WU2 (dashboard runtime doctrine in `types/dashboard.md`) after WU1 merges.
+- WU3 (`rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats) after WU2 merges.

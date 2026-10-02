@@ -72,7 +72,7 @@ module docs, see `BUILD-STATE.md` § How to read this file) before writing a rul
 
 ### 5. Network and transfer
 - [both] One `apiFetch` helper (base URL, `X-Requested-With`, timeout, error mapping); no `fetch`
-  anywhere else.
+  anywhere else. Timeout and scheduling rules: `dashboard.md` § Poll loop reliability.
 - [both] No overlapping polls; poll scope follows the visible page; secondary data (alarms) at its
   own slower cadence.
 - [both] Images ship as separate cacheable files under `rc/img/`, referenced with `?v=`; measure
@@ -98,7 +98,7 @@ module docs, see `BUILD-STATE.md` § How to read this file) before writing a rul
 - [both] Every timer and listener has a known owner and is created once; buffers are bounded and
   the cap is documented.
 - [HMI] Unattended recovery after a station restart (see the kiosk checklist in `dashboard.md`
-  § ux — servlet + SPA). [LAN] Recovery is the user's reload plus session handling (§ LAN profile).
+  § Poll loop reliability). [LAN] Recovery is the user's reload plus session handling (§ LAN profile).
 
 ### 8. Robustness and security
 - [both] Server-derived text goes through `textContent` or an `esc()` helper only — never
@@ -239,6 +239,10 @@ written for the panel):
 The checkable rules above are not yet lints. The `rc-scan.sh` extensions (unescaped `innerHTML`,
 data-URI budget, function length / dead code, orphan page, inline-block size), the ESLint config, the
 vendor-floor gate and the preview budgets are proposed in `retros/2026-10-01-dashboard-frontend-standard.md`
-and `retros/2026-10-01-dashboard-rc-file-split.md`; the poll timeout, watchdog and recovery rules in
-`retros/2026-10-01-dashboard-frontend-reliability-rules.md`. They are folded by later work units;
-until then the rules here are DECLARED, not GATED.
+and `retros/2026-10-01-dashboard-rc-file-split.md`. The runtime doctrine — fetch timeout, no overlapping
+polls, one timing config, success-time watchdog, stale-data visibility, recovery ladder, interaction
+safety, fail-visible read path, write confirmation, slot-key contract, layout shell — is folded in
+`dashboard.md` (§ Poll loop reliability, § HMI kiosk, § Config panel UX, § Critical-write step-up auth,
+§ Dashboard as an external API); its lint halves (`rc-scan.sh` fetch-without-signal and
+`setInterval(async)` WARNs, the `lint-spa-poll-no-recovery.sh` success-time rework) are owed to a later
+work unit. Until then the rules here are DECLARED, not GATED.
