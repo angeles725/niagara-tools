@@ -201,8 +201,11 @@ function flush_blk(    lvn, dmsg, key) {
 # Site-fault class of a foreign message ("" = unclassified -> no row)
 function site_class(txt,    t) {
   t = tolower(txt)
-  # whole-word id token: "valid", "invalid" and "idle" are not an id [polish-2026-10-02 P3, #199 WU9]
-  if (t ~ /duplicate/ && t ~ /(^|[^a-z0-9_])(devices?|instances?|address(es)?|ids?)([^a-z0-9_]|$)/) return "duplicate-device-id"
+  # device / instance / address match anywhere (deviceId, device_id, DeviceInstance); only the bare
+  # id token is anchored, so "valid", "invalid" and "idle" are not an id while objectId / nodeId
+  # still are [polish-2026-10-02 P3/P3b, #199 WU9]
+  if (t ~ /duplicate/ && (t ~ /(device|instance|address|(object|node)[_-]?ids?)/ ||
+      t ~ /(^|[^a-z0-9])ids?([^a-z0-9]|$)/)) return "duplicate-device-id"
   if (t ~ /histor/ && t ~ /(full|overflow|flood|capacity|exceed|too many|discard)/) return "history-flood"
   if (t ~ /(timeout|timed out|time out|no response|tiempo de espera|sin respuesta)/) return "comm-timeout"
   if (t ~ /(offline|fuera de l.nea|unreachable|not responding|ping fail)/) return "device-offline"

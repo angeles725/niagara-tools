@@ -72,3 +72,15 @@ TXT
   run "$TC" --site --package com.vendor --tag plant "$c"
   [[ "$output" == *"SITE  triage-console  console.txt  duplicate-device-id  1x"* ]]
 }
+
+# polish-2026-10-02 P3b (#199, P3 review fail-open): the anchor applies to the bare id token only; a
+# duplicate fault written deviceId / device_id / objectId / DeviceInstance is still duplicate-device-id.
+# Named mutation TCS-dupid-glued (whole-word anchor on every token again) -> TCS-dupid-glued flips.
+@test "TCS-dupid-glued: 'Duplicate deviceId / device_id / objectId / DeviceInstance' -> duplicate-device-id" {
+  local c="$BATS_TEST_TMPDIR/console.txt" v
+  for v in 'deviceId 1234' 'device_id 7' 'objectId 12' 'DeviceInstance 6'; do
+    printf 'INFO [06:00:00 01-Oct-26 CST][sys] Station starting\nSEVERE [06:04:00 01-Oct-26 CST][bacnet] Duplicate %s on the network\n' "$v" > "$c"
+    run "$TC" --site --package com.vendor --tag plant "$c"
+    [[ "$output" == *"SITE  triage-console  console.txt  duplicate-device-id  1x"* ]] || { echo "$v -> $output"; return 1; }
+  done
+}

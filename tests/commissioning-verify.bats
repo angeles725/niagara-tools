@@ -130,6 +130,23 @@ setup() {
   [[ "$output" != *"MANUAL  commissioning  values-owed"* ]]
 }
 
+# polish-2026-10-02 P3b (#199, P3 review regression): only the table whose header starts with Slot is the
+# values-owed table, so a second, unrelated table in the doc adds no MANUAL row; a doc with pipe rows but no
+# Slot header fails closed (MANUAL). Named mutation CV-owed-scope (parse every pipe row again) ->
+# CV-owed-scope flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-scope: a second unrelated table is ignored; no Slot-header table -> MANUAL, no PASS" {
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `stageDelay` | engineer | s | 30 | filled |\n\n## Revisions\n\n| Date | Note |\n|---|---|\n| 2026-10-01 | first draft |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"PASS  commissioning  values-owed  "* ]]
+  [[ "$output" != *"MANUAL  commissioning  values-owed"* ]] || { echo "$output" | grep values-owed; return 1; }
+  printf '| Date | Note |\n|---|---|\n| 2026-10-01 | first draft |\n' > "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  [[ "$output" == *"MANUAL  commissioning  values-owed  no values-owed table (header Slot | Owed by | Unit | Safe default | Status) in $f"* ]]
+  [[ "$output" != *"PASS  commissioning  values-owed"* ]]
+}
+
 @test "CV-manual2: the MANUAL footer carries the persisted-state, alarm-routing, consumer-impact and link-source rows" {
   run "$CV" "$MINIMAL"
   [[ "$output" == *"MANUAL  commissioning  persisted-state-restart"* ]]
