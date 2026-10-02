@@ -7,8 +7,18 @@
 # parse + dup-keys, lint-timers.sh <artifact>/src, --plano only when src/rc/index.html exists,
 # lint-delays.sh <artifact>/src (SKIP if no src/), schema-risk.sh (SKIP if no .deploy-baseline/).
 # Once per run: triage-console.sh --console-dir <dir> (SKIP row when --console-dir is absent).
+# *-ux frontend members (WU4): rc-scan.sh receives --profile <ui_profile> and --legacy from this
+# script's own flags (the caller reads the module's BUILD-STATE envelope; no envelope parsing here);
+# ESLint with toolbelt/eslint.config.mjs on src/rc js (SKIP "no rc js" when only vendor/ext/min);
+# lint-vendor-floor.sh on src/rc/vendor. A missing node/eslint/acorn is one SKIP row naming the
+# tool (never a silent pass, never an env fault for the whole report).
+# Tool resolution: KIT_ESLINT, else toolbelt/eslint/node_modules/.bin/eslint, else eslint on PATH;
+# node/acorn as in lint-vendor-floor.sh (KIT_NODE, KIT_ACORN). Install once:
+# npm install --prefix build-n4-module-kit/toolbelt/eslint
+# [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
+#                         [--profile hmi|lan|both|unknown] [--legacy]
 # Row:     <artifact>  PASS|FAIL|WARN|SKIP  <check>  <detail>
 # Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP  ->  CLEAN|ISSUES
 # Exit: 0 clean (zero FAIL) · 1 any FAIL · 3 env (member env fault)
@@ -24,9 +34,11 @@ HAD_FAIL=0; HAD_ENV=0
 MODULE_ROOT=""
 TARGET_VERSION=""
 CONSOLE_DIR=""
+UI_PROFILE=""
+LEGACY=0
 
 usage_exit() {
-  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]\n' >&2
+  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy]\n' >&2
   exit 2
 }
 
@@ -41,6 +53,11 @@ while [ $# -gt 0 ]; do
     --console-dir)
       [ $# -ge 2 ] || usage_exit
       CONSOLE_DIR="$2"; shift 2 ;;
+    --profile)
+      [ $# -ge 2 ] || usage_exit
+      case "$2" in hmi|lan|both|unknown) ;; *) usage_exit ;; esac
+      UI_PROFILE="$2"; shift 2 ;;
+    --legacy) LEGACY=1; shift ;;
     --) shift; break ;;
     -*) usage_exit ;;
     *)
@@ -60,6 +77,38 @@ emit() {
     WARN) NWARN=$((NWARN+1)) ;;
     SKIP) NSKIP=$((NSKIP+1)) ;;
   esac
+}
+
+# relay_rows <artifact> <member-output> — relay `FAIL|WARN  <check>  <path>:<line>  <reason>` rows
+# (rc-scan / eslint / vendor-floor grammar) as `<artifact>  <ST>  <check>  <basename>:<line>  <reason>`.
+# Sets RELAY_FAIL=1 when any FAIL row was relayed.
+relay_rows() {
+  local _aname="$1" _out="$2" _ln _parsed _st _r _chk _det
+  RELAY_FAIL=0
+  while IFS= read -r _ln; do
+    [ -z "$_ln" ] && continue
+    case "$_ln" in
+      FAIL*|WARN*)
+        _parsed=$(printf '%s' "$_ln" | awk '{
+          n = split($0, a, /[[:space:]]{2,}/)
+          st = (n >= 1) ? a[1] : ""
+          chk = (n >= 2) ? a[2] : ""
+          site = (n >= 3) ? a[3] : ""
+          reason = ""
+          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+          colon = index(site, ":")
+          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+          lno = (colon > 0) ? substr(site, colon + 1) : ""
+          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
+          print st "|" chk "|" bn ":" lno "  " reason
+        }')
+        _st="${_parsed%%|*}"; _r="${_parsed#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
+        emit "$_aname" "$_st" "$_chk" "$_det"
+        [ "$_st" = "FAIL" ] && RELAY_FAIL=1
+      ;;
+    esac
+  done <<< "$_out"
+  return 0
 }
 
 # Discover profile artifacts (all immediate subdirectories, sorted)
@@ -899,7 +948,10 @@ for ADIR in "${ARTIFACTS[@]}"; do
       # 5.19 rc-scan (FAIL; only when src/rc/ exists)
       if [ -d "$ADIR/src/rc" ]; then
         rcs_exit=0
-        rcs_out=$("$TOOLBELT/rc-scan.sh" "$ADIR" 2>&1) || rcs_exit=$?
+        RCS_ARGS=("$ADIR")
+        [ -n "$UI_PROFILE" ] && RCS_ARGS+=("--profile" "$UI_PROFILE")
+        [ "$LEGACY" -eq 1 ] && RCS_ARGS+=("--legacy")
+        rcs_out=$("$TOOLBELT/rc-scan.sh" "${RCS_ARGS[@]}" 2>&1) || rcs_exit=$?
         if [ "$rcs_exit" -eq 3 ]; then
           emit "$ANAME" ERROR rc-scan "env fault (exit 3)"; HAD_ENV=1
         else
@@ -934,6 +986,52 @@ for ADIR in "${ARTIFACTS[@]}"; do
         fi
       else
         emit "$ANAME" SKIP rc-scan "no src/rc/"
+      fi
+
+      # 5.19b ESLint (kit flat config) on the artifact's own rc js (WU4)
+      if [ -d "$ADIR/src/rc" ]; then
+        _own_js=$(find "$ADIR/src/rc" \( -path '*/vendor' -o -path '*/ext' -o -name '.*' \) -prune -o \
+          -type f -name '*.js' ! -name '*.min.js' -print 2>/dev/null | head -1)
+        ESLINT_BIN="${KIT_ESLINT:-}"
+        if [ -z "$ESLINT_BIN" ] && [ -x "$TOOLBELT/eslint/node_modules/.bin/eslint" ]; then
+          ESLINT_BIN="$TOOLBELT/eslint/node_modules/.bin/eslint"
+        fi
+        [ -n "$ESLINT_BIN" ] || ESLINT_BIN="$(command -v eslint 2>/dev/null || true)"
+        if [ -z "$_own_js" ]; then
+          emit "$ANAME" SKIP eslint "no rc js"
+        elif [ -z "$ESLINT_BIN" ] || [ ! -x "$ESLINT_BIN" ]; then
+          emit "$ANAME" SKIP eslint "unavailable: eslint not installed (npm install --prefix toolbelt/eslint, or set KIT_ESLINT)"
+        else
+          esl_exit=0
+          esl_out=$(cd "$ADIR/src/rc" && "$ESLINT_BIN" --config "$TOOLBELT/eslint.config.mjs" \
+            --format "$TOOLBELT/eslint/rows-formatter.cjs" --no-warn-ignored . 2>&1) || esl_exit=$?
+          if [ "$esl_exit" -gt 1 ]; then
+            emit "$ANAME" ERROR eslint "env fault (exit $esl_exit)"; HAD_ENV=1
+          else
+            relay_rows "$ANAME" "$esl_out"
+            [ "$RELAY_FAIL" -eq 0 ] && [ "$esl_exit" -eq 0 ] && emit "$ANAME" PASS eslint "clean"
+            [ "$RELAY_FAIL" -eq 0 ] && [ "$esl_exit" -eq 1 ] && emit "$ANAME" FAIL eslint "exit 1 with no parsable row"
+          fi
+        fi
+      fi
+
+      # 5.19c lint-vendor-floor.sh on src/rc/vendor (WU4)
+      if [ -d "$ADIR/src/rc/vendor" ]; then
+        lvf_exit=0
+        lvf_out=$("$TOOLBELT/lint-vendor-floor.sh" "$ADIR/src/rc" 2>&1) || lvf_exit=$?
+        case "$lvf_exit" in
+          0|1)
+            relay_rows "$ANAME" "$lvf_out"
+            [ "$RELAY_FAIL" -eq 0 ] && emit "$ANAME" PASS vendor-floor "clean"
+            ;;
+          4)
+            _lvf_why=$(printf '%s\n' "$lvf_out" | sed -n 's/.*unavailable: /unavailable: /p' | head -1)
+            emit "$ANAME" SKIP vendor-floor "${_lvf_why:-unavailable}"
+            ;;
+          *)
+            emit "$ANAME" ERROR vendor-floor "env fault (exit $lvf_exit)"; HAD_ENV=1
+            ;;
+        esac
       fi
     ;;
   esac

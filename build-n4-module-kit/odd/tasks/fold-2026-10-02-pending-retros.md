@@ -57,10 +57,20 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       lint halves, Δ5, Δ7 (retro FULLY folded, INDEX row + marker flipped); frontend-standard Δ2,Δ3,Δ5; rc-file-split Δ6;
       commissioning-lessons Δ6; persistent-config Δ4 (rc-scan half). Route: delegated direct writer (2 scripts + 2 bats +
       fixtures + 6 docs — writer trigger).
-- [ ] WU4 · frontend tooling (`lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc).
-- [ ] WU5a · logic persistence/restart/backup doctrine.
-- [ ] WU5b · logic safety/protection/structure doctrine.
-- [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
+- [x] WU4 · frontend tooling (`lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc) — frontend-standard Δ4
+      (folded-by-Δ10), Δ10, Δ16 (retro FULLY folded, Δ8 a recorded deferral); amps-alarms Δ3; rc-file-split Δ5 (retro
+      FULLY folded); deployment-profiles Δ5; persistent-config Δ4 no-scroll half; report-module `--profile`/`--legacy`
+      (WU3 gap). Route: delegated direct writer (3 new tools + report-module + bats + 6 docs — writer trigger).
+- [x] WU5a · logic persistence/restart/backup doctrine — restart-seq Δ5,Δ6; pressure-staging Δ2-Δ4; persistent-config
+      Δ1 (doc half),Δ2; merged seed rule = auto-lock Δ4 + commissioning Δ5 + station-backup Δ3 (doc half). Route: delegated
+      direct writer (logic.md + METHODOLOGY + BUILD-STATE + feature doc — writer trigger). PARTIAL promotion: no INDEX flip.
+- [x] WU5b · logic safety/protection/structure doctrine — amps-alarms Δ6,Δ7; restart-seq Δ7-Δ9; continuous-fan Δ2,Δ3;
+      commissioning Δ2,Δ13; persistent-config Δ6; auto-lock Δ1,Δ2; alarm-console Δ1; decision-logic Δ1-Δ3. Route: delegated
+      direct writer (logic.md + logic-authoring.md + METHODOLOGY + BUILD-STATE + INDEX — writer trigger). decision-logic-decomposition
+      FULLY folded (flipped; `lint-size.sh` recorded as a deferred lint candidate); the other retros stay `pending`.
+- [x] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker) —
+      comppan-fase2-amps-alarms Δ1; panccadia-restart-seq-comp-lockout-hours Δ1, Δ4. Route: delegated direct writer
+      (3 scripts + 3 bats + fixtures + 4 docs — writer trigger). PARTIAL promotion of both retros: no INDEX flip.
 - [x] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only advisory, write audit) —
       commissioning-lessons Δ1, Δ3, Δ9; persistent-config Δ1/Δ3 (lint + dashboard halves); alarm-console Δ3;
       servlet-write-audit Δ1, Δ2 (retro FULLY folded, INDEX row + marker flipped). Route: delegated direct writer
@@ -164,6 +174,75 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Owed (recorded in the kit BUILD-STATE open_issue): `report-module.sh` passing `--profile`/`--legacy` to rc-scan
     (WU4/WU7); METHODOLOGY.md:131 rc-scan check list (WU10/WU11).
 
+- 2026-10-02 WU4 (branch `feat/fold-wu4-frontend-tooling`, chained on `feat/fold-wu3-rc-scan`): new
+  `toolbelt/lint-vendor-floor.sh` (node + acorn: ES2020 classic-script parse FAIL, ES-module-only WARN, token-level API
+  scan WARN — comments/strings never flagged —, `--strict`; exit 4 + SKIP row naming node/acorn when missing); kit ESLint
+  flat config `toolbelt/eslint.config.mjs` (no imports; ecmaVersion 2020, script, inline browser globals, no-unused-vars
+  locals, max-lines-per-function 60 warn, no-console except error, eqeqeq) + `toolbelt/eslint/rows-formatter.cjs` +
+  pinned `toolbelt/eslint/package.json` (eslint 10.11.0, acorn 8.18.0; node_modules/lock gitignored); `report-module.sh`
+  `--profile hmi|lan|both|unknown` + `--legacy` passed to rc-scan, ESLint relay on each `-ux` artifact's own rc js,
+  lint-vendor-floor relay on rc/vendor (missing tool = SKIP row, not an env fault); new `toolbelt/hmi-sweep.js`
+  (generic rewrite of a client-repo sweep: app-agnostic `.nav-item` + `--subtab` enumeration, `--scenario` with
+  `--api-match` forwarding, document no-scroll FAIL, unnamed inner scroller WARN, occluded target FAIL; exit 4 when
+  puppeteer-core/Chrome missing). Docs: `build-verify.md` § Frontend verify step + § Client repository CI;
+  `types/frontend-standard.md` § Vendored libraries verdict rule + § Enforcement rewritten (owed note closed);
+  `types/dashboard.md` HMI kiosk sweep pointer + behavior-neutral split rule (rc-file-split Δ5 placed next to DJS1, not
+  METHODOLOGY.md as proposed — outside this WU's surface); BUILD-LOOP §5 tool line + report-module usage; regenerated
+  `toolbelt/INDEX.md`.
+  Evidence:
+  - RED: `bats tests/lint-vendor-floor.bats tests/hmi-sweep.bats` 16/16 not ok (scripts absent, exit 127);
+    `bats tests/report-module.bats` RM24, RM25, RM27-RM31 not ok (RM26 negative passes vacuously: unknown flag exit 2).
+  - GREEN: lint-vendor-floor 9/9, hmi-sweep 7/7 (HS6/HS7 real headless Chrome sweeps of the file:// fixtures with
+    puppeteer-core 25.12.0), report-module 35/35 (RM33 against real eslint 10.11.0). RM32/RM33 were added after the
+    implementation (config-load and end-to-end pins), not RED-first.
+  - Observed mutations (each flips its pin, restored byte-identical): VF3, VF5, VF6 (lint-vendor-floor.sh), RM24
+    (drop --profile pass-through), RM25 (drop --legacy), RM27 (relay no eslint rows).
+  - CI parity: without node_modules the acorn/eslint/browser pins skip with a reason; the degrade pins VF3, VF3b, VF4,
+    HS5, RM28, RM30 run wherever node runs (VF3 needs no node at all).
+  - Verification commands: see the WU4 commit / PR body.
+  - Gaps: `build.sh` calls report-module without `--profile`/`--legacy` (WU7); review finding R3-spa-init-only-lastok
+    (lint-spa-poll-no-recovery.sh accepts a `lastOk` assigned only at load time) — not fixed here.
+- 2026-10-02 WU5a (branch `feat/fold-wu5-logic-doctrine`, from origin/main a392aac): `types/logic.md` new § Restart &
+  persistence (state→mechanism table; debounced station save Δ2; file-backed accumulator backup Δ5; Windows-safe
+  dest/.bak/.tmp replace Δ6; revision/recency restore via a pure selector pressure-staging Δ2; four proofs Δ3; ONE merged
+  seed-before-first-execute rule extending `hoursSeeded` — auto-lock Δ4 + commissioning Δ5 + station-backup Δ3);
+  § Staging & interlocks HOA bullet REWRITTEN in place (persisted, never TRANSIENT — persistent-config Δ1 supersedes the
+  old TRANSIENT/restart→Auto rule); `METHODOLOGY.md` rt checklist adapter-default pin (pressure-staging Δ4) + Schema
+  seed-order pin. Owed halves recorded in the kit BUILD-STATE open_issue (Δ1 lint → WU6b; §6.b rows → WU9).
+  Evidence (passive docs, no RED applicable): kit-links + build-retro-sync 36 ok / 0 not ok; sweep-build-state exit 0;
+  sweep-fold-audit --strict exit 0 (171/171); gen-lint-index --check fresh; public-repo grep 0 hits outside citation
+  tokens. Commit: WU5a work-unit commit on this branch.
+- 2026-10-02 WU5b (same branch): `types/logic.md` § Safety fail-modes — ONE release-point-gate rule (restart-seq Δ8 +
+  continuous-fan Δ2,Δ3: never assume prior output state; audit every release-point caller; branch on the output's state
+  before release), observed-flag predicate (Δ9), opt-in AUTO-only proof-fault lockout cross-linked to HOA-OFF dominance (Δ7),
+  wear-counter rotation-liveness + proof-fault rotation regression test (amps-alarms Δ6 + commissioning Δ13); § RT control
+  logic field-terms restatement + glossary (commissioning Δ2); § Protection anatomy auto-restarting protection (persistent-config
+  Δ6); new § Flag vs console alarm (alarm-console Δ1); § Pure-class extraction named-phase `step()` (decision-logic Δ1);
+  § Composition per-concern size smells (Δ2). `types/logic-authoring.md` new § slotomatic last-comment-line Javadoc
+  (amps-alarms Δ7). `METHODOLOGY.md` automatic-action latched trace (auto-lock Δ1), negative-criterion test enabled +
+  near-miss (auto-lock Δ2), advisory size smell (decision-logic Δ2), no-restructure of deployed modules (decision-logic Δ3).
+  INDEX + marker flip: decision-logic-decomposition → `folded`. Evidence in the WU5b commit body / PR (bats, sweeps,
+  gen-lint-index, public-repo grep). Commit: WU5b work-unit commit on this branch.
+- 2026-10-02 WU6a (branch `feat/fold-wu6a-rt-lint-fp`, from `origin/main`): `toolbelt/verify-module.sh` facets-req treats
+  `BFacets.makeNumeric(<unit>, ...)` as a unit and any `makeNumeric(` as a precision (precision-only `makeNumeric(<int>)` still
+  WARNs missing UNITS); `toolbelt/lint-delays.sh` reads `makeSeconds`/`makeMinutes`/`makeHours`/`makeDays` in delay arguments and
+  `BFacets.MIN` facets (one `facet_min` helper replaces the four duplicated MIN parsers) and accumulates a multi-line
+  `Clock.schedule*(` call to its closing paren (12-line cap); `toolbelt/lint-arbitrary-ord.sh` honors
+  `// lint-arbitrary-ord: reviewed <reason>` on the same or the preceding comment line, reason mandatory. Docs: `types/logic.md`
+  § Safety fail-modes & timers, `build-verify.md` § Verify; regenerated `toolbelt/INDEX.md`; BUILD-STATE WU6a open_issue.
+  Evidence:
+  - RED: `bats -f VMN tests/verify-module.bats` VMN1, VMN2 not ok (VMN3 negative control passes); `bats -f "LD1[3-7]"
+    tests/lint-delays.bats` 5/5 not ok; `bats tests/lint-arbitrary-ord.bats` AO4, AO5, AO6 not ok (AO7 negative passes).
+  - GREEN: lint-delays 16 ok + 1 env skip (LD10); lint-arbitrary-ord 8/8; VMN 3/3; facets-lint unchanged green.
+  - Observed mutations (each flips its named test, restored from a scratch copy): VMN1, VMN3 (verify-module.sh, documentary),
+    LD13, LD16 (also flips LD17), AO4 (also flips AO5), AO6.
+  - Real smoke (client tree, read-only): lint-delays output byte-identical before/after on the deployed client source
+    (7 rows) — the author had already worked around both gaps by hand.
+  - `bats tests/*.bats`: 747 ok / 0 not ok (58 env skips), exit 0. shellcheck 0.11.0: only the pre-existing SC2329 info in
+    `lint-config-sanity.sh:58`; no new `A && B || C` (SC2015) in added lines. `lint-guard-pins.sh --strict .` exit 0 (AO4, AO6,
+    LD13, LD16 MATCH); `gen-lint-index.sh --check` exit 0; `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0
+    (172 folded, 172 cited).
+  - No retro flipped: comppan-fase2-amps-alarms owes Δ2/Δ3/Δ6/Δ7/Δ8; restart-seq-comp-lockout-hours owes Δ2/Δ3/Δ5-Δ10.
 - 2026-10-02 WU6b (branch `feat/fold-wu6b-rt-checks`, from `origin/main`): new `toolbelt/lint-link-target-flags.sh`
   (LTF1 READONLY on a link-in target — comment-block convention or `--wiring-map` Table 2; LTF2 TRANSIENT OPERATOR
   `*Mode`/`*Hoa` slot, placed in the same lint because both are flags on a link endpoint), `lint-config-sanity.sh` CS4
@@ -191,5 +270,4 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   LTF2 → WU5a (persistent-config Δ1 doc half); METHODOLOGY conformance row (persistent-config Δ3) → WU10/WU11.
 
 ## Next step
-- WU4 (frontend tooling: `lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc) after WU3 merges;
-  include the report-module `--profile`/`--legacy` wiring for rc-scan.
+- WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
