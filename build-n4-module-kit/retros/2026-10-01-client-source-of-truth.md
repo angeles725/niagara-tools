@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · kit · client-source-of-truth
 
 **Session**: PANCCADIA gap review — sessions built or read from the wrong checkout; installed skill drifts from the kit copy

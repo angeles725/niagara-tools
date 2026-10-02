@@ -185,7 +185,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | pending | 8 |
 | 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | pending | 10 |
 | 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | pending | 14 |
-| 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | pending | 3 |
+| 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | folded | 3 |
 | 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |
 | 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | pending | 7 |
 | 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | folded | 4 |
@@ -198,7 +198,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | folded | 9 |
 | 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | folded | 16 |
 | 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
-| 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | folded | 3 |
 | 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |

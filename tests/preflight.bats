@@ -228,3 +228,45 @@ _pf_fakebin() {
   out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"* ]]
 }
+
+# ================= WU7 fold: [ev: retro continuous-fan-post-defrost-delay Δ1] =================
+# The repo's settings.gradle.kts default (7.6.17 in the fixture) has drifted from the niagara_home
+# actually configured (here: one that ships only 7.6.22). build.sh forwards -PniagaraPluginVersion,
+# so preflight must check THAT version, not re-derive the stale default.
+@test "PF-plugin-override: --plugin-version V checks V in etc/m2 instead of the settings default" {
+  make_niagara_home "$TMPDIR_T/nh22" 7.6.22
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" --plugin-version 7.6.22 "$TMPDIR_T/nh22" "$GR"
+  [[ "$output" == *"PASS  plugin-pin"*"7.6.22"* ]]
+  [[ "$output" == *"--plugin-version"* ]]
+}
+
+@test "PF-plugin-override-prefix: a version prefix does not match a longer version dir (7.6.2 vs 7.6.22)" {
+  make_niagara_home "$TMPDIR_T/nh22" 7.6.22
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" --plugin-version 7.6.2 "$TMPDIR_T/nh22" "$GR"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  plugin-pin"*"7.6.2 (from --plugin-version)"* ]]
+}
+
+@test "PF-plugin-default: without the override the same environment still FAILs on the stale default" {
+  make_niagara_home "$TMPDIR_T/nh22" 7.6.22
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/nh22" "$GR"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  plugin-pin"*"7.6.17"* ]]
+}
+
+@test "PF-plugin-env: \$NIAGARA_PLUGIN_VERSION is honored like --plugin-version" {
+  make_niagara_home "$TMPDIR_T/nh22" 7.6.22
+  NIAGARA_PLUGIN_VERSION=7.6.22 run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/nh22" "$GR"
+  [[ "$output" == *"PASS  plugin-pin"*"7.6.22"* ]]
+}
+
+@test "PF-plugin-override-missing: an override absent from etc/m2 still FAILs (the override is checked, not trusted)" {
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" --plugin-version 9.9.9 "$NH" "$GR"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  plugin-pin"*"9.9.9"* ]]
+}
+
+@test "PF-plugin-usage: --plugin-version without a value exits 2" {
+  run "$PREFLIGHT" --plugin-version
+  [ "$status" -eq 2 ]
+}
