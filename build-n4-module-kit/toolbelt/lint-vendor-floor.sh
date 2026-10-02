@@ -15,7 +15,9 @@
 #                  FinalizationRegistry (C84/85), .at( (C92), Object.hasOwn( (C93), .findLast(
 #                  .findLastIndex( (C97), structuredClone( (C98), AbortSignal.timeout( (C103),
 #                  Object.groupBy( (C117), .toSorted( .toReversed( .toSpliced( (C110). Tokens, not
-#                  text: a name inside a comment or a string is never flagged.
+#                  text: a name inside a comment or a string is never flagged. Tokenized as a classic
+#                  (sloppy) script first, as a module only when that fails, so a sloppy-only token
+#                  (legacy octal, `with`) does not end the scan early.
 #   --strict promotes every WARN row to FAIL.
 #
 # Tools: node + acorn. Resolution: KIT_NODE (node binary) else `node` on PATH; KIT_ACORN (acorn
@@ -31,6 +33,7 @@
 # Mutation: VF3 -- treat a missing node as a clean pass (exit 0) so VF3 no longer sees exit 4
 # Mutation: VF5 -- parse at ecmaVersion latest so the ??= fixture parses and VF5 exits 0
 # Mutation: VF6 -- drop the API table so the replaceAll/hasOwn/findLast rows vanish
+# Mutation: VF9 -- tokenize as a module only so a sloppy script's API calls after a legacy octal vanish
 set -u
 LC_ALL=C
 export LC_ALL
@@ -119,7 +122,8 @@ function row(sev, file, line, reason) {
   console.log(`${s}  vendor-floor  ${path.relative(rc, file)}:${line}  ${reason}`);
 }
 
-function parses(src, ecmaVersion, sourceType) {
+// The parse error of src at ecmaVersion/sourceType, or null when it parses.
+function parseError(src, ecmaVersion, sourceType) {
   try {
     acorn.parse(src, { ecmaVersion, sourceType, allowHashBang: true, locations: true });
     return null;
@@ -128,15 +132,26 @@ function parses(src, ecmaVersion, sourceType) {
   }
 }
 
-function tokens(src) {
+// Tokens at 'latest', as a classic (sloppy) script first — the floor standard for vendored libs —
+// and as a module only when the script tokenizer stops (an ES-module-only library). Each pass keeps
+// the tokens read before an error; the longer run wins. A file neither tokenizer finishes already
+// carries a syntax row from the parse at the floor.
+function tokenRun(src, sourceType) {
   const out = [];
   try {
     for (const t of acorn.tokenizer(src, { ecmaVersion: 'latest', locations: true,
-      allowHashBang: true, sourceType: 'module' })) out.push(t);
+      allowHashBang: true, sourceType })) out.push(t);
+    return { out, done: true };
   } catch (e) {
-    // a file acorn cannot tokenize even at 'latest' already carries a syntax FAIL
+    return { out, done: false };
   }
-  return out;
+}
+
+function tokens(src) {
+  const script = tokenRun(src, 'script');
+  if (script.done) return script.out;
+  const mod = tokenRun(src, 'module');
+  return (mod.done || mod.out.length > script.out.length) ? mod.out : script.out;
 }
 
 function tokText(t) {
@@ -147,11 +162,11 @@ function tokText(t) {
 
 for (const file of files) {
   const src = fs.readFileSync(file, 'utf8');
-  const err = parses(src, FLOOR, 'script');
+  const err = parseError(src, FLOOR, 'script');
   if (err) {
-    const asModule = parses(src, FLOOR, 'module');
+    const moduleErr = parseError(src, FLOOR, 'module');
     const line = err.loc ? err.loc.line : 1;
-    if (!asModule) {
+    if (!moduleErr) {
       row('WARN', file, line, `syntax: parses only as an ES module (${err.message}) — load with ` +
         'type="module" or vendor the UMD/global build');
     } else {
@@ -166,12 +181,10 @@ for (const file of files) {
     const prev = i > 0 ? tokText(tk[i - 1]) : '';
     const next = i + 1 < tk.length ? tokText(tk[i + 1]) : '';
     const line = t.loc.start.line;
+    // MEMBER and QUALIFIED share no method name, so a member call never doubles a qualified row.
     if (prev === '.' && next === '(' && Object.prototype.hasOwnProperty.call(MEMBER, t.value)) {
-      const q = i > 1 ? tokText(tk[i - 2]) + '.' + t.value : '';
-      if (!Object.prototype.hasOwnProperty.call(QUALIFIED, q)) {
-        row('WARN', file, line, `api: .${t.value}( needs Chrome ${MEMBER[t.value]} (floor 83) — ` +
-          'feature-guarded? record it in THIRD-PARTY.md');
-      }
+      row('WARN', file, line, `api: .${t.value}( needs Chrome ${MEMBER[t.value]} (floor 83) — ` +
+        'feature-guarded? record it in THIRD-PARTY.md');
     }
     if (prev === '.' && next === '(' && i > 1) {
       const q = tokText(tk[i - 2]) + '.' + t.value;

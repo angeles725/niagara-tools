@@ -1,2 +1,8 @@
+# Lockfile policy (polish-2026-10-02 P5): no package-lock.json is committed. CI never installs these
+# tools (the ESLint / acorn pins skip or SKIP-row without them, and report-module.sh degrades to a SKIP
+# row, never a pass), so a committed lockfile would pin a tree nothing in CI resolves and would drift
+# unreviewed. The direct dependencies in package.json are exact versions; a local
+# `npm install --prefix build-n4-module-kit/toolbelt/eslint` resolves their transitive tree fresh.
+# Revisit when CI starts installing them: then commit the lockfile and switch the install to `npm ci`.
 node_modules/
 package-lock.json

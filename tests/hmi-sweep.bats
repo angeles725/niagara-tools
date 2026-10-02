@@ -94,3 +94,44 @@ _need_browser() {
   [[ "$output" == *"FAIL  hmi-sweep  default/hidden  target:"* ]]
   [[ "$output" == *"PASS  hmi-sweep  default/ok  no-scroll:"* ]]
 }
+
+# polish-2026-10-02 P5 (#199 WU4): input checks — a --target that matches nothing is a FAIL row
+# (was silent), a sub-tab that vanished after the previous click is a WARN row (was a TypeError),
+# and --settle-ms must be a non-negative integer (was Number(), NaN accepted).
+@test "HS8: --settle-ms must be a non-negative integer -> usage exit 3 otherwise" {
+  _need_node
+  for v in abc -5 1.5 ''; do
+    run node "$HS" --url http://x/ --settle-ms "$v"
+    [ "$status" -eq 3 ]
+    [[ "$output" == *"--settle-ms"* ]]
+  done
+  run node -e 'console.log(require(process.argv[1]).parseArgs(["--url","http://x/","--settle-ms","0"]).settleMs)' "$HS"
+  [ "$output" = "0" ]
+}
+
+@test "HS9: a --target selector that matches nothing in a view -> FAIL target row naming the selector" {
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    h.rowsForView("default", "home", { docScrollY: false, docScrollX: false,
+      target: { present: false, sel: "#alarm-banner" }, scrollers: [] }).forEach(r => console.log(r));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"FAIL  hmi-sweep  default/home  target: #alarm-banner not found"* ]]
+}
+
+@test "HS10: clickVisibleNth returns null (no click, no throw) when the i-th visible element is gone" {
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    let clicks = 0;
+    const mk = (vis, tab) => ({ getClientRects: () => (vis ? [1] : []), click: () => { clicks++; },
+      dataset: { tab }, textContent: "" });
+    const els = [mk(true, "a"), mk(false, "b")];
+    console.log(JSON.stringify([h.clickVisibleNth(els, 0), h.clickVisibleNth(els, 1), clicks]));
+    h.rowsForView("default", "home#.sub[1]", { gone: true }).forEach(r => console.log(r));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'["a",null,1]'* ]]
+  [[ "$output" == *"WARN  hmi-sweep  default/home#.sub[1]  subtab: no longer visible"* ]]
+}

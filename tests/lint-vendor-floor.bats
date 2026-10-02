@@ -87,3 +87,15 @@ _need_acorn() {
   [ "$status" -eq 1 ]
   [ "$(printf '%s\n' "$output" | grep -c '^FAIL')" -eq 3 ]
 }
+
+# polish-2026-10-02 P5 (#199 WU4): the token scan used the strict (module) tokenizer, so a sloppy
+# classic script (legal at the floor) stopped tokenizing at its first sloppy-only token and every
+# API call after it vanished. Tokenize as a classic script first, module only as a fallback.
+@test "VF9: a sloppy classic script (legacy octal) still gets its API rows after the sloppy token" {
+  _need_acorn
+  run "$LVF" "$FX/sloppy"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"syntax"* ]]
+  [[ "$output" == *"WARN  vendor-floor  vendor/sloppy-1.0.0.js:3  api: .replaceAll("* ]]
+  # Named mutation VF9: tokenize with sourceType module only -> the replaceAll row vanishes.
+}

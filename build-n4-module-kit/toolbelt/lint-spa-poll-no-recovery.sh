@@ -21,8 +21,9 @@
 #        `.catch(` — no catch, no shape to flag;
 #     3. recovery = `location.reload(` or `location.href =` ANYWHERE in the file;
 #     4. success-time key = a `lastOk*` identifier assigned from a clock (`Date.now()`,
-#        `performance.now()`, `new Date`) AND read in a subtraction/comparison (`- lastOkAt`,
-#        `lastOkAt <`/`>`) ANYWHERE in the file.
+#        `performance.now()`, `new Date`) INSIDE the poll fn body (the success path; a timestamp
+#        set only at load is not a success time) AND read in a subtraction/comparison
+#        (`- lastOkAt`, `lastOkAt <`/`>`) ANYWHERE in the file.
 #   Rows (WARN at the setInterval/setTimeout call line):
 #     no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
 #     3 but no 4  -> "... recovery is not keyed on time since the last success ..."
@@ -31,10 +32,13 @@
 # Known limitations (advisory heuristic): file-wide co-occurrence (a reload button elsewhere plus a
 # lastOk* timestamp suppresses the WARN — false-NEGATIVE bias); only the FIRST interval/timeout call
 # per file is checked; a success timestamp not named lastOk* (e.g. `lastSuccessAt`) is a false
-# positive — rename it or accept the WARN; naive `//` stripping can cut a `//` inside a string/URL.
+# positive — rename it or accept the WARN; a success timestamp set in a helper the poll calls
+# (`.then(onOk)`) is not seen either — set it in the poll body; naive `//` stripping can cut a `//`
+# inside a string/URL.
 # VCS-free by design (kit-links L2). LC_ALL=C.
 # Mutation: SPR2 -- drop the lastOk success-time requirement so a failure-count-only watchdog passes clean
 # Mutation: SPR8 -- drop the location.reload(/location.href recovery check so a lastOk timestamp that never reloads passes clean
+# Mutation: SPR9 -- count a clock assignment anywhere in the file so a lastOk set only at load passes clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -124,17 +128,18 @@ END {
     exit 0
   }
 
-  # 4. Success-time key: lastOk* assigned from a clock AND read in a subtraction/comparison.
+  # 4. Success-time key: lastOk* assigned from a clock inside the poll body (the success path;
+  #    a load-time initializer alone never advances) AND read in a subtraction/comparison anywhere.
   ok_set = 0; ok_read = 0
   for (i = 1; i <= NR; i++) {
-    if (match(lines[i], /lastOk[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(\+[[:space:]]*)?(Date\.now\(|performance\.now\(|new[[:space:]]+Date)/)) ok_set = 1
+    if (i >= decl_line && i <= body_end && match(lines[i], /lastOk[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(\+[[:space:]]*)?(Date\.now\(|performance\.now\(|new[[:space:]]+Date)/)) ok_set = 1
     if (match(lines[i], /-[[:space:]]*lastOk[A-Za-z0-9_]*/) || match(lines[i], /lastOk[A-Za-z0-9_]*[[:space:]]*[<>]/)) ok_read = 1
   }
   if (ok_set && ok_read) exit 0
 
   printf "WARN  lint-spa-poll-no-recovery  %s:%d  setInterval/setTimeout poll loop '%s()' reloads," \
     " but the recovery is not keyed on time since the last success (no lastOk* timestamp set from" \
-    " a clock and compared) -- a failure-count or reload-on-error watchdog is blind to a hung" \
+    " a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung" \
     " request; key it on lastOkAt (types/dashboard.md Poll loop reliability)\n", FILE, call_line, fn
 }
 AWKEOF
