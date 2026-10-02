@@ -61,8 +61,13 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       (folded-by-Δ10), Δ10, Δ16 (retro FULLY folded, Δ8 a recorded deferral); amps-alarms Δ3; rc-file-split Δ5 (retro
       FULLY folded); deployment-profiles Δ5; persistent-config Δ4 no-scroll half; report-module `--profile`/`--legacy`
       (WU3 gap). Route: delegated direct writer (3 new tools + report-module + bats + 6 docs — writer trigger).
-- [ ] WU5a · logic persistence/restart/backup doctrine.
-- [ ] WU5b · logic safety/protection/structure doctrine.
+- [x] WU5a · logic persistence/restart/backup doctrine — restart-seq Δ5,Δ6; pressure-staging Δ2-Δ4; persistent-config
+      Δ1 (doc half),Δ2; merged seed rule = auto-lock Δ4 + commissioning Δ5 + station-backup Δ3 (doc half). Route: delegated
+      direct writer (logic.md + METHODOLOGY + BUILD-STATE + feature doc — writer trigger). PARTIAL promotion: no INDEX flip.
+- [x] WU5b · logic safety/protection/structure doctrine — amps-alarms Δ6,Δ7; restart-seq Δ7-Δ9; continuous-fan Δ2,Δ3;
+      commissioning Δ2,Δ13; persistent-config Δ6; auto-lock Δ1,Δ2; alarm-console Δ1; decision-logic Δ1-Δ3. Route: delegated
+      direct writer (logic.md + logic-authoring.md + METHODOLOGY + BUILD-STATE + INDEX — writer trigger). decision-logic-decomposition
+      FULLY folded (flipped; `lint-size.sh` recorded as a deferred lint candidate); the other retros stay `pending`.
 - [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
 - [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
 - [ ] WU7 · build/preflight/source-of-truth.
@@ -192,6 +197,27 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Verification commands: see the WU4 commit / PR body.
   - Gaps: `build.sh` calls report-module without `--profile`/`--legacy` (WU7); review finding R3-spa-init-only-lastok
     (lint-spa-poll-no-recovery.sh accepts a `lastOk` assigned only at load time) — not fixed here.
+- 2026-10-02 WU5a (branch `feat/fold-wu5-logic-doctrine`, from origin/main a392aac): `types/logic.md` new § Restart &
+  persistence (state→mechanism table; debounced station save Δ2; file-backed accumulator backup Δ5; Windows-safe
+  dest/.bak/.tmp replace Δ6; revision/recency restore via a pure selector pressure-staging Δ2; four proofs Δ3; ONE merged
+  seed-before-first-execute rule extending `hoursSeeded` — auto-lock Δ4 + commissioning Δ5 + station-backup Δ3);
+  § Staging & interlocks HOA bullet REWRITTEN in place (persisted, never TRANSIENT — persistent-config Δ1 supersedes the
+  old TRANSIENT/restart→Auto rule); `METHODOLOGY.md` rt checklist adapter-default pin (pressure-staging Δ4) + Schema
+  seed-order pin. Owed halves recorded in the kit BUILD-STATE open_issue (Δ1 lint → WU6b; §6.b rows → WU9).
+  Evidence (passive docs, no RED applicable): kit-links + build-retro-sync 36 ok / 0 not ok; sweep-build-state exit 0;
+  sweep-fold-audit --strict exit 0 (171/171); gen-lint-index --check fresh; public-repo grep 0 hits outside citation
+  tokens. Commit: WU5a work-unit commit on this branch.
+- 2026-10-02 WU5b (same branch): `types/logic.md` § Safety fail-modes — ONE release-point-gate rule (restart-seq Δ8 +
+  continuous-fan Δ2,Δ3: never assume prior output state; audit every release-point caller; branch on the output's state
+  before release), observed-flag predicate (Δ9), opt-in AUTO-only proof-fault lockout cross-linked to HOA-OFF dominance (Δ7),
+  wear-counter rotation-liveness + proof-fault rotation regression test (amps-alarms Δ6 + commissioning Δ13); § RT control
+  logic field-terms restatement + glossary (commissioning Δ2); § Protection anatomy auto-restarting protection (persistent-config
+  Δ6); new § Flag vs console alarm (alarm-console Δ1); § Pure-class extraction named-phase `step()` (decision-logic Δ1);
+  § Composition per-concern size smells (Δ2). `types/logic-authoring.md` new § slotomatic last-comment-line Javadoc
+  (amps-alarms Δ7). `METHODOLOGY.md` automatic-action latched trace (auto-lock Δ1), negative-criterion test enabled +
+  near-miss (auto-lock Δ2), advisory size smell (decision-logic Δ2), no-restructure of deployed modules (decision-logic Δ3).
+  INDEX + marker flip: decision-logic-decomposition → `folded`. Evidence in the WU5b commit body / PR (bats, sweeps,
+  gen-lint-index, public-repo grep). Commit: WU5b work-unit commit on this branch.
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
