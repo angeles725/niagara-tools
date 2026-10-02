@@ -240,6 +240,13 @@ _pf_fakebin() {
   [[ "$output" == *"--plugin-version"* ]]
 }
 
+@test "PF-plugin-override-prefix: a version prefix does not match a longer version dir (7.6.2 vs 7.6.22)" {
+  make_niagara_home "$TMPDIR_T/nh22" 7.6.22
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" --plugin-version 7.6.2 "$TMPDIR_T/nh22" "$GR"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  plugin-pin"*"7.6.2 (from --plugin-version)"* ]]
+}
+
 @test "PF-plugin-default: without the override the same environment still FAILs on the stale default" {
   make_niagara_home "$TMPDIR_T/nh22" 7.6.22
   run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$TMPDIR_T/nh22" "$GR"

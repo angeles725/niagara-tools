@@ -34,7 +34,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --skill) [ $# -ge 2 ] || usage_exit; SKILL="$2"; shift 2 ;;
     --home)  [ $# -ge 2 ] || usage_exit; HOME_DIR="$2"; shift 2 ;;
-    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; exit 0 ;;
     *) usage_exit ;;
   esac
 done
@@ -71,8 +71,19 @@ if [ ! -f "$INSTALLED" ]; then
   printf 'FAIL  skill-drift  %s  not installed at %s — run %s\n' "$SKILL" "$INSTALLED" "$REMEDY"
   exit 1
 fi
+# sha256_of runs in a subshell, so its own exit 3 cannot stop this script: check the tool here.
+if ! command -v sha256sum >/dev/null 2>&1; then
+  if ! command -v shasum >/dev/null 2>&1; then
+    printf 'check-skill-drift: no sha256 tool found (sha256sum or shasum)\n' >&2
+    exit 3
+  fi
+fi
 tracked_sha="$(sha256_of "$TRACKED")"
 installed_sha="$(sha256_of "$INSTALLED")"
+if [ -z "$tracked_sha" ] || [ -z "$installed_sha" ]; then
+  printf 'check-skill-drift: could not compute a digest\n' >&2
+  exit 3
+fi
 if [ "$tracked_sha" = "$installed_sha" ]; then
   printf 'PASS  skill-drift  %s  installed copy matches %s\n' "$SKILL" "${TRACKED#"$REPO_ROOT/"}"
   exit 0

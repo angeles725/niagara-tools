@@ -165,7 +165,9 @@ fi
 # ---------------------------------------------------------------------------
 if [ "$WIN_PATH_FAIL" -eq 0 ] && [ -n "$PLUGIN_OVERRIDE" ]; then
   # continuous-fan-post-defrost-delay Δ1: check the version the build will actually use.
-  if find "$NH/etc/m2" -path "*${PLUGIN_OVERRIDE}*" 2>/dev/null | grep -q .; then
+  # Exact directory-name match (same rule as build.sh's m2 WARN): a prefix such as 7.6.2 must not
+  # pass on an install that only ships 7.6.22.
+  if find "$NH/etc/m2" -type d -name "$PLUGIN_OVERRIDE" 2>/dev/null | grep -q .; then
     row PASS "plugin-pin" "plugin $PLUGIN_OVERRIDE (from --plugin-version) found in niagara_home/etc/m2"
   else
     row FAIL "plugin-pin" "plugin $PLUGIN_OVERRIDE (from --plugin-version) missing from $NH/etc/m2 — pick the version this install ships"

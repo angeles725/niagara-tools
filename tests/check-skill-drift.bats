@@ -61,3 +61,20 @@ _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
   after=$(sha256sum "$H/.claude/skills/build-n4-module/SKILL.md")
   [ "$before" = "$after" ]
 }
+
+@test "SD8: no sha256 tool -> exit 3 (never a PASS on two empty digests)" {
+  _install
+  mkdir -p "$TMPDIR_T/bin"
+  for t in printf cut sed awk grep dirname cat head; do
+    p="$(command -v "$t")"; if [ -n "$p" ]; then ln -s "$p" "$TMPDIR_T/bin/$t"; fi
+  done
+  run env PATH="$TMPDIR_T/bin" /bin/bash "$SD" --home "$H"
+  [ "$status" -eq 3 ]
+  [ "$(printf '%s' "$output" | grep -c 'PASS')" -eq 0 ]
+}
+
+@test "SD9: --help prints the header only, never a code line" {
+  run "$SD" --help
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'set -u')" -eq 0 ]
+}
