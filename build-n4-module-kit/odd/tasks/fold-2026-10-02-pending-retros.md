@@ -76,7 +76,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       servlet-write-audit Δ1, Δ2 (retro FULLY folded, INDEX row + marker flipped). Route: delegated direct writer
       (1 new lint + 5 scripts + 6 bats + fixtures + 5 docs — writer trigger).
 - [ ] WU7 · build/preflight/source-of-truth.
-- [ ] WU8 · deploy, backup and release gates.
+- [x] WU8 · deploy, backup and release gates — roll-forward-recovery Δ1-Δ4; station-backup Δ1,Δ2; auto-lock Δ5,Δ7;
+      restart-seq Δ10; commissioning Δ10; kit-meta Δ4,Δ5; deployment-profiles Δ7; operator-manual Δ2. Route: delegated direct
+      writer (BUILD-LOOP + METHODOLOGY + build-verify + distribution + ledgers — writer trigger). FULL: roll-forward-recovery,
+      dashboard-deployment-profiles (flipped); the others stay `pending` with owed Δ in the kit BUILD-STATE open_issue.
 - [ ] WU9 · commissioning and post-deploy triage (+ `obix-link-audit.sh` possibly split out).
 - [ ] WU10 · process: tiers, behavior questions, orchestration.
 - [ ] WU11 · close gate and ledgers; final INDEX flips; release.
@@ -268,6 +271,21 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     `sweep-fold-audit.sh --strict` exit 0 (173 folded, 173 cited).
   Gaps: report-module.sh wiring (new lint, facade FAIL, console-only) → WU7; logic.md "HOA is TRANSIENT" bullet contradicts
   LTF2 → WU5a (persistent-config Δ1 doc half); METHODOLOGY conformance row (persistent-config Δ3) → WU10/WU11.
+WU8 (branch `feat/fold-wu8-deploy-gates`, from origin/main 32bff11): `BUILD-LOOP.md` §4.c pre-built revert
+  build (roll-forward Δ2); §6 new MANDATORY pre-deploy gates — target-distribution boot smoke (commissioning Δ10), full station
+  backup before any -rt install (station-backup Δ1; the `--no-backup` bullet rewritten in place), versioned jar archive + sha256
+  (roll-forward Δ3), deploy checklist names the opt-in enabling slot + live value (auto-lock Δ5) and every BComponent-only flag
+  lifecycle as a station-smoke item (restart-seq Δ10), observed two-checkout handoff (auto-lock Δ7); roll-forward recovery
+  doctrine (roll-forward Δ1); remote-access preconditions (kit-meta Δ5); `niagara-tools/scripts/ng-deploy.sh` full path at first
+  use (kit-meta Δ4). `METHODOLOGY.md` 4-layer-stack cold-boot bullet REWRITTEN in place (target distribution/version,
+  commissioning Δ10; same in `build-verify.md` item 3) + Schema / upgrade safety roll-forward bullet. `types/distribution.md` §10
+  Downgrade row REWRITTEN in place (opposite-polarity rule) + new § 12 station backup/provisioning/fleet (station-backup Δ2, corpus
+  B39), § 13 release package (deployment-profiles Δ7), § 14 client documentation deliverable (operator-manual Δ2).
+  roll-forward Δ4: pointer added only on the slot-type-change retro's `retros/INDEX.md` row (retro bodies untouched); the outage
+  retro target does not exist — recorded as a note. FULL promotion + flip: roll-forward-recovery, dashboard-deployment-profiles.
+  No script: no WU8 delta asked for one. Evidence (passive docs, no RED applicable): see the WU8 commit body.
+  Gap (outside surface): `types/issues-and-gotchas.md` station-stuck-at-boot list still names Downgrade without the roll-forward
+  caveat (WU11).
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.
