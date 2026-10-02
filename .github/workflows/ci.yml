@@ -87,6 +87,9 @@ jobs:
       - name: lint-guard-pins (every kit lint carries a resolvable "# Mutation:" guard-pin — strict)
         run: bash build-n4-module-kit/toolbelt/lint-guard-pins.sh --strict .
 
+      - name: gen-lint-index --check (generated toolbelt/INDEX.md is fresh vs the lint headers)
+        run: bash build-n4-module-kit/toolbelt/gen-lint-index.sh --check
+
       - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
         run: |
           bash build-n4-module-kit/toolbelt/lint-timers.sh tests/fixtures/lint-timers

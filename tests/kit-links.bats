@@ -66,11 +66,17 @@ kit_refs() {
 @test "L5: every toolbelt/*.sh is named in BUILD-LOOP.md or skill/SKILL.md (D10 routing guard)" {
   # Regression: a new toolbelt script must appear in at least one routing doc
   # Named mutation: delete a script name from both BUILD-LOOP.md and skill/SKILL.md -> L5 fails
+  # A toolbelt/lint-*.sh may instead be routed by the GENERATED toolbelt/INDEX.md (BUILD-LOOP §5
+  # points at it; gen-lint-index.sh --check keeps it fresh — GLI-real).
+  # [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
   [ -f "$KIT/skill/SKILL.md" ] || skip "skill/SKILL.md not found in kit (launcher path)"
   cd "$KIT"
   missing=()
   for sh in toolbelt/*.sh; do
     name=$(basename "$sh")
+    case "$name" in
+      lint-*.sh) if [ -f toolbelt/INDEX.md ] && grep -qF "toolbelt/$name" toolbelt/INDEX.md; then continue; fi ;;
+    esac
     if ! grep -qF "$name" BUILD-LOOP.md && ! grep -qF "$name" skill/SKILL.md; then
       missing+=("$name")
     fi
@@ -144,4 +150,12 @@ kit_refs() {
     fi
   done
   [ "$ok" -eq 1 ]
+}
+
+@test "L11: BUILD-LOOP.md routes lints through the generated toolbelt/INDEX.md (gen-lint-index.sh named)" {
+  # Regression guard: §5 must keep pointing at the generated index and its generator.
+  # Named mutation: drop the toolbelt/INDEX.md or gen-lint-index.sh reference from BUILD-LOOP.md -> L11 fails.
+  cd "$KIT"
+  grep -qF "toolbelt/INDEX.md" BUILD-LOOP.md || { echo "BUILD-LOOP.md does not reference toolbelt/INDEX.md" >&2; return 1; }
+  grep -qF "gen-lint-index.sh --check" BUILD-LOOP.md || { echo "BUILD-LOOP.md does not name gen-lint-index.sh --check" >&2; return 1; }
 }
