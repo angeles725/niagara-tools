@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · DashboardPan · dashboard-rc-file-split
 
 **Session**: PANCCADIA HMI freeze triage (Cliente/panccadia-leon, read-only); user question on HTML/CSS/JS distribution of the servlet-SPA

@@ -3,6 +3,9 @@
 # A setInterval/setTimeout poll loop whose catch path only marks data stale and never reloads
 # or re-authenticates leaves a kiosk/HMI blank forever after a station restart.
 # [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1]
+# WU3 rework: the recovery must be a watchdog keyed on time since the last SUCCESS (a lastOk*
+# timestamp) plus a reload; a failure-count-only watchdog or a bare reload-on-error still WARNs.
+# [ev: retro dashboard-frontend-reliability-rules Δ3]
 
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
@@ -50,7 +53,7 @@ EOF
   [ "$status" -eq 1 ]
 }
 
-@test "SPR2: a failure-count watchdog that eventually calls location.reload() suppresses the WARN" {
+@test "SPR2: a failure-count-only watchdog (reload after N failures, no lastOk timestamp) still WARNs" {
   cat > "$TMPDIR_T/Mod/src/rc/index.html" << 'EOF'
 <script>
 let _wdFailCount = 0;
@@ -76,8 +79,9 @@ setInterval(poll, N4.pollMs);
 EOF
   run "$SPR" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
-  [[ "$output" != *"WARN"* ]]
-  # Named mutation: drop the location.reload(/location.href check -> SPR2 false-WARNs on this fixture.
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"time since the last success"* ]]
+  # Named mutation: drop the lastOk success-time requirement -> SPR2 passes clean (no WARN).
 }
 
 @test "SPR3: a poll function with no catch at all is clean (not the flagged shape)" {
@@ -108,7 +112,7 @@ EOF
   [[ "$output" != *"WARN"* ]]
 }
 
-@test "SPR5: a plain location.href reassignment in the catch path also counts as recovery" {
+@test "SPR5: a bare location.href reassignment on error (no lastOk watchdog) still WARNs" {
   cat > "$TMPDIR_T/Mod/src/rc/index.html" << 'EOF'
 <script>
 async function poll() {
@@ -124,5 +128,59 @@ setInterval(poll, 5000);
 EOF
   run "$SPR" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"time since the last success"* ]]
+}
+
+_write_success_watchdog() {   # $1 = recovery statement
+  cat > "$TMPDIR_T/Mod/src/rc/index.html" << EOF
+<script>
+const T = { pollMs: 5000, fetchTimeoutMs: 8000, recoverMs: 30000, ceilingMs: 600000 };
+let lastOkAt = Date.now();
+function watchdog() {
+  const since = Date.now() - lastOkAt;
+  if (since > T.ceilingMs) { $1 }
+  if (since > T.recoverMs) {
+    fetchT("/api/data", {}, T.fetchTimeoutMs).then(function (r) { return r.json(); })
+      .then(function () { $1 }).catch(function () {});
+  }
+}
+async function poll() {
+  try {
+    await readJson();
+    lastOkAt = Date.now();
+    paint("live");
+  } catch (err) {
+    paint("error");
+  } finally {
+    watchdog();
+    setTimeout(poll, T.pollMs);
+  }
+}
+setTimeout(poll, T.pollMs);
+</script>
+EOF
+}
+
+@test "SPR6: a success-time watchdog (lastOkAt = Date.now() + location.reload()) is clean" {
+  _write_success_watchdog 'location.reload();'
+  run "$SPR" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
+}
+
+@test "SPR7: a success-time watchdog recovering through location.href = is clean" {
+  _write_success_watchdog 'location.href = location.pathname;'
+  run "$SPR" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}
+
+@test "SPR8: a lastOkAt timestamp with no reload/href recovery anywhere still WARNs (no recovery)" {
+  _write_success_watchdog 'paint("stale");'
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"no location.reload("* ]]
+  # Named mutation: drop the reload/href recovery check -> SPR8 passes clean.
 }

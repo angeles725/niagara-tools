@@ -194,9 +194,9 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | pending | 4 |
 | 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | folded | 3 |
 | 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | pending | 6 |
-| 2026-10-01-dashboard-rc-file-split.md | DashboardPan | 2026-10-01 | pending | 6 |
-| 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | pending | 9 |
-| 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | pending | 16 |
+| 2026-10-01-dashboard-rc-file-split.md | DashboardPan | 2026-10-01 | folded | 6 |
+| 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | folded | 9 |
+| 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | folded | 16 |
 | 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | pending | 3 |
 | 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |

@@ -48,7 +48,8 @@ module docs, see `BUILD-STATE.md` § How to read this file) before writing a rul
   `main.js` (wiring). Render never fetches; services never touch the DOM.
 - [both] No free globals: each file exposes one namespace object; live state lives in one store.
 - [both] Functions stay under ~60 lines with one responsibility each; no dead code, no commented-out
-  code, no temporary `console.log`.
+  code, no temporary `console.log`. Gated by the kit ESLint config (§ Enforcement).
+  `[ev: retro dashboard-frontend-standard Δ4]`
 
 ### 3. Naming
 - [both] Identifiers in English (camelCase functions/variables, PascalCase constructors,
@@ -184,6 +185,12 @@ rc/
   from a CDN at runtime (the panel and many site LANs have no internet).
 - [both] A deprecated build (e.g. the three.js legacy global `build/three.min.js`, deprecated since
   r150) is recorded with a migration note next to its pin in `rc/vendor/THIRD-PARTY.md`.
+- [HMI] Every vendored file passes `toolbelt/lint-vendor-floor.sh <rc-dir>` on every library bump:
+  it must parse as an ES2020 classic script (FAIL otherwise — one unparsable file breaks the whole
+  page on the panel) and each API above the floor (WARN — it may be feature-guarded) is reviewed.
+  Record the verdict (`vendor-floor: clean` or the accepted WARN list with the reason) next to the
+  pin in `rc/vendor/THIRD-PARTY.md`. [LAN] A LAN-only build may record the WARNs as accepted.
+  `[ev: retro dashboard-frontend-standard Δ16]`
 
 ## Vendor catalog `[ev: retro dashboard-frontend-standard Δ15]`
 
@@ -235,14 +242,39 @@ written for the panel):
   service selected by `config.js`. Complements the "module is the SKELETON" rule in `dashboard.md`
   § Extending an existing dashboard.
 
-## Owed enforcement (later work units)
-The checkable rules above are not yet lints. The `rc-scan.sh` extensions (unescaped `innerHTML`,
-data-URI budget, function length / dead code, orphan page, inline-block size), the ESLint config, the
-vendor-floor gate and the preview budgets are proposed in `retros/2026-10-01-dashboard-frontend-standard.md`
-and `retros/2026-10-01-dashboard-rc-file-split.md`. The runtime doctrine — fetch timeout, no overlapping
-polls, one timing config, success-time watchdog, stale-data visibility, recovery ladder, interaction
-safety, fail-visible read path, write confirmation, slot-key contract, layout shell — is folded in
-`dashboard.md` (§ Poll loop reliability, § HMI kiosk, § Config panel UX, § Critical-write step-up auth,
-§ Dashboard as an external API); its lint halves (`rc-scan.sh` fetch-without-signal and
-`setInterval(async)` WARNs, the `lint-spa-poll-no-recovery.sh` success-time rework) are owed to a later
-work unit. Until then the rules here are DECLARED, not GATED.
+## Enforcement
+`toolbelt/rc-scan.sh` gates the checkable browser rules (row format and flags in its header):
+`browser-floor` (WARN; FAIL under `--strict` or `--profile hmi|both`), `disabled-gate`,
+`fetch-no-signal`, `setinterval-async`, `innerhtml-server` (§ 8 escape rule), `datauri-budget`
+(FAIL over 20 KB; WARN with `--legacy` for a deployed module not yet restructured), `orphan-page`
+(§ 1 layout shell) and `inline-block-size` (DJS1 split, over 300 lines). A false positive is
+silenced on its line with `rc-scan: allow <check-id>` plus a reason.
+`toolbelt/lint-spa-poll-no-recovery.sh` gates the success-time watchdog (`dashboard.md` § Poll loop
+reliability). `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
+`[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
+
+`toolbelt/report-module.sh` passes the module's `ui_profile` (read by the caller from the module's
+BUILD-STATE envelope) as `--profile` and `--legacy` through to `rc-scan.sh`, so an `hmi`/`both`
+module gets browser-floor FAIL in the aggregated report. `[ev: retro dashboard-frontend-standard Δ10]`
+
+ESLint (§ 2 function size, § 11 quality): `toolbelt/eslint.config.mjs` is the kit flat config —
+`ecmaVersion: 2020` + `sourceType: "script"` (the Chromium 83 floor: syntax above it is a parse
+error, FAIL), browser globals, `no-unused-vars` (locals; classic scripts share one global scope, so
+a top-level symbol used by another file is not flagged), `max-lines-per-function` 60 (WARN),
+`no-console` except `console.error`, `eqeqeq`. `report-module.sh` runs it on every `-ux`
+artifact's own `src/rc` js (vendor/, ext/, `*.min.js` excluded) and relays its rows (error → FAIL,
+warning → WARN). This covers the function-length and dead-local rule; a dead TOP-LEVEL symbol and a
+`typeof` guard on an own symbol are not mechanized (review). Prettier is optional.
+`[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ4]`
+
+Vendored libraries: `toolbelt/lint-vendor-floor.sh` (§ Vendored libraries), also run by
+`report-module.sh` on `src/rc/vendor`. `[ev: retro dashboard-frontend-standard Δ16]`
+
+HMI layout fit: `toolbelt/hmi-sweep.js` sweeps every nav view (and declared sub-tabs) at 1280×800 for
+document scroll, unnamed inner scrollers and an occluded target such as the alarm banner
+(`build-verify.md` § Frontend verify step). `[ev: retro comppan-fase2-amps-alarms Δ3]`
+
+Tools: node + `npm install --prefix toolbelt/eslint` (pinned eslint + acorn); `hmi-sweep.js` needs
+puppeteer-core and a Chrome. A missing tool is one SKIP row naming it (exit 4 for the standalone
+scripts), never a silent pass. Still DECLARED, not gated: the preview budgets (out-of-repo preview
+harness, deferred).
