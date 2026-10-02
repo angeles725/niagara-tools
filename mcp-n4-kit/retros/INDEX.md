@@ -7,4 +7,4 @@ Retros only propose: the kit is changed by a human, never by the retro.
 
 | file | Station | Date | pending\|folded | deltas |
 |---|---|---|---|---|
-| 2026-10-02-customer-remote-01-session.md | customer-remote-01 | 2026-10-02 | pending | 8 |
+| 2026-10-02-customer-remote-01-session.md | customer-remote-01 | 2026-10-02 | folded 2026-10-02 · kit b13747e | 8 |

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded 2026-10-02 · kit b13747e -->
 <!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. This retro only PROPOSES; kit changes are human-reviewed and human-committed. -->
 # Retro — customer-remote-01 · 2026-10-02 · mcp-n4 session self-retrospective
 

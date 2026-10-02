@@ -9,6 +9,8 @@ is needed: the client speaks to `POST <station>/box/` with HTTP Basic auth.
 T1: the stdlib-only BOX client library (`mcp_n4/box.py`) and its tests against
 an in-memory fake station. T2: the stdio MCP server with read-only station tools.
 T3: guarded write tools (`--allow-writes`). T4: destructive tools, rollback and save. T5: METHODOLOGY and the skill launcher.
+v0.2.0 (retro 2026-10-02): bulk reads with `n4_bql_query` / `n4_inventory`, adaptive load
+polling with `elapsed_ms`, display strings for complex slots, an actionable 401.
 
 ## Methodology and skill
 
@@ -28,6 +30,8 @@ scripts/install-skill.sh --skill mcp-n4
   `pollchgs`, tree loading and status helpers. No side effects at import.
 - `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()`.
 - `mcp_n4/tools_read.py`: the read tool implementations and the session state.
+- `mcp_n4/bql.py`: pure BQL helpers (query guard, ORD composition, CSV parsing, `$xx`
+  decoding, inventory summary).
 - `mcp_n4/safety.py`: confirmation tokens, write scope, journal and audit log.
 - `mcp_n4/tools_write.py`: the write tools and their guard pipeline.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
@@ -37,7 +41,8 @@ scripts/install-skill.sh --skill mcp-n4
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
-retry (5 failures in 30 s lock the account).
+retry (5 failures in 30 s lock the account). A 401 names what to check: the
+user's Authentication Scheme Name must be `HTTPBasicScheme`, then the password.
 
 ## Running the server
 
@@ -72,7 +77,23 @@ Flags:
 - `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`).
 - `--token-ttl SECONDS`: confirmation token lifetime (default 300).
 - `--max-writes N`: executed writes allowed per session (default 200).
+- `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`) to PATH.
 - `--allow-http-for-tests`: permits `http://` base URLs; for the fake station only.
+
+### Getting the kit and registering it per project
+
+The kit must exist on disk: a checkout on another branch may not contain `mcp-n4-kit/`. When
+it is missing, add a worktree of `origin/main` instead of switching the shared checkout:
+
+```
+git -C /path/to/niagara-tools fetch origin
+git -C /path/to/niagara-tools worktree add /path/to/niagara-tools-main origin/main
+export MCP_N4_KIT=/path/to/niagara-tools-main/mcp-n4-kit
+```
+
+Register the server once per project, in that project's `.mcp.json` (Claude Code reads it from
+the project root). Use an absolute `cwd` to the kit, and keep the credentials in the
+environment that launches the client: never commit them in `.mcp.json`.
 
 Example MCP client entry (Claude Code `.mcp.json`):
 
@@ -91,7 +112,16 @@ Example MCP client entry (Claude Code `.mcp.json`):
 ```
 
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
-`n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`. One station session
+`n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
+`n4_inventory`, `n4_session_retro_draft`.
+
+For an inventory, use `n4_inventory` (networks, devices and points under `/Drivers`, with the
+network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_query` first.
+Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
+The query must be one `select`, `|` is refused, and rows are capped (default 5000).
+`n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
+`n4_read_slots` adds `value_display` (the station's display string) and returns that string as
+`value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
 first, so a failed reconnect leaves no session). `n4_describe_session` lists the
 configured station names. `n4_list_links` and

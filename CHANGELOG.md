@@ -6,6 +6,50 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.26.0] - 2026-10-02
+
+### Added — `mcp-n4-kit` v0.2.0: bulk reads, folding the first remote-session retro (D1-D8)
+
+The first live use against a remote station showed the gap: a navigate/read crawl of `/Drivers` ran for more than
+16 minutes over a ~100 ms WAN and never finished. Projected BQL took the same inventory in about 3 s. Retro:
+`mcp-n4-kit/retros/2026-10-02-customer-remote-01-session.md`.
+
+- **`n4_bql_query`** (D1): one read-only projected BQL `select` over a subtree, sent as
+  `GET /ord/<url-encoded ORD>|view:file:ITableToCsv` (path form; `/ord?` answers 400). It returns rows plus
+  columns. Guards:
+  - `select` only, and no `|`;
+  - a row cap (default 5000, `truncated`);
+  - a timeout;
+  - control characters and the BOM are stripped;
+  - `$xx` names are decoded by `bql.unescape_slot`.
+
+  The read is recorded as a session observation, and as an `audit.jsonl` line with outcome `read` when writes are
+  enabled. Pure helpers live in `mcp_n4/bql.py`; `BoxClient.get_ord` is the transport.
+- **`n4_inventory`** (D7, D8): networks, devices and points through three BQL queries, counted per network and per
+  device. A network's built-in `localDevice` is flagged `local: true`, and `local_devices` is counted apart from
+  `field_devices`. Each step reports `progress` counts, and the new `--progress-file PATH` flag receives the same
+  lines.
+- **Visible latency** (D2): `n4_navigate` and `n4_read_slots` return `elapsed_ms`.
+
+### Changed
+
+- **Adaptive load polling** (D2): `BoxClient.load_tree` polls at 0.1 s, then backs off 0.2, 0.4, 0.8 s (capped).
+  The total wait per window is bounded at 3 s (`box.poll_delays`); before, it was a fixed 0.5 s delay.
+- **`n4_read_slots`** (D4): adds `value_display`, and returns the display string as `value` for complexes it cannot
+  decode. Examples: a Modbus `FlexAddress` reads `Decimal:302`, and a `BacnetAddress` reads its address, where
+  both used to read `None`.
+- **Actionable auth errors** (D5): HTTP 401 names `HTTPBasicScheme`, the password, and "do not retry (lockout)".
+  HTTP 403 names permissions. This holds on both the BOX and the BQL paths.
+- **Docs** (D3, D6, D7, D8):
+  - METHODOLOGY section 7 "Inventory and long reads": BQL first, the progress-file rule, local devices;
+  - the README covers the per-project `.mcp.json` registration and a `git worktree add <path> origin/main` recipe;
+  - when the kit is missing, the skill launcher says so and offers that worktree (or an installed copy) instead
+    of searching.
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-bulk-read-deltas.md`.
+- Retro: `mcp-n4-kit/retros/2026-10-02-customer-remote-01-session.md` (folded).
+
 ## [v0.25.0] - 2026-10-01
 
 ### Added — `mcp-n4-kit/`: an MCP server + skill that lets an AI agent read AND write any Niagara N4 station safely

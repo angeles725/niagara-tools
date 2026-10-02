@@ -49,6 +49,8 @@ Default mode is read-only: write tools exist only with `--allow-writes`
 | An absent value means the type default. | The station omits values equal to the type default. | `box.status_value`; `test_status_value_applies_type_defaults`, `test_omitted_value_takes_the_type_default` |
 | Check dangling outputs after wiring. | A block whose `out` feeds nothing is usually a missed link. | `n4_find_dangling_outputs`; `test_reports_components_whose_out_is_not_a_link_source` |
 | Lock-out is 5 failures in 30 s. | Retrying a bad login locks the shared account. | `AuthError` is never retried; `test_auth_failure_in_makessc_sends_no_cleanup_del` |
+| A 401 says what to check. | The usual cause is the user's Authentication Scheme, not the password. The error names `HTTPBasicScheme`, the password and "do not retry". | `box.auth_message`; `test_http_401_names_the_auth_scheme_the_password_and_no_retry`, `test_a_401_on_the_bql_path_is_actionable_and_not_retried` |
+| Complex slots show their display string. | A FlexAddress or BacnetAddress has no simple value; `None` hid the address. | `n4_read_slots` `value_display`; `test_complex_slot_without_a_value_falls_back_to_its_display_string` |
 | No import side effects. | An import once ran a `save` by accident (B1199). | `test_import_makes_no_network_call`, `test_import_has_no_side_effects_in_fresh_process`, `test_import_prints_nothing` |
 | Confirm a save on disk, not by the action's `null` reply. | `save` always answers `null`. | `n4_save_station` compares `config.bog` mtime and sha256 (`--station-home`); `test_the_reply_to_save_is_never_taken_as_proof`, `test_a_changed_config_bog_proves_persistence_with_evidence`. Without a station home: `persisted: unknown`. |
 | Identity before writes. | Writing to the wrong station is the worst failure. | See L1. |
@@ -58,7 +60,9 @@ Default mode is read-only: write tools exist only with `--allow-writes`
 
 1. `n4_describe_session`, then `n4_connect` to a station the operator configured.
    Confirm the reported `stationName` and the version tier (section 5).
-2. `n4_navigate` and `n4_read_slots` the target subtree. **manual**
+2. `n4_navigate` and `n4_read_slots` the target subtree. **manual** For an inventory
+   or any read wider than a few components, use `n4_bql_query` / `n4_inventory`
+   first (section 7).
 3. Call the write tool with its default `dry_run=true`.
 4. Show the plan (ops, inverse, scope) to the human and wait for approval. **manual**
 5. Repeat the same call with `dry_run=false` and the `confirmation_token`.
@@ -96,3 +100,18 @@ the server does not yet branch on it.
 - B1192: decode rules and Status.
 - B1197: MCP synthesis, route ladder, safety layers, tiers, build plan.
 - B1199: live PoC on station `LLM` (create, link, kitControl, save, rollback).
+
+## 7. Inventory and long reads (retro 2026-10-02)
+
+A navigate/read crawl costs one BOX round trip per component, several seconds
+each over a WAN. A first remote inventory crawl ran more than 16 minutes and did not
+finish. The same inventory took 6 BQL queries and about 3 s.
+
+| Rule | Enforced by |
+|---|---|
+| For a station inventory, call `n4_inventory` (networks, devices and points under `/Drivers`) or `n4_bql_query` FIRST. Use `n4_navigate` / `n4_read_slots` only for targeted components, e.g. to learn a driver's proxy-extension slot names (`dataAddress`, `objectId`) once per driver, then project them in BQL as `proxyExt.<slot>`. | Tool descriptions; `test_query_returns_rows_and_columns_from_the_path_form_ord`, `test_inventory_counts_devices_and_points_per_network_with_local_apart` |
+| `n4_bql_query` is read-only: `select` only, no `|`, path-form `GET /ord/<ORD>` (the `/ord?` form answers 400), capped rows (default 5000, `truncated`), a timeout, and control characters stripped. | `mcp_n4/bql.py`; `test_non_select_and_pipe_injection_send_nothing`, `test_row_cap_and_timeout_are_passed_through`, `test_parse_csv_strips_bom_and_control_chars_and_caps_rows` |
+| A read is recorded: a session observation always, and an `audit.jsonl` line with outcome `read` when the write machinery is active. | `test_the_read_is_recorded_as_a_session_observation`, `test_the_read_is_audited_with_outcome_read` |
+| Any read expected to take more than about 1 minute writes progress to a file and reports counts. Never leave the human waiting on a piped, invisible stream. `n4_inventory` returns `progress` (rows per step) and appends the same lines to `--progress-file`. A hand-run crawl writes its own progress file. | `test_progress_lines_go_to_the_operator_progress_file`; **manual** for hand-run scripts |
+| Count devices without the network's built-in local device (`localDevice` on SnmpNetwork, the station acting as an agent). `n4_inventory` flags it `local: true` and reports `local_devices` apart from `field_devices`. | `bql.is_local_device`; `test_local_devices_are_flagged_and_counted_apart` |
+| Load latency is visible: `n4_navigate` and `n4_read_slots` return `elapsed_ms`. Load polling starts at 0.1 s and backs off (0.2, 0.4, 0.8 s cap), with a bounded total wait. | `box.poll_delays`; `test_load_tree_polls_with_a_short_first_delay_and_backoff`, `test_load_tree_total_wait_is_bounded_and_each_delay_capped`, `test_read_slots_and_navigate_report_elapsed_ms` |
