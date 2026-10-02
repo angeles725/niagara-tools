@@ -15,6 +15,7 @@ import argparse
 import datetime
 import os
 import re
+import stat
 import sys
 import tempfile
 
@@ -57,12 +58,24 @@ def _index_rows(index_text, name, row):
     return "\n".join(lines) + "\n"
 
 
+def _target_mode(path):
+    """Mode for `path`: the existing file's, else 0644 under the umask (not mkstemp's 0600)."""
+    try:
+        return stat.S_IMODE(os.stat(path).st_mode)
+    except FileNotFoundError:
+        umask = os.umask(0)
+        os.umask(umask)
+        return 0o644 & ~umask
+
+
 def _atomic_write(path, text):
     """Write `text` to `path` through a temp file in the same directory and a rename."""
+    mode = _target_mode(path)
     fd, tmp = tempfile.mkstemp(prefix=".new_retro-", suffix=".tmp", dir=os.path.dirname(path))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
