@@ -44,6 +44,7 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       Route: delegated direct writer (new script + bats + 4 doc/test files — writer trigger). PARTIAL
       promotion: kit-meta Δ1/Δ2/Δ4/Δ5 owed to later WUs, so its INDEX row stays `pending`; recorded in
       the kit BUILD-STATE self-envelope (open_issue + last_session).
+- [ ] WU0b · gen-lint-index advisory follow-ups from the WU0 review: Auto column must match an actual invocation (not a substring/comment); keep ALL Usage/Exit header lines (lint-timers exit 2/3, lint-write-path --strict); document/remove the NR<=5 join cap; treat an awk failure as an error; trim SKILL.md step-5 duplicate enumeration; amend METHODOLOGY K19 + fragment-merge rule to the index.
 - [ ] WU1 · `types/frontend-standard.md` + dashboard/BUILD-STATE `ui_profile` — frontend-standard Δ1,Δ11-Δ15;
       deployment-profiles Δ1-Δ3; rc-file-split Δ1,Δ3,Δ4.
 - [ ] WU2 · dashboard runtime doctrine (`types/dashboard.md`) — reliability Δ1-Δ4,Δ6,Δ8,Δ9; frontend-standard
@@ -84,6 +85,8 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Not run: `.githooks/pre-push` (needs a push range).
   - Follow-up outside WU0 surface: METHODOLOGY K19 + fragment-merge rule still name BUILD-LOOP §5 as
     the lint routing line; amend to name `toolbelt/INDEX.md` (recorded as kit open_issue).
+
+- WU0 RDD: assessed high (process_boundary, shell_source); consent pre-granted; 4-lens review APPROVED and acknowledged (lineage review-1e008815decc0963); 9 advisory findings → WU0b.
 
 ## Next step
 - WU1 (`types/frontend-standard.md` + `ui_profile`) from the new `origin/main` after WU0 merges.
