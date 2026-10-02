@@ -235,14 +235,18 @@ written for the panel):
   service selected by `config.js`. Complements the "module is the SKELETON" rule in `dashboard.md`
   § Extending an existing dashboard.
 
-## Owed enforcement (later work units)
-The checkable rules above are not yet lints. The `rc-scan.sh` extensions (unescaped `innerHTML`,
-data-URI budget, function length / dead code, orphan page, inline-block size), the ESLint config, the
-vendor-floor gate and the preview budgets are proposed in `retros/2026-10-01-dashboard-frontend-standard.md`
-and `retros/2026-10-01-dashboard-rc-file-split.md`. The runtime doctrine — fetch timeout, no overlapping
-polls, one timing config, success-time watchdog, stale-data visibility, recovery ladder, interaction
-safety, fail-visible read path, write confirmation, slot-key contract, layout shell — is folded in
-`dashboard.md` (§ Poll loop reliability, § HMI kiosk, § Config panel UX, § Critical-write step-up auth,
-§ Dashboard as an external API); its lint halves (`rc-scan.sh` fetch-without-signal and
-`setInterval(async)` WARNs, the `lint-spa-poll-no-recovery.sh` success-time rework) are owed to a later
-work unit. Until then the rules here are DECLARED, not GATED.
+## Enforcement
+`toolbelt/rc-scan.sh` gates the checkable browser rules (row format and flags in its header):
+`browser-floor` (WARN; FAIL under `--strict` or `--profile hmi|both`), `disabled-gate`,
+`fetch-no-signal`, `setinterval-async`, `innerhtml-server` (§ 8 escape rule), `datauri-budget`
+(FAIL over 20 KB; WARN with `--legacy` for a deployed module not yet restructured), `orphan-page`
+(§ 1 layout shell) and `inline-block-size` (DJS1 split, over 300 lines). A false positive is
+silenced on its line with `rc-scan: allow <check-id>` plus a reason.
+`toolbelt/lint-spa-poll-no-recovery.sh` gates the success-time watchdog (`dashboard.md` § Poll loop
+reliability). `[ev: retro dashboard-frontend-standard Δ2]` `[ev: retro dashboard-frontend-standard Δ3]`
+`[ev: retro dashboard-frontend-standard Δ5]` `[ev: retro dashboard-rc-file-split Δ6]`
+
+Still owed (later work units): function length / dead code via the ESLint config, the vendor-floor
+gate, the preview budgets, and `report-module.sh` passing the module's `ui_profile` (`--profile`)
+and `--legacy` to `rc-scan.sh` (today it runs the default: browser-floor WARN, datauri FAIL). Until
+then those rules are DECLARED, not GATED.

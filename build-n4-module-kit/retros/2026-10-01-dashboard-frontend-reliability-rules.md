@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · kit · dashboard-frontend-reliability-rules
 
 **Session**: PANCCADIA HMI freeze triage (Cliente/panccadia-leon, read-only); user asked for frontend rules judged by the agent

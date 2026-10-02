@@ -53,7 +53,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       Δ6,Δ7,Δ9; amps-alarms Δ4,Δ5; auto-lock Δ3; rc-file-split Δ2; persistent-config Δ5; servlet-write-audit Δ3;
       deployment-profiles Δ6. Route: delegated direct writer (3 type docs + BUILD-STATE + feature doc — writer
       trigger). PARTIAL promotion of all 8 retros: no INDEX flip; owed Δ in the kit BUILD-STATE open_issue.
-- [ ] WU3 · `rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats.
+- [x] WU3 · `rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats — reliability Δ1/Δ2/Δ3
+      lint halves, Δ5, Δ7 (retro FULLY folded, INDEX row + marker flipped); frontend-standard Δ2,Δ3,Δ5; rc-file-split Δ6;
+      commissioning-lessons Δ6; persistent-config Δ4 (rc-scan half). Route: delegated direct writer (2 scripts + 2 bats +
+      fixtures + 6 docs — writer trigger).
 - [ ] WU4 · frontend tooling (`lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc).
 - [ ] WU5a · logic persistence/restart/backup doctrine.
 - [ ] WU5b · logic safety/protection/structure doctrine.
@@ -130,5 +133,34 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   Owed lint halves to WU3: rc-scan fetch-without-signal + `setInterval(async)` WARNs,
   `lint-spa-poll-no-recovery.sh` success-time rework.
 
+- 2026-10-02 WU3 (branch `feat/fold-wu3-rc-scan`, chained on `feat/fold-wu2-dashboard-runtime`): `toolbelt/rc-scan.sh`
+  gains 8 check ids — browser-floor (CSS `inset:`, non-grid `gap`, `aspect-ratio`, `min(`/`max(`/`clamp(`,
+  `backdrop-filter`; JS `??=` `||=` `&&=` `.replaceAll(` `.at(` `structuredClone(` column-0 `await`; WARN, FAIL under
+  `--strict` or `--profile hmi|both`), disabled-gate (login-gated files), fetch-no-signal, setinterval-async,
+  innerhtml-server, datauri-budget (FAIL > 20480 chars, WARN with `--legacy`), orphan-page (cross-file pass),
+  inline-block-size (> 300 lines) — plus `--profile`/`--legacy` flags, the `rc-scan: allow <id>` marker and
+  `--strict` promoting every WARN. The profile is passed by the caller; rc-scan never reads BUILD-STATE.
+  `lint-spa-poll-no-recovery.sh` reworked to the success-time doctrine (failure-count or reload-on-error recovery
+  WARNs; `lastOk*` clock timestamp + compare + reload is clean). Docs: `types/dashboard.md` (HMI kiosk browser
+  floor, critical-write disabled-gate rule, enforcement pointers), `types/frontend-standard.md` § Enforcement,
+  BUILD-LOOP §5 rc-scan line, regenerated `toolbelt/INDEX.md`. RC5 `clean` fixture now uses `fetchT` (doctrine change).
+  Evidence:
+  - RED: `bats tests/rc-scan.bats` 10 not ok (RC11, RC12, RC13, RC16, RC18, RC20, RC22, RC24, RC26, RC28
+    positives; the negatives pass vacuously before the checks exist); `bats tests/lint-spa-poll-no-recovery.bats`
+    SPR2 + SPR5 not ok (old lint accepted the failure-count and reload-on-error shapes).
+  - GREEN: `bats tests/rc-scan.bats` 29/29 ok; `bats tests/lint-spa-poll-no-recovery.bats` 11/11 ok.
+  - Observed mutations (each flips its named test, then restored byte-identical): RC11, RC13, RC16, RC18, RC20,
+    RC22, RC24, RC26, RC28 (rc-scan.sh), SPR2, SPR8 (lint-spa-poll-no-recovery.sh).
+  - Real smoke (local client checkout, read-only): rc-scan on the deployed dashboard `-ux` reports the retro's known
+    defects (orphan `page-graficas`, `setInterval(poll)`, 9 fetch-no-signal, 4 innerhtml-server, 7 datauri-budget,
+    20 flex-gap) in ~4 s on a 3.6 MB page.
+  - `bats tests/*.bats`: 735 ok / 0 not ok (58 env skips), exit 0.
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh:58`.
+  - `lint-guard-pins.sh --strict .` exit 0 (SPR2, SPR8 MATCH); `gen-lint-index.sh --check` exit 0;
+    `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (172 folded, 172 cited).
+  - Owed (recorded in the kit BUILD-STATE open_issue): `report-module.sh` passing `--profile`/`--legacy` to rc-scan
+    (WU4/WU7); METHODOLOGY.md:131 rc-scan check list (WU10/WU11).
+
 ## Next step
-- WU3 (`rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats) after WU2 merges.
+- WU4 (frontend tooling: `lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc) after WU3 merges;
+  include the report-module `--profile`/`--legacy` wiring for rc-scan.
