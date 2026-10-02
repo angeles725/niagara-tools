@@ -55,7 +55,9 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       trigger). PARTIAL promotion of all 8 retros: no INDEX flip; owed Δ in the kit BUILD-STATE open_issue.
 - [ ] WU3 · `rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats.
 - [ ] WU4 · frontend tooling (`lint-vendor-floor.sh`, ESLint config, `hmi-sweep.js`, client CI doc).
-- [ ] WU5a · logic persistence/restart/backup doctrine.
+- [x] WU5a · logic persistence/restart/backup doctrine — restart-seq Δ5,Δ6; pressure-staging Δ2-Δ4; persistent-config
+      Δ1 (doc half),Δ2; merged seed rule = auto-lock Δ4 + commissioning Δ5 + station-backup Δ3 (doc half). Route: delegated
+      direct writer (logic.md + METHODOLOGY + BUILD-STATE + feature doc — writer trigger). PARTIAL promotion: no INDEX flip.
 - [ ] WU5b · logic safety/protection/structure doctrine.
 - [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
 - [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
@@ -129,6 +131,17 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Commit: the WU2 work-unit commit on `feat/fold-wu2-dashboard-runtime` (sha in the PR).
   Owed lint halves to WU3: rc-scan fetch-without-signal + `setInterval(async)` WARNs,
   `lint-spa-poll-no-recovery.sh` success-time rework.
+
+- 2026-10-02 WU5a (branch `feat/fold-wu5-logic-doctrine`, from origin/main a392aac): `types/logic.md` new § Restart &
+  persistence (state→mechanism table; debounced station save Δ2; file-backed accumulator backup Δ5; Windows-safe
+  dest/.bak/.tmp replace Δ6; revision/recency restore via a pure selector pressure-staging Δ2; four proofs Δ3; ONE merged
+  seed-before-first-execute rule extending `hoursSeeded` — auto-lock Δ4 + commissioning Δ5 + station-backup Δ3);
+  § Staging & interlocks HOA bullet REWRITTEN in place (persisted, never TRANSIENT — persistent-config Δ1 supersedes the
+  old TRANSIENT/restart→Auto rule); `METHODOLOGY.md` rt checklist adapter-default pin (pressure-staging Δ4) + Schema
+  seed-order pin. Owed halves recorded in the kit BUILD-STATE open_issue (Δ1 lint → WU6b; §6.b rows → WU9).
+  Evidence (passive docs, no RED applicable): kit-links + build-retro-sync 36 ok / 0 not ok; sweep-build-state exit 0;
+  sweep-fold-audit --strict exit 0 (171/171); gen-lint-index --check fresh; public-repo grep 0 hits outside citation
+  tokens. Commit: WU5a work-unit commit on this branch.
 
 ## Next step
 - WU3 (`rc-scan.sh` extensions + `lint-spa-poll-no-recovery.sh` success-time rework + bats) after WU2 merges.
