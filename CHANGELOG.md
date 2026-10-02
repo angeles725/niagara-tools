@@ -6,6 +6,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.27.0] - 2026-10-02
+
+### Added — `mcp-n4-kit` v0.3.0: navigate `types` filter, issue #179 hygiene
+
+- **`n4_navigate` `types`** (retro 2026-10-02 D3): an optional list of type specs (e.g. `["bacnet:BacnetDevice"]`).
+  Only children of those types are kept, plus the path to them; each kept entry carries `matched: true/false`
+  and the reply echoes `types`. Absent or empty means no filter, so existing calls are unchanged.
+- **METHODOLOGY** (no code gate, **manual**):
+  - section 7: a long-running client takes a progress file (e.g. `--progress-file`) and never relies on stdout
+    piped through `tail`;
+  - section 3: when the harness permission classifier blocks a live write, even from a scoped writer, surface it
+    to the operator and stop; never route around it through another tool, a subagent or a peer session.
+
+### Fixed — issue #179 (T6e+T8b review advisory)
+
+- **Load counter** (R4-001): a request that is rejected or never sent no longer stays counted, and an answered
+  load clears the count left by an earlier timed-out one (replies come in request order). A single timeout no
+  longer disables the stale-handle early abort for the rest of the session.
+- **Duplicate guard** (R1-001, R2-001, R3-001, R4-003): `write.check_state_files()` runs once per confirmed write.
+- **Retro file modes** (R3-003, R4-004): `tools/new_retro.py` keeps the existing file's mode (e.g. `INDEX.md`)
+  and gives a new retro `0644` under the umask, instead of `mkstemp`'s `0600`.
+- **Readability** (R2-002, R2-003): the drain loop in `box.py` parenthesizes its conditional iterable; `retro.py`
+  builds `by_batch` once, in `_window`.
+
+Still open in #179: rollback fidelity (R4-002, R3-002, B1200-G1/G2/G3), planned as T4.
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-issue179-hygiene.md`.
+- Issue: angeles725/niagara-tools#179.
+
 ## [v0.26.0] - 2026-10-02
 
 ### Added — `mcp-n4-kit` v0.2.0: bulk reads, folding the first remote-session retro (D1-D8)
