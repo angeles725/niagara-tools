@@ -19,6 +19,7 @@
 # Mutation: AO4 -- ignore the reviewed marker and AO4 WARNs again on the reviewed call site
 # Mutation: AO6 -- accept a bare marker without a reason and AO6 stops warning
 # Mutation: AO8 -- split code/comment at the first // regardless of quotes and AO8/AO9 stop warning
+# Mutation: AO12 -- no block-comment skip in code_part and the apostrophe in /* it's */ hides the marker
 set -u
 LC_ALL=C
 export LC_ALL
@@ -45,13 +46,18 @@ marker_state() {
     fi
 }
 
-# code_part <line>: the line up to its // line comment. A "//" inside a double-quoted string or a
-# single-quoted char literal is not a comment start, so it neither hides a call nor supplies a
-# reviewed marker. [polish-2026-10-02 P2a, #199 WU6a]
+# code_part <line>: sets CODE to the line up to its // line comment (no subshell: it runs once per
+# source line). A "//" inside a double-quoted string or a single-quoted char literal is not a comment
+# start, so it neither hides a call nor supplies a reviewed marker; an inline /* ... */ block comment is
+# skipped (kept in CODE so CODE stays a prefix of the line), so an apostrophe inside it opens no char
+# literal. Block-comment state is not carried across lines. Sibling string-aware strippers:
+# lint-delays.sh strip_comment (awk), lint-write-path.sh audit pass (awk).
+# [polish-2026-10-02 P2a/P2b, #199 WU6a]
 code_part() {
-    local s="$1" i c q="" n
-    case "$s" in *//*) ;; *) printf '%s' "$s"; return ;; esac
-    case "$s" in *\"*|*\'*) ;; *) printf '%s' "${s%%//*}"; return ;; esac
+    local s="$1" i c q="" n rest
+    CODE=$s
+    case "$s" in *//*) ;; *) return ;; esac
+    case "$s" in *\"*|*\'*|*/\**) ;; *) CODE=${s%%//*}; return ;; esac
     n=${#s}
     for ((i = 0; i < n; i++)); do
         c=${s:i:1}
@@ -61,10 +67,17 @@ code_part() {
         fi
         case "$c" in
             \"|\') q=$c ;;
-            /) if [ "${s:i+1:1}" = "/" ]; then printf '%s' "${s:0:i}"; return; fi ;;
+            /)
+                if [ "${s:i+1:1}" = "/" ]; then CODE=${s:0:i}; return; fi
+                if [ "${s:i+1:1}" = "*" ]; then
+                    rest=${s:i+2}
+                    case "$rest" in
+                        *'*/'*) rest=${rest%%'*/'*}; i=$((i + 2 + ${#rest} + 1)) ;;
+                        *) return ;;   # unclosed block comment: no // comment on this line
+                    esac
+                fi ;;
         esac
     done
-    printf '%s' "$s"
 }
 
 while IFS= read -r f; do
@@ -72,7 +85,7 @@ while IFS= read -r f; do
     prev=""
     while IFS= read -r line || [ -n "$line" ]; do
         ln=$((ln + 1))
-        code=$(code_part "$line")
+        code_part "$line"; code=$CODE
         # BOrd.make( <lowercase ident> ) — a bare variable, not a "literal" and not a CONST
         if printf '%s' "$code" | grep -Eq 'BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)'; then
             trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')

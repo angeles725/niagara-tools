@@ -35,6 +35,7 @@
 # Mutation: LD21 -- facet_min back to seconds for the make<Unit> family -> LD21 detail is wrong
 # Mutation: LD22 -- drop the unclosed-call report -> LD22 gets a blank "cannot verify floor:" row
 # Mutation: LD23 -- naive // strip that ignores string literals -> LD23 loses its guard and FAILs
+# Mutation: LD24 -- no block-comment skip in strip_comment -> an apostrophe in /* don't */ keeps the trailing // text as a guard
 set -u
 
 FAILED=0
@@ -106,7 +107,7 @@ while IFS= read -r f; do
     if (u == "Minutes") return 60000
     if (u == "Hours")   return 3600000
     if (u == "Days")    return 86400000
-    return 1
+    return 1   # "" = make(N), already ms: facet_min and literal_ms rely on this
   }
 
   # Return ms value for a BRelTime literal expression; -1 if not a simple literal.
@@ -121,8 +122,8 @@ while IFS= read -r f; do
     return -1
   }
 
-  # MIN facet value of a property declaration in ms for every factory (make(N) is already ms;
-  # makeSeconds/Minutes/Hours/Days are scaled by unit_ms); -1 when BFacets.MIN is present but
+  # MIN facet value of a property declaration in ms for every factory (make(N) is already ms:
+  # it relies on unit_ms("") == 1; makeSeconds/Minutes/Hours/Days are scaled by unit_ms); -1 when BFacets.MIN is present but
   # unreadable; -2 when there is no BFacets.MIN at all. [polish-2026-10-02 P2a: one unit, ms]
   function facet_min(text,    seg, u) {
     if (match(text, /BFacets\.MIN,[[:space:]]*BRelTime\.make(Seconds|Minutes|Hours|Days)?\([0-9]+\)/)) {
@@ -136,9 +137,13 @@ while IFS= read -r f; do
     return -2
   }
 
-  # strip_comment(s): s without a trailing // line comment (and the blanks before it). A "//"
-  # inside a double-quoted string or a single-quoted char literal is not a comment. [polish-2026-10-02 P2a]
-  function strip_comment(s,    i, c, q, n) {
+  # strip_comment(s): s without a trailing // line comment (and the blanks before it) and without
+  # inline /* ... */ block comments (an unclosed /* drops the rest of the line; block-comment state is
+  # not carried across lines). A "//" or "/*" inside a double-quoted string or a single-quoted char
+  # literal is not a comment, and an apostrophe inside a block comment opens no char literal.
+  # Sibling string-aware strippers: lint-arbitrary-ord.sh code_part (bash), lint-write-path.sh audit
+  # pass (awk). [polish-2026-10-02 P2a/P2b]
+  function strip_comment(s,    i, c, q, n, e) {
     q = ""; n = length(s)
     for (i = 1; i <= n; i++) {
       c = substr(s, i, 1)
@@ -148,6 +153,12 @@ while IFS= read -r f; do
         continue
       }
       if (c == "\"" || c == "\047") { q = c; continue }
+      if (c == "/" && substr(s, i + 1, 1) == "*") {
+        e = index(substr(s, i + 2), "*/")
+        if (e == 0) { s = substr(s, 1, i - 1); sub(/[[:space:]]+$/, "", s); return s }
+        s = substr(s, 1, i - 1) " " substr(s, i + 2 + e + 1); n = length(s)
+        continue
+      }
       if (c == "/" && substr(s, i + 1, 1) == "/") {
         s = substr(s, 1, i - 1); sub(/[[:space:]]+$/, "", s); return s
       }

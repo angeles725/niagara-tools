@@ -74,6 +74,30 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"CS4"* ]]
 }
 
+# polish-2026-10-02 P2b (#199 WU6b): CS4 matches names on camelCase word boundaries, not substrings. A
+# floor is ...MinOn / ...MinStagesOn (not a *Time/*Delay/*Sec timer); an LP cutout floor ends in LowLimit
+# or Cutout. Named mutation LCS-floor-name (back to the substring match) -> LCS-floor-name flips.
+@test "LCS-floor-name: substring decoys (adminOnline, minOnTime, cutoutDelay) -> no CS4" {
+  only FloorNameDecoys.java
+  cp "$FX/FloorNoCutout.java" "$ONE/"; sed -i -e 's/FloorNoCutout/FloorDecoyPair/' -e 's/"minStagesOn"/"stageCount"/' "$ONE/FloorNoCutout.java"
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CS4"* ]]
+  # a real floor beside a cutoutDelay of 0 (a delay, not a disabled cutout) -> still no CS4
+  only FloorCamelNames.java
+  sed -i 's/"lpCutout"/"cutoutDelay"/' "$ONE/FloorCamelNames.java"
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CS4"* ]]
+}
+
+@test "LCS-floor-camel: comp2MinOn=1 beside lpCutout=0 -> CS4 WARN naming both" {
+  only FloorCamelNames.java
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"lpCutout\"=0"* ]]
+}
+
 @test "LCS-usage: no argument -> exit 3 (usage)" {
   run "$LCS"
   [ "$status" -eq 3 ]
