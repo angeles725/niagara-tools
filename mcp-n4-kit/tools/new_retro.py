@@ -15,6 +15,7 @@ import argparse
 import datetime
 import os
 import re
+import stat
 import sys
 import tempfile
 
@@ -57,12 +58,41 @@ def _index_rows(index_text, name, row):
     return "\n".join(lines) + "\n"
 
 
+def _target_mode(path):
+    """Mode for `path`: the existing file's, else 0644 under the umask (not mkstemp's 0600)."""
+    try:
+        return stat.S_IMODE(os.stat(path).st_mode)
+    except FileNotFoundError:
+        return 0o644 & ~_current_umask()
+
+
+def _current_umask():
+    """The process umask, read without changing it where the OS allows (issue #179 R3-002).
+
+    Linux exposes it in /proc/self/status (`Umask:`); elsewhere the os.umask set-and-restore
+    pair is the only API, and it briefly changes the process-global umask, which is safe for
+    this single-threaded CLI.
+    """
+    try:
+        with open("/proc/self/status", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("Umask:"):
+                    return int(line.split()[1], 8)
+    except (OSError, ValueError, IndexError):
+        pass
+    umask = os.umask(0)
+    os.umask(umask)
+    return umask
+
+
 def _atomic_write(path, text):
     """Write `text` to `path` through a temp file in the same directory and a rename."""
+    mode = _target_mode(path)
     fd, tmp = tempfile.mkstemp(prefix=".new_retro-", suffix=".tmp", dir=os.path.dirname(path))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):

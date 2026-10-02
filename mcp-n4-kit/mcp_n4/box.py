@@ -165,20 +165,44 @@ def status_value(nodes, path):
             "status": kids.get("status", {}).get("v", "0")}
 
 
+#: Type contract table (B1200-G3): type spec -> True when the type is a BComponent the
+#: station creates with its own add op, False when it is a slot value (BSimple/BStruct).
+#: An entry here always wins over the naming heuristic below. Each entry is backed by the
+#: type's declaration (`extends`) in the decompiled N4 sources or by a live load:
+#:   baja:Component          BComponent itself
+#:   baja:Folder             BFolder extends BComponent
+#:   baja:UnrestrictedFolder BUnrestrictedFolder extends BFolder (heuristic says value)
+#:   control:NullProxyExt    BNullProxyExt extends BAbstractProxyExt (live: a writable's frozen child)
+#:   control:PriorityLevel   BPriorityLevel extends BFrozenEnum (heuristic says component)
+#:   baja:Link, baja:WsAnnotation  slot values the write tools rely on
+#: The kit has no live contract lookup yet (BOX `reg.loadContract`, B1173): it would need a
+#: new channel certified on a station. Add an entry here when a type is misclassified.
+COMPONENT_TYPES = {
+    "baja:Component": True,
+    "baja:Folder": True,
+    "baja:UnrestrictedFolder": True,
+    "control:NullProxyExt": True,
+    "control:PriorityLevel": False,
+    "baja:Link": False,
+    "baja:WsAnnotation": False,
+}
+
+
 def is_component_type(type_):
     """True when the station must create `type_` with its own add op.
 
-    Heuristic, shared by the write tools and the test fake: every type outside the
-    `baja` module is a component (`kitControl:NumericConst`, `control:...`), and so is
-    `baja:Folder`; the other `baja:` types (`Double`, `StatusNumeric`, `WsAnnotation`,
-    `Link`, ...) are plain slot values. Limits: it is a naming rule, not a type-registry
-    lookup, so any other `baja:` type that is really a component (e.g. a `baja:`
-    container added later) would be treated as a slot value and nested into its
-    parent's body, which the station rejects. Extend the rule here when one shows up.
+    Shared by the write tools and the test fake. An entry in `COMPONENT_TYPES` decides
+    first. Heuristic fallback for any other type: every type outside the `baja` module
+    is a component (`kitControl:NumericConst`, `control:...`); the other `baja:` types
+    (`Double`, `StatusNumeric`, ...) are plain slot values. The fallback is a naming
+    rule, not a type-registry lookup: a `baja:` component or a non-`baja` value type
+    missing from the table is misclassified, so extend the table when one shows up.
     """
     if not isinstance(type_, str) or ":" not in type_:
         return False
-    return type_.partition(":")[0] != "baja" or type_ == "baja:Folder"
+    if type_ in COMPONENT_TYPES:
+        return COMPONENT_TYPES[type_]
+    return type_.partition(":")[0] != "baja"
 
 
 def _flatten(node, path, out):
@@ -421,15 +445,30 @@ class BoxClient:
         for event in self.poll():  # queued before the request: cannot be its reply
             self._keep(event)
             evs = event.get("evs") if isinstance(event, dict) else None
-            for op in evs.get("ops") or [] if isinstance(evs, dict) else []:
+            for op in (evs.get("ops") or []) if isinstance(evs, dict) else []:
                 self._settle(op)
         trusted = self._loads_outstanding == 0
-        self.ssc("loadSlots", {"o": ord_str, "d": depth})
         self._loads_outstanding += 1
+        try:
+            self.ssc("loadSlots", {"o": ord_str, "d": depth})
+        # Assumption (PR #184 review R3-001): `ssc` raises either before the request is sent
+        # (transport error) or on an explicit error reply, so no load op will follow. A
+        # raise after the station received the request (a lost reply) would under-count
+        # by one; the in-order reset below bounds that to the next answered load.
+        except BaseException:  # rejected or never sent: no load op will answer it
+            self._loads_outstanding = max(0, self._loads_outstanding - 1)
+            raise
         delays = poll_delays(delay, MAX_POLL_DELAY, MAX_POLL_WAIT, attempts)
         while True:
             op, saw_other = self._split(self.poll(), handle)
             if op is not None:
+                # Replies come in request order: once this request is answered, an
+                # earlier one that timed out will not be answered any more, so the
+                # session is trusted again (issue #179 R4-001). Assumption: the station
+                # answers one session's loads in order, as observed live; it is not a
+                # documented BOX guarantee, and an out-of-order reply would be matched by
+                # handle in `_split` anyway, only the early-abort trust would be early.
+                self._loads_outstanding = 0
                 return op
             if cached and trusted and saw_other:
                 return None

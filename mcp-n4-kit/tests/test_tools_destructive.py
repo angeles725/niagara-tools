@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -523,14 +524,217 @@ class TestRollback(DestructiveCase):
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
         sent = self.sent_adds()
         back = self.rollback(removed["batch_id"])
-        self.assertEqual(back["verdict"], "verified", back)
+        # Inner is gone after the rollback: never "verified" (issue #179 R4-002)
+        self.assertEqual(back["verdict"], "partial", back)
         self.assertNotIn("Inner", [op["n"] for op in sent if op["nm"] == "a"])
         self.assertIn(("Inner", "kitControl:NumericConst"),
                       [(f["n"], f["type"]) for f in back["frozen_children_not_restored"]])
+        lost = {f["path"].rsplit("/", 1)[-1]: f for f in back["frozen_config_not_restored"]}
+        self.assertEqual(sorted(lost), ["Inner"])
+        self.assertTrue(lost["Inner"]["missing"])
 
     def test_a_rollback_without_frozen_children_reports_none(self):
         nn, removed = self.removed_group()
         self.assertNotIn("frozen_children_not_restored", self.rollback(removed["batch_id"]))
+
+    # ---- frozen-child configuration (issue #179 R4-002 / B1200-G1) -------------------
+
+    def configure_proxy_ext(self, nn, value="Fast"):
+        """Give Sp's frozen proxyExt a configured (non-default) slot, as a real point has."""
+        ext = self.fake.folder.child(nn).child("Sp").child("proxyExt")
+        self.box.sync({"nm": "s", "h": ext.handle, "n": "tuningPolicyName",
+                       "b": {"nm": "p", "t": "baja:String", "v": value}})
+        return ext
+
+    def test_frozen_child_config_not_restored_downgrades_the_verdict_to_partial(self):
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "partial", back)
+        lost = back["frozen_config_not_restored"]
+        self.assertEqual([f["path"].rsplit("/", 2)[-2:] for f in lost], [["Sp", "proxyExt"]])
+        self.assertEqual(lost[0]["slots"], ["tuningPolicyName"])
+        self.assertEqual(lost[0]["captured"]["s"],
+                         [{"nm": "p", "t": "baja:String", "n": "tuningPolicyName", "v": "Fast"}])
+        self.assertFalse(lost[0]["missing"])
+        self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "partial")
+
+    def test_a_frozen_child_of_another_type_is_reported_as_not_restored(self):
+        nn, gh = self.writable_group()
+        self.fake.folder.child(nn).child("Sp").child("proxyExt").type = \
+            "bacnet:BacnetNumericProxyExt"
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "partial", back)
+        (lost,) = back["frozen_config_not_restored"]
+        self.assertEqual((lost["type"], lost["live_type"]),
+                         ("bacnet:BacnetNumericProxyExt", "control:NullProxyExt"))
+
+    def test_a_frozen_child_whose_config_matches_keeps_the_verdict_verified(self):
+        """The fresh frozen child already holds the captured config: nothing was lost."""
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        orig = self.fake._sync
+
+        def default_fast(op):
+            res = orig(op)
+            if op["nm"] == "a" and op["n"] == "Sp":  # model only: no BOX call in a hook
+                ext = self.fake.folder.child(nn).child("Sp").child("proxyExt")
+                ext.children.append(fake_station._Node("tuningPolicyName", "baja:String",
+                                                       "Fast"))
+            return res
+        self.fake._sync = default_fast
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "verified", back)
+        self.assertNotIn("frozen_config_not_restored", back)
+
+    def test_the_frozen_check_treats_an_omitted_default_as_equal(self):
+        """The station omits slots at their default; a captured `0` status is not a loss."""
+        captured = {"nm": "p", "t": "control:NullProxyExt", "s": [
+            {"nm": "p", "n": "status", "t": "baja:Status", "v": "0"},
+            {"nm": "p", "n": "readValue", "t": "baja:StatusNumeric", "s": [
+                {"nm": "p", "n": "value", "v": "0.0"}, {"nm": "p", "n": "status", "v": "0"}]},
+            {"nm": "p", "n": "tuningPolicyName", "t": "baja:String", "v": "Fast"}]}
+
+        class Client:
+            def __init__(self, nodes):
+                self.nodes = nodes
+
+            def load_tree(self, ord_str, depth):
+                return self.nodes
+        check = {"path": "station:|slot:/F/Sp/proxyExt", "b": captured}
+        live = {"": {"t": "control:NumericWritable"},
+                "proxyExt": {"t": "control:NullProxyExt"},
+                "proxyExt/readValue": {"t": "baja:StatusNumeric"},
+                "proxyExt/tuningPolicyName": {"t": "baja:String", "v": "Fast"}}
+        self.assertIsNone(tools_write._frozen_check(Client(live), check))
+        live["proxyExt/tuningPolicyName"]["v"] = "Slow"
+        gap = tools_write._frozen_check(Client(live), check)
+        self.assertEqual((gap["slots"], gap["missing"]), (["tuningPolicyName"], False))
+
+    def test_the_frozen_check_treats_an_omitted_nested_default_slot_as_equal(self):
+        """A Status slot the station omits whole (value and status at default) is not a
+        loss (v0.28.0 advisory review R4-002); one with a non-default nested value still is."""
+        captured = {"nm": "p", "t": "control:NullProxyExt", "s": [
+            {"nm": "p", "n": "readValue", "t": "baja:StatusNumeric", "s": [
+                {"nm": "p", "n": "value", "v": "0.0"}, {"nm": "p", "n": "status", "v": "0"}]}]}
+
+        class Client:
+            def load_tree(self, ord_str, depth):
+                return {"": {"t": "control:NumericWritable"},
+                        "proxyExt": {"t": "control:NullProxyExt"}}
+        check = {"path": "station:|slot:/F/Sp/proxyExt", "b": captured}
+        self.assertIsNone(tools_write._frozen_check(Client(), check))
+        captured["s"][0]["s"][0]["v"] = "21.5"
+        gap = tools_write._frozen_check(Client(), check)
+        self.assertEqual((gap["slots"], gap["missing"]), (["readValue"], False))
+
+    def test_a_frozen_check_read_error_is_reported_distinctly_not_as_missing(self):
+        """A station read error is not evidence the frozen child is gone (v0.28.0 advisory review
+        R4-001/R2-001/R3-001)."""
+        class Client:
+            def load_tree(self, ord_str, depth):
+                raise box.BoxError("HTTP 503 from station", box.CHANNEL, "loadSlots")
+        check = {"path": "station:|slot:/F/Sp/proxyExt",
+                 "b": {"nm": "p", "t": "control:NullProxyExt"}}
+        gap = tools_write._frozen_check(Client(), check)
+        self.assertNotIn("missing", gap)
+        self.assertEqual(gap["readback_error"], "HTTP 503 from station")
+        self.assertEqual(gap["path"], check["path"])
+
+    def test_a_frozen_check_read_error_makes_the_rollback_unverified(self):
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        client = self.srv.ctx.session.client
+        orig = client.load_tree
+
+        def failing(ord_str, depth=2, **kw):  # only the frozen-child read-back fails
+            if depth == 7:
+                raise box.BoxError("HTTP 503 from station", box.CHANNEL, "loadSlots")
+            return orig(ord_str, depth=depth, **kw)
+        client.load_tree = failing
+        with mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
+            back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "unverified", back)
+        gaps = back["frozen_config_not_restored"]
+        self.assertTrue(gaps and all("missing" not in g for g in gaps), gaps)
+        self.assertTrue(all(g["readback_error"] == "HTTP 503 from station" for g in gaps))
+        self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
+
+    # ---- link-targeted inputs (issue #179 R3-002 / B1200-G2) -------------------------
+
+    def test_the_remove_plan_records_the_value_of_a_link_driven_input(self):
+        nn = self.linked_group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        (relink,) = [e["relink"] for e in plan["plan"]["inverse"] if "relink" in e]
+        self.assertEqual(relink["target_slot"], "in10")
+        # volatile: never part of the hashed plan (PR #187 blocking review R3-001)
+        self.assertNotIn("prior", relink)
+        self.assertTrue(any("captured when the confirmed remove runs" in n
+                            for n in plan["plan"]["notes"]), plan["plan"]["notes"])
+        (seen,) = plan["link_input_values"]  # the operator's preview, outside the hash
+        self.assertEqual((seen["target_path"], seen["target_slot"]), ("Tgt", "in10"))
+        self.assertEqual(seen["value"]["t"], "baja:StatusNumeric")
+        self.assertEqual({c["n"]: c["v"] for c in seen["value"]["s"]},
+                         {"value": "4.5", "status": "0"})  # facets dropped, bits kept
+
+    def test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid(self):
+        """The link source keeps propagating between dry run and confirm.
+
+        PR #187 blocking review R3-001."""
+        nn = self.linked_group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.fake.folder.child(nn).child("Tgt").child("in10").child("value").value = "7.25"
+        removed = self.ok("n4_remove_component", parent_ord=FOLDER, name=nn, dry_run=False,
+                          confirmation_token=plan["confirmation_token"])
+        self.assertNotIn(nn, self.children())
+        (relink,) = [e["relink"] for e in self.journal().read(removed["batch_id"])["inverse"]
+                     if "relink" in e]
+        self.assertEqual({c["n"]: c["v"] for c in relink["prior"]["s"]},
+                         {"value": "7.25", "status": "0"})  # the value seen at execution
+
+    def test_a_skipped_relink_reports_the_captured_input_value(self):
+        nn = self.linked_group()
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        orig = self.fake._sync
+
+        def drop_src(op):
+            res = orig(op)
+            if op["nm"] == "a" and op["n"] == "Src":
+                node = self.fake.folder.child(nn)
+                node.children = [c for c in node.children if c.name != "Src"]
+            return res
+        self.fake._sync = drop_src
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "mismatch", back)
+        (lost,) = back["link_inputs_not_restored"]
+        self.assertTrue(lost["target"].endswith("/%s/Tgt" % nn), lost)
+        self.assertEqual((lost["target_slot"], lost["source_slot"], lost["reason"]),
+                         ("in10", "out", "relink skipped"))
+        self.assertEqual({c["n"]: c["v"] for c in lost["value"]["s"]},
+                         {"value": "4.5", "status": "0"})
+
+    def test_an_input_linked_from_outside_the_subtree_is_reported_not_lost(self):
+        nn = self.linked_group()
+        other, other_h = self.add("Other", out=1.0)
+        tgt = self.fake.folder.child(nn).child("Tgt")
+        self.live_input(tgt, "in11", "1.0", "0;activeLevel=e:17@control:PriorityLevel")
+        self.box.check_links(other_h, "out", tgt.handle, "in11")
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        (unlinked,) = [e["unlinked_input"] for e in
+                       self.journal().read(removed["batch_id"])["inverse"]
+                       if "unlinked_input" in e]
+        self.assertEqual((unlinked["target_path"], unlinked["target_slot"]), ("Tgt", "in11"))
+        back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "partial", back)
+        (lost,) = back["link_inputs_not_restored"]
+        self.assertEqual((lost["target_slot"], lost["reason"]),
+                         ("in11", "link source outside the removed subtree"))
+        self.assertEqual({c["n"]: c["v"] for c in lost["value"]["s"]},
+                         {"value": "1.0", "status": "0"})
 
     def test_grandchildren_are_added_after_their_parent_breadth_first(self):
         nn, gh = self.group()

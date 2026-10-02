@@ -6,6 +6,96 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.28.1] - 2026-10-02
+
+### Fixed — `mcp-n4-kit` v0.4.1: rollback read-back precision (issue #179 T5, v0.28.0 advisory review)
+
+- **A frozen-child read error is no longer reported as `missing`** (R4-001/R2-001/R3-001): when the
+  read-back cannot load a frozen child, its `frozen_config_not_restored` entry carries `readback_error`
+  (scrubbed) and no `missing`, and the rollback verdict is `unverified` instead of `partial`. `partial`
+  asserts what was not restored; a read error establishes nothing. Precedence: `mismatch` > `unverified` >
+  `partial` > `verified`.
+- **An omitted nested-default slot is equal** (R4-002): a captured struct slot (e.g. a StatusNumeric
+  `readValue` with `value`/`status`) that the station omits now counts as equal when every captured child is
+  at its type default, as for scalars. A child whose default the kit does not know still counts as different.
+- Internal: the in-doubt error builder `_partial` is renamed `_in_doubt_with_created` (it collided with the
+  `partial` verdict, R2-003); `_link_input_values` is a plain loop sharing `_prior_kind` with
+  `_hashed_inverse` (R2-004); finding-ID comments name their review (`PR #184 review R3-001`,
+  `PR #187 blocking review R3-001`) instead of an ambiguous `issue #179 R3-001` (R2-002).
+
+## [v0.28.0] - 2026-10-02
+
+### Changed — `mcp-n4-kit` v0.4.0: rollback fidelity (issue #179 T4)
+
+- **New rollback verdict `partial`** (R4-002, B1200-G1): a rollback is `verified` only when it is faithful.
+  A frozen child of a re-created component (e.g. a writable's `proxyExt`) is still never re-added, but the
+  read-back now compares it with the snapshot (type, captured slots; a slot the station omits counts as its
+  default). Any difference, and any descendant of a frozen child that is missing, is listed in
+  `frozen_config_not_restored` (path, snapshot and live type, differing slots, captured config) and the
+  verdict is `partial`. Before, the rollback reported `verified`. The configuration is not written back:
+  a fresh frozen child can be of another type (`control:NullProxyExt` vs a driver proxy extension), which a
+  set op cannot change, and set ops on frozen children are not live-certified.
+- **Link-driven inputs are no longer lost silently** (R3-002, B1200-G2): `n4_remove_component` records the
+  last value of every input that is a link target (configuration form: status bits kept, facets dropped) on
+  its relink (`prior`), and records inputs linked from outside the removed subtree as `unlinked_input`
+  inverse entries. `n4_rollback` lists every input it did not restore in `link_inputs_not_restored`
+  (`target`, `target_slot`, `source_slot`, `reason`, `value`). A skipped relink stays `mismatch`; an input
+  linked from outside the subtree makes the verdict `partial`. The value is reported, not written: the live
+  station rejected link-target values in the re-create body (B1200 finding 3). Batches journaled before
+  v0.28.0 carry no recorded value (`value: null`). The value is captured when the confirmed remove runs
+  and journaled from that re-plan; it is kept out of the confirmation hash (a link source keeps changing
+  it, so hashing it would reject a valid confirmation by timing alone, R3-001). The dry run shows it as a
+  `link_input_values` preview outside the hashed `plan`.
+- **Type contract table** (B1200-G3): `box.COMPONENT_TYPES` maps type specs to component/value and wins over
+  the naming heuristic, which stays as the documented fallback. Seeded from the N4 declarations:
+  `baja:Component`, `baja:Folder`, `baja:UnrestrictedFolder`, `control:NullProxyExt` (components),
+  `control:PriorityLevel`, `baja:Link`, `baja:WsAnnotation` (values). A live `reg.loadContract` lookup is
+  not built: it needs a new BOX channel certified on a station.
+- `retro.py` turns a `partial` verdict into a MEDIUM candidate delta.
+
+### Fixed — #184 review advisory
+
+- `tools/new_retro.py` reads the umask from `/proc/self/status` without changing it, falling back to the
+  set-and-restore pair elsewhere (R3-002).
+- `n4_navigate`: `has_children` ignores the `types` filter, now stated in the tool description (R3-003);
+  `_types_arg` docstring says it returns the list (R2-001).
+- `box.py` documents the load-counter assumptions: `ssc` raises before send or on an error reply (R3-001),
+  and loads are answered in order (R4-001). No behavior change.
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-issue179-hygiene.md` (T4).
+- Issue: angeles725/niagara-tools#179; niagara-research B1200-G1/G2/G3.
+
+## [v0.27.0] - 2026-10-02
+
+### Added — `mcp-n4-kit` v0.3.0: navigate `types` filter, issue #179 hygiene
+
+- **`n4_navigate` `types`** (retro 2026-10-02 D3): an optional list of type specs (e.g. `["bacnet:BacnetDevice"]`).
+  Only children of those types are kept, plus the path to them; each kept entry carries `matched: true/false`
+  and the reply echoes `types`. Absent or empty means no filter, so existing calls are unchanged.
+- **METHODOLOGY** (no code gate, **manual**):
+  - section 7: a long-running client takes a progress file (e.g. `--progress-file`) and never relies on stdout
+    piped through `tail`;
+  - section 3: when the harness permission classifier blocks a live write, even from a scoped writer, surface it
+    to the operator and stop; never route around it through another tool, a subagent or a peer session.
+
+### Fixed — issue #179 (T6e+T8b review advisory)
+
+- **Load counter** (R4-001): a request that is rejected or never sent no longer stays counted, and an answered
+  load clears the count left by an earlier timed-out one (replies come in request order). A single timeout no
+  longer disables the stale-handle early abort for the rest of the session.
+- **Duplicate guard** (R1-001, R2-001, R3-001, R4-003): `write.check_state_files()` runs once per confirmed write.
+- **Retro file modes** (R3-003, R4-004): `tools/new_retro.py` keeps the existing file's mode (e.g. `INDEX.md`)
+  and gives a new retro `0644` under the umask, instead of `mkstemp`'s `0600`.
+- **Readability** (R2-002, R2-003): the drain loop in `box.py` parenthesizes its conditional iterable; `retro.py`
+  builds `by_batch` once, in `_window`.
+
+Still open in #179: rollback fidelity (R4-002, R3-002, B1200-G1/G2/G3), planned as T4.
+
+### References
+- ODD feature document: `odd/tasks/mcp-n4-issue179-hygiene.md`.
+- Issue: angeles725/niagara-tools#179.
+
 ## [v0.26.0] - 2026-10-02
 
 ### Added — `mcp-n4-kit` v0.2.0: bulk reads, folding the first remote-session retro (D1-D8)

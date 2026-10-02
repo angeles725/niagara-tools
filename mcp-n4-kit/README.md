@@ -11,6 +11,8 @@ an in-memory fake station. T2: the stdio MCP server with read-only station tools
 T3: guarded write tools (`--allow-writes`). T4: destructive tools, rollback and save. T5: METHODOLOGY and the skill launcher.
 v0.2.0 (retro 2026-10-02): bulk reads with `n4_bql_query` / `n4_inventory`, adaptive load
 polling with `elapsed_ms`, display strings for complex slots, an actionable 401.
+v0.3.0 (issue #179): `n4_navigate` `types` filter, load-counter recovery after a timed-out load,
+retro files keep their mode.
 
 ## Methodology and skill
 
@@ -120,6 +122,8 @@ network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_q
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
 The query must be one `select`, `|` is refused, and rows are capped (default 5000).
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
+`n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
+children of those types plus the path to them, each kept entry marked `matched`.
 `n4_read_slots` adds `value_display` (the station's display string) and returns that string as
 `value` for complexes it cannot decode (e.g. a Modbus `dataAddress`: `Decimal:302`). One station session
 is active per process; `n4_connect` replaces it (the old session is always closed
@@ -167,8 +171,9 @@ Every write call goes through these layers:
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.
 8. **Read-back.** After executing, the node is reloaded and the reply carries
-   `{requested, accepted, observed, verdict}`: `verified`, `mismatch` (reported, not
-   raised), `failed` (including any read-back error, reported as `readback_error`
+   `{requested, accepted, observed, verdict}`: `verified`, `partial` (a rollback that
+   did not bring back every piece of configuration, listed in the reply), `mismatch`
+   (reported, not raised), `failed` (including any read-back error, reported as `readback_error`
    next to the `batch_id`), or `unverified` for the state-changing actions
    (`active`, `inactive`, `auto`) that have no slot to read back and for an
    ambiguous `checkLinks` reply (`in_doubt: true`; the new link is searched by its
@@ -206,7 +211,16 @@ Destructive tools use the same pipeline:
   handle must still belong to its ORD. Inverses: remove a created component or
   link, restore a slot or fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
-  `relinks: {restored, skipped}`).
+  `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
+  never re-added: the read-back compares it with the snapshot and lists any
+  difference in `frozen_config_not_restored`. A link-driven input whose link is not
+  re-created (an end is missing, or its source was outside the removed subtree) is
+  listed in `link_inputs_not_restored` with the value captured when the confirmed
+  remove ran (the dry run previews it as `link_input_values`, outside the
+  confirmation hash, because a link keeps changing it). Either
+  list makes the verdict `partial`, never `verified`. A frozen child the read-back
+  could not load is listed with `readback_error` (no `missing`) and makes the verdict
+  `unverified`: a read error proves neither loss nor restore.
 - `n4_save_station` invokes `save` on the root. The BOX reply to `save` is `null`
   and proves nothing, so with `--station-home NAME=PATH` (directory holding
   `config.bog`, repeatable) the tool compares mtime and sha256 before and after,

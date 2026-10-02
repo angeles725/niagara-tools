@@ -137,6 +137,49 @@ def _inverse_list(inverse):
     return inverse or []
 
 
+#: Inverse entries whose spec may carry `prior`, a link-driven input's runtime value.
+_PRIOR_KINDS = ("relink", "unlinked_input")
+
+
+def _prior_kind(entry):
+    """The `_PRIOR_KINDS` key under which an inverse entry carries `prior`, else None."""
+    if not isinstance(entry, dict):
+        return None
+    return next((k for k in _PRIOR_KINDS
+                 if isinstance(entry.get(k), dict) and "prior" in entry[k]), None)
+
+
+def _hashed_inverse(inverse):
+    """The inverse as the confirmation token authorizes it: without `prior` values.
+
+    `prior` is the live value a link propagates into an input, so it changes whenever the
+    link source does; hashing it would make a dry run and its confirming re-plan disagree
+    by timing alone (PR #187 blocking review R3-001). The journal keeps the full inverse,
+    `prior` included, from the re-plan taken when the confirmed write runs.
+    """
+    out = []
+    for entry in inverse:
+        kind = _prior_kind(entry)
+        if kind is None:
+            out.append(entry)
+            continue
+        out.append(dict(entry, **{kind: {k: v for k, v in entry[kind].items()
+                                         if k != "prior"}}))
+    return out
+
+
+def _link_input_values(inverse):
+    """The `prior` values an inverse carries, as a dry-run preview (never hashed)."""
+    out = []
+    for entry in inverse:
+        kind = _prior_kind(entry)
+        if kind is not None:
+            spec = entry[kind]
+            out.append({"target_path": spec["target_path"],
+                        "target_slot": spec["target_slot"], "value": spec["prior"]})
+    return out
+
+
 def _data(planned):
     """A plan's private data as a dict, whatever a handler returned."""
     return planned.data if isinstance(planned.data, dict) else {}
@@ -374,7 +417,9 @@ def _snapshot(node, path, links, handles):
     values, wsAnnotation and slot facets are kept. Slots that are the TARGET of a link inside
     the snapshot (`inA`, `in10`...) are omitted too: they hold a value the link propagated
     at runtime, stale on restore and rejected live ("Unable to process request", finding 3,
-    2026-10-01); the relink re-establishes them. Frozen slot children carry no type, so the
+    2026-10-01); the relink re-establishes them. Their value is not lost, though: it is kept
+    on the link record as `prior` (same configuration-only form), so a rollback that cannot
+    re-establish the link reports it (issue #179 R3-002, B1200-G2). Frozen slot children carry no type, so the
     `t` key is omitted for them (never `"t": null`), and a `status` child of a `baja:Status*`
     parent is recognized by name.
     """
@@ -387,7 +432,7 @@ def _snapshot(node, path, links, handles):
         out["n"] = node["n"]
     if node.get("v") is not None:
         out["v"] = node["v"]
-    kids = []
+    kids, first_link, prior = [], len(links), {}
     driven = {k.get("v") for c in node.get("s", []) if c.get("t") in LINK_TYPES
               for k in c.get("s", []) if k.get("n") == "targetSlotName"}
     for child in node.get("s", []):
@@ -398,10 +443,9 @@ def _snapshot(node, path, links, handles):
                           "source_slot": slots.get("sourceSlotName"),
                           "target_slot": slots.get("targetSlotName")})
             continue
-        if child.get("n") in driven:
-            continue
         if child.get("n") in RUNTIME_OUTPUT_SLOTS and \
-                str(child.get("t", "")).startswith("baja:Status"):
+                str(child.get("t", "")).startswith("baja:Status") and \
+                child.get("n") not in driven:
             continue
         kid = _snapshot(child, child_path, links, handles)
         if kid.get("t") == "baja:Status" or (
@@ -409,11 +453,22 @@ def _snapshot(node, path, links, handles):
             if "v" in kid:
                 # Keep the configured status bits (null, disabled, overridden...); drop
                 # only the runtime facets after ';' such as activeLevel.
-                kid["v"] = str(kid["v"]).split(";", 1)[0]
+                kid["v"] = _status_bits(kid["v"])
+        if child.get("n") in driven:  # kept on its link, never in the re-create body
+            prior[child["n"]] = kid
+            continue
         kids.append(kid)
+    for link in links[first_link:]:
+        if link["target_path"] == path and link["target_slot"] in prior:
+            link["prior"] = prior[link["target_slot"]]
     if kids:
         out["s"] = kids
     return out
+
+
+def _status_bits(value):
+    """A `baja:Status` value without its runtime facets: `40;activeLevel=e_def` -> `40`."""
+    return str(value).split(";", 1)[0]
 
 
 #: How deep the optional outgoing-link scan loads below `link_scan_ord`.
@@ -466,14 +521,24 @@ def _remove_plan(client, args):
     for link in links:
         tail = (link["source_ord"] or "").rsplit("|", 1)[-1]
         source = handles.get(tail[2:]) if tail.startswith("h:") else None
+        spec = {"source_slot": link["source_slot"], "target_path": link["target_path"],
+                "target_slot": link["target_slot"]}
+        if "prior" in link:  # the input's last value, reported if it cannot be relinked
+            spec["prior"] = link["prior"]
         if source is None:
             notes.append("link into %r (%s <- %s) comes from outside the removed subtree: "
-                         "not restored" % (link["target_path"] or name, link["target_slot"],
-                                           link["source_slot"]))
+                         "not restored%s" % (link["target_path"] or name, link["target_slot"],
+                                             link["source_slot"],
+                                             "; its last value is recorded and reported by "
+                                             "n4_rollback" if "prior" in link else ""))
+            inverse.append({"unlinked_input": spec})
             continue
-        inverse.append({"relink": {"source_path": source, "source_slot": link["source_slot"],
-                                   "target_path": link["target_path"],
-                                   "target_slot": link["target_slot"]}})
+        inverse.append({"relink": dict(spec, source_path=source)})
+    if any("prior" in link for link in links):
+        notes.append("link-driven input values are captured when the confirmed remove runs, "
+                     "not at this dry run (link_input_values is a preview) and are not part "
+                     "of the confirmation hash; they are never written back: n4_rollback "
+                     "reports them when it cannot re-establish their link")
     data = {"targets": {parent_ord: parent_h}}
     scan_ord = args.get("link_scan_ord")
     if scan_ord is not None:
@@ -538,6 +603,8 @@ def _rollback_plan(client, args, ctx):
     ops = [e for e in inverse if isinstance(e, dict) and "nm" in e]
     relinks = [_relink_spec(e["relink"]) for e in inverse
                if isinstance(e, dict) and "relink" in e]
+    unlinked = [_unlinked_spec(e["unlinked_input"]) for e in inverse
+                if isinstance(e, dict) and "unlinked_input" in e]
     if not ops:
         raise ToolError("batch %s has no inverse recorded (verdict %s): nothing to roll back"
                         % (bid, view.get("verdict")))
@@ -575,19 +642,26 @@ def _rollback_plan(client, args, ctx):
     notes = ["rolls back batch %s (%s)" % (bid, view.get("tool"))]
     if relinks:
         notes.append("then re-creates %d link(s) between restored components, where both "
-                     "ends exist" % len(relinks))
+                     "ends exist; a skipped one is reported in link_inputs_not_restored with "
+                     "the input's recorded value" % len(relinks))
+    if unlinked:
+        notes.append("%d input(s) were linked from outside the removed subtree: their links "
+                     "are not re-created; they are reported in link_inputs_not_restored with "
+                     "their recorded value and the verdict is partial" % len(unlinked))
     if components:
         notes.append("re-creates %d nested component(s) one add per component, parents "
                      "first: the station rejects an add that nests components" % len(components))
         notes.append("a child that already exists on a freshly created component is a frozen "
                      "slot (e.g. a writable's proxyExt): it is never re-added and is listed "
-                     "as frozen_children_not_restored, its configuration is not restored")
+                     "as frozen_children_not_restored; its configuration is not written. The "
+                     "read-back compares it with the snapshot and, when it differs, lists it "
+                     "in frozen_config_not_restored and the verdict is partial")
     if not own or len(own) != len(ops):
         notes.append("the rollback itself has no automatic inverse for slot restores or "
                      "removals")
     return Planned(ops, own if len(own) == len(ops) else [], notes,
                    {"rollback_of": bid, "targets": targets, "relinks": relinks,
-                    "components": components,
+                    "unlinked_inputs": unlinked, "components": components,
                     "ord_of": {h: o for o, h in targets.items()}})
 
 
@@ -610,14 +684,14 @@ def _run_components(sess, write, batch_id, planned, replies):
             for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
     actual = {(i, ""): base[i] for i in base}  # (top, spec path) -> assigned ORD
     created, frozen, skipped = [], {}, set()  # created: ORD per spec, None when skipped
-    data["frozen_not_restored"] = []
+    data["frozen_not_restored"], data["frozen_checks"] = [], []
     for spec in data["components"]:
         key = (spec["top"], spec["parent_path"])
         here = (spec["top"], _spec_path(spec))
         if key in skipped:  # below a frozen child that was not re-created
             skipped.add(here)
             actual[here] = box.child_ord(actual[key], spec["n"])
-            data["frozen_not_restored"].append(_frozen_entry(actual, key, spec))
+            _skip_frozen(data, actual, key, spec)
             created.append(None)
             continue
         parent = actual[key]
@@ -625,14 +699,14 @@ def _run_components(sess, write, batch_id, planned, replies):
             write.scope.check(box.child_ord(parent, spec["n"]))
             parent_h, nodes = _handle(sess.client, parent, 1)
         except Exception as exc:
-            raise _partial(batch_id, base, created, exc) from None
+            raise _in_doubt_with_created(batch_id, base, created, exc) from None
         # The names a fresh parent already has BEFORE we add anything are its frozen
         # slots: the station refuses to add them again (live finding 4, 2026-10-01).
         frozen.setdefault(key, {k for k in nodes if k and "/" not in k})
         if spec["n"] in frozen[key]:
             skipped.add(here)
             actual[here] = box.child_ord(parent, spec["n"])
-            data["frozen_not_restored"].append(_frozen_entry(actual, key, spec))
+            _skip_frozen(data, actual, key, spec)
             created.append(None)
             continue
         op = {"nm": "a", "h": parent_h, "n": spec["n"], "b": spec["b"]}
@@ -640,13 +714,13 @@ def _run_components(sess, write, batch_id, planned, replies):
             write.journal.append({"batch_id": batch_id, "ts": _now(),
                                   "phase": "component-intent", "ops": [op]})
         except OSError:
-            raise _partial(batch_id, base, created, "the component intent could not be "
+            raise _in_doubt_with_created(batch_id, base, created, "the component intent could not be "
                            "written, nothing more was sent") from None
         sess.writes_executed += 1
         try:
             reply = _send(sess.client, op)
         except Exception as exc:
-            raise _partial(batch_id, base, created, exc) from None
+            raise _in_doubt_with_created(batch_id, base, created, exc) from None
         name = _assigned_name(op, reply)
         actual[here] = box.child_ord(parent, name)
         created.append(box.child_ord(parent, name))
@@ -659,7 +733,104 @@ def _frozen_entry(actual, key, spec):
             "type": spec["b"].get("t")}
 
 
-def _partial(batch_id, base, created, exc):
+def _skip_frozen(data, actual, key, spec):
+    """Record a skipped frozen child (or a descendant of one) for the report and read-back."""
+    entry = _frozen_entry(actual, key, spec)
+    data["frozen_not_restored"].append(entry)
+    data["frozen_checks"].append({"path": entry["path"], "b": spec["b"]})
+
+
+#: How deep the frozen-child read-back loads below the frozen child's parent: the child
+#: itself (1), its slots (2) and a Status slot's value/status (3).
+FROZEN_CHECK_DEPTH = 3
+
+
+#: Type defaults the station omits from a load (a slot at its default is not sent).
+_DEFAULT_V = {"baja:Status": "0", "baja:Double": "0.0", "baja:Boolean": "false"}
+_STATUS_VALUE_TYPE = {"baja:StatusNumeric": "baja:Double", "baja:StatusBoolean": "baja:Boolean"}
+
+
+def _default_v(slot, parent_t):
+    """The omitted-default value of a captured slot, or None when it has no known default.
+
+    Inner `value`/`status` children of a Status slot carry no type (B1200 section 1200.3):
+    their type follows from the name and the parent's type.
+    """
+    kind = slot.get("t")
+    if kind is None and slot.get("n") == "status":
+        kind = "baja:Status"
+    elif kind is None and slot.get("n") == "value":
+        kind = _STATUS_VALUE_TYPE.get(parent_t)
+    return _DEFAULT_V.get(kind)
+
+
+def _differs(nodes, prefix, captured):
+    """Names of the captured slots whose live value differs from the snapshot.
+
+    A slot the station omits is at its default. A scalar is then equal only when its
+    captured value is the type default; a struct slot (nested children, e.g. a
+    StatusNumeric's value/status) only when it carries no own value and every captured
+    child is at its default by the same rule, recursively (v0.28.0 advisory review
+    R4-002). A child with no known default (`_default_v` is None) always counts as
+    different.
+    """
+    out = []
+    for slot in captured.get("s", []):
+        here = prefix + "/" + slot["n"]
+        live = nodes.get(here)
+        if live is None and slot.get("s"):  # omitted struct: every child at its default
+            same = slot.get("v") is None and not _differs(nodes, here, slot)
+        elif live is None:  # omitted scalar: equal only when the captured value is the default
+            same = slot.get("v") is not None and \
+                slot.get("v") == _default_v(slot, captured.get("t"))
+        else:
+            same = ("t" not in slot or live.get("t") == slot["t"]) and \
+                _config_v(live, slot) == slot.get("v") and not _differs(nodes, here, slot)
+        if not same:
+            out.append(slot["n"])
+    return out
+
+
+def _config_v(live, slot):
+    v = live.get("v")
+    if v is not None and (slot.get("t") == "baja:Status" or slot.get("n") == "status"):
+        return _status_bits(v)
+    return v
+
+
+def _frozen_check(client, check):
+    """None when the live frozen child holds the captured configuration, else the gap.
+
+    Only the configuration the snapshot captured is compared (one direction): a slot
+    the station omits is at its default, so a captured (non-default) slot that is
+    missing differs. A frozen child that does not exist is `missing: true`. A station
+    read error proves nothing either way: the gap carries `readback_error` and no
+    `missing` (v0.28.0 advisory review R4-001), and the rollback verdict becomes `unverified`.
+    """
+    head, _, leaf = check["path"].rpartition("/")
+    body = check["b"]
+    gap = {"path": check["path"], "type": body.get("t"), "captured": body}
+    try:
+        nodes = client.load_tree(head, depth=FROZEN_CHECK_DEPTH)
+    except box.BoxError as exc:
+        return dict(gap, readback_error=str(exc))
+    if leaf not in nodes:
+        return dict(gap, missing=True, live_type=None, slots=[s["n"] for s in body.get("s", [])])
+    live_type, slots = nodes[leaf].get("t"), _differs(nodes, leaf, body)
+    if live_type == body.get("t") and not slots and nodes[leaf].get("v") == body.get("v"):
+        return None
+    return dict(gap, missing=False, live_type=live_type, slots=slots)
+
+
+def _scrub_gap_errors(observed, ctx):
+    """Defence in depth: scrub the station read errors a read-back put in its gaps."""
+    gaps = observed.get("frozen_config_not_restored", []) if isinstance(observed, dict) else []
+    for gap in gaps:
+        if "readback_error" in gap:
+            gap["readback_error"] = ctx.scrub(gap["readback_error"])
+
+
+def _in_doubt_with_created(batch_id, base, created, exc):
     """The in-doubt error of a rollback that stopped mid-way, listing what exists now."""
     err = _in_doubt(batch_id, exc if isinstance(exc, Exception) else ToolError(exc))
     done = sorted(base.values()) + [c for c in created if c]
@@ -704,7 +875,19 @@ def _relink_spec(spec):
     for key in keys:
         for part in (spec[key].split("/") if spec[key] else []):
             _name(key, part)
-    return {k: spec[k] for k in keys}
+    out = {k: spec[k] for k in keys}
+    if isinstance(spec.get("prior"), dict):  # journaled since v0.28.0, absent before
+        out["prior"] = spec["prior"]
+    return out
+
+
+def _unlinked_spec(spec):
+    """Validate a journaled input whose link came from outside the removed subtree."""
+    if not isinstance(spec, dict):
+        raise ToolError("batch records a malformed unlinked input: refusing")
+    out = _relink_spec(dict(spec, source_path=""))
+    del out["source_path"]
+    return out
 
 
 def _ord_of(targets, handle):
@@ -734,6 +917,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
     the links created. A send failure raises the batch in-doubt error.
     """
     data, ops, skipped, meta = planned.data, [], 0, []
+    data["relinks_skipped"] = []
     for op, reply in zip(planned.ops, replies):
         if op["nm"] != "a":
             continue
@@ -750,6 +934,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
                 src = None
             if not (src and tgt and src.get("h") and tgt.get("h")):
                 skipped += 1  # an end is missing (or out of scope): nothing to link
+                data["relinks_skipped"].append(_input_entry(comp, spec, "relink skipped"))
                 continue
             ops.append({"ssc": "checkLinks", "arg": {
                 "s": src["h"], "ss": spec["source_slot"], "t": tgt["h"],
@@ -782,6 +967,12 @@ def _run_relinks(sess, write, batch_id, planned, replies):
     if ambiguous:
         report["ambiguous"] = ambiguous
     return report, inverse, bool(ambiguous)
+
+
+def _input_entry(comp, spec, reason):
+    """A link-driven input the rollback did not restore, with its recorded value."""
+    return {"target": _end_ord(comp, spec["target_path"]), "target_slot": spec["target_slot"],
+            "source_slot": spec["source_slot"], "reason": reason, "value": spec.get("prior")}
 
 
 def _in_doubt(batch_id, exc):
@@ -821,7 +1012,7 @@ def _annotation(body):
 
 
 def _rollback_readback(client, args, planned, replies, inverse):
-    ord_of, ok, relinks = planned.data["ord_of"], True, None
+    ord_of, ok, relinks, inputs = planned.data["ord_of"], True, None, []
     for i, op in enumerate(planned.ops):
         where = ord_of[op["h"]]
         nodes = client.load_tree(where, depth=2)
@@ -833,6 +1024,9 @@ def _rollback_readback(client, args, planned, replies, inverse):
             if planned.data["relinks"]:
                 relinks = planned.data.get("relink_report") or {"restored": 0, "skipped": 1}
                 ok &= relinks["skipped"] == 0 and not relinks.get("ambiguous")
+            comp = box.child_ord(where, nn)
+            inputs += [_input_entry(comp, spec, "link source outside the removed subtree")
+                       for spec in planned.data.get("unlinked_inputs", [])]
         else:
             ok &= op["n"] in nodes and \
                 _observe(nodes, op["n"], op["b"]["t"]) == _bson_value(op["b"])
@@ -847,11 +1041,24 @@ def _rollback_readback(client, args, planned, replies, inverse):
         nodes = client.load_tree(head, depth=2)
         ok &= leaf in nodes and nodes[leaf].get("t") == spec["b"].get("t") and \
             nodes.get(leaf + "/wsAnnotation", {}).get("v") == _annotation(spec["b"])
+    # Fidelity (issue #179 R4-002/R3-002, B1200-G1/G2): configuration the rollback did not
+    # bring back is reported and caps the verdict at "partial", never "verified".
+    frozen = [gap for gap in (_frozen_check(client, c)
+                              for c in planned.data.get("frozen_checks", [])) if gap]
+    inputs = planned.data.get("relinks_skipped", []) + inputs
     observed = {"restored": bool(ok)}
     if relinks is not None:
         observed["relinks"] = relinks
-    return {"rolled_back": planned.data["rollback_of"]}, replies, observed, \
-        "verified" if ok else "mismatch"
+    if frozen:
+        observed["frozen_config_not_restored"] = frozen
+    if inputs:
+        observed["link_inputs_not_restored"] = inputs
+    # A frozen child that could not be read is unobserved, not lost: `unverified` (the
+    # verdict for an outcome the read-back could not establish), below `mismatch` only.
+    unread = any("readback_error" in gap for gap in frozen)
+    verdict = "mismatch" if not ok else "unverified" if unread else \
+        "partial" if frozen or inputs else "verified"
+    return {"rolled_back": planned.data["rollback_of"]}, replies, observed, verdict
 
 
 # ---- n4_save_station -----------------------------------------------------
@@ -964,17 +1171,22 @@ def _process(ctx, name, args):
     if name == "n4_save_station":
         planned.data["write"] = write  # readback polls with the operator's timing
     planned = planned._replace(inverse=_inverse_list(planned.inverse))
-    plan = {"tool": name, "ops": planned.ops, "inverse": planned.inverse, "notes": planned.notes}
+    plan = {"tool": name, "ops": planned.ops, "inverse": _hashed_inverse(planned.inverse),
+            "notes": planned.notes}
     data = _data(planned)
-    for key in ("relinks", "components", "outgoing_links_broken"):  # part of what the token authorizes
+    for key in ("relinks", "unlinked_inputs", "components",
+                "outgoing_links_broken"):  # part of what the token authorizes
         if data.get(key):
             plan[key] = data[key]
     plan_hash = hashlib.sha256(safety.canonical(plan).encode()).hexdigest()
     if dry:
         token, expires_at = write.tokens.issue(name, args, plan_hash)
-        return {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
-                "confirmation_token": token, "expires_at": expires_at}, None
-    write.check_state_files()  # a loose file fails here, before the token and any send
+        out = {"dry_run": True, "plan": plan, "plan_hash": plan_hash,
+               "confirmation_token": token, "expires_at": expires_at}
+        preview = _link_input_values(planned.inverse)
+        if preview:  # volatile: shown to the operator, outside what the token authorizes
+            out["link_input_values"] = preview
+        return out, None
     write.check_state_files()  # a loose file fails here, before the token and any send
     write.tokens.consume(name, args, plan_hash, args.get("confirmation_token"))
     batch_id = uuid.uuid4().hex
@@ -1024,6 +1236,7 @@ def _process(ctx, name, args):
         try:
             requested, accepted, observed, verdict = impl.readback(
                 sess.client, args, planned, replies, inverse)
+            _scrub_gap_errors(observed, ctx)
             out.update(requested=requested, accepted=accepted, observed=observed,
                        verdict=verdict)
         except Exception as exc:  # whatever the read-back hits, the write already happened
@@ -1035,8 +1248,9 @@ def _process(ctx, name, args):
     inverse = relink_inverse + inverse  # links first: undoing must precede removing their ends
     out["inverse"] = inverse
     if isinstance(out.get("observed"), dict):  # promote the headline evidence of a tool
-        out.update({k: out["observed"][k] for k in ("persisted", "evidence", "relinks")
-                    if k in out["observed"]})
+        out.update({k: out["observed"][k] for k in (
+            "persisted", "evidence", "relinks", "frozen_config_not_restored",
+            "link_inputs_not_restored") if k in out["observed"]})
     result = {"batch_id": batch_id, "ts": _now(), "phase": "result",
               "accepted": out["accepted"], "inverse": inverse, "verdict": out["verdict"]}
     if relink_doubt:

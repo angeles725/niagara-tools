@@ -70,6 +70,9 @@ _VERDICTS = {
                  "METHODOLOGY.md · section 3", "HIGH"),
     "failed": ("Investigate why the read-back failed after the station accepted the write",
                "mcp_n4/tools_write.py · read-back", "HIGH"),
+    "partial": ("Restore by hand the configuration a rollback reported as not restored "
+                "(frozen_config_not_restored, link_inputs_not_restored)",
+                "METHODOLOGY.md · section 3", "MEDIUM"),
     "unverified": ("Add a way to verify this write class, or document that it stays unverified",
                    "METHODOLOGY.md · section 3", "MEDIUM"),
 }
@@ -122,17 +125,20 @@ def _candidate(key, change, target, evidence, priority, type_="new"):
 
 
 def _window(audit, journal, since, observations):
-    """`(audit, journal views, observations)` at or after `since`: the one place it filters."""
+    """`(audit, journal views, observations, by_batch)` for the entries at or after `since`.
+
+    The one place it filters; `by_batch` maps every batch id of the unfiltered journal.
+    """
     keep = _since_filter(since)
     return ([e for e in audit if keep(e.get("ts"))],
             [v for v in journal if keep(v.get("ts"))],
-            [o for o in observations if isinstance(o, dict) and keep(o.get("ts"))])
+            [o for o in observations if isinstance(o, dict) and keep(o.get("ts"))],
+            {v.get("batch_id"): v for v in journal})
 
 
 def derive(audit, journal, since=None, observations=()):
     """Candidate deltas (list of dicts) for the entries at or after `since`."""
-    window = _window(audit, journal, since, observations)
-    return _derive(*window, by_batch={v.get("batch_id"): v for v in journal})
+    return _derive(*_window(audit, journal, since, observations))
 
 
 def _derive(audit, views, observations, by_batch):
@@ -264,8 +270,8 @@ def draft(state_dir, station="unknown", date=None, since=None, observations=(),
           template=None):
     """`{"markdown", "candidates", "station", "date"}` for the entries in `state_dir`."""
     audit, journal = load(state_dir)
-    windowed, views, seen = _window(audit, journal, since, observations)
-    candidates = _derive(windowed, views, seen, {v.get("batch_id"): v for v in journal})
+    windowed, views, seen, by_batch = _window(audit, journal, since, observations)
+    candidates = _derive(windowed, views, seen, by_batch)
     date = date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
     markdown = render(candidates, station, date, windowed, views, since, template)
     return {"markdown": markdown, "candidates": candidates, "station": station, "date": date}
