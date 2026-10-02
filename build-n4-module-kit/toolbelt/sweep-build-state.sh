@@ -16,8 +16,9 @@
 #     total_pending=<n>
 #     escalated_count=<n>
 #     oldest_age=<n|N/A>
-#   Only pending rows age; folded rows and pending rows whose INDEX line carries a
-#   `<!-- disposition: <why> -->` comment (a parked non-retro doc) are excluded.  Age is derived from the retro's FILENAME
+#   Only pending rows age; folded rows and 0-delta pending rows whose INDEX line carries a
+#   `<!-- disposition: tracked-by-issue #<n> … -->` or `<!-- disposition: worklist-complete … -->`
+#   comment (a parked non-retro doc) are excluded; any other disposition still ages.  Age is derived from the retro's FILENAME
 #   date prefix (YYYY-MM-DD-…), never from the file body.  Today is INJECTED via --today.
 #
 # content checks:
@@ -63,6 +64,14 @@ if [ "${1:-}" = "--age" ]; then
   [ -d "$retrodir" ] || { printf 'sweep-build-state: no retros dir: %s\n' "$retrodir" >&2; exit 3; }
   [ -f "$index" ]    || { printf 'sweep-build-state: no INDEX file: %s\n' "$index"   >&2; exit 3; }
 
+  # disposition_skips <INDEX line>: 0 (skip) only for a 0-delta row whose disposition value is allowed.
+  disposition_skips() {
+    local row="$1" deltas
+    case "$row" in *'<!-- disposition: tracked-by-issue #'[0-9]*|*'<!-- disposition: worklist-complete'*) : ;; *) return 1 ;; esac
+    deltas=$(printf '%s\n' "$row" | awk -F'|' '{for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="pending"||$i=="folded"){print $(i+1); exit}}}' | tr -d ' ')
+    [ "$deltas" = "0" ]
+  }
+
   today_epoch=$(date -d "$TODAY" +%s)
   total_pending=0 escalated_count=0 oldest_age=-1
 
@@ -75,7 +84,12 @@ if [ "${1:-}" = "--age" ]; then
     [ "$rstatus" = "pending" ] || continue
     # A non-retro doc parked in retros/ (a BUILD proposal tracked by an issue, a completed
     # worklist) carries `<!-- disposition: <why> -->` on its INDEX row: not retro debt, never ages.
-    case "$line" in *'<!-- disposition:'*) continue ;; esac
+    # The skip is bounded (fail closed): the row's deltas cell (the cell after the status) must be
+    # 0 AND the disposition must start with an allowed value — `tracked-by-issue #<n>` or
+    # `worklist-complete`. Any other disposition, or one on a row that enumerates deltas, still ages.
+    # Mutation: D8 -- dropping the 0-delta check hides a real retro's debt behind a comment.
+    # Mutation: D9 -- accepting any disposition value hides a row parked with no tracked reason.
+    if disposition_skips "$line"; then continue; fi
     total_pending=$(( total_pending + 1 ))
     # Extract YYYY-MM-DD from the filename prefix (first 10 chars)
     file_date="${fname:0:10}"

@@ -87,3 +87,20 @@ teardown() { rm -rf "$T"; }
   [[ "$output" != *'"Límite succión baja"'* ]]
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
 }
+
+@test "ML9: --strict on a clean manual exits 0 (strict promotes WARN rows only)" {
+  printf '# Manual\n\nPress "Guardar".\n' > "$T/docs/manual.md"
+  run "$ML" --strict "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"checked=1 missing=0"* ]]
+}
+
+@test "ML10: the header Row format matches the emitted WARN and SUMMARY prefixes" {
+  printf 'Set the "Corte" value.\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  warn_prefix=$(printf '%s\n' "$output" | grep '^WARN' | sed 's/  [^ ]*:[0-9].*//')
+  sum_prefix=$(printf '%s\n' "$output" | grep '^SUMMARY' | sed 's/  checked=.*//')
+  grep -qF "#   $warn_prefix  <manual>:<line>" "$ML"
+  grep -qF "#   $sum_prefix  checked=<n>" "$ML"
+}

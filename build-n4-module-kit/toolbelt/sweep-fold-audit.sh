@@ -6,8 +6,16 @@
 # retro's lesson was never folded into a kit file — this audit makes that
 # visible so it becomes a PR7 follow-up item, not a silent gap.
 #
-# Usage: sweep-fold-audit.sh [--strict] <INDEX.md> <kit-root>
-# exit:  0 clean or WARN-only · 1 uncited rows AND --strict · 3 usage/env
+# Usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>
+# exit:  0 clean or WARN-only · 1 uncited rows (or uncited Δ) AND --strict · 3 usage/env
+#
+# --deltas-since <date>: Δ-granular reconcile check. Every folded row whose filename date is on or
+# after <date> must account for EACH of its Δ1..Δn (n = the deltas cell after review-status): cited
+# as `[ev: retro <stem> Δk]`, or explicitly parked out of repo as `[deferred: retro <stem> Δk]`,
+# somewhere in the corpus. Exact stem, exact Δ number — no segment or prefix credit. A missing one
+# is `fold-audit: WARN <file> Δk not cited`; a non-numeric deltas cell is a WARN too (fail closed).
+# Older rows cite by stem only (the pre-Δ convention), hence the cutoff.
+# Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
 #
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md.
 # Token harvest: grep -ohE '\[ev: retro <token>' across corpus files.
@@ -19,13 +27,19 @@
 set -u
 
 STRICT=0
+DSINCE=""
+USAGE="usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict) STRICT=1; shift ;;
+    --deltas-since)
+      [[ "${2:-}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || {
+        echo "fold-audit: --deltas-since needs a YYYY-MM-DD date" >&2; echo "$USAGE" >&2; exit 3; }
+      DSINCE="$2"; shift 2 ;;
     --) shift; break ;;
     -*)
       echo "fold-audit: unknown flag: $1" >&2
-      echo "usage: sweep-fold-audit.sh [--strict] <INDEX.md> <kit-root>" >&2
+      echo "$USAGE" >&2
       exit 3
       ;;
     *) break ;;
@@ -33,7 +47,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ $# -eq 2 ] || {
-  echo "usage: sweep-fold-audit.sh [--strict] <INDEX.md> <kit-root>" >&2
+  echo "$USAGE" >&2
   exit 3
 }
 
@@ -55,7 +69,18 @@ TOKENS=$(find "$KITROOT" -name '*.md' \
   | sed 's/\[ev: retro //' \
   | sort -u)
 
-NFOLDED=0; NCITED=0; NUNCITED=0; HAS_WARN=0
+# Δ-granular harvest (only with --deltas-since): one "<stem> Δ<k>" line per citation or deferral.
+DTOKENS=""
+if [ -n "$DSINCE" ]; then
+  DTOKENS=$(find "$KITROOT" -name '*.md' \
+    ! -path "*/retros/*" \
+    ! -name 'INDEX.md' \
+    -exec grep -ohE '\[(ev|deferred): retro [A-Za-z0-9][A-Za-z0-9._-]* Δ[0-9]+\]' {} + 2>/dev/null \
+    | sed -E 's/^\[(ev|deferred): retro //; s/\]$//' \
+    | sort -u)
+fi
+
+NFOLDED=0; NCITED=0; NUNCITED=0; HAS_WARN=0; DCHECKED=0; DMISSING=0
 
 while IFS= read -r line; do
   # Only pipe-delimited data rows containing a dated retro filename
@@ -95,6 +120,25 @@ while IFS= read -r line; do
     esac
   done <<< "$TOKENS"
 
+  # Δ-granular reconcile check for rows on/after the cutoff (filename date, lexical compare).
+  if [ -n "$DSINCE" ] && [[ ! "${fname:0:10}" < "$DSINCE" ]]; then
+    ndelta=$(printf '%s\n' "$line" | awk -F'|' '{
+      for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="folded"){print $(i+1); exit}}
+    }' | tr -d ' ')
+    if ! [[ "$ndelta" =~ ^[0-9]+$ ]]; then
+      printf 'fold-audit: WARN %s deltas cell unreadable (%s)\n' "$fname" "$ndelta"
+      DMISSING=$((DMISSING + 1)); HAS_WARN=1
+    else
+      for ((k = 1; k <= ndelta; k++)); do
+        DCHECKED=$((DCHECKED + 1))
+        if ! grep -qxF -- "$stem Δ$k" <<< "$DTOKENS"; then
+          printf 'fold-audit: WARN %s Δ%d not cited\n' "$fname" "$k"
+          DMISSING=$((DMISSING + 1)); HAS_WARN=1
+        fi
+      done
+    fi
+  fi
+
   if [ "$matched" -eq 0 ]; then
     printf 'fold-audit: WARN %s folded with no [ev: retro …] citation\n' "$fname"
     NUNCITED=$((NUNCITED + 1))
@@ -108,6 +152,9 @@ while IFS= read -r line; do
 done < "$INDEX"
 
 printf 'fold-audit: %d folded, %d cited, %d uncited\n' "$NFOLDED" "$NCITED" "$NUNCITED"
+if [ -n "$DSINCE" ]; then
+  printf 'fold-audit: deltas: %d checked, %d not cited (folded rows since %s)\n' "$DCHECKED" "$DMISSING" "$DSINCE"
+fi
 
 if [ "$HAS_WARN" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1

@@ -19,8 +19,9 @@
 # Exits:  0 clean or WARN-only · 1 any WARN under --strict · 3 usage/env (no python3, bad manual or ui-dir)
 #
 # Row format:
-#   WARN     lint-manual-labels  <manual>:<line>  label "<label>" not found in the UI source
+#   WARN  lint-manual-labels  <manual>:<line>  label "<label>" not found in the UI source
 #   SUMMARY  lint-manual-labels  checked=<n> missing=<m>
+#   (ML10 pins these prefixes against the emitted rows.)
 # VCS-free by design; version control is never invoked (kit-links L2).
 # [ev: retro operator-manual-lockstep Δ3]
 # Mutation: ML2 -- dropping the not-found check stops the WARN on a renamed label the manual still quotes
@@ -103,6 +104,8 @@ for lineno, line in enumerate(text.split("\n"), 1):
             missing += 1
             print('WARN  lint-manual-labels  %s:%d  label "%s" not found in the UI source' % (manual, lineno, label))
 print("SUMMARY  lint-manual-labels  checked=%d missing=%d" % (checked, missing))
+# Exit 10 is a private sentinel for "rows printed, some label missing": it lets the shell
+# wrapper tell a WARN result (0, or 1 under --strict) from a crashed helper (any other code -> 3).
 sys.exit(10 if missing else 0)
 PYEOF
 rc=$?
