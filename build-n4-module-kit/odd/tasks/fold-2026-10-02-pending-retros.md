@@ -45,8 +45,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
       promotion: kit-meta Δ1/Δ2/Δ4/Δ5 owed to later WUs, so its INDEX row stays `pending`; recorded in
       the kit BUILD-STATE self-envelope (open_issue + last_session).
 - [ ] WU0b · gen-lint-index advisory follow-ups from the WU0 review: Auto column must match an actual invocation (not a substring/comment); keep ALL Usage/Exit header lines (lint-timers exit 2/3, lint-write-path --strict); document/remove the NR<=5 join cap; treat an awk failure as an error; trim SKILL.md step-5 duplicate enumeration; amend METHODOLOGY K19 + fragment-merge rule to the index.
-- [ ] WU1 · `types/frontend-standard.md` + dashboard/BUILD-STATE `ui_profile` — frontend-standard Δ1,Δ11-Δ15;
-      deployment-profiles Δ1-Δ3; rc-file-split Δ1,Δ3,Δ4.
+- [x] WU1 · `types/frontend-standard.md` + dashboard/BUILD-STATE `ui_profile` — frontend-standard Δ1,Δ11-Δ15;
+      deployment-profiles Δ1-Δ3; rc-file-split Δ1,Δ3,Δ4. Route: delegated direct writer (new type doc + 5 doc
+      files — writer trigger). PARTIAL promotion of all three retros: INDEX rows stay `pending`; owed Δ recorded
+      in the kit BUILD-STATE self-envelope open_issue.
 - [ ] WU2 · dashboard runtime doctrine (`types/dashboard.md`) — reliability Δ1-Δ4,Δ6,Δ8,Δ9; frontend-standard
       Δ6,Δ7,Δ9; amps-alarms Δ4,Δ5; auto-lock Δ3; rc-file-split Δ2; persistent-config Δ5; servlet-write-audit Δ3;
       deployment-profiles Δ6.
@@ -88,5 +90,23 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
 
 - WU0 RDD: assessed high (process_boundary, shell_source); consent pre-granted; 4-lens review APPROVED and acknowledged (lineage review-1e008815decc0963); 9 advisory findings → WU0b.
 
+- 2026-10-02 WU1 (branch `feat/fold-wu1-frontend-standard`, chained on `feat/fold-wu0-lint-index`): new
+  `types/frontend-standard.md` (profiles hmi/lan/both with a tag on every rule, 11-section rule set, rc/ component
+  layout, technology table, vendored-library rule, vendor catalog, LAN profile, prototype→module, owed-enforcement
+  note); `types/dashboard.md` cross-links only (ux pointer + `ui_profile`, DJS1 rc/ tree, no-Java split precondition,
+  vendor refinement, framework-decision pointer, prototype decomposition, panel classic scripts, new § LAN browser
+  access); `BUILD-STATE.md` How to read `ui_profile` + kit envelope open_issue/log line; skill/SKILL.md dashboard row
+  and README types list name the new file (kit-links L1/L4). Citation tokens are date-less
+  (`[ev: retro dashboard-frontend-standard Δn]`) because sweep-fold-audit strips the date from the stem.
+  Evidence (passive docs, no RED applicable):
+  - `bats tests/kit-links.bats tests/build-retro-sync.bats`: 36 ok / 0 not ok.
+  - `bats tests/*.bats`: 713 ok / 0 not ok (58 env skips), exit 0.
+  - `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh --strict` exit 0 (171 folded, 171 cited);
+    `gen-lint-index.sh --check` exit 0 (fresh).
+  - Public-repo grep (customer/site/host/IP names) over added text: 0 hits.
+  - Commit: the WU1 work-unit commit on `feat/fold-wu1-frontend-standard` (sha in the PR).
+  - Gap for WU11: WU0 cited `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]` (dated token), which
+    sweep-fold-audit will NOT credit to stem `kit-meta-hygiene-2026-10-01` when that row flips to folded.
+
 ## Next step
-- WU1 (`types/frontend-standard.md` + `ui_profile`) from the new `origin/main` after WU0 merges.
+- WU2 (dashboard runtime doctrine in `types/dashboard.md`) after WU1 merges.
