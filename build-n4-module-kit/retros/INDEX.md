@@ -157,7 +157,7 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-19-skill-trigger.md | kit | 2026-09-19 | folded | 1 | <!-- issue #116: expand SKILL.md trigger (driver/service/utility-lib/theme/cloud) + sync installed via install-skill.sh --force -->
 | 2026-09-19-dashboard-scaffold.md | kit | 2026-09-19 | folded | 3 | <!-- issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->
 | 2026-09-19-commissioning-verify.md | kit | 2026-09-19 | folded | 2 | <!-- issue #114: new commissioning-verify.sh (orchestrates config-sanity/status-parity/recovery-path + bog-audit CHECK11/13-19/20 + MANUAL footer) closes BUILD-LOOP §6.b -->
-| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- issue #122: BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas — proposal awaiting build trigger -->
+| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
 | 2026-09-19-apillm-headless-servlet-rt-4.14-deltas.md | kit | 2026-09-19 | folded | 24 |
 | 2026-09-20-wb-vendor-ux-rt-wb-pattern-deltas.md | kit | 2026-09-20 | folded | 25 |
 | 2026-09-20-honeywell-wb-rt-wb-deltas.md | kit | 2026-09-20 | folded | 8 |
@@ -175,33 +175,34 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-09-20-lint-bundled-jar-class-version.md | kit | 2026-09-20 | folded | 0 | <!-- L3: new FAIL lint, auto-wired report-module §12 (module-once) + RM23 -->
 | 2026-09-20-ci-lint-guard-pins.md | kit | 2026-09-20 | folded | 0 | <!-- wired lint-guard-pins --strict into ci.yml (kit self-check) -->
 | 2026-09-21-lint-servlet-api-response-headers.md | kit | 2026-09-21 | folded | 0 | <!-- api-response-headers check in lint-servlet (auto-wired §5.18) + 3 stale-doc fixes -->
-| APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- worklist, not a delta retro; 0 enumerated deltas — ranks the other retros' Δ tokens for review -->
+| APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- disposition: worklist-complete — ranked the 2026-09-20 corpus retros' Δ tokens; all of them were applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); not a delta retro, not retro debt (sweep --age skips it) -->
 
 | 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | folded | 5 |
 | 2026-09-21-wb-mapping-ord-npe-and-wsl-windows-jdk.md | kit | 2026-09-21 | folded | 2 |
 | 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | folded | 6 |
 | 2026-09-21-secure-authoring-isoperational-gate.md | kit | 2026-09-21 | folded | 1 |
 | 2026-09-23-panccadia-defrost-sequencing-hmi-reload-deltas.md | kit | 2026-09-23 | folded | 8 |
-| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | pending | 8 |
-| 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | pending | 10 |
-| 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | pending | 14 |
+| 2026-09-24-comppan-fase2-amps-alarms.md | module | 2026-09-24 | folded | 8 |
+| 2026-09-24-panccadia-restart-seq-comp-lockout-hours.md | module | 2026-09-24 | folded | 10 |
+| 2026-09-25-panccadia-commissioning-lessons.md | module | 2026-09-25 | folded | 14 |
 | 2026-09-25-continuous-fan-post-defrost-delay.md | ColdRoomPan | 2026-09-25 | folded | 3 |
-| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | pending | 6 |
-| 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | pending | 7 |
+| 2026-09-26-change-tier-time-budgets.md | kit | 2026-09-26 | folded | 6 |
+| 2026-09-26-comppan-auto-lock-indicator.md | CompPan | 2026-09-26 | folded | 7 |
 | 2026-09-26-roll-forward-recovery.md | kit | 2026-09-26 | folded | 4 |
-| 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | pending | 6 |
-| 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | pending | 4 |
+| 2026-09-26-behavior-decisions-ask-dont-assume.md | kit | 2026-09-26 | folded | 6 |
+| 2026-09-26-panccadia-version-defect-ledger.md | kit | 2026-09-26 | folded | 4 |
 | 2026-09-27-comppan-pressure-staging.md | CompPan | 2026-09-27 | folded | 4 |
 | 2026-09-28-decision-logic-decomposition.md | kit | 2026-09-28 | folded | 3 |
-| 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | pending | 6 |
+| 2026-09-28-panccadia-persistent-config-hoa.md | DashboardPan | 2026-09-28 | folded | 6 |
 | 2026-10-01-dashboard-rc-file-split.md | DashboardPan | 2026-10-01 | folded | 6 |
 | 2026-10-01-dashboard-frontend-reliability-rules.md | kit | 2026-10-01 | folded | 9 |
 | 2026-10-01-dashboard-frontend-standard.md | kit | 2026-10-01 | folded | 16 |
-| 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-operator-manual-lockstep.md | kit | 2026-10-01 | folded | 3 |
 | 2026-10-01-client-source-of-truth.md | kit | 2026-10-01 | folded | 3 |
-| 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | pending | 3 |
-| 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | pending | 3 |
-| 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | pending | 3 |
+| 2026-10-01-station-backup-before-deploy.md | kit | 2026-10-01 | folded | 3 |
+| 2026-10-01-alarm-console-design.md | kit | 2026-10-01 | folded | 3 |
+| 2026-10-01-site-fault-triage-and-incident-journal.md | kit | 2026-10-01 | folded | 3 |
 | 2026-10-01-servlet-write-audit.md | kit | 2026-10-01 | folded | 3 |
-| 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | pending | 5 |
+| 2026-10-01-kit-meta-hygiene-2026-10-01.md | kit | 2026-10-01 | folded | 5 |
 | 2026-10-01-dashboard-deployment-profiles.md | kit | 2026-10-01 | folded | 7 |
+| 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | pending | 4 |

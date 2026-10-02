@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-26 · kit · change-tier-time-budgets
 
 **Session**: PANCCADIA León, ODD feature `comppan-auto-lock-indicator` (panccadia-leon branch `feat/comppan-auto-lock-indicator`, doc commit `ae98e15`); user asked for time budgets so small additions ship faster without dropping test protection.

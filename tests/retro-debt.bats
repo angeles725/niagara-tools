@@ -91,3 +91,18 @@ age() { run "$SWEEP" --age --today 2026-09-05 "$RETRODIR" "$INDEX"; }
   [ "${lines[1]}" = "escalated_count=1" ]
   [ "${lines[2]}" = "oldest_age=31" ]
 }
+
+@test "D7: a pending row carrying an INDEX disposition comment is not retro debt (tracked proposal / completed worklist)" {
+  # A 0-delta non-retro doc kept in retros/ (a BUILD proposal tracked by an issue, a completed
+  # worklist) stays `pending` in the pending|folded domain but carries
+  # `<!-- disposition: <why> -->` on its INDEX row: it never ages into escalated debt.
+  # Mutation: dropping the disposition skip ages the row -> total_pending=2, escalated_count=1.
+  # [ev: odd/tasks/fold-2026-10-02-pending-retros.md WU11]
+  add_row "2026-08-05-esc" pending
+  printf '| 2026-08-01-proposal.md | pending | <!-- disposition: tracked-by-issue #1 -->\n' >> "$INDEX"
+  printf '<!-- review-status: pending -->\n\n# proposal\n' > "$RETRODIR/2026-08-01-proposal.md"
+  age
+  [ "${lines[0]}" = "total_pending=1" ]
+  [ "${lines[1]}" = "escalated_count=1" ]
+  [ "${lines[2]}" = "oldest_age=31" ]
+}

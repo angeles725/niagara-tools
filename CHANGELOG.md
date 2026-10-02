@@ -6,6 +6,50 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.29.0] - 2026-10-02
+
+### Changed — retro-fold campaign 2026-10-02: fold the 23 pending build-n4 retros (147 Δ)
+
+The 23 retros of 2026-09-24..2026-10-01 (commissioning, dashboard frontend reliability, deploy/backup, logic
+persistence, process tiers) were landed (#183) and folded into the build-n4-module kit core as one work-unit PR each,
+branched from `main`, reviewed by the native RDD review when due, and merged after CI. `retros/INDEX.md` again shows
+**0 pending delta-retros**; every Δ1..Δn of each campaign retro is cited as `[ev: retro <stem> Δn]` in the kit core.
+
+- **WU0** generated lint index `toolbelt/INDEX.md` + `toolbelt/gen-lint-index.sh` (`--check` in CI). [PR #185]
+- **WU1** `types/frontend-standard.md` and the `ui_profile` field (hmi/lan/both). [PR #186]
+- **WU2** dashboard runtime doctrine: poll-loop reliability, write confirmation, `/api/version`, HMI shell. [PR #188]
+- **WU3** `rc-scan.sh` frontend checks (browser floor, fetch-no-signal, data-URI budget, orphan pages …) + success-time `lint-spa-poll-no-recovery.sh`. [PR #191]
+- **WU4** `lint-vendor-floor.sh`, kit ESLint config, `hmi-sweep.js`, `report-module.sh --profile/--legacy`. [PR #192]
+- **WU5a/WU5b** logic persistence, restart, safety and structure doctrine (`types/logic.md`, `METHODOLOGY.md`). [PR #193]
+- **WU6a** rt-lint false positives (`makeNumeric` units, multi-line schedules, reviewed-ord marker). [PR #194]
+- **WU6b** `lint-link-target-flags.sh`, CS4, facade slot coverage, wiring-map display names, console-only and write-audit checks. [PR #195]
+- **WU7** build/preflight fixes, `scripts/check-client-source.sh`, `scripts/check-skill-drift.sh`, `source_of_truth` field. [PR #197]
+- **WU8** deploy, backup and release gates; roll-forward recovery doctrine. [PR #196]
+- **WU9** `obix-link-audit.sh`, values-owed rows, `triage-console.sh --site`, commissioning checklist. [PR #198]
+- **WU10** process doctrine: blast-radius tiers P0-P3, behavior-decisions gate, orchestration clauses, incident journal. [PR #202]
+- **WU11a** client version ledger template (`templates/VERSION-LEDGER.md`), operator-manual lockstep gate + advisory `lint-manual-labels.sh`, corpus-index retitle + B33/B34/B39/B48. [PR #204]
+- **WU11b** ledger reconcile (BUILD-STATE), final INDEX flips, `sweep-build-state.sh --age` skips rows with an INDEX `<!-- disposition: … -->` (the CXF proposal #122, the 2026-09-20 apply worklist), campaign close retro (4 proposed Δ), this release. [PR #206]
+
+Deferred (BUILD-STATE open_issues): the out-of-repo preview harness (frontend-standard Δ8, deployment-profiles Δ4),
+`lint-size.sh`. Review advisories: issue #199.
+
+### Added — `mcp-n4-kit` v0.5.0: enforced version-tier write gate (MWU3) [PR #205]
+
+- `n4_connect` / `n4_describe_session` report the detected station `version` (oBIX
+  `productVersion` from `/obix/about/`), `version_source`, `tier` (A 4.13/4.14, B 4.15/4.3,
+  C other or unknown), `tier_writes` and, when detection failed, `version_error`.
+- Every mutating tool refuses execution on tier B unless the server was started with
+  `--allow-tier-b NAME`, and on tier C (including an undetected version) unless
+  `--allow-tier-c NAME`; tier A is unchanged and reads are never gated. Dry runs stay
+  allowed and carry `tier_gate` when the execution would be refused.
+- Refusals name their routes and start with `safety.REASON_TIER`, which the session
+  retro classifies. METHODOLOGY section 5 no longer says the gate is manual.
+
+### Changed — `mcp-n4-kit` tests
+
+- Gap-error scrubbing and rollback verdict precedence covered (closes #190). [PR #201]
+- Destructive-test patches are undone deterministically (test patch hygiene). [PR #203]
+
 ## [v0.28.1] - 2026-10-02
 
 ### Fixed — `mcp-n4-kit` v0.4.1: rollback read-back precision (issue #179 T5, v0.28.0 advisory review)

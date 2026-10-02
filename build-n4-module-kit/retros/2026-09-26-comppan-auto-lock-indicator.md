@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-26 · CompPan · comppan-auto-lock-indicator
 
 **Session**: `Cliente/panccadia-leon` branch `feat/comppan-auto-lock-indicator` (from b8250f9): latched "auto-locked (no start)" indicator, CompPan 2.6.0 + DashboardPan 2.8.0; RDD `review-2c01aa3b04752f9e` approved (1 lens), handed off to the Downloads origin.

@@ -1,4 +1,5 @@
 <!-- review-status: pending -->
+<!-- disposition: worklist-complete — every ranked Δ was applied by the apply-deltas campaign (v0.23.0); see the retros/INDEX.md row -->
 # Kit-delta apply plan — module corpus (2026-09-20)
 
 This document is a single prioritized worklist across all pending propose-never-apply

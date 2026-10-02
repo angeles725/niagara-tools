@@ -1,4 +1,5 @@
 <!-- review-status: pending -->
+<!-- disposition: tracked-by-issue #122 — a BUILD proposal, not a delta retro; see the retros/INDEX.md row -->
 # Kit proposal — CXF → Niagara N4 control-logic translator (build delta)
 
 > Type: BUILD proposal (new toolbelt capability), not a lint/rule change. Opened 2026-09-19 from the

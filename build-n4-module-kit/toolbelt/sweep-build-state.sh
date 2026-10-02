@@ -16,7 +16,8 @@
 #     total_pending=<n>
 #     escalated_count=<n>
 #     oldest_age=<n|N/A>
-#   Only pending rows age; folded rows are excluded.  Age is derived from the retro's FILENAME
+#   Only pending rows age; folded rows and pending rows whose INDEX line carries a
+#   `<!-- disposition: <why> -->` comment (a parked non-retro doc) are excluded.  Age is derived from the retro's FILENAME
 #   date prefix (YYYY-MM-DD-…), never from the file body.  Today is INJECTED via --today.
 #
 # content checks:
@@ -72,6 +73,9 @@ if [ "${1:-}" = "--age" ]; then
     [ -n "$fname" ] || continue
     rstatus=$(printf '%s\n' "$line" | awk -F'|' '{for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="pending"||$i=="folded"){print $i; exit}}}')
     [ "$rstatus" = "pending" ] || continue
+    # A non-retro doc parked in retros/ (a BUILD proposal tracked by an issue, a completed
+    # worklist) carries `<!-- disposition: <why> -->` on its INDEX row: not retro debt, never ages.
+    case "$line" in *'<!-- disposition:'*) continue ;; esac
     total_pending=$(( total_pending + 1 ))
     # Extract YYYY-MM-DD from the filename prefix (first 10 chars)
     file_date="${fname:0:10}"
