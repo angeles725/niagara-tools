@@ -52,6 +52,7 @@
 # Mutation: LCS-floor -- dropping the floor x disabled-cutout pairing lets the CS4 shape pass silently
 # Mutation: LCS-floor-name -- matching minon/cutout as substrings again WARNs on adminOnline / minOnTime / cutoutDelay
 # Mutation: LCS-floor-status -- dropping the status/counter suffix exclusion WARNs on cutoutCount / cutoutActive
+# Mutation: LCS-floor-trip -- putting Trip|Alarm|Fault back in the status suffixes silences lpCutoutTrip=0
 # Mutation: LCS-floor-suffix -- anchoring the cutout token to the name end misses lpCutoutPsi / lowLimitBar
 set -u
 LC_ALL=C
@@ -221,8 +222,10 @@ while IFS= read -r f; do
     in_prop = 0; buf = ""; pline = 0; nf = 0; nc = 0
     # one timer-suffix rule for both the floor and the cutout names [polish-2026-10-02 P2d]
     TIMER_SUFFIX = "(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$"
-    # a cutout status / counter slot is not a cutout floor (cutoutCount, cutoutActive, lowLimitReached)
-    STATUS_SUFFIX = "(Count|Counter|Cnt|Total|Active|Reached|Tripped|Trip|Alarm|Fault|State|Status|Flag|Event|Events|Log)[0-9]*$"
+    # a cutout status / counter slot is not a cutout floor (cutoutCount, cutoutActive, lowLimitReached);
+    # Trip / Alarm / Fault are NOT here: they also name cutout setpoints (lpCutoutTrip, lowLimitAlarm)
+    # [polish-2026-10-02 P2e]
+    STATUS_SUFFIX = "(Count|Counter|Cnt|Total|Active|Reached|Tripped|State|Status|Flag|Event|Events|Log)[0-9]*$"
   }
   !in_prop && index($0, "@NiagaraProperty") > 0 { in_prop = 1; buf = ""; pline = FNR }
   in_prop {
