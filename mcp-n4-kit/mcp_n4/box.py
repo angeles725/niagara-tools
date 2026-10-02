@@ -451,7 +451,7 @@ class BoxClient:
         self._loads_outstanding += 1
         try:
             self.ssc("loadSlots", {"o": ord_str, "d": depth})
-        # Assumption (issue #179 R3-001): `ssc` raises either before the request is sent
+        # Assumption (PR #184 review R3-001): `ssc` raises either before the request is sent
         # (transport error) or on an explicit error reply, so no load op will follow. A
         # raise after the station received the request (a lost reply) would under-count
         # by one; the in-order reset below bounds that to the next answered load.

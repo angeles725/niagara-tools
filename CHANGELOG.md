@@ -6,6 +6,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.28.1] - 2026-10-02
+
+### Fixed — `mcp-n4-kit` v0.4.1: rollback read-back precision (issue #179 T5, v0.28.0 advisory review)
+
+- **A frozen-child read error is no longer reported as `missing`** (R4-001/R2-001/R3-001): when the
+  read-back cannot load a frozen child, its `frozen_config_not_restored` entry carries `readback_error`
+  (scrubbed) and no `missing`, and the rollback verdict is `unverified` instead of `partial`. `partial`
+  asserts what was not restored; a read error establishes nothing. Precedence: `mismatch` > `unverified` >
+  `partial` > `verified`.
+- **An omitted nested-default slot is equal** (R4-002): a captured struct slot (e.g. a StatusNumeric
+  `readValue` with `value`/`status`) that the station omits now counts as equal when every captured child is
+  at its type default, as for scalars. A child whose default the kit does not know still counts as different.
+- Internal: the in-doubt error builder `_partial` is renamed `_in_doubt_with_created` (it collided with the
+  `partial` verdict, R2-003); `_link_input_values` is a plain loop sharing `_prior_kind` with
+  `_hashed_inverse` (R2-004); finding-ID comments name their review (`PR #184 review R3-001`,
+  `PR #187 blocking review R3-001`) instead of an ambiguous `issue #179 R3-001` (R2-002).
+
 ## [v0.28.0] - 2026-10-02
 
 ### Changed — `mcp-n4-kit` v0.4.0: rollback fidelity (issue #179 T4)

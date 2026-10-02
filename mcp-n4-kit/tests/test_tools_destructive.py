@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -613,6 +614,56 @@ class TestRollback(DestructiveCase):
         gap = tools_write._frozen_check(Client(live), check)
         self.assertEqual((gap["slots"], gap["missing"]), (["tuningPolicyName"], False))
 
+    def test_the_frozen_check_treats_an_omitted_nested_default_slot_as_equal(self):
+        """A Status slot the station omits whole (value and status at default) is not a
+        loss (v0.28.0 advisory review R4-002); one with a non-default nested value still is."""
+        captured = {"nm": "p", "t": "control:NullProxyExt", "s": [
+            {"nm": "p", "n": "readValue", "t": "baja:StatusNumeric", "s": [
+                {"nm": "p", "n": "value", "v": "0.0"}, {"nm": "p", "n": "status", "v": "0"}]}]}
+
+        class Client:
+            def load_tree(self, ord_str, depth):
+                return {"": {"t": "control:NumericWritable"},
+                        "proxyExt": {"t": "control:NullProxyExt"}}
+        check = {"path": "station:|slot:/F/Sp/proxyExt", "b": captured}
+        self.assertIsNone(tools_write._frozen_check(Client(), check))
+        captured["s"][0]["s"][0]["v"] = "21.5"
+        gap = tools_write._frozen_check(Client(), check)
+        self.assertEqual((gap["slots"], gap["missing"]), (["readValue"], False))
+
+    def test_a_frozen_check_read_error_is_reported_distinctly_not_as_missing(self):
+        """A station read error is not evidence the frozen child is gone (v0.28.0 advisory review
+        R4-001/R2-001/R3-001)."""
+        class Client:
+            def load_tree(self, ord_str, depth):
+                raise box.BoxError("HTTP 503 from station", box.CHANNEL, "loadSlots")
+        check = {"path": "station:|slot:/F/Sp/proxyExt",
+                 "b": {"nm": "p", "t": "control:NullProxyExt"}}
+        gap = tools_write._frozen_check(Client(), check)
+        self.assertNotIn("missing", gap)
+        self.assertEqual(gap["readback_error"], "HTTP 503 from station")
+        self.assertEqual(gap["path"], check["path"])
+
+    def test_a_frozen_check_read_error_makes_the_rollback_unverified(self):
+        nn, gh = self.writable_group()
+        self.configure_proxy_ext(nn)
+        removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+        client = self.srv.ctx.session.client
+        orig = client.load_tree
+
+        def failing(ord_str, depth=2, **kw):  # only the frozen-child read-back fails
+            if depth == 7:
+                raise box.BoxError("HTTP 503 from station", box.CHANNEL, "loadSlots")
+            return orig(ord_str, depth=depth, **kw)
+        client.load_tree = failing
+        with mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
+            back = self.rollback(removed["batch_id"])
+        self.assertEqual(back["verdict"], "unverified", back)
+        gaps = back["frozen_config_not_restored"]
+        self.assertTrue(gaps and all("missing" not in g for g in gaps), gaps)
+        self.assertTrue(all(g["readback_error"] == "HTTP 503 from station" for g in gaps))
+        self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
+
     # ---- link-targeted inputs (issue #179 R3-002 / B1200-G2) -------------------------
 
     def test_the_remove_plan_records_the_value_of_a_link_driven_input(self):
@@ -620,7 +671,8 @@ class TestRollback(DestructiveCase):
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
         (relink,) = [e["relink"] for e in plan["plan"]["inverse"] if "relink" in e]
         self.assertEqual(relink["target_slot"], "in10")
-        self.assertNotIn("prior", relink)  # volatile: never part of the hashed plan (R3-001)
+        # volatile: never part of the hashed plan (PR #187 blocking review R3-001)
+        self.assertNotIn("prior", relink)
         self.assertTrue(any("captured when the confirmed remove runs" in n
                             for n in plan["plan"]["notes"]), plan["plan"]["notes"])
         (seen,) = plan["link_input_values"]  # the operator's preview, outside the hash
@@ -630,7 +682,9 @@ class TestRollback(DestructiveCase):
                          {"value": "4.5", "status": "0"})  # facets dropped, bits kept
 
     def test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid(self):
-        """The link source keeps propagating between dry run and confirm (R3-001)."""
+        """The link source keeps propagating between dry run and confirm.
+
+        PR #187 blocking review R3-001."""
         nn = self.linked_group()
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
         self.fake.folder.child(nn).child("Tgt").child("in10").child("value").value = "7.25"

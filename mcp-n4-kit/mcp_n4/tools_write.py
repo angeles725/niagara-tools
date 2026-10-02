@@ -141,18 +141,25 @@ def _inverse_list(inverse):
 _PRIOR_KINDS = ("relink", "unlinked_input")
 
 
+def _prior_kind(entry):
+    """The `_PRIOR_KINDS` key under which an inverse entry carries `prior`, else None."""
+    if not isinstance(entry, dict):
+        return None
+    return next((k for k in _PRIOR_KINDS
+                 if isinstance(entry.get(k), dict) and "prior" in entry[k]), None)
+
+
 def _hashed_inverse(inverse):
     """The inverse as the confirmation token authorizes it: without `prior` values.
 
     `prior` is the live value a link propagates into an input, so it changes whenever the
     link source does; hashing it would make a dry run and its confirming re-plan disagree
-    by timing alone (issue #179 R3-001). The journal keeps the full inverse, `prior`
-    included, from the re-plan taken when the confirmed write runs.
+    by timing alone (PR #187 blocking review R3-001). The journal keeps the full inverse,
+    `prior` included, from the re-plan taken when the confirmed write runs.
     """
     out = []
     for entry in inverse:
-        kind = next((k for k in _PRIOR_KINDS if isinstance(entry, dict) and
-                     isinstance(entry.get(k), dict) and "prior" in entry[k]), None)
+        kind = _prior_kind(entry)
         if kind is None:
             out.append(entry)
             continue
@@ -163,11 +170,14 @@ def _hashed_inverse(inverse):
 
 def _link_input_values(inverse):
     """The `prior` values an inverse carries, as a dry-run preview (never hashed)."""
-    return [{"target_path": spec["target_path"], "target_slot": spec["target_slot"],
-             "value": spec["prior"]}
-            for entry in inverse for kind in _PRIOR_KINDS
-            if isinstance(entry, dict) and isinstance(entry.get(kind), dict)
-            for spec in (entry[kind],) if "prior" in spec]
+    out = []
+    for entry in inverse:
+        kind = _prior_kind(entry)
+        if kind is not None:
+            spec = entry[kind]
+            out.append({"target_path": spec["target_path"],
+                        "target_slot": spec["target_slot"], "value": spec["prior"]})
+    return out
 
 
 def _data(planned):
@@ -689,7 +699,7 @@ def _run_components(sess, write, batch_id, planned, replies):
             write.scope.check(box.child_ord(parent, spec["n"]))
             parent_h, nodes = _handle(sess.client, parent, 1)
         except Exception as exc:
-            raise _partial(batch_id, base, created, exc) from None
+            raise _in_doubt_with_created(batch_id, base, created, exc) from None
         # The names a fresh parent already has BEFORE we add anything are its frozen
         # slots: the station refuses to add them again (live finding 4, 2026-10-01).
         frozen.setdefault(key, {k for k in nodes if k and "/" not in k})
@@ -704,13 +714,13 @@ def _run_components(sess, write, batch_id, planned, replies):
             write.journal.append({"batch_id": batch_id, "ts": _now(),
                                   "phase": "component-intent", "ops": [op]})
         except OSError:
-            raise _partial(batch_id, base, created, "the component intent could not be "
+            raise _in_doubt_with_created(batch_id, base, created, "the component intent could not be "
                            "written, nothing more was sent") from None
         sess.writes_executed += 1
         try:
             reply = _send(sess.client, op)
         except Exception as exc:
-            raise _partial(batch_id, base, created, exc) from None
+            raise _in_doubt_with_created(batch_id, base, created, exc) from None
         name = _assigned_name(op, reply)
         actual[here] = box.child_ord(parent, name)
         created.append(box.child_ord(parent, name))
@@ -755,13 +765,23 @@ def _default_v(slot, parent_t):
 
 
 def _differs(nodes, prefix, captured):
-    """Names of the captured slots whose live value differs from the snapshot."""
+    """Names of the captured slots whose live value differs from the snapshot.
+
+    A slot the station omits is at its default. A scalar is then equal only when its
+    captured value is the type default; a struct slot (nested children, e.g. a
+    StatusNumeric's value/status) only when it carries no own value and every captured
+    child is at its default by the same rule, recursively (v0.28.0 advisory review
+    R4-002). A child with no known default (`_default_v` is None) always counts as
+    different.
+    """
     out = []
     for slot in captured.get("s", []):
         here = prefix + "/" + slot["n"]
         live = nodes.get(here)
-        if live is None:  # omitted: equal only when the captured value is the default
-            same = not slot.get("s") and slot.get("v") is not None and \
+        if live is None and slot.get("s"):  # omitted struct: every child at its default
+            same = slot.get("v") is None and not _differs(nodes, here, slot)
+        elif live is None:  # omitted scalar: equal only when the captured value is the default
+            same = slot.get("v") is not None and \
                 slot.get("v") == _default_v(slot, captured.get("t"))
         else:
             same = ("t" not in slot or live.get("t") == slot["t"]) and \
@@ -783,15 +803,17 @@ def _frozen_check(client, check):
 
     Only the configuration the snapshot captured is compared (one direction): a slot
     the station omits is at its default, so a captured (non-default) slot that is
-    missing differs. A frozen child that does not exist is `missing: true`.
+    missing differs. A frozen child that does not exist is `missing: true`. A station
+    read error proves nothing either way: the gap carries `readback_error` and no
+    `missing` (v0.28.0 advisory review R4-001), and the rollback verdict becomes `unverified`.
     """
     head, _, leaf = check["path"].rpartition("/")
     body = check["b"]
+    gap = {"path": check["path"], "type": body.get("t"), "captured": body}
     try:
         nodes = client.load_tree(head, depth=FROZEN_CHECK_DEPTH)
-    except box.BoxError:
-        nodes = {}
-    gap = {"path": check["path"], "type": body.get("t"), "captured": body}
+    except box.BoxError as exc:
+        return dict(gap, readback_error=str(exc))
     if leaf not in nodes:
         return dict(gap, missing=True, live_type=None, slots=[s["n"] for s in body.get("s", [])])
     live_type, slots = nodes[leaf].get("t"), _differs(nodes, leaf, body)
@@ -800,7 +822,15 @@ def _frozen_check(client, check):
     return dict(gap, missing=False, live_type=live_type, slots=slots)
 
 
-def _partial(batch_id, base, created, exc):
+def _scrub_gap_errors(observed, ctx):
+    """Defence in depth: scrub the station read errors a read-back put in its gaps."""
+    gaps = observed.get("frozen_config_not_restored", []) if isinstance(observed, dict) else []
+    for gap in gaps:
+        if "readback_error" in gap:
+            gap["readback_error"] = ctx.scrub(gap["readback_error"])
+
+
+def _in_doubt_with_created(batch_id, base, created, exc):
     """The in-doubt error of a rollback that stopped mid-way, listing what exists now."""
     err = _in_doubt(batch_id, exc if isinstance(exc, Exception) else ToolError(exc))
     done = sorted(base.values()) + [c for c in created if c]
@@ -1023,7 +1053,11 @@ def _rollback_readback(client, args, planned, replies, inverse):
         observed["frozen_config_not_restored"] = frozen
     if inputs:
         observed["link_inputs_not_restored"] = inputs
-    verdict = "mismatch" if not ok else "partial" if frozen or inputs else "verified"
+    # A frozen child that could not be read is unobserved, not lost: `unverified` (the
+    # verdict for an outcome the read-back could not establish), below `mismatch` only.
+    unread = any("readback_error" in gap for gap in frozen)
+    verdict = "mismatch" if not ok else "unverified" if unread else \
+        "partial" if frozen or inputs else "verified"
     return {"rolled_back": planned.data["rollback_of"]}, replies, observed, verdict
 
 
@@ -1202,6 +1236,7 @@ def _process(ctx, name, args):
         try:
             requested, accepted, observed, verdict = impl.readback(
                 sess.client, args, planned, replies, inverse)
+            _scrub_gap_errors(observed, ctx)
             out.update(requested=requested, accepted=accepted, observed=observed,
                        verdict=verdict)
         except Exception as exc:  # whatever the read-back hits, the write already happened
