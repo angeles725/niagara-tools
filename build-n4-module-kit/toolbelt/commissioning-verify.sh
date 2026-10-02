@@ -352,13 +352,24 @@ fi
 # until the table marks it filled/provided.
 # ----------------------------------------------------------------
 if [ -n "$OWED" ]; then
-  # Fails closed [polish-2026-10-02 P3, #199 WU9]: every table row (a line starting with "|") is
-  # either the header, an alignment row (each cell dashes with optional colons: ---, :---, :---:,
-  # ---:), an all-empty row, a filled/provided row, or a MANUAL row; a row with fewer than five
-  # cells is a MANUAL "malformed" row, never skipped into the PASS.
-  owed_rows=$(awk '
+  # Fails closed [polish-2026-10-02 P3/P3b, #199 WU9]. The values-owed table is the one whose header
+  # row starts with Slot; other tables in the doc (revisions, notes) are ignored, and a doc with
+  # table rows but no Slot header is one MANUAL row (no PASS). A doc with no table at all (prose
+  # "none owed") stays a PASS. Inside the owed table every row is the header, an alignment row
+  # (each cell dashes with optional colons: ---, :---, :---:, ---:), an all-empty row, a
+  # filled/provided row, or a MANUAL row; a row with fewer than five cells or an empty Slot cell is
+  # a MANUAL "malformed" row, never skipped into the PASS.
+  owed_rows=$(awk -v F="$OWED" '
     function trim(x) { gsub(/^[ \t]+|[ \t]+$/, "", x); return x }
-    /^[ \t]*\|/ {
+    !/^[ \t]*\|/ { intab = 0; next }
+    {
+      pipes = 1
+      if (!intab) {                    # first row of a table: its header decides the table
+        hc = trim($0); sub(/^\|/, "", hc); split(hc, h, "|"); hc = tolower(trim(h[1])); gsub(/`/, "", hc)
+        intab = (hc == "slot") ? 1 : 2; if (intab == 1) seen = 1
+        next
+      }
+      if (intab != 1) next
       raw = trim($0); line = raw
       sub(/^\|/, "", line); sub(/\|$/, "", line)
       n = split(line, c, "|"); blank = 1; sep = 1
@@ -367,13 +378,17 @@ if [ -n "$OWED" ]; then
         if (c[i] != "") blank = 0
         if (c[i] !~ /^:?-+:?$/) sep = 0
       }
-      if (blank || sep || tolower(c[1]) == "slot") next
+      if (blank || sep) next
       if (n < 5 || c[1] == "") {
         printf "malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): %s\n", raw
         next
       }
       if (tolower(c[5]) ~ /^(filled|provided)/) next
       printf "%s: owed by %s, unit %s, still at safe default %s\n", c[1], c[2], c[3], c[4]
+    }
+    END {
+      if (pipes && !seen)
+        printf "no values-owed table (header Slot | Owed by | Unit | Safe default | Status) in %s\n", F
     }' "$OWED")
   if [ -n "$owed_rows" ]; then
     while IFS= read -r _ln; do
