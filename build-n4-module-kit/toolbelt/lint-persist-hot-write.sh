@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lint-persist-hot-write.sh — flags a persisted (non-transient) property SETTER called from
-# changed() or its one-hop callee with no cadence guard nearby the call site.
+# changed() or any of its one-hop callees with no cadence guard nearby the call site.
 #
 # Shape (PER8, B1159): a NON-transient @NiagaraProperty slot (declared without Flags.TRANSIENT
 # in the raw slot-o-matic form `Property <name> = newProperty(<flags>, ...)`) is correctly
@@ -18,14 +18,16 @@
 #   Scans *.java under <src-root> (dot-dirs pruned). Only the raw slot-o-matic declaration
 #   `Property <name> = newProperty(<flags>, ...)` is recognized (the @NiagaraProperty
 #   annotation form is not parsed -- false-negative, not false-positive, documented
-#   limitation). A setter CALL (not its method DECLARATION) inside changed()'s body or a
-#   zero-arg method changed() calls (one hop) is a candidate. A cadence guard is a
+#   limitation). A setter CALL (not its method DECLARATION) inside changed()'s body or ANY
+#   zero-arg method changed() calls (one hop, every callee) is a candidate. A cadence guard is a
 #   `Clock.millis(` comparison or a `%` (modulo/counter) test within 5 lines above the call,
 #   in the SAME method.
 #   Row:  WARN  lint-persist-hot-write  <file>:<line>  <detail>
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 # VCS-free by design (kit-links L2).
 # Mutation: PHW2 -- drop the cadence-guard lookback so a guarded setter call still false-WARNs
+# Mutation: PHW6 -- keeping only the last callee drops a hot write in an earlier callee
+# Mutation: PHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -82,44 +84,46 @@ END {
   }
   if (changed_end == 0) exit 0
 
-  # 2. One-hop callee: a zero-arg method invoked from changed(), found generically
-  #    (candidate identifier immediately followed by "()" and not a keyword).
+  # 2. One-hop callees: EVERY zero-arg method invoked from changed() (identifier immediately
+  #    followed by "()" and ";", not a keyword) -- each one's body is scanned, not only one.
   n_kw = split("if for while switch catch try finally return new else do super this Clock Sys", KW, " ")
   for (k = 1; k <= n_kw; k++) kw[KW[k]] = 1
-  callee_line = 0; callee_name = ""
-  for (i = changed_line; i <= changed_end && callee_line == 0; i++) {
-    ln = lines[i]
-    if (match(ln, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([[:space:]]*\)[[:space:]]*;/)) {
-      cand = substr(ln, RSTART, RLENGTH)
+  n_callee = 0
+  for (i = changed_line; i <= changed_end; i++) {
+    rest = lines[i]
+    while (match(rest, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([[:space:]]*\)[[:space:]]*;/)) {
+      cand = substr(rest, RSTART, RLENGTH)
+      rest = substr(rest, RSTART + RLENGTH)
       sub(/[[:space:]]*\([[:space:]]*\)[[:space:]]*;.*/, "", cand)
-      if (!(cand in kw)) callee_name = cand
+      if (!(cand in kw) && !(cand in seen_callee)) { seen_callee[cand] = 1; n_callee++; callee_name[n_callee] = cand }
     }
   }
   # A declaration is distinguished from a call by what follows "()" on the line: a call ends
   # in ';' right after the parens (possibly with trailing whitespace); a declaration is either
   # bare (Allman '{' on the next line) or a one-liner "name() { ... }".
-  if (callee_name != "") {
+  n_scope = 1
+  for (c = 1; c <= n_callee; c++) {
+    callee_line = 0
     for (i = 1; i <= NR; i++) {
       probe = " " lines[i]
-      if (match(probe, "[^A-Za-z0-9_]" callee_name "[[:space:]]*\\([[:space:]]*\\)")) {
+      if (match(probe, "[^A-Za-z0-9_]" callee_name[c] "[[:space:]]*\\([[:space:]]*\\)")) {
         trailing = substr(probe, RSTART + RLENGTH)
         gsub(/^[[:space:]]*/, "", trailing)
         if (substr(trailing, 1, 1) != ";") { callee_line = i; break }
       }
     }
-  }
-  callee_end = 0
-  if (callee_line > 0) {
-    depth = 0; started = 0
+    if (callee_line == 0) continue
+    depth = 0; started = 0; callee_end = 0
     for (i = callee_line; i <= NR; i++) {
       ln = lines[i]
       for (ci = 1; ci <= length(ln); ci++) {
-        c = substr(ln, ci, 1)
-        if (c == "{") { depth++; started = 1 }
-        else if (c == "}") depth--
+        ch = substr(ln, ci, 1)
+        if (ch == "{") { depth++; started = 1 }
+        else if (ch == "}") depth--
       }
       if (started && depth == 0) { callee_end = i; break }
     }
+    if (callee_end > 0) { n_scope++; scope_start[n_scope] = callee_line; scope_end[n_scope] = callee_end }
   }
 
   # 3. Collect NON-transient property names (raw slot-o-matic form).
@@ -138,13 +142,10 @@ END {
   }
   if (n_nt == 0) exit 0
 
-  # 4. Scan changed()'s body and the one-hop callee's body for setter CALLS (not declarations)
-  #    to any non-transient property, with no cadence guard within 5 lines above (same scope).
-  n_scope = 0
-  scope_start[1] = changed_line; scope_end[1] = changed_end; n_scope = 1
-  if (callee_line > 0 && callee_end > 0) {
-    n_scope = 2; scope_start[2] = callee_line; scope_end[2] = callee_end
-  }
+  # 4. Scan changed()'s body and every one-hop callee's body for setter CALLS (not
+  #    declarations) to any non-transient property, with no cadence guard within 5 lines above
+  #    (same scope).
+  scope_start[1] = changed_line; scope_end[1] = changed_end
 
   for (k = 1; k <= n_nt; k++) {
     cap = toupper(substr(nt_name[k], 1, 1)) substr(nt_name[k], 2)
@@ -176,14 +177,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-persist-hot-write: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

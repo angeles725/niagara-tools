@@ -77,3 +77,47 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "SSL-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: SSL-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/com/x/U.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/U.java"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/U.java" ]; then chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$SSL" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/U.java"* ]]
+}
+
+@test "SSL5: an unrelated Clock.schedule does not count as a purge when only logout removes" {
+  # Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape.
+  {
+    printf 'class E {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void started() {\n    Clock.schedule(this, BRelTime.makeSeconds(5), refresh, null);\n  }\n'
+    printf '  public void doRefresh() {\n    repaint();\n  }\n'
+    printf '  void login(String id) {\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void logout(String id) {\n    SESSIONS.remove(id);\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/E.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"E.java:10"* ]]
+  [[ "$output" == *"SESSIONS"* ]]
+}
+
+@test "SSL6: a scheduled action whose do<Action>() body removes from the map is a purge (clean)" {
+  {
+    printf 'class E {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void started() {\n    Clock.schedulePeriodically(this, BRelTime.makeMinutes(1), sweep, null);\n  }\n'
+    printf '  public void doSweep() {\n    for (String k : SESSIONS.keySet()) if (expired(k)) SESSIONS.remove(k);\n  }\n'
+    printf '  void login(String id) {\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void logout(String id) {\n    SESSIONS.remove(id);\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/E.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}

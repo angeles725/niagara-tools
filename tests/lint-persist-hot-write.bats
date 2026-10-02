@@ -77,3 +77,29 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/com/x/U.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/U.java"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/U.java" ]; then chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$PHW" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/U.java"* ]]
+}
+
+@test "PHW6: every zero-arg callee of changed() is scanned, not only the last one" {
+  # Mutation: PHW6 -- keeping only the last callee drops the hot write in the first one (no WARN).
+  printf 'class A {\n  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);\n' \
+    > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  public void changed(Property p, Context cx) {\n    accumulate();\n    repaint();\n  }\n' \
+    >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void accumulate() {\n    setXHours(1.0);\n  }\n  void repaint() {\n    int a = 1;\n  }\n}\n' \
+    >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"A.java:8"* ]]
+  [[ "$output" == *"xHours"* ]]
+}

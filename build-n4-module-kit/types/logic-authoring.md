@@ -1196,15 +1196,20 @@ Reading a control point's current value/status from rt code (station-side, not `
 
 ```java
 // Canonical rt resolve + typed read + validity check
+// LOG = java.util.logging.Logger.getLogger("<module>") (types/observability.md)
 BOrd ord = BOrd.make("station:|slot:/Services/CompControl/setpointOut");
 try {
     BObject obj = ord.get();
-    BNumericPoint pt = (BNumericPoint) obj;
-    if (pt.getOut().getStatus().isValid()) {
-        double val = pt.getOut().getValue();
-        // ... use val
+    if (obj instanceof BNumericPoint) {   // a re-pointed ORD must not throw ClassCastException
+        BNumericPoint pt = (BNumericPoint) obj;
+        if (pt.getOut().getStatus().isValid()) {
+            double val = pt.getOut().getValue();
+            // ... use val
+        }
+    } else {
+        LOG.warning("ord is not a numeric point: " + ord);
     }
 } catch (UnresolvedException e) {
-    Sys.getLog().warning(getType(), "dangling ord: " + ord, e);
+    LOG.log(Level.WARNING, "dangling ord: " + ord, e);
 }
 ```

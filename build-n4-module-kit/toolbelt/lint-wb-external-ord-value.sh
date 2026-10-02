@@ -25,7 +25,8 @@
 #   mb_strip/mb_parse -- fragment rule: edit the shared fragment, never re-implement a
 #   parallel parser here). Per METHOD:
 #     1. a candidate ORD-resolve line: `<ident>Ord()<opt-space>.get(` (e.g.
-#        `getTargetOrd().get(`) or `<ident>[Oo]rd<opt-space>.get(` (e.g. `folderOrd.get(`);
+#        `getTargetOrd().get(`) or `<ident>Ord<opt-space>.get(` / a bare `ord.get(` (e.g.
+#        `folderOrd.get(`; `record.get(` is not an ORD);
 #     2. AND, anywhere in the SAME method, a live-value/status read off the resolved
 #        object: `.get("out")`, `getOutStatusValue(`, or `BStatusValue`;
 #     3. AND the SAME method has NO `registerForComponentEvents(` call anywhere in its
@@ -35,7 +36,7 @@
 #         ORD and reads its value/status with no registerForComponentEvents(target,0)
 #         lease in scope -- subject-subtree depth does not cover it; add loadSlots() +
 #         registerForComponentEvents(target,0) for the resolved target
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 #
 # Known limitations (advisory heuristic, documented per kit style):
 #   - a resolve line and its value-read split across TWO methods (helper extraction) is
@@ -49,6 +50,8 @@
 #     the SAME method also reads a live value/status off the resolved object.
 # VCS-free by design (kit-links L2). LC_ALL=C.
 # Mutation: WEO2 -- drop the registerForComponentEvents(-absence check so a compliant method still WARNs
+# Mutation: WEO-record -- an unanchored [Oo]rd suffix takes record.get( for an ORD resolve
+# Mutation: WEO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
@@ -97,7 +100,9 @@ END {
     for (i = ms; i <= me; i++) {
       ln = slines[i]
       if (match(ln, /[A-Za-z_][A-Za-z0-9_]*Ord\(\)[[:space:]]*\.get\(/) ||
-          match(ln, /[A-Za-z_][A-Za-z0-9_]*[Oo]rd[[:space:]]*\.get\(/)) {
+          match(ln, /(^|[^A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*Ord|ord)[[:space:]]*\.get\(/)) {
+        # The second form is a whole identifier `ord` or a camelCase `...Ord` -- never a word
+        # that merely ends in "ord" (`record.get(`, `keyword.get(`).
         resolve_line = i
         break
       }
@@ -129,14 +134,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" -v FILE="$f" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" -v FILE="$f" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-wb-external-ord-value: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

@@ -19,15 +19,17 @@
 #   Candidate: a `static ... Map<...> <field>` declaration with a `.put(` call on <field>
 #   somewhere in the file. WARNs unless EITHER (a) the method containing the `.put(` call
 #   also calls `<field>.remove(` in its own body (sweep-on-insert), or (b) the file contains
-#   a `Clock.schedule` call whose scheduled body (one hop) calls `<field>.remove(`
-#   (scheduled purge). A `remove(` reachable only from an unrelated method (explicit logout,
+#   a `Clock.schedule*` call whose scheduled body (one hop: the `do<Action>()` or `<action>()`
+#   method named by an argument of the call) calls `<field>.remove(` (scheduled purge). A `remove(` reachable only from an unrelated method (explicit logout,
 #   or a query-time expiry check) does NOT count as a guard -- that is exactly the shape
 #   this lint flags.
 #   Row:  WARN  lint-session-store-lazy-evict  <file>:<line>  <detail>
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 # VCS-free by design (kit-links L2).
 # Mutation: SSL2 -- drop the `static` requirement so an instance-scope map (e.g. ConfigSession)
 # false-WARNs
+# Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape
+# Mutation: SSL-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -77,28 +79,44 @@ END {
   }
   if (n_f == 0) exit 0
 
-  # 2. Whole-file scheduled-purge check: a Clock.schedule call whose one-hop scheduled
-  #    method body contains <field>.remove(.
+  # 2. Scheduled-purge check, one hop: every identifier on a Clock.schedule* call (up to the
+  #    closing ';', at most 3 lines) is a candidate action; its scheduled body is the method
+  #    declared as do<Action>() or <action>(). A field counts as purged only when such a body
+  #    calls <field>.remove( -- a remove() elsewhere (explicit logout, query-time expiry) next to
+  #    an unrelated schedule (a refresh tick) is NOT a purge.
   has_scheduled_purge_for = ""
   for (i = 1; i <= NR; i++) {
     if (index(lines[i], "Clock.schedule") == 0) continue
-    # Look for a zero-arg callee name near the schedule call (e.g. Clock.schedule(this, t, sweepAction, null)).
+    call = ""
     for (i2 = i; i2 <= i + 2 && i2 <= NR; i2++) {
-      ln2 = lines[i2]
-      for (k = 1; k <= n_f; k++) {
-        # A scheduled body somewhere in the file that calls field.remove( counts as a purge,
-        # regardless of exact wiring (advisory heuristic: presence of BOTH signals in the file).
-        if (index(ln2, "Clock.schedule") > 0) {
-          for (j = 1; j <= NR; j++) {
-            if (index(lines[j], field[k] ".remove(") > 0 && j != field_decl_line[k]) {
-              # crude scope check: this remove() is inside a method whose body ALSO schedules
-              # (a scheduled sweep method calls remove on itself periodically) OR is invoked
-              # by name from the schedule call line. Accept file-wide co-occurrence as clean --
-              # a false-negative bias, not false-positive (documented).
-              has_scheduled_purge_for = has_scheduled_purge_for " " field[k]
-            }
+      call = call " " lines[i2]
+      if (index(lines[i2], ";") > 0) break
+    }
+    sub(/^.*Clock\.schedule[A-Za-z]*[[:space:]]*\(/, "", call)
+    sub(/;.*$/, "", call)
+    rest = call
+    while (match(rest, /[A-Za-z_][A-Za-z0-9_]*/)) {
+      act = substr(rest, RSTART, RLENGTH)
+      rest = substr(rest, RSTART + RLENGTH)
+      doname = "do" toupper(substr(act, 1, 1)) substr(act, 2)
+      for (j = 1; j <= NR; j++) {
+        probe = " " lines[j]
+        if (!match(probe, "[^A-Za-z0-9_](" doname "|" act ")[[:space:]]*\\([^;]*\\)[[:space:]]*(\\{|$|throws)")) continue
+        depth = 0; started = 0; send = 0
+        for (j2 = j; j2 <= NR; j2++) {
+          ln = lines[j2]
+          for (ci = 1; ci <= length(ln); ci++) {
+            ch = substr(ln, ci, 1)
+            if (ch == "{") { depth++; started = 1 }
+            else if (ch == "}") depth--
           }
+          if (started && depth == 0) { send = j2; break }
         }
+        for (j2 = j; j2 <= send; j2++)
+          for (k = 1; k <= n_f; k++)
+            if (index(lines[j2], field[k] ".remove(") > 0)
+              has_scheduled_purge_for = has_scheduled_purge_for " " field[k]
+        break
       }
     }
   }
@@ -128,10 +146,13 @@ END {
         if (substr(trailing, 1, 1) != ";") { msig = i; break }
       }
     }
-    if (msig == 0) msig = 1
+    # No enclosing signature found (a static initializer): the scope is the put line alone,
+    # never the whole file -- a remove() anywhere else must not count (fail closed).
+    noscope = (msig == 0)
+    if (noscope) msig = put_line
 
-    depth = 0; started = 0; mend = NR
-    for (i = msig; i <= NR; i++) {
+    depth = 0; started = 0; mend = (noscope ? put_line : NR)
+    for (i = msig; i <= NR && !noscope; i++) {
       ln = lines[i]
       for (ci = 1; ci <= length(ln); ci++) {
         c = substr(ln, ci, 1)
@@ -156,14 +177,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-session-store-lazy-evict: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

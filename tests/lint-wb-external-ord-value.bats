@@ -102,3 +102,31 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "WEO-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: WEO-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/com/x/U.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/U.java"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/U.java" ]; then chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$WEO" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/U.java"* ]]
+}
+
+@test "WEO-record: an identifier merely ending in 'ord' (record, word) is not an ORD resolve" {
+  # Mutation: WEO-record -- the unanchored [Oo]rd suffix takes record.get( for an ORD resolve (false WARN).
+  cat > "$TMPDIR_T/Mod/src/com/x/R.java" << 'JEOF'
+public class R {
+  Object rowFor(Row record) {
+    Object v = record.get("out");
+    BStatusValue sv = (BStatusValue) v;
+    return sv;
+  }
+}
+JEOF
+  run "$WEO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}

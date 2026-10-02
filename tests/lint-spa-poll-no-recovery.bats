@@ -214,3 +214,34 @@ EOF2
   [[ "$output" == *"time since the last success"* ]]
   # Named mutation SPR9: count a clock assignment anywhere in the file -> SPR9 passes clean.
 }
+
+@test "SPR-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: SPR-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/rc/u.js")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/rc/u.js"
+  chmod 000 "$TMPDIR_T/Mod/src/rc/u.js"
+  if [ -r "$TMPDIR_T/Mod/src/rc/u.js" ]; then chmod 644 "$TMPDIR_T/Mod/src/rc/u.js"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$SPR" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/rc/u.js"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/rc/u.js"* ]]
+}
+
+@test "SPR10: a poll declared as a const arrow function is found (no recovery -> WARN)" {
+  # Mutation: SPR10 -- matching only `function <name>(` loses an arrow-function poll (silent pass).
+  cat > "$TMPDIR_T/Mod/src/rc/arrow.js" << 'JEOF'
+const poll = async () => {
+  try {
+    const r = await fetch('/api/state');
+    render(await r.json());
+  } catch (e) {
+    markStale();
+  }
+};
+setInterval(poll, 5000);
+JEOF
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"arrow.js:9"* ]]
+  [[ "$output" == *"no location.reload("* ]]
+}
