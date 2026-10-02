@@ -68,7 +68,7 @@ kit_refs() {
   # Named mutation: delete a script name from both BUILD-LOOP.md and skill/SKILL.md -> L5 fails
   # A toolbelt/lint-*.sh may instead be routed by the GENERATED toolbelt/INDEX.md (BUILD-LOOP §5
   # points at it; gen-lint-index.sh --check keeps it fresh — GLI-real).
-  # [ev: retro 2026-10-01-kit-meta-hygiene-2026-10-01 Δ3]
+  # [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
   [ -f "$KIT/skill/SKILL.md" ] || skip "skill/SKILL.md not found in kit (launcher path)"
   cd "$KIT"
   missing=()

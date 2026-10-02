@@ -383,5 +383,28 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
     ceremony), R3-k19-guard-claim (K19 names only kit-links L5/L11; L4 coverage not shown), R3-ledger-wu2-stale-paren.
   - PR #202 (https://github.com/angeles725/niagara-tools/pull/202); merge commit recorded in the WU11 entry.
 
+- 2026-10-02 WU11a (branch `feat/fold-wu11-close`, from `origin/main` a0a9b90 = WU10 merge of PR #202): remaining
+  deltas. New `templates/VERSION-LEDGER.md` (client scaffold: versions table, root-cause classes 1-8, repeated-class
+  escalation, Open items); `BUILD-LOOP.md` §0 client-ledger read (version-defect-ledger Δ2), §7 ledger close gate (Δ1),
+  repeated-class escalation (Δ3), operator-manual lockstep close gate `manual: updated|n/a` (operator-manual Δ1) +
+  pointer to the new advisory `toolbelt/lint-manual-labels.sh` (Δ3); `corpus-index.md` retitled to its real range
+  B29–B1027 + rows B33/B34/B39/B48 (kit-meta Δ2; BUILD-LOOP §2, METHODOLOGY top and skill/SKILL.md range text
+  updated); `types/issues-and-gotchas.md` G1 Downgrade roll-forward caveat; WU10 review advisories reconciled (§0.c P0
+  records the tier in the commit body; §5 floor RED/GREEN `n/a (no behavior change)` for a no-behavior P0 and the P0
+  ceremony cell says the floor still runs; K19 names L5/L11/L12 and states L4 guards types docs, not scripts); the
+  dated token in two bats comments made date-less (the .md citations were already date-less, so fold-audit credits
+  kit-meta). Route: inline (the parent writer of WU11; lint + bats + 8 doc files).
+  Evidence:
+  - RED: `bats tests/lint-manual-labels.bats` 7/7 not ok (script absent). GREEN: 8/8 ok (ML8 added with the
+    word-boundary prefix rule after the first real smoke, not RED-first; pinned by its observed mutation).
+  - Observed mutations (restored byte-identical): ML2 (not-found check dropped), ML4 (`\uNNNN` decode dropped), ML8
+    (word-boundary test dropped) — each flips its pin.
+  - Real smoke (read-only, a client DashboardPan tree): the manual BEFORE the cut-out rename commit WARNs on the old
+    label `"Temp. de corte (serpentín)"`; the manual after it does not; 49 other WARNs are prose quotes/paraphrases
+    (advisory by design). 0.5 s.
+  - `bats tests/*.bats` (serial): 864 ok / 0 not ok (66 env skips); mcp-n4-kit unittest 459 OK; shellcheck 0.11.0 only
+    the pre-existing SC2329 info (`lint-config-sanity.sh`); `sweep-build-state.sh` exit 0; `sweep-fold-audit.sh
+    --strict` 181/181; `lint-guard-pins.sh --strict .` exit 0 (ML2/ML4/ML8 MATCH); `gen-lint-index.sh --check` fresh.
+
 ## Next step
 - WU11 (close gate and ledgers; final INDEX flips; release) after WU10 merges.
