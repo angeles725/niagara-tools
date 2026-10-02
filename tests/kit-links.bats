@@ -159,3 +159,18 @@ kit_refs() {
   grep -qF "toolbelt/INDEX.md" BUILD-LOOP.md || { echo "BUILD-LOOP.md does not reference toolbelt/INDEX.md" >&2; return 1; }
   grep -qF "gen-lint-index.sh --check" BUILD-LOOP.md || { echo "BUILD-LOOP.md does not name gen-lint-index.sh --check" >&2; return 1; }
 }
+
+@test "L12: every scripts/check-*.sh helper is routed by BUILD-LOOP.md (git-dependent checks live outside toolbelt)" {
+  # The git-dependent halves of kit checks live in scripts/ because L2 forbids toolbelt/ from
+  # calling version control; an unrouted helper is a check nobody runs.
+  # Named mutation: delete a helper's name from BUILD-LOOP.md -> L12 fails.
+  # [ev: retro client-source-of-truth Δ1] [ev: retro client-source-of-truth Δ3]
+  cd "$KIT"
+  missing=()
+  for sh in ../scripts/check-*.sh; do
+    [ -f "$sh" ] || continue
+    name=$(basename "$sh")
+    grep -qF "scripts/$name" BUILD-LOOP.md || missing+=("$name")
+  done
+  if [ ${#missing[@]} -gt 0 ]; then printf 'scripts helper not routed in BUILD-LOOP.md: %s\n' "${missing[@]}" >&2; return 1; fi
+}

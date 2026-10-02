@@ -65,7 +65,10 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
 - [ ] WU5b · logic safety/protection/structure doctrine.
 - [ ] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker).
 - [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
-- [ ] WU7 · build/preflight/source-of-truth.
+- [x] WU7 · build/preflight/source-of-truth — comppan-fase2-amps-alarms Δ2; panccadia-restart-seq-comp-lockout-hours Δ2, Δ3;
+      continuous-fan-post-defrost-delay Δ1; client-source-of-truth Δ1-Δ3 (retro FULLY folded, INDEX row + marker flipped);
+      change-tier-time-budgets Δ5 (BUILD-LOOP half); WU4 gap (build.sh --ui-profile/--legacy). Route: delegated direct writer
+      (3 toolbelt scripts + 2 new scripts/ helpers + 6 bats + 5 docs — writer trigger).
 - [ ] WU8 · deploy, backup and release gates.
 - [ ] WU9 · commissioning and post-deploy triage (+ `obix-link-audit.sh` possibly split out).
 - [ ] WU10 · process: tiers, behavior questions, orchestration.
@@ -192,6 +195,36 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Verification commands: see the WU4 commit / PR body.
   - Gaps: `build.sh` calls report-module without `--profile`/`--legacy` (WU7); review finding R3-spa-init-only-lastok
     (lint-spa-poll-no-recovery.sh accepts a `lastOk` assigned only at load time) — not fixed here.
+
+- 2026-10-02 WU7 (branch `feat/fold-wu7-build-preflight`, from origin/main): `toolbelt/build.sh` repo-root hint (exit 10 lists
+  gradle roots up to 3 levels below the argument), post-jar copy lock (`FileAlreadyExistsException` -> exit 32 naming each
+  `build/libs` jar rebuilt this run, stale ones "not rebuilt"), `--plugin-version`/env forwarded to `preflight.sh --plugin-version`
+  (and used by the m2 WARN), `--ui-profile hmi|lan|both|unknown` + `--legacy` forwarded to `report-module.sh`, header-only
+  `--help` via awk; `toolbelt/preflight.sh --plugin-version` (env fallback); `toolbelt/lint-structure.sh` L14 (hardcoded
+  `gradlePluginVersion` literal FAILs; pin LS14); new `scripts/check-client-source.sh` (git half of Δ1; kit-links L2 keeps git
+  out of toolbelt) and `scripts/check-skill-drift.sh` (Δ3; a scripts/ helper, not sweep-build-state.sh: CI has no installed
+  skill); `source_of_truth` DECLARED field (How to read + every module envelope, `unknown` where unconfirmed); kit-links L12
+  routes `scripts/check-*.sh` through BUILD-LOOP; BUILD-LOOP §0.b/§4/§7, build-verify.md, skill/SKILL.md step 4; regenerated
+  `toolbelt/INDEX.md`.
+  Evidence:
+  - RED: `bats tests/build-sh.bats` BS-repo-root-hint, BS-copy-lock, BS-copy-lock-stale, BS-preflight-plugin,
+    BS-preflight-plugin-env, BS-ui-profile not ok; `tests/preflight.bats` PF-plugin-override, PF-plugin-env,
+    PF-plugin-override-missing not ok; `tests/lint-structure.bats` LS14 not ok; `tests/check-client-source.bats` 14/14 and
+    `tests/check-skill-drift.bats` 6/7 not ok (scripts absent; SD7 vacuous); kit-links L12 not ok once the helpers existed.
+  - GREEN: build-sh 38/38, lint-structure 17/17, PF-plugin* 5/5, check-client-source 14/14, check-skill-drift 7/7, kit-links ok.
+  - Observed mutations (restored byte-identical): LS14 (L14 row disabled -> LS14 not ok), BS-copy-lock (signature regex
+    broken -> not ok), BS-ui-profile (--profile pass-through dropped -> not ok).
+  - Real smoke (read-only): check-client-source on the ColdRoomPan module root -> PASS (declared path, commit unknown);
+    on a non-git client tree -> WARN; check-skill-drift on this machine -> FAIL (installed launcher differs from the tracked one).
+  - `bats tests/*.bats`: 800 ok / 1 not ok (L1 dangling `toolbelt/lint-link-target-flags.sh` named in the new BUILD-STATE
+    entry; reworded, kit-links re-run 0 not ok), 66 skips.
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh:58`; `&& .* ||` in the diff: 0.
+  - `lint-guard-pins.sh --strict .` exit 0 (LS14 MATCH); `gen-lint-index.sh --check` fresh; `sweep-build-state.sh` exit 0;
+    `sweep-fold-audit.sh --strict` exit 0.
+  - Owed: continuous-fan-post-defrost-delay Δ2/Δ3 (WU5b); comppan-fase2-amps-alarms Δ1, Δ6-Δ8; restart-seq Δ1, Δ4-Δ10;
+    change-tier-time-budgets Δ1-Δ4, Δ6 + Δ5 ORCHESTRATION half (WU10); report-module.sh wiring handed off by WU6b
+    (link-target-flags relay, slot-coverage facade FAIL mapping, silent-protection ADVISORY rows) — outside the WU7 surface,
+    recorded in the kit BUILD-STATE open_issue.
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.

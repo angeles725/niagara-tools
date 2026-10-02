@@ -362,3 +362,115 @@ GRADLEW
   [ "$status" -eq 51 ]
   [[ "$output" == *"vendorVersion"* ]]
 }
+
+# ================= WU7 fold (fold-2026-10-02-pending-retros) =================
+# Stubs that RECORD their argv, so the pass-through flags below are observable.
+_record_stub() {
+  # shellcheck disable=SC2016
+  # why: $* must reach the generated stub unexpanded
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/%s.args"\nexit 0\n' "$TMPDIR_T" "$1" > "$TMPDIR_T/kit/$1.sh"
+  chmod +x "$TMPDIR_T/kit/$1.sh"
+}
+
+# [ev: retro comppan-fase2-amps-alarms Δ2] — the REPO root passed instead of the gradle root:
+# the ancestor walk cannot find ./gradlew, so build.sh lists the gradle roots BELOW the argument.
+@test "BS-repo-root-hint: repo root passed (gradlew only in child groups) -> exit 10 listing the child gradle roots" {
+  repo="$TMPDIR_T/repo"; mkdir -p "$repo/GroupA" "$repo/GroupB" "$repo/Docs"
+  make_fake_gradlew "$repo/GroupA"; make_fake_gradlew "$repo/GroupB"
+  run "$B" "$repo" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"$repo/GroupA"* ]]
+  [[ "$output" == *"$repo/GroupB"* ]]
+  [[ "$output" != *"$repo/Docs"* ]]
+}
+
+@test "BS-repo-root-hint-none: no gradlew anywhere below the argument -> no candidate list, chmod hint kept" {
+  repo="$TMPDIR_T/empty-repo"; mkdir -p "$repo/Sub"
+  run "$B" "$repo" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" != *"gradle root(s) BELOW"* ]]
+  [[ "$output" == *"chmod +x"* ]]
+}
+
+# [ev: retro panccadia-restart-seq-comp-lockout-hours Δ3] — the plugin's post-jar copy into
+# <niagara_home>/modules fails on a Windows-held jar; the fresh build/libs jar is the artifact.
+_mk_gradlew_copy_lock() {
+  cat > "$ROOT/gradlew" <<GRADLEW
+#!/usr/bin/env bash
+mkdir -p "$ROOT/Foo/Foo-rt/build/libs"; printf jar > "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"
+echo "> Task :Foo-rt:jar FAILED" >&2
+echo "java.nio.file.FileAlreadyExistsException: $TMPDIR_T/nh/modules/Foo-rt.jar" >&2
+exit 1
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-copy-lock: FileAlreadyExistsException on modules/<jar> -> exit 32 naming the fresh build/libs jar as the artifact of record" {
+  _mk_gradlew_copy_lock
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 32 ]
+  [[ "$output" == *"artifact of record"* ]]
+  [[ "$output" == *"$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"* ]]
+  [ ! -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-copy-lock-stale: a build/libs jar older than this run is NOT reported as the artifact of record" {
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"; printf old > "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"
+  touch -d '2000-01-01' "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"
+  cat > "$ROOT/gradlew" <<GRADLEW
+#!/usr/bin/env bash
+echo "java.nio.file.FileAlreadyExistsException: $TMPDIR_T/nh/modules/Foo-rt.jar" >&2
+exit 1
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 32 ]
+  [[ "$output" == *"not rebuilt"* ]]
+}
+
+# [ev: retro continuous-fan-post-defrost-delay Δ1] — build.sh forwards the plugin override to preflight.
+@test "BS-preflight-plugin: --plugin-version is forwarded to preflight.sh --plugin-version" {
+  _record_stub preflight
+  run "$B" --plugin-version 7.6.22 "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/preflight.args")" == *"--plugin-version 7.6.22"* ]]
+}
+
+@test "BS-preflight-plugin-env: \$NIAGARA_PLUGIN_VERSION is forwarded to preflight.sh too" {
+  _record_stub preflight
+  NIAGARA_PLUGIN_VERSION=7.3.40 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/preflight.args")" == *"--plugin-version 7.3.40"* ]]
+}
+
+@test "BS-preflight-plugin-none: no override -> preflight gets no --plugin-version (it derives the pin itself)" {
+  _record_stub preflight
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/preflight.args")" != *"--plugin-version"* ]]
+}
+
+# WU4 gap: build.sh must pass the dashboard's ui_profile / --legacy on to report-module.sh.
+@test "BS-ui-profile: --ui-profile hmi --legacy reach report-module.sh as --profile hmi --legacy" {
+  _record_stub report-module
+  run "$B" --ui-profile hmi --legacy "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  args="$(cat "$TMPDIR_T/report-module.args")"
+  [[ "$args" == *"--profile hmi"* ]]
+  [[ "$args" == *"--legacy"* ]]
+}
+
+@test "BS-ui-profile-none: without the flags report-module gets neither --profile nor --legacy" {
+  _record_stub report-module
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  args="$(cat "$TMPDIR_T/report-module.args")"
+  [[ "$args" != *"--profile"* ]]
+  [[ "$args" != *"--legacy"* ]]
+}
+
+@test "BS-ui-profile-bad: an unknown --ui-profile value exits 2 before gradle" {
+  run "$B" --ui-profile kiosk "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 2 ]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
