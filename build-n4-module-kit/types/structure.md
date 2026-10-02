@@ -357,6 +357,16 @@ Theme modules and lexicon-only / `-doc` profiles are a separate resource-only mo
 see `types/theme.md` for theme modules and the `-doc help profile authoring recipe` section
 above for doc-profile modules.
 
+## Deployed version publication `[ev: retro dashboard-deployment-profiles Δ6]`
+"Which build runs on this station" must be observable without opening Workbench or the Software Manager:
+- Each module exposes a read-only version on its service component: `defaultModuleVersion` plus the build
+  time (millis), as a `SUMMARY|READONLY` slot (the Reflow pattern, corpus B153). It is never OPERATOR-writable and
+  is re-derived from the module itself at every start.
+- A module with a `-ux` servlet also serves it as `GET /api/version` and the SPA shows it in an About/footer
+  (`dashboard.md` § Deploy on a JACE).
+- An off-station collector (e.g. an oBIX poller feeding a database) reads the slot per site and flags drift
+  against the latest packaged release (the package's `SOURCE.txt`). `[ev: corpus B153 §153]`
+
 ## Recommendations for our modules (impact ÷ cost) `[ev: corpus B817]`
 R1 chihuahua — populate rt+ux `module.lexicon` (10 types unlocalized; cheap, operator-visible). R2 DashboardPan-wb
 — delete the empty skeleton OR fill it + add its JUnit dep. R3 DashboardPan — test `DashboardReader` (14-baja, the
