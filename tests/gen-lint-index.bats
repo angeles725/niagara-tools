@@ -147,3 +147,78 @@ _mklint() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"under --strict · 3 usage/env/missing-matrix (K20) |"* ]]
 }
+
+# polish-2026-10-02 P4 (#199 WU0 / WU0b): the Auto column matches a real invocation, every Usage/Exit
+# header line is kept (wrapped continuations joined), the description join cap is documented and an
+# awk failure is an error.
+
+@test "GLI-auto: Auto is yes only for a real \$TOOLBELT/<lint> invocation, not a comment, a message or a longer name" {
+  _mklint lint-alpha.sh "invoked."
+  _mklint lint-beta.sh "named in a comment only."
+  _mklint lint-gamma.sh "named in a message string only."
+  _mklint lint-al.sh "a prefix of an invoked name."
+  cat > "$FK/toolbelt/report-module.sh" <<'RM'
+#!/usr/bin/env bash
+# lint-beta.sh is documented here but never run.
+a_out=$("$TOOLBELT/lint-alpha.sh" "$ADIR/src" 2>&1) || a_exit=$?
+echo "run lint-gamma.sh manually"
+RM
+  run bash "$GEN" "$FK"
+  [ "$status" -eq 0 ]
+  # shellcheck disable=SC2016  # literal backticks: Markdown code span
+  grep -F '| `toolbelt/lint-alpha.sh` |' "$FK/toolbelt/INDEX.md" | grep -qF '| yes |'
+  for n in lint-beta.sh lint-gamma.sh lint-al.sh; do
+    row=$(grep -F "| \`toolbelt/$n\` |" "$FK/toolbelt/INDEX.md")
+    if [[ "$row" != *"| no |"* ]]; then return 1; fi
+  done
+}
+
+@test "GLI-wrap-exit: an Exit contract wrapped onto an aligned continuation line is kept whole" {
+  printf '#!/usr/bin/env bash\n# lint-wrap.sh — wraps its exit contract.\n#\n# Usage:  lint-wrap.sh <src>\n#   Scans the tree (explanation, not part of the usage).\n# Exits:  0 clean · 1 any FAIL, or any\n#         STALE under --strict · 3 usage/env\n# VCS-free by design.\n' > "$FK/toolbelt/lint-wrap.sh"
+  run bash "$GEN" "$FK"
+  [ "$status" -eq 0 ]
+  row=$(grep -F 'toolbelt/lint-wrap.sh' "$FK/toolbelt/INDEX.md")
+  [[ "$row" == *'| 0 clean · 1 any FAIL, or any STALE under --strict · 3 usage/env |'* ]]
+  # shellcheck disable=SC2016  # literal backticks: Markdown code span
+  [[ "$row" == *'| `lint-wrap.sh <src>` |'* ]]
+}
+
+@test "GLI-multi: every Usage and Exit line of the header is kept, in order" {
+  printf '#!/usr/bin/env bash\n# lint-two.sh — has two usages and two exit lines.\n#\n# Usage: lint-two.sh <src>\n# Usage: lint-two.sh --strict <src>\n# Exit: 0 clean · 1 any FAIL\n# Exit: 2 usage · 3 env\n' > "$FK/toolbelt/lint-two.sh"
+  run bash "$GEN" "$FK"
+  [ "$status" -eq 0 ]
+  row=$(grep -F 'toolbelt/lint-two.sh' "$FK/toolbelt/INDEX.md")
+  # shellcheck disable=SC2016  # literal backticks: Markdown code span
+  [[ "$row" == *'| `lint-two.sh <src>`<br>`lint-two.sh --strict <src>` |'* ]]
+  [[ "$row" == *'| 0 clean · 1 any FAIL<br>2 usage · 3 env |'* ]]
+}
+
+@test "GLI-cap: the description joins at most header lines 2-5 (documented cap)" {
+  printf '#!/usr/bin/env bash\n# lint-long.sh — one\n# two\n# three\n# four\n# five-is-past-the-cap\n#\n# Usage: lint-long.sh <src>\n# Exit: 0 clean\n' > "$FK/toolbelt/lint-long.sh"
+  run bash "$GEN" "$FK"
+  [ "$status" -eq 0 ]
+  row=$(grep -F 'toolbelt/lint-long.sh' "$FK/toolbelt/INDEX.md")
+  [[ "$row" == *'| one two three four |'* ]]
+  grep -q 'lines 2-5' "$GEN"
+}
+
+@test "GLI-awkfail: an awk failure exits 3 and leaves the committed INDEX.md untouched" {
+  _mklint lint-alpha.sh "flags alpha things."
+  bash "$GEN" "$FK"
+  cp "$FK/toolbelt/INDEX.md" "$TMPDIR_T/before.md"
+  _mklint lint-new.sh "new lint, index would change."
+  mkdir -p "$TMPDIR_T/bin"
+  printf '#!/bin/sh\nexit 2\n' > "$TMPDIR_T/bin/awk"
+  chmod +x "$TMPDIR_T/bin/awk"
+  PATH="$TMPDIR_T/bin:$PATH" run bash "$GEN" "$FK"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"awk"* ]]
+  cmp "$TMPDIR_T/before.md" "$FK/toolbelt/INDEX.md"
+}
+
+@test "GLI-timers: the committed INDEX row for lint-timers carries its full exit contract (2 usage · 3 env)" {
+  # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
+  run grep -F '| `toolbelt/lint-timers.sh` |' "$KIT/toolbelt/INDEX.md"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"2 usage · 3 env |"* ]]
+}
