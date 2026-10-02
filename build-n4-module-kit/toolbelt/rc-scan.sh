@@ -22,9 +22,10 @@
 #                            attribute on button/input/select/textarea, in a file that mentions a
 #                            login/auth/step-up gate (a disabled control dispatches no click, so the
 #                            gate never opens; mark it with a class / aria-disabled instead). `auth`
-#                            counts only at a word or camelCase start (auth, Auth, authToken,
-#                            isAuthenticated, AUTH_URL, authorize) — never inside author/authority;
-#                            a lowercase-glued form (unauthorized) is not seen.
+#                            counts at a word or camelCase start (auth, Auth, authToken,
+#                            isAuthenticated, AUTH_URL, authorize) and after the gate prefixes
+#                            o / re / un (OAuth, oauth2, reauth, unauthorized) — never inside
+#                            author/authority.
 #                            [ev: retro dashboard-frontend-reliability-rules Δ7]
 #                            [ev: retro panccadia-persistent-config-hoa Δ4]
 #   fetch-no-signal    WARN  `fetch(` whose argument list carries no `signal` (nor do the 3 lines
@@ -149,16 +150,18 @@ FNR == NR {
 }
 
 function allowed(id) { return index($0, "rc-scan: allow " id) > 0 }
-# A login/auth/step-up gate mention. `auth` only at a word or camelCase start, and not author/authority
-# (authorize/authorization still count).
-function mentions_gate(s,    t, pre, nxt, cap) {
+# A login/auth/step-up gate mention. `auth` at a word or camelCase start, or after the gate prefixes
+# o / re / un (OAuth, oauth2, reauth, unauthorized), and not author/authority (authorize still counts).
+function mentions_gate(s,    t, pre, pre2, nxt, cap, start) {
     if (tolower(s) ~ /login|step-?up/) return 1
     t = s
     while (match(t, /[Aa][Uu][Tt][Hh]/)) {
         pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+        pre2 = (RSTART > 2) ? tolower(substr(t, RSTART - 2, 2)) : ""
         nxt = tolower(substr(t, RSTART + 4, 4))
         cap = (substr(t, RSTART, 1) == "A")
-        if ((pre !~ /[A-Za-z0-9]/ || (cap && pre ~ /[a-z0-9]/)) && (nxt !~ /^or/ || nxt ~ /^ori[sz]/)) return 1
+        start = (pre !~ /[A-Za-z0-9]/ || (cap && pre ~ /[a-z0-9]/) || tolower(pre) == "o" || pre2 == "re" || pre2 == "un")
+        if (start && (nxt !~ /^or/ || nxt ~ /^ori[sz]/)) return 1
         t = substr(t, RSTART + 4)
     }
     return 0
