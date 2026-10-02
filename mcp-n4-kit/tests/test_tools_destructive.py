@@ -39,6 +39,13 @@ class DestructiveCase(ttw.WriteTestCase):
     def journal(self):
         return self.srv.ctx.write.journal
 
+    def patch(self, obj, attr, new):
+        """Replace obj.attr until this test ends; the original is restored on cleanup."""
+        patcher = mock.patch.object(obj, attr, new)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return patcher
+
 
 class TestRemoveComponent(DestructiveCase):
     def test_plan_snapshots_the_subtree_as_data_and_sends_nothing(self):
@@ -91,7 +98,7 @@ class TestRemoveComponent(DestructiveCase):
         self.add("Keep")
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name="Keep")
         orig = self.fake._sync
-        self.fake._sync = lambda op: [] if op["nm"] == "v" else orig(op)
+        self.patch(self.fake, "_sync", lambda op: [] if op["nm"] == "v" else orig(op))
         out = self.ok("n4_remove_component", parent_ord=FOLDER, name="Keep", dry_run=False,
                       confirmation_token=plan["confirmation_token"])
         self.assertEqual(out["verdict"], "mismatch")
@@ -355,7 +362,7 @@ class TestRollback(DestructiveCase):
                 node = self.fake.folder.child(nn)
                 node.children = [c for c in node.children if c.name != "Tgt"]
             return res
-        self.fake._sync = drop_tgt
+        self.patch(self.fake, "_sync", drop_tgt)
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1})
 
@@ -389,7 +396,7 @@ class TestRollback(DestructiveCase):
         def spy(arg):
             seen.append([e["phase"] for e in self.lines("journal.jsonl")])
             return orig(arg)
-        self.fake._check_link = spy
+        self.patch(self.fake, "_check_link", spy)
         self.rollback(removed["batch_id"])
         self.assertIn("relink-intent", seen[-1])
 
@@ -442,7 +449,7 @@ class TestRollback(DestructiveCase):
 
     def test_an_ambiguous_relink_reply_marks_the_batch_in_doubt(self):
         nn, removed = self.removed_group()
-        self.fake._check_link = lambda arg: [{"r": "huh"}]  # no verdict, no link name
+        self.patch(self.fake, "_check_link", lambda arg: [{"r": "huh"}])  # no verdict, no link name
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["relinks"], {"restored": 0, "skipped": 1, "ambiguous": 1})
         self.assertEqual(self.journal().read(back["batch_id"])["state"], "in-doubt")
@@ -452,7 +459,7 @@ class TestRollback(DestructiveCase):
     def sent_adds(self):
         sent = []
         orig = self.fake._sync
-        self.fake._sync = lambda op: (sent.append(op), orig(op))[1]
+        self.patch(self.fake, "_sync", lambda op: (sent.append(op), orig(op))[1])
         return sent
 
     def test_the_station_model_rejects_an_add_that_nests_components(self):
@@ -586,7 +593,7 @@ class TestRollback(DestructiveCase):
                 ext.children.append(fake_station._Node("tuningPolicyName", "baja:String",
                                                        "Fast"))
             return res
-        self.fake._sync = default_fast
+        self.patch(self.fake, "_sync", default_fast)
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "verified", back)
         self.assertNotIn("frozen_config_not_restored", back)
@@ -649,15 +656,7 @@ class TestRollback(DestructiveCase):
         nn, gh = self.writable_group()
         self.configure_proxy_ext(nn)
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
-        client = self.srv.ctx.session.client
-        orig = client.load_tree
-
-        def failing(ord_str, depth=2, **kw):  # only the frozen-child read-back fails
-            if depth == 7:
-                raise box.BoxError("HTTP 503 from station", box.CHANNEL, "loadSlots")
-            return orig(ord_str, depth=depth, **kw)
-        client.load_tree = failing
-        with mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
+        with self.fail_frozen_reads("HTTP 503 from station"):  # only the frozen read-back
             back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "unverified", back)
         gaps = back["frozen_config_not_restored"]
@@ -665,8 +664,11 @@ class TestRollback(DestructiveCase):
         self.assertTrue(all(g["readback_error"] == "HTTP 503 from station" for g in gaps))
         self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
 
+    @contextlib.contextmanager
     def fail_frozen_reads(self, message, only=None):
-        """Make the frozen-child read-back (depth 7) raise; `only` limits it to ORDs ending so."""
+        """Make the frozen-child read-back (depth 7) raise; `only` limits it to ORDs ending so.
+
+        Both patches are undone when the block exits, even on failure."""
         client = self.srv.ctx.session.client
         orig = client.load_tree
 
@@ -674,8 +676,9 @@ class TestRollback(DestructiveCase):
             if depth == 7 and (only is None or ord_str.endswith(only)):
                 raise box.BoxError(message, box.CHANNEL, "loadSlots")
             return orig(ord_str, depth=depth, **kw)
-        client.load_tree = failing
-        return mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7)
+        with mock.patch.object(client, "load_tree", failing), \
+                mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
+            yield
 
     def test_a_frozen_check_read_error_is_scrubbed_of_the_session_secret(self):
         """The gap's readback_error goes through ctx.scrub (issue #190 R3-001)."""
@@ -701,8 +704,14 @@ class TestRollback(DestructiveCase):
         with self.fail_frozen_reads("HTTP 503 from station", only="/En"):
             back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "unverified", back)
-        gaps = {g["path"].rsplit("/", 2)[-2]: g for g in back["frozen_config_not_restored"]}
+        raw = back["frozen_config_not_restored"]
+        self.assertEqual(len(raw), 2, raw)  # exactly one gap per frozen child, no duplicates
+        gaps = {g["path"].rsplit("/", 2)[-2]: g for g in raw}
         self.assertEqual(sorted(gaps), ["En", "Sp"])
+        # the unread child carries only its read error; the real gap carries the diff
+        self.assertEqual(sorted(gaps["En"]), ["captured", "path", "readback_error", "type"])
+        self.assertEqual(sorted(gaps["Sp"]),
+                         ["captured", "live_type", "missing", "path", "slots", "type"])
         self.assertEqual(gaps["En"]["readback_error"], "HTTP 503 from station")
         self.assertNotIn("missing", gaps["En"])
         self.assertEqual((gaps["Sp"]["slots"], gaps["Sp"]["missing"]),
@@ -722,7 +731,7 @@ class TestRollback(DestructiveCase):
                 node = self.fake.folder.child(nn)
                 node.children = [c for c in node.children if c.name != "Src"]
             return res
-        self.fake._sync = drop_src
+        self.patch(self.fake, "_sync", drop_src)
         with self.fail_frozen_reads("HTTP 503 from station"):
             back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "mismatch", back)
@@ -775,7 +784,7 @@ class TestRollback(DestructiveCase):
                 node = self.fake.folder.child(nn)
                 node.children = [c for c in node.children if c.name != "Src"]
             return res
-        self.fake._sync = drop_src
+        self.patch(self.fake, "_sync", drop_src)
         back = self.rollback(removed["batch_id"])
         self.assertEqual(back["verdict"], "mismatch", back)
         (lost,) = back["link_inputs_not_restored"]
@@ -843,7 +852,7 @@ class TestRollback(DestructiveCase):
         def spy(op):
             seen.append((op["n"], [e["phase"] for e in self.lines("journal.jsonl")]))
             return orig(op)
-        self.fake._sync = spy
+        self.patch(self.fake, "_sync", spy)
         before = self.srv.ctx.session.writes_executed
         back = self.rollback(removed["batch_id"])
         src_seen = dict(seen)["Src"]
@@ -861,7 +870,7 @@ class TestRollback(DestructiveCase):
             if op["nm"] == "a" and op["n"] == "Tgt":
                 raise ValueError("Unable to process request.")
             return orig(op)
-        self.fake._sync = reject_tgt
+        self.patch(self.fake, "_sync", reject_tgt)
         plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
         text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
                         confirmation_token=plan["confirmation_token"])
@@ -882,8 +891,7 @@ class TestRollback(DestructiveCase):
             if depth == tools_write.SNAPSHOT_DEPTH:  # only the relink phase loads this deep
                 raise box.BoxError("boom", box.CHANNEL, "loadSlots")
             return orig(ord_str, depth=depth, **kw)
-        self.box.load_tree = flaky
-        self.addCleanup(setattr, self.box, "load_tree", orig)
+        self.patch(self.box, "load_tree", flaky)
         plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
         text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
                         confirmation_token=plan["confirmation_token"])
@@ -915,11 +923,8 @@ class TestRollback(DestructiveCase):
                     else:
                         node.children = [c for c in node.children if c.name != "wsAnnotation"]
                 return res
-            self.fake._sync = wrapped
-            try:
+            with mock.patch.object(self.fake, "_sync", wrapped):
                 return self.rollback(gone["batch_id"])["verdict"]
-            finally:
-                self.fake._sync = orig
         self.assertEqual(tamper("type"), "mismatch")
         self.assertEqual(tamper("annotation"), "mismatch")
 
@@ -928,15 +933,14 @@ class TestRollback(DestructiveCase):
     def break_readback_after_sync(self):
         sent = []
         orig_sync = self.fake._sync
-        self.fake._sync = lambda op: (sent.append(op), orig_sync(op))[1]
+        self.patch(self.fake, "_sync", lambda op: (sent.append(op), orig_sync(op))[1])
         orig_load = self.box.load_tree
 
         def flaky(*a, **k):
             if sent:
                 raise box.BoxError("boom", box.CHANNEL, "loadSlots")
             return orig_load(*a, **k)
-        self.box.load_tree = flaky
-        return lambda: setattr(self.box, "load_tree", orig_load)
+        return self.patch(self.box, "load_tree", flaky).stop  # heal early; cleanup is a no-op
 
     def test_a_rollback_accepted_but_unverified_cannot_be_retried(self):
         self.add("Pump")
@@ -975,12 +979,11 @@ class TestRollback(DestructiveCase):
     def test_in_doubt_batch_is_refused_and_shows_the_intent(self):
         plan = self.dry("n4_create_component", parent_ord=FOLDER, name="Pump",
                         type="kitControl:NumericConst")
-        self.fake.hook = lambda frame: (500, b"boom", {}) if any(
-            m.get("b", {}).get("sck") == "syncTo" for m in frame["m"]) else None
-        self.err("n4_create_component", parent_ord=FOLDER, name="Pump",
-                 type="kitControl:NumericConst", dry_run=False,
-                 confirmation_token=plan["confirmation_token"])
-        self.fake.hook = None
+        with mock.patch.object(self.fake, "hook", lambda frame: (500, b"boom", {}) if any(
+                m.get("b", {}).get("sck") == "syncTo" for m in frame["m"]) else None):
+            self.err("n4_create_component", parent_ord=FOLDER, name="Pump",
+                     type="kitControl:NumericConst", dry_run=False,
+                     confirmation_token=plan["confirmation_token"])
         batch = self.lines("journal.jsonl")[0]["batch_id"]
         text = self.err("n4_rollback", batch_id=batch)
         self.assertIn("in-doubt", text)
