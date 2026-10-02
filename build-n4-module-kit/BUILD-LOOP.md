@@ -23,10 +23,41 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - **Station live?** A running station LOCKS its `modules/<mod>.jar`. Free the lock FIRST (close Workbench, or stop a non-production station) and build directly; use a mirror (`toolbelt/mirror-niagara-home.sh`) ONLY for a live production supervisor you must not stop — see build-verify.md §Building against a running station. [ev: retro coldroompan-dashboardpan-freeze-stat-leds · B2]
 - **This module's build target may differ from the last one's — read THIS module's `gradle.properties` + `settings.gradle.kts`:** a sibling in the same client repo can target a different `niagara_home` + plugin (e.g. ColdRoomPan → PowerB 4.15.3 / 7.6.22 vs CompPan → Honeywell 4.14 / 7.6.17); never carry over the previous module's target. [ev: retro module-palette-and-build-target · B6]
 
+### 0.c Classify the change by blast radius — BEFORE the first write
+Pick the tier from what the change can MOVE in the plant, not from its file count or effort. Record the tier and
+its evidence (which slots control logic reads — staging, commands, modes — and whether the new ones are among them)
+as the FIRST line of the feature doc. The tier sets the ceremony and a wall-clock budget; the non-skippable check
+floor (§5) applies to every tier.
+
+| Tier | What it covers | Budget | Ceremony |
+|---|---|---|---|
+| **P0 Cosmetic** | HMI copy, CSS, a default value, a comment; no slot/schema change | ≤ 10 min | inline, no feature doc, no delegated writer; build the one touched group; structural readback only |
+| **P1 Additive indicator** | a new READONLY/alarm-only slot + its UI mirror, never read by staging/commands/modes | ≤ 25 min | feature doc, one writer given the recipe map (`skill/SKILL.md` § Recipe), one focused pure test of the new latch run with the feature ENABLED, touched groups built |
+| **P2 Control** | changes a state machine, staging, rotation, protection, defrost | ~45-60 min | the sequence restated in field terms and confirmed first (`types/logic.md` § RT control logic), the Behavior decisions gate (§1), the design-shard checklist (`ORCHESTRATION.md` §3), full TDD, native review |
+| **P3 Structural / deploy risk** | a facet/unit, persistence, schema rename, boot path, link-target flags | no cap | P2 + the structural checks before deploy (unit exists on the target, no `READONLY` on a link-in target, consumer-impact notice) + a boot smoke on the target distribution and version |
+
+- Classify BEFORE the first write; reclassify (and say so in the feature doc) when exploration shows the change
+  reaches a higher tier. A P0/P1 change that turns out to touch a slot control logic reads is P2.
+- A run that exceeds its tier budget records the overrun (planned vs actual, and which phase ate the time) as retro
+  input — an overrun is evidence to tune the budgets, not a failure to absorb silently.
+- Speed comes from the tier and from reused maps, never from dropping the floor. `[ev: retro panccadia-commissioning-lessons Δ14]` `[ev: retro change-tier-time-budgets Δ1]`
+- **Size review candidates at planning time:** when the feature forecasts more than ~1000 authored lines (adapter +
+  generated slotomatic region count), plan one native review per work-unit commit from the start — review each commit
+  from a detached worktree (`git worktree add --detach <wt> <commit>`) against `--base-ref <parent>` — instead of
+  discovering a lens context-budget stop at the end on the accumulated diff. `[ev: retro comppan-pressure-staging Δ1]`
+
 ## 1. Design
 - State the module's job, its profiles (rt/ux/wb), and the slot/endpoint contract in one paragraph.
 - For a dashboard: the facade slots (display link-in + writable config), the servlet routes, the JSON `{v,st}` contract, the HMI resolution.
 - **New module skeleton:** run `toolbelt/scaffold-module.sh <ModuleName> <out-dir>` to emit a pre-slotomatic tree from `fixtures/MinimalPan`; exits 0 ok / 2 usage / 3 env (skeleton missing). [ev: retro tool-integration]
+- **Behavior decisions — HARD gate before the first source write of any rt control, protection, automatic action
+  or operator-facing UI change:** list every behavior the code must decide that the user has not stated explicitly
+  (generate the list from the question catalog in `METHODOLOGY.md` § Domain correctness, not from memory). Each one
+  becomes a question with 2-4 concrete options — the recommended one first and marked, each with its field
+  consequence in plain terms — plus a free "your own option" answer (format: `skill/SKILL.md` Execution Steps). No
+  behavior on the list is coded until the user answers. Record the answers in a `## Behavior decisions` table in
+  the feature doc (question, options shown, answer, who, date). This extends the field-terms confirmation of an
+  ambiguous phrase (`types/logic.md` § RT control logic) to EVERY unstated behavior. `[ev: retro behavior-decisions-ask-dont-assume Δ1]`
 
 ### 1.a New-module bring-up (before the first build)
 
@@ -54,6 +85,9 @@ After `scaffold-module.sh` generates the skeleton, three steps MUST happen befor
 - Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb. For framework-extension authoring (custom service, ORD scheme, point extension, analytics node, job, watchdog): see `types/logic-authoring.md` (companion to `types/logic.md`).
 - **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research authoring corpus (B729–B760). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
+- **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
+  cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling
+  slot you are mirroring instead of re-tracing the path. `[ev: retro change-tier-time-budgets Δ2]`
 
 ## 3. Preview (UI types) — BEFORE compiling
 - `python3 /home/cristian/niagara-research/tools/dashboard-preview.py --rc <mod>/src/rc --prefix /<mount>`
@@ -68,6 +102,9 @@ After `scaffold-module.sh` generates the skeleton, three steps MUST happen befor
 - A `gradle :jar` with the default JDK is NOT a build.
 
 ### 4.a Gradle task matrix (`niagara-module` plugin tasks) — when to run each
+
+In the inner loop run only what the tier needs (P0: build the touched group; P1: the new latch test + that module's
+existing pure suite); the full builds and the non-skippable floor run once at task close — §5. `[ev: retro change-tier-time-budgets Δ3]`
 
 | Task | Touches | When required |
 |------|---------|---------------|
@@ -128,6 +165,12 @@ Do not count the compile-only pass as test execution.  `[ev: corpus B961 §961.3
 
 ## 5. Verify gate (before "done")
 - Run `METHODOLOGY.md` (common) + the `types/<type>.md` checklist against the built module. Every item pass, or fix it.
+- **Non-skippable floor — survives an explicit request for maximum speed:** the build (`toolbelt/build.sh`),
+  `toolbelt/verify-module.sh`, `toolbelt/schema-risk.sh`, one focused RED/GREEN on the changed behavior, and — before
+  a production deploy — the cold-boot smoke on a station of the target distribution and version. Every tier runs it
+  (§0.c). Run it ONCE at task close, not per edit: speed comes from not re-running unaffected suites mid-loop, never
+  from skipping the floor. A session under speed pressure records in the feature doc, under `## Checks skipped`,
+  exactly which OTHER checks it skipped and why — never left implicit in the commit history. `[ev: retro change-tier-time-budgets Δ3]` `[ev: retro panccadia-commissioning-lessons Δ12]`
 - **Pre-gate (run before `verify-module.sh`) — the lint list is GENERATED, not enumerated here:** `toolbelt/INDEX.md` lists every `toolbelt/lint-*.sh` with what it checks, its usage, its exit contract, its evidence and whether `report-module.sh` already runs it (**Auto** column). `toolbelt/build.sh` → `report-module.sh` runs the Auto=`yes` lints per profile; run each Auto=`no` lint by hand on every profile its usage names (e.g. a `<wb-src-root>` lint on each -wb profile with Java sources, an `<ux-src-root>` lint on each -ux profile with an rc/ SPA). A new or changed lint updates its own header (line 2 `# <name> — <what it checks>`, a `# Usage:` line, an `# Exit:`/`# Exits:` line, its `[ev: ...]` tags), then `toolbelt/gen-lint-index.sh` regenerates the index; `toolbelt/gen-lint-index.sh --check` (CI) exits 1 on a stale index. Never enumerate or count lints in this file — that inline list was a merge-conflict hotspot that drifted. `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`
 - **Non-lint pre-gate tools (not in the lint index):** `toolbelt/slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>` (type-set lexicon coverage; empty or missing lexicon with declared types exits 1; a missing `*Panel`/`*Facade` type — every missing type under `--facade` — FAILs by default) [ev: retro panccadia-commissioning-lessons Δ9]; `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro tool-integration] [ev: retro campaign7-plano]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present); `toolbelt/rc-scan.sh <ux-artifact-dir> [--strict] [--profile <ui_profile>] [--legacy]` (browser-resource lint over rc/ assets: hardcoded ORD/host literals, bare .catch(()=>{}), null display branches, plus the frontend-standard checks browser-floor (FAIL under --profile hmi|both), disabled-gate, fetch-no-signal, setinterval-async, innerhtml-server, datauri-budget, orphan-page, inline-block-size — check ids and severities in its header; exit 1 = FAIL) [ev: retro campaign8-rc-scan] [ev: retro dashboard-frontend-reliability-rules Δ5]; `toolbelt/generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>]` (scaffolds `docs/wiring-map.md` from the facade @NiagaraProperty OPERATOR-config + SUMMARY-display slots, each row with the Workbench display name from the lexicon and a full-ord column, for §6.b commissioning verification) [ev: retro live-commissioning-verification-gaps]; `toolbelt/lib/method-boundary.sh` (shared method-boundary awk library — sourced, not invoked; fragment rule: edit the shared fragment, never overwrite a consumer lint's parser block separately) [ev: retro campaign11-shared-method-boundary]; `toolbelt/eslint.config.mjs` (the kit ESLint flat config for `-ux` rc js — ecmaVersion 2020 = the panel floor, `max-lines-per-function` 60, `no-unused-vars`, `eqeqeq`, `no-console` except error; run by report-module.sh; pinned install `npm install --prefix toolbelt/eslint`, which also provides acorn for `lint-vendor-floor.sh`) [ev: retro dashboard-frontend-standard Δ10]; `node toolbelt/hmi-sweep.js --url <preview-url> [--scenario name=query] [--subtab <sel>] [--target <sel>]` (HMI no-scroll + target-visibility sweep over every nav view at 1280×800; puppeteer-core + Chrome, exit 4 when unavailable) [ev: retro comppan-fase2-amps-alarms Δ3].
 - **Lint doctrine the index rows do not carry (rules, not an index — do not append new lints here):** run `toolbelt/lint-guard-pins.sh --strict` as the LAST pre-gate step; every lint declares a `# Mutation: <fixture-id> -- <what it flips>` guard-pin resolved against a bats `@test` [ev: retro campaign11-lint-guard-pins]. `lint-timers.sh` splits usage (exit 2) from env (exit 3) — the K20 per-lint contract, `lint-timers.sh:44/:58/:63` [ev: retro campaign10-lint-timers-scope]. `lint-timers.sh`, `lint-silent-protection.sh` and `lint-ext-writable-shape.sh` share the PEAK-depth parser in `lib/method-boundary.sh` [ev: retro campaign11-shared-method-boundary]. `lint-ext-writable-shape.sh` exempts PER SLOT: a `do<Action>()` body must write THAT slot (S22 contract change; a newly reported slot is a fixed false negative, not a regression) [ev: retro campaign10-ext-writable-per-slot]. `lint-write-path.sh` semantics: uncovered OPERATOR slot FAIL always exits 1; STALE (matrix row naming a slot absent from all source names, per-row, `[concept]` exempts only the marked row) and DRIFT (a `[concept]` row whose slot IS in the covered set) are advisory, promoted to exit 1 by `--strict`; `--bog` adds link-traced dashboard slots [ev: retro campaign8-write-path] [ev: retro campaign10-write-path-stale] [ev: retro campaign11-concept-row-drift].
@@ -176,6 +219,10 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 ## 7. Retro + close (HARD close gate — not optional)
 - **Lead merge/settle order:** merge ff-only → verify `git log -1` equals the blessed tip → THEN settle the ledger; a ledger settle on a reported-but-unverified merge records the wrong evidence revision. For parallel workers: rebase onto the new main tip before the QA ping so the blessed tip is the one that merges, not the pre-rebase base. `[ev: retro campaign8-close-process-meta-lessons]`
 - **Every run ends by writing its retro** — run `toolbelt/new-retro.sh <module|kit> <slug>` and fill the stub (§1); a defect in a KIT CHECK or DOCTRINE additionally opens `toolbelt/kit-ticket.sh "<one line>"`. The retro is a PRECONDITION for "done", not an at-STOP afterthought — `toolbelt/sweep-build-state.sh --age` at orient (BUILD-LOOP §0.a) surfaces the accrued retro debt so it cannot be skipped across a continuous chain. [ev: retro campaign8-retro-loop]
+- **Assumption register at close:** every behavior still decided without an explicit user answer (deferred by the
+  user, or discovered late) is listed in the feature doc under `## Assumptions still open` and repeated in the close
+  message as "Assumptions I made — confirm or change". An empty register is stated explicitly ("none"), never
+  omitted. `[ev: retro behavior-decisions-ask-dont-assume Δ4]`
 - **Update `BUILD-STATE.md`** for the module: refresh the `build-state.v1` envelope (`last_build`, `verify_gate`, `deployed`, `bytecode_major`, `signed`, `last_commit`, `last_session`, `open_issues`), set `retro_required` honestly, and set `retro_pending`.
 - **Kit-infrastructure work** (changing the kit itself — toolbelt, type guides, methodology — not building a module) has no module build to record: update the `kit` self-section of `BUILD-STATE.md` instead, under the same close gate.
 - A session that changed KIT files is NOT "done" until ONE of:
