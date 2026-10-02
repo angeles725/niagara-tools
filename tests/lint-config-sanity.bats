@@ -98,6 +98,20 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"lpCutout\"=0"* ]]
 }
 
+# polish-2026-10-02 P2c (#199, P2b review advisories): a cutout name may carry a unit or qualifier
+# suffix (lpCutoutPsi, lowLimitBar); only timer suffixes (Delay/Time/Sec...) are excluded.
+# Named mutation LCS-floor-suffix (anchor the cutout token to the name end again) -> LCS-floor-suffix flips.
+@test "LCS-floor-suffix: comp2MinOn=1 beside lpCutoutPsi=0 or lowLimitBar=0 -> CS4 WARN" {
+  local v
+  for v in lpCutoutPsi lowLimitBar; do
+    only FloorCamelNames.java
+    sed -i "s/\"lpCutout\"/\"$v\"/" "$ONE/FloorCamelNames.java"
+    run "$LCS" "$ONE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"$v\"=0"* ]] || { echo "$v -> $output"; return 1; }
+  done
+}
+
 @test "LCS-usage: no argument -> exit 3 (usage)" {
   run "$LCS"
   [ "$status" -eq 3 ]

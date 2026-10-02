@@ -70,7 +70,7 @@ setup() {
 # polish-2026-10-02 P2b (#199 WU6b): generate-wiring-map.sh scaffolds Table 2 from every SUMMARY/READONLY
 # slot, including slots the component sets itself (timer anchors, computed status) with a `_(fill)_`
 # Source RT slot. Only a row that names a source slot is a link-in target; an unfilled scaffold row or a
-# Source cell marked self / n/a / — is not. Named mutation LTF-src (harvest every first-column slot
+# Source cell marked self / n/a / — is not. Named mutation LTF-selfset (harvest every first-column slot
 # again) -> LTF-selfset flips.
 @test "LTF-selfset: Table 2 rows with an unfilled or self Source RT slot are not link-in targets -> exit 0" {
   local m="$BATS_TEST_TMPDIR/selfset.md"
@@ -89,6 +89,30 @@ MD
     [ "$status" -eq 0 ] || { echo "source cell '$v' -> $output"; return 1; }
   done
   sed -i "s#^| \`evap2InDrip\` | Evaporadora 2 en goteo | [^|]* |#| \`evap2InDrip\` | Evaporadora 2 en goteo | \`inDrip\` |#" "$m"
+  run "$LTF" --wiring-map "$m" "$FX/map/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"LTF1: link-in target \"evap2InDrip\" (wiring-map Table 2)"* ]]
+}
+
+# polish-2026-10-02 P2c (#199, P2b review advisories): the self-set sentinels are whole-cell values
+# (`_(fill)_`, self, self-set, n/a, none, a dash, empty), not substrings, so a real source whose name
+# contains "fill" or "self" is still a link-in target; and only the table's header row picks the Source
+# column, so a data row whose display name starts with "Source" stays a target.
+# Named mutations: LTF-srcname (substring sentinels again) -> LTF-srcname flips; LTF-header (detect the
+# header on any row) -> LTF-header flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the generated map, not expansions
+@test "LTF-srcname: a Source RT slot named fillLevel / selfTestOk / refillDone is a real source -> LTF1 FAIL" {
+  local m="$BATS_TEST_TMPDIR/srcname.md" v
+  for v in '`fillLevel`' '`selfTestOk`' 'refillDone'; do
+    printf '## Table 2 — SUMMARY display slots (control → facade)\n\n| Facade slot | Workbench display name | Source RT slot | Full ord | Notes |\n|---|---|---|---|---|\n| `evap2InDrip` | Drip | %s | | |\n' "$v" > "$m"
+    run "$LTF" --wiring-map "$m" "$FX/map/src"
+    [ "$status" -eq 1 ] || { echo "source $v -> $output"; return 1; }
+  done
+}
+# shellcheck disable=SC2016  # literal markdown backticks in the generated map, not expansions
+@test "LTF-header: a data row whose display name starts with Source is still a target (no column shift)" {
+  local m="$BATS_TEST_TMPDIR/hdr.md"
+  printf '## Table 2 — SUMMARY display slots (control → facade)\n\n| Facade slot | Workbench display name | Source RT slot | Full ord | Notes |\n|---|---|---|---|---|\n| `evap2InDrip` | Source pressure drip | `inDrip` | | |\n' > "$m"
   run "$LTF" --wiring-map "$m" "$FX/map/src"
   [ "$status" -eq 1 ]
   [[ "$output" == *"LTF1: link-in target \"evap2InDrip\" (wiring-map Table 2)"* ]]

@@ -17,7 +17,8 @@
 #
 #   CS4 WARN: a nonzero permanent-minimum floor default (...MinStagesOn / ...MinOn name on a
 #             camelCase boundary, NOT a BRelTime or *Time/*Delay/*Sec short-cycle timer) coexists in
-#             the same class with a *LowLimit / *Cutout (name ending) default of 0 (= protection disabled). Either default alone is fine; together one
+#             the same class with a *LowLimit* / *Cutout* (camelCase token, unit suffix allowed, timer
+#             suffix excluded) default of 0 (= protection disabled). Either default alone is fine; together one
 #             unit is held on with no LP cutout ("pulling with every solenoid closed").
 #             [ev: retro panccadia-commissioning-lessons Δ3]
 #
@@ -50,6 +51,7 @@
 # Mutation: LCS-interval -- removes interval<=duration comparison so CS1 shape passes instead of FAIL
 # Mutation: LCS-floor -- dropping the floor x disabled-cutout pairing lets the CS4 shape pass silently
 # Mutation: LCS-floor-name -- matching minon/cutout as substrings again WARNs on adminOnline / minOnTime / cutoutDelay
+# Mutation: LCS-floor-suffix -- anchoring the cutout token to the name end misses lpCutoutPsi / lowLimitBar
 set -u
 LC_ALL=C
 export LC_ALL
@@ -236,13 +238,15 @@ while IFS= read -r f; do
     if (pname == "" || dv == "") next
     # camelCase word boundaries, not substrings [polish-2026-10-02 P2b, #199 WU6b]: a floor is
     # min(Stages)On / ...Min(Stages)On (+ digits or a capitalised suffix), never a *Time/*Delay/*Sec
-    # timer; an LP cutout floor ENDS in LowLimit or Cutout (+ digits). adminOnline, minOnTime and
-    # cutoutDelay are not matched.
+    # timer; an LP cutout floor carries a LowLimit / Cutout token (+ digits or a unit/qualifier suffix
+    # such as Psi or Bar), never a *Time/*Delay/*Sec timer. adminOnline, minOnTime and cutoutDelay are
+    # not matched; lpCutoutPsi and lowLimitBar are. [polish-2026-10-02 P2b/P2c]
     if ((pname ~ /(^min|Min)(Stages)?On([A-Z0-9]|$)/) && pname !~ /(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$/ &&
         index(buf, "BRelTime") == 0 && dv + 0 != 0) {
       nf++; fname[nf] = pname; fline[nf] = pline; fval[nf] = dv
     }
-    if (pname ~ /(^lowLimit|LowLimit|^cutout|Cutout)[0-9]*$/ && dv + 0 == 0) { nc++; cname[nc] = pname }
+    if (pname ~ /(^lowLimit|LowLimit|^cutout|Cutout)([A-Z0-9]|$)/ &&
+        pname !~ /(Time|Delay|Secs?|Seconds|Ms|Millis|Mins?|Minutes)[0-9]*$/ && dv + 0 == 0) { nc++; cname[nc] = pname }
   }
   END {
     for (i = 1; i <= nf; i++) for (j = 1; j <= nc; j++)
