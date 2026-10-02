@@ -16,11 +16,20 @@
 # Private-field exemption: a private boolean field is NEVER a surface.
 # Exactly ONE WARN per trip site (dedupe on <file>:<line>).
 #
+# Console-only advisory: a trip whose ONLY surface is a console alarm (Pattern A BAlarmSourceExt /
+# BAlarmRecord, or Pattern B BIAlarmSource adapter) with no local status/reason slot write is not
+# silent, but has no surface while the alarm console is unattended. It gets one row
+#   ADVISORY  lint-silent-protection  <file>:<line>  console-only: <method> forces <output>/sheds stage
+#         -- surfaced only by a console alarm; add a local *Status/*Reason SUMMARY slot
+# Its own ADVISORY severity (not WARN) keeps the WARN contract "a trip with NO surface" intact for
+# existing consumers and never sets the --strict exit 1. [ev: retro alarm-console-design Δ3]
+#
 # Exits: 0 no WARN (or WARN without --strict) | 1 any WARN under --strict | 3 usage/env
 # Dot-dirs excluded (D9b). VCS-free by design.
 # [ev: corpus B824]  [ev: retro campaign9-silent-protection]
 # Mutation: S23-pos -- removes Pattern-B alarm-adapter exemption, causing false-WARN on alarmed trips
 # Mutation: S23-and -- removes the BIAlarmSource check, allowing bare newOffnormalAlarm to suppress WARN
+# Mutation: SP-console -- drops the console-only row, so an alarm-only trip loses its local-surface advisory
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
@@ -417,9 +426,9 @@ END {
         # (1) this class or its B<Pure> adapter is in ALARM_CLASSES (Pattern A or B, D3c)
         # Pattern A: class itself in ALARM_CLASSES (BAlarmSourceExt/BAlarmRecord in this file)
         # Pattern B adapter->pure follow: B+this_class in ALARM_CLASSES (BIAlarmSource + alarm method)
-        if (in_list(this_class, ALARM_CLASSES) || in_list("B" this_class, ALARM_CLASSES)) {
-            surfaced = 1
-        }
+        # The console alarm is tracked apart from the LOCAL surfaces (ii-B), (2), (3) below so an
+        # alarm-only trip can get the console-only advisory row.
+        alarmed = (in_list(this_class, ALARM_CLASSES) || in_list("B" this_class, ALARM_CLASSES)) ? 1 : 0
 
         # (ii-B) condition field is surfaced via cross-file field->slot follow
         if (!surfaced && trip_cond_field[t] != "" && in_list(trip_cond_field[t], SURF_WRITE_FIELDS)) {
@@ -453,7 +462,12 @@ END {
             }
         }
 
-        if (!surfaced) {
+        if (!surfaced && alarmed) {
+            printf "ADVISORY  lint-silent-protection  %s:%d  console-only: %s forces %s/sheds stage" \
+                " -- surfaced only by a console alarm; add a local *Status/*Reason SUMMARY slot" \
+                " (advisory, unattended console)\n",
+                FILE, tl, tm, trip_out[t]
+        } else if (!surfaced) {
             printf "WARN  lint-silent-protection  %s:%d  %s forces %s/sheds stage on condition" \
                 " -- no status/reason/alarm surface in scope;" \
                 " add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt\n",
@@ -487,7 +501,8 @@ if [ -s "$_WARN_FILE" ]; then
         if (!(key in seen)) { seen[key] = 1; print }
     }
     ' "$_WARN_FILE"
-    FAILED=1
+    # console-only rows are advisory: only a silent-trip row arms the --strict exit 1
+    grep -qv 'console-only:' "$_WARN_FILE" && FAILED=1
 fi
 
 [ "$STRICT" -eq 1 ] && [ "$FAILED" -eq 1 ] && exit 1

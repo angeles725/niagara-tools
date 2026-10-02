@@ -1,0 +1,5 @@
+# Type.slot keys win over bare keys; doorOpen has no key on purpose.
+RoomFacade=Cuarto
+RoomFacade.roomTemperature=Temperatura del cuarto
+temperatureSetpoint=Setpoint de temperatura
+roomTemperature=Temperatura (bare key, must lose to Type.slot)

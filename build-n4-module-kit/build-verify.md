@@ -107,6 +107,10 @@ grep -rnE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' <module> --include='*.ja
 unzip -p <jar> META-INF/module.xml | grep baja
 ```
 
+`--src` also runs `facets-req` (WARN): an OPERATOR numeric slot without a `facets` key, a setpoint-like slot without a unit, a count-like slot without a precision. `BFacets.makeNumeric(<unit>, <precision>, ...)` satisfies the unit test (it carries a real unit without the literal `UNITS` token) and any `makeNumeric(` satisfies the precision test; a precision-only `makeNumeric(<int>)` still WARNs missing UNITS. Do not hand-rewrite a working `makeNumeric` facet to silence the check. `[ev: retro comppan-fase2-amps-alarms Δ1]`
+
+Reviewed false positives in the advisory source lints: `lint-arbitrary-ord.sh` WARNs on every `BOrd.make(<variable>)`; when the value is built from a code-controlled internal string (never client input), put `// lint-arbitrary-ord: reviewed <reason>` on the same line or the line directly above the call. The reason is mandatory — a bare marker still WARNs ("reviewed marker without a reason"). The marker records a review; it is not an allowlist for client-supplied ORDs (types/security.md §4). `[ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]`
+
 ## Pre-release real-jar smoke test
 Before shipping a kit or toolbelt change, run `toolbelt/verify-module.sh` over at least one known-good and one known-bad real module jar — the bats suites use generated fixtures, which only simulate a malformed jar; a real one proves the gate catches a live defect. Worked known-bad: `ColdRoomPan-rt.jar` fails the `types` check because `module-include.xml` still declares `com.angeles.ColdRoomPan.BHoaMode` after that class was deleted — the live "Missing class ColdRoomPan:HoaMode" defect. DashboardPan's jars pass `--src` clean. Usage: see §Verify above.
 
@@ -157,7 +161,7 @@ An `-rt` class that imports `java.awt.*` compiles cleanly under JDK 8 (full SE) 
 For any decision/safety logic, "done" means all four layers ran, in order:
 1. **Pure JUnit** (`toolbelt/run-pure-test.sh`) — the ONLY executable coverage of control/safety logic in WSL; mandatory. Extract inline logic to a pure class first (see `types/logic.md` §Pure-class extraction).
 2. **The verify gate** (`toolbelt/verify-module.sh`) — bytecode 52, signed, types resolve.
-3. **A live cold-boot smoke** — for a timer-based control, read the live anchor slot (oBIX / Slot Sheet) after boot: anchor populated = the hook armed; anchor null in an arming mode = the hook did NOT run. Correct source ≠ correct behavior; this catches what a pure test cannot. [ev: retro hidden-actions · T4]
+3. **A live cold-boot smoke on the TARGET distribution and version** (same vendor overlay or stock distribution and same Niagara release as the production station — a build `niagara_home` on another overlay or release proves nothing about a vendor/version mismatch; required before any production deploy, BUILD-LOOP §6) `[ev: retro panccadia-commissioning-lessons Δ10]` — for a timer-based control, read the live anchor slot (oBIX / Slot Sheet) after boot: anchor populated = the hook armed; anchor null in an arming mode = the hook did NOT run. Correct source ≠ correct behavior; this catches what a pure test cannot. [ev: retro hidden-actions · T4]
 4. **Adversarial pure-logic review BEFORE compile** — a second reader of the pure class catches control-logic defects the gate cannot (the `Long.MIN_VALUE` overflow and the dead-sensor false-fault both compiled and passed the gate). [ev: retro comppan-fase1 · T3]
 
 ## Known gap — mode B ignores `--with-slotomatic`

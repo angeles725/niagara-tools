@@ -14,13 +14,22 @@
 #
 #   Table 3 — Per-instance commissioning checklist (BUILD-LOOP §6.b).
 #
-# The developer fills in the "RT slot / Facade slot" column and the
-# "Physical instance / crossing notes" column before handing off the module
-# for commissioning.  The operator must not hand-derive the crossing.
+# Each table row carries the internal slot name, the Workbench display name and a full-ord
+# column: the operator searches the live tree by the DISPLAY name, so a link table that names
+# only the internal slot has to be redone by hand against Workbench. The display name is filled
+# from the module lexicon (key "<Type>.<slot>" first, then the bare "<slot>" key; Type = class
+# name without its leading B); a slot with no key shows "_(no lexicon key)_" — a lexicon gap
+# slot-coverage.sh per-slot also reports. [ev: retro panccadia-commissioning-lessons Δ9]
 #
-# Usage:  generate-wiring-map.sh <facade-src-dir> [--output <file>]
+# The developer fills in the RT-slot, Full-ord and "Physical instance / crossing notes"
+# columns before handing off the module for commissioning. The operator must not hand-derive
+# the crossing.
+#
+# Usage:  generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]
 #
 #   <facade-src-dir>   Source tree of the facade (-rt) profile.
+#   --lexicon <file>   Lexicon for the display-name column. Default: <facade-src-dir>/module.lexicon,
+#                      else <facade-src-dir>/../module.lexicon; none found -> placeholder names.
 #   --output <file>    Write to <file> instead of stdout.
 #
 # Exits: 0 ok · 3 usage/env (K20)
@@ -34,24 +43,34 @@ export LC_ALL
 
 # --- usage ---
 if [ $# -lt 1 ]; then
-  printf 'usage: generate-wiring-map.sh <facade-src-dir> [--output <file>]\n' >&2
+  printf 'usage: generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]\n' >&2
   exit 3
 fi
 
 SRC="$1"; shift
 OUTFILE="-"   # stdout by default
+LEXICON=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --output)
       [ $# -ge 2 ] || { printf 'generate-wiring-map: --output requires a filename\n' >&2; exit 3; }
       OUTFILE="$2"; shift 2 ;;
+    --lexicon)
+      [ $# -ge 2 ] || { printf 'generate-wiring-map: --lexicon requires a filename\n' >&2; exit 3; }
+      LEXICON="$2"; shift 2
+      [ -f "$LEXICON" ] || { printf 'generate-wiring-map: lexicon not found: %s\n' "$LEXICON" >&2; exit 3; } ;;
     *)
       printf 'generate-wiring-map: unknown option: %s\n' "$1" >&2; exit 3 ;;
   esac
 done
 
 [ -d "$SRC" ] || { printf 'generate-wiring-map: not a directory: %s\n' "$SRC" >&2; exit 3; }
+if [ -z "$LEXICON" ]; then
+  for _cand in "$SRC/module.lexicon" "$SRC/../module.lexicon"; do
+    [ -f "$_cand" ] && { LEXICON="$_cand"; break; }
+  done
+fi
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
@@ -63,12 +82,16 @@ touch "$_OP" "$_SUM"
 # Extract @NiagaraProperty slots from all *.java under <facade-src-dir>
 # ---------------------------------------------------------------------------
 while IFS= read -r f; do
-  awk -v OP="$_OP" -v SUM="$_SUM" '
+  _type=$(basename "$f" .java)
+  case "$_type" in B[A-Z]*) _type="${_type#B}" ;; esac
+  awk -v OP="$_OP" -v SUM="$_SUM" -v TYPE="$_type" '
   BEGIN { in_prop = 0; prop_buf = ""; prop_line = 0 }
   FNR == 1 { in_prop = 0; prop_buf = ""; prop_line = 0 }
 
+  # A single-line annotation must close on its own line (no "next" here): the old form glued it
+  # to the following annotation and lost the second slot.
   !in_prop && index($0, "@NiagaraProperty") > 0 {
-    in_prop = 1; prop_buf = $0; prop_line = FNR; next
+    in_prop = 1; prop_buf = ""; prop_line = FNR
   }
   in_prop {
     prop_buf = prop_buf " " $0
@@ -89,9 +112,9 @@ while IFS= read -r f; do
       if (pname != "") {
         is_operator = (index(prop_buf, "OPERATOR") > 0)
         if (is_operator) {
-          printf "%s\n", pname >> OP
+          printf "%s\t%s\n", pname, TYPE >> OP
         } else if (index(prop_buf, "SUMMARY") > 0 || index(prop_buf, "READONLY") > 0) {
-          printf "%s\n", pname >> SUM
+          printf "%s\t%s\n", pname, TYPE >> SUM
         }
       }
       in_prop = 0; prop_buf = ""; prop_line = 0
@@ -100,6 +123,31 @@ while IFS= read -r f; do
   }
   ' "$f"
 done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+
+# ---------------------------------------------------------------------------
+# Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon (Type.slot, then slot).
+# ---------------------------------------------------------------------------
+display_names() {  # tsv-file
+  awk -F'\t' -v LEX="$LEXICON" '
+    BEGIN {
+      if (LEX != "") {
+        while ((getline ln < LEX) > 0) {
+          if (ln ~ /^[[:space:]]*#/ || index(ln, "=") == 0) continue
+          k = substr(ln, 1, index(ln, "=") - 1); v = substr(ln, index(ln, "=") + 1)
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", k); gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+          gsub(/\|/, "\\|", v)
+          if (k != "" && !(k in lex)) lex[k] = v
+        }
+      }
+    }
+    {
+      d = "_(no lexicon key)_"
+      if (($2 "." $1) in lex) d = lex[$2 "." $1]
+      else if ($1 in lex) d = lex[$1]
+      print $1 "\t" d
+    }
+  ' "$1"
+}
 
 # ---------------------------------------------------------------------------
 # Render markdown
@@ -113,7 +161,7 @@ render() {
 
   printf '# Wiring Map — %s\n' "$module_name"
   printf '<!-- Generated by generate-wiring-map.sh from %s -->\n' "$SRC"
-  printf '<!-- Fill in the RT-slot and Notes columns before commissioning hand-off. -->\n'
+  printf '<!-- Fill in the RT-slot, Full-ord and Notes columns before commissioning hand-off. -->\n'
   printf '<!-- Rule: operator must not hand-derive the crossing  [ev: retro live-commissioning-verification-gaps Δ6] -->\n'
   printf '\n'
 
@@ -122,14 +170,14 @@ render() {
   printf 'These slots carry operator-visible setpoints and mode choices.\n'
   printf 'Each facade slot must be **linked facade→control** (the facade is the SOURCE, not the TARGET).\n'
   printf '\n'
-  printf '| Facade slot | Target RT slot | Physical instance / crossing notes |\n'
-  printf '|-------------|----------------|-------------------------------------|\n'
+  printf '| Facade slot | Workbench display name | Target RT slot | Full ord | Physical instance / crossing notes |\n'
+  printf '|-------------|------------------------|----------------|----------|-------------------------------------|\n'
   if [ -s "$_OP" ]; then
-    while IFS= read -r slot; do
-      printf '| `%s` | _(fill)_ | |\n' "$slot"
-    done < "$_OP"
+    while IFS="$(printf '\t')" read -r slot disp; do
+      printf '| `%s` | %s | _(fill)_ | _(fill)_ | |\n' "$slot" "$disp"
+    done < <(display_names "$_OP")
   else
-    printf '| _(no OPERATOR slots found — check src dir or slot flags)_ | | |\n'
+    printf '| _(no OPERATOR slots found — check src dir or slot flags)_ | | | | |\n'
   fi
 
   printf '\n'
@@ -138,14 +186,14 @@ render() {
   printf 'These slots display telemetry linked FROM the control module.\n'
   printf 'Each facade slot must be **linked control→facade** (the control point is the SOURCE).\n'
   printf '\n'
-  printf '| Facade slot | Source RT slot | Physical instance / crossing notes |\n'
-  printf '|-------------|----------------|-------------------------------------|\n'
+  printf '| Facade slot | Workbench display name | Source RT slot | Full ord | Physical instance / crossing notes |\n'
+  printf '|-------------|------------------------|----------------|----------|-------------------------------------|\n'
   if [ -s "$_SUM" ]; then
-    while IFS= read -r slot; do
-      printf '| `%s` | _(fill)_ | |\n' "$slot"
-    done < "$_SUM"
+    while IFS="$(printf '\t')" read -r slot disp; do
+      printf '| `%s` | %s | _(fill)_ | _(fill)_ | |\n' "$slot" "$disp"
+    done < <(display_names "$_SUM")
   else
-    printf '| _(no SUMMARY display slots found — check src dir or slot flags)_ | | |\n'
+    printf '| _(no SUMMARY display slots found — check src dir or slot flags)_ | | | | |\n'
   fi
 
   printf '\n'

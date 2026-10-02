@@ -127,3 +127,40 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"facet-min-zero"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# LD13-LD17 — parser gaps from a real build [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]:
+# a `BRelTime.makeMinutes(N)` MIN facet was misread as "MIN present but unreadable" (false
+# facet-min-zero FAIL — the author rewrote it as makeSeconds(60) to satisfy the parser), and a
+# multi-line `Clock.schedule(` call had to be collapsed onto one line to be seen at all.
+
+@test "LD13: a slot getter whose MIN facet is BRelTime.makeMinutes(1) -> WARN facet-floor, not FAIL" {
+  only SlotGetterMinMinutes.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"facet-floor"* ]] && [[ "$output" != *"FAIL"* ]]
+}
+@test "LD14: positive makeMinutes/makeHours literal and constant delays -> no FAIL" {
+  only LiteralHours.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+@test "LD15: a literal BRelTime.makeMinutes(0) -> FAIL literal-zero" {
+  only LiteralMinutesZero.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"literal-zero"* ]]
+}
+@test "LD16: a multi-line Clock.schedule( call with a positive literal delay -> no FAIL" {
+  only MultiLinePos.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
+@test "LD17: a multi-line Clock.schedule( call with Math.max(x, 0L) -> FAIL zero-floor at the call line" {
+  only MultiLineZeroFloor.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"zero-floor"* ]] && [[ "$output" == *"MultiLineZeroFloor.java:6"* ]]
+}

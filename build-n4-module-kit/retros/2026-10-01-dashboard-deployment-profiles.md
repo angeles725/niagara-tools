@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-01 · kit · dashboard-deployment-profiles
 
 **Session**: PANCCADIA HMI freeze triage → frontend standard; user clarified that one servlet dashboard serves two different audiences

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-28 · kit · decision-logic-decomposition
 
 **Session**: PANCCADIA persistent-config/HOA campaign (Cliente/panccadia-leon, feat/panccadia-persistent-config-hoa); user question on how large code blocks should be split

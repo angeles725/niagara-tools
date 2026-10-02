@@ -491,3 +491,55 @@ KTS
   [[ "$output" == *"PASS  slot-wall"* ]]
   [[ "$output" != *"WARN  slot-wall"* ]]
 }
+
+# ---- facets-req: BFacets.makeNumeric conveys a unit/precision without the UNITS/PRECISION token ----
+# [ev: retro comppan-fase2-amps-alarms Δ1] — a real `overAmpsLimit` slot faceted with
+# BFacets.makeNumeric(BUnit.getUnit("ampere"), ...) WARNed "missing UNITS" on every run.
+# Named mutations VMN1/VMN3: see the verify-module.sh header (facets-req).
+vmn_src() {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x"
+  cat > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+}
+
+@test "VMN1: a *Limit slot faceted with BFacets.makeNumeric(BUnit..., ...) does NOT WARN missing UNITS" {
+  vmn_src <<'JAVA'
+package com.x;
+@NiagaraProperty(
+  name = "overAmpsLimit",
+  type = "double",
+  defaultValue = "30d",
+  flags = Flags.OPERATOR,
+  facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"ampere\"), 1, 0, 200)")
+)
+public class A extends BComponent {}
+JAVA
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  facets-req"* ]]
+  [[ "$output" != *"missing UNITS"* ]]
+}
+
+@test "VMN2: a count-like slot faceted with BFacets.makeNumeric(0) does NOT WARN missing PRECISION" {
+  vmn_src <<'JAVA'
+package com.x;
+@NiagaraProperty(name = "stagesOn", type = "double", defaultValue = "0d", flags = Flags.READONLY, facets = @Facet("BFacets.makeNumeric(0)"))
+public class A extends BComponent {}
+JAVA
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  facets-req"* ]]
+  [[ "$output" != *"missing PRECISION"* ]]
+}
+
+@test "VMN3: a *Setpoint slot with a precision-only BFacets.makeNumeric(1) still WARNs missing UNITS" {
+  vmn_src <<'JAVA'
+package com.x;
+@NiagaraProperty(name = "suctionSetpoint", type = "double", defaultValue = "20d", flags = Flags.OPERATOR, facets = @Facet("BFacets.makeNumeric(1)"))
+public class A extends BComponent {}
+JAVA
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  facets-req"* ]] && [[ "$output" == *"suctionSetpoint missing UNITS"* ]]
+}
