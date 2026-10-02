@@ -19,6 +19,12 @@
 # Link endpoints (polish-2026-10-02 P1): lint-link-target-flags.sh <artifact>/src per artifact, with
 # --wiring-map <file> when given, else <module-root>/docs/wiring-map.md, else <module-root>/../docs/
 # wiring-map.md (the build.sh layout <repo>/<MOD>); a named --wiring-map file that is missing is exit 3.
+# The default differs from commissioning-verify.sh (<module-root>/docs only) because the two tools take
+# different roots: build.sh passes <repo>/<MOD> here, commissioning-verify takes <repo>; both resolve
+# <repo>/docs/wiring-map.md. In a multi-module repo the parent fallback may be another module's map, so
+# the chosen map is named in the row detail. Exit 3 from the lint is ERROR + exit 3 here (this script's
+# env convention); commissioning-verify maps it to SKIP (its convention). A non-zero exit with no FAIL
+# row is a FAIL row, never PASS.
 # [ev: retro panccadia-commissioning-lessons Δ1] slot-coverage FAIL lines other than dup-keys (facade
 # type without lexicon, empty lexicon) are FAIL rows, not a WARN percentage.
 # [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
@@ -27,7 +33,7 @@
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
-# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY  <check>  <detail>
+# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR  <check>  <detail>   (ERROR = member env fault, not counted; exit 3)
 # Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES
 # Exit: 0 clean (zero FAIL) · 1 any FAIL · 3 env (member env fault)
 # This script is VCS-free by design. version control is never invoked.
@@ -444,12 +450,23 @@ for ADIR in "${ARTIFACTS[@]}"; do
     LTF_ARGS=()
     [ -n "$WIRING_MAP" ] && LTF_ARGS+=("--wiring-map" "$WIRING_MAP")
     ltf_exit=0
-    ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" "${LTF_ARGS[@]}" "$ADIR/src" 2>&1) || ltf_exit=$?
+    # ${A[@]+"${A[@]}"}: an empty "${A[@]}" is an unbound-variable error under set -u on bash < 4.4.
+    ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" ${LTF_ARGS[@]+"${LTF_ARGS[@]}"} "$ADIR/src" 2>&1) || ltf_exit=$?
     if [ "$ltf_exit" -eq 3 ]; then
       emit "$ANAME" ERROR lint-link-target-flags "env fault (exit 3)"; HAD_ENV=1
     else
+      # Name the chosen map in the Table 2 reason so a false FAIL from the parent-dir fallback is traceable.
+      [ -n "$WIRING_MAP" ] && ltf_out="${ltf_out//(wiring-map Table 2)/(wiring-map Table 2: $WIRING_MAP)}"
       relay_rows "$ANAME" "$ltf_out"
-      [ "$RELAY_FAIL" -eq 0 ] && emit "$ANAME" PASS lint-link-target-flags "clean"
+      if [ "$RELAY_FAIL" -eq 0 ] && [ "$ltf_exit" -ne 0 ]; then
+        # Fail closed: a non-zero exit with no FAIL row (127 = lint missing, a crash, an unexpected row
+        # format) is never PASS. [polish-2026-10-02 P1b, R3-ltf-fail-open-exit]
+        emit "$ANAME" FAIL lint-link-target-flags \
+          "exited $ltf_exit with no FAIL row (crash or unexpected output) -- run lint-link-target-flags.sh manually"
+      elif [ "$RELAY_FAIL" -eq 0 ]; then
+        _ltf_map="no wiring map"; [ -n "$WIRING_MAP" ] && _ltf_map="wiring map: $WIRING_MAP"
+        emit "$ANAME" PASS lint-link-target-flags "clean ($_ltf_map)"
+      fi
     fi
   else
     emit "$ANAME" SKIP lint-link-target-flags "no src/"

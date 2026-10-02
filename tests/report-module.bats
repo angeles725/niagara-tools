@@ -502,3 +502,82 @@ JAVA
   [[ "$output" != *"WARN  lint-silent-protection"* ]]
   [[ "$output" == *"· 1 ADVISORY  ->  CLEAN"* ]]
 }
+
+# ===========================================================================
+# polish-2026-10-02 P1b — P1 review advisories (#199, lineage review-6d90aed0e4c74ba3).
+#   RM40  fail-closed: a link-target-flags member that exits non-zero (not 3) with no FAIL row (127 =
+#         lint missing, a crash) is a FAIL row naming the exit, never PASS clean. (R3-ltf-fail-open-exit)
+#   RM41  the same for exit 1 with an unexpected row format (no parsable FAIL row).
+#   RM42  member exit 3 (env) -> ERROR row + report exit 3. (R3-untested-env-branches)
+#   RM43  the chosen wiring map is named in the row detail (PASS row and the Table 2 FAIL reason), so a
+#         false FAIL from the parent-dir fallback can be traced. (R4-parent-map-discovery)
+#   RM44  the full summary string of a zero-ADVISORY run is pinned. (R3-summary-format-change)
+#   RM45  structural: the optional-argument arrays are expanded with ${A[@]+"${A[@]}"} (an empty
+#         "${A[@]}" is an unbound-variable error under set -u on bash < 4.4). (R3/R4-empty-array-set-u)
+# The member is replaced through a symlinked copy of the toolbelt (TOOLBELT resolves to the dir of the
+# invoked path), so no env override is added to the production script.
+# NAMED MUTATIONS (observed): RM-failopen (drop the non-zero-without-FAIL branch) -> RM40, RM41 flip;
+#   RM-mapname (drop the map name from the detail) -> RM43 flips.
+# ===========================================================================
+
+# _stub_toolbelt <dir> <stub-body> — symlink every toolbelt entry into <dir>, then replace
+# lint-link-target-flags.sh with a stub script whose body is <stub-body>.
+_stub_toolbelt() {
+  mkdir -p "$1"
+  local f; for f in "$KIT/toolbelt"/*; do ln -s "$f" "$1/"; done
+  rm "$1/lint-link-target-flags.sh"
+  printf '#!/usr/bin/env bash\n%s\n' "$2" > "$1/lint-link-target-flags.sh"
+  chmod +x "$1/lint-link-target-flags.sh"
+}
+
+@test "RM40: member exit 127 with no FAIL row -> FAIL lint-link-target-flags row, never PASS clean, exit 1" {
+  local tb="$BATS_TEST_TMPDIR/rm40tb"; _stub_toolbelt "$tb" 'echo "lint: command not found" >&2; exit 127'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  exited 127"* ]]
+  [[ "$output" != *"PASS  lint-link-target-flags"* ]]
+}
+
+@test "RM41: member exit 1 with an unparsable row -> FAIL row naming the exit, exit 1" {
+  local tb="$BATS_TEST_TMPDIR/rm41tb"; _stub_toolbelt "$tb" 'echo "Traceback: boom"; exit 1'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  exited 1"* ]]
+}
+
+@test "RM42: member exit 3 -> ERROR lint-link-target-flags row and report exit 3" {
+  local tb="$BATS_TEST_TMPDIR/rm42tb"; _stub_toolbelt "$tb" 'exit 3'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"DemoPan-rt  ERROR  lint-link-target-flags  env fault (exit 3)"* ]]
+}
+
+@test "RM43: the chosen wiring map is named in the PASS detail and in the Table 2 FAIL reason" {
+  local repo="$BATS_TEST_TMPDIR/rm43" t="$BATS_TEST_TMPDIR/rm43/DemoPan"; _rt_tree "$t"
+  run "$RM" "$t"
+  [[ "$output" == *"DemoPan-rt  PASS  lint-link-target-flags  clean (no wiring map)"* ]]
+  mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
+  run "$RM" "$t"
+  [[ "$output" == *"PASS  lint-link-target-flags  clean (wiring map: $t/../docs/wiring-map.md)"* ]]
+  cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
+  run "$RM" "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(wiring-map Table 2: $t/../docs/wiring-map.md)"* ]]
+}
+
+@test "RM44: the full summary string of a zero-ADVISORY clean run" {
+  run "$RM" "$FX/clean"
+  [ "$status" -eq 0 ]
+  local last; last="$(printf '%s\n' "$output" | tail -1)"
+  [[ "$last" =~ ^report-module:\ 1\ artifact\ ·\ [0-9]+\ PASS\ ·\ 0\ FAIL\ ·\ [0-9]+\ WARN\ ·\ [0-9]+\ SKIP\ ·\ 0\ ADVISORY\ \ -\>\ \ CLEAN$ ]]
+}
+
+@test "RM45: optional-argument arrays use the set -u safe \${A[@]+\"\${A[@]}\"} expansion" {
+  run grep -nE '[^+]"\$\{(LTF_ARGS|ltf_args|sp_args)\[@\]\}"' \
+    "$KIT/toolbelt/report-module.sh" "$KIT/toolbelt/commissioning-verify.sh"
+  [ "$status" -eq 1 ]
+  # shellcheck disable=SC2016  # literal source text, not an expansion
+  grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
+  # shellcheck disable=SC2016  # literal source text, not an expansion
+  grep -qF '${ltf_args[@]+"${ltf_args[@]}"}' "$KIT/toolbelt/commissioning-verify.sh"
+}
