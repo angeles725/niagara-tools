@@ -112,3 +112,38 @@ setup() {
   [[ "$output" == *"MANUAL  commissioning  consumer-impact"* ]]
   [[ "$output" == *"MANUAL  commissioning  link-source-audit"*"obix-link-audit.sh"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# polish-2026-10-02 P1 — link-target-flags per -rt/src, with the wiring map (WU9 gap).
+# [ev: retro panccadia-commissioning-lessons Δ1]
+# Named mutation CV-map: drop the --wiring-map pass-through -> CV-ltf2 flips.
+# ---------------------------------------------------------------------------
+_cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 READONLY mirror
+  mkdir -p "$1/Map/Map-rt/src/com/x"
+  cp "$BATS_TEST_DIRNAME/fixtures/lint-link-target-flags/map/src/com/x/BRoomPanel.java" "$1/Map/Map-rt/src/com/x/"
+}
+
+@test "CV-ltf1: MinimalPan -> one PASS link-target-flags row per -rt/src" {
+  run "$CV" "$MINIMAL"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  commissioning  link-target-flags:MinimalPan-rt"* ]]
+}
+
+@test "CV-ltf2: <module-root>/docs/wiring-map.md is passed as --wiring-map -> Table 2 READONLY FAILs" {
+  local r="$BATS_TEST_TMPDIR/cvltf2"; _cv_map_tree "$r"
+  run "$CV" "$r"
+  [[ "$output" == *"PASS  commissioning  link-target-flags:Map-rt"* ]]   # no map: not a known target
+  mkdir -p "$r/docs"; cp "$BATS_TEST_DIRNAME/fixtures/lint-link-target-flags/map/docs/wiring-map.md" "$r/docs/"
+  run "$CV" "$r"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  commissioning  link-target-flags:Map-rt"*"wiring-map Table 2"* ]]
+}
+
+@test "CV-ltf3: --wiring-map <file> explicit is forwarded; a missing file -> exit 3" {
+  local r="$BATS_TEST_TMPDIR/cvltf3"; _cv_map_tree "$r"
+  run "$CV" "$r" --wiring-map "$BATS_TEST_DIRNAME/fixtures/lint-link-target-flags/map/docs/wiring-map.md"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"link-target-flags:Map-rt"*"wiring-map Table 2"* ]]
+  run "$CV" "$r" --wiring-map "$BATS_TEST_TMPDIR/nope.md"
+  [ "$status" -eq 3 ]
+}

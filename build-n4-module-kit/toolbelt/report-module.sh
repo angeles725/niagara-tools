@@ -16,11 +16,19 @@
 # node/acorn as in lint-vendor-floor.sh (KIT_NODE, KIT_ACORN). Install once:
 # npm install --prefix build-n4-module-kit/toolbelt/eslint
 # [ev: retro dashboard-frontend-standard Δ10] [ev: retro dashboard-frontend-standard Δ16]
+# Link endpoints (polish-2026-10-02 P1): lint-link-target-flags.sh <artifact>/src per artifact, with
+# --wiring-map <file> when given, else <module-root>/docs/wiring-map.md, else <module-root>/../docs/
+# wiring-map.md (the build.sh layout <repo>/<MOD>); a named --wiring-map file that is missing is exit 3.
+# [ev: retro panccadia-commissioning-lessons Δ1] slot-coverage FAIL lines other than dup-keys (facade
+# type without lexicon, empty lexicon) are FAIL rows, not a WARN percentage.
+# [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
+# keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
+# [ev: retro alarm-console-design Δ3]
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
-#                         [--profile hmi|lan|both|unknown] [--legacy]
-# Row:     <artifact>  PASS|FAIL|WARN|SKIP  <check>  <detail>
-# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP  ->  CLEAN|ISSUES
+#                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
+# Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY  <check>  <detail>
+# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES
 # Exit: 0 clean (zero FAIL) · 1 any FAIL · 3 env (member env fault)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
@@ -29,16 +37,17 @@ set -u
 
 TOOLBELT="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
 
-NPASS=0; NFAIL=0; NWARN=0; NSKIP=0
+NPASS=0; NFAIL=0; NWARN=0; NSKIP=0; NADV=0
 HAD_FAIL=0; HAD_ENV=0
 MODULE_ROOT=""
 TARGET_VERSION=""
 CONSOLE_DIR=""
 UI_PROFILE=""
 LEGACY=0
+WIRING_MAP=""
 
 usage_exit() {
-  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy]\n' >&2
+  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]\n' >&2
   exit 2
 }
 
@@ -58,6 +67,9 @@ while [ $# -gt 0 ]; do
       case "$2" in hmi|lan|both|unknown) ;; *) usage_exit ;; esac
       UI_PROFILE="$2"; shift 2 ;;
     --legacy) LEGACY=1; shift ;;
+    --wiring-map)
+      [ $# -ge 2 ] || usage_exit
+      WIRING_MAP="$2"; shift 2 ;;
     --) shift; break ;;
     -*) usage_exit ;;
     *)
@@ -67,6 +79,14 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$MODULE_ROOT" ] || usage_exit
 [ -d "$MODULE_ROOT" ] || { printf 'report-module: not a directory: %s\n' "$MODULE_ROOT" >&2; exit 3; }
+# Wiring map for lint-link-target-flags (LTF1 Table 2 link-in targets): explicit, else discovered.
+if [ -n "$WIRING_MAP" ]; then
+  [ -f "$WIRING_MAP" ] || { printf 'report-module: --wiring-map file not found: %s\n' "$WIRING_MAP" >&2; exit 3; }
+elif [ -f "$MODULE_ROOT/docs/wiring-map.md" ]; then
+  WIRING_MAP="$MODULE_ROOT/docs/wiring-map.md"
+elif [ -f "$MODULE_ROOT/../docs/wiring-map.md" ]; then
+  WIRING_MAP="$MODULE_ROOT/../docs/wiring-map.md"
+fi
 
 # emit <artifact> <STATUS> <check> <detail>
 emit() {
@@ -76,10 +96,11 @@ emit() {
     FAIL) NFAIL=$((NFAIL+1)); HAD_FAIL=1 ;;
     WARN) NWARN=$((NWARN+1)) ;;
     SKIP) NSKIP=$((NSKIP+1)) ;;
+    ADVISORY) NADV=$((NADV+1)) ;;
   esac
 }
 
-# relay_rows <artifact> <member-output> — relay `FAIL|WARN  <check>  <path>:<line>  <reason>` rows
+# relay_rows <artifact> <member-output> — relay `FAIL|WARN|ADVISORY  <check>  <path>:<line>  <reason>` rows
 # (rc-scan / eslint / vendor-floor grammar) as `<artifact>  <ST>  <check>  <basename>:<line>  <reason>`.
 # Sets RELAY_FAIL=1 when any FAIL row was relayed.
 relay_rows() {
@@ -88,7 +109,7 @@ relay_rows() {
   while IFS= read -r _ln; do
     [ -z "$_ln" ] && continue
     case "$_ln" in
-      FAIL*|WARN*)
+      FAIL*|WARN*|ADVISORY*)
         _parsed=$(printf '%s' "$_ln" | awk '{
           n = split($0, a, /[[:space:]]{2,}/)
           st = (n >= 1) ? a[1] : ""
@@ -175,6 +196,14 @@ for ADIR in "${ARTIFACTS[@]}"; do
       else
         emit "$ANAME" PASS dup-keys "0"
       fi
+      # Other slot-coverage FAIL lines (facade type without lexicon, empty lexicon) are FAIL rows —
+      # the pct row below stays informational. [ev: retro panccadia-commissioning-lessons Δ9]
+      while IFS= read -r _ln; do
+        case "$_ln" in
+          'slot-coverage: FAIL dup-keys:'*) ;;
+          'slot-coverage: FAIL '*) emit "$ANAME" FAIL slot-coverage "${_ln#slot-coverage: FAIL }" ;;
+        esac
+      done <<< "$cov_out"
       # coverage: pct= line, e.g. "100.0 (type-set)" or "50.0" or "N/A"
       pct_line=$(printf '%s\n' "$cov_out" | grep '^pct=' | head -1)
       pct_val="${pct_line#pct=}"   # strip leading "pct="
@@ -380,7 +409,7 @@ for ADIR in "${ARTIFACTS[@]}"; do
       while IFS= read -r _ln; do
         [ -z "$_ln" ] && continue
         case "$_ln" in
-          FAIL*|WARN*)
+          FAIL*|WARN*|ADVISORY*)   # ADVISORY console-only keeps its own severity [ev: retro alarm-console-design Δ3]
             _parsed=$(printf '%s' "$_ln" | awk '{
               n = split($0, a, /[[:space:]]{2,}/)
               st = (n >= 1) ? a[1] : ""
@@ -405,6 +434,25 @@ for ADIR in "${ARTIFACTS[@]}"; do
     fi
   else
     emit "$ANAME" SKIP lint-silent-protection "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.5b. lint-link-target-flags.sh [--wiring-map <map>] <artifact>/src (FAIL; SKIP if no src/)
+  #       polish-2026-10-02 P1 [ev: retro panccadia-commissioning-lessons Δ1]
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    LTF_ARGS=()
+    [ -n "$WIRING_MAP" ] && LTF_ARGS+=("--wiring-map" "$WIRING_MAP")
+    ltf_exit=0
+    ltf_out=$("$TOOLBELT/lint-link-target-flags.sh" "${LTF_ARGS[@]}" "$ADIR/src" 2>&1) || ltf_exit=$?
+    if [ "$ltf_exit" -eq 3 ]; then
+      emit "$ANAME" ERROR lint-link-target-flags "env fault (exit 3)"; HAD_ENV=1
+    else
+      relay_rows "$ANAME" "$ltf_out"
+      [ "$RELAY_FAIL" -eq 0 ] && emit "$ANAME" PASS lint-link-target-flags "clean"
+    fi
+  else
+    emit "$ANAME" SKIP lint-link-target-flags "no src/"
   fi
 
   # ----------------------------------------------------------------
@@ -1427,8 +1475,8 @@ fi
 VERDICT="CLEAN"
 [ "$HAD_FAIL" -eq 1 ] && VERDICT="ISSUES"
 _s_sfx="$([ "$ARTIFACT_COUNT" -eq 1 ] && printf '' || printf 's')"
-printf 'report-module: %d artifact%s · %d PASS · %d FAIL · %d WARN · %d SKIP  ->  %s\n' \
-  "$ARTIFACT_COUNT" "$_s_sfx" "$NPASS" "$NFAIL" "$NWARN" "$NSKIP" "$VERDICT"
+printf 'report-module: %d artifact%s · %d PASS · %d FAIL · %d WARN · %d SKIP · %d ADVISORY  ->  %s\n' \
+  "$ARTIFACT_COUNT" "$_s_sfx" "$NPASS" "$NFAIL" "$NWARN" "$NSKIP" "$NADV" "$VERDICT"
 
 [ "$HAD_ENV" -eq 1 ] && exit 3
 [ "$HAD_FAIL" -eq 1 ] && exit 1
