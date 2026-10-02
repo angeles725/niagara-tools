@@ -33,7 +33,7 @@
 #   exit 3   file/dir not found
 #
 # Usage (parse subcommand — reads module files, calls the same pure function):
-#   slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>
+#   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
 #   required   <- <type name="X"> entries in module-include.xml
 #   declared   <- key=value lines in module.lexicon (comments and blank lines ignored):
 #                   bare key  (e.g. "fan")          -> declared name = fan
@@ -42,8 +42,14 @@
 #   |required|==0   -> N/A
 #   empty lexicon + |required|>=1 -> pct=0.0 + "slot-coverage: FAIL empty lexicon ..." on stdout + exit 1
 #   duplicate keys in lexicon -> "slot-coverage: FAIL dup-keys: <key>" on stdout + exit 1 (A1/B792)
+#   facade FAIL (default, no --strict needed): a MISSING type whose name ends in Panel or Facade is
+#              operator-facing — with no lexicon key its slots render raw camelCase in Workbench and the
+#              operator cannot find them — so "slot-coverage: FAIL facade type without lexicon: <T>" is
+#              printed per such type and the exit is 1. --facade declares the whole module operator-facing
+#              (every missing type FAILs). Internal control types stay advisory (missing=, exit 0).
+#              [ev: retro panccadia-commissioning-lessons Δ9]
 #   --strict   -> exit 1 when missing is non-empty or WARN was emitted
-#   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL or empty-lexicon FAIL or strict WARN
+#   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL, empty-lexicon FAIL, facade FAIL or strict WARN
 #   exit 2   wrong argc
 #   exit 3   env (file missing / unreadable)
 #
@@ -325,13 +331,15 @@ fi
 # Parse subcommand
 # ---------------------------------------------------------------------------
 STRICT=0
+FACADE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict) STRICT=1; shift ;;
+    --facade) FACADE=1; shift ;;
     --) shift; break ;;
     -*)
       printf 'slot-coverage: unknown flag: %s\n' "$1" >&2
-      printf 'usage: slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>\n' >&2
+      printf 'usage: slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>\n' >&2
       exit 2
       ;;
     *) break ;;
@@ -339,7 +347,7 @@ while [ $# -gt 0 ]; do
 done
 
 [ $# -eq 2 ] || {
-  printf 'usage: slot-coverage.sh [--strict] <module-include.xml> <module.lexicon>\n' >&2
+  printf 'usage: slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>\n' >&2
   exit 2
 }
 
@@ -411,6 +419,21 @@ fi
 sc_out=$(run_set_coverage "$declared_csv" "$required_csv")
 printf '%s\n' "$sc_out" | sed 's/^pct=\(.*\)$/pct=\1 (type-set)/'
 
+# Facade FAIL (default, not gated on --strict): an operator-facing *Panel/*Facade type (or every type
+# under --facade) with no lexicon key is a ship-blocker. [ev: retro panccadia-commissioning-lessons Δ9]
+FACADE_FAIL=0
+missing_types=$(printf '%s\n' "$sc_out" | sed -n 's/^missing=//p' | tr ',' '\n' | grep -v '^$' || true)
+if [ -n "$missing_types" ]; then
+  while IFS= read -r mt; do
+    case "$mt" in
+      *Panel|*Facade) : ;;
+      *) [ "$FACADE" -eq 1 ] || continue ;;
+    esac
+    printf 'slot-coverage: FAIL facade type without lexicon: %s\n' "$mt"
+    FACADE_FAIL=1
+  done <<< "$missing_types"
+fi
+
 # Dup-key FAIL always exits 1 — not gated on --strict (A1/B792: ship-blocker, mirrors EMPTY_LEX_FAIL).
 if [ "$HAS_FAIL" -eq 1 ]; then
   exit 1
@@ -420,6 +443,8 @@ fi
 if [ "$EMPTY_LEX_FAIL" -eq 1 ]; then
   exit 1
 fi
+
+[ "$FACADE_FAIL" -eq 1 ] && exit 1
 
 # --strict: exit 1 when missing is non-empty or WARN was emitted
 if [ "$STRICT" -eq 1 ]; then

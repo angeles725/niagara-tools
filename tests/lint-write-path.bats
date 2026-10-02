@@ -351,3 +351,30 @@ MD
   run "$LW" --strict "$ROOT/Compresores/CompPan/CompPan-rt"
   [ "$(printf '%s\n' "$output" | grep -c '^STALE')" -eq 5 ]
 }
+
+# ---------------------------------------------------------------------------
+# WP-audit (fold-2026-10-02-pending-retros WU6b) [ev: retro servlet-write-audit Δ2]:
+# a servlet write handler (doPost/doPut/doDelete/doPatch) in a file with NO audit-recording call
+# (an identifier containing "audit" invoked with "(", getters excluded, comments stripped) WARNs —
+# advisory for legacy modules; --strict promotes it to exit 1.
+# Named mutation WP-audit: drop the audit-call search -> WP-audit-ok flips (false WARN);
+# drop the WARN emission -> WP-audit flips.
+# ---------------------------------------------------------------------------
+@test "WP-audit: a doPost handler with no audit call (comment mention and getter do not count) WARNs, exit 0" {
+  run "$LW" "$FX/audit-missing"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-write-path"*"BPanelServlet.java"*"no audit call"* ]]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+@test "WP-audit-strict: the same missing audit call under --strict exits 1" {
+  run "$LW" "$FX/audit-missing" --strict
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no audit call"* ]]
+}
+
+@test "WP-audit-ok: a doPost handler that records an audit entry is clean (exit 0, no WARN)" {
+  run "$LW" "$FX/audit-ok" --strict
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}

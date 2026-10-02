@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-09-26 · kit · roll-forward-recovery
 
 **Session**: PANCCADIA León field rule stated by the user on 2026-09-26, while preparing the CompPan 2.6.0 / DashboardPan 2.8.0 deploy: when a new version crashes the station, you cannot go back to the previous version; recovery needs a higher version.

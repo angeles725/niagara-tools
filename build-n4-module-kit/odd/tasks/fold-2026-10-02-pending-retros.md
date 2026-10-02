@@ -71,9 +71,18 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
 - [x] WU6a · false positives in existing rt lints (verify-module UNITS, lint-delays, lint-arbitrary-ord marker) —
       comppan-fase2-amps-alarms Δ1; panccadia-restart-seq-comp-lockout-hours Δ1, Δ4. Route: delegated direct writer
       (3 scripts + 3 bats + fixtures + 4 docs — writer trigger). PARTIAL promotion of both retros: no INDEX flip.
-- [ ] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only WARN, write audit).
-- [ ] WU7 · build/preflight/source-of-truth.
-- [ ] WU8 · deploy, backup and release gates.
+- [x] WU6b · new rt/servlet checks (link-target flags, CS4, facade slot-coverage, console-only advisory, write audit) —
+      commissioning-lessons Δ1, Δ3, Δ9; persistent-config Δ1/Δ3 (lint + dashboard halves); alarm-console Δ3;
+      servlet-write-audit Δ1, Δ2 (retro FULLY folded, INDEX row + marker flipped). Route: delegated direct writer
+      (1 new lint + 5 scripts + 6 bats + fixtures + 5 docs — writer trigger).
+- [x] WU7 · build/preflight/source-of-truth — comppan-fase2-amps-alarms Δ2; panccadia-restart-seq-comp-lockout-hours Δ2, Δ3;
+      continuous-fan-post-defrost-delay Δ1; client-source-of-truth Δ1-Δ3 (retro FULLY folded, INDEX row + marker flipped);
+      change-tier-time-budgets Δ5 (BUILD-LOOP half); WU4 gap (build.sh --ui-profile/--legacy). Route: delegated direct writer
+      (3 toolbelt scripts + 2 new scripts/ helpers + 6 bats + 5 docs — writer trigger).
+- [x] WU8 · deploy, backup and release gates — roll-forward-recovery Δ1-Δ4; station-backup Δ1,Δ2; auto-lock Δ5,Δ7;
+      restart-seq Δ10; commissioning Δ10; kit-meta Δ4,Δ5; deployment-profiles Δ7; operator-manual Δ2. Route: delegated direct
+      writer (BUILD-LOOP + METHODOLOGY + build-verify + distribution + ledgers — writer trigger). FULL: roll-forward-recovery,
+      dashboard-deployment-profiles (flipped); the others stay `pending` with owed Δ in the kit BUILD-STATE open_issue.
 - [x] WU9 · commissioning and post-deploy triage — commissioning-lessons Δ4,Δ5,Δ8,Δ11; station-backup Δ3; alarm-console Δ2;
       site-fault-triage Δ1,Δ2; ask-dont-assume Δ5; version-defect-ledger Δ4 (merged with commissioning Δ11). Route: delegated
       direct writer (2 scripts + 1 new script + 3 bats + fixtures + 4 docs — writer trigger). `obix-link-audit.sh` kept in WU9
@@ -272,6 +281,77 @@ shellcheck 0.10.0, bats, lint-guard-pins --strict when a lint is added.
   - Gap: the link-target-flags lint (commissioning Δ1) is WU6b and absent on this base — `commissioning-verify.sh` does not
     pass it `--wiring-map` yet. Commissioning Δ9 (wiring-map display-name column, slot-coverage facade FAIL) stays WU6b.
   - Commit: the WU9 work-unit commit on this branch.
+
+- 2026-10-02 WU6b (branch `feat/fold-wu6b-rt-checks`, from `origin/main`): new `toolbelt/lint-link-target-flags.sh`
+  (LTF1 READONLY on a link-in target — comment-block convention or `--wiring-map` Table 2; LTF2 TRANSIENT OPERATOR
+  `*Mode`/`*Hoa` slot, placed in the same lint because both are flags on a link endpoint), `lint-config-sanity.sh` CS4
+  WARN, `slot-coverage.sh` facade default-FAIL (`*Panel`/`*Facade`, `--facade`), `generate-wiring-map.sh` display-name +
+  full-ord columns (`--lexicon`, auto-discovery; also fixed single-line annotations being dropped), `lint-silent-protection.sh`
+  `ADVISORY … console-only:` row (own severity so golden G-adapter "0 WARN" holds; never arms `--strict`), `lint-write-path.sh` audit-call WARN (`--strict` promotes);
+  docs: `types/dashboard.md`, `types/security.md` § 1.3, `types/logic.md`, BUILD-LOOP tool lines, regenerated INDEX.
+  Evidence:
+  - RED (before each change): LTF-* 6/6 not ok (script absent, exit 127); LCS-floor not ok; SC-facade + SC-facade-flag not ok;
+    GWM-display, GWM-display-auto, GWM-columns not ok; SP-console + SP-console-strict not ok; WP-audit + WP-audit-strict not ok.
+  - GREEN: lint-link-target-flags 6/6, lint-config-sanity 7/7, slot-coverage 18/18, generate-wiring-map 15/15,
+    lint-silent-protection 16/16, lint-write-path 25/25.
+  - Observed mutations (each flips its named test, restored byte-identical): LTF-comment, LTF-map, LTF-transient, LCS-floor,
+    SC-facade, GWM-display, SP-console, WP-audit, WP-audit-ok.
+  - Real smoke (read-only client trees): LTF2 flags the TRANSIENT HOA slots of the pre-fix facade + evaporator unit and LTF1
+    the READONLY defrost-skip link-in mirrors; CS4 flags the shipped floor/cutout combination on a copy with the floor set to 1
+    (clean on the fixed default 0); console-only flags exactly the two alarm-only trips (SP-smoke re-pinned); the audit
+    check is clean on the real servlet (audited); wiring map shows 170/192 rows with no lexicon key on the real facade.
+  - `bats tests/*.bats`: 756 ok / 0 not ok (58 env skips), exit 0 (first run caught golden-parser G-adapter pinning
+    "0 WARN" for an alarm-only trip → the console-only row got its own ADVISORY severity instead of WARN).
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh`; no new `A && B || C`.
+  - `lint-guard-pins.sh --strict .` exit 0; `gen-lint-index.sh --check` exit 0; `sweep-build-state.sh` exit 0;
+    `sweep-fold-audit.sh --strict` exit 0 (173 folded, 173 cited).
+  Gaps: report-module.sh wiring (new lint, facade FAIL, console-only) → WU7; logic.md "HOA is TRANSIENT" bullet contradicts
+  LTF2 → WU5a (persistent-config Δ1 doc half); METHODOLOGY conformance row (persistent-config Δ3) → WU10/WU11.
+- 2026-10-02 WU8 (branch `feat/fold-wu8-deploy-gates`, from origin/main 32bff11): `BUILD-LOOP.md` §4.c pre-built revert
+  build (roll-forward Δ2); §6 new MANDATORY pre-deploy gates — target-distribution boot smoke (commissioning Δ10), full station
+  backup before any -rt install (station-backup Δ1; the `--no-backup` bullet rewritten in place), versioned jar archive + sha256
+  (roll-forward Δ3), deploy checklist names the opt-in enabling slot + live value (auto-lock Δ5) and every BComponent-only flag
+  lifecycle as a station-smoke item (restart-seq Δ10), observed two-checkout handoff (auto-lock Δ7); roll-forward recovery
+  doctrine (roll-forward Δ1); remote-access preconditions (kit-meta Δ5); `niagara-tools/scripts/ng-deploy.sh` full path at first
+  use (kit-meta Δ4). `METHODOLOGY.md` 4-layer-stack cold-boot bullet REWRITTEN in place (target distribution/version,
+  commissioning Δ10; same in `build-verify.md` item 3) + Schema / upgrade safety roll-forward bullet. `types/distribution.md` §10
+  Downgrade row REWRITTEN in place (opposite-polarity rule) + new § 12 station backup/provisioning/fleet (station-backup Δ2, corpus
+  B39), § 13 release package (deployment-profiles Δ7), § 14 client documentation deliverable (operator-manual Δ2).
+  roll-forward Δ4: pointer added only on the slot-type-change retro's `retros/INDEX.md` row (retro bodies untouched); the outage
+  retro target does not exist — recorded as a note. FULL promotion + flip: roll-forward-recovery, dashboard-deployment-profiles.
+  No script: no WU8 delta asked for one. Evidence (passive docs, no RED applicable): see the WU8 commit body.
+  Gap (outside surface): `types/issues-and-gotchas.md` station-stuck-at-boot list still names Downgrade without the roll-forward
+  caveat (WU11).
+
+- 2026-10-02 WU7 (branch `feat/fold-wu7-build-preflight`, from origin/main): `toolbelt/build.sh` repo-root hint (exit 10 lists
+  gradle roots up to 3 levels below the argument), post-jar copy lock (`FileAlreadyExistsException` -> exit 32 naming each
+  `build/libs` jar rebuilt this run, stale ones "not rebuilt"), `--plugin-version`/env forwarded to `preflight.sh --plugin-version`
+  (and used by the m2 WARN), `--ui-profile hmi|lan|both|unknown` + `--legacy` forwarded to `report-module.sh`, header-only
+  `--help` via awk; `toolbelt/preflight.sh --plugin-version` (env fallback); `toolbelt/lint-structure.sh` L14 (hardcoded
+  `gradlePluginVersion` literal FAILs; pin LS14); new `scripts/check-client-source.sh` (git half of Δ1; kit-links L2 keeps git
+  out of toolbelt) and `scripts/check-skill-drift.sh` (Δ3; a scripts/ helper, not sweep-build-state.sh: CI has no installed
+  skill); `source_of_truth` DECLARED field (How to read + every module envelope, `unknown` where unconfirmed); kit-links L12
+  routes `scripts/check-*.sh` through BUILD-LOOP; BUILD-LOOP §0.b/§4/§7, build-verify.md, skill/SKILL.md step 4; regenerated
+  `toolbelt/INDEX.md`.
+  Evidence:
+  - RED: `bats tests/build-sh.bats` BS-repo-root-hint, BS-copy-lock, BS-copy-lock-stale, BS-preflight-plugin,
+    BS-preflight-plugin-env, BS-ui-profile not ok; `tests/preflight.bats` PF-plugin-override, PF-plugin-env,
+    PF-plugin-override-missing not ok; `tests/lint-structure.bats` LS14 not ok; `tests/check-client-source.bats` 14/14 and
+    `tests/check-skill-drift.bats` 6/7 not ok (scripts absent; SD7 vacuous); kit-links L12 not ok once the helpers existed.
+  - GREEN: build-sh 38/38, lint-structure 17/17, PF-plugin* 5/5, check-client-source 14/14, check-skill-drift 7/7, kit-links ok.
+  - Observed mutations (restored byte-identical): LS14 (L14 row disabled -> LS14 not ok), BS-copy-lock (signature regex
+    broken -> not ok), BS-ui-profile (--profile pass-through dropped -> not ok).
+  - Real smoke (read-only): check-client-source on the ColdRoomPan module root -> PASS (declared path, commit unknown);
+    on a non-git client tree -> WARN; check-skill-drift on this machine -> FAIL (installed launcher differs from the tracked one).
+  - `bats tests/*.bats`: 800 ok / 1 not ok (L1 dangling `toolbelt/lint-link-target-flags.sh` named in the new BUILD-STATE
+    entry; reworded, kit-links re-run 0 not ok), 66 skips.
+  - shellcheck 0.11.0 (CI pins 0.10.0): only pre-existing SC2329 info in `lint-config-sanity.sh:58`; `&& .* ||` in the diff: 0.
+  - `lint-guard-pins.sh --strict .` exit 0 (LS14 MATCH); `gen-lint-index.sh --check` fresh; `sweep-build-state.sh` exit 0;
+    `sweep-fold-audit.sh --strict` exit 0.
+  - Owed: continuous-fan-post-defrost-delay Δ2/Δ3 (WU5b); comppan-fase2-amps-alarms Δ1, Δ6-Δ8; restart-seq Δ1, Δ4-Δ10;
+    change-tier-time-budgets Δ1-Δ4, Δ6 + Δ5 ORCHESTRATION half (WU10); report-module.sh wiring handed off by WU6b
+    (link-target-flags relay, slot-coverage facade FAIL mapping, silent-protection ADVISORY rows) — outside the WU7 surface,
+    recorded in the kit BUILD-STATE open_issue.
 
 ## Next step
 - WU5a (logic persistence/restart/backup doctrine) after WU4 merges.

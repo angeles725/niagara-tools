@@ -159,3 +159,45 @@ setup() {
   run "$LS" "$OUT/MinimalPan/MinimalPan"
   [ "$status" -eq 0 ]                         # a scaffolded module is structurally clean (R18.4/R18.6)
 }
+
+# ---------------------------------------------------------------------------
+# L14 — settings.gradle.kts hardcodes gradlePluginVersion (no -PniagaraPluginVersion override)
+# [ev: retro panccadia-restart-seq-comp-lockout-hours Δ2]
+# Named mutation: LS14 -- drop the L14 check -> a hardcoded literal pin passes (LS14 exits 0)
+# ---------------------------------------------------------------------------
+_ls14_tree() {
+  # <root>/.git sentinel, <root>/Group/settings.gradle.kts, module root <root>/Group/Mod/Foo-rt
+  mkdir -p "$1/.git" "$1/Group/Mod/Foo-rt/src"
+  printf '%s\n' "$2" > "$1/Group/settings.gradle.kts"
+  printf 'plugins { id("com.tridium.niagara-module") }\n' > "$1/Group/Mod/Foo-rt/build.gradle.kts"
+  printf '<types><type name="Foo" class="com.x.Foo"/></types>\n' > "$1/Group/Mod/Foo-rt/module-include.xml"
+  printf 'Foo.displayName=Foo\n' > "$1/Group/Mod/Foo-rt/module.lexicon"
+  printf '<p n="Foo" t="x:Foo"/>\n' > "$1/Group/Mod/Foo-rt/module.palette"
+}
+
+@test "LS14: settings.gradle.kts with a hardcoded gradlePluginVersion literal FAILs L14" {
+  ROOT=$(mktemp -d)
+  _ls14_tree "$ROOT" '  val gradlePluginVersion: String = "7.6.17"'
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"L14"* ]]
+  [[ "$output" == *"settings.gradle.kts"* ]]
+}
+
+@test "LS14-clean: providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) -> no L14" {
+  ROOT=$(mktemp -d)
+  _ls14_tree "$ROOT" '  val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")'
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]                         # the fixture is otherwise structurally clean
+  [[ "$output" != *"L14"* ]]
+}
+
+@test "LS14-comment: a commented-out hardcoded literal is not flagged" {
+  ROOT=$(mktemp -d)
+  _ls14_tree "$ROOT" '  // val gradlePluginVersion: String = "7.6.17"'
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [[ "$output" != *"L14"* ]]
+}

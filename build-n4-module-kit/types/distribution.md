@@ -2,7 +2,8 @@
 
 How Niagara packages platform releases (`.dist`), what an OEM vendor overlay
 contains, trust-cert deployment for production, BOG schema-safety on upgrade,
-version stamping, station templates, and AX→N4 migration readiness.
+version stamping, station templates, AX→N4 migration readiness, station backup and fleet
+provisioning, release packages, and the client documentation deliverable.
 
 This doc is the **packaging and field-delivery** companion.
 For signing gates and `verify-module.sh`, see `build-verify.md`.
@@ -309,7 +310,7 @@ while the **station is DOWN** (the platform daemon must be running):
 
 | Action | When to use |
 |---|---|
-| **Downgrade** | roll back a newer-than-expected module to a known-good lower version |
+| **Downgrade** | only when the known-good lower version is still in the local software database — with one jar file name for every version it usually is not (copying the new jar overwrites it), and an up/downgrade stops the station and reboots the host anyway. The kit default is ROLL-FORWARD to a pre-built revert build under a higher version (`BUILD-LOOP.md` §4.c / §6) `[ev: retro roll-forward-recovery Δ1]` |
 | **Uninstall** | remove a module with no dependents; the station will boot without it |
 | **Import + Re-Install** | install the correct build via a fresh JAR upload |
 | **Rebuild Module Signatures** | repair the BLD1/BLD7 trust failure (signs the existing JAR against the station's current cert chain); **station must be not-running** |
@@ -334,6 +335,71 @@ module-verification check on next boot, even if the JAR bytes are correct.
 When an rt action can accept only small strings and you need to push a firmware image or large file from the WB to a device, use ≈5 000-character Base64 segments sent as repeated action invocations, terminated by a sentinel string `"END"`. The rt side accumulates segments in a `StringBuilder`, Base64-decodes on the sentinel, then writes the binary. This avoids any single-payload size limit without a custom Fox file channel.
 
 See `types/logic-authoring.md §Chunked Base64 transfer for firmware/file OTA` for the full WB + rt code recipe. `[ev: corpus B1080]`
+
+---
+
+## 12 · Station backup, provisioning and fleet `[ev: retro station-backup-before-deploy Δ2]`
+
+Niagara uses "backup" for three different artifacts; name which one a procedure means. `[ev: corpus B39 §39.0]`
+
+| Artifact | Contains | Restores onto | Use |
+|---|---|---|---|
+| Station copy (`.bog` via Station Copier) | station `.bog`, histories, alarms | any model; brings NO modules, NO OS | move a station between hosts |
+| Backup `.dist` (Workbench Backup, `BBackupService`, or a provisioning backup step) | `.bog` + histories + alarms + module references + platform config | same platform family; restore checks module dependencies (§ 6 restore direction rule) | the pre-deploy station backup (`BUILD-LOOP.md` §6) |
+| Clone backup (controller USB/clone) | everything incl. modules, JVM and OS image | identical hardware model only | disaster recovery |
+
+**Per-station vs Supervisor.** Each station owns its `.bog`, its persisted operator values and its
+local histories/alarms; a station-level backup is the only artifact that captures them. A Supervisor
+adds fleet tooling, not a substitute: provisioning jobs run steps (backup, software install, …) for
+each subordinate station and store each backup `.dist` under the Supervisor's per-station
+provisioning data, and Supervisor replication (proxied points, imported histories, routed alarms,
+schedules) gives the Supervisor its own copies, not a restorable image of the subordinate.
+`[ev: corpus B39 §39.2]` `[ev: corpus B39 §39.6]`
+
+**Restore is a station operation.** Restoring a Backup `.dist` runs on the target station's
+platform, restarts the station, and fails when a referenced module is missing — so the module jars
+the backup refers to must be installable at restore time (keep the versioned jar archive of
+`BUILD-LOOP.md` §6). Encrypted secrets in the `.bog` decode only with the matching keyring/system
+passphrase; a backup without it means re-entering every device/integration secret.
+`[ev: corpus B39 §39.1.4]` `[ev: corpus B39 §39.10]`
+
+**Retention.** Provisioning backup jobs keep every `.dist` forever by default; set a retention
+policy (by age or by number of runs) on the job prototype, or the Supervisor disk fills silently.
+`[ev: corpus B39 §39.2.5]`
+
+**Persisted ≠ saved.** A persisted slot reaches disk only on a station save, so a backup taken
+before a save misses the live operator values; save the station before the backup.
+`[ev: retro station-backup-before-deploy Δ2]`
+
+---
+
+## 13 · Release package `[ev: retro dashboard-deployment-profiles Δ7]`
+
+A release handed to a site is a folder, not loose jars:
+
+- **Name:** `<SITE>_<ModuleA>-<x.y.z>_<ModuleB>-<x.y.z>…` — the site and every module version it
+  carries, so the folder name alone says what is inside.
+- **`<package>/MANIFEST.md`:** module versions, operator-manual version, change summary since the previous
+  package, and pointers to `SHA256SUMS.txt` (one line per jar and document) and `SOURCE.txt`
+  (repository + commit each jar was built from).
+- **Contents:** the signed jars, the revert build of `BUILD-LOOP.md` §4.c when one was prepared, and
+  the rendered operator manual (§ 14).
+- **Retention:** keep the last 3 packages locally; archive older ones in the client repository's
+  releases, or delete them. Never keep dated copies inside the source tree.
+
+---
+
+## 14 · Client documentation deliverable `[ev: retro operator-manual-lockstep Δ2]`
+
+The operator manual ships with the modules it describes:
+
+- **Structure:** install, configuration, operation, alarms, troubleshooting.
+- **Version stamp:** the manual's version equals the module `defaultModuleVersion` it documents.
+- **One source, one render:** a single source format (HTML or Markdown) in the repository plus a
+  rendered PDF; render with a headless Chrome/Chromium print-to-PDF of the source
+  (`--headless --print-to-pdf=<out.pdf> <source.html>`), never by hand-editing the PDF.
+- **No duplicates:** no `.bak` files or dated copies of the manual in the repository — history lives
+  in version control.
 
 ---
 

@@ -40,6 +40,33 @@ individual browser user). The audit entry shows the shared user name, not the hu
 operator. This is a Niagara platform limitation, not a module bug — document it in
 your module's README so integrators are not surprised. [ev: memory PANCCADIA-access-model; corpus B507 §SEC-02]
 
+### 1.3 Servlet write audit — the customer-visible record `[ev: retro servlet-write-audit Δ1]`
+
+Platform audit (§1.1) and a customer-visible audit are different deliverables: the station
+audit history needs an admin and Workbench, a shared write-server/oBIX user erases the human
+identity (§1.2), and a record nobody can read does not answer "who changed this".
+
+**Contract — every servlet write handler (`doPost`/`doPut`/`doDelete`):**
+
+1. **Record** user (the human identity, carried in the payload when a shared service account
+   performs the station write), target ord/slot, old value, new value, source
+   (`HMI` / `viewer` / `API`) and timestamp — for every accepted write, before answering success.
+2. **Persist** the record in a BOUNDED store (ring of the last N entries, or a bounded history)
+   that survives a station restart; never only in memory, never unbounded.
+3. **Make it readable** to authorized users through a read endpoint; the dashboard's
+   "recent changes" view reads that store, never the browser's local state.
+4. **Echo what was stored:** the write response carries the value ACTUALLY stored (after
+   coercion/clamping) — the same value the audit record holds as "new".
+
+Still pass the real `Context` to `set()`/`invoke()` (§1.1) so the platform audit fires too.
+Client side (per-field confirmation, recent-changes view):
+[`dashboard.md` § Critical-write step-up auth](dashboard.md) — not restated here.
+
+Enforced: `toolbelt/lint-write-path.sh` WARNs a src file that declares a servlet write handler
+and contains no audit-recording call (an identifier containing `audit` invoked, getters and
+comments excluded); advisory for legacy modules, `--strict` promotes it to exit 1.
+`[ev: retro servlet-write-audit Δ2]`
+
 ---
 
 ## 2 · RBAC — role-based access control

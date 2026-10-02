@@ -108,3 +108,37 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"no OPERATOR slots found"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# Workbench display-name column (fold-2026-10-02-pending-retros WU6b)
+# [ev: retro panccadia-commissioning-lessons Δ9]: a commissioning link table must carry the
+# Workbench display name (from module.lexicon) next to the internal slot name and the full ord,
+# or the operator cannot find the slots in the live tree.
+# Named mutation GWM-display: drop the lexicon lookup -> every row shows the no-key placeholder.
+# ---------------------------------------------------------------------------
+@test "GWM-display: --lexicon fills the Workbench display name column (Type.slot beats bare key; no key -> placeholder)" {
+  LX="$FX-lex/Facade-rt"
+  run "$SCRIPT" "$LX/src" --lexicon "$LX/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"| \`temperatureSetpoint\` | Setpoint de temperatura |"* ]]
+  [[ "$output" == *"| \`roomTemperature\` | Temperatura del cuarto |"* ]]
+  [[ "$output" == *"| \`doorOpen\` | _(no lexicon key)_ |"* ]]
+}
+
+@test "GWM-display-auto: module.lexicon next to <facade-src-dir> is discovered without --lexicon" {
+  LX="$FX-lex/Facade-rt"
+  run "$SCRIPT" "$LX/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"| \`temperatureSetpoint\` | Setpoint de temperatura |"* ]]
+}
+
+@test "GWM-columns: both tables carry internal name + Workbench display name + full ord columns" {
+  run "$SCRIPT" "$FX"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c '| Facade slot | Workbench display name | .* | Full ord |')" -eq 2 ]
+}
+
+@test "GWM-lexicon-missing: --lexicon <nonexistent> -> exit 3" {
+  run "$SCRIPT" "$FX" --lexicon "/nonexistent/__gwm__.lexicon"
+  [ "$status" -eq 3 ]
+}

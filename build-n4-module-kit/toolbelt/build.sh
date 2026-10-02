@@ -3,11 +3,18 @@
 # A `gradle :jar` with the default JDK is NOT a build (wrong bytecode major, slotomatic skipped).
 # Deploying to a station is ng-deploy.sh's job (backup -> build -> copy -> type-count verify).
 #
-# Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--no-preflight] [--no-report] [--no-drift-check] <module-root> <MOD> [niagara_home]
-#   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/
+# Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--ui-profile P] [--legacy]
+#                 [--no-preflight] [--no-report] [--no-drift-check] <module-root> <MOD> [niagara_home]
+#   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
+#                   an ancestor holds ./gradlew (the REPO root was passed), the error lists every gradle root
+#                   found up to 3 levels BELOW it — descend into one. [ev: retro comppan-fase2-amps-alarms Δ2]
 #   niagara_home    arg 3, else $niagara_home. On WSL use the /mnt/c/... mount or a mirror (mirror-niagara-home.sh).
 #   --plugin-version / $NIAGARA_PLUGIN_VERSION   forwarded as -PniagaraPluginVersion (each install ships ONE
-#                   niagara-module plugin: 4.13.2 -> 7.3.40, 4.14 -> 7.6.17, 4.15.3 -> 7.6.22)
+#                   niagara-module plugin: 4.13.2 -> 7.3.40, 4.14 -> 7.6.17, 4.15.3 -> 7.6.22); also forwarded to
+#                   preflight.sh --plugin-version so its plugin-pin check tests the version gradle will actually
+#                   use, not a drifted settings.gradle.kts default [ev: retro continuous-fan-post-defrost-delay Δ1]
+#   --ui-profile P  hmi|lan|both|unknown — the module's BUILD-STATE ui_profile, forwarded to report-module.sh
+#                   --profile (selects rc-scan's browser floor); --legacy forwards report-module.sh --legacy
 #   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
 #   --no-drift-check  skip the deployed-baseline drift gate below (Δ2) — fix the version bump, don't skip, unless
@@ -25,18 +32,35 @@
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
 #   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
 #   OLD baseline and catches the same drift again, instead of silently "Up to Date"-passing on the retry.
+# Post-jar copy lock (exit 32): the plugin's last step copies the jar into <niagara_home>/modules; a Windows
+#   process (Workbench, station) holding the old jar open on /mnt/c makes it fail with FileAlreadyExistsException.
+#   build.sh names the build/libs jar(s) rebuilt THIS run as the artifact of record (a stale one is flagged
+#   "not rebuilt"). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ3]
+# Independent gradle groups (different gradle roots) may be built CONCURRENTLY: one build.sh per group in the
+#   background, then wait — never two runs on the SAME gradle root (BUILD-LOOP.md §4).
+#   [ev: retro change-tier-time-budgets Δ5]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
-#   30 gradle failed · 31 :clean locked · 50 gate or report-module FAIL · 51 deployed-baseline drift (Δ2)
+#   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 50 gate or report-module FAIL ·
+#   51 deployed-baseline drift (Δ2)
 set -euo pipefail
 
-usage() { sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; }
-PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"
+# usage: print the leading comment block (line 2 up to the first non-comment line), never code.
+usage() { awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; }
+PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"; UI_PROFILE=""; LEGACY=0
 SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --profiles)       [ $# -ge 2 ] || { usage >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
     --target-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; TARGET="$2"; shift 2 ;;
     --plugin-version) [ $# -ge 2 ] || { usage >&2; exit 2; }; PLUGIN="$2"; shift 2 ;;
+    --ui-profile)
+      [ $# -ge 2 ] || { usage >&2; exit 2; }
+      case "$2" in
+        hmi|lan|both|unknown) UI_PROFILE="$2" ;;
+        *) echo "build.sh: --ui-profile must be hmi|lan|both|unknown (got: $2)" >&2; exit 2 ;;
+      esac
+      shift 2 ;;
+    --legacy)       LEGACY=1;         shift ;;
     --no-preflight) SKIP_PREFLIGHT=1; shift ;;
     --no-report)    SKIP_REPORT=1;    shift ;;
     --no-drift-check) SKIP_DRIFT_CHECK=1; shift ;;
@@ -59,6 +83,14 @@ GRADLE_ROOT="$ROOT"
 while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do GRADLE_ROOT="$(dirname "$GRADLE_ROOT")"; done
 [ -x "$GRADLE_ROOT/gradlew" ] || {
     echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2
+    # comppan-fase2-amps-alarms Δ2: the opposite mistake — the REPO root was passed, one or more levels
+    # ABOVE the gradle root (a client repo nests several gradle groups as siblings). List them.
+    _BELOW="$(find "$ROOT" -mindepth 2 -maxdepth 3 \( -type d \( -name '.*' -o -name node_modules -o -name build \) -prune \) \
+        -o \( -type f -name gradlew -print \) 2>/dev/null | LC_ALL=C sort || true)"
+    if [ -n "$_BELOW" ]; then
+        echo "  found gradle root(s) BELOW $ROOT — pass the GROUP dir that holds <MOD>/, not the repo root:" >&2
+        while IFS= read -r _gw; do echo "    $(dirname "$_gw")" >&2; done <<< "$_BELOW"
+    fi
     echo "  try: chmod +x $ROOT/gradlew" >&2
     exit 10
 }
@@ -84,7 +116,8 @@ done
 
 if [ "$SKIP_PREFLIGHT" -eq 0 ]; then
   echo "==> preflight"
-  if "$HERE/preflight.sh" "$NIAGARA_HOME" "$GRADLE_ROOT"; then
+  PFARGS=(); [ -z "$PLUGIN" ] || PFARGS+=(--plugin-version "$PLUGIN")
+  if "$HERE/preflight.sh" "${PFARGS[@]}" "$NIAGARA_HOME" "$GRADLE_ROOT"; then
     :
   else
     _PF=$?
@@ -101,6 +134,8 @@ _SETTINGS_KTS="$GRADLE_ROOT/settings.gradle.kts"
 if [ -f "$_SETTINGS_KTS" ]; then
     _GPLUG_VER=$(LC_ALL=C grep -oE 'gradlePluginVersion[[:space:]]*:[[:space:]]*String[[:space:]]*=[[:space:]]*"[0-9][^"]*"' \
         "$_SETTINGS_KTS" 2>/dev/null | grep -oE '"[0-9][^"]*"' | tr -d '"' | head -1 || true)
+    # an explicit override (flag/env) is the version gradle will use — check that one instead
+    [ -z "$PLUGIN" ] || _GPLUG_VER="$PLUGIN"
     if [ -n "$_GPLUG_VER" ]; then
         _PLUG_IN_M2=$(find "$NIAGARA_HOME/etc/m2/repository" -maxdepth 8 -type d -name "$_GPLUG_VER" 2>/dev/null | head -1 || true)
         if [ -z "$_PLUG_IN_M2" ]; then
@@ -192,18 +227,37 @@ fi
 
 echo "==> build (Java 8 + slotomatic): ${TASKS[*]}"
 GLOG="$(mktemp)"
+# Start-of-build marker: a build/libs jar NEWER than this was produced by this run (exit-32 report below).
+GSTAMP="$(mktemp)"
 if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$GLOG"; then
-  rm -f "$GLOG"
+  rm -f "$GLOG" "$GSTAMP"
 else
+  # restart-seq-comp-lockout-hours Δ3: the plugin's post-jar copy into <niagara_home>/modules failed because a
+  # (Windows-side) process holds the old jar open. The jar task itself already assembled build/libs/<jar>.
+  if grep -qE 'FileAlreadyExistsException.*modules/.*\.jar' "$GLOG"; then
+    echo "build.sh: the plugin's post-jar copy into $NIAGARA_HOME/modules failed — a local process (Workbench," >&2
+    echo "  a station) holds the old jar open (FileAlreadyExistsException). The build/libs jar is the artifact of record:" >&2
+    for p in "${SEL[@]}"; do
+      _lib="$ROOT/$MOD/$MOD-$p/build/libs/$MOD-$p.jar"
+      if [ -n "$(find "$_lib" -newer "$GSTAMP" 2>/dev/null)" ]; then
+        echo "    $_lib (built this run)" >&2
+      else
+        echo "    $_lib — not rebuilt this run (missing or stale): gradle stopped before this profile" >&2
+      fi
+    done
+    echo "  Close the process holding modules/<jar> and re-run to refresh the modules/ copy — or use the build/libs" >&2
+    echo "  jar directly (the verify gate was NOT run: run verify-module.sh on it before any deploy)." >&2
+    rm -f "$GLOG" "$GSTAMP"; exit 32
+  fi
   # soft-start: a running station LOCKS modules/<mod>.jar so :clean fails — tell the operator how to fix it.
   if grep -qE 'Unable to delete .*modules/.*\.jar' "$GLOG"; then
     echo "build.sh: :clean could not delete a modules/<jar> — a running station has it locked." >&2
     echo "  Free the lock first: close Workbench, or stop the station, then build directly; or build against a" >&2
     echo "  mirror (mirror-niagara-home.sh); or just use the already-assembled build/libs jar (the modules/ copy" >&2
     echo "  is irrelevant when you are not deploying to that supervisor)." >&2
-    rm -f "$GLOG"; exit 31
+    rm -f "$GLOG" "$GSTAMP"; exit 31
   fi
-  echo "build.sh: gradle failed" >&2; rm -f "$GLOG"; exit 30
+  echo "build.sh: gradle failed" >&2; rm -f "$GLOG" "$GSTAMP"; exit 30
 fi
 
 # ---------------------------------------------------------------------------
@@ -257,6 +311,8 @@ if "$HERE/verify-module.sh" "${VARGS[@]}" "${JARS[@]}"; then
   if [ "$SKIP_REPORT" -eq 0 ]; then
     echo "==> report-module (hand-off punch-list)"
     RARGS=("$ROOT/$MOD"); [ -z "$TARGET" ] || RARGS+=(--target-version "$TARGET")
+    [ -z "$UI_PROFILE" ] || RARGS+=(--profile "$UI_PROFILE")
+    [ "$LEGACY" -eq 0 ] || RARGS+=(--legacy)
     if "$HERE/report-module.sh" "${RARGS[@]}"; then
       exit 0
     else

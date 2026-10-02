@@ -209,3 +209,35 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   run "$SC" "$WB/module-include.xml" "$WB/module.lexicon"   # module.lexicon does not exist
   [ "$status" -eq 1 ]
 }
+
+# ---------------------------------------------------------------------------
+# Facade default-FAIL mode (fold-2026-10-02-pending-retros WU6b)
+# [ev: retro panccadia-commissioning-lessons Δ9]: an operator-facing facade/panel type with no
+# lexicon key renders raw camelCase in Workbench and the operator cannot find the slots — FAIL
+# by default (not only under --strict). A *Panel / *Facade type name marks a facade type; --facade
+# treats every declared type of the module as operator-facing.
+# Named mutation SC-facade: drop the facade-type FAIL block -> SC-facade flips (exit 0).
+# ---------------------------------------------------------------------------
+@test "SC-facade: a *Panel type with no lexicon key FAILs by default (exit 1, names the type)" {
+  setup_parse_fixtures
+  run "$SC" "$FIXDIR/facade/module-include.xml" "$FIXDIR/facade/module.lexicon"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"slot-coverage: FAIL facade type without lexicon: CompressorPanel"* ]]
+  [[ "$output" != *"FAIL facade type without lexicon: RoomPanel"* ]]
+  [[ "$output" == *"pct=50.0 (type-set)"* ]]
+}
+
+@test "SC-facade-neg: a missing NON-facade type stays advisory without --strict/--facade (exit 0)" {
+  setup_parse_fixtures
+  run "$SC" "$FIXDIR/internal/module-include.xml" "$FIXDIR/internal/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"missing=StagingCore"* ]]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+@test "SC-facade-flag: --facade makes every missing type a facade FAIL (exit 1)" {
+  setup_parse_fixtures
+  run "$SC" --facade "$FIXDIR/internal/module-include.xml" "$FIXDIR/internal/module.lexicon"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL facade type without lexicon: StagingCore"* ]]
+}
