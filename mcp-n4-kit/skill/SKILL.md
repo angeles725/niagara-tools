@@ -28,7 +28,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 ## Session checklist (full detail in METHODOLOGY section 4)
 
 1. `n4_describe_session`, `n4_connect` to a configured station; confirm the real station name and the version tier.
-2. Inventory or wide reads: `n4_inventory` / `n4_bql_query` FIRST (METHODOLOGY section 7); `n4_navigate` / `n4_read_slots` only for targeted components. A read expected to exceed ~1 min writes progress to a file and reports counts.
+2. Inventory or wide reads: `n4_inventory` / `n4_bql_query` FIRST (METHODOLOGY section 7); `n4_navigate` (optional `types` filter) / `n4_read_slots` only for targeted components. A read or client expected to exceed ~1 min writes progress to a file and reports counts; never rely on stdout piped through `tail`.
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.
@@ -43,6 +43,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 - Report `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success.
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
 - Never contact a station the operator did not configure and authorize.
+- If the harness permission classifier blocks a live write, surface it to the operator and stop; never route around it (no other tool, subagent or peer session).
 - Close with the session retro (`n4_session_retro_draft` / `tools/new_retro.py`): proposed kit deltas, never applied unprompted; never stage issues automatically.
 
 ## Output Contract

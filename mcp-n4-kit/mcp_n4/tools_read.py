@@ -176,16 +176,36 @@ def n4_describe_session(ctx, args):
 
 # ---- n4_navigate ---------------------------------------------------------
 
-def _tree_entries(nodes, path, levels):
+def _tree_entries(nodes, path, levels, types=None):
+    """Child entries of `path`, `levels` deep.
+
+    With `types` (a set of type specs) an entry is kept when its type is in the set
+    (`matched: true`) or when a nested entry is kept (`matched: false`, the path to it).
+    """
     entries = []
     for name, node in box.children(nodes, path).items():
         child_path = path + "/" + name if path else name
         entry = {"name": name, "type": node.get("t"), "handle": node.get("h"),
                  "has_children": _has_component_children(nodes, child_path)}
         if levels > 1:
-            entry["children"] = _tree_entries(nodes, child_path, levels - 1)
+            entry["children"] = _tree_entries(nodes, child_path, levels - 1, types)
+        if types is not None:
+            entry["matched"] = entry["type"] in types
+            if not (entry["matched"] or entry.get("children")):
+                continue
         entries.append(entry)
     return entries
+
+
+def _types_arg(args):
+    """The `types` filter as a set, or None when absent or empty (no filter)."""
+    types = args.get("types") or None
+    if types is None:
+        return None
+    if not all(isinstance(t, str) and t for t in types):
+        raise ToolError("types must be a list of non-empty type specs such as "
+                        "'bacnet:BacnetDevice', got %r" % (types,))
+    return types
 
 
 def _timed_load(ctx, ord_str, depth):
@@ -196,11 +216,15 @@ def _timed_load(ctx, ord_str, depth):
 
 
 def n4_navigate(ctx, args):
-    ord_str, depth = _ord_arg(args), args.get("depth", 1)
+    ord_str, depth, types = _ord_arg(args), args.get("depth", 1), _types_arg(args)
     # one extra level so has_children is known for the deepest children returned
     nodes, elapsed = _timed_load(ctx, ord_str, depth + 1)
-    return {"ord": ord_str, "children": _tree_entries(nodes, "", depth),
-            "elapsed_ms": elapsed}
+    out = {"ord": ord_str,
+           "children": _tree_entries(nodes, "", depth, None if types is None else set(types)),
+           "elapsed_ms": elapsed}
+    if types is not None:
+        out["types"] = types
+    return out
 
 
 # ---- n4_read_slots -------------------------------------------------------
@@ -425,9 +449,14 @@ TOOLS = [
          "List the children of a component (name, type, handle, has_children). "
          "depth > 1 nests grandchildren under a 'children' key. elapsed_ms is the load "
          "time. For a station inventory use n4_bql_query or n4_inventory instead: one "
-         "navigate is one round trip per component.",
+         "navigate is one round trip per component. types (optional) keeps only children "
+         "whose type is one of the given specs (e.g. bacnet:BacnetDevice) plus the path to "
+         "them; each kept entry then carries matched true/false.",
          _schema({"ord": _str("Station ORD, default station:|slot:/", default=ROOT_ORD),
-                  "depth": _int("Levels to list (1-3)", 1, 3, 1)}),
+                  "depth": _int("Levels to list (1-3)", 1, 3, 1),
+                  "types": {"type": "array", "items": {"type": "string"},
+                            "description": "Optional type specs to keep, e.g. "
+                                           "['bacnet:BacnetDevice']; default: no filter"}}),
          n4_navigate),
     Tool("n4_read_slots",
          "Read all slots of one component as {name, type, value, status}. Status complexes "
