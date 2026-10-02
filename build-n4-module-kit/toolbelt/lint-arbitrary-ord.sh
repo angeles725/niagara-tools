@@ -9,9 +9,14 @@
 # Usage:  lint-arbitrary-ord.sh <src-root>
 #   Flags BOrd.make(<lowercase-identifier>) — skips string literals and UPPER_CASE constants.
 #   Row:  WARN  lint-arbitrary-ord  <file>:<line>  BOrd.make from a variable: <source>
+#   Reviewed call site: `// lint-arbitrary-ord: reviewed <reason>` on the same line or the line
+#   directly above suppresses that one WARN; the reason is mandatory — a bare marker still WARNs
+#   ("reviewed marker without a reason"). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
 # Mutation: AO2 -- require a leading quote and AO2 stops warning on BOrd.make(variable)
+# Mutation: AO4 -- ignore the reviewed marker and AO4 WARNs again on the reviewed call site
+# Mutation: AO6 -- accept a bare marker without a reason and AO6 stops warning
 set -u
 LC_ALL=C
 export LC_ALL
@@ -26,16 +31,38 @@ if [ ! -d "$ROOT" ]; then
     exit 3
 fi
 
+MARKER='lint-arbitrary-ord:[[:space:]]*reviewed'
+
+# marker_state <text>: "reason" when the text carries the reviewed marker followed by a reason,
+# "bare" when it carries the marker with nothing after it, "" when there is no marker.
+marker_state() {
+    if printf '%s' "$1" | grep -Eq "${MARKER}[[:space:]]+[^[:space:]]"; then
+        printf 'reason'
+    elif printf '%s' "$1" | grep -Eq "$MARKER"; then
+        printf 'bare'
+    fi
+}
+
 while IFS= read -r f; do
     ln=0
+    prev=""
     while IFS= read -r line || [ -n "$line" ]; do
         ln=$((ln + 1))
         code=${line%%//*}
         # BOrd.make( <lowercase ident> ) — a bare variable, not a "literal" and not a CONST
         if printf '%s' "$code" | grep -Eq 'BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)'; then
             trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
-            printf 'WARN  lint-arbitrary-ord  %s:%s  BOrd.make from a variable: %s\n' "$f" "$ln" "$trimmed"
+            st=$(marker_state "${line#"$code"}")
+            if [ -z "$st" ] && printf '%s' "$prev" | grep -Eq '^[[:space:]]*//'; then
+                st=$(marker_state "$prev")
+            fi
+            case "$st" in
+                reason) : ;;
+                bare) printf 'WARN  lint-arbitrary-ord  %s:%s  reviewed marker without a reason (add one): %s\n' "$f" "$ln" "$trimmed" ;;
+                *) printf 'WARN  lint-arbitrary-ord  %s:%s  BOrd.make from a variable: %s\n' "$f" "$ln" "$trimmed" ;;
+            esac
         fi
+        prev=$line
     done < "$f"
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print 2>/dev/null)
 
