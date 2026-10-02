@@ -171,8 +171,9 @@ Every write call goes through these layers:
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.
 8. **Read-back.** After executing, the node is reloaded and the reply carries
-   `{requested, accepted, observed, verdict}`: `verified`, `mismatch` (reported, not
-   raised), `failed` (including any read-back error, reported as `readback_error`
+   `{requested, accepted, observed, verdict}`: `verified`, `partial` (a rollback that
+   did not bring back every piece of configuration, listed in the reply), `mismatch`
+   (reported, not raised), `failed` (including any read-back error, reported as `readback_error`
    next to the `batch_id`), or `unverified` for the state-changing actions
    (`active`, `inactive`, `auto`) that have no slot to read back and for an
    ambiguous `checkLinks` reply (`in_doubt: true`; the new link is searched by its
@@ -210,7 +211,14 @@ Destructive tools use the same pipeline:
   handle must still belong to its ORD. Inverses: remove a created component or
   link, restore a slot or fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
-  `relinks: {restored, skipped}`).
+  `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
+  never re-added: the read-back compares it with the snapshot and lists any
+  difference in `frozen_config_not_restored`. A link-driven input whose link is not
+  re-created (an end is missing, or its source was outside the removed subtree) is
+  listed in `link_inputs_not_restored` with the value captured when the confirmed
+  remove ran (the dry run previews it as `link_input_values`, outside the
+  confirmation hash, because a link keeps changing it). Either
+  list makes the verdict `partial`, never `verified`.
 - `n4_save_station` invokes `save` on the root. The BOX reply to `save` is `null`
   and proves nothing, so with `--station-home NAME=PATH` (directory holding
   `config.bog`, repeatable) the tool compares mtime and sha256 before and after,

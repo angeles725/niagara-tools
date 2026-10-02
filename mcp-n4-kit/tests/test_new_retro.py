@@ -66,6 +66,15 @@ class TestNewRetro(unittest.TestCase):
         retro_file = os.path.join(self.out, "2026-10-01-LLM-session.md")
         self.assertEqual(os.stat(retro_file).st_mode & 0o777, 0o644)
 
+    def test_the_umask_is_read_without_changing_it(self):
+        old = os.umask(0o027)
+        self.addCleanup(os.umask, old)
+        with mock.patch.object(new_retro.os, "umask", wraps=os.umask) as spy:
+            self.assertEqual(new_retro._current_umask(), 0o027)
+        if os.path.exists("/proc/self/status"):  # Linux: no set-and-restore at all
+            spy.assert_not_called()
+        self.assertEqual(os.umask(0o027), 0o027)  # unchanged
+
     def test_no_friction_writes_the_honesty_line_and_zero_deltas(self):
         code, _ = self.run_cli()
         self.assertEqual(code, 0)

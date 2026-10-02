@@ -70,6 +70,9 @@ _VERDICTS = {
                  "METHODOLOGY.md · section 3", "HIGH"),
     "failed": ("Investigate why the read-back failed after the station accepted the write",
                "mcp_n4/tools_write.py · read-back", "HIGH"),
+    "partial": ("Restore by hand the configuration a rollback reported as not restored "
+                "(frozen_config_not_restored, link_inputs_not_restored)",
+                "METHODOLOGY.md · section 3", "MEDIUM"),
     "unverified": ("Add a way to verify this write class, or document that it stays unverified",
                    "METHODOLOGY.md · section 3", "MEDIUM"),
 }
