@@ -119,7 +119,7 @@ while IFS= read -r f; do
       linked = (lc ~ /link-in|linked from|commissioning link|written by (a )?blink/)
       mapped = (index(MAP_TARGETS, " " pname " ") > 0)
       if (index(buf, "READONLY") > 0 && (linked || mapped)) {
-        why = linked ? "link comment" : "wiring-map Table 2"
+        why = linked ? "link comment" : "wiring-map Table 2"   # "(wiring-map Table 2)" is matched by report-module.sh and commissioning-verify.sh
         printf "FAIL  lint-link-target-flags  %s:%d  LTF1: link-in target \"%s\" (%s) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side\n", FILE, pline, pname, why
       }
       if (index(buf, "TRANSIENT") > 0 && index(buf, "OPERATOR") > 0 &&

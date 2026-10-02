@@ -456,7 +456,10 @@ for ADIR in "${ARTIFACTS[@]}"; do
       emit "$ANAME" ERROR lint-link-target-flags "env fault (exit 3)"; HAD_ENV=1
     else
       # Name the chosen map in the Table 2 reason so a false FAIL from the parent-dir fallback is traceable.
-      [ -n "$WIRING_MAP" ] && ltf_out="${ltf_out//(wiring-map Table 2)/(wiring-map Table 2: $WIRING_MAP)}"
+      # "(wiring-map Table 2)" is a contract with the LTF1 reason text of lint-link-target-flags.sh
+      # (`why`); RM43 pins it. Pattern and replacement are quoted: under bash 5.2 patsub_replacement an
+      # unquoted & in the replacement would expand to the matched text. [polish-2026-10-02 P1c]
+      [ -n "$WIRING_MAP" ] && ltf_out=${ltf_out//"(wiring-map Table 2)"/"(wiring-map Table 2: $WIRING_MAP)"}
       relay_rows "$ANAME" "$ltf_out"
       if [ "$RELAY_FAIL" -eq 0 ] && [ "$ltf_exit" -ne 0 ]; then
         # Fail closed: a non-zero exit with no FAIL row (127 = lint missing, a crash, an unexpected row

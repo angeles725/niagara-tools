@@ -8,6 +8,8 @@
 #
 # RED today: commissioning-verify.sh does not exist -> every pin fails for the right reason.
 
+load helpers/stub-toolbelt   # stub_toolbelt <dir> <member> <body> (polish P1c)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   CV="$KIT/toolbelt/commissioning-verify.sh"
@@ -155,16 +157,8 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
 #   CV-ltf6  the chosen wiring map is named in the PASS detail and the Table 2 FAIL reason.
 # Named mutations (observed): CV-failopen -> CV-ltf4 flips; CV-mapname -> CV-ltf6 flips.
 # ---------------------------------------------------------------------------
-_cv_stub_toolbelt() {  # $1 = dir, $2 = stub body for lint-link-target-flags.sh
-  mkdir -p "$1"
-  local f; for f in "$KIT/toolbelt"/*; do ln -s "$f" "$1/"; done
-  rm "$1/lint-link-target-flags.sh"
-  printf '#!/usr/bin/env bash\n%s\n' "$2" > "$1/lint-link-target-flags.sh"
-  chmod +x "$1/lint-link-target-flags.sh"
-}
-
 @test "CV-ltf4: lint exit 127 with no FAIL row -> FAIL link-target-flags row, never PASS, exit 1" {
-  local tb="$BATS_TEST_TMPDIR/cvltf4tb"; _cv_stub_toolbelt "$tb" 'exit 127'
+  local tb="$BATS_TEST_TMPDIR/cvltf4tb"; stub_toolbelt "$tb" lint-link-target-flags.sh 'exit 127'
   run "$tb/commissioning-verify.sh" "$MINIMAL"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  commissioning  link-target-flags:MinimalPan-rt  lint-link-target-flags.sh exited 127"* ]]
@@ -172,7 +166,7 @@ _cv_stub_toolbelt() {  # $1 = dir, $2 = stub body for lint-link-target-flags.sh
 }
 
 @test "CV-ltf5: lint exit 3 -> SKIP link-target-flags row, exit 0" {
-  local tb="$BATS_TEST_TMPDIR/cvltf5tb"; _cv_stub_toolbelt "$tb" 'exit 3'
+  local tb="$BATS_TEST_TMPDIR/cvltf5tb"; stub_toolbelt "$tb" lint-link-target-flags.sh 'exit 3'
   run "$tb/commissioning-verify.sh" "$MINIMAL"
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP  commissioning  link-target-flags:MinimalPan-rt  env fault (exit 3)"* ]]
@@ -190,4 +184,14 @@ _cv_stub_toolbelt() {  # $1 = dir, $2 = stub body for lint-link-target-flags.sh
   [[ "$output" == *"(wiring-map Table 2: $r/docs/wiring-map.md)"* ]]
   run "$CV" "$MINIMAL" --wiring-map "$r/docs/wiring-map.md"
   [[ "$output" == *"PASS  commissioning  link-target-flags:MinimalPan-rt  LTF1/LTF2 clean (wiring map: $r/docs/wiring-map.md)"* ]]
+}
+
+# polish-2026-10-02 P1c: a map path holding & is named verbatim (bash 5.2 patsub_replacement).
+# Named mutation CV-amp (unquote the replacement) -> CV-ltf7 flips.
+@test "CV-ltf7: a wiring-map path holding & is named verbatim in the Table 2 FAIL reason" {
+  local r="$BATS_TEST_TMPDIR/c&v"; _cv_map_tree "$r"
+  mkdir -p "$r/docs"; cp "$BATS_TEST_DIRNAME/fixtures/lint-link-target-flags/map/docs/wiring-map.md" "$r/docs/"
+  run "$CV" "$r"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(wiring-map Table 2: $r/docs/wiring-map.md)"* ]]
 }

@@ -12,11 +12,13 @@
 #   Reviewed call site: `// lint-arbitrary-ord: reviewed <reason>` on the same line or the line
 #   directly above suppresses that one WARN; the reason is mandatory — a bare marker still WARNs
 #   ("reviewed marker without a reason"). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]
+#   The marker counts only in a real // comment: a "//" inside a string or char literal is code.
 #   Exit: 0  always (advisory) · 3  usage/env
 # VCS-free by design.
 # Mutation: AO2 -- require a leading quote and AO2 stops warning on BOrd.make(variable)
 # Mutation: AO4 -- ignore the reviewed marker and AO4 WARNs again on the reviewed call site
 # Mutation: AO6 -- accept a bare marker without a reason and AO6 stops warning
+# Mutation: AO8 -- split code/comment at the first // regardless of quotes and AO8/AO9 stop warning
 set -u
 LC_ALL=C
 export LC_ALL
@@ -43,12 +45,34 @@ marker_state() {
     fi
 }
 
+# code_part <line>: the line up to its // line comment. A "//" inside a double-quoted string or a
+# single-quoted char literal is not a comment start, so it neither hides a call nor supplies a
+# reviewed marker. [polish-2026-10-02 P2a, #199 WU6a]
+code_part() {
+    local s="$1" i c q="" n
+    case "$s" in *//*) ;; *) printf '%s' "$s"; return ;; esac
+    case "$s" in *\"*|*\'*) ;; *) printf '%s' "${s%%//*}"; return ;; esac
+    n=${#s}
+    for ((i = 0; i < n; i++)); do
+        c=${s:i:1}
+        if [ -n "$q" ]; then
+            if [ "$c" = "\\" ]; then i=$((i + 1)); elif [ "$c" = "$q" ]; then q=""; fi
+            continue
+        fi
+        case "$c" in
+            \"|\') q=$c ;;
+            /) if [ "${s:i+1:1}" = "/" ]; then printf '%s' "${s:0:i}"; return; fi ;;
+        esac
+    done
+    printf '%s' "$s"
+}
+
 while IFS= read -r f; do
     ln=0
     prev=""
     while IFS= read -r line || [ -n "$line" ]; do
         ln=$((ln + 1))
-        code=${line%%//*}
+        code=$(code_part "$line")
         # BOrd.make( <lowercase ident> ) — a bare variable, not a "literal" and not a CONST
         if printf '%s' "$code" | grep -Eq 'BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)'; then
             trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')

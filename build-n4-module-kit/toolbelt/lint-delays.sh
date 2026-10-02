@@ -28,7 +28,13 @@
 #
 # Units: BRelTime.make(ms) and makeSeconds/makeMinutes/makeHours/makeDays(N) literals are read in
 # both delay arguments and BFacets.MIN facets; a Clock.schedule*( call split over several lines is
-# accumulated to its closing paren (up to 12 lines). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
+# accumulated to its closing paren (up to 12 lines; a call still open past that window is a FAIL
+# unclosed-call row, never a silent truncation). The facet floor is carried and printed in ms for every
+# factory, and the // comment strip skips string/char literals ("http://..." is not a comment).
+# [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
+# Mutation: LD21 -- facet_min back to seconds for the make<Unit> family -> LD21 detail is wrong
+# Mutation: LD22 -- drop the unclosed-call report -> LD22 gets a blank "cannot verify floor:" row
+# Mutation: LD23 -- naive // strip that ignores string literals -> LD23 loses its guard and FAILs
 set -u
 
 FAILED=0
@@ -115,20 +121,38 @@ while IFS= read -r f; do
     return -1
   }
 
-  # MIN facet value of a property declaration: seconds for the makeSeconds/Minutes/Hours/Days
-  # family, the raw ms count for make(N) (unchanged legacy unit); -1 when BFacets.MIN is present
-  # but unreadable; -2 when there is no BFacets.MIN at all.
+  # MIN facet value of a property declaration in ms for every factory (make(N) is already ms;
+  # makeSeconds/Minutes/Hours/Days are scaled by unit_ms); -1 when BFacets.MIN is present but
+  # unreadable; -2 when there is no BFacets.MIN at all. [polish-2026-10-02 P2a: one unit, ms]
   function facet_min(text,    seg, u) {
     if (match(text, /BFacets\.MIN,[[:space:]]*BRelTime\.make(Seconds|Minutes|Hours|Days)?\([0-9]+\)/)) {
       seg = substr(text, RSTART, RLENGTH)
       sub(/^BFacets\.MIN,[[:space:]]*/, "", seg)
       u = seg; sub(/^BRelTime\.make/, "", u); sub(/\(.*$/, "", u)
       sub(/^[^(]*\(/, "", seg); sub(/\).*$/, "", seg)
-      if (u == "") return seg + 0
-      return (seg + 0) * unit_ms(u) / 1000
+      return (seg + 0) * unit_ms(u)
     }
     if (index(text, "BFacets.MIN") > 0) return -1
     return -2
+  }
+
+  # strip_comment(s): s without a trailing // line comment (and the blanks before it). A "//"
+  # inside a double-quoted string or a single-quoted char literal is not a comment. [polish-2026-10-02 P2a]
+  function strip_comment(s,    i, c, q, n) {
+    q = ""; n = length(s)
+    for (i = 1; i <= n; i++) {
+      c = substr(s, i, 1)
+      if (q != "") {
+        if (c == "\\") { i++; continue }
+        if (c == q) q = ""
+        continue
+      }
+      if (c == "\"" || c == "\047") { q = c; continue }
+      if (c == "/" && substr(s, i + 1, 1) == "/") {
+        s = substr(s, 1, i - 1); sub(/[[:space:]]+$/, "", s); return s
+      }
+    }
+    return s
   }
 
   # 1 when s (the text after the opening paren of a call) already holds the closing paren.
@@ -188,7 +212,7 @@ while IFS= read -r f; do
       if (index(ln2, expr) == 0) continue
       # Strip single-line comments before pattern matching to avoid false matches
       # on comment text that mentions the expression but is not a real guard.
-      sub(/[[:space:]]*\/\/.*$/, "", ln2)
+      ln2 = strip_comment(ln2)
       if (index(ln2, expr) == 0) continue
       if (ln2 ~ re_gt || ln2 ~ re_ge || ln2 ~ re_eq ||
           ln2 ~ re_gt_ms || ln2 ~ re_ge_ms || ln2 ~ re_eq_ms) return j
@@ -327,7 +351,7 @@ while IFS= read -r f; do
         if (slotname in prop_min) {
           minval = prop_min[slotname]
           if (minval >= 1) {
-            emit("WARN", lnum, "facet-floor  slot " slotname " facet MIN=" minval "s (advisory)")
+            emit("WARN", lnum, "facet-floor  slot " slotname " facet MIN=" minval "ms (advisory)")
           } else {
             emit("FAIL", lnum, "facet-min-zero  slot " slotname " facet MIN=0 — schedule can receive 0")
           }
@@ -434,19 +458,26 @@ while IFS= read -r f; do
     }
 
     # ---- Pass 2: find Clock.schedule* calls and classify delay argument ----
+    MAX_CONT = 12   # continuation-line window of one Clock.schedule*( call
     for (i = 1; i <= NR; i++) {
       ln = lines[i]
       if (index(ln, "Clock.schedule") == 0) continue
       if (!match(ln, /Clock\.schedule(Periodically)?\(/)) continue
 
       call_rest = substr(ln, RSTART + RLENGTH)
-      sub(/[[:space:]]*\/\/.*$/, "", call_rest)
+      call_rest = strip_comment(call_rest)
       # A call split over lines: accumulate continuation lines (comments stripped) up to the
       # closing paren of the call, the same paren-balance technique as the @NiagaraProperty pass.
       # [ev: retro panccadia-restart-seq-comp-lockout-hours Δ1]
-      for (j = i + 1; !call_closed(call_rest) && j <= NR && j <= i + 12; j++) {
-        nxt = lines[j]; sub(/[[:space:]]*\/\/.*$/, "", nxt)
+      for (j = i + 1; !call_closed(call_rest) && j <= NR && j <= i + MAX_CONT; j++) {
+        nxt = strip_comment(lines[j])
         call_rest = call_rest " " nxt
+      }
+      # The window is bounded; a call still open past it is reported, never classified on a
+      # truncated argument list. [polish-2026-10-02 P2a]
+      if (!call_closed(call_rest)) {
+        emit("FAIL", i, "unclosed-call  Clock.schedule( not closed within " MAX_CONT " lines -- cannot read the delay; wrap the call tighter")
+        continue
       }
       arg2 = skip_arg(call_rest)
       classify(i, arg2)

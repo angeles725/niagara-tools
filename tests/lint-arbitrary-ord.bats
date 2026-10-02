@@ -45,3 +45,23 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A { void f(String q){\n  // lint-arbitrary-ord: reviewed unrelated earlier call\n  int x = 1;\n  BOrd.make(q);\n} }\n' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"WARN"* ]]
 }
+
+# polish-2026-10-02 P2a (#199 WU6a): the marker counts only inside a real // comment. A "//" inside a
+# string literal is not a comment start: it neither hides the call nor supplies a marker.
+# Named mutation AO8: split code/comment at the first "//" regardless of quotes -> AO8 and AO9 flip.
+@test "AO8: a reviewed marker inside a string literal does not suppress the WARN" {
+  printf 'class A { void f(String q){ BOrd.make(q); log("see http://x lint-arbitrary-ord: reviewed not a comment"); } }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"BOrd.make from a variable"* ]]
+}
+@test "AO9: a // inside a string literal before the call does not hide BOrd.make(var)" {
+  printf 'class A { void f(String q){ String u = "a//b"; BOrd.make(q); } }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"BOrd.make from a variable"* ]]
+}
+@test "AO10: a real trailing comment marker after a string holding // still suppresses the WARN" {
+  printf 'class A { void f(String q){ BOrd.make(q); log("a//b"); // lint-arbitrary-ord: reviewed internal prefix only\n} }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" != *"WARN"* ]]
+}
+@test "AO11: an escaped quote inside the string does not end it early (the // after it is still string)" {
+  printf 'class A { void f(String q){ String u = "a\\"//b"; BOrd.make(q); } }\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"BOrd.make from a variable"* ]]
+}

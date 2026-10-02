@@ -164,3 +164,55 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 1 ]
   [[ "$output" == *"zero-floor"* ]] && [[ "$output" == *"MultiLineZeroFloor.java:6"* ]]
 }
+
+# ---------------------------------------------------------------------------
+# LD18-LD23 — polish-2026-10-02 P2a (#199 WU6a advisories).
+#   LD18  facet_min unit: a make(500) MIN is 500 ms, not "500s". The verdict was already right (any
+#         positive integer clears the >=1 floor in either unit) but the detail overstated the floor
+#         1000x; the facet floor is now carried and printed in ms for every factory.
+#   LD19  makeHours(0) MIN -> FAIL facet-min-zero; LD20 makeDays(0) MIN -> FAIL facet-min-zero.
+#   LD21  makeHours(2) MIN -> WARN facet-floor naming 7200000 ms.
+#   LD22  a Clock.schedule( call still open after the 12-line window is reported as such, not as a
+#         blank "cannot verify floor:" row.
+#   LD23  a "//" inside a string literal is not a comment: the guard after it on the same line counts.
+# NAMED MUTATIONS (observed): LD21 (facet_min back to seconds for make<Unit>) -> LD21 flips (LD18
+#   pins the ms label of make(N), RED before the change);
+#   LD22 (drop the unclosed-call report) -> LD22 flips; LD23 (back to the naive // strip) ->
+#   LD23 flips.
+# ---------------------------------------------------------------------------
+@test "LD18: a make(500) MIN facet is reported as 500 ms, not 500 s (WARN facet-floor)" {
+  only SlotGetterMinMs.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"facet-floor  slot interval facet MIN=500ms"* ]]
+}
+@test "LD19: a makeHours(0) MIN facet -> FAIL facet-min-zero" {
+  only SlotGetterMinHoursZero.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"facet-min-zero  slot interval"* ]]
+}
+@test "LD20: a makeDays(0) MIN facet -> FAIL facet-min-zero" {
+  only SlotGetterMinDaysZero.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"facet-min-zero  slot interval"* ]]
+}
+@test "LD21: a makeHours(2) MIN facet -> WARN facet-floor MIN=7200000ms" {
+  only SlotGetterMinHoursPos.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"facet-floor  slot interval facet MIN=7200000ms"* ]]
+}
+@test "LD22: a Clock.schedule( call not closed within 12 lines -> FAIL naming the window, not a blank reason" {
+  only MultiLineTooLong.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MultiLineTooLong.java:6  unclosed-call"*"12 lines"* ]]
+}
+@test "LD23: a // inside a string literal is not a comment -> the guard after it counts (no FAIL)" {
+  only StringSlashGuard.java
+  run "$LD" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+}
