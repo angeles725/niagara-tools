@@ -115,6 +115,20 @@ EOF
   [[ "$output" == *"Mod/src/com/x/U.java"* ]]
 }
 
+@test "WEO-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: WEO-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod/src/com/x/locked"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class B {}\n' > "$TMPDIR_T/Mod/src/com/x/locked/B.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/locked"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/locked" ]; then chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$WEO" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/locked"* ]]
+}
+
 @test "WEO-record: an identifier merely ending in 'ord' (record, word) is not an ORD resolve" {
   # Mutation: WEO-record -- the unanchored [Oo]rd suffix takes record.get( for an ORD resolve (false WARN).
   cat > "$TMPDIR_T/Mod/src/com/x/R.java" << 'JEOF'

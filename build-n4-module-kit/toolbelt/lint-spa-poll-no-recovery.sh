@@ -28,7 +28,7 @@
 #   Rows (WARN at the setInterval/setTimeout call line):
 #     no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
 #     3 but no 4  -> "... recovery is not keyed on time since the last success ..."
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 #
 # Known limitations (advisory heuristic): file-wide co-occurrence (a reload button elsewhere plus a
 # lastOk* timestamp suppresses the WARN — false-NEGATIVE bias); only the FIRST interval/timeout call
@@ -42,6 +42,7 @@
 # Mutation: SPR9 -- count a clock assignment anywhere in the file so a lastOk set only at load passes clean
 # Mutation: SPR10 -- matching only `function <name>(` loses an arrow-function poll (silent pass)
 # Mutation: SPR-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
+# Mutation: SPR-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -67,6 +68,9 @@ if [ ! -d "$ROOT" ]; then
   printf 'lint-spa-poll-no-recovery: not a directory: %s\n' "$ROOT" >&2
   exit 3
 fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
@@ -154,6 +158,11 @@ AWKEOF
 
 had_warn=0
 had_err=0
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.html' -o -name '*.js'; then
+  printf 'lint-spa-poll-no-recovery: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+  had_err=1
+fi
 while IFS= read -r f; do
   # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
   if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
@@ -165,7 +174,7 @@ while IFS= read -r f; do
     printf '%s\n' "$out"
     had_warn=1
   fi
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f \( -name '*.html' -o -name '*.js' \) -print | LC_ALL=C sort)
+done < "$_TMP/files"
 
 [ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then

@@ -59,6 +59,15 @@ already set. [ev: retro campaign11-client-root; design.md D3a/D3b]
 - **Diff heredoc-embedded reference tables against an oracle file as a named mutation:** embed the reference CSV/table as a heredoc, store the same bytes in `tests/fixtures/<name>.csv`, and assert byte equality as a named mutation — the oracle file is the contract. [ev: retro schema-risk]
 - **Place `shellcheck disable` directives BEFORE the entire compound command, not inside its body:** a disable inside a `while ... done` body triggers SC1123 ("ShellCheck directives are only valid in front of complete compound commands"); the correct form is one line immediately before `while ... do`. [ev: retro logic-split]
 
+- **Quote every pattern-substitution replacement: `${v//pat/"$rep"}`.** Under bash 5.2 `patsub_replacement` an
+  unquoted `&` in the replacement (or in the value of an unquoted `$rep`) expands to the matched text, so a path with
+  `&` is garbled silently. Pin a value that contains `&`. `tests/shell-hygiene.bats` SH1 fails on an unquoted `$` or
+  `&` in a replacement under `scripts/`, the toolbelt and `tests/helpers/`. [ev: retro polish-2026-10-02-close Δ3]
+- **Never use `! cmd` as a bats assertion line.** A `!`-negated command that is not the last one cannot fail the
+  test (shellcheck SC2314 flags it; CI runs shellcheck at every severity). Write `run cmd; [ "$status" -ne 0 ]`
+  (or `run ! cmd` on bats >= 1.5) or `if cmd; then return 1; fi`, and prove the negative branch with a mutation.
+  [ev: retro polish-2026-10-02-close Δ4]
+
 ### 2.1 Test runner setup
 
 The gate needs `bats` (bats-core) and `shellcheck` on `PATH`. Install once:

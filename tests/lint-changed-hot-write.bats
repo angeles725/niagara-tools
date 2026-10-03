@@ -97,3 +97,17 @@ _write_hot() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"Mod/src/com/x/U.java"* ]]
 }
+
+@test "CHW-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: CHW-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod/src/com/x/locked"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class B {}\n' > "$TMPDIR_T/Mod/src/com/x/locked/B.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/locked"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/locked" ]; then chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$CHW" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/locked"* ]]
+}

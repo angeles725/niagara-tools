@@ -75,6 +75,13 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
 - **Count what ran:** the writer runs `bats tests/*.bats` serially unless GNU `parallel` is installed. Without it,
   `bats -j` runs 0 tests and prints no `not ok` line. A parallel run reports its `ok` count next to `bats --count`,
   and the two must be equal. `[ev: retro retro-fold-campaign-close Δ2]`
+- **Two shell traps that do nothing silently:** quote every pattern-substitution replacement,
+  `${v//pat/"$rep"}` — under bash 5.2 `patsub_replacement` an unquoted `&` in the value expands to the matched text —
+  and pin a value that contains `&` (`tests/shell-hygiene.bats` SH1 scans the kit scripts for an unquoted `$` or `&`
+  replacement). In bats, never write `! cmd` as an assertion line: it cannot fail the test (shellcheck SC2314, which
+  CI runs at every severity, flags it); use `run …; [ "$status" -ne 0 ]` or `if cmd; then return 1; fi`, and prove
+  the negative branch with a mutation. Details: `CONTRIBUTING.md` §2. `[ev: retro polish-2026-10-02-close Δ3]`
+  `[ev: retro polish-2026-10-02-close Δ4]`
 
 ### 3.d Shared working-tree git discipline
 Several sessions may commit in the SAME checkout. Every writer: run `git status --short` first; stage only its own
@@ -95,6 +102,12 @@ cross-referenced — the §7 pipeline below is this side's concrete instance.
 time to the user, run `gentle-ai review assess` on the planned diff shape (or on a comparable past commit) and quote
 the tier budget (`BUILD-LOOP.md` §0.c) plus "N lenses expected" — a medium candidate commonly runs one lens, not four
 plus a correction. `[ev: retro change-tier-time-budgets Δ6]`
+
+**A START with an unknown outcome is recovered through the lineage STATUS, never by a new START.** When the granted
+START returns `candidate_context_unavailable`, the mutation outcome is unknown: the transaction may already be frozen.
+Do not re-run START and do not report an approval. Run the lineage-bound STATUS for the same lineage and target and
+continue only from the `next_transition` it returns. It may show the transaction reviewing and reoffer the lens
+captures, which then complete and are acknowledged as usual. `[ev: retro polish-2026-10-02-close Δ5]`
 
 ## 5. Adopt-list
 
@@ -135,6 +148,12 @@ feature doc and on a follow-up issue. Only a finding that shows a fail-open (a c
 real defect) or a regression introduced by the current feature becomes the next work unit. Every other finding
 is parked: list it under the feature doc's `## Parked advisories` with its reason. Without that limit, each fix
 draws new advisories and the feature never closes. `[ev: retro retro-fold-campaign-close Δ4]`
+**Write the anti-cascade policy into the feature doc before the first advisory arrives.** An advisory-driven
+feature states in its `## Authorization & delivery` section, up front, that only a fail-open or a regression
+introduced by the feature becomes a sub-task. Every other advisory goes to `## Parked advisories` and, at close, to
+ONE consolidated follow-up issue that keeps each finding's text next to its location (a lens/severity/location list
+costs a full re-read of the reviewed head to reconstruct). Set after the cascade has started, the limit arrives
+too late: the polish feature had already opened six sub-tasks. `[ev: retro polish-2026-10-02-close Δ1]`
 
 ## 8. Per-run retro/ticket loop
 

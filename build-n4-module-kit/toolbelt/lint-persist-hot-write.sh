@@ -23,11 +23,12 @@
 #   `Clock.millis(` comparison or a `%` (modulo/counter) test within 5 lines above the call,
 #   in the SAME method.
 #   Row:  WARN  lint-persist-hot-write  <file>:<line>  <detail>
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # VCS-free by design (kit-links L2).
 # Mutation: PHW2 -- drop the cadence-guard lookback so a guarded setter call still false-WARNs
 # Mutation: PHW6 -- keeping only the last callee drops a hot write in an earlier callee
 # Mutation: PHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
+# Mutation: PHW-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -53,6 +54,9 @@ if [ ! -d "$ROOT" ]; then
   printf 'lint-persist-hot-write: not a directory: %s\n' "$ROOT" >&2
   exit 3
 fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
@@ -178,6 +182,11 @@ AWKEOF
 
 had_warn=0
 had_err=0
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
+  printf 'lint-persist-hot-write: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+  had_err=1
+fi
 while IFS= read -r f; do
   # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
   if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
@@ -189,7 +198,7 @@ while IFS= read -r f; do
     printf '%s\n' "$out"
     had_warn=1
   fi
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
+done < "$_TMP/files"
 
 [ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
