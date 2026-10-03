@@ -7,8 +7,9 @@
 #                     Clock.schedule*() call) but its stopped() override does not
 #                     cancel EVERY ticket field — the timer leaks on station stop.
 #                     Checked per ticket field on comment- and string-blanked code:
-#                     `f.cancel(` / `f[i].cancel(` / a helper call with `f` as an
-#                     argument, in stopped() or in any same-file method it reaches
+#                     `f.cancel(` / `f[i].cancel(` / a call to a method whose name
+#                     contains `cancel` taking `f` (cancelTicket(f); log(f) does
+#                     not count), in stopped() or in any same-file method it reaches
 #                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
 #                     another ticket, does not count. No named field (only
 #                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
@@ -55,6 +56,8 @@
 # Mutation: TT-partial -- one cancel call for any field passes the whole class
 # Mutation: TT-string -- not blanking string literals lets log("a.cancel()") pass
 # Mutation: TT-helper -- without the callee bodies the stopped() -> cancelAll() -> cancelX() shape false-FAILs
+# Mutation: TT-overaccept -- accepting any call with the field as an argument lets log(a) + b.cancel() pass a
+# Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field
 # Mutation: TT-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
@@ -111,7 +114,7 @@ END {
   for (i = 1; i <= n; i++) {
     if (inm[i]) continue
     t = code[i]
-    while (match(t, /(Clock[[:space:]]*\.[[:space:]]*)?Ticket[[:space:]]*(\[[[:space:]]*\])?[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+    while (match(t, /(^|[^A-Za-z0-9_])(Clock[[:space:]]*\.[[:space:]]*)?Ticket[[:space:]]*(\[[[:space:]]*\])?[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
       d = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
       sub(/.*[[:space:]]/, "", d)
       if (!(d in isf)) { isf[d] = 1; fld[++nf] = d }
@@ -140,12 +143,14 @@ END {
   if (!miss) print "OK"
 }
 function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
-# f.cancel( · f[...].cancel( · this.f.cancel( · any call with f as a whole argument (cancelTicket(f), cancel(f))
+# f.cancel( · f[...].cancel( · this.f.cancel( · a call to a method whose NAME contains "cancel" (any case)
+# taking f as a whole argument: cancelTicket(f), cancel(f), safeCancel(f). Any other call taking f (log(f))
+# does not count.
 function cancels(s, f,    re1, re2) {
   re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
-  re2 = "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
+  re2 = "[A-Za-z0-9_]*[Cc]ancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
   if (s ~ re1) return 1
-  if (s ~ re2 && s ~ /\.[[:space:]]*cancel[[:space:]]*\(/) return 1
+  if (s ~ re2) return 1
   return 0
 }
 AWKEOF

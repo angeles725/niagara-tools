@@ -616,3 +616,19 @@ JAVA
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+@test "TT-overaccept: a non-cancel call taking the field (log(a)) beside another ticket's cancel FAILs naming it (A1b)" {
+  # Mutation: TT-overaccept -- accepting ANY call with the field as an argument lets log(a) + b.cancel() pass a.
+  _tt C8 '  public void stopped() throws Exception { super.stopped(); log(a); b.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C8.java"*"ticket a"* ]]
+}
+
+@test "TT-boundary: a type merely ending in Ticket (MyTicket note) is not a Clock ticket field (A1b)" {
+  # Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field and false-FAILs.
+  _tt C9 '  private MyTicket note;' '  public void stopped() throws Exception { super.stopped(); a.cancel(); b.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  if [[ "$output" == *"note"* ]]; then return 1; fi
+}
