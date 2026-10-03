@@ -223,10 +223,24 @@ _pf_fakebin() {
   MOUNTS="$TMPDIR_T/mounts-ext4"
   printf '%s\n' "ext4 / ext4 rw 0 0" > "$MOUNTS"
   FAKEBIN="$TMPDIR_T/fakebin-ext4"; _pf_fakebin "$FAKEBIN"
-  printf '#!/usr/bin/env bash\n' > "$FAKEBIN/lsof"
+  # A real lsof always lists its own process's files: a non-empty listing with no module jar in it.
+  printf '#!/usr/bin/env bash\nprintf "p1\\nn/usr/bin/lsof\\n"\n' > "$FAKEBIN/lsof"
   chmod +x "$FAKEBIN/lsof"
   out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
   [[ "$out" == *"PASS  jar-lock"* ]]
+}
+
+@test "PF-jarlock-lsof-fail: lsof that fails with an empty listing -> SKIP jar-lock, never PASS" {
+  # Mutation: PF-jarlock-lsof-fail -- treating an empty lsof listing as "no locked jars" reports PASS
+  # when lsof saw nothing at all (permission error, crash).
+  MOUNTS="$TMPDIR_T/mounts-ext4b"
+  printf '%s\n' "ext4 / ext4 rw 0 0" > "$MOUNTS"
+  FAKEBIN="$TMPDIR_T/fakebin-fail"; _pf_fakebin "$FAKEBIN"
+  printf '#!/usr/bin/env bash\necho "lsof: permission denied" >&2\nexit 1\n' > "$FAKEBIN/lsof"
+  chmod +x "$FAKEBIN/lsof"
+  out=$(N4_FSTYPE_MOUNTS_FILE="$MOUNTS" PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH" "$GR" 2>&1) || true
+  [[ "$out" == *"SKIP  jar-lock"* ]]
+  [[ "$out" != *"PASS  jar-lock"* ]]
 }
 
 # ================= WU7 fold: [ev: retro continuous-fan-post-defrost-delay Δ1] =================

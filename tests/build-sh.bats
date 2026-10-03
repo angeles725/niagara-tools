@@ -474,3 +474,31 @@ GRADLEW
   [ "$status" -eq 2 ]
   [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
 }
+
+@test "BS-drift-unverifiable-ver: shipped bytes changed and the new module.xml has no readable vendorVersion -> exit 52, not a pass" {
+  # Mutation: BS-drift-unverifiable-ver -- an unreadable version on either side counts as a bump (exit 0).
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  d="$(mktemp -d)"; mkdir -p "$d/META-INF"
+  printf '<module name="X"\n  vendorVersion="1.0.0">\n</module>\n' > "$d/META-INF/module.xml"
+  printf 'NEW-behavior-fix' > "$d/payload.txt"
+  (cd "$d" && zip -q -r "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" .); rm -rf "$d"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"cannot verify"* ]]
+  [ ! -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-drift-unverifiable-unzip: a jar the gate cannot list (unzip fails) -> exit 52, never equal empty hashes" {
+  # Mutation: BS-drift-unverifiable-unzip -- hashing an empty listing makes both sides equal (silent pass).
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  mkdir -p "$TMPDIR_T/nounzip"
+  printf '#!/usr/bin/env bash\nexit 9\n' > "$TMPDIR_T/nounzip/unzip"; chmod +x "$TMPDIR_T/nounzip/unzip"
+  PATH="$TMPDIR_T/nounzip:$PATH" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"cannot verify"* ]]
+}
