@@ -6,6 +6,90 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.31.0] - 2026-10-03
+
+### Added — build-n4 kit deferred lint candidates (`odd/tasks/deferred-lints-2026-10-03.md`)
+
+The three lint candidates that earlier folds recorded as DEFERRED, and the project-level split-package check of #142.
+Each one was written test-first with fixtures and an observed mutation per guard, landed as its own PR with a granted
+native RDD review, and was smoke-run read-only on real trees before release. Each review's fail-open was fixed in a
+sub-task (anti-cascade policy); every other advisory is parked on #226.
+
+- **D2** `toolbelt/lint-size.sh` (advisory): a class over 800 hand-written lines (slot-o-matic regions excluded) or a
+  pure-class method over 80 lines; unclosed, nested or stray region markers are their own WARN rows. Run by
+  `report-module.sh` through a new `advisory_member` helper (WARN rows relayed, any non-zero member exit is an ERROR row
+  with the member's reason). [PR #235, #237]
+- **D3** `toolbelt/lint-license-isoperational-gate.sh` (advisory): a licensed class whose `changed()`, action or
+  servlet-write callback acts without an unqualified `isOperational()`/`isFault()`/`isFatalFault()` gate in its first
+  statement. Run by `report-module.sh`. [PR #237, #239]
+- **D4** `toolbelt/lint-set-null-ord.sh` (advisory): a `getSlotPathOrd()` result (null on an unmounted component)
+  reaching a setter with no null guard, directly or through a same-method local; guards are tracked per receiver. Run
+  by `report-module.sh`. [PR #239, #242, #244]
+- **D5** `toolbelt/split-package-check.sh [--strict] <project-root>` (project level, #142): a Java package declared in
+  two or more modules of one checkout; `--strict` exits 1 for a client-CI gate. Where it runs automatically is an open
+  operator decision on #142. [PR #242, #244]
+
+### Fixed — build-n4 kit
+
+- **D1** the six T3/T4/T5a hot-path lints fail closed (exit 3) when `find` cannot enter a sub-directory, through the
+  shared `toolbelt/lib/scan-files.sh` (#226 lead item); the lister walks a `.` / dot-named root and rejects a file root.
+  [PR #230, #233, #235]
+- **D1** folds the polish close retro: anti-cascade policy up front (`ORCHESTRATION.md` §7), structural rules for
+  heuristic parsers (`METHODOLOGY.md`), the bash 5.2 `patsub_replacement` and bats `! cmd` traps (`CONTRIBUTING.md` §2,
+  new guard `tests/shell-hygiene.bats` SH1), and the `candidate_context_unavailable` recovery (`ORCHESTRATION.md` §4).
+  [PR #230, #233]
+
+Close retro: `build-n4-module-kit/retros/2026-10-03-deferred-lints-2026-10-03-close.md` (5 Δ, pending).
+
+### Fixed — `mcp-n4-kit` v0.5.1: token station binding and plain-ORD write scope
+
+- A confirmation token is bound to the station session it was issued on: the plan names `station: {name, base_url, session_id}`, so a token cannot execute after a reconnect or on another station (audit F1). [PR #229]
+- The write scope accepts only plain slot ORDs: `|h:`, `|slot:..` and any other hop after `station:|slot:` are refused, and `--write-scope` prefixes are checked at startup (audit F2). [PR #229]
+- `--token-ttl` and `--max-writes` must be >= 1 (audit F16). [PR #229]
+
+### Fixed — `mcp-n4-kit` v0.5.2: pause station calls after an authentication failure
+
+- Any `AuthError` (login, oBIX about, `/ord` GET, BOX call) pauses every station call for `--auth-cooldown` seconds (default and minimum 30), with the reason and the seconds left. Only other credentials may reconnect during the pause, which keeps a model from walking the account into the station lock-out (audit F4). [PR #231]
+
+### Fixed — `mcp-n4-kit` v0.5.3: nested set_slot, compare-before-restore rollback
+
+- `n4_set_slot` on a nested slot (`grp/sp`) reads its real previous value. Before, it read the type default, which made the journaled inverse wrong (audit F3). [PR #232]
+- `n4_rollback` refuses to restore a slot or fallback that changed after the batch wrote it, and shows both values. A later change is never overwritten silently (audit F6). [PR #232]
+- The "slot not found" refusal of `n4_set_slot` explains that the station omits a slot at its type default and names the routes (audit F10). [PR #232]
+- The authentication latch also records a second rejected credential on clients without the auth hook (H2 review). [PR #232]
+
+### Fixed — `mcp-n4-kit` v0.5.4: write-branch test debt
+
+- Tests cover the previously untested write branches (audit F13): status on a plain type, missing targets, component and relink journal-intent failures, malformed relink records, `config.bog` lost after a save, and startup exit 2 for a chained `--write-scope`. [PR #234]
+- A rollback that stops because its component intent cannot be journaled now says so. Before, it said only `ToolError`. [PR #234]
+
+### Added — `mcp-n4-kit` v0.6.0: BQL output_file; duplicate and localized headers
+
+- `n4_bql_query` takes an optional `output_file` (`<name>.csv` or `.json`). The rows are written privately to `<state-dir>/bql/<name>` (0600, never overwritten) instead of the reply. [PR #236]
+- A repeated CSV header is kept as `Type#2`, `Type#3` instead of losing a column (audit F7). [PR #236]
+- `n4_inventory` and the `name` decoding of `n4_bql_query` resolve columns by their position in the select list, so a station with localized display headers works (audit F12). [PR #236]
+
+### Added — `mcp-n4-kit` v0.7.0: n4_list_batches, snapshot truncation report, timing flags
+
+- New read-only tool `n4_list_batches`: lists the journaled write batches, newest first, with state, verdict and rollback links (audit F14). [PR #238]
+- `n4_remove_component` reports what lies deeper than its depth-3 snapshot in `snapshot_truncated`. A rollback cannot bring those back, and before this the cut was silent (audit F8). [PR #238]
+- `--load-wait` and `--http-timeout` make the 3 s load window and the 20 s HTTP timeout operator settings (audit F11). [PR #238]
+- An empty BQL answer no longer fails `n4_inventory`, and a failed `output_file` write leaves no partial file. [PR #238]
+
+### Fixed — `mcp-n4-kit` v0.7.1: process-scoped write budget, docs drift
+
+- `--max-writes` bounds the whole server process. Before, a reconnect reset it (audit F5). [PR #240]
+- `modbusCore:FlexAddress` and `bacnet:BacnetAddress` are treated as slot values, not components (audit F17). [PR #240]
+- The `snapshot_truncated` note gives a lower bound ("at least N"). [PR #240]
+- README, SKILL and METHODOLOGY drift fixed: status, layout, `--station-home`, timing flags, and BQL-first read order (audit F15). Retro for the 2026-10-03 hardening audit added (`retros/2026-10-03-hardening-audit.md`, pending). [PR #240]
+
+### Added — `mcp-n4-kit` v0.7.2: retro 2026-10-03 fold
+- `tools/mutation_check.py`: mutation checks without stale bytecode (clears `__pycache__`, `PYTHONDONTWRITEBYTECODE=1`).
+- README: stdlib `trace` untested-branch audit before each minor release.
+- METHODOLOGY section 8: explicit per-PR review of medium units under one-PR-per-unit delivery.
+
+### Fixed — `mcp-n4-kit` v0.7.3: `tools/mutation_check.py` exits 3 (environment error, with a `mutation_check: cannot launch` stderr line) when the command cannot be launched, instead of raising `FileNotFoundError`, so a failed launch is never read as a RED. Adds tests for launch failure and the `--root` not-a-directory branch, and clarifies the README `cp -p` restore instruction.
+
 ## [v0.30.0] - 2026-10-02
 
 ### Fixed — build-n4 kit polish after the 2026-10-02 retro-fold campaign (`odd/tasks/polish-2026-10-02.md`)
