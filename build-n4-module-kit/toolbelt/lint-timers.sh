@@ -5,8 +5,14 @@
 #
 #   timer-ticket      A class that owns a Clock.Ticket (field declaration or
 #                     Clock.schedule*() call) but its stopped() override does not
-#                     cancel the ticket — the timer leaks on station stop.
-#                     [ev: corpus B787]
+#                     cancel EVERY ticket field — the timer leaks on station stop.
+#                     Checked per ticket field on comment- and string-blanked code:
+#                     `f.cancel(` / `f[i].cancel(` / a helper call with `f` as an
+#                     argument, in stopped() or in any same-file method it reaches
+#                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
+#                     another ticket, does not count. No named field (only
+#                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
+#                     [ev: corpus B787] [ev: audit-2026-10-03 A1]
 #
 #   discarded-ticket  A Clock.schedule*() call whose return value is not captured
 #                     — the Clock.Ticket is immediately lost, no way to cancel it.
@@ -40,11 +46,16 @@
 #   A class with no timers emits no FAIL (silently skipped).
 #
 # Row format: FAIL|PASS  <check>  <file>: <detail>
-# Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env
+# Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
 # Mutation: S21-misparse -- drops max_d>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
+# Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass
+# Mutation: TT-partial -- one cancel call for any field passes the whole class
+# Mutation: TT-string -- not blanking string literals lets log("a.cancel()") pass
+# Mutation: TT-helper -- without the callee bodies the stopped() -> cancelAll() -> cancelX() shape false-FAILs
+# Mutation: TT-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
@@ -64,6 +75,81 @@ usage_exit() {
 [ $# -eq 1 ] || usage_exit
 JAVA_ROOT="$1"
 [ -d "$JAVA_ROOT" ] || { printf 'lint-timers: not a directory: %s\n' "$JAVA_ROOT" >&2; exit 3; }
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk feeds every check: a sub-directory find cannot enter is exit 3, never a shorter list.
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$JAVA_ROOT" -name '*.java'; then
+  printf 'lint-timers: cannot list every file under %s: %s\n' "$JAVA_ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+  exit 3
+fi
+
+# timer-ticket (per ticket field). Input: one Java file. Output lines: "OK" | "NOSTOP" | "MISS <field>".
+# Comments are blanked by mb_strip, string/char literal contents here; methods come from mb_parse.
+cat > "$_TMP/ticket.awk" <<'AWKEOF'
+function blank_str(s,    out, j, c, q) {
+  out = ""; q = ""
+  for (j = 1; j <= length(s); j++) {
+    c = substr(s, j, 1)
+    if (q != "") { if (c == "\\") { j++; continue } if (c == q) { q = ""; out = out c } ; continue }
+    if (c == "\"" || c == "'") q = c
+    out = out c
+  }
+  return out
+}
+{ raw[++n] = $0 }
+END {
+  mb_strip(raw, n, st)
+  for (i = 1; i <= n; i++) code[i] = blank_str(st[i])
+  cnt = mb_parse(code, n, ms, me, mn)
+  for (i = 1; i <= n; i++) inm[i] = 0
+  for (k = 0; k < cnt; k++) { for (i = ms[k]; i <= me[k]; i++) inm[i] = 1; body[mn[k]] = body[mn[k]] "\n" lines_of(ms[k], me[k]) }
+  # ticket FIELDS: Clock.Ticket / Ticket declarations outside every method body (arrays included)
+  nf = 0
+  for (i = 1; i <= n; i++) {
+    if (inm[i]) continue
+    t = code[i]
+    while (match(t, /(Clock[[:space:]]*\.[[:space:]]*)?Ticket[[:space:]]*(\[[[:space:]]*\])?[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
+      d = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
+      sub(/.*[[:space:]]/, "", d)
+      if (!(d in isf)) { isf[d] = 1; fld[++nf] = d }
+    }
+  }
+  if (!("stopped" in body)) { print "NOSTOP"; exit }
+  scope = body["stopped"]
+  # same-file methods reachable from stopped() through unqualified calls (transitive: stopped -> cancelAll ->
+  # cancelInterval); each method body is added once, so the walk ends
+  hop["stopped"] = 1; qn = 1; queue[1] = "stopped"; qi = 0
+  while (qi < qn) {
+    t = body[queue[++qi]]
+    while (match(t, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(/)) {
+      id = substr(t, RSTART, RLENGTH); pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+      t = substr(t, RSTART + RLENGTH); sub(/[[:space:]]*\($/, "", id)
+      if (pre != "." && (id in body) && !(id in hop)) { hop[id] = 1; queue[++qn] = id; scope = scope "\n" body[id] }
+    }
+  }
+  if (nf == 0) { print ((scope ~ /\.[[:space:]]*cancel[[:space:]]*\(/) ? "OK" : "MISS (ticket)"); exit }
+  miss = 0
+  for (q = 1; q <= nf; q++) {
+    f = fld[q]
+    if (cancels(scope, f)) continue
+    print "MISS " f; miss = 1
+  }
+  if (!miss) print "OK"
+}
+function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
+# f.cancel( · f[...].cancel( · this.f.cancel( · any call with f as a whole argument (cancelTicket(f), cancel(f))
+function cancels(s, f,    re1, re2) {
+  re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
+  re2 = "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
+  if (s ~ re1) return 1
+  if (s ~ re2 && s ~ /\.[[:space:]]*cancel[[:space:]]*\(/) return 1
+  return 0
+}
+AWKEOF
+printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
 
 # ---------------------------------------------------------------------------
 # Process each Java file
@@ -92,34 +178,21 @@ while IFS= read -r f; do
   # A timerless class is safe — no timer-ticket check needed.
   [ "$has_timer" -eq 0 ] && continue
 
-  # ---- check: timer-ticket ----------------------------------------------
-  # Find the stopped() method body (brace-counted) and look for any cancel call.
-  # Accepts:  .cancel(   directly on a ticket field
-  #           cancel*(   any helper method whose name contains "cancel"
-  found_cancel=$(awk '
-    BEGIN { in_stopped=0; depth=0; found=0 }
-    /void[[:space:]]+stopped[[:space:]]*\(/ { in_stopped=1 }
-    in_stopped {
-      if (/cancel/) found=1
-      for (i = 1; i <= length($0); i++) {
-        c = substr($0, i, 1)
-        if (c == "{") depth++
-        if (c == "}") {
-          depth--
-          if (depth == 0) { in_stopped=0; break }
-        }
-      }
-    }
-    END { print found }
-  ' "$f")
-
-  if [ "$found_cancel" = "1" ]; then
-    row PASS "timer-ticket" "$f: timer cancelled in stopped()"
-  else
-    row FAIL "timer-ticket" "$f: schedules a Clock ticket but stopped() does not cancel it"
+  # ---- check: timer-ticket (per ticket field; see header) ------------------
+  if ! tt=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/ticket.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-timers: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    exit 3
   fi
+  case "$tt" in
+    OK) row PASS "timer-ticket" "$f: timer cancelled in stopped()" ;;
+    NOSTOP) row FAIL "timer-ticket" "$f: schedules a Clock ticket but has no stopped() override to cancel it" ;;
+    *) while IFS= read -r m; do
+         [ -n "$m" ] || continue
+         row FAIL "timer-ticket" "$f: stopped() does not cancel ticket ${m#MISS } (a cancel in a comment, a string or of another ticket does not count)"
+       done <<< "$tt" ;;
+  esac
 
-done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Check: companion-flag
@@ -215,7 +288,7 @@ while IFS= read -r f; do
     }
   ' "$f")
   [ -n "$_cf" ] && row FAIL "companion-flag" "$f: flag '${_cf}' set beside Clock.schedule* not cleared in stopped()/started()"
-done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Check: jdk-thread
@@ -230,7 +303,7 @@ while IFS= read -r f; do
   grep -qE 'ScheduledExecutorService|Executors\.|new[[:space:]]+Thread\(' "$f" || continue
   _jdk_class=$(grep -m1 -oE 'class[[:space:]]+B[A-Za-z0-9_]+' "$f" | awk '{print $2}')
   row FAIL "jdk-thread" "$f: ${_jdk_class:-BUnknown} uses JDK concurrency — use Clock.schedule instead (SecurityManager denies modifyThread)"
-done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Check: changed-sched
@@ -308,7 +381,7 @@ while IFS= read -r f; do
     }
   ' "$f")
   [ -n "$_cs" ] && row FAIL "changed-sched" "$f: Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body"
-done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Check: atSteadyState-only-timer
@@ -352,7 +425,7 @@ while IFS= read -r f; do
     }
   ' "$f")
   [ -n "$_atss" ] && row WARN "atSteadyState-only-timer" "$f: timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer"
-done < <(find "$JAVA_ROOT" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 [ "$FAILED" -eq 1 ] && exit 1
 exit 0

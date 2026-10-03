@@ -159,3 +159,89 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   run "$LCS"
   [ "$status" -eq 3 ]
 }
+
+# audit-2026-10-03 A1 — CS1 compares durations in ONE unit (ms). It used to compare the raw numbers of
+# BRelTime.makeSeconds (s) and BRelTime.make (ms), and to skip makeMinutes/makeHours/makeDays and make(0L)
+# silently. Factories: javax/baja/sys/BRelTime.java:56-83 (make(long ms), makeDays/Hours/Minutes/Seconds(int),
+# make(d,h,m,s)); constants DEFAULT/SECOND/MINUTE/HOUR/DAY :34-48.
+_cs1() { # _cs1 <Class> <interval-default> <duration-default>
+  rm -f "$ONE"/*.java
+  cat > "$ONE/$1.java" <<JAVA
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+public final class $1 extends BComponent {
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "$2")
+  private BRelTime defrostInterval;
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "$3")
+  private BRelTime defrostDuration;
+}
+JAVA
+}
+
+@test "CS1-units: makeHours(4) interval vs make(1800000L) duration is SANE (4h > 30m) — no raw-number compare (A1)" {
+  # Mutation: CS1-units -- comparing raw factory arguments (4 <= 1800000) false-FAILs a sane pair.
+  _cs1 U1 'BRelTime.makeHours(4)' 'BRelTime.make(1800000L)'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  if [[ "$output" == *"CS1"* ]]; then return 1; fi
+}
+
+@test "CS1-mixed: make(30000) interval (30 s) vs makeSeconds(60) duration FAILs — the old raw compare passed it (A1)" {
+  # Mutation: CS1-mixed -- reading make(ms) and makeSeconds(s) as the same unit compares 30000 <= 60 and passes.
+  _cs1 U2 'BRelTime.make(30000)' 'BRelTime.makeSeconds(60)'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CS1"*"defrostInterval"* ]]
+}
+
+@test "CS1-minutes: makeMinutes(10) interval vs makeMinutes(45) duration FAILs — makeMinutes is parsed (A1)" {
+  # Mutation: CS1-minutes -- skipping makeMinutes silently passes a 10 min cycle with a 45 min defrost.
+  _cs1 U3 'BRelTime.makeMinutes(10)' 'BRelTime.makeMinutes(45)'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CS1"* ]]
+}
+
+@test "CS1-zero: make(0L) interval FAILs against any positive duration (A1)" {
+  _cs1 U4 'BRelTime.make(0L)' 'BRelTime.makeSeconds(60)'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+}
+
+@test "CS1-unreadable: a BRelTime default the parser cannot read is a WARN row, never a silent skip (A1)" {
+  # Mutation: CS1-unreadable -- dropping the unreadable row skips the pair silently again.
+  _cs1 U5 'BRelTime.makeMinutes(DEFAULT_MIN)' 'BRelTime.makeMinutes(45)'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"CS1"*"unreadable"*"defrostInterval"* ]]
+}
+
+@test "LCS-finderr: an unreadable sub-directory is an env error (exit 3), never a clean pass (A1)" {
+  # Mutation: LCS-finderr -- ignoring the find status skips the locked directory's classes and exits 0.
+  only IntervalBad.java
+  mkdir -p "$ONE/locked"; mv "$ONE/IntervalBad.java" "$ONE/locked/"
+  printf 'class A {}\n' > "$ONE/A.java"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LCS" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}
+
+@test "CS1-bothzero: BRelTime.DEFAULT interval AND duration (a display mirror) is unset, not a FAIL (A1)" {
+  # Mutation: CS1-bothzero -- comparing a 0/0 (DEFAULT) pair FAILs every display-mirror panel.
+  _cs1 U6 'BRelTime.DEFAULT' 'BRelTime.DEFAULT'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  if [[ "$output" == *"CS1"* ]]; then return 1; fi
+}
+
+@test "CS1-wrapped: a factory inside a wrapper (make(BRelTime.class, BRelTime.makeSeconds(300))) is read, not skipped (A1)" {
+  # Mutation: CS1-wrapped -- anchoring the factory to the whole defaultValue reads the wrapped form as unreadable.
+  _cs1 U7 'make(BRelTime.class, BRelTime.makeSeconds(300))' 'make(BRelTime.class, BRelTime.makeMinutes(10))'
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"*"CS1"*"5m"*"10m"* ]]
+}

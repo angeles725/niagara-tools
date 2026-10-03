@@ -3,7 +3,11 @@
 #
 # Detects four unsafe default patterns in @NiagaraProperty annotations:
 #
-#   CS1 FAIL: *Interval default <= *Duration default in the same class.
+#   CS1 FAIL: *Interval default <= *Duration default in the same class, both read in MILLISECONDS from
+#             any literal BRelTime factory (make(ms), makeSeconds/Minutes/Hours/Days, make(d,h,m,s)) or
+#             constant (BRelTime.java:34-48, :56-83). A BRelTime default it cannot read (a variable, an
+#             expression) is a CS1 WARN "unreadable" row, never a silent skip. A pair where BOTH are 0
+#             (BRelTime.DEFAULT on a display mirror) is unset, not a contradiction. [ev: audit-2026-10-03 A1]
 #             Physical impossibility: the cycle interval must exceed the defrost/heat duration.
 #             A too-small interval means "interval already elapsed" fires on the very first execute.
 #
@@ -28,7 +32,7 @@
 #   Emits FAIL (CS1/CS2) or WARN (CS3/CS4) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
 #
 # Row format:  FAIL|WARN  lint-config-sanity  <file>:<line>  CS<n>: <reason>
-# Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env (K20)
+# Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env, incl. a sub-directory find cannot enter (K20)
 #
 # Dot-directories excluded (D9b). VCS-free by design. kit-links.bats L2 enforces
 # the no-version-control rule on all toolbelt scripts.
@@ -37,7 +41,8 @@
 # Source of defaults (documented precedence):
 #   1. Java @NiagaraProperty defaultValue= literal (primary source).
 #   2. module-include.xml facets (fallback when Java literal is absent or unreadable).
-#   When neither source yields a readable value the check is skipped (never false-FAIL).
+#   When neither source yields a readable value the check is skipped (never false-FAIL) — except a
+#   BRelTime default on an *Interval/*Duration slot, which is a CS1 "unreadable" WARN row.
 #
 # Documented limitation — CS3 (comment-only flag enforcement):
 #   The heuristic matches a comment containing "only when", "only valid", or "only if"
@@ -54,6 +59,13 @@
 # Mutation: LCS-floor-status -- dropping the status/counter suffix exclusion WARNs on cutoutCount / cutoutActive
 # Mutation: LCS-floor-trip -- putting Trip|Alarm|Fault back in the status suffixes silences lpCutoutTrip=0
 # Mutation: LCS-floor-suffix -- anchoring the cutout token to the name end misses lpCutoutPsi / lowLimitBar
+# Mutation: CS1-units -- comparing raw factory arguments (makeHours(4) vs make(1800000L)) false-FAILs a sane pair
+# Mutation: CS1-mixed -- reading make(ms) and makeSeconds(s) as one unit passes a 30 s cycle with a 60 s defrost
+# Mutation: CS1-minutes -- skipping makeMinutes silently passes a 10 min cycle with a 45 min defrost
+# Mutation: CS1-wrapped -- anchoring the factory to the whole defaultValue reads make(BRelTime.class, BRelTime.makeSeconds(300)) as unreadable
+# Mutation: CS1-bothzero -- comparing a 0/0 (DEFAULT) pair FAILs every display-mirror panel
+# Mutation: CS1-unreadable -- dropping the unreadable row skips an unparsed BRelTime default silently
+# Mutation: LCS-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -66,6 +78,14 @@ _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 _ROWS="$_TMP/rows.txt"
 touch "$_ROWS"
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+# A sub-directory find cannot enter is an env error (exit 3), never a shorter file list.
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$SRC" -name '*.java'; then
+  printf 'lint-config-sanity: cannot list every file under %s: %s\n' "$SRC" "$(head -n 1 "$_TMP/find.err")" >&2
+  exit 3
+fi
 
 _row() {
   local sev="$1" loc="$2" reason="$3"
@@ -80,6 +100,39 @@ while IFS= read -r f; do
   # Extract @NiagaraProperty name + defaultValue for *Interval and *Duration slots.
   # Strategy: multi-line annotation accumulator; extract name= and defaultValue=.
   awk -v FILE="$f" '
+  # reltime_ms(expr) -> milliseconds, or -1 when the expression is not one literal BRelTime factory/constant
+  function reltime_ms(e,    a, n) {
+    if (e ~ /^BRelTime\.make\([0-9]+[Ll]?\)$/)            { sub(/^BRelTime\.make\(/, "", e); sub(/[Ll]?\)$/, "", e); return e + 0 }
+    if (e ~ /^BRelTime\.makeSeconds\([0-9]+\)$/)          { gsub(/[^0-9]/, "", e); return e * 1000 }
+    if (e ~ /^BRelTime\.makeMinutes\([0-9]+\)$/)          { gsub(/[^0-9]/, "", e); return e * 60000 }
+    if (e ~ /^BRelTime\.makeHours\([0-9]+\)$/)            { gsub(/[^0-9]/, "", e); return e * 3600000 }
+    if (e ~ /^BRelTime\.makeDays\([0-9]+\)$/)             { gsub(/[^0-9]/, "", e); return e * 86400000 }
+    if (e ~ /^BRelTime\.make\([0-9]+,[0-9]+,[0-9]+,[0-9]+\)$/) {
+      sub(/^BRelTime\.make\(/, "", e); sub(/\)$/, "", e); n = split(e, a, ",")
+      return ((a[1] * 24 + a[2]) * 60 + a[3]) * 60000 + a[4] * 1000
+    }
+    if (e == "BRelTime.DEFAULT") return 0
+    if (e == "BRelTime.SECOND") return 1000
+    if (e == "BRelTime.MINUTE") return 60000
+    if (e == "BRelTime.HOUR")   return 3600000
+    if (e == "BRelTime.DAY")    return 86400000
+    return -1
+  }
+  # one_factory(expr) -> the single BRelTime factory call / constant inside expr (a wrapper such as
+  # make(BRelTime.class, BRelTime.makeSeconds(300)) is allowed), or "" when there is none or more than one
+  function one_factory(e,    t, n, hit) {
+    t = e; n = 0; hit = ""
+    while (match(t, /BRelTime\.(make[A-Za-z]*\([^()]*\)|DEFAULT|SECOND|MINUTE|HOUR|DAY)/)) {
+      n++; hit = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
+    }
+    return (n == 1) ? hit : ""
+  }
+  function human(ms) {
+    if (ms % 3600000 == 0 && ms > 0) return (ms / 3600000) "h"
+    if (ms % 60000 == 0 && ms > 0)   return (ms / 60000) "m"
+    if (ms % 1000 == 0)              return (ms / 1000) "s"
+    return ms "ms"
+  }
   BEGIN { in_prop = 0; prop_buf = ""; prop_line = 0 }
   FNR == 1 { in_prop = 0; prop_buf = ""; prop_line = 0; delete interval_val; delete duration_val; delete interval_line; delete duration_line }
 
@@ -102,22 +155,21 @@ while IFS= read -r f; do
         seg = substr(prop_buf, RSTART); sub(/name[[:space:]]*=[[:space:]]*"/, "", seg); sub(/".*/, "", seg)
         pname = seg
       }
-      # Extract defaultValue= seconds literal from BRelTime.makeSeconds(N) or BRelTime.make(N)
-      dval = -1
-      if (match(prop_buf, /defaultValue[[:space:]]*=[[:space:]]*"[^"]*BRelTime\.makeSeconds\([0-9]+\)/)) {
-        seg = substr(prop_buf, RSTART)
-        match(seg, /BRelTime\.makeSeconds\([0-9]+\)/)
-        seg2 = substr(seg, RSTART); sub(/BRelTime\.makeSeconds\(/, "", seg2); sub(/\).*/, "", seg2)
-        dval = seg2 + 0
-      } else if (match(prop_buf, /defaultValue[[:space:]]*=[[:space:]]*"[^"]*BRelTime\.make\([0-9]+\)/)) {
-        seg = substr(prop_buf, RSTART)
-        match(seg, /BRelTime\.make\([0-9]+\)/)
-        seg2 = substr(seg, RSTART); sub(/BRelTime\.make\(/, "", seg2); sub(/\).*/, "", seg2)
-        dval = seg2 + 0
+      # Extract the defaultValue BRelTime in MILLISECONDS (one unit for the compare): make(ms[L]),
+      # makeSeconds/Minutes/Hours/Days(n), make(d,h,m,s), DEFAULT/SECOND/MINUTE/HOUR/DAY
+      # (javax/baja/sys/BRelTime.java:34-48, :56-83). A BRelTime default it cannot read is an
+      # "unreadable" WARN for an Interval/Duration slot, never a silent skip.
+      dval = -1; dexpr = ""
+      if (match(prop_buf, /defaultValue[[:space:]]*=[[:space:]]*"[^"]*"/)) {
+        dexpr = substr(prop_buf, RSTART, RLENGTH); sub(/^defaultValue[[:space:]]*=[[:space:]]*"/, "", dexpr); sub(/"$/, "", dexpr)
+        gsub(/[[:space:]]/, "", dexpr)
       }
+      if (index(dexpr, "BRelTime") > 0) dval = reltime_ms(one_factory(dexpr))
       if (pname != "" && dval >= 0) {
         if (pname ~ /Interval/) { interval_val[pname] = dval; interval_line[pname] = prop_line }
         if (pname ~ /Duration/) { duration_val[pname] = dval; duration_line[pname] = prop_line }
+      } else if (pname != "" && index(dexpr, "BRelTime") > 0 && pname ~ /Interval|Duration/) {
+        printf "WARN  lint-config-sanity  %s:%d  CS1: unreadable BRelTime default for %s (%s) -- interval/duration not compared; use a literal factory\n", FILE, prop_line, pname, dexpr
       }
       in_prop = 0; prop_buf = ""; prop_line = 0
     }
@@ -128,9 +180,11 @@ while IFS= read -r f; do
     # CS1: for each Interval, find any Duration in same class where interval <= duration
     for (iname in interval_val) {
       for (dname in duration_val) {
+        # both 0 (BRelTime.DEFAULT on a display mirror / unset pair) is "not configured", not a contradiction
+        if (interval_val[iname] == 0 && duration_val[dname] == 0) continue
         if (interval_val[iname] <= duration_val[dname]) {
-          printf "FAIL  lint-config-sanity  %s:%d  CS1: interval<=duration: %s(%ds) <= %s(%ds)\n",
-            FILE, interval_line[iname], iname, interval_val[iname], dname, duration_val[dname]
+          printf "FAIL  lint-config-sanity  %s:%d  CS1: interval<=duration: %s(%s) <= %s(%s)\n",
+            FILE, interval_line[iname], iname, human(interval_val[iname]), dname, human(duration_val[dname])
         }
       }
     }
@@ -267,7 +321,7 @@ while IFS= read -r f; do
   }
   ' "$f" >> "$_ROWS"
 
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 if [ -s "$_ROWS" ]; then
   cat "$_ROWS"

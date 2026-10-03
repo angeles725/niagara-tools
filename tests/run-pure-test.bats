@@ -127,3 +127,17 @@ JAVA
   run "$RUN" "$RT" com.example.demo.Widget2StructTest
   [ "$status" -eq 0 ]
 }
+
+@test "P7: a test that does not COMPILE exits 3 (environment), never 1 — a compile error is not a RED (audit A1)" {
+  # Mutation: P7 -- letting set -e propagate javac's status reports a compile error as exit 1, the "test FAILED" bite.
+  make_test "Adder.nope(2,2) == 4"
+  run "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"does not compile"* ]]
+}
+
+@test "P2-exact: a FAILING pure test exits exactly 1 (audit A1)" {
+  make_test "Adder.add(2,2) == 5"
+  run "$RUN" "$RT" com.example.demo.AdderTest
+  [ "$status" -eq 1 ]
+}

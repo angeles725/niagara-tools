@@ -17,7 +17,8 @@
 # — then runs JUnitCore.
 #
 # EXIT: 0 tests passed · 1 a test FAILED (the bite) · 2 usage · 3 environment
-#   (no JDK / junit not in the gradle cache — run one gradle build to fetch it).
+#   (no JDK / junit not in the gradle cache — run one gradle build to fetch it — or the test does not
+#   compile: a compile error is never reported as the exit-1 bite). [ev: audit-2026-10-03 A1]
 
 set -euo pipefail
 
@@ -55,8 +56,12 @@ trap 'rm -rf "$tmp"' EXIT
 
 # -sourcepath pulls in the pure sibling classes the test references, compiled together
 # so package-private members stay reachable. Nothing is written under $rt.
-javac -source 8 -target 8 -nowarn -cp "$JU" \
+# A compile error is an environment/setup failure (exit 3), never exit 1: exit 1 is reserved for a JUnit
+# failure, the RED a test-first step looks for, and a test that does not compile proves nothing.
+if ! javac -source 8 -target 8 -nowarn -cp "$JU" \
   -sourcepath "$rt/src:$testroot" \
-  -d "$tmp" "$testroot/$pkgpath/$testsimple.java"
+  -d "$tmp" "$testroot/$pkgpath/$testsimple.java"; then
+  die 3 "$testfqcn does not compile (javac failed above) — fix the test or the pure sources; a compile error is not a RED"
+fi
 
 ( cd "$rt" && java -cp "$tmp:$JU:$HC" org.junit.runner.JUnitCore "$testfqcn" )

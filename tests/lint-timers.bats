@@ -525,3 +525,94 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" != *"companion-flag"* ]]
 }
+
+# ===========================================================================
+# audit-2026-10-03 A1 — timer-ticket is checked PER TICKET FIELD on comment- and string-stripped code.
+# The old check passed when the token `cancel` appeared anywhere in stopped(): in a comment, in a string, or
+# cancelling one ticket of several. A stopped() that leaves one ticket armed leaks that timer on station stop.
+# [ev: corpus B787]
+# ===========================================================================
+
+_tt() { # _tt <Class> <body-lines...> — a class with fields a, b (Clock.Ticket) armed in arm()
+  local c="$1"; shift
+  {
+    printf 'package demo;\nimport javax.baja.sys.*;\npublic final class %s extends BComponent {\n' "$c"
+    printf '  private Clock.Ticket a;\n  private Clock.Ticket b;\n'
+    printf '  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }\n'
+    printf '%s\n' "$@"
+    printf '}\n'
+  } > "$SRC/$c.java"
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+}
+
+@test "TT-comment: 'cancel' only in a comment inside stopped() FAILs (A1)" {
+  # Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass.
+  _tt C1 '  public void stopped() throws Exception { super.stopped(); // TODO a.cancel(); b.cancel();' '  }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C1.java"*"a"* ]]
+}
+
+@test "TT-partial: stopped() cancelling ONE of two tickets FAILs naming the other (A1)" {
+  # Mutation: TT-partial -- one cancel call for any field passes the whole class.
+  _tt C2 '  public void stopped() throws Exception { super.stopped(); if (a != null) a.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C2.java"*"ticket b"* ]]
+  if [[ "$output" == *"ticket a"* ]]; then return 1; fi
+}
+
+@test "TT-string: 'cancel' inside a string literal in stopped() FAILs (A1)" {
+  # Mutation: TT-string -- not blanking string literals lets log(\"a.cancel()\") pass.
+  _tt C3 '  public void stopped() throws Exception { super.stopped(); log("a.cancel(); b.cancel();"); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+}
+
+@test "TT-helper: stopped() -> cancelAll() -> cancelA()/cancelB() cancelling every ticket PASSes (A1)" {
+  # Mutation: TT-helper -- without the callee bodies the stopped() -> cancelAll() -> cancelX() shape false-FAILs.
+  _tt C4 '  public void stopped() throws Exception { super.stopped(); cancelAll(); }' \
+         '  private void cancelAll() { cancelA(); if (b != null) b.cancel(); }' \
+         '  private void cancelA() { if (a != null) { a.cancel(); a = null; } }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  timer-ticket"*"C4.java"* ]]
+}
+
+@test "TT-both: stopped() cancelling both tickets PASSes; a helper taking the ticket counts (A1)" {
+  _tt C5 '  public void stopped() throws Exception { super.stopped(); a.cancel(); cancelTicket(b); }' \
+         '  private static void cancelTicket(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
+
+@test "TT-array: a Clock.Ticket[] field cancelled element-wise in stopped() PASSes (A1)" {
+  cat > "$SRC/C6.java" <<'JAVA'
+package demo;
+import javax.baja.sys.*;
+public final class C6 extends BComponent {
+  private final Clock.Ticket[] delays = new Clock.Ticket[4];
+  public void arm(int i) { delays[i] = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); }
+  public void stopped() throws Exception {
+    super.stopped();
+    for (int i = 0; i < delays.length; i++) { if (delays[i] != null) delays[i].cancel(); }
+  }
+}
+JAVA
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
+
+@test "TT-finderr: an unreadable sub-directory is an env error (exit 3), never a clean pass (A1)" {
+  # Mutation: TT-finderr -- ignoring the find status skips the locked directory's timers and exits 0.
+  rm -f "$SRC/Owner.java"
+  mkdir -p "$SRC/locked"
+  cp "$SRC/Conformant.java" "$SRC/locked/"
+  chmod 000 "$SRC/locked"
+  if [ -r "$SRC/locked" ]; then chmod 755 "$SRC/locked"; skip "running as root"; fi
+  run "$LINT" "$SRC"
+  chmod 755 "$SRC/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}
