@@ -4,7 +4,7 @@ description: "Trigger: read or write a live Niagara N4 station through the mcp_n
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.7.0"
+  version: "0.7.1"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, server code) — read it, don't restate it from memory.
@@ -23,7 +23,7 @@ Then read `$KIT/METHODOLOGY.md` FIRST and follow its session checklist.
 
 ## Register the server
 
-Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. The operator, not the model, chooses stations, credential env prefix and TLS policy (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
+Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. The operator, not the model, chooses stations, credential env prefix, TLS policy and timing (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`, `--load-wait`, `--http-timeout`, `--auth-cooldown`), and where each station keeps its `config.bog` (`--station-home NAME=PATH`, so `n4_save_station` can prove persistence). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
 
 ## Session checklist (full detail in METHODOLOGY section 4)
 

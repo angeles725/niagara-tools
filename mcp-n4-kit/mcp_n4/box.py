@@ -176,6 +176,8 @@ def status_value(nodes, path):
 #:   control:NullProxyExt    BNullProxyExt extends BAbstractProxyExt (live: a writable's frozen child)
 #:   control:PriorityLevel   BPriorityLevel extends BFrozenEnum (heuristic says component)
 #:   baja:Link, baja:WsAnnotation  slot values the write tools rely on
+#:   modbusCore:FlexAddress  BFlexAddress extends BStruct (a Modbus proxyExt dataAddress)
+#:   bacnet:BacnetAddress    BBacnetAddress extends BStruct (audit 2026-10-03 F17, issue #200)
 #: The kit has no live contract lookup yet (BOX `reg.loadContract`, B1173): it would need a
 #: new channel certified on a station. Add an entry here when a type is misclassified.
 COMPONENT_TYPES = {
@@ -186,6 +188,8 @@ COMPONENT_TYPES = {
     "control:PriorityLevel": False,
     "baja:Link": False,
     "baja:WsAnnotation": False,
+    "modbusCore:FlexAddress": False,
+    "bacnet:BacnetAddress": False,
 }
 
 

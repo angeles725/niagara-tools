@@ -57,6 +57,9 @@ class WriteState:
         self.tokens = safety.ConfirmationTokens(token_ttl, clock)
         self.journal, self.audit = safety.Journal(state_dir), safety.AuditLog(state_dir)
         self.max_writes = max_writes
+        #: Executed writes of this server process (audit 2026-10-03 F5): a reconnect does not
+        #: reset it, so --max-writes bounds the whole run, not one session.
+        self.writes_executed = 0
         #: station NAME -> directory holding config.bog (operator policy, for n4_save_station)
         self.station_homes = dict(station_homes or {})
         self.save_timeout, self.save_interval = 30.0, 0.5
@@ -573,9 +576,11 @@ def _remove_plan(client, args):
     if truncated:  # audit 2026-10-03 F8: the depth cut used to be silent
         data["snapshot_truncated"] = {"depth": SNAPSHOT_DEPTH,
                                       "paths": truncated[:TRUNCATED_PATHS_SHOWN]}
-        notes.append("the subtree is deeper than the snapshot (depth %d): %d slot(s) or "
-                     "component(s) below it are NOT captured and a rollback cannot bring them "
-                     "back (see snapshot_truncated%s); export or note them before removing"
+        notes.append("the subtree is deeper than the snapshot (depth %d): at least %d slot(s) "
+                     "or component(s) below it are NOT captured (only the first level below "
+                     "the cut is loaded, so deeper ones are not counted) and a rollback cannot "
+                     "bring them back (see snapshot_truncated%s); export or note them before "
+                     "removing"
                      % (SNAPSHOT_DEPTH, len(truncated),
                         ", first %d listed" % TRUNCATED_PATHS_SHOWN
                         if len(truncated) > TRUNCATED_PATHS_SHOWN else ""))
@@ -667,11 +672,11 @@ def _rollback_plan(client, args, ctx):
     own = [{"nm": "v", "h": op["h"], "n": op["n"]} for op in ops if op["nm"] == "a"]
     planned_links = len(relinks) * len(own)
     need = 1 + len(components) + planned_links
-    if sess.writes_executed + need > write.max_writes:
+    if write.writes_executed + need > write.max_writes:
         raise ToolError("%s: this rollback needs %d write(s) (1 batch + %d "
                         "component(s) + %d relink(s)) but only %d remain (--max-writes %d)"
                         % (safety.REASON_BUDGET_SMALL, need, len(components), planned_links,
-                           write.max_writes - sess.writes_executed, write.max_writes))
+                           write.max_writes - write.writes_executed, write.max_writes))
     for spec in components:  # every re-created component, under today's scope
         top = ops[spec["top"]]
         write.scope.check(_end_ord(box.child_ord(_ord_of(targets, top["h"]), top["n"]),
@@ -800,7 +805,7 @@ def _run_components(sess, write, batch_id, planned, replies):
         except OSError:
             raise _in_doubt_with_created(batch_id, base, created, "the component intent could not be "
                            "written, nothing more was sent") from None
-        sess.writes_executed += 1
+        write.writes_executed += 1
         try:
             reply = _send(sess.client, op)
         except Exception as exc:
@@ -1033,7 +1038,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
             raise ToolError("nothing more was sent: the relink intent could not be written "
                             "(batch %s is in-doubt: components were re-created, links were "
                             "not)" % batch_id) from None
-        sess.writes_executed += len(ops)
+        write.writes_executed += len(ops)
         for op, tgt_h in zip(ops, meta):
             try:
                 result = _link_result([_send(sess.client, op)])
@@ -1253,8 +1258,9 @@ def _process(ctx, name, args):
     tier_block = ctx.tier_block(sess)  # METHODOLOGY section 5: a dry run is still allowed
     if tier_block and not dry:
         raise ToolError(tier_block)
-    if sess.writes_executed >= write.max_writes:
-        raise ToolError("%s: %d writes already executed in this session (--max-writes)"
+    if write.writes_executed >= write.max_writes:
+        raise ToolError("%s: %d writes already executed by this server process "
+                        "(--max-writes; a reconnect does not reset it)"
                         % (safety.REASON_BUDGET, write.max_writes))
     ords = impl.scope_ords(args)
     for ord_str in ords:
@@ -1307,7 +1313,7 @@ def _process(ctx, name, args):
         raise ToolError("nothing was sent: the journal intent could not be written (batch %s); "
                         "the confirmation token is spent, run the dry run again"
                         % batch_id) from None
-    sess.writes_executed += 1  # counted once sent, whatever the station answers
+    write.writes_executed += 1  # counted once sent, whatever the station answers
     try:
         replies = [_send(sess.client, op) for op in planned.ops]
     except Exception as exc:

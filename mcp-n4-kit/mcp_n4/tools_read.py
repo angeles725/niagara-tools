@@ -41,7 +41,6 @@ class Session:
         self.version_error = version_error
         #: True only when the session was opened with an `expected_station` that matched.
         self.identity_verified = identity_verified
-        self.writes_executed = 0
         #: Fresh per connect: a write plan (so its confirmation token) is bound to it, so a
         #: token from a dry run never executes after a reconnect (audit 2026-10-03 F1).
         self.session_id = uuid.uuid4().hex
