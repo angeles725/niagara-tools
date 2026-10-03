@@ -10,7 +10,7 @@
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
-# Evidence of the checks below (also cited at each check): [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
+# Evidence of the checks below (also cited at each check): [ev: corpus B800 §800.3] [ev: corpus B806] [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
 # Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
 # Mutation: S21-misparse -- drops max_d>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
 # Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass
@@ -21,6 +21,8 @@
 # Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field
 # Mutation: TT-query -- a name merely CONTAINING cancel accepts isCancelled(a) as a cancel
 # Mutation: TT-safecancel -- requiring the name to START with cancel false-FAILs safeCancel(a)/doCancel(b)
+# Mutation: TT-helper-body -- accepting a helper by its name again lets logCancelRequest(a) pass a
+# Mutation: TT-helper-nested -- a separator class that admits ( binds the call to the enclosing if and misses it
 # Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave its companion flag stuck true
 # Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs a disable path that clears the flag in a helper
 # Mutation: LC-orphan-callers -- ignoring the callers reports a cancel helper whose callers own the flag
@@ -34,9 +36,10 @@
 #                     Clock.schedule*() call) but its stopped() override does not
 #                     cancel EVERY ticket field — the timer leaks on station stop.
 #                     Checked per ticket field on comment- and string-blanked code:
-#                     `f.cancel(` / `f[i].cancel(` / a call taking `f` to a method whose
-#                     name contains `cancel`/`Cancel` and is not a query (cancelTicket(f),
-#                     safeCancel(f) count; log(f), isCancelled(f) do not), in stopped() or in any same-file method it reaches
+#                     `f.cancel(` / `f[i].cancel(` / a call taking `f` to a SAME-FILE
+#                     method whose body calls .cancel( — decided by the helper's body,
+#                     not its name (log(f), isCancelled(f) and an other-file helper do
+#                     not count), in stopped() or in any same-file method it reaches
 #                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
 #                     another ticket, does not count. No named field (only
 #                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
@@ -169,19 +172,22 @@ END {
   if (!miss) print "OK"
 }
 function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
-# f.cancel( · f[...].cancel( · this.f.cancel( · a call taking f as a whole argument to a method whose NAME
-# contains "cancel"/"Cancel" and is not a query: cancel(f), cancelTicket(f), safeCancel(f), doCancel(f) count;
-# log(f), isCancelled(f), wasCancelled(f), hasCancel(f) do not (a query prefix or a "Cancelled" past tense).
-function cancels(s, f,    re1, re2, t, nm) {
+# f.cancel( · f[...].cancel( · this.f.cancel( · an unqualified call taking f as a whole argument to a SAME-FILE
+# method whose body itself calls .cancel( (cancelTicket(f), safeCancel(f), stopTimer(f) all count when they really
+# cancel). Decided by the helper's body, not its name: log(f), isCancelled(f), logCancelRequest(f) and a helper
+# from another file do not count (an unverifiable helper fails closed).
+function cancels(s, f,    re1, re2, t, nm, pre) {
   re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
   if (s ~ re1) return 1
-  re2 = "[A-Za-z0-9_]*[Cc]ancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
+  # the separator before f excludes ( and ) so the match binds to the innermost call, not an enclosing if (
+  re2 = "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.()])?" f "[[:space:]]*[,)]"
   t = s
   while (match(t, re2)) {
+    pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
     nm = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
     sub(/[[:space:]]*\(.*/, "", nm)
-    if (nm ~ /^(is|was|has|had|can|should|get|check|needs|did|will)[A-Z]/ || nm ~ /Cancelled|Canceled/) continue
-    return 1
+    if (pre == "." || !(nm in body)) continue
+    if (body[nm] ~ /\.[[:space:]]*cancel[[:space:]]*\(/) return 1
   }
   return 0
 }

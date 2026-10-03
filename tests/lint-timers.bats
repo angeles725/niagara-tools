@@ -765,3 +765,29 @@ _GATE_HEAD=(
   [ "$status" -eq 1 ]
   [[ "$output" == *"ticket a"* ]]
 }
+
+@test "TT-helper-body: a helper counts only when its same-file BODY cancels — logCancelRequest(a)/cancelled(a) do not (A8c)" {
+  # Mutation: TT-helper-body -- accepting a helper by its name again lets logCancelRequest(a) pass a.
+  _tt C14 '  public void stopped() throws Exception { super.stopped(); logCancelRequest(a); cancelled(b); }' \
+          '  private void logCancelRequest(Clock.Ticket t) { log("cancel requested"); }' \
+          '  private boolean cancelled(Clock.Ticket t) { return t == null; }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ticket a"* ]]
+  [[ "$output" == *"ticket b"* ]]
+}
+
+@test "TT-helper-any-name: a same-file helper whose body cancels its argument counts whatever its name (A8c)" {
+  _tt C15 '  public void stopped() throws Exception { super.stopped(); stopTimer(a); stopTimer(b); }' \
+          '  private static void stopTimer(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
+
+@test "TT-helper-nested: a cancelling helper called inside a condition (if (stopTimer(a)) …) still counts (A8c)" {
+  # Mutation: TT-helper-nested -- a separator class that admits "(" binds the call to the enclosing 'if' and misses it.
+  _tt C16 '  public void stopped() throws Exception { super.stopped(); if (stopTimer(a)) { } if (stopTimer(b)) { } }' \
+          '  private static boolean stopTimer(Clock.Ticket t) { if (t == null) return false; t.cancel(); return true; }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
