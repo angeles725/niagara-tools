@@ -4,7 +4,7 @@ description: "Trigger: read or write a live Niagara N4 station through the mcp_n
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.7.2"
+  version: "0.7.3"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, server code) — read it, don't restate it from memory.

@@ -61,6 +61,28 @@ class TestMutationCheck(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 2)
         self.assertEqual(len(self._caches()), 2)
 
+    def test_a_root_that_is_not_a_directory_is_a_usage_error(self):
+        not_a_dir = os.path.join(self.root, "pkg", "keep.py")
+        with self.assertRaises(SystemExit) as ctx:
+            mutation_check.main(["--root", not_a_dir, "--", sys.executable, "-c", "pass"])
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertEqual(len(self._caches()), 2)
+
+    def test_a_command_that_cannot_be_launched_is_an_env_error_not_a_red(self):
+        missing = os.path.join(self.root, "no-such-command")
+        code = mutation_check.main(["--root", self.root, "--", missing, "arg"])
+        self.assertEqual(code, mutation_check.EXIT_LAUNCH_FAILED)
+        self.assertEqual(code, 3)
+        self.assertIn("mutation_check: cannot launch", sys.stderr.getvalue())
+        self.assertIn("not a test result", sys.stderr.getvalue())
+
+    def test_a_non_executable_command_is_an_env_error(self):
+        script = os.path.join(self.root, "pkg", "keep.py")
+        os.chmod(script, 0o644)
+        code = mutation_check.main(["--root", self.root, "--", script])
+        self.assertEqual(code, 3)
+        self.assertIn("mutation_check: cannot launch", sys.stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
