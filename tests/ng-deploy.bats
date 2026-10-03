@@ -61,6 +61,11 @@ STUB
     cat > "$TMPDIR_T/fakebin/unzip" << 'STUB'
 #!/usr/bin/env bash
 count="${FAKE_UNZIP_TYPES:-9}"
+# audit A2: the module's own vendorVersion — FAKE_OLD_VERSION for a jar under modules/, FAKE_NEW_VERSION otherwise
+case "$*" in
+    */modules/*) [[ -n "${FAKE_OLD_VERSION:-}" ]] && printf '<module name="test-rt" vendorVersion="%s">\n' "$FAKE_OLD_VERSION" ;;
+    *)           [[ -n "${FAKE_NEW_VERSION:-}" ]] && printf '<module name="test-rt" vendorVersion="%s">\n' "$FAKE_NEW_VERSION" ;;
+esac
 for i in $(seq 1 "$count"); do
     printf '<type name="FakeType%s"/>\n' "$i"
 done
@@ -81,6 +86,8 @@ STUB
 
     # Prepend fakebin to PATH
     export PATH="$TMPDIR_T/fakebin:$PATH"
+    # audit A2: every pre-A2 test deploys a never-deployed module (no schema baseline); the A2 tests unset this.
+    export FIRST_DEPLOY=1
 
     # Write minimal .env.local for tests that need a valid environment
     # why: .env.local path is dynamic (TMPDIR_T); not following is expected
@@ -728,4 +735,82 @@ STUB
     "
     [ "$status" -eq 0 ]
     [[ "$output" == *"test-rt.jar"* ]] && [[ "$output" == *"Other-rt.jar"* ]]  # full = sibling included (guard; bites if --full-backup ignored)
+}
+
+# ===========================================================================
+# audit-2026-10-03 A2 — ng-deploy fails closed: a missing verify-module gate blocks (exit 50); a mode A/C deploy
+# runs the schema-risk SAFE precheck on SCHEMA_BASELINE_DIR (or --first-deploy / FIRST_DEPLOY=1 for a module
+# never deployed) and the version-bump precheck against the jar already in STATION_MODULES_DIR.
+# ===========================================================================
+_fake_sr() {   # _fake_sr <exit-code> — schema-risk stub recording its args
+    cat > "$TMPDIR_T/fake-sr.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" > "$TMPDIR_T/sr.args"
+exit ${1:-0}
+STUB
+    chmod +x "$TMPDIR_T/fake-sr.sh"
+    export SCHEMA_RISK_BIN="$TMPDIR_T/fake-sr.sh"
+}
+
+@test "NG-gate-missing: a missing verify-module gate blocks the deploy (exit 50), never a WARN pass (A2)" {
+    # Mutation: NG-gate-missing -- the old WARN-and-return-0 path deploys an unverified jar.
+    _gate_env
+    export VERIFY_MODULE_BIN="$TMPDIR_T/no-such-verify-module.sh"
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 50 ]
+    [[ "$output" == *"gate unavailable"* ]]
+}
+
+@test "NG-schema-required: mode A without SCHEMA_BASELINE_DIR or --first-deploy stops before the copy (exit 12) (A2)" {
+    # Mutation: NG-schema-required -- skipping the precheck when no baseline is set deploys an un-diffed schema.
+    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 12 ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+}
+
+@test "NG-schema-outage: a schema-risk OUTAGE (exit 2) or LOSSY (exit 1) blocks with exit 53; --accept-lossy passes LOSSY only (A2)" {
+    # Mutation: NG-schema-outage -- ignoring the schema-risk verdict deploys a slot change that breaks saved data.
+    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    mkdir -p "$TMPDIR_T/baseline"; printf 'SCHEMA_BASELINE_DIR=%s\n' "$TMPDIR_T/baseline" >> "$TMPDIR_T/env_gate"
+    _fake_sr 2
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --accept-lossy
+    [ "$status" -eq 53 ]
+    _fake_sr 1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 53 ]
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --accept-lossy
+    [ "$status" -eq 0 ]
+}
+
+@test "NG-schema-safe: a SAFE schema-risk diff (baseline vs the -rt module dir) lets the deploy complete (A2)" {
+    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    mkdir -p "$TMPDIR_T/baseline"; printf 'SCHEMA_BASELINE_DIR=%s\n' "$TMPDIR_T/baseline" >> "$TMPDIR_T/env_gate"
+    _fake_sr 0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 0 ]
+    grep -q "$TMPDIR_T/baseline" "$TMPDIR_T/sr.args"
+    grep -q "test/test-rt" "$TMPDIR_T/sr.args"
+}
+
+@test "NG-version-same: changed jar bytes with the SAME vendorVersion as the deployed jar block the deploy (exit 51) (A2)" {
+    # Mutation: NG-version-same -- skipping the version-bump precheck ships new bytes under an old version.
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=2.1.0 FAKE_NEW_VERSION=2.1.0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 51 ]
+    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+    export FAKE_NEW_VERSION=2.1.1
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 0 ]
+}
+
+@test "NG-version-unreadable: changed bytes with an unreadable vendorVersion block the deploy (exit 52) (A2)" {
+    # Mutation: NG-version-unreadable -- an unreadable version read as "bumped" ships an unverified jar.
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    unset FAKE_OLD_VERSION FAKE_NEW_VERSION
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 52 ]
 }

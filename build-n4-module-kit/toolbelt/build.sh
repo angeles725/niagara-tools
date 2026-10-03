@@ -17,6 +17,8 @@
 #                   --profile (selects rc-scan's browser floor); --legacy forwards report-module.sh --legacy
 #   --no-preflight  skip environment preflight (useful for inner rebuild loops when env is known-good)
 #   --no-report     skip report-module punch-list at the end (useful for quick inner rebuild loops)
+#   --first-deploy  forwarded to report-module.sh: a never-deployed module has no baseline for schema-risk
+#                   (otherwise a missing <artifact>/.deploy-baseline is INCOMPLETE, exit 53) [ev: audit-2026-10-03 A2]
 #   --no-drift-check  skip the deployed-baseline drift gate below (Δ2) — fix the version bump, don't skip, unless
 #                   you have a real reason (e.g. this niagara_home was never the deploy target)
 #   $JAVA8          JDK 8 path (default /usr/lib/jvm/java-8-openjdk-amd64)
@@ -43,13 +45,13 @@
 #   [ev: retro change-tier-time-budgets Δ5]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 50 gate or report-module FAIL ·
-#   51 deployed-baseline drift (Δ2)
+#   51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify · 53 report-module INCOMPLETE (a floor check SKIPped)
 set -euo pipefail
 
 # usage: print the leading comment block (line 2 up to the first non-comment line), never code.
 usage() { awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"; UI_PROFILE=""; LEGACY=0
-SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0
+SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0; FIRST_DEPLOY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --profiles)       [ $# -ge 2 ] || { usage >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
@@ -66,6 +68,7 @@ while [ $# -gt 0 ]; do
     --no-preflight) SKIP_PREFLIGHT=1; shift ;;
     --no-report)    SKIP_REPORT=1;    shift ;;
     --no-drift-check) SKIP_DRIFT_CHECK=1; shift ;;
+    --first-deploy) FIRST_DEPLOY=1; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "build.sh: unknown flag $1" >&2; usage >&2; exit 2 ;;
     *) break ;;
@@ -342,12 +345,16 @@ if "$HERE/verify-module.sh" "${VARGS[@]}" "${JARS[@]}"; then
     RARGS=("$ROOT/$MOD"); [ -z "$TARGET" ] || RARGS+=(--target-version "$TARGET")
     [ -z "$UI_PROFILE" ] || RARGS+=(--profile "$UI_PROFILE")
     [ "$LEGACY" -eq 0 ] || RARGS+=(--legacy)
+    [ "$FIRST_DEPLOY" -eq 0 ] || RARGS+=(--first-deploy)
     if "$HERE/report-module.sh" "${RARGS[@]}"; then
       exit 0
     else
       _RM=$?
       if [ "$_RM" -eq 3 ]; then
         echo "build.sh: report-module environment error (exit 3)" >&2; exit 10
+      fi
+      if [ "$_RM" -eq 4 ]; then
+        echo "build.sh: report-module verdict INCOMPLETE — a floor check (verify-module / schema-risk) did not run; extract the deployed baseline into <artifact>/.deploy-baseline (build-verify.md § Schema-risk deploy workflow) or pass --first-deploy for a never-deployed module" >&2; exit 53
       fi
       echo "build.sh: report-module punch-list has FAILs — not hand-off-ready (--no-report to skip)" >&2; exit 50
     fi

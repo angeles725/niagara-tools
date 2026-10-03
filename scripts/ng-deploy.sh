@@ -16,6 +16,8 @@ readonly SCRIPT_DIR
 readonly VERSION_FILE="${SCRIPT_DIR}/../VERSION"
 # verify-module gate binary — env-overridable (tests point it at a stub)
 VERIFY_MODULE_BIN="${VERIFY_MODULE_BIN:-${SCRIPT_DIR}/../build-n4-module-kit/toolbelt/verify-module.sh}"
+# schema-risk precheck binary — env-overridable (tests point it at a stub)
+SCHEMA_RISK_BIN="${SCHEMA_RISK_BIN:-${SCRIPT_DIR}/../build-n4-module-kit/toolbelt/schema-risk.sh}"
 SCRIPT_VERSION="$(cat "${VERSION_FILE}" 2>/dev/null || echo "unknown")"
 readonly SCRIPT_VERSION
 
@@ -29,6 +31,9 @@ ENV_FILE=".env.local"
 WITH_SLOTOMATIC=0
 STRICT_SLOTOMATIC=0
 NO_GATE=0
+# audit A2: never-deployed module (no schema baseline to diff) — --first-deploy or FIRST_DEPLOY=1
+FIRST_DEPLOY="${FIRST_DEPLOY:-0}"
+ACCEPT_LOSSY=0
 # Backup policy (Campaign 3 B10): lightweight-by-default + keep-N autopurge.
 # env-respecting so `FULL_BACKUP=1 backup` and `KEEP_N=N` work when sourced.
 KEEP_N="${KEEP_N:-3}"          # backups to retain per module (--keep N)
@@ -59,7 +64,11 @@ Options:
   --i-know-what-im-doing   Accepted no-op (kept for backward compatibility; --no-backup no longer gates)
   --with-slotomatic        Run :MODULE-rt:slotomatic (and :MODULE-ux:slotomatic when -ux is annotated) BEFORE build_jars (opt-in; ignored on mode B)
   --strict-slotomatic      Abort with exit 15 if annotation changes detected without --with-slotomatic
-  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C)
+  --no-gate                Skip the verify-module.sh gate (default: on for mode A/C). Without
+                             --no-gate a MISSING gate binary blocks the deploy (exit 50).
+  --first-deploy           The module was never deployed: skip the schema-risk precheck (no
+                             baseline to diff). Same as FIRST_DEPLOY=1.
+  --accept-lossy           Proceed on a schema-risk LOSSY verdict (an OUTAGE always blocks).
   --help                   Print this help and exit 0
   --version                Print SCRIPT_VERSION and exit 0
 
@@ -68,6 +77,11 @@ Required env vars (from .env.local or --env-file):
   JAVA_HOME, STATION_MODULES_DIR
   EXPECTED_RT_TYPES  (required for mode A or C)
   EXPECTED_UX_TYPES  (required for mode A or B)
+
+Required for mode A or C unless --first-deploy:
+  SCHEMA_BASELINE_DIR  — the DEPLOYED -rt source baseline (module-include.xml + *.java), diffed by
+                         schema-risk.sh against the -rt module dir before the copy (build-verify.md
+                         § Schema-risk deploy workflow)
 
 Optional:
   BUILD_ID             — when set, verifies index.html in ux jar contains ?v=$BUILD_ID
@@ -82,7 +96,11 @@ Exit codes:
   20  backup failed (tar returned non-zero)
   30  build (gradlew) returned non-zero
   40  copy of jar to STATION_MODULES_DIR failed
-  50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed
+  12  schema-risk precheck impossible: no SCHEMA_BASELINE_DIR and no --first-deploy (mode A/C)
+  50  verify failed: type count mismatch, BUILD_ID not found, or verify-module gate failed/missing
+  51  version-bump precheck: the built jar's bytes differ from the deployed jar but its vendorVersion did not change
+  52  version-bump precheck cannot verify (a vendorVersion is unreadable)
+  53  schema-risk precheck: verdict OUTAGE, LOSSY without --accept-lossy, or a schema-risk env fault
 EOF
 }
 
@@ -155,7 +173,15 @@ parse_args() {
             --strict-slotomatic)
                 STRICT_SLOTOMATIC=1
                 shift ;;
-            --no-gate)
+            --first-deploy)
+            FIRST_DEPLOY=1
+            shift
+            ;;
+        --accept-lossy)
+            ACCEPT_LOSSY=1
+            shift
+            ;;
+        --no-gate)
                 NO_GATE=1
                 shift ;;
             --full-backup)
@@ -470,13 +496,13 @@ ux_has_annotations() {
 
 # ---------------------------------------------------------------------------
 # run_gate — run the verify-module.sh gate on the built jars (die 50 on fail).
-# Skipped by --no-gate and for mode B; a missing gate binary warns, not blocks.
+# Skipped by --no-gate and for mode B; a missing gate binary BLOCKS (exit 50) — fail closed (audit A2).
 # ---------------------------------------------------------------------------
 run_gate() {
     local jars=( "$@" )
     if [[ ! -x "$VERIFY_MODULE_BIN" ]]; then
-        printf '[ng-deploy] WARN gate skipped: verify-module not executable at %s\n' "$VERIFY_MODULE_BIN" >&2
-        return 0
+        # fail closed (audit A2): a missing gate is not a pass; --no-gate is the explicit opt-out
+        die 50 "verify-module gate unavailable (not executable at $VERIFY_MODULE_BIN); jars not verified (use --no-gate to override)"
     fi
     local module_dir
     module_dir="$(dirname "$GRADLEW_PATH")/${MODULE_NAME}"
@@ -524,6 +550,67 @@ write_last_deploy_sha() {
 # ---------------------------------------------------------------------------
 # main — orchestrator
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# module_version <jar> — the module's own vendorVersion (the <module ...> root tag, not a dependency floor)
+# ---------------------------------------------------------------------------
+module_version() {
+    { unzip -p "$1" META-INF/module.xml 2>/dev/null || true; } \
+        | grep -oE '<module [^>]*vendorVersion="[^"]+"' | head -1 \
+        | sed -E 's/.*vendorVersion="([^"]*)".*/\1/' || true   # no version -> empty, never a set -e abort
+}
+
+# ---------------------------------------------------------------------------
+# precheck_version <jar...> — a built jar whose bytes differ from the jar already deployed in
+# STATION_MODULES_DIR must carry a NEW vendorVersion (Software Manager / module cache key on it):
+# same version -> die 51; unreadable version -> die 52. Mirrors toolbelt/build.sh's drift gate,
+# which ng-deploy (calling gradlew directly) would otherwise bypass. [ev: audit-2026-10-03 A2]
+# ---------------------------------------------------------------------------
+precheck_version() {
+    local new old nv ov
+    for new in "$@"; do
+        old="${STATION_MODULES_DIR}/$(basename "$new")"
+        [[ -f "$new" && -f "$old" ]] || continue
+        cmp -s "$new" "$old" && continue
+        nv="$(module_version "$new")"; ov="$(module_version "$old")"
+        if [[ -z "$nv" || -z "$ov" ]]; then
+            die 52 "version-bump precheck cannot verify $(basename "$new"): vendorVersion unreadable (built='$nv' deployed='$ov')"
+        fi
+        if [[ "$nv" == "$ov" ]]; then
+            die 51 "version-bump precheck: $(basename "$new") bytes changed but vendorVersion is still $nv — bump defaultModuleVersion and rebuild"
+        fi
+        printf '[ng-deploy] version-bump ok (%s: %s -> %s)\n' "$(basename "$new")" "$ov" "$nv"
+    done
+}
+
+# ---------------------------------------------------------------------------
+# precheck_schema <rt-module-dir> — schema-risk SAFE check against SCHEMA_BASELINE_DIR (mode A/C).
+# No baseline and no --first-deploy -> die 12; OUTAGE / env fault -> die 53; LOSSY -> die 53 unless
+# --accept-lossy. [ev: audit-2026-10-03 A2] (build-verify.md § Schema-risk deploy workflow)
+# ---------------------------------------------------------------------------
+precheck_schema() {
+    local rt_dir="$1" rc=0
+    if [[ -z "${SCHEMA_BASELINE_DIR:-}" ]]; then
+        if [[ "$FIRST_DEPLOY" -eq 1 ]]; then
+            printf '[ng-deploy] schema-risk: N/A (--first-deploy: no deployed baseline)\n'
+            return 0
+        fi
+        die 12 "schema-risk precheck needs SCHEMA_BASELINE_DIR (the deployed -rt source baseline), or --first-deploy for a module never deployed"
+    fi
+    [[ -d "$SCHEMA_BASELINE_DIR" ]] || die 12 "SCHEMA_BASELINE_DIR is not a directory: $SCHEMA_BASELINE_DIR"
+    [[ -x "$SCHEMA_RISK_BIN" ]] || die 53 "schema-risk precheck unavailable (not executable at $SCHEMA_RISK_BIN)"
+    "$SCHEMA_RISK_BIN" "$SCHEMA_BASELINE_DIR" "$rt_dir" || rc=$?
+    case "$rc" in
+        0) printf '[ng-deploy] schema-risk ok (SAFE)\n' ;;
+        1) if [[ "$ACCEPT_LOSSY" -eq 1 ]]; then
+               printf '[ng-deploy] WARN schema-risk LOSSY accepted (--accept-lossy)\n' >&2
+           else
+               die 53 "schema-risk verdict LOSSY: a saved value would be lost (use --accept-lossy after checking the live bog)"
+           fi ;;
+        2) die 53 "schema-risk verdict OUTAGE: the slot change would break saved data; deploy blocked" ;;
+        *) die 53 "schema-risk precheck could not run (exit $rc); deploy blocked" ;;
+    esac
+}
+
 main() {
     parse_args "$@"
     load_env_file "$ENV_FILE"
@@ -560,6 +647,18 @@ main() {
         printf '[ng-deploy] no-deploy: jars in build/libs/\n'
         exit 0
     fi
+
+    # Step 3.5: prechecks before anything reaches the station (audit A2) — the build.sh drift gate and the
+    # schema-risk floor that a direct gradlew build would otherwise bypass.
+    local pre_dir
+    pre_dir="$(dirname "$GRADLEW_PATH")/${MODULE_NAME}"
+    case "$MODE" in
+        A) precheck_version "${pre_dir}/${MODULE_NAME}-rt/build/libs/${MODULE_NAME}-rt.jar" "${pre_dir}/${MODULE_NAME}-ux/build/libs/${MODULE_NAME}-ux.jar"
+           precheck_schema "${pre_dir}/${MODULE_NAME}-rt" ;;
+        B) precheck_version "${pre_dir}/${MODULE_NAME}-ux/build/libs/${MODULE_NAME}-ux.jar" ;;
+        C) precheck_version "${pre_dir}/${MODULE_NAME}-rt/build/libs/${MODULE_NAME}-rt.jar"
+           precheck_schema "${pre_dir}/${MODULE_NAME}-rt" ;;
+    esac
 
     # Step 4: Copy
     copy_jars "$MODE"

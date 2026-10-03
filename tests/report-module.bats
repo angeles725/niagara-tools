@@ -27,19 +27,19 @@ setup() {
 }
 
 @test "RM1: a clean rt-only tree -> exit 0 with a CLEAN summary (no FAIL)" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"report-module:"* ]] && [[ "$output" == *"CLEAN"* ]]
 }
 
 @test "RM2: a timer-leak class surfaces the lint-timers FAIL row and exits 1" {
-  run "$RM" "$FX/leak"
+  run "$RM" --lint-only "$FX/leak"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"timer-ticket"* ]] && [[ "$output" == *"BLeak"* ]]
 }
 
 @test "RM3: no --plano row on an rt-only tree (the check is gated on a ux src/rc/index.html)" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   # Anchor on the tool actually running (exit 0 + summary) so a NEGATIVE-only assert can't pass
   # for the wrong reason (tool absent -> empty output -> trivially "no plano"). RED now, and the
   # --plano-always-run mutation makes a plano row appear -> this flips.
@@ -70,25 +70,25 @@ setup() {
 
 @test "RM4: a delay with no >0 floor surfaces the lint-delays FAIL row and exits 1 (isolated from lint-timers)" {
   # BDefrost cancels in stopped() -> timer-ticket PASSES, so only the lint-delays 'delay' check FAILs.
-  run "$RM" "$FX/delays"
+  run "$RM" --lint-only "$FX/delays"
   [ "$status" -eq 1 ]
   [[ "$output" == *"delay"* ]] && [[ "$output" == *"BDefrost"* ]]
 }
 
 @test "RM5a: without --console-dir, report-module emits a triage-console SKIP row (exit stays 0 on a clean tree)" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP"* ]] && [[ "$output" == *"triage-console"* ]]
 }
 
 @test "RM5b: with --console-dir, report-module runs triage-console and surfaces the own-frame trace" {
-  run "$RM" "$FX/clean" --console-dir "$FX/console-dir"
+  run "$RM" --lint-only "$FX/clean" --console-dir "$FX/console-dir"
   [[ "$output" == *"triage-console"* ]]
   [[ "$output" == *"time <= 0"* ]] || [[ "$output" == *"BDefrost"* ]]
 }
 
 @test "RM6a: an artifact with no .deploy-baseline -> a schema-risk SKIP row (exit stays 0 on a clean tree)" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP"* ]] && [[ "$output" == *"schema-risk"* ]]
 }
@@ -96,7 +96,7 @@ setup() {
 @test "RM6b: a .deploy-baseline retype (OUTAGE) maps to a FAIL schema-risk row (exit 1), NEVER ERROR" {
   # schema-outage/DemoPan-rt carries a .deploy-baseline where 'level' was a double; the current src
   # retypes it to baja:String -> schema-risk exit 2 (OUTAGE). No flag: the baseline is discovered.
-  run "$RM" "$FX/schema-outage"
+  run "$RM" --lint-only "$FX/schema-outage"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"schema-risk"* ]]
   [[ "$output" == *"verdict=OUTAGE"* ]] || [[ "$output" == *"OUTAGE"* ]]
@@ -119,28 +119,28 @@ setup() {
 
 @test "RM7: System.out call surfaces lint-no-system-out FAIL row and exits 1" {
   # system-out/DemoPan-rt/src/com/x/BOut.java has System.out.println
-  run "$RM" "$FX/system-out"
+  run "$RM" --lint-only "$FX/system-out"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-no-system-out"* ]] && [[ "$output" == *"BOut.java"* ]]
 }
 
 @test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
   # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
-  run "$RM" "$FX/se-display"
+  run "$RM" --lint-only "$FX/se-display"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-se-display"* ]] && [[ "$output" == *"BPanel.java"* ]]
 }
 
 @test "RM9: malformed agent-on type in module-include.xml surfaces lint-agent-on-shape FAIL row and exits 1" {
   # agent-on/DemoPan-rt/module-include.xml has <on type="FooService"/> — missing module: prefix
-  run "$RM" "$FX/agent-on"
+  run "$RM" --lint-only "$FX/agent-on"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-agent-on-shape"* ]] && [[ "$output" == *"module-include.xml"* ]]
 }
 
 @test "RM10: BQL string-concat produces lint-bql-string-concat WARN row but exit stays 0 (WARN does not block)" {
   # bql-warn/DemoPan-rt/src/com/x/BQuery.java concatenates into a bql: string
-  run "$RM" "$FX/bql-warn"
+  run "$RM" --lint-only "$FX/bql-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-bql-string-concat"* ]] && [[ "$output" == *"BQuery.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
@@ -148,7 +148,7 @@ setup() {
 
 @test "RM11: -ux artifact with src/rc/ but no JS specs surfaces lint-jasmine-ux WARN row, exit stays 0" {
   # ux-no-specs/DemoPan-ux/src/rc/index.html exists but srcTest/rc/spec/ is absent
-  run "$RM" "$FX/ux-no-specs"
+  run "$RM" --lint-only "$FX/ux-no-specs"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-jasmine-ux"* ]]
   [[ "$output" == *"CLEAN"* ]]
@@ -175,7 +175,7 @@ setup() {
 
 @test "RM12: subscribe-without-unsubscribe surfaces WARN row in *-rt artifact, exit stays 0" {
   # subscribe-warn/DemoPan-rt/src/com/x/BSub.java calls .subscribe( with no unsubscribe
-  run "$RM" "$FX/subscribe-warn"
+  run "$RM" --lint-only "$FX/subscribe-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"lint-subscribe-without-unsubscribe"* ]]
@@ -185,7 +185,7 @@ setup() {
 
 @test "RM13: recovery-path guarded-only safe-off surfaces FAIL row and exits 1" {
   # recovery-fail/DemoPan-rt/src/com/x/BHeat.java writes ResistanceOut only inside execute()
-  run "$RM" "$FX/recovery-fail"
+  run "$RM" --lint-only "$FX/recovery-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-recovery-path"* ]]
@@ -194,7 +194,7 @@ setup() {
 
 @test "RM14: config-sanity CS1 (interval<=duration) surfaces FAIL row and exits 1" {
   # config-sanity-fail/DemoPan-rt/src/com/x/BConfig.java has cycleInterval(300s) <= defrostDuration(600s)
-  run "$RM" "$FX/config-sanity-fail"
+  run "$RM" --lint-only "$FX/config-sanity-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-config-sanity"* ]]
@@ -203,7 +203,7 @@ setup() {
 
 @test "RM15: status-parity asymmetric facade surfaces WARN row in *-rt artifact, exit stays 0" {
   # status-parity-warn/DemoPan-rt/src/com/x/BFacade.java has 2 Interval slots, 0 status slots
-  run "$RM" "$FX/status-parity-warn"
+  run "$RM" --lint-only "$FX/status-parity-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"lint-status-parity"* ]]
@@ -212,7 +212,7 @@ setup() {
 
 @test "RM16: servlet auth violation surfaces FAIL row in *-ux artifact and exits 1" {
   # servlet-fail/DemoPan-ux/src/com/x/BMyServlet.java extends BWebServlet and writes without auth gate
-  run "$RM" "$FX/servlet-fail"
+  run "$RM" --lint-only "$FX/servlet-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"BMyServlet.java"* ]]
@@ -220,7 +220,7 @@ setup() {
 
 @test "RM17: hardcoded ORD in rc/ surfaces rc-scan FAIL row in *-ux artifact and exits 1" {
   # rc-scan-fail/DemoPan-ux/src/rc/index.html has station:|slot:/ hardcoded ORD
-  run "$RM" "$FX/rc-scan-fail"
+  run "$RM" --lint-only "$FX/rc-scan-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"rc-scan"* ]]
@@ -228,7 +228,7 @@ setup() {
 
 @test "RM18: doInvoke getNavChildren without invokeLater surfaces WARN row in *-wb artifact, exit stays 0" {
   # wb-threading-warn/DemoPan-wb/src/com/x/BPanel.java calls getNavChildren in doInvoke
-  run "$RM" "$FX/wb-threading-warn"
+  run "$RM" --lint-only "$FX/wb-threading-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"ui-thread-traversal"* ]]
@@ -237,7 +237,7 @@ setup() {
 
 @test "RM19: 2-part dependency version surfaces lint-structure FAIL row and exits 1" {
   # structure-fail/DemoPan-rt/DemoPan-rt.gradle.kts has api(\":baja:4.14\") — L7 violation
-  run "$RM" "$FX/structure-fail"
+  run "$RM" --lint-only "$FX/structure-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-structure"* ]]
@@ -245,7 +245,7 @@ setup() {
 
 @test "RM20: uncovered OPERATOR slot surfaces lint-write-path FAIL row and exits 1" {
   # write-path-fail/DemoPan-rt/src/com/x/BControl.java has OPERATOR property \"setpoint\" not in matrix
-  run "$RM" "$FX/write-path-fail"
+  run "$RM" --lint-only "$FX/write-path-fail"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-write-path"* ]]
@@ -253,7 +253,7 @@ setup() {
 
 @test "RM21: MD5+credential surfaces lint-no-md5-credential-digest WARN row but exit stays 0 (WARN does not block)" {
   # md5-cred-warn/DemoPan-rt/src/com/x/BAuth.java uses MessageDigest.getInstance("MD5") + BPassword
-  run "$RM" "$FX/md5-cred-warn"
+  run "$RM" --lint-only "$FX/md5-cred-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"lint-no-md5-credential-digest"* ]] && [[ "$output" == *"BAuth.java"* ]]
   [[ "$output" == *"CLEAN"* ]]
@@ -261,7 +261,7 @@ setup() {
 
 @test "RM22: -wb artifact with dialog(...BOrd.NULL) and no chooser surfaces lint-wb-file-chooser WARN row, exit stays 0" {
   # wb-file-chooser-warn/DemoPan-wb/src/com/x/BChooser.java calls dialog(BOrd.NULL) with no BComponentChooser/targetType
-  run "$RM" "$FX/wb-file-chooser-warn"
+  run "$RM" --lint-only "$FX/wb-file-chooser-warn"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"lint-wb-file-chooser"* ]]
@@ -278,7 +278,7 @@ setup() {
   printf '\xca\xfe\xba\xbe\x00\x00\x00\x35\x00\x00' > "$tmpmod/Foo9.class"
   (cd "$tmpmod" && zip -q DemoPan-rt/libs/java9.jar Foo9.class)
   rm "$tmpmod/Foo9.class"
-  run "$RM" "$tmpmod"
+  run "$RM" --lint-only "$tmpmod"
   rm -rf "$tmpmod"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
@@ -306,10 +306,10 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local t="$BATS_TEST_TMPDIR/rm24"; _ux_tree "$t"
   printf '<!DOCTYPE html><html><head><style>\n.bg { inset: 0; }\n</style></head><body></body></html>\n' \
     > "$t/DemoPan-ux/src/rc/index.html"
-  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  rc-scan  index.html:2  browser-floor"* ]]
-  KIT_ESLINT=/nonexistent run "$RM" "$t" --profile hmi
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t" --profile hmi
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  rc-scan  index.html:2  browser-floor"* ]]
 }
@@ -319,16 +319,16 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local big; big=$(head -c 21000 /dev/zero | tr '\0' 'A')
   printf '<!DOCTYPE html><html><body><img src="data:image/png;base64,%s"></body></html>\n' "$big" \
     > "$t/DemoPan-ux/src/rc/index.html"
-  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"datauri-budget"* ]]
-  KIT_ESLINT=/nonexistent run "$RM" "$t" --legacy
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t" --legacy
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"datauri-budget"* ]]
 }
 
 @test "RM26: an unknown --profile value -> usage exit 2" {
-  run "$RM" "$FX/clean" --profile kiosk
+  run "$RM" --lint-only "$FX/clean" --profile kiosk
   [ "$status" -eq 2 ]
 }
 
@@ -339,7 +339,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local stub="$BATS_TEST_TMPDIR/eslint-stub"
   printf '#!/usr/bin/env bash\nprintf "FAIL  eslint  js/app.js:3  eqeqeq: Expected ===\\n"\nprintf "WARN  eslint  js/app.js:9  max-lines-per-function: too long\\n"\nexit 1\n' > "$stub"
   chmod +x "$stub"
-  KIT_ESLINT="$stub" run "$RM" "$t"
+  KIT_ESLINT="$stub" run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:3  eqeqeq"* ]]
   [[ "$output" == *"DemoPan-ux  WARN  eslint  app.js:9  max-lines-per-function"* ]]
@@ -349,7 +349,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local t="$BATS_TEST_TMPDIR/rm28"; _ux_tree "$t"
   mkdir -p "$t/DemoPan-ux/src/rc/js"
   printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
-  KIT_ESLINT=/nonexistent/eslint run "$RM" "$t"
+  KIT_ESLINT=/nonexistent/eslint run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable"* ]]
 }
@@ -357,7 +357,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
 @test "RM29: a *-ux rc with no own js (vendor only) -> SKIP eslint 'no rc js'" {
   local t="$BATS_TEST_TMPDIR/rm29"; _ux_tree "$t"
   printf '<!DOCTYPE html><html><body></body></html>\n' > "$t/DemoPan-ux/src/rc/index.html"
-  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  no rc js"* ]]
 }
 
@@ -366,7 +366,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local t="$BATS_TEST_TMPDIR/rm30"; _ux_tree "$t"
   mkdir -p "$t/DemoPan-ux/src/rc/vendor"
   printf 'var lib = 1;\n' > "$t/DemoPan-ux/src/rc/vendor/lib-1.0.0.min.js"
-  KIT_ESLINT=/nonexistent KIT_ACORN=/nonexistent/acorn run "$RM" "$t"
+  KIT_ESLINT=/nonexistent KIT_ACORN=/nonexistent/acorn run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-ux  SKIP  vendor-floor"* ]] && [[ "$output" == *"acorn"* ]]
 }
@@ -379,7 +379,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   local t="$BATS_TEST_TMPDIR/rm31"; _ux_tree "$t"
   mkdir -p "$t/DemoPan-ux/src/rc/vendor"
   printf 'var c = {};\nc.t ??= 1;\n' > "$t/DemoPan-ux/src/rc/vendor/bad-1.0.0.min.js"
-  KIT_ESLINT=/nonexistent run "$RM" "$t"
+  KIT_ESLINT=/nonexistent run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-ux  FAIL  vendor-floor  bad-1.0.0.min.js:2"* ]]
 }
@@ -407,7 +407,7 @@ _ux_tree() { mkdir -p "$1"; cp -R "$FX/ux-no-specs/DemoPan-ux" "$1/"; }
   printf 'function f(x) {\n  return x == 1;\n}\nf(1);\n' > "$t/DemoPan-ux/src/rc/js/app.js"
   printf 'var c = {};\nc.t ??= 1;\n' > "$t/DemoPan-ux/src/rc/js/floor.js"
   printf 'var v = 1 == 1;\n' > "$t/DemoPan-ux/src/rc/vendor/lib.js"
-  KIT_ESLINT="$bin" KIT_ACORN=/nonexistent/acorn run "$RM" "$t"
+  KIT_ESLINT="$bin" KIT_ACORN=/nonexistent/acorn run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  app.js:2  eqeqeq"* ]]
   [[ "$output" == *"DemoPan-ux  FAIL  eslint  floor.js:2  parse"* ]]
@@ -439,7 +439,7 @@ _rt_tree() { mkdir -p "$1"; cp -R "$FX/clean/DemoPan-rt" "$1/"; }
 @test "RM34: a READONLY link-in target (link comment) -> FAIL lint-link-target-flags row, exit 1" {
   local t="$BATS_TEST_TMPDIR/rm34"; _rt_tree "$t"
   cp "$LTF_FX/comment/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-rt  FAIL  lint-link-target-flags  BRoomPanel.java:"*"LTF1"* ]]
 }
@@ -447,11 +447,11 @@ _rt_tree() { mkdir -p "$1"; cp -R "$FX/clean/DemoPan-rt" "$1/"; }
 @test "RM35: the wiring map beside the module (<root>/../docs/wiring-map.md) is passed -> Table 2 READONLY FAILs" {
   local repo="$BATS_TEST_TMPDIR/rm35" t="$BATS_TEST_TMPDIR/rm35/DemoPan"; _rt_tree "$t"
   cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]                                   # no map yet: the mirror is not a known target
   [[ "$output" != *"LTF1"* ]]
   mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  lint-link-target-flags  BRoomPanel.java:"*"wiring-map Table 2"* ]]
 }
@@ -459,15 +459,15 @@ _rt_tree() { mkdir -p "$1"; cp -R "$FX/clean/DemoPan-rt" "$1/"; }
 @test "RM36: --wiring-map <file> is forwarded; a missing --wiring-map file -> exit 3" {
   local t="$BATS_TEST_TMPDIR/rm36"; _rt_tree "$t"
   cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
-  run "$RM" "$t" --wiring-map "$LTF_FX/map/docs/wiring-map.md"
+  run "$RM" --lint-only "$t" --wiring-map "$LTF_FX/map/docs/wiring-map.md"
   [ "$status" -eq 1 ]
   [[ "$output" == *"wiring-map Table 2"* ]]
-  run "$RM" "$t" --wiring-map "$BATS_TEST_TMPDIR/nope.md"
+  run "$RM" --lint-only "$t" --wiring-map "$BATS_TEST_TMPDIR/nope.md"
   [ "$status" -eq 3 ]
 }
 
 @test "RM37: a clean artifact -> one PASS lint-link-target-flags clean row" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  PASS  lint-link-target-flags  clean"* ]]
 }
@@ -476,7 +476,7 @@ _rt_tree() { mkdir -p "$1"; cp -R "$FX/clean/DemoPan-rt" "$1/"; }
   local t="$BATS_TEST_TMPDIR/rm38"; _rt_tree "$t"
   printf '<types>\n  <type class="com.x.BFoo" name="Foo"/>\n  <type class="com.x.BRoomPanel" name="RoomPanel"/>\n</types>\n' \
     > "$t/DemoPan-rt/module-include.xml"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"DemoPan-rt  FAIL  slot-coverage  facade type without lexicon: RoomPanel"* ]]
 }
@@ -498,7 +498,7 @@ public class BCompressorControl extends BComponent implements BIAlarmSource {
   void raise() { alarmSupport.newOffnormalAlarm(mkData()); }
 }
 JAVA
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  ADVISORY  lint-silent-protection  CompressorControl.java:"*"console-only:"* ]]
   [[ "$output" != *"WARN  lint-silent-protection"* ]]
@@ -546,19 +546,19 @@ JAVA
 
 @test "RM43: the chosen wiring map is named in the PASS detail and in the Table 2 FAIL reason" {
   local repo="$BATS_TEST_TMPDIR/rm43" t="$BATS_TEST_TMPDIR/rm43/DemoPan"; _rt_tree "$t"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [[ "$output" == *"DemoPan-rt  PASS  lint-link-target-flags  clean (no wiring map)"* ]]
   mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [[ "$output" == *"PASS  lint-link-target-flags  clean (wiring map: $t/../docs/wiring-map.md)"* ]]
   cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"(wiring-map Table 2: $t/../docs/wiring-map.md)"* ]]
 }
 
 @test "RM44: the full summary string of a zero-ADVISORY clean run" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   local last; last="$(printf '%s\n' "$output" | tail -1)"
   [[ "$last" =~ ^report-module:\ 1\ artifact\ ·\ [0-9]+\ PASS\ ·\ 0\ FAIL\ ·\ [0-9]+\ WARN\ ·\ [0-9]+\ SKIP\ ·\ 0\ ADVISORY\ \ -\>\ \ CLEAN$ ]]
@@ -581,7 +581,7 @@ JAVA
   local repo="$BATS_TEST_TMPDIR/a&b" t="$BATS_TEST_TMPDIR/a&b/DemoPan"; _rt_tree "$t"
   cp "$LTF_FX/map/src/com/x/BRoomPanel.java" "$t/DemoPan-rt/src/com/x/"
   mkdir -p "$repo/docs"; cp "$LTF_FX/map/docs/wiring-map.md" "$repo/docs/"
-  run "$RM" "$t"
+  run "$RM" --lint-only "$t"
   [ "$status" -eq 1 ]
   [[ "$output" == *"(wiring-map Table 2: $t/../docs/wiring-map.md)"* ]]
 }
@@ -598,7 +598,7 @@ JAVA
   local stub="$BATS_TEST_TMPDIR/eslint-warn"
   printf '#!/usr/bin/env bash\nprintf "WARN  eslint  js/app.js:9  max-lines-per-function: too long\\n"\nexit 0\n' > "$stub"
   chmod +x "$stub"
-  KIT_ESLINT="$stub" run "$RM" "$t"
+  KIT_ESLINT="$stub" run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-ux  WARN  rc-scan  index.html:2  browser-floor"* ]]
   [[ "$output" == *"DemoPan-ux  PASS  rc-scan  no FAIL (1 WARN row above)"* ]]
@@ -618,7 +618,7 @@ JAVA
   printf '#!/usr/bin/env bash\n[ "${1:-}" = --version ] && { echo v8.57.0; exit 0; }\nprintf "FAIL  eslint  js/app.js:1  ran-with-old-eslint\\n"; exit 1\n' \
     > "$BATS_TEST_TMPDIR/bin48/eslint"
   chmod +x "$BATS_TEST_TMPDIR/bin48/eslint"
-  PATH="$BATS_TEST_TMPDIR/bin48:$PATH" KIT_ESLINT='' run "$RM" "$t"
+  PATH="$BATS_TEST_TMPDIR/bin48:$PATH" KIT_ESLINT='' run "$RM" --lint-only "$t"
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is v8.57.0"* ]]
   if [[ "$output" == *"ran-with-old-eslint"* ]]; then return 1; fi
 }
@@ -631,7 +631,7 @@ JAVA
   cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm49"
   { printf 'package com.x;\npublic class Core {\n  int step() {\n'
     for i in $(seq 1 85); do printf '    a%d();\n' "$i"; done; printf '  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm49/DemoPan-rt/src/com/x/Core.java"
-  run "$RM" "$BATS_TEST_TMPDIR/rm49"
+  run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm49"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-size  Core.java:3  method step() in pure class Core spans 87 lines"* ]]
   [[ "$output" == *"DemoPan-rt  PASS  lint-size  no FAIL (1 WARN row above)"* ]]
@@ -639,7 +639,7 @@ JAVA
 }
 
 @test "RM50: a clean artifact -> one PASS lint-size clean row" {
-  run "$RM" "$FX/clean"
+  run "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  PASS  lint-size  clean"* ]]
 }
@@ -658,7 +658,7 @@ JAVA
   { printf 'package com.x;\npublic class BSvc extends BAbstractService {\n'
     printf '  public final Feature getLicenseFeature() {\n    return Sys.getLicenseManager().getFeature("v", "f");\n  }\n'
     printf '  public void changed(Property p, Context cx) {\n    recompute();\n  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm52/DemoPan-rt/src/com/x/BSvc.java"
-  run "$RM" "$BATS_TEST_TMPDIR/rm52"
+  run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm52"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-license-isoperational-gate  BSvc.java:6  licensed class: changed()"* ]]
   [[ "$output" == *"DemoPan-rt  PASS  lint-license-isoperational-gate  no FAIL (1 WARN row above)"* ]]
@@ -676,7 +676,7 @@ JAVA
   cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm54"
   { printf 'package com.x;\npublic class BMgr {\n  void add(BComponent p, BImportMap m) {\n'
     printf '    m.setTargetOrd(p.getSlotPathOrd());\n  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm54/DemoPan-rt/src/com/x/BMgr.java"
-  run "$RM" "$BATS_TEST_TMPDIR/rm54"
+  run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm54"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-set-null-ord  BMgr.java:4  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
   [[ "$output" == *"DemoPan-rt  PASS  lint-set-null-ord  no FAIL (1 WARN row above)"* ]]
@@ -689,4 +689,48 @@ JAVA
   run "$tb/report-module.sh" "$FX/clean"
   [ "$status" -eq 3 ]
   [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]
+}
+
+# ===========================================================================
+# audit-2026-10-03 A2 — the non-skippable floor (BUILD-LOOP §5: verify-module, schema-risk) can no longer read
+# CLEAN while one of its checks SKIPped. Without --lint-only, a floor SKIP is verdict INCOMPLETE, exit 4.
+# --first-deploy declares a never-deployed module (no baseline to diff); --lint-only declares a punch-list run
+# that is not the floor. A lint-write-path exit 3 other than "no matrix" is an ERROR, not a SKIP.
+# ===========================================================================
+
+@test "RM-floor: no built jar and no deployed baseline -> INCOMPLETE, exit 4, never CLEAN (A2)" {
+  # Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN.
+  run "$RM" "$FX/clean"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"->  INCOMPLETE"* ]]
+  if [[ "$output" == *"->  CLEAN"* ]]; then return 1; fi
+}
+
+@test "RM-floor-schema: a built jar but no .deploy-baseline is INCOMPLETE unless --first-deploy (A2)" {
+  # Mutation: RM-floor-schema -- --first-deploy ignored keeps a never-deployed module INCOMPLETE forever.
+  W="$BATS_TEST_TMPDIR/mod"; cp -r "$FX/clean" "$W"
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" verify-module.sh 'printf "PASS  bytecode  x  ok\n"; exit 0'
+  A=$(find "$W" -mindepth 1 -maxdepth 1 -type d | head -1)
+  mkdir -p "$A/build/libs"; : > "$A/build/libs/x.jar"
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" "$W"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"SKIP"*"schema-risk"* ]]
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --first-deploy "$W"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"->  CLEAN"* ]]
+}
+
+@test "RM-wp-env: a lint-write-path env fault other than 'no matrix' is an ERROR (exit 3), not a SKIP (A2)" {
+  # Mutation: RM-wp-env -- mapping every exit 3 to SKIP "no write-path-matrix.md" hides a broken write-path scan.
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" lint-write-path.sh 'printf "lint-write-path  ERROR  x  cannot list every file under y: Permission denied\n"; exit 3'
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR"*"lint-write-path"* ]]
+}
+
+@test "RM-wp-nomatrix: the no-matrix exit 3 stays a SKIP row (A2)" {
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" lint-write-path.sh 'printf "lint-write-path  ERROR  x  no write-path-matrix.md found (looked in a)\n"; exit 3'
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP"*"lint-write-path"*"no write-path-matrix.md"* ]]
 }

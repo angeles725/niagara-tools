@@ -519,3 +519,19 @@ GRADLEW
   [ "$status" -eq 52 ]
   [[ "$output" == *"FAILED TO RESTORE"* ]]
 }
+
+# audit-2026-10-03 A2: report-module exit 4 (INCOMPLETE — a floor check SKIPped) is its own build.sh exit, never a pass.
+@test "BS-report-incomplete: a report-module INCOMPLETE (exit 4) exits 53 with the floor named, never 0 (A2)" {
+  # Mutation: BS-report-incomplete -- folding exit 4 into the FAIL branch reports "has FAILs" (50) for a skipped floor.
+  FAKE_REPORT_EXIT=4 run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 53 ]
+  [[ "$output" == *"INCOMPLETE"* ]]
+}
+
+@test "BS-first-deploy: --first-deploy reaches report-module.sh (A2)" {
+  # Mutation: BS-first-deploy -- not forwarding --first-deploy leaves a never-deployed module INCOMPLETE.
+  _record_stub report-module
+  run "$B" --first-deploy "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/report-module.args")" == *"--first-deploy"* ]]
+}
