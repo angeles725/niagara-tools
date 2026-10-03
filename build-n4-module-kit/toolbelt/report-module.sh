@@ -33,6 +33,8 @@
 # [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
+# Advisory members (deferred-lints-2026-10-03): lint-size.sh <artifact>/src — its WARN rows are relayed with a
+# PASS verdict row; any non-zero exit of an advisory member is an ERROR row (exit 3), never PASS.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -156,6 +158,18 @@ pass_after_relay() {
   [ "$RELAY_ADV" -gt 0 ] && _what="$_what, $RELAY_ADV ADVISORY"
   if [ "$_n" -eq 1 ]; then _what="$_what row above"; else _what="$_what rows above"; fi
   emit "$1" PASS "$2" "no FAIL ($_what)"
+}
+
+# advisory_member <artifact> <check> <exit> <output> — an advisory (WARN-only, run without --strict) lint:
+# exit 0 relays its WARN rows, then the pass_after_relay verdict row; ANY other exit (3 env, a crash, an
+# unexpected code) is an ERROR row and an env fault, never a silent PASS (deferred-lints-2026-10-03 D2).
+advisory_member() {
+  if [ "$3" -eq 0 ]; then
+    relay_rows "$1" "$4"
+    pass_after_relay "$1" "$2"
+  else
+    emit "$1" ERROR "$2" "env fault (exit $3)"; HAD_ENV=1
+  fi
 }
 
 # Discover profile artifacts (all immediate subdirectories, sorted)
@@ -1238,6 +1252,17 @@ for ADIR in "${ARTIFACTS[@]}"; do
       fi
     ;;
   esac
+
+  # ----------------------------------------------------------------
+  # 5.23. lint-size.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D2
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    lsz_exit=0
+    lsz_out=$("$TOOLBELT/lint-size.sh" "$ADIR/src" 2>&1) || lsz_exit=$?
+    advisory_member "$ANAME" lint-size "$lsz_exit" "$lsz_out"
+  else
+    emit "$ANAME" SKIP lint-size "no src/"
+  fi
 
   # ----------------------------------------------------------------
   # 6. schema-risk.sh <artifact>/.deploy-baseline <artifact>

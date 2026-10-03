@@ -9,8 +9,8 @@
 #   `-name '*.java'`, or `-name '*.html' -o -name '*.js'`) to <out-file>, one per line,
 #   sorted with LC_ALL=C. Dot SUB-directories are pruned; the root itself never is (`-mindepth 1`),
 #   so `.`, `..` or a dot-named root is walked, not pruned whole. Returns 0 when the walk was
-#   complete, and non-zero when find could not enter a sub-directory or the sorted list could not
-#   be written; <err-file> then holds the reason (find's and sort's stderr).
+#   complete, and non-zero when <root> is not a directory, find could not enter a sub-directory or
+#   the sorted list could not be written; <err-file> then holds the reason.
 #
 # Why: a lint that reads `find ... | sort` through a process substitution never sees find's
 # exit status, so a sub-directory find cannot enter is skipped and the lint reports the
@@ -19,6 +19,12 @@
 scan_files() {
   local out="$1" err="$2" root="$3" rc=0
   shift 3
+  # -mindepth 1 never tests the root itself, so a FILE root would list nothing and look clean.
+  if [ ! -d "$root" ]; then
+    printf 'scan_files: not a directory: %s\n' "$root" > "$err"
+    : > "$out"
+    return 2
+  fi
   find "$root" -mindepth 1 \( -type d -name '.*' -prune \) -o -type f \( "$@" \) -print > "$out.unsorted" 2> "$err" || rc=$?
   { LC_ALL=C sort "$out.unsorted" > "$out"; } 2>> "$err" || rc=1
   rm -f "$out.unsorted"
