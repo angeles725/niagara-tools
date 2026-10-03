@@ -791,3 +791,29 @@ _GATE_HEAD=(
   run "$LINT" "$SRC"
   [ "$status" -eq 0 ]
 }
+
+@test "TT-helper-param: a helper counts only when its body cancels its PARAMETER, not another ticket (A8d)" {
+  # Mutation: TT-helper-param -- any .cancel( in the helper body counts, so stopTimer(a) { other.cancel(); } passes a.
+  _tt C17 '  private Clock.Ticket other;' \
+          '  public void stopped() throws Exception { super.stopped(); stopTimer(a); b.cancel(); }' \
+          '  private void stopTimer(Clock.Ticket t) { if (other != null) other.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ticket a"* ]]
+}
+
+@test "TT-helper-this: this.cancelTicket(a) counts like cancelTicket(a) (A8d)" {
+  # Mutation: TT-helper-this -- rejecting every qualified call false-FAILs this.cancelTicket(a).
+  _tt C18 '  public void stopped() throws Exception { super.stopped(); this.cancelTicket(a); this.cancelTicket(b); }' \
+          '  private void cancelTicket(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
+
+@test "TT-helper-sigline: a helper whose opening brace is on the next line still has its parameters read (A8d)" {
+  # Mutation: TT-helper-sigline -- reading parameters only from the brace line false-FAILs the Allman-style helper.
+  _tt C19 '  public void stopped() throws Exception { super.stopped(); safeCancel(a); safeCancel(b); }' \
+          '  private static void safeCancel(Clock.Ticket ticket)' '  {' '    if (ticket != null) ticket.cancel();' '  }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
