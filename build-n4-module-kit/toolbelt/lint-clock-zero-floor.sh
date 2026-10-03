@@ -9,9 +9,10 @@
 # Usage:  lint-clock-zero-floor.sh <src-root>
 #   Only files that also reference Clock.schedule are scanned (reduces false positives).
 #   Row:  WARN  lint-clock-zero-floor  <file>:<line>  zero-floor: <source>
-#   Exit: 0  always (advisory) · 3  usage/env
+#   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: CZF2 -- drop the Math.max(0 match and CZF2 stops warning on a zero-floor near Clock.schedule
+# Mutation: CZF-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -26,6 +27,17 @@ if [ ! -d "$ROOT" ]; then
     exit 3
 fi
 
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+had_err=0
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
+    printf 'lint-clock-zero-floor: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+    had_err=1
+fi
+
 while IFS= read -r f; do
     # only consider files that schedule on the Clock
     grep -q 'Clock\.schedule' "$f" 2>/dev/null || continue
@@ -38,6 +50,7 @@ while IFS= read -r f; do
             printf 'WARN  lint-clock-zero-floor  %s:%s  zero-floor: %s\n' "$f" "$ln" "$trimmed"
         fi
     done < "$f"
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print 2>/dev/null)
+done < "$_TMP/files"
 
+[ "$had_err" -eq 0 ] || exit 3
 exit 0

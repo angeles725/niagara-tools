@@ -24,3 +24,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A { void f(String u){ BqlQuery.make("select * where n=" + u); } }\n' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"WARN"* ]]
 }
+
+@test "BSC-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: BSC-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/M/src/locked"
+  printf '%s\n' 'class A {}' > "$TMPDIR_T/M/src/locked/A.java"
+  chmod 000 "$TMPDIR_T/M/src/locked"
+  if [ -r "$TMPDIR_T/M/src/locked" ]; then chmod 755 "$TMPDIR_T/M/src/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$L" "$TMPDIR_T/M"
+  chmod 755 "$TMPDIR_T/M/src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

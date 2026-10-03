@@ -42,3 +42,24 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -ne 0 ]
   grep -q 'not a directory' "$TMPDIR_T/err"
 }
+
+@test "SF5: --prune <name> prunes every sub-directory of that name, at any depth (audit A0)" {
+  # Mutation: SF5 -- ignoring the --prune option lists the files under build/ again.
+  mkdir -p "$TMPDIR_T/m/lib" "$TMPDIR_T/m/build/libs" "$TMPDIR_T/m/sub/build"
+  printf 'x\n' > "$TMPDIR_T/m/lib/a.jar"
+  printf 'x\n' > "$TMPDIR_T/m/build/libs/b.jar"
+  printf 'x\n' > "$TMPDIR_T/m/sub/build/c.jar"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" --prune build -name '*.jar'
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/m/lib/a.jar" ]
+}
+
+@test "SF6: an unreadable sub-directory under a --prune walk still returns non-zero (audit A0)" {
+  mkdir -p "$TMPDIR_T/m/locked" "$TMPDIR_T/m/build"
+  printf 'x\n' > "$TMPDIR_T/m/locked/a.jar"
+  chmod 000 "$TMPDIR_T/m/locked"
+  if [ -r "$TMPDIR_T/m/locked" ]; then chmod 755 "$TMPDIR_T/m/locked"; skip "running as root"; fi
+  run scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" --prune build -name '*.jar'
+  chmod 755 "$TMPDIR_T/m/locked"
+  [ "$status" -ne 0 ]
+  grep -q 'locked' "$TMPDIR_T/err"
+}

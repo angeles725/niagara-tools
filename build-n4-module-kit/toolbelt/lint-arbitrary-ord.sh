@@ -13,13 +13,14 @@
 #   directly above suppresses that one WARN; the reason is mandatory — a bare marker still WARNs
 #   ("reviewed marker without a reason"). [ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]
 #   The marker counts only in a real // comment: a "//" inside a string or char literal is code.
-#   Exit: 0  always (advisory) · 3  usage/env
+#   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: AO2 -- require a leading quote and AO2 stops warning on BOrd.make(variable)
 # Mutation: AO4 -- ignore the reviewed marker and AO4 WARNs again on the reviewed call site
 # Mutation: AO6 -- accept a bare marker without a reason and AO6 stops warning
 # Mutation: AO8 -- split code/comment at the first // regardless of quotes and AO8/AO9 stop warning
 # Mutation: AO12 -- no block-comment skip in code_part and the apostrophe in /* it's */ hides the marker
+# Mutation: AO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -32,6 +33,17 @@ ROOT="$1"
 if [ ! -d "$ROOT" ]; then
     printf 'lint-arbitrary-ord: not a directory: %s\n' "$ROOT" >&2
     exit 3
+fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+had_err=0
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
+    printf 'lint-arbitrary-ord: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+    had_err=1
 fi
 
 MARKER='lint-arbitrary-ord:[[:space:]]*reviewed'
@@ -101,6 +113,7 @@ while IFS= read -r f; do
         fi
         prev=$line
     done < "$f"
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print 2>/dev/null)
+done < "$_TMP/files"
 
+[ "$had_err" -eq 0 ] || exit 3
 exit 0

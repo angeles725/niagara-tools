@@ -393,3 +393,37 @@ MD
   [ "$status" -eq 0 ]
   [[ "$output" == *"BPanelServlet.java:3  write handler doPost: no audit call"* ]]
 }
+
+@test "WP-finderr: an unreadable sub-directory of a scanned src is an env error (exit 3), never a covered pass (audit A0)" {
+  # Mutation: WP-finderr -- ignoring the per-profile find status hides the locked file's uncovered OPERATOR slot (exit 0).
+  # The matrix root (the matrix's grand-parent) does NOT contain the module, so the matrix-root walk never meets the
+  # locked directory and only the per-profile walk can catch it (two fail-closed walks on one fixture pin only the first).
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  W="$BATS_TEST_TMPDIR/wp"
+  mkdir -p "$W/mx/docs" "$W/Mod"
+  cp "$FX/covered/docs/write-path-matrix.md" "$W/mx/docs/"
+  cp -r "$FX/covered/src" "$W/Mod/"
+  mkdir -p "$W/Mod/src/com/x/locked"
+  printf '%s\n' 'package com.x;' '@NiagaraProperty(name="lockedKnob", flags=Flags.SUMMARY | Flags.OPERATOR)' 'public class BLocked extends BComponent {}' > "$W/Mod/src/com/x/locked/BLocked.java"
+  chmod 000 "$W/Mod/src/com/x/locked"
+  if [ -r "$W/Mod/src/com/x/locked" ]; then chmod 755 "$W/Mod/src/com/x/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$LW" "$W/Mod" --matrix "$W/mx/docs/write-path-matrix.md"
+  chmod 755 "$W/Mod/src/com/x/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}
+
+@test "WP-finderr-matrix: an unreadable directory under the matrix root is an env error (exit 3), never a false STALE (audit A0)" {
+  # Mutation: WP-finderr-matrix -- ignoring the matrix-root find status drops the locked file's names and exits 0/1.
+  W="$BATS_TEST_TMPDIR/wpm"
+  mkdir -p "$W/docs" "$W/Mod" "$W/other/locked"
+  cp "$FX/covered/docs/write-path-matrix.md" "$W/docs/"
+  cp -r "$FX/covered/src" "$W/Mod/"
+  printf 'class A {}\n' > "$W/other/locked/A.java"
+  chmod 000 "$W/other/locked"
+  if [ -r "$W/other/locked" ]; then chmod 755 "$W/other/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$LW" "$W/Mod" --matrix "$W/docs/write-path-matrix.md"
+  chmod 755 "$W/other/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

@@ -24,10 +24,11 @@
 # Its own ADVISORY severity (not WARN) keeps the WARN contract "a trip with NO surface" intact for
 # existing consumers and never sets the --strict exit 1. [ev: retro alarm-console-design Δ3]
 #
-# Exits: 0 no WARN (or WARN without --strict) | 1 any WARN under --strict | 3 usage/env
+# Exits: 0 no WARN (or WARN without --strict) | 1 any WARN under --strict | 3 usage/env or a sub-directory find cannot enter
 # Dot-dirs excluded (D9b). VCS-free by design.
 # [ev: corpus B824]  [ev: retro campaign9-silent-protection]
 # Mutation: S23-pos -- removes Pattern-B alarm-adapter exemption, causing false-WARN on alarmed trips
+# Mutation: SP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: S23-and -- removes the BIAlarmSource check, allowing bare newOffnormalAlarm to suppress WARN
 # Mutation: SP-console -- drops the console-only row, so an alarm-only trip loses its local-surface advisory
 set -u
@@ -57,7 +58,15 @@ SRC="$1"
 # SP9 guard: exit 3 when the source tree contains no Java files (K20 / C8 silent-0 lesson).
 # A directory with no .java files cannot have any trips — a silent exit 0 hides a misconfigured
 # invocation (wrong path, empty scaffold). Emit an ERROR row and exit 3.
-_java_count=$(find "$SRC" -not \( -name '.*' -prune \) -name '*.java' 2>/dev/null | wc -l)
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+# One fail-closed walk feeds every pass: a sub-directory find cannot enter is an env error (exit 3),
+# never a silently shorter file list.
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$SRC" -name '*.java'; then
+  printf 'lint-silent-protection: cannot list every file under %s: %s\n' "$SRC" "$(head -n 1 "$_TMP/find.err")" >&2
+  exit 3
+fi
+_java_count=$(wc -l < "$_TMP/files")
 if [ "$_java_count" -eq 0 ]; then
   printf 'ERROR  lint-silent-protection  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"
   exit 3
@@ -108,8 +117,7 @@ in_prop {
 AWKEOF
 
 # Run pass 0 over all Java files (dot-dirs excluded)
-find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
-    xargs -r awk -f "$_TMP/pass0.awk" 2>/dev/null > "$_TMP/all_props.txt"
+xargs -r awk -f "$_TMP/pass0.awk" < "$_TMP/files" 2>/dev/null > "$_TMP/all_props.txt"
 
 # Classify properties into SURF_SLOTS (allowlisted + SUMMARY/OPERATOR) and EFFECT_SLOTS.
 : > "$_TMP/surf_slots.txt"
@@ -169,8 +177,7 @@ BEGIN {
 }
 AWKEOF
 
-find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
-    xargs -r awk -v SURF_SLOTS="$SURF_SLOTS" -f "$_TMP/pass1.awk" 2>/dev/null | \
+xargs -r awk -v SURF_SLOTS="$SURF_SLOTS" -f "$_TMP/pass1.awk" < "$_TMP/files" 2>/dev/null | \
     sort -u > "$_TMP/surf_write_fields.txt"
 SURF_WRITE_FIELDS=$(tr '\n' ' ' < "$_TMP/surf_write_fields.txt")
 
@@ -209,7 +216,7 @@ while IFS= read -r _p0b_f; do
     }
     END { if (cn!="" && (ha || (bi && (bn||bc)))) print cn }
     ' "$_p0b_f" 2>/dev/null
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort) | sort -u > "$_TMP/alarm_classes.txt"
+done < "$_TMP/files" | sort -u > "$_TMP/alarm_classes.txt"
 ALARM_CLASSES=$(tr '\n' ' ' < "$_TMP/alarm_classes.txt")
 
 # ---------------------------------------------------------------------------
@@ -490,7 +497,7 @@ while IFS= read -r f; do
         -v SURF_WRITE_FIELDS="$SURF_WRITE_FIELDS" \
         -v ALARM_CLASSES="$ALARM_CLASSES" \
         -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" "$f" 2>/dev/null >> "$_WARN_FILE"
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # Dedupe by <file>:<line> (first WARN per site wins)
 if [ -s "$_WARN_FILE" ]; then

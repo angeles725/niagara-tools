@@ -109,6 +109,14 @@ Do not re-run START and do not report an approval. Run the lineage-bound STATUS 
 continue only from the `next_transition` it returns. It may show the transaction reviewing and reoffer the lens
 captures, which then complete and are acknowledged as usual. `[ev: retro polish-2026-10-02-close Δ5]`
 
+**Start every review from the canonical preflight, never from the command `review assess` returns.** Run
+`gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent <runtime> --next-transition`
+(add `--base-ref <boundary> --committed-only` when the candidate is a commit range). The `next_transition.command`
+that `gentle-ai review assess` prints carries no `--agent`, so a lineage started from it hands back capture tokens
+without one and every capture fails `invalid_request`. If that already happened, re-run the canonical preflight: it
+returns the same lineage's START, and its exact replay (`replayed`) binds the agent so the slots are reoffered with
+`--agent`. `[ev: retro deferred-lints-2026-10-03-close Δ1]`
+
 ## 5. Adopt-list
 
 1. **Research block → spec requirement.** A `[CERT]` block's **Kit implication** names the target kit file/§ and
@@ -154,6 +162,10 @@ introduced by the feature becomes a sub-task. Every other advisory goes to `## P
 ONE consolidated follow-up issue that keeps each finding's text next to its location (a lens/severity/location list
 costs a full re-read of the reviewed head to reconstruct). Set after the cascade has started, the limit arrives
 too late: the polish feature had already opened six sub-tasks. `[ev: retro polish-2026-10-02-close Δ1]`
+**A review's fail-open sub-task rides in the next task's PR when it touches the same file or helper.** One review
+per PR: fold the fix-forward (with its RED and observed mutation) into the next work unit's candidate when that unit
+edits the same script or shared helper, and give it its own PR only at the end of the chain, where no next unit
+exists. Record in the feature doc which one it was ("folded into the D3 PR" / "own PR"). `[ev: retro deferred-lints-2026-10-03-close Δ4]`
 
 ## 8. Per-run retro/ticket loop
 

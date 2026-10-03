@@ -187,6 +187,11 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
   ships with a positive pin for each shape the old match covered. In the polish feature each stricter heuristic
   opened the next real fail-open (values-owed parser P3 → P3b → P3c → P3d; CS4 suffix rule P2b → P2e).
   `[ev: retro polish-2026-10-02-close Δ2]`
+- **Two fail-closed guards on one fixture pin only the first.** When a new guard's observed mutation does not bite,
+  look for an earlier fail-closed guard that catches the same fixture first, and separate their inputs (prune what
+  the earlier pass does not need, or move the fixture out of its reach) so each guard is pinned by its own test — e.g.
+  `lint-write-path.sh` WP-finderr keeps the matrix root outside the module so only the per-profile walk meets the
+  locked directory. `[ev: retro deferred-lints-2026-10-03-close Δ3]`
 - **A facade link-in status mirror is never `READONLY`, and that rule is LINTABLE:** `LinkCheck` rejects a link whose target carries `READONLY`, so it is statically decidable — `toolbelt/lint-link-target-flags.sh` LTF1 FAILs it. Protecting the mirror from operator writes is NOT done with `READONLY`: omit `Flags.OPERATOR` and enforce a server-side write policy that rejects READONLY/TRANSIENT/non-OPERATOR targets (`types/dashboard.md`). [ev: retro panccadia-persistent-config-hoa Δ3]
 - folded as code: sweep-build-state.sh + BUILD-STATE.md + BUILD-LOOP.md §7 + retros/INDEX.md [ev: retro kit-continuity]
 

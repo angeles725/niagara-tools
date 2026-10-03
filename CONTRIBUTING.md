@@ -67,6 +67,12 @@ already set. [ev: retro campaign11-client-root; design.md D3a/D3b]
   test (shellcheck SC2314 flags it; CI runs shellcheck at every severity). Write `run cmd; [ "$status" -ne 0 ]`
   (or `run ! cmd` on bats >= 1.5) or `if cmd; then return 1; fi`, and prove the negative branch with a mutation.
   [ev: retro polish-2026-10-02-close Δ4]
+- **Shape an observed mutation so it neutralizes the guard and nothing else.** Neutralize a status check as
+  `if ! { cmd || true; }; then` or by deleting its `had_err=1` / `exit 3` line — never `if ! cmd || true; then`, which
+  parses as `(! cmd) || true` and is always true. A check that exits from inside a function is neutralized by replacing
+  the call, not by `|| true` after it. A mutation counts only when the mutated script still parses and the failing
+  assertion is the targeted one; run the mutated script once by hand when the RED looks too easy.
+  [ev: retro deferred-lints-2026-10-03-close Δ2]
 
 ### 2.1 Test runner setup
 

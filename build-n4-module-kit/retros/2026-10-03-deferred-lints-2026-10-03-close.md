@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-03 · kit · deferred-lints-2026-10-03-close
 
 **Session**: close of the deferred-lints feature `odd/tasks/deferred-lints-2026-10-03.md` (D1-D5b, PRs #230-#244, release v0.31.0)
@@ -47,4 +47,4 @@ returned `invalid_request` (no `--agent` in the capture tokens), four observed m
 - The assess command is a preflight hint, not the canonical preflight.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-03-deferred-lints-2026-10-03-close.md | kit | 2026-10-03 | pending | 5 |`
+**Status**: FOLDED (audit-2026-10-03 A0) — Δ1 `ORCHESTRATION.md` §4, Δ2 `CONTRIBUTING.md` §2, Δ3 `METHODOLOGY.md` § Conformance rules, Δ4 `ORCHESTRATION.md` §7, Δ5 `BUILD-LOOP.md` §5.

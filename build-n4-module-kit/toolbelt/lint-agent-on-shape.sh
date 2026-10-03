@@ -9,9 +9,10 @@
 #
 # Usage:  lint-agent-on-shape.sh <src-root>     (finds module-include.xml under it)
 #   Row:  FAIL  lint-agent-on-shape  <file>:<line>  malformed agent-on target (need module:Type): <value>
-#   Exit: 0  clean · 1  any FAIL · 3  usage/env
+#   Exit: 0  clean · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: AOS2 -- relax the module:Type regex and AOS2 stops failing on a missing module prefix
+# Mutation: AOS-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -24,6 +25,17 @@ ROOT="$1"
 if [ ! -d "$ROOT" ]; then
     printf 'lint-agent-on-shape: not a directory: %s\n' "$ROOT" >&2
     exit 3
+fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+had_err=0
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name 'module-include.xml'; then
+    printf 'lint-agent-on-shape: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+    had_err=1
 fi
 
 fail=0
@@ -41,6 +53,7 @@ while IFS= read -r f; do
             fail=1
         fi
     done < "$f"
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name 'module-include.xml' -print 2>/dev/null)
+done < "$_TMP/files"
 
+[ "$had_err" -eq 0 ] || exit 3
 exit "$fail"
