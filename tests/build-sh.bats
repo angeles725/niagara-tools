@@ -502,3 +502,20 @@ GRADLEW
   [ "$status" -eq 52 ]
   [[ "$output" == *"cannot verify"* ]]
 }
+
+@test "BS-drift-unverifiable-restore-fail: a failed restore in the cannot-verify path is reported, never silent" {
+  # Mutation: BS-drift-unverifiable-restore-fail -- dropping the FAILED TO RESTORE branch leaves the new jar in
+  # modules/ with no message, and a retry would snapshot it as its own baseline.
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  chmod 444 "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  if [ -w "$TMPDIR_T/nh/modules/Foo-rt.jar" ]; then skip "running as root: chmod 444 does not block writes"; fi
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  mkdir -p "$TMPDIR_T/nounzip"
+  printf '#!/usr/bin/env bash\nexit 9\n' > "$TMPDIR_T/nounzip/unzip"; chmod +x "$TMPDIR_T/nounzip/unzip"
+  PATH="$TMPDIR_T/nounzip:$PATH" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  chmod 644 "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"FAILED TO RESTORE"* ]]
+}
