@@ -109,10 +109,18 @@ wrap() {
 }
 
 @test "SNO1-recv: a null check on one receiver does not guard another receiver's direct pass (D4b, R2-004)" {
-  # Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on a
+  # Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on `a.`
   wrap 'if (a.getSlotPathOrd() == null) return;' 'm.setSourceOrd(a.getSlotPathOrd());' 'm.setTargetOrd(b.getSlotPathOrd());' > "$SRC/BMgr.java"
   run "$SNO" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == *"BMgr.java:6  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
   if [[ "$output" == *"BMgr.java:5"* ]]; then return 1; fi
+}
+
+@test "SNO1-chain: a call-chain receiver is never treated as guarded (D5b, R2-001/R3-001)" {
+  # Mutation: SNO1-chain -- keying a call-chain receiver as "." lets getA()'s null check silence getB()'s pass
+  wrap 'if (getA().getSlotPathOrd() == null) return;' 'm.setTargetOrd(getB().getSlotPathOrd());' > "$SRC/BMgr.java"
+  run "$SNO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BMgr.java:5  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
 }

@@ -32,6 +32,7 @@
 # Mutation: SPC4 -- scanning srcTest/ as well WARNs a test fixture that mirrors a runtime package
 # Mutation: SPC-finderr -- ignoring the per-module listing status skips the unreadable directory and reports clean
 # Mutation: SPC-findtree -- ignoring the module-search status skips a module under an unreadable directory
+# Mutation: SPC-aggfail -- an unchecked sort | awk aggregation turns a failed sort into exit 0 with no rows
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
@@ -103,15 +104,23 @@ while IFS= read -r d; do
   done < "$_TMP/files"
 done < "$_TMP/modules"
 
-# 3. A package in more than one module (distinct modules, first file of each named).
-LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2 -k3,3 "$_TMP/pkgs" | awk -F '\t' '
+# 3. A package in more than one module (distinct modules, first file of each named). Each stage is checked: a
+#    failed sort or awk would otherwise leave an empty rows file and a clean exit 0 (fail closed: exit 3).
+if ! LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2 -k3,3 "$_TMP/pkgs" > "$_TMP/pkgs.sorted" 2> "$_TMP/sort.err"; then
+  printf 'split-package-check: cannot aggregate the package list: %s\n' "$(head -n 1 "$_TMP/sort.err")" >&2
+  exit 3
+fi
+if ! awk -F '\t' '
   function flush() {
     if (nm > 1) printf "WARN  split-package-check  %s  declared in %d modules: %s -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)\n", cur, nm, list
   }
   $1 != cur { flush(); cur = $1; nm = 0; list = ""; last = "" }
   $2 != last { nm++; list = list (list == "" ? "" : ", ") $2 " (" $3 ")"; last = $2 }
   END { flush() }
-' > "$_TMP/rows"
+' "$_TMP/pkgs.sorted" > "$_TMP/rows" 2> "$_TMP/agg.err"; then
+  printf 'split-package-check: cannot aggregate the package list: %s\n' "$(head -n 1 "$_TMP/agg.err")" >&2
+  exit 3
+fi
 
 had_warn=0
 if [ -s "$_TMP/rows" ]; then
