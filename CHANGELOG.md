@@ -24,8 +24,12 @@ other advisory is parked in #226.
 - **P7a** the six T3/T4/T5a hot-path lints fail closed on an awk failure; persist-hot-write follows every callee; session-store scheduled purge is one hop; the ORD resolve is anchored; inert-coordination handles lowerCamel stagger and units() calls; spa-poll handles arrow-function polls. [PR #222]
 - **P7b/P7c** `build.sh` drift gate: exit 52 "cannot verify" for an unlistable jar or an unreadable vendorVersion (it was a silent pass), and a failed restore is reported; `preflight.sh` jar-lock is SKIP on an empty lsof listing. [PR #223, #225]
 
-Issues: #199 and #151 closed with per-advisory mappings; parked items in #226. Also on main since v0.29.0: the
-mcp-n4-kit retro for the 2026-10-02 tests and tier-gate work units. [PR #224]
+Issues: #199 and #151 are closed with per-advisory mappings. Parked items are tracked in #226.
+
+### Changed — `mcp-n4-kit` docs
+
+- Retro for the 2026-10-02 tests and tier-gate work units: `mcp-n4-kit/retros/2026-10-02-tests-and-tier-gate.md`. [PR #224]
+- That retro's D1-D3 are folded into `mcp-n4-kit/README.md`: an "Upgrading to v0.5.0" note, a "Versioning" section, and the test isolation rules. [PR #227]
 
 ## [v0.29.0] - 2026-10-02
 
