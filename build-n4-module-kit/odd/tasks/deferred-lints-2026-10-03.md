@@ -42,6 +42,11 @@ traceable to the close retro, #226 or #142.
       item: the six T3/T4/T5a lints fail closed (exit 3) when `find` cannot enter a sub-directory, through a shared
       `toolbelt/lib/scan-files.sh`. Retro flipped `folded`. Route: inline (the parent is the bounded writer for this
       feature; one lib helper + six mechanical edits + docs).
+- [x] D1b · D1 review fail-opens (posted on #226) — R4-dot-root-prune: `lib/scan-files.sh` pruned a `.`, `..` or
+      dot-named ROOT whole (pre-existing expression, a fail-open) → `-mindepth 1`; R3-patsub-multiline-skip: the SH1
+      checker passed an expansion split over lines (introduced fail-open) → follow it onto the next lines, report an
+      unterminated one; R2-patsub-backslash-in-single-quote (could hide a hit) → `'...'` is literal; sort's stderr goes
+      to the err file (R2/R3 sort-err, cheap, same lines). Route: inline (one lib, one test helper, two bats).
 - [ ] D2 · `lint-size.sh` — advisory WARN-only class/method size smell (BUILD-STATE DEFERRED spec).
 - [ ] D3 · `lint-license-isoperational-gate.sh` — a licensed class acting in `changed()`/timer/servlet-write callbacks
       without an `isOperational()`/`isFault()` gate.
@@ -82,8 +87,24 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
   - `sweep-build-state.sh` exit 0; `--age --today 2026-10-02` exit 0; `sweep-fold-audit.sh --strict` 196/196 cited;
     `--deltas-since 2026-09-24` 145 checked, 0 not cited; `lint-guard-pins.sh --strict .` exit 0;
     `gen-lint-index.sh --check` fresh (regenerated for the six exit cells).
+  - Commit 619f61a, PR #230, merge 49185d4. RDD: consent granted (operator pre-authorized), 4 lenses APPROVED and
+    acknowledged — lineage review-d02202bd55feff67, authority burned. The first capture round returned
+    `invalid_request` (mutation not started): the bound STATUS had been reached from the assess-returned preflight,
+    which carries no `--agent`, so the capture tokens had none. Re-running the canonical preflight STATUS with
+    `--agent claude-code` returned the same lineage's START; its exact replay (`replayed`) bound the agent and the
+    same four slots were reoffered with `--agent`. 5 informational findings posted on #226 → task D1b.
   - Observation (not a sub-task, anti-cascade): 12 other lints still walk with `find … 2>/dev/null`; same class, not
     introduced by this feature, outside the #226 item — recorded on #226.
+- 2026-10-02 D1b (branch `feat/dl-d1b-scan-root-and-patsub`, from `origin/main` 49185d4). Route: inline.
+  - RED: SH1-multiline, SH1-unterminated, SH1-squote, SF1, SF2, SF3 not ok before the change.
+  - GREEN: `bats tests/shell-hygiene.bats tests/scan-files.bats` 9 ok.
+  - Observed mutations (restored byte-identical, `cmp`): MAX_SPAN 0 → SH1-multiline not ok; an open expansion counted
+    clean → SH1-unterminated not ok; the backslash escape checked before the literal-quote state → SH1-squote not ok;
+    `-mindepth 1` dropped → SF1 not ok.
+  - `bats tests/*.bats` (serial): 981 ok / 0 not ok (67 env skips), count 981. mcp-n4-kit unittest: 491 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
+    `--strict` 196/196; `--deltas-since 2026-09-24` 145 checked, 0 not cited; guard-pins `--strict` exit 0;
+    gen-lint-index `--check` fresh.
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -91,6 +112,7 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
 ## Delivery record
 | Task | PR | Merge SHA | Review |
 |---|---|---|---|
+| D1 | #230 | 49185d4 | APPROVED, 4 lenses, review-d02202bd55feff67 |
 
 ## Next step
-D1 review + merge, then D2.
+D1b review + merge, then D2.
