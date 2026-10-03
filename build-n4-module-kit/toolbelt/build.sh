@@ -297,8 +297,13 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
     fi
     if [ -n "$_why" ]; then
       echo "build.sh: FAIL — drift gate cannot verify $MOD-$p: $_why." >&2
-      cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null \
-        && echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules." >&2
+      # Same retry-safety contract as the drift FAIL below: a failed restore is said out loud, because
+      # modules/ then holds the NEW jar and a bare retry would snapshot it as its own baseline.
+      if cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null; then
+        echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules." >&2
+      else
+        echo "  FAILED TO RESTORE the previously-deployed $MOD-$p.jar — $NIAGARA_HOME/modules now holds the NEW jar; restore it manually before retrying." >&2
+      fi
       DRIFT_UNVERIFIED=1
       continue
     fi
