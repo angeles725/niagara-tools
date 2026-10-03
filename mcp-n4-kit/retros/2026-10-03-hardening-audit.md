@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded 2026-10-03 · kit 031e210 -->
 <!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. This retro only PROPOSES; kit changes are human-reviewed and human-committed. -->
 # Retro — kit-dev · 2026-10-03 · mcp-n4 development retrospective (hardening audit F1-F17)
 
@@ -68,3 +68,16 @@ A productive, clean run: seven PRs, each small, RED first, mutation-pinned, revi
 high-severity safety gaps (token station binding, chained-ORD scope bypass) and the lock-out risk are closed in
 code. The remaining risk is live-only behavior that no offline test can prove; it is listed on #200. Recommended
 fold order: D1 (cheap, prevents false mutation results), D3, then D2.
+
+## Fold record
+
+Folded 2026-10-03 in kit `031e210` (v0.7.2), in the recommended order:
+
+- D1 → `tools/mutation_check.py` (removes every `__pycache__` under the kit, runs the command with
+  `PYTHONDONTWRITEBYTECODE=1`, passes its exit code through) with `tests/test_mutation_check.py`;
+  README "Run the tests", "Test isolation rules" (helper and by-hand form); METHODOLOGY section 8.
+- D3 → METHODOLOGY section 8: under one-PR-per-unit delivery, start the native review explicitly at
+  each PR for a medium or high candidate, whatever `review_due` says; README "Versioning" points there.
+- D2 → README "Run the tests", "Untested-branch audit": stdlib `python3 -m trace --count --missing
+  --summary` over the suite before each minor release (no `coverage` dependency, which CI lacks);
+  never-run `raise`/`except`/refusal branches get a test or a stated reason; METHODOLOGY section 8.
