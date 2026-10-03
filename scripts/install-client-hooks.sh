@@ -53,7 +53,7 @@ if [ -z "$current" ] && [ "$FORCE" -eq 0 ]; then
   active=""
   if [ -d "$hooks_dir" ]; then
     for h in "$hooks_dir"/*; do
-      [ -f "$h" ] && [ -x "$h" ] || continue
+      if [ ! -f "$h" ] || [ ! -x "$h" ]; then continue; fi
       case "$h" in *.sample) continue ;; esac
       active="$active ${h##*/}"
     done
