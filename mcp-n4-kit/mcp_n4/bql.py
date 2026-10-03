@@ -111,7 +111,13 @@ def unique_columns(header):
 
 
 def by_position(columns, rows, names):
-    """Rows re-keyed by `names`, one per leading column (header text is not trusted)."""
+    """Rows re-keyed by `names`, one per leading column (header text is not trusted).
+
+    No rows means nothing to map: an empty body (not even a header) is 0 rows, not an
+    error (H5 review R3: it used to fail the whole inventory).
+    """
+    if not rows:
+        return []
     if len(columns) < len(names):
         raise ValueError("the BQL answer has %d column(s), expected at least %d (%s)"
                          % (len(columns), len(names), ", ".join(names)))

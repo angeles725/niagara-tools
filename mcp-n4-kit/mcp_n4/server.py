@@ -66,13 +66,15 @@ class Server:
                  client_factory=None, tools=None, write_scopes=(), state_dir=None,
                  token_ttl=300, max_writes=200, stations=None, credential_env="MCP_N4",
                  insecure_tls=(), station_homes=None, progress_file=None,
-                 allow_tier_b=(), allow_tier_c=(), auth_cooldown=tools_read.AUTH_COOLDOWN_MIN):
+                 allow_tier_b=(), allow_tier_c=(), auth_cooldown=tools_read.AUTH_COOLDOWN_MIN,
+                 http_timeout=tools_read.HTTP_TIMEOUT_DEFAULT, load_wait=box.MAX_POLL_WAIT):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
                                       insecure_tls=insecure_tls, allow_tier_b=allow_tier_b,
                                       allow_tier_c=allow_tier_c,
-                                      auth_cooldown=auth_cooldown)
+                                      auth_cooldown=auth_cooldown,
+                                      http_timeout=http_timeout, load_wait=load_wait)
         self.ctx.state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         self.ctx.progress_path = os.path.expanduser(progress_file) if progress_file else None
         if tools is None:
@@ -206,6 +208,25 @@ def _cooldown(text):
     return value
 
 
+#: Operator bounds of the timing flags (audit 2026-10-03 F11).
+LOAD_WAIT_RANGE = (1.0, 60.0)
+HTTP_TIMEOUT_RANGE = (5, 300)
+
+
+def _bounded(kind, low, high):
+    """argparse type: a `kind` (int/float) value within [low, high]."""
+    def parse(text):
+        try:
+            value = kind(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError("%r is not a number" % text) from None
+        if not low <= value <= high:
+            raise argparse.ArgumentTypeError("must be between %s and %s, got %s"
+                                             % (low, high, text))
+        return value
+    return parse
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(prog="mcp_n4.server", description=__doc__)
     parser.add_argument("--allow-writes", action="store_true",
@@ -222,6 +243,13 @@ def parse_args(argv=None):
                         default=tools_read.AUTH_COOLDOWN_MIN, metavar="SECONDS",
                         help="after an authentication failure, refuse station calls this long "
                              "(default and minimum 30: the lock-out window)")
+    parser.add_argument("--load-wait", type=_bounded(float, *LOAD_WAIT_RANGE),
+                        default=box.MAX_POLL_WAIT, metavar="SECONDS",
+                        help="total wait for one component load (default 3; 1-60): raise it "
+                             "for a slow or remote station")
+    parser.add_argument("--http-timeout", type=_bounded(int, *HTTP_TIMEOUT_RANGE),
+                        default=tools_read.HTTP_TIMEOUT_DEFAULT, metavar="SECONDS",
+                        help="HTTP timeout of one station request (default 20; 5-300)")
     parser.add_argument("--station", action="append", default=[], metavar="NAME=URL",
                         help="station n4_connect may use (repeatable); NAME should equal the "
                              "station's stationName; URL must be https://")
@@ -270,7 +298,8 @@ def main(argv=None):
                      credential_env=args.credential_env, insecure_tls=args.insecure_tls,
                      station_homes=homes, progress_file=args.progress_file,
                      allow_tier_b=args.allow_tier_b, allow_tier_c=args.allow_tier_c,
-                     auth_cooldown=args.auth_cooldown)
+                     auth_cooldown=args.auth_cooldown, http_timeout=args.http_timeout,
+                     load_wait=args.load_wait)
     except (ValueError, safety.SafetyError) as exc:
         print("mcp_n4.server: %s" % exc, file=sys.stderr)
         return 2

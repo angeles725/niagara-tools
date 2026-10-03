@@ -21,6 +21,8 @@ from .tools_read import LINK_TYPES, Tool, ToolError, _schema, _str
 WRITE = {"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False}
 DESTRUCTIVE = {"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False}
 SNAPSHOT_DEPTH = 3
+#: At most this many truncated paths are listed in a remove plan (the count is exact).
+TRUNCATED_PATHS_SHOWN = 20
 
 #: Re-create snapshots keep configuration only. These slots are runtime OUTPUTS the
 #: component computes (a Status* value, e.g. a NumericConst's `out`): restoring them
@@ -484,6 +486,14 @@ def _snapshot(node, path, links, handles):
     return out
 
 
+def _prune(node, depth):
+    """Copy of a loaded tree node keeping `depth` levels of children (the snapshot cut)."""
+    out = {k: v for k, v in node.items() if k != "s"}
+    if depth > 0 and node.get("s"):
+        out["s"] = [_prune(child, depth - 1) for child in node["s"]]
+    return out
+
+
 def _status_bits(value):
     """A `baja:Status` value without its runtime facets: `40;activeLevel=e_def` -> `40`."""
     return str(value).split(";", 1)[0]
@@ -530,9 +540,11 @@ def _remove_plan(client, args):
     parent_h, parent_nodes = _handle(client, parent_ord, 1)
     if name not in parent_nodes:
         raise ToolError("component %r not found under %s" % (name, parent_ord))
-    _, nodes = _handle(client, box.child_ord(parent_ord, name), SNAPSHOT_DEPTH)
+    # One level more than the snapshot keeps: what sits there is reported, never captured.
+    _, nodes = _handle(client, box.child_ord(parent_ord, name), SNAPSHOT_DEPTH + 1)
+    truncated = sorted(p for p in nodes if p and p.count("/") >= SNAPSHOT_DEPTH)
     links, handles = [], {}
-    body = _snapshot(nodes[""], "", links, handles)
+    body = _snapshot(_prune(nodes[""], SNAPSHOT_DEPTH), "", links, handles)
     inverse, notes = [{"nm": "a", "h": parent_h, "n": name, "b": body}], [
         "Automatic re-creation (n4_rollback) is limited to this snapshot: type, plain slots "
         "and wsAnnotation to depth %d; it is not a full restore." % SNAPSHOT_DEPTH]
@@ -558,6 +570,15 @@ def _remove_plan(client, args):
                      "of the confirmation hash; they are never written back: n4_rollback "
                      "reports them when it cannot re-establish their link")
     data = {"targets": {parent_ord: parent_h}}
+    if truncated:  # audit 2026-10-03 F8: the depth cut used to be silent
+        data["snapshot_truncated"] = {"depth": SNAPSHOT_DEPTH,
+                                      "paths": truncated[:TRUNCATED_PATHS_SHOWN]}
+        notes.append("the subtree is deeper than the snapshot (depth %d): %d slot(s) or "
+                     "component(s) below it are NOT captured and a rollback cannot bring them "
+                     "back (see snapshot_truncated%s); export or note them before removing"
+                     % (SNAPSHOT_DEPTH, len(truncated),
+                        ", first %d listed" % TRUNCATED_PATHS_SHOWN
+                        if len(truncated) > TRUNCATED_PATHS_SHOWN else ""))
     scan_ord = args.get("link_scan_ord")
     if scan_ord is not None:
         found = _scan_outgoing(client, scan_ord, handles)
@@ -1253,7 +1274,7 @@ def _process(ctx, name, args):
                         "session_id": sess.session_id}}
     data = _data(planned)
     for key in ("relinks", "unlinked_inputs", "components",
-                "outgoing_links_broken"):  # part of what the token authorizes
+                "outgoing_links_broken", "snapshot_truncated"):  # part of what the token authorizes
         if data.get(key):
             plan[key] = data[key]
     plan_hash = hashlib.sha256(safety.canonical(plan).encode()).hexdigest()
@@ -1297,6 +1318,8 @@ def _process(ctx, name, args):
         data["created"] = _run_components(sess, write, batch_id, planned, replies)
     if data.get("frozen_not_restored"):
         out["frozen_children_not_restored"] = data["frozen_not_restored"]
+    if data.get("snapshot_truncated"):
+        out["snapshot_truncated"] = data["snapshot_truncated"]
     if data.get("relinks"):  # the rollback's links: same batch, same guards, journaled
         data["relink_report"], relink_inverse, relink_doubt = _run_relinks(
             sess, write, batch_id, planned, replies)

@@ -4,7 +4,7 @@ description: "Trigger: read or write a live Niagara N4 station through the mcp_n
 license: Apache-2.0
 metadata:
   author: angeles725
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 Thin launcher. The real content lives in an EXTERNAL kit (METHODOLOGY, README, server code) — read it, don't restate it from memory.
@@ -32,7 +32,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.
-6. Keep every `batch_id`.
+6. Keep every `batch_id` (`n4_list_batches` lists them, newest first).
 7. Close with the session retro: call `n4_session_retro_draft` (or run `$KIT/tools/new_retro.py --station NAME --state-dir DIR`), review the candidate deltas, keep or edit them (or leave the honesty line `no new deltas`). Propose, never apply; stage issues only by hand.
 
 ## Hard Rules (non-negotiable)
