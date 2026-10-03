@@ -215,7 +215,7 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
 
 **Rule:** one Java package belongs to exactly one module. If a class must be shared, put it in a dedicated shared module and list it as a dependency (`nre()` dep), never copy it into two modules.
 
-**Lint candidate:** `split-package-check` — flag a Java package name that appears in `module-include.xml` (or `src/…` source trees) of more than one module in the same project.
+**Check:** `toolbelt/split-package-check.sh [--strict] <project-root>` — one WARN row per Java package declared under the `src/` of two or more modules (a module = a directory with `module-include.xml` or `build.gradle[.kts]` next to `src/`; each -rt/-ux/-wb artifact counts). Project-level, so `report-module.sh` (one module) does not run it: run it on the project checkout before a release; `--strict` (exit 1) is the form for the client repository's CI (issue #142). Loader evidence: `ModuleClassLoader.nfind()` asks the parent, then the module's own jar, then its dependencies (a sticky last-hit cache, the deps whose manifest types declare the package, then every other dep) and the first hit wins (`com/tridium/sys/module/ModuleClassLoader.java:186-294`; package map from `<types>` only, `NModule.java:333-335`). [ev: retro module-hardening-failure-modes-deltas Δ12]
 
 [ev: corpus B1125] — **Kit coverage: see types/structure.md `module-include.xml` authoring**
 
@@ -432,7 +432,7 @@ component is already mounted, so a row is a question ("can this component be unm
 [ev: retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ1]
 
 [ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
-**Kit coverage: this entry (FOLDED); lint DEFERRED**
+**Kit coverage: this entry (FOLDED); lint LANDED (`toolbelt/lint-set-null-ord.sh`)**
 
 ---
 

@@ -64,7 +64,11 @@ traceable to the close retro, #226 or #142.
       skips the member's own WARN/FAIL/ADVISORY rows (R4/R2/R3-001), the row names isFatalFault() too (R2), LIG3/4/6
       assert the exit status (R3-003). Route: folded into the D4 PR.
 - [x] D4 · `lint-set-null-ord.sh` — a `setXxxOrd(getSlotPathOrd())` / ORD `set(...)` with no null guard. Route: inline.
-- [ ] D5 · #142 `split-package-check.sh` — project-level check: one Java package declared in two modules.
+- [x] D4b · D4 review fail-open (posted on #226) — R2-004: one null check on ANY receiver silenced a later direct pass
+      of ANOTHER receiver's ORD → guard per receiver; with it, the §H3 coverage marker that still said "lint DEFERRED"
+      (R2-001) and the setter-name comment that claimed the last setter (R2-002/R3-002). Route: folded into the D5 PR.
+- [x] D5 · #142 `split-package-check.sh` — project-level check: one Java package declared in two modules. Route:
+      inline. Conservative read-only advisory version (see "Open decisions").
 - [ ] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
       check, feature retro, this doc COMPLETE.
 
@@ -197,6 +201,33 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
     shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
     `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
     `--check` fresh (new row, Auto yes).
+  - Commit 391f1ef, PR #239, merge 6cc16f6. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-b74d56944839d5e8, authority burned. 9 informational findings posted on #226: R2-004 (receiver-agnostic
+    guard) → D4b, with R2-001 (stale §H3 marker) and R2-002/R3-002 (setter-name comment); R3-001, R2-003, R3-003,
+    R3-004, R3-005 → parked.
+- 2026-10-03 D5 + D4b (branch `feat/dl-d5-split-package-check`, from `origin/main` 6cc16f6). Route: inline.
+  Design: module = a directory with `module-include.xml` / `build.gradle[.kts]` next to `src/` (each -rt/-ux/-wb artifact
+  is its own N4 module); the module search prunes dot-dirs, `build/`, `node_modules/`, `src/`, `srcTest/`; packages come
+  from each `*.java` `package …;` under the module's `src/` (no declaration = `(default)`); a package in two or more
+  DISTINCT modules is one WARN row naming each module and one file. Fail closed: the module search, a per-module listing
+  or an awk read that fails is exit 3; no module found is exit 3. Not a `lint-*` (project-level, so not in the lint
+  index and not run by `report-module.sh`); routed by `BUILD-LOOP.md` §5 non-lint tools (kit-links L5) and §D4c.
+  Evidence (decompiled): `ModuleClassLoader.java:186-294` (`nfind`: parent, own jar, then deps — sticky last-hit
+  cache, deps that declare the package, every other dep; first hit wins), `NModule.java:333-335` (`containsPackage`
+  knows only `<types>` packages); corpus B1125 (first-dependency-wins shadow), B616/B617 (shade bundled libraries).
+  - RED: SPC1-SPC7, SPC-finderr not ok (tool absent); SNO1-recv not ok (receiver-agnostic guard).
+  - GREEN: `bats tests/split-package-check.bats tests/lint-set-null-ord.bats` all ok (SPC-findtree added with the
+    module-search prune, GREEN at once, mutation-proven).
+  - Observed mutations (restored byte-identical, `cmp`): files counted instead of modules → SPC2 not ok; scanning the
+    module dir (srcTest included) → SPC4 not ok; per-module listing status ignored → SPC-finderr not ok (after the module
+    search stopped descending into `src/`, which had masked it); module-search status ignored → SPC-findtree not ok;
+    receiver-agnostic guard → SNO1-recv not ok.
+  - Smoke (read only): one client project checkout → no row, exit 0; a directory holding 16 checkouts/worktrees of
+    the same project → one row per package naming all 16 copies (documented: `<project-root>` is ONE checkout).
+  - `bats tests/*.bats` (serial): 1035 ok / 0 not ok (67 env skips), count 1035. mcp-n4-kit unittest: 530 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
+    `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
+    `--check` fresh (no lint header changed).
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -204,6 +235,13 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
   text or a heredoc onto later lines can produce a spurious row. It fails closed, and the kit scripts are clean today.
 - R3-patsub-multiline-negative-unpinned (D1b, `tests/shell-hygiene.bats`): no negative pin for a quoted multi-line
   replacement, for the MAX_SPAN boundary or for the `$'...'` state. Test depth only.
+- R3-001 (D4, `lint-set-null-ord.sh`): any `set…` identifier (`setup(`, `settings(`) counts as a setter and a nested
+  call's `)` ends the argument, so a few false WARNs are possible. Advisory, not a fail-open.
+- R2-003 (D4): `vguard` means both "guarded" and "already reported". Readability.
+- R3-003 (D4): no pins for the `null == v`, `null != v`, `requireNonNull(v` guard branches. Test depth.
+- R3-004 (D4, license gate): a gate inside a `try {` / `synchronized (…) {` wrapper that opens the callback is cut off
+  by the first-statement head — a false-WARN edge, not a fail-open.
+- R3-005 (D4): LIG10 does not assert the exit status. Test depth.
 - R3-001 (D2, `lint-size.sh`): an oversized `enum` / `interface` / `record` file is named `class ?`; the count is still
   reported. Readability of the row only.
 
@@ -214,6 +252,15 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
 | D1b | #233 | ea3b784 | APPROVED, 4 lenses, review-5056c52c4e0fbe6c |
 | D2 + D1c | #235 | a3a9b67 | APPROVED, 4 lenses, review-a13efee4322f36c9 |
 | D3 + D2b | #237 | d551090 | APPROVED, 4 lenses, review-0a160c9b2c00cbe3 |
+| D4 + D3b | #239 | 6cc16f6 | APPROVED, 4 lenses, review-b74d56944839d5e8 |
+
+## Open decisions
+- #142 wiring (operator): the issue asks for `split-package-check` to run automatically, in the client repository's CI,
+  not as a manual step. That repository is outside this kit, so this feature ships the conservative read-only
+  advisory tool (`--strict` ready for a gate) and leaves the choice open: (a) add `split-package-check.sh --strict
+  <checkout>` to the client repository's CI (recommended: the issue's own proposal, server-side, cross-module by
+  nature); (b) auto-run it from `build.sh` over the GROUP directory it already receives (in-kit, but sees one group,
+  not the whole project); (c) keep it manual before a release. Recorded on #142.
 
 ## Next step
-D4 review + merge, then D5.
+D5 review + merge, then D6.
