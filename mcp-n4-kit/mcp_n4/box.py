@@ -253,6 +253,20 @@ class BoxClient:
     def __exit__(self, *exc):
         self.close()
 
+    #: Called with each `AuthError` before it is raised (audit 2026-10-03 F4): the server
+    #: latches on it, even where a caller catches the error (the version probe, read-backs).
+    on_auth_error = None
+
+    def _auth_error(self, code, channel, key):
+        exc = AuthError(auth_message(code), channel, key)
+        hook = self.on_auth_error
+        if hook is not None:
+            try:
+                hook(exc)
+            except Exception:  # the hook never changes what the caller sees
+                pass
+        return exc
+
     # -- transport
     def call(self, channel, key, body):
         self._seq += 1
@@ -271,7 +285,7 @@ class BoxClient:
         except urllib.error.HTTPError as exc:
             exc.close()
             if exc.code in (401, 403):
-                raise AuthError(auth_message(exc.code), channel, key) from None
+                raise self._auth_error(exc.code, channel, key) from None
             raise BoxError("HTTP %d from station" % exc.code, channel, key) from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, channel, key) from None
@@ -295,7 +309,7 @@ class BoxClient:
         except urllib.error.HTTPError as exc:
             exc.close()
             if exc.code in (401, 403):
-                raise AuthError(auth_message(exc.code), "ord", "get") from None
+                raise self._auth_error(exc.code, "ord", "get") from None
             if exc.code == 400:
                 raise BoxError("HTTP 400 from station: the ORD or BQL query was rejected "
                                "(check the type spec, column names and where clause)",
@@ -322,7 +336,7 @@ class BoxClient:
         except urllib.error.HTTPError as exc:
             exc.close()
             if exc.code in (401, 403):
-                raise AuthError(auth_message(exc.code), "obix", "about") from None
+                raise self._auth_error(exc.code, "obix", "about") from None
             raise BoxError("HTTP %d from station" % exc.code, "obix", "about") from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "obix", "about") from None

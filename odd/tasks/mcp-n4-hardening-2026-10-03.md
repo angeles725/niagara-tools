@@ -39,7 +39,7 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   per-connect session id; `WriteScope` refuses any `|` after `station:|slot:` (incl. `|h:`), and prefixes are
   validated at startup; `--token-ttl`/`--max-writes` < 1 are refused at startup. Route: inline (parent
   writer, 3 small files + tests). Release: PATCH 0.5.1.
-- [ ] **H2 — auth latch (F4)**: `Context.auth_failed` latch set by any `AuthError` (connect, about, get_ord,
+- [x] **H2 — auth latch (F4)**: `Context.auth_failed` latch set by any `AuthError` (connect, about, get_ord,
   BOX); station calls refused until a cooldown (>= 30 s, configurable) or a reconnect; message gives reason
   and remaining cooldown. Release: PATCH.
 - [ ] **H3 — set_slot / rollback correctness (F3, F6, F10)**: nested slot load depth; compare-before-restore on
@@ -84,10 +84,31 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   - Observed mutations (each restored): M1 plan `session_id: None` -> 2 binding tests fail; M2 drop the `|`
     check -> 2 scope tests fail; M3 `_positive_int` floor -100 -> parser test fails.
   - Release: `mcp_n4.__version__` 0.5.1, skill metadata 0.5.1.
+- H2 (route: inline, branch `fix/mcp-n4-h2-auth-latch`; 3 source files + one new test file). RED first — new
+  `tests/test_auth_latch.py` (9 tests): 5 failed and 2 errored (a second `n4_connect` with the rejected password
+  reached the station: `2 != 1` requests; reads after a 401 went to the station again; no `auth_cooldown`).
+  GREEN: 500 tests OK. Decisions:
+  - The latch lives on `Context` (process scope, survives reconnects). `BoxClient._auth_error` calls an
+    `on_auth_error` hook before raising, so a failure the caller catches (the version probe) still latches;
+    `Server._call` also latches on a propagated `AuthError` (clients without the hook).
+  - Gate: every `needs_session` tool and every write tool, checked in `Server._call` before the handler.
+    `n4_connect` checks a keyed credential fingerprint: the same credentials wait, other ones may try; a
+    good login clears the latch (before the version probe, which may set it again).
+  - `--auth-cooldown` default and minimum 30 s (the lock-out window); `n4_describe_session` and
+    `n4_connect` report `auth_paused: {reason, retry_in_s}`.
+  - Observed mutations (each restored): no hook -> the about test fails; gate off -> 4 tests fail; connect
+    check off -> 3 tests fail.
+  - Release: `mcp_n4.__version__` 0.5.2, skill metadata 0.5.2.
 
 ## Parked advisories
+- H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
+  `--write-scope` to prove exit 2 (code path exists: `main` catches `SafetyError`); R3-dotdot-prefix-untested —
+  the startup prefix test has no `..` case. Candidates for H4 (test debt).
 
 ## Delivery record
+| Unit | PR | Merge | Version | Review |
+| --- | --- | --- | --- | --- |
+| H1 | #229 | 0487970 | 0.5.1 | medium; 1 lens APPROVED + acknowledged (review-b8c070f2f4a8c38e); 2 advisories parked |
 
 ## Next step
-- H2 (auth latch).
+- H3 (set_slot / rollback correctness).

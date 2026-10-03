@@ -2,8 +2,12 @@
 
 Importing this module has no side effects.
 """
+import hashlib
+import hmac
 import json
+import math
 import os
+import secrets
 import time
 import uuid
 from collections import namedtuple
@@ -41,13 +45,28 @@ class Session:
         self.session_id = uuid.uuid4().hex
 
 
+#: The station locks an account after 5 failed logins in 30 s (B1179): after one failure,
+#: no station call goes out for at least this long (audit 2026-10-03 F4).
+AUTH_COOLDOWN_MIN = 30
+
+
 class Context:
     """Per-process state: at most one active station session."""
 
     def __init__(self, allow_writes=False, allow_http=False, env=None, client_factory=None,
                  stations=None, credential_env="MCP_N4", insecure_tls=(), allow_tier_b=(),
-                 allow_tier_c=()):
+                 allow_tier_c=(), auth_cooldown=AUTH_COOLDOWN_MIN):
         self.allow_writes, self.allow_http = allow_writes, allow_http
+        if isinstance(auth_cooldown, bool) or not isinstance(auth_cooldown, (int, float)) \
+                or auth_cooldown < AUTH_COOLDOWN_MIN:
+            raise ValueError("--auth-cooldown must be >= %d seconds, got %r"
+                             % (AUTH_COOLDOWN_MIN, auth_cooldown))
+        #: Seconds every station call stays refused after an authentication failure.
+        self.auth_cooldown = auth_cooldown
+        #: `{"reason", "until", "credentials"}` after an `AuthError`, else None (F4).
+        self.auth_latch = None
+        self._cred_key = secrets.token_bytes(32)
+        self._active_credentials = None
         #: Operator policy, fixed at server start: the model can only pick a NAME.
         self.stations = dict(stations or {})
         self.credential_env = credential_env
@@ -107,6 +126,51 @@ class Context:
         if sess.version_error:
             out["version_error"] = sess.version_error
         return out
+
+    # ---- authentication-failure latch (audit 2026-10-03 F4) ---------------
+    def credentials_fingerprint(self, user, secret):
+        """Keyed digest of the credentials (never stored in clear, never output)."""
+        return hmac.new(self._cred_key, ("%s\0%s" % (user, secret)).encode(),
+                        hashlib.sha256).hexdigest()
+
+    def note_auth_failure(self, exc):
+        """Latch: refuse station calls for `auth_cooldown` s after any `AuthError`."""
+        self.auth_latch = {"reason": self.scrub(str(exc)),
+                           "until": self.clock() + self.auth_cooldown,
+                           "credentials": self._active_credentials}
+
+    def auth_retry_in(self):
+        """Whole seconds left in the cooldown, or 0 (the latch is cleared once it passed)."""
+        if self.auth_latch is None:
+            return 0
+        left = self.auth_latch["until"] - self.clock()
+        if left <= 0:
+            self.auth_latch = None
+            return 0
+        return int(math.ceil(left))
+
+    def auth_block(self, credentials=None):
+        """Why station calls are paused, or None.
+
+        `credentials` (a fingerprint) is given by `n4_connect`: other credentials than the
+        ones that failed may try again during the cooldown.
+        """
+        left = self.auth_retry_in()
+        if not left:
+            return None
+        if credentials is not None and credentials != self.auth_latch["credentials"]:
+            return None
+        return ("station calls are paused after an authentication failure (%s): retry in "
+                "%d s, or fix %s_USER/%s_PASSWORD and call n4_connect again; every rejected "
+                "call counts toward the station lock-out (5 failures in 30 s)"
+                % (self.auth_latch["reason"], left, self.credential_env, self.credential_env))
+
+    def auth_report(self):
+        """`{"auth_paused": {...}}` while the latch holds, else {}."""
+        left = self.auth_retry_in()
+        if not left:
+            return {}
+        return {"auth_paused": {"reason": self.auth_latch["reason"], "retry_in_s": left}}
 
     def set_secret(self, secret):
         self._secret = secret
@@ -173,9 +237,18 @@ def n4_connect(ctx, args):
         raise ToolError("credentials missing: set env vars %s_USER and %s_PASSWORD"
                         % (prefix, prefix))
     ctx.set_secret(secret)
+    credentials = ctx.credentials_fingerprint(user, secret)
+    block = ctx.auth_block(credentials)
+    if block:  # the same credentials just failed: one more try would only near the lock-out
+        raise ToolError(block)
+    ctx._active_credentials = credentials
     client = ctx.client_factory(ctx.stations[name], user, secret,
                                 insecure_tls=name in ctx.insecure_tls,
                                 allow_http=ctx.allow_http)
+    try:
+        client.on_auth_error = ctx.note_auth_failure
+    except AttributeError:  # a client without the hook: the server still latches on raise
+        pass
     try:
         root = client.open()
         root_h = root.get("h") if isinstance(root, dict) else None
@@ -185,6 +258,7 @@ def n4_connect(ctx, args):
     except BaseException:
         client.close()
         raise
+    ctx.auth_latch = None  # these credentials logged in: an earlier failure is moot
     station_name = nodes.get("stationName", {}).get("v")
     expected = args.get("expected_station", name)  # defaults to the configured NAME
     if expected != station_name:
@@ -196,7 +270,8 @@ def n4_connect(ctx, args):
                           identity_verified=True, version=version,
                           version_error=version_error and ctx.scrub(version_error))
     return dict({"station_name": station_name, "base_url": client.base_url,
-                 "root_handle": root_h, "mode": ctx.mode}, **ctx.tier_report(ctx.session))
+                 "root_handle": root_h, "mode": ctx.mode}, **ctx.tier_report(ctx.session),
+                **ctx.auth_report())
 
 
 def _detect_version(client):
@@ -232,7 +307,8 @@ def n4_describe_session(ctx, args):
             "station_name": sess.station_name if sess else None,
             "base_url": sess.base_url if sess else None,
             "mode": ctx.mode, "server_version": __version__,
-            "configured_stations": sorted(ctx.stations), **ctx.tier_report(sess)}
+            "configured_stations": sorted(ctx.stations), **ctx.tier_report(sess),
+            **ctx.auth_report()}
 
 
 # ---- n4_navigate ---------------------------------------------------------
