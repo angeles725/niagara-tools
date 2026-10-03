@@ -15,7 +15,9 @@
 #     the next line containing `END BAJA AUTO GENERATED CODE` (the marker text slot-o-matic emits; matched on the
 #     RAW line because the marker sits inside a comment). [ev: corpus B711] [ev: code docDeveloper slot-o-matic.html:421,459]
 #   - A region that opens and never closes cannot be classified: WARN `unclosed-region`, and its lines count as
-#     hand-written (fail closed: never shrink the count on an unparsed shape).
+#     hand-written (fail closed: never shrink the count on an unparsed shape). A BEGIN inside an open region is a
+#     WARN `nested-region` (the earlier region counts as hand-written); an END with no open region is a WARN
+#     `stray-end`.
 #   - Pure class = a file with no `@NiagaraType` annotation and no `extends B<Upper>` declaration. Only pure classes
 #     get the method rule (the BComponent shell is measured by the class rule). Methods come from mb_parse (a
 #     signature whose `(...)` closes on the `{` line, or a `{` alone after it; a signature wrapped over several
@@ -30,6 +32,7 @@
 # Mutation: LSZ2 -- counting the slotomatic region lines as hand-written WARNs a small class with a large generated block
 # Mutation: LSZ4 -- applying the method rule to a Baja (BComponent) class WARNs its long callback
 # Mutation: LSZ5 -- dropping the unclosed-region row lets an unterminated BEGIN marker pass silently
+# Mutation: LSZ8 -- ignoring a nested BEGIN lets a stray END close an unterminated region and hide its lines
 # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LSZ-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
@@ -83,10 +86,23 @@ END {
   in_gen = 0; open_line = 0
   for (i = 1; i <= n; i++) {
     gen[i] = 0
-    if (!in_gen && index(raw[i], "BEGIN BAJA AUTO GENERATED CODE") > 0) { in_gen = 1; open_line = i; gen[i] = 1; continue }
+    is_begin = index(raw[i], "BEGIN BAJA AUTO GENERATED CODE") > 0
+    is_end = index(raw[i], "END BAJA AUTO GENERATED CODE") > 0
+    if (is_begin) {
+      if (in_gen) {
+        # A BEGIN inside an open region: the earlier region never closed, so count it (fail closed).
+        for (k = open_line; k < i; k++) gen[k] = 0
+        printf "WARN  lint-size  %s:%d  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line %d -- that region is counted as hand-written\n", FILE, i, open_line
+      }
+      in_gen = 1; open_line = i; gen[i] = 1; continue
+    }
+    if (is_end && !in_gen) {
+      printf "WARN  lint-size  %s:%d  stray-end: END BAJA AUTO GENERATED CODE with no open region\n", FILE, i
+      continue
+    }
     if (in_gen) {
       gen[i] = 1
-      if (index(raw[i], "END BAJA AUTO GENERATED CODE") > 0) in_gen = 0
+      if (is_end) in_gen = 0
     }
   }
   if (in_gen) {

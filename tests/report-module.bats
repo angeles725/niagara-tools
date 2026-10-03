@@ -652,3 +652,22 @@ JAVA
   [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 2)"* ]]
   [[ "$output" != *"PASS  lint-size"* ]]
 }
+
+@test "RM52: an ungated licensed callback -> lint-license-isoperational-gate WARN row relayed, exit 0" {
+  cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm52"
+  { printf 'package com.x;\npublic class BSvc extends BAbstractService {\n'
+    printf '  public final Feature getLicenseFeature() {\n    return Sys.getLicenseManager().getFeature("v", "f");\n  }\n'
+    printf '  public void changed(Property p, Context cx) {\n    recompute();\n  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm52/DemoPan-rt/src/com/x/BSvc.java"
+  run "$RM" "$BATS_TEST_TMPDIR/rm52"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  WARN  lint-license-isoperational-gate  BSvc.java:6  licensed class: changed()"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-license-isoperational-gate  no FAIL (1 WARN row above)"* ]]
+}
+
+@test "RM53: an advisory member ERROR row carries the member's own first stderr line (D2 review R4/R2)" {
+  # Mutation: RM53 -- dropping the member reason leaves 'env fault (exit 3)' with no path to act on.
+  local tb="$BATS_TEST_TMPDIR/rm53tb"; stub_toolbelt "$tb" lint-size.sh 'echo "lint-size: cannot scan /x/U.java: Permission denied" >&2; exit 3'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]
+}

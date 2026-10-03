@@ -52,8 +52,12 @@ traceable to the close retro, #226 or #142.
       directory"; plus the MAX_SPAN comment (R2-maxspan-unexplained, one line). Route: folded into the D2 PR.
 - [x] D2 · `lint-size.sh` — advisory WARN-only class/method size smell (BUILD-STATE DEFERRED spec). Route: inline
       (one new lint + its bats + the report-module member; the parent is this feature's writer).
-- [ ] D3 · `lint-license-isoperational-gate.sh` — a licensed class acting in `changed()`/timer/servlet-write callbacks
-      without an `isOperational()`/`isFault()` gate.
+- [x] D2b · D2 review fail-open (posted on #226) — R3-002: `lint-size.sh` merged a BEGIN inside an open region and let a
+      stray END close an unterminated one, hiding its lines from the count → `nested-region` / `stray-end` WARN rows.
+      With it, the R4/R2 `advisory_member` ERROR row gains the member's first output line (D3 extends that helper).
+      Route: folded into the D3 PR.
+- [x] D3 · `lint-license-isoperational-gate.sh` — a licensed class acting in `changed()`/timer/servlet-write callbacks
+      without an `isOperational()`/`isFault()` gate. Route: inline.
 - [ ] D4 · `lint-set-null-ord.sh` — a `setXxxOrd(getSlotPathOrd())` / ORD `set(...)` with no null guard.
 - [ ] D5 · #142 `split-package-check.sh` — project-level check: one Java package declared in two modules.
 - [ ] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
@@ -134,6 +138,32 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
     shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
     `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0 (LSZ2/LSZ4/LSZ5/
     LSZ-awkfail/LSZ-finderr resolve); gen-lint-index `--check` fresh (lint-size row, Auto yes).
+  - Commit 9d22fbf, PR #235, merge a3a9b67. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-a13efee4322f36c9, authority burned. 4 informational findings posted on #226: R3-002 (nested/stray markers
+    hide lines) → D2b; R4/R2 advisory ERROR drops the cause → fixed with D3's helper change; R3-001 (`class ?` for an
+    enum/interface/record) → parked.
+- 2026-10-03 D3 + D2b (branch `feat/dl-d3-license-gate`, from `origin/main` a3a9b67). Route: inline.
+  Design: licensed = the file declares `Feature getLicenseFeature()` with a body that is not just `return null;` (an
+  abstract/interface declaration ending in `;` is skipped); callbacks = `changed`, `do<Upper>…` actions (timers fire
+  actions) and servlet writes, minus doGet/doHead/doOptions/doTrace; acts = a statement other than `super.<m>(…);` or
+  `return;`; gated = `isOperational(`/`isFault(`/`isFatalFault(` in the callback body. Overlap check: no existing lint
+  reads `getLicenseFeature`, `isOperational` or `getSlotPathOrd` (grep over toolbelt/). Evidence (decompiled):
+  `BAbstractService.java:148-150` (getLicenseFeature returns null by default), `:152-190` (checkLicense sets fatalFault
+  and logs, never throws), `:87-90` (isOperational = !fatalFault && !disabled && !fault); `ServiceManager.java:297-298`
+  (serviceStarted runs right after the license check with no fault test); corpus B1143, B1145, B1146.
+  - RED: LIG1-LIG7, LIG-awkfail, LIG-finderr not ok (tool absent); LSZ8, LSZ9 not ok; RM52, RM53 not ok.
+  - GREEN: `bats tests/lint-license-isoperational-gate.bats tests/lint-size.bats` 23 ok; RM49-RM53 ok.
+  - Observed mutations (restored byte-identical, `cmp`): gate check dropped → LIG1 not ok; `return null;` treated as
+    licensed → LIG2 not ok; super call counted as acting → LIG3 not ok; awk status ignored → LIG-awkfail not ok; find
+    status ignored → LIG-finderr not ok; nested BEGIN ignored → LSZ8 not ok; reason dropped from the ERROR row → RM53
+    not ok.
+  - Smoke on decompiled vendor modules (read only): a licensed driver network and a licensed framework service get rows
+    on ungated changed()/actions; the framework service gates inside a helper (`fwServiceStarted()`), the documented
+    one-body limit — advisory WARN, cleared by moving the gate into the callback.
+  - `bats tests/*.bats` (serial): 1010 ok / 0 not ok (67 env skips), count 1010. mcp-n4-kit unittest: 513 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
+    `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
+    `--check` fresh (new row, Auto yes).
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -141,12 +171,15 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
   text or a heredoc onto later lines can produce a spurious row. It fails closed, and the kit scripts are clean today.
 - R3-patsub-multiline-negative-unpinned (D1b, `tests/shell-hygiene.bats`): no negative pin for a quoted multi-line
   replacement, for the MAX_SPAN boundary or for the `$'...'` state. Test depth only.
+- R3-001 (D2, `lint-size.sh`): an oversized `enum` / `interface` / `record` file is named `class ?`; the count is still
+  reported. Readability of the row only.
 
 ## Delivery record
 | Task | PR | Merge SHA | Review |
 |---|---|---|---|
 | D1 | #230 | 49185d4 | APPROVED, 4 lenses, review-d02202bd55feff67 |
 | D1b | #233 | ea3b784 | APPROVED, 4 lenses, review-5056c52c4e0fbe6c |
+| D2 + D1c | #235 | a3a9b67 | APPROVED, 4 lenses, review-a13efee4322f36c9 |
 
 ## Next step
-D2 review + merge, then D3.
+D3 review + merge, then D4.

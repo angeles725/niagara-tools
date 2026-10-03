@@ -33,8 +33,9 @@
 # [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
-# Advisory members (deferred-lints-2026-10-03): lint-size.sh <artifact>/src — its WARN rows are relayed with a
-# PASS verdict row; any non-zero exit of an advisory member is an ERROR row (exit 3), never PASS.
+# Advisory members (deferred-lints-2026-10-03): lint-size.sh and lint-license-isoperational-gate.sh on
+# <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit of an advisory member
+# is an ERROR row carrying the member's first output line (exit 3), never PASS.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -162,13 +163,16 @@ pass_after_relay() {
 
 # advisory_member <artifact> <check> <exit> <output> — an advisory (WARN-only, run without --strict) lint:
 # exit 0 relays its WARN rows, then the pass_after_relay verdict row; ANY other exit (3 env, a crash, an
-# unexpected code) is an ERROR row and an env fault, never a silent PASS (deferred-lints-2026-10-03 D2).
+# unexpected code) is an ERROR row and an env fault, never a silent PASS (deferred-lints-2026-10-03 D2). The
+# ERROR detail carries the member's first output line (e.g. "cannot scan <file>: …") so the cause is actionable.
 advisory_member() {
+  local _why
   if [ "$3" -eq 0 ]; then
     relay_rows "$1" "$4"
     pass_after_relay "$1" "$2"
   else
-    emit "$1" ERROR "$2" "env fault (exit $3)"; HAD_ENV=1
+    _why=$(printf '%s\n' "$4" | sed -n '/./{p;q;}')
+    emit "$1" ERROR "$2" "env fault (exit $3)${_why:+: $_why}"; HAD_ENV=1
   fi
 }
 
@@ -1262,6 +1266,17 @@ for ADIR in "${ARTIFACTS[@]}"; do
     advisory_member "$ANAME" lint-size "$lsz_exit" "$lsz_out"
   else
     emit "$ANAME" SKIP lint-size "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.24. lint-license-isoperational-gate.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D3
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    lig_exit=0
+    lig_out=$("$TOOLBELT/lint-license-isoperational-gate.sh" "$ADIR/src" 2>&1) || lig_exit=$?
+    advisory_member "$ANAME" lint-license-isoperational-gate "$lig_exit" "$lig_out"
+  else
+    emit "$ANAME" SKIP lint-license-isoperational-gate "no src/"
   fi
 
   # ----------------------------------------------------------------
