@@ -227,6 +227,20 @@ EOF2
   [[ "$output" == *"Mod/src/rc/u.js"* ]]
 }
 
+@test "SPR-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: SPR-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod/src/rc/locked"
+  printf 'var a = 1;\n' > "$TMPDIR_T/Mod/src/rc/a.js"
+  printf 'var b = 1;\n' > "$TMPDIR_T/Mod/src/rc/locked/b.js"
+  chmod 000 "$TMPDIR_T/Mod/src/rc/locked"
+  if [ -r "$TMPDIR_T/Mod/src/rc/locked" ]; then chmod 755 "$TMPDIR_T/Mod/src/rc/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$SPR" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/src/rc/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/rc/locked"* ]]
+}
+
 @test "SPR10: a poll declared as a const arrow function is found (no recovery -> WARN)" {
   # Mutation: SPR10 -- matching only `function <name>(` loses an arrow-function poll (silent pass).
   cat > "$TMPDIR_T/Mod/src/rc/arrow.js" << 'JEOF'
