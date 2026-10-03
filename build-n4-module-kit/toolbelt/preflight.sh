@@ -23,7 +23,8 @@
 #   plugin-pin  plugin version present in <niagara_home>/etc/m2: --plugin-version / $NIAGARA_PLUGIN_VERSION
 #               when given, else the first "x.y.z" quoted string in settings.gradle.kts -> PASS|FAIL
 #   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
-#               -> PASS|WARN(locked)|SKIP(lsof absent, or niagara_home is 9p/drvfs) — never a false PASS
+#               -> PASS|WARN(locked)|SKIP(lsof absent or returning an empty listing, or niagara_home is
+#               9p/drvfs) — never a false PASS
 #
 # Row format: PASS|FAIL|WARN|SKIP  <check>  <detail>
 # Exit: 0 all PASS/WARN/SKIP · 1 any FAIL · 2 usage · 3 env (path not found)
@@ -222,6 +223,10 @@ if [ "$WIN_PATH_FAIL" -eq 0 ]; then
     done
     if [ -n "$LOCKED" ]; then
       row WARN "jar-lock" "jars held by a process (station running?):$LOCKED"
+    elif [ -z "$LSOF_OUT" ]; then
+      # A working lsof always lists at least its own open files: an empty listing means lsof
+      # failed (permissions, crash), so "no locked jars" would be a false PASS (fail closed).
+      row SKIP "jar-lock" "lsof returned no open-file listing (failed or no permission) — jar locks not checked"
     else
       row PASS "jar-lock" "no locked jars under $NH/modules/"
     fi

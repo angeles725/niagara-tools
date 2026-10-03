@@ -29,6 +29,8 @@
 #   snapshots what is CURRENTLY installed there; after the build, if the new jar's shipped bytes differ from
 #   that snapshot but the module's own vendorVersion did not change, the build FAILs (exit 51) — Software
 #   Manager compares versions, not bytes, and would silently report "Up to Date" and skip installing the fix.
+#   A jar the gate cannot list (unzip missing/failing) or a changed jar whose own vendorVersion cannot be
+#   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
 #   backs up the pre-build jar and restores it into modules/ on FAIL — a bare re-run then still sees the
 #   OLD baseline and catches the same drift again, instead of silently "Up to Date"-passing on the retry.
@@ -196,11 +198,14 @@ _content_hash() {
   # EXCLUDED on purpose: those bytes change on every rebuild even when nothing
   # actually shipped changed, which would otherwise make this gate false-fire
   # on every rebuild regardless of source changes.
-  local jar="$1"
-  {
-    { unzip -Z1 "$jar" 2>/dev/null | grep -v '^META-INF/' | LC_ALL=C sort \
-        | while IFS= read -r _entry; do unzip -p "$jar" "$_entry" 2>/dev/null; done
-    } || true
+  # Fails (non-zero, no output) when the jar cannot be listed (unzip missing or failing, an
+  # unreadable or empty jar): two empty listings would hash EQUAL and the gate would silently
+  # pass, so an unlistable jar is "cannot verify", never "unchanged" (fail closed).
+  local jar="$1" list
+  list="$(unzip -Z1 "$jar" 2>/dev/null)" || return 1
+  [ -n "$list" ] || return 1
+  { printf '%s\n' "$list" | grep -v '^META-INF/' | LC_ALL=C sort \
+      | while IFS= read -r _entry; do unzip -p "$jar" "$_entry" 2>/dev/null; done
   } | sha256sum | awk '{print $1}'
 }
 _module_own_version() {
@@ -219,7 +224,7 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
   for p in "${SEL[@]}"; do
     _old="$NIAGARA_HOME/modules/$MOD-$p.jar"
     [ -f "$_old" ] || continue
-    _content_hash "$_old" > "$DRIFT_DIR/$p.old.hash"
+    _content_hash "$_old" > "$DRIFT_DIR/$p.old.hash" || : > "$DRIFT_DIR/$p.old.hash"
     _module_own_version "$_old" > "$DRIFT_DIR/$p.old.ver"
     cp -p "$_old" "$DRIFT_DIR/$p.old.jar"
   done
@@ -273,17 +278,32 @@ fi
 # [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]
 # ---------------------------------------------------------------------------
 if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
-  DRIFT_FAIL=0
+  DRIFT_FAIL=0; DRIFT_UNVERIFIED=0
   for p in "${SEL[@]}"; do
     [ -f "$DRIFT_DIR/$p.old.hash" ] || continue
     _new="$ROOT/$MOD/$MOD-$p/build/libs/$MOD-$p.jar"
     [ -f "$_new" ] || continue
-    _new_hash="$(_content_hash "$_new")"
+    _new_hash="$(_content_hash "$_new")" || _new_hash=""
     _old_hash="$(cat "$DRIFT_DIR/$p.old.hash")"
-    [ "$_new_hash" = "$_old_hash" ] && continue   # nothing shipped actually changed
     _new_ver="$(_module_own_version "$_new")"
     _old_ver="$(cat "$DRIFT_DIR/$p.old.ver" 2>/dev/null || true)"
-    if [ -n "$_new_ver" ] && [ -n "$_old_ver" ] && [ "$_new_ver" = "$_old_ver" ]; then
+    # Fail closed: a jar the gate cannot list, or a changed jar whose own vendorVersion cannot be
+    # read on either side, is UNVERIFIABLE (exit 52) -- never "unchanged" and never "bumped".
+    _why=""
+    if [ -z "$_new_hash" ] || [ -z "$_old_hash" ]; then
+      _why="cannot list the jar content (unzip missing or failing, or an unreadable jar)"
+    elif [ "$_new_hash" != "$_old_hash" ] && { [ -z "$_new_ver" ] || [ -z "$_old_ver" ]; }; then
+      _why="shipped bytes changed but the module's own vendorVersion is unreadable (old='$_old_ver' new='$_new_ver')"
+    fi
+    if [ -n "$_why" ]; then
+      echo "build.sh: FAIL — drift gate cannot verify $MOD-$p: $_why." >&2
+      cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null \
+        && echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules." >&2
+      DRIFT_UNVERIFIED=1
+      continue
+    fi
+    [ "$_new_hash" = "$_old_hash" ] && continue   # nothing shipped actually changed
+    if [ "$_new_ver" = "$_old_ver" ]; then
       echo "build.sh: FAIL — $MOD-$p shipped bytes changed but vendorVersion is still $_new_ver." >&2
       echo "  Software Manager compares versions, not bytes — it will report \"Up to Date\" and SKIP installing this jar." >&2
       echo "  Bump defaultModuleVersion(\"$_new_ver\") in $MOD-$p's build.gradle.kts (patch for a fix, minor for a feature), then rebuild." >&2
@@ -301,6 +321,10 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
   if [ "$DRIFT_FAIL" -eq 1 ]; then
     echo "build.sh: deployed-baseline drift detected — bump the version above, then rebuild (or --no-drift-check if this niagara_home is not the deploy target)." >&2
     exit 51
+  fi
+  if [ "$DRIFT_UNVERIFIED" -eq 1 ]; then
+    echo "build.sh: deployed-baseline drift gate could not verify the jar(s) above — fix the cause (install unzip, check module.xml), or --no-drift-check if this niagara_home is not the deploy target." >&2
+    exit 52
   fi
 fi
 
