@@ -23,9 +23,10 @@
 #   false-positive, documented limitation). Reachability is one hop: changed()'s own body,
 #   or a zero-arg `execute()` method it calls.
 #   Row:  WARN  lint-changed-hot-write  <file>:<line>  <detail>
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 # VCS-free by design (kit-links L2).
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs
+# Mutation: CHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -171,14 +172,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-changed-hot-write: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

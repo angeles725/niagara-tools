@@ -85,3 +85,15 @@ _write_hot() {
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "CHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: CHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/com/x/U.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/U.java"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/U.java" ]; then chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$CHW" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/U.java"* ]]
+}

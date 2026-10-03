@@ -23,15 +23,15 @@
 #        body, OR `Arrays.asList(` with no comma between the call's opening paren and the end
 #        of its line (single-argument heuristic -- see limitations);
 #     3. AND the class (whole file) must declare at least one coordination-state identifier:
-#        a `Deque`/`Queue` typed field, or an identifier containing `Token` or `Stagger`
-#        (case-sensitive substrings, matching Java's camelCase convention: `waitingQueue`,
+#        a `Deque`/`Queue` typed field, or an identifier that starts with `token`/`stagger`
+#        or carries `Token`/`Stagger` after its first word (Java camelCase: `waitingQueue`,
 #        `acquireDefrostToken`, `staggerDelay`).
 #   All true -> WARN at the units() declaration line.
 #   Row:  WARN  lint-inert-coordination  <file>:<line>  units() returns a structurally singleton
 #         list while <ids> (queue/token/stagger state) are still declared -- the coordination
 #         machinery is dead code after the per-unit move; coordinate at the parent that
 #         aggregates multiple units, or drop the unused fields
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 #
 # Known limitations (advisory heuristic, documented per kit style):
 #   - the singleton-return check only looks for `singletonList(`/`Arrays.asList(` text ANYWHERE
@@ -43,14 +43,16 @@
 #     first argument itself contains no comma but a later unrelated comma appears further on
 #     the SAME line, can mis-classify -- rare in this shape (a coordinator's argument is always
 #     `getParent()`/a single component reference).
-#   - `Token`/`Stagger` substring matching is case-sensitive on the capitalized form used by
-#     Java identifiers after the first word (e.g. `defrostToken`, `getStaggerDelay`); an
-#     all-lowercase or ALL-CAPS identifier is a false-negative risk.
+#   - `Token`/`Stagger` matching follows camelCase (a leading `token`/`stagger` word or a later
+#     `Token`/`Stagger` word); an ALL-CAPS constant (`STAGGER_MS`) is a false-negative risk.
 #   - a `Deque`/`Queue` field used for something UNRELATED to unit coordination (rare in a
 #     control component) would false-positive; only fires when a singleton units() ALSO exists,
 #     which narrows the risk considerably.
 # VCS-free by design (kit-links L2). LC_ALL=C.
 # Mutation: ICO2 -- drop the coordination-state (queue/token/stagger) requirement so any singleton units() WARNs even with no dead machinery
+# Mutation: ICO-lower -- requiring a capitalized Stagger/Token misses the lowerCamel staggerDelay field
+# Mutation: ICO-call -- taking `return units()...;` for the declaration checks the wrong body
+# Mutation: ICO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -89,7 +91,14 @@ END {
   # 1. Locate a `units()` method declaration.
   decl_line = 0
   for (i = 1; i <= NR; i++) {
-    if (match(lines[i], /[A-Za-z_][A-Za-z0-9_<>\[\], ]*[[:space:]]units\(\)/)) { decl_line = i; break }
+    # A declaration, not a call: what follows "units()" is '{', 'throws' or the end of the line
+    # (Allman brace) -- `return units().size();` or `x = units();` above the declaration must
+    # not be taken for it.
+    if (match(lines[i], /[A-Za-z_][A-Za-z0-9_<>\[\], ]*[[:space:]]units\(\)/)) {
+      trailing = substr(lines[i], RSTART + RLENGTH)
+      gsub(/^[[:space:]]*/, "", trailing)
+      if (trailing == "" || substr(trailing, 1, 1) == "{" || trailing ~ /^throws/) { decl_line = i; break }
+    }
   }
   if (decl_line == 0) exit 0
 
@@ -132,13 +141,14 @@ END {
       if (name == "") name = "(Deque/Queue field)"
       if (index(found, name) == 0) found = found (found == "" ? "" : ", ") name
     }
-    if (match(ln, /[A-Za-z_][A-Za-z0-9_]*Token[A-Za-z0-9_]*/)) {
-      seg = substr(ln, RSTART, RLENGTH)
-      if (index(found, seg) == 0) found = found (found == "" ? "" : ", ") seg
-    }
-    if (match(ln, /[A-Za-z_][A-Za-z0-9_]*Stagger[A-Za-z0-9_]*/)) {
-      seg = substr(ln, RSTART, RLENGTH)
-      if (index(found, seg) == 0) found = found (found == "" ? "" : ", ") seg
+    # An identifier that STARTS with token/stagger (lowerCamel field: `staggerDelay`,
+    # `tokenHolder`) or carries Token/Stagger after its first word (`defrostToken`,
+    # `getStaggerDelay`).
+    probe = " " ln
+    while (match(probe, /[^A-Za-z0-9_]([a-z][A-Za-z0-9_]*(Token|Stagger)|token|stagger|Token|Stagger)[A-Za-z0-9_]*/)) {
+      seg = substr(probe, RSTART + 1, RLENGTH - 1)
+      probe = substr(probe, RSTART + RLENGTH)
+      if (index(", " found ", ", ", " seg ", ") == 0) found = found (found == "" ? "" : ", ") seg
     }
   }
   if (found == "") exit 0
@@ -151,14 +161,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-inert-coordination: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

@@ -17,7 +17,8 @@
 # Usage:  lint-spa-poll-no-recovery.sh [--strict] <ux-src-root>
 #   Scans *.html and *.js under <ux-src-root> (dot-dirs pruned). `//` comments line-stripped. Per file:
 #     1. the FIRST `setInterval(<name>, ...)` / `setTimeout(<name>, ...)` call names the poll fn;
-#     2. its `function <name>(` declaration body is brace-extracted; it must contain `catch (`/
+#     2. its declaration body -- `function <name>(`, or `const|let|var <name> = [async] function(`
+#        / an arrow function -- is brace-extracted; it must contain `catch (`/
 #        `.catch(` — no catch, no shape to flag;
 #     3. recovery = `location.reload(` or `location.href =` ANYWHERE in the file;
 #     4. success-time key = a `lastOk*` identifier assigned from a clock (`Date.now()`,
@@ -27,7 +28,7 @@
 #   Rows (WARN at the setInterval/setTimeout call line):
 #     no 3        -> "... no location.reload(/location.href recovery anywhere in the file ..."
 #     3 but no 4  -> "... recovery is not keyed on time since the last success ..."
-#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env
+#   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env or an unscannable source file
 #
 # Known limitations (advisory heuristic): file-wide co-occurrence (a reload button elsewhere plus a
 # lastOk* timestamp suppresses the WARN — false-NEGATIVE bias); only the FIRST interval/timeout call
@@ -39,6 +40,8 @@
 # Mutation: SPR2 -- drop the lastOk success-time requirement so a failure-count-only watchdog passes clean
 # Mutation: SPR8 -- drop the location.reload(/location.href recovery check so a lastOk timestamp that never reloads passes clean
 # Mutation: SPR9 -- count a clock assignment anywhere in the file so a lastOk set only at load passes clean
+# Mutation: SPR10 -- matching only `function <name>(` loses an arrow-function poll (silent pass)
+# Mutation: SPR-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -91,7 +94,12 @@ END {
   # 2. Locate the function declaration and brace-extract its body forward.
   decl_line = 0
   for (i = 1; i <= NR; i++) {
-    if (match(lines[i], "function[[:space:]]+" fn "[[:space:]]*\\(")) { decl_line = i; break }
+    # `function poll(` / `async function poll(`, or a binding `const|let|var poll = [async]
+    # function(...)` / `(...) =>` / `x =>` (an arrow-function poll is the common SPA form).
+    if (match(lines[i], "function[[:space:]]+" fn "[[:space:]]*\\(") ||
+        match(lines[i], "(const|let|var)[[:space:]]+" fn "[[:space:]]*=[[:space:]]*(async[[:space:]]*)?(function[[:space:]]*\\(|\\([^)]*\\)[[:space:]]*=>|[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=>)")) {
+      decl_line = i; break
+    }
   }
   if (decl_line == 0) exit 0
 
@@ -145,14 +153,21 @@ END {
 AWKEOF
 
 had_warn=0
+had_err=0
 while IFS= read -r f; do
-  out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>/dev/null)
+  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-spa-poll-no-recovery: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    had_err=1
+    continue
+  fi
   if [ -n "$out" ]; then
     printf '%s\n' "$out"
     had_warn=1
   fi
 done < <(find "$ROOT" -type d -name '.*' -prune -o -type f \( -name '*.html' -o -name '*.js' \) -print | LC_ALL=C sort)
 
+[ "$had_err" -eq 0 ] || exit 3
 if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
   exit 1
 fi

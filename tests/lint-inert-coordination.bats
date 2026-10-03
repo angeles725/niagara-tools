@@ -101,3 +101,49 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
 }
+
+@test "ICO-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: ICO-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
+  mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
+  printf 'x\n' > "$TMPDIR_T/Mod/src/com/x/U.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/U.java"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/U.java" ]; then chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$ICO" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/src/com/x/U.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"Mod/src/com/x/U.java"* ]]
+}
+
+@test "ICO-lower: a lowerCamel staggerDelay / defrostToken field counts as coordination state" {
+  # Mutation: ICO-lower -- requiring a capitalized Stagger/Token misses the staggerDelay field itself.
+  cat > "$TMPDIR_T/Mod/src/com/x/C.java" << 'JEOF'
+public class C {
+  private double staggerDelay = 30;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+JEOF
+  run "$ICO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"C.java:3"* ]]
+  [[ "$output" == *"staggerDelay"* ]]
+}
+
+@test "ICO-call: a units() CALL above the declaration is not taken for the declaration" {
+  # Mutation: ICO-call -- accepting `return units()...;` as the declaration checks the wrong body (no WARN).
+  cat > "$TMPDIR_T/Mod/src/com/x/D.java" << 'JEOF'
+public class D {
+  private Deque<BComponent> waitingQueue = new ArrayDeque<BComponent>();
+  int count() {
+    return units().size();
+  }
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+JEOF
+  run "$ICO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"D.java:6"* ]]
+}
