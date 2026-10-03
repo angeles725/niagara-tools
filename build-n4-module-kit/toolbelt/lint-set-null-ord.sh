@@ -14,7 +14,8 @@
 # Structural rules (comments blanked by lib/method-boundary.sh mb_strip; scope = one method from mb_parse):
 #   SNO1 direct  — `set<Name>(… x.getSlotPathOrd())` / `set(<prop>, x.getSlotPathOrd(), …)`: the getSlotPathOrd()
 #                  call is itself an argument (followed by `,` or `)`). Guarded when the call line, or an earlier
-#                  line of the same method, compares a getSlotPathOrd() result with null (`!= null` / `== null`).
+#                  line of the same method, compares the SAME receiver's getSlotPathOrd() with null (`!= null` /
+#                  `== null`); a check on `a.` never guards `b.getSlotPathOrd()`.
 #   SNO2 local   — `[BOrd] v = <expr>getSlotPathOrd();` then a later `set…(…v…)` in the same method, with no
 #                  `v == null`, `v != null`, `null == v`, `null != v`, `v.isNull()` or `requireNonNull(v` on any
 #                  line from the assignment to the call (a ternary on the call line counts).
@@ -27,6 +28,7 @@
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # VCS-free by design (kit-links L2).
 # Mutation: SNO1 -- dropping the direct-argument rule passes setTargetOrd(point.getSlotPathOrd()) clean
+# Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on a
 # Mutation: SNO2-guard -- ignoring the null guard WARNs a local that is checked before the set
 # Mutation: SNO2-scope -- matching the variable outside its own method WARNs a same-named local in a sibling method
 # Mutation: SNO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
@@ -65,15 +67,38 @@ printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
 
 cat > "$_TMP/main.awk" << 'AWKEOF'
 function setter_name(s,    t) {
-  # the setter whose argument list the match sits in: last `set<Name>(` before position
+  # the LEFTMOST `set<Name>(` on the line (a chained or nested setter line names its first setter)
   if (match(s, /(^|[^A-Za-z0-9_])set[A-Za-z0-9_]*[[:space:]]*\(/)) {
     t = substr(s, RSTART, RLENGTH); sub(/^[^s]*/, "", t); sub(/[[:space:]]*\($/, "", t)
     return t
   }
   return ""
 }
-function has_null_cmp(s) {
-  return (s ~ /getSlotPathOrd\(\)[[:space:]]*[!=]=[[:space:]]*null/ || s ~ /null[[:space:]]*[!=]=[^;]*getSlotPathOrd\(\)/)
+# guard_recvs(s): record in guarded[] every receiver (`a.`, `x.y.`, or "" for this) whose getSlotPathOrd() result
+# is compared with null on line s
+function guard_recvs(s,    t, r) {
+  t = s
+  while (match(t, /[A-Za-z0-9_.]*getSlotPathOrd\(\)[[:space:]]*[!=]=[[:space:]]*null/)) {
+    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r); guarded[r] = 1
+    t = substr(t, RSTART + RLENGTH)
+  }
+  t = s
+  while (match(t, /null[[:space:]]*[!=]=[[:space:]]*[A-Za-z0-9_.]*getSlotPathOrd\(\)/)) {
+    r = substr(t, RSTART, RLENGTH); sub(/^null[[:space:]]*[!=]=[[:space:]]*/, "", r); sub(/getSlotPathOrd\(\)$/, "", r)
+    guarded[r] = 1
+    t = substr(t, RSTART + RLENGTH)
+  }
+}
+# unguarded_direct(s): 1 when some `<recv>getSlotPathOrd()` argument on s (followed by `,` or `)`) has a receiver
+# that no null compare in this method (or on this line) has guarded
+function unguarded_direct(s,    t, r) {
+  t = s
+  while (match(t, /[A-Za-z0-9_.]*getSlotPathOrd\(\)[[:space:]]*[,)]/)) {
+    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r)
+    if (!(r in guarded)) return 1
+    t = substr(t, RSTART + RLENGTH)
+  }
+  return 0
 }
 function guards_var(s, v,    re) {
   re = "(^|[^A-Za-z0-9_])" v "[[:space:]]*[!=]=[[:space:]]*null"
@@ -92,15 +117,15 @@ END {
   mb_strip(raw, n, code)
   cnt = mb_parse(code, n, ms, me, mn)
   for (k = 0; k < cnt; k++) {
-    nv = 0; guarded_direct = 0
+    nv = 0; split("", guarded)
     for (i = ms[k]; i <= me[k]; i++) {
       c = code[i]
-      # SNO1: getSlotPathOrd() is itself the argument of a set...( call on this line
+      guard_recvs(c)
+      # SNO1: getSlotPathOrd() is itself the argument of a set...( call on this line; guarded per receiver
       if (c ~ /(^|[^A-Za-z0-9_])set[A-Za-z0-9_]*[[:space:]]*\([^;]*getSlotPathOrd\(\)[[:space:]]*[,)]/) {
-        if (!guarded_direct && !has_null_cmp(c))
+        if (unguarded_direct(c))
           printf "WARN  lint-set-null-ord  %s:%d  getSlotPathOrd() passed straight to %s(...) -- null on an unmounted component and BComplex.set NPEs; assign it, guard `if (ord == null || ord.isNull())` (types/issues-and-gotchas.md §H3)\n", FILE, i, setter_name(c)
       }
-      if (has_null_cmp(c)) guarded_direct = 1
       # SNO2: a local assigned from getSlotPathOrd(), then used as a set argument
       if (match(c, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*[^=;][^;]*getSlotPathOrd\(\)[[:space:]]*;/)) {
         s = substr(c, RSTART, RLENGTH); match(s, /^[A-Za-z_][A-Za-z0-9_]*/)
