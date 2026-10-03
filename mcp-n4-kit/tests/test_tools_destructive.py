@@ -446,10 +446,10 @@ class TestRollback(DestructiveCase):
 
     def test_relinks_consume_the_write_budget(self):
         nn, removed = self.removed_group()
-        before = self.srv.ctx.session.writes_executed
+        before = self.srv.ctx.write.writes_executed
         self.rollback(removed["batch_id"])
         # 1 batch + 2 child components (Src, Tgt) + 1 relink
-        self.assertEqual(self.srv.ctx.session.writes_executed, before + 1 + 2 + 1)
+        self.assertEqual(self.srv.ctx.write.writes_executed, before + 1 + 2 + 1)
 
     def test_a_rollback_whose_relinks_exceed_the_budget_is_refused_before_sending(self):
         self.start_server(max_writes=2)
@@ -897,12 +897,12 @@ class TestRollback(DestructiveCase):
             seen.append((op["n"], [e["phase"] for e in self.lines("journal.jsonl")]))
             return orig(op)
         self.patch(self.fake, "_sync", spy)
-        before = self.srv.ctx.session.writes_executed
+        before = self.srv.ctx.write.writes_executed
         back = self.rollback(removed["batch_id"])
         src_seen = dict(seen)["Src"]
         self.assertEqual(src_seen.count("component-intent"), 1)
         self.assertEqual(dict(seen)["Tgt"].count("component-intent"), 2)
-        self.assertEqual(self.srv.ctx.session.writes_executed, before + 4)
+        self.assertEqual(self.srv.ctx.write.writes_executed, before + 4)
         view = self.journal().read(back["batch_id"])
         self.assertEqual([op["n"] for op in view["component_ops"]], ["Src", "Tgt"])
 
@@ -1209,7 +1209,9 @@ class TestSnapshotTruncation(DestructiveCase):
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
         self.assertEqual(plan["plan"]["snapshot_truncated"],
                          {"depth": tools_write.SNAPSHOT_DEPTH, "paths": ["L1/L2/C/limit"]})
-        self.assertTrue(any("deeper than the snapshot" in n for n in plan["plan"]["notes"]))
+        note = next(n for n in plan["plan"]["notes"] if "deeper than the snapshot" in n)
+        # H6 review R3: only one level below the cut is loaded, so the count is a floor.
+        self.assertIn("at least 1", note)
         body = plan["plan"]["inverse"][0]["b"]
         l2 = body["s"][0]["s"][0]
         self.assertEqual([c["n"] for c in l2["s"]], ["C"])

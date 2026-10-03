@@ -13,6 +13,13 @@ v0.2.0 (retro 2026-10-02): bulk reads with `n4_bql_query` / `n4_inventory`, adap
 polling with `elapsed_ms`, display strings for complex slots, an actionable 401.
 v0.3.0 (issue #179): `n4_navigate` `types` filter, load-counter recovery after a timed-out load,
 retro files keep their mode.
+v0.4.x: rollback fidelity (`partial` verdict, frozen-child and link-input reports).
+v0.5.0: automatic version-tier write gate. v0.5.1-v0.5.4 (audit 2026-10-03): tokens bound to the
+station session, plain-ORD write scope, authentication-failure latch (`--auth-cooldown`), nested
+`n4_set_slot`, compare-before-restore rollback, write-branch tests.
+v0.6.0: `n4_bql_query` `output_file`, duplicate and localized CSV headers.
+v0.7.0: `n4_list_batches`, `snapshot_truncated`, `--load-wait` / `--http-timeout`.
+v0.7.1: the write budget is per server process; docs drift fixed.
 
 ## Methodology and skill
 
@@ -36,6 +43,11 @@ scripts/install-skill.sh --skill mcp-n4
   decoding, inventory summary).
 - `mcp_n4/safety.py`: confirmation tokens, write scope, journal and audit log.
 - `mcp_n4/tools_write.py`: the write tools and their guard pipeline.
+- `mcp_n4/tiers.py`: version detection (`/obix/about/` productVersion) and the tier write gate.
+- `mcp_n4/retro.py` and `mcp_n4/templates/retro.template.md`: the session retro draft
+  (`n4_session_retro_draft`).
+- `tools/new_retro.py`: writes the session retro file and its `pending` row in `retros/INDEX.md`.
+- `retros/`: session retros and `INDEX.md`.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
 - `tools/live_smoke.py`: the live smoke runner (see Live smoke test).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
@@ -85,7 +97,10 @@ Flags:
 - `--token-ttl SECONDS`: confirmation token lifetime (default 300; must be >= 1).
 - `--auth-cooldown SECONDS`: after an authentication failure, refuse station calls this long
   (default and minimum 30, the lock-out window).
-- `--max-writes N`: executed writes allowed per session (default 200; must be >= 1).
+- `--max-writes N`: executed writes allowed per server process (default 200; must be >= 1);
+  a reconnect does not reset it.
+- `--station-home NAME=PATH` (repeatable): directory holding the `config.bog` of configured
+  station NAME; lets `n4_save_station` prove persistence (see Destructive tools).
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
@@ -194,7 +209,8 @@ Every write call goes through these layers:
    operator opted the station in with `--allow-tier-b` / `--allow-tier-c`; a dry run
    still works and carries `tier_gate` saying the execution would be refused. An
    undetected version is tier C. Tier A (4.13, 4.14) is unaffected.
-3. **Budget.** At most `--max-writes` executed writes per session.
+3. **Budget.** At most `--max-writes` executed writes per server process (a reconnect does
+   not reset it).
 4. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
    Only plain slot ORDs pass: a `|` after `station:|slot:` (`|h:…`, `|slot:../…`) is

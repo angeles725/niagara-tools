@@ -238,7 +238,8 @@ def parse_args(argv=None):
     parser.add_argument("--token-ttl", type=_positive_int, default=300, metavar="SECONDS",
                         help="confirmation token lifetime (default 300)")
     parser.add_argument("--max-writes", type=_positive_int, default=200, metavar="N",
-                        help="executed writes allowed per session (default 200)")
+                        help="executed writes allowed per server process (default 200); a "
+                             "reconnect does not reset it")
     parser.add_argument("--auth-cooldown", type=_cooldown,
                         default=tools_read.AUTH_COOLDOWN_MIN, metavar="SECONDS",
                         help="after an authentication failure, refuse station calls this long "

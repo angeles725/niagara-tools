@@ -1,4 +1,4 @@
-# mcp-n4-hardening-2026-10-03 — close the 2026-10-03 audit findings of mcp-n4-kit
+# mcp-n4-hardening-2026-10-03 — close the 2026-10-03 audit findings of mcp-n4-kit (COMPLETE)
 
 ## Objective
 Close the findings F1-F17 of the 2026-10-03 audit of `mcp-n4-kit` (safety binding, auth lock-out,
@@ -56,7 +56,9 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   an inventory failure; a failed `output_file` write removes its partial file. Shipped in the H6 PR.
 - [x] **H6 — ergonomics (n4_list_batches, F8, F11)**: read-only `n4_list_batches`; remove-snapshot truncation
   warning; `--load-wait` / `--http-timeout`. Release: MINOR.
-- [ ] **H7 — budget scope + docs (F5, F15, F17)**: process-scoped write budget; README/SKILL/METHODOLOGY drift;
+- [x] **H6a — H6 review inexact claim (anti-cascade sub-task)**: the truncation note says "at least N" (only
+  one level below the cut is loaded), not an exact count. Shipped in the H7 PR.
+- [x] **H7 — budget scope + docs (F5, F15, F17)**: process-scoped write budget; README/SKILL/METHODOLOGY drift;
   FlexAddress/BacnetAddress value types; skill reinstall + drift check; feature retro; this doc COMPLETE.
 
 ## Acceptance
@@ -167,6 +169,21 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
     `load_wait` each removed -> exactly its test fails.
   - Shuffled order seeds 1, 7, 42: OK.
   - Release: `mcp_n4.__version__` 0.7.0 (new tool + flags), skill metadata 0.7.0.
+- H7 (route: inline, branch `fix/mcp-n4-h7-budget-docs`). RED first — 3 tests: the reconnect test now expects
+  the budget to hold across a reconnect (it was reset); FlexAddress/BacnetAddress were classified as components;
+  the truncation note had no "at least". GREEN: 531 tests OK. Decisions:
+  - F5: the budget moved to process scope (`WriteState.writes_executed`; `Session.writes_executed` removed).
+    Safer: a per-session budget let any reconnect reset `--max-writes`, so it bounded nothing across a run.
+    `test_reconnecting_starts_a_new_budget` became `test_reconnecting_keeps_the_process_budget`. Observed
+    mutation: resetting the counter in `n4_connect` makes it fail.
+  - F17: `box.COMPONENT_TYPES` gains `modbusCore:FlexAddress` and `bacnet:BacnetAddress` = value (both
+    `extends BStruct` in the decompiled N4 sources).
+  - F15: README Status up to v0.7.1, Layout lists `tiers.py`, `retro.py`, the template, `tools/new_retro.py`,
+    `retros/`; flag list has `--station-home` and per-process `--max-writes`; SKILL "Register" names
+    `--station-home` and the timing flags; METHODOLOGY section 4 step 2 now puts BQL first, like SKILL step 2
+    and section 7. Skill metadata version follows `__version__` (0.7.1).
+  - Retro `mcp-n4-kit/retros/2026-10-03-hardening-audit.md` (3 proposed deltas, `pending`) + INDEX row.
+  - Release: `mcp_n4.__version__` 0.7.1, skill metadata 0.7.1.
 
 ## Parked advisories
 - H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
@@ -183,6 +200,8 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   `test_rollback_of_invoke_set_restores_the_fallback`.
 - H4 review (non-blocking suggestions): R2 `_in_doubt` docstring tells history rather than the contract; R2
   the `craft` test helper name is opaque; R3 the no-targets test does not assert the station is unchanged.
+- H6 review (non-blocking): R3 the cap branch (more than 20 truncated paths) is untested; R3 a header-only
+  answer with too few columns now counts as 0 rows instead of raising.
 - H5 review: R3 the read is recorded (session observation / audit `read`) before the `output_file` write, so
   a failed write still shows a successful read. The two R3 regressions became H5a.
 
@@ -194,6 +213,9 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
 | H3 | #232 | 81cdb3b | 0.5.3 | high; 4 lenses APPROVED + acknowledged (review-3bbf4aa80a638470); 4 advisories parked |
 | H4 | #234 | 7e71caa | 0.5.4 | high; 4 lenses APPROVED + acknowledged (review-0a41629cf4f014c9); 3 suggestions parked |
 | H5 | #236 | 81934de | 0.6.0 | medium; 1 lens APPROVED + acknowledged (review-464f860418d04fe7); 2 regressions -> H5a, 1 parked |
+| H6 | #238 | 79ad030 | 0.7.0 | medium; 1 lens APPROVED + acknowledged (review-5877369229126819); 1 inexact claim -> H6a, 2 parked |
+| H7 | see the H7 PR | — | 0.7.1 | recorded in the H7 PR body |
 
 ## Next step
-- H7 (process-scoped write budget, docs drift, FlexAddress/BacnetAddress, skill reinstall, retro, close).
+- Feature COMPLETE. Follow-ups: the live-gated list (on #200) and the parked advisories (comment on #200);
+  fold the retro deltas D1-D3 when a maintainer reviews them.

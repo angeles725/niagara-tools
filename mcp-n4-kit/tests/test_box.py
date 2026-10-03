@@ -747,6 +747,13 @@ class TestPureHelpers(unittest.TestCase):
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
 
+    def test_driver_address_structs_are_values_not_components(self):
+        # F17 (audit 2026-10-03, issue #200): BFlexAddress / BBacnetAddress extend BStruct;
+        # the naming heuristic (non-baja -> component) misclassified them.
+        for type_ in ("modbusCore:FlexAddress", "bacnet:BacnetAddress"):
+            self.assertIs(box.COMPONENT_TYPES[type_], False, type_)
+            self.assertFalse(box.is_component_type(type_), type_)
+
     def test_the_type_table_wins_over_the_naming_heuristic(self):
         """B1200-G3: an explicit entry decides; unknown types fall back to the heuristic."""
         self.assertIs(box.COMPONENT_TYPES["control:PriorityLevel"], False)  # BFrozenEnum

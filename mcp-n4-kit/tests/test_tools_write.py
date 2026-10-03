@@ -363,13 +363,18 @@ class TestBudget(WriteTestCase):
         self.assertIn("budget", text)
         self.assertEqual(self.children(), ["A"])
 
-    def test_reconnecting_starts_a_new_budget(self):
+    def test_reconnecting_keeps_the_process_budget(self):
+        # F5 (audit 2026-10-03): the budget is per server process. A per-session budget
+        # let a reconnect reset --max-writes, so it bounded nothing across sessions.
         self.connect_verified()
         self.run_write("n4_create_component", parent_ord=FOLDER, name="A",
                        type="kitControl:NumericConst")
         self.connect_verified()
-        self.run_write("n4_create_component", parent_ord=FOLDER, name="B",
-                       type="kitControl:NumericConst")
+        text = self.err("n4_create_component", parent_ord=FOLDER, name="B",
+                        type="kitControl:NumericConst")
+        self.assertIn("write budget exhausted", text)
+        self.assertIn("server process", text)
+        self.assertEqual(self.children(), ["A"])
 
 
 class TestCreateComponent(WriteTestCase):
@@ -719,9 +724,9 @@ class TestLooseStateFileBeforeSend(WriteTestCase):
             plan = self.dry("n4_create_component", **self.ARGS)
             os.chmod(path, 0o644)
             kw = dict(dry_run=False, confirmation_token=plan["confirmation_token"], **self.ARGS)
-            before = (self.children(), self.srv.ctx.session.writes_executed)
+            before = (self.children(), self.srv.ctx.write.writes_executed)
             self.assertIn("chmod 600", self.err("n4_create_component", **kw), filename)
-            self.assertEqual((self.children(), self.srv.ctx.session.writes_executed), before)
+            self.assertEqual((self.children(), self.srv.ctx.write.writes_executed), before)
             os.chmod(path, 0o600)
             out = self.ok("n4_create_component", **kw)  # the token was not spent
             self.assertEqual(out["verdict"], "verified")
@@ -791,7 +796,7 @@ class TestJournalAndAudit(WriteTestCase):
         kw = dict(dry_run=False, confirmation_token=plan["confirmation_token"], **self.ARGS)
         self.assertIn("nothing was sent", self.err("n4_create_component", **kw))
         self.assertEqual(self.children(), [])
-        self.assertEqual(self.srv.ctx.session.writes_executed, 0)
+        self.assertEqual(self.srv.ctx.write.writes_executed, 0)
         del self.srv.ctx.write.journal.append
         self.assertIn("already used", self.err("n4_create_component", **kw))
         self.assertEqual(self.children(), [])
