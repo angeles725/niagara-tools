@@ -289,6 +289,58 @@ class TestTokenLayers(WriteTestCase):
                                                confirmation_token=token, **args))
 
 
+class TestTokenStationBinding(WriteTestCase):
+    """F1 (audit 2026-10-03): a token vouches for the station session it was issued on."""
+    ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+
+    def test_the_plan_names_the_station_and_session_it_was_made_on(self):
+        self.connect_verified()
+        plan = self.dry("n4_create_component", **self.ARGS)["plan"]
+        sess = self.srv.ctx.session
+        self.assertEqual(plan["station"], {"name": "FakeStation", "base_url": self.fake.url,
+                                           "session_id": sess.session_id})
+        self.assertRegex(sess.session_id, r"^[0-9a-f]{32}$")
+
+    def test_a_token_from_an_earlier_session_is_refused_after_a_reconnect(self):
+        self.connect_verified()
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.connect_verified()  # same station, new session
+        self.assertIn("does not match", self.err(
+            "n4_create_component", dry_run=False, confirmation_token=token, **self.ARGS))
+        self.assertEqual(self.children(), [])
+
+    def test_a_token_from_station_a_cannot_execute_on_station_b(self):
+        other = test_server.FakeStation(password=self.PASSWORD, station_name="Other").start()
+        self.addCleanup(other.stop)
+        self.stations = dict(self.stations, Other=other.url)
+        self.start_server()
+        self.connect_verified()
+        token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
+        self.ok("n4_connect", station="Other")
+        self.assertIn("does not match", self.err(
+            "n4_create_component", dry_run=False, confirmation_token=token, **self.ARGS))
+        self.assertEqual([c.name for c in other.folder.children], [])
+
+
+class TestLimitsStartup(unittest.TestCase):
+    """F16 (audit 2026-10-03): a zero or negative TTL or budget is refused at startup."""
+
+    def test_zero_or_negative_ttl_and_budget_are_refused_by_the_parser(self):
+        for flag in ("--token-ttl", "--max-writes"):
+            for bad in ("0", "-5"):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                    server.parse_args([flag, bad])
+                self.assertEqual(cm.exception.code, 2, (flag, bad))
+                self.assertIn(flag, err.getvalue())
+
+    def test_the_write_state_refuses_them_too(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for kw in ({"token_ttl": 0}, {"max_writes": 0}, {"token_ttl": -1}):
+                with self.assertRaises(ValueError, msg=kw):
+                    tools_write.WriteState(["station:|slot:/A"], tmp, **kw)
+
+
 class TestBudget(WriteTestCase):
     MAX_WRITES = 1
 

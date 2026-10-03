@@ -177,6 +177,17 @@ class Server:
         return {"content": [{"type": "text", "text": self.ctx.scrub(text)}], "isError": True}
 
 
+def _positive_int(text):
+    """argparse type: an integer >= 1 (a zero or negative TTL/budget is refused at startup)."""
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r is not an integer" % text) from None
+    if value < 1:
+        raise argparse.ArgumentTypeError("must be >= 1, got %d" % value)
+    return value
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(prog="mcp_n4.server", description=__doc__)
     parser.add_argument("--allow-writes", action="store_true",
@@ -185,9 +196,9 @@ def parse_args(argv=None):
                         help="ORD prefix writes may touch (repeatable); none = no writes")
     parser.add_argument("--state-dir", default=None,
                         help="journal/audit directory (default ~/.local/state/mcp-n4)")
-    parser.add_argument("--token-ttl", type=int, default=300, metavar="SECONDS",
+    parser.add_argument("--token-ttl", type=_positive_int, default=300, metavar="SECONDS",
                         help="confirmation token lifetime (default 300)")
-    parser.add_argument("--max-writes", type=int, default=200, metavar="N",
+    parser.add_argument("--max-writes", type=_positive_int, default=200, metavar="N",
                         help="executed writes allowed per session (default 200)")
     parser.add_argument("--station", action="append", default=[], metavar="NAME=URL",
                         help="station n4_connect may use (repeatable); NAME should equal the "
