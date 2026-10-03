@@ -20,6 +20,8 @@ station session, plain-ORD write scope, authentication-failure latch (`--auth-co
 v0.6.0: `n4_bql_query` `output_file`, duplicate and localized CSV headers.
 v0.7.0: `n4_list_batches`, `snapshot_truncated`, `--load-wait` / `--http-timeout`.
 v0.7.1: the write budget is per server process; docs drift fixed.
+v0.7.2 (retro 2026-10-03): `tools/mutation_check.py` (mutation checks without stale bytecode), a
+stdlib untested-branch audit, explicit per-PR review of medium units.
 
 ## Methodology and skill
 
@@ -50,6 +52,8 @@ scripts/install-skill.sh --skill mcp-n4
 - `retros/`: session retros and `INDEX.md`.
 - `tests/test_server.py`: protocol, tool and end-to-end stdio tests.
 - `tools/live_smoke.py`: the live smoke runner (see Live smoke test).
+- `tools/mutation_check.py`: runs a mutation-check command with no stale bytecode (see Run
+  the tests).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
 - `tests/test_box.py`: unit tests.
 
@@ -360,6 +364,34 @@ random.Random(int(sys.argv[1])).shuffle(tests)
 sys.exit(not unittest.TextTestRunner().run(unittest.TestSuite(tests)).wasSuccessful())
 EOF
 ```
+- Run mutation checks without bytecode. A mutation restored with a plain copy within the
+  same second, with the same file size, can leave a `__pycache__` `.pyc` that still matches
+  the source's recorded mtime and size: the "restored" code keeps running the mutant
+  (retro 2026-10-03 D1). Run both the mutated and the restored run through the helper, which
+  removes every `__pycache__` under the kit and sets `PYTHONDONTWRITEBYTECODE=1`:
+
+```
+python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
+```
+
+  By hand: `find mcp-n4-kit -name __pycache__ -prune -exec rm -rf {} +` after each restore
+  and `PYTHONDONTWRITEBYTECODE=1` on each run. Restore with `cp -p` only when the saved
+  copy's mtime differs from the mutant's.
+
+Untested-branch audit (retro 2026-10-03 D2). Before each minor release (`0.X.0`), list the
+lines the suite never runs, with the stdlib `trace` module (no `coverage` dependency; CI has
+none). From the repo root, about one minute:
+
+```
+PYTHONDONTWRITEBYTECODE=1 python3 -m trace --count --missing --summary \
+  --coverdir="$(mktemp -d)" --module unittest discover -s mcp-n4-kit/tests
+```
+
+The summary prints a line percentage per `mcp_n4.*` module; in `<coverdir>/mcp_n4.<module>.cover`
+each never-run line is marked `>>>>>>`. Review the marked `raise`, `except` and refusal
+branches first, starting with `tools_write.py` and `safety.py`: each one either gets a
+characterization test or a one-line reason it stays untested in the release PR. The
+percentage is a pointer, not a gate. Delete the coverdir afterwards.
 
 ## Versioning
 
@@ -368,6 +400,8 @@ EOF
   the form ``### <kind> — `mcp-n4-kit` vX.Y.Z: <summary>`` (kind: Added, Changed, Fixed, ...).
 - When another release is in flight (another writer owns the root `CHANGELOG.md` or
   `VERSION`), put the entry text in the PR body for the release owner to fold.
+- Each work unit merges as its own PR; a medium-risk unit is reviewed at its PR, not left
+  to the slice budget (METHODOLOGY section 8).
 
 ## Evidence (niagara-research)
 

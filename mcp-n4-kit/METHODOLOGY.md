@@ -146,3 +146,13 @@ finish. The same inventory took 6 BQL queries and about 3 s.
 | A long-running client (script, crawl, smoke run) takes a progress file (e.g. `--progress-file`) and writes each step there. It never relies on stdout or stderr piped through `tail`: the pipe shows nothing until the process ends. Evidence: retro 2026-10-02 D7 (`retros/2026-10-02-customer-remote-01-session.md`). | **manual** |
 | Count devices without the network's built-in local device (`localDevice` on SnmpNetwork, the station acting as an agent). `n4_inventory` flags it `local: true` and reports `local_devices` apart from `field_devices`. | `bql.is_local_device`; `test_local_devices_are_flagged_and_counted_apart` |
 | Load latency is visible: `n4_navigate` and `n4_read_slots` return `elapsed_ms`. Load polling starts at 0.1 s and backs off (0.2, 0.4, 0.8 s cap), with a bounded total wait. | `box.poll_delays`; `test_load_tree_polls_with_a_short_first_delay_and_backoff`, `test_load_tree_total_wait_is_bounded_and_each_delay_capped`, `test_read_slots_and_navigate_report_elapsed_ms` |
+
+## 8. Kit development: delivery and review (retro 2026-10-03)
+
+These rules govern changes to the kit itself, not station sessions.
+
+| Rule | Enforced by |
+|---|---|
+| Each work unit merges as its own PR from the latest `origin/main`. Under that delivery, `gentle-ai review assess --committed-only` reports a medium-risk slice as `review_due: false` with `under_budget`: the slice never reaches the review budget because it is merged first. So at every PR, start the native review explicitly (`gentle-ai review status ... --next-transition`, then the returned START) for any medium or high candidate, whatever `review_due` says. Only a `passive` candidate skips the review. Evidence: retro 2026-10-03 D3 (H1, H5, H6 assessed `under_budget`). | **manual** |
+| A mutation check runs without bytecode (`tools/mutation_check.py`, or clear `__pycache__` and set `PYTHONDONTWRITEBYTECODE=1`); a stale `.pyc` can make a restored file keep running the mutant. Evidence: retro 2026-10-03 D1. | `tools/mutation_check.py`; `test_the_command_runs_with_bytecode_writing_disabled_after_the_clear`, `test_every_pycache_under_the_root_is_removed_and_sources_are_kept` |
+| Before each minor release, run the untested-branch audit (README "Run the tests", stdlib `trace`) and give every never-run `raise`/`except`/refusal branch in the write path a test or a stated reason. Evidence: retro 2026-10-03 D2 (the H4 characterization tests found a swallowed error reason). | **manual** |
