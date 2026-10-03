@@ -1,6 +1,6 @@
 # ODD feature — Deferred lint candidates and the polish close-retro fold
 
-**Status**: IN PROGRESS · **Created**: 2026-10-02 · **Owner**: ODD orchestrator · **Repo**: angeles725/niagara-tools (main, PUBLIC)
+**Status**: COMPLETE (2026-10-03) · **Created**: 2026-10-02 · **Owner**: ODD orchestrator · **Repo**: angeles725/niagara-tools (main, PUBLIC)
 
 ## Objective
 Fold the 5 deltas of the polish close retro (`retros/2026-10-02-polish-2026-10-02-close.md`), close the one real gap
@@ -74,8 +74,9 @@ traceable to the close retro, #226 or #142.
       R3-001: a call-chain or indexed receiver collapsed to the key `.` in `lint-set-null-ord.sh` → only a plain
       identifier chain is recorded as guarded; with it R2-002 (mutation text) and R3-003 (SPC5 status assert). Route:
       inline, own PR (keeps the release PR free of code).
-- [ ] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
-      check, feature retro, this doc COMPLETE.
+- [x] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
+      check, feature retro, this doc COMPLETE. Route: inline. CHANGELOG also folds, verbatim, the mcp-n4-kit
+      v0.5.1-v0.7.3 entries of PRs #229, #231, #232, #234, #236, #238, #240, #241, #243 (coordinator request).
 
 ## Acceptance
 - Every task lands as its own merged PR with RED → GREEN evidence where a runnable deterministic test exists, an
@@ -246,6 +247,13 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
   - `bats tests/*.bats` (serial): 1037 ok / 0 not ok (67 env skips), count 1037. mcp-n4-kit unittest: 535 OK.
     shellcheck 0.11.0: only the pre-existing SC2329 info. Sweeps, fold-audit (196/196; deltas 145, 0 not cited),
     guard-pins `--strict` and gen-lint-index `--check` clean.
+  - Commit 632455c, PR #244, merge 3ebcacb. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-7688aedb9a50cce8, authority burned. 3 informational findings (all suggestions: shared receiver regex, null-first
+    and indexed receiver pins, awk-branch pin) posted on #226 and parked. The fix-forward chain closed here.
+- 2026-10-03 D6 close (branch `chore/dl-d6-release-v0.31.0`, from `origin/main` 3ebcacb). VERSION 0.30.0 → 0.31.0;
+  CHANGELOG `[v0.31.0]` (kit D1-D5 + the nine mcp-n4-kit entries verbatim); close retro
+  `retros/2026-10-03-deferred-lints-2026-10-03-close.md` (5Δ, pending) + INDEX row; BUILD-STATE kit envelope. The tag,
+  the skill reinstall and the drift check run after the merge (recorded in the PR and the final report).
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -275,6 +283,7 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
 | D3 + D2b | #237 | d551090 | APPROVED, 4 lenses, review-0a160c9b2c00cbe3 |
 | D4 + D3b | #239 | 6cc16f6 | APPROVED, 4 lenses, review-b74d56944839d5e8 |
 | D5 + D4b | #242 | ecf93f6 | APPROVED, 4 lenses, review-33645fae1a1ba9d8 |
+| D5b | #244 | 3ebcacb | APPROVED, 4 lenses, review-7688aedb9a50cce8 |
 
 ## Open decisions
 - #142 wiring (operator): the issue asks for `split-package-check` to run automatically, in the client repository's CI,
@@ -284,5 +293,12 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
   nature); (b) auto-run it from `build.sh` over the GROUP directory it already receives (in-kit, but sees one group,
   not the whole project); (c) keep it manual before a release. Recorded on #142.
 
+## Close (2026-10-03)
+- Merged: D1 #230, D1b #233, D2+D1c #235, D3+D2b #237, D4+D3b #239, D5+D4b #242, D5b #244, D6 (this release PR).
+- #226: lead item fixed (D1/D1b/D1c); every review's advisories posted there with dispositions; the rest of #226 stays
+  open. #142: implemented as the advisory tool; the wiring decision is open (see "Open decisions"), issue left open.
+- Close retro: `retros/2026-10-03-deferred-lints-2026-10-03-close.md` (5Δ, pending).
+- Owed (not in scope): 12 other lints still walk with `find … 2>/dev/null`.
+
 ## Next step
-D5b review + merge, then D6.
+Fold the close retro; the operator's #142 wiring choice; the remaining #226 items.
