@@ -40,8 +40,15 @@
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
 # Row:     <artifact>  PASS|FAIL|WARN|SKIP|ADVISORY|ERROR  <check>  <detail>   (ERROR = member env fault, not counted; exit 3)
-# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES
-# Exit: 0 clean (zero FAIL) · 1 any FAIL · 3 env (member env fault)
+# Summary: report-module: N artifacts · p PASS · f FAIL · w WARN · s SKIP · a ADVISORY  ->  CLEAN|ISSUES|INCOMPLETE
+# Floor (BUILD-LOOP §5): verify-module (needs a built jar) and schema-risk (needs <artifact>/.deploy-baseline) never
+# read CLEAN when they SKIP — the verdict is INCOMPLETE, exit 4. --first-deploy: the module was never deployed, so
+# schema-risk has no baseline to diff (N/A, not a floor gap). --lint-only: a punch-list run that is not the floor
+# (no jar expected); floor SKIPs stay rows and are named on stderr. [ev: retro change-tier-time-budgets Δ3]
+# Mutation: RM-floor -- dropping the floor-SKIP verdict reads a run that checked neither floor member as CLEAN
+# Mutation: RM-floor-schema -- --first-deploy ignored keeps a never-deployed module INCOMPLETE forever
+# Mutation: RM-wp-env -- mapping every exit 3 to SKIP no write-path-matrix.md hides a broken write-path scan
+# Exit: 0 clean (zero FAIL) · 1 any FAIL · 2 usage · 3 env (member env fault) · 4 INCOMPLETE (a floor check — verify-module, schema-risk — SKIPped; --first-deploy / --lint-only, see below)
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro campaign7-report-module]  [ev: retro campaign8-report-integration]
@@ -57,9 +64,12 @@ CONSOLE_DIR=""
 UI_PROFILE=""
 LEGACY=0
 WIRING_MAP=""
+FIRST_DEPLOY=0
+LINT_ONLY=0
+FLOOR_SKIP=0
 
 usage_exit() {
-  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]\n' >&2
+  printf 'usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>] [--first-deploy] [--lint-only]\n' >&2
   exit 2
 }
 
@@ -79,6 +89,8 @@ while [ $# -gt 0 ]; do
       case "$2" in hmi|lan|both|unknown) ;; *) usage_exit ;; esac
       UI_PROFILE="$2"; shift 2 ;;
     --legacy) LEGACY=1; shift ;;
+    --first-deploy) FIRST_DEPLOY=1; shift ;;
+    --lint-only) LINT_ONLY=1; shift ;;
     --wiring-map)
       [ $# -ge 2 ] || usage_exit
       WIRING_MAP="$2"; shift 2 ;;
@@ -198,7 +210,11 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # 1. verify-module.sh --src  (SKIP if no built jar)
   # ----------------------------------------------------------------
   JAR=$(find "$ADIR/build/libs" -maxdepth 1 -name '*.jar' 2>/dev/null | head -1)
-  if [ -n "$JAR" ]; then
+  if [ -z "$JAR" ]; then
+    # verify-module is a floor check (BUILD-LOOP §5): no built jar means it did not run — INCOMPLETE, not CLEAN.
+    emit "$ANAME" SKIP verify-module "no built jar under build/libs (floor check not run)"
+    FLOOR_SKIP=1
+  else
     VM_ARGS=()
     [ -n "$TARGET_VERSION" ] && VM_ARGS+=("--target-version" "$TARGET_VERSION")
     VM_ARGS+=("--src" "$MODULE_ROOT")
@@ -1299,7 +1315,13 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # ----------------------------------------------------------------
   SR_BASELINE="$ADIR/.deploy-baseline"
   if [ ! -d "$SR_BASELINE" ]; then
-    emit "$ANAME" SKIP schema-risk "no .deploy-baseline"
+    if [ "$FIRST_DEPLOY" -eq 1 ]; then
+      emit "$ANAME" SKIP schema-risk "N/A (--first-deploy: never deployed, no baseline to diff)"
+    else
+      # schema-risk is a floor check: a deployed module with no baseline snapshot was never diffed.
+      emit "$ANAME" SKIP schema-risk "no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)"
+      FLOOR_SKIP=1
+    fi
   else
     sr_exit=0
     "$TOOLBELT/schema-risk.sh" "$SR_BASELINE" "$ADIR" >/dev/null 2>&1 || sr_exit=$?
@@ -1428,8 +1450,11 @@ fi
 # ----------------------------------------------------------------
 lwp_exit=0
 lwp_out=$("$TOOLBELT/lint-write-path.sh" "$MODULE_ROOT" 2>&1) || lwp_exit=$?
-if [ "$lwp_exit" -eq 3 ]; then
+if [ "$lwp_exit" -eq 3 ] && [[ "$lwp_out" == *"no write-path-matrix.md found"* ]]; then
   emit "(module)" SKIP lint-write-path "no write-path-matrix.md"
+elif [ "$lwp_exit" -eq 3 ]; then
+  # any OTHER exit 3 (a find error, usage) is an env fault: the write-path scan did not complete
+  emit "(module)" ERROR lint-write-path "env fault (exit 3): $(printf '%s\n' "$lwp_out" | head -n 1)"; HAD_ENV=1
 else
   _lwp_had_fail=0
   while IFS= read -r _ln; do
@@ -1552,11 +1577,16 @@ fi
 
 # Summary
 VERDICT="CLEAN"
+# A floor SKIP (verify-module / schema-risk did not run) is INCOMPLETE, never CLEAN — unless this run is
+# declared --lint-only (a punch-list pass that is not the floor).
+[ "$FLOOR_SKIP" -eq 1 ] && [ "$LINT_ONLY" -eq 0 ] && VERDICT="INCOMPLETE"
 [ "$HAD_FAIL" -eq 1 ] && VERDICT="ISSUES"
+[ "$LINT_ONLY" -eq 1 ] && [ "$FLOOR_SKIP" -eq 1 ] && printf 'report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict\n' >&2
 _s_sfx="$([ "$ARTIFACT_COUNT" -eq 1 ] && printf '' || printf 's')"
 printf 'report-module: %d artifact%s · %d PASS · %d FAIL · %d WARN · %d SKIP · %d ADVISORY  ->  %s\n' \
   "$ARTIFACT_COUNT" "$_s_sfx" "$NPASS" "$NFAIL" "$NWARN" "$NSKIP" "$NADV" "$VERDICT"
 
 [ "$HAD_ENV" -eq 1 ] && exit 3
 [ "$HAD_FAIL" -eq 1 ] && exit 1
+[ "$VERDICT" = "INCOMPLETE" ] && exit 4
 exit 0
