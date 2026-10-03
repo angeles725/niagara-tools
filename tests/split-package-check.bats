@@ -64,6 +64,7 @@ jfile() {
   jfile G/A/A-rt/src/U.java ""
   jfile G/B/B-rt/src/V.java ""
   run "$SPC" "$P"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"split-package-check  (default)  declared in 2 modules"* ]]
 }
 
@@ -115,4 +116,21 @@ jfile() {
   chmod 755 "$P/G/Hidden"
   [ "$status" -eq 3 ]
   [[ "$output" == *"G/Hidden"* ]]
+}
+
+@test "SPC-aggfail: a failing aggregation (sort) is exit 3, never an empty clean report, even under --strict (D5b, R4-001)" {
+  # Mutation: SPC-aggfail -- an unchecked sort | awk aggregation turns a failed sort into exit 0 with no rows
+  module G/A/A-rt; module G/B/B-rt
+  jfile G/A/A-rt/src/com/x/U.java com.a
+  jfile G/B/B-rt/src/com/x/U.java com.a
+  mkdir -p "$TMPDIR_T/bin"
+  cat > "$TMPDIR_T/bin/sort" <<SH
+#!/usr/bin/env bash
+for a in "\$@"; do [ "\$a" = "-k1,1" ] && { echo "sort: write failed: No space left on device" >&2; exit 2; }; done
+exec $(command -v sort) "\$@"
+SH
+  chmod +x "$TMPDIR_T/bin/sort"
+  PATH="$TMPDIR_T/bin:$PATH" run "$SPC" --strict "$P"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"No space left on device"* ]]
 }

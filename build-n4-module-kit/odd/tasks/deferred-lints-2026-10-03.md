@@ -69,6 +69,11 @@ traceable to the close retro, #226 or #142.
       (R2-001) and the setter-name comment that claimed the last setter (R2-002/R3-002). Route: folded into the D5 PR.
 - [x] D5 · #142 `split-package-check.sh` — project-level check: one Java package declared in two modules. Route:
       inline. Conservative read-only advisory version (see "Open decisions").
+- [x] D5b · D5 review fail-opens (posted on #226) — R4-001: the `sort | awk` aggregation of `split-package-check.sh`
+      was unchecked (a failed sort → no rows → exit 0, even under `--strict`) → each stage checked, exit 3; R2-001 /
+      R3-001: a call-chain or indexed receiver collapsed to the key `.` in `lint-set-null-ord.sh` → only a plain
+      identifier chain is recorded as guarded; with it R2-002 (mutation text) and R3-003 (SPC5 status assert). Route:
+      inline, own PR (keeps the release PR free of code).
 - [ ] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
       check, feature retro, this doc COMPLETE.
 
@@ -228,6 +233,19 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
     shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
     `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
     `--check` fresh (no lint header changed).
+  - Commit 4ba3b9f, PR #242, merge ecf93f6. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-33645fae1a1ba9d8, authority burned. 6 informational findings posted on #226: R4-001 (unchecked
+    aggregation) and R2-001/R3-001 (call-chain receivers) → D5b with R2-002 and R3-003; R3-002 → parked. #142 commented
+    with the implementation and the open wiring decision (left open for the operator).
+- 2026-10-03 D5b (branch `feat/dl-d5b-aggregation-and-receivers`, from `origin/main` ecf93f6). Route: inline.
+  - RED: SPC-aggfail not ok (a PATH-stub sort that fails only for the aggregation's `-k1,1` call: exit 0, no rows);
+    SNO1-chain not ok (getA()'s null check silenced getB()'s direct pass).
+  - GREEN: `bats tests/split-package-check.bats tests/lint-set-null-ord.bats` 22 ok.
+  - Observed mutations (restored byte-identical, `cmp`): sort failure not fatal → SPC-aggfail not ok; any receiver
+    recorded as guarded → SNO1-chain not ok.
+  - `bats tests/*.bats` (serial): 1037 ok / 0 not ok (67 env skips), count 1037. mcp-n4-kit unittest: 535 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. Sweeps, fold-audit (196/196; deltas 145, 0 not cited),
+    guard-pins `--strict` and gen-lint-index `--check` clean.
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -235,6 +253,9 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
   text or a heredoc onto later lines can produce a spurious row. It fails closed, and the kit scripts are clean today.
 - R3-patsub-multiline-negative-unpinned (D1b, `tests/shell-hygiene.bats`): no negative pin for a quoted multi-line
   replacement, for the MAX_SPAN boundary or for the `$'...'` state. Test depth only.
+- R3-002 (D5, `split-package-check.sh`): an annotation (or a block-comment end) on the same line as `package …;`
+  (package-info.java) reads as the `(default)` package and can report a spurious split — errs toward WARN / `--strict`
+  exit 1, never toward a clean pass.
 - R3-001 (D4, `lint-set-null-ord.sh`): any `set…` identifier (`setup(`, `settings(`) counts as a setter and a nested
   call's `)` ends the argument, so a few false WARNs are possible. Advisory, not a fail-open.
 - R2-003 (D4): `vguard` means both "guarded" and "already reported". Readability.
@@ -253,6 +274,7 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
 | D2 + D1c | #235 | a3a9b67 | APPROVED, 4 lenses, review-a13efee4322f36c9 |
 | D3 + D2b | #237 | d551090 | APPROVED, 4 lenses, review-0a160c9b2c00cbe3 |
 | D4 + D3b | #239 | 6cc16f6 | APPROVED, 4 lenses, review-b74d56944839d5e8 |
+| D5 + D4b | #242 | ecf93f6 | APPROVED, 4 lenses, review-33645fae1a1ba9d8 |
 
 ## Open decisions
 - #142 wiring (operator): the issue asks for `split-package-check` to run automatically, in the client repository's CI,
@@ -263,4 +285,4 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
   not the whole project); (c) keep it manual before a release. Recorded on #142.
 
 ## Next step
-D5 review + merge, then D6.
+D5b review + merge, then D6.

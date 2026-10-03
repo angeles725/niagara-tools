@@ -15,7 +15,8 @@
 #   SNO1 direct  — `set<Name>(… x.getSlotPathOrd())` / `set(<prop>, x.getSlotPathOrd(), …)`: the getSlotPathOrd()
 #                  call is itself an argument (followed by `,` or `)`). Guarded when the call line, or an earlier
 #                  line of the same method, compares the SAME receiver's getSlotPathOrd() with null (`!= null` /
-#                  `== null`); a check on `a.` never guards `b.getSlotPathOrd()`.
+#                  `== null`); a check on `a.` never guards `b.getSlotPathOrd()`, and a call-chain or indexed
+#                  receiver (`getA().`, `arr[i].`) is never guarded (its row always shows).
 #   SNO2 local   — `[BOrd] v = <expr>getSlotPathOrd();` then a later `set…(…v…)` in the same method, with no
 #                  `v == null`, `v != null`, `null == v`, `null != v`, `v.isNull()` or `requireNonNull(v` on any
 #                  line from the assignment to the call (a ternary on the call line counts).
@@ -28,7 +29,8 @@
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # VCS-free by design (kit-links L2).
 # Mutation: SNO1 -- dropping the direct-argument rule passes setTargetOrd(point.getSlotPathOrd()) clean
-# Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on a
+# Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on `a.`
+# Mutation: SNO1-chain -- keying a call-chain receiver as "." lets getA()'s null check silence getB()'s pass
 # Mutation: SNO2-guard -- ignoring the null guard WARNs a local that is checked before the set
 # Mutation: SNO2-scope -- matching the variable outside its own method WARNs a same-named local in a sibling method
 # Mutation: SNO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
@@ -75,17 +77,19 @@ function setter_name(s,    t) {
   return ""
 }
 # guard_recvs(s): record in guarded[] every receiver (`a.`, `x.y.`, or "" for this) whose getSlotPathOrd() result
-# is compared with null on line s
+# is compared with null on line s. Only a plain identifier chain is a usable key: a call-chain or indexed receiver
+# (`getA().`, `arr[i].`) is captured as a bare `.`, so it is never recorded and its direct pass always WARNs.
 function guard_recvs(s,    t, r) {
   t = s
   while (match(t, /[A-Za-z0-9_.]*getSlotPathOrd\(\)[[:space:]]*[!=]=[[:space:]]*null/)) {
-    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r); guarded[r] = 1
+    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r)
+    if (r ~ /^([A-Za-z_][A-Za-z0-9_]*\.)*$/) guarded[r] = 1
     t = substr(t, RSTART + RLENGTH)
   }
   t = s
   while (match(t, /null[[:space:]]*[!=]=[[:space:]]*[A-Za-z0-9_.]*getSlotPathOrd\(\)/)) {
     r = substr(t, RSTART, RLENGTH); sub(/^null[[:space:]]*[!=]=[[:space:]]*/, "", r); sub(/getSlotPathOrd\(\)$/, "", r)
-    guarded[r] = 1
+    if (r ~ /^([A-Za-z_][A-Za-z0-9_]*\.)*$/) guarded[r] = 1
     t = substr(t, RSTART + RLENGTH)
   }
 }
