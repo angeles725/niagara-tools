@@ -262,9 +262,14 @@ def _set_slot_plan(client, args):
     if "status" in args and not value_type.startswith("baja:Status"):
         raise ToolError("status only applies to baja:StatusNumeric / baja:StatusBoolean")
     requested = _coerce(value_type, args["value"], args.get("status", "0"))
-    h, nodes = _handle(client, args["ord"], 2)
+    h, nodes = _handle(client, args["ord"], _slot_depth(slot))
     if slot not in nodes:
-        raise ToolError("slot %r not found on %s" % (slot, args["ord"]))
+        raise ToolError(
+            "slot %r not found on %s. The station omits a slot whose value equals its type "
+            "default (0.0, false, an empty string), so n4_set_slot cannot read its type and "
+            "refuses. Check the name with n4_read_slots; if the slot exists at its default, "
+            "set it once in Workbench (or through an action such as `set`) and plan again"
+            % (slot, args["ord"]))
     if nodes[slot].get("t") != value_type:
         raise ToolError("slot %r is %s, not %s" % (slot, nodes[slot].get("t"), value_type))
     previous = _observe(nodes, slot, value_type)
@@ -273,8 +278,17 @@ def _set_slot_plan(client, args):
                    [], {"requested": requested, "targets": {args["ord"]: h}})
 
 
+def _slot_depth(slot):
+    """Load depth that reaches the children of `slot` (a Status' value/status), nested too.
+
+    Depth 2 only covers a top-level slot: for `a/b` the value child sat one level deeper
+    and was read as its type default (audit 2026-10-03 F3).
+    """
+    return len(slot.split("/")) + 1
+
+
 def _set_slot_readback(client, args, planned, replies, inverse):
-    _, nodes = _handle(client, args["ord"], 2)
+    _, nodes = _handle(client, args["ord"], _slot_depth(args["slot"]))
     observed = _observe(nodes, args["slot"], args["value_type"])
     requested = planned.data["requested"]
     return requested, replies[0], observed, "verified" if observed == requested else "mismatch"
@@ -622,6 +636,7 @@ def _rollback_plan(client, args, ctx):
         if current != recorded:
             raise ToolError("%s now has handle %s but the batch recorded %s: the component "
                             "was replaced, refusing" % (ord_str, current, recorded))
+    _unchanged_since(client, view, ops, targets)
     components = []
     for i, op in enumerate(ops):  # one add per component: nested bodies are rejected live
         if op["nm"] == "a":
@@ -667,6 +682,50 @@ def _rollback_plan(client, args, ctx):
                    {"rollback_of": bid, "targets": targets, "relinks": relinks,
                     "unlinked_inputs": unlinked, "components": components,
                     "ord_of": {h: o for o, h in targets.items()}})
+
+
+def _written_values(view):
+    """`{(handle, slot): (value, whole)}` of what a batch wrote, from its journaled ops.
+
+    `whole` is False for `invokeAction set`, which writes the fallback's value only.
+    """
+    out = {}
+    for op in view.get("ops") or []:
+        if not isinstance(op, dict):
+            continue
+        if op.get("nm") == "s" and isinstance(op.get("b"), dict):
+            out[(op.get("h"), op.get("n"))] = (_bson_value(op["b"]), True)
+        arg = op.get("arg") if op.get("ssc") == "invokeAction" else None
+        if isinstance(arg, dict) and arg.get("a") == "set" and isinstance(arg.get("b"), dict):
+            out[(arg.get("h"), "fallback")] = (_bson_value(arg["b"]), False)
+    return out
+
+
+def _unchanged_since(client, view, ops, targets):
+    """Refuse to restore a slot that no longer holds what the batch wrote (audit F6).
+
+    A later change (an operator, a schedule, another tool) would be silently overwritten;
+    restoring it is the operator's decision, by hand with `n4_set_slot`.
+    """
+    written = _written_values(view)
+    for op in ops:
+        if op["nm"] != "s" or (op["h"], op["n"]) not in written:
+            continue
+        wrote, whole = written[(op["h"], op["n"])]
+        where = _ord_of(targets, op["h"])
+        nodes = client.load_tree(where, depth=_slot_depth(op["n"]))
+        try:
+            now = _observe(nodes, op["n"], op["b"]["t"])
+        except (KeyError, ValueError):
+            now = None  # the slot is gone (or no longer a Status): it changed
+        seen = now if whole or not isinstance(now, dict) else now["value"]
+        if seen != wrote:
+            raise ToolError(
+                "slot %r on %s changed since batch %s wrote it (the batch wrote %s, the "
+                "station now holds %s): refusing to overwrite a later change. Restore it by "
+                "hand with n4_set_slot if that is still wanted"
+                % (op["n"], where, view.get("batch_id"), safety.canonical(wrote),
+                   safety.canonical(seen)))
 
 
 def _spec_path(spec):
@@ -1019,7 +1078,7 @@ def _rollback_readback(client, args, planned, replies, inverse):
     ord_of, ok, relinks, inputs = planned.data["ord_of"], True, None, []
     for i, op in enumerate(planned.ops):
         where = ord_of[op["h"]]
-        nodes = client.load_tree(where, depth=2)
+        nodes = client.load_tree(where, depth=_slot_depth(op["n"]) if op["nm"] == "s" else 2)
         if op["nm"] == "v":
             ok &= op["n"] not in nodes
         elif op["nm"] == "a":

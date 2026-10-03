@@ -92,6 +92,40 @@ class TestConnectLatch(LatchCase):
             server.Server(auth_cooldown=10)
 
 
+class HooklessClient(box.BoxClient):
+    """A client that cannot take the `on_auth_error` hook (the server must still latch)."""
+
+    @property
+    def on_auth_error(self):
+        return None
+
+    @on_auth_error.setter
+    def on_auth_error(self, value):
+        raise AttributeError("this client has no auth hook")
+
+
+class TestHooklessClientLatch(LatchCase):
+    """H2 review R4/R2/R3 fallback-latch: the `Server._call` fallback must record every
+    failure, also while an earlier latch (for other credentials) is held."""
+
+    def setUp(self):
+        super().setUp()
+        self.srv.ctx.close()
+        self.srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
+                                 client_factory=HooklessClient)
+        self.addCleanup(self.srv.ctx.close)
+        self.srv.ctx.clock = self.clock
+
+    def test_a_second_rejected_credential_is_latched_by_the_fallback(self):
+        self.wrong_password()
+        self.err("n4_connect", station="FakeStation")
+        self.srv.ctx.env = dict(self.env, MCP_N4_PASSWORD="another-wrong-pw")
+        self.assertIn("HTTP 401", self.err("n4_connect", station="FakeStation"))
+        before = self.requests()
+        self.assertIn("authentication failure", self.err("n4_connect", station="FakeStation"))
+        self.assertEqual(self.requests(), before)
+
+
 class TestSessionLatch(LatchCase):
     def setUp(self):
         super().setUp()

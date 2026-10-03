@@ -224,6 +224,50 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified")
         self.assertEqual(self.fake.by_handle[h].child("out").child("value").value, "1.0")
 
+    def test_a_slot_changed_after_the_batch_is_not_overwritten_by_its_rollback(self):
+        # F6 (audit 2026-10-03): compare before restore.
+        nn, h = self.add("Calc", out=1.0)
+        out = self.run_write("n4_set_slot", ord=FOLDER + "/" + nn, slot="out", value=9.0,
+                             value_type="baja:StatusNumeric")
+        self.box.set_slot(h, "out", box.bson_status_numeric(4.0))  # an operator changes it
+        text = self.err("n4_rollback", batch_id=out["batch_id"])
+        self.assertIn("changed since batch", text)
+        self.assertIn("4.0", text)
+        self.assertIn("9.0", text)
+        self.assertEqual(self.fake.by_handle[h].child("out").child("value").value, "4.0")
+        self.assertEqual(self.journal().rollbacks_of(out["batch_id"]), [])
+
+    def test_a_slot_changed_between_dry_run_and_confirm_is_refused_at_confirm(self):
+        nn, h = self.add("Calc", out=1.0)
+        out = self.run_write("n4_set_slot", ord=FOLDER + "/" + nn, slot="out", value=9.0,
+                             value_type="baja:StatusNumeric")
+        plan = self.dry("n4_rollback", batch_id=out["batch_id"])
+        self.box.set_slot(h, "out", box.bson_status_numeric(4.0))
+        text = self.err("n4_rollback", batch_id=out["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("changed since batch", text)
+        self.assertEqual(self.fake.by_handle[h].child("out").child("value").value, "4.0")
+
+    def test_rollback_of_a_nested_status_slot_restores_and_verifies_it(self):
+        nn, h = self.add("Calc", out=1.0)
+        self.box.set_slot(h, "grp", {"nm": "p", "t": "baja:Struct", "s": [
+            dict(box.bson_status_numeric(7.5), n="sp")]})
+        out = self.run_write("n4_set_slot", ord=FOLDER + "/" + nn, slot="grp/sp", value=9.0,
+                             value_type="baja:StatusNumeric")
+        back = self.rollback(out["batch_id"])
+        self.assertEqual(back["verdict"], "verified")
+        self.assertEqual(self.fake.by_handle[h].child("grp").child("sp").child("value").value,
+                         "7.5")
+
+    def test_a_fallback_changed_after_invoke_set_is_not_overwritten(self):
+        nn, h = self.add("Sp", "control:NumericWritable")
+        out = self.run_write("n4_invoke_action", ord=FOLDER + "/" + nn, action="set", arg=7.0,
+                             arg_type="baja:Double")
+        self.box.set_slot(h, "fallback", box.bson_status_numeric(3.0))
+        text = self.err("n4_rollback", batch_id=out["batch_id"])
+        self.assertIn("changed since batch", text)
+        self.assertEqual(self.fake.by_handle[h].child("fallback").child("value").value, "3.0")
+
     def test_rollback_of_a_link_removes_it(self):
         src, _ = self.add("Src", out=1.0)
         tgt, tgt_h = self.add("Tgt")

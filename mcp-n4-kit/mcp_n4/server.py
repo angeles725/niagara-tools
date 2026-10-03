@@ -172,8 +172,8 @@ class Server:
                     raise tools_read.ToolError(block)
             obj = tool.handler(self.ctx, args)
         except box.AuthError as exc:  # a client without the hook still latches here
-            if self.ctx.auth_latch is None:
-                self.ctx.note_auth_failure(exc)
+            # Always (re)latch: a held latch may name other credentials (H2 review R4-001).
+            self.ctx.note_auth_failure(exc)
             return self._tool_error(str(exc))
         except (tools_read.ToolError, box.BoxError, ValueError) as exc:
             return self._tool_error(str(exc))

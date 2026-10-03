@@ -39,10 +39,13 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   per-connect session id; `WriteScope` refuses any `|` after `station:|slot:` (incl. `|h:`), and prefixes are
   validated at startup; `--token-ttl`/`--max-writes` < 1 are refused at startup. Route: inline (parent
   writer, 3 small files + tests). Release: PATCH 0.5.1.
-- [x] **H2 — auth latch (F4)**: `Context.auth_failed` latch set by any `AuthError` (connect, about, get_ord,
+- [x] **H2 — auth latch (F4)**: `Context.auth_latch` latch set by any `AuthError` (connect, about, get_ord,
   BOX); station calls refused until a cooldown (>= 30 s, configurable) or a reconnect; message gives reason
   and remaining cooldown. Release: PATCH.
-- [ ] **H3 — set_slot / rollback correctness (F3, F6, F10)**: nested slot load depth; compare-before-restore on
+- [x] **H2a — fallback latch (H2 review fail-open, anti-cascade sub-task)**: the `Server._call` fallback
+  latches every propagated `AuthError`, also while a latch for other credentials is held; latch state
+  changes go through `Context.use_credentials`. Shipped in the H3 PR.
+- [x] **H3 — set_slot / rollback correctness (F3, F6, F10)**: nested slot load depth; compare-before-restore on
   rollback of set/fallback; clearer "slot not found" for a slot at its type default. Release: PATCH.
 - [ ] **H4 — test debt (F13)**: tests for the untested write branches. Release: PATCH.
 - [ ] **H5 — BQL hardening (F7, F12, output_file)**: duplicate headers kept (`Type`, `Type#2`); inventory
@@ -99,16 +102,37 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   - Observed mutations (each restored): no hook -> the about test fails; gate off -> 4 tests fail; connect
     check off -> 3 tests fail.
   - Release: `mcp_n4.__version__` 0.5.2, skill metadata 0.5.2.
+- H3 (route: inline, branch `fix/mcp-n4-h3-setslot-rollback`; 3 source files, focused edits). RED first — 7
+  tests: hookless client let a second rejected credential retry (`'authentication failure' not found`);
+  nested `grp/sp` planned previous `0.0` instead of `7.5`; the "not found" text had no explanation; rollback
+  overwrote a slot / fallback changed after the batch (x3, incl. a change between dry run and confirm,
+  `KeyError: 'isError'` = executed); nested rollback read-back was `mismatch`. GREEN: 506 tests OK. Decisions:
+  - H2a: unconditional `note_auth_failure` in the `Server._call` fallback (re-latching restarts the
+    cooldown with the failing credentials; the hook path sets the same values).
+  - F3: `_slot_depth(slot) = segments + 1` for the set plan, its read-back and the rollback read-back of `s` ops.
+  - F6: `_unchanged_since` runs in the rollback plan (so again at confirm): every `s` inverse whose slot
+    the batch wrote (`s` op, or `invokeAction set` -> fallback value only) is read and compared; a
+    difference refuses with both values. No override argument: like an in-doubt batch, a changed slot is
+    the operator's decision, restored by hand with `n4_set_slot` (its own dry run + token).
+  - F10: the refusal explains type-default omission and routes to `n4_read_slots` / Workbench / an action.
+  - Observed mutations (each restored): compare call removed -> 3 tests fail; depth fixed at 2 -> 2 fail;
+    conditional fallback latch -> the hookless test fails.
+  - Release: `mcp_n4.__version__` 0.5.3, skill metadata 0.5.3.
 
 ## Parked advisories
 - H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
   `--write-scope` to prove exit 2 (code path exists: `main` catches `SafetyError`); R3-dotdot-prefix-untested —
   the startup prefix test has no `..` case. Candidates for H4 (test debt).
+- H2 review (non-blocking): R3/R4 active-credentials-set-before-login — moot in practice (`n4_connect` closes
+  the old session first, so no older hooked client outlives a failed connect); the attribute is now set via
+  `Context.use_credentials` (R2-private-attr-crossing). R2-task-doc-stale-name fixed (`auth_latch`). The
+  fallback-latch findings (R2/R3/R4) were a fail-open -> H2a.
 
 ## Delivery record
 | Unit | PR | Merge | Version | Review |
 | --- | --- | --- | --- | --- |
 | H1 | #229 | 0487970 | 0.5.1 | medium; 1 lens APPROVED + acknowledged (review-b8c070f2f4a8c38e); 2 advisories parked |
+| H2 | #231 | 0b7c3dd | 0.5.2 | high; 4 lenses APPROVED + acknowledged (review-ce356fee111e83c7); 1 fail-open -> H2a, rest parked |
 
 ## Next step
-- H3 (set_slot / rollback correctness).
+- H4 (test debt F13 + the H1 parked test advisories).

@@ -133,6 +133,10 @@ class Context:
         return hmac.new(self._cred_key, ("%s\0%s" % (user, secret)).encode(),
                         hashlib.sha256).hexdigest()
 
+    def use_credentials(self, fingerprint):
+        """The credentials the next station call goes out with (what a failure latches)."""
+        self._active_credentials = fingerprint
+
     def note_auth_failure(self, exc):
         """Latch: refuse station calls for `auth_cooldown` s after any `AuthError`."""
         self.auth_latch = {"reason": self.scrub(str(exc)),
@@ -241,7 +245,7 @@ def n4_connect(ctx, args):
     block = ctx.auth_block(credentials)
     if block:  # the same credentials just failed: one more try would only near the lock-out
         raise ToolError(block)
-    ctx._active_credentials = credentials
+    ctx.use_credentials(credentials)
     client = ctx.client_factory(ctx.stations[name], user, secret,
                                 insecure_tls=name in ctx.insecure_tls,
                                 allow_http=ctx.allow_http)
