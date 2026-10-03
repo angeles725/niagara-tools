@@ -13,6 +13,7 @@
 # Kit toolbelt: $N4_KIT_TOOLBELT, else `git config n4kit.toolbelt` (set per clone by the installer, never committed).
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
+set -o pipefail   # a git archive failure must not be masked by tar's status
 
 block() { printf 'pre-push: %s\npre-push: push blocked.\n' "$1" >&2; exit "${2:-1}"; }
 

@@ -13,6 +13,7 @@ setup() {
   KIT="$REPO/build-n4-module-kit"
   INSTALLER="$REPO/scripts/install-client-hooks.sh"
   HOOK_TPL="$KIT/templates/client-pre-push"
+  export GIT_CONFIG_GLOBAL="$BATS_TEST_TMPDIR/gitconfig"   # no host global hooksPath leaks in
   CR="$BATS_TEST_TMPDIR/client"
   mkdir -p "$CR"
   git -C "$CR" init -q
@@ -166,4 +167,38 @@ _zero=0000000000000000000000000000000000000000
   grep -q 'split-package-check.sh --strict' "$T"
   grep -qE 'ref: v[0-9]+\.[0-9]+\.[0-9]+' "$T"
   grep -q 'actions/checkout' "$T"
+}
+
+@test "ICH7: active hooks in the default hooks dir are never silently disabled (exit 3, nothing changed) (A142b)" {
+  # Mutation: ICH7 -- dropping the default-hooks scan sets core.hooksPath and silently stops .git/hooks/pre-commit.
+  printf '#!/bin/sh\nexit 0\n' > "$CR/.git/hooks/pre-commit"
+  chmod +x "$CR/.git/hooks/pre-commit"
+  run bash "$INSTALLER" "$CR"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"pre-commit"* ]]
+  [ -z "$(git -C "$CR" config --local --get core.hooksPath || true)" ]
+  [ ! -e "$CR/.githooks/pre-push" ]
+  run bash "$INSTALLER" --force "$CR"
+  [ "$status" -eq 0 ]
+}
+
+@test "ICH8: a GLOBAL core.hooksPath is never silently overridden by the local one (exit 3) (A142b)" {
+  # Mutation: ICH8 -- reading only the local hooksPath lets the install shadow the global hooks directory.
+  export GIT_CONFIG_GLOBAL="$BATS_TEST_TMPDIR/gitconfig"
+  git config --global core.hooksPath "$BATS_TEST_TMPDIR/global-hooks"
+  run bash "$INSTALLER" "$CR"
+  [ "$status" -eq 3 ]
+  [ -z "$(git -C "$CR" config --local --get core.hooksPath || true)" ]
+}
+
+@test "CPH8: a pushed commit that cannot be exported is reported as such and blocked (A142b)" {
+  # Pin (GREEN on the base: tar also fails on an empty stream). pipefail makes a git archive failure win even when tar
+  # would accept a truncated stream.
+  _mod A-rt com.acme.a A
+  _commit one
+  bash "$INSTALLER" "$CR"
+  bogus=1234567890123456789012345678901234567890
+  run bash -c "cd '$CR' && printf 'refs/heads/main %s refs/heads/main %s\n' $bogus $_zero | .githooks/pre-push origin /remote"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"could not be exported"* ]]
 }
