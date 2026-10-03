@@ -49,7 +49,7 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
 - [x] **H3 — set_slot / rollback correctness (F3, F6, F10)**: nested slot load depth; compare-before-restore on
   rollback of set/fallback; clearer "slot not found" for a slot at its type default. Release: PATCH.
 - [x] **H4 — test debt (F13)**: tests for the untested write branches. Release: PATCH.
-- [ ] **H5 — BQL hardening (F7, F12, output_file)**: duplicate headers kept (`Type`, `Type#2`); inventory
+- [x] **H5 — BQL hardening (F7, F12, output_file)**: duplicate headers kept (`Type`, `Type#2`); inventory
   resolves columns by queried slot / position; optional `output_file` for `n4_bql_query` under the state dir.
   Release: MINOR.
 - [ ] **H6 — ergonomics (n4_list_batches, F8, F11)**: read-only `n4_list_batches`; remove-snapshot truncation
@@ -132,6 +132,23 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   - `test_auth_latch` now patches `BoxClient.about` with `mock.patch.object` (README isolation rule).
   - Shuffled order seeds 1, 7, 42: OK. Full suite 513 tests OK.
   - Release: `mcp_n4.__version__` 0.5.4, skill metadata 0.5.4.
+- H5 (route: inline, branch `feat/mcp-n4-h5-bql-hardening`; bql.py + tools_read.py + tests). RED first — 9
+  tests: duplicate `Type,Type` lost a column; no `selected_slots`/`by_position`/`name_positions`; a Spanish
+  header set ("Ruta de slot", "Nombre", "Tipo") gave an inventory with 0 networks/devices and an undecoded
+  name; no `output_file`. GREEN: 522 tests OK. Decisions:
+  - F7: `bql.unique_columns` — a repeated header becomes `Type#2`, `Type#3` (skipping a name already taken).
+  - F12: the select list is ours, so columns are resolved by position: `selected_slots(query)` gives the
+    queried slot names, the `name` column is decoded by position (header fallback for `select *`);
+    `n4_inventory` re-keys each query's rows with `by_position` (a short answer is a ToolError naming the step).
+  - `output_file`: a plain `<name>.csv|.json` under `<state-dir>/bql/` (state dir checked like write mode,
+    dirs 0700, file 0600 `O_EXCL`, never overwritten); validated before any station call; the reply omits
+    `rows`. MINOR release (new argument).
+  - Observed mutations (each restored, `__pycache__` cleared): no de-dup -> duplicate test fails; inventory on
+    raw rows -> localized test fails; name check reduced to non-empty -> path test fails (`/tmp/x.json`
+    would have escaped the state dir); mode 0644 -> private-file test fails.
+  - Shuffled order seeds 1, 7, 42: OK (a first shuffled failure was a stale `.pyc` left by the mode
+    mutation: same size, restored within the same second).
+  - Release: `mcp_n4.__version__` 0.6.0, skill metadata 0.6.0.
 
 ## Parked advisories
 - H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
@@ -146,6 +163,8 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   `_observe` is reported as "changed" without its cause; R2 the dense `seen` expression; R2 the H2a doc
   wording (fixed in H4). R3 invoke-set unchanged path: already covered by
   `test_rollback_of_invoke_set_restores_the_fallback`.
+- H4 review (non-blocking suggestions): R2 `_in_doubt` docstring tells history rather than the contract; R2
+  the `craft` test helper name is opaque; R3 the no-targets test does not assert the station is unchanged.
 
 ## Delivery record
 | Unit | PR | Merge | Version | Review |
@@ -153,6 +172,7 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
 | H1 | #229 | 0487970 | 0.5.1 | medium; 1 lens APPROVED + acknowledged (review-b8c070f2f4a8c38e); 2 advisories parked |
 | H2 | #231 | 0b7c3dd | 0.5.2 | high; 4 lenses APPROVED + acknowledged (review-ce356fee111e83c7); 1 fail-open -> H2a, rest parked |
 | H3 | #232 | 81cdb3b | 0.5.3 | high; 4 lenses APPROVED + acknowledged (review-3bbf4aa80a638470); 4 advisories parked |
+| H4 | #234 | 7e71caa | 0.5.4 | high; 4 lenses APPROVED + acknowledged (review-0a41629cf4f014c9); 3 suggestions parked |
 
 ## Next step
-- H5 (BQL hardening).
+- H6 (n4_list_batches, remove-snapshot truncation warning, --load-wait / --http-timeout).

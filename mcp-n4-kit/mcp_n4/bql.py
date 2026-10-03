@@ -82,13 +82,56 @@ def compose_ord(base, query):
     return "%s%s|bql:%s|%s" % (STATION_SLOT, base_slot(base), validate_query(query), VIEW)
 
 
-def parse_csv(text, max_rows=DEFAULT_MAX_ROWS):
-    """`(columns, rows, truncated)` from an ITableToCsv body; rows are dicts by column."""
-    reader = csv.reader(io.StringIO(text.lstrip("﻿"), newline=""))
+_SELECT_LIST = re.compile(r"select\s+(.*?)\s+from\s", re.I | re.S)
+
+
+def selected_slots(query):
+    """The queried slot names in order (`select slotPath, name from ...`), None for `*`.
+
+    The CSV headers are the station's DISPLAY names, which a localized station translates
+    (audit 2026-10-03 F12); the select list is ours, so it names columns by position.
+    """
+    match = _SELECT_LIST.match(query.strip())
+    if not match:
+        return None
+    names = [part.strip() for part in match.group(1).split(",")]
+    return None if any(n == "*" or not n for n in names) else names
+
+
+def unique_columns(header):
+    """Header names made unique: a repeated `Type` becomes `Type#2`, `Type#3`, ... (F7)."""
+    columns, seen = [], set()
+    for name in header:
+        unique, n = name, 2
+        while unique in seen:
+            unique, n = "%s#%d" % (name, n), n + 1
+        seen.add(unique)
+        columns.append(unique)
+    return columns
+
+
+def by_position(columns, rows, names):
+    """Rows re-keyed by `names`, one per leading column (header text is not trusted)."""
+    if len(columns) < len(names):
+        raise ValueError("the BQL answer has %d column(s), expected at least %d (%s)"
+                         % (len(columns), len(names), ", ".join(names)))
+    return [{name: row.get(col, "") for name, col in zip(names, columns)} for row in rows]
+
+
+def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
+    """`(columns, rows, truncated)` from an ITableToCsv body; rows are dicts by column.
+
+    Repeated headers are made unique (`unique_columns`). The slot-name cells to decode are
+    the columns at `name_positions` (from the query's select list) or, without it, the
+    columns whose header is in `NAME_COLUMNS`.
+    """
+    reader = csv.reader(io.StringIO(text.lstrip("\ufeff"), newline=""))
     header = next(reader, None)
     if not header:
         return [], [], False
-    columns = [strip_control(h).strip() for h in header]
+    columns = unique_columns([strip_control(h).strip() for h in header])
+    decode = set(name_positions) if name_positions is not None else \
+        {i for i, col in enumerate(columns) if col in NAME_COLUMNS}
     rows, truncated = [], False
     for record in reader:
         if not record:
@@ -99,7 +142,7 @@ def parse_csv(text, max_rows=DEFAULT_MAX_ROWS):
         row = {}
         for i, col in enumerate(columns):
             cell = strip_control(record[i]) if i < len(record) else ""
-            row[col] = unescape_slot(cell) if col in NAME_COLUMNS else cell
+            row[col] = unescape_slot(cell) if i in decode else cell
         rows.append(row)
     return columns, rows, truncated
 

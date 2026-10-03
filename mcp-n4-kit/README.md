@@ -149,6 +149,11 @@ For an inventory, use `n4_inventory` (networks, devices and points under `/Drive
 network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_query` first.
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
 The query must be one `select`, `|` is refused, and rows are capped (default 5000).
+CSV headers are the station's display names, which a localized station translates: the
+queried `name` column is decoded by its position in the select list, `n4_inventory` reads its
+columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
+`output_file: "<name>.csv|.json"`, `n4_bql_query` writes the rows to `<state-dir>/bql/<name>`
+(directory 0700, file 0600, never overwritten) and replies without `rows`.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types plus the path to them, each kept entry marked `matched`.

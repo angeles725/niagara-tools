@@ -2,6 +2,7 @@
 
 The CSV fixtures under tests/fixtures/ are recorded station output, anonymized.
 """
+import csv
 import io
 import json
 import os
@@ -130,6 +131,43 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual((meter["network"], meter["points"]), ("ModbusTcpNetwork", 2))
         empty = [n for n in inv["networks"] if n["network"] == "NiagaraNetwork"][0]
         self.assertEqual((empty["field_devices"], empty["points"]), (0, 0))
+
+
+class TestHeaderRobustness(unittest.TestCase):
+    """Audit 2026-10-03 F7 (duplicate headers) and F12 (localized headers)."""
+
+    def test_duplicate_headers_keep_every_column(self):
+        columns, rows, _ = bql.parse_csv("Type,Type,Type#2,Type\nA,B,C,D\n")
+        self.assertEqual(columns, ["Type", "Type#2", "Type#2#2", "Type#3"])
+        self.assertEqual(rows, [{"Type": "A", "Type#2": "B", "Type#2#2": "C", "Type#3": "D"}])
+
+    def test_selected_slots_name_the_queried_columns_in_order(self):
+        self.assertEqual(bql.selected_slots("select slotPath, name ,type from driver:Device"),
+                         ["slotPath", "name", "type"])
+        self.assertEqual(bql.selected_slots("SELECT proxyExt.dataAddress FROM x where a = 1"),
+                         ["proxyExt.dataAddress"])
+        self.assertIsNone(bql.selected_slots("select * from driver:Device"))
+
+    def test_the_name_column_is_decoded_by_position_whatever_its_header(self):
+        columns, rows, _ = bql.parse_csv("Ruta,Nombre\nslot:/A$20B,A$20B\n",
+                                         name_positions=[1])
+        self.assertEqual(rows, [{"Ruta": "slot:/A$20B", "Nombre": "A B"}])
+
+    def test_by_position_maps_rows_to_the_queried_slot_names(self):
+        columns = ["Ruta", "Nombre", "Tipo"]
+        rows = [{"Ruta": "slot:/D/N", "Nombre": "N", "Tipo": "x:Net"}]
+        self.assertEqual(bql.by_position(columns, rows, ["Slot Path", "Name", "Type"]),
+                         [{"Slot Path": "slot:/D/N", "Name": "N", "Type": "x:Net"}])
+        with self.assertRaisesRegex(ValueError, "2 column.*at least 3"):
+            bql.by_position(columns[:2], rows, ["Slot Path", "Name", "Type"])
+
+
+def localized(name):
+    """A fixture with Spanish display headers (the station localizes them)."""
+    head, _, rest = fixture(name).partition(b"\n")
+    head = head.replace(b"Slot Path", b"Ruta de slot").replace(b"Name", b"Nombre") \
+        .replace(b"Type", b"Tipo").replace(b"Out", b"Salida")
+    return head + b"\n" + rest
 
 
 class BqlToolCase(unittest.TestCase):
@@ -265,6 +303,69 @@ class TestInventoryTool(BqlToolCase):
     def test_server_flag_sets_the_progress_file(self):
         args = server.parse_args(["--progress-file", "/x/p.jsonl"])
         self.assertEqual(args.progress_file, "/x/p.jsonl")
+
+
+class TestLocalizedHeaders(BqlToolCase):
+    def setUp(self):
+        super().setUp()
+        self.opener.routes = [("driver:DeviceNetwork", localized("bql_networks.csv")),
+                              ("driver:Device", localized("bql_devices.csv")),
+                              ("control:ControlPoint", localized("bql_points.csv"))]
+
+    def test_inventory_does_not_depend_on_english_headers(self):
+        out = self.ok("n4_inventory")
+        self.assertEqual((out["totals"]["field_devices"], out["totals"]["local_devices"],
+                          out["totals"]["points"], out["totals"]["unassigned_points"]),
+                         (4, 1, 5, 0))
+        self.assertIn("Meter A", [d["name"] for d in out["devices"]])
+
+    def test_bql_query_decodes_the_queried_name_column(self):
+        out = self.ok("n4_bql_query", base="/Drivers",
+                      query="select slotPath, name, type from driver:Device")
+        self.assertEqual(out["columns"], ["Ruta de slot", "Nombre", "Tipo"])
+        self.assertIn("Meter A", [r["Nombre"] for r in out["rows"]])
+        self.assertIn("slot:/Drivers/ModbusTcpNetwork/Meter$20A",
+                      [r["Ruta de slot"] for r in out["rows"]])
+
+
+class TestBqlOutputFile(BqlToolCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.state = os.path.join(self.tmp.name, "state")
+        super().setUp(state_dir=self.state)
+
+    def test_rows_go_to_a_private_file_under_the_state_dir_not_into_the_reply(self):
+        out = self.ok("n4_bql_query", base="/Drivers", output_file="devices.json",
+                      query="select slotPath, name, type from driver:Device")
+        path = os.path.join(self.state, "bql", "devices.json")
+        self.assertEqual(out["output_file"], path)
+        self.assertNotIn("rows", out)
+        self.assertEqual(out["row_count"], 5)
+        self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
+        self.assertEqual(os.stat(os.path.dirname(path)).st_mode & 0o777, 0o700)
+        with open(path) as fh:
+            saved = json.load(fh)
+        self.assertEqual((saved["columns"], len(saved["rows"])), (["Slot Path", "Name", "Type"], 5))
+
+    def test_a_csv_output_file_keeps_the_columns_in_order(self):
+        self.ok("n4_bql_query", base="/Drivers", output_file="devices.csv",
+                query="select slotPath, name, type from driver:Device")
+        with open(os.path.join(self.state, "bql", "devices.csv"), newline="") as fh:
+            lines = list(csv.reader(fh))
+        self.assertEqual(lines[0], ["Slot Path", "Name", "Type"])
+        self.assertEqual(len(lines), 6)
+
+    def test_a_path_or_an_existing_file_is_refused_and_nothing_is_read(self):
+        for bad in ("../x.json", "a/b.json", "/tmp/x.json", "x.txt", ".hidden.json", ""):
+            self.assertIn("output_file", self.err(
+                "n4_bql_query", base="/Drivers", output_file=bad,
+                query="select name from driver:Device"), bad)
+        self.assertEqual(self.opener.requests, [])
+        self.ok("n4_bql_query", base="/Drivers", output_file="d.json",
+                query="select name from driver:Device")
+        self.assertIn("exists", self.err("n4_bql_query", base="/Drivers", output_file="d.json",
+                                         query="select name from driver:Device"))
 
 
 if __name__ == "__main__":

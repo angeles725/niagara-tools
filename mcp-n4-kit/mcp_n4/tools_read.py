@@ -2,11 +2,13 @@
 
 Importing this module has no side effects.
 """
+import csv
 import hashlib
 import hmac
 import json
 import math
 import os
+import re
 import secrets
 import time
 import uuid
@@ -524,18 +526,70 @@ def _bql(ctx, base, query, max_rows, timeout):
     start = ctx.clock()
     text, cut = ctx.session.client.get_ord(ord_text, timeout=timeout,
                                            max_bytes=bql.MAX_RESPONSE_BYTES)
-    columns, rows, capped = bql.parse_csv(text, max_rows)
+    slots = bql.selected_slots(query)  # localized headers: decode `name` by position (F12)
+    positions = None if slots is None else [i for i, n in enumerate(slots)
+                                             if n.lower() == "name"]
+    columns, rows, capped = bql.parse_csv(text, max_rows, name_positions=positions)
     return columns, rows, cut or capped, int(round((ctx.clock() - start) * 1000))
+
+
+#: `output_file` of n4_bql_query: a plain file name with a .csv or .json extension.
+_OUTPUT_FILE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(csv|json)")
+
+
+def _output_path(ctx, name):
+    """`<state-dir>/bql/<name>` for a plain new file name, else ToolError (nothing read)."""
+    if not isinstance(name, str) or not _OUTPUT_FILE.fullmatch(name) or ".." in name:
+        raise ToolError("output_file must be a plain file name ending in .csv or .json "
+                        "(letters, digits, '.', '_', '-'), written under <state-dir>/bql/; "
+                        "got %r" % (name,))
+    state_dir = ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR)
+    try:
+        safety.check_state_dir(state_dir)
+    except safety.SafetyError as exc:
+        raise ToolError(str(exc)) from None
+    path = os.path.join(state_dir, "bql", name)
+    if os.path.lexists(path):
+        raise ToolError("output_file %s already exists: choose another name (the server "
+                        "never overwrites a result file)" % path)
+    return path
+
+
+def _write_output(path, base, query, columns, rows):
+    """Write the result privately (dirs 0700, file 0600, never over an existing file)."""
+    for directory in (os.path.dirname(os.path.dirname(path)), os.path.dirname(path)):
+        if not os.path.isdir(directory):
+            os.makedirs(directory, mode=0o700, exist_ok=True)
+            os.chmod(directory, 0o700)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+        if path.endswith(".csv"):
+            writer = csv.writer(fh)
+            writer.writerow(columns)
+            writer.writerows([row.get(c, "") for c in columns] for row in rows)
+        else:
+            json.dump({"base": base, "query": query, "columns": columns, "rows": rows}, fh)
 
 
 def n4_bql_query(ctx, args):
     base = args.get("base", "station:|slot:/")
+    path = _output_path(ctx, args["output_file"]) if "output_file" in args else None
     columns, rows, truncated, elapsed = _bql(
         ctx, base, args["query"], args.get("max_rows", bql.DEFAULT_MAX_ROWS),
         args.get("timeout_s", 60))
     _record_read(ctx, "n4_bql_query", args, len(rows))
-    return {"base": base, "query": args["query"].strip(), "columns": columns, "rows": rows,
-            "row_count": len(rows), "truncated": truncated, "elapsed_ms": elapsed}
+    out = {"base": base, "query": args["query"].strip(), "columns": columns,
+           "row_count": len(rows), "truncated": truncated, "elapsed_ms": elapsed}
+    if path is None:
+        out["rows"] = rows
+        return out
+    try:
+        _write_output(path, base, out["query"], columns, rows)
+    except OSError as exc:
+        raise ToolError("output_file %s could not be written (%s)"
+                        % (path, exc.strerror or type(exc).__name__)) from None
+    out["output_file"] = path
+    return out
 
 
 INVENTORY_QUERIES = (
@@ -543,19 +597,26 @@ INVENTORY_QUERIES = (
     ("devices", "select slotPath, name, type from driver:Device"),
     ("points", "select slotPath, name, type, out from control:ControlPoint"),
 )
+#: The keys `bql.summarize_inventory` reads, in the order every inventory query selects them.
+INVENTORY_COLUMNS = ("Slot Path", "Name", "Type")
 
 
 def n4_inventory(ctx, args):
     base = args.get("base", "station:|slot:/Drivers")
     max_rows, timeout = args.get("max_rows", bql.DEFAULT_MAX_ROWS), args.get("timeout_s", 60)
     results, progress, truncated, total = {}, [], False, 0
+    keyed = {}
     for step, query in INVENTORY_QUERIES:
-        _, rows, cut, elapsed = _bql(ctx, base, query, max_rows, timeout)
+        columns, rows, cut, elapsed = _bql(ctx, base, query, max_rows, timeout)
         results[step], truncated, total = rows, truncated or cut, total + elapsed
         _progress(ctx, "n4_inventory", step, len(rows), elapsed, progress)
+        try:  # by the queried slot's position: headers are localized display names (F12)
+            keyed[step] = bql.by_position(columns, rows, INVENTORY_COLUMNS)
+        except ValueError as exc:
+            raise ToolError("%s query: %s" % (step, exc)) from None
     try:
-        out = bql.summarize_inventory(base, results["networks"], results["devices"],
-                                      results["points"])
+        out = bql.summarize_inventory(base, keyed["networks"], keyed["devices"],
+                                      keyed["points"])
     except ValueError as exc:
         raise ToolError(str(exc)) from None
     _record_read(ctx, "n4_inventory", args, sum(len(r) for r in results.values()))
@@ -636,15 +697,19 @@ TOOLS = [
          "usually under a second, where a navigate crawl costs one round trip per "
          "component). Use it FIRST for any inventory. Only 'select <cols> from <type> "
          "[where ...]' is accepted; '|' is refused. Columns are the station's display "
-         "headers (e.g. 'Slot Path', 'Name'); 'Name' is decoded ($20 -> space), 'Slot Path' "
-         "stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. "
+         "headers (e.g. 'Slot Path', 'Name'; a localized station translates them, a repeated "
+         "header becomes 'Type#2'); the queried name column is decoded ($20 -> space), "
+         "'Slot Path' stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. "
          "proxyExt.dataAddress. Rows are capped (truncated=true when cut).",
          _schema({"base": _str("Subtree ORD or slot path, e.g. station:|slot:/Drivers "
                                "(default: the station root)"),
                   "query": _str("select <columns> from <type> [where ...], e.g. select "
                                 "slotPath, name, out from control:ControlPoint"),
                   "max_rows": _int("Row cap", 1, bql.MAX_ROWS_LIMIT, bql.DEFAULT_MAX_ROWS),
-                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60)},
+                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60),
+                  "output_file": _str("Optional plain file name (.csv or .json): the rows go "
+                                      "to <state-dir>/bql/<name> (0600, never overwritten) "
+                                      "instead of the reply")},
                  ["query"]),
          n4_bql_query),
     Tool("n4_inventory",
