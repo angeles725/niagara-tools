@@ -17,8 +17,10 @@
 #               operator actions both land in one) or a servlet write handler doPost/doPut/doDelete/doPatch; the
 #               read handlers doGet/doHead/doOptions/doTrace are excluded.
 #   Acts      — the callback body has a statement other than a `super.<name>(…);` call or a bare `return;`.
-#   Gated     — the callback body calls isOperational(, isFault( or isFatalFault(. A gate in a helper the callback
-#               calls is NOT followed (one row the reviewer clears by moving the gate up — WARN, never FAIL).
+#   Gated     — the callback's FIRST statement (after any super.<name>(…); call) calls isOperational(, isFault( or
+#               isFatalFault( unqualified or on `this.`: a check after the acting statements, or another object's
+#               x.isOperational(), does not gate this class. A gate in a helper the callback calls is NOT followed
+#               (one row the reviewer clears by moving the gate up — WARN, never FAIL).
 #   Overlap   — none with lint-status-parity (config/status slot ratio) or lint-silent-protection (a protection trip
 #               with no operator surface): neither reads getLicenseFeature() or the operational gate.
 #
@@ -29,6 +31,8 @@
 # Mutation: LIG1 -- dropping the gate check WARNs a callback that returns early on !isOperational()
 # Mutation: LIG2 -- treating `return null;` as a license feature WARNs an unlicensed service
 # Mutation: LIG3 -- counting a super.changed() call as acting WARNs a callback that only delegates
+# Mutation: LIG8 -- accepting a gate anywhere in the body passes a callback that acts before it checks
+# Mutation: LIG9 -- accepting a qualified call passes child.isOperational() as this service's gate
 # Mutation: LIG-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LIG-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
@@ -97,14 +101,19 @@ END {
     if (m != "changed" && m !~ /^do[A-Z]/) continue
     if (m ~ /^do(Get|Head|Options|Trace)$/) continue
     b = block_body(ms[k], n)
-    if (b ~ /isOperational[[:space:]]*\(|isFault[[:space:]]*\(|isFatalFault[[:space:]]*\(/) continue
-    # acts? drop super.<name>(...); and bare return; then look for any remaining statement text
+    # drop super.<name>(...); calls, then the gate must open the callback: an UNQUALIFIED (or this.) gate call in
+    # the first statement (`if (!isOperational()) return;` / `if (isOperational()) {`). A check placed after the
+    # acting statements, or another object's x.isOperational(), is not this class's gate.
     t = b
     gsub(/super\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([^;]*\)[[:space:]]*;/, "", t)
+    head = t; sub(/^[[:space:]]+/, "", head)
+    if (match(head, /[{;]/)) head = substr(head, 1, RSTART)
+    if (head ~ /(^|[^A-Za-z0-9_.])(this\.)?(isOperational|isFault|isFatalFault)[[:space:]]*\(/) continue
+    # acts? drop a bare return; then look for any remaining statement text
     gsub(/return[[:space:]]*;/, "", t)
     gsub(/[[:space:]]/, "", t)
     if (t == "") continue
-    printf "WARN  lint-license-isoperational-gate  %s:%d  licensed class: %s() acts with no isOperational()/isFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)\n", FILE, ms[k], m
+    printf "WARN  lint-license-isoperational-gate  %s:%d  licensed class: %s() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)\n", FILE, ms[k], m
   }
 }
 AWKEOF

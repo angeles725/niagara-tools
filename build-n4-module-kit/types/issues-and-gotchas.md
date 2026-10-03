@@ -422,10 +422,14 @@ reaches `BComplex.set`, which dereferences `value.getSlotMap()` and NPEs when `v
 that one is about `BOrdFE` falling back to the file-system chooser on a null value; this one is a
 runtime `set()` NPE, unrelated to any field editor.
 
-**Lint candidate `lint-set-null-ord`** (a `setXxxOrd(getSlotPathOrd())` / `set(<ordProp>, <expr
-that can be null>)` call with no null guard) was evaluated and **DEFERRED, not implemented** —
-see `BUILD-STATE.md` kit open_issue. Check for overlap with `lint-null-context-write` (§1.1 of
-`types/security.md` — that lint targets a null *Context*, not a null *value*) before implementing.
+**Lint:** `toolbelt/lint-set-null-ord.sh` (advisory WARN, run by `report-module.sh`) flags, within one method, a
+`getSlotPathOrd()` call passed straight as a `set…(…)` argument (SNO1) and a local assigned from `getSlotPathOrd()`
+that reaches a `set…(…)` argument with no `== null` / `!= null` / `.isNull()` / `requireNonNull` check in between
+(SNO2). It does not overlap `lint-null-context-write` (§1.1 of `types/security.md`): that lint targets a null
+*Context*, this one a null *value*. Tridium's own importers pass `getSlotPathOrd()` straight to setters where the
+component is already mounted, so a row is a question ("can this component be unmounted here?"), never a FAIL.
+[ev: code javax/baja/sys/BComponent.java:321-324] [ev: code javax/baja/sys/BComplex.java:386-390]
+[ev: retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ1]
 
 [ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
 **Kit coverage: this entry (FOLDED); lint DEFERRED**

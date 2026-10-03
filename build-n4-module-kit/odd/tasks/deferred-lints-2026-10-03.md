@@ -58,7 +58,12 @@ traceable to the close retro, #226 or #142.
       Route: folded into the D3 PR.
 - [x] D3 · `lint-license-isoperational-gate.sh` — a licensed class acting in `changed()`/timer/servlet-write callbacks
       without an `isOperational()`/`isFault()` gate. Route: inline.
-- [ ] D4 · `lint-set-null-ord.sh` — a `setXxxOrd(getSlotPathOrd())` / ORD `set(...)` with no null guard.
+- [x] D3b · D3 review fail-open (posted on #226) — R3-002: a gate call anywhere in the callback body counted, including a
+      check after the acting statements and another object's `x.isOperational()` → the gate must be unqualified (or
+      `this.`) in the callback's first statement; with it (same helper / same lint): the `advisory_member` ERROR reason
+      skips the member's own WARN/FAIL/ADVISORY rows (R4/R2/R3-001), the row names isFatalFault() too (R2), LIG3/4/6
+      assert the exit status (R3-003). Route: folded into the D4 PR.
+- [x] D4 · `lint-set-null-ord.sh` — a `setXxxOrd(getSlotPathOrd())` / ORD `set(...)` with no null guard. Route: inline.
 - [ ] D5 · #142 `split-package-check.sh` — project-level check: one Java package declared in two modules.
 - [ ] D6 · close — release v0.31.0 (VERSION, CHANGELOG, tag on the confirmed merge SHA), skill reinstall + drift
       check, feature retro, this doc COMPLETE.
@@ -164,6 +169,34 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
     shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
     `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
     `--check` fresh (new row, Auto yes).
+  - Commit eeb488c, PR #237, merge d551090. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-0a160c9b2c00cbe3, authority burned. 6 informational findings posted on #226: R3-002 (gate anywhere /
+    qualified) → D3b; R4/R2/R3-001 (ERROR reason may be a WARN row), R2 (row omits isFatalFault), R3-003 (status
+    asserts) → folded into D3b.
+- 2026-10-03 D4 + D3b (branch `feat/dl-d4-set-null-ord`, from `origin/main` d551090). Route: inline.
+  Design (scope = one method from `mb_parse`, comments blanked): SNO1 — `set<Name>(… x.getSlotPathOrd())` where the call
+  is itself an argument (followed by `,` or `)`), guarded by a `getSlotPathOrd() == / != null` compare on that line or
+  earlier in the method; SNO2 — `v = …getSlotPathOrd();` then `set…(` with `v` as an argument, unless `v == null`,
+  `v != null`, `null == v`, `v.isNull()` or `requireNonNull(v` appears from the assignment to the call (a ternary on
+  the call line counts). Out of scope (false negatives): values carried through a field, a return or another method.
+  Overlap check: `lint-null-context-write` flags a null CONTEXT argument, not a null value. Evidence (decompiled):
+  `BComponent.java:321-324` (`getSlotPathOrd()` returns null when `getSlotPath()` is null), `ComponentSlotMap.java:
+  171-173` (null when the component has no space), `BComplex.java:386-390` (`set` dereferences `value.getSlotMap()`).
+  - RED: SNO1-SNO4, SNO-awkfail, SNO-finderr not ok (tool absent); LIG8, LIG9, LIG10 not ok; RM54, RM55 not ok.
+  - Found while proving SNO2-scope: the first draft missed a local passed as the ONLY setter argument
+    (`setTargetOrd(ord)`): the argument pattern needed a separator before the name. Pinned by SNO2-single (RED, then
+    GREEN), after which the SNO2-scope mutation bites.
+  - GREEN: `bats tests/lint-set-null-ord.bats tests/lint-license-isoperational-gate.bats` all ok; RM49-RM55 ok.
+  - Observed mutations (restored byte-identical, `cmp`): direct rule off → SNO1 not ok; guard ignored → SNO2-guard not
+    ok; locals carried across methods → SNO2-scope not ok; awk status ignored → SNO-awkfail not ok; find status ignored
+    → SNO-finderr not ok; gate anywhere in the body → LIG8 not ok; qualified gate accepted → LIG9 not ok; first output
+    line as the reason → RM55 not ok.
+  - Smoke on decompiled vendor modules (read only, 334 files that call getSlotPathOrd()): 81 SNO1 rows, mostly
+    Tridium importers passing a just-resolved point's ORD straight to a setter; advisory, as documented in §H3.
+  - `bats tests/*.bats` (serial): 1025 ok / 0 not ok (67 env skips), count 1025. mcp-n4-kit unittest: 522 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
+    `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0; gen-lint-index
+    `--check` fresh (new row, Auto yes).
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
@@ -180,6 +213,7 @@ Non-blocking review advisories parked under the anti-cascade policy (posted on #
 | D1 | #230 | 49185d4 | APPROVED, 4 lenses, review-d02202bd55feff67 |
 | D1b | #233 | ea3b784 | APPROVED, 4 lenses, review-5056c52c4e0fbe6c |
 | D2 + D1c | #235 | a3a9b67 | APPROVED, 4 lenses, review-a13efee4322f36c9 |
+| D3 + D2b | #237 | d551090 | APPROVED, 4 lenses, review-0a160c9b2c00cbe3 |
 
 ## Next step
-D3 review + merge, then D4.
+D4 review + merge, then D5.
