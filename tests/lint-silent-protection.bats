@@ -365,3 +365,17 @@ JAVA
   [[ "$output" != *"console-only"* ]]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "SP-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: SP-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$S/com/x/locked"
+  printf 'class A {}\n' > "$S/com/x/A.java"
+  printf 'class B {}\n' > "$S/com/x/locked/B.java"
+  chmod 000 "$S/com/x/locked"
+  if [ -r "$S/com/x/locked" ]; then chmod 755 "$S/com/x/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$LSP" "$S"
+  chmod 755 "$S/com/x/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

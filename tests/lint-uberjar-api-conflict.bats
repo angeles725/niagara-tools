@@ -20,3 +20,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [[ "$output" == *"WARN"* ]]; [[ "$output" == *"jackson-core"* ]]
   # Named mutation: skip the comm -12 intersection -> UAC2 WARN vanishes.
 }
+
+@test "UAC-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: UAC-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/M/locked"
+  printf '%s\n' 'x' > "$TMPDIR_T/M/locked/build.gradle.kts"
+  chmod 000 "$TMPDIR_T/M/locked"
+  if [ -r "$TMPDIR_T/M/locked" ]; then chmod 755 "$TMPDIR_T/M/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$L" "$TMPDIR_T/M"
+  chmod 755 "$TMPDIR_T/M/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

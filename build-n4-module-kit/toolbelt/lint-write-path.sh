@@ -33,7 +33,7 @@
 #   Row format:  FAIL  lint-write-path  <module>  slot <name>: no matrix row
 #                WARN  lint-write-path  <file>:<line>  write handler <method>: no audit call
 #   Error format: lint-write-path  ERROR  <module-root>  <reason>
-#   Exits: 0 all covered (STALE/DRIFT/audit WARN advisory) · 1 any uncovered, or any STALE/DRIFT/audit WARN under --strict · 3 usage/env/missing-matrix (K20)
+#   Exits: 0 all covered (STALE/DRIFT/audit WARN advisory) · 1 any uncovered, or any STALE/DRIFT/audit WARN under --strict · 3 usage/env/missing-matrix or a sub-directory find cannot enter (K20)
 #
 # A comment mention of a slot name does NOT satisfy the matrix row requirement (R19.3).
 # Dot-directories pruned (D9b). VCS-free by design.
@@ -45,6 +45,8 @@
 # Mutation: WP-audit -- drops the audit-call WARN, so a servlet write handler that never records the write passes
 # Mutation: WP-audit-ok -- drops the audit-call search, so an audited handler gets a false WARN
 # Mutation: WP-audit-str-ok -- strips comments without tracking string literals, so "*/*" hides the audit call
+# Mutation: WP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports the slot covered
+# Mutation: WP-finderr-matrix -- ignoring the matrix-root find status drops names from the covered set
 set -u
 
 FAILED=0
@@ -109,6 +111,22 @@ if [ ! -d "$MODULE_ROOT" ]; then
     exit 3
 fi
 
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# list_java <out> <root> [--prune <name>]... — fail-closed walk: a sub-directory find cannot
+# enter is an ERROR row + exit 3, never a shorter file list (a skipped file hides its slots).
+list_java() {
+    local out="$1" root="$2"
+    shift 2
+    if ! scan_files "$out" "$_TMP/find.err" "$root" "$@" -name '*.java'; then
+        printf 'lint-write-path  ERROR  %s  cannot list every file under %s: %s\n' \
+            "$MODULE_ROOT" "$root" "$(head -n 1 "$_TMP/find.err")"
+        exit 3
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Matrix resolution: --matrix override, or walk up to find docs/write-path-matrix.md.
 # "Found" means the file exists AND has at least one table row (line starting with |).
@@ -171,10 +189,8 @@ MATRIX_ROOT="$(dirname "$(dirname "$MATRIX")")"
 # Multi-line annotations put name = "X" on its own line — match the field,
 # not @Niagara… on the same line.  NOT the per-module OPERATOR-only scanner.
 # ---------------------------------------------------------------------------
-_all_matrix_java=$(find "$MATRIX_ROOT" \
-    -type d \( -name '.*' -o -name 'build' \) -prune \
-    -o -name '*.java' -print \
-    2>/dev/null)
+list_java "$_TMP/matrix-java" "$MATRIX_ROOT" --prune build
+_all_matrix_java=$(cat "$_TMP/matrix-java")
 _covered_names=""
 if [ -n "$_all_matrix_java" ]; then
     _covered_names=$(printf '%s\n' "$_all_matrix_java" | \
@@ -405,10 +421,8 @@ for _scan_name in "${_SCAN_NAMES[@]}"; do
     _idx=$(( _idx + 1 ))
 
     # Collect OPERATOR slots from this profile's src/.
-    _java_files=$(find "$_scan_src" \
-        -type d -name '.*' -prune \
-        -o -name '*.java' -print \
-        2>/dev/null | sort)
+    list_java "$_TMP/src.$_idx" "$_scan_src"
+    _java_files=$(cat "$_TMP/src.$_idx")
 
     if [ -n "$_java_files" ]; then
         # shellcheck disable=SC2016
@@ -441,7 +455,9 @@ done
 # Audit-call pass (WARN, advisory; --strict promotes). File scope: a file that declares a servlet
 # write handler must contain an audit-recording call. [ev: retro servlet-write-audit Δ2]
 # ---------------------------------------------------------------------------
+_idx=0
 for _scan_src in "${_SCAN_SRCS[@]}"; do
+    _idx=$(( _idx + 1 ))
     while IFS= read -r _jf; do
         [ -n "$_jf" ] || continue
         _arow=$(awk -v FILE="$_jf" '
@@ -484,7 +500,7 @@ for _scan_src in "${_SCAN_SRCS[@]}"; do
             printf '%s\n' "$_arow"
             AUDIT=1
         fi
-    done < <(find "$_scan_src" -type d -name '.*' -prune -o -name '*.java' -print 2>/dev/null | sort)
+    done < "$_TMP/src.$_idx"
 done
 
 # ---------------------------------------------------------------------------

@@ -145,7 +145,7 @@ _mklint() {
   # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
   run grep -F '| `toolbelt/lint-write-path.sh` |' "$KIT/toolbelt/INDEX.md"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"under --strict · 3 usage/env/missing-matrix (K20) |"* ]]
+  [[ "$output" == *"under --strict · 3 usage/env/missing-matrix or a sub-directory find cannot enter (K20) |"* ]]
 }
 
 # polish-2026-10-02 P4 (#199 WU0 / WU0b): the Auto column matches a real invocation, every Usage/Exit

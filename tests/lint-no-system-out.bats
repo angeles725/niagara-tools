@@ -63,3 +63,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$NSO" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
 }
+
+@test "NSO-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: NSO-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod/src/com/x/locked"
+  printf '%s\n' 'class A {}' > "$TMPDIR_T/Mod/src/com/x/locked/A.java"
+  chmod 000 "$TMPDIR_T/Mod/src/com/x/locked"
+  if [ -r "$TMPDIR_T/Mod/src/com/x/locked" ]; then chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$NSO" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/src/com/x/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

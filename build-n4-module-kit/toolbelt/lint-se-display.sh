@@ -9,9 +9,10 @@
 #
 # Usage:  lint-se-display.sh <se-src-root>     (a -se profile source tree)
 #   Row:  FAIL  lint-se-display  <file>:<line>  display class: <source>
-#   Exit: 0  clean · 1  any FAIL · 3  usage/env
+#   Exit: 0  clean · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: SED2 -- drop the JFrame import case and SED2 stops flagging a display import
+# Mutation: SED-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -24,6 +25,17 @@ ROOT="$1"
 if [ ! -d "$ROOT" ]; then
     printf 'lint-se-display: not a directory: %s\n' "$ROOT" >&2
     exit 3
+fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+had_err=0
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
+    printf 'lint-se-display: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+    had_err=1
 fi
 
 fail=0
@@ -43,6 +55,7 @@ while IFS= read -r f; do
                 ;;
         esac
     done < "$f"
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print 2>/dev/null)
+done < "$_TMP/files"
 
+[ "$had_err" -eq 0 ] || exit 3
 exit "$fail"

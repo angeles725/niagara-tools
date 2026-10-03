@@ -27,3 +27,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
     > "$TMPDIR_T/M/Mod-rt/module-include.xml"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 1 ]; [[ "$output" == *"FAIL"* ]]
 }
+
+@test "AOS-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: AOS-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/M/Mod-rt/locked"
+  printf '%s\n' '<on type="Bad"/>' > "$TMPDIR_T/M/Mod-rt/locked/module-include.xml"
+  chmod 000 "$TMPDIR_T/M/Mod-rt/locked"
+  if [ -r "$TMPDIR_T/M/Mod-rt/locked" ]; then chmod 755 "$TMPDIR_T/M/Mod-rt/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$L" "$TMPDIR_T/M"
+  chmod 755 "$TMPDIR_T/M/Mod-rt/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

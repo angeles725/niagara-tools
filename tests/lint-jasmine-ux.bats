@@ -37,3 +37,17 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "JUX-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: JUX-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod-ux/src/rc"
+  mkdir -p "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked"
+  printf '%s\n' 'x' > "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked/a.js"
+  chmod 000 "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked"
+  if [ -r "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked" ]; then chmod 755 "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$JUX" "$TMPDIR_T/Mod-ux"
+  chmod 755 "$TMPDIR_T/Mod-ux/srcTest/rc/spec/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

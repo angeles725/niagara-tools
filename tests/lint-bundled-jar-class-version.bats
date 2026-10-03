@@ -73,3 +73,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
     [ "$status" -eq 0 ]
     [[ "$output" != *"FAIL"* ]]
 }
+
+@test "BJCV-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
+  # Mutation: BJCV-finderr -- ignoring the find exit status skips the unreadable directory's files and exits 0.
+  # [ev: issue #226 R3-find-error-still-fail-open]
+  mkdir -p "$TMPDIR_T/Mod/libs/locked"
+  printf '%s\n' 'x' > "$TMPDIR_T/Mod/libs/locked/a.jar"
+  chmod 000 "$TMPDIR_T/Mod/libs/locked"
+  if [ -r "$TMPDIR_T/Mod/libs/locked" ]; then chmod 755 "$TMPDIR_T/Mod/libs/locked"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$BJCV" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/libs/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"locked"* ]]
+}

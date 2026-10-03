@@ -14,9 +14,10 @@
 #   multi-release jar legitimately bundles higher-version bytecode under META-INF/versions/<N>/).
 #   Samples up to 20 class entries per jar; stops after the first FAIL in each jar.
 #   Row:   FAIL  lint-bundled-jar-class-version  <jar>  class <entry> is major <N> (> 52 = Java 8) — bundled Java 9+ bytecode throws UnsupportedClassVersionError at load
-#   Exit:  0  no FAIL (clean) · 1  any FAIL · 3  usage/env
+#   Exit:  0  no FAIL (clean) · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
 #
 # Mutation: BJCV2 -- drop the major > 52 check and BJCV2 stops flagging Java 9+ bytecode
+# Mutation: BJCV-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 LC_ALL=C
 export LC_ALL
@@ -30,6 +31,17 @@ ROOT="$1"
 if [ ! -d "$ROOT" ]; then
     printf 'lint-bundled-jar-class-version: not a directory: %s\n' "$ROOT" >&2
     exit 3
+fi
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+had_err=0
+if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" --prune build -name '*.jar'; then
+    printf 'lint-bundled-jar-class-version: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
+    had_err=1
 fi
 
 if ! command -v unzip >/dev/null 2>&1; then
@@ -62,6 +74,7 @@ while IFS= read -r jar; do
             break
         fi
     done < <(unzip -Z1 "$jar" 2>/dev/null | grep '\.class$' | grep -v '^META-INF/versions/' | head -n "$SAMPLE_LIMIT")
-done < <(find "$ROOT" \( -type d \( -name 'build' -o -name '.*' \) -prune \) -o -type f -name '*.jar' -print 2>/dev/null)
+done < "$_TMP/files"
 
+[ "$had_err" -eq 0 ] || exit 3
 exit "$fail"
