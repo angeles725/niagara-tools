@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded 2026-10-02 · kit 41602cf -->
 <!-- Marker lifecycle: the maintainer flips 'pending' above to 'folded <date> · kit <sha>' once the proposed deltas are reviewed and applied (or dismissed) in the kit. This retro only PROPOSES; kit changes are human-reviewed and human-committed. -->
 # Retro — kit-dev · 2026-10-02 · mcp-n4 development retrospective (tests and tier gate)
 
@@ -78,3 +78,15 @@ A clean day. Every unit ran RED before GREEN, review advisories were fixed forwa
 reopening review, and the gate fails closed: an undetected version is tier C. The gaps are process documentation
 and an upgrade note, not code: D2 matters most, because an operator who already writes to a 4.3 station sees
 refusals after the upgrade with no note explaining them. Recommended fold order: D2, then D1, then D3.
+
+## Fold record
+
+Folded 2026-10-02 in kit `41602cf` (`mcp-n4-kit/README.md`), in the recommended order:
+
+- D2 → section "Upgrading to v0.5.0" (after the server flags): list tier B/C stations that already write,
+  opt in only after the PoC or probe of METHODOLOGY section 5, never to clear a refusal.
+- D1 → section "Versioning": version in `mcp_n4/__init__.py`, entries in the root `CHANGELOG.md` with the
+  `mcp-n4-kit` heading form, PR-body hand-off when another release is in flight. No kit-local changelog.
+- D3 → "Run the tests", "Test isolation rules": `mock.patch` + `addCleanup` (reference helper
+  `DestructiveCase.patch`), no bare attribute assignment, and a stdlib shuffled-order run snippet. The
+  optional move of the helper to a shared base class was not done.

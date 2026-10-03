@@ -87,6 +87,22 @@ Flags:
 - `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`) to PATH.
 - `--allow-http-for-tests`: permits `http://` base URLs; for the fake station only.
 
+### Upgrading to v0.5.0
+
+Before v0.5.0 the version-tier gate was manual, so a server started with `--allow-writes`
+against a tier B (4.15, 4.3) or tier C station could execute writes. From v0.5.0 the same
+command line refuses every execution on that station (dry runs still work) until it is
+opted in. When upgrading:
+
+1. List the tier B and tier C stations that this deployment already writes to
+   (`n4_connect` reports `tier` and `tier_writes`).
+2. Add `--allow-tier-b NAME` only for a tier B build where a PoC already matched; add
+   `--allow-tier-c NAME` only for a tier C build where `reg.loadContract`, `loadRoot` and a
+   harmless scratch write already succeeded (METHODOLOGY section 5).
+3. Otherwise run the PoC or probe first, then restart with the opt-in.
+
+Never add an opt-in just to clear a refusal: the opt-in records that the PoC or probe ran.
+
 ### Getting the kit and registering it per project
 
 The kit must exist on disk: a checkout on another branch may not contain `mcp-n4-kit/`. When
@@ -277,6 +293,36 @@ python3 -m unittest discover -s mcp-n4-kit/tests -v
 ```
 
 Python 3.10+, stdlib only (no pytest, no MCP SDK).
+
+Test isolation rules:
+
+- Replace a module or object attribute only through `mock.patch` (or `mock.patch.object`)
+  with `addCleanup(patcher.stop)`, or inside a `with` block / context manager that restores
+  it. Never assign the attribute directly: the replacement leaks into later tests and stays
+  hidden while the suite runs in file order. `DestructiveCase.patch(obj, attr, new)` in
+  `tests/test_tools_destructive.py` is the reference helper.
+- Before merging a test-heavy change, also run the suite in a shuffled order with a few
+  seeds (for example 1, 7 and 42), from the repo root:
+
+```
+python3 - 42 <<'EOF'
+import random, sys, unittest
+def flat(s):
+    for t in s:
+        yield from (flat(t) if isinstance(t, unittest.TestSuite) else [t])
+tests = list(flat(unittest.defaultTestLoader.discover("mcp-n4-kit/tests")))
+random.Random(int(sys.argv[1])).shuffle(tests)
+sys.exit(not unittest.TextTestRunner().run(unittest.TestSuite(tests)).wasSuccessful())
+EOF
+```
+
+## Versioning
+
+- The kit version lives in `mcp_n4/__init__.py` (`__version__`).
+- There is no kit-local changelog. Entries go in the root `CHANGELOG.md` under a heading of
+  the form ``### <kind> — `mcp-n4-kit` vX.Y.Z: <summary>`` (kind: Added, Changed, Fixed, ...).
+- When another release is in flight (another writer owns the root `CHANGELOG.md` or
+  `VERSION`), put the entry text in the PR body for the release owner to fold.
 
 ## Evidence (niagara-research)
 
