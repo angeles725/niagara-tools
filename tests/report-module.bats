@@ -622,3 +622,33 @@ JAVA
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is v8.57.0"* ]]
   if [[ "$output" == *"ran-with-old-eslint"* ]]; then return 1; fi
 }
+
+# ===========================================================================
+# deferred-lints-2026-10-03 D2: advisory member lint-size (WARN-only) — relayed rows, PASS verdict row,
+# any non-zero member exit is an ERROR row (never a silent PASS).
+
+@test "RM49: a pure method over 80 lines -> lint-size WARN row relayed, PASS 'no FAIL (1 WARN row above)', exit 0" {
+  cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm49"
+  { printf 'package com.x;\npublic class Core {\n  int step() {\n'
+    for i in $(seq 1 85); do printf '    a%d();\n' "$i"; done; printf '  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm49/DemoPan-rt/src/com/x/Core.java"
+  run "$RM" "$BATS_TEST_TMPDIR/rm49"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  WARN  lint-size  Core.java:3  method step() in pure class Core spans 87 lines"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-size  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM50: a clean artifact -> one PASS lint-size clean row" {
+  run "$RM" "$FX/clean"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-size  clean"* ]]
+}
+
+@test "RM51: advisory member exit 3 or an unexpected exit -> ERROR row and report exit 3, never PASS" {
+  # Mutation: RM51 -- relaying any member exit as rows + PASS hides a crashed advisory lint behind PASS clean.
+  local tb="$BATS_TEST_TMPDIR/rm51tb"; stub_toolbelt "$tb" lint-size.sh 'echo "boom" >&2; exit 2'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 2)"* ]]
+  [[ "$output" != *"PASS  lint-size"* ]]
+}

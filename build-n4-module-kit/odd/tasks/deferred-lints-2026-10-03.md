@@ -47,7 +47,11 @@ traceable to the close retro, #226 or #142.
       checker passed an expansion split over lines (introduced fail-open) → follow it onto the next lines, report an
       unterminated one; R2-patsub-backslash-in-single-quote (could hide a hit) → `'...'` is literal; sort's stderr goes
       to the err file (R2/R3 sort-err, cheap, same lines). Route: inline (one lib, one test helper, two bats).
-- [ ] D2 · `lint-size.sh` — advisory WARN-only class/method size smell (BUILD-STATE DEFERRED spec).
+- [x] D1c · D1b review fail-open (posted on #226) — R3/R4 file-root: with `-mindepth 1` a FILE root lists nothing and
+      `scan_files` returned 0 (no current caller reaches it: each rejects a non-directory first) → return 2 with "not a
+      directory"; plus the MAX_SPAN comment (R2-maxspan-unexplained, one line). Route: folded into the D2 PR.
+- [x] D2 · `lint-size.sh` — advisory WARN-only class/method size smell (BUILD-STATE DEFERRED spec). Route: inline
+      (one new lint + its bats + the report-module member; the parent is this feature's writer).
 - [ ] D3 · `lint-license-isoperational-gate.sh` — a licensed class acting in `changed()`/timer/servlet-write callbacks
       without an `isOperational()`/`isFault()` gate.
 - [ ] D4 · `lint-set-null-ord.sh` — a `setXxxOrd(getSlotPathOrd())` / ORD `set(...)` with no null guard.
@@ -105,14 +109,44 @@ shellcheck per `.github/workflows/ci.yml` · `sweep-build-state.sh` · `sweep-bu
     shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
     `--strict` 196/196; `--deltas-since 2026-09-24` 145 checked, 0 not cited; guard-pins `--strict` exit 0;
     gen-lint-index `--check` fresh.
+  - Commit d140a64, PR #233, merge ea3b784. RDD: consent granted, 4 lenses APPROVED and acknowledged — lineage
+    review-5056c52c4e0fbe6c, authority burned. 5 informational findings posted on #226: R3/R4 file-root fail-open →
+    D1c; R2-maxspan-unexplained → one comment in D1c; R3-patsub-span-false-positive-surface and
+    R3-patsub-multiline-negative-unpinned → parked.
+- 2026-10-03 D2 + D1c (branch `feat/dl-d2-lint-size`, from `origin/main` ea3b784). Route: inline.
+  Design (structural, decided up front per `METHODOLOGY.md` § Conformance rules): hand-written lines = non-blank lines
+  after `mb_strip` blanks comments, outside slotomatic regions; a region opens on a RAW line containing
+  `BEGIN BAJA AUTO GENERATED CODE` and closes on the next `END BAJA AUTO GENERATED CODE` (substring, so the
+  `//region /*+ ---- … +*/` form slot-o-matic writes in kit modules and the bare `/*+ … +*/` form both match); an
+  unclosed region is a WARN and its lines count; pure class = no `@NiagaraType` and no `extends B<Upper>`; method spans
+  from `mb_parse`; thresholds strictly greater than 800 / 80, overridable. Evidence: marker text in the Tridium
+  developer doc `docDeveloper … slot-o-matic.html:421,459` and corpus B711 (slot-o-matic writes the region back);
+  no corpus block sets a size limit — the thresholds are the retro's review smell, so every row is WARN.
+  - RED: LSZ1-LSZ7, LSZ-awkfail, LSZ-finderr not ok (tool absent); SF4 not ok (a file root returned 0); RM49-RM51 not
+    ok (no lint-size member).
+  - GREEN: `bats tests/lint-size.bats tests/scan-files.bats tests/shell-hygiene.bats` 22 ok; RM49-RM51 ok.
+  - Observed mutations (restored byte-identical, `cmp`): region lines counted → LSZ2 not ok; method rule on Baja classes
+    → LSZ4 not ok; unclosed-region row dropped → LSZ5 not ok; awk status ignored → LSZ-awkfail not ok; find status
+    ignored → LSZ-finderr not ok; directory check dropped → SF4 not ok; advisory_member relays every exit → RM51 not ok.
+  - Real-tree smoke (a deployed client checkout, read only, not committed): 10 WARN rows, all genuine — one facade
+    BComponent at 1362 hand-written lines and pure `step()`/stage methods of 102-236 lines; no false row seen.
+  - `bats tests/*.bats` (serial): 997 ok / 0 not ok (67 env skips), count 997. mcp-n4-kit unittest: 506 OK.
+    shellcheck 0.11.0: only the pre-existing SC2329 info. sweep-build-state exit 0; `--age` exit 0; fold-audit
+    `--strict` 196/196; `--deltas-since 2026-09-24` 145, 0 not cited; guard-pins `--strict` exit 0 (LSZ2/LSZ4/LSZ5/
+    LSZ-awkfail/LSZ-finderr resolve); gen-lint-index `--check` fresh (lint-size row, Auto yes).
 
 ## Parked advisories
 Non-blocking review advisories parked under the anti-cascade policy (posted on #226, no sub-task).
+- R3-patsub-span-false-positive-surface (D1b, `tests/helpers/patsub-check.py`): following a `${x/` start inside quoted
+  text or a heredoc onto later lines can produce a spurious row. It fails closed, and the kit scripts are clean today.
+- R3-patsub-multiline-negative-unpinned (D1b, `tests/shell-hygiene.bats`): no negative pin for a quoted multi-line
+  replacement, for the MAX_SPAN boundary or for the `$'...'` state. Test depth only.
 
 ## Delivery record
 | Task | PR | Merge SHA | Review |
 |---|---|---|---|
 | D1 | #230 | 49185d4 | APPROVED, 4 lenses, review-d02202bd55feff67 |
+| D1b | #233 | ea3b784 | APPROVED, 4 lenses, review-5056c52c4e0fbe6c |
 
 ## Next step
-D1b review + merge, then D2.
+D2 review + merge, then D3.

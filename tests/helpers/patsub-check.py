@@ -21,6 +21,8 @@ import re
 import sys
 
 START = re.compile(r'\$\{[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])?/')
+# How far an expansion is followed past its first line. Real kit expansions close on their line; 20 lines is
+# far beyond any legitimate one, and 'unterminated' therefore also means 'did not close within MAX_SPAN lines'.
 MAX_SPAN = 20
 
 

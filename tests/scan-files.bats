@@ -34,3 +34,11 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -ne 0 ]
   [ -s "$TMPDIR_T/err" ]
 }
+
+@test "SF4: a root that is not a directory returns non-zero with a reason, never an empty clean list (D1c)" {
+  # Mutation: SF4 -- dropping the directory check lists nothing for a file root and returns 0.
+  printf 'x\n' > "$TMPDIR_T/A.java"
+  run scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/A.java" -name '*.java'
+  [ "$status" -ne 0 ]
+  grep -q 'not a directory' "$TMPDIR_T/err"
+}
