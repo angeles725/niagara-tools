@@ -46,3 +46,34 @@ SH
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "SH1-multiline: a replacement that continues on the next line is still checked (D1b)" {
+  # Mutation: SH1-multiline -- scanning one line at a time treats the split expansion as clean.
+  cat > "$TMPDIR_T/split.sh" <<'SH'
+out=${out//"(map)"/(map:
+$MAP)}
+SH
+  run python3 "$CHECK" "$TMPDIR_T/split.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"split.sh:1: unquoted replacement"* ]]
+}
+
+@test "SH1-unterminated: an expansion that never closes is reported, never passed as clean (D1b)" {
+  # Mutation: SH1-unterminated -- treating an unclosed expansion as clean passes it silently.
+  cat > "$TMPDIR_T/open.sh" <<'SH'
+out=${out//a/"b"
+SH
+  run python3 "$CHECK" "$TMPDIR_T/open.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"open.sh:1:"*"unterminated"* ]]
+}
+
+@test "SH1-squote: a backslash inside single quotes is literal, so the unquoted replacement after it is flagged (D1b)" {
+  # Mutation: SH1-squote -- treating the backslash as an escape inside '...' swallows the closing quote and hides the hit.
+  cat > "$TMPDIR_T/sq.sh" <<'SH'
+x=${x//'\'/$y}
+SH
+  run python3 "$CHECK" "$TMPDIR_T/sq.sh"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"sq.sh:1: unquoted replacement"* ]]
+}

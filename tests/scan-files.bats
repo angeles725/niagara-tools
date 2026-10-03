@@ -1,0 +1,36 @@
+#!/usr/bin/env bats
+# scan-files.bats — toolbelt/lib/scan-files.sh, the shared fail-closed file lister (deferred-lints D1/D1b).
+# [ev: issue #226 R3-find-error-still-fail-open]
+
+setup() {
+  TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
+  KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
+  # shellcheck disable=SC1091
+  . "$KIT/toolbelt/lib/scan-files.sh"
+}
+teardown() { rm -rf "$TMPDIR_T"; }
+
+@test "SF1: a dot-named root is walked, only dot SUB-directories are pruned (D1b, R4-dot-root-prune)" {
+  # Mutation: SF1 -- applying the dot-dir prune at depth 0 prunes the whole tree and lists nothing.
+  mkdir -p "$TMPDIR_T/.mod/src/.git" "$TMPDIR_T/.mod/src/com"
+  printf 'x\n' > "$TMPDIR_T/.mod/src/com/A.java"
+  printf 'x\n' > "$TMPDIR_T/.mod/src/.git/B.java"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/.mod" -name '*.java'
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/.mod/src/com/A.java" ]
+}
+
+@test "SF2: '.' as the root is walked (D1b)" {
+  mkdir -p "$TMPDIR_T/m/com"
+  printf 'x\n' > "$TMPDIR_T/m/com/A.java"
+  cd "$TMPDIR_T/m"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" . -name '*.java'
+  [ "$(cat "$TMPDIR_T/files")" = "./com/A.java" ]
+}
+
+@test "SF3: a sort failure returns non-zero with its reason in the err file (D1b, R2/R3 sort-err)" {
+  mkdir -p "$TMPDIR_T/m" "$TMPDIR_T/out-is-a-dir"
+  printf 'x\n' > "$TMPDIR_T/m/A.java"
+  run scan_files "$TMPDIR_T/out-is-a-dir" "$TMPDIR_T/err" "$TMPDIR_T/m" -name '*.java'
+  [ "$status" -ne 0 ]
+  [ -s "$TMPDIR_T/err" ]
+}
