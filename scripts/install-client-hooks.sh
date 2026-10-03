@@ -9,7 +9,8 @@
 # Usage:  scripts/install-client-hooks.sh [--force] <client-repo>
 #   --force  replace a DIFFERENT existing .githooks/pre-push and a custom core.hooksPath
 # Exit: 0 installed (or already installed: idempotent) · 2 usage, or <client-repo> is not a git work tree ·
-#       3 refused: a different pre-push or a custom core.hooksPath exists (re-run with --force)
+#       3 refused: a different pre-push, a custom core.hooksPath (local, global or system) or an active hook in the
+#         default hooks directory exists — setting .githooks would silently stop it (re-run with --force)
 #
 # git IS used here on purpose: this lives under scripts/, not toolbelt/ (kit-links L2).
 set -euo pipefail
@@ -39,10 +40,29 @@ fi
 TOP="$(git -C "$REPO_ARG" rev-parse --show-toplevel)"
 HOOK="$TOP/.githooks/pre-push"
 
-current="$(git -C "$TOP" config --local --get core.hooksPath 2>/dev/null || true)"
+# The EFFECTIVE hooksPath (local, global or system): a local .githooks would shadow any of them.
+current="$(git -C "$TOP" config --get core.hooksPath 2>/dev/null || true)"
 if [ -n "$current" ] && [ "$current" != ".githooks" ] && [ "$FORCE" -eq 0 ]; then
   printf 'install-client-hooks: REFUSING — core.hooksPath is already "%s"; nothing changed. Re-run with --force.\n' "$current" >&2
   exit 3
+fi
+# With no hooksPath, git runs the default hooks directory; setting .githooks would silently stop every active hook
+# there (e.g. a Git LFS pre-push). Refuse and name them, unless --force.
+if [ -z "$current" ] && [ "$FORCE" -eq 0 ]; then
+  hooks_dir="$(git -C "$TOP" rev-parse --path-format=absolute --git-path hooks)"
+  active=""
+  if [ -d "$hooks_dir" ]; then
+    for h in "$hooks_dir"/*; do
+      [ -f "$h" ] && [ -x "$h" ] || continue
+      case "$h" in *.sample) continue ;; esac
+      active="$active ${h##*/}"
+    done
+  fi
+  if [ -n "$active" ]; then
+    printf 'install-client-hooks: REFUSING — active hooks in %s would stop running:%s; nothing changed.\n' "$hooks_dir" "$active" >&2
+    printf '                      Move them into .githooks/ (or chain them) and re-run with --force.\n' >&2
+    exit 3
+  fi
 fi
 if [ -e "$HOOK" ] && ! cmp -s "$TEMPLATE" "$HOOK" && [ "$FORCE" -eq 0 ]; then
   printf 'install-client-hooks: REFUSING — %s exists and differs from the kit template; nothing changed. Re-run with --force.\n' "$HOOK" >&2
