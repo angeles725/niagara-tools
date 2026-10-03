@@ -46,6 +46,9 @@ class WriteState:
 
     def __init__(self, scopes=(), state_dir=None, token_ttl=300, max_writes=200,
                  clock=time.time, station_homes=None):
+        for flag, value in (("--token-ttl", token_ttl), ("--max-writes", max_writes)):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError("%s must be a positive integer, got %r" % (flag, value))
         state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         safety.check_state_dir(state_dir)  # refuse a dir we do not own; never chmod it
         self.scope = safety.WriteScope(scopes)
@@ -1176,7 +1179,11 @@ def _process(ctx, name, args):
         planned.data["write"] = write  # readback polls with the operator's timing
     planned = planned._replace(inverse=_inverse_list(planned.inverse))
     plan = {"tool": name, "ops": planned.ops, "inverse": _hashed_inverse(planned.inverse),
-            "notes": planned.notes}
+            "notes": planned.notes,
+            # Handles and ORDs are per station: the token vouches for this exact session
+            # (audit 2026-10-03 F1), so a dry run's token cannot execute after a reconnect.
+            "station": {"name": sess.station_name, "base_url": sess.base_url,
+                        "session_id": sess.session_id}}
     data = _data(planned)
     for key in ("relinks", "unlinked_inputs", "components",
                 "outgoing_links_broken"):  # part of what the token authorizes

@@ -111,10 +111,30 @@ class ConfirmationTokens:
             raise SafetyError(REASON_TOKEN_REUSED + ": run the dry run again")
 
 
+#: The only ORD form a write may target: one station slot path, nothing chained after it.
+SLOT_ORD_PREFIX = "station:|slot:/"
+
+
+def _plain_slot_ord(ord_str):
+    """True for `station:|slot:/<path>` with no further ORD hop (`|h:`, `|slot:`, `|bql:`).
+
+    A chained ORD resolves past its slot path, so a prefix match on its text says nothing
+    about the component it reaches (audit 2026-10-03 F2).
+    """
+    return isinstance(ord_str, str) and ord_str.startswith(SLOT_ORD_PREFIX) \
+        and "|" not in ord_str[len(SLOT_ORD_PREFIX):] \
+        and ".." not in ord_str.split("/")
+
+
 class WriteScope:
-    """Allowlist of ORD prefixes a write may touch (boundary-aware)."""
+    """Allowlist of ORD prefixes a write may touch (boundary-aware, plain slot ORDs only)."""
 
     def __init__(self, prefixes):
+        for prefix in prefixes:
+            if not _plain_slot_ord(prefix):
+                raise SafetyError("--write-scope %r must be a plain slot ORD such as "
+                                  "'station:|slot:/Drivers' (no '|' after the slot path)"
+                                  % (prefix,))
         self.prefixes = [p.rstrip("/") for p in prefixes]
 
     def require_any(self):
@@ -125,9 +145,9 @@ class WriteScope:
     def check(self, ord_str):
         if not self.prefixes:
             raise SafetyError(REASON_SCOPE_NONE + ": every write is refused")
-        if not isinstance(ord_str, str) or not ord_str.startswith("station:") \
-                or ".." in ord_str.split("/"):
-            raise SafetyError("ord %r %s" % (ord_str, REASON_SCOPE_PLAIN))
+        if not _plain_slot_ord(ord_str):
+            raise SafetyError("ord %r %s (station:|slot:/<path>, nothing chained after the "
+                              "slot path)" % (ord_str, REASON_SCOPE_PLAIN))
         target = ord_str.rstrip("/")
         if not any(target == p or target.startswith(p + "/") for p in self.prefixes):
             raise SafetyError("ord %r %s" % (ord_str, REASON_SCOPE_OUTSIDE))

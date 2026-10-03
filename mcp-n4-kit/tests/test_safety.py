@@ -151,6 +151,20 @@ class TestWriteScope(unittest.TestCase):
         with self.assertRaises(safety.SafetyError):
             safety.WriteScope(["station:|slot:/"]).check(None)
 
+    def test_a_chained_ord_after_the_slot_path_is_refused(self):
+        # F1/F2 audit 2026-10-03: a prefix match let a chained ORD resolve elsewhere.
+        scope = safety.WriteScope(["station:|slot:/A"])
+        for ord_ in ("station:|slot:/A|h:1f", "station:|slot:/A/B|slot:../X",
+                     "station:|slot:/A|slot:/Other", "station:|h:1f",
+                     "station:|slot:/A/B|bql:select *"):
+            with self.assertRaisesRegex(safety.SafetyError, "plain station ORD", msg=ord_):
+                scope.check(ord_)
+
+    def test_a_prefix_that_is_not_a_plain_slot_ord_is_refused_at_startup(self):
+        for bad in ("station:|slot:/A|h:1", "station:|h:1", "slot:/A", "", "station:"):
+            with self.assertRaisesRegex(safety.SafetyError, "--write-scope", msg=bad):
+                safety.WriteScope([bad])
+
 
 class StateFileCase(unittest.TestCase):
     def setUp(self):

@@ -75,10 +75,11 @@ Flags:
   configured station (self-signed certificates). Without it TLS is always verified.
 
 - `--allow-writes`: registers the write tools; the default is read-only.
-- `--write-scope ORD_PREFIX` (repeatable): ORD prefixes writes may touch.
+- `--write-scope ORD_PREFIX` (repeatable): ORD prefixes writes may touch; each must be a plain
+  slot ORD (`station:|slot:/Path`, nothing chained after it) or the server refuses to start.
 - `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`).
-- `--token-ttl SECONDS`: confirmation token lifetime (default 300).
-- `--max-writes N`: executed writes allowed per session (default 200).
+- `--token-ttl SECONDS`: confirmation token lifetime (default 300; must be >= 1).
+- `--max-writes N`: executed writes allowed per session (default 200; must be >= 1).
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
@@ -179,12 +180,16 @@ Every write call goes through these layers:
 3. **Budget.** At most `--max-writes` executed writes per session.
 4. **Scope.** Every target ORD must sit under a `--write-scope` prefix, matched on
    slot boundaries (`/A` does not cover `/AB`). With no prefix, every write is refused.
+   Only plain slot ORDs pass: a `|` after `station:|slot:` (`|h:…`, `|slot:../…`) is
+   refused, because a chained ORD resolves past the path the prefix was matched on.
 5. **Dry run.** `dry_run` defaults to true: the reply is the exact BOX ops and their
    inverse, a `plan_hash` and a `confirmation_token`; nothing is sent to the station.
 6. **Token.** To execute, repeat the same call with `dry_run=false` and the token.
    It is single use, expires after `--token-ttl`, and is an HMAC under a per-process
    random key bound to the tool, the arguments, the plan and the expiry. If the
    station changed since the dry run the plan hash differs and the token is refused.
+   The plan names the station (`station: {name, base_url, session_id}`, a fresh id per
+   `n4_connect`), so a token never executes after a reconnect or on another station.
 7. **Write-ahead journal.** Before any op is sent, an `intent` record
    `{batch_id, ts, tool, ops, inverse_plan, station_name, phase}` is appended to
    `<state-dir>/journal.jsonl`; if that fails nothing is sent (the token stays
