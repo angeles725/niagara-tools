@@ -12,13 +12,18 @@ the restore (expect GREEN).
 Usage, from the repo root:
     python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
 
-Exit code: the command's own exit code; 2 on usage errors.
+Exit codes: the command's own exit code; 2 on usage errors; 3 when the command cannot be
+launched (missing, not executable): an environment error, never a test result. A launch
+failure also prints a `mutation_check: cannot launch ...` line on stderr, which is what tells
+it apart from a command that itself exits 3. Do not read exit 3 with that line as RED.
 """
 import argparse
 import os
 import shutil
 import subprocess
 import sys
+
+EXIT_LAUNCH_FAILED = 3
 
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,7 +55,13 @@ def main(argv=None):
     print("mutation_check: removed %d __pycache__ dir(s) under %s" % (removed, args.root),
           file=sys.stderr)
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    return subprocess.call(command, env=env)
+    try:
+        return subprocess.call(command, env=env)
+    except OSError as exc:
+        print("mutation_check: cannot launch %r: %s (exit %d: environment error, not a test "
+              "result; a failed launch is never a RED)" % (command[0], exc, EXIT_LAUNCH_FAILED),
+              file=sys.stderr)
+        return EXIT_LAUNCH_FAILED
 
 
 if __name__ == "__main__":

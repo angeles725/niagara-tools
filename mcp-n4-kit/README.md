@@ -22,6 +22,8 @@ v0.7.0: `n4_list_batches`, `snapshot_truncated`, `--load-wait` / `--http-timeout
 v0.7.1: the write budget is per server process; docs drift fixed.
 v0.7.2 (retro 2026-10-03): `tools/mutation_check.py` (mutation checks without stale bytecode), a
 stdlib untested-branch audit, explicit per-PR review of medium units.
+v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command cannot be
+launched, so a failed launch is never read as a RED.
 
 ## Methodology and skill
 
@@ -374,9 +376,16 @@ EOF
 python3 mcp-n4-kit/tools/mutation_check.py -- python3 -m unittest discover -s mcp-n4-kit/tests
 ```
 
+  Exit codes: the command's own code; 2 on usage errors; 3 when the command cannot be
+  launched (missing or not executable). Exit 3 with a `mutation_check: cannot launch` line on
+  stderr is an environment error, not a RED: the mutation was not tested.
+
   By hand: `find mcp-n4-kit -name __pycache__ -prune -exec rm -rf {} +` after each restore
-  and `PYTHONDONTWRITEBYTECODE=1` on each run. Restore with `cp -p` only when the saved
-  copy's mtime differs from the mutant's.
+  and `PYTHONDONTWRITEBYTECODE=1` on each run. Clearing the caches is the reliable route.
+  If you restore from a saved copy, make both copies with `cp -p` (save:
+  `cp -p file.py file.py.orig`; restore: `cp -p file.py.orig file.py`): the restored file then
+  carries the original file's mtime, not the mutant's, so a stale mutant `.pyc` no longer
+  matches. A plain `cp` stamps the current time, which can fall in the mutant's second.
 
 Untested-branch audit (retro 2026-10-03 D2). Before each minor release (`0.X.0`), list the
 lines the suite never runs, with the stdlib `trace` module (no `coverage` dependency; CI has
