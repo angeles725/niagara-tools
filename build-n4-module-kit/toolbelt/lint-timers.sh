@@ -22,6 +22,9 @@
 # Mutation: TT-query -- a name merely CONTAINING cancel accepts isCancelled(a) as a cancel
 # Mutation: TT-safecancel -- requiring the name to START with cancel false-FAILs safeCancel(a)/doCancel(b)
 # Mutation: TT-helper-body -- accepting a helper by its name again lets logCancelRequest(a) pass a
+# Mutation: TT-helper-param -- any .cancel( in the helper body counts, so stopTimer(a) { other.cancel(); } passes a
+# Mutation: TT-helper-this -- rejecting every qualified call false-FAILs this.cancelTicket(a)
+# Mutation: TT-helper-sigline -- reading parameters only from the brace line false-FAILs an Allman-style helper
 # Mutation: TT-helper-nested -- a separator class that admits ( binds the call to the enclosing if and misses it
 # Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave its companion flag stuck true
 # Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs a disable path that clears the flag in a helper
@@ -36,10 +39,11 @@
 #                     Clock.schedule*() call) but its stopped() override does not
 #                     cancel EVERY ticket field — the timer leaks on station stop.
 #                     Checked per ticket field on comment- and string-blanked code:
-#                     `f.cancel(` / `f[i].cancel(` / a call taking `f` to a SAME-FILE
-#                     method whose body calls .cancel( — decided by the helper's body,
-#                     not its name (log(f), isCancelled(f) and an other-file helper do
-#                     not count), in stopped() or in any same-file method it reaches
+#                     `f.cancel(` / `f[i].cancel(` / a call taking `f` (bare or this.)
+#                     to a SAME-FILE method whose body cancels its own parameter —
+#                     decided by the helper's body, not its name (log(f),
+#                     isCancelled(f), a helper cancelling another ticket and an
+#                     other-file helper do not count), in stopped() or in any same-file method it reaches
 #                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
 #                     another ticket, does not count. No named field (only
 #                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
@@ -137,7 +141,7 @@ END {
   for (i = 1; i <= n; i++) code[i] = blank_str(st[i])
   cnt = mb_parse(code, n, ms, me, mn)
   for (i = 1; i <= n; i++) inm[i] = 0
-  for (k = 0; k < cnt; k++) { for (i = ms[k]; i <= me[k]; i++) inm[i] = 1; body[mn[k]] = body[mn[k]] "\n" lines_of(ms[k], me[k]) }
+  for (k = 0; k < cnt; k++) { for (i = ms[k]; i <= me[k]; i++) inm[i] = 1; body[mn[k]] = body[mn[k]] "\n" lines_of(ms[k], me[k]); params[mn[k]] = params[mn[k]] " " params_of(mn[k], ms[k]) }
   # ticket FIELDS: Clock.Ticket / Ticket declarations outside every method body (arrays included)
   nf = 0
   for (i = 1; i <= n; i++) {
@@ -172,22 +176,35 @@ END {
   if (!miss) print "OK"
 }
 function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
-# f.cancel( · f[...].cancel( · this.f.cancel( · an unqualified call taking f as a whole argument to a SAME-FILE
-# method whose body itself calls .cancel( (cancelTicket(f), safeCancel(f), stopTimer(f) all count when they really
-# cancel). Decided by the helper's body, not its name: log(f), isCancelled(f), logCancelRequest(f) and a helper
-# from another file do not count (an unverifiable helper fails closed).
-function cancels(s, f,    re1, re2, t, nm, pre) {
+# params_of(nm, l): the parameter names of method nm, read from the signature text from the line that names it
+# (searched back up to 4 lines from the brace line l, for a brace on its own line) to the first ")"
+function params_of(nm, l,    j, sig, a, i, k, p, out) {
+  sig = ""
+  for (j = l; j >= 1 && j >= l - 4; j--) if (code[j] ~ ("(^|[^A-Za-z0-9_.])" nm "[[:space:]]*\\(")) { sig = lines_of(j, l); break }
+  if (sig == "") return ""
+  sub("^.*(^|[^A-Za-z0-9_.])" nm "[[:space:]]*\\(", "", sig); sub(/\).*/, "", sig); gsub(/\n/, " ", sig)
+  k = split(sig, a, ","); out = ""
+  for (i = 1; i <= k; i++) { p = a[i]; gsub(/\[[[:space:]]*\]/, "", p); sub(/[[:space:]]+$/, "", p); sub(/.*[^A-Za-z0-9_]/, "", p); if (p != "") out = out " " p }
+  return out
+}
+# f.cancel( · f[...].cancel( · this.f.cancel( · a call taking f as a whole argument (unqualified or this.) to a
+# SAME-FILE method whose body cancels one of its own PARAMETERS (p.cancel( / p[i].cancel(): cancelTicket(f),
+# safeCancel(f), stopTimer(f) count when they really cancel what they are given. Decided structurally: log(f),
+# isCancelled(f), a helper that cancels some OTHER ticket, and a helper from another file do not count.
+function cancels(s, f,    re1, re2, t, nm, pre, k, a, i) {
   re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
   if (s ~ re1) return 1
   # the separator before f excludes ( and ) so the match binds to the innermost call, not an enclosing if (
   re2 = "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.()])?" f "[[:space:]]*[,)]"
   t = s
   while (match(t, re2)) {
-    pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+    pre = (RSTART > 1) ? substr(t, 1, RSTART - 1) : ""
     nm = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
     sub(/[[:space:]]*\(.*/, "", nm)
-    if (pre == "." || !(nm in body)) continue
-    if (body[nm] ~ /\.[[:space:]]*cancel[[:space:]]*\(/) return 1
+    if (pre ~ /\.[[:space:]]*$/ && pre !~ /(^|[^A-Za-z0-9_])this[[:space:]]*\.[[:space:]]*$/) continue
+    if (!(nm in body)) continue
+    k = split(params[nm], a, " ")
+    for (i = 1; i <= k; i++) if (a[i] != "" && body[nm] ~ ("(^|[^A-Za-z0-9_.])" a[i] "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\(")) return 1
   }
   return 0
 }
