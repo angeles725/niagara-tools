@@ -1,6 +1,32 @@
 #!/usr/bin/env bash
 # lint-timers.sh — timer-ticket conformance lint for Niagara N4 Java modules (Campaign 6 PR8).
 #
+# Usage: lint-timers.sh <java-root>
+#   Scans all *.java files recursively under <java-root> (dot-dirs pruned).
+#   Prints FAIL|PASS rows per owning class.
+#   A class with no timers emits no FAIL (silently skipped).
+#
+# Row format: FAIL|PASS|WARN  <check>  <file>: <detail>   (WARN never changes the exit status)
+# Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
+# This script is VCS-free by design. version control is never invoked.
+# kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
+# Evidence of the checks below (also cited at each check): [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
+# Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
+# Mutation: S21-misparse -- drops max_d>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
+# Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass
+# Mutation: TT-partial -- one cancel call for any field passes the whole class
+# Mutation: TT-string -- not blanking string literals lets log("a.cancel()") pass
+# Mutation: TT-helper -- without the callee bodies the stopped() -> cancelAll() -> cancelX() shape false-FAILs
+# Mutation: TT-overaccept -- accepting any call with the field as an argument lets log(a) + b.cancel() pass a
+# Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field
+# Mutation: TT-query -- a name merely CONTAINING cancel accepts isCancelled(a) as a cancel
+# Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave its companion flag stuck true
+# Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs a disable path that clears the flag in a helper
+# Mutation: LC-orphan-callers -- ignoring the callers reports a cancel helper whose callers own the flag
+# Mutation: LC-gate -- dropping the parity pass lets an exit handler re-assert gated outputs ungated
+# Mutation: LC-gate-ok -- not looking for the gate call in the release point false-WARNs the fixed shape
+# Mutation: TT-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
+#
 # Detects timer lifecycle defects in module Java source files:
 #
 #   timer-ticket      A class that owns a Clock.Ticket (field declaration or
@@ -8,8 +34,8 @@
 #                     cancel EVERY ticket field — the timer leaks on station stop.
 #                     Checked per ticket field on comment- and string-blanked code:
 #                     `f.cancel(` / `f[i].cancel(` / a call to a method whose name
-#                     contains `cancel` taking `f` (cancelTicket(f); log(f) does
-#                     not count), in stopped() or in any same-file method it reaches
+#                     starts with `cancel` taking `f` (cancelTicket(f); log(f) and
+#                     isCancelled(f) do not count), in stopped() or in any same-file method it reaches
 #                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
 #                     another ticket, does not count. No named field (only
 #                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
@@ -41,24 +67,23 @@
 #                     inside applyRunCmd(). NotRunningException x6 on PANCCADIA logs.
 #                     [ev: corpus B816]
 #
-# Usage: lint-timers.sh <java-root>
-#   Scans all *.java files recursively under <java-root> (dot-dirs pruned).
-#   Prints FAIL|PASS rows per owning class.
-#   A class with no timers emits no FAIL (silently skipped).
+#   orphan-flag       WARN (advisory). T's companion flag F is set true where
+#                     `T = Clock.schedule*(recv, delay, act, …)` is armed and cleared in
+#                     T's expiry handler do<Act>(). A method other than stopped()/
+#                     started()/the handler whose own body cancels T, and that never
+#                     assigns F (itself or in a same-file callee), leaves F stuck true —
+#                     the handler no longer runs. Not reported: a method that re-arms T
+#                     (a re-arm), a helper whose every same-file caller assigns F (or
+#                     re-arms T, or is a lifecycle callback), and a class with a self-heal
+#                     `T == null && F … F = false`. [ev: corpus B801] [ev: corpus B812] [ev: audit-2026-10-03 A8]
 #
-# Row format: FAIL|PASS  <check>  <file>: <detail>
-# Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
-# This script is VCS-free by design. version control is never invoked.
-# kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
-# Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
-# Mutation: S21-misparse -- drops max_d>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
-# Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass
-# Mutation: TT-partial -- one cancel call for any field passes the whole class
-# Mutation: TT-string -- not blanking string literals lets log("a.cancel()") pass
-# Mutation: TT-helper -- without the callee bodies the stopped() -> cancelAll() -> cancelX() shape false-FAILs
-# Mutation: TT-overaccept -- accepting any call with the field as an argument lets log(a) + b.cancel() pass a
-# Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field
-# Mutation: TT-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
+#   release-gate-parity WARN (advisory). started()/atSteadyState() calls a begin*()
+#                     gate and re-applies outputs through apply*() methods; a release
+#                     point (exit*/end*/finish*/leave*/on*Exit|Expired|End) that calls
+#                     one of those apply*() methods without calling a begin*() gate
+#                     re-asserts outputs ungated (types/logic.md § release-point gate,
+#                     rule 2). [ev: retro continuous-fan-post-defrost-delay Δ2]
+#                     [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
@@ -143,18 +168,137 @@ END {
   if (!miss) print "OK"
 }
 function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
-# f.cancel( · f[...].cancel( · this.f.cancel( · a call to a method whose NAME contains "cancel" (any case)
-# taking f as a whole argument: cancelTicket(f), cancel(f), safeCancel(f). Any other call taking f (log(f))
-# does not count.
+# f.cancel( · f[...].cancel( · this.f.cancel( · a call to a method whose NAME STARTS with "cancel" taking f as
+# a whole argument: cancel(f), cancelTicket(f). Any other call taking f (log(f), isCancelled(f)) does not count.
 function cancels(s, f,    re1, re2) {
   re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
-  re2 = "[A-Za-z0-9_]*[Cc]ancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
+  re2 = "(^|[^A-Za-z0-9_])cancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
   if (s ~ re1) return 1
   if (s ~ re2) return 1
   return 0
 }
 AWKEOF
 printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
+
+# orphan-flag + release-gate-parity (WARN). Output lines: "ORPHAN <method> <ticket> <flag>" | "GATE <method> <apply> <gate>".
+cat > "$_TMP/lifecycle.awk" <<'AWKEOF'
+{ raw[++n] = $0 }
+END {
+  mb_strip(raw, n, code)
+  all = ""; for (i = 1; i <= n; i++) all = all code[i] "\n"
+  cnt = mb_parse(code, n, ms, me, mn)
+  for (k = 0; k < cnt; k++) { b = ""; for (i = ms[k]; i <= me[k]; i++) b = b code[i] "\n"; body[mn[k]] = body[mn[k]] b; names[k] = mn[k] }
+  # class-scope boolean fields (outside every method)
+  for (i = 1; i <= n; i++) inm[i] = 0
+  for (k = 0; k < cnt; k++) for (i = ms[k]; i <= me[k]; i++) inm[i] = 1
+  for (i = 1; i <= n; i++) if (!inm[i] && match(code[i], /boolean[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[;=]/)) {
+    d = substr(code[i], RSTART, RLENGTH); sub(/^boolean[[:space:]]+/, "", d); sub(/[[:space:]]*[;=]$/, "", d); bfield[d] = 1
+  }
+  # ---- orphan-flag: pairs (T, F) — F set true where T is armed AND cleared in T's expiry handler ----
+  # Handler of `T = Clock.schedule*(recv, delay, act, …)` = method do<Act>(); only a flag that handler clears
+  # is T's companion (the companion-flag doctrine), so an unrelated `x = true` beside a schedule is not paired.
+  np = 0
+  for (m in body) {
+    t = body[m]
+    while (match(t, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*Clock[[:space:]]*\.[[:space:]]*schedule[A-Za-z]*[[:space:]]*\(/)) {
+      T = substr(t, RSTART, RLENGTH); sub(/[[:space:]]*=.*/, "", T); t = substr(t, RSTART + RLENGTH)
+      act = third_arg(t)
+      if (act !~ /^[A-Za-z_][A-Za-z0-9_]*$/) continue
+      h = "do" toupper(substr(act, 1, 1)) substr(act, 2)
+      if (!(h in body)) continue
+      u = body[m]
+      while (match(u, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*true[[:space:]]*;/)) {
+        F = substr(u, RSTART, RLENGTH); sub(/[[:space:]]*=.*/, "", F); u = substr(u, RSTART + RLENGTH)
+        if (!(F in bfield)) continue
+        if (body[h] !~ ("(^|[^A-Za-z0-9_.])" F "[[:space:]]*=[[:space:]]*false")) continue
+        key = T SUBSEP F
+        if (!(key in paired)) { paired[key] = 1; np++; PT[np] = T; PF[np] = F; PH[np] = h }
+      }
+    }
+  }
+  for (m in body) {
+    if (m == "stopped" || m == "started") continue
+    sc = reach(m)
+    for (p = 1; p <= np; p++) {
+      if (m == PH[p]) continue
+      # the method that cancels T DIRECTLY reports (its callers would only repeat the row)
+      if (body[m] !~ ("(^|[^A-Za-z0-9_.])" PT[p] "[[:space:]]*\\.[[:space:]]*cancel[[:space:]]*\\(")) continue
+      # a self-heal anywhere in the class (`if (T == null && F) F = false;`) releases the orphan
+      if (all ~ (PT[p] "[[:space:]]*==[[:space:]]*null[^;]*" PF[p] "[[:space:]]*=[[:space:]]*false")) continue
+      if (sc ~ ("(^|[^A-Za-z0-9_.])" PT[p] "[[:space:]]*=[[:space:]]*Clock[[:space:]]*\\.[[:space:]]*schedule")) continue
+      if (sc ~ ("(^|[^A-Za-z0-9_.])" PF[p] "[[:space:]]*=[^=]")) continue
+      # a helper whose every same-file caller assigns F (or re-arms T, or is a lifecycle callback / the
+      # handler) is not an orphan: the caller owns the flag
+      if (callers_handle(m, PT[p], PF[p], PH[p])) continue
+      print "ORPHAN " m " " PT[p] " " PF[p]
+    }
+  }
+  # ---- release-gate-parity ----
+  boot = ""
+  if ("started" in body) boot = boot reach("started")
+  if ("atSteadyState" in body) boot = boot reach("atSteadyState")
+  ng = 0; na = 0
+  t = boot
+  while (match(t, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(/)) {
+    id = substr(t, RSTART, RLENGTH); pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+    t = substr(t, RSTART + RLENGTH); sub(/[[:space:]]*\($/, "", id)
+    if (pre == "." || !(id in body)) continue
+    if (id ~ /^begin[A-Z]/ && !(id in isg)) { isg[id] = 1; G[++ng] = id }
+    if (id ~ /^apply[A-Z]/ && !(id in isa)) { isa[id] = 1; A[++na] = id }
+  }
+  if (ng == 0 || na == 0) exit
+  for (m in body) {
+    if (m !~ /^(exit|end|finish|leave)[A-Z]/ && m !~ /^on[A-Za-z0-9_]*(Exit|Expired|Expiry|End)[A-Za-z0-9_]*$/) continue
+    sc = reach(m); hit = ""
+    for (a = 1; a <= na; a++) if (body[m] ~ ("(^|[^A-Za-z0-9_.])" A[a] "[[:space:]]*\\(")) { hit = A[a]; break }
+    if (hit == "") continue
+    gated = 0
+    for (g = 1; g <= ng; g++) if (sc ~ ("(^|[^A-Za-z0-9_.])" G[g] "[[:space:]]*\\(")) gated = 1
+    if (!gated) print "GATE " m " " hit " " G[1]
+  }
+}
+# callers_handle(m, T, F, H): m has at least one same-file caller, and every caller assigns F or re-arms T
+# (in its own reach) or is stopped()/started()/H
+function callers_handle(m, T, F, H,    c, any, sc, re) {
+  any = 0; re = "(^|[^A-Za-z0-9_.])" m "[[:space:]]*\\("
+  for (c in body) {
+    if (c == m || body[c] !~ re) continue
+    any = 1
+    if (c == "stopped" || c == "started" || c == H) continue
+    sc = reach(c)
+    if (sc ~ ("(^|[^A-Za-z0-9_.])" F "[[:space:]]*=[^=]")) continue
+    if (sc ~ ("(^|[^A-Za-z0-9_.])" T "[[:space:]]*=[[:space:]]*Clock[[:space:]]*\\.[[:space:]]*schedule")) continue
+    return 0
+  }
+  return any
+}
+# third_arg(s): the third depth-0 argument of the call whose "(" was just consumed (s starts after it)
+function third_arg(s,    i, c, d, k, a) {
+  d = 0; k = 1; a = ""
+  for (i = 1; i <= length(s); i++) {
+    c = substr(s, i, 1)
+    if (c == "(") d++
+    else if (c == ")") { if (d == 0) break; d-- }
+    else if (c == "," && d == 0) { k++; continue }
+    if (k == 3) a = a c
+  }
+  gsub(/[[:space:]]/, "", a)
+  return a
+}
+# reach(m): m's body plus every same-file method it reaches through unqualified calls
+function reach(m,    seen, q, qn, qi, out, t, id, pre) {
+  qn = 1; q[1] = m; seen[m] = 1; qi = 0; out = ""
+  while (qi < qn) {
+    t = body[q[++qi]]; out = out "\n" t
+    while (match(t, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(/)) {
+      id = substr(t, RSTART, RLENGTH); pre = (RSTART > 1) ? substr(t, RSTART - 1, 1) : ""
+      t = substr(t, RSTART + RLENGTH); sub(/[[:space:]]*\($/, "", id)
+      if (pre != "." && (id in body) && !(id in seen)) { seen[id] = 1; q[++qn] = id }
+    }
+  }
+  return out
+}
+AWKEOF
 
 # ---------------------------------------------------------------------------
 # Process each Java file
@@ -430,6 +574,22 @@ while IFS= read -r f; do
     }
   ' "$f")
   [ -n "$_atss" ] && row WARN "atSteadyState-only-timer" "$f: timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer"
+done < "$_TMP/files"
+
+# ---------------------------------------------------------------------------
+# Lifecycle WARNs (advisory, never change the exit): orphan-flag, release-gate-parity. See the header.
+# ---------------------------------------------------------------------------
+while IFS= read -r f; do
+  if ! lc=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/lifecycle.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-timers: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    exit 3
+  fi
+  while read -r kind m x y; do
+    case "$kind" in
+      ORPHAN) row WARN "orphan-flag" "$f: ${m}() cancels ${x} but never clears its companion flag ${y} (set true beside the schedule) -- the expiry handler that clears it will not run" ;;
+      GATE)   row WARN "release-gate-parity" "$f: ${m}() re-applies ${x}() without the ${y}() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)" ;;
+    esac
+  done <<< "$lc"
 done < "$_TMP/files"
 
 [ "$FAILED" -eq 1 ] && exit 1

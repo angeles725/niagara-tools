@@ -632,3 +632,123 @@ JAVA
   [ "$status" -eq 0 ]
   if [[ "$output" == *"note"* ]]; then return 1; fi
 }
+
+@test "TT-query: a query named like cancel (isCancelled(a)) does not count as cancelling a (A1c)" {
+  # Mutation: TT-query -- a name merely CONTAINING cancel accepts isCancelled(a) as a cancel.
+  _tt C10 '  public void stopped() throws Exception { super.stopped(); if (isCancelled(a)) return; b.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C10.java"*"ticket a"* ]]
+}
+
+@test "TT-helper-only: a cancel helper taking the field is the only cancel in scope and still PASSes (A1c)" {
+  _tt C11 '  public void stopped() throws Exception { super.stopped(); cancelTicket(a); cancelTicket(b); }' \
+          '  private static void cancelTicket(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+}
+
+# ===========================================================================
+# audit-2026-10-03 A8 — lifecycle WARNs (advisory: exit unchanged).
+# orphan-flag: a method other than stopped()/started() cancels ticket T, but leaves the companion flag F that was
+#   set true beside `T = Clock.schedule*` — the expiry handler that would clear F never runs, so F stays true.
+#   [ev: corpus B801] [ev: corpus B812] (companion-flag doctrine, extended to the cancel path)
+# release-gate-parity: started()/atSteadyState() re-applies outputs (apply*()) behind a begin*() gate, and a
+#   release point (exit*/end*/finish*/leave*/on*Exit|Expired|End) re-applies the same apply*() without that gate.
+#   [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
+#   (types/logic.md § release-point gate rule 2)
+# ===========================================================================
+
+_lc() { # _lc <Class> <body-lines...>
+  local c="$1"; shift
+  { printf 'package demo;\nimport javax.baja.sys.*;\npublic final class %s extends BComponent {\n' "$c"; printf '%s\n' "$@"; printf '}\n'; } > "$SRC/$c.java"
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+}
+
+_ORPH_HEAD=(
+'  private Clock.Ticket startTicket;'
+'  private boolean startingUp;'
+'  public void arm() { startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }'
+'  public void doDone() { startingUp = false; }'
+'  public void started() throws Exception { super.started(); startingUp = false; }'
+'  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }'
+)
+
+@test "LC-orphan: a disable path that cancels the ticket but leaves its companion flag true WARNs orphan-flag (A8)" {
+  # Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave startingUp stuck true.
+  _lc O1 "${_ORPH_HEAD[@]}" '  public void disable() { if (startTicket != null) startTicket.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  orphan-flag"*"O1.java"*"disable()"*"startTicket"*"startingUp"* ]]
+}
+
+@test "LC-orphan-ok: the same disable path clearing the flag (directly or in a callee) does not WARN (A8)" {
+  # Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs disable() -> resetStart().
+  _lc O2 "${_ORPH_HEAD[@]}" '  public void disable() { if (startTicket != null) startTicket.cancel(); clearStart(); }' \
+         '  private void clearStart() { startingUp = false; }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
+}
+
+@test "LC-orphan-rearm: cancelling before re-arming in the arming method itself does not WARN (A8)" {
+  _lc O3 '  private Clock.Ticket startTicket;' '  private boolean startingUp;' \
+    '  public void arm() { if (startTicket != null) startTicket.cancel(); startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }' \
+    '  public void doDone() { startingUp = false; }' \
+    '  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }'
+  run "$LINT" "$SRC"
+  if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
+}
+
+_GATE_HEAD=(
+'  private boolean restartSequencing;'
+'  public void started() throws Exception { super.started(); beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }'
+'  private void beginRestartSequencing() { restartSequencing = true; }'
+'  private void applyRunCmd() { }'
+'  private void applyFanRunMode() { }'
+)
+
+@test "LC-gate: a release point re-applying gated outputs without the gate WARNs release-gate-parity (A8)" {
+  # Mutation: LC-gate -- dropping the parity pass lets exitDefrost() re-assert outputs ungated (the 2.2.x defect shape).
+  _lc G1 "${_GATE_HEAD[@]}" '  public void exitDefrost() { applyRunCmd(); applyFanRunMode(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  release-gate-parity"*"G1.java"*"exitDefrost()"*"beginRestartSequencing"* ]]
+}
+
+@test "LC-gate-ok: the release point calling the gate first does not WARN (A8)" {
+  # Mutation: LC-gate-ok -- not looking for the gate call in the release point false-WARNs the fixed shape.
+  _lc G2 "${_GATE_HEAD[@]}" '  public void exitDefrost() { beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }'
+  run "$LINT" "$SRC"
+  if [[ "$output" == *"release-gate-parity"* ]]; then return 1; fi
+}
+
+@test "LC-gate-none: without a begin*() gate in started() no release point is judged (A8)" {
+  _lc G3 '  public void started() throws Exception { super.started(); applyRunCmd(); }' '  private void applyRunCmd() { }' \
+         '  public void exitDefrost() { applyRunCmd(); }'
+  run "$LINT" "$SRC"
+  if [[ "$output" == *"release-gate-parity"* ]]; then return 1; fi
+}
+
+@test "LC-orphan-heal: a class-wide self-heal (if (startTicket == null && startingUp) startingUp = false) releases the orphan (A8)" {
+  _lc O4 "${_ORPH_HEAD[@]}" '  public void disable() { if (startTicket != null) startTicket.cancel(); startTicket = null; }' \
+         '  public void execute() { if (startTicket == null && startingUp) startingUp = false; }'
+  run "$LINT" "$SRC"
+  if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
+}
+
+@test "LC-orphan-direct: only the method that cancels the ticket directly reports, not each of its callers (A8)" {
+  _lc O5 "${_ORPH_HEAD[@]}" '  private void cancelStart() { if (startTicket != null) startTicket.cancel(); }' \
+         '  public void disable() { cancelStart(); }' '  public void reset() { cancelStart(); }'
+  run "$LINT" "$SRC"
+  [ "$(grep -c 'orphan-flag' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"cancelStart()"* ]]
+}
+
+@test "LC-orphan-callers: a cancel helper whose every caller clears the flag does not WARN (A8)" {
+  # Mutation: LC-orphan-callers -- ignoring the callers reports a helper whose callers own the flag.
+  _lc O6 "${_ORPH_HEAD[@]}" '  private void cancelStart() { if (startTicket != null) startTicket.cancel(); }' \
+         '  public void disable() { cancelStart(); startingUp = false; }'
+  run "$LINT" "$SRC"
+  if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
+}
