@@ -6,6 +6,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [v0.30.0] - 2026-10-02
+
+### Fixed — build-n4 kit polish after the 2026-10-02 retro-fold campaign (`odd/tasks/polish-2026-10-02.md`)
+
+This release clears the advisories that the approved campaign reviews left on #199 and #151. Every fix was written
+test-first and pinned with an observed mutation, and each landed as its own PR with a native RDD review. From P2d on,
+an anti-cascade policy applied: only a fail-open or a regression introduced by the feature became a sub-task. Every
+other advisory is parked in #226.
+
+- **P1/P1b/P1c** `report-module.sh` runs `lint-link-target-flags.sh` (it fails closed on a non-zero exit with no FAIL row and names the wiring map), surfaces the slot-coverage facade FAIL and relays ADVISORY rows; `commissioning-verify.sh` gets the same member; bash 5.2 `patsub_replacement` quoting. [PR #207, #208, #209]
+- **P2a-P2e** `lint-delays.sh` reports the MIN floor in ms, flags an unclosed schedule call and strips comments with string awareness; `verify-module` `has_nu`; arbitrary-ord markers inside literals; LTF1 handles self-set Table 2 rows (whole-cell, backtick-safe sentinels, header-row Source column); write-path literal-aware stripping; CS4 camelCase, unit-suffixed cutouts and the status/counter vs setpoint suffix split. [PR #209-#213]
+- **P3-P3d** `obix-link-audit.sh` escapes credentials in the curl config, checks the MATCH source component and warns on an `http://` base; the `commissioning-verify.sh` values-owed parser became a named-state, Slot-anchored, fail-closed block parser; `triage-console.sh --site` duplicate-id token. [PR #214-#217]
+- **P4** `gen-lint-index.sh`: Auto column from real invocations, every Usage/Exit line, and an awk failure is exit 3. [PR #218]
+- **P5/P5b** spa-poll success-path `lastOk`, the rc-scan disabled-gate `auth` token (OAuth/reauth/unauthorized kept), hmi-sweep input checks, the vendor-floor sloppy-script tokenizer, report-module "PASS" after WARN rows plus the eslint major gate; `ui_profile` single source, profile tags, B34 alarm fidelity. [PR #219, #220]
+- **P6** folds the campaign close retro: per-entry ledger merge, serial bats / count what ran, trivial trailer for feature-doc pushes, and advisory routing with the anti-cascade limit. `sweep-build-state.sh --age` disposition skip is bounded (0-delta rows, allowed values). `sweep-fold-audit.sh --deltas-since` (in CI) checks every Δ of each folded retro; `lint-manual-labels` header fixes. [PR #221]
+- **P7a** the six T3/T4/T5a hot-path lints fail closed on an awk failure; persist-hot-write follows every callee; session-store scheduled purge is one hop; the ORD resolve is anchored; inert-coordination handles lowerCamel stagger and units() calls; spa-poll handles arrow-function polls. [PR #222]
+- **P7b/P7c** `build.sh` drift gate: exit 52 "cannot verify" for an unlistable jar or an unreadable vendorVersion (it was a silent pass), and a failed restore is reported; `preflight.sh` jar-lock is SKIP on an empty lsof listing. [PR #223, #225]
+
+Issues: #199 and #151 are closed with per-advisory mappings. Parked items are tracked in #226.
+
+### Changed — `mcp-n4-kit` docs
+
+- Retro for the 2026-10-02 tests and tier-gate work units: `mcp-n4-kit/retros/2026-10-02-tests-and-tier-gate.md`. [PR #224]
+- That retro's D1-D3 are folded into `mcp-n4-kit/README.md`: an "Upgrading to v0.5.0" note, a "Versioning" section, and the test isolation rules. [PR #227]
+
 ## [v0.29.0] - 2026-10-02
 
 ### Changed — retro-fold campaign 2026-10-02: fold the 23 pending build-n4 retros (147 Δ)
