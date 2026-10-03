@@ -58,7 +58,7 @@ jobs:
           shellcheck --version
 
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
-        run: shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash
+        run: shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
 
       - name: bats (all unit tests)
         run: bats tests/*.bats
