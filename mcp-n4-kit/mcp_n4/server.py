@@ -66,12 +66,13 @@ class Server:
                  client_factory=None, tools=None, write_scopes=(), state_dir=None,
                  token_ttl=300, max_writes=200, stations=None, credential_env="MCP_N4",
                  insecure_tls=(), station_homes=None, progress_file=None,
-                 allow_tier_b=(), allow_tier_c=()):
+                 allow_tier_b=(), allow_tier_c=(), auth_cooldown=tools_read.AUTH_COOLDOWN_MIN):
         self.ctx = tools_read.Context(allow_writes=allow_writes, allow_http=allow_http,
                                       env=env, client_factory=client_factory,
                                       stations=stations, credential_env=credential_env,
                                       insecure_tls=insecure_tls, allow_tier_b=allow_tier_b,
-                                      allow_tier_c=allow_tier_c)
+                                      allow_tier_c=allow_tier_c,
+                                      auth_cooldown=auth_cooldown)
         self.ctx.state_dir = os.path.expanduser(state_dir or safety.DEFAULT_STATE_DIR)
         self.ctx.progress_path = os.path.expanduser(progress_file) if progress_file else None
         if tools is None:
@@ -165,7 +166,15 @@ class Server:
         try:
             if tool.needs_session and self.ctx.session is None:
                 raise tools_read.ToolError(safety.REASON_NOT_CONNECTED + ": call n4_connect first")
+            if tool.needs_session or tool.name in tools_write.NAMES:  # station calls (F4)
+                block = self.ctx.auth_block()
+                if block:
+                    raise tools_read.ToolError(block)
             obj = tool.handler(self.ctx, args)
+        except box.AuthError as exc:  # a client without the hook still latches here
+            if self.ctx.auth_latch is None:
+                self.ctx.note_auth_failure(exc)
+            return self._tool_error(str(exc))
         except (tools_read.ToolError, box.BoxError, ValueError) as exc:
             return self._tool_error(str(exc))
         except Exception as exc:  # never leak a message (could hold secrets) or a trace
@@ -188,6 +197,15 @@ def _positive_int(text):
     return value
 
 
+def _cooldown(text):
+    """argparse type: whole seconds >= the lock-out window (30)."""
+    value = _positive_int(text)
+    if value < tools_read.AUTH_COOLDOWN_MIN:
+        raise argparse.ArgumentTypeError("must be >= %d (the station lock-out window), got %d"
+                                         % (tools_read.AUTH_COOLDOWN_MIN, value))
+    return value
+
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(prog="mcp_n4.server", description=__doc__)
     parser.add_argument("--allow-writes", action="store_true",
@@ -200,6 +218,10 @@ def parse_args(argv=None):
                         help="confirmation token lifetime (default 300)")
     parser.add_argument("--max-writes", type=_positive_int, default=200, metavar="N",
                         help="executed writes allowed per session (default 200)")
+    parser.add_argument("--auth-cooldown", type=_cooldown,
+                        default=tools_read.AUTH_COOLDOWN_MIN, metavar="SECONDS",
+                        help="after an authentication failure, refuse station calls this long "
+                             "(default and minimum 30: the lock-out window)")
     parser.add_argument("--station", action="append", default=[], metavar="NAME=URL",
                         help="station n4_connect may use (repeatable); NAME should equal the "
                              "station's stationName; URL must be https://")
@@ -247,7 +269,8 @@ def main(argv=None):
                      token_ttl=args.token_ttl, max_writes=args.max_writes, stations=stations,
                      credential_env=args.credential_env, insecure_tls=args.insecure_tls,
                      station_homes=homes, progress_file=args.progress_file,
-                     allow_tier_b=args.allow_tier_b, allow_tier_c=args.allow_tier_c)
+                     allow_tier_b=args.allow_tier_b, allow_tier_c=args.allow_tier_c,
+                     auth_cooldown=args.auth_cooldown)
     except (ValueError, safety.SafetyError) as exc:
         print("mcp_n4.server: %s" % exc, file=sys.stderr)
         return 2

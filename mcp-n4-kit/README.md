@@ -45,6 +45,10 @@ Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
 retry (5 failures in 30 s lock the account). A 401 names what to check: the
 user's Authentication Scheme Name must be `HTTPBasicScheme`, then the password.
+The server also latches on any `AuthError` (login, `/obix/about/`, `/ord` GET, BOX call):
+every station call is refused for `--auth-cooldown` seconds (default and minimum 30), with
+the reason and the seconds left; `n4_describe_session` shows `auth_paused`. Only an
+`n4_connect` with other credentials may try during the cooldown; a good login clears it.
 
 ## Running the server
 
@@ -79,6 +83,8 @@ Flags:
   slot ORD (`station:|slot:/Path`, nothing chained after it) or the server refuses to start.
 - `--state-dir DIR`: journal and audit directory (default `~/.local/state/mcp-n4`).
 - `--token-ttl SECONDS`: confirmation token lifetime (default 300; must be >= 1).
+- `--auth-cooldown SECONDS`: after an authentication failure, refuse station calls this long
+  (default and minimum 30, the lock-out window).
 - `--max-writes N`: executed writes allowed per session (default 200; must be >= 1).
 - `--allow-tier-b NAME` (repeatable): let writes run on that configured station although
   its version is tier B (4.15, 4.3). Only after a PoC matched that build.
