@@ -224,8 +224,10 @@ server never chmods a directory it did not create.
 Tool rules:
 
 - `n4_set_slot` writes Status slots whole (value plus status) and refuses a path
-  ending in `/value` or `/status`. The slot must already be listed by the station;
-  a plain slot at its type default is omitted by the station and is refused.
+  ending in `/value` or `/status`. A nested slot (`grp/sp`) is loaded one level deeper
+  so its previous value is the real one. The slot must already be listed by the station;
+  a plain slot at its type default is omitted by the station and is refused (the
+  refusal says so and routes to `n4_read_slots`, or to setting it once in Workbench).
 - `n4_invoke_action` allows only `set`, `active`, `inactive` and `auto`. `set` restores
   the previous `fallback` as its inverse; the others have none and the plan says so.
   `emergency*`, `save` and `restart` are refused; saving has its own tool,
@@ -245,8 +247,10 @@ Destructive tools use the same pipeline:
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled
   intent so a human decides) and a batch from another station. The current
   `--write-scope` is enforced on every ORD the batch touched, and each recorded
-  handle must still belong to its ORD. Inverses: remove a created component or
-  link, restore a slot or fallback, re-create a removed component from its
+  handle must still belong to its ORD. Before restoring a slot or fallback it reads
+  the slot and refuses when it no longer holds what the batch wrote (a later change is
+  never overwritten; restore it by hand with `n4_set_slot`). Inverses: remove a created
+  component or link, restore a slot or fallback, re-create a removed component from its
   snapshot (links only when both ends exist; the reply reports
   `relinks: {restored, skipped}`). A frozen child (e.g. a writable's `proxyExt`) is
   never re-added: the read-back compares it with the snapshot and lists any

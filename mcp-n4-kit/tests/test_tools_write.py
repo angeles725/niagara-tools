@@ -468,8 +468,28 @@ class TestSetSlot(WriteTestCase):
 
     def test_slot_at_its_type_default_is_not_listed_by_the_station_so_it_is_refused(self):
         self.box.set_slot(self.h, "zero", box.bson_double(0))  # default values are omitted
-        self.assertIn("not found", self.err("n4_set_slot", ord=self.ord, slot="zero",
-                                            value=1.0, value_type="baja:Double"))
+        text = self.err("n4_set_slot", ord=self.ord, slot="zero", value=1.0,
+                        value_type="baja:Double")
+        self.assertIn("not found", text)
+        # F10 (audit 2026-10-03): the refusal explains why and names the routes.
+        self.assertIn("type default", text)
+        self.assertIn("n4_read_slots", text)
+        self.assertIn("Workbench", text)
+
+    def test_a_nested_status_slot_plans_its_real_previous_value(self):
+        # F3 (audit 2026-10-03): `grp/sp` needs its value/status children loaded, else the
+        # previous value (and the journaled inverse) silently became the type default.
+        self.box.set_slot(self.h, "grp", {"nm": "p", "t": "baja:Struct", "s": [
+            dict(box.bson_status_numeric(7.5), n="sp")]})
+        args = dict(ord=self.ord, slot="grp/sp", value=9.0, value_type="baja:StatusNumeric")
+        plan = self.dry("n4_set_slot", **args)
+        self.assertEqual(plan["plan"]["inverse"],
+                         [{"nm": "s", "h": self.h, "n": "grp/sp",
+                           "b": box.bson_status_numeric(7.5, "0")}])
+        out = self.ok("n4_set_slot", dry_run=False,
+                      confirmation_token=plan["confirmation_token"], **args)
+        self.assertEqual((out["verdict"], out["observed"]),
+                         ("verified", {"value": 9.0, "status": "0"}))
 
     def test_unknown_slot_and_type_mismatch_with_the_slot_are_refused(self):
         self.assertIn("not found", self.err("n4_set_slot", ord=self.ord, slot="nope",
