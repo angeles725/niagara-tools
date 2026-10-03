@@ -121,3 +121,17 @@ END_M='//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- 
   [ "$status" -eq 3 ]
   [[ "$output" == *"Mod/src/com/x/locked"* ]]
 }
+
+@test "LSZ8: a BEGIN inside an open region is its own WARN, never silently merged (D2b, R3-002)" {
+  # Mutation: LSZ8 -- ignoring a nested BEGIN lets a stray END close an unterminated region and hide its lines
+  { printf 'package com.x;\npublic class Nest {\n%s\n' "$BEGIN_M"; lines 3 'int a'
+    printf '%s\n' "$BEGIN_M"; lines 2 'int b'; printf '%s\n}\n' "$END_M"; } > "$SRC/Nest.java"
+  run "$LSZ" "$TMPDIR_T/Mod"
+  [[ "$output" == *"Nest.java:7  nested-region"* ]]
+}
+
+@test "LSZ9: an END with no open region is its own WARN (D2b, R3-002)" {
+  { printf 'package com.x;\npublic class Stray {\n  int a;\n%s\n}\n' "$END_M"; } > "$SRC/Stray.java"
+  run "$LSZ" "$TMPDIR_T/Mod"
+  [[ "$output" == *"Stray.java:4  stray-end"* ]]
+}

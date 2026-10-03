@@ -310,10 +310,13 @@ in the framework forces it, so a module that skips the gate runs unlicensed unde
 [ev: corpus B1145 — ServiceManager.java:291-322]
 [ev: corpus B1146 — BAlarmService.java:289,397,448,578 et al.]
 
-Deferred lint candidate (not implemented): `lint-license-isoperational-gate` — flag a class with
-a non-null `getLicenseFeature()` whose `changed()`/timer/servlet-write callbacks act without an
-`isOperational()`/`isFault()` guard. Check for overlap with `lint-status-parity` and
-`lint-silent-protection` before implementing.
+Lint: `toolbelt/lint-license-isoperational-gate.sh` (advisory WARN, run by `report-module.sh`) flags a class
+whose `getLicenseFeature()` returns a feature (not the `return null;` default) and whose `changed()`, action
+(`do<Name>`, where `Clock.schedule` timers land) or servlet write handler (`doPost`/`doPut`/`doDelete`/`doPatch`) acts
+with no `isOperational()`/`isFault()`/`isFatalFault()` call in its own body. A gate placed in a helper the callback
+calls is not followed, so such a row is cleared by moving the gate into the callback. No overlap with
+`lint-status-parity` (config/status slot ratio) or `lint-silent-protection` (an unsurfaced protection trip): neither
+reads the license feature or the operational gate. [ev: retro secure-authoring-isoperational-gate Δ1]
 
 A fuller treatment of license file format, DSA signing, and OEM trust certs belongs in
 a future dedicated licensing doc.
