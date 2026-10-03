@@ -11,6 +11,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -163,12 +164,11 @@ class TestSessionLatch(LatchCase):
 
 class TestAboutLatch(LatchCase):
     def test_an_about_rejection_during_connect_pauses_later_station_calls(self):
-        orig = box.BoxClient.about
-
         def about_401(client, *a, **kw):
             raise client._auth_error(401, "obix", "about")
-        box.BoxClient.about = about_401
-        self.addCleanup(setattr, box.BoxClient, "about", orig)
+        patcher = mock.patch.object(box.BoxClient, "about", about_401)  # README isolation rule
+        patcher.start()
+        self.addCleanup(patcher.stop)
         out = self.connect()  # the version probe never fails the connect
         self.assertIn("HTTP 401", out["version_error"])
         self.assertIn("auth_paused", out)

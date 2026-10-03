@@ -158,6 +158,16 @@ class TestStateDirStartup(WriteTestCase):
         self.assertEqual(code, 2)
         self.assertIn("--state-dir", err.getvalue())
 
+    def test_main_exits_2_for_a_chained_or_non_slot_write_scope(self):
+        # H1 review R3-startup-exit-unproved: the refusal reaches the operator as exit 2.
+        for bad in ("station:|slot:/A|h:1f", "station:|h:1f", "station:|slot:/A/../B"):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code = server.main(["--allow-writes", "--state-dir", self.state_dir,
+                                    "--write-scope", bad])
+            self.assertEqual(code, 2, bad)
+            self.assertIn("--write-scope", err.getvalue(), bad)
+
     def test_main_rejects_malformed_station_values(self):
         for bad in ("nourl", "=https://h", "name=", ""):
             err = io.StringIO()
@@ -456,6 +466,13 @@ class TestSetSlot(WriteTestCase):
             self.assertIn("whole", text)
             self.assertIn("status", text)
         self.assertEqual(self.fake.by_handle[self.h].child("out").child("value").value, "1.0")
+
+    def test_a_status_for_a_plain_value_type_is_refused(self):
+        # F13 (audit 2026-10-03): untested branch.
+        self.box.set_slot(self.h, "d", box.bson_double(2))
+        text = self.err("n4_set_slot", ord=self.ord, slot="d", value=3.0,
+                        value_type="baja:Double", status="0")
+        self.assertIn("status only applies", text)
 
     def test_bad_values_types_and_status_are_refused(self):
         for kw in ({"value": True, "value_type": "baja:Double"},
