@@ -220,5 +220,5 @@ RM
   # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
   run grep -F '| `toolbelt/lint-timers.sh` |' "$KIT/toolbelt/INDEX.md"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"2 usage · 3 env |"* ]]
+  [[ "$output" == *"2 usage · 3 env (incl. a sub-directory find cannot enter) |"* ]]
 }
