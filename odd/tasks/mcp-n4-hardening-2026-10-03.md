@@ -52,7 +52,9 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
 - [x] **H5 — BQL hardening (F7, F12, output_file)**: duplicate headers kept (`Type`, `Type#2`); inventory
   resolves columns by queried slot / position; optional `output_file` for `n4_bql_query` under the state dir.
   Release: MINOR.
-- [ ] **H6 — ergonomics (n4_list_batches, F8, F11)**: read-only `n4_list_batches`; remove-snapshot truncation
+- [x] **H5a — H5 review regressions (anti-cascade sub-task)**: an empty BQL body (no header) is 0 rows, not
+  an inventory failure; a failed `output_file` write removes its partial file. Shipped in the H6 PR.
+- [x] **H6 — ergonomics (n4_list_batches, F8, F11)**: read-only `n4_list_batches`; remove-snapshot truncation
   warning; `--load-wait` / `--http-timeout`. Release: MINOR.
 - [ ] **H7 — budget scope + docs (F5, F15, F17)**: process-scoped write budget; README/SKILL/METHODOLOGY drift;
   FlexAddress/BacnetAddress value types; skill reinstall + drift check; feature retro; this doc COMPLETE.
@@ -149,6 +151,22 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   - Shuffled order seeds 1, 7, 42: OK (a first shuffled failure was a stale `.pyc` left by the mode
     mutation: same size, restored within the same second).
   - Release: `mcp_n4.__version__` 0.6.0, skill metadata 0.6.0.
+- H6 (route: inline, branch `feat/mcp-n4-h6-ergonomics`; box/bql/server/tools_read/tools_write + tests). RED
+  first — 7 tests: H5a empty body (`0 column(s)` ToolError) and partial file left behind; no
+  `n4_list_batches`; no `snapshot_truncated` for a 4-level subtree; no `--load-wait`/`--http-timeout`, and
+  a muted load slept 7.1 s whatever was asked. GREEN: 530 tests OK. Decisions:
+  - `n4_list_batches` (read-only, no session, not latched): journal views newest first with
+    `rolled_back_by`; `limit` 1-1000 (default 50); `total` is exact.
+  - F8: the remove plan loads `SNAPSHOT_DEPTH + 1`, prunes the tree back to the snapshot depth (so the
+    re-create body is unchanged) and lists every deeper path in `snapshot_truncated` (first 20 + exact
+    count in the note); it is part of the plan (hashed) and of the execution reply.
+  - F11: `--load-wait` (float 1-60, default 3) and `--http-timeout` (int 5-300, default 20). The client's
+    `load_wait` bounds the polling window; `load_tree(attempts=None)` takes enough polls to fill it (12 at
+    3 s). Non-default values only are passed to `client_factory` (custom factories keep working).
+  - Observed mutations (each restored, `__pycache__` cleared): empty guard, unlink, truncation list and
+    `load_wait` each removed -> exactly its test fails.
+  - Shuffled order seeds 1, 7, 42: OK.
+  - Release: `mcp_n4.__version__` 0.7.0 (new tool + flags), skill metadata 0.7.0.
 
 ## Parked advisories
 - H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
@@ -165,6 +183,8 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   `test_rollback_of_invoke_set_restores_the_fallback`.
 - H4 review (non-blocking suggestions): R2 `_in_doubt` docstring tells history rather than the contract; R2
   the `craft` test helper name is opaque; R3 the no-targets test does not assert the station is unchanged.
+- H5 review: R3 the read is recorded (session observation / audit `read`) before the `output_file` write, so
+  a failed write still shows a successful read. The two R3 regressions became H5a.
 
 ## Delivery record
 | Unit | PR | Merge | Version | Review |
@@ -173,6 +193,7 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
 | H2 | #231 | 0b7c3dd | 0.5.2 | high; 4 lenses APPROVED + acknowledged (review-ce356fee111e83c7); 1 fail-open -> H2a, rest parked |
 | H3 | #232 | 81cdb3b | 0.5.3 | high; 4 lenses APPROVED + acknowledged (review-3bbf4aa80a638470); 4 advisories parked |
 | H4 | #234 | 7e71caa | 0.5.4 | high; 4 lenses APPROVED + acknowledged (review-0a41629cf4f014c9); 3 suggestions parked |
+| H5 | #236 | 81934de | 0.6.0 | medium; 1 lens APPROVED + acknowledged (review-464f860418d04fe7); 2 regressions -> H5a, 1 parked |
 
 ## Next step
-- H6 (n4_list_batches, remove-snapshot truncation warning, --load-wait / --http-timeout).
+- H7 (process-scoped write budget, docs drift, FlexAddress/BacnetAddress, skill reinstall, retro, close).

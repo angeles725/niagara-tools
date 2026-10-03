@@ -1,3 +1,4 @@
+import contextlib
 import io
 import json
 import os
@@ -337,6 +338,27 @@ class TestConnect(ToolTestCase):
         self.assertIn("Other", text)
         self.assertIn("FakeStation", text)
         self.assertIsNone(self.srv.ctx.session)
+
+    def test_load_wait_and_http_timeout_flags_reach_the_client(self):
+        # F11 (audit 2026-10-03): the fixed 3 s load window and 20 s HTTP timeout are
+        # operator flags with bounds.
+        args = server.parse_args([])
+        self.assertEqual((args.load_wait, args.http_timeout), (3.0, 20))
+        args = server.parse_args(["--load-wait", "12.5", "--http-timeout", "90"])
+        self.assertEqual((args.load_wait, args.http_timeout), (12.5, 90))
+        for flag, bad in (("--load-wait", "0.5"), ("--load-wait", "61"),
+                          ("--http-timeout", "4"), ("--http-timeout", "301")):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit):
+                server.parse_args([flag, bad])
+            self.assertIn(flag, err.getvalue())
+        srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
+                            load_wait=12.5, http_timeout=90)
+        self.addCleanup(srv.ctx.close)
+        srv.dispatch(rpc("tools/call", {"name": "n4_connect",
+                                        "arguments": {"station": "FakeStation"}}))
+        client = srv.ctx.session.client
+        self.assertEqual((client.timeout, client.load_wait), (90, 12.5))
 
     def test_tls_is_verified_unless_the_operator_marks_the_station_insecure(self):
         seen = []
@@ -731,7 +753,7 @@ class TestStdioEndToEnd(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4, 5])
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "mcp-n4")
-        self.assertEqual(len(replies[1]["result"]["tools"]), 9)  # 7 + n4_bql_query + n4_inventory
+        self.assertEqual(len(replies[1]["result"]["tools"]), 10)  # 7 + bql + inventory + list_batches
         self.assertEqual(replies[2]["result"]["structuredContent"]["station_name"], "FakeStation")
         names = [c["name"] for c in replies[3]["result"]["structuredContent"]["children"]]
         self.assertIn("Folder", names)

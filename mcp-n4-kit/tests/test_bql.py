@@ -9,6 +9,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.parse
 
@@ -366,6 +367,37 @@ class TestBqlOutputFile(BqlToolCase):
                 query="select name from driver:Device")
         self.assertIn("exists", self.err("n4_bql_query", base="/Drivers", output_file="d.json",
                                          query="select name from driver:Device"))
+
+
+class TestH5aRegressions(BqlToolCase):
+    """H5 review: an empty BQL body and a failed output_file write."""
+
+    def test_an_empty_body_counts_zero_rows_instead_of_failing_the_inventory(self):
+        self.opener.routes = [("driver:DeviceNetwork", fixture("bql_networks.csv")),
+                              ("driver:Device", b""),
+                              ("control:ControlPoint", b"")]
+        out = self.ok("n4_inventory")
+        self.assertEqual((out["totals"]["field_devices"], out["totals"]["points"]), (0, 0))
+
+    def test_a_failed_output_write_leaves_no_partial_file_and_the_name_stays_usable(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.srv.ctx.state_dir = os.path.join(tmp.name, "state")
+        path = os.path.join(self.srv.ctx.state_dir, "bql", "d.json")
+
+        def full(*a, **k):
+            raise OSError(28, "No space left on device")
+        patcher = mock.patch.object(tools_read.json, "dump", full)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        text = self.err("n4_bql_query", base="/Drivers", output_file="d.json",
+                        query="select name from driver:Device")
+        self.assertIn("could not be written", text)
+        self.assertFalse(os.path.exists(path))
+        patcher.stop()
+        self.ok("n4_bql_query", base="/Drivers", output_file="d.json",
+                query="select name from driver:Device")
+        self.assertTrue(os.path.exists(path))
 
 
 if __name__ == "__main__":

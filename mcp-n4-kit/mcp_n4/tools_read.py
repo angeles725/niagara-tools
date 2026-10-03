@@ -50,6 +50,8 @@ class Session:
 #: The station locks an account after 5 failed logins in 30 s (B1179): after one failure,
 #: no station call goes out for at least this long (audit 2026-10-03 F4).
 AUTH_COOLDOWN_MIN = 30
+#: Default per-request HTTP timeout (seconds) of a station client.
+HTTP_TIMEOUT_DEFAULT = 20
 
 
 class Context:
@@ -57,12 +59,15 @@ class Context:
 
     def __init__(self, allow_writes=False, allow_http=False, env=None, client_factory=None,
                  stations=None, credential_env="MCP_N4", insecure_tls=(), allow_tier_b=(),
-                 allow_tier_c=(), auth_cooldown=AUTH_COOLDOWN_MIN):
+                 allow_tier_c=(), auth_cooldown=AUTH_COOLDOWN_MIN,
+                 http_timeout=HTTP_TIMEOUT_DEFAULT, load_wait=box.MAX_POLL_WAIT):
         self.allow_writes, self.allow_http = allow_writes, allow_http
         if isinstance(auth_cooldown, bool) or not isinstance(auth_cooldown, (int, float)) \
                 or auth_cooldown < AUTH_COOLDOWN_MIN:
             raise ValueError("--auth-cooldown must be >= %d seconds, got %r"
                              % (AUTH_COOLDOWN_MIN, auth_cooldown))
+        #: Operator timing (F11): HTTP timeout per request and total wait of one load.
+        self.http_timeout, self.load_wait = http_timeout, load_wait
         #: Seconds every station call stays refused after an authentication failure.
         self.auth_cooldown = auth_cooldown
         #: `{"reason", "until", "credentials"}` after an `AuthError`, else None (F4).
@@ -248,9 +253,14 @@ def n4_connect(ctx, args):
     if block:  # the same credentials just failed: one more try would only near the lock-out
         raise ToolError(block)
     ctx.use_credentials(credentials)
+    timing = {}  # only non-defaults: a custom client_factory need not know these kwargs
+    if ctx.http_timeout != HTTP_TIMEOUT_DEFAULT:
+        timing["timeout"] = ctx.http_timeout
+    if ctx.load_wait != box.MAX_POLL_WAIT:
+        timing["load_wait"] = ctx.load_wait
     client = ctx.client_factory(ctx.stations[name], user, secret,
                                 insecure_tls=name in ctx.insecure_tls,
-                                allow_http=ctx.allow_http)
+                                allow_http=ctx.allow_http, **timing)
     try:
         client.on_auth_error = ctx.note_auth_failure
     except AttributeError:  # a client without the hook: the server still latches on raise
@@ -562,13 +572,20 @@ def _write_output(path, base, query, columns, rows):
             os.makedirs(directory, mode=0o700, exist_ok=True)
             os.chmod(directory, 0o700)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
-        if path.endswith(".csv"):
-            writer = csv.writer(fh)
-            writer.writerow(columns)
-            writer.writerows([row.get(c, "") for c in columns] for row in rows)
-        else:
-            json.dump({"base": base, "query": query, "columns": columns, "rows": rows}, fh)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            if path.endswith(".csv"):
+                writer = csv.writer(fh)
+                writer.writerow(columns)
+                writer.writerows([row.get(c, "") for c in columns] for row in rows)
+            else:
+                json.dump({"base": base, "query": query, "columns": columns, "rows": rows}, fh)
+    except BaseException:  # never leave a truncated file a reader could trust (H5 review R3)
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        raise
 
 
 def n4_bql_query(ctx, args):
@@ -624,6 +641,27 @@ def n4_inventory(ctx, args):
     if args.get("include_points"):
         out["point_rows"] = results["points"]
     return out
+
+
+def n4_list_batches(ctx, args):
+    """The journaled write batches, newest first (reads the journal only, never the station).
+
+    Audit 2026-10-03 F14: before this, finding a `batch_id` for `n4_rollback` meant reading
+    `journal.jsonl` by hand.
+    """
+    views = safety.Journal(ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR)).views()
+    rolled = {}
+    for view in views:
+        if view.get("rollback_of"):
+            rolled.setdefault(view["rollback_of"], []).append(view.get("batch_id"))
+    limit = args.get("limit", 50)
+    batches = [{"batch_id": v.get("batch_id"), "tool": v.get("tool"),
+                "station_name": v.get("station_name"), "ts": v.get("ts"),
+                "result_ts": v.get("result_ts"), "state": v.get("state"),
+                "verdict": v.get("verdict"), "rollback_of": v.get("rollback_of"),
+                "rolled_back_by": rolled.get(v.get("batch_id"), [])}
+               for v in reversed(views)]
+    return {"total": len(batches), "batches": batches[:limit]}
 
 
 def n4_session_retro_draft(ctx, args):
@@ -725,6 +763,13 @@ TOOLS = [
                                    bql.DEFAULT_MAX_ROWS),
                   "timeout_s": _int("HTTP timeout per query in seconds", 1, 600, 60)}),
          n4_inventory),
+    Tool("n4_list_batches",
+         "List the write batches in this server's journal, newest first: batch_id, tool, "
+         "station_name, ts, state (completed / in-doubt), verdict, rollback_of and "
+         "rolled_back_by. Use it to find the batch_id for n4_rollback. Reads the journal "
+         "only; works without a session.",
+         _schema({"limit": _int("Most recent batches to return", 1, 1000, 50)}),
+         n4_list_batches, needs_session=False),
     Tool("n4_session_retro_draft",
          "Draft the session retro: reads this server's audit and journal and returns markdown "
          "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "

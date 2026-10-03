@@ -91,6 +91,25 @@ class RaisingOpener:
 
 
 class TestSecurity(BoxTestCase):
+    def test_the_load_window_follows_the_client_load_wait(self):
+        # F11: a longer --load-wait means more polls and a longer total sleep.
+        slept = []
+        client = self.client(load_wait=10.0)
+        self.addCleanup(client.close)
+        client.open()
+        orig = self.fake._ssc
+
+        def mute_loads(key, arg):
+            if key == "loadSlots":
+                return None  # never answered
+            return orig(key, arg)
+        patcher = mock.patch.object(self.fake, "_ssc", mute_loads)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        with self.assertRaises(box.BoxError):
+            client.load_tree("station:|slot:/Folder", sleep=slept.append)
+        self.assertAlmostEqual(sum(slept), 10.0, places=3)
+
     def test_auth_failure_raises_once_without_retry(self):
         c = self.client(password="wrong")
         with self.assertRaises(box.AuthError):

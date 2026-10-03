@@ -91,6 +91,9 @@ Flags:
 - `--allow-tier-c NAME` (repeatable): the same for tier C (any other or undetected
   version). Only after `reg.loadContract`, `loadRoot` and a harmless scratch write
   succeeded on that build (METHODOLOGY section 5).
+- `--load-wait SECONDS`: total wait for one component load (default 3, range 1-60); raise
+  it for a slow or remote station.
+- `--http-timeout SECONDS`: HTTP timeout of one station request (default 20, range 5-300).
 - `--progress-file PATH`: append JSON progress lines of long reads (`n4_inventory`) to PATH.
 - `--allow-http-for-tests`: permits `http://` base URLs; for the fake station only.
 
@@ -143,7 +146,10 @@ Example MCP client entry (Claude Code `.mcp.json`):
 
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
-`n4_inventory`, `n4_session_retro_draft`.
+`n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`.
+`n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
+`station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
+`batch_id` for `n4_rollback`. It reads the journal only and needs no session.
 
 For an inventory, use `n4_inventory` (networks, devices and points under `/Drivers`, with the
 network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_query` first.
@@ -247,6 +253,9 @@ Destructive tools use the same pipeline:
   whose target is inside it) as data; it is the recorded inverse. Re-creation is
   limited to that snapshot and is not a full restore: deeper levels, runtime state
   and links coming from outside the subtree are not recreated (the plan says so).
+  The plan loads one level deeper to see what the cut drops: anything there is listed in
+  `snapshot_truncated: {depth, paths}` (first 20 paths, with the exact count in the note),
+  also in the execution reply.
 - `n4_rollback(batch_id)` plans the inverse recorded in the journal as a new batch
   (`rollback_of` points to the original). It refuses an unknown batch, one already
   rolled back, a rollback itself, an `in-doubt` batch (it shows the journaled

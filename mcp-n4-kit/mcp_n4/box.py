@@ -5,6 +5,7 @@ Importing this module has no side effects.
 """
 import base64
 import json
+import math
 import ssl
 import time
 import urllib.error
@@ -215,7 +216,7 @@ def _flatten(node, path, out):
 
 class BoxClient:
     def __init__(self, base_url, username, password, *, timeout=20,
-                 insecure_tls=False, allow_http=False, opener=None):
+                 insecure_tls=False, allow_http=False, opener=None, load_wait=MAX_POLL_WAIT):
         if base_url.startswith("http://") and not allow_http:
             raise ValueError("refusing http:// (password would travel in clear); use https")
         if not base_url.startswith(("http://", "https://")):
@@ -223,6 +224,8 @@ class BoxClient:
         self.base_url = base_url.rstrip("/")
         self.username = username
         self.timeout = timeout
+        #: Total sleep of one load polling window (`--load-wait`, audit 2026-10-03 F11).
+        self.load_wait = load_wait
         self._auth = "Basic " + base64.b64encode(
             ("%s:%s" % (username, password)).encode()).decode()
         if opener is None:
@@ -490,7 +493,7 @@ class BoxClient:
         except BaseException:  # rejected or never sent: no load op will answer it
             self._loads_outstanding = max(0, self._loads_outstanding - 1)
             raise
-        delays = poll_delays(delay, MAX_POLL_DELAY, MAX_POLL_WAIT, attempts)
+        delays = poll_delays(delay, MAX_POLL_DELAY, self.load_wait, attempts)
         while True:
             op, saw_other = self._split(self.poll(), handle)
             if op is not None:
@@ -509,13 +512,14 @@ class BoxClient:
                 return None
             sleep(pause)
 
-    def load_tree(self, ord_str, depth=2, attempts=12, delay=FIRST_POLL_DELAY,
+    def load_tree(self, ord_str, depth=2, attempts=None, delay=FIRST_POLL_DELAY,
                   sleep=time.sleep, handle=None):
         """Load `ord_str` and return a flat {path: node} dict (root key is "").
 
         Polling: at most `attempts` polls per window, sleeping `poll_delays(delay, ...)`
         between them (short first delay, backoff, each capped at MAX_POLL_DELAY, total
-        sleep per window bounded by MAX_POLL_WAIT).
+        sleep per window bounded by the client's `load_wait`, default MAX_POLL_WAIT;
+        `attempts=None` takes enough polls to fill that window).
 
         Only the load op for the requested target is returned. Events already
         queued before the request are kept in `pending_events` (they cannot belong
@@ -529,6 +533,8 @@ class BoxClient:
         op arrives (or a load op with another handle does, which proves it stale),
         the request is repeated once with the handle treated as unknown.
         """
+        if attempts is None:  # enough polls to fill the window: 12 for the default 3 s
+            attempts = max(12, int(math.ceil(self.load_wait / MAX_POLL_DELAY)) + 4)
         explicit = handle is not None
         handle = handle if explicit else self._handles.get(ord_str)
         op = self._load_once(ord_str, depth, attempts, delay, sleep, handle,

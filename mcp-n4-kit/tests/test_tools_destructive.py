@@ -1158,6 +1158,72 @@ class TestStationHomeFlag(unittest.TestCase):
             srv.ctx.close()
 
 
+class TestListBatches(DestructiveCase):
+    """H6 (audit 2026-10-03 F14): a read tool that lists the journaled batches."""
+
+    def test_batches_are_listed_newest_first_with_their_state_and_rollback(self):
+        a = self.run_write("n4_create_component", parent_ord=FOLDER, name="A",
+                           type="kitControl:NumericConst")
+        b = self.run_write("n4_create_component", parent_ord=FOLDER, name="B",
+                           type="kitControl:NumericConst")
+        back = self.run_write("n4_rollback", batch_id=a["batch_id"])
+        out = self.ok("n4_list_batches")
+        ids = [e["batch_id"] for e in out["batches"]]
+        self.assertEqual(ids, [back["batch_id"], b["batch_id"], a["batch_id"]])
+        first = out["batches"][-1]
+        self.assertEqual({k: first[k] for k in ("tool", "verdict", "state", "station_name",
+                                                 "rolled_back_by")},
+                         {"tool": "n4_create_component", "verdict": "verified",
+                          "state": "completed", "station_name": "FakeStation",
+                          "rolled_back_by": [back["batch_id"]]})
+        self.assertEqual(out["batches"][0]["rollback_of"], a["batch_id"])
+        self.assertIn("ts", first)
+        self.assertEqual(self.ok("n4_list_batches", limit=1)["batches"][0]["batch_id"],
+                         back["batch_id"])
+        self.assertEqual(out["total"], 3)
+
+    def test_it_is_read_only_and_works_without_a_session(self):
+        self.srv.ctx.close()
+        self.assertEqual(self.ok("n4_list_batches")["batches"], [])
+        tool = self.srv.tools["n4_list_batches"]
+        self.assertTrue(tool.annotations["readOnlyHint"])
+
+
+class TestSnapshotTruncation(DestructiveCase):
+    """H6 (audit 2026-10-03 F8): a subtree deeper than the snapshot is flagged."""
+
+    def deep_group(self):
+        nn = self.box.add_component("3", "Deep", "baja:Folder")["nn"]
+        h1 = self.box.load_tree(FOLDER + "/" + nn, depth=1, **NO_SLEEP)[""]["h"]
+        self.box.add_component(h1, "L1", "baja:Folder")
+        h2 = self.box.load_tree(FOLDER + "/" + nn + "/L1", depth=1, **NO_SLEEP)[""]["h"]
+        self.box.add_component(h2, "L2", "baja:Folder")
+        h3 = self.box.load_tree(FOLDER + "/" + nn + "/L1/L2", depth=1, **NO_SLEEP)[""]["h"]
+        self.box.add_component(h3, "C", "kitControl:NumericConst")
+        h4 = self.box.load_tree(FOLDER + "/" + nn + "/L1/L2/C", depth=1, **NO_SLEEP)[""]["h"]
+        self.box.set_slot(h4, "limit", box.bson_double(42))
+        return nn
+
+    def test_a_subtree_deeper_than_the_snapshot_is_reported_in_the_plan(self):
+        nn = self.deep_group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.assertEqual(plan["plan"]["snapshot_truncated"],
+                         {"depth": tools_write.SNAPSHOT_DEPTH, "paths": ["L1/L2/C/limit"]})
+        self.assertTrue(any("deeper than the snapshot" in n for n in plan["plan"]["notes"]))
+        body = plan["plan"]["inverse"][0]["b"]
+        l2 = body["s"][0]["s"][0]
+        self.assertEqual([c["n"] for c in l2["s"]], ["C"])
+        self.assertNotIn("s", l2["s"][0])  # level 4 never enters the re-create body
+        out = self.ok("n4_remove_component", parent_ord=FOLDER, name=nn, dry_run=False,
+                      confirmation_token=plan["confirmation_token"])
+        self.assertEqual(out["snapshot_truncated"]["paths"], ["L1/L2/C/limit"])
+
+    def test_a_shallow_subtree_has_no_truncation_entry(self):
+        nn, _ = self.group()
+        plan = self.dry("n4_remove_component", parent_ord=FOLDER, name=nn)
+        self.assertNotIn("snapshot_truncated", plan["plan"])
+
+
 class TestWriteBranchDebt(DestructiveCase):
     """F13 (audit 2026-10-03): write branches that no test exercised."""
 
