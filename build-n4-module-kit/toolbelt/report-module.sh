@@ -33,9 +33,9 @@
 # [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
-# Advisory members (deferred-lints-2026-10-03): lint-size.sh and lint-license-isoperational-gate.sh on
-# <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit of an advisory member
-# is an ERROR row carrying the member's first output line (exit 3), never PASS.
+# Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh and
+# lint-set-null-ord.sh on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
+# of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -164,14 +164,17 @@ pass_after_relay() {
 # advisory_member <artifact> <check> <exit> <output> — an advisory (WARN-only, run without --strict) lint:
 # exit 0 relays its WARN rows, then the pass_after_relay verdict row; ANY other exit (3 env, a crash, an
 # unexpected code) is an ERROR row and an env fault, never a silent PASS (deferred-lints-2026-10-03 D2). The
-# ERROR detail carries the member's first output line (e.g. "cannot scan <file>: …") so the cause is actionable.
+# ERROR detail carries the member's first non-row output line (e.g. "cannot scan <file>: …") so the cause is
+# actionable.
 advisory_member() {
   local _why
   if [ "$3" -eq 0 ]; then
     relay_rows "$1" "$4"
     pass_after_relay "$1" "$2"
   else
-    _why=$(printf '%s\n' "$4" | sed -n '/./{p;q;}')
+    # the first output line that is not one of the member's own WARN/FAIL/ADVISORY rows (rows printed for earlier
+    # files would otherwise hide the cause)
+    _why=$(printf '%s\n' "$4" | awk 'NF && $0 !~ /^(WARN|FAIL|ADVISORY)  / { print; exit }')
     emit "$1" ERROR "$2" "env fault (exit $3)${_why:+: $_why}"; HAD_ENV=1
   fi
 }
@@ -1277,6 +1280,17 @@ for ADIR in "${ARTIFACTS[@]}"; do
     advisory_member "$ANAME" lint-license-isoperational-gate "$lig_exit" "$lig_out"
   else
     emit "$ANAME" SKIP lint-license-isoperational-gate "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.25. lint-set-null-ord.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D4
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    sno_exit=0
+    sno_out=$("$TOOLBELT/lint-set-null-ord.sh" "$ADIR/src" 2>&1) || sno_exit=$?
+    advisory_member "$ANAME" lint-set-null-ord "$sno_exit" "$sno_out"
+  else
+    emit "$ANAME" SKIP lint-set-null-ord "no src/"
   fi
 
   # ----------------------------------------------------------------

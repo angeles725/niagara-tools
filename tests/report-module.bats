@@ -664,9 +664,28 @@ JAVA
   [[ "$output" == *"DemoPan-rt  PASS  lint-license-isoperational-gate  no FAIL (1 WARN row above)"* ]]
 }
 
-@test "RM53: an advisory member ERROR row carries the member's own first stderr line (D2 review R4/R2)" {
+@test "RM53: an advisory member ERROR row carries the member's own reason line (D2 review R4/R2)" {
   # Mutation: RM53 -- dropping the member reason leaves 'env fault (exit 3)' with no path to act on.
   local tb="$BATS_TEST_TMPDIR/rm53tb"; stub_toolbelt "$tb" lint-size.sh 'echo "lint-size: cannot scan /x/U.java: Permission denied" >&2; exit 3'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]
+}
+
+@test "RM54: an unguarded getSlotPathOrd() set -> lint-set-null-ord WARN row relayed, exit 0" {
+  cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm54"
+  { printf 'package com.x;\npublic class BMgr {\n  void add(BComponent p, BImportMap m) {\n'
+    printf '    m.setTargetOrd(p.getSlotPathOrd());\n  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm54/DemoPan-rt/src/com/x/BMgr.java"
+  run "$RM" "$BATS_TEST_TMPDIR/rm54"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  WARN  lint-set-null-ord  BMgr.java:4  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-set-null-ord  no FAIL (1 WARN row above)"* ]]
+}
+
+@test "RM55: the advisory ERROR reason skips the member's WARN rows and names the failure (D3b, R4/R2/R3)" {
+  # Mutation: RM55 -- taking the first output line names an unrelated WARN row instead of the cause.
+  local tb="$BATS_TEST_TMPDIR/rm55tb"
+  stub_toolbelt "$tb" lint-size.sh 'echo "WARN  lint-size  /x/A.java:1  class A has 900 hand-written lines"; echo "lint-size: cannot scan /x/U.java: Permission denied" >&2; exit 3'
   run "$tb/report-module.sh" "$FX/clean"
   [ "$status" -eq 3 ]
   [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]

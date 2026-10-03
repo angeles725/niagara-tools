@@ -24,7 +24,7 @@ licensed_head() {
     printf '  public void doTick() {\n    if (!isOperational()) return;\n    recompute();\n  }\n}\n'; } > "$SRC/BSvc.java"
   run "$LIG" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN  lint-license-isoperational-gate  "*"BSvc.java:8  licensed class: changed() acts with no isOperational()/isFault() gate"* ]]
+  [[ "$output" == *"WARN  lint-license-isoperational-gate  "*"BSvc.java:8  licensed class: changed() acts with no isOperational()/isFault()/isFatalFault() gate"* ]]
   if [[ "$output" == *"doTick"* ]]; then return 1; fi
 }
 
@@ -44,6 +44,7 @@ licensed_head() {
     printf '  public void changed(Property p, Context cx) {\n    super.changed(p, cx);\n  }\n'
     printf '  public void doNothing() {\n    return;\n  }\n}\n'; } > "$SRC/BDel.java"
   run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
@@ -52,6 +53,7 @@ licensed_head() {
     printf '  public void doGet(WebOp op) {\n    render(op);\n  }\n'
     printf '  public void doPost(WebOp op) {\n    write(op);\n  }\n}\n'; } > "$SRC/BWeb.java"
   run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"BWeb.java:10  licensed class: doPost() acts"* ]]
   if [[ "$output" == *"doGet"* ]]; then return 1; fi
 }
@@ -71,6 +73,7 @@ licensed_head() {
     printf '  public void doA() {\n    if (isFault()) return;\n    a();\n  }\n'
     printf '  public void doB() {\n    if (isFatalFault()) return;\n    b();\n  }\n}\n'; } > "$SRC/BAlt.java"
   run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
@@ -107,4 +110,31 @@ licensed_head() {
   chmod 755 "$SRC/locked"
   [ "$status" -eq 3 ]
   [[ "$output" == *"Mod/src/com/x/locked"* ]]
+}
+
+@test "LIG8: a gate placed after the acting statement does not count (it must open the callback) (D3b, R3-002)" {
+  # Mutation: LIG8 -- accepting a gate anywhere in the body passes a callback that acts before it checks
+  { licensed_head BLate
+    printf '  public void doPoll() {\n    poll();\n    if (!isOperational()) return;\n  }\n}\n'; } > "$SRC/BLate.java"
+  run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BLate.java:7  licensed class: doPoll() acts"* ]]
+}
+
+@test "LIG9: another object's isOperational() is not this class's gate; this.isOperational() is (D3b, R3-002)" {
+  # Mutation: LIG9 -- accepting a qualified call passes child.isOperational() as this service's gate
+  { licensed_head BOther
+    printf '  public void doA() {\n    if (!child.isOperational()) return;\n    a();\n  }\n'
+    printf '  public void doB() {\n    if (!this.isOperational()) return;\n    b();\n  }\n'
+    printf '  public void doC() {\n    if (isOperational()) {\n      c();\n    }\n  }\n}\n'; } > "$SRC/BOther.java"
+  run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BOther.java:7  licensed class: doA() acts"* ]]
+  if [[ "$output" == *"doB()"* || "$output" == *"doC()"* ]]; then return 1; fi
+}
+
+@test "LIG10: the row names all three accepted gates (D3b, R2)" {
+  { licensed_head BMsg; printf '  public void doPoll() {\n    poll();\n  }\n}\n'; } > "$SRC/BMsg.java"
+  run "$LIG" "$TMPDIR_T/Mod"
+  [[ "$output" == *"no isOperational()/isFault()/isFatalFault() gate"* ]]
 }
