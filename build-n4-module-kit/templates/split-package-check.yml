@@ -1,0 +1,29 @@
+# split-package-check.yml — GitHub Actions template for an N4 CLIENT repository (issue #142).
+# Copy to <client-repo>/.github/workflows/split-package-check.yml. It fails the run when one Java package is
+# declared under the src/ of two or more N4 modules (N4 class loading is first-dependency-wins, so one copy is
+# silently shadowed). Exit 1 = split package, exit 3 = the check could not run (no module found, an unreadable
+# file): both fail the job — never a silent pass.
+# The kit is checked out at a pinned release tag; bump `ref` deliberately when you take a newer kit.
+name: split-package-check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  split-package-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: client
+      - uses: actions/checkout@v5
+        with:
+          repository: angeles725/niagara-tools
+          ref: v0.31.0
+          path: n4-kit
+      - name: split-package-check --strict (one package, one module)
+        run: bash n4-kit/build-n4-module-kit/toolbelt/split-package-check.sh --strict client
