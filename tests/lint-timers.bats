@@ -752,3 +752,16 @@ _GATE_HEAD=(
   run "$LINT" "$SRC"
   if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
 }
+
+@test "TT-safecancel: safeCancel(a) / doCancel(b) helpers in stopped() PASS; isCancelled/wasCancelled do not (A8b)" {
+  # Mutation: TT-safecancel -- requiring the name to START with cancel false-FAILs safeCancel(a)/doCancel(b).
+  _tt C12 '  public void stopped() throws Exception { super.stopped(); safeCancel(a); doCancel(b); }' \
+          '  private static void safeCancel(Clock.Ticket t) { if (t != null) t.cancel(); }' \
+          '  private static void doCancel(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  _tt C13 '  public void stopped() throws Exception { super.stopped(); if (wasCancelled(a)) return; b.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"ticket a"* ]]
+}

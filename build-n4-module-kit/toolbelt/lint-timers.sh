@@ -20,6 +20,7 @@
 # Mutation: TT-overaccept -- accepting any call with the field as an argument lets log(a) + b.cancel() pass a
 # Mutation: TT-boundary -- an unanchored Ticket match reads 'MyTicket note' as a ticket field
 # Mutation: TT-query -- a name merely CONTAINING cancel accepts isCancelled(a) as a cancel
+# Mutation: TT-safecancel -- requiring the name to START with cancel false-FAILs safeCancel(a)/doCancel(b)
 # Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave its companion flag stuck true
 # Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs a disable path that clears the flag in a helper
 # Mutation: LC-orphan-callers -- ignoring the callers reports a cancel helper whose callers own the flag
@@ -33,9 +34,9 @@
 #                     Clock.schedule*() call) but its stopped() override does not
 #                     cancel EVERY ticket field — the timer leaks on station stop.
 #                     Checked per ticket field on comment- and string-blanked code:
-#                     `f.cancel(` / `f[i].cancel(` / a call to a method whose name
-#                     starts with `cancel` taking `f` (cancelTicket(f); log(f) and
-#                     isCancelled(f) do not count), in stopped() or in any same-file method it reaches
+#                     `f.cancel(` / `f[i].cancel(` / a call taking `f` to a method whose
+#                     name contains `cancel`/`Cancel` and is not a query (cancelTicket(f),
+#                     safeCancel(f) count; log(f), isCancelled(f) do not), in stopped() or in any same-file method it reaches
 #                     through unqualified calls. A `cancel` token in a comment or string, or a cancel of
 #                     another ticket, does not count. No named field (only
 #                     Clock.schedule* calls) → any `.cancel(` in that scope counts.
@@ -168,13 +169,20 @@ END {
   if (!miss) print "OK"
 }
 function lines_of(a, b,    s, i) { s = ""; for (i = a; i <= b; i++) s = s code[i] "\n"; return s }
-# f.cancel( · f[...].cancel( · this.f.cancel( · a call to a method whose NAME STARTS with "cancel" taking f as
-# a whole argument: cancel(f), cancelTicket(f). Any other call taking f (log(f), isCancelled(f)) does not count.
-function cancels(s, f,    re1, re2) {
+# f.cancel( · f[...].cancel( · this.f.cancel( · a call taking f as a whole argument to a method whose NAME
+# contains "cancel"/"Cancel" and is not a query: cancel(f), cancelTicket(f), safeCancel(f), doCancel(f) count;
+# log(f), isCancelled(f), wasCancelled(f), hasCancel(f) do not (a query prefix or a "Cancelled" past tense).
+function cancels(s, f,    re1, re2, t, nm) {
   re1 = "(^|[^A-Za-z0-9_.])(this[[:space:]]*\\.[[:space:]]*)?" f "[[:space:]]*(\\[[^]]*\\][[:space:]]*)?\\.[[:space:]]*cancel[[:space:]]*\\("
-  re2 = "(^|[^A-Za-z0-9_])cancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
   if (s ~ re1) return 1
-  if (s ~ re2) return 1
+  re2 = "[A-Za-z0-9_]*[Cc]ancel[A-Za-z0-9_]*[[:space:]]*\\(([^()]*[^A-Za-z0-9_.])?" f "[[:space:]]*[,)]"
+  t = s
+  while (match(t, re2)) {
+    nm = substr(t, RSTART, RLENGTH); t = substr(t, RSTART + RLENGTH)
+    sub(/[[:space:]]*\(.*/, "", nm)
+    if (nm ~ /^(is|was|has|had|can|should|get|check|needs|did|will)[A-Z]/ || nm ~ /Cancelled|Canceled/) continue
+    return 1
+  }
   return 0
 }
 AWKEOF
