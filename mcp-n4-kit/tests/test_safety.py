@@ -161,7 +161,8 @@ class TestWriteScope(unittest.TestCase):
                 scope.check(ord_)
 
     def test_a_prefix_that_is_not_a_plain_slot_ord_is_refused_at_startup(self):
-        for bad in ("station:|slot:/A|h:1", "station:|h:1", "slot:/A", "", "station:"):
+        for bad in ("station:|slot:/A|h:1", "station:|h:1", "slot:/A", "", "station:",
+                    "station:|slot:/A/../B"):
             with self.assertRaisesRegex(safety.SafetyError, "--write-scope", msg=bad):
                 safety.WriteScope([bad])
 

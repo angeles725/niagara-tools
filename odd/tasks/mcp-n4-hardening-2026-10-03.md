@@ -43,11 +43,12 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   BOX); station calls refused until a cooldown (>= 30 s, configurable) or a reconnect; message gives reason
   and remaining cooldown. Release: PATCH.
 - [x] **H2a — fallback latch (H2 review fail-open, anti-cascade sub-task)**: the `Server._call` fallback
-  latches every propagated `AuthError`, also while a latch for other credentials is held; latch state
-  changes go through `Context.use_credentials`. Shipped in the H3 PR.
+  latches every propagated `AuthError`, also while a latch for other credentials is held; the active
+  credentials are recorded through `Context.use_credentials` (the latch itself is set only by
+  `note_auth_failure`). Shipped in the H3 PR.
 - [x] **H3 — set_slot / rollback correctness (F3, F6, F10)**: nested slot load depth; compare-before-restore on
   rollback of set/fallback; clearer "slot not found" for a slot at its type default. Release: PATCH.
-- [ ] **H4 — test debt (F13)**: tests for the untested write branches. Release: PATCH.
+- [x] **H4 — test debt (F13)**: tests for the untested write branches. Release: PATCH.
 - [ ] **H5 — BQL hardening (F7, F12, output_file)**: duplicate headers kept (`Type`, `Type#2`); inventory
   resolves columns by queried slot / position; optional `output_file` for `n4_bql_query` under the state dir.
   Release: MINOR.
@@ -118,6 +119,19 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   - Observed mutations (each restored): compare call removed -> 3 tests fail; depth fixed at 2 -> 2 fail;
     conditional fallback latch -> the hookless test fails.
   - Release: `mcp_n4.__version__` 0.5.3, skill metadata 0.5.3.
+- H4 (route: inline, branch `test/mcp-n4-h4-write-branches`; tests + one small fix). Characterization tests for
+  the F13 branches (code already existed, so the proof is a mutation per branch, not a RED): status on a plain
+  type, rollback without recorded targets, component-intent and relink-intent journal failures, malformed
+  relink record, config.bog unreadable after the save; the `readback_failed` retry refusal was already pinned
+  by `test_a_rollback_accepted_but_unverified_cannot_be_retried` (mutation confirms). Plus the H1 parked test
+  advisories: `server.main` exits 2 for a chained / `..` `--write-scope`, and the `..` prefix case.
+  - Found and fixed (RED observed): the component-intent failure text was swallowed — `_in_doubt_with_created`
+    wrapped the reason in a ToolError and `_in_doubt` printed only `ToolError`, so the operator never learnt
+    the journal write failed. `_in_doubt` now shows a kit-written reason text as is.
+  - Observed mutations (each restored): each of the 7 branches disabled -> exactly its test fails.
+  - `test_auth_latch` now patches `BoxClient.about` with `mock.patch.object` (README isolation rule).
+  - Shuffled order seeds 1, 7, 42: OK. Full suite 513 tests OK.
+  - Release: `mcp_n4.__version__` 0.5.4, skill metadata 0.5.4.
 
 ## Parked advisories
 - H1 review (non-blocking, reliability lens): R3-startup-exit-unproved — no test runs `server.main` with a bad
@@ -127,12 +141,18 @@ advisory is parked in the "Parked advisories" section below and in a comment on 
   the old session first, so no older hooked client outlives a failed connect); the attribute is now set via
   `Context.use_credentials` (R2-private-attr-crossing). R2-task-doc-stale-name fixed (`auth_latch`). The
   fallback-latch findings (R2/R3/R4) were a fail-open -> H2a.
+- H3 review (non-blocking): R4 compare-before-restore compares a whole Status (value + status), so a
+  station-driven status change also refuses (fail-closed, by design); R4 a `KeyError`/`ValueError` from
+  `_observe` is reported as "changed" without its cause; R2 the dense `seen` expression; R2 the H2a doc
+  wording (fixed in H4). R3 invoke-set unchanged path: already covered by
+  `test_rollback_of_invoke_set_restores_the_fallback`.
 
 ## Delivery record
 | Unit | PR | Merge | Version | Review |
 | --- | --- | --- | --- | --- |
 | H1 | #229 | 0487970 | 0.5.1 | medium; 1 lens APPROVED + acknowledged (review-b8c070f2f4a8c38e); 2 advisories parked |
 | H2 | #231 | 0b7c3dd | 0.5.2 | high; 4 lenses APPROVED + acknowledged (review-ce356fee111e83c7); 1 fail-open -> H2a, rest parked |
+| H3 | #232 | 81cdb3b | 0.5.3 | high; 4 lenses APPROVED + acknowledged (review-3bbf4aa80a638470); 4 advisories parked |
 
 ## Next step
-- H4 (test debt F13 + the H1 parked test advisories).
+- H5 (BQL hardening).

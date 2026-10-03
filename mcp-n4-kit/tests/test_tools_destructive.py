@@ -1158,5 +1158,88 @@ class TestStationHomeFlag(unittest.TestCase):
             srv.ctx.close()
 
 
+class TestWriteBranchDebt(DestructiveCase):
+    """F13 (audit 2026-10-03): write branches that no test exercised."""
+
+    def failing_append(self, phase):
+        """Make the journal refuse entries of `phase` (OSError), keep the others."""
+        journal = self.journal()
+        orig = journal.append
+
+        def append(entry):
+            if entry.get("phase") == phase:
+                raise OSError("disk full")
+            return orig(entry)
+        self.patch(journal, "append", append)
+
+    def removed_group(self):
+        nn, _ = self.group()
+        return nn, self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
+
+    def craft(self, bid, inverse, targets):
+        self.journal().append({"batch_id": bid, "phase": "intent", "tool": "n4_remove_component",
+                               "station_name": "FakeStation", "ops": [], "inverse_plan": inverse,
+                               "targets": targets})
+        self.journal().append({"batch_id": bid, "phase": "result", "verdict": "verified",
+                               "inverse": inverse, "accepted": None})
+
+    def test_a_component_intent_that_cannot_be_written_stops_with_an_in_doubt_batch(self):
+        nn, removed = self.removed_group()
+        self.failing_append("component-intent")
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("in-doubt", text)
+        self.assertIn("component intent could not be written", text)
+        grp = self.fake.folder.child(nn)
+        self.assertIsNotNone(grp)  # the top add was sent before the failure
+        self.assertEqual([c.name for c in grp.children if c.handle], [])  # no nested add
+
+    def test_a_relink_intent_that_cannot_be_written_sends_no_link(self):
+        nn, removed = self.removed_group()
+        self.failing_append("relink-intent")
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("relink intent could not be written", text)
+        self.assertIn("in-doubt", text)
+        tgt = self.fake.folder.child(nn).child("Tgt")
+        self.assertIsNone(tgt.child("Link"))
+
+    def test_a_malformed_relink_record_is_refused(self):
+        bid = "ef" * 16
+        self.craft(bid, [{"nm": "a", "h": "3", "n": "X",
+                          "b": {"nm": "p", "t": "baja:Folder"}},
+                         {"relink": {"source_path": 1, "source_slot": "out"}}],
+                   {FOLDER: "3"})
+        self.assertIn("malformed relink", self.err("n4_rollback", batch_id=bid))
+        self.assertEqual(self.children(), [])
+
+    def test_a_batch_without_recorded_targets_is_refused(self):
+        bid = "fe" * 16
+        self.craft(bid, [{"nm": "v", "h": "3", "n": "x"}], {})
+        self.assertIn("does not record which components", self.err("n4_rollback", batch_id=bid))
+
+    def test_a_config_bog_that_becomes_unreadable_after_the_save_is_unverified(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "config.bog")
+        with open(path, "wb") as fh:
+            fh.write(b"bog")
+        self.srv.ctx.write.station_homes = {"FakeStation": tmp.name}
+        self.srv.ctx.write.save_timeout, self.srv.ctx.write.save_interval = 1.0, 0.01
+        orig = self.fake._invoke
+
+        def save_and_lose(arg):
+            out = orig(arg)
+            if arg["a"] == "save":
+                os.remove(path)
+            return out
+        self.patch(self.fake, "_invoke", save_and_lose)
+        out = self.run_write("n4_save_station")
+        self.assertEqual((out["persisted"], out["verdict"]), ("unknown", "unverified"))
+        self.assertIn("unreadable after the save", out["evidence"]["hint"])
+
+
 if __name__ == "__main__":
     unittest.main()

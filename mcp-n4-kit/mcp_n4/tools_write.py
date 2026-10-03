@@ -895,7 +895,7 @@ def _scrub_gap_errors(observed, ctx):
 
 def _in_doubt_with_created(batch_id, base, created, exc):
     """The in-doubt error of a rollback that stopped mid-way, listing what exists now."""
-    err = _in_doubt(batch_id, exc if isinstance(exc, Exception) else ToolError(exc))
+    err = _in_doubt(batch_id, exc)
     done = sorted(base.values()) + [c for c in created if c]
     err.args = ("%s. Components already created by this batch (remove the top-level one "
                 "to clean up): %s" % (err.args[0], ", ".join(done)),)
@@ -1039,7 +1039,15 @@ def _input_entry(comp, spec, reason):
 
 
 def _in_doubt(batch_id, exc):
-    why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
+    """`exc` is the failure, or a reason text the kit wrote (shown as is).
+
+    A reason text was wrapped in a ToolError and shown as "ToolError" before (audit
+    2026-10-03 F13): the operator never learnt that the journal write had failed.
+    """
+    if isinstance(exc, str):
+        why = exc
+    else:
+        why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
     err = ToolError("station call failed after the intent was journaled: batch %s is "
                     "in-doubt (the station may or may not have applied it; inspect it "
                     "before retrying): %s" % (batch_id, why))
