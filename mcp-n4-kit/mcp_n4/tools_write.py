@@ -664,10 +664,11 @@ def _rollback_plan(client, args, ctx):
                             "was replaced, refusing" % (ord_str, current, recorded))
     _unchanged_since(client, view, ops, targets)
     components = []
+    classify = _component_classifier(client)
     for i, op in enumerate(ops):  # one add per component: nested bodies are rejected live
         if op["nm"] == "a":
             ops[i] = dict(op)
-            ops[i]["b"], specs = _flatten(i, op["b"])
+            ops[i]["b"], specs = _flatten(i, op["b"], classify)
             components += specs
     own = [{"nm": "v", "h": op["h"], "n": op["n"]} for op in ops if op["nm"] == "a"]
     planned_links = len(relinks) * len(own)
@@ -928,32 +929,53 @@ def _in_doubt_with_created(batch_id, base, created, exc):
     return err
 
 
-def _own_slots(body):
+def _component_classifier(client):
+    """A `type_ -> bool` classifier for snapshot children: live lookup first (B1200-G3).
+
+    The verdict comes from `reg`/`loadContract` through `box.is_component_type_live`
+    when it is decisive; None (ambiguous chain, closed session, station or transport
+    error) falls back to `box.is_component_type`, so the lookup never breaks a write.
+    Verdicts are memoized: one station round trip per distinct type per plan.
+    """
+    cache = {}
+
+    def classify(type_):
+        if type_ not in cache:
+            live = None if client is None else box.is_component_type_live(client, type_)
+            cache[type_] = box.is_component_type(type_) if live is None else live
+        return cache[type_]
+
+    return classify
+
+
+def _own_slots(body, classify):
     """`body` without its component children: plain slot values and wsAnnotation only."""
     out = {k: v for k, v in body.items() if k not in ("s", "n")}
-    kept = [c for c in body.get("s", []) if not box.is_component_type(c.get("t"))]
+    kept = [c for c in body.get("s", []) if not classify(c.get("t"))]
     if kept:
         out["s"] = kept
     return out
 
 
-def _flatten(top, body):
+def _flatten(top, body, classify):
     """Split a nested snapshot body into `(top_body, specs)`, one spec per descendant.
 
     The real station rejects an add whose body nests components, so each component
-    becomes its own add, parents before children (breadth-first). Specs carry paths
-    relative to the top component, never handles, so the plan hash stays stable.
+    becomes its own add, parents before children (breadth-first). Children are
+    classified with `classify` (the live contract lookup when decisive, else the
+    static table, B1200-G3). Specs carry paths relative to the top component, never
+    handles, so the plan hash stays stable.
     """
     specs, queue = [], [("", body)]
     while queue:
         path, node = queue.pop(0)
         for kid in node.get("s", []):
-            if box.is_component_type(kid.get("t")):
+            if classify(kid.get("t")):
                 name = _name("component name", kid.get("n"))
                 specs.append({"top": top, "parent_path": path, "n": name,
-                              "b": _own_slots(kid)})
+                              "b": _own_slots(kid, classify)})
                 queue.append((name if not path else path + "/" + name, kid))
-    return _own_slots(body), specs
+    return _own_slots(body, classify), specs
 
 
 def _relink_spec(spec):

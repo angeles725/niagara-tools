@@ -9,6 +9,9 @@ interface only: every write is dry run -> confirmation token -> execute -> verdi
 Credentials reach the server only through the environment variables it reads
 (`<PREFIX>_USER` / `<PREFIX>_PASSWORD`); the runner scrubs their values from
 everything it prints or writes. Exit 0 only when every required step is verified.
+With `--live-contract <type>` it instead runs a read-only `reg`/`loadContract`
+probe against one station (no mutation beyond the session open/close) and prints
+the chain and the component-vs-value verdict next to the static table's answer.
 Importing this module has no side effects.
 """
 import argparse
@@ -23,7 +26,8 @@ import time
 KIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, KIT_DIR)
 
-from mcp_n4.box import child_ord  # noqa: E402  (the one ORD join; stdlib-only module)
+from mcp_n4 import box  # noqa: E402  (stdlib-only module, no side effects)
+from mcp_n4.box import child_ord, is_component_type_live  # noqa: E402
 
 SCRATCH = "McpSmoke"
 ROOT_ORD = "station:|slot:/"
@@ -421,6 +425,9 @@ def parse_args(argv):
     p.add_argument("--settle", type=float, default=5.0, metavar="SECONDS",
                    help="how long to wait for the logic outputs to settle (default 5)")
     p.add_argument("--call-timeout", type=float, default=120.0, metavar="SECONDS")
+    p.add_argument("--live-contract", metavar="TYPE",
+                   help="read-only probe: load the reg/loadContract chain of TYPE "
+                        "(no mutation beyond the session open/close) and exit")
     p.add_argument("--allow-http-for-tests", action="store_true")
     return p.parse_args(argv)
 
@@ -445,10 +452,51 @@ def server_argv(args):
     return argv
 
 
+def probe_contract(args, env, stdout, stderr):
+    """The read-only `--live-contract <type>` probe: open, loadContract, close.
+
+    No station mutation beyond the session open/close (B1200-G3). The report shows
+    the live chain, the live component verdict (None = ambiguous or unavailable)
+    and the static COMPONENT_TYPES answer the write tools would fall back to.
+    """
+    stations = _pairs(args.station)
+    if len(stations) != 1 or not all(stations.values()):
+        stderr.write("live_smoke: --live-contract needs exactly one --station NAME=URL\n")
+        return 2
+    name, url = next(iter(stations.items()))
+    secrets = [env.get(args.credential_env + "_" + k, "") for k in ("USER", "PASSWORD")]
+    error, report = None, {"station": name, "type": args.live_contract}
+    try:
+        client = box.BoxClient(url, env.get(args.credential_env + "_USER", ""),
+                               env.get(args.credential_env + "_PASSWORD", ""),
+                               insecure_tls=name in args.insecure_tls,
+                               allow_http=args.allow_http_for_tests)
+        try:
+            client.open()
+            chain = client.load_contract(args.live_contract)
+            report.update(chain=sorted(chain), chain_len=len(chain),
+                          component=is_component_type_live(client, args.live_contract),
+                          static_table=box.is_component_type(args.live_contract))
+        finally:
+            client.close()
+    except (box.BoxError, ValueError) as exc:  # AuthError is a BoxError
+        error = "%s: %s" % (type(exc).__name__, exc)
+    if error:
+        report["error"] = error
+    stdout.write(render_report(report, secrets) + "\n")
+    return 1 if error else 0
+
+
 def main(argv=None, env=None, stdout=None, stderr=None):
     stdout, stderr = stdout or sys.stdout, stderr or sys.stderr
     env = dict(os.environ if env is None else env)
     args = parse_args(argv)
+    if args.live_contract:
+        if args.apply:
+            stderr.write("live_smoke: --live-contract is a read-only probe; it cannot be "
+                         "combined with --apply\n")
+            return 2
+        return probe_contract(args, env, stdout, stderr)
     if not args.apply:
         stdout.write(plan_text())
         return 0

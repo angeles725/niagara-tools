@@ -178,8 +178,11 @@ def status_value(nodes, path):
 #:   baja:Link, baja:WsAnnotation  slot values the write tools rely on
 #:   modbusCore:FlexAddress  BFlexAddress extends BStruct (a Modbus proxyExt dataAddress)
 #:   bacnet:BacnetAddress    BBacnetAddress extends BStruct (audit 2026-10-03 F17, issue #200)
-#: The kit has no live contract lookup yet (BOX `reg.loadContract`, B1173): it would need a
-#: new channel certified on a station. Add an entry here when a type is misclassified.
+#: Live lookup (B1200-G3): `BoxClient.load_contract` (BOX `reg`/`loadContract`, N5-live
+#: evidence 2026-10-04; N4 live cert pending) decides component-vs-value from the reply
+#: chain through `is_component_type_live`. This table remains the authority where the
+#: live rule is ambiguous (chain length 1: the baja:Folder anomaly) and the fallback
+#: when the lookup is unavailable or fails. Add an entry here when a type is misclassified.
 COMPONENT_TYPES = {
     "baja:Component": True,
     "baja:Folder": True,
@@ -208,6 +211,29 @@ def is_component_type(type_):
     if type_ in COMPONENT_TYPES:
         return COMPONENT_TYPES[type_]
     return type_.partition(":")[0] != "baja"
+
+
+def is_component_type_live(client, type_):
+    """Component verdict for `type_` from the live `reg`/`loadContract` chain, or None.
+
+    B1200-G3 (live N5 5.0.0.28 evidence 2026-10-04; re-measure on N4 before trusting
+    it there). `baja:Component` in the chain -> True (the type is a BComponent). Chain
+    length 1 (only the type itself) -> None: AMBIGUOUS, because `baja:Folder` (a
+    component) and `baja:WsAnnotation` (a slot value) share that shape, so the static
+    `COMPONENT_TYPES` table decides. A longer chain without `baja:Component` -> False
+    (a slot value). Fail-open: a closed session, an unknown type (the station's error
+    frame), a transport failure or a malformed reply all return None, and the caller
+    must fall back to `is_component_type` — the live lookup never breaks a write.
+    """
+    try:
+        chain = client.load_contract(type_)
+    except BoxError:
+        return None
+    if not isinstance(chain, dict) or not chain:
+        return None
+    if "baja:Component" in chain:
+        return True
+    return None if len(chain) == 1 else False
 
 
 def _flatten(node, path, out):
@@ -633,3 +659,18 @@ class BoxClient:
 
     def save_station(self, root_h=DEFAULT_ROOT_HANDLE):
         return self.invoke_action(root_h, "save")
+
+    # -- type contracts (B1200-G3)
+    def load_contract(self, type_spec):
+        """`reg`/`loadContract`: the frozen-slot contract chain of `type_spec`.
+
+        Returns the reply as a dict keyed by the type's FULL ancestor chain (the type
+        itself and, for components, `baja:Component` among the keys), each key mapping
+        to that ancestor's frozen-slot entries. An unknown type raises `BoxError` (the
+        station answers with an error frame): a clean known/unknown distinguisher. The
+        session must be open first (`open()`), like any other session-bound call.
+        """
+        if self.sid is None:
+            raise BoxError("no session: call open() before load_contract",
+                           "reg", "loadContract")
+        return self.call("reg", "loadContract", type_spec)

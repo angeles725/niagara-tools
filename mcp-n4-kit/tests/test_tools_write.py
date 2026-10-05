@@ -332,6 +332,62 @@ class TestTokenStationBinding(WriteTestCase):
         self.assertEqual([c.name for c in other.folder.children], [])
 
 
+class TestRollbackLiveContract(WriteTestCase):
+    """B1200-G3: the rollback plan classifies snapshot children with the live
+    reg/loadContract verdict when decisive, and falls back to the static table when
+    the lookup is ambiguous (chain length 1) or unavailable (fail-open)."""
+
+    def setUp(self):
+        super().setUp()
+        self.connect_verified()
+
+    def nested_batch(self, child_type):
+        """A remove batch whose inverse re-creates a folder holding one `child_type`."""
+        self.box.add_component("3", "Live", "baja:Folder")
+        gh = self.box.load_tree(FOLDER + "/Live", depth=1, **NO_SLEEP)[""]["h"]
+        self.box.add_component(gh, "Kid", child_type)
+        out = self.run_write("n4_remove_component", parent_ord=FOLDER, name="Live")
+        return out["batch_id"]
+
+    @staticmethod
+    def reg_error_hook():
+        """Answer every reg call with a station error frame, pass everything else."""
+        def hook(frame):
+            if frame["m"][0]["c"] == "reg":
+                reply = {"p": "box", "n": frame["n"],
+                         "m": [{"c": "reg", "k": "loadContract", "r": 0, "t": "e",
+                                "b": {"isErr": True, "m": "boom"}}]}
+                return 200, json.dumps(reply).encode(), {}
+            return None
+        return hook
+
+    def test_the_live_verdict_splits_a_component_the_static_table_misses(self):
+        # baja:TestComponent (a fake-station-only stand-in for a baja component missing
+        # from COMPONENT_TYPES): the static heuristic says value, the live chain says
+        # component, so the rollback re-creates the child with its own add op.
+        batch = self.nested_batch("baja:TestComponent")
+        plan = self.dry("n4_rollback", batch_id=batch)
+        self.assertEqual([c["n"] for c in plan["plan"]["components"]], ["Kid"])
+        self.assertNotIn("s", plan["plan"]["ops"][0]["b"])
+        back = self.ok("n4_rollback", batch_id=batch, dry_run=False,
+                       confirmation_token=plan["confirmation_token"])
+        self.assertEqual(back["verdict"], "verified")
+
+    def test_an_ambiguous_chain_falls_back_to_the_static_table(self):
+        # baja:Folder's chain holds only itself (the live evidence anomaly): the live
+        # verdict is None and the static table says component, so the child splits out.
+        batch = self.nested_batch("baja:Folder")
+        plan = self.dry("n4_rollback", batch_id=batch)
+        self.assertEqual([c["n"] for c in plan["plan"]["components"]], ["Kid"])
+
+    def test_a_failing_lookup_falls_open_to_the_static_table(self):
+        self.fake.hook = self.reg_error_hook()
+        batch = self.nested_batch("baja:TestComponent")
+        plan = self.dry("n4_rollback", batch_id=batch)
+        self.assertNotIn("components", plan["plan"])  # static verdict: a plain value
+        self.assertIn("s", plan["plan"]["ops"][0]["b"])
+
+
 class TestLimitsStartup(unittest.TestCase):
     """F16 (audit 2026-10-03): a zero or negative TTL or budget is refused at startup."""
 

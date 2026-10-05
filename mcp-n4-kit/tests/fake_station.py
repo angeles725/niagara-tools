@@ -25,6 +25,33 @@ class _Node:
 #: the writable does, and adding another child of a ProxyExt type is illegal.
 _WRITABLES = ("control:NumericWritable", "control:BooleanWritable")
 
+#: reg/loadContract contract chains (B1200-G3, live N5 5.0.0.28 evidence 2026-10-04):
+#: type spec -> the frozen-slot contract chain as a dict keyed by the FULL ancestor
+#: chain (the type itself and, for components, `baja:Component` among the keys). Each
+#: key maps to that ancestor's frozen-slot entries; they are empty here because the
+#: tests inspect keys and chain length only. Shapes:
+#:   control:NumericWritable  component: the certified 22-key chain, `baja:Component` in it
+#:   control:PriorityLevel    slot value: 2-key chain, no `baja:Component`
+#:   baja:Folder              length 1: AMBIGUOUS (a component whose chain holds only itself)
+#:   baja:WsAnnotation        length 1: a slot value with the same shape
+#:   baja:TestComponent       test-only stand-in for a baja component missing from the
+#:                            static COMPONENT_TYPES table (what the live lookup fixes)
+#: Any other type raises, like the live station's error frame for an unknown type.
+_CONTRACT_CHAINS = {
+    "control:NumericWritable": {key: [] for key in (
+        "control:NumericWritable", "control:NumericPoint", "control:ControlPoint",
+        "control:PointExtension", "control:AbstractProxyExt", "control:IWritablePoint",
+        "control:NullProxyExt", "control:Override", "control:NumericOverride",
+        "baja:INumeric", "baja:IStatusValue", "baja:StatusValue", "baja:Status",
+        "baja:StatusNumeric", "baja:INiagaraSyncCapableComplex", "baja:IActionAuditProvider",
+        "baja:Interface", "baja:Struct", "baja:Facets", "baja:AbsTime", "baja:RelTime",
+        "baja:Component")},
+    "control:PriorityLevel": {"control:PriorityLevel": [], "baja:FrozenEnum": []},
+    "baja:Folder": {"baja:Folder": []},
+    "baja:WsAnnotation": {"baja:WsAnnotation": []},
+    "baja:TestComponent": {"baja:TestComponent": [], "baja:Component": []},
+}
+
 
 class FakeStation:
     def __init__(self, user="admin", password="secret", station_name="FakeStation"):
@@ -186,6 +213,13 @@ class FakeStation:
         return out
 
     # ---- protocol --------------------------------------------------------
+    def load_contract(self, type_spec):
+        """A copy of the contract chain of `type_spec`; unknown types raise (error frame)."""
+        chain = _CONTRACT_CHAINS.get(type_spec)
+        if chain is None:
+            raise ValueError("unknown type %s" % (type_spec,))
+        return {key: list(entries) for key, entries in chain.items()}
+
     def handle_frame(self, frame):
         replies = []
         for m in frame["m"]:
@@ -198,6 +232,10 @@ class FakeStation:
         return {"v": "2.3", "p": "box", "n": frame.get("n"), "m": replies}
 
     def _dispatch(self, channel, key, body):
+        if channel == "reg":
+            if key == "loadContract":
+                return self.load_contract(body)
+            raise ValueError("unknown reg key %s" % key)
         if channel != "ssession":
             raise ValueError("unknown channel %s" % channel)
         if key == "make":

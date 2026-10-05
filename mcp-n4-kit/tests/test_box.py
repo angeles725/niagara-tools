@@ -703,6 +703,48 @@ class TestPendingEvents(BoxTestCase):
         self.assertEqual(self.client().dropped_events, 0)
 
 
+class TestLoadContract(BoxTestCase):
+    """reg/loadContract and the live component verdict (B1200-G3, issue #200).
+
+    Live evidence (N5 5.0.0.28, probe 2026-10-04): the chain is a dict keyed by the
+    FULL ancestor chain; `baja:Component` in it means component; chain length 1 is
+    AMBIGUOUS (the baja:Folder anomaly) and an unknown type is a station error frame.
+    """
+
+    def test_load_contract_without_a_session_is_refused(self):
+        c = self.client()
+        with self.assertRaises(box.BoxError) as cm:
+            c.load_contract("control:NumericWritable")
+        self.assertIn("open()", str(cm.exception))
+
+    def test_load_contract_returns_the_full_ancestor_chain(self):
+        chain = self.opened().load_contract("control:NumericWritable")
+        self.assertIsInstance(chain, dict)
+        self.assertEqual(len(chain), 22)
+        self.assertIn("baja:Component", chain)
+        self.assertIn("control:NumericWritable", chain)
+
+    def test_live_verdict_component_value_and_ambiguous(self):
+        c = self.opened()
+        self.assertIs(box.is_component_type_live(c, "control:NumericWritable"), True)
+        self.assertIs(box.is_component_type_live(c, "control:PriorityLevel"), False)
+        # baja:Folder (a component) and baja:WsAnnotation (a value) both answer a
+        # chain of length 1: AMBIGUOUS, the static table decides.
+        self.assertIsNone(box.is_component_type_live(c, "baja:Folder"))
+        self.assertIsNone(box.is_component_type_live(c, "baja:WsAnnotation"))
+
+    def test_live_verdict_fails_open_on_a_closed_session_and_unknown_type(self):
+        self.assertIsNone(box.is_component_type_live(  # never opened
+            self.client(), "control:NumericWritable"))
+        self.assertIsNone(box.is_component_type_live(  # station error frame
+            self.opened(), "tipo:Inexistente"))
+
+    def test_live_verdict_fails_open_on_a_malformed_reply(self):
+        c = self.opened()
+        self.fake.hook = lambda frame: (200, b'{"p":"box","m":"nope"}', {})
+        self.assertIsNone(box.is_component_type_live(c, "control:NumericWritable"))
+
+
 class TestErrorLabelsAndRedirectClose(BoxTestCase):
     def test_malformed_reply_keys_use_session_component_key(self):
         c = self.opened()
