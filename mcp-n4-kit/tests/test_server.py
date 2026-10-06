@@ -753,7 +753,7 @@ class TestStdioEndToEnd(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual([r["id"] for r in replies], [1, 2, 3, 4, 5])
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "mcp-n4")
-        self.assertEqual(len(replies[1]["result"]["tools"]), 10)  # 7 + bql + inventory + list_batches
+        self.assertEqual(len(replies[1]["result"]["tools"]), 13)  # 10 + read_file + px views + px summary
         self.assertEqual(replies[2]["result"]["structuredContent"]["station_name"], "FakeStation")
         names = [c["name"] for c in replies[3]["result"]["structuredContent"]["children"]]
         self.assertIn("Folder", names)

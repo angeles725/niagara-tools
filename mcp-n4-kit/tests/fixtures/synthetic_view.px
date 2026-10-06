@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic Px view for mcp-n4 tests; not taken from any station. -->
+<px version="1.0" media="workbench:WbPxMedia">
+<import>
+  <module name="baja"/>
+  <module name="bajaui"/>
+  <module name="converters"/>
+  <module name="gx"/>
+  <module name="kitPx"/>
+</import>
+<content>
+<ScrollPane>
+  <CanvasPane name="content" viewSize="1024.0,768.0" background="#ffffff">
+    <Image name="logo" layout="10,10,120,40" image="module://demoModule/rc/logo.png"/>
+    <Image name="plan" layout="0,60,800,500" image="file:^images/floor%20plan.png" layer="background"/>
+    <Label name="title" layout="140,10,300,30" text="Plant Overview" layer="labels"/>
+    <BoundLabel name="tempLabel" layout="20,600,160,24" text="Supply Temp" layer="values">
+      <ValueBinding ord="station:|slot:/Plant/AHU1/SupplyTemp" statusEffect="color"/>
+    </BoundLabel>
+    <BoundLabel name="tempOut" layout="200,600,160,24" text="%out.value%" layer="values">
+      <ValueBinding ord="station:|slot:/Plant/AHU1/SupplyTemp/out"/>
+    </BoundLabel>
+    <BoundLabel name="fanLabel" layout="20,630,160,24" text="Fan Status">
+      <ValueBinding ord="station:|slot:/Plant/AHU1/FanCmd"/>
+    </BoundLabel>
+    <Bargraph name="valve" layout="400,600,40,120">
+      <ValueBinding ord="station:|slot:/Plant/AHU1/ValvePos/out" hyperlink="station:|slot:/Plant/AHU1"/>
+    </Bargraph>
+    <PxInclude name="header" layout="0,0,1024,60" ord="file:^px/includes/Header.px"/>
+    <ActionButton name="occ" layout="500,600,100,24" text="Occupied">
+      <ActionBinding ord="station:|slot:/Plant/Schedule"/>
+    </ActionButton>
+    <WebChart name="trend" layout="600,60,400,300">
+      <ValueBinding ord="history:/demo/SupplyTemp"/>
+    </WebChart>
+  </CanvasPane>
+</ScrollPane>
+</content>
+</px>
