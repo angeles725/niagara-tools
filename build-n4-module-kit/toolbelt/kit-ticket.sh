@@ -14,7 +14,10 @@
 # Output row (SKIP path):
 #   ticket  SKIP  <retro-file-or-title>  gh absent; wrote retros/tickets/<date>-<slug>.md
 #
-# Exit codes: 0 ok (including gh absent) · 3 usage/env (K20)
+# gh present but no known host / no auth: ticket written locally to retros/tickets/<date>-<slug>.md,
+#   `ticket  LOCAL  …` row, exit 4 (typed — filed locally only; retro deltas 1928).
+#
+# Exit codes: 0 ok (including gh absent) · 3 usage/env/other gh failure (K20) · 4 gh no host/auth, written locally
 # VCS-free by design; kit-links.bats L2 enforces.
 # [ev: retro campaign8-retro-loop]
 set -u
@@ -148,15 +151,29 @@ if [ -n "$REPO" ]; then
     REPO_FLAG="--repo $REPO"
 fi
 
+_GH_OUT="$TICKETS_DIR/.kit-ticket-tmp-$$-gh.txt"
 # shellcheck disable=SC2086
 gh issue create \
     $REPO_FLAG \
     --title "[kit] $TITLE" \
     --label "kit,from-run,campaign-9" \
-    --body-file "$_TMP_BODY"
+    --body-file "$_TMP_BODY" > "$_GH_OUT" 2>&1
 _RC=$?
-rm -f "$_TMP_BODY"
+cat "$_GH_OUT"
 if [ $_RC -ne 0 ]; then
+    # retro deltas 1928: gh is installed but has no known GitHub host / no auth — keep the ticket locally,
+    # print its path and exit 4 (typed: filed LOCALLY, not on GitHub; never a silent success, never lost).
+    if grep -qiE 'no known github host|known GitHub host|gh auth login|not logged in|authentication' "$_GH_OUT"; then
+        if mv "$_TMP_BODY" "$TICKET_FILE"; then
+            rm -f "$_GH_OUT"
+            printf 'ticket  LOCAL  %s  gh has no host/auth; wrote retros/tickets/%s-%s.md (file it by hand)\n' \
+                "$RETRO_REL" "$DATE" "$SLUG"
+            exit 4
+        fi
+        printf 'kit-ticket: cannot write ticket file: %s\n' "$TICKET_FILE" >&2
+    fi
+    rm -f "$_TMP_BODY" "$_GH_OUT"
     printf 'kit-ticket: gh issue create failed\n' >&2
     exit 3
 fi
+rm -f "$_TMP_BODY" "$_GH_OUT"

@@ -143,3 +143,37 @@ retro_pending: false
   # INDEX must still have exactly ONE row for rl9slug (no duplicate)
   [ "$(grep -c 'rl9slug' "$TK9/retros/INDEX.md")" -eq 1 ]
 }
+
+# retro deltas 1928: gh PRESENT but with no known host / no auth must not just fail (exit 3, ticket lost) —
+# the body is kept as a local ticket file, the path is printed and the exit status is the distinct 4.
+_stub_gh() {  # _stub_gh <stderr text> : gh issue create fails with that text
+  GHBIN="$BATS_TEST_TMPDIR/ghbin"; mkdir -p "$GHBIN"
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s" >&2\nexit 1\n' "$1" > "$GHBIN/gh"
+  chmod +x "$GHBIN/gh"
+}
+
+@test "RL4b: gh present but 'no known GitHub host' -> local ticket file, path printed, exit 4 (never 0, never lost)" {
+  # Mutation: RL4b -- removing the host/auth fallback branch returns the generic exit 3 and writes no file.
+  _stub_gh "none of the git remotes configured for this repository point to a known GitHub host"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the host fallback"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"LOCAL"* ]]
+  [[ "$output" == *"retros/tickets/$DATE-fix-the-host-fallback.md"* ]]
+  F="$TK/retros/tickets/$DATE-fix-the-host-fallback.md"
+  [ -f "$F" ]
+  grep -q '^\[kit\] fix the host fallback' "$F"
+}
+
+@test "RL4c: gh present, not logged in -> same local fallback, exit 4" {
+  _stub_gh "To get started with GitHub CLI, please run:  gh auth login"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the auth fallback"
+  [ "$status" -eq 4 ]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-auth-fallback.md" ]
+}
+
+@test "RL4d: any OTHER gh failure stays exit 3 and writes no local ticket (the fallback is not a blanket catch)" {
+  _stub_gh "HTTP 502: bad gateway"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the other failure"
+  [ "$status" -eq 3 ]
+  [ ! -e "$TK/retros/tickets/$DATE-fix-the-other-failure.md" ]
+}
