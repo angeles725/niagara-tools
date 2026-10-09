@@ -32,6 +32,8 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.
+5a. Operator-made changes: after ANY config write the operator makes by hand (or says it is done: "ya lo hice"), read the value back live (`n4_read_slots`) and compare it with the intended value before proceeding; never trust the operator's confirmation alone. Evidence: `hmiPanelAddress` typed as 192.168.1.140 instead of .40, caught only by a live read-back. `[ev: retro 2026-10-06-panccadia-comppan-hmi-support Δ3]`
+5b. Live diagnosis of a restart: take restart timing from the station log, not from oBIX `about/serverBootTime` (oBIX said 00:19:30; the station log showed the restart at 00:06:45-00:08:42). Use oBIX only as a cross-check. `[ev: retro 2026-10-06-panccadia-comppan-hmi-support Δ6]`
 6. Keep every `batch_id` (`n4_list_batches` lists them, newest first).
 7. Close with the session retro: call `n4_session_retro_draft` (or run `$KIT/tools/new_retro.py --station NAME --state-dir DIR`), review the candidate deltas, keep or edit them (or leave the honesty line `no new deltas`). Propose, never apply; stage issues only by hand.
 

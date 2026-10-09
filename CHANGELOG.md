@@ -6,6 +6,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 ---
 
+## [Unreleased]
+
+### Fixed — build-n4 and mcp-n4 kits (retro deltas from the 2026-10-06 CompPan HMI support session)
+
+- `toolbelt/build.sh` resolves ROOT to an absolute path before the gradlew walk-up (a relative `.` looped forever) and
+  fails fast, naming `chmod +x`, when a `gradlew` exists but is not executable; the build-n4-module SKILL documents the
+  `chmod +x gradlew` step after `git worktree add`. (sdd-investigacion#1924, #1925)
+- `toolbelt/kit-ticket.sh`: with `gh` present but no known host / no auth, the ticket is written to
+  `retros/tickets/` and the script exits 4 (typed, not a silent success). (sdd-investigacion#1928)
+- mcp-n4 SKILL: read an operator-made config value back live before proceeding; prefer the station log over oBIX
+  `about/serverBootTime` for restart timing. (sdd-investigacion#1926, #1929)
+
+---
+
 ## [v0.31.0] - 2026-10-03
 
 ### Added — build-n4 kit deferred lint candidates (`odd/tasks/deferred-lints-2026-10-03.md`)
