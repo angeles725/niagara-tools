@@ -14,10 +14,11 @@
 # Output row (SKIP path):
 #   ticket  SKIP  <retro-file-or-title>  gh absent; wrote retros/tickets/<date>-<slug>.md
 #
-# gh present but no known host / no auth: ticket written locally to retros/tickets/<date>-<slug>.md,
-#   `ticket  LOCAL  …` row, exit 4 (typed — filed locally only; retro deltas 1928).
+# gh present but failing: the ticket is ALWAYS kept at retros/tickets/<date>-<slug>.md and its path printed.
+#   no known host / no auth / not a git repo / no base repo -> `ticket  LOCAL  …` row, exit 4;
+#   any other gh failure -> `ticket  FAIL  …` row, exit 3 (retro deltas 1928).
 #
-# Exit codes: 0 ok (including gh absent) · 3 usage/env/other gh failure (K20) · 4 gh no host/auth, written locally
+# Exit codes: 0 ok (including gh absent) · 3 usage/env/other gh failure (K20) · 4 gh no host/auth/repo, kept locally
 # VCS-free by design; kit-links.bats L2 enforces.
 # [ev: retro campaign8-retro-loop]
 set -u
@@ -161,19 +162,21 @@ gh issue create \
 _RC=$?
 cat "$_GH_OUT"
 if [ $_RC -ne 0 ]; then
-    # retro deltas 1928: gh is installed but has no known GitHub host / no auth — keep the ticket locally,
-    # print its path and exit 4 (typed: filed LOCALLY, not on GitHub; never a silent success, never lost).
-    if grep -qiE 'no known github host|known GitHub host|gh auth login|not logged in|authentication' "$_GH_OUT"; then
-        if mv "$_TMP_BODY" "$TICKET_FILE"; then
-            rm -f "$_GH_OUT"
-            printf 'ticket  LOCAL  %s  gh has no host/auth; wrote retros/tickets/%s-%s.md (file it by hand)\n' \
-                "$RETRO_REL" "$DATE" "$SLUG"
-            exit 4
-        fi
+    # Every gh failure keeps the ticket: the body moves to retros/tickets/ and the path is printed, so the
+    # ticket is never lost. Exit 4 = no host / no auth / no repo context (gh could not even try — file it by
+    # hand); exit 3 = any other gh failure (typed apart, file kept too). retro deltas 1928.
+    _CODE=3; _ROW=FAIL
+    if grep -qiE 'no known github host|point to a known github host|gh auth login|not logged in|not a git repository|could not determine base repo' "$_GH_OUT"; then
+        _CODE=4; _ROW=LOCAL
+    fi
+    if mv "$_TMP_BODY" "$TICKET_FILE"; then
+        printf 'ticket  %s  %s  gh issue create failed; wrote retros/tickets/%s-%s.md (file it by hand)\n' \
+            "$_ROW" "$RETRO_REL" "$DATE" "$SLUG"
+    else
         printf 'kit-ticket: cannot write ticket file: %s\n' "$TICKET_FILE" >&2
     fi
     rm -f "$_TMP_BODY" "$_GH_OUT"
     printf 'kit-ticket: gh issue create failed\n' >&2
-    exit 3
+    exit "$_CODE"
 fi
 rm -f "$_TMP_BODY" "$_GH_OUT"

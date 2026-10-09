@@ -154,7 +154,7 @@ _stub_gh() {  # _stub_gh <stderr text> : gh issue create fails with that text
 
 @test "RL4b: gh present but 'no known GitHub host' -> local ticket file, path printed, exit 4 (never 0, never lost)" {
   # Mutation: RL4b -- removing the host/auth fallback branch returns the generic exit 3 and writes no file.
-  _stub_gh "none of the git remotes configured for this repository point to a known GitHub host"
+  _stub_gh "gh: no known GitHub host"
   run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the host fallback"
   [ "$status" -eq 4 ]
   [[ "$output" == *"LOCAL"* ]]
@@ -164,16 +164,48 @@ _stub_gh() {  # _stub_gh <stderr text> : gh issue create fails with that text
   grep -q '^\[kit\] fix the host fallback' "$F"
 }
 
-@test "RL4c: gh present, not logged in -> same local fallback, exit 4" {
+@test "RL4b2: gh 'none of the git remotes ... point to a known GitHub host' -> local fallback, exit 4" {
+  _stub_gh "none of the git remotes configured for this repository point to a known GitHub host"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the remotes fallback"
+  [ "$status" -eq 4 ]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-remotes-fallback.md" ]
+}
+
+@test "RL4c: gh present, not logged in ('gh auth login') -> same local fallback, exit 4" {
   _stub_gh "To get started with GitHub CLI, please run:  gh auth login"
   run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the auth fallback"
   [ "$status" -eq 4 ]
   [ -f "$TK/retros/tickets/$DATE-fix-the-auth-fallback.md" ]
 }
 
-@test "RL4d: any OTHER gh failure stays exit 3 and writes no local ticket (the fallback is not a blanket catch)" {
+@test "RL4c2: gh 'You are not logged in' -> local fallback, exit 4" {
+  _stub_gh "You are not logged into any GitHub hosts."
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the notlogged fallback"
+  [ "$status" -eq 4 ]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-notlogged-fallback.md" ]
+}
+
+@test "RL4e: gh run outside a git repository (no --repo) -> local fallback, exit 4, path printed" {
+  # Mutation: RL4e -- dropping the 'not a git repository' alternative loses it to exit 3.
+  _stub_gh "fatal: not a git repository (or any of the parent directories): .git"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the norepo fallback"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"retros/tickets/$DATE-fix-the-norepo-fallback.md"* ]]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-norepo-fallback.md" ]
+}
+
+@test "RL4f: gh 'could not determine base repo' -> local fallback, exit 4" {
+  _stub_gh "could not determine base repo"
+  run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the baserepo fallback"
+  [ "$status" -eq 4 ]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-baserepo-fallback.md" ]
+}
+
+@test "RL4d: any OTHER gh failure keeps the ticket file too but stays exit 3 (distinct from 4), path printed" {
+  # Mutation: RL4d -- deleting the body on failure (the old rm) loses the ticket.
   _stub_gh "HTTP 502: bad gateway"
   run env -C "$TK" KIT="$TK" PATH="$GHBIN:$PATH" bash "$KT" "fix the other failure"
   [ "$status" -eq 3 ]
-  [ ! -e "$TK/retros/tickets/$DATE-fix-the-other-failure.md" ]
+  [[ "$output" == *"retros/tickets/$DATE-fix-the-other-failure.md"* ]]
+  [ -f "$TK/retros/tickets/$DATE-fix-the-other-failure.md" ]
 }

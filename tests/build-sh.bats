@@ -563,3 +563,15 @@ GRADLEW
   [[ "$output" == *"chmod +x $ROOT/gradlew"* ]]
   [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
 }
+
+@test "BS-cdpath: a relative ROOT resolves against cwd even with CDPATH exported (#1924)" {
+  # Mutation: BS-cdpath -- a bare `cd "$ROOT"` follows CDPATH and echoes the target, corrupting ROOT.
+  mkdir -p "$TMPDIR_T/cdp/other/mod"
+  make_fake_gradlew "$TMPDIR_T/cdp/other/mod"
+  mkdir -p "$TMPDIR_T/cdp/wd/mod"; make_fake_gradlew "$TMPDIR_T/cdp/wd/mod"
+  make_profile "$TMPDIR_T/cdp/wd/mod" Foo rt 1
+  cd "$TMPDIR_T/cdp/wd"
+  CDPATH="$TMPDIR_T/cdp/other" run timeout 20 "$B" mod Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"$TMPDIR_T/cdp/other"* ]]
+}

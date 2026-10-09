@@ -78,7 +78,7 @@ if [ $# -lt 2 ] || [ $# -gt 3 ]; then usage >&2; exit 2; fi
 ROOT="$1"; MOD="$2"
 NIAGARA_HOME="${3:-${niagara_home:-}}"
 J8="${JAVA8:-/usr/lib/jvm/java-8-openjdk-amd64}"
-HERE="$(cd "$(dirname "$0")" && pwd)"
+HERE="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 # shellcheck disable=SC1091
 . "$HERE/lib/fs-type.sh"
 
@@ -86,7 +86,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
 # retro deltas 1924: resolve ROOT to an absolute path first — dirname of a relative "." is "." (endless loop) — and fail
 # fast when a gradlew exists but is not executable (a worktree checkout of a 100644 gradlew): do not walk past it.
-ROOT="$(cd "$ROOT" && pwd)" || { echo "build.sh: cannot resolve module root: $ROOT" >&2; exit 10; }
+ROOT="$(CDPATH='' cd -- "$ROOT" >/dev/null && pwd)" || { echo "build.sh: cannot resolve module root: $ROOT" >&2; exit 10; }
 GRADLE_ROOT="$ROOT"
 while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do
     if [ -f "$GRADLE_ROOT/gradlew" ]; then

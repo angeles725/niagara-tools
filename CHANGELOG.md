@@ -12,9 +12,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versio
 
 - `toolbelt/build.sh` resolves ROOT to an absolute path before the gradlew walk-up (a relative `.` looped forever) and
   fails fast, naming `chmod +x`, when a `gradlew` exists but is not executable; the build-n4-module SKILL documents the
-  `chmod +x gradlew` step after `git worktree add`. (sdd-investigacion#1924, #1925)
+  `chmod +x gradlew` step after `git worktree add`. Behaviour change: the FIRST non-executable `gradlew` met on the walk-up now exits 10 instead of being walked past to an executable ancestor one. (sdd-investigacion#1924, #1925)
 - `toolbelt/kit-ticket.sh`: with `gh` present but no known host / no auth, the ticket is written to
-  `retros/tickets/` and the script exits 4 (typed, not a silent success). (sdd-investigacion#1928)
+  `retros/tickets/` and the script exits 4 (typed, not a silent success); any other `gh` failure keeps the file too and exits 3. (sdd-investigacion#1928)
 - mcp-n4 SKILL: read an operator-made config value back live before proceeding; prefer the station log over oBIX
   `about/serverBootTime` for restart timing. (sdd-investigacion#1926, #1929)
 
