@@ -535,3 +535,31 @@ GRADLEW
   [ "$status" -eq 0 ]
   [[ "$(cat "$TMPDIR_T/report-module.args")" == *"--first-deploy"* ]]
 }
+
+# retro deltas 1924: a relative ROOT ("." or "mod") made the gradlew walk-up loop forever (dirname . == .);
+# a gradlew present but not executable must fail fast with the chmod hint, not walk past it.
+@test "BS-relative-root: a relative ROOT with no gradlew terminates (exit 10), never loops (#1924)" {
+  # Mutation: BS-relative-root -- dropping the absolute-path resolution of ROOT makes this hit the timeout (124).
+  mkdir -p "$TMPDIR_T/norel/mod"
+  cd "$TMPDIR_T/norel/mod"
+  run timeout 10 "$B" . Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"no executable ./gradlew"* ]]
+}
+
+@test "BS-relative-root-ok: a relative ROOT that holds an executable gradlew builds (#1924)" {
+  cd "$ROOT"
+  run timeout 20 "$B" . Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *":Foo-rt:jar"* ]]
+}
+
+@test "BS-gradlew-not-exec: a gradlew that exists but is not executable fails fast, naming chmod +x (#1924)" {
+  # Mutation: BS-gradlew-not-exec -- removing the non-executable check falls through to the generic 'no executable' walk-up message.
+  chmod -x "$ROOT/gradlew"
+  run timeout 10 "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"is not executable"* ]]
+  [[ "$output" == *"chmod +x $ROOT/gradlew"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
