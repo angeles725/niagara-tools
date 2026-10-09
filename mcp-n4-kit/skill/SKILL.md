@@ -25,6 +25,10 @@ Then read `$KIT/METHODOLOGY.md` FIRST and follow its session checklist.
 
 Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering it per project"). Register the server once in the project's `.mcp.json` rather than driving stdio by hand. The operator, not the model, chooses stations, credential env prefix, TLS policy and timing (`--station NAME=https://…`, `--credential-env`, `--insecure-tls NAME`, `--load-wait`, `--http-timeout`, `--auth-cooldown`), and where each station keeps its `config.bog` (`--station-home NAME=PATH`, so `n4_save_station` can prove persistence). Writes need `--allow-writes` plus at least one `--write-scope`; the default is read-only. A tier B or C station (METHODOLOGY section 5) also needs the operator's `--allow-tier-b NAME` / `--allow-tier-c NAME`, given only after the PoC or probe that tier requires. If no station is configured, stop and tell the operator which flag is missing.
 
+## Before acting on an operator's hand edit
+
+Before step 5 (and before relying on anything the operator wrote by hand or says is done, e.g. "ya lo hice"), read the value back live (`n4_read_slots`) and compare it with the intended value; never trust the confirmation alone. Evidence: `hmiPanelAddress` typed as 192.168.1.140 instead of .40, caught only by a live read-back. `[ev: external retro niagara-research/retros/2026-10-06-panccadia-comppan-hmi-support.md Δ3]`
+
 ## Session checklist (full detail in METHODOLOGY section 4)
 
 1. `n4_describe_session`, `n4_connect` to a configured station; confirm the real station name, `version` and `tier`. With `tier_writes: refused`, plan with dry runs only (they carry `tier_gate`) and give the operator the refusal's routes.
@@ -43,6 +47,7 @@ Follow `$KIT/README.md` ("Running the server", "Getting the kit and registering 
 - Report `partial`, `mismatch`, `failed`, `unverified`, `in-doubt` and `persisted: unknown` exactly as returned; never call them success. A `partial` rollback lists `frozen_config_not_restored` / `link_inputs_not_restored`: show them to the operator. A frozen child whose read-back failed carries `readback_error` and makes the verdict `unverified`, not `partial`: report it as "could not check", never as "missing".
 - Never ask for or suggest a tier opt-in to get past a refused write without the PoC or probe that tier requires; the opt-in is the operator's record that it ran.
 - Never invent a bare "cannot": give the route ladder from METHODOLOGY section 1 (cost, needs, next step).
+- Live diagnosis of a restart: take the timing from the station log, not from oBIX `about/serverBootTime` (oBIX said 00:19:30; the station log showed the restart at 00:06:45-00:08:42); use oBIX only as a cross-check. `[ev: external retro niagara-research/retros/2026-10-06-panccadia-comppan-hmi-support.md Δ6]`
 - Never contact a station the operator did not configure and authorize.
 - If the harness permission classifier blocks a live write, surface it to the operator and stop; never route around it (no other tool, subagent or peer session).
 - Close with the session retro (`n4_session_retro_draft` / `tools/new_retro.py`): proposed kit deltas, never applied unprompted; never stage issues automatically.
