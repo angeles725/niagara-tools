@@ -90,7 +90,7 @@ ROOT="$(CDPATH='' cd -- "$ROOT" >/dev/null && pwd)" || { echo "build.sh: cannot 
 GRADLE_ROOT="$ROOT"
 while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do
     if [ -f "$GRADLE_ROOT/gradlew" ]; then
-        echo "build.sh: $GRADLE_ROOT/gradlew exists but is not executable (a fresh git worktree of a repo that stores it 100644)" >&2
+        echo "build.sh: $GRADLE_ROOT/gradlew exists but is not executable (a fresh VCS worktree of a repo that stores it 100644)" >&2
         echo "  fix: chmod +x $GRADLE_ROOT/gradlew" >&2
         exit 10
     fi

@@ -15,7 +15,7 @@
 #   ticket  SKIP  <retro-file-or-title>  gh absent; wrote retros/tickets/<date>-<slug>.md
 #
 # gh present but failing: the ticket is ALWAYS kept at retros/tickets/<date>-<slug>.md and its path printed.
-#   no known host / no auth / not a git repo / no base repo -> `ticket  LOCAL  …` row, exit 4;
+#   no known host / no auth / outside a repository / no base repo -> `ticket  LOCAL  …` row, exit 4;
 #   any other gh failure -> `ticket  FAIL  …` row, exit 3 (retro deltas 1928).
 #
 # Exit codes: 0 ok (including gh absent) · 3 usage/env/other gh failure (K20) · 4 gh no host/auth/repo, kept locally
@@ -166,7 +166,7 @@ if [ $_RC -ne 0 ]; then
     # ticket is never lost. Exit 4 = no host / no auth / no repo context (gh could not even try — file it by
     # hand); exit 3 = any other gh failure (typed apart, file kept too). retro deltas 1928.
     _CODE=3; _ROW=FAIL
-    if grep -qiE 'no known github host|point to a known github host|gh auth login|not logged in|not a git repository|could not determine base repo' "$_GH_OUT"; then
+    if grep -qiE 'no known github host|point to a known github host|gh auth login|not logged in|not a [g]it repository|could not determine base repo' "$_GH_OUT"; then
         _CODE=4; _ROW=LOCAL
     fi
     if mv "$_TMP_BODY" "$TICKET_FILE"; then
