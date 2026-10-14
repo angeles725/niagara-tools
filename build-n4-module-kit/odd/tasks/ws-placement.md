@@ -54,7 +54,13 @@ lint-guard-pins.sh; run the lint on DashboardFord (must WARN at BFordDashboardSe
   - Real trees: DashboardFord-rt/src -> one WARN at `BFordDashboardService.java:199` (`add(op.path.substring(slash +
     1), create(...)) in doSyncInventory()`), exit 0; chihuahua-rt/src -> 0 rows, exit 0 (guard-dropped mutant shows
     the three monitors, so the clean result comes from the guard).
+- 2026-10-14 native review of origin/main..2b96ad2 (e268d52, 2a45e1c, 2b96ad2): assessed tier high (`high_risk`),
+  consent granted, lineage `review-bd835d2c08a5e4fc`, 4-lens plan (risk, resilience, readability, reliability).
+  Outcome: approved, no correction; acknowledged, authority burned (consumed revision `sha256:6a215e2e...daca`).
+  Six non-blocking SUGGESTION follow-ups: logic-authoring.md:858-859 lint trigger wording; WsGrid.java:62 rowSpacing
+  message literal; lint-ws-placement.sh:112 duplicated value-type list; WsGrid.java:112-115 raw position overflow
+  (reliability + resilience); lint-ws-placement.sh:150 variable-index list case.
 
 ## Next step
-Parent: native review of the work-unit commits, then push/PR (user decision). DashboardFord fix stays in the client
+Native review done (approved). Push/PR is the user's decision. DashboardFord fix stays in the client
 repo (T5d). Retro fold review flips `retros/2026-10-14-ws-placement.md`.
