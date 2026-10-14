@@ -33,8 +33,8 @@
 # [ev: retro panccadia-commissioning-lessons Δ9] ADVISORY rows (lint-silent-protection console-only)
 # keep their own severity: counted apart, never PASS, never FAIL, never change the verdict.
 # [ev: retro alarm-console-design Δ3]
-# Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh and
-# lint-set-null-ord.sh on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
+# Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
+# lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
 # of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
@@ -1307,6 +1307,17 @@ for ADIR in "${ARTIFACTS[@]}"; do
     advisory_member "$ANAME" lint-set-null-ord "$sno_exit" "$sno_out"
   else
     emit "$ANAME" SKIP lint-set-null-ord "no src/"
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.26. lint-ws-placement.sh <artifact>/src (advisory WARN; SKIP if no src/) — ws-placement W3
+  # ----------------------------------------------------------------
+  if [ -d "$ADIR/src" ]; then
+    wsp_exit=0
+    wsp_out=$("$TOOLBELT/lint-ws-placement.sh" "$ADIR/src" 2>&1) || wsp_exit=$?
+    advisory_member "$ANAME" lint-ws-placement "$wsp_exit" "$wsp_out"
+  else
+    emit "$ANAME" SKIP lint-ws-placement "no src/"
   fi
 
   # ----------------------------------------------------------------

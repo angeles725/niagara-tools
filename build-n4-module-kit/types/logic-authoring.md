@@ -826,6 +826,38 @@ The full lifecycle callback contract for a `BComponent` subclass:
 - **Tear down in `stopped()` — match every acquire in `started()` with a release in `stopped()`:** cancel `Clock.Ticket`s, call `unsubscribeAll()`, release resources. If the acquire path in `started()` is conditional, make the release in `stopped()` unconditional (null-safe cancel).
 - **super order:** `super.started()` FIRST; cancel resources BEFORE `super.stopped()` (super LAST in stopped).
 
+## Wire-sheet placement of code-created components `[ev: corpus B1172]` `[ev: retro ws-placement]`
+
+A component a module adds from code (`parent.add(name, child)` in a sync action, `started()` seeding,
+an inventory builder) has no `wsAnnotation` slot, so the wire sheet gives it an in-memory diagonal
+stagger (`+4`, wrap to 2, width 8, `WsController.java:398-405`) — every sibling created that way lands
+on the same diagonal and overlaps. Place it yourself:
+
+- **Grid, stable index:** compute `p,q` with the Baja-free `templates/ws-placement/src/com/angeles/wsplacement/WsGrid.java` (copy it
+  into the module's rt package; `WsGrid.standard()` = 8 columns, 14×10 cells, margins 3, width 8). Index
+  by the child's row in the STABLE data order (seed table, inventory row), not the add order, so a
+  re-sync that creates one missing child puts it in its own cell. Pick `rowSpacing` above the tallest
+  expected glyph: height = 2 + visible SUMMARY slot bars + 1 (B1194 §1194.8).
+- **Add if absent, READONLY, never re-place:** Workbench adds the slot with flags `1` = `Flags.READONLY`
+  only when it is absent and otherwise `set`s it (`WsController.java:189-200`). A module does the add half
+  only — an existing annotation is the user's layout and is never overwritten:
+
+  ```java
+  if (child.getProperty("wsAnnotation") == null)
+    child.add("wsAnnotation", BWsAnnotation.make(GRID.p(i), GRID.q(i), GRID.width()), Flags.READONLY);
+  if (parent.getProperty(name) == null) parent.add(name, child);
+  ```
+
+  (`javax.baja.util.BWsAnnotation`, `javax.baja.sys.Flags`.) Annotating before the parent `add` stores the
+  child with its position in one add (B1172 §1172.5). A bare `add("wsAnnotation", …)` with no exists-check
+  fails on a child that already carries the slot (the name is taken) and omits the READONLY flag Workbench
+  uses (the chihuahua `BChiUpMonitor.ensureUps` shape, safe there only because it annotates brand-new children).
+- **Stay inside the sheet:** the sheet clamps `p+w` / `q+h` to `BWsOptions` maxWidth / maxHeight (default
+  600) at display time; `WsGrid` clamps the same way and `fits(i)` reports a cell that had to be clamped.
+  More children than one sheet holds belong in sub-folders, not a clamped pile.
+- **Advisory lint:** `toolbelt/lint-ws-placement.sh` WARNs a method that adds a freshly created component
+  (`new B…()`, `create(…)`, `newInstance(…)`) and never mentions `wsAnnotation` / `BWsAnnotation` / `WsGrid`.
+
 ## Dynamic-slot lifecycle — orphan hygiene and schema migration
 
 ### Dynamic-slot orphan hygiene rule `[ev: retro module-hardening-reqexec-closed-deltas Δ5]`
