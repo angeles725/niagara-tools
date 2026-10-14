@@ -691,6 +691,30 @@ JAVA
   [[ "$output" == *"DemoPan-rt  ERROR  lint-size  env fault (exit 3): lint-size: cannot scan /x/U.java: Permission denied"* ]]
 }
 
+# ws-placement W3: advisory member lint-ws-placement (WARN-only) — a created component added with no wsAnnotation.
+# [ev: retro ws-placement]
+
+@test "RM56: a created component added with no wsAnnotation -> lint-ws-placement WARN row relayed, PASS verdict, exit 0" {
+  cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm56"
+  { printf 'package com.x;\npublic class BSync extends BComponent {\n  public void doSync() {\n'
+    printf '    add("n1", new BFolder());\n  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm56/DemoPan-rt/src/com/x/BSync.java"
+  run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm56"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  WARN  lint-ws-placement  BSync.java:4  add(\"n1\", new BFolder()) in doSync() never sets a wsAnnotation"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-ws-placement  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"CLEAN"* ]]
+}
+
+@test "RM57: a clean artifact -> one PASS lint-ws-placement clean row; a member exit 3 -> ERROR, report exit 3" {
+  run "$RM" --lint-only "$FX/clean"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-ws-placement  clean"* ]]
+  local tb="$BATS_TEST_TMPDIR/rm57tb"; stub_toolbelt "$tb" lint-ws-placement.sh 'echo "lint-ws-placement: cannot scan /x/U.java: Permission denied" >&2; exit 3'
+  run "$tb/report-module.sh" "$FX/clean"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"DemoPan-rt  ERROR  lint-ws-placement  env fault (exit 3): lint-ws-placement: cannot scan /x/U.java: Permission denied"* ]]
+}
+
 # ===========================================================================
 # audit-2026-10-03 A2 — the non-skippable floor (BUILD-LOOP §5: verify-module, schema-risk) can no longer read
 # CLEAN while one of its checks SKIPped. Without --lint-only, a floor SKIP is verdict INCOMPLETE, exit 4.
