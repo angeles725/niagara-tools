@@ -232,3 +232,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |
+| 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | pending | 6 |
