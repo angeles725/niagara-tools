@@ -10,6 +10,8 @@ The 23 retros stay untouched (`review-status: pending`); this file only maps the
 **Count.** 23 retros, **168** source deltas (parsed rows = declared `**Delta count**` in every file; no file uses another
 row shape). The HEAD commit message (ffcddad) says 178 because it sums the 14 devguide retros as 129; they hold 119
 (10+5+10+10+10+10+9+10+9+10+6+4+6+10). 43 course + 119 devguide + 6 pilot = 168.
+**Addendum (15ad06f).** A 24th retro, `review2-signing-build-route` (alias `rsb`, 6 deltas), was added after the
+first consolidation and mapped into existing C-items (C39, C48, C51, C58). Current total: **24 retros, 174 deltas**.
 
 **No-loss proof.** `bash build-n4-module-kit/odd/tasks/kit-improvement-candidates-2026-10-15.check.sh` (next to this file).
 It extracts every delta ID from the 23 retros, checks each appears exactly once in Appendix A, that Appendix A holds no
@@ -50,6 +52,7 @@ split across several C-items is folded partially until its last C-item lands.
 | scc | n4-course-slots-components-contracts | 6 |
 | tjd | n4-course-threading-jobs-doctrine | 6 |
 | tpb | testing-parity-btestng | 6 |
+| rsb | review2-signing-build-route | 6 |
 
 **r3 corrections not written into any retro** (reported by the round-3 run; recorded here as `r3-report#Rn`, mapped in
 Appendix B, outside the 168 count):
@@ -70,10 +73,10 @@ Appendix B, outside the 168 count):
 | Tier | Meaning | C-items | Source deltas |
 |---|---|---|---|
 | P0 | The kit currently teaches something wrong | 30 (C01–C30) | 56 |
-| P1 | High-value missing rules that affect client modules | 22 (C31–C52) | 64 |
-| P2 | New reference sections and templates | 23 (C53–C75) | 42 |
+| P1 | High-value missing rules that affect client modules | 22 (C31–C52) | 69 |
+| P2 | New reference sections and templates | 23 (C53–C75) | 43 |
 | P3 | Horizons and nice-to-have | 5 (C76–C80) | 6 |
-| **Total** | | **80** | **168** |
+| **Total** | | **80** | **174** |
 
 **Rejected:** 0 whole deltas. 10 deltas carry a corrected, superseded or rejected PART (status `accepted-corrected` /
 `superseded-in-part` / `partial-reject` in Appendix A): has Δ1 (poll-servlet route), has Δ2 (CSRF lint scope), shl Δ7
@@ -362,7 +365,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Lint-able:** yes — WARN blocking ASYNC action without `post(` override; bare `this::do` in `post(`. **Fold type:** doc section + lint.
 
 ### C39 — A null Context means `BPermissions.all`; `OrdTarget.can*` pass without a security target
-- **Sources:** rcf#Δ2 (primary) · nsto#Δ8 extends (custom `BOrdScheme` contract; gate every hop with `canRead()`)
+- **Sources:** rcf#Δ2 (primary) · nsto#Δ8 extends (custom `BOrdScheme` contract; gate every hop with `canRead()`) · rsb#Δ5 extends (worker threads must carry the action's Context: null Context = all permissions + default locale)
 - **Evidence:** `BComponent.java:1979-1982`, `OrdTarget.java:465-480`, corpus B1316 §1316.2, B1308 §1308.1.
 - **Target:** `types/security.md` §4, `types/logic-authoring.md:73`, `types/module-wiring.md` § ordScheme.
 - **Lint-able:** partial — WARN `.resolve(x, null)` in a file that calls `.canRead(`. **Fold type:** doc section + lint.
@@ -417,7 +420,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Lint-able:** yes — WARN non-`<permissions>` root, `<req-permission>` without `<purposeKey>`; WARN `new File("/` outside homes. **Fold type:** template + doc section + lint.
 
 ### C48 — Signing hardening and verification modes
-- **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes)
+- **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
 - **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `ModuleSign/VerificationModesModuleSigning-182D0E86.txt:25-36`.
 - **Target:** `build-verify.md` § signing, `types/distribution.md:100`, `types/logic-authoring.md:917`, `toolbelt/lint-structure.sh`.
 - **Lint-able:** yes — WARN signing plugin without `allowDefaultProfile.set(false)`. **Fold type:** doc section + lint.
@@ -435,7 +438,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Lint-able:** partial. **Fold type:** doc section.
 
 ### C51 — Kit process: register the course, reference-first, sweep absolute claims
-- **Sources:** cex#Δ1 (primary: SOURCES.md + corpus-index row) · cex#Δ2 extends (reference-first Orient rule) · cex#Δ3 extends (K-rule + one-time "never"/"forbidden" sweep; C01, C03, C09, C11 are its worked examples)
+- **Sources:** cex#Δ1 (primary: SOURCES.md + corpus-index row) · cex#Δ2 extends (reference-first Orient rule) · cex#Δ3 extends (K-rule + one-time "never"/"forbidden" sweep; C01, C03, C09, C11 are its worked examples) · rsb#Δ6 extends (delta totals come from a counting script, never a hand sum)
 - **Evidence:** corpus B1242 §1242.3/§1242.7 K13, B1238 §1238.8; user session 2026-10-15.
 - **Target:** `SOURCES.md`, `corpus-index.md`, `BUILD-LOOP.md` §0, `skill/SKILL.md` step 2, `METHODOLOGY.md` K-rules.
 - **Lint-able:** partial — report of absolute claims citing only inference. **Fold type:** doc + report script.
@@ -478,7 +481,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Lint-able:** yes (triage patterns, Spanish names; INFO in poll bodies). **Fold type:** doc section + script fix.
 
 ### C58 — Build reference: supertype modules, part gradle.kts, JDK-8 preflight, region-less sources
-- **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources)
+- **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources) · rsb#Δ4 extends (Windows-native build route from WSL for any Windows-side Gradle root: cmd.exe + gradlew.bat slotomatic/jar; back up `<niagara_home>/modules` first)
 - **Evidence:** course `Lab Instructions.pdf` p81-86, `Slides/6` p6-18; `javap` on 4.15.6.20 jars; corpus B1235 §1235.2.
 - **Target:** `types/module-wiring.md`, `types/structure.md`, `toolbelt/build.sh`, `toolbelt/preflight.sh`, `build-verify.md`, `METHODOLOGY.md` K15. **Lint-able:** yes. **Fold type:** doc section + script.
 
@@ -808,6 +811,12 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `testing-parity-btestng#Δ4` | types/moduleTest.md, METHODOLOGY.md | Station tests for component behaviour | C41 | P1 | accepted |
 | `testing-parity-btestng#Δ5` | toolbelt/lint-structure.sh | Structural-test advisory lint | C41 | P1 | accepted |
 | `testing-parity-btestng#Δ6` | types/moduleTest.md, toolbelt/scaffold-module.sh | moduleTest-include.xml template | C41 | P1 | accepted |
+| `review2-signing-build-route#Δ1` | build-verify.md § Verify, toolbelt/verify-module.sh | Signer-identity check by fingerprint | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ2` | types/security.md § 3 | Signing-profile files are secret stores | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ3` | build-verify.md § Signing per deploy target | Portable signing root blocks | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | accepted |
+| `review2-signing-build-route#Δ5` | types/security.md § 2.4, types/logic-authoring.md | Worker threads keep the caller's Context | C39 | P1 | accepted |
+| `review2-signing-build-route#Δ6` | BUILD-LOOP.md § 7, toolbelt/ | Computed retro delta counts | C51 | P1 | accepted |
 
 ## Appendix B — r3-report corrections → C-item
 
@@ -819,3 +828,19 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | r3-report#R4 | C71 |
 | r3-report#R5 | C77 |
 | r3-report#R6 | C23 |
+
+Re-run after the 24th retro (15ad06f, alias `rsb`):
+
+```
+retro files: 24
+source deltas: 174
+mapped: 174
+missing: 0
+extra (in appendix, not in retros): 0
+duplicate appendix rows: 0
+undefined C-ids: none
+tier mismatches: none
+C-items defined: 80
+source deltas per tier: P0=56 P1=69 P2=43 P3=6 
+RESULT: PASS (missing=0)
+```
