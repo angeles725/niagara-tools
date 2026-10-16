@@ -209,3 +209,8 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-02-polish-2026-10-02-close.md | kit | 2026-10-02 | folded | 5 |
 | 2026-10-03-deferred-lints-2026-10-03-close.md | kit | 2026-10-03 | folded | 5 |
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |
+| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | pending | 8 |
+| 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-workflow.md | kit | 2026-10-16 | pending | 4 |
