@@ -428,7 +428,7 @@ GRADLEW
   [[ "$output" == *"not rebuilt"* ]]
 }
 
-# [ev: retro n4-course-handson-build-signing-windows Δ5] — the Windows gradlew.bat route prints the copy-lock
+# [ev: retro n4-course-signed-jars-gate-fix Δ5] — the Windows gradlew.bat route prints the copy-lock
 # with backslash paths and the Kotlin message, CRLF-terminated; the exit-32 classifier must not depend on the route.
 @test "BS-copy-lock-win: the captured gradlew.bat kotlin FileAlreadyExistsException (backslashes, CRLF) -> exit 32" {
   cat > "$ROOT/gradlew" <<'GRADLEW'

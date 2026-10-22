@@ -844,6 +844,7 @@ on the same diagonal and overlaps. Place it yourself:
   leaves under a 4-bar glyph. A 22-SUMMARY facade (DashboardFord `BVavPanel`, 25 wixels) gets 28; with 10
   its rows overlap. Pin `n` in the module's pure test against the facade's SUMMARY slots, so a new SUMMARY
   slot that outgrows the spacing fails a test instead of the wire sheet. `[ev: retro ws-row-spacing Δ1]`
+  `rowSpacingFor` rejects `n > WsGrid.MAX_SUMMARY_COUNT` (591, no row fits the sheet) with `IllegalArgumentException`. `[ev: retro n4-course-sample-check-precision Δ5]`
 - **Add if absent, READONLY, never re-place:** Workbench adds the slot with flags `1` = `Flags.READONLY`
   only when it is absent and otherwise `set`s it (`WsController.java:189-200`). A module does the add half
   only — an existing annotation is the user's layout and is never overwritten:
