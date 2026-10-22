@@ -188,7 +188,9 @@ never a bare `nav:` path. [CERT] `javax/baja/nav/BNavScheme.java:80-124` (corpus
   }
   ```
 
-  [CERT] `com/tridium/tagdictionary/relation/BChildPointRelation.java:42-54` (tagdictionary-rt vineflower)
+  [CERT] `com/tridium/tagdictionary/relation/BChildPointRelation.java:42-54` (tagdictionary-rt vineflower). Check every
+  snippet against the real overloads and callback signatures: the previous one called a non-existent `BOrd.get(cx)`.
+  `[ev: retro r8-t9g-nav Δ1]`
 
   Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register the custom relation in the tag dictionary's constructor alongside the tag defs (it participates in the same `BSmartTagDictionary` registration; see `types/logic.md §Ship a tag dictionary`). `[ev: corpus B758 §758.2]`
 - **Hierarchy:** compose a `BHierarchy` root + ordered `BLevelDef` children (`BQueryLevelDef`/`BRelationLevelDef` entity levels, `BGroupLevelDef`/`BListLevelDef` grouping) under `BHierarchyService`; subclass `BLevelDef`+`getElements` only for a bespoke level. `[ev: corpus B781]`
@@ -230,7 +232,8 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - **Remote stations:** `ip:…|foxs:|…|bql:…` works in Workbench (it prompts) but not through `BOrd.get` in code;
   open a `BFoxProxySession.make(host, port, useFoxs, credentials)` (`javax/baja/fox/BFoxProxySession.java:28-36`,
   fox-rt vineflower) and resolve against it. The course instructor adds that the session can reuse a NiagaraNetwork
-  station's stored credentials, machine-to-machine only — a spoken claim, not traced in code [CERT-a] (corpus B1418 §1418.4).
+  station's stored credentials, machine-to-machine only — a spoken claim, not traced in code [CERT-a] (corpus B1418 §1418.4);
+  such claims stay marked until a code or doc read backs them. `[ev: retro r8-t9g-nav Δ2]`
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
