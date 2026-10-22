@@ -1,0 +1,4 @@
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>

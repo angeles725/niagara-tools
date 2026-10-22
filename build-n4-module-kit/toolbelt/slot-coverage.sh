@@ -51,7 +51,9 @@
 #              operator-facing — with no lexicon key its slots render raw camelCase in Workbench and the
 #              operator cannot find them — so "slot-coverage: FAIL facade type without lexicon: <T>" is
 #              printed per such type and the exit is 1. --facade declares the whole module operator-facing
-#              (every missing type FAILs). Internal control types stay advisory (missing=, exit 0).
+#              (every missing type FAILs). Internal control types stay advisory (missing=, exit 0). A facade
+#              type whose only key is a bare "<Type>=" gets "WARN facade type with only a bare key" instead:
+#              Workbench shows the raw type name, nothing breaks (NTypeInfo.java:178); --strict promotes it.
 #              [ev: retro panccadia-commissioning-lessons Δ9]
 #   --strict   -> exit 1 when missing is non-empty or WARN was emitted
 #   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL, empty-lexicon FAIL, facade FAIL or strict WARN
@@ -442,7 +444,8 @@ sc_out=$(run_set_coverage "$declared_csv" "$required_csv")
 printf '%s\n' "$sc_out" | sed 's/^pct=\(.*\)$/pct=\1 (type-set)/'
 
 # Facade FAIL (default, not gated on --strict): an operator-facing *Panel/*Facade type (or every type
-# under --facade) with no lexicon key is a ship-blocker. [ev: retro panccadia-commissioning-lessons Δ9]
+# under --facade) with no lexicon key is a ship-blocker; one with only a bare "<Type>=" key is a WARN (--strict
+# promotes it). [ev: retro panccadia-commissioning-lessons Δ9]
 FACADE_FAIL=0
 missing_types=$(printf '%s\n' "$sc_out" | sed -n 's/^missing=//p' | tr ',' '\n' | grep -v '^$' || true)
 if [ -n "$missing_types" ]; then
@@ -451,6 +454,12 @@ if [ -n "$missing_types" ]; then
       *Panel|*Facade) : ;;
       *) [ "$FACADE" -eq 1 ] || continue ;;
     esac
+    # Only a bare "<Type>=" key: Workbench shows the raw type name (NTypeInfo.java:178), nothing breaks -> WARN.
+    if grep -qxF -- "$mt" <<< "$lex_keys"; then
+      printf 'slot-coverage: WARN facade type with only a bare key: %s (add %s.displayName)\n' "$mt" "$mt"
+      HAS_WARN=1
+      continue
+    fi
     printf 'slot-coverage: FAIL facade type without lexicon: %s\n' "$mt"
     FACADE_FAIL=1
   done <<< "$missing_types"

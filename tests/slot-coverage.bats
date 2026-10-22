@@ -228,6 +228,19 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   [[ "$output" == *"pct=50.0 (type-set)"* ]]
 }
 
+# A facade type whose only key is the bare "<Type>=" form has a key, but not the one Workbench reads: the
+# raw type name shows, nothing breaks (NTypeInfo.java:178), so it is a WARN, promoted by --strict.
+# Named mutation SC-facade-bare: FAIL a bare-keyed facade type -> SC-facade-bare flips (exit 1).
+@test "SC-facade-bare: a *Panel type with only a bare <Type>= key WARNs (exit 0), --strict exits 1" {
+  setup_parse_fixtures
+  run "$SC" "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slot-coverage: WARN facade type with only a bare key: CompressorPanel"* ]]
+  [[ "$output" != *"FAIL facade type without lexicon"* ]]
+  run "$SC" --strict "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
+  [ "$status" -eq 1 ]
+}
+
 @test "SC-facade-neg: a missing NON-facade type stays advisory without --strict/--facade (exit 0)" {
   setup_parse_fixtures
   run "$SC" "$FIXDIR/internal/module-include.xml" "$FIXDIR/internal/module.lexicon"
