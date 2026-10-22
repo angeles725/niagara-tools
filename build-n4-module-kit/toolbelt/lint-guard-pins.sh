@@ -15,78 +15,22 @@
 #   WARN   lint-guard-pins  <script>:<line>  mutation <id> -> no fixture
 #   WARN   lint-guard-pins  <script>  no # Mutation: line (K24(7): add '# Mutation: <fixture-id> -- <what it flips>')
 #
-# Usage:  lint-guard-pins.sh [--strict] <kit-root>
+# Usage:  lint-guard-pins.sh [--strict] <repo-root>
+#   <repo-root> holds tests/ and build-n4-module-kit/ (or toolbelt/); a kit root alone is exit 3.
 # Exits:  0 clean or WARN-only (no --strict) · 1 any WARN under --strict · 3 usage/env (K20)
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2). LC_ALL=C.
 # [ev: retro campaign11-lint-guard-pins]
+#
+# Implementation: the Go module at <repo>/go (go/internal/guardpins). This wrapper is the stable entry
+# point: go/go-tool.sh `go_tool_bin` builds go/bin/lint-guard-pins when the binary is missing or older
+# than a Go source, then this script execs it. Needs `go` on PATH to build; no Go toolchain or a failed
+# build is exit 3. The T4-nomutation pin lives in the Go source and tests as well.
 set -u
-LC_ALL=C
-export LC_ALL
 
-STRICT=0
-case "${1:-}" in --strict) STRICT=1; shift ;; esac
-
-usage_exit() {
-  printf 'usage: lint-guard-pins.sh [--strict] <kit-root>\n' >&2
-  exit 3
-}
-
-[ $# -eq 1 ] || usage_exit
-ROOT="$1"
-
-# Resolve toolbelt directory (D4b scope: lint-*.sh only)
-if [ -d "$ROOT/toolbelt" ]; then
-  TOOLBELT="$ROOT/toolbelt"
-elif [ -d "$ROOT/build-n4-module-kit/toolbelt" ]; then
-  TOOLBELT="$ROOT/build-n4-module-kit/toolbelt"
-else
-  printf 'lint-guard-pins: no toolbelt/ found under %s\n' "$ROOT" >&2
-  exit 3
-fi
-
-# Resolve tests directory
-TESTS_DIR="$ROOT/tests"
-if [ ! -d "$TESTS_DIR" ]; then
-  printf 'lint-guard-pins: no tests/ found under %s\n' "$ROOT" >&2
-  exit 3
-fi
-
-WARNED=0
-
-# Scan lint-*.sh scripts only; prune dot-dirs (D9b); sorted for determinism
-while IFS= read -r script; do
-  has_mutation=0
-  lineno=0
-
-  # Read first 60 lines only (header region, D4c)
-  while IFS= read -r hline; do
-    lineno=$((lineno + 1))
-    # Declaration ERE: ^# Mutation: [A-Za-z][A-Za-z0-9_-]* -- .+$  (ASCII --, no em dash)
-    if printf '%s\n' "$hline" | grep -qE '^# Mutation: [A-Za-z][A-Za-z0-9_-]* -- .+$'; then
-      has_mutation=1
-      mid=$(printf '%s\n' "$hline" | sed -E 's/^# Mutation: ([A-Za-z][A-Za-z0-9_-]*) -- .*/\1/')
-      # Locate fixture: @test "<id>:" or "@test "<id> " in tests/*.bats (-H forces filename even for 1 file)
-      fixture_hit=$(grep -HnoE "^@test \"${mid}[: ]" "$TESTS_DIR"/*.bats 2>/dev/null | head -1)
-      if [ -n "$fixture_hit" ]; then
-        fixture_path=$(printf '%s\n' "$fixture_hit" | cut -d: -f1)
-        fixture_line=$(printf '%s\n' "$fixture_hit" | cut -d: -f2)
-        fixture_rel="${fixture_path#"${ROOT}"/}"
-        printf 'MATCH  lint-guard-pins  %s:%d  mutation %s -> %s:%s\n' \
-          "$script" "$lineno" "$mid" "$fixture_rel" "$fixture_line"
-      else
-        printf 'WARN  lint-guard-pins  %s:%d  mutation %s -> no fixture\n' \
-          "$script" "$lineno" "$mid"
-        WARNED=1
-      fi
-    fi
-  done < <(head -60 "$script")
-
-  if [ "$has_mutation" -eq 0 ]; then
-    printf "WARN  lint-guard-pins  %s  no # Mutation: line (K24(7): add '# Mutation: <fixture-id> -- <what it flips>')\n" \
-      "$script"
-    WARNED=1
-  fi
-done < <(find "$TOOLBELT" -maxdepth 1 -name 'lint-*.sh' ! -name '.*' | LC_ALL=C sort)
-
-[ "$STRICT" -eq 1 ] && [ "$WARNED" -eq 1 ] && exit 1
-exit 0
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-guard-pins: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" lint-guard-pins)" || exit 3
+exec "$BIN" "$@"

@@ -61,9 +61,16 @@ store-and-forward queue, GZIP compression, retry logic, and send-metrics.
 public class BHttpTransport extends BAbstractConnectionlessTransport { ... }
 ```
 
-Backed by **okhttp3**, which ships in `net-rt` (a Tridium platform module). Do NOT
-bundle okhttp3 yourself — declare `net-rt` as a module dependency and let the platform
-supply it. [ev: code cloudLink-rt BHttpTransport imports okhttp3.*; module.xml dep net-rt]
+Backed by **okhttp3**, which the NRE ships in `bin/ext` (`okhttp-4.12.0.jar` + okio + kotlin-stdlib in
+4.15.6.20; `net-rt.jar` holds no okhttp class). Do NOT bundle okhttp3 yourself: compile against the shipped
+copy with `nre("com.squareup.okhttp3:okhttp")` (the `nre` configuration = jars in `!bin/ext`, devguide
+`build.txt:186`). `[ev: corpus B1320 §1320.3 C1-C2]` `[ev: retro devguide415-r2-shipped-libraries Δ2]`
+
+**MQTT: native first.** The stock driver is the `abstractMqttDriver` module, a licensed
+feature, capped by default at 25 devices on a JACE and 50 on a Supervisor (guide
+`Mqtt/MQTTRequirements-74179811.txt:11,17`). Model one broker connection with many points before many devices. A
+bundled Paho client bypasses the licence, the cap and the User Key Store; record why when you choose it.
+`[ev: corpus B1323 §1323.1-2]` `[ev: retro devguide415-r2-drivers-protocols Δ1]`
 
 ### 2.2 · AMQP transport — `BAmqpTransport`
 

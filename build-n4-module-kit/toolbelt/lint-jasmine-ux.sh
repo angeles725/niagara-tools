@@ -26,10 +26,7 @@ fi
 specs=""
 if [ -d "$ROOT/srcTest/rc/spec" ]; then
     # A spec sub-directory find cannot enter is an env error, never "no specs" and never a clean pass.
-    if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$ROOT/srcTest/rc/spec" -name '*.js'; then
-        printf 'lint-jasmine-ux: cannot list every file under %s: %s\n' "$ROOT/srcTest/rc/spec" "$(head -n 1 "$AL_TMP/find.err")" >&2
-        exit 3
-    fi
+    scan_files_or_exit lint-jasmine-ux 3 "$AL_TMP/files" "$ROOT/srcTest/rc/spec" -name '*.js'
     specs=$(head -n 1 "$AL_TMP/files")
 fi
 if [ -z "$specs" ]; then

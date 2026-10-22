@@ -41,6 +41,7 @@
 # Mutation: SPR8 -- drop the location.reload(/location.href recovery check so a lastOk timestamp that never reloads passes clean
 # Mutation: SPR9 -- count a clock assignment anywhere in the file so a lastOk set only at load passes clean
 # Mutation: SPR10 -- matching only `function <name>(` loses an arrow-function poll (silent pass)
+# Mutation: SPR11 -- brace-extracting a concise-body arrow poll runs past its statement and reads a later lastOk* as its own
 # Mutation: SPR-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: SPR-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
@@ -75,13 +76,27 @@ END {
     # function(...)` / `(...) =>` / `x =>` (an arrow-function poll is the common SPA form).
     if (match(lines[i], "function[[:space:]]+" fn "[[:space:]]*\\(") ||
         match(lines[i], "(const|let|var)[[:space:]]+" fn "[[:space:]]*=[[:space:]]*(async[[:space:]]*)?(function[[:space:]]*\\(|\\([^)]*\\)[[:space:]]*=>|[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=>)")) {
-      decl_line = i; break
+      decl_line = i; decl_rest = substr(lines[i], RSTART + RLENGTH); decl_arrow = (substr(lines[i], RSTART + RLENGTH - 2, 2) == "=>")
+      break
     }
   }
   if (decl_line == 0) exit 0
 
+  # A concise-body arrow (`() => fetch(...).catch(...)`, no `{` after the `=>`) has no braces to extract: its
+  # body is the statement, up to the first line holding a `;` (bounded at 20 lines). Brace extraction would run
+  # to the next unrelated `{...}` or to end of file and read a later function's lastOk* as the poll's (#226).
+  concise = 0
+  if (decl_arrow) {
+    nxt = decl_rest
+    for (i = decl_line + 1; nxt ~ /^[[:space:]]*$/ && i <= NR; i++) nxt = lines[i]
+    if (nxt !~ /^[[:space:]]*\{/) concise = 1
+  }
   depth = 0; started = 0; body_end = NR
-  for (i = decl_line; i <= NR; i++) {
+  if (concise) {
+    for (i = decl_line; i <= NR && i < decl_line + 20; i++) if (index(lines[i], ";") > 0) break
+    body_end = (i <= NR) ? i : NR
+  }
+  for (i = decl_line; !concise && i <= NR; i++) {
     ln = lines[i]
     for (ci = 1; ci <= length(ln); ci++) {
       c = substr(ln, ci, 1)

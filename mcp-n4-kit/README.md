@@ -236,7 +236,12 @@ Every write call goes through these layers:
    verdict}` follows, holding the real inverse (for example the server-assigned
    name). An intent without a result, or a result flagged `in_doubt` (the station
    reply was ambiguous or malformed), is an `in-doubt` batch: the station may or
-   may not have applied it, so inspect it before retrying.
+   may not have applied it, so inspect it before retrying. Any failure after the
+   intent is written is reported with its `batch_id` (reply and audit line, outcome
+   `error`). When op k of a multi-op batch fails, the error names the ops already
+   sent, their replies and their inverse, and an in-doubt `result` record
+   (`sent`, `failed_op`, partial `accepted` and `inverse`) is journaled; a rollback
+   that stops after re-creating components lists the components that now exist.
 8. **Audit.** Every write call, dry, executed or refused, appends a line to
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.

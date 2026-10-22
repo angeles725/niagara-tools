@@ -28,6 +28,8 @@
 # when the map declares a component, a link source whose component path ends in that component on
 # a whole path segment (slot:/Plant/Rack2 matches Rack2 and Plant/Rack2, not Rack12): a link from
 # the right slot of the wrong instance is a MISMATCH. A bare declared slot compares the slot only.
+# The component check applies to Table 2 only: a Table 1 row (facade -> control) declares the facade slot and is
+# compared by slot alone.
 # A row whose declared column is empty or _(fill)_ is SKIP. [polish-2026-10-02 P3, #199 WU9]
 #
 # Rows:    STATUS  obix-link-audit  <slot>  <detail>   (MATCH | MISMATCH | MISSING | SKIP)

@@ -5,7 +5,7 @@ public class ApiRespNoHeader extends BWebServlet {
   public void doGet(WebOp op) throws Exception {
     if (op.getUser() == null) { op.getResponse().sendError(401); return; }
     op.getResponse().setContentType("application/json");
-    PrintWriter out = op.getResponse().getWriter(); // no X-Content-Type-Options anywhere -> WARN
+    PrintWriter out = op.getResponse().getWriter(); // no X-Content-Type-Options anywhere -> INFO
     out.print("{\"ok\":true}");
   }
 }

@@ -25,6 +25,9 @@
 #             gradlePluginVersion as a string literal instead of
 #             providers.gradleProperty("niagaraPluginVersion").getOrElse(...) — -PniagaraPluginVersion
 #             (build.sh --plugin-version) is then silently ignored [ev: retro panccadia-restart-seq-comp-lockout-hours Δ2]
+#   L15 WARN  the ROOT build.gradle.kts beside that settings.gradle.kts applies com.tridium.niagara-signing
+#             without the signing block (uncommented allowDefaultProfile.set(false) or = false, niagaraSigning {,
+#             aliases, signingProfileFile) — a missing profile then signs with the self-signed default key (#266)
 #   (L8 signed-jar check is in verify-module.sh)
 #
 # Usage:  lint-structure.sh <module-root>
@@ -38,6 +41,7 @@
 # [ev: retro campaign8-structure]
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
+# Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs
 set -u
 LC_ALL=C
 export LC_ALL
@@ -381,6 +385,60 @@ if [ -n "$_L14_SETTINGS" ] \
         && LC_ALL=C grep -qE '^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"' \
             "$_L14_SETTINGS" 2>/dev/null; then
     _row FAIL "$_L14_SETTINGS" "L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) so -PniagaraPluginVersion applies)"
+fi
+
+# ---------------------------------------------------------------------------
+# L15: the ROOT build.gradle.kts (beside the settings.gradle.kts L14 found) that applies
+# com.tridium.niagara-signing must carry the signing block, else a failed HSM/token login or a missing
+# profile silently signs with the self-signed default key and the build stays green (issue #266).
+# Only uncommented code counts: lib/method-boundary.sh mb_strip drops comments (literal-aware) and the
+# local blank step empties string contents, so a commented-out or quoted block is absent.
+# L15_SIGN_ERE[k] is named L15_SIGN_NAME[k] in the row; the table is the same as preflight.sh
+# SAMPLE_SIGN_ERE (tests/lint-structure.bats LS15-sync keeps the two copies equal).
+# [ev: retro n4-course-signed-jars-gate-fix Δ4] [ev: code devkit-wb.jar!gradle/build.gradle.kts.vm:18]
+# ---------------------------------------------------------------------------
+L15_SIGN_ERE=('allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))'
+  'niagaraSigning[[:space:]]*\{' '(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)' 'signingProfileFile')
+L15_SIGN_NAME=('allowDefaultProfile.set(false) (or = false)' 'niagaraSigning {' 'aliases' 'signingProfileFile')
+_L15_ROOT="${_L14_SETTINGS%/settings.gradle.kts}/build.gradle.kts"
+if [ -n "$_L14_SETTINGS" ] && [ -f "$_L15_ROOT" ]; then
+    # dirname, not ${BASH_SOURCE[0]%/*}: a bare-name run (bash lint-structure.sh) has no slash to strip
+    # (same form as gen-retro-index.sh; tests/lint-structure.bats LS15-barename)
+    # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
+    # shellcheck disable=SC2016  # awk program text in single quotes
+    _L15_CODE=$(awk "$MB_AWK"'
+        # blank: string contents emptied ("..." and """...""" across lines, \ escapes honoured), quotes kept
+        function blank(src, n, dst,   i, ln, out, j, c, q, tb) {
+          for (i = 1; i <= n; i++) {
+            ln = src[i]; out = ""; q = ""
+            for (j = 1; j <= length(ln); j++) {
+              c = substr(ln, j, 1)
+              if (tb) { if (c == "\\") j++; else if (substr(ln, j, 3) == "\"\"\"") { out = out "\"\"\""; tb = 0; j += 2 } }
+              else if (q != "") { if (c == "\\") j++; else if (c == q) { out = out q; q = "" } }
+              else if (substr(ln, j, 3) == "\"\"\"") { out = out "\"\"\""; tb = 1; j += 2 }
+              else { if (c == "\"" || c == "\047") q = c; out = out c }
+            }
+            dst[i] = out
+          }
+        }
+        { raw[NR] = $0 }
+        END { mb_strip(raw, NR, code); blank(code, NR, code); for (i = 1; i <= NR; i++) print code[i] }' "$_L15_ROOT" 2>"$_TMP/l15.err")
+    _L15_RC=$?
+    # the plugin id is itself a string, so it is matched on the comment-stripped text before blanking
+    _L15_STRIPPED=$(awk "$MB_AWK"'{ raw[NR] = $0 } END { mb_strip(raw, NR, code); for (i = 1; i <= NR; i++) print code[i] }' \
+        "$_L15_ROOT" 2>>"$_TMP/l15.err") || _L15_RC=$?
+    _L15_APPLIES=$(grep -cE 'id[[:space:]]*\([[:space:]]*"com\.tridium\.niagara-signing"' <<< "$_L15_STRIPPED")
+    if [ "$_L15_RC" -ne 0 ]; then
+        # a failed scan is a visible row, never a silent skip (fail-closed to the reader)
+        _row WARN "$_L15_ROOT" "L15: could not scan the root for the signing block (awk exit $_L15_RC: $(head -n1 "$_TMP/l15.err")) — signing block unchecked"
+    elif [ "${_L15_APPLIES:-0}" -gt 0 ]; then
+        _L15_MISS=""
+        for _k in "${!L15_SIGN_ERE[@]}"; do
+            grep -qE "${L15_SIGN_ERE[$_k]}" <<< "$_L15_CODE" || _L15_MISS="$_L15_MISS${_L15_MISS:+, }${L15_SIGN_NAME[$_k]}"
+        done
+        [ -n "$_L15_MISS" ] && _row WARN "$_L15_ROOT" "L15: applies com.tridium.niagara-signing without (uncommented) $_L15_MISS — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

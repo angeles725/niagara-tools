@@ -45,7 +45,7 @@ course/vendor sample that still pointed at its author's install. This unit lands
 - Δ2 → done by #267 (T8f); cited in `build-verify.md` § Verify. No kit-ticket opened: the coordinator moved Δ2 to T8f.
 - Δ3 → `toolbelt/verify-module.sh` `check_bytecode_major`; `build-verify.md` § Verify; `types/third-party-libraries.md`
   § Java-8 class-file ceiling (multi-release jars; Jackson 2.21.2 `uberjar()` ran live).
-- Δ4 → `[deferred]` in `build-verify.md` § Signing per deploy target, tracked by #266.
+- Δ4 → `[deferred]` in `build-verify.md` § Signing per deploy target, tracked by #266; landed on `docs/r8-t9i-libs` (2026-10-23): `lint-structure.sh` L15, `templates/signing-root.gradle.kts`, both fixtures.
 - Δ5 → `toolbelt/build.sh` exit-32 classifier; `BUILD-LOOP.md` § 4; `build-verify.md` § Raw gradle.
 - Δ6 → `toolbelt/preflight.sh` `--sample` (opt-in: client trees keep Windows `gradle.properties` paths);
   `BUILD-LOOP.md` § 0.b; `build-verify.md` § Build target & plugin version.

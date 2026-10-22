@@ -136,5 +136,6 @@ licensed_head() {
 @test "LIG10: the row names all three accepted gates (D3b, R2)" {
   { licensed_head BMsg; printf '  public void doPoll() {\n    poll();\n  }\n}\n'; } > "$SRC/BMsg.java"
   run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]   # advisory: the WARN row never changes the exit without --strict
   [[ "$output" == *"no isOperational()/isFault()/isFatalFault() gate"* ]]
 }

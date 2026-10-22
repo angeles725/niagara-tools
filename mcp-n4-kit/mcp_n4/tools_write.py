@@ -758,6 +758,13 @@ def _spec_path(spec):
     return spec["n"] if not spec["parent_path"] else spec["parent_path"] + "/" + spec["n"]
 
 
+def _top_created(planned, replies):
+    """`{op index: ORD}` of the top-level components the batch's own add ops created."""
+    data = planned.data
+    return {i: box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
+            for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
+
+
 def _run_components(sess, write, batch_id, planned, replies):
     """Create the nested components of a restored subtree, one add op each, parents first.
 
@@ -769,8 +776,7 @@ def _run_components(sess, write, batch_id, planned, replies):
     A failure mid-way raises the batch in-doubt error listing what was created so far.
     """
     data = planned.data
-    base = {i: box.child_ord(data["ord_of"][op["h"]], _assigned_name(op, reply))
-            for i, (op, reply) in enumerate(zip(planned.ops, replies)) if op["nm"] == "a"}
+    base = _top_created(planned, replies)
     actual = {(i, ""): base[i] for i in base}  # (top, spec path) -> assigned ORD
     created, frozen, skipped = [], {}, set()  # created: ORD per spec, None when skipped
     data["frozen_not_restored"], data["frozen_checks"] = [], []
@@ -1003,9 +1009,11 @@ def _run_relinks(sess, write, batch_id, planned, replies):
     Runs after the component ops, once the new handles exist: scope is checked for both
     ends, the concrete ops are journaled (write-ahead) before the first is sent, and each
     counts against the write budget. Returns `(report, inverse, doubt)`; `inverse` removes
-    the links created. A send failure raises the batch in-doubt error.
+    the links created. Any failure raises the batch in-doubt error listing the components
+    re-created so far (they exist on the station whatever happens to their links).
     """
     data, ops, skipped, meta = planned.data, [], 0, []
+    base, created = _top_created(planned, replies), data.get("created") or []
     data["relinks_skipped"] = []
     for op, reply in zip(planned.ops, replies):
         if op["nm"] != "a":
@@ -1014,7 +1022,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
         try:
             nodes = sess.client.load_tree(comp, depth=SNAPSHOT_DEPTH)
         except Exception as exc:  # components exist, their links were never attempted
-            raise _in_doubt(batch_id, exc) from None
+            raise _in_doubt_with_created(batch_id, base, created, exc) from None
         for spec in data["relinks"]:
             src, tgt = nodes.get(spec["source_path"]), nodes.get(spec["target_path"])
             try:
@@ -1035,9 +1043,9 @@ def _run_relinks(sess, write, batch_id, planned, replies):
             write.journal.append({"batch_id": batch_id, "ts": _now(), "phase": "relink-intent",
                                   "ops": ops})
         except OSError:
-            raise ToolError("nothing more was sent: the relink intent could not be written "
-                            "(batch %s is in-doubt: components were re-created, links were "
-                            "not)" % batch_id) from None
+            raise _in_doubt_with_created(
+                batch_id, base, created, "nothing more was sent: the relink intent could "
+                "not be written (components were re-created, links were not)") from None
         write.writes_executed += len(ops)
         for op, tgt_h in zip(ops, meta):
             try:
@@ -1045,7 +1053,7 @@ def _run_relinks(sess, write, batch_id, planned, replies):
             except box.BoxError:
                 result = {}
             except Exception as exc:
-                raise _in_doubt(batch_id, exc) from None
+                raise _in_doubt_with_created(batch_id, base, created, exc) from None
             if result.get("v") and result.get("s"):
                 restored += 1
                 inverse.append({"nm": "v", "h": tgt_h, "n": result["s"]})
@@ -1072,8 +1080,10 @@ def _in_doubt(batch_id, exc):
     """
     if isinstance(exc, str):
         why = exc
+    elif isinstance(exc, (box.BoxError, ToolError, safety.SafetyError)):
+        why = str(exc)  # the station's or the kit's own words
     else:
-        why = str(exc) if isinstance(exc, box.BoxError) else type(exc).__name__
+        why = type(exc).__name__
     err = ToolError("station call failed after the intent was journaled: batch %s is "
                     "in-doubt (the station may or may not have applied it; inspect it "
                     "before retrying): %s" % (batch_id, why))
@@ -1314,10 +1324,63 @@ def _process(ctx, name, args):
                         "the confirmation token is spent, run the dry run again"
                         % batch_id) from None
     write.writes_executed += 1  # counted once sent, whatever the station answers
-    try:
-        replies = [_send(sess.client, op) for op in planned.ops]
+    try:  # from here on the batch exists: every failure is its in-doubt error
+        return _execute(ctx, impl, args, planned, data, batch_id), batch_id
     except Exception as exc:
+        if getattr(exc, "batch_id", None) == batch_id:
+            raise
         raise _in_doubt(batch_id, exc) from None
+
+
+def _send_all(ctx, impl, batch_id, planned):
+    """Send the batch's ops in order; a failure at op k raises its partial in-doubt error."""
+    replies = []
+    for op in planned.ops:
+        try:
+            replies.append(_send(ctx.session.client, op))
+        except Exception as exc:
+            raise _in_doubt_partial(ctx.write, impl, batch_id, planned, replies, exc) from None
+    return replies
+
+
+def _in_doubt_partial(write, impl, batch_id, planned, replies, exc):
+    """The in-doubt error of a multi-op batch whose op k failed after ops 0..k-1 were sent.
+
+    Ops before k were accepted (their replies are given), op k may or may not have been
+    applied, no later op was sent. The inverse of the sent ops and an in-doubt `result`
+    record go to the journal, so the batch never looks completed and the operator can
+    undo what was sent by hand. A one-op batch keeps the plain in-doubt error: its
+    intent without a result already says everything.
+    """
+    err = _in_doubt(batch_id, exc)
+    total, sent = len(planned.ops), len(replies)
+    if total == 1:
+        return err
+    try:
+        inverse = _inverse_list(impl.inverse(planned._replace(ops=planned.ops[:sent]), replies))
+    except Exception:  # an inverse cannot be built from these replies: say so
+        inverse = None
+    done = ("op 1 was sent" if sent == 1 else "ops 1-%d were sent" % sent) if sent else \
+        "no op before it was sent"
+    text = ("%s; op %d of %d failed: %s and accepted by the station (replies: %s), op %d "
+            "may or may not have been applied and no later op was sent. Inverse of the sent "
+            "ops: %s" % (err.args[0], sent + 1, total, done, safety.canonical(replies), sent + 1,
+                         "unknown" if inverse is None else safety.canonical(inverse)))
+    try:
+        write.journal.append({"batch_id": batch_id, "ts": _now(), "phase": "result",
+                              "accepted": replies, "inverse": inverse or [],
+                              "verdict": "unverified", "in_doubt": True, "sent": sent,
+                              "failed_op": sent})
+    except Exception:  # the intent without a result still marks the batch in-doubt
+        text += " (the in-doubt result record could not be journaled)"
+    err.args = (text,)
+    return err
+
+
+def _execute(ctx, impl, args, planned, data, batch_id):
+    """Send a journaled batch, then its follow-up ops, the read-back and the result record."""
+    write, sess = ctx.write, ctx.session
+    replies = _send_all(ctx, impl, batch_id, planned)
     out = {"dry_run": False, "batch_id": batch_id}
     warnings, relink_inverse, relink_doubt = [], [], False
     if data.get("components"):  # nested components: one add per component, same batch
@@ -1378,7 +1441,7 @@ def _process(ctx, name, args):
                         "inverse ops: %s" % (batch_id, safety.canonical(inverse)))
     if warnings:
         out["warnings"] = warnings
-    return out, batch_id
+    return out
 
 
 def _now():
