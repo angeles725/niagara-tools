@@ -476,7 +476,7 @@ detect_annotation_changes() {
     # why: glob in git diff path spec is intentional; no brace expansion needed
     # shellcheck disable=SC2086
     diff_output="$(git diff "${BASELINE_SHA}..HEAD" -- '*/src/com/**/*.java' 2>/dev/null || true)"
-    if printf '%s\n' "$diff_output" | grep -qE '^[+-][[:space:]]*@Niagara(Type|Property|Action|Topic|Singleton)'; then
+    if grep -qE '^[+-][[:space:]]*@Niagara(Type|Property|Action|Topic|Singleton)' <<< "$diff_output"; then
         return 0   # annotation changes found
     fi
     return 1       # no annotation changes
