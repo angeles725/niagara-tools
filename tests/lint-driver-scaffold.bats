@@ -54,7 +54,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 }
 
 @test "LDS6: string, char and text-block literals do not hide a stub (\"tcp://host\" and '{' before it, a \"/*\" string, a text block holding braces)" {
-  # Mutation: LDS6 -- stop skipping string/char literals in the comment stripper and both stubs stop failing
+  # Mutation: LDS6 -- stop blanking literal contents (driverscaffold blank) and the '{' char and the text block move the boundaries
   run "$L" "$FX/literals"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BUrlDevice.java:8  doPing() only calls pingOk()"* ]]
@@ -98,7 +98,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 }
 
 @test "LDS10: a backslash in the source path is reported as is" {
-  # Mutation: LDS10 -- pass the path with awk -v and its \n becomes a newline in the row
+  # Mutation: LDS10 -- escape-process the path (awk -v style) and its \n becomes a newline in the row
   d="$TMPDIR_T/src/a\\nb"
   mkdir -p "$d"
   cp "$FX/wizard/BNfooDevice.java" "$d/"
@@ -108,7 +108,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 }
 
 @test "LDS-finderr: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
-  # Mutation: LDS-finderr -- ignoring the find exit status skips the unreadable directory and exits 0
+  # Mutation: LDS-finderr -- ignoring the walk error (internal/lint Walk) skips the unreadable directory and exits 0
   mkdir -p "$TMPDIR_T/src/locked"
   cp "$FX/wizard/BNfooDevice.java" "$TMPDIR_T/src/locked/"
   chmod 000 "$TMPDIR_T/src/locked"
