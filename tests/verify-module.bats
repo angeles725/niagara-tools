@@ -633,3 +633,56 @@ vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
     printf '%s\n' "$output" | grep -qE "^PASS  $c " || { echo "no PASS row for $c"; return 1; }
   done
 }
+
+# --- #260 (retro n4-course-handson-build-signing-windows Δ1-Δ3): false FAILs on live-loaded jars ---
+# The course jars were signed by the CodeSigning profile (META-INF/CODESIGN.SF + CODESIGN.RSA), loaded live
+# under moduleVerificationMode=high, and still FAILed `signed`, `bytecode` and `types` here.
+
+# signed_jar <jar> <alias> <key-ext>: good_dir with the NIAGARA4 pair swapped for <alias>.SF + <alias>.<key-ext>
+signed_jar() {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.SF" "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  add_signature "$TMPDIR_T/d" "$2" "$3"; make_jar "$1" "$TMPDIR_T/d"; rm -rf "$TMPDIR_T/d"
+}
+
+@test "VSIG1: an alias-named signature (CODESIGN.SF + .RSA, SERVER1 + .DSA, EC1 + .EC) PASSes signed and names the alias" {
+  for pair in CODESIGN:RSA SERVER1:DSA EC1:EC; do
+    signed_jar "$TMPDIR_T/j.jar" "${pair%%:*}" "${pair##*:}"
+    run "$VM" "$TMPDIR_T/j.jar"
+    [ "$status" -eq 0 ] || { echo "$pair: $output"; return 1; }
+    printf '%s\n' "$output" | grep -E '^PASS  signed ' | grep -qF "${pair%%:*}" || { echo "$pair: $output"; return 1; }
+    rm -f "$TMPDIR_T/j.jar"
+  done
+}
+
+@test "VSIG2: a .SF without its signature block file (.RSA/.DSA/.EC) FAILs signed" {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  signed ' | grep -qF 'NIAGARA4.SF'
+}
+
+@test "VSIG3: a jar with no META-INF/*.SF at all FAILs signed, naming the missing signature file" {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.SF" "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  signed ' | grep -qF 'no META-INF/*.SF'
+}
+
+@test "VMR1: a major-55 class under META-INF/versions/ is ignored by bytecode and counted in the detail" {
+  good_dir "$TMPDIR_T/d"; make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -E '^PASS  bytecode ' | grep -qF '2 classes, all major 52; 1 multi-release classes ignored'
+}
+
+@test "VMR2: a major-55 class OUTSIDE META-INF/versions/ still FAILs bytecode (the skip is path-scoped)" {
+  good_dir "$TMPDIR_T/d"; make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_class_file "$TMPDIR_T/d/com/x/versions/C.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  bytecode ' | grep -qF 'com/x/versions/C.class major=55'
+}

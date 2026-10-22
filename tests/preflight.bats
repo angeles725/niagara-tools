@@ -284,3 +284,58 @@ _pf_fakebin() {
   run "$PREFLIGHT" --plugin-version
   [ "$status" -eq 2 ]
 }
+
+# ---------------------------------------------------------------------------
+# --sample: a project the user did not generate (course zip, vendor sample) must be retargeted first.
+# [ev: retro n4-course-handson-build-signing-windows Δ6] — the shipped trafficLightServer.zip pointed at an
+# absent 4.15.4.24 home, carried a <username> placeholder, had no root signing block and shipped build/ dirs.
+# ---------------------------------------------------------------------------
+# sample_tree <gr> <niagara_home-value> <user-home-value> <signing 1|0> <shipped-build 1|0>
+sample_tree() {
+  mkdir -p "$1"; cp "$GR/settings.gradle.kts" "$1/"
+  printf 'niagara_home=%s\nniagara_user_home=%s\n' "$2" "$3" > "$1/gradle.properties"
+  printf 'plugins {\n  id("com.tridium.niagara-signing")\n}\n' > "$1/build.gradle.kts"
+  if [ "$4" = 1 ]; then
+    printf 'signingServices {\n  signingProfileFactory {\n    allowDefaultProfile.set(false)\n  }\n}\n' >> "$1/build.gradle.kts"
+    printf 'niagaraSigning {\n  aliases.set(listOf("CodeSigning"))\n  signingProfileFile.set(file("p.xml"))\n}\n' >> "$1/build.gradle.kts"
+  fi
+  [ "$5" = 0 ] || mkdir -p "$1/trafficLightServer-rt/build/libs"
+}
+# sample_nh: a niagara_home whose directory name carries the installed version (4.15.6.20)
+sample_nh() { SNH="$TMPDIR_T/niagara-4.15.6.20"; cp -r "$NH" "$SNH"; }
+
+@test "PF-sample-orig: the shipped course sample -> FAIL sample-home, sample-user, sample-sign + WARN sample-build" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" 'c:\\niagara\\niagara-4.15.4.24' 'C:\\Users\\<username>\\Niagara4.15\\<brand>' 0 1
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -cE '^FAIL  sample-')" -eq 3 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-home ' | grep -qF '/mnt/c/niagara/niagara-4.15.4.24'
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-user ' | grep -qF '<username>'
+  printf '%s\n' "$output" | grep -qE '^FAIL  sample-sign '
+  printf '%s\n' "$output" | grep -E '^WARN  sample-build ' | grep -qF 'trafficLightServer-rt/build'
+}
+
+@test "PF-sample-retargeted: the retargeted tree PASSes every sample row, exit 0" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -cE '^PASS  sample-')" -eq 4 ]
+  [ "$(printf '%s\n' "$output" | grep -cE '^(FAIL|WARN)  sample-')" -eq 0 ]
+}
+
+@test "PF-sample-version: a niagara_home that exists but is another version than the target FAILs sample-home" {
+  sample_nh; mkdir -p "$TMPDIR_T/niagara-4.15.4.24"
+  sample_tree "$TMPDIR_T/tls" "$TMPDIR_T/niagara-4.15.4.24" '/home/u/Niagara4.15/tridium' 1 0
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-home ' | grep -qF '4.15.4.24'
+}
+
+@test "PF-sample-off: without --sample no sample row is printed (client trees keep their own gradle.properties)" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" 'c:\\niagara\\niagara-4.15.4.24' 'C:\\Users\\<username>\\x' 0 1
+  run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [[ "$output" != *"sample-"* ]]
+}

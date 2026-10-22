@@ -428,6 +428,20 @@ GRADLEW
   [[ "$output" == *"not rebuilt"* ]]
 }
 
+# [ev: retro n4-course-handson-build-signing-windows Δ5] — the Windows gradlew.bat route prints the copy-lock
+# with backslash paths and the Kotlin message, CRLF-terminated; the exit-32 classifier must not depend on the route.
+@test "BS-copy-lock-win: the captured gradlew.bat kotlin FileAlreadyExistsException (backslashes, CRLF) -> exit 32" {
+  cat > "$ROOT/gradlew" <<'GRADLEW'
+#!/usr/bin/env bash
+printf '%s\r\n' 'kotlin.io.FileAlreadyExistsException: C:\N4\exam\Cristian_Angeles_Cert-rt\build\libs\Cristian_Angeles_Cert-rt.jar -> c:\niagara\niagara-4.15.6.20\modules\Cristian_Angeles_Cert-rt.jar: Tried to overwrite the destination, but failed to delete it.' >&2
+exit 1
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 32 ]
+  [[ "$output" == *"artifact of record"* ]]
+}
+
 # [ev: retro continuous-fan-post-defrost-delay Δ1] — build.sh forwards the plugin override to preflight.
 @test "BS-preflight-plugin: --plugin-version is forwarded to preflight.sh --plugin-version" {
   _record_stub preflight
