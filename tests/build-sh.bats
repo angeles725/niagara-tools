@@ -756,14 +756,66 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [[ "$output" != *"throwaway dev key"* ]]
 }
 
-@test "BS-mirror-devkey-preexisting: a profile that existed before the build -> no dev-key WARN" {
-  _devkey_gradlew
+@test "BS-mirror-devkey-preexisting: a profile left by an earlier mirror build still WARNs on every later build (#316)" {
+  # Every profile under .mirror-user-home is plugin-created, never the user's: the 2nd+ build of a root without the
+  # signing block signs with the same throwaway key. Mutation: warn only when the profile is new -> this fails.
+  _env_gradlew
   : > "$TMPDIR_T/nh/.niagara-mirror"
   mkdir -p "$TMPDIR_T/nh/.mirror-user-home/.tridium/security"
   : > "$TMPDIR_T/nh/.mirror-user-home/.tridium/security/niagara.signing.xml"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
-  [[ "$output" != *"throwaway dev key"* ]]
+  [[ "$output" == *"WARN"*"throwaway dev key"* ]]
+}
+
+@test "BS-mirror-home-whitespace: a \$HOME with whitespace in mirror mode exits 33 before gradle (maven.repo.local split, #316)" {
+  # Mutation: guard only the mirror path -> -Dmaven.repo.local=<home with a space> is split by the JVM and gradle runs.
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  mkdir -p "$TMPDIR_T/h ome"
+  HOME="$TMPDIR_T/h ome" run env -u JAVA_TOOL_OPTIONS "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 33 ]
+  [[ "$output" == *"HOME"*"whitespace"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
+}
+
+@test "BS-mirror-home-whitespace-m2set: a \$HOME with whitespace is fine when JAVA_TOOL_OPTIONS already sets maven.repo.local" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  mkdir -p "$TMPDIR_T/h ome"
+  HOME="$TMPDIR_T/h ome" JAVA_TOOL_OPTIONS="-Dmaven.repo.local=$TMPDIR_T/m2" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.env")" != *"h ome"*"/.m2/repository"* ]]
+}
+
+@test "BS-mirror-home-whitespace-control: a \$HOME with whitespace outside mirror mode still builds" {
+  _env_gradlew
+  mkdir -p "$TMPDIR_T/h ome"
+  HOME="$TMPDIR_T/h ome" run env -u JAVA_TOOL_OPTIONS "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/gradlew.env" ]
+}
+
+@test "BS-gradle-prop: --gradle-prop k=v (repeatable) reaches gradlew as -Pk=v (#308)" {
+  _env_gradlew
+  run "$B" --gradle-prop niagaraSigningAlias=acme --gradle-prop "niagaraSigningProfile=/p/x.xml" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  argv="$(grep '^ARGV=' "$TMPDIR_T/gradlew.env")"
+  [[ "$argv" == *" -PniagaraSigningAlias=acme"* ]]
+  [[ "$argv" == *" -PniagaraSigningProfile=/p/x.xml"* ]]
+}
+
+@test "BS-gradle-prop-bad: --gradle-prop without k=v, or with no value, exits 2 before gradle (#308)" {
+  _env_gradlew
+  run "$B" --gradle-prop noequals "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--gradle-prop needs k=v"* ]]
+  run "$B" --gradle-prop "=v" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--gradle-prop needs k=v"* ]]
+  run "$B" --gradle-prop
+  [ "$status" -eq 2 ]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
 }
 
 # BS-slotomatic-hint: slot-o-matic logs "Could not process <file>: Found multiple metadata blocks" as a WARNING
