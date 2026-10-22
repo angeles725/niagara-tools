@@ -5,6 +5,11 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 ## 0. Orient (before touching anything)
 - `corpus-nav find "<topic>"` — read the matching blocks. 90% is already documented; don't re-derive.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
+- **Reference first:** when the user supplies a reference implementation (a course lab, a vendor sample, an earlier
+  module of theirs) or their own code for the same exercise, mirror it and the user's style (names, layout,
+  permission file, palette) first, and state each deviation with its reason. For course code, apply the
+  "what not to copy" fixes (niagara-research corpus B1242 §1242.4) only as named, opt-in changes. The N4 Developer
+  course is a primary exemplar source: blocks B1230-B1258, synthesis B1242. `[ev: retro n4-course-as-exemplar-source Δ2]`
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 - **Read the client's version ledger before the first write of a new session on that client:** `odd/VERSION-LEDGER.md` in the client repository (scaffold: `templates/VERSION-LEDGER.md`). Check its `Class` column against the classes the new work is likely to hit — the template's "Root-cause classes" table maps typical new work to classes and is the only copy of that map — and read those rows' prevention deltas first. Verify a candidate against the CLIENT's own history, not just this session's. No ledger yet → create it from the template at this session's close. `[ev: retro panccadia-version-defect-ledger Δ2]`
 
