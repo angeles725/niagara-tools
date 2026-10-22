@@ -22,8 +22,9 @@ before any `$(sha256_of ...)`. Messages and exit codes stay byte-identical; net 
   stop this script") named the trap; install-skill.sh never got the fix `[ev: scripts/check-skill-drift.sh@1197614]`
 - Helper test first: `tests/sha256.bats` SHA1-SHA5 RED (exit 127, lib absent) before the lib existed
   `[ev: tests/sha256.bats]`
-- CI's `shellcheck scripts/*.sh` glob and shell-hygiene SH1 do not reach `scripts/lib/`; SHA5 shellchecks the
-  lib from bats until the globs widen `[ev: .github/workflows/ci.yml shellcheck step]`
+- CI's `shellcheck scripts/*.sh` glob and shell-hygiene SH1 did not reach `scripts/lib/` (CI shellcheck also
+  missed `toolbelt/lib/`); this unit widens both globs `[ev: .github/workflows/ci.yml shellcheck step;
+  tests/shell-hygiene.bats SH1]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
