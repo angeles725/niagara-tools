@@ -14,16 +14,23 @@ write**, named `do` + Capitalized(action name):
 ```java
 @NiagaraAction(name = "tick", flags = Flags.HIDDEN)
 public void tick() { invoke(tick, null, null); }   // GENERATED wrapper — do not hand-write
-void doTick() { /* your logic */ }                  // YOU write this — the handler
+public void doTick(Context cx) { /* your logic */ }  // YOU write this — the handler: public, takes Context
 ```
 
-Baja resolves the handler by reflection as `do<Cap>(paramType)` and, if present, the overload
-`do<Cap>(paramType, Context)` — the Context form gives you the invoking user/session (needed
-for auditing and per-user privilege). `EngineUtil.doInvoke` tries both signatures.
+The type introspector resolves the handler when the type loads: `do<Cap>()` / `do<Cap>(P)` first, and only if
+that is missing `do<Cap>(Context)` / `do<Cap>(P, Context)`. The handler must be public, non-static and return
+the wrapper's type. [CERT] `com/tridium/sys/schema/ComplexIntrospector.java:316-343` (4.14 decompile, corpus B1231 §1231.4)
 
-**Gotcha:** the rule applies to EVERY action, parameterized or not. Name the handler wrong
-(`myAction()` instead of `doMyAction()`) and the action dispatches to nothing — a **silent
-no-op**, no error. [ev: code slot-o-matic `getMethod("do"+cap, paramType[, Context])`; corpus authoring-exemplars]
+**Gotcha — a wrong frozen handler is a type-load error, not a no-op:** a missing or mis-named `do` method fails
+the type with `Missing action do method`; a non-public one with `Do action method must be public`; a different
+return type with `Action method and do method have mismatched signature`. A silent no-op is possible
+at most on a reflectively dispatched DYNAMIC action [INFER].
+[ev: retro n4-course-slots-components-contracts Δ1] [ev: corpus B1231 §1231.4]
+
+**Declare ONE handler and take the `Context`** (Tridium's recommendation: the Context carries the invoking user,
+needed for audit and per-user checks). If both `doX()` and `doX(Context)` exist, the no-Context one is found
+first and the Context one never runs. A check for that pair is owed as Go lint G1 (BUILD-STATE `open_issues`).
+[ev: corpus B1231 §1231.4]
 
 ## 2 · Threading model — ordinary vs `ASYNC`
 

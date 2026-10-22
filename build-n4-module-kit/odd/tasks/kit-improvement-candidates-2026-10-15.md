@@ -221,7 +221,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Target:** `types/actions.md:24-26`.
 - **Lint-able:** yes — WARN both `do<X>()` and `do<X>(…Context)`. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-4, `docs/r8-t9g-actions`, 2026-10-22; scc Δ1): `types/actions.md` § 1 (type-load errors,
-  public handler taking `Context`, one handler) + `toolbelt/lint-action-handler.sh` WARN. Premise checked against
+  public handler taking `Context`, one handler); the pair WARN is owed as Go lint G1 (new checks go in Go). Premise checked against
   `ComplexIntrospector.java:316-343`; the kit's own example handler was package-private (also a type-load error), fixed.
 
 ### C10 — Lexicon keys: slot = bare slot name, type = `<Type>.displayName`, enum = bare tag
