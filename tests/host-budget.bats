@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 # host-budget.bats — black-box tests of go/cmd/host-budget, the shared-host gate scripts/ci-local.sh runs
-# before any CI step (quality round 8 T47; spec: build-n4-module-kit/ledger.d/2026-10-22-r8-t41-host-safety.md).
+# before any CI step (quality round 8 T47; spec: build-n4-module-kit/ledger.d/2026-10-22-r8-t47-host-budget.md,
+# retro build-n4-module-kit/retros/2026-10-22-r8-t47-host-budget.md).
 # The binary is built through go/go-tool.sh go_tool_bin, the same path ci-local.sh uses. Fixtures are fake
 # cgroup v2 roots and a fake /proc; the disk rows stat a real tmpdir, so every case passes --disk-pct 100
 # except the disk case, and the injected-statfs cases (95% → FAIL) live in the Go table tests.

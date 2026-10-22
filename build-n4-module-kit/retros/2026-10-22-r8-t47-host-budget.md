@@ -21,6 +21,7 @@ every `toolbelt/*.sh` named in BUILD-LOOP.md or skill/SKILL.md, which were outsi
 - mutations killed: `>` → `>=` in `classify`, `max` parsed as a number, apparent size dropped from the cache sum, `--strict` ignored `[ev: go/internal/hostbudget/command_test.go]`
 - `tests/host-budget.bats` HB1-HB6 (incident FAIL exit 1, exact half WARN exit 0 / --strict exit 1, `max` skipped, 21 GB sparse cache WARN with the `go clean -cache` hint, disk FAIL, exit 3) `[ev: tests/host-budget.bats]`
 - dropping the `check_host_budget` call in ci-local.sh fails CL10 only `[ev: tests/ci-local.bats]`
+- review correction: a missing cgroup root (macOS, cgroup-less containers) exited 3 where the old inline loop ran; it is now a stderr note (CL13 RED exit 3 → GREEN), an existing unreadable root stays exit 3 (CL14), and `CI_LOCAL_HOST_BUDGET_ARGS` makes CL10-CL12 hermetic (CL15 RED exit 0 → GREEN exit 4) `[ev: tests/ci-local.bats]`
 - a first draft printed `FAIL > 50%` inside PASS/WARN notes, so `[[ $output != *FAIL* ]]` failed in HB2; notes now read `fail above` `[ev: tests/host-budget.bats HB2]`
 
 ## Proposed kit deltas (propose-never-apply)
