@@ -16,8 +16,8 @@ import (
 // every spec prunes), reads each file once and runs the specs that select it, in spec order, printing
 // their rows. An incomplete walk or an unreadable file is reported on stderr with the texts of
 // toolbelt/lib/awk-lint.sh, a file a rule could not analyze as "cannot scan <path>: <rule>: <error>",
-// and the scan goes on. Exit: 3 when anything could not be scanned, else 1
-// when a row was printed under a.Strict, else 0.
+// and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else 1 when a FAIL
+// row was printed or any row was printed under a.Strict, else 0.
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	out := bufio.NewWriter(s.Out)
 	defer out.Flush()
@@ -26,7 +26,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, name+": "+format+"\n", v...)
 	}
 	sel := union(specs)
-	envErr, rows := false, false
+	envErr, rows, failed := false, false, false
 	for _, root := range a.Roots {
 		files, err := Walk(root, sel)
 		if err != nil {
@@ -55,6 +55,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 					}
 					fmt.Fprintln(out, fd.Row())
 					rows = true
+					failed = failed || fd.Severity == Fail
 				}
 				if err != nil {
 					fail("cannot scan %s: %s: %s", p, sp.Rule.ID(), err)
@@ -66,7 +67,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	switch {
 	case envErr:
 		return 3
-	case rows && a.Strict:
+	case failed, rows && a.Strict:
 		return 1
 	}
 	return 0

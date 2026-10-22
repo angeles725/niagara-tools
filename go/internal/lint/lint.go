@@ -17,7 +17,7 @@ type Severity int
 const (
 	Unset Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
 	Warn                  // advisory: exit 0, or 1 under --strict
-	Fail                  // a failed check (rows print FAIL; the exit contract is the same)
+	Fail                  // a failed check: exit 1 with or without --strict
 )
 
 func (s Severity) String() string {

@@ -259,11 +259,35 @@ func TestRunRuleOrderAndSelection(t *testing.T) {
 	}
 }
 
+// TestRunExitPolicy: any FAIL row exits 1 with or without --strict, --strict also makes a WARN row exit 1,
+// and an env error (here a file the rule cannot analyze) exits 3 even beside a FAIL row.
+func TestRunExitPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		text   string
+		strict bool
+		want   int
+	}{
+		{"FAIL alone", "FAIL a\n", false, 1},
+		{"WARN alone", "WARN a\n", false, 0},
+		{"WARN with --strict", "WARN a\n", true, 1},
+		{"env error with FAIL", "FAIL a\nBROKEN\n", false, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := tree(t, map[string]string{"A.java": tc.text})
+			s, _, _ := stdio()
+			if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Strict: tc.strict, Roots: []string{root}}, s); code != tc.want {
+				t.Errorf("exit %d, want %d", code, tc.want)
+			}
+		})
+	}
+}
+
 func TestRunPerFindingSeverity(t *testing.T) {
 	root := tree(t, map[string]string{"A.java": "FAIL one\nWARN two\n"})
 	s, o, _ := stdio()
-	if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s); code != 0 {
-		t.Errorf("exit %d, want 0", code)
+	if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s); code != 1 {
+		t.Errorf("exit %d, want 1 (a FAIL row)", code)
 	}
 	want := "FAIL  lint-m  " + root + "/A.java:1  saw: FAIL one\n" +
 		"WARN  lint-m  " + root + "/A.java:2  saw: WARN two\n"
