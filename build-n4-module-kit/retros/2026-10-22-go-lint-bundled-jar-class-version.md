@@ -3,7 +3,7 @@
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-lint-bundled-jar-class-version
 
-**Session**: niagara-research quality round 8, branch `r8/lint-bundled-jar-class-version-go` from origin/main 942a4f4
+**Session**: niagara-research quality round 8, branch `r8/lint-bundled-jar-class-version-go` rebased onto origin/main 9119296 (bash oracle = main's awk-lint skeleton version)
 **Delta count**: 1
 
 ## What happened
@@ -15,7 +15,7 @@ port keeps the bash rules: the `find -P` walk with `build/` and dot-directories 
 nor followed), C byte order, GNU find's C-locale error wording and quoting for an unreadable sub-directory, at
 most 20 `.class` entries per jar outside `META-INF/versions/`, bytes 6-7 as the major version (a 7-byte entry
 gives its 7th byte, a shorter one none; the magic is not checked), bzip2 entries read and encrypted ones not, the
-first record of a duplicated name, and a jar that is not a readable zip counted clean. Capturing the old output
+first record of a duplicated name. Capturing the old output
 first exposed a silent pass: `unzip -p <jar> <entry>` takes the entry name as a wildcard, so `Foo[1].class` or
 `back\slash.class` read nothing and passed (and a control character in a name, as listed by `unzip -Z1`, did not
 match either); the port reads every sampled entry literally.
@@ -38,7 +38,20 @@ match either); the port reads every sampled entry literally.
 - Mutations: BJCV2 (`> 52` broken) fails `TestAboveJava8`/`TestCheckJar`/`TestMain` and bats BJCV2;
   BJCV-finderr (walk error dropped) fails `TestListJarsUnreadable`/`TestMain` and bats BJCV-finderr
 - Honeywell tree at load ~2.5: bash 8.1-13.1 s (3 runs), wrapper 77-86 ms (5 runs); `~/.m2/repository` (41 FAIL
-  rows) bash 33-39 s, wrapper ~0.28 s `[ev: r8 jar-version timing]`
+  rows) bash 33-39 s, wrapper ~0.28 s; after the rebase, at load ~8-12: bash 9.0-9.5 s (3), wrapper 108-142 ms (5)
+  `[ev: r8 jar-version timing]`
+- The rebased port commit re-diffed against main's current script (awk-lint skeleton): the same 45/50 edge and
+  15/15 real-tree result, the same 5 deliberate differences
+- Deliberate fail-closed fix (separate commit, coordinator request): a jar that cannot be checked is
+  `lint-bundled-jar-class-version: cannot scan <jar>: <reason>` on stderr (the `lib/awk-lint.sh` wording) and exit 3;
+  the other jars are still scanned. Reasons: `not a valid zip file` (not a zip, zero bytes, truncated),
+  `Permission denied`, `cannot read <entry>: encrypted entry` / `unsupported compression algorithm` / a short read.
+  Bash counted all of these clean (`unzip ... 2>/dev/null`). Edge differential after it: 40/50; the 5 new
+  differences are exactly corrupt, truncated, zero-byte, mode-000 and encrypted jars (exit 0/1 → 3), plus the
+  extra `cannot scan` line in the `r--` directory case (already exit 3); real trees still 15/15. The `Exit:` header
+  line names the new case, so `toolbelt/INDEX.md` changes in that cell only. Pinned by `TestCheckJarUnreadable`,
+  `TestCheckJarModeZero` and `TestMain`; mutation BJCV-jarerr (error dropped) fails `TestMain`
+  `[ev: go/internal/jarversion/jar_test.go TestCheckJarUnreadable]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
@@ -49,8 +62,9 @@ match either); the port reads every sampled entry literally.
 decides the rule.
 
 ## Lessons
-- Bash's fail-open paths are kept, not fixed, in a port unless named: an unreadable or corrupt `.jar`, and a
-  symlinked root (`find -P` lists nothing), still pass clean; whether they should be exit 3 is a contract decision.
+- A port keeps bash's fail-open paths unless a fix is named and committed on its own: the unreadable/corrupt-jar
+  fix is a separate commit; a symlinked root still lists nothing and passes, exactly as the shared
+  `lib/scan-files.sh` (`find "$root"` without `-H`) does for every skeleton lint, so it is a scan_files decision.
 - An unredirected stderr of a helper in a pipeline (`od`) is noise the old output carries; a byte-identity harness
   separates it from a real behaviour change.
 - GNU find's C-locale message is `find: '<path>': <strerror>` with backslash escapes and octal for non-printable

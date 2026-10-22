@@ -26,6 +26,9 @@ func TestMain(t *testing.T) {
 	j11 := writeJar(t, bad, "libs/a/java11.jar", entry{name: "A.class", data: classHeader(52)}, entry{name: "B.class", data: classHeader(55)})
 	writeJar(t, bad, "libs/ok.jar", entry{name: "Ok.class", data: classHeader(52)})
 	touch(t, filepath.Join(none, "libs", "readme.txt"))
+	broken := filepath.Join(d, "broken")
+	bj9 := writeJar(t, broken, "libs/java9.jar", entry{name: "Bar.class", data: classHeader(53)})
+	touch(t, filepath.Join(broken, "libs", "a.jar"))
 	lj := writeJar(t, locked, "libs/java9.jar", entry{name: "Bar.class", data: classHeader(53)})
 	touch(t, filepath.Join(locked, "libs", "locked", "a.jar"))
 	lock(t, filepath.Join(locked, "libs", "locked"))
@@ -44,6 +47,8 @@ func TestMain(t *testing.T) {
 		{"BJCV2: one row per failing jar, C byte order, extra arguments ignored", []string{bad, "ignored"}, ExitFail,
 			FailRow(j11, "B.class", 55) + FailRow(j9, "Bar.class", 53), ""},
 		{"raw arity: a flag is taken as the root", []string{"--strict", bad}, ExitEnv, "", "lint-bundled-jar-class-version: not a directory: --strict\n"},
+		{"a jar that is not a zip is exit 3 naming it, the other jars still scanned", []string{broken}, ExitEnv,
+			FailRow(bj9, "Bar.class", 53), "lint-bundled-jar-class-version: cannot scan " + broken + "/libs/a.jar: not a valid zip file\n"},
 		{"BJCV-finderr: an unreadable sub-directory is exit 3, the rest still scanned", []string{locked}, ExitEnv,
 			FailRow(lj, "Bar.class", 53), "lint-bundled-jar-class-version: cannot list every file under " + locked + ": find: '" + locked + "/libs/locked': Permission denied\n"},
 	}

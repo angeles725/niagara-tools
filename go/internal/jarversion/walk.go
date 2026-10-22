@@ -1,7 +1,6 @@
 package jarversion
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -59,7 +58,7 @@ func (w *walker) dir(path string) {
 // fail records the first walk error in find's wording.
 func (w *walker) fail(path string, err error) {
 	if w.err == "" {
-		w.err = "find: " + findQuote(path) + ": " + reason(err)
+		w.err = "find: " + findQuote(path) + ": " + Reason(err)
 	}
 }
 
@@ -71,15 +70,7 @@ func join(dir, name string) string {
 	return dir + "/" + name
 }
 
-// reason is the C-locale strerror text of err's errno (Go's errno strings are glibc's, lower-cased).
-func reason(err error) string {
-	var errno syscall.Errno
-	if errors.As(err, &errno) {
-		return strerror(errno)
-	}
-	return err.Error()
-}
-
+// strerror is the C-locale strerror text of errno (Go's errno strings are glibc's, lower-cased).
 func strerror(errno syscall.Errno) string {
 	s := errno.Error()
 	if s != "" && s[0] >= 'a' && s[0] <= 'z' {

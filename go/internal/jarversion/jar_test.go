@@ -73,10 +73,6 @@ func TestCheckJar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	notZip := filepath.Join(d, "notzip.jar")
-	if err := os.WriteFile(notZip, []byte("x\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	cases := []struct {
 		name    string
@@ -100,8 +96,6 @@ func TestCheckJar(t *testing.T) {
 			Finding{"S.class", 53}, true},
 		{"a six-byte class has no version", writeJar(t, d, "six.jar", entry{name: "S.class", data: classHeader(60)[:6]}), Finding{}, false},
 		{"a bzip2 entry is read", writeJar(t, d, "bz.jar", entry{name: "Z.class", data: bz, method: 12}), Finding{"Z.class", 53}, true},
-		{"an encrypted entry is not read (unzip cannot without a password)",
-			writeJar(t, d, "enc.jar", entry{name: "E.class", data: classHeader(60), flags: 0x1}), Finding{}, false},
 		{"a duplicate name reads its first record, as unzip -p did",
 			writeJar(t, d, "dup.jar", entry{name: "D.class", data: classHeader(52)}, entry{name: "D.class", data: classHeader(60)}), Finding{}, false},
 		// Deliberate fix: unzip -p took the entry name as a wildcard, so these read nothing and passed.
@@ -109,16 +103,84 @@ func TestCheckJar(t *testing.T) {
 		{"a name with a backslash is read literally", writeJar(t, d, "backslash.jar", entry{name: `back\slash.class`, data: classHeader(56)}),
 			Finding{`back\slash.class`, 56}, true},
 		{"a name with a control character is read", writeJar(t, d, "tab.jar", entry{name: "a\tb.class", data: classHeader(54)}), Finding{"a\tb.class", 54}, true},
-		{"a file that is not a zip is clean (unzip -Z1 failed silently)", notZip, Finding{}, false},
-		{"a missing file is clean", filepath.Join(d, "missing.jar"), Finding{}, false},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, hit := CheckJar(tt.path)
-			if hit != tt.wantHit || got != tt.want {
-				t.Errorf("CheckJar(%s) = %+v, %v; want %+v, %v", tt.path, got, hit, tt.want, tt.wantHit)
+			got, hit, err := CheckJar(tt.path)
+			if hit != tt.wantHit || got != tt.want || err != nil {
+				t.Errorf("CheckJar(%s) = %+v, %v, %v; want %+v, %v, <nil>", tt.path, got, hit, err, tt.want, tt.wantHit)
 			}
 		})
+	}
+}
+
+// Deliberate fail-closed fix: the bash tool ran unzip with 2>/dev/null, so a jar it could not open or a
+// class it could not extract counted as clean. Now each is an error (the command exits 3).
+func TestCheckJarUnreadable(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	notZip := filepath.Join(d, "notzip.jar")
+	if err := os.WriteFile(notZip, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	zero := filepath.Join(d, "zero.jar")
+	if err := os.WriteFile(zero, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	trunc := writeJar(t, d, "trunc.jar", entry{name: "T.class", data: classHeader(60)})
+	b, err := os.ReadFile(trunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(trunc, b[:len(b)/2], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name, path, want string
+	}{
+		{"not a zip", notZip, "not a valid zip file"},
+		{"a zero-byte file", zero, "not a valid zip file"},
+		{"a truncated zip", trunc, "not a valid zip file"},
+		{"a missing file", filepath.Join(d, "missing.jar"), "No such file or directory"},
+		{"an encrypted class", writeJar(t, d, "enc.jar", entry{name: "E.class", data: classHeader(60), flags: 0x1}),
+			"cannot read E.class: encrypted entry"},
+		{"a class in an unsupported compression method", writeJar(t, d, "m99.jar", entry{name: "M.class", data: classHeader(60), method: 99}),
+			"cannot read M.class: unsupported compression algorithm"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, hit, err := CheckJar(tt.path)
+			if hit || err == nil || Reason(err) != tt.want {
+				t.Errorf("CheckJar(%s) = hit %v, err %v; want reason %q", tt.path, hit, err, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckJarErrorKeepsTheFinding(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	path := writeJar(t, d, "half.jar", entry{name: "A.class", data: classHeader(60), method: 99}, entry{name: "B.class", data: classHeader(55)})
+	got, hit, err := CheckJar(path)
+	if !hit || got != (Finding{"B.class", 55}) || err == nil {
+		t.Errorf("CheckJar = %+v, %v, %v; want the B.class finding and the A.class error", got, hit, err)
+	}
+}
+
+func TestCheckJarModeZero(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	path := writeJar(t, d, "locked.jar", entry{name: "A.class", data: classHeader(53)})
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	if f, err := os.Open(path); err == nil {
+		f.Close()
+		t.Skip("running as root: mode 000 does not block reads")
+	}
+	if _, _, err := CheckJar(path); err == nil || Reason(err) != "Permission denied" {
+		t.Errorf("CheckJar(mode 000) err = %v, want Permission denied", err)
 	}
 }

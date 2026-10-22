@@ -14,7 +14,8 @@
 #   multi-release jar legitimately bundles higher-version bytecode under META-INF/versions/<N>/).
 #   Samples up to 20 class entries per jar; stops after the first FAIL in each jar.
 #   Row:   FAIL  lint-bundled-jar-class-version  <jar>  class <entry> is major <N> (> 52 = Java 8) — bundled Java 9+ bytecode throws UnsupportedClassVersionError at load
-#   Exit:  0  no FAIL (clean) · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
+#   Exit:  0  no FAIL (clean) · 1  any FAIL · 3  usage/env, a sub-directory find cannot enter, or a jar that
+#          cannot be read (not a zip, unreadable, or a sampled class it cannot extract: "cannot scan <jar>: <reason>")
 #
 # Mutation: BJCV2 -- drop the major > 52 check and BJCV2 stops flagging Java 9+ bytecode
 # Mutation: BJCV-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
