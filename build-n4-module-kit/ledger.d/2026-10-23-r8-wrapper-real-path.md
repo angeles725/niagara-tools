@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-23 -->
+<!-- last-change-note: quality round 8: Go wrappers find go/ from their real path (symlinked toolbelt copy) -->
+log: 2026-10-23 · quality round 8 → the six Go-backed toolbelt wrappers (check-facets-card, gen-build-state, gen-lint-index, gen-retro-index, lint-guard-pins, sweep-fold-audit) now derive `here=` as `here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"`, so a symlinked toolbelt copy (report-module's tests/helpers/stub-toolbelt.bash) still finds `<repo>/go` instead of exiting 3 "go-tool.sh missing"; behaviour is unchanged when they are invoked from the real kit. `tests/go-wrapper-symlink.bats` GWS1 (check-facets-card through the copy from an unrelated cwd, RED → GREEN), GWS2 (every Go wrapper through the copy, per-wrapper timeout), GWS3 ratchet with GWS3-neg; mutation control observed. Retro retros/2026-10-23-r8-wrapper-real-path.md (1Δ, pending). [ev: retro r8-wrapper-real-path Δ1]

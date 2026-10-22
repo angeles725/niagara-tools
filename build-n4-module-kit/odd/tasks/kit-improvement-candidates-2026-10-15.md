@@ -504,24 +504,47 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BAlarmSourceExt.java:326,1332,1954`, corpus B1324, B1314 §1314.1 row 13.
 - **Target:** `types/logic.md` § alarm decisions + `:336` LC5.
 - **Lint-able:** yes — WARN `%parent.` in alarm text defaults. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ2, rac Δ6): `types/logic.md` LC8 (ext chooser from the
+  4.15.6.20 guide, `alarmInhibit` + `inhibitTime`, texts against the record) and LC5 corrected. **Premise corrected (kit
+  text):** LC5 "alarm-ext … is notification-only" — code wins: the ext owns ALARM|FAULT|UNACKED_ALARM of `out` (devguide
+  source 4.15.6.20 `BAlarmSourceExt.java:1330-1331,1954`; vineflower alarm-rt 4.14.0.162 `NON_ALARM_BITS = -139`, `:222`).
+  LC4 reworded to "no interlock". Pin KPC1; owed Go lint G25 `alarm-text-parent`.
 
 ### C33 — Reuse kitControl before hand-rolling: LeadLag, Sequence, Interstart, timers, LoopPoint, writables
 - **Sources:** cas#Δ5 (primary) · r3pec#Δ3 extends (LeadLag feedback inputs must be linked) · r3pec#Δ4 corrects cas Δ5 (Interstart min on/off = inherited `minActiveTime`/`minInactiveTime`, default 0) · rac#Δ7 extends (`activeLevel`, overrides, min on/off on Boolean writables) · cas#Δ6 (timers TRANSIENT) · cas#Δ7 (LoopPoint zero gains, 0.5 s ticket) · cas#Δ8 (Tstat no lockout; ext ordering)
 - **Evidence:** `BLeadLagRuntime.java:307,385,411`, `BLeadLagCycles.java:1116-1124,1187-1200`, `BInterstartDelayControl.java:63-160`, `BSequence.java:575`, `BLoopPoint.java:352,499`, `BBooleanDelay.java:535`, `BStatus.java:824`, corpus B1331, B1351, B1314 §1314.1.
 - **Target:** `types/logic.md` after `:333`, LC1, `:332-333`.
 - **Lint-able:** partial — bog checks (feedback links, non-zero min on/off, kP=0). **Fold type:** new doc section + bog lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ5, Δ6, Δ7, Δ8, r3pec Δ3, Δ4, rac Δ7): `types/logic.md`
+  LC7 (LeadLag feedback links, Sequence, Interstart = inherited `minActiveTime`/`minInactiveTime`, TRANSIENT timers,
+  inert LoopPoint, Tstat + ext ordering) and LC1 (`activeLevel`, override actions/`overrideExpiration`/
+  `maxOverrideDuration` facet, Boolean writable min on/off). Verified in kitControl-rt and control-rt 4.14.0.162
+  vineflower; the 4.15.6.20 devguide source agrees where the corpus cites it; 4.13 not verified. r3pec Δ4's correction
+  of cas Δ5 adopted (min on/off is inherited, default 0). Owed Go lint G26 `kitcontrol-bog`.
 
 ### C34 — Timers and schedules: TriggerSchedule for defrost, `clockChanged` for absolute tickets
 - **Sources:** cas#Δ9 (primary) · rac#Δ3 extends (absolute-start `schedulePeriodically` needs `clockChanged`) · cas#Δ10 extends (weekly schedule `defaultOutput`, share via ScheduleSelector)
 - **Evidence:** `BTriggerSchedule.java:274,524,527,540`, devguide `execution.txt:131-137`, ColdRoomPan `BDefrostMode.java:16`, corpus B1335, B1304 §1304.2.
 - **Target:** `types/logic.md` § Watchdogs and timers, `types/logic-authoring.md:298`, `toolbelt/lint-timers.sh`.
 - **Lint-able:** yes — WARN absolute `Clock.schedule`/`schedulePeriodically` without `clockChanged`. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ9, rac Δ3, cas Δ10): `types/logic.md` § Safety
+  fail-modes & timers (relative vs absolute tickets from the 4.15.6.20 `Clock.java` javadoc + `execution.txt:64-66`;
+  TriggerSchedule with the persisted `nextTrigger`, flags 265 in vineflower schedule-rt 4.14.0.162 `:102`, `:274` in
+  the 4.15.6.20 source), `types/logic-authoring.md` § Schedule integration (`defaultOutput`, specials, selectors). The
+  `lint-timers.sh` WARN is owed as Go lint G24 `absolute-ticket-clock` (a new check, not a small edit).
 
 ### C35 — History extensions and commissioning: `_cfg0` split, ship disabled, capacity, alarm DB size
 - **Sources:** has#Δ3 (primary: split rule + exporter URL) · cas#Δ3 reinforces (disabled on palette, literal `historyName`, rollover) · poh#Δ5 extends (capacity 500, pasted ext disabled + empty name, implied tags from facets, `out.value`) · cas#Δ4 extends (file alarm DB 500)
 - **Evidence:** `LocalDbConnection.java:226-229`, `BHistoryExt.java:281`, devguide `history.txt:75`, `servlets/exporters.txt:16-20`, corpus B1315, B1324, B1256 §1256.6, B1253 §1253.3 K4.
 - **Target:** `types/logic-authoring.md:536-545`, `types/dashboard.md`, `BUILD-LOOP.md` commissioning.
 - **Lint-able:** partial — flag literal `historyName`; diff interval defaults across versions. **Fold type:** doc section + commissioning items.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; has Δ3, cas Δ3, poh Δ5, cas Δ4): `types/logic-authoring.md`
+  § Logging a point to history (split, disabled by default, script name, capacity 500, rollover, `out.value`, implied
+  tags, `ITableToCsv`), `BUILD-LOOP.md` § 6.b item 7 (alarm DB 500, history exts). **Premise corrected:** has Δ3 "a
+  config change starts `<name>_cfg0`" — code wins: on a `recordType`/`interval` change of a non-empty history the OLD
+  records are renamed to `<name>_cfg0` and a new empty history takes the original name (vineflower history-rt
+  4.14.0.162 `HistoryDatabaseConnection.java:194-221`, `LocalDbConnection.java:213-238`; 4.15 not verified). Same
+  operational effect (readers see an empty history), different place for the old data. Owed Go lint G27 `history-name-literal`.
 
 ### C36 — Slot and callback contracts
 - **Sources:** scc#Δ3 (primary: `isRunning()` first line) · scc#Δ4 (validators skip link writes) · scc#Δ5 (slot-API traps) · scc#Δ6 (one-shot status write, TRANSIENT run-state, single-flight, ids in `started()`) · scc#Δ2 (flags are UI, not security; `checkSetFlags`)
@@ -630,12 +653,31 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** course `Slide Code/…/module-permissions.xml`, `Labs/Lab9 Multithreaded/module-permissions.xml`; devguide `security/securityManager.txt:44-124`, `requestingPermissions.txt:677-730`; corpus B1312 §1312.1.
 - **Target:** new `templates/module-permissions.xml`, `types/structure.md` § module-permissions.xml, fixture, `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN non-`<permissions>` root, `<req-permission>` without `<purposeKey>`; WARN `new File("/` outside homes. **Fold type:** template + doc section + lint.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-sign`, 2026-10-23; afl Δ2, has Δ5): new `templates/module-permissions.xml`
+  (devkit-wb 4.14.0.162 wizard shape `gradle/includes/niagara/module-permissions.xml.vm:1-19` + course Lab9 requests),
+  `types/structure.md` § module-permissions.xml (template, `AccessControlException` path, Security Manager card from
+  devguide 4.15.6.20 `security/securityManager.txt:44-124`, `requestingPermissions.txt:40-80,142,596,653`). LEFT: the
+  fixture copy and `scaffold-module.sh` emission (outside this unit's edit surface); the lint half is owed Go lint G21
+  `permissions-xml`. Pin KPS2.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
 - **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `ModuleSign/VerificationModesModuleSigning-182D0E86.txt:25-36`.
 - **Target:** `build-verify.md` § signing, `types/distribution.md:100`, `types/logic-authoring.md:917`, `toolbelt/lint-structure.sh`.
 - **Lint-able:** yes — WARN signing plugin without `allowDefaultProfile.set(false)`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-sign`, 2026-10-23; bdps Δ4, pps Δ6, Δ7, rsb Δ1, Δ2, Δ3): `build-verify.md`
+  § Signing per deploy target (read the mode; mode × status table from the 4.15.6.20 ModuleSign guide; Signing
+  Service ≠ module signing; `RestrictedSigningProfile` + RSA 3072 + `allowDefaultProfile`; clean + Module Info check;
+  profile-XML secrecy; "Unable to load" causes; Jar Signer Tool), `types/distribution.md` pointer,
+  `types/logic-authoring.md` § BProgram. **Premise checked:** pps Δ6 "the guide's default Low is stale" — code wins:
+  `ModuleVerificationMode.make` returns `medium` for ≥ 4.9 (vineflower baja 4.14.0.162 `Nre.java:752-763`, decompiled
+  nre-ext 4.14 `ModuleVerificationMode.java:28-33`) against the guide's `VerificationModesModuleSigning-182D0E86.txt:17`;
+  the kit's existing JACE/supervisor line was already right. **Premise corrected (kit text):** "an unsigned
+  `BRobotCode` blob is rejected at instantiation" — code wins: `BCode` verifies only when a signature is present or
+  `program.requireSigning` is true, else logs `program.notSigned` (vineflower program-rt 4.14.0.162 `BCode.java:202-215`);
+  the guide agrees enforcement is off (`User/ProgramObjectSigning-10F25D1D.txt:16`). The allowDefaultProfile WARN is
+  L15 (C85). Owed Go lints G22 `signer-identity` (rsb Δ1, replaces the verify-module `--expect-signer` flag) and G23
+  `signing-secrets` (rsb Δ2). rsb Δ3's `--info` proof lines not folded (no source line located). Pin KPS1.
 
 ### C49 — `BSimple` encoding must be locale-safe (Spanish stations)
 - **Sources:** poh#Δ2 (primary)
@@ -648,6 +690,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1336 §1336.1 row 5, **B1353 §1353.2** (`EngNotes/aHandlingNull_ExprComponent.txt:23-27`, `[CERT-doc]`).
 - **Target:** `types/logic-authoring.md` (staging).
 - **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; rcf Δ9): `types/logic.md` § Zero-demand (every staging
+  comparison names its fallback; Expr null handling per the 4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17`,
+  `[CERT-doc]`, not verified in code). No lint: a NaN guard near a comparison has no deterministic signal.
 
 ### C51 — Kit process: register the course, reference-first, sweep absolute claims
 - **Sources:** cex#Δ1 (primary: SOURCES.md + corpus-index row) · cex#Δ2 extends (reference-first Orient rule) · cex#Δ3 extends (K-rule + one-time "never"/"forbidden" sweep; C01, C03, C09, C11 are its worked examples) · rsb#Δ6 extends (delta totals come from a counting script, never a hand sum)
