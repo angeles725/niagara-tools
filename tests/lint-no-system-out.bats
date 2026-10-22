@@ -76,3 +76,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+@test "NSO-unreadable: an unreadable source file is 'cannot scan' (exit 3), never a clean pass" {
+  # Mutation: NSO-unreadable -- ignoring the per-file scan failure reports the unreadable file clean (exit 0).
+  local d
+  d="$(mktemp -d "$TMPDIR_T/u.XXXX")"
+  printf 'x\n' > "$d/A.java"
+  chmod 000 "$d/A.java"
+  if [ -r "$d/A.java" ]; then chmod 644 "$d/A.java"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$KIT/toolbelt/lint-no-system-out.sh" "$d"
+  chmod 644 "$d/A.java"
+  [ "$status" -eq 3 ]
+  [ "$output" = "lint-no-system-out: cannot scan $d/A.java: Permission denied" ]
+}

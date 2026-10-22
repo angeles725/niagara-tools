@@ -271,3 +271,58 @@ EOF
   [ "$status" -eq 3 ]
   [[ "$output" == "strip-lint: cannot list every file under $TMPDIR_T/src: "* ]]
 }
+
+# each_lint [exit-expr]: writes $TMPDIR_T/each-lint.sh, a line-loop lint on awk_lint_each that WARNs on
+# every line holding BAD, the path read from ENVIRON["AL_FILE"].
+each_lint() {
+  cat > "$TMPDIR_T/each-lint.sh" <<EOF
+#!/usr/bin/env bash
+set -u
+. "$KIT/toolbelt/lib/awk-lint.sh"
+awk_lint_parse each-lint raw 'usage: each-lint.sh <src-root>' "\$@"
+awk_lint_list -name '*.java'
+awk_lint_each '/BAD/ { printf "WARN  each-lint  %s:%d  %s\n", ENVIRON["AL_FILE"], FNR, \$0 }'
+awk_lint_exit \${AL_ROWS}
+EOF
+}
+
+@test "AL21: awk_lint_each runs the program once per listed file in order, path via ENVIRON; AL_ROWS says a row printed" {
+  # Mutation: AL21 -- passing the path with -v escape-processes the backslash in 'a\tb' and the row names a tab.
+  mkdir -p "$TMPDIR_T/src/a\\tb"
+  printf 'x\nBAD one\nBAD two' > "$TMPDIR_T/src/a\\tb/B.java"
+  printf 'BAD\n' > "$TMPDIR_T/src/com/A.java"
+  each_lint
+  run bash "$TMPDIR_T/each-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 1 ]
+  [ "$output" = "$(printf 'WARN  each-lint  %s:2  BAD one\nWARN  each-lint  %s:3  BAD two\nWARN  each-lint  %s:1  BAD' "$TMPDIR_T/src/a\\tb/B.java" "$TMPDIR_T/src/a\\tb/B.java" "$TMPDIR_T/src/com/A.java")" ]
+  printf 'class A {}\n' > "$TMPDIR_T/src/com/A.java"
+  rm -rf "$TMPDIR_T/src/a\\tb"
+  run bash "$TMPDIR_T/each-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "AL22: awk_lint_each names an unreadable file 'cannot scan' and exits 3; the other files are still scanned" {
+  # Mutation: AL22 -- ignoring the awk/redirect failure passes the unreadable file clean (exit 0).
+  printf 'BAD\n' > "$TMPDIR_T/src/B.java"
+  printf 'BAD\n' > "$TMPDIR_T/src/C.java"
+  chmod 000 "$TMPDIR_T/src/B.java"
+  if [ -r "$TMPDIR_T/src/B.java" ]; then skip "running as root"; fi
+  each_lint
+  run bash "$TMPDIR_T/each-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 3 ]
+  [ "${lines[0]}" = "each-lint: cannot scan $TMPDIR_T/src/B.java: Permission denied" ]
+  [ "${lines[1]}" = "WARN  each-lint  $TMPDIR_T/src/C.java:1  BAD" ]
+}
+
+@test "AL23: every awk_lint_each lint runs by bare relative name from inside toolbelt/" {
+  # Mutation: AL23 -- sourcing the lib via \${BASH_SOURCE[0]%/*} fails when BASH_SOURCE has no slash.
+  local l n=0
+  for l in "$KIT"/toolbelt/lint-*.sh; do
+    grep -q 'awk_lint_each' "$l" || continue
+    n=$((n + 1))
+    run bash -c 'cd "$1" && bash "$2" "$3"' _ "$KIT/toolbelt" "${l##*/}" "$TMPDIR_T/src"
+    [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "$l: $status $output"; return 1; }
+  done
+  [ "$n" -ge 6 ]
+}
