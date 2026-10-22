@@ -639,3 +639,48 @@ GRADLEW
   [ "$status" -eq 0 ]
   [[ "$output" != *"$TMPDIR_T/cdp/other"* ]]
 }
+
+# env-printing gradlew stub for the mirror user.home isolation tests
+_env_gradlew() {
+  # shellcheck disable=SC2016
+  # why: the single-quoted $JAVA_TOOL_OPTIONS / $GRADLE_USER_HOME / $* must reach the stub unexpanded
+  printf '#!/usr/bin/env bash\n{ printf "JTO=%%s\\n" "${JAVA_TOOL_OPTIONS:-}"; printf "GUH=%%s\\n" "${GRADLE_USER_HOME:-}"; printf "ARGV=%%s\\n" "$*"; } > "%s/gradlew.env"\n' "$TMPDIR_T" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-mirror-userhome: a .niagara-mirror niagara_home isolates user.home via JAVA_TOOL_OPTIONS and passes --no-daemon" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  JAVA_TOOL_OPTIONS="-Xfoo" run env -u GRADLE_USER_HOME "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  e="$(cat "$TMPDIR_T/gradlew.env")"
+  [[ "$e" == *"JTO=-Xfoo -Duser.home=$TMPDIR_T/nh/.mirror-user-home"* ]]
+  [[ "$e" != *"-Duser.home=$HOME "* ]]
+  [ -d "$TMPDIR_T/nh/.mirror-user-home" ]
+  [[ "$e" == *"GUH=$HOME/.gradle"* ]]
+  [[ "$e" == *"ARGV="*"--no-daemon"* ]]
+  [[ "$output" == *"user.home isolated"* ]]
+}
+
+@test "BS-mirror-userhome-guh: an already-set GRADLE_USER_HOME is kept in mirror mode" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  GRADLE_USER_HOME="$TMPDIR_T/guh" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  e="$(cat "$TMPDIR_T/gradlew.env")"
+  [[ "$e" == *"GUH=$TMPDIR_T/guh"* ]]
+  [[ "$e" == *"-Duser.home=$TMPDIR_T/nh/.mirror-user-home"* ]]
+  [[ "$e" == *"--no-daemon"* ]]
+}
+
+@test "BS-mirror-userhome-control: a non-mirror niagara_home forces no user.home and no --no-daemon" {
+  _env_gradlew
+  run env -u JAVA_TOOL_OPTIONS -u GRADLE_USER_HOME "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  e="$(cat "$TMPDIR_T/gradlew.env")"
+  [[ "$e" == *"JTO="$'\n'* ]]
+  [[ "$e" != *"user.home"* ]]
+  [[ "$e" == *"GUH="$'\n'* ]]
+  [[ "$e" != *"--no-daemon"* ]]
+  [ ! -e "$TMPDIR_T/nh/.mirror-user-home" ]
+}

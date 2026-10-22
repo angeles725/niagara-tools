@@ -43,6 +43,10 @@
 # Independent gradle groups (different gradle roots) may be built CONCURRENTLY: one build.sh per group in the
 #   background, then wait — never two runs on the SAME gradle root (BUILD-LOOP.md §4).
 #   [ev: retro change-tier-time-budgets Δ5]
+# Mirror user.home isolation: when niagara_home holds the .niagara-mirror marker (mirror-niagara-home.sh), gradle
+#   runs with JAVA_TOOL_OPTIONS += -Duser.home=<mirror>/.mirror-user-home, GRADLE_USER_HOME kept (default
+#   ~/.gradle) and --no-daemon, so the signing plugin cannot read the real ~/.tridium keystore.
+#   [ev: retro r8-mirror-userhome Δ1]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 50 gate or report-module FAIL ·
 #   51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify · 53 report-module INCOMPLETE (a floor check SKIPped)
@@ -191,6 +195,19 @@ if [ -z "$PLUGIN" ]; then
 fi
 GARGS=(-Pniagara_home="$NIAGARA_HOME" -Porg.gradle.java.installations.paths="$J8")
 [ -z "$PLUGIN" ] || GARGS+=(-PniagaraPluginVersion="$PLUGIN")
+
+# Mirror user.home isolation [ev: retro r8-mirror-userhome Δ1]: org.gradle.jvmargs=-Duser.home never reaches an
+# already-running daemon, so the signing plugin's default profile (user.home/.tridium/security) would read the
+# REAL keystore. JAVA_TOOL_OPTIONS reaches every JVM gradle starts; --no-daemon stops reuse of a stale daemon.
+# GRADLE_USER_HOME is pinned first, because gradle derives it from user.home and offline resolution needs it.
+if [ -f "$NIAGARA_HOME/.niagara-mirror" ]; then
+  _MIRROR_UH="$NIAGARA_HOME/.mirror-user-home"
+  mkdir -p "$_MIRROR_UH"
+  export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
+  export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Duser.home=$_MIRROR_UH"
+  GARGS+=(--no-daemon)
+  echo "==> INFO: mirror niagara_home: user.home isolated to $_MIRROR_UH (GRADLE_USER_HOME=$GRADLE_USER_HOME, --no-daemon) so the signing plugin cannot read the real ~/.tridium keystore"
+fi
 
 # ---------------------------------------------------------------------------
 # Deployed-baseline drift gate (Δ2), part 1 — pre-build snapshot + backup.
