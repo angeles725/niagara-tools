@@ -29,8 +29,20 @@ installs any version ≥ floor. A 2-part floor (e.g., `4.14`) fails lint L7. `[e
 
 ## 2 · Own-type registration (`module-include.xml` → `module.xml`)
 
-You author `module-include.xml`; the gradle plugin generates `META-INF/module.xml` from it.
-**Never hand-author `META-INF/module.xml`** — it will be overwritten (lint L6). `[ev: corpus B817]`
+`module-include.xml` lives in source (javac writes its lines, below; you prune them); the gradle plugin
+generates `META-INF/module.xml` from it. **Never hand-author `META-INF/module.xml`** — it will be overwritten (lint L6). `[ev: corpus B817]`
+
+- **`module-include.xml` holds only `<types>`.** Defs, lexicons, installation and finer-grained dependencies
+  go in the part's `moduleManifest { … }` block, and the parts come from the root `niagara-module.xml`
+  (devguide `upgradingBuild.txt:95,115`); a `<defs>`, `<lexicons>` or `<moduleParts>` element in it is
+  Gradle-6-era residue. `[ev: corpus B1313 §1313.3 C2]` `[ev: retro devguide415-horizons-authoring-security Δ6]`
+- **javac's annotation processor writes it, append-only.** For each `@NiagaraType` whose `<type>` line is missing
+  or differs, `NiagaraTypeAnnotationProcessor` adds one and saves the file; it never removes or renames one. After
+  renaming or deleting a type, delete its stale line (or the file, to regenerate it), or registry build logs
+  SEVERE `Missing Sys.loadType() <type>` at station start (`Builder.java:776`). Test types
+  (`test.com.<vendor>…B*Test`) belong only in `moduleTest-include.xml`: the processor picks that file for classes
+  under a configured test root. `[ev: corpus B1233 §1233.4]` `[ev: corpus B1128]`
+  `[ev: retro n4-course-authoring-files-and-libraries Δ5]`
 
 ```xml
 <!-- module-include.xml (authored) -->

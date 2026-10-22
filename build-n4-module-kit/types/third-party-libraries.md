@@ -33,12 +33,34 @@ embedded extJar — bundling a 3rd-party JAR is an accepted, working pattern.
 
 ---
 
-## Two packaging paths
+## Packaging paths
 
-### Path A — Bundle / shade into the module JAR (Shadow plugin)
+### Path 0 — the plugin's `uberjar` (Tridium default; use this first)
 
-The standard approach for a single module that needs one or more external
-libraries:
+The devguide's form: declare the library under the `uberjar` configuration
+(`testUberjar` for a test-only library such as Mockito 4.x) and the plugin
+embeds it in the part jar, with no `module.xml` entry:
+
+```kotlin
+dependencies {
+    uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")
+    testUberjar("org.mockito:mockito-inline:4.5.1")
+    api(":baja")            // api(...) only for Niagara modules
+}
+```
+
+"You should only use the configurations listed above. Other Gradle configurations
+may not interact correctly with the Niagara build environment" (devguide
+`build.txt:187-193`). `uberjar` does not relocate, so the boot-parent shadowing
+rule below still applies; Path A is the fallback only when a library must be
+relocated. `[ev: corpus B1313 §1313.3 C5]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
+`[ev: retro n4-course-authoring-files-and-libraries Δ1]`
+
+### Path A — Shade with relocation (Shadow plugin; unsupported fallback)
+
+Only when a bundled library collides with a class the NRE boot parent ships and
+must move to a private package. It uses Gradle configurations the devguide does
+not support, so the build is ours to keep working:
 
 1. Apply the Shadow plugin in the part's `build.gradle.kts`:
 
@@ -75,15 +97,15 @@ libraries:
    paths; those namespaces trigger the cert-chain signature check for
    non-elevated modules. `[ev: corpus B617 §617.5, B18 §18.1.1]`
 
-**When to shade (relocate)**: always when there is any chance the NRE boot
-parent carries the same library (Guava, commons-lang3, SLF4J API are common
-candidates). A plain bundle without relocation works when you are certain the
-NRE does not ship that package at the boot level.
+**When to shade (relocate)**: when the NRE boot parent carries the same
+library (Guava, commons-lang3, SLF4J API are common candidates). A plain
+`uberjar` bundle (Path 0) works when the NRE does not ship that package at the
+boot level.
 
 ### Path B — Wrap as a dedicated library Niagara module
 
 Use this when the library is shared across many modules in the same product (the
-overhead is only worth it at scale; for a single module, Path A is simpler):
+overhead is only worth it at scale; for a single module, Path 0 is simpler):
 
 1. Create a new Niagara module (e.g. `myProduct-lib`) with:
    - `module.xml`: `runtimeProfile="rt"`, no `<type>` entries (zero-types), a
@@ -131,7 +153,7 @@ libraries still ship a Java 8–compatible artifact; look for a `-jre8` or
 
 **Multi-release jars are fine:** a library may ship Java 9+ classes under
 `META-INF/versions/<N>/` (Jackson 2.21.2 ships major-55 ones) — a Java 8 runtime
-never loads them, so the base classes decide. Path A's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
+never loads them, so the base classes decide. Path 0's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
 embedded databind + core + annotations (1107 classes) and ran live; "pin to Java-8
 builds" means a Java-8 BASE, not a jar without `META-INF/versions/`.
 `verify-module.sh`'s bytecode check and `lint-bundled-jar-class-version.sh` both
