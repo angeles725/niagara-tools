@@ -240,6 +240,38 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **A facade/panel type with no lexicon entry is a ship-blocker, not a coverage warning:** its slots render raw camelCase in Workbench next to the translated control-side names and the operator cannot find them during commissioning. `toolbelt/slot-coverage.sh` FAILs (exit 1, no `--strict` needed) for every missing type named `*Panel`/`*Facade`; pass `--facade` to treat every declared type of an operator-facing module that way. `[ev: retro panccadia-commissioning-lessons Δ9]`
 - **`module.lexicon` must be ASCII-only — Niagara reads it as Latin-1 on-station:** UTF-8 multibyte accented characters render as mojibake in the Workbench property sheet (`Presión` → `PresiÃ³n`). Use plain ASCII spellings (`Presion`, `Seccion`) or `\uXXXX` unicode escapes for any non-ASCII glyph. `toolbelt/lint-lexicon-ascii.sh` implements this check (FAILs on any non-ASCII byte in a `.lexicon` file). `[ev: corpus B1015 §1015.5]`
 
+## Reading the station directly with BajaScript `[ev: retro t9c-reference-gaps Δ5]`
+A page the station serves to a logged-in user can read the station with BajaScript instead of a custom JSON
+servlet. Derivations: corpus B1306 (Subscriber, leases), B1307 (nav), B1308 (BQL/ORD from code), B1311 (tags,
+relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC). Paths below:
+`BS=organized/bajaScript/bajaScript-ux/extracted/rc` and `EX=niagara-help/devguide-examples/examples/bajaScript`, under niagara-research.
+- **Resolve + subscribe:** `const sub = new baja.Subscriber(); sub.attach('changed', fn);
+  baja.Ord.make('station:|slot:/...').get({subscriber: sub})`; clean up with `sub.unsubscribeAll(); sub.detach()`.
+  `get()` takes `lease`, `subscriber`, `cursor` and returns a Promise. [CERT-doc] `EX/subscription.js:18-59`;
+  [CERT] `BS/baja/ord/Ord.js:286-296`
+- **BQL with a cursor:** `baja.Ord.make("station:|slot:/|bql:select ... from ...").get({cursor: {each, limit, offset}})`.
+  [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
+  shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`
+- **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.
+  [CERT] `BS/nav.js:28-55`; `BS/baja/nav/NavContainer.js:153`
+- **Tags and relations:** there is no `baja.tag` call namespace; use the Promise methods
+  `component.tags()` and `component.relations()` (read-only `get(id)` / `getAll()`; a network call on a proxy
+  space). [CERT] `BS/baja/comp/Component.js:2923,2972`
+- **Session:** it rides the user's web login; opening a component space needs `operatorRead` on it
+  `[ev: corpus B1177]`, and the station enforces the user's permissions on every call `[ev: corpus B46]`.
+  BajaScript sends the CSRF token itself; your own `fetch` calls must send it (§ Critical-write step-up auth) `[ev: corpus B36]`.
+- **Loading:** AMD/RequireJS only (`baja!`, `nmodule/<mod>/rc/...`, `lex!`, `css!`); the AX `<script src=bs.min.js>`
+  style is gone. [CERT-doc] `niagara-help/devguide-clean/requirejs.txt:6-57`. A classic-script SPA (the
+  `frontend-standard.md` format) must boot RequireJS first — the exact bootstrap from a servlet page is not
+  verified [INFER].
+
+**Decision** [INFER, from B46 and B752]:
+| Need | Choose |
+|---|---|
+| Read/subscribe a few slots from a page or bajaux view the station serves; live push; the user's own permissions | BajaScript direct |
+| Cross-origin or off-station client, server-side aggregation, validated writes with audit, a classic-script SPA | servlet JSON (this guide's servlet-SPA) |
+| Off-station read-only consumer | oBIX or OPC UA — `driver-authoring.md` § 10 |
+
 ## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
 
 This section documents the web tier from OUR modules; the Tridium exemplar for each aspect is in the corpus — reach for it, do not re-derive: servlet routing (`BWebServlet`/`BServletView`) → B29; hx views (`BHxView`/`BHxProfile`/`HxOp`) → B433; module `rc/` web resources + `module://<mod>/rc/…` ORDs → B5/B752; `@AgentOn` web agents (`BIJavaScript`+`JsInfo`) → B752/B421; Tridium-servlet CSRF (`CsrfGuard`/`CsrfProtectedFilter`) → B58 (vs our hand-rolled `X-Requested-With` guard, B763); JSON/REST response shaping → B16/B66, B361–B364, B604, B509. `[ev: corpus B791]`
