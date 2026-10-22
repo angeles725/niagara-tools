@@ -33,15 +33,20 @@ Critical attributes — wrong values corrupt field devices:
 | `@name` | string | display name in the Supervisor distribution manager |
 | `@version` | string | the version string presented to `installDist.query` |
 | `@vendor` | string | vendor identity |
-| `@reboot` | boolean | **GOTCHA:** `true` forces an immediate controller reboot after install; omit or `false` only for hotpatch-safe bundles |
-| `@noStation` | boolean | **GOTCHA:** `true` = installs without stopping the station; wrong value on a bundle that mutates station files = data corruption |
+| `@reboot` | boolean | `true` reboots the controller after install; a missing attribute reads `false` (`DistributionManifest.java:130`) |
+| `@noStation` | boolean | **GOTCHA:** `true` = the installer stops EVERY running app (stations and Sedona) before it commits; a missing attribute reads `false` (install while running). `noStation` is the shipped alias of the devguide's `noRunningApp` (`DistributionManifest.java:87`); 22 of 26 shipped 4.15.6.20 dists set it `true`. Workbench asks first and aborts the install on "no" |
+| `@noRunningStation` | boolean | `true` stops stations only (Sedona keeps running); implied by `noStation`/`noRunningApp` (`DistributionManifest.java:79`) |
 | `@absoluteElementPaths` | boolean | `true` treats payload paths as absolute on the target; otherwise relative to install root |
 | `@osInstall` | boolean | `true` = the bundle replaces OS-level firmware (JACE QNX, Atlas snap); installer validates compatibility |
-| `@updateDaemonBinaries` | boolean | `true` = the daemon binary itself is replaced; forces a mandatory restart |
+| `@updateDaemonBinaries` | boolean | `true` = the daemon binary itself is replaced; it does not reboot by itself (the one shipped example, `nre-core-win-x64.dist`, sets `reboot="false"`) |
 | `<dependencies>` | child | ordered list of prerequisite dists; Supervisor validates before install |
 | `<provides>` | child | capabilities this dist advertises (used by dependent dists) |
 
-`[ev: corpus B1023 §1023.7]`
+**Always write `reboot` and `noStation` explicitly** in a dist we build: the devguide says both default
+to true (devguide `distribution.txt:86,88`), the code reads a missing attribute as false, so only an explicit value means the same to both readers.
+A dist that replaces jars a running station has loaded sets `noStation="true"` (or `noRunningStation="true"`
+to spare Sedona). `[ev: corpus B1023 §1023.7]` `[ev: corpus B1318 §1318.2 C1-C2]` `[ev: corpus B1345]`
+`[ev: retro devguide415-r2-packaging-platform-signing Δ1]` `[ev: retro devguide415-r3-packaging-extension-control Δ1]`
 
 ---
 
@@ -54,10 +59,10 @@ The Supervisor is the install tool for field controllers (JACE, Atlas):
 3. The controller validates `dist.xml` (@version, @dependencies, @osInstall compatibility).
 4. On success it pulls the payload and applies it; `@reboot`/`@noStation` govern restart.
 
-**Gotcha:** a `.dist` whose `@noStation=false` and `@reboot=false` that still
-touches station files silently corrupts the running station. Test the
+**Gotcha:** a `.dist` whose `@noStation=false` (or missing) and `@reboot=false` that still
+touches station files is installed under the running station and can corrupt it. Test the
 `@noStation`/`@reboot` pair against the actual payload contents before shipping.
-`[ev: corpus B1023 §1023.1]`
+`[ev: corpus B1023 §1023.1]` `[ev: corpus B1345]`
 
 ---
 
@@ -136,15 +141,15 @@ self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium
 
 ### Hard signing gate (permission groups)
 
-`ACCESS_CLASS`, `REFLECTION`, and `MBEAN_PERMISSION` force cert-chain
-validation **regardless of `moduleVerificationMode`**. A local DEV cert is
-insufficient for modules requesting these groups even on a Win Supervisor set
-to LOW mode.
+Six groups (`REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
+`THIRD_PARTY_PERMISSION`, `PROTECTION_DOMAIN`, `HSM_SIGNING`) need a signed module
+whose cert the installation trusts, in every `moduleVerificationMode`; without it
+the station drops the group with a WARNING (`Skipping element`).
 
 → Full signing gate details and `skipModuleValidation` semantics are in
 `build-verify.md §Signing per deploy target`. Do not duplicate here.
 
-`[ev: corpus B1027 §1027.4, B18 §18.3-18.4]`
+`[ev: corpus B1027 §1027.4, B18 §18.3-18.4]` `[ev: corpus B1312 §1312.3 C1-C2]`
 
 ### Signing-profile build-triage
 
@@ -393,6 +398,14 @@ passphrase; a backup without it means re-entering every device/integration secre
 **Retention.** Provisioning backup jobs keep every `.dist` forever by default; set a retention
 policy (by age or by number of runs) on the job prototype, or the Supervisor disk fills silently.
 `[ev: corpus B39 §39.2.5]`
+
+**Fleet install of a module jar.** A provisioning Install Software step installs a jar the Supervisor's
+software database holds; when it holds several versions the step asks which one, and modules the jar depends on
+that the database also holds are added for each host automatically. Platform fit stays the operator's job, and the
+Supervisor needs the `provisioningNiagara` licence (guide `Provisioning/InstallingSoftwareByDraggingFromThe.txt:16-26`,
+`Provisioning/ProvisioningTroubleshooting.txt:14`). `[ev: corpus B1325 §1325.1 rows 8-9]`
+`[ev: retro devguide415-r2-packaging-platform-signing Δ4]` (line cites re-read on 4.15.6.20; the block's `:36-46` is
+past the end of the file) `[ev: retro r8-t9i-packaging Δ1]`
 
 **Persisted ≠ saved.** A persisted slot reaches disk only on a station save, so a backup taken
 before a save misses the live operator values; save the station before the backup.

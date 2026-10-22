@@ -365,6 +365,9 @@ if [ -n "$OWED" ]; then
   # cells or an empty Slot cell is a MANUAL "malformed" row, never skipped into the PASS.
   owed_rows=$(awk -v F="$OWED" '
     BEGIN { S_OUT = 0; S_OWED = 1; S_FOREIGN = 2; S_PEND = 3; st = S_OUT; pend = "" }   # block states
+    # OWED_COLS: Slot | Owed by | Unit | Safe default | Status. One constant for the malformed-row rule and the
+    # wide-block-after-the-Slot-table rule, so the two stay in step.
+    BEGIN { OWED_COLS = 5 }
     function trim(x) { gsub(/^[ \t]+|[ \t]+$/, "", x); return x }
     function cells(r,    line, i) {   # sets c[1..n], n, blank, sep
       line = trim(r); sub(/^\|/, "", line); sub(/\|$/, "", line)
@@ -378,7 +381,7 @@ if [ -n "$OWED" ]; then
     function owed(r) {
       cells(r)
       if (blank || sep) return
-      if (n < 5 || c[1] == "") {
+      if (n < OWED_COLS || c[1] == "") {
         printf "malformed values-owed row (needs Slot | Owed by | Unit | Safe default | Status): %s\n", trim(r)
         return
       }
@@ -396,7 +399,7 @@ if [ -n "$OWED" ]; then
       }
       if (st == S_PEND) {
         cells($0)
-        if (sep && !(seen && pend_n >= 5)) { pend = ""; st = S_FOREIGN; next }
+        if (sep && !(seen && pend_n >= OWED_COLS)) { pend = ""; st = S_FOREIGN; next }
         flush(); st = S_OWED           # headerless or wide block after the Slot table: owed rows
       }
       if (st == S_OWED) owed($0)
@@ -436,7 +439,7 @@ emit MANUAL "consumer-impact" \
 emit MANUAL "link-source-audit" \
   "run obix-link-audit.sh --map docs/wiring-map.md against the live facade: every declared link-in comes from its declared source (MATCH)"
 emit MANUAL "servlet-response-headers" \
-  "BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options' — both headers must appear (ODA2-G1/G2; see types/security.md §7)"
+  "BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options|content-security-policy' — the station's header providers must reach the servlet (see types/security.md §7)"
 
 # ----------------------------------------------------------------
 # Summary

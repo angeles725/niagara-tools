@@ -111,3 +111,20 @@ _write_hot() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"Mod/src/com/x/locked"* ]]
 }
+
+@test "CHW-reset: resetXHours() is not the setter setXHours( -- no WARN on a reset-only write (#151)" {
+  # Mutation: CHW-reset -- a bare substring `setXHours(` also matches inside `resetXHours(` and false-WARNs.
+  _write_hot
+  sed -i 's/    setXHours(1.0);/    resetXHours();/' "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$CHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"WARN"* ]]
+}
+
+@test "CHW-qualified: a qualified this.setXHours( still counts as the setter (#151)" {
+  _write_hot
+  sed -i 's/    setXHours(1.0);/    this.setXHours(1.0);/' "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$CHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+}

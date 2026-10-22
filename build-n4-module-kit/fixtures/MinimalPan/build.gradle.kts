@@ -44,3 +44,20 @@ subprojects {
     mavenCentral()
   }
 }
+
+////////////////////////////////////////////////////////////////
+// Signing: allowDefaultProfile off; alias and profile from gradle properties
+// (niagaraSigningAlias, niagaraSigningProfile) — templates/signing-root.gradle.kts
+////////////////////////////////////////////////////////////////
+
+signingServices {
+  // Disable the default profile: a missing profile fails the build instead of signing with the dev key
+  signingProfileFactory {
+    allowDefaultProfile.set(false)
+  }
+}
+
+niagaraSigning {
+  aliases.set(providers.gradleProperty("niagaraSigningAlias").map { listOf(it) })
+  signingProfileFile.set(layout.projectDirectory.file(providers.gradleProperty("niagaraSigningProfile")))
+}

@@ -217,7 +217,9 @@ _content_hash() {
   local jar="$1" list
   list="$(unzip -Z1 "$jar" 2>/dev/null)" || return 1
   [ -n "$list" ] || return 1
-  { printf '%s\n' "$list" | grep -v '^META-INF/' | LC_ALL=C sort \
+  # awk, not `grep -v`: a jar with only META-INF entries has no payload line, and grep's exit 1 would fail the
+  # pipeline under pipefail and report an unchanged resource-only jar as "cannot verify" (#226).
+  { printf '%s\n' "$list" | awk '!/^META-INF\//' | LC_ALL=C sort \
       | while IFS= read -r _entry; do unzip -p "$jar" "$_entry" 2>/dev/null; done
   } | sha256sum | awk '{print $1}'
 }
@@ -229,6 +231,19 @@ _module_own_version() {
       | grep -oE '<module [^>]*vendorVersion="[0-9]+\.[0-9]+\.[0-9]+[^"]*"' \
       | head -1 | sed -E 's/.*vendorVersion="([^"]*)".*/\1/'
   } || true
+}
+# _restore_baseline <profile> <ok-suffix> — put the part-1 backup back into modules/ and say so. A failed copy
+# prints cp's own reason and what modules/<jar> really holds now (the pre-build jar, or something else such as
+# the new jar gradle's :jar step installed), because a bare retry would snapshot a new jar as its own baseline.
+_restore_baseline() {
+  local p="$1" ok="$2" dst="$NIAGARA_HOME/modules/$MOD-$1.jar" err
+  if err="$(cp -p "$DRIFT_DIR/$p.old.jar" "$dst" 2>&1)"; then
+    echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules$ok" >&2
+  elif cmp -s "$DRIFT_DIR/$p.old.jar" "$dst"; then
+    echo "  FAILED TO RESTORE $MOD-$p.jar (${err:-cp failed}); $NIAGARA_HOME/modules still holds the pre-build jar, so a retry is still safe." >&2
+  else
+    echo "  FAILED TO RESTORE the previously-deployed $MOD-$p.jar (${err:-cp failed}) — $NIAGARA_HOME/modules no longer holds it (likely the NEW jar); restore it manually before retrying." >&2
+  fi
 }
 DRIFT_DIR=""
 if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
@@ -277,6 +292,20 @@ else
     echo "  is irrelevant when you are not deploying to that supervisor)." >&2
     rm -f "$GLOG" "$GSTAMP"; exit 31
   fi
+  # slotomatic-authoring Δ1 (K15): slot-o-matic logs "Could not process <file>: …" as a WARNING and its task
+  # succeeds, so the failure surfaces later in compileJava ("… have you run slot-o-matic?"). Name the skipped file.
+  # The capture ends at ".java" so a Windows drive letter (C:\...) does not cut the path short.
+  if grep -q 'have you run slot-o-matic' "$GLOG"; then
+    _SKIPPED=$(sed -n 's/.*Could not process \(.*\.java\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u)
+    echo "build.sh: compileJava found slots slot-o-matic never generated." >&2
+    if [ -n "$_SKIPPED" ]; then
+      printf '%s\n' "$_SKIPPED" >&2
+      echo "  A file with empty BEGIN/END BAJA AUTO GENERATED markers is skipped (METHODOLOGY K15): delete the" >&2
+      echo "  markers and rerun." >&2
+    else
+      echo "  Rerun :<part>:slotomatic --info and read its output for 'Could not process' (METHODOLOGY K15)." >&2
+    fi
+  fi
   echo "build.sh: gradle failed" >&2; rm -f "$GLOG" "$GSTAMP"; exit 30
 fi
 
@@ -312,13 +341,8 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
     fi
     if [ -n "$_why" ]; then
       echo "build.sh: FAIL — drift gate cannot verify $MOD-$p: $_why." >&2
-      # Same retry-safety contract as the drift FAIL below: a failed restore is said out loud, because
-      # modules/ then holds the NEW jar and a bare retry would snapshot it as its own baseline.
-      if cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null; then
-        echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules." >&2
-      else
-        echo "  FAILED TO RESTORE the previously-deployed $MOD-$p.jar — $NIAGARA_HOME/modules now holds the NEW jar; restore it manually before retrying." >&2
-      fi
+      # Same retry-safety contract as the drift FAIL below.
+      _restore_baseline "$p" "."
       DRIFT_UNVERIFIED=1
       continue
     fi
@@ -330,14 +354,12 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
       # Restore the pre-build baseline (part 1 backup) so a bare re-run stays retry-safe: without this,
       # gradle's :jar step has already left the NEW jar in modules/, and a re-run would snapshot that as
       # its own baseline and silently pass. [R4-drift-gate-not-retry-safe]
-      if cp -p "$DRIFT_DIR/$p.old.jar" "$NIAGARA_HOME/modules/$MOD-$p.jar" 2>/dev/null; then
-        echo "  Restored the previously-deployed $MOD-$p.jar into $NIAGARA_HOME/modules — a retry will catch this again." >&2
-      else
-        echo "  FAILED TO RESTORE the previously-deployed $MOD-$p.jar — $NIAGARA_HOME/modules now holds the NEW jar; restore it manually before retrying." >&2
-      fi
+      _restore_baseline "$p" " — a retry will catch this again."
       DRIFT_FAIL=1
     fi
   done
+  # Precedence: a real drift FAIL (51) outranks a cannot-verify profile (52) in the same run — the bump it asks for
+  # is needed either way, and the cannot-verify rows above stay on stderr.
   if [ "$DRIFT_FAIL" -eq 1 ]; then
     echo "build.sh: deployed-baseline drift detected — bump the version above, then rebuild (or --no-drift-check if this niagara_home is not the deploy target)." >&2
     exit 51

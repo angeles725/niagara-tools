@@ -36,11 +36,9 @@ Use these class numbers in the `Class` column; add a class only when no row fits
 | 7 | Skipped design step for a new control state machine | a new state machine |
 | 8 | Test hygiene — a test that is vacuous under a disabled flag | a new feature flag |
 
-**Repeated class = escalation** (the rule lives in `BUILD-LOOP.md` §7; this is a pointer, not a second copy). When a
-class already has a live hit in this ledger and its prevention delta has not shipped yet, a second hit on this
-client makes that delta PRIORITIZED: apply it in the current work or open it as the next work unit, ahead of its
-normal promotion queue. Citing it again as evidence is not enough.
-`[ev: retro panccadia-version-defect-ledger Δ3]`
+**Repeated class = escalation:** a second live hit of a class in this ledger can make its prevention delta
+PRIORITIZED. The rule, and what PRIORITIZED requires, lives only in the kit's `BUILD-LOOP.md` §7 ("Repeated
+root-cause class = escalation"); read it there. `[ev: retro panccadia-version-defect-ledger Δ3]`
 
 ## Open items
 

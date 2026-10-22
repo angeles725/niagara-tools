@@ -27,18 +27,40 @@ library without clashing. It also means an NRE-shipped class (e.g. an older
 Guava, a commons-* version) **shadows your bundled copy** unless you relocate
 (shade) it to a private package. `[ev: corpus B617 §617.5]`
 
-First-party precedent: Niagara's own `jsonToolkit-wb` bundles Gson 2.9.0 as an
+First-party precedent: Niagara's own `jsonToolkit-wb` bundles Gson 2.13.2 (4.15.6.20) as an
 embedded extJar — bundling a 3rd-party JAR is an accepted, working pattern.
 `[ev: corpus B347 §347.3]`
 
 ---
 
-## Two packaging paths
+## Packaging paths
 
-### Path A — Bundle / shade into the module JAR (Shadow plugin)
+### Path 0 — the plugin's `uberjar` (Tridium default; use this first)
 
-The standard approach for a single module that needs one or more external
-libraries:
+The devguide's form: declare the library under the `uberjar` configuration
+(`testUberjar` for a test-only library such as Mockito 4.x) and the plugin
+embeds it in the part jar, with no `module.xml` entry:
+
+```kotlin
+dependencies {
+    uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")
+    testUberjar("org.mockito:mockito-inline:4.5.1")
+    api(":baja")            // api(...) only for Niagara modules
+}
+```
+
+"You should only use the configurations listed above. Other Gradle configurations
+may not interact correctly with the Niagara build environment" (devguide
+`build.txt:187-193`). `uberjar` does not relocate, so the boot-parent shadowing
+rule below still applies; Path A is the fallback only when a library must be
+relocated. `[ev: corpus B1313 §1313.3 C5]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
+`[ev: retro n4-course-authoring-files-and-libraries Δ1]`
+
+### Path A — Shade with relocation (Shadow plugin; unsupported fallback)
+
+Only when a bundled library collides with a class the NRE boot parent ships and
+must move to a private package. It uses Gradle configurations the devguide does
+not support, so the build is ours to keep working:
 
 1. Apply the Shadow plugin in the part's `build.gradle.kts`:
 
@@ -75,15 +97,15 @@ libraries:
    paths; those namespaces trigger the cert-chain signature check for
    non-elevated modules. `[ev: corpus B617 §617.5, B18 §18.1.1]`
 
-**When to shade (relocate)**: always when there is any chance the NRE boot
-parent carries the same library (Guava, commons-lang3, SLF4J API are common
-candidates). A plain bundle without relocation works when you are certain the
-NRE does not ship that package at the boot level.
+**When to shade (relocate)**: when the NRE boot parent carries the same
+library (Guava, commons-lang3, SLF4J API are common candidates). A plain
+`uberjar` bundle (Path 0) works when the NRE does not ship that package at the
+boot level.
 
 ### Path B — Wrap as a dedicated library Niagara module
 
 Use this when the library is shared across many modules in the same product (the
-overhead is only worth it at scale; for a single module, Path A is simpler):
+overhead is only worth it at scale; for a single module, Path 0 is simpler):
 
 1. Create a new Niagara module (e.g. `myProduct-lib`) with:
    - `module.xml`: `runtimeProfile="rt"`, no `<type>` entries (zero-types), a
@@ -131,7 +153,7 @@ libraries still ship a Java 8–compatible artifact; look for a `-jre8` or
 
 **Multi-release jars are fine:** a library may ship Java 9+ classes under
 `META-INF/versions/<N>/` (Jackson 2.21.2 ships major-55 ones) — a Java 8 runtime
-never loads them, so the base classes decide. Path A's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
+never loads them, so the base classes decide. Path 0's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
 embedded databind + core + annotations (1107 classes) and ran live; "pin to Java-8
 builds" means a Java-8 BASE, not a jar without `META-INF/versions/`.
 `verify-module.sh`'s bytecode check and `lint-bundled-jar-class-version.sh` both
@@ -149,15 +171,16 @@ x64, Windows DLL, macOS dylib) will:
 
 This is **not** a packaging problem; the binary simply does not exist. The
 solution is to use the equivalent Niagara native driver (platform serial, rdb,
-modbus-driver, mqtt-driver) instead of the JNI library.
+modbus-driver, `abstractMqttDriver`) instead of the JNI library.
 
 ### Elevated-permission signing note
 
 If a bundled library calls `AccessibleObject.setAccessible()` (e.g. MVEL via
 reflection), your module may need `REFLECTION` or `ACCESS_CLASS` in
-`module-permissions.xml`. Those permission groups force cert-chain validation
-regardless of `niagara.moduleVerificationMode` — a DEV cert no longer suffices;
-a Tridium-trusted cert is required at install time. `[ev: corpus B18 §18.3.1]`
+`module-permissions.xml`. Both are among the six groups that need a signed module
+whose cert the installation trusts (public CA, internal CA root or self-signed cert in
+the user trust store); unsigned, the group is dropped with a WARNING
+(`build-verify.md` § Signing per deploy target). `[ev: corpus B18 §18.3.1]` `[ev: corpus B1312 §1312.3 C1-C3]`
 
 ---
 
@@ -166,7 +189,7 @@ a Tridium-trusted cert is required at install time. `[ev: corpus B18 §18.3.1]`
 | Library | Maven artifact (representative) | Compact3-safe rt/ux? | Supervisor-only? | Native-blocked on JACE? | N4 verdict |
 |---------|--------------------------------|---------------------|-----------------|------------------------|------------|
 | Jackson | `com.fasterxml.jackson.core:jackson-databind:2.14.x` | **Yes** | No | No | Bundle (shade recommended); use 2.14.x (Java 8 compat; 2.15+ dropped Java 7, still Java 8-safe) |
-| Gson | `com.google.gson:gson:2.10.x` | **Yes** | No | No | Bundle; first-party precedent: `jsonToolkit-wb` ships Gson 2.9.0 `[ev: B347]`; safe to bundle own copy (classloaders are isolated) |
+| Gson | `com.google.gson:gson:2.10.x` | **Yes** | No | No | Bundle; first-party precedent: `jsonToolkit-wb` ships Gson 2.13.2 in 4.15.6.20 (`META-INF/maven/…/gson/pom.properties`) `[ev: B347]` `[ev: corpus B1321 §1321.2]`; safe to bundle own copy (classloaders are isolated) |
 | org.json | `org.json:json:20240303` | **Yes** | No | No | Bundle; zero runtime deps, minimal footprint |
 | json-schema-validator (networknt) | `com.networknt:json-schema-validator:1.0.87` | **Yes** | No | No | Bundle + shade; heavy transitive tree (Jackson, SLF4J, commons-lang3); shade to avoid boot-parent conflicts |
 | Commons Math | `org.apache.commons:commons-math3:3.6.1` | **Yes** | No | No | Bundle; pure math, no forbidden API; no transitives |
@@ -177,10 +200,10 @@ a Tridium-trusted cert is required at install time. `[ev: corpus B18 §18.3.1]`
 | Guava | `com.google.guava:guava:31.0-jre` | **Yes** | No | No | Bundle + shade; risk: NRE boot parent may carry an older Guava that wins if unshaded `[ev: B617 §617.5]`; shade to private package |
 | SLF4J + Logback | `org.slf4j:slf4j-api` + `ch.qos.logback:logback-classic` | SLF4J-api: **Yes**; Logback-classic: **conditional** (java.sql in DBAppender) | Logback: Supervisor preferred | No | Avoid Logback on rt/ux: DBAppender references `java.sql` at class-load time even when no DB appender is configured; use `java.util.logging.Logger` directly (see `types/logic.md`) |
 | Typesafe Config | `com.typesafe:config:1.4.x` | **Yes** | No | No | Bundle; pure config parsing (HOCON/properties); no forbidden API |
-| Eclipse Paho MQTT | `org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.x` | **Yes** | No | No | Bundle; NOTE: Niagara ships a native mqtt-driver — prefer the native driver for production; Paho for custom publish-from-rt-logic scenarios |
+| Eclipse Paho MQTT | `org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.x` | **Yes** | No | No | Bundle; NOTE: Niagara ships the licensed `abstractMqttDriver` (Paho 1.2.5, Jackson 2.22.1, JJWT 0.12.7 inside in 4.15.6.20) — prefer it for production (`types/cloud-connector.md` § 2.1); a bundled Paho bypasses its licence and device cap `[ev: retro devguide415-r2-shipped-libraries Δ5]` |
 | modbus4j | `com.infiniteautomation:modbus4j:3.0.x` | **Yes** | No | No | Bundle; NOTE: Niagara has a native modbus-driver — prefer it; modbus4j for custom protocol logic only |
 | jSerialComm | `com.fazecast:jSerialComm:2.10.x` | N/A | Supervisor (Linux/Win) only | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE: bundles Linux-x64/Win/macOS .so only; `UnsatisfiedLinkError` at runtime on QNX ARM `[ev: B26]`; use Niagara's platform serial driver instead |
-| OkHttp | `com.squareup.okhttp3:okhttp:4.12.x` | **Yes** | No | No | Bundle (+ okio + kotlin-stdlib transitives); for outbound HTTPS calls from rt logic; kotlin-stdlib adds ~1.5 MB to the jar |
+| OkHttp | `com.squareup.okhttp3:okhttp:4.12.x` | **Yes** | No | No | Do NOT bundle: the NRE ships okhttp 4.12.0 + okio + kotlin-stdlib in `bin/ext`; compile with `nre("com.squareup.okhttp3:okhttp")` (`types/cloud-connector.md` § 2.1) |
 | RxJava2 | `io.reactivex.rxjava2:rxjava:2.2.21` | **Yes** | No | No | Bundle; ~900 KB; fine for complex async orchestration |
 | H2 | `com.h2database:h2:2.2.x` | **No** (`java.sql` throughout) | **Supervisor-only** (-wb or -se profile) | No | `java.sql`-BLOCKED on rt/ux (station Compact3 has no `java.sql`); Supervisor only; use Niagara's native rdb module for database needs |
 | SQLite-JDBC | `org.xerial:sqlite-jdbc:3.x` | **No** (JNI + `java.sql`) | Neither (no QNX .so) | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE (no QNX .so) AND `java.sql`-blocked on rt/ux; neither path works on JACE; use Niagara's rdb driver |
