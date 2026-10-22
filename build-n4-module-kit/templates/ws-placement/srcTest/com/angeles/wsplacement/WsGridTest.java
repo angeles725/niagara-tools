@@ -92,6 +92,19 @@ public class WsGridTest
   }
 
   @Test
+  public void summaryCountsWhoseSpacingCannotFitTheSheetAreRejected()
+  {
+    // 600 - 3 top margin - (2 + n + 1 + 3) >= 0  ->  n <= 591; review R3-001 of #268
+    assertEquals(597, WsGrid.rowSpacingFor(591));
+    assertEquals(3, WsGrid.forSummaryCount(591).q(8));   // every row clamps onto the only one that fits
+    for (int n : new int[] { 592, 1000, Integer.MAX_VALUE - 5, Integer.MAX_VALUE })
+    {
+      try { WsGrid.rowSpacingFor(n); fail("SUMMARY count " + n + " accepted"); }
+      catch (IllegalArgumentException expected) { }
+    }
+  }
+
+  @Test
   public void invalidShapesAreRejected()
   {
     rejects(0, 14, 10, 3, 3, 8, 600, 600);   // no column
