@@ -439,7 +439,7 @@ emit MANUAL "consumer-impact" \
 emit MANUAL "link-source-audit" \
   "run obix-link-audit.sh --map docs/wiring-map.md against the live facade: every declared link-in comes from its declared source (MATCH)"
 emit MANUAL "servlet-response-headers" \
-  "BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options' — both headers must appear (ODA2-G1/G2; see types/security.md §7)"
+  "BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options|content-security-policy' — the station's header providers must reach the servlet (see types/security.md §7)"
 
 # ----------------------------------------------------------------
 # Summary

@@ -30,17 +30,30 @@ A theme module customizes Niagara's visual identity across browser (bajaux/Hx) a
 
 ## 2 · Registration — the `themeName` def
 
-The **only** registration mechanism is:
+The **only** registration mechanism is a registry def, declared in the part's build script
+(`moduleManifest { defines { define("themeName", "themeAcme") } }`, devguide `build.txt:337-358`), which the
+plugin writes into the generated `module.xml`:
 
 ```xml
 <defs>
-  <def name='themeName' value='<your-theme-name>'/>
+  <def name='themeName' value='themeAcme'/>
 </defs>
 ```
 
-The platform scans all installed ux modules for a `themeName` def and lists them in the
-Workbench theme picker (Platform → User Interface → Look and Feel). The value is the display
-name; it must be unique across installed modules. `[ev: code themeDistech-ux module.xml]`
+- **The value is the module name, and the module name starts with `theme`.** Discovery reads every `themeName`
+  def and resolves `module://<value>/nss` (vineflower `CustomThemeModuleManager.java:24,47`); Hx and bajaux load
+  `module://theme<Tag>/hx/theme.css` and `…/ux/theme.css` (vineflower `BHxProfile.java:291`, vineflower `UxUtil.java:23`). Every shipped
+  theme follows it (`themeDistech` declares `value='themeDistech'`).
+- **The picker lists `nss/*.nss` files.** A theme with no `nss/` directory, or no `.nss` in it, is never listed; the
+  label is the file name with the `theme` prefix stripped (`theme.nss` in `themeAcme` → `Acme`,
+  vineflower `CustomThemeModuleManager.java:64-72`).
+- **A missing theme falls back silently** to Zebra, then Lucid, then the first listed theme (`getDefaultThemeEnum`).
+- **Choosing a theme is per web profile, not per module:** the user's (or prototype's) web profile carries
+  `selectedHxTheme` / `selectedWorkbenchTheme` ("Hx Theme … defaults to Zebra", guide `User/baja-User.txt:54`); the
+  Workbench theme is picked in Tools › Options › General (`User/aAboutWorkbenchThemes.txt:26`). There is no Platform ›
+  User Interface picker.
+
+`[ev: corpus B1328 §1328.2 C1]` `[ev: corpus B1328 row 3]` `[ev: retro devguide415-r2-web-ui-hmi Δ2]`
 
 No `module-include.xml` type entries, no palette, no lexicon keys are required.
 
@@ -49,11 +62,11 @@ No `module-include.xml` type entries, no palette, no lexicon keys are required.
 ## 3 · Asset layout
 
 ```
-<themeName>-ux/
+theme<Name>-ux/            # module name = the themeName def value
 ├── ux/theme.css          # bajaux active browser profile (Hx 4.x+ / HTML5)
 ├── hx/theme.css          # legacy Hx browser profile
 ├── fx/theme.css          # JavaFX Workbench browser-side styling
-├── nss/theme.nss         # Workbench Niagara Style Sheet (Swing/FX widgets)
+├── nss/theme.nss         # Workbench Niagara Style Sheet (Swing/FX widgets); REQUIRED — no .nss, not listed
 ├── fonts/                # OTF / WOFF font files
 │   ├── MyFont-Regular.otf.woff
 │   └── MyFont-Regular.ttf
@@ -150,7 +163,12 @@ Key NSS rules:
 
 - The `-ux` Gradle plugin compiles LESS (if present) and packages resources into the ux jar.
   No Java compilation step runs.
-- `module-include.xml` must still be present but holds only `<types/>`.
+- `module-include.xml` must still be present but holds only `<types/>`; the `themeName` def goes in
+  `moduleManifest { defines { … } }` (§ 2).
+- **A servlet SPA is not themed automatically.** Tridium injects the theme CSS only into its own pages (Hx profile,
+  vineflower `WbWebWidgetServlet.java:133,143-149`, the bajaux resolver); a module's own HTML must link
+  `/module/web/rc/theme/theme.css` and `/module/theme<Name>/ux/theme.css` itself, or render through a bajaux
+  view (`types/frontend-standard.md` § 1). `[ev: corpus B1349 §1349.2]` `[ev: retro devguide415-r3-web-session-headers Δ4]`
 - `nodeHome` in `gradle.properties` is required (LESS runs via Node). `[ev: types/structure.md §L10]`
 - No `module.palette` or `module.lexicon` is needed for a pure theme.
 
