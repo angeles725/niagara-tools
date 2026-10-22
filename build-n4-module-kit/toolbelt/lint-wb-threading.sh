@@ -24,6 +24,8 @@
 # [ev: retro campaign8-wb-audit]
 # Mutation: WBT1c -- changes the invokeLater exemption, making an invokeLater-wrapped traversal false-WARN
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -59,6 +61,8 @@ done
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-wb-threading 3 "$_TMP/files" "$SRC" -name '*.java'
 _ROWS="$_TMP/rows.txt"
 touch "$_ROWS"
 
@@ -220,7 +224,7 @@ AWK
 while IFS= read -r f; do
   awk -v FILE="$f" -f "$_AWK_THREAD" "$f" >> "$_ROWS"
   awk -v FILE="$f" -f "$_AWK_AGENT"  "$f" >> "$_ROWS"
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Emit rows and decide exit code

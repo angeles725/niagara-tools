@@ -265,3 +265,15 @@ JAVA
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"faultReset"* ]]
 }
+
+@test "EW-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: EW-locked -- a raw find walk skips the locked directory and passes clean.
+  printf "class A {}\n" > "$SRC/com/x/A.java"
+  mkdir -p "$SRC/locked"
+  chmod 000 "$SRC/locked"
+  if [ -r "$SRC/locked" ]; then chmod 755 "$SRC/locked"; skip "running as root"; fi
+  run "$EW" --strict "$SRC"
+  chmod 755 "$SRC/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-ext-writable-shape: cannot list every file under $SRC: "* ]]
+}

@@ -32,6 +32,8 @@
 # Mutation: EW-s22-nondo -- widens scope past do<Action> bodies, allowing execute() to exempt OPERATOR slots
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
@@ -52,8 +54,11 @@ SRC="$1"
 
 # K20 / EW11: a source dir with no *.java files is a configuration error -> exit 3.
 # Never emit a silent 0. Row contains ERROR + ext-writable-shape.
-_nj=$(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | grep -c '\.java$' || true)
-if [ "$_nj" -eq 0 ]; then
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-ext-writable-shape 3 "$_TMP/files" "$SRC" -name '*.java'
+if [ ! -s "$_TMP/files" ]; then
   printf 'ERROR  ext-writable-shape  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"
   exit 3
 fi
@@ -289,7 +294,7 @@ while IFS= read -r f; do
     printf '%s\n' "$out"
     WARNED=1
   fi
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 [ "$STRICT" -eq 1 ] && [ "$WARNED" -eq 1 ] && exit 1
 exit 0

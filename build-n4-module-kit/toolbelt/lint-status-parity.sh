@@ -32,6 +32,8 @@
 #
 # Mutation: LSP-asymmetric -- removes N>M asymmetry detection so all facades pass regardless of parity
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -51,6 +53,8 @@ SRC="$1"
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-status-parity 3 "$_TMP/files" "$SRC" -name '*.java'
 _ROWS="$_TMP/rows.txt"
 touch "$_ROWS"
 
@@ -111,7 +115,7 @@ while IFS= read -r f; do
     }
   }
   ' "$f"
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort) | \
+done < "$_TMP/files" | \
 while IFS=" " read -r cls n_config n_status; do
   sev="WARN"
   [ "$STRICT" -eq 1 ] && sev="FAIL"

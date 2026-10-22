@@ -47,3 +47,15 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   run "$LSP"
   [ "$status" -eq 3 ]
 }
+
+@test "LSP-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: LSP-locked -- a raw find walk skips the locked directory and passes clean.
+  printf "class A {}\n" > "$ONE/A.java"
+  mkdir -p "$ONE/locked"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LSP" --strict "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-status-parity: cannot list every file under $ONE: "* ]]
+}

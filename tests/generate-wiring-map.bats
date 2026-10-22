@@ -142,3 +142,16 @@ setup() {
   run "$SCRIPT" "$FX" --lexicon "/nonexistent/__gwm__.lexicon"
   [ "$status" -eq 3 ]
 }
+
+@test "GWM-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: GWM-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf "class A {}\n" > "$BATS_TEST_TMPDIR/src/A.java"
+  mkdir -p "$BATS_TEST_TMPDIR/src/locked"
+  chmod 000 "$BATS_TEST_TMPDIR/src/locked"
+  if [ -r "$BATS_TEST_TMPDIR/src/locked" ]; then chmod 755 "$BATS_TEST_TMPDIR/src/locked"; skip "running as root"; fi
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  chmod 755 "$BATS_TEST_TMPDIR/src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"generate-wiring-map: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
+}

@@ -38,6 +38,8 @@
 #
 # Mutation: LRP-noguard -- removes the guarded-only classification so mode-gated-only safe-offs pass instead of FAIL
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -47,6 +49,8 @@ SRC="$1"
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-recovery-path 3 "$_TMP/files" "$SRC" -name '*.java'
 
 FAILED=0
 
@@ -140,7 +144,7 @@ while IFS= read -r f; do
     printf '%s\n' "$result"
     printf '%s\n' "$result" | grep -q '^FAIL' && FAILED=1
   fi
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 [ "$FAILED" -eq 0 ] || exit 1
 exit 0

@@ -326,3 +326,16 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   done
   rm -rf "$T"
 }
+
+@test "RS-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: RS-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$BATS_TEST_TMPDIR/art/rc"
+  printf "<p>x</p>\n" > "$BATS_TEST_TMPDIR/art/rc/index.html"
+  mkdir -p "$BATS_TEST_TMPDIR/art/locked"
+  chmod 000 "$BATS_TEST_TMPDIR/art/locked"
+  if [ -r "$BATS_TEST_TMPDIR/art/locked" ]; then chmod 755 "$BATS_TEST_TMPDIR/art/locked"; skip "running as root"; fi
+  run "$RS" "$BATS_TEST_TMPDIR/art"
+  chmod 755 "$BATS_TEST_TMPDIR/art/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"rc-scan: cannot list every file under $BATS_TEST_TMPDIR/art: "* ]]
+}
