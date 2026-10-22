@@ -909,8 +909,8 @@ TOOLS = [
     Tool("n4_read_file",
          "Read one station file (e.g. a Px view file:^px/General.px) through the station's "
          "file servlet: GET /file/<path>. file_ord is a file:^ ORD or a path relative to the "
-         "station home. Refused before any request: '..', '|', absolute paths, directories "
-         "and .bog/.bog.gz (the station never serves them). Text types (px, xml, nav, chart, "
+         "station home. Refused before any request: '..', '|', ':', absolute paths, directories, "
+         "names ending in '.' or ' ' and .bog/.bog.gz (the station never serves them). Text types (px, xml, nav, chart, "
          "json, csv, html, txt, ...) return text; other files return size, sha256 and "
          "content type only (output_file saves the complete bytes under "
          "<state-dir>/files/). status is ok, forbidden (403: no read permission) or "

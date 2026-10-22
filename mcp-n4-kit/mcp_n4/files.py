@@ -40,7 +40,8 @@ def station_path(file_ord):
 
     Accepts `file:^px/X.px`, `station:|file:^px/X.px` or `px/X.px`. Raises ValueError for
     anything else: an absolute or home path, a drive letter, a backslash, `.`/`..` or empty
-    segments, a trailing `/` (a directory), `|`, control characters, and `.bog`/`.bog.gz`.
+    segments, a trailing `/` (a directory), `|`, control characters, `:`, a segment ending
+    in `.` or space (Windows aliases), and `.bog`/`.bog.gz`.
     """
     if not isinstance(file_ord, str) or not file_ord:
         raise ValueError("file_ord must be a file ORD such as file:^px/General.px or a "
@@ -70,6 +71,13 @@ def station_path(file_ord):
     segments = path.split("/")
     if any(seg in ("", ".", "..") for seg in segments):
         raise ValueError("file path must not contain empty, '.' or '..' segments: %r" % path)
+    # Windows aliases: a station on Windows strips trailing dots and spaces from a name
+    # ("config.bog." is config.bog, ".. " is "..") and reads "a:b" as an NTFS stream.
+    if ":" in path:
+        raise ValueError("file path must not contain ':' (drive or NTFS stream): %r" % path)
+    if any(seg[-1] in ". " for seg in segments):
+        raise ValueError("file path segments must not end in '.' or ' ' (a Windows station "
+                         "strips them, aliasing another name): %r" % path)
     if path.lower().endswith(REFUSED_SUFFIXES):
         raise ValueError("the station never serves .bog / .bog.gz files (FileServlet); "
                          "use the offline config.bog route instead")

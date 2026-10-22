@@ -191,8 +191,8 @@ Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root
 null when the station answers `NULL` (a PxView is a property value, not a component).
 `n4_read_file(file_ord, max_bytes=2097152, output_file=None)` sends
 `GET /file/<path>` for `file:^px/General.px`, `station:|file:^px/General.px` or
-`px/General.px`. It refuses `..`, `|`, absolute paths, directories and `.bog` / `.bog.gz`
-before any request; returns text for text types and size, `sha256` and `content_type` for
+`px/General.px`. It refuses `..`, `|`, `:`, absolute paths, directories, names ending in
+`.` or a space (Windows aliases of another name) and `.bog` / `.bog.gz` before any request; returns text for text types and size, `sha256` and `content_type` for
 the rest; `status` is `ok`, `forbidden` (403) or `not_found` (404). With
 `output_file: "<name>.<ext>"` the complete bytes go to `<state-dir>/files/<name>` (0600,
 never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_bytes,

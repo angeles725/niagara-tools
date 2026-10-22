@@ -47,6 +47,17 @@ class TestFilePaths(unittest.TestCase):
                 files.station_path(bad)
             self.assertIn(".bog", str(cm.exception))
 
+    def test_windows_path_aliases_of_refused_files_are_refused(self):
+        # A Windows station resolves "config.bog." / "config.bog " / "config.bog::$DATA"
+        # and ".. " to the refused name, so the suffix and ".." checks must see through them.
+        for bad in ("config.bog.", "config.bog ", "config.bog. .", "config.bog::$DATA",
+                    "px/.. /config.bog", "px/.../a.px", "px/... /a.px", "px/a.px:stream",
+                    "backups/config.bog.gz.", "px/ /a.px"):
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                files.station_path(bad)
+        self.assertEqual(files.station_path("px/a b.px"), "px/a b.px")
+        self.assertEqual(files.station_path("px/v1.2/a.px"), "px/v1.2/a.px")
+
     def test_text_types_are_detected_by_extension_or_content_type(self):
         for path in ("px/a.px", "a.xml", "nav/NavFile.nav", "c.chart", "d.json", "e.csv",
                      "f.html", "g.txt"):
