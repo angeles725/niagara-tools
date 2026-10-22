@@ -836,8 +836,14 @@ on the same diagonal and overlaps. Place it yourself:
 - **Grid, stable index:** compute `p,q` with the Baja-free `templates/ws-placement/src/com/angeles/wsplacement/WsGrid.java` (copy it
   into the module's rt package; `WsGrid.standard()` = 8 columns, 14×10 cells, margins 3, width 8). Index
   by the child's row in the STABLE data order (seed table, inventory row), not the add order, so a
-  re-sync that creates one missing child puts it in its own cell. Pick `rowSpacing` above the tallest
-  expected glyph: height = 2 + visible SUMMARY slot bars + 1 (B1194 §1194.8).
+  re-sync that creates one missing child puts it in its own cell.
+- **Row spacing from the SUMMARY count, not a fixed 10:** a glyph is 2 + visible SUMMARY slot bars + 1
+  wixels tall (B1194 §1194.8), so `standard()`'s 10 only clears children with up to 4 SUMMARY slots. For
+  taller children use `WsGrid.forSummaryCount(n)` with `n` = the largest SUMMARY count among the children
+  it places: row spacing `rowSpacingFor(n)` = max(10, 2 + n + 1 + 3), the same 3-wixel gap `standard()`
+  leaves under a 4-bar glyph. A 22-SUMMARY facade (DashboardFord `BVavPanel`, 25 wixels) gets 28; with 10
+  its rows overlap. Pin `n` in the module's pure test against the facade's SUMMARY slots, so a new SUMMARY
+  slot that outgrows the spacing fails a test instead of the wire sheet. `[ev: retro ws-row-spacing Δ1]`
 - **Add if absent, READONLY, never re-place:** Workbench adds the slot with flags `1` = `Flags.READONLY`
   only when it is absent and otherwise `set`s it (`WsController.java:189-200`). A module does the add half
   only — an existing annotation is the user's layout and is never overwritten:
