@@ -17,9 +17,9 @@
 # Each table row carries the internal slot name, the Workbench display name and a full-ord
 # column: the operator searches the live tree by the DISPLAY name, so a link table that names
 # only the internal slot has to be redone by hand against Workbench. The display name is filled
-# from the module lexicon (key "<Type>.<slot>" first, then the bare "<slot>" key; Type = class
-# name without its leading B); a slot with no key shows "_(no lexicon key)_" — a lexicon gap
-# slot-coverage.sh per-slot also reports. [ev: retro panccadia-commissioning-lessons Δ9]
+# from the module lexicon by the bare "<slot>" key, the only key the framework reads (NSlot.java:42;
+# a "<Type>.<slot>" key is never shown); a slot with no key shows "_(no lexicon key)_" — a lexicon gap
+# slot-coverage.sh per-slot also reports. [ev: retro panccadia-commissioning-lessons Δ9] [ev: retro devguide415-lexicons-ux-i18n Δ1]
 #
 # The developer fills in the RT-slot, Full-ord and "Physical instance / crossing notes"
 # columns before handing off the module for commissioning. The operator must not hand-derive
@@ -129,7 +129,7 @@ while IFS= read -r f; do
 done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
-# Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon (Type.slot, then slot).
+# Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon by the bare slot key (NSlot.java:42).
 # ---------------------------------------------------------------------------
 display_names() {  # tsv-file
   awk -F'\t' -v LEX="$LEXICON" '
@@ -146,8 +146,7 @@ display_names() {  # tsv-file
     }
     {
       d = "_(no lexicon key)_"
-      if (($2 "." $1) in lex) d = lex[$2 "." $1]
-      else if ($1 in lex) d = lex[$1]
+      if ($1 in lex) d = lex[$1]
       print $1 "\t" d
     }
   ' "$1"

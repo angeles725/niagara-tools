@@ -140,13 +140,13 @@ good_dir() {
 # --- C3-PR4 (module-palette Delta 1, the gate half): empty module.palette + declared types ---
 # The retro defect: a jar with declared @NiagaraType(s) but a TOTALLY EMPTY module.palette builds,
 # passes the gate, deploys — and Workbench shows nothing to drag. check_palette (default-on, reads the
-# packaged module.palette + module.xml): palette entries = `<p n=` count (the b:Folder root has no n=);
+# packaged module.palette + module.xml): palette entries = palette_scan ENTRY rows (folders have no entry);
 # declared types = `<type ` count (B8 convention). Empty (0) + types(>=1) → WARN / --strict FAIL.
 # SCOPE: empty-palette-with-types (high-signal), NOT one-<p>-per-type (would noise on internal types).
 
 @test "V13 (palette): an EMPTY module.palette with declared types → WARN, exit 0 (names the empty palette)" {
   good_dir "$TMPDIR_T/d"                                   # module.xml declares 1 type (com.x.A)
-  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"   # root only — 0 <p n= entries
+  printf '<p m="b=baja" t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"   # root only — 0 <p n= entries
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]                                      # WARN does not fail the gate
@@ -155,7 +155,7 @@ good_dir() {
 
 @test "V14 (palette): --strict promotes the empty-palette WARN to FAIL (exit 1)" {
   good_dir "$TMPDIR_T/d"
-  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" --strict "$TMPDIR_T/j.jar"
   [ "$status" -eq 1 ]
@@ -165,7 +165,7 @@ good_dir() {
 @test "V15 (palette): a POPULATED palette (>=1 <p n=) + types → PASS, no palette WARN" {
   good_dir "$TMPDIR_T/d"
   # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here.
-  printf '<p t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:UnrestrictedFolder">\n<p n="Demo" m="x=demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
@@ -185,7 +185,7 @@ good_dir() {
   good_dir "$TMPDIR_T/d"; make_module_xml "$TMPDIR_T/d" 4.14   # rewrite module.xml with ZERO declared types
   # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here,
   # keeping the assertion clean: only the empty-palette type-guard is exercised.
-  printf '<p t="b:UnrestrictedFolder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:UnrestrictedFolder"></p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
@@ -196,7 +196,7 @@ good_dir() {
   # Δ1/B746 §746.1: b:Folder is gated (access-controlled); b:UnrestrictedFolder is the idiomatic ungated root.
   # Using b:Folder causes "access denied" palette expansion for engineers without the folder's category permission.
   good_dir "$TMPDIR_T/d"
-  printf '<p t="b:Folder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:Folder">\n<p n="Demo" m="x=demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]                                        # WARN never changes exit code
@@ -204,6 +204,70 @@ good_dir() {
   [[ "$output" == *"b:Folder"* ]]
   [[ "$output" == *"b:UnrestrictedFolder"* ]]                # the remedy is named in the message
   [[ "$output" == *"PASS  palette"* ]]                       # entries check still passes (>= 1 <p n=)
+}
+
+# --- Palette format (register C11 afl Δ3, C82 slo Δ6). A palette is a BOG document: `t=` is a type spec
+# `<symbol>:<Type>` whose symbol an `m="<symbol>=<module>"` declares (ValueDocDecoder.java:1071-1073 "Invalid
+# typespec", :1091 "Undeclared module symbol"); Workbench saves `n=` after `t=`; a child `<p n v/>` (with
+# t= for a dynamic slot) is a slot override, not a component. [ev: retro n4-course-authoring-files-and-libraries Δ3]
+# [ev: retro n4-course-handson-slotomatic-authoring Δ6]
+# Named mutations: PAL-n-last -- counting only `<p n=` misses Workbench-saved entries;
+# PAL-override -- counting a `v=` slot override as a component; PAL-class / PAL-prefix -- dropping the
+# type-spec FAILs; PAL-comment -- reading XML comments as elements.
+_pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palette"; make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"; }
+
+@test "PAL-n-last: a Workbench-saved entry (n= after t=) counts as a component entry" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p m="t=training" t="t:FirstComponent" n="FirstComponent" />' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-override: a slot override child (n v, t+v for a dynamic slot) is not a component entry" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="And" m="c=control" t="c:And">' \
+    '  <p n="inA" f="sx" t="b:Boolean" v="false"/>' '  <p n="enabled" v="true"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-class: a Java class name as t= FAILs palette-type (Invalid typespec)" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="Demo" t="com.x.BDemo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-type"*"com.x.BDemo"*"Java class name"* ]]
+}
+
+@test "PAL-prefix: a t= symbol no m= declared FAILs palette-type (Undeclared module symbol)" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="Demo" t="x:Demo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-type"*"x:Demo"* ]]
+}
+
+@test "PAL-comment: an element inside an XML comment is not read; a nested b:Folder WARNs palette-root" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<!-- old: <p n="Old" t="com.x.BOld"/> -->' \
+    '<p n="Sub" t="b:Folder">' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"palette-type"* ]]
+  [[ "$output" == *"WARN  palette-root"* ]]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-unterm: an unterminated <!-- FAILs palette-parse and reports no PASS palette" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<!-- draft, never closed' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-parse"*"unterminated comment"* ]]
+  [[ "$output" != *"PASS  palette "* ]]
+}
+
+@test "PAL-root-alias: a baja Folder under any alias WARNs palette-root naming the element, root or nested" {
+  _pal '<p m="bj=baja" t="bj:UnrestrictedFolder">' '<p n="Sub" t="bj:Folder">' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  palette-root"*"bj:Folder"*"root or nested"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -225,6 +289,17 @@ good_dir() {
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"WARN"* ]]
   run "$VM" --strict "$TMPDIR_T/Scaffold-wb.jar"
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "WB-SCAFFOLD-badtype: a -wb palette entry with an undeclared t= still counts as an entry (no wb-scaffold row)" {
+  d="$TMPDIR_T/wbb"; add_manifest "$d"; add_signature "$d"
+  make_module_xml "$d" 4.14
+  printf '<p m="b=baja" t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$d/module.palette"
+  make_jar "$TMPDIR_T/Bad-wb.jar" "$d"
+  run "$VM" "$TMPDIR_T/Bad-wb.jar"
+  [ "$status" -eq 1 ]                                         # palette-type FAIL
+  [[ "$output" == *"FAIL  palette-type"* ]]
+  [[ "$output" != *"wb-scaffold"*"0 palette entries"* ]]
 }
 
 @test "WB-DEP1: a module.xml dependency absent from the profile gradle.kts api()/nre() WARNs phantom-dep" {

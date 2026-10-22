@@ -116,13 +116,14 @@ setup() {
 # or the operator cannot find the slots in the live tree.
 # Named mutation GWM-display: drop the lexicon lookup -> every row shows the no-key placeholder.
 # ---------------------------------------------------------------------------
-@test "GWM-display: --lexicon fills the Workbench display name column (Type.slot beats bare key; no key -> placeholder)" {
+@test "GWM-display: --lexicon fills the Workbench display name column (bare slot key; Type.slot never read; no key -> placeholder)" {
   LX="$FX-lex/Facade-rt"
   run "$SCRIPT" "$LX/src" --lexicon "$LX/module.lexicon"
   [ "$status" -eq 0 ]
   [[ "$output" == *"| \`temperatureSetpoint\` | Setpoint de temperatura |"* ]]
   [[ "$output" == *"| \`roomTemperature\` | Temperatura del cuarto |"* ]]
   [[ "$output" == *"| \`doorOpen\` | _(no lexicon key)_ |"* ]]
+  [[ "$output" != *"never shown"* ]]   # Type.slot is ignored by the framework (corpus B1305 §1305.2 C1)
 }
 
 @test "GWM-display-auto: module.lexicon next to <facade-src-dir> is discovered without --lexicon" {

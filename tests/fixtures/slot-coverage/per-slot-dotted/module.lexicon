@@ -1,0 +1,4 @@
+# Thing.setpoint is never read: Workbench resolves the bare slot key "setpoint" (NSlot.java:42)
+Thing.setpoint=Setpoint
+fanMode=Fan Mode
+help.guide.base=module://x/doc/

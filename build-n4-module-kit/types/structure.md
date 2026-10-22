@@ -70,6 +70,26 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
 
+### Lexicon key catalogue (what L4's keys must look like)
+
+The framework reads only these forms; any other key is dead for that purpose. `[ev: retro n4-course-lexicon-logging-testing Δ1]`
+`[ev: retro devguide415-lexicons-ux-i18n Δ1]`
+
+| Key | Shown as | Read by |
+|---|---|---|
+| `<slot>=` (bare slot name) | the slot's display name | `NSlot.java:42` `Lexicon.make(module, cx).get(this.name)` |
+| `<Type>.displayName=` | the type's display name (palette, New menu) | `NTypeInfo.java:178` `get(getTypeName() + ".displayName")` |
+| `<tag>=` (bare enum tag) | the frozen enum value's display text | `EnumType.java:50` `get(entry.tag)` |
+| `%lexicon(<module>:<key>)%` in a facet value | e.g. `TRUE_TEXT`/`FALSE_TEXT` text | `BFormat.java:77,452` (a BFormat call, any key) |
+
+All [CERT]: the first three under `organized/baja/baja/vineflower/com/tridium/sys/{schema,registry}/`, `BFormat.java` under
+`organized/docSource/docSource-doc/extracted/baja/javax/baja/util/`; cross-read in corpus B1305 §1305.1 and B1236 §1236.3.
+A `Type.slot` key is never read for the slot, and a bare `<Type>=` key does nothing for the type (it falls back to
+`toFriendly(<Type>)`, `NTypeInfo.java:183`). `toolbelt/slot-coverage.sh` checks both: the parse mode
+counts a type only through `<Type>.displayName` and WARNs a bare `<Type>=`; `per-slot` counts only bare slot keys and
+prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated slot. A coverage check counts only
+the key forms the framework looks up; a form it ignores is reported, never counted. `[ev: retro r8-t9g-actions Δ2]`
+
 ## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
 
 L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niagara_home=`, `user_home=`, `nodeHome=`). The correct pattern is:
@@ -161,9 +181,25 @@ drops the correct sub-tree with every flag already set — no manual wiring requ
 2. **Copy it into the palette:** in Workbench, open the module's palette view, drag the assembled
    component into it, then **Save** (`File › Save All`). The Workbench serialises the live component
    subtree into BOG XML inside `module.palette`.
-3. **Alternatively, hand-edit `module.palette`:** nest child `<p>` elements inside the parent `<p>`,
-   then set property overrides as attributes, e.g. `hasDefrost="true"`. This is faster for simple
-   boolean flags but harder to verify visually.
+3. **Alternatively, hand-edit `module.palette`:** nest child `<p>` elements inside the parent `<p>` and set
+   each slot override as a child element `<p n="<slot>" v="<value>"/>` (see the format card below).
+
+### Format card `[ev: retro n4-course-authoring-files-and-libraries Δ3]`
+
+A palette is a BOG document, decoded like a `.bog` (`bajaObjectGraph`). Tridium's own palettes follow it
+(`kitControl-rt.jar!module.palette:1-11,130-135`, 4.15 corpus `organized/kitControl/kitControl-rt/extracted/`):
+
+- Root `<p m="b=baja" t="b:UnrestrictedFolder">`; nested folders `<p n="<Folder>" t="b:UnrestrictedFolder">`.
+- A module symbol is declared once, `m="<x>=<moduleName>"`, on the first element that uses it (an earlier
+  sibling or an ancestor carries it for the rest); entries use `t="<x>:<TypeName>"` — the registered type name,
+  never a Java class name. The decoder rejects `t=` without a symbol (`Invalid typespec`) and an undeclared
+  symbol (`Undeclared module symbol`). [CERT] `javax/baja/io/ValueDocDecoder.java:1071-1073,1091` (baja vineflower)
+- `n=` is the palette label (slot-escaped: `$20` for a space); its position among the attributes does not
+  matter (Workbench saves it last).
+- Slot overrides are CHILD elements: `<p n="<slot>" v="<value>"/>` for a frozen slot, plus `t=` and `f=` for
+  a dynamic slot (`<p n="inA" f="sx" t="b:Boolean" v="false"/>`, kitControl :131).
+- List only draggable component types — not helper `BWorker`/`BStruct`/POJO types held as properties.
+  Restricted services (`BIRestrictedComponent`) only under `b:UnrestrictedFolder` [INFER: course guidance, not traced].
 
 ### Example: defrost-enabled cold-room template
 
@@ -171,30 +207,40 @@ This template bakes out the B731 trap (`hasDefrost=false` + `airDefrost=true` �
 disabled) by setting both flags correctly in the palette entry so every drag-drop starts correct:
 
 ```xml
-<p t="b:UnrestrictedFolder">
-  <!-- Note: use b:UnrestrictedFolder (not b:Folder) — b:Folder is access-controlled and
-       causes "access denied" palette expansion for engineers without the folder's category permission.
-       [ev: corpus B746 §746.1] -->
-  <p n="ColdRoom" m="cr=ColdRoomPan" t="cr:ColdRoomPan"
-     hasDefrost="true" airDefrost="true">
-    <!-- Child entries: pre-wired sub-components appear as nested <p> -->
-    <p n="defrost" t="cr:DefrostController"
-       interval="PT4H" duration="PT30M"/>
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <!-- b:UnrestrictedFolder, never b:Folder: b:Folder is access-controlled and causes "access denied"
+       palette expansion for engineers without the folder's category permission. [ev: corpus B746 §746.1] -->
+  <p n="ColdRoom" m="cr=ColdRoomPan" t="cr:ColdRoomPan">
+    <p n="hasDefrost" v="true"/>
+    <p n="airDefrost" v="true"/>
+    <!-- a pre-built child component: its own entry, its overrides as children -->
+    <p n="defrost" t="cr:DefrostController">
+      <p n="interval" v="PT4H"/>
+      <p n="duration" v="PT30M"/>
+    </p>
   </p>
 </p>
 ```
 
 ### Key rules
 
-- The palette root MUST use `t="b:UnrestrictedFolder"`, never `t="b:Folder"`. The latter is
-  access-controlled and causes silent "access denied" palette expansion in Workbench for engineers
-  who lack the folder's category permission. `verify-module.sh` warns on `b:Folder`.
-  **`scaffold-module.sh` MUST emit `t="b:UnrestrictedFolder"` as the palette root** (not the default `b:Folder` emitted by some scaffold versions) to ensure the `palette-root` WARN is never present on a freshly-scaffolded module. `[ev: corpus B746 §746.1]` `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
-- **Type spec = `<alias>:<TypeName>` without the `B`** (`cr:ColdRoomPan` for `BColdRoomPan`); a Java class
-  name or a `B`-prefixed name fails with "Type not found". Declare each alias once, `m="<alias>=<module>"` on the
-  first `<p>` that uses it; later entries reuse the alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
-- Property overrides in the palette are XML attributes on the `<p>` tag; they set the slot value
-  at drag-drop time and are not persisted unless the component itself persists them.
+- Every folder (root or nested) uses `t="b:UnrestrictedFolder"`, never `t="b:Folder"`: the latter is
+  access-controlled and causes silent "access denied" palette expansion in Workbench for engineers who lack
+  the folder's category permission. `verify-module.sh` WARNs (`palette-root`) on every `b:Folder`.
+  `scaffold-module.sh` copies `fixtures/MinimalPan`, whose palette root is `b:UnrestrictedFolder`, so a
+  freshly scaffolded module carries no `palette-root` WARN. `[ev: corpus B746 §746.1]`
+  `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
+- **Type spec = `<alias>:<TypeName>` without the `B`** (`cr:ColdRoomPan` for `BColdRoomPan`). A Java class
+  name has no alias and fails as `Invalid typespec`; a `B`-prefixed name under a declared alias fails with "Type not
+  found". Declare each alias once, `m="<alias>=<module>"` on the first `<p>` that uses it; later entries reuse the
+  alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
+- `verify-module.sh` FAILs (`palette-parse`) an unterminated `<!--`, FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
+  and counts as entries only `<p>` elements with `n=` and a non-folder `t=` in any attribute order, skipping
+  `v=` overrides — a Workbench-saved palette is no longer reported empty. A check over a framework file reads
+  it the way the framework does, never by a literal text pattern.
+  `[ev: retro n4-course-handson-slotomatic-authoring Δ6]` `[ev: retro r8-t9g-actions Δ1]`
+- Override values are applied at drag-drop time; they are not persisted unless the component itself
+  persists them.
 - Assembly templates are **pure resource additions** — no code change, no class risk.
 - Every child `<p n=…>` that should appear in the Workbench drag-palette at the top level needs its
   own `n=` attribute; nested children are part of the parent template only, not individually draggable.
