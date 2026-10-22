@@ -1,0 +1,18 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/O1.java: timer cancelled in stopped()
+WARN  orphan-flag  @DIR@/src/O1.java: disable() cancels startTicket but never clears its companion flag startingUp (set true beside the schedule) -- the expiry handler that clears it will not run
+-- src/O1.java --
+package demo;
+import javax.baja.sys.*;
+public final class O1 extends BComponent {
+  private Clock.Ticket startTicket;
+  private boolean startingUp;
+  public void arm() { startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }
+  public void doDone() { startingUp = false; }
+  public void started() throws Exception { super.started(); startingUp = false; }
+  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }
+  public void disable() { if (startTicket != null) startTicket.cancel(); }
+}

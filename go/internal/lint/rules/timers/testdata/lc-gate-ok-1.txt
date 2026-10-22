@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 0
+-- src/G2.java --
+package demo;
+import javax.baja.sys.*;
+public final class G2 extends BComponent {
+  private boolean restartSequencing;
+  public void started() throws Exception { super.started(); beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }
+  private void beginRestartSequencing() { restartSequencing = true; }
+  private void applyRunCmd() { }
+  private void applyFanRunMode() { }
+  public void exitDefrost() { beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }
+}

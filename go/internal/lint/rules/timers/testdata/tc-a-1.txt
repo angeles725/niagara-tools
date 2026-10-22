@@ -1,0 +1,48 @@
+-- root --
+tca
+-- want --
+exit 1
+PASS  timer-ticket  @DIR@/tca/BStaggerHold.java: timer cancelled in stopped()
+FAIL  companion-flag  @DIR@/tca/BStaggerHold.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tca/BStaggerHold.java --
+package demo;
+import javax.baja.sys.*;
+public final class BStaggerHold extends BComponent {
+  private boolean startingUp = false;
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void doPowerOnExpired() {
+    startingUp = false;   // cleared ONLY in the expiry path (real BCompressorControl:1864) — does NOT count
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+    // BUG: startingUp is NOT cleared here; a stop mid-stagger leaves it stuck true for this run.
+  }
+}

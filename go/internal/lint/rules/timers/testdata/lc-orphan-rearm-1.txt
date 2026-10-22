@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/O3.java: timer cancelled in stopped()
+-- src/O3.java --
+package demo;
+import javax.baja.sys.*;
+public final class O3 extends BComponent {
+  private Clock.Ticket startTicket;
+  private boolean startingUp;
+  public void arm() { if (startTicket != null) startTicket.cancel(); startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }
+  public void doDone() { startingUp = false; }
+  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }
+}

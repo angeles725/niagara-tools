@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/C16.java: timer cancelled in stopped()
+-- src/C16.java --
+package demo;
+import javax.baja.sys.*;
+public final class C16 extends BComponent {
+  private Clock.Ticket a;
+  private Clock.Ticket b;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }
+  public void stopped() throws Exception { super.stopped(); if (stopTimer(a)) { } if (stopTimer(b)) { } }
+  private static boolean stopTimer(Clock.Ticket t) { if (t == null) return false; t.cancel(); return true; }
+}

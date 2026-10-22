@@ -115,6 +115,18 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 1 ]
 }
 
+@test "BSF-pending: an envelope with no retro_pending line names that missing field (exit 1, empty stdout)" {
+  # Mutation: BSF-pending -- dropping the retro_pending presence check falls through to the boolean check
+  # ("retro_pending not boolean: ''"): S4 still exits 1, this exact row flips.
+  write_state true OMIT
+  write_index
+  run --separate-stderr "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 1 ]
+  [ "$output" = "" ]
+  # shellcheck disable=SC2154  # $stderr is set by bats run --separate-stderr
+  [ "$stderr" = "sweep: envelope (DemoPan) missing required field: retro_pending" ]
+}
+
 @test "S5: an INDEX row pointing at a NON-existent retro exits 1" {
   write_state false false
   write_index "2026-09-04-ghost.md|pending"   # no such file in retros/

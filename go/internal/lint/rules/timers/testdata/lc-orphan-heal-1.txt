@@ -1,0 +1,18 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/O4.java: timer cancelled in stopped()
+-- src/O4.java --
+package demo;
+import javax.baja.sys.*;
+public final class O4 extends BComponent {
+  private Clock.Ticket startTicket;
+  private boolean startingUp;
+  public void arm() { startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }
+  public void doDone() { startingUp = false; }
+  public void started() throws Exception { super.started(); startingUp = false; }
+  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }
+  public void disable() { if (startTicket != null) startTicket.cancel(); startTicket = null; }
+  public void execute() { if (startTicket == null && startingUp) startingUp = false; }
+}

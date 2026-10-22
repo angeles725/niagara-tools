@@ -1,0 +1,18 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/O6.java: timer cancelled in stopped()
+-- src/O6.java --
+package demo;
+import javax.baja.sys.*;
+public final class O6 extends BComponent {
+  private Clock.Ticket startTicket;
+  private boolean startingUp;
+  public void arm() { startingUp = true; startTicket = Clock.schedule(this, BRelTime.makeSeconds(5), done, null); }
+  public void doDone() { startingUp = false; }
+  public void started() throws Exception { super.started(); startingUp = false; }
+  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }
+  private void cancelStart() { if (startTicket != null) startTicket.cancel(); }
+  public void disable() { cancelStart(); startingUp = false; }
+}
