@@ -227,6 +227,7 @@ _pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palett
   _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="And" m="c=control" t="c:And">' \
     '  <p n="inA" f="sx" t="b:Boolean" v="false"/>' '  <p n="enabled" v="true"/>' '</p>' '</p>'
   run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
 }
 
@@ -254,6 +255,21 @@ _pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palett
   [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
 }
 
+@test "PAL-unterm: an unterminated <!-- FAILs palette-parse and reports no PASS palette" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<!-- draft, never closed' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-parse"*"unterminated comment"* ]]
+  [[ "$output" != *"PASS  palette "* ]]
+}
+
+@test "PAL-root-alias: a baja Folder under any alias WARNs palette-root naming the element, root or nested" {
+  _pal '<p m="bj=baja" t="bj:UnrestrictedFolder">' '<p n="Sub" t="bj:Folder">' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  palette-root"*"bj:Folder"*"root or nested"* ]]
+}
+
 # ---------------------------------------------------------------------------
 # CAMPAIGN 8 PR11 — two verify-module wb checks. Fixtures generated in-test (n4-fixtures), no binaries.
 #   wb-scaffold  a -wb jar (profile from basename) with 0 .class AND 0 palette entries -> WARN, --strict FAIL
@@ -273,6 +289,17 @@ _pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palett
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"WARN"* ]]
   run "$VM" --strict "$TMPDIR_T/Scaffold-wb.jar"
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "WB-SCAFFOLD-badtype: a -wb palette entry with an undeclared t= still counts as an entry (no wb-scaffold row)" {
+  d="$TMPDIR_T/wbb"; add_manifest "$d"; add_signature "$d"
+  make_module_xml "$d" 4.14
+  printf '<p m="b=baja" t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$d/module.palette"
+  make_jar "$TMPDIR_T/Bad-wb.jar" "$d"
+  run "$VM" "$TMPDIR_T/Bad-wb.jar"
+  [ "$status" -eq 1 ]                                         # palette-type FAIL
+  [[ "$output" == *"FAIL  palette-type"* ]]
+  [[ "$output" != *"wb-scaffold"*"0 palette entries"* ]]
 }
 
 @test "WB-DEP1: a module.xml dependency absent from the profile gradle.kts api()/nre() WARNs phantom-dep" {

@@ -27,9 +27,11 @@
 #                 Other dotted keys (help.guide.base, Type.displayName, error keys) are not judged.
 #                 [ev: retro devguide415-lexicons-ux-i18n Δ1] [ev: corpus B1305 §1305.2 C1]
 #   STALE      <- bare lexicon key matching no "known key" — a truly dead translation.
-#                 known keys = @NiagaraProperty slots (any flags) ∪ type display-name keys
-#                 (from module-include.xml <type name="X">) ∪ @Range enum-tag values.
-#                 A key for a READONLY slot, a type name, or a frozen-enum tag is live, NOT stale.
+#                 known keys = @NiagaraProperty slots (any flags) ∪ declared type names
+#                 (module-include.xml <type name="X">) ∪ @Range enum-tag values.
+#                 A key for a READONLY slot or a frozen-enum tag is live, NOT stale. A bare type-name key is
+#                 not reported here although it is ineffective (the type reads <Type>.displayName,
+#                 NTypeInfo.java:178): the parse mode WARNs it, so it is not reported twice.
 #   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot>, STALE <key> and DOTTED <key> lines
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
@@ -232,8 +234,9 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   lex_slots_raw=$(printf '%s\n' "$_lex_keys" | grep -v '\.' || true)
   lex_dotted=$(printf '%s\n' "$_lex_keys" | grep '\.' || true)
 
-  # Type names from module-include.xml: <type name="X" ...> -> "X"
-  # These appear as top-level lexicon keys by Niagara convention (TypeName=Display Name).
+  # Type names from module-include.xml: <type name="X" ...> -> "X". A bare "X=" key is ineffective (the
+  # type's display name is "X.displayName", NTypeInfo.java:178); it is kept out of STALE only because the
+  # parse mode already WARNs it.
   type_names_raw=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$PS_XML" \
     | grep -oE '\bname="[^"]*"' | sed 's/^name="//;s/"$//')
 
@@ -406,10 +409,13 @@ dup_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
   | grep '=' | cut -d'=' -f1 | sort | uniq -d)
 HAS_WARN=0
 HAS_FAIL=0
-# A bare "<Type>=" key for a declared type is ineffective for the type's display name (lex Δ1).
+# A bare "<Type>=" key for a declared type is ineffective for the type's display name (lex Δ1). A facade type
+# (*Panel/*Facade, or any type under --facade) with no "<Type>.displayName" gets the facade WARN below instead.
 while IFS= read -r bt; do
   [ -n "$bt" ] || continue
   grep -qxF -- "$bt" <<< "$lex_keys" || continue
+  case "$bt" in *Panel|*Facade) facade_t=1 ;; *) facade_t=$FACADE ;; esac
+  [ "$facade_t" -eq 1 ] && ! grep -qxF -- "$bt.displayName" <<< "$lex_keys" && continue
   printf 'slot-coverage: WARN ineffective type key: %s= (Workbench reads %s.displayName)\n' "$bt" "$bt"
   HAS_WARN=1
 done <<< "$(printf '%s\n' "$required_csv" | tr ',' '\n')"

@@ -236,6 +236,7 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   run "$SC" "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
   [ "$status" -eq 0 ]
   [[ "$output" == *"slot-coverage: WARN facade type with only a bare key: CompressorPanel"* ]]
+  [[ "$output" != *"ineffective type key: CompressorPanel"* ]]   # one WARN per facade type, not two
   [[ "$output" != *"FAIL facade type without lexicon"* ]]
   run "$SC" --strict "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
   [ "$status" -eq 1 ]
@@ -275,6 +276,7 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
 
 @test "SC-dotted-other: a dotted key that names no slot (help.guide.base) is neither STALE nor DOTTED" {
   run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_DOT/module.lexicon" "$FX_PS/src"
+  [ "$status" -eq 1 ]                        # setpoint is MISSING
   [[ "$output" == *"MISSING setpoint"* ]]   # anchor: per-slot ran
   [[ "$output" != *"base"* ]]
   [[ "$output" != *"help.guide"* ]]
@@ -291,6 +293,7 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
 
 @test "SC-type-dotted: a Type.slot key does not declare the type (only Type.displayName does)" {
   run "$SC" "$FX_TD/module-include.xml" "$FX_TD/module.lexicon"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"pct=0.0 (type-set)"* ]]
   [[ "$output" == *"missing="*"Core"* ]]
 }

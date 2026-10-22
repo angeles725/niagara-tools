@@ -234,7 +234,7 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   name has no alias and fails as `Invalid typespec`; a `B`-prefixed name under a declared alias fails with "Type not
   found". Declare each alias once, `m="<alias>=<module>"` on the first `<p>` that uses it; later entries reuse the
   alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
-- `verify-module.sh` FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
+- `verify-module.sh` FAILs (`palette-parse`) an unterminated `<!--`, FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
   and counts as entries only `<p>` elements with `n=` and a non-folder `t=` in any attribute order, skipping
   `v=` overrides — a Workbench-saved palette is no longer reported empty. A check over a framework file reads
   it the way the framework does, never by a literal text pattern.
