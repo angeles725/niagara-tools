@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lint-session-store-lazy-evict.sh — flags a STATIC session/token store whose eviction is
-# only lazy (on query) or explicit-logout, with no sweep reachable from the insert itself
-# and no scheduled purge anywhere in the file.
+# only lazy (on query) or explicit-logout, with no sweep in the inserting method and no
+# scheduled purge (a Clock.schedule* action whose do<Action>()/<action>() body removes from it).
 #
 # Shape (UXS7, B1160): a `static Map<String,*>` field in a `-ux` class inserts on login
 # (`.put(`) and removes ONLY via an explicit logout method or a query-time expiry check --
