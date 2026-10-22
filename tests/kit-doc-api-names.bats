@@ -8,8 +8,8 @@
 #   BJobs.                             no such class in javax.baja.job
 #   BJobService.submit(                submit is an instance method; use job.submit(cx) (S/job/BJob.java:420)
 #   makeDouble(                        BFacets has no makeDouble; use makeNumeric(BUnit, int) (S/sys/BFacets.java:310)
-# Scope: every *.md under build-n4-module-kit/ except retros/, odd/ and BUILD-STATE.md (the ledger and the
-# retros quote the wrong text as evidence).
+# Scope: every *.md under build-n4-module-kit/ except retros/, odd/, ledger.d/ and BUILD-STATE.md (the ledger,
+# its fragments and the retros quote the wrong text as evidence).
 # [ev: retro devguide415-runtime-api-corrections Δ1] [ev: retro devguide415-runtime-api-corrections Δ2]
 
 setup() { KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"; }
@@ -18,7 +18,7 @@ BANNED='BWorker\.post|post\(\)/postAsync\(\)|BJobs\.|BJobService\.submit\(|makeD
 
 # doc_api_hits <root>: every banned-name line in the core docs under <root>, as path:line:text.
 doc_api_hits() {
-  find "$1" -name '*.md' -not -path '*/retros/*' -not -path '*/odd/*' -not -name BUILD-STATE.md -print0 \
+  find "$1" -name '*.md' -not -path '*/retros/*' -not -path '*/odd/*' -not -path '*/ledger.d/*' -not -name BUILD-STATE.md -print0 \
     | xargs -0 grep -nE "$BANNED" || true
 }
 
@@ -28,14 +28,14 @@ doc_api_hits() {
   [ -z "$output" ] || { printf '%s\n' "$output"; false; }
 }
 
-@test "DOC-API2: the scan bites every banned form, and skips retros/, odd/ and BUILD-STATE.md" {
-  D="$BATS_TEST_TMPDIR/kit"; mkdir -p "$D/types" "$D/retros" "$D/odd/tasks"
+@test "DOC-API2: the scan bites every banned form, and skips retros/, odd/, ledger.d/ and BUILD-STATE.md" {
+  D="$BATS_TEST_TMPDIR/kit"; mkdir -p "$D/types" "$D/retros" "$D/odd/tasks" "$D/ledger.d"
   printf '%s\n' 'Post via `BWorker.post(Runnable)`.' 'deliver back via `post()/postAsync()`' \
     '`BJobs.submit(job, cx)`' '`BJobService.submit(job,cx)`' '`BFacets.makeDouble(unit, 2)`' > "$D/types/bad.md"
   printf '%s\n' 'A subclass may declare its own `postAsync(Runnable)`; use `job.submit(cx)`.' > "$D/types/good.md"
-  cp "$D/types/bad.md" "$D/retros/quoted.md"; cp "$D/types/bad.md" "$D/odd/tasks/quoted.md"; cp "$D/types/bad.md" "$D/BUILD-STATE.md"
+  cp "$D/types/bad.md" "$D/retros/quoted.md"; cp "$D/types/bad.md" "$D/odd/tasks/quoted.md"; cp "$D/types/bad.md" "$D/BUILD-STATE.md"; cp "$D/types/bad.md" "$D/ledger.d/quoted.md"
   run doc_api_hits "$D"
   [ "$(printf '%s\n' "$output" | grep -c .)" -eq 5 ]
   [[ "$output" == *"types/bad.md"* ]]
-  [[ "$output" != *"good.md"* && "$output" != *"retros/"* && "$output" != *"odd/"* && "$output" != *"BUILD-STATE"* ]]
+  [[ "$output" != *"good.md"* && "$output" != *"retros/"* && "$output" != *"odd/"* && "$output" != *"BUILD-STATE"* && "$output" != *"ledger.d/"* ]]
 }
