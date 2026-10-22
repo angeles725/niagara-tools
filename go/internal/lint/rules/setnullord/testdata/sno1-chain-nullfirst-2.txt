@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-set-null-ord  @DIR@/Mod/src/com/x/BMgr.java:5  getSlotPathOrd() passed straight to setTargetOrd(...) -- null on an unmounted component and BComplex.set NPEs; assign it, guard `if (ord == null || ord.isNull())` (types/issues-and-gotchas.md §H3)
+-- stderr --
+-- Mod/src/com/x/BMgr.java --
+package com.x;
+public class BMgr {
+  void addMapping(BComponent point, BImportMap m) {
+    if (arr[0].getSlotPathOrd() == null) return;
+    m.setTargetOrd(arr[1].getSlotPathOrd());
+  }
+}
