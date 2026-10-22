@@ -123,6 +123,19 @@ Order: highest copy-risk first (examples and API names that fail to compile or m
 
 Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-STATE.md` (§7 exit (c), partial promotion).
 
+**Fold log.** WU-P0-1 docs folded on `docs/r8-t9b-p0-1` (2026-10-22): C01-C03 doc text in `types/logic.md`,
+`types/math-control-libraries.md`, `types/logic-authoring.md`; the lint halves (tjd Δ2, shs Δ3 `jdk-thread` re-scope, the
+`postAsync(`/`BJobs.` doc greps, the `isAlive()` loop WARN) are owed in `BUILD-STATE.md` kit `open_issues`.
+WU-P0-3 docs folded on `docs/r8-t9b-p0-3` (2026-10-22): C06 BFacets card regenerated from the 4.15.6.20 `BFacets.java`
+(34 constants) in `types/logic-authoring.md`, C07 BFormat card in `types/logic.md`; the key-diff check, the BFormat WARN
+and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
+WU-P0 lints, `docs/r8-t9b-p0-lints` (2026-10-22): `lint-timers.sh` `jdk-thread` re-scoped (FAIL only a
+thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new `job-cancel` WARN.
+New `lint-bformat-call.sh` (BFormat `%time(<arg>)%` / `%user%` WARN).
+New `check-facets-card.sh` + pinned 4.15.6.20 key list.
+New `tests/kit-doc-api-names.bats` doc greps. Every owed lint half of C01-C03, C06, C07 is landed; only the rac Δ9
+cursor recipe stays owed (WU-P0-6).
+
 ---
 
 ## P0 — the kit teaches something wrong
@@ -133,6 +146,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** course `Labs/Lab Instructions.pdf` p78-80; `Labs/Lab9 Multithreaded/module-permissions.xml`; user's live `training-rt` ran all three executors.
 - **Target:** `types/logic.md:344`, `types/math-control-libraries.md:91,132`, `toolbelt/lint-timers.sh:477-485` (+ bats, mutation).
 - **Lint-able:** yes — FAIL only when `shutdownNow(`/`interrupt(`/`setDaemon(`/`setPriority(` appear without `MANAGE_EXECUTION`; else WARN. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-1 doc + WU-P0 lints, 2026-10-22; tjd Δ1, Δ2, shs Δ3, Δ4). Open decision 2 answered by the
+  Integrador: keep a blocking FAIL only for a thread-modifying call without `MANAGE_EXECUTION`.
 
 ### C02 — `BWorker.post(Runnable)` / `postAsync()` do not exist
 - **Sources:** rac#Δ1 (primary). Thread-naming half reinforced by tjd Δ5 (C37).
@@ -140,6 +155,10 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `source/baja/javax/baja/util/BWorker.java:49-139`, `ExecutorUtil.java:43,89,122`, corpus B1304 §1304.3.
 - **Target:** `types/logic.md:346`, `types/math-control-libraries.md:86`.
 - **Lint-able:** yes — FAIL `postAsync(` in kit docs, WARN in rt sources. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-1 doc + `tests/kit-doc-api-names.bats`, 2026-10-22; rac Δ1). The rt-source WARN half is
+  REJECTED. Note: `postAsync(Runnable)` is a legitimate name for a
+  method a `BWorker` subclass declares itself (Tridium's course `BTrainingWorker`), so the rt-source WARN must target a call on a
+  type that does not declare it, not the bare token.
 
 ### C03 — Background jobs: no `BJobs`; `BSimpleJob` owns its thread; the job contract
 - **Sources:** rac#Δ2 (primary) · tjd#Δ6 duplicate on the pool claim + extends (job contract, test idiom)
@@ -147,6 +166,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `BSimpleJob.java:51-56`, `BRunnableJob.java:41`, corpus B1238 §1238.8, B1304 §1304.2.
 - **Target:** `types/logic-authoring.md:216-233` § Background jobs.
 - **Lint-able:** yes — doc grep FAIL `BJobs.`; WARN a `BSimpleJob.run(` loop with no `isAlive()`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-1 doc + WU-P0 lints, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6): `BJobs.` doc grep,
+  `lint-timers.sh` `job-cancel` WARN.
 
 ### C04 — BStatus bit table is shifted from STALE on and misses ALARM
 - **Sources:** rac#Δ4 (primary)
@@ -172,6 +193,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `docSource/…/javax/baja/sys/BFacets.java:155-159`, corpus B1310 §1310.3 C1; course `Labs/Lab10 Jobs/BHistoriesToCsvService.java`.
 - **Target:** `types/logic-authoring.md:489-534`.
 - **Lint-able:** yes — script diffs card keys against the constant list. **Fold type:** doc fix + script.
+- **Fold status:** doc FOLDED (WU-P0-3, 2026-10-22; rac Δ8, bdps Δ6). 4.15.6.20 has 34 constants, so `multiLine` is one
+  (`BFacets.MULTI_LINE`). FOLDED with `toolbelt/check-facets-card.sh` + `tests/check-facets-card.bats`.
 
 ### C07 — BFormat card gets `?`, `time()`, `substring` and the lookup order wrong
 - **Sources:** rac#Δ9 (primary; cursor half cross-ref C19) · rcf#Δ6 extends (line-level facts)
@@ -179,6 +202,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Winning text:** `?` = fallback script; `%%` literal; `time()`/`user()` take no argument (chain after `time()`); `substring(i)`, `(-n)`, `(a,b)` on the previous value.
 - **Target:** `types/logic.md:399-418`; cursor recipe → `types/logic-authoring.md:190-200` (with C19).
 - **Lint-able:** yes — WARN `%time([^)]`, `%user%`. **Fold type:** doc fix + lint.
+- **Fold status:** BFormat card FOLDED (WU-P0-3, 2026-10-22; rac Δ9 card half, rcf Δ6); `lint-bformat-call.sh` LANDED (WU-P0
+  lints); the cursor recipe (rac Δ9, with C19) is OWED.
 
 ### C08 — Link rules: programmatic links are never `checkLink`ed; `BLink` 4th arg is `enabled`
 - **Sources:** rac#Δ10 (primary) · rcf#Δ3 extends (call `target.checkLink(...)` and require `isValid()` before adding)
@@ -712,6 +737,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 
 1. **Count of record:** 168, not 178 (see § Count). The ffcddad message is wrong; the retros are right.
 2. **C01 lint downgrade** turns a FAIL gate (`jdk-thread`) into a WARN for most code — this changes what blocks client modules.
+   **Answered 2026-10-22 (Integrador):** FAIL stays only for a thread-modifying call in a module that requests no
+   `MANAGE_EXECUTION`; everything else WARNs. Landed on `docs/r8-t9b-p0-lints`.
 3. **C13** retires the DashboardPan headers gap (ODA2-G1/G2) — the client tracking that cites it needs the same close.
 4. **C28** unsigned-group outcome on 4.15 (WARNING skip vs station halt) needs a target check before the kit states it.
 5. **C31** live proof of the keep-alive route (niagara-research B1315-G1) is still open.
@@ -816,7 +843,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded (WU-P0-3 + lints) |
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
@@ -865,15 +892,15 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r3-web-session-headers#Δ4` | types/theme.md, types/frontend-standard.md | Servlet SPA not themed automatically | C30 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ5` | types/security.md | Never X-Frame Any; frame-ancestors | C13 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ6` | types/security.md | oBIX HIDDEN is not access control | C46 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | accepted |
-| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | folded (WU-P0-1 + lints); rt WARN rejected |
+| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | folded (WU-P0-1 + lints) |
 | `devguide415-runtime-api-corrections#Δ3` | types/logic.md | Absolute schedules need clockChanged | C34 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ4` | types/logic.md:233-243 | Fix the BStatus bit table | C04 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ6` | types/logic.md:336 | Alarm ext owns ALARM/FAULT/UNACKED bits | C32 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ7` | types/logic.md LC1 | Writable primitives: activeLevel, overrides, min on/off | C33 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | accepted |
-| `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6) |
+| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | folded (WU-P0-3 + lints) |
+| `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6); folded card (WU-P0-3); cursor recipe owed (C19) |
 | `devguide415-runtime-api-corrections#Δ10` | types/logic.md:111-143 | Fix link rules | C08 | P0 | accepted |
 | `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ2` | BUILD-LOOP.md §0, skill/SKILL.md | Reference-first rule at Orient | C51 | P1 | accepted |
@@ -889,7 +916,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |
 | `n4-course-drivers-bql-ords-files#Δ1` | types/logic-authoring.md, toolbelt/lint-null-context-write.sh | BQL consumer pattern with Context | C19 | P0 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ3` | types/driver-authoring.md | NDriver section | C60 | P2 | accepted |
@@ -912,12 +939,12 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-slots-components-contracts#Δ4` | types/logic.md | Validators skip link writes | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ5` | types/logic-authoring.md or types/logic.md | Slot-API traps | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ6` | types/logic.md | Write/state discipline | C36 | P1 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | folded (WU-P0-1) |
+| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | folded (WU-P0 lints) |
 | `n4-course-threading-jobs-doctrine#Δ3` | types/actions.md §2 | Action threading; Invocation offload | C38 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ4` | types/logic.md, toolbelt/lint-intrinsic-lock.sh | No intrinsic locks on B* classes | C37 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ5` | types/logic.md, toolbelt/lint-timers.sh | Thread naming/priority hygiene | C37 | P1 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | folded (WU-P0-1 + lints) |
 | `testing-parity-btestng#Δ1` | types/moduleTest.md, BUILD-LOOP.md:162-165 | Native Windows niagaraTest route | C12 | P0 | accepted |
 | `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | accepted |
 | `testing-parity-btestng#Δ3` | types/moduleTest.md, build-verify.md | Test-jar signing prerequisite | C12 | P0 | accepted |
@@ -982,10 +1009,10 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ2` | types/actions.md § 2 | confirms C38: `Flags.ASYNC` lint stays WARN | C38 | P1 | accepted |
-| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | accepted |
-| `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | folded (WU-P0 lints) |
+| `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
-| `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | accepted |
