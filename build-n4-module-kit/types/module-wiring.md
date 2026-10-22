@@ -157,6 +157,8 @@ type visible. No extra plumbing needed. `[ev: corpus B617 §617.3; third-party-l
 `BOrd.make("myord:/...")` routes to the `BMyScheme` registered under `ordScheme="myord"` in
 `module.xml`. The scheme handler's class must be visible to the caller's classloader
 (i.e., the module carrying it must be in the `<dependency>` chain). `[ev: corpus B35 §35.2]`
+Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every returned hop): `types/security.md`
+§ 4.4. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ8]`
 
 ---
 
