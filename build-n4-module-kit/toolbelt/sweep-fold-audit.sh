@@ -13,7 +13,9 @@
 # after <date> must account for EACH of its Δ1..Δn (n = the deltas cell after review-status): cited
 # as `[ev: retro <stem> Δk]`, or explicitly parked out of repo as `[deferred: retro <stem> Δk]`,
 # somewhere in the corpus. Exact stem, exact Δ number — no segment or prefix credit. A missing one
-# is `fold-audit: WARN <file> Δk not cited`; a non-numeric deltas cell is a WARN too (fail closed).
+# is `fold-audit: WARN <file> Δk not cited`; a non-numeric or oversize (>999) deltas cell is a WARN
+# too (fail closed), counted on its own `fold-audit: deltas: N unreadable cells` line (shown when N>0).
+# The cell parser is go/internal/retrocells ParseDeltasCell, shared with the other INDEX sweeps.
 # Older rows cite by stem only (the pre-Δ convention), hence the cutoff.
 #
 # Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
@@ -27,7 +29,7 @@
 # former bash tool under C.UTF-8 except those fail-open cases. This wrapper is the stable entry
 # point: go/go-tool.sh `go_tool_bin` builds go/bin/sweep-fold-audit when the binary is missing or
 # older than a Go source, then this script execs it. Needs `go` on PATH to build (a missing toolchain or failed build exits 3).
-# Mutation pins (F3, F4, F6, F9, F11, F12, F13) are exercised by tests/sweep-fold-audit.bats and the Go tests.
+# Mutation pins (F3, F4, F6, F9, F11, F12, F13, R2-unreadable) are exercised by tests/sweep-fold-audit.bats and the Go tests.
 # This script is VCS-free by design — version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u

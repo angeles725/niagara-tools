@@ -183,7 +183,9 @@ func TestMainFailClosedEdges(t *testing.T) {
 	want.WriteString(w + "2026-10-01-huge.md" + nocit)
 	want.WriteString(w + "2026-10-01-tail-row-x.md Δ1 not cited\n")
 	want.WriteString("fold-audit: 5 folded, 2 cited, 3 uncited\n")
-	want.WriteString("fold-audit: deltas: 20 checked, 21 not cited (folded rows since 2026-01-01)\n")
+	// The unreadable cell has its own counter: it is not a "not cited" Δ (R2-unreadable-cell).
+	want.WriteString("fold-audit: deltas: 20 checked, 20 not cited (folded rows since 2026-01-01)\n")
+	want.WriteString("fold-audit: deltas: 1 unreadable cells\n")
 	if code != ExitStrict || out != want.String() || errs != "" {
 		t.Errorf("got (%d, %q, %q)\nwant (1, %q, \"\")", code, out, errs, want.String())
 	}
@@ -202,5 +204,22 @@ func TestMainUnreadableIndex(t *testing.T) {
 	code, out, errs := run("", "--strict", index, root)
 	if code != ExitEnv || out != "" || errs != "fold-audit: cannot read INDEX: open "+index+": permission denied\n" {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
+	}
+}
+
+// An unreadable cell still fails --strict, and the unreadable line appears only when one exists.
+func TestMainUnreadableCellCounter(t *testing.T) {
+	t.Parallel()
+	root := kit(t, map[string]string{
+		"core.md":         "[ev: retro word-cell] [ev: retro one-cell Δ1]\n",
+		"retros/INDEX.md": "| 2026-10-01-word-cell.md | folded | x |\n| 2026-10-01-one-cell.md | folded | 1 |\n",
+	})
+	code, out, _ := run("", "--strict", "--deltas-since", "2026-01-01", root+"/retros/INDEX.md", root)
+	want := w + "2026-10-01-word-cell.md deltas cell unreadable (x)\n" +
+		"fold-audit: 2 folded, 2 cited, 0 uncited\n" +
+		"fold-audit: deltas: 1 checked, 0 not cited (folded rows since 2026-01-01)\n" +
+		"fold-audit: deltas: 1 unreadable cells\n"
+	if code != ExitStrict || out != want {
+		t.Errorf("got (%d, %q), want (1, %q)", code, out, want)
 	}
 }

@@ -176,3 +176,16 @@ _delta_fixture() {
   [ "$status" -eq 3 ]
   [[ "$output" == *"fold-audit: cannot read INDEX:"* ]]
 }
+
+@test "F15: an unreadable deltas cell has its own counter, not a 'not cited' Δ, and still fails --strict" {
+  # Mutation: R2-unreadable -- counting the unreadable cell as "not cited" makes the deltas line read 1 not cited.
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros"
+  printf '| 2026-10-22-word-cell.md | kit | 2026-10-22 | folded | x |\n' > "$D/retros/INDEX.md"
+  printf 'Rule [ev: retro word-cell].\n' > "$D/core.md"
+  run "$SCRIPT" --strict --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"fold-audit: WARN 2026-10-22-word-cell.md deltas cell unreadable (x)"* ]]
+  [[ "$output" == *"deltas: 0 checked, 0 not cited"* ]]
+  [[ "$output" == *"fold-audit: deltas: 1 unreadable cells"* ]]
+}

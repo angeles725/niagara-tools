@@ -14,6 +14,9 @@ with a leading zero is octal in bash arithmetic (`010` checks Δ1..Δ8 only), an
 with a bash error on stderr and the row is never Δ-checked, an INDEX last row without a final newline is never read
 (`while read`), and an unreadable INDEX prints a bash error and audits zero rows with exit 0, even under `--strict`.
 All four pass bad input as clean; they are reported, and fixed in a separate follow-up commit.
+A third commit, on the integrator's #226 triage, moves the deltas-cell parser into `go/internal/retrocells`
+(`ParseDeltasCell`, decimal, error on an unreadable or >999 cell) for the sweep-build-state port to share, and
+counts an unreadable cell on its own line instead of as a "not cited" Δ.
 
 ## Evidence
 - Old `.sh` vs Go binary over 30 named argument shapes (real tree `--strict --deltas-since 2026-09-24`, no-flag,

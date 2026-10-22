@@ -3,10 +3,10 @@ package foldaudit
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/retrocells"
 )
 
 // Exit codes of sweep-fold-audit (unchanged from the bash tool).
@@ -47,7 +47,7 @@ func Main(args []string, s cli.Stdio) int {
 		lines = lines[:len(lines)-1] // the final newline ends the last row; an unterminated last row is still read
 	}
 
-	var nFolded, nCited, nUncited, dChecked, dMissing int
+	var nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
 	warned := false
 	for _, line := range lines {
 		line = strings.ReplaceAll(line, "\x00", "") // `read` drops NUL bytes
@@ -64,22 +64,21 @@ func Main(args []string, s cli.Stdio) int {
 
 		if o.since != "" && !(prefix(file, 10) < o.since) {
 			cell := deltasCell(line)
-			// The cell is decimal (bash arithmetic read a leading zero as octal); an overflowing cell is
-			// unreadable, never a silently wrapped count.
-			n, perr := strconv.ParseInt(cell, 10, 64)
-			if !allDigits(cell) || perr != nil {
+			// Decimal (bash arithmetic read a leading zero as octal); an unreadable or oversize cell is
+			// counted on its own, never as a "not cited" Δ, and still fails --strict (fail closed).
+			deltas, perr := retrocells.ParseDeltasCell(cell)
+			if perr != nil {
 				fmt.Fprintf(s.Out, "fold-audit: WARN %s deltas cell unreadable (%s)\n", file, cell)
-				dMissing++
+				dUnreadable++
 				warned = true
-			} else {
-				for k := int64(1); k <= n; k++ {
-					dChecked++
-					// Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
-					if !h.deltas[st+" Δ"+strconv.FormatInt(k, 10)] {
-						fmt.Fprintf(s.Out, "fold-audit: WARN %s Δ%d not cited\n", file, k)
-						dMissing++
-						warned = true
-					}
+			}
+			for _, d := range deltas {
+				dChecked++
+				// Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
+				if !h.deltas[st+" "+d.String()] {
+					fmt.Fprintf(s.Out, "fold-audit: WARN %s %s not cited\n", file, d)
+					dMissing++
+					warned = true
 				}
 			}
 		}
@@ -99,6 +98,10 @@ func Main(args []string, s cli.Stdio) int {
 	fmt.Fprintf(s.Out, "fold-audit: %d folded, %d cited, %d uncited\n", nFolded, nCited, nUncited)
 	if o.since != "" {
 		fmt.Fprintf(s.Out, "fold-audit: deltas: %d checked, %d not cited (folded rows since %s)\n", dChecked, dMissing, o.since)
+		// Mutation: R2-unreadable -- folding dUnreadable back into dMissing hides a corrupt cell as a citation gap.
+		if dUnreadable > 0 {
+			fmt.Fprintf(s.Out, "fold-audit: deltas: %d unreadable cells\n", dUnreadable)
+		}
 	}
 	if warned && o.strict {
 		return ExitStrict
@@ -111,16 +114,4 @@ func prefix(s string, n int) string {
 		return s
 	}
 	return s[:n]
-}
-
-func allDigits(s string) bool {
-	if s == "" {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		if s[i] < '0' || s[i] > '9' {
-			return false
-		}
-	}
-	return true
 }
