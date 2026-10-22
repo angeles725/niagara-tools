@@ -305,6 +305,53 @@ run_hook_at() { # run_hook_at <toplevel>
   [[ "$output" == *"stale"* ]]
 }
 
+# --- ledger fragments (r8 T8i slice B): the kit block's last_change, open_issues and session log are
+# GENERATED from build-n4-module-kit/ledger.d/*.md by toolbelt/gen-build-state.sh. A new or changed
+# fragment in range satisfies the "BUILD-STATE.md in range" half of every exit, and sweep (the content
+# half) fails a BUILD-STATE.md that is stale against ledger.d/. RED before slice B: the hook counted
+# only a BUILD-STATE.md diff, and ledger.d/ was build-relevant.
+# _fixture_ledger_top — _fixture_top plus ledger.d/, the generator and a kit block generated from it.
+_fixture_ledger_top() {
+  _fixture_top; local k="$TOP/build-n4-module-kit"
+  cp "$KIT/toolbelt/gen-build-state.sh" "$k/toolbelt/"
+  mkdir -p "$k/ledger.d"
+  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: x\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: 2026-09-04 · demo\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n' > "$k/ledger.d/0000-archive-pre-2026-10-23.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n' > "$k/ledger.d/2026-09-05-demo.md"
+  bash "$k/toolbelt/gen-build-state.sh" "$k" >/dev/null
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+}
+
+@test "H13: a kit change + a ledger.d fragment + a retro (no BUILD-STATE.md diff) PASSES when BUILD-STATE.md is fresh" {
+  _fixture_ledger_top
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H14: the same range FAILS when BUILD-STATE.md is stale against ledger.d (fragment added, not regenerated)" {
+  # Mutation: GBS-gate -- a hook that counts a fragment without sweep's freshness check passes this.
+  _fixture_ledger_top
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\nlog: 2026-09-06 · not regenerated\n' > "$TOP/build-n4-module-kit/ledger.d/2026-09-06-late.md"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"stale vs ledger.d"* ]]
+}
+
+@test "H15: a promotion trailer + an in-range ledger.d fragment (no INDEX, no BUILD-STATE diff) PASSES" {
+  _fixture_ledger_top
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold demo\n\nRetro: promotion (folds demo Δ1; source retro stays pending)\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H16: a ledger.d-only range is not build-relevant (does NOT fire the gate)" {
+  printf 'build-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: ledger entry\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
 # ============ MARKER<->INDEX CONSISTENCY (campaign 6, Option 2-lite) ==========
 # Frozen contract (investigador, 2026-09-05): when a retro file carries a
 # `<!-- review-status: X -->` marker, X MUST equal that retro's INDEX row status;

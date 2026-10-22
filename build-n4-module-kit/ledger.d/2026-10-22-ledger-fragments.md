@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8 T8i slice B: kit ledger generated from ledger.d/ -->
+log: 2026-10-22 · quality round 8 T8i slice B → the kit block's `last_change`, `open_issues` items and session log are GENERATED from one fragment per change in `ledger.d/` by new `toolbelt/gen-build-state.sh` (`go/internal/buildstate`, `go/cmd/gen-build-state`); the 95 log lines + 76 items moved to `ledger.d/0000-archive-pre-2026-10-23.md` (byte-identical regeneration of origin/main c30a19a); `--check` in CI and in `sweep-build-state.sh`; pre-push counts a `ledger.d/*.md` fragment as the BUILD-STATE.md update and treats ledger.d/ as not build-relevant; `go/go-tool.sh` staleness `find` fails closed (exit 3, GT9); new `tests/gen-build-state.bats`, H13-H16, F11. Retro retros/2026-10-22-ledger-fragments.md (2Δ, folded). [ev: retro ledger-fragments Δ1] [ev: retro ledger-fragments Δ2]

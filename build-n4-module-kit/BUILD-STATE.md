@@ -11,6 +11,14 @@ modules, not sixty focuses.
 - **One `build-state.v1` envelope per module**, between `<!-- build-state.v1 -->` and
   `<!-- /build-state.v1 -->`. Fields are `key: value`; a parser strips blank lines, the
   `open_issues:` list items, and any trailing `# comment`.
+- **The kit block's per-change parts are GENERATED — never hand-edit them.** `last_change:`, the `open_issues:`
+  items and the session log after `last_session:` in the `kit` envelope come from `ledger.d/*.md`, one fragment
+  per change (`ledger.d/<YYYY-MM-DD>-<slug>.md`: `<!-- ledger: kit -->`, `<!-- date: … -->`, optional
+  `<!-- last-change-note: … -->`, one `log: YYYY-MM-DD · …` line, any `open_issue: …` lines). Run
+  `toolbelt/gen-build-state.sh` after adding one; `--check` (CI, `sweep-build-state.sh`) fails a stale file.
+  `last_change` = the newest fragment, items newest first, log oldest first. Entries from before fragments live
+  in `ledger.d/0000-archive-pre-2026-10-23.md`. Module blocks and the other kit fields stay hand-kept.
+  `[ev: retro ledger-fragments Δ1]`
 - **GATED vs DECLARED — never label a gate that cannot run.**
   - **GATED** (`retro_required`, `retro_pending`): machine-enforced, but ONLY for KIT-local
     changes inside the `niagara-tools` repo — that is the only diff the enforcement check
@@ -182,6 +190,7 @@ last_session: unknown · imported as the build exemplar; see SOURCES.md
 Kit-infrastructure work (changing the kit itself, not building a module) has no module build to
 record, so it updates THIS `kit` self-section. Same `build-state.v1` envelope and same `BUILD-LOOP.md`
 §7 close gate — this is the kit's no-registro fix applied to its own evolution.
+Its `last_change:`, `open_issues:` items and session log are GENERATED from `ledger.d/` by `toolbelt/gen-build-state.sh`: add a fragment, never edit those lines here.
 
 Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a LATER PR that will carry it, revert its INDEX row to `pending`; when it has NO later home, fold it now — reverting would orphan the lesson.
 
@@ -366,5 +375,6 @@ last_session: 2026-10-16 · n4-course-handson retros (branch docs/n4-course-hand
 2026-10-22 · quality round 8 T9g unit 1 (WU-P0-4) → actions.md frozen-handler contract (pair check owed as Go lint G1); slot-coverage/generate-wiring-map read only framework-read lexicon keys (a facade type with only a bare `<Type>=` key WARNs, --strict promotes; FAIL stays for no key at all) (bare slot, `<Type>.displayName`, bare tag) + key catalogue; verify-module `palette_scan` (type spec FAIL, any-order entries, every b:Folder WARN), MinimalPan palette root UnrestrictedFolder, palette format card; RED → GREEN in slot-coverage/generate-wiring-map/verify-module bats. Retro retros/2026-10-22-r8-t9g-actions.md 2Δ folded. [ev: retro r8-t9g-actions]
 2026-10-22 · quality round 8 T8l → `toolbelt/lib/awk-lint.sh` gains `awk_lint_each` (one awk per listed file, path via ENVIRON["AL_FILE"], `AL_ROWS`, an unreadable file is "cannot scan" + exit 3); agent-on-shape, se-display, clock-zero-floor, bql-string-concat, no-system-out and arbitrary-ord drop their per-line shell loops (bql-string-concat 56 s → 0.2 s, arbitrary-ord 49 s → 0.2 s on a 33k-line tree; stdout byte-identical) and source the lib via `dirname` (bare relative run works); null-context-write left to a parallel session. Bats RED 9 → 509 ok. Retro retros/2026-10-22-line-loop-lint-forks.md 1Δ pending. [ev: retro line-loop-lint-forks]
 2026-10-22 · quality round 8 T8j-2 → `scripts/lib/ci_steps.py` ported to `go/cmd/ci-steps` (`go/internal/cisteps`; byte-identical stdout/stderr/exit vs the Python over every `tests/fixtures/ci-local` file and both ci.yml versions, `ci-local.sh --list` unchanged) and deleted; the build-on-demand logic moved into `go/go-tool.sh` `go_tool_bin`, shared by `toolbelt/gen-retro-index.sh` and `scripts/ci-local.sh` (exit 3 when ci-steps cannot be built), new `tests/go-tool.bats` RED 0/8 → GREEN 8/8 + GRI-build/GRI-nogo-stale; `retroindex` fails closed on ReadDir/stat/read errors (exit 3, nothing rendered); CI gofmt step fails when gofmt fails or lists files, shellcheck covers `go/*.sh`. Retro retros/2026-10-22-go-ci-steps.md (2Δ, pending). [ev: retro go-ci-steps]
+2026-10-22 · quality round 8 T8i slice B → the kit block's `last_change`, `open_issues` items and session log are GENERATED from one fragment per change in `ledger.d/` by new `toolbelt/gen-build-state.sh` (`go/internal/buildstate`, `go/cmd/gen-build-state`); the 95 log lines + 76 items moved to `ledger.d/0000-archive-pre-2026-10-23.md` (byte-identical regeneration of origin/main c30a19a); `--check` in CI and in `sweep-build-state.sh`; pre-push counts a `ledger.d/*.md` fragment as the BUILD-STATE.md update and treats ledger.d/ as not build-relevant; `go/go-tool.sh` staleness `find` fails closed (exit 3, GT9); new `tests/gen-build-state.bats`, H13-H16, F11. Retro retros/2026-10-22-ledger-fragments.md (2Δ, folded). [ev: retro ledger-fragments Δ1] [ev: retro ledger-fragments Δ2]
 2026-10-22 · quality round 8 T9g unit 2 (WU-P0-6) → nav files (`version="1.0"`, `BUser.navFile`, no discovery), ORD recipe (`BOrd.make` wraps, Context, `canRead`), `root:|nav:`, `hierarchy:` client-only, BQL consumer (Context, try-with-resources, `Tables.slurp`, `BFoxProxySession`), tag-dictionary recipe on real slots + licence; `lint-null-context-write.sh` bql rule; `kit-nav-tag-pins.bats` RED 5/5 → GREEN. Retro retros/2026-10-22-r8-t9g-nav.md 2Δ folded. [ev: retro r8-t9g-nav]
 <!-- /build-state.v1 -->

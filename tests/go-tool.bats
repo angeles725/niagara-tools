@@ -95,3 +95,16 @@ _bin() { run env PATH="${1:-$PATH}" bash -c '. "$1" && go_tool_bin "$2" hello' _
   [ "$status" -eq 0 ]
   [ "$output" = "$MOD/bin/hello" ]
 }
+
+@test "GT9: a find error in the staleness check is exit 3, never a silent reuse of the binary" {
+  # Mutation: GT9 -- a find piped into `head` loses its exit status and reuses a stale binary.
+  [ "$(id -u)" -ne 0 ] || skip "root ignores directory permissions"
+  _bin
+  [ "$status" -eq 0 ]
+  mkdir "$MOD/cmd/locked"
+  chmod 000 "$MOD/cmd/locked"
+  _bin
+  chmod 755 "$MOD/cmd/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"hello: cannot check whether $MOD/bin/hello is current"* ]]
+}
