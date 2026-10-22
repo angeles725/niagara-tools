@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · testing-parity-btestng
 
 **Session**: testing-parity pilot — first `BTestNgStation` test in client `Cliente/panccadia-leon` (ColdRoomPan-rt, branch `test/coldroompan-station-test-pilot`, commit 337ee6c on base 7ca1b57), run natively on Windows from the WSL shell; follows `2026-10-15-n4-course-lexicon-logging-testing.md` Δ3 (layout/idioms) and `2026-10-15-n4-course-parity-observability-horizons.md` Δ3 (parity ticket), not a duplicate of either

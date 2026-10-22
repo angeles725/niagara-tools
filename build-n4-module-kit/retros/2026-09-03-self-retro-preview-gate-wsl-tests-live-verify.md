@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro (mejora del proceso /build-n4-module) — preview-gate para UI · correr tests puros en WSL · verificación en vivo · 2026-09-03
 
 Self-retro del BUILD-LOOP tras la sesión larga del deshielo/interlock/freeze de PANCCADIA (ColdRoomPan + CompPan + DashboardPan). PROPOSED kit deltas (propose-never-apply). Sólo lo NUEVO respecto a los retros técnicos del día.

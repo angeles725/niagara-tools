@@ -1,4 +1,7 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: disposition: worklist-complete — ranked the 2026-09-20 corpus retros' Δ tokens; all of them were applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); not a delta retro, not retro debt (sweep --age skips it) -->
 <!-- disposition: worklist-complete — every ranked Δ was applied by the apply-deltas campaign (v0.23.0); see the retros/INDEX.md row -->
 # Kit-delta apply plan — module corpus (2026-09-20)
 

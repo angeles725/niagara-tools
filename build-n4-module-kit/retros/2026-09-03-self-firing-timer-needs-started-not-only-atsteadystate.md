@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — un BComponent con timer auto-armado necesita `started()`, no solo `atSteadyState()`, o NUNCA arma en commissioning · 2026-09-03
 
 Décimo retro del día. Un `BDefrostController` (ColdRoomPan-rt) con `Modo = Intervalo` que "nunca entra" al

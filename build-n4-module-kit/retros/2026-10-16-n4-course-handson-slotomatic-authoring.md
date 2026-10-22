@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-slotomatic-authoring
 
 **Session**: hands-on Certification Exam P1 (`BLimiter`) and P2 (`BHistoryExportService`), Bonus Lab Part 2 (agent point manager), and the course palettes, built with slot-o-matic and run live on 4.15.6.20.

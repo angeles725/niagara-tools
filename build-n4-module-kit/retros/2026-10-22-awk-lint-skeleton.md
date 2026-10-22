@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-10-22 · kit · awk-lint-skeleton
 
 **Session**: niagara-research quality round 8, work unit T8b, branch `r8/t8b-awk-lint` from origin/main 1197614

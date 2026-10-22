@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-09-06 · kit · campaign10-ext-writable-per-slot
 
 **Session**: C10 PR2 — S22 lint-ext-writable-shape per-slot writing-action exemption

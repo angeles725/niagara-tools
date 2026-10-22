@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: D4→same-method body; jdk-thread; changed-sched -->
 # Retro: Campaign 8 — lint-timers.sh extension (companion-flag, jdk-thread, changed-sched, dot-dir prune)
 
 **Date:** 2026-09-05

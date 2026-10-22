@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-security-tags-analytics
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 read the StationSecurity, Fips, Tagging, Hierarchies, Relations, ExportTags and Analytics (Guide, API, DeveloperAnalytics) user guides plus haystack source; this retro carries corpus B1326, B1329, B1338 and B1336 (flags on rebuild). Complements `2026-10-15-devguide415-nav-subscriptions-tags-ords.md` (**nsto** Δ9 tag-dictionary recipe) and `…-horizons-authoring-security.md` (**has** Δ5 Security Manager card).

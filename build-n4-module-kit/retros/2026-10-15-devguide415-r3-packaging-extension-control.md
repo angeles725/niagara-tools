@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-10-15 · kit · devguide415-r3-packaging-extension-control
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 3 closed the packaging, jsonToolkit and kitControl child gaps from source; this retro carries corpus B1345 (`noRunningApp`), B1350 (jsonToolkit contract) and B1351 (LeadLag/Interstart). It REFINES `2026-10-15-devguide415-r2-packaging-platform-signing.md` (**pps**) Δ1, `2026-10-15-devguide415-r2-shipped-libraries.md` (**shl**) Δ9 and `2026-10-15-devguide415-r2-control-alarms-schedules.md` (**cas**) Δ5.

@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: L2: new WARN lint, auto-wired report-module §5.21 + RM21 -->
 # 2026-09-20 · kit · lint-no-md5-credential-digest (L2 — lint-candidate impl, auto-wired)
 
 **Session**: implement-lint-candidates campaign, L2. Partial promotion of the `no-md5-credential-digest` lint CANDIDATE proposed in the folded retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ13 (documented in types/security.md §9).

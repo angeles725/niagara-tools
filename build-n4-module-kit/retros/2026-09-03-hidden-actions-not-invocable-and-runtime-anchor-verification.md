@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — acciones HIDDEN no son invocables desde fuera · verificar el ANCLA en vivo · applyRunCmd cosmético · 2026-09-03
 
 Complementa (NO duplica) el retro `2026-09-03-self-firing-timer-needs-started-not-only-atsteadystate.md` y el bloque corpus B729 (que ya cubren el idiom `started()`+`atSteadyState()`+`clockChanged()`). Este retro captura las OTRAS lecciones del mismo episodio (deshielo Cuarto 3 que no armaba). PROPOSED kit delta (propose-never-apply). Sólo lo NUEVO.

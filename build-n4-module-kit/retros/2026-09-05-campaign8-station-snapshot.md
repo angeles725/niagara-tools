@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
+<!-- index-comment: manifest.json not .txt (K13); flat output not nested dir (K13); find-newer source-write check; cp -p NTFS mtime -->
 # Retro: Campaign 8 — station-snapshot.sh local audit-surface snapshot (Campaign 8 PR9)
 
 **Date:** 2026-09-05

@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-web-ui-hmi
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 read the shipped `WEB-INF/web.xml` of 14 Tridium modules and the Graphics, JavaWebClients, User (web profile/theme), Touch, WebCharts, SeriesTransform, Mobile and EngNotes (dashboard) guides; this retro carries corpus B1318 (web.xml part), B1328, B1334, B1336, B1339 and B1342. It CORRECTS `2026-10-15-devguide415-horizons-authoring-security.md` (**has**) Δ1 and Δ2.

@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: Δ1 lint-write-path.sh; Δ2 logic.md §write-path; Δ3 logic-authoring.md §write-path-matrix; Δ4 CHECK12-pin; Δ5 K19 routing -->
 # Retro: Campaign 8 — lint-write-path.sh OPERATOR-slot write-path matrix coverage (Campaign 8 PR19, B816)
 
 **Date:** 2026-09-06

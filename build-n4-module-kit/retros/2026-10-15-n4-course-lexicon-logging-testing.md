@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-15 · kit · n4-course-lexicon-logging-testing
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined against the kit — deck 7, Lab 7, Lab 10 lexicon, the 34-test Slide Code suite, corpus B1236/B1252/B1242; the user ran the course station with a Spanish locale

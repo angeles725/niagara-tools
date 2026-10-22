@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: DashboardPan -->
+<!-- deltas: 6 -->
 # 2026-09-28 · DashboardPan · panccadia-persistent-config-hoa
 
 **Session**: PANCCADIA campaign "persistent config + HOA" — Cliente/panccadia-leon feat/panccadia-persistent-config-hoa (ColdRoomPan 2.4.0, CompPan 2.8.0, DashboardPan 2.9.0), 13 native reviews approved

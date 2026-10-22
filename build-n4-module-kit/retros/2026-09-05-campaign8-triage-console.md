@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: D1-D5; B818 registry flexible match -->
 # Retro: campaign8-triage-console — triage-console.sh station log exception triage
 
 **Session**: Campaign 8 PR2 · 2026-09-05

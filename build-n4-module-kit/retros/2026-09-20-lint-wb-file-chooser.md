@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: L5: new WARN lint, auto-wired report-module §5.22 + RM22 -->
 # 2026-09-20 · kit · lint-wb-file-chooser (L5 — lint-candidate impl, auto-wired)
 
 **Session**: implement-lint-candidates campaign, L5. Partial promotion of the `lint-wb-file-chooser` CANDIDATE from the folded retro apillm-headless-servlet-rt-4.14-deltas Δ8 (types/wb-widgets.md station-space-picker rule).

@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-packaging-platform-signing
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 read the real 4.15.6.20 `.dist` manifests and the Templates, Provisioning, Lexicon, ModuleSign, SigningService and Platform user guides; this retro carries corpus B1318 (dist part), B1325, B1330, B1332 and B1341. Complements `2026-10-15-devguide415-horizons-authoring-security.md` (**has** Δ4 signing roster, Δ8 `se`) and `2026-10-15-n4-course-build-deps-permissions-signing.md` (**bdps** Δ4).

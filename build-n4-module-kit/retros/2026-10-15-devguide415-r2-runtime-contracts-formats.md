@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 9 -->
 # 2026-10-15 · kit · devguide415-r2-runtime-contracts-formats
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 (niagara-research B1316–B1343) closed the round-1 static child gaps from N4.15.6.20 source; this retro carries corpus B1316 (engine contracts), B1317 (Command keys, nav files, BFormat), B1319 (kitControl status) and B1336 (Expr null). Extends `2026-10-15-devguide415-runtime-api-corrections.md` (**rac** Δ5, Δ9, Δ10) and `…-nav-subscriptions-tags-ords.md` (**nsto** Δ5); confirms `2026-10-15-n4-course-threading-jobs-doctrine.md` (**tjd**) Δ3.

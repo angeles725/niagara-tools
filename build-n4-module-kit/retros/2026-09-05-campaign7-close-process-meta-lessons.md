@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 <!-- kit-retro -->
 # Campaign 7 close: meta-lessons from the close process
 

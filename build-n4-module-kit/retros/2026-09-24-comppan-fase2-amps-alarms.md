@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: module -->
+<!-- deltas: 8 -->
 # 2026-09-24 · module · comppan-fase2-amps-alarms
 
 **Session**: PANCCADIA León field support. Feature doc

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-06 · kit · campaign11-lint-guard-pins
 
 **Session**: C11 PR4 — lint-guard-pins.sh meta-check + # Mutation: header retrofit of 10 lints (T4)

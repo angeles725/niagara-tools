@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # Campaign 8 PR13 — post-deploy verification checklist → BUILD-LOOP.md §6.a
 
 **Date:** 2026-09-05

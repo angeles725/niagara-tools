@@ -1,4 +1,6 @@
 <!-- review-status: folded v0.2 · 2026-09-01 -->
+<!-- module: ColdRoomPan -->
+<!-- deltas: 0 -->
 
 # Retro — ColdRoomPan `-rt` hardening (2026-08-31) — PROPOSED kit deltas
 

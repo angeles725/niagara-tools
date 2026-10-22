@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
+<!-- index-comment: moduleTest.md expand: BTestNgStation fixture, waitFor, DataProvider, retry, @Requires, StationRunner, palette assert -->
 # 2026-09-19 · kit · moduletest-patterns
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU expanding moduleTest.md with real test-wb patterns.

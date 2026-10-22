@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-drivers-protocols
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 read the 4.15.6.20 Mqtt, Bacnet, Modbus, Drivers, Obix and EngNotes user guides plus driver-rt source; this retro carries corpus B1323, B1327, B1336, B1337 and B1343. No earlier 2026-10-15 retro covers drivers or protocols (`rg -i 'mqtt|bacnet|modbus|obix|ping'` over them → 0 relevant).

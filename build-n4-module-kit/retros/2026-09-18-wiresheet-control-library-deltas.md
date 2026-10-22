@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-09-18 · kit · wiresheet-control-library-deltas
 
 **Session**: corpus-mining gap-audit for build-n4-module — wire-sheet authoring, control-library/alarms/PID, state-machine, transport types.

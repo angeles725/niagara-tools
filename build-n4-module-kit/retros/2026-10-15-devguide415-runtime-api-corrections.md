@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-runtime-api-corrections
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` (niagara-research B1304–B1315) mapped the N4.15.6.20 Developer Guide + `javax.baja`/kitControl source against this kit; this retro carries the runtime-API corrections from corpus B1304 (threads/jobs), B1309 (links), B1310 (facets/formats/cursors) and B1314 (status). Complements `2026-10-15-n4-course-threading-jobs-doctrine.md` (**thr**), `…-slots-components-contracts.md` (**scc**) and `…-build-deps-permissions-signing.md` (**bdps** Δ6 facets card).

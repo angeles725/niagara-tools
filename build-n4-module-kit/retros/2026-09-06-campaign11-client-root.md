@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # 2026-09-06 · kit · campaign11-client-root
 
 **Session**: C11 PR3 — centralise client-tree defaults in tests/lib/client-root.bash (T2)

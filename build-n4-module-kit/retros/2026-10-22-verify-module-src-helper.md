@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-10-22 · kit · verify-module-src-helper
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T8d), branch

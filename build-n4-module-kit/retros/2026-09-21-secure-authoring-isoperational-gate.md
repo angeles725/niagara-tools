@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-09-21 · kit · secure-authoring-isoperational-gate
 
 **Session**: niagara-research security-enforcement-seams focus (corpus B1143–B1156) closed the full N4 runtime enforcement chain, then pivoted to `secure-module-authoring` (B1157). That block distilled 10 enforcement fissures into 5 candidate kit deltas (SA-1..SA-5). This retro is the SMA3 step: verify the 5 candidates against the SHIPPED kit before proposing. Result: 4 of 5 are already covered; 1 genuine gap survives.

@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
+<!-- index-comment: CHECK11 FAIL not WARN (K13); CHECK12 WARN; direct-parent slot tracking; compound-type sub-slots; wsAnnotation READONLY skip; BA12 inherited frozen slots WARN -->
 # Campaign 8 PR10 — bog-audit retro
 
 Session: 2026-09-05, branch feat/c8-bog-audit, kit PR10.

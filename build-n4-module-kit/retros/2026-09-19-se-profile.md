@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
+<!-- index-comment: structure.md §-se: Java-SE profile, JACE load {rt,se}, wb-dep + headless AWT traps, install no-rollback -->
 # 2026-09-19 · kit · se-profile
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the -se profile cluster (deploy scope now includes JACE).

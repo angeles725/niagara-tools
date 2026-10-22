@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 9 -->
 # 2026-10-15 · kit · devguide415-r2-shipped-libraries
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 built a shipped-libraries catalog (gap SL1) from the real 4.15.6.20 install and the HttpClient, Rdbms and JsonToolkit guides; this retro carries corpus B1320, B1321, B1322, B1333 and B1340. Complements `2026-10-15-n4-course-authoring-files-and-libraries.md` (**afl** Δ1 uberjar Path 0) and `…-horizons-authoring-security.md` (**has** Δ7).

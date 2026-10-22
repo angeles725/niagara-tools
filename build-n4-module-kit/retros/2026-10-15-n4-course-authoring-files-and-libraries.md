@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-15 · kit · n4-course-authoring-files-and-libraries
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined for the module authoring files and third-party Java libraries — deck 6, Labs 1–10 palettes/permissions/gradle, Slide Code `slides-rt`, the user's live `training-rt`, kit fixtures `fixtures/MinimalPan`

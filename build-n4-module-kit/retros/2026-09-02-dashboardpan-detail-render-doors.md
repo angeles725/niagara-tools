@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 
 # Retro — DashboardPan detail-view render + door alarm — PROPOSED kit deltas
 

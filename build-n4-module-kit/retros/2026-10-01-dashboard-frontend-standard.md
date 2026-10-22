@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 16 -->
 # 2026-10-01 · kit · dashboard-frontend-standard
 
 **Session**: PANCCADIA HMI freeze triage → user-requested frontend standard (structure, naming, data, memory, transfer); read-only audit of DashboardPan-ux `rc/index.html`

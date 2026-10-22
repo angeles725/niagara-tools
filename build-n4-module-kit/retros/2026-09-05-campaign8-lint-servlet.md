@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: D1 lint-servlet not rc-scan --servlet (K13); D2 R12.2 deferred B803; D3 csrf WARN not FAIL (B813); D4 input-400 prediction wrong; comment-strip both body+flags -->
 # Retro: Campaign 8 — lint-servlet.sh BWebServlet security lint (Campaign 8 PR12, B813)
 
 **Date:** 2026-09-05

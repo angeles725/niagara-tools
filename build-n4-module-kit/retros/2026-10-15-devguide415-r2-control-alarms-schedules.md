@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-control-alarms-schedules
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 2 mined the 4.15.6.20 Alarms, Histories, KitControl and Scheduling user guides (plus the source behind them) for cold-room/compressor modules; this retro carries corpus B1324, B1331 and B1335. Complements `2026-10-15-devguide415-runtime-api-corrections.md` (**rac** Δ6 alarm ext owns FAULT) and `…-horizons-authoring-security.md` (**has** Δ3 history `_cfg` split).

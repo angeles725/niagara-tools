@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro (PROPOSED delta — propose-never-apply) — pin the exact cached JUnit/Hamcrest jar locations for the WSL standalone pure-test run
 
 - **Date**: 2026-09-04

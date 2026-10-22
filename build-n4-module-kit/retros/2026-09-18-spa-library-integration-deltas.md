@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-09-18 · kit · spa-library-integration-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas — SPA/library integration).
