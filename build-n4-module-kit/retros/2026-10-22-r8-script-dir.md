@@ -3,7 +3,7 @@
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · r8-script-dir
 
-**Session**: niagara-research quality round 8, issue #310, branch `fix/r8-script-dir` from origin/main 1e39076
+**Session**: niagara-research quality round 8, issue #310, branch `fix/r8-script-dir` from origin/main 1e39076 (rebased onto 42b9ffa)
 **Delta count**: 1
 
 ## What happened
@@ -30,6 +30,14 @@ is sourced.
   `scan_files_or_exit: command not found` and `MB_AWK: unbound variable`, with exit 1 but no finding. SD1 failed, and
   SD2 (bare name on PATH, unrelated cwd) passed `[ev: tests/script-dir.bats SD1]`
 - GREEN: `bats tests/script-dir.bats` 4/4 `[ev: tests/script-dir.bats]`
+- The premise of the brief, that a bare name run through PATH is broken, was wrong. The real trigger is
+  `bash <name>` run from the toolbelt dir. SD2 keeps the PATH case as a regression check, and it is green on both
+  the old and the new code `[ev: tests/script-dir.bats SD2]`
+- The full ci-local run then failed preflight.bats PF-jarlock-skip-9p. Its `_pf_fakebin` PATH did not link
+  `dirname`, so `lib/fs-type.sh` was not sourced and the 9p skip was lost. `dirname` is now in that list
+  (preflight.sh already calls it at L272/L287) `[ev: tests/preflight.bats _pf_fakebin]`
+- Rebased onto origin/main 42b9ffa. lint-structure.sh:405 now has a comment that names the idiom, so SD3 skips
+  comment lines. SD3-neg pins that skip, and dropping it fails SD3 and SD3-neg `[ev: tests/script-dir.bats SD3-neg]`
 - Mutations: putting `${BASH_SOURCE[0]%/*}` back on lint-timers.sh:122 fails SD1 and SD3. Writing
   `${BASH_SOURCE%/*}` into lib/awk-lint.sh:73 fails SD3 only, because SD1 sources that lib by an absolute path `[ev: tests/script-dir.bats SD3]`
 
@@ -39,6 +47,8 @@ is sourced.
 | Δ1 | A toolbelt script derives its dir with `$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)`, never a `${BASH_SOURCE…%…}` / `${0%…}` strip; SD3 ratchets it | `tests/script-dir.bats` § SD3 | `[ev: tests/script-dir.bats SD3]` |
 
 ## Lessons
+- A script that gains an external tool must also gain it in every test's fake PATH. Search `PATH="$FAKEBIN"`
+  fixtures before you swap a builtin form for a fork.
 - `${x%/*}` is not a dirname: it returns the whole value when there is no slash. Use `dirname` for any
   path-derived directory.
 - A reproduction of a path bug has to pin the exact BASH_SOURCE shape. A PATH lookup always produces a slash, and

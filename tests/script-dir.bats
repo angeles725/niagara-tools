@@ -35,7 +35,8 @@ assert_timer_finding() {
 
 # strip_idiom_rows <file>...: prints `<file>:<line>:<text>` for every `${BASH_SOURCE%…}`, `${BASH_SOURCE[0]%…}`
 # or `${0%…}` suffix strip; a script dir must come from dirname, which returns `.` for a slash-less name.
-strip_idiom_rows() { grep -nHE '\$\{(BASH_SOURCE(\[0\])?|0)%' "$@"; }
+# A comment line that names the idiom (lint-structure.sh explains why it avoids it) is not a use; exit 1 = none.
+strip_idiom_rows() { grep -nHE '\$\{(BASH_SOURCE(\[0\])?|0)%' "$@" | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#'; }
 
 @test "SD3: no toolbelt script or lib derives its directory by a suffix strip of BASH_SOURCE or \$0" {
   # Mutation: SD3 -- reintroducing one \${BASH_SOURCE[0]%/*} in any toolbelt/*.sh or lib/*.sh names it here
@@ -44,15 +45,16 @@ strip_idiom_rows() { grep -nHE '\$\{(BASH_SOURCE(\[0\])?|0)%' "$@"; }
   [ -z "$output" ]
 }
 
-@test "SD3-neg: the scan names each suffix-strip variant and passes the dirname form" {
+@test "SD3-neg: the scan names each suffix-strip variant and passes the dirname form and a comment" {
   cat > "$BATS_TEST_TMPDIR/bad.sh" <<'SH'
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/a.sh"
 . "${BASH_SOURCE%/*}/b.sh"
 d=${0%/*}
+  # comment only: ${BASH_SOURCE[0]%/*} is not used here
 SH
   run strip_idiom_rows "$BATS_TEST_TMPDIR/bad.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"bad.sh:2:"* && "$output" == *"bad.sh:3:"* && "$output" == *"bad.sh:4:"* ]]
-  if [[ "$output" == *"bad.sh:1:"* ]]; then return 1; fi
+  if [[ "$output" == *"bad.sh:1:"* || "$output" == *"bad.sh:5:"* ]]; then return 1; fi
 }
