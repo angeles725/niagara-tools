@@ -261,6 +261,12 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BJettyWebServer.java:1178-1180,1462-1468`, `TridiumSecurityFilter.java:22-27`, corpus B1349 C1, B1328 row 9.
 - **Target:** `types/security.md:360-380`; `toolbelt/lint-servlet.sh` `api-response-headers` WARN → info.
 - **Lint-able:** yes (downgrade). **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-8, `docs/r8-t9i-headers`, 2026-10-23; r3wsh Δ3, Δ5, wuh Δ5, r3-report#R1):
+  `types/security.md` § 7 rewritten (station providers reach every servlet, set a header only to deviate, embed with
+  CSP `frame-ancestors`, Hx needs the defaults); `lint-servlet.sh` `api-response-headers` WARN → INFO (no `--strict`
+  escalation), `report-module.sh` counts an INFO-only servlet as PASS (RM16b), `commissioning-verify.sh` probe text.
+  Premise refined: the X-Frame provider class default is `deny` (`BXFrameOptionsHeaderProvider.java:34`); only the
+  guide and `BWebService.java:255` say `Sameorigin`, so the commissioning probe reads the live value. Pins KH1-KH4.
 
 ### C14 — `pingEnabled` is ON by default
 - **Sources:** r3di#Δ2 (primary) · r3-report#R2
@@ -408,6 +414,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `CustomThemeModuleManager.java:24,47`, `BHxProfile.java:291`, `WbWebWidgetServlet.java:143-149`, corpus B1328 §1328.2 C1, B1349 §1349.2.
 - **Target:** `types/theme.md` §2-§3, §7; `types/frontend-standard.md`.
 - **Lint-able:** yes — def value == moduleName, `theme` prefix, `nss/*.nss` present; grep SPA HTML for `theme.css`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-8, 2026-10-23; wuh Δ2, r3wsh Δ4): `types/theme.md` § 2 (value = module name with
+  the `theme` prefix, `nss/*.nss` required, silent fallback, per-web-profile choice, Tools › Options for Workbench,
+  def via `moduleManifest { defines }`), § 3 layout, § 7 SPA theming; `types/frontend-standard.md` § 1 theme link
+  rule. Owed Go lints G13 `theme-module`, G14 `spa-theme-link`.
 
 ### C81 — `verify-module.sh` false-FAILs live-loaded signed jars (issue #260)
 - **Sources:** bsw#Δ1 (primary: `signed` PASSes on any `META-INF/<ALIAS>.SF` + matching `.RSA`/`.DSA`/`.EC`; report the alias) · bsw#Δ2 extends (pipefail/SIGPIPE 141 false negatives in `check_signed`, `check_types_have_classes`, `check_palette`; here-string membership tests) · bsw#Δ3 extends (skip `META-INF/versions/**` in `check_bytecode_major`, as `lint-bundled-jar-class-version.sh` already does)

@@ -369,7 +369,7 @@ Out of the box that is `X-Content-Type-Options: nosniff` (`BXContentTypeOptionsH
 provider (`default-src 'self' workbench`, `script-src 'self' workbench 'unsafe-inline' 'unsafe-eval'`,
 `BCspHeaderProvider.java:66,130`) and `X-Frame-Options` (the guide documents `Sameorigin` as the default, Hx needs
 it, `User/web-HttpHeaderProviders.txt:20`; the provider class default is `deny`, `BXFrameOptionsHeaderProvider.java:34`,
-so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: corpus B1328 row 9]`
+so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: corpus B1328 row 9]` `[ev: retro r8-t9i-headers Δ1]`
 `[ev: retro devguide415-r3-web-session-headers Δ3]` `[ev: retro devguide415-r2-web-ui-hmi Δ5]`
 
 - **Set a header in servlet code only to deviate on purpose.** A `resp.setHeader()` for a name the filter already set
@@ -386,7 +386,8 @@ so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: cor
 
 **Lint** (`toolbelt/lint-servlet.sh`, check `api-response-headers`, INFO): a `doGet`/`doPost`/`service` handler that
 calls `getWriter()`/`getOutputStream()` in a class with no `X-Content-Type-Options` / `setApiHeaders()` /
-`applyHeaders()` reference gets an INFO row ("station header providers apply"); `--strict` does not escalate it.
+`applyHeaders()` reference gets an INFO row ("station header providers apply"); `--strict` does not escalate it, and
+`report-module.sh` counts an INFO-only servlet as scanned (PASS). `[ev: retro r8-t9i-headers Δ2]`
 
 **Commissioning header probe** (`toolbelt/commissioning-verify.sh` `servlet-response-headers` MANUAL step): after
 deploying a `BWebServlet` module, confirm the live endpoint carries the station's headers:
