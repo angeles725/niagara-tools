@@ -357,6 +357,9 @@ Rules for integrating a control component with a `BControlSchedule`:
 - **Composite priority = FIRST SLOT WINS (positional, no numeric field):** `getOutputSource(now)` does a positional walk and returns the FIRST slot whose time range covers `now`. There is no numeric priority field — slot order is the only arbitrator. `BWeeklySchedule` places `specialEvents` at slot 0 (beats `week` at slot 1 by the positional rule).
 - **ONE `Clock.Ticket` per transition — no polling loop:** the scheduler arms a single `Clock.Ticket` at each transition and reschedules it at the NEXT transition boundary. There is no polling loop. A custom component that wraps a schedule must not substitute a periodic poll for this ticket.
 - **Scan horizon = 90 days:** `scanLimit` defaults to 90 days. A schedule with no event within 90 days of `now` returns null from `getOutputSource`, so the linked output sees null/invalid. Design schedules so there is always a reachable event within the horizon.
+- **Out of every effective period a weekly schedule outputs its `defaultOutput`:** false for a Boolean schedule, null (relinquish the linked level) for the others; In > special event > weekly > default. Specials rank by list order, and `cleanupExpiredEvents` (default true) deletes past one-time events (4.15.6.20 guides, corpus B1335 rows 5-6). `[ev: retro devguide415-r2-control-alarms-schedules Δ10]`
+- **One schedule, many rooms:** fan the one schedule's `out` to each room's input, or use a `BooleanScheduleSelector`/`EnumScheduleSelector` (container ORD + schedule choice; it makes and type-checks the link, corpus B1335 row 7). Never one schedule copy per room.
+- **Wall-clock triggers:** a `TriggerSchedule` fires `trigger` at listed times (`addTime(h, m)`), keeps a persisted `nextTrigger` and fires `triggerMissed` after a missed time; rule and code lines in `types/logic.md` § Safety fail-modes & timers. `[ev: retro devguide415-r2-control-alarms-schedules Δ9]`
 
 ## Action protection
 
@@ -621,6 +624,26 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
 - **Interval vs COV** — `BIntervalHistoryExt` records on a timer (default 15 min; configure `interval`); `BCovHistoryExt` records on Change-Of-Value above a `changeTolerance` deadband. Pick COV for setpoints and slow-moving analog values that change infrequently; use Interval for continuous telemetry where a regular time-series is required. `[ev: corpus B804]`
 - **`BHistoryConfig` capacity + `fullPolicy`** — `capacity` is the ring-buffer depth (record count, not bytes); `fullPolicy` is `roll` (overwrite oldest, default) or `stop` (reject new records when full). For an always-running production module, use `roll` so the history never silently stops accumulating. `[ev: corpus B804]`
 - **One ext per logged slot** — attach exactly ONE `BHistoryExt` child per logged slot; two extensions on the same point log duplicate records and double the storage cost. `[ev: corpus B804]`
+- **Changing a shipped history's record type or interval splits it.** When a non-empty history's config changes
+  `recordType` or `interval`, the database RENAMES the old records to `<name>_cfg0` (then `_cfg1`, …) and creates a
+  new, empty history under the original name (vineflower history-rt 4.14.0.162
+  `javax/baja/history/db/HistoryDatabaseConnection.java:194-221`, `com/tridium/history/db/LocalDbConnection.java:213-238`;
+  4.15 not verified). Every trend and dashboard reading `<name>` then starts from zero, and the old data sits
+  under a name nobody reads: never change a shipped interval default without a migration note. `[ev: retro devguide415-horizons-authoring-security Δ3]`
+- **A history extension records nothing until enabled.** `enabled` defaults false with DEFAULT_ON_CLONE (flags 64,
+  `javax/baja/history/ext/BHistoryExt.java:119`, same copy), so a palette-shipped ext is dead until commissioning
+  enables it or code calls `setEnabled(true)`; a Paste Special copy also arrives disabled with an empty History
+  Name (corpus B1256 §1256.6). `[ev: retro devguide415-r2-control-alarms-schedules Δ3]` `[ev: retro n4-course-parity-observability-horizons Δ5]`
+- **Keep `historyName` a script** (default `%parent.name%`, same file `:122`): a literal name loses the automatic
+  numbering, so a duplicated ext collides (4.15.6.20 guide `Histories/aHistoryNames.txt:7,11`); never rename a
+  history from the History space (it splits too, corpus B1324 row 9).
+- **Size it:** `capacity` defaults to 500 records (`javax/baja/history/BHistoryConfig.java:93`, same copy) — at a
+  15 min interval that is about five days; set it for defrost and compressor trends. Counters (run hours, kWh) set
+  Min/Max Rollover for delta logging (corpus B1324 row 10).
+- **Readers use `out.value`** in BQL, not the `out` display string; units and min/max facets on the point give the
+  implied tags (`n:qudtUnit`, `h4:minVal`/`maxVal`) for free (corpus B1256 §1256.6).
+- **CSV export needs no servlet code:** the stock `…|view:file:ITableToCsv?fileName=<name>` ORD view downloads any
+  table, a history query included (devguide 4.15.6.20 `servlets/exporters.txt:24`).
 - **B804-G1 OPEN (requires-execution):** `BHistoryExt` on a custom `BComponent` (vs a `BControlPoint`) needs a live station smoke to confirm the extension mechanism works with a non-point parent. `[ev: corpus B804]`
 
 ## Slot types for externally written values `[ev: corpus B823]`
