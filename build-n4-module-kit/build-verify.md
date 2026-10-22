@@ -48,6 +48,7 @@ J8=/usr/lib/jvm/java-8-openjdk-amd64            # confirm: ls /usr/lib/jvm
   reproducible on a Windows `gradlew` build**, where Gradle falls back to auto-detect and
   may pick the wrong JDK major. Pin an explicit JDK path matching a sibling module before
   shipping the `gradle.properties`. `[ev: build.sh:74]` `[ev: corpus B1016]`
+- **Always run QUALIFIED tasks (`:<MOD>-<part>:jar`), on WSL and on Windows (`gradlew.bat`) alike:** a bare `gradlew jar` builds every subproject of the root, and the post-jar copy fails on an UNRELATED jar that a running station holds. The copy-lock signature differs by route — WSL prints `java.nio.file.FileAlreadyExistsException: …/modules/<jar>`, the Windows route prints backslash paths and the Kotlin message `kotlin.io.FileAlreadyExistsException: …\modules\<jar>: Tried to overwrite the destination, but failed to delete it.`; `build.sh` classifies both as exit 32. To find the holder on Windows, `tasklist` for `station.exe` / `wb.exe`: `java.exe` processes left after the station closes are Gradle daemons (`gradlew --stop`), not the lock. `[ev: retro n4-course-handson-build-signing-windows Δ5]`
 
 ## Build target & plugin version
 - **Build against the `niagara_home` of the LOWEST target version you must support:** the manifest stamps its `baja` dependency version, and a 4.14 station REJECTS a jar built against 4.15. Check `unzip -p <jar> META-INF/module.xml | grep baja`. [ev: retro rt-hardening #6]
