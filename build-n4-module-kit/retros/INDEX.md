@@ -251,6 +251,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-generated-retro-index.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-check-facets-card.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-ci-steps.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-gen-lint-index.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |
