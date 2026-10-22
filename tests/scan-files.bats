@@ -89,3 +89,13 @@ teardown() { rm -rf "$TMPDIR_T"; }
   scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" --prune-path '*/rc/ext' -name '*.js'
   [ "$(cat "$TMPDIR_T/files")" = "$(printf '%s\n' "$TMPDIR_T/m/ext/d.js" "$TMPDIR_T/m/rc/a.js")" ]
 }
+
+@test "SF9: sibling *-worktrees checkouts are pruned at any depth, so a finding is not reported once per checkout" {
+  # Mutation: SF9 -- dropping the '*-worktrees' prune lists the copy under chihuahua-worktrees/ again.
+  mkdir -p "$TMPDIR_T/m/chihuahua/src" "$TMPDIR_T/m/chihuahua-worktrees/wt/src" "$TMPDIR_T/m/a/x-worktrees"
+  printf 'x\n' > "$TMPDIR_T/m/chihuahua/src/A.java"
+  printf 'x\n' > "$TMPDIR_T/m/chihuahua-worktrees/wt/src/A.java"
+  printf 'x\n' > "$TMPDIR_T/m/a/x-worktrees/B.java"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" -name '*.java'
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/m/chihuahua/src/A.java" ]
+}

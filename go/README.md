@@ -11,7 +11,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/<tool>/` | a thin `main` that calls one package's entry point; no logic |
 | `internal/cli/` | injectable stdio (`cli.Stdio`) and the `cli.Main` signature every command uses |
 | `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines` and `File` (one file's lines plus its scan results, computed once) |
-| `internal/lint/` | the lint engine: `Rule`, `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`), `Run` (exit 0 / 1 under `--strict` / 3 env) and `Command` (n4lint) |
+| `internal/lint/` | the lint engine: `Rule`, `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 under `--strict` / 3 env) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |

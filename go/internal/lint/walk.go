@@ -12,7 +12,7 @@ import (
 // Selection is which files under a root a rule reads, as toolbelt/lib/scan-files.sh selects them.
 type Selection struct {
 	Names []string // find -name patterns, any of which selects a regular file
-	Prune []string // sub-directory names never entered (dot sub-directories never are)
+	Prune []string // sub-directory names never entered (dot and *-worktrees sub-directories never are)
 }
 
 func (s Selection) selects(name string) bool {
@@ -24,8 +24,9 @@ func (s Selection) selects(name string) bool {
 	return false
 }
 
+// prunes also skips sibling "*-worktrees" checkouts, which would report every finding once per checkout.
 func (s Selection) prunes(dir string) bool {
-	if strings.HasPrefix(dir, ".") {
+	if strings.HasPrefix(dir, ".") || strings.HasSuffix(dir, "-worktrees") {
 		return true
 	}
 	for _, p := range s.Prune {

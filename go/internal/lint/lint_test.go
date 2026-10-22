@@ -119,6 +119,7 @@ func TestWalkOrderAndSelection(t *testing.T) {
 	root := tree(t, map[string]string{
 		"b/Z.java": "", "a/B.java": "", "a/A.java": "", "A.java": "", "a/x.txt": "",
 		".git/G.java": "", "a/.hidden/H.java": "", ".dot.java": "", "build/O.java": "",
+		"x-worktrees/wt/W.java": "", "a/y-worktrees/V.java": "",
 	})
 	if err := os.Symlink(filepath.Join(root, "a"), filepath.Join(root, "link")); err != nil {
 		t.Fatal(err)
