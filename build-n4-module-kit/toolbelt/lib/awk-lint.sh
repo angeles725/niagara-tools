@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# lib/awk-lint.sh — shared skeleton of the per-file awk lints (lint-<name>.sh that write one
+# main.awk and run it once per source file). Sourced only (never invoked directly). Fragment
+# rule: edit THIS shared fragment, never re-implement the skeleton in a consumer lint — mirrors
+# lib/scan-files.sh. VCS-free by design (kit-links L2). Sourcing it also sources scan-files.sh
+# and exports LC_ALL=C.
+#
+# A consumer lint is:
+#   . ".../lib/awk-lint.sh"
+#   awk_lint_parse <name> <arity> '<usage line>' "$@"
+#   cat > "$AL_TMP/main.awk" << 'AWKEOF' ... AWKEOF
+#   awk_lint_run <find-test...>
+#
+# awk_lint_parse <name> <arity> <usage> <args...>
+#   Parses `[--strict] [--] <root>...`. <name> prefixes every message ("<name>: not a directory: ..."),
+#   <usage> is printed verbatim. <arity> says how the roots are taken:
+#     one    exactly one root; any other count prints <usage> (exit 3)
+#     first  at least one root; only the first is checked and scanned, the rest are ignored
+#     each   at least one root; every root is checked before any scan, then each is scanned in order
+#   Sets AL_NAME, AL_USAGE, AL_STRICT (0/1), AL_ROOTS (array) and AL_TMP (a temp dir removed on EXIT).
+#   A flag other than --strict/-- goes to the function named by AL_FLAG_HOOK (set it after sourcing),
+#   called with every remaining argument; it sets AL_SHIFT to the count it consumed, or leaves 0 for
+#   "unknown flag". Usage, unknown flag and a non-directory root exit 3.
+#
+# awk_lint_run <find-test...>
+#   For each root, lists the files matching the find tests (scan_files), runs
+#   `awk -v FILE=<file> "${AL_AWK_ARGS[@]}" -f "$AL_TMP/main.awk" <file>` on each, and prints its
+#   rows. Exits 3 when a walk was incomplete or an awk run failed, 1 when a row was printed under
+#   --strict, 0 otherwise. Never returns.
+#
+# Why: ten lints carried the same ~50-line copy of this skeleton; a fail-closed fix (issue #226)
+# had to land ten times. [ev: retro 2026-10-22-awk-lint-skeleton]
+
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "${BASH_SOURCE[0]%/*}/scan-files.sh"
+LC_ALL=C
+export LC_ALL
+
+AL_AWK_ARGS=()
+AL_FLAG_HOOK=
+AL_SHIFT=0
+
+awk_lint_parse() {
+  AL_NAME="$1"
+  AL_USAGE="$3"
+  local arity="$2" root
+  shift 3
+  case "$arity" in
+    one|first|each) ;;
+    *) printf 'awk_lint_parse: unknown arity: %s\n' "$arity" >&2; exit 3 ;;
+  esac
+  AL_STRICT=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --strict) AL_STRICT=1; shift ;;
+      --) shift; break ;;
+      -*) AL_SHIFT=0
+          if [ -n "$AL_FLAG_HOOK" ]; then "$AL_FLAG_HOOK" "$@"; fi
+          if [ "$AL_SHIFT" -eq 0 ]; then
+            printf '%s: unknown flag: %s\n%s\n' "$AL_NAME" "$1" "$AL_USAGE" >&2
+            exit 3
+          fi
+          shift "$AL_SHIFT" ;;
+      *) break ;;
+    esac
+  done
+  if [ $# -lt 1 ] || { [ "$arity" = one ] && [ $# -ne 1 ]; }; then
+    printf '%s\n' "$AL_USAGE" >&2
+    exit 3
+  fi
+  if [ "$arity" = each ]; then AL_ROOTS=("$@"); else AL_ROOTS=("$1"); fi
+  for root in "${AL_ROOTS[@]}"; do
+    if [ ! -d "$root" ]; then
+      printf '%s: not a directory: %s\n' "$AL_NAME" "$root" >&2
+      exit 3
+    fi
+  done
+  AL_TMP=$(mktemp -d)
+  trap 'rm -rf "$AL_TMP"' EXIT
+}
+
+awk_lint_run() {
+  local root f out had_warn=0 had_err=0
+  for root in "${AL_ROOTS[@]}"; do
+    # A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+    if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$root" "$@"; then
+      printf '%s: cannot list every file under %s: %s\n' "$AL_NAME" "$root" "$(head -n 1 "$AL_TMP/find.err")" >&2
+      had_err=1
+    fi
+    while IFS= read -r f; do
+      # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
+      if ! out=$(awk -v FILE="$f" "${AL_AWK_ARGS[@]}" -f "$AL_TMP/main.awk" "$f" 2>"$AL_TMP/awk.err"); then
+        printf '%s: cannot scan %s: %s\n' "$AL_NAME" "$f" "$(head -n 1 "$AL_TMP/awk.err")" >&2
+        had_err=1
+        continue
+      fi
+      if [ -n "$out" ]; then
+        printf '%s\n' "$out"
+        had_warn=1
+      fi
+    done < "$AL_TMP/files"
+  done
+  [ "$had_err" -eq 0 ] || exit 3
+  if [ "$had_warn" -eq 1 ] && [ "$AL_STRICT" -eq 1 ]; then
+    exit 1
+  fi
+  exit 0
+}
