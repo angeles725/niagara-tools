@@ -1,0 +1,35 @@
+-- root --
+jtcreate/m-rt/src
+-- want --
+exit 0
+WARN  jdk-thread  @DIR@/jtcreate/m-rt/src/demo/BPoolSvc.java: BPoolSvc uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+-- jtcreate/m-rt/src/demo/BPoolSvc.java --
+package demo;
+import javax.baja.sys.*;
+import java.util.concurrent.*;
+public class BPoolSvc extends BAbstractService {
+  private ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}

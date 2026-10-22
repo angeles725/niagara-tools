@@ -5,5 +5,4 @@
 # build-n4-module-kit/ledger.d/2026-10-22-r8-t22-retro-deltas.md.
 lint-lexicon-ascii.sh _raw_line 1
 lint-silent-protection.sh pname 1
-lint-timers.sh line 3
 lint-write-path.sh _mline 1

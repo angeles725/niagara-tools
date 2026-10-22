@@ -253,9 +253,11 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-go-ci-steps.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-gen-lint-index.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-lint-bundled-jar-class-version.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
@@ -282,6 +284,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-p1-control.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-sign.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-slots.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r8-p1-tests.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-web.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-headers.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-k15.md | kit | 2026-10-23 | folded | 1 |

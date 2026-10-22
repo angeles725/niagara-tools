@@ -1,0 +1,100 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/BOrder.java: timer cancelled in stopped()
+WARN  orphan-flag  @DIR@/src/BOrder.java: killyankee() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killyankee() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killzeta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killzeta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killalpha() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killalpha() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killcharlie() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killcharlie() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killxray() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killxray() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killmike() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killmike() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killbravo() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killbravo() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killdelta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java: killdelta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitValve() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitRun() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endRun() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endValve() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endDefrost() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitLight() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endLight() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endPump() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitPump() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitDefrost() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: exitFan() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java: endFan() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+-- src/BOrder.java --
+package demo;
+import javax.baja.sys.*;
+public final class BOrder extends BComponent {
+  private Clock.Ticket tA;
+  private Clock.Ticket tB;
+  private boolean fA;
+  private boolean fB;
+  public void arm() { fA = true; fB = true; tA = Clock.schedule(this, BRelTime.makeSeconds(5), goA, null); tB = Clock.schedule(this, BRelTime.makeSeconds(5), goB, null); }
+  public void doGoA() { fA = false; }
+  public void doGoB() { fB = false; }
+  public void started() throws Exception { super.started(); beginGate(); applyOne(); applyTwo(); fA = false; fB = false; }
+  private void beginGate() { }
+  private void applyOne() { }
+  private void applyTwo() { }
+  public void stopped() throws Exception { super.stopped(); tA.cancel(); tB.cancel(); fA = false; fB = false; }
+  public void killzeta() { tA.cancel(); tB.cancel(); }
+  public void killalpha() { tA.cancel(); tB.cancel(); }
+  public void killmike() { tA.cancel(); tB.cancel(); }
+  public void killbravo() { tA.cancel(); tB.cancel(); }
+  public void killyankee() { tA.cancel(); tB.cancel(); }
+  public void killcharlie() { tA.cancel(); tB.cancel(); }
+  public void killxray() { tA.cancel(); tB.cancel(); }
+  public void killdelta() { tA.cancel(); tB.cancel(); }
+  public void exitDefrost() { applyTwo(); }
+  public void endDefrost() { applyOne(); }
+  public void exitRun() { applyTwo(); }
+  public void endRun() { applyOne(); }
+  public void exitFan() { applyTwo(); }
+  public void endFan() { applyOne(); }
+  public void exitLight() { applyTwo(); }
+  public void endLight() { applyOne(); }
+  public void exitPump() { applyTwo(); }
+  public void endPump() { applyOne(); }
+  public void exitValve() { applyTwo(); }
+  public void endValve() { applyOne(); }
+  public void filler1() { int x = 1; }
+  public void filler2() { int x = 2; }
+  public void filler3() { int x = 3; }
+  public void filler4() { int x = 4; }
+  public void filler5() { int x = 5; }
+  public void filler6() { int x = 6; }
+  public void filler7() { int x = 7; }
+  public void filler8() { int x = 8; }
+  public void filler9() { int x = 9; }
+  public void filler10() { int x = 10; }
+  public void filler11() { int x = 11; }
+  public void filler12() { int x = 12; }
+  public void filler13() { int x = 13; }
+  public void filler14() { int x = 14; }
+  public void filler15() { int x = 15; }
+  public void filler16() { int x = 16; }
+  public void filler17() { int x = 17; }
+  public void filler18() { int x = 18; }
+  public void filler19() { int x = 19; }
+  public void filler20() { int x = 20; }
+  public void filler21() { int x = 21; }
+  public void filler22() { int x = 22; }
+  public void filler23() { int x = 23; }
+  public void filler24() { int x = 24; }
+  public void filler25() { int x = 25; }
+  public void filler26() { int x = 26; }
+  public void filler27() { int x = 27; }
+  public void filler28() { int x = 28; }
+  public void filler29() { int x = 29; }
+  public void filler30() { int x = 30; }
+}
