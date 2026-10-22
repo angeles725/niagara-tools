@@ -1,0 +1,8 @@
+name: CI
+on: pull_request
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: bats (all unit tests)
+        run: bats tests/*.bats
