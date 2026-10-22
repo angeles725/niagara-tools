@@ -100,3 +100,37 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 2 ]
   [[ "$output" == *"usage"* ]]
 }
+
+# Host pids guard (quality round 8 T41): on 2026-10-22 the WSL init.scope cgroup hit pids.max 48,129
+# ("fork rejected by pids controller") and every session on the host aborted. The replay refuses to
+# start its steps while any cgroup under the root is above half of its pids.max. [ev: retro r8-t41-host-safety]
+fake_cgroup() { # fake_cgroup <name> <current> <max>
+  mkdir -p "$TMPDIR_T/cg/$1"
+  printf '%s\n' "$2" > "$TMPDIR_T/cg/$1/pids.current"
+  printf '%s\n' "$3" > "$TMPDIR_T/cg/$1/pids.max"
+}
+
+@test "CL10: a cgroup above 50% of its pids.max refuses the run (exit 4) before any step runs" {
+  # Mutation: CL10 -- dropping the pre-run pids check lets the step run on a host near its fork limit.
+  fake_cgroup init.scope 30000 48129
+  fake_cgroup system.slice 16 max
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"init.scope"*"30000/48129"* ]]
+  [[ "$output" != *"ran-after"* ]]
+}
+
+@test "CL11: cgroups at or below 50% of pids.max, or unlimited, let the run proceed" {
+  # Mutation: CL11 -- comparing against the literal 'max' or using >= refuses a healthy host.
+  fake_cgroup init.scope 24064 48128
+  fake_cgroup system.slice 99999 max
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS runs after a failure"* ]]
+}
+
+@test "CL12: --list is a read-only classification and never runs the pids check" {
+  fake_cgroup init.scope 48000 48129
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --list --ci-file "$FX/semantics.yml"
+  [ "$status" -eq 0 ]
+}

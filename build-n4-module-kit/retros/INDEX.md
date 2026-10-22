@@ -267,6 +267,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | pending | 9 |
 | 2026-10-22-r8-t23-parked-advisories.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-r8-t41-host-safety.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-r8-t9e-drivers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-status-links.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
