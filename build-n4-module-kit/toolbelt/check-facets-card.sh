@@ -20,7 +20,7 @@ export LC_ALL
 [ $# -eq 2 ] || { printf 'usage: check-facets-card.sh <card.md> <BFacets.java | keys-file>\n' >&2; exit 3; }
 card="$1" src="$2"
 for f in "$card" "$src"; do
-  [ -f "$f" ] && [ -r "$f" ] || { printf 'check-facets-card: cannot read %s\n' "$f" >&2; exit 3; }
+  if [ ! -f "$f" ] || [ ! -r "$f" ]; then printf 'check-facets-card: cannot read %s\n' "$f" >&2; exit 3; fi
 done
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
