@@ -639,3 +639,43 @@ GRADLEW
   [ "$status" -eq 0 ]
   [[ "$output" != *"$TMPDIR_T/cdp/other"* ]]
 }
+
+# BS-slotomatic-hint: slot-o-matic logs "Could not process <file>: Found multiple metadata blocks" as a WARNING
+# and its task succeeds; the build then fails in compileJava with "... have you run slot-o-matic?". build.sh keeps
+# exit 30 but names the file slot-o-matic skipped and the recovery (register C84, METHODOLOGY K15).
+# [ev: retro n4-course-handson-slotomatic-authoring Δ1]
+# Named mutation: delete the slot-o-matic hint branch in build.sh -> BS-slotomatic-hint loses the "K15" line.
+@test "BS-slotomatic-hint: a skipped file + 'have you run slot-o-matic?' -> exit 30 with the file and the K15 recovery" {
+  printf '#!/usr/bin/env bash\necho "WARNING: Could not process /x/src/com/a/BLimiter.java: Found multiple metadata blocks"\necho "BLimiter.java:12: error: Slot with name limit not found in BLimiter, have you run slot-o-matic?"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"slot-o-matic skipped"*"BLimiter.java"* ]]
+  [[ "$output" == *"K15"* ]]
+}
+
+@test "BS-slotomatic-hint-clean: an unrelated gradle failure gets no slot-o-matic hint" {
+  printf '#!/usr/bin/env bash\necho "error: cannot find symbol"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" != *"slot-o-matic skipped"* ]]
+  [[ "$output" != *"K15"* ]]
+}
+
+@test "BS-slotomatic-hint-win: a Windows drive-letter path is named in full" {
+  printf '#!/usr/bin/env bash\necho "WARNING: Could not process C:\\\\m\\\\src\\\\BLimiter.java: Found multiple metadata blocks"\necho "BLimiter.java:12: error: Slot with name limit not found in BLimiter, have you run slot-o-matic?"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"slot-o-matic skipped C:"*"BLimiter.java"* ]]
+}
+
+@test "BS-slotomatic-hint-noskip: no 'Could not process' line -> generic rerun hint, no empty-marker advice" {
+  printf '#!/usr/bin/env bash\necho "BLimiter.java:12: error: Slot with name limit not found in BLimiter, have you run slot-o-matic?"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"slotomatic --info"* ]]
+  [[ "$output" != *"empty BEGIN/END"* ]]
+}
