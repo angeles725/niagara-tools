@@ -5,7 +5,7 @@
 
 - **The N4 extension idiom (one shape for most SPIs):** to extend the framework, *subclass a framework base + register a `<type>`/agent in `module.xml` + hand back a self-describing SPI object* — there is NO central registry the author edits. Learn it once; B778 (service/ORD-scheme/subscription), B782 (query providers), and B785 (rdb dialect) are three instances. `[ev: corpus B778/B782/B785/B777]`
 - **Custom SERVICE:** `extends BAbstractService`, override `getServiceTypes(){return new Type[]{TYPE};}` → registered by dropping it under `/Services` (auto at bootstrap); hook `serviceStarted()`; look up via `Sys.getService(Type)`. `[ev: corpus B778]`
-- **New ORD SCHEME:** `extends BOrdScheme` (a `BSingleton`) + `@NiagaraType(ordScheme="<id>")` + `@NiagaraSingleton`; ctor `super("<id>")`; override `resolve()`; Slot-o-Matic emits `<type … ordScheme="<id>"/>`; registry resolves via `BOrdScheme.lookup`. `[ev: corpus B778]`
+- **New ORD SCHEME:** `extends BOrdScheme` (a `BSingleton`) + `@NiagaraType(ordScheme="<id>")` + `@NiagaraSingleton`; ctor `super("<id>")`; override `resolve()`; Slot-o-Matic emits `<type … ordScheme="<id>"/>`; registry resolves via `BOrdScheme.lookup`; `resolve()` throws `UnresolvedException` for a missing or unreadable target (never returns null) and must tolerate unmounted or offline components. `[ev: corpus B778]` `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
 - **Server-side SUBSCRIPTION:** subclass `javax.baja.sys.Subscriber`, override `event(BComponentEvent)`, call `subscribe(component, depth, cx)` and `unsubscribeAll()` on stop (the SERVER complement to the BOX client). A plain `Subscriber` defaults to the `PROPERTY_EVENTS` mask (a `TypeSubscriber` to `SELF_EVENTS`). For a timed read without teardown use a **lease**: `lease()`, `lease(depth)`, `lease(depth, millis)`; the default is 60 s per space (`BComponentSpace.getDefaultLeaseTime()` returns `60000L`; a Fox proxy space takes the server's value) and the first read after `lease()` may still be stale — read again later. `[ev: corpus B778]` `[ev: corpus B1306 §1306.1 rows 1-2, 5]` `[ev: corpus B1418 §1418.4]` [ev: retro devguide415-nav-subscriptions-tags-ords Δ2]
 - **Observed-side `subscribed()` / `unsubscribed()` — demand activation on the WATCHED component:** these callbacks fire ON a component when a remote client (Workbench, BOX browser) STARTS/STOPS watching it — distinct from `Subscriber.subscribe()` (which is the OBSERVER API: *I am watching*). Override to do demand-based resource acquisition/release (e.g., open a serial port only while someone is watching the status component). Caveat: fires only at the 0↔1 subscriber-count crossing, not on every client join/leave. **A watching client is only one of three causes:** a component is subscribed when it is permanently subscribed, when any `Subscriber` holds it, or when it has knobs (outgoing links) while running — `isPermanentlySubscribed() || getSubscribers().length > 0 || (getKnobs().length > 0 && isRunning())` (`BComponent.java:408-414`). A LINKED point is therefore subscribed for good, with no client, and keeps propagating even a stale value; demand activation keyed on "someone is looking" also fires for every linked component. Subscribing to proxy points adds poll load: each subscribed polled point joins the poll scheduler (a course student overflowed a queue and restarted the station at ~5000 points) — subscribe what you use, and size the poll buckets (`types/driver-authoring.md` § 4). `[ev: corpus B4 §4.3.1, B408 §408.4.2]` `[ev: corpus B1306 §1306.2 C2]` `[ev: corpus B1418 §1418.4]` [ev: retro devguide415-nav-subscriptions-tags-ords Δ2]
 - **BOX→SubscribeCallbacks→subscribed() causal chain:** browser/Workbench BOX `sub` op → `ProxyBroker.subscribeOp` → space subscriber-count 0→1 → `SubscribeCallbacks.subscribe()` fires → `component.subscribed()` fires. This is WHY `subscribed()` and `SubscribeCallbacks` fire — the trigger is a remote client starting a live subscription, not a local observer. A `BComponent` author who overrides `subscribed()` is therefore reacting to a Workbench panel or browser SPA opening a live view on that component. `[ev: corpus B408 §408.4.2, B512 §512.3–512.4]`
@@ -36,7 +36,8 @@ Two independent levers control whether a slot appears in the nav sidebar:
 
 - **`isNavChild()→false`** hides the component from the nav sidebar ONLY. The slot still exists, is wireable, and is visible everywhere else (property sheet, wireboard). Override this when a child should not clutter the nav tree but must remain accessible for configuration. Contrast with `Flags.HIDDEN`, which removes the slot from ALL UI (nav, property sheet, wireboard) — use `HIDDEN` only for truly internal machinery.
 - **Nav order = slot declaration order:** the nav tree lists `getNavChildren()` in the same order as slots are declared with `@NiagaraProperty`. Reorder the field declarations to reorder the nav sidebar entries. There is no separate nav-order property.
-- **Virtual nav node recipe:** to expose a nav node that has no backing `@NiagaraProperty` slot (e.g. a synthetic grouping folder), implement `BINavNode` manually — override `getNavChildren()`, `getNavOrd()` (must return a stable `BOrd`), and `getNavIcon()`. Return the synthetic instance from the parent's `getNavChildren()` alongside its real child components. Canonical example: `BModulePaletteNode`. `getNavOrd()` must be stable across renames and restarts; a `BOrd` based on a constant string or handle is preferred over a computed slot path.
+- **Virtual nav node recipe:** to expose a nav node that has no backing `@NiagaraProperty` slot (e.g. a synthetic grouping folder), implement `BINavNode` manually — override `getNavChildren()`, `getNavOrd()` (must return a stable `BOrd`), and `getNavIcon()`. Return the synthetic instance from the parent's `getNavChildren()` alongside its real child components. Canonical example: `BModulePaletteNode`. `getNavOrd()` must be stable across renames and restarts; a `BOrd` based on a constant string or handle is preferred over a computed slot path. For a container of virtual nodes extend `BNavContainer`/`BNavFolder` (`addNavChild`, `removeNavChild`, `reorderNavChildren`) instead of hand-writing the list.
+- **`getNavChildren()` ignores permissions** (its javadoc, `BINavNode.java:96-98`): a servlet or `-ux` walk that returns nav children to a user filters them with `BNavContainer.filter(nodes, cx)` (`BNavContainer.java:364`). Logic walks do not use the nav tree at all: `getChildren(Class)`, `getChildComponents()` or `getProperties()` + `SlotCursor.next(Class)` (`BComponent.java:1526,1552`). All [CERT] niagara-help 4.15.6.20 source, corpus B1307 §1307.1 rows 1-4, 7. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ6]`
 
 ## Link lifecycle callbacks `[ev: corpus B958 §958.1–958.2]`
 
@@ -69,12 +70,22 @@ so a station restart that starts the target before the source does not leave the
 ### Call-site recipe
 
 ```java
-BOrd ord = BOrd.make("slot:/MyComp/mySlot");   // parse once; store in a field if reused
-BObject result = ord.resolve(base, cx).get();  // base may be null for absolute ORDs
+BOrd ord = BOrd.make(BOrd.make("station:|slot:/MyComp"), "slot:mySlot");  // compose, never concatenate
+OrdTarget target = ord.resolve(base, cx);         // narrowest base you have + the caller's Context
+if (!target.canRead()) throw new PermissionException("…");  // when the caller's permissions matter
+BObject result = target.get();
 ```
 
-- `BOrd.make(string)` parses and normalizes the ORD string.
-- `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget.get()` → `BObject`.
+- `BOrd.make(string)` only wraps the string (`"null"` → `BOrd.NULL`); a malformed ORD fails at `resolve`, and
+  `parse()` is not cached, so keeping a `BOrd` in a field does not save parsing. [CERT] `javax/baja/naming/BOrd.java:32-34`
+  (baja vineflower) `[ev: corpus B1308 §1308.2 C1]`
+- `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget`; `get()` then yields the `BObject`.
+  The one-argument `get(base)`/`resolve(base)` and the no-argument forms pass a **null Context** (`BOrd.java:90-107`):
+  no user, no permission filter. Pass the caller's Context; use `resolve()` + `canRead()` when the caller's
+  permissions matter and `get(base, cx)` only deliberately. Resolve against the narrowest base you hold (the
+  component, not the station root). `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
+- Store a portable ORD with `relativizeToSession()` (`station:|slot:…`), not the absolute host form.
+  `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 - **Absolute ORD** (host-anchored, starts with a host-type scheme): `base` may be `null`.
 - **Relative ORD**: requires a non-null `base` component; resolution starts from the base context.
 - **Normalization rule:** when a host-query fragment is encountered mid-chain, all prior fragments are trimmed — `slot:/a|ip:host|slot:/b` resolves as `ip:host|slot:/b` (the `ip:` fragment resets the root). Build cross-station ORDs from the host query outward. `[ev: corpus B5 §5.1.5]`
@@ -117,7 +128,7 @@ Warning: resolves the **first-registered** instance — same semantics as `Sys.g
 
 ### `h:` handle scheme — BOG-document-local links `[ev: corpus B5 §5.2.4]`
 
-- A handle (`h:N`) is **unique per BOG document, not globally** — the same `h:5` in two BOG files refers to two distinct entities.
+- A handle (`h:N`) is **unique within one component space, not globally** (devguide `naming.txt:159-162`) — the same `h:5` in two BOG files or two stations refers to two distinct entities. `[ev: corpus B1308 §1308.2 C2]`
 - `BOrd` properties that link to another component in the same BOG file serialize as `v="h:N"`.
 - `h:` ORDs are **path-independent**: rename or move the target component within the document without breaking the reference — contrasts with `slot:` which breaks on rename.
 - Use `h:` for palette template intra-document links; use `slot:` for human-readable cross-document references.
@@ -139,7 +150,9 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 
 ### `nav:` ORD scheme — nav tree walk `[ev: corpus B35 §35.5.2]`
 
-`BNavScheme` resolves `nav:Station/Floor1/Zone` by walking `getNavChild()` segment-by-segment:
+`BNavScheme` (4.13+) resolves against a **nav-node base** and rejects a leading `/`: write `root:|nav:Station/Floor1/Zone`,
+never a bare `nav:` path. [CERT] `javax/baja/nav/BNavScheme.java:80-124` (corpus B1307 §1307.2 C3)
+`[ev: retro devguide415-nav-subscriptions-tags-ords Δ6]` It walks `getNavChild()` segment-by-segment:
 
 - Each path segment calls `getNavChild(name)` on the current node until the leaf is reached.
 - Permission enforcement is **inline**: a denied node raises `UnresolvedException` — the UI silently fails to expand that branch with **no error shown to the user**.
@@ -149,7 +162,8 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 
 `BHierarchyScheme extends BSpaceScheme` (`ordScheme="hierarchy"`); body parses as `HierarchyQuery extends SlotPath`.
 
-- A `hierarchy:` ORD **survives component-tree reorganisation** — it resolves through tags/relations to the real component, not through slot paths. Prefer over `slot:` when a module must hold a reference to a component that operators may reorganize.
+- **`hierarchy:` ORDs resolve only in a client** (Workbench, browser): "the resulting hierarchies only exist in the client environment" (devguide `hierarchy.txt:63-66`). Station code calls `BHierarchyService.resolveHierarchyLevelElem(new HierarchyQuery("/<hierarchy>"))`, which throws unless it runs in the station (`BHierarchyService.java:404-406`, hierarchy-rt vineflower), and caches the result. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]` `[ev: corpus B1311 §1311.2 C3]`
+- In a client, a `hierarchy:` ORD **survives component-tree reorganisation** — it resolves through tags/relations to the real component, not through slot paths.
 - The last path segment encoded as `station$3a$7c` (URL-escaped `station:|`) is the **ENTITY seam**: it dereferences to the real station component with an inline permission check.
 - Choose `hierarchy:` when the reference must be stable across renames and tree moves; choose `slot:` when you control the component path and human readability of the ORD matters more than stability.
 
@@ -164,46 +178,63 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 ## Grouping and relating declaration surfaces (three postures)
 
 - **Categories:** author NOTHING — every `BComponent` is `BICategorizable`; categories are operator-runtime via `BCategoryService`. Emit NO category scaffold. `[ev: corpus B781]`
-- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. Full `BCustomRelation` recipe — declare a `BCustomRelation extends BRelationInfo` with source scope (`entity` or `station`), target `BTypeSpec`, and inbound/outbound relation-id facet maps; override `addRelations(entity, cx)` to resolve targets via an ORD/NEQL query:
+- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. Full `BCustomRelation` recipe — declare a `BCustomRelation extends BRelationInfo` with source scope (`entity` or `station`), target `BTypeSpec`, and inbound/outbound relation-id facet maps; override `addRelations(Entity entity, Collection<Relation> relations)` and add one `BasicRelation` per target. It gets no Context, so walk the tree from the entity, the way Tridium's own relation infos do, rather than run a station-wide query per entity:
 
   ```java
-  BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from module:BTargetType where ...")
-                                  .get(cx);
-  TableCursor<?> c = t.cursor();
-  while (c.next()) {
-      BComponent target = (BComponent) c.cell(0);
-      cx.add(new BasicRelation(relationId, target, /*inbound=*/false));
+  public void addRelations(Entity entity, Collection<Relation> relations) {
+      if (!(entity instanceof BMyEquip)) return;
+      for (BMyPoint p : ((BComponent) entity).getChildren(BMyPoint.class))
+          relations.add(new BasicRelation(getRelationId(), p, /*inbound=*/false));
   }
-  c.close();
   ```
 
-  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register the custom relation in the tag dictionary's constructor alongside the tag defs (it participates in the same `BSmartTagDictionary` registration; see `types/logic.md §Ship a tag dictionary`). `[ev: corpus B758 §758.2]`
+  [CERT] `com/tridium/tagdictionary/relation/BChildPointRelation.java:42-54` (tagdictionary-rt vineflower). Check every
+  snippet against the real overloads and callback signatures: the previous one called a non-existent `BOrd.get(cx)`.
+  `[ev: retro r8-t9g-nav Δ1]`
+
+  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register it through the dictionary's slots, not its constructor: define it in `relationDefinitions` (`BRelationInfoList`) and attach it to a `BTagRule`'s `relationList`, the same no-override recipe as the tags (`types/logic.md` § Ship a tag dictionary). [CERT] `tagdictionary-rt/decompiled/javax/baja/tagdictionary/BTagDictionary.java:116`, `BTagRule.java:74`. `[ev: corpus B758 §758.2]` `[ev: corpus B1311 §1311.2 C1]`
 - **Hierarchy:** compose a `BHierarchy` root + ordered `BLevelDef` children (`BQueryLevelDef`/`BRelationLevelDef` entity levels, `BGroupLevelDef`/`BListLevelDef` grouping) under `BHierarchyService`; subclass `BLevelDef`+`getElements` only for a bespoke level. `[ev: corpus B781]`
 
 ## Query/search/index surface
 
 - Declare a typed `BQuery`/NEQL payload + plug the matching `BIAgent` provider (`BQueryEngine` execute / `BColumnsProvider` table columns / `BISearchProvider` station search [`@AgentOn` scope×scheme] / `BSystemIndexer`+`BIIndexQueryProvider` station index [scope = a `BOrdList` of NEQL queries]) → read the resulting `BITable` cursor. `[ev: corpus B782]`
 
-## BQL from code — consumer cursor pattern `[ev: corpus B758 §758.4]`
+## BQL from code — consumer cursor pattern `[ev: corpus B758 §758.4]` `[ev: corpus B1237 §1237.7]`
 
 The CONSUMER side of BQL — used by a dashboard servlet or service method that runs a query from code:
 
 ```java
-BITable<?> t = (BITable<?>) BOrd.make(
-        "station:|slot:/|bql:select * from <module:Type> where …")
-    .get(Sys.getStation());
-TableCursor<?> c = t.cursor();
-while (c.next()) {
+BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from <module:Type> where …")
+    .get(Sys.getStation(), cx);                 // the CALLER's Context, never get(base) / get()
+try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
+  while (c.next()) {
     BObject cell = (BObject) c.cell(columnIndex);
-    // … process cell …
+    // … process cell; history/alarm record kept past next(): record.newCopy()
+  }
 }
-c.close();   // always close — leaks a resource if skipped
 ```
 
-- `from <module:Type>` is the select-by-registered-type mechanism — it finds every mounted instance of `module:Type` in the station space.
-- Always close the cursor in a `finally` block; a leaked cursor holds a read lock on the space.
+- **The Context is the access control.** Workbench hides unreadable components from a query; code does so only
+  when it passes the user's Context. `get(base)`, `get()` and a `null` Context run with no user (`BOrd.java:90-107`),
+  so a servlet that omits it leaks every component and counts differ from Workbench. `toolbelt/lint-null-context-write.sh`
+  WARNs on a `bql:` ORD resolved that way. `[ev: retro n4-course-drivers-bql-ords-files Δ1]`
+- `from <module:Type>` finds every mounted instance of `module:Type` in the station space.
 - Case rules (`LIKE` and slot names are case-sensitive, keywords are not; NEQL `(?i)` for a case-insensitive match): `types/dashboard.md` § BQL case rules `[ev: corpus B1418 §1418.3]`.
-- oBIX exposes the same query as `/obix/bql/<url-encoded-query>` — the same BQL string works over HTTP from a browser client.
+- **Close with try-with-resources** (a leaked cursor holds a read lock on the space). The cursor is iterable
+  (`for`, `stream()`); `Tables.slurp(t)` gives a `BIRandomAccessTable` when random access is needed
+  (`javax/baja/collection/Tables.java:51`, docSource). N4 has no `BICollection`/`BIList`.
+  `[ev: retro devguide415-runtime-api-corrections Δ9]` `[ev: corpus B1310 §1310.2 rows 10-11]`
+- **A single value:** append `|cell:0,0` to the ORD instead of iterating.
+- **Cursor records are reused:** call `newCopy()` on a history/alarm record you keep past the next `next()`.
+- **BQL never subscribes.** A proxy point's value is only as fresh as its last subscription: `BComponent.lease(points, 0)`
+  for a one-off fresh snapshot (the instructor warns the first read after a lease may still be stale — spoken, [CERT-a] corpus B1418 §1418.4),
+  `Subscriber` + `subscribe(points, 0, cx)` and `unsubscribeAll()` when done for a stream.
+- **Remote stations:** `ip:…|foxs:|…|bql:…` works in Workbench (it prompts) but not through `BOrd.get` in code;
+  open a `BFoxProxySession.make(host, port, useFoxs, credentials)` (`javax/baja/fox/BFoxProxySession.java:28-36`,
+  fox-rt vineflower) and resolve against it. The course instructor adds that the session can reuse a NiagaraNetwork
+  station's stored credentials, machine-to-machine only — a spoken claim, not traced in code [CERT-a] (corpus B1418 §1418.4);
+  such claims stay marked until a code or doc read backs them. `[ev: retro r8-t9g-nav Δ2]`
+- oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
 ## Templates are artifact production, not a type SPI

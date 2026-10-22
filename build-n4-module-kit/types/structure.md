@@ -317,41 +317,37 @@ F1-accessible help; `bajadoc-module` adds the API documentation layer.
 
 `[ev: corpus B759 §759.6]`
 
-## Nav file packaging `[ev: corpus B35 §35.5.3]`
+## Nav files `[ev: corpus B35 §35.5.3]` `[ev: retro devguide415-nav-subscriptions-tags-ords Δ5]`
 
-A module can ship a static nav tree by bundling one or more `.nav` files as JAR resources.
-
-### File locations
-
-| Location | When used |
-|---|---|
-| `rc/nav/<name>.nav` inside the module JAR | Module-packaged static nav tree (ships with the module) |
-| `~/stations/<stationName>/nav/<name>.nav` | Station-local nav file (operator-placed, not in the JAR) |
-
-At startup, Workbench and the station discover `.nav` files in both locations and merge them into the nav sidebar.
+A `.nav` file is a static nav tree a user sees instead of the component tree. **Nothing discovers it**: a file
+is used only when a user's `navFile` ORD property points at it (`BUser.navFile`, `javax/baja/user/BUser.java:621`)
+or the user's profile names it as the mobile nav file. Keep it under the station's Files and assign the ORD on
+the user or the user prototype. No Tridium module ships one: 0 `.nav` files across 728 jars (corpus B1353 §1353.1),
+so an `rc/nav/` convention inside a module jar is not a framework feature.
+`[ev: retro devguide415-r2-runtime-contracts-formats Δ5]` `[ev: corpus B1317 §1317.2]`
 
 ### XML schema
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<nav>
-  <node name="My Module" ord="slot:/Services/MyService" icon="module://mymod/icons/x16/service.png">
-    <node name="Status"  ord="slot:/Services/MyService/status"/>
-    <node name="Config"  ord="slot:/Services/MyService/config"/>
+<nav version="1.0">
+  <node name="My Module" ord="station:|slot:/Services/MyService" icon="module://mymod/icons/x16/service.png">
+    <node name="Status"  ord="station:|slot:/Services/MyService/status"/>
+    <node name="Config"  ord="station:|slot:/Services/MyService/config"/>
   </node>
 </nav>
 ```
 
-- `name` — display label in the nav sidebar.
-- `ord` — the target ORD the node resolves to; supports any registered scheme (`slot:`, `service:`, `nav:`, etc.).
-- `icon` — optional `module://` ORD pointing to a 16×16 PNG icon.
-- Nodes nest arbitrarily; children are listed in declaration order (same as slot-order rule for `BINavNode`).
+- The root is `<nav version="1.0">` with exactly one root `<node>`: the decoder throws `Root element must be "nav"`,
+  `Only version 1.0 is supported` or `Missing root <node>` otherwise.
+- Each `<node>` reads `name` (label), `ord` (target, any scheme) and optional `icon`; nodes nest, in document order.
+- [CERT] `javax/baja/nav/NavFileDecoder.java:127-138,166-168` (niagara-help 4.15.6.20 source)
 
-### Static-cache gotcha
+### Cache
 
-`NavFileDecoder.cache` is a **JVM-static `Map`** keyed by ORD. Editing a `.nav` file on disk while Workbench is running does **NOT** refresh the nav sidebar — Workbench reads each file once and caches it for the session lifetime. The sidebar shows the stale tree until the user does **Ctrl+R (station reload)** or reconnects.
-
-**Design rule for development:** ship the `.nav` as a resource in `rc/nav/` inside the module JAR, not as an editable file outside it. This way the only way to change it is to rebuild and redeploy the JAR — which forces a Workbench reconnect and clears the cache naturally. An editable `.nav` file outside the JAR is a dev-time footgun: changes appear silent ("why doesn't my nav update?") until the session is restarted.
+`NavFileDecoder` caches each parsed file by its absolute ORD and re-parses it when the file's `lastModified`
+changes (`NavFileDecoder.java:51-71`), so an edited file is picked up on its next load; there is no
+session-lifetime staleness to design around. `[ev: corpus B1307 §1307.2 C2]`
 
 ## The `-se` (Java SE) runtime profile
 
