@@ -591,12 +591,22 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BProxyExt.java:923-930`, `BBacnetDevice.java:1096-1102`, `BPingMonitor.java:484-488,526,532`, corpus B1348 §1348.1, B1337.
 - **Target:** `types/driver-authoring.md` §5 after `:182`.
 - **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; r3di Δ1, drp Δ7): `types/driver-authoring.md` § 5 (a failed
+  poll is not a failed ping; the BACnet `ping()` + `maxPollTimeouts` pattern; ping-monitor rules). **Premise checked:**
+  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`Drivers/driver-PingMonitor.txt:37-40`)
+  vs code — code wins for behaviour: `BProxyExt.readFail` makes no device call (vineflower driver-rt 4.14.0.162
+  `BProxyExt.java:463-469`); BACnet does it in its own poll path (vineflower bacnet-rt 4.14.0.162
+  `BBacnetDevice.java:1093-1101`). 4.13/4.15 code not verified. No lint (policy in the module's own comm code).
 
 ### C45 — BACnet `statusFlags` facet or field alarm/fault never reaches Niagara status
 - **Sources:** drp#Δ4 (primary) · r3di#Δ3 corrects scope (COV and polled alike; cost note)
 - **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `Bacnet/TroubleshootingBACnet-4FF09FBA.txt:86`, corpus B1327 row 3, B1348 §1348.2.
 - **Target:** `types/driver-authoring.md:129`, `types/dashboard.md` health read.
 - **Lint-able:** yes — bog check. **Fold type:** doc section + bog lint.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; drp Δ4, r3di Δ3): `types/driver-authoring.md` § 2 BACnet
+  `statusFlags` paragraph (vineflower bacnet-rt 4.14.0.162 `BBacnetProxyExt.java:808-822`; COV and polled alike per
+  r3di Δ3's scope correction of drp Δ4, corpus B1348 §1348.2). The dashboard side is a pointer. Owed Go lint G36
+  `bacnet-status-flags`.
 
 ### C46 — oBIX exposure: licence, priority writes, watches, hidden ≠ protected
 - **Sources:** drp#Δ9 (primary) · r3wsh#Δ6 extends (HIDDEN removes from listings only; served by path)
@@ -625,6 +635,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1252 §1252.4 (`BPair.encodeToString()` via `toString()` → `(1,00,2,00)` on `es`).
 - **Target:** `types/value-types.md:123-144`.
 - **Lint-able:** yes — WARN `String.format(`/`.toString()` on a `B*` field in `encodeToString`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; poh Δ2): `types/value-types.md` § 3 Custom BSimple (encode
+  with encoders: vineflower baja 4.14.0.162 `BObject.java:111-113`, `BDouble.java:131-133,261-262,354-381`; the course
+  `BPair.java:78-81` as the failing example). The `es` corruption is `[INFER]` from the code (not executed). Owed Go
+  lint G37 `bsimple-encode-locale`.
 
 ### C50 — Staging comparisons need an explicit NaN/null fallback
 - **Sources:** rcf#Δ9 (primary)
