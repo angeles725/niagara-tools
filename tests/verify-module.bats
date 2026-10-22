@@ -568,3 +568,68 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" != *"missing UNITS"* ]]
 }
+
+# --- VSRC: the shared --src check opening (src_or_skip / src_dir_or_skip) and Java walk (java_files) ---
+# Every --src check opens the same way: SKIP "no --src" without --src, then (for the checks that walk
+# <profile>/src) SKIP "no <profile>/src" when that dir is absent. VSRC1/VSRC2 pin those exact rows per
+# check, so a refactor of the shared opening cannot drop or reword one. VSRC3 pins the D9b dot-dir prune
+# of the shared walk for every walking check.
+# NAMED MUTATION: reword the "no --src" detail in src_or_skip -> VSRC1 fails.
+# NAMED MUTATION: drop `-type d -name '.*' -prune -o` from java_files -> VSRC3 fails.
+
+# vsrc_row <status> <check> <jar> <detail>: one report row in verify-module's exact format.
+vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
+
+@test "VSRC1: without --src every source check reports SKIP 'no --src' (exact rows)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  j="$TMPDIR_T/Foo-rt.jar"
+  run "$VM" "$j"
+  [ "$status" -eq 0 ]
+  for c in typecount facets facets-req ord-literal phantom-dep moduletest cross-module-type \
+           transient-operator compact3-import subscription-leak slot-wall; do
+    row=$(vsrc_row SKIP "$c" "$j" "no --src")
+    printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
+  done
+}
+
+@test "VSRC2: --src with no <profile>/src makes every walking check report SKIP 'no <pd>/src' (exact rows)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  j="$TMPDIR_T/Foo-rt.jar"; pd="$TMPDIR_T/mod/Foo-rt"
+  run "$VM" --src "$TMPDIR_T/mod" "$j"
+  [ "$status" -eq 0 ]
+  for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
+           subscription-leak slot-wall; do
+    row=$(vsrc_row SKIP "$c" "$j" "no $pd/src")
+    printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
+  done
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row PASS typecount "$j" "jar declares 1 types == module-include.xml")"
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row SKIP phantom-dep "$j" "no *.gradle.kts in $pd")"
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row SKIP moduletest "$j" "no production .java under src/")"
+}
+
+@test "VSRC3: a dot-dir (.deploy-baseline) under src is pruned by every walking check (D9b)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  src="$TMPDIR_T/mod/Foo-rt/src"; mkdir -p "$src/com/x" "$src/.deploy-baseline/com/x"
+  printf 'package com.x;\npublic class A extends BComponent {}\n' > "$src/com/x/A.java"
+  # The stale snapshot trips every walking check; none of it may be reported.
+  {
+    printf 'package com.x;\nimport java.awt.Color;\n'
+    printf 'public class Stale extends TypeSubscriber {\n'
+    printf '  Object f = BFacets.make(BFacets.MIN, -40);\n'
+    printf '  String o = "station:|slot:/Drivers";\n'
+    printf '  @NiagaraProperty(name = "roomSetpoint", type = "double", flags = Flags.OPERATOR)\n'
+    printf '  @NiagaraProperty(name = "t", type = "double", flags = Flags.TRANSIENT | Flags.OPERATOR)\n'
+    printf '  @NiagaraProperty(name = "f", type = "org.other.Foreign")\n'
+    for i in $(seq 1 16); do printf '  @NiagaraProperty(name = "p%s", type = "boolean")\n' "$i"; done
+    printf '}\n'
+  } > "$src/.deploy-baseline/com/x/Stale.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"deploy-baseline"* ]]
+  for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
+           subscription-leak slot-wall; do
+    printf '%s\n' "$output" | grep -qE "^PASS  $c " || { echo "no PASS row for $c"; return 1; }
+  done
+}
