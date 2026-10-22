@@ -211,7 +211,7 @@ check_bytecode_major() {  # every class, not just the first
   row FAIL bytecode "$jar" "$bad of $n classes not major 52 (expected Java 8); first: $first"; return 1
 }
 check_signed() {
-  if printf '%s\n' "$LIST" | grep -q '^META-INF/NIAGARA4\.SF$'; then row PASS signed "$1" "META-INF/NIAGARA4.SF present"; return 0; fi
+  if grep -q '^META-INF/NIAGARA4\.SF$' <<< "$LIST"; then row PASS signed "$1" "META-INF/NIAGARA4.SF present"; return 0; fi
   row FAIL signed "$1" "META-INF/NIAGARA4.SF missing (jar not signed)"; return 1
 }
 check_types_have_classes() {
@@ -220,7 +220,7 @@ check_types_have_classes() {
   while IFS= read -r cls; do
     [ -n "$cls" ] || continue; tn=$((tn+1))
     f="$(printf '%s' "$cls" | tr . /).class"
-    printf '%s\n' "$LIST" | grep -qx "$f" || { missing=$((missing+1)); [ -n "$firstmiss" ] || firstmiss="$cls"; }
+    grep -qx "$f" <<< "$LIST" || { missing=$((missing+1)); [ -n "$firstmiss" ] || firstmiss="$cls"; }
   done <<< "$TYPES"
   if [ "$missing" -eq 0 ]; then row PASS types "$jar" "$tn declared types resolve to classes"; return 0; fi
   row FAIL types "$jar" "$missing of $tn declared types have no class; first: $firstmiss"; return 1
@@ -416,12 +416,12 @@ check_palette() {  # an EMPTY module.palette on a module that declares types = n
   # Also WARNs (palette-root) when the root <p> uses t="b:Folder" (gated) instead of t="b:UnrestrictedFolder" (idiomatic).
   # [Δ1/B746 §746.1]
   local jar="$1" pal entries types
-  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP palette "$jar" "no module.palette"; return 0; }
+  grep -q '^module\.palette$' <<< "$LIST" || { row SKIP palette "$jar" "no module.palette"; return 0; }
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
   # Δ1/B746 §746.1: b:Folder is access-controlled (gated by category permission) — engineers without the
   # folder's category permission get "access denied" on expansion. b:UnrestrictedFolder is the idiomatic
   # ungated palette root. WARN independently of the entries count.
-  if printf '%s' "$pal" | grep -qF 't="b:Folder"'; then
+  if grep -qF 't="b:Folder"' <<< "$pal"; then
     row WARN palette-root "$jar" "module.palette root uses t=\"b:Folder\" (access-controlled) — use t=\"b:UnrestrictedFolder\" for ungated palette expansion [ev: corpus B746 §746.1]"
   fi
   # component entries carry a name (<p n="..."/>); the b:Folder root has no n= so it is naturally excluded
@@ -444,7 +444,7 @@ check_wb_scaffold() {
   local jar="$1" base n_classes pal entries
   base=$(basename "$jar" .jar)
   case "$base" in *-wb) ;; *) row SKIP wb-scaffold "$jar" "not a -wb jar"; return 0 ;; esac
-  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
+  grep -q '^module\.palette$' <<< "$LIST" || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
   n_classes=$(printf '%s\n' "$LIST" | grep -c '\.class$' || true)
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
   entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
@@ -484,7 +484,7 @@ check_phantom_dep() {
   phantom_list=""
   while IFS= read -r dep; do
     [ -z "$dep" ] && continue
-    if ! printf '%s\n' "$gkt_deps" | grep -qxF "$dep"; then
+    if ! grep -qxF "$dep" <<< "$gkt_deps"; then
       phantom_list="${phantom_list:+$phantom_list, }$dep"
     fi
   done < <(printf '%s' "$MX" | grep -oE '<dependency[[:space:]]+[^>]*\bname="[^"]*"' \
@@ -509,7 +509,7 @@ check_moduletest_present() {
   [ -d "$pd" ] || { row SKIP moduletest "$jar" "no source dir $pd"; return 0; }
   njava=$(find "$pd/src" -name '*.java' 2>/dev/null | grep -c . || true)
   [ "$njava" -ge 1 ] || { row SKIP moduletest "$jar" "no production .java under src/"; return 0; }
-  mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1)
+  mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1 || true)
   if [ -z "$mti" ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 1; fi
     row WARN moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 0
@@ -639,7 +639,7 @@ for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
   LIST=$(unzip -Z1 "$JAR" 2>/dev/null) || { echo "verify-module: not a zip: $JAR" >&2; exit 3; }
   MX=""; TYPES=""
-  if printf '%s\n' "$LIST" | grep -q '^META-INF/module\.xml$'; then
+  if grep -q '^META-INF/module\.xml$' <<< "$LIST"; then
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi
