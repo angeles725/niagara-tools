@@ -163,6 +163,12 @@ func TestParse(t *testing.T) {
 		{Raw, []string{"--strict", dir}, false, nil, name + ": not a directory: --strict\n"},
 		{Raw, []string{"-h"}, false, nil, name + ": not a directory: -h\n"},
 		{Raw, []string{file}, false, nil, name + ": not a directory: " + file + "\n"},
+		{Exact, nil, false, nil, usage + "\n"},
+		{Exact, []string{dir}, false, []string{dir}, ""},
+		{Exact, []string{dir, dir}, false, nil, usage + "\n"},
+		{Exact, []string{"-h"}, false, nil, name + ": not a directory: -h\n"},
+		{Exact, []string{"--strict"}, false, nil, name + ": not a directory: --strict\n"},
+		{Exact, []string{"--strict", dir}, false, nil, usage + "\n"},
 		{One, []string{"--strict", dir}, true, []string{dir}, ""},
 		{One, []string{dir, dir}, false, nil, usage + "\n"},
 		{One, []string{"--", "--strict"}, false, nil, name + ": not a directory: --strict\n"},
@@ -500,5 +506,25 @@ func TestCommandRuleOrder(t *testing.T) {
 		if code := main([]string{args, root}, s); code != 1 || o.String() != want {
 			t.Errorf("%s: exit %d out\n%s\nwant\n%s", args, code, o, want)
 		}
+	}
+}
+
+func TestParseExactUsageError(t *testing.T) {
+	for _, args := range [][]string{nil, {"a", "b"}, {"--", "a"}} {
+		_, err := Parse(Exact, "lint-x", "usage: lint-x.sh <java-root>", args)
+		var ue *UsageError
+		if !errors.As(err, &ue) {
+			t.Errorf("Parse(Exact, %q) error %v, want a *UsageError", args, err)
+		}
+	}
+	main := Command(Spec{Tree: treeFake{id: "lint-e"}, Mode: Exact, Usage: "usage: lint-e.sh <java-root>", UsageExit: 2,
+		Select: Selection{Names: []string{"*.java"}}})
+	s, _, e := stdio()
+	if code := main([]string{"lint-e", "--strict", "x"}, s); code != 2 || e.String() != "usage: lint-e.sh <java-root>\n" {
+		t.Errorf("Exact two args: exit %d %q, want 2 and the usage line", code, e)
+	}
+	s, _, e = stdio()
+	if code := main([]string{"lint-e", "-h"}, s); code != 3 || e.String() != "lint-e: not a directory: -h\n" {
+		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
 	}
 }

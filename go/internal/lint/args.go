@@ -15,6 +15,7 @@ const (
 	First             // [--strict] [--] <root>...: only the first root is checked and scanned
 	Each              // [--strict] [--] <root>...: every root is checked first, then scanned in order
 	Raw               // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+	Exact             // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 )
 
 // Args is a parsed command line.
@@ -34,7 +35,7 @@ func (e *UsageError) Error() string { return e.Text }
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 	var a Args
 flags:
-	for mode != Raw && len(args) > 0 {
+	for mode != Raw && mode != Exact && len(args) > 0 {
 		switch arg := args[0]; {
 		case arg == "--strict":
 			a.Strict = true
@@ -48,7 +49,7 @@ flags:
 			break flags
 		}
 	}
-	if len(args) < 1 || (mode == One && len(args) != 1) {
+	if len(args) < 1 || ((mode == One || mode == Exact) && len(args) != 1) {
 		return Args{}, &UsageError{usage + "\n"}
 	}
 	a.Roots = args[:1]
