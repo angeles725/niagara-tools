@@ -19,13 +19,13 @@ setup() {
 teardown() { rm -rf "$TMPDIR_T"; }
 
 # write_scanner: prints the awk scanner. Rows: `FORK <file>:<line> <var>` and, when a file ends with a loop
-# or a quote still open, `UNBALANCED <file> loops=<n> sq=<0|1> dq=<0|1>` (the scanner lost the structure,
+# a quote or a heredoc still open, `UNBALANCED <file> loops=<n> sq=<0|1> dq=<0|1>[ heredoc=<delim>]` (the scanner lost the structure,
 # so its silence on that file proves nothing).
 write_scanner() {
   cat <<'AWK'
 FNR == 1 { if (prev != "") endfile(prev); prev = FILENAME; hd = ""; sp = 0; pend = ""; sq = 0; dq = 0; split("", seen) }
 END { if (prev != "") endfile(prev) }
-function endfile(f) { if (sp != 0 || sq || dq) printf "UNBALANCED %s loops=%d sq=%d dq=%d\n", f, sp, sq, dq }
+function endfile(f) { if (sp != 0 || sq || dq || hd != "") printf "UNBALANCED %s loops=%d sq=%d dq=%d%s\n", f, sp, sq, dq, (hd != "" ? " heredoc=" hd : "") }
 # lex(s): sets CODE (every quoted character blanked) and SQFREE (single-quoted text blanked, double quotes
 # kept so "$line" stays visible); a trailing comment is cut from both. Quote state carries across lines.
 function lex(s,    i, c, n, inq) {
@@ -102,6 +102,13 @@ FORK $FIX/planted.sh:11 f"
   run scan "$FIX/unbalanced.sh"
   [ "$status" -eq 0 ]
   [ "$output" = "UNBALANCED $FIX/unbalanced.sh loops=1 sq=0 dq=0" ]
+}
+
+@test "FPL5: an unterminated heredoc is reported, so the skipped rest of the file is never read as clean" {
+  # Mutation: FPL5 -- dropping the hd check in endfile hides the per-line fork after the open heredoc.
+  run scan "$FIX/unterminated-heredoc.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" = "UNBALANCED $FIX/unterminated-heredoc.sh loops=0 sq=0 dq=0 heredoc=EOF" ]
 }
 
 @test "FPL4: the real toolbelt lints match the frozen baseline exactly (no new fork, no stale row)" {
