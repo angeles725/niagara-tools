@@ -281,6 +281,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-p1-control.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-sign.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-slots.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r8-p1-tests.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-web.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-headers.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-k15.md | kit | 2026-10-23 | folded | 1 |

@@ -598,18 +598,35 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** commit 337ee6c (two BUILD SUCCESSFUL runs with 0 tests).
 - **Target:** new `toolbelt/run-niagara-test.sh`, `toolbelt/INDEX.md`, bats with three log fixtures.
 - **Lint-able:** yes. **Fold type:** script.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ2): the runner is a new script, which round 8
+  does not write in bash; its contract is in `types/moduleTest.md` § Known gotchas (read the `Total tests run` and
+  rejection lines by hand meanwhile) and its full spec is owed as Go tool G33 `run-niagara-test` (ledger fragment
+  r8-p1-tests). LEFT: the runner, its `toolbelt/INDEX.md` row and the three log fixtures.
 
 ### C41 — moduleTest doctrine, layout and template
 - **Sources:** tpb#Δ4 (primary: station tests for component behaviour, structural tests last resort) · tpb#Δ5 extends (structural-test advisory lint) · tpb#Δ6 extends (`moduleTest-include.xml` template + scaffold) · lex#Δ3 duplicate on the 4.14 layout + extends (BTestNg vs BTestNgStation, mockStatic, FINE assertions, no fixed sleeps)
 - **Evidence:** commit 337ee6c; corpus B1252 §1252.3, B1236 §1236.5-6; `toolbelt/lint-structure.sh:271-303`.
 - **Target:** `types/moduleTest.md`, `METHODOLOGY.md` testing tiers, `toolbelt/lint-structure.sh` (L12), `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN `srcTest` reading `.java` as text with no BTestNg class. **Fold type:** doc section + template + lint.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ4, Δ5, Δ6, lex Δ3): `types/moduleTest.md`
+  (client parity doctrine, base-class choice, idempotent station fixtures, DB seeding, mockStatic, no fixed sleeps,
+  `setup()` trap from docSource 4.14.0.162 `BTest.java:72`, `@BeforeTest` at `BTestNgStation.java:93-94`; the 4.14+
+  `test.` package layout from devkit-wb 4.14.0.162 `BNfooVideoDriverTest.java.vm:4` and the course suite), new
+  `templates/moduleTest-include.xml`, `METHODOLOGY.md` tier note. LEFT: `scaffold-module.sh` emission (outside the
+  surface); the structural-test advisory is owed as Go lint G34 `structural-tests` (a new check, not a small edit of
+  L12). Whether 4.14+ tooling still discovers the older layout is `[INFER]`. Pin KPT1.
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
 - **Evidence:** devguide `build.txt:238,250`, `upgradingBuild.txt:289`, corpus B1320, B1321.
 - **Target:** `types/third-party-libraries.md` after `:15` and near `:160`, `types/module-wiring.md` §1.
 - **Lint-able:** yes — WARN bundling okhttp/okio/kotlin-stdlib/commons-lang3/codec/slf4j/jose4j/httpclient5/bouncycastle; `import org.apache.http.`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-tests`, 2026-10-23; shl Δ1, Δ3, Δ4, Δ6): `types/third-party-libraries.md` § Before
+  bundling (nre without version, devguide 4.15.6.20 `build.txt:186`; a three-install drift table from `ls bin/ext` of
+  iC-Niagara 4.13.2.18, Honeywell OptimizerSupervisor 4.14.0.162 and Niagara 4.15.6.20; the wrapper table from corpus
+  B1321; `commonsLang-rt` empty in 4.15.6.20 by `unzip -l`, 424 `lang3` entries in the 4.14.0.162 copy; wrappers lend
+  no permissions), `types/module-wiring.md` § 1 `nre("g:a")` row. The okhttp half was WU-P0-9. Pin KPT2; owed Go lint
+  G35 `shipped-library-bundle`.
 
 ### C43 — Outbound HTTP ladder; the non-driver-client gate is closed by default; OAuth2
 - **Sources:** shl#Δ7 (primary ladder) · r3di#Δ4 corrects shl Δ7(b) (`enableNonDriverClients=false` → every send skipped with only a health fault; mount with `mountAtOrd`) · r3-report#R3 · r3di#Δ5 extends (OAuth2 via `oauth2-rt` + `BAuthorizationHeaderScheme`, the `email-rt` pattern)

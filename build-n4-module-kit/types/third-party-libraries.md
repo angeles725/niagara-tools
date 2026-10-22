@@ -33,6 +33,51 @@ embedded extJar — bundling a 3rd-party JAR is an accepted, working pattern.
 
 ---
 
+## Before bundling: `bin/ext` first, then a wrapper module `[ev: retro devguide415-r2-shipped-libraries Δ1]`
+
+**Step 1 — `ls <niagara_home>/bin/ext`.** A library there is visible to every module (boot delegation, above). Declare it
+with `nre("group:artifact")` and NO version — the devguide's `nre` configuration is "dependencies on jars in !bin/ext"
+(4.15.6.20 `build.txt:186`; `upgradingBuild.txt:281`: "libraries in !bin/ext and its subfolders") — and never bundle it.
+**The versions drift between releases**, so never pin them and re-check after an upgrade
+`[ev: retro devguide415-r2-shipped-libraries Δ3]` (listing of each install's `bin/ext`):
+
+| Library | 4.13.2.18 (iC-Niagara) | 4.14.0.162 (Honeywell OptimizerSupervisor) | 4.15.6.20 | Declare as |
+|---|---|---|---|---|
+| okhttp (+ okio, kotlin-stdlib) | 4.11.0 | 4.12.0 (kotlin 1.9.10) | 4.12.0 (okio 3.9.1, kotlin 2.0.20) | `nre("com.squareup.okhttp3:okhttp")` |
+| Apache HttpClient | httpclient 4.5.13 | httpclient 4.5.13 | **httpclient5 5.3.1** (no `org.apache.http`) | 4.15.6: `nre("org.apache.httpcomponents.client5:httpclient5")` |
+| jose4j | 0.9.3 | 0.9.6 | 0.9.6 | `nre("org.bitbucket.b_c:jose4j")` |
+| commons-codec | 1.15 | 1.16.1 | 1.19.0 | `nre("commons-codec:commons-codec")` |
+| commons-lang3 | — | not in `bin/ext`; in the `commonsLang-rt` module (424 `lang3` entries) | 3.19.0 | 4.15: `nre("org.apache.commons:commons-lang3")` |
+| slf4j-api | 2.0.3 | 2.0.9 | 2.0.17 (+ slf4j-jdk14) | `nre("org.slf4j:slf4j-api")` (routes to JUL) |
+| OWASP encoder | 1.2.3 | 1.2.3 | 1.3.1 | `nre("org.owasp.encoder:encoder")` |
+
+So `import org.apache.http.` that compiled against the 4.13/4.14 copy breaks on 4.15.6, and a module that must run on
+4.14 and 4.15 either bundles one HTTP client itself or uses okhttp. "—" = not checked. The full 4.15.6.20 catalog with
+the permissions each needs is corpus B1320 §1320.2. `[ev: corpus B1320 §1320.1-§1320.2]`
+
+**Step 2 — a Tridium wrapper module**, declared with `api(":<module>")` (4.15.6.20, corpus B1321 §1321.1)
+`[ev: retro devguide415-r2-shipped-libraries Δ4]`:
+
+| Module | Wraps | Prefer when |
+|---|---|---|
+| `jsonSmart-rt` | json-smart 2.6.0 (`net.minidev.json`) | small JSON parse/write in rt code |
+| `jsonToolkit-rt` | Tridium JSON components (jsonpath inside) | station-level JSON exchange by components |
+| `commonsIo-rt` / `commonsCompress-rt` | commons-io 2.20.0 / commons-compress 1.28.0 | stream, file, archive helpers |
+| `apachePoi-rt` | Apache POI | Excel read/write |
+| `jodaTime-rt` | Joda-Time 2.12.7 | interop only; new code uses `java.time` |
+| `oauth2-rt` | nimbus-jose-jwt, oauth2-oidc-sdk | client-credentials / JWT tokens (`types/cloud-connector.md` § 7) |
+| `abstractMqttDriver-rt` | Paho mqttv3, Jackson databind | a cloud MQTT driver |
+| `httpClient-rt` | no library; `javax.baja.httpClient` over `bin/ext` okhttp | REST through the station service (`types/cloud-connector.md` § 7) |
+
+`commonsLang-rt` is EMPTY in 4.15.6.20 (6 entries: manifest, `module.xml`, lexicon; `unzip -l modules/commonsLang-rt.jar`):
+use the `bin/ext` commons-lang3 there. **A wrapper does not lend its permissions:** your module's own
+`module-permissions.xml` still requests every group its code needs (`types/structure.md` § module-permissions.xml).
+`[ev: retro devguide415-r2-shipped-libraries Δ6]` `[ev: corpus B1321 §1321.3]` The bundling WARN (okhttp, okio,
+kotlin-stdlib, commons-lang3, commons-codec, slf4j, jose4j, httpclient5, bouncycastle in `uberjar(`/`implementation(`, and
+`import org.apache.http.`) is owed as Go lint G35 `shipped-library-bundle`.
+
+**Step 3 — bundle** (the paths below) only when neither exists.
+
 ## Packaging paths
 
 ### Path 0 — the plugin's `uberjar` (Tridium default; use this first)
