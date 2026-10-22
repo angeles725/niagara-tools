@@ -145,3 +145,19 @@ _rows() { sed -n '/^|---|/,$p' "$FK/retros/INDEX.md" | sed 1d; }
   [ "$status" -eq 1 ]
   [[ "$output" == *"stale"* ]]
 }
+
+@test "GRI-go: the wrapper exits 3 naming the cause when the Go module or the go toolchain is missing" {
+  # The bash entry point execs go/bin/gen-retro-index, building it first when missing; it never
+  # falls back silently. A copy outside the repo has no go/ module; a PATH without go cannot build.
+  local top="$TMPDIR_T/top"
+  mkdir -p "$top/build-n4-module-kit/toolbelt" "$top/build-n4-module-kit/retros" "$TMPDIR_T/bin"
+  cp "$GEN" "$top/build-n4-module-kit/toolbelt/"
+  run bash "$top/build-n4-module-kit/toolbelt/gen-retro-index.sh"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"no Go module at $top/go"* ]]
+  mkdir -p "$top/go"; printf 'module example.com/x\n' > "$top/go/go.mod"
+  ln -s "$(command -v bash)" "$TMPDIR_T/bin/bash"; ln -s "$(command -v dirname)" "$TMPDIR_T/bin/dirname"
+  run env PATH="$TMPDIR_T/bin" bash "$top/build-n4-module-kit/toolbelt/gen-retro-index.sh"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"go is not on PATH"* ]]
+}

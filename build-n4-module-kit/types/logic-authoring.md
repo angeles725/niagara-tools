@@ -202,6 +202,7 @@ c.close();   // always close — leaks a resource if skipped
 
 - `from <module:Type>` is the select-by-registered-type mechanism — it finds every mounted instance of `module:Type` in the station space.
 - Always close the cursor in a `finally` block; a leaked cursor holds a read lock on the space.
+- Case rules (`LIKE` and slot names are case-sensitive, keywords are not; NEQL `(?i)` for a case-insensitive match): `types/dashboard.md` § BQL case rules `[ev: corpus B1418 §1418.3]`.
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>` — the same BQL string works over HTTP from a browser client.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 

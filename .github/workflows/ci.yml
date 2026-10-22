@@ -57,6 +57,18 @@ jobs:
           sudo install "shellcheck-${SC}/shellcheck" /usr/local/bin/shellcheck
           shellcheck --version
 
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          cache: false
+
+      - name: Go gofmt + vet + test (go/)
+        run: cd go && test -z "$(gofmt -l . | tee /dev/stderr)" && go vet ./... && go test ./...
+
+      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
+        run: cd go && go build -o bin/ ./cmd/...
+
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
         run: shellcheck scripts/*.sh scripts/lib/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
 

@@ -11,7 +11,11 @@
 # Structural rules (comments blanked by lib/method-boundary.sh mb_strip):
 #   Scope     — a `Type[] getServiceTypes(...)` declaration with a body; an abstract/interface declaration
 #               (`;` before `{`) and a file without one are out of scope.
-#   Returned  — every `return <expr>;` of the body, the worst verdict wins (empty, other, unresolved, own).
+#   Returned  — every `return <expr>;` of the body, the worst verdict wins (empty > other > unresolved > own).
+#               A return inside a nested scope — a block lambda, an anonymous class, a local class — belongs to
+#               that scope, not to getServiceTypes(), and is skipped; a switch-rule block (`case A, B -> {`,
+#               `default -> {`, a guarded `case T t when (…) -> {`) is not one, a lambda on a case line is.
+#               String/char/text-block contents are blanked first, so no literal opens a scope or holds a return.
 #               <expr> is an array literal (`new Type[] { … }`), `null`, `new Type[0]`, or a field (`a`, `Own.a`,
 #               `(Type[]) a.clone()`) resolved through every `a = …;` assignment in the same file (a static
 #               initializer counts), read from the assignment itself, not from the start of its line.
@@ -35,6 +39,10 @@
 # Mutation: ST10 -- checking only the first return passes a getServiceTypes() whose fallback branch returns null
 # Mutation: ST11 -- reading the initializer from the line start stops at an earlier ';' and misses new Type[0]
 # Mutation: ST8 -- dropping getType() from the own-type set WARNs the vendor form new Type[] { this.getType() }
+# Mutation: ST12 -- counting nested-scope returns FAILs a lambda that returns null inside a method returning { TYPE }
+# Mutation: ST13 -- ranking other below unresolved reports a foreign-only array as merely unresolved
+# Mutation: ST14 -- classifying any '->' on a case line as a switch rule FAILs a lambda's return null on that line
+# Mutation: ST15 -- reading literal contents lets "class A" in a condition hide the method's return null
 # Mutation: ST6 -- matching inside comments flags a commented-out return new Type[0]
 # Mutation: ST-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: ST-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
@@ -59,15 +67,68 @@ function until_char(from, col, n, stop,    i, j, ch, out) {
   }
   return out
 }
-# body text of the brace block that opens on line `from`
-function block_body(from, n,    i, j, ch, d, started, out) {
-  d = 0; started = 0; out = ""
+# 1 when `seg` (the statement text before a `->` that precedes `{`) is a switch-rule label: `default`, or `case …`
+# whose labels hold no other `->` (that is a lambda on a case line), no assignment `=` (an old `case X:` label then
+# `r = () -> {`) and balanced parentheses (`case X: run(() -> {`); a guard (`case T t when (…)`) is a label
+function switch_rule(seg,    t, k, d, ch) {
+  sub(/^[[:space:]]+/, "", seg); sub(/[[:space:]]*->$/, "", seg)
+  if (seg == "default") return 1
+  if (seg !~ /^case[[:space:]]/ || index(seg, "->")) return 0
+  t = seg; gsub(/==|!=|<=|>=/, "", t); if (index(t, "=")) return 0
+  d = 0
+  for (k = 1; k <= length(seg); k++) {
+    ch = substr(seg, k, 1)
+    if (ch == "(") d++
+    else if (ch == ")" && --d < 0) return 0
+  }
+  return d == 0
+}
+# 1 when the `{` that follows text `pre` (literal contents already blanked by block_body) opens a nested scope
+# whose returns are not the method's: a block lambda (`-> {` that is not a switch rule), an anonymous class
+# (`new X(…) {`) or a local class/interface/enum
+function nested_opener(pre,    seg, k, d, ch) {
+  sub(/[[:space:]]+$/, "", pre)
+  seg = pre; sub(/^.*[;{}]/, "", seg)
+  if (pre ~ /->$/) return !switch_rule(seg)
+  if (seg ~ /(^|[^A-Za-z0-9_])(class|interface|enum)[[:space:]]+[A-Za-z_]/) return 1
+  if (pre !~ /\)$/) return 0
+  d = 0
+  for (k = length(pre); k > 0; k--) {
+    ch = substr(pre, k, 1)
+    if (ch == ")") d++
+    else if (ch == "(" && --d == 0) break
+  }
+  return (substr(pre, 1, k - 1) ~ /(^|[^A-Za-z0-9_])new[[:space:]]+[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*(<[^;{}()]*>)?[[:space:]]*$/)
+}
+# body text of the brace block that opens on line `from`; a nested scope (nested_opener) is replaced by `{}` so its
+# returns never count as the method's. mb_strip keeps literal contents, so here every character inside a "…", '…'
+# or """…""" literal becomes `_`: no brace, arrow, keyword or `return` is read from a literal. An unterminated
+# "…"/'…' ends at its line end (as in mb_strip); a text block carries across lines.
+function block_body(from, n,    i, j, ch, d, started, out, skip, q, tb) {
+  d = 0; started = 0; out = ""; skip = 0; tb = 0
   for (i = from; i <= n; i++) {
+    q = ""
     for (j = 1; j <= length(code[i]); j++) {
       ch = substr(code[i], j, 1)
-      if (ch == "{") { d++; if (!started) { started = 1; continue } }
+      if (tb || q != "") {
+        if (ch == "\\") { j++; ch = "__" }
+        else if (tb && substr(code[i], j, 3) == "\"\"\"") { tb = 0; j += 2; ch = "\"\"\"" }
+        else if (!tb && ch == q) q = ""
+        else ch = "_"
+      } else if (substr(code[i], j, 3) == "\"\"\"") { tb = 1; j += 2; ch = "\"\"\"" }
+      else if (ch == "\"" || ch == "\047") q = ch
+      else if (skip) {
+        if (ch == "{") skip++
+        else if (ch == "}" && --skip == 0) out = out "{}"
+        continue
+      }
+      else if (ch == "{") {
+        if (!started) { d = 1; started = 1; continue }
+        if (nested_opener(out)) { skip = 1; continue }
+        d++
+      }
       else if (ch == "}") { d--; if (started && d == 0) return out }
-      if (started) out = out ch
+      if (started && !skip) out = out ch
     }
     if (started) out = out "\n"
   }
@@ -105,7 +166,7 @@ function resolve(e, n,    f, init, v, out, seen) {
 }
 { raw[NR] = $0 }
 END {
-  rank["own"] = 1; rank["unresolved"] = 2; rank["other"] = 3; rank["empty"] = 4
+  rank[""] = 0; rank["own"] = 1; rank["unresolved"] = 2; rank["other"] = 3; rank["empty"] = 4
   n = NR
   mb_strip(raw, n, code)
   own = ""
@@ -118,7 +179,8 @@ END {
     head = until_char(i, 1, n, "{")
     if (index(head, ";") > 0) continue                     # abstract / interface declaration
     b = block_body(i, n); gsub(/[[:space:]]+/, " ", b)
-    # every `return <expr>;` counts; the worst wins: empty > other > unresolved > own (no return = unresolved)
+    # every `return <expr>;` of the method counts (nested scopes are blanked by block_body); the worst wins:
+    # empty > other > unresolved > own > "" (rank 0 = no return seen yet; no return at all = unresolved)
     verdict = ""; rest = b
     while (match(rest, /(^|[^A-Za-z0-9_])return[[:space:]][^;]*;/)) {
       e = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
