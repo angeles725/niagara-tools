@@ -49,8 +49,11 @@ insertion and corrupt persisted BOG values silently. [ev: code BEovOpModeEnum.ja
 The `false` flag means "return null on unknown ordinal" rather than throwing — caller checks null. [ev: code BEovOpModeEnum.java]
 
 Display names (Workbench property sheet, oBIX `<enum>` list) come from the **lexicon** (`module.lexicon`), keyed
-by `BOpMode.cooling`, `BOpMode.heating`, `BOpMode.off`. The tag itself is the wire value; the lexicon
-key produces the translated label. [ev: corpus B4 §4.2]
+by the BARE tag — `cooling`, `heating`, `off` — in the enum type's module; a `BOpMode.cooling` key is never read.
+The tag itself is the wire value; the lexicon key produces the translated label. A dynamic enum
+(`BEnumRange`) takes its lexicon module from a `lexicon=<module>` option, else shows the unescaped tag.
+[CERT] `com/tridium/sys/schema/EnumType.java:50` (`Lexicon.make(module, cx).get(entry.tag)`)
+`[ev: retro devguide415-lexicons-ux-i18n Δ1]` `[ev: corpus B1305 §1305.2 C2]`
 
 **Cross-module link rule (from `types/logic.md`):** a `BFrozenEnum` value linked ACROSS two custom modules forces
 a compile-time module dependency that the build system does not resolve easily. Use a plain `double` for

@@ -121,6 +121,11 @@ station needs UI services (common in practice). `[ev: corpus B958 §958.4]`
 
 `[ev: corpus B958 §958.3]`
 
+**A BQL query needs no station:** build the tree in a plain `BFolder` and run
+`BqlQuery.make(bql).resolve(OrdTarget.unmounted(folder)).get()`; give points values with `setOut(...)`, because
+`set()` does not work on an unmounted component. [CERT-doc] devguide `bql.txt:453-460`; `OrdTarget.java:196,208`
+(corpus B1308 §1308.1 row 4). `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
+
 ---
 
 ## Worked example — asserting link validation

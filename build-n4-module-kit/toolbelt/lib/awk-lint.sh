@@ -15,8 +15,8 @@
 #   . ".../lib/awk-lint.sh"
 #   awk_lint_parse <name> raw '<usage line>' "$@"
 #   awk_lint_list <find-test...>
-#   while IFS= read -r f; do ...; done < "$AL_TMP/files"
-#   awk_lint_exit <code>
+#   awk_lint_each '<awk program>'     (or a shell loop over "$AL_TMP/files")
+#   awk_lint_exit <code>              (e.g. "$AL_ROWS" for a lint whose every row fails)
 #
 # awk_lint_parse <name> <arity> <usage> <args...>
 #   Parses `[--strict] [--] <root>...`. <name> prefixes every message ("<name>: not a directory: ..."),
@@ -40,6 +40,15 @@
 #   Lists the files under the first root that match the find tests into "$AL_TMP/files" (scan_files).
 #   An incomplete walk prints "<name>: cannot list every file under <root>: <reason>" and sets
 #   AL_ERR=1; the files it did list are still written, so the caller scans them before exiting.
+#
+# awk_lint_each <awk-program>
+#   Runs `awk <awk-program>` once per file listed in "$AL_TMP/files", the file on stdin and its
+#   path in ENVIRON["AL_FILE"] (never -v, which escape-processes a backslash in the path), and
+#   prints the program's rows. Sets AL_ROWS=1 when any row was printed (0 otherwise). An unreadable
+#   file or an awk failure prints "<name>: cannot scan <file>: <reason>", sets AL_ERR=1 and the
+#   scan goes on. Returns; the caller ends with awk_lint_exit.
+#   Why: a per-source-line `printf | grep` loop forks twice and execs once per line (43.6 s on a
+#   23k-line tree, 0.13 s with one awk per file). [ev: retro 2026-10-22-line-loop-lint-forks]
 #
 # A comment-stripped per-file lint (a grep check per file, no main.awk) is:
 #   . ".../lib/awk-lint.sh"
@@ -127,6 +136,25 @@ awk_lint_list() {
 awk_lint_exit() {
   [ "$AL_ERR" -eq 0 ] || exit 3
   exit "$1"
+}
+
+# shellcheck disable=SC2034  # AL_ROWS is read by the caller: awk_lint_exit "$AL_ROWS"
+AL_ROWS=0
+# shellcheck disable=SC2034,SC2094  # AL_ROWS: read by the caller; AL_FILE="$f" is an env value, not a write to "$f"
+awk_lint_each() {
+  local f out
+  while IFS= read -r f; do
+    # 2> before < so a failed redirect (unreadable file) lands in awk.err too, not on the terminal.
+    if ! out=$(AL_FILE="$f" awk "$1" 2>"$AL_TMP/awk.err" < "$f"); then
+      read -r out < "$AL_TMP/awk.err" || true
+      printf '%s: cannot scan %s: %s\n' "$AL_NAME" "$f" "${out##*: }" >&2
+      AL_ERR=1
+      continue
+    fi
+    [ -n "$out" ] || continue
+    printf '%s\n' "$out"
+    AL_ROWS=1
+  done < "$AL_TMP/files"
 }
 
 awk_lint_run() {

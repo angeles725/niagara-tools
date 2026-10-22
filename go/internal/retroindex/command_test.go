@@ -105,3 +105,21 @@ func TestMainViolationWritesNothing(t *testing.T) {
 		t.Errorf("INDEX.md was written despite a violation (stat err %v)", err)
 	}
 }
+
+func TestMainUnlistableRetrosDirExits3(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	root := kit(t, map[string]string{"2026-09-01-a.md": okRetro})
+	dir := filepath.Join(root, "retros")
+	if err := os.Chmod(dir, 0o300); err != nil { // a directory, but not readable
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	code, out, errs := run("", root)
+	if code != ExitEnv || out != "" || !strings.HasPrefix(errs, "gen-retro-index: cannot list "+dir+": ") ||
+		!strings.HasSuffix(errs, "; index not written\n") {
+		t.Errorf("got (%d, %q, %q)", code, out, errs)
+	}
+}

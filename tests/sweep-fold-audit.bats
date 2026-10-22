@@ -126,3 +126,16 @@ _delta_fixture() {
   run "$SCRIPT" --deltas-since 2026-9-1 "$D/retros/INDEX.md" "$D"
   [ "$status" -eq 3 ]
 }
+
+@test "F11: a citation that lives only in a ledger.d/ fragment credits the retro (stem and Δ)" {
+  # BUILD-STATE.md's kit block is generated from build-n4-module-kit/ledger.d/*.md, so a fragment is
+  # corpus like any other kit *.md. Mutation: F11 -- excluding */ledger.d/* from the corpus WARNs here.
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros" "$D/ledger.d"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n| 2026-10-22-ledger-only.md | kit | 2026-10-22 | folded | 1 |\n' > "$D/retros/INDEX.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-10-22 -->\nlog: 2026-10-22 · folded [ev: retro ledger-only Δ1]\n' > "$D/ledger.d/2026-10-22-x.md"
+  run "$SCRIPT" --strict --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1 folded, 1 cited, 0 uncited"* ]]
+  [[ "$output" == *"deltas: 1 checked, 0 not cited"* ]]
+}

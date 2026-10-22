@@ -203,7 +203,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Target:** `types/logic.md:399-418`; cursor recipe → `types/logic-authoring.md:190-200` (with C19).
 - **Lint-able:** yes — WARN `%time([^)]`, `%user%`. **Fold type:** doc fix + lint.
 - **Fold status:** BFormat card FOLDED (WU-P0-3, 2026-10-22; rac Δ9 card half, rcf Δ6); `lint-bformat-call.sh` LANDED (WU-P0
-  lints); the cursor recipe (rac Δ9, with C19) is OWED.
+  lints); the cursor recipe (rac Δ9, with C19) FOLDED in WU-P0-6 (`docs/r8-t9g-nav`, 2026-10-22).
 
 ### C08 — Link rules: programmatic links are never `checkLink`ed; `BLink` 4th arg is `enabled`
 - **Sources:** rac#Δ10 (primary) · rcf#Δ3 extends (call `target.checkLink(...)` and require `isValid()` before adding)
@@ -220,6 +220,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1231 §1231.4 (`ComplexIntrospector`); course `Slides/2 Slots.pdf`.
 - **Target:** `types/actions.md:24-26`.
 - **Lint-able:** yes — WARN both `do<X>()` and `do<X>(…Context)`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-4, `docs/r8-t9g-actions`, 2026-10-22; scc Δ1): `types/actions.md` § 1 (type-load errors,
+  public handler taking `Context`, one handler); the pair WARN is owed as Go lint G1 (new checks go in Go). Premise checked against
+  `ComplexIntrospector.java:316-343`; the kit's own example handler was package-private (also a type-load error), fixed.
 
 ### C10 — Lexicon keys: slot = bare slot name, type = `<Type>.displayName`, enum = bare tag
 - **Sources:** lux#Δ1 (primary, corrects the kit's `Type.slot` advice and its checkers) · lex#Δ1 extends (`<Type>.displayName`, `%lexicon()%` in facets; lux Δ1 refines its slot row)
@@ -227,6 +230,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `NSlot.java:42`, `EnumType.java:50`, devguide `localization.txt:106-108,135-136`, corpus B1305 §1305.2 C1, B759 §759.1, B1236 §1236.3.
 - **Target:** `types/dashboard.md:203`, `types/value-types.md:51-52`, `types/structure.md` L4, `toolbelt/slot-coverage.sh:23,39-41`, `toolbelt/generate-wiring-map.sh:20`.
 - **Lint-able:** yes — `slot-coverage.sh` WARN dotted-only match and bare `<Type>=`; require `<Type>.displayName`. **Fold type:** doc fix + script fix.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; lux Δ1, lex Δ1): `types/structure.md` § Lexicon key catalogue,
+  `types/dashboard.md` (wiring-map bullet + key bullet, now :239 not :203), `types/value-types.md`; `slot-coverage.sh`
+  parse = `<Type>.displayName` only + WARN bare `<Type>=`, per-slot = bare keys + `DOTTED` row; `generate-wiring-map.sh`
+  bare key only (:20-22, :145). `%lexicon()%` is a BFormat call (`BFormat.java:452`), not `Lexicon.java:466-495` as
+  B1305 row 11 grouped it. The `generate-wiring-map.sh` display-names comment (:132) reworded after T8c.
 
 ### C11 — Palette example uses class names and attribute overrides; fixture root violates the kit's rule
 - **Sources:** afl#Δ3 (primary)
@@ -234,6 +242,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `Niagara-4.15.6.20/modules/kitControl-rt.jar!module.palette:133-141`; course `Slide Code/…/module.palette`; `fixtures/MinimalPan/MinimalPan/MinimalPan-rt/module.palette:3`.
 - **Target:** `types/structure.md:133-180`, fixture palette, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — FAIL `t="` with a `.`, undeclared prefix; WARN any `b:Folder`. **Fold type:** doc fix + template + lint.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; afl Δ3): `types/structure.md` § Palette format card + example + key
+  rules; `verify-module.sh` `palette_scan` (`palette-type` FAIL, `palette-root` WARN on every baja Folder);
+  `fixtures/MinimalPan` root `b:UnrestrictedFolder`. Premise confirmed in `ValueDocDecoder.java:1071-1073,1091`; the
+  undeclared-symbol FAIL also catches a root without `m="b=baja"`. OWED: `fixtures/MinimalDash` palettes (two `b:Folder`
+  roots; outside the unit's surface).
 
 ### C12 — `niagaraTest` is not "WSL finds 0 tests → Workbench only"; native Windows route works
 - **Sources:** tpb#Δ1 (primary) · tpb#Δ3 extends (signing prerequisite: CA-chained test-jar signer, else BUILD SUCCESSFUL with 0 tests)
@@ -280,12 +293,18 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `NavFileDecoder.java:56,71,130-133`, `BUser.java:1030`, corpus B1307 §1307.2, B1317 §1317.2; **B1353 §1353.1** upgrades "no rc/nav convention" to `[CERT]` (0 `.nav` in 728 jars).
 - **Target:** `types/structure.md:253-287`.
 - **Lint-able:** yes — `<nav>` without `version=`; FAIL phrase "discover `.nav` files". **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-6, `docs/r8-t9g-nav`, 2026-10-22; nsto Δ5, rcf Δ5): `types/structure.md` § Nav files;
+  doc pins `tests/kit-nav-tag-pins.bats` KN1/KN2. OWED: Go lint G5 `nav-version` (spec in `BUILD-STATE.md`).
 
 ### C18 — ORD/nav basics: `BOrd.make` only wraps; `nav:` needs a base; `getNavChildren` is permission-blind
 - **Sources:** nsto#Δ7 (primary, ORD basics + unmounted BQL test) · nsto#Δ6 (primary, nav safety) · ord#Δ4 extends (narrowest base, `resolve()`+`canRead()`, custom scheme `UnresolvedException`)
 - **Evidence:** `BOrd.java:97-101,375-380`, `BINavNode.java:96-98`, `BNavContainer.java:364`, devguide `bql.txt:453-460`, corpus B1307 §1307.1, B1308 §1308.2, B1237 §1237.3.
 - **Target:** `types/logic-authoring.md:37-39,76,120,142`, `types/moduleTest.md`, `types/security.md`.
 - **Lint-able:** yes — WARN `getNavChildren(` without `filter(` in servlet/ux; `nav:` without `root:|`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED doc (WU-P0-6, 2026-10-22; nsto Δ6, Δ7, ord Δ4): `types/logic-authoring.md` (nav safety,
+  call-site recipe, `h:` scope, `nav:` base, custom scheme), `types/moduleTest.md` (unmounted BQL); doc pins KN3/KN5.
+  OWED: Go lint G6 `nav-children-filter` (spec in `BUILD-STATE.md`). The `types/security.md`
+  target needed no nav text: the permission rule lives with the walk.
 
 ### C19 — BQL consumer example omits the Context and closes the cursor by hand
 - **Sources:** ord#Δ1 (primary). Cursor recipe of rac Δ9 (C07) folds here.
@@ -293,6 +312,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1237 §1237.7 (BQL Reference.pdf, deck 8), course `Slide Code/…/ords/BPointsQuery.java`.
 - **Target:** `types/logic-authoring.md:191-204`, `toolbelt/lint-null-context-write.sh` (or sibling).
 - **Lint-able:** yes — flag one-arg `get(` or `null` Context on a `bql:` ORD in `-rt`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-6, 2026-10-22; ord Δ1, rac Δ9 cursor half): `types/logic-authoring.md` § BQL from code
+  (+ digest D3-31 `BFoxProxySession`, spoken claim); `lint-null-context-write.sh` bql rule (also no-arg `get()` and
+  `resolve(base)`; -wb skipped) with a literal-aware comment stripper; to be re-done as Go lint G4 `bql-context`.
 
 ### C20 — Subscription semantics and virtual ORDs are described wrongly
 - **Sources:** nsto#Δ2 (primary: subscribed = permanent ‖ subscribers ‖ knobs-while-running; leases; SELF_EVENTS = 11–16,19,20) · nsto#Δ3 (primary: virtual ORD = gateway ORD + `|virtual:/a/b`; `SlotPath.escape`; cache properties)
@@ -306,6 +328,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BSmartTagDictionary.java:71`, `BTagDictionary.java:144,200`, `BNamespace.java:19` (`@Deprecated`), devguide `neql.txt:18,28-46`, `hierarchy.txt:63-66`, `Tagging/LicenseRequirements-474FC1B4.txt:20`, corpus B1311 §1311.2, B1329.
 - **Target:** `types/logic.md:359-376`, `types/logic-authoring.md:148-154,181`, `types/security.md:220`, `types/cloud-connector.md:206-217`.
 - **Lint-able:** yes — doc grep FAIL `getRules()`, `SmartTagRule`, `tag::`, `tagInfoList.add`; grep `BOrd.make("hierarchy:` in `-rt`. **Fold type:** doc rewrite + lint.
+- **Fold status:** FOLDED doc + doc grep (WU-P0-6, 2026-10-22; nsto Δ9, Δ10, sta Δ5, Δ7): `types/logic.md` § Ship a tag
+  dictionary + § Tags in code, `types/logic-authoring.md` § `hierarchy:`, `types/security.md` § 4, `types/cloud-connector.md`
+  § 6; doc pin KN4. OWED: Go lint G7 `hierarchy-ord` (spec in `BUILD-STATE.md`).
 
 ### C22 — `ackRequired` default is version-dependent; `timeDelay` never debounces FAULT; stale points never alarm
 - **Sources:** cas#Δ1 (primary)
@@ -378,6 +403,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: live 2026-10-16 verify-module.sh training-rt.jar]` (`training-rt.jar` → 10 entries, `Cristian_Angeles_Cert-rt.jar` → 2).
 - **Target:** `toolbelt/verify-module.sh` `check_palette` (:420) + bats.
 - **Lint-able:** yes. **Fold type:** kit-check fix + bats.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; slo Δ6): `palette_scan` counts `<p>` with `n=` in any position and
+  a non-folder `t=`, and also skips `v=` slot overrides (kitControl `module.palette:131` children carry `n`+`t`+`v`).
 
 ### C83 — The ping API is `void doPing()` with void `pingOk()`/`pingFail(String)`
 - **Sources:** ndh#Δ1 (primary) · ndh#Δ3 extends (reachability-only ping recipe: `Socket.connect(addr, timeoutMs)` → `pingOk()`, `IOException` → `pingFail(...)`; confirms bdps Δ2's `NETWORK_COMMUNICATION` grant live, `hosts="*"`/`ports="*"` stays WARN)
@@ -393,6 +420,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: transcript 2026-10-16 exam P1 slotomatic --info]`.
 - **Target:** `METHODOLOGY.md` K15 (:122), `toolbelt/build.sh` (pre-gradle marker scan + failure hint).
 - **Lint-able:** yes — FAIL a `.java` with a `BEGIN BAJA AUTO GENERATED` marker and no `/*@ $` stamp before `END`. **Fold type:** doc fix + build.sh check + bats.
+- **Fold status:** NOT FOLDED (WU-P0-4, 2026-10-22): both targets, `METHODOLOGY.md` K15 and `toolbelt/build.sh`, are outside
+  the unit's allowed surface; OWED in `BUILD-STATE.md` with slo Δ1 (K15 text + Go lint G3 `slotomatic-markers`).
 
 ---
 

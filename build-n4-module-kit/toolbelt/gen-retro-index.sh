@@ -15,8 +15,9 @@
 # Date = the first YYYY-MM-DD in the filename; rows sort by date, then filename (bytewise).
 #
 # Implementation: the Go module at <repo>/go (go/internal/retroindex, r8 T8j-1). This wrapper is the
-# stable entry point: it builds go/bin/gen-retro-index when the binary is missing or older than a Go
-# source, then execs it with this script's ../ as the default kit root. Needs `go` on PATH to build.
+# stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/gen-retro-index when the binary is
+# missing or older than a Go source, then this script execs it with its ../ as the default kit root.
+# Needs `go` on PATH to build. [ev: retro go-ci-steps]
 # Mutation pins (GRI-stale, GRI-order, GRI-comment, GRI-required) live in the Go source and tests.
 #
 # Usage:  gen-retro-index.sh [--check] [<kit-root>]     (default kit root: this script's ../)
@@ -27,16 +28,8 @@ set -u
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GO_DIR="$(cd "$here/../.." && pwd)/go"
-BIN="$GO_DIR/bin/gen-retro-index"
-
-if [ ! -x "$BIN" ] || [ -n "$(find -H "$GO_DIR" -path "$GO_DIR/bin" -prune -o \( -name '*.go' -o -name go.mod \) -newer "$BIN" -print 2>/dev/null | head -1)" ]; then
-  [ -f "$GO_DIR/go.mod" ] || { printf 'gen-retro-index: no Go module at %s\n' "$GO_DIR" >&2; exit 3; }
-  command -v go >/dev/null 2>&1 || { printf 'gen-retro-index: go is not on PATH; it is needed to build %s\n' "$BIN" >&2; exit 3; }
-  # Build to a private name, then rename: concurrent callers never exec a half-written binary.
-  tmp="$BIN.tmp.$$"
-  if ! (mkdir -p "$GO_DIR/bin" && cd "$GO_DIR" && go build -o "$tmp" ./cmd/gen-retro-index) >&2; then
-    rm -f "$tmp"; printf 'gen-retro-index: go build failed in %s\n' "$GO_DIR" >&2; exit 3
-  fi
-  mv -f "$tmp" "$BIN"
-fi
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'gen-retro-index: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" gen-retro-index)" || exit 3
 GEN_RETRO_INDEX_DEFAULT_ROOT="$(cd "$here/.." && pwd)" exec "$BIN" "$@"

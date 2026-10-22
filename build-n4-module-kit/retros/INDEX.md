@@ -249,7 +249,11 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-course-recordings.md | kit | 2026-10-22 | folded | 8 |
 | 2026-10-22-fail-closed-walks.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-generated-retro-index.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-go-check-facets-card.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-go-ci-steps.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-n4-course-sample-check-precision.md | kit | 2026-10-22 | folded | 5 |
 | 2026-10-22-n4-course-signed-jars-gate-fix.md | kit | 2026-10-22 | folded | 6 |
@@ -257,6 +261,9 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-276-driver-scaffold.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-drivers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-status-links.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-r8-t9g-lifecycle.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-r8-t9g-nav.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |

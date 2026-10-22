@@ -95,11 +95,19 @@ New tools and ports are written in Go when possible, in the dependency-free modu
 over shared `go/internal/` packages (`internal/cli` holds the injectable stdio). Needs `go` on `PATH` at the
 `go/go.mod` version.
 
-- Check: `cd go && gofmt -l . && go vet ./... && go test ./...` (CI runs the same, then builds into `go/bin/`).
+- Check: `cd go && test -z "$(gofmt -l .)" && go vet ./... && go test ./...` (CI fails on any file `gofmt -l`
+  lists, then builds into `go/bin/`).
 - A ported toolbelt script keeps its `.sh` name as the stable entry point: a thin wrapper that builds
   `go/bin/<tool>` when it is missing or older than a Go source, then execs it (exit 3 when `go` is missing).
   `go/bin/` is gitignored. First port: `toolbelt/gen-retro-index.sh` → `go/internal/retroindex`, output byte
   for byte the same as the bash version. `[ev: retro go-module-gen-retro-index]`
+- Every wrapper gets the binary from `go/go-tool.sh` (`. go/go-tool.sh; bin="$(go_tool_bin <go-dir> <tool>)" || exit 3`),
+  never from its own copy of the rebuild logic; `tests/go-tool.bats` pins the rebuild paths. The first call after
+  a source change pays one `go build`. `go/go-tool.sh` sits in `go/` so a fixture that symlinks `go/` next to a
+  copied wrapper still finds it. Second port: `scripts/lib/ci_steps.py` → `go/cmd/ci-steps`, used by
+  `scripts/ci-local.sh`. `[ev: retro go-ci-steps]`
+- Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates the kit ledger parts of
+  `BUILD-STATE.md` from `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]`
 
 ---
 
@@ -205,6 +213,13 @@ structural anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff).
 `module`, `deltas`, optional `index-comment`) and run `build-n4-module-kit/toolbelt/gen-retro-index.sh`;
 on a merge conflict in `INDEX.md`, regenerate it instead of resolving rows by hand. CI and the gate's
 content half (`sweep-build-state.sh`) fail a stale index.
+
+The kit block of `build-n4-module-kit/BUILD-STATE.md` is partly GENERATED too: its `last_change:` line,
+`open_issues:` items and session log come from one fragment per change in `build-n4-module-kit/ledger.d/`
+(`<YYYY-MM-DD>-<slug>.md`; format in `BUILD-LOOP.md` §7). A kit PR adds its fragment, runs
+`build-n4-module-kit/toolbelt/gen-build-state.sh` and commits both; it never edits those lines by hand. The
+fragment counts as the `BUILD-STATE.md` update for the gate, and CI plus `sweep-build-state.sh` fail a stale
+`BUILD-STATE.md`. On a merge conflict there, take either side of the generated lines and regenerate.
 
 The gate ships **inert** — nothing runs until you enable it:
 
