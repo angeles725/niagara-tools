@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 # 2026-10-22 · kit · t9c-reference-gaps
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T9c), branch
@@ -29,7 +29,7 @@ links to the corpus instead of copying it. This retro records the set; each Δ i
 | Δ6 | Series transforms guide: graph, nodes, `BSeriesSchema`, `BTransformFunction`, `transform:` ORD, pitfalls | `types/history-transforms.md` (new) | `[ev: corpus B1339]` |
 | Δ7 | OPC UA client/server summary and the data-access/egress decision table | `types/driver-authoring.md` § 10, `types/cloud-connector.md` pointer | `[ev: corpus B1222]` |
 
-Each Δ is folded by its own commit on this branch; the last commit flips this retro and its INDEX row.
+Each Δ was folded by its own commit on this branch; the last commit flipped this retro and its INDEX row.
 
 ## Lessons
 - A coverage audit against the official devguide finds whole subsystems the kit never named; link the
@@ -40,4 +40,4 @@ Each Δ is folded by its own commit on this branch; the last commit flips this r
   N4 version fact.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | pending | 7 |`
+**Status**: FOLDED 2026-10-22 — Δ1-Δ7 each folded by its own commit on `docs/r8-t9c-refs`; INDEX row flipped to folded.

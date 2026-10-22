@@ -445,6 +445,8 @@ Additional patterns for field-bus protocol drivers:
 
 ### 9.6 · Protocol-adapter manager — action-slot bridge and structured error decode (OPC) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ10]
 
+This section is about the classic OPC DA (COM) manager. For OPC UA client/server and for choosing a data-egress channel see § 10. `[ev: retro t9c-reference-gaps Δ7]`
+
 OPC and similar protocol-adapter drivers expose three recurring WB patterns that differ from standard BACnet/Modbus drivers:
 
 **Action-slot bridge:** OPC items are exposed as Niagara action slots rather than as proxy points; invoking the action calls the underlying COM/native OPC operation. Keep the COM/native error handling inside the driver layer — never let `COMException` or `NativeException` propagate to the WB view. Decode the HRESULT/native error code into a Niagara `BFacets` display string before reporting to the manager.
@@ -463,6 +465,46 @@ try {
 **Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. Implement `isLeaf(node)` and `getChildren(node)` on demand (on node expand only); cache expanded nodes in a `WeakHashMap` keyed by node path.
 
 **Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. Model this as a distinct `SECURITY_FAULT` status separate from `COMM_FAULT` — display a locked-padlock column in the manager and gate write actions on `isSecurityReady()`. The WB manager must never expose a write path when the security state is not fully resolved. [ev: corpus B1103]
+
+## 10 · OPC UA and the data-egress choice `[ev: retro t9c-reference-gaps Δ7]`
+
+Full guides (read them, do not re-derive): niagara-research `docs/opc-n4-guide.md` (recipes §2-§4, type and
+status mapping §5, pitfalls §8, 4.15 differences §11) and `docs/n4-data-access-guide.md` (decision table §1,
+channel families §4, security baseline §5). Corpus blocks B1222-B1281. Code paths below are under
+niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/tridium/opcUaClient`,
+`S=opcUaServer/opcUaServer-rt/vineflower/com/tridium/opcUaServer`.
+
+- **Two stacks.** OPC DA = module `opc` (COM/DCOM, Windows only, licence `tridium:opc`; § 9.6). OPC UA =
+  `opcUaCore` + `opcUaClient` + `opcUaServer` (`opc.tcp`, JACE and Windows). [CERT]
+  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `[ev: corpus B1222]`
+- **Client** is an ndriver stack: `BOpcUaNetwork extends BNNetwork` (licence `tridium:opcUaClient`),
+  `BOpcUaDevice`, `BOpcUaClientPointDeviceExt`, `BOpcUaClientProxyExt`. Reads are subscriptions only
+  (`publishInterval`), no poll. [CERT] `C/BOpcUaNetwork.java:42,70-71`; `docs/opc-n4-guide.md` §3, §7
+- **Server** is a driver network too, not a service: `BOpcUaServer extends BNNetwork` (licence
+  `tridium:opcUaServer`) → `BOpcUaNamespace extends BNDevice` → server proxy exts. It exposes ONLY the points
+  you add; each is Export (links the source `out`, read-only node) or Import (links into an `inN`, offered
+  only for writable sources). [CERT] `S/BOpcUaServer.java:175,344-345`; `S/BOpcUaNamespace.java:121`;
+  `S/point/BOpcUaServerProxyExt.java:148-152`
+- **Namespace-index drift is handled for discovered points:** on subscribe the client rewrites `ns=` from
+  the stored `nameSpaceUri`; a hand-made point with an empty `nameSpaceUri` is not remapped. [CERT]
+  `C/point/PointSubscribeCmd.java:34-40`
+- **Certificates** live in the station's CertManagerService key/trust stores; approve the peer per
+  `host:port` in Allowed Hosts, again after a cert is regenerated; use Basic256Sha256 + SignEncrypt and turn
+  off Basic128Rsa15 and anonymous tokens. `docs/opc-n4-guide.md` §3, §4, §8 `[ev: corpus B1244]`
+- **Server status and authorization differ by release:** 4.14 publishes every value as Good and has no
+  per-user authorization; 4.15.3.28+ sends Bad/Good_NoData and has RBAC for user-name sessions only.
+  `docs/opc-n4-guide.md` §5, §11 `[ev: corpus B1280]`
+
+**Egress decision** — the full per-job table is `docs/n4-data-access-guide.md` §1; the module builder's cut:
+
+| Consumer | Channel | Who initiates | Note |
+|---|---|---|---|
+| SCADA / third-party read-only | OPC UA server, curated namespace | client pulls/subscribes | UserName + SignEncrypt; RBAC only on 4.15.3+ |
+| Off-station app, BI, alarm feed to systems | oBIX server `/obix` | client pulls (Watch, history query, `alarmFeed`) | a read user sees the whole tree; needs the oBIX export licence |
+| Cloud, outbound only | MQTT (`types/cloud-connector.md`) or an edge poller | the station pushes | strings only; publishes drop while disconnected |
+| Another BMS | BACnet/IP export | peer reads/writes | no auth on BACnet/IP; writes run as station user `BACnet` |
+| On-site HMI, narrow write API | custom `BWebServlet` (`dashboard.md`) | browser pulls JSON | write with the real user Context; CSRF is yours |
+| Station-served page, few live values | BajaScript (`dashboard.md` § Reading the station directly) | browser subscribes | the user's own permissions |
 
 ---
 
