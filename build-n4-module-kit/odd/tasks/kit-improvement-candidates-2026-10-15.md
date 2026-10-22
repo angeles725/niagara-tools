@@ -123,6 +123,10 @@ Order: highest copy-risk first (examples and API names that fail to compile or m
 
 Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-STATE.md` (§7 exit (c), partial promotion).
 
+**Fold log.** WU-P0-1 docs folded on `docs/r8-t9b-p0-1` (2026-10-22): C01-C03 doc text in `types/logic.md`,
+`types/math-control-libraries.md`, `types/logic-authoring.md`; the lint halves (tjd Δ2, shs Δ3 `jdk-thread` re-scope, the
+`postAsync(`/`BJobs.` doc greps, the `isAlive()` loop WARN) are owed in `BUILD-STATE.md` kit `open_issues`.
+
 ---
 
 ## P0 — the kit teaches something wrong
@@ -133,6 +137,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** course `Labs/Lab Instructions.pdf` p78-80; `Labs/Lab9 Multithreaded/module-permissions.xml`; user's live `training-rt` ran all three executors.
 - **Target:** `types/logic.md:344`, `types/math-control-libraries.md:91,132`, `toolbelt/lint-timers.sh:477-485` (+ bats, mutation).
 - **Lint-able:** yes — FAIL only when `shutdownNow(`/`interrupt(`/`setDaemon(`/`setPriority(` appear without `MANAGE_EXECUTION`; else WARN. **Fold type:** doc fix + lint.
+- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; tjd Δ1, shs Δ4); lint OWED (tjd Δ2, shs Δ3).
 
 ### C02 — `BWorker.post(Runnable)` / `postAsync()` do not exist
 - **Sources:** rac#Δ1 (primary). Thread-naming half reinforced by tjd Δ5 (C37).
@@ -140,6 +145,9 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `source/baja/javax/baja/util/BWorker.java:49-139`, `ExecutorUtil.java:43,89,122`, corpus B1304 §1304.3.
 - **Target:** `types/logic.md:346`, `types/math-control-libraries.md:86`.
 - **Lint-able:** yes — FAIL `postAsync(` in kit docs, WARN in rt sources. **Fold type:** doc fix + lint.
+- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ1); lint OWED. Note: `postAsync(Runnable)` is a legitimate name for a
+  method a `BWorker` subclass declares itself (Tridium's course `BTrainingWorker`), so the rt-source WARN must target a call on a
+  type that does not declare it, not the bare token.
 
 ### C03 — Background jobs: no `BJobs`; `BSimpleJob` owns its thread; the job contract
 - **Sources:** rac#Δ2 (primary) · tjd#Δ6 duplicate on the pool claim + extends (job contract, test idiom)
@@ -147,6 +155,7 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `BSimpleJob.java:51-56`, `BRunnableJob.java:41`, corpus B1238 §1238.8, B1304 §1304.2.
 - **Target:** `types/logic-authoring.md:216-233` § Background jobs.
 - **Lint-able:** yes — doc grep FAIL `BJobs.`; WARN a `BSimpleJob.run(` loop with no `isAlive()`. **Fold type:** doc fix + lint.
+- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6); lint OWED.
 
 ### C04 — BStatus bit table is shifted from STALE on and misses ALARM
 - **Sources:** rac#Δ4 (primary)
@@ -865,8 +874,8 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r3-web-session-headers#Δ4` | types/theme.md, types/frontend-standard.md | Servlet SPA not themed automatically | C30 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ5` | types/security.md | Never X-Frame Any; frame-ancestors | C13 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ6` | types/security.md | oBIX HIDDEN is not access control | C46 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | accepted |
-| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | folded doc (WU-P0-1); lint owed |
+| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | folded doc (WU-P0-1); lint owed |
 | `devguide415-runtime-api-corrections#Δ3` | types/logic.md | Absolute schedules need clockChanged | C34 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ4` | types/logic.md:233-243 | Fix the BStatus bit table | C04 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |
@@ -912,12 +921,12 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-slots-components-contracts#Δ4` | types/logic.md | Validators skip link writes | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ5` | types/logic-authoring.md or types/logic.md | Slot-API traps | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ6` | types/logic.md | Write/state discipline | C36 | P1 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | folded (WU-P0-1) |
+| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | accepted; owed (WU-P0-1 lint) |
 | `n4-course-threading-jobs-doctrine#Δ3` | types/actions.md §2 | Action threading; Invocation offload | C38 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ4` | types/logic.md, toolbelt/lint-intrinsic-lock.sh | No intrinsic locks on B* classes | C37 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ5` | types/logic.md, toolbelt/lint-timers.sh | Thread naming/priority hygiene | C37 | P1 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | folded doc (WU-P0-1); lint owed |
 | `testing-parity-btestng#Δ1` | types/moduleTest.md, BUILD-LOOP.md:162-165 | Native Windows niagaraTest route | C12 | P0 | accepted |
 | `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | accepted |
 | `testing-parity-btestng#Δ3` | types/moduleTest.md, build-verify.md | Test-jar signing prerequisite | C12 | P0 | accepted |
@@ -982,10 +991,10 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ2` | types/actions.md § 2 | confirms C38: `Flags.ASYNC` lint stays WARN | C38 | P1 | accepted |
-| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | accepted |
-| `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | accepted; owed (WU-P0-1 lint) |
+| `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
-| `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | accepted |

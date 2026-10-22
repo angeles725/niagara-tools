@@ -211,25 +211,44 @@ c.close();   // always close — leaks a resource if skipped
 
 ## Background jobs
 
-- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit via `BJobService.submit(job,cx)` and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]`
+- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit with `job.submit(cx)` (a convenience for `BJobService.getService().submit(job, cx)` — `submit` is an instance method, not a static one) and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). For a one-line job use `new BRunnableJob(() -> exportNow()).submit(cx)` — `BRunnableJob(Runnable)` is a `BSimpleJob` whose `run(Context)` calls the runnable, so no subclass is needed. Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]` [ev: retro devguide415-runtime-api-corrections Δ2]
 
-### BJob submission safety rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
+### BJob submission rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
 
-`BJobs.submit(job, cx)` posts to a `ForkJoinPool` sized `availableProcessors × niagara.job.threadsPerCPU`. Violations:
+There is no `BJobs` class. `job.submit(cx)` invokes the JobService's HIDDEN `submitAction` (no `OPERATOR` flag, so a user Context needs admin invoke on the JobService), which adds the job as a TRANSIENT child and calls `doSubmit`. A `BSimpleJob` then runs `run(Context)` on its OWN `JobThread`, named after the job's slot path; it never touches the JobService `ForkJoinPool` (`getExecutor()`, sized `availableProcessors × niagara.job.threadsPerCPU`, default 2, or `niagara.job.threads`). That pool matters only to code that hands work to `getExecutor()` itself, so a `BSimpleJob` submit has no pool to saturate and no `RejectedExecutionException` to catch. [ev: retro n4-course-threading-jobs-doctrine Δ6] [ev: corpus B1238 §1238.8] [ev: corpus B1304 §1304.2]
 
-- **Never submit from a high-frequency callback (`changed()`, timer tick):** each submission drains one thread from the shared pool. A 1 s timer that submits a new job every tick can saturate the pool in seconds.
+- **Never submit from a high-frequency callback (`changed()`, timer tick):** every submission adds a job component to the JobService and starts one more thread; a 1 s timer that submits a new job every tick piles up job threads and job records.
 - **`submit()` itself is an `invoke` action (RUN6 RBAC rule applies):** the job runs under the submitted context. If the caller uses `post()` to defer submission, the RBAC context is dropped (see `types/security.md §2` for the post()-drops-context rule).
-- **A saturated or shutting-down pool throws `RejectedExecutionException` as an unhandled `RuntimeException`** directly into the calling callback (the bare-callback death path — see logic.md §Tridium rt idioms). This exception is NOT a checked exception and is NOT caught by `catch(Exception)`.
-- **Wrap `submit()` in `try/catch(RejectedExecutionException)`** and log or surface the failure; do not let it escape to the engine thread.
+
+### Job contract — `BSimpleJob.run(Context)`
+
+- **Return = success, throw = failure.** `failed(cause)` records a CANCEL instead when the state is `canceling` or the cause is an `InterruptedException` or a `JobCancelException` (unchecked, a `BajaRuntimeException`).
+- **Cancel is cooperative.** `doCancel` sets `canceling` and interrupts the job thread, which only reaches a thread blocked in I/O or `sleep`; every loop checks `if (!isAlive()) throw new JobCancelException();` (`isAlive()` = state is `running`).
+- **Report liveness.** `progress(pct)` sets the percent and heartbeats; call `heartbeat()` when the percent is unknown; completion forces progress to 100.
+- **Log through the job log.** `log().message(<module>, <lexKey>, <args>)` with the key present in that module's `module.lexicon` (`log().message(String)` for a non-localized line).
+- **Snapshot inputs in the constructor.** Copy the service properties the job needs when it is built; Tridium's Lab 10 job reads them live from the job thread, so an edit in the middle of an export changes the later files. [ev: corpus B1242 §1242.4]
+- **Unit test without a station:** `job.setJobState(BJobState.running); job.run(null);` then assert on `job.log().getItems()`.
+- **Worked example:** the course Lab 10 `BHistoriesToCsvJob.java:105-112` (`isAlive()` → `JobCancelException`, `progress()`, `log().message(...)` per history), run live on 4.15.6.20. [ev: retro n4-course-handson-services-history-threading Δ6]
 
 **Pattern:**
 ```java
-try {
-    BJobService.submit(myJob, cx);
-} catch (RejectedExecutionException e) {
-    logWarning("job-submit rejected (pool saturated)", e);
+public final class BExportJob extends BSimpleJob {
+  public BExportJob() {}                                  // Type loading needs the no-arg constructor
+  public BExportJob(BExportService svc) { this.names = svc.getPointNames().split(","); }  // snapshot
+  @Override
+  public void run(Context cx) throws Exception {
+    for (int i = 0; i < names.length; i++) {
+      if (!isAlive()) throw new JobCancelException();     // cooperative cancel
+      exportOne(names[i], cx);
+      progress((int) Math.round((i + 1) * 100.0 / names.length));
+    }
+  }
+  private String[] names = new String[0];
 }
+// caller, e.g. an action handler: BOrd jobOrd = new BExportJob(this).submit(cx);
 ```
+
+The advisory lints these rules imply (a doc grep that fails on `BJobs.`, a WARN for a `BSimpleJob` loop with no `isAlive()`) are owed; see `BUILD-STATE.md` kit `open_issues`.
 
 ### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
 
