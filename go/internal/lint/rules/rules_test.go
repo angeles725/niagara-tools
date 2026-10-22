@@ -44,3 +44,28 @@ func TestAllRuleOrder(t *testing.T) {
 		}
 	}
 }
+
+// TestAllWalkError: under --all an unreadable sub-directory stops lint-timers (scan_files_or_exit: no
+// rows) while lint-null-context-write, which opts out (awk_lint_run), still reports the listed files.
+func TestAllWalkError(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	root := t.TempDir()
+	src := "class A {\n  void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n}\n"
+	locked := filepath.Join(root, "locked")
+	if err := os.WriteFile(filepath.Join(root, "A.java"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	a := filepath.Join(root, "A.java")
+	ncw := "WARN  lint-null-context-write  " + a + ":2  null-Context write: void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n"
+	env := "n4lint: cannot list every file under " + root + ": find: '" + locked + "': Permission denied\n"
+	var o, e bytes.Buffer
+	if code := lint.Command(All()...)([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != ncw || e.String() != env {
+		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), ncw, env)
+	}
+}
