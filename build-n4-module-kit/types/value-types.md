@@ -143,6 +143,18 @@ public final class BMyValue extends BSimple {
 with no compile-time error. BOG stores the value as `v="encodeToString()"` and restores via
 `decodeFromString`. [ev: code BSampleRate.java; BHistoryId.java]
 
+**Encode with encoders, never with display formatters — or a Spanish station corrupts the value**
+`[ev: retro n4-course-parity-observability-horizons Δ2]` `[ev: corpus B1252 §1252.4]`. `encodeToString()`/`decodeFromString()`
+build the string from each field's own `encodeToString()` (or `Double.toString`), never from `toString()`,
+`toString(Context)` or `String.format("%s", field)`. `BObject.toString()` is `toString(null)` (vineflower baja 4.14.0.162
+`javax/baja/sys/BObject.java:111-113`), and for a `BDouble` that is the display formatter: precision 2 and a
+`DecimalFormat` for the platform language (`BDouble.java:261-262,354-381`), while `BDouble.encodeToString()` is the
+lossless encoder (`:131-133`). The course `BPair` encodes with `String.format("(%s,%s)", one, two)` (course
+`Slide Code/slides/slides-rt/src/com/tridiumuniversity/slides/gradleAndPermissions/BPair.java:78-81`): 1.234 is saved
+as `1.23`, and on an `es` station the text becomes `(1,00,2,00)`, which a comma-splitting decoder reads back as
+`(1, 0)` `[INFER]` (from the cited code; not executed). Test every BSimple with a non-integer value and under a
+decimal-comma locale. Owed Go lint G37 `bsimple-encode-locale`.
+
 **`BSimple` throws if `hashCode()` is not overridden** — the base class default throws an exception to
 enforce override. Lazy `encodeToString().hashCode()` is the common pattern. [ev: code BSampleRate.java:86-96]
 

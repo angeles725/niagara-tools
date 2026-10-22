@@ -1,0 +1,48 @@
+-- root --
+.
+-- want --
+exit 1
+FAIL  lint-driver-scaffold  @DIR@/BMarkerDevice.java:8  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+FAIL  lint-driver-scaffold  @DIR@/BTextBlockDevice.java:10  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+FAIL  lint-driver-scaffold  @DIR@/BUrlDevice.java:8  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+-- BMarkerDevice.java --
+// A "/*" inside a string before the wizard stub must not open a block comment.
+package com.example.literals;
+
+public class BMarkerDevice extends BNDevice
+{
+  private static final String START = "/*";
+
+  public void doPing()
+  {
+    pingOk();
+  }
+}
+-- BTextBlockDevice.java --
+// A text block holding braces and an escaped quote before the wizard stub.
+package com.example.literals;
+
+public class BTextBlockDevice extends BNDevice
+{
+  private static final String JSON = """
+      { "open": "{", "q": "\"" }
+      """;
+
+  public void doPing()
+  {
+    pingOk();
+  }
+}
+-- BUrlDevice.java --
+// A '{' char literal and a "//" inside a string on the line before the wizard stub.
+package com.example.literals;
+
+public class BUrlDevice extends BNDevice
+{
+  private static final char OPEN = '{'; private static final String URL = "tcp://host";
+
+  public void doPing()
+  {
+    pingOk();
+  }
+}
