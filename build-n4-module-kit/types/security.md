@@ -139,6 +139,30 @@ post(myAction, arg);  // safe to post after the check
 
 Never rely on the framework to enforce RBAC across the `post()` boundary. This complements §1.1 (null-Context write hazard): that rule covers `set()`/`invoke()` with explicit null; this rule covers `post()` which implicitly drops context on every call.
 
+**Worker threads keep the caller's Context.** When an action hands work to its own thread or executor, capture
+the action's `Context` before the hand-off and pass it to every `BOrd.get/resolve`, BQL query and `toString(cx)`
+inside the worker: with `null`, BQL and file reads are no longer filtered by the invoking user (§ 4.4) and value
+text falls back to the default locale. `[ev: retro review2-signing-build-route Δ5]`
+
+### 2.5 oBIX exposure — licence, writes, watches, hidden ≠ protected `[ev: retro devguide415-r2-drivers-protocols Δ9]`
+
+The PANCCADIA read/write users talk oBIX (`types/dashboard.md` § Facade contract). Rules for the station side
+(4.15.6.20 guide; encoder read in obixDriver-rt 4.14.0.162 vineflower; other versions not verified):
+- **Licence:** the server needs the `obixDriver` feature with `export=true` and the `web` feature
+  (`Obix/LicenseRequirement-OBIXDriver-9F25675C.txt:9`). Server disabled → HTTP 410 to every request; enabled but
+  unlicensed (fault) → HTTP 500 (`Obix/obixDriver-ObixNetwork.txt:19`).
+- **External writes to a control point** go through an `ObixExport` descriptor at a priority level the module
+  never drives; a level that is already linked faults the descriptor (`Obix/obixDriver-ObixExport.txt:19-20`).
+  `set` (fallback, persists) and `override` (timed) are different writes: pick one on purpose (corpus B607 §607.2).
+- **Watches** are leased: a client polls the watch well inside the lease and re-creates it after a lease expiry;
+  the client driver's requested lease is the larger of 2 × interval and interval + safety factor
+  (`Obix/obixDriver-ObixClient.txt:30`). `[ev: corpus B1343]`
+- **HIDDEN is not protection.** The encoder drops a HIDDEN slot from child listings only (`ObixEncoder.java:588-589`);
+  a direct request for the slot's path checks `canRead()` alone (`ObixEncoder.java:234-236`). The boundary for the
+  read user is categories and permissions, never the flag. `[ev: corpus B1347 §1347.1]`
+  `[ev: retro devguide415-r3-web-session-headers Δ6]`
+- Bind each oBIX user to the authentication scheme its client actually speaks (corpus B605).
+
 ---
 
 ## 3 · CSRF + secrets
@@ -229,6 +253,15 @@ The production log level is typically INFO, but a support engineer enabling FINE
 **Security messages carry no stack trace:** `log(Level, msg, ex)` appends the exception's trace; for an
 authentication, authorization or crypto failure log the message only (`log(Level.WARNING, msg)`). `[ev: corpus B1418 §1418.2 d]` `[ev: retro course-recordings Δ7]`
 
+### 3.4 Unattended panels — session lifetime and client-certificate SSO
+
+A wall panel's session ends by idle auto logoff, by the 4.15 absolute logoff, or by a reboot; the recipe and the
+kiosk-user checklist live in `types/dashboard.md` § Session lifetime. For a panel that must log back in on its
+own after a reboot, prefer client-certificate SSO over a stored password: a `ClientCertAuthScheme` (one ships by
+default) with Auto Attempt Single Sign-On = true and Ignore Auto SSO if User Cookie Present = false
+(4.15.6.20 guide `Touch/SettingUpAuth-1ABCB56A.txt:12,21`). `[ev: retro devguide415-r2-web-ui-hmi Δ7]`
+`[ev: retro devguide415-r3-web-session-headers Δ2]`
+
 ---
 
 ## 4 · Anti-injection — BQL and ORD
@@ -279,6 +312,23 @@ Servlet and HTML output uses `lex.getHtmlSafeText(key)` (or `getHtmlSafeText(key
 `Encode.forHtml(getText(key))`; the same method exists on `LexiconText` and `LexiconModule`. It encodes for HTML
 element content only: JavaScript, URL and attribute contexts still need their own encoder. A missing key comes back
 encoded too. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
+
+### 4.4 A permission check is only as good as the Context behind it `[ev: retro devguide415-r2-runtime-contracts-formats Δ2]`
+
+- `BComponent.getPermissions(cx)` returns `BPermissions.all` when `cx` is null or carries no user (vineflower baja
+  4.14.0.162 `BComponent.java:896-903`; devguide source 4.15.6.20 `BComponent.java:1971-1982`).
+- `OrdTarget.canRead/canWrite/canInvoke` ask the target's `BIProtected` with the resolve Context and return
+  **true when there is no security target** (vineflower baja 4.14.0.162 `OrdTarget.java:281-294`; devguide source
+  4.15.6.20 `OrdTarget.java:476-503`). So `ord.resolve(base, null)` followed by `canRead()` is a gate that never
+  closes. Resolve with the caller's Context: a servlet with its `WebOp`, an action with its own `cx`, a worker
+  with the Context captured before the hand-off (§ 2.4). Recipe: `types/logic-authoring.md` § ORD resolution.
+  `[ev: corpus B1316 §1316.2]`
+- **A custom `BOrdScheme`** (registered with `ordScheme="id"`, `types/module-wiring.md`) returns its own
+  `OrdQuery` from `parse(body)` (default: a `BasicQuery`), implements `resolve(OrdTarget base, OrdQuery query)`
+  (docSource 4.14.0.162 `javax/baja/naming/BOrdScheme.java:105-119`), throws `InvalidOrdBaseException` for a base it
+  cannot use (shipped precedent `BSlotScheme.java:194`, same copy) and `UnresolvedException` for a miss, and checks
+  `canRead()` on every hop it returns, so the scheme cannot be a side door around permissions.
+  `[ev: retro devguide415-nav-subscriptions-tags-ords Δ8]` `[ev: corpus B1308 §1308.1]`
 
 ---
 
