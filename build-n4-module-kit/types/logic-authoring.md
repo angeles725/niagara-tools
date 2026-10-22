@@ -721,7 +721,7 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 
 - **Demand-based native-COV subscription via `SubscribeCallbacks`:** when the driver should register a native device COV subscription only while at least one client is watching a space component, implement `SubscribeCallbacks` and set it via `space.setSubscribeCallbacks(impl)`. Override `subscribe(BComponent[] c, int depth)` to register the native subscription when subscriber count goes 0→1; override `unsubscribe(BComponent[] c)` to deregister on 1→0. Use `BComponentSpace.update(c, depth)` for a one-time snapshot (no ongoing subscription). Rule: the framework tracks the subscriber count — one `subscribe()` call per 0→1 crossing, not per individual client joining. `[ev: corpus B408 §408.4]`
 - **DDF driver: pick the transaction manager to match device concurrency:** DDF comm splits solicited (request→response) from unsolicited via two SPI managers. **`defaultComm`** (serialized, one-outstanding-at-a-time, `Clock.Ticket` timeout, blocking-queue dequeue) is for devices that cannot handle overlapping requests. **`multipleTransaction`** (tag-correlated concurrent, `Hashtable<tag, requests>` two-level map) is for capable protocols that can pipeline. Wrong pick = poll jams (serialized device overwhelmed by pipelined requests) or framing errors (pipelined device receiving one request at a time in the wrong order). `[ev: corpus B909 §909.1-3]`
-- **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network; (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
+- **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network's poll service — a `BAbstractPollService` property, not a network one (`javax/baja/driver/util/BAbstractPollService.java:26`, driver-rt vineflower; `types/driver-authoring.md` § 6); (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
 
 - **Type-factory hooks: a `BPointDeviceExt` subclass must override three hooks** to tell the framework which concrete types to instantiate for the driver subtree: `getDeviceType()→BMyDevice.TYPE`, `getProxyExtType()→BMyProxyExt.TYPE`, `getPointFolderType()→BMyPointFolder.TYPE`. Pair these with trivial `extends BDeviceFolder` / `extends BPointFolder` subclasses (empty body + generated `TYPE`) — they exist solely to supply a driver-specific concrete `Type` handle; copy them verbatim, no business logic belongs in them. Without these hooks the framework cannot build the driver-specific subtree. `[ev: corpus B955 §955.1]`
 
@@ -889,16 +889,46 @@ Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
 3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
+4. **Reject a bad value by reverting it and logging why — never by throwing.** `changed()` runs after the value is
+   already set, so a throw does not undo it; write the previous or safe value back and log the reason (the course's
+   TLS-version slot: `READONLY` + `HIDDEN` + a reverting `changed()`). [CERT-a] corpus B1416 §1416.4 row d
+5. **The guard is load-bearing at start-up:** the engine activates a component's links — and a property→property
+   link propagates at once — BEFORE its `started()` (`EngineManager.start`: `activateLinks` → `activateRelations` →
+   `started()` → children in slot order → `descendantsStarted()`; [CERT] `com/tridium/sys/engine/EngineManager.java:74-90`,
+   `javax/baja/sys/BLink.java:168,214-215`, baja vineflower). So `changed()` can fire for a linked slot before
+   `started()`, with the source's decoded `config.bog` value; this is why the `isRunning()` guard and "no scheduling
+   or I/O before `started()`" matter. Never rely on sibling start order (N4 starts depth-first in slot order).
+   The course instructor guessed the opposite order; the code read wins over a hedged spoken answer.
+   `[ev: corpus B1416 §1416.1]` `[ev: retro r8-t9g-lifecycle Δ2]`
 
 ### Lifecycle callback contract `[ev: retro module-hardening-failure-modes-deltas Δ2]`
 
 The full lifecycle callback contract for a `BComponent` subclass:
 
-- **`started()` / `stopped()` pair fires on BOTH enable/disable AND mount/unmount transitions.** A station start fires `started()`; a component enable fires `started()`; a component drop onto a running station fires `started()`. Both directions are symmetric: `stopped()` fires on component disable, on station stop, and on unmount.
+- **`started()` / `stopped()` follow the RUNNING state, not `enabled`.** A station start and a component drop onto a running station fire `started()`; station stop and unmount fire `stopped()` ("called when a component's running state is set to false", `javax/baja/sys/BComponent.java:353-361`, docSource). **Disabling does not call `stopped()`**: a `BAbstractService` subclass overrides `disabled()`/`enabled()`, which `updateStatus()` calls when `enabled` flips (`javax/baja/sys/BAbstractService.java:234-245,466,474,530-540`); a plain component with its own `enabled` slot reacts in `changed()`. [CERT] corpus B1416 §1416.2 (this replaces the earlier "fires on enable/disable" rule; a lifecycle rule names the engine call that fires it). `[ev: retro r8-t9g-lifecycle Δ1]`
+- **Start-up logic goes in `started()`, not `stationStarted()`:** `stationStarted()` is called once by the station bootstrap (`com/tridium/sys/station/Station.java:324`), so it never runs for a component dropped into a running station; `started()` runs on every start. [CERT] corpus B1416 §1416.3
 - **`save` (bog serialize) does NOT fire `stopped()` / `started()`** — a save writes the component to disk without touching the lifecycle. There is no `saving()` / `saved()` callback.
-- **`started()` runs on EVERY enable cycle, so it must be IDEMPOTENT.** It may run multiple times per station session (stop/start, enable/disable). Arm timers in exactly ONE place (`started()` only); do NOT use `atSteadyState()` as the sole arm point (see issues-and-gotchas.md §B1).
+- **`started()` runs on EVERY start, so it must be IDEMPOTENT.** It may run several times per station session (unmount/remount, a parent's stop/start). Arm timers in exactly ONE place (`started()` only); do NOT use `atSteadyState()` as the sole arm point (see issues-and-gotchas.md §B1).
 - **Tear down in `stopped()` — match every acquire in `started()` with a release in `stopped()`:** cancel `Clock.Ticket`s, call `unsubscribeAll()`, release resources. If the acquire path in `started()` is conditional, make the release in `stopped()` unconditional (null-safe cancel).
 - **super order:** `super.started()` FIRST; cancel resources BEFORE `super.stopped()` (super LAST in stopped).
+- **Veto illegal placement with `isParentLegal`/`isChildLegal`** (both default `true`): a palette drop under the wrong
+  parent otherwise goes unnoticed for years. [CERT-a] corpus B1416 §1416.4 row e; `§ Child-tree containers` above.
+
+### Frozen-slot facts the lifecycle depends on `[ev: corpus B1416 §1416.4]` `[ev: corpus B1417 §1417.3]`
+
+All spoken by the course instructor ([CERT-a]) unless a code cite is given.
+
+- **`HIDDEN` is not a lock:** a user can clear `HIDDEN` on a frozen slot at runtime, unlike `READONLY`; if hiding
+  matters, re-assert it in a flags-changed callback (B1416 row a; open child gap B1416-G2).
+- **Frozen slots keep declaration order:** the Reorder dialog (and Sort by name) moves only dynamic slots, so declare
+  frozen properties in the order the operator should read them (B1416 row c).
+- **A frozen action without a `do<Action>()` handler fails the type**, so the component also disappears from the
+  palette; Slot-o-Matic never writes the handler (B1417 row j; type-load rule in `types/actions.md` § 1).
+- **Compare with the declared default, not a literal:** `((BString) id.getDefaultValue()).getString()` — a literal
+  copy drifts from the annotation ("hidden bug", B1417 row k; `Property.getDefaultValue`, `javax/baja/sys/Property.java:50`).
+- **A default whose type differs from the declared type compiles and fails at runtime:** an `int` property with
+  `defaultValue = "false"` throws `ClassCastException` when read (B1417 row l, child gap B1417-G4); Slot-o-Matic
+  copies `defaultValue` verbatim (see `types/logic.md` § Regenerating slots) [INFER for the mechanism].
 
 ## Wire-sheet placement of code-created components `[ev: corpus B1172]` `[ev: retro ws-placement]`
 
