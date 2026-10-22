@@ -32,9 +32,10 @@ do not construct a separate one in the device class. [ev: code modbusCore-rt `BM
 (`LOG.log(Level.FINE, msg, ex)`) only from `FINE` down, so a production station shows the reason without the trace.
 `[ev: corpus B1418 §1418.2 a]`
 
-**Ops note — `LogHistoryService` has one master level:** a single `minimumSeverity` property, default `info`, is
-the floor for every logger, which is why `FINE` never reaches the log history. Raising it to `FINE` with the history
-capacity set to Unlimited can fill the disk — set it back after the trace.
+**Ops note — `LogHistoryService` has one master level:** its single `minimumSeverity` property (default `info`)
+decides which log records the station's log history keeps, for every logger, so `FINE` records never reach it by
+default. Lowering it to `fine` while the history capacity is Unlimited can fill the disk; restore `info` after the
+trace.
 `[ev: corpus B1418 §1418.2 b]` `[ev: code com/tridium/history/log/BLogHistoryService.java:78]`
 
 **Guard expensive strings** at `FINE`/`FINEST`:

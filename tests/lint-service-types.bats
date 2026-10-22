@@ -167,6 +167,43 @@ svc() {
   [[ "$output" == *"WARN  lint-service-types  "*"BUo.java:3  getServiceTypes() return not resolved in this file"* ]]
 }
 
+# gst <class> <statement line> — a service whose getServiceTypes() runs <statement> and then returns { TYPE }
+gst() {
+  printf 'package com.x;\npublic class %s extends BAbstractService {\n' "$1"
+  printf '  public Type[] getServiceTypes() {\n    %s\n    return new Type[] { TYPE };\n  }\n}\n' "$2"
+}
+
+@test "ST14: switch-rule blocks are the method's scope; a lambda on a case line or after case X: is nested" {
+  # Mutation: ST14 -- classifying any '->' on a case line as a switch rule FAILs a lambda's return null on that line
+  gst BMulti 'switch (m) { case 1, 2 -> { return null; } default -> { } }' > "$SRC/BMulti.java"
+  gst BDef 'switch (m) { case 1 -> { } default -> { return null; } }' > "$SRC/BDef.java"
+  gst BGuard 'switch (o) { case Integer i when (i > 0) -> { return null; } default -> { } }' > "$SRC/BGuard.java"
+  gst BCaseLam 'switch (m) { case 1 -> run(() -> { return null; }); default -> { } }' > "$SRC/BCaseLam.java"
+  gst BColonLam 'switch (m) { case 1: s = x -> { return null; }; break; }' > "$SRC/BColonLam.java"
+  gst BColonRun 'switch (m) { case 1: run(() -> { return null; }); break; }' > "$SRC/BColonRun.java"
+  gst BYield 'Type[] t = switch (m) { case 1 -> { yield new Type[0]; } default -> { yield null; } };' > "$SRC/BYield.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BMulti.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BDef.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BGuard.java:3  getServiceTypes() registers no type"* ]]
+  if [[ "$output" == *"BCaseLam.java"* || "$output" == *"BColonLam.java"* || "$output" == *"BColonRun.java"* || "$output" == *"BYield.java"* ]]; then return 1; fi
+}
+
+@test "ST15: string and char literals never open a scope, close the body or carry a return" {
+  # Mutation: ST15 -- reading literal contents lets "class A" in a condition hide the method's return null
+  gst BLitCls 'if (n.equals("class A")) { return null; }' > "$SRC/BLitCls.java"
+  gst BLitBrace 'String s = "}"; char c = '"'"'{'"'"'; if (n == null) return null;' > "$SRC/BLitBrace.java"
+  gst BLitArrow 'if (n.equals("a ->")) { return null; }' > "$SRC/BLitArrow.java"
+  gst BLitRet 'String r = "return null;";' > "$SRC/BLitRet.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BLitCls.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BLitBrace.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BLitArrow.java:3  getServiceTypes() registers no type"* ]]
+  if [[ "$output" == *"BLitRet.java"* ]]; then return 1; fi
+}
+
 @test "ST7: --strict exits 1 on a WARN; usage errors and a non-directory exit 3" {
   svc BOther 'return new Type[] { BIOther.TYPE };' > "$SRC/BOther.java"
   run "$LST" --strict "$TMPDIR_T/Mod"

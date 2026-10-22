@@ -26,7 +26,8 @@ corrected the instructor (the default store is `niagara.signing.jceks`, not `.jk
   declared mutation observed flipping its own test. Review follow-up: every `return` is checked and an assignment is
   read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). T9h review follow-up: nested-scope
   returns (block lambda, anonymous class, local class) are skipped and the rank order is pinned (RED ST12 → GREEN
-  15/15, mutations ST12/ST13 observed; vendor smoke unchanged). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
+  15/15, mutations ST12/ST13 observed; vendor smoke unchanged); review fix: exact switch-rule labels and literal
+  contents blanked (RED ST14/ST15 → GREEN 17/17, mutations ST14/ST15 observed). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
   590 files declaring `getServiceTypes`, 0 FAIL, 6 WARN no own type (registered only under an interface type,
   genuine by the rule), 4 WARN unresolved `[ev: corpus B1419 §1419.1]`
 
@@ -54,8 +55,8 @@ quality-round8 T9f course-recording rows") until a session with those files in s
 - `types/logic-authoring.md` § BQL from code — a pointer to the BQL case rules in `types/dashboard.md` (D3-23).
 - FOLDED by T9h (2026-10-22): the `types/observability.md` §1/§3 rows above (plus D3-7, the `LogHistoryService`
   single `minimumSeverity` ops note) and the `types/logic-authoring.md` § BQL from code pointer.
-- Component lifecycle rows deferred until T9b merges (`types/logic-authoring.md`): D1-12, D1-14, D1-15, D1-16,
-  D1-17, D1-18, D2-11, D2-12, D2-13.
+- Component lifecycle rows (`types/logic-authoring.md`), still owed now that T9b has merged; they belong to T9g
+  (Ayudante1): D1-12, D1-14, D1-15, D1-16, D1-17, D1-18, D2-11, D2-12, D2-13.
 
 ## Lessons
 - A spoken demo, the official devguide and our own older block can agree and still be wrong for our hosts: the
