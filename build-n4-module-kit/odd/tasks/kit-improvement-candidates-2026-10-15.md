@@ -551,18 +551,34 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1231 §1231.6/§1231.9/§1231.11, B1232 §1232.2/§1232.4, B1253 §1253.3 K1/K6, B1254 §1254.5.
 - **Target:** `types/logic.md` § Tridium rt idioms / Slots / Restart & persistence; `types/logic-authoring.md`; `types/security.md` §2.
 - **Lint-able:** yes — WARN callback without `isRunning()` guard (B1242 K4); `get("…") != null`; `removeAll()`; `setValue` then `setStatus`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; scc Δ2, Δ3, Δ4, Δ5, Δ6): `types/logic.md` § Tridium rt idioms
+  (callback contract, validators skip link-fed writes, one-shot status write, TRANSIENT run-state, single-flight,
+  persisted ids, slot-API traps), `types/security.md` § 2.2a. **Premise refined:** scc Δ2 "READONLY is honoured only by
+  the Workbench property sheet" — code: `set(prop, v, cx)` checks only operator/admin write (vineflower baja 4.14.0.162
+  `BUser.java:902-912`), but `BComponent.canWrite(OrdTarget)` does refuse READONLY (`BComponent.java:925-939`); the kit
+  states both and leaves "which remote surfaces ask canWrite" not verified. scc Δ5's `NoSuchSlotException`: javadoc
+  (docSource 4.14.0.162 `BComplex.java:686-697`) vs a `Property` cast in the 4.14.0.162 body (`ComplexSlotMap.java:371-373`);
+  the rule avoids the call (K30). Owed Go lints G29 `callback-running-guard`, G32 `slot-api-traps`.
 
 ### C37 — Concurrency doctrine: no intrinsic locks, named threads, callback thread map
 - **Sources:** tjd#Δ4 (primary: `lint-intrinsic-lock.sh`) · tjd#Δ5 extends (naming/priority; reinforces rac Δ1's `defaultThreadFactory`) · poh#Δ1 extends (callback → thread map)
 - **Evidence:** course `Slides/9 Multithreaded Development.pdf` p4-11, p21, p26-28; corpus B1238 §1238.2, §1238.10; DashboardPan `BDashboardService` has 5 `synchronized` methods.
 - **Target:** `types/logic.md` § Tridium rt idioms; new `toolbelt/lint-intrinsic-lock.sh`.
 - **Lint-able:** yes — FAIL `synchronized` method / `synchronized(this)` in a `B*` class; WARN unnamed `new Thread(`/`Executors.new*()`. **Fold type:** doc section + new lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; tjd Δ4, Δ5, poh Δ1): `types/logic.md` § Tridium rt idioms (no
+  intrinsic locks with the framework's own `synchronized (this.instance)` at vineflower baja 4.14.0.162
+  `ComplexSlotMap.java:740`; named threads; the callback thread map with `Console.java:41`, `EngineManager.java:560`,
+  fox-rt `SessionDispatcher.java:16`). The new `lint-intrinsic-lock.sh` is NOT written (round-8 rule: no new bash
+  lints): owed Go lints G30 `intrinsic-lock`, G31 `thread-naming`. The live thread-map run stays open (B1238-G2).
 
 ### C38 — Action threading and the two coalescing winners
 - **Sources:** tjd#Δ3 (primary: Fox dispatcher, ASYNC → engine, `post()` override with `Invocation`) · rcf#Δ1 reinforces (confirms tjd Δ3; `post()` FIRST-wins vs `CoalesceQueue` LAST-wins; queued ASYNC runs with null Context)
 - **Evidence:** `ActionQueue.java:28,85`, `EngineManager.java:310`, `Invocation.java:85-91`, course `Slides/9` p13-17, corpus B1238 §1238.3-5, B1316 §1316.1.
 - **Target:** `types/actions.md` § 2 Threading model.
 - **Lint-able:** yes — WARN blocking ASYNC action without `post(` override; bare `this::do` in `post(`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; tjd Δ3, rcf Δ1): `types/actions.md` § 2 (Fox:Dispatcher, 60 s
+  request timeout, `ActionQueue` FIRST-wins vs `CoalesceQueue` LAST-wins, null Context in queued ASYNC, the `Invocation`
+  offload), all read in baja/fox-rt 4.14.0.162 vineflower; 4.15 not verified. Owed Go lint G28 `async-blocking-action`.
 
 ### C39 — A null Context means `BPermissions.all`; `OrdTarget.can*` pass without a security target
 - **Sources:** rcf#Δ2 (primary) · nsto#Δ8 extends (custom `BOrdScheme` contract; gate every hop with `canRead()`) · rsb#Δ5 extends (worker threads must carry the action's Context: null Context = all permissions + default locale)
