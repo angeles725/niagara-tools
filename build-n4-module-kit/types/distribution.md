@@ -111,7 +111,7 @@ into a production JACE. `[ev: corpus B18 §18.9]`
 self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium/security/niagara.signing.jceks`
 (type JCEKS; the course demo and the 4.15 devguide say `niagara.signing.jks`, our hosts have `.jceks`), RSA-3072,
 valid 365 days, refreshed at 183. The store password sits in clear text in `niagara.signing.xml` beside it: read
-key names only, never print it. `[ev: corpus B1417 §1417.1]`
+key names only, never print it. `[ev: corpus B1417 §1417.1]` `[ev: retro course-recordings Δ3]`
 
 - **Release builds turn the default profile off** (`allowDefaultProfile.set(false)` in the ROOT signing block, `build-verify.md`
   § Build target & plugin version): with it on, a failed HSM/token login silently falls back to the dev key and the build stays

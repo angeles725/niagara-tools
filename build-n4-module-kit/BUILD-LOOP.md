@@ -22,7 +22,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Run **`scripts/check-client-source.sh --build-state BUILD-STATE.md --module <MOD> <module-root>`** — is this checkout the module's declared `source_of_truth` (`<path>@<branch>@<commit>`)? WARN when the module root is not in a git work tree or the field is undeclared/`unknown`; FAIL on a detached HEAD, the wrong checkout, the wrong branch, or a HEAD behind the declared commit (stale). Local refs only, never fetches. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2); a FAIL means you are about to build from the wrong tree — stop and switch. `[ev: retro client-source-of-truth Δ1]`
 - **JDK 8** present (`ls /usr/lib/jvm`).
 - **A second local test station** needs its own ports: in the new station's services set Fox 4911 → 4912 and Web
-  443 → 444, then **save** the station, or nothing is written and the two stations collide. `[ev: corpus B1416 §1416.5 a]`
+  443 → 444, then **save** the station, or nothing is written and the two stations collide. `[ev: corpus B1416 §1416.5 a]` `[ev: retro course-recordings Δ4]`
 - **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
 - **Station live?** A running station LOCKS its `modules/<mod>.jar`. Free the lock FIRST (close Workbench, or stop a non-production station) and build directly; use a mirror (`toolbelt/mirror-niagara-home.sh`) ONLY for a live production supervisor you must not stop — see build-verify.md §Building against a running station. [ev: retro coldroompan-dashboardpan-freeze-stat-leds · B2]
 - **This module's build target may differ from the last one's — read THIS module's `gradle.properties` + `settings.gradle.kts`:** a sibling in the same client repo can target a different `niagara_home` + plugin (e.g. ColdRoomPan → PowerB 4.15.3 / 7.6.22 vs CompPan → Honeywell 4.14 / 7.6.17); never carry over the previous module's target. [ev: retro module-palette-and-build-target · B6]
@@ -94,7 +94,7 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 - **After editing a part's `*.gradle.kts`, Gradle-sync the IDE before you trust its imports:** a new `api(":x-rt")`
   (a module from another Gradle build or the install) or an `uberjar(...)` dependency does not resolve in IntelliJ
   until the sync runs. Keep the dependency block grouped NRE / module / test. Forms: `types/module-wiring.md` §1.
-  `[ev: corpus B1418 §1418.5 c]` `[ev: corpus B1419 §1419.4 a]`
+  `[ev: corpus B1418 §1418.5 c]` `[ev: corpus B1419 §1419.4 a]` `[ev: retro course-recordings Δ5]`
 - **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
   cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling
   slot you are mirroring instead of re-tracing the path. `[ev: retro change-tier-time-budgets Δ2]`

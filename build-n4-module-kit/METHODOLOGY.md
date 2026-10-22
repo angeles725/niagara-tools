@@ -98,7 +98,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev: corpus B1054-B1061]`
 
-## Version and N5 readiness
+## Version and N5 readiness `[ev: retro course-recordings Δ4]`
 - [ ] **Public API only where it exists:** public `javax.baja` API changes only between majors (4.14.7 → 4.15.6 is
   one); private `com.tridium.*` API can change in a minor release without notice. A private import needs a reason
   in the module README (lint proposed: retro n4-course-build-deps-permissions-signing Δ3). `[ev: corpus B1416 §1416.5 i]`

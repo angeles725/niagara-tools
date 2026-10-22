@@ -12,7 +12,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **One Java package belongs to one module part.** Code the `-rt` and `-wb` parts both need is either duplicated
   or moved into its own utility module (`types/utility-lib.md`); a package is never split across parts or modules.
   N4 loads the first copy and shadows the other; Niagara 5 refuses split packages. Check:
-  `toolbelt/split-package-check.sh` (`types/issues-and-gotchas.md` D4c). `[ev: corpus B1417 §1417.3 a-b]`
+  `toolbelt/split-package-check.sh` (`types/issues-and-gotchas.md` D4c). `[ev: corpus B1417 §1417.3 a-b]` `[ev: retro course-recordings Δ1]`
 
 ## Naming — `javax.baja.*` = framework API, `com.<vendor>.*` = your code `[ev: corpus B817]`
 - Tridium declares PUBLIC framework types under `javax.baja.<domain>` (e.g. `javax.baja.control.BControlPoint`) and
@@ -24,7 +24,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - You AUTHOR `module-include.xml` (the `<type>` list). The gradle plugin GENERATES `META-INF/module.xml` from it.
 - **After renaming or deleting a type, delete `module-include.xml` (or its stale `<type>` line) and rebuild.** The
   build adds lines for new `@NiagaraType` classes but never rewrites or removes an existing line, so a renamed
-  type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1417 §1417.3 e]`
+  type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1417 §1417.3 e]` `[ev: retro course-recordings Δ1]`
 - A hand-authored `META-INF/module.xml` in source is WRONG (L6): it will be overwritten and drifts from the plugin
   output. Edit `module-include.xml`; never the generated manifest. `[ev: corpus B817]`
 - **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1]
@@ -111,7 +111,7 @@ L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niag
 
 When hand-adding a `@NiagaraProperty` to an already-generated class (outside Slotomatic's auto-region), set the auto-region checksum to the plain integer `0`, NOT the literal placeholder `(auto)`. The `(auto)` text causes a cosmetic Slotomatic parse error (the build still passes but emits a noisy WARNING about an unrecognized checksum token); `0` causes Slotomatic to regenerate the checksum cleanly on the next build. If Slotomatic's region comment shows `/* auto */ (auto)` after a hand-edit, replace it with `/* auto */ 0`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ24]`
 
-## Slot-o-Matic runs — read the output, recover a failed file
+## Slot-o-Matic runs — read the output, recover a failed file `[ev: retro course-recordings Δ5]`
 - **Read the Slot-o-Matic output on every run:** a file it cannot process is logged and skipped, the task still
   succeeds, and the build fails later (or not at all) in `compileJava`. `[ev: corpus B1417 §1417.3 s]`
 - **Never write code inside the generated `BEGIN … END BAJA AUTO GENERATED CODE` region:** the next run replaces
@@ -192,7 +192,7 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   **`scaffold-module.sh` MUST emit `t="b:UnrestrictedFolder"` as the palette root** (not the default `b:Folder` emitted by some scaffold versions) to ensure the `palette-root` WARN is never present on a freshly-scaffolded module. `[ev: corpus B746 §746.1]` `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
 - **Type spec = `<alias>:<TypeName>` without the `B`** (`cr:ColdRoomPan` for `BColdRoomPan`); a Java class
   name or a `B`-prefixed name fails with "Type not found". Declare each alias once, `m="<alias>=<module>"` on the
-  first `<p>` that uses it; later entries reuse the alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]`
+  first `<p>` that uses it; later entries reuse the alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
 - Property overrides in the palette are XML attributes on the `<p>` tag; they set the slot value
   at drag-drop time and are not persisted unless the component itself persists them.
 - Assembly templates are **pure resource additions** — no code change, no class risk.

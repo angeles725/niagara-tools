@@ -240,7 +240,7 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **A facade/panel type with no lexicon entry is a ship-blocker, not a coverage warning:** its slots render raw camelCase in Workbench next to the translated control-side names and the operator cannot find them during commissioning. `toolbelt/slot-coverage.sh` FAILs (exit 1, no `--strict` needed) for every missing type named `*Panel`/`*Facade`; pass `--facade` to treat every declared type of an operator-facing module that way. `[ev: retro panccadia-commissioning-lessons Δ9]`
 - **`module.lexicon` must be ASCII-only — Niagara reads it as Latin-1 on-station:** UTF-8 multibyte accented characters render as mojibake in the Workbench property sheet (`Presión` → `PresiÃ³n`). Use plain ASCII spellings (`Presion`, `Seccion`) or `\uXXXX` unicode escapes for any non-ASCII glyph. `toolbelt/lint-lexicon-ascii.sh` implements this check (FAILs on any non-ASCII byte in a `.lexicon` file). `[ev: corpus B1015 §1015.5]`
 - **A translation is per whole key:** one key has one value in every place it shows, so a word that needs two
-  translations needs two keys. `[ev: corpus B1418 §1418.1]`
+  translations needs two keys. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
 - **A translated lexicon ships as its own jar:** the Lexicon Module Builder makes an extra module installed beside
   the base module (the base jar is unchanged). `[ev: corpus B1418 §1418.1]`
 - **Verify a translation in both clients:** Workbench uses one global locale (Tools › Options, then restart); a
@@ -264,7 +264,7 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
   not. For a case-insensitive match chain NEQL first: its `like` is a whole-string Java regex, so `(?i)` at the start
   works and the pattern must match the full value; then `|bql:select …` (exact literal still open, B1418-G1).
   A query run from the browser moves every row over the network: filter and `limit` in the query, not in the page.
-  `[ev: corpus B1418 §1418.3]` `[ev: corpus B1419 §1419.2 b]`
+  `[ev: corpus B1418 §1418.3]` `[ev: corpus B1419 §1419.2 b]` `[ev: retro course-recordings Δ6]`
 - **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.
   [CERT] `BS/nav.js:28-55`; `BS/baja/nav/NavContainer.js:153`
 - **Tags and relations:** there is no `baja.tag` call namespace; use the Promise methods
