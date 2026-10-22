@@ -276,6 +276,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | pending | 2 |
 | 2026-10-23-r8-mirror-userhome.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r8-p1-process.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-web.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-headers.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-k15.md | kit | 2026-10-23 | folded | 1 |

@@ -637,6 +637,12 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1242 §1242.3/§1242.7 K13, B1238 §1238.8; user session 2026-10-15.
 - **Target:** `SOURCES.md`, `corpus-index.md`, `BUILD-LOOP.md` §0, `skill/SKILL.md` step 2, `METHODOLOGY.md` K-rules.
 - **Lint-able:** partial — report of absolute claims citing only inference. **Fold type:** doc + report script.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-process`, 2026-10-23; cex Δ2, Δ3, rsb Δ6): `BUILD-LOOP.md` § 0 reference-first
+  rule (+ the course as a primary exemplar, B1230-B1258), `METHODOLOGY.md` K33 (absolute claims checked against Tridium
+  training; C01/C03/C09/C11 as worked examples) and K34 (delta totals counted by script; this register's 178-vs-168 hand
+  sum as the example). LEFT: cex Δ1's `SOURCES.md` § Exemplar source and `corpus-index.md` rows, and the `skill/SKILL.md`
+  step-2 line — all three files are outside this unit's edit surface; the one-time "never"/"forbidden" sweep. Owed Go
+  lint G38 `absolute-claims` and Go tool G39 `count-retro-deltas`.
 
 ### C52 — Client parity ticket (course convention wins on five points)
 - **Sources:** poh#Δ3 (primary)
@@ -644,6 +650,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** read-only parity of `Cliente/panccadia-leon` 7ca1b57; corpus B1236 §1236.3, B1255 §1255.7.
 - **Target:** `toolbelt/kit-ticket.sh` + `types/observability.md` §1.
 - **Lint-able:** yes via C10/C11 checks + new logger-name WARN. **Fold type:** kit-ticket + doc line.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-process`, 2026-10-23; poh Δ3): the kit half, logger name = exact
+  `moduleName`, in `types/observability.md` § 1 (course `BLoggingExample.java:89`, Lab 7 `BWorkOrderService.java:271`).
+  LEFT: the client parity ticket, (a) `<Type>.displayName` keys, (b) `b:UnrestrictedFolder` palette roots, (d)
+  `BDashboardService` private lock (C37 names it), (e) operator text via `LexiconModule.getText` — client follow-ups for
+  `Cliente/panccadia-leon`; `toolbelt/kit-ticket.sh` is outside this unit's surface. Owed Go lint G40 `logger-name`.
 
 ### C85 — Root `build.gradle.kts` signing block: template, scaffold and root-aware lint
 - **Sources:** bsw#Δ4 (primary). Extends bdps Δ4 (C48): the lint reads the ROOT `build.gradle.kts` (the wizard folder is the Gradle root project).
