@@ -129,7 +129,7 @@ while IFS= read -r f; do
 done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
-# Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon (Type.slot, then slot).
+# Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon by the bare slot key (NSlot.java:42).
 # ---------------------------------------------------------------------------
 display_names() {  # tsv-file
   awk -F'\t' -v LEX="$LEXICON" '

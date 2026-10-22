@@ -220,6 +220,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1231 §1231.4 (`ComplexIntrospector`); course `Slides/2 Slots.pdf`.
 - **Target:** `types/actions.md:24-26`.
 - **Lint-able:** yes — WARN both `do<X>()` and `do<X>(…Context)`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-4, `docs/r8-t9g-actions`, 2026-10-22; scc Δ1): `types/actions.md` § 1 (type-load errors,
+  public handler taking `Context`, one handler) + `toolbelt/lint-action-handler.sh` WARN. Premise checked against
+  `ComplexIntrospector.java:316-343`; the kit's own example handler was package-private (also a type-load error), fixed.
 
 ### C10 — Lexicon keys: slot = bare slot name, type = `<Type>.displayName`, enum = bare tag
 - **Sources:** lux#Δ1 (primary, corrects the kit's `Type.slot` advice and its checkers) · lex#Δ1 extends (`<Type>.displayName`, `%lexicon()%` in facets; lux Δ1 refines its slot row)
@@ -227,6 +230,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `NSlot.java:42`, `EnumType.java:50`, devguide `localization.txt:106-108,135-136`, corpus B1305 §1305.2 C1, B759 §759.1, B1236 §1236.3.
 - **Target:** `types/dashboard.md:203`, `types/value-types.md:51-52`, `types/structure.md` L4, `toolbelt/slot-coverage.sh:23,39-41`, `toolbelt/generate-wiring-map.sh:20`.
 - **Lint-able:** yes — `slot-coverage.sh` WARN dotted-only match and bare `<Type>=`; require `<Type>.displayName`. **Fold type:** doc fix + script fix.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; lux Δ1, lex Δ1): `types/structure.md` § Lexicon key catalogue,
+  `types/dashboard.md` (wiring-map bullet + key bullet, now :239 not :203), `types/value-types.md`; `slot-coverage.sh`
+  parse = `<Type>.displayName` only + WARN bare `<Type>=`, per-slot = bare keys + `DOTTED` row; `generate-wiring-map.sh`
+  bare key only (:20-22, :145). `%lexicon()%` is a BFormat call (`BFormat.java:452`), not `Lexicon.java:466-495` as
+  B1305 row 11 grouped it. The `generate-wiring-map.sh` display-names comment (:132) reworded after T8c.
 
 ### C11 — Palette example uses class names and attribute overrides; fixture root violates the kit's rule
 - **Sources:** afl#Δ3 (primary)
@@ -234,6 +242,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `Niagara-4.15.6.20/modules/kitControl-rt.jar!module.palette:133-141`; course `Slide Code/…/module.palette`; `fixtures/MinimalPan/MinimalPan/MinimalPan-rt/module.palette:3`.
 - **Target:** `types/structure.md:133-180`, fixture palette, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — FAIL `t="` with a `.`, undeclared prefix; WARN any `b:Folder`. **Fold type:** doc fix + template + lint.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; afl Δ3): `types/structure.md` § Palette format card + example + key
+  rules; `verify-module.sh` `palette_scan` (`palette-type` FAIL, `palette-root` WARN on every baja Folder);
+  `fixtures/MinimalPan` root `b:UnrestrictedFolder`. Premise confirmed in `ValueDocDecoder.java:1071-1073,1091`; the
+  undeclared-symbol FAIL also catches a root without `m="b=baja"`. OWED: `fixtures/MinimalDash` palettes (two `b:Folder`
+  roots; outside the unit's surface).
 
 ### C12 — `niagaraTest` is not "WSL finds 0 tests → Workbench only"; native Windows route works
 - **Sources:** tpb#Δ1 (primary) · tpb#Δ3 extends (signing prerequisite: CA-chained test-jar signer, else BUILD SUCCESSFUL with 0 tests)
@@ -378,6 +391,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: live 2026-10-16 verify-module.sh training-rt.jar]` (`training-rt.jar` → 10 entries, `Cristian_Angeles_Cert-rt.jar` → 2).
 - **Target:** `toolbelt/verify-module.sh` `check_palette` (:420) + bats.
 - **Lint-able:** yes. **Fold type:** kit-check fix + bats.
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; slo Δ6): `palette_scan` counts `<p>` with `n=` in any position and
+  a non-folder `t=`, and also skips `v=` slot overrides (kitControl `module.palette:131` children carry `n`+`t`+`v`).
 
 ### C83 — The ping API is `void doPing()` with void `pingOk()`/`pingFail(String)`
 - **Sources:** ndh#Δ1 (primary) · ndh#Δ3 extends (reachability-only ping recipe: `Socket.connect(addr, timeoutMs)` → `pingOk()`, `IOException` → `pingFail(...)`; confirms bdps Δ2's `NETWORK_COMMUNICATION` grant live, `hosts="*"`/`ports="*"` stays WARN)
@@ -393,6 +408,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: transcript 2026-10-16 exam P1 slotomatic --info]`.
 - **Target:** `METHODOLOGY.md` K15 (:122), `toolbelt/build.sh` (pre-gradle marker scan + failure hint).
 - **Lint-able:** yes — FAIL a `.java` with a `BEGIN BAJA AUTO GENERATED` marker and no `/*@ $` stamp before `END`. **Fold type:** doc fix + build.sh check + bats.
+- **Fold status:** NOT FOLDED (WU-P0-4, 2026-10-22): both targets, `METHODOLOGY.md` K15 and `toolbelt/build.sh`, are outside
+  the unit's allowed surface; OWED in `BUILD-STATE.md` with slo Δ1 (K15 text + Go lint G3 `slotomatic-markers`).
 
 ---
 

@@ -87,7 +87,8 @@ All [CERT]: the first three under `organized/baja/baja/vineflower/com/tridium/sy
 A `Type.slot` key is never read for the slot, and a bare `<Type>=` key does nothing for the type (it falls back to
 `toFriendly(<Type>)`, `NTypeInfo.java:183`). `toolbelt/slot-coverage.sh` checks both: the parse mode
 counts a type only through `<Type>.displayName` and WARNs a bare `<Type>=`; `per-slot` counts only bare slot keys and
-prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated slot.
+prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated slot. A coverage check counts only
+the key forms the framework looks up; a form it ignores is reported, never counted. `[ev: retro r8-t9g-actions Δ2]`
 
 ## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
 
@@ -235,8 +236,9 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]` `[ev: retro course-recordings Δ2]`
 - `verify-module.sh` FAILs (`palette-type`) a `t=` that is a Java class name or whose symbol no `m=` declared,
   and counts as entries only `<p>` elements with `n=` and a non-folder `t=` in any attribute order, skipping
-  `v=` overrides — a Workbench-saved palette is no longer reported empty.
-  `[ev: retro n4-course-handson-slotomatic-authoring Δ6]`
+  `v=` overrides — a Workbench-saved palette is no longer reported empty. A check over a framework file reads
+  it the way the framework does, never by a literal text pattern.
+  `[ev: retro n4-course-handson-slotomatic-authoring Δ6]` `[ev: retro r8-t9g-actions Δ1]`
 - Override values are applied at drag-drop time; they are not persisted unless the component itself
   persists them.
 - Assembly templates are **pure resource additions** — no code change, no class risk.
