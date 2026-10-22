@@ -156,7 +156,7 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   it defeats the site's logoff policy; the published keep-alive API is route 2. Contract question, so the doc wins:
   corpus B1344 §1344.4 lists the raw POST as a route `[INFER]`, while devguide `autoLogoffWeb.txt:35,112-125`
   publishes only `keepAlive()`/`release(token)`. `[ev: retro devguide415-r3-web-session-headers Δ1]`
-- Route 3 is not "map the filter on the poll servlet" (has Δ1's proposal, rejected as a primary route): the only
+- Route 3 is not "map the filter on the poll servlet" (the horizons-authoring-security retro's Δ1 proposal, rejected as a primary route): the only
   shipped mapping is web-rt's `file` servlet, by `<servlet-name>` (vineflower web-rt 4.14.0.162 `WEB-INF/web.xml:84-91`),
   and the doc says to use the filter only when the activity monitor cannot be used (`autoLogoffWeb.txt:140`). Keep
   it for a war-style module whose every request is user-driven. `[ev: retro devguide415-r2-web-ui-hmi Δ1]`
@@ -168,7 +168,9 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   `[ev: retro devguide415-r3-web-session-headers Δ2]` `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **The SPA must survive a session that ends anyway** (absolute logoff, an admin's session invalidation, a
   station restart): on a 401 or a login-page redirect, stop the poll loop and show a re-login state, never a
-  silent retry loop (same rule as § LAN browser access). `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
+  silent retry loop (same rule as § LAN browser access). `fetch`/XHR follow the redirect themselves and hand
+  the poll a 200 HTML login page, so test `response.redirected` or a non-JSON `Content-Type`, not only the
+  status code; otherwise every tick fails JSON parsing in exactly the silent loop this rule forbids. `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
 - **Kiosk panel user — commissioning checklist** (per display, 4.15.6.20 Touch guide): dedicated user; Auto
   Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24`); Allow Concurrent
   Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23`); on 4.15 also Absolute Logoff
