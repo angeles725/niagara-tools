@@ -1058,6 +1058,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
                 _srv_had_row=1
                 [ "$_st" = "FAIL" ] && _srv_had_fail=1
               ;;
+              # INFO rows (api-response-headers) prove a servlet was scanned; the report shows it as PASS.
+              INFO*) _srv_had_row=1 ;;
             esac
           done <<< "$srv_out"
           if [ "$_srv_had_row" -eq 0 ]; then

@@ -360,64 +360,45 @@ Do not reproduce them.
 
 ---
 
-## 7 · Servlet response-header checklist
+## 7 · Servlet response headers — the station already sets them
 
-**Platform-level filter note** (`TridiumSecurityFilter`): the station's `WebService/httpHeaderProviders`
-are applied globally to EVERY servlet context — including every custom `BWebServlet` at `/api/` — by
-`TridiumSecurityFilter`, installed on `/*` of every context by `configureNiagaraWebApp()`. When the
-station has header providers configured and enabled, a custom JSON API servlet receives the configured
-headers automatically with no per-servlet wiring. `setApiHeaders()` and the `lint-servlet.sh` check are
-therefore a **defense-in-depth fallback layer** for deployments where the station-level providers are
-absent or disabled; a servlet-level `resp.setHeader()` call OVERRIDES the filter value for the same
-header name. `[ev: retro module-hardening-reqexec-closed-deltas Δ1]`
+**Every module servlet inherits the station's headers.** Jetty gives each `BWebServlet` its own context and
+`configureNiagaraWebApp()` adds `TridiumSecurityFilter` on `/*` of it (`BJettyWebServer.java:1178-1180,1462-1468`);
+the filter applies the WebService's Http Header Providers before the servlet runs (`TridiumSecurityFilter.java:22-27`).
+Out of the box that is `X-Content-Type-Options: nosniff` (`BXContentTypeOptionsHeaderProvider.java:38`), the CSP
+provider (`default-src 'self' workbench`, `script-src 'self' workbench 'unsafe-inline' 'unsafe-eval'`,
+`BCspHeaderProvider.java:66,130`) and `X-Frame-Options` (the guide documents `Sameorigin` as the default, Hx needs
+it, `User/web-HttpHeaderProviders.txt:20`; the provider class default is `deny`, `BXFrameOptionsHeaderProvider.java:34`,
+so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: corpus B1328 row 9]`
+`[ev: retro devguide415-r3-web-session-headers Δ3]` `[ev: retro devguide415-r2-web-ui-hmi Δ5]`
 
-Every `BWebServlet` API response path **must** call a `setApiHeaders()` helper (or
-equivalent) that sets at minimum the following security headers:
+- **Set a header in servlet code only to deviate on purpose.** A `resp.setHeader()` for a name the filter already set
+  REPLACES the station value for that response, so a hand-written CSP silently drops the operator's policy.
+  `[ev: retro module-hardening-reqexec-closed-deltas Δ1]`
+- **A hand-rolled header helper is not a gap by itself.** An earlier audit flagged DashboardPan's and Apillm's
+  `setApiHeaders()` for missing `nosniff`/`X-Frame-Options`; with the filter in place those headers arrive anyway.
+  Check the live response, not the source. `[ev: retro our-dashboard-audit-deltas Δ1]`
+  `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ13]`
+- **Embedding a station page elsewhere:** never set `X-Frame-Options` to `Any`; the operator adds a CSP
+  `frame-ancestors` directive on the station's CSP provider (`User/web-HttpHeaderProviders.txt:20`). This is a
+  commissioning setting, not module code. `[ev: corpus B1349 §1349.1]` `[ev: retro devguide415-r3-web-session-headers Δ5]`
+- **Hx views need the defaults:** `Sameorigin` and the default CSP sources; tightening them breaks Hx views.
 
-| Header | Required value | Scope |
-|---|---|---|
-| `X-Content-Type-Options` | `nosniff` | **all** API responses |
-| `X-Frame-Options` | `SAMEORIGIN` | **all** API responses |
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'` | HTML responses only |
+**Lint** (`toolbelt/lint-servlet.sh`, check `api-response-headers`, INFO): a `doGet`/`doPost`/`service` handler that
+calls `getWriter()`/`getOutputStream()` in a class with no `X-Content-Type-Options` / `setApiHeaders()` /
+`applyHeaders()` reference gets an INFO row ("station header providers apply"); `--strict` does not escalate it.
 
-`DashboardPan`'s `setApiHeaders()` (v2026-08-31, `BDashboardServlet.java:540–543`) omits
-both `X-Content-Type-Options` and `X-Frame-Options`, and ships no `Content-Security-Policy`
-anywhere in the module — gaps ODA2-G1/G2. The two-line fix is:
-
-```java
-// Inside setApiHeaders() — add after any existing header calls
-resp.setHeader("X-Content-Type-Options", "nosniff");
-resp.setHeader("X-Frame-Options", "SAMEORIGIN");
-// HTML endpoint only:
-resp.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'");
-```
-
-**Lint check implemented** (`toolbelt/lint-servlet.sh`, check `api-response-headers`, WARN):
-- `api-response-headers` — flags a `doGet`/`doPost`/`service` handler that calls
-  `getWriter()`/`getOutputStream()` but whose class has no `setHeader("X-Content-Type-Options",…)`
-  and no `setApiHeaders()`/`applyHeaders()` helper call anywhere. Emitted as WARN (defense-in-depth;
-  the global `TridiumSecurityFilter` usually covers it). WARN → FAIL under `--strict`.
-
-`[ev: retro our-dashboard-audit-deltas Δ1]`
-
-**Gap confirmed in Apillm BApillmServlet:** `setApiHeaders()` shipping only `Cache-Control` (no `X-Content-Type-Options`, no `X-Frame-Options`) is a recurring pattern, not a DashboardPan-specific oversight — every servlet that hand-rolls its header helper must explicitly include the security headers listed above. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ13]`
-
-**Post-deploy header probe** (see also `toolbelt/commissioning-verify.sh`
-`servlet-response-headers` MANUAL step):
-After deploying a `BWebServlet`-based module, verify the live endpoint returns the required
-headers:
+**Commissioning header probe** (`toolbelt/commissioning-verify.sh` `servlet-response-headers` MANUAL step): after
+deploying a `BWebServlet` module, confirm the live endpoint carries the station's headers:
 
 ```bash
 curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass \
      'http://<station>/<module>/api/equipment' \
-  | grep -iE 'x-content-type-options|x-frame-options'
+  | grep -iE 'x-content-type-options|x-frame-options|content-security-policy'
 ```
 
-Both headers must appear in the response. A missing header is an ODA2-G2-style gap
-detectable in minutes — the static code fix (`setApiHeaders()`) is equally low-effort.
-`[ev: retro our-dashboard-audit-deltas Δ5]`
-
----
+A missing header means the station's provider is disabled or the servlet overrides it: fix the provider (operator)
+or remove the override (module), not both. `[ev: retro our-dashboard-audit-deltas Δ5]`
 
 ---
 
