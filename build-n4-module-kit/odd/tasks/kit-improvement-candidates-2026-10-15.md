@@ -154,6 +154,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `source/baja/javax/baja/status/BStatus.java:758-786`; corpus B736 already right (transcription error).
 - **Target:** `types/logic.md:233-243`.
 - **Lint-able:** yes — bats row pins the table to the constants. **Fold type:** doc fix + test pin.
+- **Fold status:** FOLDED (WU-P0-2, `docs/r8-t9e-status-links`, 2026-10-22; rac Δ4): table = `BStatus` constants, pinned by
+  `tests/kit-api-pins.bats` KP1.
 
 ### C05 — `propagateFlags` recipe uses a non-existent `BStatus.and()`; kitControl status families
 - **Sources:** rac#Δ5 (primary) · rcf#Δ7 extends (Select/Switch hold + `nullStatus` default; math `ok` default masks FAULT/DOWN/STALE)
@@ -161,6 +163,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `kitControl-rt/…/logic/BLogic.java:113,169`, `util/BSwitch.java:127,317,336`, corpus B1314 §1314.2, B1319 §1319.1.
 - **Target:** `types/logic.md:252-256`, `:335` (LC3/LC4).
 - **Lint-able:** yes — doc grep FAIL `getPropagateFlags().and(`; partial bog check for default flags behind proxy points. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED doc + doc grep (WU-P0-2, 2026-10-22; rac Δ5, rcf Δ7): recipe and status families in `types/logic.md`,
+  `tests/kit-api-pins.bats` KP2 is the doc grep. OWED: the bog check for default flags behind proxy points.
 
 ### C06 — BFacets key card names `makeDouble` and ~17 non-constant keys
 - **Sources:** rac#Δ8 (primary) · bdps#Δ6 extends (absorbed: `multiLine`, `targetType "baja:IDirectory"`, `@Facet` expression syntax)
@@ -182,6 +186,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `BComponent.java:1604-1612,1778-1785`, `BLink.java:270`, `ComponentSlotMap.java:1683-1686`, corpus B1309 §1309.2, B1316 §1316.3.
 - **Target:** `types/logic.md:111-143`.
 - **Lint-able:** yes — WARN `BLink`/`linkTo(` without `checkLink(`; `getOrdInSession` beside `new BLink`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED doc (WU-P0-2, 2026-10-22; rac Δ10, rcf Δ3): `types/logic.md` § Link lifecycle. OWED: the rt-source
+  WARN lint (outside the unit's allowed surface), stamped in `BUILD-STATE.md`.
 
 ### C09 — A mis-named frozen action handler is a type-load error, not a silent no-op
 - **Sources:** scc#Δ1 (primary)

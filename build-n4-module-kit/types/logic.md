@@ -106,13 +106,20 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 
 ## Linking across custom modules
 
-### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]`
+### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]` `[ev: corpus B1309 §1309.2]` `[ev: corpus B1316 §1316.3]`
 
-- **`doCheckLink` gates incoming links before creation:** override
-  `doCheckLink(BComponent source, Slot sourceSlot, Slot targetSlot, Context cx)` in your component to
-  validate whether a proposed link is legal.  Return `LinkCheck.makeInvalid("reason")` to block it;
-  `LinkCheck.makeValid()` to allow it.  The framework calls this before any link is created in the
-  wiresheet or programmatically.
+- **`doCheckLink` is a tooling gate, not a runtime invariant:** override
+  `doCheckLink(BComponent source, Slot sourceSlot, Slot targetSlot, Context cx)` to declare which links are legal;
+  return `LinkCheck.makeInvalid("reason")` to refuse one, `LinkCheck.makeValid()` to allow it. Only the public
+  `checkLink(...)` runs it, after the standard `LinkCheck.make` rules, and only tools call `checkLink` (Workbench link
+  pads, BOX `checkLink`) `[CERT]` `organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/BComponent.java:1580-1585`,
+  `:1596`. **Code-built links are never checked:** `linkTo(...)` builds a direct link, adds it `Flags.TRANSIENT` and
+  activates it (`BComponent.java:1776-1782`); `add(name, new BLink(...))` and `makeLink(...)` skip `checkLink` too — on a
+  running component the slot map runs only a user-permission check, skipped for a null Context or a super user
+  (`organized/baja/baja/vineflower/com/tridium/sys/schema/ComponentSlotMap.java:1684-1685`). Code that adds a link calls
+  `target.checkLink(source, sourceSlot, targetSlot, cx)` itself and adds the link only when the result `isValid()`.
+  [ev: retro devguide415-runtime-api-corrections Δ10] [ev: retro devguide415-r2-runtime-contracts-formats Δ3]
+  [ev: retro r8-t9e-status-links Δ2]
 
   ```java
   @Override
@@ -132,21 +139,33 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
   (not slot loads at startup). Use `removed(Property, BValue, Context)` symmetrically to tear down
   anything `added()` set up.
 
-- **INDIRECT-link rule — a programmatically added reciprocal link MUST use the `true` (indirect) flag:**
+- **A programmatically added reciprocal link is INDIRECT — built from a `BOrd`, from the source's handle ORD:**
   when `added()` creates a back-link (e.g. wiring the source's offset back into this component), use:
 
   ```java
-  BOrd sessionOrd = sourceComponent.getOrdInSession();
-  add(null, new BLink(sessionOrd, sourceSlot.getName(), mySlot.getName(), true));
-  //                                                                       ^^^^
-  //                                         true = INDIRECT (ORD-resolved)
+  if (checkLink(sourceComponent, sourceSlot, mySlot, cx).isValid()) {
+      BOrd srcOrd = sourceComponent.getHandleOrd();          // survives renames and moves
+      add(null, new BLink(srcOrd, sourceSlot.getName(), mySlot.getName(), true));
+      //                                                                  ^^^^ enabled
+  }
   ```
+
+  The link is indirect because its source is a `BOrd`; the 4th argument is `boolean enabled`, not an "indirect" flag
+  (`BLink.java:254`, `public BLink(BOrd sourceOrd, String sourceSlot, String targetSlot, boolean enabled)`). Take the ORD
+  from `getHandleOrd()`, as `makeLink`'s javadoc advises (`BComponent.java:1608`), not `getOrdInSession()`. Keep
+  `linkTo(...)` for UI built in code: its TRANSIENT direct link is never persisted.
 
   **Why indirect?** A direct link embeds a hard reference — if the target component starts before the
   source during a station restart, the link is unresolvable and silently breaks.  An indirect link holds
   the source as an ORD and resolves it lazily, surviving any startup ordering.  The first-party comment
   in `componentLinks-rt` states this verbatim: "we cannot guarantee the order in which the components
   will start when the station is restarted." `[ev: corpus B958 §958.2]`
+
+- **Read a code-built link back — the licence link capacity faults it silently:** inside a station, activating a link
+  past the licence's `globalCapacity` link limit sets the link's `fatalFault` and logs only
+  `Exceeded link limit for globalCapacity`; that link then propagates nothing (`BLink.java:373-378`, `:661`). After
+  adding links in code, check `link.isActive() && !link.isFatalFault()` (`BLink.java:348`, `:824`) and surface a
+  failure instead of assuming the link runs. [ev: retro devguide415-runtime-api-corrections Δ10]
 
 - **A value linked ACROSS two custom modules is a plain `double` (0/1/2), never a shared frozen-enum type:** an enum link requires the identical type on both ends, which forces module-B-rt to depend on module-A-rt, and the custom-module dependency DSL is non-trivial (`compileOnly(files(...))` does not reach the plugin classpath; the plugin auto-includes only Tridium modules). A `double` links with zero dependency; Workbench shows 0/1/2. The deleted `BHoaMode` was such an enum — a leftover reference surfaced live on the JACE as `Missing class ColdRoomPan:HoaMode`. [ev: bitácora 5cuartos §5]
 - **A discrete selector used ONLY as an internal slot is a `BFrozenEnum` (registered in `module-include.xml`), NOT a double — the plain-double rule above is for values linked ACROSS custom modules only:** e.g. `BFanMode` internal config is a frozen enum. [ev: retro coldroompan-fan-mode-defrost · L19]
@@ -230,30 +249,48 @@ Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `ch
 
 ## Slots — BStatus producers `[ev: corpus B736 §736.2–736.4]`
 
-**8-bit BStatus reference** (BStatus.java:46–53; ok = 0, no bits set):
+**8-bit BStatus reference** (`javax.baja.status.BStatus` constants; ok = 0, no bits set) `[CERT]`
+`organized/docSource/docSource-doc/extracted/baja/javax/baja/status/BStatus.java:702-716` (4.15.6.20: `:758-786`,
+`[ev: corpus B1314 §1314.2]`). `tests/kit-api-pins.bats` KP1 pins this table to those constants.
+[ev: retro devguide415-runtime-api-corrections Δ4] [ev: retro r8-t9e-status-links Δ1]
 
 | Flag | Value |
 |------|-------|
 | `DISABLED` | 0x01 |
 | `FAULT` | 0x02 |
 | `DOWN` | 0x04 |
-| `STALE` | 0x08 |
-| `OVERRIDDEN` | 0x10 |
-| `NULL` | 0x20 |
+| `ALARM` | 0x08 |
+| `STALE` | 0x10 |
+| `OVERRIDDEN` | 0x20 |
+| `NULL` | 0x40 |
 | `UNACKED_ALARM` | 0x80 |
 
-Typed factory family (BStatus.java:51–140) — never construct a raw `BStatus(int)`:
-`makeFault(s)`, `makeDown(s)`, `makeNull(s, addNull)`, `makeStale(s)`, `makeOverridden(s, addOverridden)`, `makeDisabled(s, state)`.
+Typed factory family (`BStatus.java:51-140`) — build from bits with `BStatus.make(int bits)`, or flip one bit with
+`makeFault(s, b)`, `makeDown(s, b)`, `makeAlarm(s, b)`, `makeNull(s, b)`, `makeStale(s, b)`, `makeOverridden(s, b)`,
+`makeDisabled(s, b)` (`:98-134`). Never hand-type a mask from memory: use the named constants.
 
 - **Set `makeOverridden(s, true)` on an output when it is forced by a HOA HAND or writable override** so the HMI and any subscriber can distinguish a forced value from an auto-computed one. The existing kit documents reading `OVERRIDDEN`; this is the producer side — the component applying the override must set the bit. `[ev: corpus B736 §736.4]`
 - **Use `BStatus.makeNull(s, true)` when a sensor is absent or the computation is indeterminate** — write a NULL-status output, not a `0.0` with ok-status. A `0.0/ok` lie is a valid reading downstream; it can drive a false control decision (e.g. a 0 °C reading from a disconnected probe triggers unnecessary cooling). `[ev: corpus B736 §736.4]`
-- **Gate control math on `isValid()`, not `isOk()`:** `isOk()` returns `false` whenever ANY status bit is set — including OVERRIDDEN and UNACKED_ALARM — so it drops control output even when the sensor value is numerically usable. `isValid()` returns `true` when bits = 0 OR when only override/unacked-alarm bits are set: the value is trustworthy for a control decision. Rule: use `isOk()` only for the strictest "no bits at all" check (e.g. a safety-latch gate); use `isValid()` as the control gate for all sensor reads and setpoint checks. Confusing the two silently drops control output on every manual HOA override — the fail-to-danger pattern B730/B650/B655 warns about. `[ev: retro module-hardening-reference-cards-deltas Δ2]`
+- **Gate control math on `isValid()`, not `isOk()`:** `isOk()` returns `false` whenever ANY status bit is set — including OVERRIDDEN and UNACKED_ALARM — so it drops control output even when the sensor value is numerically usable. `isValid()` returns `true` unless DISABLED, FAULT, DOWN, STALE or NULL is set — ALARM, OVERRIDDEN and UNACKED_ALARM pass (`BStatus.java:287-294`): the value is trustworthy for a control decision. Rule: use `isOk()` only for the strictest "no bits at all" check (e.g. a safety-latch gate); use `isValid()` as the control gate for all sensor reads and setpoint checks. Confusing the two silently drops control output on every manual HOA override — the fail-to-danger pattern B730/B650/B655 warns about. `[ev: retro module-hardening-reference-cards-deltas Δ2]`
 
 ## Propagation — `propagateFlags` on custom components `[ev: corpus B738 §738.3]`
 
-**Add a `propagateFlags BStatus` slot (`SUMMARY|OPERATOR`, default `BStatus.ok`) to custom control components** to let operators tune which status bits (fault/stale/down/null) flow through to outputs — mirrors the `BKitNumeric` pattern (BKitNumeric.java:35). Without it the component hardcodes propagation unconditionally.
+**Add a `propagateFlags` `BStatus` slot to custom control components** so operators choose which input status bits
+reach `out`. kitControl declares it with slot flags `0` and default `BStatus.ok` on logic/math blocks, `BStatus.nullStatus`
+on switches `[CERT]` `organized/kitControl/kitControl-rt/decompiled/com/tridium/kitControl/logic/BLogic.java:40`,
+`…/util/BSwitch.java:50`; a `SUMMARY|OPERATOR` slot is a kit choice that exposes it, not the framework's default.
 
-Recipe: `out.setStatus(getPropagateFlags().and(aggregatedInputStatus))` — AND the aggregated input status with the mask before setting the output. A `BStatus.ok` mask blocks all propagation; a mask with `FAULT` lets only fault bits through. The `SUMMARY|OPERATOR` flag exposes it in the property sheet; operators can tune per-site without a code change.
+Recipe (`BStatus` has no `and()`): `out.setStatus(BStatus.make(agg.getBits() & getPropagateFlags().getBits()))` — OR the
+input bits into `agg`, then mask, exactly as `BLogic.java:72` and `BSwitch.java:156` do. A `BStatus.ok` mask blocks all
+propagation; a mask with `FAULT` lets only the fault bit through. `tests/kit-api-pins.bats` KP2 keeps the old
+`.and(` recipe out of the kit. [ev: retro devguide415-runtime-api-corrections Δ5] `[ev: corpus B1314 §1314.2]`
+
+**kitControl status families** `[ev: corpus B1319 §1319.1]` [ev: retro devguide415-r2-runtime-contracts-formats Δ7]:
+switches (Select, MuxSwitch, Switch, NumericSwitch) COPY the selected value and mask its status; logic/math (Hysteresis,
+Limiter, math blocks) COMPUTE on the value and mask its status. Any null math input gives `nullStatus` + NaN; an
+invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.java:128`). With the default mask
+(`nullStatus` or `ok`) a faulted, down or stale probe yields an **OK-status** output carrying the bad value — set
+`propagateFlags` to `fault,down,stale,disabled` on every block fed by a probe or proxy point (LC3/LC4 below).
 
 ## RT control logic `[ev: corpus B805]`
 
@@ -331,8 +368,8 @@ An informational flag still gets a readable surface (status/reason slot, dashboa
 - **LC1 / Writable priority array (16-level arbitration):** `WritableSupport.onExecute` scans levels 1→16 first-valid-wins; relinquish-default = ordinal 17 (`BPriorityLevel.fallback`), used only when all 16 are null; only levels 1 and 8 raise `OVERRIDDEN`; to make a config slot oBIX-writable add a NEW slot + link, never re-type the existing point. [ev: corpus B536]
 - **LC2 / BLoopPoint PID:** ramp = rate-limiter + ramp-aware anti-windup; `executeTime` clamped [100ms, 60s]; `direct` action = cooling, `reverse` = heating; `disableAction` triggers bumpless pre-load; recommended tuning: `kP = (maxOut − minOut) / throttlingRange`; PI is recommended, PID seldom justified. [ev: corpus B539]
   → For third-party math/control library selection (Apache Commons Math, EJML, ND4J, MiniPID, state-machine libs) and the engine-thread/BWorker rule for heavy math: see `types/math-control-libraries.md`.
-- **LC3 / Multi-input null contract:** nulls are SKIPPED, not zeroed (`BQuadMath.nonNullCount`, `BAnd.nullOnInactive`); latch = rising-edge vs latch-action both-edges; `switch`/`select` invalid → hold + invalid-flag. [ev: corpus B537]
-- **LC4 / Control-logic fail-safe checklist (the 6 unsafe-unless-configured defaults):** `disableAction=hold` freezes the last command; `propagateFlags=0` lets a bad sensor drive the loop with no fault; `rampTime=0` = no anti-slam; alarm-ext is notification-only (no interlock); `999` sentinel is convention not framework; `clHVAC` strips Baja status. Operator recs: set `disableAction`/`Fallback` to safe posture, `propagateFlags=fault|stale|down`, `rampTime>0`, emergency L1 for interlocks. [ev: corpus B543]
+- **LC3 / Multi-input null contract:** nulls are SKIPPED, not zeroed (`BQuadMath.nonNullCount`, `BAnd.nullOnInactive`); latch = rising-edge vs latch-action both-edges; `switch`/`select` invalid → hold + invalid facet; any null math input → `nullStatus` + NaN, otherwise the input bits are OR-ed and masked by `propagateFlags` (§ Propagation above). [ev: corpus B537] `[ev: corpus B1319 §1319.1]`
+- **LC4 / Control-logic fail-safe checklist (the 6 unsafe-unless-configured defaults):** `disableAction=hold` freezes the last command; the default `propagateFlags` (`ok` on logic/math, `nullStatus` on switches) masks FAULT/DOWN/STALE, so a bad sensor drives the loop with an OK status; `rampTime=0` = no anti-slam; alarm-ext is notification-only (no interlock); `999` sentinel is convention not framework; `clHVAC` strips Baja status. Operator recs: set `disableAction`/`Fallback` to safe posture, `propagateFlags=fault,down,stale,disabled` on blocks fed by probes, `rampTime>0`, emergency L1 for interlocks. [ev: corpus B543] [ev: retro devguide415-r2-runtime-contracts-formats Δ7]
 - **LC5 / Point-extension chain (alarm + history):** `BAlarmSourceExt` → offnormal/fault algorithm (`BOutOfRange`/`FloatingLimit`/`TwoState`) + `AlarmService`; `BIntervalHistoryExt` (timer, default 15 min) vs `BCovHistoryExt` (COV `changeTolerance` deadband); alarm-ext NEVER writes the value/priority-array — it is notification-only. [ev: corpus B552]
 - **LC6 / Scheduler seam DI:** instead of calling `Clock.schedule` directly in the arming method, inject a tiny interface `interface Sched { Object at(long delayMs); void cancel(Object t); }` — production wires a `Clock`-backed impl; a test wires a fake that records `at(delayMs)` calls. This makes "which path arms, with what delay, cancel-before-reschedule" unit-testable without a station. [ev: corpus B743 §743.3]
 
