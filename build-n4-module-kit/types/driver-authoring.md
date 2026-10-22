@@ -49,6 +49,36 @@ Full wb-side recipe in `types/wb-widgets.md §Plugin-extensible device-type mana
 
 ---
 
+### 1.5 · Browser-side managers (`-ux`) — the JavaScript twin of the Workbench manager `[ev: retro t9c-reference-gaps Δ4]`
+
+The Java `BAbstractManager` framework (corpus B1088–B1093, `types/wb-widgets.md`) has a browser twin in
+webEditors-ux / driver-ux that renders the same device/point manager in the HTML5 (hx) profile. Paths below
+are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/rc/wb/mgr`.
+
+- **AMD ids:** `nmodule/webEditors/rc/wb/mgr/Manager`, `.../mgr/model/MgrModel`, `.../mgr/model/MgrColumn`,
+  `nmodule/driver/rc/wb/mgr/DeviceMgr`, `DeviceMgrModel`, `PointMgr`, `PointMgrModel`. [CERT-doc]
+  `niagara-help/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
+- **Extend `DeviceMgr`/`PointMgr` and `DeviceMgrModel`/`PointMgrModel`, never `Manager`/`MgrModel`** — Tridium
+  marks the base framework incubating. [CERT] `W/Manager.js:72-75`, `W/model/MgrModel.js:44-48`
+- **View contract:** constructor `{moduleName, keyName}` (lexicon + saved state); `makeModel(value)` returns
+  a `Promise<MgrModel>` (the base throws, `W/Manager.js:415-417`); extra commands go in `makeCommands()`, which
+  is async since 4.14 (`frontend-standard.md` § UI API changes). [CERT] `W/Manager.js:77-85`
+- **Model contract:** `DeviceMgrModel` wraps the network in a `ContainerComponentSource` filtered to
+  `driver:Device` and overrides `makeRow(subject)`; `MgrModel` adds `newTypes` and `newInstance(typeInfo)`.
+  [CERT] `driver/driver-ux/extracted/rc/wb/mgr/DeviceMgrModel.js:8-11,91`; `W/model/MgrModel.js:54-66,160`.
+  Columns hook `buildCell`, `mgrValidate`, `commit` (`W/model/MgrColumn.js:82` and below); ready-made
+  columns live in `W/model/columns/`.
+- **Discovery:** the manager provides `makeLearnModel()` and `doDiscover()`, and maps a dragged discovery
+  node with `getProposedValuesFromDiscovery()`. [CERT] `W/MgrLearn.js:45-97`
+- **Registration needs a small Java class in the `-ux` jar:** a `BSingleton implements BIJavaScript`
+  (optionally `BIFormFactorMax`, `BIOffline`) with `@AgentOn(types=...)` on your network/folder type and
+  `getJsInfo()` → `JsInfo.make(BOrd.make("module://<mod>/rc/.../MyMgr.js"), <your BJsBuild>.TYPE)`. Worked
+  example: [CERT] `modbusCore/modbusCore-ux/vineflower/com/tridium/modbusCore/ux/mgr/BModbusClientPointUxManager.java:17-38`.
+  The agent's `requiredPermissions` controls visibility only, not server-side access. `[ev: corpus B752 §752.5]`
+- **Which one to build** [INFER]: the Java manager when Workbench is the only client or you need its mature
+  learn/edit transactions; the ux manager when operators manage devices/points from a browser. A bespoke
+  dashboard is neither — it stays a servlet-SPA (`dashboard.md`).
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself:
