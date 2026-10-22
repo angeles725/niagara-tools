@@ -211,3 +211,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |
 | 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | pending | 5 |
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |
+| 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
