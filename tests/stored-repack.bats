@@ -43,3 +43,21 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$R" "$TMPDIR_T/in.jar"; [ "$status" -eq 2 ]
   run "$R" "$TMPDIR_T/nope.jar" "$TMPDIR_T/out2.jar"; [ "$status" -eq 1 ] && [ ! -e "$TMPDIR_T/out2.jar" ]
 }
+
+# The repack kept only NIAGARA4.SF/.RSA first: a jar signed under another alias (the N4 course
+# CodeSigning profile writes CODESIGN.*, Honeywell SERVER1.*, an EC key <ALIAS>.EC) lost its
+# signature-first order. Every META-INF/<ALIAS>.SF with its .RSA/.DSA/.EC block goes right after
+# the manifest. [ev: retro n4-course-sample-check-precision Δ4]
+@test "S4: alias-named signatures (CODESIGN.SF+.RSA, EC1.SF+.EC) follow MANIFEST.MF, before every other entry" {
+  rm "$TMPDIR_T/src/META-INF/NIAGARA4.SF" "$TMPDIR_T/src/META-INF/NIAGARA4.RSA" "$TMPDIR_T/in.jar"
+  add_signature "$TMPDIR_T/src" CODESIGN RSA; add_signature "$TMPDIR_T/src" EC1 EC
+  make_jar "$TMPDIR_T/in.jar" "$TMPDIR_T/src"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/out.jar"
+  [ "$status" -eq 0 ]
+  mapfile -t order < <(unzip -Z1 "$TMPDIR_T/out.jar")
+  [ "${order[0]}" = "META-INF/MANIFEST.MF" ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "$(printf '%s\n' "${order[@]:1:4}" | sort | tr '\n' ' ')" = \
+    "META-INF/CODESIGN.RSA META-INF/CODESIGN.SF META-INF/EC1.EC META-INF/EC1.SF " ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "$(printf '%s\n' "${order[@]}" | grep -c '^META-INF/\(CODESIGN\|EC1\)\.')" -eq 4 ]   # each entry exactly once
+  [[ "$output" == *"CODESIGN.SF"* ]] && [[ "$output" == *"EC1.EC"* ]]
+}
