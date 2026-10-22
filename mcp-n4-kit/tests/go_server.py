@@ -8,7 +8,8 @@
   missing binary raises `GoBinaryMissing`: a Go run never passes silently on Python.
 
 Tests that cannot run black-box carry `@go_twin(package, category)`: they are skipped under
-Go and name the Go test that replaces them.
+Go and name the Go test that replaces them. The per-file inventory lives in the plan doc and
+`test_go_harness` keeps the two in step.
 
 Any stdio server can stand in for the binary: pointing `MCP_N4_GO_BIN` at a wrapper that runs
 `python3 -m mcp_n4.server "$@"` checks that every unmarked test really is black-box.
@@ -259,3 +260,45 @@ def go_twin(package, category):
             REGISTRY.add((obj.__module__, cls_name, obj.__name__, twin, category))
         return unittest.skipIf(GO, reason)(obj)
     return mark
+
+
+INVENTORY_BEGIN = "<!-- go-skip-inventory:begin -->"
+INVENTORY_END = "<!-- go-skip-inventory:end -->"
+PLAN_DOC = os.path.join(KIT_DIR, "docs", "go-port-plan.md")
+
+
+def discovered_ids():
+    """`module.Class.test` of every test in the suite (imports every module: fills REGISTRY)."""
+    def flat(suite):
+        for item in suite:
+            if isinstance(item, unittest.TestSuite):
+                yield from flat(item)
+            else:
+                yield item.id()
+    return sorted(flat(unittest.defaultTestLoader.discover(TESTS_DIR)))
+
+
+def inventory_table(ids):
+    """The skip inventory as the Markdown table the plan doc publishes."""
+    cats = list(CATEGORIES)
+    totals, skipped = {}, {}
+    for test_id in ids:
+        module = test_id.split(".")[0]
+        totals[module] = totals.get(module, 0) + 1
+    for module, _cls, _name, _twin, category in REGISTRY:
+        skipped[(module, category)] = skipped.get((module, category), 0) + 1
+    head = ["Test file", "Tests"] + cats + ["Skipped under Go", "Runs under Go"]
+    lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+    sums = [0] * (len(head) - 1)
+    for module in sorted(totals):
+        per = [skipped.get((module, c), 0) for c in cats]
+        row = [totals[module]] + per + [sum(per), totals[module] - sum(per)]
+        sums = [a + b for a, b in zip(sums, row)]
+        lines.append("| `%s.py` | %s |" % (module, " | ".join(str(n) for n in row)))
+    lines.append("| **Total** | %s |" % " | ".join("**%d**" % n for n in sums))
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":  # print the inventory table for docs/go-port-plan.md
+    import go_server  # the module the tests import, which holds their REGISTRY
+    print(go_server.inventory_table(go_server.discovered_ids()))

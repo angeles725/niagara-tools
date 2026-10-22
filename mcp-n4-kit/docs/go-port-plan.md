@@ -41,7 +41,7 @@ line to a long-lived `go/bin/mcp-n4` subprocess and reads one reply line. `ToolT
   station state, and the Go server talks to the same FakeStation.
 - The `hook(frame)` and `on_sync` fault seams keep working unchanged.
 - Tests that touch internals or inject clocks/factories get a skip under Go plus a 1:1 Go table
-  test. S0 publishes that inventory, with a count per file.
+  test. S0 publishes that inventory, with a count per file (section 5).
 
 **Recorded-frame differential.** FakeStation gets a recorder that logs every raw BOX request
 body and reply, plus the MCP stdin/stdout. A replay station then serves the recorded frames to
@@ -137,3 +137,74 @@ If a write slice runs over 400 lines, split it per op.
 
 **No-go if:** any unmasked byte differs in stdout, BOX bodies or the journal; any token or scope
 check is weaker; or a Go test needs a live station.
+
+## 5. S0 harness and skip inventory
+
+**Running the suite against Go.** `MCP_N4_IMPL` selects the server the tests drive:
+
+```
+# Python, in-process (the default; no Go binary needed)
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s mcp-n4-kit/tests
+# Go binary over stdio (MCP_N4_GO_BIN, else go/bin/mcp-n4)
+MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests
+```
+
+- `tests/go_server.py`: `make_server(**kw)` builds `mcp_n4.server.Server(**kw)` or `GoServer`,
+  which maps the same keywords to command-line flags. Each request is followed by a `ping`
+  sentinel, so a notification (no reply) never blocks, and more than one reply line is an error.
+- A missing binary raises `GoBinaryMissing` (a `RuntimeError`, so a test expecting a startup
+  `ValueError` cannot swallow it), and an unknown `MCP_N4_IMPL` value is a `ValueError`: a Go run
+  never passes on Python by accident. A start refusal (exit 2) is a `ValueError` carrying stderr,
+  like `Server(...)`.
+- Under Go, `ToolTestCase.station_client()` arranges station state through a separate Python
+  `BoxClient` on the same FakeStation; in-process it is the session's own client, as before.
+- `FakeStation.record()` turns on the frame recorder (off by default): `frames` holds one
+  `{"request", "status", "reply"}` entry per BOX POST with the raw bodies, including injected
+  `hook` replies and 401s; `dump_frames(path)` writes them as JSON Lines for the replay
+  differential.
+- `@go_server.go_twin(package, category)` skips a test, or every test of a class, under Go and
+  names its twin, `<package>.Test<CamelCaseName>` in `go/internal/mcpn4/<package>`.
+
+**Validating the inventory.** Any stdio server can stand in for the binary. With
+`MCP_N4_GO_BIN` pointing at a wrapper that runs `python3 -m mcp_n4.server "$@"` from the kit
+directory, the whole suite passes under `MCP_N4_IMPL=go` (590 tests, 339 skipped): every unmarked
+server test is black-box over stdio.
+
+**Categories.**
+
+| Category | Meaning |
+|---|---|
+| `unit` | Calls a Python module function or class directly; the twin is a Go unit test |
+| `internals` | Reads or writes in-process server state (`srv.ctx`: session, env, write state, journal) |
+| `injection` | Replaces behaviour in-process (mock/patch, clock, `client_factory`, opener, custom tools) |
+| `in-process` | Uses an entry point with no wire form (`parse_args`, `main`, `serve`, `_validate`, docstrings, the Python `TOOLS` table, an in-process `Server`) |
+
+`test_live_smoke.py`, `test_mutation_check.py`, `test_new_retro.py` and
+`test_methodology_names.py` cover dev tooling that stays Python, and `test_go_harness.py` covers
+the harness itself: they run unchanged under both implementations. Several `in-process` tests
+(start refusals, `TestRobustness` id handling, `TestServerTool`) can move to `make_server` in the
+slice that ports their code instead of getting a Go twin.
+
+The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
+`test_go_harness` fails when it and the markers disagree.
+
+<!-- go-skip-inventory:begin -->
+| Test file | Tests | unit | internals | injection | in-process | Skipped under Go | Runs under Go |
+|---|---|---|---|---|---|---|---|
+| `test_auth_latch.py` | 10 | 0 | 0 | 10 | 0 | 10 | 0 |
+| `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
+| `test_bql.py` | 32 | 13 | 0 | 19 | 0 | 32 | 0 |
+| `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
+| `test_go_harness.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
+| `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
+| `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
+| `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
+| `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
+| `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
+| `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
+| `test_server.py` | 93 | 4 | 14 | 5 | 9 | 32 | 61 |
+| `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
+| `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
+| `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
+| **Total** | **590** | **155** | **56** | **104** | **24** | **339** | **251** |
+<!-- go-skip-inventory:end -->

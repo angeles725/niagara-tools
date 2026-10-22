@@ -157,5 +157,33 @@ class TestFrameRecorder(unittest.TestCase):
         self.assertEqual(rows, fake.frames)
 
 
+class TestSkipInventory(unittest.TestCase):
+    """The per-file inventory in docs/go-port-plan.md matches the @go_twin markers."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ids = go_server.discovered_ids()
+
+    def test_every_marked_test_exists_and_names_a_go_twin(self):
+        ids = set(self.ids)
+        self.assertTrue(go_server.REGISTRY)
+        for module, cls_name, name, twin, category in go_server.REGISTRY:
+            self.assertIn("%s.%s.%s" % (module, cls_name, name), ids)
+            self.assertRegex(twin, r"^[a-z]+\.Test[A-Za-z0-9]+$")
+            self.assertIn(category, go_server.CATEGORIES)
+
+    def test_the_plan_doc_publishes_the_current_inventory(self):
+        with open(go_server.PLAN_DOC, encoding="utf-8") as fh:
+            doc = fh.read()
+        begin = doc.index(go_server.INVENTORY_BEGIN) + len(go_server.INVENTORY_BEGIN)
+        published = doc[begin:doc.index(go_server.INVENTORY_END)].strip()
+        self.assertEqual(published, go_server.inventory_table(self.ids),
+                         "regenerate it with: python3 mcp-n4-kit/tests/go_server.py")
+
+    def test_an_unknown_category_is_refused(self):
+        with self.assertRaises(ValueError):
+            go_server.go_twin("box", "flaky")
+
+
 if __name__ == "__main__":
     unittest.main()

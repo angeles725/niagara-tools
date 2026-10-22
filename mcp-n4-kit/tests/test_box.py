@@ -10,12 +10,14 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
 from mcp_n4 import box  # noqa: E402
 
 NO_SLEEP = dict(sleep=lambda s: None)
 
 
+@go_server.go_twin("ord", "unit")
 class TestChildOrd(unittest.TestCase):
     def test_every_parent_form_joins_with_exactly_one_slash(self):
         for parent, expected in (
@@ -91,6 +93,7 @@ class RaisingOpener:
 
 
 class TestSecurity(BoxTestCase):
+    @go_server.go_twin("box", "injection")
     def test_the_load_window_follows_the_client_load_wait(self):
         # F11: a longer --load-wait means more polls and a longer total sleep.
         slept = []
@@ -110,28 +113,34 @@ class TestSecurity(BoxTestCase):
             client.load_tree("station:|slot:/Folder", sleep=slept.append)
         self.assertAlmostEqual(sum(slept), 10.0, places=3)
 
+    @go_server.go_twin("box", "unit")
     def test_auth_failure_raises_once_without_retry(self):
         c = self.client(password="wrong")
         with self.assertRaises(box.AuthError):
             c.open()
         self.assertEqual(self.fake.requests, 1)
 
+    @go_server.go_twin("box", "unit")
     def test_http_refused_without_allow_http(self):
         with self.assertRaises(ValueError):
             box.BoxClient("http://127.0.0.1:1", "u", "p")
 
+    @go_server.go_twin("box", "unit")
     def test_https_accepted_without_flag(self):
         box.BoxClient("https://station.example", "u", "p")
 
+    @go_server.go_twin("box", "unit")
     def test_repr_hides_password(self):
         c = self.client(password="s3cr3t-pw")
         self.assertNotIn("s3cr3t-pw", repr(c))
         self.assertNotIn("s3cr3t-pw", str(c))
 
+    @go_server.go_twin("box", "injection")
     def test_import_makes_no_network_call(self):
         with mock.patch.object(socket.socket, "connect", side_effect=AssertionError("network")):
             importlib.reload(box)
 
+    @go_server.go_twin("box", "unit")
     def test_import_has_no_side_effects_in_fresh_process(self):
         kit = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         r = subprocess.run([sys.executable, "-c", "import mcp_n4.box"], cwd=kit,
@@ -139,6 +148,7 @@ class TestSecurity(BoxTestCase):
         self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
 
 
+@go_server.go_twin("box", "unit")
 class TestRedirects(BoxTestCase):
     def test_redirect_is_refused_and_credentials_never_reach_target(self):
         target = FakeStation().start()
@@ -157,6 +167,7 @@ class TestRedirects(BoxTestCase):
 
 
 class TestTransportErrors(BoxTestCase):
+    @go_server.go_twin("box", "unit")
     def test_http_401_names_the_auth_scheme_the_password_and_no_retry(self):
         c = self.client(password="wrong")
         with self.assertRaises(box.AuthError) as cm:
@@ -167,6 +178,7 @@ class TestTransportErrors(BoxTestCase):
         self.assertNotIn("wrong", text)  # never echoes the password
         self.assertEqual(self.fake.requests, 1)
 
+    @go_server.go_twin("box", "unit")
     def test_http_403_says_permission_and_no_retry(self):
         self.fake.hook = hook_for("make", 403)
         with self.assertRaises(box.AuthError) as cm:
@@ -174,18 +186,21 @@ class TestTransportErrors(BoxTestCase):
         self.assertIn("HTTP 403", str(cm.exception))
         self.assertIn("do not retry", str(cm.exception))
 
+    @go_server.go_twin("box", "unit")
     def test_http_403_is_auth_error(self):
         self.fake.hook = hook_for("make", 403)
         with self.assertRaises(box.AuthError):
             self.client().open()
         self.assertEqual(self.fake.requests, 1)
 
+    @go_server.go_twin("box", "unit")
     def test_http_500_is_boxerror_not_autherror(self):
         self.fake.hook = hook_for("make", 500)
         with self.assertRaises(box.BoxError) as cm:
             self.client().open()
         self.assertNotIsInstance(cm.exception, box.AuthError)
 
+    @go_server.go_twin("box", "injection")
     def test_timeout_and_refused_and_oserror_are_boxerror(self):
         for exc in (TimeoutError("timed out"),
                     urllib.error.URLError(ConnectionRefusedError("refused")),
@@ -194,16 +209,19 @@ class TestTransportErrors(BoxTestCase):
             with self.assertRaises(box.BoxError):
                 c.open()
 
+    @go_server.go_twin("box", "unit")
     def test_connection_refused_for_real(self):
         c = box.BoxClient("http://127.0.0.1:1", "u", "p", allow_http=True, timeout=2)
         with self.assertRaises(box.BoxError):
             c.open()
 
+    @go_server.go_twin("box", "unit")
     def test_invalid_json_body_is_boxerror(self):
         self.fake.hook = lambda frame: (200, b"<html>not json", {})
         with self.assertRaises(box.BoxError):
             self.client().open()
 
+    @go_server.go_twin("box", "unit")
     def test_an_oversized_box_reply_is_refused_with_the_cap_named(self):
         # call() reads at most max_reply_bytes (32 MB by default, like get_ord): a reply
         # past the cap is refused, never parsed from a truncated body.
@@ -217,6 +235,7 @@ class TestTransportErrors(BoxTestCase):
         self.assertIn("1024", str(cm.exception))
         self.assertIn("larger than", str(cm.exception))
 
+    @go_server.go_twin("box", "unit")
     def test_malformed_reply_shapes_are_boxerror(self):
         shapes = {
             "missing m": lambda f: error_frame(f),
@@ -233,6 +252,7 @@ class TestTransportErrors(BoxTestCase):
             with self.subTest(label), self.assertRaises(box.BoxError):
                 c.open()
 
+    @go_server.go_twin("box", "unit")
     def test_error_frame_message_is_propagated(self):
         self.fake.hook = reply_hook(
             lambda f: error_frame(f, m=[{"t": "e", "b": {"m": "boom"}}]))
@@ -240,6 +260,7 @@ class TestTransportErrors(BoxTestCase):
             self.client().open()
         self.assertEqual(cm.exception.message, "boom")
 
+    @go_server.go_twin("box", "unit")
     def test_reply_seq_mismatch_is_boxerror(self):
         self.fake.hook = reply_hook(
             lambda f: error_frame(f, n=f["n"] + 41, m=[{"t": "rp", "b": "sess-1"}]))
@@ -247,6 +268,7 @@ class TestTransportErrors(BoxTestCase):
             self.client().open()
         self.assertIn("seq", str(cm.exception))
 
+    @go_server.go_twin("box", "unit")
     def test_reply_without_n_is_accepted(self):
         self.fake.hook = reply_hook(
             lambda f: {"v": "2.3", "p": "box", "m": [{"t": "rp", "b": "sess-1"}]})
@@ -254,6 +276,7 @@ class TestTransportErrors(BoxTestCase):
         c.sid = None
         self.assertEqual(c.call("ssession", "make", {}), "sess-1")
 
+    @go_server.go_twin("box", "injection")
     def test_close_swallows_any_exception(self):
         c = self.opened()
         with mock.patch.object(c, "call", side_effect=RuntimeError("password=secret")):
@@ -262,17 +285,20 @@ class TestTransportErrors(BoxTestCase):
 
 
 class TestSession(BoxTestCase):
+    @go_server.go_twin("box", "unit")
     def test_open_returns_root(self):
         c = self.client()
         root = c.open()
         self.assertEqual(root["h"], "2")
         self.assertEqual(root["t"], "baja:Station")
 
+    @go_server.go_twin("box", "unit")
     def test_context_manager_deletes_session(self):
         with self.client() as c:
             self.assertEqual(self.fake.sessions, {"sess-1"})
         self.assertEqual(self.fake.sessions, set())
 
+    @go_server.go_twin("box", "unit")
     def test_open_closes_session_when_makessc_fails(self):
         self.fake.hook = hook_for("makessc", 500)
         c = self.client()
@@ -281,6 +307,7 @@ class TestSession(BoxTestCase):
         self.assertEqual(self.fake.sessions, set())
         self.assertIsNone(c.sid)
 
+    @go_server.go_twin("box", "unit")
     def test_open_closes_session_when_loadroot_fails(self):
         def hook(frame):
             m = frame["m"][0]
@@ -292,6 +319,7 @@ class TestSession(BoxTestCase):
             self.client().open()
         self.assertEqual(self.fake.sessions, set())
 
+    @go_server.go_twin("box", "unit")
     def test_with_block_does_not_leak_on_open_failure(self):
         self.fake.hook = hook_for("makessc", 500)
         with self.assertRaises(box.BoxError):
@@ -299,10 +327,12 @@ class TestSession(BoxTestCase):
                 pass
         self.assertEqual(self.fake.sessions, set())
 
+    @go_server.go_twin("box", "unit")
     def test_constants(self):
         self.assertEqual(box.SESSION_COMPONENT_ID, "cs1")
         self.assertEqual(box.DEFAULT_ROOT_HANDLE, "2")
 
+    @go_server.go_twin("box", "unit")
     def test_station_error_frame_raises_boxerror(self):
         c = self.opened()
         with self.assertRaises(box.BoxError):
@@ -310,6 +340,7 @@ class TestSession(BoxTestCase):
 
 
 class TestReadWrite(BoxTestCase):
+    @go_server.go_twin("box", "unit")
     def test_add_component_visible_with_handle_and_annotation(self):
         c = self.opened()
         res = c.add_component("3", "Temp", "kitControl:NumericConst", ws=box.ws_annotation(10, 20))
@@ -319,6 +350,7 @@ class TestReadWrite(BoxTestCase):
         self.assertTrue(nodes["Temp"]["h"])
         self.assertEqual(nodes["Temp/wsAnnotation"]["v"], "10,20,8")
 
+    @go_server.go_twin("box", "unit")
     def test_add_component_name_collision_yields_distinct_nn(self):
         c = self.opened()
         first = c.add_component("3", "Dup", "kitControl:NumericConst")
@@ -329,6 +361,7 @@ class TestReadWrite(BoxTestCase):
         self.assertIn(first["nn"], nodes)
         self.assertIn(second["nn"], nodes)
 
+    @go_server.go_twin("box", "injection")
     def test_add_component_malformed_reply_is_boxerror(self):
         c = self.opened()
         for bad in (None, [], ["x"], "x"):
@@ -336,6 +369,7 @@ class TestReadWrite(BoxTestCase):
                     self.assertRaises(box.BoxError):
                 c.add_component("3", "X", "kitControl:NumericConst")
 
+    @go_server.go_twin("box", "unit")
     def test_load_tree_ignores_stale_load_for_other_ord(self):
         c = self.opened()
         c.ssc("loadSlots", {"o": "station:|slot:/Folder", "d": 1})  # stale, handle 3
@@ -345,6 +379,7 @@ class TestReadWrite(BoxTestCase):
         stale = [op for ev in c.pending_events for op in ev["evs"]["ops"]]
         self.assertEqual([op["h"] for op in stale], ["3"])
 
+    @go_server.go_twin("box", "unit")
     def test_load_tree_unknown_handle_ignores_stale_event(self):
         c = self.client()
         c.open()
@@ -353,6 +388,7 @@ class TestReadWrite(BoxTestCase):
         nodes = c.load_tree("station:|slot:/Folder", **NO_SLEEP)
         self.assertEqual(nodes[""]["h"], "3")
 
+    @go_server.go_twin("box", "injection")
     def test_two_load_ops_are_never_merged(self):
         c = self.opened()
         root_op = {"nm": "l", "h": "2", "b": {"nm": "p", "t": "baja:Station", "h": "2",
@@ -368,6 +404,7 @@ class TestReadWrite(BoxTestCase):
         kept = [op for ev in c.pending_events for op in ev["evs"]["ops"]]
         self.assertEqual(kept, [root_op])
 
+    @go_server.go_twin("box", "unit")
     def test_pending_events_is_read_only_view(self):
         c = self.opened()
         self.assertEqual(len(c.pending_events), 0)
@@ -376,6 +413,7 @@ class TestReadWrite(BoxTestCase):
         with self.assertRaises(AttributeError):
             c.pending_events = []
 
+    @go_server.go_twin("box", "injection")
     def test_non_load_events_are_kept(self):
         c = self.opened()
         other = {"evs": {"nm": "sync", "ops": [{"nm": "s", "h": "9", "n": "x"}]}}
@@ -386,6 +424,7 @@ class TestReadWrite(BoxTestCase):
         self.assertEqual(nodes[""]["t"], "baja:Station")
         self.assertEqual(list(c.pending_events), [other])
 
+    @go_server.go_twin("box", "injection")
     def test_load_tree_retries_n_empty_polls_then_succeeds(self):
         c = self.opened()
         good = {"evs": {"ops": [{"nm": "l", "h": "2",
@@ -398,6 +437,7 @@ class TestReadWrite(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "2")
         self.assertEqual(sleeps, [0.25, 0.5, 0.8])  # backoff from `delay`, capped at 0.8 s
 
+    @go_server.go_twin("box", "injection")
     def test_load_tree_polls_with_a_short_first_delay_and_backoff(self):
         c = self.opened()
         good = {"evs": {"ops": [{"nm": "l", "h": "2",
@@ -408,6 +448,7 @@ class TestReadWrite(BoxTestCase):
             c.load_tree("station:", sleep=sleeps.append)
         self.assertEqual(sleeps, [0.1, 0.2, 0.4, 0.8])
 
+    @go_server.go_twin("box", "injection")
     def test_load_tree_total_wait_is_bounded_and_each_delay_capped(self):
         c = self.opened()
         sleeps = []
@@ -419,18 +460,21 @@ class TestReadWrite(BoxTestCase):
         self.assertAlmostEqual(sum(sleeps), box.MAX_POLL_WAIT)
         self.assertEqual(sleeps[:4], [0.1, 0.2, 0.4, 0.8])
 
+    @go_server.go_twin("box", "unit")
     def test_poll_delays_are_a_pure_bounded_schedule(self):
         self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 20)),
                          [0.1, 0.2, 0.4, 0.8, 0.8, 0.7])
         self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 3)), [0.1, 0.2])
         self.assertEqual(list(box.poll_delays(0.1, 0.8, 3.0, 1)), [])
 
+    @go_server.go_twin("box", "unit")
     def test_load_tree_root_key_is_empty_path(self):
         c = self.opened()
         nodes = c.load_tree("station:", **NO_SLEEP)
         self.assertEqual(nodes[""]["h"], "2")
         self.assertIn("Folder", nodes)
 
+    @go_server.go_twin("box", "injection")
     def test_load_tree_gives_up_when_no_event(self):
         c = self.opened()
         with mock.patch.object(c, "ssc", return_value=None), \
@@ -438,11 +482,13 @@ class TestReadWrite(BoxTestCase):
             with self.assertRaises(box.BoxError):
                 c.load_tree("station:", attempts=3, **NO_SLEEP)
 
+    @go_server.go_twin("box", "unit")
     def test_sync_rejects_multiple_ops(self):
         c = self.opened()
         with self.assertRaises(ValueError):
             c.sync([{"nm": "v", "h": "3", "n": "a"}, {"nm": "v", "h": "3", "n": "b"}])
 
+    @go_server.go_twin("box", "unit")
     def test_set_slot_rejects_partial_status_by_default(self):
         c = self.opened()
         h = self.add(c, "Temp")
@@ -452,6 +498,7 @@ class TestReadWrite(BoxTestCase):
         c.set_slot(h, "out", box.bson_status_numeric(1.0))
         c.set_slot(h, "out/value", box.bson_double(30.0), allow_partial_status=True)
 
+    @go_server.go_twin("box", "unit")
     def test_set_slot_whole_status_numeric_reads_back_ok(self):
         c = self.opened()
         h = self.add(c, "Temp")
@@ -461,6 +508,7 @@ class TestReadWrite(BoxTestCase):
         self.assertEqual(got["value"], "30.0")
         self.assertTrue(box.parse_status(got["status"])["ok"])
 
+    @go_server.go_twin("box", "unit")
     def test_check_links_returns_link_name_and_creates_link(self):
         c = self.opened()
         a, b = self.add(c, "A"), self.add(c, "B")
@@ -475,6 +523,7 @@ class TestReadWrite(BoxTestCase):
         self.assertEqual(nodes["Link/sourceSlotName"]["v"], "out")
         self.assertEqual(nodes["Link/targetSlotName"]["v"], "in10")
 
+    @go_server.go_twin("box", "unit")
     def test_invoke_action_set_writes_fallback_whole(self):
         c = self.opened()
         h = self.add(c, "W", "control:NumericWritable")
@@ -484,11 +533,13 @@ class TestReadWrite(BoxTestCase):
         self.assertEqual(got["value"], "7.5")
         self.assertEqual(got["status"], "0")
 
+    @go_server.go_twin("box", "unit")
     def test_save_station_increments_counter(self):
         c = self.opened()
         c.save_station()
         self.assertEqual(self.fake.saves, 1)
 
+    @go_server.go_twin("box", "unit")
     def test_remove_component(self):
         c = self.opened()
         self.add(c, "Gone")
@@ -512,6 +563,7 @@ class TestLockoutSafeOpen(BoxTestCase):
                 return code, b"", {}
         self.fake.hook = hook
 
+    @go_server.go_twin("box", "unit")
     def test_auth_failure_in_makessc_sends_no_cleanup_del(self):
         self.track("makessc", 401)
         c = self.client()
@@ -520,6 +572,7 @@ class TestLockoutSafeOpen(BoxTestCase):
         self.assertEqual(self.deletes(), [])
         self.assertIsNone(c.sid)
 
+    @go_server.go_twin("box", "unit")
     def test_auth_failure_in_loadroot_sends_no_cleanup_del(self):
         self.track("loadRoot", 403)
         c = self.client()
@@ -528,12 +581,14 @@ class TestLockoutSafeOpen(BoxTestCase):
         self.assertEqual(self.deletes(), [])
         self.assertIsNone(c.sid)
 
+    @go_server.go_twin("box", "unit")
     def test_non_auth_failure_still_cleans_up(self):
         self.track("makessc", 500)
         with self.assertRaises(box.BoxError):
             self.client().open()
         self.assertEqual(len(self.deletes()), 1)
 
+    @go_server.go_twin("box", "injection")
     def test_interrupt_after_make_still_closes_the_server_session(self):
         for exc in (KeyboardInterrupt, SystemExit):
             with self.subTest(exc=exc.__name__):
@@ -553,6 +608,7 @@ class TestLockoutSafeOpen(BoxTestCase):
 
 
 class TestHandleCache(BoxTestCase):
+    @go_server.go_twin("box", "unit")
     def test_remove_component_invalidates_child_and_descendants(self):
         c = self.opened()
         self.add(c, "Gone")
@@ -566,6 +622,7 @@ class TestHandleCache(BoxTestCase):
         self.assertIn("station:|slot:/Folder/GoneNot", c._handles)
         self.assertIn("station:|slot:/Folder", c._handles)
 
+    @go_server.go_twin("box", "injection")
     def test_remove_component_with_unknown_parent_clears_cache(self):
         c = self.opened()
         self.add(c, "Gone")
@@ -576,6 +633,7 @@ class TestHandleCache(BoxTestCase):
             c.remove_component("unknown-handle", "Gone")
         self.assertEqual(c._handles, {})
 
+    @go_server.go_twin("box", "unit")
     def test_invalidate_handles_prefix_and_all(self):
         c = self.opened()
         c._handles.update({"station:|slot:/A": "1", "station:|slot:/A/B": "2",
@@ -585,6 +643,7 @@ class TestHandleCache(BoxTestCase):
         c.invalidate_handles()
         self.assertEqual(c._handles, {})
 
+    @go_server.go_twin("box", "unit")
     def test_invalidate_handles_is_boundary_aware(self):
         c = self.opened()
         c._handles.update({"station:|slot:/A": "1", "station:|slot:/A/B": "2",
@@ -595,12 +654,14 @@ class TestHandleCache(BoxTestCase):
         c.invalidate_handles("station:|slot:/AB/")  # a trailing slash is the same boundary
         self.assertEqual(sorted(c._handles), ["station:"])
 
+    @go_server.go_twin("box", "unit")
     def test_the_station_model_rejects_an_add_nesting_a_baja_folder(self):
         c = self.opened()
         nested = {"nm": "p", "t": "baja:Folder", "s": [{"nm": "p", "n": "Sub", "t": "baja:Folder"}]}
         with self.assertRaises(box.BoxError):
             c.sync({"nm": "a", "h": "3", "n": "Grp", "b": nested})
 
+    @go_server.go_twin("box", "injection")
     def test_a_stale_cached_handle_does_not_wait_a_second_polling_window(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "dead"
@@ -609,6 +670,7 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(sleeps, [])  # a load op with another handle proves it is stale
 
+    @go_server.go_twin("box", "unit")
     def test_split_returns_the_other_load_flag_instead_of_keeping_it_on_the_client(self):
         c = self.opened()
         other = {"evs": {"ops": [{"nm": "l", "h": "9", "b": {"nm": "p", "t": "baja:Folder"}}]}}
@@ -616,6 +678,7 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual((found, saw_other), (None, True))
         self.assertFalse(hasattr(c, "_saw_other_load"))
 
+    @go_server.go_twin("box", "injection")
     def test_an_unanswered_earlier_load_disables_the_stale_handle_early_abort(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "3"
@@ -635,6 +698,7 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(len(sleeps), 1)  # it kept polling instead of giving up at once
 
+    @go_server.go_twin("box", "injection")
     def test_an_answered_load_clears_the_count_left_by_a_timed_out_one(self):
         c = self.opened()
         with mock.patch.object(c, "ssc", return_value=None), \
@@ -646,6 +710,7 @@ class TestHandleCache(BoxTestCase):
         # replies come in request order: the earlier request will not be answered now
         self.assertEqual(c._loads_outstanding, 0)
 
+    @go_server.go_twin("box", "injection")
     def test_a_cached_handle_regains_the_early_abort_after_a_timed_out_load(self):
         c = self.opened()
         with mock.patch.object(c, "ssc", return_value=None), \
@@ -659,6 +724,7 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(sleeps, [])  # the session is trusted again
 
+    @go_server.go_twin("box", "injection")
     def test_a_rejected_load_request_is_not_left_outstanding(self):
         c = self.opened()
         with mock.patch.object(c, "ssc", side_effect=box.BoxError("rejected")):
@@ -666,6 +732,7 @@ class TestHandleCache(BoxTestCase):
                 c.load_tree("station:|slot:/Folder", **NO_SLEEP)
         self.assertEqual(c._loads_outstanding, 0)
 
+    @go_server.go_twin("box", "unit")
     def test_stale_cached_handle_is_retried_once_as_unknown(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "dead"
@@ -673,11 +740,13 @@ class TestHandleCache(BoxTestCase):
         self.assertEqual(nodes[""]["h"], "3")
         self.assertEqual(c._handles["station:|slot:/Folder"], "3")
 
+    @go_server.go_twin("box", "unit")
     def test_explicit_handle_is_not_retried_as_unknown(self):
         c = self.opened()
         with self.assertRaises(box.BoxError):
             c.load_tree("station:|slot:/Folder", handle="dead", attempts=2, **NO_SLEEP)
 
+    @go_server.go_twin("box", "injection")
     def test_stale_cached_handle_failure_still_gives_up(self):
         c = self.opened()
         c._handles["station:|slot:/Folder"] = "dead"
@@ -688,6 +757,7 @@ class TestHandleCache(BoxTestCase):
 
 
 class TestPendingEvents(BoxTestCase):
+    @go_server.go_twin("box", "injection")
     def test_drain_returns_and_clears(self):
         c = self.opened()
         other = {"evs": {"ops": [{"nm": "s", "h": "9"}]}}
@@ -700,6 +770,7 @@ class TestPendingEvents(BoxTestCase):
         self.assertEqual(c.pending_events, ())
         self.assertEqual(c.drain_pending_events(), [])
 
+    @go_server.go_twin("box", "injection")
     def test_pending_events_are_capped_oldest_dropped(self):
         c = self.opened()
         total = box.MAX_PENDING_EVENTS + 7
@@ -712,10 +783,12 @@ class TestPendingEvents(BoxTestCase):
         self.assertEqual(c.dropped_events, 7)
         self.assertEqual(c.pending_events[0]["evs"]["ops"][0]["h"], "7")
 
+    @go_server.go_twin("box", "unit")
     def test_dropped_events_starts_at_zero(self):
         self.assertEqual(self.client().dropped_events, 0)
 
 
+@go_server.go_twin("box", "injection")
 class TestErrorLabelsAndRedirectClose(BoxTestCase):
     def test_malformed_reply_keys_use_session_component_key(self):
         c = self.opened()
@@ -737,6 +810,7 @@ class TestErrorLabelsAndRedirectClose(BoxTestCase):
 
 
 class TestPureHelpers(unittest.TestCase):
+    @go_server.go_twin("box", "unit")
     def test_status_value_applies_type_defaults(self):
         nodes = {
             "sb": {"t": "baja:StatusBoolean"},
@@ -745,6 +819,7 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual(box.status_value(nodes, "sb"), {"value": "false", "status": "0"})
         self.assertEqual(box.status_value(nodes, "sn"), {"value": "0.0", "status": "0"})
 
+    @go_server.go_twin("box", "unit")
     def test_status_value_reads_present_children(self):
         nodes = {
             "sb": {"t": "baja:StatusBoolean"},
@@ -753,6 +828,7 @@ class TestPureHelpers(unittest.TestCase):
         }
         self.assertEqual(box.status_value(nodes, "sb"), {"value": "true", "status": "40"})
 
+    @go_server.go_twin("box", "unit")
     def test_is_component_type_is_the_shared_station_add_rule(self):
         for type_ in ("kitControl:NumericConst", "control:NumericWritable", "baja:Folder"):
             self.assertTrue(box.is_component_type(type_), type_)
@@ -760,6 +836,7 @@ class TestPureHelpers(unittest.TestCase):
                       "", None):
             self.assertFalse(box.is_component_type(type_), type_)
 
+    @go_server.go_twin("box", "unit")
     def test_driver_address_structs_are_values_not_components(self):
         # F17 (audit 2026-10-03, issue #200): BFlexAddress / BBacnetAddress extend BStruct;
         # the naming heuristic (non-baja -> component) misclassified them.
@@ -767,6 +844,7 @@ class TestPureHelpers(unittest.TestCase):
             self.assertIs(box.COMPONENT_TYPES[type_], False, type_)
             self.assertFalse(box.is_component_type(type_), type_)
 
+    @go_server.go_twin("box", "unit")
     def test_the_type_table_wins_over_the_naming_heuristic(self):
         """B1200-G3: an explicit entry decides; unknown types fall back to the heuristic."""
         self.assertIs(box.COMPONENT_TYPES["control:PriorityLevel"], False)  # BFrozenEnum
@@ -777,11 +855,13 @@ class TestPureHelpers(unittest.TestCase):
         self.assertTrue(box.is_component_type("acme:UnknownWidget"))  # fallback
         self.assertFalse(box.is_component_type("baja:RelTime"))  # fallback
 
+    @go_server.go_twin("box", "unit")
     def test_children_lists_direct_children_only(self):
         nodes = {"": {}, "a": {}, "a/b": {}, "c": {}}
         self.assertEqual(sorted(box.children(nodes, "")), ["a", "c"])
         self.assertEqual(sorted(box.children(nodes, "a")), ["b"])
 
+    @go_server.go_twin("box", "unit")
     def test_parse_status(self):
         s = box.parse_status("40;activeLevel=e:17@control:PriorityLevel")
         self.assertEqual(s["bits"], 0x40)
@@ -793,6 +873,7 @@ class TestPureHelpers(unittest.TestCase):
         self.assertFalse(ok["null"])
         self.assertEqual(ok["facets"], "")
 
+    @go_server.go_twin("box", "unit")
     def test_encoders(self):
         self.assertEqual(box.bson_double(30), {"nm": "p", "t": "baja:Double", "v": "30.0"})
         self.assertEqual(box.bson_bool(True)["v"], "true")
