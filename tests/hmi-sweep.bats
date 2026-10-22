@@ -135,3 +135,17 @@ _need_browser() {
   [[ "$output" == *'["a",null,1]'* ]]
   [[ "$output" == *"WARN  hmi-sweep  default/home#.sub[1]  subtab: no longer visible"* ]]
 }
+
+@test "HS10b: clickNavNth labels by data-page, returns null (no click, no throw) once the nav set shrank (#226)" {
+  # Mutation: HS10b -- the nav click's own inline guard was untested; dropping it throws on a vanished nav item.
+  _need_node
+  run node -e '
+    const h = require(process.argv[1]);
+    let clicks = 0;
+    const mk = (page, text) => ({ click: () => { clicks++; }, dataset: { page }, textContent: text });
+    const els = [mk("home", "Home"), mk(undefined, " Alarms ")];
+    console.log(JSON.stringify([h.clickNavNth(els, 0), h.clickNavNth(els, 1), h.clickNavNth(els, 2), clicks]));
+  ' "$HS"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'["home","Alarms",null,2]'* ]]
+}

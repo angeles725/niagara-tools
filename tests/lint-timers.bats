@@ -849,6 +849,7 @@ _ORPH_HEAD=(
     '  public void doDone() { startingUp = false; }' \
     '  public void stopped() throws Exception { super.stopped(); if (startTicket != null) startTicket.cancel(); startingUp = false; }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
 }
 
@@ -872,6 +873,7 @@ _GATE_HEAD=(
   # Mutation: LC-gate-ok -- not looking for the gate call in the release point false-WARNs the fixed shape.
   _lc G2 "${_GATE_HEAD[@]}" '  public void exitDefrost() { beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   if [[ "$output" == *"release-gate-parity"* ]]; then return 1; fi
 }
 
@@ -879,6 +881,7 @@ _GATE_HEAD=(
   _lc G3 '  public void started() throws Exception { super.started(); applyRunCmd(); }' '  private void applyRunCmd() { }' \
          '  public void exitDefrost() { applyRunCmd(); }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   if [[ "$output" == *"release-gate-parity"* ]]; then return 1; fi
 }
 
@@ -886,6 +889,7 @@ _GATE_HEAD=(
   _lc O4 "${_ORPH_HEAD[@]}" '  public void disable() { if (startTicket != null) startTicket.cancel(); startTicket = null; }' \
          '  public void execute() { if (startTicket == null && startingUp) startingUp = false; }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
 }
 
@@ -893,6 +897,7 @@ _GATE_HEAD=(
   _lc O5 "${_ORPH_HEAD[@]}" '  private void cancelStart() { if (startTicket != null) startTicket.cancel(); }' \
          '  public void disable() { cancelStart(); }' '  public void reset() { cancelStart(); }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   [ "$(grep -c 'orphan-flag' <<< "$output")" -eq 1 ]
   [[ "$output" == *"cancelStart()"* ]]
 }
@@ -902,6 +907,7 @@ _GATE_HEAD=(
   _lc O6 "${_ORPH_HEAD[@]}" '  private void cancelStart() { if (startTicket != null) startTicket.cancel(); }' \
          '  public void disable() { cancelStart(); startingUp = false; }'
   run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]   # WARN-only: a negative LC case must also exit 0 (#246 A8 R3-neg-tests-no-status)
   if [[ "$output" == *"orphan-flag"* ]]; then return 1; fi
 }
 
@@ -968,4 +974,28 @@ _GATE_HEAD=(
           '  private static void safeCancel(Clock.Ticket ticket)' '  {' '    if (ticket != null) ticket.cancel();' '  }'
   run "$LINT" "$SRC"
   [ "$status" -eq 0 ]
+}
+
+@test "TT-noname: a schedule with no named Ticket field FAILs with a readable row, no '(ticket)' placeholder (#246)" {
+  # Mutation: TT-noname -- the placeholder rendered as "does not cancel ticket (ticket)".
+  {
+    printf 'package demo;\nimport javax.baja.sys.*;\npublic final class C20 extends BComponent {\n'
+    printf '  public void arm() { Clock.schedule(this, BRelTime.makeSeconds(5), x, null); }\n'
+    printf '  public void stopped() throws Exception { super.stopped(); }\n}\n'
+  } > "$SRC/C20.java"
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C20.java: stopped() cancels no ticket"* ]]
+  if [[ "$output" == *"(ticket)"* ]]; then return 1; fi
+}
+
+@test "TT-helper-other: other.cancelTicket(a) is another object's method, not this file's helper -> FAIL (#246 A8d)" {
+  # Mutation: TT-helper-other -- accepting any qualified call as this file's helper passes a ticket nobody cancels.
+  _tt C21 '  public void stopped() throws Exception { super.stopped(); other.cancelTicket(a); this.cancelTicket(b); }' \
+          '  private void cancelTicket(Clock.Ticket t) { if (t != null) t.cancel(); }'
+  run "$LINT" "$SRC"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  timer-ticket"*"C21.java"*"ticket a"* ]]
+  if [[ "$output" == *"ticket b"* ]]; then return 1; fi
 }
