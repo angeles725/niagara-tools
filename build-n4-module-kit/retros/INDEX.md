@@ -215,3 +215,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-awk-lint-line-loops.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-pipefail-grep-q-race.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
