@@ -29,6 +29,7 @@
 # Mutation: SSL2 -- drop the `static` requirement so an instance-scope map (e.g. ConfigSession)
 # false-WARNs
 # Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape
+# Mutation: SSL7 -- a probe without the return-type anchor takes `if (sweep(id)) {` for the declaration and its remove() for a purge
 # Mutation: SSL-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: SSL-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
@@ -78,7 +79,8 @@ END {
       doname = "do" toupper(substr(act, 1, 1)) substr(act, 2)
       for (j = 1; j <= NR; j++) {
         probe = " " lines[j]
-        if (!match(probe, "[^A-Za-z0-9_](" doname "|" act ")[[:space:]]*\\([^;]*\\)[[:space:]]*(\\{|$|throws)")) continue
+        # A declaration has a return type before the name (`void doSweep() {`); `if (sweep(x)) {` is a call.
+        if (!match(probe, "[A-Za-z0-9_>\\]][[:space:]]+(" doname "|" act ")[[:space:]]*\\([^;]*\\)[[:space:]]*(\\{|$|throws)")) continue
         depth = 0; started = 0; send = 0
         for (j2 = j; j2 <= NR; j2++) {
           ln = lines[j2]

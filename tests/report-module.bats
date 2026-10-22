@@ -758,3 +758,20 @@ JAVA
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP"*"lint-write-path"*"no write-path-matrix.md"* ]]
 }
+
+@test "RM48b: a PATH eslint whose --version hangs is bounded -> SKIP eslint 'unknown version', never a hung report (#226)" {
+  # Mutation: RM48b -- the unbounded `eslint --version` probe hangs the whole report on a wedged wrapper.
+  if [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ]; then
+    skip "the pinned eslint is installed under toolbelt/eslint; the PATH fallback is not reached"
+  fi
+  command -v timeout >/dev/null 2>&1 || skip "no timeout(1) on PATH"
+  local t="$BATS_TEST_TMPDIR/rm48b"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js" "$BATS_TEST_TMPDIR/bin48b"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  printf '#!/usr/bin/env bash\nexec sleep 60\n' > "$BATS_TEST_TMPDIR/bin48b/eslint"
+  chmod +x "$BATS_TEST_TMPDIR/bin48b/eslint"
+  start=$(date +%s)
+  PATH="$BATS_TEST_TMPDIR/bin48b:$PATH" KIT_ESLINT='' KIT_ESLINT_PROBE_TIMEOUT=1 run timeout 50 "$RM" --lint-only "$t"
+  [ "$(( $(date +%s) - start ))" -lt 40 ]
+  [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is unknown version"* ]]
+}

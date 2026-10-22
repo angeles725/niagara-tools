@@ -33,6 +33,7 @@
 # Mutation: VF3 -- treat a missing node as a clean pass (exit 0) so VF3 no longer sees exit 4
 # Mutation: VF5 -- parse at ecmaVersion latest so the ??= fixture parses and VF5 exits 0
 # Mutation: VF6 -- drop the API table so the replaceAll/hasOwn/findLast rows vanish
+# Mutation: VF-disjoint -- dropping the startup table check lets a name in both MEMBER and QUALIFIED double-report
 # Mutation: VF9 -- tokenize as a module only so a sloppy script's API calls after a legacy octal vanish
 set -u
 LC_ALL=C
@@ -114,6 +115,14 @@ const QUALIFIED = { 'Object.hasOwn': 93, 'AbortSignal.timeout': 103, 'Promise.an
   'Object.groupBy': 117 };
 const GLOBAL_CALL = { structuredClone: 98 };
 const GLOBAL_NEW = { WeakRef: 84, FinalizationRegistry: 84 };
+// MEMBER and QUALIFIED must share no method name, or one call would print two rows: checked here, not assumed.
+for (const q of Object.keys(QUALIFIED)) {
+  const m = q.slice(q.lastIndexOf('.') + 1);
+  if (Object.prototype.hasOwnProperty.call(MEMBER, m)) {
+    console.error(`lint-vendor-floor: env fault: MEMBER and QUALIFIED share the method name '${m}' (${q})`);
+    process.exit(3);
+  }
+}
 
 let fails = 0;
 function row(sev, file, line, reason) {
@@ -181,7 +190,7 @@ for (const file of files) {
     const prev = i > 0 ? tokText(tk[i - 1]) : '';
     const next = i + 1 < tk.length ? tokText(tk[i + 1]) : '';
     const line = t.loc.start.line;
-    // MEMBER and QUALIFIED share no method name, so a member call never doubles a qualified row.
+    // MEMBER and QUALIFIED share no method name (checked at startup), so a member call never doubles a qualified row.
     if (prev === '.' && next === '(' && Object.prototype.hasOwnProperty.call(MEMBER, t.value)) {
       row('WARN', file, line, `api: .${t.value}( needs Chrome ${MEMBER[t.value]} (floor 83) — ` +
         'feature-guarded? record it in THIRD-PARTY.md');
