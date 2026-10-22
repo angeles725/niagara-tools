@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-09-26 · kit · behavior-decisions-ask-dont-assume
 
 **Session**: PANCCADIA León, 2026-09-26: CompPan 2.6.0/2.6.1, DashboardPan 2.8.0/2.8.1, ColdRoomPan 2.3.0 in progress. The user asked for a kit rule so that field behaviors are ASKED with options, never assumed.

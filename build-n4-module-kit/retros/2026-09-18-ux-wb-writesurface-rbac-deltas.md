@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-09-18 · kit · ux-wb-writesurface-rbac-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas).

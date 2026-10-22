@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
 # 2026-10-22 · kit · course-recordings
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T9f), branch

@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: Δ1 module-root=project-root note for L10; Δ2 L2 Javadoc anchor; Δ3 L5/L9 <p n= not <p -->
 # Retro: Campaign 8 — lint-structure.sh module source-tree structure lint (Campaign 8 PR18, B817)
 
 **Date:** 2026-09-06

@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-15 · kit · n4-course-drivers-bql-ords-files
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined against the kit — decks 8 (ORDs/BQL) and 10 (Drivers), BQL Reference.pdf, Lab 10, Lab 11 NDriver + Bonus driver labs, Review Assignment 2, Slide Code `ords/`, corpus B1237/B1239/B1254

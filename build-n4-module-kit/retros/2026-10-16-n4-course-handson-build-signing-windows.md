@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-build-signing-windows
 
 **Session**: hands-on close of the Tridium N4 Developer Certification Course (4.15.6.20, Windows host driven from WSL): Labs 5-11, Review 2, the Certification Exam and the Bonus Lab, built and run live; the kit gate re-run on the resulting jars.

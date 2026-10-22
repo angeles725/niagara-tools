@@ -1,3 +1,7 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: line 45 "rollback = redeploy the previous jar + restart" is SUPERSEDED: recovery is roll-forward to a revert build under a higher version, see BUILD-LOOP §4.c/§6 and retro 2026-09-26-roll-forward-recovery Δ1/Δ2 -->
 # Retro — cambiar el TIPO de un slot con datos guardados ROMPE el .bog: la station no arranca · 2026-09-03
 
 Noveno retro del día, y el más importante: un cambio de tipo de slot en una station VIVA tumbó el arranque

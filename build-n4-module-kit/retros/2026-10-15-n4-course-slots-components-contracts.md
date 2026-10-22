@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-slots-components-contracts
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined against the kit — decks 2–4, Labs 1–4, Review Assignments 1–2, Slide Code, corpus B1231/B1232/B1253/B1254

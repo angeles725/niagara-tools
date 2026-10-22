@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-09-18 · kit · ml-libraries-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: ML libraries for N4).

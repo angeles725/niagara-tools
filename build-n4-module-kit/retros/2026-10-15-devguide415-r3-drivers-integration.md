@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · devguide415-r3-drivers-integration
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 3 traced driver health, the HTTP client gate and RDBMS export from source; this retro carries corpus B1348 (ping/statusFlags), B1346 (httpClient-rt) and B1352 (RDBMS export). It CORRECTS kit `types/logic-authoring.md:646` and REFINES `2026-10-15-devguide415-r2-shipped-libraries.md` (**shl**) Δ7(b) and `2026-10-15-devguide415-r2-drivers-protocols.md` (**drp**) Δ4.

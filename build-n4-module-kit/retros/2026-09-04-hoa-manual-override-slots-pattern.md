@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro (PROPOSED delta — propose-never-apply) — the HOA manual-override slot pattern for a control component (Auto / On / Off per output)
 
 - **Date**: 2026-09-04

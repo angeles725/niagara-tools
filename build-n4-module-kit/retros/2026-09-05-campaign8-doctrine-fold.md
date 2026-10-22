@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 
 # Campaign 8 PR7 — doctrine fold (corpus B800/B801/B802/B803/B806/B812/B815)
 

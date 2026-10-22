@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-15 · kit · devguide415-lexicons-ux-i18n
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` (niagara-research B1304–B1315) mapped the official N4.15.6.20 Developer Guide (`docDeveloper`) + `javax.baja` source against this kit; this retro carries the lexicon / UI-i18n findings of corpus B1305. Complements (does not repeat) `2026-10-15-n4-course-lexicon-logging-testing.md` (**lex** Δ1–Δ5).

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-10-22 · kit · ws-row-spacing
 
 **Session**: niagara-research quality round 8, work unit T9d-2 (issue #259), branch `fix/r8-t9d-ws-spacing` from origin/main 3a58392

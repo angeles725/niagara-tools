@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — soft-start / staggered startup (ColdRoomPan + CompPan) · 2026-09-03
 
 Second retro of the day (the first was `2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md`). Driven

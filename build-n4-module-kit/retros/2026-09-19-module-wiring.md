@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
+<!-- index-comment: new types/module-wiring.md: gradle dep table + type/agent-on registration + cross-module refs -->
 # 2026-09-19 · kit · module-wiring
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the module-wiring cluster.

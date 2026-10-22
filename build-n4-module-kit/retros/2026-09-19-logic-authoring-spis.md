@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
+<!-- index-comment: logic-authoring expand: BSingleton/@AgentOn, lifecycle guard, BProgram, BBatchRoutine, BEmailService, BIRestrictedComponent, provider-in-service, Fox file-channel job -->
 # 2026-09-19 · kit · logic-authoring-spis
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU expanding logic-authoring.md with exemplar SPIs + anatomy patterns.

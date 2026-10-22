@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
+<!-- index-comment: new types/actions.md §1-6: doX dispatch law; ASYNC engine-thread; flags CONFIRM_REQUIRED/NO_AUDIT; typed-args defaultValue; actions-vs-@NiagaraTopic; @NiagaraRpc-vs-@NiagaraAction boundary -->
 # 2026-09-19 · kit · actions-authoring
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — folding the actions-authoring cluster from the master candidate register.

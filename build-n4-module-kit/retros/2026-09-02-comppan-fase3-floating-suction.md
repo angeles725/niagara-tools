@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: CompPan -->
+<!-- deltas: 0 -->
 # Retro — CompPan Fase 3 (floating suction, mechanism-only) · 2026-09-02
 
 Module: CompPan-rt. Additive on top of Fase 2. Built by session "Ayudante". The R404A curve

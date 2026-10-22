@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-10-16 · kit · n4-course-handson-workflow
 
 **Session**: working method across the hands-on N4 Developer Certification Course (2026-10-12 to 2026-10-16): Labs 1-11, Reviews 1-2, the Certification Exam and the Bonus Lab, with the operator driving Workbench and the agent writing, building and checking code from WSL.

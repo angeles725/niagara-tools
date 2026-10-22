@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: L3: new FAIL lint, auto-wired report-module §12 (module-once) + RM23 -->
 # 2026-09-20 · kit · lint-bundled-jar-class-version (L3 — lint-candidate impl, auto-wired)
 
 **Session**: implement-lint-candidates campaign, L3. Partial promotion of the `bundled-jar-class-version` CANDIDATE from the folded retro module-hardening-failure-modes-deltas Δ11 (BLD2, types/issues-and-gotchas.md).

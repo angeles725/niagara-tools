@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 <!-- kit-retro -->
 # Campaign 2 close: the promotion process's own meta-lessons
 

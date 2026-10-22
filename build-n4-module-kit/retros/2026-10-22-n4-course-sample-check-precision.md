@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-22 · kit · n4-course-sample-check-precision
 
 **Session**: niagara-research quality round 8, task T9d follow-ups (review findings of #269 / issue #260 and #268 / issue #259), branch `fix/r8-t9d-followups` on main 6b17b5d

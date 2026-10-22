@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 <!-- kit-retro -->
 # Kit self-improvement campaign: continuity ledger + retro-enforcement gate + lesson promotion
 

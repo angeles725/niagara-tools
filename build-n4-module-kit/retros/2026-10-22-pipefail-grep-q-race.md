@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-10-22 · kit · pipefail-grep-q-race
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T8f), branch

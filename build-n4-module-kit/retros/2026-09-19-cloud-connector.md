@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
+<!-- index-comment: new types/cloud-connector.md: BCloudConnectionService SPI maps + transport dual model + KeyRing auth + backend plugin chain -->
 # 2026-09-19 · kit · cloud-connector
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the cloud-connector cluster (vendor mining: cloudLink*).

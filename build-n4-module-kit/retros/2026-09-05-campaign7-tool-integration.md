@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 <!-- kit-retro -->
 # Campaign 7 PR2: tool integration — BUILD-LOOP + launcher routed to preflight, lint-timers, slot-coverage, fold-audit, --age
 

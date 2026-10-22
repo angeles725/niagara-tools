@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-build-deps-permissions-signing
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined against the kit — decks 5–6, Labs 5/6/9/10, Lab 11 permissions, corpus B1234/B1235/B1242; the user compiled Labs 6–10 live (`training-rt`)

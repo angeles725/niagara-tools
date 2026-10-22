@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-07 · kit · tree-selection-and-schema-risk-baseline
 
 **Session**: PANCCADIA multi-module session — cross-cutting workflow defects (wrong work tree; schema-risk baseline).

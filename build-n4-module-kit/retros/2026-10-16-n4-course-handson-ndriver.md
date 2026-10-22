@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
 # 2026-10-16 · kit · n4-course-handson-ndriver
 
 **Session**: hands-on Lab 11 (`trafficLightDriver` NDriver against the course `trafficLightServer`), Certification Exam P3 (`websiteDriver`, TCP reachability ping) and the Bonus Lab (device/point managers and discovery), all generated with the New Driver Wizard and verified live on 4.15.6.20.

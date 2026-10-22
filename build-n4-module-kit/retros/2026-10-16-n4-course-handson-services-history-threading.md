@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-services-history-threading
 
 **Session**: hands-on Lab 6 (Work Order Service, Jackson + REST), Lab 9 (multithreading variants), Lab 10 (BSimpleJob history-to-CSV) and Certification Exam P2 (`BHistoryExportService`), run live on 4.15.6.20; kit lints re-run on the course sources.

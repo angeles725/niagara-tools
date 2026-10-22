@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-threading-jobs-doctrine
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) mined against the kit — deck 9 + Labs 9–10 + Slide Code + corpus B1238/B1253/B1254; the user ran Labs 9–10 live (`training-rt`)

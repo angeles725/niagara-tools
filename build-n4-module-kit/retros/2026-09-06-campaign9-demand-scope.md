@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # 2026-09-06 · kit · campaign9-demand-scope
 
 **Session**: Campaign 9 PR2 — `toolbelt/lint-demand-scope.sh` (demand-in-scope lint, B820)

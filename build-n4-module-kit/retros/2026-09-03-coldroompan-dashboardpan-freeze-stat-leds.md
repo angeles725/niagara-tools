@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: ColdRoomPan -->
+<!-- deltas: 0 -->
 # Retro — freeze-stat + interlock (ColdRoomPan rt) & LEDs/Cuarto-5 (DashboardPan) · 2026-09-03
 
 Shipping two changes across ColdRoomPan-rt and DashboardPan (rt+ux): a resistance→valve interlock

@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro (PROPOSED delta — propose-never-apply) — editing the base64-heavy dashboard SPA, and the preview → screenshot → PDF report pipeline
 
 - **Date**: 2026-09-04

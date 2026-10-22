@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: Gradle task matrix §4.a; version-bump checklist §4.b; exit-31 regression pin BS-lock/BS-lock-hint -->
 # Retro: campaign8-build-pipeline
 
 **Session**: 2026-09-05 · Campaign 8 PR14 — Build pipeline + module versioning doctrine  

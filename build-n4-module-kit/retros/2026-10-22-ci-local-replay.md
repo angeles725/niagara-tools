@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-10-22 · kit · ci-local-replay
 
 **Session**: niagara-research quality round 8, task T8g, branch `r8/t8g-ci-local` from origin/main 409fd2e
