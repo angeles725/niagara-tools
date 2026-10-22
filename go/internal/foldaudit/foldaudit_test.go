@@ -122,27 +122,6 @@ func TestRowParsing(t *testing.T) {
 	}
 }
 
-func TestBashInt(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		in   string
-		want int64
-		ok   bool
-	}{
-		{"0", 0, true}, {"3", 3, true}, {"10", 10, true},
-		{"010", 8, true}, {"00", 0, true}, // a leading zero is octal in bash arithmetic
-		{"09", 0, false}, {"0189", 0, false},
-		{"18446744073709551617", 1, true}, // decimal wraps modulo 2^64
-		{"0777777777777777777777777", -1, true},
-	}
-	for _, c := range cases {
-		got, ok := bashInt(c.in)
-		if got != c.want || ok != c.ok {
-			t.Errorf("bashInt(%q) = (%d, %v), want (%d, %v)", c.in, got, ok, c.want, c.ok)
-		}
-	}
-}
-
 func TestCorpusWalk(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

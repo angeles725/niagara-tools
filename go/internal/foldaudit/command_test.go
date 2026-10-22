@@ -4,21 +4,17 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
 
-// run calls Main with buffers and an empty environment except for arg0.
-func run(arg0 string, args ...string) (code int, out, errs string) {
+// run calls Main with buffers and an empty environment.
+func run(_ string, args ...string) (code int, out, errs string) {
 	var o, e bytes.Buffer
-	s := cli.Stdio{Out: &o, Err: &e, Getenv: func(name string) string {
-		if name == Arg0Env {
-			return arg0
-		}
-		return ""
-	}}
+	s := cli.Stdio{Out: &o, Err: &e, Getenv: func(string) string { return "" }}
 	code = Main(args, s)
 	return code, o.String(), e.String()
 }
@@ -160,28 +156,36 @@ func TestMainUsageAndEnv(t *testing.T) {
 	}
 }
 
-// Bash-compatible edges of the INDEX loop (each captured from the bash tool).
-func TestMainBashEdges(t *testing.T) {
+// The fail-open cases of the bash tool, fixed in the port: a leading-zero deltas cell is decimal
+// (bash read 010 as 8 and aborted on 09), an overflowing cell is unreadable, and an unterminated
+// last INDEX row is audited (bash `while read` dropped it).
+func TestMainFailClosedEdges(t *testing.T) {
 	t.Parallel()
 	root := kit(t, map[string]string{
-		"core.md": "[ev: retro tail-row-x Δ1] [ev: retro nul-row-x]\n",
+		"core.md": "[ev: retro tail-row-x] [ev: retro nul-row-x]\n",
 		"retros/INDEX.md": "| 2026-10-01-octal.md | folded | 010 |\n" +
 			"| 2026-10-01-badoct.md | folded | 09 |\n" +
 			"| 2026-10-01-n\x00ul-row-x.md | fol\x00ded | 0 |\n" +
-			"| 2026-10-01-tail-row-x.md | folded | 1 |", // no trailing newline: bash `read` never runs the body
+			"| 2026-10-01-huge.md | folded | 18446744073709551617 |\n" +
+			"| 2026-10-01-tail-row-x.md | folded | 1 |",
 	})
-	code, out, errs := run("/x/sweep-fold-audit.sh", "--strict", "--deltas-since", "2026-01-01", root+"/retros/INDEX.md", root)
+	code, out, errs := run("", "--strict", "--deltas-since", "2026-01-01", root+"/retros/INDEX.md", root)
 	var want strings.Builder
-	for k := 1; k <= 8; k++ {
-		want.WriteString(w + "2026-10-01-octal.md Δ" + string(rune('0'+k)) + " not cited\n")
+	for k := 1; k <= 10; k++ {
+		want.WriteString(w + "2026-10-01-octal.md Δ" + strconv.Itoa(k) + " not cited\n")
 	}
 	want.WriteString(w + "2026-10-01-octal.md" + nocit)
+	for k := 1; k <= 9; k++ {
+		want.WriteString(w + "2026-10-01-badoct.md Δ" + strconv.Itoa(k) + " not cited\n")
+	}
 	want.WriteString(w + "2026-10-01-badoct.md" + nocit)
-	want.WriteString("fold-audit: 3 folded, 1 cited, 2 uncited\n")
-	want.WriteString("fold-audit: deltas: 8 checked, 8 not cited (folded rows since 2026-01-01)\n")
-	wantErr := "/x/sweep-fold-audit.sh: line 132: ((: 09: value too great for base (error token is \"09\")\n"
-	if code != ExitStrict || out != want.String() || errs != wantErr {
-		t.Errorf("got (%d, %q, %q)\nwant (1, %q, %q)", code, out, errs, want.String(), wantErr)
+	want.WriteString(w + "2026-10-01-huge.md deltas cell unreadable (18446744073709551617)\n")
+	want.WriteString(w + "2026-10-01-huge.md" + nocit)
+	want.WriteString(w + "2026-10-01-tail-row-x.md Δ1 not cited\n")
+	want.WriteString("fold-audit: 5 folded, 2 cited, 3 uncited\n")
+	want.WriteString("fold-audit: deltas: 20 checked, 21 not cited (folded rows since 2026-01-01)\n")
+	if code != ExitStrict || out != want.String() || errs != "" {
+		t.Errorf("got (%d, %q, %q)\nwant (1, %q, \"\")", code, out, errs, want.String())
 	}
 }
 
@@ -196,8 +200,7 @@ func TestMainUnreadableIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, out, errs := run("", "--strict", index, root)
-	if code != ExitOK || out != "fold-audit: 0 folded, 0 cited, 0 uncited\n" ||
-		errs != "sweep-fold-audit.sh: line 152: "+index+": Permission denied\n" {
+	if code != ExitEnv || out != "" || errs != "fold-audit: cannot read INDEX: open "+index+": permission denied\n" {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
 	}
 }

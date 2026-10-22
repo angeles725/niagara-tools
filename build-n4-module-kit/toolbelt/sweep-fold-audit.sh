@@ -20,11 +20,14 @@
 # Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits
 # a row when "-T-" is a hyphen-segment-aligned part of "-<stem>-".
 #
+# A deltas cell is decimal (a leading zero is not octal); an unterminated last INDEX row is audited;
+# an unreadable INDEX exits 3. (The former bash tool passed all three silently.)
+#
 # Implementation: the Go module at <repo>/go (go/internal/foldaudit, r8 T17), byte-identical to the
-# former bash tool under C.UTF-8. This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin`
-# builds go/bin/sweep-fold-audit when the binary is missing or older than a Go source, then this
-# script execs it. Needs `go` on PATH to build (a missing toolchain or failed build exits 3).
-# Mutation pins (F3, F4, F6, F9, F11) are exercised by tests/sweep-fold-audit.bats and the Go tests.
+# former bash tool under C.UTF-8 except those fail-open cases. This wrapper is the stable entry
+# point: go/go-tool.sh `go_tool_bin` builds go/bin/sweep-fold-audit when the binary is missing or
+# older than a Go source, then this script execs it. Needs `go` on PATH to build (a missing toolchain or failed build exits 3).
+# Mutation pins (F3, F4, F6, F9, F11, F12, F13) are exercised by tests/sweep-fold-audit.bats and the Go tests.
 # This script is VCS-free by design — version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
@@ -35,5 +38,4 @@ GO_DIR="$(cd "$here/../.." && pwd)/go"
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
 . "$GO_DIR/go-tool.sh"
 BIN="$(go_tool_bin "$GO_DIR" sweep-fold-audit)" || exit 3
-# The Go tool prefixes the bash runtime diagnostics it reproduces with this script's $0.
-SWEEP_FOLD_AUDIT_ARG0="$0" exec "$BIN" "$@"
+exec "$BIN" "$@"

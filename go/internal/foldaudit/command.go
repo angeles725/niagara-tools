@@ -1,12 +1,10 @@
 package foldaudit
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
@@ -18,17 +16,7 @@ const (
 	ExitEnv    = 3 // usage or environment error
 )
 
-// Arg0Env names the script path the wrapper was invoked as; it prefixes the two bash runtime
-// diagnostics this port reproduces (an octal-invalid deltas cell, an unreadable INDEX).
-const Arg0Env = "SWEEP_FOLD_AUDIT_ARG0"
-
 const usage = "usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
-
-// Line numbers of the bash statements whose runtime errors are reproduced verbatim.
-const (
-	bashLineDeltaLoop = 132 // for ((k = 1; k <= ndelta; k++))
-	bashLineIndexRead = 152 // done < "$INDEX"
-)
 
 // Main implements `sweep-fold-audit [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`.
 func Main(args []string, s cli.Stdio) int {
@@ -45,21 +33,19 @@ func Main(args []string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "fold-audit: kit-root not found: %s\n", o.root)
 		return ExitEnv
 	}
-	arg0 := s.Env(Arg0Env)
-	if arg0 == "" {
-		arg0 = "sweep-fold-audit.sh"
-	}
-
 	h := harvestCorpus(o.root, o.since != "")
 	tokens := h.sortedTokens()
 
-	// Like the bash loop: an unreadable INDEX is reported and audited as empty.
+	// An unreadable INDEX is an environment error: auditing it as empty would pass under --strict.
 	data, err := os.ReadFile(o.index)
 	if err != nil {
-		fmt.Fprintf(s.Err, "%s: line %d: %s: %s\n", arg0, bashLineIndexRead, o.index, strerror(err))
+		fmt.Fprintf(s.Err, "fold-audit: cannot read INDEX: %v\n", err)
+		return ExitEnv
 	}
 	lines := strings.Split(string(data), "\n")
-	lines = lines[:len(lines)-1] // `read` never runs the body for a last line without a newline
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1] // the final newline ends the last row; an unterminated last row is still read
+	}
 
 	var nFolded, nCited, nUncited, dChecked, dMissing int
 	warned := false
@@ -78,13 +64,13 @@ func Main(args []string, s cli.Stdio) int {
 
 		if o.since != "" && !(prefix(file, 10) < o.since) {
 			cell := deltasCell(line)
-			if !allDigits(cell) {
+			// The cell is decimal (bash arithmetic read a leading zero as octal); an overflowing cell is
+			// unreadable, never a silently wrapped count.
+			n, perr := strconv.ParseInt(cell, 10, 64)
+			if !allDigits(cell) || perr != nil {
 				fmt.Fprintf(s.Out, "fold-audit: WARN %s deltas cell unreadable (%s)\n", file, cell)
 				dMissing++
 				warned = true
-			} else if n, ok := bashInt(cell); !ok {
-				fmt.Fprintf(s.Err, "%s: line %d: ((: %s: value too great for base (error token is \"%s\")\n",
-					arg0, bashLineDeltaLoop, cell, cell)
 			} else {
 				for k := int64(1); k <= n; k++ {
 					dChecked++
@@ -137,18 +123,4 @@ func allDigits(s string) bool {
 		}
 	}
 	return true
-}
-
-// strerror renders err as glibc's strerror does for bash ("Permission denied"): Go's errno text
-// with its first letter capitalized.
-func strerror(err error) string {
-	var errno syscall.Errno
-	msg := err.Error()
-	if errors.As(err, &errno) {
-		msg = errno.Error()
-	}
-	if msg == "" {
-		return msg
-	}
-	return strings.ToUpper(msg[:1]) + msg[1:]
 }

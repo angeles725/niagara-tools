@@ -139,3 +139,40 @@ _delta_fixture() {
   [[ "$output" == *"1 folded, 1 cited, 0 uncited"* ]]
   [[ "$output" == *"deltas: 1 checked, 0 not cited"* ]]
 }
+
+@test "F12: an INDEX whose last row has no final newline still audits that row" {
+  # Mutation: F12 -- dropping the unterminated last line (bash `while read`) passes this row unaudited.
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros"
+  printf '| 2026-10-22-no-newline.md | kit | 2026-10-22 | folded | 1 |' > "$D/retros/INDEX.md"
+  : > "$D/core.md"
+  run "$SCRIPT" --strict --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"fold-audit: WARN 2026-10-22-no-newline.md Δ1 not cited"* ]]
+  [[ "$output" == *"1 folded, 0 cited, 1 uncited"* ]]
+}
+
+@test "F13: a leading-zero deltas cell is decimal (010 checks Δ1..Δ10, 09 checks Δ1..Δ9)" {
+  # Mutation: F13 -- bash arithmetic read 010 as octal 8 and aborted on 09, leaving Δ unchecked.
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros"
+  printf '| 2026-10-22-ten-deltas.md | kit | 2026-10-22 | folded | 010 |\n| 2026-10-22-nine-deltas.md | kit | 2026-10-22 | folded | 09 |\n' > "$D/retros/INDEX.md"
+  : > "$D/core.md"
+  run "$SCRIPT" --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"2026-10-22-ten-deltas.md Δ10 not cited"* ]]
+  [[ "$output" == *"2026-10-22-nine-deltas.md Δ9 not cited"* ]]
+  [[ "$output" == *"deltas: 19 checked, 19 not cited"* ]]
+}
+
+@test "F14: an unreadable INDEX exits 3, never a clean 0-row audit" {
+  [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros"
+  printf '| 2026-10-22-a.md | kit | 2026-10-22 | folded | 1 |\n' > "$D/retros/INDEX.md"
+  chmod 000 "$D/retros/INDEX.md"
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  chmod 644 "$D/retros/INDEX.md"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"fold-audit: cannot read INDEX:"* ]]
+}

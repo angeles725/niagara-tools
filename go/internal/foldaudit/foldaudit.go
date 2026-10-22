@@ -2,7 +2,10 @@
 // retros/INDEX.md must be cited somewhere in the kit corpus, and (with --deltas-since) every Δk of
 // a folded row dated on or after the cutoff must be cited or deferred. It is the Go port of
 // build-n4-module-kit/toolbelt/sweep-fold-audit.sh (r8 T17); stdout, stderr and the exit code are
-// byte-identical to the bash tool under the C.UTF-8 locale the repository and CI run in.
+// byte-identical to the bash tool under the C.UTF-8 locale the repository and CI run in, except
+// four fail-open cases it fixes: a leading-zero deltas cell is decimal (bash read it as octal, and
+// 08/09 skipped the Δ check), an unterminated last INDEX row is audited, and an unreadable INDEX
+// exits 3.
 // VCS-free by design (kit-links L2).
 package foldaudit
 
@@ -187,24 +190,6 @@ func citedBy(stem string, tokens []string) []string {
 		}
 	}
 	return hits
-}
-
-// bashInt evaluates a digits-only string as bash arithmetic does: a leading 0 means octal (a digit
-// 8 or 9 is then an error), and the value wraps modulo 2^64.
-func bashInt(s string) (int64, bool) {
-	base := uint64(10)
-	if len(s) > 1 && s[0] == '0' {
-		base = 8
-	}
-	var v uint64
-	for i := 0; i < len(s); i++ {
-		d := uint64(s[i] - '0')
-		if d >= base {
-			return 0, false
-		}
-		v = v*base + d
-	}
-	return int64(v), true
 }
 
 // options is the parsed command line.
