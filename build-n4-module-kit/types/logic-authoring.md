@@ -358,9 +358,12 @@ with a few module-specific rules:
          agentOn="baja:AuthenticationScheme"/>
    ```
 
-4. **Signing:** a security module MUST be signed with `NIAGARA4.RSA` / `NIAGARA4.SF` — same signing
-   path as any production jar.  The station's `SecurityManager` enforces this; an unsigned or
-   OEM-signed scheme is rejected at load time.
+4. **Signing:** a security module MUST be signed — same signing path as any production jar: a
+   `META-INF/<ALIAS>.SF` with its `.RSA`/`.DSA`/`.EC` signature block, named after the signing alias
+   (`NIAGARA4` default profile, `CODESIGN` course profile, `SERVER1` Honeywell). `toolbelt/verify-module.sh`
+   `signed` accepts any alias and reports it, but checks PRESENCE only: the station decides by its module
+   verification mode and the signer's cert chain, never by the entry name. An unsigned scheme is rejected
+   at load time. [ev: retro n4-course-handson-build-signing-windows Δ1]
 
 - **Every class listed as a `<type>` in `module-include.xml` MUST carry `@NiagaraType`** (so Slotomatic generates `TYPE = Sys.loadType(…)`). A class listed as a `<type>` without `@NiagaraType` is caught at registry-build time with a named SEVERE: `"Missing Sys.loadType()"` — it is NOT a silent NPE, but it BLOCKS the module from loading at station start. Fix: add `@NiagaraType` to the class. `[ev: retro module-hardening-failure-modes-deltas Δ15]`
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
