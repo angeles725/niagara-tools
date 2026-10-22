@@ -11,6 +11,14 @@ modules, not sixty focuses.
 - **One `build-state.v1` envelope per module**, between `<!-- build-state.v1 -->` and
   `<!-- /build-state.v1 -->`. Fields are `key: value`; a parser strips blank lines, the
   `open_issues:` list items, and any trailing `# comment`.
+- **The kit block's per-change parts are GENERATED — never hand-edit them.** `last_change:`, the `open_issues:`
+  items and the session log after `last_session:` in the `kit` envelope come from `ledger.d/*.md`, one fragment
+  per change (`ledger.d/<YYYY-MM-DD>-<slug>.md`: `<!-- ledger: kit -->`, `<!-- date: … -->`, optional
+  `<!-- last-change-note: … -->`, one `log: YYYY-MM-DD · …` line, any `open_issue: …` lines). Run
+  `toolbelt/gen-build-state.sh` after adding one; `--check` (CI, `sweep-build-state.sh`) fails a stale file.
+  `last_change` = the newest fragment, items newest first, log oldest first. Entries from before fragments live
+  in `ledger.d/0000-archive-pre-2026-10-23.md`. Module blocks and the other kit fields stay hand-kept.
+  `[ev: retro ledger-fragments Δ1]`
 - **GATED vs DECLARED — never label a gate that cannot run.**
   - **GATED** (`retro_required`, `retro_pending`): machine-enforced, but ONLY for KIT-local
     changes inside the `niagara-tools` repo — that is the only diff the enforcement check
@@ -182,6 +190,7 @@ last_session: unknown · imported as the build exemplar; see SOURCES.md
 Kit-infrastructure work (changing the kit itself, not building a module) has no module build to
 record, so it updates THIS `kit` self-section. Same `build-state.v1` envelope and same `BUILD-LOOP.md`
 §7 close gate — this is the kit's no-registro fix applied to its own evolution.
+Its `last_change:`, `open_issues:` items and session log are GENERATED from `ledger.d/` by `toolbelt/gen-build-state.sh`: add a fragment, never edit those lines here.
 
 Split-retro fold rule (from Campaign 2): when a retro's remaining lesson has a LATER PR that will carry it, revert its INDEX row to `pending`; when it has NO later home, fold it now — reverting would orphan the lesson.
 
