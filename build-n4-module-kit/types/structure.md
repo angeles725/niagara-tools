@@ -37,6 +37,27 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1] Six of the groups (REFLECTION, ACCESS_CLASS, MBEAN_PERMISSION, THIRD_PARTY_PERMISSION, PROTECTION_DOMAIN, HSM_SIGNING) also need a signed, trusted module, or the station drops them with a WARNING (`build-verify.md` § Signing per deploy target). [ev: corpus B1312 §1312.3 C1]
 - **Source→runtime inlining:** the Gradle signing plugin (`NiagaraPermissionGroupFactory`) expands the high-level group names into concrete `<java-permission class="…">` entries and INLINES them into the built JAR's `META-INF/module.xml` `<permissions>` element. There is NO `module-permissions.xml` in the deployed artifact (confirmed zero across all corpus JARs). To inspect deployed grants: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -A20 permissions`. [ev: corpus B18 §18.4.2-18.4.3; B777 §777.4]
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
+- **Start from `templates/module-permissions.xml`** (the wizard shape: `<permissions>` root, three
+  `<niagara-permission-groups>` blocks `all`/`workbench`/`station`, devkit-wb 4.14.0.162
+  `gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
+  MANAGE_EXECUTION and `<opt-permission>` requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`).
+  `<name>` and `<purposeKey>` are both required; `purposeKey` may be a lexicon key of the module, else the text is
+  shown as-is (devguide 4.15.6.20 `security/requestingPermissions.txt:40-80`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
+- **When a privileged call fails** with `AccessControlException`: read the `java.*` permission it names, find the
+  group that grants it in devguide `security/requestingPermissions.txt`, add the request, rebuild. For a feature
+  that can run without it, request it as `<opt-permission>` and catch `AccessControlException` where it is used
+  (`requestingPermissions.txt:51-54,142`).
+- **Security Manager card** (devguide 4.15.6.20 `security/securityManager.txt`; 4.13/4.14 not verified):
+  - Debug: the `security.niagaraPolicy` log at FINE/FINER/FINEST (DebugService or Logger Configuration, `:44`), or
+    start with `-@Djava.security.debug=access,failure` (`:58-62`).
+  - Disabling it is development-only: it needs the `smDeveloperMode` licence feature plus
+    `niagara.security.manager.disable` (`:86-98`); from 4.9 the denials are logged to a file while the app runs
+    on (`:112`).
+  - File I/O needs no permission under `Sys.getStationHome()` and `Sys.getNiagaraSharedUserHome()` (`:122-124`);
+    write there, not to an absolute path.
+  - What a module was granted: Spy › securityInfo › Policy Spy (`requestingPermissions.txt:653`); the startup
+    console listing is turned off with `niagara.security.logPermissionGroups=false` (`:596`).
+  `[ev: retro devguide415-horizons-authoring-security Δ5]` `[ev: corpus B1312 §1312.1]`
 
 ### Canonical per-module descriptor table `[ev: corpus B960 §960.4]`
 

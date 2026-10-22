@@ -171,6 +171,51 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   the cert-chain layer also refuses the load is not live-proven (niagara-research B1312-G1). Either way: sign it with a
   trusted cert, and read the station log for `Skipping element`. `[ev: corpus B1312 §1312.3 C2]`
 - **JACE=MEDIUM vs Win Supervisor=LOW:** the Win Supervisor's `defaults/system.properties` actively sets `niagara.moduleVerificationMode=low`; the JACE-8000 QNX leaves the property commented out, falling back to the N4 code default `medium`. A dev-signed module that loads on the supervisor (LOW) fails on a JACE (MEDIUM) unless the cert is imported into the JACE user trust store. The "JACE enforces the project CA" note above is correct; MEDIUM mode is the reason. Both files add the comment "will be removed in a future release" — treat `medium` as the stable long-term target. [ev: corpus B1004 §1004.2-1004.3]
+- **Read the mode, do not assume it.** The 4.15.6.20 guide still says "the current default verification mode is
+  Low" (`ModuleSign/VerificationModesModuleSigning-182D0E86.txt:17`) while its own roll-out page says Medium from 4.9
+  (`ModuleSign/StagedRoll-outModuleSigning-182E7CC0.txt:11`). Code wins for behaviour: with no property, `Nre` asks
+  `ModuleVerificationMode.make`, which returns `medium` for baja ≥ 4.9 (vineflower baja 4.14.0.162 `Nre.java:752-763`;
+  decompiled nre-ext 4.14 `ModuleVerificationMode.java:11,28-33`; 4.13 and 4.15 not verified). The authority on a
+  given host is `niagara.moduleVerificationMode` in its `system.properties`. `[ev: corpus B1010]`
+  `[ev: retro devguide415-r2-packaging-platform-signing Δ6]`
+- **Mode × signature status** (4.15.6.20 `ModuleSign/SignatureStatusesModuleSigning-1F0024B2.txt:9-21`,
+  `VerificationModesModuleSigning-182D0E86.txt:11-15`):
+
+  | Status | low | medium | high |
+  |---|---|---|---|
+  | Ok (trusted CA, timestamped) | yes | yes | yes |
+  | Not timestamped | yes, until the signing cert expires | same | same |
+  | Self-signed, cert in the user trust store | yes | yes | no |
+  | Certificate path validation failure | warns | no | no |
+  | Unsigned | warns | no | no |
+  | Invalid signature (modified after signing) | no | no | no |
+
+  So timestamp production jars (`niagara.signing.standardtsa`, devguide `security/codeSigning.txt:127-133`).
+- **The Signing Service is not module signing.** It issues CSR-signed TLS certificates for the Fox, Web and
+  platform servers and MQTT client authentication (`SigningService/SupportedComponents-9530B192.txt:9-15`); module,
+  program-object and robot signatures come from a code-signing certificate. `[ev: corpus B1332 §1332.2]`
+- **Harden the signing profile** `[ev: retro n4-course-build-deps-permissions-signing Δ4]` `[ev: corpus B1234 §1234.6]`:
+  - Profile type `RestrictedSigningProfile` (the devguide sample, `codeSigning.txt:37`; plugin 7.6.17 `createProfile`
+    writes it, corpus B1249 §1249.3): a missing alias fails the build, where a Local profile makes a new
+    self-signed key. Key RSA 3072 (`codeSigning.txt:45`).
+  - `allowDefaultProfile.set(false)` (above) stops the fallback to the default profile; together they make a
+    wrong alias a build failure. The two root blocks (`signingServices{…}` + `niagaraSigning{…}`) are the whole
+    portable unit: a part-level gradle file needs nothing (`templates/signing-root.gradle.kts`).
+    `[ev: retro review2-signing-build-route Δ3]`
+  - After changing the signing configuration run `:<part>:clean` before `jar`; then check Workbench Tools ›
+    Module Info: a green check and, on double-click, the expected signer certificate
+    (`ModuleSign/CheckingModuleSignaturesOnYourLocal-1B6825A0.txt:15-17`). `verify-module.sh`'s `signed` row
+    proves only that A signature exists, not whose; the signer-identity check is owed (Go lint G22).
+    `[ev: retro review2-signing-build-route Δ1]`
+  - The profile XML holds the store and key passwords in clear text: never print it, read element names only
+    (`grep -o '<[a-zA-Z]*'`), keep it and every `*.p12`/`*.jks`/`*.jceks` outside the repo, and give a delegated
+    task its path, never its contents. `[ev: retro review2-signing-build-route Δ2]`
+- **"Unable to load …" at station start** (`ModuleSign/StationFailsWithErrorMessageModuleS-1BDB7827.txt:11-17`):
+  the module was installed by a non-standard tool, its signing certificate was removed from the trust store, or
+  the certificate expired and the jar is not timestamped; Software Manager lists the signature errors. A
+  third-party jar that cannot be re-signed by its author can be signed with Workbench Tools › Jar Signer Tool
+  (`UsingJarSignerTool-29018E23.txt:9-13`, a last resort). Program objects and robots carry their own signature
+  (`types/logic-authoring.md` § BProgram). `[ev: retro devguide415-r2-packaging-platform-signing Δ7]`
 - **`skipModuleValidation` AND-gate — the property alone does nothing:** bypassing the sign-always groups (the six above) on the Win Supervisor requires BOTH `-Dniagara.classLoader.skipModuleValidation=true` (JVM system property) AND a `Webs.license` carrying `skipModuleValidation="true"` (verify expiry). Neither condition alone enables the bypass. NOT available on a JACE without a `Webs.license`. [ev: corpus B18 §18.3.2-18.3.3]
 - **`exemptions.tes` — Workbench-user dev bypass:** the Workbench "Module XYZ is not validly signed. Trust permanently?" dialog adds a per-module entry to `user/security/exemptions.tes` (~16 KB binary), persisting across restarts. Scoped to the Workbench JVM only — does NOT affect the station daemon. Less invasive than JVM flags; requires admin credentials; Workbench audit-logs each addition. For Workbench-local inspection of unsigned modules only; `skipModuleValidation` (above) is the corresponding station-daemon path on the Win Supervisor. [ev: corpus B18 §18.9]
 

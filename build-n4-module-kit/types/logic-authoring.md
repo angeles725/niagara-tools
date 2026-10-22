@@ -1057,7 +1057,15 @@ BString log = svc.runBatchRoutine(myBatchRoutine);
 ```
 
 Security model:
-- **`BRobotCode` class bytes must be signed** — `BCode.newInstance()` verifies the class signature via `CertUtils` / `SigningUtil` before loading. An unsigned class blob is rejected at instantiation with `CertificateNotTrustedException`.
+- **Program and robot code SHOULD be signed; an unsigned blob is only refused when the station requires it.** `BCode`
+  verifies a class signature when one is present, or when the system property `program.requireSigning` is true;
+  a bad or untrusted signature then fails (`handleVerificationFailed` throws `program.certNotTrusted` /
+  `program.failedVerification`, `:254-268`),
+  while an unsigned blob without that property only logs `program.notSigned` as a WARNING (vineflower program-rt
+  4.14.0.162 `com/tridium/program/BCode.java:202-215`; 4.13/4.15 not verified). The 4.15.6.20 guide agrees that
+  enforcement is off by default and asks for signing anyway (`User/ProgramObjectSigning-10F25D1D.txt:7,16`); sign
+  existing objects with the Program Service's Program Recompile Tool (`:46`). An earlier version of this line said
+  an unsigned blob is rejected at instantiation; the code does not. `[ev: retro devguide415-r2-packaging-platform-signing Δ7]`
 - **`compactProfile` = `"compact3"` (default)** — the sandbox ClassLoader enforces the Java SE compact3 API subset; classes that reference SE APIs outside compact3 fail to load.
 - **`allowProgramRuntimeExec` gate** — `BProgramService` has a `HIDDEN` boolean property `allowProgramRuntimeExec` (default `false`). When `false`, the sandbox SecurityManager denies `Runtime.exec()` calls; when `true`, the station administrator has explicitly opened that gate. Leave it `false` for normal automation scripts.
 - **`doRunRobot` checks `cx.getUser().getPermissions().isSuperUser()`** — only a super-user may invoke `runRobot`; all other users get `PermissionException`.
