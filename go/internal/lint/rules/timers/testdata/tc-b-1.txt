@@ -1,0 +1,45 @@
+-- root --
+tcb/m-rt/src
+-- want --
+exit 1
+FAIL  jdk-thread  @DIR@/tcb/m-rt/src/demo/BExec.java: BExec modifies a thread (shutdownNow() at line 8) but @DIR@/tcb/m-rt/module-permissions.xml requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tcb/m-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission><name>NETWORK_COMMUNICATION</name></req-permission>
+  </niagara-permission-groups>
+</permissions>
+-- tcb/m-rt/src/demo/BExec.java --
+package demo;
+import javax.baja.sys.*;
+import java.util.concurrent.*;
+public class BExec
+  extends BComponent
+{
+  public void started() { executorService = Executors.newSingleThreadExecutor(); }
+  public void stopped() { if (executorService != null) executorService.shutdownNow(); }
+  private ExecutorService executorService;
+}

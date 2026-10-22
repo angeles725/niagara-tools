@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/C5.java: timer cancelled in stopped()
+-- src/C5.java --
+package demo;
+import javax.baja.sys.*;
+public final class C5 extends BComponent {
+  private Clock.Ticket a;
+  private Clock.Ticket b;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }
+  public void stopped() throws Exception { super.stopped(); a.cancel(); cancelTicket(b); }
+  private static void cancelTicket(Clock.Ticket t) { if (t != null) t.cancel(); }
+}

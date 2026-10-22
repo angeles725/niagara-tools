@@ -1,0 +1,35 @@
+-- root --
+tcd
+-- want --
+exit 0
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tcd/.deploy-baseline/com/x/BStale.java --
+package demo;
+import javax.baja.sys.*;
+public final class BStale extends BComponent {
+  private Clock.Ticket t;
+  public void arm() { t = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() cancel -> a real leak, but it lives under .deploy-baseline/ so it must be pruned
+}

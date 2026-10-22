@@ -1,0 +1,45 @@
+-- root --
+s21pos
+-- want --
+exit 1
+PASS  timer-ticket  @DIR@/s21pos/BFieldFlag.java: timer cancelled in stopped()
+FAIL  companion-flag  @DIR@/s21pos/BFieldFlag.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+-- s21pos/BFieldFlag.java --
+package demo;
+import javax.baja.sys.*;
+public final class BFieldFlag extends BComponent {
+  private boolean startingUp = false;   // class FIELD — CAN stay stuck across stop/restart
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void doPowerOnExpired() { startingUp = false; }   // cleared only in expiry — does NOT count
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+  }
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
