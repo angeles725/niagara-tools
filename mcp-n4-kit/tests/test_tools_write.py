@@ -10,6 +10,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
 from mcp_n4 import box, server, tools_write  # noqa: E402
 
@@ -35,13 +36,12 @@ class WriteTestCase(test_server.ToolTestCase):
                     stations=self.stations,
                     write_scopes=list(self.SCOPES), max_writes=self.MAX_WRITES)
         opts.update(kw)
-        self.srv.ctx.close()
-        self.srv = server.Server(**opts)
-        self.addCleanup(self.srv.ctx.close)
+        go_server.close_server(self.srv)
+        self.srv = self.make_server(**opts)
 
     def connect_verified(self):
         self.connect(expected_station="FakeStation")
-        self.box = self.srv.ctx.session.client
+        self.box = self.station_client()
 
     def add(self, name, type_="kitControl:NumericConst", out=None):
         nn = self.box.add_component("3", name, type_)["nn"]
@@ -120,6 +120,7 @@ class TestMode(WriteTestCase):
             self.assertIn("dry_run", props)
             self.assertIn("confirmation_token", props)
 
+    @go_server.go_twin("cli", "in-process")
     def test_flags_have_documented_defaults_and_scope_is_repeatable(self):
         args = server.parse_args([])
         self.assertEqual((args.write_scope, args.state_dir, args.token_ttl, args.max_writes),
@@ -129,12 +130,14 @@ class TestMode(WriteTestCase):
         self.assertEqual((args.write_scope, args.state_dir, args.token_ttl, args.max_writes),
                          (["a", "b"], "/x", 9, 3))
 
+    @go_server.go_twin("cli", "internals")
     def test_default_state_dir_is_under_the_home_state_dir(self):
         srv = server.Server(allow_writes=True)
         self.assertEqual(srv.ctx.write.journal.state_dir,
                          os.path.expanduser("~/.local/state/mcp-n4"))
 
 
+@go_server.go_twin("cli", "in-process")
 class TestStateDirStartup(WriteTestCase):
     def loose_dir(self):
         os.makedirs(self.state_dir)
@@ -178,6 +181,7 @@ class TestStateDirStartup(WriteTestCase):
 
 
 class TestIdentity(WriteTestCase):
+    @go_server.go_twin("plan", "internals")
     def test_write_on_an_unverified_session_is_refused_and_audited(self):
         self.connect()
         self.srv.ctx.session.identity_verified = False
@@ -189,6 +193,7 @@ class TestIdentity(WriteTestCase):
         self.assertEqual((audit[-1]["outcome"], audit[-1]["tool"]),
                          ("refused", "n4_create_component"))
 
+    @go_server.go_twin("plan", "internals")
     def test_default_connect_verifies_identity_so_writes_are_allowed(self):
         self.connect()
         self.assertTrue(self.srv.ctx.session.identity_verified)
@@ -264,6 +269,7 @@ class TestTokenLayers(WriteTestCase):
                                                confirmation_token=token, **self.ARGS))
         self.assertEqual(self.children(), ["Pump"])
 
+    @go_server.go_twin("plan", "injection")
     def test_an_expired_token_is_refused(self):
         token = self.dry("n4_create_component", **self.ARGS)["confirmation_token"]
         self.srv.ctx.write.tokens.clock = lambda: 4e9
@@ -303,6 +309,7 @@ class TestTokenStationBinding(WriteTestCase):
     """F1 (audit 2026-10-03): a token vouches for the station session it was issued on."""
     ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
 
+    @go_server.go_twin("plan", "internals")
     def test_the_plan_names_the_station_and_session_it_was_made_on(self):
         self.connect_verified()
         plan = self.dry("n4_create_component", **self.ARGS)["plan"]
@@ -335,6 +342,7 @@ class TestTokenStationBinding(WriteTestCase):
 class TestLimitsStartup(unittest.TestCase):
     """F16 (audit 2026-10-03): a zero or negative TTL or budget is refused at startup."""
 
+    @go_server.go_twin("cli", "in-process")
     def test_zero_or_negative_ttl_and_budget_are_refused_by_the_parser(self):
         for flag in ("--token-ttl", "--max-writes"):
             for bad in ("0", "-5"):
@@ -344,6 +352,7 @@ class TestLimitsStartup(unittest.TestCase):
                 self.assertEqual(cm.exception.code, 2, (flag, bad))
                 self.assertIn(flag, err.getvalue())
 
+    @go_server.go_twin("cli", "unit")
     def test_the_write_state_refuses_them_too(self):
         with tempfile.TemporaryDirectory() as tmp:
             for kw in ({"token_ttl": 0}, {"max_writes": 0}, {"token_ttl": -1}):
@@ -628,6 +637,7 @@ class TestCreateLink(WriteTestCase):
         self.assertEqual(out["verdict"], "mismatch")
 
 
+@go_server.go_twin("plan", "internals")
 class TestCreateLinkRejected(WriteTestCase):
     def test_station_rejection_is_failed_with_reason_and_nothing_journaled(self):
         self.connect_verified()
@@ -647,6 +657,7 @@ class TestCreateLinkRejected(WriteTestCase):
         self.assertEqual(self.srv.ctx.write.journal.read(out["batch_id"])["state"], "completed")
 
 
+@go_server.go_twin("plan", "internals")
 class TestLinkReplies(WriteTestCase):
     def setUp(self):
         super().setUp()
@@ -696,6 +707,7 @@ class TestLinkReplies(WriteTestCase):
             self.assertIn("readback_error", out)
 
 
+@go_server.go_twin("plan", "injection")
 class TestNoneInverse(WriteTestCase):
     def test_a_none_inverse_is_normalized_to_an_empty_list(self):
         self.connect_verified()
@@ -709,6 +721,7 @@ class TestNoneInverse(WriteTestCase):
         self.assertEqual(result["inverse"], [])
 
 
+@go_server.go_twin("plan", "internals")
 class TestLooseStateFileBeforeSend(WriteTestCase):
     ARGS = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
 
@@ -733,6 +746,7 @@ class TestLooseStateFileBeforeSend(WriteTestCase):
             self.box.remove_component("3", "Pump")
 
 
+@go_server.go_twin("plan", "injection")
 class TestNestedReadbackPairing(WriteTestCase):
     def test_mismatched_components_and_created_lists_are_a_verdict_mismatch(self):
         spec = {"n": "K", "parent_path": "", "top": 0, "b": {"t": "kitControl:NumericConst"}}
@@ -772,6 +786,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertEqual(result["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
         self.assertEqual(result["accepted"], {"id": "a", "nn": "Pump"})
 
+    @go_server.go_twin("plan", "internals")
     def test_the_result_records_the_server_assigned_name_not_the_planned_one(self):
         self.add("Pump")
         out = self.run_write("n4_create_component", **self.ARGS)
@@ -787,6 +802,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.run_write("n4_create_component", **self.ARGS)
         self.assertEqual([[e["phase"] for e in lines] for lines in seen], [["intent"]])
 
+    @go_server.go_twin("plan", "internals")
     def test_an_intent_that_cannot_be_written_sends_nothing_and_keeps_the_token_spent(self):
         plan = self.dry("n4_create_component", **self.ARGS)
 
@@ -801,6 +817,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertIn("already used", self.err("n4_create_component", **kw))
         self.assertEqual(self.children(), [])
 
+    @go_server.go_twin("plan", "internals")
     def test_a_send_exception_after_the_token_was_spent_leaves_an_in_doubt_batch(self):
         plan = self.dry("n4_create_component", **self.ARGS)
         self.fake.hook = lambda frame: (500, b"boom", {}) if any(
@@ -816,6 +833,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertIn("already used", self.err("n4_create_component", **kw))
         self.assertEqual(self.lines("audit.jsonl")[-2]["batch_id"], intent["batch_id"])
 
+    @go_server.go_twin("plan", "internals")
     def test_a_result_that_cannot_be_written_is_a_warning_with_the_inverse(self):
         real = self.srv.ctx.write.journal.append
 
@@ -829,6 +847,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertTrue(any("in-doubt" in w for w in out["warnings"]), out)
         self.assertEqual(out["inverse"], [{"nm": "v", "h": "3", "n": "Pump"}])
 
+    @go_server.go_twin("plan", "injection")
     def test_a_read_back_box_error_is_failed_with_the_batch_id(self):
         def break_reads(op):
             def boom(*a, **kw):
@@ -851,6 +870,7 @@ class TestJournalAndAudit(WriteTestCase):
         self.assertIn("ValueError", out["readback_error"])
         self.assertRegex(out["batch_id"], r"^[0-9a-f]{32}$")
 
+    @go_server.go_twin("plan", "internals")
     def test_an_unwritable_audit_log_is_a_warning_not_an_error(self):
         def boom(entry):
             raise OSError("read-only")
@@ -875,6 +895,7 @@ class TestJournalAndAudit(WriteTestCase):
             self.assertEqual(set(line), {"ts", "tool", "batch_id", "dry_run", "outcome",
                                          "reason", "args_redacted"})
 
+    @go_server.go_twin("plan", "unit")
     def test_audit_and_outputs_hold_no_secret_value(self):
         extra = dict(password="hunter2", api_secret="s3cr3t-x")
         plan = self.dry("n4_create_component", **dict(self.ARGS, **extra))

@@ -7,6 +7,9 @@
   request. The binary is `MCP_N4_GO_BIN`, else `go/bin/mcp-n4` at the repository root. A
   missing binary raises `GoBinaryMissing`: a Go run never passes silently on Python.
 
+Tests that cannot run black-box carry `@go_twin(package, category)`: they are skipped under
+Go and name the Go test that replaces them.
+
 Any stdio server can stand in for the binary: pointing `MCP_N4_GO_BIN` at a wrapper that runs
 `python3 -m mcp_n4.server "$@"` checks that every unmarked test really is black-box.
 """
@@ -17,6 +20,7 @@ import queue
 import subprocess
 import tempfile
 import threading
+import unittest
 
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 KIT_DIR = os.path.dirname(TESTS_DIR)
@@ -26,6 +30,20 @@ IMPLS = ("python", "go")
 IMPL = os.environ.get("MCP_N4_IMPL") or "python"
 GO = IMPL == "go"
 REPLY_TIMEOUT = 60.0
+
+#: Why a test cannot run against the binary. Each skipped test names its future Go twin.
+CATEGORIES = {
+    "unit": "calls a Python module function or class directly; the twin is a Go unit test",
+    "internals": "reads or writes in-process server state (srv.ctx: session, env, journal)",
+    "injection": "replaces behaviour in-process (mock/patch, clock, client_factory, opener, "
+                 "custom tools)",
+    "in-process": "uses an entry point with no wire form (parse_args, main, serve, _validate, "
+                  "docstrings, the Python TOOLS table, an in-process Server)",
+}
+
+#: (test module, class name, test name, Go twin, category) of every @go_twin test.
+REGISTRY = set()
+
 
 class GoBinaryMissing(RuntimeError):
     """MCP_N4_IMPL=go was asked for but there is no binary to run."""
@@ -215,3 +233,29 @@ def close_server(srv):
         srv.close()
     else:
         srv.ctx.close()
+
+
+def twin_name(package, test_name):
+    words = test_name[len("test_"):].split("_") if test_name.startswith("test_") else [test_name]
+    return "%s.Test%s" % (package, "".join(w[:1].upper() + w[1:] for w in words))
+
+
+def go_twin(package, category):
+    """Skip a test (or every test of a class) under Go, naming the Go twin that replaces it."""
+    if category not in CATEGORIES:
+        raise ValueError("unknown go_twin category %r" % category)
+
+    def mark(obj):
+        if isinstance(obj, type):
+            names = sorted(n for n in vars(obj) if n.startswith("test"))
+            reason = "Go twins %s.Test* (%s)" % (package, category)
+            for name in names:
+                REGISTRY.add((obj.__module__, obj.__name__, name, twin_name(package, name),
+                              category))
+        else:
+            cls_name = obj.__qualname__.rpartition(".")[0]
+            twin = twin_name(package, obj.__name__)
+            reason = "Go twin %s (%s)" % (twin, category)
+            REGISTRY.add((obj.__module__, cls_name, obj.__name__, twin, category))
+        return unittest.skipIf(GO, reason)(obj)
+    return mark
