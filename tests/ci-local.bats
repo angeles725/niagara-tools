@@ -11,6 +11,10 @@ setup() {
   CI="$ROOT/.github/workflows/ci.yml"
   FX="$ROOT/tests/fixtures/ci-local"
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
+  # Neutral host-budget limits so the gate cases read only fixtures: the fake /proc, an empty Go cache and a
+  # disk limit no mount can exceed. Without them CL10-CL12 would read this machine's threads, cache and disks.
+  mkdir -p "$TMPDIR_T/gocache"
+  HB_NEUTRAL="--proc-root $ROOT/tests/fixtures/host-budget/proc --gocache $TMPDIR_T/gocache --disk-pct 100"
 }
 teardown() { rm -rf "$TMPDIR_T"; }
 
@@ -114,7 +118,7 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
   # Mutation: CL10 -- dropping the pre-run pids check lets the step run on a host near its fork limit.
   fake_cgroup init.scope 30000 48129
   fake_cgroup system.slice 16 max
-  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
   [ "$status" -eq 4 ]
   [[ "$output" == *"init.scope"*"30000/48129"* ]]
   [[ "$output" != *"ran-after"* ]]
@@ -124,13 +128,42 @@ fake_cgroup() { # fake_cgroup <name> <current> <max>
   # Mutation: CL11 -- comparing against the literal 'max' or using >= refuses a healthy host.
   fake_cgroup init.scope 24064 48128
   fake_cgroup system.slice 99999 max
-  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
   [ "$status" -eq 0 ]
   [[ "$output" == *"PASS runs after a failure"* ]]
 }
 
 @test "CL12: --list is a read-only classification and never runs the pids check" {
   fake_cgroup init.scope 48000 48129
-  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" run "$CL" --list --ci-file "$FX/semantics.yml"
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" run "$CL" --list --ci-file "$FX/semantics.yml"
   [ "$status" -eq 0 ]
+}
+
+@test "CL13: a missing cgroup root is a stderr note and the run proceeds (hosts without /sys/fs/cgroup)" {
+  # Mutation: CL13 -- treating a missing root as a host-budget error (exit 3) stops ci-local on macOS and
+  # cgroup-less containers, which the pre-T47 inline loop let run.
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/no-such-root" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" \
+    run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ci-local: no cgroup root at $TMPDIR_T/no-such-root; host budget not checked"* ]]
+  [[ "$output" == *"PASS runs after a failure"* ]]
+}
+
+@test "CL14: a cgroup root that exists but cannot be read as one stays a tool error (exit 3)" {
+  # Mutation: CL14 -- skipping the check on any unreadable root hides a broken host behind a green run.
+  printf 'not a directory\n' > "$TMPDIR_T/cg-file"
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg-file" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL" \
+    run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"host-budget failed (exit 3: 3 = cannot read host / usage, other = crash/signal)"* ]]
+  [[ "$output" != *"ran-after"* ]]
+}
+
+@test "CL15: CI_LOCAL_HOST_BUDGET_ARGS is appended to the host-budget call" {
+  # Mutation: CL15 -- dropping the extra args makes CL10-CL12 read the real disks, threads and Go cache.
+  fake_cgroup init.scope 16 48129
+  CI_LOCAL_CGROUP_ROOT="$TMPDIR_T/cg" CI_LOCAL_HOST_BUDGET_ARGS="$HB_NEUTRAL --disk-pct 0 --mount $TMPDIR_T" \
+    run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"FAIL disk:$TMPDIR_T "* ]]
 }

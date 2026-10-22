@@ -20,6 +20,8 @@ func Spec() lint.Spec {
 		Mode:   lint.Raw,
 		Usage:  "usage: lint-null-context-write.sh <src-root>",
 		Select: lint.Selection{Names: []string{"*.java"}},
+		// Reason: bash used awk_lint_run, which scans the partial list (env line, then rows, exit 3).
+		ContinueOnWalkError: true,
 	}
 }
 

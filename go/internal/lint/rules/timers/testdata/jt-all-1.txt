@@ -1,0 +1,51 @@
+-- root --
+jtall/m-rt/src
+-- want --
+exit 0
+WARN  jdk-thread  @DIR@/jtall/m-rt/src/demo/BExec.java: BExec uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+-- jtall/m-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission><name>NETWORK_COMMUNICATION</name></req-permission>
+  </niagara-permission-groups>
+  <niagara-permission-groups type="all">
+    <req-permission>
+      <name>MANAGE_EXECUTION</name>
+      <purposeKey>Stop running station threads during station shutdown</purposeKey>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>
+-- jtall/m-rt/src/demo/BExec.java --
+package demo;
+import javax.baja.sys.*;
+import java.util.concurrent.*;
+public class BExec
+  extends BComponent
+{
+  public void started() { executorService = Executors.newSingleThreadExecutor(); }
+  public void stopped() { if (executorService != null) executorService.shutdownNow(); }
+  private ExecutorService executorService;
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}

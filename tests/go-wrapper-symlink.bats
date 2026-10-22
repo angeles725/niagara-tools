@@ -14,8 +14,8 @@ setup() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   KIT="$ROOT/build-n4-module-kit"
   COPY="$BATS_TEST_TMPDIR/toolbelt-copy"
-  # The same copy report-module's tests run: every entry symlinked, one unrelated member stubbed.
-  stub_toolbelt "$COPY" lint-timers.sh 'exit 0'
+  # The same copy report-module's tests run: every entry symlinked, one unrelated (bash, non-Go) member stubbed.
+  stub_toolbelt "$COPY" rc-scan.sh 'exit 0'
 }
 
 # go_wrappers: every toolbelt script that sources go/go-tool.sh, one basename per line.

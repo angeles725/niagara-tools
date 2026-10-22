@@ -598,18 +598,35 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** commit 337ee6c (two BUILD SUCCESSFUL runs with 0 tests).
 - **Target:** new `toolbelt/run-niagara-test.sh`, `toolbelt/INDEX.md`, bats with three log fixtures.
 - **Lint-able:** yes. **Fold type:** script.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ2): the runner is a new script, which round 8
+  does not write in bash; its contract is in `types/moduleTest.md` § Known gotchas (read the `Total tests run` and
+  rejection lines by hand meanwhile) and its full spec is owed as Go tool G33 `run-niagara-test` (ledger fragment
+  r8-p1-tests). LEFT: the runner, its `toolbelt/INDEX.md` row and the three log fixtures.
 
 ### C41 — moduleTest doctrine, layout and template
 - **Sources:** tpb#Δ4 (primary: station tests for component behaviour, structural tests last resort) · tpb#Δ5 extends (structural-test advisory lint) · tpb#Δ6 extends (`moduleTest-include.xml` template + scaffold) · lex#Δ3 duplicate on the 4.14 layout + extends (BTestNg vs BTestNgStation, mockStatic, FINE assertions, no fixed sleeps)
 - **Evidence:** commit 337ee6c; corpus B1252 §1252.3, B1236 §1236.5-6; `toolbelt/lint-structure.sh:271-303`.
 - **Target:** `types/moduleTest.md`, `METHODOLOGY.md` testing tiers, `toolbelt/lint-structure.sh` (L12), `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN `srcTest` reading `.java` as text with no BTestNg class. **Fold type:** doc section + template + lint.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ4, Δ5, Δ6, lex Δ3): `types/moduleTest.md`
+  (client parity doctrine, base-class choice, idempotent station fixtures, DB seeding, mockStatic, no fixed sleeps,
+  `setup()` trap from docSource 4.14.0.162 `BTest.java:72`, `@BeforeTest` at `BTestNgStation.java:93-94`; the 4.14+
+  `test.` package layout from devkit-wb 4.14.0.162 `BNfooVideoDriverTest.java.vm:4` and the course suite), new
+  `templates/moduleTest-include.xml`, `METHODOLOGY.md` tier note. LEFT: `scaffold-module.sh` emission (outside the
+  surface); the structural-test advisory is owed as Go lint G34 `structural-tests` (a new check, not a small edit of
+  L12). Whether 4.14+ tooling still discovers the older layout is `[INFER]`. Pin KPT1.
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
 - **Evidence:** devguide `build.txt:238,250`, `upgradingBuild.txt:289`, corpus B1320, B1321.
 - **Target:** `types/third-party-libraries.md` after `:15` and near `:160`, `types/module-wiring.md` §1.
 - **Lint-able:** yes — WARN bundling okhttp/okio/kotlin-stdlib/commons-lang3/codec/slf4j/jose4j/httpclient5/bouncycastle; `import org.apache.http.`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-tests`, 2026-10-23; shl Δ1, Δ3, Δ4, Δ6): `types/third-party-libraries.md` § Before
+  bundling (nre without version, devguide 4.15.6.20 `build.txt:186`; a three-install drift table from `ls bin/ext` of
+  iC-Niagara 4.13.2.18, Honeywell OptimizerSupervisor 4.14.0.162 and Niagara 4.15.6.20; the wrapper table from corpus
+  B1321; `commonsLang-rt` empty in 4.15.6.20 by `unzip -l`, 424 `lang3` entries in the 4.14.0.162 copy; wrappers lend
+  no permissions), `types/module-wiring.md` § 1 `nre("g:a")` row. The okhttp half was WU-P0-9. Pin KPT2; owed Go lint
+  G35 `shipped-library-bundle`.
 
 ### C43 — Outbound HTTP ladder; the non-driver-client gate is closed by default; OAuth2
 - **Sources:** shl#Δ7 (primary ladder) · r3di#Δ4 corrects shl Δ7(b) (`enableNonDriverClients=false` → every send skipped with only a health fault; mount with `mountAtOrd`) · r3-report#R3 · r3di#Δ5 extends (OAuth2 via `oauth2-rt` + `BAuthorizationHeaderScheme`, the `email-rt` pattern)
@@ -630,12 +647,22 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BProxyExt.java:923-930`, `BBacnetDevice.java:1096-1102`, `BPingMonitor.java:484-488,526,532`, corpus B1348 §1348.1, B1337.
 - **Target:** `types/driver-authoring.md` §5 after `:182`.
 - **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; r3di Δ1, drp Δ7): `types/driver-authoring.md` § 5 (a failed
+  poll is not a failed ping; the BACnet `ping()` + `maxPollTimeouts` pattern; ping-monitor rules). **Premise checked:**
+  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`Drivers/driver-PingMonitor.txt:37-40`)
+  vs code — code wins for behaviour: `BProxyExt.readFail` makes no device call (vineflower driver-rt 4.14.0.162
+  `BProxyExt.java:463-469`); BACnet does it in its own poll path (vineflower bacnet-rt 4.14.0.162
+  `BBacnetDevice.java:1093-1101`). 4.13/4.15 code not verified. No lint (policy in the module's own comm code).
 
 ### C45 — BACnet `statusFlags` facet or field alarm/fault never reaches Niagara status
 - **Sources:** drp#Δ4 (primary) · r3di#Δ3 corrects scope (COV and polled alike; cost note)
 - **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `Bacnet/TroubleshootingBACnet-4FF09FBA.txt:86`, corpus B1327 row 3, B1348 §1348.2.
 - **Target:** `types/driver-authoring.md:129`, `types/dashboard.md` health read.
 - **Lint-able:** yes — bog check. **Fold type:** doc section + bog lint.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; drp Δ4, r3di Δ3): `types/driver-authoring.md` § 2 BACnet
+  `statusFlags` paragraph (vineflower bacnet-rt 4.14.0.162 `BBacnetProxyExt.java:808-822`; COV and polled alike per
+  r3di Δ3's scope correction of drp Δ4, corpus B1348 §1348.2). The dashboard side is a pointer. Owed Go lint G36
+  `bacnet-status-flags`.
 
 ### C46 — oBIX exposure: licence, priority writes, watches, hidden ≠ protected
 - **Sources:** drp#Δ9 (primary) · r3wsh#Δ6 extends (HIDDEN removes from listings only; served by path)
@@ -683,6 +710,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1252 §1252.4 (`BPair.encodeToString()` via `toString()` → `(1,00,2,00)` on `es`).
 - **Target:** `types/value-types.md:123-144`.
 - **Lint-able:** yes — WARN `String.format(`/`.toString()` on a `B*` field in `encodeToString`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; poh Δ2): `types/value-types.md` § 3 Custom BSimple (encode
+  with encoders: vineflower baja 4.14.0.162 `BObject.java:111-113`, `BDouble.java:131-133,261-262,354-381`; the course
+  `BPair.java:78-81` as the failing example). The `es` corruption is `[INFER]` from the code (not executed). Owed Go
+  lint G37 `bsimple-encode-locale`.
 
 ### C50 — Staging comparisons need an explicit NaN/null fallback
 - **Sources:** rcf#Δ9 (primary)

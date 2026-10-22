@@ -1,0 +1,21 @@
+-- root --
+src
+-- want --
+exit 1
+FAIL  discarded-ticket  @DIR@/src/Discard.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field
+PASS  timer-ticket  @DIR@/src/Discard.java: timer cancelled in stopped()
+-- src/Discard.java --
+package demo;
+import javax.baja.sys.*;
+public final class Discard extends BComponent {
+  private Clock.Ticket periodic;
+  public void start() {
+    periodic = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), refresh, null);
+    // fire-and-forget one-shot — discarded ticket:
+    Clock.schedule(this, BRelTime.makeSeconds(1), init, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (periodic != null) periodic.cancel();
+  }
+}

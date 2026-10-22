@@ -1,0 +1,44 @@
+-- root --
+jtutil/m-rt/src
+-- want --
+exit 1
+FAIL  jdk-thread  @DIR@/jtutil/m-rt/src/demo/BUtilSvc.java: BUtilSvc modifies a thread (shutdown() at line 7) but @DIR@/jtutil/m-rt/module-permissions.xml requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+-- jtutil/m-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission><name>NETWORK_COMMUNICATION</name></req-permission>
+  </niagara-permission-groups>
+</permissions>
+-- jtutil/m-rt/src/demo/BUtilSvc.java --
+package demo;
+import javax.baja.sys.*;
+import javax.baja.util.ExecutorUtil;
+import java.util.concurrent.*;
+public class BUtilSvc extends BComponent {
+  public void started() { svc = ExecutorUtil.newSingleThreadBackgroundExecutor("demo-io", 60L, TimeUnit.SECONDS); }
+  public void stopped() { ExecutorUtil.shutdown(svc); }
+  private ExecutorService svc;
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}

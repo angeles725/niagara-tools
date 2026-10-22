@@ -1,0 +1,13 @@
+-- root --
+.
+-- want --
+exit 1
+FAIL  lint-driver-scaffold  @DIR@/BX.java:2  doPing() still holds the wizard TODO: replace it with a real reachability check
+-- BX.java --
+class BX extends BNDevice {
+  public void doPing() {
+    // TODO - add ping implementation
+    log("ping");
+    pingOk();
+  }
+}

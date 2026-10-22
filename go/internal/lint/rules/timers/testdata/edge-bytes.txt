@@ -1,0 +1,42 @@
+-- root --
+src
+-- want --
+exit 1
+FAIL  discarded-ticket  @DIR@/src/BCrlf.java: Clock.schedule result is discarded â€” assign it to a Clock.Ticket field
+PASS  timer-ticket  @DIR@/src/BCrlf.java: timer cancelled in stopped()
+FAIL  discarded-ticket  @DIR@/src/BLatin.java: Clock.schedule result is discarded â€” assign it to a Clock.Ticket field
+FAIL  timer-ticket  @DIR@/src/BLatin.java: schedules a Clock ticket but has no stopped() override to cancel it
+FAIL  jdk-thread  @DIR@/src/BNoPerm.java: BNoPerm modifies a thread (interrupt() at line 4) but no module-permissions.xml above the file requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+WARN  job-cancel  @DIR@/src/BTwoRuns.java: BTwoRuns run() loops (line 5) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
+-- src/BCrlf.java --
+package demo;
+public final class BCrlf extends BComponent {
+  private Clock.Ticket t;
+  public void a() { t = Clock.schedule(this, null, x, null); }
+  public void b() { Clock.schedule(this, null, x, null); }
+  public void stopped() { t.cancel(); }
+}
+-- src/BLatin.java --
+package demo;
+public final class BLatin extends BComponent {
+  // señal
+  public void a() { x = f("á") + Clock.schedule(this, null, x, null); }
+  public void b() { y = 1; Clock.schedulePeriodically(this, null, x, null); }
+  public Object c() { return Clock.schedule(this, null, x, null); }
+  public void d() { Clock.scheduleOnce(this, null, x, null); }
+}
+-- src/BNoPerm.java --
+package demo;
+public class BNoPerm extends BComponent {
+  private Thread th = new Thread(this);
+  public void stopped() { th.interrupt(); Thread.currentThread().interrupt(); }
+}
+-- src/BTwoRuns.java --
+package demo;
+public class BTwoRuns
+  extends BSimpleJob {
+  public void run(Context cx) { while (a()) { b(); } }
+  public void run(int n) { for (int i = 0; i < n; i++) { b(); } }
+  public void other() { do {
+  } while (x); }
+}
