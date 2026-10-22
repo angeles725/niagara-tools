@@ -22,6 +22,12 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] **`module.palette` has one `<p n=… t=…>` entry per exposed `@NiagaraType`:** a scaffold-only palette (just `<p t="b:Folder">`) passes the ENTIRE verify gate and deploys, yet Workbench shows nothing to drag — commissioning is silently broken. [ev: retro module-palette · B5]
 - [ ] **Every component created in code gets a wire-sheet position:** give each child a `wsAnnotation` on a grid (`templates/ws-placement/src/com/angeles/wsplacement/WsGrid.java`, indexed by the child's row in the stable data order, never the add order), added only when absent with `Flags.READONLY` exactly as Workbench does, never re-placed once present (the user may have moved it), and kept inside the 600×600 default sheet. Without it Workbench hands every code-created sibling the same diagonal stagger and they overlap. Recipe: `types/logic-authoring.md` §Wire-sheet placement; advisory check: `toolbelt/lint-ws-placement.sh`. `[ev: corpus B1172]` `[ev: retro ws-placement]`
 - [ ] **A self-armed timer arms in BOTH `started()` and `atSteadyState()`** — never only `atSteadyState()` (it skips a late commissioning mount and the timer never fires; the anti-pattern has ZERO hits in the entire Tridium first-party corpus). Full idiom in `types/logic.md` §Safety fail-modes. [ev: retro self-firing-timer]
+- [ ] **A service's `getServiceTypes()` returns its own `TYPE`** (`new Type[] { TYPE }`, plus an interface type when
+  lookups use it, e.g. `{ TYPE, BILoggingService.TYPE }`): `ServiceManager` registers exactly that array, so the IDE's
+  "Implement methods" stub `new Type[0]` registers nothing and `Sys.getService` never finds the service. Check:
+  `toolbelt/lint-service-types.sh` (FAIL empty/null, WARN no own type). `[ev: corpus B1419 §1419.1]` `[ev: retro course-recordings Δ8]`
+- [ ] **Text bytes name their charset:** `getBytes(StandardCharsets.UTF_8)` / `new String(b, UTF_8)`, never the
+  platform default; a written text file ends lines with `System.lineSeparator()`. `[ev: corpus B1419 §1419.4 c]` `[ev: retro course-recordings Δ8]`
 - **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. The watchdog chain — niagarad daemon (PID poll → process exit → auto-restart with crash-loop backoff) → `EngineWatchdog` (hung engine heartbeat) → engine discipline — recovers a DEAD or HUNG station; a merely SLOW station is invisible to the watchdogs — engine-thread discipline (never block, `catch(Throwable)`) is the ONLY protection against slow callbacks. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B737 §A.3, B775]`
 
 ## Domain correctness
@@ -65,6 +71,9 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - **Permissions — one source file, one inlined element, two kinds of children (B777 reconciled with B636; verified on real jars 2026-09-05):** you AUTHOR grants in the source `module-permissions.xml` (the New-Module wizard emits it from `wbutil-wb/rc/module-permissions.xml`; the build requires it) and the gradle plugin INLINES its `<permissions>` element into the jar's `META-INF/module.xml`, so decompiled modules show it inline and never as a separate file. Inside it: `<niagara-permission-groups type="all|workbench|station">` with `<req-permission>` entries (Niagara permission groups such as NETWORK_COMMUNICATION — the wizard scaffold line 15 tells you to neutralize) and, for a security module, `<java-permissions type="station">` (JVM SecurityManager grants: SAMLPermission, KeyStorePermission, FilePermission — saml-rt). Read the inline block in a Tridium jar to learn what it grants; edit the source file to change yours; jar-signing (a `META-INF/<ALIAS>.SF` + its `.RSA`/`.DSA`/`.EC` block under any signer alias, `NIAGARA4` by default) is mandatory for the privileged grants. `[ev: corpus B777]`
 - [ ] Built with **Java 8** + **clean + slotomatic + jar**. Bytecode major version **52**.
 - [ ] Both/all profile jars **signed** (a `META-INF/*.SF` signature block — `<ALIAS>.SF` + its `.RSA|.DSA|.EC`). `[ev: retro n4-course-signed-jars-gate-fix Δ1]`
+- [ ] **Compiles warning-clean:** some vendors build with `-Werror`, so a module with javac warnings fails their
+  build. An unavoidable unchecked cast (`(BITable<T>) ord.get()`) gets `@SuppressWarnings("unchecked")` on the
+  smallest declaration that holds it. `[ev: corpus B1419 §1419.4 b]` `[ev: retro course-recordings Δ8]`
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
 - [ ] `toolbelt/verify-module.sh` passed on the built jars.
 - [ ] **The non-skippable floor ran** (`BUILD-LOOP.md` §5) — even under an explicit speed request — and any OTHER skipped check is listed with its reason under `## Checks skipped` in the feature doc.
@@ -88,6 +97,20 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 | **rt-only negative** | Intentionally NO `-wb`: relies on base Niagara hx-wb (e.g. lonSchneider/lonDistech zero-Java .lnml) | none — must be documented explicitly (see `types/driver-authoring.md §1.3 PD-13`) | 0 |
 
 See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev: corpus B1054-B1061]`
+
+## Version and N5 readiness `[ev: retro course-recordings Δ4]`
+- [ ] **Public API only where it exists:** public `javax.baja` API changes only between majors (4.14.7 → 4.15.6 is
+  one); private `com.tridium.*` API can change in a minor release without notice. A private import needs a reason
+  in the module README (lint proposed: retro n4-course-build-deps-permissions-signing Δ3). `[ev: corpus B1416 §1416.5 i]`
+- [ ] **Check each API against the TARGET version:** the Resource Center shows only the newest docs; for an older
+  target read that version's Workbench Help/bajadoc or its source. `[ev: corpus B1416 §1416.5 h]`
+- [ ] **Alarm and history data go through the alarm/history APIs,** never `java.io`/`java.nio` on their files.
+  `[ev: corpus B1416 §1416.5 g]`
+- [ ] **Niagara 5 readiness** (instructor statements; no N5 source yet, gaps B1416-G1/B1417-G1): an N4 module needs an
+  upgrade for N5 (expected early 2027; migration guide via the developer program). Keep these true now: no split
+  package (`types/structure.md` § Layout); every jar validly signed by a trusted cert, because N5 drops the `low`
+  verification mode (`types/distribution.md` §5); module parts go away in N5, so each part's code stays
+  self-contained; N5 builds on Gradle 9.x. `[ev: corpus B1416 §1416.5 j]` `[ev: corpus B1417 §1417.3 a,t,u,v]`
 
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
