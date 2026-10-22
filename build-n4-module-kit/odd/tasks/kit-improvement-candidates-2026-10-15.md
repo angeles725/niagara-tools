@@ -131,6 +131,7 @@ WU-P0-3 docs folded on `docs/r8-t9b-p0-3` (2026-10-22): C06 BFacets card regener
 and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 WU-P0 lints, `docs/r8-t9b-p0-lints` (2026-10-22): `lint-timers.sh` `jdk-thread` re-scoped (FAIL only a
 thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new `job-cancel` WARN.
+New `lint-bformat-call.sh` (BFormat `%time(<arg>)%` / `%user%` WARN).
 
 ---
 
@@ -197,8 +198,8 @@ thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new
 - **Winning text:** `?` = fallback script; `%%` literal; `time()`/`user()` take no argument (chain after `time()`); `substring(i)`, `(-n)`, `(a,b)` on the previous value.
 - **Target:** `types/logic.md:399-418`; cursor recipe → `types/logic-authoring.md:190-200` (with C19).
 - **Lint-able:** yes — WARN `%time([^)]`, `%user%`. **Fold type:** doc fix + lint.
-- **Fold status:** BFormat card FOLDED (WU-P0-3, 2026-10-22; rac Δ9 card half, rcf Δ6); the WARN lint and the cursor recipe
-  (rac Δ9, with C19) are OWED.
+- **Fold status:** BFormat card FOLDED (WU-P0-3, 2026-10-22; rac Δ9 card half, rcf Δ6); `lint-bformat-call.sh` LANDED (WU-P0
+  lints); the cursor recipe (rac Δ9, with C19) is OWED.
 
 ### C08 — Link rules: programmatic links are never `checkLink`ed; `BLink` 4th arg is `enabled`
 - **Sources:** rac#Δ10 (primary) · rcf#Δ3 extends (call `target.checkLink(...)` and require `isValid()` before adding)
@@ -838,7 +839,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded doc (WU-P0-3); lint owed |
+| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded (WU-P0-3 + lints) |
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |

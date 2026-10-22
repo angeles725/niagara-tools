@@ -448,7 +448,7 @@ Three function families are available in BQL expressions. Resolution is reflecti
 
 **Resolution order:** the special calls (`time()`, `user()`, `lexicon(…)`, `substring(…)`, `escape(…)`, `unescape(…)`, `decodeFromString(…)`) are recognized when the pattern is parsed. Any other call `foo` on a component resolves to its property `foo` FIRST (`getProperty(id)`, permission-checked, and the slot facets join the Context for the rest of the chain), then `getFoo(Context)`, `getFoo()`, `foo(Context)`, `foo()`, `get("foo")`, `getFormatValue("foo")`, and LAST a `BIFormatPropertyHandler`'s `getFormatPropertyByName("foo")`. A call that names a frozen ACTION (`doFoo`) is denied unless `FormatDenylist` excludes it. Nothing throws to the caller: a failure takes the `?` fallback or prints the `%err:…%` text.
 
-The advisory lint this card implies (WARN on `%time(<arg>)%` and `%user%` in source) is owed (see `BUILD-STATE.md` kit `open_issues`).
+`toolbelt/lint-bformat-call.sh` WARNs `%time(<arg>)%` and `%user%` in Java, lexicon, bog and palette files.
 
 **`FormatDenylist`:** N4 maintains a station-version-specific denylist that blocks known-dangerous reflection targets. The list limits the attack surface but does not eliminate it.
 
