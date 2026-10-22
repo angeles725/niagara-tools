@@ -109,9 +109,20 @@ into a production JACE. `[ev: corpus B18 §18.9]`
 
 **The default dev key (no signing block in the build):** the plugin's `LocalSigningProfile` signs with a
 self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium/security/niagara.signing.jceks`
-(type JCEKS; the course demo and the 4.15 devguide say `niagara.signing.jks`, our hosts have `.jceks`), RSA-3072,
-valid 365 days, refreshed at 183. The store password sits in clear text in `niagara.signing.xml` beside it: read
-key names only, never print it. `[ev: corpus B1417 §1417.1]` `[ev: retro course-recordings Δ3]`
+(type JCEKS), RSA-3072, valid 365 days, refreshed at 183. The store password sits in clear text in
+`niagara.signing.xml` beside it: read key names only, never print it. `[ev: corpus B1417 §1417.1]` `[ev: retro course-recordings Δ3]`
+
+- **`.jceks` vs `.jks` is decided by the profile XML, not the Niagara version.** Every 7.x signing plugin (7.3.40 → 7.6.22)
+  auto-creates the default profile as JCEKS → `niagara.signing.jceks`. A profile XML without `niagara.signing.storetype`
+  is read as JKS → `niagara.signing.jks`; only the legacy 4.1.5 plugin (shipped beside 7.x in 4.13/4.14) or a
+  `convertProfileKeystoreType` run writes such a profile. The 4.15 devguide's `.jks` is stale for 7.x-created profiles.
+  `[ev: corpus B1420 §1420.4]`
+- **Several signers are fine; the Tridium pin is not negotiable.** The module verifier accepts a jar when ANY one of its
+  signers validates (`ModuleManager.verifyModuleSignature`), and a self-signed signer is refused only in `high` mode.
+  But classes under `com/tridium/` or `javax/baja/`, and every class of a module whose `module.xml` declares
+  `<java-permissions>`, must chain to the Tridium Platform Key (`ModuleClassLoader` `shouldCheckTpk`, `NModule`
+  `checkTpk`), so an integrator cannot re-sign ("co-sign") such a module with their own CA and have it trusted.
+  `[ev: corpus B1420 §1420.5]`
 
 - **Release builds turn the default profile off** (`allowDefaultProfile.set(false)` in the ROOT signing block, `build-verify.md`
   § Build target & plugin version): with it on, a failed HSM/token login silently falls back to the dev key and the build stays
