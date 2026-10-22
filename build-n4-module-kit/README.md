@@ -9,7 +9,7 @@ Building a Niagara N4 module — control logic (rt), a browser dashboard for an 
 - `METHODOLOGY.md` — the rules + the common per-layer checklist (the verify gate).
 - `BUILD-LOOP.md` — the operational cycle the launcher runs.
 - `build-verify.md` — the Java-8 + slotomatic build command and how to verify.
-- `types/` — per-type guides: `dashboard.md` (mature), `frontend-standard.md` (seed — the SPA side of a dashboard), `logic.md` (growing), `wb-widgets.md` (seed).
+- `types/` — per-type guides: `dashboard.md` (mature), `frontend-standard.md` (seed — the SPA side of a dashboard), `logic.md` (growing), `wb-widgets.md` (seed), `history-transforms.md` (seriesTransform graphs and custom aggregate functions).
 - `toolbelt/build.sh` — recommended WSL build (clean → slotomatic → jar, Java 8, then runs the gate). `toolbelt/verify-module.sh` — THE verify gate (major 52 outside `META-INF/versions/`, an alias `META-INF/<ALIAS>.SF` signature with its key file, module.xml types resolve). `toolbelt/mirror-niagara-home.sh` — safe mirror for building against a live install. `toolbelt/stored-repack.sh` — STORED repackage for the Workbench re-sign path.
 - `templates/` — files a build session copies into the CLIENT repository: `templates/VERSION-LEDGER.md` (the per-client version and defect ledger, read at `BUILD-LOOP.md` §0 and appended at §7).
 - `SOURCES.md` — where the knowledge lives (corpus-nav, docs, exemplars, tools).

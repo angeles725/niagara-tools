@@ -49,6 +49,36 @@ Full wb-side recipe in `types/wb-widgets.md §Plugin-extensible device-type mana
 
 ---
 
+### 1.5 · Browser-side managers (`-ux`) — the JavaScript twin of the Workbench manager `[ev: retro t9c-reference-gaps Δ4]`
+
+The Java `BAbstractManager` framework (corpus B1088–B1093, `types/wb-widgets.md`) has a browser twin in
+webEditors-ux / driver-ux that renders the same device/point manager in the HTML5 (hx) profile. Paths below
+are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/rc/wb/mgr`.
+
+- **AMD ids:** `nmodule/webEditors/rc/wb/mgr/Manager`, `.../mgr/model/MgrModel`, `.../mgr/model/MgrColumn`,
+  `nmodule/driver/rc/wb/mgr/DeviceMgr`, `DeviceMgrModel`, `PointMgr`, `PointMgrModel`. [CERT-doc]
+  `niagara-help/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
+- **Extend `DeviceMgr`/`PointMgr` and `DeviceMgrModel`/`PointMgrModel`, never `Manager`/`MgrModel`** — Tridium
+  marks the base framework incubating. [CERT] `W/Manager.js:72-75`, `W/model/MgrModel.js:44-48`
+- **View contract:** constructor `{moduleName, keyName}` (lexicon + saved state); `makeModel(value)` returns
+  a `Promise<MgrModel>` (the base throws, `W/Manager.js:415-417`); extra commands go in `makeCommands()`, which
+  is async since 4.14 (`frontend-standard.md` § UI API changes). [CERT] `W/Manager.js:77-85`
+- **Model contract:** `DeviceMgrModel` wraps the network in a `ContainerComponentSource` filtered to
+  `driver:Device` and overrides `makeRow(subject)`; `MgrModel` adds `newTypes` and `newInstance(typeInfo)`.
+  [CERT] `driver/driver-ux/extracted/rc/wb/mgr/DeviceMgrModel.js:8-11,91`; `W/model/MgrModel.js:54-66,160`.
+  Columns hook `buildCell`, `mgrValidate`, `commit` (`W/model/MgrColumn.js:82` and below); ready-made
+  columns live in `W/model/columns/`.
+- **Discovery:** the manager provides `makeLearnModel()` and `doDiscover()`, and maps a dragged discovery
+  node with `getProposedValuesFromDiscovery()`. [CERT] `W/MgrLearn.js:45-97`
+- **Registration needs a small Java class in the `-ux` jar:** a `BSingleton implements BIJavaScript`
+  (optionally `BIFormFactorMax`, `BIOffline`) with `@AgentOn(types=...)` on your network/folder type and
+  `getJsInfo()` → `JsInfo.make(BOrd.make("module://<mod>/rc/.../MyMgr.js"), <your BJsBuild>.TYPE)`. Worked
+  example: [CERT] `modbusCore/modbusCore-ux/vineflower/com/tridium/modbusCore/ux/mgr/BModbusClientPointUxManager.java:17-38`.
+  The agent's `requiredPermissions` controls visibility only, not server-side access. `[ev: corpus B752 §752.5]`
+- **Which one to build** [INFER]: the Java manager when Workbench is the only client or you need its mature
+  learn/edit transactions; the ux manager when operators manage devices/points from a browser. A bespoke
+  dashboard is neither — it stays a servlet-SPA (`dashboard.md`).
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself:
@@ -249,6 +279,41 @@ fixed-ms gap, NOT the baud-relative silence prescribed by Modbus RTU spec.
 
 ---
 
+### 7.5 · `BAlarmDeviceExt` — alarms raised by the device, not by points `[ev: retro t9c-reference-gaps Δ2]`
+
+Use it when the field device sends its own alarm/event notifications (BACnet event notifications, SNMP traps,
+an oBIX alarm feed); per-point `BAlarmSourceExt` stays the choice for limits the station evaluates itself.
+Official page: devguide `driverAlarm`. Worked client example: opcUa `AlarmExt`, corpus B1226.
+Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium source), all under niagara-research.
+
+- **Contract** [CERT] `D/driver-rt/javax/baja/driver/alarm/BAlarmDeviceExt.java`: `public abstract class
+  BAlarmDeviceExt extends BDeviceExt implements BIRemoteAlarmSource, BIRemoteAlarmRecipient` (`:66-68`); slots
+  `alarmClass` (String, default `defaultAlarmClass`) and `lastReceivedTime`, hidden actions `routeAlarm` /
+  `ackAlarm` (`:40-65`); implement `doRouteAlarm(BAlarmRecord)` and `doAckAlarm(BAlarmRecord): BBoolean`
+  (`:170-174`); `isChildLegal` returns false (`:179-182`) — override it if the ext holds feeds/processors.
+- **Declare it on your device** with your own property — `BDevice` has no alarm-ext hook. BACnet:
+  `@NiagaraProperty name="alarms" type="BBacnetAlarmDeviceExt"`. [CERT] `D/bacnet-rt/javax/baja/bacnet/BBacnetDevice.java:155-156,372`
+- **Recipe — receive:** build the record with the ext as source, `new BAlarmRecord(ext, ext.getAlarmClass(),
+  alarmData, BUuid.make())`, put the field point in the `sourceName` facet, `ext.routeAlarm(record)`, then
+  `setLastReceivedTime`. `doRouteAlarm` hands it to `BAlarmService.routeAlarm(record)`. [CERT]
+  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:1330-1335`;
+  `D/bacnet-rt/javax/baja/bacnet/alarm/BBacnetAlarmDeviceExt.java:121-163`
+- **Recipe — ack:** the alarm service routes an ack to a `BIRemoteAlarmSource` source (`doRouteToSource` →
+  `ackAlarm` → your `doAckAlarm`). [CERT] `D/alarm-rt/javax/baja/alarm/BAlarmService.java:1003-1006,1108-1114`.
+  `doAckAlarm` sends the ack and returns; route the record again only when the device confirms. [CERT]
+  `D/alarm-rt/javax/baja/alarm/BIRemoteAlarmSource.java:10-16`. A device with no remote ack (SNMP) sets
+  ackTime, `BAckState.acked`, `ackRequired=false` itself and routes. [CERT]
+  `organized/snmp/snmp-rt/vineflower/com/tridium/snmp/alarm/BSnmpAlarmDeviceExt.java:197-203`
+- **Pitfalls:**
+  - The ext must be the record source, or acks never come back to it; carry the real point in `sourceName`
+    or `alarmData`. [CERT-doc] `niagara-help/devguide-clean/driverAlarm.txt:10`
+  - Offnormal and normal are two states of ONE alarm: without `AlarmSupport` you transition each offnormal
+    record to normal yourself. [CERT-doc] `driverAlarm.txt:12`
+  - `BDevice.alarmSourceInfo` / `ackAlarm` are the ping-health alarms, not this ext. [CERT] `D/driver-rt/javax/baja/driver/BDevice.java:590-593,689-696`
+  - Catch `ServiceNotFoundException` when the station has no alarm service. [CERT] `BBacnetAlarmDeviceExt.java:163-165`
+  - Sending station alarms TO a device is a `BAlarmRecipient` whose `handleAlarm` works off the engine
+    thread and skips down/disabled devices. [CERT-doc] `driverAlarm.txt:16`
+
 ## 8 · Transport-specific twists — KNX and Z-Wave
 
 ### 8.1 · KNX (`eibnetIp` driver)
@@ -380,6 +445,8 @@ Additional patterns for field-bus protocol drivers:
 
 ### 9.6 · Protocol-adapter manager — action-slot bridge and structured error decode (OPC) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ10]
 
+This section is about the classic OPC DA (COM) manager. For OPC UA client/server and for choosing a data-egress channel see § 10. `[ev: retro t9c-reference-gaps Δ7]`
+
 OPC and similar protocol-adapter drivers expose three recurring WB patterns that differ from standard BACnet/Modbus drivers:
 
 **Action-slot bridge:** OPC items are exposed as Niagara action slots rather than as proxy points; invoking the action calls the underlying COM/native OPC operation. Keep the COM/native error handling inside the driver layer — never let `COMException` or `NativeException` propagate to the WB view. Decode the HRESULT/native error code into a Niagara `BFacets` display string before reporting to the manager.
@@ -398,6 +465,46 @@ try {
 **Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. Implement `isLeaf(node)` and `getChildren(node)` on demand (on node expand only); cache expanded nodes in a `WeakHashMap` keyed by node path.
 
 **Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. Model this as a distinct `SECURITY_FAULT` status separate from `COMM_FAULT` — display a locked-padlock column in the manager and gate write actions on `isSecurityReady()`. The WB manager must never expose a write path when the security state is not fully resolved. [ev: corpus B1103]
+
+## 10 · OPC UA and the data-egress choice `[ev: retro t9c-reference-gaps Δ7]`
+
+Full guides (read them, do not re-derive): niagara-research `docs/opc-n4-guide.md` (recipes §2-§4, type and
+status mapping §5, pitfalls §8, 4.15 differences §11) and `docs/n4-data-access-guide.md` (decision table §1,
+channel families §4, security baseline §5). Corpus blocks B1222-B1281. Code paths below are under
+niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/tridium/opcUaClient`,
+`S=opcUaServer/opcUaServer-rt/vineflower/com/tridium/opcUaServer`.
+
+- **Two stacks.** OPC DA = module `opc` (COM/DCOM, Windows only, licence `tridium:opc`; § 9.6). OPC UA =
+  `opcUaCore` + `opcUaClient` + `opcUaServer` (`opc.tcp`, JACE and Windows). [CERT]
+  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `[ev: corpus B1222]`
+- **Client** is an ndriver stack: `BOpcUaNetwork extends BNNetwork` (licence `tridium:opcUaClient`),
+  `BOpcUaDevice`, `BOpcUaClientPointDeviceExt`, `BOpcUaClientProxyExt`. Reads are subscriptions only
+  (`publishInterval`), no poll. [CERT] `C/BOpcUaNetwork.java:42,70-71`; `docs/opc-n4-guide.md` §3, §7
+- **Server** is a driver network too, not a service: `BOpcUaServer extends BNNetwork` (licence
+  `tridium:opcUaServer`) → `BOpcUaNamespace extends BNDevice` → server proxy exts. It exposes ONLY the points
+  you add; each is Export (links the source `out`, read-only node) or Import (links into an `inN`, offered
+  only for writable sources). [CERT] `S/BOpcUaServer.java:175,344-345`; `S/BOpcUaNamespace.java:121`;
+  `S/point/BOpcUaServerProxyExt.java:148-152`
+- **Namespace-index drift is handled for discovered points:** on subscribe the client rewrites `ns=` from
+  the stored `nameSpaceUri`; a hand-made point with an empty `nameSpaceUri` is not remapped. [CERT]
+  `C/point/PointSubscribeCmd.java:34-40`
+- **Certificates** live in the station's CertManagerService key/trust stores; approve the peer per
+  `host:port` in Allowed Hosts, again after a cert is regenerated; use Basic256Sha256 + SignEncrypt and turn
+  off Basic128Rsa15 and anonymous tokens. `docs/opc-n4-guide.md` §3, §4, §8 `[ev: corpus B1244]`
+- **Server status and authorization differ by release:** 4.14 publishes every value as Good and has no
+  per-user authorization; 4.15.3.28+ sends Bad/Good_NoData and has RBAC for user-name sessions only.
+  `docs/opc-n4-guide.md` §5, §11 `[ev: corpus B1280]`
+
+**Egress decision** — the full per-job table is `docs/n4-data-access-guide.md` §1; the module builder's cut:
+
+| Consumer | Channel | Who initiates | Note |
+|---|---|---|---|
+| SCADA / third-party read-only | OPC UA server, curated namespace | client pulls/subscribes | UserName + SignEncrypt; RBAC only on 4.15.3+ |
+| Off-station app, BI, alarm feed to systems | oBIX server `/obix` | client pulls (Watch, history query, `alarmFeed`) | a read user sees the whole tree; needs the oBIX export licence |
+| Cloud, outbound only | MQTT (`types/cloud-connector.md`) or an edge poller | the station pushes | strings only; publishes drop while disconnected |
+| Another BMS | BACnet/IP export | peer reads/writes | no auth on BACnet/IP; writes run as station user `BACnet` |
+| On-site HMI, narrow write API | custom `BWebServlet` (`dashboard.md`) | browser pulls JSON | write with the real user Context; CSRF is yours |
+| Station-served page, few live values | BajaScript (`dashboard.md` § Reading the station directly) | browser subscribes | the user's own permissions |
 
 ---
 

@@ -125,6 +125,41 @@ Whether a NEW SPA should use a framework build at all (plain classic scripts vs.
 - The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, `dashboard.md:48`). `[ev: corpus B763]`
 - OPEN (requires-execution): **B803-G1** (confirm the live SAML mid-session re-auth block on a station) and **B803-G2** (whether gauth's `BPasswordCache.validate` accepts a TOTP token mid-session). `[ev: corpus B803]`
 
+## Session lifetime — the auto-logoff activity monitor `[ev: retro t9c-reference-gaps Δ1]`
+Full derivation: corpus B1344 (idle timer from source), B1334 (panel-user recipe), B1315 (the gap). Official
+pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
+- **The server decides, not the page.** The idle timer is `NiagaraSuperSession.lastActivity`: remaining =
+  period − (now − lastActivity); period −1 never expires; while any keep-alive token is held the full period
+  is returned. [CERT] `organized/baja/baja/vineflower/com/tridium/session/NiagaraSuperSession.java:184-198`
+- **The period is per user:** −1 when any session of the group has auto logoff disabled, there is no user,
+  or `BUser.autoLogoffSettings.autoLogoffEnabled` is false; else `BUserService.defaultAutoLogoffPeriod` when
+  `useDefaultAutoLogoffPeriod` is set, else the user's own `autoLogoffPeriod`. [CERT] same file `:217-244`.
+  Defaults (enabled, use-default, 15 min): `[ev: corpus B1344 §1344.1]`.
+- **Only user input counts as activity.** `activityMonitor.js` listens to `keypress`, `mousedown`,
+  `touchstart`, `DOMMouseScroll`, `mousewheel` and POSTs `/timeout` (CSRF token required), which calls
+  `resetSessionTimeout(offset)`. [CERT] `organized/web/web-rt/vineflower/rc/util/activityMonitor.js:125,128`;
+  `organized/web/web-rt/vineflower/com/tridium/web/servlets/SessionTimeoutServlet.java:25-38`
+- **A REST poll from a servlet-SPA does NOT keep the session alive** [INFER from CERT, B1315-G1 runtime half
+  open]: no `BWebServlet`/box/oBIX path calls `resetSessionTimeout`; `UserActivityFilter` (which does) is mapped
+  only on web-rt's `file` servlet. [CERT] `organized/web/web-rt/vineflower/javax/baja/web/filters/UserActivityFilter.java:20-22`
+- **Recipe for an always-on dashboard** — pick one, in this order:
+  1. Kiosk/HMI panel: a dedicated panel user with Auto Logoff Enabled = false and Allow Concurrent Sessions =
+     false. `BUser.allowConcurrentSessions` defaults true, so a second login by the same user can evict the
+     kiosk when it is false — use a separate user for the second-login (write) session. `[ev: corpus B1334]`
+  2. A view that must stay live while open: load `/module/web/rc/util/activityMonitor.js` and pause it with
+     `keepAlive()` → token → `release(token)` (bajaux: `activityMonitor.mixinKeepAlive(this)`). [CERT-doc]
+     `niagara-help/devguide-clean/autoLogoffWeb.txt:14-46,52-98`
+  3. Every request to a module web app is activity: map `javax.baja.web.filters.UserActivityFilter` on the
+     servlet in `WEB-INF/web.xml` — the doc calls this a fallback. [CERT-doc] `autoLogoffWeb.txt:138-152`
+  Never fake activity by POSTing `/timeout` from the poll loop: it defeats the site's logoff policy.
+- **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
+  default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
+  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:30-41`
+- **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
+  `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
+- Release note 7154 ("After AutoLogoff, refresh logs user back in") is an AX 3.0.91 fix, not an N4 fact.
+  [CERT-doc] `niagara-help/devguide-clean/releaseNotes.txt:6365`
+
 ## Extending an existing dashboard
 - **Before hand-editing a dashboard SPA, decide DATA vs CODE:** a data-driven render (`CUARTOS.forEach`, `SENSORS.map`) is entity-count-agnostic, so scaling 3→5 rooms is swapping the DATA arrays (`CUARTOS`/`SENSORS`/`FANS`, the plano src, `viewBox`/`IMG_W`/`IMG_H`) with zero change to the render functions. Verify with `node --check` on the extracted `<script>` blocks after. [ev: retro 5rooms #1]
 - **The module is the SKELETON; the operator's standalone HTML is only the DATA:** splice the operator's calibrated data blocks into the module's `index.html` (which already carries kiosk CSS, `/api/*` wiring, status classes, alarms, setpoint save) and remap sim ords to the module's Niagara ords — never rebuild the module from the standalone, which loses the integration layer. See `METHODOLOGY.md` §editing technique for navigating the giant single-file source. [ev: retro 5rooms #2]
@@ -204,6 +239,38 @@ Whether a NEW SPA should use a framework build at all (plain classic scripts vs.
 - **`module.lexicon` prefixing:** the lexicon is flat + MODULE-GLOBAL — PREFIX keys (`parent.child`, `Type.slot`) to dodge the B759 collision; a missing key renders raw camelCase via `toFriendly`. `[ev: corpus B780]`
 - **A facade/panel type with no lexicon entry is a ship-blocker, not a coverage warning:** its slots render raw camelCase in Workbench next to the translated control-side names and the operator cannot find them during commissioning. `toolbelt/slot-coverage.sh` FAILs (exit 1, no `--strict` needed) for every missing type named `*Panel`/`*Facade`; pass `--facade` to treat every declared type of an operator-facing module that way. `[ev: retro panccadia-commissioning-lessons Δ9]`
 - **`module.lexicon` must be ASCII-only — Niagara reads it as Latin-1 on-station:** UTF-8 multibyte accented characters render as mojibake in the Workbench property sheet (`Presión` → `PresiÃ³n`). Use plain ASCII spellings (`Presion`, `Seccion`) or `\uXXXX` unicode escapes for any non-ASCII glyph. `toolbelt/lint-lexicon-ascii.sh` implements this check (FAILs on any non-ASCII byte in a `.lexicon` file). `[ev: corpus B1015 §1015.5]`
+
+## Reading the station directly with BajaScript `[ev: retro t9c-reference-gaps Δ5]`
+A page the station serves to a logged-in user can read the station with BajaScript instead of a custom JSON
+servlet. Derivations: corpus B1306 (Subscriber, leases), B1307 (nav), B1308 (BQL/ORD from code), B1311 (tags,
+relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC). Paths below:
+`BS=organized/bajaScript/bajaScript-ux/extracted/rc` and `EX=niagara-help/devguide-examples/examples/bajaScript`, under niagara-research.
+- **Resolve + subscribe:** `const sub = new baja.Subscriber(); sub.attach('changed', fn);
+  baja.Ord.make('station:|slot:/...').get({subscriber: sub})`; clean up with `sub.unsubscribeAll(); sub.detach()`.
+  `get()` takes `lease`, `subscriber`, `cursor` and returns a Promise. [CERT-doc] `EX/subscription.js:18-59`;
+  [CERT] `BS/baja/ord/Ord.js:286-296`
+- **BQL with a cursor:** `baja.Ord.make("station:|slot:/|bql:select ... from ...").get({cursor: {each, limit, offset}})`.
+  [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
+  shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`
+- **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.
+  [CERT] `BS/nav.js:28-55`; `BS/baja/nav/NavContainer.js:153`
+- **Tags and relations:** there is no `baja.tag` call namespace; use the Promise methods
+  `component.tags()` and `component.relations()` (read-only `get(id)` / `getAll()`; a network call on a proxy
+  space). [CERT] `BS/baja/comp/Component.js:2923,2972`
+- **Session:** it rides the user's web login; opening a component space needs `operatorRead` on it
+  `[ev: corpus B1177]`, and the station enforces the user's permissions on every call `[ev: corpus B46]`.
+  BajaScript sends the CSRF token itself; your own `fetch` calls must send it (§ Critical-write step-up auth) `[ev: corpus B36]`.
+- **Loading:** AMD/RequireJS only (`baja!`, `nmodule/<mod>/rc/...`, `lex!`, `css!`); the AX `<script src=bs.min.js>`
+  style is gone. [CERT-doc] `niagara-help/devguide-clean/requirejs.txt:6-57`. A classic-script SPA (the
+  `frontend-standard.md` format) must boot RequireJS first — the exact bootstrap from a servlet page is not
+  verified [INFER].
+
+**Decision** [INFER, from B46 and B752]:
+| Need | Choose |
+|---|---|
+| Read/subscribe a few slots from a page or bajaux view the station serves; live push; the user's own permissions | BajaScript direct |
+| Cross-origin or off-station client, server-side aggregation, validated writes with audit, a classic-script SPA | servlet JSON (this guide's servlet-SPA) |
+| Off-station read-only consumer | oBIX or OPC UA — `driver-authoring.md` § 10 |
 
 ## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
 
