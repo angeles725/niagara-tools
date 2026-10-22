@@ -1,4 +1,6 @@
 <!-- review-status: folded v0.2 · 2026-09-01 -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 
 # Retro — DashboardPan 3→5 rooms + deploy/signing (2026-09-01) — PROPOSED kit deltas
 

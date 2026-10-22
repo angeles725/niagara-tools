@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-10-22 · kit · awk-lint-line-loops
 
 **Session**: niagara-research quality round 8, work unit T8b2, branch `r8/t8b2-line-lints` from origin/main 3a58392

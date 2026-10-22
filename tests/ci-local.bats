@@ -1,0 +1,102 @@
+#!/usr/bin/env bats
+# ci-local.bats — scripts/ci-local.sh replays .github/workflows/ci.yml locally (quality round 8 T8g).
+# Why: local shellcheck drifts newer than the CI pin (0.11 vs 0.10.0: SC2015 missed, SC2329 extra),
+# and GitHub `run:` steps use `bash -e {0}` (errexit, no pipefail). The replay derives its steps from
+# ci.yml, so a CI step it neither runs nor skips on purpose is a drift failure, never a silent gap.
+# [ev: retro 2026-10-22-ci-local-replay]
+
+setup() {
+  ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  CL="$ROOT/scripts/ci-local.sh"
+  CI="$ROOT/.github/workflows/ci.yml"
+  FX="$ROOT/tests/fixtures/ci-local"
+  TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
+}
+teardown() { rm -rf "$TMPDIR_T"; }
+
+@test "CL1: --list classifies every ci.yml step as RUN or SKIP (no step uncovered, no stale skip rule)" {
+  # Mutation: CL1 -- a parser that drops `run: |` blocks lists fewer steps than ci.yml has.
+  run "$CL" --list --ci-file "$CI"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *UNCOVERED* ]]
+  [[ "$output" != *STALE* ]]
+  local items listed name
+  items="$(grep -cE '^[[:space:]]+- (name|uses|run):' "$CI")"
+  listed="$(grep -cE '^(RUN|SKIP) ' <<< "$output")"
+  [ "$items" -eq "$listed" ]
+  while IFS= read -r name; do
+    grep -qxE "(RUN|SKIP) $(printf '%s' "$name" | sed 's/[][\.*^$+?(){}|]/\\&/g')( — .*)?" <<< "$output" \
+      || { echo "not listed: $name"; return 1; }
+  done < <(sed -nE 's/^[[:space:]]+- name: //p' "$CI")
+}
+
+@test "CL2: a run: step that needs a system install and has no skip rule is UNCOVERED (exit 2)" {
+  # Mutation: CL2 -- running every unmatched step treats `sudo apt-get` as an ordinary local step.
+  run "$CL" --list --ci-file "$FX/uncovered-sudo.yml"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"UNCOVERED Install foo"* ]]
+}
+
+@test "CL3: an unknown uses: action and a step-level env/shell key are UNCOVERED (exit 2)" {
+  run "$CL" --list --ci-file "$FX/uncovered-uses.yml"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"UNCOVERED some/action@v1"* ]]
+  [[ "$output" == *"UNCOVERED with env"*"env"* ]]
+  [[ "$output" == *"UNCOVERED with shell"*"shell"* ]]
+}
+
+@test "CL4: a run: form the parser does not read (folded >) fails with its line, never vanishes (exit 2)" {
+  # Mutation: CL4 -- skipping unknown block styles drops the step from --list and from the run.
+  run "$CL" --list --ci-file "$FX/folded.yml"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"folded.yml:9:"* ]]
+}
+
+@test "CL5: a cached shellcheck tarball with the wrong sha256 is rejected (exit 3) before any step runs" {
+  # Mutation: CL5 -- checking the hash only after a fresh download trusts a tampered cache.
+  mkdir -p "$TMPDIR_T/cache"
+  printf 'not a tarball\n' > "$TMPDIR_T/cache/shellcheck-v0.10.0.linux.x86_64.tar.xz"
+  run "$CL" --ci-file "$FX/shellcheck.yml" --cache-dir "$TMPDIR_T/cache"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"sha256 mismatch"* ]]
+  [[ "$output" != *"== marker"* ]]
+  [[ "$output" != *"marker-ran"* ]]
+}
+
+@test "CL6: steps run under bash -e without pipefail, and a failure does not stop later steps (exit 1)" {
+  # Mutation: CL6 -- `bash -eo pipefail` fails the `false | true` step that passes on GitHub.
+  run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"PASS pipe without pipefail"* ]]
+  [[ "$output" == *"FAIL plain false"* ]]
+  [[ "$output" == *"FAIL errexit stops the block"* ]]
+  [[ "$output" != *"should-not-print"* ]]
+  [[ "$output" == *"PASS runs after a failure"* ]]
+  [[ "$output" == *"ran-after"* ]]
+  [[ "$output" == *"PASS multi-line block"*  ]]
+  [[ "$output" == *"line-two-ok"* ]]
+  [ ! -e "$TMPDIR_T/cache/shellcheck-v0.10.0.linux.x86_64.tar.xz" ]
+}
+
+@test "CL7: --only runs just the steps whose name contains the substring" {
+  run "$CL" --ci-file "$FX/semantics.yml" --cache-dir "$TMPDIR_T/cache" --only 'runs after'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS runs after a failure"* ]]
+  [[ "$output" != *"plain false"* ]]
+}
+
+@test "CL8: -j N turns 'bats tests/*.bats' into 'bats -j N tests/*.bats' when parallel is on PATH" {
+  mkdir -p "$TMPDIR_T/bin"
+  printf '#!/bin/sh\necho "bats-args: $*"\n' > "$TMPDIR_T/bin/bats"
+  printf '#!/bin/sh\nexit 0\n' > "$TMPDIR_T/bin/parallel"
+  chmod +x "$TMPDIR_T/bin/bats" "$TMPDIR_T/bin/parallel"
+  PATH="$TMPDIR_T/bin:$PATH" run "$CL" --ci-file "$FX/bats.yml" --cache-dir "$TMPDIR_T/cache" -j 2
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"bats-args: -j 2 tests/"* ]]
+}
+
+@test "CL9: an unknown option is a usage error (exit 2)" {
+  run "$CL" --bogus
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage"* ]]
+}

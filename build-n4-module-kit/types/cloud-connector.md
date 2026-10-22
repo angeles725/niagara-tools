@@ -5,6 +5,9 @@ four extension seams: the central service, the transport layer, the authenticato
 the per-data-type channel. Protocol-specific message formats and backend telemetry schemas
 are out of scope.
 
+Choosing between MQTT, OPC UA, oBIX, BACnet/IP export and a custom servlet for getting data out of a
+station: `types/driver-authoring.md` § 10 (egress decision). `[ev: retro t9c-reference-gaps Δ7]`
+
 ---
 
 ## 1 · Core service — `BCloudConnectionService`

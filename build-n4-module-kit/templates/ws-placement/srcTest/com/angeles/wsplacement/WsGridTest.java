@@ -65,6 +65,46 @@ public class WsGridTest
   }
 
   @Test
+  public void rowSpacingClearsATallFacadeGlyph()
+  {
+    // DashboardFord BVavPanel: 22 SUMMARY slots -> glyph 2 + 22 + 1 = 25 wixels; 10 overlaps, 28 clears it
+    // with the same 3-wixel gap standard() leaves under a 4-SUMMARY glyph (issue #259).
+    assertEquals(28, WsGrid.rowSpacingFor(22));
+    assertTrue(WsGrid.rowSpacingFor(22) > 2 + 22 + 1);
+    WsGrid g = WsGrid.forSummaryCount(22);
+    assertEquals(3, g.q(7));     // still 8 columns per row
+    assertEquals(31, g.q(8));    // next row starts 28 below: 3 + 28
+    assertEquals(3, g.p(8));
+    assertEquals(8, g.width());
+  }
+
+  @Test
+  public void smallGlyphsKeepTheStandardSpacing()
+  {
+    for (int n = 0; n <= 4; n++)
+    {
+      assertEquals("summary " + n, 10, WsGrid.rowSpacingFor(n));
+      assertEquals("summary " + n, WsGrid.standard().annotation(9), WsGrid.forSummaryCount(n).annotation(9));
+    }
+    assertEquals(11, WsGrid.rowSpacingFor(5)); // first count past standard(): 2 + 5 + 1 + 3
+    try { WsGrid.rowSpacingFor(-1); fail("negative SUMMARY count accepted"); }
+    catch (IllegalArgumentException expected) { }
+  }
+
+  @Test
+  public void summaryCountsWhoseSpacingCannotFitTheSheetAreRejected()
+  {
+    // 600 - 3 top margin - (2 + n + 1 + 3) >= 0  ->  n <= 591; review R3-001 of #268
+    assertEquals(597, WsGrid.rowSpacingFor(591));
+    assertEquals(3, WsGrid.forSummaryCount(591).q(8));   // every row clamps onto the only one that fits
+    for (int n : new int[] { 592, 1000, Integer.MAX_VALUE - 5, Integer.MAX_VALUE })
+    {
+      try { WsGrid.rowSpacingFor(n); fail("SUMMARY count " + n + " accepted"); }
+      catch (IllegalArgumentException expected) { }
+    }
+  }
+
+  @Test
   public void invalidShapesAreRejected()
   {
     rejects(0, 14, 10, 3, 3, 8, 600, 600);   // no column

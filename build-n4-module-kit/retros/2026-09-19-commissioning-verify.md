@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
+<!-- index-comment: issue #114: new commissioning-verify.sh (orchestrates config-sanity/status-parity/recovery-path + bog-audit CHECK11/13-19/20 + MANUAL footer) closes BUILD-LOOP §6.b -->
 # 2026-09-19 · kit · commissioning-verify
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/issue-114-commissioning) — close the kit's BUILD-LOOP §6.b gap (issue #114).

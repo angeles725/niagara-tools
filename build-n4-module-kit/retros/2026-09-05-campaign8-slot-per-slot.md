@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
+<!-- index-comment: D6 per-slot; D6a empty-lex FAIL; OPERATOR gate; paren-balance awk -->
 # Retro: Campaign 8 — slot-coverage.sh per-slot mode + empty-lexicon FAIL escalation (PR5)
 
 **Date:** 2026-09-05

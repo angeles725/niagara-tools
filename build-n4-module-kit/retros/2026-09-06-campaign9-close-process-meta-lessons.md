@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 25 -->
+<!-- index-comment: 19 investigador1 lessons + 6 W2/W3 lead additions: stale-checkout, re-anchor, RED-wins, harness-pins, design-re-apply, null-Context-security, BUser-is-Context, lockout-accounting, scheme-leak, tool-failure, repo-visibility, identity-vs-session, second-read, repo-fixed≠deployed, resume-from-tree, negative-claim-grep, fixture-fitting, golden-axis, conservative-lag; TTL-never-compared, comment-pins, HashMap-servlet, BUILD-STATE-pairing, K13-QA-REDs, K12-worktree-scope -->
 <!-- kit-retro -->
 # Campaign 9 close: meta-lessons from the close process
 

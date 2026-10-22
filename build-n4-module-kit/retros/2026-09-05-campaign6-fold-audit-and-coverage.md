@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 <!-- kit-retro -->
 # Campaign 6 PR5a: fold-citation audit + coverage% model
 

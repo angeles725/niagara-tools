@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — anti-patrón SISTÉMICO: un límite con default 0 BLOQUEA en vez de deshabilitar · 2026-09-03
 
 Apareció TRES veces en este sistema durante la sesión. Merece regla propia y una auditoría transversal. PROPOSED kit delta (propose-never-apply).

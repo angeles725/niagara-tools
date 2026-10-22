@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: wired lint-guard-pins --strict into ci.yml (kit self-check) -->
 # 2026-09-20 · kit · wire lint-guard-pins into CI (kit self-check gap)
 
 **Session**: automation-audit follow-up. The audit noted `lint-guard-pins.sh` (the kit's own meta-check: every `toolbelt/lint-*.sh` must carry a resolvable `# Mutation:` guard-pin) was invoked by nothing — a kit SELF-check with no gate. It belongs in CI, not the per-module report.

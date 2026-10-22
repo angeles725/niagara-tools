@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: L8 numbering deviation (L7 existed); new-retro.sh/kit-ticket.sh prefix drop for L1; step 5b placement -->
 # campaign8-orchestration
 
 **Date**: 2026-09-06

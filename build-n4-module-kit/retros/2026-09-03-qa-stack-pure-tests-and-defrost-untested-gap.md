@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — cómo saber que un módulo rt está bien: pila de QA de 4 capas + el gap del deshielo sin tests · 2026-09-03
 
 Undécimo retro del día. Auditoría de aseguramiento de calidad de nuestros módulos frente al framework de

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: ColdRoomPan -->
+<!-- deltas: 0 -->
 # 2026-09-07 · ColdRoomPan · air-defrost-off-cycle
 
 **Session**: PANCCADIA — add off-cycle (air) defrost for evaporators without resistance heaters.

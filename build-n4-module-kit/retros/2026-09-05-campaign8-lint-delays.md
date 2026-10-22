@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
+<!-- index-comment: D2b+D2c+D9b -->
 # Retro: campaign8-lint-delays — lint-delays.sh Clock.schedule delay-floor lint
 
 **Session**: Campaign 8 PR1 · 2026-09-05

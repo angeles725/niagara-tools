@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 # Retro — DashboardPan `-ux` direct build (2026-09-01) — PROPOSED kit deltas
 
 Status: **propose-never-apply**. A human folds these into `types/dashboard.md` / `METHODOLOGY.md` / `build-verify.md`.

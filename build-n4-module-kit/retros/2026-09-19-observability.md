@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
+<!-- index-comment: new types/observability.md: logging conventions + spy pages + fault surfacing + audit-vs-log -->
 # 2026-09-19 · kit · observability
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the observability cluster.

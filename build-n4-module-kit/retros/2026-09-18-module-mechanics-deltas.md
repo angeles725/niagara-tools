@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
 # 2026-09-18 · kit · module-mechanics-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate kit deltas from niagara-research).

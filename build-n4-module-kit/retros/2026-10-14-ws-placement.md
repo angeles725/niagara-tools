@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-10-14 · kit · ws-placement
 
 **Session**: feature `odd/tasks/ws-placement.md` (W1-W4, branch `feat/ws-placement` from origin/main 5179bf2)

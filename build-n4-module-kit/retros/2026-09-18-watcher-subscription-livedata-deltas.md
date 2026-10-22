@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
 # 2026-09-18 · kit · watcher-subscription-livedata-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas — watcher/live-data).

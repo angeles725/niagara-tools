@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
 # 2026-09-18 · kit · permissions-security-model-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas — permissions/security model).

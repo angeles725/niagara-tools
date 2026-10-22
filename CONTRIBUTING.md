@@ -169,6 +169,9 @@ Before `git commit`:
       `not ok` line, so a check that greps for failures reads it as green. A parallel run must assert that its `ok`
       count equals `bats --count tests/*.bats`. `[ev: retro retro-fold-campaign-close Δ2]`
 - [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
+- [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
+      pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or
+      adds findings (0.11 missed SC2015, adds SC2329). `--list` shows each step as RUN or SKIP. `[ev: retro ci-local-replay]`
 - [ ] Commit message is Conventional Commits (`feat:` / `fix:` / `chore:` / `docs:` /
       `refactor:` / etc.).
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
@@ -181,9 +184,16 @@ Before `git commit`:
 ### 6.1 Enabling the retro-enforcement gate (opt-in, per-clone, reversible)
 
 The `build-n4-module` kit ships a pre-push gate (`.githooks/pre-push`) that blocks a push touching
-build-relevant kit files unless it also records continuity (a `BUILD-STATE.md` update + a pending retro +
-its INDEX row), carries a `Retro: none (trivial: <reason>)` trailer, or is a promotion with a structural
-anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff). It ships **inert** — nothing runs until you enable it:
+build-relevant kit files unless it also records continuity (a `BUILD-STATE.md` update + a pending retro,
+with a fresh generated index), carries a `Retro: none (trivial: <reason>)` trailer, or is a promotion with a
+structural anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff).
+
+`build-n4-module-kit/retros/INDEX.md` is GENERATED: edit the retro's header comments (`review-status`,
+`module`, `deltas`, optional `index-comment`) and run `build-n4-module-kit/toolbelt/gen-retro-index.sh`;
+on a merge conflict in `INDEX.md`, regenerate it instead of resolving rows by hand. CI and the gate's
+content half (`sweep-build-state.sh`) fail a stale index.
+
+The gate ships **inert** — nothing runs until you enable it:
 
 ```sh
 scripts/install-hooks.sh              # activate: git config core.hooksPath .githooks

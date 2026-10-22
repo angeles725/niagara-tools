@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
+<!-- index-comment: Δ1 §RT-control-logic logic.md; Δ2 §history-ext logic-authoring.md; Δ3 §slot-types-ext-writes logic-authoring.md; Δ4 dashboard.md pointer -->
 # Campaign 8 — RT control doctrine fold (PR15)
 
 **Module:** kit

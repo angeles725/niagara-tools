@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # 2026-09-06 · kit · campaign11-concept-row-drift
 
 **Session**: <campaign/PR context — one line>

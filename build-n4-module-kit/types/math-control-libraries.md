@@ -82,17 +82,26 @@ take longer than ~2 ms must be posted off the engine thread.
 ODE integration, matrix inversion, state-observer updates, expression
 evaluation.
 
-**Mechanism:** `BWorker` child component (single named thread, framework-managed
-lifetime). Post work via the `BWorker.post(Runnable)` / `postAsync()` API;
-deliver results back to the engine-thread component via a slot write or
-`postAsync`.
+**Mechanism:** a `BWorker` child component (single named thread, framework-managed
+lifetime). `BWorker` has no `post(Runnable)`/`postAsync()` method: the subclass
+returns a `Worker` over a `Queue` from `getWorker()` and adds its own enqueue
+method; an `ASYNC` action's `post()` override hands it
+`new Invocation(this, action, arg, cx)`. Without a `BWorker`, use
+`ExecutorUtil.newSingleThreadBackgroundExecutor(name, keepAlive, unit)` and
+`ExecutorUtil.shutdown(svc)` in `stopped()`. Deliver results back to the
+engine-thread component via a slot write or an action.
+[ev: retro devguide415-runtime-api-corrections Δ1]
 
-**What is FORBIDDEN in BComponent subclasses:**
-`ScheduledExecutorService`, `Executors.*`, `new Thread(...)`. The station
-`SecurityManager` denies `modifyThread` to module code; any of these throws at
-runtime and leaves the unit in a broken state. Use `Clock.schedule` /
-`Clock.schedulePeriodically` for time-triggered callbacks and `BWorker` for
-blocking or compute-heavy off-thread work.
+**JDK threads are allowed, thread modification needs a grant:**
+`ScheduledExecutorService`, `Executors.*` and `new Thread(...)` run in a
+BComponent subclass — Tridium's course rates a named dedicated thread and an
+`ExecutorService` production-grade. Shutting an executor down, `interrupt()`,
+`setPriority()` and `setDaemon()` need `RuntimePermission "modifyThread"`, granted
+by the `MANAGE_EXECUTION` permission group (`module-permissions.xml`,
+`type="station"`); without it the stop path is denied and the thread outlives
+the component. Still prefer `Clock.schedule` / `Clock.schedulePeriodically`
+for time-triggered callbacks and a `BWorker` for blocking or compute-heavy
+off-thread work. [ev: retro n4-course-threading-jobs-doctrine Δ1]
 
 > Full engine-thread and BWorker recipe: see `types/logic.md` §Off-engine
 > blocking I/O (BWORKER-OFFTHREAD1) and §Engine-thread cost — HogsPage
@@ -129,7 +138,7 @@ smoke-test on the target JACE.
 | **Squirrel Foundation** | `org.squirrelframework:squirrel-foundation:0.3.10` | **Compact3: unverified — prefer plain BEnum pattern** | Reflection-heavy annotation processor; dynamic proxy generation may fail on Compact3 ZRE. Verified only on Supervisor. Smoke-test on JACE before any rt use. |
 | **Aviator** | `com.googlecode.aviator:aviator:5.x` | **Compact3: NOT proven — risk of `ClassLoader.defineClass`** | Expression compilers invoke `ClassLoader.defineClass` to emit bytecode at runtime; SecurityManager on Compact3 ZRE may deny this. The failure occurs at runtime on the JACE, not at compile time on the Supervisor build host. Supervisor use only until verified. |
 | **MVEL2** | `org.mvel:mvel2:2.4.x` | **Compact3: NOT proven — same risk as Aviator** | Dynamic bytecode generation; same JACE runtime risk as Aviator. Supervisor use only until verified. |
-| **ScheduledExecutorService / Executors.\*** | JDK (`java.util.concurrent`) | **NOT viable in BComponent** | SecurityManager denies `modifyThread`; throws at runtime. Use `Clock.schedule` / `Clock.schedulePeriodically` for time-triggered callbacks; `BWorker` for blocking off-thread work. |
+| **ScheduledExecutorService / Executors.\*** | JDK (`java.util.concurrent`) | **Viable with `MANAGE_EXECUTION`** | Creating and running the executor is allowed; `shutdown()`/`shutdownNow()` in `stopped()` need `RuntimePermission "modifyThread"` (`MANAGE_EXECUTION` group). Name it (`ExecutorUtil.newSingleThreadBackgroundExecutor(name, …)`). Prefer `Clock.schedule` / `Clock.schedulePeriodically` for time-triggered callbacks and `BWorker` for blocking off-thread work. |
 
 ---
 

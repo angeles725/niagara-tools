@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 # Retro — el CONTRATO de un módulo dashboard como superficie reusable (port spec) · 2026-09-03
 
 Tercer retro del día (previos: `2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md`,

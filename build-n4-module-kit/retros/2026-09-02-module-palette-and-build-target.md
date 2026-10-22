@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — empty module.palette passes the gate + per-module build target · 2026-09-02
 
 Two cross-cutting gaps found while shipping CompPan and ColdRoomPan (session "Acompañante").

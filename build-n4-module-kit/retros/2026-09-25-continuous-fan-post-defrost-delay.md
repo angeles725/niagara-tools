@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: ColdRoomPan -->
+<!-- deltas: 3 -->
 # 2026-09-25 · ColdRoomPan · continuous-fan-post-defrost-delay
 
 **Session**: `Cliente/panccadia-leon` branch `fix/continuous-fan-post-defrost-delay` (from 1d016bc) — bounded fix + version bump for a live PANCCADIA field report, reopened same day for a regression found before deploy (T3).

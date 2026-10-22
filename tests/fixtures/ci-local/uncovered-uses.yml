@@ -1,0 +1,14 @@
+name: CI
+on: pull_request
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: some/action@v1
+      - name: with env
+        env:
+          X: 1
+        run: echo "$X"
+      - name: with shell
+        shell: bash
+        run: echo hi

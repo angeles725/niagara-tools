@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — `ng-deploy.sh` backup: liviano (solo nuestros jars) + auto-purga · 2026-09-03
 
 Octavo retro del día. Tras ~8 deploys en la sesión, los `_backups/` acumularon **~1.9 GB** (8 tarballs de

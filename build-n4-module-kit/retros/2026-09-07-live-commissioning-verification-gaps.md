@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
 # 2026-09-07 · kit · live-commissioning-verification-gaps
 
 **Session**: PANCCADIA León live commissioning of the per-evaporator rearchitect (ColdRoomPan v2.1.x + DashboardPan v2.4.x) on the JACE-9000, driven over oBIX with the operator (Cristian). All modules had already PASSED every kit gate.

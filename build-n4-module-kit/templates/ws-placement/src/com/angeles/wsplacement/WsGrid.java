@@ -32,6 +32,14 @@ public final class WsGrid
   public static final int GLYPH_WIDTH = 8;
   /** Smallest glyph height: 2 + 0 visible slot bars + 1 (B1194 §1194.8). */
   private static final int MIN_GLYPH_HEIGHT = 3;
+  /** Row spacing of {@link #standard()}: clears a glyph with up to 4 SUMMARY bars by {@link #ROW_GAP}. */
+  private static final int STANDARD_ROW_SPACING = 10;
+  /** Free wixels between a glyph's bottom edge and the next row (standard(): 10 - (2 + 4 + 1)). */
+  private static final int ROW_GAP = 3;
+  /** Left and top margin of {@link #standard()}, in wixels. */
+  private static final int MARGIN = 3;
+  /** Largest SUMMARY count whose row spacing still fits one row under the top margin: 600 - 3 - 3 - 3 = 591. */
+  public static final int MAX_SUMMARY_COUNT = SHEET_MAX - MARGIN - MIN_GLYPH_HEIGHT - ROW_GAP;
 
   private final int cols;
   private final int colSpacing;
@@ -73,10 +81,43 @@ public final class WsGrid
     this.maxHeight = maxHeight;
   }
 
-  /** 8 columns, 14 x 10 wixel cells, 3 wixel margins, width 8, 600 x 600 sheet (chihuahua's grid). */
+  /**
+   * 8 columns, 14 x 10 wixel cells, 3 wixel margins, width 8, 600 x 600 sheet (chihuahua's grid). Fits
+   * children of up to 4 SUMMARY slots; a taller facade glyph takes {@link #forSummaryCount(int)}.
+   */
   public static WsGrid standard()
   {
-    return new WsGrid(8, 14, 10, 3, 3, GLYPH_WIDTH, SHEET_MAX, SHEET_MAX);
+    return forRowSpacing(STANDARD_ROW_SPACING);
+  }
+
+  /**
+   * Row spacing that clears a glyph showing {@code summaryCount} SUMMARY slot bars:
+   * {@code max(10, 2 + summaryCount + 1 + 3)} — the glyph height (B1194 §1194.8) plus the 3-wixel gap
+   * {@link #standard()} leaves under a 4-bar glyph. A 22-SUMMARY facade (25 wixels tall) gets 28; the fixed
+   * 10 of {@link #standard()} would stack its rows on top of each other (issue #259). A count past
+   * {@link #MAX_SUMMARY_COUNT} is rejected: its glyph cannot fit the sheet (and near
+   * {@code Integer.MAX_VALUE} the sum would overflow into a silent 10).
+   */
+  public static int rowSpacingFor(int summaryCount)
+  {
+    if (summaryCount < 0) throw new IllegalArgumentException("summaryCount < 0: " + summaryCount);
+    if (summaryCount > MAX_SUMMARY_COUNT)
+      throw new IllegalArgumentException("summaryCount > " + MAX_SUMMARY_COUNT + " does not fit the sheet: " + summaryCount);
+    return Math.max(STANDARD_ROW_SPACING, MIN_GLYPH_HEIGHT + summaryCount + ROW_GAP);
+  }
+
+  /**
+   * {@link #standard()} with the row spacing derived from the tallest child's SUMMARY slot count
+   * ({@link #rowSpacingFor(int)}); a count of 4 or fewer gives exactly {@link #standard()}.
+   */
+  public static WsGrid forSummaryCount(int summaryCount)
+  {
+    return forRowSpacing(rowSpacingFor(summaryCount));
+  }
+
+  private static WsGrid forRowSpacing(int rowSpacing)
+  {
+    return new WsGrid(8, 14, rowSpacing, MARGIN, MARGIN, GLYPH_WIDTH, SHEET_MAX, SHEET_MAX);
   }
 
   /** Column coordinate of cell {@code index}, clamped so {@code p + width <= maxWidth}. */

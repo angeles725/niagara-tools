@@ -7,7 +7,9 @@
 #
 # Opt-in: enable with `git config core.hooksPath .githooks`. When active it BLOCKS a push that
 # changes build-relevant kit files unless the SAME range also carries a BUILD-STATE.md update +
-# a pending retro + its INDEX row, OR a `Retro: none (trivial: <reason>)` commit trailer.
+# a pending retro, OR a `Retro: none (trivial: <reason>)` commit trailer. retros/INDEX.md is
+# GENERATED (toolbelt/gen-retro-index.sh) from the retro headers, so it need not be in range:
+# sweep (the content half) fails the push when the committed index is stale.
 #
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
@@ -51,8 +53,8 @@ if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' \
   exit $?
 fi
 
-if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ] && [ "${has_index:-0}" -ge 1 ]; then
-  # content half: the ledger + index must actually cohere
+if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
+  # content half: the ledger + index must actually cohere, and the generated index must be fresh
   bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
                 "$toplevel/build-n4-module-kit/retros" \
                 "$toplevel/build-n4-module-kit/retros/INDEX.md"
@@ -60,5 +62,6 @@ if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ] && [ "${has_index:-0}" -ge
 fi
 
 echo "pre-push: build-relevant kit files changed without a BUILD-STATE.md update + a pending retro" >&2
-echo "          + its INDEX row, and no 'Retro: none (trivial: <reason>)' trailer. See BUILD-LOOP.md §7." >&2
+echo "          (then run toolbelt/gen-retro-index.sh), and no 'Retro: none (trivial: <reason>)' trailer." >&2
+echo "          See BUILD-LOOP.md §7." >&2
 exit 1

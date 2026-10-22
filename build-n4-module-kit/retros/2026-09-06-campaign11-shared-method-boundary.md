@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # 2026-09-06 · kit · campaign11-shared-method-boundary
 
 **Session**: C11 PR1 — shared method-boundary awk fragment (`toolbelt/lib/method-boundary.sh`)

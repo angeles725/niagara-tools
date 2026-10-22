@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
 # 2026-09-06 · kit · campaign10-close-process-meta-lessons
 
 **Session**: Campaign 10 CLOSE — v0.21.0 lint precision (S21-S25) + client hygiene (S26)

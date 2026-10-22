@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
+<!-- index-comment: issues-and-gotchas: Clock<=0 floor, lifecycle seam, Missing-class, ux-Jasmine, EC-Net set(value), GET-destructive -->
 # 2026-09-19 · kit · gotchas-tier-a
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU adding field-proven Tier-A gotchas.

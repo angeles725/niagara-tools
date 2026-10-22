@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-10-01 · kit · alarm-console-design
 
 **Session**: PANCCADIA gap review — when is a fault a status flag and when is it a console alarm

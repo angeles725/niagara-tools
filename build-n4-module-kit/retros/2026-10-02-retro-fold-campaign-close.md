@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-10-02 · kit · retro-fold-campaign-close
 
 **Session**: close of the 2026-10-02 retro-fold campaign (WU0-WU11, PRs #183-#206, release v0.29.0)

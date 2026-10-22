@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro (PROPOSED delta — propose-never-apply) — a curated corpus index for build-n4-module: the RT-authoring + organization blocks the skill should take into account
 
 - **Date**: 2026-09-03

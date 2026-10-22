@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-09-18 · kit · palette-lexicon-assets-images-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: generate all possible kit deltas).

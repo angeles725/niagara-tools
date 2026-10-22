@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
+<!-- index-comment: issue #113: 9 new lints wired into report-module.sh (per-artifact 5.7-5.13 + module-root 8-9) + RM7-RM11 bats -->
 # 2026-09-19 · kit · wire-lints
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/issue-113-wire-lints) — wire the 9 new lints into report-module.sh (issue #113).

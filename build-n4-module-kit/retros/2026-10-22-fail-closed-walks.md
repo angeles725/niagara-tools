@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-10-22 · kit · fail-closed-walks
 
 **Session**: niagara-research quality round 8, work unit T8c, branch `r8/t8c-fail-closed-walks` from origin/main e1fee85
