@@ -12,7 +12,7 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 | Class | Your subclass base | What you override |
 |---|---|---|
 | Network | `BDeviceNetwork` / `BBasicNetwork` / `BLoadableNetwork` (§1.2) | `getDeviceType()`, `getDeviceFolderType()` |
-| Device | `BDevice` / `BBasicDevice` / `BLoadableDevice` | `getNetworkType()`, `doPing(cx)` |
+| Device | `BDevice` / `BBasicDevice` / `BLoadableDevice` | `getNetworkType()`, `void doPing()` (§5) |
 | Point folder | `BPointDeviceExt` | `getProxyExtType()` |
 | Proxy ext | `BProxyExt` | `getMode()`, `readSubscribed(cx)`, `readUnsubscribed(cx)`, `write(cx)` |
 
@@ -79,28 +79,55 @@ are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/r
   learn/edit transactions; the ux manager when operators manage devices/points from a browser. A bespoke
   dashboard is neither — it stays a servlet-SPA (`dashboard.md`).
 
+### 1.6 · NDriver — comm config, managers and discovery
+
+New drivers are written on NDriver (`com.tridium.ndriver`); Tridium's older driver frameworks are deprecated or slated
+to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
+
+- **Client drivers keep `serverEnabled` false.** `BTcpCommConfig.serverEnabled` defaults to `false` in the framework
+  `[CERT]` `organized/docSource/docSource-doc/extracted/ndriver-rt/com/tridium/ndriver/datatypes/BTcpCommConfig.java:32-36,94`;
+  when true, the link layer opens a listening socket on the configured port (`TcpLinkLayer.java:123`, vineflower). A
+  network that came up with it true (course Lab 11) faulted `Address already in use: JVM_Bind` because the real
+  server held the port, with Health `Can not connect to local:0`. A client driver's `B<X>TcpCommConfig` never
+  overrides the default to true, and commissioning checks Tcp Config › Server Enabled = false before the first ping.
+  [ev: retro n4-course-handson-ndriver Δ4] [ev: retro r8-t9e-drivers Δ2]
+- **Manager columns and discovery** (verified live on the course driver): a device column comes from a property facet
+  `SfUtil.incl(SfUtil.MGR_EDIT)` (or `MGR_EDIT_READONLY`) (`ndriver-rt/…/util/SfUtil.java:15,28`, vineflower); a point
+  manager is `@NiagaraType(agent = @AgentOn(types = {"<mod>:<X>PointDeviceExt", "<mod>:<X>PointFolder"}))` extending
+  `BNPointManager` with `NPointModel`/`NPointController` (`ndriver-wb/…/ui/point/BNPointManager.java:24-41`); a
+  proxy-ext column is `new MgrColumn.PropPath(new Property[] {BControlPoint.proxyExt, B<X>ProxyExt.<slot>}, MgrColumn.EDITABLE)`
+  (`workbench-wb/…/mgr/MgrColumn.java:730`); `getNewTypes()` restricts the New menu. `doSubmitDiscoveryJob(prefs, cx)`
+  submits with `job.submit(cx)` — the wizard's `job.submit(null)` runs the job with no user (`lint-driver-scaffold.sh`
+  WARN). Discovery and learn jobs run on their own job threads: a Workbench freeze during discovery is not the engine
+  thread, and no driver I/O ever runs on the engine thread `[ev: corpus B1419 §1419.3]`.
+  [ev: retro n4-course-handson-ndriver Δ6]
+
 ## 2 · `BProxyExt` point SPI
 
-Three overrides — the framework calls them, never call them yourself:
+Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
+I/O on another thread and report each result with `readOk(value)` / `readFail(cause)` `[CERT]`
+`organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/point/BProxyExt.java:851-869`.
+`getPollScheduler()` stands for your network's own accessor; `BPollScheduler.subscribe(p)` / `unsubscribe(p)` are
+`util/BPollScheduler.java:1130,1154`. [ev: retro devguide415-nav-subscriptions-tags-ords Δ1] `[ev: corpus B1306 §1306.2 C1]`
 
 ```java
-// Called once when the first subscriber (Workbench panel / BOX client) watches this point.
-// Register a native COV subscription or push the point into the poll scheduler.
+// The point ENTERS the subscribed state (a watcher, a link, or permanent subscription — see
+// logic-authoring.md § Author-side SPIs): start polling or register a native COV subscription.
 @Override
-protected void readSubscribed(Context cx) throws Exception {
-    getNetwork().getPollScheduler().subscribe(this);   // or COV register
+public void readSubscribed(Context cx) throws Exception {
+    getNetwork().getPollScheduler().subscribe(this);     // or COV register
 }
 
-// Called for a one-shot read with no active subscriber (e.g. a "refresh" from Workbench).
+// The point EXITS the subscribed state: stop polling or unregister. Never read here.
 @Override
-protected void readUnsubscribed(Context cx) throws Exception {
-    getNetwork().sendAsync(buildPollRequest(), cx);
+public void readUnsubscribed(Context cx) throws Exception {
+    getNetwork().getPollScheduler().unsubscribe(this);   // or COV unregister
 }
 
 // Called when our control logic BLinks a value into a proxy writable point.
 // NEVER block here — post to an async worker instead (§3 CoalesceQueue).
 @Override
-protected boolean write(Context cx) throws Exception {
+public boolean write(Context cx) throws Exception {
     getNetwork().postWrite(buildWriteRequest(cx));
     return false;   // false = async; the framework does not wait
 }
@@ -156,8 +183,8 @@ default `"defaultPolicy"`).
 |---|---|---|
 | `minWriteTime` | 0 (off) | Minimum gap between device writes; closer writes suppressed |
 | `maxWriteTime` | 0 (off) | Heartbeat: force re-write even if value unchanged |
-| `staleTime` | 0 (off) | Mark point STALE if no successful read within this window |
-| `writeOnStart` | **true** | Write on station/point start |
+| `staleTime` | 0 (timer off) | Mark point STALE when this long passes without a `readOk` |
+| `writeOnStart` | **true** | Write on station/point start; set `false` except for critical points on a large network (write-queue overflow) |
 | `writeOnUp` | **true** | Re-write when device returns UP after comm loss |
 | `writeOnEnabled` | **true** | Write when point re-enabled |
 
@@ -167,22 +194,48 @@ default `"defaultPolicy"`).
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
 correct; the policy kicks in only when specific slots are set. [ev: corpus B872 §872.2]
 
+**Stale time.** The generic framework applies a stale timer only when `staleTime > 0` (`Tuning.java:484`); 0 = no
+timer. The guides add "0 = stale immediately when unsubscribed" (the `BTuningPolicy.staleTime` javadoc says the same),
+but no code in driver-rt, basicDriver or bacnet-rt implements it — keep it out of a design `[ev: corpus B1365 §1365.4]`
+`[ev: corpus B1419 §1419.4 row e]`. COV points keep the default 0; a polled point gets a few poll periods (a 1-min poll →
+a 3-min stale time, course practice `[CERT-a]`). [ev: retro devguide415-r2-drivers-protocols Δ3]
+
+**Sizing.** Keep the poll scheduler's busy time ≤ ~75 % with only the permanent subscriptions running (linked points,
+points with history or alarm extensions). Ship a few named policies (Slow / Normal / Fast, and a no-`writeOnStart`
+variant) and bind them per point; keep `defaultPolicy` for the rest and add a custom one only for a problem point.
+COV sensitivity is a tuning-policy setting, never a display facet. Proxy points have no inputs: put history and alarm
+extensions on the SOURCE point, not on the proxy. `[ev: corpus B1337 §1337.1 rows 5-7]` `[ev: corpus B1418 §1418.4]`
+`[ev: corpus B1419 §1419.4 row e]` [ev: retro devguide415-r2-drivers-protocols Δ8]
+
 ---
 
 ## 5 · Health — `doPing` and fault reporting
 
+The API is `public abstract void doPing() throws Exception`; `pingOk()` and `pingFail(String cause)` are void calls
+routed to the device's health `[CERT]` `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:552,570,580`.
+A device with no protocol of its own (reachability only) pings with a bounded socket connect (`getHost()`/`getPort()`
+are the device's own slots); the timeout bounds the
+`Ping:` thread, and the module needs the station-scoped `NETWORK_COMMUNICATION` permission:
+
 ```java
 @Override
-public BObject doPing(Context cx) throws Exception {
-    try {
-        boolean ok = comm.sendPing();          // protocol-specific
-        if (ok) return pingOk();               // clears DOWN bit, fires offnormal→normal alarm
-        else    return pingFail("no response"); // sets DOWN bit on device + all its proxy points
+public void doPing() throws Exception {
+    try (Socket s = new Socket()) {
+        s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // 2000 ms bounds the Ping: thread
+        pingOk();                                  // clears DOWN, fires offnormal→normal alarm
     } catch (IOException e) {
-        return pingFail(e.getMessage());
+        pingFail(e.getLocalizedMessage());         // sets DOWN on the device + all its proxy points
     }
 }
 ```
+
+[ev: retro n4-course-handson-ndriver Δ1] [ev: retro n4-course-handson-ndriver Δ3]
+
+**Never ship the wizard's ping.** The NDriver wizard generates a `doPing()` whose only statement is `pingOk();` under
+`// TODO - add ping implementation` (`devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:102-111`): every device then
+reports UP forever. `toolbelt/lint-driver-scaffold.sh <src-root>` FAILs that stub and WARNs on the wizard's other
+placeholders (poll TODO, `TODO - convert linkMessage`, a message factory that only returns null, a discovery job
+submitted with a null Context). [ev: retro n4-course-handson-ndriver Δ2] [ev: retro r8-t9e-drivers Δ1]
 
 `pingFail` propagates DOWN to every `BProxyExt` under the device via:
 `BDevice.updateStatus()` → `BPointDeviceExt.updateStatus()` → `BProxyExt.updateStatus()` sets
@@ -240,8 +293,9 @@ Lifecycle rule: **register in `readSubscribed`, unregister in `readUnsubscribed`
 pushes the point onto the `dibs` stack immediately on subscribe for a first-poll before the bucket
 cadence starts. [ev: corpus B872 §872.1]
 
-One poll thread per network, named `"Poll:<networkName>"`. `pollEnabled` on the network gates the
-entire loop. [ev: corpus B872 §872.1; corpus B810 in `logic-authoring.md §Authoring a driver`]
+One poll thread per network, named `"Poll:<networkName>"`. `pollEnabled` is a property of the network's POLL
+SERVICE (`BAbstractPollService.java:62`, default true) and gates the entire loop. [ev: corpus B872 §872.1;
+corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
 
 ---
 
@@ -264,10 +318,14 @@ network load. [ev: code BScheduleDeviceExt.java:34; corpus B872 §872.4]
 ### 7.3 · `BVirtualComponent` / `BVirtualGateway` (virtual: scheme)
 
 `BVirtualGateway extends BComponent` exposes a lazy, transient-only `BVirtualComponentSpace`.
-Points inside resolve via `virtual:/gw/device/point` ORDs — NOT `slot:`. The space is read-only
-and not persisted; writes do not survive GC. Use for on-demand browsing of large address spaces
-(e.g. a BACnet router with thousands of objects) where creating a full proxy tree would be
-prohibitive. [ev: corpus B28 §28.9-28.12]
+A point inside resolves as the gateway's ORD followed by `|virtual:/A/B/point` — NOT `virtual:/gw/device/point` and NOT
+`slot:` (devguide `virtualComponents.txt:252-254`). Each virtual slot is named `SlotPath.escape(virtualPath)`; a load
+can add a slot under a parent that is already subscribed, so register the new point with the poll scheduler too. The
+space forbids links and structure edits, not property writes; it is not persisted and is GC-cached, tuned by
+`niagara.virtual.cache.{maxLifeDefault,minLifeDefault,threshold,thresholdScanRate}` (45 s / 25 s / 1000 / 1000 ms).
+Use it for on-demand browsing of large address spaces (e.g. a BACnet router with thousands of objects) where creating
+a full proxy tree would be prohibitive. [ev: corpus B28 §28.9-28.12] `[ev: corpus B1306 §1306.1 rows 7-8]`
+[ev: retro devguide415-nav-subscriptions-tags-ords Δ3]
 
 ### 7.4 · `BSerialNetwork` / `SerialComm` — RS-485 twists
 

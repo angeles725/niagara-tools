@@ -255,6 +255,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `driver-rt/…/ping/BPingMonitor.java:128`, corpus B1348 C1.
 - **Target:** `types/logic-authoring.md:646`.
 - **Lint-able:** yes — doc grep for "enable `pingEnabled`". **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-5, `docs/r8-t9e-drivers`, 2026-10-22; r3di Δ2): `types/logic-authoring.md` ping line;
+  doc grep = `tests/kit-driver-pins.bats` KD2.
 
 ### C15 — Proxy-point example inverts `readUnsubscribed`
 - **Sources:** nsto#Δ1 (primary)
@@ -262,12 +264,16 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `driver-rt/javax/baja/driver/point/BProxyExt.java:886-897`, devguide `driverPoint.txt:64-67`, corpus B1306 §1306.2 C1.
 - **Target:** `types/driver-authoring.md:54-70` (and `:209`).
 - **Lint-able:** yes — WARN `send`/`poll`/`post` in `readUnsubscribed`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED doc (WU-P0-5, 2026-10-22; nsto Δ1): `types/driver-authoring.md` § 2, doc pin KD4. OWED: the
+  rt-source WARN lint.
 
 ### C16 — Tuning facts: `staleTime=0` is not "off"; `pollEnabled` lives on the poll service
 - **Sources:** drp#Δ3 (primary, staleTime) · drp#Δ8 (primary, pollEnabled; extends with ≤75 % busy, Slow/Normal/Fast policies, no exts on proxy points)
 - **Evidence:** `guides-clean/Bacnet/bacnet-BacnetTuningPolicy.txt:66`; `driver-rt/…/util/BAbstractPollService.java:64`; corpus B1327 §1327.2 C1, B1337 §1337.2 C1-C2.
 - **Target:** `types/driver-authoring.md:121-132,205-213`.
 - **Lint-able:** yes for `:213`; partial otherwise. **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; drp Δ3, Δ8; KD3 pins `:213`). The staleTime half is CORRECTED, not
+  applied: B1365 §1365.4 and B1419 §1419.4 show 0 = timer off in code; the guide's stale-on-unsubscribe is marked unimplemented.
 
 ### C17 — Nav files: `version="1.0"` mandatory, cache re-parses, nothing auto-discovers `.nav`
 - **Sources:** nsto#Δ5 (primary) · rcf#Δ5 extends (delete "Workbench and the station discover `.nav` files"; only `BUser.navFile` / mobile nav file)
@@ -293,6 +299,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BComponent.java:408-414`, `BComponentSpace.java:172-174`, `BComponentEventMask.java:319-327`, devguide `virtualComponents.txt:252-254`, corpus B1306.
 - **Target:** `types/logic-authoring.md:9-24`, `types/driver-authoring.md:234-240`.
 - **Lint-able:** partial (`addVirtualSlot` without `SlotPath.escape`). **Fold type:** doc fix.
+- **Fold status:** FOLDED doc (WU-P0-5, 2026-10-22; nsto Δ2, Δ3). OWED: the `addVirtualSlot` grep.
 
 ### C21 — Tag-dictionary recipe names APIs that do not exist; `hierarchy:` is client-only; dictionaries are licensed
 - **Sources:** nsto#Δ9 (primary, recipe rewrite) · nsto#Δ10 extends (tags-in-code card, `hierarchy:` client-only) · sta#Δ5 extends (licence: 2 dictionaries, `n` takes one) · sta#Δ7 reinforces (ScopedTagRule, implied index off, heap-only caches)
@@ -378,6 +385,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: code javap driver-rt.jar BDevice 4.15.6.20]`, `[ev: live 2026-10-16 exam P3 ping {ok} www.google.com:443]`.
 - **Target:** `types/driver-authoring.md:15` + § 5 Health (:142-153).
 - **Lint-able:** yes — kit self-check FAILs on `BObject doPing` or `return pingOk` in `types/*.md`. **Fold type:** doc fix + self-check.
+- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ1, Δ3): § 1.1 + § 5; self-check = `tests/kit-driver-pins.bats` KD1.
 
 ### C84 — K15 describes the slot-o-matic marker failure wrongly
 - **Sources:** slo#Δ1 (primary). Confirms cex Δ4 (C58: region-less sources need slot-o-matic before `jar`).
@@ -552,6 +560,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: code devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:104-111]`.
 - **Target:** new `toolbelt/lint-driver-scaffold.sh` wired into `report-module.sh`, `types/driver-authoring.md` § 5.
 - **Lint-able:** yes. **Fold type:** new lint + bats + doc line.
+- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ2): `toolbelt/lint-driver-scaffold.sh` + bats + § 5 line. OWED: the
+  `report-module.sh` wiring and the `toolbelt/INDEX.md` row (outside the unit's surface).
 
 ### C89 — Client drivers: `BTcpCommConfig.serverEnabled` defaults to true
 - **Sources:** ndh#Δ4 (primary)
@@ -559,6 +569,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11476]`.
 - **Target:** `types/driver-authoring.md` (NDriver section, C60) + commissioning checklist.
 - **Lint-able:** partial — WARN a `BTcpCommConfig` subclass of a client-only module that keeps the default `[INFER]`. **Fold type:** doc section + checklist line.
+- **Fold status:** FOLDED CORRECTED (WU-P0-5, 2026-10-22; ndh Δ4): the framework default is `false`
+  (`BTcpCommConfig.java:94`); § 1.6 says a client driver keeps it false and commissioning checks it. The proposed WARN is moot.
 
 ### C90 — Operator-entered bounds must handle `min > max` explicitly
 - **Sources:** slo#Δ4 (primary). Confirms scc Δ3 (C36: `isRunning()` guard first) live.
@@ -693,6 +705,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11479]`.
 - **Target:** `types/driver-authoring.md` (NDriver section), `types/wb-widgets.md` § Manager recipe.
 - **Lint-able:** yes — WARN `.submit(null)` inside a `doSubmitDiscoveryJob` body. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ6): § 1.6; the `.submit(null)` WARN lives in `lint-driver-scaffold.sh`.
+  OWED: the `types/wb-widgets.md` § Manager recipe half.
 
 ### C92 — Orient: report the newest working-tree file before trusting a summary
 - **Sources:** hwf#Δ2 (primary)
