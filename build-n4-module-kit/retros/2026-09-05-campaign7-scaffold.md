@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # Retro: scaffold-module.sh + fixtures/MinimalPan (Campaign 7 PR4)
 
 **Date**: 2026-09-05 | **PR**: feat/c7-scaffold | **SDD change**: build-n4-module-campaign7

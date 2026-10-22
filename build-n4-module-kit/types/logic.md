@@ -106,13 +106,20 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
 
 ## Linking across custom modules
 
-### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]`
+### Link lifecycle — gating and reacting `[ev: corpus B958 §958.1–958.2]` `[ev: corpus B1309 §1309.2]` `[ev: corpus B1316 §1316.3]`
 
-- **`doCheckLink` gates incoming links before creation:** override
-  `doCheckLink(BComponent source, Slot sourceSlot, Slot targetSlot, Context cx)` in your component to
-  validate whether a proposed link is legal.  Return `LinkCheck.makeInvalid("reason")` to block it;
-  `LinkCheck.makeValid()` to allow it.  The framework calls this before any link is created in the
-  wiresheet or programmatically.
+- **`doCheckLink` is a tooling gate, not a runtime invariant:** override
+  `doCheckLink(BComponent source, Slot sourceSlot, Slot targetSlot, Context cx)` to declare which links are legal;
+  return `LinkCheck.makeInvalid("reason")` to refuse one, `LinkCheck.makeValid()` to allow it. Only the public
+  `checkLink(...)` runs it, after the standard `LinkCheck.make` rules, and only tools call `checkLink` (Workbench link
+  pads, BOX `checkLink`) `[CERT]` `organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/BComponent.java:1580-1585`,
+  `:1596`. **Code-built links are never checked:** `linkTo(...)` builds a direct link, adds it `Flags.TRANSIENT` and
+  activates it (`BComponent.java:1776-1782`); `add(name, new BLink(...))` and `makeLink(...)` skip `checkLink` too — on a
+  running component the slot map runs only a user-permission check, skipped for a null Context or a super user
+  (`organized/baja/baja/vineflower/com/tridium/sys/schema/ComponentSlotMap.java:1684-1685`). Code that adds a link calls
+  `target.checkLink(source, sourceSlot, targetSlot, cx)` itself and adds the link only when the result `isValid()`.
+  [ev: retro devguide415-runtime-api-corrections Δ10] [ev: retro devguide415-r2-runtime-contracts-formats Δ3]
+  [ev: retro r8-t9e-status-links Δ2]
 
   ```java
   @Override
@@ -132,21 +139,33 @@ if (!Double.isFinite(setpoint) || !setpointSlot.getStatus().isValid()) {
   (not slot loads at startup). Use `removed(Property, BValue, Context)` symmetrically to tear down
   anything `added()` set up.
 
-- **INDIRECT-link rule — a programmatically added reciprocal link MUST use the `true` (indirect) flag:**
+- **A programmatically added reciprocal link is INDIRECT — built from a `BOrd`, from the source's handle ORD:**
   when `added()` creates a back-link (e.g. wiring the source's offset back into this component), use:
 
   ```java
-  BOrd sessionOrd = sourceComponent.getOrdInSession();
-  add(null, new BLink(sessionOrd, sourceSlot.getName(), mySlot.getName(), true));
-  //                                                                       ^^^^
-  //                                         true = INDIRECT (ORD-resolved)
+  if (checkLink(sourceComponent, sourceSlot, mySlot, cx).isValid()) {
+      BOrd srcOrd = sourceComponent.getHandleOrd();          // survives renames and moves
+      add(null, new BLink(srcOrd, sourceSlot.getName(), mySlot.getName(), true));
+      //                                                                  ^^^^ enabled
+  }
   ```
+
+  The link is indirect because its source is a `BOrd`; the 4th argument is `boolean enabled`, not an "indirect" flag
+  (`BLink.java:254`, `public BLink(BOrd sourceOrd, String sourceSlot, String targetSlot, boolean enabled)`). Take the ORD
+  from `getHandleOrd()`, as `makeLink`'s javadoc advises (`BComponent.java:1608`), not `getOrdInSession()`. Keep
+  `linkTo(...)` for UI built in code: its TRANSIENT direct link is never persisted.
 
   **Why indirect?** A direct link embeds a hard reference — if the target component starts before the
   source during a station restart, the link is unresolvable and silently breaks.  An indirect link holds
   the source as an ORD and resolves it lazily, surviving any startup ordering.  The first-party comment
   in `componentLinks-rt` states this verbatim: "we cannot guarantee the order in which the components
   will start when the station is restarted." `[ev: corpus B958 §958.2]`
+
+- **Read a code-built link back — the licence link capacity faults it silently:** inside a station, activating a link
+  past the licence's `globalCapacity` link limit sets the link's `fatalFault` and logs only
+  `Exceeded link limit for globalCapacity`; that link then propagates nothing (`BLink.java:373-378`, `:661`). After
+  adding links in code, check `link.isActive() && !link.isFatalFault()` (`BLink.java:348`, `:824`) and surface a
+  failure instead of assuming the link runs. [ev: retro devguide415-runtime-api-corrections Δ10]
 
 - **A value linked ACROSS two custom modules is a plain `double` (0/1/2), never a shared frozen-enum type:** an enum link requires the identical type on both ends, which forces module-B-rt to depend on module-A-rt, and the custom-module dependency DSL is non-trivial (`compileOnly(files(...))` does not reach the plugin classpath; the plugin auto-includes only Tridium modules). A `double` links with zero dependency; Workbench shows 0/1/2. The deleted `BHoaMode` was such an enum — a leftover reference surfaced live on the JACE as `Missing class ColdRoomPan:HoaMode`. [ev: bitácora 5cuartos §5]
 - **A discrete selector used ONLY as an internal slot is a `BFrozenEnum` (registered in `module-include.xml`), NOT a double — the plain-double rule above is for values linked ACROSS custom modules only:** e.g. `BFanMode` internal config is a frozen enum. [ev: retro coldroompan-fan-mode-defrost · L19]
@@ -230,30 +249,48 @@ Verify with METHODOLOGY.md + build-verify.md. TODO: deepen the `execute()` / `ch
 
 ## Slots — BStatus producers `[ev: corpus B736 §736.2–736.4]`
 
-**8-bit BStatus reference** (BStatus.java:46–53; ok = 0, no bits set):
+**8-bit BStatus reference** (`javax.baja.status.BStatus` constants; ok = 0, no bits set) `[CERT]`
+`organized/docSource/docSource-doc/extracted/baja/javax/baja/status/BStatus.java:702-716` (4.15.6.20: `:758-786`,
+`[ev: corpus B1314 §1314.2]`). `tests/kit-api-pins.bats` KP1 pins this table to those constants.
+[ev: retro devguide415-runtime-api-corrections Δ4] [ev: retro r8-t9e-status-links Δ1]
 
 | Flag | Value |
 |------|-------|
 | `DISABLED` | 0x01 |
 | `FAULT` | 0x02 |
 | `DOWN` | 0x04 |
-| `STALE` | 0x08 |
-| `OVERRIDDEN` | 0x10 |
-| `NULL` | 0x20 |
+| `ALARM` | 0x08 |
+| `STALE` | 0x10 |
+| `OVERRIDDEN` | 0x20 |
+| `NULL` | 0x40 |
 | `UNACKED_ALARM` | 0x80 |
 
-Typed factory family (BStatus.java:51–140) — never construct a raw `BStatus(int)`:
-`makeFault(s)`, `makeDown(s)`, `makeNull(s, addNull)`, `makeStale(s)`, `makeOverridden(s, addOverridden)`, `makeDisabled(s, state)`.
+Typed factory family (`BStatus.java:51-140`) — build from bits with `BStatus.make(int bits)`, or flip one bit with
+`makeFault(s, b)`, `makeDown(s, b)`, `makeAlarm(s, b)`, `makeNull(s, b)`, `makeStale(s, b)`, `makeOverridden(s, b)`,
+`makeDisabled(s, b)` (`:98-134`). Never hand-type a mask from memory: use the named constants.
 
 - **Set `makeOverridden(s, true)` on an output when it is forced by a HOA HAND or writable override** so the HMI and any subscriber can distinguish a forced value from an auto-computed one. The existing kit documents reading `OVERRIDDEN`; this is the producer side — the component applying the override must set the bit. `[ev: corpus B736 §736.4]`
 - **Use `BStatus.makeNull(s, true)` when a sensor is absent or the computation is indeterminate** — write a NULL-status output, not a `0.0` with ok-status. A `0.0/ok` lie is a valid reading downstream; it can drive a false control decision (e.g. a 0 °C reading from a disconnected probe triggers unnecessary cooling). `[ev: corpus B736 §736.4]`
-- **Gate control math on `isValid()`, not `isOk()`:** `isOk()` returns `false` whenever ANY status bit is set — including OVERRIDDEN and UNACKED_ALARM — so it drops control output even when the sensor value is numerically usable. `isValid()` returns `true` when bits = 0 OR when only override/unacked-alarm bits are set: the value is trustworthy for a control decision. Rule: use `isOk()` only for the strictest "no bits at all" check (e.g. a safety-latch gate); use `isValid()` as the control gate for all sensor reads and setpoint checks. Confusing the two silently drops control output on every manual HOA override — the fail-to-danger pattern B730/B650/B655 warns about. `[ev: retro module-hardening-reference-cards-deltas Δ2]`
+- **Gate control math on `isValid()`, not `isOk()`:** `isOk()` returns `false` whenever ANY status bit is set — including OVERRIDDEN and UNACKED_ALARM — so it drops control output even when the sensor value is numerically usable. `isValid()` returns `true` unless DISABLED, FAULT, DOWN, STALE or NULL is set — ALARM, OVERRIDDEN and UNACKED_ALARM pass (`BStatus.java:287-294`): the value is trustworthy for a control decision. Rule: use `isOk()` only for the strictest "no bits at all" check (e.g. a safety-latch gate); use `isValid()` as the control gate for all sensor reads and setpoint checks. Confusing the two silently drops control output on every manual HOA override — the fail-to-danger pattern B730/B650/B655 warns about. `[ev: retro module-hardening-reference-cards-deltas Δ2]`
 
 ## Propagation — `propagateFlags` on custom components `[ev: corpus B738 §738.3]`
 
-**Add a `propagateFlags BStatus` slot (`SUMMARY|OPERATOR`, default `BStatus.ok`) to custom control components** to let operators tune which status bits (fault/stale/down/null) flow through to outputs — mirrors the `BKitNumeric` pattern (BKitNumeric.java:35). Without it the component hardcodes propagation unconditionally.
+**Add a `propagateFlags` `BStatus` slot to custom control components** so operators choose which input status bits
+reach `out`. kitControl declares it with slot flags `0` and default `BStatus.ok` on logic/math blocks, `BStatus.nullStatus`
+on switches `[CERT]` `organized/kitControl/kitControl-rt/decompiled/com/tridium/kitControl/logic/BLogic.java:40`,
+`…/util/BSwitch.java:50`; a `SUMMARY|OPERATOR` slot is a kit choice that exposes it, not the framework's default.
 
-Recipe: `out.setStatus(getPropagateFlags().and(aggregatedInputStatus))` — AND the aggregated input status with the mask before setting the output. A `BStatus.ok` mask blocks all propagation; a mask with `FAULT` lets only fault bits through. The `SUMMARY|OPERATOR` flag exposes it in the property sheet; operators can tune per-site without a code change.
+Recipe (`BStatus` has no `and()`): `out.setStatus(BStatus.make(agg.getBits() & getPropagateFlags().getBits()))` — OR the
+input bits into `agg`, then mask, exactly as `BLogic.java:72` and `BSwitch.java:156` do. A `BStatus.ok` mask blocks all
+propagation; a mask with `FAULT` lets only the fault bit through. `tests/kit-api-pins.bats` KP2 keeps the old
+`.and(` recipe out of the kit. [ev: retro devguide415-runtime-api-corrections Δ5] `[ev: corpus B1314 §1314.2]`
+
+**kitControl status families** `[ev: corpus B1319 §1319.1]` [ev: retro devguide415-r2-runtime-contracts-formats Δ7]:
+switches (Select, MuxSwitch, Switch, NumericSwitch) COPY the selected value and mask its status; logic/math (Hysteresis,
+Limiter, math blocks) COMPUTE on the value and mask its status. Any null math input gives `nullStatus` + NaN; an
+invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.java:128`). With the default mask
+(`nullStatus` or `ok`) a faulted, down or stale probe yields an **OK-status** output carrying the bad value — set
+`propagateFlags` to `fault,down,stale,disabled` on every block fed by a probe or proxy point (LC3/LC4 below).
 
 ## RT control logic `[ev: corpus B805]`
 
@@ -331,8 +368,8 @@ An informational flag still gets a readable surface (status/reason slot, dashboa
 - **LC1 / Writable priority array (16-level arbitration):** `WritableSupport.onExecute` scans levels 1→16 first-valid-wins; relinquish-default = ordinal 17 (`BPriorityLevel.fallback`), used only when all 16 are null; only levels 1 and 8 raise `OVERRIDDEN`; to make a config slot oBIX-writable add a NEW slot + link, never re-type the existing point. [ev: corpus B536]
 - **LC2 / BLoopPoint PID:** ramp = rate-limiter + ramp-aware anti-windup; `executeTime` clamped [100ms, 60s]; `direct` action = cooling, `reverse` = heating; `disableAction` triggers bumpless pre-load; recommended tuning: `kP = (maxOut − minOut) / throttlingRange`; PI is recommended, PID seldom justified. [ev: corpus B539]
   → For third-party math/control library selection (Apache Commons Math, EJML, ND4J, MiniPID, state-machine libs) and the engine-thread/BWorker rule for heavy math: see `types/math-control-libraries.md`.
-- **LC3 / Multi-input null contract:** nulls are SKIPPED, not zeroed (`BQuadMath.nonNullCount`, `BAnd.nullOnInactive`); latch = rising-edge vs latch-action both-edges; `switch`/`select` invalid → hold + invalid-flag. [ev: corpus B537]
-- **LC4 / Control-logic fail-safe checklist (the 6 unsafe-unless-configured defaults):** `disableAction=hold` freezes the last command; `propagateFlags=0` lets a bad sensor drive the loop with no fault; `rampTime=0` = no anti-slam; alarm-ext is notification-only (no interlock); `999` sentinel is convention not framework; `clHVAC` strips Baja status. Operator recs: set `disableAction`/`Fallback` to safe posture, `propagateFlags=fault|stale|down`, `rampTime>0`, emergency L1 for interlocks. [ev: corpus B543]
+- **LC3 / Multi-input null contract:** nulls are SKIPPED, not zeroed (`BQuadMath.nonNullCount`, `BAnd.nullOnInactive`); latch = rising-edge vs latch-action both-edges; `switch`/`select` invalid → hold + invalid facet; any null math input → `nullStatus` + NaN, otherwise the input bits are OR-ed and masked by `propagateFlags` (§ Propagation above). [ev: corpus B537] `[ev: corpus B1319 §1319.1]`
+- **LC4 / Control-logic fail-safe checklist (the 6 unsafe-unless-configured defaults):** `disableAction=hold` freezes the last command; the default `propagateFlags` (`ok` on logic/math, `nullStatus` on switches) masks FAULT/DOWN/STALE, so a bad sensor drives the loop with an OK status; `rampTime=0` = no anti-slam; alarm-ext is notification-only (no interlock); `999` sentinel is convention not framework; `clHVAC` strips Baja status. Operator recs: set `disableAction`/`Fallback` to safe posture, `propagateFlags=fault,down,stale,disabled` on blocks fed by probes, `rampTime>0`, emergency L1 for interlocks. [ev: corpus B543] [ev: retro devguide415-r2-runtime-contracts-formats Δ7]
 - **LC5 / Point-extension chain (alarm + history):** `BAlarmSourceExt` → offnormal/fault algorithm (`BOutOfRange`/`FloatingLimit`/`TwoState`) + `AlarmService`; `BIntervalHistoryExt` (timer, default 15 min) vs `BCovHistoryExt` (COV `changeTolerance` deadband); alarm-ext NEVER writes the value/priority-array — it is notification-only. [ev: corpus B552]
 - **LC6 / Scheduler seam DI:** instead of calling `Clock.schedule` directly in the arming method, inject a tiny interface `interface Sched { Object at(long delayMs); void cancel(Object t); }` — production wires a `Clock`-backed impl; a test wires a fake that records `at(delayMs)` calls. This makes "which path arms, with what delay, cancel-before-reschedule" unit-testable without a station. [ev: corpus B743 §743.3]
 
@@ -341,9 +378,9 @@ See also: `docs/how-to-create-coldroom-module.md` (end-to-end ColdRoomPan build)
 → For framework-extension authoring (SPIs, ORD schemes, point extensions, containers, queries, templates, jobs, watchdogs, action protection, minimal module): see `types/logic-authoring.md`.
 - **A companion boolean/int flag set in the same method body as `Clock.schedule*` MUST be cleared in `stopped()` or `started()`, not only in the expiry handler:** if `stopped()` returns without clearing the flag, a disable→enable cycle (same object, no new instance) carries the stale `true` forward; the flag read after the re-arm is wrong. Cleared only in the expiry path does NOT count — clearing it in `stopped()` (or `started()`) is the only safe lifetime. [ev: corpus B801] [ev: corpus B812]
 - **The same companion flag is orphaned by any OTHER path that cancels its ticket:** when a disable, mode change or re-sequencing cancels `T` while `F` is true, the expiry handler `do<Act>()` that clears `F` never runs, so `F` stays true until the next stop. Every method that cancels `T` must also assign `F` (itself, in a callee, or in every caller of a cancel helper), or the class must carry a self-heal (`if (T == null && F) F = false;`). `toolbelt/lint-timers.sh` reports it as an advisory `orphan-flag` WARN. [ev: corpus B801] [ev: corpus B812]
-- **Schedule through `Clock.schedule*` only — never via `ScheduledExecutorService`, `Executors.*`, or `new Thread(...)` in a BComponent subclass:** the station `SecurityManager` denies `modifyThread` to module code; any JDK thread primitive throws at runtime and leaves the unit in a broken state. [ev: corpus B800 §800.3] [ev: corpus B806]
+- **Off-engine work — Tridium's ladder, not a JDK-thread ban:** use `Clock.schedule`/`schedulePeriodically` for short timed callbacks and an existing `BWorker` or a `BSimpleJob` (`types/logic-authoring.md` § Background jobs) for long work; a named dedicated `Thread` or an `ExecutorService` is ALSO production-grade — the course's verdict on the dedicated thread, the executor and the `BWorker` is "Any of the latter three multithreading techniques will work well in a production environment". Creating and starting a thread is not denied; MODIFYING one is: `shutdown()`/`shutdownNow()` of an executor, `interrupt()`, `setPriority()` and `setDaemon()` need `RuntimePermission "modifyThread"`, which the `MANAGE_EXECUTION` permission group grants — request it under `<niagara-permission-groups type="station">` in `module-permissions.xml`. Without the grant the component starts its thread and runs, then FAILS AT STOP: chihuahua `BChiDashboardService` logged `failed to unschedule controlTick: access denied ("java.lang.RuntimePermission" "modifyThread")` at every service stop and its executor never shut down. Lifecycle: create the executor in `started()`, shut it down in `stopped()`, null-check it before use; name every thread (`new Thread(r, "<module>-<purpose>")`, or `ExecutorUtil.newSingleThreadBackgroundExecutor(name, keepAlive, unit)`, below). `toolbelt/lint-timers.sh` `jdk-thread` FAILs only a thread-modifying call in a module whose `module-permissions.xml` requests no `MANAGE_EXECUTION` (type station or all) and WARNs every other JDK thread use. [ev: retro n4-course-threading-jobs-doctrine Δ2] [ev: retro n4-course-handson-services-history-threading Δ3] [ev: retro n4-course-threading-jobs-doctrine Δ1] [ev: retro n4-course-handson-services-history-threading Δ4] [ev: course Lab Instructions.txt:1675-1679,1749] [ev: devguide security/requestingPermissions.txt:272-283] [ev: corpus B800 §800.3] [ev: corpus B806]
 - **Guard every scheduling body reachable from `changed()` or `started()` (directly or one level deep) with `isRunning()|atSteadyState()`:** `changed()` fires during `activateLinks` before the engine fully accepts `Clock.schedule`; without a guard the schedule call throws `NotRunningException` and the timer is silently skipped for the whole session (observed ×6 in PANCCADIA logs). [ev: corpus B816]
-- **Off-engine blocking I/O — use `BWorker`, never `Thread.start()`:** when a `BComponent` needs direct hardware/device IO (not via `BLink`/proxy), post `Runnable`s to a `BWorker` child component and deliver results back via `post()/postAsync()`; `Thread.start()` is wrong (unmanaged lifetime, no Baja fault propagation). Cascade failure mode: a blocking engine callback stalls Jetty worker threads that call `.get()` on `BComponent` state, saturating the Jetty pool and producing HTTP 503 (503-cascade). `[ev: corpus B730 §730.8 §G2]`
+- **Off-engine blocking I/O — never on the engine thread:** when a `BComponent` needs direct hardware/device IO (not via `BLink`/proxy), run it off the engine thread (driver discovery and sync already run on their own threads — a Workbench freeze during discovery is not the engine thread). `BWorker` has NO `post(Runnable)` or `postAsync()` method: it is an abstract component that wraps a `Worker` — the subclass returns `getWorker()` (typically `new Worker(queue)` over a `javax.baja.util.Queue`) and adds its own enqueue method (Tridium's course worker names it `postAsync(Runnable)`: `if (!isRunning()) throw new NotRunningException(); queue.enqueue(r);`). The engine-side hand-off is an `ASYNC` action whose `post(Action, BValue, Context)` override enqueues `new Invocation(this, action, arg, cx)` on that worker. Without a `BWorker`, use `ExecutorUtil.newSingleThreadBackgroundExecutor(name, keepAlive, unit)` (a named single thread that exits when idle) and `ExecutorUtil.shutdown(svc)` in `stopped()` (it calls `shutdownNow()` after a 10 s wait, so `MANAGE_EXECUTION` applies, above); name pool threads with `ConcurrencyUtil.defaultThreadFactory(prefix)`. Deliver results back by setting a slot or invoking an action on the component. Cascade failure mode: a blocking engine callback stalls Jetty worker threads that call `.get()` on `BComponent` state, saturating the Jetty pool and producing HTTP 503 (503-cascade). [ev: retro devguide415-runtime-api-corrections Δ1] [ev: corpus B1304 §1304.3] [ev: corpus B1419 §1419.3] `[ev: corpus B730 §730.8 §G2]`
 
 ## Liveness watchdog recipe `[ev: corpus B812]`
 
@@ -354,27 +391,54 @@ An independent monitor on the producer's `lastTick` is the layer Tridium does NO
 - **Why separate:** the monitor cannot sit in the same component it watches — a stuck engine thread leaves the monitor stuck too. A second component on its own cadence (or a `BAbstractAlarmMonitor`) remains independent.
 - **Do not wait on wall-clock timers** in a WSL test — inject the `Sched` interface (see LC6 above) or test the pure stall-detection math (stall threshold, floor) off-station.
 
-## Ship a tag dictionary `[ev: corpus B814]`
+## Ship a tag dictionary `[ev: corpus B814]` `[ev: corpus B1311 §1311.2 C1-C2]`
 
-A module can auto-tag every component of its types with semantic tags using `BSmartTagDictionary` and `BNamespace`, so NEQL queries, navigation hierarchies, and Haystack tooling see the components with zero integrator effort.
+A module can tag every component of its types with semantic tags so NEQL queries, hierarchies and Haystack
+tooling see them. **First check the licence:** the tags licence enables the first two dictionaries only
+(`Dictionary.limit`, default 2) and Niagara's own `n` dictionary takes one; a third goes to fault and its tags
+vanish (UG `Tagging/LicenseRequirements` :15-21, corpus B1329 §1329.1 row 1). Prefer direct tags or rules in an
+existing dictionary (`hs`) unless the site licence allows another. `[ev: retro devguide415-r2-security-tags-analytics Δ5]`
 
-- **`BSmartTagDictionary`** is the mechanism: declare a `@NiagaraType` subclass, register it as an agent under `TagDictionaryService`, and override `getRules()` to return `SmartTagRule[]` — each rule maps a Baja `Type` to a set of tag names/values. Components matching that type are auto-tagged on insert.
-- **Constructor-seed API (alternative to `getRules`):** seed individual marker tags directly in the subclass constructor via `tagInfoList.add(SlotPath.escape(name), new BSimpleTagInfo(BMarker.DEFAULT))`, guarded by `if (get(name) == null)` for idempotency across re-runs. This is the Honeywell "seed in constructor" pattern; the `getRules()/SmartTagRule[]` pattern (B814) is the Haystack discovery path. Both extend `BSmartTagDictionary`; choose one per dictionary. `[ev: corpus B758 §758.1]`
-- **Rule-based auto-tagging:** implement `BTagRule` + `BTagRuleCondition` to classify components automatically without per-instance annotation. The `getImpliedTag`/`addAllImpliedTags` engine in `BSmartTagDictionary` iterates `getTagRules()` and applies matching rules. Override `test(entity)` → `true/false` and return tag names/values from `getTags()`. `BEquipmentTypeTag` maps a folder's `displayName` to an equip-type tag via a `lookupTable` facet. `BIsPointProxyTypeRule` + `BIsPointProxyTypeCondition` match a driver point by its proxyExt `TYPE`. `[ev: corpus B758 §758.1]`
-- **`BNamespace`** (optional): declare a named namespace in `module-include.xml` to own tag names that don't collide with the Haystack or Baja built-in namespaces.
-- **Palette placement:** drag the dictionary instance under `TagDictionaryService` at commissioning (or auto-install it in `serviceStarted()`). NEQL queries that use `tag::` operators and the Hierarchy/Navigation view become addressable immediately.
-- **Key rule:** tag names live in the lexicon (they are user-visible strings); keep them short, scope-stable, and consistent with the Haystack marker convention (no CamelCase in tag names).
+**Recipe** (no method overrides — the dictionary is configured through its slots):
+
+1. Subclass `BSmartTagDictionary` (`@NiagaraType`, nothing overridden).
+2. Set its `namespace` String property, e.g. `angeles` (`BTagDictionary.java:107`); `BNamespace` is deprecated.
+3. Define every tag in `tagDefinitions` (`BTagInfoList`, `BTagDictionary.java:114`); a rule may only use defined tags.
+4. Add `BTagRule` children to `tagRules` (`BTagRuleList`, read by `getTagRules()`, `BSmartTagDictionary.java:71`):
+   each has a `condition` and a `tagList` / `tagGroupList` / `relationList`. Prefer `ScopedTagRule` over a
+   `HasAncestor` condition (faster).
+5. Put the instance under `TagDictionaryService` (by hand at commissioning or in `serviceStarted()`).
+
+All [CERT] `tagdictionary-rt/decompiled/javax/baja/tagdictionary/`. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ9]`
+
+**Query:** a NEQL tag is `<namespace>:<key>` — `station:|slot:/|neql:angeles:room` (filter form); the
+`select <tags> where <predicate>` form has no `*`, and projections are ignored (NEQL returns entities). NEQL takes `{facetName}` parameters from the
+resolve Context (`BOrd.make("neql:childValue50 = {limit}").resolve(root, BFacets.make("limit", 50))`), the
+injection-safe route where tags suffice (devguide `neql.txt:18,28-46,282-285`; `types/security.md` § 4).
+
+**Operating facts:** tags are case-sensitive; the Implied Tags Index is off by default and both indexes and
+hierarchy caches live on the heap (recreate after edits); verify with Spy "Tags Implied" (corpus B1329 §1329.1
+rows 4-8). `[ev: retro devguide415-r2-security-tags-analytics Δ7]`
+
+### Tags in code `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]`
+
+- Direct tag: `comp.tags().set(Id.newId("angeles:room"), BMarker.MARKER)` — only `BIDataValue` values are taggable.
+- `tags().contains(id)` sees implied tags; `get(slot)` does not.
+- Relation: `comp.relations().add(Id.newId("angeles:feeds"), target, false)`; `BComponent.makeRelation` only builds
+  the `BRelation` struct for tooling, it does not add it.
+- `hierarchy:` ORDs resolve only in a client; station code uses `BHierarchyService.resolveHierarchyLevelElem`
+  (`types/logic-authoring.md` § `hierarchy:` ORD).
+
+Corpus B1311 §1311.1 rows 1-6, 13 (`javax/baja/tag/Tags.java:66-69,97` docSource, `BComponent.java:1794-1803`).
 
 ### Our-modules tag recipe (namespace `angeles`) `[ev: corpus B750 §750.2, B758 §758.5]`
 
-Concrete application of the dictionary for our cold-chain modules:
-
-- **Namespace:** `angeles` (declare in `module-include.xml` as a `<namespace>` entry).
-- **Marker tags:** `room`, `evaporator`, `compressor`, `defrost`.
-- **Keying strategy:** one `BTagRule` per component TYPE (e.g. `entity instanceof BEvaporatorUnit`) — not by folder name, since our components are well-typed.
-- **Auto-install:** place the dictionary instance under `TagDictionaryService` in `serviceStarted()` — no integrator drag required.
-- **Result:** `station:|slot:/|neql:select * where tag::room` reaches all cold-room components with zero integrator effort after module deploy.
-- **Deploy safety note:** this overlay is additive — no schema change, no containment change; deploy on an existing station is safe.
+- **Namespace:** `angeles`, set as the dictionary's `namespace` property; marker tags `room`, `evaporator`,
+  `compressor`, `defrost` in `tagDefinitions`.
+- **Rules:** one `BTagRule` per component TYPE (our components are well-typed; no folder-name keying).
+- **Query:** `station:|slot:/|neql:angeles:room` reaches every cold-room component.
+- **Licence:** ship it only where the site's tags licence has a free dictionary slot (above); otherwise tag directly.
+- **Deploy safety:** additive — no schema or containment change.
 
 ## BQL function reference card `[ev: corpus B1108]`
 
@@ -400,18 +464,18 @@ Three function families are available in BQL expressions. Resolution is reflecti
 
 `BFormat` is the display-name / annotation / history-label pattern language. Understand it before writing a format expression or processing user-supplied templates.
 
-**Pattern syntax:**
-- `%slot%` — resolve `slot` on the current context component via reflection
-- `%a.b.c%` — chain access with `.` (traverse slots/methods left-to-right)
-- `%slot?default%` — use literal `default` when `slot` resolves to null or throws
-- `%time(<fmt>)%` — current date/time with a Java `SimpleDateFormat` pattern
-- `%user%` — current user's display name
-- `%substring(<slot>,<start>,<end>)%` — substring of a resolved slot value
+**Pattern syntax** (4.15.6.20 `javax.baja.util.BFormat`): plain text with scripts between `%` pairs; `%%` is a literal `%`. A script is one or more calls chained with `.`, each applied to the previous result. [ev: retro devguide415-runtime-api-corrections Δ9] [ev: retro devguide415-r2-runtime-contracts-formats Δ6] [ev: corpus B1317 §1317.3]
+- `%displayName%`, `%parent.displayName%`, `%out.value%` — slot or reflected call, chained left to right
+- `%a?b%` — `?` starts a FALLBACK SCRIPT, not a literal default: when `a` fails, `b` is evaluated (`%parent.value?lexicon(bajaui:dialog.error)%`); with no fallback a failed call prints `%err:<type>:<call>%`
+- `%time()%` — `Clock.time()` as a `BAbsTime`; it takes NO argument, so chain a call to format it (`%time().toDateString%`). `%time(<fmt>)%` is not the special call — it goes to reflection and fails
+- `%user()%` — the current user's name; the parentheses are required (`%user%` goes to reflection)
+- `%lexicon(<module>:<key>)%` — lexicon text; `%decodeFromString(<module>:<type>:<escapedValue>)%` — a decoded value
+- `.substring(i)` (from index `i`), `.substring(-n)` (the last `n` characters), `.substring(a,b)` (the range) — applied to the previous value's string, never given a slot argument: `%displayName.substring(0,8)%`
+- `.escape(…)` / `.unescape(…)` — slot-path escaping or unescaping of the previous value's string
 
-**Reflection resolution order** (inside a `%…%` block):
-1. Baja slot by name
-2. Public zero-arg Java method (getter shape)
-3. `ReflectionException` if neither resolves
+**Resolution order:** the special calls (`time()`, `user()`, `lexicon(…)`, `substring(…)`, `escape(…)`, `unescape(…)`, `decodeFromString(…)`) are recognized when the pattern is parsed. Any other call `foo` on a component resolves to its property `foo` FIRST (`getProperty(id)`, permission-checked, and the slot facets join the Context for the rest of the chain), then `getFoo(Context)`, `getFoo()`, `foo(Context)`, `foo()`, `get("foo")`, `getFormatValue("foo")`, and LAST a `BIFormatPropertyHandler`'s `getFormatPropertyByName("foo")`. A call that names a frozen ACTION (`doFoo`) is denied unless `FormatDenylist` excludes it. Nothing throws to the caller: a failure takes the `?` fallback or prints the `%err:…%` text.
+
+`toolbelt/lint-bformat-call.sh` WARNs `%time(<arg>)%` and `%user%` in Java, lexicon, bog and palette files.
 
 **`FormatDenylist`:** N4 maintains a station-version-specific denylist that blocks known-dangerous reflection targets. The list limits the attack surface but does not eliminate it.
 

@@ -57,8 +57,26 @@ jobs:
           sudo install "shellcheck-${SC}/shellcheck" /usr/local/bin/shellcheck
           shellcheck --version
 
+      - name: Set up Go (version from go/go.mod — the niagara-tools Go module)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go/go.mod
+          cache: false
+
+      - name: Go gofmt + vet + test (go/)
+        run: |
+          cd go
+          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
+          go vet ./...
+          go test ./...
+
+      - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
+        run: cd go && go build -o bin/ ./cmd/...
+
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
-        run: shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
+        run: shellcheck scripts/*.sh scripts/lib/*.sh go/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
 
       - name: bats (all unit tests)
         run: bats tests/*.bats
@@ -91,6 +109,12 @@ jobs:
 
       - name: gen-lint-index --check (generated toolbelt/INDEX.md is fresh vs the lint headers)
         run: bash build-n4-module-kit/toolbelt/gen-lint-index.sh --check
+
+      - name: gen-retro-index --check (generated retros/INDEX.md is fresh vs the retro headers)
+        run: bash build-n4-module-kit/toolbelt/gen-retro-index.sh --check
+
+      - name: gen-build-state --check (generated kit ledger in BUILD-STATE.md is fresh vs ledger.d/)
+        run: bash build-n4-module-kit/toolbelt/gen-build-state.sh --check
 
       - name: lint-timers (timer-ticket conformance over committed fixtures — Campaign 6 PR8)
         run: |

@@ -132,3 +132,16 @@ MD
   [ "$status" -eq 1 ]
   [[ "$output" == *"LTF1: link-in target \"evap2InDrip\" (wiring-map Table 2)"* ]]
 }
+
+@test "LTF-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: LTF-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf "class A {}\n" > "$BATS_TEST_TMPDIR/src/A.java"
+  mkdir -p "$BATS_TEST_TMPDIR/src/locked"
+  chmod 000 "$BATS_TEST_TMPDIR/src/locked"
+  if [ -r "$BATS_TEST_TMPDIR/src/locked" ]; then chmod 755 "$BATS_TEST_TMPDIR/src/locked"; skip "running as root"; fi
+  run "$LTF" "$BATS_TEST_TMPDIR/src"
+  chmod 755 "$BATS_TEST_TMPDIR/src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-link-target-flags: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
+}

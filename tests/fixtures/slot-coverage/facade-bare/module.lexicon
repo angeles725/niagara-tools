@@ -1,0 +1,3 @@
+# facade-bare lexicon: CompressorPanel has only a bare type key (ineffective: Workbench reads <Type>.displayName)
+CompressorPanel=Compresor
+RoomPanel.displayName=Cuarto

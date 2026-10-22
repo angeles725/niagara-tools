@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 11 -->
+<!-- index-comment: new types/security.md: null-Context audit hazard + RBAC + CSRF/BPassword + anti-injection + anti-patterns -->
 # 2026-09-19 · kit · security-model
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the security cluster (user-mandated first-class).

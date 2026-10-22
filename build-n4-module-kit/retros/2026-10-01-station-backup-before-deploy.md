@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-10-01 · kit · station-backup-before-deploy
 
 **Session**: PANCCADIA gap review — station-level state (persisted operator values, run hours) is not protected by the module-jar backup

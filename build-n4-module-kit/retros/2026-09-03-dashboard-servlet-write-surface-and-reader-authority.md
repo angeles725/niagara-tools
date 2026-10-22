@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 # Retro (mejora del proceso /build-n4-module) — superficie de escritura del servlet + el reader como autoridad · 2026-09-03
 
 Self-retro de una sesión de **ANÁLISIS de comisionamiento** (NO de build) sobre los 3 módulos PANCCADIA

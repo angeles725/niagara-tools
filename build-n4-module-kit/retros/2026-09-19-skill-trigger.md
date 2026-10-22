@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
+<!-- index-comment: issue #116: expand SKILL.md trigger (driver/service/utility-lib/theme/cloud) + sync installed via install-skill.sh --force -->
 # 2026-09-19 · kit · skill-trigger
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/issue-116-skill) — expand the skill trigger + sync the installed copy (issue #116).

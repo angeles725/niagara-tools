@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-09-06 · kit · campaign10-lint-timers-scope
 
 **Session**: Campaign 10 PR1 — S21 companion-flag false positive fix (anyNoHardware on BDefrostController)

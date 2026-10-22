@@ -32,38 +32,11 @@
 # Mutation: SSL-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: SSL-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-LC_ALL=C
-export LC_ALL
-
-STRICT=0
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --strict) STRICT=1; shift ;;
-    --) shift; break ;;
-    -*) printf 'lint-session-store-lazy-evict: unknown flag: %s\n' "$1" >&2
-        printf 'usage: lint-session-store-lazy-evict.sh [--strict] <src-root>\n' >&2
-        exit 3 ;;
-    *) break ;;
-  esac
-done
-
-if [ $# -lt 1 ]; then
-  printf 'usage: lint-session-store-lazy-evict.sh [--strict] <src-root>\n' >&2
-  exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-  printf 'lint-session-store-lazy-evict: not a directory: %s\n' "$ROOT" >&2
-  exit 3
-fi
-
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-session-store-lazy-evict first 'usage: lint-session-store-lazy-evict.sh [--strict] <src-root>' "$@"
 
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-
-cat > "$_TMP/main.awk" << 'AWKEOF'
+cat > "$AL_TMP/main.awk" << 'AWKEOF'
 { lines[NR] = $0 }
 
 END {
@@ -180,28 +153,4 @@ END {
 }
 AWKEOF
 
-had_warn=0
-had_err=0
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
-  printf 'lint-session-store-lazy-evict: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-  had_err=1
-fi
-while IFS= read -r f; do
-  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
-  if ! out=$(awk -v FILE="$f" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
-    printf 'lint-session-store-lazy-evict: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
-    had_err=1
-    continue
-  fi
-  if [ -n "$out" ]; then
-    printf '%s\n' "$out"
-    had_warn=1
-  fi
-done < "$_TMP/files"
-
-[ "$had_err" -eq 0 ] || exit 3
-if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+awk_lint_run -name '*.java'

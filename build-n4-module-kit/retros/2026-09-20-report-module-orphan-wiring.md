@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: automation-audit PR-A: wired 9 static-source orphan lints into report-module.sh (§5.14-5.20,§10,§11) + RM12-20 -->
 # 2026-09-20 · kit · report-module orphan-lint wiring (automation audit fix, PR-A)
 
 **Session**: automation audit (operator: module creation must be AUTOMATIC — no mechanical check may depend on the agent REMEMBERING to run it; the research-sdd flaw). Audit found 8 static-source lints existed but were NOT wired into `report-module.sh` (they lived only as BUILD-LOOP §5 checklist prose), plus `report-module.sh`/`preflight.sh` are invoked by no orchestrator. This PR closes the first half: wire the static-source orphans into the aggregator so ONE `report-module.sh` run catches them.

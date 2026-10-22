@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->
 # 2026-09-19 · kit · dashboard-scaffold
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/issue-115-scaffold) — multi-profile dashboard scaffold (issue #115).

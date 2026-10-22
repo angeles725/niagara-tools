@@ -20,11 +20,14 @@ make_stored_jar() { (cd "$2" && zip -q -0 -X -D -r "$1" .); }
 
 # add_manifest <dir>               — META-INF/MANIFEST.MF (a jar without one is not a jar)
 add_manifest()  { mkdir -p "$1/META-INF"; printf 'Manifest-Version: 1.0\n' > "$1/META-INF/MANIFEST.MF"; }
-# add_signature <dir>              — NIAGARA4.SF + NIAGARA4.RSA with dummy content
+# add_signature <dir> [alias] [key-ext] — <alias>.SF + <alias>.<key-ext> with dummy content
+#                                    (default NIAGARA4 + RSA; the entry is named after the signing alias,
+#                                    e.g. CODESIGN for the N4 course profile, SERVER1 for Honeywell)
 add_signature() {
+  local alias="${2:-NIAGARA4}" ext="${3:-RSA}"
   mkdir -p "$1/META-INF"
-  printf 'Signature-Version: 1.0\nName: com/x/A.class\nSHA-256-Digest: AAAA\n' > "$1/META-INF/NIAGARA4.SF"
-  printf 'RSA' > "$1/META-INF/NIAGARA4.RSA"
+  printf 'Signature-Version: 1.0\nName: com/x/A.class\nSHA-256-Digest: AAAA\n' > "$1/META-INF/$alias.SF"
+  printf '%s' "$ext" > "$1/META-INF/$alias.$ext"
 }
 
 # make_module_xml <dir> <vendorVersion> <type-class>...  — META-INF/module.xml with a baja dependency

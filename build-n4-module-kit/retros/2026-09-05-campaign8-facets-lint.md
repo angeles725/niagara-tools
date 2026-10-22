@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: WARN not FAIL (K13); DashboardPan-ux path; false-positive fix; MIN=0 correct; profile_dir naming -->
 # Retro: Campaign 8 — verify-module facets-req + ord-literal sub-checks (facets-lint)
 
 **Date:** 2026-09-05

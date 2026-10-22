@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-09-21 · kit · wb-mapping-ord-npe-and-wsl-windows-jdk
 
 **Session**: Live bidirectional-gateway testing of the Apillm client module (Cliente/LLM/Apillm). The operator tried to add a new DB→N4 key mapping (`demo2`) through the `-wb` "Add Mapping" wizard and hit a `NullPointerException`; fixing it surfaced a runtime ORD gotcha, and rebuilding surfaced a WSL Java-toolchain gotcha.

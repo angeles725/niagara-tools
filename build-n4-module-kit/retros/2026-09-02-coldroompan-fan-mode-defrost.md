@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: ColdRoomPan -->
+<!-- deltas: 0 -->
 # Retro — ColdRoomPan fan-mode + defrost-entry sequence (additive) · 2026-09-02
 
 Module: ColdRoomPan-rt. Additive changes on top of the hardened ColdRoomPan, built by session

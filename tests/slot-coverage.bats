@@ -173,8 +173,9 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
 @test "SP6: a type-name key and a @Range enum-tag key are NOT STALE" {
   # Fixture per-slot-sp6: module-include.xml declares <type name="BThing">, lexicon has BThing=Thing
   # display and fast=Fast; src/BMode.java has @NiagaraEnum + @Range("fast") + @Range("slow").
-  # BThing is a type display-name key (Niagara convention: TypeName=Display) and fast is a frozen-enum
-  # value tag — both are live translations, NOT dead.
+  # fast is a frozen-enum value tag (EnumType.java:50 reads the bare tag) — a live translation. A bare
+  # type-name key is not STALE here either: it is ineffective for the type (Workbench reads
+  # BThing.displayName, NTypeInfo.java:178) and the parse mode WARNs it (SC-type-bare), so it is not reported twice.
   # RED on the pre-fix script (BThing and fast appear as STALE); GREEN after this fix (known_sorted).
   FX_SP6="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot-sp6"
   run "$SC" per-slot "$FX_SP6/module-include.xml" "$FX_SP6/module.lexicon" "$FX_SP6/src"
@@ -227,6 +228,20 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   [[ "$output" == *"pct=50.0 (type-set)"* ]]
 }
 
+# A facade type whose only key is the bare "<Type>=" form has a key, but not the one Workbench reads: the
+# raw type name shows, nothing breaks (NTypeInfo.java:178), so it is a WARN, promoted by --strict.
+# Named mutation SC-facade-bare: FAIL a bare-keyed facade type -> SC-facade-bare flips (exit 1).
+@test "SC-facade-bare: a *Panel type with only a bare <Type>= key WARNs (exit 0), --strict exits 1" {
+  setup_parse_fixtures
+  run "$SC" "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slot-coverage: WARN facade type with only a bare key: CompressorPanel"* ]]
+  [[ "$output" != *"ineffective type key: CompressorPanel"* ]]   # one WARN per facade type, not two
+  [[ "$output" != *"FAIL facade type without lexicon"* ]]
+  run "$SC" --strict "$FIXDIR/facade-bare/module-include.xml" "$FIXDIR/facade-bare/module.lexicon"
+  [ "$status" -eq 1 ]
+}
+
 @test "SC-facade-neg: a missing NON-facade type stays advisory without --strict/--facade (exit 0)" {
   setup_parse_fixtures
   run "$SC" "$FIXDIR/internal/module-include.xml" "$FIXDIR/internal/module.lexicon"
@@ -240,4 +255,45 @@ FX_PS="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot"
   run "$SC" --facade "$FIXDIR/internal/module-include.xml" "$FIXDIR/internal/module.lexicon"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL facade type without lexicon: StagingCore"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# Lexicon key forms (register C10: lux Δ1, lex Δ1). The framework reads a slot's display name from the BARE
+# slot key (NSlot.java:42) and a type's from `<Type>.displayName` (NTypeInfo.java:178); a `Type.slot` key and
+# a bare `<Type>=` key are never read for those. [ev: corpus B1305 §1305.2 C1] [ev: corpus B1236 §1236.3]
+# Named mutations: SC-dotted -- counting the part after the dot as a slot key again hides setpoint;
+# SC-type-bare -- dropping the bare-type WARN; SC-type-dotted -- counting Type.slot as declaring the type.
+# ---------------------------------------------------------------------------
+FX_DOT="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/per-slot-dotted"
+FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
+
+@test "SC-dotted: per-slot does not count Thing.setpoint for setpoint (MISSING + DOTTED row)" {
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_DOT/module.lexicon" "$FX_PS/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISSING setpoint"* ]]
+  [[ "$output" == *"DOTTED Thing.setpoint"* ]]
+}
+
+@test "SC-dotted-other: a dotted key that names no slot (help.guide.base) is neither STALE nor DOTTED" {
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_DOT/module.lexicon" "$FX_PS/src"
+  [ "$status" -eq 1 ]                        # setpoint is MISSING
+  [[ "$output" == *"MISSING setpoint"* ]]   # anchor: per-slot ran
+  [[ "$output" != *"base"* ]]
+  [[ "$output" != *"help.guide"* ]]
+}
+
+@test "SC-type-bare: a bare <Type>= key WARNs ineffective and the type stays missing" {
+  run "$SC" "$FX_TD/module-include.xml" "$FX_TD/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"slot-coverage: WARN ineffective type key: Room="*"Room.displayName"* ]]
+  [[ "$output" == *"missing=Core,Room"* ]]
+  run "$SC" --strict "$FX_TD/module-include.xml" "$FX_TD/module.lexicon"
+  [ "$status" -eq 1 ]
+}
+
+@test "SC-type-dotted: a Type.slot key does not declare the type (only Type.displayName does)" {
+  run "$SC" "$FX_TD/module-include.xml" "$FX_TD/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pct=0.0 (type-set)"* ]]
+  [[ "$output" == *"missing="*"Core"* ]]
 }

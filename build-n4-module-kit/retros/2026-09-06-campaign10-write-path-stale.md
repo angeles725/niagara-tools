@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-06 · kit · campaign10-write-path-stale
 
 **Session**: Campaign 10 PR5 — S25 lint-write-path STALE advisory + --strict flag

@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — dos gotchas PROBADOS de `ng-deploy.sh`: conteo de tipos y cwd de gradle · 2026-09-03
 
 Cuarto retro del día (previos: `2026-09-03-coldroompan-dashboardpan-freeze-stat-leds.md`,

@@ -15,9 +15,10 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **Keep the facade a PURE slot container — never `setOut` a child `ControlPoint` from `changed()`:** feeding points on every change re-triggers `changed()` (a re-entrancy flood) and a `ControlPoint.setOut` always logs "out set explicitly". If the module must own alarm points, guard `changed()` to real source slots + a deadband; the clean design keeps display/config/HOA/label slots only and lets the integrator build alarms in Workbench. [CERT-live 2026-09-01 · bitácora 5cuartos §7]
 - **Adding one operator config field is an end-to-end path, not a UI edit:** facade `@NiagaraProperty(SUMMARY|OPERATOR)` → reader field list (e.g. `BOOL_CONFIG_SLOTS`) → SPA field descriptor (`SP_COMMON`) → a linkmark facade→control. Miss any layer and the field is invisible or unwired. [ev: bitácora 5cuartos §11]
 - **Expose operator-runtime config on the HMI; leave commissioning-time enums in Workbench:** setpoints/limits/modes belong on the dashboard, but one-time commissioning choices (staging mode, defrost trigger mode) stay in Workbench unless the operator asks to surface them. [ev: bitácora 5cuartos §11]
-- **A per-instance rearchitect (N children per entity — N evaporators per room, N zones per floor, etc.) MUST ship a `docs/wiring-map.md` commissioning aid before hand-off.** The wiring map lists every facade slot → rt slot pair for both directions: OPERATOR config slots (facade → control) and SUMMARY display slots (control → facade), plus physical mapping / crossing notes. The operator must not hand-derive the crossing. Run `toolbelt/generate-wiring-map.sh <facade-src-dir>` to scaffold the template; fill in the RT-slot and Notes columns before shipping. `[ev: retro live-commissioning-verification-gaps Δ6]` Every link-table row names the internal slot, its **Workbench display name** (the name the operator actually searches the live tree by) and the full ord: the generator fills the display name from the module lexicon (`--lexicon`, default `module.lexicon` beside the src dir; `Type.slot` key first, then the bare slot key) and marks a missing key `_(no lexicon key)_`. `[ev: retro panccadia-commissioning-lessons Δ9]` The filled source column is then the expected-links manifest: `toolbelt/obix-link-audit.sh` diffs it against the live links of the facade (read-only oBIX) during commissioning — `BUILD-LOOP.md` §6.b item 1. `[ev: retro panccadia-commissioning-lessons Δ4]`
+- **A per-instance rearchitect (N children per entity — N evaporators per room, N zones per floor, etc.) MUST ship a `docs/wiring-map.md` commissioning aid before hand-off.** The wiring map lists every facade slot → rt slot pair for both directions: OPERATOR config slots (facade → control) and SUMMARY display slots (control → facade), plus physical mapping / crossing notes. The operator must not hand-derive the crossing. Run `toolbelt/generate-wiring-map.sh <facade-src-dir>` to scaffold the template; fill in the RT-slot and Notes columns before shipping. `[ev: retro live-commissioning-verification-gaps Δ6]` Every link-table row names the internal slot, its **Workbench display name** (the name the operator actually searches the live tree by) and the full ord: the generator fills the display name from the module lexicon (`--lexicon`, default `module.lexicon` beside the src dir; the bare slot key, the only key Workbench reads — see `types/structure.md` § Lexicon key catalogue) and marks a missing key `_(no lexicon key)_`. `[ev: retro panccadia-commissioning-lessons Δ9]` The filled source column is then the expected-links manifest: `toolbelt/obix-link-audit.sh` diffs it against the live links of the facade (read-only oBIX) during commissioning — `BUILD-LOOP.md` §6.b item 1. `[ev: retro panccadia-commissioning-lessons Δ4]`
 - **Before creating any facade→control link, set the facade value to the LIVE control value:** the link pushes the facade's current (default) value into the control slot immediately, so linking a fresh facade overwrites the running setpoint/mode with a type default. Ship a live-values sheet (control slot → current live value → facade slot) with every new facade mirror, and fill each facade slot from it before its link is created. `[ev: retro panccadia-persistent-config-hoa Δ5]`
 
+- **A facade that builds its own tree from code (an inventory sync, seeded entity children) places every node on the wire sheet:** each created child gets a grid `wsAnnotation` added only when absent with `Flags.READONLY`, never re-placed once present, inside the 600×600 sheet — otherwise the integrator opens the facade to a diagonal pile of overlapping glyphs and has to drag every node before linking. Index the grid by the inventory row, so a re-sync that recreates one node puts it back in its own cell. Derive the row spacing from the tallest node's SUMMARY slot count (`WsGrid.forSummaryCount(n)`; glyph = 2 + n + 1 wixels), never the fixed 10 of `standard()`, which overlaps any facade with more than 4 SUMMARY slots `[ev: retro ws-row-spacing Δ2]`. Recipe and helper: `types/logic-authoring.md` §Wire-sheet placement, `templates/ws-placement/src/com/angeles/wsplacement/WsGrid.java`; advisory check `toolbelt/lint-ws-placement.sh`. `[ev: corpus B1172]` `[ev: retro ws-placement]`
 - **A per-room link-in boolean alarm (e.g. door-open) is a `SUMMARY` slot — an INPUT, not OPERATOR config:** one `boolean` on the facade (SUMMARY link-in), one entry in the reader's boolean loop, one generic frontend read; the zone polygon force-reds via a CSS class. Keep it on every room so the frontend stays generic. [ev: retro dashboardpan-detail-render-doors · U4]
 - **A process/defrost timer shown on the dashboard is a facade+reader path — the facade gains the anchor as a READONLY link-in slot AND the reader gains a `BAbsTime` type-reader (without the reader entry the slot is invisible):** store the event instant as `TRANSIENT|SUMMARY|READONLY` `BAbsTime`; the reader emits DERIVED keys (elapsed/remaining ms from a single `Clock.millis()`) so the SPA ticks between polls. [ev: retro process-timers-and-defrost-audit + L16]
 - **Off-station consumers (oBIX batch, 3D viewer) must recompute servlet-derived keys from the anchor slots:** `*ElapsedMs`/`*RemainingMs` are computed by `DashboardReader` at read-time and do NOT exist in the oBIX facade — a facade poller will never find them. Read the ANCHOR slots (`coolingSince`, `defrostStart`, `defrostDuration`, `nextDefrostTime`) and recompute `now − anchor`. Read the reader source to tell a real oBIX slot from a derived value. [ev: retro dashboardpan-2d-to-3d-port Δ2]
@@ -124,6 +125,41 @@ Whether a NEW SPA should use a framework build at all (plain classic scripts vs.
 - The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, `dashboard.md:48`). `[ev: corpus B763]`
 - OPEN (requires-execution): **B803-G1** (confirm the live SAML mid-session re-auth block on a station) and **B803-G2** (whether gauth's `BPasswordCache.validate` accepts a TOTP token mid-session). `[ev: corpus B803]`
 
+## Session lifetime — the auto-logoff activity monitor `[ev: retro t9c-reference-gaps Δ1]`
+Full derivation: corpus B1344 (idle timer from source), B1334 (panel-user recipe), B1315 (the gap). Official
+pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
+- **The server decides, not the page.** The idle timer is `NiagaraSuperSession.lastActivity`: remaining =
+  period − (now − lastActivity); period −1 never expires; while any keep-alive token is held the full period
+  is returned. [CERT] `organized/baja/baja/vineflower/com/tridium/session/NiagaraSuperSession.java:184-198`
+- **The period is per user:** −1 when any session of the group has auto logoff disabled, there is no user,
+  or `BUser.autoLogoffSettings.autoLogoffEnabled` is false; else `BUserService.defaultAutoLogoffPeriod` when
+  `useDefaultAutoLogoffPeriod` is set, else the user's own `autoLogoffPeriod`. [CERT] same file `:217-244`.
+  Defaults (enabled, use-default, 15 min): `[ev: corpus B1344 §1344.1]`.
+- **Only user input counts as activity.** `activityMonitor.js` listens to `keypress`, `mousedown`,
+  `touchstart`, `DOMMouseScroll`, `mousewheel` and POSTs `/timeout` (CSRF token required), which calls
+  `resetSessionTimeout(offset)`. [CERT] `organized/web/web-rt/vineflower/rc/util/activityMonitor.js:125,128`;
+  `organized/web/web-rt/vineflower/com/tridium/web/servlets/SessionTimeoutServlet.java:25-38`
+- **A REST poll from a servlet-SPA does NOT keep the session alive** [INFER from CERT, B1315-G1 runtime half
+  open]: no `BWebServlet`/box/oBIX path calls `resetSessionTimeout`; `UserActivityFilter` (which does) is mapped
+  only on web-rt's `file` servlet. [CERT] `organized/web/web-rt/vineflower/javax/baja/web/filters/UserActivityFilter.java:20-22`
+- **Recipe for an always-on dashboard** — pick one, in this order:
+  1. Kiosk/HMI panel: a dedicated panel user with Auto Logoff Enabled = false and Allow Concurrent Sessions =
+     false. `BUser.allowConcurrentSessions` defaults true, so a second login by the same user can evict the
+     kiosk when it is false — use a separate user for the second-login (write) session. `[ev: corpus B1334]`
+  2. A view that must stay live while open: load `/module/web/rc/util/activityMonitor.js` and pause it with
+     `keepAlive()` → token → `release(token)` (bajaux: `activityMonitor.mixinKeepAlive(this)`). [CERT-doc]
+     `niagara-help/devguide-clean/autoLogoffWeb.txt:14-46,52-98`
+  3. Every request to a module web app is activity: map `javax.baja.web.filters.UserActivityFilter` on the
+     servlet in `WEB-INF/web.xml` — the doc calls this a fallback. [CERT-doc] `autoLogoffWeb.txt:138-152`
+  Never fake activity by POSTing `/timeout` from the poll loop: it defeats the site's logoff policy.
+- **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
+  default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
+  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:30-41`
+- **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
+  `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
+- Release note 7154 ("After AutoLogoff, refresh logs user back in") is an AX 3.0.91 fix, not an N4 fact.
+  [CERT-doc] `niagara-help/devguide-clean/releaseNotes.txt:6365`
+
 ## Extending an existing dashboard
 - **Before hand-editing a dashboard SPA, decide DATA vs CODE:** a data-driven render (`CUARTOS.forEach`, `SENSORS.map`) is entity-count-agnostic, so scaling 3→5 rooms is swapping the DATA arrays (`CUARTOS`/`SENSORS`/`FANS`, the plano src, `viewBox`/`IMG_W`/`IMG_H`) with zero change to the render functions. Verify with `node --check` on the extracted `<script>` blocks after. [ev: retro 5rooms #1]
 - **The module is the SKELETON; the operator's standalone HTML is only the DATA:** splice the operator's calibrated data blocks into the module's `index.html` (which already carries kiosk CSS, `/api/*` wiring, status classes, alarms, setpoint save) and remap sim ords to the module's Niagara ords — never rebuild the module from the standalone, which loses the integration layer. See `METHODOLOGY.md` §editing technique for navigating the giant single-file source. [ev: retro 5rooms #2]
@@ -200,9 +236,57 @@ Whether a NEW SPA should use a framework build at all (plain classic scripts vs.
 
 - **`module.palette` convention:** bare-Type-minus-`B` instance names, plural category folders, `m="alias=module"` declared once, nested `<p>` to pre-seed ext/config child slots. `[ev: corpus B780]`
 - **Dashboard modules MUST include at least the primary rt service type and the facade slot container as draggable palette entries — an empty palette is an MBP3 violation:** for a `BWebServlet`-style dashboard, the minimum is `BDashboardService` (or the module's root service type) and `BRoomPanel` (or its entity container equivalent). An empty `module.palette` forces the integrator to use Config > New Component on every new deployment, compounding with every new site. `DashboardPan`'s palette is an empty scaffold (`<p t="b:Folder">` only, no draggable entries) — ODA4-G1 palette gap; cross-reference [corpus B788]. `[ev: retro our-dashboard-audit-deltas Δ3]`
-- **`module.lexicon` prefixing:** the lexicon is flat + MODULE-GLOBAL — PREFIX keys (`parent.child`, `Type.slot`) to dodge the B759 collision; a missing key renders raw camelCase via `toFriendly`. `[ev: corpus B780]`
+- **`module.lexicon` keys are bare, never prefixed:** the lexicon is flat + MODULE-GLOBAL and Workbench reads a slot's display name from the BARE slot key in the declaring type's module, so a `Type.slot` key is never read and a missing key renders raw camelCase via `toFriendly`. Two types with a same-named slot that needs different labels use a `displayNames` `BNameMap` or override `getDisplayName(Slot, Context)`, not a prefix. Key forms: `types/structure.md` § Lexicon key catalogue. `[ev: retro devguide415-lexicons-ux-i18n Δ1]` `[ev: corpus B1305 §1305.2 C1]`
 - **A facade/panel type with no lexicon entry is a ship-blocker, not a coverage warning:** its slots render raw camelCase in Workbench next to the translated control-side names and the operator cannot find them during commissioning. `toolbelt/slot-coverage.sh` FAILs (exit 1, no `--strict` needed) for every missing type named `*Panel`/`*Facade`; pass `--facade` to treat every declared type of an operator-facing module that way. `[ev: retro panccadia-commissioning-lessons Δ9]`
 - **`module.lexicon` must be ASCII-only — Niagara reads it as Latin-1 on-station:** UTF-8 multibyte accented characters render as mojibake in the Workbench property sheet (`Presión` → `PresiÃ³n`). Use plain ASCII spellings (`Presion`, `Seccion`) or `\uXXXX` unicode escapes for any non-ASCII glyph. `toolbelt/lint-lexicon-ascii.sh` implements this check (FAILs on any non-ASCII byte in a `.lexicon` file). `[ev: corpus B1015 §1015.5]`
+- **A translation is per whole key:** one key has one value in every place it shows, so a word that needs two
+  translations needs two keys. `[ev: corpus B1418 §1418.1]` `[ev: retro course-recordings Δ6]`
+- **A translated lexicon ships as its own jar:** the Lexicon Module Builder makes an extra module installed beside
+  the base module (the base jar is unchanged). `[ev: corpus B1418 §1418.1]`
+- **Verify a translation in both clients:** Workbench uses one global locale (Tools › Options, then restart); a
+  browser follows the user's `language` property, which must equal the lexicon folder name (`<lang>`).
+  `[ev: corpus B1418 §1418.1]`
+- **Lexicon text written into HTML goes through `getHtmlSafeText`**, never raw `getText` (`types/security.md` §4.3).
+
+## Reading the station directly with BajaScript `[ev: retro t9c-reference-gaps Δ5]`
+A page the station serves to a logged-in user can read the station with BajaScript instead of a custom JSON
+servlet. Derivations: corpus B1306 (Subscriber, leases), B1307 (nav), B1308 (BQL/ORD from code), B1311 (tags,
+relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC). Paths below:
+`BS=organized/bajaScript/bajaScript-ux/extracted/rc` and `EX=niagara-help/devguide-examples/examples/bajaScript`, under niagara-research.
+- **Resolve + subscribe:** `const sub = new baja.Subscriber(); sub.attach('changed', fn);
+  baja.Ord.make('station:|slot:/...').get({subscriber: sub})`; clean up with `sub.unsubscribeAll(); sub.detach()`.
+  `get()` takes `lease`, `subscriber`, `cursor` and returns a Promise. [CERT-doc] `EX/subscription.js:18-59`;
+  [CERT] `BS/baja/ord/Ord.js:286-296`
+- **BQL with a cursor:** `baja.Ord.make("station:|slot:/|bql:select ... from ...").get({cursor: {each, limit, offset}})`.
+  [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
+  shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`
+- **BQL case rules:** `LIKE` is case-sensitive and so are slot/property names in the projection; only keywords are
+  not [CERT] (B1418 §1418.3: `Pattern.java:122`, `BqlTokenizer.java:188-192`). For a case-insensitive match chain
+  NEQL first: its `like` is `java.util.regex.Pattern.matches`, a whole-string regex, so a leading `(?i)` works and the
+  pattern must match the full value [CERT] (`NeqlEntityEvaluator.java:276-277`); the chained
+  `station:|neql:…|bql:select …` form worked live in the course [CERT-a], but its exact literal is [INFER] until
+  run (open gap B1418-G1).
+  A query run from the browser moves every row over the network: filter and `limit` in the query, not in the page.
+  `[ev: corpus B1418 §1418.3]` `[ev: corpus B1419 §1419.2 b]` `[ev: retro course-recordings Δ6]`
+- **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.
+  [CERT] `BS/nav.js:28-55`; `BS/baja/nav/NavContainer.js:153`
+- **Tags and relations:** there is no `baja.tag` call namespace; use the Promise methods
+  `component.tags()` and `component.relations()` (read-only `get(id)` / `getAll()`; a network call on a proxy
+  space). [CERT] `BS/baja/comp/Component.js:2923,2972`
+- **Session:** it rides the user's web login; opening a component space needs `operatorRead` on it
+  `[ev: corpus B1177]`, and the station enforces the user's permissions on every call `[ev: corpus B46]`.
+  BajaScript sends the CSRF token itself; your own `fetch` calls must send it (§ Critical-write step-up auth) `[ev: corpus B36]`.
+- **Loading:** AMD/RequireJS only (`baja!`, `nmodule/<mod>/rc/...`, `lex!`, `css!`); the AX `<script src=bs.min.js>`
+  style is gone. [CERT-doc] `niagara-help/devguide-clean/requirejs.txt:6-57`. A classic-script SPA (the
+  `frontend-standard.md` format) must boot RequireJS first — the exact bootstrap from a servlet page is not
+  verified [INFER].
+
+**Decision** [INFER, from B46 and B752]:
+| Need | Choose |
+|---|---|
+| Read/subscribe a few slots from a page or bajaux view the station serves; live push; the user's own permissions | BajaScript direct |
+| Cross-origin or off-station client, server-side aggregation, validated writes with audit, a classic-script SPA | servlet JSON (this guide's servlet-SPA) |
+| Off-station read-only consumer | oBIX or OPC UA — `driver-authoring.md` § 10 |
 
 ## Web-tier exemplars — where the Tridium pattern lives (DUX-WEB1)
 

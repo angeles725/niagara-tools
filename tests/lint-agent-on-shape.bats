@@ -40,3 +40,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+@test "AOS-unreadable: an unreadable source file is 'cannot scan' (exit 3), never a clean pass" {
+  # Mutation: AOS-unreadable -- ignoring the per-file scan failure reports the unreadable file clean (exit 0).
+  local d
+  d="$(mktemp -d "$TMPDIR_T/u.XXXX")"
+  printf 'x\n' > "$d/module-include.xml"
+  chmod 000 "$d/module-include.xml"
+  if [ -r "$d/module-include.xml" ]; then chmod 644 "$d/module-include.xml"; skip "running as root: chmod 000 does not block reads"; fi
+  run "$KIT/toolbelt/lint-agent-on-shape.sh" "$d"
+  chmod 644 "$d/module-include.xml"
+  [ "$status" -eq 3 ]
+  [ "$output" = "lint-agent-on-shape: cannot scan $d/module-include.xml: Permission denied" ]
+}

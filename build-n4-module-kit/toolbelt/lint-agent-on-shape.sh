@@ -13,47 +13,32 @@
 # VCS-free by design.
 # Mutation: AOS2 -- relax the module:Type regex and AOS2 stops failing on a missing module prefix
 # Mutation: AOS-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: AOS-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
-LC_ALL=C
-export LC_ALL
-
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-agent-on-shape.sh <src-root>\n' >&2
-    exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-    printf 'lint-agent-on-shape: not a directory: %s\n' "$ROOT" >&2
-    exit 3
-fi
-
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-had_err=0
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name 'module-include.xml'; then
-    printf 'lint-agent-on-shape: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-    had_err=1
-fi
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-agent-on-shape raw 'usage: lint-agent-on-shape.sh <src-root>' "$@"
+awk_lint_list -name 'module-include.xml'
 
-fail=0
-while IFS= read -r f; do
-    ln=0
-    while IFS= read -r line || [ -n "$line" ]; do
-        ln=$((ln + 1))
-        # only lines that declare an <on ... type="...">
-        printf '%s' "$line" | grep -Eq '<on[[:space:]][^>]*type=' || continue
-        val=$(printf '%s' "$line" | sed -nE 's/.*<on[[:space:]][^>]*type="([^"]*)".*/\1/p')
-        [ -n "$val" ] || continue
+# One awk per file (was three printf|grep/sed pipelines per line). The value is the one GNU sed's
+# `s/.*<on[[:space:]][^>]*type="([^"]*)".*/\1/` captured: the LAST `<on<space>` that holds a
+# quoted type= (greedy .*), and inside it the LAST `type="` with no `>` before it (greedy [^>]*).
+# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
+awk_lint_each '
+    {
+        val = ""; found = 0
+        for (p = length($0) - 3; p >= 1 && !found; p--) {
+            if (substr($0, p, 3) != "<on" || substr($0, p + 3, 1) !~ /[[:space:]]/) continue
+            tag = substr($0, p + 4); gt = index(tag, ">"); if (!gt) gt = length(tag) + 1
+            for (q = gt - 1; q >= 1; q--) {
+                if (substr(tag, q, 6) != "type=\"") continue
+                v = substr(tag, q + 6); e = index(v, "\"")
+                if (e) { val = substr(v, 1, e - 1); found = 1; break }
+            }
+        }
         # well-formed = exactly one colon, non-empty module and type parts
-        if ! printf '%s' "$val" | grep -Eq '^[A-Za-z0-9_.-]+:[A-Za-z0-9_$]+$'; then
-            printf 'FAIL  lint-agent-on-shape  %s:%s  malformed agent-on target (need module:Type): %s\n' "$f" "$ln" "$val"
-            fail=1
-        fi
-    done < "$f"
-done < "$_TMP/files"
+        if (val != "" && val !~ /^[A-Za-z0-9_.-]+:[A-Za-z0-9_$]+$/)
+            printf "FAIL  lint-agent-on-shape  %s:%d  malformed agent-on target (need module:Type): %s\n", ENVIRON["AL_FILE"], FNR, val
+    }'
 
-[ "$had_err" -eq 0 ] || exit 3
-exit "$fail"
+awk_lint_exit "$AL_ROWS"

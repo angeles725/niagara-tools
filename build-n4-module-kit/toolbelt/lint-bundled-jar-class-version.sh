@@ -19,30 +19,10 @@
 # Mutation: BJCV2 -- drop the major > 52 check and BJCV2 stops flagging Java 9+ bytecode
 # Mutation: BJCV-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-LC_ALL=C
-export LC_ALL
-
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-bundled-jar-class-version.sh <module-root>\n' >&2
-    exit 3
-fi
-
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-    printf 'lint-bundled-jar-class-version: not a directory: %s\n' "$ROOT" >&2
-    exit 3
-fi
-
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-had_err=0
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" --prune build -name '*.jar'; then
-    printf 'lint-bundled-jar-class-version: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-    had_err=1
-fi
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-bundled-jar-class-version raw 'usage: lint-bundled-jar-class-version.sh <module-root>' "$@"
+awk_lint_list --prune build -name '*.jar'
 
 if ! command -v unzip >/dev/null 2>&1; then
     printf 'lint-bundled-jar-class-version: unzip not found\n' >&2
@@ -74,7 +54,6 @@ while IFS= read -r jar; do
             break
         fi
     done < <(unzip -Z1 "$jar" 2>/dev/null | grep '\.class$' | grep -v '^META-INF/versions/' | head -n "$SAMPLE_LIMIT")
-done < "$_TMP/files"
+done < "$AL_TMP/files"
 
-[ "$had_err" -eq 0 ] || exit 3
-exit "$fail"
+awk_lint_exit "$fail"

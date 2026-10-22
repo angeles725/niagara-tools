@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 <!-- kit-retro -->
 # run-pure-test.sh: `set -e` + a pipe aborts the empty-cache error path before it can report
 

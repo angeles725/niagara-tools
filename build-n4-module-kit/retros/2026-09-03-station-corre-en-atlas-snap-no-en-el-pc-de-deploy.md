@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — la station de producción corre en el ATLAS (snap), NO en el PC donde compilas/deployas · 2026-09-03
 
 Del episodio del deshielo Cuarto 3: verificar el jar en `modules/` del PC de Workbench NO prueba qué corre en la station real. PROPOSED kit delta (propose-never-apply). Sólo lo NUEVO.

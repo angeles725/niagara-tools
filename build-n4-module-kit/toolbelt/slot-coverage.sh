@@ -20,13 +20,19 @@
 #   slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>
 #   required   <- OPERATOR-flagged @NiagaraProperty slots from *.java under <src-dir>
 #                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key)
-#   declared   <- lexicon slot names: bare key "fan" -> "fan"; "FanMode.fan" -> "fan" (after dot)
-#   MISSING    <- OPERATOR slot with no lexicon key (renders raw camelCase in operator views)
-#   STALE      <- lexicon key matching no "known key" — a truly dead translation.
-#                 known keys = @NiagaraProperty slots (any flags) ∪ type display-name keys
-#                 (from module-include.xml <type name="X">) ∪ @Range enum-tag values.
-#                 A key for a READONLY slot, a type name, or a frozen-enum tag is live, NOT stale.
-#   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot> and STALE <key> lines
+#   declared   <- BARE lexicon keys only: the framework reads a slot's display name from the bare slot key in the
+#                 declaring type's module (NSlot.java:42); "FanMode.fan" is never read for slot fan.
+#   MISSING    <- OPERATOR slot with no bare lexicon key (renders raw camelCase in operator views)
+#   DOTTED     <- a dotted key "X.<slot>" naming an annotated slot that has no bare key: dead for that slot.
+#                 Other dotted keys (help.guide.base, Type.displayName, error keys) are not judged.
+#                 [ev: retro devguide415-lexicons-ux-i18n Δ1] [ev: corpus B1305 §1305.2 C1]
+#   STALE      <- bare lexicon key matching no "known key" — a truly dead translation.
+#                 known keys = @NiagaraProperty slots (any flags) ∪ declared type names
+#                 (module-include.xml <type name="X">) ∪ @Range enum-tag values.
+#                 A key for a READONLY slot or a frozen-enum tag is live, NOT stale. A bare type-name key is
+#                 not reported here although it is ineffective (the type reads <Type>.displayName,
+#                 NTypeInfo.java:178): the parse mode WARNs it, so it is not reported twice.
+#   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot>, STALE <key> and DOTTED <key> lines
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
 #   exit 2   bad arity + "usage: slot-coverage.sh per-slot ..." on stderr
@@ -35,10 +41,11 @@
 # Usage (parse subcommand — reads module files, calls the same pure function):
 #   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
 #   required   <- <type name="X"> entries in module-include.xml
-#   declared   <- key=value lines in module.lexicon (comments and blank lines ignored):
-#                   bare key  (e.g. "fan")          -> declared name = fan
-#                   Type.slot (e.g. "FanMode.fan")  -> declared name = FanMode (before the dot)
-#                 Both forms name the same type; the part before the first dot is the type name.
+#   declared   <- "<Type>.displayName" keys in module.lexicon (comments and blank lines ignored): the
+#                 framework reads a type's display name from that key only (NTypeInfo.java:178). A bare
+#                 "<Type>=" key is ineffective -> "slot-coverage: WARN ineffective type key: <Type>=" and the
+#                 type stays missing; a "Type.slot" key does not declare the type.
+#                 [ev: retro n4-course-lexicon-logging-testing Δ1] [ev: corpus B1236 §1236.3]
 #   |required|==0   -> N/A
 #   empty lexicon + |required|>=1 -> pct=0.0 + "slot-coverage: FAIL empty lexicon ..." on stdout + exit 1
 #   duplicate keys in lexicon -> "slot-coverage: FAIL dup-keys: <key>" on stdout + exit 1 (A1/B792)
@@ -46,7 +53,9 @@
 #              operator-facing — with no lexicon key its slots render raw camelCase in Workbench and the
 #              operator cannot find them — so "slot-coverage: FAIL facade type without lexicon: <T>" is
 #              printed per such type and the exit is 1. --facade declares the whole module operator-facing
-#              (every missing type FAILs). Internal control types stay advisory (missing=, exit 0).
+#              (every missing type FAILs). Internal control types stay advisory (missing=, exit 0). A facade
+#              type whose only key is a bare "<Type>=" gets "WARN facade type with only a bare key" instead:
+#              Workbench shows the raw type name, nothing breaks (NTypeInfo.java:178); --strict promotes it.
 #              [ev: retro panccadia-commissioning-lessons Δ9]
 #   --strict   -> exit 1 when missing is non-empty or WARN was emitted
 #   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL, empty-lexicon FAIL, facade FAIL or strict WARN
@@ -220,12 +229,14 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
     }
     ' 2>/dev/null)
 
-  # Lexicon slot keys: bare "fan" -> "fan"; "FanMode.fan" -> "fan" (part after last dot)
-  lex_slots_raw=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" \
-    | grep '=' | cut -d'=' -f1 | sed 's/.*\.//' | sort -u)
+  # Lexicon slot keys = BARE keys only (NSlot.java:42 reads the bare slot name); dotted keys kept apart.
+  _lex_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" | grep '=' | cut -d'=' -f1 | sed 's/[[:space:]]*$//' | sort -u)
+  lex_slots_raw=$(printf '%s\n' "$_lex_keys" | grep -v '\.' || true)
+  lex_dotted=$(printf '%s\n' "$_lex_keys" | grep '\.' || true)
 
-  # Type names from module-include.xml: <type name="X" ...> -> "X"
-  # These appear as top-level lexicon keys by Niagara convention (TypeName=Display Name).
+  # Type names from module-include.xml: <type name="X" ...> -> "X". A bare "X=" key is ineffective (the
+  # type's display name is "X.displayName", NTypeInfo.java:178); it is kept out of STALE only because the
+  # parse mode already WARNs it.
   type_names_raw=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$PS_XML" \
     | grep -oE '\bname="[^"]*"' | sed 's/^name="//;s/"$//')
 
@@ -309,6 +320,16 @@ $range_tags_raw"
     done <<< "$stale_slots"
   fi
 
+  # Emit DOTTED rows: "X.<slot>" for an annotated slot with no bare key is never read for that slot
+  if [ -n "$lex_dotted" ]; then
+    while IFS= read -r dk; do
+      ds="${dk##*.}"
+      grep -qxF -- "$ds" <<< "$all_slots_raw" || continue
+      grep -qxF -- "$ds" <<< "$lex_slots_raw" && continue
+      printf 'DOTTED %s (never read: the framework reads the bare key %s)\n' "$dk" "$ds"
+    done <<< "$lex_dotted"
+  fi
+
   # Exit 1 if any MISSING (a missing operator slot renders raw camelCase — ship-blocker)
   [ -z "$missing_slots" ] && exit 0 || exit 1
 fi
@@ -376,11 +397,10 @@ required_csv=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$XML" \
   | sed 's/^name="//;s/"$//' \
   | sort -u | paste -sd ',' -)
 
-# Extract declared type names from lexicon key=value lines
-# (skip comment lines starting with # and blank lines)
-# bare key "fan" -> "fan"; "FanMode.fan" -> "FanMode" (before the dot)
-declared_csv=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
-  | grep '=' | cut -d'=' -f1 | sed 's/\..*//' | sort -u | paste -sd ',' -)
+# Declared types = "<Type>.displayName" keys (NTypeInfo.java:178); comment and blank lines skipped.
+# A bare "<Type>=" or a "Type.slot" key does not give the type a display name.
+lex_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" | grep '=' | cut -d'=' -f1 | sed 's/[[:space:]]*$//' || true)
+declared_csv=$(printf '%s\n' "$lex_keys" | sed -n 's/\.displayName$//p' | sort -u | paste -sd ',' -)
 
 # Dup-key detection: duplicate raw keys before dot-stripping (operationalizes B759/B780)
 # A1 (B792): upgraded from WARN/exit-0 to FAIL/exit-1 — a duplicate key silently overrides a
@@ -389,6 +409,16 @@ dup_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
   | grep '=' | cut -d'=' -f1 | sort | uniq -d)
 HAS_WARN=0
 HAS_FAIL=0
+# A bare "<Type>=" key for a declared type is ineffective for the type's display name (lex Δ1). A facade type
+# (*Panel/*Facade, or any type under --facade) with no "<Type>.displayName" gets the facade WARN below instead.
+while IFS= read -r bt; do
+  [ -n "$bt" ] || continue
+  grep -qxF -- "$bt" <<< "$lex_keys" || continue
+  case "$bt" in *Panel|*Facade) facade_t=1 ;; *) facade_t=$FACADE ;; esac
+  [ "$facade_t" -eq 1 ] && ! grep -qxF -- "$bt.displayName" <<< "$lex_keys" && continue
+  printf 'slot-coverage: WARN ineffective type key: %s= (Workbench reads %s.displayName)\n' "$bt" "$bt"
+  HAS_WARN=1
+done <<< "$(printf '%s\n' "$required_csv" | tr ',' '\n')"
 if [ -n "$dup_keys" ]; then
   while IFS= read -r dk; do
     printf 'slot-coverage: FAIL dup-keys: %s\n' "$dk"
@@ -420,7 +450,8 @@ sc_out=$(run_set_coverage "$declared_csv" "$required_csv")
 printf '%s\n' "$sc_out" | sed 's/^pct=\(.*\)$/pct=\1 (type-set)/'
 
 # Facade FAIL (default, not gated on --strict): an operator-facing *Panel/*Facade type (or every type
-# under --facade) with no lexicon key is a ship-blocker. [ev: retro panccadia-commissioning-lessons Δ9]
+# under --facade) with no lexicon key is a ship-blocker; one with only a bare "<Type>=" key is a WARN (--strict
+# promotes it). [ev: retro panccadia-commissioning-lessons Δ9]
 FACADE_FAIL=0
 missing_types=$(printf '%s\n' "$sc_out" | sed -n 's/^missing=//p' | tr ',' '\n' | grep -v '^$' || true)
 if [ -n "$missing_types" ]; then
@@ -429,6 +460,12 @@ if [ -n "$missing_types" ]; then
       *Panel|*Facade) : ;;
       *) [ "$FACADE" -eq 1 ] || continue ;;
     esac
+    # Only a bare "<Type>=" key: Workbench shows the raw type name (NTypeInfo.java:178), nothing breaks -> WARN.
+    if grep -qxF -- "$mt" <<< "$lex_keys"; then
+      printf 'slot-coverage: WARN facade type with only a bare key: %s (add %s.displayName)\n' "$mt" "$mt"
+      HAS_WARN=1
+      continue
+    fi
     printf 'slot-coverage: FAIL facade type without lexicon: %s\n' "$mt"
     FACADE_FAIL=1
   done <<< "$missing_types"

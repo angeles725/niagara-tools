@@ -123,7 +123,8 @@ JAVA
 # NEW CHECK LABELS (contract the GREEN impl must emit in the row's <check> column):
 #   companion-flag   TC-A   a boolean flag set true beside a Clock.schedule*
 #                           assignment, not set false in stopped()
-#   jdk-thread       TC-B   a JDK concurrency primitive inside a B* component/service
+#   jdk-thread       TC-B   a JDK concurrency primitive inside a B* component/service (re-scoped
+#                           2026-10-22: FAIL only a thread-modifying call without MANAGE_EXECUTION)
 #   changed-sched    TC-C   a Clock.schedule* reachable from changed()/started()
 #                           (≤1 level deep) with no isRunning()/atSteadyState() guard
 #
@@ -131,7 +132,7 @@ JAVA
 # own bite, not an unrelated grep):
 #   TC-A  accept ANY stopped() that cancels the ticket → companion-flag stops
 #         firing → TC-A FAIL pin flips green.
-#   TC-B  whitelist ScheduledExecutorService → jdk-thread stops firing → TC-B flips.
+#   TC-B  ignore the shutdownNow() call → the modifying-call FAIL stops firing → TC-B flips.
 #   TC-C  drop the one-level-deep call following (only scan changed()/started()
 #         bodies directly) → the indirect applyRunCmd() schedule is no longer
 #         reachable → changed-sched stops firing → TC-C flips.
@@ -232,34 +233,130 @@ JAVA
   [[ "$output" != *"FAIL"* ]]
 }
 
-# ---- TC-B: jdk-thread -----------------------------------------------------
-# Real shape: chihuahua BChiDashboardService.java — :89 `extends BAbstractService`,
-# :229 `ScheduledExecutorService _tickScheduler`, :305 Executors.new*, :309 new Thread.
-# A B* component/service must schedule via Clock, not a raw JDK thread pool (the pool
-# is not tied to station lifecycle and survives stop). Isolated to ScheduledExecutorService
-# as the sole trigger so the whitelist mutation flips this cleanly.
-@test "TC-B: a ScheduledExecutorService inside a B* service FAILs (jdk-thread)" {
-  D="$BATS_TEST_TMPDIR/tcb"; mkdir -p "$D"
-  cat > "$D/BThreadSvc.java" <<'JAVA'
-package demo;
-import javax.baja.sys.*;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Executors;
-public class BThreadSvc extends BAbstractService {
-  private ScheduledExecutorService _tickScheduler = null;
-  public void serviceStarted() throws Exception {
-    _tickScheduler = Executors.newSingleThreadScheduledExecutor();
-  }
+# ---- TC-B / JT: jdk-thread (re-scoped, quality round 8 T9b) -----------------
+# Creating and starting a JDK thread in a B* class is allowed (Tridium Lab 9 runs a dedicated
+# Thread and an ExecutorService in production shape). The real defect is MODIFYING a thread
+# (shutdown/shutdownNow/interrupt/setPriority/setDaemon, ExecutorUtil.shutdown) without the
+# MANAGE_EXECUTION permission group: chihuahua BChiDashboardService logged "failed to unschedule
+# controlTick: access denied (modifyThread)" at every stop (corpus B800 §800.3). FAIL = that call
+# with no station/all MANAGE_EXECUTION in the nearest module-permissions.xml; WARN otherwise.
+# Layout: $D/m-rt/module-permissions.xml + $D/m-rt/src/demo/<File>.java, lint run on $D/m-rt/src.
+_jt_src() {  # _jt_src <dir> <class-file-basename> <java body...>: writes one Java file under <dir>/m-rt/src/demo
+  local d="$1" c="$2"; shift 2
+  mkdir -p "$d/m-rt/src/demo"
+  printf '%s\n' "$@" > "$d/m-rt/src/demo/$c.java"
 }
-JAVA
-  run "$LINT" "$D"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]]
-  [[ "$output" == *"jdk-thread"* ]]
-  [[ "$output" == *"BThreadSvc"* ]]
+_jt_perms() {  # _jt_perms <dir> <type-attr-of-the-group-holding-MANAGE_EXECUTION | none>
+  local d="$1" t="$2"
+  mkdir -p "$d/m-rt"
+  {
+    printf '<permissions>\n'
+    printf '  <niagara-permission-groups type="station">\n'
+    printf '    <req-permission><name>NETWORK_COMMUNICATION</name></req-permission>\n'
+    printf '  </niagara-permission-groups>\n'
+    if [ "$t" != none ]; then
+      printf '  <niagara-permission-groups type="%s">\n' "$t"
+      printf '    <req-permission>\n      <name>MANAGE_EXECUTION</name>\n'
+      printf '      <purposeKey>Stop running station threads during station shutdown</purposeKey>\n    </req-permission>\n'
+      printf '  </niagara-permission-groups>\n'
+    fi
+    printf '</permissions>\n'
+  } > "$d/m-rt/module-permissions.xml"
+}
+_jt_exec() {  # a Lab-9-shaped executor component: two-line class header, shutdownNow() in stopped()
+  _jt_src "$1" BExec 'package demo;' 'import javax.baja.sys.*;' 'import java.util.concurrent.*;' \
+    'public class BExec' '  extends BComponent' '{' \
+    '  public void started() { executorService = Executors.newSingleThreadExecutor(); }' \
+    '  public void stopped() { if (executorService != null) executorService.shutdownNow(); }' \
+    '  private ExecutorService executorService;' '}'
 }
 
-@test "TC-B companion: a plain (non-B*) helper using ScheduledExecutorService does NOT FAIL (the B* gate)" {
+@test "TC-B: a thread-modifying call in a B* class with no MANAGE_EXECUTION FAILs (jdk-thread)" {
+  D="$BATS_TEST_TMPDIR/tcb"; _jt_exec "$D"; _jt_perms "$D" none
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  jdk-thread"*"BExec"*"MANAGE_EXECUTION"* ]]
+}
+
+@test "JT-perm: the same executor with MANAGE_EXECUTION under type=station only WARNs (exit 0)" {
+  D="$BATS_TEST_TMPDIR/jtperm"; _jt_exec "$D"; _jt_perms "$D" station
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"*"BExec"* ]]
+  [[ "$output" != *"FAIL"* ]]
+}
+
+@test "JT-all: MANAGE_EXECUTION under type=all also counts as granted" {
+  D="$BATS_TEST_TMPDIR/jtall"; _jt_exec "$D"; _jt_perms "$D" all
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"* ]]
+}
+
+@test "JT-scope: MANAGE_EXECUTION only under type=workbench does not grant the station and FAILs" {
+  D="$BATS_TEST_TMPDIR/jtscope"; _jt_exec "$D"; _jt_perms "$D" workbench
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  jdk-thread"* ]]
+}
+
+@test "JT-header: a two-line class header (class / extends on the next line) is still a B* class" {
+  D="$BATS_TEST_TMPDIR/jthdr"
+  _jt_src "$D" BDedicated 'package demo;' 'import javax.baja.sys.*;' \
+    'public class BDedicated' '  extends BComponent' '  implements Runnable' '{' \
+    '  public void doExecute() { new Thread(this, "demo-dedicated").start(); }' \
+    '  public void run() { }' '}'
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"*"BDedicated"* ]]
+}
+
+@test "JT-create: thread creation alone, no permissions file, WARNs and never FAILs" {
+  D="$BATS_TEST_TMPDIR/jtcreate"
+  _jt_src "$D" BPoolSvc 'package demo;' 'import javax.baja.sys.*;' 'import java.util.concurrent.*;' \
+    'public class BPoolSvc extends BAbstractService {' \
+    '  private ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();' '}'
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"*"BPoolSvc"*"ExecutorUtil"* ]]
+}
+
+@test "JT-comment: a shutdownNow() only in a comment or a string is not a modifying call" {
+  D="$BATS_TEST_TMPDIR/jtcomment"; _jt_perms "$D" none
+  _jt_src "$D" BQuiet 'package demo;' 'import javax.baja.sys.*;' 'import java.util.concurrent.*;' \
+    'public class BQuiet extends BComponent {' \
+    '  private ExecutorService ex = Executors.newSingleThreadExecutor();' \
+    '  // ex.shutdownNow(); needs MANAGE_EXECUTION' \
+    '  public String note() { return "call ex.shutdownNow() later"; }' '}'
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"* ]]
+}
+
+@test "JT-self: Thread.currentThread().interrupt() restores the caller's own flag and is not a modifying call" {
+  D="$BATS_TEST_TMPDIR/jtself"; _jt_perms "$D" none
+  _jt_src "$D" BSleeper 'package demo;' 'import javax.baja.sys.*;' \
+    'public class BSleeper extends BComponent {' \
+    '  public void doWork() { new Thread(() -> { try { Thread.sleep(10L); }' \
+    '    catch (InterruptedException e) { Thread.currentThread().interrupt(); } }, "demo-sleeper").start(); }' '}'
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  jdk-thread"* ]]
+}
+
+@test "JT-util: ExecutorUtil.shutdown(svc) is a modifying call (it ends in shutdownNow)" {
+  D="$BATS_TEST_TMPDIR/jtutil"; _jt_perms "$D" none
+  _jt_src "$D" BUtilSvc 'package demo;' 'import javax.baja.sys.*;' 'import javax.baja.util.ExecutorUtil;' 'import java.util.concurrent.*;' \
+    'public class BUtilSvc extends BComponent {' \
+    '  public void started() { svc = ExecutorUtil.newSingleThreadBackgroundExecutor("demo-io", 60L, TimeUnit.SECONDS); }' \
+    '  public void stopped() { ExecutorUtil.shutdown(svc); }' \
+    '  private ExecutorService svc;' '}'
+  run "$LINT" "$D/m-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  jdk-thread"*"BUtilSvc"* ]]
+}
+
+@test "TC-B companion: a plain (non-B*) helper using ScheduledExecutorService emits no jdk-thread row (the B* gate)" {
   D="$BATS_TEST_TMPDIR/tcb_ok"; mkdir -p "$D"
   cat > "$D/PlainPool.java" <<'JAVA'
 package demo;
@@ -267,11 +364,66 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 public final class PlainPool {
   private final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+  void stop() { pool.shutdownNow(); }
 }
 JAVA
   run "$LINT" "$D"
   [ "$status" -eq 0 ]
-  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" != *"jdk-thread"* ]]
+}
+
+# ---- JC: job-cancel (WARN) ---------------------------------------------------
+# A BSimpleJob's run(Context) loop must check isAlive() and throw JobCancelException:
+# doCancel only interrupts the job thread, which reaches a thread blocked in I/O or sleep
+# (S/job/BSimpleJob.java:54-67, course Lab 10 BHistoriesToCsvJob.java:105-112).
+_jc_job() {  # _jc_job <dir> <run-body-lines...>
+  local d="$1"; shift
+  mkdir -p "$d"
+  printf '%s\n' 'package demo;' 'import javax.baja.job.*;' 'import javax.baja.sys.*;' \
+    'public class BExportJob' '  extends BSimpleJob' '{' '  public BExportJob() {}' \
+    '  @Override' '  public void run(Context cx) throws Exception' '  {' "$@" '  }' \
+    '  private String[] names = new String[0];' '}' > "$d/BExportJob.java"
+}
+
+@test "JC-loop: a BSimpleJob run() loop with no isAlive() WARNs job-cancel (exit 0)" {
+  D="$BATS_TEST_TMPDIR/jcloop"
+  _jc_job "$D" '    for (int i = 0; i < names.length; i++) {' '      progress(i);' '    }'
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  job-cancel"*"BExportJob"*"isAlive"* ]]
+}
+
+@test "JC-alive: the same loop checking isAlive() emits no job-cancel row" {
+  D="$BATS_TEST_TMPDIR/jcalive"
+  _jc_job "$D" '    for (int i = 0; i < names.length; i++) {' \
+    '      if (!isAlive()) throw new JobCancelException();' '      progress(i);' '    }'
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"job-cancel"* ]]
+}
+
+@test "JC-scope: a loop in a helper method, not in run(), emits no job-cancel row" {
+  D="$BATS_TEST_TMPDIR/jcscope"
+  _jc_job "$D" '    progress(50);' '  }' '  void helper() {' '    for (int i = 0; i < 3; i++) { progress(i); }'
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"job-cancel"* ]]
+}
+
+@test "JC-noloop: a BSimpleJob run() without a loop emits no job-cancel row" {
+  D="$BATS_TEST_TMPDIR/jcnoloop"
+  _jc_job "$D" '    progress(50);' '    log().message("demo", "done");'
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"job-cancel"* ]]
+}
+
+@test "JC-comment: isAlive() only in a comment of the run() loop does not count" {
+  D="$BATS_TEST_TMPDIR/jccomment"
+  _jc_job "$D" '    // if (!isAlive()) throw new JobCancelException();' '    while (more()) { step(); }'
+  run "$LINT" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  job-cancel"* ]]
 }
 
 # ---- TC-C: changed-sched --------------------------------------------------

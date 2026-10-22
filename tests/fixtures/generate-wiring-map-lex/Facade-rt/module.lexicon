@@ -1,5 +1,5 @@
-# Type.slot keys win over bare keys; doorOpen has no key on purpose.
-RoomFacade=Cuarto
-RoomFacade.roomTemperature=Temperatura del cuarto
+# Workbench shows the bare slot key (NSlot.java:42); a Type.slot key is never read. doorOpen has no key on purpose.
+RoomFacade.displayName=Cuarto
+RoomFacade.roomTemperature=Type.slot key, never shown
 temperatureSetpoint=Setpoint de temperatura
-roomTemperature=Temperatura (bare key, must lose to Type.slot)
+roomTemperature=Temperatura del cuarto

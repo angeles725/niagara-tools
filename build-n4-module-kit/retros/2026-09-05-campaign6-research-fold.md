@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 <!-- kit-retro -->
 # Retro — Campaign 6 PR7: research fold (exemplar-backed author-side SPIs, point extensions, web-tier pointers, lintable-vs-advisory)
 

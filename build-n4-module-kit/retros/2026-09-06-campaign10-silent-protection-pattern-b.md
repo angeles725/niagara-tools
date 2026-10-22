@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-06 · kit · campaign10-silent-protection-pattern-b
 
 **Session**: Campaign 10 PR3 — S23 lint-silent-protection Pattern B surface (BIAlarmSource/AlarmSupport adapter→pure follow)

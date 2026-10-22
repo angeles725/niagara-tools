@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-09-21 · kit · apillm-wb-subscription-refresh-and-points-deltas
 
 **Session**: Apillm client module (Cliente/LLM/Apillm) — live commissioning of the rt+wb N4↔DB bidirectional gateway on station LLM. A user-visible WB manager bug (stale table until re-open) was root-caused live, fixed, and deepened in the research corpus (B1140–B1142).

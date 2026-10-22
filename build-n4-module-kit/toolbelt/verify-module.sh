@@ -7,11 +7,12 @@
 #
 # Checks (each guards a failure seen on a real build — build-n4-module-kit/retros/):
 #   bytecode    every .class has major 52 (Java 8). 65 = built with the default JDK 21.          [default]
-#   signed      META-INF/NIAGARA4.SF present (gradle niagara-signing ran).                       [default]
+#               META-INF/versions/** (multi-release) is skipped and counted: Java 8 never loads it.
+#   signed      a META-INF/<ALIAS>.SF with its <ALIAS>.RSA|.DSA|.EC block; the alias is reported. [default]
 #               NOTE: `signed` checks PRESENCE only — the signer's cert may not be in the
 #               station's trust store. A self-signed/untrusted-CA jar PASSES this gate yet a
 #               station enforcing cert-chain validation loads it UNSIGNED (`Could not validate
-#               cert chain`). Signed = jar has NIAGARA4.SF; trusted = station-side policy.
+#               cert chain`). Signed = jar has a *.SF block; trusted = station-side policy.
 #               `[ev: corpus B800 §800.8]`
 #               folded as code: verify-module.sh signed-check (cert-chain trust caveat, D8, R7.6).
 #   types       every <type class=...> in META-INF/module.xml exists as a .class in the jar.     [default]
@@ -30,6 +31,9 @@
 #   rcbackup    no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
 #   palette     a module that declares types must not ship an EMPTY module.palette (nothing to drag in
 #               Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.     [default]
+#               palette-type FAILs a t= that is not "<symbol>:<Type>" with an m=-declared symbol; palette-root
+#               WARNs every baja Folder (root or nested, any alias); palette-parse FAILs an unterminated
+#               comment. Entries: palette_scan below.
 #   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
 #   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN.              [--src]
@@ -200,19 +204,40 @@ row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; case "$1" in PASS) NP
 ver_le() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
 
 check_bytecode_major() {  # every class, not just the first
-  local jar="$1" n=0 bad=0 c m first=""
+  # META-INF/versions/** is skipped, like lint-bundled-jar-class-version.sh: a Java 8 runtime never loads
+  # multi-release classes (Jackson 2.21 ships major-55 ones and runs on N4). [ev: retro n4-course-signed-jars-gate-fix Δ3]
+  local jar="$1" n=0 bad=0 mr=0 c m first="" ign=""
   while IFS= read -r c; do
-    [ -n "$c" ] || continue; n=$((n+1))
+    [ -n "$c" ] || continue
+    case "$c" in META-INF/versions/*) mr=$((mr+1)); continue ;; esac
+    n=$((n+1))
     m=$(unzip -p "$jar" "$c" | od -An -t u1 -j6 -N2 | awk '{print $2}')
     [ "$m" = "52" ] || { bad=$((bad+1)); [ -n "$first" ] || first="$c major=$m"; }
   done <<< "$(printf '%s\n' "$LIST" | grep '\.class$' || true)"
-  if [ "$n" -eq 0 ]; then row FAIL bytecode "$jar" "no .class entries"; return 1; fi
-  if [ "$bad" -eq 0 ]; then row PASS bytecode "$jar" "$n classes, all major 52"; return 0; fi
-  row FAIL bytecode "$jar" "$bad of $n classes not major 52 (expected Java 8); first: $first"; return 1
+  [ "$mr" -eq 0 ] || ign="; $mr multi-release classes ignored"
+  if [ "$n" -eq 0 ]; then row FAIL bytecode "$jar" "no .class entries${ign:+ outside META-INF/versions/}$ign"; return 1; fi
+  if [ "$bad" -eq 0 ]; then row PASS bytecode "$jar" "$n classes, all major 52$ign"; return 0; fi
+  row FAIL bytecode "$jar" "$bad of $n classes not major 52 (expected Java 8); first: $first$ign"; return 1
 }
 check_signed() {
-  if printf '%s\n' "$LIST" | grep -q '^META-INF/NIAGARA4\.SF$'; then row PASS signed "$1" "META-INF/NIAGARA4.SF present"; return 0; fi
-  row FAIL signed "$1" "META-INF/NIAGARA4.SF missing (jar not signed)"; return 1
+  # The signature files are named after the signing ALIAS (NIAGARA4 default profile, CODESIGN course profile,
+  # SERVER1 Honeywell); the station decides by verification mode + cert chain, never by the entry name.
+  # A .SF counts only with its signature block (.RSA/.DSA/.EC). [ev: retro n4-course-signed-jars-gate-fix Δ1]
+  # `sigs` is the META-INF signature entries (a here-string, never a pipe into grep: tests/pipefail-grep.bats),
+  # matched in-shell so each alias lookup is one case pattern, not one grep per extension.
+  local sigs sf alias ext ok="" orphan=""
+  sigs=$'\n'$(grep -E '^META-INF/[^/]+\.(SF|RSA|DSA|EC)$' <<< "$LIST" || true)$'\n'
+  while IFS= read -r sf; do
+    case "$sf" in META-INF/*.SF) ;; *) continue ;; esac
+    alias="${sf#META-INF/}"; alias="${alias%.SF}"
+    for ext in RSA DSA EC; do
+      case "$sigs" in *$'\n'"META-INF/$alias.$ext"$'\n'*) ok="$ok${ok:+, }$alias"; continue 2 ;; esac
+    done
+    orphan="$orphan${orphan:+, }$sf"
+  done <<< "$sigs"
+  if [ -n "$ok" ]; then row PASS signed "$1" "signed by alias $ok (META-INF/<ALIAS>.SF + signature block)"; return 0; fi
+  if [ -n "$orphan" ]; then row FAIL signed "$1" "$orphan without its .RSA/.DSA/.EC signature block (jar not signed)"; return 1; fi
+  row FAIL signed "$1" "no META-INF/*.SF (jar not signed)"; return 1
 }
 check_types_have_classes() {
   local jar="$1" missing=0 tn=0 cls f firstmiss=""
@@ -220,7 +245,7 @@ check_types_have_classes() {
   while IFS= read -r cls; do
     [ -n "$cls" ] || continue; tn=$((tn+1))
     f="$(printf '%s' "$cls" | tr . /).class"
-    printf '%s\n' "$LIST" | grep -qx "$f" || { missing=$((missing+1)); [ -n "$firstmiss" ] || firstmiss="$cls"; }
+    grep -qx "$f" <<< "$LIST" || { missing=$((missing+1)); [ -n "$firstmiss" ] || firstmiss="$cls"; }
   done <<< "$TYPES"
   if [ "$missing" -eq 0 ]; then row PASS types "$jar" "$tn declared types resolve to classes"; return 0; fi
   row FAIL types "$jar" "$missing of $tn declared types have no class; first: $firstmiss"; return 1
@@ -242,10 +267,25 @@ check_stored() {
   row FAIL stored "$jar" "$d deflated entries (run stored-repack.sh before re-signing in Workbench)"; return 1
 }
 profile_dir() { local b; b=$(basename "$1" .jar); printf '%s/%s' "$SRC" "$b"; }
+# src_or_skip <check> <jar>: the shared opening of every --src check. Sets the CALLER's local `pd` to
+# the jar's profile dir; without --src it prints the SKIP row and returns 1, so a caller writes
+# `src_or_skip <check> "$jar" || return 0`.
+src_or_skip() {
+  [ -n "$SRC" ] || { row SKIP "$1" "$2" "no --src"; return 1; }
+  pd=$(profile_dir "$2")
+}
+# src_dir_or_skip <check> <jar>: src_or_skip, then SKIP (return 1) when <pd>/src is not a directory.
+src_dir_or_skip() {
+  src_or_skip "$1" "$2" || return 1
+  [ -d "$pd/src" ] || { row SKIP "$1" "$2" "no $pd/src"; return 1; }
+}
+# java_files <dir>: every *.java under <dir>, in find order. D9b: dot-dirs (e.g. .deploy-baseline) are
+# pruned so stale snapshots are never scanned. Fail-open like the walk it replaced: find errors are not checked.
+java_files() { find "$1" -type d -name '.*' -prune -o -name '*.java' -print; }
 check_type_count() {
   local jar="$1" pd inc tn sn
-  [ -n "$SRC" ] || { row SKIP typecount "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar"); inc="$pd/module-include.xml"
+  src_or_skip typecount "$jar" || return 0
+  inc="$pd/module-include.xml"
   [ -f "$inc" ] || { row SKIP typecount "$jar" "no $inc"; return 0; }
   tn=$(printf '%s\n' "$TYPES" | grep -c . || true); sn=$(grep -c '<type ' "$inc" || true)
   if [ "$tn" = "$sn" ]; then row PASS typecount "$jar" "jar declares $tn types == module-include.xml"; return 0; fi
@@ -253,15 +293,12 @@ check_type_count() {
 }
 check_raw_double_facets() {
   local jar="$1" pd hits f
-  [ -n "$SRC" ] || { row SKIP facets "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP facets "$jar" "no $pd/src"; return 0; }
-  # D9b: prune dot-dirs (e.g. .deploy-baseline) so stale snapshots are never scanned.
+  src_dir_or_skip facets "$jar" || return 0
   hits=""
   while IFS= read -r f; do
     h=$(grep -nE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' "$f" 2>/dev/null | head -1 || true)
     if [ -n "$h" ]; then hits="$f:$h"; break; fi
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   if [ -z "$hits" ]; then row PASS facets "$jar" "no raw-number MIN/MAX facet under $pd/src"; return 0; fi
   row FAIL facets "$jar" "raw-number MIN/MAX facet (wrap in BDouble.make): $hits"; return 1
 }
@@ -272,9 +309,7 @@ check_facet_presence() {
   # are not flagged, even if only MIN is set). WARN never changes exit code (K20).
   # D9b: dot-dirs pruned.
   local jar="$1" pd warned=0 f hit
-  [ -n "$SRC" ] || { row SKIP facets-req "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP facets-req "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip facets-req "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
@@ -365,7 +400,7 @@ check_facet_presence() {
         }
       }
     ' "$f")
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS facets-req "$jar" "no missing required facets under $pd/src"
   return 0
 }
@@ -375,9 +410,7 @@ check_ord_literal() {
   # justification comment, (b) the literal is inside a @NiagaraProperty defaultValue= attribute,
   # (c) the file is under srcTest/**. WARN never changes exit code (K20). D9b: dot-dirs pruned.
   local jar="$1" pd warned=0 f fname skip hit
-  [ -n "$SRC" ] || { row SKIP ord-literal "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP ord-literal "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip ord-literal "$jar" || return 0
   while IFS= read -r f; do
     case "$f" in */srcTest/*) continue ;; esac
     fname="$(basename "$f" .java)"
@@ -393,7 +426,7 @@ check_ord_literal() {
       row WARN ord-literal "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE '"(station:|local:|slot:/)' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS ord-literal "$jar" "no hardcoded ORD literals under $pd/src"
   return 0
 }
@@ -404,26 +437,75 @@ check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable)
   if [ "$STRICT" -eq 1 ]; then row FAIL rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 1; fi
   row WARN rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 0
 }
+# palette_scan: module.palette text on stdin -> one row per finding: ENTRY (a component entry), FOLDER <t> (a baja
+# Folder under any alias), BADTYPE <t> <why> (plus BADENTRY when that element carries n=, so a count of named
+# elements still sees it), UNTERM (a <!-- with no -->: the rest of the document is not read). A palette is a BOG document: t= is "<symbol>:<Type>" and the symbol must be declared
+# by an m="<symbol>=<module>" on the same or an earlier element — else "Invalid typespec" / "Undeclared module
+# symbol" (ValueDocDecoder.java:1071-1073,1091). An entry is a <p> with n= and a non-folder t= in ANY attribute
+# order (Workbench saves n= last) and no v= (a <p n v/> child, t+v for a dynamic slot, is a slot override).
+# XML comments are dropped first. [ev: retro n4-course-authoring-files-and-libraries Δ3]
+# [ev: retro n4-course-handson-slotomatic-authoring Δ6]
+palette_scan() {
+  awk '
+    # attr: the value of attribute a in element text e, or "\001" (a byte no attribute holds) when a is absent
+    function attr(e, a,   v) {
+      if (!match(e, "[[:space:]]" a "=\"[^\"]*\"")) return "\001"
+      v = substr(e, RSTART, RLENGTH); sub(/^[[:space:]][a-z]+="/, "", v); sub(/"$/, "", v); return v
+    }
+    { doc = doc " " $0 }
+    END {
+      while ((i = index(doc, "<!--")) > 0) {
+        j = index(substr(doc, i + 4), "-->")
+        if (!j) { print "UNTERM"; doc = substr(doc, 1, i - 1); break }
+        doc = substr(doc, 1, i - 1) substr(doc, i + 4 + j + 2)
+      }
+      n = split(doc, el, "<")
+      for (k = 2; k <= n; k++) {
+        e = el[k]; if (e !~ /^p[[:space:]\/>]/) continue
+        e = " " substr(e, 2, index(e, ">") ? index(e, ">") - 2 : length(e))
+        m = attr(e, "m"); if (m != "\001" && index(m, "=")) mod[substr(m, 1, index(m, "=") - 1)] = substr(m, index(m, "=") + 1)
+        t = attr(e, "t"); if (t == "\001") continue
+        c = index(t, ":"); sym = substr(t, 1, c - 1); ty = substr(t, c + 1); bad = ""
+        if (index(t, ".")) bad = "is a Java class name, not <symbol>:<Type>"
+        else if (c <= 1) bad = "has no <symbol>: prefix"
+        else if (!(sym in mod)) bad = "uses symbol " sym " that no m=\"" sym "=<module>\" declared"
+        if (bad != "") { print "BADTYPE " t " " bad; if (attr(e, "n") != "\001") print "BADENTRY"; continue }
+        folder = (mod[sym] == "baja" && (ty == "Folder" || ty == "UnrestrictedFolder"))
+        if (mod[sym] == "baja" && ty == "Folder") print "FOLDER " t
+        if (!folder && attr(e, "n") != "\001" && attr(e, "v") == "\001") print "ENTRY"
+      }
+    }'
+}
 check_palette() {  # an EMPTY module.palette on a module that declares types = nothing to drag in Workbench. WARN by default; FAIL under --strict.
-  # Also WARNs (palette-root) when the root <p> uses t="b:Folder" (gated) instead of t="b:UnrestrictedFolder" (idiomatic).
-  # [Δ1/B746 §746.1]
-  local jar="$1" pal entries types
-  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP palette "$jar" "no module.palette"; return 0; }
+  # palette-type FAILs a malformed t= type spec; palette-parse FAILs an unterminated comment (no palette row then);
+  # palette-root WARNs every baja Folder, root or nested, under any alias. [Δ1/B746 §746.1]
+  local jar="$1" pal scan entries types folders bad rc=0
+  grep -q '^module\.palette$' <<< "$LIST" || { row SKIP palette "$jar" "no module.palette"; return 0; }
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
+  scan=$(palette_scan <<< "$pal")
+  while IFS= read -r bad; do
+    [ -n "$bad" ] || continue
+    row FAIL palette-type "$jar" "module.palette t=\"${bad#BADTYPE }\" — write t=\"<symbol>:<Type>\" with m=\"<symbol>=<module>\" declared once [ev: retro n4-course-authoring-files-and-libraries Δ3]"
+    rc=1
+  done < <(grep '^BADTYPE ' <<< "$scan" || true)
   # Δ1/B746 §746.1: b:Folder is access-controlled (gated by category permission) — engineers without the
   # folder's category permission get "access denied" on expansion. b:UnrestrictedFolder is the idiomatic
-  # ungated palette root. WARN independently of the entries count.
-  if printf '%s' "$pal" | grep -qF 't="b:Folder"'; then
-    row WARN palette-root "$jar" "module.palette root uses t=\"b:Folder\" (access-controlled) — use t=\"b:UnrestrictedFolder\" for ungated palette expansion [ev: corpus B746 §746.1]"
+  # ungated palette folder, root or nested. WARN independently of the entries count.
+  folders=$(sed -n 's/^FOLDER //p' <<< "$scan" | sort -u | sed 's/.*/t="&"/' | paste -sd ' ' -)
+  if [ -n "$folders" ]; then
+    row WARN palette-root "$jar" "module.palette uses a baja Folder ($folders), root or nested: access-controlled — use the baja UnrestrictedFolder (t=\"b:UnrestrictedFolder\") for ungated palette expansion [ev: corpus B746 §746.1]"
   fi
-  # component entries carry a name (<p n="..."/>); the b:Folder root has no n= so it is naturally excluded
-  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  if grep -qx 'UNTERM' <<< "$scan"; then
+    row FAIL palette-parse "$jar" "module.palette has an unterminated comment (<!-- with no -->): the rest of the document is not read"
+    return 1
+  fi
+  entries=$(grep -c '^ENTRY$' <<< "$scan" || true)
   types=$(printf '%s' "$MX" | grep -c '<type ' || true)
   if [ "$entries" -eq 0 ] && [ "$types" -ge 1 ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 1; fi
-    row WARN palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 0
+    row WARN palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return "$rc"
   fi
-  row PASS palette "$jar" "module.palette has $entries component entries"; return 0
+  row PASS palette "$jar" "module.palette has $entries component entries"; return "$rc"
 }
 check_wb_scaffold() {
   # WB-SCAFFOLD1: a -wb jar with 0 .class entries AND 0 palette entries is an
@@ -436,10 +518,10 @@ check_wb_scaffold() {
   local jar="$1" base n_classes pal entries
   base=$(basename "$jar" .jar)
   case "$base" in *-wb) ;; *) row SKIP wb-scaffold "$jar" "not a -wb jar"; return 0 ;; esac
-  printf '%s\n' "$LIST" | grep -q '^module\.palette$' || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
+  grep -q '^module\.palette$' <<< "$LIST" || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
   n_classes=$(printf '%s\n' "$LIST" | grep -c '\.class$' || true)
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
-  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  entries=$(palette_scan <<< "$pal" | grep -cE '^(ENTRY|BADENTRY)$' || true)   # a named bad-type element is still an entry
   if [ "$n_classes" -eq 0 ] && [ "$entries" -eq 0 ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 1; fi
     row WARN wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 0
@@ -454,8 +536,7 @@ check_phantom_dep() {
   # contract; it may disappear after a Gradle upgrade and cause runtime CNFE.
   # NAMED MUTATION: drop this check -> WB-DEP1's phantom-dep WARN vanishes.
   local jar="$1" pd gkt dep gkt_deps phantom_list
-  [ -n "$SRC" ] || { row SKIP phantom-dep "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
+  src_or_skip phantom-dep "$jar" || return 0
   gkt=$(find "$pd" -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1)
   [ -n "$gkt" ] || { row SKIP phantom-dep "$jar" "no *.gradle.kts in $pd"; return 0; }
   [ -n "$MX" ]  || { row SKIP phantom-dep "$jar" "no META-INF/module.xml"; return 0; }
@@ -477,7 +558,7 @@ check_phantom_dep() {
   phantom_list=""
   while IFS= read -r dep; do
     [ -z "$dep" ] && continue
-    if ! printf '%s\n' "$gkt_deps" | grep -qxF "$dep"; then
+    if ! grep -qxF "$dep" <<< "$gkt_deps"; then
       phantom_list="${phantom_list:+$phantom_list, }$dep"
     fi
   done < <(printf '%s' "$MX" | grep -oE '<dependency[[:space:]]+[^>]*\bname="[^"]*"' \
@@ -498,12 +579,11 @@ check_moduletest_present() {
   local jar="$1" base pd njava mti
   base=$(basename "$jar" .jar)
   case "$base" in *-rt) ;; *) row SKIP moduletest "$jar" "not an -rt jar"; return 0 ;; esac
-  [ -n "$SRC" ] || { row SKIP moduletest "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
+  src_or_skip moduletest "$jar" || return 0
   [ -d "$pd" ] || { row SKIP moduletest "$jar" "no source dir $pd"; return 0; }
   njava=$(find "$pd/src" -name '*.java' 2>/dev/null | grep -c . || true)
   [ "$njava" -ge 1 ] || { row SKIP moduletest "$jar" "no production .java under src/"; return 0; }
-  mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1)
+  mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1 || true)
   if [ -z "$mti" ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 1; fi
     row WARN moduletest "$jar" "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"; return 0
@@ -520,16 +600,14 @@ check_transient_operator() {
   # NAMED MUTATION: drop this check -> TRANSOP1's WARN vanishes.
   # [ev: corpus B755 §755.5, B4 §4.1.2]
   local jar="$1" pd warned=0 f hit
-  [ -n "$SRC" ] || { row SKIP transient-operator "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP transient-operator "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip transient-operator "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
       row WARN transient-operator "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE 'TRANSIENT[^;]*OPERATOR|OPERATOR[^;]*TRANSIENT' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS transient-operator "$jar" "no TRANSIENT+OPERATOR slot combination under $pd/src"
   return 0
 }
@@ -544,16 +622,14 @@ check_compact3_imports() {
   local jar="$1" base pd warned=0 f hit
   base=$(basename "$jar" .jar)
   case "$base" in *-rt|*-ux) ;; *) row SKIP compact3-import "$jar" "not an -rt or -ux jar"; return 0 ;; esac
-  [ -n "$SRC" ] || { row SKIP compact3-import "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP compact3-import "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip compact3-import "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
       row WARN compact3-import "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE 'import (java\.awt|javax\.swing|java\.sql)\.' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS compact3-import "$jar" "no Compact3 non-safe imports under $pd/src"
   return 0
 }
@@ -565,9 +641,7 @@ check_cross_module_type() {
   # WARN severity (may be intentional with a correct runtime dep). [ev: corpus B740 §740.2]
   # NAMED MUTATION: drop this check -> CROSSMOD1's cross-module-type WARN vanishes.
   local jar="$1" pd warned=0 t pkg pkg_path
-  [ -n "$SRC" ] || { row SKIP cross-module-type "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP cross-module-type "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip cross-module-type "$jar" || return 0
   while IFS= read -r t; do
     [ -n "$t" ] || continue
     # FQN: must contain a dot; last segment must start with an uppercase letter
@@ -581,7 +655,7 @@ check_cross_module_type() {
     row WARN cross-module-type "$jar" "foreign type in @NiagaraProperty: $t"
     warned=1
   done < <(
-    find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print \
+    java_files "$pd/src" \
     | while IFS= read -r _f; do
         grep -oE 'type[[:space:]]*=[[:space:]]*"[^"]*"' "$_f" 2>/dev/null || true
       done \
@@ -602,15 +676,13 @@ check_subscription_leak() {
   # NAMED MUTATION: drop this check -> SUBLEAK1's WARN row vanishes.
   # [ev: corpus B867 §867.2, B408 §408.4]
   local jar="$1" pd warned=0 f
-  [ -n "$SRC" ] || { row SKIP subscription-leak "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP subscription-leak "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip subscription-leak "$jar" || return 0
   while IFS= read -r f; do
     grep -qE '(extends[[:space:]]+TypeSubscriber|TypeSubscriber[[:space:]]+)' "$f" 2>/dev/null || continue
     grep -qE 'void[[:space:]]+stopped[[:space:]]*\(' "$f" 2>/dev/null && continue
     row WARN subscription-leak "$jar" "$f: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart"
     warned=1
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS subscription-leak "$jar" "no TypeSubscriber without stopped() under $pd/src"
   return 0
 }
@@ -623,9 +695,7 @@ check_slot_wall() {
   # NAMED MUTATION: drop this check -> SLOTWALL1's WARN vanishes.
   # [ev: corpus B737 §B.2-B.3]
   local jar="$1" pd warned=0 f count classname
-  [ -n "$SRC" ] || { row SKIP slot-wall "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP slot-wall "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip slot-wall "$jar" || return 0
   while IFS= read -r f; do
     count=$(grep -c '@NiagaraProperty' "$f" 2>/dev/null || true)
     [ "$count" -gt 15 ] || continue
@@ -634,7 +704,7 @@ check_slot_wall() {
     [ -z "$classname" ] && classname="$(basename "$f" .java)"
     row WARN slot-wall "$jar" "$count properties in class $classname ($f) — compose into child BComponents (logic.md L21)"
     warned=1
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS slot-wall "$jar" "no flat slot wall (>15 @NiagaraProperty per class) under $pd/src"
   return 0
 }
@@ -643,7 +713,7 @@ for JAR in "${JARS[@]}"; do
   [ -f "$JAR" ] || { echo "verify-module: jar not readable: $JAR" >&2; exit 3; }
   LIST=$(unzip -Z1 "$JAR" 2>/dev/null) || { echo "verify-module: not a zip: $JAR" >&2; exit 3; }
   MX=""; TYPES=""
-  if printf '%s\n' "$LIST" | grep -q '^META-INF/module\.xml$'; then
+  if grep -q '^META-INF/module\.xml$' <<< "$LIST"; then
     MX=$(unzip -p "$JAR" META-INF/module.xml)
     TYPES=$(printf '%s' "$MX" | grep -oE '<type [^>]*class="[^"]+"' | sed -E 's/.*class="([^"]+)".*/\1/' || true)
   fi

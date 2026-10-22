@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 7 -->
 # 2026-09-06 · kit · campaign9-doctrine-fold
 
 **Session**: Campaign 9 PR12 — doctrine fold: protection anatomy patterns A/B, unified write audit, K22 cross-ref, C8/C9 process lessons

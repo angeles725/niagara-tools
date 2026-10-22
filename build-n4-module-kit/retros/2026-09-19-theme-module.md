@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: new types/theme.md: zero-Java ux theme, themeName def, asset layout, imageOverrides, NSS -->
 # 2026-09-19 · kit · theme-module
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the theme-module cluster (vendor mining: themeDistech).

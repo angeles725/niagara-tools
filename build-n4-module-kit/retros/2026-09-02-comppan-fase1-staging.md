@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: CompPan -->
+<!-- deltas: 0 -->
 
 # Retro — CompPan `-rt` FASE 1: rack de compresores (staging) — PROPOSED kit deltas
 

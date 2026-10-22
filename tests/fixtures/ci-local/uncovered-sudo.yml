@@ -1,0 +1,11 @@
+name: CI
+on: pull_request
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install foo
+        run: sudo apt-get install -y foo
+      - name: ok
+        run: echo ok

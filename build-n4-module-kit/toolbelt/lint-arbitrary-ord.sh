@@ -21,99 +21,66 @@
 # Mutation: AO8 -- split code/comment at the first // regardless of quotes and AO8/AO9 stop warning
 # Mutation: AO12 -- no block-comment skip in code_part and the apostrophe in /* it's */ hides the marker
 # Mutation: AO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: AO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
-LC_ALL=C
-export LC_ALL
-
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-arbitrary-ord.sh <src-root>\n' >&2
-    exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-    printf 'lint-arbitrary-ord: not a directory: %s\n' "$ROOT" >&2
-    exit 3
-fi
-
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-had_err=0
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
-    printf 'lint-arbitrary-ord: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-    had_err=1
-fi
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-arbitrary-ord raw 'usage: lint-arbitrary-ord.sh <src-root>' "$@"
+awk_lint_list -name '*.java'
 
-MARKER='lint-arbitrary-ord:[[:space:]]*reviewed'
-
-# marker_state <text>: "reason" when the text carries the reviewed marker followed by a reason,
+# One awk per file (was a printf|grep pipeline per source line plus a marker_state subshell per hit).
+#
+# marker_state(text): "reason" when the text carries the reviewed marker followed by a reason,
 # "bare" when it carries the marker with nothing after it, "" when there is no marker.
-marker_state() {
-    if printf '%s' "$1" | grep -Eq "${MARKER}[[:space:]]+[^[:space:]]"; then
-        printf 'reason'
-    elif printf '%s' "$1" | grep -Eq "$MARKER"; then
-        printf 'bare'
-    fi
-}
-
-# code_part <line>: sets CODE to the line up to its // line comment (no subshell: it runs once per
-# source line). A "//" inside a double-quoted string or a single-quoted char literal is not a comment
-# start, so it neither hides a call nor supplies a reviewed marker; an inline /* ... */ block comment is
-# skipped (kept in CODE so CODE stays a prefix of the line), so an apostrophe inside it opens no char
-# literal. Block-comment state is not carried across lines. Sibling string-aware strippers:
-# lint-delays.sh strip_comment (awk), lint-write-path.sh audit pass (awk).
-# [polish-2026-10-02 P2a/P2b, #199 WU6a]
-code_part() {
-    local s="$1" i c q="" n rest
-    CODE=$s
-    case "$s" in *//*) ;; *) return ;; esac
-    case "$s" in *\"*|*\'*|*/\**) ;; *) CODE=${s%%//*}; return ;; esac
-    n=${#s}
-    for ((i = 0; i < n; i++)); do
-        c=${s:i:1}
-        if [ -n "$q" ]; then
-            if [ "$c" = "\\" ]; then i=$((i + 1)); elif [ "$c" = "$q" ]; then q=""; fi
-            continue
-        fi
-        case "$c" in
-            \"|\') q=$c ;;
-            /)
-                if [ "${s:i+1:1}" = "/" ]; then CODE=${s:0:i}; return; fi
-                if [ "${s:i+1:1}" = "*" ]; then
-                    rest=${s:i+2}
-                    case "$rest" in
-                        *'*/'*) rest=${rest%%'*/'*}; i=$((i + 2 + ${#rest} + 1)) ;;
-                        *) return ;;   # unclosed block comment: no // comment on this line
-                    esac
-                fi ;;
-        esac
-    done
-}
-
-while IFS= read -r f; do
-    ln=0
-    prev=""
-    while IFS= read -r line || [ -n "$line" ]; do
-        ln=$((ln + 1))
-        code_part "$line"; code=$CODE
+#
+# code_part(s): the line up to its // line comment. A "//" inside a double-quoted string or a
+# single-quoted char literal is not a comment start, so it neither hides a call nor supplies a reviewed
+# marker; an inline /* ... */ block comment is skipped (kept in the code so it stays a prefix of the
+# line), so an apostrophe inside it opens no char literal. Block-comment state is not carried across
+# lines. Sibling string-aware strippers: lint-delays.sh strip_comment (awk), lint-write-path.sh audit
+# pass (awk). [polish-2026-10-02 P2a/P2b, #199 WU6a]
+# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
+awk_lint_each '
+    function marker_state(text) {
+        if (text ~ /lint-arbitrary-ord:[[:space:]]*reviewed[[:space:]]+[^[:space:]]/) return "reason"
+        if (text ~ /lint-arbitrary-ord:[[:space:]]*reviewed/) return "bare"
+        return ""
+    }
+    function code_part(s,    i, n, c, q, rest, e) {
+        if (!index(s, "//")) return s
+        if (!index(s, "\"") && !index(s, "\047") && !index(s, "/*")) return substr(s, 1, index(s, "//") - 1)
+        n = length(s); q = ""
+        for (i = 1; i <= n; i++) {
+            c = substr(s, i, 1)
+            if (q != "") {
+                if (c == "\\") i++; else if (c == q) q = ""
+                continue
+            }
+            if (c == "\"" || c == "\047") q = c
+            else if (c == "/") {
+                if (substr(s, i + 1, 1) == "/") return substr(s, 1, i - 1)
+                if (substr(s, i + 1, 1) == "*") {
+                    rest = substr(s, i + 2); e = index(rest, "*/")
+                    if (!e) return s   # unclosed block comment: no // comment on this line
+                    i += e + 2         # the loop i++ lands just past the */
+                }
+            }
+        }
+        return s
+    }
+    {
+        code = code_part($0)
         # BOrd.make( <lowercase ident> ) — a bare variable, not a "literal" and not a CONST
-        if printf '%s' "$code" | grep -Eq 'BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)'; then
-            trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
-            st=$(marker_state "${line#"$code"}")
-            if [ -z "$st" ] && printf '%s' "$prev" | grep -Eq '^[[:space:]]*//'; then
-                st=$(marker_state "$prev")
-            fi
-            case "$st" in
-                reason) : ;;
-                bare) printf 'WARN  lint-arbitrary-ord  %s:%s  reviewed marker without a reason (add one): %s\n' "$f" "$ln" "$trimmed" ;;
-                *) printf 'WARN  lint-arbitrary-ord  %s:%s  BOrd.make from a variable: %s\n' "$f" "$ln" "$trimmed" ;;
-            esac
-        fi
-        prev=$line
-    done < "$f"
-done < "$_TMP/files"
+        if (code ~ /BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)/) {
+            t = $0; sub(/^[[:space:]]+/, "", t)
+            st = marker_state(substr($0, length(code) + 1))
+            if (st == "" && prev ~ /^[[:space:]]*\/\//) st = marker_state(prev)
+            if (st == "bare")
+                printf "WARN  lint-arbitrary-ord  %s:%d  reviewed marker without a reason (add one): %s\n", ENVIRON["AL_FILE"], FNR, t
+            else if (st != "reason")
+                printf "WARN  lint-arbitrary-ord  %s:%d  BOrd.make from a variable: %s\n", ENVIRON["AL_FILE"], FNR, t
+        }
+        prev = $0
+    }'
 
-[ "$had_err" -eq 0 ] || exit 3
-exit 0
+awk_lint_exit 0

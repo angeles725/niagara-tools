@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: CompPan -->
+<!-- deltas: 0 -->
 # Retro — CompPan Fase 2 (suction-pressure modulation) · 2026-09-02
 
 Module: CompPan-rt (3-compressor rack, PANCCADIA Leon). Type: pure logic (rt control).

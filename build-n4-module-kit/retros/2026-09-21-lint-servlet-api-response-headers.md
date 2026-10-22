@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: api-response-headers check in lint-servlet (auto-wired §5.18) + 3 stale-doc fixes -->
 # 2026-09-21 · kit · lint-servlet api-response-headers check + stale-doc fixes
 
 **Session**: build-n4-module "what's-left" audit follow-up. `security.md §311` documented an `api-response-headers` lint candidate "not yet in lint-servlet.sh" — the last genuine unimplemented per-module lint. Implemented as a CHECK inside the existing `lint-servlet.sh` (already auto-wired into report-module.sh §5.18), so it needs no new wiring and runs in the build.sh chain.

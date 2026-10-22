@@ -78,14 +78,24 @@ if [ $# -lt 2 ] || [ $# -gt 3 ]; then usage >&2; exit 2; fi
 ROOT="$1"; MOD="$2"
 NIAGARA_HOME="${3:-${niagara_home:-}}"
 J8="${JAVA8:-/usr/lib/jvm/java-8-openjdk-amd64}"
-HERE="$(cd "$(dirname "$0")" && pwd)"
+HERE="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 # shellcheck disable=SC1091
 . "$HERE/lib/fs-type.sh"
 
 [ -d "$ROOT" ] || { echo "build.sh: module root not found: $ROOT" >&2; exit 10; }
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
+# retro deltas 1924: resolve ROOT to an absolute path first — dirname of a relative "." is "." (endless loop) — and fail
+# fast when a gradlew exists but is not executable (a worktree checkout of a 100644 gradlew): do not walk past it.
+ROOT="$(CDPATH='' cd -- "$ROOT" >/dev/null && pwd)" || { echo "build.sh: cannot resolve module root: $ROOT" >&2; exit 10; }
 GRADLE_ROOT="$ROOT"
-while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do GRADLE_ROOT="$(dirname "$GRADLE_ROOT")"; done
+while [ -n "$GRADLE_ROOT" ] && [ "$GRADLE_ROOT" != "/" ] && [ ! -x "$GRADLE_ROOT/gradlew" ]; do
+    if [ -f "$GRADLE_ROOT/gradlew" ]; then
+        echo "build.sh: $GRADLE_ROOT/gradlew exists but is not executable (a fresh VCS worktree of a repo that stores it 100644)" >&2
+        echo "  fix: chmod +x $GRADLE_ROOT/gradlew" >&2
+        exit 10
+    fi
+    GRADLE_ROOT="$(dirname "$GRADLE_ROOT")"
+done
 [ -x "$GRADLE_ROOT/gradlew" ] || {
     echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2
     # comppan-fase2-amps-alarms Δ2: the opposite mistake — the REPO root was passed, one or more levels
@@ -242,7 +252,9 @@ if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$G
 else
   # restart-seq-comp-lockout-hours Δ3: the plugin's post-jar copy into <niagara_home>/modules failed because a
   # (Windows-side) process holds the old jar open. The jar task itself already assembled build/libs/<jar>.
-  if grep -qE 'FileAlreadyExistsException.*modules/.*\.jar' "$GLOG"; then
+  # Route-independent: the Windows gradlew.bat route prints backslash paths and the Kotlin message
+  # ("Tried to overwrite the destination, but failed to delete it"). [ev: retro n4-course-signed-jars-gate-fix Δ5]
+  if grep -qE 'FileAlreadyExistsException.*modules[/\\].*\.jar' "$GLOG"; then
     echo "build.sh: the plugin's post-jar copy into $NIAGARA_HOME/modules failed — a local process (Workbench," >&2
     echo "  a station) holds the old jar open (FileAlreadyExistsException). The build/libs jar is the artifact of record:" >&2
     for p in "${SEL[@]}"; do

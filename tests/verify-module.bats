@@ -140,13 +140,13 @@ good_dir() {
 # --- C3-PR4 (module-palette Delta 1, the gate half): empty module.palette + declared types ---
 # The retro defect: a jar with declared @NiagaraType(s) but a TOTALLY EMPTY module.palette builds,
 # passes the gate, deploys — and Workbench shows nothing to drag. check_palette (default-on, reads the
-# packaged module.palette + module.xml): palette entries = `<p n=` count (the b:Folder root has no n=);
+# packaged module.palette + module.xml): palette entries = palette_scan ENTRY rows (folders have no entry);
 # declared types = `<type ` count (B8 convention). Empty (0) + types(>=1) → WARN / --strict FAIL.
 # SCOPE: empty-palette-with-types (high-signal), NOT one-<p>-per-type (would noise on internal types).
 
 @test "V13 (palette): an EMPTY module.palette with declared types → WARN, exit 0 (names the empty palette)" {
   good_dir "$TMPDIR_T/d"                                   # module.xml declares 1 type (com.x.A)
-  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"   # root only — 0 <p n= entries
+  printf '<p m="b=baja" t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"   # root only — 0 <p n= entries
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]                                      # WARN does not fail the gate
@@ -155,7 +155,7 @@ good_dir() {
 
 @test "V14 (palette): --strict promotes the empty-palette WARN to FAIL (exit 1)" {
   good_dir "$TMPDIR_T/d"
-  printf '<p t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:Folder"></p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" --strict "$TMPDIR_T/j.jar"
   [ "$status" -eq 1 ]
@@ -165,7 +165,7 @@ good_dir() {
 @test "V15 (palette): a POPULATED palette (>=1 <p n=) + types → PASS, no palette WARN" {
   good_dir "$TMPDIR_T/d"
   # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here.
-  printf '<p t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:UnrestrictedFolder">\n<p n="Demo" m="x=demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
@@ -185,7 +185,7 @@ good_dir() {
   good_dir "$TMPDIR_T/d"; make_module_xml "$TMPDIR_T/d" 4.14   # rewrite module.xml with ZERO declared types
   # Use the idiomatic b:UnrestrictedFolder root so the palette-root check (Δ1/B746) does not fire here,
   # keeping the assertion clean: only the empty-palette type-guard is exercised.
-  printf '<p t="b:UnrestrictedFolder"></p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:UnrestrictedFolder"></p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
@@ -196,7 +196,7 @@ good_dir() {
   # Δ1/B746 §746.1: b:Folder is gated (access-controlled); b:UnrestrictedFolder is the idiomatic ungated root.
   # Using b:Folder causes "access denied" palette expansion for engineers without the folder's category permission.
   good_dir "$TMPDIR_T/d"
-  printf '<p t="b:Folder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
+  printf '<p m="b=baja" t="b:Folder">\n<p n="Demo" m="x=demo" t="x:Demo"/>\n</p>\n' > "$TMPDIR_T/d/module.palette"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]                                        # WARN never changes exit code
@@ -204,6 +204,70 @@ good_dir() {
   [[ "$output" == *"b:Folder"* ]]
   [[ "$output" == *"b:UnrestrictedFolder"* ]]                # the remedy is named in the message
   [[ "$output" == *"PASS  palette"* ]]                       # entries check still passes (>= 1 <p n=)
+}
+
+# --- Palette format (register C11 afl Δ3, C82 slo Δ6). A palette is a BOG document: `t=` is a type spec
+# `<symbol>:<Type>` whose symbol an `m="<symbol>=<module>"` declares (ValueDocDecoder.java:1071-1073 "Invalid
+# typespec", :1091 "Undeclared module symbol"); Workbench saves `n=` after `t=`; a child `<p n v/>` (with
+# t= for a dynamic slot) is a slot override, not a component. [ev: retro n4-course-authoring-files-and-libraries Δ3]
+# [ev: retro n4-course-handson-slotomatic-authoring Δ6]
+# Named mutations: PAL-n-last -- counting only `<p n=` misses Workbench-saved entries;
+# PAL-override -- counting a `v=` slot override as a component; PAL-class / PAL-prefix -- dropping the
+# type-spec FAILs; PAL-comment -- reading XML comments as elements.
+_pal() { good_dir "$TMPDIR_T/d"; printf '%s\n' "$@" > "$TMPDIR_T/d/module.palette"; make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"; }
+
+@test "PAL-n-last: a Workbench-saved entry (n= after t=) counts as a component entry" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p m="t=training" t="t:FirstComponent" n="FirstComponent" />' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-override: a slot override child (n v, t+v for a dynamic slot) is not a component entry" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="And" m="c=control" t="c:And">' \
+    '  <p n="inA" f="sx" t="b:Boolean" v="false"/>' '  <p n="enabled" v="true"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-class: a Java class name as t= FAILs palette-type (Invalid typespec)" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="Demo" t="com.x.BDemo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-type"*"com.x.BDemo"*"Java class name"* ]]
+}
+
+@test "PAL-prefix: a t= symbol no m= declared FAILs palette-type (Undeclared module symbol)" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<p n="Demo" t="x:Demo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-type"*"x:Demo"* ]]
+}
+
+@test "PAL-comment: an element inside an XML comment is not read; a nested b:Folder WARNs palette-root" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<!-- old: <p n="Old" t="com.x.BOld"/> -->' \
+    '<p n="Sub" t="b:Folder">' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"palette-type"* ]]
+  [[ "$output" == *"WARN  palette-root"* ]]
+  [[ "$output" == *"PASS  palette"*"1 component entries"* ]]
+}
+
+@test "PAL-unterm: an unterminated <!-- FAILs palette-parse and reports no PASS palette" {
+  _pal '<p m="b=baja" t="b:UnrestrictedFolder">' '<!-- draft, never closed' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  palette-parse"*"unterminated comment"* ]]
+  [[ "$output" != *"PASS  palette "* ]]
+}
+
+@test "PAL-root-alias: a baja Folder under any alias WARNs palette-root naming the element, root or nested" {
+  _pal '<p m="bj=baja" t="bj:UnrestrictedFolder">' '<p n="Sub" t="bj:Folder">' '<p n="Demo" m="x=demo" t="x:Demo"/>' '</p>' '</p>'
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  palette-root"*"bj:Folder"*"root or nested"* ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -225,6 +289,17 @@ good_dir() {
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"WARN"* ]]
   run "$VM" --strict "$TMPDIR_T/Scaffold-wb.jar"
   [[ "$output" == *"wb-scaffold"* ]] && [[ "$output" == *"FAIL"* ]]
+}
+
+@test "WB-SCAFFOLD-badtype: a -wb palette entry with an undeclared t= still counts as an entry (no wb-scaffold row)" {
+  d="$TMPDIR_T/wbb"; add_manifest "$d"; add_signature "$d"
+  make_module_xml "$d" 4.14
+  printf '<p m="b=baja" t="b:UnrestrictedFolder">\n<p n="Demo" t="x:Demo"/>\n</p>\n' > "$d/module.palette"
+  make_jar "$TMPDIR_T/Bad-wb.jar" "$d"
+  run "$VM" "$TMPDIR_T/Bad-wb.jar"
+  [ "$status" -eq 1 ]                                         # palette-type FAIL
+  [[ "$output" == *"FAIL  palette-type"* ]]
+  [[ "$output" != *"wb-scaffold"*"0 palette entries"* ]]
 }
 
 @test "WB-DEP1: a module.xml dependency absent from the profile gradle.kts api()/nre() WARNs phantom-dep" {
@@ -567,4 +642,131 @@ JAVA
   run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
   [ "$status" -eq 0 ]
   [[ "$output" != *"missing UNITS"* ]]
+}
+
+# --- VSRC: the shared --src check opening (src_or_skip / src_dir_or_skip) and Java walk (java_files) ---
+# Every --src check opens the same way: SKIP "no --src" without --src, then (for the checks that walk
+# <profile>/src) SKIP "no <profile>/src" when that dir is absent. VSRC1/VSRC2 pin those exact rows per
+# check, so a refactor of the shared opening cannot drop or reword one. VSRC3 pins the D9b dot-dir prune
+# of the shared walk for every walking check.
+# NAMED MUTATION: reword the "no --src" detail in src_or_skip -> VSRC1 fails.
+# NAMED MUTATION: drop `-type d -name '.*' -prune -o` from java_files -> VSRC3 fails.
+
+# vsrc_row <status> <check> <jar> <detail>: one report row in verify-module's exact format.
+vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
+
+@test "VSRC1: without --src every source check reports SKIP 'no --src' (exact rows)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  j="$TMPDIR_T/Foo-rt.jar"
+  run "$VM" "$j"
+  [ "$status" -eq 0 ]
+  for c in typecount facets facets-req ord-literal phantom-dep moduletest cross-module-type \
+           transient-operator compact3-import subscription-leak slot-wall; do
+    row=$(vsrc_row SKIP "$c" "$j" "no --src")
+    printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
+  done
+}
+
+@test "VSRC2: --src with no <profile>/src makes every walking check report SKIP 'no <pd>/src' (exact rows)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  j="$TMPDIR_T/Foo-rt.jar"; pd="$TMPDIR_T/mod/Foo-rt"
+  run "$VM" --src "$TMPDIR_T/mod" "$j"
+  [ "$status" -eq 0 ]
+  for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
+           subscription-leak slot-wall; do
+    row=$(vsrc_row SKIP "$c" "$j" "no $pd/src")
+    printf '%s\n' "$output" | grep -qxF "$row" || { echo "missing row: $row"; return 1; }
+  done
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row PASS typecount "$j" "jar declares 1 types == module-include.xml")"
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row SKIP phantom-dep "$j" "no *.gradle.kts in $pd")"
+  printf '%s\n' "$output" | grep -qxF "$(vsrc_row SKIP moduletest "$j" "no production .java under src/")"
+}
+
+@test "VSRC3: a dot-dir (.deploy-baseline) under src is pruned by every walking check (D9b)" {
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  src="$TMPDIR_T/mod/Foo-rt/src"; mkdir -p "$src/com/x" "$src/.deploy-baseline/com/x"
+  printf 'package com.x;\npublic class A extends BComponent {}\n' > "$src/com/x/A.java"
+  # The stale snapshot trips every walking check; none of it may be reported.
+  {
+    printf 'package com.x;\nimport java.awt.Color;\n'
+    printf 'public class Stale extends TypeSubscriber {\n'
+    printf '  Object f = BFacets.make(BFacets.MIN, -40);\n'
+    printf '  String o = "station:|slot:/Drivers";\n'
+    printf '  @NiagaraProperty(name = "roomSetpoint", type = "double", flags = Flags.OPERATOR)\n'
+    printf '  @NiagaraProperty(name = "t", type = "double", flags = Flags.TRANSIENT | Flags.OPERATOR)\n'
+    printf '  @NiagaraProperty(name = "f", type = "org.other.Foreign")\n'
+    for i in $(seq 1 16); do printf '  @NiagaraProperty(name = "p%s", type = "boolean")\n' "$i"; done
+    printf '}\n'
+  } > "$src/.deploy-baseline/com/x/Stale.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"deploy-baseline"* ]]
+  for c in facets facets-req ord-literal cross-module-type transient-operator compact3-import \
+           subscription-leak slot-wall; do
+    printf '%s\n' "$output" | grep -qE "^PASS  $c " || { echo "no PASS row for $c"; return 1; }
+  done
+}
+
+# --- #260 (retro n4-course-signed-jars-gate-fix Δ1-Δ3): false FAILs on live-loaded jars ---
+# The course jars were signed by the CodeSigning profile (META-INF/CODESIGN.SF + CODESIGN.RSA), loaded live
+# under moduleVerificationMode=high, and still FAILed `signed`, `bytecode` and `types` here.
+
+# signed_jar <jar> <alias> <key-ext>: good_dir with the NIAGARA4 pair swapped for <alias>.SF + <alias>.<key-ext>
+signed_jar() {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.SF" "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  add_signature "$TMPDIR_T/d" "$2" "$3"; make_jar "$1" "$TMPDIR_T/d"; rm -rf "$TMPDIR_T/d"
+}
+
+@test "VSIG1: an alias-named signature (CODESIGN.SF + .RSA, SERVER1 + .DSA, EC1 + .EC) PASSes signed and names the alias" {
+  for pair in CODESIGN:RSA SERVER1:DSA EC1:EC; do
+    signed_jar "$TMPDIR_T/j.jar" "${pair%%:*}" "${pair##*:}"
+    run "$VM" "$TMPDIR_T/j.jar"
+    [ "$status" -eq 0 ] || { echo "$pair: $output"; return 1; }
+    printf '%s\n' "$output" | grep -E '^PASS  signed ' | grep -qF "${pair%%:*}" || { echo "$pair: $output"; return 1; }
+    rm -f "$TMPDIR_T/j.jar"
+  done
+}
+
+@test "VSIG2: a .SF without its signature block file (.RSA/.DSA/.EC) FAILs signed" {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  signed ' | grep -qF 'NIAGARA4.SF'
+}
+
+@test "VSIG3: a jar with no META-INF/*.SF at all FAILs signed with \"no META-INF/*.SF\"" {
+  good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.SF" "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  signed ' | grep -qF 'no META-INF/*.SF'
+}
+
+@test "VMR1: a major-55 class under META-INF/versions/ is ignored by bytecode and counted in the detail" {
+  good_dir "$TMPDIR_T/d"; make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -E '^PASS  bytecode ' | grep -qF '2 classes, all major 52; 1 multi-release classes ignored'
+}
+
+@test "VMR3: a jar whose only classes sit under META-INF/versions/ FAILs bytecode and still counts the ignored ones" {
+  good_dir "$TMPDIR_T/d"; find "$TMPDIR_T/d" -name '*.class' -delete
+  make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  bytecode ' | grep -qF 'no .class entries outside META-INF/versions/; 1 multi-release classes ignored'
+}
+
+@test "VMR2: a major-55 class OUTSIDE META-INF/versions/ still FAILs bytecode (the skip is path-scoped)" {
+  good_dir "$TMPDIR_T/d"; make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_class_file "$TMPDIR_T/d/com/x/versions/C.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  bytecode ' | grep -qF 'com/x/versions/C.class major=55'
 }

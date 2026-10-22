@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # Retro: Campaign 6 Close (PR6) — tracked launcher + openspec durability + v0.16.0
 
 **Date**: 2026-09-05

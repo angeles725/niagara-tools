@@ -270,6 +270,88 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 0 ]
 }
 
+# --- generated INDEX (r8 T8i): retros/INDEX.md is regenerated from the retro headers by
+# toolbelt/gen-retro-index.sh, so the new-retro exit no longer needs a hand-edited INDEX.md diff in
+# range: BUILD-STATE.md + a retro is enough WHEN the index is fresh, and sweep (the content half)
+# fails a stale one. RED before T8i: the hook required has_index>=1, so H11 fell through to FAIL.
+# _fixture_top — a fake toplevel with the real sweep + generator and a one-retro kit.
+_fixture_top() {
+  TOP="$BATS_TEST_TMPDIR/top"; local k="$TOP/build-n4-module-kit"
+  mkdir -p "$k/toolbelt" "$k/retros"
+  ln -s "$(cd "$KIT/.." && pwd)/go" "$TOP/go" # the wrapper execs <toplevel>/go/bin [ev: retro go-module-gen-retro-index Δ2]
+  cp "$KIT/toolbelt/sweep-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$k/toolbelt/"
+  printf '<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 1 -->\n# demo\n' > "$k/retros/2026-09-04-demo.md"
+  printf '<!-- build-state.v1 -->\nmodule: kit\nretro_required: true\nretro_pending: true\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
+  bash "$k/toolbelt/gen-retro-index.sh" "$k" >/dev/null
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'feat: change a control rule + retro\n' > "$BATS_TEST_TMPDIR/log"
+}
+run_hook_at() { # run_hook_at <toplevel>
+  FAKE_TOPLEVEL="$1" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
+  run env PATH="$FAKEBIN:$PATH" bash "$HOOK" origin https://example/repo.git <<<'refs/heads/main aaaa refs/heads/main bbbb'
+}
+
+@test "H11: BUILD-STATE.md + a retro with NO INDEX.md diff PASSES when the generated index is fresh" {
+  _fixture_top
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H12: the same range FAILS when the generated index is stale (retro header changed, not regenerated)" {
+  _fixture_top
+  sed -i 's/deltas: 1/deltas: 2/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"stale"* ]]
+}
+
+# --- ledger fragments (r8 T8i slice B): the kit block's last_change, open_issues and session log are
+# GENERATED from build-n4-module-kit/ledger.d/*.md by toolbelt/gen-build-state.sh. A new or changed
+# fragment in range satisfies the "BUILD-STATE.md in range" half of every exit, and sweep (the content
+# half) fails a BUILD-STATE.md that is stale against ledger.d/. RED before slice B: the hook counted
+# only a BUILD-STATE.md diff, and ledger.d/ was build-relevant.
+# _fixture_ledger_top — _fixture_top plus ledger.d/, the generator and a kit block generated from it.
+_fixture_ledger_top() {
+  _fixture_top; local k="$TOP/build-n4-module-kit"
+  cp "$KIT/toolbelt/gen-build-state.sh" "$k/toolbelt/"
+  mkdir -p "$k/ledger.d"
+  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: x\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: 2026-09-04 · demo\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n' > "$k/ledger.d/0000-archive-pre-2026-10-23.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n' > "$k/ledger.d/2026-09-05-demo.md"
+  bash "$k/toolbelt/gen-build-state.sh" "$k" >/dev/null
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+}
+
+@test "H13: a kit change + a ledger.d fragment + a retro (no BUILD-STATE.md diff) PASSES when BUILD-STATE.md is fresh" {
+  _fixture_ledger_top
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H14: the same range FAILS when BUILD-STATE.md is stale against ledger.d (fragment added, not regenerated)" {
+  # Mutation: GBS-gate -- a hook that counts a fragment without sweep's freshness check passes this.
+  _fixture_ledger_top
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\nlog: 2026-09-06 · not regenerated\n' > "$TOP/build-n4-module-kit/ledger.d/2026-09-06-late.md"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"stale vs ledger.d"* ]]
+}
+
+@test "H15: a promotion trailer + an in-range ledger.d fragment (no INDEX, no BUILD-STATE diff) PASSES" {
+  _fixture_ledger_top
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold demo\n\nRetro: promotion (folds demo Δ1; source retro stays pending)\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H16: a ledger.d-only range is not build-relevant (does NOT fire the gate)" {
+  printf 'build-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: ledger entry\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
 # ============ MARKER<->INDEX CONSISTENCY (campaign 6, Option 2-lite) ==========
 # Frozen contract (investigador, 2026-09-05): when a retro file carries a
 # `<!-- review-status: X -->` marker, X MUST equal that retro's INDEX row status;

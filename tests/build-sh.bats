@@ -428,6 +428,20 @@ GRADLEW
   [[ "$output" == *"not rebuilt"* ]]
 }
 
+# [ev: retro n4-course-signed-jars-gate-fix Δ5] — the Windows gradlew.bat route prints the copy-lock
+# with backslash paths and the Kotlin message, CRLF-terminated; the exit-32 classifier must not depend on the route.
+@test "BS-copy-lock-win: the captured gradlew.bat kotlin FileAlreadyExistsException (backslashes, CRLF) -> exit 32" {
+  cat > "$ROOT/gradlew" <<'GRADLEW'
+#!/usr/bin/env bash
+printf '%s\r\n' 'kotlin.io.FileAlreadyExistsException: C:\N4\exam\Cristian_Angeles_Cert-rt\build\libs\Cristian_Angeles_Cert-rt.jar -> c:\niagara\niagara-4.15.6.20\modules\Cristian_Angeles_Cert-rt.jar: Tried to overwrite the destination, but failed to delete it.' >&2
+exit 1
+GRADLEW
+  chmod +x "$ROOT/gradlew"
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 32 ]
+  [[ "$output" == *"artifact of record"* ]]
+}
+
 # [ev: retro continuous-fan-post-defrost-delay Δ1] — build.sh forwards the plugin override to preflight.
 @test "BS-preflight-plugin: --plugin-version is forwarded to preflight.sh --plugin-version" {
   _record_stub preflight
@@ -534,4 +548,44 @@ GRADLEW
   run "$B" --first-deploy "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
   [[ "$(cat "$TMPDIR_T/report-module.args")" == *"--first-deploy"* ]]
+}
+
+# retro deltas 1924: a relative ROOT ("." or "mod") made the gradlew walk-up loop forever (dirname . == .);
+# a gradlew present but not executable must fail fast with the chmod hint, not walk past it.
+@test "BS-relative-root: a relative ROOT with no gradlew terminates (exit 10), never loops (#1924)" {
+  # Mutation: BS-relative-root -- dropping the absolute-path resolution of ROOT makes this hit the timeout (124).
+  mkdir -p "$TMPDIR_T/norel/mod"
+  cd "$TMPDIR_T/norel/mod"
+  run timeout 10 "$B" . Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"no executable ./gradlew"* ]]
+}
+
+@test "BS-relative-root-ok: a relative ROOT that holds an executable gradlew builds (#1924)" {
+  cd "$ROOT"
+  run timeout 20 "$B" . Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *":Foo-rt:jar"* ]]
+}
+
+@test "BS-gradlew-not-exec: a gradlew that exists but is not executable fails fast, naming chmod +x (#1924)" {
+  # Mutation: BS-gradlew-not-exec -- removing the non-executable check falls through to the generic 'no executable' walk-up message.
+  chmod -x "$ROOT/gradlew"
+  run timeout 10 "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"is not executable"* ]]
+  [[ "$output" == *"chmod +x $ROOT/gradlew"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+}
+
+@test "BS-cdpath: a relative ROOT resolves against cwd even with CDPATH exported (#1924)" {
+  # Mutation: BS-cdpath -- a bare `cd "$ROOT"` follows CDPATH and echoes the target, corrupting ROOT.
+  mkdir -p "$TMPDIR_T/cdp/other/mod"
+  make_fake_gradlew "$TMPDIR_T/cdp/other/mod"
+  mkdir -p "$TMPDIR_T/cdp/wd/mod"; make_fake_gradlew "$TMPDIR_T/cdp/wd/mod"
+  make_profile "$TMPDIR_T/cdp/wd/mod" Foo rt 1
+  cd "$TMPDIR_T/cdp/wd"
+  CDPATH="$TMPDIR_T/cdp/other" run timeout 20 "$B" mod Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"$TMPDIR_T/cdp/other"* ]]
 }

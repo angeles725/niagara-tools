@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-06 · kit · campaign9-silent-protection
 
 **Session**: Campaign 9 PR3 — toolbelt/lint-silent-protection.sh (B824 §824.2 two-part scan: trip detection + surface resolution)

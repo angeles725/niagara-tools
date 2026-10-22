@@ -24,13 +24,15 @@
 #   0   Installed or already current (or --dry-run).
 #   1   Installed copy exists and diverges from the tracked copy; --force absent.
 #   2   Usage error (including an unknown --skill name).
-#   3   Environment error (target directory not creatable).
+#   3   Environment error (tracked source missing, no sha256 tool, target directory not creatable).
 #
 # shellcheck disable=SC2006  # not used; POSIX $() throughout
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via SCRIPT_DIR
+. "$SCRIPT_DIR/lib/sha256.sh" || exit 3
 
 # The one place that names the skills: "<name>:<tracked launcher, relative to the repo>".
 # The usage text, the error messages and the lookup below are all derived from it.
@@ -108,21 +110,7 @@ fi
 TARGET_DIR="$HOME_DIR/.claude/skills/$SKILL"
 TARGET="$TARGET_DIR/SKILL.md"
 
-# ---------------------------------------------------------------------------
-# Sha256 helper — works on both Linux (sha256sum) and macOS (shasum -a 256)
-# ---------------------------------------------------------------------------
-sha256_of() {
-  local f="$1"
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$f" | cut -d' ' -f1
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$f" | cut -d' ' -f1
-  else
-    printf 'install-skill: no sha256 tool found (sha256sum or shasum)\n' >&2
-    exit 3
-  fi
-}
-
+sha256_require 'install-skill' || exit 3   # up front: an exit inside $( ) cannot stop us
 tracked_sha=$(sha256_of "$TRACKED")
 
 # ---------------------------------------------------------------------------

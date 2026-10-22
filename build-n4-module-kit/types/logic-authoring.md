@@ -5,13 +5,13 @@
 
 - **The N4 extension idiom (one shape for most SPIs):** to extend the framework, *subclass a framework base + register a `<type>`/agent in `module.xml` + hand back a self-describing SPI object* — there is NO central registry the author edits. Learn it once; B778 (service/ORD-scheme/subscription), B782 (query providers), and B785 (rdb dialect) are three instances. `[ev: corpus B778/B782/B785/B777]`
 - **Custom SERVICE:** `extends BAbstractService`, override `getServiceTypes(){return new Type[]{TYPE};}` → registered by dropping it under `/Services` (auto at bootstrap); hook `serviceStarted()`; look up via `Sys.getService(Type)`. `[ev: corpus B778]`
-- **New ORD SCHEME:** `extends BOrdScheme` (a `BSingleton`) + `@NiagaraType(ordScheme="<id>")` + `@NiagaraSingleton`; ctor `super("<id>")`; override `resolve()`; Slot-o-Matic emits `<type … ordScheme="<id>"/>`; registry resolves via `BOrdScheme.lookup`. `[ev: corpus B778]`
-- **Server-side SUBSCRIPTION:** subclass `javax.baja.sys.Subscriber`, override `event(BComponentEvent)`, call `subscribe(component, depth, cx)` and `unsubscribeAll()` on stop (the SERVER complement to the BOX client). `[ev: corpus B778]`
-- **Observed-side `subscribed()` / `unsubscribed()` — demand activation on the WATCHED component:** these callbacks fire ON a component when a remote client (Workbench, BOX browser) STARTS/STOPS watching it — distinct from `Subscriber.subscribe()` (which is the OBSERVER API: *I am watching*). Override to do demand-based resource acquisition/release (e.g., open a serial port only while someone is watching the status component). Caveat: fires only at the 0↔1 subscriber-count crossing, not on every client join/leave. `[ev: corpus B4 §4.3.1, B408 §408.4.2]`
+- **New ORD SCHEME:** `extends BOrdScheme` (a `BSingleton`) + `@NiagaraType(ordScheme="<id>")` + `@NiagaraSingleton`; ctor `super("<id>")`; override `resolve()`; Slot-o-Matic emits `<type … ordScheme="<id>"/>`; registry resolves via `BOrdScheme.lookup`; `resolve()` throws `UnresolvedException` for a missing or unreadable target (never returns null) and must tolerate unmounted or offline components. `[ev: corpus B778]` `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
+- **Server-side SUBSCRIPTION:** subclass `javax.baja.sys.Subscriber`, override `event(BComponentEvent)`, call `subscribe(component, depth, cx)` and `unsubscribeAll()` on stop (the SERVER complement to the BOX client). A plain `Subscriber` defaults to the `PROPERTY_EVENTS` mask (a `TypeSubscriber` to `SELF_EVENTS`). For a timed read without teardown use a **lease**: `lease()`, `lease(depth)`, `lease(depth, millis)`; the default is 60 s per space (`BComponentSpace.getDefaultLeaseTime()` returns `60000L`; a Fox proxy space takes the server's value) and the first read after `lease()` may still be stale — read again later. `[ev: corpus B778]` `[ev: corpus B1306 §1306.1 rows 1-2, 5]` `[ev: corpus B1418 §1418.4]` [ev: retro devguide415-nav-subscriptions-tags-ords Δ2]
+- **Observed-side `subscribed()` / `unsubscribed()` — demand activation on the WATCHED component:** these callbacks fire ON a component when a remote client (Workbench, BOX browser) STARTS/STOPS watching it — distinct from `Subscriber.subscribe()` (which is the OBSERVER API: *I am watching*). Override to do demand-based resource acquisition/release (e.g., open a serial port only while someone is watching the status component). Caveat: fires only at the 0↔1 subscriber-count crossing, not on every client join/leave. **A watching client is only one of three causes:** a component is subscribed when it is permanently subscribed, when any `Subscriber` holds it, or when it has knobs (outgoing links) while running — `isPermanentlySubscribed() || getSubscribers().length > 0 || (getKnobs().length > 0 && isRunning())` (`BComponent.java:408-414`). A LINKED point is therefore subscribed for good, with no client, and keeps propagating even a stale value; demand activation keyed on "someone is looking" also fires for every linked component. Subscribing to proxy points adds poll load: each subscribed polled point joins the poll scheduler (a course student overflowed a queue and restarted the station at ~5000 points) — subscribe what you use, and size the poll buckets (`types/driver-authoring.md` § 4). `[ev: corpus B4 §4.3.1, B408 §408.4.2]` `[ev: corpus B1306 §1306.2 C2]` `[ev: corpus B1418 §1418.4]` [ev: retro devguide415-nav-subscriptions-tags-ords Δ2]
 - **BOX→SubscribeCallbacks→subscribed() causal chain:** browser/Workbench BOX `sub` op → `ProxyBroker.subscribeOp` → space subscriber-count 0→1 → `SubscribeCallbacks.subscribe()` fires → `component.subscribed()` fires. This is WHY `subscribed()` and `SubscribeCallbacks` fire — the trigger is a remote client starting a live subscription, not a local observer. A `BComponent` author who overrides `subscribed()` is therefore reacting to a Workbench panel or browser SPA opening a live view on that component. `[ev: corpus B408 §408.4.2, B512 §512.3–512.4]`
 - **TYPE-LEVEL SUBSCRIPTION (`TypeSubscriber`) — watch every instance of a type across the space:** to receive events for EVERY mounted instance of a `BComponent` subtype T (vs instance-depth `Subscriber` which watches one component tree): (1) subclass `TypeSubscriber`; constructor receives `ComponentSpace` — call `super(space)` and store it; (2) override `abstract void event(BComponentEvent)` to handle each event; (3) in `started()`, call `subscribe(new Type[]{T.TYPE}, cx)` — the framework validates `t.is(BComponent.TYPE)` (throws on a non-component type) and calls `space.subscribe(t, this)`; (4) call `unsubscribeAll()` in `stopped()`. `[ev: corpus B867 §867.2-3]`
 - **`TypeSubscriber` supertype-walk gotcha — subscribing to a BASE type catches ALL subtypes across the space:** `BComponentSpace.event()` recurses up `getSuperType()` — a `TypeSubscriber` on a BASE type (e.g., `BNumericPoint.TYPE`) catches ALL subtype instances' events across the ENTIRE space; subscribing to `BComponent.TYPE` = "watch everything" for the masked event-ids. Rule: be specific about the Type; profile event volume before subscribing to ANY framework base type; a too-broad base type causes a silent event flood with no compile-time warning. `[ev: corpus B867 §867.3]`
-- **`TypeSubscriber` event-mask gotcha — default `SELF_EVENTS` covers lifecycle ONLY, not value changes:** `BComponentEventMask.SELF_EVENTS` (= 1 701 888) covers component lifecycle event ids 11–20 (`parented`, `started`, `stopped`, …). It does **NOT** include `PROPERTY_CHANGED` (id = 0) or the `PROPERTY_EVENTS` set (mask 395 263). A default-mask `TypeSubscriber` receives **no** value-change callbacks. To receive value-change notifications, call `setMask(BComponentEventMask.PROPERTY_EVENTS)` (or compose masks with bitwise OR) before subscribing. Using the default mask while expecting value changes is a **silent miss**: compiles, passes the verify gate, never fires. `[ev: corpus B867 §867.4, B900 §900.1]`
+- **`TypeSubscriber` event-mask gotcha — default `SELF_EVENTS` covers lifecycle ONLY, not value changes:** `BComponentEventMask.SELF_EVENTS` (= 1 701 888) covers component lifecycle event ids 11–16, 19 and 20 (`parented`, `started`, `stopped`, …; 17 and 18 are `RELATION_KNOB_ADDED/REMOVED` and are left out, `BComponentEventMask.java:319-327`, `[ev: corpus B1306 §1306.2 C4]`). It does **NOT** include `PROPERTY_CHANGED` (id = 0) or the `PROPERTY_EVENTS` set (mask 395 263). A default-mask `TypeSubscriber` receives **no** value-change callbacks. To receive value-change notifications, call `setMask(BComponentEventMask.PROPERTY_EVENTS)` (or compose masks with bitwise OR) before subscribing. Using the default mask while expecting value changes is a **silent miss**: compiles, passes the verify gate, never fires. `[ev: corpus B867 §867.4, B900 §900.1]`
 ### Subscribe / unsubscribe symmetry rule `[ev: retro module-hardening-failure-modes-deltas Δ3]`
 
 Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or `unsubscribeAll()`) in `stopped()`. Omitting the teardown has three compounding effects:
@@ -36,7 +36,8 @@ Two independent levers control whether a slot appears in the nav sidebar:
 
 - **`isNavChild()→false`** hides the component from the nav sidebar ONLY. The slot still exists, is wireable, and is visible everywhere else (property sheet, wireboard). Override this when a child should not clutter the nav tree but must remain accessible for configuration. Contrast with `Flags.HIDDEN`, which removes the slot from ALL UI (nav, property sheet, wireboard) — use `HIDDEN` only for truly internal machinery.
 - **Nav order = slot declaration order:** the nav tree lists `getNavChildren()` in the same order as slots are declared with `@NiagaraProperty`. Reorder the field declarations to reorder the nav sidebar entries. There is no separate nav-order property.
-- **Virtual nav node recipe:** to expose a nav node that has no backing `@NiagaraProperty` slot (e.g. a synthetic grouping folder), implement `BINavNode` manually — override `getNavChildren()`, `getNavOrd()` (must return a stable `BOrd`), and `getNavIcon()`. Return the synthetic instance from the parent's `getNavChildren()` alongside its real child components. Canonical example: `BModulePaletteNode`. `getNavOrd()` must be stable across renames and restarts; a `BOrd` based on a constant string or handle is preferred over a computed slot path.
+- **Virtual nav node recipe:** to expose a nav node that has no backing `@NiagaraProperty` slot (e.g. a synthetic grouping folder), implement `BINavNode` manually — override `getNavChildren()`, `getNavOrd()` (must return a stable `BOrd`), and `getNavIcon()`. Return the synthetic instance from the parent's `getNavChildren()` alongside its real child components. Canonical example: `BModulePaletteNode`. `getNavOrd()` must be stable across renames and restarts; a `BOrd` based on a constant string or handle is preferred over a computed slot path. For a container of virtual nodes extend `BNavContainer`/`BNavFolder` (`addNavChild`, `removeNavChild`, `reorderNavChildren`) instead of hand-writing the list.
+- **`getNavChildren()` ignores permissions** (its javadoc, `BINavNode.java:96-98`): a servlet or `-ux` walk that returns nav children to a user filters them with `BNavContainer.filter(nodes, cx)` (`BNavContainer.java:364`). Logic walks do not use the nav tree at all: `getChildren(Class)`, `getChildComponents()` or `getProperties()` + `SlotCursor.next(Class)` (`BComponent.java:1526,1552`). All [CERT] niagara-help 4.15.6.20 source, corpus B1307 §1307.1 rows 1-4, 7. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ6]`
 
 ## Link lifecycle callbacks `[ev: corpus B958 §958.1–958.2]`
 
@@ -69,12 +70,22 @@ so a station restart that starts the target before the source does not leave the
 ### Call-site recipe
 
 ```java
-BOrd ord = BOrd.make("slot:/MyComp/mySlot");   // parse once; store in a field if reused
-BObject result = ord.resolve(base, cx).get();  // base may be null for absolute ORDs
+BOrd ord = BOrd.make(BOrd.make("station:|slot:/MyComp"), "slot:mySlot");  // compose, never concatenate
+OrdTarget target = ord.resolve(base, cx);         // narrowest base you have + the caller's Context
+if (!target.canRead()) throw new PermissionException("…");  // when the caller's permissions matter
+BObject result = target.get();
 ```
 
-- `BOrd.make(string)` parses and normalizes the ORD string.
-- `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget.get()` → `BObject`.
+- `BOrd.make(string)` only wraps the string (`"null"` → `BOrd.NULL`); a malformed ORD fails at `resolve`, and
+  `parse()` is not cached, so keeping a `BOrd` in a field does not save parsing. [CERT] `javax/baja/naming/BOrd.java:32-34`
+  (baja vineflower) `[ev: corpus B1308 §1308.2 C1]`
+- `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget`; `get()` then yields the `BObject`.
+  The one-argument `get(base)`/`resolve(base)` and the no-argument forms pass a **null Context** (`BOrd.java:90-107`):
+  no user, no permission filter. Pass the caller's Context; use `resolve()` + `canRead()` when the caller's
+  permissions matter and `get(base, cx)` only deliberately. Resolve against the narrowest base you hold (the
+  component, not the station root). `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
+- Store a portable ORD with `relativizeToSession()` (`station:|slot:…`), not the absolute host form.
+  `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 - **Absolute ORD** (host-anchored, starts with a host-type scheme): `base` may be `null`.
 - **Relative ORD**: requires a non-null `base` component; resolution starts from the base context.
 - **Normalization rule:** when a host-query fragment is encountered mid-chain, all prior fragments are trimmed — `slot:/a|ip:host|slot:/b` resolves as `ip:host|slot:/b` (the `ip:` fragment resets the root). Build cross-station ORDs from the host query outward. `[ev: corpus B5 §5.1.5]`
@@ -117,7 +128,7 @@ Warning: resolves the **first-registered** instance — same semantics as `Sys.g
 
 ### `h:` handle scheme — BOG-document-local links `[ev: corpus B5 §5.2.4]`
 
-- A handle (`h:N`) is **unique per BOG document, not globally** — the same `h:5` in two BOG files refers to two distinct entities.
+- A handle (`h:N`) is **unique within one component space, not globally** (devguide `naming.txt:159-162`) — the same `h:5` in two BOG files or two stations refers to two distinct entities. `[ev: corpus B1308 §1308.2 C2]`
 - `BOrd` properties that link to another component in the same BOG file serialize as `v="h:N"`.
 - `h:` ORDs are **path-independent**: rename or move the target component within the document without breaking the reference — contrasts with `slot:` which breaks on rename.
 - Use `h:` for palette template intra-document links; use `slot:` for human-readable cross-document references.
@@ -139,7 +150,9 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 
 ### `nav:` ORD scheme — nav tree walk `[ev: corpus B35 §35.5.2]`
 
-`BNavScheme` resolves `nav:Station/Floor1/Zone` by walking `getNavChild()` segment-by-segment:
+`BNavScheme` (4.13+) resolves against a **nav-node base** and rejects a leading `/`: write `root:|nav:Station/Floor1/Zone`,
+never a bare `nav:` path. [CERT] `javax/baja/nav/BNavScheme.java:80-124` (corpus B1307 §1307.2 C3)
+`[ev: retro devguide415-nav-subscriptions-tags-ords Δ6]` It walks `getNavChild()` segment-by-segment:
 
 - Each path segment calls `getNavChild(name)` on the current node until the leaf is reached.
 - Permission enforcement is **inline**: a denied node raises `UnresolvedException` — the UI silently fails to expand that branch with **no error shown to the user**.
@@ -149,7 +162,8 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 
 `BHierarchyScheme extends BSpaceScheme` (`ordScheme="hierarchy"`); body parses as `HierarchyQuery extends SlotPath`.
 
-- A `hierarchy:` ORD **survives component-tree reorganisation** — it resolves through tags/relations to the real component, not through slot paths. Prefer over `slot:` when a module must hold a reference to a component that operators may reorganize.
+- **`hierarchy:` ORDs resolve only in a client** (Workbench, browser): "the resulting hierarchies only exist in the client environment" (devguide `hierarchy.txt:63-66`). Station code calls `BHierarchyService.resolveHierarchyLevelElem(new HierarchyQuery("/<hierarchy>"))`, which throws unless it runs in the station (`BHierarchyService.java:404-406`, hierarchy-rt vineflower), and caches the result. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]` `[ev: corpus B1311 §1311.2 C3]`
+- In a client, a `hierarchy:` ORD **survives component-tree reorganisation** — it resolves through tags/relations to the real component, not through slot paths.
 - The last path segment encoded as `station$3a$7c` (URL-escaped `station:|`) is the **ENTITY seam**: it dereferences to the real station component with an inline permission check.
 - Choose `hierarchy:` when the reference must be stable across renames and tree moves; choose `slot:` when you control the component path and human readability of the ORD matters more than stability.
 
@@ -164,45 +178,63 @@ Compose programmatically with string concatenation or `BOrd.make(base, suffix)`.
 ## Grouping and relating declaration surfaces (three postures)
 
 - **Categories:** author NOTHING — every `BComponent` is `BICategorizable`; categories are operator-runtime via `BCategoryService`. Emit NO category scaffold. `[ev: corpus B781]`
-- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. Full `BCustomRelation` recipe — declare a `BCustomRelation extends BRelationInfo` with source scope (`entity` or `station`), target `BTypeSpec`, and inbound/outbound relation-id facet maps; override `addRelations(entity, cx)` to resolve targets via an ORD/NEQL query:
+- **Relations:** never subclass `BRelation` (a concrete carrier); define a relation type by registering a `RelationInfo`/`BCustomRelation` in a tag dictionary. Full `BCustomRelation` recipe — declare a `BCustomRelation extends BRelationInfo` with source scope (`entity` or `station`), target `BTypeSpec`, and inbound/outbound relation-id facet maps; override `addRelations(Entity entity, Collection<Relation> relations)` and add one `BasicRelation` per target. It gets no Context, so walk the tree from the entity, the way Tridium's own relation infos do, rather than run a station-wide query per entity:
 
   ```java
-  BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from module:BTargetType where ...")
-                                  .get(cx);
-  TableCursor<?> c = t.cursor();
-  while (c.next()) {
-      BComponent target = (BComponent) c.cell(0);
-      cx.add(new BasicRelation(relationId, target, /*inbound=*/false));
+  public void addRelations(Entity entity, Collection<Relation> relations) {
+      if (!(entity instanceof BMyEquip)) return;
+      for (BMyPoint p : ((BComponent) entity).getChildren(BMyPoint.class))
+          relations.add(new BasicRelation(getRelationId(), p, /*inbound=*/false));
   }
-  c.close();
   ```
 
-  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register the custom relation in the tag dictionary's constructor alongside the tag defs (it participates in the same `BSmartTagDictionary` registration; see `types/logic.md §Ship a tag dictionary`). `[ev: corpus B758 §758.2]`
+  [CERT] `com/tridium/tagdictionary/relation/BChildPointRelation.java:42-54` (tagdictionary-rt vineflower). Check every
+  snippet against the real overloads and callback signatures: the previous one called a non-existent `BOrd.get(cx)`.
+  `[ev: retro r8-t9g-nav Δ1]`
+
+  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register it through the dictionary's slots, not its constructor: define it in `relationDefinitions` (`BRelationInfoList`) and attach it to a `BTagRule`'s `relationList`, the same no-override recipe as the tags (`types/logic.md` § Ship a tag dictionary). [CERT] `tagdictionary-rt/decompiled/javax/baja/tagdictionary/BTagDictionary.java:116`, `BTagRule.java:74`. `[ev: corpus B758 §758.2]` `[ev: corpus B1311 §1311.2 C1]`
 - **Hierarchy:** compose a `BHierarchy` root + ordered `BLevelDef` children (`BQueryLevelDef`/`BRelationLevelDef` entity levels, `BGroupLevelDef`/`BListLevelDef` grouping) under `BHierarchyService`; subclass `BLevelDef`+`getElements` only for a bespoke level. `[ev: corpus B781]`
 
 ## Query/search/index surface
 
 - Declare a typed `BQuery`/NEQL payload + plug the matching `BIAgent` provider (`BQueryEngine` execute / `BColumnsProvider` table columns / `BISearchProvider` station search [`@AgentOn` scope×scheme] / `BSystemIndexer`+`BIIndexQueryProvider` station index [scope = a `BOrdList` of NEQL queries]) → read the resulting `BITable` cursor. `[ev: corpus B782]`
 
-## BQL from code — consumer cursor pattern `[ev: corpus B758 §758.4]`
+## BQL from code — consumer cursor pattern `[ev: corpus B758 §758.4]` `[ev: corpus B1237 §1237.7]`
 
 The CONSUMER side of BQL — used by a dashboard servlet or service method that runs a query from code:
 
 ```java
-BITable<?> t = (BITable<?>) BOrd.make(
-        "station:|slot:/|bql:select * from <module:Type> where …")
-    .get(Sys.getStation());
-TableCursor<?> c = t.cursor();
-while (c.next()) {
+BITable<?> t = (BITable<?>) BOrd.make("station:|slot:/|bql:select * from <module:Type> where …")
+    .get(Sys.getStation(), cx);                 // the CALLER's Context, never get(base) / get()
+try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
+  while (c.next()) {
     BObject cell = (BObject) c.cell(columnIndex);
-    // … process cell …
+    // … process cell; history/alarm record kept past next(): record.newCopy()
+  }
 }
-c.close();   // always close — leaks a resource if skipped
 ```
 
-- `from <module:Type>` is the select-by-registered-type mechanism — it finds every mounted instance of `module:Type` in the station space.
-- Always close the cursor in a `finally` block; a leaked cursor holds a read lock on the space.
-- oBIX exposes the same query as `/obix/bql/<url-encoded-query>` — the same BQL string works over HTTP from a browser client.
+- **The Context is the access control.** Workbench hides unreadable components from a query; code does so only
+  when it passes the user's Context. `get(base)`, `get()` and a `null` Context run with no user (`BOrd.java:90-107`),
+  so a servlet that omits it leaks every component and counts differ from Workbench. `toolbelt/lint-null-context-write.sh`
+  WARNs on a `bql:` ORD resolved that way. `[ev: retro n4-course-drivers-bql-ords-files Δ1]`
+- `from <module:Type>` finds every mounted instance of `module:Type` in the station space.
+- Case rules (`LIKE` and slot names are case-sensitive, keywords are not; NEQL `(?i)` for a case-insensitive match): `types/dashboard.md` § BQL case rules `[ev: corpus B1418 §1418.3]`.
+- **Close with try-with-resources** (a leaked cursor holds a read lock on the space). The cursor is iterable
+  (`for`, `stream()`); `Tables.slurp(t)` gives a `BIRandomAccessTable` when random access is needed
+  (`javax/baja/collection/Tables.java:51`, docSource). N4 has no `BICollection`/`BIList`.
+  `[ev: retro devguide415-runtime-api-corrections Δ9]` `[ev: corpus B1310 §1310.2 rows 10-11]`
+- **A single value:** append `|cell:0,0` to the ORD instead of iterating.
+- **Cursor records are reused:** call `newCopy()` on a history/alarm record you keep past the next `next()`.
+- **BQL never subscribes.** A proxy point's value is only as fresh as its last subscription: `BComponent.lease(points, 0)`
+  for a one-off fresh snapshot (the instructor warns the first read after a lease may still be stale — spoken, [CERT-a] corpus B1418 §1418.4),
+  `Subscriber` + `subscribe(points, 0, cx)` and `unsubscribeAll()` when done for a stream.
+- **Remote stations:** `ip:…|foxs:|…|bql:…` works in Workbench (it prompts) but not through `BOrd.get` in code;
+  open a `BFoxProxySession.make(host, port, useFoxs, credentials)` (`javax/baja/fox/BFoxProxySession.java:28-36`,
+  fox-rt vineflower) and resolve against it. The course instructor adds that the session can reuse a NiagaraNetwork
+  station's stored credentials, machine-to-machine only — a spoken claim, not traced in code [CERT-a] (corpus B1418 §1418.4);
+  such claims stay marked until a code or doc read backs them. `[ev: retro r8-t9g-nav Δ2]`
+- oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
 ## Templates are artifact production, not a type SPI
@@ -211,25 +243,44 @@ c.close();   // always close — leaks a resource if skipped
 
 ## Background jobs
 
-- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit via `BJobService.submit(job,cx)` and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]`
+- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit with `job.submit(cx)` (a convenience for `BJobService.getService().submit(job, cx)` — `submit` is an instance method, not a static one) and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). For a one-line job use `new BRunnableJob(() -> exportNow()).submit(cx)` — `BRunnableJob(Runnable)` is a `BSimpleJob` whose `run(Context)` calls the runnable, so no subclass is needed. Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]` [ev: retro devguide415-runtime-api-corrections Δ2]
 
-### BJob submission safety rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
+### BJob submission rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
 
-`BJobs.submit(job, cx)` posts to a `ForkJoinPool` sized `availableProcessors × niagara.job.threadsPerCPU`. Violations:
+There is no `BJobs` class. `job.submit(cx)` invokes the JobService's HIDDEN `submitAction` (no `OPERATOR` flag, so a user Context needs admin invoke on the JobService), which adds the job as a TRANSIENT child and calls `doSubmit`. A `BSimpleJob` then runs `run(Context)` on its OWN `JobThread`, named after the job's slot path; it never touches the JobService `ForkJoinPool` (`getExecutor()`, sized `availableProcessors × niagara.job.threadsPerCPU`, default 2, or `niagara.job.threads`). That pool matters only to code that hands work to `getExecutor()` itself, so a `BSimpleJob` submit has no pool to saturate and no `RejectedExecutionException` to catch. [ev: retro n4-course-threading-jobs-doctrine Δ6] [ev: corpus B1238 §1238.8] [ev: corpus B1304 §1304.2]
 
-- **Never submit from a high-frequency callback (`changed()`, timer tick):** each submission drains one thread from the shared pool. A 1 s timer that submits a new job every tick can saturate the pool in seconds.
+- **Never submit from a high-frequency callback (`changed()`, timer tick):** every submission adds a job component to the JobService and starts one more thread; a 1 s timer that submits a new job every tick piles up job threads and job records.
 - **`submit()` itself is an `invoke` action (RUN6 RBAC rule applies):** the job runs under the submitted context. If the caller uses `post()` to defer submission, the RBAC context is dropped (see `types/security.md §2` for the post()-drops-context rule).
-- **A saturated or shutting-down pool throws `RejectedExecutionException` as an unhandled `RuntimeException`** directly into the calling callback (the bare-callback death path — see logic.md §Tridium rt idioms). This exception is NOT a checked exception and is NOT caught by `catch(Exception)`.
-- **Wrap `submit()` in `try/catch(RejectedExecutionException)`** and log or surface the failure; do not let it escape to the engine thread.
+
+### Job contract — `BSimpleJob.run(Context)`
+
+- **Return = success, throw = failure.** `failed(cause)` records a CANCEL instead when the state is `canceling` or the cause is an `InterruptedException` or a `JobCancelException` (unchecked, a `BajaRuntimeException`).
+- **Cancel is cooperative.** `doCancel` sets `canceling` and interrupts the job thread, which only reaches a thread blocked in I/O or `sleep`; every loop checks `if (!isAlive()) throw new JobCancelException();` (`isAlive()` = state is `running`).
+- **Report liveness.** `progress(pct)` sets the percent and heartbeats; call `heartbeat()` when the percent is unknown; completion forces progress to 100.
+- **Log through the job log.** `log().message(<module>, <lexKey>, <args>)` with the key present in that module's `module.lexicon` (`log().message(String)` for a non-localized line).
+- **Snapshot inputs in the constructor.** Copy the service properties the job needs when it is built; Tridium's Lab 10 job reads them live from the job thread, so an edit in the middle of an export changes the later files. [ev: corpus B1242 §1242.4]
+- **Unit test without a station:** `job.setJobState(BJobState.running); job.run(null);` then assert on `job.log().getItems()`.
+- **Worked example:** the course Lab 10 `BHistoriesToCsvJob.java:105-112` (`isAlive()` → `JobCancelException`, `progress()`, `log().message(...)` per history), run live on 4.15.6.20. [ev: retro n4-course-handson-services-history-threading Δ6]
 
 **Pattern:**
 ```java
-try {
-    BJobService.submit(myJob, cx);
-} catch (RejectedExecutionException e) {
-    logWarning("job-submit rejected (pool saturated)", e);
+public final class BExportJob extends BSimpleJob {
+  public BExportJob() {}                                  // Type loading needs the no-arg constructor
+  public BExportJob(BExportService svc) { this.names = svc.getPointNames().split(","); }  // snapshot
+  @Override
+  public void run(Context cx) throws Exception {
+    for (int i = 0; i < names.length; i++) {
+      if (!isAlive()) throw new JobCancelException();     // cooperative cancel
+      exportOne(names[i], cx);
+      progress((int) Math.round((i + 1) * 100.0 / names.length));
+    }
+  }
+  private String[] names = new String[0];
 }
+// caller, e.g. an action handler: BOrd jobOrd = new BExportJob(this).submit(cx);
 ```
+
+`toolbelt/lint-timers.sh` `job-cancel` WARNs a `BSimpleJob` `run()` loop with no `isAlive()` check; `tests/kit-doc-api-names.bats` fails a core kit doc that names the non-existent `BJobs` class, a static job-service submit, a `BWorker` post method or `makeDouble`.
 
 ### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
 
@@ -339,9 +390,12 @@ with a few module-specific rules:
          agentOn="baja:AuthenticationScheme"/>
    ```
 
-4. **Signing:** a security module MUST be signed with `NIAGARA4.RSA` / `NIAGARA4.SF` — same signing
-   path as any production jar.  The station's `SecurityManager` enforces this; an unsigned or
-   OEM-signed scheme is rejected at load time.
+4. **Signing:** a security module MUST be signed — same signing path as any production jar: a
+   `META-INF/<ALIAS>.SF` with its `.RSA`/`.DSA`/`.EC` signature block, named after the signing alias
+   (`NIAGARA4` default profile, `CODESIGN` course profile, `SERVER1` Honeywell). `toolbelt/verify-module.sh`
+   `signed` accepts any alias and reports it, but checks PRESENCE only: the station decides by its module
+   verification mode and the signer's cert chain, never by the entry name. An unsigned scheme is rejected
+   at load time. [ev: retro n4-course-handson-build-signing-windows Δ1]
 
 - **Every class listed as a `<type>` in `module-include.xml` MUST carry `@NiagaraType`** (so Slotomatic generates `TYPE = Sys.loadType(…)`). A class listed as a `<type>` without `@NiagaraType` is caught at registry-build time with a named SEVERE: `"Missing Sys.loadType()"` — it is NOT a silent NPE, but it BLOCKS the module from loading at station start. Fix: add `@NiagaraType` to the class. `[ev: retro module-hardening-failure-modes-deltas Δ15]`
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
@@ -488,50 +542,70 @@ slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(.
 
 ## BFacets key reference card `[ev: corpus B1106]`
 
-`BFacets` is the property-metadata map; keys are string literals. The 31 known keys (B49 listed 11; B1106 completes the catalogue):
+`BFacets` (`final`, `implements Context`) is the property-metadata map. Its keys are the `public static final String` constants of `javax.baja.sys.BFacets`: name them by constant (`BFacets.UNITS`), never by a hand-typed literal. 4.15.6.20 declares **34**; releases before 4.15u2 declare 32 (no `showHours`/`showMinutes`). The table is that list in declaration order, with the value type the source javadoc names. [ev: retro devguide415-runtime-api-corrections Δ8] [ev: corpus B1310 §1310.3]
 
-| Key | Purpose |
-|-----|---------|
-| `"units"` | Engineering unit (`BUnit`); shown in slot value display |
-| `"precision"` | Decimal places for numeric display (int) |
-| `"min"` | Minimum allowed value (numeric) |
-| `"max"` | Maximum allowed value (numeric) |
-| `"range"` | Enum range (`BEnumRange`); required for dynamic enums |
-| `"fieldWidth"` | Character-width hint for text fields |
-| `"radix"` | Display radix for integers (2=binary, 8=octal, 10=decimal, 16=hex) |
-| `"showSeconds"` | Show seconds in time display (boolean) |
-| `"showUnits"` | Append engineering-unit string to the formatted value (boolean) |
-| `"unitConversion"` | Unit-conversion factor when bridging unit systems |
-| `"maxOverrideDuration"` | Maximum HOA override duration (`BRelTime`) |
-| `"targetType"` | Type constraint for ORD/link pickers (`BTypeSpec`) |
-| `"editorTemplate"` | Workbench editor template name |
-| `"editorClass"` | Custom editor class name |
-| `"editorArgs"` | Arguments forwarded to the custom editor |
-| `"editorColumns"` | Column definitions for a table editor |
-| `"editorRows"` | Row definitions for a table editor |
-| `"trueText"` | Display string for `true` (boolean slots) |
-| `"falseText"` | Display string for `false` (boolean slots) |
-| `"nullText"` | Display string for null/invalid values |
-| `"format"` | A `BFormat` pattern for display formatting |
-| `"icon"` | Icon ORD for Workbench display |
-| `"help"` | Help URL or key for context-sensitive help |
-| `"category"` | Default category tag |
-| `"history"` | History configuration hint |
-| `"alarm"` | Alarm configuration hint |
-| `"trended"` | Whether the slot is trended by default (boolean) |
-| `"locked"` | Whether the slot is locked from operator edit |
-| `"persistent"` | Override persistence behavior |
-| `"sparse"` | Sparse rendering hint for large tables |
-| `"summary"` | Summary display hint |
+| Constant | Key | Value | Purpose |
+|---|---|---|---|
+| `MIN` | `"min"` | `BNumber` | Inclusive minimum; enforced on the client AND the station on a value change |
+| `MAX` | `"max"` | `BNumber` | Inclusive maximum; enforced like `min` |
+| `TRUE_TEXT` | `"trueText"` | `BString` (a BFormat) | Display text for `true`; a `%lexicon(<module>:<key>)%` script localizes it |
+| `FALSE_TEXT` | `"falseText"` | `BString` (a BFormat) | Display text for `false` |
+| `PRECISION` | `"precision"` | `BInteger` | Digits after the decimal point |
+| `UNITS` | `"units"` | `BUnit` | Engineering unit of an integer or float |
+| `RADIX` | `"radix"` | `BInteger` | Base radix of an integer |
+| `RANGE` | `"range"` | `BEnumRange` | Enum range |
+| `SHOW_DATE` | `"showDate"` | `BBoolean` | Abs time: show the date |
+| `SHOW_HOURS` | `"showHours"` | `BBoolean` | Abs time: show hours (4.15u2+) |
+| `SHOW_TIME` | `"showTime"` | `BBoolean` | Abs time: show the time |
+| `SHOW_MINUTES` | `"showMinutes"` | `BBoolean` | Abs time: show minutes (4.15u2+) |
+| `SHOW_SECONDS` | `"showSeconds"` | `BBoolean` | Abs time: show seconds |
+| `SHOW_MILLISECONDS` | `"showMilliseconds"` | `BBoolean` | Abs and rel time: show milliseconds |
+| `SHOW_TIME_ZONE` | `"showTimeZone"` | `BBoolean` | Abs time: show the time zone |
+| `TIME_ZONE` | `"TimeZone"` | `BTimeZone` | Abs time: display time zone (the key starts with a capital `T`) |
+| `MULTI_LINE` | `"multiLine"` | `BBoolean` | String: multi-line editor (e.g. one ORD per line on a `BOrdList`) |
+| `FIELD_WIDTH` | `"fieldWidth"` | `BInteger` | String: columns of the text field |
+| `ALLOW_NULL` | `"allowNull"` | `BBoolean` | Simple: allow or disallow null |
+| `ORD_RELATIVIZE` | `"ordRelativize"` | `BBoolean` | ORD: relativize to the session on save (default true) |
+| `FIELD_EDITOR` | `"fieldEditor"` | `BString` | Type spec of the Workbench field editor; also used for action arguments |
+| `UX_FIELD_EDITOR` | `"uxFieldEditor"` | `BString` | `web:IJavaScript` type spec, or a RequireJS module ID, of the browser field editor |
+| `INPLACE_EDITOR` | `"inplaceEditor"` | `BString` | Type spec of the inplace editor |
+| `CELL_EDITOR` | `"cellEditor"` | `BString` | Type spec of the cell editor |
+| `TARGET_TYPE` | `"targetType"` | `BString` (a TypeSpec) | Target type of an ORD chooser; `"baja:IDirectory"` gives a folder-only picker |
+| `UNIT_CONVERSION` | `"unitConversion"` | dynamic enum over `BUnitConversion` (`none`/`metric`/`english`) | Unit SYSTEM for display; `none` = no conversion (not a conversion factor) |
+| `REALMS` | `"realms"` | `BString` | Semicolon-separated realm names (see `BStation`) |
+| `SHOW_UNITS` | `"showUnits"` | `BBoolean` | Numeric: display the unit |
+| `SHOW_SEPARATORS` | `"showSeparators"` | `BBoolean` | Numeric: separator every 3 digits (10,000 vs 10000) |
+| `FORCE_SIGN` | `"forceSign"` | `BBoolean` | Numeric, radix 10: always show `+`/`-` |
+| `ENCODER_FILE` | `"encoderFile"` | ORD string | `BComplex`: persist the child slots to a different `BIDataFile` |
+| `MAX_OVERRIDE_DURATION` | `"maxOverrideDuration"` | `BRelTime` | Control point or sysInfo facets: longest override allowed |
+| `NAMESPACE` | `"namespace"` | `BString` | Entity queries: default namespace for tags and relations |
+| `SECURITY` | `"security"` | `BBoolean` | Slot is security-related; its changes go to the security history (4.9+) |
 
-**Factory methods** (all on `BFacets`):
-- `BFacets.make(String key, BValue value)` — single key-value pair
-- `BFacets.make(String[] keys, BValue[] values)` — multiple pairs (parallel arrays)
-- `BFacets.makeDouble(BUnit unit, int precision)` — convenience for a numeric slot
-- `BFacets.makeBoolean(String trueText, String falseText)` — convenience for a boolean slot
-- `BFacets.makeEnum(BEnumRange range)` — convenience for a dynamic-enum slot
+**Not `BFacets` keys** (an older card listed them): `editorTemplate`, `editorClass`, `editorArgs`, `editorColumns`, `editorRows`, `nullText`, `format`, `icon`, `help`, `category`, `history`, `alarm`, `trended`, `locked`, `persistent`, `sparse`, `summary`. The framework gives them no meaning; a facet with one of these names is read only by code that looks it up itself.
 
-**Rule:** always use factory methods, never `new BFacets(Map)` directly. For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
+**Factory methods** (all `static` on `BFacets`; a `BFacets` is immutable, so every "change" returns a new instance):
+- `make(String key, BIDataValue value)` (plus `boolean` / `int` / `long` / `String` value overloads); `make(String[] keys, BIDataValue[] values)`; `make(Map<String, ? extends BIDataValue>)`; `make(String encoding)`
+- `make(BFacets orig, String key, BIDataValue value)`, `make(BFacets orig, BFacets toAdd)`, `makeRemove(BFacets orig, String key)` / `makeRemove(BFacets orig, String[] keys)`
+- `makeNumeric(BUnit unit, int precision)` — the numeric convenience (also `makeNumeric(int precision)`, `makeNumeric(BUnit, int precision, double min, double max)`, `makeNumeric(BUnit, BNumber min, BNumber max)`). There is **no** `makeDouble`.
+- `makeInt(BUnit unit, int min, int max)` (also with a trailing `int radix`, `makeInt(BUnit)`, `makeInt(int min, int max)`)
+- `makeBoolean(String trueText, String falseText)`
+- `makeEnum(BEnumRange range)`
+
+**`@Facet` syntax (slotomatic):** `name` is a Java constant expression and `value` is a Java expression, so a string value carries escaped quotes. [ev: retro n4-course-build-deps-permissions-signing Δ6]
+
+```java
+@NiagaraProperty(name = "destinationFolder", type = "BOrd", defaultValue = "BOrd.make(\"file:^\")",
+  facets = @Facet(name = "BFacets.TARGET_TYPE", value = "\"baja:IDirectory\""))     // folder-only picker
+@NiagaraProperty(name = "excludedHistoryIds", type = "BOrdList", defaultValue = "BOrdList.NULL",
+  facets = @Facet(name = "BFacets.MULTI_LINE", value = "true"))                    // one ORD per line
+@NiagaraProperty(name = "enabled", type = "boolean", defaultValue = "true",
+  facets = { @Facet(name = "BFacets.TRUE_TEXT",  value = "\"%lexicon(<module>:enabled.value)%\""),
+             @Facet(name = "BFacets.FALSE_TEXT", value = "\"%lexicon(<module>:disabled.value)%\"") })
+```
+
+Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/logic-authoring.md <BFacets.java>` diffs the Constant and Key columns against the source in declaration order; `tests/check-facets-card.bats` pins it to the 4.15.6.20 list.
+
+**Rule:** build facets only with the factory methods above (the `BFacets` constructors are private). For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
 
 ## Logging a point to history `[ev: corpus B804]`
 
@@ -643,11 +717,11 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 - **`writeOnUp=true` (verify it is set):** `BTuningPolicy.writeOnUp` defaults `true` (`BTuningPolicy.java:206`), so a proxy point whose TuningPolicy uses the default is self-correcting — on device-UP it replays the last desired write. If `writeOnUp` is `false`, a write that was issued while the device was DOWN is silently dropped and the relay never receives the command. (`Tuning.java:201-204`.) Do NOT override `writeOnUp=false`.
 - **Verify the write landed — read the DOWN/STALE status bit:** `set()` returning normally does NOT mean the device received the command; it means Niagara queued it. Always check the proxy point's `BStatus.isDown()` / `isStale()` bit after a write and surface it via an alarm or a health-status slot.
 - **Device-side `relinquishDefault`:** configure the field device's own relinquish-default so the device falls back safely (e.g. valve closed) when the network drops, independent of the Niagara priority array.
-- **`pingEnabled` monitor:** enable `pingEnabled` on the device network to get prompt DOWN detection; a stale ping-less point stays UP in Niagara while the physical relay is unresponsive.
+- **`pingEnabled` monitor — never disable it:** `<network>/monitor/pingEnabled` is ON by default (`BPingMonitor.java:128`, `newProperty(0, true, null)`); tune `pingFrequency` and `numRetriesUntilPingFail` for prompt DOWN detection instead. A disabled monitor leaves a stale ping-less point UP in Niagara while the physical relay is unresponsive. `[ev: corpus B1348 C1]` [ev: retro devguide415-r3-drivers-integration Δ2]
 
 - **Demand-based native-COV subscription via `SubscribeCallbacks`:** when the driver should register a native device COV subscription only while at least one client is watching a space component, implement `SubscribeCallbacks` and set it via `space.setSubscribeCallbacks(impl)`. Override `subscribe(BComponent[] c, int depth)` to register the native subscription when subscriber count goes 0→1; override `unsubscribe(BComponent[] c)` to deregister on 1→0. Use `BComponentSpace.update(c, depth)` for a one-time snapshot (no ongoing subscription). Rule: the framework tracks the subscriber count — one `subscribe()` call per 0→1 crossing, not per individual client joining. `[ev: corpus B408 §408.4]`
 - **DDF driver: pick the transaction manager to match device concurrency:** DDF comm splits solicited (request→response) from unsolicited via two SPI managers. **`defaultComm`** (serialized, one-outstanding-at-a-time, `Clock.Ticket` timeout, blocking-queue dequeue) is for devices that cannot handle overlapping requests. **`multipleTransaction`** (tag-correlated concurrent, `Hashtable<tag, requests>` two-level map) is for capable protocols that can pipeline. Wrong pick = poll jams (serialized device overwhelmed by pipelined requests) or framing errors (pipelined device receiving one request at a time in the wrong order). `[ev: corpus B909 §909.1-3]`
-- **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network; (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
+- **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network's poll service — a `BAbstractPollService` property, not a network one (`javax/baja/driver/util/BAbstractPollService.java:26`, driver-rt vineflower; `types/driver-authoring.md` § 6); (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
 
 - **Type-factory hooks: a `BPointDeviceExt` subclass must override three hooks** to tell the framework which concrete types to instantiate for the driver subtree: `getDeviceType()→BMyDevice.TYPE`, `getProxyExtType()→BMyProxyExt.TYPE`, `getPointFolderType()→BMyPointFolder.TYPE`. Pair these with trivial `extends BDeviceFolder` / `extends BPointFolder` subclasses (empty body + generated `TYPE`) — they exist solely to supply a driver-specific concrete `Type` handle; copy them verbatim, no business logic belongs in them. Without these hooks the framework cannot build the driver-specific subtree. `[ev: corpus B955 §955.1]`
 
@@ -815,16 +889,85 @@ Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
 3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
+4. **Reject a bad value by reverting it and logging why — never by throwing.** `changed()` runs after the value is
+   already set, so a throw does not undo it; write the previous or safe value back and log the reason (the course's
+   TLS-version slot: `READONLY` + `HIDDEN` + a reverting `changed()`). [CERT-a] corpus B1416 §1416.4 row d
+5. **The guard is load-bearing at start-up:** the engine activates a component's links — and a property→property
+   link propagates at once — BEFORE its `started()` (`EngineManager.start`: `activateLinks` → `activateRelations` →
+   `started()` → children in slot order → `descendantsStarted()`; [CERT] `com/tridium/sys/engine/EngineManager.java:74-90`,
+   `javax/baja/sys/BLink.java:168,214-215`, baja vineflower). So `changed()` can fire for a linked slot before
+   `started()`, with the source's decoded `config.bog` value; this is why the `isRunning()` guard and "no scheduling
+   or I/O before `started()`" matter. Never rely on sibling start order (N4 starts depth-first in slot order).
+   The course instructor guessed the opposite order; the code read wins over a hedged spoken answer.
+   `[ev: corpus B1416 §1416.1]` `[ev: retro r8-t9g-lifecycle Δ2]`
 
 ### Lifecycle callback contract `[ev: retro module-hardening-failure-modes-deltas Δ2]`
 
 The full lifecycle callback contract for a `BComponent` subclass:
 
-- **`started()` / `stopped()` pair fires on BOTH enable/disable AND mount/unmount transitions.** A station start fires `started()`; a component enable fires `started()`; a component drop onto a running station fires `started()`. Both directions are symmetric: `stopped()` fires on component disable, on station stop, and on unmount.
+- **`started()` / `stopped()` follow the RUNNING state, not `enabled`.** A station start and a component drop onto a running station fire `started()`; station stop and unmount fire `stopped()` ("called when a component's running state is set to false", `javax/baja/sys/BComponent.java:353-361`, docSource). **Disabling does not call `stopped()`**: a `BAbstractService` subclass overrides `disabled()`/`enabled()`, which `updateStatus()` calls when `enabled` flips (`javax/baja/sys/BAbstractService.java:234-245,466,474,530-540`); a plain component with its own `enabled` slot reacts in `changed()`. [CERT] corpus B1416 §1416.2 (this replaces the earlier "fires on enable/disable" rule; a lifecycle rule names the engine call that fires it). `[ev: retro r8-t9g-lifecycle Δ1]`
+- **Start-up logic goes in `started()`, not `stationStarted()`:** `stationStarted()` is called once by the station bootstrap (`com/tridium/sys/station/Station.java:324`), so it never runs for a component dropped into a running station; `started()` runs on every start. [CERT] corpus B1416 §1416.3
 - **`save` (bog serialize) does NOT fire `stopped()` / `started()`** — a save writes the component to disk without touching the lifecycle. There is no `saving()` / `saved()` callback.
-- **`started()` runs on EVERY enable cycle, so it must be IDEMPOTENT.** It may run multiple times per station session (stop/start, enable/disable). Arm timers in exactly ONE place (`started()` only); do NOT use `atSteadyState()` as the sole arm point (see issues-and-gotchas.md §B1).
+- **`started()` runs on EVERY start, so it must be IDEMPOTENT.** It may run several times per station session (unmount/remount, a parent's stop/start). Arm timers in exactly ONE place (`started()` only); do NOT use `atSteadyState()` as the sole arm point (see issues-and-gotchas.md §B1).
 - **Tear down in `stopped()` — match every acquire in `started()` with a release in `stopped()`:** cancel `Clock.Ticket`s, call `unsubscribeAll()`, release resources. If the acquire path in `started()` is conditional, make the release in `stopped()` unconditional (null-safe cancel).
 - **super order:** `super.started()` FIRST; cancel resources BEFORE `super.stopped()` (super LAST in stopped).
+- **Veto illegal placement with `isParentLegal`/`isChildLegal`** (both default `true`): a palette drop under the wrong
+  parent otherwise goes unnoticed for years. [CERT-a] corpus B1416 §1416.4 row e; `§ Child-tree containers` above.
+
+### Frozen-slot facts the lifecycle depends on `[ev: corpus B1416 §1416.4]` `[ev: corpus B1417 §1417.3]`
+
+All spoken by the course instructor ([CERT-a]) unless a code cite is given.
+
+- **`HIDDEN` is not a lock:** a user can clear `HIDDEN` on a frozen slot at runtime, unlike `READONLY`; if hiding
+  matters, re-assert it in a flags-changed callback (B1416 row a; open child gap B1416-G2).
+- **Frozen slots keep declaration order:** the Reorder dialog (and Sort by name) moves only dynamic slots, so declare
+  frozen properties in the order the operator should read them (B1416 row c).
+- **A frozen action without a `do<Action>()` handler fails the type**, so the component also disappears from the
+  palette; Slot-o-Matic never writes the handler (B1417 row j; type-load rule in `types/actions.md` § 1).
+- **Compare with the declared default, not a literal:** `((BString) id.getDefaultValue()).getString()` — a literal
+  copy drifts from the annotation ("hidden bug", B1417 row k; `Property.getDefaultValue`, `javax/baja/sys/Property.java:50`).
+- **A default whose type differs from the declared type compiles and fails at runtime:** an `int` property with
+  `defaultValue = "false"` throws `ClassCastException` when read (B1417 row l, child gap B1417-G4); Slot-o-Matic
+  copies `defaultValue` verbatim (see `types/logic.md` § Regenerating slots) [INFER for the mechanism].
+
+## Wire-sheet placement of code-created components `[ev: corpus B1172]` `[ev: retro ws-placement]`
+
+A component a module adds from code (`parent.add(name, child)` in a sync action, `started()` seeding,
+an inventory builder) has no `wsAnnotation` slot, so the wire sheet gives it an in-memory diagonal
+stagger (`+4`, wrap to 2, width 8, `WsController.java:398-405`) — every sibling created that way lands
+on the same diagonal and overlaps. Place it yourself:
+
+- **Grid, stable index:** compute `p,q` with the Baja-free `templates/ws-placement/src/com/angeles/wsplacement/WsGrid.java` (copy it
+  into the module's rt package; `WsGrid.standard()` = 8 columns, 14×10 cells, margins 3, width 8). Index
+  by the child's row in the STABLE data order (seed table, inventory row), not the add order, so a
+  re-sync that creates one missing child puts it in its own cell.
+- **Row spacing from the SUMMARY count, not a fixed 10:** a glyph is 2 + visible SUMMARY slot bars + 1
+  wixels tall (B1194 §1194.8), so `standard()`'s 10 only clears children with up to 4 SUMMARY slots. For
+  taller children use `WsGrid.forSummaryCount(n)` with `n` = the largest SUMMARY count among the children
+  it places: row spacing `rowSpacingFor(n)` = max(10, 2 + n + 1 + 3), the same 3-wixel gap `standard()`
+  leaves under a 4-bar glyph. A 22-SUMMARY facade (DashboardFord `BVavPanel`, 25 wixels) gets 28; with 10
+  its rows overlap. Pin `n` in the module's pure test against the facade's SUMMARY slots, so a new SUMMARY
+  slot that outgrows the spacing fails a test instead of the wire sheet. `[ev: retro ws-row-spacing Δ1]`
+  `rowSpacingFor` rejects `n > WsGrid.MAX_SUMMARY_COUNT` (591, no row fits the sheet) with `IllegalArgumentException`. `[ev: retro n4-course-sample-check-precision Δ5]`
+- **Add if absent, READONLY, never re-place:** Workbench adds the slot with flags `1` = `Flags.READONLY`
+  only when it is absent and otherwise `set`s it (`WsController.java:189-200`). A module does the add half
+  only — an existing annotation is the user's layout and is never overwritten:
+
+  ```java
+  if (child.getProperty("wsAnnotation") == null)
+    child.add("wsAnnotation", BWsAnnotation.make(GRID.p(i), GRID.q(i), GRID.width()), Flags.READONLY);
+  if (parent.getProperty(name) == null) parent.add(name, child);
+  ```
+
+  (`javax.baja.util.BWsAnnotation`, `javax.baja.sys.Flags`.) Annotating before the parent `add` stores the
+  child with its position in one add (B1172 §1172.5). A bare `add("wsAnnotation", …)` with no exists-check
+  fails on a child that already carries the slot (the name is taken) and omits the READONLY flag Workbench
+  uses (the chihuahua `BChiUpMonitor.ensureUps` shape, safe there only because it annotates brand-new children).
+- **Stay inside the sheet:** the sheet clamps `p+w` / `q+h` to `BWsOptions` maxWidth / maxHeight (default
+  600) at display time; `WsGrid` clamps the same way and `fits(i)` reports a cell that had to be clamped.
+  More children than one sheet holds belong in sub-folders, not a clamped pile.
+- **Advisory lint:** `toolbelt/lint-ws-placement.sh` WARNs a method that adds a freshly created component
+  (`new B…()`, `create(…)`, `newInstance(…)`) and never mentions `wsAnnotation` / `BWsAnnotation` / `WsGrid`.
 
 ## Dynamic-slot lifecycle — orphan hygiene and schema migration
 

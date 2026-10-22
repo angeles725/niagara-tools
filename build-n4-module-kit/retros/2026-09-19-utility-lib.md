@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
+<!-- index-comment: new types/utility-lib.md: pure lib bundle (jtds) + helper-type lib (clUtils) + protocol-split -->
 # 2026-09-19 · kit · utility-lib
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the utility-lib cluster (vendor mining: clUtils*, jtds).

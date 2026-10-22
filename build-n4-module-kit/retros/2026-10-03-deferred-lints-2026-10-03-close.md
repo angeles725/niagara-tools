@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-03 · kit · deferred-lints-2026-10-03-close
 
 **Session**: close of the deferred-lints feature `odd/tasks/deferred-lints-2026-10-03.md` (D1-D5b, PRs #230-#244, release v0.31.0)

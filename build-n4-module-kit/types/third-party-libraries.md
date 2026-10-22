@@ -70,7 +70,7 @@ libraries:
    to be self-contained / packaged). `[ev: corpus B756]`
 
 4. The resulting merged jar is signed end-to-end by the `niagara-signing` plugin
-   under `NIAGARA4.SF` — no extra signing step needed. The only constraint: do
+   under the signing alias's `META-INF/<ALIAS>.SF` — no extra signing step needed. The only constraint: do
    **not** place bundled classes under `com/tridium/` or `javax/baja/` package
    paths; those namespaces trigger the cert-chain signature check for
    non-elevated modules. `[ev: corpus B617 §617.5, B18 §18.1.1]`
@@ -97,7 +97,7 @@ overhead is only worth it at scale; for a single module, Path A is simpler):
    dependents through step 4 of the delegation order. `[ev: corpus B617 §617.3]`
 
 3. Deploy, sign, and version this library module separately — it follows the same
-   signing rules as any other module (NIAGARA4.SF). `[ev: corpus B18]`
+   signing rules as any other module (`META-INF/<ALIAS>.SF`). `[ev: corpus B18]`
 
 **Trade-off**: separate jar, module.xml, signing, and deploy chain; adds
 operational overhead. Worthwhile only when 3+ consumer modules share the same
@@ -128,6 +128,15 @@ major ≥ 53) will throw `UnsupportedClassVersionError` at load time. Always
 verify with `javap -verbose` or check the library's release notes. Most popular
 libraries still ship a Java 8–compatible artifact; look for a `-jre8` or
 `-android` classifier, or check `Automatic-Module-Name` in the manifest.
+
+**Multi-release jars are fine:** a library may ship Java 9+ classes under
+`META-INF/versions/<N>/` (Jackson 2.21.2 ships major-55 ones) — a Java 8 runtime
+never loads them, so the base classes decide. Path A's `uberjar("com.fasterxml.jackson.core:jackson-databind:2.21.2")`
+embedded databind + core + annotations (1107 classes) and ran live; "pin to Java-8
+builds" means a Java-8 BASE, not a jar without `META-INF/versions/`.
+`verify-module.sh`'s bytecode check and `lint-bundled-jar-class-version.sh` both
+skip `META-INF/versions/**` (the bytecode row counts them).
+`[ev: retro n4-course-signed-jars-gate-fix Δ3]`
 
 ### Native JNI caveat `[ev: corpus B26 §26.7, §26.4]`
 

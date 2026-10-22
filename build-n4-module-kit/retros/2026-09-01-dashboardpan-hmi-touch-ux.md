@@ -1,4 +1,6 @@
 <!-- review-status: folded v0.2 · 2026-09-01 -->
+<!-- module: DashboardPan -->
+<!-- deltas: 0 -->
 
 # Retro — DashboardPan HMI touch UX + chart (2026-09-01) — PROPOSED kit deltas
 

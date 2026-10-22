@@ -116,13 +116,14 @@ setup() {
 # or the operator cannot find the slots in the live tree.
 # Named mutation GWM-display: drop the lexicon lookup -> every row shows the no-key placeholder.
 # ---------------------------------------------------------------------------
-@test "GWM-display: --lexicon fills the Workbench display name column (Type.slot beats bare key; no key -> placeholder)" {
+@test "GWM-display: --lexicon fills the Workbench display name column (bare slot key; Type.slot never read; no key -> placeholder)" {
   LX="$FX-lex/Facade-rt"
   run "$SCRIPT" "$LX/src" --lexicon "$LX/module.lexicon"
   [ "$status" -eq 0 ]
   [[ "$output" == *"| \`temperatureSetpoint\` | Setpoint de temperatura |"* ]]
   [[ "$output" == *"| \`roomTemperature\` | Temperatura del cuarto |"* ]]
   [[ "$output" == *"| \`doorOpen\` | _(no lexicon key)_ |"* ]]
+  [[ "$output" != *"never shown"* ]]   # Type.slot is ignored by the framework (corpus B1305 §1305.2 C1)
 }
 
 @test "GWM-display-auto: module.lexicon next to <facade-src-dir> is discovered without --lexicon" {
@@ -141,4 +142,17 @@ setup() {
 @test "GWM-lexicon-missing: --lexicon <nonexistent> -> exit 3" {
   run "$SCRIPT" "$FX" --lexicon "/nonexistent/__gwm__.lexicon"
   [ "$status" -eq 3 ]
+}
+
+@test "GWM-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: GWM-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$BATS_TEST_TMPDIR/src"
+  printf "class A {}\n" > "$BATS_TEST_TMPDIR/src/A.java"
+  mkdir -p "$BATS_TEST_TMPDIR/src/locked"
+  chmod 000 "$BATS_TEST_TMPDIR/src/locked"
+  if [ -r "$BATS_TEST_TMPDIR/src/locked" ]; then chmod 755 "$BATS_TEST_TMPDIR/src/locked"; skip "running as root"; fi
+  run "$SCRIPT" "$BATS_TEST_TMPDIR/src"
+  chmod 755 "$BATS_TEST_TMPDIR/src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"generate-wiring-map: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
 }

@@ -5,6 +5,9 @@ four extension seams: the central service, the transport layer, the authenticato
 the per-data-type channel. Protocol-specific message formats and backend telemetry schemas
 are out of scope.
 
+Choosing between MQTT, OPC UA, oBIX, BACnet/IP export and a custom servlet for getting data out of a
+station: `types/driver-authoring.md` § 10 (egress decision). `[ev: retro t9c-reference-gaps Δ7]`
+
 ---
 
 ## 1 · Core service — `BCloudConnectionService`
@@ -206,7 +209,10 @@ FilePermission cloudLinkModel + cloudLinkSchedule]
 ## 6 · Point tagging — the `nc` SmartTagDictionary
 
 The `Niagara Cloud` tag dictionary (`nc` prefix, `BSmartTagDictionary`) ships in
-cloudLink-rt's palette. Drop it on a point to opt it into cloud sync:
+cloudLink-rt's palette. Drop it on a point to opt it into cloud sync. It counts against the tags licence like
+any dictionary: only the first two are enabled (`Dictionary.limit`) and `n` takes one (corpus B1329 §1329.1 row 1),
+so on a station that already has `n` and another dictionary, `nc` would be the third and go to fault [INFER from
+the licence rule]; see `types/logic.md` § Ship a tag dictionary. `[ev: retro devguide415-r2-security-tags-analytics Δ5]`
 
 | Tag | Purpose |
 |---|---|

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: module -->
+<!-- deltas: 14 -->
 # 2026-09-25 · module · panccadia-commissioning-lessons
 
 **Session**: PANCCADIA León field support, tail of `feat/comppan-fase2-amps-alarms`

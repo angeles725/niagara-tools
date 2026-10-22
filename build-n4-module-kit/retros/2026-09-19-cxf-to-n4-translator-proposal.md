@@ -1,4 +1,7 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
 <!-- disposition: tracked-by-issue #122 — a BUILD proposal, not a delta retro; see the retros/INDEX.md row -->
 # Kit proposal — CXF → Niagara N4 control-logic translator (build delta)
 
