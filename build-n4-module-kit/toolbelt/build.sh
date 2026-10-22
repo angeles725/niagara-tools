@@ -279,11 +279,17 @@ else
   fi
   # slotomatic-authoring Δ1 (K15): slot-o-matic logs "Could not process <file>: …" as a WARNING and its task
   # succeeds, so the failure surfaces later in compileJava ("… have you run slot-o-matic?"). Name the skipped file.
+  # The capture ends at ".java" so a Windows drive letter (C:\...) does not cut the path short.
   if grep -q 'have you run slot-o-matic' "$GLOG"; then
-    sed -n 's/.*Could not process \([^:]*\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u >&2
-    echo "build.sh: compileJava found slots slot-o-matic never generated. A file with empty BEGIN/END BAJA AUTO" >&2
-    echo "  GENERATED markers is skipped (METHODOLOGY K15): delete the markers, rerun :<part>:slotomatic --info and read" >&2
-    echo "  its output for 'Could not process'." >&2
+    _SKIPPED=$(sed -n 's/.*Could not process \(.*\.java\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u)
+    echo "build.sh: compileJava found slots slot-o-matic never generated." >&2
+    if [ -n "$_SKIPPED" ]; then
+      printf '%s\n' "$_SKIPPED" >&2
+      echo "  A file with empty BEGIN/END BAJA AUTO GENERATED markers is skipped (METHODOLOGY K15): delete the" >&2
+      echo "  markers and rerun." >&2
+    else
+      echo "  Rerun :<part>:slotomatic --info and read its output for 'Could not process' (METHODOLOGY K15)." >&2
+    fi
   fi
   echo "build.sh: gradle failed" >&2; rm -f "$GLOG" "$GSTAMP"; exit 30
 fi

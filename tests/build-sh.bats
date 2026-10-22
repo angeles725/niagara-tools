@@ -610,4 +610,22 @@ GRADLEW
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
   [[ "$output" != *"slot-o-matic skipped"* ]]
+  [[ "$output" != *"K15"* ]]
+}
+
+@test "BS-slotomatic-hint-win: a Windows drive-letter path is named in full" {
+  printf '#!/usr/bin/env bash\necho "WARNING: Could not process C:\\\\m\\\\src\\\\BLimiter.java: Found multiple metadata blocks"\necho "BLimiter.java:12: error: Slot with name limit not found in BLimiter, have you run slot-o-matic?"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"slot-o-matic skipped C:"*"BLimiter.java"* ]]
+}
+
+@test "BS-slotomatic-hint-noskip: no 'Could not process' line -> generic rerun hint, no empty-marker advice" {
+  printf '#!/usr/bin/env bash\necho "BLimiter.java:12: error: Slot with name limit not found in BLimiter, have you run slot-o-matic?"\nexit 1\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 30 ]
+  [[ "$output" == *"slotomatic --info"* ]]
+  [[ "$output" != *"empty BEGIN/END"* ]]
 }
