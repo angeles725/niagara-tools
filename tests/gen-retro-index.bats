@@ -157,7 +157,7 @@ _rows() { sed -n '/^|---|/,$p' "$FK/retros/INDEX.md" | sed 1d; }
   [[ "$output" == *"no Go module at $top/go"* ]]
   mkdir -p "$top/go"; printf 'module example.com/x\n' > "$top/go/go.mod"
   cp "$KIT/../go/go-tool.sh" "$top/go/"
-  ln -s "$(command -v bash)" "$TMPDIR_T/bin/bash"; ln -s "$(command -v dirname)" "$TMPDIR_T/bin/dirname"
+  ln -s "$(command -v bash)" "$TMPDIR_T/bin/bash"; ln -s "$(command -v dirname)" "$TMPDIR_T/bin/dirname"; ln -s "$(command -v readlink)" "$TMPDIR_T/bin/readlink"
   run env PATH="$TMPDIR_T/bin" bash "$top/build-n4-module-kit/toolbelt/gen-retro-index.sh"
   [ "$status" -eq 3 ]
   [[ "$output" == *"go is not on PATH"* ]]
@@ -201,7 +201,7 @@ _copy_top() {
   touch -d '2000-01-01' "$bin"
   mkdir -p "$TMPDIR_T/bin"
   local t
-  for t in bash dirname find head; do ln -s "$(command -v "$t")" "$TMPDIR_T/bin/$t"; done
+  for t in bash dirname find head readlink; do ln -s "$(command -v "$t")" "$TMPDIR_T/bin/$t"; done
   run env PATH="$TMPDIR_T/bin" bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" --check "$FK"
   [ "$status" -eq 3 ]
   [[ "$output" == *"go is not on PATH"* ]]

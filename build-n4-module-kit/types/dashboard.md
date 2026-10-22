@@ -151,10 +151,34 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
      `niagara-help/devguide-clean/autoLogoffWeb.txt:14-46,52-98`
   3. Every request to a module web app is activity: map `javax.baja.web.filters.UserActivityFilter` on the
      servlet in `WEB-INF/web.xml` — the doc calls this a fallback. [CERT-doc] `autoLogoffWeb.txt:138-152`
-  Never fake activity by POSTing `/timeout` from the poll loop: it defeats the site's logoff policy.
+  **A poll is not activity, and the module must not make it one.** A raw `POST /timeout` (offset 0) from the poll
+  loop would keep the session (it is the call `activityMonitor.js` makes), but it is an internal of the monitor and
+  it defeats the site's logoff policy; the published keep-alive API is route 2. Contract question, so the doc wins:
+  corpus B1344 §1344.4 lists the raw POST as a route `[INFER]`, while devguide `autoLogoffWeb.txt:35,112-125`
+  publishes only `keepAlive()`/`release(token)`. `[ev: retro devguide415-r3-web-session-headers Δ1]`
+- Route 3 is not "map the filter on the poll servlet" (the horizons-authoring-security retro's Δ1 proposal, rejected as a primary route): the only
+  shipped mapping is web-rt's `file` servlet, by `<servlet-name>` (vineflower web-rt 4.14.0.162 `WEB-INF/web.xml:84-91`),
+  and the doc says to use the filter only when the activity monitor cannot be used (`autoLogoffWeb.txt:140`). Keep
+  it for a war-style module whose every request is user-driven. `[ev: retro devguide415-r2-web-ui-hmi Δ1]`
+  `[ev: retro devguide415-horizons-authoring-security Δ1]`
 - **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
   default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
   weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:30-41`
+  4.14 has no absolute logoff (not in the 4.14.0.162 decompile, corpus B1344 §1344.3); 4.13 not verified.
+  `[ev: retro devguide415-r3-web-session-headers Δ2]` `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
+- **The SPA must survive a session that ends anyway** (absolute logoff, an admin's session invalidation, a
+  station restart): on a 401 or a login-page redirect, stop the poll loop and show a re-login state, never a
+  silent retry loop (same rule as § LAN browser access). `fetch`/XHR follow the redirect themselves and hand
+  the poll a 200 HTML login page, so test `response.redirected` or a non-JSON `Content-Type`, not only the
+  status code; otherwise every tick fails JSON parsing in exactly the silent loop this rule forbids. `[ev: retro devguide415-r2-security-tags-analytics Δ3]`
+- **Kiosk panel user — commissioning checklist** (per display, 4.15.6.20 Touch guide): dedicated user; Auto
+  Logoff Enabled = false (`Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24`); Allow Concurrent
+  Sessions = false (`Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23`); on 4.15 also Absolute Logoff
+  off or a planned weekly re-login; a role with read (R) and invoke (I) on the app's categories only
+  (`Touch/CreatingARoleToAssignToTheDisplay-CF979AC4.txt:25`); a `.nav` file under Files as the landing page, one
+  per display (`Touch/SettingUpANavigationFileForTheOnscr-504FCDC3.txt:7,12`); the panel's configuration password
+  turned on (default OFF, `Touch/GeneralSettingsTouch-F06218DF.txt:20`). For re-login after a panel reboot,
+  prefer client-certificate SSO (`types/security.md` § 3.4). `[ev: retro devguide415-r2-web-ui-hmi Δ6]`
 - **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
   `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
 - Release note 7154 ("After AutoLogoff, refresh logs user back in") is an AX 3.0.91 fix, not an N4 fact.
