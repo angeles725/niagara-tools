@@ -31,6 +31,8 @@
 #   rcbackup    no editor/backup files (*~ *.orig *.bak*) packaged under rc/ — WARN, or FAIL under --strict. [default]
 #   palette     a module that declares types must not ship an EMPTY module.palette (nothing to drag in
 #               Workbench) — WARN, or FAIL under --strict; SKIP when the jar has no module.palette.     [default]
+#               palette-type FAILs a t= that is not "<symbol>:<Type>" with an m=-declared symbol; palette-root
+#               WARNs every baja Folder (root or nested). Entries: palette_scan below.
 #   subscription-leak a TypeSubscriber subclass with no stopped() override — unsubscribeAll() is never
 #               called; typeSubscriptionMap holds strong refs, leaking until station restart — WARN.    [--src]
 #   slot-wall   more than 15 @NiagaraProperty on one class (flat slot wall) — WARN.              [--src]
@@ -434,26 +436,66 @@ check_rc_backup() {  # editor/backup files packaged under rc/ (bloat + servable)
   if [ "$STRICT" -eq 1 ]; then row FAIL rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 1; fi
   row WARN rcbackup "$jar" "editor/backup files under rc/ (drop them): $names"; return 0
 }
+# palette_scan: module.palette text on stdin -> one row per finding: ENTRY (a component entry), FOLDER (a baja
+# Folder), BADTYPE <t> <why>. A palette is a BOG document: t= is "<symbol>:<Type>" and the symbol must be declared
+# by an m="<symbol>=<module>" on the same or an earlier element — else "Invalid typespec" / "Undeclared module
+# symbol" (ValueDocDecoder.java:1071-1073,1091). An entry is a <p> with n= and a non-folder t= in ANY attribute
+# order (Workbench saves n= last) and no v= (a <p n v/> child, t+v for a dynamic slot, is a slot override).
+# XML comments are dropped first. [ev: retro n4-course-authoring-files-and-libraries Δ3]
+# [ev: retro n4-course-handson-slotomatic-authoring Δ6]
+palette_scan() {
+  awk '
+    function attr(e, a,   v) {
+      if (!match(e, "[[:space:]]" a "=\"[^\"]*\"")) return "\001"
+      v = substr(e, RSTART, RLENGTH); sub(/^[[:space:]][a-z]+="/, "", v); sub(/"$/, "", v); return v
+    }
+    { doc = doc " " $0 }
+    END {
+      while ((i = index(doc, "<!--")) > 0) {
+        j = index(substr(doc, i + 4), "-->")
+        doc = substr(doc, 1, i - 1) (j ? substr(doc, i + 4 + j + 2) : "")
+      }
+      n = split(doc, el, "<")
+      for (k = 2; k <= n; k++) {
+        e = el[k]; if (e !~ /^p[[:space:]\/>]/) continue
+        e = " " substr(e, 2, index(e, ">") ? index(e, ">") - 2 : length(e))
+        m = attr(e, "m"); if (m != "\001" && index(m, "=")) mod[substr(m, 1, index(m, "=") - 1)] = substr(m, index(m, "=") + 1)
+        t = attr(e, "t"); if (t == "\001") continue
+        c = index(t, ":"); sym = substr(t, 1, c - 1); ty = substr(t, c + 1)
+        if (index(t, ".")) { print "BADTYPE " t " is a Java class name, not <symbol>:<Type>"; continue }
+        if (c <= 1) { print "BADTYPE " t " has no <symbol>: prefix"; continue }
+        if (!(sym in mod)) { print "BADTYPE " t " uses symbol " sym " that no m=\"" sym "=<module>\" declared"; continue }
+        folder = (mod[sym] == "baja" && (ty == "Folder" || ty == "UnrestrictedFolder"))
+        if (mod[sym] == "baja" && ty == "Folder") print "FOLDER"
+        if (!folder && attr(e, "n") != "\001" && attr(e, "v") == "\001") print "ENTRY"
+      }
+    }'
+}
 check_palette() {  # an EMPTY module.palette on a module that declares types = nothing to drag in Workbench. WARN by default; FAIL under --strict.
-  # Also WARNs (palette-root) when the root <p> uses t="b:Folder" (gated) instead of t="b:UnrestrictedFolder" (idiomatic).
-  # [Δ1/B746 §746.1]
-  local jar="$1" pal entries types
+  # palette-type FAILs a malformed t= type spec; palette-root WARNs a b:Folder anywhere. [Δ1/B746 §746.1]
+  local jar="$1" pal scan entries types folders bad rc=0
   grep -q '^module\.palette$' <<< "$LIST" || { row SKIP palette "$jar" "no module.palette"; return 0; }
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
+  scan=$(palette_scan <<< "$pal")
+  while IFS= read -r bad; do
+    [ -n "$bad" ] || continue
+    row FAIL palette-type "$jar" "module.palette t=\"${bad#BADTYPE }\" — write t=\"<symbol>:<Type>\" with m=\"<symbol>=<module>\" declared once [ev: retro n4-course-authoring-files-and-libraries Δ3]"
+    rc=1
+  done < <(grep '^BADTYPE ' <<< "$scan" || true)
   # Δ1/B746 §746.1: b:Folder is access-controlled (gated by category permission) — engineers without the
   # folder's category permission get "access denied" on expansion. b:UnrestrictedFolder is the idiomatic
-  # ungated palette root. WARN independently of the entries count.
-  if grep -qF 't="b:Folder"' <<< "$pal"; then
-    row WARN palette-root "$jar" "module.palette root uses t=\"b:Folder\" (access-controlled) — use t=\"b:UnrestrictedFolder\" for ungated palette expansion [ev: corpus B746 §746.1]"
+  # ungated palette folder, root or nested. WARN independently of the entries count.
+  folders=$(grep -c '^FOLDER$' <<< "$scan" || true)
+  if [ "$folders" -ge 1 ]; then
+    row WARN palette-root "$jar" "module.palette uses t=\"b:Folder\" ($folders element(s), access-controlled) — use t=\"b:UnrestrictedFolder\" for ungated palette expansion [ev: corpus B746 §746.1]"
   fi
-  # component entries carry a name (<p n="..."/>); the b:Folder root has no n= so it is naturally excluded
-  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  entries=$(grep -c '^ENTRY$' <<< "$scan" || true)
   types=$(printf '%s' "$MX" | grep -c '<type ' || true)
   if [ "$entries" -eq 0 ] && [ "$types" -ge 1 ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 1; fi
-    row WARN palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return 0
+    row WARN palette "$jar" "empty palette but module declares $types type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)"; return "$rc"
   fi
-  row PASS palette "$jar" "module.palette has $entries component entries"; return 0
+  row PASS palette "$jar" "module.palette has $entries component entries"; return "$rc"
 }
 check_wb_scaffold() {
   # WB-SCAFFOLD1: a -wb jar with 0 .class entries AND 0 palette entries is an
@@ -469,7 +511,7 @@ check_wb_scaffold() {
   grep -q '^module\.palette$' <<< "$LIST" || { row SKIP wb-scaffold "$jar" "no module.palette"; return 0; }
   n_classes=$(printf '%s\n' "$LIST" | grep -c '\.class$' || true)
   pal=$(unzip -p "$jar" module.palette 2>/dev/null || true)
-  entries=$(printf '%s' "$pal" | grep -c '<p n=' || true)
+  entries=$(palette_scan <<< "$pal" | grep -c '^ENTRY$' || true)
   if [ "$n_classes" -eq 0 ] && [ "$entries" -eq 0 ]; then
     if [ "$STRICT" -eq 1 ]; then row FAIL wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 1; fi
     row WARN wb-scaffold "$jar" "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"; return 0
