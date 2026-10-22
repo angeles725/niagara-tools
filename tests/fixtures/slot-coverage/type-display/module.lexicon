@@ -1,0 +1,4 @@
+# Room= is ineffective: the type display name is read from Room.displayName (NTypeInfo.java:178)
+Room=Cuarto
+# Core.mode names a slot, not the type: Core has no display-name key
+Core.mode=Modo

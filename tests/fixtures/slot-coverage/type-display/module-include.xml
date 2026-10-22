@@ -1,0 +1,4 @@
+<types>
+  <type name="Room" class="com.x.BRoom"/>
+  <type name="Core" class="com.x.BCore"/>
+</types>

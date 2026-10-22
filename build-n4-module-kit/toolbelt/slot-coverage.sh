@@ -20,13 +20,17 @@
 #   slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>
 #   required   <- OPERATOR-flagged @NiagaraProperty slots from *.java under <src-dir>
 #                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key)
-#   declared   <- lexicon slot names: bare key "fan" -> "fan"; "FanMode.fan" -> "fan" (after dot)
-#   MISSING    <- OPERATOR slot with no lexicon key (renders raw camelCase in operator views)
-#   STALE      <- lexicon key matching no "known key" — a truly dead translation.
+#   declared   <- BARE lexicon keys only: the framework reads a slot's display name from the bare slot key in the
+#                 declaring type's module (NSlot.java:42); "FanMode.fan" is never read for slot fan.
+#   MISSING    <- OPERATOR slot with no bare lexicon key (renders raw camelCase in operator views)
+#   DOTTED     <- a dotted key "X.<slot>" naming an annotated slot that has no bare key: dead for that slot.
+#                 Other dotted keys (help.guide.base, Type.displayName, error keys) are not judged.
+#                 [ev: retro devguide415-lexicons-ux-i18n Δ1] [ev: corpus B1305 §1305.2 C1]
+#   STALE      <- bare lexicon key matching no "known key" — a truly dead translation.
 #                 known keys = @NiagaraProperty slots (any flags) ∪ type display-name keys
 #                 (from module-include.xml <type name="X">) ∪ @Range enum-tag values.
 #                 A key for a READONLY slot, a type name, or a frozen-enum tag is live, NOT stale.
-#   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot> and STALE <key> lines
+#   stdout:    pct=<n.n> (per-slot)   followed by MISSING <slot>, STALE <key> and DOTTED <key> lines
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
 #   exit 2   bad arity + "usage: slot-coverage.sh per-slot ..." on stderr
@@ -35,10 +39,11 @@
 # Usage (parse subcommand — reads module files, calls the same pure function):
 #   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
 #   required   <- <type name="X"> entries in module-include.xml
-#   declared   <- key=value lines in module.lexicon (comments and blank lines ignored):
-#                   bare key  (e.g. "fan")          -> declared name = fan
-#                   Type.slot (e.g. "FanMode.fan")  -> declared name = FanMode (before the dot)
-#                 Both forms name the same type; the part before the first dot is the type name.
+#   declared   <- "<Type>.displayName" keys in module.lexicon (comments and blank lines ignored): the
+#                 framework reads a type's display name from that key only (NTypeInfo.java:178). A bare
+#                 "<Type>=" key is ineffective -> "slot-coverage: WARN ineffective type key: <Type>=" and the
+#                 type stays missing; a "Type.slot" key does not declare the type.
+#                 [ev: retro n4-course-lexicon-logging-testing Δ1] [ev: corpus B1236 §1236.3]
 #   |required|==0   -> N/A
 #   empty lexicon + |required|>=1 -> pct=0.0 + "slot-coverage: FAIL empty lexicon ..." on stdout + exit 1
 #   duplicate keys in lexicon -> "slot-coverage: FAIL dup-keys: <key>" on stdout + exit 1 (A1/B792)
@@ -220,9 +225,10 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
     }
     ' 2>/dev/null)
 
-  # Lexicon slot keys: bare "fan" -> "fan"; "FanMode.fan" -> "fan" (part after last dot)
-  lex_slots_raw=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" \
-    | grep '=' | cut -d'=' -f1 | sed 's/.*\.//' | sort -u)
+  # Lexicon slot keys = BARE keys only (NSlot.java:42 reads the bare slot name); dotted keys kept apart.
+  _lex_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$PS_LEX" | grep '=' | cut -d'=' -f1 | sed 's/[[:space:]]*$//' | sort -u)
+  lex_slots_raw=$(printf '%s\n' "$_lex_keys" | grep -v '\.' || true)
+  lex_dotted=$(printf '%s\n' "$_lex_keys" | grep '\.' || true)
 
   # Type names from module-include.xml: <type name="X" ...> -> "X"
   # These appear as top-level lexicon keys by Niagara convention (TypeName=Display Name).
@@ -309,6 +315,16 @@ $range_tags_raw"
     done <<< "$stale_slots"
   fi
 
+  # Emit DOTTED rows: "X.<slot>" for an annotated slot with no bare key is never read for that slot
+  if [ -n "$lex_dotted" ]; then
+    while IFS= read -r dk; do
+      ds="${dk##*.}"
+      grep -qxF -- "$ds" <<< "$all_slots_raw" || continue
+      grep -qxF -- "$ds" <<< "$lex_slots_raw" && continue
+      printf 'DOTTED %s (never read: the framework reads the bare key %s)\n' "$dk" "$ds"
+    done <<< "$lex_dotted"
+  fi
+
   # Exit 1 if any MISSING (a missing operator slot renders raw camelCase — ship-blocker)
   [ -z "$missing_slots" ] && exit 0 || exit 1
 fi
@@ -376,11 +392,10 @@ required_csv=$(grep -ohE '<type[[:space:]]+[^>]*\bname="[^"]*"' "$XML" \
   | sed 's/^name="//;s/"$//' \
   | sort -u | paste -sd ',' -)
 
-# Extract declared type names from lexicon key=value lines
-# (skip comment lines starting with # and blank lines)
-# bare key "fan" -> "fan"; "FanMode.fan" -> "FanMode" (before the dot)
-declared_csv=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
-  | grep '=' | cut -d'=' -f1 | sed 's/\..*//' | sort -u | paste -sd ',' -)
+# Declared types = "<Type>.displayName" keys (NTypeInfo.java:178); comment and blank lines skipped.
+# A bare "<Type>=" or a "Type.slot" key does not give the type a display name.
+lex_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" | grep '=' | cut -d'=' -f1 | sed 's/[[:space:]]*$//' || true)
+declared_csv=$(printf '%s\n' "$lex_keys" | sed -n 's/\.displayName$//p' | sort -u | paste -sd ',' -)
 
 # Dup-key detection: duplicate raw keys before dot-stripping (operationalizes B759/B780)
 # A1 (B792): upgraded from WARN/exit-0 to FAIL/exit-1 — a duplicate key silently overrides a
@@ -389,6 +404,13 @@ dup_keys=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$LEX" \
   | grep '=' | cut -d'=' -f1 | sort | uniq -d)
 HAS_WARN=0
 HAS_FAIL=0
+# A bare "<Type>=" key for a declared type is ineffective for the type's display name (lex Δ1).
+while IFS= read -r bt; do
+  [ -n "$bt" ] || continue
+  grep -qxF -- "$bt" <<< "$lex_keys" || continue
+  printf 'slot-coverage: WARN ineffective type key: %s= (Workbench reads %s.displayName)\n' "$bt" "$bt"
+  HAS_WARN=1
+done <<< "$(printf '%s\n' "$required_csv" | tr ',' '\n')"
 if [ -n "$dup_keys" ]; then
   while IFS= read -r dk; do
     printf 'slot-coverage: FAIL dup-keys: %s\n' "$dk"

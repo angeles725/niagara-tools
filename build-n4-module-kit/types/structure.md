@@ -70,6 +70,25 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 `[ev: corpus B817]` for every row. Deeper cites B817 carries: lexicon/palette STANDARD ← B780/B759 (§817.4), the
 empty-lexicon/empty-palette AUDIT that fires L4/L5 ← B788; L6 ← B790 §14; L7 ← B784; L8 ← B807; L10/L11 ← B815 §815.12.
 
+### Lexicon key catalogue (what L4's keys must look like)
+
+The framework reads only these forms; any other key is dead for that purpose. `[ev: retro n4-course-lexicon-logging-testing Δ1]`
+`[ev: retro devguide415-lexicons-ux-i18n Δ1]`
+
+| Key | Shown as | Read by |
+|---|---|---|
+| `<slot>=` (bare slot name) | the slot's display name | `NSlot.java:42` `Lexicon.make(module, cx).get(this.name)` |
+| `<Type>.displayName=` | the type's display name (palette, New menu) | `NTypeInfo.java:178` `get(getTypeName() + ".displayName")` |
+| `<tag>=` (bare enum tag) | the frozen enum value's display text | `EnumType.java:50` `get(entry.tag)` |
+| `%lexicon(<module>:<key>)%` in a facet value | e.g. `TRUE_TEXT`/`FALSE_TEXT` text | `BFormat.java:77,452` (a BFormat call, any key) |
+
+All [CERT]: the first three under `organized/baja/baja/vineflower/com/tridium/sys/{schema,registry}/`, `BFormat.java` under
+`organized/docSource/docSource-doc/extracted/baja/javax/baja/util/`; cross-read in corpus B1305 §1305.1 and B1236 §1236.3.
+A `Type.slot` key is never read for the slot, and a bare `<Type>=` key does nothing for the type (it falls back to
+`toFriendly(<Type>)`, `NTypeInfo.java:183`). `toolbelt/slot-coverage.sh` checks both: the parse mode
+counts a type only through `<Type>.displayName` and WARNs a bare `<Type>=`; `per-slot` counts only bare slot keys and
+prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated slot.
+
 ## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
 
 L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niagara_home=`, `user_home=`, `nodeHome=`). The correct pattern is:
