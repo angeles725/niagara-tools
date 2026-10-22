@@ -5,11 +5,13 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
 
 // All returns every registered rule, in the order --all runs them.
 func All() []lint.Spec {
 	return []lint.Spec{
 		nullcontext.Spec(),
+		timers.Spec(),
 	}
 }

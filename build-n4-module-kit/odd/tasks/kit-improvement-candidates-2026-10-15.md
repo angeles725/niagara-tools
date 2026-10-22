@@ -504,42 +504,81 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BAlarmSourceExt.java:326,1332,1954`, corpus B1324, B1314 §1314.1 row 13.
 - **Target:** `types/logic.md` § alarm decisions + `:336` LC5.
 - **Lint-able:** yes — WARN `%parent.` in alarm text defaults. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ2, rac Δ6): `types/logic.md` LC8 (ext chooser from the
+  4.15.6.20 guide, `alarmInhibit` + `inhibitTime`, texts against the record) and LC5 corrected. **Premise corrected (kit
+  text):** LC5 "alarm-ext … is notification-only" — code wins: the ext owns ALARM|FAULT|UNACKED_ALARM of `out` (devguide
+  source 4.15.6.20 `BAlarmSourceExt.java:1330-1331,1954`; vineflower alarm-rt 4.14.0.162 `NON_ALARM_BITS = -139`, `:222`).
+  LC4 reworded to "no interlock". Pin KPC1; owed Go lint G25 `alarm-text-parent`.
 
 ### C33 — Reuse kitControl before hand-rolling: LeadLag, Sequence, Interstart, timers, LoopPoint, writables
 - **Sources:** cas#Δ5 (primary) · r3pec#Δ3 extends (LeadLag feedback inputs must be linked) · r3pec#Δ4 corrects cas Δ5 (Interstart min on/off = inherited `minActiveTime`/`minInactiveTime`, default 0) · rac#Δ7 extends (`activeLevel`, overrides, min on/off on Boolean writables) · cas#Δ6 (timers TRANSIENT) · cas#Δ7 (LoopPoint zero gains, 0.5 s ticket) · cas#Δ8 (Tstat no lockout; ext ordering)
 - **Evidence:** `BLeadLagRuntime.java:307,385,411`, `BLeadLagCycles.java:1116-1124,1187-1200`, `BInterstartDelayControl.java:63-160`, `BSequence.java:575`, `BLoopPoint.java:352,499`, `BBooleanDelay.java:535`, `BStatus.java:824`, corpus B1331, B1351, B1314 §1314.1.
 - **Target:** `types/logic.md` after `:333`, LC1, `:332-333`.
 - **Lint-able:** partial — bog checks (feedback links, non-zero min on/off, kP=0). **Fold type:** new doc section + bog lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ5, Δ6, Δ7, Δ8, r3pec Δ3, Δ4, rac Δ7): `types/logic.md`
+  LC7 (LeadLag feedback links, Sequence, Interstart = inherited `minActiveTime`/`minInactiveTime`, TRANSIENT timers,
+  inert LoopPoint, Tstat + ext ordering) and LC1 (`activeLevel`, override actions/`overrideExpiration`/
+  `maxOverrideDuration` facet, Boolean writable min on/off). Verified in kitControl-rt and control-rt 4.14.0.162
+  vineflower; the 4.15.6.20 devguide source agrees where the corpus cites it; 4.13 not verified. r3pec Δ4's correction
+  of cas Δ5 adopted (min on/off is inherited, default 0). Owed Go lint G26 `kitcontrol-bog`.
 
 ### C34 — Timers and schedules: TriggerSchedule for defrost, `clockChanged` for absolute tickets
 - **Sources:** cas#Δ9 (primary) · rac#Δ3 extends (absolute-start `schedulePeriodically` needs `clockChanged`) · cas#Δ10 extends (weekly schedule `defaultOutput`, share via ScheduleSelector)
 - **Evidence:** `BTriggerSchedule.java:274,524,527,540`, devguide `execution.txt:131-137`, ColdRoomPan `BDefrostMode.java:16`, corpus B1335, B1304 §1304.2.
 - **Target:** `types/logic.md` § Watchdogs and timers, `types/logic-authoring.md:298`, `toolbelt/lint-timers.sh`.
 - **Lint-able:** yes — WARN absolute `Clock.schedule`/`schedulePeriodically` without `clockChanged`. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ9, rac Δ3, cas Δ10): `types/logic.md` § Safety
+  fail-modes & timers (relative vs absolute tickets from the 4.15.6.20 `Clock.java` javadoc + `execution.txt:64-66`;
+  TriggerSchedule with the persisted `nextTrigger`, flags 265 in vineflower schedule-rt 4.14.0.162 `:102`, `:274` in
+  the 4.15.6.20 source), `types/logic-authoring.md` § Schedule integration (`defaultOutput`, specials, selectors). The
+  `lint-timers.sh` WARN is owed as Go lint G24 `absolute-ticket-clock` (a new check, not a small edit).
 
 ### C35 — History extensions and commissioning: `_cfg0` split, ship disabled, capacity, alarm DB size
 - **Sources:** has#Δ3 (primary: split rule + exporter URL) · cas#Δ3 reinforces (disabled on palette, literal `historyName`, rollover) · poh#Δ5 extends (capacity 500, pasted ext disabled + empty name, implied tags from facets, `out.value`) · cas#Δ4 extends (file alarm DB 500)
 - **Evidence:** `LocalDbConnection.java:226-229`, `BHistoryExt.java:281`, devguide `history.txt:75`, `servlets/exporters.txt:16-20`, corpus B1315, B1324, B1256 §1256.6, B1253 §1253.3 K4.
 - **Target:** `types/logic-authoring.md:536-545`, `types/dashboard.md`, `BUILD-LOOP.md` commissioning.
 - **Lint-able:** partial — flag literal `historyName`; diff interval defaults across versions. **Fold type:** doc section + commissioning items.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; has Δ3, cas Δ3, poh Δ5, cas Δ4): `types/logic-authoring.md`
+  § Logging a point to history (split, disabled by default, script name, capacity 500, rollover, `out.value`, implied
+  tags, `ITableToCsv`), `BUILD-LOOP.md` § 6.b item 7 (alarm DB 500, history exts). **Premise corrected:** has Δ3 "a
+  config change starts `<name>_cfg0`" — code wins: on a `recordType`/`interval` change of a non-empty history the OLD
+  records are renamed to `<name>_cfg0` and a new empty history takes the original name (vineflower history-rt
+  4.14.0.162 `HistoryDatabaseConnection.java:194-221`, `LocalDbConnection.java:213-238`; 4.15 not verified). Same
+  operational effect (readers see an empty history), different place for the old data. Owed Go lint G27 `history-name-literal`.
 
 ### C36 — Slot and callback contracts
 - **Sources:** scc#Δ3 (primary: `isRunning()` first line) · scc#Δ4 (validators skip link writes) · scc#Δ5 (slot-API traps) · scc#Δ6 (one-shot status write, TRANSIENT run-state, single-flight, ids in `started()`) · scc#Δ2 (flags are UI, not security; `checkSetFlags`)
 - **Evidence:** corpus B1231 §1231.6/§1231.9/§1231.11, B1232 §1232.2/§1232.4, B1253 §1253.3 K1/K6, B1254 §1254.5.
 - **Target:** `types/logic.md` § Tridium rt idioms / Slots / Restart & persistence; `types/logic-authoring.md`; `types/security.md` §2.
 - **Lint-able:** yes — WARN callback without `isRunning()` guard (B1242 K4); `get("…") != null`; `removeAll()`; `setValue` then `setStatus`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; scc Δ2, Δ3, Δ4, Δ5, Δ6): `types/logic.md` § Tridium rt idioms
+  (callback contract, validators skip link-fed writes, one-shot status write, TRANSIENT run-state, single-flight,
+  persisted ids, slot-API traps), `types/security.md` § 2.2a. **Premise refined:** scc Δ2 "READONLY is honoured only by
+  the Workbench property sheet" — code: `set(prop, v, cx)` checks only operator/admin write (vineflower baja 4.14.0.162
+  `BUser.java:902-912`), but `BComponent.canWrite(OrdTarget)` does refuse READONLY (`BComponent.java:925-939`); the kit
+  states both and leaves "which remote surfaces ask canWrite" not verified. scc Δ5's `NoSuchSlotException`: javadoc
+  (docSource 4.14.0.162 `BComplex.java:686-697`) vs a `Property` cast in the 4.14.0.162 body (`ComplexSlotMap.java:371-373`);
+  the rule avoids the call (K30). Owed Go lints G29 `callback-running-guard`, G32 `slot-api-traps`.
 
 ### C37 — Concurrency doctrine: no intrinsic locks, named threads, callback thread map
 - **Sources:** tjd#Δ4 (primary: `lint-intrinsic-lock.sh`) · tjd#Δ5 extends (naming/priority; reinforces rac Δ1's `defaultThreadFactory`) · poh#Δ1 extends (callback → thread map)
 - **Evidence:** course `Slides/9 Multithreaded Development.pdf` p4-11, p21, p26-28; corpus B1238 §1238.2, §1238.10; DashboardPan `BDashboardService` has 5 `synchronized` methods.
 - **Target:** `types/logic.md` § Tridium rt idioms; new `toolbelt/lint-intrinsic-lock.sh`.
 - **Lint-able:** yes — FAIL `synchronized` method / `synchronized(this)` in a `B*` class; WARN unnamed `new Thread(`/`Executors.new*()`. **Fold type:** doc section + new lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; tjd Δ4, Δ5, poh Δ1): `types/logic.md` § Tridium rt idioms (no
+  intrinsic locks with the framework's own `synchronized (this.instance)` at vineflower baja 4.14.0.162
+  `ComplexSlotMap.java:740`; named threads; the callback thread map with `Console.java:41`, `EngineManager.java:560`,
+  fox-rt `SessionDispatcher.java:16`). The new `lint-intrinsic-lock.sh` is NOT written (round-8 rule: no new bash
+  lints): owed Go lints G30 `intrinsic-lock`, G31 `thread-naming`. The live thread-map run stays open (B1238-G2).
 
 ### C38 — Action threading and the two coalescing winners
 - **Sources:** tjd#Δ3 (primary: Fox dispatcher, ASYNC → engine, `post()` override with `Invocation`) · rcf#Δ1 reinforces (confirms tjd Δ3; `post()` FIRST-wins vs `CoalesceQueue` LAST-wins; queued ASYNC runs with null Context)
 - **Evidence:** `ActionQueue.java:28,85`, `EngineManager.java:310`, `Invocation.java:85-91`, course `Slides/9` p13-17, corpus B1238 §1238.3-5, B1316 §1316.1.
 - **Target:** `types/actions.md` § 2 Threading model.
 - **Lint-able:** yes — WARN blocking ASYNC action without `post(` override; bare `this::do` in `post(`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; tjd Δ3, rcf Δ1): `types/actions.md` § 2 (Fox:Dispatcher, 60 s
+  request timeout, `ActionQueue` FIRST-wins vs `CoalesceQueue` LAST-wins, null Context in queued ASYNC, the `Invocation`
+  offload), all read in baja/fox-rt 4.14.0.162 vineflower; 4.15 not verified. Owed Go lint G28 `async-blocking-action`.
 
 ### C39 — A null Context means `BPermissions.all`; `OrdTarget.can*` pass without a security target
 - **Sources:** rcf#Δ2 (primary) · nsto#Δ8 extends (custom `BOrdScheme` contract; gate every hop with `canRead()`) · rsb#Δ5 extends (worker threads must carry the action's Context: null Context = all permissions + default locale)
@@ -559,18 +598,35 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** commit 337ee6c (two BUILD SUCCESSFUL runs with 0 tests).
 - **Target:** new `toolbelt/run-niagara-test.sh`, `toolbelt/INDEX.md`, bats with three log fixtures.
 - **Lint-able:** yes. **Fold type:** script.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ2): the runner is a new script, which round 8
+  does not write in bash; its contract is in `types/moduleTest.md` § Known gotchas (read the `Total tests run` and
+  rejection lines by hand meanwhile) and its full spec is owed as Go tool G33 `run-niagara-test` (ledger fragment
+  r8-p1-tests). LEFT: the runner, its `toolbelt/INDEX.md` row and the three log fixtures.
 
 ### C41 — moduleTest doctrine, layout and template
 - **Sources:** tpb#Δ4 (primary: station tests for component behaviour, structural tests last resort) · tpb#Δ5 extends (structural-test advisory lint) · tpb#Δ6 extends (`moduleTest-include.xml` template + scaffold) · lex#Δ3 duplicate on the 4.14 layout + extends (BTestNg vs BTestNgStation, mockStatic, FINE assertions, no fixed sleeps)
 - **Evidence:** commit 337ee6c; corpus B1252 §1252.3, B1236 §1236.5-6; `toolbelt/lint-structure.sh:271-303`.
 - **Target:** `types/moduleTest.md`, `METHODOLOGY.md` testing tiers, `toolbelt/lint-structure.sh` (L12), `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN `srcTest` reading `.java` as text with no BTestNg class. **Fold type:** doc section + template + lint.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ4, Δ5, Δ6, lex Δ3): `types/moduleTest.md`
+  (client parity doctrine, base-class choice, idempotent station fixtures, DB seeding, mockStatic, no fixed sleeps,
+  `setup()` trap from docSource 4.14.0.162 `BTest.java:72`, `@BeforeTest` at `BTestNgStation.java:93-94`; the 4.14+
+  `test.` package layout from devkit-wb 4.14.0.162 `BNfooVideoDriverTest.java.vm:4` and the course suite), new
+  `templates/moduleTest-include.xml`, `METHODOLOGY.md` tier note. LEFT: `scaffold-module.sh` emission (outside the
+  surface); the structural-test advisory is owed as Go lint G34 `structural-tests` (a new check, not a small edit of
+  L12). Whether 4.14+ tooling still discovers the older layout is `[INFER]`. Pin KPT1.
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
 - **Evidence:** devguide `build.txt:238,250`, `upgradingBuild.txt:289`, corpus B1320, B1321.
 - **Target:** `types/third-party-libraries.md` after `:15` and near `:160`, `types/module-wiring.md` §1.
 - **Lint-able:** yes — WARN bundling okhttp/okio/kotlin-stdlib/commons-lang3/codec/slf4j/jose4j/httpclient5/bouncycastle; `import org.apache.http.`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-tests`, 2026-10-23; shl Δ1, Δ3, Δ4, Δ6): `types/third-party-libraries.md` § Before
+  bundling (nre without version, devguide 4.15.6.20 `build.txt:186`; a three-install drift table from `ls bin/ext` of
+  iC-Niagara 4.13.2.18, Honeywell OptimizerSupervisor 4.14.0.162 and Niagara 4.15.6.20; the wrapper table from corpus
+  B1321; `commonsLang-rt` empty in 4.15.6.20 by `unzip -l`, 424 `lang3` entries in the 4.14.0.162 copy; wrappers lend
+  no permissions), `types/module-wiring.md` § 1 `nre("g:a")` row. The okhttp half was WU-P0-9. Pin KPT2; owed Go lint
+  G35 `shipped-library-bundle`.
 
 ### C43 — Outbound HTTP ladder; the non-driver-client gate is closed by default; OAuth2
 - **Sources:** shl#Δ7 (primary ladder) · r3di#Δ4 corrects shl Δ7(b) (`enableNonDriverClients=false` → every send skipped with only a health fault; mount with `mountAtOrd`) · r3-report#R3 · r3di#Δ5 extends (OAuth2 via `oauth2-rt` + `BAuthorizationHeaderScheme`, the `email-rt` pattern)
@@ -650,6 +706,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** corpus B1336 §1336.1 row 5, **B1353 §1353.2** (`EngNotes/aHandlingNull_ExprComponent.txt:23-27`, `[CERT-doc]`).
 - **Target:** `types/logic-authoring.md` (staging).
 - **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; rcf Δ9): `types/logic.md` § Zero-demand (every staging
+  comparison names its fallback; Expr null handling per the 4.15.6.20 guide `EngNotes/aHandlingNull_ExprComponent.txt:13-17`,
+  `[CERT-doc]`, not verified in code). No lint: a NaN guard near a comparison has no deterministic signal.
 
 ### C51 — Kit process: register the course, reference-first, sweep absolute claims
 - **Sources:** cex#Δ1 (primary: SOURCES.md + corpus-index row) · cex#Δ2 extends (reference-first Orient rule) · cex#Δ3 extends (K-rule + one-time "never"/"forbidden" sweep; C01, C03, C09, C11 are its worked examples) · rsb#Δ6 extends (delta totals come from a counting script, never a hand sum)
