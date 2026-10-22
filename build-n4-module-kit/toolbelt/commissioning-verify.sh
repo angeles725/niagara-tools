@@ -57,7 +57,7 @@
 set -u
 LC_ALL=C; export LC_ALL
 
-TOOLBELT="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+TOOLBELT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NPASS=0; NFAIL=0; NWARN=0; NSKIP=0; NMANUAL=0
 HAD_FAIL=0

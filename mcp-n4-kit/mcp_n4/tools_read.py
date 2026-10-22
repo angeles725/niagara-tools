@@ -14,7 +14,7 @@ import time
 import uuid
 from collections import namedtuple
 
-from . import __version__, box, bql, retro, safety, tiers
+from . import __version__, box, bql, files, retro, safety, tiers
 
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 
@@ -497,11 +497,11 @@ def n4_find_dangling_outputs(ctx, args):
 
 # ---- bulk reads: n4_bql_query / n4_inventory (retro 2026-10-02 D1, D7, D8) ----
 
-def _record_read(ctx, tool, args, rows):
+def _record_read(ctx, tool, args, rows, target_key="base"):
     """A read leaves a session observation, plus an `audit.jsonl` line (outcome `read`)
     when the write machinery (and so the audit log) is active. Never raises."""
     ctx.observations.append({"ts": retro.now(), "tool": tool, "rows": rows,
-                             "ord": ctx.scrub(str(args.get("base", "")))})
+                             "ord": ctx.scrub(str(args.get(target_key, "")))})
     if ctx.write is None:
         return
     try:
@@ -546,30 +546,36 @@ def _bql(ctx, base, query, max_rows, timeout):
 _OUTPUT_FILE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(csv|json)")
 
 
-def _output_path(ctx, name):
-    """`<state-dir>/bql/<name>` for a plain new file name, else ToolError (nothing read)."""
-    if not isinstance(name, str) or not _OUTPUT_FILE.fullmatch(name) or ".." in name:
-        raise ToolError("output_file must be a plain file name ending in .csv or .json "
-                        "(letters, digits, '.', '_', '-'), written under <state-dir>/bql/; "
-                        "got %r" % (name,))
+def _output_path(ctx, name, subdir="bql", pattern=_OUTPUT_FILE,
+                 kinds="ending in .csv or .json "):
+    """`<state-dir>/<subdir>/<name>` for a plain new file name, else ToolError (nothing read)."""
+    if not isinstance(name, str) or not pattern.fullmatch(name) or ".." in name:
+        raise ToolError("output_file must be a plain file name %s(letters, digits, '.', "
+                        "'_', '-'), written under <state-dir>/%s/; got %r"
+                        % (kinds, subdir, name))
     state_dir = ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR)
     try:
         safety.check_state_dir(state_dir)
     except safety.SafetyError as exc:
         raise ToolError(str(exc)) from None
-    path = os.path.join(state_dir, "bql", name)
+    path = os.path.join(state_dir, subdir, name)
     if os.path.lexists(path):
         raise ToolError("output_file %s already exists: choose another name (the server "
                         "never overwrites a result file)" % path)
     return path
 
 
-def _write_output(path, base, query, columns, rows):
-    """Write the result privately (dirs 0700, file 0600, never over an existing file)."""
+def _private_dirs(path):
+    """Create the state dir and the result subdir of `path` (0700) when missing."""
     for directory in (os.path.dirname(os.path.dirname(path)), os.path.dirname(path)):
         if not os.path.isdir(directory):
             os.makedirs(directory, mode=0o700, exist_ok=True)
             os.chmod(directory, 0o700)
+
+
+def _write_output(path, base, query, columns, rows):
+    """Write the result privately (dirs 0700, file 0600, never over an existing file)."""
+    _private_dirs(path)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
@@ -639,6 +645,144 @@ def n4_inventory(ctx, args):
     out.update(base=base, truncated=truncated, progress=progress, elapsed_ms=total)
     if args.get("include_points"):
         out["point_rows"] = results["points"]
+    return out
+
+
+# ---- station files and Px views ---------------------------------------------
+
+#: `output_file` of n4_read_file: a plain file name with an extension.
+_FILE_OUTPUT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.[A-Za-z0-9]{1,10}")
+FILE_STATUS = {403: "forbidden", 404: "not_found"}
+
+
+def _write_bytes(path, data):
+    """Write `data` privately (dirs 0700, file 0600, never over an existing file)."""
+    _private_dirs(path)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+    except BaseException:  # never leave a partial file a reader could trust
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        raise
+
+
+def _fetch_file(ctx, args, tool):
+    """`(out, body)` of one `GET /file/<path>`: a typed result for 403/404, body None then.
+
+    Client-side refusals (see `files.station_path`) raise ToolError before any request.
+    A 401 raises `box.AuthError` (latched by the server, never retried).
+    """
+    file_ord = args["file_ord"]
+    try:
+        path = files.station_path(file_ord)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from None
+    max_bytes = args.get("max_bytes", files.DEFAULT_MAX_BYTES)
+    out = {"file_ord": file_ord, "path": path}
+    start = ctx.clock()
+    try:
+        got = ctx.session.client.get_file(files.url_path(path),
+                                          timeout=args.get("timeout_s", 60),
+                                          max_bytes=max_bytes)
+    except box.HttpStatusError as exc:
+        out.update(status=FILE_STATUS[exc.code], http_status=exc.code,
+                   elapsed_ms=int(round((ctx.clock() - start) * 1000)))
+        if exc.code == 403:
+            out["hint"] = ("the station user lacks read permission on this file, or the "
+                           "station refuses its type (directories, .bog)")
+        _record_read(ctx, tool, args, 0, target_key="file_ord")
+        return out, None
+    body, truncated = got["body"], got["truncated"]
+    out.update(status="ok", http_status=200, content_type=got["content_type"],
+               content_length=got["content_length"], size_bytes=len(body),
+               truncated=truncated,
+               sha256=None if truncated else hashlib.sha256(body).hexdigest(),
+               elapsed_ms=int(round((ctx.clock() - start) * 1000)))
+    _record_read(ctx, tool, args, 1, target_key="file_ord")
+    return out, body
+
+
+def n4_read_file(ctx, args):
+    path = None
+    if "output_file" in args:
+        path = _output_path(ctx, args["output_file"], subdir="files", pattern=_FILE_OUTPUT,
+                            kinds="with an extension ")
+    out, body = _fetch_file(ctx, args, "n4_read_file")
+    if body is None:
+        return out
+    if files.is_text(out["path"], out["content_type"]):
+        out["text"] = body.decode("utf-8", "replace")
+    else:
+        out["binary"] = True
+    if path is not None:
+        if out["truncated"]:
+            out["output_skipped"] = ("the file was truncated at max_bytes; raise max_bytes to "
+                                     "save it whole")
+        else:
+            try:
+                _write_bytes(path, body)
+            except OSError as exc:
+                raise ToolError("output_file %s could not be written (%s)"
+                                % (path, exc.strerror or type(exc).__name__)) from None
+            out["output_file"] = path
+    return out
+
+
+PX_VIEW_QUERY = "select slotPath, displayName, pxFile, media from baja:PxView"
+PX_VIEW_COLUMNS = ("slot_path", "display_name", "px_file", "media")
+PX_OWNER_NOTE = ("A PxView is a property value (BStruct) of its owning component, not a "
+                 "component: the station answers its slotPath as NULL, so slot_path and "
+                 "owner_path are null then. Find the owner by the view's display name in "
+                 "n4_navigate / n4_read_slots, or read the Px file directly.")
+
+
+def _null(cell):
+    return None if cell in ("", "NULL", "null") else cell
+
+
+def n4_list_px_views(ctx, args):
+    root = args.get("root", ROOT_ORD)
+    max_rows = args.get("max_rows", bql.DEFAULT_MAX_ROWS)
+    columns, rows, truncated, elapsed = _bql(ctx, root, PX_VIEW_QUERY, max_rows,
+                                             args.get("timeout_s", 60))
+    try:
+        keyed = bql.by_position(columns, rows, PX_VIEW_COLUMNS)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from None
+    views = []
+    for row in keyed:
+        view = {key: _null(row[key]) for key in PX_VIEW_COLUMNS}
+        slot = view["slot_path"]
+        owner = None
+        if slot:
+            slot = slot[len("slot:"):] if slot.startswith("slot:") else slot
+            head = slot.rstrip("/").rpartition("/")[0]
+            owner = bql.STATION_SLOT + (head or "/")
+        view["owner_path"] = owner
+        views.append(view)
+    _record_read(ctx, "n4_list_px_views", args, len(views), target_key="root")
+    return {"root": root, "query": PX_VIEW_QUERY, "views": views, "row_count": len(views),
+            "truncated": truncated, "elapsed_ms": elapsed, "owner_note": PX_OWNER_NOTE}
+
+
+def n4_px_summary(ctx, args):
+    out, body = _fetch_file(ctx, args, "n4_px_summary")
+    if body is None:
+        return out
+    if out["truncated"]:
+        raise ToolError("%s is larger than max_bytes=%d: raise max_bytes (up to %d) to "
+                        "summarize it" % (out["path"], out["size_bytes"],
+                                          files.MAX_BYTES_LIMIT))
+    try:
+        out["summary"] = files.parse_px(body.decode("utf-8", "replace"),
+                                        max_items=args.get("max_items",
+                                                           files.DEFAULT_MAX_ITEMS))
+    except ValueError as exc:
+        raise ToolError("%s: %s" % (out["path"], exc)) from None
     return out
 
 
@@ -762,6 +906,50 @@ TOOLS = [
                                    bql.DEFAULT_MAX_ROWS),
                   "timeout_s": _int("HTTP timeout per query in seconds", 1, 600, 60)}),
          n4_inventory),
+    Tool("n4_read_file",
+         "Read one station file (e.g. a Px view file:^px/General.px) through the station's "
+         "file servlet: GET /file/<path>. file_ord is a file:^ ORD or a path relative to the "
+         "station home. Refused before any request: '..', '|', ':', absolute paths, directories, "
+         "names ending in '.' or ' ' and .bog/.bog.gz (the station never serves them). Text types (px, xml, nav, chart, "
+         "json, csv, html, txt, ...) return text; other files return size, sha256 and "
+         "content type only (output_file saves the complete bytes under "
+         "<state-dir>/files/). status is ok, forbidden (403: no read permission) or "
+         "not_found (404); a 401 pauses station calls and is never retried. Reads are "
+         "capped at max_bytes (truncated=true, sha256 null when cut).",
+         _schema({"file_ord": _str("file:^px/General.px, station:|file:^px/General.px or "
+                                   "px/General.px"),
+                  "max_bytes": _int("Byte cap of the read", files.MIN_BYTES,
+                                    files.MAX_BYTES_LIMIT, files.DEFAULT_MAX_BYTES),
+                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60),
+                  "output_file": _str("Optional plain file name with an extension: the "
+                                      "complete bytes go to <state-dir>/files/<name> (0600, "
+                                      "never overwritten)")},
+                 ["file_ord"]),
+         n4_read_file),
+    Tool("n4_list_px_views",
+         "List the Px views (baja:PxView) below root with one BQL query: display_name, "
+         "px_file (the file:^ ORD to pass to n4_read_file / n4_px_summary) and media. A "
+         "PxView is a property value, not a component, so the station usually answers its "
+         "slot path as NULL: slot_path and owner_path are null then (see owner_note).",
+         _schema({"root": _str("Subtree ORD, default station:|slot:/", default=ROOT_ORD),
+                  "max_rows": _int("Row cap", 1, bql.MAX_ROWS_LIMIT, bql.DEFAULT_MAX_ROWS),
+                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60)}),
+         n4_list_px_views),
+    Tool("n4_px_summary",
+         "Fetch one .px file (like n4_read_file) and summarize it without returning the XML: "
+         "media, imported modules, canvases and viewSize, layers, widget and binding type "
+         "counts, bound ORDs grouped by component (a trailing value slot such as /out "
+         "stripped), images, included Px files, charts, other ORDs and label texts. Every "
+         "list is capped at max_items. A file larger than max_bytes is refused, not "
+         "summarized in part.",
+         _schema({"file_ord": _str("file:^px/General.px or px/General.px"),
+                  "max_bytes": _int("Byte cap of the read", files.MIN_BYTES,
+                                    files.MAX_BYTES_LIMIT, files.DEFAULT_MAX_BYTES),
+                  "max_items": _int("Cap of every summary list", 1, 2000,
+                                    files.DEFAULT_MAX_ITEMS),
+                  "timeout_s": _int("HTTP timeout in seconds", 1, 600, 60)},
+                 ["file_ord"]),
+         n4_px_summary),
     Tool("n4_list_batches",
          "List the write batches in this server's journal, newest first: batch_id, tool, "
          "station_name, ts, state (completed / in-doubt), verdict, rollback_of and "

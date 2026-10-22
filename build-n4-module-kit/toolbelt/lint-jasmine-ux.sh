@@ -14,7 +14,7 @@
 # Mutation: JUX-finderr -- ignoring the find exit status reads an unreadable spec directory as no specs (or hides it)
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-jasmine-ux raw 'usage: lint-jasmine-ux.sh <ux-module-root>' "$@"
 ROOT="${AL_ROOTS[0]}"
 

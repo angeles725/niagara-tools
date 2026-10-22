@@ -156,3 +156,29 @@ These rules govern changes to the kit itself, not station sessions.
 | Each work unit merges as its own PR from the latest `origin/main`. Under that delivery, `gentle-ai review assess --committed-only` reports a medium-risk slice as `review_due: false` with `under_budget`: the slice never reaches the review budget because it is merged first. So at every PR, start the native review explicitly (`gentle-ai review status ... --next-transition`, then the returned START) for any medium or high candidate, whatever `review_due` says. Only a `passive` candidate skips the review. Evidence: retro 2026-10-03 D3 (H1, H5, H6 assessed `under_budget`). | **manual** |
 | A mutation check runs without bytecode (`tools/mutation_check.py`, or clear `__pycache__` and set `PYTHONDONTWRITEBYTECODE=1`); a stale `.pyc` can make a restored file keep running the mutant. Evidence: retro 2026-10-03 D1. | `tools/mutation_check.py`; `test_the_command_runs_with_bytecode_writing_disabled_after_the_clear`, `test_every_pycache_under_the_root_is_removed_and_sources_are_kept` |
 | Before each minor release, run the untested-branch audit (README "Run the tests", stdlib `trace`) and give every never-run `raise`/`except`/refusal branch in the write path a test or a stated reason. Evidence: retro 2026-10-03 D2 (the H4 characterization tests found a swallowed error reason). | **manual** |
+
+## 9. Reading Px views and station files
+
+Px graphics are files (`file:^px/<name>.px`), not components: BOX and BQL reads do not show
+them. A live station served them over two read-only HTTP routes, with the same HTTP Basic
+credentials (still taken only from the operator's environment, never from tool arguments):
+
+1. `GET /ord/<url-encoded station:|slot:/|bql:select slotPath, displayName, pxFile, media
+   from baja:PxView|view:file:ITableToCsv>` lists the views. `slotPath` came back `NULL`:
+   `BPxView` extends `BAbstractPxView`, a `BStruct` held as a property of its owning
+   component, so it has no slot path of its own.
+2. `GET /file/<path>` returns the file (`/file/px/General.px` answered the raw Px XML; an
+   absent `/file/nav/NavFile.nav` answered 404).
+
+Source notes (N4 web-rt): `web.xml` maps the `file` servlet (`FileServlet`) to `/file/*`;
+`file:^a/b` corresponds to `/file/a/b` (`WebSnoopHtmlWriter.java:121-122`);
+`FileServlet.canRead` requires read permission and refuses directories and `.bog` /
+`.bog.gz` (`FileServlet.java:418-426`); `BPxView.pxFile` is a `BOrd` property.
+
+| Rule | Enforced by |
+|---|---|
+| List views with `n4_list_px_views`, then read one with `n4_px_summary` (structure, bound ORDs, images, includes) or `n4_read_file` (raw text). A `NULL` slot path is reported as `slot_path: null` / `owner_path: null` with `owner_note`, never guessed. | `test_px_views_are_listed_with_their_file_and_media` |
+| File reads are read-only `GET /file/<path>`; each path segment is URL-encoded. `..`, `|`, absolute or home paths, drive letters, backslashes, empty segments, directories (trailing `/`), `:` and segments ending in `.` or space (Windows aliases such as `config.bog.` or `config.bog::$DATA`) and `.bog` / `.bog.gz` are refused before any request. | `mcp_n4/files.py`; `test_unsafe_paths_are_refused_before_any_request`, `test_bog_files_are_refused_like_the_file_servlet`, `test_windows_path_aliases_of_refused_files_are_refused`, `test_unsafe_paths_and_bog_files_send_nothing`, `test_the_url_path_encodes_each_segment` |
+| Reads are capped (`max_bytes`, default 2 MB, at most 16 MB); a cut read says `truncated: true` and has no `sha256`. A binary file returns size, `sha256` and content type, never its bytes in the reply; `output_file` saves complete bytes only. | `test_the_size_cap_truncates_and_says_so`, `test_a_binary_file_returns_size_and_digest_without_content`, `test_a_truncated_read_is_not_saved_and_a_path_name_is_refused` |
+| A 401 on `/file/` latches station calls and is never retried (on a live station one user got 401 where another succeeded: check that user's Authentication Scheme and password). A 403 (no read permission) or 404 is a typed `status`, not an authentication failure, and does not latch. | `test_a_401_on_the_file_path_latches_and_is_not_retried`, `test_missing_and_forbidden_files_are_typed_results_without_a_latch` |
+| The Px summary parses with the standard library only and refuses a `DOCTYPE` / `ENTITY` declaration (no entity expansion). Grouping bound ORDs by component strips a trailing value slot (`/out`, `/in1`..`/in16`, `|slot:out`, ...): a heuristic, the station is not asked. Every list is capped (`max_items`). | `test_a_doctype_or_entity_declaration_is_refused`, `test_bound_ords_are_grouped_by_component_with_the_trailing_slot_stripped`, `test_label_texts_are_listed_and_bounded` |
