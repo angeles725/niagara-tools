@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -280,21 +281,76 @@ func TestRunUnreadableFile(t *testing.T) {
 	}
 }
 
-func TestRunUnlistableDir(t *testing.T) {
+// lockedTree is tree with dir made unreadable (restored at cleanup); it returns the root and dir's path.
+func lockedTree(t *testing.T, files map[string]string, dir string) (string, string) {
+	t.Helper()
 	skipIfRoot(t)
-	root := tree(t, map[string]string{"locked/A.java": "", "B.java": "MARK\n"})
-	locked := filepath.Join(root, "locked")
+	root := tree(t, files)
+	locked := filepath.Join(root, dir)
 	if err := os.Chmod(locked, 0); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	return root, locked
+}
+
+// TestRunUnlistableDir: by default an incomplete walk stops the rule, as scan_files_or_exit does: the
+// env line only, no rows from the files that were listed, no later root, exit 3.
+func TestRunUnlistableDir(t *testing.T) {
+	root, locked := lockedTree(t, map[string]string{"locked/A.java": "", "B.java": "MARK\n"}, "locked")
+	later := tree(t, map[string]string{"C.java": "MARK\n"})
 	s, o, e := stdio()
-	code := Run([]Spec{javaSpec(fakeRule{"lint-x", "MARK", Warn}, One)}, "lint-x", Args{Roots: []string{root}}, s)
-	if want := "lint-x: cannot list every file under " + root + ": find: '" + locked + "': Permission denied\n"; code != 3 || e.String() != want {
-		t.Errorf("exit %d err %q, want 3 and %q", code, e, want)
+	code := Run([]Spec{javaSpec(fakeRule{"lint-x", "MARK", Warn}, Each)}, "lint-x", Args{Roots: []string{root, later}}, s)
+	if want := "lint-x: cannot list every file under " + root + ": find: '" + locked + "': Permission denied\n"; code != 3 || e.String() != want || o.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3, no rows and %q", code, o, e, want)
 	}
-	if !strings.Contains(o.String(), "B.java:1") {
-		t.Errorf("the listed files were not scanned: out %q", o)
+}
+
+// TestRunUnlistableDirContinue: a ContinueOnWalkError rule scans the files that were listed, as
+// awk_lint_run does: the env line, then the rows, then the next root, exit 3.
+func TestRunUnlistableDirContinue(t *testing.T) {
+	root, locked := lockedTree(t, map[string]string{"locked/A.java": "", "B.java": "MARK\n"}, "locked")
+	later := tree(t, map[string]string{"C.java": "MARK\n"})
+	spec := javaSpec(fakeRule{"lint-x", "MARK", Warn}, Each)
+	spec.ContinueOnWalkError = true
+	s, o, e := stdio()
+	code := Run([]Spec{spec}, "lint-x", Args{Roots: []string{root, later}}, s)
+	wantOut := "WARN  lint-x  " + root + "/B.java:1  saw: MARK\nWARN  lint-x  " + later + "/C.java:1  saw: MARK\n"
+	wantErr := "lint-x: cannot list every file under " + root + ": find: '" + locked + "': Permission denied\n"
+	if code != 3 || o.String() != wantOut || e.String() != wantErr {
+		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o, e, wantOut, wantErr)
+	}
+}
+
+// TestRunUnlistableDirMixed: in one run a stopping rule prints nothing while a continuing rule scans.
+func TestRunUnlistableDirMixed(t *testing.T) {
+	root, _ := lockedTree(t, map[string]string{"locked/A.java": "", "B.java": "MARK\n"}, "locked")
+	cont := javaSpec(fakeRule{"lint-c", "MARK", Warn}, Each)
+	cont.ContinueOnWalkError = true
+	s, o, _ := stdio()
+	code := Run([]Spec{javaSpec(fakeRule{"lint-s", "MARK", Warn}, Each), cont}, "n4lint", Args{Roots: []string{root}}, s)
+	if want := "WARN  lint-c  " + root + "/B.java:1  saw: MARK\n"; code != 3 || o.String() != want {
+		t.Errorf("exit %d out %q, want 3 and %q", code, o, want)
+	}
+}
+
+// TestWalkErrorText pins the bytes GNU find 4.9 prints for a directory it cannot read under LC_ALL=C
+// (awk-lint.sh): always quoted; \' and \\; C escapes for \a \b \f \n \r \t \v; 3-digit octal for any
+// other control byte and every byte from 0x80. Every row was measured on real directories.
+func TestWalkErrorText(t *testing.T) {
+	for path, want := range map[string]string{
+		"src/locked":           `'src/locked'`,
+		"src/lo\nck":           `'src/lo\nck'`,
+		"src/lo\tck":           `'src/lo\tck'`,
+		"src/q'b\\s\x01":       `'src/q\'b\\s\001'`,
+		"src/\xc3\xa9\x7f\xff": `'src/\303\251\177\377'`,
+		"src/a\ab\bc\fd\re\vf": `'src/a\ab\bc\fd\re\vf'`,
+		"src/sp ace\x1b~":      `'src/sp ace\033~'`,
+	} {
+		err := &WalkError{Path: path, Err: syscall.EACCES}
+		if got, w := err.Error(), "find: "+want+": Permission denied"; got != w {
+			t.Errorf("WalkError(%q) = %q, want %q", path, got, w)
+		}
 	}
 }
 
