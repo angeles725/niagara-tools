@@ -22,29 +22,10 @@
 # Mutation: AO12 -- no block-comment skip in code_part and the apostrophe in /* it's */ hides the marker
 # Mutation: AO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-LC_ALL=C
-export LC_ALL
-
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-arbitrary-ord.sh <src-root>\n' >&2
-    exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-    printf 'lint-arbitrary-ord: not a directory: %s\n' "$ROOT" >&2
-    exit 3
-fi
-
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-had_err=0
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
-    printf 'lint-arbitrary-ord: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-    had_err=1
-fi
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-arbitrary-ord raw 'usage: lint-arbitrary-ord.sh <src-root>' "$@"
+awk_lint_list -name '*.java'
 
 MARKER='lint-arbitrary-ord:[[:space:]]*reviewed'
 
@@ -113,7 +94,6 @@ while IFS= read -r f; do
         fi
         prev=$line
     done < "$f"
-done < "$_TMP/files"
+done < "$AL_TMP/files"
 
-[ "$had_err" -eq 0 ] || exit 3
-exit 0
+awk_lint_exit 0
