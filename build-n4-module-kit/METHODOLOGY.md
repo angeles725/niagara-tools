@@ -89,6 +89,20 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 
 See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev: corpus B1054-B1061]`
 
+## Version and N5 readiness
+- [ ] **Public API only where it exists:** public `javax.baja` API changes only between majors (4.14.7 → 4.15.6 is
+  one); private `com.tridium.*` API can change in a minor release without notice. A private import needs a reason
+  in the module README (lint proposed: retro n4-course-build-deps-permissions-signing Δ3). `[ev: corpus B1416 §1416.5 i]`
+- [ ] **Check each API against the TARGET version:** the Resource Center shows only the newest docs; for an older
+  target read that version's Workbench Help/bajadoc or its source. `[ev: corpus B1416 §1416.5 h]`
+- [ ] **Alarm and history data go through the alarm/history APIs,** never `java.io`/`java.nio` on their files.
+  `[ev: corpus B1416 §1416.5 g]`
+- [ ] **Niagara 5 readiness** (instructor statements; no N5 source yet, gaps B1416-G1/B1417-G1): an N4 module needs an
+  upgrade for N5 (expected early 2027; migration guide via the developer program). Keep these true now: no split
+  package (`types/structure.md` § Layout); every jar validly signed by a trusted cert, because N5 drops the `low`
+  verification mode (`types/distribution.md` §5); module parts go away in N5, so each part's code stays
+  self-contained; N5 builds on Gradle 9.x. `[ev: corpus B1416 §1416.5 j]` `[ev: corpus B1417 §1417.3 a,t,u,v]`
+
 ## Tradeoffs to state, not hide
 - Adding alarm sources / control points to a "pure display" facade makes it an alarm SOURCE — a real change of role. Flag it.
 - **A 4/5 exemplar that names its missing gate is more trustworthy than an unqualified 5/5 aspiration:** documenting a gap (e.g. gate 4 REQUIRED-but-absent → issue #49) makes the exemplar auditable; an unqualified 5/5 claim invites over-trust. [ev: retro dashboard-exemplar]

@@ -9,6 +9,10 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - `-doc` is a SEPARATE `runtimeProfile="doc"` module (with an empty `<types/>`, per B784 §784.1), NEVER a part of a code module.
 - Author-side source tree: `<MOD>-rt.gradle.kts` + `module-include.xml` + `module.lexicon` + `module.palette` +
   `src/com/<vendor>/<MOD>/…` (+ `srcTest/` for tests, `rc/` for `-ux`). `[ev: corpus B817]`
+- **One Java package belongs to one module part.** Code the `-rt` and `-wb` parts both need is either duplicated
+  or moved into its own utility module (`types/utility-lib.md`); a package is never split across parts or modules.
+  N4 loads the first copy and shadows the other; Niagara 5 refuses split packages. Check:
+  `toolbelt/split-package-check.sh` (`types/issues-and-gotchas.md` D4c). `[ev: corpus B1417 §1417.3 a-b]`
 
 ## Naming — `javax.baja.*` = framework API, `com.<vendor>.*` = your code `[ev: corpus B817]`
 - Tridium declares PUBLIC framework types under `javax.baja.<domain>` (e.g. `javax.baja.control.BControlPoint`) and
@@ -18,6 +22,9 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 
 ## `module-include.xml` vs `META-INF/module.xml` `[ev: corpus B817]`
 - You AUTHOR `module-include.xml` (the `<type>` list). The gradle plugin GENERATES `META-INF/module.xml` from it.
+- **After renaming or deleting a type, delete `module-include.xml` (or its stale `<type>` line) and rebuild.** The
+  build adds lines for new `@NiagaraType` classes but never rewrites or removes an existing line, so a renamed
+  type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1417 §1417.3 e]`
 - A hand-authored `META-INF/module.xml` in source is WRONG (L6): it will be overwritten and drifts from the plugin
   output. Edit `module-include.xml`; never the generated manifest. `[ev: corpus B817]`
 - **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1]
@@ -157,10 +164,10 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   <!-- Note: use b:UnrestrictedFolder (not b:Folder) — b:Folder is access-controlled and
        causes "access denied" palette expansion for engineers without the folder's category permission.
        [ev: corpus B746 §746.1] -->
-  <p n="ColdRoom" t="com.angeles.coldroomrt.BColdRoomPan"
+  <p n="ColdRoom" m="cr=ColdRoomPan" t="cr:ColdRoomPan"
      hasDefrost="true" airDefrost="true">
     <!-- Child entries: pre-wired sub-components appear as nested <p> -->
-    <p n="defrost" t="com.angeles.coldroomrt.BDefrostController"
+    <p n="defrost" t="cr:DefrostController"
        interval="PT4H" duration="PT30M"/>
   </p>
 </p>
@@ -172,6 +179,9 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
   access-controlled and causes silent "access denied" palette expansion in Workbench for engineers
   who lack the folder's category permission. `verify-module.sh` warns on `b:Folder`.
   **`scaffold-module.sh` MUST emit `t="b:UnrestrictedFolder"` as the palette root** (not the default `b:Folder` emitted by some scaffold versions) to ensure the `palette-root` WARN is never present on a freshly-scaffolded module. `[ev: corpus B746 §746.1]` `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
+- **Type spec = `<alias>:<TypeName>` without the `B`** (`cr:ColdRoomPan` for `BColdRoomPan`); a Java class
+  name or a `B`-prefixed name fails with "Type not found". Declare each alias once, `m="<alias>=<module>"` on the
+  first `<p>` that uses it; later entries reuse the alias. `[ev: corpus B1418 §1418.5 e]` `[ev: corpus B1419 §1419.4 d]` `[ev: corpus B780]`
 - Property overrides in the palette are XML attributes on the `<p>` tag; they set the slot value
   at drag-drop time and are not persisted unless the component itself persists them.
 - Assembly templates are **pure resource additions** — no code change, no class risk.

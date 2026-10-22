@@ -107,6 +107,22 @@ trust store** (`<user_home>/security/cacerts.jceks`). The production cert goes
 into the station's trust store through the overlay; it is never hand-imported
 into a production JACE. `[ev: corpus B18 §18.9]`
 
+**The default dev key (no signing block in the build):** the plugin's `LocalSigningProfile` signs with a
+self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium/security/niagara.signing.jceks`
+(type JCEKS; the course demo and the 4.15 devguide say `niagara.signing.jks`, our hosts have `.jceks`), RSA-3072,
+valid 365 days, refreshed at 183. The store password sits in clear text in `niagara.signing.xml` beside it: read
+key names only, never print it. `[ev: corpus B1417 §1417.1]`
+
+- **Release builds turn the default profile off** (`allowDefaultProfile.set(false)` in the ROOT signing block, `build-verify.md`
+  § Build target & plugin version): with it on, a failed HSM/token login silently falls back to the dev key and the build stays
+  green. `[ev: corpus B1417 §1417.1]`
+- **An untrusted module stops the whole station, not only its component:** a station whose `.bog` holds a component
+  from an untrusted module does not start. Test trust first by opening the module in a Workbench palette; after
+  raising the verification mode, look for a trust prompt hidden behind other windows. `[ev: corpus B1417 §1417.1]`
+- **Niagara 5 removes the `low` verification mode:** every module must be validly signed by a trusted cert, so a
+  module that only loads on a `low` supervisor is not N5-ready (METHODOLOGY § Version and N5 readiness).
+  `[ev: corpus B1417 §1417.3 u]`
+
 ### Hard signing gate (permission groups)
 
 `ACCESS_CLASS`, `REFLECTION`, and `MBEAN_PERMISSION` force cert-chain

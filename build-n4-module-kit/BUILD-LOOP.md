@@ -21,6 +21,8 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - Run **`toolbelt/preflight.sh <niagara_home> <gradle-root>`** — automates win-path, jdk8, plugin-pin, jar-lock checks; exit 0 = all clear. Pass **`--plugin-version <v>`** (or export `NIAGARA_PLUGIN_VERSION`) when the build overrides the plugin: plugin-pin then checks the version gradle will actually use instead of re-deriving a `settings.gradle.kts` default that may have drifted from this `niagara_home` (`build.sh` forwards its own `--plugin-version` automatically). `[ev: retro continuous-fan-post-defrost-delay Δ1]` For a project you did not generate (course zip, vendor sample) add **`--sample`**: the `sample-*` rows check the retarget (`niagara_home` present + same version, no `<…>` user-home placeholder, root signing block, no shipped `build/`). `[ev: retro n4-course-signed-jars-gate-fix Δ6]`
 - Run **`scripts/check-client-source.sh --build-state BUILD-STATE.md --module <MOD> <module-root>`** — is this checkout the module's declared `source_of_truth` (`<path>@<branch>@<commit>`)? WARN when the module root is not in a git work tree or the field is undeclared/`unknown`; FAIL on a detached HEAD, the wrong checkout, the wrong branch, or a HEAD behind the declared commit (stale). Local refs only, never fetches. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2); a FAIL means you are about to build from the wrong tree — stop and switch. `[ev: retro client-source-of-truth Δ1]`
 - **JDK 8** present (`ls /usr/lib/jvm`).
+- **A second local test station** needs its own ports: in the new station's services set Fox 4911 → 4912 and Web
+  443 → 444, then **save** the station, or nothing is written and the two stations collide. `[ev: corpus B1416 §1416.5 a]`
 - **niagara_home chosen** = the LOWEST target version you must support, AND its pinned gradle plugin version (from `settings.gradle.kts`) is present in `<niagara_home>/etc/m2` — each install ships only one (build-verify.md).
 - **Station live?** A running station LOCKS its `modules/<mod>.jar`. Free the lock FIRST (close Workbench, or stop a non-production station) and build directly; use a mirror (`toolbelt/mirror-niagara-home.sh`) ONLY for a live production supervisor you must not stop — see build-verify.md §Building against a running station. [ev: retro coldroompan-dashboardpan-freeze-stat-leds · B2]
 - **This module's build target may differ from the last one's — read THIS module's `gradle.properties` + `settings.gradle.kts`:** a sibling in the same client repo can target a different `niagara_home` + plugin (e.g. ColdRoomPan → PowerB 4.15.3 / 7.6.22 vs CompPan → Honeywell 4.14 / 7.6.17); never carry over the previous module's target. [ev: retro module-palette-and-build-target · B6]
@@ -65,7 +67,8 @@ non-skippable check floor (§5) applies to every tier.
 ### 1.a New-module bring-up (before the first build)
 
 After `scaffold-module.sh` generates the skeleton, three steps MUST happen before running
-`toolbelt/build.sh` for the first time:
+`toolbelt/build.sh` for the first time. (Workbench's New Module wizard instead defaults to the Workbench user home;
+point it at the client tree that `orient-guard.sh` accepts, never the user home. `[ev: corpus B1417 §1417.3 p]`)
 
 1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
    bit; `./gradlew` is non-functional without it.
