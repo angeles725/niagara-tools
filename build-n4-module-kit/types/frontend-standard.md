@@ -245,6 +245,43 @@ written for the panel):
   service selected by `config.js`. Complements the "module is the SKELETON" rule in `dashboard.md`
   § Extending an existing dashboard.
 
+## UI API changes across NRE versions `[ev: retro t9c-reference-gaps Δ3]`
+
+Our `-ux` modules target 4.13, 4.14 and 4.15 stations. A classic-script servlet-SPA (this standard) uses
+no Tridium UI API, so the list below binds only code that imports bajaux / webEditors / BajaScript or ships
+Px. Source: the devguide `ui/uiChangelog` page — read the copy of the NEWEST release you target
+(`niagara-help/versions/4.15.6.20/devguide-clean/ui/uiChangelog.txt`, cited `CL:` below; the default
+`devguide-clean` copy stops at 4.14). The page lists 4.10 to 4.15; corpus B1303 records that no block covers it.
+
+| Since | Change that breaks or alters `-ux` code | Action | Cite |
+|---|---|---|---|
+| 4.13 | `Widget.load()` rejects until `initialize()` resolves; `doChanged()` waits for it too | chain `initialize().then(() => load(v))` | [CERT-doc] `CL:297-336` |
+| 4.13 | a custom `BIBajaScriptTypeExt.encodeToJson()` must return an array of arrays | update the encoder (B957 type-ext recipe in `dashboard.md`) | [CERT-doc] `CL:390` |
+| 4.13 | `BIWebResource` / `BCssResource`: a `BJsBuild` can declare its CSS | declare CSS on the build, drop manual `<link>` loading | [CERT-doc] `CL:349-357` |
+| 4.14 | `makeCommands()` moved from `DriverMgr` to `Manager` and is async | `return Promise.resolve(super.makeCommands()).then(c => [...c, mine])` | [CERT-doc] `CL:152-171` |
+| 4.14 | `MgrCommand` flags replace `isShowInActionBar` and mixin use (deprecated) | pass flags | [CERT-doc] `CL:175-177` |
+| 4.14 | Manager New/Add/Edit/Match now call save; `PropertyColumn` formats with slot facets | re-test manager edits and column text | [CERT-doc] `CL:181-189` |
+| 4.14 | `spandrel.jsx` returns a Thenable, not data | await it | [CERT-doc] `CL:217` |
+| 4.15 | `UxModel`/`BindingList` moved to `bajaux/model/...` (old ids deprecated) | change the AMD ids | [CERT-doc] `CL:10-14` |
+| 4.15 | UxModel.jsx child `readonly` now inherits from the parent | set `readonly` explicitly where it matters | [CERT-doc] `CL:32` |
+| 4.15 | shape CSS `.ux-shape-Rect` → `.ux-Rect` (Ellipse, Line, Path, Polygon too) | rename selectors | [CERT-doc] `CL:39-43` |
+| 4.15 | `IconOrdEditor` replaces `IconEditor` as the default icon editor | name `IconEditor` explicitly if you need it | [CERT-doc] `CL:48-50` |
+| 4.15 | `baja.Complex#getValueOf()` deprecated | use `encodeToString()` / typed getters | [CERT-doc] `CL:60-68` |
+| 4.15 | `BDefaultMobileWebProfile` removed (users move to HTML5HxProfile); `HxOp` cookie helpers removed | move off both | [CERT-doc] `CL:114-120` |
+| 4.15 | c3.js replaced by billboard.js 3.12.4; d3 7.9.0; jQuery 3.7.1 (also 4.14u1) | do not depend on the bundled c3 | [CERT-doc] `CL:124-140` |
+
+Rule: a module whose lowest target is older than the newest one must work on both sides of every row it
+touches — test on the lowest and the newest NRE, not only the build NRE.
+
+**`PxMediaMigration`** is a palette component (`wb:PxMediaMigrator`, class
+`com.tridium.workbench.px.BPxMediaMigrator`) that rewrites `.px` files and/or Px views to a target media
+(default `uxBuilder:UxMedia`); it never runs by itself. Drop it in the station, configure it, run **Dry Run**,
+then **Execute**, with a backup first. [CERT] niagara-research
+`organized/pxEditor/pxEditor-wb/extracted/module.palette:31`; [CERT-doc] `niagara-help/devguide-clean/ui/uxMediaMigration.txt:6-12`.
+To preview pages in UxMedia without rewriting them: system property `niagara.preferUxMedia=true` [CERT-doc]
+`niagara-help/devguide-clean/ui/uxMedia.txt:56`. The page also ships in the 4.13.2.18 docs, so it is not
+4.15-only as B1315 states [CERT-doc] `niagara-help/versions/4.13.2.18/devguide-clean/ui/uxMediaMigration.txt:1`.
+
 ## Enforcement
 `toolbelt/rc-scan.sh` gates the checkable browser rules (row format and flags in its header):
 `browser-floor` (WARN; FAIL under `--strict` or `--profile hmi|both`), `disabled-gate`,
