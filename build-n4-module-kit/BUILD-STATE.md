@@ -331,4 +331,5 @@ last_session: 2026-10-14 · ws-placement (branch feat/ws-placement: wire-sheet p
 2026-10-03 · audit-2026-10-03 A8c → timer-ticket cancel helper decided by its same-file body, not its name (closes the A1b-A8b name-heuristic chain); innermost-call binding. [ev: corpus B787]
 2026-10-03 · audit-2026-10-03 A8d → timer-ticket helper must cancel its own parameter; this.-qualified helper accepted (A8c review fail-open + regression). [ev: corpus B787]
 2026-10-03 · audit-2026-10-03 A2 → report-module floor SKIP = INCOMPLETE (exit 4; build.sh 53; --first-deploy / --lint-only); write-path env exit 3 = ERROR; ng-deploy fails closed (missing gate 50, schema-risk precheck 12/53, version-bump precheck 51/52). [ev: retro change-tier-time-budgets Δ3]
+2026-10-21 · quality-round8 T8a → `scripts/lib/sha256.sh` shared by install-skill.sh and check-skill-drift.sh (one `sha256_of` instead of two); install-skill.sh now fails closed (exit 3, nothing installed) without sha256sum/shasum instead of installing on empty digests; retro retros/2026-10-21-shared-sha256-fail-closed.md 2Δ pending. [ev: retro shared-sha256-fail-closed]
 <!-- /build-state.v1 -->
