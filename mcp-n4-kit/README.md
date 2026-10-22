@@ -24,7 +24,8 @@ v0.7.2 (retro 2026-10-03): `tools/mutation_check.py` (mutation checks without st
 stdlib untested-branch audit, explicit per-PR review of medium units.
 v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command cannot be
 launched, so a failed launch is never read as a RED.
-v0.8.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
+v0.8.1: a failed write keeps its batch id, a partial batch reports what was sent and its inverse, BOX replies capped at 32 MB.
+v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
 
 ## Methodology and skill
 
@@ -254,7 +255,12 @@ Every write call goes through these layers:
    verdict}` follows, holding the real inverse (for example the server-assigned
    name). An intent without a result, or a result flagged `in_doubt` (the station
    reply was ambiguous or malformed), is an `in-doubt` batch: the station may or
-   may not have applied it, so inspect it before retrying.
+   may not have applied it, so inspect it before retrying. Any failure after the
+   intent is written is reported with its `batch_id` (reply and audit line, outcome
+   `error`). When op k of a multi-op batch fails, the error names the ops already
+   sent, their replies and their inverse, and an in-doubt `result` record
+   (`sent`, `failed_op`, partial `accepted` and `inverse`) is journaled; a rollback
+   that stops after re-creating components lists the components that now exist.
 8. **Audit.** Every write call, dry, executed or refused, appends a line to
    `<state-dir>/audit.jsonl`; arguments whose key contains `pass`, `secret`, `token`
    or `credential` are replaced by `***`.

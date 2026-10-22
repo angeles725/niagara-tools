@@ -204,6 +204,19 @@ class TestTransportErrors(BoxTestCase):
         with self.assertRaises(box.BoxError):
             self.client().open()
 
+    def test_an_oversized_box_reply_is_refused_with_the_cap_named(self):
+        # call() reads at most max_reply_bytes (32 MB by default, like get_ord): a reply
+        # past the cap is refused, never parsed from a truncated body.
+        self.assertEqual(box.BoxClient.max_reply_bytes, 32 * 1024 * 1024)
+        c = self.client()
+        c.max_reply_bytes = 1024
+        self.fake.hook = lambda frame: (200, b'{"pad": "' + b"x" * 4096 + b'"}', {})
+        with self.assertRaises(box.BoxError) as cm:
+            c.open()
+        self.assertNotIsInstance(cm.exception, box.AuthError)
+        self.assertIn("1024", str(cm.exception))
+        self.assertIn("larger than", str(cm.exception))
+
     def test_malformed_reply_shapes_are_boxerror(self):
         shapes = {
             "missing m": lambda f: error_frame(f),

@@ -24,7 +24,7 @@
 # Mutation: WFC2 -- remove the BComponentChooser/targetType-absent guard so a file WITH BComponentChooser still WARNs
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-wb-file-chooser first 'usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>' "$@"
 
 # check <file>: the line of the file-chooser dialog call, when the file has no station-space picker.

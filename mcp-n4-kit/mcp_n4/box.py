@@ -282,6 +282,10 @@ class BoxClient:
                 pass
         return exc
 
+    #: Byte cap of one BOX reply (the same 32 MB as `get_ord`): a longer reply is refused,
+    #: never read whole into memory nor parsed from a truncated body.
+    max_reply_bytes = 32 * 1024 * 1024
+
     # -- transport
     def call(self, channel, key, body):
         self._seq += 1
@@ -294,7 +298,11 @@ class BoxClient:
             headers={"Authorization": self._auth, "Content-Type": "application/json"})
         try:
             with self._opener.open(req, timeout=self.timeout) as resp:
-                reply = json.loads(resp.read().decode())
+                raw = resp.read(self.max_reply_bytes + 1)
+            if len(raw) > self.max_reply_bytes:
+                raise BoxError("BOX reply larger than %d bytes: refused, not parsed in part"
+                               % self.max_reply_bytes, channel, key)
+            reply = json.loads(raw.decode())
         except BoxError:
             raise
         except urllib.error.HTTPError as exc:

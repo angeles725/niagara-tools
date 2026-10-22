@@ -26,7 +26,7 @@ set -u
 # Skeleton resolved relative to this script — never from $HOME
 # (K8; TC-K8 verifies the script works under HOME=/nonexistent)
 ################################################################
-_SCRIPT_DIR="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 ################################################################
 # usage
