@@ -249,6 +249,41 @@ fixed-ms gap, NOT the baud-relative silence prescribed by Modbus RTU spec.
 
 ---
 
+### 7.5 · `BAlarmDeviceExt` — alarms raised by the device, not by points `[ev: retro t9c-reference-gaps Δ2]`
+
+Use it when the field device sends its own alarm/event notifications (BACnet event notifications, SNMP traps,
+an oBIX alarm feed); per-point `BAlarmSourceExt` stays the choice for limits the station evaluates itself.
+Official page: devguide `driverAlarm`. Worked client example: opcUa `AlarmExt`, corpus B1226.
+Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium source), all under niagara-research.
+
+- **Contract** [CERT] `D/driver-rt/javax/baja/driver/alarm/BAlarmDeviceExt.java`: `public abstract class
+  BAlarmDeviceExt extends BDeviceExt implements BIRemoteAlarmSource, BIRemoteAlarmRecipient` (`:66-68`); slots
+  `alarmClass` (String, default `defaultAlarmClass`) and `lastReceivedTime`, hidden actions `routeAlarm` /
+  `ackAlarm` (`:40-65`); implement `doRouteAlarm(BAlarmRecord)` and `doAckAlarm(BAlarmRecord): BBoolean`
+  (`:170-174`); `isChildLegal` returns false (`:179-182`) — override it if the ext holds feeds/processors.
+- **Declare it on your device** with your own property — `BDevice` has no alarm-ext hook. BACnet:
+  `@NiagaraProperty name="alarms" type="BBacnetAlarmDeviceExt"`. [CERT] `D/bacnet-rt/javax/baja/bacnet/BBacnetDevice.java:155-156,372`
+- **Recipe — receive:** build the record with the ext as source, `new BAlarmRecord(ext, ext.getAlarmClass(),
+  alarmData, BUuid.make())`, put the field point in the `sourceName` facet, `ext.routeAlarm(record)`, then
+  `setLastReceivedTime`. `doRouteAlarm` hands it to `BAlarmService.routeAlarm(record)`. [CERT]
+  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:1330-1335`;
+  `D/bacnet-rt/javax/baja/bacnet/alarm/BBacnetAlarmDeviceExt.java:121-163`
+- **Recipe — ack:** the alarm service routes an ack to a `BIRemoteAlarmSource` source (`doRouteToSource` →
+  `ackAlarm` → your `doAckAlarm`). [CERT] `D/alarm-rt/javax/baja/alarm/BAlarmService.java:1003-1006,1108-1114`.
+  `doAckAlarm` sends the ack and returns; route the record again only when the device confirms. [CERT]
+  `D/alarm-rt/javax/baja/alarm/BIRemoteAlarmSource.java:10-16`. A device with no remote ack (SNMP) sets
+  ackTime, `BAckState.acked`, `ackRequired=false` itself and routes. [CERT]
+  `organized/snmp/snmp-rt/vineflower/com/tridium/snmp/alarm/BSnmpAlarmDeviceExt.java:197-203`
+- **Pitfalls:**
+  - The ext must be the record source, or acks never come back to it; carry the real point in `sourceName`
+    or `alarmData`. [CERT-doc] `niagara-help/devguide-clean/driverAlarm.txt:10`
+  - Offnormal and normal are two states of ONE alarm: without `AlarmSupport` you transition each offnormal
+    record to normal yourself. [CERT-doc] `driverAlarm.txt:12`
+  - `BDevice.alarmSourceInfo` / `ackAlarm` are the ping-health alarms, not this ext. [CERT] `D/driver-rt/javax/baja/driver/BDevice.java:590-593,689-696`
+  - Catch `ServiceNotFoundException` when the station has no alarm service. [CERT] `BBacnetAlarmDeviceExt.java:163-165`
+  - Sending station alarms TO a device is a `BAlarmRecipient` whose `handleAlarm` works off the engine
+    thread and skips down/disabled devices. [CERT-doc] `driverAlarm.txt:16`
+
 ## 8 · Transport-specific twists — KNX and Z-Wave
 
 ### 8.1 · KNX (`eibnetIp` driver)
