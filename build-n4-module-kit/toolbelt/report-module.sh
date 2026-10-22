@@ -54,7 +54,7 @@
 # [ev: retro campaign7-report-module]  [ev: retro campaign8-report-integration]
 set -u
 
-TOOLBELT="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+TOOLBELT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 NPASS=0; NFAIL=0; NWARN=0; NSKIP=0; NADV=0
 HAD_FAIL=0; HAD_ENV=0

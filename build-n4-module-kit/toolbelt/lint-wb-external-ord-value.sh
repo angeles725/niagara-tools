@@ -55,9 +55,9 @@
 # Mutation: WEO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-wb-external-ord-value first 'usage: lint-wb-external-ord-value.sh [--strict] <wb-src-root>' "$@"
 printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
 # shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)

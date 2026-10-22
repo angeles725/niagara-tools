@@ -32,7 +32,7 @@ Before step 5 (and before relying on anything the operator wrote by hand or says
 ## Session checklist (full detail in METHODOLOGY section 4)
 
 1. `n4_describe_session`, `n4_connect` to a configured station; confirm the real station name, `version` and `tier`. With `tier_writes: refused`, plan with dry runs only (they carry `tier_gate`) and give the operator the refusal's routes.
-2. Inventory or wide reads: `n4_inventory` / `n4_bql_query` FIRST (METHODOLOGY section 7); `n4_navigate` (optional `types` filter) / `n4_read_slots` only for targeted components. A read or client expected to exceed ~1 min writes progress to a file and reports counts; never rely on stdout piped through `tail`.
+2. Inventory or wide reads: `n4_inventory` / `n4_bql_query` FIRST (METHODOLOGY section 7); `n4_navigate` (optional `types` filter) / `n4_read_slots` only for targeted components. Px graphics are files: `n4_list_px_views`, then `n4_px_summary` / `n4_read_file` on the `px_file` (METHODOLOGY section 9). A read or client expected to exceed ~1 min writes progress to a file and reports counts; never rely on stdout piped through `tail`.
 3. Write tools with `dry_run=true` (the default); show the plan to the human.
 4. After approval, repeat with `dry_run=false` and the `confirmation_token`.
 5. Read the verdict; `n4_find_dangling_outputs`; `n4_save_station` with persistence evidence.

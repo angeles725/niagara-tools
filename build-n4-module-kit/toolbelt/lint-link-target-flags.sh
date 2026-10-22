@@ -39,7 +39,7 @@
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2). LC_ALL=C.
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 

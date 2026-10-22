@@ -45,7 +45,7 @@
 set -u
 
 # shellcheck disable=SC1091
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/fs-type.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/fs-type.sh"
 
 JVM_DIR="/usr/lib/jvm"
 PLUGIN_OVERRIDE="${NIAGARA_PLUGIN_VERSION:-}"

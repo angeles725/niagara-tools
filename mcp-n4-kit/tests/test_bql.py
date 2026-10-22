@@ -15,7 +15,7 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fake_station import FakeStation  # noqa: E402
+import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
 from mcp_n4 import box, bql, server, tools_read, tools_write  # noqa: E402
 
 FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
@@ -171,40 +171,31 @@ def localized(name):
     return head + b"\n" + rest
 
 
-class BqlToolCase(unittest.TestCase):
-    """A connected read-only server whose HTTP GETs go to a FakeOpener."""
+class BqlToolCase(test_server.ToolTestCase):
+    """A connected server whose HTTP GETs go to a FakeOpener.
+
+    call/ok/err and the FakeStation come from `test_server.ToolTestCase` (it defines no
+    tests, and the module import keeps test_server's own test classes out of this module).
+    Only the server options and the opener differ.
+    """
+    PASSWORD = "pw-123456"
 
     def setUp(self, allow_writes=False, state_dir=None):
-        self.fake = FakeStation(password="pw-123456").start()
-        self.addCleanup(self.fake.stop)
-        self.srv = server.Server(allow_http=True, allow_writes=allow_writes,
-                                 env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "pw-123456"},
-                                 stations={"FakeStation": self.fake.url}, state_dir=state_dir,
-                                 write_scopes=["station:|slot:/Folder"] if allow_writes else ())
-        self.addCleanup(self.srv.ctx.close)
-        self.call("n4_connect", station="FakeStation")
+        super().setUp()
+        if allow_writes or state_dir is not None:
+            self.srv.ctx.close()
+            self.srv = server.Server(
+                allow_http=True, allow_writes=allow_writes, env=self.env,
+                stations=self.stations, state_dir=state_dir,
+                write_scopes=["station:|slot:/Folder"] if allow_writes else ())
+            self.addCleanup(self.srv.ctx.close)
+        self.connect()
         client = self.srv.ctx.session.client
         self.opener = FakeOpener([("driver:DeviceNetwork", fixture("bql_networks.csv")),
                                   ("driver:Device", fixture("bql_devices.csv")),
                                   ("control:ControlPoint", fixture("bql_points.csv"))],
                                  client._opener)
         client._opener = self.opener
-
-    def call(self, name, **args):
-        res = self.srv.dispatch({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-                                 "params": {"name": name, "arguments": args}})
-        self.assertNotIn("error", res, res)
-        return res["result"]
-
-    def ok(self, name, **args):
-        result = self.call(name, **args)
-        self.assertFalse(result.get("isError", False), result)
-        return result["structuredContent"]
-
-    def err(self, name, **args):
-        result = self.call(name, **args)
-        self.assertTrue(result["isError"], result)
-        return result["content"][0]["text"]
 
 
 class TestBqlQueryTool(BqlToolCase):
@@ -240,7 +231,7 @@ class TestBqlQueryTool(BqlToolCase):
         text = self.err("n4_bql_query", base="/Drivers", query="select name from driver:Device")
         self.assertIn("HTTPBasicScheme", text)
         self.assertIn("do not retry", text)
-        self.assertNotIn("pw-123456", text)
+        self.assertNotIn(self.PASSWORD, text)
         self.assertEqual(len(self.opener.requests), 1)
 
     def test_a_400_names_the_query_as_the_likely_cause(self):
@@ -273,7 +264,7 @@ class TestBqlAuditInWritesMode(BqlToolCase):
             lines = [json.loads(line) for line in fh]
         self.assertEqual([(e["tool"], e["outcome"]) for e in lines],
                          [("n4_bql_query", "read")])
-        self.assertNotIn("pw-123456", json.dumps(lines))
+        self.assertNotIn(self.PASSWORD, json.dumps(lines))
 
 
 class TestInventoryTool(BqlToolCase):

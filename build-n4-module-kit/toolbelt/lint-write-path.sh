@@ -112,7 +112,7 @@ if [ ! -d "$MODULE_ROOT" ]; then
 fi
 
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 # list_java <out> <root> [--prune <name>]... — fail-closed walk: a sub-directory find cannot

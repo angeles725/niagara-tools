@@ -24,7 +24,7 @@
 # kit's usual 2=usage/3=env convention by design (D4a).
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 
 # --- B795 §795.4 — embeddable classifier table (verbatim; diff-guarded by SR-CSV in schema-risk.bats) ---
 CSV_TABLE=$(cat <<'CSV'
