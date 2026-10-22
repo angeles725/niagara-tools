@@ -3,7 +3,8 @@
 #
 # Usage: lint-timers.sh <java-root>
 #   Scans all *.java files recursively under <java-root> (dot-dirs pruned).
-#   Prints FAIL|PASS rows per owning class.
+#   Prints FAIL|PASS rows per owning class, and advisory WARN rows (job-cancel, jdk-thread,
+#   atSteadyState-only-timer, orphan-flag, release-gate-parity).
 #   A class with no timers emits no FAIL (silently skipped).
 #
 # Row format: FAIL|PASS|WARN  <check>  <file>: <detail>   (WARN never changes the exit status)
@@ -26,6 +27,7 @@
 # Mutation: TT-helper-this -- rejecting every qualified call false-FAILs this.cancelTicket(a)
 # Mutation: TT-helper-sigline -- reading parameters only from the brace line false-FAILs an Allman-style helper
 # Mutation: TT-helper-nested -- a separator class that admits ( binds the call to the enclosing if and misses it
+# Mutation: TT-noname -- a schedule with no named ticket field rendered "does not cancel ticket (ticket)"
 # Mutation: LC-orphan -- dropping the orphan-flag pass lets a cancelled ticket leave its companion flag stuck true
 # Mutation: LC-orphan-ok -- ignoring the callee scope false-WARNs a disable path that clears the flag in a helper
 # Mutation: LC-orphan-callers -- ignoring the callers reports a cancel helper whose callers own the flag
@@ -140,12 +142,10 @@ JAVA_ROOT="$1"
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 # One fail-closed walk feeds every check: a sub-directory find cannot enter is exit 3, never a shorter list.
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$JAVA_ROOT" -name '*.java'; then
-  printf 'lint-timers: cannot list every file under %s: %s\n' "$JAVA_ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-  exit 3
-fi
+scan_files_or_exit lint-timers 3 "$_TMP/files" "$JAVA_ROOT" -name '*.java'
 
-# timer-ticket (per ticket field). Input: one Java file. Output lines: "OK" | "NOSTOP" | "MISS <field>".
+# timer-ticket (per ticket field). Input: one Java file. Output lines: "OK" | "NOSTOP" | "MISSANY" (no named
+# ticket field and no cancel reachable from stopped()) | "MISS <field>".
 # Comments are blanked by mb_strip, string/char literal contents here; methods come from mb_parse.
 # blank_str(s): string/char literal CONTENTS blanked (quotes kept); shared by ticket.awk and threads.awk.
 cat > "$_TMP/blank-str.awk" <<'AWKEOF'
@@ -192,7 +192,7 @@ END {
       if (pre != "." && (id in body) && !(id in hop)) { hop[id] = 1; queue[++qn] = id; scope = scope "\n" body[id] }
     }
   }
-  if (nf == 0) { print ((scope ~ /\.[[:space:]]*cancel[[:space:]]*\(/) ? "OK" : "MISS (ticket)"); exit }
+  if (nf == 0) { print ((scope ~ /\.[[:space:]]*cancel[[:space:]]*\(/) ? "OK" : "MISSANY"); exit }
   miss = 0
   for (q = 1; q <= nf; q++) {
     f = fld[q]
@@ -392,6 +392,7 @@ while IFS= read -r f; do
   case "$tt" in
     OK) row PASS "timer-ticket" "$f: timer cancelled in stopped()" ;;
     NOSTOP) row FAIL "timer-ticket" "$f: schedules a Clock ticket but has no stopped() override to cancel it" ;;
+    MISSANY) row FAIL "timer-ticket" "$f: stopped() cancels no ticket (the Clock ticket is not kept in a named Clock.Ticket field, and no .cancel( call is reachable from stopped())" ;;
     *) while IFS= read -r m; do
          [ -n "$m" ] || continue
          row FAIL "timer-ticket" "$f: stopped() does not cancel ticket ${m#MISS } (a cancel in a comment, a string or of another ticket does not count)"

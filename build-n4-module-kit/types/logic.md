@@ -201,7 +201,7 @@ Six changes that fix wire-sheet and property-sheet overload, ordered by impact �
 | 2 | **Compose flat slots into child components** (one child per concern) | medium · structural | One careful pass per module; the structural change that reduces the flat-slot wall permanently. |
 | 3 | **Units/precision facets on every temp / pressure / percent slot** | low · facet-only | Applies to all SUMMARY-flagged numeric pins; pairs with item 1. |
 | 4 | **Distinct icon per block type** | low · one SVG resource | See `types/logic-authoring.md §Adding a block icon`. Polish — do after items 1–3 are done. |
-| 5 | **Pre-wired palette assembly templates** | low · resource-only | A `.ntpl` zip covering the most common wiring; see §Templates. Discoverability improvement. |
+| 5 | **Pre-wired palette assembly templates** | low · resource-only | A `module.palette` assembly covering the most common wiring (`types/structure.md` § Palette assembly templates; a palette entry is not a `.ntpl`). Discoverability improvement. `[ev: corpus B1325 §1325.2 C1]` |
 | 6 | **Semantic tag dictionary** | medium | See §Ship a tag dictionary above; enables NEQL queries and navigation. |
 
 **Sequencing rule:** 1 + 3 are same-day flag/facet passes; 5 is a resource add; 2 is the structural one (plan carefully); 4 + 6 are polish and discoverability improvements.

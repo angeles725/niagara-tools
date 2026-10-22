@@ -18,23 +18,25 @@
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.
 #                       [ev: corpus B813]
-#   api-response-headers WARN  a doGet/doPost/service handler that calls getWriter()/getOutputStream()
+#   api-response-headers INFO  a doGet/doPost/service handler that calls getWriter()/getOutputStream()
 #                       but the class has no setHeader("X-Content-Type-Options",...) and no
-#                       setApiHeaders()/applyHeaders() helper call anywhere. Defense-in-depth only;
-#                       the global TridiumSecurityFilter usually covers it. [ev: corpus B1133 UXS1]
+#                       setApiHeaders()/applyHeaders() helper call anywhere. Information only: the
+#                       station's header providers reach every module servlet through
+#                       TridiumSecurityFilter, and a servlet-level header REPLACES them.
+#                       [ev: corpus B1133 UXS1] [ev: corpus B1349 C1]
 #
-# WARN -> FAIL under --strict. Deferred: R12.2 step-up re-auth (B803 — no static primitive).
+# WARN -> FAIL under --strict; INFO rows never escalate. Deferred: R12.2 step-up re-auth (B803 — no static primitive).
 #
 # Usage:  lint-servlet.sh <src-dir> [--strict]
 #
-#   Row format:  <check>  FAIL|WARN  <file>:<line>  <detail>
+#   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>
 #   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20)
 #
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro campaign8-lint-servlet]
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
-# Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options does not WARN
+# Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 
 FAILED=0
@@ -156,9 +158,8 @@ END {
         # AND the class has no X-Content-Type-Options header set anywhere (not even via helper).
         has_resp_write = (body ~ /getWriter\(\)/ || body ~ /getOutputStream\(\)/)
         if (has_resp_write && !file_has_xcto) {
-            v = (strict+0 == 1) ? "FAIL" : "WARN"
-            printf "%s  api-response-headers  %s:%d  response handler with no X-Content-Type-Options (defense-in-depth; the global filter usually covers it — see security.md §7)\n",
-                   v, rel, start
+            printf "INFO  api-response-headers  %s:%d  response handler sets no headers; the station header providers apply (security.md §7)\n",
+                   rel, start
         }
 
     }
