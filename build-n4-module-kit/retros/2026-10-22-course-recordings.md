@@ -24,7 +24,9 @@ corrected the instructor (the default store is `niagara.signing.jceks`, not `.jk
   (fixtures/MinimalPan, CompPan, DashboardFord) `[ev: corpus B1418 §1418.5 e]`
 - `lint-service-types.sh`: RED 0/9 before the script existed, GREEN 11/11 (ST1-ST9, ST-awkfail, ST-finderr); each
   declared mutation observed flipping its own test. Review follow-up: every `return` is checked and an assignment is
-  read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
+  read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). T9h review follow-up: nested-scope
+  returns (block lambda, anonymous class, local class) are skipped and the rank order is pinned (RED ST12 → GREEN
+  15/15, mutations ST12/ST13 observed; vendor smoke unchanged). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
   590 files declaring `getServiceTypes`, 0 FAIL, 6 WARN no own type (registered only under an interface type,
   genuine by the rule), 4 WARN unresolved `[ev: corpus B1419 §1419.1]`
 

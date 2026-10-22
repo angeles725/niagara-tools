@@ -126,6 +126,47 @@ svc() {
   [[ "$output" == *"BLine.java:5  getServiceTypes() registers no type"* ]]
 }
 
+@test "ST12: a return inside a nested scope (lambda, anonymous class, local class) is not the method's return" {
+  # Mutation: ST12 -- counting nested-scope returns FAILs a lambda that returns null inside a method returning { TYPE }
+  { printf 'package com.x;\npublic class BLam extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    Supplier<Type[]> s = () -> { return null; };\n'
+    printf '    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BLam.java"
+  { printf 'package com.x;\npublic class BAnon extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    Callable<Type[]> c = new Callable<Type[]>() {\n'
+    printf '      public Type[] call() { return new Type[0]; }\n    };\n    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BAnon.java"
+  { printf 'package com.x;\npublic class BLoc extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    class Helper { Type[] none() { return null; } }\n'
+    printf '    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BLoc.java"
+  # the method's own returns around a nested scope still count
+  { printf 'package com.x;\npublic class BAfter extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    Supplier<Type[]> s = () -> { return new Type[] { TYPE }; };\n'
+    printf '    if (ready) { return null; }\n    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BAfter.java"
+  # a switch-rule block is not a lambda: its return is the method's
+  { printf 'package com.x;\npublic class BSw extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    switch (m) { case 1 -> { return null; } default -> { } }\n'
+    printf '    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BSw.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BSw.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BAfter.java:3  getServiceTypes() registers no type"* ]]
+  if [[ "$output" == *"BLam.java"* || "$output" == *"BAnon.java"* || "$output" == *"BLoc.java"* ]]; then return 1; fi
+}
+
+@test "ST13: the worst return wins in rank order empty > other > unresolved > own" {
+  # Mutation: ST13 -- ranking other below unresolved reports a foreign-only array as merely unresolved
+  { printf 'package com.x;\npublic class BEo extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    if (a) return new Type[] { BIEo.TYPE };\n    return null;\n  }\n}\n'; } > "$SRC/BEo.java"
+  { printf 'package com.x;\npublic class BOu extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    if (a) return super.getServiceTypes();\n    return new Type[] { BIOu.TYPE };\n  }\n}\n'; } > "$SRC/BOu.java"
+  { printf 'package com.x;\npublic class BUo extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    if (a) return new Type[] { TYPE };\n    return super.getServiceTypes();\n  }\n}\n'; } > "$SRC/BUo.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BEo.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"WARN  lint-service-types  "*"BOu.java:3  getServiceTypes() does not return the service's own TYPE"* ]]
+  [[ "$output" == *"WARN  lint-service-types  "*"BUo.java:3  getServiceTypes() return not resolved in this file"* ]]
+}
+
 @test "ST7: --strict exits 1 on a WARN; usage errors and a non-directory exit 3" {
   svc BOther 'return new Type[] { BIOther.TYPE };' > "$SRC/BOther.java"
   run "$LST" --strict "$TMPDIR_T/Mod"
