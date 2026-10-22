@@ -121,6 +121,29 @@ station needs UI services (common in practice). `[ev: corpus B958 §958.4]`
 
 `[ev: corpus B958 §958.3]`
 
+**Client parity doctrine — behaviour is tested through real slots** `[ev: retro testing-parity-btestng Δ4]`:
+component behaviour (slot outputs, notify chains, HOA/defrost interplay, links) is a `BTestNgStation` test that drives
+real slots and waits with `TestHelper.assertWillBeTrue` (§ TEST-G2); pure seams keep their WSL JUnit. A
+source-structural test (reading a `.java` file as text) is the last resort, kept only where no station route exists,
+and its header names the station test that replaces it or says why none can. Pilot: the ColdRoomPan-rt
+`BTestNgStation` suite, 6 tests, five production mutations observed biting (§ Running from WSL). The advisory that flags
+a structural test in a part with no `BTestNg` class is owed as Go lint G34 `structural-tests`.
+`[ev: retro testing-parity-btestng Δ5]`
+
+**Which base class** (course suite, corpus B1252 §1252.3.2; base classes in docSource 4.14.0.162 `test-wb`)
+`[ev: retro n4-course-lexicon-logging-testing Δ3]`:
+- `BTestNg` for value and slot logic, callbacks on a DETACHED component (no `started()`), a `do` method as a function.
+- `BTestNgStation` for `started()`, service lookup, `JobService`, the alarm or history database, BQL/NEQL over the
+  station, permissions. Its station is set up once per TestNG `<test>` run (`@BeforeTest setupStation()`,
+  `javax/baja/test/BTestNgStation.java:93-94`), not per method: fixtures must be idempotent (remove-if-present, then
+  add). Seed alarms with `getAlarmService().getAlarmDb().getDbConnection(null)` and `append`, histories through the
+  history database's `getDbConnection(null)` (`createHistory`, `append`).
+- Mock I/O at a static factory seam: `testUberjar("org.mockito:mockito-inline:4.11.0")` and `Mockito.mockStatic(...)`
+  in try-with-resources (course deck 7 `7 Logging, Lexicons, and Testing.txt:436`; Lab 7 `BWorkOrderServiceTest.java:53`). To assert a FINE log line, lower the logger to `Level.ALL` in the test.
+- Wait with `TestHelper.assertWillBeTrue`, never a fixed `Thread.sleep` (seven course tests sleep a fixed time;
+  corpus B1252 §1252.3.3). Do not name a method `setup()`: it overrides `BTest.setup()` (`BTest.java:72`); use
+  `@BeforeMethod`/`@AfterMethod` with distinct names. `[ev: retro testing-parity-btestng Δ6]`
+
 **A BQL query needs no station:** build the tree in a plain `BFolder` and run
 `BqlQuery.make(bql).resolve(OrdTarget.unmounted(folder)).get()`; give points values with `setOut(...)`, because
 `set()` does not work on an unmounted component. [CERT-doc] devguide `bql.txt:453-460`; `OrdTarget.java:196,208`
@@ -379,6 +402,22 @@ Pair with the known gap: `-ux` modules lack Jasmine palette coverage (see R6 / D
 
 ### File layout
 
+Two layouts exist. The 4.14+ wizard and course layout puts tests under a `test.` package root — the devkit-wb
+4.14.0.162 test template declares `package test.${package};` (`gradle/videodriver/BNfooVideoDriverTest.java.vm:4`), and the
+course suite lives in `srcTest/test/com/tridiumuniversity/slides/…` with `package test.com.tridiumuniversity.slides.<topic>`
+and a class-level `@Test` (corpus B1252 §1252.3.1). New modules use it. The older layout below is what the kit showed before; whether 4.14+ tooling still discovers it was not verified `[INFER]`. Start the
+registration file from `templates/moduleTest-include.xml`. `[ev: retro n4-course-lexicon-logging-testing Δ3]`
+
+```
+<part>/
+  srcTest/
+    test/com/<vendor>/<mod>/
+      BYourModuleTest.java          # package test.com.<vendor>.<mod>; @NiagaraType + class-level @Test
+  moduleTest-include.xml            # <type class="test.com.<vendor>.<mod>.BYourModuleTest" name="YourModuleTest"/>
+```
+
+Older layout:
+
 ```
 <part>/
   srcTest/
@@ -415,6 +454,10 @@ the main Gradle section above).
 
 - **`niagaraTest` from a WSL-side Gradle (plugin 7.6.17) discovers 0 `moduleTest` tests.** Run it on Windows
   (§ Running from WSL); a 0-test `BUILD SUCCESSFUL` is a failure, never a pass. `[ev: corpus B961 §961.3]`
+- **`niagaraTest` can report BUILD SUCCESSFUL with zero tests or a rejected test jar.** Until the owed runner exists
+  (Go tool G33 `run-niagara-test`: scratch copy, `:clean` first, PASS only when every `Total tests run: N` has N > 0
+  and 0 failures, FAIL on `invalid test target(s)` or `failed signature validation`, back up and restore
+  `modules/<part>.jar`), read those lines in the output yourself (§ Running from WSL). `[ev: retro testing-parity-btestng Δ2]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports
