@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # method-boundary.sh — shared awk method-boundary parser library (C11 T1).
 # ONE shell variable: MB_AWK — awk function definitions only (no BEGIN/END/pattern rules).
-# Consumed by lint-timers.sh, lint-silent-protection.sh, lint-ext-writable-shape.sh.
+# Consumed by lint-timers.sh, lint-silent-protection.sh, lint-ext-writable-shape.sh and the
+# later lints that source it (git grep -l method-boundary.sh build-n4-module-kit/toolbelt).
 #
 # Consumption forms (D1b):
 #   inline:   awk "$MB_AWK"' { lines[++n]=$0 } END { mb_strip(lines,n,slines); ... }' "$f"
@@ -9,9 +10,16 @@
 #             awk ... -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" "$f"
 #
 # Interface (D1d):
-#   mb_strip(src, n, dst)
+#   mb_strip(src, n, dst) -> open
 #     Blank // and /* */ content; block-comment state carried across lines;
-#     line numbers preserved. dst[1..n] out.
+#     line numbers preserved. dst[1..n] out. A // or /* inside a Java literal is
+#     code: "..." strings and '...' chars (\ escapes honoured) and """...""" text
+#     blocks (state carried across lines) are copied as-is, contents included —
+#     consumers match string text (ORDs, BFormat patterns), so contents are NOT
+#     blanked here. An unterminated "..."/'...' ends at its line end.
+#     RETURN open — 0 closed, 1 file ends inside /* */, 2 inside a text block
+#     (callers may treat non-zero as "boundaries not trusted"; aligned with
+#     lint-driver-scaffold 9c41fdf).
 #
 #   mb_parse(src, n, m_start, m_end, m_name) -> cnt
 #     INPUT   src[1..n]  ALREADY comment-stripped lines (caller runs mb_strip first); n = line count
@@ -27,6 +35,8 @@
 #   I3  Keyword exclusion: if|for|while|switch|catch|try|else|do|new not named as methods
 #   I4  One-liner accessor skip: (one-liner) AND mname ~ /^(get|set|is)[A-Z_]/ -> not entered
 #   I5  /* */ strip in mb_strip alongside // (B832-G2; no biting fixture; pinned by 3x3 baselines)
+#   I6  Literals: mb_strip never reads // or /* inside a string/char/text block; mb_parse never
+#       counts a { or } inside one (tests/method-boundary.bats MB1-MB9, MB-e2e)
 #
 # Location: sourced via BASH_SOURCE, not $KIT (D1c — avoids writable-target seam).
 # shellcheck shell=bash
@@ -34,32 +44,45 @@
 # shellcheck disable=SC2034  # MB_AWK is exported to consumers via `. method-boundary.sh`; not unused
 # shellcheck disable=SC2016  # awk program text in single quotes — $ belongs to awk, not shell
 MB_AWK='
-function mb_strip(src, n, dst,    i, ln, out, j, in_bc, c2) {
-    in_bc = 0
+function mb_strip(src, n, dst,    i, ln, out, j, c, c2, in_bc, in_tb, q) {
+    in_bc = 0; in_tb = 0
     for (i = 1; i <= n; i++) {
-        ln = src[i]; out = ""; j = 1
+        ln = src[i]; out = ""; j = 1; q = ""
         while (j <= length(ln)) {
+            c = substr(ln, j, 1); c2 = substr(ln, j, 2)
             if (in_bc) {
-                if (substr(ln, j, 2) == "*/") { in_bc = 0; j += 2 }
+                if (c2 == "*/") { in_bc = 0; j += 2 }
                 else j++
-            } else {
-                c2 = substr(ln, j, 2)
-                if (c2 == "/*") { in_bc = 1; j += 2 }
-                else if (c2 == "//") break
-                else { out = out substr(ln, j, 1); j++ }
-            }
+            } else if (in_tb) {
+                if (c == "\\") { out = out c2; j += 2 }
+                else if (substr(ln, j, 3) == "\"\"\"") { out = out "\"\"\""; in_tb = 0; j += 3 }
+                else { out = out c; j++ }
+            } else if (q != "") {
+                if (c == "\\") { out = out c2; j += 2 }
+                else { out = out c; if (c == q) q = ""; j++ }
+            } else if (substr(ln, j, 3) == "\"\"\"") { out = out "\"\"\""; in_tb = 1; j += 3 }
+            else if (c2 == "/*") { in_bc = 1; j += 2 }
+            else if (c2 == "//") break
+            else { if (c == "\"" || c == "\047") q = c; out = out c; j++ }
         }
         dst[i] = out
     }
+    return in_bc + 2 * in_tb
 }
 
-function mb_parse(src, n, m_start, m_end, m_name,    cnt, i, ln, old_d, brace_depth, max_d, in_m, m_dep, m_st, cur_name, mname, ci, c, seg, bonly, k, lk, lk_t, seg2, cn) {
-    cnt = 0; brace_depth = 0; in_m = 0; m_dep = 0; m_st = 0; cur_name = ""
+function mb_parse(src, n, m_start, m_end, m_name,    cnt, i, ln, old_d, brace_depth, max_d, in_m, m_dep, m_st, cur_name, mname, ci, c, seg, bonly, k, lk, lk_t, seg2, cn, q, in_tb) {
+    cnt = 0; in_tb = 0; brace_depth = 0; in_m = 0; m_dep = 0; m_st = 0; cur_name = ""
     for (i = 1; i <= n; i++) {
         ln = src[i]; old_d = brace_depth; max_d = brace_depth
+        q = ""
         for (ci = 1; ci <= length(ln); ci++) {
             c = substr(ln, ci, 1)
-            if (c == "{") { brace_depth++; if (brace_depth > max_d) max_d = brace_depth }
+            # I6: braces inside "...", '...' and """...""" literals never move the depth
+            if (in_tb) { if (c == "\\") ci++; else if (substr(ln, ci, 3) == "\"\"\"") { in_tb = 0; ci += 2 } }
+            else if (q != "") { if (c == "\\") ci++; else if (c == q) q = "" }
+            else if (substr(ln, ci, 3) == "\"\"\"") { in_tb = 1; ci += 2 }
+            else if (c == "\"" || c == "\047") q = c
+            else if (c == "{") { brace_depth++; if (brace_depth > max_d) max_d = brace_depth }
             else if (c == "}") brace_depth--
         }
         # I1: PEAK open — max_d increased AND max_d >= 2 (class-body guard)

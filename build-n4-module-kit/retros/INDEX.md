@@ -252,3 +252,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-22-ci-local-replay.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-r8-t9e-drivers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-course-recordings.md | kit | 2026-10-22 | folded | 8 |
+| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |
