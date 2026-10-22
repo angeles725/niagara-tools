@@ -11,12 +11,20 @@
 #   cat > "$AL_TMP/main.awk" << 'AWKEOF' ... AWKEOF
 #   awk_lint_run <find-test...>
 #
+# A line-loop lint (a shell loop over the files, no main.awk, no --strict) is:
+#   . ".../lib/awk-lint.sh"
+#   awk_lint_parse <name> raw '<usage line>' "$@"
+#   awk_lint_list <find-test...>
+#   while IFS= read -r f; do ...; done < "$AL_TMP/files"
+#   awk_lint_exit <code>
+#
 # awk_lint_parse <name> <arity> <usage> <args...>
 #   Parses `[--strict] [--] <root>...`. <name> prefixes every message ("<name>: not a directory: ..."),
 #   <usage> is printed verbatim. <arity> says how the roots are taken:
 #     one    exactly one root; any other count prints <usage> (exit 3)
 #     first  at least one root; only the first is checked and scanned, the rest are ignored
 #     each   at least one root; every root is checked before any scan, then each is scanned in order
+#     raw    like first, but no flag is parsed: `-h`, `--` or `--strict` is taken as the root
 #   Sets AL_NAME, AL_USAGE, AL_STRICT (0/1), AL_ROOTS (array) and AL_TMP (a temp dir removed on EXIT).
 #   A flag other than --strict/-- goes to the function named by AL_FLAG_HOOK (set it after sourcing),
 #   called with every remaining argument; it sets AL_SHIFT to the count it consumed, or leaves 0 for
@@ -24,9 +32,17 @@
 #
 # awk_lint_run <find-test...>
 #   For each root, lists the files matching the find tests (scan_files), runs
-#   `awk -v FILE=<file> "${AL_AWK_ARGS[@]}" -f "$AL_TMP/main.awk" <file>` on each, and prints its
+#   `awk -v FILE=<file> <AL_AWK_ARGS...> -f "$AL_TMP/main.awk" <file>` on each, and prints its
 #   rows. Exits 3 when a walk was incomplete or an awk run failed, 1 when a row was printed under
 #   --strict, 0 otherwise. Never returns.
+#
+# awk_lint_list <find-test...>
+#   Lists the files under the first root that match the find tests into "$AL_TMP/files" (scan_files).
+#   An incomplete walk prints "<name>: cannot list every file under <root>: <reason>" and sets
+#   AL_ERR=1; the files it did list are still written, so the caller scans them before exiting.
+#
+# awk_lint_exit <code>
+#   Exits 3 when AL_ERR is set (an incomplete walk or a failed scan), <code> otherwise.
 #
 # Why: ten lints carried the same ~50-line copy of this skeleton; a fail-closed fix (issue #226)
 # had to land ten times. [ev: retro 2026-10-22-awk-lint-skeleton]
@@ -39,6 +55,7 @@ export LC_ALL
 AL_AWK_ARGS=()
 AL_FLAG_HOOK=
 AL_SHIFT=0
+AL_ERR=0
 
 awk_lint_parse() {
   AL_NAME="$1"
@@ -46,11 +63,11 @@ awk_lint_parse() {
   local arity="$2" root
   shift 3
   case "$arity" in
-    one|first|each) ;;
+    one|first|each|raw) ;;
     *) printf 'awk_lint_parse: unknown arity: %s\n' "$arity" >&2; exit 3 ;;
   esac
   AL_STRICT=0
-  while [ $# -gt 0 ]; do
+  while [ "$arity" != raw ] && [ $# -gt 0 ]; do
     case "$1" in
       --strict) AL_STRICT=1; shift ;;
       --) shift; break ;;
@@ -79,19 +96,36 @@ awk_lint_parse() {
   trap 'rm -rf "$AL_TMP"' EXIT
 }
 
+# _al_list <root> <find-test...>: the fail-closed walk shared by awk_lint_list and awk_lint_run.
+_al_list() {
+  local root="$1"
+  shift
+  # A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
+  if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$root" "$@"; then
+    printf '%s: cannot list every file under %s: %s\n' "$AL_NAME" "$root" "$(head -n 1 "$AL_TMP/find.err")" >&2
+    AL_ERR=1
+  fi
+}
+
+awk_lint_list() {
+  _al_list "${AL_ROOTS[0]}" "$@"
+}
+
+awk_lint_exit() {
+  [ "$AL_ERR" -eq 0 ] || exit 3
+  exit "$1"
+}
+
 awk_lint_run() {
-  local root f out had_warn=0 had_err=0
+  local root f out had_warn=0
   for root in "${AL_ROOTS[@]}"; do
-    # A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-    if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$root" "$@"; then
-      printf '%s: cannot list every file under %s: %s\n' "$AL_NAME" "$root" "$(head -n 1 "$AL_TMP/find.err")" >&2
-      had_err=1
-    fi
+    _al_list "$root" "$@"
     while IFS= read -r f; do
       # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
-      if ! out=$(awk -v FILE="$f" "${AL_AWK_ARGS[@]}" -f "$AL_TMP/main.awk" "$f" 2>"$AL_TMP/awk.err"); then
+      # The +-guarded expansion keeps an empty AL_AWK_ARGS safe under set -u on bash < 4.4.
+      if ! out=$(awk -v FILE="$f" ${AL_AWK_ARGS[@]+"${AL_AWK_ARGS[@]}"} -f "$AL_TMP/main.awk" "$f" 2>"$AL_TMP/awk.err"); then
         printf '%s: cannot scan %s: %s\n' "$AL_NAME" "$f" "$(head -n 1 "$AL_TMP/awk.err")" >&2
-        had_err=1
+        AL_ERR=1
         continue
       fi
       if [ -n "$out" ]; then
@@ -100,9 +134,8 @@ awk_lint_run() {
       fi
     done < "$AL_TMP/files"
   done
-  [ "$had_err" -eq 0 ] || exit 3
   if [ "$had_warn" -eq 1 ] && [ "$AL_STRICT" -eq 1 ]; then
-    exit 1
+    awk_lint_exit 1
   fi
-  exit 0
+  awk_lint_exit 0
 }
