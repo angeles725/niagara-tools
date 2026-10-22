@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/C9.java: timer cancelled in stopped()
+-- src/C9.java --
+package demo;
+import javax.baja.sys.*;
+public final class C9 extends BComponent {
+  private Clock.Ticket a;
+  private Clock.Ticket b;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }
+  private MyTicket note;
+  public void stopped() throws Exception { super.stopped(); a.cancel(); b.cancel(); }
+}

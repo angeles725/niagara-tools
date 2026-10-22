@@ -1,0 +1,10 @@
+<!--
+  moduleTest-include.xml template: registers a part's test types for the moduleTestJar. Never list them in
+  module-include.xml. Shape: the course suite (Slide Code/slides/slides-rt/moduleTest-include.xml, no DOCTYPE);
+  4.14+ package root test.<vendor package> (devkit-wb 4.14.0.162 gradle/videodriver/BNfooVideoDriverTest.java.vm:4).
+  One <type> per @NiagaraType test class; let slot-o-matic generate each class's TYPE block.
+  Rules: types/moduleTest.md § TEST-G8.
+-->
+<types>
+  <type class="test.com.yourvendor.yourmod.BYourModuleTest" name="YourModuleTest"/>
+</types>

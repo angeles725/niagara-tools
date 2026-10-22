@@ -1,0 +1,16 @@
+-- root --
+src
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/src/C6.java: timer cancelled in stopped()
+-- src/C6.java --
+package demo;
+import javax.baja.sys.*;
+public final class C6 extends BComponent {
+  private final Clock.Ticket[] delays = new Clock.Ticket[4];
+  public void arm(int i) { delays[i] = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); }
+  public void stopped() throws Exception {
+    super.stopped();
+    for (int i = 0; i < delays.length; i++) { if (delays[i] != null) delays[i].cancel(); }
+  }
+}

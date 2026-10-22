@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8 T41: host pids/disk safety and landing-script rules; ci-local.sh pids guard -->
+log: 2026-10-22 · quality round 8 T41 → host incident (init.scope `pids.max` 48,129 reached, all four sessions aborted; `~/.cache/go-build` 84 GB, C: 99%, WSL E_UNEXPECTED) and landing lessons folded into `BUILD-LOOP.md` § 7 (Shared host: pids budget, writer cap, disk at round close, operator vhdx hygiene; Landing scripts: poll `gh pr checks`, absolute paths before `cd`, no helpers in `/tmp`) and `skill/SKILL.md` step 7; `scripts/ci-local.sh` refuses to start (exit 4) while a cgroup is above 50% of its `pids.max` (`CI_LOCAL_CGROUP_ROOT` test seam); `tests/ci-local.bats` CL10 RED → GREEN, CL11/CL12 pins. Retro retros/2026-10-22-r8-t41-host-safety.md 7Δ folded. [ev: retro r8-t41-host-safety]

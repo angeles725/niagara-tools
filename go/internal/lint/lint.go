@@ -89,6 +89,11 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
+	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
+	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
+	// comment naming the reason, normally that the bash lint being ported used awk_lint_run.
+	ContinueOnWalkError bool
 }
 
 // ID is the registered rule's ID.

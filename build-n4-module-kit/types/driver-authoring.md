@@ -137,6 +137,16 @@ Callback pair: `readOk(value)` / `readFail(cause)` and `writeOk()` / `writeFail(
 these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:859,883,895;
 corpus B810 §810.3]
 
+**BACnet: a field alarm or fault reaches Niagara status only with the `statusFlags` facet**
+`[ev: retro devguide415-r2-drivers-protocols Δ4]` `[ev: retro devguide415-r3-drivers-integration Δ3]` `[ev: corpus B1348 §1348.2]`.
+`useStatusFlags()` is true only for a Present_Value proxy whose object type has Status_Flags AND whose point facets
+carry `statusFlags=true` (or the ext's own override); with the facet absent it is false (vineflower bacnet-rt
+4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:808-822`). Without it a point that is in alarm, faulted or
+overridden in the controller reads `{ok}` in Niagara. With it, polled and COV proxies alike take ALARM, FAULT and
+OVERRIDDEN from the flags; the cost is one extra Status_Flags read per poll, or a metadata read when a COV
+notification omits the flags (corpus B1348 §1348.2 rows 4-7). A dashboard health read is only as good as this facet
+(`types/dashboard.md` § Facade contract). Owed Go lint G36 `bacnet-status-flags` (bog check).
+
 **Gotcha:** a write to a DOWN/FAULT/DISABLED device is **silently dropped** — `Tuning.write()`
 calls `isOperational()` first and returns without queuing if false. The write is NOT retried unless
 `BTuningPolicy.writeOnUp=true` (default true). [ev: code Tuning.java:332-333; corpus B810 §810.4]
@@ -254,6 +264,25 @@ annotated or nested-class stub is caught too. [ev: retro n4-course-handson-ndriv
 `pingFail` propagates DOWN to every `BProxyExt` under the device via:
 `BDevice.updateStatus()` → `BPointDeviceExt.updateStatus()` → `BProxyExt.updateStatus()` sets
 `BStatus.DOWN`. [ev: code BDevice.java:400; BProxyExt.java:475; corpus B810 §810.2]
+
+**A failed poll is not a failed ping** `[ev: retro devguide415-r3-drivers-integration Δ1]` `[ev: corpus B1348 §1348.1]`. The
+4.15.6.20 guide says "in most drivers" a point poll with no response makes the monitor note a ping fail
+(`Drivers/driver-PingMonitor.txt:37-40`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
+only records the fault on the point and re-executes it (vineflower driver-rt 4.14.0.162
+`javax/baja/driver/point/BProxyExt.java:463-469`); nothing in driver-rt calls the device's ping from there. Code wins
+for behaviour: in a custom driver, on a transport timeout in the poll path call `device.ping()` (a fresh ping now) or
+`pingFail(cause)`, and fail the points only after N consecutive timeouts — the BACnet pattern: `this.ping()`, then
+`readFail` on the poll list once `++pollTimeouts > getMaxPollTimeouts()` (vineflower bacnet-rt 4.14.0.162
+`javax/baja/bacnet/BBacnetDevice.java:1093-1101`; `maxPollTimeouts` default 0, `:201`). 4.13 and 4.15 not verified.
+
+**Ping monitor rules** `[ev: retro devguide415-r2-drivers-protocols Δ7]` `[ev: corpus B1337 rows 1-3]` (vineflower driver-rt
+4.14.0.162 `javax/baja/driver/ping/BPingMonitor.java`):
+- A disabled or faulted device is never pinged (`isPingEnabled`, `:216-218`), so its recovery must come from the
+  config or read path, not from the ping.
+- DOWN is set on the first failed ping; the ping ALARM waits for more than `numRetriesUntilPingFail` consecutive fails
+  (default 0) and for `startupAlarmDelay` after station start (default 5 min, `:65-66`).
+- A failing device is retried once per `pingFrequency` counted from the last ATTEMPT, not the last success
+  (corpus B1337 row 3).
 
 ### `configFatal` vs `configFail` — recovery reference card
 

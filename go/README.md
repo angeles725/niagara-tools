@@ -34,7 +34,14 @@ rule's rows stay contiguous.
    one rule can report several named checks. `Line` 0 is a file-level finding printed as `<path>: <msg>`;
    rows with `Line` ≥ 1 are unchanged. Severity `Pass` prints `PASS` and never affects the exit code.
    `Spec.UsageExit` is the exit code of a usage error when the rule runs alone (0 means 3).
-   A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead:
+   A directory the walk cannot read prints `<lint>: cannot list every file under <root>: find: '<dir>': <reason>`
+   (`<dir>` quoted as GNU find does under `LC_ALL=C`: `\'`, `\\`, `\n`-style C escapes, 3-digit octal for
+   other control bytes and bytes from 0x80) and, by default, stops the rule: no rows, no later root, exit 3,
+   as `scan_files_or_exit` does. Set `Spec.ContinueOnWalkError` only when the bash lint used `awk_lint_run`,
+   which scans the files it did list (env line, rows, next root, exit 3), and write that reason in a comment
+   beside it (reference: `rules/nullcontext`).
+   A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
+   (reference port: `rules/timers`, lint-timers, which also keeps gawk's matching and `for (k in a)` order):
    `CheckTree(files []*javasrc.File)` gets every selected file under the root in walk order, and sets
    `Path` on each finding; a non-nil error prints the findings returned with it, then `<lint>: <error>`
    (the rule writes the whole text) and exits 3. A spec sets exactly one of `Rule` and `Tree`, and its

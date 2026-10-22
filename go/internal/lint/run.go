@@ -18,7 +18,9 @@ import (
 // every spec prunes) with one walk, reads each file once, feeds it to every per-file Rule that selects
 // it, in spec order, and after the root's walk feeds each TreeRule the ordered slice of the files it
 // selects. Each spec's rows stay contiguous, in spec order: the first spec prints as it goes and the
-// others are held and printed after it, each with its own stderr lines in place. An incomplete walk or
+// others are held and printed after it, each with its own stderr lines in place. An incomplete walk
+// stops every spec that does not set ContinueOnWalkError (no rows from that root or any later one; the
+// run ends once no spec is left) and the others scan the files listed. An incomplete walk or
 // an unreadable file is reported on stderr when it happens with the texts of toolbelt/lib/awk-lint.sh,
 // a file a per-file rule could not analyze as "cannot scan <path>: <rule>: <error>", a TreeRule error as
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
@@ -27,10 +29,20 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs))}
 	defer r.out.Flush()
 	sel := union(specs)
+	stopped := make([]bool, len(specs)) // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
+	live := len(specs)
 	for _, root := range a.Roots {
 		files, err := Walk(root, sel)
 		if err != nil {
 			r.envError(0, fmt.Sprintf("cannot list every file under %s: %s", root, err))
+			for i, sp := range specs {
+				if !sp.ContinueOnWalkError && !stopped[i] {
+					stopped[i], live = true, live-1
+				}
+			}
+			if live == 0 {
+				break // scan_files_or_exit exited: no file is scanned and no later root is walked
+			}
 		}
 		trees := make([][]*javasrc.File, len(specs))
 		for _, p := range files {
@@ -43,7 +55,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 			f := javasrc.NewFile(p, lines)
 			for i, sp := range specs {
-				if !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+				if stopped[i] || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
 					continue
 				}
 				if sp.Tree != nil {
@@ -58,7 +70,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			}
 		}
 		for i, sp := range specs {
-			if sp.Tree == nil {
+			if sp.Tree == nil || stopped[i] {
 				continue
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])

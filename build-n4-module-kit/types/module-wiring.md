@@ -10,6 +10,7 @@ calls into types across module boundaries. `[ev: code nmodsreflow gradle.kts; co
 | Gradle declaration | `module.xml` effect | Notes |
 |---|---|---|
 | `nre(":nre")` | Sets `nre="true"` attribute on `<module>` — NO `<dependency>` entry | Marks the module as NRE-level; every production module should carry this |
+| `nre("group:artifact")` (no version) | Nothing in `module.xml` | Compile against a library the NRE ships in `!bin/ext` (devguide 4.15.6.20 `build.txt:186`); never bundle it — `types/third-party-libraries.md` § Before bundling `[ev: retro devguide415-r2-shipped-libraries Δ1]` |
 | `api(":baja")` / `api(":web-rt")` | Emits `<dependency name="baja" vendor="Tridium" vendorVersion="X.Y.Z"/>` | Transitive: a module that `api()`s yours also sees baja; 3-part floor required (L7) |
 | `api(project(":mymod-rt"))` | Emits `<dependency name="mymod-rt" vendor="<OEM>" vendorVersion="<major.minor>"/>` | Sibling part dep; vendor and version stamped from `defaultModuleVersion` in the GROUP `build.gradle.kts`, NOT from the part's own `.kts` `[ev: corpus B802; nmodsreflow-ux module.xml]` |
 | `compileOnly("javax.servlet:...")` | **Nothing** in `module.xml` | Servlet API is provided by the container at runtime; compile-time only |

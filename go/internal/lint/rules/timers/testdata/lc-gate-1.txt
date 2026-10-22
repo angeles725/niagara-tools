@@ -1,0 +1,16 @@
+-- root --
+src
+-- want --
+exit 0
+WARN  release-gate-parity  @DIR@/src/G1.java: exitDefrost() re-applies applyRunCmd() without the beginRestartSequencing() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+-- src/G1.java --
+package demo;
+import javax.baja.sys.*;
+public final class G1 extends BComponent {
+  private boolean restartSequencing;
+  public void started() throws Exception { super.started(); beginRestartSequencing(); applyRunCmd(); applyFanRunMode(); }
+  private void beginRestartSequencing() { restartSequencing = true; }
+  private void applyRunCmd() { }
+  private void applyFanRunMode() { }
+  public void exitDefrost() { applyRunCmd(); applyFanRunMode(); }
+}

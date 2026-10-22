@@ -291,6 +291,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 5. After a hot reload: `triage-console.sh` clean + `bog-audit.sh` CHECK11 clean.
 6. **Persisted operator state survives the first restart:** HOA modes, setpoints, run hours and any new backup/persistence slot are SEEDED from the live values (or saved) BEFORE the first restart after the feature ships, and re-read after it. A brand-new backup starts empty on its first boot by construction — the first restart after a new hours backup reset a wear counter to ~0 — so either seed it or record the one-time reset as accepted in the feature doc. Mechanism: `types/logic.md` § Restart & persistence. `[ev: retro panccadia-commissioning-lessons Δ5]` `[ev: retro station-backup-before-deploy Δ3]`
 7. **Alarm routing is proven end-to-end:** every alarm source has an alarm class and at least one recipient, and a test alarm per class reaches the console and is acknowledged there. Which faults are console alarms and which are flags: `types/logic.md` § Flag vs console alarm. `[ev: retro alarm-console-design Δ2]`
+   Size the store at the same time: the file alarm DB keeps 500 records by default and overwrites the oldest
+   (4.15.6.20 guide `Alarms/Alarm-FileAlarmDbConfig-92D9119A.txt:10`); every module history ext is enabled, named by
+   script and sized (`types/logic-authoring.md` § Logging a point to history). `[ev: retro devguide415-r2-control-alarms-schedules Δ4]`
 8. **Consumer impact notified:** every point whose MEANING changed (proof threshold, predicate, mode semantics, default, reset by a first boot — see `METHODOLOGY.md` § Schema / upgrade safety, Consumer impact) was notified to its downstream consumers (web viewers, oBIX/cloud readers, other stations), with the date it takes effect. `schema-risk.sh` SAFE proves decode survival, not semantic stability. `[ev: retro panccadia-commissioning-lessons Δ8]`
 9. **Values owed by the field — a table that stays open until filled:** every slot shipped at a "disabled / no value yet" default because the field has not supplied the real value (a nameplate current limit, a low-pressure cutout) gets a row in `docs/values-owed.md` (`| Slot | Owed by | Unit | Safe default | Status |`; Status `owed` until `filled <date>`/`provided`). `commissioning-verify.sh` prints a `MANUAL values-owed` row per still-owed slot, so the debt cannot age out when the feature doc is archived. Where the client keeps a version ledger, its `Open items` appendix aggregates these rows across features (together with pending manual links and open behavior assumptions) — cross-reference the module table, do not restate it. `[ev: retro panccadia-commissioning-lessons Δ11]` `[ev: retro panccadia-version-defect-ledger Δ4]`
 
@@ -316,6 +319,26 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
     wider run made `verify-module.bats` flake). GNU `parallel` children inherit an open `flock` fd and hold the
     lock after the parent exits: start a locked parallel run with `setsid` and stop it with `kill -- -<PGID>`.
     `[ev: retro r8-t22-retro-deltas Δ7]`
+    - **Host pids budget:** on WSL every session shares the `init.scope` cgroup (`pids.max` = systemd
+      TasksMax, 15% of `threads-max`; 48,129 here). When it fills, every fork fails and all sessions abort
+      together. Before a heavy suite (`bats`, `make check`, a mutation run) read
+      `/sys/fs/cgroup/init.scope/pids.current` and wait while it is above 20,000; run under `ulimit -u 4000`.
+      `scripts/ci-local.sh` refuses to start (exit 4) while any cgroup is above 50% of its `pids.max`.
+      `[ev: retro r8-t41-host-safety Δ1]`
+    - **Writer cap:** at most two writers per session run a heavy suite at the same time; the others edit,
+      read or wait. The integrator runs the full `ci-local.sh -j 3` once, at the end. `[ev: retro r8-t41-host-safety Δ2]`
+    - **Disk at round close:** Go never caps `~/.cache/go-build` (84 GB after five days of multi-worktree
+      builds). At round close run `go clean -cache` and `df -h / /mnt/c`; stop heavy work while C: is above
+      90%, because WSL then fails to start (`Wsl/Service/E_UNEXPECTED`). Operator hygiene, outside the
+      agent's reach: delete orphan `swap.vhdx` files and crash dumps, and compact `ext4.vhdx` (`fstrim -av` in
+      WSL, then `wsl --shutdown` and diskpart `compact vdisk`); the vhdx never shrinks on its own.
+      `[ev: retro r8-t41-host-safety Δ3]` `[ev: retro r8-t41-host-safety Δ7]`
+  - **Landing scripts:** poll `gh pr checks <n>` in a bounded loop instead of `gh pr checks --watch` (it hung
+    15 minutes on a PR whose only check had passed). Resolve every path argument to an absolute path before
+    any `cd` (a relative `--body-file` failed after `cd` into the worktree). Keep helper scripts in the
+    repository or the session scratchpad, never in `/tmp`, which a WSL restart wipes. Toolbelt entry points
+    resolve their own real path (#315, `fix/r8-wrapper-real-path`), so call them by path or through a symlink.
+    `[ev: retro r8-t41-host-safety Δ4]` `[ev: retro r8-t41-host-safety Δ5]` `[ev: retro r8-t41-host-safety Δ6]`
 - A session that changed KIT files is NOT "done" until ONE of:
   - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
   - **The retro index is GENERATED** — never hand-edit `retros/INDEX.md`. Each retro carries its row as header comments (`<!-- review-status: pending|folded -->` on line 1, then `<!-- module: X -->`, `<!-- deltas: N -->`, optional `<!-- index-comment: … -->`); edit the retro header and run `toolbelt/gen-retro-index.sh` (`--check` is the CI freshness gate and is called by `sweep-build-state.sh`). On a merge conflict in `INDEX.md`, take either side and regenerate. `.gitattributes` marks it `merge=union` so a conflict rarely stops a merge, but a union result is only valid after regeneration. `toolbelt/new-retro.sh` writes that header block into its stub and regenerates the index (it never appends a row). `[ev: retro generated-retro-index Δ1]` `[ev: retro generated-retro-index Δ2]`

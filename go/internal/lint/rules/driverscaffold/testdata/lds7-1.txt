@@ -1,0 +1,15 @@
+-- root --
+.
+-- want --
+exit 0
+WARN  lint-driver-scaffold  @DIR@/BTruncatedDevice.java:9  method boundaries not trusted (braces do not balance): a stub in this file may be missed
+-- BTruncatedDevice.java --
+// The class body never closes: method boundaries cannot be trusted.
+package com.example.unbalanced;
+
+public class BTruncatedDevice extends BNDevice
+{
+  public void doPing()
+  {
+    sendPing();
+  }

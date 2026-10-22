@@ -43,6 +43,28 @@ thread. Blocking inside an `ASYNC` action (HTTP call, disk I/O, `Thread.sleep`, 
 **all** timers and other async actions station-wide. Do blocking work on a `BWorker`/off-engine
 thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=Flags.ASYNC` on escalateAlarms/cleanup]
 
+**Which thread, exactly** (baja and fox-rt 4.14.0.162 vineflower; 4.15 not verified) `[ev: retro n4-course-threading-jobs-doctrine Δ3]` `[ev: corpus B1238 §1238.3-§1238.5]`:
+- A plain action invoked from Workbench runs inline on that session's ONE serial `Fox:Dispatcher:<hash>` thread
+  (`fox/session/SessionDispatcher.java:16,46-66`; `ComponentSlotMap.invoke` calls the `do` method on the caller's
+  thread, `:1315-1340`). A `do` method that blocks freezes every later request of that session; the client gives
+  up after `Fox.requestTimeout` = 60 s (`fox/session/Fox.java:28`) while the station thread stays pinned.
+- An `ASYNC` action's default `post()` enqueues on `Nre:Engine`, returns nothing and only logs an exception.
+- **The two coalescing winners are opposite** `[ev: retro devguide415-r2-runtime-contracts-formats Δ1]` `[ev: corpus B1316 §1316.1]`:
+  the engine's `ActionQueue` keeps the FIRST pending entry per (component, action) and drops a later post with
+  another argument (`com/tridium/sys/engine/ActionQueue.java:26-28,80-88`: `equals` ignores the argument), so post a
+  no-argument "recalculate" and read the current slots inside it; a `CoalesceQueue` of `Invocation`s keeps the LAST
+  one (`Invocation.coalesce` returns the newcomer, `javax/baja/util/Invocation.java:49-50`).
+- **A queued ASYNC action runs with a null Context** (`EngineManager.java:306-310`: `doInvoke(…, entry.arg, null)`):
+  never read `cx.getUser()` there; check permissions before posting (`types/security.md` § 2.4).
+- **The sanctioned offload** for slow work is an `ASYNC` action whose `post()` override hands
+  `new Invocation(this, action, arg, cx)` to the module's own executor or worker, which calls `invoke()` on it. A
+  bare `this::doX` lambda skips the invoke path: no links, no action event, no audit, no Context. A bounded executor
+  rejects work when it is full or shut down (`RejectedExecutionException` under the JDK default policy): catch it in
+  `post()` and report it (fault the status and log), or fall back with `return super.post(action, arg, cx);`, which
+  queues it on the engine's action queue (vineflower baja 4.14.0.162 `javax/baja/sys/BComponent.java:590`). Never
+  call `invoke()` from `post()`: that runs the slow work on the caller's thread. Never let the exception escape. (Owed Go lint G28
+  `async-blocking-action`.)
+
 ## 3 · Action flags
 
 | Flag | Hex | Effect |
