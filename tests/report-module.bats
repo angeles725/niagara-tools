@@ -159,7 +159,7 @@ setup() {
 #   Per-artifact *-rt: lint-subscribe-without-unsubscribe (WARN, RM12),
 #     lint-recovery-path (FAIL, RM13), lint-config-sanity (FAIL, RM14),
 #     lint-status-parity (WARN, RM15).
-#   Per-artifact *-ux: lint-servlet (FAIL, RM16), rc-scan (FAIL, RM17).
+#   Per-artifact *-ux: lint-servlet (FAIL, RM16; INFO-only = PASS, RM16b), rc-scan (FAIL, RM17).
 #   Per-artifact *-wb: lint-wb-threading (WARN, RM18).
 #   Module-once: lint-structure (FAIL, RM19), lint-write-path (FAIL, RM20).
 # Named mutations (post-green):
@@ -168,6 +168,7 @@ setup() {
 #   - drop config-sanity CS1 check -> RM14 exits 0.
 #   - drop status-parity check -> RM15 loses WARN row.
 #   - drop servlet auth check -> RM16 exits 0.
+#   - drop the INFO* case in report-module.sh -> RM16b reports "no BWebServlet".
 #   - drop rc-scan ord-literal check -> RM17 exits 0.
 #   - drop wb-threading traversal check -> RM18 loses WARN row.
 #   - drop structure L7 check -> RM19 exits 0.
@@ -216,6 +217,14 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"BMyServlet.java"* ]]
+}
+
+@test "RM16b: a servlet with only the api-response-headers INFO row reports lint-servlet PASS, exit 0" {
+  # servlet-info/DemoPan-ux/src/com/x/BInfoServlet.java writes a body and sets no headers (register C13)
+  run "$RM" --lint-only "$FX/servlet-info"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS"*"lint-servlet"*"clean"* ]]
+  [[ "$output" != *"no BWebServlet"* ]]
 }
 
 @test "RM17: hardcoded ORD in rc/ surfaces rc-scan FAIL row in *-ux artifact and exits 1" {

@@ -101,11 +101,23 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
 }
 
 # shellcheck disable=SC2016
-@test "LSV7: doGet with getWriter() but no X-Content-Type-Options WARNs (api-response-headers), exit 0" {
+@test "LSV7: doGet with getWriter() but no X-Content-Type-Options is an INFO row (api-response-headers), exit 0" {
+  # Station header providers reach every module servlet (TridiumSecurityFilter on /*), so a missing
+  # per-servlet header is information, not a finding (register C13, corpus B1349 C1).
   only ApiRespNoHeader.java
   run "$LS" "$ONE"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN"* ]] && [[ "$output" == *"api-response-headers"* ]]
+  [[ "$output" == *"INFO  api-response-headers"* ]]
+  [[ "$output" != *"WARN  api-response-headers"* ]]
+}
+
+# shellcheck disable=SC2016
+@test "LSV7-strict: --strict does not escalate the api-response-headers INFO row" {
+  only ApiRespNoHeader.java
+  run "$LS" "$ONE" --strict
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"INFO  api-response-headers"* ]]
+  [[ "$output" != *"FAIL  api-response-headers"* ]]
 }
 
 # shellcheck disable=SC2016
