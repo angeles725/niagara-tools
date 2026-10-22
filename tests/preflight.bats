@@ -287,7 +287,7 @@ _pf_fakebin() {
 
 # ---------------------------------------------------------------------------
 # --sample: a project the user did not generate (course zip, vendor sample) must be retargeted first.
-# [ev: retro n4-course-handson-build-signing-windows Δ6] — the shipped trafficLightServer.zip pointed at an
+# [ev: retro n4-course-signed-jars-gate-fix Δ6] — the shipped trafficLightServer.zip pointed at an
 # absent 4.15.4.24 home, carried a <username> placeholder, had no root signing block and shipped build/ dirs.
 # ---------------------------------------------------------------------------
 # sample_tree <gr> <niagara_home-value> <user-home-value> <signing 1|0> <shipped-build 1|0>
@@ -338,4 +338,57 @@ sample_nh() { SNH="$TMPDIR_T/niagara-4.15.6.20"; cp -r "$NH" "$SNH"; }
   sample_tree "$TMPDIR_T/tls" 'c:\\niagara\\niagara-4.15.4.24' 'C:\\Users\\<username>\\x' 0 1
   run "$PREFLIGHT" --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
   [[ "$output" != *"sample-"* ]]
+}
+
+# The review of #269 (R3) found three silent PASS channels in Check 6: sample-sign matched bare
+# substrings (a set(true) or commented-out block PASSed), a missing niagara_user_home key PASSed
+# sample-user, and a niagara_home with no X.Y.Z skipped the version compare without saying so.
+# [ev: retro n4-course-sample-check-precision Δ1] [ev: retro n4-course-sample-check-precision Δ2]
+@test "PF-sample-sign-true: allowDefaultProfile.set(true) FAILs sample-sign (the default profile still signs)" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i 's/allowDefaultProfile.set(false)/allowDefaultProfile.set(true)/' "$TMPDIR_T/tls/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-sign ' | grep -qF 'allowDefaultProfile.set(false)'
+}
+
+@test "PF-sample-sign-commented: a //-commented or /* */-commented signing block FAILs sample-sign" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i '/^plugins/,/^}/!s|^|// |' "$TMPDIR_T/tls/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ] || { echo "line comments: $output"; return 1; }
+  printf '%s\n' "$output" | grep -qE '^FAIL  sample-sign '
+  sample_tree "$TMPDIR_T/blk" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i -e '/^signingServices/i /*' -e '$a */' "$TMPDIR_T/blk/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/blk"
+  [ "$status" -eq 1 ] || { echo "block comment: $output"; return 1; }
+  printf '%s\n' "$output" | grep -qE '^FAIL  sample-sign '
+}
+
+@test "PF-sample-sign-partial: a niagaraSigning block without signingProfileFile FAILs sample-sign, naming it" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i '/signingProfileFile/d' "$TMPDIR_T/tls/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-sign ' | grep -qF 'signingProfileFile'
+}
+
+@test "PF-sample-user-missing: no niagara_user_home key WARNs sample-user instead of PASSing" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i '/^niagara_user_home=/d' "$TMPDIR_T/tls/gradle.properties"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  printf '%s\n' "$output" | grep -E '^WARN  sample-user ' | grep -qF 'no niagara_user_home'
+  [[ "$output" != *"PASS  sample-user"* ]]
+}
+
+@test "PF-sample-version-unknown: a niagara_home with no X.Y.Z WARNs that the version could not be compared" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$NH" '/home/u/Niagara4.15/tridium' 1 0
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  printf '%s\n' "$output" | grep -E '^WARN  sample-home ' | grep -qF 'version could not be compared'
+  [[ "$output" != *"PASS  sample-home"* ]]
 }
