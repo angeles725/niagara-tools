@@ -26,7 +26,7 @@ every `toolbelt/*.sh` named in BUILD-LOOP.md or skill/SKILL.md, which were outsi
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | Point the Shared host pids and Disk-at-round-close manual reads to `go/cmd/host-budget` (one run reports pids, threads, GOCACHE and `/`, `/mnt/c`), and add a `toolbelt/host-budget.sh` wrapper routed there | `BUILD-LOOP.md` § 7 Shared host; `skill/SKILL.md` step 7 | `[ev: tests/host-budget.bats]` |
+| Δ1 | Point the Shared host pids and Disk-at-round-close manual reads to `go/cmd/host-budget` (one run reports pids, threads, GOCACHE and `/`, `/mnt/c`), and add a host-budget wrapper in the toolbelt routed there | `BUILD-LOOP.md` § 7 Shared host; `skill/SKILL.md` step 7 | `[ev: tests/host-budget.bats]` |
 | Δ2 | A row's free-text note must never contain a status word (PASS/WARN/FAIL), so callers can grep the status column | `CONTRIBUTING.md` § 2.2 Go module (`go/`) | `[ev: tests/host-budget.bats HB2]` |
 
 ## Lessons
