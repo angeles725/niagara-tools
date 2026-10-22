@@ -213,4 +213,5 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-awk-lint-line-loops.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-pipefail-grep-q-race.md | kit | 2026-10-22 | pending | 1 |

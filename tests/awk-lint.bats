@@ -152,3 +152,60 @@ EOF
   [ "$status" -eq 3 ]
   [[ "$output" == "demo-lint: unknown flag: --other"* ]]
 }
+
+# list_lint: writes $TMPDIR_T/list-lint.sh, a flagless line-loop lint (arity raw) that lists *.java
+# with awk_lint_list, prints one row per file and ends with awk_lint_exit <code>.
+list_lint() {
+  cat > "$TMPDIR_T/list-lint.sh" <<EOF
+#!/usr/bin/env bash
+set -u
+. "$KIT/toolbelt/lib/awk-lint.sh"
+awk_lint_parse list-lint raw 'usage: list-lint.sh <src-root>' "\$@"
+awk_lint_list -name '*.java'
+while IFS= read -r f; do printf 'ROW  %s\n' "\$f"; done < "\$AL_TMP/files"
+awk_lint_exit ${1:-0}
+EOF
+}
+
+@test "AL13: arity 'raw' takes the first argument verbatim as the root: no flag parsing, rest ignored" {
+  # Mutation: AL13 -- parsing flags in raw mode turns '-h' into an unknown flag instead of a root.
+  list_lint
+  run bash "$TMPDIR_T/list-lint.sh"
+  [ "$status" -eq 3 ]
+  [ "$output" = "usage: list-lint.sh <src-root>" ]
+  run bash "$TMPDIR_T/list-lint.sh" -h
+  [ "$status" -eq 3 ]
+  [ "$output" = "list-lint: not a directory: -h" ]
+  run bash "$TMPDIR_T/list-lint.sh" "$TMPDIR_T/src" --strict "$TMPDIR_T/nonexist"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ROW  $TMPDIR_T/src/com/A.java" ]
+}
+
+@test "AL14: awk_lint_list writes the sorted file list; awk_lint_exit returns the caller's code" {
+  printf 'class B {}\n' > "$TMPDIR_T/src/B.java"
+  list_lint 1
+  run bash "$TMPDIR_T/list-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 1 ]
+  [ "$output" = "$(printf 'ROW  %s\nROW  %s' "$TMPDIR_T/src/B.java" "$TMPDIR_T/src/com/A.java")" ]
+}
+
+@test "AL15: an incomplete awk_lint_list walk still lists the rest, then awk_lint_exit exits 3" {
+  # Mutation: AL15 -- exiting on the walk error drops the rows; ignoring it exits with the caller's code.
+  mkdir -p "$TMPDIR_T/src/locked"
+  chmod 000 "$TMPDIR_T/src/locked"
+  if [ -r "$TMPDIR_T/src/locked" ]; then skip "running as root"; fi
+  list_lint 1
+  run bash "$TMPDIR_T/list-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 3 ]
+  [[ "${lines[0]}" == "list-lint: cannot list every file under $TMPDIR_T/src: "* ]]
+  [ "${lines[1]}" = "ROW  $TMPDIR_T/src/com/A.java" ]
+}
+
+@test "AL16: AL_AWK_ARGS is expanded only through the set -u safe idiom (empty array on bash < 4.4)" {
+  # Mutation: AL16 -- a bare "\${AL_AWK_ARGS[@]}" aborts with 'unbound variable' on bash 4.3 when it is empty.
+  run grep -nE '(^|[^+])"\$\{AL_AWK_ARGS\[@\]\}"' "$KIT/toolbelt/lib/awk-lint.sh"
+  [ "$status" -eq 1 ]
+  # shellcheck disable=SC2016  # a literal pattern: the expansion must stay unexpanded
+  run grep -c '${AL_AWK_ARGS\[@\]+"${AL_AWK_ARGS\[@\]}"}' "$KIT/toolbelt/lib/awk-lint.sh"
+  [ "$output" -ge 1 ]
+}
