@@ -78,3 +78,17 @@ setup() {
   run bash "$KIT/toolbelt/lint-timers.sh" "$RT/src"
   [ "$status" -eq 0 ]
 }
+
+@test "TC-SIGN: both scaffold types emit the root signing block, so lint-structure L15 stays silent (issue #266)" {
+  # Named mutation: drop the block from a fixture root -> this test sees an L15 WARN.
+  for t in logic dashboard; do
+    run "$SC" "Sign${t^}" "$OUT/$t" --type "$t"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"niagaraSigningAlias"* ]]
+    root="$OUT/$t/Sign${t^}"
+    mkdir -p "$root/.git"                      # the L10/L14 upward walk stops here, not in the test tmpdir
+    grep -q 'allowDefaultProfile.set(false)' "$root/build.gradle.kts"
+    run "$KIT/toolbelt/lint-structure.sh" "$root/Sign${t^}"
+    [[ "$output" != *"L15"* ]]
+  done
+}

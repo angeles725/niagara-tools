@@ -14,6 +14,8 @@
 #                    dashboard — two-profile -rt facade + -ux servlet skeleton (MinimalDash fixture)
 #
 # The emitted tree is pre-slotomatic. Run build.sh to generate the AUTO region and build the jar.
+# The root build.gradle.kts carries the signing block (templates/signing-root.gradle.kts, issue #266):
+# set niagaraSigningAlias and niagaraSigningProfile as gradle properties before the first build.
 # This script is VCS-free by design. version control is never invoked.
 #
 # Exit: 0 ok · 2 usage or invalid ModuleName or unknown --type · 3 env (skeleton missing,
@@ -177,3 +179,4 @@ done < <(find "$FIXTURE_ROOT" -type f -print0)
 chmod +x "${DEST}/gradlew"
 
 printf 'scaffold-module: emitted %s -> %s\n' "$MOD" "$DEST"
+printf 'scaffold-module: signing: set niagaraSigningAlias + niagaraSigningProfile (gradle properties) before the first build\n'
