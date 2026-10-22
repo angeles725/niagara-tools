@@ -52,6 +52,43 @@ func (mixedRule) Check(f *javasrc.File) ([]Finding, error) {
 	return out, nil
 }
 
+// treeFake is a TreeRule: it records the paths it is given, reports a file-level finding (sub-check
+// "sub") for each file holding MARK and a PASS row for the others, and fails when broken is set.
+type treeFake struct {
+	id     string
+	seen   *[]string
+	broken bool
+}
+
+func (r treeFake) ID() string         { return r.id }
+func (r treeFake) Severity() Severity { return Fail }
+func (r treeFake) CheckTree(files []*javasrc.File) ([]Finding, error) {
+	var out []Finding
+	for _, f := range files {
+		if r.seen != nil {
+			*r.seen = append(*r.seen, f.Path)
+		}
+		if strings.Contains(strings.Join(f.Raw, "\n"), "MARK") {
+			out = append(out, Finding{Check: "sub", Path: f.Path, Msg: "tree saw MARK"})
+		} else {
+			out = append(out, Finding{Check: "sub", Severity: Pass, Path: f.Path, Msg: "clean"})
+		}
+	}
+	if r.broken {
+		return out, errors.New("cannot scan " + files[0].Path + ": broken")
+	}
+	return out, nil
+}
+
+// bothRule implements Rule and TreeRule, which registration refuses.
+type bothRule struct{ fakeRule }
+
+func (bothRule) CheckTree([]*javasrc.File) ([]Finding, error) { return nil, nil }
+
+func treeSpec(r TreeRule) Spec {
+	return Spec{Tree: r, Mode: One, Usage: "usage: " + r.ID() + ".sh <src-root>", Select: Selection{Names: []string{"*.java"}}}
+}
+
 func javaSpec(r Rule, mode Mode) Spec {
 	return Spec{Rule: r, Mode: mode, Usage: "usage: " + r.ID() + ".sh <src-root>", Select: Selection{Names: []string{"*.java"}}}
 }
@@ -95,6 +132,17 @@ func TestRow(t *testing.T) {
 	}
 }
 
+func TestRowColumns(t *testing.T) {
+	f := Finding{Rule: "lint-t", Check: "timer-ticket", Severity: Pass, Path: "M/A.java", Msg: "timer cancelled in stopped()"}
+	if got, want := f.Row(), "PASS  timer-ticket  M/A.java: timer cancelled in stopped()"; got != want {
+		t.Errorf("file-level PASS row = %q, want %q", got, want)
+	}
+	f.Line, f.Severity = 3, Warn
+	if got, want := f.Row(), "WARN  timer-ticket  M/A.java:3  timer cancelled in stopped()"; got != want {
+		t.Errorf("line row with sub-check = %q, want %q", got, want)
+	}
+}
+
 func TestParse(t *testing.T) {
 	const name, usage = "lint-x", "usage: lint-x.sh <src-root>"
 	dir := t.TempDir()
@@ -115,6 +163,12 @@ func TestParse(t *testing.T) {
 		{Raw, []string{"--strict", dir}, false, nil, name + ": not a directory: --strict\n"},
 		{Raw, []string{"-h"}, false, nil, name + ": not a directory: -h\n"},
 		{Raw, []string{file}, false, nil, name + ": not a directory: " + file + "\n"},
+		{Exact, nil, false, nil, usage + "\n"},
+		{Exact, []string{dir}, false, []string{dir}, ""},
+		{Exact, []string{dir, dir}, false, nil, usage + "\n"},
+		{Exact, []string{"-h"}, false, nil, name + ": not a directory: -h\n"},
+		{Exact, []string{"--strict"}, false, nil, name + ": not a directory: --strict\n"},
+		{Exact, []string{"--strict", dir}, false, nil, usage + "\n"},
 		{One, []string{"--strict", dir}, true, []string{dir}, ""},
 		{One, []string{dir, dir}, false, nil, usage + "\n"},
 		{One, []string{"--", "--strict"}, false, nil, name + ": not a directory: --strict\n"},
@@ -251,19 +305,44 @@ func TestRunRuleOrderAndSelection(t *testing.T) {
 	second.Select.Prune = []string{"build"}
 	s, o, _ := stdio()
 	Run([]Spec{first, second}, "n4lint", Args{Roots: []string{root}}, s)
+	// Each rule's rows stay contiguous, in spec order.
 	want := "WARN  lint-a  " + root + "/A.java:1  saw: MARK OTHER\n" +
-		"FAIL  lint-b  " + root + "/A.java:1  saw: MARK OTHER\n" +
-		"WARN  lint-a  " + root + "/build/B.java:1  saw: MARK OTHER\n"
+		"WARN  lint-a  " + root + "/build/B.java:1  saw: MARK OTHER\n" +
+		"FAIL  lint-b  " + root + "/A.java:1  saw: MARK OTHER\n"
 	if o.String() != want {
 		t.Errorf("out\n%s\nwant\n%s", o, want)
+	}
+}
+
+// TestRunExitPolicy: any FAIL row exits 1 with or without --strict, --strict also makes a WARN row exit 1,
+// and an env error (here a file the rule cannot analyze) exits 3 even beside a FAIL row.
+func TestRunExitPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		text   string
+		strict bool
+		want   int
+	}{
+		{"FAIL alone", "FAIL a\n", false, 1},
+		{"WARN alone", "WARN a\n", false, 0},
+		{"WARN with --strict", "WARN a\n", true, 1},
+		{"env error with FAIL", "FAIL a\nBROKEN\n", false, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := tree(t, map[string]string{"A.java": tc.text})
+			s, _, _ := stdio()
+			if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Strict: tc.strict, Roots: []string{root}}, s); code != tc.want {
+				t.Errorf("exit %d, want %d", code, tc.want)
+			}
+		})
 	}
 }
 
 func TestRunPerFindingSeverity(t *testing.T) {
 	root := tree(t, map[string]string{"A.java": "FAIL one\nWARN two\n"})
 	s, o, _ := stdio()
-	if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s); code != 0 {
-		t.Errorf("exit %d, want 0", code)
+	if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s); code != 1 {
+		t.Errorf("exit %d, want 1 (a FAIL row)", code)
 	}
 	want := "FAIL  lint-m  " + root + "/A.java:1  saw: FAIL one\n" +
 		"WARN  lint-m  " + root + "/A.java:2  saw: WARN two\n"
@@ -325,5 +404,127 @@ func TestCommand(t *testing.T) {
 	}
 	if code, _, e := run("--all", "--bogus", root); code != 3 || !strings.HasPrefix(e, "n4lint: unknown flag: --bogus\n") {
 		t.Errorf("--all unknown flag: %d %q", code, e)
+	}
+}
+
+func TestRunTreeRuleMixedOrder(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n", "b/B.java": "MARK\n", "C.java": "clean\n", "build/D.java": "MARK\n"})
+	var seen []string
+	tr := treeSpec(treeFake{id: "lint-t", seen: &seen})
+	tr.Select.Prune = []string{"build"}
+	specs := []Spec{javaSpec(fakeRule{"lint-a", "MARK", Warn}, Each), tr, javaSpec(fakeRule{"lint-b", "clean", Warn}, Each)}
+	s, o, e := stdio()
+	code := Run(specs, "n4lint", Args{Roots: []string{root}}, s)
+	want := "WARN  lint-a  " + root + "/A.java:1  saw: MARK\n" +
+		"WARN  lint-a  " + root + "/b/B.java:1  saw: MARK\n" +
+		"WARN  lint-a  " + root + "/build/D.java:1  saw: MARK\n" +
+		"FAIL  sub  " + root + "/A.java: tree saw MARK\n" +
+		"PASS  sub  " + root + "/C.java: clean\n" +
+		"FAIL  sub  " + root + "/b/B.java: tree saw MARK\n" +
+		"WARN  lint-b  " + root + "/C.java:1  saw: clean\n"
+	if o.String() != want || e.Len() != 0 || code != 1 {
+		t.Errorf("exit %d err %q out\n%s\nwant\n%s", code, e, o, want)
+	}
+	if w := []string{root + "/A.java", root + "/C.java", root + "/b/B.java"}; !reflect.DeepEqual(seen, w) {
+		t.Errorf("tree rule saw %q, want the ordered selected files %q", seen, w)
+	}
+}
+
+func TestRunPassNeverExits(t *testing.T) {
+	root := tree(t, map[string]string{"C.java": "clean\n"})
+	s, o, _ := stdio()
+	if code := Run([]Spec{treeSpec(treeFake{id: "lint-t"})}, "lint-t", Args{Strict: true, Roots: []string{root}}, s); code != 0 {
+		t.Errorf("PASS-only --strict exit %d, want 0 (out %q)", code, o)
+	}
+}
+
+func TestRunTreeRuleError(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, o, e := stdio()
+	code := Run([]Spec{treeSpec(treeFake{id: "lint-t", broken: true})}, "lint-t", Args{Roots: []string{root}}, s)
+	if want := "FAIL  sub  " + root + "/A.java: tree saw MARK\n"; code != 3 || o.String() != want {
+		t.Errorf("exit %d out %q, want 3 and %q", code, o, want)
+	}
+	if want := "lint-t: cannot scan " + root + "/A.java: broken\n"; e.String() != want {
+		t.Errorf("err %q, want %q", e, want)
+	}
+}
+
+func TestCommandRegistration(t *testing.T) {
+	for name, sp := range map[string]Spec{
+		"neither":         {Usage: "u"},
+		"both fields":     {Rule: fakeRule{id: "lint-a"}, Tree: treeFake{id: "lint-a"}, Usage: "u"},
+		"Rule is a tree":  {Rule: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
+		"Tree is a check": {Tree: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%s: Command accepted the spec", name)
+				}
+			}()
+			Command(sp)
+		}()
+	}
+	Command(javaSpec(fakeRule{id: "lint-a"}, One), treeSpec(treeFake{id: "lint-t"})) // a valid mix registers
+}
+
+func TestCommandUsageExit(t *testing.T) {
+	def := treeSpec(treeFake{id: "lint-d"})
+	two := treeSpec(treeFake{id: "lint-u"})
+	two.UsageExit = 2
+	main := Command(def, two)
+	s, _, e := stdio()
+	if code := main([]string{"lint-d"}, s); code != 3 || e.String() != "usage: lint-d.sh <src-root>\n" {
+		t.Errorf("default usage exit %d %q, want 3", code, e)
+	}
+	s, _, e = stdio()
+	if code := main([]string{"lint-u", "a", "b"}, s); code != 2 || e.String() != "usage: lint-u.sh <src-root>\n" {
+		t.Errorf("UsageExit 2: exit %d %q", code, e)
+	}
+	s, _, _ = stdio()
+	if code := main([]string{"lint-u", "-x", "a"}, s); code != 2 {
+		t.Errorf("UsageExit 2, unknown flag: exit %d, want 2", code)
+	}
+	s, _, _ = stdio()
+	if code := main([]string{"lint-u", "missing-dir"}, s); code != 3 {
+		t.Errorf("UsageExit 2, not a directory: exit %d, want 3 (an env error, not usage)", code)
+	}
+	s, _, _ = stdio()
+	if code := main([]string{"lint-u,lint-d"}, s); code != 3 {
+		t.Errorf("rule list usage: exit %d, want 3 (the n4lint contract)", code)
+	}
+}
+
+func TestCommandRuleOrder(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n", "B.java": "MARK\n"})
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), treeSpec(treeFake{id: "lint-t"}))
+	perFile := "WARN  lint-a  " + root + "/A.java:1  saw: MARK\n" + "WARN  lint-a  " + root + "/B.java:1  saw: MARK\n"
+	treeRows := "FAIL  sub  " + root + "/A.java: tree saw MARK\n" + "FAIL  sub  " + root + "/B.java: tree saw MARK\n"
+	for args, want := range map[string]string{"lint-t,lint-a": treeRows + perFile, "--all": perFile + treeRows} {
+		s, o, _ := stdio()
+		if code := main([]string{args, root}, s); code != 1 || o.String() != want {
+			t.Errorf("%s: exit %d out\n%s\nwant\n%s", args, code, o, want)
+		}
+	}
+}
+
+func TestParseExactUsageError(t *testing.T) {
+	for _, args := range [][]string{nil, {"a", "b"}, {"--", "a"}} {
+		_, err := Parse(Exact, "lint-x", "usage: lint-x.sh <java-root>", args)
+		var ue *UsageError
+		if !errors.As(err, &ue) {
+			t.Errorf("Parse(Exact, %q) error %v, want a *UsageError", args, err)
+		}
+	}
+	main := Command(Spec{Tree: treeFake{id: "lint-e"}, Mode: Exact, Usage: "usage: lint-e.sh <java-root>", UsageExit: 2,
+		Select: Selection{Names: []string{"*.java"}}})
+	s, _, e := stdio()
+	if code := main([]string{"lint-e", "--strict", "x"}, s); code != 2 || e.String() != "usage: lint-e.sh <java-root>\n" {
+		t.Errorf("Exact two args: exit %d %q, want 2 and the usage line", code, e)
+	}
+	s, _, e = stdio()
+	if code := main([]string{"lint-e", "-h"}, s); code != 3 || e.String() != "lint-e: not a directory: -h\n" {
+		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
 	}
 }
