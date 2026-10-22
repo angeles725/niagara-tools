@@ -571,7 +571,7 @@ slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(.
              @Facet(name = "BFacets.FALSE_TEXT", value = "\"%lexicon(<module>:disabled.value)%\"") })
 ```
 
-The card is hand-copied from the source; a check that diffs its Constant column against `BFacets.java` is owed (see `BUILD-STATE.md` kit `open_issues`).
+Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/logic-authoring.md <BFacets.java>` diffs the Constant and Key columns against the source in declaration order; `tests/check-facets-card.bats` pins it to the 4.15.6.20 list.
 
 **Rule:** build facets only with the factory methods above (the `BFacets` constructors are private). For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
 

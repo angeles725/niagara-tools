@@ -132,6 +132,7 @@ and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 WU-P0 lints, `docs/r8-t9b-p0-lints` (2026-10-22): `lint-timers.sh` `jdk-thread` re-scoped (FAIL only a
 thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new `job-cancel` WARN.
 New `lint-bformat-call.sh` (BFormat `%time(<arg>)%` / `%user%` WARN).
+New `check-facets-card.sh` + pinned 4.15.6.20 key list.
 
 ---
 
@@ -190,7 +191,7 @@ New `lint-bformat-call.sh` (BFormat `%time(<arg>)%` / `%user%` WARN).
 - **Target:** `types/logic-authoring.md:489-534`.
 - **Lint-able:** yes — script diffs card keys against the constant list. **Fold type:** doc fix + script.
 - **Fold status:** doc FOLDED (WU-P0-3, 2026-10-22; rac Δ8, bdps Δ6). 4.15.6.20 has 34 constants, so `multiLine` is one
-  (`BFacets.MULTI_LINE`); the key-diff check is OWED.
+  (`BFacets.MULTI_LINE`). FOLDED with `toolbelt/check-facets-card.sh` + `tests/check-facets-card.bats`.
 
 ### C07 — BFormat card gets `?`, `time()`, `substring` and the lookup order wrong
 - **Sources:** rac#Δ9 (primary; cursor half cross-ref C19) · rcf#Δ6 extends (line-level facts)
@@ -895,7 +896,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ6` | types/logic.md:336 | Alarm ext owns ALARM/FAULT/UNACKED bits | C32 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ7` | types/logic.md LC1 | Writable primitives: activeLevel, overrides, min on/off | C33 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | folded doc (WU-P0-3); script owed |
+| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | folded (WU-P0-3 + lints) |
 | `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6); folded card (WU-P0-3); cursor recipe owed (C19) |
 | `devguide415-runtime-api-corrections#Δ10` | types/logic.md:111-143 | Fix link rules | C08 | P0 | accepted |
 | `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
