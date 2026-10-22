@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · generated-retro-index
@@ -23,6 +23,8 @@ pre-push gate's content half fails a stale index. The gate no longer needs an `I
   place `[ev: tests/gen-retro-index.bats GRI-rows]`
 - The old file had a blank line inside the table (after the 2026-09-05 campaign8 wb-audit row), so every later row
   rendered outside the table; generation removes the defect class
+- `new-retro.sh`: RL1/RL5/RL6/RL9/RL10 were RED against the appending script and are GREEN after it regenerates;
+  swapping the generator call back to an append re-fails RL6/RL9/RL10 `[ev: tests/retro-loop.bats]`
 - Gate: H11 (BUILD-STATE + retro, no INDEX diff, fresh index) was RED before the hook change and is GREEN after;
   H12 (stale index) fails through sweep `[ev: tests/build-retro-sync.bats H11 H12]`
 
@@ -30,7 +32,7 @@ pre-push gate's content half fails a stale index. The gate no longer needs an `I
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
 | 1 | **`retros/INDEX.md` is generated; never hand-edit it.** A retro's row lives in its header comments; edit the header and run `toolbelt/gen-retro-index.sh`; on a conflict, regenerate. Applied in this PR. | `BUILD-LOOP.md` §7; `CONTRIBUTING.md` §6.1 | `[ev: tests/gen-retro-index.bats]` |
-| 2 | **`new-retro.sh` writes the header block and regenerates the index instead of appending a row.** Today it still appends a row and its stub has no `module`/`deltas` headers, so the generator rejects the new retro until the author adds them. Not applied: `toolbelt/new-retro.sh` and `tests/retro-loop.bats` RL2/RL5/RL6/RL9 were outside this unit's edit surface. | `toolbelt/new-retro.sh`; `tests/retro-loop.bats` | `[ev: retro generated-retro-index]` |
+| 2 | **`new-retro.sh` writes the header block and regenerates the index instead of appending a row.** Before, it appended a row and its stub had no `module`/`deltas` headers, so the generator would reject every new retro. Applied in this PR: the stub carries review-status/module/deltas on lines 1-3, the script runs `gen-retro-index.sh` and removes the stub again if regeneration fails (BUILD-STATE.md untouched). | `toolbelt/new-retro.sh`; `BUILD-LOOP.md` §7 | `[ev: tests/retro-loop.bats RL1 RL5 RL6 RL9 RL10]` |
 
 ## Lessons
 - A hand-edited registry that only restates facts its entries already hold is a merge-conflict hotspot; move the
@@ -40,4 +42,4 @@ pre-push gate's content half fails a stale index. The gate no longer needs an `I
 - A freshness check placed inside the gate's existing content validator covers the hook without new git logic.
 
 ---
-**Status**: PENDING — Δ1 applied in this PR, Δ2 owed (new-retro.sh). Row generated from this header.
+**Status**: FOLDED — Δ1 and Δ2 applied in this PR (`BUILD-LOOP.md` §7 cites both). Row generated from this header.
