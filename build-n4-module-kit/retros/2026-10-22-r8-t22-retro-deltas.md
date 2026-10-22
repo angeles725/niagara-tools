@@ -20,7 +20,7 @@ ledger are generated, so Δ1, Δ4 and Δ5 refine and point instead of restating.
 
 ## Evidence
 - Go layout today: `go/internal/{retroindex,cisteps,buildstate,facetscard,cli}` each behind a thin `go/cmd/<tool>/main.go`
-  (PRs #288, #296); `internal/javasrc` and `internal/lint` do not exist yet, so Δ9 is the layout new lint code
+  (PRs #288, #296); `internal/javasrc` landed in #297 (96f8bc2) and `internal/lint` is in flight (T8k-2a), so Δ9 is the layout new lint code
   starts from
 - Go tools: `go/cmd/{gen-retro-index,ci-steps,gen-build-state,check-facets-card}` + `go/internal/*` + `go/go-tool.sh`
   wrappers (PRs #288, #290, #296); owed Go lints specified as ledger items G1-G3 (archive fragment) and G4-G7
