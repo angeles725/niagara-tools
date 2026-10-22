@@ -3,7 +3,9 @@ package lint
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -13,64 +15,125 @@ import (
 )
 
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
-// every spec prunes), reads each file once and runs the specs that select it, in spec order, printing
-// their rows. An incomplete walk or an unreadable file is reported on stderr with the texts of
-// toolbelt/lib/awk-lint.sh, a file a rule could not analyze as "cannot scan <path>: <rule>: <error>",
-// and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else 1 when a FAIL
-// row was printed or any row was printed under a.Strict, else 0.
+// every spec prunes) with one walk, reads each file once, feeds it to every per-file Rule that selects
+// it, in spec order, and after the root's walk feeds each TreeRule the ordered slice of the files it
+// selects. Each spec's rows stay contiguous, in spec order: the first spec prints as it goes and the
+// others are held and printed after it, each with its own stderr lines in place. An incomplete walk or
+// an unreadable file is reported on stderr when it happens with the texts of toolbelt/lib/awk-lint.sh,
+// a file a per-file rule could not analyze as "cannot scan <path>: <rule>: <error>", a TreeRule error as
+// its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
+// 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS rows never count).
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
-	out := bufio.NewWriter(s.Out)
-	defer out.Flush()
-	fail := func(format string, v ...any) {
-		out.Flush() // keep stdout and stderr in the order the bash lint printed them
-		fmt.Fprintf(s.Err, name+": "+format+"\n", v...)
-	}
+	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs))}
+	defer r.out.Flush()
 	sel := union(specs)
-	envErr, rows, failed := false, false, false
 	for _, root := range a.Roots {
 		files, err := Walk(root, sel)
 		if err != nil {
-			fail("cannot list every file under %s: %s", root, err)
-			envErr = true
+			r.envError(0, fmt.Sprintf("cannot list every file under %s: %s", root, err))
 		}
+		trees := make([][]*javasrc.File, len(specs))
 		for _, p := range files {
 			data, err := os.ReadFile(p)
 			if err != nil {
 				// awk_lint_run printed the first line of awk's own error.
-				fail("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror(err))
-				envErr = true
+				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror(err)))
 				continue
 			}
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 			f := javasrc.NewFile(p, lines)
-			for _, sp := range specs {
+			for i, sp := range specs {
 				if !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
 					continue
 				}
-				fds, err := sp.Rule.Check(f)
-				for _, fd := range fds {
-					fd.Rule, fd.Path = sp.Rule.ID(), p
-					if fd.Severity == Unset {
-						fd.Severity = sp.Rule.Severity()
-					}
-					fmt.Fprintln(out, fd.Row())
-					rows = true
-					failed = failed || fd.Severity == Fail
+				if sp.Tree != nil {
+					trees[i] = append(trees[i], f)
+					continue
 				}
+				fds, err := sp.Rule.Check(f)
+				r.findings(i, sp, p, fds)
 				if err != nil {
-					fail("cannot scan %s: %s: %s", p, sp.Rule.ID(), err)
-					envErr = true
+					r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
 				}
 			}
 		}
+		for i, sp := range specs {
+			if sp.Tree == nil {
+				continue
+			}
+			fds, err := sp.Tree.CheckTree(trees[i])
+			r.findings(i, sp, "", fds)
+			if err != nil {
+				r.envError(i, err.Error())
+			}
+		}
 	}
+	r.release()
 	switch {
-	case envErr:
+	case r.envErr:
 		return 3
-	case failed, rows && a.Strict:
+	case r.failed, r.rows && a.Strict:
 		return 1
 	}
 	return 0
+}
+
+// event is one held output line: a row on stdout or, when err is set, a message on stderr.
+type event struct {
+	err  bool
+	text string
+}
+
+// report prints the first spec's output as it comes and holds every other spec's until release.
+type report struct {
+	name                 string
+	out                  *bufio.Writer
+	err                  io.Writer
+	held                 [][]event
+	envErr, rows, failed bool
+}
+
+func (r *report) emit(i int, e event) {
+	if i > 0 {
+		r.held[i] = append(r.held[i], e)
+		return
+	}
+	if !e.err {
+		fmt.Fprintln(r.out, e.text)
+		return
+	}
+	r.out.Flush() // keep stdout and stderr in the order the bash lint printed them
+	fmt.Fprintln(r.err, r.name+": "+e.text)
+}
+
+func (r *report) envError(i int, msg string) {
+	r.envErr = true
+	r.emit(i, event{err: true, text: msg})
+}
+
+// findings fills each finding's Rule, an Unset Severity and an empty Path, then emits its row.
+func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
+	for _, fd := range fds {
+		fd.Rule = sp.ID()
+		if fd.Path == "" {
+			fd.Path = path
+		}
+		if fd.Severity == Unset {
+			fd.Severity = sp.severity()
+		}
+		r.failed = r.failed || fd.Severity == Fail
+		r.rows = r.rows || fd.Severity != Pass
+		r.emit(i, event{text: fd.Row()})
+	}
+}
+
+// release prints the held output of every spec after the first, in spec order.
+func (r *report) release() {
+	for i := 1; i < len(r.held); i++ {
+		for _, e := range r.held[i] {
+			r.emit(0, e)
+		}
+	}
 }
 
 // union selects what any spec selects and prunes what every spec prunes.
@@ -111,16 +174,21 @@ func prunedFor(sel Selection, root, p string) bool {
 const usage = "usage: n4lint <rule>[,<rule>...] <args>... | n4lint --all [--strict] [--] <src-root>..."
 
 // Command is the n4lint entry point over specs. "n4lint <rule> <args>..." runs one rule with the
-// argument contract (Mode, Usage, message prefix) of its toolbelt wrapper; "n4lint <rule>,<rule>..."
+// argument contract (Mode, Usage, UsageExit, message prefix) of its toolbelt wrapper; "n4lint <rule>,<rule>..."
 // and "n4lint --all" run several rules over one walk with the n4lint contract (Each mode, n4lint
-// prefix). Usage and environment errors exit 3. A duplicate rule ID panics (a registration bug).
+// prefix), in the requested (or registry) order with each rule's rows contiguous. Usage errors exit the
+// spec's UsageExit (3 by default, always 3 for a rule list or --all), environment errors 3. A duplicate
+// rule ID or a spec that is not exactly one of Rule and TreeRule panics (a registration bug).
 func Command(specs ...Spec) cli.Main {
 	byID := map[string]Spec{}
 	for _, sp := range specs {
-		if _, dup := byID[sp.Rule.ID()]; dup {
-			panic("lint: duplicate rule ID " + sp.Rule.ID())
+		if err := sp.validate(); err != nil {
+			panic(err.Error())
 		}
-		byID[sp.Rule.ID()] = sp
+		if _, dup := byID[sp.ID()]; dup {
+			panic("lint: duplicate rule ID " + sp.ID())
+		}
+		byID[sp.ID()] = sp
 	}
 	return func(args []string, s cli.Stdio) int {
 		if len(args) == 0 {
@@ -130,7 +198,7 @@ func Command(specs ...Spec) cli.Main {
 		if args[0] == "-h" || args[0] == "--help" {
 			fmt.Fprintf(s.Out, "%s\nrules:\n", usage)
 			for _, sp := range specs {
-				fmt.Fprintln(s.Out, sp.Rule.ID())
+				fmt.Fprintln(s.Out, sp.ID())
 			}
 			return 0
 		}
@@ -146,13 +214,17 @@ func Command(specs ...Spec) cli.Main {
 				selected = append(selected, sp)
 			}
 		}
-		mode, name, use := Each, "n4lint", usage
+		mode, name, use, usageExit := Each, "n4lint", usage, 3
 		if len(selected) == 1 && args[0] != "--all" {
-			mode, name, use = selected[0].Mode, selected[0].Rule.ID(), selected[0].Usage
+			mode, name, use, usageExit = selected[0].Mode, selected[0].ID(), selected[0].Usage, selected[0].usageExit()
 		}
 		a, err := Parse(mode, name, use, args[1:])
 		if err != nil {
 			fmt.Fprint(s.Err, err)
+			var ue *UsageError
+			if errors.As(err, &ue) {
+				return usageExit
+			}
 			return 3
 		}
 		return Run(selected, name, a, s)

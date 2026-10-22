@@ -23,6 +23,12 @@ type Args struct {
 	Roots  []string
 }
 
+// UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
+// its exit code is the spec's UsageExit. Every other Parse error is an environment error (exit 3).
+type UsageError struct{ Text string }
+
+func (e *UsageError) Error() string { return e.Text }
+
 // Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting
 // 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, or "<name>: not a directory: <root>".
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
@@ -37,13 +43,13 @@ flags:
 			args = args[1:]
 			break flags
 		case strings.HasPrefix(arg, "-"):
-			return Args{}, errors.New(name + ": unknown flag: " + arg + "\n" + usage + "\n")
+			return Args{}, &UsageError{name + ": unknown flag: " + arg + "\n" + usage + "\n"}
 		default:
 			break flags
 		}
 	}
 	if len(args) < 1 || (mode == One && len(args) != 1) {
-		return Args{}, errors.New(usage + "\n")
+		return Args{}, &UsageError{usage + "\n"}
 	}
 	a.Roots = args[:1]
 	if mode == Each {
