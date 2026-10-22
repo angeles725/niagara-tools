@@ -648,6 +648,9 @@ _env_gradlew() {
   chmod +x "$ROOT/gradlew"
 }
 
+# _last_userhome <env-dump>: the LAST -Duser.home= token of the JTO= line (the JVM keeps the last one)
+_last_userhome() { printf '%s\n' "$1" | grep '^JTO=' | grep -oE -- '-Duser\.home=[^ ]*' | tail -1; }
+
 @test "BS-mirror-userhome: a .niagara-mirror niagara_home isolates user.home via JAVA_TOOL_OPTIONS and passes --no-daemon" {
   _env_gradlew
   : > "$TMPDIR_T/nh/.niagara-mirror"
@@ -655,7 +658,8 @@ _env_gradlew() {
   [ "$status" -eq 0 ]
   e="$(cat "$TMPDIR_T/gradlew.env")"
   [[ "$e" == *"JTO=-Xfoo -Duser.home=$TMPDIR_T/nh/.mirror-user-home"* ]]
-  [[ "$e" != *"-Duser.home=$HOME "* ]]
+  [ "$(_last_userhome "$e")" = "-Duser.home=$TMPDIR_T/nh/.mirror-user-home" ]
+  [[ "$e" == *"-Dmaven.repo.local=$HOME/.m2/repository"* ]]
   [ -d "$TMPDIR_T/nh/.mirror-user-home" ]
   [[ "$e" == *"GUH=$HOME/.gradle"* ]]
   [[ "$e" == *"ARGV="*"--no-daemon"* ]]
@@ -683,6 +687,83 @@ _env_gradlew() {
   [[ "$e" == *"GUH="$'\n'* ]]
   [[ "$e" != *"--no-daemon"* ]]
   [ ! -e "$TMPDIR_T/nh/.mirror-user-home" ]
+}
+
+@test "BS-mirror-userhome-override: a pre-existing -Duser.home in JAVA_TOOL_OPTIONS is overridden by the appended mirror value" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  JAVA_TOOL_OPTIONS="-Duser.home=$TMPDIR_T/elsewhere" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  e="$(cat "$TMPDIR_T/gradlew.env")"
+  [[ "$e" == *"JTO=-Duser.home=$TMPDIR_T/elsewhere "* ]]
+  [ "$(_last_userhome "$e")" = "-Duser.home=$TMPDIR_T/nh/.mirror-user-home" ]
+}
+
+@test "BS-mirror-m2-kept: an existing -Dmaven.repo.local in JAVA_TOOL_OPTIONS is not overridden in mirror mode" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  JAVA_TOOL_OPTIONS="-Dmaven.repo.local=$TMPDIR_T/m2" run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  e="$(cat "$TMPDIR_T/gradlew.env")"
+  [[ "$e" == *"-Dmaven.repo.local=$TMPDIR_T/m2"* ]]
+  [ "$(grep -o -- '-Dmaven.repo.local=' "$TMPDIR_T/gradlew.env" | wc -l)" -eq 1 ]
+}
+
+@test "BS-mirror-whitespace: a mirror niagara_home path with whitespace exits 33 before gradle runs" {
+  # Mutation: BS-mirror-whitespace -- dropping the whitespace refusal lets gradle run with a split JAVA_TOOL_OPTIONS.
+  _env_gradlew
+  make_niagara_home "$TMPDIR_T/sp ace/nh" 7.6.17
+  : > "$TMPDIR_T/sp ace/nh/.niagara-mirror"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/sp ace/nh"
+  [ "$status" -eq 33 ]
+  [[ "$output" == *"whitespace"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.env" ]
+}
+
+@test "BS-mirror-whitespace-control: a non-mirror niagara_home path with whitespace still builds" {
+  _env_gradlew
+  make_niagara_home "$TMPDIR_T/sp ace/nh" 7.6.17
+  run "$B" "$ROOT" Foo "$TMPDIR_T/sp ace/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/gradlew.env" ]
+}
+
+# _devkey_gradlew: a gradlew stub that creates the mirror-user-home signing profile (what the plugin does for a
+# root without a signing block) and succeeds.
+_devkey_gradlew() {
+  printf '#!/usr/bin/env bash
+mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
+: > "%s/nh/.mirror-user-home/.tridium/security/niagara.signing.xml"
+' "$TMPDIR_T" "$TMPDIR_T" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-mirror-devkey-warn: a signing profile created in the mirror user home during the build WARNs, exit 0" {
+  # Mutation: BS-mirror-devkey-warn -- dropping the post-build profile check makes the dev-key signature silent.
+  _devkey_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"throwaway dev key"* ]]
+  [[ "$output" == *"signing-root.gradle.kts"* ]]
+}
+
+@test "BS-mirror-devkey-control: no profile created during the build -> no dev-key WARN" {
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"throwaway dev key"* ]]
+}
+
+@test "BS-mirror-devkey-preexisting: a profile that existed before the build -> no dev-key WARN" {
+  _devkey_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  mkdir -p "$TMPDIR_T/nh/.mirror-user-home/.tridium/security"
+  : > "$TMPDIR_T/nh/.mirror-user-home/.tridium/security/niagara.signing.xml"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"throwaway dev key"* ]]
 }
 
 # BS-slotomatic-hint: slot-o-matic logs "Could not process <file>: Found multiple metadata blocks" as a WARNING

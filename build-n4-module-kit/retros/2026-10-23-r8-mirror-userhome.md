@@ -22,10 +22,11 @@ real `~/.gradle` isolated it and kept offline dependency resolution working.
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | `org.gradle.jvmargs -Duser.home` does not reach an already-running Gradle daemon; isolate user.home via `JAVA_TOOL_OPTIONS` + `--no-daemon` for mirror builds | `toolbelt/build.sh` (mirror mode) + `build-verify.md` § Mirror | `[ev: CERT-live local build 2026-10-22]` |
+| Δ1 | `org.gradle.jvmargs -Duser.home` (and `systemProp.user.home`) in `gradle.properties` does not reach an already-running Gradle daemon; isolate user.home via `JAVA_TOOL_OPTIONS` + `--no-daemon` for mirror builds | `toolbelt/build.sh` (mirror mode) + `build-verify.md` § Mirror | `[ev: CERT-live local build 2026-10-22]` |
 
 ## Lessons
-- A JVM argument in `gradle.properties` only reaches a daemon that starts after it; a reused daemon keeps its own command line.
+- A JVM argument in `gradle.properties` (`org.gradle.jvmargs=-Duser.home=…` or `systemProp.user.home=…`) only reaches a daemon that starts after it; a reused daemon keeps its own command line.
+- Review correction: the mirror path cannot contain whitespace (exit 33), a dev-key signature in the mirror user home is a WARN, and `maven.repo.local` is pinned to the real `~/.m2`.
 - Moving `user.home` also moves the default Gradle user home, so pin `GRADLE_USER_HOME` before isolating it.
 
 ---
