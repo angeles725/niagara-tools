@@ -7,10 +7,10 @@ BComponent()` requires a running NRE; see the offline-instantiation-boundary mem
 
 Exemplar to read before writing: `componentLinks-rt/srcTest/…/BLinkCheckTestTest.java` (B958 §958.3–958.4).
 
-> **NRE requirement:** `moduleTest` tests do NOT pass the WSL gate (`niagaraTest` task has a known
-> plugin bug in sdk 7.6.17; run from Workbench → **Tools → Run Tests** until the task is fixed).
-> Keep them as a separate QA tier — they verify inter-component link/station behaviour that pure JUnit
-> cannot reach. `[ev: corpus B958 §958.3]`
+> **NRE requirement:** `moduleTest` tests run on a native Windows Niagara install. From a WSL shell, run
+> Gradle's `niagaraTest` through `cmd.exe` on a Windows copy of the tree (§ Running from WSL); only a WSL-side
+> Gradle with plugin 7.6.17 discovers 0 tests. Keep them as a separate QA tier — they verify inter-component
+> link/station behaviour that pure JUnit cannot reach. `[ev: corpus B958 §958.3]` `[ev: retro testing-parity-btestng Δ1]`
 
 ---
 
@@ -161,9 +161,30 @@ public void ngTestLinkCheck2() throws Exception {
 4. Run the tests on a native (non-WSL) Niagara install with `bin/test` and a developer license:
    - **Inner loop:** Workbench → Tools → Run Tests, or the console runner `test <module>`, `test <module:Type>`,
      `test <module:Type.method>` for one module, class or method (the course instructor's choice).
-   - **CI with coverage:** Gradle `niagaraTest` (+ JaCoCo), as the course uses it, on a native host only. From WSL
-     plugin 7.6.17 discovers 0 tests (Known gotchas below), so a WSL build gates only the `moduleTestJar` compile.
+   - **Gradle `niagaraTest`** (+ JaCoCo), as the course uses it (Lab 7, 9/9), on Windows; from WSL through
+     `cmd.exe` (§ Running from WSL). This is the primary route; Workbench Run Tests is the fallback.
    `[ev: corpus B1418 §1418.5 f]` `[ev: corpus B961 §961.3]` `[ev: retro course-recordings Δ7]`
+
+### Running from WSL `[ev: retro testing-parity-btestng Δ1]` `[ev: retro testing-parity-btestng Δ3]`
+
+```bash
+# Gradle needs a Windows path: copy the gradle root to %TEMP% (cd /d rejects a \\wsl.localhost UNC path).
+cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat \
+  -PniagaraPluginVersion=<the plugin version in THIS niagara_home's etc/m2> :<part>:clean :<part>:niagaraTest"
+```
+
+- **Always `:clean` first:** after a failed run `niagaraTest` is UP-TO-DATE and reports nothing.
+- **Count the tests, not the exit code.** `BUILD SUCCESSFUL` with `Total tests run: 0` is a failed run. The two
+  known causes: a WSL-side Gradle (plugin 7.6.17), and a test jar the test NRE cannot trust: the default
+  self-signed `Niagara4Modules` dev key logs `Could not validate cert chain` → `invalid test target(s)`. Sign with a
+  CA-chained profile (`niagaraSigning { aliases; signingProfileFile }`, `build-verify.md` § Signing per deploy
+  target) or import the signer's root into that NRE's user trust store; ask before changing a client root's
+  signing block, since it also signs the shipped jars.
+- **`:jar` writes into `niagara_home`:** it overwrites `<niagara_home>/modules/<part>.jar` and installs
+  `<part>Test.jar`; on a reference install back up the first, restore it and remove the second afterwards, then
+  delete the `%TEMP%` copy.
+- Proof: the ColdRoomPan-rt `BTestNgStation` pilot ran 6/6 this way on 4.15.3.28, and five production mutations
+  each failed 1-3 tests (client commit 337ee6c, retro `testing-parity-btestng`).
 
 See also: `types/structure.md §PASS state + scaffold` (scaffold emits a stub `moduleTest-include.xml`);
 `types/logic.md §Link lifecycle — gating and reacting` (the `doCheckLink`/INDIRECT-link patterns
@@ -392,9 +413,8 @@ the main Gradle section above).
 
 ### Known gotchas (R6)
 
-- **`niagaraTest` task bug (sdk 7.6.17):** run from WSL, the Gradle `niagaraTest` task discovers 0 `moduleTest`
-  tests. Use the native runners of the checklist step 4 (Workbench Run Tests or console `test`); `niagaraTest` as a
-  CI step needs a native host. `[ev: corpus B961 §961.3]`
+- **`niagaraTest` from a WSL-side Gradle (plugin 7.6.17) discovers 0 `moduleTest` tests.** Run it on Windows
+  (§ Running from WSL); a 0-test `BUILD SUCCESSFUL` is a failure, never a pass. `[ev: corpus B961 §961.3]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports

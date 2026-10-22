@@ -31,7 +31,7 @@
 # Mutation: PHW-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-persist-hot-write first 'usage: lint-persist-hot-write.sh [--strict] <src-root>' "$@"
 
 cat > "$AL_TMP/main.awk" << 'AWKEOF'
@@ -78,7 +78,8 @@ END {
   # A declaration is distinguished from a call by what follows "()" on the line: a call ends
   # in ';' right after the parens (possibly with trailing whitespace); a declaration is either
   # bare (Allman '{' on the next line) or a one-liner "name() { ... }".
-  n_scope = 1
+  # Scope slot 1 is changed() itself; slots 2.. are the one-hop callees found below.
+  n_scope = 1; scope_start[1] = changed_line; scope_end[1] = changed_end
   for (c = 1; c <= n_callee; c++) {
     callee_line = 0
     for (i = 1; i <= NR; i++) {
@@ -122,7 +123,6 @@ END {
   # 4. Scan changed()'s body and every one-hop callee's body for setter CALLS (not
   #    declarations) to any non-transient property, with no cadence guard within 5 lines above
   #    (same scope).
-  scope_start[1] = changed_line; scope_end[1] = changed_end
 
   for (k = 1; k <= n_nt; k++) {
     cap = toupper(substr(nt_name[k], 1, 1)) substr(nt_name[k], 2)

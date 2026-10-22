@@ -53,3 +53,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$M" "$TMPDIR_T/nh" "$TMPDIR_T/mir"
   [ "$status" -eq 0 ] && [[ "$output" == *"0 jars linked"* ]]
 }
+
+@test "M6: a mirror holding build.sh's .mirror-user-home (with a generated .tridium) refreshes cleanly and never touches the source" {
+  run "$M" "$TMPDIR_T/nh" "$TMPDIR_T/mir"
+  [ "$status" -eq 0 ]
+  mkdir -p "$TMPDIR_T/mir/.mirror-user-home/.tridium/security"
+  : > "$TMPDIR_T/mir/.mirror-user-home/.tridium/security/niagara.signing.xml"
+  run "$M" "$TMPDIR_T/nh" "$TMPDIR_T/mir"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TMPDIR_T/mir/.mirror-user-home" ] && [ -f "$TMPDIR_T/mir/.niagara-mirror" ]
+  [ ! -e "$TMPDIR_T/nh/.mirror-user-home" ]
+}

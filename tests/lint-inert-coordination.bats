@@ -142,6 +142,12 @@ JEOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"C.java:3"* ]]
   [[ "$output" == *"staggerDelay"* ]]
+  # the title also names defrostToken: a field whose capitalized Token sits mid-identifier is coordination state too
+  sed -i 's/staggerDelay = 30/defrostToken = 30/' "$TMPDIR_T/Mod/src/com/x/C.java"
+  run "$ICO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"C.java:3"* ]]
+  [[ "$output" == *"defrostToken"* ]]
 }
 
 @test "ICO-call: a units() CALL above the declaration is not taken for the declaration" {

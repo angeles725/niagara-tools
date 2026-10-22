@@ -259,3 +259,32 @@ JEOF
   [[ "$output" == *"arrow.js:9"* ]]
   [[ "$output" == *"no location.reload("* ]]
 }
+
+@test "SPR11: a concise-body arrow poll ends at its statement -- a lastOk set in a later function is not its success path (#226)" {
+  # Mutation: SPR11 -- with no braces to extract, the poll body ran to end of file, so a lastOkAt assignment in
+  # an unrelated later function read as the poll's success time and the WARN vanished.
+  cat > "$TMPDIR_T/Mod/src/rc/concise.js" << 'JEOF'
+const poll = () => fetch('/api/state').then((r) => r.json()).then(render).catch(markStale);
+setInterval(poll, 5000);
+function onLoginOk() { lastOkAt = Date.now(); }
+function watchdog() { if (Date.now() - lastOkAt > 30000) location.reload(); }
+JEOF
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"concise.js:2"* ]]
+  [[ "$output" == *"not keyed on time since the last success"* ]]
+}
+
+@test "SPR12: a concise-body arrow poll that spans lines up to its ';' keeps its own .catch( (#226)" {
+  cat > "$TMPDIR_T/Mod/src/rc/concise2.js" << 'JEOF'
+const poll = () =>
+  fetch('/api/state')
+    .then((r) => r.json())
+    .catch(markStale);
+setInterval(poll, 5000);
+JEOF
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"concise2.js:5"* ]]
+  [[ "$output" == *"no location.reload("* ]]
+}

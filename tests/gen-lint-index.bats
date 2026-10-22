@@ -202,17 +202,18 @@ RM
   grep -q 'lines 2-5' "$GEN"
 }
 
-@test "GLI-awkfail: an awk failure exits 3 and leaves the committed INDEX.md untouched" {
+@test "GLI-awkfail: an unreadable lint header exits 3 and leaves the committed INDEX.md untouched" {
+  # The generator is Go (go/internal/lintindex); a header it cannot read is the env failure that a
+  # failing awk used to be. Mutation: GLI-awkfail -- treating it like a contract violation exits 1.
+  [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
   _mklint lint-alpha.sh "flags alpha things."
   bash "$GEN" "$FK"
   cp "$FK/toolbelt/INDEX.md" "$TMPDIR_T/before.md"
   _mklint lint-new.sh "new lint, index would change."
-  mkdir -p "$TMPDIR_T/bin"
-  printf '#!/bin/sh\nexit 2\n' > "$TMPDIR_T/bin/awk"
-  chmod +x "$TMPDIR_T/bin/awk"
-  PATH="$TMPDIR_T/bin:$PATH" run bash "$GEN" "$FK"
+  chmod 000 "$FK/toolbelt/lint-new.sh"
+  run bash "$GEN" "$FK"
   [ "$status" -eq 3 ]
-  [[ "$output" == *"awk"* ]]
+  [[ "$output" == *"lint-new.sh"* ]]
   cmp "$TMPDIR_T/before.md" "$FK/toolbelt/INDEX.md"
 }
 

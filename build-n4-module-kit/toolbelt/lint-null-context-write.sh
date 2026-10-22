@@ -39,8 +39,8 @@
 # Mutation: NCW-bql-unrelated -- matching a one-argument get( anywhere in the window flags params.get("x") beside a clean get(base, cx)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
-self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)" || self="${BASH_SOURCE[0]}"
-GO_DIR="$(cd "${self%/*}/../.." && pwd)/go"
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
 [ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-null-context-write: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
 . "$GO_DIR/go-tool.sh"

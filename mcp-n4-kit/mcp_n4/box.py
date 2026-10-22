@@ -67,6 +67,14 @@ class AuthError(BoxError):
     """HTTP 401/403. Never retried: 5 failures in 30 s lock the account (B1179)."""
 
 
+class HttpStatusError(BoxError):
+    """A non-auth HTTP status a caller maps to a typed result (e.g. 403/404 on /file/)."""
+
+    def __init__(self, code, message, channel=None, key=None):
+        super().__init__(message, channel, key)
+        self.code = code
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Refuse every redirect: urllib would re-send Authorization to the new target."""
 
@@ -274,6 +282,10 @@ class BoxClient:
                 pass
         return exc
 
+    #: Byte cap of one BOX reply (the same 32 MB as `get_ord`): a longer reply is refused,
+    #: never read whole into memory nor parsed from a truncated body.
+    max_reply_bytes = 32 * 1024 * 1024
+
     # -- transport
     def call(self, channel, key, body):
         self._seq += 1
@@ -286,7 +298,11 @@ class BoxClient:
             headers={"Authorization": self._auth, "Content-Type": "application/json"})
         try:
             with self._opener.open(req, timeout=self.timeout) as resp:
-                reply = json.loads(resp.read().decode())
+                raw = resp.read(self.max_reply_bytes + 1)
+            if len(raw) > self.max_reply_bytes:
+                raise BoxError("BOX reply larger than %d bytes: refused, not parsed in part"
+                               % self.max_reply_bytes, channel, key)
+            reply = json.loads(raw.decode())
         except BoxError:
             raise
         except urllib.error.HTTPError as exc:
@@ -329,6 +345,44 @@ class BoxClient:
         if truncated:  # never hand back a torn last line
             text = text[:text.rfind("\n") + 1]
         return text, truncated
+
+    def get_file(self, url_path, timeout=None, max_bytes=2 * 1024 * 1024):
+        """`GET <url_path>` (a `/file/...` path) with HTTP Basic: a dict of the body.
+
+        `{"body": bytes, "truncated": bool, "content_type": str|None,
+        "content_length": int|None}`; at most `max_bytes` are read. A 401 raises
+        `AuthError` once (never retried; the server latches on it). A 403 or 404 raises
+        `HttpStatusError`: the user is authenticated, the file is denied or absent, which
+        is no failed login. Redirects are refused like every other call.
+        """
+        if not url_path.startswith("/file/"):
+            raise ValueError("get_file reads /file/ paths only, got %r" % (url_path,))
+        req = urllib.request.Request(self.base_url + url_path, method="GET",
+                                     headers={"Authorization": self._auth})
+        try:
+            with self._opener.open(req, timeout=timeout or self.timeout) as resp:
+                raw = resp.read(max_bytes + 1)
+                headers = resp.headers
+        except BoxError:
+            raise
+        except urllib.error.HTTPError as exc:
+            exc.close()
+            if exc.code == 401:
+                raise self._auth_error(exc.code, "file", "get") from None
+            if exc.code in (403, 404):
+                raise HttpStatusError(exc.code, "HTTP %d from station" % exc.code,
+                                      "file", "get") from None
+            raise BoxError("HTTP %d from station" % exc.code, "file", "get") from None
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            raise BoxError("transport failure: %s" % exc, "file", "get") from None
+        length = headers.get("Content-Length") if headers is not None else None
+        try:
+            length = int(length) if length is not None else None
+        except ValueError:
+            length = None
+        return {"body": raw[:max_bytes], "truncated": len(raw) > max_bytes,
+                "content_type": headers.get("Content-Type") if headers is not None else None,
+                "content_length": length}
 
     def about(self, timeout=None, max_bytes=64 * 1024):
         """`GET /obix/about/` text (the oBIX About document), one attempt.

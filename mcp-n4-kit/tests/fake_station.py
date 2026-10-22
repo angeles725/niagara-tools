@@ -5,6 +5,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import base64
+import urllib.parse
 
 from mcp_n4 import box
 
@@ -45,6 +46,14 @@ class FakeStation:
         #: What `GET /obix/about/` reports as productVersion; None answers 404 (no oBIX).
         self.product_version = "4.14.0.162"
         self.about_requests = 0  # GETs are not counted in `requests` (BOX POSTs only)
+        #: Station files served on `GET /file/<path>` (FileServlet): path -> (bytes, type),
+        #: or path -> an HTTP status code to answer instead.
+        #: A `.bog`/`.bog.gz` path answers 403 and an unknown path 404, like the station.
+        self.files = {}
+        self.file_requests = []  # decoded paths of every `GET /file/...`
+        #: `GET /ord/<ORD>` answers: (substring of the decoded ORD, CSV bytes); else 404.
+        self.ord_routes = []
+        self.ord_requests = []  # decoded ORDs of every `GET /ord/...`
         self._next_handle = 0x10
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
@@ -63,8 +72,13 @@ class FakeStation:
 
             def do_GET(self):
                 station.about_requests += 1
+                ctype = "text/xml"
                 if not station._authorized(self.headers.get("Authorization", "")):
                     code, out = 401, b""
+                elif self.path.startswith("/file/"):
+                    code, out, ctype = station._file(self.path[len("/file/"):])
+                elif self.path.startswith("/ord/"):
+                    code, out, ctype = station._ord(self.path[len("/ord/"):])
                 elif self.path.rstrip("/") != "/obix/about" or station.product_version is None:
                     code, out = 404, b""
                 else:  # shape of a live 4.14 answer (B457): one <str> per property
@@ -77,7 +91,7 @@ class FakeStation:
                         '  <str val="%s" name="productVersion"/>\n'
                         '</obj>\n' % station.product_version).encode()
                 self.send_response(code)
-                self.send_header("Content-Type", "text/xml")
+                self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(out)))
                 self.end_headers()
                 self.wfile.write(out)
@@ -118,6 +132,29 @@ class FakeStation:
     def stop(self):
         self._server.shutdown()
         self._server.server_close()
+
+    def _file(self, raw_path):
+        """`(code, body, content type)` of `GET /file/<raw_path>` (FileServlet model)."""
+        path = urllib.parse.unquote(raw_path)
+        self.file_requests.append(path)
+        if path.lower().endswith((".bog", ".bog.gz")):  # FileServlet.canRead refuses them
+            return 403, b"", "text/html"
+        if path not in self.files:
+            return 404, b"", "text/html"
+        entry = self.files[path]
+        if isinstance(entry, int):  # an injected status, e.g. 403 for a permission denial
+            return entry, b"", "text/html"
+        body, ctype = entry
+        return 200, body, ctype
+
+    def _ord(self, raw_ord):
+        """`(code, body, content type)` of `GET /ord/<raw_ord>` from `ord_routes`."""
+        ord_text = urllib.parse.unquote(raw_ord)
+        self.ord_requests.append(ord_text)
+        for needle, body in self.ord_routes:
+            if needle in ord_text:
+                return 200, body, "text/csv"
+        return 404, b"", "text/html"
 
     def _authorized(self, header):
         expected = base64.b64encode(("%s:%s" % (self.user, self.password)).encode()).decode()

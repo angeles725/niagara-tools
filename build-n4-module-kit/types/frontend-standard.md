@@ -38,6 +38,9 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   responsive breakpoints.
 - [both] One design-token set in `css/base.css` (`--ok`, `--warn`, `--alarm`, `--offline`,
   `--manual`, spacing, radii, fonts); no hard-coded colors outside it.
+- [both] Station theme: a servlet SPA gets no theme CSS from the station. To follow the station's theme, link
+  `/module/web/rc/theme/theme.css` and `/module/theme<Name>/ux/theme.css` before `css/base.css`; otherwise
+  `base.css` alone defines the look (`types/theme.md` § 7). `[ev: corpus B1349 §1349.2]`
 - [both] One component per visual pattern (button, chip, card, table row, modal, HOA selector,
   toast), styled once and reused everywhere.
 - [HMI] Target the panel resolution exactly (1280×800); no page scroll (budget in `dashboard.md`

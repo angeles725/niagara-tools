@@ -21,7 +21,7 @@
 # Mutation: NMD2 -- drop the credential context guard so MD5-only files also WARN
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-no-md5-credential-digest first 'usage: lint-no-md5-credential-digest.sh [--strict] <src-root>' "$@"
 
 # check <file>: the line of the first MD5 call when the file also has a credential context.

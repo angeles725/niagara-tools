@@ -14,7 +14,7 @@
 # Mutation: JUX-finderr -- ignoring the find exit status reads an unreadable spec directory as no specs (or hides it)
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-jasmine-ux raw 'usage: lint-jasmine-ux.sh <ux-module-root>' "$@"
 ROOT="${AL_ROOTS[0]}"
 
@@ -26,10 +26,7 @@ fi
 specs=""
 if [ -d "$ROOT/srcTest/rc/spec" ]; then
     # A spec sub-directory find cannot enter is an env error, never "no specs" and never a clean pass.
-    if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$ROOT/srcTest/rc/spec" -name '*.js'; then
-        printf 'lint-jasmine-ux: cannot list every file under %s: %s\n' "$ROOT/srcTest/rc/spec" "$(head -n 1 "$AL_TMP/find.err")" >&2
-        exit 3
-    fi
+    scan_files_or_exit lint-jasmine-ux 3 "$AL_TMP/files" "$ROOT/srcTest/rc/spec" -name '*.js'
     specs=$(head -n 1 "$AL_TMP/files")
 fi
 if [ -z "$specs" ]; then

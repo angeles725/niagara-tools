@@ -77,7 +77,7 @@
 # [ev: retro campaign8-rc-scan]
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 
 FAILED=0
 STRICT=0
@@ -154,7 +154,7 @@ FNR == NR {
 function allowed(id) { return index($0, "rc-scan: allow " id) > 0 }
 # A login/auth/step-up gate mention. `auth` at a word or camelCase start, or after the gate prefixes
 # o / re / un (OAuth, oauth2, reauth, unauthorized), and not author/authority (authorize still counts).
-function mentions_gate(s,    t, pre, pre2, nxt, cap, start) {
+function mentions_gate(s,    t, pre, pre2, nxt, cap, word_start, gate_prefix) {
     if (tolower(s) ~ /login|step-?up/) return 1
     t = s
     while (match(t, /[Aa][Uu][Tt][Hh]/)) {
@@ -162,8 +162,9 @@ function mentions_gate(s,    t, pre, pre2, nxt, cap, start) {
         pre2 = (RSTART > 2) ? tolower(substr(t, RSTART - 2, 2)) : ""
         nxt = tolower(substr(t, RSTART + 4, 4))
         cap = (substr(t, RSTART, 1) == "A")
-        start = (pre !~ /[A-Za-z0-9]/ || (cap && pre ~ /[a-z0-9]/) || tolower(pre) == "o" || pre2 == "re" || pre2 == "un")
-        if (start && (nxt !~ /^or/ || nxt ~ /^ori[sz]/)) return 1
+        word_start = (pre !~ /[A-Za-z0-9]/ || (cap && pre ~ /[a-z0-9]/))         # auth, Auth, authToken, getAuth
+        gate_prefix = (tolower(pre) == "o" || pre2 == "re" || pre2 == "un")      # OAuth, reauth, unauthorized
+        if ((word_start || gate_prefix) && (nxt !~ /^or/ || nxt ~ /^ori[sz]/)) return 1
         t = substr(t, RSTART + 4)
     }
     return 0

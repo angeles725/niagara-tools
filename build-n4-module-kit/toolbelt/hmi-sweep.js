@@ -205,6 +205,16 @@ function clickVisibleNth(els, i) {
   return (el.dataset && el.dataset.tab) || (el.textContent || '').trim() || String(i);
 }
 
+// Runs in the page (serialized by $$eval, so self-contained): click the i-th --nav element and return its label
+// (data-page, else its text, else the index), or null when the nav set shrank after an earlier click. Unlike
+// clickVisibleNth it does not filter by visibility: the nav set is the fixed menu, counted once per page.
+function clickNavNth(els, i) {
+  const el = els[i];
+  if (!el) return null;
+  el.click();
+  return (el.dataset && el.dataset.page) || (el.textContent || '').trim() || String(i);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sweepScenario(browser, args, sc) {
@@ -237,12 +247,7 @@ async function sweepScenario(browser, args, sc) {
     await measure('main');
   }
   for (let n = 0; n < navCount; n++) {
-    const navLabel = await page.$$eval(args.nav, (els, i) => {
-      const el = els[i];
-      if (!el) return null;
-      el.click();
-      return el.dataset.page || (el.textContent || '').trim() || String(i);
-    }, n);
+    const navLabel = await page.$$eval(args.nav, clickNavNth, n);
     if (navLabel === null) {
       out.push({ label: `${args.nav}[${n}]`, m: { gone: true } });
       continue;
@@ -318,4 +323,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseArgs, rowsForView, summarize, withQuery, clickVisibleNth };
+module.exports = { parseArgs, rowsForView, summarize, withQuery, clickVisibleNth, clickNavNth };

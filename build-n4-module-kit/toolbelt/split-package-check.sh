@@ -10,8 +10,9 @@
 # [ev: code com/tridium/sys/module/ModuleClassLoader.java:186-294] [ev: code com/tridium/sys/module/NModule.java:333-335]
 #
 # Cross-module by nature, so it is not a per-module lint and report-module.sh (one module) does not run it. It runs
-# as the client repository's gate (issue #142): the push-time hook templates/client-pre-push (installed with
-# scripts/install-client-hooks.sh) or the CI template templates/split-package-check.yml; by hand before a release. Advisory by default (WARN, exit 0); --strict makes a split package exit 1 for a CI gate.
+# as the client repository's gate (issue #142) — the push-time hook templates/client-pre-push (installed with
+# scripts/install-client-hooks.sh) or the CI template templates/split-package-check.yml — and by hand before a
+# release. Advisory by default (WARN, exit 0); --strict makes a split package exit 1 for a gate.
 # <project-root> is ONE checkout: a directory that holds several checkouts or worktrees of the same project
 # reports every copied package as a split.
 #
@@ -35,7 +36,7 @@
 # Mutation: SPC-aggfail -- an unchecked sort | awk aggregation turns a failed sort into exit 0 with no rows
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 

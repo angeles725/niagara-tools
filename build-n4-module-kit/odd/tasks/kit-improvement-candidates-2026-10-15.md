@@ -73,7 +73,7 @@ Appendix B, outside the 168 count):
 
 | ID | Correction | Evidence | Also in a retro? |
 |---|---|---|---|
-| r3-report#R1 | `types/security.md:366-377` "DashboardPan omits X-Frame/nosniff/CSP" is wrong — `TridiumSecurityFilter` applies the station header providers to every `BWebServlet`; the snippet's CSP would REPLACE the station policy; `lint-servlet.sh` `api-response-headers` WARN is a false positive | `TridiumSecurityFilter.java:22-27`, `BJettyWebServer.java:1178-1180,1462-1468`, corpus B1349 C1 | yes, r3wsh Δ3 |
+| r3-report#R1 | `types/security.md:366-377` "DashboardPan omits X-Frame/nosniff/CSP" is wrong — `TridiumSecurityFilter` applies the station header providers to every `BWebServlet`; the snippet's CSP would REPLACE the station policy; `lint-servlet.sh` `api-response-headers` WARN is a false positive | vineflower `TridiumSecurityFilter.java:22-27`, vineflower `BJettyWebServer.java:1178-1180,1462-1468`, corpus B1349 C1 | yes, r3wsh Δ3 |
 | r3-report#R2 | `types/logic-authoring.md:646` — `pingEnabled` is already ON by default (`<network>/monitor`) | `BPingMonitor.java:128`, corpus B1348 C1 | yes, r3di Δ2 |
 | r3-report#R3 | shl Δ7(b): the non-driver-client gate is CLOSED by default (`HttpClientService.enableNonDriverClients=false`) | `BHttpClientService.java:231-252,270`, corpus B1346 §1346.2 | yes, r3di Δ4 |
 | r3-report#R4 | shl Δ9: the jsonToolkit type-override hook is `overrideValueEncoding(BValue)`; `doOverride` is `final` in the 4.15 jar | `javap jsonToolkit-rt.jar!…/BTypeOverride`, corpus B1350 | yes, r3pec Δ2 |
@@ -254,13 +254,23 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** commit 337ee6c (6/6, five mutations bite); course Lab 7 9/9; `Could not validate cert chain` → `invalid test target(s)`.
 - **Target:** `types/moduleTest.md:10-13,156,385-386`, `BUILD-LOOP.md:162-165`, `build-verify.md` § Signing.
 - **Lint-able:** no (doctrine; C40 adds the runner). **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-9, `docs/r8-t9i-libs`, 2026-10-23; tpb Δ1, Δ3): `types/moduleTest.md` NRE note,
+  checklist step 4, new § Running from WSL (cmd.exe on a `%TEMP%` copy, `:clean` first, count the tests, the
+  self-signed test-jar cause, back up `modules/<part>.jar`), Known gotchas; `BUILD-LOOP.md` § moduleTest;
+  `build-verify.md` § Unit tests in WSL. The runner (tpb Δ2) stays with C40. Pin KL4.
 
 ### C13 — Security headers: station headers already apply to module servlets
 - **Sources:** r3wsh#Δ3 (primary, corrects the kit) · wuh#Δ5 extends (Hx needs X-Frame Sameorigin + default CSP) · r3wsh#Δ5 extends (embed via CSP `frame-ancestors` on the station provider, never X-Frame `Any`) · r3-report#R1
 - **Winning text:** remove "DashboardPan omits X-Frame/nosniff/CSP — gaps ODA2-G1/G2" and the `setHeader` snippet (its CSP replaces the station policy); set a header only to deviate deliberately; commissioning `curl -I` check.
-- **Evidence:** `BJettyWebServer.java:1178-1180,1462-1468`, `TridiumSecurityFilter.java:22-27`, corpus B1349 C1, B1328 row 9.
+- **Evidence:** vineflower `BJettyWebServer.java:1178-1180,1462-1468`, vineflower `TridiumSecurityFilter.java:22-27`, corpus B1349 C1, B1328 row 9.
 - **Target:** `types/security.md:360-380`; `toolbelt/lint-servlet.sh` `api-response-headers` WARN → info.
 - **Lint-able:** yes (downgrade). **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-8, `docs/r8-t9i-headers`, 2026-10-23; r3wsh Δ3, Δ5, wuh Δ5, r3-report#R1):
+  `types/security.md` § 7 rewritten (station providers reach every servlet, set a header only to deviate, embed with
+  CSP `frame-ancestors`, Hx needs the defaults); `lint-servlet.sh` `api-response-headers` WARN → INFO (no `--strict`
+  escalation), `report-module.sh` counts an INFO-only servlet as PASS (RM16b), `commissioning-verify.sh` probe text.
+  Premise refined: the X-Frame provider class default is `deny` (vineflower `BXFrameOptionsHeaderProvider.java:34`); only the
+  guide and vineflower `BWebService.java:255` say `Sameorigin`, so the commissioning probe reads the live value. Pins KH1-KH4.
 
 ### C14 — `pingEnabled` is ON by default
 - **Sources:** r3di#Δ2 (primary) · r3-report#R2
@@ -337,6 +347,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `alarm-rt/javax/baja/alarm/BAlarmClass.java:178` (4.15.6.20 = toOffnormal|toFault|toNormal), `BAlarmSourceExt.java:1462,1634`, corpus B1324 §1324.1.
 - **Target:** `types/logic.md:324-325`.
 - **Lint-able:** partial. **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; cas Δ1): `types/logic.md` alarm policy items 3-4. **Premise
+  corrected:** the default is NOT version-dependent: vineflower 4.14.0.162 `BAlarmClass.java:115` (`make(7)`) and the
+  devguide 4.15.6.20 source `:178` both say toOffnormal|toFault|toNormal; the kit's "without toNormal" was wrong in
+  both. `timeDelay` offnormal-only and the stale/disabled skip folded as written. Pin KL3; owed Go lint G16.
 
 ### C23 — Dist attribute table inverts `noStation`
 - **Sources:** pps#Δ1 (primary) · r3pec#Δ1 corrects part (default) · r3-report#R6
@@ -384,6 +398,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `unzip -l modules/net-rt.jar` → 0 okhttp; wrapper `pom.properties`; `BAbstractMqttDriverNetwork.java:64,69,125`; corpus B1320 §1320.3, B1321 §1321.2, B1323.
 - **Target:** `types/cloud-connector.md:61-63`, `types/third-party-libraries.md:30,143,159-160,167,171,174`.
 - **Lint-able:** yes — grep `okhttp3.*net-rt`, `2\.9\.0`, `mqtt-driver`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; shl Δ2, Δ5, drp Δ1): `types/cloud-connector.md` § 2.1 (okhttp in
+  `bin/ext`, `nre(...)`; MQTT native first) and `types/third-party-libraries.md` (Gson 2.13.2, `abstractMqttDriver`
+  with Paho 1.2.5 / Jackson 2.22.1 / JJWT 0.12.7, OkHttp row). Verified on the 4.15.6.20 install (`bin/ext`,
+  `pom.properties`); the MQTT guide lines moved to `MQTTRequirements-74179811.txt:11,17`. Pins KL1, KL2. The Commons
+  Lang `nre(...)` half of shl Δ2 is not folded (no kit text names it).
 
 ### C28 — Signing-required permission roster names three groups; there are six
 - **Sources:** has#Δ4 (primary) · bdps#Δ2 reinforces + extends (roster with triggers: NETWORK_COMMUNICATION, REFLECTION, MANAGE_EXECUTION)
@@ -392,6 +411,14 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `com/tridium/security/*PermissionGroup.java` `requiresSignature()`, `NiagaraPermissionGroupFactory.java:196-204`, devguide `security/codeSigning.txt:123-129,163`, corpus B1312 §1312.3, B1235 §1235.5.
 - **Target:** `build-verify.md:132`, `types/distribution.md:110-115`, `types/third-party-libraries.md:148-151`, `types/structure.md` § module-permissions.xml, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — FAIL unsigned jar naming one of the six; source cross-check (Jackson→REFLECTION, `shutdownNow`→MANAGE_EXECUTION, sockets→NETWORK_COMMUNICATION). **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; has Δ4, bdps Δ2): `build-verify.md` § Signing per deploy target
+  (six groups, triggers, three trust routes), `types/distribution.md` § Hard signing gate, `types/third-party-libraries.md`
+  signing note, `types/structure.md` module-permissions bullet. **Open verification closed at the factory layer:** code wins over
+  the devguide's "halt" (`codeSigning.txt:185`): organized/ vineflower 4.14.0.162 `NiagaraPermissionGroupFactory.java:196-204`
+  (decompiled `:243-248`, procyon `:215-220`) and javap of `baja.jar` 4.15.6.20 and iC-Niagara 4.13.2.18 (throw at 537
+  inside the 134-547 try, WARNING "Skipping element") all skip; other builds not verified; the cert-chain layer stays open (niagara-research B1312-G1). The
+  removed kit claim "fails to load unsigned (`ValidationException`) even in LOW" had no code behind it. Pin KL5; owed Go
+  lint G15 `permission-signature`.
 
 ### C29 — A palette entry is not a `.ntpl`; the `§Templates` link dangles
 - **Sources:** pps#Δ4 (primary; provisioning half rides along)
@@ -405,9 +432,13 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C30 — Theme module rules: `themeName` value is the module name; picker location wrong; SPA not auto-themed
 - **Sources:** wuh#Δ2 (primary) · r3wsh#Δ4 extends (servlet SPA must link `theme.css` explicitly)
-- **Evidence:** `CustomThemeModuleManager.java:24,47`, `BHxProfile.java:291`, `WbWebWidgetServlet.java:143-149`, corpus B1328 §1328.2 C1, B1349 §1349.2.
+- **Evidence:** vineflower `CustomThemeModuleManager.java:24,47`, vineflower `BHxProfile.java:291`, vineflower `WbWebWidgetServlet.java:143-149`, corpus B1328 §1328.2 C1, B1349 §1349.2.
 - **Target:** `types/theme.md` §2-§3, §7; `types/frontend-standard.md`.
 - **Lint-able:** yes — def value == moduleName, `theme` prefix, `nss/*.nss` present; grep SPA HTML for `theme.css`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-8, 2026-10-23; wuh Δ2, r3wsh Δ4): `types/theme.md` § 2 (value = module name with
+  the `theme` prefix, `nss/*.nss` required, silent fallback, per-web-profile choice, Tools › Options for Workbench,
+  def via `moduleManifest { defines }`), § 3 layout, § 7 SPA theming; `types/frontend-standard.md` § 1 theme link
+  rule. Owed Go lints G13 `theme-module`, G14 `spa-theme-link`.
 
 ### C81 — `verify-module.sh` false-FAILs live-loaded signed jars (issue #260)
 - **Sources:** bsw#Δ1 (primary: `signed` PASSes on any `META-INF/<ALIAS>.SF` + matching `.RSA`/`.DSA`/`.EC`; report the alias) · bsw#Δ2 extends (pipefail/SIGPIPE 141 false negatives in `check_signed`, `check_types_have_classes`, `check_palette`; here-string membership tests) · bsw#Δ3 extends (skip `META-INF/versions/**` in `check_bytecode_major`, as `lint-bundled-jar-class-version.sh` already does)
@@ -439,8 +470,13 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: transcript 2026-10-16 exam P1 slotomatic --info]`.
 - **Target:** `METHODOLOGY.md` K15 (:122), `toolbelt/build.sh` (pre-gradle marker scan + failure hint).
 - **Lint-able:** yes — FAIL a `.java` with a `BEGIN BAJA AUTO GENERATED` marker and no `/*@ $` stamp before `END`. **Fold type:** doc fix + build.sh check + bats.
-- **Fold status:** NOT FOLDED (WU-P0-4, 2026-10-22): both targets, `METHODOLOGY.md` K15 and `toolbelt/build.sh`, are outside
-  the unit's allowed surface; OWED in `BUILD-STATE.md` with slo Δ1 (K15 text + Go lint G3 `slotomatic-markers`).
+- **Fold status:** FOLDED (`docs/r8-t9i-k15`, 2026-10-23; slo Δ1): `METHODOLOGY.md` K15 rewritten to the observed
+  mechanism, verified in code: organized/ devkit-wb 4.14.0.162 vineflower `JavaUnit.java:270-272` throws "Found multiple
+  metadata blocks" for any stamp-line count other than one (an empty region has zero), `Compiler.java:241` logs it as a
+  WARNING and goes on; javap of `niagara-slotomatic-library-2.0.4.jar` (4.15.6.20) holds both messages. The compileJava
+  message is transcript-only (emitting class not located). `toolbelt/build.sh` prints the skipped file + K15 when the
+  compile error appears (BS-slotomatic-hint); the pre-gradle marker scan stays owed as Go lint G3 `slotomatic-markers`
+  (no new bash check). Earlier "NOT FOLDED (WU-P0-4)" superseded.
 
 ---
 
@@ -587,6 +623,16 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: code devkit-wb.jar!gradle/build.gradle.kts.vm:18]`.
 - **Target:** `toolbelt/lint-structure.sh`, `build-verify.md` § Signing per deploy target, `templates/`, `toolbelt/scaffold-module.sh` (+ scaffold-diff fixtures).
 - **Lint-able:** yes. **Fold type:** template + lint + doc section.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; bsw Δ4, issue #266): `lint-structure.sh` L15 (WARN, uncommented-code
+  rule shared by table with `preflight.sh` sample-sign, LS15-sync), `templates/signing-root.gradle.kts`, both fixture
+  roots (so `scaffold-module.sh` emits it; the script prints the two gradle properties), `build-verify.md`. The
+  property-driven `aliases`/`signingProfileFile` form (the course form uses literals) was built offline (U3b; N4
+  4.14.0.162 mirror, plugin 7.6.17, Gradle 7.6, via `build.sh`): it compiles, configures, and fails closed (no
+  properties → `:jar` "signingAwareArchive.aliases doesn't have a configured value", exit 30; missing profile file →
+  `:jar` "doesn't exist", exit 30; `build.sh` needs `ORG_GRADLE_PROJECT_*`, kit issue #308) `[CERT-live local build]`.
+  A throwaway self-signed key + profile signs the jar (jarsigner verified), and `allowDefaultProfile.set(false)` alone
+  refuses a profile-less build ("The default profile is not available"); without it the plugin silently signs with an
+  auto-created Niagara4Modules dev key `[CERT-live local build]`. A production CA-issued profile was not exercised.
 
 ### C86 — Jar-lock diagnosis must be route-independent; always run qualified tasks
 - **Sources:** bsw#Δ5 (primary)

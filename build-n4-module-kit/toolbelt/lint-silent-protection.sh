@@ -33,7 +33,7 @@
 # Mutation: SP-console -- drops the console-only row, so an alarm-only trip loses its local-surface advisory
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -59,13 +59,10 @@ SRC="$1"
 # A directory with no .java files cannot have any trips — a silent exit 0 hides a misconfigured
 # invocation (wrong path, empty scaffold). Emit an ERROR row and exit 3.
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 # One fail-closed walk feeds every pass: a sub-directory find cannot enter is an env error (exit 3),
 # never a silently shorter file list.
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$SRC" -name '*.java'; then
-  printf 'lint-silent-protection: cannot list every file under %s: %s\n' "$SRC" "$(head -n 1 "$_TMP/find.err")" >&2
-  exit 3
-fi
+scan_files_or_exit lint-silent-protection 3 "$_TMP/files" "$SRC" -name '*.java'
 _java_count=$(wc -l < "$_TMP/files")
 if [ "$_java_count" -eq 0 ]; then
   printf 'ERROR  lint-silent-protection  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"

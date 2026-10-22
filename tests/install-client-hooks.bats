@@ -14,6 +14,7 @@ setup() {
   INSTALLER="$REPO/scripts/install-client-hooks.sh"
   HOOK_TPL="$KIT/templates/client-pre-push"
   export GIT_CONFIG_GLOBAL="$BATS_TEST_TMPDIR/gitconfig"   # no host global hooksPath leaks in
+  export GIT_CONFIG_SYSTEM=/dev/null                         # nor a system one (/etc/gitconfig)
   CR="$BATS_TEST_TMPDIR/client"
   mkdir -p "$CR"
   git -C "$CR" init -q
@@ -113,8 +114,11 @@ _zero=0000000000000000000000000000000000000000
   bash "$INSTALLER" "$CR"
   sha=$(git -C "$CR" rev-parse HEAD)
   run bash -c "cd '$CR' && printf 'refs/heads/main %s refs/heads/main %s\n' $sha $_zero | .githooks/pre-push origin /remote"
-  [ "$status" -ne 0 ]
+  [ "$status" -eq 3 ]
   [[ "$output" == *"cannot verify"* ]]
+  # Mutation: CPH3-msg -- the final line said "fix the rows above" although no row was printed (#246).
+  [[ "$output" == *"could not be verified"* ]]
+  if [[ "$output" == *"fix the rows above"* ]]; then return 1; fi
 }
 
 @test "CPH4: no kit toolbelt (config unset, no env) blocks the push with a clear message" {

@@ -135,3 +135,21 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "SSL7: a CALL of the scheduled action inside if (...) { } is not its declaration (#226)" {
+  # Mutation: SSL7 -- a probe that accepts any `<action>(...) {` line takes `if (sweep(id)) {` for the declaration,
+  # and the logout remove() inside that if-block reads as a scheduled purge.
+  {
+    printf 'class E {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void started() {\n    Clock.schedulePeriodically(this, BRelTime.makeMinutes(1), sweep, null);\n  }\n'
+    printf '  void login(String id) {\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void logout(String id) {\n    if (sweep(id)) {\n      SESSIONS.remove(id);\n    }\n  }\n'
+    printf '  boolean sweep(String id) {\n    return true;\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/E.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"* ]]
+  [[ "$output" == *"SESSIONS"* ]]
+}
