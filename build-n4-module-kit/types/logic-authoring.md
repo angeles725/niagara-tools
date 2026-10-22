@@ -248,7 +248,7 @@ public final class BExportJob extends BSimpleJob {
 // caller, e.g. an action handler: BOrd jobOrd = new BExportJob(this).submit(cx);
 ```
 
-The advisory lints these rules imply (a doc grep that fails on `BJobs.`, a WARN for a `BSimpleJob` loop with no `isAlive()`) are owed; see `BUILD-STATE.md` kit `open_issues`.
+`toolbelt/lint-timers.sh` `job-cancel` WARNs a `BSimpleJob` `run()` loop with no `isAlive()` check.
 
 ### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
 

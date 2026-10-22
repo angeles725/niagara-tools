@@ -129,6 +129,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 WU-P0-3 docs folded on `docs/r8-t9b-p0-3` (2026-10-22): C06 BFacets card regenerated from the 4.15.6.20 `BFacets.java`
 (34 constants) in `types/logic-authoring.md`, C07 BFormat card in `types/logic.md`; the key-diff check, the BFormat WARN
 and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
+WU-P0 lints, `docs/r8-t9b-p0-lints` (2026-10-22): `lint-timers.sh` `jdk-thread` re-scoped (FAIL only a
+thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new `job-cancel` WARN.
 
 ---
 
@@ -140,7 +142,8 @@ and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 - **Evidence:** course `Labs/Lab Instructions.pdf` p78-80; `Labs/Lab9 Multithreaded/module-permissions.xml`; user's live `training-rt` ran all three executors.
 - **Target:** `types/logic.md:344`, `types/math-control-libraries.md:91,132`, `toolbelt/lint-timers.sh:477-485` (+ bats, mutation).
 - **Lint-able:** yes — FAIL only when `shutdownNow(`/`interrupt(`/`setDaemon(`/`setPriority(` appear without `MANAGE_EXECUTION`; else WARN. **Fold type:** doc fix + lint.
-- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; tjd Δ1, shs Δ4); lint OWED (tjd Δ2, shs Δ3).
+- **Fold status:** FOLDED (WU-P0-1 doc + WU-P0 lints, 2026-10-22; tjd Δ1, Δ2, shs Δ3, Δ4). Open decision 2 answered by the
+  Integrador: keep a blocking FAIL only for a thread-modifying call without `MANAGE_EXECUTION`.
 
 ### C02 — `BWorker.post(Runnable)` / `postAsync()` do not exist
 - **Sources:** rac#Δ1 (primary). Thread-naming half reinforced by tjd Δ5 (C37).
@@ -158,7 +161,8 @@ and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 - **Evidence:** `BSimpleJob.java:51-56`, `BRunnableJob.java:41`, corpus B1238 §1238.8, B1304 §1304.2.
 - **Target:** `types/logic-authoring.md:216-233` § Background jobs.
 - **Lint-able:** yes — doc grep FAIL `BJobs.`; WARN a `BSimpleJob.run(` loop with no `isAlive()`. **Fold type:** doc fix + lint.
-- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6); lint OWED.
+- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6); `job-cancel` WARN LANDED (WU-P0 lints);
+  the `BJobs.` doc grep is OWED.
 
 ### C04 — BStatus bit table is shifted from STALE on and misses ALARM
 - **Sources:** rac#Δ4 (primary)
@@ -728,6 +732,8 @@ and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 
 1. **Count of record:** 168, not 178 (see § Count). The ffcddad message is wrong; the retros are right.
 2. **C01 lint downgrade** turns a FAIL gate (`jdk-thread`) into a WARN for most code — this changes what blocks client modules.
+   **Answered 2026-10-22 (Integrador):** FAIL stays only for a thread-modifying call in a module that requests no
+   `MANAGE_EXECUTION`; everything else WARNs. Landed on `docs/r8-t9b-p0-lints`.
 3. **C13** retires the DashboardPan headers gap (ODA2-G1/G2) — the client tracking that cites it needs the same close.
 4. **C28** unsigned-group outcome on 4.15 (WARNING skip vs station halt) needs a target check before the kit states it.
 5. **C31** live proof of the keep-alive route (niagara-research B1315-G1) is still open.
@@ -929,11 +935,11 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-slots-components-contracts#Δ5` | types/logic-authoring.md or types/logic.md | Slot-API traps | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ6` | types/logic.md | Write/state discipline | C36 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | folded (WU-P0-1) |
-| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | accepted; owed (WU-P0-1 lint) |
+| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | folded (WU-P0 lints) |
 | `n4-course-threading-jobs-doctrine#Δ3` | types/actions.md §2 | Action threading; Invocation offload | C38 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ4` | types/logic.md, toolbelt/lint-intrinsic-lock.sh | No intrinsic locks on B* classes | C37 | P1 | accepted |
 | `n4-course-threading-jobs-doctrine#Δ5` | types/logic.md, toolbelt/lint-timers.sh | Thread naming/priority hygiene | C37 | P1 | accepted |
-| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | folded doc (WU-P0-1); lint owed |
+| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | folded (WU-P0-1 + lints) |
 | `testing-parity-btestng#Δ1` | types/moduleTest.md, BUILD-LOOP.md:162-165 | Native Windows niagaraTest route | C12 | P0 | accepted |
 | `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | accepted |
 | `testing-parity-btestng#Δ3` | types/moduleTest.md, build-verify.md | Test-jar signing prerequisite | C12 | P0 | accepted |
@@ -998,7 +1004,7 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | accepted |
 | `n4-course-handson-services-history-threading#Δ2` | types/actions.md § 2 | confirms C38: `Flags.ASYNC` lint stays WARN | C38 | P1 | accepted |
-| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | accepted; owed (WU-P0-1 lint) |
+| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | folded (WU-P0 lints) |
 | `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
 | `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |

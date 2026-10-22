@@ -32,6 +32,14 @@
 # Mutation: LC-gate -- dropping the parity pass lets an exit handler re-assert gated outputs ungated
 # Mutation: LC-gate-ok -- not looking for the gate call in the release point false-WARNs the fixed shape
 # Mutation: TT-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
+# Mutation: TC-B -- ignoring the modifying call lets a shutdownNow() with no MANAGE_EXECUTION pass as a WARN
+# Mutation: JT-perm -- ignoring the permission lookup FAILs an executor whose module requests MANAGE_EXECUTION
+# Mutation: JT-scope -- accepting any group type grants the station from a workbench-only request
+# Mutation: JT-header -- a single-line class-header match misses `class BX` / `extends BComponent` on two lines
+# Mutation: JT-self -- counting Thread.currentThread().interrupt() FAILs a thread restoring its own flag
+# Mutation: JT-comment -- matching comment and string text FAILs a shutdownNow() that is only mentioned
+# Mutation: JC-loop -- dropping the job-cancel pass lets a BSimpleJob loop run with no isAlive() check
+# Mutation: JC-comment -- matching comment text lets a commented-out isAlive() silence the WARN
 #
 # Detects timer lifecycle defects in module Java source files:
 #
@@ -59,12 +67,27 @@
 #                     Real shape: CompPan BCompressorControl :1760/:1764 startingUp.
 #                     [ev: corpus B801] [ev: corpus B812]
 #
-#   jdk-thread        A class extending a B* Niagara component/service that uses JDK
-#                     concurrency (ScheduledExecutorService, Executors.*, new Thread)
-#                     instead of Clock.schedule — JDK pools ignore station lifecycle
-#                     and the station SecurityManager denies modifyThread to module code.
-#                     Real shape: chihuahua BChiDashboardService :229/:305/:314.
+#   jdk-thread        A B* class (its header may span lines up to the first `{`) that
+#                     uses JDK concurrency (ExecutorService, Executors.*, ExecutorUtil.*,
+#                     new Thread). Creating and starting a thread is ALLOWED (Tridium
+#                     Lab 9), so that alone is a WARN recommending Clock / BWorker /
+#                     BSimpleJob / a named ExecutorUtil executor. FAIL only when the
+#                     class MODIFIES a thread — .shutdown( .shutdownNow( .interrupt(
+#                     .setPriority( .setDaemon( (ExecutorUtil.shutdown included;
+#                     Thread.currentThread().interrupt() excluded) on comment- and
+#                     string-blanked code — and the nearest module-permissions.xml
+#                     above the file requests no MANAGE_EXECUTION under
+#                     type="station" or type="all": the modifyThread check denies the
+#                     call at stop and the thread outlives the component.
+#                     Real shape: chihuahua BChiDashboardService :305/:455.
 #                     [ev: corpus B800 §800.3] [ev: corpus B806]
+#                     [ev: retro n4-course-threading-jobs-doctrine Δ2]
+#                     [ev: retro n4-course-handson-services-history-threading Δ3]
+#
+#   job-cancel        WARN (advisory). A class extending BSimpleJob whose run(...) body
+#                     holds a for/while/do loop but no isAlive() call: cancel only
+#                     interrupts the job thread, so the loop must check isAlive() and
+#                     throw JobCancelException. [ev: retro n4-course-threading-jobs-doctrine Δ6]
 #
 #   changed-sched     A Clock.schedule* call reachable from changed() or started()
 #                     (directly or via one private callee, one level deep) without an
@@ -124,7 +147,8 @@ fi
 
 # timer-ticket (per ticket field). Input: one Java file. Output lines: "OK" | "NOSTOP" | "MISS <field>".
 # Comments are blanked by mb_strip, string/char literal contents here; methods come from mb_parse.
-cat > "$_TMP/ticket.awk" <<'AWKEOF'
+# blank_str(s): string/char literal CONTENTS blanked (quotes kept); shared by ticket.awk and threads.awk.
+cat > "$_TMP/blank-str.awk" <<'AWKEOF'
 function blank_str(s,    out, j, c, q) {
   out = ""; q = ""
   for (j = 1; j <= length(s); j++) {
@@ -135,6 +159,8 @@ function blank_str(s,    out, j, c, q) {
   }
   return out
 }
+AWKEOF
+cat > "$_TMP/ticket.awk" <<'AWKEOF'
 { raw[++n] = $0 }
 END {
   mb_strip(raw, n, st)
@@ -359,7 +385,7 @@ while IFS= read -r f; do
   [ "$has_timer" -eq 0 ] && continue
 
   # ---- check: timer-ticket (per ticket field; see header) ------------------
-  if ! tt=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/ticket.awk" "$f" 2>"$_TMP/awk.err"); then
+  if ! tt=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/blank-str.awk" -f "$_TMP/ticket.awk" "$f" 2>"$_TMP/awk.err"); then
     printf 'lint-timers: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
     exit 3
   fi
@@ -471,18 +497,98 @@ while IFS= read -r f; do
 done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
-# Check: jdk-thread
-# A B* Niagara component/service that uses JDK concurrency primitives instead
-# of Clock.schedule — JDK pools are not bound to station lifecycle, and the
-# station SecurityManager denies modifyThread to module code.
-# Real shape: chihuahua BChiDashboardService :229/:305/:314.
-# [ev: corpus B800 §800.3] [ev: corpus B806]
+# Check: jdk-thread (FAIL / WARN) + job-cancel (WARN). See the header.
+# threads.awk output lines: "BCLASS <name>" · "JDK" · "MODIFY <line> <call>" · "JOBLOOP <line>".
 # ---------------------------------------------------------------------------
+cat > "$_TMP/threads.awk" <<'AWKEOF'
+{ raw[++n] = $0 }
+END {
+  mb_strip(raw, n, st)
+  for (i = 1; i <= n; i++) code[i] = blank_str(st[i])
+  # class header: from the line naming `class BX` to the first `{`, joined (a Tridium header spans lines)
+  for (i = 1; i <= n && cls == ""; i++) {
+    if (code[i] !~ /(^|[^A-Za-z0-9_])class[[:space:]]+B[A-Za-z0-9_]+/) continue
+    h = ""
+    for (j = i; j <= n; j++) { h = h " " code[j]; if (code[j] ~ /\{/) break }
+    sub(/\{.*/, "", h)
+    t = h; sub(/.*(^|[^A-Za-z0-9_])class[[:space:]]+/, "", t); sub(/[^A-Za-z0-9_].*/, "", t)
+    if (h ~ /(extends|implements)[[:space:]]+B[A-Za-z0-9_]/) cls = t
+    if (h ~ /extends[[:space:]]+BSimpleJob([^A-Za-z0-9_]|$)/) job = 1
+  }
+  if (cls == "") exit
+  print "BCLASS " cls
+  for (i = 1; i <= n; i++) {
+    c = code[i]
+    if (c ~ /(^|[^A-Za-z0-9_])(Scheduled)?ExecutorService([^A-Za-z0-9_]|$)|(^|[^A-Za-z0-9_])Executors[[:space:]]*\.|(^|[^A-Za-z0-9_])ExecutorUtil[[:space:]]*\.|(^|[^A-Za-z0-9_])new[[:space:]]+Thread[[:space:]]*\(/) jdk = 1
+    gsub(/currentThread[[:space:]]*\([[:space:]]*\)[[:space:]]*\.[[:space:]]*interrupt[[:space:]]*\(/, "currentThread().selfInterrupt(", c)
+    if (!mod && match(c, /\.[[:space:]]*(shutdownNow|shutdown|interrupt|setPriority|setDaemon)[[:space:]]*\(/)) {
+      m = substr(c, RSTART, RLENGTH); gsub(/[.([:space:]]/, "", m); mod = i " " m
+    }
+  }
+  if (jdk) print "JDK"
+  if (jdk && mod != "") print "MODIFY " mod
+  if (!job) exit
+  cnt = mb_parse(code, n, ms, me, mn)
+  for (k = 0; k < cnt; k++) {
+    if (mn[k] != "run") continue
+    loop = 0; alive = 0
+    for (i = ms[k]; i <= me[k]; i++) {
+      if (code[i] ~ /(^|[^A-Za-z0-9_])(for|while)[[:space:]]*\(|(^|[^A-Za-z0-9_])do[[:space:]]*(\{|$)/) loop = loop ? loop : i
+      if (code[i] ~ /(^|[^A-Za-z0-9_])isAlive[[:space:]]*\(/) alive = 1
+    }
+    if (loop && !alive) print "JOBLOOP " loop
+  }
+}
+AWKEOF
+# perms_grant <file>: prints the module-permissions.xml nearest above <file> and whether it requests
+# MANAGE_EXECUTION under type="station" or type="all" ("<path> yes|no"; "- no" when none is found).
+# An unreadable file is an env error (exit 3), never "no grant" guessed from a missing read.
+perms_grant() {
+  local d g
+  d=$(cd "$(dirname "$1")" && pwd)
+  while :; do
+    if [ -e "$d/module-permissions.xml" ]; then
+      if ! g=$(awk '
+        /<niagara-permission-groups/ { ty = ""; if (match($0, /type[[:space:]]*=[[:space:]]*"[^"]*"/)) { ty = substr($0, RSTART, RLENGTH); sub(/^[^"]*"/, "", ty); sub(/"$/, "", ty) } ; in_g = 1 }
+        in_g && (ty == "station" || ty == "all") && /<name>[[:space:]]*MANAGE_EXECUTION[[:space:]]*<\/name>/ { ok = 1 }
+        /<\/niagara-permission-groups>/ { in_g = 0 }
+        END { print (ok ? "yes" : "no") }' "$d/module-permissions.xml" 2>"$_TMP/awk.err"); then
+        printf 'lint-timers: cannot read %s: %s\n' "$d/module-permissions.xml" "$(head -n 1 "$_TMP/awk.err")" >&2
+        exit 3
+      fi
+      printf '%s %s\n' "$d/module-permissions.xml" "$g"
+      return
+    fi
+    [ "$d" = / ] && break
+    d=$(dirname "$d")
+  done
+  printf -- '- no\n'
+}
 while IFS= read -r f; do
-  grep -qE 'class[[:space:]]+B[A-Za-z0-9_]+[[:space:]]+(extends|implements)[[:space:]]+B[A-Za-z0-9_]' "$f" || continue
-  grep -qE 'ScheduledExecutorService|Executors\.|new[[:space:]]+Thread\(' "$f" || continue
-  _jdk_class=$(grep -m1 -oE 'class[[:space:]]+B[A-Za-z0-9_]+' "$f" | awk '{print $2}')
-  row FAIL "jdk-thread" "$f: ${_jdk_class:-BUnknown} uses JDK concurrency — use Clock.schedule instead (SecurityManager denies modifyThread)"
+  if ! th=$(awk -f "$_TMP/method-boundary.awk" -f "$_TMP/blank-str.awk" -f "$_TMP/threads.awk" "$f" 2>"$_TMP/awk.err"); then
+    printf 'lint-timers: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
+    exit 3
+  fi
+  _cls=""; _jdk=0; _mod=""; _jl=""
+  while read -r kind a b; do
+    case "$kind" in
+      BCLASS)  _cls="$a" ;;
+      JDK)     _jdk=1 ;;
+      MODIFY)  _mod="$b() at line $a" ;;
+      JOBLOOP) _jl="$a" ;;
+    esac
+  done <<< "$th"
+  if [ -n "$_jl" ]; then
+    row WARN "job-cancel" "$f: ${_cls} run() loops (line ${_jl}) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)"
+  fi
+  [ "$_jdk" -eq 1 ] || continue
+  read -r _pf _pg <<< "$(perms_grant "$f")"
+  if [ -n "$_mod" ] && [ "$_pg" != yes ]; then
+    if [ "$_pf" = - ]; then _pf="no module-permissions.xml above the file"; fi
+    row FAIL "jdk-thread" "$f: ${_cls} modifies a thread (${_mod}) but ${_pf} requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)"
+  else
+    row WARN "jdk-thread" "$f: ${_cls} uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION"
+  fi
 done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
