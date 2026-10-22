@@ -32,7 +32,7 @@ setup() {
 }
 
 @test "KN4: no kit doc names getRules(), SmartTagRule, tagInfoList.add or a tag:: NEQL operator" {
-  run grep -rnE 'getRules\(\)|SmartTagRule\[|tagInfoList\.add|tag::' "$DOCS"
+  run grep -rnE 'getRules\(\)|(^|[^A-Za-z])SmartTagRule|tagInfoList\.add|tag::' "$DOCS"
   [ "$status" -eq 1 ]
 }
 

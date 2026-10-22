@@ -192,7 +192,7 @@ never a bare `nav:` path. [CERT] `javax/baja/nav/BNavScheme.java:80-124` (corpus
   snippet against the real overloads and callback signatures: the previous one called a non-existent `BOrd.get(cx)`.
   `[ev: retro r8-t9g-nav Δ1]`
 
-  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register the custom relation in the tag dictionary's constructor alongside the tag defs (it participates in the same `BSmartTagDictionary` registration; see `types/logic.md §Ship a tag dictionary`). `[ev: corpus B758 §758.2]`
+  Consume with `entity.relations().get(Id, dir)` / `getAll(Id, dir)` — each `Relation`'s endpoint is the far component. Register it through the dictionary's slots, not its constructor: define it in `relationDefinitions` (`BRelationInfoList`) and attach it to a `BTagRule`'s `relationList`, the same no-override recipe as the tags (`types/logic.md` § Ship a tag dictionary). [CERT] `tagdictionary-rt/decompiled/javax/baja/tagdictionary/BTagDictionary.java:116`, `BTagRule.java:74`. `[ev: corpus B758 §758.2]` `[ev: corpus B1311 §1311.2 C1]`
 - **Hierarchy:** compose a `BHierarchy` root + ordered `BLevelDef` children (`BQueryLevelDef`/`BRelationLevelDef` entity levels, `BGroupLevelDef`/`BListLevelDef` grouping) under `BHierarchyService`; subclass `BLevelDef`+`getElements` only for a bespoke level. `[ev: corpus B781]`
 
 ## Query/search/index surface

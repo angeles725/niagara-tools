@@ -51,7 +51,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 @test "NCW-bql2: a multi-line statement ending in .get(base, null) or a bare .get() WARNs" {
   printf '%s\n' 'class A { void q() {' '  Object t = BOrd.make(' '      "bql:select name from baja:Folder")' \
     '      .get(base, null);' '  Object u = BOrd.make("bql:select *").get();' '} }' > "$TMPDIR_T/M/src/A.java"
-  run "$L" "$TMPDIR_T/M"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
   [[ "$output" == *"A.java:3"*"bql"* ]]
   [[ "$output" == *"A.java:5"*"bql"* ]]
 }
@@ -64,10 +64,24 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [ -z "$output" ]
 }
 @test "NCW-literal: a // inside a string does not hide a null-Context write after it" {
-  printf '%s\n' 'class A { void f(){ String u = "http://h"; parent.set(prop, val, null); } }' > "$TMPDIR_T/M/src/A.java"
-  run "$L" "$TMPDIR_T/M"; [[ "$output" == *"A.java:1"*"null-Context write"* ]]
+  printf '%s\n' 'class A { void f(){ String u = "http://h"; parent.set(prop, val, null); }' \
+    '  String s = "c.set(a, b, null)"; }' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
+  [[ "$output" == *"A.java:1"*"null-Context write"* ]]
+  [[ "$output" != *"A.java:2"* ]]   # a write quoted inside a string literal is not code
 }
 @test "NCW-comment: a write in a comment is not reported" {
   printf '%s\n' 'class A {' '  // parent.set(prop, val, null);' '  /* comp.invoke(act, arg, null); */' '}' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [ -z "$output" ]
+}
+@test "NCW-wb-write: a -wb part is skipped by the bql rule only; its null-Context write still WARNs" {
+  mkdir -p "$TMPDIR_T/M/src/Foo-wb/src"
+  printf '%s\n' 'class W { void f(){ comp.invoke(act, arg, null); } }' > "$TMPDIR_T/M/src/Foo-wb/src/W.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
+  [[ "$output" == *"W.java:1"*"null-Context write"* ]]
+}
+@test "NCW-bql-unrelated: a one-argument get outside the ORD chain does not WARN when the ORD gets (base, cx)" {
+  printf '%s\n' 'class A { void q(Context cx) {' \
+    '  Object t = BOrd.make("bql:select " + "*").get(base, cx) == null ? params.get("x") : null;' '} }' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [ -z "$output" ]
 }
