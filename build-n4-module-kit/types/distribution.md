@@ -141,15 +141,15 @@ self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium
 
 ### Hard signing gate (permission groups)
 
-`ACCESS_CLASS`, `REFLECTION`, and `MBEAN_PERMISSION` force cert-chain
-validation **regardless of `moduleVerificationMode`**. A local DEV cert is
-insufficient for modules requesting these groups even on a Win Supervisor set
-to LOW mode.
+Six groups (`REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
+`THIRD_PARTY_PERMISSION`, `PROTECTION_DOMAIN`, `HSM_SIGNING`) need a signed module
+whose cert the installation trusts, in every `moduleVerificationMode`; without it
+the station drops the group with a WARNING (`Skipping element`).
 
 → Full signing gate details and `skipModuleValidation` semantics are in
 `build-verify.md §Signing per deploy target`. Do not duplicate here.
 
-`[ev: corpus B1027 §1027.4, B18 §18.3-18.4]`
+`[ev: corpus B1027 §1027.4, B18 §18.3-18.4]` `[ev: corpus B1312 §1312.3 C1-C2]`
 
 ### Signing-profile build-triage
 
