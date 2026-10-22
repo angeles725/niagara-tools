@@ -27,10 +27,10 @@ setup() { KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"; }
   [ "$status" -eq 1 ]
 }
 
-@test "KD4: a readUnsubscribed example in the kit never sends or posts a request" {
+@test "KD4: a readUnsubscribed example in the kit never sends, posts or polls" {
   run awk '/void readUnsubscribed\(/ { on = 1; next }
            on && /^[[:space:]]*}[[:space:]]*$/ { on = 0; next }
-           on && /(send|post)[A-Za-z]*\(/ { print FILENAME ":" FNR ": " $0 }' "$KIT"/types/*.md
+           on && /(send|post|poll)[A-Za-z]*\(/ { print FILENAME ":" FNR ": " $0 }' "$KIT"/types/*.md
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }

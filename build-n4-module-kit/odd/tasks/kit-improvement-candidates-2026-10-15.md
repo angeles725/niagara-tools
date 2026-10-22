@@ -560,8 +560,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: code devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:104-111]`.
 - **Target:** new `toolbelt/lint-driver-scaffold.sh` wired into `report-module.sh`, `types/driver-authoring.md` § 5.
 - **Lint-able:** yes. **Fold type:** new lint + bats + doc line.
-- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ2): `toolbelt/lint-driver-scaffold.sh` + bats + § 5 line. OWED: the
-  `report-module.sh` wiring and the `toolbelt/INDEX.md` row (outside the unit's surface).
+- **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ2): `toolbelt/lint-driver-scaffold.sh` + bats + § 5 line. `toolbelt/INDEX.md` row
+  regenerated (6260fca). OWED: the `report-module.sh` wiring (outside the unit's surface).
 
 ### C89 — Client drivers: `BTcpCommConfig.serverEnabled` defaults to true
 - **Sources:** ndh#Δ4 (primary)

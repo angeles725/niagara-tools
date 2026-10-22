@@ -38,6 +38,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 @test "LDS4: the other wizard markers WARN: poll TODO, linkMessage TODO, null message factory, submit(null)" {
   # Mutation: LDS4 -- drop the submit(null) match and the wizard discovery job stops warning
   run "$L" "$FX/wizard"
+  [ "$status" -eq 1 ]     # the wizard device's FAIL; the WARN rows below never lower it
   [[ "$output" == *"WARN  lint-driver-scaffold  $FX/wizard/BNfooDevice.java:17  wizard stub: // TODO add poll support"* ]]
   [[ "$output" == *"WARN  lint-driver-scaffold  $FX/wizard/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage"* ]]
   [[ "$output" == *"WARN  lint-driver-scaffold  $FX/wizard/NfooMessageFactory.java:6  toResponse() only returns null"* ]]
@@ -50,6 +51,30 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$L" "$TMPDIR_T/src"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "LDS6: string and char literals do not hide a stub (\"tcp://host\" and '{' before it, a \"/*\" string before it)" {
+  # Mutation: LDS6 -- stop skipping string/char literals in the comment stripper and both stubs stop failing
+  run "$L" "$FX/literals"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BUrlDevice.java:8  doPing() only calls pingOk()"* ]]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BMarkerDevice.java:8  doPing() only calls pingOk()"* ]]
+}
+
+@test "LDS7: a file whose braces do not balance gets a WARN row instead of silently trusted boundaries" {
+  # Mutation: LDS7 -- drop the END balance check and the truncated file reports clean
+  run "$L" "$FX/unbalanced"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/unbalanced/BTruncatedDevice.java:9  method boundaries not trusted"* ]]
+}
+
+@test "LDS8: WARN-tier stubs alone (network + message factory, no device) exit 0 with their WARN rows" {
+  run "$L" "$FX/warnonly"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"FAIL"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/BNfooNetwork.java:6  doSubmitDiscoveryJob() submits with a null Context"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/NfooMessageFactory.java:6  toResponse() only returns null"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage"* ]]
 }
 
 @test "LDS-finderr: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
