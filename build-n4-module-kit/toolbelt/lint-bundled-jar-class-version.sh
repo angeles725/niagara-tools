@@ -18,42 +18,18 @@
 #
 # Mutation: BJCV2 -- drop the major > 52 check and BJCV2 stops flagging Java 9+ bytecode
 # Mutation: BJCV-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+#
+# Implementation: the Go module at <repo>/go (go/internal/jarversion, archive/zip: no unzip/od/awk per
+# class). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
+# go/bin/lint-bundled-jar-class-version when the binary is missing or older than a Go source, then this
+# script execs it. Needs `go` on PATH to build; no Go toolchain or a failed build is exit 3. The BJCV2
+# and BJCV-finderr pins live in the Go source and tests as well.
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-bundled-jar-class-version raw 'usage: lint-bundled-jar-class-version.sh <module-root>' "$@"
-awk_lint_list --prune build -name '*.jar'
 
-if ! command -v unzip >/dev/null 2>&1; then
-    printf 'lint-bundled-jar-class-version: unzip not found\n' >&2
-    exit 3
-fi
-if ! command -v od >/dev/null 2>&1; then
-    printf 'lint-bundled-jar-class-version: od not found\n' >&2
-    exit 3
-fi
-
-SAMPLE_LIMIT=20
-fail=0
-
-while IFS= read -r jar; do
-    n=0
-    while IFS= read -r entry; do
-        n=$((n + 1))
-        [ "$n" -gt "$SAMPLE_LIMIT" ] && break
-        # Read class-file major version: bytes 6-7 (after magic CAFEBABE[4] + minor[2])
-        _bytes=$(unzip -p "$jar" "$entry" 2>/dev/null | od -An -tu1 -j6 -N2)
-        _major=$(printf '%s' "$_bytes" | awk '{
-            if (NF >= 2) { m = $1 * 256 + $2 } else if (NF == 1) { m = $1 + 0 } else { m = -1 }
-            if (m > 52) { print m }
-        }')
-        if [ -n "$_major" ]; then
-            printf 'FAIL  lint-bundled-jar-class-version  %s  class %s is major %s (> 52 = Java 8) — bundled Java 9+ bytecode throws UnsupportedClassVersionError at load\n' \
-                "$jar" "$entry" "$_major"
-            fail=1
-            break
-        fi
-    done < <(unzip -Z1 "$jar" 2>/dev/null | grep '\.class$' | grep -v '^META-INF/versions/' | head -n "$SAMPLE_LIMIT")
-done < "$AL_TMP/files"
-
-awk_lint_exit "$fail"
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-bundled-jar-class-version: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" lint-bundled-jar-class-version)" || exit 3
+exec "$BIN" "$@"
