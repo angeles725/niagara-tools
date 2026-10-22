@@ -38,7 +38,7 @@
 # Mutation: LD24 -- no block-comment skip in strip_comment -> an apostrophe in /* don't */ keeps the trailing // text as a guard
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 
 FAILED=0
 _TMP=$(mktemp -d)

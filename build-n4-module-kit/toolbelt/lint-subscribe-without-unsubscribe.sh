@@ -24,7 +24,7 @@
 # Mutation: SWU2 -- drop the unsubscribe-absent guard so a file WITH unsubscribe still WARNs
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-subscribe-without-unsubscribe first 'usage: lint-subscribe-without-unsubscribe.sh [--strict] <src-root>' "$@"
 
 # check <file>: the line of the first subscribe when the file never unsubscribes.

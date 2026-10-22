@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8: toolbelt script dir via dirname (#310) -->
+log: 2026-10-22 · quality round 8 → issue #310: the 54 `${BASH_SOURCE[0]%/*}` dir derivations in 42 toolbelt files (41 scripts and `lib/awk-lint.sh`) now use the dirname form `$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)`, so `bash lint-x.sh` run from the toolbelt dir no longer sources `/lib/<lib>.sh` and dies, or silently skips its check; behaviour is unchanged for every path that contains a slash. `tests/script-dir.bats` SD1 (from-own-dir RED → GREEN on lint-timers), SD2 (bare name on PATH), SD3 ratchet (no `${BASH_SOURCE…%…}` / `${0%…}` strip in toolbelt/*.sh or lib/*.sh) with SD3-neg; mutation controls observed. Retro retros/2026-10-22-r8-script-dir.md (1Δ, pending). [ev: retro r8-script-dir Δ1]

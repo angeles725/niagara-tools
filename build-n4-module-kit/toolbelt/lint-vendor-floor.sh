@@ -56,7 +56,7 @@ done
 [ -n "$RC" ] || usage_exit
 [ -d "$RC" ] || { printf 'lint-vendor-floor: not a directory: %s\n' "$RC" >&2; exit 3; }
 
-TOOLBELT="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
+TOOLBELT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ ! -d "$RC/vendor" ]; then
   printf 'lint-vendor-floor: no vendor/ under %s — nothing to check\n' "$RC" >&2
