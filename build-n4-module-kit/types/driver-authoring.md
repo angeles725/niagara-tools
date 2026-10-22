@@ -215,13 +215,13 @@ The API is `public abstract void doPing() throws Exception`; `pingOk()` and `pin
 routed to the device's health `[CERT]` `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:552,570,580`.
 A device with no protocol of its own (reachability only) pings with a bounded socket connect (`getHost()`/`getPort()`
 are the device's own slots); the timeout bounds the
-`Ping:` thread, and the module needs the station-scoped `NETWORK_COMMUNICATION` permission:
+connect on the `Ping:` thread (not a DNS lookup, below), and the module needs the station-scoped `NETWORK_COMMUNICATION` permission:
 
 ```java
 @Override
 public void doPing() throws Exception {
     try (Socket s = new Socket()) {
-        s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // 2000 ms bounds the Ping: thread
+        s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // 2000 ms bounds the connect, not DNS
         pingOk();                                  // clears DOWN, fires offnormal→normal alarm
     } catch (IOException e) {
         pingFail(e.getLocalizedMessage());         // sets DOWN on the device + all its proxy points
@@ -231,11 +231,25 @@ public void doPing() throws Exception {
 
 [ev: retro n4-course-handson-ndriver Δ1] [ev: retro n4-course-handson-ndriver Δ3]
 
+**The timeout does not bound DNS.** `new InetSocketAddress(host, port)` resolves a host name in its constructor
+("An attempt will be made to resolve the hostname into an InetAddress"), before `connect` and its 2000 ms start
+`[CERT-doc]` (https://docs.oracle.com/javase/8/docs/api/java/net/InetSocketAddress.html), so a slow resolver holds
+the `Ping:` thread for the resolver's own timeout. An IP-literal `host` costs no lookup: `InetAddress.getByName`
+only checks the format of a literal `[CERT-doc]` (https://docs.oracle.com/javase/8/docs/api/java/net/InetAddress.html),
+and the constructor going through that path is `[INFER]`. For a host-name device, never resolve in `changed()`
+(that blocks the engine thread): resolve on the `Ping:` thread, keep the `InetAddress`, ping
+`new InetSocketAddress(addr, getPort())`, and drop the cache when `host` changes or a connect fails, so DNS costs one
+lookup per change instead of one per ping. That lookup is still bounded only by the OS resolver `[INFER]`.
+`InetSocketAddress.createUnresolved` is no way out: `Socket.connect`'s javadoc does not say what an unresolved
+endpoint does `[CERT-doc]`. [ev: retro r8-276-driver-scaffold Δ1]
+
 **Never ship the wizard's ping.** The NDriver wizard generates a `doPing()` whose only statement is `pingOk();` under
 `// TODO - add ping implementation` (`devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:102-111`): every device then
 reports UP forever. `toolbelt/lint-driver-scaffold.sh <src-root>` FAILs that stub and WARNs on the wizard's other
 placeholders (poll TODO, `TODO - convert linkMessage`, a message factory that only returns null, a discovery job
-submitted with a null Context). [ev: retro n4-course-handson-ndriver Δ2] [ev: retro r8-t9e-drivers Δ1]
+submitted with a null Context). It names a method from its header with annotations dropped, at any class depth, so an
+annotated or nested-class stub is caught too. [ev: retro n4-course-handson-ndriver Δ2] [ev: retro r8-t9e-drivers Δ1]
+[ev: retro r8-276-driver-scaffold Δ2]
 
 `pingFail` propagates DOWN to every `BProxyExt` under the device via:
 `BDevice.updateStatus()` → `BPointDeviceExt.updateStatus()` → `BProxyExt.updateStatus()` sets

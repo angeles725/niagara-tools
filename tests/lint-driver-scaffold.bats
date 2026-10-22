@@ -53,12 +53,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ -z "$output" ]
 }
 
-@test "LDS6: string and char literals do not hide a stub (\"tcp://host\" and '{' before it, a \"/*\" string before it)" {
+@test "LDS6: string, char and text-block literals do not hide a stub (\"tcp://host\" and '{' before it, a \"/*\" string, a text block holding braces)" {
   # Mutation: LDS6 -- stop skipping string/char literals in the comment stripper and both stubs stop failing
   run "$L" "$FX/literals"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BUrlDevice.java:8  doPing() only calls pingOk()"* ]]
   [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BMarkerDevice.java:8  doPing() only calls pingOk()"* ]]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/literals/BTextBlockDevice.java:10  doPing() only calls pingOk()"* ]]
+  [[ "$output" != *"not trusted"* ]]   # a closed text block is parsed, not a reason to distrust the file
 }
 
 @test "LDS7: a file whose braces do not balance gets a WARN row instead of silently trusted boundaries" {
@@ -66,15 +68,43 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$L" "$FX/unbalanced"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  lint-driver-scaffold  $FX/unbalanced/BTruncatedDevice.java:9  method boundaries not trusted"* ]]
+  mkdir -p "$TMPDIR_T/src"
+  printf '%s\n' 'class BZ extends BNDevice {' '  String T = """' '    }' '}' > "$TMPDIR_T/src/BZ.java"
+  run "$L" "$TMPDIR_T/src"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $TMPDIR_T/src/BZ.java:4  method boundaries not trusted (ends inside a text block)"* ]]
 }
 
 @test "LDS8: WARN-tier stubs alone (network + message factory, no device) exit 0 with their WARN rows" {
-  run "$L" "$FX/warnonly"
+  mkdir -p "$TMPDIR_T/src"
+  cp "$FX/wizard/BNfooNetwork.java" "$FX/wizard/NfooMessageFactory.java" "$TMPDIR_T/src/"
+  run "$L" "$TMPDIR_T/src"
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
-  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/BNfooNetwork.java:6  doSubmitDiscoveryJob() submits with a null Context"* ]]
-  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/NfooMessageFactory.java:6  toResponse() only returns null"* ]]
-  [[ "$output" == *"WARN  lint-driver-scaffold  $FX/warnonly/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $TMPDIR_T/src/BNfooNetwork.java:6  doSubmitDiscoveryJob() submits with a null Context"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $TMPDIR_T/src/NfooMessageFactory.java:6  toResponse() only returns null"* ]]
+  [[ "$output" == *"WARN  lint-driver-scaffold  $TMPDIR_T/src/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage"* ]]
+}
+
+@test "LDS9: annotations, a throws line and a nested device class do not hide a stub" {
+  # Mutation: LDS9 -- name the method by the leftmost identifier( without dropping annotations and the annotated stubs stop failing
+  run "$L" "$FX/annotated"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/annotated/BSameLineDevice.java:6  doPing() only calls pingOk()"* ]]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/annotated/BArrayAnnotDevice.java:6  doPing() only calls pingOk()"* ]]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/annotated/BThrowsDevice.java:7  doPing() only calls pingOk()"* ]]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $FX/annotated/BOuter.java:8  doPing() only calls pingOk()"* ]]
+  [ "$(grep -c '^FAIL ' <<< "$output")" -eq 4 ]
+}
+
+@test "LDS10: a backslash in the source path is reported as is" {
+  # Mutation: LDS10 -- pass the path with awk -v and its \n becomes a newline in the row
+  d="$TMPDIR_T/src/a\\nb"
+  mkdir -p "$d"
+  cp "$FX/wizard/BNfooDevice.java" "$d/"
+  run "$L" "$TMPDIR_T/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-driver-scaffold  $d/BNfooDevice.java:6  doPing() only calls pingOk()"* ]]
 }
 
 @test "LDS-finderr: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
