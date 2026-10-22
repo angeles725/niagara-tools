@@ -41,7 +41,7 @@
 # [ev: retro campaign8-structure]
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
-# Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15-wizard) no longer WARNs
+# Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs
 set -u
 LC_ALL=C
 export LC_ALL

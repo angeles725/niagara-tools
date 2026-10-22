@@ -141,14 +141,17 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
   `codeSigning.txt:137-143`). `[ev: corpus B1312 §1312.3 C1-C3]` `[ev: corpus B1235 §1235.5]`
   `[ev: retro devguide415-horizons-authoring-security Δ4]` `[ev: retro n4-course-build-deps-permissions-signing Δ2]`
 - **What an unsigned module gets is the group silently dropped, not a halt — at the permission-factory layer.** The
-  devguide says the station or Workbench halts (`codeSigning.txt:185`), but `NiagaraPermissionGroupFactory` throws
-  "Permission group (%s) requires signature but the module (%s) is not signed" inside its per-element `try` and
-  logs `Error parsing Niagara permission group XML … Skipping element.` as a WARNING (javap of
-  `modules/baja.jar` 4.15.6.20, offsets 489-583, exception range 134-547; same code in vineflower 4.14.0.162
-  `NiagaraPermissionGroupFactory.java:196-204`). The module then loads without that grant, so its first privileged
-  call should fail with `AccessControlException` `[INFER]`; whether the cert-chain layer also refuses the load is not
-  live-proven (niagara-research B1312-G1). Either way: sign it with a trusted cert, and read the station log for
-  `Skipping element`. `[ev: corpus B1312 §1312.3 C2]`
+  devguide says the station or Workbench halts (`security/codeSigning.txt:185`, same sentence in the 4.13.2.18 and
+  4.15.6.20 devguides) and `requestingPermissions.txt:160,294` only says the group "requires the module … to be
+  signed". The code disagrees, and code wins for behaviour: `NiagaraPermissionGroupFactory` throws "Permission group
+  (%s) requires signature but the module (%s) is not signed" inside its per-element `try`, whose `catch (Throwable)`
+  logs `Error parsing Niagara permission group XML … Skipping element.` as a WARNING and goes on. Verified in
+  `baja` 4.14.0.162 (organized/ vineflower `NiagaraPermissionGroupFactory.java:196-204`, decompiled `:243-248`, procyon
+  `:215-220`) and by javap of `modules/baja.jar` 4.15.6.20 and of iC-Niagara 4.13.2.18 `baja.jar` (both: `athrow` at
+  offset 537 inside the Throwable range 134-547, handler at 550). Other 4.13-4.15 builds: not verified. The module then
+  loads without that grant, so its first privileged call should fail with `AccessControlException` `[INFER]`; whether
+  the cert-chain layer also refuses the load is not live-proven (niagara-research B1312-G1). Either way: sign it with a
+  trusted cert, and read the station log for `Skipping element`. `[ev: corpus B1312 §1312.3 C2]`
 - **JACE=MEDIUM vs Win Supervisor=LOW:** the Win Supervisor's `defaults/system.properties` actively sets `niagara.moduleVerificationMode=low`; the JACE-8000 QNX leaves the property commented out, falling back to the N4 code default `medium`. A dev-signed module that loads on the supervisor (LOW) fails on a JACE (MEDIUM) unless the cert is imported into the JACE user trust store. The "JACE enforces the project CA" note above is correct; MEDIUM mode is the reason. Both files add the comment "will be removed in a future release" — treat `medium` as the stable long-term target. [ev: corpus B1004 §1004.2-1004.3]
 - **`skipModuleValidation` AND-gate — the property alone does nothing:** bypassing the sign-always groups (the six above) on the Win Supervisor requires BOTH `-Dniagara.classLoader.skipModuleValidation=true` (JVM system property) AND a `Webs.license` carrying `skipModuleValidation="true"` (verify expiry). Neither condition alone enables the bypass. NOT available on a JACE without a `Webs.license`. [ev: corpus B18 §18.3.2-18.3.3]
 - **`exemptions.tes` — Workbench-user dev bypass:** the Workbench "Module XYZ is not validly signed. Trust permanently?" dialog adds a per-module entry to `user/security/exemptions.tes` (~16 KB binary), persisting across restarts. Scoped to the Workbench JVM only — does NOT affect the station daemon. Less invasive than JVM flags; requires admin credentials; Workbench audit-logs each addition. For Workbench-local inspection of unsigned modules only; `skipModuleValidation` (above) is the corresponding station-daemon path on the Win Supervisor. [ev: corpus B18 §18.9]

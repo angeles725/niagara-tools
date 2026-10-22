@@ -413,9 +413,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Lint-able:** yes — FAIL unsigned jar naming one of the six; source cross-check (Jackson→REFLECTION, `shutdownNow`→MANAGE_EXECUTION, sockets→NETWORK_COMMUNICATION). **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-9, 2026-10-23; has Δ4, bdps Δ2): `build-verify.md` § Signing per deploy target
   (six groups, triggers, three trust routes), `types/distribution.md` § Hard signing gate, `types/third-party-libraries.md`
-  signing note, `types/structure.md` module-permissions bullet. **Open verification closed at the factory layer:** javap of
-  `modules/baja.jar` 4.15.6.20 `NiagaraPermissionGroupFactory` (throw at 537 inside the 134-547 try, WARNING "Skipping
-  element") — the 4.15 factory skips, as 4.14 did; the cert-chain layer stays open (niagara-research B1312-G1). The
+  signing note, `types/structure.md` module-permissions bullet. **Open verification closed at the factory layer:** code wins over
+  the devguide's "halt" (`codeSigning.txt:185`): organized/ vineflower 4.14.0.162 `NiagaraPermissionGroupFactory.java:196-204`
+  (decompiled `:243-248`, procyon `:215-220`) and javap of `baja.jar` 4.15.6.20 and iC-Niagara 4.13.2.18 (throw at 537
+  inside the 134-547 try, WARNING "Skipping element") all skip; other builds not verified; the cert-chain layer stays open (niagara-research B1312-G1). The
   removed kit claim "fails to load unsigned (`ValidationException`) even in LOW" had no code behind it. Pin KL5; owed Go
   lint G15 `permission-signature`.
 

@@ -206,7 +206,7 @@ _ls14_tree() {
 # L15 — the ROOT build.gradle.kts (the dir holding settings.gradle.kts) applies com.tridium.niagara-signing
 # without the signing block (issue #266, register C85). Same uncommented-code rule as preflight.sh sample-sign.
 # [ev: retro n4-course-signed-jars-gate-fix Δ4]
-# Named mutation: LS15 -- drop the L15 check -> the wizard root (LS15-wizard) no longer WARNs
+# Named mutation: LS15 -- drop the L15 check -> the wizard root (LS15) no longer WARNs
 # ---------------------------------------------------------------------------
 _ls15_tree() {
   # <root>/.git sentinel, <root>/Group/{settings,build}.gradle.kts, module root <root>/Group/Mod/Foo-rt
@@ -220,7 +220,7 @@ niagaraSigning {
   signingProfileFile.set(layout.projectDirectory.file("profile.xml"))
 }'
 
-@test "LS15-wizard: a root that applies niagara-signing with no signing block WARNs L15 and names what is missing" {
+@test "LS15: a root that applies niagara-signing with no signing block WARNs L15 and names what is missing" {
   ROOT=$(mktemp -d)
   _ls15_tree "$ROOT" "$_LS15_SIGN"
   run "$LS" "$ROOT/Group/Mod"
