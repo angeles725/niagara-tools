@@ -88,6 +88,19 @@ brew install bats-core shellcheck
 
 Check: `bats --version` prints `Bats 1.x` and `bats tests/ng-deploy.bats` reports 26 cases.
 
+### 2.2 Go module (`go/`)
+
+New tools and ports are written in Go when possible, in the dependency-free module at `go/`
+(`github.com/angeles725/niagara-tools/go`, stdlib only): one `go/cmd/<tool>/` per tool, a thin `main.go`
+over shared `go/internal/` packages (`internal/cli` holds the injectable stdio). Needs `go` on `PATH` at the
+`go/go.mod` version.
+
+- Check: `cd go && gofmt -l . && go vet ./... && go test ./...` (CI runs the same, then builds into `go/bin/`).
+- A ported toolbelt script keeps its `.sh` name as the stable entry point: a thin wrapper that builds
+  `go/bin/<tool>` when it is missing or older than a Go source, then execs it (exit 3 when `go` is missing).
+  `go/bin/` is gitignored. First port: `toolbelt/gen-retro-index.sh` → `go/internal/retroindex`, output byte
+  for byte the same as the bash version. `[ev: retro go-module-gen-retro-index]`
+
 ---
 
 ## 3. KB topic authoring rules

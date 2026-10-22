@@ -26,3 +26,6 @@ _backups/
 
 # SDD runtime state (instance IDs/tokens, per-session; not repository content)
 openspec/**/.gentle-ai-instance
+
+# Go build output (go/bin/gen-retro-index is built on demand by toolbelt/gen-retro-index.sh)
+go/bin/

@@ -278,6 +278,7 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
 _fixture_top() {
   TOP="$BATS_TEST_TMPDIR/top"; local k="$TOP/build-n4-module-kit"
   mkdir -p "$k/toolbelt" "$k/retros"
+  ln -s "$(cd "$KIT/.." && pwd)/go" "$TOP/go" # the wrapper execs <toplevel>/go/bin [ev: retro go-module-gen-retro-index Δ2]
   cp "$KIT/toolbelt/sweep-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$k/toolbelt/"
   printf '<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 1 -->\n# demo\n' > "$k/retros/2026-09-04-demo.md"
   printf '<!-- build-state.v1 -->\nmodule: kit\nretro_required: true\nretro_pending: true\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
