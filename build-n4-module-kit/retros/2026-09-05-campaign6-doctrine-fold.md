@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 <!-- kit-retro -->
 # Campaign 6 PR3: doctrine fold — K1–K10, multi-session + live-verify rules, what-to-test-where
 

@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-10-21 · kit · shared-sha256-fail-closed
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T8a), branch

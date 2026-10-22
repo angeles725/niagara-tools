@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-nav-subscriptions-tags-ords
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` (niagara-research B1304–B1315) mapped the N4.15.6.20 Developer Guide + source against this kit; this retro carries corpus B1306 (subscriptions/leases/virtual), B1307 (nav tree), B1308 (ORDs/BQL) and B1311 (tags/relations/dictionaries/hierarchies). Complements `2026-10-15-n4-course-drivers-bql-ords-files.md` (**ord** Δ1–Δ5), `…-slots-components-contracts.md` Δ3, and the folded `2026-09-18-ord-path-nav-deltas.md`.

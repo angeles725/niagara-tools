@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: WB-LEX1 exit1; SCAFFOLD1 dead-angle; THREAD1/AGENT1 WARN-only (K13); DEP1 phantom; DWB1 doctrine -->
 # Retro: Campaign 8 — wb checks (WB-LEX1/SCAFFOLD1/THREAD1/AGENT1/DEP1, Campaign 8 PR11)
 
 **Date:** 2026-09-05

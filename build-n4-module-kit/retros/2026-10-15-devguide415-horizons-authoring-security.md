@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-horizons-authoring-security
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` (niagara-research B1304–B1315) mapped the N4.15.6.20 Developer Guide + source against this kit; this retro carries corpus B1312 (permissions, Security Manager, signing), B1313 (third-party libraries, API stability, authoring files) and B1315 (devguide capabilities the kit never teaches). Complements `2026-10-15-n4-course-build-deps-permissions-signing.md` (**bdps** Δ2–Δ5), `…-authoring-files-and-libraries.md` (**afl** Δ1–Δ5) and `…-parity-observability-horizons.md` (**poh** Δ6).

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
 # 2026-09-18 · kit · authoring-exemplars-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: mine B772–B785 + B817 for concrete kit improvements — types/, toolbelt/, build-verify.md, BUILD-LOOP.md; NOT corpus-index.md pointers, which have a same-day retro).

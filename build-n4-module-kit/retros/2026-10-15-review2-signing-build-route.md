@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · review2-signing-build-route
 
 **Session**: N4 Developer Certification Course — Lab 10 build + Review Assignment 2 (`BPointSummaryService`) implemented, signed with the Lab 5 cert, built from WSL through Windows `gradlew.bat`, and verified live in station `Cristian_Angeles_Review`; plus the delta-count slip in the 2026-10-15 retro batch

@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-parity-observability-horizons
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) — Slide Code thread/value examples, the visual-pass blocks (B1251/B1255/B1256/B1257), Review Assignment 2, and a read-only parity read of our production modules (`Cliente/panccadia-leon` at 7ca1b57: ColdRoomPan, CompPan, DashboardPan)

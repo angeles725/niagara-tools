@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — un deploy `-ux`-only NO reinicia la station (solo hard-reload del navegador) · 2026-09-03
 
 Séptimo retro del día. Al iterar la UI del DashboardPan (config sin scroll + campos de Cuarto 5) se

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 <!-- kit-retro -->
 # Campaign 6 close: retro harvest, research lanes, and the kit's own meta-lessons
 

@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 11 -->
+<!-- index-comment: D1 CHECK16 vice-versa deferred (BA5 conflict); D2 self-closing bug; D3 relay clean fixture; D4 f-string !r syntax fix -->
 <!-- kit-retro -->
 # Campaign 8 close: meta-lessons from the close process
 

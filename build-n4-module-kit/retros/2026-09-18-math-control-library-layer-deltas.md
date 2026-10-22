@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-09-18 · kit · math-control-library-layer-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: math/PID/control libraries for N4 rt modules — Java 8).

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-09-06 · kit · campaign11-close-process-meta-lessons
 
 **Session**: Campaign 11 CLOSE — v0.22.0 shared parser (T1), DRIFT (T3), client-root (T2), guard-pins (T4)

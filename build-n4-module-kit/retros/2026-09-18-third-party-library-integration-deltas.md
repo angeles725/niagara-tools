@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-09-18 · kit · third-party-library-integration-deltas
 
 **Session**: corpus-mining for build-n4-module (operator: how to integrate helper libraries into N4 modules).

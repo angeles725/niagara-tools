@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # Campaign 8 PR20 — station-logic wiring checks retro
 
 Session: 2026-09-06, branch feat/c8-station-logic, kit PR20.

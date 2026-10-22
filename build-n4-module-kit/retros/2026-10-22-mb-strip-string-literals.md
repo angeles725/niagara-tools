@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-10-22 · kit · mb-strip-string-literals
 
 **Session**: niagara-research quality round 8, work unit T8h, branch `r8/t8h-mb-strip-strings` from origin/main fd77e16

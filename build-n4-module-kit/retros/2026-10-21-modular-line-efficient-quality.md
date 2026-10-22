@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
 # 2026-10-21 · kit · modular-line-efficient-quality
 
 **Session**: niagara-research quality round 8 (`odd/tasks/quality-round8.md`, task T7), branch

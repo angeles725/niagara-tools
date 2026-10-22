@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-22 · kit · n4-course-signed-jars-gate-fix
 
 **Session**: niagara-research quality round 8, task T9d-1 (issue #260), branch `fix/r8-t9d-verify-signed-jars` on main e1fee85

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: UmbrellaDashboard -->
+<!-- deltas: 4 -->
 # 2026-09-16 · UmbrellaDashboard · umbrelladashboard-module-creation
 
 **Session**: `/build-n4-module` — new dashboard module for the Juárez/Umbrella "Productos de Agua" 3D HMI, replicating DashboardPan.

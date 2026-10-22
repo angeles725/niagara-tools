@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 3 -->
 # 2026-10-01 · kit · servlet-write-audit
 
 **Session**: PANCCADIA gap review — operators change setpoints through the dashboard, but who/what/when is not visible to the customer

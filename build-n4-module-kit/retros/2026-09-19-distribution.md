@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 9 -->
+<!-- index-comment: new types/distribution.md: .dist/dist.xml, OEM overlay+trust certs, BOG schema-safety, version floor, .ntpl, AX->N4 -->
 # 2026-09-19 · kit · distribution
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the OEM distribution cluster (audience now includes OEM builders).

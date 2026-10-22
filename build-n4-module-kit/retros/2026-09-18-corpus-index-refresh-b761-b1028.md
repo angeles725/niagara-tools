@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 26 -->
 # 2026-09-18 · kit · corpus-index-refresh-b761-b1028
 
 **Session**: corpus-mining for build-n4-module (operator: index newer niagara-research docs for the kit).

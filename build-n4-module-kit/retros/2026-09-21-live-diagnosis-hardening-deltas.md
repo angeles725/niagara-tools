@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-09-21 · kit · live-diagnosis-hardening-deltas
 
 **Session**: niagara-research focus `module-hardening`, blocks **B1158–B1160** — a LIVE-DIAGNOSIS deepening of the hardening focus. The PANCCADIA JACE-9000 (client station, 4.15.3.28) was restarting every 2–3 days from tenured-gen heap exhaustion (engine watchdog `terminate`, rc=-119). A read-only oBIX diagnosis + a source review of the operator's three custom modules (DashboardPan v2.4.2, CompPan v2.1.0, ColdRoomPan v2.1.2) traced it to a control-callback anti-pattern, not a textbook growing-collection leak. This is the FIRST time the hardening focus closed `[CERT-live]` gaps against a real station (the focus had parked its live residues for exactly this).

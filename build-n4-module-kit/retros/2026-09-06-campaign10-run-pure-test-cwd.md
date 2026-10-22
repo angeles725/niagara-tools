@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 1 -->
 # 2026-09-06 · kit · campaign10-run-pure-test-cwd
 
 **Session**: C10 PR4 — S24 cwd-independent structural REDs

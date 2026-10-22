@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 8 -->
+<!-- index-comment: new types/value-types.md: BFrozenEnum/BDynamicEnum/BSimple/BStruct/BFacets/BUnit + persistence -->
 # 2026-09-19 · kit · value-types
 
 **Session**: 2026-09-19 kit-improvement campaign (branch odd/apply-kit-candidates-2026-09-19) — WU folding the value-types cluster.

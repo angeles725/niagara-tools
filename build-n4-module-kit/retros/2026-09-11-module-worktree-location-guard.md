@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: Δ1 orient-guard.sh; Δ2 BUILD-LOOP §0.a; Δ3 SKILL.md step1; Δ4 orient-guard.bats; Δ5 kit-links L9 -->
 <!-- Marker lifecycle: 'folded' = promoted into the kit core in this same PR. -->
 # Kit Retro — kit · 2026-09-11 · Module worktree location guard (orient-guard.sh)
 

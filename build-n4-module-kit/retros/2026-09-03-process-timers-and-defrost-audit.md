@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — timers "en vivo" en un dashboard (deshielo va/falta, cuánto lleva enfriando) + auditoría del disparo de deshielo · 2026-09-03
 
 Quinto retro del día (previos hoy: freeze-stat-leds, soft-start-staggered-startup, dashboard-contract-port-spec,

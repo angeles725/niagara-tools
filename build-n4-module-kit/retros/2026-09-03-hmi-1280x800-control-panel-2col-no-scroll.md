@@ -1,3 +1,6 @@
+<!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 # Retro — HMI 10" (1280x800): el panel de Control se REPARTE en 2 columnas, nunca scroll · 2026-09-03
 
 Sexto retro del día. Al agregar una salida más ("Intercambiador") a la pestaña Control del Cuarto 3

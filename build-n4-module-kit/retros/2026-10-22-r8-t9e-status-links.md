@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 2 -->
 # 2026-10-22 · kit · r8-t9e-status-links
 
 **Session**: niagara-research quality round 8, task T9e unit A (register WU-P0-2: C04, C05, C08), branch `docs/r8-t9e-status-links` from origin/main c9d1215

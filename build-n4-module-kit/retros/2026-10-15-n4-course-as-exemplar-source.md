@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 4 -->
 # 2026-10-15 · kit · n4-course-as-exemplar-source
 
 **Session**: N4 Developer Certification Course (Tridium, N4.15.6.20) as a kit source — the course folder, the corpus focus `n4-dev-course` (B1230–B1258), `docs/n4-module-development-course-guide.md`, and the user's live lab project

@@ -1,4 +1,6 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
 <!-- kit-retro -->
 # Campaign 7 PR1: fold the 9 Campaign-6 retros — K11–K14, §7 envelope rule, SDD-ledger notes, two-reads rule
 

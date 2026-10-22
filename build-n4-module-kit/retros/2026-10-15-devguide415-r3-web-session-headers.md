@@ -1,4 +1,6 @@
 <!-- review-status: pending -->
+<!-- module: kit -->
+<!-- deltas: 6 -->
 # 2026-10-15 · kit · devguide415-r3-web-session-headers
 
 **Session**: research-sdd focus `dev-capabilities-kit-gaps` round 3 closed the web-side static child gaps from source (4.14 decompile + `javap` of the 4.15.6.20 jars); this retro carries corpus B1344 (session lifetime), B1349 (headers/themes on a module servlet) and B1347 (oBIX hidden slots). It CORRECTS kit `types/security.md:366-377` and EXTENDS `2026-10-15-devguide415-r2-web-ui-hmi.md` (**wuh**) Δ1/Δ6 and `2026-10-15-devguide415-r2-drivers-protocols.md` Δ9.

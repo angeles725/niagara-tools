@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 0 -->
+<!-- index-comment: automation-audit PR-B: build.sh auto-chains preflight->build->verify->report-module (+--no-preflight/--no-report); new tests/build.bats -->
 # 2026-09-20 · kit · build.sh auto-chain (automation audit fix, PR-B)
 
 **Session**: automation audit, PR-B (PR-A wired the orphan lints into report-module.sh). Operator requirement: module creation must be AUTOMATIC — no mechanical step may depend on the agent REMEMBERING to run it (the research-sdd flaw). Audit found `report-module.sh` and `preflight.sh` were invoked by NO orchestrator: they lived only as SKILL.md/BUILD-LOOP.md steps the agent had to remember. This PR makes `build.sh` the single automatic entry.

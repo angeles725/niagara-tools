@@ -1,4 +1,7 @@
 <!-- review-status: folded -->
+<!-- module: kit -->
+<!-- deltas: 5 -->
+<!-- index-comment: h:/ vs h: CSS FP; multi-line ternary; URL in detail; dot-dir prune order; awk heredoc quoting -->
 # Retro: Campaign 8 — rc-scan.sh browser-resource lint (Campaign 8 PR6)
 
 **Date:** 2026-09-05
