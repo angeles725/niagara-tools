@@ -124,3 +124,24 @@ wrap() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"BMgr.java:5  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
 }
+
+@test "SNO1-chain-nullfirst: the null-first form and an indexed receiver are never treated as guarded either (#226 D5b R3-001)" {
+  wrap 'if (null == getA().getSlotPathOrd()) return;' 'm.setTargetOrd(getB().getSlotPathOrd());' > "$SRC/BMgr.java"
+  run "$SNO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BMgr.java:5  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
+  wrap 'if (arr[0].getSlotPathOrd() == null) return;' 'm.setTargetOrd(arr[1].getSlotPathOrd());' > "$SRC/BMgr.java"
+  run "$SNO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"BMgr.java:5  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
+}
+
+@test "SNO2-guard-forms: null == v, null != v and requireNonNull(v) also guard the local (#226 D4 R3-003)" {
+  local g
+  for g in 'if (null == ord) return;' 'if (null != ord) { log(ord); }' 'Objects.requireNonNull(ord);'; do
+    wrap 'BOrd ord = point.getSlotPathOrd();' "$g" 'm.setTargetOrd(ord);' > "$SRC/BMgr.java"
+    run "$SNO" "$TMPDIR_T/Mod"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ] || { echo "$g -> $output"; return 1; }
+  done
+}

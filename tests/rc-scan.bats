@@ -316,15 +316,15 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
 # polish-2026-10-02 P5b (P5 review R4-001 / R3-001): the P5 word-start rule dropped OAuth / oauth2 /
 # reauth / unauthorized gate mentions (the pre-P5 substring matched them) — a fail-open. They gate again.
 @test "RC32: disabled-gate — an OAuth / oauth2 / reauth / unauthorized mention still makes a file login-gated" {
-  T="$(mktemp -d)"
-  local i=0 m
+  # BATS_TEST_TMPDIR is removed by bats even when the test fails, and every mention is checked before the verdict.
+  local T="$BATS_TEST_TMPDIR/rc32" i=0 m miss=""
   for m in 'startOAuthFlow();' 'const client = oauth2Client();' 'function reauth() { openGate(); }' 'if (res.status === 401) onUnauthorized();'; do
     i=$((i+1)); mkdir -p "$T/m$i/rc"
     printf '%s\nsaveBtn.disabled = true;\n' "$m" > "$T/m$i/rc/app.js"
     run "$RS" "$T/m$i"
-    if [[ "$output" != *"rc/app.js:2  disabled-gate"* ]]; then echo "not gated: $m"; return 1; fi
+    if [[ "$output" != *"rc/app.js:2  disabled-gate"* ]]; then miss="$miss [$m]"; fi
   done
-  rm -rf "$T"
+  if [ -n "$miss" ]; then echo "not gated:$miss"; return 1; fi
 }
 
 @test "RS-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {

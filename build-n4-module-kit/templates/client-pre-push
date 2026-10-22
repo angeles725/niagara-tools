@@ -5,7 +5,7 @@
 #
 # For every pushed ref it exports the pushed COMMIT (not the working tree) and runs the kit's
 # split-package-check.sh --strict on it. It blocks the push when:
-#   - a package is split across two modules (checker exit 1), and
+#   - a package is split across two modules (checker exit 1), or
 #   - the check cannot run: the kit toolbelt is not found, the commit cannot be exported, or the checker exits 3
 #     (no module in the commit, an unreadable file) or any other status.
 # It never passes silently. To bypass for one push on purpose: git push --no-verify (operator decision).
@@ -53,5 +53,9 @@ while read -r _lref lsha _rref _rsha; do
   esac
 done
 
-[ "$rc" -eq 0 ] || block "fix the rows above (or push with --no-verify as an explicit operator decision)" "$rc"
+case "$rc" in
+  0) ;;
+  1) block "fix the split-package rows above (or push with --no-verify as an explicit operator decision)" 1 ;;
+  *) block "a pushed commit could not be verified (reason above); fix the cause and push again (or --no-verify as an explicit operator decision)" "$rc" ;;
+esac
 exit 0
