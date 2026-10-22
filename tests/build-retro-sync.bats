@@ -270,6 +270,40 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 0 ]
 }
 
+# --- generated INDEX (r8 T8i): retros/INDEX.md is regenerated from the retro headers by
+# toolbelt/gen-retro-index.sh, so the new-retro exit no longer needs a hand-edited INDEX.md diff in
+# range: BUILD-STATE.md + a retro is enough WHEN the index is fresh, and sweep (the content half)
+# fails a stale one. RED before T8i: the hook required has_index>=1, so H11 fell through to FAIL.
+# _fixture_top — a fake toplevel with the real sweep + generator and a one-retro kit.
+_fixture_top() {
+  TOP="$BATS_TEST_TMPDIR/top"; local k="$TOP/build-n4-module-kit"
+  mkdir -p "$k/toolbelt" "$k/retros"
+  cp "$KIT/toolbelt/sweep-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$k/toolbelt/"
+  printf '<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 1 -->\n# demo\n' > "$k/retros/2026-09-04-demo.md"
+  printf '<!-- build-state.v1 -->\nmodule: kit\nretro_required: true\nretro_pending: true\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
+  bash "$k/toolbelt/gen-retro-index.sh" "$k" >/dev/null
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'feat: change a control rule + retro\n' > "$BATS_TEST_TMPDIR/log"
+}
+run_hook_at() { # run_hook_at <toplevel>
+  FAKE_TOPLEVEL="$1" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
+  run env PATH="$FAKEBIN:$PATH" bash "$HOOK" origin https://example/repo.git <<<'refs/heads/main aaaa refs/heads/main bbbb'
+}
+
+@test "H11: BUILD-STATE.md + a retro with NO INDEX.md diff PASSES when the generated index is fresh" {
+  _fixture_top
+  run_hook_at "$TOP"
+  [ "$status" -eq 0 ]
+}
+
+@test "H12: the same range FAILS when the generated index is stale (retro header changed, not regenerated)" {
+  _fixture_top
+  sed -i 's/deltas: 1/deltas: 2/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"stale"* ]]
+}
+
 # ============ MARKER<->INDEX CONSISTENCY (campaign 6, Option 2-lite) ==========
 # Frozen contract (investigador, 2026-09-05): when a retro file carries a
 # `<!-- review-status: X -->` marker, X MUST equal that retro's INDEX row status;
