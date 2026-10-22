@@ -26,6 +26,16 @@ do not construct a separate one in the device class. [ev: code modbusCore-rt `BM
 | `INFO` | Operational message (startup, major state change) |
 | `WARNING` | Recoverable problem; auto-captured by `BLogHistoryService` for BQL alarms |
 | `SEVERE` | Error |
+| `CONFIG` | Rarely used — prefer `INFO` or `FINE` |
+
+**Message vs stack trace:** log the one-line message at `SEVERE`/`WARNING`/`INFO`; attach the stack trace
+(`LOG.log(Level.FINE, msg, ex)`) only from `FINE` down, so a production station shows the reason without the trace.
+`[ev: corpus B1418 §1418.2 a]`
+
+**Ops note — `LogHistoryService` has one master level:** a single `minimumSeverity` property, default `info`, is
+the floor for every logger, which is why `FINE` never reaches the log history. Raising it to `FINE` with the history
+capacity set to Unlimited can fill the disk — set it back after the trace.
+`[ev: corpus B1418 §1418.2 b]` `[ev: code com/tridium/history/log/BLogHistoryService.java:78]`
 
 **Guard expensive strings** at `FINE`/`FINEST`:
 
@@ -39,7 +49,9 @@ if (LOG.isLoggable(Level.FINE)) {
 
 **Why `System.out.println` is wrong:** bypasses `BLogHistoryService`; output lands only
 in `stdout.txt`, is not BQL-queryable, not level-filtered, and unmonitored on a headless JACE.
-[ev: corpus B92/B106]
+Users cannot turn it off — tech support has traced station console spam to third-party modules that print.
+`toolbelt/lint-no-system-out.sh` enforces the rule.
+[ev: corpus B92/B106] `[ev: corpus B1418 §1418.2 c]`
 
 **`module-permissions.xml`:** declare `java.util.logging.LoggingPermission "control"` so
 station admins can change log levels at runtime via the Workbench log viewer. The Gradle
@@ -127,6 +139,9 @@ if (!licensed) { configFatal("Unlicensed: " + toPathString()); return; }
 ```
 
 [ev: code bacnetAws-rt `BBacnetAwsNetwork.java` `configFatal("Unlicensed: " + ...)`; code maxpro-rt `BMaxproCamera.java` `configFatal(cameraLimitFault)`]
+
+**Lexiconize the fault cause:** the `configFail(cause)` / `appFail(msg)` text shows on the property sheet, so build
+it from a lexicon key (`lex.getText("fault.readTimeout")`), not a hard-coded English literal. `[ev: corpus B1419 §1419.4 c]`
 
 Pair `appFail`/`configFail` with `READONLY|TRANSIENT|SUMMARY` status and `faultCause` slots
 so the wire-sheet color-codes the component's health and operators see a one-line reason:

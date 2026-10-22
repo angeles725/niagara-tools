@@ -50,6 +50,8 @@ quality-round8 T9f course-recording rows") until a session with those files in s
   CONFIG rare) and the D3-8 reason (users cannot switch `System.out` off; `lint-no-system-out.sh` already enforces
   the rule); §3 Fault surfacing — D4-15 lexiconized `configFail` cause. `[ev: corpus B1418 §1418.2]` `[ev: corpus B1419 §1419.4 c]`
 - `types/logic-authoring.md` § BQL from code — a pointer to the BQL case rules in `types/dashboard.md` (D3-23).
+- FOLDED by T9h (2026-10-22): the `types/observability.md` §1/§3 rows above (plus D3-7, the `LogHistoryService`
+  single `minimumSeverity` ops note) and the `types/logic-authoring.md` § BQL from code pointer.
 - Component lifecycle rows deferred until T9b merges (`types/logic-authoring.md`): D1-12, D1-14, D1-15, D1-16,
   D1-17, D1-18, D2-11, D2-12, D2-13.
 
