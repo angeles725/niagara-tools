@@ -311,6 +311,26 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
     wider run made `verify-module.bats` flake). GNU `parallel` children inherit an open `flock` fd and hold the
     lock after the parent exits: start a locked parallel run with `setsid` and stop it with `kill -- -<PGID>`.
     `[ev: retro r8-t22-retro-deltas Δ7]`
+    - **Host pids budget:** on WSL every session shares the `init.scope` cgroup (`pids.max` = systemd
+      TasksMax, 15% of `threads-max`; 48,129 here). When it fills, every fork fails and all sessions abort
+      together. Before a heavy suite (`bats`, `make check`, a mutation run) read
+      `/sys/fs/cgroup/init.scope/pids.current` and wait while it is above 20,000; run under `ulimit -u 4000`.
+      `scripts/ci-local.sh` refuses to start (exit 4) while any cgroup is above 50% of its `pids.max`.
+      `[ev: retro r8-t41-host-safety Δ1]`
+    - **Writer cap:** at most two writers per session run a heavy suite at the same time; the others edit,
+      read or wait. The integrator runs the full `ci-local.sh -j 3` once, at the end. `[ev: retro r8-t41-host-safety Δ2]`
+    - **Disk at round close:** Go never caps `~/.cache/go-build` (84 GB after five days of multi-worktree
+      builds). At round close run `go clean -cache` and `df -h / /mnt/c`; stop heavy work while C: is above
+      90%, because WSL then fails to start (`Wsl/Service/E_UNEXPECTED`). Operator hygiene, outside the
+      agent's reach: delete orphan `swap.vhdx` files and crash dumps, and compact `ext4.vhdx` (`fstrim -av` in
+      WSL, then `wsl --shutdown` and diskpart `compact vdisk`); the vhdx never shrinks on its own.
+      `[ev: retro r8-t41-host-safety Δ3]` `[ev: retro r8-t41-host-safety Δ7]`
+  - **Landing scripts:** poll `gh pr checks <n>` in a bounded loop instead of `gh pr checks --watch` (it hung
+    15 minutes on a PR whose only check had passed). Resolve every path argument to an absolute path before
+    any `cd` (a relative `--body-file` failed after `cd` into the worktree). Keep helper scripts in the
+    repository or the session scratchpad, never in `/tmp`, which a WSL restart wipes. Toolbelt entry points
+    resolve their own real path (#315, `fix/r8-wrapper-real-path`), so call them by path or through a symlink.
+    `[ev: retro r8-t41-host-safety Δ4]` `[ev: retro r8-t41-host-safety Δ5]` `[ev: retro r8-t41-host-safety Δ6]`
 - A session that changed KIT files is NOT "done" until ONE of:
   - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
   - **The retro index is GENERATED** — never hand-edit `retros/INDEX.md`. Each retro carries its row as header comments (`<!-- review-status: pending|folded -->` on line 1, then `<!-- module: X -->`, `<!-- deltas: N -->`, optional `<!-- index-comment: … -->`); edit the retro header and run `toolbelt/gen-retro-index.sh` (`--check` is the CI freshness gate and is called by `sweep-build-state.sh`). On a merge conflict in `INDEX.md`, take either side and regenerate. `.gitattributes` marks it `merge=union` so a conflict rarely stops a merge, but a union result is only valid after regeneration. `toolbelt/new-retro.sh` writes that header block into its stub and regenerates the index (it never appends a row). `[ev: retro generated-retro-index Δ1]` `[ev: retro generated-retro-index Δ2]`
