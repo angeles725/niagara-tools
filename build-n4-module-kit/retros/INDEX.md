@@ -251,6 +251,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-generated-retro-index.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-check-facets-card.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-ci-steps.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |
@@ -268,3 +269,4 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | pending | 2 |
+| 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |

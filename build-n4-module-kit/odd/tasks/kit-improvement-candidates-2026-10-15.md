@@ -344,18 +344,29 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `DistributionManifest.java:87,130`, `PlatformInstallManager.java:353-356`, `CommitCommand.java:74-86`, 22/26 shipped dists, corpus B1318 §1318.3, B1345.
 - **Target:** `types/distribution.md:35-45`.
 - **Lint-able:** yes — FAIL "installs without stopping"; WARN dist.xml without explicit `reboot`/`noStation`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-7, `docs/r8-t9i-packaging`, 2026-10-23; pps Δ1, r3pec Δ1): `types/distribution.md` § 2
+  table (`noStation` = stop every app, missing = false, `noRunningStation`, `reboot` default false,
+  `updateDaemonBinaries` no reboot) + "always write both"; § 3 gotcha. Pin KP1. The dist.xml check is owed as Go lint G8.
 
 ### C24 — `-se` means "depends on Java SE APIs" and runs on the Windows Supervisor only
 - **Sources:** has#Δ8 (primary, meaning + part dependency matrix) · pps#Δ8 extends (JACE never loads `-se`)
 - **Evidence:** devguide `modules.txt:72-76`, `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:49-51`, corpus B1313 §1313.3 C3, B1341 §1341.2 C1.
 - **Target:** `types/structure.md:300` + § Layout.
 - **Lint-able:** yes — parse cross-part `api(...)`; WARN `runtimeProfile=se` on a JACE module. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-7, 2026-10-23; has Δ8, pps Δ8): `types/structure.md` § Layout (profile meanings, part
+  dependency matrix from `modules.txt:148-155`) and § The `-se` runtime profile; the JACE premise was in five places
+  (load table, AWT trap, `-wb` dependency trap, JACE limits, `METHODOLOGY.md`), all corrected. The JACE row is
+  doc-proven (`ConfigureRuntimeProfiles.txt:30`), not run on a JACE. Pin KP2; owed Go lint G9 `part-deps`.
 
 ### C25 — `module-include.xml` holds only `<type>` lines; stale lines are never removed
 - **Sources:** has#Δ6 (primary) · afl#Δ5 extends (processor appends, never removes → SEVERE "Missing Sys.loadType()"; test types only in `moduleTest-include.xml`)
 - **Evidence:** devguide `upgradingBuild.txt:121`, corpus B1313 §1313.3 C2, B1233 §1233.4.
 - **Target:** `types/structure.md:8,338`, `types/module-wiring.md` §2, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — WARN `<defs>`/`<lexicons>`/`<moduleParts>` in it; FAIL dangling `<type class>`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-7, 2026-10-23; has Δ6, afl Δ5): `types/module-wiring.md` § 2 (only `<types>`,
+  `moduleManifest {}`, append-only processor, SEVERE `Missing Sys.loadType()` at `Builder.java:776`, test types in
+  `moduleTest-include.xml`); `types/structure.md` § Layout + `-se` sibling step 3 no longer put `<moduleParts>` in it.
+  Pin KP5; owed Go lint G10 `module-include` (the `verify-module.sh` target is left to it).
 
 ### C26 — Authoring recipe: doc part allowed, `help.guide.base` optional, `uberjar` first
 - **Sources:** has#Δ7 (primary) · afl#Δ1 reinforces/duplicate on `uberjar` + extends (Path 0, `testUberjar`, library→permission table, POJO DTO, Java-8 pins)
@@ -363,6 +374,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** devguide `deployingHelp.txt:10,29-31`, `modules.txt:122`, `build.txt:250`, `upgradingBuild.txt:101`, course `Lab Instructions.pdf` p59-63.
 - **Target:** `types/structure.md:9,176-250`, `types/third-party-libraries.md:38-80`.
 - **Lint-able:** yes — FAIL `help.guide.base=module://docUser`; WARN `shadowJar`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-7, 2026-10-23; has Δ7, afl Δ1 uberjar half): doc part allowed, `help.guide.base`
+  optional (`deployingHelp.txt:8,28`) in `types/structure.md`; `types/third-party-libraries.md` Path 0 `uberjar` /
+  `testUberjar` first (`build.txt:187-193`), Shadow demoted to the relocation fallback. Pins KP3, KP4; owed Go lint
+  G11. afl Δ1's library→permission table and Java-8 pins stay with C42.
 
 ### C27 — Wrong library facts: okhttp location, Gson version, MQTT module name
 - **Sources:** shl#Δ2 (primary, okhttp ships in `bin/ext`, `nre("com.squareup.okhttp3:okhttp")`) · shl#Δ5 (Gson 2.13.2, Jackson 2.22.1, `abstractMqttDriver`) · drp#Δ1 duplicate on the module name + extends (MQTT native first, `tridium:mqtt`, 25 devices on a JACE)
@@ -383,6 +398,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `guides-clean/Templates/DeployingTemplates-054F175F.txt:33`, corpus B1325 C1-C2; reinforces afl Δ3.
 - **Target:** `types/distribution.md`, `types/logic.md:185`, `types/structure.md:133`.
 - **Lint-able:** yes — dangling `§` link check. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-7, 2026-10-23; pps Δ4): `types/logic.md` UX row 5 link fixed, palette ≠ `.ntpl` note
+  in `types/structure.md` § Palette assembly templates, fleet install in `types/distribution.md` § 12. Corrected
+  cite: the evidence line `DeployingTemplates-054F175F.txt:33` is past the end of the 21-line 4.15.6.20 file (claim at
+  `:7-11`). Pin KP6; owed Go lint G12 `kit-section-links`.
 
 ### C30 — Theme module rules: `themeName` value is the module name; picker location wrong; SPA not auto-themed
 - **Sources:** wuh#Δ2 (primary) · r3wsh#Δ4 extends (servlet SPA must link `theme.css` explicitly)
