@@ -247,3 +247,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-n4-course-signed-jars-gate-fix.md | kit | 2026-10-22 | folded | 6 |
 | 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | folded | 7 |
+| 2026-10-22-n4-course-sample-check-precision.md | kit | 2026-10-22 | folded | 5 |

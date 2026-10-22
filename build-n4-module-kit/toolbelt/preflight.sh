@@ -28,10 +28,12 @@
 #               -> PASS|WARN(locked)|SKIP(lsof absent or returning an empty listing, or niagara_home is
 #               9p/drvfs) — never a false PASS
 #   sample-*    [--sample] gradle.properties niagara_home exists (C:\\… read as /mnt/c/…) and carries the
-#               <niagara_home> version (sample-home); niagara_user_home has no <…> placeholder (sample-user);
-#               the ROOT build.gradle.kts has the signing block — signingServices allowDefaultProfile +
-#               niagaraSigning (sample-sign); no shipped build/ directory (sample-build, WARN: delete it).
-#               [ev: retro n4-course-handson-build-signing-windows Δ6]
+#               <niagara_home> version (sample-home; WARN when either path has no X.Y.Z to compare);
+#               niagara_user_home is set (WARN when missing) and has no <…> placeholder (sample-user);
+#               the ROOT build.gradle.kts code outside comments and strings has allowDefaultProfile.set(false)
+#               or `allowDefaultProfile = false` plus niagaraSigning { aliases…; signingProfileFile… }
+#               (sample-sign); no shipped build/ directory (sample-build, WARN: delete it).
+#               [ev: retro n4-course-signed-jars-gate-fix Δ6] [ev: retro n4-course-sample-check-precision Δ1]
 #
 # Row format: PASS|FAIL|WARN|SKIP  <check>  <detail>
 # Exit: 0 all PASS/WARN/SKIP · 1 any FAIL · 2 usage · 3 env (path not found)
@@ -295,12 +297,35 @@ fi
 # niagara_home, a <username> placeholder user home, a root with no signing block (the station then
 # loads the jar unsigned under high verification) and stale build/ outputs. gradle.properties escapes
 # backslashes (c:\\niagara\\…); a drive path is checked as its /mnt/<drive>/… WSL mount.
-# [ev: retro n4-course-handson-build-signing-windows Δ6]
+# [ev: retro n4-course-signed-jars-gate-fix Δ6]
 # ---------------------------------------------------------------------------
 # _prop <file> <key>: the value of <key>=… in a .properties file, backslash escapes collapsed.
 _prop() { sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*//p" "$1" 2>/dev/null | head -1 | sed 's/\\\\/\\/g; s/[[:space:]]*$//'; }
 # _n4_ver <path>: the last X.Y.Z[.W] version token in <path> (empty when none).
 _n4_ver() { grep -oE '[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?' <<< "$1" | tail -1; }
+# _kts_code <file>: <file> with // line comments and /* */ blocks removed, so a commented-out block is absent.
+# Kotlin strings are tracked ("…" with \ escapes, """…""" raw across lines) and emptied to "" / """""": a
+# comment marker inside one ("**/*.jar", "https://…") is text, and a quoted setting is not code.
+_kts_code() {
+  awk '{ out = ""; n = length($0); i = 1; ins = 0
+    while (i <= n) {
+      c = substr($0, i, 1); t = substr($0, i, 2); q3 = (substr($0, i, 3) == "\"\"\"")
+      if (inb) { if (t == "*/") { inb = 0; i += 2 } else i++; continue }
+      if (inr) { if (q3) { inr = 0; out = out "\"\"\""; i += 3 } else i++; continue }
+      if (ins) { if (c == "\\") i += 2; else { if (c == "\"") { ins = 0; out = out c }; i++ }; continue }
+      if (q3) { inr = 1; out = out "\"\"\""; i += 3; continue }
+      if (c == "\"") { ins = 1; out = out c; i++; continue }
+      if (t == "//") break
+      if (t == "/*") { inb = 1; i += 2; continue }
+      out = out c; i++
+    }
+    print out }' "$1" 2>/dev/null
+}
+# The sample-sign requirements: SAMPLE_SIGN_ERE[k] (over the uncommented code) is named SAMPLE_SIGN_NAME[k] in the
+# FAIL detail. allowDefaultProfile takes the .set(false) call or the Kotlin-DSL `= false` assignment.
+SAMPLE_SIGN_ERE=('allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))'
+  'niagaraSigning[[:space:]]*\{' '(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)' 'signingProfileFile')
+SAMPLE_SIGN_NAME=('allowDefaultProfile.set(false) (or = false)' 'niagaraSigning {' 'aliases' 'signingProfileFile')
 if [ "$SAMPLE" -eq 1 ] && [ "$WIN_PATH_FAIL" -eq 0 ]; then
   GP="$GR/gradle.properties"
   S_HOME=$(_prop "$GP" niagara_home)
@@ -313,22 +338,31 @@ if [ "$SAMPLE" -eq 1 ] && [ "$WIN_PATH_FAIL" -eq 0 ]; then
     row FAIL "sample-home" "no niagara_home in $GP — set it to this install ($NH)"
   elif [ ! -d "$S_PATH" ]; then
     row FAIL "sample-home" "gradle.properties niagara_home $S_PATH does not exist — retarget it to $NH"
-  elif [ -n "$S_VER" ] && [ -n "$NH_VER" ] && [ "$S_VER" != "$NH_VER" ]; then
+  elif [ -z "$S_VER" ] || [ -z "$NH_VER" ]; then
+    row WARN "sample-home" "gradle.properties niagara_home $S_PATH exists, but its version could not be compared (no X.Y.Z in $([ -z "$S_VER" ] && echo "$S_PATH" || echo "the target $NH")) — confirm it is the target install $NH"
+  elif [ "$S_VER" != "$NH_VER" ]; then
     row FAIL "sample-home" "gradle.properties niagara_home is $S_VER, the target install is $NH_VER — retarget it to $NH"
   else
     row PASS "sample-home" "gradle.properties niagara_home $S_PATH exists${NH_VER:+ (version $NH_VER)}"
   fi
   S_USER=$(_prop "$GP" niagara_user_home)
-  if grep -q '<[^>]*>' <<< "$S_USER"; then
+  if [ -z "$S_USER" ]; then
+    row WARN "sample-user" "no niagara_user_home in $GP — set it to this user's Niagara user home"
+  elif grep -q '<[^>]*>' <<< "$S_USER"; then
     row FAIL "sample-user" "gradle.properties niagara_user_home has a placeholder: $S_USER"
   else
     row PASS "sample-user" "niagara_user_home has no <…> placeholder"
   fi
   ROOT_KTS="$GR/build.gradle.kts"
-  if grep -q 'allowDefaultProfile' "$ROOT_KTS" 2>/dev/null && grep -q 'niagaraSigning' "$ROOT_KTS" 2>/dev/null; then
-    row PASS "sample-sign" "root build.gradle.kts has signingServices allowDefaultProfile + niagaraSigning"
+  # uncommented code only: a set(true) or commented-out block still signs with the default profile
+  S_CODE=$(_kts_code "$ROOT_KTS"); S_MISS=""
+  for _k in "${!SAMPLE_SIGN_ERE[@]}"; do
+    grep -qE "${SAMPLE_SIGN_ERE[$_k]}" <<< "$S_CODE" || S_MISS="$S_MISS${S_MISS:+, }${SAMPLE_SIGN_NAME[$_k]}"
+  done
+  if [ -z "$S_MISS" ]; then
+    row PASS "sample-sign" "root build.gradle.kts has allowDefaultProfile.set(false) + niagaraSigning { aliases; signingProfileFile }"
   else
-    row FAIL "sample-sign" "root $ROOT_KTS lacks the signing block (signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile })"
+    row FAIL "sample-sign" "root $ROOT_KTS lacks (uncommented) $S_MISS — the signing block is signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile }"
   fi
   S_BUILD=$(find "$GR" -mindepth 1 -maxdepth 3 -type d -name '.*' -prune -o -type d -name build -print -prune 2>/dev/null | sort | tr '\n' ' ' | sed 's/ *$//')
   if [ -n "$S_BUILD" ]; then

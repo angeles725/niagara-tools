@@ -253,7 +253,7 @@ else
   # restart-seq-comp-lockout-hours Δ3: the plugin's post-jar copy into <niagara_home>/modules failed because a
   # (Windows-side) process holds the old jar open. The jar task itself already assembled build/libs/<jar>.
   # Route-independent: the Windows gradlew.bat route prints backslash paths and the Kotlin message
-  # ("Tried to overwrite the destination, but failed to delete it"). [ev: retro n4-course-handson-build-signing-windows Δ5]
+  # ("Tried to overwrite the destination, but failed to delete it"). [ev: retro n4-course-signed-jars-gate-fix Δ5]
   if grep -qE 'FileAlreadyExistsException.*modules[/\\].*\.jar' "$GLOG"; then
     echo "build.sh: the plugin's post-jar copy into $NIAGARA_HOME/modules failed — a local process (Workbench," >&2
     echo "  a station) holds the old jar open (FileAlreadyExistsException). The build/libs jar is the artifact of record:" >&2

@@ -8,8 +8,8 @@
 # STORED entries make the mismatch impossible by construction and keep the content bytes identical,
 # so the existing signature stays valid. Field-confirmed (operator re-signed STORED jars, 2026-09-01).
 #
-# Entry order matters for a valid signed jar: META-INF/MANIFEST.MF first, then NIAGARA4.SF/.RSA
-# when present, then everything else. Cost: a bigger jar (deflate ratio lost).
+# Entry order matters for a valid signed jar: META-INF/MANIFEST.MF first, then every
+# META-INF/<ALIAS>.SF with its .RSA/.DSA/.EC block (NIAGARA4, CODESIGN, SERVER1, ...), then everything else. Cost: a bigger jar (deflate ratio lost).
 #
 # Usage: stored-repack.sh <in.jar> <out.jar>      (refuses to overwrite an existing out.jar)
 # Check: verify-module.sh --stored <out.jar>      (0 "Defl:" entries)
@@ -30,10 +30,14 @@ cd "$TMP/ex"
 
 # -0 store only, -X no extra attrs, -D no directory entries
 zip -q -0 -X -D "$OUT_ABS" META-INF/MANIFEST.MF
+# the signature files are named after the signing alias [ev: retro n4-course-sample-check-precision Δ4]
 SIG=()
-for f in META-INF/NIAGARA4.SF META-INF/NIAGARA4.RSA; do [ -f "$f" ] && SIG+=("$f"); done
+for f in META-INF/*.SF; do
+  [ -f "$f" ] || continue; SIG+=("$f")
+  for k in RSA DSA EC; do [ -f "${f%.SF}.$k" ] && SIG+=("${f%.SF}.$k"); done
+done
 [ ${#SIG[@]} -eq 0 ] || zip -q -0 -X -D "$OUT_ABS" "${SIG[@]}"
-zip -q -0 -X -D -r "$OUT_ABS" . -x META-INF/MANIFEST.MF META-INF/NIAGARA4.SF META-INF/NIAGARA4.RSA
+zip -q -0 -X -D -r "$OUT_ABS" . -x META-INF/MANIFEST.MF "${SIG[@]}"
 
 d=$(unzip -v "$OUT_ABS" | grep -c 'Defl:' || true)
 [ "$d" -eq 0 ] || { echo "stored-repack: $d deflated entries remain in $OUT_ABS" >&2; exit 1; }

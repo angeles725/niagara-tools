@@ -36,6 +36,10 @@ public final class WsGrid
   private static final int STANDARD_ROW_SPACING = 10;
   /** Free wixels between a glyph's bottom edge and the next row (standard(): 10 - (2 + 4 + 1)). */
   private static final int ROW_GAP = 3;
+  /** Left and top margin of {@link #standard()}, in wixels. */
+  private static final int MARGIN = 3;
+  /** Largest SUMMARY count whose row spacing still fits one row under the top margin: 600 - 3 - 3 - 3 = 591. */
+  public static final int MAX_SUMMARY_COUNT = SHEET_MAX - MARGIN - MIN_GLYPH_HEIGHT - ROW_GAP;
 
   private final int cols;
   private final int colSpacing;
@@ -90,11 +94,15 @@ public final class WsGrid
    * Row spacing that clears a glyph showing {@code summaryCount} SUMMARY slot bars:
    * {@code max(10, 2 + summaryCount + 1 + 3)} — the glyph height (B1194 §1194.8) plus the 3-wixel gap
    * {@link #standard()} leaves under a 4-bar glyph. A 22-SUMMARY facade (25 wixels tall) gets 28; the fixed
-   * 10 of {@link #standard()} would stack its rows on top of each other (issue #259).
+   * 10 of {@link #standard()} would stack its rows on top of each other (issue #259). A count past
+   * {@link #MAX_SUMMARY_COUNT} is rejected: its glyph cannot fit the sheet (and near
+   * {@code Integer.MAX_VALUE} the sum would overflow into a silent 10).
    */
   public static int rowSpacingFor(int summaryCount)
   {
     if (summaryCount < 0) throw new IllegalArgumentException("summaryCount < 0: " + summaryCount);
+    if (summaryCount > MAX_SUMMARY_COUNT)
+      throw new IllegalArgumentException("summaryCount > " + MAX_SUMMARY_COUNT + " does not fit the sheet: " + summaryCount);
     return Math.max(STANDARD_ROW_SPACING, MIN_GLYPH_HEIGHT + summaryCount + ROW_GAP);
   }
 
@@ -109,7 +117,7 @@ public final class WsGrid
 
   private static WsGrid forRowSpacing(int rowSpacing)
   {
-    return new WsGrid(8, 14, rowSpacing, 3, 3, GLYPH_WIDTH, SHEET_MAX, SHEET_MAX);
+    return new WsGrid(8, 14, rowSpacing, MARGIN, MARGIN, GLYPH_WIDTH, SHEET_MAX, SHEET_MAX);
   }
 
   /** Column coordinate of cell {@code index}, clamped so {@code p + width <= maxWidth}. */
