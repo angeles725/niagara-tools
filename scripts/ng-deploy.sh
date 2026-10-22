@@ -31,8 +31,10 @@ ENV_FILE=".env.local"
 WITH_SLOTOMATIC=0
 STRICT_SLOTOMATIC=0
 NO_GATE=0
-# audit A2: never-deployed module (no schema baseline to diff) — --first-deploy or FIRST_DEPLOY=1
-FIRST_DEPLOY="${FIRST_DEPLOY:-0}"
+# audit A2: never-deployed module (no schema baseline to diff) — --first-deploy, or FIRST_DEPLOY=1 in the env file.
+# Never read from the ambient environment: a variable left exported in the operator's shell would silently skip the
+# schema-risk precheck on a module that WAS deployed (#246 A2b).
+FIRST_DEPLOY=0
 ACCEPT_LOSSY=0
 # Backup policy (Campaign 3 B10): lightweight-by-default + keep-N autopurge.
 # env-respecting so `FULL_BACKUP=1 backup` and `KEEP_N=N` work when sourced.
@@ -67,7 +69,8 @@ Options:
   --no-gate                Skip the verify-module.sh gate (default: on for mode A/C). Without
                              --no-gate a MISSING gate binary blocks the deploy (exit 50).
   --first-deploy           The module was never deployed: skip the schema-risk precheck (no
-                             baseline to diff). Same as FIRST_DEPLOY=1.
+                             baseline to diff). Same as FIRST_DEPLOY=1 in the env file
+                             (an exported FIRST_DEPLOY in the shell is ignored).
   --accept-lossy           Proceed on a schema-risk LOSSY verdict (an OUTAGE always blocks).
   --help                   Print this help and exit 0
   --version                Print SCRIPT_VERSION and exit 0
