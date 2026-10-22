@@ -534,6 +534,56 @@ GRADLEW
   [[ "$output" == *"FAILED TO RESTORE"* ]]
 }
 
+# Fault injection for the restore-failure pins below: a read-only modules/<jar> (chmod 444) makes build.sh's
+# `cp -p <backup> modules/<jar>` fail exactly as a station or Workbench lock would. The stock fake gradlew never
+# writes modules/, so the jar there is still the pre-build one afterwards.
+@test "BS-drift-restore-fail-truth: a failed restore names cp's cause and says what modules/ really holds (#226)" {
+  # Mutation: BS-drift-restore-fail-truth -- the old unconditional text claimed modules/ "now holds the NEW jar"
+  # and dropped cp's stderr, so the operator could neither trust the message nor see why the restore failed.
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  cp "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+  chmod 444 "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  if [ -w "$TMPDIR_T/nh/modules/Foo-rt.jar" ]; then skip "running as root: chmod 444 does not block writes"; fi
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  chmod 644 "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"FAILED TO RESTORE"* ]]
+  [[ "$output" == *"Permission denied"* ]]
+  [[ "$output" == *"still holds the pre-build jar"* ]]
+  if [[ "$output" == *"now holds the NEW jar"* ]]; then return 1; fi
+  cmp -s "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+}
+
+@test "BS-drift-meta-inf-only: two jars with only META-INF entries and the same version are unchanged, not exit 52 (#226)" {
+  # Mutation: BS-drift-meta-inf-only -- under pipefail, `grep -v '^META-INF/'` with no payload line exits 1, the
+  # content hash fails and an unchanged resource-only jar is reported "cannot verify" (exit 52).
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for jar in "$TMPDIR_T/nh/modules/Foo-rt.jar" "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"; do
+    d="$(mktemp -d)"; mkdir -p "$d/META-INF"
+    printf '<module name="X" vendorVersion="1.0.0" buildMillis="%s">\n</module>\n' "$RANDOM" > "$d/META-INF/module.xml"
+    (cd "$d" && zip -q -r "$jar" .); rm -rf "$d"
+  done
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-drift-empty-listing: unzip that succeeds with an EMPTY listing is cannot-verify (exit 52), never equal hashes (#226)" {
+  # Mutation: BS-drift-empty-listing -- dropping the empty-listing check hashes two empty lists equal (silent pass).
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.0" "NEW-behavior-fix"
+  mkdir -p "$TMPDIR_T/emptyunzip"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$TMPDIR_T/emptyunzip/unzip"; chmod +x "$TMPDIR_T/emptyunzip/unzip"
+  PATH="$TMPDIR_T/emptyunzip:$PATH" run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"cannot verify"* ]]
+}
+
 # audit-2026-10-03 A2: report-module exit 4 (INCOMPLETE — a floor check SKIPped) is its own build.sh exit, never a pass.
 @test "BS-report-incomplete: a report-module INCOMPLETE (exit 4) exits 53 with the floor named, never 0 (A2)" {
   # Mutation: BS-report-incomplete -- folding exit 4 into the FAIL branch reports "has FAILs" (50) for a skipped floor.
