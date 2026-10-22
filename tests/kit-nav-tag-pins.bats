@@ -21,6 +21,7 @@ setup() {
 }
 
 @test "KN2: no kit doc says Workbench or the station discovers .nav files" {
+  # shellcheck disable=SC2016  # the backticks are Markdown code spans in the pattern, not command substitution
   run grep -rniE 'discover[a-z]* (the )?`?\.nav`? files' "$DOCS"
   [ "$status" -eq 1 ]
 }
