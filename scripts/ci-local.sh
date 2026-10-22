@@ -7,7 +7,8 @@
 #   - every `run:` step runs as GitHub runs it: `bash -e -c` (errexit, NO pipefail) from the repo root,
 #     with CI=true and RUNNER_TEMP set; a failure is reported and the next step still runs;
 #   - steps with a local equivalent are skipped by the SKIP_RULES below (shellcheck install -> the pinned
-#     v0.10.0 binary from a sha256-checked cache, prepended to PATH; bats install -> bats on PATH);
+#     v0.10.0 binary from a sha256-checked cache, prepended to PATH; bats install -> bats on PATH;
+#     actions/setup-go -> the go on PATH);
 #   - a step it can neither run nor skip on purpose (sudo/apt-get, an unknown `uses:` action, a step-level
 #     env:/shell:/if:) is UNCOVERED: --list and the run both stop with exit 2 instead of skipping it silently.
 # --list prints RUN/SKIP per step; --only runs the steps whose name contains <substring>; -j N (default 3)
@@ -37,6 +38,7 @@ SKIP_RULES=(
   "Pre-fetch JUnit*|network download into ~/.gradle; run-pure-test.bats needs junit-4.13.2 there (one gradle build fetches it)"
   "Install bats|uses bats on PATH"
   "Install shellcheck*|replaced by the cached, sha256-checked shellcheck ${SC_VER} prepended to PATH"
+  "Set up Go*|uses the go on PATH (CI installs the go/go.mod version; local go must exist)"
 )
 
 usage() { printf 'usage: %s [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2; exit 2; }
