@@ -239,13 +239,43 @@ The `BCloudIdManager` service child assigns and persists `nc:cloudId` UUIDs.
 
 ---
 
-## 7 · `enableNonDriverClients` outbound HTTP gate (PD-18 GOTCHA) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ18]`
+## 7 · Outbound HTTP — the decision ladder and the `enableNonDriverClients` gate `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ18]`
 
-**GOTCHA:** `httpClient-rt BHttpClientService.enableNonDriverClients=false` blocks non-driver modules from using `BHttpClient` for outbound HTTP by default.
+**Ladder** — take the first route that fits `[ev: retro devguide415-r2-shipped-libraries Δ7]` `[ev: corpus B1333 §1333.3]`:
+1. **No code:** the HttpClient driver (needs the `http` licence and an active SMA; JSONPath parsing).
+2. **Java through the station:** `HttpClientBuilder…build()` then `sendSync()` (`IHttpClient`), which inherits the
+   service gates, the licence, the throttle, the request audit and CertManager trust. Mount it with
+   `mountAtOrd(slotPathOrd, name)` — it throws `IllegalArgumentException` outside a running station
+   (vineflower httpClient-rt 4.14.0.162 `HttpClientBuilder.java:167-181`); `withoutSendOnStart()` stops the
+   first send at start.
+3. **okhttp from `bin/ext`** via `nre(...)` (§ 2.1): unlicensed and outside every service gate, so trust,
+   retries and timeouts are the module's job.
+4. An uberjar only when 2 and 3 cannot do it.
 
-- A module that is NOT a `BDeviceNetwork`/`BBasicNetwork` driver (i.e. a plain `BAbstractService` or utility module) and calls `BHttpClient.send(...)` will receive a `ServiceException` at runtime unless `enableNonDriverClients=true` is set on the station's `httpClient-rt` service.
-- **Raw `HttpURLConnection` / OkHttp BYPASS the gate entirely** — they are plain JVM calls and are not routed through `BHttpClientService`. Our Apillm importer uses `HttpURLConnection` for this reason (not gated). OkHttp from `net-rt` is also gate-free.
-- **Rule:** if your module uses `BHttpClient`, add a commissioning note: `httpClient-rt: set enableNonDriverClients=true`. If your module uses `HttpURLConnection` or OkHttp, document that the gate does NOT apply.
+**The gate is CLOSED by default and fails quietly.** `BHttpClientService.enableNonDriverClients` and
+`enableInsecureHttp` both default false (vineflower httpClient-rt 4.14.0.162 `BHttpClientService.java:88-89`; javap
+of `httpClient-rt.jar` 4.15.6.20 static init: `iconst_0`). Every builder client is a non-driver client:
+`BHttpClient.isDriverBasedClient()` is `final` and returns false (same copy `BHttpClient.java:302-306`), whatever
+module calls it. With the gate closed, `permittedByService` catches the refusal, writes it to the client's
+health as a fault ("Non driver clients are disabled in the HttpClientService") and returns false
+(`BHttpClientService.java:231-252`); `sendSync()` then returns `""` (`BHttpClient.java:277`, `sendSync` = `commonPoll(null)`).
+No exception reaches the caller. Same message and health call in the 4.15.6.20 jar (javap). `[ev: corpus B1346 §1346.2]`
+`[ev: retro devguide415-r3-drivers-integration Δ4]`
+- **Commissioning item:** a module on route 2 states "set `HttpClientService.enableNonDriverClients=true`" (and
+  `enableInsecureHttp` only for a plain-http endpoint) in its runbook, and the module reads its client's health
+  so an empty reply is not mistaken for an empty payload.
+- An unmounted client that passes the gate reaches the request audit, which dereferences the component's slot
+  path (`BHttpClientService.java:270`); a null there is a likely NPE `[INFER]` (not executed, niagara-research
+  B1346-G1). Mount it.
+- **Raw `HttpURLConnection` / okhttp bypass the gate entirely** — they are plain JVM calls and are not routed
+  through `BHttpClientService`. Our Apillm importer uses `HttpURLConnection` for this reason. Document in the
+  module README which route applies.
+- **OAuth2:** no OAuth2 auth type ships. Subclass `BAuthorizationHeaderScheme` (abstract `getAuthHeaderValue`,
+  vineflower httpClient-rt 4.14.0.162 `datatypes/auth/BAuthorizationHeaderScheme.java:29`), fetch and cache the token in
+  `getAuthHeaderValue` through `oauth2-rt` `OAuth2ClientCredentialsGrantRequest` (the `email-rt` pattern: `BOAuthEmailClientSecretAuthenticator.java:6`, email-rt 4.14.0.162), plug
+  it in with `withAuthenticator(BTypeSpec)` (`HttpClientBuilder.java:93`) and depend on `oauth2-rt`; the client
+  keeps the gate, throttle and audit. A static `withBearerAuthenticator(token)` (`:116`) with a token our code
+  refreshes is the simpler route. `[ev: retro devguide415-r3-drivers-integration Δ5]` `[ev: corpus B1346 §1346.3]`
 - **Security axis note:** this gate is OUTBOUND-only — it does NOT affect inbound auth. See `types/security.md §10` for the full outbound-vs-inbound axis separation.
 
 `[ev: corpus B1069]`

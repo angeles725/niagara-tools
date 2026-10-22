@@ -19,7 +19,9 @@
 #
 # Exit: 0 every run step passed; 1 a step failed; 2 usage error or an UNCOVERED / unparsable step;
 #       3 the pinned shellcheck could not be provisioned (sha256 mismatch, download failed, no sha256 tool),
-#         or the ci-steps parser could not be built (no `go` on PATH, build failure).
+#         or the ci-steps parser could not be built (no `go` on PATH, build failure);
+#       4 host pids pressure: a cgroup under ${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup} uses more than half of its
+#         pids.max (a full init.scope rejected every fork and aborted all sessions on 2026-10-22); wait and retry.
 # [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps]
 set -euo pipefail
 
@@ -108,6 +110,24 @@ if [ "$LIST" -eq 1 ]; then
 fi
 [ "$uncovered" -eq 0 ] || exit 2
 [ "$LIST" -eq 0 ] || exit 0
+
+# check_host_pids — refuse to start the steps while any cgroup is above 50% of a numeric pids.max.
+check_host_pids() {
+  local root="${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}" d cur max busy=0
+  for d in "$root"/*/; do
+    [ -r "$d/pids.current" ] || continue
+    [ -r "$d/pids.max" ] || continue
+    read -r cur < "$d/pids.current"; read -r max < "$d/pids.max"
+    [[ "$cur" =~ ^[0-9]+$ && "$max" =~ ^[1-9][0-9]*$ ]] || continue
+    if [ $((cur * 2)) -gt "$max" ]; then
+      printf 'ci-local: host pids pressure in %s: %s/%s (> 50%%); wait for other sessions and retry\n' \
+        "$(basename "$d")" "$cur" "$max" >&2
+      busy=1
+    fi
+  done
+  [ "$busy" -eq 0 ] || exit 4
+}
+check_host_pids
 
 # provision_shellcheck — verify (and on first use download) the pinned tarball, unpack it into $WORK, PATH it.
 provision_shellcheck() {

@@ -256,6 +256,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |
@@ -267,6 +268,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | pending | 9 |
 | 2026-10-22-r8-t23-parked-advisories.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-r8-t41-host-safety.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-r8-t9e-drivers.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9e-status-links.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
@@ -277,7 +279,10 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | pending | 2 |
 | 2026-10-23-r8-mirror-userhome.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r8-p1-sign.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r8-p1-web.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-headers.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-k15.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
+| 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |
