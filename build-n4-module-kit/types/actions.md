@@ -60,7 +60,9 @@ thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=
   `new Invocation(this, action, arg, cx)` to the module's own executor or worker, which calls `invoke()` on it. A
   bare `this::doX` lambda skips the invoke path: no links, no action event, no audit, no Context. A bounded executor
   rejects work when it is full or shut down (`RejectedExecutionException` under the JDK default policy): catch it in
-  `post()` and report it (fault the status, log, or fall back to a queued `ASYNC` invoke), never let it escape. (Owed Go lint G28
+  `post()` and report it (fault the status and log), or fall back with `return super.post(action, arg, cx);`, which
+  queues it on the engine's action queue (vineflower baja 4.14.0.162 `javax/baja/sys/BComponent.java:590`). Never
+  call `invoke()` from `post()`: that runs the slow work on the caller's thread. Never let the exception escape. (Owed Go lint G28
   `async-blocking-action`.)
 
 ## 3 · Action flags
