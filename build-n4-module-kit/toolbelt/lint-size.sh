@@ -39,45 +39,32 @@ set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-LC_ALL=C
-export LC_ALL
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
 
-USAGE='usage: lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>'
-STRICT=0
 MAXC=800
 MAXM=80
 is_count() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
-while [ $# -gt 0 ]; do
+# size_flag: the --max-class/--max-method flags, called by awk_lint_parse for a flag it does not own.
+size_flag() {
   case "$1" in
-    --strict) STRICT=1; shift ;;
     --max-class|--max-method)
       if [ $# -lt 2 ] || ! is_count "$2"; then
-        printf 'lint-size: %s needs a non-negative integer\n%s\n' "$1" "$USAGE" >&2
+        printf 'lint-size: %s needs a non-negative integer\n%s\n' "$1" "$AL_USAGE" >&2
         exit 3
       fi
       if [ "$1" = --max-class ]; then MAXC="$2"; else MAXM="$2"; fi
-      shift 2 ;;
-    --) shift; break ;;
-    -*) printf 'lint-size: unknown flag: %s\n%s\n' "$1" "$USAGE" >&2; exit 3 ;;
-    *) break ;;
+      # shellcheck disable=SC2034  # read by awk_lint_parse (lib/awk-lint.sh)
+      AL_SHIFT=2 ;;
   esac
-done
-if [ $# -ne 1 ]; then
-  printf '%s\n' "$USAGE" >&2
-  exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-  printf 'lint-size: not a directory: %s\n' "$ROOT" >&2
-  exit 3
-fi
+}
+# shellcheck disable=SC2034  # read by awk_lint_parse (lib/awk-lint.sh)
+AL_FLAG_HOOK=size_flag
+awk_lint_parse lint-size one 'usage: lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>' "$@"
+printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
+# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
+AL_AWK_ARGS=(-v MAXC="$MAXC" -v MAXM="$MAXM" -f "$AL_TMP/method-boundary.awk")
 
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
-
-cat > "$_TMP/main.awk" << 'AWKEOF'
+cat > "$AL_TMP/main.awk" << 'AWKEOF'
 { raw[NR] = $0 }
 END {
   n = NR
@@ -138,28 +125,4 @@ END {
 }
 AWKEOF
 
-had_warn=0
-had_err=0
-# A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
-  printf 'lint-size: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-  had_err=1
-fi
-while IFS= read -r f; do
-  # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
-  if ! out=$(awk -v FILE="$f" -v MAXC="$MAXC" -v MAXM="$MAXM" -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
-    printf 'lint-size: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
-    had_err=1
-    continue
-  fi
-  if [ -n "$out" ]; then
-    printf '%s\n' "$out"
-    had_warn=1
-  fi
-done < "$_TMP/files"
-
-[ "$had_err" -eq 0 ] || exit 3
-if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+awk_lint_run -name '*.java'

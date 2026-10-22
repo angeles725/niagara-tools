@@ -46,36 +46,13 @@ set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
-LC_ALL=C
-export LC_ALL
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-ws-placement each 'usage: lint-ws-placement.sh [--strict] <src-root>...' "$@"
+printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
+# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
+AL_AWK_ARGS=(-f "$AL_TMP/method-boundary.awk")
 
-USAGE='usage: lint-ws-placement.sh [--strict] <src-root>...'
-STRICT=0
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --strict) STRICT=1; shift ;;
-    --) shift; break ;;
-    -*) printf 'lint-ws-placement: unknown flag: %s\n%s\n' "$1" "$USAGE" >&2; exit 3 ;;
-    *) break ;;
-  esac
-done
-if [ $# -lt 1 ]; then
-  printf '%s\n' "$USAGE" >&2
-  exit 3
-fi
-for ROOT in "$@"; do
-  if [ ! -d "$ROOT" ]; then
-    printf 'lint-ws-placement: not a directory: %s\n' "$ROOT" >&2
-    exit 3
-  fi
-done
-
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-printf '%s\n' "$MB_AWK" > "$_TMP/method-boundary.awk"
-
-cat > "$_TMP/main.awk" << 'AWKEOF'
+cat > "$AL_TMP/main.awk" << 'AWKEOF'
 function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
 # split_args(s, from): parse the argument list that opens just before index `from` of s; sets NARGS, A[1..NARGS]
 # (top-level arguments, untrimmed) and returns 1 when the closing parenthesis was found
@@ -159,30 +136,4 @@ END {
 }
 AWKEOF
 
-had_warn=0
-had_err=0
-for ROOT in "$@"; do
-  # A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
-  if ! scan_files "$_TMP/files" "$_TMP/find.err" "$ROOT" -name '*.java'; then
-    printf 'lint-ws-placement: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2
-    had_err=1
-  fi
-  while IFS= read -r f; do
-    # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
-    if ! out=$(awk -v FILE="$f" -f "$_TMP/method-boundary.awk" -f "$_TMP/main.awk" "$f" 2>"$_TMP/awk.err"); then
-      printf 'lint-ws-placement: cannot scan %s: %s\n' "$f" "$(head -n 1 "$_TMP/awk.err")" >&2
-      had_err=1
-      continue
-    fi
-    if [ -n "$out" ]; then
-      printf '%s\n' "$out"
-      had_warn=1
-    fi
-  done < "$_TMP/files"
-done
-
-[ "$had_err" -eq 0 ] || exit 3
-if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+awk_lint_run -name '*.java'

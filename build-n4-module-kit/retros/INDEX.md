@@ -210,3 +210,4 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-03-deferred-lints-2026-10-03-close.md | kit | 2026-10-03 | folded | 5 |
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |
 | 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | pending | 5 |
+| 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |
