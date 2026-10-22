@@ -2,6 +2,7 @@ package lint
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,14 +21,35 @@ type fakeRule struct {
 
 func (r fakeRule) ID() string         { return r.id }
 func (r fakeRule) Severity() Severity { return r.sev }
-func (r fakeRule) Check(f *javasrc.File) []Finding {
+func (r fakeRule) Check(f *javasrc.File) ([]Finding, error) {
 	var out []Finding
 	for i, ln := range f.Raw {
 		if strings.Contains(ln, r.marker) {
 			out = append(out, Finding{Line: i + 1, Msg: "saw: " + ln})
 		}
 	}
-	return out
+	return out, nil
+}
+
+// mixedRule reports lines holding WARN (severity left unset) or FAIL (severity set by the rule) and
+// cannot analyze a file that holds BROKEN.
+type mixedRule struct{}
+
+func (mixedRule) ID() string         { return "lint-m" }
+func (mixedRule) Severity() Severity { return Warn }
+func (mixedRule) Check(f *javasrc.File) ([]Finding, error) {
+	var out []Finding
+	for i, ln := range f.Raw {
+		switch {
+		case strings.Contains(ln, "BROKEN"):
+			return out, errors.New("unbalanced braces")
+		case strings.Contains(ln, "FAIL"):
+			out = append(out, Finding{Severity: Fail, Line: i + 1, Msg: "saw: " + ln})
+		case strings.Contains(ln, "WARN"):
+			out = append(out, Finding{Line: i + 1, Msg: "saw: " + ln})
+		}
+	}
+	return out, nil
 }
 
 func javaSpec(r Rule, mode Mode) Spec {
@@ -232,6 +254,37 @@ func TestRunRuleOrderAndSelection(t *testing.T) {
 	want := "WARN  lint-a  " + root + "/A.java:1  saw: MARK OTHER\n" +
 		"FAIL  lint-b  " + root + "/A.java:1  saw: MARK OTHER\n" +
 		"WARN  lint-a  " + root + "/build/B.java:1  saw: MARK OTHER\n"
+	if o.String() != want {
+		t.Errorf("out\n%s\nwant\n%s", o, want)
+	}
+}
+
+func TestRunPerFindingSeverity(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "FAIL one\nWARN two\n"})
+	s, o, _ := stdio()
+	if code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s); code != 0 {
+		t.Errorf("exit %d, want 0", code)
+	}
+	want := "FAIL  lint-m  " + root + "/A.java:1  saw: FAIL one\n" +
+		"WARN  lint-m  " + root + "/A.java:2  saw: WARN two\n"
+	if o.String() != want {
+		t.Errorf("out\n%s\nwant\n%s", o, want)
+	}
+}
+
+func TestRunCheckErrorFailsClosed(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "WARN a\nBROKEN\n", "B.java": "WARN b\n"})
+	s, o, e := stdio()
+	code := Run([]Spec{javaSpec(mixedRule{}, One)}, "lint-m", Args{Roots: []string{root}}, s)
+	if code != 3 {
+		t.Errorf("exit %d, want 3", code)
+	}
+	a := root + "/A.java"
+	if want := "lint-m: cannot scan " + a + ": lint-m: unbalanced braces\n"; e.String() != want {
+		t.Errorf("err %q\nwant %q", e, want)
+	}
+	// The findings made before the error and the other file's rows are still printed.
+	want := "WARN  lint-m  " + a + ":1  saw: WARN a\n" + "WARN  lint-m  " + root + "/B.java:1  saw: WARN b\n"
 	if o.String() != want {
 		t.Errorf("out\n%s\nwant\n%s", o, want)
 	}

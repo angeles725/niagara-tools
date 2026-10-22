@@ -17,13 +17,17 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
 
 The engine reads and scans each file once for every selected rule, and every rule prints the same row:
-`WARN  <rule-id>  <path>:<line>  <message>`.
+`<WARN|FAIL>  <rule-id>  <path>:<line>  <message>`.
 
 ## Adding a lint rule
 
 1. Create `internal/lint/rules/<name>/` with a type that implements `lint.Rule` (`ID`, `Severity`,
-   `Check(*javasrc.File) []lint.Finding`; `Check` sets only `Line` and `Msg`), plus `Spec() lint.Spec`
-   carrying the parse mode, usage line and file selection of the bash lint it replaces.
+   `Check(*javasrc.File) ([]lint.Finding, error)`), plus `Spec() lint.Spec` carrying the parse mode,
+   usage line and file selection of the bash lint it replaces. `Check` sets `Line` and `Msg`, and
+   `Severity` only on a finding that differs from the rule's `Severity()` (a rule that emits WARN and
+   FAIL rows); the engine fills an unset one. Return a non-nil error only when the file cannot be
+   analyzed (e.g. unbalanced braces): the engine prints `<lint>: cannot scan <path>: <rule-id>: <error>`
+   on stderr and exits 3, as for an unreadable file. Never drop a file silently.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the table tests first (port every bats case) and watch them fail.
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,

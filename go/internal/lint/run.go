@@ -15,7 +15,8 @@ import (
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
 // every spec prunes), reads each file once and runs the specs that select it, in spec order, printing
 // their rows. An incomplete walk or an unreadable file is reported on stderr with the texts of
-// toolbelt/lib/awk-lint.sh and the scan goes on. Exit: 3 when anything could not be scanned, else 1
+// toolbelt/lib/awk-lint.sh, a file a rule could not analyze as "cannot scan <path>: <rule>: <error>",
+// and the scan goes on. Exit: 3 when anything could not be scanned, else 1
 // when a row was printed under a.Strict, else 0.
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	out := bufio.NewWriter(s.Out)
@@ -46,10 +47,18 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				if !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
 					continue
 				}
-				for _, fd := range sp.Rule.Check(f) {
-					fd.Rule, fd.Severity, fd.Path = sp.Rule.ID(), sp.Rule.Severity(), p
+				fds, err := sp.Rule.Check(f)
+				for _, fd := range fds {
+					fd.Rule, fd.Path = sp.Rule.ID(), p
+					if fd.Severity == Unset {
+						fd.Severity = sp.Rule.Severity()
+					}
 					fmt.Fprintln(out, fd.Row())
 					rows = true
+				}
+				if err != nil {
+					fail("cannot scan %s: %s: %s", p, sp.Rule.ID(), err)
+					envErr = true
 				}
 			}
 		}

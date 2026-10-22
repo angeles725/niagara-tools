@@ -10,12 +10,14 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
 
-// Severity is the first column of a row.
+// Severity is the first column of a row. Its zero value is Unset, so a Finding that leaves it out
+// takes its rule's severity.
 type Severity int
 
 const (
-	Warn Severity = iota // advisory: exit 0, or 1 under --strict
-	Fail                 // a failed check (rows print FAIL; the exit contract is the same)
+	Unset Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
+	Warn                  // advisory: exit 0, or 1 under --strict
+	Fail                  // a failed check (rows print FAIL; the exit contract is the same)
 )
 
 func (s Severity) String() string {
@@ -25,8 +27,8 @@ func (s Severity) String() string {
 	return "WARN"
 }
 
-// Finding is one reported source line. A rule's Check sets Line (1-based) and Msg; the runner fills
-// Rule, Severity and Path.
+// Finding is one reported source line. A rule's Check sets Line (1-based) and Msg, and Severity only
+// when this finding differs from Rule.Severity(); the runner fills Rule, Path and an Unset Severity.
 type Finding struct {
 	Rule     string
 	Severity Severity
@@ -40,11 +42,14 @@ func (f Finding) Row() string {
 	return fmt.Sprintf("%s  %s  %s:%d  %s", f.Severity, f.Rule, f.Path, f.Line, f.Msg)
 }
 
-// Rule is one lint check over one Java file.
+// Rule is one lint check over one Java file. Check returns its findings in report order; a non-nil
+// error means the rule could not analyze the file (e.g. unbalanced braces) and fails the scan closed
+// like an unreadable file: the runner reports it on stderr, prints the findings returned with it,
+// exits 3 and goes on with the other files. A clean file is (nil, nil), never an error.
 type Rule interface {
-	ID() string // the lint name printed in every row and accepted by n4lint, e.g. lint-null-context-write
-	Severity() Severity
-	Check(f *javasrc.File) []Finding // findings in report order
+	ID() string         // the lint name printed in every row and accepted by n4lint, e.g. lint-null-context-write
+	Severity() Severity // the severity of every finding that leaves its own Unset
+	Check(f *javasrc.File) ([]Finding, error)
 }
 
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.

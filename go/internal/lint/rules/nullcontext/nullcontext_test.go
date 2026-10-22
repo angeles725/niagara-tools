@@ -81,8 +81,12 @@ func TestCheck(t *testing.T) {
 	r := Spec().Rule
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			fds, err := r.Check(javasrc.NewFile(tc.path, tc.src))
+			if err != nil {
+				t.Fatalf("Check error: %v", err)
+			}
 			var got []string
-			for _, f := range r.Check(javasrc.NewFile(tc.path, tc.src)) {
+			for _, f := range fds {
 				got = append(got, fmt.Sprintf("%d: %s", f.Line, f.Msg))
 			}
 			if !reflect.DeepEqual(got, tc.want) {

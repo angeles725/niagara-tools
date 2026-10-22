@@ -41,7 +41,8 @@ var (
 
 const space = " \t\n\v\f\r" // awk's [[:space:]] in the C locale
 
-func (rule) Check(f *javasrc.File) []lint.Finding {
+// Check never fails: every file it is given is scanned line by line, as the awk did.
+func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	code, bql := blank(f.Stripped())
 	var out []lint.Finding
 	report := func(i int, msg string) {
@@ -54,7 +55,7 @@ func (rule) Check(f *javasrc.File) []lint.Finding {
 	}
 	// -wb parts are client code (the session carries the user): skipped by the bql rule only.
 	if strings.Contains(f.Path, "-wb/") {
-		return out
+		return out, nil
 	}
 	for i := range code {
 		if bql[i] == 0 {
@@ -77,7 +78,7 @@ func (rule) Check(f *javasrc.File) []lint.Finding {
 			report(i, "bql: ORD resolved without the caller's Context (pass get(base, cx)): ")
 		}
 	}
-	return out
+	return out, nil
 }
 
 // nullContext reports whether the argument list that args opens (the text after "get(") ends in a
