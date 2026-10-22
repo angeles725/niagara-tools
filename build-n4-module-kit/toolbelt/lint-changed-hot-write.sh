@@ -26,6 +26,7 @@
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # VCS-free by design (kit-links L2).
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs
+# Mutation: CHW-reset -- a bare `set<X>(` substring also matches `reset<X>(` and false-WARNs
 # Mutation: CHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: CHW-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
@@ -136,8 +137,9 @@ END {
   wprop = ""
   for (k = 1; k <= n_nt; k++) {
     cap = toupper(substr(nt_name[k], 1, 1)) substr(nt_name[k], 2)
-    setter = "set" cap "("
-    if (index(exec_body, setter) > 0 || index(changed_body, setter) > 0) { wprop = nt_name[k]; break }
+    # anchored at an identifier boundary: `resetXHours(` is not the setter `setXHours(` (#151)
+    setter = "(^|[^A-Za-z0-9_])set" cap "[[:space:]]*\\("
+    if (exec_body ~ setter || changed_body ~ setter) { wprop = nt_name[k]; break }
   }
   if (wprop == "") exit 0
 

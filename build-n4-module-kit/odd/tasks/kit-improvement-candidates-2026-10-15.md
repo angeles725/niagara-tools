@@ -470,8 +470,13 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: transcript 2026-10-16 exam P1 slotomatic --info]`.
 - **Target:** `METHODOLOGY.md` K15 (:122), `toolbelt/build.sh` (pre-gradle marker scan + failure hint).
 - **Lint-able:** yes — FAIL a `.java` with a `BEGIN BAJA AUTO GENERATED` marker and no `/*@ $` stamp before `END`. **Fold type:** doc fix + build.sh check + bats.
-- **Fold status:** NOT FOLDED (WU-P0-4, 2026-10-22): both targets, `METHODOLOGY.md` K15 and `toolbelt/build.sh`, are outside
-  the unit's allowed surface; OWED in `BUILD-STATE.md` with slo Δ1 (K15 text + Go lint G3 `slotomatic-markers`).
+- **Fold status:** FOLDED (`docs/r8-t9i-k15`, 2026-10-23; slo Δ1): `METHODOLOGY.md` K15 rewritten to the observed
+  mechanism, verified in code: organized/ devkit-wb 4.14.0.162 vineflower `JavaUnit.java:270-272` throws "Found multiple
+  metadata blocks" for any stamp-line count other than one (an empty region has zero), `Compiler.java:241` logs it as a
+  WARNING and goes on; javap of `niagara-slotomatic-library-2.0.4.jar` (4.15.6.20) holds both messages. The compileJava
+  message is transcript-only (emitting class not located). `toolbelt/build.sh` prints the skipped file + K15 when the
+  compile error appears (BS-slotomatic-hint); the pre-gradle marker scan stays owed as Go lint G3 `slotomatic-markers`
+  (no new bash check). Earlier "NOT FOLDED (WU-P0-4)" superseded.
 
 ---
 

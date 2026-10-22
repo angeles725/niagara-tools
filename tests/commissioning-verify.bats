@@ -175,7 +175,9 @@ setup() {
   run "$CV" "$MINIMAL" --values-owed "$f"
   [[ "$output" == *"MANUAL  commissioning  values-owed  lowPressureCutout: owed by technician"* ]] || { echo "$output" | grep values-owed; return 1; }
   [[ "$output" == *"MANUAL  commissioning  values-owed  overCurrentLimit: owed by technician"* ]]
-  [[ "$output" != *"values-owed  2026-10-01"* ]] && [[ "$output" != *"Date"* ]]
+  # one assertion per line: bats only fails on the LAST command of an `a && b` list
+  [[ "$output" != *"values-owed  2026-10-01"* ]]
+  [[ "$output" != *"Date"* ]]
   [[ "$output" != *"PASS  commissioning  values-owed"* ]]
 }
 
