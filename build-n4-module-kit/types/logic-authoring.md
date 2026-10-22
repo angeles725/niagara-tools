@@ -510,50 +510,70 @@ slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(.
 
 ## BFacets key reference card `[ev: corpus B1106]`
 
-`BFacets` is the property-metadata map; keys are string literals. The 31 known keys (B49 listed 11; B1106 completes the catalogue):
+`BFacets` (`final`, `implements Context`) is the property-metadata map. Its keys are the `public static final String` constants of `javax.baja.sys.BFacets`: name them by constant (`BFacets.UNITS`), never by a hand-typed literal. 4.15.6.20 declares **34**; releases before 4.15u2 declare 32 (no `showHours`/`showMinutes`). The table is that list in declaration order, with the value type the source javadoc names. [ev: retro devguide415-runtime-api-corrections Δ8] [ev: corpus B1310 §1310.3]
 
-| Key | Purpose |
-|-----|---------|
-| `"units"` | Engineering unit (`BUnit`); shown in slot value display |
-| `"precision"` | Decimal places for numeric display (int) |
-| `"min"` | Minimum allowed value (numeric) |
-| `"max"` | Maximum allowed value (numeric) |
-| `"range"` | Enum range (`BEnumRange`); required for dynamic enums |
-| `"fieldWidth"` | Character-width hint for text fields |
-| `"radix"` | Display radix for integers (2=binary, 8=octal, 10=decimal, 16=hex) |
-| `"showSeconds"` | Show seconds in time display (boolean) |
-| `"showUnits"` | Append engineering-unit string to the formatted value (boolean) |
-| `"unitConversion"` | Unit-conversion factor when bridging unit systems |
-| `"maxOverrideDuration"` | Maximum HOA override duration (`BRelTime`) |
-| `"targetType"` | Type constraint for ORD/link pickers (`BTypeSpec`) |
-| `"editorTemplate"` | Workbench editor template name |
-| `"editorClass"` | Custom editor class name |
-| `"editorArgs"` | Arguments forwarded to the custom editor |
-| `"editorColumns"` | Column definitions for a table editor |
-| `"editorRows"` | Row definitions for a table editor |
-| `"trueText"` | Display string for `true` (boolean slots) |
-| `"falseText"` | Display string for `false` (boolean slots) |
-| `"nullText"` | Display string for null/invalid values |
-| `"format"` | A `BFormat` pattern for display formatting |
-| `"icon"` | Icon ORD for Workbench display |
-| `"help"` | Help URL or key for context-sensitive help |
-| `"category"` | Default category tag |
-| `"history"` | History configuration hint |
-| `"alarm"` | Alarm configuration hint |
-| `"trended"` | Whether the slot is trended by default (boolean) |
-| `"locked"` | Whether the slot is locked from operator edit |
-| `"persistent"` | Override persistence behavior |
-| `"sparse"` | Sparse rendering hint for large tables |
-| `"summary"` | Summary display hint |
+| Constant | Key | Value | Purpose |
+|---|---|---|---|
+| `MIN` | `"min"` | `BNumber` | Inclusive minimum; enforced on the client AND the station on a value change |
+| `MAX` | `"max"` | `BNumber` | Inclusive maximum; enforced like `min` |
+| `TRUE_TEXT` | `"trueText"` | `BString` (a BFormat) | Display text for `true`; a `%lexicon(<module>:<key>)%` script localizes it |
+| `FALSE_TEXT` | `"falseText"` | `BString` (a BFormat) | Display text for `false` |
+| `PRECISION` | `"precision"` | `BInteger` | Digits after the decimal point |
+| `UNITS` | `"units"` | `BUnit` | Engineering unit of an integer or float |
+| `RADIX` | `"radix"` | `BInteger` | Base radix of an integer |
+| `RANGE` | `"range"` | `BEnumRange` | Enum range |
+| `SHOW_DATE` | `"showDate"` | `BBoolean` | Abs time: show the date |
+| `SHOW_HOURS` | `"showHours"` | `BBoolean` | Abs time: show hours (4.15u2+) |
+| `SHOW_TIME` | `"showTime"` | `BBoolean` | Abs time: show the time |
+| `SHOW_MINUTES` | `"showMinutes"` | `BBoolean` | Abs time: show minutes (4.15u2+) |
+| `SHOW_SECONDS` | `"showSeconds"` | `BBoolean` | Abs time: show seconds |
+| `SHOW_MILLISECONDS` | `"showMilliseconds"` | `BBoolean` | Abs and rel time: show milliseconds |
+| `SHOW_TIME_ZONE` | `"showTimeZone"` | `BBoolean` | Abs time: show the time zone |
+| `TIME_ZONE` | `"TimeZone"` | `BTimeZone` | Abs time: display time zone (the key starts with a capital `T`) |
+| `MULTI_LINE` | `"multiLine"` | `BBoolean` | String: multi-line editor (e.g. one ORD per line on a `BOrdList`) |
+| `FIELD_WIDTH` | `"fieldWidth"` | `BInteger` | String: columns of the text field |
+| `ALLOW_NULL` | `"allowNull"` | `BBoolean` | Simple: allow or disallow null |
+| `ORD_RELATIVIZE` | `"ordRelativize"` | `BBoolean` | ORD: relativize to the session on save (default true) |
+| `FIELD_EDITOR` | `"fieldEditor"` | `BString` | Type spec of the Workbench field editor; also used for action arguments |
+| `UX_FIELD_EDITOR` | `"uxFieldEditor"` | `BString` | `web:IJavaScript` type spec, or a RequireJS module ID, of the browser field editor |
+| `INPLACE_EDITOR` | `"inplaceEditor"` | `BString` | Type spec of the inplace editor |
+| `CELL_EDITOR` | `"cellEditor"` | `BString` | Type spec of the cell editor |
+| `TARGET_TYPE` | `"targetType"` | `BString` (a TypeSpec) | Target type of an ORD chooser; `"baja:IDirectory"` gives a folder-only picker |
+| `UNIT_CONVERSION` | `"unitConversion"` | dynamic enum over `BUnitConversion` (`none`/`metric`/`english`) | Unit SYSTEM for display; `none` = no conversion (not a conversion factor) |
+| `REALMS` | `"realms"` | `BString` | Semicolon-separated realm names (see `BStation`) |
+| `SHOW_UNITS` | `"showUnits"` | `BBoolean` | Numeric: display the unit |
+| `SHOW_SEPARATORS` | `"showSeparators"` | `BBoolean` | Numeric: separator every 3 digits (10,000 vs 10000) |
+| `FORCE_SIGN` | `"forceSign"` | `BBoolean` | Numeric, radix 10: always show `+`/`-` |
+| `ENCODER_FILE` | `"encoderFile"` | ORD string | `BComplex`: persist the child slots to a different `BIDataFile` |
+| `MAX_OVERRIDE_DURATION` | `"maxOverrideDuration"` | `BRelTime` | Control point or sysInfo facets: longest override allowed |
+| `NAMESPACE` | `"namespace"` | `BString` | Entity queries: default namespace for tags and relations |
+| `SECURITY` | `"security"` | `BBoolean` | Slot is security-related; its changes go to the security history (4.9+) |
 
-**Factory methods** (all on `BFacets`):
-- `BFacets.make(String key, BValue value)` — single key-value pair
-- `BFacets.make(String[] keys, BValue[] values)` — multiple pairs (parallel arrays)
-- `BFacets.makeDouble(BUnit unit, int precision)` — convenience for a numeric slot
-- `BFacets.makeBoolean(String trueText, String falseText)` — convenience for a boolean slot
-- `BFacets.makeEnum(BEnumRange range)` — convenience for a dynamic-enum slot
+**Not `BFacets` keys** (an older card listed them): `editorTemplate`, `editorClass`, `editorArgs`, `editorColumns`, `editorRows`, `nullText`, `format`, `icon`, `help`, `category`, `history`, `alarm`, `trended`, `locked`, `persistent`, `sparse`, `summary`. The framework gives them no meaning; a facet with one of these names is read only by code that looks it up itself.
 
-**Rule:** always use factory methods, never `new BFacets(Map)` directly. For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
+**Factory methods** (all `static` on `BFacets`; a `BFacets` is immutable, so every "change" returns a new instance):
+- `make(String key, BIDataValue value)` (plus `boolean` / `int` / `long` / `String` value overloads); `make(String[] keys, BIDataValue[] values)`; `make(Map<String, ? extends BIDataValue>)`; `make(String encoding)`
+- `make(BFacets orig, String key, BIDataValue value)`, `make(BFacets orig, BFacets toAdd)`, `makeRemove(BFacets orig, String key)` / `makeRemove(BFacets orig, String[] keys)`
+- `makeNumeric(BUnit unit, int precision)` — the numeric convenience (also `makeNumeric(int precision)`, `makeNumeric(BUnit, int precision, double min, double max)`, `makeNumeric(BUnit, BNumber min, BNumber max)`). There is **no** `makeDouble`.
+- `makeInt(BUnit unit, int min, int max)` (also with a trailing `int radix`, `makeInt(BUnit)`, `makeInt(int min, int max)`)
+- `makeBoolean(String trueText, String falseText)`
+- `makeEnum(BEnumRange range)`
+
+**`@Facet` syntax (slotomatic):** `name` is a Java constant expression and `value` is a Java expression, so a string value carries escaped quotes. [ev: retro n4-course-build-deps-permissions-signing Δ6]
+
+```java
+@NiagaraProperty(name = "destinationFolder", type = "BOrd", defaultValue = "BOrd.make(\"file:^\")",
+  facets = @Facet(name = "BFacets.TARGET_TYPE", value = "\"baja:IDirectory\""))     // folder-only picker
+@NiagaraProperty(name = "excludedHistoryIds", type = "BOrdList", defaultValue = "BOrdList.NULL",
+  facets = @Facet(name = "BFacets.MULTI_LINE", value = "true"))                    // one ORD per line
+@NiagaraProperty(name = "enabled", type = "boolean", defaultValue = "true",
+  facets = { @Facet(name = "BFacets.TRUE_TEXT",  value = "\"%lexicon(<module>:enabled.value)%\""),
+             @Facet(name = "BFacets.FALSE_TEXT", value = "\"%lexicon(<module>:disabled.value)%\"") })
+```
+
+The card is hand-copied from the source; a check that diffs its Constant column against `BFacets.java` is owed (see `BUILD-STATE.md` kit `open_issues`).
+
+**Rule:** build facets only with the factory methods above (the `BFacets` constructors are private). For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
 
 ## Logging a point to history `[ev: corpus B804]`
 

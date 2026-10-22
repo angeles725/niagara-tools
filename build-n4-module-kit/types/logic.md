@@ -437,18 +437,18 @@ Three function families are available in BQL expressions. Resolution is reflecti
 
 `BFormat` is the display-name / annotation / history-label pattern language. Understand it before writing a format expression or processing user-supplied templates.
 
-**Pattern syntax:**
-- `%slot%` — resolve `slot` on the current context component via reflection
-- `%a.b.c%` — chain access with `.` (traverse slots/methods left-to-right)
-- `%slot?default%` — use literal `default` when `slot` resolves to null or throws
-- `%time(<fmt>)%` — current date/time with a Java `SimpleDateFormat` pattern
-- `%user%` — current user's display name
-- `%substring(<slot>,<start>,<end>)%` — substring of a resolved slot value
+**Pattern syntax** (4.15.6.20 `javax.baja.util.BFormat`): plain text with scripts between `%` pairs; `%%` is a literal `%`. A script is one or more calls chained with `.`, each applied to the previous result. [ev: retro devguide415-runtime-api-corrections Δ9] [ev: retro devguide415-r2-runtime-contracts-formats Δ6] [ev: corpus B1317 §1317.3]
+- `%displayName%`, `%parent.displayName%`, `%out.value%` — slot or reflected call, chained left to right
+- `%a?b%` — `?` starts a FALLBACK SCRIPT, not a literal default: when `a` fails, `b` is evaluated (`%parent.value?lexicon(bajaui:dialog.error)%`); with no fallback a failed call prints `%err:<type>:<call>%`
+- `%time()%` — `Clock.time()` as a `BAbsTime`; it takes NO argument, so chain a call to format it (`%time().toDateString%`). `%time(<fmt>)%` is not the special call — it goes to reflection and fails
+- `%user()%` — the current user's name; the parentheses are required (`%user%` goes to reflection)
+- `%lexicon(<module>:<key>)%` — lexicon text; `%decodeFromString(<module>:<type>:<escapedValue>)%` — a decoded value
+- `.substring(i)` (from index `i`), `.substring(-n)` (the last `n` characters), `.substring(a,b)` (the range) — applied to the previous value's string, never given a slot argument: `%displayName.substring(0,8)%`
+- `.escape(…)` / `.unescape(…)` — slot-path escaping or unescaping of the previous value's string
 
-**Reflection resolution order** (inside a `%…%` block):
-1. Baja slot by name
-2. Public zero-arg Java method (getter shape)
-3. `ReflectionException` if neither resolves
+**Resolution order:** the special calls (`time()`, `user()`, `lexicon(…)`, `substring(…)`, `escape(…)`, `unescape(…)`, `decodeFromString(…)`) are recognized when the pattern is parsed. Any other call `foo` on a component resolves to its property `foo` FIRST (`getProperty(id)`, permission-checked, and the slot facets join the Context for the rest of the chain), then `getFoo(Context)`, `getFoo()`, `foo(Context)`, `foo()`, `get("foo")`, `getFormatValue("foo")`, and LAST a `BIFormatPropertyHandler`'s `getFormatPropertyByName("foo")`. A call that names a frozen ACTION (`doFoo`) is denied unless `FormatDenylist` excludes it. Nothing throws to the caller: a failure takes the `?` fallback or prints the `%err:…%` text.
+
+The advisory lint this card implies (WARN on `%time(<arg>)%` and `%user%` in source) is owed (see `BUILD-STATE.md` kit `open_issues`).
 
 **`FormatDenylist`:** N4 maintains a station-version-specific denylist that blocks known-dangerous reflection targets. The list limits the attack surface but does not eliminate it.
 

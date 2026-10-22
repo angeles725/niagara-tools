@@ -126,6 +126,9 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 **Fold log.** WU-P0-1 docs folded on `docs/r8-t9b-p0-1` (2026-10-22): C01-C03 doc text in `types/logic.md`,
 `types/math-control-libraries.md`, `types/logic-authoring.md`; the lint halves (tjd Δ2, shs Δ3 `jdk-thread` re-scope, the
 `postAsync(`/`BJobs.` doc greps, the `isAlive()` loop WARN) are owed in `BUILD-STATE.md` kit `open_issues`.
+WU-P0-3 docs folded on `docs/r8-t9b-p0-3` (2026-10-22): C06 BFacets card regenerated from the 4.15.6.20 `BFacets.java`
+(34 constants) in `types/logic-authoring.md`, C07 BFormat card in `types/logic.md`; the key-diff check, the BFormat WARN
+and the rac Δ9 cursor recipe (with C19, WU-P0-6) are owed.
 
 ---
 
@@ -181,6 +184,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Evidence:** `docSource/…/javax/baja/sys/BFacets.java:155-159`, corpus B1310 §1310.3 C1; course `Labs/Lab10 Jobs/BHistoriesToCsvService.java`.
 - **Target:** `types/logic-authoring.md:489-534`.
 - **Lint-able:** yes — script diffs card keys against the constant list. **Fold type:** doc fix + script.
+- **Fold status:** doc FOLDED (WU-P0-3, 2026-10-22; rac Δ8, bdps Δ6). 4.15.6.20 has 34 constants, so `multiLine` is one
+  (`BFacets.MULTI_LINE`); the key-diff check is OWED.
 
 ### C07 — BFormat card gets `?`, `time()`, `substring` and the lookup order wrong
 - **Sources:** rac#Δ9 (primary; cursor half cross-ref C19) · rcf#Δ6 extends (line-level facts)
@@ -188,6 +193,8 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Winning text:** `?` = fallback script; `%%` literal; `time()`/`user()` take no argument (chain after `time()`); `substring(i)`, `(-n)`, `(a,b)` on the previous value.
 - **Target:** `types/logic.md:399-418`; cursor recipe → `types/logic-authoring.md:190-200` (with C19).
 - **Lint-able:** yes — WARN `%time([^)]`, `%user%`. **Fold type:** doc fix + lint.
+- **Fold status:** BFormat card FOLDED (WU-P0-3, 2026-10-22; rac Δ9 card half, rcf Δ6); the WARN lint and the cursor recipe
+  (rac Δ9, with C19) are OWED.
 
 ### C08 — Link rules: programmatic links are never `checkLink`ed; `BLink` 4th arg is `enabled`
 - **Sources:** rac#Δ10 (primary) · rcf#Δ3 extends (call `target.checkLink(...)` and require `isValid()` before adding)
@@ -825,7 +832,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded doc (WU-P0-3); lint owed |
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
@@ -881,8 +888,8 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ6` | types/logic.md:336 | Alarm ext owns ALARM/FAULT/UNACKED bits | C32 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ7` | types/logic.md LC1 | Writable primitives: activeLevel, overrides, min on/off | C33 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | accepted |
-| `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6) |
+| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | folded doc (WU-P0-3); script owed |
+| `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6); folded card (WU-P0-3); cursor recipe owed (C19) |
 | `devguide415-runtime-api-corrections#Δ10` | types/logic.md:111-143 | Fix link rules | C08 | P0 | accepted |
 | `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ2` | BUILD-LOOP.md §0, skill/SKILL.md | Reference-first rule at Orient | C51 | P1 | accepted |
@@ -898,7 +905,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |
 | `n4-course-drivers-bql-ords-files#Δ1` | types/logic-authoring.md, toolbelt/lint-null-context-write.sh | BQL consumer pattern with Context | C19 | P0 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ3` | types/driver-authoring.md | NDriver section | C60 | P2 | accepted |
