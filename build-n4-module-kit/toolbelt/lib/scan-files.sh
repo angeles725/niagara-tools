@@ -7,7 +7,8 @@
 # scan_files <out-file> <err-file> <root> [--prune <dir-name> | --prune-path <pattern>]... <find-test...>
 #   Writes every regular file under <root> that matches the find tests (for example
 #   `-name '*.java'`, or `-name '*.html' -o -name '*.js'`) to <out-file>, one per line,
-#   sorted with LC_ALL=C. Dot SUB-directories are pruned, and so is every sub-directory named by a
+#   sorted with LC_ALL=C. Dot and `*-worktrees` SUB-directories are pruned (a sibling worktrees
+#   checkout would report every finding once per checkout), and so is every sub-directory named by a
 #   `--prune <dir-name>` (e.g. `--prune build` for gradle outputs) and every one whose path matches a
 #   `--prune-path <pattern>` (find -path, e.g. `--prune-path '*/rc/ext'`); the root itself never is (`-mindepth 1`),
 #   so `.`, `..` or a dot-named root is walked, not pruned whole. Returns 0 when the walk was
@@ -25,7 +26,7 @@
 # clean scan. [ev: issue #226 R3-find-error-still-fail-open]
 scan_files() {
   local out="$1" err="$2" root="$3" rc=0
-  local -a prune=( -name '.*' )
+  local -a prune=( -name '.*' -o -name '*-worktrees' )
   shift 3
   while [ $# -ge 2 ]; do
     case "$1" in

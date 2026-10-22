@@ -85,3 +85,18 @@ teardown() { rm -rf "$TMPDIR_T"; }
     '  Object t = BOrd.make("bql:select " + "*").get(base, cx) == null ? params.get("x") : null;' '} }' > "$TMPDIR_T/M/src/A.java"
   run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]; [ -z "$output" ]
 }
+# --- issue #293: resolve is judged like get; the null-Context check stays inside the call's own parentheses.
+@test "NCW-bql-resolve: resolve(base) and resolve() WARN (issue #293)" {
+  printf '%s\n' 'class A { void q() {' '  OrdTarget t = BOrd.make("bql:select *").resolve(base);' \
+    '  OrdTarget u = BOrd.make("bql:select *").resolve();' '} }' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
+  [[ "$output" == *"A.java:2"*"bql"* ]]
+  [[ "$output" == *"A.java:3"*"bql"* ]]
+}
+@test "NCW-bql-null-scope: a null after the get call closes is clean, a null last argument still WARNs (issue #293)" {
+  printf '%s\n' 'class A { void q(Context cx) {' '  foo(BOrd.make("bql:select *").get(base, cx), null);' \
+    '  Object t = BOrd.make("bql:select *").get(base(a, b), null);' '} }' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
+  [[ "$output" != *"A.java:2"* ]]
+  [[ "$output" == *"A.java:3"*"bql"* ]]
+}

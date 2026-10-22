@@ -81,9 +81,12 @@ BObject result = target.get();
   (baja vineflower) `[ev: corpus B1308 §1308.2 C1]`
 - `resolve(base, cx)` runs: parse → normalize → iterate query chain → `OrdTarget`; `get()` then yields the `BObject`.
   The one-argument `get(base)`/`resolve(base)` and the no-argument forms pass a **null Context** (`BOrd.java:90-107`):
-  no user, no permission filter. Pass the caller's Context; use `resolve()` + `canRead()` when the caller's
-  permissions matter and `get(base, cx)` only deliberately. Resolve against the narrowest base you hold (the
-  component, not the station root). `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
+  no user, no permission filter. Always pass the caller's Context, and pick the form by what the ORD yields:
+  a single target (a `slot:`/`h:` component ORD) → `resolve(base, cx)`, then `canRead()` on the `OrdTarget`
+  before using it when the caller's permissions matter (the recipe above); a `bql:` query → `get(base, cx)`,
+  where the Context filters the rows and there is no single target to check (§ BQL from code).
+  `toolbelt/lint-null-context-write.sh` checks the Context argument, not the form. Resolve against the
+  narrowest base you hold (the component, not the station root). `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
 - Store a portable ORD with `relativizeToSession()` (`station:|slot:…`), not the absolute host form.
   `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 - **Absolute ORD** (host-anchored, starts with a host-type scheme): `base` may be `null`.
@@ -231,7 +234,9 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
   `Subscriber` + `subscribe(points, 0, cx)` and `unsubscribeAll()` when done for a stream.
 - **Remote stations:** `ip:…|foxs:|…|bql:…` works in Workbench (it prompts) but not through `BOrd.get` in code;
   open a `BFoxProxySession.make(host, port, useFoxs, credentials)` (`javax/baja/fox/BFoxProxySession.java:28-36`,
-  fox-rt vineflower) and resolve against it. The course instructor adds that the session can reuse a NiagaraNetwork
+  fox-rt vineflower) and resolve against it. The code that calls `make` owns the session: `connect()` before
+  resolving and `disconnect()` in a `finally` when done (`BFoxProxySession.java:101-105` also declares `close()`;
+  which of the two frees the session for good is not traced). The course instructor adds that the session can reuse a NiagaraNetwork
   station's stored credentials, machine-to-machine only — a spoken claim, not traced in code [CERT-a] (corpus B1418 §1418.4);
   such claims stay marked until a code or doc read backs them. `[ev: retro r8-t9g-nav Δ2]`
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.

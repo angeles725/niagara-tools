@@ -1,0 +1,58 @@
+package lint
+
+import (
+	"errors"
+	"os"
+	"strings"
+)
+
+// Mode is how a lint takes its arguments; each one is an awk_lint_parse arity of toolbelt/lib/awk-lint.sh,
+// so a ported lint keeps the argument contract of the bash lint it replaces.
+type Mode int
+
+const (
+	One   Mode = iota // [--strict] [--] <root>: exactly one root
+	First             // [--strict] [--] <root>...: only the first root is checked and scanned
+	Each              // [--strict] [--] <root>...: every root is checked first, then scanned in order
+	Raw               // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+)
+
+// Args is a parsed command line.
+type Args struct {
+	Strict bool
+	Roots  []string
+}
+
+// Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting
+// 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, or "<name>: not a directory: <root>".
+func Parse(mode Mode, name, usage string, args []string) (Args, error) {
+	var a Args
+flags:
+	for mode != Raw && len(args) > 0 {
+		switch arg := args[0]; {
+		case arg == "--strict":
+			a.Strict = true
+			args = args[1:]
+		case arg == "--":
+			args = args[1:]
+			break flags
+		case strings.HasPrefix(arg, "-"):
+			return Args{}, errors.New(name + ": unknown flag: " + arg + "\n" + usage + "\n")
+		default:
+			break flags
+		}
+	}
+	if len(args) < 1 || (mode == One && len(args) != 1) {
+		return Args{}, errors.New(usage + "\n")
+	}
+	a.Roots = args[:1]
+	if mode == Each {
+		a.Roots = args
+	}
+	for _, root := range a.Roots {
+		if st, err := os.Stat(root); err != nil || !st.IsDir() {
+			return Args{}, errors.New(name + ": not a directory: " + root + "\n")
+		}
+	}
+	return a, nil
+}
