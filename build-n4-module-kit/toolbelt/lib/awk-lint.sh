@@ -41,6 +41,19 @@
 #   An incomplete walk prints "<name>: cannot list every file under <root>: <reason>" and sets
 #   AL_ERR=1; the files it did list are still written, so the caller scans them before exiting.
 #
+# A comment-stripped per-file lint (a grep check per file, no main.awk) is:
+#   . ".../lib/awk-lint.sh"
+#   awk_lint_parse <name> first '<usage line>' "$@"
+#   <check-fn>() { ...reads "$AL_TEXT", prints the line number to report or nothing...; }
+#   awk_lint_strip_run <check-fn> <find-test...>
+#
+# awk_lint_strip_run <check-fn> <find-test...>
+#   Lists the files like awk_lint_list, sets AL_TEXT to each file with its // line comments stripped
+#   (`sed 's://.*::'`, same line numbers) and calls <check-fn> <file>. A printed line number becomes
+#   "WARN  <name>  <file>:<line>  <that source line, trimmed>". An unreadable file is
+#   "<name>: cannot scan <file>: <reason>" and the scan goes on. Exits like awk_lint_run (3 / 1 under
+#   --strict / 0). Never returns.
+#
 # awk_lint_exit <code>
 #   Exits 3 when AL_ERR is set (an incomplete walk or a failed scan), <code> otherwise.
 #
@@ -134,6 +147,30 @@ awk_lint_run() {
       fi
     done < "$AL_TMP/files"
   done
+  if [ "$had_warn" -eq 1 ] && [ "$AL_STRICT" -eq 1 ]; then
+    awk_lint_exit 1
+  fi
+  awk_lint_exit 0
+}
+
+awk_lint_strip_run() {
+  local check="$1" f line had_warn=0
+  shift
+  awk_lint_list "$@"
+  while IFS= read -r f; do
+    # An unreadable file is an env error, never an empty text that passes clean (fail closed).
+    # shellcheck disable=SC2034  # AL_TEXT is read by the caller's <check-fn>
+    if ! AL_TEXT=$(sed 's://.*::' "$f" 2>"$AL_TMP/sed.err"); then
+      printf '%s: cannot scan %s: %s\n' "$AL_NAME" "$f" "$(head -n 1 "$AL_TMP/sed.err")" >&2
+      AL_ERR=1
+      continue
+    fi
+    line=$("$check" "$f")
+    [ -n "$line" ] || continue
+    printf 'WARN  %s  %s:%s  %s\n' "$AL_NAME" "$f" "$line" \
+      "$(sed -n "${line}p" "$f" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    had_warn=1
+  done < "$AL_TMP/files"
   if [ "$had_warn" -eq 1 ] && [ "$AL_STRICT" -eq 1 ]; then
     awk_lint_exit 1
   fi

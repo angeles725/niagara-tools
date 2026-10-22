@@ -37,6 +37,8 @@
 # Mutation: LD23 -- naive // strip that ignores string literals -> LD23 loses its guard and FAILs
 # Mutation: LD24 -- no block-comment skip in strip_comment -> an apostrophe in /* don't */ keeps the trailing // text as a guard
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 
 FAILED=0
 _TMP=$(mktemp -d)
@@ -45,6 +47,8 @@ trap 'rm -rf "$_TMP"' EXIT
 [ $# -ge 1 ] || { printf 'usage: lint-delays.sh <java-src-dir>\n' >&2; exit 3; }
 SRC="$1"
 [ -d "$SRC" ] || { printf 'lint-delays: not a directory: %s\n' "$SRC" >&2; exit 3; }
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-delays 3 "$_TMP/files" "$SRC" -name '*.java'
 
 # ---------------------------------------------------------------------------
 # D2b — Cross-file positive-floor helper registry.
@@ -56,8 +60,7 @@ SRC="$1"
 _PH_FILE="$_TMP/ph.txt"
 # Multi-file awk: FNR==1 resets state at each new file so nothing bleeds across.
 # shellcheck disable=SC2016  # awk program intentionally in single quotes (no shell expansion needed)
-find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
-  xargs awk '
+xargs awk '
   BEGIN { fn = ""; body = ""; depth = 0; in_meth = 0 }
   FNR == 1 { fn = ""; body = ""; depth = 0; in_meth = 0 }
   function adjust(line,   o, c) {
@@ -90,7 +93,7 @@ find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort | \
       fn = ""; body = ""; in_meth = 0; depth = 0
     }
   }
-  ' 2>/dev/null | sort -u > "$_PH_FILE"
+  ' 2>/dev/null < "$_TMP/files" | sort -u > "$_PH_FILE"
 POSITIVE_HELPERS=$(tr '\n' ' ' < "$_PH_FILE")
 
 # ---------------------------------------------------------------------------
@@ -500,7 +503,7 @@ while IFS= read -r f; do
     printf '%s\n' "$result"
     printf '%s\n' "$result" | grep -q '^FAIL' && FAILED=1
   fi
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 [ "$FAILED" -eq 0 ] || exit 1
 exit 0

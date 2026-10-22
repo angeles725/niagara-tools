@@ -23,54 +23,28 @@
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # Mutation: WFC2 -- remove the BComponentChooser/targetType-absent guard so a file WITH BComponentChooser still WARNs
 set -u
-LC_ALL=C
-export LC_ALL
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-wb-file-chooser first 'usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>' "$@"
 
-STRICT=0
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --strict) STRICT=1; shift ;;
-    --) shift; break ;;
-    -*) printf 'lint-wb-file-chooser: unknown flag: %s\n' "$1" >&2
-        printf 'usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>\n' >&2
-        exit 3 ;;
-    *) break ;;
-  esac
-done
-
-if [ $# -lt 1 ]; then
-  printf 'usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>\n' >&2
-  exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-  printf 'lint-wb-file-chooser: not a directory: %s\n' "$ROOT" >&2
-  exit 3
-fi
-
-had_warn=0
-while IFS= read -r f; do
-  # Strip // line comments before matching (a leading-dot // is a rare miss, documented).
-  stripped=$(sed 's://.*::' "$f")
+# check <file>: the line of the file-chooser dialog call, when the file has no station-space picker.
+check() {
+  local line
   # Only files that call BWbFieldEditor.dialog( are candidates.
-  printf '%s\n' "$stripped" | grep -q 'BWbFieldEditor\.dialog(' || continue
+  printf '%s\n' "$AL_TEXT" | grep -q 'BWbFieldEditor\.dialog(' || return 0
   # Only files whose dialog call may receive BOrd.NULL (file-space default) are candidates.
-  printf '%s\n' "$stripped" | grep -q 'BOrd\.NULL' || continue
+  printf '%s\n' "$AL_TEXT" | grep -q 'BOrd\.NULL' || return 0
   # Exempt if the file already uses a station-component chooser or targetType facet.
-  printf '%s\n' "$stripped" | grep -q 'BComponentChooser' && continue
-  printf '%s\n' "$stripped" | grep -q 'targetType' && continue
+  printf '%s\n' "$AL_TEXT" | grep -q 'BComponentChooser' && return 0
+  printf '%s\n' "$AL_TEXT" | grep -q 'targetType' && return 0
   # Report the first line that has both the dialog call and BOrd.NULL on the same line;
   # fall back to the first dialog line if the argument spans multiple lines.
-  line=$(printf '%s\n' "$stripped" | grep -n 'BWbFieldEditor\.dialog(' | grep 'BOrd\.NULL' | head -1 | cut -d: -f1)
+  line=$(printf '%s\n' "$AL_TEXT" | grep -n 'BWbFieldEditor\.dialog(' | grep 'BOrd\.NULL' | head -1 | cut -d: -f1)
   if [ -z "$line" ]; then
-    line=$(printf '%s\n' "$stripped" | grep -n 'BWbFieldEditor\.dialog(' | head -1 | cut -d: -f1)
+    line=$(printf '%s\n' "$AL_TEXT" | grep -n 'BWbFieldEditor\.dialog(' | head -1 | cut -d: -f1)
   fi
-  src=$(sed -n "${line}p" "$f" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-  printf 'WARN  lint-wb-file-chooser  %s:%s  %s\n' "$f" "$line" "$src"
-  had_warn=1
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print)
+  printf '%s\n' "$line"
+}
 
-if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+# The lib strips // comments into AL_TEXT, walks fail closed, prints the WARN row and the exit code.
+awk_lint_strip_run check -name '*.java'

@@ -38,6 +38,8 @@
 # Dot-directories excluded (D9b). VCS-free by design.
 
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -74,6 +76,8 @@ fi
 
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit generate-wiring-map 3 "$_TMP/files" "$SRC" -name '*.java'
 _OP="$_TMP/operator.tsv"
 _SUM="$_TMP/summary.tsv"
 touch "$_OP" "$_SUM"
@@ -122,7 +126,7 @@ while IFS= read -r f; do
     next
   }
   ' "$f"
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 # ---------------------------------------------------------------------------
 # Display names: "<slot>\t<Type>" -> "<slot>\t<display>" from the lexicon (Type.slot, then slot).

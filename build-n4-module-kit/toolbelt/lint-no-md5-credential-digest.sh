@@ -20,47 +20,19 @@
 # Known limitation: a `//` inside a string literal can hide the call. VCS-free by design.
 # Mutation: NMD2 -- drop the credential context guard so MD5-only files also WARN
 set -u
-LC_ALL=C
-export LC_ALL
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+awk_lint_parse lint-no-md5-credential-digest first 'usage: lint-no-md5-credential-digest.sh [--strict] <src-root>' "$@"
 
-STRICT=0
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --strict) STRICT=1; shift ;;
-    --) shift; break ;;
-    -*) printf 'lint-no-md5-credential-digest: unknown flag: %s\n' "$1" >&2
-        printf 'usage: lint-no-md5-credential-digest.sh [--strict] <src-root>\n' >&2
-        exit 3 ;;
-    *) break ;;
-  esac
-done
-
-if [ $# -lt 1 ]; then
-  printf 'usage: lint-no-md5-credential-digest.sh [--strict] <src-root>\n' >&2
-  exit 3
-fi
-ROOT="$1"
-if [ ! -d "$ROOT" ]; then
-  printf 'lint-no-md5-credential-digest: not a directory: %s\n' "$ROOT" >&2
-  exit 3
-fi
-
-had_warn=0
-while IFS= read -r f; do
-  # Strip // line comments before matching.
-  stripped=$(sed 's://.*::' "$f")
+# check <file>: the line of the first MD5 call when the file also has a credential context.
+check() {
   # Only files that contain a MessageDigest.getInstance("MD5") call (case-insensitive on MD5).
-  printf '%s\n' "$stripped" | grep -qi 'MessageDigest\.getInstance("MD5")' || continue
+  printf '%s\n' "$AL_TEXT" | grep -qi 'MessageDigest\.getInstance("MD5")' || return 0
   # Credential context: BPassword, BCredentials, or identifier containing password/credential/pin.
-  printf '%s\n' "$stripped" | grep -qiE '(BPassword|BCredentials|password|credential|pin)' || continue
+  printf '%s\n' "$AL_TEXT" | grep -qiE '(BPassword|BCredentials|password|credential|pin)' || return 0
   # Report the MD5 line (1-indexed, against the stripped view = same line numbers).
-  line=$(printf '%s\n' "$stripped" | grep -ni 'MessageDigest\.getInstance("MD5")' | head -1 | cut -d: -f1)
-  src=$(sed -n "${line}p" "$f" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-  printf 'WARN  lint-no-md5-credential-digest  %s:%s  %s\n' "$f" "$line" "$src"
-  had_warn=1
-done < <(find "$ROOT" -type d -name '.*' -prune -o -type f -name '*.java' -print)
+  printf '%s\n' "$AL_TEXT" | grep -ni 'MessageDigest\.getInstance("MD5")' | head -1 | cut -d: -f1
+}
 
-if [ "$had_warn" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+# The lib strips // comments into AL_TEXT, walks fail closed, prints the WARN row and the exit code.
+awk_lint_strip_run check -name '*.java'
