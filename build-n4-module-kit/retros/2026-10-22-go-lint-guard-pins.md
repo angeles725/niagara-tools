@@ -30,8 +30,14 @@ instead of one grep per mutation, so a real-tree run drops from seconds to milli
   (package missing, build failed) → GREEN `[ev: go/internal/guardpins/command_test.go TestMain]`
 - Mutation T4-nomutation (drop the no-declaration WARN) fails 4 Go tests and bats T4-nomutation / T4-strict
   `[ev: go/internal/guardpins/command.go Main]`
-- `--strict .` on the real repo, load average ~13: bash ~9.3 s/call (5 calls), wrapper ~26 ms/call, binary
-  ~11 ms/call (20 calls) `[ev: r8 guard-pins timing]`
+- `--strict .` on the real repo (199 mutation lines; coordinator baseline 12.2 s, hot spots the per-header-line
+  `printf | grep` + `sed` and one `grep tests/*.bats` per mutation): load ~13, bash ~9.3 s/call (5 calls), wrapper
+  ~26 ms/call, binary ~11 ms/call (20 calls); re-run at load ~10: bash ~7.6 s/call (2), wrapper ~16 ms/call (20)
+  `[ev: r8 guard-pins timing]`
+- Deliberate contract fix (follow-up commit): the usage said `<kit-root>`, but `tests/` is read from the argument,
+  so a kit root always exited 3 `no tests/ found` (T27 profiling). Usage and header now say `<repo-root>`
+  (`toolbelt/INDEX.md` regenerated: that Usage cell only), and a kit root whose parent holds `tests/` is exit 3
+  naming the repository root to pass `[ev: go/internal/guardpins/command_test.go TestMainKitRootGiven]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
@@ -42,6 +48,7 @@ instead of one grep per mutation, so a real-tree run drops from seconds to milli
 
 ## Lessons
 - `find ... | sort` in a process substitution hides find's exit status: the loop sees an empty list, not an error.
+- A usage line is a contract: `<kit-root>` that only works with the repository root is a defect, not a typo.
 - A ported `lint-*.sh` is also an input of `gen-lint-index` and of itself; keep its header (and its `[ev:]` tags)
   unchanged or the generated lint index moves with the port.
 

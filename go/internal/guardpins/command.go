@@ -17,16 +17,16 @@ const (
 	ExitEnv  = 3 // usage or environment error (K20)
 )
 
-// Main implements `lint-guard-pins [--strict] <kit-root>`. The toolbelt is <kit-root>/toolbelt or
-// else <kit-root>/build-n4-module-kit/toolbelt; fixtures are <kit-root>/tests/*.bats. Paths are
-// printed as built from <kit-root> (no cleaning), as the bash tool's find printed them.
+// Main implements `lint-guard-pins [--strict] <repo-root>`. The toolbelt is <repo-root>/toolbelt or
+// else <repo-root>/build-n4-module-kit/toolbelt; fixtures are <repo-root>/tests/*.bats. Paths are
+// printed as built from <repo-root> (no cleaning), as the bash tool's find printed them.
 func Main(args []string, s cli.Stdio) int {
 	strict := false
 	if len(args) > 0 && args[0] == "--strict" {
 		strict, args = true, args[1:]
 	}
 	if len(args) != 1 {
-		fmt.Fprint(s.Err, "usage: lint-guard-pins.sh [--strict] <kit-root>\n")
+		fmt.Fprint(s.Err, "usage: lint-guard-pins.sh [--strict] <repo-root>\n")
 		return ExitEnv
 	}
 	root := args[0]
@@ -39,6 +39,12 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	testsDir := root + "/tests"
 	if !isDir(testsDir) {
+		// The contract is the repository root: <repo>/tests holds the fixtures. A kit root resolves
+		// its toolbelt/ but not its tests/, so name the parent that would work.
+		if parent := filepath.Dir(filepath.Clean(root)); toolbelt == root+"/toolbelt" && isDir(parent+"/tests") {
+			fmt.Fprintf(s.Err, "lint-guard-pins: no tests/ found under %s (a kit root? pass the repository root %s)\n", root, parent)
+			return ExitEnv
+		}
 		fmt.Fprintf(s.Err, "lint-guard-pins: no tests/ found under %s\n", root)
 		return ExitEnv
 	}

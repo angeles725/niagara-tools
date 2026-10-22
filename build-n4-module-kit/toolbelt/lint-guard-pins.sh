@@ -15,7 +15,8 @@
 #   WARN   lint-guard-pins  <script>:<line>  mutation <id> -> no fixture
 #   WARN   lint-guard-pins  <script>  no # Mutation: line (K24(7): add '# Mutation: <fixture-id> -- <what it flips>')
 #
-# Usage:  lint-guard-pins.sh [--strict] <kit-root>
+# Usage:  lint-guard-pins.sh [--strict] <repo-root>
+#   <repo-root> holds tests/ and build-n4-module-kit/ (or toolbelt/); a kit root alone is exit 3.
 # Exits:  0 clean or WARN-only (no --strict) · 1 any WARN under --strict · 3 usage/env (K20)
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2). LC_ALL=C.
 # [ev: retro campaign11-lint-guard-pins]

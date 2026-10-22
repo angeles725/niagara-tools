@@ -11,7 +11,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
 
-const usageText = "usage: lint-guard-pins.sh [--strict] <kit-root>\n"
+const usageText = "usage: lint-guard-pins.sh [--strict] <repo-root>\n"
 
 // mklint mirrors tests/guard-pins.bats _mklint: toolbelt/<s>.sh with an optional mutation id and
 // tests/<s>.bats with an optional @test "<def>: a guard".
@@ -149,6 +149,30 @@ func TestMainOddEntries(t *testing.T) {
 	}
 	if !strings.Contains(errs, "lint-guard-pins: cannot read "+tb+"/lint-dir.sh") || !strings.Contains(errs, "lint-guard-pins: cannot read "+tb+"/lint-locked.sh") {
 		t.Errorf("stderr = %q", errs)
+	}
+}
+
+// TestMainKitRootGiven: the argument is the repository root (it holds tests/); a kit root, whose
+// toolbelt/ resolves but whose tests/ is its parent's, is exit 3 naming the repository root to pass.
+func TestMainKitRootGiven(t *testing.T) {
+	t.Parallel()
+	repo := filepath.Join(t.TempDir(), "repo")
+	kit := filepath.Join(repo, "build-n4-module-kit")
+	for _, d := range []string{filepath.Join(kit, "toolbelt"), filepath.Join(repo, "tests")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(t, filepath.Join(kit, "toolbelt", "lint-a.sh"), "#!/bin/sh\n# Mutation: A -- x\n")
+	write(t, filepath.Join(repo, "tests", "a.bats"), "@test \"A: x\" { true; }\n")
+	code, out, errs := run(kit)
+	want := "lint-guard-pins: no tests/ found under " + kit + " (a kit root? pass the repository root " + repo + ")\n"
+	if code != ExitEnv || out != "" || errs != want {
+		t.Errorf("kit root: got (%d, %q, %q)\nwant errs %q", code, out, errs, want)
+	}
+	code, out, _ = run(repo)
+	if code != ExitOK || out != "MATCH  lint-guard-pins  "+kit+"/toolbelt/lint-a.sh:2  mutation A -> tests/a.bats:1\n" {
+		t.Errorf("repo root: got (%d, %q)", code, out)
 	}
 }
 
