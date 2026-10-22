@@ -1231,12 +1231,16 @@ class TestWriteBranchDebt(DestructiveCase):
 
     def failing_append(self, phase):
         """Make the journal refuse entries of `phase` (OSError), keep the others."""
+        self.failing_append_exc(phase, OSError("disk full"))
+
+    def failing_append_exc(self, phase, error):
+        """Make the journal raise `error` on entries of `phase`, keep the others."""
         journal = self.journal()
         orig = journal.append
 
         def append(entry):
             if entry.get("phase") == phase:
-                raise OSError("disk full")
+                raise error
             return orig(entry)
         self.patch(journal, "append", append)
 
@@ -1273,6 +1277,95 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIn("in-doubt", text)
         tgt = self.fake.folder.child(nn).child("Tgt")
         self.assertIsNone(tgt.child("Link"))
+
+    def last_audit(self):
+        return self.lines("audit.jsonl")[-1]
+
+    def intent_ids(self):
+        return [e["batch_id"] for e in self.lines("journal.jsonl") if e.get("phase") == "intent"]
+
+    def test_a_failed_relink_intent_is_audited_as_an_in_doubt_error_with_its_batch(self):
+        # Finding 1: components were re-created before the relink intent failed, so the
+        # audit line is an error of that batch, not a "refused" call without a batch_id.
+        nn, removed = self.removed_group()
+        self.failing_append("relink-intent")
+        plan = self.dry("n4_rollback", batch_id=removed["batch_id"])
+        text = self.err("n4_rollback", batch_id=removed["batch_id"], dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        audit = self.last_audit()
+        self.assertEqual(audit["outcome"], "error")
+        self.assertEqual(audit["batch_id"], self.intent_ids()[-1])
+        self.assertIn(audit["batch_id"], text)
+        self.assertIn("Components already created by this batch", text)
+        self.assertIn(FOLDER + "/" + nn, text)
+
+    def craft_two_adds(self):
+        bid = "ab" * 16
+        inverse = [{"nm": "a", "h": "3", "n": "A", "b": {"nm": "p", "t": "baja:Folder"}},
+                   {"nm": "a", "h": "3", "n": "B", "b": {"nm": "p", "t": "baja:Folder"}}]
+        self.craft(bid, inverse, {FOLDER: "3"})
+        return bid
+
+    def fail_add_of(self, name):
+        def hook(frame):
+            arg = frame["m"][0]["b"].get("scarg") or {}
+            ops = arg.get("ops") if isinstance(arg, dict) else None
+            if ops and ops[0].get("nm") == "a" and ops[0].get("n") == name:
+                return 500, b"", {}
+        self.fake.hook = hook
+
+    def test_a_multi_op_batch_that_fails_mid_way_names_the_sent_ops_and_their_inverse(self):
+        # Finding 2: op 2 of 2 fails; op 1 was sent and accepted. The error says so, gives
+        # the partial replies and inverse, and the journal records an in-doubt result.
+        bid = self.craft_two_adds()
+        plan = self.dry("n4_rollback", batch_id=bid)
+        self.fail_add_of("B")
+        text = self.err("n4_rollback", batch_id=bid, dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.fake.hook = None
+        self.assertEqual(self.children(), ["A"])
+        self.assertIn("in-doubt", text)
+        self.assertIn("op 2 of 2 failed", text)
+        self.assertIn("op 1 was sent", text)
+        self.assertIn('"nm":"v"', text.replace(" ", ""))  # the partial inverse removes A
+        batch = self.intent_ids()[-1]
+        result = [e for e in self.lines("journal.jsonl")
+                  if e.get("batch_id") == batch and e.get("phase") == "result"]
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result[0]["in_doubt"])
+        self.assertEqual(result[0]["sent"], 1)
+        self.assertEqual(result[0]["failed_op"], 1)
+        self.assertEqual(result[0]["inverse"], [{"nm": "v", "h": "3", "n": "A"}])
+        self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
+        audit = self.last_audit()
+        self.assertEqual((audit["outcome"], audit["batch_id"]), ("error", batch))
+
+    def test_a_partial_result_that_cannot_be_journaled_is_said_and_stays_in_doubt(self):
+        bid = self.craft_two_adds()
+        plan = self.dry("n4_rollback", batch_id=bid)
+        self.fail_add_of("B")
+        self.failing_append("result")
+        text = self.err("n4_rollback", batch_id=bid, dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        self.assertIn("op 2 of 2 failed", text)
+        self.assertIn("in-doubt result record could not be journaled", text)
+        self.assertEqual(self.journal().read(self.intent_ids()[-1])["state"], "in-doubt")
+
+    def test_an_unexpected_failure_after_the_intent_keeps_the_batch_id(self):
+        # Finding 3: a non-ToolError after the intent (here the result record cannot be
+        # serialized) is the batch's in-doubt error, in the reply and in the audit line.
+        self.failing_append_exc("result", TypeError("not JSON serializable"))
+        plan = self.dry("n4_create_component", parent_ord=FOLDER, name="Pump",
+                        type="kitControl:NumericConst")
+        text = self.err("n4_create_component", parent_ord=FOLDER, name="Pump",
+                        type="kitControl:NumericConst", dry_run=False,
+                        confirmation_token=plan["confirmation_token"])
+        batch = self.intent_ids()[-1]
+        self.assertIn(batch, text)
+        self.assertIn("in-doubt", text)
+        self.assertIn("TypeError", text)
+        audit = self.last_audit()
+        self.assertEqual((audit["outcome"], audit["batch_id"]), ("error", batch))
 
     def test_a_malformed_relink_record_is_refused(self):
         bid = "ef" * 16
