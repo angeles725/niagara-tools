@@ -5,13 +5,15 @@
 # gradle fails with a cryptic error. A FAIL row identifies the problem; the script
 # continues checking the rest so all issues are visible in one run.
 #
-# Usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] <niagara_home> <gradle-root>
+# Usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] <niagara_home> <gradle-root>
 #   --jvm-dir <d>   scan this directory for a JDK 8 release (default /usr/lib/jvm, read-only)
 #                   JAVA_HOME is also checked (fallback) — never $HOME
 #   --plugin-version <v>  the niagara plugin version the build will actually use (build.sh forwards its
 #                   --plugin-version / $NIAGARA_PLUGIN_VERSION here); plugin-pin checks <v> instead of
 #                   re-deriving the settings.gradle.kts default, which may have drifted from niagara_home.
 #                   Falls back to $NIAGARA_PLUGIN_VERSION. [ev: retro continuous-fan-post-defrost-delay Δ1]
+#   --sample        the gradle root is a project you did NOT generate (course zip, vendor sample): also run
+#                   the sample-* retarget checks below. Opt-in: client trees keep their own gradle.properties.
 #   <niagara_home>  Niagara 4 installation root (must not be a Windows-style path)
 #   <gradle-root>   gradle project root containing settings.gradle.kts
 #
@@ -25,6 +27,11 @@
 #   jar-lock    ONE filtered `lsof -Fn` pass over <niagara_home>/modules/*.jar
 #               -> PASS|WARN(locked)|SKIP(lsof absent or returning an empty listing, or niagara_home is
 #               9p/drvfs) — never a false PASS
+#   sample-*    [--sample] gradle.properties niagara_home exists (C:\\… read as /mnt/c/…) and carries the
+#               <niagara_home> version (sample-home); niagara_user_home has no <…> placeholder (sample-user);
+#               the ROOT build.gradle.kts has the signing block — signingServices allowDefaultProfile +
+#               niagaraSigning (sample-sign); no shipped build/ directory (sample-build, WARN: delete it).
+#               [ev: retro n4-course-handson-build-signing-windows Δ6]
 #
 # Row format: PASS|FAIL|WARN|SKIP  <check>  <detail>
 # Exit: 0 all PASS/WARN/SKIP · 1 any FAIL · 2 usage · 3 env (path not found)
@@ -40,6 +47,7 @@ set -u
 
 JVM_DIR="/usr/lib/jvm"
 PLUGIN_OVERRIDE="${NIAGARA_PLUGIN_VERSION:-}"
+SAMPLE=0
 FAILED=0
 
 row() {
@@ -49,7 +57,7 @@ row() {
 }
 
 usage_exit() {
-  printf 'usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] <niagara_home> <gradle-root>\n' >&2
+  printf 'usage: preflight.sh [--jvm-dir <d>] [--plugin-version <v>] [--sample] <niagara_home> <gradle-root>\n' >&2
   exit 2
 }
 
@@ -66,6 +74,7 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] || usage_exit
       PLUGIN_OVERRIDE="$2"; shift 2
       ;;
+    --sample) SAMPLE=1; shift ;;
     --) shift; break ;;
     -*) usage_exit ;;
     *) break ;;
@@ -277,6 +286,55 @@ if [ "$WIN_PATH_FAIL" -eq 0 ] && [ -d "$GR" ]; then
       [ "$_NEXT_PARENT" = "$_SCAN_PARENT" ] && break
       _SCAN_PARENT="$_NEXT_PARENT"
     done
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Check 6 — [--sample] course / vendor sample retarget
+# A project shipped by someone else still points at THEIR install: an absent (or other-version)
+# niagara_home, a <username> placeholder user home, a root with no signing block (the station then
+# loads the jar unsigned under high verification) and stale build/ outputs. gradle.properties escapes
+# backslashes (c:\\niagara\\…); a drive path is checked as its /mnt/<drive>/… WSL mount.
+# [ev: retro n4-course-handson-build-signing-windows Δ6]
+# ---------------------------------------------------------------------------
+# _prop <file> <key>: the value of <key>=… in a .properties file, backslash escapes collapsed.
+_prop() { sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*//p" "$1" 2>/dev/null | head -1 | sed 's/\\\\/\\/g; s/[[:space:]]*$//'; }
+# _n4_ver <path>: the last X.Y.Z[.W] version token in <path> (empty when none).
+_n4_ver() { grep -oE '[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?' <<< "$1" | tail -1; }
+if [ "$SAMPLE" -eq 1 ] && [ "$WIN_PATH_FAIL" -eq 0 ]; then
+  GP="$GR/gradle.properties"
+  S_HOME=$(_prop "$GP" niagara_home)
+  case "$S_HOME" in
+    [A-Za-z]:*) _d="${S_HOME%%:*}"; _rest="${S_HOME#?:}"; S_PATH="/mnt/${_d,,}${_rest//\\//}" ;;
+    *) S_PATH="$S_HOME" ;;
+  esac
+  S_VER=$(_n4_ver "$S_PATH"); NH_VER=$(_n4_ver "$NH")
+  if [ -z "$S_HOME" ]; then
+    row FAIL "sample-home" "no niagara_home in $GP — set it to this install ($NH)"
+  elif [ ! -d "$S_PATH" ]; then
+    row FAIL "sample-home" "gradle.properties niagara_home $S_PATH does not exist — retarget it to $NH"
+  elif [ -n "$S_VER" ] && [ -n "$NH_VER" ] && [ "$S_VER" != "$NH_VER" ]; then
+    row FAIL "sample-home" "gradle.properties niagara_home is $S_VER, the target install is $NH_VER — retarget it to $NH"
+  else
+    row PASS "sample-home" "gradle.properties niagara_home $S_PATH exists${NH_VER:+ (version $NH_VER)}"
+  fi
+  S_USER=$(_prop "$GP" niagara_user_home)
+  if grep -q '<[^>]*>' <<< "$S_USER"; then
+    row FAIL "sample-user" "gradle.properties niagara_user_home has a placeholder: $S_USER"
+  else
+    row PASS "sample-user" "niagara_user_home has no <…> placeholder"
+  fi
+  ROOT_KTS="$GR/build.gradle.kts"
+  if grep -q 'allowDefaultProfile' "$ROOT_KTS" 2>/dev/null && grep -q 'niagaraSigning' "$ROOT_KTS" 2>/dev/null; then
+    row PASS "sample-sign" "root build.gradle.kts has signingServices allowDefaultProfile + niagaraSigning"
+  else
+    row FAIL "sample-sign" "root $ROOT_KTS lacks the signing block (signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile })"
+  fi
+  S_BUILD=$(find "$GR" -mindepth 1 -maxdepth 3 -type d -name '.*' -prune -o -type d -name build -print -prune 2>/dev/null | sort | tr '\n' ' ' | sed 's/ *$//')
+  if [ -n "$S_BUILD" ]; then
+    row WARN "sample-build" "shipped build/ output (delete it before the first build): $S_BUILD"
+  else
+    row PASS "sample-build" "no shipped build/ directory"
   fi
 fi
 
