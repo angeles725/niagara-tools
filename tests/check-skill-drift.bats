@@ -70,6 +70,7 @@ _install() { "$REPO/scripts/install-skill.sh" --home "$H" "$@" >/dev/null; }
   done
   run env PATH="$TMPDIR_T/bin" /bin/bash "$SD" --home "$H"
   [ "$status" -eq 3 ]
+  [[ "$output" == *"check-skill-drift: no sha256 tool found (sha256sum or shasum)"* ]]
   [ "$(printf '%s' "$output" | grep -c 'PASS')" -eq 0 ]
 }
 

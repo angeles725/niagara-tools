@@ -21,6 +21,8 @@ set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INSTALLER="$SCRIPT_DIR/install-skill.sh"
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via SCRIPT_DIR
+. "$SCRIPT_DIR/lib/sha256.sh" || exit 3
 
 SKILL="build-n4-module"
 HOME_DIR="${HOME:-}"
@@ -54,30 +56,13 @@ fi
 [ -f "$TRACKED" ] || { printf 'check-skill-drift: tracked launcher not found: %s\n' "$TRACKED" >&2; exit 3; }
 [ -n "$HOME_DIR" ] || { printf 'check-skill-drift: no home directory (pass --home)\n' >&2; exit 3; }
 
-sha256_of() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | cut -d' ' -f1
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | cut -d' ' -f1
-  else
-    printf 'check-skill-drift: no sha256 tool found (sha256sum or shasum)\n' >&2
-    exit 3
-  fi
-}
-
 INSTALLED="$HOME_DIR/.claude/skills/$SKILL/SKILL.md"
 REMEDY="scripts/install-skill.sh --skill $SKILL"
 if [ ! -f "$INSTALLED" ]; then
   printf 'FAIL  skill-drift  %s  not installed at %s — run %s\n' "$SKILL" "$INSTALLED" "$REMEDY"
   exit 1
 fi
-# sha256_of runs in a subshell, so its own exit 3 cannot stop this script: check the tool here.
-if ! command -v sha256sum >/dev/null 2>&1; then
-  if ! command -v shasum >/dev/null 2>&1; then
-    printf 'check-skill-drift: no sha256 tool found (sha256sum or shasum)\n' >&2
-    exit 3
-  fi
-fi
+sha256_require 'check-skill-drift' || exit 3   # up front: an exit inside $( ) cannot stop us
 tracked_sha="$(sha256_of "$TRACKED")"
 installed_sha="$(sha256_of "$INSTALLED")"
 if [ -z "$tracked_sha" ] || [ -z "$installed_sha" ]; then

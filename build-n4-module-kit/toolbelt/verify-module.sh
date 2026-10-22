@@ -242,10 +242,25 @@ check_stored() {
   row FAIL stored "$jar" "$d deflated entries (run stored-repack.sh before re-signing in Workbench)"; return 1
 }
 profile_dir() { local b; b=$(basename "$1" .jar); printf '%s/%s' "$SRC" "$b"; }
+# src_or_skip <check> <jar>: the shared opening of every --src check. Sets the CALLER's local `pd` to
+# the jar's profile dir; without --src it prints the SKIP row and returns 1, so a caller writes
+# `src_or_skip <check> "$jar" || return 0`.
+src_or_skip() {
+  [ -n "$SRC" ] || { row SKIP "$1" "$2" "no --src"; return 1; }
+  pd=$(profile_dir "$2")
+}
+# src_dir_or_skip <check> <jar>: src_or_skip, then SKIP (return 1) when <pd>/src is not a directory.
+src_dir_or_skip() {
+  src_or_skip "$1" "$2" || return 1
+  [ -d "$pd/src" ] || { row SKIP "$1" "$2" "no $pd/src"; return 1; }
+}
+# java_files <dir>: every *.java under <dir>, in find order. D9b: dot-dirs (e.g. .deploy-baseline) are
+# pruned so stale snapshots are never scanned. Fail-open like the walk it replaced: find errors are not checked.
+java_files() { find "$1" -type d -name '.*' -prune -o -name '*.java' -print; }
 check_type_count() {
   local jar="$1" pd inc tn sn
-  [ -n "$SRC" ] || { row SKIP typecount "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar"); inc="$pd/module-include.xml"
+  src_or_skip typecount "$jar" || return 0
+  inc="$pd/module-include.xml"
   [ -f "$inc" ] || { row SKIP typecount "$jar" "no $inc"; return 0; }
   tn=$(printf '%s\n' "$TYPES" | grep -c . || true); sn=$(grep -c '<type ' "$inc" || true)
   if [ "$tn" = "$sn" ]; then row PASS typecount "$jar" "jar declares $tn types == module-include.xml"; return 0; fi
@@ -253,15 +268,12 @@ check_type_count() {
 }
 check_raw_double_facets() {
   local jar="$1" pd hits f
-  [ -n "$SRC" ] || { row SKIP facets "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP facets "$jar" "no $pd/src"; return 0; }
-  # D9b: prune dot-dirs (e.g. .deploy-baseline) so stale snapshots are never scanned.
+  src_dir_or_skip facets "$jar" || return 0
   hits=""
   while IFS= read -r f; do
     h=$(grep -nE 'BFacets\.make\(BFacets\.(MIN|MAX), *-?[0-9]' "$f" 2>/dev/null | head -1 || true)
     if [ -n "$h" ]; then hits="$f:$h"; break; fi
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   if [ -z "$hits" ]; then row PASS facets "$jar" "no raw-number MIN/MAX facet under $pd/src"; return 0; fi
   row FAIL facets "$jar" "raw-number MIN/MAX facet (wrap in BDouble.make): $hits"; return 1
 }
@@ -272,9 +284,7 @@ check_facet_presence() {
   # are not flagged, even if only MIN is set). WARN never changes exit code (K20).
   # D9b: dot-dirs pruned.
   local jar="$1" pd warned=0 f hit
-  [ -n "$SRC" ] || { row SKIP facets-req "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP facets-req "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip facets-req "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
@@ -365,7 +375,7 @@ check_facet_presence() {
         }
       }
     ' "$f")
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS facets-req "$jar" "no missing required facets under $pd/src"
   return 0
 }
@@ -375,9 +385,7 @@ check_ord_literal() {
   # justification comment, (b) the literal is inside a @NiagaraProperty defaultValue= attribute,
   # (c) the file is under srcTest/**. WARN never changes exit code (K20). D9b: dot-dirs pruned.
   local jar="$1" pd warned=0 f fname skip hit
-  [ -n "$SRC" ] || { row SKIP ord-literal "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP ord-literal "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip ord-literal "$jar" || return 0
   while IFS= read -r f; do
     case "$f" in */srcTest/*) continue ;; esac
     fname="$(basename "$f" .java)"
@@ -393,7 +401,7 @@ check_ord_literal() {
       row WARN ord-literal "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE '"(station:|local:|slot:/)' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS ord-literal "$jar" "no hardcoded ORD literals under $pd/src"
   return 0
 }
@@ -454,8 +462,7 @@ check_phantom_dep() {
   # contract; it may disappear after a Gradle upgrade and cause runtime CNFE.
   # NAMED MUTATION: drop this check -> WB-DEP1's phantom-dep WARN vanishes.
   local jar="$1" pd gkt dep gkt_deps phantom_list
-  [ -n "$SRC" ] || { row SKIP phantom-dep "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
+  src_or_skip phantom-dep "$jar" || return 0
   gkt=$(find "$pd" -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1)
   [ -n "$gkt" ] || { row SKIP phantom-dep "$jar" "no *.gradle.kts in $pd"; return 0; }
   [ -n "$MX" ]  || { row SKIP phantom-dep "$jar" "no META-INF/module.xml"; return 0; }
@@ -498,8 +505,7 @@ check_moduletest_present() {
   local jar="$1" base pd njava mti
   base=$(basename "$jar" .jar)
   case "$base" in *-rt) ;; *) row SKIP moduletest "$jar" "not an -rt jar"; return 0 ;; esac
-  [ -n "$SRC" ] || { row SKIP moduletest "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
+  src_or_skip moduletest "$jar" || return 0
   [ -d "$pd" ] || { row SKIP moduletest "$jar" "no source dir $pd"; return 0; }
   njava=$(find "$pd/src" -name '*.java' 2>/dev/null | grep -c . || true)
   [ "$njava" -ge 1 ] || { row SKIP moduletest "$jar" "no production .java under src/"; return 0; }
@@ -520,16 +526,14 @@ check_transient_operator() {
   # NAMED MUTATION: drop this check -> TRANSOP1's WARN vanishes.
   # [ev: corpus B755 §755.5, B4 §4.1.2]
   local jar="$1" pd warned=0 f hit
-  [ -n "$SRC" ] || { row SKIP transient-operator "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP transient-operator "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip transient-operator "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
       row WARN transient-operator "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE 'TRANSIENT[^;]*OPERATOR|OPERATOR[^;]*TRANSIENT' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS transient-operator "$jar" "no TRANSIENT+OPERATOR slot combination under $pd/src"
   return 0
 }
@@ -544,16 +548,14 @@ check_compact3_imports() {
   local jar="$1" base pd warned=0 f hit
   base=$(basename "$jar" .jar)
   case "$base" in *-rt|*-ux) ;; *) row SKIP compact3-import "$jar" "not an -rt or -ux jar"; return 0 ;; esac
-  [ -n "$SRC" ] || { row SKIP compact3-import "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP compact3-import "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip compact3-import "$jar" || return 0
   while IFS= read -r f; do
     while IFS= read -r hit; do
       [ -n "$hit" ] || continue
       row WARN compact3-import "$jar" "$f:$hit"
       warned=1
     done < <(grep -nE 'import (java\.awt|javax\.swing|java\.sql)\.' "$f" 2>/dev/null || true)
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS compact3-import "$jar" "no Compact3 non-safe imports under $pd/src"
   return 0
 }
@@ -565,9 +567,7 @@ check_cross_module_type() {
   # WARN severity (may be intentional with a correct runtime dep). [ev: corpus B740 §740.2]
   # NAMED MUTATION: drop this check -> CROSSMOD1's cross-module-type WARN vanishes.
   local jar="$1" pd warned=0 t pkg pkg_path
-  [ -n "$SRC" ] || { row SKIP cross-module-type "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP cross-module-type "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip cross-module-type "$jar" || return 0
   while IFS= read -r t; do
     [ -n "$t" ] || continue
     # FQN: must contain a dot; last segment must start with an uppercase letter
@@ -581,7 +581,7 @@ check_cross_module_type() {
     row WARN cross-module-type "$jar" "foreign type in @NiagaraProperty: $t"
     warned=1
   done < <(
-    find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print \
+    java_files "$pd/src" \
     | while IFS= read -r _f; do
         grep -oE 'type[[:space:]]*=[[:space:]]*"[^"]*"' "$_f" 2>/dev/null || true
       done \
@@ -602,15 +602,13 @@ check_subscription_leak() {
   # NAMED MUTATION: drop this check -> SUBLEAK1's WARN row vanishes.
   # [ev: corpus B867 §867.2, B408 §408.4]
   local jar="$1" pd warned=0 f
-  [ -n "$SRC" ] || { row SKIP subscription-leak "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP subscription-leak "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip subscription-leak "$jar" || return 0
   while IFS= read -r f; do
     grep -qE '(extends[[:space:]]+TypeSubscriber|TypeSubscriber[[:space:]]+)' "$f" 2>/dev/null || continue
     grep -qE 'void[[:space:]]+stopped[[:space:]]*\(' "$f" 2>/dev/null && continue
     row WARN subscription-leak "$jar" "$f: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart"
     warned=1
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS subscription-leak "$jar" "no TypeSubscriber without stopped() under $pd/src"
   return 0
 }
@@ -623,9 +621,7 @@ check_slot_wall() {
   # NAMED MUTATION: drop this check -> SLOTWALL1's WARN vanishes.
   # [ev: corpus B737 §B.2-B.3]
   local jar="$1" pd warned=0 f count classname
-  [ -n "$SRC" ] || { row SKIP slot-wall "$jar" "no --src"; return 0; }
-  pd=$(profile_dir "$jar")
-  [ -d "$pd/src" ] || { row SKIP slot-wall "$jar" "no $pd/src"; return 0; }
+  src_dir_or_skip slot-wall "$jar" || return 0
   while IFS= read -r f; do
     count=$(grep -c '@NiagaraProperty' "$f" 2>/dev/null || true)
     [ "$count" -gt 15 ] || continue
@@ -634,7 +630,7 @@ check_slot_wall() {
     [ -z "$classname" ] && classname="$(basename "$f" .java)"
     row WARN slot-wall "$jar" "$count properties in class $classname ($f) — compose into child BComponents (logic.md L21)"
     warned=1
-  done < <(find "$pd/src" -type d -name '.*' -prune -o -name '*.java' -print)
+  done < <(java_files "$pd/src")
   [ "$warned" -eq 0 ] && row PASS slot-wall "$jar" "no flat slot wall (>15 @NiagaraProperty per class) under $pd/src"
   return 0
 }

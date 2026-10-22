@@ -110,6 +110,7 @@ make_tree() {
   TREE="$BATS_TEST_TMPDIR/tree"
   mkdir -p "$TREE/scripts" "$TREE/build-n4-module-kit/skill" "$TREE/mcp-n4-kit/skill"
   cp "$SCRIPT" "$TREE/scripts/install-skill.sh"
+  cp -r "$REPO_ROOT/scripts/lib" "$TREE/scripts/lib"
   printf 'stub build skill\n' > "$TREE/build-n4-module-kit/skill/SKILL.md"
   printf 'stub mcp skill\n' > "$TREE/mcp-n4-kit/skill/SKILL.md"
   TSCRIPT="$TREE/scripts/install-skill.sh"
@@ -205,4 +206,23 @@ make_tree() {
   [ "$status" -eq 0 ]
   cmp -s "$REAL" "$TEST_HOME/.claude/skills/mcp-n4/SKILL.md"
   grep -q '^name: mcp-n4$' "$REAL"
+}
+
+# ---------------------------------------------------------------------------
+# IS5 — no sha256 tool: fail closed before any write (quality round 8 T8a)
+# The digest is taken inside $( ), where an exit cannot stop the script, so the
+# tool check must run up front.
+# Mutation: IS5 -- dropping the up-front tool check installs on two empty digests (exit 0).
+# ---------------------------------------------------------------------------
+@test "IS5: no sha256sum and no shasum -> exit 3 with the missing-tool message, nothing installed" {
+  BIN="$BATS_TEST_TMPDIR/bin"
+  mkdir -p "$BIN"
+  for t in dirname cut mkdir cp cat; do
+    p="$(command -v "$t")"; if [ -n "$p" ]; then ln -s "$p" "$BIN/$t"; fi
+  done
+  run env HOME=/nonexistent PATH="$BIN" /bin/bash "$SCRIPT" --home "$TEST_HOME"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"install-skill: no sha256 tool found (sha256sum or shasum)"* ]]
+  [ ! -e "$TEST_HOME/.claude/skills/build-n4-module" ]
+  [[ "$output" != *"installed"* ]]
 }
