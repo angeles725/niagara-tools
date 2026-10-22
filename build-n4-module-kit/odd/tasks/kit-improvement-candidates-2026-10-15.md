@@ -12,6 +12,10 @@ row shape). The HEAD commit message (ffcddad) says 178 because it sums the 14 de
 (10+5+10+10+10+10+9+10+9+10+6+4+6+10). 43 course + 119 devguide + 6 pilot = 168.
 **Addendum (15ad06f).** A 24th retro, `review2-signing-build-route` (alias `rsb`, 6 deltas), was added after the
 first consolidation and mapped into existing C-items (C39, C48, C51, C58). Current total: **24 retros, 174 deltas**.
+**Addendum (2026-10-16 hands-on, T9a).** Five hands-on retros from executing the N4 Developer course
+(`build-n4-module-kit/retros/2026-10-16-n4-course-handson-*.md`, 30 deltas) are mapped in **Appendix C**: 15 genuinely new
+deltas open C81–C93; the other 15 confirm, refine or extend an existing C-item and are mapped to it. Appendix A and its
+check script stay scoped to the 24 retros of 2026-10-15. Register total: **29 retros, 204 deltas, 93 C-items**.
 
 **No-loss proof.** `bash build-n4-module-kit/odd/tasks/kit-improvement-candidates-2026-10-15.check.sh` (next to this file).
 It extracts every delta ID from the 23 retros, checks each appears exactly once in Appendix A, that Appendix A holds no
@@ -54,6 +58,16 @@ split across several C-items is folded partially until its last C-item lands.
 | tpb | testing-parity-btestng | 6 |
 | rsb | review2-signing-build-route | 6 |
 
+Hands-on retros of 2026-10-16 (`build-n4-module-kit/retros/2026-10-16-n4-course-handson-<slug>.md`, mapped in Appendix C):
+
+| Alias | Retro slug | Δ |
+|---|---|---|
+| bsw | build-signing-windows | 6 |
+| ndh | ndriver | 8 |
+| shs | services-history-threading | 6 |
+| slo | slotomatic-authoring | 6 |
+| hwf | workflow | 4 |
+
 **r3 corrections not written into any retro** (reported by the round-3 run; recorded here as `r3-report#Rn`, mapped in
 Appendix B, outside the 168 count):
 
@@ -72,11 +86,13 @@ Appendix B, outside the 168 count):
 
 | Tier | Meaning | C-items | Source deltas |
 |---|---|---|---|
-| P0 | The kit currently teaches something wrong | 30 (C01–C30) | 56 |
-| P1 | High-value missing rules that affect client modules | 22 (C31–C52) | 69 |
-| P2 | New reference sections and templates | 23 (C53–C75) | 43 |
+| P0 | The kit currently teaches something wrong | 34 (C01–C30, C81–C84) | 56 + 13 |
+| P1 | High-value missing rules that affect client modules | 28 (C31–C52, C85–C90) | 69 + 10 |
+| P2 | New reference sections and templates | 26 (C53–C75, C91–C93) | 43 + 7 |
 | P3 | Horizons and nice-to-have | 5 (C76–C80) | 6 |
-| **Total** | | **80** | **174** |
+| **Total** | | **93** | **174 + 30 = 204** |
+
+The `+ n` figures are the 2026-10-16 hands-on deltas of Appendix C, counted by the C-item tier they map to.
 
 **Rejected:** 0 whole deltas. 10 deltas carry a corrected, superseded or rejected PART (status `accepted-corrected` /
 `superseded-in-part` / `partial-reject` in Appendix A): has Δ1 (poll-servlet route), has Δ2 (CSRF lint scope), shl Δ7
@@ -311,6 +327,34 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Target:** `types/theme.md` §2-§3, §7; `types/frontend-standard.md`.
 - **Lint-able:** yes — def value == moduleName, `theme` prefix, `nss/*.nss` present; grep SPA HTML for `theme.css`. **Fold type:** doc fix + lint.
 
+### C81 — `verify-module.sh` false-FAILs live-loaded signed jars (issue #260)
+- **Sources:** bsw#Δ1 (primary: `signed` PASSes on any `META-INF/<ALIAS>.SF` + matching `.RSA`/`.DSA`/`.EC`; report the alias) · bsw#Δ2 extends (pipefail/SIGPIPE 141 false negatives in `check_signed`, `check_types_have_classes`, `check_palette`; here-string membership tests) · bsw#Δ3 extends (skip `META-INF/versions/**` in `check_bytecode_major`, as `lint-bundled-jar-class-version.sh` already does)
+- **Winning text:** bsw Δ1 — the signature entry is named after the signing alias (`NIAGARA4`, `CODESIGN`, `SERVER1`); the station decides by verification mode + chain (reinforces pps Δ6, C48). Drop "OEM jars are expected to FAIL".
+- **Evidence:** `[ev: live 2026-10-16 verify-module.sh on course jars]`, `[ev: live 2026-10-16 verify-module.sh training-rt.jar]`; GitHub issue #260.
+- **Target:** `toolbelt/verify-module.sh` (`check_signed` :213-215, :214, :223, :411, `check_bytecode_major` :202-212), `build-verify.md` § Verify (:96, :103) + § Signing per deploy target (:131), `METHODOLOGY.md:67`, `types/third-party-libraries.md` § packaging paths, `tests/` new bats rows (alias-named `.SF`, >64 KiB listing, multi-release jar).
+- **Lint-able:** yes — the check itself is the fix; mutation "restore the pipe" must turn its bats red. **Fold type:** kit-check fix + bats + doc fix.
+
+### C82 — Palette entry count misses entries whose `n=` is not the first attribute
+- **Sources:** slo#Δ6 (primary). Confirms afl Δ3 (C11) on the root folder type.
+- **Winning text:** count every `<p` element carrying `n="…"` in any position with a non-folder `t="x:Type"`; keep the folder exclusion.
+- **Evidence:** `[ev: live 2026-10-16 verify-module.sh training-rt.jar]` (`training-rt.jar` → 10 entries, `Cristian_Angeles_Cert-rt.jar` → 2).
+- **Target:** `toolbelt/verify-module.sh` `check_palette` (:420) + bats.
+- **Lint-able:** yes. **Fold type:** kit-check fix + bats.
+
+### C83 — The ping API is `void doPing()` with void `pingOk()`/`pingFail(String)`
+- **Sources:** ndh#Δ1 (primary) · ndh#Δ3 extends (reachability-only ping recipe: `Socket.connect(addr, timeoutMs)` → `pingOk()`, `IOException` → `pingFail(...)`; confirms bdps Δ2's `NETWORK_COMMUNICATION` grant live, `hosts="*"`/`ports="*"` stays WARN)
+- **Winning text:** ndh Δ1 — class-ladder row → `doPing()`; § 5 snippet `public void doPing() throws Exception { … if (ok) pingOk(); else pingFail("no response"); }`; keep the DOWN-propagation text.
+- **Evidence:** `[ev: code javap driver-rt.jar BDevice 4.15.6.20]`, `[ev: live 2026-10-16 exam P3 ping {ok} www.google.com:443]`.
+- **Target:** `types/driver-authoring.md:15` + § 5 Health (:142-153).
+- **Lint-able:** yes — kit self-check FAILs on `BObject doPing` or `return pingOk` in `types/*.md`. **Fold type:** doc fix + self-check.
+
+### C84 — K15 describes the slot-o-matic marker failure wrongly
+- **Sources:** slo#Δ1 (primary). Confirms cex Δ4 (C58: region-less sources need slot-o-matic before `jar`).
+- **Winning text:** write a new class with its annotations and NO `BEGIN/END BAJA AUTO GENERATED` markers; pre-written empty markers make slot-o-matic log `Could not process <file>: Found multiple metadata blocks` without failing its task, and the build then fails in `compileJava` with `Slot with name <x> not found … have you run slot-o-matic?`.
+- **Evidence:** `[ev: transcript 2026-10-16 exam P1 slotomatic --info]`.
+- **Target:** `METHODOLOGY.md` K15 (:122), `toolbelt/build.sh` (pre-gradle marker scan + failure hint).
+- **Lint-able:** yes — FAIL a `.java` with a `BEGIN BAJA AUTO GENERATED` marker and no `/*@ $` stamp before `END`. **Fold type:** doc fix + build.sh check + bats.
+
 ---
 
 ## P1 — high-value missing rules that affect client modules
@@ -450,6 +494,48 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Target:** `toolbelt/kit-ticket.sh` + `types/observability.md` §1.
 - **Lint-able:** yes via C10/C11 checks + new logger-name WARN. **Fold type:** kit-ticket + doc line.
 
+### C85 — Root `build.gradle.kts` signing block: template, scaffold and root-aware lint
+- **Sources:** bsw#Δ4 (primary). Extends bdps Δ4 (C48): the lint reads the ROOT `build.gradle.kts` (the wizard folder is the Gradle root project).
+- **Winning text:** WARN when `com.tridium.niagara-signing` is applied without both `signingServices { signingProfileFactory { allowDefaultProfile.set(false) } }` and `niagaraSigning { aliases.set(…); signingProfileFile.set(…) }`; ship the block as `templates/signing-root.gradle.kts` and emit it from `scaffold-module.sh`.
+- **Evidence:** `[ev: code devkit-wb.jar!gradle/build.gradle.kts.vm:18]`.
+- **Target:** `toolbelt/lint-structure.sh`, `build-verify.md` § Signing per deploy target, `templates/`, `toolbelt/scaffold-module.sh` (+ scaffold-diff fixtures).
+- **Lint-able:** yes. **Fold type:** template + lint + doc section.
+
+### C86 — Jar-lock diagnosis must be route-independent; always run qualified tasks
+- **Sources:** bsw#Δ5 (primary)
+- **Winning text:** `build.sh` pattern `FileAlreadyExistsException.*modules[/\\].*\.jar` (Windows `gradlew.bat` prints backslash paths); run qualified tasks (`:<MOD>-<part>:jar`), never a bare `gradlew jar`; leftover `java.exe` processes are Gradle daemons (`gradlew --stop`), find the real holder with `tasklist` for `station.exe`/`wb.exe`.
+- **Evidence:** `[ev: transcript 2026-10-16 exam P1 FileAlreadyExistsException]`.
+- **Target:** `toolbelt/build.sh` (:255), `BUILD-LOOP.md` § 4 Post-jar copy lock (:131), `build-verify.md` § Raw gradle (:30).
+- **Lint-able:** yes (pattern, bats row). **Fold type:** build.sh fix + bats + doc fix.
+
+### C87 — Sample / course project retarget preflight
+- **Sources:** bsw#Δ6 (primary). Extends cex Δ4 (C58), which covers only the missing slot-o-matic region.
+- **Winning text:** before building a project the user did not generate, check `gradle.properties` `niagara_home` exists and matches the installed version, `niagara_user_home` holds no `<…>` placeholder, the ROOT has the signing block (C85), and no shipped `build/` directory is present.
+- **Evidence:** `[ev: code Labs/Lab11 NDriver/trafficLightServer.zip!gradle.properties:5,8]`.
+- **Target:** `toolbelt/preflight.sh` (new check), `build-verify.md` § Build target & plugin version.
+- **Lint-able:** yes. **Fold type:** preflight check + bats + doc line.
+
+### C88 — Wizard-stub lint for NDriver modules (silent-success `doPing`)
+- **Sources:** ndh#Δ2 (primary)
+- **Winning text:** FAIL when a `doPing()` body's only executable statement is `pingOk();` or still holds `TODO - add ping implementation`; WARN on the other wizard markers in shipped `src/` (`TODO add poll support`, `TODO - convert linkMessage`, a message factory that only `return null;`, `TODO add code to detect beginning and end of message`).
+- **Evidence:** `[ev: code devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:104-111]`.
+- **Target:** new `toolbelt/lint-driver-scaffold.sh` wired into `report-module.sh`, `types/driver-authoring.md` § 5.
+- **Lint-able:** yes. **Fold type:** new lint + bats + doc line.
+
+### C89 — Client drivers: `BTcpCommConfig.serverEnabled` defaults to true
+- **Sources:** ndh#Δ4 (primary)
+- **Winning text:** a new network binds the listening port itself, so a CLIENT driver faults `Address already in use: JVM_Bind` when the real server runs on the same host; set `serverEnabled=false` at commissioning, and in a client-only driver override the default in the `B<X>TcpCommConfig` subclass (`[INFER]`, not yet built).
+- **Evidence:** `[ev: engram obs 11476]`.
+- **Target:** `types/driver-authoring.md` (NDriver section, C60) + commissioning checklist.
+- **Lint-able:** partial — WARN a `BTcpCommConfig` subclass of a client-only module that keeps the default `[INFER]`. **Fold type:** doc section + checklist line.
+
+### C90 — Operator-entered bounds must handle `min > max` explicitly
+- **Sources:** slo#Δ4 (primary). Confirms scc Δ3 (C36: `isRunning()` guard first) live.
+- **Winning text:** fault the output or refuse the write instead of silently pinning to one bound (the exam limiter held `out` at 75 for every input after a swapped entry); the remedy is `[INFER]`.
+- **Evidence:** `[ev: live 2026-10-16 BLimiter Max=25 Min=75]`.
+- **Target:** `types/logic.md` § Safety fail-modes & timers.
+- **Lint-able:** no. **Fold type:** doc rule.
+
 ---
 
 ## P2 — new reference sections and templates
@@ -569,6 +655,27 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 - **Sources:** rcf#Δ8 (primary)
 - **Evidence:** `BHysteresis.java:35,292`, corpus B1319 §1319.3 D3.
 - **Target:** `types/logic.md` (version note). **Lint-able:** yes. **Fold type:** doc note + lint.
+
+### C91 — NDriver device/point manager and discovery recipe
+- **Sources:** ndh#Δ6 (primary). Extends C60 (NDriver section) and the manager recipe in `types/wb-widgets.md`.
+- **Winning text:** device columns by property facet `SfUtil.incl(SfUtil.MGR_EDIT)`; point manager = `@AgentOn(types = {"<mod>:<X>PointDeviceExt", "<mod>:<X>PointFolder"})` extending `BNPointManager` with `NPointModel`/`NPointController`; extension columns via `MgrColumn.PropPath(new Property[] {BControlPoint.proxyExt, …}, MgrColumn.EDITABLE)`; `getNewTypes()` restricts New; `doSubmitDiscoveryJob(prefs, cx)` submits with `job.submit(cx)`.
+- **Evidence:** `[ev: engram obs 11479]`.
+- **Target:** `types/driver-authoring.md` (NDriver section), `types/wb-widgets.md` § Manager recipe.
+- **Lint-able:** yes — WARN `.submit(null)` inside a `doSubmitDiscoveryJob` body. **Fold type:** doc section + lint.
+
+### C92 — Orient: report the newest working-tree file before trusting a summary
+- **Sources:** hwf#Δ2 (primary)
+- **Winning text:** when resuming hands-on work, list the most recently modified files and read the latest transcript before trusting a session summary; the orient line gains `newest: <file> <mtime>`.
+- **Evidence:** `[ev: engram obs 11477]`.
+- **Target:** `BUILD-LOOP.md` § 0.a Orient from BUILD-STATE; optional `toolbelt/orient-guard.sh --recent <root>`.
+- **Lint-able:** no (procedure); the orient-guard option is the mechanical form. **Fold type:** doc procedure (+ optional helper).
+
+### C93 — Shared-host rule: no heavy background jobs while Workbench or a station is open
+- **Sources:** hwf#Δ4 (primary)
+- **Winning text:** defer or cap (`nice`, `-j` at half the cores) index builds, full suites and parallel batches while `wb.exe` or `station.exe` runs on the same laptop.
+- **Evidence:** `[ev: engram obs 11095]`.
+- **Target:** `ORCHESTRATION.md` § 3 Delegation triggers, `toolbelt/preflight.sh`.
+- **Lint-able:** partial — preflight WARN when `tasklist.exe` shows `wb.exe`/`station.exe` before a heavy job. **Fold type:** doc rule + preflight row.
 
 ---
 
@@ -844,3 +951,61 @@ C-items defined: 80
 source deltas per tier: P0=56 P1=69 P2=43 P3=6 
 RESULT: PASS (missing=0)
 ```
+
+## Appendix C — 2026-10-16 hands-on deltas → C-item
+
+Same columns as Appendix A. `new` = the delta opens C81–C93; every other row confirms, refines or extends an existing
+C-item (relation in the Summary column). Outside the scope of `kit-improvement-candidates-2026-10-15.check.sh`, which
+reads only Appendix A and the 2026-10-15 retros; the no-loss result for this appendix is recorded below the table.
+
+| Source ID | Target kit file(s) | Summary | C-item | Tier | Status |
+|---|---|---|---|---|---|
+| `n4-course-handson-build-signing-windows#Δ1` | toolbelt/verify-module.sh, build-verify.md, METHODOLOGY.md:67 | new: `signed` accepts alias-named `.SF` + key file (#260) | C81 | P0 | accepted |
+| `n4-course-handson-build-signing-windows#Δ2` | toolbelt/verify-module.sh (:214, :223, :411), tests/ | new: pipefail/SIGPIPE false negatives in membership tests | C81 | P0 | accepted |
+| `n4-course-handson-build-signing-windows#Δ3` | toolbelt/verify-module.sh (:202-212), types/third-party-libraries.md | new: bytecode check skips META-INF/versions | C81 | P0 | accepted |
+| `n4-course-handson-build-signing-windows#Δ4` | toolbelt/lint-structure.sh, templates/, toolbelt/scaffold-module.sh | new: root signing block template + root-aware lint (extends bdps Δ4) | C85 | P1 | accepted |
+| `n4-course-handson-build-signing-windows#Δ5` | toolbelt/build.sh:255, BUILD-LOOP.md § 4, build-verify.md § Raw gradle | new: route-independent jar-lock pattern; qualified tasks | C86 | P1 | accepted |
+| `n4-course-handson-build-signing-windows#Δ6` | toolbelt/preflight.sh, build-verify.md | new: sample/course project retarget preflight | C87 | P1 | accepted |
+| `n4-course-handson-ndriver#Δ1` | types/driver-authoring.md:15, § 5 | new: `void doPing()`, void `pingOk()`/`pingFail()` | C83 | P0 | accepted |
+| `n4-course-handson-ndriver#Δ2` | new toolbelt/lint-driver-scaffold.sh, report-module.sh | new: wizard-stub silent-success lint | C88 | P1 | accepted |
+| `n4-course-handson-ndriver#Δ3` | types/driver-authoring.md § 5 | extends C83: reachability-only ping recipe; confirms bdps Δ2 | C83 | P0 | accepted |
+| `n4-course-handson-ndriver#Δ4` | types/driver-authoring.md, commissioning checklist | new: `serverEnabled` defaults to true on client drivers | C89 | P1 | accepted (override `[INFER]`) |
+| `n4-course-handson-ndriver#Δ5` | types/driver-authoring.md § 2, commissioning checklist | extends C60: enum proxy facets "Use Frozen Enum in Range" | C60 | P2 | accepted |
+| `n4-course-handson-ndriver#Δ6` | types/driver-authoring.md, types/wb-widgets.md | new: NDriver manager + discovery recipe | C91 | P2 | accepted |
+| `n4-course-handson-ndriver#Δ7` | types/driver-authoring.md, ord Δ3 lint | confirms C60: static subscription set in the course reference | C60 | P2 | accepted |
+| `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | accepted |
+| `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | accepted |
+| `n4-course-handson-services-history-threading#Δ2` | types/actions.md § 2 | confirms C38: `Flags.ASYNC` lint stays WARN | C38 | P1 | accepted |
+| `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
+| `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | accepted |
+| `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
+| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | accepted |
+| `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | accepted |
+| `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | accepted (remedy `[INFER]`) |
+| `n4-course-handson-slotomatic-authoring#Δ5` | toolbelt/lint-agent-on-shape.sh, types/module-wiring.md | refines C25: processor never updates a stale `<type>` line | C25 | P0 | accepted |
+| `n4-course-handson-slotomatic-authoring#Δ6` | toolbelt/verify-module.sh `check_palette` | new: palette count misses non-first `n=` | C82 | P0 | accepted |
+| `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | accepted |
+| `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | accepted |
+| `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | accepted |
+| `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | accepted |
+
+No-loss result for Appendix C (2026-10-22, T9a; ad-hoc comparison of the `| Δn |` rows of the five 2026-10-16 retros
+with the rows above, and of every C-id above with its `### Cnn` heading and tier):
+
+```
+hands-on retro files: 5
+source deltas: 30
+mapped: 30
+missing: 0
+extra: 0
+duplicate rows: 0
+undefined C-ids / tier mismatches: none
+new C-items (C81-C93) defined: 13
+C-items defined: 93
+source deltas per tier: P0=13 P1=10 P2=7 
+```
+
+The comparison has teeth: deleting the `n4-course-handson-workflow#Δ4` row gives `missing: 1`; changing the C93 row's tier
+to P1 gives `C93(P1≠P2)` (each mutation run once, then restored).
