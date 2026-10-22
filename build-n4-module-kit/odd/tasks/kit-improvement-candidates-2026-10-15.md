@@ -133,6 +133,8 @@ WU-P0 lints, `docs/r8-t9b-p0-lints` (2026-10-22): `lint-timers.sh` `jdk-thread` 
 thread-modifying call without `MANAGE_EXECUTION`, multi-line class header) + new `job-cancel` WARN.
 New `lint-bformat-call.sh` (BFormat `%time(<arg>)%` / `%user%` WARN).
 New `check-facets-card.sh` + pinned 4.15.6.20 key list.
+New `tests/kit-doc-api-names.bats` doc greps. Every owed lint half of C01-C03, C06, C07 is landed; only the rac Δ9
+cursor recipe stays owed (WU-P0-6).
 
 ---
 
@@ -153,7 +155,8 @@ New `check-facets-card.sh` + pinned 4.15.6.20 key list.
 - **Evidence:** `source/baja/javax/baja/util/BWorker.java:49-139`, `ExecutorUtil.java:43,89,122`, corpus B1304 §1304.3.
 - **Target:** `types/logic.md:346`, `types/math-control-libraries.md:86`.
 - **Lint-able:** yes — FAIL `postAsync(` in kit docs, WARN in rt sources. **Fold type:** doc fix + lint.
-- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ1); lint OWED. Note: `postAsync(Runnable)` is a legitimate name for a
+- **Fold status:** FOLDED (WU-P0-1 doc + `tests/kit-doc-api-names.bats`, 2026-10-22; rac Δ1). The rt-source WARN half is
+  REJECTED. Note: `postAsync(Runnable)` is a legitimate name for a
   method a `BWorker` subclass declares itself (Tridium's course `BTrainingWorker`), so the rt-source WARN must target a call on a
   type that does not declare it, not the bare token.
 
@@ -163,8 +166,8 @@ New `check-facets-card.sh` + pinned 4.15.6.20 key list.
 - **Evidence:** `BSimpleJob.java:51-56`, `BRunnableJob.java:41`, corpus B1238 §1238.8, B1304 §1304.2.
 - **Target:** `types/logic-authoring.md:216-233` § Background jobs.
 - **Lint-able:** yes — doc grep FAIL `BJobs.`; WARN a `BSimpleJob.run(` loop with no `isAlive()`. **Fold type:** doc fix + lint.
-- **Fold status:** doc FOLDED (WU-P0-1, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6); `job-cancel` WARN LANDED (WU-P0 lints);
-  the `BJobs.` doc grep is OWED.
+- **Fold status:** FOLDED (WU-P0-1 doc + WU-P0 lints, 2026-10-22; rac Δ2, tjd Δ6, shs Δ6): `BJobs.` doc grep,
+  `lint-timers.sh` `job-cancel` WARN.
 
 ### C04 — BStatus bit table is shifted from STALE on and misses ALARM
 - **Sources:** rac#Δ4 (primary)
@@ -889,8 +892,8 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r3-web-session-headers#Δ4` | types/theme.md, types/frontend-standard.md | Servlet SPA not themed automatically | C30 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ5` | types/security.md | Never X-Frame Any; frame-ancestors | C13 | P0 | accepted |
 | `devguide415-r3-web-session-headers#Δ6` | types/security.md | oBIX HIDDEN is not access control | C46 | P1 | accepted |
-| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | folded doc (WU-P0-1); lint owed |
-| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | folded doc (WU-P0-1); lint owed |
+| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | folded (WU-P0-1 + lints); rt WARN rejected |
+| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | folded (WU-P0-1 + lints) |
 | `devguide415-runtime-api-corrections#Δ3` | types/logic.md | Absolute schedules need clockChanged | C34 | P1 | accepted |
 | `devguide415-runtime-api-corrections#Δ4` | types/logic.md:233-243 | Fix the BStatus bit table | C04 | P0 | accepted |
 | `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |

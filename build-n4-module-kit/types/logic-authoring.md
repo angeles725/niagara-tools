@@ -248,7 +248,7 @@ public final class BExportJob extends BSimpleJob {
 // caller, e.g. an action handler: BOrd jobOrd = new BExportJob(this).submit(cx);
 ```
 
-`toolbelt/lint-timers.sh` `job-cancel` WARNs a `BSimpleJob` `run()` loop with no `isAlive()` check.
+`toolbelt/lint-timers.sh` `job-cancel` WARNs a `BSimpleJob` `run()` loop with no `isAlive()` check; `tests/kit-doc-api-names.bats` fails a core kit doc that names the non-existent `BJobs` class, a static job-service submit, a `BWorker` post method or `makeDouble`.
 
 ### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
 
