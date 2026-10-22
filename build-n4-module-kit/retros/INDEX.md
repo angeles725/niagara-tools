@@ -249,6 +249,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-course-recordings.md | kit | 2026-10-22 | folded | 8 |
 | 2026-10-22-fail-closed-walks.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-generated-retro-index.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-n4-course-sample-check-precision.md | kit | 2026-10-22 | folded | 5 |
 | 2026-10-22-n4-course-signed-jars-gate-fix.md | kit | 2026-10-22 | folded | 6 |
