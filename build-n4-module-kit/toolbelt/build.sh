@@ -277,6 +277,14 @@ else
     echo "  is irrelevant when you are not deploying to that supervisor)." >&2
     rm -f "$GLOG" "$GSTAMP"; exit 31
   fi
+  # slotomatic-authoring Δ1 (K15): slot-o-matic logs "Could not process <file>: …" as a WARNING and its task
+  # succeeds, so the failure surfaces later in compileJava ("… have you run slot-o-matic?"). Name the skipped file.
+  if grep -q 'have you run slot-o-matic' "$GLOG"; then
+    sed -n 's/.*Could not process \([^:]*\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u >&2
+    echo "build.sh: compileJava found slots slot-o-matic never generated. A file with empty BEGIN/END BAJA AUTO" >&2
+    echo "  GENERATED markers is skipped (METHODOLOGY K15): delete the markers, rerun :<part>:slotomatic --info and read" >&2
+    echo "  its output for 'Could not process'." >&2
+  fi
   echo "build.sh: gradle failed" >&2; rm -f "$GLOG" "$GSTAMP"; exit 30
 fi
 
