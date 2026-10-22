@@ -452,3 +452,395 @@ Each WU folds partial retros, so each commit stamps the owed halves in `BUILD-ST
 
 ---
 
+## P2 — new reference sections and templates
+
+### C53 — Templates: shipping a template module, what breaks on upgrade
+- **Sources:** pps#Δ2 (primary) · pps#Δ3 extends
+- **Evidence:** `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:25`, corpus B1325.
+- **Target:** `types/logic-authoring.md:208-211`, `METHODOLOGY.md:44-52`. **Lint-able:** partial. **Fold type:** new doc section.
+
+### C54 — Lexicon resolution chain and lexicon-only modules
+- **Sources:** lux#Δ2 (primary) · pps#Δ5 extends
+- **Evidence:** `Lexicon.java:313-334`, devguide `localization.txt:59-70,189-214`, `Lexicon/devkit-LexiconModuleBuilder.txt:14-43`, corpus B1305, B1330.
+- **Target:** `types/structure.md` L4, `types/dashboard.md` i18n. **Lint-able:** partial. **Fold type:** new doc section.
+
+### C55 — Runtime lexicon idiom and localizable exceptions
+- **Sources:** lex#Δ2 (primary: `LexiconModule.getText`, `lint-lexicon-keys.sh`) · lux#Δ3 extends (`LocalizableRuntimeException` + `toString(cx)`)
+- **Evidence:** course `Lab7/BWorkOrderService.java:107-185,272`, corpus B1236 §1236.4/§1236.7, B1305 §1305.1.
+- **Target:** `types/observability.md` §3, new `toolbelt/lint-lexicon-keys.sh`. **Lint-able:** yes. **Fold type:** doc section + lint.
+
+### C56 — ux i18n: `lex!` plugin; lexicon content is public
+- **Sources:** lux#Δ5 (primary)
+- **Evidence:** `BLexiconRpc.java:44` (`unrestricted`), jsdoc `lex_lex.js.txt:157-208`.
+- **Target:** `types/frontend-standard.md` § i18n. **Lint-able:** yes. **Fold type:** doc section + lint.
+
+### C57 — Station diagnostics card, log levels, Spanish console levels
+- **Sources:** poh#Δ4 (primary) · lux#Δ4 duplicate (lexicon diagnostics switch) · lex#Δ5 extends (INFO default, DebugService, FINE in hot paths) · lex#Δ4 extends (`triage-console.sh` `DETALLADO` etc.)
+- **Evidence:** corpus B1255-B1257, B1251 §1251.9, B1236 §1236.2; `toolbelt/triage-console.sh:99-111`.
+- **Target:** `types/observability.md` (new § Station diagnostics, §1), `types/issues-and-gotchas.md`, `toolbelt/triage-console.sh` + bats.
+- **Lint-able:** yes (triage patterns, Spanish names; INFO in poll bodies). **Fold type:** doc section + script fix.
+
+### C58 — Build reference: supertype modules, part gradle.kts, JDK-8 preflight, region-less sources
+- **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources) · rsb#Δ4 extends (Windows-native build route from WSL for any Windows-side Gradle root: cmd.exe + gradlew.bat slotomatic/jar; back up `<niagara_home>/modules` first)
+- **Evidence:** course `Lab Instructions.pdf` p81-86, `Slides/6` p6-18; `javap` on 4.15.6.20 jars; corpus B1235 §1235.2.
+- **Target:** `types/module-wiring.md`, `types/structure.md`, `toolbelt/build.sh`, `toolbelt/preflight.sh`, `build-verify.md`, `METHODOLOGY.md` K15. **Lint-able:** yes. **Fold type:** doc section + script.
+
+### C59 — API stability: `com.tridium.*` is private; registry and agent lookups
+- **Sources:** bdps#Δ3 (primary) · has#Δ9 extends (apiInfo labels, `getDef`, `AgentFilter`)
+- **Evidence:** course `Lab Instructions.pdf` p83; devguide `apiInfo.txt:29-40,117-118`; corpus B1313.
+- **Target:** `types/module-wiring.md` (new §), `toolbelt/verify-module.sh`. **Lint-able:** yes — WARN `import com.tridium.` outside allow-list. **Fold type:** doc section + lint.
+
+### C60 — NDriver section with the correlation rule
+- **Sources:** ord#Δ3 (primary)
+- **Evidence:** corpus B1239 §1239.12-13; course `Labs/Lab11 NDriver`.
+- **Target:** `types/driver-authoring.md` (new §). **Lint-able:** yes. **Fold type:** new doc section + lint.
+
+### C61 — BQL literal rules in anti-injection
+- **Sources:** ord#Δ2 (primary)
+- **Evidence:** corpus B1237 §1237.6, B1242 §1242.3 rules 62-63.
+- **Target:** `types/security.md` §4. **Lint-able:** no. **Fold type:** doc section.
+
+### C62 — File-export recipe
+- **Sources:** ord#Δ5 (primary)
+- **Evidence:** corpus B1254 §1254.5 traps 11-15; course `Lab10 Jobs/BHistoriesToCsvJob.java`.
+- **Target:** `types/logic-authoring.md` (new §). **Lint-able:** yes — WARN `.getBytes()` without charset, `BajaFileUtil.createFile(`. **Fold type:** doc section + lint.
+
+### C63 — Serving recipe B: `WEB-INF/web.xml` servlets and filters
+- **Sources:** has#Δ2 (primary; its lint half is rejected — "every `<servlet-class>` needs `CsrfProtectedFilter`" fails 8 of 14 shipped Tridium `web.xml`; use wuh Δ1's scope: POST/PUT servlets only, see C31)
+- **Evidence:** devguide `servlets/webModules.txt:12`; corpus B1315 §1315.1 rank 2, B1318 §1318.3 C3-C4.
+- **Target:** `types/dashboard.md:29`. **Lint-able:** yes (scoped). **Fold type:** doc section + lint.
+
+### C64 — SPA live-data subscription contract (bajaScript)
+- **Sources:** nsto#Δ4 (primary)
+- **Evidence:** corpus B1306 §1306.1 row 11, B1311 §1311.1 row 14.
+- **Target:** `types/dashboard.md` (new § live data). **Lint-able:** yes (JS twin of subscribe-without-unsubscribe). **Fold type:** doc section + lint.
+
+### C65 — Security hardening: FIPS, least privilege, platform TLS stores
+- **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
+- **Evidence:** `Fips/DevelopersNotes-51FBF6BE.txt:29-41`, `StationSecurity/role_*`, corpus B1326.
+- **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
+
+### C66 — Equipment tagging for our logic points
+- **Sources:** sta#Δ6 (primary)
+- **Evidence:** `BContainmentRelation.java:65`, corpus B1329 rows 2-3.
+- **Target:** `types/logic.md` tag recipe. **Lint-able:** partial. **Fold type:** doc section.
+
+### C67 — Analytics framework facts
+- **Sources:** sta#Δ9 (primary)
+- **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:9,23`, `ordSchemes.txt:15,25`, corpus B1338.
+- **Target:** `types/logic-authoring.md:31,101`. **Lint-able:** yes — grep `analytic:`. **Fold type:** doc section + lint.
+
+### C68 — BACnet/Modbus field rules
+- **Sources:** drp#Δ5 (primary, BACnet export) · drp#Δ6 extends (MS/TP, Modbus byte order)
+- **Evidence:** corpus B1327 rows 4-10.
+- **Target:** `types/driver-authoring.md` (new §), `types/logic-authoring.md:641`. **Lint-able:** partial. **Fold type:** doc section.
+
+### C69 — Cloud/MQTT telemetry and watch clients
+- **Sources:** drp#Δ2 (primary, MQTT auth matrix + telemetry) · drp#Δ10 extends (lease formula, 503 = out of web threads, queue depth points)
+- **Evidence:** corpus B1323 rows 3-6, B1336 rows 3,4,6.
+- **Target:** `types/cloud-connector.md`, `types/driver-authoring.md`, `types/observability.md`. **Lint-able:** partial. **Fold type:** doc section.
+
+### C70 — RDBMS: supported databases and export from code
+- **Sources:** shl#Δ8 (primary) · r3di#Δ6 extends (`histories.getExportDescriptorType()`, licence on the database)
+- **Evidence:** `Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:16,46`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
+- **Target:** `types/third-party-libraries.md:176-177`, `types/utility-lib.md:8`, `types/cloud-connector.md`. **Lint-able:** partial. **Fold type:** doc section.
+
+### C71 — Extending jsonToolkit
+- **Sources:** shl#Δ9 (primary: decision rule + extension points) · r3pec#Δ2 corrects (`overrideValueEncoding`, not final `doOverride`) · r3-report#R4
+- **Evidence:** `BIJsonProperty.java:15-30`, `javap BTypeOverride`, corpus B1322, B1350.
+- **Target:** `types/dashboard.md:29`, `types/cloud-connector.md` §1, new § "Extending jsonToolkit". **Lint-able:** yes. **Fold type:** new doc section + lint.
+
+### C72 — Web UI reference: profiles, Px rules, charts, Mobile deprecated
+- **Sources:** wuh#Δ3 (primary, profiles) · wuh#Δ4 (Px rules) · wuh#Δ8 (stock ChartWidget first) · wuh#Δ9 (Mobile profile/Px deprecated since 4.6)
+- **Evidence:** corpus B1328, B1339, B1342.
+- **Target:** `types/dashboard.md`, `types/wb-widgets.md:360`, `types/frontend-standard.md:22,175`. **Lint-able:** partial. **Fold type:** doc sections + lint.
+
+### C73 — Platform install and runtime profiles
+- **Sources:** pps#Δ9 (primary)
+- **Evidence:** `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt`, corpus B1341 rows 2-6.
+- **Target:** `types/distribution.md` Software Manager §, `BUILD-LOOP.md:207`. **Lint-able:** no. **Fold type:** doc section.
+
+### C74 — Workbench Commands card
+- **Sources:** rcf#Δ4 (primary)
+- **Evidence:** `Command.java:61-64`, corpus B1317 §1317.1.
+- **Target:** `types/wb-widgets.md` (new §). **Lint-able:** partial. **Fold type:** doc section.
+
+### C75 — `BHysteresis`/`BLimiter` are 4.15+
+- **Sources:** rcf#Δ8 (primary)
+- **Evidence:** `BHysteresis.java:35,292`, corpus B1319 §1319.3 D3.
+- **Target:** `types/logic.md` (version note). **Lint-able:** yes. **Fold type:** doc note + lint.
+
+---
+
+## P3 — horizons and nice-to-have
+
+### C76 — Horizons lists
+- **Sources:** poh#Δ6 (primary, course capabilities not yet used) · has#Δ10 extends (promiseUtils, `LocalizableError`, CSRF constant, login branding, popup editors)
+- **Target:** `corpus-index.md`, `toolbelt/kit-ticket.sh`, `types/dashboard.md`, `types/theme.md`, `types/wb-widgets.md`. **Lint-able:** no. **Fold type:** kit-tickets + small doc notes.
+
+### C77 — Preserve author-set slot flags on rebuild (scope corrected)
+- **Sources:** sta#Δ10 (primary, accepted-corrected) · r3-report#R5
+- **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
+- **Evidence:** `EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8.
+- **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
+
+### C78 — ExportTags makes a copy, not a proxy
+- **Sources:** sta#Δ8 (primary). **Target:** `types/distribution.md`. **Lint-able:** no. **Fold type:** doc note.
+
+### C79 — Coexisting with the Tridium DashboardService
+- **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
+
+### C80 — NRE memory budget and flash writes on a JACE
+- **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
+
+---
+
+## Open decisions and verifications
+
+1. **Count of record:** 168, not 178 (see § Count). The ffcddad message is wrong; the retros are right.
+2. **C01 lint downgrade** turns a FAIL gate (`jdk-thread`) into a WARN for most code — this changes what blocks client modules.
+3. **C13** retires the DashboardPan headers gap (ODA2-G1/G2) — the client tracking that cites it needs the same close.
+4. **C28** unsigned-group outcome on 4.15 (WARNING skip vs station halt) needs a target check before the kit states it.
+5. **C31** live proof of the keep-alive route (niagara-research B1315-G1) is still open.
+6. **C52 / tpb Δ3** touch the client: palette roots, logger names (DebugService categories change) and the client root signing config — client decisions, not kit folds.
+
+---
+
+## Proof
+
+Command (from the worktree root):
+
+```
+bash build-n4-module-kit/odd/tasks/kit-improvement-candidates-2026-10-15.check.sh
+```
+
+Recorded result (2026-10-15, worktree `retros/2026-10-15-course-devguide`, retros at ffcddad):
+
+```
+retro files: 23
+source deltas: 168
+mapped: 168
+missing: 0
+extra (in appendix, not in retros): 0
+duplicate appendix rows: 0
+undefined C-ids: none
+tier mismatches: none
+C-items defined: 80
+source deltas per tier: P0=56 P1=64 P2=42 P3=6
+RESULT: PASS (missing=0)
+```
+
+The check has teeth: deleting one Appendix A row gives `missing: 1` → FAIL; changing one row's tier gives
+`tier mismatches: C41(P2≠P1)` → FAIL; renaming a C heading gives `undefined C-ids: C80` → FAIL (each mutation run once,
+then restored).
+
+---
+
+## Appendix A — coverage: every source delta → its C-item
+
+Status: `accepted` · `accepted-corrected` (a later source or evidence corrects part of it; the C-item states the winner) ·
+`partial-reject` (one named part is rejected with evidence, the rest is kept) · `superseded-in-part`.
+
+| Source ID | Target kit file(s) | Summary | C-item | Tier | Status |
+|---|---|---|---|---|---|
+| `devguide415-horizons-authoring-security#Δ1` | types/dashboard.md, types/security.md | Session lifetime for kiosk/HMI; polls do not reset idle timeout | C31 | P1 | superseded-in-part (poll-servlet route rejected, wuh Δ1 / r3wsh Δ1) |
+| `devguide415-horizons-authoring-security#Δ2` | types/dashboard.md:29 | Serving recipe B via WEB-INF/web.xml | C63 | P2 | partial-reject (CSRF-on-every-servlet lint; scoped by wuh Δ1) |
+| `devguide415-horizons-authoring-security#Δ3` | types/logic-authoring.md:536-545, types/dashboard.md | History `_cfg0` split rule; exporter CSV URL | C35 | P1 | accepted |
+| `devguide415-horizons-authoring-security#Δ4` | build-verify.md:132, types/distribution.md:110-115, types/third-party-libraries.md:148-151 | Six signing-required permission groups; trust text | C28 | P0 | accepted (4.15 outcome to verify) |
+| `devguide415-horizons-authoring-security#Δ5` | types/structure.md | Security Manager card | C47 | P1 | accepted |
+| `devguide415-horizons-authoring-security#Δ6` | types/structure.md:8,338, types/module-wiring.md | module-include.xml holds only types | C25 | P0 | accepted |
+| `devguide415-horizons-authoring-security#Δ7` | types/structure.md:9,176-250, types/third-party-libraries.md:38-69 | Doc part allowed, help.guide.base optional, uberjar first | C26 | P0 | accepted |
+| `devguide415-horizons-authoring-security#Δ8` | types/structure.md | `se` = Java SE APIs; part dependency matrix | C24 | P0 | accepted |
+| `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted |
+| `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ3` | types/observability.md | LocalizableRuntimeException idiom | C55 | P2 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ4` | types/issues-and-gotchas.md | Lexicon diagnostics triage note | C57 | P2 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ5` | types/frontend-standard.md | ux i18n with lex!; LexiconRpc unrestricted | C56 | P2 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ1` | types/driver-authoring.md:54-70 | Fix inverted readSubscribed/readUnsubscribed | C15 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ2` | types/logic-authoring.md:9-24 | Subscribed semantics, leases, SELF_EVENTS ids | C20 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ3` | types/driver-authoring.md:234-240 | Virtual component ORD form and cache | C20 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ4` | types/dashboard.md | SPA bajaScript subscription contract | C64 | P2 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ5` | types/structure.md:253-287 | Nav file version + cache refresh | C17 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ6` | types/logic-authoring.md:37-39,142, types/security.md | getNavChildren permission-blind; nav: needs base | C18 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ7` | types/logic-authoring.md:76,120, types/moduleTest.md | BOrd.make only wraps; unmounted BQL test | C18 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ8` | types/security.md, types/module-wiring.md | OrdTarget permission rule; custom scheme contract | C39 | P1 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ9` | types/logic.md:359-376, types/security.md:220 | Rewrite tag-dictionary recipe; NEQL | C21 | P0 | accepted |
+| `devguide415-nav-subscriptions-tags-ords#Δ10` | types/logic.md, types/logic-authoring.md:148-154 | Tags-in-code card; hierarchy: client-only | C21 | P0 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ1` | types/logic.md:324-325 | ackRequired version-qualified; timeDelay; stale | C22 | P0 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ2` | types/logic.md | Alarm-ext chooser and alarmInhibit recipe | C32 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ3` | types/logic-authoring.md:536-545 | History ext rules (disabled, historyName, capacity) | C35 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ4` | BUILD-LOOP.md | Size the file alarm DB at commissioning | C35 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ5` | types/logic.md | Reuse LeadLag/Sequence/Interstart | C33 | P1 | accepted-corrected (Interstart min on/off default 0, r3pec Δ4) |
+| `devguide415-r2-control-alarms-schedules#Δ6` | types/logic.md | Timer outputs TRANSIENT; Counter persists | C33 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ7` | types/logic.md:332-333 | LoopPoint zero gains, 0.5 s ticket | C33 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ8` | types/logic.md | Tstat no lockout; ext ordering | C33 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ9` | types/logic.md | TriggerSchedule for wall-clock defrosts | C34 | P1 | accepted |
+| `devguide415-r2-control-alarms-schedules#Δ10` | types/logic-authoring.md:298 | Weekly schedule defaultOutput; sharing | C34 | P1 | accepted |
+| `devguide415-r2-drivers-protocols#Δ1` | types/cloud-connector.md, types/third-party-libraries.md:143,171 | MQTT native first; module abstractMqttDriver | C27 | P0 | accepted |
+| `devguide415-r2-drivers-protocols#Δ2` | types/cloud-connector.md | MQTT auth matrix and telemetry recipe | C69 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ3` | types/driver-authoring.md:127-132 | staleTime 0 = stale immediately | C16 | P0 | accepted |
+| `devguide415-r2-drivers-protocols#Δ4` | types/driver-authoring.md, types/dashboard.md | BACnet statusFlags facet for health | C45 | P1 | accepted-corrected (COV and polled alike, r3di Δ3) |
+| `devguide415-r2-drivers-protocols#Δ5` | types/driver-authoring.md, types/logic-authoring.md:641 | Exposing values over BACnet | C68 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ6` | types/driver-authoring.md | MS/TP and Modbus rules | C68 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ7` | types/driver-authoring.md | Ping rules (faulted never pinged, alarm delay) | C44 | P1 | accepted |
+| `devguide415-r2-drivers-protocols#Δ8` | types/driver-authoring.md:121-122,205-213 | pollEnabled on poll service; tuning sizing | C16 | P0 | accepted |
+| `devguide415-r2-drivers-protocols#Δ9` | types/dashboard.md:23, types/logic-authoring.md:554, types/security.md | oBIX exposure rules | C46 | P1 | accepted |
+| `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ1` | types/distribution.md:35-45 | Fix dist attribute table (noStation) | C23 | P0 | accepted-corrected (missing attribute = false, r3pec Δ1) |
+| `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ4` | types/distribution.md, types/logic.md:185, types/structure.md:133 | Palette entry ≠ .ntpl; dangling §Templates; provisioning | C29 | P0 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ5` | types/structure.md, types/dashboard.md | Lexicon-only modules | C54 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ6` | build-verify.md, types/distribution.md:100 | Signing Service ≠ module signing; mode × status | C48 | P1 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ7` | types/logic-authoring.md:917 | Program objects signed; load failure causes | C48 | P1 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ8` | types/structure.md:300 | se is Supervisor (Windows) only | C24 | P0 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ9` | types/distribution.md, BUILD-LOOP.md:207 | Runtime profiles and install rules | C73 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ10` | types/math-control-libraries.md:43 | NRE memory budget; flash writes | C80 | P3 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ1` | types/actions.md | post() first-wins vs CoalesceQueue last-wins | C38 | P1 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ2` | types/security.md, types/logic-authoring.md:73 | Null Context = BPermissions.all | C39 | P1 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ3` | types/security.md §3, types/dashboard.md | 4.15 absolute logoff ends HMI sessions | C31 | P1 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ5` | types/logic.md, types/cloud-connector.md:206-217 | Tag dictionary licence (2 dictionaries) | C21 | P0 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ7` | types/logic.md, types/logic-authoring.md:181 | Tag rules and hierarchies | C21 | P0 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353) |
+| `devguide415-r2-shipped-libraries#Δ1` | types/third-party-libraries.md, types/module-wiring.md | bin/ext first; nre("g:a") | C42 | P1 | accepted |
+| `devguide415-r2-shipped-libraries#Δ2` | types/cloud-connector.md:61-63, types/third-party-libraries.md:167,174 | okhttp ships in bin/ext, not net-rt | C27 | P0 | accepted |
+| `devguide415-r2-shipped-libraries#Δ3` | types/third-party-libraries.md | bin/ext version drift | C42 | P1 | accepted |
+| `devguide415-r2-shipped-libraries#Δ4` | types/third-party-libraries.md | Tridium wrapper module table | C42 | P1 | accepted |
+| `devguide415-r2-shipped-libraries#Δ5` | types/third-party-libraries.md:30,143,159-160,171 | Stale versions and MQTT module name | C27 | P0 | accepted |
+| `devguide415-r2-shipped-libraries#Δ6` | types/module-wiring.md | Wrapper does not grant permissions | C42 | P1 | accepted |
+| `devguide415-r2-shipped-libraries#Δ7` | types/cloud-connector.md §7, types/issues-and-gotchas.md | Outbound-HTTP decision ladder | C43 | P1 | accepted-corrected ((b) gate closed by default, r3di Δ4) |
+| `devguide415-r2-shipped-libraries#Δ8` | types/third-party-libraries.md:176-177, types/utility-lib.md:8 | Qualify native rdb (no Postgres) | C70 | P2 | accepted |
+| `devguide415-r2-shipped-libraries#Δ9` | types/dashboard.md:29, types/cloud-connector.md | jsonToolkit decision rule and extension card | C71 | P2 | accepted-corrected (overrideValueEncoding, r3pec Δ2) |
+| `devguide415-r2-web-ui-hmi#Δ1` | types/security.md:138-152, types/dashboard.md | Correct has Δ1/Δ2 (UserActivityFilter, CSRF scope) | C31 | P1 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ2` | types/theme.md | Theme module rules | C30 | P0 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ3` | types/dashboard.md | Web profiles and theme per profile | C72 | P2 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ4` | types/wb-widgets.md:360 | Px rules | C72 | P2 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ5` | types/security.md | Hx headers; embed via frame-ancestors | C13 | P0 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ6` | types/dashboard.md | Kiosk panel user settings | C31 | P1 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ7` | types/security.md | Client-certificate SSO for panels | C31 | P1 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ8` | types/dashboard.md, types/frontend-standard.md:175 | Stock ChartWidget first | C72 | P2 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ9` | types/frontend-standard.md:22, types/dashboard.md | Mobile profile/Px deprecated | C72 | P2 | accepted |
+| `devguide415-r2-web-ui-hmi#Δ10` | types/dashboard.md | Coexisting with DashboardService | C79 | P3 | accepted |
+| `devguide415-r3-drivers-integration#Δ1` | types/driver-authoring.md §5 | readFail does not affect device health | C44 | P1 | accepted |
+| `devguide415-r3-drivers-integration#Δ2` | types/logic-authoring.md:646 | pingEnabled is ON by default | C14 | P0 | accepted |
+| `devguide415-r3-drivers-integration#Δ3` | types/driver-authoring.md:129 | statusFlags applies to COV and polled | C45 | P1 | accepted |
+| `devguide415-r3-drivers-integration#Δ4` | types/cloud-connector.md §7 | enableNonDriverClients default false; mountAtOrd | C43 | P1 | accepted |
+| `devguide415-r3-drivers-integration#Δ5` | types/cloud-connector.md, types/security.md | OAuth2 via oauth2-rt | C43 | P1 | accepted |
+| `devguide415-r3-drivers-integration#Δ6` | types/cloud-connector.md | RDBMS export from code | C70 | P2 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ1` | types/distribution.md:37 | noRunningApp enforced; missing = false | C23 | P0 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ2` | types/ (new §) | Extending jsonToolkit (overrideValueEncoding) | C71 | P2 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ3` | types/logic.md | LeadLag feedback links mandatory | C33 | P1 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ4` | types/logic.md | Interstart min on/off inherited, default 0 | C33 | P1 | accepted |
+| `devguide415-r3-web-session-headers#Δ1` | types/dashboard.md | Session lifetime ladder; a poll is not activity | C31 | P1 | accepted |
+| `devguide415-r3-web-session-headers#Δ2` | types/security.md, commissioning | 4.15 absolute logoff flags | C31 | P1 | accepted |
+| `devguide415-r3-web-session-headers#Δ3` | types/security.md:360-380, toolbelt/lint-servlet.sh | Station headers already apply; remove gap + snippet | C13 | P0 | accepted |
+| `devguide415-r3-web-session-headers#Δ4` | types/theme.md, types/frontend-standard.md | Servlet SPA not themed automatically | C30 | P0 | accepted |
+| `devguide415-r3-web-session-headers#Δ5` | types/security.md | Never X-Frame Any; frame-ancestors | C13 | P0 | accepted |
+| `devguide415-r3-web-session-headers#Δ6` | types/security.md | oBIX HIDDEN is not access control | C46 | P1 | accepted |
+| `devguide415-runtime-api-corrections#Δ1` | types/logic.md:346, types/math-control-libraries.md:86 | Remove BWorker.post/postAsync; ExecutorUtil | C02 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ2` | types/logic-authoring.md:216-233 | Replace BJobs.submit; BRunnableJob | C03 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ3` | types/logic.md | Absolute schedules need clockChanged | C34 | P1 | accepted |
+| `devguide415-runtime-api-corrections#Δ4` | types/logic.md:233-243 | Fix the BStatus bit table | C04 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ5` | types/logic.md:252-256 | Fix propagateFlags recipe (no BStatus.and) | C05 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ6` | types/logic.md:336 | Alarm ext owns ALARM/FAULT/UNACKED bits | C32 | P1 | accepted |
+| `devguide415-runtime-api-corrections#Δ7` | types/logic.md LC1 | Writable primitives: activeLevel, overrides, min on/off | C33 | P1 | accepted |
+| `devguide415-runtime-api-corrections#Δ8` | types/logic-authoring.md:489-534 | Regenerate the BFacets key card | C06 | P0 | accepted |
+| `devguide415-runtime-api-corrections#Δ9` | types/logic.md:399-418, types/logic-authoring.md:190-200 | Fix BFormat card; cursor recipe | C07 | P0 | accepted-corrected (step order per rcf Δ6) |
+| `devguide415-runtime-api-corrections#Δ10` | types/logic.md:111-143 | Fix link rules | C08 | P0 | accepted |
+| `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
+| `n4-course-as-exemplar-source#Δ2` | BUILD-LOOP.md §0, skill/SKILL.md | Reference-first rule at Orient | C51 | P1 | accepted |
+| `n4-course-as-exemplar-source#Δ3` | METHODOLOGY.md | K-rule: re-check absolute claims; one-time sweep | C51 | P1 | accepted |
+| `n4-course-as-exemplar-source#Δ4` | build-verify.md, METHODOLOGY.md K15 | slotomatic before jar for region-less sources | C58 | P2 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ1` | types/third-party-libraries.md | Path 0 uberjar; library → permission table | C26 | P0 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ2` | templates/module-permissions.xml, types/structure.md, fixture | Canonical permissions template | C47 | P1 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ3` | types/structure.md:133-180, fixture palette, toolbelt/verify-module.sh | Fix palette example and format card | C11 | P0 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ4` | types/structure.md or types/module-wiring.md | Part gradle.kts reference; bajadoc packages | C58 | P2 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ5` | types/module-wiring.md §2, toolbelt/verify-module.sh | module-include.xml lifecycle; dangling types | C25 | P0 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ2` | types/structure.md, toolbelt/verify-module.sh | Permission-group roster with triggers | C28 | P0 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ1` | types/logic-authoring.md, toolbelt/lint-null-context-write.sh | BQL consumer pattern with Context | C19 | P0 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ3` | types/driver-authoring.md | NDriver section | C60 | P2 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ4` | types/logic-authoring.md | ORD call rules | C18 | P0 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ5` | types/logic-authoring.md | File-export recipe | C62 | P2 | accepted |
+| `n4-course-lexicon-logging-testing#Δ1` | types/structure.md, toolbelt/slot-coverage.sh | Lexicon key catalogue; Type.displayName | C10 | P0 | accepted-corrected (slot row per lux Δ1) |
+| `n4-course-lexicon-logging-testing#Δ2` | types/observability.md, toolbelt/lint-lexicon-keys.sh | Runtime lexicon idiom; key-exists lint | C55 | P2 | accepted |
+| `n4-course-lexicon-logging-testing#Δ3` | types/moduleTest.md | moduleTest layout and idioms | C41 | P1 | accepted |
+| `n4-course-lexicon-logging-testing#Δ4` | toolbelt/triage-console.sh | Spanish JDK level names | C57 | P2 | accepted |
+| `n4-course-lexicon-logging-testing#Δ5` | types/observability.md | Log-level operating notes | C57 | P2 | accepted |
+| `n4-course-parity-observability-horizons#Δ1` | types/logic.md | Callback thread map | C37 | P1 | accepted |
+| `n4-course-parity-observability-horizons#Δ2` | types/value-types.md | Locale-safe BSimple encoding | C49 | P1 | accepted |
+| `n4-course-parity-observability-horizons#Δ3` | toolbelt/kit-ticket.sh, types/observability.md | Client parity ticket | C52 | P1 | accepted |
+| `n4-course-parity-observability-horizons#Δ4` | types/observability.md, toolbelt/triage-console.sh | Station diagnostics card | C57 | P2 | accepted |
+| `n4-course-parity-observability-horizons#Δ5` | types/logic-authoring.md:540, types/logic.md | History/tag commissioning items | C35 | P1 | accepted |
+| `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | accepted |
+| `n4-course-slots-components-contracts#Δ1` | types/actions.md:24-26 | Frozen action handler = type-load error | C09 | P0 | accepted |
+| `n4-course-slots-components-contracts#Δ2` | types/security.md §2 | Flags are UI, not security | C36 | P1 | accepted |
+| `n4-course-slots-components-contracts#Δ3` | types/logic.md | Callback isRunning() guard | C36 | P1 | accepted |
+| `n4-course-slots-components-contracts#Δ4` | types/logic.md | Validators skip link writes | C36 | P1 | accepted |
+| `n4-course-slots-components-contracts#Δ5` | types/logic-authoring.md or types/logic.md | Slot-API traps | C36 | P1 | accepted |
+| `n4-course-slots-components-contracts#Δ6` | types/logic.md | Write/state discipline | C36 | P1 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ1` | types/logic.md:344, types/math-control-libraries.md | Replace the JDK-thread ban with Tridium ladder | C01 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ2` | toolbelt/lint-timers.sh:477-485 | Re-scope jdk-thread FAIL | C01 | P0 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ3` | types/actions.md §2 | Action threading; Invocation offload | C38 | P1 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ4` | types/logic.md, toolbelt/lint-intrinsic-lock.sh | No intrinsic locks on B* classes | C37 | P1 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ5` | types/logic.md, toolbelt/lint-timers.sh | Thread naming/priority hygiene | C37 | P1 | accepted |
+| `n4-course-threading-jobs-doctrine#Δ6` | types/logic-authoring.md | Correct and extend Background jobs | C03 | P0 | accepted |
+| `testing-parity-btestng#Δ1` | types/moduleTest.md, BUILD-LOOP.md:162-165 | Native Windows niagaraTest route | C12 | P0 | accepted |
+| `testing-parity-btestng#Δ2` | toolbelt/run-niagara-test.sh | Runner that refuses 0-test passes | C40 | P1 | accepted |
+| `testing-parity-btestng#Δ3` | types/moduleTest.md, build-verify.md | Test-jar signing prerequisite | C12 | P0 | accepted |
+| `testing-parity-btestng#Δ4` | types/moduleTest.md, METHODOLOGY.md | Station tests for component behaviour | C41 | P1 | accepted |
+| `testing-parity-btestng#Δ5` | toolbelt/lint-structure.sh | Structural-test advisory lint | C41 | P1 | accepted |
+| `testing-parity-btestng#Δ6` | types/moduleTest.md, toolbelt/scaffold-module.sh | moduleTest-include.xml template | C41 | P1 | accepted |
+| `review2-signing-build-route#Δ1` | build-verify.md § Verify, toolbelt/verify-module.sh | Signer-identity check by fingerprint | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ2` | types/security.md § 3 | Signing-profile files are secret stores | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ3` | build-verify.md § Signing per deploy target | Portable signing root blocks | C48 | P1 | accepted |
+| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | accepted |
+| `review2-signing-build-route#Δ5` | types/security.md § 2.4, types/logic-authoring.md | Worker threads keep the caller's Context | C39 | P1 | accepted |
+| `review2-signing-build-route#Δ6` | BUILD-LOOP.md § 7, toolbelt/ | Computed retro delta counts | C51 | P1 | accepted |
+
+## Appendix B — r3-report corrections → C-item
+
+| ID | C-item |
+|---|---|
+| r3-report#R1 | C13 |
+| r3-report#R2 | C14 |
+| r3-report#R3 | C43 |
+| r3-report#R4 | C71 |
+| r3-report#R5 | C77 |
+| r3-report#R6 | C23 |
+
+Re-run after the 24th retro (15ad06f, alias `rsb`):
+
+```
+retro files: 24
+source deltas: 174
+mapped: 174
+missing: 0
+extra (in appendix, not in retros): 0
+duplicate appendix rows: 0
+undefined C-ids: none
+tier mismatches: none
+C-items defined: 80
+source deltas per tier: P0=56 P1=69 P2=43 P3=6 
+RESULT: PASS (missing=0)
+```
