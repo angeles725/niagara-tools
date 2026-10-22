@@ -157,7 +157,7 @@ _pf_fakebin() {
   # jar-lock WARN row and other checks need) into $1, WITHOUT lsof — tests place their
   # own fake lsof at $1/lsof afterward.
   mkdir -p "$1"
-  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm basename head; do
+  for t in bash sh env grep sed awk cut find paste sort uniq wc tr comm basename dirname head; do
     p=$(command -v "$t" 2>/dev/null || true)
     [ -z "$p" ] || ln -sf "$p" "$1/$t"
   done

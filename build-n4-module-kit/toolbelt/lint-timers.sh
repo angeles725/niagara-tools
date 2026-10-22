@@ -119,7 +119,7 @@
 #                     [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
 
 FAILED=0
 
@@ -138,7 +138,7 @@ JAVA_ROOT="$1"
 [ -d "$JAVA_ROOT" ] || { printf 'lint-timers: not a directory: %s\n' "$JAVA_ROOT" >&2; exit 3; }
 
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 # One fail-closed walk feeds every check: a sub-directory find cannot enter is exit 3, never a shorter list.

@@ -33,7 +33,7 @@
 # Mutation: SP-console -- drops the console-only row, so an alarm-only trip loses its local-surface advisory
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -59,7 +59,7 @@ SRC="$1"
 # A directory with no .java files cannot have any trips — a silent exit 0 hides a misconfigured
 # invocation (wrong path, empty scaffold). Emit an ERROR row and exit 3.
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 # One fail-closed walk feeds every pass: a sub-directory find cannot enter is an env error (exit 3),
 # never a silently shorter file list.
 scan_files_or_exit lint-silent-protection 3 "$_TMP/files" "$SRC" -name '*.java'

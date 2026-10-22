@@ -70,7 +70,7 @@
 # had to land ten times. [ev: retro 2026-10-22-awk-lint-skeleton]
 
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "${BASH_SOURCE[0]%/*}/scan-files.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 

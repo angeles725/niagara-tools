@@ -20,7 +20,7 @@
 # Mutation: BJCV-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-bundled-jar-class-version raw 'usage: lint-bundled-jar-class-version.sh <module-root>' "$@"
 awk_lint_list --prune build -name '*.jar'
 
