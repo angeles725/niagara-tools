@@ -634,7 +634,7 @@ vsrc_row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; }
   done
 }
 
-# --- #260 (retro n4-course-handson-build-signing-windows Δ1-Δ3): false FAILs on live-loaded jars ---
+# --- #260 (retro n4-course-signed-jars-gate-fix Δ1-Δ3): false FAILs on live-loaded jars ---
 # The course jars were signed by the CodeSigning profile (META-INF/CODESIGN.SF + CODESIGN.RSA), loaded live
 # under moduleVerificationMode=high, and still FAILed `signed`, `bytecode` and `types` here.
 
@@ -662,7 +662,7 @@ signed_jar() {
   printf '%s\n' "$output" | grep -E '^FAIL  signed ' | grep -qF 'NIAGARA4.SF'
 }
 
-@test "VSIG3: a jar with no META-INF/*.SF at all FAILs signed, naming the missing signature file" {
+@test "VSIG3: a jar with no META-INF/*.SF at all FAILs signed with \"no META-INF/*.SF\"" {
   good_dir "$TMPDIR_T/d"; rm "$TMPDIR_T/d/META-INF/NIAGARA4.SF" "$TMPDIR_T/d/META-INF/NIAGARA4.RSA"
   make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
   run "$VM" "$TMPDIR_T/j.jar"
@@ -676,6 +676,15 @@ signed_jar() {
   run "$VM" "$TMPDIR_T/j.jar"
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -E '^PASS  bytecode ' | grep -qF '2 classes, all major 52; 1 multi-release classes ignored'
+}
+
+@test "VMR3: a jar whose only classes sit under META-INF/versions/ FAILs bytecode and still counts the ignored ones" {
+  good_dir "$TMPDIR_T/d"; find "$TMPDIR_T/d" -name '*.class' -delete
+  make_class_file "$TMPDIR_T/d/META-INF/versions/11/com/y/Z.class" 55
+  make_jar "$TMPDIR_T/j.jar" "$TMPDIR_T/d"
+  run "$VM" "$TMPDIR_T/j.jar"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  bytecode ' | grep -qF 'no .class entries outside META-INF/versions/; 1 multi-release classes ignored'
 }
 
 @test "VMR2: a major-55 class OUTSIDE META-INF/versions/ still FAILs bytecode (the skip is path-scoped)" {

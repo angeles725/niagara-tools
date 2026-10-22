@@ -202,7 +202,7 @@ ver_le() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
 
 check_bytecode_major() {  # every class, not just the first
   # META-INF/versions/** is skipped, like lint-bundled-jar-class-version.sh: a Java 8 runtime never loads
-  # multi-release classes (Jackson 2.21 ships major-55 ones and runs on N4). [ev: retro n4-course-handson-build-signing-windows Δ3]
+  # multi-release classes (Jackson 2.21 ships major-55 ones and runs on N4). [ev: retro n4-course-signed-jars-gate-fix Δ3]
   local jar="$1" n=0 bad=0 mr=0 c m first="" ign=""
   while IFS= read -r c; do
     [ -n "$c" ] || continue
@@ -211,15 +211,15 @@ check_bytecode_major() {  # every class, not just the first
     m=$(unzip -p "$jar" "$c" | od -An -t u1 -j6 -N2 | awk '{print $2}')
     [ "$m" = "52" ] || { bad=$((bad+1)); [ -n "$first" ] || first="$c major=$m"; }
   done <<< "$(printf '%s\n' "$LIST" | grep '\.class$' || true)"
-  if [ "$n" -eq 0 ]; then row FAIL bytecode "$jar" "no .class entries"; return 1; fi
   [ "$mr" -eq 0 ] || ign="; $mr multi-release classes ignored"
+  if [ "$n" -eq 0 ]; then row FAIL bytecode "$jar" "no .class entries${ign:+ outside META-INF/versions/}$ign"; return 1; fi
   if [ "$bad" -eq 0 ]; then row PASS bytecode "$jar" "$n classes, all major 52$ign"; return 0; fi
   row FAIL bytecode "$jar" "$bad of $n classes not major 52 (expected Java 8); first: $first$ign"; return 1
 }
 check_signed() {
   # The signature files are named after the signing ALIAS (NIAGARA4 default profile, CODESIGN course profile,
   # SERVER1 Honeywell); the station decides by verification mode + cert chain, never by the entry name.
-  # A .SF counts only with its signature block (.RSA/.DSA/.EC). [ev: retro n4-course-handson-build-signing-windows Δ1]
+  # A .SF counts only with its signature block (.RSA/.DSA/.EC). [ev: retro n4-course-signed-jars-gate-fix Δ1]
   # `sigs` is the META-INF signature entries (a here-string, never a pipe into grep: tests/pipefail-grep.bats),
   # matched in-shell so each alias lookup is one case pattern, not one grep per extension.
   local sigs sf alias ext ok="" orphan=""
