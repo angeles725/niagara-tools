@@ -8,9 +8,10 @@
 #
 # Usage:  scripts/install-client-hooks.sh [--force] <client-repo>
 #   --force  replace a DIFFERENT existing .githooks/pre-push and a custom core.hooksPath
-# Exit: 0 installed (or already installed: idempotent) · 2 usage, or <client-repo> is not a git work tree ·
-#       3 refused: a different pre-push, a custom core.hooksPath (local, global or system) or an active hook in the
-#         default hooks directory exists — setting .githooks would silently stop it (re-run with --force)
+# Exit: 0 installed (or already installed: idempotent) · 2 usage, <client-repo> is not a git work tree, or the kit
+#       template is missing · 3 refused, nothing changed (re-run with --force): a different pre-push exists, a
+#       custom core.hooksPath is set (local, global or system), or the default hooks directory holds an active
+#       hook that setting .githooks would silently stop
 #
 # git IS used here on purpose: this lives under scripts/, not toolbelt/ (kit-links L2).
 set -euo pipefail
@@ -49,7 +50,9 @@ fi
 # With no hooksPath, git runs the default hooks directory; setting .githooks would silently stop every active hook
 # there (e.g. a Git LFS pre-push). Refuse and name them, unless --force.
 if [ -z "$current" ] && [ "$FORCE" -eq 0 ]; then
-  hooks_dir="$(git -C "$TOP" rev-parse --path-format=absolute --git-path hooks)"
+  # --git-path (git >= 2.5) prints the path relative to TOP; --path-format=absolute would need git >= 2.31.
+  hooks_dir="$(git -C "$TOP" rev-parse --git-path hooks)"
+  case "$hooks_dir" in /*) ;; *) hooks_dir="$TOP/$hooks_dir" ;; esac
   active=""
   if [ -d "$hooks_dir" ]; then
     for h in "$hooks_dir"/*; do

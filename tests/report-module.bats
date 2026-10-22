@@ -159,7 +159,7 @@ setup() {
 #   Per-artifact *-rt: lint-subscribe-without-unsubscribe (WARN, RM12),
 #     lint-recovery-path (FAIL, RM13), lint-config-sanity (FAIL, RM14),
 #     lint-status-parity (WARN, RM15).
-#   Per-artifact *-ux: lint-servlet (FAIL, RM16), rc-scan (FAIL, RM17).
+#   Per-artifact *-ux: lint-servlet (FAIL, RM16; INFO-only = PASS, RM16b), rc-scan (FAIL, RM17).
 #   Per-artifact *-wb: lint-wb-threading (WARN, RM18).
 #   Module-once: lint-structure (FAIL, RM19), lint-write-path (FAIL, RM20).
 # Named mutations (post-green):
@@ -168,6 +168,7 @@ setup() {
 #   - drop config-sanity CS1 check -> RM14 exits 0.
 #   - drop status-parity check -> RM15 loses WARN row.
 #   - drop servlet auth check -> RM16 exits 0.
+#   - drop the INFO* case in report-module.sh -> RM16b reports "no BWebServlet".
 #   - drop rc-scan ord-literal check -> RM17 exits 0.
 #   - drop wb-threading traversal check -> RM18 loses WARN row.
 #   - drop structure L7 check -> RM19 exits 0.
@@ -216,6 +217,14 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"BMyServlet.java"* ]]
+}
+
+@test "RM16b: a servlet with only the api-response-headers INFO row reports lint-servlet PASS, exit 0" {
+  # servlet-info/DemoPan-ux/src/com/x/BInfoServlet.java writes a body and sets no headers (register C13)
+  run "$RM" --lint-only "$FX/servlet-info"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"PASS"*"lint-servlet"*"clean"* ]]
+  [[ "$output" != *"no BWebServlet"* ]]
 }
 
 @test "RM17: hardcoded ORD in rc/ surfaces rc-scan FAIL row in *-ux artifact and exits 1" {
@@ -757,4 +766,21 @@ JAVA
   run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP"*"lint-write-path"*"no write-path-matrix.md"* ]]
+}
+
+@test "RM48b: a PATH eslint whose --version hangs is bounded -> SKIP eslint 'unknown version', never a hung report (#226)" {
+  # Mutation: RM48b -- the unbounded `eslint --version` probe hangs the whole report on a wedged wrapper.
+  if [ -x "$KIT/toolbelt/eslint/node_modules/.bin/eslint" ]; then
+    skip "the pinned eslint is installed under toolbelt/eslint; the PATH fallback is not reached"
+  fi
+  command -v timeout >/dev/null 2>&1 || skip "no timeout(1) on PATH"
+  local t="$BATS_TEST_TMPDIR/rm48b"; _ux_tree "$t"
+  mkdir -p "$t/DemoPan-ux/src/rc/js" "$BATS_TEST_TMPDIR/bin48b"
+  printf 'var a = 1;\n' > "$t/DemoPan-ux/src/rc/js/app.js"
+  printf '#!/usr/bin/env bash\nexec sleep 60\n' > "$BATS_TEST_TMPDIR/bin48b/eslint"
+  chmod +x "$BATS_TEST_TMPDIR/bin48b/eslint"
+  start=$(date +%s)
+  PATH="$BATS_TEST_TMPDIR/bin48b:$PATH" KIT_ESLINT='' KIT_ESLINT_PROBE_TIMEOUT=1 run timeout 50 "$RM" --lint-only "$t"
+  [ "$(( $(date +%s) - start ))" -lt 40 ]
+  [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is unknown version"* ]]
 }

@@ -1058,6 +1058,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
                 _srv_had_row=1
                 [ "$_st" = "FAIL" ] && _srv_had_fail=1
               ;;
+              # INFO rows (api-response-headers) prove a servlet was scanned; the report shows it as PASS.
+              INFO*) _srv_had_row=1 ;;
             esac
           done <<< "$srv_out"
           if [ "$_srv_had_row" -eq 0 ]; then
@@ -1097,10 +1099,15 @@ for ADIR in "${ARTIFACTS[@]}"; do
         fi
         _esl_old=""
         if [ -z "$ESLINT_BIN" ]; then
-          # PATH fallback: any installed version — the kit flat config (eslint.config.mjs) needs ESLint >= 9.
+          # PATH fallback: an eslint on PATH is used only when its --version reports major >= 9 (the kit flat
+          # config eslint.config.mjs needs it); any other or unreadable version is a SKIP row below. The probe is
+          # bounded (KIT_ESLINT_PROBE_TIMEOUT seconds, default 15) when timeout(1) exists: a wedged wrapper is an
+          # "unknown version" SKIP, never a hung report (#226 R4-002).
           ESLINT_BIN="$(command -v eslint 2>/dev/null || true)"
           if [ -n "$ESLINT_BIN" ] && [ -n "$_own_js" ]; then
-            _esl_ver=$("$ESLINT_BIN" --version 2>/dev/null | head -1)
+            _esl_to=()
+            command -v timeout >/dev/null 2>&1 && _esl_to=(timeout "${KIT_ESLINT_PROBE_TIMEOUT:-15}")
+            _esl_ver=$("${_esl_to[@]}" "$ESLINT_BIN" --version 2>/dev/null | head -1) || true
             _esl_major=$(printf '%s' "$_esl_ver" | sed -n 's/^v\{0,1\}\([0-9][0-9]*\)\..*/\1/p')
             if [ -z "$_esl_major" ] || [ "$_esl_major" -lt 9 ]; then _esl_old="${_esl_ver:-unknown version}"; fi
           fi

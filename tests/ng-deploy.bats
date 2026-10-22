@@ -86,8 +86,10 @@ STUB
 
     # Prepend fakebin to PATH
     export PATH="$TMPDIR_T/fakebin:$PATH"
-    # audit A2: every pre-A2 test deploys a never-deployed module (no schema baseline); the A2 tests unset this.
-    export FIRST_DEPLOY=1
+    # audit A2: every pre-A2 test deploys a never-deployed module (no schema baseline): the env files below carry
+    # FIRST_DEPLOY=1 (an env-file key is an explicit opt-in; an ambient variable is ignored, #246 A2b), and the A2
+    # tests drop it again with _no_first_deploy.
+    unset FIRST_DEPLOY
 
     # Write minimal .env.local for tests that need a valid environment
     # why: .env.local path is dynamic (TMPDIR_T); not following is expected
@@ -101,6 +103,7 @@ JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
 EXPECTED_RT_TYPES=9
 EXPECTED_UX_TYPES=2
+FIRST_DEPLOY=1
 ENVEOF
 
     cd "$TMPDIR_T" || return 1
@@ -482,6 +485,7 @@ JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
 EXPECTED_RT_TYPES=9
 EXPECTED_UX_TYPES=9
+FIRST_DEPLOY=1
 ENVEOF
     run bash "$SCRIPT" \
         --env-file "$TMPDIR_T/env_t24" \
@@ -598,6 +602,8 @@ STUB
     export VERIFY_MODULE_BIN="$TMPDIR_T/fake-vm.sh"
 }
 
+_no_first_deploy() { sed -i '/^FIRST_DEPLOY=/d' "$TMPDIR_T/env_gate"; }   # a module with a deployed baseline
+
 _gate_env() {   # env whose expected type counts match the fake unzip (9) so verify_jar passes
     cat > "$TMPDIR_T/env_gate" <<ENVEOF
 MODULE_NAME=test
@@ -608,6 +614,7 @@ JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 STATION_MODULES_DIR=$TMPDIR_T/modules
 EXPECTED_RT_TYPES=9
 EXPECTED_UX_TYPES=9
+FIRST_DEPLOY=1
 ENVEOF
     mkdir -p "$TMPDIR_T/fakebin/test/test-rt/build/libs" "$TMPDIR_T/fakebin/test/test-ux/build/libs"
     touch "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar" \
@@ -763,15 +770,26 @@ STUB
 
 @test "NG-schema-required: mode A without SCHEMA_BASELINE_DIR or --first-deploy stops before the copy (exit 12) (A2)" {
     # Mutation: NG-schema-required -- skipping the precheck when no baseline is set deploys an un-diffed schema.
-    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    _gate_env; _fake_gate 0; _no_first_deploy
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
     [ "$status" -eq 12 ]
     [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
 }
 
+@test "NG-first-deploy-ambient: an inherited FIRST_DEPLOY=1 does not skip the schema-risk precheck (exit 12) (#246 A2b)" {
+    # Mutation: NG-first-deploy-ambient -- reading FIRST_DEPLOY from the ambient environment lets a variable left
+    # exported in the operator's shell silently skip the schema diff on a module that WAS deployed.
+    _gate_env; _fake_gate 0; _no_first_deploy
+    FIRST_DEPLOY=1 run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A
+    [ "$status" -eq 12 ]
+    [ ! -e "$TMPDIR_T/modules/test-rt.jar" ]
+    FIRST_DEPLOY=1 run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --first-deploy
+    [ "$status" -eq 0 ]
+}
+
 @test "NG-schema-outage: a schema-risk OUTAGE (exit 2) or LOSSY (exit 1) blocks with exit 53; --accept-lossy passes LOSSY only (A2)" {
     # Mutation: NG-schema-outage -- ignoring the schema-risk verdict deploys a slot change that breaks saved data.
-    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    _gate_env; _fake_gate 0; _no_first_deploy
     mkdir -p "$TMPDIR_T/baseline"; printf 'SCHEMA_BASELINE_DIR=%s\n' "$TMPDIR_T/baseline" >> "$TMPDIR_T/env_gate"
     _fake_sr 2
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A --accept-lossy
@@ -784,7 +802,7 @@ STUB
 }
 
 @test "NG-schema-safe: a SAFE schema-risk diff (baseline vs the -rt module dir) lets the deploy complete (A2)" {
-    _gate_env; _fake_gate 0; unset FIRST_DEPLOY
+    _gate_env; _fake_gate 0; _no_first_deploy
     mkdir -p "$TMPDIR_T/baseline"; printf 'SCHEMA_BASELINE_DIR=%s\n' "$TMPDIR_T/baseline" >> "$TMPDIR_T/env_gate"
     _fake_sr 0
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode A

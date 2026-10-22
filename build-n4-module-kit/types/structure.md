@@ -4,9 +4,16 @@ The shape a Niagara N4 module must have on disk, and the L1–L11 checklist `lin
 in how Tridium/Honeywell lay out their own modules and an audit of our four. `[ev: corpus B817]`
 
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
-- A module splits into per-`runtimeProfile` artifacts `<module>-{rt,ux,wb,se}`: `-rt` server runtime, `-ux` browser
-  (BajaScript), `-wb` Workbench (Swing), `-se` server-only. The `-rt` part lists its siblings in `<moduleParts>`.
-- `-doc` is a SEPARATE `runtimeProfile="doc"` module (with an empty `<types/>`, per B784 §784.1), NEVER a part of a code module.
+- A module splits into per-`runtimeProfile` artifacts `<module>-{rt,ux,wb,se,doc}`: `-rt` runtime (compact3, every
+  host), `-ux` browser (BajaScript), `-wb` Workbench (Swing), `-se` code that depends on Java SE APIs (JDBC, AWT,
+  Swing; § The `-se` runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
+  plugin writes the `<moduleParts>` element of the generated `META-INF/module.xml`, never an authored file.
+  `[ev: corpus B1313 §1313.3 C2-C3]` `[ev: retro devguide415-horizons-authoring-security Δ8]`
+- **Allowed part dependencies** (devguide `modules.txt:148-155`): `rt`→rt · `ux`→rt, ux · `wb`→rt, ux, wb ·
+  `se`→rt, ux, wb, se · `doc`→none, and nothing depends on a `doc` part. An `api(":<mod>-wb")` in an `-rt` or `-ux`
+  part's build script is a layering error.
+- Help ships as a `doc` PART of the code module (the devguide's form, `deployingHelp.txt:8`) or as a separate
+  `doc*` module; both are legitimate (§ -doc help profile authoring recipe).
 - Author-side source tree: `<MOD>-rt.gradle.kts` + `module-include.xml` + `module.lexicon` + `module.palette` +
   `src/com/<vendor>/<MOD>/…` (+ `srcTest/` for tests, `rc/` for `-ux`). `[ev: corpus B817]`
 - **One Java package belongs to one module part.** Code the `-rt` and `-wb` parts both need is either duplicated
@@ -27,7 +34,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
   type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1417 §1417.3 e]` `[ev: retro course-recordings Δ1]`
 - A hand-authored `META-INF/module.xml` in source is WRONG (L6): it will be overwritten and drifts from the plugin
   output. Edit `module-include.xml`; never the generated manifest. `[ev: corpus B817]`
-- **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1]
+- **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1] Six of the groups (REFLECTION, ACCESS_CLASS, MBEAN_PERMISSION, THIRD_PARTY_PERMISSION, PROTECTION_DOMAIN, HSM_SIGNING) also need a signed, trusted module, or the station drops them with a WARNING (`build-verify.md` § Signing per deploy target). [ev: corpus B1312 §1312.3 C1]
 - **Source→runtime inlining:** the Gradle signing plugin (`NiagaraPermissionGroupFactory`) expands the high-level group names into concrete `<java-permission class="…">` entries and INLINES them into the built JAR's `META-INF/module.xml` `<permissions>` element. There is NO `module-permissions.xml` in the deployed artifact (confirmed zero across all corpus JARs). To inspect deployed grants: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -A20 permissions`. [ev: corpus B18 §18.4.2-18.4.3; B777 §777.4]
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
 
@@ -174,6 +181,11 @@ A `module.palette` `<p>` entry can nest child `<p>` elements with property overr
 pre-configured, commissioning-ready **assembly templates**. Dragging one component from the palette
 drops the correct sub-tree with every flag already set — no manual wiring required.
 
+A palette assembly is NOT a Niagara template. A template is a `.ntpl` file deployed from the Template sidebar or
+the Device Manager, with its own manifest, deploy, status and upgrade rules (`types/logic-authoring.md` § template
+bullet, `types/distribution.md` § 8); a palette drop is a plain copy that nothing tracks afterwards.
+`[ev: corpus B1325 §1325.2 C2]` `[ev: retro devguide415-r2-packaging-platform-signing Δ4]`
+
 ### Authoring workflow
 
 1. **Build the assembly correctly in a scratch station** — create the component, add its children
@@ -247,9 +259,10 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
 
 ## -doc help profile authoring recipe `[ev: corpus B759 §759.6]`
 
-A `-doc` module is a **separate runtime profile** (`runtimeProfile="doc"`) with an empty `<types/>`.
-It is NEVER a part of a code module. Its sole job is to ship HTML help pages that Workbench's
-F1 help system discovers via the `help.guide.base` lexicon key.
+A `-doc` part has its own runtime profile (`runtimeProfile="doc"`) and no types. The devguide puts help
+"in a part with a runtime profile of doc" of the code module (`deployingHelp.txt:8`); a separate `doc*`
+module is also legitimate. Its sole job is to ship HTML help pages that Workbench's F1 help system finds in
+the module's own `doc/` directory. `[ev: corpus B1313 §1313.3 C1]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
 
 Our modules ship none today — that is architecturally correct. This recipe documents the path for
 any future help investment.
@@ -260,7 +273,7 @@ any future help investment.
 <Mod>-doc/
 ├── <Mod>-doc.gradle.kts         # runtimeProfile = "doc"
 ├── module-include.xml           # <types/> — intentionally empty [ev: corpus B784 §784.1]
-├── module.lexicon               # contains help.guide.base key (see below)
+├── module.lexicon               # help.guide.base is optional (see below)
 └── src/
     └── doc/
         ├── toc.xml              # JavaHelp 1.0 TOC descriptor
@@ -292,16 +305,13 @@ The `target=` value maps to a filename in `src/doc/` without the `.html` suffix.
 
 Example: help for `BColdRoomPan` in module `coldroomrt` → `doc/coldroomrt-BColdRoomPan.html`.
 
-### Lexicon key
+### Lexicon key (optional — usually omit it)
 
-Add to `module.lexicon`:
-
-```
-help.guide.base=module://docUser/doc
-```
-
-This key points Workbench's F1 help resolver at the `doc/` directory inside the `-doc` module jar.
-The type name is appended to the base to form the full HTML path.
+Guide on Target looks for the HTML file in the `doc/` directory of the type's own module when the lexicon
+defines no `help.guide.base` (`deployingHelp.txt:28`), so a vendor module omits the key. Set it only to point at
+ANOTHER module that holds the help; core Tridium modules point it at `docUser`, which a vendor module must never
+copy (its types would open Tridium's guide, not ours). The type name is appended to the base to form the
+full HTML path.
 
 ### Build plugins
 
@@ -360,26 +370,29 @@ It is built against Java 8 SE — NOT synonymous with "JACE-exclusive".
 
 | Host | Profiles loaded at startup |
 |------|---------------------------|
-| Station daemon (JACE **and** Supervisor) launched with `-rp:se` | `{rt, se}` — rt is always prepended |
+| Station daemon on a Windows-based host (Supervisor) launched with `-rp:se` | `{rt, se}` — rt is always prepended |
+| JACE | never `-se`: the platform guide says `se` jars "can run on Windows-based hosts only" and a JACE runs a Java 8 compact3 VM |
 | Workbench | `{rt, ux, wb}` (+ `se` when `-rp:se` passed) |
 
-A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags.
-`[ev: corpus B630]`
+A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags. Keep JACE logic in `-rt`.
+`[ev: corpus B630]` `[ev: corpus B1341 §1341.2 C1]` (guide `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30`;
+the JACE row is doc-proven, not run on a JACE) `[ev: retro devguide415-r2-packaging-platform-signing Δ8]`
+`[ev: retro r8-t9i-packaging Δ2]`
 
 ### Dependency trap — `-wb` deps in a `-se` module.xml
 
 A `-se` `module.xml` may legitimately declare dependencies on `-wb` modules (they satisfy the
 compiler). Example: `alarm-se` at 4.14.0 lists `alarm-wb`, `bajaui-wb`, and `export-wb` as
 dependencies. Those classes are **not loaded** on a headless daemon (`-rp:se` loads only `{rt,se}`),
-so any `-se` code path that calls into a `-wb` class at runtime on a JACE or Supervisor throws
+so any `-se` code path that calls into a `-wb` class at runtime on a Supervisor daemon throws
 `ClassNotFoundException`. `[ev: code alarm-se module.xml; corpus B630]`
 
 **Rule:** guard every `-wb` class reference in a `-se` part behind a runtime `Sys.getProfile()`
 check, or move the wb-dependent code into the `-wb` part and keep `-se` wb-free.
 
-### JACE headless AWT trap
+### Headless AWT trap
 
-`-se` modules load on JACE (headless OpenJDK on QNX ARM). Display-dependent classes
+A Supervisor station daemon runs headless. Display-dependent classes
 (`JFrame`, `JDialog`, any component that opens a native window) fail at runtime with
 `HeadlessException`. Headless-safe AWT is fine: `java.awt.print`, `Font`, image I/O,
 `java.awt.AWTPermission` (clipboard, window-without-warning-banner) — `obix-se` uses exactly
@@ -398,14 +411,15 @@ Three places to touch (beyond the new `-se` source tree):
 
 1. `<Mod>-se.gradle.kts` — `runtimeProfile.set("se")`
 2. `niagara-module.xml` (module root) — add `se` to the `runtimeProfiles` list
-3. `<Mod>-rt`'s `module-include.xml` — add the `-se` part in `<moduleParts>`
+3. nothing in `module-include.xml`: it holds only `<types>`, and the plugin writes `<moduleParts>` into the
+   generated `module.xml` from `niagara-module.xml` (devguide `upgradingBuild.txt:95,115`)
 
-`[ev: corpus B784]`
+`[ev: corpus B784]` `[ev: corpus B1313 §1313.3 C2]`
 
 ### JACE resource limits
 
-JACE hardware (1 GB DDR3, ARM, QNX): avoid OrientDB, Swing UI components, and heavy JNI
-libraries in any `-se` part destined for JACE. `[ev: corpus B473]`
+JACE hardware (1 GB DDR3, ARM, QNX) never loads `-se`, so code a JACE needs stays in `-rt` and within
+compact3: no OrientDB, Swing UI components or heavy JNI libraries there. `[ev: corpus B473]`
 
 ### Real `-se` modules for reference (Tridium 4.14)
 

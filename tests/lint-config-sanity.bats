@@ -115,16 +115,21 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
 # polish-2026-10-02 P2d (#199, P2c review advisories): a cutout status or counter slot (cutoutCount,
 # cutoutActive, lowLimitReached, cutoutTripCount) is not a cutout floor, and a non-numeric default
 # (false, BBoolean.FALSE) is never read as a disabled cutout. Unit suffixes (lpCutoutPsi) still count.
-# Named mutation LCS-floor-status (drop the status/counter suffix exclusion) -> LCS-floor-status flips.
-@test "LCS-floor-status: comp2MinOn=1 beside cutoutCount / cutoutActive / lowLimitReached =0 -> no CS4" {
+# Named mutation LCS-floor-status (drop the status/counter suffix exclusion) -> LCS-floor-status flips; dropping
+# Tripped from STATUS_SUFFIX flips it on cutoutTripped.
+@test "LCS-floor-status: comp2MinOn=1 beside cutoutCount / cutoutActive / lowLimitReached / cutoutTripped =0 -> no CS4" {
   local v
-  for v in cutoutCount cutoutActive lowLimitReached cutoutTripCount lpCutoutState; do
+  for v in cutoutCount cutoutActive lowLimitReached cutoutTripCount lpCutoutState cutoutTripped; do
     only FloorCamelNames.java
     sed -i "s/\"lpCutout\"/\"$v\"/" "$ONE/FloorCamelNames.java"
     run "$LCS" "$ONE"
     [ "$status" -eq 0 ]
     [[ "$output" != *"CS4"* ]] || { echo "$v -> $output"; return 1; }
   done
+}
+
+@test "LCS-floor-status-bool: a non-numeric cutout default (false, BBoolean.FALSE) is never a disabled cutout -> no CS4" {
+  local v
   for v in 'false' 'BBoolean.FALSE'; do
     only FloorCamelNames.java
     sed -i -e 's/"lpCutout", type = "double", defaultValue = "0.0"/"lpCutout", type = "boolean", defaultValue = "'"$v"'"/' "$ONE/FloorCamelNames.java"
@@ -133,10 +138,13 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
     [ "$status" -eq 0 ]
     [[ "$output" != *"CS4"* ]] || { echo "default $v -> $output"; return 1; }
   done
-  # the suffixed real cutout is still a cutout floor
+}
+
+@test "LCS-floor-status-unit: beside the status exclusions, a unit-suffixed real cutout (lpCutoutPsi=0) still WARNs CS4" {
   only FloorCamelNames.java
   sed -i 's/"lpCutout"/"lpCutoutPsi"/' "$ONE/FloorCamelNames.java"
   run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
   [[ "$output" == *"CS4: floor \"comp2MinOn\"=1 with LP cutout \"lpCutoutPsi\"=0"* ]]
 }
 

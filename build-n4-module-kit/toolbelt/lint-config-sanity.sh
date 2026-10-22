@@ -29,7 +29,7 @@
 # Usage:  lint-config-sanity.sh <java-src-dir>
 #
 #   Scans all *.java recursively under <java-src-dir>.
-#   Emits FAIL (CS1/CS2) or WARN (CS3/CS4) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
+#   Emits FAIL (CS1/CS2) or WARN (CS1 "unreadable", CS3/CS4) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
 #
 # Row format:  FAIL|WARN  lint-config-sanity  <file>:<line>  CS<n>: <reason>
 # Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env, incl. a sub-directory find cannot enter (K20)
@@ -82,10 +82,7 @@ touch "$_ROWS"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 # A sub-directory find cannot enter is an env error (exit 3), never a shorter file list.
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$SRC" -name '*.java'; then
-  printf 'lint-config-sanity: cannot list every file under %s: %s\n' "$SRC" "$(head -n 1 "$_TMP/find.err")" >&2
-  exit 3
-fi
+scan_files_or_exit lint-config-sanity 3 "$_TMP/files" "$SRC" -name '*.java'
 
 _row() {
   local sev="$1" loc="$2" reason="$3"

@@ -99,3 +99,18 @@ _need_acorn() {
   [[ "$output" == *"WARN  vendor-floor  vendor/sloppy-1.0.0.js:3  api: .replaceAll("* ]]
   # Named mutation VF9: tokenize with sourceType module only -> the replaceAll row vanishes.
 }
+
+@test "VF-disjoint: a method name in both MEMBER and QUALIFIED is a startup env fault (exit 3), never a double row (#226)" {
+  # Mutation: VF-disjoint -- with the disjointness only stated in a comment, adding 'Array.at' to QUALIFIED while
+  # `at` is in MEMBER double-reports every .at( call and nothing notices.
+  _need_node
+  local t="$BATS_TEST_TMPDIR/vfd"
+  mkdir -p "$t/toolbelt" "$t/acorn" "$t/rc/vendor"
+  sed "s/^const QUALIFIED = { /const QUALIFIED = { 'Array.at': 92, /" "$LVF" > "$t/toolbelt/lint-vendor-floor.sh"
+  grep -q "'Array.at': 92" "$t/toolbelt/lint-vendor-floor.sh"
+  printf 'module.exports = {};\n' > "$t/acorn/index.js"   # the table check runs before acorn is used
+  printf 'var a = [1].at(0);\n' > "$t/rc/vendor/lib.js"
+  KIT_ACORN="$t/acorn" run bash "$t/toolbelt/lint-vendor-floor.sh" "$t/rc"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"MEMBER and QUALIFIED share the method name 'at'"* ]]
+}

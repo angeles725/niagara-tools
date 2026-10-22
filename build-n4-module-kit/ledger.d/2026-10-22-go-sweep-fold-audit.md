@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8 T17: sweep-fold-audit ported to Go -->
+log: 2026-10-22 · quality round 8 T17 → `toolbelt/sweep-fold-audit.sh` ported to `go/cmd/sweep-fold-audit` (`go/internal/foldaudit`) and reduced to a thin `go/go-tool.sh` `go_tool_bin` wrapper (exit 3 when it cannot be built); stdout/stderr/exit identical to the bash version over 30 named argument shapes (real tree strict+since and no-flag, bats F1-F11, edge kits) and 300 seeded random kits; real-tree median 5391 ms → 27 ms; `tests/sweep-fold-audit.bats` unchanged 11/11, mutations F3/F4/F6/F9 observed. Four bash fail-open quirks kept byte-identical and reported (octal deltas cell, `08`/`09` cell skips the Δ check, unterminated last INDEX row, unreadable INDEX exits 0). Retro retros/2026-10-22-go-sweep-fold-audit.md (2Δ, pending). [ev: retro go-sweep-fold-audit Δ1]

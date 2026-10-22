@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8: gen-lint-index ported to Go -->
+log: 2026-10-22 · quality round 8 → `toolbelt/gen-lint-index.sh` ported to `go/cmd/gen-lint-index` (`go/internal/lintindex`) and reduced to a thin `go/go-tool.sh` `go_tool_bin` wrapper (exit 3 when it cannot be built); all 42 real-tree runs byte-identical (committed `toolbelt/INDEX.md` unchanged); deliberate edge fixes: an `[ev:]`-only description no longer shifts the row's columns, a failed write is exit 3 (bash said `wrote`), Usage/Exit read from the header block only (#226 R2/R3/R4-gli-exit), Auto needs a command-position invocation (#226 R3-gli-auto), wrap/exit mutation label fixed; `tests/gen-lint-index.bats` 20/20 with GLI-awkfail restated as an unreadable header (exit 3, INDEX untouched); `--check` ~470 ms → ~42 ms. Retro retros/2026-10-22-go-gen-lint-index.md (1Δ, pending). [ev: retro go-gen-lint-index Δ1]
