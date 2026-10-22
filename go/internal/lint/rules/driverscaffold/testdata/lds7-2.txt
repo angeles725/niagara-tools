@@ -1,0 +1,10 @@
+-- root --
+.
+-- want --
+exit 0
+WARN  lint-driver-scaffold  @DIR@/BZ.java:4  method boundaries not trusted (ends inside a text block): a stub in this file may be missed
+-- BZ.java --
+class BZ extends BNDevice {
+  String T = """
+    }
+}

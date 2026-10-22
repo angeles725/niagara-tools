@@ -4,6 +4,7 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 )
 
@@ -11,5 +12,6 @@ import (
 func All() []lint.Spec {
 	return []lint.Spec{
 		nullcontext.Spec(),
+		driverscaffold.Spec(),
 	}
 }

@@ -1,0 +1,40 @@
+-- root --
+.
+-- want --
+exit 0
+-- BCoursePingDevice.java --
+// Course reference shape: pingOk() is guarded by the protocol's answer, so it is not a stub.
+package com.example.course;
+
+public class BCoursePingDevice extends BNDevice
+{
+  public void doPing() {
+    PingResponse pingResponse = sendPing();
+    if (pingResponse.getPingSuccessful()) { pingOk(); }
+    else { pingFail(pingResponse.getFailureCause()); }
+  }
+}
+-- BReachDevice.java --
+// A finished device: reachability-only ping (course exam P3), discovery job submitted with the caller's Context.
+package com.example.reach;
+
+public class BReachDevice extends BNDevice
+{
+  public void doPing()
+  {
+    try (Socket s = new Socket())
+    {
+      s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // bounds the connect, not DNS
+      pingOk();
+    }
+    catch (IOException e)
+    {
+      pingFail(e.getLocalizedMessage());
+    }
+  }
+
+  public BOrd doSubmitDiscoveryJob(BReachDiscoveryPreferences prefs, Context cx)
+  {
+    return new BReachLearnJob(this, prefs).submit(cx);
+  }
+}

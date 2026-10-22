@@ -1,0 +1,8 @@
+-- root --
+.
+-- want --
+exit 0
+-- BY.java --
+class BY extends BNDevice {
+  /* public void doPing() { pingOk(); } */
+}

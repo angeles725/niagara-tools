@@ -1,0 +1,56 @@
+-- root --
+.
+-- want --
+exit 1
+FAIL  lint-driver-scaffold  @DIR@/BArrayAnnotDevice.java:6  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+FAIL  lint-driver-scaffold  @DIR@/BOuter.java:8  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+FAIL  lint-driver-scaffold  @DIR@/BSameLineDevice.java:6  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+FAIL  lint-driver-scaffold  @DIR@/BThrowsDevice.java:7  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+-- BArrayAnnotDevice.java --
+// An annotation whose array argument holds braces, on the stub's own line: its braces are not a method body.
+package com.example.annotated;
+
+public class BArrayAnnotDevice extends BNDevice
+{
+  @SuppressWarnings({"unused", "rawtypes"}) public void doPing() {
+    pingOk();
+  }
+}
+-- BOuter.java --
+// The device is a nested class: its methods sit one class level deeper than a top-level class's.
+package com.example.annotated;
+
+public class BOuter
+{
+  public static class BInnerDevice extends BNDevice
+  {
+    public void doPing()
+    {
+      pingOk();
+    }
+  }
+}
+-- BSameLineDevice.java --
+// A same-line annotation with arguments ahead of the wizard stub: the annotation is not the method name.
+package com.example.annotated;
+
+public class BSameLineDevice extends BNDevice
+{
+  @SuppressWarnings("unused") public void doPing()
+  {
+    pingOk();
+  }
+}
+-- BThrowsDevice.java --
+// The header continues on a throws line and the brace sits on its own line.
+package com.example.annotated;
+
+public class BThrowsDevice extends BNDevice
+{
+  @Override
+  public void doPing()
+      throws Exception
+  {
+    pingOk();
+  }
+}

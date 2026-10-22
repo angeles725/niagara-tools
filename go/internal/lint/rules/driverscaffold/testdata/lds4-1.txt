@@ -1,0 +1,54 @@
+-- root --
+.
+-- want --
+exit 1
+FAIL  lint-driver-scaffold  @DIR@/BNfooDevice.java:6  doPing() only calls pingOk(): every device reports UP (wizard stub, silent success)
+WARN  lint-driver-scaffold  @DIR@/BNfooDevice.java:17  wizard stub: // TODO add poll support
+WARN  lint-driver-scaffold  @DIR@/BNfooNetwork.java:6  doSubmitDiscoveryJob() submits with a null Context: use job.submit(cx)
+WARN  lint-driver-scaffold  @DIR@/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage driver specific NMessage
+WARN  lint-driver-scaffold  @DIR@/NfooMessageFactory.java:6  toResponse() only returns null (wizard message factory)
+-- BNfooDevice.java --
+// Shape of the NDriver wizard output (devkit-wb.jar!gradle/ndriver/BNfooDevice.java.vm:102-124).
+package com.example.nfoo;
+
+public class BNfooDevice extends BNDevice
+{
+  public void doPing()
+  {
+    // TODO - add ping implementation
+    // if()
+    pingOk();
+    // else
+    //  pingFail("not receiving response from device ");
+  }
+
+  public void doPoll()
+  {
+    // TODO add poll support
+  }
+}
+-- BNfooNetwork.java --
+// Shape of the NDriver wizard output (devkit-wb.jar!gradle/ndriver/BNfooNetwork.java.vm:200-205).
+package com.example.nfoo;
+
+public class BNfooNetwork extends BNNetwork
+{
+  public BOrd doSubmitDiscoveryJob(BNfooDeviceDiscoveryPreferences prefs, Context cx)
+  {
+    BNfooLearnDevicesJob job = new BNfooLearnDevicesJob(this, prefs);
+    return job.submit(null);
+  }
+}
+-- NfooMessageFactory.java --
+// Shape of the NDriver wizard output (devkit-wb.jar!gradle/ndriver/NfooMessageFactory.java.vm:22-29).
+package com.example.nfoo;
+
+public class NfooMessageFactory implements NMessageFactory
+{
+  public NMessage toResponse(LinkMessage lm)
+  {
+    //
+    // TODO - convert linkMessage driver specific NMessage
+    return null;
+  }
+}
