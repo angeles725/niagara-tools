@@ -177,14 +177,12 @@ parse_args() {
                 STRICT_SLOTOMATIC=1
                 shift ;;
             --first-deploy)
-            FIRST_DEPLOY=1
-            shift
-            ;;
-        --accept-lossy)
-            ACCEPT_LOSSY=1
-            shift
-            ;;
-        --no-gate)
+                FIRST_DEPLOY=1
+                shift ;;
+            --accept-lossy)
+                ACCEPT_LOSSY=1
+                shift ;;
+            --no-gate)
                 NO_GATE=1
                 shift ;;
             --full-backup)
@@ -551,9 +549,6 @@ write_last_deploy_sha() {
 }
 
 # ---------------------------------------------------------------------------
-# main — orchestrator
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
 # module_version <jar> — the module's own vendorVersion (the <module ...> root tag, not a dependency floor)
 # ---------------------------------------------------------------------------
 module_version() {
@@ -614,6 +609,9 @@ precheck_schema() {
     esac
 }
 
+# ---------------------------------------------------------------------------
+# main — orchestrator
+# ---------------------------------------------------------------------------
 main() {
     parse_args "$@"
     load_env_file "$ENV_FILE"
