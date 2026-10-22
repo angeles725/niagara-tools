@@ -169,6 +169,9 @@ Before `git commit`:
       `not ok` line, so a check that greps for failures reads it as green. A parallel run must assert that its `ok`
       count equals `bats --count tests/*.bats`. `[ev: retro retro-fold-campaign-close Δ2]`
 - [ ] `shellcheck scripts/*.sh build-n4-module-kit/toolbelt/*.sh tests/*.bats tests/helpers/*.bash` exits 0 (no warnings on changed lines).
+- [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
+      pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or
+      adds findings (0.11 missed SC2015, adds SC2329). `--list` shows each step as RUN or SKIP. `[ev: retro ci-local-replay]`
 - [ ] Commit message is Conventional Commits (`feat:` / `fix:` / `chore:` / `docs:` /
       `refactor:` / etc.).
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.

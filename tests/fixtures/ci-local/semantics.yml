@@ -1,0 +1,22 @@
+name: CI
+on: pull_request
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: pipe without pipefail
+        run: false | true
+      - name: plain false
+        run: false
+      - name: errexit stops the block
+        run: |
+          false
+          echo should-not-print
+      - name: runs after a failure
+        run: echo ran-after
+      - name: multi-line block
+        run: |
+          # a comment line
+          X=line-two
+          echo "$X-ok"
