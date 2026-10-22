@@ -7,7 +7,7 @@ public class BReachDevice extends BNDevice
   {
     try (Socket s = new Socket())
     {
-      s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // bounds the Ping: thread
+      s.connect(new InetSocketAddress(getHost(), getPort()), 2000);   // bounds the connect, not DNS
       pingOk();
     }
     catch (IOException e)
