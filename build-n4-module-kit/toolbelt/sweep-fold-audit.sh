@@ -34,7 +34,8 @@
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
 
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# readlink -f: resolve a symlinked copy of this file (report-module test toolbelts) to the real kit, so ../../go exists.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 GO_DIR="$(cd "$here/../.." && pwd)/go"
 [ -f "$GO_DIR/go-tool.sh" ] || { printf 'sweep-fold-audit: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
 # shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
