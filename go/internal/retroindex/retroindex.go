@@ -15,7 +15,9 @@ package retroindex
 
 import (
 	"bufio"
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -67,10 +69,10 @@ func digits(s string) bool {
 }
 
 // ParseHeader reads the first 10 lines of the retro called name and returns its entry, or the
-// contract violation that keeps it out of the index ("" reason = ok).
-func ParseHeader(name string, r io.Reader) (Entry, string) {
-	e, reason, _ := parseHeader(name, r)
-	return e, reason
+// contract violation that keeps it out of the index ("" reason = ok), or the read error that
+// stopped it (a read error is never a short header: the caller must not render a partial index).
+func ParseHeader(name string, r io.Reader) (Entry, string, error) {
+	return parseHeader(name, r)
 }
 
 func parseHeader(name string, r io.Reader) (Entry, string, error) {
@@ -123,9 +125,14 @@ func parseHeader(name string, r io.Reader) (Entry, string, error) {
 
 // Scan parses every retro (*.md regular file, INDEX.md and dotfiles excluded) in dir, in
 // bytewise name order. Problems come back in that order; entries are unsorted by date.
-// An unreadable dir yields nothing, like the unmatched shell glob it replaces.
-func Scan(dir string) ([]Entry, []Problem) {
-	files, _ := os.ReadDir(dir) // sorted by filename
+// It fails closed: an unlistable dir is an error, and a retro that cannot be stat'ed or read is
+// an IO problem, so no partial index is rendered. Only an entry that vanished or a dangling
+// symlink is skipped, as the `[ -f ]` test of the shell glob it replaces did.
+func Scan(dir string) ([]Entry, []Problem, error) {
+	files, err := os.ReadDir(dir) // sorted by filename
+	if err != nil {
+		return nil, nil, err
+	}
 	var entries []Entry
 	var problems []Problem
 	for _, de := range files {
@@ -134,10 +141,15 @@ func Scan(dir string) ([]Entry, []Problem) {
 			continue
 		}
 		path := filepath.Join(dir, name)
-		if st, err := os.Stat(path); err != nil || !st.Mode().IsRegular() {
+		st, err := os.Stat(path)
+		if errors.Is(err, fs.ErrNotExist) || (err == nil && !st.Mode().IsRegular()) {
 			continue
 		}
-		e, reason, err := parseFile(name, path)
+		var e Entry
+		var reason string
+		if err == nil {
+			e, reason, err = parseFile(name, path)
+		}
 		switch {
 		case err != nil:
 			problems = append(problems, Problem{Name: name, Reason: "cannot read the header: " + err.Error(), IO: true})
@@ -147,7 +159,7 @@ func Scan(dir string) ([]Entry, []Problem) {
 			entries = append(entries, e)
 		}
 	}
-	return entries, problems
+	return entries, problems, nil
 }
 
 func parseFile(name, path string) (Entry, string, error) {

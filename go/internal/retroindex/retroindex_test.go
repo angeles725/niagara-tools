@@ -1,10 +1,13 @@
 package retroindex
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 const (
@@ -49,7 +52,11 @@ func TestParseHeader(t *testing.T) {
 			"| 2026-09-01-a.md | kit | 2026-09-01 | pending | 2 |", ""},
 	}
 	for _, c := range cases {
-		e, reason := ParseHeader(c.file, strings.NewReader(c.text))
+		e, reason, err := ParseHeader(c.file, strings.NewReader(c.text))
+		if err != nil {
+			t.Errorf("%s: unexpected read error %v", c.name, err)
+			continue
+		}
 		if reason != c.reason {
 			t.Errorf("%s: reason = %q, want %q", c.name, reason, c.reason)
 			continue
@@ -89,7 +96,10 @@ func TestGoldenRealTree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entries, problems := Scan(dir)
+	entries, problems, err := Scan(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(problems) != 0 {
 		t.Fatalf("real retros have header problems: %+v", problems)
 	}
@@ -114,11 +124,55 @@ func TestScanSkipsIndexDotfilesAndNonFiles(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, "2026-09-03-dir.md"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	entries, problems := Scan(dir)
+	entries, problems, err := Scan(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(entries) != 1 || entries[0].Name != "2026-09-01-ok.md" {
 		t.Errorf("entries = %+v, want only 2026-09-01-ok.md", entries)
 	}
 	if len(problems) != 1 || problems[0].Name != "2026-09-02-bad.md" || problems[0].Reason != errModule || problems[0].IO {
 		t.Errorf("problems = %+v, want one module violation for 2026-09-02-bad.md", problems)
+	}
+}
+
+// The review advisory of #288: a read error must never look like a short header.
+func TestParseHeaderReportsReadErrors(t *testing.T) {
+	t.Parallel()
+	boom := errors.New("boom")
+	r := io.MultiReader(strings.NewReader("<!-- review-status: pending -->\n"), iotest.ErrReader(boom))
+	if _, _, err := ParseHeader("2026-09-01-a.md", r); !errors.Is(err, boom) {
+		t.Errorf("ParseHeader err = %v, want the reader's error", err)
+	}
+}
+
+func TestScanFailsClosedOnAnUnlistableDir(t *testing.T) {
+	t.Parallel()
+	file := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	entries, problems, err := Scan(file)
+	if err == nil || entries != nil || problems != nil {
+		t.Errorf("Scan(file) = %v, %v, %v; want only an error", entries, problems, err)
+	}
+}
+
+func TestScanReportsAnUnstatableRetroAsIO(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "2026-09-01-a.md"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o444); err != nil { // listable, but no entry can be stat'ed
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	entries, problems, err := Scan(dir)
+	if err != nil || len(entries) != 0 || len(problems) != 1 || !problems[0].IO || problems[0].Name != "2026-09-01-a.md" {
+		t.Errorf("Scan = %v, %+v, %v; want one IO problem", entries, problems, err)
 	}
 }

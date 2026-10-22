@@ -64,13 +64,19 @@ jobs:
           cache: false
 
       - name: Go gofmt + vet + test (go/)
-        run: cd go && test -z "$(gofmt -l . | tee /dev/stderr)" && go vet ./... && go test ./...
+        run: |
+          cd go
+          # The assignment fails the step when gofmt itself fails; a non-empty list fails it too.
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
+          go vet ./...
+          go test ./...
 
       - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
         run: cd go && go build -o bin/ ./cmd/...
 
       - name: shellcheck (scripts, toolbelt, tests) — CONTRIBUTING.md §6
-        run: shellcheck scripts/*.sh scripts/lib/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
+        run: shellcheck scripts/*.sh scripts/lib/*.sh go/*.sh build-n4-module-kit/toolbelt/*.sh build-n4-module-kit/toolbelt/lib/*.sh build-n4-module-kit/templates/client-pre-push tests/*.bats tests/helpers/*.bash
 
       - name: bats (all unit tests)
         run: bats tests/*.bats
