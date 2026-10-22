@@ -19,10 +19,13 @@
 #
 # Exit: 0 every run step passed; 1 a step failed; 2 usage error or an UNCOVERED / unparsable step;
 #       3 the pinned shellcheck could not be provisioned (sha256 mismatch, download failed, no sha256 tool),
-#         or the ci-steps parser could not be built (no `go` on PATH, build failure);
-#       4 host pids pressure: a cgroup under ${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup} uses more than half of its
-#         pids.max (a full init.scope rejected every fork and aborted all sessions on 2026-10-22); wait and retry.
-# [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps]
+#         the ci-steps parser or host-budget could not be built (no `go` on PATH, build failure), or host-budget
+#         could not read the cgroup root;
+#       4 host budget exceeded (go/cmd/host-budget FAIL row): a cgroup under ${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}
+#         uses more than half of its pids.max (a full init.scope rejected every fork and aborted all sessions on
+#         2026-10-22), the system thread count is above half of threads-max, or / or /mnt/c is above 90% used;
+#         wait (or free disk) and retry. --list never runs the check.
+# [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps] [ev: retro r8-t47-host-budget]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -111,23 +114,21 @@ fi
 [ "$uncovered" -eq 0 ] || exit 2
 [ "$LIST" -eq 0 ] || exit 0
 
-# check_host_pids — refuse to start the steps while any cgroup is above 50% of a numeric pids.max.
-check_host_pids() {
-  local root="${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}" d cur max busy=0
-  for d in "$root"/*/; do
-    [ -r "$d/pids.current" ] || continue
-    [ -r "$d/pids.max" ] || continue
-    read -r cur < "$d/pids.current"; read -r max < "$d/pids.max"
-    [[ "$cur" =~ ^[0-9]+$ && "$max" =~ ^[1-9][0-9]*$ ]] || continue
-    if [ $((cur * 2)) -gt "$max" ]; then
-      printf 'ci-local: host pids pressure in %s: %s/%s (> 50%%); wait for other sessions and retry\n' \
-        "$(basename "$d")" "$cur" "$max" >&2
-      busy=1
-    fi
-  done
-  [ "$busy" -eq 0 ] || exit 4
+# check_host_budget — refuse to start the steps while go/cmd/host-budget reports a FAIL row: a cgroup above
+# 50% of a numeric pids.max (or the system thread count above 50% of threads-max), or / or /mnt/c above 90%
+# used. WARN rows (pids above 40%, disk above 80%, GOCACHE above 20 GB) are printed and do not block.
+# Mutation: CL10 -- dropping this call lets the steps run on a host near its fork limit.
+check_host_budget() {
+  local bin rc=0
+  bin="$(go_tool_bin "$ROOT/go" host-budget)" || exit 3
+  "$bin" --cgroup-root "${CI_LOCAL_CGROUP_ROOT:-/sys/fs/cgroup}" >&2 || rc=$?
+  case "$rc" in
+    0) ;;
+    1) printf 'ci-local: host budget exceeded (FAIL row above); wait for other sessions and retry\n' >&2; exit 4 ;;
+    *) printf 'ci-local: host-budget could not read the host (exit %d)\n' "$rc" >&2; exit 3 ;;
+  esac
 }
-check_host_pids
+check_host_budget
 
 # provision_shellcheck — verify (and on first use download) the pinned tarball, unpack it into $WORK, PATH it.
 provision_shellcheck() {
