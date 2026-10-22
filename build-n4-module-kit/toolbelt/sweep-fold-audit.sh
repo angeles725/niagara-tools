@@ -15,148 +15,25 @@
 # somewhere in the corpus. Exact stem, exact Δ number — no segment or prefix credit. A missing one
 # is `fold-audit: WARN <file> Δk not cited`; a non-numeric deltas cell is a WARN too (fail closed).
 # Older rows cite by stem only (the pre-Δ convention), hence the cutoff.
-# Mutation: F9 -- substring matching credits another stem's Δk, or Δ10 for Δ1.
 #
-# Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md.
-# Token harvest: grep -ohE '\[ev: retro <token>' across corpus files.
-# Stem: filename minus leading YYYY-MM-DD- and trailing .md.
-# Token match (hyphen-segment aligned, floor 6 chars):
-#   case "-$stem-" in *"-$T-"*)
+# Corpus: every *.md under <kit-root> excluding */retros/* and INDEX.md (ledger.d/ fragments count).
+# Stem: filename minus leading YYYY-MM-DD- and trailing .md. A stem token T (6-char floor) credits
+# a row when "-T-" is a hyphen-segment-aligned part of "-<stem>-".
+#
+# Implementation: the Go module at <repo>/go (go/internal/foldaudit, r8 T17), byte-identical to the
+# former bash tool under C.UTF-8. This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin`
+# builds go/bin/sweep-fold-audit when the binary is missing or older than a Go source, then this
+# script execs it. Needs `go` on PATH to build (a missing toolchain or failed build exits 3).
+# Mutation pins (F3, F4, F6, F9, F11) are exercised by tests/sweep-fold-audit.bats and the Go tests.
 # This script is VCS-free by design — version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
 
-STRICT=0
-DSINCE=""
-USAGE="usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --strict) STRICT=1; shift ;;
-    --deltas-since)
-      [[ "${2:-}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || {
-        echo "fold-audit: --deltas-since needs a YYYY-MM-DD date" >&2; echo "$USAGE" >&2; exit 3; }
-      DSINCE="$2"; shift 2 ;;
-    --) shift; break ;;
-    -*)
-      echo "fold-audit: unknown flag: $1" >&2
-      echo "$USAGE" >&2
-      exit 3
-      ;;
-    *) break ;;
-  esac
-done
-
-[ $# -eq 2 ] || {
-  echo "$USAGE" >&2
-  exit 3
-}
-
-INDEX="$1"
-KITROOT="$2"
-
-[ -f "$INDEX" ]   || { echo "fold-audit: INDEX not found: $INDEX" >&2;    exit 3; }
-[ -d "$KITROOT" ] || { echo "fold-audit: kit-root not found: $KITROOT" >&2; exit 3; }
-
-# Harvest citation tokens from corpus (VCS-free, pure file scan).
-# retros/ excluded: self-citations must not mask genuinely uncited entries.
-# INDEX.md excluded: cross-links in the index are not proof of folded content.
-# Token format: [ev: retro <token>] where token is [A-Za-z0-9][A-Za-z0-9._-]+
-# The 6-char floor removes template placeholders like [ev: retro X].
-TOKENS=$(find "$KITROOT" -name '*.md' \
-  ! -path "*/retros/*" \
-  ! -name 'INDEX.md' \
-  -exec grep -ohE '\[ev: retro [A-Za-z0-9][A-Za-z0-9._-]*' {} + 2>/dev/null \
-  | sed 's/\[ev: retro //' \
-  | sort -u)
-
-# Δ-granular harvest (only with --deltas-since): one "<stem> Δ<k>" line per citation or deferral.
-DTOKENS=""
-if [ -n "$DSINCE" ]; then
-  DTOKENS=$(find "$KITROOT" -name '*.md' \
-    ! -path "*/retros/*" \
-    ! -name 'INDEX.md' \
-    -exec grep -ohE '\[(ev|deferred): retro [A-Za-z0-9][A-Za-z0-9._-]* Δ[0-9]+\]' {} + 2>/dev/null \
-    | sed -E 's/^\[(ev|deferred): retro //; s/\]$//' \
-    | sort -u)
-fi
-
-NFOLDED=0; NCITED=0; NUNCITED=0; HAS_WARN=0; DCHECKED=0; DMISSING=0
-
-while IFS= read -r line; do
-  # Only pipe-delimited data rows containing a dated retro filename
-  case "$line" in \|*) : ;; *) continue ;; esac
-  printf '%s\n' "$line" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}[^|]*\.md' || continue
-  fname=$(printf '%s\n' "$line" | grep -oE '[A-Za-z0-9._-]+\.md' | grep -vx 'INDEX.md' | head -1)
-  [ -n "$fname" ] || continue
-  rstatus=$(printf '%s\n' "$line" | awk -F'|' '{
-    for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="pending"||$i=="folded"){print $i; exit}}
-  }')
-  [ "$rstatus" = "folded" ] || continue
-  NFOLDED=$((NFOLDED + 1))
-
-  # Stem: strip leading YYYY-MM-DD- date prefix and trailing .md
-  base="${fname%.md}"
-  stem=$(printf '%s' "$base" | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-//')
-
-  # Check each harvested token for hyphen-segment alignment with this stem.
-  # A token T credits the stem when "-T-" appears as a segment in "-stem-".
-  # Example: token "5rooms" credits stem "dashboardpan-5rooms" because
-  #          "-dashboardpan-5rooms-" contains the segment "-5rooms-".
-  # Counter-example: token "ender-doors" does NOT credit "detail-render-doors"
-  #          because "-detail-render-doors-" has no segment "-ender-doors-"
-  #          ("ender" is mid-segment inside "render").
-  matched=0
-  match_count=0
-  matched_tokens=""
-  while IFS= read -r T; do
-    [ -n "$T" ] || continue
-    [ "${#T}" -ge 6 ] || continue
-    case "-${stem}-" in
-      *"-${T}-"*)
-        matched=1
-        match_count=$((match_count + 1))
-        matched_tokens="${matched_tokens} ${T}"
-        ;;
-    esac
-  done <<< "$TOKENS"
-
-  # Δ-granular reconcile check for rows on/after the cutoff (filename date, lexical compare).
-  if [ -n "$DSINCE" ] && [[ ! "${fname:0:10}" < "$DSINCE" ]]; then
-    ndelta=$(printf '%s\n' "$line" | awk -F'|' '{
-      for(i=1;i<=NF;i++){gsub(/^ +| +$/,"",$i); if($i=="folded"){print $(i+1); exit}}
-    }' | tr -d ' ')
-    if ! [[ "$ndelta" =~ ^[0-9]+$ ]]; then
-      printf 'fold-audit: WARN %s deltas cell unreadable (%s)\n' "$fname" "$ndelta"
-      DMISSING=$((DMISSING + 1)); HAS_WARN=1
-    else
-      for ((k = 1; k <= ndelta; k++)); do
-        DCHECKED=$((DCHECKED + 1))
-        if ! grep -qxF -- "$stem Δ$k" <<< "$DTOKENS"; then
-          printf 'fold-audit: WARN %s Δ%d not cited\n' "$fname" "$k"
-          DMISSING=$((DMISSING + 1)); HAS_WARN=1
-        fi
-      done
-    fi
-  fi
-
-  if [ "$matched" -eq 0 ]; then
-    printf 'fold-audit: WARN %s folded with no [ev: retro …] citation\n' "$fname"
-    NUNCITED=$((NUNCITED + 1))
-    HAS_WARN=1
-  else
-    NCITED=$((NCITED + 1))
-    if [ "$match_count" -gt 1 ]; then
-      printf 'fold-audit: NOTE ambiguous citation token credits %s:%s\n' "$fname" "$matched_tokens"
-    fi
-  fi
-done < "$INDEX"
-
-printf 'fold-audit: %d folded, %d cited, %d uncited\n' "$NFOLDED" "$NCITED" "$NUNCITED"
-if [ -n "$DSINCE" ]; then
-  printf 'fold-audit: deltas: %d checked, %d not cited (folded rows since %s)\n' "$DCHECKED" "$DMISSING" "$DSINCE"
-fi
-
-if [ "$HAS_WARN" -eq 1 ] && [ "$STRICT" -eq 1 ]; then
-  exit 1
-fi
-exit 0
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'sweep-fold-audit: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" sweep-fold-audit)" || exit 3
+# The Go tool prefixes the bash runtime diagnostics it reproduces with this script's $0.
+SWEEP_FOLD_AUDIT_ARG0="$0" exec "$BIN" "$@"
