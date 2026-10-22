@@ -26,7 +26,10 @@ corrected the instructor (the default store is `niagara.signing.jceks`, not `.jk
   (fixtures/MinimalPan, CompPan, DashboardFord) `[ev: corpus B1418 §1418.5 e]`
 - `lint-service-types.sh`: RED 0/9 before the script existed, GREEN 11/11 (ST1-ST9, ST-awkfail, ST-finderr); each
   declared mutation observed flipping its own test. Review follow-up: every `return` is checked and an assignment is
-  read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
+  read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). T9h review follow-up: nested-scope
+  returns (block lambda, anonymous class, local class) are skipped and the rank order is pinned (RED ST12 → GREEN
+  15/15, mutations ST12/ST13 observed; vendor smoke unchanged); review fix: exact switch-rule labels and literal
+  contents blanked (RED ST14/ST15 → GREEN 17/17, mutations ST14/ST15 observed). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
   590 files declaring `getServiceTypes`, 0 FAIL, 6 WARN no own type (registered only under an interface type,
   genuine by the rule), 4 WARN unresolved `[ev: corpus B1419 §1419.1]`
 
@@ -52,8 +55,10 @@ quality-round8 T9f course-recording rows") until a session with those files in s
   CONFIG rare) and the D3-8 reason (users cannot switch `System.out` off; `lint-no-system-out.sh` already enforces
   the rule); §3 Fault surfacing — D4-15 lexiconized `configFail` cause. `[ev: corpus B1418 §1418.2]` `[ev: corpus B1419 §1419.4 c]`
 - `types/logic-authoring.md` § BQL from code — a pointer to the BQL case rules in `types/dashboard.md` (D3-23).
-- Component lifecycle rows deferred until T9b merges (`types/logic-authoring.md`): D1-12, D1-14, D1-15, D1-16,
-  D1-17, D1-18, D2-11, D2-12, D2-13.
+- FOLDED by T9h (2026-10-22): the `types/observability.md` §1/§3 rows above (plus D3-7, the `LogHistoryService`
+  single `minimumSeverity` ops note) and the `types/logic-authoring.md` § BQL from code pointer.
+- Component lifecycle rows (`types/logic-authoring.md`), still owed now that T9b has merged; they belong to T9g
+  (Ayudante1): D1-12, D1-14, D1-15, D1-16, D1-17, D1-18, D2-11, D2-12, D2-13.
 
 ## Lessons
 - A spoken demo, the official devguide and our own older block can agree and still be wrong for our hosts: the
