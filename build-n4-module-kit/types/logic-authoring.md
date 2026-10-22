@@ -87,6 +87,9 @@ BObject result = target.get();
   where the Context filters the rows and there is no single target to check (§ BQL from code).
   `toolbelt/lint-null-context-write.sh` checks the Context argument, not the form. Resolve against the
   narrowest base you hold (the component, not the station root). `[ev: retro n4-course-drivers-bql-ords-files Δ4]` `[ev: corpus B1237 §1237.3]`
+- A target resolved with a null Context answers `canRead()`/`canWrite()`/`canInvoke()` with true (no user →
+  `BPermissions.all`; no security target → true): the check above only bites with the caller's Context.
+  Code and the custom-scheme contract: `types/security.md` § 4.4. `[ev: retro devguide415-r2-runtime-contracts-formats Δ2]`
 - Store a portable ORD with `relativizeToSession()` (`station:|slot:…`), not the absolute host form.
   `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 - **Absolute ORD** (host-anchored, starts with a host-type scheme): `base` may be `null`.

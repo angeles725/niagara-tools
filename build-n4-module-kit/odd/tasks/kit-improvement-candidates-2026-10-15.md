@@ -488,6 +488,16 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `NiagaraSuperSession.java:184-198,217-244`, `SessionTimeoutServlet.java:25-38`, web-rt `WEB-INF/web.xml:59-68,84-91`, corpus B1344, B1318 §1318.2, B1334, B1326 row 8.
 - **Target:** `types/dashboard.md` (new § Session lifetime / HMI kiosk), `types/security.md` §3, commissioning checklist.
 - **Lint-able:** partial — poll loop must reference `/timeout`/`keepAlive` or document route (1); commissioning check of user slots. **Fold type:** new doc section + lint + commissioning item. Live proof B1315-G1 still open.
+- **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; r3wsh Δ1, Δ2, has Δ1, wuh Δ1, Δ6, Δ7, sta Δ3): the
+  static recipe was already in `types/dashboard.md` § Session lifetime (t9c-reference-gaps Δ1); this unit adds "a
+  poll is not activity", route 3 scoped to war-style modules, the 401/re-login rule, the 4.14 scope of absolute
+  logoff, the kiosk-user commissioning checklist (4.15.6.20 Touch guide lines) and `types/security.md` § 3.4
+  (client-certificate SSO). **Premise corrected:** r3wsh Δ1 route (2) "keep-alive = raw `POST /timeout`" is not
+  adopted: contract question, doc wins — devguide `autoLogoffWeb.txt:35,112-125` publishes only
+  `keepAlive()`/`release(token)`; the raw POST (B1344 §1344.4, `[INFER]`) is the monitor's internal and defeats the
+  logoff policy. has Δ1 "map the filter on the poll servlet" stays rejected (only shipped mapping: web-rt `file`,
+  vineflower 4.14.0.162 `WEB-INF/web.xml:84-91`). Not adopted: wuh Δ7 "assigning the cert restarts Fox/Web" (not
+  found in the 4.15.6.20 Touch guide). Live proof B1315-G1 still open. Owed Go lint G18 `session-keepalive`.
 
 ### C32 — Alarms for control modules: inhibit during defrost, ext chooser, ext owns FAULT
 - **Sources:** cas#Δ2 (primary) · rac#Δ6 extends (alarm ext clears/owns ALARM|FAULT|UNACKED)
@@ -536,6 +546,12 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BComponent.java:1979-1982`, `OrdTarget.java:465-480`, corpus B1316 §1316.2, B1308 §1308.1.
 - **Target:** `types/security.md` §4, `types/logic-authoring.md:73`, `types/module-wiring.md` § ordScheme.
 - **Lint-able:** partial — WARN `.resolve(x, null)` in a file that calls `.canRead(`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; rcf Δ2, nsto Δ8, rsb Δ5): `types/security.md` § 4.4
+  (`getPermissions` → `BPermissions.all` with no user; `OrdTarget.can*` true with no security target; custom
+  `BOrdScheme` contract) and § 2.4 worker-thread Context, `types/logic-authoring.md` § ORD resolution pointer,
+  `types/module-wiring.md` ordScheme pointer. Verified in vineflower baja 4.14.0.162 (`OrdTarget.java:281-294`,
+  `BComponent.java:896-903`) and devguide source 4.15.6.20 (`OrdTarget.java:476-503`, `BComponent.java:1971-1982`);
+  4.13 not verified. The lint half rides with #293 as owed Go lint G19 `null-context-permission-check`.
 
 ### C40 — Test runner that refuses silent passes
 - **Sources:** tpb#Δ2 (primary)
@@ -561,6 +577,14 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `BHttpClientService.java:88-89,231-252,270`, `BHttpClient.java:277,304-306`, `IHttpClient.java:23`, corpus B1333, B1346.
 - **Target:** `types/cloud-connector.md` §7, `types/issues-and-gotchas.md` H2, `types/security.md`.
 - **Lint-able:** partial — grep `HttpClientBuilder` without `mountAtOrd`. **Fold type:** doc section + commissioning item.
+- **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; shl Δ7, r3di Δ4, Δ5, r3-report#R3): `types/cloud-connector.md`
+  § 7 rewritten (four-step ladder, gate closed by default, health-fault refusal, commissioning item, OAuth2 route),
+  `types/issues-and-gotchas.md` H2 corrected. **Premise corrected (kit text):** "a non-driver client receives a
+  `ServiceException`" — code wins: httpClient-rt has no such exception; `permittedByService` catches the refusal,
+  writes a health fault and returns false, `sendSync()` returns `""` (vineflower httpClient-rt 4.14.0.162
+  `BHttpClientService.java:231-252`, `BHttpClient.java:277,302-306`; javap `httpClient-rt.jar` 4.15.6.20 same message,
+  default false). The leftover "okhttp from `net-rt`" in both passages removed (C27). Unmounted-client NPE stays
+  `[INFER]` (B1346-G1). Pins KPW1, KPW2; owed Go lint G20 `http-client-mount`.
 
 ### C44 — Driver health: failed polls do not ping-fail a device; ping rules
 - **Sources:** r3di#Δ1 (primary) · drp#Δ7 extends (faulted device never pinged; alarm after retries + 5-min startup delay)
@@ -579,6 +603,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `Obix/LicenseRequirement-OBIXDriver-9F25675C.txt:19`, `obixDriver-ObixExport.txt:61`, `ObixEncoder.java:234-236,588-589`, corpus B1343, B1347. Applies to the PANCCADIA oBIX read/write users.
 - **Target:** `types/dashboard.md:23`, `types/logic-authoring.md:554`, `types/security.md` (oBIX exposure).
 - **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; drp Δ9, r3wsh Δ6): `types/security.md` § 2.5 (licence and
+  410/500 from the 4.15.6.20 Obix guide, `ObixExport` priority writes, `set` vs `override`, watch leases, HIDDEN ≠
+  protected from obixDriver-rt 4.14.0.162 vineflower `ObixEncoder.java:234-236,588-589`). The direct-path read of a
+  HIDDEN slot stays `[INFER]` (not executed). No lint (no deterministic signal in module source).
 
 ### C47 — Canonical `module-permissions.xml` template and Security Manager card
 - **Sources:** afl#Δ2 (primary: template, fixture, scaffold) · has#Δ5 extends (debug switches, permission-free homes, `<opt-permission>`, Policy Spy)
