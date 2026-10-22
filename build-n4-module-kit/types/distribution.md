@@ -110,7 +110,8 @@ build environment only. `[ev: corpus B1027 §1027.4]`
 During development, import the self-signed dev cert into the **Workbench user
 trust store** (`<user_home>/security/cacerts.jceks`). The production cert goes
 into the station's trust store through the overlay; it is never hand-imported
-into a production JACE. `[ev: corpus B18 §18.9]`
+into a production JACE. `[ev: corpus B18 §18.9]` Which signature statuses each verification mode accepts, and
+how to read a host's mode: `build-verify.md` § Signing per deploy target. `[ev: retro devguide415-r2-packaging-platform-signing Δ6]`
 
 **The default dev key (no signing block in the build):** the plugin's `LocalSigningProfile` signs with a
 self-signed alias `Niagara4Modules` (keytool lists it lower-case) in `~/.tridium/security/niagara.signing.jceks`

@@ -636,12 +636,31 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** course `Slide Code/…/module-permissions.xml`, `Labs/Lab9 Multithreaded/module-permissions.xml`; devguide `security/securityManager.txt:44-124`, `requestingPermissions.txt:677-730`; corpus B1312 §1312.1.
 - **Target:** new `templates/module-permissions.xml`, `types/structure.md` § module-permissions.xml, fixture, `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN non-`<permissions>` root, `<req-permission>` without `<purposeKey>`; WARN `new File("/` outside homes. **Fold type:** template + doc section + lint.
+- **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-sign`, 2026-10-23; afl Δ2, has Δ5): new `templates/module-permissions.xml`
+  (devkit-wb 4.14.0.162 wizard shape `gradle/includes/niagara/module-permissions.xml.vm:1-19` + course Lab9 requests),
+  `types/structure.md` § module-permissions.xml (template, `AccessControlException` path, Security Manager card from
+  devguide 4.15.6.20 `security/securityManager.txt:44-124`, `requestingPermissions.txt:40-80,142,596,653`). LEFT: the
+  fixture copy and `scaffold-module.sh` emission (outside this unit's edit surface); the lint half is owed Go lint G21
+  `permissions-xml`. Pin KPS2.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
 - **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `ModuleSign/VerificationModesModuleSigning-182D0E86.txt:25-36`.
 - **Target:** `build-verify.md` § signing, `types/distribution.md:100`, `types/logic-authoring.md:917`, `toolbelt/lint-structure.sh`.
 - **Lint-able:** yes — WARN signing plugin without `allowDefaultProfile.set(false)`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-p1-sign`, 2026-10-23; bdps Δ4, pps Δ6, Δ7, rsb Δ1, Δ2, Δ3): `build-verify.md`
+  § Signing per deploy target (read the mode; mode × status table from the 4.15.6.20 ModuleSign guide; Signing
+  Service ≠ module signing; `RestrictedSigningProfile` + RSA 3072 + `allowDefaultProfile`; clean + Module Info check;
+  profile-XML secrecy; "Unable to load" causes; Jar Signer Tool), `types/distribution.md` pointer,
+  `types/logic-authoring.md` § BProgram. **Premise checked:** pps Δ6 "the guide's default Low is stale" — code wins:
+  `ModuleVerificationMode.make` returns `medium` for ≥ 4.9 (vineflower baja 4.14.0.162 `Nre.java:752-763`, decompiled
+  nre-ext 4.14 `ModuleVerificationMode.java:28-33`) against the guide's `VerificationModesModuleSigning-182D0E86.txt:17`;
+  the kit's existing JACE/supervisor line was already right. **Premise corrected (kit text):** "an unsigned
+  `BRobotCode` blob is rejected at instantiation" — code wins: `BCode` verifies only when a signature is present or
+  `program.requireSigning` is true, else logs `program.notSigned` (vineflower program-rt 4.14.0.162 `BCode.java:202-215`);
+  the guide agrees enforcement is off (`User/ProgramObjectSigning-10F25D1D.txt:16`). The allowDefaultProfile WARN is
+  L15 (C85). Owed Go lints G22 `signer-identity` (rsb Δ1, replaces the verify-module `--expect-signer` flag) and G23
+  `signing-secrets` (rsb Δ2). rsb Δ3's `--info` proof lines not folded (no source line located). Pin KPS1.
 
 ### C49 — `BSimple` encoding must be locale-safe (Spanish stations)
 - **Sources:** poh#Δ2 (primary)
