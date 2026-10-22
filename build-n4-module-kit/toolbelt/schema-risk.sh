@@ -23,6 +23,8 @@
 # bad invocation never masquerades as OUTAGE in a deployment script.  This deviates from the
 # kit's usual 2=usage/3=env convention by design (D4a).
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 
 # --- B795 §795.4 — embeddable classifier table (verbatim; diff-guarded by SR-CSV in schema-risk.bats) ---
 CSV_TABLE=$(cat <<'CSV'
@@ -79,7 +81,9 @@ type_name() {
 parse_slots() {
   local dir="$1"
   local -a java_files
-  mapfile -t java_files < <(find "$dir" -mindepth 1 -type d -name '.*' -prune -o -name "*.java" -print | sort)
+  # A fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is env (4), never fewer slots.
+  scan_files_or_exit error 4 "$WORK/java-files" "$dir" -name '*.java'
+  mapfile -t java_files < "$WORK/java-files"
   [ "${#java_files[@]}" -eq 0 ] && return
   awk '
     function count_depth(s,    i, n, ch, d) {

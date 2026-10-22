@@ -85,3 +85,15 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "LW-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: LW-locked -- a raw find walk skips the locked directory and passes clean.
+  printf "class A {}\n" > "$ONE/A.java"
+  mkdir -p "$ONE/locked"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LW" --strict "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-wb-threading: cannot list every file under $ONE: "* ]]
+}

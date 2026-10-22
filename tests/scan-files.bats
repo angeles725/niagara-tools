@@ -63,3 +63,29 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -ne 0 ]
   grep -q 'locked' "$TMPDIR_T/err"
 }
+
+@test "SF7: scan_files_or_exit lists a complete walk, and exits with the caller's prefix and code on an incomplete one" {
+  # Mutation: SF7 -- returning instead of exiting lets the caller scan a short list and pass clean.
+  mkdir -p "$TMPDIR_T/m/com" "$TMPDIR_T/m/locked"
+  printf 'x\n' > "$TMPDIR_T/m/com/A.java"
+  run scan_files_or_exit demo 3 "$TMPDIR_T/files" "$TMPDIR_T/m/com" -name '*.java'
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/m/com/A.java" ]
+  chmod 000 "$TMPDIR_T/m/locked"
+  if [ -r "$TMPDIR_T/m/locked" ]; then chmod 755 "$TMPDIR_T/m/locked"; skip "running as root"; fi
+  run scan_files_or_exit demo 4 "$TMPDIR_T/files" "$TMPDIR_T/m" -name '*.java'
+  chmod 755 "$TMPDIR_T/m/locked"
+  [ "$status" -eq 4 ]
+  [[ "$output" == "demo: cannot list every file under $TMPDIR_T/m: "*locked* ]]
+}
+
+@test "SF8: --prune-path <pattern> prunes every sub-directory whose path matches, at any depth (rc-scan rc/ext)" {
+  # Mutation: SF8 -- ignoring --prune-path lists the vendored files under rc/ext again.
+  mkdir -p "$TMPDIR_T/m/rc/ext" "$TMPDIR_T/m/a/rc/ext/x" "$TMPDIR_T/m/ext"
+  printf 'x\n' > "$TMPDIR_T/m/rc/a.js"
+  printf 'x\n' > "$TMPDIR_T/m/rc/ext/b.js"
+  printf 'x\n' > "$TMPDIR_T/m/a/rc/ext/x/c.js"
+  printf 'x\n' > "$TMPDIR_T/m/ext/d.js"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" --prune-path '*/rc/ext' -name '*.js'
+  [ "$(cat "$TMPDIR_T/files")" = "$(printf '%s\n' "$TMPDIR_T/m/ext/d.js" "$TMPDIR_T/m/rc/a.js")" ]
+}

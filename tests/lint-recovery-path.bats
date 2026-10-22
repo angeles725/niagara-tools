@@ -52,3 +52,15 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
 @test "LRP-limitation: limitation comment present in script header (documented false-negative)" {
   grep -q 'helper method' "$KIT/toolbelt/lint-recovery-path.sh"
 }
+
+@test "LRP-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: LRP-locked -- a raw find walk skips the locked directory and passes clean.
+  printf "class A {}\n" > "$ONE/A.java"
+  mkdir -p "$ONE/locked"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LRP" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-recovery-path: cannot list every file under $ONE: "* ]]
+}

@@ -18,6 +18,8 @@
 # matched token is named in the row so a reviewer sees which term cleared it.
 # Mutation: DS2 -- removes demand-shaped input check, allowing pressure-without-demand methods to pass silently
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -31,8 +33,11 @@ WARNED=0
 
 # K20 / R2.5: a source dir with no *.java files is a configuration error -> exit 3.
 # Never emit a silent 0 (C8 lesson; WP9b shape). Row contains ERROR + demand-in-scope.
-_nj=$(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | wc -l)
-if [ "$_nj" -eq 0 ]; then
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-demand-scope 3 "$_TMP/files" "$SRC" -name '*.java'
+if [ ! -s "$_TMP/files" ]; then
   printf 'ERROR  demand-in-scope  %s  no *.java sources found\n' "$SRC"
   exit 3
 fi
@@ -185,7 +190,7 @@ while IFS= read -r f; do
     printf '%s\n' "$out"
     WARNED=1
   fi
-done < <(find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+done < "$_TMP/files"
 
 [ "$STRICT" -eq 1 ] && [ "$WARNED" -eq 1 ] && exit 1
 exit 0

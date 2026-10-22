@@ -38,6 +38,8 @@
 # Exits:  0 clean · 1 any FAIL · 3 usage/env (K20; no Java sources is exit 3 + ERROR row)
 # Dot-directories pruned (D9b). VCS-free by design (kit-links L2). LC_ALL=C.
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -67,7 +69,8 @@ fi
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 
-find "$SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort > "$_TMP/files.txt"
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-link-target-flags 3 "$_TMP/files.txt" "$SRC" -name '*.java'
 if [ ! -s "$_TMP/files.txt" ]; then
   printf 'ERROR  lint-link-target-flags  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"
   exit 3

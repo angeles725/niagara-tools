@@ -209,3 +209,65 @@ EOF
   run grep -c '${AL_AWK_ARGS\[@\]+"${AL_AWK_ARGS\[@\]}"}' "$KIT/toolbelt/lib/awk-lint.sh"
   [ "$output" -ge 1 ]
 }
+
+# strip_lint: writes $TMPDIR_T/strip-lint.sh, a comment-stripped per-file lint (awk_lint_strip_run)
+# whose check reports the first line holding BAD when the stripped file has no GOOD.
+strip_lint() {
+  cat > "$TMPDIR_T/strip-lint.sh" <<EOF
+#!/usr/bin/env bash
+set -u
+. "$KIT/toolbelt/lib/awk-lint.sh"
+awk_lint_parse strip-lint first 'usage: strip-lint.sh [--strict] <src-root>' "\$@"
+check() {
+  printf '%s\n' "\$AL_TEXT" | grep -q GOOD && return
+  printf '%s\n' "\$AL_TEXT" | grep -n BAD | head -1 | cut -d: -f1
+}
+awk_lint_strip_run check -name '*.java'
+EOF
+}
+
+@test "AL17: awk_lint_strip_run prints the check's line as a trimmed WARN row, in sorted file order, // comments stripped" {
+  # Mutation: AL17 -- checking the raw text instead of AL_TEXT lets a commented-out GOOD exempt B.java.
+  printf 'class B {\n   x = BAD;  \n  // GOOD\n}\n' > "$TMPDIR_T/src/B.java"
+  printf 'class C {\n  BAD(); // fine\n  GOOD();\n}\n' > "$TMPDIR_T/src/C.java"
+  printf 'class D {\n  // BAD\n}\n' > "$TMPDIR_T/src/D.java"
+  printf 'class A {\n  BAD();\n}\n' > "$TMPDIR_T/src/com/A.java"
+  strip_lint
+  run bash "$TMPDIR_T/strip-lint.sh" "$TMPDIR_T/src" "$TMPDIR_T/ignored"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$(printf 'WARN  strip-lint  %s:2  x = BAD;\nWARN  strip-lint  %s:2  BAD();' "$TMPDIR_T/src/B.java" "$TMPDIR_T/src/com/A.java")" ]
+}
+
+@test "AL18: awk_lint_strip_run exits 1 on a WARN under --strict, 0 on a clean tree under --strict" {
+  strip_lint
+  run bash "$TMPDIR_T/strip-lint.sh" --strict "$TMPDIR_T/src"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  printf 'BAD\n' > "$TMPDIR_T/src/B.java"
+  run bash "$TMPDIR_T/strip-lint.sh" --strict "$TMPDIR_T/src"
+  [ "$status" -eq 1 ]
+  [ "$output" = "WARN  strip-lint  $TMPDIR_T/src/B.java:1  BAD" ]
+}
+
+@test "AL19: an unreadable file is 'cannot scan' (exit 3); the other files are still scanned" {
+  # Mutation: AL19 -- ignoring the sed failure reads an empty text and passes the file clean.
+  printf 'BAD\n' > "$TMPDIR_T/src/B.java"
+  printf 'BAD\n' > "$TMPDIR_T/src/C.java"
+  chmod 000 "$TMPDIR_T/src/B.java"
+  if [ -r "$TMPDIR_T/src/B.java" ]; then skip "running as root"; fi
+  strip_lint
+  run bash "$TMPDIR_T/strip-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 3 ]
+  [[ "${lines[0]}" == "strip-lint: cannot scan $TMPDIR_T/src/B.java: "* ]]
+  [ "${lines[1]}" = "WARN  strip-lint  $TMPDIR_T/src/C.java:1  BAD" ]
+}
+
+@test "AL20: an unreadable sub-directory under awk_lint_strip_run is an env error (exit 3), never a clean pass" {
+  mkdir -p "$TMPDIR_T/src/locked"
+  chmod 000 "$TMPDIR_T/src/locked"
+  if [ -r "$TMPDIR_T/src/locked" ]; then skip "running as root"; fi
+  strip_lint
+  run bash "$TMPDIR_T/strip-lint.sh" --strict "$TMPDIR_T/src"
+  [ "$status" -eq 3 ]
+  [[ "$output" == "strip-lint: cannot list every file under $TMPDIR_T/src: "* ]]
+}

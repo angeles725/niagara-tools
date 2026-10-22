@@ -227,3 +227,15 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 1 ]
   [[ "$output" == *"BlockCommentApostrophe.java:7  unfloored"* ]]
 }
+
+@test "LD-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: LD-locked -- a raw find walk skips the locked directory and passes clean.
+  printf "class A {}\n" > "$ONE/A.java"
+  mkdir -p "$ONE/locked"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LD" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-delays: cannot list every file under $ONE: "* ]]
+}

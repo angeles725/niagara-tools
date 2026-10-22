@@ -165,3 +165,16 @@ JAVA
   [ "$status" -eq 3 ]
   [[ "$output" == *"ERROR"* ]] && [[ "$output" != *"WARN"* ]]
 }
+
+@test "DIS-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: DIS-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$S"
+  printf "class A {}\n" > "$S/A.java"
+  mkdir -p "$S/locked"
+  chmod 000 "$S/locked"
+  if [ -r "$S/locked" ]; then chmod 755 "$S/locked"; skip "running as root"; fi
+  run "$DIS" --strict "$S"
+  chmod 755 "$S/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-demand-scope: cannot list every file under $S: "* ]]
+}

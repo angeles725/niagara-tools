@@ -83,3 +83,19 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   extracted=$(awk '/^CSV_TABLE=\$\(cat <</{f=1;next} f&&/^CSV$/{exit} f{print}' "$script")
   [ "$extracted" = "$(cat "$oracle")" ]
 }
+
+@test "SR-locked: an unreadable sub-directory is an env error (exit 4), never a clean pass" {
+  # Mutation: SR-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
+  for d in before after; do
+    printf '<module><type name="A"/></module>\n' > "$BATS_TEST_TMPDIR/$d/module-include.xml"
+    printf 'class A {}\n' > "$BATS_TEST_TMPDIR/$d/A.java"
+  done
+  mkdir -p "$BATS_TEST_TMPDIR/after/locked"
+  chmod 000 "$BATS_TEST_TMPDIR/after/locked"
+  if [ -r "$BATS_TEST_TMPDIR/after/locked" ]; then chmod 755 "$BATS_TEST_TMPDIR/after/locked"; skip "running as root"; fi
+  run "$SR" "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
+  chmod 755 "$BATS_TEST_TMPDIR/after/locked"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"error: cannot list every file under $BATS_TEST_TMPDIR/after: "* ]]
+}

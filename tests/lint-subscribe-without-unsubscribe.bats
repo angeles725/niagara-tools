@@ -63,3 +63,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
+
+@test "SWU-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
+  # Mutation: SWU-locked -- a raw find walk skips the locked directory and passes clean.
+  mkdir -p "$TMPDIR_T/Mod/locked"
+  chmod 000 "$TMPDIR_T/Mod/locked"
+  if [ -r "$TMPDIR_T/Mod/locked" ]; then chmod 755 "$TMPDIR_T/Mod/locked"; skip "running as root"; fi
+  run "$SWU" "$TMPDIR_T/Mod"
+  chmod 755 "$TMPDIR_T/Mod/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-subscribe-without-unsubscribe: cannot list every file under $TMPDIR_T/Mod: "* ]]
+}

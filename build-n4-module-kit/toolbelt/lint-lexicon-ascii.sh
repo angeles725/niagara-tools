@@ -23,6 +23,8 @@
 # [ev: retro 2026-09-17-umbrelladashboard-module-creation]
 # Mutation: LA2 -- remove the non-ASCII byte scan and LA2 stops failing on a UTF-8 accented lexicon
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 LC_ALL=C
 export LC_ALL
 
@@ -44,6 +46,11 @@ command -v od >/dev/null 2>&1 || {
     exit 3
 }
 
+_TMP=$(mktemp -d)
+trap 'rm -rf "$_TMP"' EXIT
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit lint-lexicon-ascii 3 "$_TMP/files" "$MODULE_ROOT" -name '*.lexicon'
+
 _FAILED=0
 
 # Find every *.lexicon under module root, dot-dirs pruned (D9b)
@@ -61,7 +68,7 @@ while IFS= read -r _lex; do
             _FAILED=1
         fi
     done < "$_lex"
-done < <(find "$MODULE_ROOT" \( -type d -name '.*' -prune \) -o \( -type f -name '*.lexicon' -print \) | LC_ALL=C sort)
+done < "$_TMP/files"
 
 [ "$_FAILED" -eq 0 ] && exit 0
 exit 1

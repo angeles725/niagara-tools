@@ -76,6 +76,8 @@
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro campaign8-rc-scan]
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/scan-files.sh"
 
 FAILED=0
 STRICT=0
@@ -421,20 +423,13 @@ AWKEOF
 # Excludes: dot-directories (D9b — e.g. .deploy-baseline), srcTest, rc/ext,
 #           and *.min.js files.
 # ---------------------------------------------------------------------------
-_scan_files() {
-    find "$1" \
-        \( -type d \( -name '.*' -o -name 'srcTest' \) -prune \) \
-        -o \( -type d -path '*/rc/ext' -prune \) \
-        -o \( -type f -path '*/rc/*' \
-              \( -name '*.html' -o -name '*.js' -o -name '*.css' \) \
-              -not -name '*.min.js' \
-              -print \)
-}
 
 # WARN-row severity, one source for scan.awk (sevw) and orphan.awk (sev): FAIL under --strict.
 SEVW=WARN
 [ "$STRICT" -eq 1 ] && SEVW=FAIL
-_scan_files "$ARTIFACT_DIR" | LC_ALL=C sort > "$_TMP/files.txt"
+# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
+scan_files_or_exit rc-scan 3 "$_TMP/files.txt" "$ARTIFACT_DIR" --prune srcTest --prune-path '*/rc/ext' \
+    -path '*/rc/*' \( -name '*.html' -o -name '*.js' -o -name '*.css' \) -not -name '*.min.js'
 
 # ---------------------------------------------------------------------------
 # Per-file scan: run the awk program (two passes over the same file).
