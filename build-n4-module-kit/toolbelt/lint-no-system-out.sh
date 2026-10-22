@@ -17,26 +17,20 @@
 # can hide it (rare). VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # Mutation: NSO2 -- drop the System.out.print case and NSO2 stops flagging System.out.println
 # Mutation: NSO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: NSO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-no-system-out raw 'usage: lint-no-system-out.sh <src-root>' "$@"
 awk_lint_list -name '*.java'
 
-fail=0
-while IFS= read -r f; do
-    ln=0
-    while IFS= read -r line || [ -n "$line" ]; do
-        ln=$((ln + 1))
-        code=${line%%//*}
-        case "$code" in
-            *System.out.print*|*System.err.print*)
-                trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
-                printf 'FAIL  lint-no-system-out  %s:%s  %s\n' "$f" "$ln" "$trimmed"
-                fail=1
-                ;;
-        esac
-    done < "$f"
-done < "$AL_TMP/files"
+# One awk per file (was a shell read loop + a sed fork per hit). Line // comments are stripped first.
+# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
+awk_lint_each '
+    { code = $0; i = index(code, "//"); if (i) code = substr(code, 1, i - 1) }
+    index(code, "System.out.print") || index(code, "System.err.print") {
+        t = $0; sub(/^[[:space:]]+/, "", t)
+        printf "FAIL  lint-no-system-out  %s:%d  %s\n", ENVIRON["AL_FILE"], FNR, t
+    }'
 
-awk_lint_exit "$fail"
+awk_lint_exit "$AL_ROWS"
