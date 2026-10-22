@@ -3,7 +3,8 @@
 #
 # Usage: scripts/ci-local.sh [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]
 #
-# The steps come from ci.yml itself (scripts/lib/ci_steps.py), so the replay cannot drift from CI:
+# The steps come from ci.yml itself (go/cmd/ci-steps, built on demand by go/go-tool.sh), so the replay
+# cannot drift from CI:
 #   - every `run:` step runs as GitHub runs it: `bash -e -c` (errexit, NO pipefail) from the repo root,
 #     with CI=true and RUNNER_TEMP set; a failure is reported and the next step still runs;
 #   - steps with a local equivalent are skipped by the SKIP_RULES below (shellcheck install -> the pinned
@@ -17,13 +18,16 @@
 # and its sha256 is checked on every use; never installed system-wide, never sudo.
 #
 # Exit: 0 every run step passed; 1 a step failed; 2 usage error or an UNCOVERED / unparsable step;
-#       3 the pinned shellcheck could not be provisioned (sha256 mismatch, download failed, no sha256 tool).
-# [ev: retro 2026-10-22-ci-local-replay]
+#       3 the pinned shellcheck could not be provisioned (sha256 mismatch, download failed, no sha256 tool),
+#         or the ci-steps parser could not be built (no `go` on PATH, build failure).
+# [ev: retro 2026-10-22-ci-local-replay] [ev: retro go-ci-steps]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via ROOT
 . "$ROOT/scripts/lib/sha256.sh" || exit 3
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via ROOT
+. "$ROOT/go/go-tool.sh" || exit 3
 
 SC_VER=v0.10.0
 SC_TAR="shellcheck-${SC_VER}.linux.x86_64.tar.xz"
@@ -77,7 +81,8 @@ classify() {
 KINDS=() NAMES=() BODIES=() VERDICTS=()
 parsed="$(mktemp)"; WORK="$(mktemp -d)"
 trap 'rm -rf "$parsed" "$WORK"' EXIT
-python3 -I "$ROOT/scripts/lib/ci_steps.py" "$CI_FILE" > "$parsed" || exit 2
+CI_STEPS="$(go_tool_bin "$ROOT/go" ci-steps)" || exit 3
+"$CI_STEPS" "$CI_FILE" > "$parsed" || exit 2
 while IFS= read -r -d '' kind && IFS= read -r -d '' name && IFS= read -r -d '' body; do
   KINDS+=("$kind") NAMES+=("$name") BODIES+=("$body") VERDICTS+=("$(classify "$kind" "$name" "$body")")
 done < "$parsed"
