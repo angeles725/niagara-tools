@@ -20,9 +20,24 @@ KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
 }
 
 @test "KPS2: the module-permissions template is well-formed with a <permissions> root and the three group types" {
+  command -v python3 >/dev/null || skip "python3 not installed"
   T="$KIT/templates/module-permissions.xml"
   [ -f "$T" ]
   run python3 -c 'import sys,xml.etree.ElementTree as E; r=E.parse(sys.argv[1]).getroot(); print(r.tag, *sorted(g.get("type") for g in r.findall("niagara-permission-groups")))' "$T"
   [ "$status" -eq 0 ]
   [ "$output" = "permissions all station workbench" ]
+}
+
+@test "KPS3: every commented-out request in the template parses once uncommented (no raw < in placeholders)" {
+  command -v python3 >/dev/null || skip "python3 not installed"
+  run python3 -c '
+import re, sys, xml.etree.ElementTree as E
+n = 0
+for c in re.findall(r"<!--(.*?)-->", open(sys.argv[1]).read(), re.S):
+    m = re.search(r"<(req|opt)-permission>.*</(req|opt)-permission>", c, re.S)
+    if m:
+        E.fromstring("<x>" + m.group(0) + "</x>"); n += 1
+print(n)' "$KIT/templates/module-permissions.xml"
+  [ "$status" -eq 0 ]
+  [ "$output" -ge 1 ]
 }

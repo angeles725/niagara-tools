@@ -24,8 +24,8 @@
       <name>NETWORK_COMMUNICATION</name>
       <purposeKey>networkComm.purpose</purposeKey>
       <parameters>
-        <parameter name="hosts" value="<host>"/>
-        <parameter name="ports" value="<port>"/>
+        <parameter name="hosts" value="HOST"/>
+        <parameter name="ports" value="PORT"/>
       </parameters>
     </req-permission>
     -->
