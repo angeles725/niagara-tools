@@ -178,6 +178,8 @@ not a token-based proof. Migrate to `CsrfProtectedFilter` in new modules; keep t
   call it inside `AccessController.doPrivileged(...)`. **Never log the result.**
 - Use `SecretChars` (try-with-resources) to zero the char array after use — prevents
   the plaintext from sitting in a GC-able heap object.
+- A secret a component must keep is a `BPassword` **slot**: a private Java field is not saved to `config.bog`
+  and is lost on restart. `[ev: corpus B1416 §1416.4 b]`
 
 ```java
 char[] plain = AccessController.doPrivileged(
@@ -212,6 +214,9 @@ LOG.finest("request headers: " + safe);
 ```
 
 The production log level is typically INFO, but a support engineer enabling FINEST for diagnostics must not accidentally capture credentials. Add this guard to any code that iterates HTTP headers or logs connection state. `[ev: corpus B1082]`
+
+**Security messages carry no stack trace:** `log(Level, msg, ex)` appends the exception's trace; for an
+authentication, authorization or crypto failure log the message only (`log(Level.WARNING, msg)`). `[ev: corpus B1418 §1418.2 d]`
 
 ---
 
@@ -251,6 +256,14 @@ BOrd ord = BOrd.make(raw);   // only after allowlist check
 
 Never accept an arbitrary BOrd from client-supplied input without an allowlist prefix
 check. [ev: corpus B507 §SEC-10]
+
+### 4.3 Lexicon text in HTML — `getHtmlSafeText`
+
+A lexicon value rendered raw into HTML is an XSS vector.
+Servlet and HTML output uses `lex.getHtmlSafeText(key)` (or `getHtmlSafeText(key, args…)`), which returns
+`Encode.forHtml(getText(key))`; the same method exists on `LexiconText` and `LexiconModule`. It encodes for HTML
+element content only: JavaScript, URL and attribute contexts still need their own encoder. A missing key comes back
+encoded too. `[ev: corpus B1418 §1418.1]`
 
 ---
 

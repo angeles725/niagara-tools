@@ -91,6 +91,10 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 - Follow `types/<type>.md` + `METHODOLOGY.md`. Keep a facade pure; keep control logic in rt; keep UI in ux/wb. For framework-extension authoring (custom service, ORD scheme, point extension, analytics node, job, watchdog): see `types/logic-authoring.md` (companion to `types/logic.md`).
 - **What to READ for this layer, in priority order: `corpus-index.md`** — the curated map of the niagara-research corpus for module builders (B29–B1027). `corpus-nav FIRST` for a term; `corpus-index.md` for what to read by layer/priority (P0 before building).
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
+- **After editing a part's `*.gradle.kts`, Gradle-sync the IDE before you trust its imports:** a new `api(":x-rt")`
+  (a module from another Gradle build or the install) or an `uberjar(...)` dependency does not resolve in IntelliJ
+  until the sync runs. Keep the dependency block grouped NRE / module / test. Forms: `types/module-wiring.md` §1.
+  `[ev: corpus B1418 §1418.5 c]` `[ev: corpus B1419 §1419.4 a]`
 - **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
   cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling
   slot you are mirroring instead of re-tracing the path. `[ev: retro change-tier-time-budgets Δ2]`

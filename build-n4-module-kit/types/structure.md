@@ -111,6 +111,17 @@ L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niag
 
 When hand-adding a `@NiagaraProperty` to an already-generated class (outside Slotomatic's auto-region), set the auto-region checksum to the plain integer `0`, NOT the literal placeholder `(auto)`. The `(auto)` text causes a cosmetic Slotomatic parse error (the build still passes but emits a noisy WARNING about an unrecognized checksum token); `0` causes Slotomatic to regenerate the checksum cleanly on the next build. If Slotomatic's region comment shows `/* auto */ (auto)` after a hand-edit, replace it with `/* auto */ 0`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ24]`
 
+## Slot-o-Matic runs — read the output, recover a failed file
+- **Read the Slot-o-Matic output on every run:** a file it cannot process is logged and skipped, the task still
+  succeeds, and the build fails later (or not at all) in `compileJava`. `[ev: corpus B1417 §1417.3 s]`
+- **Never write code inside the generated `BEGIN … END BAJA AUTO GENERATED CODE` region:** the next run replaces
+  the region and the code is gone. Hand-written code goes outside it. `[ev: corpus B1417 §1417.3 r]`
+- **"Failed to process" / "Could not process":** delete the whole generated region and rerun; it regenerates from
+  the annotations (an empty pre-written region is METHODOLOGY K15). `[ev: corpus B1418 §1418.5 a]`
+- **Annotation types are Java names:** a lower-case `type = "string"` breaks the run; use `String`/`BString` as the
+  property card says, and remove unused auto-imports the IDE added. `[ev: corpus B1418 §1418.5 d]`
+- **"java file must belong to a package"** means the `package` line was lost in a copy-paste. `[ev: corpus B1418 §1418.5 b]`
+
 ## PASS state + scaffold `[ev: corpus B817]`
 `scaffold-module.sh <MOD>` output passes L1–L11 at exit 0 — the skeleton is the GREEN fixture. A mutation that
 empties the palette (L5/L9), a lexicon (L4), drops a 3-part floor (L7), hardcodes a `C:\` path (L10), or mixes
