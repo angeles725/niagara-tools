@@ -73,7 +73,7 @@ Appendix B, outside the 168 count):
 
 | ID | Correction | Evidence | Also in a retro? |
 |---|---|---|---|
-| r3-report#R1 | `types/security.md:366-377` "DashboardPan omits X-Frame/nosniff/CSP" is wrong — `TridiumSecurityFilter` applies the station header providers to every `BWebServlet`; the snippet's CSP would REPLACE the station policy; `lint-servlet.sh` `api-response-headers` WARN is a false positive | `TridiumSecurityFilter.java:22-27`, `BJettyWebServer.java:1178-1180,1462-1468`, corpus B1349 C1 | yes, r3wsh Δ3 |
+| r3-report#R1 | `types/security.md:366-377` "DashboardPan omits X-Frame/nosniff/CSP" is wrong — `TridiumSecurityFilter` applies the station header providers to every `BWebServlet`; the snippet's CSP would REPLACE the station policy; `lint-servlet.sh` `api-response-headers` WARN is a false positive | vineflower `TridiumSecurityFilter.java:22-27`, vineflower `BJettyWebServer.java:1178-1180,1462-1468`, corpus B1349 C1 | yes, r3wsh Δ3 |
 | r3-report#R2 | `types/logic-authoring.md:646` — `pingEnabled` is already ON by default (`<network>/monitor`) | `BPingMonitor.java:128`, corpus B1348 C1 | yes, r3di Δ2 |
 | r3-report#R3 | shl Δ7(b): the non-driver-client gate is CLOSED by default (`HttpClientService.enableNonDriverClients=false`) | `BHttpClientService.java:231-252,270`, corpus B1346 §1346.2 | yes, r3di Δ4 |
 | r3-report#R4 | shl Δ9: the jsonToolkit type-override hook is `overrideValueEncoding(BValue)`; `doOverride` is `final` in the 4.15 jar | `javap jsonToolkit-rt.jar!…/BTypeOverride`, corpus B1350 | yes, r3pec Δ2 |
@@ -258,15 +258,15 @@ cursor recipe stays owed (WU-P0-6).
 ### C13 — Security headers: station headers already apply to module servlets
 - **Sources:** r3wsh#Δ3 (primary, corrects the kit) · wuh#Δ5 extends (Hx needs X-Frame Sameorigin + default CSP) · r3wsh#Δ5 extends (embed via CSP `frame-ancestors` on the station provider, never X-Frame `Any`) · r3-report#R1
 - **Winning text:** remove "DashboardPan omits X-Frame/nosniff/CSP — gaps ODA2-G1/G2" and the `setHeader` snippet (its CSP replaces the station policy); set a header only to deviate deliberately; commissioning `curl -I` check.
-- **Evidence:** `BJettyWebServer.java:1178-1180,1462-1468`, `TridiumSecurityFilter.java:22-27`, corpus B1349 C1, B1328 row 9.
+- **Evidence:** vineflower `BJettyWebServer.java:1178-1180,1462-1468`, vineflower `TridiumSecurityFilter.java:22-27`, corpus B1349 C1, B1328 row 9.
 - **Target:** `types/security.md:360-380`; `toolbelt/lint-servlet.sh` `api-response-headers` WARN → info.
 - **Lint-able:** yes (downgrade). **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-8, `docs/r8-t9i-headers`, 2026-10-23; r3wsh Δ3, Δ5, wuh Δ5, r3-report#R1):
   `types/security.md` § 7 rewritten (station providers reach every servlet, set a header only to deviate, embed with
   CSP `frame-ancestors`, Hx needs the defaults); `lint-servlet.sh` `api-response-headers` WARN → INFO (no `--strict`
   escalation), `report-module.sh` counts an INFO-only servlet as PASS (RM16b), `commissioning-verify.sh` probe text.
-  Premise refined: the X-Frame provider class default is `deny` (`BXFrameOptionsHeaderProvider.java:34`); only the
-  guide and `BWebService.java:255` say `Sameorigin`, so the commissioning probe reads the live value. Pins KH1-KH4.
+  Premise refined: the X-Frame provider class default is `deny` (vineflower `BXFrameOptionsHeaderProvider.java:34`); only the
+  guide and vineflower `BWebService.java:255` say `Sameorigin`, so the commissioning probe reads the live value. Pins KH1-KH4.
 
 ### C14 — `pingEnabled` is ON by default
 - **Sources:** r3di#Δ2 (primary) · r3-report#R2
@@ -411,7 +411,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C30 — Theme module rules: `themeName` value is the module name; picker location wrong; SPA not auto-themed
 - **Sources:** wuh#Δ2 (primary) · r3wsh#Δ4 extends (servlet SPA must link `theme.css` explicitly)
-- **Evidence:** `CustomThemeModuleManager.java:24,47`, `BHxProfile.java:291`, `WbWebWidgetServlet.java:143-149`, corpus B1328 §1328.2 C1, B1349 §1349.2.
+- **Evidence:** vineflower `CustomThemeModuleManager.java:24,47`, vineflower `BHxProfile.java:291`, vineflower `WbWebWidgetServlet.java:143-149`, corpus B1328 §1328.2 C1, B1349 §1349.2.
 - **Target:** `types/theme.md` §2-§3, §7; `types/frontend-standard.md`.
 - **Lint-able:** yes — def value == moduleName, `theme` prefix, `nss/*.nss` present; grep SPA HTML for `theme.css`. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-8, 2026-10-23; wuh Δ2, r3wsh Δ4): `types/theme.md` § 2 (value = module name with

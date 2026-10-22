@@ -363,12 +363,12 @@ Do not reproduce them.
 ## 7 · Servlet response headers — the station already sets them
 
 **Every module servlet inherits the station's headers.** Jetty gives each `BWebServlet` its own context and
-`configureNiagaraWebApp()` adds `TridiumSecurityFilter` on `/*` of it (`BJettyWebServer.java:1178-1180,1462-1468`);
-the filter applies the WebService's Http Header Providers before the servlet runs (`TridiumSecurityFilter.java:22-27`).
-Out of the box that is `X-Content-Type-Options: nosniff` (`BXContentTypeOptionsHeaderProvider.java:38`), the CSP
+`configureNiagaraWebApp()` adds `TridiumSecurityFilter` on `/*` of it (vineflower `BJettyWebServer.java:1178-1180,1462-1468`);
+the filter applies the WebService's Http Header Providers before the servlet runs (vineflower `TridiumSecurityFilter.java:22-27`).
+Out of the box that is `X-Content-Type-Options: nosniff` (vineflower `BXContentTypeOptionsHeaderProvider.java:38`), the CSP
 provider (`default-src 'self' workbench`, `script-src 'self' workbench 'unsafe-inline' 'unsafe-eval'`,
-`BCspHeaderProvider.java:66,130`) and `X-Frame-Options` (the guide documents `Sameorigin` as the default, Hx needs
-it, `User/web-HttpHeaderProviders.txt:20`; the provider class default is `deny`, `BXFrameOptionsHeaderProvider.java:34`,
+vineflower `BCspHeaderProvider.java:66,130`) and `X-Frame-Options` (the guide documents `Sameorigin` as the default, Hx needs
+it, `User/web-HttpHeaderProviders.txt:20`; the provider class default is `deny`, vineflower `BXFrameOptionsHeaderProvider.java:34`,
 so read the station's value at commissioning). `[ev: corpus B1349 C1]` `[ev: corpus B1328 row 9]` `[ev: retro r8-t9i-headers Δ1]`
 `[ev: retro devguide415-r3-web-session-headers Δ3]` `[ev: retro devguide415-r2-web-ui-hmi Δ5]`
 

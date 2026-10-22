@@ -41,12 +41,12 @@ plugin writes into the generated `module.xml`:
 ```
 
 - **The value is the module name, and the module name starts with `theme`.** Discovery reads every `themeName`
-  def and resolves `module://<value>/nss` (`CustomThemeModuleManager.java:24,47`); Hx and bajaux load
-  `module://theme<Tag>/hx/theme.css` and `…/ux/theme.css` (`BHxProfile.java:291`, `UxUtil.java:23`). Every shipped
+  def and resolves `module://<value>/nss` (vineflower `CustomThemeModuleManager.java:24,47`); Hx and bajaux load
+  `module://theme<Tag>/hx/theme.css` and `…/ux/theme.css` (vineflower `BHxProfile.java:291`, vineflower `UxUtil.java:23`). Every shipped
   theme follows it (`themeDistech` declares `value='themeDistech'`).
 - **The picker lists `nss/*.nss` files.** A theme with no `nss/` directory, or no `.nss` in it, is never listed; the
   label is the file name with the `theme` prefix stripped (`theme.nss` in `themeAcme` → `Acme`,
-  `CustomThemeModuleManager.java:64-72`).
+  vineflower `CustomThemeModuleManager.java:64-72`).
 - **A missing theme falls back silently** to Zebra, then Lucid, then the first listed theme (`getDefaultThemeEnum`).
 - **Choosing a theme is per web profile, not per module:** the user's (or prototype's) web profile carries
   `selectedHxTheme` / `selectedWorkbenchTheme` ("Hx Theme … defaults to Zebra", guide `User/baja-User.txt:54`); the
@@ -166,7 +166,7 @@ Key NSS rules:
 - `module-include.xml` must still be present but holds only `<types/>`; the `themeName` def goes in
   `moduleManifest { defines { … } }` (§ 2).
 - **A servlet SPA is not themed automatically.** Tridium injects the theme CSS only into its own pages (Hx profile,
-  `WbWebWidgetServlet.java:133,143-149`, the bajaux resolver); a module's own HTML must link
+  vineflower `WbWebWidgetServlet.java:133,143-149`, the bajaux resolver); a module's own HTML must link
   `/module/web/rc/theme/theme.css` and `/module/theme<Name>/ux/theme.css` itself, or render through a bajaux
   view (`types/frontend-standard.md` § 1). `[ev: corpus B1349 §1349.2]` `[ev: retro devguide415-r3-web-session-headers Δ4]`
 - `nodeHome` in `gradle.properties` is required (LESS runs via Node). `[ev: types/structure.md §L10]`
