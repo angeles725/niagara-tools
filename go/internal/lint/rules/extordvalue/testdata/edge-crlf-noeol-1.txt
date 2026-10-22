@@ -1,0 +1,13 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-wb-external-ord-value  @DIR@/m/A.java:3  a() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+-- stderr --
+-- m/A.java (noeol) --
+class A {
+  void a() {
+    Object o = ord.get(s);
+    BStatusValue v;
+  }
+}

@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  BComponent resolveFolder(Object folderOrd) {
+    Object obj = folderOrd.get(importer, null);
+    if (obj instanceof BComponent) return (BComponent) obj;
+    return null;
+  }
+}

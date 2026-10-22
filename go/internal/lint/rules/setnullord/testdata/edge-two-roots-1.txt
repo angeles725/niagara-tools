@@ -1,0 +1,13 @@
+-- args --
+@DIR@/m
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+usage: lint-set-null-ord.sh [--strict] <src-root>
+-- m/A.java --
+class B {
+  void a(BComponent p, M m) {
+    m.setX(p.getSlotPathOrd());
+  }
+}
