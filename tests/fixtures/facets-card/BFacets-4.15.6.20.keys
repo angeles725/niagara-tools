@@ -1,0 +1,37 @@
+# BFacets key constants, 4.15.6.20, in declaration order: NAME=key
+# Source: niagara-help versions/4.15.6.20/source/baja/javax/baja/sys/BFacets.java:65-230
+# Regenerate: sed -nE 's/^ *public static final String ([A-Z_]+) *= *"([A-Za-z]+)";.*/\1=\2/p' BFacets.java
+MIN=min
+MAX=max
+TRUE_TEXT=trueText
+FALSE_TEXT=falseText
+PRECISION=precision
+UNITS=units
+RADIX=radix
+RANGE=range
+SHOW_DATE=showDate
+SHOW_HOURS=showHours
+SHOW_TIME=showTime
+SHOW_MINUTES=showMinutes
+SHOW_SECONDS=showSeconds
+SHOW_MILLISECONDS=showMilliseconds
+SHOW_TIME_ZONE=showTimeZone
+TIME_ZONE=TimeZone
+MULTI_LINE=multiLine
+FIELD_WIDTH=fieldWidth
+ALLOW_NULL=allowNull
+ORD_RELATIVIZE=ordRelativize
+FIELD_EDITOR=fieldEditor
+UX_FIELD_EDITOR=uxFieldEditor
+INPLACE_EDITOR=inplaceEditor
+CELL_EDITOR=cellEditor
+TARGET_TYPE=targetType
+UNIT_CONVERSION=unitConversion
+REALMS=realms
+SHOW_UNITS=showUnits
+SHOW_SEPARATORS=showSeparators
+FORCE_SIGN=forceSign
+ENCODER_FILE=encoderFile
+MAX_OVERRIDE_DURATION=maxOverrideDuration
+NAMESPACE=namespace
+SECURITY=security

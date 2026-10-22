@@ -211,25 +211,44 @@ c.close();   // always close — leaks a resource if skipped
 
 ## Background jobs
 
-- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit via `BJobService.submit(job,cx)` and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]`
+- Subclass **`BSimpleJob`** + implement **`run(Context)`** for the normal async case (dedicated thread + auto success/fail + interrupt-cancel are free); report `progress(pct)` + `log().*`; submit with `job.submit(cx)` (a convenience for `BJobService.getService().submit(job, cx)` — `submit` is an instance method, not a static one) and track the returned `BOrd` (poll `getJobState()`/`getProgress()` — no join). For a one-line job use `new BRunnableJob(() -> exportNow()).submit(cx)` — `BRunnableJob(Runnable)` is a `BSimpleJob` whose `run(Context)` calls the runnable, so no subclass is needed. Use raw `BJob` (`doRun`+`doCancel`) only to own threading. Multi-step = `BJobStep`/`BDeviceJobStep` under a `BBatchJob`. `[ev: corpus B774]` [ev: retro devguide415-runtime-api-corrections Δ2]
 
-### BJob submission safety rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
+### BJob submission rule `[ev: retro module-hardening-failure-modes-deltas Δ5]`
 
-`BJobs.submit(job, cx)` posts to a `ForkJoinPool` sized `availableProcessors × niagara.job.threadsPerCPU`. Violations:
+There is no `BJobs` class. `job.submit(cx)` invokes the JobService's HIDDEN `submitAction` (no `OPERATOR` flag, so a user Context needs admin invoke on the JobService), which adds the job as a TRANSIENT child and calls `doSubmit`. A `BSimpleJob` then runs `run(Context)` on its OWN `JobThread`, named after the job's slot path; it never touches the JobService `ForkJoinPool` (`getExecutor()`, sized `availableProcessors × niagara.job.threadsPerCPU`, default 2, or `niagara.job.threads`). That pool matters only to code that hands work to `getExecutor()` itself, so a `BSimpleJob` submit has no pool to saturate and no `RejectedExecutionException` to catch. [ev: retro n4-course-threading-jobs-doctrine Δ6] [ev: corpus B1238 §1238.8] [ev: corpus B1304 §1304.2]
 
-- **Never submit from a high-frequency callback (`changed()`, timer tick):** each submission drains one thread from the shared pool. A 1 s timer that submits a new job every tick can saturate the pool in seconds.
+- **Never submit from a high-frequency callback (`changed()`, timer tick):** every submission adds a job component to the JobService and starts one more thread; a 1 s timer that submits a new job every tick piles up job threads and job records.
 - **`submit()` itself is an `invoke` action (RUN6 RBAC rule applies):** the job runs under the submitted context. If the caller uses `post()` to defer submission, the RBAC context is dropped (see `types/security.md §2` for the post()-drops-context rule).
-- **A saturated or shutting-down pool throws `RejectedExecutionException` as an unhandled `RuntimeException`** directly into the calling callback (the bare-callback death path — see logic.md §Tridium rt idioms). This exception is NOT a checked exception and is NOT caught by `catch(Exception)`.
-- **Wrap `submit()` in `try/catch(RejectedExecutionException)`** and log or surface the failure; do not let it escape to the engine thread.
+
+### Job contract — `BSimpleJob.run(Context)`
+
+- **Return = success, throw = failure.** `failed(cause)` records a CANCEL instead when the state is `canceling` or the cause is an `InterruptedException` or a `JobCancelException` (unchecked, a `BajaRuntimeException`).
+- **Cancel is cooperative.** `doCancel` sets `canceling` and interrupts the job thread, which only reaches a thread blocked in I/O or `sleep`; every loop checks `if (!isAlive()) throw new JobCancelException();` (`isAlive()` = state is `running`).
+- **Report liveness.** `progress(pct)` sets the percent and heartbeats; call `heartbeat()` when the percent is unknown; completion forces progress to 100.
+- **Log through the job log.** `log().message(<module>, <lexKey>, <args>)` with the key present in that module's `module.lexicon` (`log().message(String)` for a non-localized line).
+- **Snapshot inputs in the constructor.** Copy the service properties the job needs when it is built; Tridium's Lab 10 job reads them live from the job thread, so an edit in the middle of an export changes the later files. [ev: corpus B1242 §1242.4]
+- **Unit test without a station:** `job.setJobState(BJobState.running); job.run(null);` then assert on `job.log().getItems()`.
+- **Worked example:** the course Lab 10 `BHistoriesToCsvJob.java:105-112` (`isAlive()` → `JobCancelException`, `progress()`, `log().message(...)` per history), run live on 4.15.6.20. [ev: retro n4-course-handson-services-history-threading Δ6]
 
 **Pattern:**
 ```java
-try {
-    BJobService.submit(myJob, cx);
-} catch (RejectedExecutionException e) {
-    logWarning("job-submit rejected (pool saturated)", e);
+public final class BExportJob extends BSimpleJob {
+  public BExportJob() {}                                  // Type loading needs the no-arg constructor
+  public BExportJob(BExportService svc) { this.names = svc.getPointNames().split(","); }  // snapshot
+  @Override
+  public void run(Context cx) throws Exception {
+    for (int i = 0; i < names.length; i++) {
+      if (!isAlive()) throw new JobCancelException();     // cooperative cancel
+      exportOne(names[i], cx);
+      progress((int) Math.round((i + 1) * 100.0 / names.length));
+    }
+  }
+  private String[] names = new String[0];
 }
+// caller, e.g. an action handler: BOrd jobOrd = new BExportJob(this).submit(cx);
 ```
+
+`toolbelt/lint-timers.sh` `job-cancel` WARNs a `BSimpleJob` `run()` loop with no `isAlive()` check; `tests/kit-doc-api-names.bats` fails a core kit doc that names the non-existent `BJobs` class, a static job-service submit, a `BWorker` post method or `makeDouble`.
 
 ### Long RT operation → WB job-bar (PD-04 cross-reference) `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ4]`
 
@@ -339,9 +358,12 @@ with a few module-specific rules:
          agentOn="baja:AuthenticationScheme"/>
    ```
 
-4. **Signing:** a security module MUST be signed with `NIAGARA4.RSA` / `NIAGARA4.SF` — same signing
-   path as any production jar.  The station's `SecurityManager` enforces this; an unsigned or
-   OEM-signed scheme is rejected at load time.
+4. **Signing:** a security module MUST be signed — same signing path as any production jar: a
+   `META-INF/<ALIAS>.SF` with its `.RSA`/`.DSA`/`.EC` signature block, named after the signing alias
+   (`NIAGARA4` default profile, `CODESIGN` course profile, `SERVER1` Honeywell). `toolbelt/verify-module.sh`
+   `signed` accepts any alias and reports it, but checks PRESENCE only: the station decides by its module
+   verification mode and the signer's cert chain, never by the entry name. An unsigned scheme is rejected
+   at load time. [ev: retro n4-course-handson-build-signing-windows Δ1]
 
 - **Every class listed as a `<type>` in `module-include.xml` MUST carry `@NiagaraType`** (so Slotomatic generates `TYPE = Sys.loadType(…)`). A class listed as a `<type>` without `@NiagaraType` is caught at registry-build time with a named SEVERE: `"Missing Sys.loadType()"` — it is NOT a silent NPE, but it BLOCKS the module from loading at station start. Fix: add `@NiagaraType` to the class. `[ev: retro module-hardening-failure-modes-deltas Δ15]`
 - **The SMALLEST correct module (proven by build in B793)** = a SOURCE tree the gradle plugin turns into a signed jar: `<MOD>-rt/module-include.xml` (the `<type>` list — the plugin GENERATES `META-INF/module.xml`, you do NOT author it) + `<MOD>-rt/module.lexicon` (SOURCE name; the plugin renames it to `<MOD>-rt.lexicon` in the jar) + a non-empty `module.palette` (one `<p>` per component) + `<MOD>-rt.gradle.kts` (the profile gradle file — findProjects convention, NOT `build.gradle.kts`) + one `B<Comp> extends BComponent` with one `Flags.SUMMARY|Flags.OPERATOR` property + one `Flags.HIDDEN` engine action whose handler the developer HAND-WRITES as `do<Action>()` (Baja calls `doTickExpired()`, not the generated `tickExpired()` wrapper) + one `Clock.Ticket` armed in `started()`+`atSteadyState()`, cancelled in `stopped()`. Slot-o-matic markers use the `//region /*+ … +*/ … //endregion` form. `preferredSymbol` in source is ignored (the plugin assigns the profile-dir name). Built with Java 8 (bytecode 52) + SIGNED. **Verified GREEN by an actual build (B793, a7396ec06): gate exit 0, ALL PASS.** `[ev: corpus B790, B793]`
@@ -488,50 +510,70 @@ slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(.
 
 ## BFacets key reference card `[ev: corpus B1106]`
 
-`BFacets` is the property-metadata map; keys are string literals. The 31 known keys (B49 listed 11; B1106 completes the catalogue):
+`BFacets` (`final`, `implements Context`) is the property-metadata map. Its keys are the `public static final String` constants of `javax.baja.sys.BFacets`: name them by constant (`BFacets.UNITS`), never by a hand-typed literal. 4.15.6.20 declares **34**; releases before 4.15u2 declare 32 (no `showHours`/`showMinutes`). The table is that list in declaration order, with the value type the source javadoc names. [ev: retro devguide415-runtime-api-corrections Δ8] [ev: corpus B1310 §1310.3]
 
-| Key | Purpose |
-|-----|---------|
-| `"units"` | Engineering unit (`BUnit`); shown in slot value display |
-| `"precision"` | Decimal places for numeric display (int) |
-| `"min"` | Minimum allowed value (numeric) |
-| `"max"` | Maximum allowed value (numeric) |
-| `"range"` | Enum range (`BEnumRange`); required for dynamic enums |
-| `"fieldWidth"` | Character-width hint for text fields |
-| `"radix"` | Display radix for integers (2=binary, 8=octal, 10=decimal, 16=hex) |
-| `"showSeconds"` | Show seconds in time display (boolean) |
-| `"showUnits"` | Append engineering-unit string to the formatted value (boolean) |
-| `"unitConversion"` | Unit-conversion factor when bridging unit systems |
-| `"maxOverrideDuration"` | Maximum HOA override duration (`BRelTime`) |
-| `"targetType"` | Type constraint for ORD/link pickers (`BTypeSpec`) |
-| `"editorTemplate"` | Workbench editor template name |
-| `"editorClass"` | Custom editor class name |
-| `"editorArgs"` | Arguments forwarded to the custom editor |
-| `"editorColumns"` | Column definitions for a table editor |
-| `"editorRows"` | Row definitions for a table editor |
-| `"trueText"` | Display string for `true` (boolean slots) |
-| `"falseText"` | Display string for `false` (boolean slots) |
-| `"nullText"` | Display string for null/invalid values |
-| `"format"` | A `BFormat` pattern for display formatting |
-| `"icon"` | Icon ORD for Workbench display |
-| `"help"` | Help URL or key for context-sensitive help |
-| `"category"` | Default category tag |
-| `"history"` | History configuration hint |
-| `"alarm"` | Alarm configuration hint |
-| `"trended"` | Whether the slot is trended by default (boolean) |
-| `"locked"` | Whether the slot is locked from operator edit |
-| `"persistent"` | Override persistence behavior |
-| `"sparse"` | Sparse rendering hint for large tables |
-| `"summary"` | Summary display hint |
+| Constant | Key | Value | Purpose |
+|---|---|---|---|
+| `MIN` | `"min"` | `BNumber` | Inclusive minimum; enforced on the client AND the station on a value change |
+| `MAX` | `"max"` | `BNumber` | Inclusive maximum; enforced like `min` |
+| `TRUE_TEXT` | `"trueText"` | `BString` (a BFormat) | Display text for `true`; a `%lexicon(<module>:<key>)%` script localizes it |
+| `FALSE_TEXT` | `"falseText"` | `BString` (a BFormat) | Display text for `false` |
+| `PRECISION` | `"precision"` | `BInteger` | Digits after the decimal point |
+| `UNITS` | `"units"` | `BUnit` | Engineering unit of an integer or float |
+| `RADIX` | `"radix"` | `BInteger` | Base radix of an integer |
+| `RANGE` | `"range"` | `BEnumRange` | Enum range |
+| `SHOW_DATE` | `"showDate"` | `BBoolean` | Abs time: show the date |
+| `SHOW_HOURS` | `"showHours"` | `BBoolean` | Abs time: show hours (4.15u2+) |
+| `SHOW_TIME` | `"showTime"` | `BBoolean` | Abs time: show the time |
+| `SHOW_MINUTES` | `"showMinutes"` | `BBoolean` | Abs time: show minutes (4.15u2+) |
+| `SHOW_SECONDS` | `"showSeconds"` | `BBoolean` | Abs time: show seconds |
+| `SHOW_MILLISECONDS` | `"showMilliseconds"` | `BBoolean` | Abs and rel time: show milliseconds |
+| `SHOW_TIME_ZONE` | `"showTimeZone"` | `BBoolean` | Abs time: show the time zone |
+| `TIME_ZONE` | `"TimeZone"` | `BTimeZone` | Abs time: display time zone (the key starts with a capital `T`) |
+| `MULTI_LINE` | `"multiLine"` | `BBoolean` | String: multi-line editor (e.g. one ORD per line on a `BOrdList`) |
+| `FIELD_WIDTH` | `"fieldWidth"` | `BInteger` | String: columns of the text field |
+| `ALLOW_NULL` | `"allowNull"` | `BBoolean` | Simple: allow or disallow null |
+| `ORD_RELATIVIZE` | `"ordRelativize"` | `BBoolean` | ORD: relativize to the session on save (default true) |
+| `FIELD_EDITOR` | `"fieldEditor"` | `BString` | Type spec of the Workbench field editor; also used for action arguments |
+| `UX_FIELD_EDITOR` | `"uxFieldEditor"` | `BString` | `web:IJavaScript` type spec, or a RequireJS module ID, of the browser field editor |
+| `INPLACE_EDITOR` | `"inplaceEditor"` | `BString` | Type spec of the inplace editor |
+| `CELL_EDITOR` | `"cellEditor"` | `BString` | Type spec of the cell editor |
+| `TARGET_TYPE` | `"targetType"` | `BString` (a TypeSpec) | Target type of an ORD chooser; `"baja:IDirectory"` gives a folder-only picker |
+| `UNIT_CONVERSION` | `"unitConversion"` | dynamic enum over `BUnitConversion` (`none`/`metric`/`english`) | Unit SYSTEM for display; `none` = no conversion (not a conversion factor) |
+| `REALMS` | `"realms"` | `BString` | Semicolon-separated realm names (see `BStation`) |
+| `SHOW_UNITS` | `"showUnits"` | `BBoolean` | Numeric: display the unit |
+| `SHOW_SEPARATORS` | `"showSeparators"` | `BBoolean` | Numeric: separator every 3 digits (10,000 vs 10000) |
+| `FORCE_SIGN` | `"forceSign"` | `BBoolean` | Numeric, radix 10: always show `+`/`-` |
+| `ENCODER_FILE` | `"encoderFile"` | ORD string | `BComplex`: persist the child slots to a different `BIDataFile` |
+| `MAX_OVERRIDE_DURATION` | `"maxOverrideDuration"` | `BRelTime` | Control point or sysInfo facets: longest override allowed |
+| `NAMESPACE` | `"namespace"` | `BString` | Entity queries: default namespace for tags and relations |
+| `SECURITY` | `"security"` | `BBoolean` | Slot is security-related; its changes go to the security history (4.9+) |
 
-**Factory methods** (all on `BFacets`):
-- `BFacets.make(String key, BValue value)` — single key-value pair
-- `BFacets.make(String[] keys, BValue[] values)` — multiple pairs (parallel arrays)
-- `BFacets.makeDouble(BUnit unit, int precision)` — convenience for a numeric slot
-- `BFacets.makeBoolean(String trueText, String falseText)` — convenience for a boolean slot
-- `BFacets.makeEnum(BEnumRange range)` — convenience for a dynamic-enum slot
+**Not `BFacets` keys** (an older card listed them): `editorTemplate`, `editorClass`, `editorArgs`, `editorColumns`, `editorRows`, `nullText`, `format`, `icon`, `help`, `category`, `history`, `alarm`, `trended`, `locked`, `persistent`, `sparse`, `summary`. The framework gives them no meaning; a facet with one of these names is read only by code that looks it up itself.
 
-**Rule:** always use factory methods, never `new BFacets(Map)` directly. For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
+**Factory methods** (all `static` on `BFacets`; a `BFacets` is immutable, so every "change" returns a new instance):
+- `make(String key, BIDataValue value)` (plus `boolean` / `int` / `long` / `String` value overloads); `make(String[] keys, BIDataValue[] values)`; `make(Map<String, ? extends BIDataValue>)`; `make(String encoding)`
+- `make(BFacets orig, String key, BIDataValue value)`, `make(BFacets orig, BFacets toAdd)`, `makeRemove(BFacets orig, String key)` / `makeRemove(BFacets orig, String[] keys)`
+- `makeNumeric(BUnit unit, int precision)` — the numeric convenience (also `makeNumeric(int precision)`, `makeNumeric(BUnit, int precision, double min, double max)`, `makeNumeric(BUnit, BNumber min, BNumber max)`). There is **no** `makeDouble`.
+- `makeInt(BUnit unit, int min, int max)` (also with a trailing `int radix`, `makeInt(BUnit)`, `makeInt(int min, int max)`)
+- `makeBoolean(String trueText, String falseText)`
+- `makeEnum(BEnumRange range)`
+
+**`@Facet` syntax (slotomatic):** `name` is a Java constant expression and `value` is a Java expression, so a string value carries escaped quotes. [ev: retro n4-course-build-deps-permissions-signing Δ6]
+
+```java
+@NiagaraProperty(name = "destinationFolder", type = "BOrd", defaultValue = "BOrd.make(\"file:^\")",
+  facets = @Facet(name = "BFacets.TARGET_TYPE", value = "\"baja:IDirectory\""))     // folder-only picker
+@NiagaraProperty(name = "excludedHistoryIds", type = "BOrdList", defaultValue = "BOrdList.NULL",
+  facets = @Facet(name = "BFacets.MULTI_LINE", value = "true"))                    // one ORD per line
+@NiagaraProperty(name = "enabled", type = "boolean", defaultValue = "true",
+  facets = { @Facet(name = "BFacets.TRUE_TEXT",  value = "\"%lexicon(<module>:enabled.value)%\""),
+             @Facet(name = "BFacets.FALSE_TEXT", value = "\"%lexicon(<module>:disabled.value)%\"") })
+```
+
+Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/logic-authoring.md <BFacets.java>` diffs the Constant and Key columns against the source in declaration order; `tests/check-facets-card.bats` pins it to the 4.15.6.20 list.
+
+**Rule:** build facets only with the factory methods above (the `BFacets` constructors are private). For a slot projection, use `getSlotFacets()` (see `types/logic.md §Tridium rt idioms`) to apply config-slot facets to outputs once rather than hardcoding them per output. `[ev: retro module-hardening-reference-cards-deltas Δ1]`
 
 ## Logging a point to history `[ev: corpus B804]`
 
