@@ -100,6 +100,17 @@ Slots without `OPERATOR` default to the admin tier.
 an operator panel calls, add `Flags.OPERATOR` to reduce the required permission
 to `operatorInvoke`. [ev: code Flags.java; corpus B507 §SEC-05]
 
+### 2.2a Slot flags are not a security boundary `[ev: retro n4-course-slots-components-contracts Δ2]`
+
+`set(prop, value, cx)` with a user checks only operator vs admin write (`BUser.checkWrite`, vineflower baja 4.14.0.162
+`javax/baja/user/BUser.java:902-912`); it does not look at READONLY. READONLY counts in `BComponent.canWrite(OrdTarget)`
+(same copy `BComponent.java:925-939`), which a surface that asks the `OrdTarget` honours; whether every remote surface
+asks is not verified. CONFIRM_REQUIRED is a UI hint. A user with admin write can also change a frozen slot's flags:
+the `setFlags` path calls the no-op hook `checkSetFlags` (`BComponent.java:619`) and has no frozen-READONLY check
+(corpus B1231 §1231.9). So: protect a slot with the operator/admin tier and categories (§ 2.2), gate sensitive values
+in the setter path with the Context's permissions, and override `checkSetFlags` (throw a
+`LocalizableRuntimeException`) when a flag must not be cleared.
+
 ### 2.3 Fail-closed authorization default for WB controls and PX widgets [ev: retro honeywell-wb-rt-wb-deltas Δ3]
 
 A control whose authorization mixin or PIN slot is absent must be **DISABLED and HIDDEN** by default — never open-by-default. The rule applies to both Workbench manager rows and PX widgets:
