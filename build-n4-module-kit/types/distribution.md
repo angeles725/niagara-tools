@@ -404,7 +404,8 @@ software database holds; when it holds several versions the step asks which one,
 that the database also holds are added for each host automatically. Platform fit stays the operator's job, and the
 Supervisor needs the `provisioningNiagara` licence (guide `Provisioning/InstallingSoftwareByDraggingFromThe.txt:16-26`,
 `Provisioning/ProvisioningTroubleshooting.txt:14`). `[ev: corpus B1325 §1325.1 rows 8-9]`
-`[ev: retro devguide415-r2-packaging-platform-signing Δ4]`
+`[ev: retro devguide415-r2-packaging-platform-signing Δ4]` (line cites re-read on 4.15.6.20; the block's `:36-46` is
+past the end of the file) `[ev: retro r8-t9i-packaging Δ1]`
 
 **Persisted ≠ saved.** A persisted slot reaches disk only on a station save, so a backup taken
 before a save misses the live operator values; save the station before the backup.
