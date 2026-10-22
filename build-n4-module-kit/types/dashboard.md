@@ -125,6 +125,41 @@ Whether a NEW SPA should use a framework build at all (plain classic scripts vs.
 - The per-Ord write lock / HTTP 423 for a critical write is tracked as the client gate-4 gap (issue #49, `dashboard.md:48`). `[ev: corpus B763]`
 - OPEN (requires-execution): **B803-G1** (confirm the live SAML mid-session re-auth block on a station) and **B803-G2** (whether gauth's `BPasswordCache.validate` accepts a TOTP token mid-session). `[ev: corpus B803]`
 
+## Session lifetime — the auto-logoff activity monitor `[ev: retro t9c-reference-gaps Δ1]`
+Full derivation: corpus B1344 (idle timer from source), B1334 (panel-user recipe), B1315 (the gap). Official
+pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
+- **The server decides, not the page.** The idle timer is `NiagaraSuperSession.lastActivity`: remaining =
+  period − (now − lastActivity); period −1 never expires; while any keep-alive token is held the full period
+  is returned. [CERT] `organized/baja/baja/vineflower/com/tridium/session/NiagaraSuperSession.java:184-198`
+- **The period is per user:** −1 when any session of the group has auto logoff disabled, there is no user,
+  or `BUser.autoLogoffSettings.autoLogoffEnabled` is false; else `BUserService.defaultAutoLogoffPeriod` when
+  `useDefaultAutoLogoffPeriod` is set, else the user's own `autoLogoffPeriod`. [CERT] same file `:217-244`.
+  Defaults (enabled, use-default, 15 min): `[ev: corpus B1344 §1344.1]`.
+- **Only user input counts as activity.** `activityMonitor.js` listens to `keypress`, `mousedown`,
+  `touchstart`, `DOMMouseScroll`, `mousewheel` and POSTs `/timeout` (CSRF token required), which calls
+  `resetSessionTimeout(offset)`. [CERT] `organized/web/web-rt/vineflower/rc/util/activityMonitor.js:125,128`;
+  `organized/web/web-rt/vineflower/com/tridium/web/servlets/SessionTimeoutServlet.java:25-38`
+- **A REST poll from a servlet-SPA does NOT keep the session alive** [INFER from CERT, B1315-G1 runtime half
+  open]: no `BWebServlet`/box/oBIX path calls `resetSessionTimeout`; `UserActivityFilter` (which does) is mapped
+  only on web-rt's `file` servlet. [CERT] `organized/web/web-rt/vineflower/javax/baja/web/filters/UserActivityFilter.java:20-22`
+- **Recipe for an always-on dashboard** — pick one, in this order:
+  1. Kiosk/HMI panel: a dedicated panel user with Auto Logoff Enabled = false and Allow Concurrent Sessions =
+     false. `BUser.allowConcurrentSessions` defaults true, so a second login by the same user can evict the
+     kiosk when it is false — use a separate user for the second-login (write) session. `[ev: corpus B1334]`
+  2. A view that must stay live while open: load `/module/web/rc/util/activityMonitor.js` and pause it with
+     `keepAlive()` → token → `release(token)` (bajaux: `activityMonitor.mixinKeepAlive(this)`). [CERT-doc]
+     `niagara-help/devguide-clean/autoLogoffWeb.txt:14-46,52-98`
+  3. Every request to a module web app is activity: map `javax.baja.web.filters.UserActivityFilter` on the
+     servlet in `WEB-INF/web.xml` — the doc calls this a fallback. [CERT-doc] `autoLogoffWeb.txt:138-152`
+  Never fake activity by POSTing `/timeout` from the poll loop: it defeats the site's logoff policy.
+- **4.15 adds an absolute logoff** counted from login that activity cannot reset (`UserService.absoluteLogoffEnabled`,
+  default period 7 days, per-user `absoluteLogoffEnabled`); a 24/7 kiosk user needs both flags off or a planned
+  weekly re-login. `[ev: corpus B1344 §1344.3]` [CERT-doc] `niagara-help/versions/4.15.6.20/guides-clean/StationSecurity/StationAutoLogoff-4CBC23A4.txt:30-41`
+- **Workbench views** not hosted on a station component report activity through `BFoxProxySession.userActivity()`;
+  `NotifyListener.onNotify()` fires with ≤30 s left. [CERT-doc] `niagara-help/devguide-clean/autoLogoffWb.txt:6-46`
+- Release note 7154 ("After AutoLogoff, refresh logs user back in") is an AX 3.0.91 fix, not an N4 fact.
+  [CERT-doc] `niagara-help/devguide-clean/releaseNotes.txt:6365`
+
 ## Extending an existing dashboard
 - **Before hand-editing a dashboard SPA, decide DATA vs CODE:** a data-driven render (`CUARTOS.forEach`, `SENSORS.map`) is entity-count-agnostic, so scaling 3→5 rooms is swapping the DATA arrays (`CUARTOS`/`SENSORS`/`FANS`, the plano src, `viewBox`/`IMG_W`/`IMG_H`) with zero change to the render functions. Verify with `node --check` on the extracted `<script>` blocks after. [ev: retro 5rooms #1]
 - **The module is the SKELETON; the operator's standalone HTML is only the DATA:** splice the operator's calibrated data blocks into the module's `index.html` (which already carries kiosk CSS, `/api/*` wiring, status classes, alarms, setpoint save) and remap sim ords to the module's Niagara ords — never rebuild the module from the standalone, which loses the integration layer. See `METHODOLOGY.md` §editing technique for navigating the giant single-file source. [ev: retro 5rooms #2]
