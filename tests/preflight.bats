@@ -392,3 +392,38 @@ sample_nh() { SNH="$TMPDIR_T/niagara-4.15.6.20"; cp -r "$NH" "$SNH"; }
   printf '%s\n' "$output" | grep -E '^WARN  sample-home ' | grep -qF 'version could not be compared'
   [[ "$output" != *"PASS  sample-home"* ]]
 }
+
+# The review of the follow-up (R3-001/R4-001, R3-002): comment markers inside Kotlin strings are not
+# comments ("**/*.jar" opened a block that never closed, "https://…" cut the line), and the Kotlin-DSL
+# assignment `allowDefaultProfile = false` is the same setting as `.set(false)`.
+# [ev: retro n4-course-sample-check-precision Δ1]
+# sample_kts_prepend <gr> <line>: put <line> right after the plugins block, before the signing block
+sample_kts_prepend() {
+  L="$2" awk '{ print } !done && /^}/ { print ENVIRON["L"]; done = 1 }' "$1/build.gradle.kts" > "$1/kts.new"
+  mv "$1/kts.new" "$1/build.gradle.kts"
+}
+
+@test "PF-sample-sign-strings: comment markers inside \"…\" and \"\"\"…\"\"\" strings do not hide the signing block" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sample_kts_prepend "$TMPDIR_T/tls" 'val jars = fileTree("lib") { include("**/*.jar") }'
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  printf '%s\n' "$output" | grep -qE '^PASS  sample-sign ' || { echo "glob: $output"; return 1; }
+  sample_tree "$TMPDIR_T/url" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sample_kts_prepend "$TMPDIR_T/url" 'repositories { maven { url = uri("https://repo.example/m2") } }; val q = "a \"/*\" b"; val r = """/* raw"""'
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/url"
+  printf '%s\n' "$output" | grep -qE '^PASS  sample-sign ' || { echo "url/escape/raw: $output"; return 1; }
+  grep -qF 'https://repo.example' "$TMPDIR_T/url/build.gradle.kts"   # the fixture really carries the markers
+}
+
+@test "PF-sample-sign-assign: the Kotlin-DSL form allowDefaultProfile = false PASSes, = true FAILs" {
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "$SNH" '/home/u/Niagara4.15/tridium' 1 0
+  sed -i 's/allowDefaultProfile.set(false)/allowDefaultProfile = false/' "$TMPDIR_T/tls/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  printf '%s\n' "$output" | grep -qE '^PASS  sample-sign ' || { echo "= false: $output"; return 1; }
+  sed -i 's/allowDefaultProfile = false/allowDefaultProfile = true/' "$TMPDIR_T/tls/build.gradle.kts"
+  run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  [ "$status" -eq 1 ]
+  printf '%s\n' "$output" | grep -E '^FAIL  sample-sign ' | grep -qF 'allowDefaultProfile'
+}

@@ -27,11 +27,15 @@ the retro that is, like the docs.
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | `sample-sign` checks the UNCOMMENTED root code for `allowDefaultProfile.set(false)`, `niagaraSigning {`, `aliases`, `signingProfileFile`, and names each one missing | `toolbelt/preflight.sh` Check 6; `build-verify.md` § Build target & plugin version | `[ev: tests/preflight.bats PF-sample-sign-*]` |
+| Δ1 | `sample-sign` checks the root code outside comments and strings (`"…"` with escapes, raw `"""…"""`, so `"**/*.jar"` or `"https://…"` is text) for `allowDefaultProfile.set(false)` or `allowDefaultProfile = false`, `niagaraSigning {`, `aliases`, `signingProfileFile`, and names each one missing | `toolbelt/preflight.sh` Check 6; `build-verify.md` § Build target & plugin version | `[ev: tests/preflight.bats PF-sample-sign-*]` |
 | Δ2 | No `sample-*` row PASSes by omission: missing `niagara_user_home` WARNs, an uncomparable version WARNs | `toolbelt/preflight.sh` Check 6; `build-verify.md` § Build target & plugin version | `[ev: tests/preflight.bats PF-sample-user-missing PF-sample-version-unknown]` |
 | Δ3 | `bytecode` FAIL for a jar with only multi-release classes keeps their count | `toolbelt/verify-module.sh` `check_bytecode_major`; `build-verify.md` § Verify | `[ev: tests/verify-module.bats VMR3]` |
 | Δ4 | `stored-repack.sh` puts every `META-INF/<ALIAS>.SF` + `.RSA/.DSA/.EC` right after the manifest | `toolbelt/stored-repack.sh`; `build-verify.md` § Workbench re-sign: STORED repackage | `[ev: tests/stored-repack.bats S4]` |
 | Δ5 | `WsGrid.rowSpacingFor` rejects `n > MAX_SUMMARY_COUNT` (591) | `templates/ws-placement/`; `types/logic-authoring.md` §Wire-sheet placement | `[ev: templates/ws-placement/srcTest/com/angeles/wsplacement/WsGridTest.java]` |
+
+- Branch review WARNINGs, fixed in the same unit `[ev: tests/preflight.bats PF-sample-sign-strings PF-sample-sign-assign]`: RED,
+  the first stripper took `/*` in `"**/*.jar"` as an unclosed block comment (every requirement reported missing) and
+  `allowDefaultProfile = false` FAILed; GREEN once strings are tracked and the assignment form is accepted.
 
 ## Lessons
 - A gate that matches a configuration by substring passes its own negation (`set(true)`) and its commented-out copy;
