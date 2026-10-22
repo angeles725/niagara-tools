@@ -223,7 +223,11 @@ authentication, authorization or crypto failure log the message only (`log(Level
 ## 4 · Anti-injection — BQL and ORD
 
 BQL has **no parameterized query API**. Constructing a query by string concatenation
-with user-supplied input is a direct injection vector.
+with user-supplied input is a direct injection vector. Where tags can express the query, NEQL is the
+injection-safe route: it "supports parameterized queries" (devguide `neql.txt:18`), reading `{facetName}`
+values from the resolve Context — `BOrd.make("neql:childValue50 = {integerValue50}").resolve(root, facets)` with
+`facets = BFacets.make("integerValue50", 50)` (`neql.txt:262-285`; recipe in `types/logic.md` § Ship a tag dictionary). `[ev: corpus B1308 §1308.2 C3]`
+`[ev: retro devguide415-nav-subscriptions-tags-ords Δ9]`
 
 ### 4.1 Safe literal embedding
 

@@ -391,27 +391,54 @@ An independent monitor on the producer's `lastTick` is the layer Tridium does NO
 - **Why separate:** the monitor cannot sit in the same component it watches — a stuck engine thread leaves the monitor stuck too. A second component on its own cadence (or a `BAbstractAlarmMonitor`) remains independent.
 - **Do not wait on wall-clock timers** in a WSL test — inject the `Sched` interface (see LC6 above) or test the pure stall-detection math (stall threshold, floor) off-station.
 
-## Ship a tag dictionary `[ev: corpus B814]`
+## Ship a tag dictionary `[ev: corpus B814]` `[ev: corpus B1311 §1311.2 C1-C2]`
 
-A module can auto-tag every component of its types with semantic tags using `BSmartTagDictionary` and `BNamespace`, so NEQL queries, navigation hierarchies, and Haystack tooling see the components with zero integrator effort.
+A module can tag every component of its types with semantic tags so NEQL queries, hierarchies and Haystack
+tooling see them. **First check the licence:** the tags licence enables the first two dictionaries only
+(`Dictionary.limit`, default 2) and Niagara's own `n` dictionary takes one; a third goes to fault and its tags
+vanish (UG `Tagging/LicenseRequirements` :15-21, corpus B1329 §1329.1 row 1). Prefer direct tags or rules in an
+existing dictionary (`hs`) unless the site licence allows another. `[ev: retro devguide415-r2-security-tags-analytics Δ5]`
 
-- **`BSmartTagDictionary`** is the mechanism: declare a `@NiagaraType` subclass, register it as an agent under `TagDictionaryService`, and override `getRules()` to return `SmartTagRule[]` — each rule maps a Baja `Type` to a set of tag names/values. Components matching that type are auto-tagged on insert.
-- **Constructor-seed API (alternative to `getRules`):** seed individual marker tags directly in the subclass constructor via `tagInfoList.add(SlotPath.escape(name), new BSimpleTagInfo(BMarker.DEFAULT))`, guarded by `if (get(name) == null)` for idempotency across re-runs. This is the Honeywell "seed in constructor" pattern; the `getRules()/SmartTagRule[]` pattern (B814) is the Haystack discovery path. Both extend `BSmartTagDictionary`; choose one per dictionary. `[ev: corpus B758 §758.1]`
-- **Rule-based auto-tagging:** implement `BTagRule` + `BTagRuleCondition` to classify components automatically without per-instance annotation. The `getImpliedTag`/`addAllImpliedTags` engine in `BSmartTagDictionary` iterates `getTagRules()` and applies matching rules. Override `test(entity)` → `true/false` and return tag names/values from `getTags()`. `BEquipmentTypeTag` maps a folder's `displayName` to an equip-type tag via a `lookupTable` facet. `BIsPointProxyTypeRule` + `BIsPointProxyTypeCondition` match a driver point by its proxyExt `TYPE`. `[ev: corpus B758 §758.1]`
-- **`BNamespace`** (optional): declare a named namespace in `module-include.xml` to own tag names that don't collide with the Haystack or Baja built-in namespaces.
-- **Palette placement:** drag the dictionary instance under `TagDictionaryService` at commissioning (or auto-install it in `serviceStarted()`). NEQL queries that use `tag::` operators and the Hierarchy/Navigation view become addressable immediately.
-- **Key rule:** tag names live in the lexicon (they are user-visible strings); keep them short, scope-stable, and consistent with the Haystack marker convention (no CamelCase in tag names).
+**Recipe** (no method overrides — the dictionary is configured through its slots):
+
+1. Subclass `BSmartTagDictionary` (`@NiagaraType`, nothing overridden).
+2. Set its `namespace` String property, e.g. `angeles` (`BTagDictionary.java:107`); `BNamespace` is deprecated.
+3. Define every tag in `tagDefinitions` (`BTagInfoList`, `BTagDictionary.java:114`); a rule may only use defined tags.
+4. Add `BTagRule` children to `tagRules` (`BTagRuleList`, read by `getTagRules()`, `BSmartTagDictionary.java:71`):
+   each has a `condition` and a `tagList` / `tagGroupList` / `relationList`. Prefer `ScopedTagRule` over a
+   `HasAncestor` condition (faster).
+5. Put the instance under `TagDictionaryService` (by hand at commissioning or in `serviceStarted()`).
+
+All [CERT] `tagdictionary-rt/decompiled/javax/baja/tagdictionary/`. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ9]`
+
+**Query:** a NEQL tag is `<namespace>:<key>` — `station:|slot:/|neql:angeles:room` (filter form); the
+`select <tags> where <predicate>` form has no `*`, and projections are ignored (NEQL returns entities). NEQL takes `{facetName}` parameters from the
+resolve Context (`BOrd.make("neql:childValue50 = {limit}").resolve(root, BFacets.make("limit", 50))`), the
+injection-safe route where tags suffice (devguide `neql.txt:18,28-46,282-285`; `types/security.md` § 4).
+
+**Operating facts:** tags are case-sensitive; the Implied Tags Index is off by default and both indexes and
+hierarchy caches live on the heap (recreate after edits); verify with Spy "Tags Implied" (corpus B1329 §1329.1
+rows 4-8). `[ev: retro devguide415-r2-security-tags-analytics Δ7]`
+
+### Tags in code `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]`
+
+- Direct tag: `comp.tags().set(Id.newId("angeles:room"), BMarker.MARKER)` — only `BIDataValue` values are taggable.
+- `tags().contains(id)` sees implied tags; `get(slot)` does not.
+- Relation: `comp.relations().add(Id.newId("angeles:feeds"), target, false)`; `BComponent.makeRelation` only builds
+  the `BRelation` struct for tooling, it does not add it.
+- `hierarchy:` ORDs resolve only in a client; station code uses `BHierarchyService.resolveHierarchyLevelElem`
+  (`types/logic-authoring.md` § `hierarchy:` ORD).
+
+Corpus B1311 §1311.1 rows 1-6, 13 (`javax/baja/tag/Tags.java:66-69,97` docSource, `BComponent.java:1794-1803`).
 
 ### Our-modules tag recipe (namespace `angeles`) `[ev: corpus B750 §750.2, B758 §758.5]`
 
-Concrete application of the dictionary for our cold-chain modules:
-
-- **Namespace:** `angeles` (declare in `module-include.xml` as a `<namespace>` entry).
-- **Marker tags:** `room`, `evaporator`, `compressor`, `defrost`.
-- **Keying strategy:** one `BTagRule` per component TYPE (e.g. `entity instanceof BEvaporatorUnit`) — not by folder name, since our components are well-typed.
-- **Auto-install:** place the dictionary instance under `TagDictionaryService` in `serviceStarted()` — no integrator drag required.
-- **Result:** `station:|slot:/|neql:select * where tag::room` reaches all cold-room components with zero integrator effort after module deploy.
-- **Deploy safety note:** this overlay is additive — no schema change, no containment change; deploy on an existing station is safe.
+- **Namespace:** `angeles`, set as the dictionary's `namespace` property; marker tags `room`, `evaporator`,
+  `compressor`, `defrost` in `tagDefinitions`.
+- **Rules:** one `BTagRule` per component TYPE (our components are well-typed; no folder-name keying).
+- **Query:** `station:|slot:/|neql:angeles:room` reaches every cold-room component.
+- **Licence:** ship it only where the site's tags licence has a free dictionary slot (above); otherwise tag directly.
+- **Deploy safety:** additive — no schema or containment change.
 
 ## BQL function reference card `[ev: corpus B1108]`
 
