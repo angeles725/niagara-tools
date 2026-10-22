@@ -233,6 +233,11 @@ validated by `toolbelt/sweep-build-state.sh` + `tests/build-retro-sync.bats`.
 | 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |
 | 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | pending | 6 |
+| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | pending | 8 |
+| 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-workflow.md | kit | 2026-10-16 | pending | 4 |
 | 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | pending | 5 |
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
