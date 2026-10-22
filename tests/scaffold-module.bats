@@ -80,7 +80,8 @@ setup() {
 }
 
 @test "TC-SIGN: both scaffold types emit the root signing block, so lint-structure L15 stays silent (issue #266)" {
-  # Named mutation: drop the block from a fixture root -> this test sees an L15 WARN.
+  # Named mutation: drop the niagaraSigning { aliases; signingProfileFile } part of the block from a fixture
+  # root (keep allowDefaultProfile) -> the lint exits 0 with an L15 WARN on this root, and this test fails.
   for t in logic dashboard; do
     run "$SC" "Sign${t^}" "$OUT/$t" --type "$t"
     [ "$status" -eq 0 ]
@@ -89,6 +90,12 @@ setup() {
     mkdir -p "$root/.git"                      # the L10/L14 upward walk stops here, not in the test tmpdir
     grep -q 'allowDefaultProfile.set(false)' "$root/build.gradle.kts"
     run "$KIT/toolbelt/lint-structure.sh" "$root/Sign${t^}"
+    [ "$status" -eq 0 ]                        # not 3 (usage/env: wrong path) and not 1 (FAIL)
     [[ "$output" != *"L15"* ]]
+    # positive control: the same root without its aliases line WARNs, so the lint reached this exact root
+    sed -i '/aliases\.set(/d' "$root/build.gradle.kts"
+    run "$KIT/toolbelt/lint-structure.sh" "$root/Sign${t^}"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARN  lint-structure  $root/build.gradle.kts  L15: "*"aliases"* ]]
   done
 }

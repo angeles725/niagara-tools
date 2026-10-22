@@ -402,8 +402,10 @@ L15_SIGN_ERE=('allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:
 L15_SIGN_NAME=('allowDefaultProfile.set(false) (or = false)' 'niagaraSigning {' 'aliases' 'signingProfileFile')
 _L15_ROOT="${_L14_SETTINGS%/settings.gradle.kts}/build.gradle.kts"
 if [ -n "$_L14_SETTINGS" ] && [ -f "$_L15_ROOT" ]; then
+    # dirname, not ${BASH_SOURCE[0]%/*}: a bare-name run (bash lint-structure.sh) has no slash to strip
+    # (same form as gen-retro-index.sh; tests/lint-structure.bats LS15-barename)
     # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-    . "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/method-boundary.sh"
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
     # shellcheck disable=SC2016  # awk program text in single quotes
     _L15_CODE=$(awk "$MB_AWK"'
         # blank: string contents emptied ("..." and """...""" across lines, \ escapes honoured), quotes kept
@@ -421,11 +423,16 @@ if [ -n "$_L14_SETTINGS" ] && [ -f "$_L15_ROOT" ]; then
           }
         }
         { raw[NR] = $0 }
-        END { mb_strip(raw, NR, code); blank(code, NR, code); for (i = 1; i <= NR; i++) print code[i] }' "$_L15_ROOT" 2>/dev/null)
+        END { mb_strip(raw, NR, code); blank(code, NR, code); for (i = 1; i <= NR; i++) print code[i] }' "$_L15_ROOT" 2>"$_TMP/l15.err")
+    _L15_RC=$?
     # the plugin id is itself a string, so it is matched on the comment-stripped text before blanking
-    _L15_APPLIES=$(awk "$MB_AWK"'{ raw[NR] = $0 } END { mb_strip(raw, NR, code); for (i = 1; i <= NR; i++) print code[i] }' \
-        "$_L15_ROOT" 2>/dev/null | grep -cE 'id[[:space:]]*\([[:space:]]*"com\.tridium\.niagara-signing"')
-    if [ "${_L15_APPLIES:-0}" -gt 0 ]; then
+    _L15_STRIPPED=$(awk "$MB_AWK"'{ raw[NR] = $0 } END { mb_strip(raw, NR, code); for (i = 1; i <= NR; i++) print code[i] }' \
+        "$_L15_ROOT" 2>>"$_TMP/l15.err") || _L15_RC=$?
+    _L15_APPLIES=$(grep -cE 'id[[:space:]]*\([[:space:]]*"com\.tridium\.niagara-signing"' <<< "$_L15_STRIPPED")
+    if [ "$_L15_RC" -ne 0 ]; then
+        # a failed scan is a visible row, never a silent skip (fail-closed to the reader)
+        _row WARN "$_L15_ROOT" "L15: could not scan the root for the signing block (awk exit $_L15_RC: $(head -n1 "$_TMP/l15.err")) — signing block unchecked"
+    elif [ "${_L15_APPLIES:-0}" -gt 0 ]; then
         _L15_MISS=""
         for _k in "${!L15_SIGN_ERE[@]}"; do
             grep -qE "${L15_SIGN_ERE[$_k]}" <<< "$_L15_CODE" || _L15_MISS="$_L15_MISS${_L15_MISS:+, }${L15_SIGN_NAME[$_k]}"

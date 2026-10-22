@@ -621,7 +621,13 @@ cursor recipe stays owed (WU-P0-6).
 - **Fold status:** FOLDED (WU-P0-9, 2026-10-23; bsw Δ4, issue #266): `lint-structure.sh` L15 (WARN, uncommented-code
   rule shared by table with `preflight.sh` sample-sign, LS15-sync), `templates/signing-root.gradle.kts`, both fixture
   roots (so `scaffold-module.sh` emits it; the script prints the two gradle properties), `build-verify.md`. The
-  property-driven `aliases`/`signingProfileFile` form is not built here `[INFER]`: the course form uses literals.
+  property-driven `aliases`/`signingProfileFile` form (the course form uses literals) was built offline (U3b; N4
+  4.14.0.162 mirror, plugin 7.6.17, Gradle 7.6, via `build.sh`): it compiles, configures, and fails closed (no
+  properties → `:jar` "signingAwareArchive.aliases doesn't have a configured value", exit 30; missing profile file →
+  `:jar` "doesn't exist", exit 30; `build.sh` needs `ORG_GRADLE_PROJECT_*`, kit issue #308) `[CERT-live local build]`.
+  A throwaway self-signed key + profile signs the jar (jarsigner verified), and `allowDefaultProfile.set(false)` alone
+  refuses a profile-less build ("The default profile is not available"); without it the plugin silently signs with an
+  auto-created Niagara4Modules dev key `[CERT-live local build]`. A production CA-issued profile was not exercised.
 
 ### C86 — Jar-lock diagnosis must be route-independent; always run qualified tasks
 - **Sources:** bsw#Δ5 (primary)

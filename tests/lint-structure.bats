@@ -245,8 +245,14 @@ $_LS15_BLOCK"
   _ls15_tree "$ROOT" "$_LS15_SIGN
 ${_LS15_BLOCK/allowDefaultProfile.set(false)/allowDefaultProfile = false}"
   run "$LS" "$ROOT/Group/Mod"
-  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
   [[ "$output" != *"L15"* ]]
+  # positive control: the same root with = true WARNs, so the silence above means "accepted", not "never scanned"
+  sed -i 's/allowDefaultProfile = false/allowDefaultProfile = true/' "$ROOT/Group/build.gradle.kts"
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: "*"allowDefaultProfile.set(false)"* ]]
 }
 
 @test "LS15-partial: the block without allowDefaultProfile WARNs and names only it" {
@@ -272,8 +278,37 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   ROOT=$(mktemp -d)
   _ls15_tree "$ROOT" 'plugins { id("com.tridium.niagara") }'
   run "$LS" "$ROOT/Group/Mod"
-  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
   [[ "$output" != *"L15"* ]]
+  # positive control: adding only the signing plugin id to the same root WARNs, so the root was reached
+  printf '%s\n' "$_LS15_SIGN" >> "$ROOT/Group/build.gradle.kts"
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: "* ]]
+}
+
+@test "LS15-barename: run by bare name from inside toolbelt/, the lib still sources and L15 still WARNs" {
+  # ${BASH_SOURCE[0]%/*} of a bare name is the name itself, so the lib source failed and L15 skipped silently.
+  ROOT=$(mktemp -d)
+  _ls15_tree "$ROOT" "$_LS15_SIGN"
+  cd "$KIT/toolbelt"
+  run bash lint-structure.sh "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"L15: applies com.tridium.niagara-signing without"* ]]
+  [[ "$output" != *"No such file"* ]] && [[ "$output" != *"unbound variable"* ]]
+}
+
+@test "LS15-unreadable: a root build.gradle.kts the scan cannot read WARNs L15 visibly instead of skipping" {
+  [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
+  ROOT=$(mktemp -d)
+  _ls15_tree "$ROOT" "$_LS15_SIGN"
+  chmod 000 "$ROOT/Group/build.gradle.kts"
+  run "$LS" "$ROOT/Group/Mod"
+  chmod 644 "$ROOT/Group/build.gradle.kts"; rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
 @test "LS15-sync: lint-structure L15 and preflight sample-sign use the same four requirement patterns" {

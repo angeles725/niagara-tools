@@ -131,6 +131,24 @@ The `schema-risk.sh` "before" snapshot must be the **DEPLOYED source**, not the 
 ## Signing per deploy target
 - **Check the deploy target's signing policy before assuming a Workbench re-sign:** a Honeywell supervisor ACCEPTS gradle's per-machine DEV cert — no re-sign needed (chihuahua's `deploy.sh` only builds + copies and runs on the same supervisor). A JACE field controller enforces the project CA (e.g. `angelessigner`), so a JACE-bound module IS re-signed. [CERT-live 2026-09-01 · retro 5rooms #9]
 - **The signature entries are named after the signing ALIAS, not fixed:** `NIAGARA4.*` for the default profile, `CODESIGN.*` for the N4 course `CodeSigning` alias, `SERVER1.*` for Honeywell-signed jars. The station decides by `niagara.moduleVerificationMode` + cert chain, never by the entry name, and `verify-module.sh`'s `signed` check accepts any `META-INF/<ALIAS>.SF` with its `<ALIAS>.RSA|.DSA|.EC` block (an orphan `.SF` FAILs) and reports the alias. A wizard-generated ROOT `build.gradle.kts` applies `com.tridium.niagara-signing` with NO `signingServices`/`niagaraSigning` block (`devkit-wb.jar!gradle/build.gradle.kts.vm:18`, 4.15.6.20), so a missing profile signs with the self-signed default key and the build stays green: `lint-structure.sh` L15 WARNs such a root (same uncommented-code rule as `preflight.sh --sample` `sample-sign`, which FAILs a sample tree), `templates/signing-root.gradle.kts` holds the block (alias and profile path from the `niagaraSigningAlias` / `niagaraSigningProfile` gradle properties, never a tracked host path), and `scaffold-module.sh` emits it through both fixtures. `[ev: retro n4-course-signed-jars-gate-fix Δ4]` `[ev: retro n4-course-handson-build-signing-windows Δ4]` `[ev: corpus B817 §817.6]` `[ev: retro n4-course-signed-jars-gate-fix Δ1]`
+- **The property-driven signing block builds offline and fails closed; a real signed build is still open.** The
+  template is a property-driven variant of the course block (Lab 5 `signing_configuration.kts` uses literals). Built
+  offline against an N4 4.14.0.162 mirror (Honeywell OptimizerSupervisor), niagara-module plugin 7.6.17, Gradle 7.6, on
+  a `scaffold-module.sh` module via `build.sh`: with no properties, configure passes and `:<MOD>-rt:jar` FAILS
+  ("property 'signingAwareArchive.aliases' doesn't have a configured value", exit 30); `gradlew --offline help` with
+  dummy `-PniagaraSigningAlias`/`-PniagaraSigningProfile` is BUILD SUCCESSFUL (the Provider-API form configures); with
+  the properties pointing at a missing profile file, `:jar` FAILS ("specifies file ... which doesn't exist", exit 30).
+  `build.sh` does not forward `-P` flags, so pass the two properties through it as `ORG_GRADLE_PROJECT_niagaraSigningAlias`
+  / `ORG_GRADLE_PROJECT_niagaraSigningProfile` environment variables (kit issue #308). `[CERT-live local build]`
+  With a throwaway self-signed JCEKS key and a hand-written profile (Java properties XML, devguide
+  `security/codeSigning.txt:29-47`; keys `niagara.signing.profileType`, `storetype`, `storepath`, `storepass`,
+  `keypass.<alias>`), the build SIGNS: `META-INF/<ALIAS8>.SF`/`.RSA` (alias cut to 8 upper-case chars), `jarsigner
+  -verify` passes; no CA chain or timestamp server is needed (the TSA is contacted only when
+  `niagara.signing.standardtsa` is set, devguide `codeSigning.txt:113-135`). `allowDefaultProfile.set(false)` is what
+  refuses on its own: with no profile, `:jar` FAILS "The default profile is not available. Specify one explicitly";
+  with the line removed, the plugin creates `user.home/.tridium/security/niagara.signing.{xml,jceks}` and the build
+  passes signed `NIAGARA4` by a "For Development Purposes Only" Niagara4Modules certificate. `[CERT-live local build]`
+  A production CA-issued profile was not exercised (none on that machine).
 - **Six permission groups require a signed, trusted module:** `REFLECTION`, `ACCESS_CLASS`, `MBEAN_PERMISSION`,
   `THIRD_PARTY_PERMISSION`, `PROTECTION_DOMAIN`, `HSM_SIGNING` (`requiresSignature()` is true in exactly these six
   `com/tridium/security/*PermissionGroup` classes, vineflower 4.14.0.162; the devguide names only REFLECTION and
