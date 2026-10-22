@@ -1,0 +1,12 @@
+-- root --
+src
+-- want --
+exit 0
+-- src/G3.java --
+package demo;
+import javax.baja.sys.*;
+public final class G3 extends BComponent {
+  public void started() throws Exception { super.started(); applyRunCmd(); }
+  private void applyRunCmd() { }
+  public void exitDefrost() { applyRunCmd(); }
+}

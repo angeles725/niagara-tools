@@ -1,0 +1,16 @@
+-- root --
+src
+-- want --
+exit 1
+FAIL  timer-ticket  @DIR@/src/C17.java: stopped() does not cancel ticket a (a cancel in a comment, a string or of another ticket does not count)
+-- src/C17.java --
+package demo;
+import javax.baja.sys.*;
+public final class C17 extends BComponent {
+  private Clock.Ticket a;
+  private Clock.Ticket b;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }
+  private Clock.Ticket other;
+  public void stopped() throws Exception { super.stopped(); stopTimer(a); b.cancel(); }
+  private void stopTimer(Clock.Ticket t) { if (other != null) other.cancel(); }
+}

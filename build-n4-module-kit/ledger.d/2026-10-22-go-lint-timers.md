@@ -1,0 +1,6 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-22 -->
+<!-- last-change-note: quality round 8 T8k-3: lint-timers ported onto the Go lint engine -->
+log: 2026-10-22 · quality round 8 T8k-3 → `toolbelt/lint-timers.sh` now a wrapper over the TreeRule package `go/internal/lint/rules/timers` (awk semantics kept: leftmost-longest matching, gawk `for (k in a)` order, grep UTF-8 and bash `read` quirks); byte-identical on the bats cases (62 recorded goldens), tests/fixtures, Honeywell, panccadia-leon, Leon-Guanjuato and (same 423 rows and exit; stderr without gawk's invalid-multibyte warnings) a 600-file decompiled Niagara sample; Honeywell 65.9 s → 0.25 s; one intended difference: an unreadable module-permissions.xml exits 3 (the bash exit ran in a subshell and failed open). Retro retros/2026-10-22-go-lint-timers.md 2Δ pending. [ev: retro go-lint-timers]
+open_issue: Go lint engine: after a walk error Run still scans the listed files (bash lints printed nothing), and WalkError quotes the directory as C-locale find does ('dir', GNU find under C.UTF-8 prints ‘dir’) [ev: retro go-lint-timers]
+open_issue: lib/method-boundary.sh header still names lint-timers.sh as a consumer; update the consumer list [ev: retro go-lint-timers]

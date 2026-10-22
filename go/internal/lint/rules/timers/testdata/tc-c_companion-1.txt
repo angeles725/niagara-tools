@@ -1,0 +1,46 @@
+-- root --
+tcc_ok
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/tcc_ok/BUnitFixed.java: timer cancelled in stopped()
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tcc_ok/BUnitFixed.java --
+package demo;
+import javax.baja.sys.*;
+public final class BUnitFixed extends BComponent {
+  private Clock.Ticket startDelayTicket;
+  public void changed(Property p, Context cx) {
+    if (!isRunning()) return;
+    applyRunCmd();
+  }
+  void applyRunCmd() {
+    if (!Sys.atSteadyState()) return;   // the fix — no schedule before steady state
+    startDelayTicket = Clock.schedule(this, BRelTime.makeSeconds(5), startDelayExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (startDelayTicket != null) { startDelayTicket.cancel(); startDelayTicket = null; }
+  }
+}

@@ -1,0 +1,11 @@
+-- root --
+src
+-- want --
+exit 0
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}

@@ -1,0 +1,46 @@
+-- root --
+tcc
+-- want --
+exit 1
+PASS  timer-ticket  @DIR@/tcc/BUnitPre.java: timer cancelled in stopped()
+FAIL  changed-sched  @DIR@/tcc/BUnitPre.java: Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tcc/BUnitPre.java --
+package demo;
+import javax.baja.sys.*;
+public final class BUnitPre extends BComponent {
+  private Clock.Ticket startDelayTicket;
+  public void changed(Property p, Context cx) {
+    if (!isRunning()) return;
+    applyRunCmd();                 // one level deep -> schedules with no steady-state guard
+  }
+  void applyRunCmd() {
+    startDelayTicket = Clock.schedule(this, BRelTime.makeSeconds(5), startDelayExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (startDelayTicket != null) { startDelayTicket.cancel(); startDelayTicket = null; }
+  }
+}

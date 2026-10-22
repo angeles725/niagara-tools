@@ -1,0 +1,44 @@
+-- root --
+tca_ok
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/tca_ok/BStaggerClean.java: timer cancelled in stopped()
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
+-- tca_ok/BStaggerClean.java --
+package demo;
+import javax.baja.sys.*;
+public final class BStaggerClean extends BComponent {
+  private boolean startingUp = false;
+  private Clock.Ticket powerOnTicket;
+  public void arm() {
+    startingUp = true;
+    powerOnTicket = Clock.schedule(this, BRelTime.makeSeconds(5), powerOnExpired, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (powerOnTicket != null) { powerOnTicket.cancel(); powerOnTicket = null; }
+    startingUp = false;   // cleared on stop — conformant
+  }
+}

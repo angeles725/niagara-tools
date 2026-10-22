@@ -1,0 +1,45 @@
+-- root --
+s21mis
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/s21mis/BMisparse.java: timer cancelled in stopped()
+-- s21mis/BMisparse.java --
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(
+  name = "ackAlarm",
+  type = "BAlarmRecord",
+  defaultValue = "new BAlarmRecord()"
+)
+public final class BMisparse extends BComponent
+{
+  private boolean startingUp = false;
+  private Clock.Ticket t;
+  public void armA() { startingUp = true; }                                              // FIELD flag, method A
+  public void armB() { t = Clock.schedule(this, BRelTime.makeSeconds(5), exp, null); }    // schedule, method B
+  public void stopped() throws Exception { super.stopped(); if (t != null) { t.cancel(); t = null; } }
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}

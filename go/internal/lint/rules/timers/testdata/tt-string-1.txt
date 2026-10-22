@@ -1,0 +1,15 @@
+-- root --
+src
+-- want --
+exit 1
+FAIL  timer-ticket  @DIR@/src/C3.java: stopped() does not cancel ticket a (a cancel in a comment, a string or of another ticket does not count)
+FAIL  timer-ticket  @DIR@/src/C3.java: stopped() does not cancel ticket b (a cancel in a comment, a string or of another ticket does not count)
+-- src/C3.java --
+package demo;
+import javax.baja.sys.*;
+public final class C3 extends BComponent {
+  private Clock.Ticket a;
+  private Clock.Ticket b;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), x, null); b = Clock.schedule(this, BRelTime.makeSeconds(9), y, null); }
+  public void stopped() throws Exception { super.stopped(); log("a.cancel(); b.cancel();"); }
+}

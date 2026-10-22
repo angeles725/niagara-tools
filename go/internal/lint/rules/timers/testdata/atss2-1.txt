@@ -1,0 +1,48 @@
+-- root --
+atss2
+-- want --
+exit 0
+PASS  timer-ticket  @DIR@/atss2/BAtssFixed.java: timer cancelled in stopped()
+-- atss2/BAtssFixed.java --
+package demo;
+import javax.baja.sys.*;
+public final class BAtssFixed extends BComponent {
+  private Clock.Ticket pollTicket;
+  @Override public void started() throws Exception {
+    super.started();
+    if (Sys.atSteadyState()) {
+      pollTicket = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), doPoll, null);
+    }
+  }
+  @Override public void atSteadyState() throws Exception {
+    super.atSteadyState();
+    pollTicket = Clock.schedulePeriodically(this, BRelTime.makeSeconds(60), doPoll, null);
+  }
+  public void stopped() throws Exception {
+    super.stopped();
+    if (pollTicket != null) { pollTicket.cancel(); pollTicket = null; }
+  }
+}
+-- src/Conformant.java --
+package demo;
+import javax.baja.sys.*;
+public final class Conformant extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() throws Exception { super.stopped(); if (ticket != null) ticket.cancel(); }
+}
+-- src/NoTimer.java --
+package demo;
+import javax.baja.sys.*;
+public final class NoTimer extends BComponent {
+  private int count;
+  public void bump() { count++; }
+}
+-- src/Owner.java --
+package demo;
+import javax.baja.sys.*;
+public final class Owner extends BComponent {
+  private Clock.Ticket ticket;
+  public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  // no stopped() override — the ticket leaks on station stop
+}
