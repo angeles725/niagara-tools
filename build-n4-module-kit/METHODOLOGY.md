@@ -27,7 +27,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   "Implement methods" stub `new Type[0]` registers nothing and `Sys.getService` never finds the service. Check:
   `toolbelt/lint-service-types.sh` (FAIL empty/null, WARN no own type). `[ev: corpus B1419 §1419.1]` `[ev: retro course-recordings Δ8]`
 - [ ] **Text bytes name their charset:** `getBytes(StandardCharsets.UTF_8)` / `new String(b, UTF_8)`, never the
-  platform default; a written text file ends lines with `System.lineSeparator()`. `[ev: corpus B1419 §1419.4 c]`
+  platform default; a written text file ends lines with `System.lineSeparator()`. `[ev: corpus B1419 §1419.4 c]` `[ev: retro course-recordings Δ8]`
 - **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. The watchdog chain — niagarad daemon (PID poll → process exit → auto-restart with crash-loop backoff) → `EngineWatchdog` (hung engine heartbeat) → engine discipline — recovers a DEAD or HUNG station; a merely SLOW station is invisible to the watchdogs — engine-thread discipline (never block, `catch(Throwable)`) is the ONLY protection against slow callbacks. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B737 §A.3, B775]`
 
 ## Domain correctness
@@ -73,7 +73,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
 - [ ] Both/all profile jars **signed** (a `META-INF/*.SF` signature block — `<ALIAS>.SF` + its `.RSA|.DSA|.EC`). `[ev: retro n4-course-signed-jars-gate-fix Δ1]`
 - [ ] **Compiles warning-clean:** some vendors build with `-Werror`, so a module with javac warnings fails their
   build. An unavoidable unchecked cast (`(BITable<T>) ord.get()`) gets `@SuppressWarnings("unchecked")` on the
-  smallest declaration that holds it. `[ev: corpus B1419 §1419.4 b]`
+  smallest declaration that holds it. `[ev: corpus B1419 §1419.4 b]` `[ev: retro course-recordings Δ8]`
 - [ ] Tests: unit-test the pure-Java model (e.g. a pure router) with JUnit — `niagaraTest` does not run in WSL.
 - [ ] `toolbelt/verify-module.sh` passed on the built jars.
 - [ ] **The non-skippable floor ran** (`BUILD-LOOP.md` §5) — even under an explicit speed request — and any OTHER skipped check is listed with its reason under `## Checks skipped` in the feature doc.

@@ -261,8 +261,11 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
   [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
   shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`
 - **BQL case rules:** `LIKE` is case-sensitive and so are slot/property names in the projection; only keywords are
-  not. For a case-insensitive match chain NEQL first: its `like` is a whole-string Java regex, so `(?i)` at the start
-  works and the pattern must match the full value; then `|bql:select …` (exact literal still open, B1418-G1).
+  not [CERT] (B1418 §1418.3: `Pattern.java:122`, `BqlTokenizer.java:188-192`). For a case-insensitive match chain
+  NEQL first: its `like` is `java.util.regex.Pattern.matches`, a whole-string regex, so a leading `(?i)` works and the
+  pattern must match the full value [CERT] (`NeqlEntityEvaluator.java:276-277`); the chained
+  `station:|neql:…|bql:select …` form worked live in the course [CERT-a], but its exact literal is [INFER] until
+  run (open gap B1418-G1).
   A query run from the browser moves every row over the network: filter and `limit` in the query, not in the page.
   `[ev: corpus B1418 §1418.3]` `[ev: corpus B1419 §1419.2 b]` `[ev: retro course-recordings Δ6]`
 - **Nav tree:** `baja.nav` (a NavRoot) and `getNavChildren()` on Component / NavContainer / ComponentSpace.

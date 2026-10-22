@@ -93,7 +93,7 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 - Apply the slot rules as you write each `@NiagaraProperty` (flags, facets/units, the annotation+generated+imports rule).
 - **After editing a part's `*.gradle.kts`, Gradle-sync the IDE before you trust its imports:** a new `api(":x-rt")`
   (a module from another Gradle build or the install) or an `uberjar(...)` dependency does not resolve in IntelliJ
-  until the sync runs. Keep the dependency block grouped NRE / module / test. Forms: `types/module-wiring.md` §1.
+  until the sync runs. Keep the dependency block grouped NRE (Niagara Runtime Environment) / module / test. Forms: `types/module-wiring.md` §1.
   `[ev: corpus B1418 §1418.5 c]` `[ev: corpus B1419 §1419.4 a]` `[ev: retro course-recordings Δ5]`
 - **A path mapped twice belongs in a recipe:** a read-only indicator carried from rt to the dashboard follows the
   cached hop list in `skill/SKILL.md` § Recipe — add a read-only indicator (rt → dashboard); start from the sibling

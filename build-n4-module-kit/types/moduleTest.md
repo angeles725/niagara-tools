@@ -153,10 +153,12 @@ public void ngTestLinkCheck2() throws Exception {
    annotations.
 2. `<part>/moduleTest-include.xml` — registers the test type; does NOT appear in `module-include.xml`.
 3. `.gradle.kts` — `moduleTestImplementation("Tridium:test-wb")` (and any other needed test deps).
-4. Test verifies in Workbench → Tools → Run Tests (WSL `niagaraTest` task is blocked by sdk bug 7.6.17).
-   From a native Niagara console the instructor's runner is `test <module>`, `test <module:Type>` or
-   `test <module:Type.method>` for one module, class or method; Gradle `niagaraTest` is the CI form (with
-   JaCoCo coverage). `[ev: corpus B1418 §1418.5 f]` `[ev: retro course-recordings Δ7]`
+4. Run the tests on a native (non-WSL) Niagara install with `bin/test` and a developer license:
+   - **Inner loop:** Workbench → Tools → Run Tests, or the console runner `test <module>`, `test <module:Type>`,
+     `test <module:Type.method>` for one module, class or method (the course instructor's choice).
+   - **CI with coverage:** Gradle `niagaraTest` (+ JaCoCo), as the course uses it, on a native host only. From WSL
+     plugin 7.6.17 discovers 0 tests (Known gotchas below), so a WSL build gates only the `moduleTestJar` compile.
+   `[ev: corpus B1418 §1418.5 f]` `[ev: corpus B961 §961.3]` `[ev: retro course-recordings Δ7]`
 
 See also: `types/structure.md §PASS state + scaffold` (scaffold emits a stub `moduleTest-include.xml`);
 `types/logic.md §Link lifecycle — gating and reacting` (the `doCheckLink`/INDIRECT-link patterns
@@ -385,8 +387,9 @@ the main Gradle section above).
 
 ### Known gotchas (R6)
 
-- **`niagaraTest` task bug (sdk 7.6.17):** the Gradle `niagaraTest` task has a known plugin bug and cannot
-  run `moduleTest` suites.  Run tests from Workbench → **Tools → Run Tests** until the task is fixed.
+- **`niagaraTest` task bug (sdk 7.6.17):** run from WSL, the Gradle `niagaraTest` task discovers 0 `moduleTest`
+  tests. Use the native runners of the checklist step 4 (Workbench Run Tests or console `test`); `niagaraTest` as a
+  CI step needs a native host. `[ev: corpus B961 §961.3]`
 - **No test depends on the network or Wi-Fi:** a test that needs a reachable host fails for reasons the code does
   not control. Pure seams (`run-pure-test.sh`) or a station-local fixture replace it. `[ev: corpus B1418 §1418.5 g]` `[ev: retro course-recordings Δ7]`
 - **Do not run `gradle -t` with IDE autosave:** continuous build compiles half-written files and reports

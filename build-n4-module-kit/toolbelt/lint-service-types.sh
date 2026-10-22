@@ -11,9 +11,10 @@
 # Structural rules (comments blanked by lib/method-boundary.sh mb_strip):
 #   Scope     — a `Type[] getServiceTypes(...)` declaration with a body; an abstract/interface declaration
 #               (`;` before `{`) and a file without one are out of scope.
-#   Returned  — the first `return <expr>;` of the body. <expr> is an array literal (`new Type[] { … }`), `null`,
-#               `new Type[0]`, or a field (`a`, `Own.a`, `(Type[]) a.clone()`) resolved through every `a = …;`
-#               assignment in the same file (a static initializer counts).
+#   Returned  — every `return <expr>;` of the body, the worst verdict wins (empty, other, unresolved, own).
+#               <expr> is an array literal (`new Type[] { … }`), `null`, `new Type[0]`, or a field (`a`, `Own.a`,
+#               `(Type[]) a.clone()`) resolved through every `a = …;` assignment in the same file (a static
+#               initializer counts), read from the assignment itself, not from the start of its line.
 #   FAIL      — the returned array is empty (`new Type[0]`, `new Type[] {}`, `{}`) or null.
 #   Own type  — `TYPE`, `this.TYPE`, `<OwnClass>.TYPE` or `getType()`/`this.getType()` (own class = first `class X`
 #               in the file); `<OwnClass>.<field>` resolves like a bare field; outer parentheses are dropped.
@@ -31,6 +32,8 @@
 # Mutation: ST4 -- accepting any X.TYPE as the own type passes a service registered only under another type
 # Mutation: ST5 -- treating an unresolved return as clean passes return super.getServiceTypes()
 # Mutation: ST9 -- resolving only the declaration line misses a field assigned in a static block to new Type[0]
+# Mutation: ST10 -- checking only the first return passes a getServiceTypes() whose fallback branch returns null
+# Mutation: ST11 -- reading the initializer from the line start stops at an earlier ';' and misses new Type[0]
 # Mutation: ST8 -- dropping getType() from the own-type set WARNs the vendor form new Type[] { this.getType() }
 # Mutation: ST6 -- matching inside comments flags a commented-out return new Type[0]
 # Mutation: ST-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
@@ -44,11 +47,11 @@ awk_lint_parse lint-service-types one 'usage: lint-service-types.sh [--strict] <
 printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
 
 cat > "$AL_TMP/main.awk" << 'AWKEOF'
-# text from line `from` to the first `stop` character, whitespace removed (the end of a statement or header)
-function until_char(from, n, stop,    i, j, ch, out) {
+# raw text from column `col` of line `from` up to (not including) the first `stop` character, across lines
+function until_char(from, col, n, stop,    i, j, ch, out) {
   out = ""
   for (i = from; i <= n; i++) {
-    for (j = 1; j <= length(code[i]); j++) {
+    for (j = (i == from ? col : 1); j <= length(code[i]); j++) {
       ch = substr(code[i], j, 1)
       if (ch == stop) return out
       out = out ch
@@ -80,7 +83,7 @@ function classify(e,    inner, k, parts, cnt) {
   cnt = split(inner, parts, ",")
   for (k = 1; k <= cnt; k++)
     if (parts[k] ~ /^(this\.)?(TYPE|getType\(\))$/ || parts[k] == own ".TYPE") return "own"
-  return cnt > 0 ? "other" : "empty"
+  return "other"
 }
 # a returned field (`a`, `Own.a`, `this.a`, `(Type[]) a.clone()`) -> the verdict of every `a = …;` in the file:
 # any empty -> empty, any other -> other, all own -> own, no assignment found -> unresolved
@@ -91,9 +94,9 @@ function resolve(e, n,    f, init, v, out, seen) {
   if (e !~ /^[A-Za-z_][A-Za-z0-9_]*$/) return "unresolved"
   out = "own"; seen = 0
   for (f = 1; f <= n; f++) {
-    if (code[f] !~ ("(^|[^A-Za-z0-9_])" e "[[:space:]]*=([^=]|$)")) continue
-    init = until_char(f, n, ";"); gsub(/[[:space:]]/, "", init)
-    sub("^.*(^|[^A-Za-z0-9_])" e "=", "", init)
+    if (!match(code[f], ("(^|[^A-Za-z0-9_])" e "[[:space:]]*=([^=]|$)"))) continue
+    init = until_char(f, RSTART, n, ";"); gsub(/[[:space:]]/, "", init)
+    sub("^[^=]*=", "", init)
     v = classify(init); seen = 1
     if (v == "empty") return "empty"
     if (v != "own") out = (v == "other" || out == "other") ? "other" : "unresolved"
@@ -102,6 +105,7 @@ function resolve(e, n,    f, init, v, out, seen) {
 }
 { raw[NR] = $0 }
 END {
+  rank["own"] = 1; rank["unresolved"] = 2; rank["other"] = 3; rank["empty"] = 4
   n = NR
   mb_strip(raw, n, code)
   own = ""
@@ -111,16 +115,19 @@ END {
     }
   for (i = 1; i <= n; i++) {
     if (code[i] !~ /Type[[:space:]]*\[[[:space:]]*\][[:space:]]+getServiceTypes[[:space:]]*\(/) continue
-    head = until_char(i, n, "{")
+    head = until_char(i, 1, n, "{")
     if (index(head, ";") > 0) continue                     # abstract / interface declaration
     b = block_body(i, n); gsub(/[[:space:]]+/, " ", b)
-    e = ""
-    if (match(b, /(^|[^A-Za-z0-9_])return[[:space:]][^;]*;/)) {
-      e = substr(b, RSTART, RLENGTH); sub(/.*return[[:space:]]/, "", e); sub(/;$/, "", e)
+    # every `return <expr>;` counts; the worst wins: empty > other > unresolved > own (no return = unresolved)
+    verdict = ""; rest = b
+    while (match(rest, /(^|[^A-Za-z0-9_])return[[:space:]][^;]*;/)) {
+      e = substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH)
+      sub(/.*return[[:space:]]/, "", e); sub(/;$/, "", e); gsub(/[[:space:]]/, "", e)
+      v = classify(e)
+      if (v == "unresolved") v = resolve(e, n)
+      if (rank[v] > rank[verdict]) verdict = v
     }
-    gsub(/[[:space:]]/, "", e)
-    verdict = classify(e)
-    if (verdict == "unresolved") verdict = resolve(e, n)
+    if (verdict == "") verdict = "unresolved"
     if (verdict == "empty")
       printf "FAIL  lint-service-types  %s:%d  getServiceTypes() registers no type (empty array or null) -- the service is never registered; return new Type[] { TYPE } (METHODOLOGY.md § rt)\n", FILE, i
     else if (verdict == "other")

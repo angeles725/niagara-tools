@@ -23,7 +23,8 @@ corrected the instructor (the default store is `niagara.signing.jceks`, not `.jk
   (`t="com.angeles.coldroomrt.BColdRoomPan"`); real palettes use `m="alias=module"` + `t="alias:Type"` without the `B`
   (fixtures/MinimalPan, CompPan, DashboardFord) `[ev: corpus B1418 §1418.5 e]`
 - `lint-service-types.sh`: RED 0/9 before the script existed, GREEN 11/11 (ST1-ST9, ST-awkfail, ST-finderr); each
-  declared mutation observed flipping its own test. Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
+  declared mutation observed flipping its own test. Review follow-up: every `return` is checked and an assignment is
+  read from its own column (RED ST10/ST11 2 failing → GREEN 13/13, both mutations observed). Real-tree smoke: 3 client roots (0 rows); decompiled vendor code,
   590 files declaring `getServiceTypes`, 0 FAIL, 6 WARN no own type (registered only under an interface type,
   genuine by the rule), 4 WARN unresolved `[ev: corpus B1419 §1419.1]`
 
@@ -42,7 +43,9 @@ corrected the instructor (the default store is `niagara.signing.jceks`, not `.jk
 Each Δ was folded by the commit that names its topic group on this branch; this commit flips the retro and its
 INDEX row.
 
-**Rows owed elsewhere (outside this task's edit surface):**
+**Rows owed elsewhere (outside this task's edit surface).** They are not deltas of this retro (Δ1-Δ8 all landed), so
+the retro stays folded; the owed rows are tracked as an open issue in `BUILD-STATE.md` (kit `open_issues`, "OWED
+quality-round8 T9f course-recording rows") until a session with those files in scope folds them:
 - `types/observability.md` §1 Level mapping — D3-6 (messages at SEVERE/WARNING/INFO, stack traces from FINE,
   CONFIG rare) and the D3-8 reason (users cannot switch `System.out` off; `lint-no-system-out.sh` already enforces
   the rule); §3 Fault surfacing — D4-15 lexiconized `configFail` cause. `[ev: corpus B1418 §1418.2]` `[ev: corpus B1419 §1419.4 c]`

@@ -75,9 +75,8 @@ svc() {
   # Mutation: ST6 -- matching inside comments flags a commented-out return new Type[0]
   printf 'package com.x;\npublic interface IFoo {\n  Type[] getServiceTypes();\n}\n' > "$SRC/IFoo.java"
   printf 'package com.x;\npublic class BPlain extends BComponent {\n}\n' > "$SRC/BPlain.java"
-  svc BCom '// return new Type[0];' > "$SRC/BCom.tmp"
-  sed 's|// return new Type\[0\];|// return new Type[0];\n    return new Type[] { TYPE };|' "$SRC/BCom.tmp" > "$SRC/BCom.java"
-  rm "$SRC/BCom.tmp"
+  { printf 'package com.x;\npublic class BCom extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    // return new Type[0];\n    return new Type[] { TYPE };\n  }\n}\n'; } > "$SRC/BCom.java"
   run "$LST" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
@@ -103,6 +102,28 @@ svc() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"BLate.java:5  getServiceTypes() registers no type"* ]]
   if [[ "$output" == *"BClone.java"* ]]; then return 1; fi
+}
+
+@test "ST10: every return is checked: a later null or empty return FAILs, a later foreign-only array WARNs" {
+  # Mutation: ST10 -- checking only the first return passes a getServiceTypes() whose fallback branch returns null
+  { printf 'package com.x;\npublic class BTwo extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    if (ready) return new Type[] { TYPE };\n    return null;\n  }\n}\n'; } > "$SRC/BTwo.java"
+  { printf 'package com.x;\npublic class BMix extends BAbstractService {\n'
+    printf '  public Type[] getServiceTypes() {\n    if (ready) return new Type[] { TYPE };\n    return new Type[] { BIMix.TYPE };\n  }\n}\n'; } > "$SRC/BMix.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-service-types  "*"BTwo.java:3  getServiceTypes() registers no type"* ]]
+  [[ "$output" == *"WARN  lint-service-types  "*"BMix.java:3  getServiceTypes() does not return the service's own TYPE"* ]]
+}
+
+@test "ST11: an assignment after another statement on the same line is read from the assignment, not the line start" {
+  # Mutation: ST11 -- reading the initializer from the line start stops at an earlier ';' and misses new Type[0]
+  { printf 'package com.x;\npublic class BLine extends BAbstractService {\n  private static Type[] types;\n'
+    printf '  static { int k = 0; types = new Type[0]; }\n'
+    printf '  public Type[] getServiceTypes() {\n    return types;\n  }\n}\n'; } > "$SRC/BLine.java"
+  run "$LST" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"BLine.java:5  getServiceTypes() registers no type"* ]]
 }
 
 @test "ST7: --strict exits 1 on a WARN; usage errors and a non-directory exit 3" {
