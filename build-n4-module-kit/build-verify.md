@@ -261,5 +261,6 @@ Stop station → replace the jars in `<niagara_home>/modules/` → start (the ja
 See also: `docs/module-dev-workflow.md` (toolchain, codegen round-trip, dev loop, testing).
 
 ## Toolbelt authoring — composition conventions
+- **One rule, two scripts: duplicate only the rule table and pin the copies with a test.** When a check already lives in another toolbelt script and a shared `toolbelt/lib` file is not an option, copy the requirement table verbatim (e.g. `lint-structure.sh` `L15_SIGN_ERE` = `preflight.sh` `SAMPLE_SIGN_ERE`) and add a bats test that fails when they differ (`tests/lint-structure.bats` LS15-sync). `[ev: retro r8-t9i-libs Δ2]`
 - **Prefer row-level output parsing over exit-code-only aggregation when composing toolbelt scripts:** a member tool that exits 0 may still emit WARN rows that must propagate (e.g. `slot-coverage.sh` exits 0 on <100% coverage); exit codes are a secondary ORed guard for crashed members. [ev: retro report-module]
 - **Emit a single count row (PASS N=0 / FAIL N>0) when relaying dup-count checks from a composed tool:** relaying individual WARN lines per duplicate key adds noise in multi-artifact reports; a count row is cleaner and machine-parseable. [ev: retro report-module]

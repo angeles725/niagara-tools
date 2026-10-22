@@ -254,6 +254,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** commit 337ee6c (6/6, five mutations bite); course Lab 7 9/9; `Could not validate cert chain` → `invalid test target(s)`.
 - **Target:** `types/moduleTest.md:10-13,156,385-386`, `BUILD-LOOP.md:162-165`, `build-verify.md` § Signing.
 - **Lint-able:** no (doctrine; C40 adds the runner). **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-9, `docs/r8-t9i-libs`, 2026-10-23; tpb Δ1, Δ3): `types/moduleTest.md` NRE note,
+  checklist step 4, new § Running from WSL (cmd.exe on a `%TEMP%` copy, `:clean` first, count the tests, the
+  self-signed test-jar cause, back up `modules/<part>.jar`), Known gotchas; `BUILD-LOOP.md` § moduleTest;
+  `build-verify.md` § Unit tests in WSL. The runner (tpb Δ2) stays with C40. Pin KL4.
 
 ### C13 — Security headers: station headers already apply to module servlets
 - **Sources:** r3wsh#Δ3 (primary, corrects the kit) · wuh#Δ5 extends (Hx needs X-Frame Sameorigin + default CSP) · r3wsh#Δ5 extends (embed via CSP `frame-ancestors` on the station provider, never X-Frame `Any`) · r3-report#R1
@@ -343,6 +347,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `alarm-rt/javax/baja/alarm/BAlarmClass.java:178` (4.15.6.20 = toOffnormal|toFault|toNormal), `BAlarmSourceExt.java:1462,1634`, corpus B1324 §1324.1.
 - **Target:** `types/logic.md:324-325`.
 - **Lint-able:** partial. **Fold type:** doc fix.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; cas Δ1): `types/logic.md` alarm policy items 3-4. **Premise
+  corrected:** the default is NOT version-dependent: vineflower 4.14.0.162 `BAlarmClass.java:115` (`make(7)`) and the
+  devguide 4.15.6.20 source `:178` both say toOffnormal|toFault|toNormal; the kit's "without toNormal" was wrong in
+  both. `timeDelay` offnormal-only and the stale/disabled skip folded as written. Pin KL3; owed Go lint G16.
 
 ### C23 — Dist attribute table inverts `noStation`
 - **Sources:** pps#Δ1 (primary) · r3pec#Δ1 corrects part (default) · r3-report#R6
@@ -390,6 +398,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `unzip -l modules/net-rt.jar` → 0 okhttp; wrapper `pom.properties`; `BAbstractMqttDriverNetwork.java:64,69,125`; corpus B1320 §1320.3, B1321 §1321.2, B1323.
 - **Target:** `types/cloud-connector.md:61-63`, `types/third-party-libraries.md:30,143,159-160,167,171,174`.
 - **Lint-able:** yes — grep `okhttp3.*net-rt`, `2\.9\.0`, `mqtt-driver`. **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; shl Δ2, Δ5, drp Δ1): `types/cloud-connector.md` § 2.1 (okhttp in
+  `bin/ext`, `nre(...)`; MQTT native first) and `types/third-party-libraries.md` (Gson 2.13.2, `abstractMqttDriver`
+  with Paho 1.2.5 / Jackson 2.22.1 / JJWT 0.12.7, OkHttp row). Verified on the 4.15.6.20 install (`bin/ext`,
+  `pom.properties`); the MQTT guide lines moved to `MQTTRequirements-74179811.txt:11,17`. Pins KL1, KL2. The Commons
+  Lang `nre(...)` half of shl Δ2 is not folded (no kit text names it).
 
 ### C28 — Signing-required permission roster names three groups; there are six
 - **Sources:** has#Δ4 (primary) · bdps#Δ2 reinforces + extends (roster with triggers: NETWORK_COMMUNICATION, REFLECTION, MANAGE_EXECUTION)
@@ -398,6 +411,13 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `com/tridium/security/*PermissionGroup.java` `requiresSignature()`, `NiagaraPermissionGroupFactory.java:196-204`, devguide `security/codeSigning.txt:123-129,163`, corpus B1312 §1312.3, B1235 §1235.5.
 - **Target:** `build-verify.md:132`, `types/distribution.md:110-115`, `types/third-party-libraries.md:148-151`, `types/structure.md` § module-permissions.xml, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — FAIL unsigned jar naming one of the six; source cross-check (Jackson→REFLECTION, `shutdownNow`→MANAGE_EXECUTION, sockets→NETWORK_COMMUNICATION). **Fold type:** doc fix + lint.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; has Δ4, bdps Δ2): `build-verify.md` § Signing per deploy target
+  (six groups, triggers, three trust routes), `types/distribution.md` § Hard signing gate, `types/third-party-libraries.md`
+  signing note, `types/structure.md` module-permissions bullet. **Open verification closed at the factory layer:** javap of
+  `modules/baja.jar` 4.15.6.20 `NiagaraPermissionGroupFactory` (throw at 537 inside the 134-547 try, WARNING "Skipping
+  element") — the 4.15 factory skips, as 4.14 did; the cert-chain layer stays open (niagara-research B1312-G1). The
+  removed kit claim "fails to load unsigned (`ValidationException`) even in LOW" had no code behind it. Pin KL5; owed Go
+  lint G15 `permission-signature`.
 
 ### C29 — A palette entry is not a `.ntpl`; the `§Templates` link dangles
 - **Sources:** pps#Δ4 (primary; provisioning half rides along)
@@ -597,6 +617,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: code devkit-wb.jar!gradle/build.gradle.kts.vm:18]`.
 - **Target:** `toolbelt/lint-structure.sh`, `build-verify.md` § Signing per deploy target, `templates/`, `toolbelt/scaffold-module.sh` (+ scaffold-diff fixtures).
 - **Lint-able:** yes. **Fold type:** template + lint + doc section.
+- **Fold status:** FOLDED (WU-P0-9, 2026-10-23; bsw Δ4, issue #266): `lint-structure.sh` L15 (WARN, uncommented-code
+  rule shared by table with `preflight.sh` sample-sign, LS15-sync), `templates/signing-root.gradle.kts`, both fixture
+  roots (so `scaffold-module.sh` emits it; the script prints the two gradle properties), `build-verify.md`. The
+  property-driven `aliases`/`signingProfileFile` form is not built here `[INFER]`: the course form uses literals.
 
 ### C86 — Jar-lock diagnosis must be route-independent; always run qualified tasks
 - **Sources:** bsw#Δ5 (primary)
