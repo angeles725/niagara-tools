@@ -13,24 +13,21 @@
 # VCS-free by design.
 # Mutation: BSC2 -- drop the concat-operator test and BSC2 stops warning on a concatenated bql: string
 # Mutation: BSC-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: BSC-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "${BASH_SOURCE[0]%/*}" && pwd)/lib/awk-lint.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-bql-string-concat raw 'usage: lint-bql-string-concat.sh <src-root>' "$@"
 awk_lint_list -name '*.java'
 
-while IFS= read -r f; do
-    ln=0
-    while IFS= read -r line || [ -n "$line" ]; do
-        ln=$((ln + 1))
-        code=${line%%//*}
-        # a bql: string OR a BqlQuery.make, AND a string-concatenation operator next to a quote
-        if printf '%s' "$code" | grep -Eq 'bql:|BqlQuery\.make\(' \
-           && printf '%s' "$code" | grep -Eq '"[[:space:]]*\+|\+[[:space:]]*"'; then
-            trimmed=$(printf '%s' "$line" | sed 's/^[[:space:]]*//')
-            printf 'WARN  lint-bql-string-concat  %s:%s  bql concat: %s\n' "$f" "$ln" "$trimmed"
-        fi
-    done < "$f"
-done < "$AL_TMP/files"
+# One awk per file (was two printf|grep pipelines per source line). Line // comments are stripped first.
+# A bql: string OR a BqlQuery.make, AND a string-concatenation operator next to a quote.
+# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
+awk_lint_each '
+    { code = $0; i = index(code, "//"); if (i) code = substr(code, 1, i - 1) }
+    code ~ /bql:|BqlQuery\.make\(/ && code ~ /"[[:space:]]*\+|\+[[:space:]]*"/ {
+        t = $0; sub(/^[[:space:]]+/, "", t)
+        printf "WARN  lint-bql-string-concat  %s:%d  bql concat: %s\n", ENVIRON["AL_FILE"], FNR, t
+    }'
 
 awk_lint_exit 0
