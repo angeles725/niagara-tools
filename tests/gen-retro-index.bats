@@ -156,8 +156,54 @@ _rows() { sed -n '/^|---|/,$p' "$FK/retros/INDEX.md" | sed 1d; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"no Go module at $top/go"* ]]
   mkdir -p "$top/go"; printf 'module example.com/x\n' > "$top/go/go.mod"
+  cp "$KIT/../go/go-tool.sh" "$top/go/"
   ln -s "$(command -v bash)" "$TMPDIR_T/bin/bash"; ln -s "$(command -v dirname)" "$TMPDIR_T/bin/dirname"
   run env PATH="$TMPDIR_T/bin" bash "$top/build-n4-module-kit/toolbelt/gen-retro-index.sh"
   [ "$status" -eq 3 ]
   [[ "$output" == *"go is not on PATH"* ]]
+}
+
+# _copy_top — a fake toplevel with a copy of the repository go/ (no bin/) and the wrapper, so a
+# rebuild never touches the shared go/bin of the checkout.
+_copy_top() {
+  TOP="$TMPDIR_T/top"
+  mkdir -p "$TOP/build-n4-module-kit/toolbelt"
+  cp "$GEN" "$TOP/build-n4-module-kit/toolbelt/"
+  cp -R "$KIT/../go" "$TOP/go"
+  rm -rf "$TOP/go/bin"
+  _mkretro 2026-09-01-alpha.md folded kit 0
+}
+
+@test "GRI-build: the wrapper builds a missing binary, reuses a fresh one and rebuilds after a source edit" {
+  # Mutation: GT3 -- a wrapper that only tests `[ -x bin ]` never rebuilds after a source edit.
+  _copy_top
+  local bin="$TOP/go/bin/gen-retro-index"
+  run bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" "$FK"
+  [ "$status" -eq 0 ]
+  [ -x "$bin" ]
+  [ "$(_rows)" = "| 2026-09-01-alpha.md | kit | 2026-09-01 | folded | 0 |" ]
+  touch -d '2000-01-01' "$bin"
+  find "$TOP/go" -path "$TOP/go/bin" -prune -o \( -name '*.go' -o -name go.mod \) -exec touch -d '1999-06-01' {} +
+  run bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" --check "$FK"
+  [ "$status" -eq 0 ]
+  [ "$(date -r "$bin" +%Y)" = 2000 ] # every source is older: reused, not rebuilt
+  touch "$TOP/go/internal/retroindex/retroindex.go"
+  run bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" --check "$FK"
+  [ "$status" -eq 0 ]
+  [ "$(date -r "$bin" +%Y)" != 2000 ]
+}
+
+@test "GRI-nogo-stale: a stale binary with no go on PATH is exit 3, never a run of the old binary" {
+  _copy_top
+  local bin="$TOP/go/bin/gen-retro-index"
+  run bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" "$FK"
+  [ "$status" -eq 0 ]
+  touch -d '2000-01-01' "$bin"
+  mkdir -p "$TMPDIR_T/bin"
+  local t
+  for t in bash dirname find head; do ln -s "$(command -v "$t")" "$TMPDIR_T/bin/$t"; done
+  run env PATH="$TMPDIR_T/bin" bash "$TOP/build-n4-module-kit/toolbelt/gen-retro-index.sh" --check "$FK"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"go is not on PATH"* ]]
+  [[ "$output" != *"is fresh"* ]]
 }

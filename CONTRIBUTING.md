@@ -95,11 +95,17 @@ New tools and ports are written in Go when possible, in the dependency-free modu
 over shared `go/internal/` packages (`internal/cli` holds the injectable stdio). Needs `go` on `PATH` at the
 `go/go.mod` version.
 
-- Check: `cd go && gofmt -l . && go vet ./... && go test ./...` (CI runs the same, then builds into `go/bin/`).
+- Check: `cd go && test -z "$(gofmt -l .)" && go vet ./... && go test ./...` (CI fails on any file `gofmt -l`
+  lists, then builds into `go/bin/`).
 - A ported toolbelt script keeps its `.sh` name as the stable entry point: a thin wrapper that builds
   `go/bin/<tool>` when it is missing or older than a Go source, then execs it (exit 3 when `go` is missing).
   `go/bin/` is gitignored. First port: `toolbelt/gen-retro-index.sh` → `go/internal/retroindex`, output byte
   for byte the same as the bash version. `[ev: retro go-module-gen-retro-index]`
+- Every wrapper gets the binary from `go/go-tool.sh` (`. go/go-tool.sh; bin="$(go_tool_bin <go-dir> <tool>)" || exit 3`),
+  never from its own copy of the rebuild logic; `tests/go-tool.bats` pins the rebuild paths. The first call after
+  a source change pays one `go build`. `go/go-tool.sh` sits in `go/` so a fixture that symlinks `go/` next to a
+  copied wrapper still finds it. Second port: `scripts/lib/ci_steps.py` → `go/cmd/ci-steps`, used by
+  `scripts/ci-local.sh`. `[ev: retro go-ci-steps]`
 
 ---
 

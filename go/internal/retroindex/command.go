@@ -49,7 +49,11 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	out := dir + "/INDEX.md"
 
-	entries, problems := Scan(dir)
+	entries, problems, err := Scan(dir)
+	if err != nil {
+		fmt.Fprintf(s.Err, "gen-retro-index: cannot list %s: %v; index not written\n", dir, err)
+		return ExitEnv
+	}
 	unreadable := false
 	for _, p := range problems {
 		fmt.Fprintf(s.Err, "gen-retro-index: %s: %s\n", p.Name, p.Reason)
