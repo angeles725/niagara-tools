@@ -24,6 +24,8 @@ v0.7.2 (retro 2026-10-03): `tools/mutation_check.py` (mutation checks without st
 stdlib untested-branch audit, explicit per-PR review of medium units.
 v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command cannot be
 launched, so a failed launch is never read as a RED.
+v0.8.1: a failed write keeps its batch id, a partial batch reports what was sent and its inverse, BOX replies capped at 32 MB.
+v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
 
 ## Methodology and skill
 
@@ -43,6 +45,8 @@ scripts/install-skill.sh --skill mcp-n4
   `pollchgs`, tree loading and status helpers. No side effects at import.
 - `mcp_n4/server.py`: stdio JSON-RPC 2.0 protocol layer and `main()`.
 - `mcp_n4/tools_read.py`: the read tool implementations and the session state.
+- `mcp_n4/files.py`: pure station-file helpers (path guard, `/file/` URL, text detection,
+  Px summary parser).
 - `mcp_n4/bql.py`: pure BQL helpers (query guard, ORD composition, CSV parsing, `$xx`
   decoding, inventory summary).
 - `mcp_n4/safety.py`: confirmation tokens, write scope, journal and audit log.
@@ -167,7 +171,8 @@ Example MCP client entry (Claude Code `.mcp.json`):
 
 Read tools (all `readOnlyHint`): `n4_connect`, `n4_describe_session`, `n4_navigate`,
 `n4_read_slots`, `n4_list_links`, `n4_find_dangling_outputs`, `n4_bql_query`,
-`n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`.
+`n4_inventory`, `n4_list_batches`, `n4_session_retro_draft`, `n4_read_file`,
+`n4_list_px_views`, `n4_px_summary`.
 `n4_list_batches` lists the journaled write batches newest first (`batch_id`, `tool`,
 `station_name`, `ts`, `state`, `verdict`, `rollback_of`, `rolled_back_by`): the way to find a
 `batch_id` for `n4_rollback`. It reads the journal only and needs no session.
@@ -181,6 +186,20 @@ queried `name` column is decoded by its position in the select list, `n4_invento
 columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
 `output_file: "<name>.csv|.json"`, `n4_bql_query` writes the rows to `<state-dir>/bql/<name>`
 (directory 0700, file 0600, never overwritten) and replies without `rows`.
+Px views and other station files (METHODOLOGY section 9): `n4_list_px_views(root)` runs
+`select slotPath, displayName, pxFile, media from baja:PxView` and returns `display_name`,
+`px_file` (e.g. `file:^px/General.px`) and `media` per view; `slot_path` / `owner_path` are
+null when the station answers `NULL` (a PxView is a property value, not a component).
+`n4_read_file(file_ord, max_bytes=2097152, output_file=None)` sends
+`GET /file/<path>` for `file:^px/General.px`, `station:|file:^px/General.px` or
+`px/General.px`. It refuses `..`, `|`, `:`, absolute paths, directories, names ending in
+`.` or a space (Windows aliases of another name) and `.bog` / `.bog.gz` before any request; returns text for text types and size, `sha256` and `content_type` for
+the rest; `status` is `ok`, `forbidden` (403) or `not_found` (404). With
+`output_file: "<name>.<ext>"` the complete bytes go to `<state-dir>/files/<name>` (0600,
+never overwritten; a truncated read is not saved). `n4_px_summary(file_ord, max_bytes,
+max_items=200)` fetches a `.px` and returns its media, imported modules, canvases and
+`viewSize`, layers, widget and binding counts, bound ORDs grouped by component, images,
+included Px, charts and label texts, without the XML.
 `n4_navigate` and `n4_read_slots` cost one round trip per component; they report `elapsed_ms`.
 `n4_navigate` takes an optional `types` list (e.g. `["bacnet:BacnetDevice"]`) that keeps only
 children of those types plus the path to them, each kept entry marked `matched`.
