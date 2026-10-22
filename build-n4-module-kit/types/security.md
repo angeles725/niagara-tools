@@ -104,7 +104,7 @@ to `operatorInvoke`. [ev: code Flags.java; corpus B507 §SEC-05]
 
 `set(prop, value, cx)` with a user checks only operator vs admin write (`BUser.checkWrite`, vineflower baja 4.14.0.162
 `javax/baja/user/BUser.java:902-912`); it does not look at READONLY. READONLY counts in `BComponent.canWrite(OrdTarget)`
-(same copy `BComponent.java:925-939`), which a surface that asks the `OrdTarget` honours; whether every remote surface
+(vineflower baja 4.14.0.162 `javax/baja/sys/BComponent.java:925-939`), which a surface that asks the `OrdTarget` honours; whether every remote surface
 asks is not verified. CONFIRM_REQUIRED is a UI hint. A user with admin write can also change a frozen slot's flags:
 the `setFlags` path calls the no-op hook `checkSetFlags` (`BComponent.java:619`) and has no frozen-READONLY check
 (corpus B1231 §1231.9). So: protect a slot with the operator/admin tier and categories (§ 2.2), gate sensitive values

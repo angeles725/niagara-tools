@@ -58,7 +58,9 @@ thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=
   never read `cx.getUser()` there; check permissions before posting (`types/security.md` § 2.4).
 - **The sanctioned offload** for slow work is an `ASYNC` action whose `post()` override hands
   `new Invocation(this, action, arg, cx)` to the module's own executor or worker, which calls `invoke()` on it. A
-  bare `this::doX` lambda skips the invoke path: no links, no action event, no audit, no Context. (Owed Go lint G28
+  bare `this::doX` lambda skips the invoke path: no links, no action event, no audit, no Context. A bounded executor
+  rejects work when it is full or shut down (`RejectedExecutionException` under the JDK default policy): catch it in
+  `post()` and report it (fault the status, log, or fall back to a queued `ASYNC` invoke), never let it escape. (Owed Go lint G28
   `async-blocking-action`.)
 
 ## 3 · Action flags
