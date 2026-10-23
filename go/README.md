@@ -34,7 +34,8 @@ rule's rows stay contiguous.
    on stderr and exits 3, as for an unreadable file. Never drop a file silently.
    Row columns: `Finding.Check` is the sub-check shown in the check column (empty shows the rule ID), so
    one rule can report several named checks. `Line` 0 is a file-level finding printed as `<path>: <msg>`;
-   rows with `Line` ≥ 1 are unchanged. Severity `Pass` prints `PASS` and never affects the exit code.
+   rows with `Line` ≥ 1 are unchanged. `Spec.BarePathRow` prints a `Line` 0 finding as `<path>  <msg>`
+   instead (two spaces, no colon), the row of lint-structure. Severity `Pass` prints `PASS` and never affects the exit code.
    `Spec.UsageExit` is the exit code of a usage error when the rule runs alone (0 means 3).
    A directory the walk cannot read prints `<lint>: cannot list every file under <root>: find: '<dir>': <reason>`
    (`<dir>` quoted as GNU find does under `LC_ALL=C`: `\'`, `\\`, `\n`-style C escapes, 3-digit octal for

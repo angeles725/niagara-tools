@@ -77,3 +77,27 @@ func TestRunRootRule(t *testing.T) {
 		}
 	}
 }
+
+// TestRunBarePathRow: Spec.BarePathRow prints a file-level finding as "<path>  <msg>" (lint-structure's
+// row) and leaves a line finding and every other spec's rows as they were.
+func TestRunBarePathRow(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var seen []string
+	bare := rootSpec(lineFake{rootFake{seen: &seen}})
+	bare.BarePathRow = true
+	s, o, e := stdio()
+	code := Run([]Spec{bare, rootSpec(rootFake{seen: &seen})}, "n4lint", Args{Roots: []string{root}}, s)
+	want := "FAIL  lint-r  " + root + "  root seen\n" + "FAIL  lint-r  " + root + "/A:3  L1: line seen\n" +
+		"FAIL  lint-r  " + root + ": root seen\n"
+	if code != 1 || o.String() != want || e.Len() != 0 {
+		t.Errorf("exit %d err %q out\n%s\nwant\n%s", code, e, o, want)
+	}
+}
+
+// lineFake adds a line finding to rootFake's file-level one.
+type lineFake struct{ rootFake }
+
+func (r lineFake) CheckRoot(root string) ([]Finding, error) {
+	out, err := r.rootFake.CheckRoot(root)
+	return append(out, Finding{Path: root + "/A", Line: 3, Msg: "L1: line seen"}), err
+}

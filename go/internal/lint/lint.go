@@ -51,10 +51,16 @@ type Finding struct {
 
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
 // for a file-level finding (Line 0). The check column is Check, or Rule when Check is empty.
-func (f Finding) Row() string {
+func (f Finding) Row() string { return f.row(false) }
+
+// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
+func (f Finding) row(bare bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
+	}
+	if f.Line == 0 && bare {
+		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
 		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
@@ -119,6 +125,9 @@ type Spec struct {
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
 	// without them.
 	EmptyError EmptyRow
+	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
+	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".
+	BarePathRow bool
 	// BareUsage prints only Usage on an unknown flag (no "<lint>: unknown flag: <flag>" line), as a bash
 	// lint with its own `-*) usage; exit 3` case does; the exit code stays UsageExit.
 	BareUsage bool
