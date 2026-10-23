@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-15 · kit · devguide415-r3-packaging-extension-control
@@ -28,4 +28,4 @@
 - A doc default and a parser default can differ; the parser decides what an attribute-less manifest does.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |`
+**Status**: FOLDED (quality round 8 U9, base f2cf198) — Δ1 `types/distribution.md:49`, Δ2 `types/json-toolkit.md` § 3, Δ3 `types/logic.md:402`, Δ4 `types/logic.md:404`. INDEX row generated from the header: `| 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | folded | 4 |`

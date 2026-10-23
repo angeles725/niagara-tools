@@ -12,6 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_box  # noqa: E402
 import go_registry  # noqa: E402
 import go_server  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
@@ -235,6 +236,27 @@ class TestGoRegistry(unittest.TestCase):
         data = go_registry.registry()
         self.assertTrue(data["cli"]["usage"].startswith("usage: mcp_n4.server [-h]"))
         self.assertTrue(data["cli"]["help"].startswith(data["cli"]["usage"]))
+
+
+class TestGoBoxReplay(unittest.TestCase):
+    """go/internal/mcpn4/box/testdata/replay.jsonl is what the Python BoxClient does today."""
+
+    def test_the_replay_corpus_matches_the_python_client(self):
+        with open(go_box.REPLAY_FILE, encoding="ascii", newline="") as fh:
+            published = fh.read()
+        self.maxDiff = 2000
+        self.assertEqual(published, go_box.replay_text(),
+                         "regenerate it with: python3 mcp-n4-kit/tests/go_box.py --write")
+
+    def test_every_scenario_ports_a_box_test_or_says_it_pins_more(self):
+        import test_box
+        names = {name for cls in vars(test_box).values() if isinstance(cls, type)
+                 for name in vars(cls) if name.startswith("test")}
+        for scenario in go_box.SCENARIOS:
+            ports = scenario.get("ports", "test_" + scenario["name"])
+            if ports is not None:
+                self.assertIn(ports, names, scenario["name"])
+        self.assertEqual(len({s["name"] for s in go_box.SCENARIOS}), len(go_box.SCENARIOS))
 
 
 if __name__ == "__main__":
