@@ -14,10 +14,13 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_strip_run did).
 #
 # Usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>
-#   Scans *.java under <wb-src-root>, dot-dirs pruned. Line // comments stripped before matching
-#   so commented-out code does not trigger.
-#   Per FILE: a line with BWbFieldEditor.dialog( + BOrd.NULL anywhere in the file, when the same
-#   file has neither BComponentChooser nor targetType, is the file-chooser shape.
+#   Scans *.java under <wb-src-root>, dot-dirs pruned. Per FILE: a BWbFieldEditor.dialog( call and
+#   BOrd.NULL anywhere in the file, when the same file has neither BComponentChooser nor targetType,
+#   is the file-chooser shape; the row is the first dialog line that also holds BOrd.NULL, else the
+#   first dialog line (an argument list split across lines). The call, BOrd.NULL and
+#   BComponentChooser count in code only (never in a comment, Javadoc or string); targetType also
+#   counts in a string (the facet key "targetType"), never in a comment. A `//` inside a string
+#   never hides the rest of a line.
 #   Row:   WARN  lint-wb-file-chooser  <file>:<line>  <trimmed source>
 #   Exit:  0  clean or WARN-only · 1  any WARN under --strict · 3  usage/env
 #
@@ -25,6 +28,7 @@
 # is assumed to be using the correct station-space picker; a file that calls the dialog with only
 # BOrd.NULL is the file-chooser candidate a reviewer must confirm.
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
+# Mutation: WFC5 -- matching the raw line (no comment/literal blanking) lets a commented BComponentChooser exempt a file
 # Mutation: WFC2 -- remove the BComponentChooser/targetType-absent guard so a file WITH BComponentChooser still WARNs
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

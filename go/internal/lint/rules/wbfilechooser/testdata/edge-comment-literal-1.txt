@@ -2,8 +2,9 @@
 @DIR@/m
 -- want --
 exit 0
+WARN  lint-wb-file-chooser  @DIR@/m/A.java:3  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
 WARN  lint-wb-file-chooser  @DIR@/m/B.java:2  void f() { BWbFieldEditor.dialog(p, t, o); }
-WARN  lint-wb-file-chooser  @DIR@/m/E.java:3  /* BWbFieldEditor.dialog(p, t, BOrd.NULL); */
+WARN  lint-wb-file-chooser  @DIR@/m/C.java:2  String u = "http://h"; void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
 -- stderr --
 -- m/A.java --
 class A {

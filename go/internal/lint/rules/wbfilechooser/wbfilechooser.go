@@ -37,14 +37,15 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
-// Check, over the code before each line's first "//": a file that calls the dialog and names BOrd.NULL,
-// with neither BComponentChooser nor targetType, reports the first dialog line that also holds
-// BOrd.NULL, else its first dialog line.
+// Check: a file that calls the dialog and names BOrd.NULL, with neither BComponentChooser nor targetType,
+// reports the first dialog line that also holds BOrd.NULL, else its first dialog line. The dialog,
+// BOrd.NULL and BComponentChooser are matched in the code (linescan.Code: no comment, Javadoc or literal
+// text); targetType also in a literal (the facet key is often written "targetType"), never in a comment.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	first, both, hasNull := 0, 0, false
-	for i, ln := range f.Raw {
-		code := linescan.Cut(ln)
-		if strings.Contains(code, "BComponentChooser") || strings.Contains(code, "targetType") {
+	text := f.Stripped()
+	for i, code := range linescan.Code(f) {
+		if strings.Contains(code, "BComponentChooser") || strings.Contains(text[i], "targetType") {
 			return nil, nil
 		}
 		isNull := strings.Contains(code, null)
