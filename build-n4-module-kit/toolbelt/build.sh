@@ -46,10 +46,11 @@
 # Mirror user.home isolation: when niagara_home holds the .niagara-mirror marker (mirror-niagara-home.sh), gradle
 #   runs with JAVA_TOOL_OPTIONS += -Duser.home=<mirror>/.mirror-user-home, GRADLE_USER_HOME kept (default
 #   ~/.gradle), -Dmaven.repo.local=<real ~/.m2/repository> (unless already set) and --no-daemon, so the signing
-#   plugin cannot read the real ~/.tridium keystore. A mirror path with whitespace is refused (exit 33); a signing
-#   profile the plugin creates in the mirror user home (throwaway dev key) is a WARN. [ev: retro r8-mirror-userhome Δ1]
+#   plugin cannot read the real ~/.tridium keystore. A mirror path, or a $HOME used for that maven.repo.local, with
+#   whitespace is refused (exit 33); a signing profile in the mirror user home (always plugin-created, so a throwaway
+#   dev key) is a WARN on every build. [ev: retro r8-mirror-userhome Δ1, retro r8-buildsh-316-308]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
-#   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path has whitespace ·
+#   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
 #   50 gate or report-module FAIL · 51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify ·
 #   53 report-module INCOMPLETE (a floor check SKIPped)
 set -euo pipefail
@@ -202,9 +203,10 @@ GARGS=(-Pniagara_home="$NIAGARA_HOME" -Porg.gradle.java.installations.paths="$J8
 # already-running daemon, so the signing plugin's default profile (user.home/.tridium/security) would read the
 # REAL keystore. JAVA_TOOL_OPTIONS reaches every JVM gradle starts; --no-daemon stops reuse of a stale daemon.
 # GRADLE_USER_HOME is pinned first, because gradle derives it from user.home and offline resolution needs it.
-# The JVM splits JAVA_TOOL_OPTIONS on whitespace (JDK 8 has no quoting), so a mirror path with whitespace is
-# refused (exit 33). Moving user.home also moves ~/.m2, so mavenLocal() is pinned to the real one unless set.
-_MIRROR_UH=""; _MIRROR_SIGNXML=""; _MIRROR_SIGNXML_PRE=0
+# The JVM splits JAVA_TOOL_OPTIONS on whitespace (JDK 8 has no quoting), so both values it would carry are
+# refused with whitespace (exit 33): the mirror path (-Duser.home) and $HOME (-Dmaven.repo.local, appended only
+# when not already set). Moving user.home also moves ~/.m2, so mavenLocal() is pinned to the real one unless set.
+_MIRROR_UH=""; _MIRROR_SIGNXML=""
 if [ -f "$NIAGARA_HOME/.niagara-mirror" ]; then
   _MIRROR_UH="$NIAGARA_HOME/.mirror-user-home"
   if [[ "$_MIRROR_UH" =~ [[:space:]] ]]; then
@@ -212,15 +214,18 @@ if [ -f "$NIAGARA_HOME/.niagara-mirror" ]; then
     echo "  JAVA_TOOL_OPTIONS cannot carry -Duser.home=<path> with whitespace (the JVM splits it); move the mirror." >&2
     exit 33
   fi
+  _M2_SET=0; case "${JAVA_TOOL_OPTIONS:-}" in *-Dmaven.repo.local=*) _M2_SET=1 ;; esac
+  if [ "$_M2_SET" -eq 0 ] && [[ "$HOME" =~ [[:space:]] ]]; then
+    echo "build.sh: HOME contains whitespace: $HOME" >&2
+    echo "  JAVA_TOOL_OPTIONS cannot carry -Dmaven.repo.local=\$HOME/.m2/repository with whitespace (the JVM splits it);" >&2
+    echo "  set -Dmaven.repo.local=<path without whitespace> in JAVA_TOOL_OPTIONS yourself, or use a HOME without whitespace." >&2
+    exit 33
+  fi
   mkdir -p "$_MIRROR_UH"
   _MIRROR_SIGNXML="$_MIRROR_UH/.tridium/security/niagara.signing.xml"
-  [ ! -e "$_MIRROR_SIGNXML" ] || _MIRROR_SIGNXML_PRE=1
   export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
   export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }-Duser.home=$_MIRROR_UH"
-  case "$JAVA_TOOL_OPTIONS" in
-    *-Dmaven.repo.local=*) ;;
-    *) JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Dmaven.repo.local=$HOME/.m2/repository" ;;
-  esac
+  [ "$_M2_SET" -eq 1 ] || JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Dmaven.repo.local=$HOME/.m2/repository"
   GARGS+=(--no-daemon)
   echo "==> INFO: mirror niagara_home: user.home isolated to $_MIRROR_UH (GRADLE_USER_HOME=$GRADLE_USER_HOME, --no-daemon) so the signing plugin cannot read the real ~/.tridium keystore"
 fi
@@ -298,8 +303,9 @@ GSTAMP="$(mktemp)"
 if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$GLOG"; then
   rm -f "$GLOG" "$GSTAMP"
   # A root without a signing block makes the plugin create a profile in the mirror user home and sign with a
-  # throwaway Niagara4Modules dev key; the build still passes, so say it (WARN, exit unchanged).
-  if [ -n "$_MIRROR_SIGNXML" ] && [ "$_MIRROR_SIGNXML_PRE" -eq 0 ] && [ -e "$_MIRROR_SIGNXML" ]; then
+  # throwaway Niagara4Modules dev key; the build still passes, so say it (WARN, exit unchanged). Every profile
+  # there is plugin-created (never the user's), and it persists, so WARN on every build, not only the first (#316).
+  if [ -n "$_MIRROR_SIGNXML" ] && [ -e "$_MIRROR_SIGNXML" ]; then
     echo "==> WARN: the jar is signed with a throwaway dev key created in the mirror user home ($_MIRROR_SIGNXML) — do not deploy it; add the signing block (templates/signing-root.gradle.kts, lint-structure L15)" >&2
   fi
 else
