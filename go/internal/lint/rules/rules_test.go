@@ -14,7 +14,7 @@ func TestAllUniqueIDs(t *testing.T) {
 	seen := map[string]bool{}
 	for _, sp := range All() {
 		id := sp.ID()
-		if id == "" || seen[id] || sp.Usage == "" || len(sp.Select.Names) == 0 {
+		if id == "" || seen[id] || sp.Usage == "" || (len(sp.Select.Names) == 0) != (sp.Root != nil) {
 			t.Errorf("bad or duplicate spec %q: %+v", id, sp)
 		}
 		seen[id] = true
@@ -72,12 +72,16 @@ func TestAllWalkError(t *testing.T) {
 
 // TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
 // file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6), in its
-// Spec.EmptyError shape when it overrides the default.
+// Spec.EmptyError shape when it overrides the default. A RootRule (lint-structure) is out of scope: it
+// selects no file, --all leaves it out, and its empty-root contract is its own (TestRootRulesOnAnEmptyRoot).
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
+		if sp.Root != nil {
+			continue
+		}
 		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
 		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
 		if sp.EmptyError.Check != "" {
@@ -96,5 +100,30 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	var o, e bytes.Buffer
 	if code := main([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != all || e.Len() != 0 {
 		t.Errorf("--all: exit %d out %q err %q, want 3 and\n%s", code, o.String(), e.String(), all)
+	}
+}
+
+// TestRootRulesOnAnEmptyRoot pins the one registered RootRule's empty-root contract as the bash lint has
+// it: lint-structure on a module root without profiles prints nothing and exits 0 (rules/structure
+// golden edge-empty records the same bytes).
+func TestRootRulesOnAnEmptyRoot(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
+		t.Fatal(err)
+	}
+	main := lint.Command(All()...)
+	var roots []string
+	for _, sp := range All() {
+		if sp.Root == nil {
+			continue
+		}
+		roots = append(roots, sp.ID())
+		var o, e bytes.Buffer
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+		}
+	}
+	if len(roots) != 1 || roots[0] != "lint-structure" {
+		t.Errorf("RootRules %q, want exactly lint-structure (a new one decides its empty-root contract here)", roots)
 	}
 }

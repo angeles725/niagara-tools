@@ -11,10 +11,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
 
-// All returns every registered rule, in the order --all runs them.
+// All returns every registered rule, in the order --all runs them (--all leaves out a RootRule).
 func All() []lint.Spec {
 	return []lint.Spec{
 		nullcontext.Spec(),
@@ -25,5 +26,6 @@ func All() []lint.Spec {
 		servicetypes.Spec(),
 		silentprotection.Spec(),
 		configsanity.Spec(),
+		structure.Spec(),
 	}
 }
