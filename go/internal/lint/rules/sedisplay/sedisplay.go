@@ -39,14 +39,14 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// Check reports every line whose code before its first "//" holds one of the display texts.
+// Check reports every line whose code (linescan.Code: no comment, Javadoc or literal text) holds one of
+// the display texts.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
-	for i, ln := range f.Raw {
-		code := linescan.Cut(ln)
+	for i, code := range linescan.Code(f) {
 		for _, d := range display {
 			if strings.Contains(code, d) {
-				out = append(out, lint.Finding{Line: i + 1, Msg: "display class: " + linescan.Source(ln)})
+				out = append(out, lint.Finding{Line: i + 1, Msg: "display class: " + linescan.Source(f.Raw[i])})
 				break
 			}
 		}

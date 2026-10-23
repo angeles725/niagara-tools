@@ -2,8 +2,7 @@
 @DIR@/m
 -- want --
 exit 1
-FAIL  lint-se-display  @DIR@/m/A.java:3  display class: /* import javax.swing.JFrame; */
-FAIL  lint-se-display  @DIR@/m/A.java:5  display class: String s = "new JFrame";
+FAIL  lint-se-display  @DIR@/m/A.java:6  display class: String u = "http://h"; Object f = new JFrame();
 -- stderr --
 -- m/A.java --
 import java.awt.Font;

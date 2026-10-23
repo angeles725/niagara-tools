@@ -12,11 +12,14 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
 #
 # Usage:  lint-se-display.sh <se-src-root>     (a -se profile source tree)
+#   Matches each listed text (an import or `new` of a display class) in the code only: comments,
+#   Javadoc and literal text never trigger, and a `//` inside a string never hides the rest of a line.
 #   Row:  FAIL  lint-se-display  <file>:<line>  display class: <source>
 #   Exit: 0  clean · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: SED2 -- drop the JFrame import case and SED2 stops flagging a display import
 # Mutation: SED-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: SED5 -- matching the raw line (no comment/literal blanking) FAILs a commented or string display class
 # Mutation: SED-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
