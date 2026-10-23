@@ -497,3 +497,42 @@ newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; br
   run bash -c "cd '$d' && bash '$HOOK' origin x <<<'(delete) 0000000000000000000000000000000000000000 refs/heads/feat $(git -C "$d" rev-parse HEAD)'"
   [ "$status" -eq 0 ]
 }
+
+# --- a failing git and the origin/HEAD merge-base fallback (#355 R3-git-failure-refusal-untested) --------
+@test "H22: a failing git diff refuses the push (never an unchecked pass)" {
+  # Mutation: H22-diff-refuse -- dropping '|| refuse' leaves changed empty, so nothing is build-relevant and the push passes
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  # the remote sha names an object this repo does not have, so 'git diff <rsha>..<lsha>' fails
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 1111111111111111111111111111111111111111'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"git diff 1111111111111111111111111111111111111111..$lsha failed; refusing to push unchecked"* ]]
+}
+
+@test "H23: a failing git log refuses the push (never read as 'no waiver trailer')" {
+  # Mutation: H23-log-refuse -- dropping '|| refuse' falls through to the generic no-BUILD-STATE FAIL, losing the cause
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  local real_git; real_git=$(command -v git)
+  mkdir -p "$BATS_TEST_TMPDIR/bin"
+  # a git that fails only 'log'; every other subcommand is the real git
+  # shellcheck disable=SC2016  # $1 and $@ belong to the generated wrapper, not to this test
+  printf '#!/bin/sh\n[ "$1" = log ] && exit 128\nexec %s "$@"\n' "$real_git" > "$BATS_TEST_TMPDIR/bin/git"
+  chmod +x "$BATS_TEST_TMPDIR/bin/git"
+  run bash -c "cd '$d' && PATH='$BATS_TEST_TMPDIR/bin':\"\$PATH\" bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"git log "*"..$lsha failed; refusing to push unchecked"* ]]
+}
+
+@test "H24: without origin/main the new-branch base falls back to origin/HEAD" {
+  # Mutation: H24-origin-head -- dropping the origin/HEAD fallback refuses with 'cannot find' instead of gating the range
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  git -C "$d" update-ref refs/remotes/origin/trunk refs/remotes/origin/main
+  git -C "$d" update-ref -d refs/remotes/origin/main
+  git -C "$d" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"build-relevant kit files changed"* ]]
+  [[ "$output" != *"cannot find"* ]]
+}

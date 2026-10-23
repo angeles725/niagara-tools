@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · pipefail-grep-q-race
@@ -57,4 +57,4 @@ Not applied; a fold review decides it and flips this retro.
 - Small-input races hide in CI as flakes; the same bug on a large input is deterministic and fail-open.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-pipefail-grep-q-race.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `METHODOLOGY.md` § Conformance rules (pipefail here-string) + a comment in `templates/client-pre-push` (it already sets pipefail and has no `grep -q` pipe).

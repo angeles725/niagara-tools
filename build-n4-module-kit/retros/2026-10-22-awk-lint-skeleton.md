@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · awk-lint-skeleton
@@ -39,4 +39,4 @@ migrated all ten callers with stdout, stderr and exit codes unchanged.
   suites alone: the suites rarely cover `-`, extra roots or flag-argument errors.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `BUILD-LOOP.md` § 5 Kit tooling doctrine "Fail-closed input listing"; Δ2 already landed as code (the nine line-loop lints call `awk_lint_parse`/`awk_lint_list` in `toolbelt/lib/awk-lint.sh`).
