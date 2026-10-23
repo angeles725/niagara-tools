@@ -4,6 +4,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import unittest
 import urllib.error
 from unittest import mock
@@ -282,6 +283,100 @@ class TestTransportErrors(BoxTestCase):
         with mock.patch.object(c, "call", side_effect=RuntimeError("password=secret")):
             c.close()
         self.assertIsNone(c.sid)
+
+
+class RawStation:
+    """Loopback TCP server answering every request with the same raw bytes, then closing.
+
+    It stands in for a station (or a proxy) whose answer is not well-formed HTTP; the
+    FakeStation always writes a correct status line and Content-Length.
+    """
+
+    def __init__(self, answer):
+        self.answer = answer
+        self._sock = socket.create_server(("127.0.0.1", 0))
+        self.url = "http://127.0.0.1:%d" % self._sock.getsockname()[1]
+        threading.Thread(target=self._serve, daemon=True).start()
+
+    def _serve(self):
+        while True:
+            try:
+                conn, _ = self._sock.accept()
+            except OSError:  # closed by stop()
+                return
+            with conn:
+                conn.settimeout(5)
+                data = b""
+                while b"\r\n\r\n" not in data:  # the request head; a POST body is small
+                    chunk = conn.recv(65536)
+                    if not chunk:
+                        break
+                    data += chunk
+                conn.sendall(self.answer)
+
+    def stop(self):
+        self._sock.close()
+
+
+#: Every client read: (label, callable(client)). Each one must turn a bad answer into BoxError.
+CLIENT_READS = (
+    ("call", lambda c: c.call("ssession", "make", {})),
+    ("get_ord", lambda c: c.get_ord("station:|slot:/")),
+    ("get_file", lambda c: c.get_file("/file/a.txt")),
+    ("about", lambda c: c.about()),
+)
+
+
+@go_server.go_twin("box", "unit")
+class TestTransportTruth(unittest.TestCase):
+    """An answer that is not complete HTTP is a transport failure, never data (0.9.2)."""
+
+    def reads_against(self, answer):
+        """(label, raised exception or the returned value) of every client read."""
+        station = RawStation(answer)
+        self.addCleanup(station.stop)
+        client = box.BoxClient(station.url, "u", "p", allow_http=True, timeout=5)
+        outcomes = []
+        for label, read in CLIENT_READS:
+            try:
+                outcomes.append((label, read(client)))
+            except Exception as exc:  # noqa: BLE001 - the type is what is asserted
+                outcomes.append((label, exc))
+        return outcomes
+
+    def test_a_non_http_answer_is_a_transport_failure(self):
+        for label, exc in self.reads_against(b"NOT HTTP AT ALL\r\n\r\n"):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: invalid HTTP answer (BadStatusLine)",
+                             label)
+
+    def test_a_body_shorter_than_its_content_length_is_never_returned(self):
+        answer = (b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 100\r\n"
+                  b"\r\n" + b'{"m": [{"b": 1}]}')
+        for label, exc in self.reads_against(answer):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: incomplete read (got 17 of 100 "
+                             "bytes)", label)
+
+    def test_a_cut_chunked_body_is_a_transport_failure(self):
+        answer = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nab"
+        for label, exc in self.reads_against(answer):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: invalid HTTP answer (IncompleteRead)",
+                             label)
+
+    def test_a_body_longer_than_the_cap_is_still_only_truncated(self):
+        # The Content-Length check compares with what was asked for: a capped read of a long,
+        # complete body is the documented truncation, not an incomplete read.
+        body = b"a,b\n" * 64
+        answer = (b"HTTP/1.1 200 OK\r\nContent-Type: text/csv\r\nContent-Length: %d\r\n\r\n"
+                  % len(body)) + body
+        station = RawStation(answer)
+        self.addCleanup(station.stop)
+        client = box.BoxClient(station.url, "u", "p", allow_http=True, timeout=5)
+        self.assertEqual(client.get_ord("station:|slot:/", max_bytes=10),
+                         (("a,b\n" * 3)[:10], True))
+        self.assertEqual(client.about(max_bytes=8), "a,b\na,b\n")
 
 
 class TestSession(BoxTestCase):

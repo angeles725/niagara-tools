@@ -4,6 +4,7 @@ Wire protocol certified live against N4.14 in niagara-research B1199.
 Importing this module has no side effects.
 """
 import base64
+import http.client
 import json
 import math
 import re
@@ -74,6 +75,35 @@ class HttpStatusError(BoxError):
     def __init__(self, code, message, channel=None, key=None):
         super().__init__(message, channel, key)
         self.code = code
+
+
+def _invalid_http(exc, channel, key):
+    """BoxError for an http.client error that is no OSError (BadStatusLine, IncompleteRead).
+
+    Only the exception's type is named: its text would echo the station's raw bytes.
+    """
+    return BoxError("transport failure: invalid HTTP answer (%s)" % type(exc).__name__,
+                    channel, key)
+
+
+def _read_body(resp, amount, channel, key):
+    """Read at most `amount` bytes of `resp`; a body cut before its Content-Length raises.
+
+    `read(n)` returns a short body as it is when the connection closes early, so without this
+    check a cut reply would pass for a complete one. A body longer than `amount` is the
+    caller's documented truncation, not an incomplete read.
+    """
+    raw = resp.read(amount)
+    headers = getattr(resp, "headers", None)
+    declared = headers.get("Content-Length") if headers is not None else None
+    try:
+        declared = int(declared) if declared is not None else None
+    except ValueError:
+        declared = None
+    if declared is not None and len(raw) < min(declared, amount):
+        raise BoxError("transport failure: incomplete read (got %d of %d bytes)"
+                       % (len(raw), declared), channel, key)
+    return raw
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -303,7 +333,7 @@ class BoxClient:
             headers={"Authorization": self._auth, "Content-Type": "application/json"})
         try:
             with self._opener.open(req, timeout=self.timeout) as resp:
-                raw = resp.read(self.max_reply_bytes + 1)
+                raw = _read_body(resp, self.max_reply_bytes + 1, channel, key)
             if len(raw) > self.max_reply_bytes:
                 raise BoxError("BOX reply larger than %d bytes: refused, not parsed in part"
                                % self.max_reply_bytes, channel, key)
@@ -317,6 +347,8 @@ class BoxClient:
             raise BoxError("HTTP %d from station" % exc.code, channel, key) from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, channel, key) from None
+        except http.client.HTTPException as exc:  # no OSError: it escaped before 0.9.2
+            raise _invalid_http(exc, channel, key) from None
         return self._unwrap(reply, channel, key)
 
     def get_ord(self, ord_text, timeout=None, max_bytes=32 * 1024 * 1024):
@@ -326,7 +358,8 @@ class BoxClient:
         a 401/403 raises `AuthError` once (never retried), and at most `max_bytes` are
         read; `truncated` is True when the body was longer. An HTML answer (by its
         Content-Type or by its first bytes) raises `BoxError`: it is a login or error page,
-        never a table. A truncated `text` ends
+        never a table. A body cut before its Content-Length, or an answer that is not
+        HTTP, raises `BoxError` ("transport failure: ..."). A truncated `text` ends
         wherever the cap fell: the CSV reader drops the incomplete last record
         (`bql.complete_records`), since only it knows where a quoted cell ends.
         """
@@ -335,7 +368,7 @@ class BoxClient:
             "Authorization": self._auth, "Accept": "text/csv"})
         try:
             with self._opener.open(req, timeout=timeout or self.timeout) as resp:
-                raw = resp.read(max_bytes + 1)
+                raw = _read_body(resp, max_bytes + 1, "ord", "get")
                 content_type = resp.headers.get("Content-Type") or ""
         except BoxError:
             raise
@@ -350,6 +383,8 @@ class BoxClient:
             raise BoxError("HTTP %d from station" % exc.code, "ord", "get") from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "ord", "get") from None
+        except http.client.HTTPException as exc:  # no OSError: it escaped before 0.9.2
+            raise _invalid_http(exc, "ord", "get") from None
         if "html" in content_type.lower() or self._MARKUP_START.match(raw[:256]):
             raise BoxError("HTTP 200 from station with an HTML page (Content-Type %s), not a "
                            "CSV table: a login or error page holds no rows"
@@ -372,7 +407,7 @@ class BoxClient:
                                      headers={"Authorization": self._auth})
         try:
             with self._opener.open(req, timeout=timeout or self.timeout) as resp:
-                raw = resp.read(max_bytes + 1)
+                raw = _read_body(resp, max_bytes + 1, "file", "get")
                 headers = resp.headers
         except BoxError:
             raise
@@ -386,6 +421,8 @@ class BoxClient:
             raise BoxError("HTTP %d from station" % exc.code, "file", "get") from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "file", "get") from None
+        except http.client.HTTPException as exc:  # no OSError: it escaped before 0.9.2
+            raise _invalid_http(exc, "file", "get") from None
         length = headers.get("Content-Length") if headers is not None else None
         try:
             length = int(length) if length is not None else None
@@ -404,7 +441,9 @@ class BoxClient:
                                      headers={"Authorization": self._auth})
         try:
             with self._opener.open(req, timeout=timeout or self.timeout) as resp:
-                return resp.read(max_bytes).decode("utf-8", "replace")
+                return _read_body(resp, max_bytes, "obix", "about").decode("utf-8", "replace")
+        except BoxError:
+            raise
         except urllib.error.HTTPError as exc:
             exc.close()
             if exc.code in (401, 403):
@@ -412,6 +451,8 @@ class BoxClient:
             raise BoxError("HTTP %d from station" % exc.code, "obix", "about") from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "obix", "about") from None
+        except http.client.HTTPException as exc:  # no OSError: it escaped before 0.9.2
+            raise _invalid_http(exc, "obix", "about") from None
 
     def _unwrap(self, reply, channel, key):
         """Validate a reply frame and return its first message body, else BoxError."""
