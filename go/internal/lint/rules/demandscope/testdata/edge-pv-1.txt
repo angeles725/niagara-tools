@@ -1,0 +1,26 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/P.java:2  a reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/P.java:3  b reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/P.java:4  c reads cv with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/P.java:7  f reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/P.java:12  k reads temp with no demand-shaped input in scope
+-- stderr --
+-- m/P.java --
+class P {
+  void a(double t) { if (head > 1 && suction > 2) setX(1); }
+  void b(double t) { if (x < coilTemp) setX(1); }
+  void c(double t) { if (cvalue > 1) setX(1); }
+  void d(double t) { if (a.b.temperature  > 1) setX(1); }
+  void e(double t) { if (1 >temp) setX(1); }
+  void f(double t) { if (1 >=	temp) setX(1); }
+  void g(double t) { if (1 > -temp) setX(1); }
+  void h(double t) { foo(temp_1 > 2); set(1); }
+  void i(double t) { int v = temp > 2 ? 1 : 0; setup(); }
+  void j(double t) { int target = 1; if (t > 1) foo(); }
+  void k(double t) { int target
+     = 1; if (temp > 1) foo(); }
+  void l(double t) { if (temp > 1) cmd [0] = 1; }
+}

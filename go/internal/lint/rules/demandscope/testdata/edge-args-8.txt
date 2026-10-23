@@ -1,0 +1,15 @@
+-- args --
+@DIR@/m
+@DIR@/nope
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/A.java:2  step reads suction with no demand-shaped input in scope
+-- stderr --
+-- m/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}

@@ -102,6 +102,37 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
   thread, and no driver I/O ever runs on the engine thread `[ev: corpus B1419 §1419.3]`.
   [ev: retro n4-course-handson-ndriver Δ6]
 
+### 1.7 · NDriver — layers, threads and request/response correlation `[ev: corpus B1239 §1239.12-§1239.13]`
+
+Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless named.
+
+- **Layers** (course Lab 11 `[CERT]`): the network owns the comm stack (a `BCommConfig` subclass such as
+  `BTcpCommConfig`, driving `NComm`); one `NMessage` subclass per message type; one `LinkMessage` subclass frames
+  every message on the wire.
+- **Threads:** `doPoll` runs on the scheduler's `Poll:<network>` thread (`BNPollScheduler extends BPollScheduler`,
+  `driver-rt/…/util/BPollScheduler.java:809`); `BNDevice.postPing()` posts the ping to the network's `BNWorker`
+  (`BNDevice.java:72-79`, `BNNetwork.java:101,145-149`). Post proxy-ext I/O there with `postAsync(Runnable)` and
+  return `true` from `write()` (§ 2).
+- **Correlation rule.** Open transactions are keyed by `NMessage.getTag()` (`comm/NCommTimer.java:162`) and a
+  response is matched the same way (`comm/NComm.java:356`). The default tag is the shared `nullTag`
+  (`comm/NMessage.java:63-68`) while `BCommConfig.getMaxOutstandingTransactions()` returns 32
+  (`datatypes/BCommConfig.java:436-444`). So: a protocol with a request id overrides `getTag()` on requests and
+  responses; a protocol without one returns 1 from `getMaxOutstandingTransactions()` in its comm-config subclass.
+  With neither, the poll thread, the worker and a discovery job share one key, and a response can complete the
+  wrong request `[INFER]` (B1239 §1239.12 row 1).
+- **Timeouts:** a request waits `getResponseTimeOut()` (default 0) plus `getRespTimePadding()` (1000 ms) and
+  retries `getRetryCount()` (default 0) times (`comm/NMessage.java:151-200,233`, `comm/NCommTimer.java:524-527`):
+  1 s, no retry. Set both per message (`setResponseTimeOut`, `setRetryCount`) from the device's real latency.
+- **Defect checklist** — the course reference driver ships each one (B1239 §1239.12): keep subscription bookkeeping
+  per instance (the reference holds `private static final Set<String> subscribedPoints`,
+  `BTrafficLightDriverDevice.java:414`, shared by every device); bounds-check `LinkMessage.receive` against the
+  buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
+  proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
+  `poll/BNPollScheduler.java:48-59`).
+- Owed advisory lints G66 `ndriver-static-collection` and G67 `ndriver-tagless-correlation`
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
+  [ev: retro n4-course-handson-ndriver Δ7]
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
@@ -129,13 +160,24 @@ public void readUnsubscribed(Context cx) throws Exception {
 @Override
 public boolean write(Context cx) throws Exception {
     getNetwork().postWrite(buildWriteRequest(cx));
-    return false;   // false = async; the framework does not wait
+    return true;    // true = write enqueued: call writeOk()/writeFail() when it completes
 }
 ```
 
 Callback pair: `readOk(value)` / `readFail(cause)` and `writeOk()` / `writeFail(cause)` — call
 these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:859,883,895;
 corpus B810 §810.3]
+
+**`write()` returns whether a write is pending.** `true` = enqueued, the driver later calls `writeOk()` or
+`writeFail()`; `false` = cancelled at once, and `Tuning` clears the pending flag (`driver-rt/…/point/BProxyExt.java:872-883`,
+`Tuning.java:346-351`, vineflower). An async driver that returns `false` reports "not pending" for a write it
+still sends. NDriver threading: § 1.7. [ev: retro n4-course-drivers-bql-ords-files Δ3]
+
+**Enum proxy points show state names only with a frozen-enum range.** Set the point's `range` facet through
+"Use Frozen Enum in Range (module:name)" (`EnumRangeEditor.useFrozen`, `webEditors-ux.lexicon:92`) with the
+driver's enum type, e.g. `trafficLightDriver:TrafficLightState`; without it the course Lab 11 points showed ordinals
+`[CERT-live]` (corpus B1257 L11.40). Commissioning checks the range of every enum proxy before handover.
+[ev: retro n4-course-handson-ndriver Δ5]
 
 **BACnet: a field alarm or fault reaches Niagara status only with the `statusFlags` facet**
 `[ev: retro devguide415-r2-drivers-protocols Δ4]` `[ev: retro devguide415-r3-drivers-integration Δ3]` `[ev: corpus B1348 §1348.2]`.
