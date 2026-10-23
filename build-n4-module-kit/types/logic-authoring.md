@@ -29,6 +29,16 @@ Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or
 
 - **`BEventService` routing — routing IS the Baja link graph, no imperative registry:** `BEventSource.routeTo(name, routable)` = `add(name, consumer)` + `linkTo(source.event → consumer.process)`. `BEventFilter` chains (consumer = process action, producer = event topic). `BEventRecipient` is terminal async delivery via `ThreadPoolWorker`. The event envelope is a uniform `BEvent` (uuid / timestamp / source ORD / open value). Cross-station delivery uses `BStationRecipient` (Fox `EventChannel`). `BComponentEventSource` wraps a `Subscriber.event(BComponentEvent)` into a `BEvent`; `BComponentTypeEventSource` uses `TypeSubscriber` internally — the event module is an OVERLAY on the B867 subscription primitives. **License required:** `tridium:eventService`. `[ev: corpus B873 §873.1-4]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
+  **Documented scope** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: the 4.15.6.20 developer guide covers only
+  data-processing blocks (extend `BAlgorithmBlock` or `BOutputBlock`, pins are `BBlockPin`;
+  `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22,28-30`). `AnalyticDataSource.Provider` lives in the internal
+  `com.tridiumx.analytics.data` package (analytics-rt 4.15.6.20 jar listing) and is undocumented: a design that
+  depends on it is [INFER] and needs a version pin. Consume results through an analytic proxy ext on a point or the
+  ORD schemes (§ ORD scheme typology), not by reaching into the framework. **Licence:** every point the framework
+  uses carries the `a:a` tag and counts against the licence; when the count exceeds it the framework stops, so turn
+  `AutoTagAnalyticPoint` off after commissioning (`AnalyticsGuide/AboutLicensing-2CF33B35.txt:7-11`,
+  `ConfiguringTheServiceForLicensing-2D096CAA.txt:17`). An alert raises no alarm unless its `Alarm` property is set
+  (default false, `AnalyticsGuide/CreatingAnAlert-4506D8F3.txt:42`). Corpus B1338.
 
 ### Nav-tree ordering and visibility `[ev: corpus B757 §757.3–757.4]`
 
@@ -119,6 +129,14 @@ BObject result = target.get();
 | **query** | Runs a search or query | `bql:`, `neql:`, `hierarchy:`, `nav:` |
 
 Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side SPIs for the authoring recipe.
+
+**Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
+`BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
+There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt 4.15.6.20
+`META-INF/module.xml:106`). Analytic values cannot be subscribed like points; the bindings poll them
+(`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
+`analytic-ord-scheme` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
+`[deferred: retro devguide415-r2-security-tags-analytics Δ9]`
 
 ### `service:` lookup scheme `[ev: corpus B5 §5.1.1; B38 §38.1]`
 
@@ -542,6 +560,13 @@ When adding dynamic slots (`add(name, value)`) or forming `SlotPath` strings fro
 String escaped = SlotPath.escape(bacnetDeviceName);  // handles spaces, leading digits, special chars
 add(escaped, BDouble.DEFAULT);
 ```
+
+**Keep author-set flags when an action rebuilds slots** `[ev: retro devguide415-r2-security-tags-analytics Δ10]`: a
+refresh or rediscover action that removes and re-adds dynamic slots must carry over the flags an integrator set
+(HIDDEN, OPERATOR, READONLY): read `getFlags(slot)` before removing and `setFlags` after re-adding, or update the
+slot in place. Tridium's counter-example is scoped narrowly: `forceUpdate` resets hidden or changed action flags to
+defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `EngNotes/aForceUpdateAction.txt:2,13`;
+corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a design note [INFER].
 
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
 
