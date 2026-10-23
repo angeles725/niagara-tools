@@ -287,6 +287,24 @@ String safeName = SlotPath.escape(rawSlotName);
 
 [ev: code BRelationInfoList.java `SlotPath.escape(...)`; tagdictionary-rt; corpus B507 §SEC-09]
 
+### 4.1a BQL literal rules `[ev: corpus B1237 §1237.6]`
+
+Paths are `bql-rt/…` (vineflower) unless named.
+
+- **The whole query text is slot-unescaped before it is tokenized** (`javax/baja/bql/BqlQuery.java:22-25`): a `$xx`
+  sequence in an embedded value is decoded first. To match a literal `$20` write `'%$2420%'`. `toBqlLiteral`
+  slot-escapes the encoded value (`BqlQuery.java:87-97`), so § 4.1 round-trips; a raw string concatenation does not.
+- **Enum literals** take the frozen-enum dot form `<module>:<Enum>.<tag>` (`alarm:SourceState.offnormal`); the
+  parser accepts only a `BFrozenEnum` there, else `invalid.enum.tag` (`com/tridium/bql/compiler/ExprParser.java:398-414`).
+  A dynamic enum cannot use the dot form.
+- **Alarm scans:** query `FROM openAlarms` (or `ackPendingAlarms`) when only those rows matter — the extent names
+  are case-sensitive (`alarm-rt/…/BAlarmDatabase.java:228-231`); a BQLTIME window bounds the rest, and that it
+  narrows the record scan is `[INFER]`.
+- **Custom functions** are called `<module>:<Type>.<fn>(args)` (`ExprParser.java:390,398-403`; devguide `bql.txt:165`);
+  user-defined aggregates are "still considered experimental" (devguide `bql.txt:232`).
+
+[ev: retro n4-course-drivers-bql-ords-files Δ2]
+
 ### 4.2 BOrd from client input — allowlist prefix mandatory
 
 `BOrd.make(clientOrdString)` executed without validation lets a caller reach any
