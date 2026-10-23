@@ -258,6 +258,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | pending | 2 |
@@ -295,4 +296,5 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |
+| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-m2-gen.md | kit | 2026-10-23 | pending | 1 |

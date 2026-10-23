@@ -31,6 +31,8 @@ v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4
 
 - [METHODOLOGY.md](METHODOLOGY.md): route ladder, safety layers mapped to code and tests,
   live rules, the mandatory session checklist and version tiers. Read it before writing.
+- [docs/go-port-plan.md](docs/go-port-plan.md): the plan for porting the server to Go
+  (package layout, parity strategy, slices S0-S16, go/no-go criteria).
 - [skill/SKILL.md](skill/SKILL.md): the Claude Code skill launcher. Install it with
   (from the repository root; add `--dry-run` to preview, `--force` to overwrite a diverged copy):
 
