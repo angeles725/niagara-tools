@@ -333,7 +333,7 @@ func (r *file) classify(lnum int, arg string) {
 			return
 		}
 		for j := lnum - 1; j >= 1 && j >= lnum-50; j-- {
-			if r.binding(lnum, v, r.lines[j-1]) {
+			if r.binding(lnum, v, r.code[j-1]) {
 				return
 			}
 		}
@@ -387,9 +387,11 @@ func (r *file) helper(lnum int, fn string, guard bool) {
 	return
 }
 
-// binding reads one earlier line ln for the binding of variable v; true when it decided the call.
+// binding reads one earlier code line ln (comments removed) for the binding of variable v; true when it
+// decided the call. v must appear there as a whole name.
 func (r *file) binding(lnum int, v, ln string) bool {
-	if awkIndex(ln, v) == 0 {
+	pos := nameAt(ln, v)
+	if pos < 0 {
 		return false
 	}
 	if loc := maxBinding.FindStringIndex(ln); loc != nil {
@@ -406,7 +408,7 @@ func (r *file) binding(lnum int, v, ln string) bool {
 		}
 		return true
 	}
-	after := ln[awkIndex(ln, v)-1+len(v):]
+	after := ln[pos+len(v):]
 	if loc := assign.FindStringIndex(after); loc != nil {
 		if fn := helperName(strings.TrimLeft(after[loc[1]:], " \t\n\v\f\r")); fn != "" {
 			r.helper(lnum, fn, false)
@@ -416,9 +418,34 @@ func (r *file) binding(lnum int, v, ln string) bool {
 	return false
 }
 
+func isNameByte(c byte) bool {
+	return c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
+}
+
+// nameAt is the byte offset of the first whole-name occurrence of v in s (no name character glued to an
+// end of v that is itself a name character), -1 when there is none.
+func nameAt(s, v string) int {
+	if v == "" {
+		return -1
+	}
+	for off := 0; ; {
+		i := strings.Index(s[off:], v)
+		if i < 0 {
+			return -1
+		}
+		i += off
+		end := i + len(v)
+		if (i == 0 || !isNameByte(v[0]) || !isNameByte(s[i-1])) &&
+			(end == len(s) || !isNameByte(v[len(v)-1]) || !isNameByte(s[end])) {
+			return i
+		}
+		off = i + 1
+	}
+}
+
 // guarded looks up to 80 lines back for a positivity guard on expr (`expr > 0`, `>= 1`, `== 0`, or the
 // same on `expr().getMillis()`), comments cut, and reports a PASS row at the call when one is found.
-// expr is matched as text: the bash lint spliced it into a regular expression.
+// expr is matched as text (the bash lint spliced it into a regular expression) and as a whole name.
 func (r *file) guarded(lnum int, expr string) bool {
 	if expr == "" {
 		return false
@@ -446,9 +473,12 @@ func (r *file) guarded(lnum int, expr string) bool {
 	return false
 }
 
-// guardPatterns are the guard regexps on the literal text expr.
+// guardPatterns are the guard regexps on the literal text expr, which no name character may precede.
 func guardPatterns(expr string) []*regexp.Regexp {
 	q := regexp.QuoteMeta(expr)
+	if isNameByte(expr[0]) {
+		q = `(^|[^A-Za-z0-9_$])` + q
+	}
 	var out []*regexp.Regexp
 	for _, tail := range []string{
 		`[[:space:]]*>[[:space:]]*0`,
