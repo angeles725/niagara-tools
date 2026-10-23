@@ -47,6 +47,14 @@ func Open(path string) (*Doc, error) {
 // Parse checks data for well-formedness and builds its Doc; path only labels errors.
 func Parse(path string, data []byte) (*Doc, error) {
 	p := &parser{path: path, pos: newPositions(data)}
+	text, err := p.toUTF8(data)
+	if err != nil {
+		return nil, err
+	}
+	if len(text) != len(data) {
+		p.pos = newPositions(text)
+	}
+	data = text
 	elems, err := p.run(data)
 	if err != nil {
 		return nil, err

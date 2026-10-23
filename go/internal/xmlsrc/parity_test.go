@@ -11,7 +11,7 @@ import (
 // The verdict to share with niagara-go (internal/bog CheckWellFormed, which matches pyexpat): only
 // "malformed or not"; the messages differ by design. Deliberate differences, all fail-closed and
 // none ever written by Niagara: any DOCTYPE (expat reads an internal DTD), a declared encoding
-// other than UTF-8 and an XML version other than 1.0 (encoding/xml reads neither).
+// other than UTF-8, ISO-8859-1 and US-ASCII, and an XML version other than 1.0.
 var parityProbes = []struct {
 	class     string
 	text      string
@@ -49,10 +49,10 @@ var parityProbes = []struct {
 }
 
 // deliberate matches the xmlsrc errors of the deliberate differences.
-var deliberate = regexp.MustCompile(`<!DOCTYPE \.\.\.> is not supported$|CharsetReader is nil$|unsupported version`)
+var deliberate = regexp.MustCompile(`<!DOCTYPE \.\.\.> is not supported$|is not supported \(UTF-8|unsupported version`)
 
 func TestDeliberateDifferences(t *testing.T) {
-	for _, text := range []string{"<!DOCTYPE b []><b/>", "<?xml version='1.0' encoding='latin1'?><b/>", "<?xml version='1.1'?><b/>"} {
+	for _, text := range []string{"<!DOCTYPE b []><b/>", "<?xml version='1.0' encoding='UTF-16'?><b/>", "<?xml version='1.1'?><b/>"} {
 		if _, err := Parse("d.xml", []byte(text)); err == nil || !deliberate.MatchString(err.Error()) {
 			t.Errorf("%q: err = %v, want a deliberate refusal", text, err)
 		}

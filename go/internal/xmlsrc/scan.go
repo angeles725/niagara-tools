@@ -14,6 +14,7 @@ import (
 func (p *parser) run(data []byte) ([]Element, error) {
 	dec := xml.NewDecoder(bytes.NewReader(data))
 	dec.Strict = true
+	dec.CharsetReader = sameReader
 	var elems []Element
 	var stack []int
 	rooted := false
