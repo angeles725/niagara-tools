@@ -23,6 +23,8 @@ func Spec() lint.Spec {
 		Mode:   lint.One,
 		Usage:  "usage: lint-service-types.sh [--strict] <src-root>",
 		Select: lint.Selection{Names: []string{"*.java"}},
+		// Reason: bash used awk_lint_list, then scanned the partial list (env line, then rows, exit 3).
+		ContinueOnWalkError: true,
 	}
 }
 

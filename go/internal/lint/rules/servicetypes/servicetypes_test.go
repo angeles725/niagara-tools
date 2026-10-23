@@ -8,6 +8,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
 const (
@@ -175,4 +176,10 @@ func TestSpec(t *testing.T) {
 		s.Mode != lint.One || s.Rule.Severity() != lint.Fail || s.UsageExit != 0 {
 		t.Errorf("Spec() = %+v", s)
 	}
+}
+
+// TestUnreadable: ST-awkfail and ST-finderr keep the bash contract (awk_lint_list scanned the files it did list,
+// printed their rows and exited 3), so the spec sets ContinueOnWalkError.
+func TestUnreadable(t *testing.T) {
+	golden.Unreadable(t, Spec(), "class A extends BAbstractService {\n  public Type[] getServiceTypes() { return new Type[0]; }\n}\n")
 }
