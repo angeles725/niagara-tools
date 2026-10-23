@@ -1,0 +1,25 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  lint-config-sanity  @DIR@/one/Cmt.java:7  CS3: flag combo enforced only in comment: // only valid two
+WARN  lint-config-sanity  @DIR@/one/Cmt.java:11  CS3: flag combo enforced only in comment: //only when tabbed
+WARN  lint-config-sanity  @DIR@/one/Cmt.java:15  CS3: flag combo enforced only in comment: // only when: then code
+-- stderr --
+-- one/Cmt.java --
+class Cmt {
+  // Only when A is set
+
+  @NiagaraProperty(name = "a", type = "boolean", defaultValue = "false")
+  // only if one
+  // only valid two
+  @NiagaraProperty(name = "b", type = "boolean", defaultValue = "false")
+  /* only if block */
+  @NiagaraProperty(name = "c", type = "boolean", defaultValue = "false")
+	//only when tabbed
+	@NiagaraProperty(name = "d", type = "boolean", defaultValue = "false")
+  // ONLY WHEN caps
+  @NiagaraProperty(name = "e", type = "boolean", defaultValue = "false")
+  // only when: then code
+  int x; @NiagaraProperty(name = "f", type = "boolean", defaultValue = "false")
+}

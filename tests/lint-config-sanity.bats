@@ -253,3 +253,48 @@ JAVA
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"*"CS1"*"5m"*"10m"* ]]
 }
+
+@test "LCS-awkfail: an unreadable source file is an env error (exit 3, cannot scan), never a pass on the other files' rows" {
+  # Mutation: LCS-awkfail -- skipping a file the scan cannot read exits by the other files' rows (0 or 1), never 3.
+  only SetpointZero.java
+  cp "$FX/IntervalBad.java" "$ONE/"
+  chmod 000 "$ONE/IntervalBad.java"
+  if [ -r "$ONE/IntervalBad.java" ]; then chmod 644 "$ONE/IntervalBad.java"; skip "running as root"; fi
+  run "$LCS" "$ONE"
+  chmod 644 "$ONE/IntervalBad.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-config-sanity: cannot scan $ONE/IntervalBad.java"* ]]
+  [[ "$output" == *"FAIL"*"SetpointZero.java"*"CS2"* ]]
+}
+
+@test "LCS-doc: the header claims no suppression marker and no module-include.xml fallback (the lint has neither)" {
+  # A '// lint-config-sanity: ok' marker on the comment line or on the property line leaves CS3 in place.
+  only FlagCombo.java
+  sed -i -e 's|^  // Only valid when hasDefrost=true.*|& // lint-config-sanity: ok|' \
+         -e 's|"airDefrost", flags = Flags.OPERATOR)|&  // lint-config-sanity: ok|' "$ONE/FlagCombo.java"
+  [ "$(grep -c 'lint-config-sanity: ok' "$ONE/FlagCombo.java")" -eq 2 ]
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"CS3"* ]]
+  # so the header must not promise that marker, nor defaults read from module-include.xml
+  if grep -qF 'lint-config-sanity: ok' "$LCS"; then echo "header claims an unimplemented suppression" >&2; return 1; fi
+  if grep -qF 'module-include.xml' "$LCS"; then echo "header claims an unimplemented module-include.xml fallback" >&2; return 1; fi
+}
+
+@test "LCS-oneline: an annotation right after a one-line @NiagaraProperty is read by CS1 and CS2" {
+  # Mutation: LCS-oneline -- taking the next line into a one-line annotation hides the annotation on it from CS1/CS2.
+  rm -f "$ONE"/*.java
+  cat > "$ONE/OneLine.java" <<'JAVA'
+class OneLine {
+  @NiagaraProperty(name = "label", type = "String", defaultValue = "x")
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeSeconds(30)")
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeMinutes(1)")
+  @NiagaraProperty(name = "coolSetpoint", type = "double", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR)
+  int x;
+}
+JAVA
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"OneLine.java:3  CS1: interval<=duration: defrostInterval(30s) <= defrostDuration(1m)"* ]]
+  [[ "$output" == *"OneLine.java:5  CS2: zero-default setpoint \"coolSetpoint\""* ]]
+}

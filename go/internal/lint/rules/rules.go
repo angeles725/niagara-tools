@@ -6,6 +6,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -35,5 +36,6 @@ func All() []lint.Spec {
 		subscribeleak.Spec(),
 		wbfilechooser.Spec(),
 		nomd5credential.Spec(),
+		configsanity.Spec(),
 	}
 }

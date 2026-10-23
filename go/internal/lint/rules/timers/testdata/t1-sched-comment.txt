@@ -1,0 +1,28 @@
+-- root --
+src
+-- want --
+exit 1
+PASS  timer-ticket  @DIR@/src/BGuardNote.java:4  timer cancelled in stopped()
+FAIL  changed-sched  @DIR@/src/BGuardNote.java:5  Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body
+-- src/BGuardNote.java --
+package demo;
+import javax.baja.sys.*;
+public final class BGuardNote extends BComponent {
+  private Clock.Ticket ticket;
+  public void changed(Property p, Context cx) {
+    // TODO: add an isRunning() guard here
+    ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null);
+  }
+  public void stopped() { if (ticket != null) ticket.cancel(); }
+}
+-- src/BNoteOnly.java --
+package demo;
+import javax.baja.sys.*;
+public final class BNoteOnly extends BComponent {
+  public void changed(Property p, Context cx) {
+    log("Clock.schedule is not used here");
+  }
+  public void atSteadyState() {
+    // Clock.schedule(this, BRelTime.makeSeconds(5), armed, null) was removed
+  }
+}

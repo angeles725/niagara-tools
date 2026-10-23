@@ -2,7 +2,7 @@
 atss2
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/atss2/BAtssFixed.java: timer cancelled in stopped()
+PASS  timer-ticket  @DIR@/atss2/BAtssFixed.java:4  timer cancelled in stopped()
 -- atss2/BAtssFixed.java --
 package demo;
 import javax.baja.sys.*;

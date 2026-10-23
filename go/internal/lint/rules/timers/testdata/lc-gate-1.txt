@@ -2,7 +2,7 @@
 src
 -- want --
 exit 0
-WARN  release-gate-parity  @DIR@/src/G1.java: exitDefrost() re-applies applyRunCmd() without the beginRestartSequencing() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/G1.java:9  exitDefrost() re-applies applyRunCmd() without the beginRestartSequencing() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
 -- src/G1.java --
 package demo;
 import javax.baja.sys.*;

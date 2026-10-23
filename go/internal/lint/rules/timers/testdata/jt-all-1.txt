@@ -2,7 +2,7 @@
 jtall/m-rt/src
 -- want --
 exit 0
-WARN  jdk-thread  @DIR@/jtall/m-rt/src/demo/BExec.java: BExec uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+WARN  jdk-thread  @DIR@/jtall/m-rt/src/demo/BExec.java:7  BExec uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- jtall/m-rt/module-permissions.xml --
 <permissions>
   <niagara-permission-groups type="station">

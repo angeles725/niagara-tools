@@ -2,8 +2,8 @@
 src
 -- want --
 exit 1
-PASS  timer-ticket  @DIR@/src/Conformant.java: timer cancelled in stopped()
-FAIL  timer-ticket  @DIR@/src/Owner.java: schedules a Clock ticket but has no stopped() override to cancel it
+PASS  timer-ticket  @DIR@/src/Conformant.java:4  timer cancelled in stopped()
+FAIL  timer-ticket  @DIR@/src/Owner.java:4  schedules a Clock ticket but has no stopped() override to cancel it
 -- src/Conformant.java --
 package demo;
 import javax.baja.sys.*;

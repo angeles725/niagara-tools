@@ -1,0 +1,78 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "lowLimitPsi"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "cutoutBar"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "lowLimit2"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "lpCutoutTrip"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:2  CS4: floor "minOn"=2 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "lowLimitPsi"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "cutoutBar"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "lowLimit2"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "lpCutoutTrip"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:4  CS4: floor "compMinStagesOn"=3 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "lowLimitPsi"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "cutoutBar"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "lowLimit2"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "lpCutoutTrip"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:6  CS4: floor "stageMinOn2"=3 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "lowLimitPsi"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "cutoutBar"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "lowLimit2"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "lpCutoutTrip"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:8  CS4: floor "fanMinOnX"=1.5 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "lowLimitPsi"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "cutoutBar"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "lowLimit2"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "lpCutoutTrip"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+WARN  lint-config-sanity  @DIR@/one/Floors.java:16  CS4: floor "suctionMinOn"=4 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+-- stderr --
+-- one/Floors.java --
+class Floors {
+  @NiagaraProperty(name = "minOn", defaultValue = "2")
+  int v;
+  @NiagaraProperty(name = "compMinStagesOn", defaultValue = "BInteger.make(3)")
+  int v;
+  @NiagaraProperty(name = "stageMinOn2", defaultValue = "3L")
+  int v;
+  @NiagaraProperty(name = "fanMinOnX", defaultValue = "1.5d")
+  int v;
+  @NiagaraProperty(name = "minOnSecs", defaultValue = "5")
+  int v;
+  @NiagaraProperty(name = "adminOnline", defaultValue = "1")
+  int v;
+  @NiagaraProperty(name = "minStagesOn", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "suctionMinOn", defaultValue = "BLong.make( 4 )")
+  int v;
+  @NiagaraProperty(name = "tmrMinOn", defaultValue = "BRelTime.makeSeconds(5)")
+  int v;
+  @NiagaraProperty(name = "lpCutout", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "lowLimitPsi", defaultValue = "-0")
+  int v;
+  @NiagaraProperty(name = "cutoutBar", defaultValue = "0.0f")
+  int v;
+  @NiagaraProperty(name = "lowLimit2", defaultValue = "BDouble.make(0.)")
+  int v;
+  @NiagaraProperty(name = "cutoutDelay", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "cutoutCount", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "lpCutoutTrip", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "hpCutout", defaultValue = "1")
+  int v;
+  @NiagaraProperty(name = "cutoutFlag", defaultValue = "0")
+  int v;
+  @NiagaraProperty(name = "cutout", defaultValue = "false")
+  int v;
+  @NiagaraProperty(name = "lowLimitAlarm", defaultValue = "BInteger.make(0)")
+  int v;
+}

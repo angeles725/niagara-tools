@@ -35,6 +35,9 @@
 #   Row:  FAIL|WARN  lint-service-types  <file>:<line>  <detail>     (<line> = the getServiceTypes declaration)
 #   Exit: 0  no FAIL (WARN only without --strict) · 1  any FAIL, or any WARN under --strict · 3  usage/env, an
 #         unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-service-types  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # VCS-free by design (kit-links L2).
 # Mutation: ST1 -- dropping the empty-array check passes the IntelliJ 'Implement methods' stub new Type[0]
 # Mutation: ST2 -- requiring the array on the return line flags a multi-line initializer that holds TYPE
