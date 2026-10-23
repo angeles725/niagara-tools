@@ -48,5 +48,5 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$KIT/toolbelt/lint-bql-string-concat.sh" "$d"
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
-  [ "$output" = "lint-bql-string-concat: cannot scan $d/A.java: Permission denied" ]
+  [ "$output" = "lint-bql-string-concat: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
 }
