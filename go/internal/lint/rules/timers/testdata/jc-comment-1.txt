@@ -2,7 +2,7 @@
 jccomment
 -- want --
 exit 0
-WARN  job-cancel  @DIR@/jccomment/BExportJob.java: BExportJob run() loops (line 12) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
+WARN  job-cancel  @DIR@/jccomment/BExportJob.java:12  BExportJob run() loops with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
 -- jccomment/BExportJob.java --
 package demo;
 import javax.baja.job.*;

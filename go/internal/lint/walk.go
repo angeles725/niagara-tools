@@ -1,13 +1,12 @@
 package lint
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path"
 	"sort"
 	"strings"
-	"syscall"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // Selection is which files under a root a rule reads, as toolbelt/lib/scan-files.sh selects them.
@@ -39,54 +38,21 @@ func (s Selection) prunes(dir string) bool {
 }
 
 // WalkError is a directory the walk could not read; its text is the line GNU find printed for it
-// under LC_ALL=C (exported by toolbelt/lib/awk-lint.sh), path quoted as findQuote spells it.
+// under LC_ALL=C (exported by toolbelt/lib/awk-lint.sh), path quoted as strerror.FindQuote spells it.
 type WalkError struct {
 	Path string
 	Err  error
 }
 
-func (e *WalkError) Error() string { return "find: " + findQuote(e.Path) + ": " + strerror(e.Err) }
-
-// findQuote spells a path as GNU find quotes it in the C locale (quotearg locale style): always inside
-// '...', with \' and \\, C escapes for \a \b \f \n \r \t \v, and 3-digit octal for every other byte
-// outside printable ASCII (UTF-8 too: each byte is escaped on its own).
-func findQuote(p string) string {
-	var b strings.Builder
-	b.WriteByte('\'')
-	for i := 0; i < len(p); i++ {
-		c := p[i]
-		switch esc := strings.IndexByte("\a\b\f\n\r\t\v", c); {
-		case c == '\'' || c == '\\':
-			b.WriteByte('\\')
-			b.WriteByte(c)
-		case esc >= 0:
-			b.WriteByte('\\')
-			b.WriteByte("abfnrtv"[esc])
-		case c < 0x20 || c >= 0x7f:
-			fmt.Fprintf(&b, "\\%03o", c)
-		default:
-			b.WriteByte(c)
-		}
-	}
-	b.WriteByte('\'')
-	return b.String()
-}
-
-// strerror is the C library text of err's errno (Go's text with a capital first letter), as find
-// and awk print it in the C locale.
-func strerror(err error) string {
-	var errno syscall.Errno
-	if !errors.As(err, &errno) {
-		return err.Error()
-	}
-	s := errno.Error()
-	return strings.ToUpper(s[:1]) + s[1:]
+func (e *WalkError) Error() string {
+	return "find: " + strerror.FindQuote(e.Path) + ": " + strerror.Text(e.Err)
 }
 
 // Walk lists the regular files under root that sel selects, sorted bytewise (LC_ALL=C sort), with
 // paths spelled as find spells them (root + "/" + name, or root + name when root ends in "/").
-// The root itself is never pruned and, being a symlink, is not followed (find -P); symlinks below it
-// are neither followed nor listed. A directory it cannot read is skipped and the first one is returned
+// The root itself is never pruned and, being a symlink, is followed (find -H, issue #329) with paths
+// still spelled from the root as given; symlinks below it are neither followed nor listed. A root that
+// cannot be stat'ed (a dangling symlink) is a *WalkError, never an empty clean list. A directory it cannot read is skipped and the first one is returned
 // as a *WalkError after the rest of the tree is walked: the caller must treat it as an incomplete scan
 // (fail closed), never as clean.
 func Walk(root string, sel Selection) ([]string, error) {
@@ -117,7 +83,7 @@ func Walk(root string, sel Selection) ([]string, error) {
 			}
 		}
 	}
-	if st, err := os.Lstat(root); err != nil {
+	if st, err := os.Stat(root); err != nil {
 		return nil, &WalkError{Path: root, Err: err}
 	} else if st.IsDir() {
 		walk(root)

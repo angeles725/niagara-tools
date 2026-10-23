@@ -149,6 +149,11 @@ a structural test in a part with no `BTestNg` class is owed as Go lint G34 `stru
 `set()` does not work on an unmounted component. [CERT-doc] devguide `bql.txt:453-460`; `OrdTarget.java:196,208`
 (corpus B1308 §1308.1 row 4). `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 
+**A dedupe or helper extraction is tested at two levels** (`BUILD-LOOP.md` § 5): the new helper gets a pure JUnit
+test, seen RED before any caller moves to it; each caller keeps a test of its observable output (servlet JSON,
+rendered HTML, slot values) that passes unchanged before and after the move: a `BTestNgStation` test when the output
+is slot behaviour, a golden or pure test otherwise. `[ev: retro modular-line-efficient-quality Δ4]`
+
 ---
 
 ## Worked example — asserting link validation

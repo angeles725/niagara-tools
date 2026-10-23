@@ -2,8 +2,8 @@
 src
 -- want --
 exit 1
-FAIL  discarded-ticket  @DIR@/src/C20.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field
-FAIL  timer-ticket  @DIR@/src/C20.java: stopped() cancels no ticket (the Clock ticket is not kept in a named Clock.Ticket field, and no .cancel( call is reachable from stopped())
+FAIL  discarded-ticket  @DIR@/src/C20.java:4  Clock.schedule result is discarded — assign it to a Clock.Ticket field
+FAIL  timer-ticket  @DIR@/src/C20.java:4  stopped() cancels no ticket (the Clock ticket is not kept in a named Clock.Ticket field, and no .cancel( call is reachable from stopped())
 -- src/C20.java --
 package demo;
 import javax.baja.sys.*;

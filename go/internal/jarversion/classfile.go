@@ -1,6 +1,6 @@
 // Package jarversion implements lint-bundled-jar-class-version: it flags a bundled ext-jar under a module
 // source tree that carries Java 9+ bytecode (class-file major version > 52), which an N4 station cannot
-// load. The rules are those of the bash tool it replaces: the same file walk (find -P with build/ and
+// load. The rules are those of the bash tool it replaces: the same file walk (find -H with build/ and
 // dot-directories pruned), the same sample of class entries, the same version read and the same rows.
 package jarversion
 

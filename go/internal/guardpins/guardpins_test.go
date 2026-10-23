@@ -9,25 +9,27 @@ import (
 func TestDeclarations(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name, text string
-		want       []Decl
+		name, text  string
+		want, stray []Decl
 	}{
-		{"T4-match: one declaration", "#!/usr/bin/env bash\n# lint-foo\n# Mutation: FOO1 -- drops the guard\n", []Decl{{3, "FOO1"}}},
-		{"T4-nomutation: none", "#!/usr/bin/env bash\n# lint-baz\n", nil},
+		{"T4-match: one declaration", "#!/usr/bin/env bash\n# lint-foo\n# Mutation: FOO1 -- drops the guard\n", []Decl{{3, "FOO1"}}, nil},
+		{"T4-nomutation: none", "#!/usr/bin/env bash\n# lint-baz\n", nil, nil},
 		{"grammar: ASCII --, id starts with a letter, column 0, text after --", "#!/bin/sh\n# lint-a\n# Mutation: A -- x\n# Mutation: B -- y\n" +
 			"#  Mutation: C -- indented\n# Mutation: D --\n# Mutation: E - single\n# Mutation: 9F -- digit start\n" +
 			"# Mutation: G_h-1 -- ok\n# Mutation: A -- repeat\n# Mutation: H — em dash\n",
-			[]Decl{{3, "A"}, {4, "B"}, {9, "G_h-1"}, {10, "A"}}},
-		{"line 60 is read, line 61 is not", "#!/bin/sh\n" + strings.Repeat("# f\n", 58) + "# Mutation: ON60 -- x\n# Mutation: L61 -- y\n", []Decl{{60, "ON60"}}},
-		{"CRLF line", "#!/bin/sh\r\n# Mutation: A -- crlf\r\n", []Decl{{2, "A"}}},
-		{"an unterminated last line is read", "#!/bin/sh\n# Mutation: A -- no newline", []Decl{{2, "A"}}},
-		{"empty file", "", nil},
+			[]Decl{{3, "A"}, {4, "B"}, {9, "G_h-1"}, {10, "A"}}, nil},
+		{"the whole header is read, past line 60", "#!/bin/sh\n" + strings.Repeat("# f\n", 58) + "# Mutation: ON60 -- x\n# Mutation: L61 -- y\n", []Decl{{60, "ON60"}, {61, "L61"}}, nil},
+		{"a blank line does not end the header", "#!/bin/sh\n# Mutation: A -- x\n\n# Mutation: B -- after blank\n", []Decl{{2, "A"}, {4, "B"}}, nil},
+		{"a declaration below the header is stray", "#!/bin/sh\n# Mutation: A -- x\nset -u\n# Mutation: B -- after code\n", []Decl{{2, "A"}}, []Decl{{4, "B"}}},
+		{"CRLF line", "#!/bin/sh\r\n# Mutation: A -- crlf\r\n", []Decl{{2, "A"}}, nil},
+		{"an unterminated last line is read", "#!/bin/sh\n# Mutation: A -- no newline", []Decl{{2, "A"}}, nil},
+		{"empty file", "", nil, nil},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if got := Declarations(tt.text); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %v, want %v", got, tt.want)
+			if got, stray := Declarations(tt.text); !reflect.DeepEqual(got, tt.want) || !reflect.DeepEqual(stray, tt.stray) {
+				t.Errorf("got %v stray %v, want %v stray %v", got, stray, tt.want, tt.stray)
 			}
 		})
 	}

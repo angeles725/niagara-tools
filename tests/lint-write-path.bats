@@ -12,6 +12,8 @@
 
 load lib/client-root   # C11 T2: one blessed client read root; env override wins [ev: design.md D3b]
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LW="$KIT/toolbelt/lint-write-path.sh"
@@ -426,4 +428,17 @@ MD
   chmod 755 "$W/other/locked"
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
+}
+
+@test "WP-symroot: a symlinked module root lists its profile dirs like find -H, same FAILs as the directory (issue #329)" {
+  # Mutation: WP-symroot -- dropping -H from the profile find scans no -rt/-wb under a symlinked module root (exit 3).
+  # The matrix sits in <module-root>/docs: the parent-dir lookup is textual, so it must not depend on the link's parent.
+  repo="$BATS_TEST_TMPDIR/repo"; mkdir -p "$repo/ColdRoomPan/docs"
+  printf '# Write-Path Matrix\n| Slot | Writer | Timing | Test |\n|---|---|---|---|\n| setpoint | Dashboard | mid-cycle | w1 |\n' \
+    > "$repo/ColdRoomPan/docs/write-path-matrix.md"
+  mkdir -p "$repo/ColdRoomPan/ColdRoomPan-rt/src/com/x"
+  printf '@NiagaraProperty(name="fanMode", flags=Flags.OPERATOR)\npublic class BCrp extends BComponent {}\n' \
+    > "$repo/ColdRoomPan/ColdRoomPan-rt/src/com/x/BCrp.java"
+  assert_symroot_same "$repo/ColdRoomPan" "$LW" "$repo/ColdRoomPan"
+  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"fanMode"* ]]
 }

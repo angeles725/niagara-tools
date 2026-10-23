@@ -12,9 +12,10 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_registry  # noqa: E402
 import go_server  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
-from mcp_n4 import server  # noqa: E402
+from mcp_n4 import server, tools_read, tools_write  # noqa: E402
 
 PASSWORD = "harness-pw-4242"
 PYTHON_STDIO = [sys.executable, "-m", "mcp_n4.server"]
@@ -183,6 +184,57 @@ class TestSkipInventory(unittest.TestCase):
     def test_an_unknown_category_is_refused(self):
         with self.assertRaises(ValueError):
             go_server.go_twin("box", "flaky")
+
+
+class TestUnportedSkip(unittest.TestCase):
+    """Only the exact unported tool error skips; every other error still fails the test."""
+
+    @staticmethod
+    def tool_error(text):
+        return {"jsonrpc": "2.0", "id": 1,
+                "result": {"content": [{"type": "text", "text": text}], "isError": True}}
+
+    def test_the_unported_tool_error_skips(self):
+        with self.assertRaises(unittest.SkipTest):
+            go_server.skip_if_unported(self.tool_error("n4_connect " + go_server.UNPORTED))
+
+    def test_other_replies_do_not_skip(self):
+        for reply in (self.tool_error("not connected: call n4_connect first"),
+                      self.tool_error(go_server.UNPORTED + " and more"),
+                      {"jsonrpc": "2.0", "id": 1, "error": {"code": -32602,
+                                                            "message": go_server.UNPORTED}},
+                      {"jsonrpc": "2.0", "id": 1, "result": {"structuredContent": {}}},
+                      None, [1]):
+            go_server.skip_if_unported(reply)  # no SkipTest
+
+    def test_an_unported_start_refusal_skips(self):
+        refuse = [sys.executable, "-c", "import sys; sys.stderr.write('mcp_n4.server: "
+                  "--allow-writes %s\\n'); sys.exit(2)" % go_server.UNPORTED]
+        with self.assertRaises(unittest.SkipTest):
+            go_server.GoServer(command=refuse)
+
+
+class TestGoRegistry(unittest.TestCase):
+    """go/internal/mcpn4/registry/registry.json is the Python surface, byte for byte."""
+
+    def test_the_go_registry_matches_the_python_tables(self):
+        with open(go_registry.REGISTRY_FILE, encoding="ascii", newline="") as fh:
+            published = fh.read()
+        self.assertEqual(published, go_registry.registry_text(),
+                         "regenerate it with: python3 mcp-n4-kit/tests/go_registry.py --write")
+
+    def test_it_lists_every_tool_with_its_session_need(self):
+        data = go_registry.registry()
+        self.assertEqual([t["name"] for t in data["write_tools"]],
+                         [t.name for t in tools_write.TOOLS])
+        self.assertEqual(set(t["name"] for t in data["write_tools"]), tools_write.NAMES)
+        self.assertEqual({t["name"]: t["needs_session"] for t in data["read_tools"]},
+                         {t.name: t.needs_session for t in tools_read.TOOLS})
+
+    def test_the_usage_is_the_one_a_flag_error_prints(self):
+        data = go_registry.registry()
+        self.assertTrue(data["cli"]["usage"].startswith("usage: mcp_n4.server [-h]"))
+        self.assertTrue(data["cli"]["help"].startswith(data["cli"]["usage"]))
 
 
 if __name__ == "__main__":

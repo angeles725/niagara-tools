@@ -1,6 +1,7 @@
 // Package nullcontext is the lint-null-context-write rule: component writes and bql: ORD resolutions
 // made with no caller Context. Port of the awk in toolbelt/lint-null-context-write.sh (the wrapper keeps
-// the user-facing contract and its header documents the rule and its mutation pins).
+// the user-facing contract and its header documents the rule, its mutation pins and the declared
+// differences: a write is judged on its own argument list, across lines).
 package nullcontext
 
 import (
@@ -31,8 +32,10 @@ func (rule) ID() string              { return id }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
 var (
-	// A write whose last argument is null, on one blanked code line.
-	write = regexp.MustCompile(`\.(set|setInt|setBoolean|setDouble|invoke)\(.*,[[:space:]]*null[[:space:]]*\)`)
+	// The start of a write call; its argument list is read to its balanced ")" across lines.
+	write = regexp.MustCompile(`\.(set|setInt|setBoolean|setDouble|invoke)[[:space:]]*\(`)
+	// A null Context argument: null, or null cast to Context ((Context) null, (javax.baja.sys.Context)null).
+	nullArg = regexp.MustCompile(`^(\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*[[:space:]]*\.[[:space:]]*)*Context[[:space:]]*\)[[:space:]]*)?null$`)
 	// The blanked ORD literal, an optional paren-free concatenation, make's ")", then the call on that ORD.
 	ordCall = regexp.MustCompile(`^""[^()]*\)[[:space:]]*\.(get|resolve)\(`)
 	noArgs  = regexp.MustCompile(`^[[:space:]]*\)`)
@@ -45,14 +48,25 @@ const space = " \t\n\v\f\r" // awk's [[:space:]] in the C locale
 
 // Check never fails: every file it is given is scanned line by line, as the awk did.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code, bql := blank(f.Stripped())
+	// bql[i] is the 1-based column in code[i] of the opening quote of the first "..." literal on line i
+	// whose text holds "bql:" (0 when none).
+	st := f.Stripped()
+	bql := make([]int, len(st))
+	code, _ := javasrc.BlankLiterals(st, func(l javasrc.Literal) {
+		if l.Quote == '"' && bql[l.Line] == 0 && strings.Contains(l.Text, "bql:") {
+			bql[l.Line] = l.Col
+		}
+	})
 	var out []lint.Finding
 	report := func(i int, msg string) {
 		out = append(out, lint.Finding{Line: i + 1, Msg: msg + strings.TrimLeft(f.Raw[i], space)})
 	}
 	for i, ln := range code {
-		if write.MatchString(ln) {
-			report(i, "null-Context write: ")
+		for _, loc := range write.FindAllStringIndex(ln, -1) {
+			if nullLastArg(code, i, loc[1]) {
+				report(i, "null-Context write: ") // one row per line, at the line of the call
+				break
+			}
 		}
 	}
 	// -wb parts are client code (the session carries the user): skipped by the bql rule only.
@@ -102,57 +116,34 @@ func nullContext(args string) bool {
 	return false
 }
 
-// blank returns the stripped lines with the contents of "...", '...' and """...""" literals removed
-// (quotes kept, \ escapes honoured, text-block state carried across lines; a "..." or '...' literal
-// ends at its line end) and, per line, the 1-based column in the blanked line of the opening quote of
-// the first "..." literal on that line whose text holds "bql:" (0 when none).
-func blank(src []string) (dst []string, bql []int) {
-	dst, bql = make([]string, len(src)), make([]int, len(src))
-	inText := false
-	var b, lit strings.Builder
-	for i, ln := range src {
-		b.Reset()
-		var quote byte
-		at := 0
-		for j := 0; j < len(ln); j++ {
-			c := ln[j]
-			switch {
-			case inText:
-				if c == '\\' {
-					j++
-				} else if strings.HasPrefix(ln[j:], `"""`) {
-					b.WriteString(`"""`)
-					inText = false
-					j += 2
-				}
-			case quote != 0:
-				switch c {
-				case '\\':
-					lit.WriteString(ln[j:min(j+2, len(ln))])
-					j++
-				case quote:
-					b.WriteByte(quote)
-					if quote == '"' && bql[i] == 0 && strings.Contains(lit.String(), "bql:") {
-						bql[i] = at
-					}
-					quote = 0
-				default:
-					lit.WriteByte(c)
-				}
-			case strings.HasPrefix(ln[j:], `"""`):
-				b.WriteString(`"""`)
-				inText = true
-				j += 2
-			default:
-				if c == '"' || c == '\'' {
-					quote = c
-					lit.Reset()
-					at = b.Len() + 1
-				}
-				b.WriteByte(c)
+// nullLastArg reports whether the call whose argument list opens at code[i][at:] has two or more
+// arguments and its last one is a null Context. The list is read to its balanced ")" across lines (the
+// whole statement, not one line); an argument list still open at the end of the file is not judged.
+func nullLastArg(code []string, i, at int) bool {
+	var args []string
+	var cur strings.Builder
+	depth := 0
+	for ln, j := code[i][at:], i; ; {
+		for k := 0; k < len(ln); k++ {
+			switch c := ln[k]; {
+			case c == '(' || c == '[' || c == '{':
+				depth++
+			case (c == ')' || c == ']' || c == '}') && depth > 0:
+				depth--
+			case c == ')':
+				args = append(args, cur.String())
+				return len(args) >= 2 && nullArg.MatchString(strings.Trim(args[len(args)-1], space))
+			case c == ',' && depth == 0:
+				args = append(args, cur.String())
+				cur.Reset()
+				continue
 			}
+			cur.WriteByte(ln[k])
 		}
-		dst[i] = b.String()
+		if j++; j == len(code) {
+			return false
+		}
+		ln = code[j]
+		cur.WriteByte(' ')
 	}
-	return dst, bql
 }

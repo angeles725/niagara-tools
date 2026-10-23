@@ -2,7 +2,7 @@
 jtself/m-rt/src
 -- want --
 exit 0
-WARN  jdk-thread  @DIR@/jtself/m-rt/src/demo/BSleeper.java: BSleeper uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+WARN  jdk-thread  @DIR@/jtself/m-rt/src/demo/BSleeper.java:4  BSleeper uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- jtself/m-rt/module-permissions.xml --
 <permissions>
   <niagara-permission-groups type="station">

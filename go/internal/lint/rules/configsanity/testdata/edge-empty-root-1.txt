@@ -1,0 +1,8 @@
+-- args --
+@DIR@/one
+-- want --
+exit 3
+ERROR  lint-config-sanity  @DIR@/one  no *.java sources found (wrong path or empty source tree)
+-- stderr --
+-- one/README.txt --
+no java here
