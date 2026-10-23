@@ -50,4 +50,7 @@ func TestStrReprPicksDoubleQuotesOnlyForASingleQuoteAlone(t *testing.T) {
 	if got := StrRepr(`say "hi"`); got != `'say "hi"'` {
 		t.Errorf("StrRepr = %s", got)
 	}
+	if got := StrRepr("a\xffb"); got != `'a\udcffb'` {
+		t.Errorf("StrRepr of an undecodable byte = %s, want the surrogateescape escape", got)
+	}
 }

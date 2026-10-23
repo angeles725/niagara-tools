@@ -75,7 +75,8 @@ func repr(b *strings.Builder, v any) {
 // StrRepr returns repr(s) for a Python str held as UTF-8 or WTF-8: single quotes unless s holds a
 // ' and no ", the quote and backslash escaped, \t \n \r, then \xhh, \uhhhh or \Uhhhhhhhh for
 // every code point that is not printable (str.isprintable, approximated by unicode.IsPrint),
-// lone surrogates included.
+// lone surrogates included. A byte that is not UTF-8 is the surrogate U+DC80..U+DCFF that
+// surrogateescape decodes it to (argv and stdin under Python's UTF-8 mode).
 func StrRepr(s string) string {
 	quote := byte('\'')
 	if strings.IndexByte(s, '\'') >= 0 && strings.IndexByte(s, '"') < 0 {
@@ -89,7 +90,7 @@ func StrRepr(s string) string {
 			if sur, ok := wtf8Surrogate(s[i:]); ok {
 				r, size = sur, 3
 			} else {
-				r = rune(s[i]) // not reachable for decoded strings; keep the byte visible
+				r = 0xdc00 + rune(s[i]) // an undecodable byte, as surrogateescape reads it
 			}
 		}
 		i += size
