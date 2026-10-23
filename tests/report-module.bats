@@ -20,6 +20,8 @@
 
 load helpers/stub-toolbelt   # stub_toolbelt <dir> <member> <body> (polish P1c)
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   RM="$KIT/toolbelt/report-module.sh"
@@ -815,4 +817,10 @@ JAVA
   [ "$output" = "$total" ]
   run grep -c '^[^#]*"\$?"' "$RM"
   [ "$output" = "0" ]
+}
+
+@test "RM-symroot: a symlinked module root lists its artifacts like find -H, same report as the directory (issue #329)" {
+  # Mutation: RM-symroot -- dropping -H from the artifact find lists no artifact under a symlinked root.
+  assert_symroot_same "$FX/clean" "$RM" --lint-only "$FX/clean"
+  [ "$status" -eq 0 ] && [[ "$output" == *"CLEAN"* ]]
 }

@@ -259,7 +259,7 @@ have_src() {
 ARTIFACTS=()
 while IFS= read -r _d; do
   ARTIFACTS+=("$_d")
-done < <(find "$MODULE_ROOT" -maxdepth 1 -mindepth 1 -type d | sort)
+done < <(find -H "$MODULE_ROOT" -maxdepth 1 -mindepth 1 -type d | sort)
 
 ARTIFACT_COUNT="${#ARTIFACTS[@]}"
 if [ "$ARTIFACT_COUNT" -eq 0 ]; then

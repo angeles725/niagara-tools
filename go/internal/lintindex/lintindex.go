@@ -1,16 +1,16 @@
 // Package lintindex generates build-n4-module-kit/toolbelt/INDEX.md, the lint index, from the
 // header of each toolbelt/lint-*.sh (port of the awk in the former toolbelt/gen-lint-index.sh).
 //
-// Header contract (lines 1-60 of every lint-*.sh):
+// Header contract (the header of every lint-*.sh: its leading run of '#' and blank lines, lintheader.Lines):
 //   - line 2 is `# <script-name> — <what it checks>` (also `--` or `-`); continuation lines are
 //     joined until a blank '#', a non-comment or keyword line, or line 5 (the description spans
 //     header lines 2-5 at most);
-//   - every `# Usage:` line and every `# Exit:`/`# Exits:`/`# Exit <code>` line of the header block
-//     (the leading run of '#' lines, so a code comment below the first non-comment line never
-//     joins) is kept, in order, joined with <br>; a '#' line whose text starts at or right of the
+//   - every `# Usage:` line and every `# Exit:`/`# Exits:`/`# Exit <code>` line of the header (so a
+//     code comment below the first non-comment line never joins) is kept, in order, joined with
+//     <br>; a '#' line whose text starts at or right of the
 //     value column of the Usage/Exit line above it is a wrapped continuation, unless it is a
 //     `Word:` line;
-//   - every `[ev: ...]` tag in lines 1-60 is collected once, in first-seen order.
+//   - every `[ev: ...]` tag in the header is collected once, in first-seen order.
 //
 // Bytes are compared as in the C locale: [[:space:]] is ASCII whitespace.
 package lintindex
@@ -18,10 +18,9 @@ package lintindex
 import (
 	"regexp"
 	"strings"
-)
 
-// HeaderLines is how many lines of a lint script are read as its header.
-const HeaderLines = 60
+	"github.com/angeles725/niagara-tools/go/internal/lintheader"
+)
 
 // Row is one lint of the index.
 type Row struct {
@@ -36,7 +35,7 @@ type Row struct {
 var (
 	evTag        = regexp.MustCompile(`\[ev: [^]]*\]`)
 	separator    = regexp.MustCompile(`^[[:space:]]*(—|--|-)[[:space:]]*`)
-	blankHash    = regexp.MustCompile(`^#[[:space:]]*$`)
+	blankHash    = regexp.MustCompile(`^#?[[:space:]]*$`)
 	keywordLine  = regexp.MustCompile(`^#[[:space:]]*(Usage|Exits?|Scope|Mutation|Row)`)
 	hashLead     = regexp.MustCompile(`^#[[:space:]]*`)
 	textLine     = regexp.MustCompile(`^#[[:space:]]*[^[:space:]]`)
@@ -56,25 +55,14 @@ func Extract(name, text string) (Row, string) {
 	seen := map[string]bool{}
 	joining := false
 	cont, vcol := byte(0), 0
-	inHeader := true // the leading run of '#' lines; Usage/Exit lines are read only there
 
-	lines := strings.Split(text, "\n")
-	if strings.HasSuffix(text, "\n") {
-		lines = lines[:len(lines)-1] // the final newline ends the last line, it does not start one
-	}
-	for i, line := range lines {
+	for i, line := range lintheader.Lines(text) {
 		nr := i + 1
-		if nr > HeaderLines {
-			break
-		}
 		for _, tag := range evTag.FindAllString(line, -1) {
 			if !seen[tag] {
 				seen[tag] = true
 				ev = append(ev, tag)
 			}
-		}
-		if !strings.HasPrefix(line, "#") {
-			inHeader = false
 		}
 		if nr == 2 {
 			if pre := "# " + name; strings.HasPrefix(line, pre) {
@@ -87,16 +75,13 @@ func Extract(name, text string) (Row, string) {
 		}
 		// Description cap: header lines 3-5 only.
 		if joining && nr <= 5 {
-			if blankHash.MatchString(line) || !strings.HasPrefix(line, "#") || keywordLine.MatchString(line) {
+			if blankHash.MatchString(line) || keywordLine.MatchString(line) {
 				joining = false
 			} else {
 				desc += " " + line[len(hashLead.FindString(line)):]
 			}
 		}
-		// Mutation: GLI-exit-block -- reading Usage/Exit lines past the header block joins a code comment
-		if !inHeader {
-			continue
-		}
+		// Usage/Exit lines are read from the header only: lintheader.Lines stops at the first code line.
 		// Wrapped continuation of the Usage/Exit line above: text at or right of its value column.
 		// Mutation: GLI-wrap-exit -- dropping the continuation join truncates a wrapped exit contract
 		if cont != 0 {
@@ -129,9 +114,9 @@ func Extract(name, text string) (Row, string) {
 	case desc == "":
 		return Row{}, `line 2 is not "# ` + name + ` — <what it checks>"`
 	case usage == "":
-		return Row{}, `no "# Usage:" line in the header (lines 1-60)`
+		return Row{}, `no "# Usage:" line in the header (the leading comment block)`
 	case exitc == "":
-		return Row{}, `no "# Exit:"/"# Exits:" line in the header (lines 1-60)`
+		return Row{}, `no "# Exit:"/"# Exits:" line in the header (the leading comment block)`
 	}
 	return Row{Name: name, Desc: clean(evTag.ReplaceAllString(desc, "")), Usage: clean(usage),
 		Exit: clean(exitc), Ev: clean(strings.Join(ev, " "))}, ""

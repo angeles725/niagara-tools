@@ -176,9 +176,9 @@ class FakeStation:
         """`(code, body, content type)` of `GET /ord/<raw_ord>` from `ord_routes`."""
         ord_text = urllib.parse.unquote(raw_ord)
         self.ord_requests.append(ord_text)
-        for needle, body in self.ord_routes:
+        for needle, body in self.ord_routes:  # body, or (body, content type)
             if needle in ord_text:
-                return 200, body, "text/csv"
+                return (200,) + (body if isinstance(body, tuple) else (body, "text/csv"))
         return 404, b"", "text/html"
 
     def _authorized(self, header):

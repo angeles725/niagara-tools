@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"syscall"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // Finding is the first sampled class entry of a jar whose major version is above Java 8.
@@ -105,7 +107,7 @@ func Reason(err error) string {
 	}
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		return strerror(errno)
+		return strerror.Text(errno)
 	}
 	msg := err.Error()
 	for _, pkg := range []string{"zip: ", "flate: ", "bzip2 data invalid: "} {

@@ -159,7 +159,7 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   # STALE = lex_keys - known_sorted; known_sorted = all_annotation_slots ∪ type names ∪ @Range tags.
   # Type display-name keys and frozen-enum tag keys are live translations, not dead.
   # shellcheck disable=SC2016  # awk programs intentionally in single quotes (no shell expansion needed)
-  _java_files=$(find "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+  _java_files=$(find -H "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
   # shellcheck disable=SC2016
   op_slots_raw=$(printf '%s\n' "$_java_files" | xargs awk '
     BEGIN { in_prop=0; prop_buf=""; prop_name=""; prop_op=0 }

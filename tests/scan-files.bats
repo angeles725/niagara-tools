@@ -99,3 +99,35 @@ teardown() { rm -rf "$TMPDIR_T"; }
   scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/m" -name '*.java'
   [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/m/chihuahua/src/A.java" ]
 }
+
+@test "SF10: a symlinked root is followed like find -H, paths keep the root as given (issue #329)" {
+  # Mutation: SF10 -- dropping -H from the find in scan_files lists nothing under a symlinked root and returns 0.
+  mkdir -p "$TMPDIR_T/m/com"
+  printf 'x\n' > "$TMPDIR_T/m/com/A.java"
+  ln -s "$TMPDIR_T/m" "$TMPDIR_T/link"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/link" -name '*.java'
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/link/com/A.java" ]
+}
+
+@test "SF11: below a symlinked root, symlinks are still neither followed nor listed (issue #329)" {
+  # Mutation: SF11 -- -L instead of -H follows the inner links and lists other/B.java and L.java.
+  mkdir -p "$TMPDIR_T/m/com" "$TMPDIR_T/other"
+  printf 'x\n' > "$TMPDIR_T/m/com/A.java"
+  printf 'x\n' > "$TMPDIR_T/other/B.java"
+  ln -s "$TMPDIR_T/other" "$TMPDIR_T/m/inner"
+  ln -s "$TMPDIR_T/m/com/A.java" "$TMPDIR_T/m/L.java"
+  ln -s "$TMPDIR_T/m" "$TMPDIR_T/link"
+  scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/link" -name '*.java'
+  [ "$(cat "$TMPDIR_T/files")" = "$TMPDIR_T/link/com/A.java" ]
+}
+
+@test "SF12: a dangling root symlink or a root symlink to a file is not a directory, never a clean pass (issue #329)" {
+  ln -s "$TMPDIR_T/gone" "$TMPDIR_T/dangling"
+  printf 'x\n' > "$TMPDIR_T/A.java"
+  ln -s "$TMPDIR_T/A.java" "$TMPDIR_T/filelink"
+  for r in dangling filelink; do
+    run scan_files "$TMPDIR_T/files" "$TMPDIR_T/err" "$TMPDIR_T/$r" -name '*.java'
+    [ "$status" -eq 2 ]
+    grep -q "not a directory: $TMPDIR_T/$r" "$TMPDIR_T/err"
+  done
+}

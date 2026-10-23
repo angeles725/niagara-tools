@@ -12,6 +12,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
@@ -58,7 +59,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			data, err := os.ReadFile(p)
 			if err != nil {
 				// awk_lint_run printed the first line of awk's own error.
-				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror(err)))
+				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
 				continue
 			}
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails

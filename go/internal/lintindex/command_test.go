@@ -147,8 +147,8 @@ func TestMainContractViolation(t *testing.T) {
 		"lint-nousage.sh": lint("lint-nousage.sh", "no usage line.", "", "e"),
 	})
 	code, stdout, errs := run("", root)
-	want := "gen-lint-index: lint-noexit.sh: no \"# Exit:\"/\"# Exits:\" line in the header (lines 1-60)\n" +
-		"gen-lint-index: lint-nousage.sh: no \"# Usage:\" line in the header (lines 1-60)\n" +
+	want := "gen-lint-index: lint-noexit.sh: no \"# Exit:\"/\"# Exits:\" line in the header (the leading comment block)\n" +
+		"gen-lint-index: lint-nousage.sh: no \"# Usage:\" line in the header (the leading comment block)\n" +
 		"gen-lint-index: header-contract violation; index not written\n"
 	if code != ExitStale || stdout != "" || errs != want {
 		t.Errorf("GLI-contract: got (%d, %q, %q)", code, stdout, errs)
@@ -181,7 +181,7 @@ func TestMainUnreadableHeader(t *testing.T) {
 	code, stdout, errs := run("", root)
 	if code != ExitEnv || stdout != "" ||
 		!strings.HasPrefix(errs, "gen-lint-index: lint-locked.sh: cannot read the header: ") ||
-		!strings.HasSuffix(errs, "gen-lint-index: lint-nousage.sh: no \"# Usage:\" line in the header (lines 1-60)\n"+
+		!strings.HasSuffix(errs, "gen-lint-index: lint-nousage.sh: no \"# Usage:\" line in the header (the leading comment block)\n"+
 			"gen-lint-index: a lint header could not be read; index not written\n") {
 		t.Errorf("got (%d, %q, %q)", code, stdout, errs)
 	}
