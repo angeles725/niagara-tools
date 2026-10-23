@@ -1,0 +1,30 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/E.java:4  unfloored  cannot verify floor of variable: 
+FAIL  lint-delays     @DIR@/t/E.java:5  unfloored  cannot verify floor of variable: 
+FAIL  lint-delays     @DIR@/t/Noeol.java:1  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/U.java:3  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)
+FAIL  lint-delays     @DIR@/t/U.java:4  unfloored  cannot verify floor of variable: ñandú
+FAIL  lint-delays     @DIR@/t/U.java:5  unfloored  cannot verify floor: ñ
+-- stderr --
+-- t/E.java --
+class E {
+  long q = Helpers.floor1(x);
+  void a() {
+    Clock.schedule(this, BRelTime.make( ), go, null);
+    Clock.schedule(this, BRelTime.make(	), go, null);
+  }
+}
+-- t/Empty.java --
+-- t/Noeol.java (noeol) --
+class N { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/U.java --
+class U {
+  void a(long x) {
+    String ñ = "señal"; Clock.schedule(this, BRelTime.make(Math.max(x, 0L)), go, null);
+    Clock.schedule(this, BRelTime.make(ñandú), go, null);
+    Clock.schedule(this, ñ, go, null);
+  }
+}

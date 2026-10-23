@@ -1,0 +1,18 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/W.java:4  unfloored  cannot verify floor of variable: x
+FAIL  lint-delays     @DIR@/t/W.java:5  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/W.java:6  unfloored  cannot verify floor of variable: x
+-- stderr --
+-- t/W.java --
+package demo;
+class W {
+  void a(long x) {
+    Clock.schedule(this, BRelTime.make(x), go, null);
+    Clock.schedule(this, BRelTime.make(0), go, null);
+    if (x > 0) Clock.schedule(this, BRelTime.make(x), go,
+      null);
+  }
+}
