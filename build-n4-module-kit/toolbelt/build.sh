@@ -94,6 +94,10 @@ J8="${JAVA8:-/usr/lib/jvm/java-8-openjdk-amd64}"
 HERE="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 # shellcheck disable=SC1091
 . "$HERE/lib/fs-type.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/method-boundary.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/signing-block.sh"
 
 [ -d "$ROOT" ] || { echo "build.sh: module root not found: $ROOT" >&2; exit 10; }
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
@@ -312,7 +316,17 @@ if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$G
   # A root without a signing block makes the plugin create a profile in the mirror user home and sign with a
   # throwaway Niagara4Modules dev key; the build still passes, so say it (WARN, exit unchanged). Every profile
   # there is plugin-created (never the user's), and it persists, so WARN on every build, not only the first (#316).
-  if [ -n "$_MIRROR_SIGNXML" ] && [ -e "$_MIRROR_SIGNXML" ]; then
+  # A root whose uncommented code disables the default profile (SIGN_BLOCK_ERE[0], the lint-structure L15 rule)
+  # cannot fall back to it — such a build fails without an explicit profile — so a leftover profile is no
+  # evidence there: no WARN (templates/signing-root.gradle.kts). An unreadable root keeps the WARN.
+  _root_disables_default=0
+  if [ -n "$_MIRROR_SIGNXML" ] && [ -e "$_MIRROR_SIGNXML" ] && [ -f "$GRADLE_ROOT/build.gradle.kts" ]; then
+    # shellcheck disable=SC2016  # awk program text in single quotes
+    _root_code=$(awk "$MB_AWK"'{ raw[NR] = $0 } END { mb_strip(raw, NR, code); for (i = 1; i <= NR; i++) print code[i] }' \
+      "$GRADLE_ROOT/build.gradle.kts" 2>/dev/null) \
+      && grep -qE "${SIGN_BLOCK_ERE[0]}" <<< "$_root_code" && _root_disables_default=1
+  fi
+  if [ -n "$_MIRROR_SIGNXML" ] && [ -e "$_MIRROR_SIGNXML" ] && [ "$_root_disables_default" -eq 0 ]; then
     echo "==> WARN: the jar is signed with a throwaway dev key created in the mirror user home ($_MIRROR_SIGNXML) — do not deploy it; add the signing block (templates/signing-root.gradle.kts, lint-structure L15)" >&2
   fi
 else

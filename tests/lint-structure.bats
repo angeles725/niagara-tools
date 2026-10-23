@@ -311,9 +311,19 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: lint-structure L15 and preflight sample-sign use the same four requirement patterns" {
-  # The ERE table is duplicated (no shared lib file in the unit's surface); this pins the two copies together.
-  a=$(grep -A1 '^SAMPLE_SIGN_ERE=' "$KIT/toolbelt/preflight.sh" | sed 's/^SAMPLE_SIGN_ERE=//')
-  b=$(grep -A1 '^L15_SIGN_ERE=' "$KIT/toolbelt/lint-structure.sh" | sed 's/^L15_SIGN_ERE=//')
-  [ -n "$a" ] && [ "$a" = "$b" ]
+@test "LS15-sync: lint-structure L15, preflight sample-sign and build.sh take the one table in lib/signing-block.sh" {
+  # Mutation: re-inline a copy of the ERE table in any consumer -> its literal line appears and this fails.
+  grep -q '^SIGN_BLOCK_ERE=(' "$KIT/toolbelt/lib/signing-block.sh"
+  # shellcheck disable=SC2016
+  # why: the consumer's literal source line is matched, so ${SIGN_BLOCK_ERE[@]} must stay unexpanded
+  grep -qxF 'L15_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/lint-structure.sh"
+  # shellcheck disable=SC2016
+  # why: same literal match as the line above
+  grep -qxF 'SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/preflight.sh"
+  grep -q 'SIGN_BLOCK_ERE\[0\]' "$KIT/toolbelt/build.sh"
+  for f in lint-structure.sh preflight.sh build.sh; do
+    grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/$f"
+    run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
+    [ "$status" -ne 0 ]
+  done
 }

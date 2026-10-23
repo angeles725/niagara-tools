@@ -9,9 +9,10 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   # copy build.sh next to a stub gate so the sibling lookup resolves to the stub
   mkdir -p "$TMPDIR_T/kit"; cp "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
-  # build.sh sources lib/fs-type.sh (Δ7/Δ2) relative to its own dir — copy the real lib
-  # alongside the copied build.sh so that sibling lookup resolves too.
-  mkdir -p "$TMPDIR_T/kit/lib"; cp "$KIT/toolbelt/lib/fs-type.sh" "$TMPDIR_T/kit/lib/fs-type.sh"
+  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh and lib/signing-block.sh relative to its own
+  # dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
+  mkdir -p "$TMPDIR_T/kit/lib"
+  cp "$KIT/toolbelt/lib/fs-type.sh" "$KIT/toolbelt/lib/method-boundary.sh" "$KIT/toolbelt/lib/signing-block.sh" "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -768,6 +769,31 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [[ "$output" == *"WARN"*"throwaway dev key"* ]]
 }
 
+@test "BS-mirror-devkey-signing-block: a root with allowDefaultProfile.set(false) and a leftover profile -> no dev-key WARN" {
+  # With the default profile disabled the plugin cannot fall back to the mirror profile (a passing build signed with
+  # the explicit one) [ev: templates/signing-root.gradle.kts header]. Mutation: drop the root check -> WARN, fails.
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  mkdir -p "$TMPDIR_T/nh/.mirror-user-home/.tridium/security"
+  : > "$TMPDIR_T/nh/.mirror-user-home/.tridium/security/niagara.signing.xml"
+  printf 'signingServices {\n  signingProfileFactory {\n    allowDefaultProfile.set(false)\n  }\n}\n' > "$ROOT/build.gradle.kts"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"throwaway dev key"* ]]
+}
+
+@test "BS-mirror-devkey-commented-block: a commented-out allowDefaultProfile.set(false) still WARNs" {
+  # Only uncommented code counts (same rule as lint-structure L15). Mutation: grep the raw file -> no WARN, fails.
+  _env_gradlew
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  mkdir -p "$TMPDIR_T/nh/.mirror-user-home/.tridium/security"
+  : > "$TMPDIR_T/nh/.mirror-user-home/.tridium/security/niagara.signing.xml"
+  printf '// allowDefaultProfile.set(false)\n/* allowDefaultProfile = false */\n' > "$ROOT/build.gradle.kts"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"throwaway dev key"* ]]
+}
+
 @test "BS-mirror-home-whitespace: a \$HOME with whitespace in mirror mode exits 33 before gradle (maven.repo.local split, #316)" {
   # Mutation: guard only the mirror path -> -Dmaven.repo.local=<home with a space> is split by the JVM and gradle runs.
   _env_gradlew
@@ -805,7 +831,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [[ "$argv" == *" -PniagaraSigningProfile=/p/x.xml"* ]]
 }
 
-@test "BS-gradle-prop-bad: --gradle-prop without k=v, or with no value, exits 2 before gradle (#308)" {
+@test "BS-gradle-prop-bad: --gradle-prop with no argument, no '=', or an empty key exits 2 before gradle (#308)" {
   _env_gradlew
   run "$B" --gradle-prop noequals "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 2 ]
@@ -816,6 +842,14 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   run "$B" --gradle-prop
   [ "$status" -eq 2 ]
   [ ! -e "$TMPDIR_T/gradlew.env" ]
+}
+
+@test "BS-gradle-prop-empty-value: --gradle-prop k= (empty value) is accepted and forwarded as -Pk= (#308)" {
+  _env_gradlew
+  run "$B" --gradle-prop k= "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  argv="$(grep '^ARGV=' "$TMPDIR_T/gradlew.env")"
+  [[ "$argv " == *" -Pk= "* ]]
 }
 
 # BS-slotomatic-hint: slot-o-matic logs "Could not process <file>: Found multiple metadata blocks" as a WARNING
