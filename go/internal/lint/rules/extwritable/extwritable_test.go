@@ -72,3 +72,48 @@ func TestLocked(t *testing.T) {
 		t.Errorf("exit %d out %q err %q, want 3, no rows and %q", code, out, stderr, want)
 	}
 }
+
+// prop is an OPERATOR BStatusNumeric @NiagaraProperty named name, with extra attributes before flags.
+func prop(name, extra string) string {
+	return `@NiagaraProperty(name="` + name + `", type="BStatusNumeric", ` + extra + `flags=Flags.OPERATOR)` + "\n"
+}
+
+// TestLiteralComments: a "//" or "/*" inside a string literal is not a comment [ev: retro
+// mb-strip-string-literals Δ1]. The awk's private strip cut the line there, so a property's flags were lost,
+// a "/*" hid every property up to the next "*/", and an action's name was never harvested.
+func TestLiteralComments(t *testing.T) {
+	for _, c := range []struct{ name, src, want string }{
+		{"a // in a property string keeps its flags",
+			prop("a", `defaultValue="http://x", `), "a@2"},
+		{"a /* in a property string hides no later property",
+			prop("b", `defaultValue="/*", `) + prop("c", "") + prop("d", `defaultValue="*/", `), "b@2 c@3 d@4"},
+		{"a // in an action string keeps the next action's name",
+			prop("e", "") + `@NiagaraAction(name="go", defaultValue="BString.make(\"//\")")` + "\n" +
+				`@NiagaraAction(name="setE")` + "\n", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := write(t, map[string]string{"B.java": "package a;\n" + c.src + "public class B {}\n"})
+			if got := warned(t, dir); got != c.want {
+				t.Errorf("WARN rows %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+// warned runs the rule on dir and returns its WARN rows as "<slot>@<line>", blank-separated.
+func warned(t *testing.T, dir string) string {
+	t.Helper()
+	code, out, stderr := run(t, dir, dir)
+	if code != 0 || stderr != "" {
+		t.Fatalf("exit %d err %q", code, stderr)
+	}
+	var got []string
+	for _, row := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
+		if row == "" {
+			continue
+		}
+		f := strings.Fields(row) // WARN ext-writable-shape <path>:<line> <slot>: ...
+		got = append(got, strings.TrimSuffix(f[3], ":")+"@"+f[2][strings.LastIndexByte(f[2], ':')+1:])
+	}
+	return strings.Join(got, " ")
+}

@@ -51,11 +51,11 @@ var (
 // Check harvests the file's @NiagaraAction names, marks every slot a do<Action> body writes, then reports
 // each OPERATOR complex @NiagaraProperty that neither a body nor an action name exempts.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := cutComments(f.Raw)
+	lines := f.Stripped()
 	actions, handlers := harvestActions(lines)
 	exempt := map[string]bool{}
 	if len(handlers) > 0 {
-		for _, m := range javasrc.Methods(lines) {
+		for _, m := range f.Methods() {
 			if !handlers[m.Name] {
 				continue
 			}

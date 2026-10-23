@@ -14,40 +14,6 @@ var (
 	propSetCall  = regexp.MustCompile(`\.set\(([a-zA-Z_][a-zA-Z0-9_]*),`)
 )
 
-// cutComments is the awk's own comment strip: it blanks // and /* */ text, carries block-comment state
-// across lines and keeps line numbers, but does not know string literals, so a "//" or "/*" inside one
-// is read as a comment.
-func cutComments(raw []string) []string {
-	out := make([]string, len(raw))
-	inComment := false
-	var b strings.Builder
-	for i, ln := range raw {
-		b.Reset()
-	scan:
-		for j := 0; j < len(ln); {
-			switch rest := ln[j:]; {
-			case inComment:
-				if strings.HasPrefix(rest, "*/") {
-					inComment = false
-					j += 2
-				} else {
-					j++
-				}
-			case strings.HasPrefix(rest, "/*"):
-				inComment = true
-				j += 2
-			case strings.HasPrefix(rest, "//"):
-				break scan
-			default:
-				b.WriteByte(ln[j])
-				j++
-			}
-		}
-		out[i] = b.String()
-	}
-	return out
-}
-
 // harvestActions returns every @NiagaraAction name and the do<Action> handler name of each. An annotation
 // is joined from the line holding "@NiagaraAction" to the line where its parentheses balance; the rest of
 // that line is not read for another annotation.
