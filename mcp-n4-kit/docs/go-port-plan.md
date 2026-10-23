@@ -270,6 +270,16 @@ session).
   timeout, a refused port, the GET reads) and compares results, request bodies and every request
   header except User-Agent.
 
+**Target Python.** Every Go differential (pyjson, jsonrpc, cli, box) compares against one CPython,
+`pytarget.Minor` = 3.15: the `python3` the MCP config launches on the reference host. Some of the
+compared text moves between minors (JSON decode errors say "Illegal trailing comma" since 3.13),
+so `pytarget.Python` skips a differential, printing the version found and the target, when
+`python3` is another minor; with `MCP_N4_PYTHON` set the mismatch fails instead. CI installs 3.15
+with `actions/setup-python` before the Go step and runs `go test` with `MCP_N4_PYTHON` set to it,
+so a wrong interpreter fails CI rather than skipping; the mcp-n4-kit unittest step runs on it too.
+Locally `scripts/ci-local.sh` uses the `python3` on PATH. The kit suite, replay-corpus check
+included, also passes on 3.12.
+
 **Known differences.** The User-Agent is Go's, not `Python-urllib/3.x`. A TLS verification
 failure and other OS errors without an errno keep Go's wording inside `<urlopen error ...>`.
 A BOX reply nested past CPython's C stack raises RecursionError in Python; Go decodes it. A

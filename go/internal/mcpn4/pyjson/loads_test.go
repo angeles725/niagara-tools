@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // loadsCases pin the error texts the BOX client shows ("transport failure: <text>") for a reply
@@ -77,13 +79,10 @@ for line in open(sys.argv[1]):
 `
 
 // TestDifferentialLoads runs the boundary cases, the decode corpus and random byte strings
-// through CPython and through Loads / DecodeUTF8: the lines must be equal. It skips when
-// python3 is missing.
+// through CPython and through Loads / DecodeUTF8: the lines must be equal.
+// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
 func TestDifferentialLoads(t *testing.T) {
-	py, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 not on PATH")
-	}
+	py := pytarget.Python(t)
 	var docs []string
 	for _, c := range loadsCases {
 		docs = append(docs, c.in)

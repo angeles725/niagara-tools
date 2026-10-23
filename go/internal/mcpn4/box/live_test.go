@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // liveCase is one HTTP-level scenario: the Python BoxClient (go_box.py --live) and the Go client
@@ -100,11 +101,12 @@ var liveCases = []liveCase{
 	{name: "about statuses", answer: func(s seen) *reply { return &reply{Status: 403} }, ops: `[{"op": "about"}, {"op": "state"}]`},
 }
 
+// TestLiveDifferential runs every liveCase through python3 and Go against the same station: the
+// result lines must be equal, and so must the requests the station saw (method, path, body and
+// every header except User-Agent). It skips, naming the Python found, unless that is the target
+// CPython (pytarget.Minor).
 func TestLiveDifferential(t *testing.T) {
-	py, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 not on PATH")
-	}
+	py := pytarget.Python(t)
 	driver, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit", "tests", "go_box.py"))
 	if err != nil {
 		t.Fatal(err)
