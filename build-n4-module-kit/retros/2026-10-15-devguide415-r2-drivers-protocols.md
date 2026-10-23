@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-drivers-protocols
@@ -35,4 +35,4 @@ The kit's driver card has the mechanics but misses the rules that decide field b
 - Every external write path (BACnet export, oBIX export) links into a priority slot; the module must reserve its own level and document the others.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | pending | 10 |`
+**Status**: FOLDED (quality round 8 U9, base f2cf198) — Δ1 `types/cloud-connector.md:76`, Δ2 `types/cloud-connector.md` § 9, Δ3 `types/driver-authoring.md:211`, Δ4 `types/driver-authoring.md:141`, Δ5 `types/driver-authoring.md` § 11.1 + `types/logic-authoring.md:747` + `types/issues-and-gotchas.md` H5, Δ6 `types/driver-authoring.md` § 11.2-11.3 + `types/issues-and-gotchas.md` H4, Δ7 `types/driver-authoring.md:278`, Δ8 `types/driver-authoring.md:218,341`, Δ9 `types/security.md:147`, Δ10 `types/cloud-connector.md` § 10 + `types/driver-authoring.md` § 11.4; owed Go lints G85-G87 (ledger.d). INDEX row generated from the header: `| 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | folded | 10 |`

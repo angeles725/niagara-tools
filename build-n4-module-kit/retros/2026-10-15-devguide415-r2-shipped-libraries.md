@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 9 -->
 # 2026-10-15 · kit · devguide415-r2-shipped-libraries
@@ -34,4 +34,4 @@ afl Δ1 and has Δ7 made `uberjar` the path for external jars; neither covers th
 - A shipped driver often replaces a hand-written client; the kit should present it before the code route.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-shipped-libraries.md | kit | 2026-10-15 | pending | 9 |`
+**Status**: FOLDED (quality round 8 U9, base f2cf198) — Δ1 `types/third-party-libraries.md:36` + `types/module-wiring.md:13`, Δ2 `types/cloud-connector.md:70`, Δ3 `types/third-party-libraries.md:42`, Δ4 `:59`, Δ5 `:248`, Δ6 `:75`, Δ7 `types/cloud-connector.md:247`, Δ8 `types/cloud-connector.md` § 11, Δ9 `types/json-toolkit.md` § 1-2 + `types/cloud-connector.md:12`; owed Go lints G88-G89 (ledger.d). INDEX row generated from the header: `| 2026-10-15-devguide415-r2-shipped-libraries.md | kit | 2026-10-15 | folded | 9 |`
