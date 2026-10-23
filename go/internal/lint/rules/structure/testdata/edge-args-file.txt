@@ -1,0 +1,10 @@
+-- args --
+@DIR@/empty/README
+-- want --
+exit 3
+-- stderr --
+lint-structure: not a directory: @DIR@/empty/README
+-- empty/.git/HEAD --
+x
+-- empty/README --
+x

@@ -1,0 +1,517 @@
+-- args --
+@DIR@/out/MinimalPan/MinimalPan
+-- want --
+exit 0
+-- stderr --
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/MinimalPan-rt.gradle.kts --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ * MinimalPan-rt — B790 minimal correct N4 module skeleton (rt profile).
+ */
+
+import com.tridium.gradle.plugins.bajadoc.task.Bajadoc
+import com.tridium.gradle.plugins.module.util.ModulePart.RuntimeProfile.*
+
+plugins {
+  // The Niagara Module plugin configures the "moduleManifest" extension and the
+  // "jar" and "moduleTestJar" tasks.
+  id("com.tridium.niagara-module")
+
+  // The signing plugin configures the correct signing of modules. It requires
+  // that the plugin also be applied to the root project.
+  id("com.tridium.niagara-signing")
+
+  // The bajadoc plugin configures the generation of Bajadoc for a module.
+  id("com.tridium.bajadoc")
+
+  // Configures JaCoCo for the "niagaraTest" task of this module.
+  id("com.tridium.niagara-jacoco")
+
+  // The Annotation processors plugin adds default dependencies on ":nre"
+  // for the "annotationProcessor" and "moduleTestAnnotationProcessor"
+  // configurations by creating a single "niagaraAnnotationProcessor"
+  // configuration they extend from.
+  id("com.tridium.niagara-annotation-processors")
+
+  // The niagara_home repositories convention plugin configures !bin/ext and
+  // !modules as flat-file Maven repositories so that projects in this build can
+  // depend on already-installed Niagara modules.
+  id("com.tridium.convention.niagara-home-repositories")
+}
+
+description = "MinimalPan rt — B790 minimal correct N4 module skeleton"
+
+moduleManifest {
+  moduleName.set("MinimalPan")
+  runtimeProfile.set(rt)
+}
+
+// See documentation at module://docDeveloper/doc/build.html#dependencies for the supported
+// dependency types
+dependencies {
+  // NRE dependencies
+  nre(":nre")
+
+  // Niagara module dependencies
+  api(":baja")
+
+  // Test Niagara module dependencies
+  moduleTestImplementation(":test-wb")
+}
+
+tasks.named<Bajadoc>("bajadoc") {
+  includePackage("com.angeles.MinimalPan")
+}
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/module-include.xml --
+<types>
+  <!--com.angeles.MinimalPan-->
+  <type class="com.angeles.MinimalPan.BMinimalPan" name="MinimalPan"/>
+</types>
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/module-permissions.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<modulePermissions/>
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/module.lexicon --
+#
+# Lexicon for the MinimalPan module.
+# Display names shown in Workbench. Key = type or slot name.
+#
+
+# --- Component type display names ---
+MinimalPan=Minimal Panel
+
+# --- MinimalPan slots ---
+MinimalPan.setpoint=Setpoint
+MinimalPan.interval=Interval
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/module.palette --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version="4.0" reversibleEncodingKeySource="none" FIPSEnabled="false" reversibleEncodingValidator="[null.1]=" >
+<p m="b=baja" t="b:UnrestrictedFolder">
+  <p n="MinimalPan" m="mp=MinimalPan" t="mp:MinimalPan"/>
+</p>
+</bajaObjectGraph>
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/src/com/angeles/MinimalPan/BMinimalPan.java --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ */
+package com.angeles.MinimalPan;
+
+import javax.baja.nre.annotations.NiagaraAction;
+import javax.baja.nre.annotations.NiagaraProperty;
+import javax.baja.nre.annotations.NiagaraType;
+import javax.baja.sys.Action;
+import javax.baja.sys.BComponent;
+import javax.baja.sys.BRelTime;
+import javax.baja.sys.Clock;
+import javax.baja.sys.Context;
+import javax.baja.sys.Flags;
+import javax.baja.sys.Property;
+import javax.baja.sys.Sys;
+import javax.baja.sys.Type;
+
+/**
+ * BMinimalPan — B790 minimal correct N4 module skeleton.
+ *
+ * <p>One OPERATOR-writable setpoint, a configurable periodic timer, and a HIDDEN
+ * tick action. Demonstrates the minimal viable Baja component: property lifecycle,
+ * Clock.Ticket management, and the annotation/slotomatic pattern.</p>
+ *
+ * <p>All control logic is in {@link MinimalPanLogic} (zero-Baja, unit-testable).</p>
+ *
+ * [ev: B790 §790.1 / §790.2 — minimal N4 module skeleton]
+ */
+@NiagaraType
+@NiagaraProperty(
+  name = "setpoint",
+  type = "double",
+  defaultValue = "0d",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+@NiagaraProperty(
+  name = "interval",
+  type = "BRelTime",
+  defaultValue = "BRelTime.makeSeconds(30)",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+@NiagaraAction(name = "tickExpired", flags = Flags.HIDDEN)
+public class BMinimalPan
+  extends BComponent
+{
+  /*
+   * Pre-slotomatic state: the AUTO region is absent.
+   * Run build.sh — it invokes :slotomatic before :jar and generates the
+   * //region … //endregion block (slot fields, accessors, Type) from the
+   * @NiagaraType / @NiagaraProperty / @NiagaraAction annotations above.
+   * [ev: B793 §793.3 C1 — pre-slotomatic scaffold convention]
+   */
+
+  public BMinimalPan() {}
+
+  ////////////////////////////////////////////////////////////////
+  // Lifecycle
+  ////////////////////////////////////////////////////////////////
+
+  /**
+   * Called when the component is started.
+   * If the station is already at steady state (component added at runtime), arm the
+   * periodic timer immediately — atSteadyState() only fires once at boot. [ev: B729]
+   */
+  @Override
+  public void started() throws Exception
+  {
+    super.started();
+    if (!Sys.atSteadyState()) return;
+    arm();
+  }
+
+  /**
+   * Called once when the station reaches steady state (normal boot path).
+   * Arms the periodic timer. [ev: B729]
+   */
+  @Override
+  public void atSteadyState()
+  {
+    arm();
+  }
+
+  /**
+   * Called when the component is stopped.
+   * Cancels the periodic timer so no callbacks fire after the component is disabled.
+   * [ev: B787 — ticket-without-stopped-cancel biting check]
+   */
+  @Override
+  public void stopped() throws Exception
+  {
+    if (ticket != null) { ticket.cancel(); ticket = null; }
+    super.stopped();
+  }
+
+  /**
+   * Called when any slot changes.
+   * Re-arms the timer when the {@code interval} slot changes so the new period takes
+   * effect immediately (no wait for the current ticket to expire). [ev: B775]
+   */
+  @Override
+  public void changed(Property p, Context cx)
+  {
+    super.changed(p, cx);
+    if (p == interval && isRunning()) arm();
+  }
+
+  ////////////////////////////////////////////////////////////////
+  // Timer
+  ////////////////////////////////////////////////////////////////
+
+  /**
+   * Arms (or re-arms) the periodic timer.
+   * Cancels any existing ticket first to prevent double-firing on interval changes.
+   * Uses {@code Clock.schedulePeriodically} so the action fires repeatedly without
+   * manual re-arming in the callback (one ticket per arm call). [ev: B790 §790.2]
+   */
+  private void arm()
+  {
+    if (ticket != null) { ticket.cancel(); ticket = null; }
+    if (!MinimalPanLogic.isValidInterval(getInterval().getMillis())) return;
+    ticket = Clock.schedulePeriodically(this, getInterval(), tickExpired, null);
+  }
+
+  /**
+   * Timer callback — called every {@code interval} by the Baja engine.
+   * In this skeleton there are no output slots to update; it demonstrates the
+   * periodic callback hook pattern. [ev: B790 §790.2]
+   */
+  public void doTickExpired()
+  {
+    // Minimal skeleton — no output slots to update.
+    // A real module would run its control logic here.
+  }
+
+  ////////////////////////////////////////////////////////////////
+  // Fields
+  ////////////////////////////////////////////////////////////////
+
+  /** Active timer ticket; null when the component is stopped or interval is invalid. */
+  private Clock.Ticket ticket;
+}
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/src/com/angeles/MinimalPan/MinimalPanLogic.java --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ */
+package com.angeles.MinimalPan;
+
+/**
+ * MinimalPanLogic — zero-Baja, zero-external-dependency pure decision class.
+ *
+ * <p>Extracts the interval-validity guard from {@link BMinimalPan#arm()} so the
+ * rule can be tested standalone with JUnit without a running station or dev license.
+ * This is the B790 §build-verify.md §Unit-tests pattern:
+ * "extract the control decision into a ZERO-Baja pure class and run it standalone."</p>
+ *
+ * [ev: build-verify.md §Unit tests; retro rt-hardening #5]
+ */
+final class MinimalPanLogic
+{
+  private MinimalPanLogic() {}
+
+  /**
+   * Returns {@code true} when {@code millis} is a positive, scheduleable interval.
+   *
+   * <p>Zero or negative values would cause {@code Clock.schedulePeriodically} to fire
+   * immediately and/or loop at CPU speed — both are defects. The guard in
+   * {@link BMinimalPan#arm()} delegates here so this contract is testable without Baja.</p>
+   *
+   * @param millis interval in milliseconds (from {@code BRelTime.getMillis()})
+   * @return true when millis &gt; 0
+   */
+  static boolean isValidInterval(long millis)
+  {
+    return millis > 0L;
+  }
+}
+-- out/MinimalPan/MinimalPan/MinimalPan-rt/srcTest/test/com/angeles/MinimalPan/MinimalPanLogicTest.java --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ */
+package com.angeles.MinimalPan;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+/**
+ * Pure JUnit test for {@link MinimalPanLogic}.
+ *
+ * <p>Zero-Baja, zero-station, runs via {@code toolbelt/run-pure-test.sh} in WSL.
+ * Tests the interval-validity guard that protects {@link BMinimalPan#arm()} from
+ * scheduling a zero- or negative-duration periodic ticket (which would loop at
+ * CPU speed or never fire). [ev: build-verify.md §Unit tests; B790 §build-sequence]</p>
+ */
+public class MinimalPanLogicTest
+{
+  @Test
+  public void positiveIntervalIsValid()
+  {
+    assertTrue("30 s should be valid", MinimalPanLogic.isValidInterval(30_000L));
+  }
+
+  @Test
+  public void oneMillisIsValid()
+  {
+    assertTrue("1 ms boundary should be valid", MinimalPanLogic.isValidInterval(1L));
+  }
+
+  @Test
+  public void zeroIntervalIsInvalid()
+  {
+    assertFalse("0 ms must be rejected (would loop at CPU speed)", MinimalPanLogic.isValidInterval(0L));
+  }
+
+  @Test
+  public void negativeIntervalIsInvalid()
+  {
+    assertFalse("negative ms must be rejected", MinimalPanLogic.isValidInterval(-1L));
+  }
+}
+-- out/MinimalPan/build.gradle.kts --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ * MinimalPan — B790 minimal correct N4 module skeleton.
+ */
+
+plugins {
+  // Base Niagara plugin
+  id("com.tridium.niagara")
+
+  // The vendor plugin provides the vendor {} extension to set the default group
+  // for Maven publishing; the default vendor attribute for installable
+  // manifests; and the default module and dist version for their respective
+  // manifests
+  id("com.tridium.vendor")
+
+  // The signing plugin configures signing of all executables, modules, and
+  // dists. It also registers a factory only on the root project to avoid
+  // overhead from managing signing profiles on all subprojects
+  id("com.tridium.niagara-signing")
+
+  // The niagara_home repositories convention plugin configures !bin/ext and
+  // !modules as flat-file Maven repositories to allow modules to compile against
+  // Niagara
+  id("com.tridium.convention.niagara-home-repositories")
+}
+
+
+vendor {
+  // defaultVendor sets the "vendor" attribute on module and dist files; it's
+  // what's shown in Niagara when viewing a module or dist.
+  defaultVendor("Angeles")
+
+  // defaultModuleVersion sets the "vendorVersion" attribute on all modules
+  defaultModuleVersion("1.0.0")
+}
+
+
+////////////////////////////////////////////////////////////////
+// Dependencies and configurations... configuration
+////////////////////////////////////////////////////////////////
+
+subprojects {
+  repositories {
+    mavenCentral()
+  }
+}
+
+////////////////////////////////////////////////////////////////
+// Signing: allowDefaultProfile off; alias and profile from gradle properties
+// (niagaraSigningAlias, niagaraSigningProfile) — templates/signing-root.gradle.kts
+////////////////////////////////////////////////////////////////
+
+signingServices {
+  // Disable the default profile: a missing profile fails the build instead of signing with the dev key
+  signingProfileFactory {
+    allowDefaultProfile.set(false)
+  }
+}
+
+niagaraSigning {
+  aliases.set(providers.gradleProperty("niagaraSigningAlias").map { listOf(it) })
+  signingProfileFile.set(layout.projectDirectory.file(providers.gradleProperty("niagaraSigningProfile")))
+}
+-- out/MinimalPan/gradle.properties --
+#Uncomment and set to the path of the Gradle plugins if they are not in niagara_home
+#gradlePluginHome=
+
+#The path to the installation of Niagara you are building against.
+#Set via -Pniagara_home=... on the build.sh command line, or uncomment and set here:
+#niagara_home=
+
+#The path to niagara_user_home for the version of Niagara you are building against:
+#niagara_user_home=
+-- out/MinimalPan/gradle/wrapper/gradle-wrapper.properties --
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.6-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+-- out/MinimalPan/settings.gradle.kts --
+/*
+ * Copyright 2026 Angeles. All Rights Reserved.
+ * MinimalPan — B790 minimal correct N4 module skeleton.
+ */
+
+import com.tridium.gradle.plugins.settings.MultiProjectExtension
+import com.tridium.gradle.plugins.settings.LocalSettingsExtension
+
+pluginManagement {
+  val niagaraHome: Provider<String> = providers.gradleProperty("niagara_home").orElse(
+    providers.systemProperty("niagara_home").orElse(
+      providers.environmentVariable("NIAGARA_HOME").orElse(
+        providers.environmentVariable("niagara_home")
+      )
+    )
+  )
+
+  val gradlePluginHome: String = providers.gradleProperty("gradlePluginHome").orElse(
+    providers.environmentVariable("GRADLE_PLUGIN_HOME").orElse (
+      niagaraHome.map { "$it/etc/m2/repository" }
+    )
+  ).orNull ?: throw InvalidUserDataException(buildString {
+    val isWindows = providers.systemProperty("os.name").map { it.toLowerCase(java.util.Locale.ENGLISH) }.get().contains("windows")
+    val propsFile = File(rootDir, "gradle.properties")
+
+    appendLine("************************************************************")
+    appendLine("ERROR: Invalid project configuration: Cannot derive value of 'gradlePluginHome'.")
+    appendLine()
+    if (propsFile.exists()) {
+      appendLine("You can set it by editing the properties file at:")
+    } else {
+      appendLine("You can set it by creating a properties file at:")
+    }
+    appendLine()
+    appendLine("  $propsFile")
+    appendLine()
+    appendLine("and adding 'gradlePluginHome':")
+    appendLine()
+    if (isWindows) {
+      appendLine("  gradlePluginHome=C:\\\\path\\\\to\\\\plugins")
+    } else {
+      appendLine("  gradlePluginHome=/path/to/plugins")
+    }
+    appendLine()
+    appendLine("You can also set it by defining the 'GRADLE_PLUGIN_HOME' environment variable:")
+    appendLine()
+    if (isWindows) {
+      appendLine("  set GRADLE_PLUGIN_HOME=C:\\\\path\\\\to\\\\plugins")
+    } else {
+      appendLine("  export GRADLE_PLUGIN_HOME=/path/to/plugins")
+    }
+    appendLine()
+    appendLine("------------------------------------------------------------")
+    appendLine()
+    append("If you are using the plugins shipped with the version of Niagara you are building against, ")
+    if (propsFile.exists()) {
+      appendLine("you can edit the properties file at:")
+    } else {
+      appendLine("you can create a properties file at:")
+    }
+    appendLine()
+    appendLine("  $propsFile")
+    appendLine()
+    appendLine("and add 'niagara_home':")
+    appendLine()
+    if (isWindows) {
+      appendLine("  niagara_home=C:\\\\Niagara\\\\Niagara-4.x.y.z")
+    } else {
+      appendLine("  niagara_home=/opt/Niagara-4.x.y.z")
+    }
+    appendLine()
+    appendLine("You can also set it by defining the 'NIAGARA_HOME' environment variable:")
+    appendLine()
+    if (isWindows) {
+      appendLine("  set NIAGARA_HOME=C:\\\\Niagara\\\\Niagara-4.x.y.z")
+    } else {
+      appendLine("  export NIAGARA_HOME=/opt/Niagara-4.x.y.z")
+    }
+    appendLine()
+    appendLine("************************************************************")
+  })
+
+  val gradlePluginRepoUrl = "file:///${gradlePluginHome.replace('\\', '/')}"
+
+  // Niagara gradle-plugin version — MUST exist in <niagara_home>/etc/m2. Overridable per install:
+  //   Honeywell OptimizerSupervisor 4.14 -> 7.6.17 (default)   |   PowerB 4.15 -> -PniagaraPluginVersion=7.6.22
+  val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")
+  val settingsPluginVersion: String = "7.6.3"
+
+  repositories {
+    maven(url = "$gradlePluginRepoUrl")
+    gradlePluginPortal()
+  }
+
+  plugins {
+    id("com.tridium.settings.multi-project") version (settingsPluginVersion)
+    id("com.tridium.settings.local-settings-convention") version (settingsPluginVersion)
+
+    id("com.tridium.niagara") version (gradlePluginVersion)
+    id("com.tridium.vendor") version (gradlePluginVersion)
+    id("com.tridium.niagara-module") version (gradlePluginVersion)
+    id("com.tridium.niagara-signing") version (gradlePluginVersion)
+
+    id("com.tridium.convention.niagara-home-repositories") version (gradlePluginVersion)
+  }
+}
+
+plugins {
+  // Discover all subprojects in this build
+  id("com.tridium.settings.multi-project")
+
+  // Apply local settings from local/my-niagara.gradle(.kts) if they are present
+  id("com.tridium.settings.local-settings-convention")
+}
+
+configure<LocalSettingsExtension> {
+  loadLocalSettings()
+}
+
+configure<MultiProjectExtension> {
+  findProjects()
+}
+
+rootProject.name = "MinimalPan"

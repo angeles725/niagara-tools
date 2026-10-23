@@ -1,0 +1,16 @@
+-- args --
+@DIR@/l15-ok/M
+-- want --
+exit 0
+-- stderr --
+-- l15-ok/.git/HEAD --
+x
+-- l15-ok/M/build.gradle.kts --
+plugins { id("com.tridium.niagara-signing") }
+signingServices { signingProfileFactory { allowDefaultProfile = false } }
+niagaraSigning {
+  aliases.set(listOf("x"))
+  signingProfileFile.set(f)
+}
+-- l15-ok/M/settings.gradle.kts --
+val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7")

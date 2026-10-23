@@ -1,0 +1,10 @@
+-- args --
+@DIR@/skeleton-wb
+-- want --
+exit 1
+FAIL  lint-structure  Foo-wb  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+FAIL  lint-structure  Foo-wb  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)
+-- stderr --
+-- skeleton-wb/Foo-wb/build.gradle.kts --
+plugins { id("com.tridium.niagara-module") }
+-- skeleton-wb/Foo-wb/src/.gitkeep --

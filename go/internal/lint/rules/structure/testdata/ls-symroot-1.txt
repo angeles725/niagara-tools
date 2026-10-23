@@ -1,0 +1,14 @@
+-- args --
+@DIR@/client-gradleprops
+-- want --
+exit 1
+FAIL  lint-structure  @DIR@/client-gradleprops/gradle.properties  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  Foo-rt  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
+FAIL  lint-structure  Foo-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.installations block (add paths + auto-detect=false to pin JDK 8)
+-- stderr --
+-- client-gradleprops/Foo-rt/module-include.xml --
+<types><type name="Foo" class="com.x.BFoo"/></types>
+-- client-gradleprops/gradle.properties --
+org.gradle.jvmargs=-Xmx2g
+niagara_home=C:\Honeywell\OptimizerSupervisor-N4.14.0.162

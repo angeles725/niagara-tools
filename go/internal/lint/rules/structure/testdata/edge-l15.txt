@@ -1,0 +1,21 @@
+-- args --
+@DIR@/l15/M
+-- want --
+exit 0
+WARN  lint-structure  @DIR@/l15/M/build.gradle.kts  L15: applies com.tridium.niagara-signing without (uncommented) allowDefaultProfile.set(false) (or = false), niagaraSigning {, aliases — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)
+-- stderr --
+-- l15/.git/HEAD --
+x
+-- l15/M/A-rt/module-include.xml --
+<types/>
+-- l15/M/A-rt/module.palette --
+<p n="A"/>
+-- l15/M/build.gradle.kts --
+plugins { id("com.tridium.niagara-signing") }
+val s = "allowDefaultProfile = false niagaraSigning { aliases signingProfileFile"
+allowDefaultProfile = falsey
+signingProfileFile.set(f) // aliases
+/* niagaraSigning {
+*/
+-- l15/M/settings.gradle.kts --
+// root

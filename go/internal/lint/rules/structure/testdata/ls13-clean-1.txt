@@ -1,0 +1,19 @@
+-- args --
+@DIR@/tree/group-parent/ModA
+-- want --
+exit 1
+FAIL  lint-structure  Foo-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
+FAIL  lint-structure  Foo-rt/module.palette  L5: module.palette has no named component entries (empty palette — see B788)
+-- stderr --
+-- tree/group-parent/ModA/Foo-rt/module-include.xml --
+<module><type name="Foo"/></module>
+-- tree/group-parent/ModA/Foo-rt/module.lexicon --
+test
+-- tree/group-parent/ModA/Foo-rt/module.palette --
+test
+-- tree/group-parent/ModA/gradle.properties --
+org.gradle.java.installations.paths=/jdk
+org.gradle.java.installations.auto-detect=false
+niagara_home=/opt/niagara-same
+-- tree/group-parent/ModB/gradle.properties --
+niagara_home=/opt/niagara-same

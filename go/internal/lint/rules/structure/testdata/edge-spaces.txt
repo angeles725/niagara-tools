@@ -1,0 +1,23 @@
+-- args --
+@DIR@/spaces/My Mod
+-- want --
+exit 1
+FAIL  lint-structure  A b-wb  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+WARN  lint-structure  C-rt/src/model  L3: pure-model package contains javax.baja.* imports (advisory; isolate control logic from Baja for testability)
+-- stderr --
+-- spaces/.git/HEAD --
+x
+-- spaces/My Mod/A b-wb/module.palette --
+<p n="A"/>
+-- spaces/My Mod/A b-wb/src --
+not a dir
+-- spaces/My Mod/C-rt/build.gradle.kts --
+dependencies { testImplementation("junit:junit:4.12") }
+-- spaces/My Mod/C-rt/module-include.xml --
+<types/>
+-- spaces/My Mod/C-rt/module.palette --
+<p n="C"/>
+-- spaces/My Mod/C-rt/src/model/M.java --
+import javax.baja.sys.X;
+-- spaces/My Mod/C-rt/srcTest/T.java --
+import org.junit.Test;

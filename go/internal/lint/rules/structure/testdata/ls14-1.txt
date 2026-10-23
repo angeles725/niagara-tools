@@ -1,0 +1,16 @@
+-- args --
+@DIR@/tree/Group/Mod
+-- want --
+exit 1
+FAIL  lint-structure  @DIR@/tree/Group/settings.gradle.kts  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
+-- stderr --
+-- tree/Group/Mod/Foo-rt/build.gradle.kts --
+plugins { id("com.tridium.niagara-module") }
+-- tree/Group/Mod/Foo-rt/module-include.xml --
+<types><type name="Foo" class="com.x.Foo"/></types>
+-- tree/Group/Mod/Foo-rt/module.lexicon --
+Foo.displayName=Foo
+-- tree/Group/Mod/Foo-rt/module.palette --
+<p n="Foo" t="x:Foo"/>
+-- tree/Group/settings.gradle.kts --
+  val gradlePluginVersion: String = "7.6.17"

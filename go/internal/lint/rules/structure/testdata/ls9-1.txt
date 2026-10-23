@@ -1,0 +1,12 @@
+-- args --
+@DIR@/dashboardpan-wb
+-- want --
+exit 1
+FAIL  lint-structure  DashboardPan-wb  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)
+-- stderr --
+-- dashboardpan-wb/DashboardPan-wb/module-include.xml --
+<types>
+</types>
+-- dashboardpan-wb/DashboardPan-wb/module.palette --
+<?xml version="1.0"?>
+<bajaObjectGraph version="4.0"/>

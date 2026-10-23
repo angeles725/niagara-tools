@@ -1,0 +1,26 @@
+-- args --
+@DIR@/l13/G/M
+-- want --
+exit 1
+FAIL  lint-structure  M/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
+FAIL  lint-structure  N/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
+FAIL  lint-structure  x	@DIR@/l13/G/O/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
+-- stderr --
+-- l13/.git/HEAD --
+x
+-- l13/G/.Q/gradle.properties --
+niagara_home=/hidden
+-- l13/G/M/A-rt/module-include.xml --
+<types/>
+-- l13/G/M/A-rt/module.palette --
+<p n="A"/>
+-- l13/G/M/gradle.properties --
+niagara_home=	/opt/a
+org.gradle.java.installations.paths=/j
+org.gradle.java.installations.auto-detect=false
+-- l13/G/N/gradle.properties --
+niagara_home=/opt/a
+-- l13/G/O/gradle.properties --
+niagara_home=/opt/a	x
+-- l13/G/P/gradle.properties --
+niagara_home=

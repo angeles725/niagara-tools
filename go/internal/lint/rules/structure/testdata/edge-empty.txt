@@ -1,0 +1,9 @@
+-- args --
+@DIR@/empty
+-- want --
+exit 0
+-- stderr --
+-- empty/.git/HEAD --
+x
+-- empty/README --
+x
