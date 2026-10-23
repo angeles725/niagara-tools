@@ -32,7 +32,19 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 ## ux — servlet + SPA `[ev: corpus B813]`
 - **The SPA side (structure, naming, data/state, transfer, memory, `rc/` component layout, technology choices, vendored libraries and the vetted vendor catalog) follows [`frontend-standard.md`](frontend-standard.md)** — this section keeps the servlet, reader, RBAC and serving rules; do not restate the frontend rules here. `[ev: retro dashboard-frontend-standard Δ1]`
 - **Declare `ui_profile` for every `-ux` dashboard** (its BUILD-STATE row and the module docs) before writing a rule or a line of CSS. The values (`hmi | lan | both | unknown`), the `both` single-build/two-entry rule and the per-rule tags are defined once in [`frontend-standard.md`](frontend-standard.md) § Profiles; the HMI-specific rules below apply to `hmi` and a single-build `both`. `[ev: retro dashboard-deployment-profiles Δ1]`
-- **Pick the right serving recipe first (three exist):** a bespoke dashboard with a custom JSON API → **servlet-SPA** (a `BWebServlet` that self-registers by `getServletName()`); a view bound to a component TYPE → **bajaux `@AgentOn` + `BIJavaScript`** (`getJsInfo` → `module://…/rc/X.js`); engineer-authored equipment graphics → **PX** (XML bound to slot ords, no Java). PX is also a zero-Java **complement** to an existing servlet-SPA: an integrator can add a `.px` bound to the facade slot ords for equipment schematics without touching the servlet — the facade's `OPERATOR` slots are already the write surface, no servlet change needed. **Our DashboardPan is servlet-SPA — the correct choice for a bespoke HMI; do not migrate it to bajaux.** [ev: retro corpus-index · B752, corpus B752 §752.1, B753 §753.2]
+- **Pick the right serving recipe first (three exist; a fourth, the web-module recipe, follows):** a bespoke dashboard with a custom JSON API → **servlet-SPA** (a `BWebServlet` that self-registers by `getServletName()`); a view bound to a component TYPE → **bajaux `@AgentOn` + `BIJavaScript`** (`getJsInfo` → `module://…/rc/X.js`); engineer-authored equipment graphics → **PX** (XML bound to slot ords, no Java). PX is also a zero-Java **complement** to an existing servlet-SPA: an integrator can add a `.px` bound to the facade slot ords for equipment schematics without touching the servlet — the facade's `OPERATOR` slots are already the write surface, no servlet change needed. **Our DashboardPan is servlet-SPA — the correct choice for a bespoke HMI; do not migrate it to bajaux.** [ev: retro corpus-index · B752, corpus B752 §752.1, B753 §753.2]
+- **Web-module recipe — a standard `HttpServlet`/`Filter` declared in `WEB-INF/web.xml`; choose it when the endpoint
+  needs `web.xml` filters (`CsrfProtectedFilter`, `UserActivityFilter`):** the class extends
+  `javax.servlet.http.HttpServlet` (no `WebOp`; the user is `req.getUserPrincipal()` cast to `BUser`, the locale
+  `req.getLocale()`); `src/WEB-INF/web.xml` maps it to a URL pattern (servlet annotations are not supported) and the
+  part's gradle adds `jar { from('src') { include 'WEB-INF/*.xml' } }`. The station installs it at start under the
+  context path = module name (`/<moduleName>/<pattern>`); only a `WEB-INF/jetty-web.xml` `contextPath` changes that.
+  Route on the path info, never `getRequestURI()`. [CERT-doc] `devguide-clean/servlets/webModules.txt:10,34-36,48,85-98`.
+  **CSRF scope:** map `CsrfProtectedFilter` (`security.md` § 3.1) on every servlet that accepts POST or PUT, not on
+  every `<servlet-class>`: of the 14 shipped 4.15.6.20 modules with a `web.xml`, 6 map it, always with `httpMethod`
+  POST, POST,PUT or GET,POST, and none lists DELETE [CERT] (unzip sweep of `modules/*.jar!WEB-INF/web.xml`,
+  2026-10-23) `[ev: corpus B1318 §1318.2 row 6]`. Owed lint: G75 `web-xml-csrf-scope`
+  (`ledger.d/2026-10-23-r8-u7-web-ui.md`). `[ev: retro devguide415-horizons-authoring-security Δ2]`
 - **"How to feed live data" decision matrix — match the serving recipe to the channel:** (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for JACE-computed fields); no BOX/Fox subscription available in a plain `BWebServlet` context; (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open — treat as P2); (c) **PX page** → `*Binding` handles live data implicitly (no author code); (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(cx, null)` → `BITable` (pull, not push). Rule: do NOT mix channels (no BOX subscription from a plain servlet, no polling from a PX binding). `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
 - **`BWebServlet` override contract (4.14 verified):** the overridable dispatch set is `service/doGet/doPost/doPut/doDelete(WebOp)` — NOT `doService(WebOp)`, which is `private(HttpServletRequest, HttpServletResponse)` (confirmed via `javap javax/baja/web/BWebServlet.class`). Overriding `doService(WebOp)` compiles silently and NEVER fires; only the private internal form is called by the framework. Derive `getServletName()` from the module name (e.g. `getType().getModule().getModuleName().toLowerCase()`) rather than a hardcoded literal — a hardcoded string breaks multi-site deployments and causes mount conflicts. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ1]`
@@ -286,6 +298,14 @@ relations), B1177 (BOX and the space permission), B46 (oBIX vs BajaScript vs RPC
   baja.Ord.make('station:|slot:/...').get({subscriber: sub})`; clean up with `sub.unsubscribeAll(); sub.detach()`.
   `get()` takes `lease`, `subscriber`, `cursor` and returns a Promise. [CERT-doc] `EX/subscription.js:18-59`;
   [CERT] `BS/baja/ord/Ord.js:286-296`
+- **Subscription lifetime:** `subscribe()`/`unsubscribe()` return Promises (the `ok`/`fail` callbacks are deprecated);
+  a subscription lasts until the page is refreshed or `unsubscribe()` is called, so a view leaving the DOM calls
+  `unsubscribeAll()`; a rejected `subscribe()` over several component spaces may still have subscribed some
+  components, so check `isSubscribed()` and unsubscribe anyway; `detach()` only removes event handlers.
+  [CERT] `BS/baja/comp/Subscriber.js:186-192,268-290,600-604`. For a one-shot read lease instead:
+  `baja.Component.lease()` holds the subscription 10 000 ms by default (`time` overrides). [CERT]
+  `BS/baja/comp/Component.js:1760-1761,1791-1800`. Owed lint: G76 `spa-subscribe-without-unsubscribe` (the JS twin of
+  `toolbelt/lint-subscribe-without-unsubscribe.sh`). `[ev: retro devguide415-nav-subscriptions-tags-ords Δ4]`
 - **BQL with a cursor:** `baja.Ord.make("station:|slot:/|bql:select ... from ...").get({cursor: {each, limit, offset}})`.
   [CERT-doc] `EX/querying.js:21-38`. **Pitfall: `limit` defaults to 10** — a dashboard that omits it silently
   shows 10 rows. [CERT] `BS/baja/coll/tableMixIn.js:201-203,253-254`
