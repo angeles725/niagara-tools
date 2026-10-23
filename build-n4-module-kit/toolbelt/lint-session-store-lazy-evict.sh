@@ -14,8 +14,13 @@
 # types/issues-and-gotchas.md §F2. [ev: retro live-diagnosis-hardening-deltas Δ5]
 # [ev: corpus B1160; DashboardConfigSession.java:31-126]
 #
+# Implementation: go/internal/lint/rules/sessionstore on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-session-store-lazy-evict <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3
+# otherwise). An unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as
+# awk_lint_run did).
+#
 # Usage:  lint-session-store-lazy-evict.sh [--strict] <src-root>
-#   Scans *.java under <src-root> (dot-dirs pruned). Run on any -ux profile with Java sources.
+#   Scans *.java under <src-root> (dot and *-worktrees dirs pruned). Run on any -ux profile with Java sources.
 #   Candidate: a `static ... Map<...> <field>` declaration with a `.put(` call on <field>
 #   somewhere in the file. WARNs unless EITHER (a) the method containing the `.put(` call
 #   also calls `<field>.remove(` in its own body (sweep-on-insert), or (b) the file contains
@@ -30,129 +35,14 @@
 # false-WARNs
 # Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape
 # Mutation: SSL7 -- a probe without the return-type anchor takes `if (sweep(id)) {` for the declaration and its remove() for a purge
-# Mutation: SSL-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
-# Mutation: SSL-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: SSL-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
+# Mutation: SSL-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-session-store-lazy-evict first 'usage: lint-session-store-lazy-evict.sh [--strict] <src-root>' "$@"
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  for (i = 1; i <= NR; i++) { ln = lines[i]; sub(/\/\/.*$/, "", ln); lines[i] = ln }
-
-  # 1. Collect static Map<...> field names.
-  n_f = 0
-  for (i = 1; i <= NR; i++) {
-    ln = lines[i]
-    if (ln ~ /static/ && match(ln, /(Map|HashMap|ConcurrentHashMap)[[:space:]]*<[^>]*>[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
-      seg = substr(ln, RSTART, RLENGTH)
-      match(seg, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*$/)
-      fname = substr(seg, RSTART, RLENGTH)
-      gsub(/[[:space:]]/, "", fname)
-      if (fname != "") { n_f++; field[n_f] = fname; field_decl_line[n_f] = i }
-    }
-  }
-  if (n_f == 0) exit 0
-
-  # 2. Scheduled-purge check, one hop: every identifier on a Clock.schedule* call (up to the
-  #    closing ';', at most 3 lines) is a candidate action; its scheduled body is the method
-  #    declared as do<Action>() or <action>(). A field counts as purged only when such a body
-  #    calls <field>.remove( -- a remove() elsewhere (explicit logout, query-time expiry) next to
-  #    an unrelated schedule (a refresh tick) is NOT a purge.
-  has_scheduled_purge_for = ""
-  for (i = 1; i <= NR; i++) {
-    if (index(lines[i], "Clock.schedule") == 0) continue
-    call = ""
-    for (i2 = i; i2 <= i + 2 && i2 <= NR; i2++) {
-      call = call " " lines[i2]
-      if (index(lines[i2], ";") > 0) break
-    }
-    sub(/^.*Clock\.schedule[A-Za-z]*[[:space:]]*\(/, "", call)
-    sub(/;.*$/, "", call)
-    rest = call
-    while (match(rest, /[A-Za-z_][A-Za-z0-9_]*/)) {
-      act = substr(rest, RSTART, RLENGTH)
-      rest = substr(rest, RSTART + RLENGTH)
-      doname = "do" toupper(substr(act, 1, 1)) substr(act, 2)
-      for (j = 1; j <= NR; j++) {
-        probe = " " lines[j]
-        # A declaration has a return type before the name (`void doSweep() {`); `if (sweep(x)) {` is a call.
-        if (!match(probe, "[A-Za-z0-9_>\\]][[:space:]]+(" doname "|" act ")[[:space:]]*\\([^;]*\\)[[:space:]]*(\\{|$|throws)")) continue
-        depth = 0; started = 0; send = 0
-        for (j2 = j; j2 <= NR; j2++) {
-          ln = lines[j2]
-          for (ci = 1; ci <= length(ln); ci++) {
-            ch = substr(ln, ci, 1)
-            if (ch == "{") { depth++; started = 1 }
-            else if (ch == "}") depth--
-          }
-          if (started && depth == 0) { send = j2; break }
-        }
-        for (j2 = j; j2 <= send; j2++)
-          for (k = 1; k <= n_f; k++)
-            if (index(lines[j2], field[k] ".remove(") > 0)
-              has_scheduled_purge_for = has_scheduled_purge_for " " field[k]
-        break
-      }
-    }
-  }
-
-  # 3. For each field with a `.put(`, find the enclosing method and check for a same-method
-  #    `.remove(` (sweep-on-insert).
-  for (k = 1; k <= n_f; k++) {
-    fname = field[k]
-    if (index(" " has_scheduled_purge_for " ", " " fname " ") > 0) continue
-
-    put_line = 0
-    for (i = 1; i <= NR; i++) {
-      if (index(lines[i], fname ".put(") > 0) { put_line = i; break }
-    }
-    if (put_line == 0) continue
-
-    # Find the enclosing method: scan backward for the nearest method-signature-shaped line
-    # (two identifiers then a parenthesized arg list, NOT immediately followed by ';' -- that
-    # would be a call, not a declaration -- so a one-liner "name(args) { ... }" still matches),
-    # then brace-extract forward from it.
-    msig = 0
-    for (i = put_line; i >= 1; i--) {
-      ln = lines[i]
-      if (match(ln, /[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([^;{}]*\)/)) {
-        trailing = substr(ln, RSTART + RLENGTH)
-        gsub(/^[[:space:]]*/, "", trailing)
-        if (substr(trailing, 1, 1) != ";") { msig = i; break }
-      }
-    }
-    # No enclosing signature found (a static initializer): the scope is the put line alone,
-    # never the whole file -- a remove() anywhere else must not count (fail closed).
-    noscope = (msig == 0)
-    if (noscope) msig = put_line
-
-    depth = 0; started = 0; mend = (noscope ? put_line : NR)
-    for (i = msig; i <= NR && !noscope; i++) {
-      ln = lines[i]
-      for (ci = 1; ci <= length(ln); ci++) {
-        c = substr(ln, ci, 1)
-        if (c == "{") { depth++; started = 1 }
-        else if (c == "}") depth--
-      }
-      if (started && depth == 0) { mend = i; break }
-    }
-
-    swept = 0
-    for (i = msig; i <= mend; i++) {
-      if (index(lines[i], fname ".remove(") > 0) { swept = 1; break }
-    }
-    if (!swept) {
-      printf "WARN  lint-session-store-lazy-evict  %s:%d  static session/token map '%s' inserted here" \
-        " with no sweep in the SAME method (no scheduled purge found either) -- add a" \
-        " scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare" \
-        " container id\n", FILE, put_line, fname
-    }
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-session-store-lazy-evict: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-session-store-lazy-evict "$@"
