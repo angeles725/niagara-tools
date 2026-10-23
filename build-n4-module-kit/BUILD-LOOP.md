@@ -330,6 +330,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
       `/sys/fs/cgroup/init.scope/pids.current` and wait while it is above 20,000; run under `ulimit -u 4000`.
       `scripts/ci-local.sh` refuses to start (exit 4) while any cgroup is above 50% of its `pids.max`.
       `[ev: retro r8-t41-host-safety Δ1]`
+    - **One read:** `toolbelt/host-budget.sh` (wrapper of `go/cmd/host-budget`) reports pids, threads, GOCACHE
+      and `/`, `/mnt/c` in one run (exit 1 on a FAIL row); use it for the pids and disk reads here.
+      `[ev: retro r8-t47-host-budget Δ1]`
     - **Writer cap:** at most two writers per session run a heavy suite at the same time; the others edit,
       read or wait. The integrator runs the full `ci-local.sh -j 3` once, at the end. `[ev: retro r8-t41-host-safety Δ2]`
     - **Disk at round close:** Go never caps `~/.cache/go-build` (84 GB after five days of multi-worktree
