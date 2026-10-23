@@ -58,12 +58,12 @@ func boxError(msg, channel, key string) *Error {
 	return &Error{Kind: KindBox, Msg: msg, Channel: channel, Key: key}
 }
 
-// PyError is a Python exception the BoxClient lets escape without wrapping it (a TypeError or
-// KeyError on a malformed station reply, an http.client error that is no OSError). The server
-// answers it as "internal error (<Type>)", so only the type is kept.
-type PyError struct{ Type string }
+// MaxReplyNesting is box.MAX_REPLY_NESTING: the deepest BOX reply (lists and objects, the outer
+// object counted) accepted. CPython's json raises RecursionError past its C stack while Go
+// decodes any depth, so both refuse a deeper reply as malformed.
+const MaxReplyNesting = 1000
 
-func (e *PyError) Error() string { return e.Type }
-
-// PyType is the Python class name.
-func (e *PyError) PyType() string { return e.Type }
+// malformed is box._malformed: the BoxError of a reply of the wrong shape.
+func malformed(detail, channel, key string) *Error {
+	return boxError("malformed BOX reply: "+detail, channel, key)
+}

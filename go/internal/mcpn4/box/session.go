@@ -7,16 +7,19 @@ func (c *Client) SSC(key string, arg any) (any, error) {
 	return c.Call(Channel, "callssc", obj("id", c.sid, "scid", SessionComponentID, "sck", key, "scarg", arg))
 }
 
-// Poll is BoxClient.poll as a for loop walks it: the pollchgs body, [] when falsy.
+// Poll is BoxClient.poll: the pollchgs events, [] for null; any other non-list is malformed.
 func (c *Client) Poll() ([]any, error) {
 	r, err := c.Call(Channel, "pollchgs", obj("id", c.sid))
 	if err != nil {
 		return nil, err
 	}
-	if !truthy(r) {
+	switch events := r.(type) {
+	case nil:
 		return []any{}, nil
+	case []any:
+		return events, nil
 	}
-	return pyIter(r)
+	return nil, malformed("pollchgs answered "+jsonKind(r)+", not a list", Channel, "pollchgs")
 }
 
 // Open is BoxClient.open: make, makessc, loadRoot; the loadRoot reply. A failure after make
