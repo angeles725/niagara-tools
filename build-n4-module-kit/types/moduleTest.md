@@ -8,7 +8,7 @@ BComponent()` requires a running NRE; see the offline-instantiation-boundary mem
 Exemplar to read before writing: `componentLinks-rt/srcTest/…/BLinkCheckTestTest.java` (B958 §958.3–958.4).
 
 > **NRE requirement:** `moduleTest` tests run on a native Windows Niagara install. From a WSL shell, run
-> Gradle's `niagaraTest` through `cmd.exe` on a Windows copy of the tree (§ Running from WSL); only a WSL-side
+> Gradle's `niagaraTest` through `cmd.exe` (§ Running from WSL); only a WSL-side
 > Gradle with plugin 7.6.17 discovers 0 tests. Keep them as a separate QA tier — they verify inter-component
 > link/station behaviour that pure JUnit cannot reach. `[ev: corpus B958 §958.3]` `[ev: retro testing-parity-btestng Δ1]`
 
@@ -193,12 +193,14 @@ public void ngTestLinkCheck2() throws Exception {
      `cmd.exe` (§ Running from WSL). This is the primary route; Workbench Run Tests is the fallback.
    `[ev: corpus B1418 §1418.5 f]` `[ev: corpus B961 §961.3]` `[ev: retro course-recordings Δ7]`
 
-### Running from WSL `[ev: retro testing-parity-btestng Δ1]` `[ev: retro testing-parity-btestng Δ3]`
+### Running from WSL `[ev: retro testing-parity-btestng Δ1]` `[ev: retro testing-parity-btestng Δ3]` `[ev: retro n4-course-handson-workflow Δ3]`
 
 ```bash
-# Gradle needs a Windows path: copy the gradle root to %TEMP% (cd /d rejects a \\wsl.localhost UNC path).
-cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat \
+# Root already on a Windows drive: run in place (cmd.exe inherits the drive-letter cwd).
+cd /mnt/c/<path> && cmd.exe /c "gradlew.bat \
   -PniagaraPluginVersion=<the plugin version in THIS niagara_home's etc/m2> :<part>:clean :<part>:niagaraTest"
+# Root on ext4: copy it to %TEMP% first (cd /d rejects a \\wsl.localhost UNC path).
+cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat <same tasks>"
 ```
 
 - **Always `:clean` first:** after a failed run `niagaraTest` is UP-TO-DATE and reports nothing.
@@ -210,7 +212,7 @@ cmd.exe /c "cd /d C:\Users\<you>\AppData\Local\Temp\<copy> && gradlew.bat \
   signing block, since it also signs the shipped jars.
 - **`:jar` writes into `niagara_home`:** it overwrites `<niagara_home>/modules/<part>.jar` and installs
   `<part>Test.jar`; on a reference install back up the first, restore it and remove the second afterwards, then
-  delete the `%TEMP%` copy.
+  delete any `%TEMP%` copy. Same route for `slotomatic`/`jar`: `build-verify.md` § Raw gradle.
 - Proof: the ColdRoomPan-rt `BTestNgStation` pilot ran 6/6 this way on 4.15.3.28, and five production mutations
   each failed 1-3 tests (client commit 337ee6c, retro `testing-parity-btestng`).
 
