@@ -21,7 +21,7 @@ func TestAllUniqueIDs(t *testing.T) {
 	}
 }
 
-// TestAllRuleOrder: one walk over a file both registered rules report on prints each rule's rows
+// TestAllRuleOrder: one walk over a file several registered rules report on prints each rule's rows
 // contiguously, in registry order under --all and in the requested order for a rule list.
 func TestAllRuleOrder(t *testing.T) {
 	root := t.TempDir()
@@ -33,9 +33,10 @@ func TestAllRuleOrder(t *testing.T) {
 	ncw := "WARN  lint-null-context-write  " + a + ":2  null-Context write: void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n"
 	timers := "FAIL  discarded-ticket  " + a + ": Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
 		"FAIL  timer-ticket  " + a + ": schedules a Clock ticket but has no stopped() override to cancel it\n"
+	delays := "FAIL  lint-delays     " + a + ":2  unfloored  cannot verify floor: null\n"
 	main := lint.Command(All()...)
 	for args, want := range map[string]string{
-		"--all":                               ncw + timers,
+		"--all":                               ncw + timers + delays,
 		"lint-timers,lint-null-context-write": timers + ncw,
 	} {
 		var o, e bytes.Buffer
