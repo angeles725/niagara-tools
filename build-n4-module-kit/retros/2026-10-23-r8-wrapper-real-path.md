@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · r8-wrapper-real-path
@@ -55,4 +55,4 @@ belongs in the wrapper.
   slip or a hang is named instead of hiding the result or stalling the host.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `tests/go-wrapper-symlink.bats:53` GWS3; token in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | folded | 1 |`

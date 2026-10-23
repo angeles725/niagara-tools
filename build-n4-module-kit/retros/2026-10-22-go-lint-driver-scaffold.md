@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-lint-driver-scaffold
@@ -42,4 +42,4 @@ reason, so that shape WARNs instead of being swallowed silently.
 - When a diff is large, find the one source edit that makes the old tool agree (blanking annotation lines) before calling it intended.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `toolbelt/lint-driver-scaffold.sh:27` header + `go/internal/lint/rules/driverscaffold/scan.go:11-25`; the `javasrc.Methods` half rides with the owed `new X() {` item [ev: retro go-javasrc-scanner Δ2] in `ledger.d/2026-10-22-go-lint-engine.md`. INDEX row generated from the header: `| 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | folded | 1 |`

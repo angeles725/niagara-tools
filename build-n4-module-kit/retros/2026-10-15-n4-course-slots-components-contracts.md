@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-slots-components-contracts
@@ -44,3 +44,6 @@ single-flight guards need TRANSIENT + a serialising executor because each Workbe
 - The type introspector, not slot-o-matic, decides whether an action handler is valid; trust the load-time error over reflective-dispatch folklore.
 - Every Workbench session and the engine are separate threads; any "check then set" on a component needs a lock or a single executor.
 - Validators and READONLY protect only the user path; link writes and API writes need their own guards.
+
+---
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/actions.md:28`, Δ2 `types/security.md:103`, Δ3-Δ6 `types/logic.md:234-237`. INDEX row generated from the header: `| 2026-10-15-n4-course-slots-components-contracts.md | kit | 2026-10-15 | folded | 6 |`
