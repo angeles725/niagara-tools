@@ -458,3 +458,42 @@ _fixture_ledger_top() {
   run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
   [ "$status" -eq 0 ]
 }
+
+# --- first push of a new branch (remote sha all zeros), against a REAL scratch repo -------------------
+# The range must be <merge-base with origin/main>..<local sha>. Diffing the lone local sha compared it with
+# the WORKING TREE (empty after a clean commit), so every new branch passed unchecked.
+newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; branch feat adds a kit toolbelt file
+  local d="$1"
+  git init -q -b main "$d"
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
+  git -C "$d" update-ref refs/remotes/origin/main HEAD
+  git -C "$d" checkout -q -b feat
+  mkdir -p "$d/build-n4-module-kit/toolbelt"
+  echo 'echo hi' > "$d/build-n4-module-kit/toolbelt/new.sh"
+  git -C "$d" add -A
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q -m "feat: new toolbelt script"
+}
+
+@test "H19: the first push of a new branch gates the whole branch since main (no BUILD-STATE/retro -> FAIL)" {
+  # Mutation: H19-newbranch -- diffing the lone local sha (vs the working tree) passes every new branch unchecked
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"build-relevant kit files changed"* ]]
+}
+
+@test "H20: a new branch whose base cannot be found fails closed (never an unchecked pass)" {
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  git -C "$d" update-ref -d refs/remotes/origin/main
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"cannot find"* ]]
+}
+
+@test "H21: deleting a remote branch (local sha all zeros) is not gated" {
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'(delete) 0000000000000000000000000000000000000000 refs/heads/feat $(git -C "$d" rev-parse HEAD)'"
+  [ "$status" -eq 0 ]
+}
