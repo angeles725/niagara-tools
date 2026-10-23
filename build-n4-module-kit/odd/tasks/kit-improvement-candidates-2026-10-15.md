@@ -812,6 +812,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** pps#Δ2 (primary) · pps#Δ3 extends
 - **Evidence:** `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:25`, corpus B1325.
 - **Target:** `types/logic-authoring.md:208-211`, `METHODOLOGY.md:44-52`. **Lint-able:** partial. **Fold type:** new doc section.
+- **Fold status:** FOLDED (U10, `docs/r8-u10-platform-templates`, 2026-10-23; pps Δ2, Δ3): `types/logic-authoring.md` § Templates (palette entry ≠ `.ntpl`, Shipping a template module, What breaks on a module or template upgrade). Landed in logic-authoring only; the `METHODOLOGY.md:44-52` pointer is owed (outside the unit's surface). Owed Go lint G92 `ntpl-manifest-deps`. The `BConfigBinding` slot-rename breakage stays `[INFER]` (B1325-G1).
 
 ### C54 — Lexicon resolution chain and lexicon-only modules
 - **Sources:** lux#Δ2 (primary) · pps#Δ5 extends
@@ -917,16 +918,19 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** pps#Δ9 (primary)
 - **Evidence:** `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt`, corpus B1341 rows 2-6.
 - **Target:** `types/distribution.md` Software Manager §, `BUILD-LOOP.md:207`. **Lint-able:** no. **Fold type:** doc section.
+- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ9): new `types/platform.md` § 1 (runtime profiles, Configure Runtime Profiles wizard) and § 2 (Software Manager install/upgrade/uninstall, Station Copier); pointer from `types/distribution.md` intro. `BUILD-LOOP.md:207` pointer owed (outside the surface).
 
 ### C74 — Workbench Commands card
 - **Sources:** rcf#Δ4 (primary)
 - **Evidence:** `Command.java:61-64`, corpus B1317 §1317.1.
 - **Target:** `types/wb-widgets.md` (new §). **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U10, 2026-10-23; rcf Δ4): `types/wb-widgets.md` § Commands (`Command.java:61-64` four keys, null on a missing key, a bad accelerator only prints). Owed Go lint G91 `command-lexicon-keys`.
 
 ### C75 — `BHysteresis`/`BLimiter` are 4.15+
 - **Sources:** rcf#Δ8 (primary)
 - **Evidence:** `BHysteresis.java:35,292`, corpus B1319 §1319.3 D3.
 - **Target:** `types/logic.md` (version note). **Lint-able:** yes. **Fold type:** doc note + lint.
+- **Fold status:** FOLDED (U10, 2026-10-23; rcf Δ8): `types/logic.md` after the kitControl status families (`@since Niagara 4.15`; jar check: absent in 4.3.58.18 / 4.13.2.18 / 4.14.0.162, present in 4.15.3.28 / 4.15.6.20; swapped limits fault; latch not persisted). No kit lint checks type availability per target release; owed Go lint G90 `since-version-type`.
 
 ### C91 — NDriver device/point manager and discovery recipe
 - **Sources:** ndh#Δ6 (primary). Extends C60 (NDriver section) and the manager recipe in `types/wb-widgets.md`.
@@ -958,6 +962,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C76 — Horizons lists
 - **Sources:** poh#Δ6 (primary, course capabilities not yet used) · has#Δ10 extends (promiseUtils, `LocalizableError`, CSRF constant, login branding, popup editors)
 - **Target:** `corpus-index.md`, `toolbelt/kit-ticket.sh`, `types/dashboard.md`, `types/theme.md`, `types/wb-widgets.md`. **Lint-able:** no. **Fold type:** kit-tickets + small doc notes.
+- **Fold status:** FOLDED (U10, 2026-10-23; poh Δ6, has Δ10): new `types/horizons.md` (§ 1 course capabilities with the kit recipe per row, § 2 promiseUtils, `LocalizableError`, CSRF header constant, login branding) + `types/wb-widgets.md` popup-editor note. Owed outside the surface: `corpus-index.md` row group, `kit-ticket.sh` tickets, pointers from `types/dashboard.md` DUX-TEST1 and `types/theme.md`.
 
 ### C77 — Preserve author-set slot flags on rebuild (scope corrected)
 - **Sources:** sta#Δ10 (primary, accepted-corrected) · r3-report#R5
@@ -973,6 +978,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C80 — NRE memory budget and flash writes on a JACE
 - **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ10): new `types/platform.md` § 3 (NRE pool defaults 0/384/128/32 MB, reboot to apply, flash writes; flash-wear advice `[INFER]`). `types/math-control-libraries.md:43` pointer owed (outside the surface).
 
 ---
 
@@ -1035,7 +1041,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-horizons-authoring-security#Δ7` | types/structure.md:9,176-250, types/third-party-libraries.md:38-69 | Doc part allowed, help.guide.base optional, uberjar first | C26 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ8` | types/structure.md | `se` = Java SE APIs; part dependency matrix | C24 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted |
-| `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | accepted |
+| `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | folded (U10, `types/horizons.md` § 2 + `types/wb-widgets.md` popup editor) |
 | `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
 | `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | folded (U6, `types/lexicon.md` § 1); manifest lint owed G71 |
 | `devguide415-lexicons-ux-i18n#Δ3` | types/observability.md | LocalizableRuntimeException idiom | C55 | P2 | folded (U6, `types/lexicon.md` § 3); key lint owed G70 |
@@ -1072,23 +1078,23 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-drivers-protocols#Δ9` | types/dashboard.md:23, types/logic-authoring.md:554, types/security.md | oBIX exposure rules | C46 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ1` | types/distribution.md:35-45 | Fix dist attribute table (noStation) | C23 | P0 | accepted-corrected (missing attribute = false, r3pec Δ1) |
-| `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | folded (U10, `types/logic-authoring.md` § Shipping a template module); lint owed G92 |
+| `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | folded (U10, `types/logic-authoring.md` § What breaks on a module or template upgrade) |
 | `devguide415-r2-packaging-platform-signing#Δ4` | types/distribution.md, types/logic.md:185, types/structure.md:133 | Palette entry ≠ .ntpl; dangling §Templates; provisioning | C29 | P0 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ5` | types/structure.md, types/dashboard.md | Lexicon-only modules | C54 | P2 | folded (U6, `types/lexicon.md` § 2); lint owed G71 |
 | `devguide415-r2-packaging-platform-signing#Δ6` | build-verify.md, types/distribution.md:100 | Signing Service ≠ module signing; mode × status | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ7` | types/logic-authoring.md:917 | Program objects signed; load failure causes | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ8` | types/structure.md:300 | se is Supervisor (Windows) only | C24 | P0 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ9` | types/distribution.md, BUILD-LOOP.md:207 | Runtime profiles and install rules | C73 | P2 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ10` | types/math-control-libraries.md:43 | NRE memory budget; flash writes | C80 | P3 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ9` | types/distribution.md, BUILD-LOOP.md:207 | Runtime profiles and install rules | C73 | P2 | folded (U10, `types/platform.md` § 1-2) |
+| `devguide415-r2-packaging-platform-signing#Δ10` | types/math-control-libraries.md:43 | NRE memory budget; flash writes | C80 | P3 | folded (U10, `types/platform.md` § 3) |
 | `devguide415-r2-runtime-contracts-formats#Δ1` | types/actions.md | post() first-wins vs CoalesceQueue last-wins | C38 | P1 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ2` | types/security.md, types/logic-authoring.md:73 | Null Context = BPermissions.all | C39 | P1 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | folded (U10, `types/wb-widgets.md` § Commands); lint owed G91 |
 | `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded (WU-P0-3 + lints) |
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | folded (U10, `types/logic.md` 4.15+ note); lint owed G90 |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
 | `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | accepted |
 | `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | accepted |
@@ -1175,7 +1181,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-parity-observability-horizons#Δ3` | toolbelt/kit-ticket.sh, types/observability.md | Client parity ticket | C52 | P1 | accepted |
 | `n4-course-parity-observability-horizons#Δ4` | types/observability.md, toolbelt/triage-console.sh | Station diagnostics card | C57 | P2 | folded (U6, `types/diagnostics.md`); triage patterns owed G73 |
 | `n4-course-parity-observability-horizons#Δ5` | types/logic-authoring.md:540, types/logic.md | History/tag commissioning items | C35 | P1 | accepted |
-| `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | accepted |
+| `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | folded (U10, `types/horizons.md` § 1) |
 | `n4-course-slots-components-contracts#Δ1` | types/actions.md:24-26 | Frozen action handler = type-load error | C09 | P0 | accepted |
 | `n4-course-slots-components-contracts#Δ2` | types/security.md §2 | Flags are UI, not security | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ3` | types/logic.md | Callback isRunning() guard | C36 | P1 | accepted |

@@ -217,8 +217,8 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | pending | 10 |
-| 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | pending | 10 |
-| 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | pending | 9 |
+| 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | folded | 10 |
+| 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | folded | 9 |
 | 2026-10-15-devguide415-r2-security-tags-analytics.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-shipped-libraries.md | kit | 2026-10-15 | pending | 9 |
 | 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | pending | 10 |
@@ -231,7 +231,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-n4-course-drivers-bql-ords-files.md | kit | 2026-10-15 | pending | 5 |
 | 2026-10-15-n4-course-lexicon-logging-testing.md | kit | 2026-10-15 | folded | 5 |
-| 2026-10-15-n4-course-parity-observability-horizons.md | kit | 2026-10-15 | pending | 6 |
+| 2026-10-15-n4-course-parity-observability-horizons.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-n4-course-slots-components-contracts.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-n4-course-threading-jobs-doctrine.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | pending | 6 |
