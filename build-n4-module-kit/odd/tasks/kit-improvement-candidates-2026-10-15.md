@@ -868,8 +868,9 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** bdps#Δ3 (primary) · has#Δ9 extends (apiInfo labels, `getDef`, `AgentFilter`)
 - **Evidence:** course `Lab Instructions.pdf` p83; devguide `apiInfo.txt:29-40,117-118`; corpus B1313.
 - **Target:** `types/module-wiring.md` (new §), `toolbelt/verify-module.sh`. **Lint-able:** yes — WARN `import com.tridium.` outside allow-list. **Fold type:** doc section + lint.
-- **Fold status:** LINT OWED, DOC BLOCKED (U5, `docs/r8-u5-c59-c62`, 2026-10-23): the WARN with the ndh Δ8 allow-list is
-  owed Go lint G65 `private-api-import`; the doc half (bdps Δ3, has Δ9) waits for U4, which owns `types/module-wiring.md`.
+- **Fold status:** DOC FOLDED, LINT OWED (doc: `docs/r8-pointer-lines`, 2026-10-23; bdps Δ3 doc half, has Δ9):
+  `types/module-wiring.md` § 4.4 (defs, agents) and § 4.5 (stability labels, private API) + `types/structure.md`
+  § Naming pointer. The WARN with the ndh Δ8 allow-list is owed Go lint G65 `private-api-import` (U5).
 
 ### C60 — NDriver section with the correlation rule
 - **Sources:** ord#Δ3 (primary)
@@ -1030,7 +1031,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C78 — ExportTags makes a copy, not a proxy
 - **Sources:** sta#Δ8 (primary). **Target:** `types/distribution.md`. **Lint-able:** no. **Fold type:** doc note.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ8): landed in `types/logic.md` § Ship a tag dictionary; `types/distribution.md`
-  was outside the unit's edit surface (a one-line pointer there stays optional).
+  was outside the unit's edit surface; its one-line pointer landed with the pointer unit (`docs/r8-pointer-lines`).
 
 ### C79 — Coexisting with the Tridium DashboardService
 - **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
@@ -1040,7 +1041,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C80 — NRE memory budget and flash writes on a JACE
 - **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
-- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ10): new `types/platform.md` § 3 (NRE pool defaults 0/384/128/32 MB, reboot to apply, flash writes; flash-wear advice `[INFER]`). `types/math-control-libraries.md:43` pointer owed (outside the surface).
+- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ10): new `types/platform.md` § 3 (NRE pool defaults 0/384/128/32 MB, reboot to apply, flash writes; flash-wear advice `[INFER]`). `types/math-control-libraries.md` GC-note pointer landed with the pointer unit (`docs/r8-pointer-lines`).
 
 ---
 
@@ -1102,7 +1103,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-horizons-authoring-security#Δ6` | types/structure.md:8,338, types/module-wiring.md | module-include.xml holds only types | C25 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ7` | types/structure.md:9,176-250, types/third-party-libraries.md:38-69 | Doc part allowed, help.guide.base optional, uberjar first | C26 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ8` | types/structure.md | `se` = Java SE APIs; part dependency matrix | C24 | P0 | accepted |
-| `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted (doc waits for U4) |
+| `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | folded (pointer unit, `types/module-wiring.md` § 4.4-4.5) |
 | `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | folded (U10, `types/horizons.md` § 2 + `types/wb-widgets.md` popup editor) |
 | `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
 | `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | folded (U6, `types/lexicon.md` § 1); manifest lint owed G71 |
@@ -1224,7 +1225,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-authoring-files-and-libraries#Δ5` | types/module-wiring.md §2, toolbelt/verify-module.sh | module-include.xml lifecycle; dangling types | C25 | P0 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | folded doc (U4 C58); build.sh hint owed G60 |
 | `n4-course-build-deps-permissions-signing#Δ2` | types/structure.md, toolbelt/verify-module.sh | Permission-group roster with triggers | C28 | P0 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted (lint owed G65; doc waits for U4) |
+| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | folded doc (`types/module-wiring.md` § 4.5; lint owed G65) |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | folded doc (U4 C58); preflight owed G61 |
 | `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |

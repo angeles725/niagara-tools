@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · verify-module-src-helper
@@ -46,4 +46,4 @@ Not applied; a fold review decides it and flips this retro.
   one line each without a subshell.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 pointer unit, `docs/r8-pointer-lines`) — Δ1 6f27bf2 (PR #354) `java_files` on `lib/scan-files.sh`, fail closed + `tests/verify-module.bats` VM-walk-locked; tokens in `ledger.d/2026-10-23-r8-pointer-lines.md`. INDEX row generated from the header: `| 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | folded | 1 |`
