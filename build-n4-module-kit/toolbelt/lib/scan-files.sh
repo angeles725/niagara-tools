@@ -11,7 +11,10 @@
 #   checkout would report every finding once per checkout), and so is every sub-directory named by a
 #   `--prune <dir-name>` (e.g. `--prune build` for gradle outputs) and every one whose path matches a
 #   `--prune-path <pattern>` (find -path, e.g. `--prune-path '*/rc/ext'`); the root itself never is (`-mindepth 1`),
-#   so `.`, `..` or a dot-named root is walked, not pruned whole. Returns 0 when the walk was
+#   so `.`, `..` or a dot-named root is walked, not pruned whole. A symlinked root is followed (find -H,
+#   paths still spelled from <root> as given); symlinks below it are never followed or listed, since a
+#   plain find lists nothing under a symlinked root and the lint passed clean. [ev: issue #329]
+#   Returns 0 when the walk was
 #   complete, and non-zero when <root> is not a directory, find could not enter a sub-directory or
 #   the sorted list could not be written; <err-file> then holds the reason.
 #
@@ -42,7 +45,7 @@ scan_files() {
     : > "$out"
     return 2
   fi
-  find "$root" -mindepth 1 \( -type d \( "${prune[@]}" \) -prune \) -o -type f \( "$@" \) -print > "$out.unsorted" 2> "$err" || rc=$?
+  find -H "$root" -mindepth 1 \( -type d \( "${prune[@]}" \) -prune \) -o -type f \( "$@" \) -print > "$out.unsorted" 2> "$err" || rc=$?
   { LC_ALL=C sort "$out.unsorted" > "$out"; } 2>> "$err" || rc=1
   rm -f "$out.unsorted"
   return "$rc"

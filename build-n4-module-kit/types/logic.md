@@ -194,6 +194,11 @@ An unresolvable link (source ORD throws `UnresolvedException`) leaves the target
 ## Composition & organization
 - **Above ~12–15 flat slots, compose into child components (one per concern) and keep config separate from live-state — don't sprawl a flat slot wall:** Honeywell modules distribute by containment (one child BComponent per concern: timing / outputs / hoa / freeze), tunables in a frozen `config` child, value + `BStatus` on the component; a 25-slot flat `BEvaporatorUnit` is the smell. [ev: corpus B737/B749/B750 · L21]
 - **NEW modules: decompose by CONCERN from the first version — size thresholds as review smells:** a `BComponent` whose hand-written body (excluding the slotomatic `BEGIN/END BAJA AUTO GENERATED CODE` regions) exceeds ~800 lines, or mixes 3+ concerns (e.g. defrost + drip + restart sequencing + freeze protection + HOA in one unit), splits each concern into its own pure class — and into a child component per concern where the concern owns slots (rule above). A pure method over ~80 lines is a review smell. Reference point: kitControl ships one function per component. These thresholds are advisory (a review question, never a hard gate); `toolbelt/lint-size.sh` reports them as WARN rows, run by `report-module.sh` after every build (`METHODOLOGY.md` § Conformance rules). Existing deployed modules are NOT restructured to meet them (`METHODOLOGY.md` § Schema / upgrade safety). [ev: retro decision-logic-decomposition Δ2]
+- **Deduplicate before you split:** when no class is over the size smell, the line savings are in duplicated helpers,
+  and splitting a file that is not large only adds lines. A second copy of existing logic (in this module or a sibling
+  module of the same GROUP) becomes one shared, unit-tested helper that every caller uses (`METHODOLOGY.md` § rt "One
+  shared helper per concern"); the move keeps the callers' output unchanged and tests the helper first (`BUILD-LOOP.md`
+  § 5). `[ev: retro modular-line-efficient-quality Δ1]`
 
 ### UX/legibility ranked checklist `[ev: corpus B748 §748.2]`
 
