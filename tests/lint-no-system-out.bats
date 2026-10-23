@@ -60,8 +60,10 @@ teardown() { rm -rf "$TMPDIR_T"; }
 @test "NSO5: dot-directories are pruned" {
   mkdir -p "$TMPDIR_T/Mod/.git"
   printf 'class J { void f(){ System.out.println("x"); } }\n' > "$TMPDIR_T/Mod/.git/J.java"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/A.java"   # a scanned file: an empty list is now exit 3 (lint-empty-root.bats)
   run "$NSO" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "NSO-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {

@@ -23,14 +23,27 @@ sweep="$toplevel/build-n4-module-kit/toolbelt/sweep-build-state.sh"
 # range from the first ref line; fields 1/3 (refs) are unused
 read -r _ lsha _ rsha || exit 0
 [ -n "${lsha:-}" ] || exit 0
-if [[ "${rsha:-}" =~ ^0*$ ]]; then range="$lsha"; else range="$rsha..$lsha"; fi
+[[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
+refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
+if [[ "${rsha:-}" =~ ^0*$ ]]; then
+  # A new remote branch: gate everything since it left main. Diffing the lone $lsha would compare it with
+  # the WORKING TREE (empty after a clean commit) and pass every new branch unchecked.
+  base=$(git merge-base origin/main "$lsha" 2>/dev/null || git merge-base origin/HEAD "$lsha" 2>/dev/null) || base=""
+  [ -n "$base" ] || refuse "cannot find where $lsha left origin/main (git fetch origin first)"
+  range="$base..$lsha"
+else
+  range="$rsha..$lsha"
+fi
 
-changed=$(git diff --name-only "$range" 2>/dev/null)
-log=$(git log --format=%B "$range" 2>/dev/null)
+changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
+log=$(git log --format=%B "$range") || refuse "git log $range failed"
 
-# build-relevant = kit files EXCEPT BUILD-STATE.md, ledger.d/** and retros/**, PLUS scripts/**
+# build-relevant = kit files EXCEPT BUILD-STATE.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
+# go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
+# behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
 relevant=$(printf '%s\n' "$changed" \
-  | grep -E '^(build-n4-module-kit/|scripts/)' \
+  | grep -E '^(build-n4-module-kit/|scripts/|go/)' \
+  | grep -vE '^go/bin/' \
   | grep -vE '^build-n4-module-kit/BUILD-STATE\.md$' \
   | grep -vE '^build-n4-module-kit/ledger\.d/' \
   | grep -vE '^build-n4-module-kit/retros/' || true)

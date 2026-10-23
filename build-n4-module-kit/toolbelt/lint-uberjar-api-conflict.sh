@@ -17,6 +17,10 @@ set -u
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
 awk_lint_parse lint-uberjar-api-conflict raw 'usage: lint-uberjar-api-conflict.sh <src-root>' "$@"
+# Advisory, "Exit: 0 always": a root with no *.gradle.kts has nothing to check (report-module runs it on
+# every module root), so an empty list stays a clean exit 0.
+# shellcheck disable=SC2034  # read by lib/awk-lint.sh _al_list
+AL_EMPTY_OK=1
 awk_lint_list -name '*.gradle.kts'
 
 # extract group:artifact (drop :version) from a config line

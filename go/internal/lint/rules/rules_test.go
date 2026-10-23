@@ -71,13 +71,22 @@ func TestAllWalkError(t *testing.T) {
 }
 
 // TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
-// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6).
+// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6), in its
+// Spec.EmptyError shape when it overrides the default.
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
-		row := "ERROR  " + sp.ID() + "  " + root + "  no *.java sources found (wrong path or empty source tree)\n"
+		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
+		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
+		if sp.EmptyError.Check != "" {
+			check = sp.EmptyError.Check
+		}
+		if sp.EmptyError.Msg != "" {
+			msg = sp.EmptyError.Msg
+		}
+		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
 		all += row
 		var o, e bytes.Buffer
 		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {

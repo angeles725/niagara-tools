@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BDefrostController.java --
+package com.x;
+public class BDefrostController extends BComponent {
+  @NiagaraProperty(name="defrostSkipped", type="BStatusBoolean", defaultValue="new BStatusBoolean(false)", flags=Flags.SUMMARY|Flags.READONLY)
+  @NiagaraProperty(name="lastSkipReason", type="BString", defaultValue="BString.make(\"\")", flags=Flags.SUMMARY|Flags.READONLY)
+  void maybeSkip(boolean overdue, boolean doorOpen) {
+    if (doorOpen) { this.defrostSkipped = true; setLastSkipReason("door open"); return; } // private latch + surfaced reason
+  }
+  private boolean defrostSkipped = false;
+}
