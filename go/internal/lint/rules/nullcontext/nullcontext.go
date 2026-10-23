@@ -45,7 +45,15 @@ const space = " \t\n\v\f\r" // awk's [[:space:]] in the C locale
 
 // Check never fails: every file it is given is scanned line by line, as the awk did.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code, bql := blank(f.Stripped())
+	// bql[i] is the 1-based column in code[i] of the opening quote of the first "..." literal on line i
+	// whose text holds "bql:" (0 when none).
+	st := f.Stripped()
+	bql := make([]int, len(st))
+	code, _ := javasrc.BlankLiterals(st, func(l javasrc.Literal) {
+		if l.Quote == '"' && bql[l.Line] == 0 && strings.Contains(l.Text, "bql:") {
+			bql[l.Line] = l.Col
+		}
+	})
 	var out []lint.Finding
 	report := func(i int, msg string) {
 		out = append(out, lint.Finding{Line: i + 1, Msg: msg + strings.TrimLeft(f.Raw[i], space)})
@@ -100,59 +108,4 @@ func nullContext(args string) bool {
 		}
 	}
 	return false
-}
-
-// blank returns the stripped lines with the contents of "...", '...' and """...""" literals removed
-// (quotes kept, \ escapes honoured, text-block state carried across lines; a "..." or '...' literal
-// ends at its line end) and, per line, the 1-based column in the blanked line of the opening quote of
-// the first "..." literal on that line whose text holds "bql:" (0 when none).
-func blank(src []string) (dst []string, bql []int) {
-	dst, bql = make([]string, len(src)), make([]int, len(src))
-	inText := false
-	var b, lit strings.Builder
-	for i, ln := range src {
-		b.Reset()
-		var quote byte
-		at := 0
-		for j := 0; j < len(ln); j++ {
-			c := ln[j]
-			switch {
-			case inText:
-				if c == '\\' {
-					j++
-				} else if strings.HasPrefix(ln[j:], `"""`) {
-					b.WriteString(`"""`)
-					inText = false
-					j += 2
-				}
-			case quote != 0:
-				switch c {
-				case '\\':
-					lit.WriteString(ln[j:min(j+2, len(ln))])
-					j++
-				case quote:
-					b.WriteByte(quote)
-					if quote == '"' && bql[i] == 0 && strings.Contains(lit.String(), "bql:") {
-						bql[i] = at
-					}
-					quote = 0
-				default:
-					lit.WriteByte(c)
-				}
-			case strings.HasPrefix(ln[j:], `"""`):
-				b.WriteString(`"""`)
-				inText = true
-				j += 2
-			default:
-				if c == '"' || c == '\'' {
-					quote = c
-					lit.Reset()
-					at = b.Len() + 1
-				}
-				b.WriteByte(c)
-			}
-		}
-		dst[i] = b.String()
-	}
-	return dst, bql
 }

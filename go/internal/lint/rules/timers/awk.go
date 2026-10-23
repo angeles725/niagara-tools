@@ -80,32 +80,6 @@ func (c rxCache) calls(body string, fn func(name string)) {
 	})
 }
 
-// blankStr is blank_str(): string and char literal contents blanked per line, quotes kept.
-func blankStr(s string) string {
-	if !strings.ContainsAny(s, `"'`) {
-		return s
-	}
-	var b strings.Builder
-	var q byte
-	for j := 0; j < len(s); j++ {
-		c := s[j]
-		if q != 0 {
-			if c == '\\' {
-				j++
-			} else if c == q {
-				q = 0
-				b.WriteByte(c)
-			}
-			continue
-		}
-		if c == '"' || c == '\'' {
-			q = c
-		}
-		b.WriteByte(c)
-	}
-	return b.String()
-}
-
 // gawkOrder is the order `for (k in a)` visits the string keys of a gawk 5 array that were inserted
 // in the order given (str_array.c: awk_hash, chains prepended, tables of 13, 127, 1021, ... buckets
 // grown when the element count over the bucket count exceeds STR_CHAIN_MAX = 2).
