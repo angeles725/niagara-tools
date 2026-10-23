@@ -45,6 +45,18 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
   POST, POST,PUT or GET,POST, and none lists DELETE [CERT] (unzip sweep of `modules/*.jar!WEB-INF/web.xml`,
   2026-10-23) `[ev: corpus B1318 §1318.2 row 6]`. Owed lint: G75 `web-xml-csrf-scope`
   (`ledger.d/2026-10-23-r8-u7-web-ui.md`). `[ev: retro devguide415-horizons-authoring-security Δ2]`
+- **Px rules when PX is the recipe or the complement** (bindings: `wb-widgets.md` § PX authoring): choose the target
+  media deliberately — Ux media (4.10+) loads faster on controllers, Hx is the browser media, Mobile Px is obsolete,
+  and changing a view's media later does not rewrite the file; a wall panel needs a responsive container
+  (`ResponsiveCanvasPane`, `FlowPane`, `ResponsivePane`), absolute `x,y` belongs to `CanvasPane`; bind with relative
+  ORDs (`slot:..`), `$(var)` ORD variables set by a parent `PxInclude`, or tag-based bindings, so one page serves the
+  JACE and the Supervisor; icons only from modules (`module://icons/...`); in Hx the `visible` property refreshes
+  every 5 s; WebService › Warmup Config speeds the first HxPx page after a restart. [CERT-doc] guides (GD =
+  niagara-help 4.15.6.20 `guides-clean/`) `GD/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:11,37,49`,
+  `GD/Graphics/docGraphics_DevelopingForPortability-FAA1EFED.txt:7,27`,
+  `GD/Graphics/pBasicProcedureForUsingThePxIncludeW-13B8E5FB.txt:12`, `GD/Graphics/aPxView.txt:18`,
+  `GD/Graphics/UsingTheVisibilePropertyInHxProfile-16D68DD7.txt:25`, `GD/User/web-WebWarmupConfig.txt:7`. Owed lint:
+  G77 `px-portability`. `[ev: retro devguide415-r2-web-ui-hmi Δ4]`
 - **"How to feed live data" decision matrix — match the serving recipe to the channel:** (a) **Servlet-SPA** → REST-poll (a self-scheduled `setTimeout` loop per § Poll loop reliability + 1 s local tick for JACE-computed fields); no BOX/Fox subscription available in a plain `BWebServlet` context; (b) **bajaux `@AgentOn` view** → `subscriberMixIn` Fox/BOX subscription (push on value change; B752-G2 still open — treat as P2); (c) **PX page** → `*Binding` handles live data implicitly (no author code); (d) **Query** (alarms, history) → BQL via `BOrd.make(bql).get(cx, null)` → `BITable` (pull, not push). Rule: do NOT mix channels (no BOX subscription from a plain servlet, no polling from a PX binding). `[ev: corpus B752 §752.4, B553 §553.1–553.3]`
 - `BWebServlet` subclass; `getServletName()` = the mount prefix → `/<prefix>/`. Registered as a `<type>` in module-include.xml + a palette instance under a Servlets folder.
 - **`BWebServlet` override contract (4.14 verified):** the overridable dispatch set is `service/doGet/doPost/doPut/doDelete(WebOp)` — NOT `doService(WebOp)`, which is `private(HttpServletRequest, HttpServletResponse)` (confirmed via `javap javax/baja/web/BWebServlet.class`). Overriding `doService(WebOp)` compiles silently and NEVER fires; only the private internal form is called by the framework. Derive `getServletName()` from the module name (e.g. `getType().getModule().getModuleName().toLowerCase()`) rather than a hardcoded literal — a hardcoded string breaks multi-site deployments and causes mount conflicts. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ1]`
@@ -226,6 +238,16 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **A reusable output row must allow custom buttons + a special-cased prefill — don't assume 0/1/2 from a `*Mode` name:** an AUTO/OFF exchanger (AUTO=1/OFF=0) needs `hoaRow(..., {buttons, valueMap})`; a key ending in `Mode` otherwise falls into the generic `["auto","on","off"][ordinal]` prefill and shows the wrong state — special-case its prefill before the generic branch. [ev: retro hmi-1280x800 · U3]
 
 ## Charts on an HMI
+- **Before hand-rolling a chart, use the stock webChart where it fits:** a Px/Hx page or a `lan` view embeds the
+  `ChartWidget` (an HTML5 WebWidget); a custom SPA may read `GET /webChart/query/data/<ord>` (the servlet checks the
+  target's `canRead()`; `/webChart/file/*` saves are CSRF-protected); a series-transform graph rolls up or scales
+  server-side (its data needs a timestamp and a non-String value; no live mode, no Delta); a points folder plots only
+  its first 10 histories; `file:^charts/defaultOptions.chart` holds shared axis, sampling and time-range defaults.
+  Keep the hand-rolled SVG below on the `hmi` panel. [CERT] `webChart-rt.jar!WEB-INF/web.xml` (`/query/*`,
+  `/file/*`), vineflower `WebChartQueryServlet.java:47,95`; [CERT-doc] `GD/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25`,
+  `GD/WebCharts/webChart-ChartWidget.txt:73`, `GD/WebCharts/CreatingADefaultOptionsChartFileWeb-32F441A8.txt:17`
+  (GD as in § ux Px rules). The series-transform servlet path (`/seriesTransformQuery/*` in its jar) is not called
+  live yet [INFER] (B1339-G1). `[ev: retro devguide415-r2-web-ui-hmi Δ8]`
 - **Size the SVG chart's `viewBox` to the MEASURED box in real px each render — do not carry a fixed art-board viewBox with `preserveAspectRatio="none"`:** measure `getBoundingClientRect()` (guard width>60) and set `viewBox="0 0 <w> <h>"` so 1 unit = 1px and strokes/axis text stop distorting. [ev: retro hmi-touch-ux Δ5]
 - **On a capacitive HMI the chart read-out is a TOUCH crosshair (pointer events + `touch-action:none`), never hover:** `pointerdown/move` map touch X back to a reading index, drawing a vertical line + per-series dots + a tooltip with the time and each visible series' friendly name (`equipo`) and value; double-tap clears. Label points by the operator's name, never the raw tag. [ev: retro hmi-touch-ux Δ7]
 - **Assign each series a distinct color explicitly and mark the shown series bold — never inherited `currentColor` or hover-only emphasis:** a `SERIE_COL` palette per series (and its legend chip); visible series get `.on` (opacity 1, wider stroke) applied on filter, not only on hover. [ev: retro hmi-touch-ux Δ6]
@@ -246,6 +268,19 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
 - **Dashboard write access on a JACE is DEPLOY-side config, not code:** `checkCanWrite` is fail-closed and needs `OPERATOR_WRITE` GLOBAL + a non-null Web Profile + a category granting operatorRead on the service; the log line `[<mod>] checkCanWrite:` states the reason (401/403/user-not-found). [ev: bitácora 5cuartos §8]
 - **Cache-bust every static asset with the module version:** every `<link href>`/`<script src>`/image reference in `index.html` carries `?v=<module version>` equal to `defaultModuleVersion` in the group `build.gradle.kts`, bumped on every `-ux` deploy, so a kiosk panel does not keep stale JS/CSS after a `-ux`-only deploy (no station restart; the browser keeps its cache). [INFER: browser caching of servlet static responses not measured on the panel; relates to the `lint-servlet.sh` cache check.] `[ev: retro dashboard-rc-file-split Δ2]`
 - **Publish the deployed version:** the module exposes its version as a read-only service slot AND as `GET /api/version` (`{module, version, buildMillis}`, same XHR guard as every `/api/*`), and the SPA shows it in an About/footer, so "which build is on this station" is observable from the HMI and from an off-station collector without opening Workbench. The rt side (slot, build millis, drift against the latest packaged release) is `structure.md` § Deployed version publication. `[ev: retro dashboard-deployment-profiles Δ6]`
+- **Web profile of the dashboard user:** HTML5 Hx (Basic, Default, Handheld) and Wb Web profiles exist; Kiosk
+  profiles and the KioskService are not supported in Niagara 4, and Mobile profiles are deprecated
+  (`frontend-standard.md` § Profiles); `Enable Nav Tree Side Bar` and `Enable View Selection` (default true) hide the
+  side bar and the view selector for a panel user; the Hx theme is chosen per profile on the user or prototype
+  (`selectedHxTheme`, default Zebra — `theme.md` § 2). [CERT-doc] `GD/Graphics/AboutKioskProfiles-E920D19F.txt:9`,
+  `GD/User/baja-User.txt:54-66,89`; [CERT] vineflower `hx-wb BHxProfile.java:86`. `[ev: retro devguide415-r2-web-ui-hmi Δ3]`
+- **Coexisting with the Tridium DashboardService (`dashboard-rt`/`-ux`/`-wb`):** a different product from this
+  servlet dashboard. It keeps per-user state as `db*.json` under the protected station home
+  `file:~stations/<station>/dashboards/<user>`; a `DashboardPane` holds exactly one HTML5 WebWidget (WebChart,
+  CircularGauge) and its `Id` (`%ord%;%viewId%;%widgetOrd%;%jsOrd%`) keys each user's saved data — leave it at the
+  default. [CERT-doc] `GD/EngNotes/dashboard-DashboardService.txt:7`, `GD/EngNotes/CreatingADashboard-34B5B646.txt:38`,
+  `GD/EngNotes/dashboard-DashboardPane.txt:7,22`. Both may sit in one Services container, so do not name our facade
+  service slot `DashboardService` on such a station [INFER]. `[ev: retro devguide415-r2-web-ui-hmi Δ10]`
 
 ## Dashboard as an external API (port spec)
 - **A dashboard's reusable CONTRACT is a first-class deliverable when consumed off-station (e.g. a 3D viewer over oBIX):** document the port spec once — the flat `CuartoN/slot → {v,st}` map (identical between `/api/equipment` and oBIX), which slots are OPERATOR-writable vs display, and per-type encoding (°C / HOA 0-1-2 / bool / RelTime in ms). Hand off a big single-file SPA as a line-range map, not a paste, and warn about the embedded base64. [ev: retro dashboard-contract-port-spec · U7]

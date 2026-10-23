@@ -214,14 +214,14 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |
 | 2026-10-15-devguide415-horizons-authoring-security.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-lexicons-ux-i18n.md | kit | 2026-10-15 | pending | 5 |
-| 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | pending | 9 |
 | 2026-10-15-devguide415-r2-security-tags-analytics.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-shipped-libraries.md | kit | 2026-10-15 | pending | 9 |
-| 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |
 | 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | pending | 6 |
