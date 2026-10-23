@@ -69,6 +69,50 @@ class A extends BWebServlet {
 	{"T8 the header name in a string after an http:// literal still counts", `class A extends BWebServlet {
   void x(WebOp op) { String u = "http://h/"; String h = op.getHeader("X-Requested-With"); }
 }`, []string{"WARN csrf-xrw-only 2"}},
+	// T2: every other check read raw lines, so a comment or a string literal counted as code.
+	{"T2 a parse call in a comment or a literal is no parse", `class A extends BWebServlet {
+  // Double.parseDouble(x)
+  /* Integer.parseInt(y) */
+  String s = "Integer.parseInt(";
+}`, nil},
+	{"T2 a handler named in a comment is no handler", `// see void doGet( below
+class A extends HttpServlet {
+  /** void doPost(WebOp op) writes c.set(v) */
+  void x() { c.set("a", 1); LOG.info("x"); }
+}`, nil},
+	{"T2 a servlet declared only in a comment is no servlet", `// class A extends BWebServlet
+class A { void x() { Double.parseDouble(s); } }`, nil},
+	{"T2 a write, a log call or a response write in a comment is none", `class A extends BWebServlet {
+  void doPost(WebOp op) {
+    /* c.setDouble("a", 1); */ // c.set("b", 2);
+    // LOG.info("x"); op.getResponse().getWriter();
+  }
+}`, nil},
+	{"T2 a brace in a literal does not close the handler", `class A extends BWebServlet {
+  void doPost(WebOp op) {
+    String b = "}";
+    c.setDouble("a", 1);
+  }
+}`, []string{"FAIL auth 2", "WARN unbounded-set 2"}},
+	{"T2 an auth call or a clamp in a comment is no gate", `class A extends BWebServlet {
+  void doPost(WebOp op) { c.setDouble("a", 1); } // getRemoteUser() MAX
+}`, []string{"FAIL auth 2", "WARN unbounded-set 2"}},
+	{"T2 a Cache-Control in a comment is no header", `class A extends BWebServlet {
+  // rsp.setHeader("Cache-Control", "max-age=60");
+  /* rsp.setHeader("Cache-Control", "max-age=60"); */
+}`, nil},
+	{"T2 a try in a comment encloses no parse", `class A extends BWebServlet {
+  void x(String s) {
+    // try {
+    Double.parseDouble(s);
+  }
+}`, []string{"FAIL input-400 4"}},
+	{"T2 a 400 in a literal is no 400 response", `class A extends BWebServlet {
+  void x(String s) {
+    try { Double.parseDouble(s); }
+    catch (Exception e) { log("400"); }
+  }
+}`, []string{"WARN catch-no-400 4"}},
 }
 
 func TestTruth(t *testing.T) {

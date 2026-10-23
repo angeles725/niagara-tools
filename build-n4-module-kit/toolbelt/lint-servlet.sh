@@ -21,15 +21,19 @@
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.
-#                       Read in code: a // or /* */ comment (a Javadoc included) is neither the guard
-#                       nor the token; the row anchors at the first code line naming the header.
+#                       The row anchors at the first code line naming the header.
 #                       [ev: corpus B813]
 #   api-response-headers INFO  a doGet/doPost/service handler that calls getWriter()/getOutputStream()
 #                       but the class has no setHeader("X-Content-Type-Options",...) and no
-#                       setApiHeaders()/applyHeaders() helper call anywhere in code (comments ignored). Information only: the
+#                       setApiHeaders()/applyHeaders() helper call anywhere. Information only: the
 #                       station's header providers reach every module servlet through
 #                       TridiumSecurityFilter, and a servlet-level header REPLACES them.
 #                       [ev: corpus B1133 UXS1] [ev: corpus B1349 C1]
+#
+# Every check reads code, never a // or /* */ comment (a Javadoc included). Code shapes (handler and
+# class declarations, calls, braces, try/catch, the 400 indicators) also ignore string and char literal
+# contents, so "}" or "Integer.parseInt(" in a string is no code; the header names (X-Requested-With,
+# X-Content-Type-Options, the CSRF token) and the Cache-Control value are read with literal text kept.
 #
 # WARN -> FAIL under --strict; INFO rows never escalate. Deferred: R12.2 step-up re-auth (B803 — no static primitive).
 #
@@ -52,6 +56,7 @@
 # [ev: retro campaign8-lint-servlet] [ev: retro go-lint-servlet]
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
 # Mutation: LSV4b -- reading the X-Requested-With flag from raw lines reports a guard documented only in a Javadoc
+# Mutation: LSV2c -- matching the parse calls on raw lines FAILs input-400 on a commented-out Double.parseDouble(
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

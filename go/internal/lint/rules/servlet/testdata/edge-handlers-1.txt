@@ -1,11 +1,9 @@
+Declared difference (truth fix T2): the void doGet( in the line-1 comment and the void doPost( in the
+line-3 Javadoc are no handlers.
 -- args --
 @DIR@/m
 -- want --
 exit 1
-WARN  log-in-handler  H.java:1  LOG.info inside request handler (per-request log spam)
-INFO  api-response-headers  H.java:1  response handler sets no headers; the station header providers apply (security.md §7)
-FAIL  auth  H.java:3  handler writes without getRemoteUser()/getUser() auth gate
-WARN  unbounded-set  H.java:3  typed set* in handler without MIN/MAX facet enforcement
 FAIL  auth  H.java:4  handler writes without getRemoteUser()/getUser() auth gate
 WARN  unbounded-set  H.java:4  typed set* in handler without MIN/MAX facet enforcement
 FAIL  auth  H.java:10  handler writes without getRemoteUser()/getUser() auth gate

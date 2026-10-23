@@ -65,17 +65,9 @@ const (
 	msgCsrfOnly = "X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]"
 )
 
-// cut drops a line's first "//" and everything after it (the awk's line-comment strip).
-func cut(s string) string {
-	if i := strings.Index(s, "//"); i >= 0 {
-		return s[:i]
-	}
-	return s
-}
-
-// block is the text of the brace block that opens at or after line start (0-based): the cut lines, each
-// prefixed by " ", from start to the line where the depth counted over the raw lines returns to 0, or to
-// the end of the file. needOpen ignores a "}" before the first "{" counted (the catch scan) instead of
+// block is the text of the brace block that opens at or after line start (0-based): the lines, each
+// prefixed by " ", from start to the line where the depth counted over them returns to 0, or to the end
+// of the file. needOpen ignores a "}" before the first "{" counted (the catch scan) instead of
 // only a "}" at depth 0 (the handler and try scans). end is the closing line, or start when the block
 // never closes (the awk's try_end kept its initial value).
 func block(lines []string, start int, needOpen bool) (text string, end int) {
@@ -83,7 +75,7 @@ func block(lines []string, start int, needOpen bool) (text string, end int) {
 	depth, opened := 0, false
 	for j := start; j < len(lines); j++ {
 		b.WriteString(" ")
-		b.WriteString(cut(lines[j]))
+		b.WriteString(lines[j])
 		for _, ch := range []byte(lines[j]) {
 			switch {
 			case ch == '{':
@@ -101,7 +93,12 @@ func block(lines []string, start int, needOpen bool) (text string, end int) {
 }
 
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := f.Raw
+	// Every check reads code, never a comment: code is the file with comments blanked and literal text
+	// kept (the header names and the Cache-Control value are string literals); lines also has the literal
+	// contents removed, for the code shapes (calls, braces, try/catch, handler and class declarations), so
+	// "}" or "Integer.parseInt(" inside a string is no code either.
+	code := f.Stripped()
+	lines, _ := javasrc.BlankLiterals(code, nil)
 	isServlet := false
 	for _, ln := range lines {
 		if servletDecl.MatchString(ln) || handler.MatchString(ln) {
@@ -112,10 +109,8 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	if !isServlet {
 		return nil, nil
 	}
-	// The file-level flags and the csrf-xrw-only anchor read code with literal text kept: the header
-	// names are string literals, but a comment (a Javadoc block included) documents, it guards nothing
-	// (truth audit 2026-10-22 T8: a Javadoc line was reported as the guard).
-	code := f.Stripped()
+	// The file-level flags and the csrf-xrw-only anchor: a comment (a Javadoc block included) documents,
+	// it guards nothing (truth audit 2026-10-22 T8: a Javadoc line was reported as the guard).
 	hasXHR, hasCsrf, hasXCTO := false, false, false
 	for _, sl := range code {
 		hasXHR = hasXHR || strings.Contains(sl, "X-Requested-With")
@@ -185,7 +180,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 
-	for i, ln := range lines {
+	for i, ln := range code {
 		if strings.Contains(ln, "Cache-Control") && maxAge.MatchString(ln) {
 			add(lint.Unset, "cache-nofinger", i+1, msgCache)
 		}

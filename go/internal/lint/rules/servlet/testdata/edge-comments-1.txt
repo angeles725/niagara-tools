@@ -1,14 +1,12 @@
+Declared difference (truth fix T2): comments and literal contents are not code. The LOG.info(,
+parse and Cache-Control comments give no row; the "http://x/" literal no longer hides the setDouble after it,
+so unbounded-set WARNs at C.java:3.
 -- args --
 @DIR@/m
 -- want --
 exit 1
 FAIL  auth  C.java:3  handler writes without getRemoteUser()/getUser() auth gate
-WARN  log-in-handler  C.java:3  LOG.info inside request handler (per-request log spam)
-FAIL  input-400  C.java:8  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
-FAIL  input-400  C.java:9  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
-FAIL  input-400  C.java:10  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
-WARN  cache-nofinger  C.java:11  Cache-Control max-age>0 on rc asset without fingerprint
-WARN  cache-nofinger  C.java:12  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  unbounded-set  C.java:3  typed set* in handler without MIN/MAX facet enforcement
 -- stderr --
 -- m/C.java --
 class C extends BWebServlet {

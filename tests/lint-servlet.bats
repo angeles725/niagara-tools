@@ -163,3 +163,12 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"csrf-xrw-only"* ]]
 }
+
+@test "LSV2c: a parse call in a comment or a string literal is no input-400 FAIL (code only)" {
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class C extends BWebServlet {' '  // double v = Double.parseDouble(raw);' \
+    '  /* Integer.parseInt(raw) */' '  String hint = "use Integer.parseInt(";' '}' > "$ONE/C.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"input-400"* ]]
+}
