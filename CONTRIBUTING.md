@@ -307,6 +307,15 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
   merging any other head merges unreviewed code. Incident 2026-10-22: a helper piped `git push` through
   `grep | tail`, a rejected non-fast-forward push looked successful, and PR #346 merged the stale remote head, WIP
   commit 79ca5a2, with CI green. `[ev: retro truth-audit Δ5]`
+- **Settle a testable review claim by running it.** A reviewer claim that can be disproved by running a test at
+  the exact reviewed SHA is answered with that command and its output (in the PR body and any review disposition),
+  not argued. Example: a BLOCKER on 5b8eac9 said BSC4 fails because the bash scan is unchanged; the `.sh` is the
+  `n4lint` wrapper since c15f6cd, and `bats -f BSC tests/lint-bql-string-concat.bats` at 5b8eac9 is 7/7.
+  `[ev: retro truth-audit Δ6]`
+- **Prove a dead-code deletion mechanically.** A deletion-only commit that removes the old bash body after a Go
+  wrapper's `exec` tail draws inconclusive review findings; prove it with the no-code-after-exec check
+  (`bats -f GWS4 tests/go-wrapper-symlink.bats`: no non-comment line and no leftover `disable=SC2093` below the
+  first top-level `exec`) and cite its output, instead of arguing. `[ev: retro truth-audit Δ7]`
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
   checklist + agent discipline. Future: a pre-commit hook.
 - **CI active** (`ci.yml`, since Campaign 5): GitHub Actions on `origin` runs shellcheck + bats + sweep on every push and PR — server-side, un-bypassable complement to the opt-in client hook. **Pin every tool the CI gate depends on** (shellcheck version, Java version, junit sha256); an unpinned tool drifts newer on the runner and turns green→red with no code change. [ev: retro ci-server-side-enforcement] (K10/A10)

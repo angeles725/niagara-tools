@@ -455,6 +455,11 @@ injection-safe route where tags suffice (devguide `neql.txt:18,28-46,282-285`; `
 hierarchy caches live on the heap (recreate after edits); verify with Spy "Tags Implied" (corpus B1329 §1329.1
 rows 4-8). `[ev: retro devguide415-r2-security-tags-analytics Δ7]`
 
+**ExportTags copy, they do not proxy:** a `ComponentTag` replicates the tagged component under the Supervisor's
+`NiagaraStation` as a copy; later edits in the source station do not reach it (4.15.6.20
+`ExportTags/aComponentTags.txt:7-11`). For live values on a Supervisor use proxy points (a `PointTag` or the
+Niagara network), oBIX or the cloud path, never a `ComponentTag`. `[ev: retro devguide415-r2-security-tags-analytics Δ8]`
+
 ### Tags in code `[ev: retro devguide415-nav-subscriptions-tags-ords Δ10]`
 
 - Direct tag: `comp.tags().set(Id.newId("angeles:room"), BMarker.MARKER)` — only `BIDataValue` values are taggable.
@@ -473,6 +478,13 @@ Corpus B1311 §1311.1 rows 1-6, 13 (`javax/baja/tag/Tags.java:66-69,97` docSourc
 - **Rules:** one `BTagRule` per component TYPE (our components are well-typed; no folder-name keying).
 - **Query:** `station:|slot:/|neql:angeles:room` reaches every cold-room component.
 - **Licence:** ship it only where the site's tags licence has a free dictionary slot (above); otherwise tag directly.
+- **Haystack equipment tags** `[ev: retro devguide415-r2-security-tags-analytics Δ6]`: tag the equipment component
+  `hs:equip` and give it a direct `hs:siteRef` to the `hs:site` component. The implied `hs:equipRef` reaches only a
+  `BControlPoint` under an `hs:equip` ancestor whose proxy ext is not `BNullProxyExt`, and never one that already has
+  a direct `hs:equipRef` (vineflower haystack-rt 4.14.0.162 `BContainmentRelation.java:48-49`; 4.15.6.20
+  `Tagging/haystack-EquipRelation.txt:11`). So our logic and setpoint points (NullProxy writables) and our own
+  non-point components need a DIRECT `hs:equipRef`; the implied `hs:siteRef` then follows point → equip → site
+  (`Tagging/haystack-SiteRelation.txt:9`). Check with Spy "Tags Implied" (corpus B1329 rows 2-3).
 - **Deploy safety:** additive — no schema or containment change.
 
 ## BQL function reference card `[ev: corpus B1108]`
