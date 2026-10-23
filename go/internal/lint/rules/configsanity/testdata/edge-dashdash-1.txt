@@ -1,0 +1,52 @@
+-- args --
+--
+@DIR@/one
+-- want --
+exit 3
+-- stderr --
+lint-config-sanity: not a directory: --
+-- one/.hidden/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/Z.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/a/Noeol.java (noeol) --
+class Empty {}
+-- one/a/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/a/Zero.java --
+-- one/a/notjava.txt --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/b/c/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/x-worktrees/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}

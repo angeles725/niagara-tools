@@ -1,0 +1,31 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/Nested.java:2  CS2: zero-default setpoint "coolSetpoint" with OPERATOR flag and no min>0 facet
+FAIL  lint-config-sanity  @DIR@/one/Nested.java:18  CS2: zero-default setpoint "fanSet" with OPERATOR flag and no min>0 facet
+-- stderr --
+-- one/Nested.java --
+class Nested {
+  @NiagaraProperty(
+    name = "coolSetpoint",
+    type = "double",
+    defaultValue = "BDouble.make(0.0)",
+    flags = Flags.OPERATOR,
+    facets = { @Facet(name = "BFacets.MIN", value = "BDouble.make(0)"), @Facet("BFacets.make(BFacets.UNITS, x)") }
+  )
+  private double coolSetpoint;
+  @NiagaraProperty(
+    name = "heatSetpoint",
+    type = "double",
+    defaultValue = "BDouble.make( 0 )",
+    flags = Flags.OPERATOR | Flags.SUMMARY,
+    facets = @Facet("BFacets.make(BFacets.MIN, BDouble.make( 2.5 ))")
+  )
+  private double heatSetpoint;
+  @NiagaraProperty(name = "fanSet", type = "double", defaultValue = "BDouble.make(0)",
+     flags = Flags.OPERATOR, facets = @Facet("BFacets.make(BFacets.MIN, BDouble.make(0.0))"))
+  private double fanSet;
+  @NiagaraProperty(name = "noOpSetpoint", type = "double", defaultValue = "BDouble.make(0)")
+  private double noOpSetpoint;
+  @NiagaraProperty(name = "openAtEof", defaultValue = "BRelTime.makeSeconds(1)",

@@ -32,6 +32,9 @@
 # Usage:  lint-set-null-ord.sh [--strict] <src-root>
 #   Row:  WARN  lint-set-null-ord  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-set-null-ord  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # VCS-free by design (kit-links L2).
 # Mutation: SNO1 -- dropping the direct-argument rule passes setTargetOrd(point.getSlotPathOrd()) clean
 # Mutation: SNO1-recv -- a receiver-agnostic guard silences b.getSlotPathOrd() after a check on `a.`

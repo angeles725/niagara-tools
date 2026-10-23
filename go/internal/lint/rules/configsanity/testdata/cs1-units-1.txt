@@ -1,0 +1,15 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+-- stderr --
+-- one/U1.java --
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+public final class U1 extends BComponent {
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeHours(4)")
+  private BRelTime defrostInterval;
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.make(1800000L)")
+  private BRelTime defrostDuration;
+}

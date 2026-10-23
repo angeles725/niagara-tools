@@ -354,19 +354,20 @@ for ADIR in "${ARTIFACTS[@]}"; do
         [ -z "$_ln" ] && continue
         case "$_ln" in
           PASS*|FAIL*)
-            # Row: STATUS  check  /path/file.java: message
+            # Row: STATUS  check  /path/file.java:<line>  message (every lint-timers row carries its line)
             _st="${_ln%%  *}"
-            _rest="${_ln#*  }"           # check  /path/file.java: msg
+            _rest="${_ln#*  }"           # check  /path/file.java:<line>  msg
             _chk="${_rest%%  *}"
-            _detail="${_rest#*  }"       # /path/file.java: msg
-            _fp="${_detail%%:*}"         # /path/file.java
-            _msg="${_detail#*: }"        # message after ": "
+            _detail="${_rest#*  }"       # /path/file.java:<line>  msg
+            _site="${_detail%%  *}"      # /path/file.java:<line>
+            _msg="${_detail#*  }"        # message after the two-space separator
+            _fp="${_site%:*}"            # /path/file.java
             # basename without a fork per row; basename(1) only where ${_fp##*/} differs (empty, trailing /, leading -)
             case "$_fp" in
               ''|*/|-*) _bn="$(basename "$_fp")" ;;
               *) _bn="${_fp##*/}" ;;
             esac
-            emit "$ANAME" "$_st" "$_chk" "${_bn}: ${_msg}"
+            emit "$ANAME" "$_st" "$_chk" "${_bn}:${_site##*:}  ${_msg}"
           ;;
         esac
       done <<< "$lt_out"

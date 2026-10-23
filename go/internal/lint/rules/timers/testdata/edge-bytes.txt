@@ -2,12 +2,12 @@
 src
 -- want --
 exit 1
-FAIL  discarded-ticket  @DIR@/src/BCrlf.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field
-PASS  timer-ticket  @DIR@/src/BCrlf.java: timer cancelled in stopped()
-FAIL  discarded-ticket  @DIR@/src/BLatin.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field
-FAIL  timer-ticket  @DIR@/src/BLatin.java: schedules a Clock ticket but has no stopped() override to cancel it
-FAIL  jdk-thread  @DIR@/src/BNoPerm.java: BNoPerm modifies a thread (interrupt() at line 4) but no module-permissions.xml above the file requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
-WARN  job-cancel  @DIR@/src/BTwoRuns.java: BTwoRuns run() loops (line 5) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
+FAIL  discarded-ticket  @DIR@/src/BCrlf.java:5  Clock.schedule result is discarded — assign it to a Clock.Ticket field
+PASS  timer-ticket  @DIR@/src/BCrlf.java:3  timer cancelled in stopped()
+FAIL  discarded-ticket  @DIR@/src/BLatin.java:5  Clock.schedule result is discarded — assign it to a Clock.Ticket field
+FAIL  timer-ticket  @DIR@/src/BLatin.java:4  schedules a Clock ticket but has no stopped() override to cancel it
+FAIL  jdk-thread  @DIR@/src/BNoPerm.java:4  BNoPerm modifies a thread (interrupt()) but no module-permissions.xml above the file requests MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+WARN  job-cancel  @DIR@/src/BTwoRuns.java:5  BTwoRuns run() loops with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
 -- src/BCrlf.java --
 package demo;
 public final class BCrlf extends BComponent {
