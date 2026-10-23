@@ -2,8 +2,8 @@
 atss1
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/atss1/BAtssOnly.java: timer cancelled in stopped()
-WARN  atSteadyState-only-timer  @DIR@/atss1/BAtssOnly.java: timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer
+PASS  timer-ticket  @DIR@/atss1/BAtssOnly.java:4  timer cancelled in stopped()
+WARN  atSteadyState-only-timer  @DIR@/atss1/BAtssOnly.java:5  timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer
 -- atss1/BAtssOnly.java --
 package demo;
 import javax.baja.sys.*;

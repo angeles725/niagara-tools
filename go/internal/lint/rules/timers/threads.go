@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
@@ -15,7 +14,8 @@ import (
 
 // threadPass is jdk-thread (FAIL / WARN) and job-cancel (WARN). Per file: the job-cancel row, then for a
 // B* class that uses JDK concurrency, FAIL when it modifies a thread and the nearest module-permissions.xml
-// requests no MANAGE_EXECUTION under type station/all (R8-D7), else WARN.
+// requests no MANAGE_EXECUTION under type station/all (R8-D7), else WARN. A FAIL row points at the
+// modifying call, a WARN row at the first JDK concurrency use, a job-cancel row at the loop.
 func (r *run) threadPass(srcs []*source) error {
 	for _, s := range srcs {
 		t := r.threadFacts(s)
@@ -23,24 +23,24 @@ func (r *run) threadPass(srcs []*source) error {
 			continue
 		}
 		if t.jobLoop != 0 {
-			r.row(lint.Warn, "job-cancel", s, fmt.Sprintf("%s run() loops (line %d) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)", t.class, t.jobLoop))
+			r.row(lint.Warn, "job-cancel", s, t.jobLoop, t.class+" run() loops with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)")
 		}
-		if !t.jdk {
+		if t.jdk == 0 {
 			continue
 		}
 		g, err := r.permsGrant(s.Path)
 		if err != nil {
 			return err
 		}
-		// the bash `read -r _pf _pg` split of "<path> <yes|no>": a path with spaces shifts into _pg
-		pf, pg := splitTwo(g.path + " " + g.answer)
-		if t.modify != "" && pg != "yes" {
-			if pf == "-" {
-				pf = "no module-permissions.xml above the file"
+		if t.modify != "" && g.answer != "yes" {
+			// the permissions file is named by its module directory: the row already carries the source path
+			who := "no module-permissions.xml above the file requests"
+			if g.path != "-" {
+				who = filepath.Base(filepath.Dir(g.path)) + "/module-permissions.xml requests no"
 			}
-			r.row(lint.Fail, "jdk-thread", s, fmt.Sprintf("%s modifies a thread (%s) but %s requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)", t.class, t.modify, pf))
+			r.row(lint.Fail, "jdk-thread", s, t.modLine, fmt.Sprintf("%s modifies a thread (%s) but %s MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)", t.class, t.modify, who))
 		} else {
-			r.row(lint.Warn, "jdk-thread", s, t.class+" uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION")
+			r.row(lint.Warn, "jdk-thread", s, t.jdk, t.class+" uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION")
 		}
 	}
 	return nil
@@ -49,8 +49,9 @@ func (r *run) threadPass(srcs []*source) error {
 // threadFacts is threads.awk over one file.
 type threadFacts struct {
 	class   string // the B* class name; "" when the file holds none (no rows)
-	jdk     bool   // uses ExecutorService, Executors., ExecutorUtil. or new Thread(
-	modify  string // "<call>() at line <n>": the first thread-modifying call (read only when jdk)
+	jdk     int    // the first line using ExecutorService, Executors., ExecutorUtil. or new Thread( (0: none)
+	modify  string // "<call>()": the first thread-modifying call (read only when jdk != 0)
+	modLine int    // the line of that call
 	jobLoop int    // the first loop line of a BSimpleJob run() with no isAlive() (the last such run() wins)
 }
 
@@ -83,15 +84,15 @@ func (r *run) threadFacts(s *source) threadFacts {
 		return t
 	}
 	for i, c := range code {
-		if !t.jdk && r.rx.has(c, notWord+`(Scheduled)?ExecutorService([^A-Za-z0-9_]|$)|`+notWord+`Executors`+sp+`*\.|`+notWord+`ExecutorUtil`+sp+`*\.|`+notWord+`new`+sp+`+Thread`+sp+`*\(`) {
-			t.jdk = true
+		if t.jdk == 0 && r.rx.has(c, notWord+`(Scheduled)?ExecutorService([^A-Za-z0-9_]|$)|`+notWord+`Executors`+sp+`*\.|`+notWord+`ExecutorUtil`+sp+`*\.|`+notWord+`new`+sp+`+Thread`+sp+`*\(`) {
+			t.jdk = i + 1
 		}
 		if t.modify != "" || !strings.Contains(c, ".") {
 			continue
 		}
 		c = r.rx.get(`currentThread`+sp+`*\(`+sp+`*\)`+sp+`*\.`+sp+`*interrupt`+sp+`*\(`).ReplaceAllLiteralString(c, "currentThread().selfInterrupt(")
 		if m, ok := r.rx.find(c, `\.`+sp+`*(shutdownNow|shutdown|interrupt|setPriority|setDaemon)`+sp+`*\(`); ok {
-			t.modify = r.rx.gsub(m, `[.([:space:]]`) + "() at line " + strconv.Itoa(i+1)
+			t.modify, t.modLine = r.rx.gsub(m, `[.([:space:]]`)+"()", i+1
 		}
 	}
 	if job {
@@ -188,14 +189,4 @@ func (r *run) managesExecution(data []byte) bool {
 		}
 	}
 	return false
-}
-
-// splitTwo is `read -r a b` over one line: a is the first IFS word, b the rest with its outer blanks trimmed.
-func splitTwo(s string) (string, string) {
-	s = strings.Trim(s, " \t\n")
-	i := strings.IndexAny(s, " \t\n")
-	if i < 0 {
-		return s, ""
-	}
-	return s[:i], strings.Trim(s[i:], " \t\n")
 }

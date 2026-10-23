@@ -2,7 +2,7 @@
 src
 -- want --
 exit 1
-FAIL  timer-ticket  @DIR@/src/C2.java: stopped() does not cancel ticket b (a cancel in a comment, a string or of another ticket does not count)
+FAIL  timer-ticket  @DIR@/src/C2.java:5  stopped() does not cancel ticket b (a cancel in a comment, a string or of another ticket does not count)
 -- src/C2.java --
 package demo;
 import javax.baja.sys.*;

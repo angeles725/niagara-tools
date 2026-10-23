@@ -2,7 +2,7 @@
 jtcreate/m-rt/src
 -- want --
 exit 0
-WARN  jdk-thread  @DIR@/jtcreate/m-rt/src/demo/BPoolSvc.java: BPoolSvc uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+WARN  jdk-thread  @DIR@/jtcreate/m-rt/src/demo/BPoolSvc.java:5  BPoolSvc uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- jtcreate/m-rt/src/demo/BPoolSvc.java --
 package demo;
 import javax.baja.sys.*;

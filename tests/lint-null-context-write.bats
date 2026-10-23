@@ -100,3 +100,21 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" != *"A.java:2"* ]]
   [[ "$output" == *"A.java:3"*"bql"* ]]
 }
+@test "NCW-stmt: a multi-line write and a (Context) null WARN at the call's line; a null outside the write's own arguments is clean (truth audit T2)" {
+  # Mutation: NCW-stmt -- matching the write on one line misses c.set(p,\n v,\n null) and (Context) null
+  printf '%s\n' 'class A { void f() {' '  c.set(p,' '      BDouble.make(2),' '      null);' \
+    '  c.set(p, BDouble.make(2), (Context) null);' '  a.set(p, v); b.foo(x, null);' '  c.set(p, foo(x, null));' '} }' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"; [ "$status" -eq 0 ]
+  [[ "$output" == *"A.java:2  null-Context write: c.set(p,"* ]]
+  [[ "$output" == *"A.java:5  null-Context write: c.set(p, BDouble.make(2), (Context) null);"* ]]
+  [ "$(printf '%s\n' "$output" | grep -c WARN)" -eq 2 ]
+}
+
+@test "NCW-symroot: a symlinked module root is walked like find -H, never a silent clean pass (issue #329)" {
+  # Mutation: NCW-symroot -- os.Lstat instead of os.Stat on the root in go/internal/lint/walk.go Walk lists no file and exits 0.
+  printf 'class A { void f(){ parent.set(prop, val, null); } }\n' > "$TMPDIR_T/M/src/A.java"
+  ln -s "$TMPDIR_T/M" "$TMPDIR_T/link"
+  run "$L" "$TMPDIR_T/link"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"lint-null-context-write"*"$TMPDIR_T/link/src/A.java:1"* ]]
+}

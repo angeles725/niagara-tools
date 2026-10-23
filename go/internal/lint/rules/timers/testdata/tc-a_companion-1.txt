@@ -2,7 +2,7 @@
 tca_ok
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/tca_ok/BStaggerClean.java: timer cancelled in stopped()
+PASS  timer-ticket  @DIR@/tca_ok/BStaggerClean.java:5  timer cancelled in stopped()
 -- src/Conformant.java --
 package demo;
 import javax.baja.sys.*;

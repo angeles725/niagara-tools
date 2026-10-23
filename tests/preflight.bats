@@ -23,6 +23,8 @@ bats_require_minimum_version 1.5.0
 
 load helpers/n4-fixtures
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   TMPDIR_T="$(mktemp -d)"
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
@@ -426,4 +428,12 @@ sample_kts_prepend() {
   run "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
   [ "$status" -eq 1 ]
   printf '%s\n' "$output" | grep -E '^FAIL  sample-sign ' | grep -qF 'allowDefaultProfile'
+}
+
+@test "PF-symroot: a symlinked gradle root lists its shipped build/ like find -H, same rows as the directory (issue #329)" {
+  # Mutation: PF-symroot -- dropping -H from the sample-build find PASSes sample-build under a symlinked root.
+  sample_nh
+  sample_tree "$TMPDIR_T/tls" "c:\\\\niagara\\\\niagara-4.15.4.24" "C:\\\\Users\\\\<username>\\\\Niagara4.15\\\\<brand>" 0 1
+  assert_symroot_same "$TMPDIR_T/tls" "$PREFLIGHT" --sample --jvm-dir "$JVMDIR" "$SNH" "$TMPDIR_T/tls"
+  printf "%s\n" "$output" | grep -E "^WARN  sample-build " | grep -qF "trafficLightServer-rt/build"
 }

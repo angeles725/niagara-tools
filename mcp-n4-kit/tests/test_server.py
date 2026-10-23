@@ -164,16 +164,61 @@ class TestProtocol(unittest.TestCase):
 
 
 class TestRobustness(unittest.TestCase):
-    @go_server.go_twin("jsonrpc", "in-process")
+    def make_server(self):
+        srv = go_server.make_server()
+        self.addCleanup(go_server.close_server, srv)
+        return srv
+
     def test_id_null_is_a_request_and_gets_a_reply(self):
-        srv = server.Server()
+        srv = self.make_server()
         out = json.loads(srv.handle_line('{"jsonrpc":"2.0","id":null,"method":"ping"}'))
         self.assertEqual(out, {"jsonrpc": "2.0", "id": None, "result": {}})
 
-    @go_server.go_twin("jsonrpc", "in-process")
     def test_message_without_id_is_still_a_notification(self):
-        srv = server.Server()
+        srv = self.make_server()
         self.assertIsNone(srv.handle_line('{"jsonrpc":"2.0","method":"ping"}'))
+
+    def test_replies_are_the_bytes_the_python_server_writes(self):
+        """tools/list (every schema), errors and odd ids, compared byte for byte with an
+        in-process Python server: the Go port's protocol-parity proof (plan slice S2)."""
+        srv, reference = self.make_server(), server.Server()
+        for line in ('{"jsonrpc":"2.0","id":2,"method":"tools/list"}',
+                     '{"id":3,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}',
+                     '{"id":[1.0,"\\u00e9",{"k":null}],"method":"nope"}',
+                     '{"id":4,"method":"tools/call","params":{"name":"n4_set_slot"}}',
+                     '{"id":5,"method":"tools/call","params":{"name":"n4_navigate",'
+                     '"arguments":{"depth":0}}}',
+                     '{"id":6,"method":"tools/call","params":{"name":"n4_navigate"}}',
+                     '\u00a0{"id":7,"method":"ping"}\x0b', '{bad', '7'):
+            self.assertEqual(srv.handle_line(line), reference.handle_line(line), line)
+
+    @staticmethod
+    def nested_id(depth):
+        """A ping whose request nests `depth` arrays/objects deep (the outer object counts)."""
+        inner = depth - 1
+        return '{"id":%s1%s,"method":"ping"}' % ("[" * inner, "]" * inner)
+
+    def test_nesting_up_to_the_limit_is_answered(self):
+        srv = self.make_server()
+        out = json.loads(srv.handle_line(self.nested_id(server.MAX_NESTING)))
+        self.assertEqual(out["result"], {})
+        self.assertEqual(json.dumps(out["id"]).count("["), server.MAX_NESTING - 1)
+
+    def test_deeper_nesting_is_a_parse_error_and_the_server_keeps_serving(self):
+        """R8-D15: CPython's json raised RecursionError (not ValueError) and killed serve."""
+        srv = self.make_server()
+        for depth in (server.MAX_NESTING + 1, 200000):
+            for line in (self.nested_id(depth), '{"a":' * depth + "1" + "}" * depth):
+                out = json.loads(srv.handle_line(line))
+                self.assertEqual(out, {"jsonrpc": "2.0", "id": None,
+                                       "error": {"code": -32700, "message": "parse error"}})
+        self.assertEqual(srv.dispatch(rpc("ping"))["result"], {})
+
+    def test_whitespace_around_a_line_is_python_str_strip(self):
+        srv = self.make_server()
+        self.assertIsNone(srv.handle_line("\u3000\x1c\x0c"))
+        out = json.loads(srv.handle_line('\u2028{"id":1,"method":"ping"}\x85'))
+        self.assertEqual(out["result"], {})
 
     @go_server.go_twin("jsonrpc", "in-process")
     def test_validate_supports_number_and_array(self):
@@ -736,6 +781,39 @@ class TestDanglingOutputs(StationTestCase):
                                             ord="station:|slot:/Folder")["dangling"]]
         self.assertEqual(sorted(paths), sorted(["/Folder/" + a[0], "/Folder/" + b[0]]))
 
+    def link_with_source_ord(self, source_ord):
+        """A -> B link whose sourceOrd the station reports as `source_ord`."""
+        a, b = self.add_with_out("A"), self.add_with_out("B")
+        self.box.check_links(a[1], "out", b[1], "in10", add=True)
+        self.fake.by_handle[b[1]].child("Link").child("sourceOrd").value = source_ord
+        return a, b
+
+    def test_a_slot_path_source_is_resolved_like_a_handle(self):
+        a, b = self.link_with_source_ord("station:|slot:/Folder/A")
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder")
+        self.assertEqual([d["path"] for d in out["dangling"]], ["/Folder/" + b[0]])
+        self.assertEqual(out["unknown"], [])
+        links = self.ok("n4_list_links", ord="station:|slot:/Folder")["links"]
+        self.assertEqual(links[0]["source_path"], "/Folder/" + a[0])
+
+    def test_an_unresolvable_source_makes_candidates_unknown_not_dangling(self):
+        a, b = self.link_with_source_ord("local:|foxs:|station:|bql:select x from y")
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder")
+        self.assertEqual(out["dangling"], [])
+        self.assertEqual(sorted(d["path"] for d in out["unknown"]),
+                         sorted(["/Folder/" + a[0], "/Folder/" + b[0]]))
+        self.assertEqual(out["unresolved_links"], [{
+            "target_path": "/Folder/" + b[0], "link_name": "Link",
+            "source_ord": "local:|foxs:|station:|bql:select x from y", "source_slot": "out"}])
+        self.assertIn("unknown", out["scope_note"])
+
+    def test_a_handle_source_outside_the_subtree_keeps_candidates_dangling(self):
+        a, b = self.add_with_out("A"), self.add_with_out("B")
+        self.box.check_links(a[1], "out", b[1], "in10", add=True)
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder/" + b[0], depth=1)
+        self.assertEqual((out["dangling"], out["unknown"]),
+                         ([{"path": "/Folder/" + b[0], "type": "kitControl:NumericConst"}], []))
+
 
 class TestDeepTargets(StationTestCase):
     """A link whose target is deeper than `depth` must not cause false positives."""
@@ -779,7 +857,10 @@ class TestStdioEndToEnd(unittest.TestCase):
             command + list(args), cwd=KIT_DIR, env=env,
             input="".join(json.dumps(m) + "\n" for m in lines), capture_output=True,
             text=True, timeout=60)
-        return proc, [json.loads(line) for line in proc.stdout.splitlines()]
+        replies = [json.loads(line) for line in proc.stdout.splitlines()]
+        for reply in replies:
+            go_server.skip_if_unported(reply)
+        return proc, replies
 
     @go_server.go_twin("cli", "in-process")
     def test_import_prints_nothing(self):

@@ -134,3 +134,24 @@ func TestMainEmptyLedgerAndStructureViolation(t *testing.T) {
 		t.Errorf("no kit envelope: got (%d, %q)", code, errs)
 	}
 }
+
+func TestCheck(t *testing.T) {
+	t.Parallel()
+	root := kit(t, fresh, map[string]string{"0000-archive-pre-2026-10-23.md": archiveText})
+	var diag bytes.Buffer
+	if !Check(root, &diag) || diag.String() != "" {
+		t.Errorf("fresh kit: Check = false or diagnostics %q", diag.String())
+	}
+	frag := "<!-- ledger: kit -->\n<!-- date: 2026-10-24 -->\n<!-- last-change-note: new -->\nlog: 2026-10-24 · new line\n"
+	if err := os.WriteFile(filepath.Join(root, "ledger.d", "2026-10-24-new.md"), []byte(frag), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(root + "/BUILD-STATE.md")
+	diag.Reset()
+	if Check(root, &diag) || !strings.HasPrefix(diag.String(), "gen-build-state: "+root+"/BUILD-STATE.md is stale vs ledger.d/;") {
+		t.Errorf("stale kit: Check = true or diagnostics %q", diag.String())
+	}
+	if after, _ := os.ReadFile(root + "/BUILD-STATE.md"); string(after) != string(before) {
+		t.Error("Check rewrote BUILD-STATE.md")
+	}
+}

@@ -1,0 +1,45 @@
+-- root --
+m-rt/src
+-- want --
+exit 1
+FAIL  discarded-ticket  @DIR@/m-rt/src/demo/BLeak.java:7  Clock.schedule result is discarded — assign it to a Clock.Ticket field
+FAIL  timer-ticket  @DIR@/m-rt/src/demo/BLeak.java:5  schedules a Clock ticket but has no stopped() override to cancel it
+FAIL  timer-ticket  @DIR@/m-rt/src/demo/BMiss.java:4  stopped() does not cancel ticket a (a cancel in a comment, a string or of another ticket does not count)
+FAIL  companion-flag  @DIR@/m-rt/src/demo/BLeak.java:9  flag 'busy' set beside Clock.schedule* not cleared in stopped()/started()
+FAIL  jdk-thread  @DIR@/m-rt/src/demo/BExec.java:7  BExec modifies a thread (shutdownNow()) but m-rt/module-permissions.xml requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+-- m-rt/module-permissions.xml --
+<permissions>
+  <niagara-permission-groups type="station">
+    <req-permission><name>NETWORK_COMMUNICATION</name></req-permission>
+  </niagara-permission-groups>
+</permissions>
+-- m-rt/src/demo/BExec.java --
+package demo;
+import java.util.concurrent.*;
+public class BExec extends BComponent
+{
+  private ExecutorService executorService;
+  public void started() { executorService = Executors.newSingleThreadExecutor(); }
+  public void stopped() { executorService.shutdownNow(); }
+}
+-- m-rt/src/demo/BLeak.java --
+package demo;
+import javax.baja.sys.*;
+public final class BLeak extends BComponent {
+  // a comment line
+  private Clock.Ticket ticket;
+  public void kick() {
+    Clock.schedule(this, BRelTime.makeSeconds(1), kicked, null);
+    ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null);
+    busy = true;
+  }
+  private boolean busy;
+}
+-- m-rt/src/demo/BMiss.java --
+package demo;
+import javax.baja.sys.*;
+public final class BMiss extends BComponent {
+  private Clock.Ticket a;
+  public void arm() { a = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
+  public void stopped() { other.cancel(); }
+}

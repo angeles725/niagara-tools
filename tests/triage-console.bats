@@ -15,6 +15,8 @@
 # NAMED MUTATION (post-green): drop the own-frame filter -> the jetty-only NullPointerException row
 # appears, so TR1's "no jetty row" assertion flips.
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   TC="$KIT/toolbelt/triage-console.sh"
@@ -137,4 +139,10 @@ setup() {
   [[ "$output" == *"2"* ]]                         # cross-file count = 2 (one row, not one-per-file)
   [[ "$output" == *"16:20:10"* ]] && [[ "$output" == *"18:58:19"* ]]   # first ts from a.txt, last from b.txt
   [[ "$output" == *"console-multi"* ]]             # subject is the directory basename when a dir is passed
+}
+
+@test "TR-symroot: a symlinked console directory is read like find -H, same row as the directory (issue #329)" {
+  # Mutation: TR-symroot -- dropping -H from the console find reads no *.txt under a symlinked directory.
+  assert_symroot_same "$FX/console-multi" "$TC" --package com.angeles "$FX/console-multi"
+  [ "$status" -eq 1 ] && [[ "$output" == *"time <= 0"* ]]
 }

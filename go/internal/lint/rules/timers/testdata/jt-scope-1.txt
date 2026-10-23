@@ -2,7 +2,7 @@
 jtscope/m-rt/src
 -- want --
 exit 1
-FAIL  jdk-thread  @DIR@/jtscope/m-rt/src/demo/BExec.java: BExec modifies a thread (shutdownNow() at line 8) but @DIR@/jtscope/m-rt/module-permissions.xml requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+FAIL  jdk-thread  @DIR@/jtscope/m-rt/src/demo/BExec.java:8  BExec modifies a thread (shutdownNow()) but m-rt/module-permissions.xml requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
 -- jtscope/m-rt/module-permissions.xml --
 <permissions>
   <niagara-permission-groups type="station">
