@@ -5,6 +5,7 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
@@ -27,5 +28,6 @@ func All() []lint.Spec {
 		nosystemout.Spec(),
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
+		clockzerofloor.Spec(),
 	}
 }
