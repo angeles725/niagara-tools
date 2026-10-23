@@ -306,13 +306,40 @@ class RawStation:
                 return
             with conn:
                 conn.settimeout(5)
-                data = b""
-                while b"\r\n\r\n" not in data:  # the request head; a POST body is small
-                    chunk = conn.recv(65536)
-                    if not chunk:
-                        break
-                    data += chunk
-                conn.sendall(self.answer)
+                try:
+                    self._answer(conn)
+                except OSError:  # the client gave up: nothing left to prove on this socket
+                    pass
+
+    def _answer(self, conn):
+        """Read the whole request, answer, then end with a FIN, never a RST.
+
+        Closing a socket that still holds unread request bytes makes Linux send RST, and the
+        client then sees "Connection reset by peer" instead of the short body. So the head
+        and its Content-Length body are read first, the write side is shut down (FIN after
+        the answer), and the socket is drained until the client closes.
+        """
+        data = b""
+        while b"\r\n\r\n" not in data:
+            chunk = conn.recv(65536)
+            if not chunk:
+                return
+            data += chunk
+        head, _, body = data.partition(b"\r\n\r\n")
+        length = 0
+        for line in head.split(b"\r\n")[1:]:
+            name, _, value = line.partition(b":")
+            if name.strip().lower() == b"content-length":
+                length = int(value.strip())
+        while len(body) < length:
+            chunk = conn.recv(65536)
+            if not chunk:
+                return
+            body += chunk
+        conn.sendall(self.answer)
+        conn.shutdown(socket.SHUT_WR)
+        while conn.recv(65536):
+            pass
 
     def stop(self):
         self._sock.close()
