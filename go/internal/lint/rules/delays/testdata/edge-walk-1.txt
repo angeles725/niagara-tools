@@ -1,0 +1,25 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/Z.java:1  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/a/A.java:1  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/a/b/Z.java:1  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/build/Z.java:1  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+-- stderr --
+-- t/.deploy-baseline/Z.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/B.JAVA --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/Z.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/a/A.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/a/b/README.txt --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/a/b/Z.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/build/Z.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }
+-- t/x-worktrees/Z.java --
+class Z { void a() { Clock.schedule(this, BRelTime.make(0), go, null); } }

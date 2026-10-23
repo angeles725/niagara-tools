@@ -1,0 +1,7 @@
+-- args --
+@DIR@/t
+-- want --
+exit 0
+-- stderr --
+-- t/a.txt --
+x

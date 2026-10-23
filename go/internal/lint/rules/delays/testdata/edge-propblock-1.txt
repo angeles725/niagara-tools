@@ -1,0 +1,44 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+WARN  lint-delays     @DIR@/t/P.java:27  facet-floor  slot alpha facet MIN=180000ms (advisory)
+FAIL  lint-delays     @DIR@/t/P.java:28  facet-min-zero  slot beta has no MIN facet — can schedule 0
+FAIL  lint-delays     @DIR@/t/P.java:29  facet-min-zero  slot gamma facet MIN=0 — schedule can receive 0
+WARN  lint-delays     @DIR@/t/P.java:30  facet-floor  slot delta facet MIN=3600000ms (advisory)
+FAIL  lint-delays     @DIR@/t/P.java:31  unfloored  unknown getter getEpsilon — cannot verify floor
+-- stderr --
+-- t/P.java --
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(
+  name = "alpha",
+  type = "BRelTime",
+  defaultValue = "BRelTime.make(5)",
+  facets = @Facet("BFacets.make(BFacets.MIN, BRelTime.makeMinutes(3))")
+)
+@NiagaraProperty(name = "beta", type = "BRelTime", defaultValue = "BRelTime.make(5)")
+@NiagaraProperty(name = "gamma", type = "BRelTime", defaultValue = "BRelTime.make(5)",
+  facets = @Facet("BFacets.make(BFacets.MIN, someMin)"))
+@NiagaraProperty(name = "delta", type = "BRelTime", defaultValue = "BRelTime.make(5)",
+  facets = @Facet("BFacets.make(BFacets.MIN,BRelTime.makeHours(1))"))
+public class P extends BComponent {
+  public BRelTime getAlpha() { return (BRelTime) get(alpha); }
+  public BRelTime getBeta() { return (BRelTime) get(beta); }
+  public BRelTime getGamma() { return (BRelTime) get(gamma); }
+  public BRelTime getDelta() { return (BRelTime) get(delta); }
+  public BRelTime getEpsilon() {
+    // nothing
+    //
+    //
+    return (BRelTime) get("epsilon");
+  }
+  void a() {
+    Clock.schedule(this, getAlpha(), go, null);
+    Clock.schedule(this, getBeta(), go, null);
+    Clock.schedule(this, getGamma(), go, null);
+    Clock.schedule(this, getDelta(), go, null);
+    Clock.schedule(this, getEpsilon(), go, null);
+  }
+}

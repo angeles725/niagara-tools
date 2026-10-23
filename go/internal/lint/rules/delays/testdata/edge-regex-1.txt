@@ -1,0 +1,42 @@
+Declared difference from the bash recording: gawk died on the invalid dynamic regexp built from
+"(long" (stderr "awk: cmd. line:129: (FILENAME=@DIR@/t/R2.java FNR=10) fatal: invalid regexp: Unmatched ( or \(: ..."),
+dropped the rest of R2.java and the lint still exited 1. The port keeps the rows printed before the
+crash but fails closed: env line, exit 3.
+-- args --
+@DIR@/t
+-- want --
+exit 3
+FAIL  lint-delays     @DIR@/t/R.java:5  unfloored  cannot verify floor of variable: a.b
+FAIL  lint-delays     @DIR@/t/R.java:6  unfloored  cannot verify floor of variable: x + 1
+FAIL  lint-delays     @DIR@/t/R.java:7  unfloored  cannot verify floor of variable: arr[i]
+FAIL  lint-delays     @DIR@/t/R.java:8  unfloored  cannot verify floor of variable: x * 2
+FAIL  lint-delays     @DIR@/t/R.java:9  unfloored  cannot verify floor of variable: x$y
+FAIL  lint-delays     @DIR@/t/R2.java:6  unfloored  cannot verify floor of variable: q
+-- stderr --
+lint-delays: cannot scan @DIR@/t/R2.java: guard pattern for "(long" at line 7 is not a valid regular expression (awk died on it): error parsing regexp: missing closing ): `(long[[:space:]]*>[[:space:]]*0`
+-- t/R.java --
+package demo;
+import javax.baja.sys.*;
+class R extends BComponent {
+  void a(long x, long[] arr, int i) {
+    Clock.schedule(this, BRelTime.make(a.b), go, null);
+    Clock.schedule(this, BRelTime.make(x + 1), go, null);
+    Clock.schedule(this, BRelTime.make(arr[i]), go, null);
+    Clock.schedule(this, BRelTime.make(x * 2), go, null);
+    Clock.schedule(this, BRelTime.make(x$y), go, null);
+  }
+}
+-- t/R2.java --
+package demo;
+import javax.baja.sys.*;
+class R2 extends BComponent {
+  void a(long x) {
+    long q = x;
+    Clock.schedule(this, BRelTime.make(q), go, null);
+    Clock.schedule(this, BRelTime.make((long) x), go, null);
+    Clock.schedule(this, BRelTime.make(5), go, null);
+  }
+}
+-- t/R3.java --
+package demo;
+class R3 { void a() { Clock.schedule(this, BRelTime.make(5), go, null); } }
