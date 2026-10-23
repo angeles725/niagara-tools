@@ -26,6 +26,35 @@ installs any version ≥ floor. A 2-part floor (e.g., `4.14`) fails lint L7. `[e
 `build.gradle.kts`, not in any individual part `.kts`. The plugin stamps every sibling
 `<dependency>` with `major.minor` (2-part) from this value. `[ev: client-module-version-key memory]`
 
+### 1.1 · Supertype modules and the part build script
+
+**Depend on the module of every supertype, not only the type's own module.** javac needs each superclass and
+implemented interface on the compile classpath. Course Lab 10 needed three for two types: `api(":history-rt")`
+for `BHistoryToCsv`, `api(":file-rt")` because it extends `com.tridium.file.exporters.BITableToCsv`, and
+`api(":bql-rt")` because `BHistoryDatabase` implements `javax.baja.bql.BIRelational` (javap on 4.15.6.20 jars).
+Symptoms: javac `class file for <X> not found`; IntelliJ shows no class between the type and `Object`, then
+"BValue cannot be cast". Find the chain with `javap -cp <niagara_home>/modules/<mod>.jar <class>` and the
+owning jar with `unzip -l`. The `build.sh` hint that maps the missing class to its `api(":<mod>")` line is owed
+(G60). `[ev: course Labs/Lab Instructions.pdf p81-86]` `[ev: retro n4-course-build-deps-permissions-signing Δ1]`
+`[deferred: retro n4-course-build-deps-permissions-signing Δ1]`
+
+**Part build script (`<part>.gradle.kts`)** — the course `slides-rt.gradle.kts` is the reference shape
+(`Slide Code/slides/slides-rt/slides-rt.gradle.kts:8-76`; tasks and dependency forms: `Slides/6 Gradle and
+Permissions.pdf` p6-18):
+- `plugins { id("com.tridium.niagara-module"); id("com.tridium.niagara-signing"); id("com.tridium.bajadoc");
+  id("com.tridium.niagara-jacoco"); id("com.tridium.niagara-annotation-processors");
+  id("com.tridium.convention.niagara-home-repositories") }` — signing also applies at the root.
+- `moduleManifest { moduleName.set("<mod>"); runtimeProfile.set(rt) }`.
+- Dependency forms by release: 4.12 and older `compile "Tridium:alarm-rt:4.12"`; 4.13 `api("Tridium:alarm-rt")`;
+  4.14 and newer `api(":alarm-rt")`, `nre(":nre")`, `api(project(":<sibling>-rt"))`.
+- Non-source files in the jar: `tasks.named<Jar>("jar") { from("src") { include("<pkg path>/**/*.png") } }`.
+- `tasks.named<Bajadoc>("bajadoc") { options.encoding = "utf-8"; includePackage("<pkg>") }` — every package must
+  be listed by hand and the list drifts: the course's own file names packages that do not exist under its
+  `src/` and misses ones that do. A lint comparing the two sets is owed (G62).
+- Tasks: `slotomatic` (generate from annotations), `jar` (compile, assemble, copy into `<niagara_home>/modules`),
+  `clean` (also deletes the jar from `modules`), `moduleTestJar`; qualify them (`:<part>:jar`).
+`[ev: retro n4-course-authoring-files-and-libraries Δ4]`
+
 ---
 
 ## 2 · Own-type registration (`module-include.xml` → `module.xml`)
