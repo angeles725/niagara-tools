@@ -804,3 +804,15 @@ JAVA
   run grep -c 'awk -v sel=' "$RM"
   [ "$output" = "1" ]
 }
+
+@test "RM-exit-capture: every member capture keeps its exit on the same line -- no bare \$? after _o=\$(...) (r9 M3)" {
+  # Mutation: RM-exit-capture -- a bare `_o=$(member)` with "$?" read on the next line aborts the report under
+  # errexit on the first failing member and breaks as soon as a command is inserted between the two lines.
+  run grep -c '^[^#]*_o=\$(' "$RM"
+  [ "$output" -gt 0 ]
+  local total="$output"
+  run grep -c '^[^#]*_rc=0; _o=\$(.*) || _rc=\$?$' "$RM"
+  [ "$output" = "$total" ]
+  run grep -c '^[^#]*"\$?"' "$RM"
+  [ "$output" = "0" ]
+}

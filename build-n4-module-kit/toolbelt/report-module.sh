@@ -235,7 +235,9 @@ advisory_member() {
 #   rows  PASS "clean" when no row was relayed
 #   fail  PASS "clean" when no FAIL row was relayed (WARN rows do not block)
 # The caller runs the member itself ("$TOOLBELT/<lint>.sh" in command position: gen-lint-index.sh reads
-# those invocations for the INDEX.md Auto column).
+# those invocations for the INDEX.md Auto column) and captures its exit on the same line,
+# `_rc=0; _o=$(member) || _rc=$?`, so a failing member never aborts the report under errexit and no
+# command can slip between the capture and its status (pinned by RM-exit-capture).
 lint_rows() {
   if [ "$3" -eq 3 ]; then emit "$1" ERROR "$2" "env fault (exit 3)"; HAD_ENV=1; return 0; fi
   member_rows "$1" "$4" "$5" "${7:-site}" "${8:-}"
@@ -423,8 +425,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # ----------------------------------------------------------------
   if have_src lint-delays; then
     # Row: STATUS  lint-delays  /path/file.java:N  reason... (fields separated by two or more spaces)
-    _o=$("$TOOLBELT/lint-delays.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-delays "$?" "$_o" 'FAIL|WARN' -
+    _rc=0; _o=$("$TOOLBELT/lint-delays.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-delays "$_rc" "$_o" 'FAIL|WARN' -
   fi
 
   # ----------------------------------------------------------------
@@ -434,8 +436,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   #     aggregate as WARN (not FAIL) in the report; usage error = ERROR.
   # ----------------------------------------------------------------
   if have_src lint-demand-scope; then
-    _o=$("$TOOLBELT/lint-demand-scope.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-demand-scope "$?" "$_o" WARN -
+    _rc=0; _o=$("$TOOLBELT/lint-demand-scope.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-demand-scope "$_rc" "$_o" WARN -
   fi
 
   # ----------------------------------------------------------------
@@ -443,8 +445,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # ----------------------------------------------------------------
   if have_src lint-silent-protection; then
     # ADVISORY console-only keeps its own severity [ev: retro alarm-console-design Δ3]
-    _o=$("$TOOLBELT/lint-silent-protection.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-silent-protection "$?" "$_o" 'FAIL|WARN|ADVISORY' -
+    _rc=0; _o=$("$TOOLBELT/lint-silent-protection.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-silent-protection "$_rc" "$_o" 'FAIL|WARN|ADVISORY' -
   fi
 
   # ----------------------------------------------------------------
@@ -484,48 +486,48 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # 5.6. lint-ext-writable-shape.sh <artifact>/src (Campaign 9 PR10; D9b: SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-ext-writable-shape; then
-    _o=$("$TOOLBELT/lint-ext-writable-shape.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-ext-writable-shape "$?" "$_o" 'FAIL|WARN' -
+    _rc=0; _o=$("$TOOLBELT/lint-ext-writable-shape.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-ext-writable-shape "$_rc" "$_o" 'FAIL|WARN' -
   fi
 
   # ----------------------------------------------------------------
   # 5.7. lint-no-system-out.sh <artifact>/src (FAIL; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-no-system-out; then
-    _o=$("$TOOLBELT/lint-no-system-out.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-no-system-out "$?" "$_o" FAIL rows
+    _rc=0; _o=$("$TOOLBELT/lint-no-system-out.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-no-system-out "$_rc" "$_o" FAIL rows
   fi
 
   # ----------------------------------------------------------------
   # 5.8. lint-clock-zero-floor.sh <artifact>/src (WARN; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-clock-zero-floor; then
-    _o=$("$TOOLBELT/lint-clock-zero-floor.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-clock-zero-floor "$?" "$_o" WARN -
+    _rc=0; _o=$("$TOOLBELT/lint-clock-zero-floor.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-clock-zero-floor "$_rc" "$_o" WARN -
   fi
 
   # ----------------------------------------------------------------
   # 5.9. lint-null-context-write.sh <artifact>/src (WARN; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-null-context-write; then
-    _o=$("$TOOLBELT/lint-null-context-write.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-null-context-write "$?" "$_o" WARN -
+    _rc=0; _o=$("$TOOLBELT/lint-null-context-write.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-null-context-write "$_rc" "$_o" WARN -
   fi
 
   # ----------------------------------------------------------------
   # 5.10. lint-bql-string-concat.sh <artifact>/src (WARN; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-bql-string-concat; then
-    _o=$("$TOOLBELT/lint-bql-string-concat.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-bql-string-concat "$?" "$_o" WARN -
+    _rc=0; _o=$("$TOOLBELT/lint-bql-string-concat.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-bql-string-concat "$_rc" "$_o" WARN -
   fi
 
   # ----------------------------------------------------------------
   # 5.11. lint-arbitrary-ord.sh <artifact>/src (WARN; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-arbitrary-ord; then
-    _o=$("$TOOLBELT/lint-arbitrary-ord.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-arbitrary-ord "$?" "$_o" WARN -
+    _rc=0; _o=$("$TOOLBELT/lint-arbitrary-ord.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-arbitrary-ord "$_rc" "$_o" WARN -
   fi
 
   # ----------------------------------------------------------------
@@ -534,8 +536,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   case "$ANAME" in
     *-se)
       if have_src lint-se-display; then
-        _o=$("$TOOLBELT/lint-se-display.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-se-display "$?" "$_o" FAIL rows
+        _rc=0; _o=$("$TOOLBELT/lint-se-display.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-se-display "$_rc" "$_o" FAIL rows
       fi
     ;;
   esac
@@ -545,8 +547,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # ----------------------------------------------------------------
   case "$ANAME" in
     *-ux)
-      _o=$("$TOOLBELT/lint-jasmine-ux.sh" "$ADIR" 2>&1)
-      lint_rows "$ANAME" lint-jasmine-ux "$?" "$_o" WARN - nosite
+      _rc=0; _o=$("$TOOLBELT/lint-jasmine-ux.sh" "$ADIR" 2>&1) || _rc=$?
+      lint_rows "$ANAME" lint-jasmine-ux "$_rc" "$_o" WARN - nosite
     ;;
   esac
 
@@ -562,26 +564,26 @@ for ADIR in "${ARTIFACTS[@]}"; do
     *-rt)
       # 5.14 lint-subscribe-without-unsubscribe
       if have_src lint-subscribe-without-unsubscribe; then
-        _o=$("$TOOLBELT/lint-subscribe-without-unsubscribe.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-subscribe-without-unsubscribe "$?" "$_o" WARN -
+        _rc=0; _o=$("$TOOLBELT/lint-subscribe-without-unsubscribe.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-subscribe-without-unsubscribe "$_rc" "$_o" WARN -
       fi
 
       # 5.15 lint-recovery-path (FAIL; exit 1 = FAIL rows)
       if have_src lint-recovery-path; then
-        _o=$("$TOOLBELT/lint-recovery-path.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-recovery-path "$?" "$_o" FAIL rows
+        _rc=0; _o=$("$TOOLBELT/lint-recovery-path.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-recovery-path "$_rc" "$_o" FAIL rows
       fi
 
       # 5.16 lint-config-sanity (CS1/CS2 FAIL; CS3 WARN)
       if have_src lint-config-sanity; then
-        _o=$("$TOOLBELT/lint-config-sanity.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-config-sanity "$?" "$_o" 'FAIL|WARN' fail
+        _rc=0; _o=$("$TOOLBELT/lint-config-sanity.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-config-sanity "$_rc" "$_o" 'FAIL|WARN' fail
       fi
 
       # 5.17 lint-status-parity (WARN; called without --strict)
       if have_src lint-status-parity; then
-        _o=$("$TOOLBELT/lint-status-parity.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-status-parity "$?" "$_o" WARN -
+        _rc=0; _o=$("$TOOLBELT/lint-status-parity.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-status-parity "$_rc" "$_o" WARN -
       fi
     ;;
   esac
@@ -701,8 +703,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   case "$ANAME" in
     *-wb)
       if have_src lint-wb-threading; then
-        _o=$("$TOOLBELT/lint-wb-threading.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-wb-threading "$?" "$_o" '' - swap WARN
+        _rc=0; _o=$("$TOOLBELT/lint-wb-threading.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-wb-threading "$_rc" "$_o" '' - swap WARN
       fi
     ;;
   esac
@@ -711,8 +713,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # 5.21. lint-no-md5-credential-digest.sh (WARN; SKIP if no src/)
   # ----------------------------------------------------------------
   if have_src lint-no-md5-credential-digest; then
-    _o=$("$TOOLBELT/lint-no-md5-credential-digest.sh" "$ADIR/src" 2>&1)
-    lint_rows "$ANAME" lint-no-md5-credential-digest "$?" "$_o" WARN rows
+    _rc=0; _o=$("$TOOLBELT/lint-no-md5-credential-digest.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-no-md5-credential-digest "$_rc" "$_o" WARN rows
   fi
 
   # ----------------------------------------------------------------
@@ -723,8 +725,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
   case "$ANAME" in
     *-wb)
       if have_src lint-wb-file-chooser; then
-        _o=$("$TOOLBELT/lint-wb-file-chooser.sh" "$ADIR/src" 2>&1)
-        lint_rows "$ANAME" lint-wb-file-chooser "$?" "$_o" WARN -
+        _rc=0; _o=$("$TOOLBELT/lint-wb-file-chooser.sh" "$ADIR/src" 2>&1) || _rc=$?
+        lint_rows "$ANAME" lint-wb-file-chooser "$_rc" "$_o" WARN -
       fi
     ;;
   esac
@@ -733,32 +735,32 @@ for ADIR in "${ARTIFACTS[@]}"; do
   # 5.23. lint-size.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D2
   # ----------------------------------------------------------------
   if have_src lint-size; then
-    _o=$("$TOOLBELT/lint-size.sh" "$ADIR/src" 2>&1)
-    advisory_member "$ANAME" lint-size "$?" "$_o"
+    _rc=0; _o=$("$TOOLBELT/lint-size.sh" "$ADIR/src" 2>&1) || _rc=$?
+    advisory_member "$ANAME" lint-size "$_rc" "$_o"
   fi
 
   # ----------------------------------------------------------------
   # 5.24. lint-license-isoperational-gate.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D3
   # ----------------------------------------------------------------
   if have_src lint-license-isoperational-gate; then
-    _o=$("$TOOLBELT/lint-license-isoperational-gate.sh" "$ADIR/src" 2>&1)
-    advisory_member "$ANAME" lint-license-isoperational-gate "$?" "$_o"
+    _rc=0; _o=$("$TOOLBELT/lint-license-isoperational-gate.sh" "$ADIR/src" 2>&1) || _rc=$?
+    advisory_member "$ANAME" lint-license-isoperational-gate "$_rc" "$_o"
   fi
 
   # ----------------------------------------------------------------
   # 5.25. lint-set-null-ord.sh <artifact>/src (advisory WARN; SKIP if no src/) — deferred-lints D4
   # ----------------------------------------------------------------
   if have_src lint-set-null-ord; then
-    _o=$("$TOOLBELT/lint-set-null-ord.sh" "$ADIR/src" 2>&1)
-    advisory_member "$ANAME" lint-set-null-ord "$?" "$_o"
+    _rc=0; _o=$("$TOOLBELT/lint-set-null-ord.sh" "$ADIR/src" 2>&1) || _rc=$?
+    advisory_member "$ANAME" lint-set-null-ord "$_rc" "$_o"
   fi
 
   # ----------------------------------------------------------------
   # 5.26. lint-ws-placement.sh <artifact>/src (advisory WARN; SKIP if no src/) — ws-placement W3
   # ----------------------------------------------------------------
   if have_src lint-ws-placement; then
-    _o=$("$TOOLBELT/lint-ws-placement.sh" "$ADIR/src" 2>&1)
-    advisory_member "$ANAME" lint-ws-placement "$?" "$_o"
+    _rc=0; _o=$("$TOOLBELT/lint-ws-placement.sh" "$ADIR/src" 2>&1) || _rc=$?
+    advisory_member "$ANAME" lint-ws-placement "$_rc" "$_o"
   fi
 
   # ----------------------------------------------------------------
@@ -791,20 +793,20 @@ done
 # ----------------------------------------------------------------
 # 8. lint-agent-on-shape.sh <module-root> — once per run (FAIL)
 # ----------------------------------------------------------------
-_o=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1)
-lint_rows "(module)" lint-agent-on-shape "$?" "$_o" FAIL rows
+_rc=0; _o=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+lint_rows "(module)" lint-agent-on-shape "$_rc" "$_o" FAIL rows
 
 # ----------------------------------------------------------------
 # 9. lint-uberjar-api-conflict.sh <module-root> — once per run (WARN)
 # ----------------------------------------------------------------
-_o=$("$TOOLBELT/lint-uberjar-api-conflict.sh" "$MODULE_ROOT" 2>&1)
-lint_rows "(module)" lint-uberjar-api-conflict "$?" "$_o" WARN - base
+_rc=0; _o=$("$TOOLBELT/lint-uberjar-api-conflict.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+lint_rows "(module)" lint-uberjar-api-conflict "$_rc" "$_o" WARN - base
 
 # ----------------------------------------------------------------
 # 10. lint-structure.sh <module-root> — once per run (FAIL)
 # ----------------------------------------------------------------
-_o=$("$TOOLBELT/lint-structure.sh" "$MODULE_ROOT" 2>&1)
-lint_rows "(module)" lint-structure "$?" "$_o" 'FAIL|WARN' fail
+_rc=0; _o=$("$TOOLBELT/lint-structure.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+lint_rows "(module)" lint-structure "$_rc" "$_o" 'FAIL|WARN' fail
 
 # ----------------------------------------------------------------
 # 11. lint-write-path.sh <module-root> — once per run (FAIL on uncovered;
@@ -829,8 +831,8 @@ fi
 #     (class-file major > 52). A bundled jar with major > 52 throws a raw
 #     UnsupportedClassVersionError at module load, bypassing catch(Exception).
 # ----------------------------------------------------------------
-_o=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1)
-lint_rows "(module)" lint-bundled-jar-class-version "$?" "$_o" FAIL rows base
+_rc=0; _o=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+lint_rows "(module)" lint-bundled-jar-class-version "$_rc" "$_o" FAIL rows base
 
 # ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)
