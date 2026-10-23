@@ -559,6 +559,10 @@ cursor recipe stays owed (WU-P0-6).
   states both and leaves "which remote surfaces ask canWrite" not verified. scc Δ5's `NoSuchSlotException`: javadoc
   (docSource 4.14.0.162 `BComplex.java:686-697`) vs a `Property` cast in the 4.14.0.162 body (`ComplexSlotMap.java:371-373`);
   the rule avoids the call (K30). Owed Go lints G29 `callback-running-guard`, G32 `slot-api-traps`.
+  **Extensions FOLDED** (U11, 2026-10-23; slo Δ2, Δ3): `types/logic-authoring.md` § Generated accessors and slot declaration
+  order (primitive accessors from devkit-wb 4.14.0.162 `PropertyProcessor.java:40-91`; low-before-high order). Premise
+  corrected: slo Δ3's "a later reorder is a schema change" — a `.bog` binds by name (`schema-risk.sh` `reorder_slot,SAFE`);
+  the reorder changes the operator's view only. Owed Go lint G96 `slot-pair-order`.
 
 ### C37 — Concurrency doctrine: no intrinsic locks, named threads, callback thread map
 - **Sources:** tjd#Δ4 (primary: `lint-intrinsic-lock.sh`) · tjd#Δ5 extends (naming/priority; reinforces rac Δ1's `defaultThreadFactory`) · poh#Δ1 extends (callback → thread map)
@@ -615,6 +619,9 @@ cursor recipe stays owed (WU-P0-6).
   `templates/moduleTest-include.xml`, `METHODOLOGY.md` tier note. LEFT: `scaffold-module.sh` emission (outside the
   surface); the structural-test advisory is owed as Go lint G34 `structural-tests` (a new check, not a small edit of
   L12). Whether 4.14+ tooling still discovers the older layout is `[INFER]`. Pin KPT1.
+  **Doc half of the emission FOLDED** (U11, 2026-10-23; tpb Δ6): `types/structure.md` § What the scaffold emits today (copy the
+  template by hand; the § PASS state stub is not well-formed XML). The fixture + scaffold emission is owed as G97
+  `fixture-moduletest-include` (`ledger.d/2026-10-23-r8-u11-leftovers.md`); the stub-block fix is an owed pointer (P4).
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
@@ -685,6 +692,9 @@ cursor recipe stays owed (WU-P0-6).
   devguide 4.15.6.20 `security/securityManager.txt:44-124`, `requestingPermissions.txt:40-80,142,596,653`). LEFT: the
   fixture copy and `scaffold-module.sh` emission (outside this unit's edit surface); the lint half is owed Go lint G21
   `permissions-xml`. Pin KPS2.
+  **Doc half of the fixture FOLDED** (U11, 2026-10-23; afl Δ2): `types/structure.md` § What the scaffold emits today — the fixtures'
+  `<modulePermissions/>` root is copied into `META-INF/module.xml` as is and never read (baja 4.14.0.162 `NModule.java:442-452`
+  reads only `<permissions>`). The fixture replacement is owed as G98 `fixture-permissions`.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
@@ -735,6 +745,9 @@ cursor recipe stays owed (WU-P0-6).
   sum as the example). LEFT: cex Δ1's `SOURCES.md` § Exemplar source and `corpus-index.md` rows, and the `skill/SKILL.md`
   step-2 line — all three files are outside this unit's edit surface; the one-time "never"/"forbidden" sweep. Owed Go
   lint G38 `absolute-claims` and Go tool G39 `count-retro-deltas`.
+  U11 (2026-10-23): cex Δ1 still outside the surface; its exact `SOURCES.md` and `corpus-index.md` rows are recorded as owed
+  pointer P1 in `ledger.d/2026-10-23-r8-u11-leftovers.md` (`[deferred: …Δ1]`); hwf Δ1 (copy after a diff) FOLDED in
+  `METHODOLOGY.md` § Hands-on work, helper owed G93 `diff-vs-reference`.
 
 ### C52 — Client parity ticket (course convention wins on five points)
 - **Sources:** poh#Δ3 (primary)
@@ -803,6 +816,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: live 2026-10-16 BLimiter Max=25 Min=75]`.
 - **Target:** `types/logic.md` § Safety fail-modes & timers.
 - **Lint-able:** no. **Fold type:** doc rule.
+- **Fold status:** FOLDED (U11, 2026-10-23; slo Δ4): `types/logic.md` § Operator-entered bounds (symptom derived from
+  `BLimiter.java:159-176`: `out` = 75 below 75 and 25 otherwise; remedy `[INFER]`; a validator misses link-fed bounds).
 
 ---
 
@@ -812,6 +827,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** pps#Δ2 (primary) · pps#Δ3 extends
 - **Evidence:** `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:25`, corpus B1325.
 - **Target:** `types/logic-authoring.md:208-211`, `METHODOLOGY.md:44-52`. **Lint-able:** partial. **Fold type:** new doc section.
+- **Fold status:** FOLDED (U10, `docs/r8-u10-platform-templates`, 2026-10-23; pps Δ2, Δ3): `types/logic-authoring.md` § Templates (palette entry ≠ `.ntpl`, Shipping a template module, What breaks on a module or template upgrade). Landed in logic-authoring only; the `METHODOLOGY.md:44-52` pointer is owed (outside the unit's surface). Owed Go lint G92 `ntpl-manifest-deps`. The `BConfigBinding` slot-rename breakage stays `[INFER]` (B1325-G1).
 
 ### C54 — Lexicon resolution chain and lexicon-only modules
 - **Sources:** lux#Δ2 (primary) · pps#Δ5 extends
@@ -953,16 +969,19 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** pps#Δ9 (primary)
 - **Evidence:** `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt`, corpus B1341 rows 2-6.
 - **Target:** `types/distribution.md` Software Manager §, `BUILD-LOOP.md:207`. **Lint-able:** no. **Fold type:** doc section.
+- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ9): new `types/platform.md` § 1 (runtime profiles, Configure Runtime Profiles wizard) and § 2 (Software Manager install/upgrade/uninstall, Station Copier); pointer from `types/distribution.md` intro. `BUILD-LOOP.md:207` pointer owed (outside the surface).
 
 ### C74 — Workbench Commands card
 - **Sources:** rcf#Δ4 (primary)
 - **Evidence:** `Command.java:61-64`, corpus B1317 §1317.1.
 - **Target:** `types/wb-widgets.md` (new §). **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U10, 2026-10-23; rcf Δ4): `types/wb-widgets.md` § Commands (`Command.java:61-64` four keys, null on a missing key, a bad accelerator only prints). Owed Go lint G91 `command-lexicon-keys`.
 
 ### C75 — `BHysteresis`/`BLimiter` are 4.15+
 - **Sources:** rcf#Δ8 (primary)
 - **Evidence:** `BHysteresis.java:35,292`, corpus B1319 §1319.3 D3.
 - **Target:** `types/logic.md` (version note). **Lint-able:** yes. **Fold type:** doc note + lint.
+- **Fold status:** FOLDED (U10, 2026-10-23; rcf Δ8): `types/logic.md` after the kitControl status families (`@since Niagara 4.15`; jar check: absent in 4.3.58.18 / 4.13.2.18 / 4.14.0.162, present in 4.15.3.28 / 4.15.6.20; swapped limits fault; latch not persisted). No kit lint checks type availability per target release; owed Go lint G90 `since-version-type`.
 
 ### C91 — NDriver device/point manager and discovery recipe
 - **Sources:** ndh#Δ6 (primary). Extends C60 (NDriver section) and the manager recipe in `types/wb-widgets.md`.
@@ -979,6 +998,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11477]`.
 - **Target:** `BUILD-LOOP.md` § 0.a Orient from BUILD-STATE; optional `toolbelt/orient-guard.sh --recent <root>`.
 - **Lint-able:** no (procedure); the orient-guard option is the mechanical form. **Fold type:** doc procedure (+ optional helper).
+- **Fold status:** FOLDED (U11, 2026-10-23; hwf Δ2): `METHODOLOGY.md` § Hands-on work (resume from the workspace; `newest:` in the orient line).
+  Landed there, not in `BUILD-LOOP.md` § 0.a (outside the surface; pointer P2 owed). Owed G94 `orient-recent`.
 
 ### C93 — Shared-host rule: no heavy background jobs while Workbench or a station is open
 - **Sources:** hwf#Δ4 (primary)
@@ -986,6 +1007,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11095]`.
 - **Target:** `ORCHESTRATION.md` § 3 Delegation triggers, `toolbelt/preflight.sh`.
 - **Lint-able:** partial — preflight WARN when `tasklist.exe` shows `wb.exe`/`station.exe` before a heavy job. **Fold type:** doc rule + preflight row.
+- **Fold status:** FOLDED (U11, 2026-10-23; hwf Δ4): `METHODOLOGY.md` § Hands-on work (shared host; `wb.exe`, `wb_w.exe`, `station.exe` from the
+  4.15.6.20 `bin/`). Landed there, not in `ORCHESTRATION.md` § 3 (pointer P3 owed). Owed preflight row G95 `shared-host`.
 
 ---
 
@@ -994,6 +1017,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C76 — Horizons lists
 - **Sources:** poh#Δ6 (primary, course capabilities not yet used) · has#Δ10 extends (promiseUtils, `LocalizableError`, CSRF constant, login branding, popup editors)
 - **Target:** `corpus-index.md`, `toolbelt/kit-ticket.sh`, `types/dashboard.md`, `types/theme.md`, `types/wb-widgets.md`. **Lint-able:** no. **Fold type:** kit-tickets + small doc notes.
+- **Fold status:** FOLDED (U10, 2026-10-23; poh Δ6, has Δ10): new `types/horizons.md` (§ 1 course capabilities with the kit recipe per row, § 2 promiseUtils, `LocalizableError`, CSRF header constant, login branding) + `types/wb-widgets.md` popup-editor note. Owed outside the surface: `corpus-index.md` row group, `kit-ticket.sh` tickets, pointers from `types/dashboard.md` DUX-TEST1 and `types/theme.md`.
 
 ### C77 — Preserve author-set slot flags on rebuild (scope corrected)
 - **Sources:** sta#Δ10 (primary, accepted-corrected) · r3-report#R5
@@ -1016,6 +1040,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C80 — NRE memory budget and flash writes on a JACE
 - **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (U10, 2026-10-23; pps Δ10): new `types/platform.md` § 3 (NRE pool defaults 0/384/128/32 MB, reboot to apply, flash writes; flash-wear advice `[INFER]`). `types/math-control-libraries.md:43` pointer owed (outside the surface).
 
 ---
 
@@ -1078,7 +1103,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-horizons-authoring-security#Δ7` | types/structure.md:9,176-250, types/third-party-libraries.md:38-69 | Doc part allowed, help.guide.base optional, uberjar first | C26 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ8` | types/structure.md | `se` = Java SE APIs; part dependency matrix | C24 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted (doc waits for U4) |
-| `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | accepted |
+| `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | folded (U10, `types/horizons.md` § 2 + `types/wb-widgets.md` popup editor) |
 | `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
 | `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | folded (U6, `types/lexicon.md` § 1); manifest lint owed G71 |
 | `devguide415-lexicons-ux-i18n#Δ3` | types/observability.md | LocalizableRuntimeException idiom | C55 | P2 | folded (U6, `types/lexicon.md` § 3); key lint owed G70 |
@@ -1115,23 +1140,23 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-drivers-protocols#Δ9` | types/dashboard.md:23, types/logic-authoring.md:554, types/security.md | oBIX exposure rules | C46 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | folded (U9, `types/cloud-connector.md` § 10, `types/driver-authoring.md` § 11.4) |
 | `devguide415-r2-packaging-platform-signing#Δ1` | types/distribution.md:35-45 | Fix dist attribute table (noStation) | C23 | P0 | accepted-corrected (missing attribute = false, r3pec Δ1) |
-| `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | folded (U10, `types/logic-authoring.md` § Shipping a template module); lint owed G92 |
+| `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | folded (U10, `types/logic-authoring.md` § What breaks on a module or template upgrade) |
 | `devguide415-r2-packaging-platform-signing#Δ4` | types/distribution.md, types/logic.md:185, types/structure.md:133 | Palette entry ≠ .ntpl; dangling §Templates; provisioning | C29 | P0 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ5` | types/structure.md, types/dashboard.md | Lexicon-only modules | C54 | P2 | folded (U6, `types/lexicon.md` § 2); lint owed G71 |
 | `devguide415-r2-packaging-platform-signing#Δ6` | build-verify.md, types/distribution.md:100 | Signing Service ≠ module signing; mode × status | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ7` | types/logic-authoring.md:917 | Program objects signed; load failure causes | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ8` | types/structure.md:300 | se is Supervisor (Windows) only | C24 | P0 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ9` | types/distribution.md, BUILD-LOOP.md:207 | Runtime profiles and install rules | C73 | P2 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ10` | types/math-control-libraries.md:43 | NRE memory budget; flash writes | C80 | P3 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ9` | types/distribution.md, BUILD-LOOP.md:207 | Runtime profiles and install rules | C73 | P2 | folded (U10, `types/platform.md` § 1-2) |
+| `devguide415-r2-packaging-platform-signing#Δ10` | types/math-control-libraries.md:43 | NRE memory budget; flash writes | C80 | P3 | folded (U10, `types/platform.md` § 3) |
 | `devguide415-r2-runtime-contracts-formats#Δ1` | types/actions.md | post() first-wins vs CoalesceQueue last-wins | C38 | P1 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ2` | types/security.md, types/logic-authoring.md:73 | Null Context = BPermissions.all | C39 | P1 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ3` | types/logic.md:111-143 | Call checkLink before adding links in code | C08 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ4` | types/wb-widgets.md | Commands card (four key suffixes) | C74 | P2 | folded (U10, `types/wb-widgets.md` § Commands); lint owed G91 |
 | `devguide415-r2-runtime-contracts-formats#Δ5` | types/structure.md:253-287 | Nav files load only via explicit ORDs | C17 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ6` | types/logic.md:399-418 | BFormat line-level facts | C07 | P0 | folded (WU-P0-3 + lints) |
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
-| `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
+| `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | folded (U10, `types/logic.md` 4.15+ note); lint owed G90 |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
 | `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | folded (U8, `types/security.md` § 9.1); lint owed G80 |
 | `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | folded (U8, `types/security.md` § 2.6) |
@@ -1218,7 +1243,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-parity-observability-horizons#Δ3` | toolbelt/kit-ticket.sh, types/observability.md | Client parity ticket | C52 | P1 | accepted |
 | `n4-course-parity-observability-horizons#Δ4` | types/observability.md, toolbelt/triage-console.sh | Station diagnostics card | C57 | P2 | folded (U6, `types/diagnostics.md`); triage patterns owed G73 |
 | `n4-course-parity-observability-horizons#Δ5` | types/logic-authoring.md:540, types/logic.md | History/tag commissioning items | C35 | P1 | accepted |
-| `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | accepted |
+| `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | folded (U10, `types/horizons.md` § 1) |
 | `n4-course-slots-components-contracts#Δ1` | types/actions.md:24-26 | Frozen action handler = type-load error | C09 | P0 | accepted |
 | `n4-course-slots-components-contracts#Δ2` | types/security.md §2 | Flags are UI, not security | C36 | P1 | accepted |
 | `n4-course-slots-components-contracts#Δ3` | types/logic.md | Callback isRunning() guard | C36 | P1 | accepted |
@@ -1300,15 +1325,15 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
 | `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | accepted (remedy `[INFER]`) |
+| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | folded (U11, logic-authoring § Generated accessors) |
+| `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | folded doc (U11); lint owed G96 |
+| `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | folded (U11, logic.md § Operator-entered bounds; remedy `[INFER]`) |
 | `n4-course-handson-slotomatic-authoring#Δ5` | toolbelt/lint-agent-on-shape.sh, types/module-wiring.md | refines C25: processor never updates a stale `<type>` line | C25 | P0 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ6` | toolbelt/verify-module.sh `check_palette` | new: palette count misses non-first `n=` | C82 | P0 | accepted |
-| `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | accepted |
-| `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | accepted |
+| `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | folded doc (U11, METHODOLOGY § Hands-on work); helper owed G93 |
+| `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | folded doc (U11, METHODOLOGY § Hands-on work); owed G94, pointer P2 |
 | `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | folded doc (U4 C58); run-niagara-test.sh skip waits on that script |
-| `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | accepted |
+| `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | folded doc (U11, METHODOLOGY § Hands-on work); owed G95, pointer P3 |
 
 No-loss result for Appendix C (2026-10-22, T9a; ad-hoc comparison of the `| Δn |` rows of the five 2026-10-16 retros
 with the rows above, and of every C-id above with its `### Cnn` heading and tier):

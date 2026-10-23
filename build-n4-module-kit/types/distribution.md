@@ -7,6 +7,8 @@ provisioning, release packages, and the client documentation deliverable.
 
 This doc is the **packaging and field-delivery** companion.
 For signing gates and `verify-module.sh`, see `build-verify.md`.
+Which profile jars a host holds, which Software Manager operations stop the station or reboot the host, and NRE
+memory on a JACE: `types/platform.md`. [ev: retro devguide415-r2-packaging-platform-signing Δ9]
 
 ---
 
