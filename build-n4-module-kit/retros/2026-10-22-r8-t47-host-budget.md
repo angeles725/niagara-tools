@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · r8-t47-host-budget
@@ -36,4 +36,4 @@ every `toolbelt/*.sh` named in BUILD-LOOP.md or skill/SKILL.md, which were outsi
 - When a spec example and its own thresholds disagree, test the thresholds and record the reading.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-r8-t47-host-budget.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED (quality round 8 pointer unit, `docs/r8-pointer-lines`) — Δ1 f734c80 (PR #354) `toolbelt/host-budget.sh` + `BUILD-LOOP.md` § 7 Shared host and `skill/SKILL.md` step 7, Δ2 `CONTRIBUTING.md:139-140` § 2.2; tokens in `ledger.d/2026-10-23-r8-pointer-lines.md`. INDEX row generated from the header: `| 2026-10-22-r8-t47-host-budget.md | kit | 2026-10-22 | folded | 2 |`
