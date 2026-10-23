@@ -1,0 +1,29 @@
+-- args --
+--strict
+@DIR@/m
+-- want --
+exit 1
+WARN  lint-silent-protection  @DIR@/m/com/x/BValve.java:3  valveInhibited forces freezeTripped/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/BValve.java:4  compTrip forces lockout/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/BValve.java --
+package com.x;
+public class BValve extends BComponent {
+  private boolean freezeTripped = false;
+  private final boolean lockout = false;
+  boolean valveInhibited() {
+    return doorOpen || freezeTripped;
+  }
+  boolean compTrip() {
+    return a.b || c || lockout;
+  }
+  boolean otherTrip() {
+    return a || freezeTripped;
+  }
+  boolean notATrip() {
+    return a || freezeTripped;
+  }
+  boolean plainInhibited() {
+    return a || notPrivate;
+  }
+}

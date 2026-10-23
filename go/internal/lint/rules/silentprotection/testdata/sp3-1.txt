@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/src/com/x/BEvaporatorUnit.java:6  recompute forces valveOut/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- src/com/x/BEvaporatorUnit.java --
+package com.x;
+public class BEvaporatorUnit extends BComponent {
+  @NiagaraProperty(name="valveOut", type="BStatusBoolean", defaultValue="new BStatusBoolean(false)", flags=Flags.SUMMARY|Flags.READONLY)
+  void recompute(boolean coilValid, double coil, double freezeSp) {
+    boolean freezeTripped = coilValid && coil < freezeSp;      // trip decision
+    if (freezeTripped) getValveOut().setValue(false);          // forces its OWN output only
+  }
+}

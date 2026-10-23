@@ -1,0 +1,35 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/com/x/BP.java --
+package com.x;
+public class BP extends BComponent {
+  @NiagaraProperty(flags=Flags.SUMMARY, name="aStatus") @NiagaraProperty(name="bStatus", flags=Flags.SUMMARY)
+  @NiagaraProperty
+  (name = "cMismatch", flags = Flags.OPERATOR)
+  @NiagaraProperty(name="dStuck", type="x", defaultValue="BString.make(\"(\")", flags=Flags.SUMMARY)
+  @NiagaraProperty(name="eAvailable", flags=Flags.SUMMARY)
+  void a(boolean c) {
+    if (c) this.t1 = true;
+    setAStatus(c);
+  }
+  void b(boolean c) {
+    if (c) this.t1 = true;
+    setBStatus(c);
+  }
+  void d(boolean c) {
+    if (c) this.t1 = true;
+    setCMismatch(c);
+  }
+  void e(boolean c) {
+    if (c) this.t1 = true;
+    setDStuck(c);
+  }
+  void f(boolean c) {
+    if (c) this.t1 = true;
+    getEAvailable().setValue(c);
+  }
+  private boolean t1;
+}
