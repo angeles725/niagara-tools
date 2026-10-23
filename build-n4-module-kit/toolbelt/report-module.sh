@@ -359,7 +359,11 @@ for ADIR in "${ARTIFACTS[@]}"; do
             _detail="${_rest#*  }"       # /path/file.java: msg
             _fp="${_detail%%:*}"         # /path/file.java
             _msg="${_detail#*: }"        # message after ": "
-            _bn="$(basename "$_fp")"
+            # basename without a fork per row; basename(1) only where ${_fp##*/} differs (empty, trailing /, leading -)
+            case "$_fp" in
+              ''|*/|-*) _bn="$(basename "$_fp")" ;;
+              *) _bn="${_fp##*/}" ;;
+            esac
             emit "$ANAME" "$_st" "$_chk" "${_bn}: ${_msg}"
           ;;
         esac
@@ -787,110 +791,20 @@ done
 # ----------------------------------------------------------------
 # 8. lint-agent-on-shape.sh <module-root> — once per run (FAIL)
 # ----------------------------------------------------------------
-aos_exit=0
-aos_out=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1) || aos_exit=$?
-if [ "$aos_exit" -eq 3 ]; then
-  emit "(module)" ERROR lint-agent-on-shape "env fault (exit 3)"; HAD_ENV=1
-else
-  _aos_had_fail=0
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      FAIL*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          colon = index(site, ":")
-          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-          lno = (colon > 0) ? substr(site, colon + 1) : ""
-          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn ":" lno "  " reason
-        }')
-        _st="${_parsed%%|*}"
-        _r="${_parsed#*|}"
-        _chk="${_r%%|*}"
-        _det="${_r#*|}"
-        emit "(module)" "$_st" "$_chk" "$_det"
-        _aos_had_fail=1
-      ;;
-    esac
-  done <<< "$aos_out"
-  [ "$_aos_had_fail" -eq 0 ] && emit "(module)" PASS lint-agent-on-shape "clean"
-fi
+_o=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1)
+lint_rows "(module)" lint-agent-on-shape "$?" "$_o" FAIL rows
 
 # ----------------------------------------------------------------
 # 9. lint-uberjar-api-conflict.sh <module-root> — once per run (WARN)
 # ----------------------------------------------------------------
-uac_exit=0
-uac_out=$("$TOOLBELT/lint-uberjar-api-conflict.sh" "$MODULE_ROOT" 2>&1) || uac_exit=$?
-if [ "$uac_exit" -eq 3 ]; then
-  emit "(module)" ERROR lint-uberjar-api-conflict "env fault (exit 3)"; HAD_ENV=1
-else
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      WARN*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          nsplit = split(site, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn "  " reason
-        }')
-        _st="${_parsed%%|*}"
-        _r="${_parsed#*|}"
-        _chk="${_r%%|*}"
-        _det="${_r#*|}"
-        emit "(module)" "$_st" "$_chk" "$_det"
-      ;;
-    esac
-  done <<< "$uac_out"
-fi
+_o=$("$TOOLBELT/lint-uberjar-api-conflict.sh" "$MODULE_ROOT" 2>&1)
+lint_rows "(module)" lint-uberjar-api-conflict "$?" "$_o" WARN - base
 
 # ----------------------------------------------------------------
 # 10. lint-structure.sh <module-root> — once per run (FAIL)
 # ----------------------------------------------------------------
-lst_exit=0
-lst_out=$("$TOOLBELT/lint-structure.sh" "$MODULE_ROOT" 2>&1) || lst_exit=$?
-if [ "$lst_exit" -eq 3 ]; then
-  emit "(module)" ERROR lint-structure "env fault (exit 3)"; HAD_ENV=1
-else
-  _lst_had_fail=0
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      FAIL*|WARN*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          colon = index(site, ":")
-          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-          lno = (colon > 0) ? substr(site, colon + 1) : ""
-          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn ":" lno "  " reason
-        }')
-        _st="${_parsed%%|*}"
-        _r="${_parsed#*|}"
-        _chk="${_r%%|*}"
-        _det="${_r#*|}"
-        emit "(module)" "$_st" "$_chk" "$_det"
-        [ "$_st" = "FAIL" ] && _lst_had_fail=1
-      ;;
-    esac
-  done <<< "$lst_out"
-  [ "$_lst_had_fail" -eq 0 ] && emit "(module)" PASS lint-structure "clean"
-fi
+_o=$("$TOOLBELT/lint-structure.sh" "$MODULE_ROOT" 2>&1)
+lint_rows "(module)" lint-structure "$?" "$_o" 'FAIL|WARN' fail
 
 # ----------------------------------------------------------------
 # 11. lint-write-path.sh <module-root> — once per run (FAIL on uncovered;
@@ -904,52 +818,9 @@ elif [ "$lwp_exit" -eq 3 ]; then
   # any OTHER exit 3 (a find error, usage) is an env fault: the write-path scan did not complete
   emit "(module)" ERROR lint-write-path "env fault (exit 3): $(printf '%s\n' "$lwp_out" | head -n 1)"; HAD_ENV=1
 else
-  _lwp_had_fail=0
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      FAIL*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          colon = index(site, ":")
-          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-          lno = (colon > 0) ? substr(site, colon + 1) : ""
-          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn ":" lno "  " reason
-        }')
-        _st="${_parsed%%|*}"
-        _r="${_parsed#*|}"
-        _chk="${_r%%|*}"
-        _det="${_r#*|}"
-        emit "(module)" "$_st" "$_chk" "$_det"
-        _lwp_had_fail=1
-      ;;
-      STALE*|DRIFT*)
-        # Advisory rows: exit-0 but surface as WARN so they appear in the report
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          colon = index(site, ":")
-          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-          lno = (colon > 0) ? substr(site, colon + 1) : ""
-          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-          print chk "|" bn ":" lno "  " reason
-        }')
-        _chk="${_parsed%%|*}"
-        _det="${_parsed#*|}"
-        emit "(module)" WARN "$_chk" "$_det"
-      ;;
-    esac
-  done <<< "$lwp_out"
-  [ "$_lwp_had_fail" -eq 0 ] && emit "(module)" PASS lint-write-path "clean"
+  # STALE/DRIFT advisory rows: exit-0 but surface as WARN so they appear in the report
+  member_rows "(module)" "$lwp_out" FAIL site '' 'STALE|DRIFT'
+  [ "$MR_FAILP" -eq 0 ] && emit "(module)" PASS lint-write-path "clean"
 fi
 
 # ----------------------------------------------------------------
@@ -958,37 +829,8 @@ fi
 #     (class-file major > 52). A bundled jar with major > 52 throws a raw
 #     UnsupportedClassVersionError at module load, bypassing catch(Exception).
 # ----------------------------------------------------------------
-bjcv_exit=0
-bjcv_out=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1) || bjcv_exit=$?
-if [ "$bjcv_exit" -eq 3 ]; then
-  emit "(module)" ERROR lint-bundled-jar-class-version "env fault (exit 3)"; HAD_ENV=1
-else
-  _bjcv_had_fail=0
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      FAIL*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          det = ""
-          for (i = 4; i <= n; i++) det = (det == "" ? "" : det "  ") a[i]
-          site = (n >= 3) ? a[3] : ""
-          nsplit = split(site, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn "  " det
-        }')
-        _st="${_parsed%%|*}"
-        _r="${_parsed#*|}"
-        _chk="${_r%%|*}"
-        _det="${_r#*|}"
-        emit "(module)" "$_st" "$_chk" "$_det"
-        _bjcv_had_fail=1
-      ;;
-    esac
-  done <<< "$bjcv_out"
-  [ "$_bjcv_had_fail" -eq 0 ] && emit "(module)" PASS lint-bundled-jar-class-version "clean"
-fi
+_o=$("$TOOLBELT/lint-bundled-jar-class-version.sh" "$MODULE_ROOT" 2>&1)
+lint_rows "(module)" lint-bundled-jar-class-version "$?" "$_o" FAIL rows base
 
 # ----------------------------------------------------------------
 # 7. triage-console.sh — once per run (Campaign 8 PR8; D9)
