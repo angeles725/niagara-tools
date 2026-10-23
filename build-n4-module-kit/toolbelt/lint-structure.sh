@@ -43,6 +43,15 @@
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
 # Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs
 set -u
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-structure: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+# shellcheck disable=SC2093  # the bash body below is dead until the next commits delete it
+exec "$BIN" lint-structure "$@"
 LC_ALL=C
 export LC_ALL
 
