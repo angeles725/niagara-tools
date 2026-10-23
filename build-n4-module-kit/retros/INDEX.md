@@ -295,3 +295,4 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |
+| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
