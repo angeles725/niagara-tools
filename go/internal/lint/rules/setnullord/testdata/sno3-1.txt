@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BMgr.java --
+package com.x;
+public class BMgr {
+  void addMapping(BComponent point, BImportMap m) {
+    String s = point.getSlotPathOrd().toString();
+    m.setName(s);
+  }
+}

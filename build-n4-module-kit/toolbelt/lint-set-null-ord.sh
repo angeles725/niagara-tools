@@ -11,7 +11,8 @@
 # [ev: code javax/baja/sys/BComponent.java:321-324] [ev: code com/tridium/sys/schema/ComponentSlotMap.java:171-173]
 # [ev: code javax/baja/sys/BComplex.java:386-390]
 #
-# Structural rules (comments blanked by lib/method-boundary.sh mb_strip; scope = one method from mb_parse):
+# Structural rules (comments blanked by go/internal/javasrc Strip; scope = one method from javasrc Methods, the
+# ports of lib/method-boundary.sh mb_strip/mb_parse):
 #   SNO1 direct  — `set<Name>(… x.getSlotPathOrd())` / `set(<prop>, x.getSlotPathOrd(), …)`: the getSlotPathOrd()
 #                  call is itself an argument (followed by `,` or `)`). Guarded when the call line, or an earlier
 #                  line of the same method, compares the SAME receiver's getSlotPathOrd() with null (`!= null` /
@@ -21,8 +22,12 @@
 #                  `v == null`, `v != null`, `null == v`, `null != v`, `v.isNull()` or `requireNonNull(v` on any
 #                  line from the assignment to the call (a ternary on the call line counts).
 #   Scope limits (false negatives, never false WARNs): a value carried through a field, a return value or another
-#   method; a signature wrapped over several lines before `{` (mb_parse does not see that method).
+#   method; a signature wrapped over several lines before `{` (Methods does not see that method).
 #   Not overlapping lint-null-context-write: that lint flags a null CONTEXT argument, this one a null VALUE.
+#
+# Implementation: go/internal/lint/rules/setnullord on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-set-null-ord <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_run did).
 #
 # Usage:  lint-set-null-ord.sh [--strict] <src-root>
 #   Row:  WARN  lint-set-null-ord  <file>:<line>  <detail>
@@ -33,99 +38,14 @@
 # Mutation: SNO1-chain -- keying a call-chain receiver as "." lets getA()'s null check silence getB()'s pass
 # Mutation: SNO2-guard -- ignoring the null guard WARNs a local that is checked before the set
 # Mutation: SNO2-scope -- matching the variable outside its own method WARNs a same-named local in a sibling method
-# Mutation: SNO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
-# Mutation: SNO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: SNO-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
+# Mutation: SNO-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-set-null-ord one 'usage: lint-set-null-ord.sh [--strict] <src-root>' "$@"
-printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
-# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
-AL_AWK_ARGS=(-f "$AL_TMP/method-boundary.awk")
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-function setter_name(s,    t) {
-  # the LEFTMOST `set<Name>(` on the line (a chained or nested setter line names its first setter)
-  if (match(s, /(^|[^A-Za-z0-9_])set[A-Za-z0-9_]*[[:space:]]*\(/)) {
-    t = substr(s, RSTART, RLENGTH); sub(/^[^s]*/, "", t); sub(/[[:space:]]*\($/, "", t)
-    return t
-  }
-  return ""
-}
-# guard_recvs(s): record in guarded[] every receiver (`a.`, `x.y.`, or "" for this) whose getSlotPathOrd() result
-# is compared with null on line s. Only a plain identifier chain is a usable key: a call-chain or indexed receiver
-# (`getA().`, `arr[i].`) is captured as a bare `.`, so it is never recorded and its direct pass always WARNs.
-function guard_recvs(s,    t, r) {
-  t = s
-  while (match(t, /[A-Za-z0-9_.]*getSlotPathOrd\(\)[[:space:]]*[!=]=[[:space:]]*null/)) {
-    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r)
-    if (r ~ /^([A-Za-z_][A-Za-z0-9_]*\.)*$/) guarded[r] = 1
-    t = substr(t, RSTART + RLENGTH)
-  }
-  t = s
-  while (match(t, /null[[:space:]]*[!=]=[[:space:]]*[A-Za-z0-9_.]*getSlotPathOrd\(\)/)) {
-    r = substr(t, RSTART, RLENGTH); sub(/^null[[:space:]]*[!=]=[[:space:]]*/, "", r); sub(/getSlotPathOrd\(\)$/, "", r)
-    if (r ~ /^([A-Za-z_][A-Za-z0-9_]*\.)*$/) guarded[r] = 1
-    t = substr(t, RSTART + RLENGTH)
-  }
-}
-# unguarded_direct(s): 1 when some `<recv>getSlotPathOrd()` argument on s (followed by `,` or `)`) has a receiver
-# that no null compare in this method (or on this line) has guarded
-function unguarded_direct(s,    t, r) {
-  t = s
-  while (match(t, /[A-Za-z0-9_.]*getSlotPathOrd\(\)[[:space:]]*[,)]/)) {
-    r = substr(t, RSTART, RLENGTH); sub(/getSlotPathOrd\(\).*$/, "", r)
-    if (!(r in guarded)) return 1
-    t = substr(t, RSTART + RLENGTH)
-  }
-  return 0
-}
-function guards_var(s, v,    re) {
-  re = "(^|[^A-Za-z0-9_])" v "[[:space:]]*[!=]=[[:space:]]*null"
-  if (s ~ re) return 1
-  re = "null[[:space:]]*[!=]=[[:space:]]*" v "([^A-Za-z0-9_]|$)"
-  if (s ~ re) return 1
-  re = "(^|[^A-Za-z0-9_])" v "\\.isNull\\("
-  if (s ~ re) return 1
-  re = "requireNonNull\\([[:space:]]*" v "([^A-Za-z0-9_]|$)"
-  if (s ~ re) return 1
-  return 0
-}
-{ raw[NR] = $0 }
-END {
-  n = NR
-  mb_strip(raw, n, code)
-  cnt = mb_parse(code, n, ms, me, mn)
-  for (k = 0; k < cnt; k++) {
-    nv = 0; split("", guarded)
-    for (i = ms[k]; i <= me[k]; i++) {
-      c = code[i]
-      guard_recvs(c)
-      # SNO1: getSlotPathOrd() is itself the argument of a set...( call on this line; guarded per receiver
-      if (c ~ /(^|[^A-Za-z0-9_])set[A-Za-z0-9_]*[[:space:]]*\([^;]*getSlotPathOrd\(\)[[:space:]]*[,)]/) {
-        if (unguarded_direct(c))
-          printf "WARN  lint-set-null-ord  %s:%d  getSlotPathOrd() passed straight to %s(...) -- null on an unmounted component and BComplex.set NPEs; assign it, guard `if (ord == null || ord.isNull())` (types/issues-and-gotchas.md §H3)\n", FILE, i, setter_name(c)
-      }
-      # SNO2: a local assigned from getSlotPathOrd(), then used as a set argument
-      if (match(c, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*[^=;][^;]*getSlotPathOrd\(\)[[:space:]]*;/)) {
-        s = substr(c, RSTART, RLENGTH); match(s, /^[A-Za-z_][A-Za-z0-9_]*/)
-        nv++; vname[nv] = substr(s, 1, RLENGTH); vline[nv] = i; vguard[nv] = 0
-        continue
-      }
-      for (j = 1; j <= nv; j++) {
-        if (vguard[j]) continue
-        if (guards_var(c, vname[j])) { vguard[j] = 1; continue }
-        re = "(^|[^A-Za-z0-9_])set[A-Za-z0-9_]*[[:space:]]*\\(([^;]*[,[:space:]])?" vname[j] "[[:space:]]*[,)]"
-        if (c ~ re) {
-          printf "WARN  lint-set-null-ord  %s:%d  '%s' (getSlotPathOrd() at line %d) reaches %s(...) with no null guard -- null on an unmounted component and BComplex.set NPEs; guard `if (%s == null || %s.isNull())` (types/issues-and-gotchas.md §H3)\n", FILE, i, vname[j], vline[j], setter_name(c), vname[j], vname[j]
-          vguard[j] = 1
-        }
-      }
-    }
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-set-null-ord: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-set-null-ord "$@"

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-set-null-ord  @DIR@/m/A.java:4  'a' (getSlotPathOrd() at line 3) reaches setA(...) with no null guard -- null on an unmounted component and BComplex.set NPEs; guard `if (a == null || a.isNull())` (types/issues-and-gotchas.md §H3)
+-- stderr --
+-- m/A.java --
+class B {
+  void a(BComponent p, M m) {
+    BOrd a = p.getSlotPathOrd(); BOrd b = q.getSlotPathOrd();
+    m.setA(a); m.setB(b);
+    m.setA(a);
+  }
+}

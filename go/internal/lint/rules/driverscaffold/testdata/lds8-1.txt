@@ -1,0 +1,32 @@
+-- root --
+.
+-- want --
+exit 0
+WARN  lint-driver-scaffold  @DIR@/BNfooNetwork.java:6  doSubmitDiscoveryJob() submits with a null Context: use job.submit(cx)
+WARN  lint-driver-scaffold  @DIR@/NfooMessageFactory.java:9  wizard stub: // TODO - convert linkMessage driver specific NMessage
+WARN  lint-driver-scaffold  @DIR@/NfooMessageFactory.java:6  toResponse() only returns null (wizard message factory)
+-- BNfooNetwork.java --
+// Shape of the NDriver wizard output (devkit-wb.jar!gradle/ndriver/BNfooNetwork.java.vm:200-205).
+package com.example.nfoo;
+
+public class BNfooNetwork extends BNNetwork
+{
+  public BOrd doSubmitDiscoveryJob(BNfooDeviceDiscoveryPreferences prefs, Context cx)
+  {
+    BNfooLearnDevicesJob job = new BNfooLearnDevicesJob(this, prefs);
+    return job.submit(null);
+  }
+}
+-- NfooMessageFactory.java --
+// Shape of the NDriver wizard output (devkit-wb.jar!gradle/ndriver/NfooMessageFactory.java.vm:22-29).
+package com.example.nfoo;
+
+public class NfooMessageFactory implements NMessageFactory
+{
+  public NMessage toResponse(LinkMessage lm)
+  {
+    //
+    // TODO - convert linkMessage driver specific NMessage
+    return null;
+  }
+}

@@ -1,0 +1,21 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-wb-external-ord-value  @DIR@/Mod/src/com/x/A.java:3  rowForBad() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  String[] rowForBad(Object e) {
+    Object o = e.getOrd().get(subject, null);
+    if (o instanceof BComponent) {
+      BComponent targetComp = (BComponent) o;
+      Object out = targetComp.get("out");
+      if (out instanceof BStatusValue) {
+        BStatusValue sv = (BStatusValue) out;
+      }
+    }
+    return null;
+  }
+}

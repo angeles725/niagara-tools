@@ -4,7 +4,10 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
 
@@ -13,5 +16,8 @@ func All() []lint.Spec {
 	return []lint.Spec{
 		nullcontext.Spec(),
 		timers.Spec(),
+		driverscaffold.Spec(),
+		setnullord.Spec(),
+		extordvalue.Spec(),
 	}
 }

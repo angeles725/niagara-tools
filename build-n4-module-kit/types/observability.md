@@ -14,6 +14,12 @@ adminRead), **fault slot** (wire-sheet visible), **audit trail** (attributed use
 private static final Logger LOG = Logger.getLogger("modbusCore");
 ```
 
+**Logger name = the exact `moduleName`**, so the DebugService (Logger Configuration) shows one row per module and an
+integrator can raise one module to FINE. The course follows it in shipped code even where a slide does not:
+`Logger.getLogger("slides")` (`Slide Code/…/BLoggingExample.java:89`) and `Logger.getLogger("training")` (Lab 7
+`BWorkOrderService.java:271`) (corpus B1236). A logger-name check (`Logger.getLogger("<x>")` ≠ `moduleName` → WARN) is
+owed as Go lint G40 `logger-name`. `[ev: retro n4-course-parity-observability-horizons Δ3]`
+
 A `BDevice` inherits the network's logger name + device path automatically:
 `device.getLogger()` returns a logger named `"<moduleShortName>.<deviceName>"` —
 do not construct a separate one in the device class. [ev: code modbusCore-rt `BModbusClientPollGroup.java` `device.getLogger()`; code bacnetAws-rt `BacnetAwsServlet.java` `Logger.getLogger("bacnetAws")`]

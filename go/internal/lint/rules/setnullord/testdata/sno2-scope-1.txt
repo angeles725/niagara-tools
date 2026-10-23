@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BTwo.java --
+package com.x;
+public class BTwo {
+  void a(BComponent p) {
+    BOrd ord = p.getSlotPathOrd();
+    log(ord);
+  }
+  void b(BImportMap m, BOrd ord) {
+    m.setTargetOrd(ord);
+  }
+}
