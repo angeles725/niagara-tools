@@ -784,3 +784,23 @@ JAVA
   [ "$(( $(date +%s) - start ))" -lt 40 ]
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is unknown version"* ]]
 }
+
+# r9 M3: every member's rows go through ONE shared parser (ROW_AWK via member_rows), one awk per member output.
+@test "RM-rows-multi: a member's rows are relayed in order with the shared grammar; non-row lines are dropped (r9 M3)" {
+  # Mutation: RM-rows-multi -- a whole-output parser that loses row order, keeps a non-row line or splits on a
+  # single space instead of 2+ whitespace changes these exact rows.
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" lint-delays.sh 'printf "%s\n" "FAIL  delay  /a/b/BOne.java:12  no floor" "scanning 3 files" "WARN  delay  /c/BTwo.java:7  short  extra note" ""; exit 1'
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *$'DemoPan-rt  FAIL  delay  BOne.java:12  no floor\nDemoPan-rt  WARN  delay  BTwo.java:7  short  extra note\n'* ]]
+  [[ "$output" != *"scanning 3 files"* ]]
+}
+
+@test "RM-row-parser: no pasted per-line row parser -- one awk call site parses every member's rows (r9 M3)" {
+  # Mutation: RM-row-parser -- re-pasting the per-line `printf '%s' "$_ln" | awk` parser forks awk once per row
+  # (kit retro rule: no per-line forks) and drifts from the shared ROW_AWK grammar.
+  run grep -c -F "printf '%s' \"\$_ln\" | awk" "$RM"
+  [ "$output" = "0" ]
+  run grep -c 'awk -v sel=' "$RM"
+  [ "$output" = "1" ]
+}
