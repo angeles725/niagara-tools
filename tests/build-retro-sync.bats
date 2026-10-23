@@ -15,7 +15,7 @@ bats_require_minimum_version 1.5.0
 #   2) .githooks/pre-push  — git ALLOWED (a hook is not toolbelt/*.sh).
 #        invoked: pre-push <remote> <url>, ref lines on stdin "<lref> <lsha> <rref> <rsha>".
 #        build-relevant IN this repo = build-n4-module-kit/** EXCLUDING BUILD-STATE.md,
-#          retros/, retros/INDEX.md; PLUS scripts/**.
+#          retros/, retros/INDEX.md; PLUS scripts/** and go/** (except go/bin/).
 #        if a build-relevant path changed in range AND NOT (BUILD-STATE.md + a pending
 #          retro + its INDEX row all in range) AND NOT a `Retro: none (trivial: …)` trailer
 #          in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep for the content half.
@@ -360,6 +360,23 @@ _fixture_ledger_top() {
 @test "H16: a ledger.d-only range is not build-relevant (does NOT fire the gate)" {
   printf 'build-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: ledger entry\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
+@test "H17: a go/ source change with no state/retro/trailer FAILS (go/** is build-relevant)" {
+  # Mutation: H17 -- dropping go/ from the build-relevant set lets a Go port change lint behavior ungated.
+  # [ev: retro go-javasrc-scanner Δ1]
+  printf 'go/internal/javasrc/javasrc.go\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'feat: port a lint to Go\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -ne 0 ]
+}
+
+@test "H18: a go/bin/-only range is not build-relevant (built binaries, not source)" {
+  # Mutation: H18 -- matching go/ without the go/bin/ exclusion fires the gate on a rebuilt binary.
+  printf 'go/bin/n4lint\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'chore: rebuild\n' > "$BATS_TEST_TMPDIR/log"
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
 }
