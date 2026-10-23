@@ -843,76 +843,112 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources) · rsb#Δ4 extends (Windows-native build route from WSL for any Windows-side Gradle root: cmd.exe + gradlew.bat slotomatic/jar; back up `<niagara_home>/modules` first)
 - **Evidence:** course `Lab Instructions.pdf` p81-86, `Slides/6` p6-18; `javap` on 4.15.6.20 jars; corpus B1235 §1235.2.
 - **Target:** `types/module-wiring.md`, `types/structure.md`, `toolbelt/build.sh`, `toolbelt/preflight.sh`, `build-verify.md`, `METHODOLOGY.md` K15. **Lint-able:** yes. **Fold type:** doc section + script.
+- **Fold status:** FOLDED doc (`docs/r8-u4-c58-build-reference`, 2026-10-23; bdps Δ1, Δ5, afl Δ4, cex Δ4, rsb Δ4, plus hw Δ3
+  in-place refinement of C12): `types/module-wiring.md` § 1.1 (supertypes verified by javap on 4.15.6.20; part script from
+  course `slides-rt.gradle.kts`), `build-verify.md` § Raw gradle, `BUILD-LOOP.md` § 4.b, `types/moduleTest.md` § Running
+  from WSL, METHODOLOGY K15. Lands in `module-wiring.md`, not `structure.md`. OWED code: G60 supertype-hint (`build.sh`),
+  G61 jdk-toolchain (`preflight.sh`), G62 bajadoc-packages, in `ledger.d/2026-10-23-r8-u4-c58-build-reference.md`.
 
 ### C59 — API stability: `com.tridium.*` is private; registry and agent lookups
 - **Sources:** bdps#Δ3 (primary) · has#Δ9 extends (apiInfo labels, `getDef`, `AgentFilter`)
 - **Evidence:** course `Lab Instructions.pdf` p83; devguide `apiInfo.txt:29-40,117-118`; corpus B1313.
 - **Target:** `types/module-wiring.md` (new §), `toolbelt/verify-module.sh`. **Lint-able:** yes — WARN `import com.tridium.` outside allow-list. **Fold type:** doc section + lint.
+- **Fold status:** LINT OWED, DOC BLOCKED (U5, `docs/r8-u5-c59-c62`, 2026-10-23): the WARN with the ndh Δ8 allow-list is
+  owed Go lint G65 `private-api-import`; the doc half (bdps Δ3, has Δ9) waits for U4, which owns `types/module-wiring.md`.
 
 ### C60 — NDriver section with the correlation rule
 - **Sources:** ord#Δ3 (primary)
 - **Evidence:** corpus B1239 §1239.12-13; course `Labs/Lab11 NDriver`.
 - **Target:** `types/driver-authoring.md` (new §). **Lint-able:** yes. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED doc (U5, 2026-10-23; ord Δ3, ndh Δ5, Δ7): `types/driver-authoring.md` § 1.7 + § 2 enum range
+  step; the § 2 example's `write()` return was wrong (`false` for an enqueued write) and is corrected. OWED: lints G66, G67.
 
 ### C61 — BQL literal rules in anti-injection
 - **Sources:** ord#Δ2 (primary)
 - **Evidence:** corpus B1237 §1237.6, B1242 §1242.3 rules 62-63.
 - **Target:** `types/security.md` §4. **Lint-able:** no. **Fold type:** doc section.
+- **Fold status:** FOLDED (U5, 2026-10-23; ord Δ2): `types/security.md` § 4.1a; BQLTIME narrowing kept `[INFER]`.
 
 ### C62 — File-export recipe
 - **Sources:** ord#Δ5 (primary)
 - **Evidence:** corpus B1254 §1254.5 traps 11-15; course `Lab10 Jobs/BHistoriesToCsvJob.java`.
 - **Target:** `types/logic-authoring.md` (new §). **Lint-able:** yes — WARN `.getBytes()` without charset, `BajaFileUtil.createFile(`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED doc (U5, 2026-10-23; ord Δ5, shh Δ1): `types/logic-authoring.md` § File export. OWED: lints G68
+  (`file-export`) and G69 (`lint-bql-string-concat.sh` history-prefix precision).
 
 ### C63 — Serving recipe B: `WEB-INF/web.xml` servlets and filters
 - **Sources:** has#Δ2 (primary; its lint half is rejected — "every `<servlet-class>` needs `CsrfProtectedFilter`" fails 8 of 14 shipped Tridium `web.xml`; use wuh Δ1's scope: POST/PUT servlets only, see C31)
 - **Evidence:** devguide `servlets/webModules.txt:12`; corpus B1315 §1315.1 rank 2, B1318 §1318.3 C3-C4.
 - **Target:** `types/dashboard.md:29`. **Lint-able:** yes (scoped). **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; has Δ2): `types/dashboard.md` § ux web-module recipe
+  (devguide `servlets/webModules.txt`), CSRF scope re-measured: 6 of the 14 shipped 4.15.6.20 `web.xml` map
+  `CsrfProtectedFilter`, only POST, POST,PUT or GET,POST. OWED: lint G75 `web-xml-csrf-scope`
+  (`ledger.d/2026-10-23-r8-u7-web-ui.md`); the `POST,PUT,DELETE` example in `types/security.md` § 3.1.
 
 ### C64 — SPA live-data subscription contract (bajaScript)
 - **Sources:** nsto#Δ4 (primary)
 - **Evidence:** corpus B1306 §1306.1 row 11, B1311 §1311.1 row 14.
 - **Target:** `types/dashboard.md` (new § live data). **Lint-able:** yes (JS twin of subscribe-without-unsubscribe). **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; nsto Δ4): `types/dashboard.md` § Reading the station
+  directly with BajaScript, subscription lifetime (bajaScript-ux `Subscriber.js`, `Component.js`). OWED: lint G76
+  `spa-subscribe-without-unsubscribe`.
 
 ### C65 — Security hardening: FIPS, least privilege, platform TLS stores
 - **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
 - **Evidence:** `Fips/DevelopersNotes-51FBF6BE.txt:29-41`, `StationSecurity/role_*`, corpus B1326.
 - **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ1, Δ2, Δ4): `types/security.md` § 9.1 FIPS, § 2.6 least privilege, § 10.1
+  TLS stores. Δ1 "RC4/DES" dropped (not in the guide). Lints owed G80 `jca-named-provider`, G81 `embedded-keystore`
+  (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`). Same unit: § 3.1 CSRF example corrected to the shipped
+  `httpMethod` values (no DELETE in any 4.15.6.20 `web.xml`).
 
 ### C66 — Equipment tagging for our logic points
 - **Sources:** sta#Δ6 (primary)
 - **Evidence:** `BContainmentRelation.java:65`, corpus B1329 rows 2-3.
 - **Target:** `types/logic.md` tag recipe. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ6): `types/logic.md` § Our-modules tag recipe, code-verified
+  (`BContainmentRelation.java:48-49`). No lint (partial, doc-only fold type).
 
 ### C67 — Analytics framework facts
 - **Sources:** sta#Δ9 (primary)
 - **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:9,23`, `ordSchemes.txt:15,25`, corpus B1338.
 - **Target:** `types/logic-authoring.md:31,101`. **Lint-able:** yes — grep `analytic:`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ9): `types/logic-authoring.md` analytics bullet + § ORD scheme typology
+  (no `analytic:` id, analytics-rt 4.15.6.20 `module.xml:106`). "Data definition per tag" not folded. Lint owed G82
+  `analytic-ord-scheme`.
 
 ### C68 — BACnet/Modbus field rules
 - **Sources:** drp#Δ5 (primary, BACnet export) · drp#Δ6 extends (MS/TP, Modbus byte order)
 - **Evidence:** corpus B1327 rows 4-10.
 - **Target:** `types/driver-authoring.md` (new §), `types/logic-authoring.md:641`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; drp Δ5, Δ6): `types/driver-authoring.md` § 11.1-11.3, `types/logic-authoring.md` § Authoring a driver (`in8` vs the device array), `types/issues-and-gotchas.md` H4, H5. Owed Go lints G85 `bacnet-export-inN-contention`, G86 `bacnet-export-enum-range`.
 
 ### C69 — Cloud/MQTT telemetry and watch clients
 - **Sources:** drp#Δ2 (primary, MQTT auth matrix + telemetry) · drp#Δ10 extends (lease formula, 503 = out of web threads, queue depth points)
 - **Evidence:** corpus B1323 rows 3-6, B1336 rows 3,4,6.
 - **Target:** `types/cloud-connector.md`, `types/driver-authoring.md`, `types/observability.md`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; drp Δ2, Δ10): `types/cloud-connector.md` § 9 (auth matrix, 1883 default port, telemetry recipe), § 10 (lease formula, 503 back-off), `types/driver-authoring.md` § 11.4 (capability overrides, queue depth). `types/observability.md` pointer owed (outside the unit's surface). Owed Go lint G87 `mqtt-tls-port`.
 
 ### C70 — RDBMS: supported databases and export from code
 - **Sources:** shl#Δ8 (primary) · r3di#Δ6 extends (`histories.getExportDescriptorType()`, licence on the database)
 - **Evidence:** `Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:16,46`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
 - **Target:** `types/third-party-libraries.md:176-177`, `types/utility-lib.md:8`, `types/cloud-connector.md`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; shl Δ8, r3di Δ6): `types/cloud-connector.md` § 11. Landed there, not at `types/third-party-libraries.md:176-177` / `types/utility-lib.md:8` (outside the unit's surface; pointer lines owed). Owed Go lint G88 `rdbms-dialect-descriptor`.
 
 ### C71 — Extending jsonToolkit
 - **Sources:** shl#Δ9 (primary: decision rule + extension points) · r3pec#Δ2 corrects (`overrideValueEncoding`, not final `doOverride`) · r3-report#R4
 - **Evidence:** `BIJsonProperty.java:15-30`, `javap BTypeOverride`, corpus B1322, B1350.
 - **Target:** `types/dashboard.md:29`, `types/cloud-connector.md` §1, new § "Extending jsonToolkit". **Lint-able:** yes. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (U9, 2026-10-23; shl Δ9, r3pec Δ2, r3-report#R4): new `types/json-toolkit.md` § 1-3 + `types/cloud-connector.md` pointer. `types/dashboard.md:29` pointer owed (outside the unit's surface). Owed Go lint G89 `jsontoolkit-licence-note`; the `doOverride`/dependency halves are compiler-enforced.
 
 ### C72 — Web UI reference: profiles, Px rules, charts, Mobile deprecated
 - **Sources:** wuh#Δ3 (primary, profiles) · wuh#Δ4 (Px rules) · wuh#Δ8 (stock ChartWidget first) · wuh#Δ9 (Mobile profile/Px deprecated since 4.6)
 - **Evidence:** corpus B1328, B1339, B1342.
 - **Target:** `types/dashboard.md`, `types/wb-widgets.md:360`, `types/frontend-standard.md:22,175`. **Lint-able:** partial. **Fold type:** doc sections + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; wuh Δ3, Δ4, Δ8, Δ9): `types/dashboard.md` § ux Px rules,
+  § Charts on an HMI, § Deploy on a JACE (web profile); `types/frontend-standard.md` § Profiles, § Technology
+  choices. Δ4 landed in `types/dashboard.md`, not `types/wb-widgets.md` (outside the unit's surfaces). OWED: lints G77
+  `px-portability`, G78 `mobile-deprecated`; the `types/wb-widgets.md` § PX authoring "all positions are absolute" line.
 
 ### C73 — Platform install and runtime profiles
 - **Sources:** pps#Δ9 (primary)
@@ -969,12 +1005,19 @@ cursor recipe stays owed (WU-P0-6).
 - **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
 - **Evidence:** `EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8.
 - **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ10, r3-report R5): `types/logic-authoring.md` § Programmatic slot-name
+  rules, design note [INFER] with the R2-oBIX-only scope.
 
 ### C78 — ExportTags makes a copy, not a proxy
 - **Sources:** sta#Δ8 (primary). **Target:** `types/distribution.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ8): landed in `types/logic.md` § Ship a tag dictionary; `types/distribution.md`
+  was outside the unit's edit surface (a one-line pointer there stays optional).
 
 ### C79 — Coexisting with the Tridium DashboardService
 - **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; wuh Δ10): `types/dashboard.md` § Deploy on a JACE
+  (clean-text anchor `dashboard-DashboardService.txt:7`). The lint half stays human review: the state lives in the
+  station home, not the module tree.
 
 ### C80 — NRE memory budget and flash writes on a JACE
 - **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
@@ -1040,7 +1083,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-horizons-authoring-security#Δ6` | types/structure.md:8,338, types/module-wiring.md | module-include.xml holds only types | C25 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ7` | types/structure.md:9,176-250, types/third-party-libraries.md:38-69 | Doc part allowed, help.guide.base optional, uberjar first | C26 | P0 | accepted |
 | `devguide415-horizons-authoring-security#Δ8` | types/structure.md | `se` = Java SE APIs; part dependency matrix | C24 | P0 | accepted |
-| `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted |
+| `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted (doc waits for U4) |
 | `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | folded (U10, `types/horizons.md` § 2 + `types/wb-widgets.md` popup editor) |
 | `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
 | `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | folded (U6, `types/lexicon.md` § 1); manifest lint owed G71 |
@@ -1068,15 +1111,15 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-control-alarms-schedules#Δ9` | types/logic.md | TriggerSchedule for wall-clock defrosts | C34 | P1 | accepted |
 | `devguide415-r2-control-alarms-schedules#Δ10` | types/logic-authoring.md:298 | Weekly schedule defaultOutput; sharing | C34 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ1` | types/cloud-connector.md, types/third-party-libraries.md:143,171 | MQTT native first; module abstractMqttDriver | C27 | P0 | accepted |
-| `devguide415-r2-drivers-protocols#Δ2` | types/cloud-connector.md | MQTT auth matrix and telemetry recipe | C69 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ2` | types/cloud-connector.md | MQTT auth matrix and telemetry recipe | C69 | P2 | folded (U9, `types/cloud-connector.md` § 9); lint owed G87 |
 | `devguide415-r2-drivers-protocols#Δ3` | types/driver-authoring.md:127-132 | staleTime 0 = stale immediately | C16 | P0 | accepted |
 | `devguide415-r2-drivers-protocols#Δ4` | types/driver-authoring.md, types/dashboard.md | BACnet statusFlags facet for health | C45 | P1 | accepted-corrected (COV and polled alike, r3di Δ3) |
-| `devguide415-r2-drivers-protocols#Δ5` | types/driver-authoring.md, types/logic-authoring.md:641 | Exposing values over BACnet | C68 | P2 | accepted |
-| `devguide415-r2-drivers-protocols#Δ6` | types/driver-authoring.md | MS/TP and Modbus rules | C68 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ5` | types/driver-authoring.md, types/logic-authoring.md:641 | Exposing values over BACnet | C68 | P2 | folded (U9, `types/driver-authoring.md` § 11.1, H5); lints owed G85, G86 |
+| `devguide415-r2-drivers-protocols#Δ6` | types/driver-authoring.md | MS/TP and Modbus rules | C68 | P2 | folded (U9, `types/driver-authoring.md` § 11.2-11.3, H4) |
 | `devguide415-r2-drivers-protocols#Δ7` | types/driver-authoring.md | Ping rules (faulted never pinged, alarm delay) | C44 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ8` | types/driver-authoring.md:121-122,205-213 | pollEnabled on poll service; tuning sizing | C16 | P0 | accepted |
 | `devguide415-r2-drivers-protocols#Δ9` | types/dashboard.md:23, types/logic-authoring.md:554, types/security.md | oBIX exposure rules | C46 | P1 | accepted |
-| `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | folded (U9, `types/cloud-connector.md` § 10, `types/driver-authoring.md` § 11.4) |
 | `devguide415-r2-packaging-platform-signing#Δ1` | types/distribution.md:35-45 | Fix dist attribute table (noStation) | C23 | P0 | accepted-corrected (missing attribute = false, r3pec Δ1) |
 | `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | folded (U10, `types/logic-authoring.md` § Shipping a template module); lint owed G92 |
 | `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | folded (U10, `types/logic-authoring.md` § What breaks on a module or template upgrade) |
@@ -1096,16 +1139,16 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | folded (U10, `types/logic.md` 4.15+ note); lint owed G90 |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | folded (U8, `types/security.md` § 9.1); lint owed G80 |
+| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | folded (U8, `types/security.md` § 2.6) |
 | `devguide415-r2-security-tags-analytics#Δ3` | types/security.md §3, types/dashboard.md | 4.15 absolute logoff ends HMI sessions | C31 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | folded (U8, `types/security.md` § 10.1); lint owed G81 |
 | `devguide415-r2-security-tags-analytics#Δ5` | types/logic.md, types/cloud-connector.md:206-217 | Tag dictionary licence (2 dictionaries) | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | folded (U8, `types/logic.md` § Our-modules tag recipe) |
 | `devguide415-r2-security-tags-analytics#Δ7` | types/logic.md, types/logic-authoring.md:181 | Tag rules and hierarchies | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353) |
+| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | folded (U8, `types/logic.md` § Ship a tag dictionary) |
+| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | folded (U8, `types/logic-authoring.md` analytics + § ORD scheme typology); lint owed G82 |
+| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353); folded (U8, `types/logic-authoring.md` § Programmatic slot-name rules) |
 | `devguide415-r2-shipped-libraries#Δ1` | types/third-party-libraries.md, types/module-wiring.md | bin/ext first; nre("g:a") | C42 | P1 | accepted |
 | `devguide415-r2-shipped-libraries#Δ2` | types/cloud-connector.md:61-63, types/third-party-libraries.md:167,174 | okhttp ships in bin/ext, not net-rt | C27 | P0 | accepted |
 | `devguide415-r2-shipped-libraries#Δ3` | types/third-party-libraries.md | bin/ext version drift | C42 | P1 | accepted |
@@ -1113,8 +1156,8 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-shipped-libraries#Δ5` | types/third-party-libraries.md:30,143,159-160,171 | Stale versions and MQTT module name | C27 | P0 | accepted |
 | `devguide415-r2-shipped-libraries#Δ6` | types/module-wiring.md | Wrapper does not grant permissions | C42 | P1 | accepted |
 | `devguide415-r2-shipped-libraries#Δ7` | types/cloud-connector.md §7, types/issues-and-gotchas.md | Outbound-HTTP decision ladder | C43 | P1 | accepted-corrected ((b) gate closed by default, r3di Δ4) |
-| `devguide415-r2-shipped-libraries#Δ8` | types/third-party-libraries.md:176-177, types/utility-lib.md:8 | Qualify native rdb (no Postgres) | C70 | P2 | accepted |
-| `devguide415-r2-shipped-libraries#Δ9` | types/dashboard.md:29, types/cloud-connector.md | jsonToolkit decision rule and extension card | C71 | P2 | accepted-corrected (overrideValueEncoding, r3pec Δ2) |
+| `devguide415-r2-shipped-libraries#Δ8` | types/third-party-libraries.md:176-177, types/utility-lib.md:8 | Qualify native rdb (no Postgres) | C70 | P2 | folded (U9, `types/cloud-connector.md` § 11); lint owed G88 |
+| `devguide415-r2-shipped-libraries#Δ9` | types/dashboard.md:29, types/cloud-connector.md | jsonToolkit decision rule and extension card | C71 | P2 | folded (U9, `types/json-toolkit.md` § 1-2, corrected per r3pec Δ2); lint owed G89 |
 | `devguide415-r2-web-ui-hmi#Δ1` | types/security.md:138-152, types/dashboard.md | Correct has Δ1/Δ2 (UserActivityFilter, CSRF scope) | C31 | P1 | accepted |
 | `devguide415-r2-web-ui-hmi#Δ2` | types/theme.md | Theme module rules | C30 | P0 | accepted |
 | `devguide415-r2-web-ui-hmi#Δ3` | types/dashboard.md | Web profiles and theme per profile | C72 | P2 | accepted |
@@ -1130,9 +1173,9 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r3-drivers-integration#Δ3` | types/driver-authoring.md:129 | statusFlags applies to COV and polled | C45 | P1 | accepted |
 | `devguide415-r3-drivers-integration#Δ4` | types/cloud-connector.md §7 | enableNonDriverClients default false; mountAtOrd | C43 | P1 | accepted |
 | `devguide415-r3-drivers-integration#Δ5` | types/cloud-connector.md, types/security.md | OAuth2 via oauth2-rt | C43 | P1 | accepted |
-| `devguide415-r3-drivers-integration#Δ6` | types/cloud-connector.md | RDBMS export from code | C70 | P2 | accepted |
+| `devguide415-r3-drivers-integration#Δ6` | types/cloud-connector.md | RDBMS export from code | C70 | P2 | folded (U9, `types/cloud-connector.md` § 11); lint owed G88 |
 | `devguide415-r3-packaging-extension-control#Δ1` | types/distribution.md:37 | noRunningApp enforced; missing = false | C23 | P0 | accepted |
-| `devguide415-r3-packaging-extension-control#Δ2` | types/ (new §) | Extending jsonToolkit (overrideValueEncoding) | C71 | P2 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ2` | types/ (new §) | Extending jsonToolkit (overrideValueEncoding) | C71 | P2 | folded (U9, `types/json-toolkit.md` § 3) |
 | `devguide415-r3-packaging-extension-control#Δ3` | types/logic.md | LeadLag feedback links mandatory | C33 | P1 | accepted |
 | `devguide415-r3-packaging-extension-control#Δ4` | types/logic.md | Interstart min on/off inherited, default 0 | C33 | P1 | accepted |
 | `devguide415-r3-web-session-headers#Δ1` | types/dashboard.md | Session lifetime ladder; a poll is not activity | C31 | P1 | accepted |
@@ -1154,23 +1197,23 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ2` | BUILD-LOOP.md §0, skill/SKILL.md | Reference-first rule at Orient | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ3` | METHODOLOGY.md | K-rule: re-check absolute claims; one-time sweep | C51 | P1 | accepted |
-| `n4-course-as-exemplar-source#Δ4` | build-verify.md, METHODOLOGY.md K15 | slotomatic before jar for region-less sources | C58 | P2 | accepted |
+| `n4-course-as-exemplar-source#Δ4` | build-verify.md, METHODOLOGY.md K15 | slotomatic before jar for region-less sources | C58 | P2 | folded (U4 C58) |
 | `n4-course-authoring-files-and-libraries#Δ1` | types/third-party-libraries.md | Path 0 uberjar; library → permission table | C26 | P0 | accepted |
 | `n4-course-authoring-files-and-libraries#Δ2` | templates/module-permissions.xml, types/structure.md, fixture | Canonical permissions template | C47 | P1 | accepted |
 | `n4-course-authoring-files-and-libraries#Δ3` | types/structure.md:133-180, fixture palette, toolbelt/verify-module.sh | Fix palette example and format card | C11 | P0 | accepted |
-| `n4-course-authoring-files-and-libraries#Δ4` | types/structure.md or types/module-wiring.md | Part gradle.kts reference; bajadoc packages | C58 | P2 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ4` | types/structure.md or types/module-wiring.md | Part gradle.kts reference; bajadoc packages | C58 | P2 | folded (U4 C58, module-wiring § 1.1); lint owed G62 |
 | `n4-course-authoring-files-and-libraries#Δ5` | types/module-wiring.md §2, toolbelt/verify-module.sh | module-include.xml lifecycle; dangling types | C25 | P0 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | folded doc (U4 C58); build.sh hint owed G60 |
 | `n4-course-build-deps-permissions-signing#Δ2` | types/structure.md, toolbelt/verify-module.sh | Permission-group roster with triggers | C28 | P0 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted (lint owed G65; doc waits for U4) |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | folded doc (U4 C58); preflight owed G61 |
 | `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |
 | `n4-course-drivers-bql-ords-files#Δ1` | types/logic-authoring.md, toolbelt/lint-null-context-write.sh | BQL consumer pattern with Context | C19 | P0 | accepted |
-| `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | accepted |
-| `n4-course-drivers-bql-ords-files#Δ3` | types/driver-authoring.md | NDriver section | C60 | P2 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | folded (U5) |
+| `n4-course-drivers-bql-ords-files#Δ3` | types/driver-authoring.md | NDriver section | C60 | P2 | folded (U5; lints owed G66, G67) |
 | `n4-course-drivers-bql-ords-files#Δ4` | types/logic-authoring.md | ORD call rules | C18 | P0 | accepted |
-| `n4-course-drivers-bql-ords-files#Δ5` | types/logic-authoring.md | File-export recipe | C62 | P2 | accepted |
+| `n4-course-drivers-bql-ords-files#Δ5` | types/logic-authoring.md | File-export recipe | C62 | P2 | folded (U5; lint owed G68) |
 | `n4-course-lexicon-logging-testing#Δ1` | types/structure.md, toolbelt/slot-coverage.sh | Lexicon key catalogue; Type.displayName | C10 | P0 | accepted-corrected (slot row per lux Δ1) |
 | `n4-course-lexicon-logging-testing#Δ2` | types/observability.md, toolbelt/lint-lexicon-keys.sh | Runtime lexicon idiom; key-exists lint | C55 | P2 | folded (U6, `types/lexicon.md` § 3); key lint owed G70 |
 | `n4-course-lexicon-logging-testing#Δ3` | types/moduleTest.md | moduleTest layout and idioms | C41 | P1 | accepted |
@@ -1203,7 +1246,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `review2-signing-build-route#Δ1` | build-verify.md § Verify, toolbelt/verify-module.sh | Signer-identity check by fingerprint | C48 | P1 | accepted |
 | `review2-signing-build-route#Δ2` | types/security.md § 3 | Signing-profile files are secret stores | C48 | P1 | accepted |
 | `review2-signing-build-route#Δ3` | build-verify.md § Signing per deploy target | Portable signing root blocks | C48 | P1 | accepted |
-| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | accepted |
+| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | folded (U4 C58) |
 | `review2-signing-build-route#Δ5` | types/security.md § 2.4, types/logic-authoring.md | Worker threads keep the caller's Context | C39 | P1 | accepted |
 | `review2-signing-build-route#Δ6` | BUILD-LOOP.md § 7, toolbelt/ | Computed retro delta counts | C51 | P1 | accepted |
 
@@ -1252,11 +1295,11 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-ndriver#Δ2` | new toolbelt/lint-driver-scaffold.sh, report-module.sh | new: wizard-stub silent-success lint | C88 | P1 | accepted |
 | `n4-course-handson-ndriver#Δ3` | types/driver-authoring.md § 5 | extends C83: reachability-only ping recipe; confirms bdps Δ2 | C83 | P0 | accepted |
 | `n4-course-handson-ndriver#Δ4` | types/driver-authoring.md, commissioning checklist | new: `serverEnabled` defaults to true on client drivers | C89 | P1 | accepted (override `[INFER]`) |
-| `n4-course-handson-ndriver#Δ5` | types/driver-authoring.md § 2, commissioning checklist | extends C60: enum proxy facets "Use Frozen Enum in Range" | C60 | P2 | accepted |
+| `n4-course-handson-ndriver#Δ5` | types/driver-authoring.md § 2, commissioning checklist | extends C60: enum proxy facets "Use Frozen Enum in Range" | C60 | P2 | folded (U5) |
 | `n4-course-handson-ndriver#Δ6` | types/driver-authoring.md, types/wb-widgets.md | new: NDriver manager + discovery recipe | C91 | P2 | accepted |
-| `n4-course-handson-ndriver#Δ7` | types/driver-authoring.md, ord Δ3 lint | confirms C60: static subscription set in the course reference | C60 | P2 | accepted |
-| `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | accepted |
-| `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | accepted |
+| `n4-course-handson-ndriver#Δ7` | types/driver-authoring.md, ord Δ3 lint | confirms C60: static subscription set in the course reference | C60 | P2 | folded (U5; lint owed G66) |
+| `n4-course-handson-ndriver#Δ8` | toolbelt/verify-module.sh --src, types/module-wiring.md | refines C59: allow-list `com.tridium.ndriver.**` | C59 | P2 | deferred (U5; owed lint G65) |
+| `n4-course-handson-services-history-threading#Δ1` | types/logic-authoring.md, lint-bql-string-concat.sh | confirms C62/C19: history → CSV recipe; BQL-concat lint refinement | C62 | P2 | folded (U5; lint owed G69) |
 | `n4-course-handson-services-history-threading#Δ2` | types/actions.md § 2 | confirms C38: `Flags.ASYNC` lint stays WARN | C38 | P1 | accepted |
 | `n4-course-handson-services-history-threading#Δ3` | toolbelt/lint-timers.sh | refines C01: multi-line class-header detection | C01 | P0 | folded (WU-P0 lints) |
 | `n4-course-handson-services-history-threading#Δ4` | types/logic.md:344 | confirms C01: Thread/ExecutorService live under MANAGE_EXECUTION | C01 | P0 | folded (WU-P0-1) |
@@ -1270,7 +1313,7 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-slotomatic-authoring#Δ6` | toolbelt/verify-module.sh `check_palette` | new: palette count misses non-first `n=` | C82 | P0 | accepted |
 | `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | accepted |
 | `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | accepted |
-| `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | accepted |
+| `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | folded doc (U4 C58); run-niagara-test.sh skip waits on that script |
 | `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | accepted |
 
 No-loss result for Appendix C (2026-10-22, T9a; ad-hoc comparison of the `| Δn |` rows of the five 2026-10-16 retros

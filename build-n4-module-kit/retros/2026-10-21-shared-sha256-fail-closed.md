@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-21 · kit · shared-sha256-fail-closed
@@ -41,4 +41,4 @@ Neither is applied; a fold review decides each one and flips this retro.
 - Deduplicating a helper is the moment to fix its contract, so the fix lands once for every caller.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 6 (no `exit` inside `$( )`); Δ2 already landed as code (`.github/workflows/ci.yml` shellcheck step and `tests/shell-hygiene.bats` SH1 list `scripts/lib/*.sh`).

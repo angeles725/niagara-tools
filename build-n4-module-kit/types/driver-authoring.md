@@ -102,6 +102,37 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
   thread, and no driver I/O ever runs on the engine thread `[ev: corpus B1419 §1419.3]`.
   [ev: retro n4-course-handson-ndriver Δ6]
 
+### 1.7 · NDriver — layers, threads and request/response correlation `[ev: corpus B1239 §1239.12-§1239.13]`
+
+Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless named.
+
+- **Layers** (course Lab 11 `[CERT]`): the network owns the comm stack (a `BCommConfig` subclass such as
+  `BTcpCommConfig`, driving `NComm`); one `NMessage` subclass per message type; one `LinkMessage` subclass frames
+  every message on the wire.
+- **Threads:** `doPoll` runs on the scheduler's `Poll:<network>` thread (`BNPollScheduler extends BPollScheduler`,
+  `driver-rt/…/util/BPollScheduler.java:809`); `BNDevice.postPing()` posts the ping to the network's `BNWorker`
+  (`BNDevice.java:72-79`, `BNNetwork.java:101,145-149`). Post proxy-ext I/O there with `postAsync(Runnable)` and
+  return `true` from `write()` (§ 2).
+- **Correlation rule.** Open transactions are keyed by `NMessage.getTag()` (`comm/NCommTimer.java:162`) and a
+  response is matched the same way (`comm/NComm.java:356`). The default tag is the shared `nullTag`
+  (`comm/NMessage.java:63-68`) while `BCommConfig.getMaxOutstandingTransactions()` returns 32
+  (`datatypes/BCommConfig.java:436-444`). So: a protocol with a request id overrides `getTag()` on requests and
+  responses; a protocol without one returns 1 from `getMaxOutstandingTransactions()` in its comm-config subclass.
+  With neither, the poll thread, the worker and a discovery job share one key, and a response can complete the
+  wrong request `[INFER]` (B1239 §1239.12 row 1).
+- **Timeouts:** a request waits `getResponseTimeOut()` (default 0) plus `getRespTimePadding()` (1000 ms) and
+  retries `getRetryCount()` (default 0) times (`comm/NMessage.java:151-200,233`, `comm/NCommTimer.java:524-527`):
+  1 s, no retry. Set both per message (`setResponseTimeOut`, `setRetryCount`) from the device's real latency.
+- **Defect checklist** — the course reference driver ships each one (B1239 §1239.12): keep subscription bookkeeping
+  per instance (the reference holds `private static final Set<String> subscribedPoints`,
+  `BTrafficLightDriverDevice.java:414`, shared by every device); bounds-check `LinkMessage.receive` against the
+  buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
+  proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
+  `poll/BNPollScheduler.java:48-59`).
+- Owed advisory lints G66 `ndriver-static-collection` and G67 `ndriver-tagless-correlation`
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
+  [ev: retro n4-course-handson-ndriver Δ7]
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
@@ -129,13 +160,24 @@ public void readUnsubscribed(Context cx) throws Exception {
 @Override
 public boolean write(Context cx) throws Exception {
     getNetwork().postWrite(buildWriteRequest(cx));
-    return false;   // false = async; the framework does not wait
+    return true;    // true = write enqueued: call writeOk()/writeFail() when it completes
 }
 ```
 
 Callback pair: `readOk(value)` / `readFail(cause)` and `writeOk()` / `writeFail(cause)` — call
 these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:859,883,895;
 corpus B810 §810.3]
+
+**`write()` returns whether a write is pending.** `true` = enqueued, the driver later calls `writeOk()` or
+`writeFail()`; `false` = cancelled at once, and `Tuning` clears the pending flag (`driver-rt/…/point/BProxyExt.java:872-883`,
+`Tuning.java:346-351`, vineflower). An async driver that returns `false` reports "not pending" for a write it
+still sends. NDriver threading: § 1.7. [ev: retro n4-course-drivers-bql-ords-files Δ3]
+
+**Enum proxy points show state names only with a frozen-enum range.** Set the point's `range` facet through
+"Use Frozen Enum in Range (module:name)" (`EnumRangeEditor.useFrozen`, `webEditors-ux.lexicon:92`) with the
+driver's enum type, e.g. `trafficLightDriver:TrafficLightState`; without it the course Lab 11 points showed ordinals
+`[CERT-live]` (corpus B1257 L11.40). Commissioning checks the range of every enum proxy before handover.
+[ev: retro n4-course-handson-ndriver Δ5]
 
 **BACnet: a field alarm or fault reaches Niagara status only with the `statusFlags` facet**
 `[ev: retro devguide415-r2-drivers-protocols Δ4]` `[ev: retro devguide415-r3-drivers-integration Δ3]` `[ev: corpus B1348 §1348.2]`.
@@ -606,6 +648,69 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
 | Another BMS | BACnet/IP export | peer reads/writes | no auth on BACnet/IP; writes run as station user `BACnet` |
 | On-site HMI, narrow write API | custom `BWebServlet` (`dashboard.md`) | browser pulls JSON | write with the real user Context; CSRF is yours |
 | Station-served page, few live values | BajaScript (`dashboard.md` § Reading the station directly) | browser subscribes | the user's own permissions |
+
+## 11 · Field-bus rules — BACnet export, MS/TP and Modbus
+
+Rules that decide field behaviour when our module's points sit on, or are exposed through, the stock BACnet and
+Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
+
+### 11.1 · Exposing values over BACnet `[ev: retro devguide415-r2-drivers-protocols Δ5]`
+
+- **Never enable an export priority our module drives.** Each priority level ticked in a writable export
+  descriptor's `bacnetWritable` links that `inN` of the source point to the descriptor; the guide warns "Do not
+  select any priority level already linked or in use by the system, otherwise control contention occurs"
+  (`Bacnet/AddandEditExportObjectsWindow-540E5726.txt:27`). Reserve our level (`in8`, `types/logic-authoring.md`
+  § Authoring a driver) and list the levels left to remote writers in the module README.
+- **Remote writes run as the station user `BACnet`,** which has no permissions until granted: give it Operator
+  write on the category that holds the exported points and a non-blank password
+  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:15-45`).
+- **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
+  has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
+  Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
+- **The N4 level is the BACnet priority.** A proxy write goes out as `WriteProperty` at the winning N4 level and
+  relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
+  corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
+  A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
+  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`). `[ev: corpus B1327 rows 4-7]`
+- Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
+
+### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`
+
+- **COV is a tuning-policy setting:** `Use Cov`, `Cov Subscription Lifetime` (default 15 min) and `Accept
+  Unsolicited Cov` (default false) live on the BACnet tuning policy (`Bacnet/bacnet-BacnetTuningPolicy.txt:24-29`);
+  bind MS/TP and IP devices to separate policies (`Bacnet/AddingATuningPolicyBACnet-4FD602EE.txt:11`).
+- **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
+  at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58`); a duplicate Device ID faults the
+  device (`:17`).
+- **Worst-case wait per request = `apduTimeout` × (`numberOfApduRetries` + 1)** — defaults 3000 ms and 3 on
+  `BLocalBacnetDevice`; ping and poll threads queue behind it (corpus B1190 §1190.2, live on the PANCCADIA TC500:
+  10 s × 4 = 40 s). Raise the timeout only with the retry count in view.
+
+### 11.3 · Modbus data `[ev: retro devguide415-r2-drivers-protocols Δ6]`
+
+- Integer is unsigned 16-bit; Long/Float take two registers; Double and Long 64-bit take four (new in 4.15)
+  (`Modbus/ModbusData-5FD097AE.txt:18,28,34,37`).
+- Byte order for 32/64-bit values is set on the network or the device, default `Order3210` (big-endian)
+  (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). Modbus carries no type metadata, so a wrong order still
+  reads `{ok}` with a zero or absurd value `[INFER]` — check one known value at commissioning. Gotcha H4.
+- Writes are rounded and clamped by data type (Integer 0..65535, Signed Integer -32768..32767; Float and Double
+  not rounded) (`Modbus/ModbusData-5FD097AE.txt:64-79`).
+- Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
+  (`Modbus/ModbusRegisters-5E427D5B.txt:33`).
+- Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
+  `[ev: corpus B1327 rows 8-10]`
+
+### 11.4 · Weak peers — capability overrides and queue depth `[ev: retro devguide415-r2-drivers-protocols Δ10]`
+
+- **Capability overrides are a last resort.** For a BACnet device that claims what it cannot deliver, the
+  bacnetUtil children `RpmOverride`, `SegmentationOverride`, `ApduSizeOverride` and `ServicesSupportedOverride`
+  correct the claim; the guide calls them "features of last resort", temporary until firmware or network fixes
+  (guide 4.15.6.20 `EngNotes/BACnetOverridingADevice.txt:19`). Record each one in the site runbook.
+- **Expose bounded queues as diagnostics.** Stock MS/TP diagnostics count queue-full events (`rxQ_full`,
+  `apptxq_overflow`; `EngNotes/bacnetUtil-Tokens.txt:18-20,59-60`). A custom driver should show its own comm or
+  write queue depth and overflow count the same way (the spy page in `types/observability.md` § 2, plus a
+  read-only transient slot when a dashboard or alarm must see it `[INFER]`) and baseline it per trunk.
+  `[ev: corpus B1336 rows 4,6]` Watch-client leases and 503 back-off: `types/cloud-connector.md` § 10.
 
 ---
 

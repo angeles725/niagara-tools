@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · fail-closed-walks
@@ -47,4 +47,4 @@ enter was skipped and the script reported the module clean (exit 0): the issue #
   so a symlinked source is no longer scanned. No fixture or repo tree holds one, so the snapshot shows no diff.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-fail-closed-walks.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `BUILD-LOOP.md` § 5 Kit tooling doctrine "Fail-closed input listing".

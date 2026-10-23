@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 // TestDifferentialPython is the equivalence proof against CPython's json module: every boundary
@@ -18,7 +20,7 @@ import (
 // and safety.canonical, then float() for a top-level number; random float bit patterns go
 // through repr(). python3 decodes the input bytes with surrogateescape, as its stdin does in
 // UTF-8 mode (the default since 3.15). The Go result must equal Python's byte for byte.
-// It skips when python3 is missing.
+// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
 
 const pyDriver = `
 import json, struct, sys
@@ -45,10 +47,7 @@ for line in open(sys.argv[1]):
 const fuzzSeed, fuzzDocs, fuzzFloats = 20261022, 4000, 4000
 
 func TestDifferentialPython(t *testing.T) {
-	py, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 not on PATH")
-	}
+	py := pytarget.Python(t)
 	rng := rand.New(rand.NewPCG(fuzzSeed, fuzzSeed))
 	var docs []string
 	for _, c := range decodeCases {

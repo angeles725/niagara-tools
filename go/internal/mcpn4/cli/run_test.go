@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 )
 
 func run(args []string, stdin string) (code int, out, errOut string) {
@@ -44,12 +45,10 @@ var argvCorpus = [][]string{
 
 // TestDifferentialPython is the command-line equivalence proof: for every argv above, exit code,
 // stdout and stderr equal those of `python3 -m mcp_n4.server` with an empty stdin (argparse at
-// 80 columns, no color). It skips when python3 is missing.
+// 80 columns, no color).
+// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
 func TestDifferentialPython(t *testing.T) {
-	py, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 not on PATH")
-	}
+	py := pytarget.Python(t)
 	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
 	if err != nil {
 		t.Fatal(err)

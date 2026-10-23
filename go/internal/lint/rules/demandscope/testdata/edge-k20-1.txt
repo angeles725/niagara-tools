@@ -1,0 +1,22 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  demand-in-scope  @DIR@/m  no *.java sources found
+-- stderr --
+-- m/.deploy-baseline/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/k-worktrees/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}

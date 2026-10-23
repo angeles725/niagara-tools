@@ -67,6 +67,9 @@ already set. [ev: retro campaign11-client-root; design.md D3a/D3b]
   test (shellcheck SC2314 flags it; CI runs shellcheck at every severity). Write `run cmd; [ "$status" -ne 0 ]`
   (or `run ! cmd` on bats >= 1.5) or `if cmd; then return 1; fi`, and prove the negative branch with a mutation.
   [ev: retro polish-2026-10-02-close Δ4]
+- **One assertion per command line in bats.** An `[[ a ]] && [[ b ]]` list that is not the test's last command
+  never fails on `a` (bats errexit ignores a failing `&&` list member); write `[[ a ]]` and `[[ b ]]` on their own
+  lines. [ev: retro r8-t23-parked-advisories Δ1]
 - **Shape an observed mutation so it neutralizes the guard and nothing else.** Neutralize a status check as
   `if ! { cmd || true; }; then` or by deleting its `had_err=1` / `exit 3` line — never `if ! cmd || true; then`, which
   parses as `(! cmd) || true` and is always true. A check that exits from inside a function is neutralized by replacing
@@ -100,14 +103,37 @@ over shared `go/internal/` packages (`internal/cli` holds the injectable stdio).
 - A ported toolbelt script keeps its `.sh` name as the stable entry point: a thin wrapper that builds
   `go/bin/<tool>` when it is missing or older than a Go source, then execs it (exit 3 when `go` is missing).
   `go/bin/` is gitignored. First port: `toolbelt/gen-retro-index.sh` → `go/internal/retroindex`, output byte
-  for byte the same as the bash version. `[ev: retro go-module-gen-retro-index]`
+  for byte the same as the bash version. `[ev: retro go-module-gen-retro-index Δ1]`
 - Every wrapper gets the binary from `go/go-tool.sh` (`. go/go-tool.sh; bin="$(go_tool_bin <go-dir> <tool>)" || exit 3`),
   never from its own copy of the rebuild logic; `tests/go-tool.bats` pins the rebuild paths. The first call after
   a source change pays one `go build`. `go/go-tool.sh` sits in `go/` so a fixture that symlinks `go/` next to a
   copied wrapper still finds it. Second port: `scripts/lib/ci_steps.py` → `go/cmd/ci-steps`, used by
-  `scripts/ci-local.sh`. `[ev: retro go-ci-steps]`
+  `scripts/ci-local.sh`. `[ev: retro go-ci-steps Δ1]`
 - Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates the kit ledger parts of
   `BUILD-STATE.md` from `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]`
+
+Tool-authoring rules for a Go tool or port (what to port and the lint stack: `build-n4-module-kit/BUILD-LOOP.md`
+§ 5 "Kit tooling doctrine"):
+
+- **Port in two steps.** The first commit is byte-identical to the old tool, fail-open quirks included; capture
+  old vs new on edge inputs (unterminated last line, unreadable file, empty and odd cells) so the diff both proves
+  equivalence and finds silent passes. Each known false result (a silent pass or a false finding) is then fixed in
+  its own droppable commit with a seeded RED test, and the PR lists them. A port is not done while it keeps a known
+  lie: an unfixed one is an owed `ledger.d/` item. `[ev: retro go-check-facets-card Δ1]`
+  `[ev: retro go-sweep-fold-audit Δ1]` `[ev: retro truth-audit Δ1]`
+- **Fail closed on I/O.** An unlistable directory, a failed listing or an unreadable input is exit 3 with nothing
+  rendered or reported; only a vanished entry or a dangling symlink may be skipped. An empty input set is the same
+  error for a lint (BUILD-LOOP.md § 5). `[ev: retro go-ci-steps Δ2]` `[ev: retro go-lint-guard-pins Δ1]`
+- **Data is never a pattern.** A name read from an archive, a tree or a file is matched literally in Go, never
+  handed to an external tool that globs or regex-parses it (`unzip -p <jar> 'Foo[1].class'` matched nothing and
+  the jar passed). `[ev: retro go-lint-bundled-jar-class-version Δ1]`
+- **Pin the contract, not the old implementation.** A test that fakes an external binary on `PATH` tests the bash
+  tool; when the tool is ported, restate it as the behaviour the binary stood for (an unreadable header is exit
+  3, nothing written). `[ev: retro go-gen-lint-index Δ1]`
+- **A gate calls another kit tool's Go package in process, never its wrapper script:** same messages, no
+  sibling-script lookup, no second build or process. `[ev: retro go-sweep-build-state Δ1]`
+- **A row's free-text note never contains a status word** (PASS/WARN/FAIL), so a caller can grep the status
+  column; write thresholds as prose (`fail above 50%`). `[ev: retro r8-t47-host-budget Δ2]`
 
 ---
 
@@ -193,6 +219,10 @@ Before `git commit`:
 - [ ] Or replay the whole CI job: `scripts/ci-local.sh -j 3` runs every `ci.yml` step under GitHub's `bash -e` (no
       pipefail) with the pinned shellcheck v0.10.0 from a sha256-checked cache; a newer local shellcheck misses or
       adds findings (0.11 missed SC2015, adds SC2329). `--list` shows each step as RUN or SKIP. `[ev: retro ci-local-replay]`
+- [ ] No `exit` inside a function whose output is captured with `$( )`: it leaves only the subshell, so the
+      script goes on (install-skill.sh installed on two empty digests; lint-timers' `$(perms_grant)` exited 3 and
+      the lint exited 0). Split a fatal helper into a top-level check (`require_x <prefix> || exit N`) and a pure
+      producer used inside `$( )`. `[ev: retro shared-sha256-fail-closed Δ1]` `[ev: retro go-lint-timers Δ2]`
 - [ ] Commit message is Conventional Commits (`feat:` / `fix:` / `chore:` / `docs:` /
       `refactor:` / etc.).
 - [ ] No `Co-Authored-By` trailers. No AI attribution of any kind.
@@ -220,6 +250,11 @@ The kit block of `build-n4-module-kit/BUILD-STATE.md` is partly GENERATED too: i
 `build-n4-module-kit/toolbelt/gen-build-state.sh` and commits both; it never edits those lines by hand. The
 fragment counts as the `BUILD-STATE.md` update for the gate, and CI plus `sweep-build-state.sh` fail a stale
 `BUILD-STATE.md`. On a merge conflict there, take either side of the generated lines and regenerate.
+
+Retro citation tags name the retro by its stem, the filename without the `YYYY-MM-DD-` prefix and `.md`:
+`[ev: retro <stem> Δn]` and `[deferred: retro <stem> Δn]`. `toolbelt/sweep-fold-audit.sh` matches the stem
+exactly (header lines 13-15 and 22; `go/internal/foldaudit` `stem`), so the dated form is silently not counted.
+`[ev: retro truth-audit Δ4]`
 
 The gate ships **inert** — nothing runs until you enable it:
 
@@ -266,6 +301,21 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
   (`gh pr create --base main`) → merge **ff-only / rebase** (no squash, no merge commits — keep a
   linear history). Tags (§5 step 6) are pushed with `git push --tags` after the release commit is on
   `main`.
+- **Land only the reviewed SHA.** A landing script checks the `git push` exit status itself (never through a pipe
+  without `pipefail`), verifies that `origin/<branch>` equals the reviewed local SHA before it opens or merges the
+  PR, and merges with `gh pr merge --match-head-commit <reviewed SHA>`. Review evidence is bound to one SHA;
+  merging any other head merges unreviewed code. Incident 2026-10-22: a helper piped `git push` through
+  `grep | tail`, a rejected non-fast-forward push looked successful, and PR #346 merged the stale remote head, WIP
+  commit 79ca5a2, with CI green. `[ev: retro truth-audit Δ5]`
+- **Settle a testable review claim by running it.** A reviewer claim that can be disproved by running a test at
+  the exact reviewed SHA is answered with that command and its output (in the PR body and any review disposition),
+  not argued. Example: a BLOCKER on 5b8eac9 said BSC4 fails because the bash scan is unchanged; the `.sh` is the
+  `n4lint` wrapper since c15f6cd, and `bats -f BSC tests/lint-bql-string-concat.bats` at 5b8eac9 is 7/7.
+  `[ev: retro truth-audit Δ6]`
+- **Prove a dead-code deletion mechanically.** A deletion-only commit that removes the old bash body after a Go
+  wrapper's `exec` tail draws inconclusive review findings; prove it with the no-code-after-exec check
+  (`bats -f GWS4 tests/go-wrapper-symlink.bats`: no non-comment line and no leftover `disable=SC2093` below the
+  first top-level `exec`) and cite its output, instead of arguing. `[ev: retro truth-audit Δ7]`
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
   checklist + agent discipline. Future: a pre-commit hook.
 - **CI active** (`ci.yml`, since Campaign 5): GitHub Actions on `origin` runs shellcheck + bats + sweep on every push and PR — server-side, un-bypassable complement to the opt-in client hook. **Pin every tool the CI gate depends on** (shellcheck version, Java version, junit sha256); an unpinned tool drifts newer on the runner and turns green→red with no code change. [ev: retro ci-server-side-enforcement] (K10/A10)

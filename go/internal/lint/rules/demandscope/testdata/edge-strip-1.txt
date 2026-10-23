@@ -1,0 +1,24 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/A.java:3  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/A.java:15  demandless reads coil with no demand-shaped input in scope
+-- stderr --
+-- m/A.java --
+class A {
+  String u = "http://x"; int x = 1;
+  int step(double suction, double lim) { // { brace in comment
+    int target = 4; /* } */
+    if (suction < lim) target = 3; // suction < lim
+    String s = "{"; char c = '}';
+    return target;
+  }
+  int pick(double t) {
+    // target = 1; temp < 3
+    String s = "target = 1; temp > 2";
+    return 0;
+  }
+  /* demand field in a comment; */
+  int demandless(double coil) { if (coil > 2) setOut(1); return 0; }
+}
