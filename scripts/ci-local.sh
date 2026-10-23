@@ -48,6 +48,7 @@ SKIP_RULES=(
   "Install bats|uses bats on PATH"
   "Install shellcheck*|replaced by the cached, sha256-checked shellcheck ${SC_VER} prepended to PATH"
   "Set up Go*|uses the go on PATH (CI installs the go/go.mod version; local go must exist)"
+  "Set up CPython 3.15*|uses python3 on PATH; the Go differentials skip, naming it, unless it is 3.15"
 )
 
 usage() { printf 'usage: %s [--list] [--only <substring>] [-j N] [--ci-file <path>] [--cache-dir <path>]\n' "$0" >&2; exit 2; }

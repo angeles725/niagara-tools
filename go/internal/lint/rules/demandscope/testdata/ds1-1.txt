@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  int step(long now, int demandCount, double suction, double suctionLowLimit) {
+    int target = demandCount;
+    if (demandCount <= 0) target = 0;                       // demand GATE
+    if (suction < suctionLowLimit) target = Math.min(target, demandCount - 1);
+    return target;
+  }
+}

@@ -29,6 +29,16 @@ Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or
 
 - **`BEventService` routing — routing IS the Baja link graph, no imperative registry:** `BEventSource.routeTo(name, routable)` = `add(name, consumer)` + `linkTo(source.event → consumer.process)`. `BEventFilter` chains (consumer = process action, producer = event topic). `BEventRecipient` is terminal async delivery via `ThreadPoolWorker`. The event envelope is a uniform `BEvent` (uuid / timestamp / source ORD / open value). Cross-station delivery uses `BStationRecipient` (Fox `EventChannel`). `BComponentEventSource` wraps a `Subscriber.event(BComponentEvent)` into a `BEvent`; `BComponentTypeEventSource` uses `TypeSubscriber` internally — the event module is an OVERLAY on the B867 subscription primitives. **License required:** `tridium:eventService`. `[ev: corpus B873 §873.1-4]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
+  **Documented scope** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: the 4.15.6.20 developer guide covers only
+  data-processing blocks (extend `BAlgorithmBlock` or `BOutputBlock`, pins are `BBlockPin`;
+  `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22,28-30`). `AnalyticDataSource.Provider` lives in the internal
+  `com.tridiumx.analytics.data` package (analytics-rt 4.15.6.20 jar listing) and is undocumented: a design that
+  depends on it is [INFER] and needs a version pin. Consume results through an analytic proxy ext on a point or the
+  ORD schemes (§ ORD scheme typology), not by reaching into the framework. **Licence:** every point the framework
+  uses carries the `a:a` tag and counts against the licence; when the count exceeds it the framework stops, so turn
+  `AutoTagAnalyticPoint` off after commissioning (`AnalyticsGuide/AboutLicensing-2CF33B35.txt:7-11`,
+  `ConfiguringTheServiceForLicensing-2D096CAA.txt:17`). An alert raises no alarm unless its `Alarm` property is set
+  (default false, `AnalyticsGuide/CreatingAnAlert-4506D8F3.txt:42`). Corpus B1338.
 
 ### Nav-tree ordering and visibility `[ev: corpus B757 §757.3–757.4]`
 
@@ -119,6 +129,14 @@ BObject result = target.get();
 | **query** | Runs a search or query | `bql:`, `neql:`, `hierarchy:`, `nav:` |
 
 Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side SPIs for the authoring recipe.
+
+**Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
+`BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
+There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt 4.15.6.20
+`META-INF/module.xml:106`). Analytic values cannot be subscribed like points; the bindings poll them
+(`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
+`analytic-ord-scheme` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
+`[deferred: retro devguide415-r2-security-tags-analytics Δ9]`
 
 ### `service:` lookup scheme `[ev: corpus B5 §5.1.1; B38 §38.1]`
 
@@ -244,6 +262,40 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
   such claims stay marked until a code or doc read backs them. `[ev: retro r8-t9g-nav Δ2]`
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
+
+## File export — history to CSV `[ev: corpus B1254 §1254.5]`
+
+A third-party module writes only under Station Home, `file:^…` = `stations/<name>/shared/`; the rest of the station
+folder is Protected Station Home, framework-only (devguide `directoryRestructure.txt:103,109`). A history goes to
+CSV without an exporter class (course certification exam `BHistoryExportService.doExport`, run live):
+
+```java
+BOrd target = getOutputFile();                                  // e.g. BOrd.make("file:^export/history.csv")
+if (target.isNull()) throw new IllegalArgumentException("output file not set");
+BOrd src = BOrd.make("history:" + getHistoryId().encodeToString() + "|bql:select *");
+BITable<BHistoryRecord> table = (BITable<BHistoryRecord>) src.get(this, cx);   // caller's Context
+BIFile file = BajaFileUtil.createFileToOverwrite(target, cx);   // re-runnable
+try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream(), StandardCharsets.UTF_8));
+     TableCursor<BHistoryRecord> c = table.cursor()) {
+  while (c.next()) {
+    BHistoryRecord r = c.get();
+    w.println(r.getTimestamp() + "," + r.get("operation"));    // audit history: columns by name
+  }
+}
+```
+
+- **`createFileToOverwrite`, not `createFile`:** `createFile` throws `FileAlreadyExistsException` when the file
+  exists, so the second run fails; both throw `IllegalArgumentException("Filename required")` for a null or empty
+  ORD (`baja/…/javax/baja/file/BajaFileUtil.java:82-121`, vineflower) — guard `isNull()` first.
+- **Explicit charset:** `getBytes()` and a bare `OutputStreamWriter` use the platform charset; pass
+  `StandardCharsets.UTF_8`. Close the stream and the cursor with try-with-resources (§ BQL from code).
+- **Exporters:** `ExportOp` is public (`javax.baja.file`), but `BHistoryToCsv` is `com.tridium.history.exporters`
+  — private API; the course itself says it "could change between minor version updates" (Lab Instructions p83).
+  Write the loop above instead.
+- Owed advisory lints G68 `file-export` (bare `getBytes()`, `BajaFileUtil.createFile(`) and G69, the
+  `lint-bql-string-concat.sh` precision fix that stops it WARNing on the `history:<id>|bql:` literal above
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ5]
+  [ev: retro n4-course-handson-services-history-threading Δ1]
 
 ## Templates are artifact production, not a type SPI
 
@@ -543,6 +595,13 @@ String escaped = SlotPath.escape(bacnetDeviceName);  // handles spaces, leading 
 add(escaped, BDouble.DEFAULT);
 ```
 
+**Keep author-set flags when an action rebuilds slots** `[ev: retro devguide415-r2-security-tags-analytics Δ10]`: a
+refresh or rediscover action that removes and re-adds dynamic slots must carry over the flags an integrator set
+(HIDDEN, OPERATOR, READONLY): read `getFlags(slot)` before removing and `setFlags` after re-adding, or update the
+slot in place. Tridium's counter-example is scoped narrowly: `forceUpdate` resets hidden or changed action flags to
+defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `EngNotes/aForceUpdateAction.txt:2,13`;
+corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a design note [INFER].
+
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
 
 ## `@NiagaraProperty` source comment → generated Javadoc (slotomatic keeps only the LAST line)
@@ -744,6 +803,10 @@ A boolean flag that gates ALL output writers (e.g. `if(inDefrost) return;` at th
 When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable` that sits above a driver point), follow these rules to avoid silent command loss and stuck relays.
 
 - **Write to `in8`, not `in1`:** Niagara's priority-16 array arbitrates commands; level 8 is the MANUAL/OPERATOR write level (persisted across restarts). Writing to `in1` (supervisor override) can lock out the operator; writing to `in8` is the correct level for our own module's command. (`BBooleanWritable.java:490` — `in8` is the persisted manual level.)
+- **`in8` is a local choice, not a guarantee on BACnet:** the winning N4 level is the BACnet `WriteProperty`
+  priority, so a device program at priority 1-7 still wins in the device, and panels differ (`in10`/`in16`,
+  corpus B846). Never tick a BACnet export priority our module drives (`types/driver-authoring.md` § 11.1).
+  `[ev: corpus B1327 §1327.2 C2]` `[ev: retro devguide415-r2-drivers-protocols Δ5]`
 - **Set a non-null `fallback`:** the `fallback` slot is the value the writable holds when ALL 16 priority levels are null (the relinquished state). If `fallback` is null on a `BBooleanWritable`, the relay HOLDS its last command on station stop/reload — 22 PANCCADIA relays exhibited this until the fallback was set. (`BBooleanWritable.java:726`: `fallback = newProperty(0, new BStatusBoolean(false, ...))`.)
 - **`writeOnUp=true` (verify it is set):** `BTuningPolicy.writeOnUp` defaults `true` (`BTuningPolicy.java:206`), so a proxy point whose TuningPolicy uses the default is self-correcting — on device-UP it replays the last desired write. If `writeOnUp` is `false`, a write that was issued while the device was DOWN is silently dropped and the relay never receives the command. (`Tuning.java:201-204`.) Do NOT override `writeOnUp=false`.
 - **Verify the write landed — read the DOWN/STALE status bit:** `set()` returning normally does NOT mean the device received the command; it means Niagara queued it. Always check the proxy point's `BStatus.isDown()` / `isStale()` bit after a write and surface it via an alarm or a health-status slot.

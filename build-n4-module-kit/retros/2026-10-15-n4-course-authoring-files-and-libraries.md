@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-10-15 · kit · n4-course-authoring-files-and-libraries
@@ -43,3 +43,6 @@ with no check.
 - A kit example that no Tridium artifact matches (class-name palette types, attribute overrides) is a defect; check examples against a shipped jar.
 - A fixture is the kit's executable doctrine; when it violates a stated rule, the scaffold propagates the violation to every new module.
 - Every `java.*` capability a library uses maps to a permission group; the table belongs next to the library recipe, not in the security chapter.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u4-c58-build-reference`) — Δ1 `types/third-party-libraries.md`; Δ2 `types/structure.md` § module-permissions.xml; Δ3 `types/structure.md` § Format card; Δ4 `types/module-wiring.md` § 1.1 (bajadoc lint owed G62, `ledger.d/2026-10-23-r8-u4-c58-build-reference.md`); Δ5 `types/module-wiring.md` § 2.

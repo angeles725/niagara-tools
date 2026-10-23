@@ -139,3 +139,38 @@ func TestCheck(t *testing.T) {
 		t.Errorf("fresh index: Check = false or diagnostics %q", diag.String())
 	}
 }
+
+// TestMainCommittedBytes ports the key cases of the gen.File parity matrix (#344): the written
+// index ends in exactly one newline; --check ignores any trailing newlines on the committed file
+// (as the bash $(...) compare did); a read-only index is exit 3 and left untouched.
+func TestMainCommittedBytes(t *testing.T) {
+	t.Parallel()
+	root := kit(t, map[string]string{"2026-09-01-a.md": okRetro})
+	index := root + "/retros/INDEX.md"
+	if code, _, _ := run("", root); code != ExitOK {
+		t.Fatalf("write: exit %d", code)
+	}
+	written, err := os.ReadFile(index)
+	if err != nil || !strings.HasSuffix(string(written), "|\n") {
+		t.Fatalf("written index does not end in exactly one newline: %q", written)
+	}
+	body := strings.TrimSuffix(string(written), "\n")
+	for _, committed := range []string{body, body + "\n\n\n"} {
+		if err := os.WriteFile(index, []byte(committed), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if code, out, _ := run("", "--check", root); code != ExitOK || out != "gen-retro-index: "+index+" is fresh\n" {
+			t.Errorf("committed %q: --check = (%d, %q), want fresh", committed[len(committed)-3:], code, out)
+		}
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a mode-444 file")
+	}
+	if err := os.Chmod(index, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	code, out, errs := run("", root)
+	if b, _ := os.ReadFile(index); code != ExitEnv || out != "" || !strings.HasPrefix(errs, "gen-retro-index: cannot write "+index+": ") || string(b) != body+"\n\n\n" {
+		t.Errorf("read-only index: got (%d, %q, %q), target %q", code, out, errs, b)
+	}
+}

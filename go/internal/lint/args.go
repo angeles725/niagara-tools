@@ -17,6 +17,7 @@ const (
 	Raw                  // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
 	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
+	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
 )
 
 // Args is a parsed command line.
@@ -45,8 +46,12 @@ func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 		}
 		args = args[:1]
 	}
+	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
+		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots
+		a.Strict, args = true, args[1:]
+	}
 flags:
-	for mode != Raw && mode != Exact && mode != Trailing && len(args) > 0 {
+	for mode != Raw && mode != Exact && mode != Trailing && mode != Leading && len(args) > 0 {
 		switch arg := args[0]; {
 		case arg == "--strict":
 			a.Strict = true
