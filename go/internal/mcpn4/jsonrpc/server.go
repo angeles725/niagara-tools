@@ -96,7 +96,11 @@ func (s *Server) HandleLine(line []byte) ([]byte, bool) {
 	if len(line) == 0 {
 		return nil, false
 	}
-	msg, err := pyjson.Unmarshal(line)
+	var msg any
+	err := errTooDeep
+	if !NestsDeeper(line, MaxNesting) { // checked first: the decoder recurses per level
+		msg, err = pyjson.Unmarshal(line)
+	}
 	var reply *pyjson.Object
 	if err != nil {
 		reply = errorReply(nil, ParseError, "parse error")

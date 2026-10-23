@@ -77,8 +77,10 @@ func TestDifferentialPython(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
+	lines := append(append([]string{}, protocolLines...), nestedPing(MaxNesting), nestedPing(MaxNesting+1),
+		strings.Repeat(`{"a":`, 100000)+"1"+strings.Repeat("}", 100000)) // past CPython's C stack
 	var in strings.Builder
-	for _, l := range protocolLines {
+	for _, l := range lines {
 		in.WriteString(hex.EncodeToString([]byte(l)) + "\n")
 	}
 	inPath, driver := filepath.Join(dir, "lines.txt"), filepath.Join(dir, "driver.py")
@@ -99,19 +101,19 @@ func TestDifferentialPython(t *testing.T) {
 	s := New(registry.Default())
 	i := 0
 	for ; sc.Scan(); i++ {
-		if i >= len(protocolLines) {
+		if i >= len(lines) {
 			t.Fatalf("python3 printed more lines than the corpus holds")
 		}
 		want := sc.Text()
 		got := "-"
-		if reply, ok := s.HandleLine([]byte(protocolLines[i])); ok {
+		if reply, ok := s.HandleLine([]byte(lines[i])); ok {
 			got = string(reply)
 		}
 		if got != want {
-			t.Errorf("line %q:\n go     %s\n python %s", protocolLines[i], got, want)
+			t.Errorf("line %q:\n go     %s\n python %s", lines[i], got, want)
 		}
 	}
-	if i != len(protocolLines) {
-		t.Fatalf("python3 answered %d of %d lines", i, len(protocolLines))
+	if i != len(lines) {
+		t.Fatalf("python3 answered %d of %d lines", i, len(lines))
 	}
 }

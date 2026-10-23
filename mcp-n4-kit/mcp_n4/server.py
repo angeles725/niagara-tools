@@ -22,9 +22,32 @@ SERVER_VERSION = __version__
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 
 PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS = -32700, -32600, -32601, -32602
+#: Deepest request nesting (arrays and objects, the outer object counted) that is parsed; a
+#: deeper line gets the parse error reply. CPython's json has no fixed limit of its own: it
+#: raises RecursionError (not ValueError) at a depth set by the C stack (~52k in 3.15 with an
+#: 8 MB stack, about 1000 before 3.12), which escaped handle_line and ended `serve` (R8-D15).
+#: 1000, the default sys.getrecursionlimit(), is far beyond any MCP request; the Go port
+#: (go/internal/mcpn4/jsonrpc) uses the same number.
+MAX_NESTING = 1000
 
 _JSON_TYPES = {"string": str, "boolean": bool, "integer": int, "number": (int, float),
                "array": list, "object": dict}
+
+
+_UNPARSED = object()
+
+
+def _nesting_exceeds(value, limit):
+    """Whether lists/dicts nest deeper than `limit` in a decoded value (iterative: no recursion)."""
+    stack = [(value, 1)]
+    while stack:
+        item, depth = stack.pop()
+        if isinstance(item, (list, dict)):
+            if depth > limit:
+                return True
+            children = item.values() if isinstance(item, dict) else item
+            stack.extend((child, depth + 1) for child in children)
+    return False
 
 
 class InvalidParams(Exception):
@@ -93,7 +116,9 @@ class Server:
             return None
         try:
             msg = json.loads(line)
-        except ValueError:
+        except (ValueError, RecursionError):  # RecursionError: nesting past the C stack
+            msg = _UNPARSED
+        if msg is _UNPARSED or _nesting_exceeds(msg, MAX_NESTING):
             return json.dumps(self._error(None, PARSE_ERROR, "parse error"))
         reply = self.dispatch(msg)
         return None if reply is None else json.dumps(reply)

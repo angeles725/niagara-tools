@@ -192,6 +192,28 @@ class TestRobustness(unittest.TestCase):
                      '\u00a0{"id":7,"method":"ping"}\x0b', '{bad', '7'):
             self.assertEqual(srv.handle_line(line), reference.handle_line(line), line)
 
+    @staticmethod
+    def nested_id(depth):
+        """A ping whose request nests `depth` arrays/objects deep (the outer object counts)."""
+        inner = depth - 1
+        return '{"id":%s1%s,"method":"ping"}' % ("[" * inner, "]" * inner)
+
+    def test_nesting_up_to_the_limit_is_answered(self):
+        srv = self.make_server()
+        out = json.loads(srv.handle_line(self.nested_id(server.MAX_NESTING)))
+        self.assertEqual(out["result"], {})
+        self.assertEqual(json.dumps(out["id"]).count("["), server.MAX_NESTING - 1)
+
+    def test_deeper_nesting_is_a_parse_error_and_the_server_keeps_serving(self):
+        """R8-D15: CPython's json raised RecursionError (not ValueError) and killed serve."""
+        srv = self.make_server()
+        for depth in (server.MAX_NESTING + 1, 200000):
+            for line in (self.nested_id(depth), '{"a":' * depth + "1" + "}" * depth):
+                out = json.loads(srv.handle_line(line))
+                self.assertEqual(out, {"jsonrpc": "2.0", "id": None,
+                                       "error": {"code": -32700, "message": "parse error"}})
+        self.assertEqual(srv.dispatch(rpc("ping"))["result"], {})
+
     def test_whitespace_around_a_line_is_python_str_strip(self):
         srv = self.make_server()
         self.assertIsNone(srv.handle_line("\u3000\x1c\x0c"))

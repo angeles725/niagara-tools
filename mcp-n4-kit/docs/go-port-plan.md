@@ -202,11 +202,11 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 95 | 4 | 14 | 5 | 7 | 30 | 65 |
+| `test_server.py` | 97 | 4 | 14 | 5 | 7 | 30 | 67 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **598** | **155** | **56** | **104** | **22** | **337** | **261** |
+| **Total** | **600** | **155** | **56** | **104** | **22** | **337** | **263** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -237,3 +237,9 @@ until S10. Under `MCP_N4_IMPL=go` the harness skips a test that meets exactly th
 in the inventory above. Known command-line differences: `int()`/`float()` flag values take
 ASCII digits only (Python also takes other Unicode decimal digits), integers past int64
 saturate, and Python's `str.isprintable` is approximated by `unicode.IsPrint` in `%r` text.
+
+**Nesting limit (R8-D15).** CPython's `json` has no fixed depth limit: it raises
+`RecursionError`, not `ValueError`, at a depth set by the C stack, and that escaped
+`handle_line` and ended `serve`. Both servers now answer the normal parse error for a request
+nested deeper than `server.MAX_NESTING` (1000, arrays and objects with the outer object
+counted); Go checks the depth before decoding (`jsonrpc.NestsDeeper`).
