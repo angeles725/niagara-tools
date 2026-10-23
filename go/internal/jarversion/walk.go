@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"syscall"
 )
 
 // ListJars lists the regular files named *.jar under root the way lib/scan-files.sh did with
@@ -68,15 +67,6 @@ func join(dir, name string) string {
 		return dir + name
 	}
 	return dir + "/" + name
-}
-
-// strerror is the C-locale strerror text of errno (Go's errno strings are glibc's, lower-cased).
-func strerror(errno syscall.Errno) string {
-	s := errno.Error()
-	if s != "" && s[0] >= 'a' && s[0] <= 'z' {
-		s = string(s[0]-'a'+'A') + s[1:]
-	}
-	return s
 }
 
 // findQuote quotes a path as GNU find does in an LC_ALL=C error message (gnulib locale_quoting_style):

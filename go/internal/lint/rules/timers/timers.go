@@ -77,7 +77,7 @@ func (s *source) blanked() ([]string, []javasrc.Method) {
 		st := s.Stripped()
 		s.code = make([]string, len(st))
 		for i, ln := range st {
-			s.code[i] = blankStr(ln)
+			s.code[i] = javasrc.BlankLine(ln)
 		}
 		s.methods = javasrc.Methods(s.code)
 	}
