@@ -101,3 +101,27 @@ func TestKeywords(t *testing.T) {
 		}
 	}
 }
+
+// TestUnreadableFile pins the wrapper header: an unreadable .java file is exit 3 with a "cannot scan"
+// line, and the other files are still scanned (the bash lint printed awk's error and exited 0).
+func TestUnreadableFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	dir := t.TempDir()
+	src := "class A {\n  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n}\n"
+	a, u := filepath.Join(dir, "A.java"), filepath.Join(dir, "U.java")
+	if err := os.WriteFile(a, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(u, []byte(src), 0); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	code := lint.Command(Spec())([]string{ID, dir}, cli.Stdio{Out: &o, Err: &e})
+	row := "WARN  demand-in-scope  " + a + ":2  s reads suction with no demand-shaped input in scope\n"
+	errLine := ID + ": cannot scan " + u + ": awk: fatal: cannot open file `" + u + "' for reading: Permission denied\n"
+	if code != 3 || o.String() != row || e.String() != errLine {
+		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), row, errLine)
+	}
+}

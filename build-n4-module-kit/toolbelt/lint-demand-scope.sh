@@ -2,11 +2,15 @@
 # lint-demand-scope.sh — demand-in-scope lint (Campaign 9 PR2, B820). [ev: retro campaign9-demand-scope]
 # Usage: lint-demand-scope.sh [--strict] <java-src-dir>
 #
-# Within a control-decision method (one that writes an output/cmd/target/setBool driven by a
-# numeric input), checks whether the method's PARAMETER list OR the enclosing class's FIELDS
-# contain a demand-shaped input {demand*, *call*, enable, loopEnable, *count, BStatusBoolean in*}.
+# Within a control-decision method (one whose body writes target, cmd[...], setBool(, .setValue( or
+# any set<Upper>...( call), checks whether the method's PARAMETER list OR the file's class-level FIELDS
+# contain a demand-shaped input: a name holding demand, call, enable or count (any case, any position:
+# demandCount, callForCool, loopEnable, onCount) or a `BStatusBoolean in<Upper>...` parameter.
 # If the method reads a PROCESS VARIABLE (suction/pressure/discharge/temp/cv/coil/head) in a
 # comparison but has ZERO demand-shaped input in scope -> WARN ("pressure without demand").
+# Methods are those opened at class scope on the line holding their "(" and ")"; a method whose
+# parameter list spans lines or whose "{" is on a later line, and methods of nested classes, are not
+# checked. Comments and literal contents are never read as code.
 #
 # Row:  WARN  demand-in-scope  <file>:<line>  <method> reads <pv> with no demand-shaped input in scope
 # Exits: 0 no WARN (or WARN without --strict) · 1 any WARN under --strict · 3 usage/env
@@ -15,11 +19,11 @@
 # file, which prints the stdout row  ERROR  demand-in-scope  <dir>  no *.java sources found
 # Only a first --strict is a flag; the first other argument is the root, later ones are ignored.
 #
-# Dot-directories pruned (D9b). VCS-free by design (kit-links L2).
+# Dot-directories (D9b) and *-worktrees directories pruned. VCS-free by design (kit-links L2).
 # §820.3: WARN only (statically-decidable absence), never a hard FAIL — a pure-modulator block
 # driven by an upstream demand gate would false-positive on a hard FAIL.
-# Advisory: bare *count (e.g. onCount) is the weakest demand signal; kept per B820 but the
-# matched token is named in the row so a reviewer sees which term cleared it.
+# Advisory: bare *count (e.g. onCount) is the weakest demand signal; kept per B820. A cleared
+# method prints no row, so the term that cleared it is not shown; review a suspect method by hand.
 # Mutation: DS2 -- removes demand-shaped input check, allowing pressure-without-demand methods to pass silently
 #
 # Implementation: rule package go/internal/lint/rules/demandscope (a per-file lint.Rule) on the shared
