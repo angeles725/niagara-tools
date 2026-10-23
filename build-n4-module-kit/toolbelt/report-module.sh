@@ -124,40 +124,77 @@ emit() {
   esac
 }
 
+# ROW_AWK — the one member-row parser, run ONCE over a member's whole output (never one awk fork per line).
+# Selects the lines whose start matches ^(sel) (sel empty: every non-empty line) and prints one
+# `<st>|<check>|<detail>` record per selected line. Fields of the row are split on runs of 2+ whitespace:
+#   mode site    `ST  check  path:line  reason` -> detail `<basename>:<line>  <reason>`
+#        swap    as site, but the member prints `check  ST  ...` (lint-wb-threading); only records whose
+#                status (up to a '|', as the shell split reads it) equals keep are printed
+#        base    `ST  check  path  reason` -> detail `<basename>  <reason>` (no :line split)
+#        nosite  `ST  check  site  reason` -> detail `<reason>` (site dropped)
+#        ws      whitespace-split `ST check path detail...` -> detail = the words from field 4, one space apart
+#                (verify-module --src / --plano rows)
+# Lines matching ^(asw) are relayed with status WARN instead (lint-write-path STALE/DRIFT advisories).
+# shellcheck disable=SC2016  # awk program text, expanded by awk, not the shell
+ROW_AWK='
+function bname(p,   ns, parts) { ns = split(p, parts, "/"); return parts[ns] }
+{
+  forced = ""
+  if (asw != "" && $0 ~ ("^(" asw ")")) forced = "WARN"
+  else if (sel == "" ? $0 == "" : $0 !~ ("^(" sel ")")) next
+  if (mode == "ws") {
+    st = $1; chk = $2; det = ""
+    for (i = 4; i <= NF; i++) det = (det ? det " " : "") $i
+    print st "|" chk "|" det
+    next
+  }
+  n = split($0, a, /[[:space:]]{2,}/)
+  if (mode == "swap") { chk = (n >= 1) ? a[1] : ""; st = (n >= 2) ? a[2] : "" }
+  else { st = (n >= 1) ? a[1] : ""; chk = (n >= 2) ? a[2] : "" }
+  site = (n >= 3) ? a[3] : ""
+  reason = ""
+  for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
+  if (mode == "nosite") det = reason
+  else if (mode == "base") det = bname(site) "  " reason
+  else {
+    colon = index(site, ":")
+    fp = (colon > 0) ? substr(site, 1, colon - 1) : site
+    lno = (colon > 0) ? substr(site, colon + 1) : ""
+    det = bname(fp) ":" lno "  " reason
+  }
+  if (keep != "") { p = index(st, "|"); if ((p ? substr(st, 1, p - 1) : st) != keep) next }
+  if (forced != "") st = forced
+  print st "|" chk "|" det
+}'
+
+# member_rows <artifact> <member-output> <select-ERE> [<mode> [<keep-status> [<as-WARN-ERE>]]] — relay a
+# member's rows (ROW_AWK grammar; mode defaults to site) as `<artifact>  <ST>  <check>  <detail>`.
+# Sets MR_ROWS (rows relayed), MR_FAILP (rows whose status starts with FAIL), RELAY_FAIL=1 when a FAIL row
+# was relayed, and RELAY_WARN / RELAY_ADV (WARN / ADVISORY rows).
+member_rows() {
+  local _parsed _p _st _r _chk _det
+  MR_ROWS=0; MR_FAILP=0; RELAY_FAIL=0; RELAY_WARN=0; RELAY_ADV=0
+  _parsed=$(printf '%s\n' "$2" | awk -v sel="$3" -v mode="${4:-site}" -v keep="${5:-}" -v asw="${6:-}" "$ROW_AWK")
+  while IFS= read -r _p; do
+    [ -z "$_p" ] && continue
+    _st="${_p%%|*}"; _r="${_p#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
+    emit "$1" "$_st" "$_chk" "$_det"
+    MR_ROWS=$((MR_ROWS+1))
+    case "$_st" in
+      FAIL) RELAY_FAIL=1; MR_FAILP=1 ;;
+      FAIL*) MR_FAILP=1 ;;
+      WARN) RELAY_WARN=$((RELAY_WARN+1)) ;;
+      ADVISORY) RELAY_ADV=$((RELAY_ADV+1)) ;;
+    esac
+  done <<< "$_parsed"
+  return 0
+}
+
 # relay_rows <artifact> <member-output> — relay `FAIL|WARN|ADVISORY  <check>  <path>:<line>  <reason>` rows
 # (rc-scan / eslint / vendor-floor grammar) as `<artifact>  <ST>  <check>  <basename>:<line>  <reason>`.
 # Sets RELAY_FAIL=1 when any FAIL row was relayed; RELAY_WARN / RELAY_ADV count the WARN / ADVISORY rows.
 relay_rows() {
-  local _aname="$1" _out="$2" _ln _parsed _st _r _chk _det
-  RELAY_FAIL=0; RELAY_WARN=0; RELAY_ADV=0
-  while IFS= read -r _ln; do
-    [ -z "$_ln" ] && continue
-    case "$_ln" in
-      FAIL*|WARN*|ADVISORY*)
-        _parsed=$(printf '%s' "$_ln" | awk '{
-          n = split($0, a, /[[:space:]]{2,}/)
-          st = (n >= 1) ? a[1] : ""
-          chk = (n >= 2) ? a[2] : ""
-          site = (n >= 3) ? a[3] : ""
-          reason = ""
-          for (i = 4; i <= n; i++) reason = (reason == "" ? "" : reason "  ") a[i]
-          colon = index(site, ":")
-          fp = (colon > 0) ? substr(site, 1, colon - 1) : site
-          lno = (colon > 0) ? substr(site, colon + 1) : ""
-          nsplit = split(fp, parts, "/"); bn = parts[nsplit]
-          print st "|" chk "|" bn ":" lno "  " reason
-        }')
-        _st="${_parsed%%|*}"; _r="${_parsed#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
-        emit "$_aname" "$_st" "$_chk" "$_det"
-        case "$_st" in
-          FAIL) RELAY_FAIL=1 ;;
-          WARN) RELAY_WARN=$((RELAY_WARN+1)) ;;
-          ADVISORY) RELAY_ADV=$((RELAY_ADV+1)) ;;
-        esac
-      ;;
-    esac
-  done <<< "$_out"
-  return 0
+  member_rows "$1" "$2" 'FAIL|WARN|ADVISORY'
 }
 
 # pass_after_relay <artifact> <check> — the member verdict row after relay_rows: nothing when a FAIL row
@@ -223,21 +260,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
     if [ "$vm_exit" -eq 3 ]; then
       emit "$ANAME" ERROR verify-module "env fault (exit 3)"; HAD_ENV=1
     else
-      while IFS= read -r _ln; do
-        case "$_ln" in
-          PASS*|FAIL*|SKIP*|WARN*)
-            # Row format: STATUS(%-4s)  check(%-9s)  path  detail
-            # awk: $1=status $2=check $3=path $4..=detail
-            _parsed=$(printf '%s' "$_ln" | awk '{
-              st=$1; chk=$2; det="";
-              for(i=4;i<=NF;i++) det=(det? det " " : "") $i;
-              print st "|" chk "|" det
-            }')
-            _st="${_parsed%%|*}"; _r="${_parsed#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
-            emit "$ANAME" "$_st" "$_chk" "$_det"
-          ;;
-        esac
-      done <<< "$vm_out"
+      # Row format: STATUS(%-4s)  check(%-9s)  path  detail -- whitespace fields, detail = fields 4..
+      member_rows "$ANAME" "$vm_out" 'PASS|FAIL|SKIP|WARN' ws
     fi
   fi
 
@@ -328,20 +352,8 @@ for ADIR in "${ARTIFACTS[@]}"; do
     if [ "$pl_exit" -eq 3 ]; then
       emit "$ANAME" ERROR plano "env fault (exit 3)"; HAD_ENV=1
     else
-      while IFS= read -r _ln; do
-        case "$_ln" in
-          PASS*|FAIL*|SKIP*|WARN*)
-            # Row: STATUS(%-4s)  plano(%-9s)  path  detail
-            _parsed=$(printf '%s' "$_ln" | awk '{
-              st=$1; chk=$2; det="";
-              for(i=4;i<=NF;i++) det=(det? det " " : "") $i;
-              print st "|" chk "|" det
-            }')
-            _st="${_parsed%%|*}"; _r="${_parsed#*|}"; _chk="${_r%%|*}"; _det="${_r#*|}"
-            emit "$ANAME" "$_st" "$_chk" "$_det"
-          ;;
-        esac
-      done <<< "$pl_out"
+      # Row: STATUS(%-4s)  plano(%-9s)  path  detail
+      member_rows "$ANAME" "$pl_out" 'PASS|FAIL|SKIP|WARN' ws
     fi
   fi
 
