@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · mb-strip-string-literals
@@ -48,4 +48,4 @@ caller can mark boundaries as not trusted, as 9c41fdf does.
   counter must skip literals on its own.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 doc half `BUILD-LOOP.md:234-238` (a private stripper is a finding); the two bash lints still on a private stripper (lint-silent-protection, lint-ext-writable-shape) are an owed Go lint `[deferred: retro mb-strip-string-literals Δ1]` in `ledger.d/2026-10-23-r8-u0-retro-flips.md` (lint-driver-scaffold is already on the Go engine). Δ2 OBSOLETE: its second `blank_str` consumer, lint-timers, moved to Go (`go/internal/lint/rules/timers/awk.go:84`, 2d7b31a), so a bash `mb_blank_lit` has no second user; one shared Go literal blanker belongs in `go/internal/javasrc`. INDEX row generated from the header: `| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | folded | 2 |`

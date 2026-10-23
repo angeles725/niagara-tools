@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · line-loop-lint-forks
@@ -52,4 +52,4 @@ session is rewriting in parallel; it is re-measured after that work merges.
 - `${BASH_SOURCE[0]%/*}` is not a directory when the script is run by bare name; use `dirname`.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `BUILD-LOOP.md:226-232` § Kit tooling doctrine "No fork per input line" + `tests/lint-fork-per-line.bats`. INDEX row generated from the header: `| 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | folded | 1 |`
