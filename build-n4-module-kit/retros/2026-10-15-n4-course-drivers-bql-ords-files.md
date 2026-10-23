@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-10-15 · kit · n4-course-drivers-bql-ords-files
@@ -36,3 +36,9 @@ traps (`BajaFileUtil.createFile` vs `createFileToOverwrite`, `BOrd.DEFAULT`, pla
 - A kit example is copied more often than a rule is read; the BQL example must carry the Context and try-with-resources itself.
 - BQL is a snapshot read, not a subscription; proxy values it returns can be stale unless leased.
 - A tagless request/response driver needs `maxOutstandingTransactions = 1` from the first commit; the framework default allows 32.
+
+---
+**Status**: FOLDED 2026-10-23 (quality round 8 U5, branch `docs/r8-u5-c59-c62`) — Δ1 and Δ4 earlier (WU-P0-6:
+`types/logic-authoring.md` § BQL from code, § ORD resolution); Δ2 `types/security.md` § 4.1a; Δ3
+`types/driver-authoring.md` § 1.7 (plus the § 2 `write()` return contract), lint halves owed as G66/G67; Δ5
+`types/logic-authoring.md` § File export, lint half owed as G68 (`ledger.d/2026-10-23-r8-u5-c59-c62.md`).
