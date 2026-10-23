@@ -136,3 +136,24 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   assert_symroot_same "$ONE" "$LS" "$ONE"
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
 }
+
+@test "LSV-walk-locked: a sub-directory find cannot enter is an env error (exit 3) naming the root, never a clean pass" {
+  # Mutation: LSV-walk-locked -- a find | sort process substitution drops find's status and exits 0.
+  only WithAuth.java
+  mkdir -p "$ONE/locked"; cp "$FX/NoAuth.java" "$ONE/locked/"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LS" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-servlet: cannot list every file under $ONE: "*"locked"* ]]
+}
+
+@test "LSV-worktrees: a *-worktrees sub-directory is pruned, so a checkout copy never doubles a finding" {
+  # Mutation: LSV-worktrees -- a walk without the *-worktrees prune prints the auth FAIL twice.
+  only NoAuth.java
+  mkdir -p "$ONE/mod-worktrees/feat"; cp "$FX/NoAuth.java" "$ONE/mod-worktrees/feat/"
+  run "$LS" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'FAIL  auth')" -eq 1 ]
+}

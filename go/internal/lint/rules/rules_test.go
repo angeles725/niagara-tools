@@ -31,8 +31,8 @@ func TestAllRuleOrder(t *testing.T) {
 	}
 	a := filepath.Join(root, "A.java")
 	ncw := "WARN  lint-null-context-write  " + a + ":2  null-Context write: void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n"
-	timers := "FAIL  discarded-ticket  " + a + ": Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
-		"FAIL  timer-ticket  " + a + ": schedules a Clock ticket but has no stopped() override to cancel it\n"
+	timers := "FAIL  discarded-ticket  " + a + ":2  Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
+		"FAIL  timer-ticket  " + a + ":2  schedules a Clock ticket but has no stopped() override to cancel it\n"
 	delays := "FAIL  lint-delays     " + a + ":2  unfloored  cannot verify floor: null\n"
 	main := lint.Command(All()...)
 	for args, want := range map[string]string{
@@ -68,5 +68,34 @@ func TestAllWalkError(t *testing.T) {
 	var o, e bytes.Buffer
 	if code := lint.Command(All()...)([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != ncw || e.String() != env {
 		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), ncw, env)
+	}
+}
+
+// TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
+// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6), in its
+// Spec.EmptyError shape when it overrides the default.
+func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
+	root := t.TempDir()
+	main := lint.Command(All()...)
+	var all string
+	for _, sp := range All() {
+		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
+		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
+		if sp.EmptyError.Check != "" {
+			check = sp.EmptyError.Check
+		}
+		if sp.EmptyError.Msg != "" {
+			msg = sp.EmptyError.Msg
+		}
+		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
+		all += row
+		var o, e bytes.Buffer
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)
+		}
+	}
+	var o, e bytes.Buffer
+	if code := main([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != all || e.Len() != 0 {
+		t.Errorf("--all: exit %d out %q err %q, want 3 and\n%s", code, o.String(), e.String(), all)
 	}
 }

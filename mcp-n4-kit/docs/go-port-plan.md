@@ -195,16 +195,51 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
+| `test_go_harness.py` | 23 | 0 | 0 | 0 | 0 | 0 | 23 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 96 | 4 | 14 | 5 | 9 | 32 | 64 |
+| `test_server.py` | 100 | 4 | 14 | 5 | 7 | 30 | 70 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **600** | **157** | **56** | **105** | **24** | **342** | **258** |
+| **Total** | **610** | **157** | **56** | **105** | **22** | **340** | **270** |
 <!-- go-skip-inventory:end -->
+
+## 6. S2 protocol layer
+
+**Registry.** `go/internal/mcpn4/registry/registry.json` is the Python surface the Go server
+serves verbatim: `SERVER_NAME`, `SERVER_VERSION`, `SUPPORTED_PROTOCOL_VERSIONS`, the argparse
+usage and help text (`server.build_parser()` at 80 columns, no color), and every tool's name,
+description, `inputSchema`, annotations and `needs_session` in table order. It is generated, never
+edited: after changing a tool table, a flag or the version, run
+`python3 mcp-n4-kit/tests/go_registry.py --write`. `test_go_harness.TestGoRegistry` fails while
+the file and the Python tables disagree, under both implementations.
+
+**Packages.** `jsonrpc` holds framing (`str.strip()` whitespace, lines split at `\n` only, as
+Python's stdin splits them on POSIX), dispatch, `Validate` and the reply shapes, all encoded with
+`pyjson`. `cli` holds the argparse surface (exact option strings, unique long prefixes, `-h`
+with attached flags, `--`, the type and range messages, usage then
+`mcp_n4.server: error: ...`, exit 2) and the start checks of `main()`/`Server(...)` (NAME=URL and
+NAME=PATH pairs, https URLs, names the per-station flags may use). `go/cmd/mcp-n4` only calls
+`cli.Main`. Both packages carry a differential test that runs the same lines / argv through
+python3 and compares the bytes.
+
+**Not ported yet.** A read tool that needs a session answers `not connected: call n4_connect
+first` (no session can exist yet); any other tool answers `<name> is not implemented in this
+version of the Go server`, and `--allow-writes` is refused at start with
+`mcp_n4.server: --allow-writes is not implemented in this version of the Go server` (exit 2)
+until S10. Under `MCP_N4_IMPL=go` the harness skips a test that meets exactly that text
+(`go_server.skip_if_unported`), so these skips shrink by themselves as slices land and are not
+in the inventory above. Known command-line differences: `int()`/`float()` flag values take
+ASCII digits only (Python also takes other Unicode decimal digits), integers past int64
+saturate, and Python's `str.isprintable` is approximated by `unicode.IsPrint` in `%r` text.
+
+**Nesting limit (R8-D15).** CPython's `json` has no fixed depth limit: it raises
+`RecursionError`, not `ValueError`, at a depth set by the C stack, and that escaped
+`handle_line` and ended `serve`. Both servers now answer the normal parse error for a request
+nested deeper than `server.MAX_NESTING` (1000, arrays and objects with the outer object
+counted); Go checks the depth before decoding (`jsonrpc.NestsDeeper`).

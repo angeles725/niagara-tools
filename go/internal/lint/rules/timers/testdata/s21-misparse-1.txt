@@ -2,7 +2,7 @@
 s21mis
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/s21mis/BMisparse.java: timer cancelled in stopped()
+PASS  timer-ticket  @DIR@/s21mis/BMisparse.java:12  timer cancelled in stopped()
 -- s21mis/BMisparse.java --
 package demo;
 import javax.baja.sys.*;

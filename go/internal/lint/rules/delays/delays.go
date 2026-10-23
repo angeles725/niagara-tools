@@ -22,13 +22,15 @@ const id = "lint-delays"
 var check = padRight(id, 14)
 
 // Spec registers the rule with the argument contract of toolbelt/lint-delays.sh: the first argument is
-// the root and no flag is parsed; the walk is scan_files_or_exit (a walk error stops the rule).
+// the root and no flag is parsed; the walk is scan_files_or_exit (a walk error stops the rule). A root
+// with no *.java keeps the K20 row of the bash lint's scan_files_nonempty_or_exit.
 func Spec() lint.Spec {
 	return lint.Spec{
-		Tree:   rule{},
-		Mode:   lint.Raw,
-		Usage:  "usage: lint-delays.sh <java-src-dir>",
-		Select: lint.Selection{Names: []string{"*.java"}},
+		Tree:       rule{},
+		Mode:       lint.Raw,
+		Usage:      "usage: lint-delays.sh <java-src-dir>",
+		Select:     lint.Selection{Names: []string{"*.java"}},
+		EmptyError: lint.EmptyRow{Msg: "no files to scan (K20: wrong path or empty scaffold)"},
 	}
 }
 

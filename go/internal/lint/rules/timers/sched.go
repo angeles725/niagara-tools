@@ -8,11 +8,13 @@ import (
 
 // changedSchedPass is changed-sched: a Clock.schedule reachable from changed() or started() (directly or
 // through one same-file callee) with no isRunning()/atSteadyState() guard in the scheduling body. It reads
-// raw lines (comments included), as the bash awk did.
+// code (comments and literal contents blanked), so a guard or a schedule in a comment or a string does
+// not count; the row points at the line where the changed()/started() block is found.
 func (r *run) changedSchedPass(srcs []*source) {
 	for _, s := range srcs {
-		if r.unguardedSchedule(s.Raw) {
-			r.row(lint.Fail, "changed-sched", s, "Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body")
+		code, _ := s.blanked()
+		if line := r.unguardedSchedule(code); line != 0 {
+			r.row(lint.Fail, "changed-sched", s, line, "Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body")
 		}
 	}
 }
@@ -27,41 +29,48 @@ var schedKeywords = func() map[string]bool {
 }()
 
 // unguardedSchedule is the changed-sched awk: it maps each name to the body of the first block that
-// follows its first "name(" on a line, then judges changed() and started().
-func (r *run) unguardedSchedule(lines []string) bool {
+// follows its first "name(" on a line, then judges changed() and started(). It returns the 1-based line
+// of the first unguarded lifecycle block, or 0.
+func (r *run) unguardedSchedule(lines []string) int {
 	meth := r.blocks(lines)
 	unguarded := func(b string) bool {
 		return strings.Contains(b, "Clock.schedule") && !strings.Contains(b, "isRunning") && !strings.Contains(b, "atSteadyState")
 	}
 	for _, lc := range []string{"changed", "started"} {
-		body, ok := meth[lc]
+		blk, ok := meth[lc]
 		if !ok {
 			continue
 		}
-		if unguarded(body) {
-			return true
+		if unguarded(blk.body) {
+			return blk.line
 		}
 		hit := false
-		r.rx.each(body, `[a-z][a-zA-Z0-9_]*`+sp+`*\(`, func(_, m, _ string) bool {
+		r.rx.each(blk.body, `[a-z][a-zA-Z0-9_]*`+sp+`*\(`, func(_, m, _ string) bool {
 			callee := strings.TrimRight(m[:len(m)-1], " \t\n\v\f\r")
-			if cb, ok := meth[callee]; ok && !schedKeywords[callee] && unguarded(cb) {
+			if cb, ok := meth[callee]; ok && !schedKeywords[callee] && unguarded(cb.body) {
 				hit = true
 				return false
 			}
 			return true
 		})
 		if hit {
-			return true
+			return blk.line
 		}
 	}
-	return false
+	return 0
+}
+
+// block is one entry of the changed-sched method map: the body text and the 1-based line of "name(".
+type block struct {
+	body string
+	line int
 }
 
 // blocks is the awk's method map: for a line whose first "name(" is not a keyword, scan from that line's
 // start; a ";" before any "{" ends the try, otherwise the text inside the balanced braces (each line end
 // adding a space) is the body of name, and scanning resumes after the closing line.
-func (r *run) blocks(lines []string) map[string]string {
-	meth := map[string]string{}
+func (r *run) blocks(lines []string) map[string]block {
+	meth := map[string]block{}
 	for i := 0; i < len(lines); i++ {
 		if !strings.Contains(lines[i], "(") {
 			continue
@@ -76,7 +85,7 @@ func (r *run) blocks(lines []string) map[string]string {
 		}
 		if body, end, ok := blockAfter(lines, i); ok {
 			if _, seen := meth[cand]; !seen {
-				meth[cand] = body
+				meth[cand] = block{body, i + 1}
 			}
 			i = end
 		}
@@ -116,18 +125,22 @@ func blockAfter(lines []string, i int) (string, int, bool) {
 }
 
 // steadyStatePass is atSteadyState-only-timer (WARN): a Clock.schedule inside atSteadyState() in a file
-// with no started() override never arms on a component mounted after station bootstrap.
+// with no started() override never arms on a component mounted after station bootstrap. It reads code
+// (comments and literal contents blanked); the row points at the atSteadyState() declaration line.
 func (r *run) steadyStatePass(srcs []*source) {
 	for _, s := range srcs {
-		if r.steadyStateOnly(s.Raw) {
-			r.row(lint.Warn, "atSteadyState-only-timer", s, "timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer")
+		code, _ := s.blanked()
+		if line := r.steadyStateOnly(code); line != 0 {
+			r.row(lint.Warn, "atSteadyState-only-timer", s, line, "timer armed only in atSteadyState() — add started() override with Sys.atSteadyState() guard or commissioning-time mounts will never arm the timer")
 		}
 	}
 }
 
-func (r *run) steadyStateOnly(lines []string) bool {
-	inBody, depth, sched, started := false, 0, false, false
-	for _, ln := range lines {
+// steadyStateOnly returns the line of the atSteadyState() declaration when its body schedules a timer
+// and the file has no started() override, else 0.
+func (r *run) steadyStateOnly(lines []string) int {
+	inBody, depth, sched, started, at := false, 0, false, false, 0
+	for i, ln := range lines {
 		if !strings.Contains(ln, "started") && !strings.Contains(ln, "atSteadyState") && !inBody {
 			continue
 		}
@@ -136,6 +149,9 @@ func (r *run) steadyStateOnly(lines []string) bool {
 		}
 		if !inBody && r.rx.has(ln, `void`+sp+`+atSteadyState`+sp+`*\(`) {
 			inBody, depth = true, 0
+			if at == 0 {
+				at = i + 1
+			}
 		}
 		if !inBody {
 			continue
@@ -154,5 +170,8 @@ func (r *run) steadyStateOnly(lines []string) bool {
 			}
 		}
 	}
-	return sched && !started
+	if sched && !started {
+		return at
+	}
+	return 0
 }

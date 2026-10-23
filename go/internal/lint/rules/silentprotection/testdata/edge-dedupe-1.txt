@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/com/x/BD.java:3  aInhibited forces tripped/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/BD.java --
+package com.x;
+public class BD extends BComponent {
+  private boolean tripped;
+  boolean aInhibited() {
+    return x || tripped;
+  }
+  boolean bInhibited() {
+    return y || tripped;
+  }
+}

@@ -1,7 +1,10 @@
+Re-recorded 2026-10-23 after origin/main #351: the bash lint now ends an empty root with
+scan_files_nonempty_or_exit (ERROR row, exit 3); the first recording (exit 0, no row) predates it.
 -- args --
 @DIR@/t
 -- want --
-exit 0
+exit 3
+ERROR  lint-delays  @DIR@/t  no files to scan (K20: wrong path or empty scaffold)
 -- stderr --
 -- t/a.txt --
 x

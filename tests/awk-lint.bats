@@ -322,7 +322,19 @@ EOF
     grep -q 'awk_lint_each' "$l" || continue
     n=$((n + 1))
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$KIT/toolbelt" "${l##*/}" "$TMPDIR_T/src"
-    [ "$status" -eq 0 ] && [ -z "$output" ] || { echo "$l: $status $output"; return 1; }
+    # A lint whose inputs are not *.java finds nothing in this tree: the shared ERROR row, exit 3 (not a source failure).
+    { [ "$status" -eq 0 ] && [ -z "$output" ]; } || { [ "$status" -eq 3 ] && [[ "$output" == "ERROR  "* ]]; } \
+      || { echo "$l: $status $output"; return 1; }
   done
   [ "$n" -ge 6 ]
+}
+
+@test "AL24: awk_lint_run hands the path to main.awk verbatim; a backslash in it is never escape-processed" {
+  # Mutation: AL24 -- passing the path with awk -v FILE= turns the 'a\tb' directory into a tab in every row.
+  mkdir -p "$TMPDIR_T/src/a\\tb"
+  printf 'BAD\n' > "$TMPDIR_T/src/a\\tb/B.java"
+  demo_lint one
+  run bash "$TMPDIR_T/demo-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  demo-lint  $TMPDIR_T/src/a\\tb/B.java:1  bad" ]
 }

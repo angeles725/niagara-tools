@@ -2,8 +2,8 @@
 s21pos
 -- want --
 exit 1
-PASS  timer-ticket  @DIR@/s21pos/BFieldFlag.java: timer cancelled in stopped()
-FAIL  companion-flag  @DIR@/s21pos/BFieldFlag.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+PASS  timer-ticket  @DIR@/s21pos/BFieldFlag.java:5  timer cancelled in stopped()
+FAIL  companion-flag  @DIR@/s21pos/BFieldFlag.java:7  flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
 -- s21pos/BFieldFlag.java --
 package demo;
 import javax.baja.sys.*;

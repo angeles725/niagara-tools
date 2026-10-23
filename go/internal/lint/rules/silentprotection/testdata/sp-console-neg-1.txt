@@ -1,0 +1,23 @@
+-- args --
+@DIR@/console-neg
+-- want --
+exit 0
+-- stderr --
+-- console-neg/com/x/BCompressorControl.java --
+package com.x;
+public class BCompressorControl extends BComponent implements BIAlarmSource {
+  void raise() { alarmSupport.newOffnormalAlarm(mkData()); }
+}
+-- console-neg/com/x/BStatusSlots.java --
+package com.x;
+@NiagaraProperty(name = "lowSuctionReason", type = "String", defaultValue = "", flags = Flags.SUMMARY)
+public class BStatusSlots extends BComponent {}
+-- console-neg/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    owner.setLowSuctionReason(reason);
+    return target;
+  }
+}

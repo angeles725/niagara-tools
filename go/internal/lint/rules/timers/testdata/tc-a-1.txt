@@ -2,8 +2,8 @@
 tca
 -- want --
 exit 1
-PASS  timer-ticket  @DIR@/tca/BStaggerHold.java: timer cancelled in stopped()
-FAIL  companion-flag  @DIR@/tca/BStaggerHold.java: flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
+PASS  timer-ticket  @DIR@/tca/BStaggerHold.java:5  timer cancelled in stopped()
+FAIL  companion-flag  @DIR@/tca/BStaggerHold.java:7  flag 'startingUp' set beside Clock.schedule* not cleared in stopped()/started()
 -- src/Conformant.java --
 package demo;
 import javax.baja.sys.*;

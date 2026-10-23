@@ -2,7 +2,7 @@
 jtcomment/m-rt/src
 -- want --
 exit 0
-WARN  jdk-thread  @DIR@/jtcomment/m-rt/src/demo/BQuiet.java: BQuiet uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+WARN  jdk-thread  @DIR@/jtcomment/m-rt/src/demo/BQuiet.java:5  BQuiet uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- jtcomment/m-rt/module-permissions.xml --
 <permissions>
   <niagara-permission-groups type="station">

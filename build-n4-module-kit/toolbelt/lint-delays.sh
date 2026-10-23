@@ -38,6 +38,9 @@
 # Row format:  FAIL|WARN|PASS  lint-delays     <file>:<line>  <reason>   (<line> = the Clock.schedule*( line)
 # Exits:       0 no FAIL · 1 any FAIL · 3 usage/env, an unscannable source file or a sub-directory find
 #              cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-delays  <root>  no files to scan (K20: wrong path or empty scaffold)`, the row of the bash
+# lint's scan_files_nonempty_or_exit (go/internal/lint Spec.EmptyError; until 2026-10-23 it exited 0 with no row).
 #
 # Dot-directories (e.g. .deploy-baseline/) and *-worktrees sub-directories are excluded from the file walk
 # so baseline snapshots under an artifact dir are never double-counted (D9b).

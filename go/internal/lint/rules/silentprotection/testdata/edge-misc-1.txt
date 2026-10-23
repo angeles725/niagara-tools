@@ -1,0 +1,21 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+ADVISORY  lint-silent-protection  @DIR@/m/com/x/.java:1  console-only: a forces stage/sheds stage -- surfaced only by a console alarm; add a local *Status/*Reason SUMMARY slot (advisory, unattended console)
+WARN  lint-silent-protection  @DIR@/m/com/x/M.java:7  run forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/.java --
+class Dot { int a(int target, boolean c) { if (c) target = Math.min(target, 1); return target; } }
+-- m/com/x/Empty.java --
+-- m/com/x/M.java --
+package com.x;
+public class M {
+  int f = 0; { if (c) target = Math.min(target, 1); }
+  int getX(boolean c) { if (c) target = Math.min(target, 1); return 0; }
+  void run() {
+    exec(() -> {
+      if (c) target = Math.min(target, 1);
+    });
+  }
+}

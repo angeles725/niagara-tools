@@ -494,6 +494,7 @@ JAVA
 # NAMED MUTATION (post-green): remove the dot-dir prune -> BStale's leak is flagged again -> TC-D flips.
 @test "TC-D: a timer leak under .deploy-baseline/ is NOT flagged (dot-dir pruned)" {
   D="$BATS_TEST_TMPDIR/tcd"; mkdir -p "$D/.deploy-baseline/com/x"
+  printf 'class Keep {}\n' > "$D/Keep.java"  # a root with no source outside the dot-dir is an empty root (exit 3)
   cat > "$D/.deploy-baseline/com/x/BStale.java" <<'JAVA'
 package demo;
 import javax.baja.sys.*;
@@ -986,7 +987,7 @@ _GATE_HEAD=(
   rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
   run "$LINT" "$SRC"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL  timer-ticket"*"C20.java: stopped() cancels no ticket"* ]]
+  [[ "$output" == *"FAIL  timer-ticket"*"C20.java:4  stopped() cancels no ticket"* ]]
   if [[ "$output" == *"(ticket)"* ]]; then return 1; fi
 }
 
@@ -998,4 +999,42 @@ _GATE_HEAD=(
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL  timer-ticket"*"C21.java"*"ticket a"* ]]
   if [[ "$output" == *"ticket b"* ]]; then return 1; fi
+}
+
+# --- Truth fixes 2026-10-23 (R8-D14): the port reads code, and every row carries its line ---
+# Seeds: truth audit 2026-10-22 T1 (a schedule only in a comment or a string false-FAILed; rows had no line).
+
+@test "TR1-code: a Clock.schedule only in a comment or a string owns no timer (no row, exit 0)" {
+  # Mutation: TR1-code -- scanning the raw lines (comments and strings kept) FAILs a schedule that is only mentioned
+  {
+    printf 'package demo;\nimport javax.baja.sys.*;\npublic final class BNote extends BComponent {\n'
+    printf '  public void arm() {\n    // t = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null);\n'
+    printf '    log("Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); Clock.Ticket t;");\n  }\n}\n'
+  } > "$SRC/BNote.java"
+  rm -f "$SRC/Owner.java" "$SRC/Conformant.java" "$SRC/NoTimer.java"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "TR1-shape: every row is <sev>  <check>  <file>:<line>  <msg>, the line pointing at the finding" {
+  # Mutation: TR1-shape -- leaving Line 0 prints the file-level "<file>: <msg>" row with no line
+  mkdir -p "$BATS_TEST_TMPDIR/m-rt/src"
+  printf '<permissions/>\n' > "$BATS_TEST_TMPDIR/m-rt/module-permissions.xml"
+  {
+    printf 'package demo;\nimport javax.baja.sys.*;\npublic final class BLeak extends BComponent {\n'
+    printf '  private Clock.Ticket ticket;\n  private boolean busy;\n  public void kick() {\n'
+    printf '    Clock.schedule(this, BRelTime.makeSeconds(1), kicked, null);\n    busy = true;\n  }\n'
+    printf '  private ExecutorService ex = Executors.newSingleThreadExecutor();\n'
+    printf '  public void stopped() { ex.shutdownNow(); }\n}\n'
+  } > "$BATS_TEST_TMPDIR/m-rt/src/BLeak.java"
+  run "$LINT" "$BATS_TEST_TMPDIR/m-rt/src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  discarded-ticket  $BATS_TEST_TMPDIR/m-rt/src/BLeak.java:7  "* ]]
+  [[ "$output" == *"FAIL  timer-ticket  $BATS_TEST_TMPDIR/m-rt/src/BLeak.java:4  "* ]]
+  [[ "$output" == *"FAIL  companion-flag  $BATS_TEST_TMPDIR/m-rt/src/BLeak.java:8  "* ]]
+  # the permissions file is named by its module directory, never a second absolute path
+  [[ "$output" == *"FAIL  jdk-thread  $BATS_TEST_TMPDIR/m-rt/src/BLeak.java:11  BLeak modifies a thread (shutdownNow()) but m-rt/module-permissions.xml requests no MANAGE_EXECUTION"* ]]
+  # no row is file-level
+  if printf '%s\n' "$output" | grep -qE '\.java: '; then return 1; fi
 }

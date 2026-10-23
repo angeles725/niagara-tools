@@ -2,8 +2,8 @@
 src
 -- want --
 exit 1
-FAIL  discarded-ticket  @DIR@/src/Discard.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field
-PASS  timer-ticket  @DIR@/src/Discard.java: timer cancelled in stopped()
+FAIL  discarded-ticket  @DIR@/src/Discard.java:8  Clock.schedule result is discarded — assign it to a Clock.Ticket field
+PASS  timer-ticket  @DIR@/src/Discard.java:4  timer cancelled in stopped()
 -- src/Discard.java --
 package demo;
 import javax.baja.sys.*;
