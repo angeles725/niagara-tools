@@ -24,7 +24,9 @@ import (
 // an unreadable file is reported on stderr when it happens with the texts of toolbelt/lib/awk-lint.sh,
 // a file a per-file rule could not analyze as "cannot scan <path>: <rule>: <error>", a TreeRule error as
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
-// 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS rows never count).
+// 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS and ADVISORY
+// rows never count). A spec with EmptyError prints its ERROR row on a root where it selects no file
+// and stops like a walk error (exit 3).
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs))}
 	defer r.out.Flush()
@@ -40,9 +42,16 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 					stopped[i], live = true, live-1
 				}
 			}
-			if live == 0 {
-				break // scan_files_or_exit exited: no file is scanned and no later root is walked
+		} else { // a walk error wins: scan_files_or_exit exits before the K20 check
+			for i, sp := range specs {
+				if sp.EmptyError.Msg != "" && !stopped[i] && !selectsAny(sp.Select, root, files) {
+					r.empty(i, sp, root)
+					stopped[i], live = true, live-1
+				}
 			}
+		}
+		if live == 0 {
+			break // every rule exited: no file is scanned and no later root is walked
 		}
 		trees := make([][]*javasrc.File, len(specs))
 		for _, p := range files {
@@ -134,9 +143,19 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 			fd.Severity = sp.severity()
 		}
 		r.failed = r.failed || fd.Severity == Fail
-		r.rows = r.rows || fd.Severity != Pass
+		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
 		r.emit(i, event{text: fd.Row()})
 	}
+}
+
+// empty prints the Spec.EmptyError row of a root where spec i selects no file.
+func (r *report) empty(i int, sp Spec, root string) {
+	check := sp.EmptyError.Check
+	if check == "" {
+		check = sp.ID()
+	}
+	r.envErr = true
+	r.emit(i, event{text: "ERROR  " + check + "  " + root + "  " + sp.EmptyError.Msg})
 }
 
 // release prints the held output of every spec after the first, in spec order.
@@ -165,6 +184,17 @@ func union(specs []Spec) Selection {
 	}
 	sort.Strings(u.Prune)
 	return u
+}
+
+// selectsAny reports whether sel selects any of the listed files under root (read or not, as the
+// bash lints count their file list).
+func selectsAny(sel Selection, root string, files []string) bool {
+	for _, p := range files {
+		if sel.selects(baseName(p)) && !prunedFor(sel, root, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func baseName(p string) string { return p[strings.LastIndexByte(p, '/')+1:] }
@@ -226,15 +256,21 @@ func Command(specs ...Spec) cli.Main {
 				selected = append(selected, sp)
 			}
 		}
-		mode, name, use, usageExit := Each, "n4lint", usage, 3
+		mode, name, use, usageExit, bare := Each, "n4lint", usage, 3, false
 		if len(selected) == 1 && args[0] != "--all" {
-			mode, name, use, usageExit = selected[0].Mode, selected[0].ID(), selected[0].Usage, selected[0].usageExit()
+			sp := selected[0]
+			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
 		}
 		a, err := Parse(mode, name, use, args[1:])
 		if err != nil {
-			fmt.Fprint(s.Err, err)
 			var ue *UsageError
-			if errors.As(err, &ue) {
+			usageErr := errors.As(err, &ue)
+			if usageErr && bare {
+				fmt.Fprintln(s.Err, use) // the usage line only, without Parse's "unknown flag" line
+			} else {
+				fmt.Fprint(s.Err, err)
+			}
+			if usageErr {
 				return usageExit
 			}
 			return 3
