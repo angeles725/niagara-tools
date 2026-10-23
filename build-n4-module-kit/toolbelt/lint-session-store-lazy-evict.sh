@@ -3,7 +3,7 @@
 # only lazy (on query) or explicit-logout, with no sweep in the inserting method and no
 # scheduled purge (a Clock.schedule* action whose do<Action>()/<action>() body removes from it).
 #
-# Shape (UXS7, B1160): a `static Map<String,*>` field in a `-ux` class inserts on login
+# Shape (UXS7, B1160): a `static Map<String,*>` field (B1160: a `-ux` class) inserts on login
 # (`.put(`) and removes ONLY via an explicit logout method or a query-time expiry check --
 # never a sweep in the SAME method that inserts, and never a Clock.schedule-driven purge.
 # Being STATIC, the map survives servlet re-mount, so a reused container id (JSESSIONID) can
@@ -20,7 +20,10 @@
 # awk_lint_run did).
 #
 # Usage:  lint-session-store-lazy-evict.sh [--strict] <src-root>
-#   Scans *.java under <src-root> (dot and *-worktrees dirs pruned). Run on any -ux profile with Java sources.
+#   Scans *.java under <src-root> (dot, *-worktrees and srcTest sub-directories pruned) on ANY
+#   module profile, not only -ux: B1160's store lives in a -ux class, but a static store behind an
+#   -rt servlet has the same shape. srcTest is pruned because the rule guards production session
+#   stores and test sources never ship in the module jar; a root that IS a srcTest dir is scanned.
 #   Candidate: a class-level `static` field of a (java.util.) Map type -- Map, HashMap,
 #   ConcurrentHashMap, LinkedHashMap, TreeMap, ... with generics nested up to three levels --
 #   whose name is followed by `=` or `;` on the same line; a method parameter, a return type, a
@@ -45,6 +48,7 @@
 # Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags a static method's Map parameter
 # Mutation: SSL-everyput -- checking only the file's first put (a substring match) reports OLD_SESSIONS's put as SESSIONS and misses relogin
 # Mutation: SSL-literal -- matching the raw line counts a sweep spelled in a logged string as an eviction
+# Mutation: SSL-srctest -- scanning srcTest reports a test fixture's static map as a production session store
 # Mutation: SSL-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
 # Mutation: SSL-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u

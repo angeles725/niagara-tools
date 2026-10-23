@@ -18,10 +18,12 @@ const ID = "lint-session-store-lazy-evict"
 // Spec registers the rule with the argument contract of toolbelt/lint-session-store-lazy-evict.sh.
 func Spec() lint.Spec {
 	return lint.Spec{
-		Rule:   rule{},
-		Mode:   lint.First,
-		Usage:  "usage: lint-session-store-lazy-evict.sh [--strict] <src-root>",
-		Select: lint.Selection{Names: []string{"*.java"}},
+		Rule:  rule{},
+		Mode:  lint.First,
+		Usage: "usage: lint-session-store-lazy-evict.sh [--strict] <src-root>",
+		// srcTest is pruned: the rule guards production session stores, and test sources never ship in
+		// the module jar (truth audit T5: InventoryPlanTest, FordDispatchTest).
+		Select: lint.Selection{Names: []string{"*.java"}, Prune: []string{"srcTest"}},
 		// Reason: bash used awk_lint_run, which scans the partial list (env line, then rows, exit 3).
 		ContinueOnWalkError: true,
 		EmptyError:          lint.EmptyRow{Msg: "no files to scan (K20: wrong path or empty scaffold)"},

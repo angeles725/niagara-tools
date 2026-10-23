@@ -1,3 +1,4 @@
+declared difference: T5-F4 srcTest directories are pruned: the lint protects production session stores, and test sources never ship in the module jar
 -- args --
 @DIR@
 -- want --
@@ -5,7 +6,6 @@ exit 0
 WARN  lint-session-store-lazy-evict  @DIR@/Mod/a/b/C.java:3  static session/token map 'M' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
 WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/A.java:3  static session/token map 'M' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
 WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/B.java:3  static session/token map 'M' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
-WARN  lint-session-store-lazy-evict  @DIR@/Mod/srcTest/T.java:3  static session/token map 'M' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
 WARN  lint-session-store-lazy-evict  @DIR@/Mod/z/Z.java:3  static session/token map 'M' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
 -- stderr --
 -- .hidden/H.java --

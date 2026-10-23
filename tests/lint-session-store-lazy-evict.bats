@@ -200,3 +200,17 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "${#lines[@]}" -eq 1 ]
   [[ "${lines[0]}" == *"K.java:5  static session/token map 'SESSIONS'"* ]]
 }
+
+@test "SSL-srctest: srcTest is pruned, a production -rt store is still scanned (truth audit T5)" {
+  # Mutation: SSL-srctest -- scanning srcTest reports the test's static map as a production session store
+  mkdir -p "$TMPDIR_T/Mod/srcTest/test/com/x" "$TMPDIR_T/Mod-rt/src/com/x"
+  printf 'class T {\n  private static final Map<String, String> XHR = new HashMap<String, String>();\n  void a(String k) { XHR.put(k, k); }\n}\n' > "$TMPDIR_T/Mod/srcTest/test/com/x/T.java"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  cp "$TMPDIR_T/Mod/srcTest/test/com/x/T.java" "$TMPDIR_T/Mod-rt/src/com/x/S.java"
+  run "$SSL" "$TMPDIR_T/Mod-rt"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"S.java:3  static session/token map 'XHR'"* ]]
+}

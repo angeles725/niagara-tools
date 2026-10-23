@@ -6,8 +6,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
-// TestGolden: every tests/lint-session-store-lazy-evict.bats run and every edge tree, recorded from the bash lint.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 38) }
+// TestGolden: every tests/lint-session-store-lazy-evict.bats run and every edge tree, recorded from the bash lint;
+// a case whose first line is "declared difference: ..." holds the intended truth-audit T5 output instead.
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 40) }
 
 // TestUnreadable: SSL-awkfail and SSL-finderr keep awk_lint_run's contract (ContinueOnWalkError).
 func TestUnreadable(t *testing.T) {
