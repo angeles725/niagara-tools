@@ -24,6 +24,12 @@ symlink or a root symlink to a file was already fail-closed by the `[ -d ]` / `o
 - RED on 0018c74: `tests/scan-files.bats` SF10, SF11; `tests/lint-no-system-out.bats` NSO-symroot (exit 0, no row);
   `tests/lint-null-context-write.bats` NCW-symroot (no WARN row); `go test` TestWalkOrderAndSelection (symlinked
   root, inner link as root, dangling root) and TestListJars (symlinked root) `[ev: tests/scan-files.bats SF10]`
+- RED on 0018c74 with `find -H` reverted in the ten sweep scripts: LSV-symroot, LS-symroot, SPC-symroot, SP-symroot,
+  WP-symroot, RM-symroot, CV-symroot, PF-symroot, BS-symroot, TR-symroot; GREEN with it. Each runs the script on a
+  directory and on a symlink to it through the shared `tests/helpers/symroot.bash` `assert_symroot_same` (same
+  exit, same output with the root respelled) `[ev: tests/helpers/symroot.bash]`
+- Lints added on main since 0018c74 (driver-scaffold, set-null-ord, wb-external-ord-value) are wrappers over
+  `go/internal/lint` `Walk` with no find of their own, so the `os.Stat` root fix covers them `[ev: go/internal/lint/run.go]`
 - SF12 (dangling root symlink, root symlink to a file) was green before and after: it pins the existing
   fail-closed check `[ev: tests/scan-files.bats SF12]`
 - Mutation: `find -L` in scan_files fails SF11; plain `find` fails SF10 and NSO-symroot; `os.Lstat` in `Walk`
@@ -44,6 +50,8 @@ symlink or a root symlink to a file was already fail-closed by the `[ -d ]` / `o
 ## Lessons
 - `find` without `-H` lists nothing under a symlinked root and exits 0; a lint root needs `find -H`, never `-L`.
 - `find -H` on a dangling or file root symlink also exits 0 with no output; only an explicit `[ -d ]` keeps it fail-closed.
+- lint-write-path looks for `docs/write-path-matrix.md` by walking the root's textual parents, so a symlinked
+  module root finds the matrix only in `<root>/docs` or above the link, not above its target.
 - A Go port of a find walk must pick `os.Stat` (find -H) or `os.Lstat` (find -P) for the root on purpose and pin it.
 
 ---

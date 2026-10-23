@@ -1,10 +1,11 @@
 package jarversion
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // ListJars lists the regular files named *.jar under root the way lib/scan-files.sh does with
@@ -57,7 +58,7 @@ func (w *walker) dir(path string) {
 // fail records the first walk error in find's wording.
 func (w *walker) fail(path string, err error) {
 	if w.err == "" {
-		w.err = "find: " + findQuote(path) + ": " + Reason(err)
+		w.err = "find: " + strerror.FindQuote(path) + ": " + Reason(err)
 	}
 }
 
@@ -67,29 +68,4 @@ func join(dir, name string) string {
 		return dir + name
 	}
 	return dir + "/" + name
-}
-
-// findQuote quotes a path as GNU find does in an LC_ALL=C error message (gnulib locale_quoting_style):
-// single quotes; a backslash or a single quote is backslash-escaped, the C control escapes are used for
-// \a\b\f\n\r\t\v, and any other byte outside printable ASCII is a three-digit octal escape.
-func findQuote(s string) string {
-	var b strings.Builder
-	b.WriteByte('\'')
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		switch {
-		case c == '\\' || c == '\'':
-			b.WriteByte('\\')
-			b.WriteByte(c)
-		case strings.IndexByte("\a\b\f\n\r\t\v", c) >= 0:
-			b.WriteByte('\\')
-			b.WriteByte("abfnrtv"[strings.IndexByte("\a\b\f\n\r\t\v", c)])
-		case c < 0x20 || c >= 0x7f:
-			fmt.Fprintf(&b, "\\%03o", c)
-		default:
-			b.WriteByte(c)
-		}
-	}
-	b.WriteByte('\'')
-	return b.String()
 }

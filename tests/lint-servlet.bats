@@ -14,6 +14,8 @@
 # NAMED MUTATIONS (post-green): drop the auth check -> LSV1 no longer FAILs; drop the input-400 check
 # -> LSV2 no longer FAILs; remove the dot-dir prune -> LSV-prune's stale NoAuth is flagged (D9b).
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LS="$KIT/toolbelt/lint-servlet.sh"
@@ -126,4 +128,11 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   run "$LS" "$ONE"
   [ "$status" -eq 0 ]
   [[ "$output" != *"api-response-headers"* ]]
+}
+
+@test "LSV-symroot: a symlinked <src-dir> is walked like find -H, same rows as the directory (issue #329)" {
+  # Mutation: LSV-symroot -- dropping -H from the find in _scan_files lists no file under a symlinked root.
+  only NoAuth.java
+  assert_symroot_same "$ONE" "$LS" "$ONE"
+  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
 }
