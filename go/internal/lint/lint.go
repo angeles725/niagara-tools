@@ -16,10 +16,11 @@ import (
 type Severity int
 
 const (
-	Unset Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
-	Warn                  // advisory: exit 0, or 1 under --strict
-	Fail                  // a failed check: exit 1 with or without --strict
-	Pass                  // a check that held (rows print PASS); never affects the exit code
+	Unset    Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
+	Warn                     // a warning: exit 0, or 1 under --strict
+	Fail                     // a failed check: exit 1 with or without --strict
+	Pass                     // a check that held (rows print PASS); never affects the exit code
+	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -28,6 +29,8 @@ func (s Severity) String() string {
 		return "FAIL"
 	case Pass:
 		return "PASS"
+	case Advisory:
+		return "ADVISORY"
 	}
 	return "WARN"
 }
@@ -94,6 +97,20 @@ type Spec struct {
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
 	// comment naming the reason, normally that the bash lint being ported used awk_lint_run.
 	ContinueOnWalkError bool
+	// EmptyError, when its Msg is set, makes a root where the rule selects no file an environment
+	// error, as the K20 guard of the bash lints does: the rule prints "ERROR  <check>  <root>  <msg>" on
+	// stdout and stops (no later root, exit 3). It is decided per root after the walk, so a walk error
+	// wins and prints no ERROR row.
+	EmptyError EmptyRow
+	// BareUsage prints only Usage on an unknown flag (no "<lint>: unknown flag: <flag>" line), as a bash
+	// lint with its own `-*) usage; exit 3` case does; the exit code stays UsageExit.
+	BareUsage bool
+}
+
+// EmptyRow is the ERROR row of Spec.EmptyError.
+type EmptyRow struct {
+	Check string // the check column; empty shows the rule ID
+	Msg   string // the message; empty turns the check off
 }
 
 // ID is the registered rule's ID.
