@@ -1,10 +1,10 @@
 <!-- review-status: folded -->
 <!-- module: kit -->
-<!-- deltas: 7 -->
+<!-- deltas: 10 -->
 # 2026-10-22 · kit · truth-audit
 
 **Session**: niagara-research quality round 8, kit truth audit of 2026-10-22 (40 lints x 16 client module roots) and the PR #346/#347 landings; fold unit U1, branch `docs/r8-u1-tool-doctrine` from origin/main 5ea892c
-**Delta count**: 7 (Δ6, Δ7 added 2026-10-23 on branch `docs/r8-truth-audit-addendum`, Integrador-approved, from Ayudante2)
+**Delta count**: 10 (Δ6, Δ7 added 2026-10-23 on branch `docs/r8-truth-audit-addendum`, Integrador-approved, from Ayudante2; Δ8, Δ9, Δ10 added 2026-10-23 on branch `docs/r8-truth-audit-addendum-2`, from Ayudante1)
 
 ## What happened
 The truth audit ran every kit lint over the client module roots and asked one question per tool: does it ever
@@ -68,6 +68,25 @@ push, so PR #346 was opened from the stale remote head and merged unreviewed WIP
   `bats -f GWS4 tests/go-wrapper-symlink.bats` → `ok 1 GWS4 …`, `ok 2 GWS4-neg …`; with `echo dead` appended to
   `toolbelt/lint-delays.sh` in a scratch worktree → `not ok 1 GWS4 …` (line 92, `[ "$status" -eq 1 ]`)
   `[ev: tests/go-wrapper-symlink.bats]`
+- Δ8: Ayudante2 found awk regexes using `\b` in `toolbelt/lint-demand-scope.sh:71,105,106,141` (fixed by its Go
+  port). In gawk and POSIX awk `\b` inside a regex is a backspace (0x08); the word boundary is `\y`. Observed with
+  GNU Awk 5.2.1: `printf 'public class Foo\n' | gawk '/\bclass\b/{print "b"} /\yclass\y/{print "y"}'` → `y` only.
+  Ratchet kit PR #373 (merge 97f395d, `test(kit): ratchet against \b inside awk regexes`): AWB1 scans every tracked
+  `.sh`/`.awk`/`.bash`, `.githooks/` and `scripts/` file with no allow-list, AWB2/AWB3 are the bad/good fixtures,
+  AWB4 pins the gawk semantics. Observed on main 97f395d: `bats tests/awk-word-boundary.bats` → `1..4`, all `ok`.
+  The sweep covered niagara-tools + mcp-n4-kit, the research-sdd kit, niagara-research tools/hooks and niagara-go
+  (as reported by Ayudante2) `[ev: tests/awk-word-boundary.bats]`
+- Δ9: the lint-structure Go port (branch `r8/e3-lint-structure-go`, not on main at the time of writing) fixed L10
+  and L14 after byte identity (e6df1bb L10 reads `gradle.properties` as `Properties` does, 64cf587 L10/L14 rows
+  name the offending line, 060d18e L10 no longer claims the file is git-tracked). Reported by Integrador: on the
+  real trees the findings went from 56 to 86 rows, each with a line number. Not reproduced here: the port is not
+  on main, and bash `lint-structure.sh` on main over today's `Cliente` tree prints 54 lines `[ev: 64cf587]`
+- Δ10: the shared landing script of Integrador/Ayudante2 refuses to push unless every non-merge commit in
+  `origin/main..<branch>` has an acknowledged RDD run, or is declared in `LAND_UNREVIEWED` and named in the PR
+  body; `LAND_REVIEW_ONLY=1` reviews without pushing. Ayudante1's lock-guarded landing script applies the same
+  range gate (reviewed ranges, auto-passive for ledger-only commits). Both scripts live outside the repo (as
+  reported). The #346 incident (Δ5) is the case a per-call SHA check misses: WIP 79ca5a2 was in the pushed range
+  `[ev: 79ca5a2]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
@@ -79,6 +98,9 @@ push, so PR #346 was opened from the stale remote head and merged unreviewed WIP
 | Δ5 | **A landing script checks the `git push` exit status (never through a pipe without pipefail), verifies `origin/<branch>` equals the reviewed local SHA before opening or merging the PR, and merges with `gh pr merge --match-head-commit <reviewed SHA>`.** Review evidence is bound to a SHA. | `CONTRIBUTING.md` § 8 | `[ev: 79ca5a2]` |
 | Δ6 | **A reviewer claim that can be disproved by running a test at the exact SHA is recorded with that command and its output, not argued.** Review rule. | `CONTRIBUTING.md` § 8 | `[ev: 5b8eac9]` |
 | Δ7 | **A deletion-only commit that removes dead code after an `exec` tail is proved by a mechanical no-code-after-exec check (GWS4), not argued; inconclusive review findings on it are answered with that check's output.** Review rule. | `CONTRIBUTING.md` § 8 | `[ev: tests/go-wrapper-symlink.bats]` |
+| Δ8 | **An awk regex never uses `\b`: in gawk/POSIX awk it is a backspace (0x08) and the word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire. Prefer the Go engine.** Ratchet AWB1. | `BUILD-LOOP.md` § 5 Kit tooling doctrine | `[ev: tests/awk-word-boundary.bats]` |
+| Δ9 | **A port can reveal a dead rule: compare finding counts before and after on real trees and explain every new row.** | `CONTRIBUTING.md` § 2.2 | `[ev: 64cf587]` |
+| Δ10 | **A landing script verifies review coverage of the whole range it is about to push (every non-merge commit in `origin/main..<branch>`), not only the SHAs passed on this call.** | `CONTRIBUTING.md` § 8 | `[ev: 79ca5a2]` |
 
 ## Lessons
 - A byte-identical port is the proof step, not the finish line: the known lies it keeps are owed work.
@@ -88,6 +110,9 @@ push, so PR #346 was opened from the stale remote head and merged unreviewed WIP
 - Review evidence is bound to one SHA; a landing step that cannot prove the SHA lands unreviewed code.
 - A reviewer claim a test can settle is settled by running the test at the SHA, not by debate.
 - Reviewers cannot see absence well; a mechanical check proves that nothing is left after `exec`.
+- A regex escape that means something else in the engine gives a lint that is silently dead; pin the engine.
+- New rows after a port are either a fixed dead rule or a regression; only an explained count tells which.
+- Review coverage is a property of the pushed range, not of the SHAs a caller remembered to name.
 
 ---
-**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Port in two steps"; Δ2 `BUILD-LOOP.md` § 5 "Fail-closed input listing" (owed G50); Δ3 `BUILD-LOOP.md` § 5 "Literal-aware and scope-aware Java scanning" (owed G51); Δ4 `CONTRIBUTING.md` § 6.1 (owed G52); Δ5 `CONTRIBUTING.md` § 8 "Land only the reviewed SHA". Δ6, Δ7 FOLDED 2026-10-23 (branch `docs/r8-truth-audit-addendum`; log in `ledger.d/2026-10-23-r8-truth-audit-addendum.md`) — Δ6 `CONTRIBUTING.md` § 8 "Settle a testable review claim by running it"; Δ7 `CONTRIBUTING.md` § 8 "Prove a dead-code deletion mechanically".
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Port in two steps"; Δ2 `BUILD-LOOP.md` § 5 "Fail-closed input listing" (owed G50); Δ3 `BUILD-LOOP.md` § 5 "Literal-aware and scope-aware Java scanning" (owed G51); Δ4 `CONTRIBUTING.md` § 6.1 (owed G52); Δ5 `CONTRIBUTING.md` § 8 "Land only the reviewed SHA". Δ6, Δ7 FOLDED 2026-10-23 (branch `docs/r8-truth-audit-addendum`; log in `ledger.d/2026-10-23-r8-truth-audit-addendum.md`) — Δ6 `CONTRIBUTING.md` § 8 "Settle a testable review claim by running it"; Δ7 `CONTRIBUTING.md` § 8 "Prove a dead-code deletion mechanically". Δ8, Δ9, Δ10 FOLDED 2026-10-23 (branch `docs/r8-truth-audit-addendum-2`; log in `ledger.d/2026-10-23-r8-truth-audit-addendum-2.md`) — Δ8 `BUILD-LOOP.md` § 5 "Literal-aware and scope-aware Java scanning" (awk `\y`, not `\b`); Δ9 `CONTRIBUTING.md` § 2.2 "Compare finding counts across a port"; Δ10 `CONTRIBUTING.md` § 8 "Gate the whole landing range".

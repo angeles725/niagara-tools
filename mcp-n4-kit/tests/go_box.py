@@ -158,6 +158,14 @@ FOLDER_OP = {"nm": "l", "h": "3", "b": {"nm": "p", "t": "baja:Folder", "h": "3",
                                         "s": [{"n": "FolderKid", "t": "baja:Folder"}]}}
 
 
+def _nested(depth):
+    """A poll body of `depth` nested lists: the reply frame adds 3 levels around it."""
+    out = []
+    for _ in range(depth - 1):
+        out = [out]
+    return out
+
+
 def _lt(ord_str=FOLDER, **kw):
     return dict({"op": "load_tree", "ord": ord_str}, **kw)
 
@@ -252,17 +260,32 @@ SCENARIOS = [
         {"op": "set_handle", "ord": "station:|slot:/A/B", "handle": "2"},
         {"op": "set_handle", "ord": "station:|slot:/AB", "handle": "3"},
         {"op": "invalidate", "prefix": "station:|slot:/A/"}, STATE, {"op": "invalidate"}, STATE]),
-    # Python semantics pinned beyond test_box: what a malformed poll or load reply does.
-    dict(name="a_poll_answering_an_object_keeps_its_keys", ports=None,
+    # A malformed poll or load reply is a "malformed BOX reply" BoxError (0.9.2), and an
+    # early event whose ops are no list is kept, never walked.
+    dict(name="a_poll_answering_an_object_is_malformed", ports=None,
          hook=Script(muted=1, polls=[{"k1": 1, "k2": 2}, [_load("2", t="baja:Station")]]),
          ops=[OPEN, _lt("station:"), STATE]),
-    dict(name="a_poll_answering_a_number_is_a_type_error", ports=None,
+    dict(name="a_poll_answering_a_number_is_malformed", ports=None,
          hook=Script(muted=1, polls=[5]), ops=[OPEN, _lt("station:"), STATE]),
-    dict(name="a_load_child_without_a_name_is_a_key_error", ports=None,
+    dict(name="a_poll_answering_a_string_is_malformed", ports=None,
+         hook=Script(muted=1, polls=["ab"]), ops=[OPEN, {"op": "poll"}, STATE]),
+    dict(name="an_early_event_with_ops_that_are_no_list_is_kept", ports=None,
+         hook=Script(muted=1, polls=[[{"evs": {"ops": 5}}, {"evs": {"ops": "ab"}}],
+                                     [_load("2", t="baja:Station")]]),
+         ops=[OPEN, _lt("station:"), STATE]),
+    dict(name="a_load_child_without_a_name_is_malformed", ports=None,
          hook=Script(muted=1, polls=[[], [_load("2", s=[{"t": "x"}])]]), ops=[OPEN, _lt("station:"), STATE]),
-    dict(name="load_children_that_are_no_dicts_are_a_type_error", ports=None,
+    dict(name="a_load_child_with_a_numeric_name_is_malformed", ports=None,
+         hook=Script(muted=1, polls=[[], [_load("2", s=[{"n": 5}])]]), ops=[OPEN, _lt("station:")]),
+    dict(name="load_children_that_are_no_list_are_malformed", ports=None,
          hook=Script(muted=1, polls=[[], [_load("2", s={"a": 1})]]), ops=[OPEN, _lt("station:")]),
-    dict(name="a_load_with_an_empty_child_name_replaces_the_root", ports=None,
+    dict(name="a_load_child_that_is_no_object_is_malformed", ports=None,
+         hook=Script(muted=1, polls=[[], [_load("2", s=[{"n": "a", "s": [None]}])]]),
+         ops=[OPEN, _lt("station:")]),
+    dict(name="a_reply_nested_past_the_limit_is_malformed", ports=None,
+         hook=Script(polls=[_nested(997), _nested(998)]),
+         ops=[OPEN, {"op": "poll"}, {"op": "poll"}, STATE]),
+    dict(name="a_load_with_an_empty_child_name_is_malformed", ports=None,
          hook=Script(muted=1, polls=[[], [_load("2", h="2", s=[{"n": "", "t": "x", "s": [{"n": "k"}]}])]]),
          ops=[OPEN, _lt("station:"), STATE]),
 ]

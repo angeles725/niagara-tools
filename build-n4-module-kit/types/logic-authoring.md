@@ -263,9 +263,74 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
+## File export — history to CSV `[ev: corpus B1254 §1254.5]`
+
+A third-party module writes only under Station Home, `file:^…` = `stations/<name>/shared/`; the rest of the station
+folder is Protected Station Home, framework-only (devguide `directoryRestructure.txt:103,109`). A history goes to
+CSV without an exporter class (course certification exam `BHistoryExportService.doExport`, run live):
+
+```java
+BOrd target = getOutputFile();                                  // e.g. BOrd.make("file:^export/history.csv")
+if (target.isNull()) throw new IllegalArgumentException("output file not set");
+BOrd src = BOrd.make("history:" + getHistoryId().encodeToString() + "|bql:select *");
+BITable<BHistoryRecord> table = (BITable<BHistoryRecord>) src.get(this, cx);   // caller's Context
+BIFile file = BajaFileUtil.createFileToOverwrite(target, cx);   // re-runnable
+try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream(), StandardCharsets.UTF_8));
+     TableCursor<BHistoryRecord> c = table.cursor()) {
+  while (c.next()) {
+    BHistoryRecord r = c.get();
+    w.println(r.getTimestamp() + "," + r.get("operation"));    // audit history: columns by name
+  }
+}
+```
+
+- **`createFileToOverwrite`, not `createFile`:** `createFile` throws `FileAlreadyExistsException` when the file
+  exists, so the second run fails; both throw `IllegalArgumentException("Filename required")` for a null or empty
+  ORD (`baja/…/javax/baja/file/BajaFileUtil.java:82-121`, vineflower) — guard `isNull()` first.
+- **Explicit charset:** `getBytes()` and a bare `OutputStreamWriter` use the platform charset; pass
+  `StandardCharsets.UTF_8`. Close the stream and the cursor with try-with-resources (§ BQL from code).
+- **Exporters:** `ExportOp` is public (`javax.baja.file`), but `BHistoryToCsv` is `com.tridium.history.exporters`
+  — private API; the course itself says it "could change between minor version updates" (Lab Instructions p83).
+  Write the loop above instead.
+- Owed advisory lints G68 `file-export` (bare `getBytes()`, `BajaFileUtil.createFile(`) and G69, the
+  `lint-bql-string-concat.sh` precision fix that stops it WARNing on the `history:<id>|bql:` literal above
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ5]
+  [ev: retro n4-course-handson-services-history-threading Δ1]
+
 ## Templates are artifact production, not a type SPI
 
 - A "template type" is an `.ntpl` ZIP (a `.bog` + `template-manifest.xml`) produced by a make-job (`BMakeTemplateJob`/`NiagaraTemplate.createFrom().save()`) from a component subtree marked with a `BTemplateConfig` (+ `BConfigBinding` children + tagged parameter slots). Do NOT scaffold a `BTemplate` subclass — there is no such SPI. `[ev: corpus B783]`
+- A palette entry (`module.palette`) is a drop of components, not a `.ntpl`; only a `.ntpl` has a manifest, a
+  deployed-template status and an upgrade path (`types/structure.md` § Palette assembly templates).
+
+### Shipping a template module `[ev: corpus B1325 §1325.1 rows 1-3]` [ev: retro devguide415-r2-packaging-platform-signing Δ2]
+
+- **Package:** select the templates in the Template sidebar → **Make Module**; the result is one `.jar` named by
+  `moduleName` in Sys Home `modules/`. A template inside a module is read-only (the Template view shows
+  `ReadOnly`; Save As copies it to `~templates` to edit) (guide `Templates/MakingATemplateModule-8A3D4B56.txt:7,16,21,31`).
+- **Dependencies:** the `.ntpl` carries `template-manifest.xml` (the guide spells it `template.manifest.xml`;
+  shipped `.ntpl` files use the hyphen) whose `<dependencies>` holds one `<dependency name vendor vendorVersion rel>`
+  per module (`template-rt` `ManifestXMLWriter.java:129-140`). List every module the component tree AND the Px
+  need, both `-rt` and `-ux`: install hard-fails on a missing one (guide `ExampleTemplate.manifest.xmlFileTem-9BAE5349.txt:11`,
+  corpus B578). Its `signature` attribute detects a modified template (`:13`).
+- **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
+  pins only the major, so a template built on a later minor deploys to stations on an earlier one
+  (guide `Templates/TemplateOptions-49093F67.txt:9-11`).
+- Owed advisory: Go lint G92 `ntpl-manifest-deps` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
+  [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
+
+### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]
+
+- Template changes are never applied to deployed copies; redeploy is the only path
+  (guide `Templates/DeployingTemplates-054F175F.txt:13`).
+- Upgrade, downgrade and redeploy of a deployed template remove it and install the new one: local edits to those
+  objects are lost (guide `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12,22`); links and history names
+  survive by handle (corpus B579). Record which edits an operator made before an upgrade.
+- An application template install is destructive (existing station components are deleted), needs the `-wb`
+  profile, and has no version or change tracking — record the installed version in the site ledger
+  (guide `Templates/InstallingAnApplicationTemplate-B8DEEB83.txt`).
+- `[INFER]` renaming a slot of a type used by a deployed template breaks an exposed `BConfigBinding` on the next
+  template upgrade (open: niagara-research B1325-G1). Treat a slot rename as a breaking change (`types/distribution.md` § 6).
 
 ## Background jobs
 
@@ -569,6 +634,34 @@ defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `E
 corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a design note [INFER].
 
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
+
+## Generated accessors and slot declaration order
+
+**Simple `B*` types get primitive accessors.** Slot-o-Matic picks the accessor pair from the `type` string
+(devkit-wb 4.14.0.162 vineflower `com/tridium/slottool/processor/PropertyProcessor.java:40-91`):
+
+| `type` | Generated getter / setter |
+|---|---|
+| `BBoolean`, `BInteger`, `BLong`, `BFloat`, `BDouble` (or `boolean` … `double`) | `boolean`/`int`/`long`/`float`/`double` via `getBoolean`/`getInt`/`getLong`/`getFloat`/`getDouble` and the matching `set*` |
+| `BString` (or `String`) | `String` via `getString`/`setString` |
+| `BValue` | `BValue` via `get`/`set` |
+| any other type | a cast, `(T) get(x)`, and `set(x, v, null)` |
+
+So logic reads and writes `double`, never `BDouble`: the 4.15.6.20 course exam's `BLimiter` (`type = "BDouble"`,
+`defaultValue = "BDouble.DEFAULT"`) generated `newProperty(0, BDouble.DEFAULT.as(BDouble.class).getDouble(), null)`,
+`public double getMax() { return getDouble(max); }` and `public void setMax(double v) { setDouble(max, v, null); }`
+(`CertificationExam/…/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
+
+**Declare paired bounds low before high.** Slot-o-Matic writes the `Property` fields in annotation order (`BLimiter`:
+annotations `out`, `in`, `max`, `min` at `:17-38`, fields at `:53`, `:76`, `:99`, `:122`), and the Type's slot list
+follows the field order, superclass first (baja 4.14.0.162 vineflower `ComplexIntrospector.resolveFields`
+`:104-133`, which reads `getDeclaredFields()`; that this keeps source order is HotSpot behaviour, not a JVM-spec
+guarantee `[INFER]`). The property sheet (observed in the exam, engram obs 11478) and the nav tree (§ Nav-tree
+ordering) show that order, so `max` above `min` is what the operator sees. Declare `min`/`low`/`lo` before
+`max`/`high`/`hi`, and the inputs the operator edits before outputs. A later reorder keeps saved data (a `.bog`
+binds by name: `types/distribution.md` § 6, `toolbelt/schema-risk.sh` `reorder_slot,SAFE`), but it changes every
+operator's view, so decide it at first authoring. The pair-order WARN is owed Go lint G96 `slot-pair-order`.
+`[ev: retro n4-course-handson-slotomatic-authoring Δ3]`
 
 ## `@NiagaraProperty` source comment → generated Javadoc (slotomatic keeps only the LAST line)
 

@@ -344,6 +344,22 @@ private BLabelPane createTPageStatus() {
 
 **`BTabbedPane.selection` is TRANSIENT — persist the tab by label text (PD-24):** `BTabbedPane.selection` is NOT annotated with `@NiagaraProperty`, so it is TRANSIENT — it does not survive a view close/reopen or a `doSaveValue()` call. To remember the selected tab across open/close, persist the tab's **label text** (not its index, which is unstable if tabs are added/removed) in a per-user pref file (see `§WB user preferences`) or in a `String` field. Restore in `doLoadValue()` with `tabs.setSelection(tabs.find(savedLabel))`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ24]` `[ev: corpus B1076]`
 
+**Popup editor — one editor for the whole component** `[ev: corpus B1315 §1315.1 rank 7]` [ev: retro devguide415-horizons-authoring-security Δ10]:
+a class that extends `BWbEditor` and implements `BIPopupEditor` (`workbench-wb` `javax.baja.workbench.popup`) opens
+instead of the per-field Property Sheet when the component is clicked on the wiresheet (devguide `popupEditor.txt:10-12`).
+Use it for a setpoint dialog that must validate fields together; other horizons: `types/horizons.md`.
+
+## Commands — lexicon-driven `Command` / `ToggleCommand` `[ev: corpus B1317 §1317.1]` [ev: retro devguide415-r2-runtime-contracts-formats Δ4]
+
+`new Command(owner, lexicon, keyBase)` (also the `BModule` and `Properties` overloads, and every `ToggleCommand`
+constructor, which calls `super`) reads exactly four keys: `keyBase.label`, `keyBase.icon` (an ORD to a 16x16 png),
+`keyBase.accelerator` and `keyBase.description` (`bajaui-wb` `javax/baja/ui/Command.java:61-64`, 4.15.6.20 source).
+A missing key leaves that field null (`Lexicon.get` returns null, `javax/baja/util/Lexicon.java:326-335`); an accelerator that
+`BAccelerator.make` rejects only prints "Invalid accelerator for Command <keyBase>" to stdout and the command loads
+without it (`:68-79`). Ship all four keys per command in `module.lexicon` (lexicon chain: `types/lexicon.md`), and
+override `doInvoke()` to do the work. Owed advisory: Go lint G91 `command-lexicon-keys`
+(`ledger.d/2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ4]
+
 ## PX authoring — binding taxonomy
 
 PX files are XML authored in the Workbench PxEditor, shipped as module resources, and rendered in the browser via the Hx/HTML5 profile. The corpus contains 270+ `.px` files; the binding patterns below are the recurring skeleton. [ev: corpus B752 §752.3]
@@ -357,7 +373,10 @@ PX files are XML authored in the Workbench PxEditor, shipped as module resources
 | Invoke an action | `ActionBinding` | `ord="…"`, `widgetEvent="actionPerformed"` |
 | Hyperlink to a view | any binding | ORD ends in `\|view:<module>:<ViewName>`; `\|` = cross-space separator |
 
-**Geometry:** all widget positions are absolute — `layout="x,y,w,h"` in px. Cross-space ords use `|` (pipe) as the space separator; e.g. `station:|slot:/Services/MyService`.
+**Geometry:** only a `CanvasPane` lays out its children by position: it reads each child's `layout="x,y,w,h"`, where
+each value is px, `%` of the pane, or `pref` (preferred size) (`organized/bajaui/bajaui-wb/vineflower/javax/baja/ui/pane/BCanvasPane.java:160-185`, `BLayout.ABS/PERCENT/PREF`);
+`GridPane`, `BorderPane`, `EdgePane` and the other panes ignore `layout` and size children by their own rules
+(`columnCount`, edges). Cross-space ords use `|` (pipe) as the space separator; e.g. `station:|slot:/Services/MyService`.
 
 **Minimal read-label + write-setpoint snippet** (from `VENOM_VAV_003n.px:32-35`, `Smart_IO.px:134` — [ev: corpus B752 §752.3]):
 ```xml

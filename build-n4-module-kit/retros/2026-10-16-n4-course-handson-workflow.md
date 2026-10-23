@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-16 · kit · n4-course-handson-workflow
@@ -52,4 +52,4 @@ than the 2026-10-15 testing retro assumed.
 - A dev laptop shared with a running station is a production-like host for CPU purposes.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-16-n4-course-handson-workflow.md | kit | 2026-10-16 | pending | 4 |`
+**Status**: FOLDED (quality round 8 U11, base 54ec5dc) — Δ1 `METHODOLOGY.md` § Hands-on work (copy after a diff), Δ2 same § (resume from the workspace), Δ3 `BUILD-LOOP.md` § 4.b + `build-verify.md` § Raw gradle (U4), Δ4 `METHODOLOGY.md` § Hands-on work (shared host); owed Go tools G93 `diff-vs-reference`, G94 `orient-recent` and preflight row G95 `shared-host`, plus the `BUILD-LOOP.md` § 0/0.a and `ORCHESTRATION.md` § 3 pointer lines (`ledger.d/2026-10-23-r8-u11-leftovers.md`).

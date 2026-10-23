@@ -178,10 +178,12 @@ test types never mix.  A WSL gate step to compile the test jar: `./gradlew :<MOD
 file schema and gradle dep block. `[ev: corpus B958 §958.3–958.4]`
 
 **From WSL:** a WSL-side Gradle `niagaraTest` (plugin 7.6.17) discovers 0 tests; run `gradlew.bat … :<part>:clean
-:<part>:niagaraTest` through `cmd.exe` on a Windows copy instead (`types/moduleTest.md` § Running from WSL), and
+:<part>:niagaraTest` through `cmd.exe` instead: in place when the gradle root is under `/mnt/<drive>/`, on a Windows
+copy only when it lives on ext4 (`build-verify.md` § Raw gradle, `types/moduleTest.md` § Running from WSL), and
 count the tests: `BUILD SUCCESSFUL` with 0 tests run is a failure. Workbench Tools → Run Tests is the fallback.
 Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: corpus B961 §961.3]`
 `[ev: retro testing-parity-btestng Δ1]`
+`[ev: retro n4-course-handson-workflow Δ3]`
 
 ### 4.c Version-bump checklist (before any shipped-bytes commit)
 - `vendorVersion` (in `module.xml` / `gradle.properties`) MUST be bumped on EVERY change to shipped bytes — a schema change (slot add, remove, retype, rename) OR a behavior-only change with no slot touched (Java logic, `rc/` assets, resources). Software Manager compares versions, not bytes: a same-version rebuild reports "Up to Date" and is silently skipped even when the fix is real. On reload the station re-decodes `config.bog` against the new module's type/slot registry; a retype or remove is a schema-risk OUTAGE. `[ev: corpus B807]` `[ev: corpus B795]` `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]`
@@ -246,7 +248,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
     (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
     or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14). Owed engine item G51.
-    `[ev: retro truth-audit Δ3]`
+    `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
+    word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
+    its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
