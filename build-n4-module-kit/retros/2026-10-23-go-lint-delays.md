@@ -44,6 +44,9 @@ Byte identity first (commit ba3b78e), then three truth fixes, each with a RED se
   bracket expressions and warned on stderr — the port reads bytes as LC_ALL=C gawk does (identical there)
 - Real-tree row diff of the three truth fixes on all of `Cliente`, `niagara-research/sources` and
   `niagara5-research`: no row changes; the fixes show only on the seeded and edge trees `[ev: r8 e3 truth diff]`
+- Empty root (after merging origin/main #351): the rule keeps the bash K20 row of `scan_files_nonempty_or_exit`
+  through `Spec.EmptyError`, byte-identical to main's bash lint on an empty and a no-Java root; `edge-no-java`
+  re-recorded (the first recording predates #351) and pinned by bats LD-empty `[ev: tests/lint-delays.bats]`
 - Mutation LD1 in Go (`n <= 0` → `n < 0` for the Math.max floor) fails bats LD1, LD6, LD17; restored, 25/25
 - Timing: all of `Cliente` bash 1.6-2.2 s → Go 0.04-0.11 s; `niagara5-research` bash ~13 min → Go 19.6 s
 
