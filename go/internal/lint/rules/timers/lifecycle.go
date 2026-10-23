@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/awkorder"
 )
 
 // lifecyclePass is orphan-flag and release-gate-parity (WARN, advisory), per file on code (comments and
 // literal contents blanked). Rows come in the order the awk's `for (m in body)` visited methods: gawk's
-// hash order (gawkOrder); each points at the opening brace of the method it names.
+// hash order (awkorder.Order); each points at the opening brace of the method it names.
 func (r *run) lifecyclePass(srcs []*source) {
 	for _, s := range srcs {
 		lc := r.newLifecycle(s)
@@ -43,7 +44,7 @@ func (r *run) newLifecycle(s *source) *lifecycle {
 		}
 		lc.body[m.Name] += joinLines(st, m.Start, m.End, "", "\n")
 	}
-	lc.order = gawkOrder(inserted)
+	lc.order = awkorder.Order(inserted)
 	in := inMethod(len(st), ms)
 	for i, ln := range st {
 		if in[i+1] || !strings.Contains(ln, "boolean") {

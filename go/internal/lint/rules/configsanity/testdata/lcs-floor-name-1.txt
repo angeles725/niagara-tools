@@ -1,0 +1,33 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+-- stderr --
+-- one/FloorNameDecoys.java --
+package demo;
+import javax.baja.sys.*;
+// FloorNameDecoys: names that only CONTAIN "minon" / "cutout" are not a permanent-minimum floor or an
+// LP cutout floor: adminOnline (a flag count), minOnTime (an int-seconds short-cycle timer, not a floor),
+// cutoutDelay (a delay of 0 is not a disabled cutout). No CS4.
+@NiagaraType
+@NiagaraProperty(name = "adminOnline", type = "int", defaultValue = "1", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "minOnTime", type = "int", defaultValue = "300", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "cutoutDelay", type = "int", defaultValue = "0", flags = Flags.OPERATOR)
+public final class FloorNameDecoys extends BComponent {
+}
+-- one/FloorNoCutout.java --
+package demo;
+import javax.baja.sys.*;
+// FloorDecoyPair: a permanent-minimum floor (minStagesOn=1) ships while the LP cutout floor
+// (suctionLowLimit) is 0 = disabled -> one compressor always pulls with no LP protection (CS4 WARN).
+@NiagaraType
+@NiagaraProperty(name = "stageCount", type = "int", defaultValue = "1", flags = Flags.OPERATOR)
+@NiagaraProperty(
+  name = "suctionLowLimit",
+  type = "double",
+  defaultValue = "0.0",
+  flags = Flags.OPERATOR,
+  facets = "BFacets.make(BFacets.MIN, BDouble.make(0.0))"
+)
+public final class FloorDecoyPair extends BComponent {
+}
