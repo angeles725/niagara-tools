@@ -8,15 +8,55 @@
 package delays
 
 import (
+	"errors"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 const id = "lint-delays"
 
 // check is the bash row's check column: printf "%-14s" of the lint name.
 var check = padRight(id, 14)
+
+// Spec registers the rule with the argument contract of toolbelt/lint-delays.sh: the first argument is
+// the root and no flag is parsed; the walk is scan_files_or_exit (a walk error stops the rule).
+func Spec() lint.Spec {
+	return lint.Spec{
+		Tree:   rule{},
+		Mode:   lint.Raw,
+		Usage:  "usage: lint-delays.sh <java-src-dir>",
+		Select: lint.Selection{Names: []string{"*.java"}},
+	}
+}
+
+type rule struct{}
+
+func (rule) ID() string              { return id }
+func (rule) Severity() lint.Severity { return lint.Fail }
+
+func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
+	helpers := map[string]bool{}
+	for _, f := range files {
+		positiveHelpers(f.Raw, helpers)
+	}
+	var out []lint.Finding
+	var errs []string
+	for _, f := range files {
+		fds, err := scanFile(f, helpers)
+		out = append(out, fds...)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if errs != nil {
+		return out, errors.New(strings.Join(errs, "\n"+id+": "))
+	}
+	return out, nil
+}
 
 // re compiles an awk regular expression: POSIX ERE syntax, leftmost-longest matching.
 func re(s string) *regexp.Regexp { return regexp.MustCompilePOSIX(s) }

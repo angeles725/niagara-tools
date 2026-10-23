@@ -151,6 +151,14 @@ type file struct {
 	err        error
 }
 
+func scanFile(f *javasrc.File, helpers map[string]bool) ([]lint.Finding, error) {
+	r := &file{path: f.Path, lines: f.Raw, helpers: helpers,
+		constMs: map[string]float64{}, propMin: map[string]float64{}, getterSlot: map[string]string{}}
+	r.declarations()
+	r.calls()
+	return r.out, r.err
+}
+
 func (r *file) emit(sev lint.Severity, line int, msg string) {
 	r.out = append(r.out, lint.Finding{Check: check, Severity: sev, Path: r.path, Line: line, Msg: msg})
 }
@@ -227,6 +235,133 @@ func (r *file) getter(i int, ln string) {
 			return
 		}
 	}
+}
+
+// calls is pass 2: every Clock.schedule*( call, its argument list read up to the closing paren over at
+// most maxCont continuation lines (comments cut), and its delay argument classified.
+func (r *file) calls() {
+	for i, ln := range r.lines {
+		loc := callSite.FindStringIndex(ln)
+		if loc == nil {
+			continue
+		}
+		rest := javasrc.CutComments(ln[loc[1]:])
+		for j := i + 1; !callClosed(rest) && j < len(r.lines) && j <= i+maxCont; j++ {
+			rest += " " + javasrc.CutComments(r.lines[j])
+		}
+		if !callClosed(rest) {
+			r.emit(lint.Fail, i+1, fmt.Sprintf("unclosed-call  Clock.schedule( not closed within %d lines -- cannot read the delay; wrap the call tighter", maxCont))
+			continue
+		}
+		if err := r.classify(i+1, secondArg(rest)); err != nil {
+			r.err = err
+			return
+		}
+	}
+}
+
+// classify reports the delay argument arg of the call on line lnum (1-based).
+func (r *file) classify(lnum int, arg string) error {
+	arg = trimSpace(arg)
+
+	// 1. An inline BRelTime literal.
+	if v := literalMs(arg); v >= 0 {
+		if v == 0 {
+			r.emit(lint.Fail, lnum, "literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0")
+		}
+		return nil
+	}
+
+	// 2. BRelTime.make(Math.max(x, k)).
+	if loc := maxInMake.FindStringIndex(arg); loc != nil {
+		seg := arg[loc[1]:]
+		depth, comma := 0, -1
+	scan:
+		for i := 0; i < len(seg); i++ {
+			switch seg[i] {
+			case '(':
+				depth++
+			case ')':
+				if depth == 0 {
+					break scan
+				}
+				depth--
+			case ',':
+				if depth == 0 {
+					comma = i
+					break scan
+				}
+			}
+		}
+		if comma >= 0 {
+			if k := digits.FindString(strings.TrimLeft(seg[comma+1:], " \t\n\v\f\r")); k != "" {
+				if n, _ := strconv.ParseFloat(k, 64); n <= 0 {
+					r.emit(lint.Fail, lnum, "zero-floor  Math.max floor="+num(n)+" (<=0) — use Math.max(x,1L)")
+				}
+				return nil
+			}
+		}
+		r.emit(lint.Fail, lnum, "zero-floor  cannot determine Math.max floor in: "+arg)
+		return nil
+	}
+
+	// 2.5 D2b: BRelTime.make(<method call>), the helper resolved one level across files.
+	if loc := makeOpen.FindStringIndex(arg); loc != nil {
+		if fn := helperName(strings.TrimLeft(arg[loc[1]:], " \t\n\v\f\r")); fn != "" {
+			return r.helper(lnum, fn, true)
+		}
+	}
+
+	// 3. BRelTime.make(VAR): a same-method guard, else the variable's binding up to 50 lines back.
+	if loc := makeVar.FindStringIndex(arg); loc != nil {
+		seg := strings.Replace(arg[loc[0]:], "BRelTime.make(", "", 1)
+		if k := strings.IndexByte(seg, ')'); k >= 0 {
+			seg = seg[:k]
+		}
+		v := trimSpace(seg)
+		if done, err := r.guarded(lnum, v); done || err != nil {
+			return err
+		}
+		for j := lnum - 1; j >= 1 && j >= lnum-50; j-- {
+			if r.binding(lnum, v, r.lines[j-1]) {
+				return nil
+			}
+		}
+		r.emit(lint.Fail, lnum, "unfloored  cannot verify floor of variable: "+v)
+		return nil
+	}
+
+	// 4. A slot getter: getXxx().
+	if m := getterCall.FindString(arg); m != "" {
+		g := getterArgs.ReplaceAllString(m, "")
+		if done, err := r.guarded(lnum, g); done || err != nil {
+			return err
+		}
+		slot, ok := r.getterSlot[g]
+		switch min, has := r.propMin[slot]; {
+		case !ok:
+			r.emit(lint.Fail, lnum, "unfloored  unknown getter "+g+" — cannot verify floor")
+		case !has:
+			r.emit(lint.Fail, lnum, "facet-min-zero  slot "+slot+" has no MIN facet — can schedule 0")
+		case min >= 1:
+			r.emit(lint.Warn, lnum, "facet-floor  slot "+slot+" facet MIN="+num(min)+"ms (advisory)")
+		default:
+			r.emit(lint.Fail, lnum, "facet-min-zero  slot "+slot+" facet MIN=0 — schedule can receive 0")
+		}
+		return nil
+	}
+
+	// 5. A known static final BRelTime constant.
+	if v, ok := r.constMs[arg]; ok {
+		if v <= 0 {
+			r.emit(lint.Fail, lnum, "literal-zero  constant "+arg+"="+num(v)+"ms (<=0)")
+		}
+		return nil
+	}
+
+	// 6. Unresolved.
+	r.emit(lint.Fail, lnum, "unfloored  cannot verify floor: "+arg)
+	return nil
 }
 
 // helper reports a delay computed by method fn: proven floor, same-method guard, or FAIL. guard is false
