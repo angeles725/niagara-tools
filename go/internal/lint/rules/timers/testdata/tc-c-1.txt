@@ -2,8 +2,8 @@
 tcc
 -- want --
 exit 1
-PASS  timer-ticket  @DIR@/tcc/BUnitPre.java: timer cancelled in stopped()
-FAIL  changed-sched  @DIR@/tcc/BUnitPre.java: Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body
+PASS  timer-ticket  @DIR@/tcc/BUnitPre.java:4  timer cancelled in stopped()
+FAIL  changed-sched  @DIR@/tcc/BUnitPre.java:5  Clock.schedule reachable from changed()/started() without isRunning()/atSteadyState() guard in scheduling body
 -- src/Conformant.java --
 package demo;
 import javax.baja.sys.*;

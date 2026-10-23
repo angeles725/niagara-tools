@@ -8,16 +8,18 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/awkorder"
 )
 
-// lifecyclePass is orphan-flag and release-gate-parity (WARN, advisory), per file on comment-stripped code.
-// Rows come in the order the awk's `for (m in body)` visited methods: gawk's hash order (awkorder.Order).
+// lifecyclePass is orphan-flag and release-gate-parity (WARN, advisory), per file on code (comments and
+// literal contents blanked). Rows come in the order the awk's `for (m in body)` visited methods: gawk's
+// hash order (awkorder.Order); each points at the opening brace of the method it names.
 func (r *run) lifecyclePass(srcs []*source) {
 	for _, s := range srcs {
 		lc := r.newLifecycle(s)
+		_, ms := s.blanked()
 		for _, o := range lc.orphans() {
-			r.row(lint.Warn, "orphan-flag", s, o[0]+"() cancels "+o[1]+" but never clears its companion flag "+o[2]+" (set true beside the schedule) -- the expiry handler that clears it will not run")
+			r.row(lint.Warn, "orphan-flag", s, methodLine(ms, o[0]), o[0]+"() cancels "+o[1]+" but never clears its companion flag "+o[2]+" (set true beside the schedule) -- the expiry handler that clears it will not run")
 		}
 		for _, g := range lc.gates() {
-			r.row(lint.Warn, "release-gate-parity", s, g[0]+"() re-applies "+g[1]+"() without the "+g[2]+"() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)")
+			r.row(lint.Warn, "release-gate-parity", s, methodLine(ms, g[0]), g[0]+"() re-applies "+g[1]+"() without the "+g[2]+"() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)")
 		}
 	}
 }
@@ -33,7 +35,7 @@ type lifecycle struct {
 }
 
 func (r *run) newLifecycle(s *source) *lifecycle {
-	st, ms := s.Stripped(), s.Methods()
+	st, ms := s.blanked()
 	lc := &lifecycle{r: r, all: joinLines(st, 1, len(st), "", "\n"), body: map[string]string{}, bfield: map[string]bool{}, reach: map[string]string{}}
 	var inserted []string
 	for _, m := range ms {

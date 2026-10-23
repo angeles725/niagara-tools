@@ -2,7 +2,7 @@
 s21neg
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/s21neg/BLocalFlag.java: timer cancelled in stopped()
+PASS  timer-ticket  @DIR@/s21neg/BLocalFlag.java:4  timer cancelled in stopped()
 -- s21neg/BLocalFlag.java --
 package demo;
 import javax.baja.sys.*;

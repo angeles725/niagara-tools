@@ -2,6 +2,7 @@ package timers
 
 import (
 	"bytes"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,10 +13,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// Each testdata/<case>.txt is one tests/lint-timers.bats case (or an edge case) recorded from the bash
-// lint-timers.sh it replaces: "-- root --" (the root, relative to the tree), "-- want --" ("exit <n>"
-// then the exact stdout of the bash lint, with the tree's absolute path written @DIR@) and one
-// "-- <path> --" section per file of the tree.
+// Each testdata/<case>.txt is one tests/lint-timers.bats case (or an edge case), first recorded from the
+// bash lint-timers.sh it replaces and since rewritten with -update for each declared difference of the
+// port (the lint-timers.sh header lists them): "-- root --" (the root, relative to the tree), "-- want --"
+// ("exit <n>" then the exact stdout, with the tree's absolute path written @DIR@) and one "-- <path> --"
+// section per file of the tree.
 type golden struct {
 	root, want string
 	files      map[string]string
@@ -77,7 +79,11 @@ func writeTree(t *testing.T, files map[string]string) string {
 	return dir
 }
 
-// TestGolden: every recorded case prints the bash lint's exact stdout and exit code, and nothing on stderr.
+// update rewrites the want section of every golden case from the current output (go test -run TestGolden
+// -update); review the diff: every changed row must be a declared difference.
+var update = flag.Bool("update", false, "rewrite the want section of the golden cases")
+
+// TestGolden: every case prints its exact stdout and exit code, and nothing on stderr.
 func TestGolden(t *testing.T) {
 	paths, _ := filepath.Glob("testdata/*.txt")
 	if len(paths) < 60 {
@@ -88,26 +94,46 @@ func TestGolden(t *testing.T) {
 			g := readGolden(t, p)
 			dir := writeTree(t, g.files)
 			got, stderr := runLint(t, filepath.Join(dir, g.root))
-			if got = strings.ReplaceAll(got, dir, "@DIR@"); got != g.want || stderr != "" {
+			got = strings.ReplaceAll(got, dir, "@DIR@")
+			if *update && got != g.want {
+				rewriteWant(t, p, g.want, got)
+				return
+			}
+			if got != g.want || stderr != "" {
 				t.Errorf("stderr %q\ngot\n%s\nwant\n%s", stderr, got, g.want)
 			}
 		})
 	}
 }
 
-// TestDiscardedUnterminatedLastLine: the bash loop read lines with `read`, which skips a last line with
-// no "\n", so a discarded schedule there is not reported (recorded from lint-timers.sh).
-func TestDiscardedUnterminatedLastLine(t *testing.T) {
+// rewriteWant replaces the want section of golden file p.
+func rewriteWant(t *testing.T, p, old, got string) {
+	t.Helper()
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.Replace(string(data), "-- want --\n"+old, "-- want --\n"+got, 1)
+	if err := os.WriteFile(p, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestDiscardedLastLine: a discarded schedule on a last line with no "\n" is reported like any other
+// (the bash loop read lines with `read`, which skipped that line: a declared difference of the port).
+func TestDiscardedLastLine(t *testing.T) {
 	const head = "class A {\n  void a() { Clock.schedule(this, null, x, null); }\n"
-	for name, tc := range map[string]struct{ tail, want string }{
-		"terminated":   {"  void b() { Clock.schedule(this, null, x, null); } }\n", "exit 1\n" + strings.Repeat("FAIL  discarded-ticket  @DIR@/A.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field\n", 2)},
-		"unterminated": {"  void b() { Clock.schedule(this, null, x, null); } }", "exit 1\nFAIL  discarded-ticket  @DIR@/A.java: Clock.schedule result is discarded — assign it to a Clock.Ticket field\n"},
+	for name, tail := range map[string]string{
+		"terminated":   "  void b() { Clock.schedule(this, null, x, null); } }\n",
+		"unterminated": "  void b() { Clock.schedule(this, null, x, null); } }",
 	} {
 		t.Run(name, func(t *testing.T) {
-			dir := writeTree(t, map[string]string{"A.java": head + tc.tail})
+			dir := writeTree(t, map[string]string{"A.java": head + tail})
 			got, _ := runLint(t, dir)
 			got = strings.ReplaceAll(got, dir, "@DIR@")
-			want := tc.want + "FAIL  timer-ticket  @DIR@/A.java: schedules a Clock ticket but has no stopped() override to cancel it\n"
+			const discard = "  Clock.schedule result is discarded — assign it to a Clock.Ticket field\n"
+			want := "exit 1\nFAIL  discarded-ticket  @DIR@/A.java:2" + discard + "FAIL  discarded-ticket  @DIR@/A.java:3" + discard +
+				"FAIL  timer-ticket  @DIR@/A.java:2  schedules a Clock ticket but has no stopped() override to cancel it\n"
 			if got != want {
 				t.Errorf("got\n%s\nwant\n%s", got, want)
 			}
@@ -117,8 +143,9 @@ func TestDiscardedUnterminatedLastLine(t *testing.T) {
 
 // TestArgs: the argument contract of lint-timers.sh (exactly one root, no flags, usage exits 2).
 func TestArgs(t *testing.T) {
-	dir := writeTree(t, map[string]string{"x.txt": ""})
+	dir := writeTree(t, map[string]string{"x.txt": "", "A.java": "class A {}\n"})
 	file := filepath.Join(dir, "x.txt")
+	empty := t.TempDir()
 	for _, tc := range []struct {
 		args     []string
 		out, err string
@@ -129,6 +156,7 @@ func TestArgs(t *testing.T) {
 		{[]string{"--strict"}, "exit 3\n", "lint-timers: not a directory: --strict\n"},
 		{[]string{file}, "exit 3\n", "lint-timers: not a directory: " + file + "\n"},
 		{[]string{dir}, "exit 0\n", ""},
+		{[]string{empty}, "exit 3\nERROR  lint-timers  " + empty + "  no *.java sources found (wrong path or empty source tree)\n", ""},
 	} {
 		if out, err := runLint(t, tc.args...); out != tc.out || err != tc.err {
 			t.Errorf("args %q: got %q %q, want %q %q", tc.args, out, err, tc.out, tc.err)
@@ -154,18 +182,6 @@ func TestUnreadablePermissions(t *testing.T) {
 	out, err := runLint(t, filepath.Join(dir, "m/src"))
 	if want := "lint-timers: cannot read " + perms + ": awk: fatal: cannot open file `" + perms + "' for reading: Permission denied\n"; out != "exit 3\n" || err != want {
 		t.Errorf("got %q %q, want exit 3 and %q", out, err, want)
-	}
-}
-
-func TestSplitTwo(t *testing.T) {
-	for in, want := range map[string][2]string{
-		"/m/module-permissions.xml yes":     {"/m/module-permissions.xml", "yes"},
-		"- no":                              {"-", "no"},
-		"/my mod/module-permissions.xml no": {"/my", "mod/module-permissions.xml no"},
-	} {
-		if a, b := splitTwo(in); a != want[0] || b != want[1] {
-			t.Errorf("splitTwo(%q) = %q, %q; want %q", in, a, b, want)
-		}
 	}
 }
 

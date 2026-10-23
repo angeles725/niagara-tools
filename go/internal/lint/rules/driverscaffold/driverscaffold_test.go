@@ -156,7 +156,7 @@ func TestIssue282(t *testing.T) {
 // TestArgs: the argument contract of lint-driver-scaffold.sh (awk_lint_parse raw: no flag is parsed,
 // only the first root counts, usage exits 3), recorded from the bash lint.
 func TestArgs(t *testing.T) {
-	dir := writeTree(t, map[string]string{"x.txt": ""})
+	dir := writeTree(t, map[string]string{"x.txt": "", "A.java": "class A {}\n"})
 	file := filepath.Join(dir, "x.txt")
 	missing := filepath.Join(dir, "missing")
 	for _, tc := range []struct {

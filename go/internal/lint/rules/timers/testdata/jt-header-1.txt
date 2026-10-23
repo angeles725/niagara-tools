@@ -2,7 +2,7 @@
 jthdr/m-rt/src
 -- want --
 exit 0
-WARN  jdk-thread  @DIR@/jthdr/m-rt/src/demo/BDedicated.java: BDedicated uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
+WARN  jdk-thread  @DIR@/jthdr/m-rt/src/demo/BDedicated.java:7  BDedicated uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- jthdr/m-rt/src/demo/BDedicated.java --
 package demo;
 import javax.baja.sys.*;

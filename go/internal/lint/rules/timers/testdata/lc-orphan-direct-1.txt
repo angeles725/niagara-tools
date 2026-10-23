@@ -2,8 +2,8 @@
 src
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/src/O5.java: timer cancelled in stopped()
-WARN  orphan-flag  @DIR@/src/O5.java: cancelStart() cancels startTicket but never clears its companion flag startingUp (set true beside the schedule) -- the expiry handler that clears it will not run
+PASS  timer-ticket  @DIR@/src/O5.java:4  timer cancelled in stopped()
+WARN  orphan-flag  @DIR@/src/O5.java:10  cancelStart() cancels startTicket but never clears its companion flag startingUp (set true beside the schedule) -- the expiry handler that clears it will not run
 -- src/O5.java --
 package demo;
 import javax.baja.sys.*;

@@ -38,6 +38,8 @@ setup() {
   run "$RM" --lint-only "$FX/leak"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"timer-ticket"* ]] && [[ "$output" == *"BLeak"* ]]
+  # the relayed row keeps the line lint-timers points at: "timer-ticket  BLeak.java:<n>  <msg>"
+  [[ "$output" =~ timer-ticket\ \ BLeak\.java:[0-9]+\ \ [a-z] ]]
 }
 
 @test "RM3: no --plano row on an rt-only tree (the check is gated on a ux src/rc/index.html)" {
