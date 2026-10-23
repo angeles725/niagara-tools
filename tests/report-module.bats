@@ -810,9 +810,11 @@ JAVA
 @test "RM-exit-capture: every member capture keeps its exit on the same line -- no bare \$? after _o=\$(...) (r9 M3)" {
   # Mutation: RM-exit-capture -- a bare `_o=$(member)` with "$?" read on the next line aborts the report under
   # errexit on the first failing member and breaks as soon as a command is inserted between the two lines.
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
   run grep -c '^[^#]*_o=\$(' "$RM"
   [ "$output" -gt 0 ]
   local total="$output"
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
   run grep -c '^[^#]*_rc=0; _o=\$(.*) || _rc=\$?$' "$RM"
   [ "$output" = "$total" ]
   run grep -c '^[^#]*"\$?"' "$RM"
