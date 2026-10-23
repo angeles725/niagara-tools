@@ -32,9 +32,10 @@
 #
 # awk_lint_run <find-test...>
 #   For each root, lists the files matching the find tests (scan_files), runs
-#   `awk -v FILE=<file> <AL_AWK_ARGS...> -f "$AL_TMP/main.awk" <file>` on each, and prints its
-#   rows. Exits 3 when a walk was incomplete or an awk run failed, 1 when a row was printed under
-#   --strict, 0 otherwise. Never returns.
+#   `awk <AL_AWK_ARGS...> -f "$AL_TMP/main.awk" <file>` on each with FILE set to the path (from
+#   ENVIRON["AL_FILE"] in a BEGIN ahead of main.awk, never -v, which escape-processes a backslash
+#   in the path [ev: retro go-lint-ord-ports Δ1]), and prints its rows. Exits 3 when a walk was
+#   incomplete or an awk run failed, 1 when a row was printed under --strict, 0 otherwise. Never returns.
 #
 # awk_lint_list <find-test...>
 #   Lists the files under the first root that match the find tests into "$AL_TMP/files" (scan_files).
@@ -159,12 +160,13 @@ awk_lint_each() {
 
 awk_lint_run() {
   local root f out had_warn=0
+  printf 'BEGIN { FILE = ENVIRON["AL_FILE"] }\n' > "$AL_TMP/file.awk"
   for root in "${AL_ROOTS[@]}"; do
     _al_list "$root" "$@"
     while IFS= read -r f; do
       # An awk failure (unreadable file, awk error) is an env error, never a clean pass (fail closed).
       # The +-guarded expansion keeps an empty AL_AWK_ARGS safe under set -u on bash < 4.4.
-      if ! out=$(awk -v FILE="$f" ${AL_AWK_ARGS[@]+"${AL_AWK_ARGS[@]}"} -f "$AL_TMP/main.awk" "$f" 2>"$AL_TMP/awk.err"); then
+      if ! out=$(AL_FILE="$f" awk -f "$AL_TMP/file.awk" ${AL_AWK_ARGS[@]+"${AL_AWK_ARGS[@]}"} -f "$AL_TMP/main.awk" "$f" 2>"$AL_TMP/awk.err"); then
         printf '%s: cannot scan %s: %s\n' "$AL_NAME" "$f" "$(head -n 1 "$AL_TMP/awk.err")" >&2
         AL_ERR=1
         continue

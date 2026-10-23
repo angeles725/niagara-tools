@@ -326,3 +326,13 @@ EOF
   done
   [ "$n" -ge 6 ]
 }
+
+@test "AL24: awk_lint_run hands the path to main.awk verbatim; a backslash in it is never escape-processed" {
+  # Mutation: AL24 -- passing the path with awk -v FILE= turns the 'a\tb' directory into a tab in every row.
+  mkdir -p "$TMPDIR_T/src/a\\tb"
+  printf 'BAD\n' > "$TMPDIR_T/src/a\\tb/B.java"
+  demo_lint one
+  run bash "$TMPDIR_T/demo-lint.sh" "$TMPDIR_T/src"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  demo-lint  $TMPDIR_T/src/a\\tb/B.java:1  bad" ]
+}
