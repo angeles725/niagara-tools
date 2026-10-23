@@ -24,6 +24,15 @@ func (s *scan) row(sev lint.Severity, path, msg string) {
 	s.out = append(s.out, lint.Finding{Severity: sev, Path: path, Msg: msg})
 }
 
+// lineRows adds a finding at every line of p that re matches (path:line rows, one per offending line).
+func (s *scan) lineRows(p string, re *regexp.Regexp, msg string) {
+	for i, ln := range s.lines(p) {
+		if re.MatchString(ln) {
+			s.out = append(s.out, lint.Finding{Path: p, Line: i + 1, Msg: msg})
+		}
+	}
+}
+
 // fail keeps the first error: the run still reports every row it can, then exits 3.
 func (s *scan) fail(err error) {
 	if s.err == nil {

@@ -2,9 +2,10 @@
 @DIR@/all-checks/G/M
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties  L10: absolute host path in tracked gradle.properties
-FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties  L10: absolute host path in tracked gradle.properties
-FAIL  lint-structure  @DIR@/all-checks/gradle.properties  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties:1  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: absolute host path in tracked gradle.properties
 FAIL  lint-structure  A-rt/META-INF/module.xml  L6: hand-authored META-INF/module.xml found; author module-include.xml instead
 FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (2 type(s) declared, zero key=value entries)
 FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile
@@ -23,7 +24,7 @@ FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.i
 FAIL  lint-structure  M/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: C:\\Niagara)
 FAIL  lint-structure  S1/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
 FAIL  lint-structure  S2/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/b)
-FAIL  lint-structure  @DIR@/all-checks/G/M/settings.gradle.kts  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
+FAIL  lint-structure  @DIR@/all-checks/G/M/settings.gradle.kts:2  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
 WARN  lint-structure  @DIR@/all-checks/G/M/build.gradle.kts  L15: applies com.tridium.niagara-signing without (uncommented) allowDefaultProfile.set(false) (or = false), niagaraSigning {, signingProfileFile — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)
 -- stderr --
 -- all-checks/.git/HEAD --

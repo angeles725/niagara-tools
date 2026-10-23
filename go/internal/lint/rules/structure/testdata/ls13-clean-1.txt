@@ -2,7 +2,7 @@
 @DIR@/tree/group-parent/ModA
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/tree/group-parent/ModA/gradle.properties  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/tree/group-parent/ModA/gradle.properties:3  L10: absolute host path in tracked gradle.properties
 FAIL  lint-structure  Foo-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
 FAIL  lint-structure  Foo-rt/module.palette  L5: module.palette has no named component entries (empty palette — see B788)
 -- stderr --

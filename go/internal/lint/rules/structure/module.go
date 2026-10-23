@@ -53,8 +53,8 @@ func (s *scan) hostPaths() {
 }
 
 func (s *scan) hostPath(p string) {
-	if isFile(p) && grep(s.lines(p), hostPath) {
-		s.row(lint.Unset, p, "L10: absolute host path in tracked gradle.properties")
+	if isFile(p) {
+		s.lineRows(p, hostPath, "L10: absolute host path in tracked gradle.properties")
 	}
 }
 
@@ -130,9 +130,7 @@ func (s *scan) pluginPin() {
 	if settings == "" {
 		return
 	}
-	if grep(s.lines(settings), pluginLit) {
-		s.row(lint.Unset, settings, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
-	}
+	s.lineRows(settings, pluginLit, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
 	if build := strings.TrimSuffix(settings, "/settings.gradle.kts") + "/build.gradle.kts"; isFile(build) {
 		s.signing(build)
 	}

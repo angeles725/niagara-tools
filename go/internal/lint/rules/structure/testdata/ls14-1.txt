@@ -2,7 +2,7 @@
 @DIR@/tree/Group/Mod
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/tree/Group/settings.gradle.kts  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
+FAIL  lint-structure  @DIR@/tree/Group/settings.gradle.kts:1  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
 -- stderr --
 -- tree/Group/Mod/Foo-rt/build.gradle.kts --
 plugins { id("com.tridium.niagara-module") }

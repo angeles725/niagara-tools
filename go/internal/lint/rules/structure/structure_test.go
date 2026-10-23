@@ -103,3 +103,20 @@ func TestHostPathShapes(t *testing.T) {
 		}
 	}
 }
+
+// TestRowLines (truth audit 2026-10-22 T7): an L10 or L14 row names the offending line as path:line, one
+// row per offending line, like every other lint's line rows; file and directory rows keep the bare path.
+func TestRowLines(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, map[string]string{".git/HEAD": "x\n", "M/gradle.properties": "x=1\nniagara_home=C:\\N\nnodeHome=/n\n",
+		"M/settings.gradle.kts": "// root\nval gradlePluginVersion = \"7.6\"\n", "M/A-rt/module-include.xml": "<types/>\n"})
+	m := filepath.Join(dir, "M")
+	want := "FAIL  lint-structure  " + m + "/gradle.properties:2  L10: absolute host path in tracked gradle.properties\n" +
+		"FAIL  lint-structure  " + m + "/gradle.properties:3  L10: absolute host path in tracked gradle.properties\n" +
+		"FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile\n" +
+		"FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.installations block (add paths + auto-detect=false to pin JDK 8)\n" +
+		"FAIL  lint-structure  " + m + "/settings.gradle.kts:2  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) so -PniagaraPluginVersion applies)\n"
+	if code, out, errs := run(m); code != 1 || out != want || errs != "" {
+		t.Errorf("exit %d err %q out\n%s\nwant\n%s", code, errs, out, want)
+	}
+}

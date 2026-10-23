@@ -2,7 +2,7 @@
 @DIR@/crlf/M
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/crlf/M/gradle.properties  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/crlf/M/gradle.properties:1  L10: absolute host path in tracked gradle.properties
 FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
 FAIL  lint-structure  A-rt/A-rt.gradle.kts  L7: dependency version is not a 3-part floor (use X.Y.Z e.g. 4.14.0, not X.Y e.g. 4.14)
 FAIL  lint-structure  A-rt/src/A.java  L1: package declares javax.baja.* (framework namespace; OEM modules use com.<vendor>.*)

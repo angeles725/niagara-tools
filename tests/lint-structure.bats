@@ -148,7 +148,7 @@ setup() {
   run "$LS" "$ROOT/proj/Mod"
   rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"L10"* ]]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/gradle.properties:1  L10: "* ]]   # path:line (truth audit T7)
 }
 
 @test "LS10-shapes: spaced, colon-separated, indented, POSIX and UNC host paths all FAIL L10 (truth audit T7)" {
@@ -201,8 +201,7 @@ _ls14_tree() {
   run "$LS" "$ROOT/Group/Mod"
   rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"L14"* ]]
-  [[ "$output" == *"settings.gradle.kts"* ]]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/Group/settings.gradle.kts:1  L14: "* ]]   # path:line (truth audit T7)
 }
 
 @test "LS14-clean: providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) -> no L14" {
