@@ -44,7 +44,6 @@ func orNil(s string) any {
 func describe(err error) *pyjson.Object {
 	var be *Error
 	var ve *pyjson.ValueError
-	var pe *PyError
 	switch {
 	case errors.As(err, &be):
 		var code any
@@ -55,8 +54,6 @@ func describe(err error) *pyjson.Object {
 			"key", orNil(be.Key), "code", code)
 	case errors.As(err, &ve):
 		return obj("type", "ValueError", "message", ve.Msg)
-	case errors.As(err, &pe):
-		return obj("type", pe.Type)
 	}
 	return obj("type", "Exception", "go", err.Error())
 }

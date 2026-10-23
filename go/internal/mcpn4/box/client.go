@@ -128,6 +128,9 @@ func (c *Client) Call(channel, key string, body any) (any, error) {
 	if err != nil {
 		return nil, boxError("transport failure: "+err.Error(), channel, key)
 	}
+	if nestsDeeper(reply, MaxReplyNesting) {
+		return nil, malformed(fmt.Sprintf("nested deeper than %d levels", MaxReplyNesting), channel, key)
+	}
 	return c.unwrap(reply, channel, key)
 }
 
