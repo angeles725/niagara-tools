@@ -52,7 +52,7 @@ for arg in "${FILES[@]+"${FILES[@]}"}"; do
     _DIR_ARG="$arg"
     while IFS= read -r -d '' f; do
       EXPANDED+=("$f")
-    done < <(find "$arg" -maxdepth 1 -not -path '*/.*' -type f -name '*.txt' -print0 | sort -z)
+    done < <(find -H "$arg" -maxdepth 1 -not -path '*/.*' -type f -name '*.txt' -print0 | sort -z)
   elif [ -f "$arg" ]; then
     EXPANDED+=("$arg")
   fi

@@ -65,7 +65,7 @@ trap 'rm -rf "$_TMP"' EXIT
 had_err=0
 
 # 1. Module directories: a build marker next to a src/ directory.
-if ! find "$ROOT" -mindepth 1 \( -type d \( -name '.*' -o -name build -o -name node_modules -o -name src -o -name srcTest \) -prune \) -o \
+if ! find -H "$ROOT" -mindepth 1 \( -type d \( -name '.*' -o -name build -o -name node_modules -o -name src -o -name srcTest \) -prune \) -o \
      -type f \( -name module-include.xml -o -name build.gradle.kts -o -name build.gradle \) -print \
      > "$_TMP/markers" 2> "$_TMP/find.err"; then
   printf 'split-package-check: cannot list every file under %s: %s\n' "$ROOT" "$(head -n 1 "$_TMP/find.err")" >&2

@@ -140,7 +140,7 @@ emit() {
 SRC_DIRS=()
 while IFS= read -r _d; do
   SRC_DIRS+=("$_d")
-done < <(find "$MODULE_ROOT" -mindepth 3 -maxdepth 3 -type d -name 'src' 2>/dev/null \
+done < <(find -H "$MODULE_ROOT" -mindepth 3 -maxdepth 3 -type d -name 'src' 2>/dev/null \
          | grep -- '-rt/src$' | sort)
 
 if [ "${#SRC_DIRS[@]}" -eq 0 ] && [ -d "$MODULE_ROOT/src" ]; then

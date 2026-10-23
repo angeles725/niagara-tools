@@ -215,7 +215,7 @@ else
         [ -d "$_pd/src" ] || continue
         _SCAN_NAMES+=("$(basename "$_pd")")
         _SCAN_SRCS+=("$_pd/src")
-    done < <(find "$MODULE_ROOT" -maxdepth 1 -mindepth 1 -type d \
+    done < <(find -H "$MODULE_ROOT" -maxdepth 1 -mindepth 1 -type d \
         \( -name '*-rt' -o -name '*-ux' -o -name '*-wb' -o -name '*-se' \) \
         2>/dev/null | sort)
 
