@@ -1,0 +1,35 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/a b/BS.java:5  a forces tripped/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/c  d/P.java:4  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/a b/BS.java --
+package com.x;
+public class BS extends BComponent {
+  @NiagaraProperty(name="tripReason", type="BString", flags=Flags.SUMMARY)
+  void a(boolean c) {
+    if (c) this.tripped = true;
+    setTripReason("x");
+  }
+  private boolean tripped;
+}
+-- m/c  d/P.java --
+package com.x;
+public class P {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    if (c) target = Math.min(target, onCount - 2);
+    return target;
+  }
+}
+-- m/c  d/Q.java --
+package com.x;
+public class P {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    if (c) target = Math.min(target, onCount - 2);
+    return target;
+  }
+}

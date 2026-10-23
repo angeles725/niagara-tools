@@ -1,0 +1,20 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BCompressorControl.java --
+package com.x;
+public class BCompressorControl extends BComponent {
+  @NiagaraProperty(name="dischargeHighAlarm", type="BStatusBoolean", defaultValue="new BStatusBoolean(false)", flags=Flags.TRANSIENT|Flags.SUMMARY|Flags.READONLY)
+  void sync(CompressorControl ctl) { getDischargeHighAlarm().setValue(ctl.dischargeHigh); }
+}
+-- src/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  boolean dischargeHigh = false;
+  int step(int target, double discharge, double dischargeLimit) {
+    if (discharge > dischargeLimit) { dischargeHigh = true; target = 0; } // named trip field
+    return target;
+  }
+}

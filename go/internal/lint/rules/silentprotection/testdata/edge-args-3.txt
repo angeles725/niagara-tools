@@ -1,0 +1,17 @@
+-- args --
+@DIR@/other
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-silent-protection  @DIR@/other  no Java sources found (K20: wrong path or empty scaffold)
+-- stderr --
+-- m/com/x/S.java --
+package com.x;
+public class S {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}
+-- other/README.txt --
+not java
