@@ -17,7 +17,21 @@
 # Advisory: bare *count (e.g. onCount) is the weakest demand signal; kept per B820 but the
 # matched token is named in the row so a reviewer sees which term cleared it.
 # Mutation: DS2 -- removes demand-shaped input check, allowing pressure-without-demand methods to pass silently
+#
+# Implementation: rule package go/internal/lint/rules/demandscope (a per-file lint.Rule) on the shared
+# engine go/internal/lint (walker, argument parser, row formatter; go/README.md). This wrapper is the stable
+# entry point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source,
+# then this script execs `n4lint lint-demand-scope <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 set -u
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-demand-scope: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+# shellcheck disable=SC2093  # the bash body below is dead until the next commit deletes it
+exec "$BIN" lint-demand-scope "$@"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 LC_ALL=C
