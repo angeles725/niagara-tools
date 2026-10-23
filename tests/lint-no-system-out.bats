@@ -87,7 +87,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$KIT/toolbelt/lint-no-system-out.sh" "$d"
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
-  [ "$output" = "lint-no-system-out: cannot scan $d/A.java: Permission denied" ]
+  [ "$output" = "lint-no-system-out: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
 }
 
 @test "NSO-symroot: a symlinked module root is scanned like find -H, never a silent clean pass (issue #329)" {

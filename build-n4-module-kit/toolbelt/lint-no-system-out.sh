@@ -7,6 +7,10 @@
 # the Logging service. Module diagnostics MUST use java.util.logging.Logger.
 # See types/observability.md §1. [ev: retro 2026-09-19-observability]
 #
+# Implementation: go/internal/lint/rules/nosystemout on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-no-system-out <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
+#
 # Usage:  lint-no-system-out.sh <src-root>
 #   Scans *.java under <src-root>, dot-dirs pruned (D9b). Line // comments are stripped
 #   before matching, so commented-out code does not trigger.
@@ -19,18 +23,11 @@
 # Mutation: NSO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: NSO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-no-system-out raw 'usage: lint-no-system-out.sh <src-root>' "$@"
-awk_lint_list -name '*.java'
-
-# One awk per file (was a shell read loop + a sed fork per hit). Line // comments are stripped first.
-# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
-awk_lint_each '
-    { code = $0; i = index(code, "//"); if (i) code = substr(code, 1, i - 1) }
-    index(code, "System.out.print") || index(code, "System.err.print") {
-        t = $0; sub(/^[[:space:]]+/, "", t)
-        printf "FAIL  lint-no-system-out  %s:%d  %s\n", ENVIRON["AL_FILE"], FNR, t
-    }'
-
-awk_lint_exit "$AL_ROWS"
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-no-system-out: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-no-system-out "$@"
