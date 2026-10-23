@@ -1,9 +1,12 @@
+Declared difference (truth fix T8): comments are not code; A.java anchors at its code guard
+(line 6), not the Javadoc line 2, and D.java's csrfToken lives only in a block comment.
 -- args --
 @DIR@/m
 -- want --
 exit 0
-WARN  csrf-xrw-only  A.java:2  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
+WARN  csrf-xrw-only  A.java:6  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
 WARN  csrf-xrw-only  B.java:2  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
+WARN  csrf-xrw-only  D.java:3  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
 -- stderr --
 -- m/A.java --
 /**

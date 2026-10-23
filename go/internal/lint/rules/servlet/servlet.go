@@ -112,9 +112,12 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	if !isServlet {
 		return nil, nil
 	}
+	// The file-level flags and the csrf-xrw-only anchor read code with literal text kept: the header
+	// names are string literals, but a comment (a Javadoc block included) documents, it guards nothing
+	// (truth audit 2026-10-22 T8: a Javadoc line was reported as the guard).
+	code := f.Stripped()
 	hasXHR, hasCsrf, hasXCTO := false, false, false
-	for _, ln := range lines {
-		sl := cut(ln)
+	for _, sl := range code {
 		hasXHR = hasXHR || strings.Contains(sl, "X-Requested-With")
 		hasCsrf = hasCsrf || csrf.MatchString(sl)
 		hasXCTO = hasXCTO || xcto.MatchString(sl)
@@ -189,8 +192,8 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	}
 
 	if hasXHR && !hasCsrf {
-		for i, ln := range lines {
-			if strings.Contains(cut(ln), "X-Requested-With") {
+		for i, sl := range code {
+			if strings.Contains(sl, "X-Requested-With") {
 				add(lint.Unset, "csrf-xrw-only", i+1, msgCsrfOnly)
 				break
 			}

@@ -1,7 +1,10 @@
+Declared difference (truth fix T8): B.java's applyHeaders( lives only in a block comment, so it
+sets no header and the INFO row stays.
 -- args --
 @DIR@/m
 -- want --
 exit 0
+INFO  api-response-headers  B.java:2  response handler sets no headers; the station header providers apply (security.md §7)
 INFO  api-response-headers  C.java:2  response handler sets no headers; the station header providers apply (security.md §7)
 INFO  api-response-headers  C.java:3  response handler sets no headers; the station header providers apply (security.md §7)
 -- stderr --

@@ -153,3 +153,13 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 1 ]
   [[ "$output" == "FAIL  auth  NoAuth.java:4  "* ]]
 }
+
+@test "LSV4b: an X-Requested-With named only in a Javadoc is no guard, so no csrf-xrw-only row (truth audit T8)" {
+  # The chihuahua BChiServlet.java:41 row anchored on a Javadoc line; the guard lives in another file.
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' '/**' ' * Security: /api/* requires X-Requested-With: XMLHttpRequest' ' */' \
+    'public class Doc extends BWebServlet {' '  void x() { }' '}' > "$ONE/Doc.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"csrf-xrw-only"* ]]
+}
