@@ -195,18 +195,18 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
 | `test_bql.py` | 32 | 13 | 0 | 19 | 0 | 32 | 0 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 20 | 0 | 0 | 0 | 0 | 0 | 20 |
+| `test_go_harness.py` | 23 | 0 | 0 | 0 | 0 | 0 | 23 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 93 | 4 | 14 | 5 | 9 | 32 | 61 |
+| `test_server.py` | 95 | 4 | 14 | 5 | 7 | 30 | 65 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **593** | **155** | **56** | **104** | **24** | **339** | **254** |
+| **Total** | **598** | **155** | **56** | **104** | **22** | **337** | **261** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -218,3 +218,22 @@ description, `inputSchema`, annotations and `needs_session` in table order. It i
 edited: after changing a tool table, a flag or the version, run
 `python3 mcp-n4-kit/tests/go_registry.py --write`. `test_go_harness.TestGoRegistry` fails while
 the file and the Python tables disagree, under both implementations.
+
+**Packages.** `jsonrpc` holds framing (`str.strip()` whitespace, lines split at `\n` only, as
+Python's stdin splits them on POSIX), dispatch, `Validate` and the reply shapes, all encoded with
+`pyjson`. `cli` holds the argparse surface (exact option strings, unique long prefixes, `-h`
+with attached flags, `--`, the type and range messages, usage then
+`mcp_n4.server: error: ...`, exit 2) and the start checks of `main()`/`Server(...)` (NAME=URL and
+NAME=PATH pairs, https URLs, names the per-station flags may use). `go/cmd/mcp-n4` only calls
+`cli.Main`. Both packages carry a differential test that runs the same lines / argv through
+python3 and compares the bytes.
+
+**Not ported yet.** A read tool that needs a session answers `not connected: call n4_connect
+first` (no session can exist yet); any other tool answers `<name> is not implemented in this
+version of the Go server`, and `--allow-writes` is refused at start with
+`mcp_n4.server: --allow-writes is not implemented in this version of the Go server` (exit 2)
+until S10. Under `MCP_N4_IMPL=go` the harness skips a test that meets exactly that text
+(`go_server.skip_if_unported`), so these skips shrink by themselves as slices land and are not
+in the inventory above. Known command-line differences: `int()`/`float()` flag values take
+ASCII digits only (Python also takes other Unicode decimal digits), integers past int64
+saturate, and Python's `str.isprintable` is approximated by `unicode.IsPrint` in `%r` text.
