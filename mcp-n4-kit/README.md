@@ -26,6 +26,8 @@ v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command c
 launched, so a failed launch is never read as a RED.
 v0.8.1: a failed write keeps its batch id, a partial batch reports what was sent and its inverse, BOX replies capped at 32 MB.
 v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
+v0.9.1: read truth fixes: `n4_find_dangling_outputs` resolves slot-path link sources and reports
+an output an unresolved source may feed as `unknown`, not dangling.
 
 ## Methodology and skill
 
@@ -213,7 +215,10 @@ configured station names. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
 (the ord itself is level 0). Links are seen when their target is at most one level
 below `depth`; an out slot used only by a deeper target, or from outside the
-subtree, is reported as dangling.
+subtree, is reported as dangling. A link source given by handle (`h:`) or by absolute
+slot path (`station:|slot:/Folder/A`) is resolved; while any link reading `out` has a
+source in another form (listed in `unresolved_links`), every out slot not proven used
+is reported under `unknown`, never as dangling.
 
 ## Writing safely
 
