@@ -98,3 +98,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"*"lint-no-system-out"*"$TMPDIR_T/link/src/com/x/A.java:2"* ]]
 }
+
+@test "NSO6: a System.out in a block comment, Javadoc or string is clean; one after a // in a string or split across lines is flagged" {
+  # Mutation: NSO6 -- matching the raw line (no comment/literal blanking) FAILs the commented and string lines.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* System.out.println("x"); */\n  /**\n   * System.out.println(x)\n   */\n  String s = "System.out.println(x)";\n  String u = "http://h"; System.out.println(u);\n  void f() {\n    System\n        .out.println(x);\n  }\n}\n' \
+    > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$NSO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-no-system-out  $TMPDIR_T/Mod/src/com/x/A.java:7  String u = \"http://h\"; System.out.println(u);
+FAIL  lint-no-system-out  $TMPDIR_T/Mod/src/com/x/A.java:9  System" ]
+}

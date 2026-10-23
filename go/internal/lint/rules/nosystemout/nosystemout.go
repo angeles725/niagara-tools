@@ -5,6 +5,7 @@
 package nosystemout
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
@@ -27,17 +28,27 @@ func Spec() lint.Spec {
 	}
 }
 
+// print is a System.out / System.err print call as a statement: whitespace (newlines included) may sit
+// around each dot, and System is a whole word (never MySystem).
+var print = regexp.MustCompile(`\bSystem\s*\.\s*(out|err)\s*\.\s*print`)
+
 type rule struct{}
 
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// Check reports every line whose code before its first "//" holds System.out.print or System.err.print.
+// Check reports every line where a System.out / System.err print call starts, matched over the code
+// (linescan.Code: no comment, Javadoc or literal text) joined across lines, once per line.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
+	code := strings.Join(linescan.Code(f), "\n")
 	var out []lint.Finding
-	for i, ln := range f.Raw {
-		if code := linescan.Cut(ln); strings.Contains(code, "System.out.print") || strings.Contains(code, "System.err.print") {
-			out = append(out, lint.Finding{Line: i + 1, Msg: linescan.Source(ln)})
+	line, from, last := 1, 0, 0
+	for _, m := range print.FindAllStringIndex(code, -1) {
+		line += strings.Count(code[from:m[0]], "\n")
+		from = m[0]
+		if line != last {
+			out = append(out, lint.Finding{Line: line, Msg: linescan.Source(f.Raw[line-1])})
+			last = line
 		}
 	}
 	return out, nil

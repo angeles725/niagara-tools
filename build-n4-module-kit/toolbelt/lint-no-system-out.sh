@@ -12,15 +12,17 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
 #
 # Usage:  lint-no-system-out.sh <src-root>
-#   Scans *.java under <src-root>, dot-dirs pruned (D9b). Line // comments are stripped
-#   before matching, so commented-out code does not trigger.
+#   Scans *.java under <src-root>, dot-dirs pruned (D9b). Matches the code only: // and /* */
+#   comments, Javadoc and the text of string/char/text-block literals never trigger, and a `//`
+#   inside a string never hides the rest of its line. A call split across lines
+#   (`System\n  .out.println(x)`) is one statement, reported at its `System` line.
 #   Row:   FAIL  lint-no-system-out  <file>:<line>  <trimmed source>
 #   Exit:  0  no FAIL (clean) · 1  any FAIL · 3  usage/env or a sub-directory find cannot enter
 #
-# Known limitation: a `//` inside a string literal on the same line as a System.out call
-# can hide it (rare). VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
+# VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # Mutation: NSO2 -- drop the System.out.print case and NSO2 stops flagging System.out.println
 # Mutation: NSO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: NSO6 -- matching the raw line (no comment/literal blanking) FAILs a commented or string System.out
 # Mutation: NSO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
