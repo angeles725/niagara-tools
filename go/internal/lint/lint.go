@@ -83,12 +83,26 @@ type TreeRule interface {
 	CheckTree(files []*javasrc.File) ([]Finding, error)
 }
 
+// RootRule is a lint check that reads its root itself instead of the files the shared walk lists: a
+// structure lint over directories and over files above or beside the root (lint-structure, which walks
+// up to the .git sentinel and reads sibling modules). CheckRoot gets each root as given and sets Path on
+// each finding. Spec.Select, ContinueOnWalkError and EmptyError do not apply to it: the runner walks
+// nothing for it, and the rule owns its empty-root contract (a module root without profiles is clean
+// for lint-structure, as the bash lint printed it). A non-nil error fails the scan closed: the runner
+// prints the findings returned with it, then "<lint>: <error>" on stderr, and exits 3.
+type RootRule interface {
+	ID() string
+	Severity() Severity
+	CheckRoot(root string) ([]Finding, error)
+}
+
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
-// Exactly one of Rule and Tree is set, and that value implements only its own interface; Command
-// panics on any other spec (a registration bug).
+// Exactly one of Rule, Tree and Root is set, and that value implements only its own interface;
+// Command panics on any other spec (a registration bug).
 type Spec struct {
 	Rule      Rule      // a per-file rule, or
-	Tree      TreeRule  // a whole-tree rule
+	Tree      TreeRule  // a whole-tree rule, or
+	Root      RootRule  // a rule that reads its root itself
 	Mode      Mode      // how the rule's arguments are parsed when it runs alone
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
@@ -125,18 +139,22 @@ func (sp Spec) emptyMsg() string {
 }
 
 // ID is the registered rule's ID.
-func (sp Spec) ID() string {
-	if sp.Tree != nil {
-		return sp.Tree.ID()
-	}
-	return sp.Rule.ID()
-}
+func (sp Spec) ID() string { return sp.rule().ID() }
 
-func (sp Spec) severity() Severity {
-	if sp.Tree != nil {
-		return sp.Tree.Severity()
+func (sp Spec) severity() Severity { return sp.rule().Severity() }
+
+// rule is the one rule value the spec sets.
+func (sp Spec) rule() interface {
+	ID() string
+	Severity() Severity
+} {
+	switch {
+	case sp.Tree != nil:
+		return sp.Tree
+	case sp.Root != nil:
+		return sp.Root
 	}
-	return sp.Rule.Severity()
+	return sp.Rule
 }
 
 func (sp Spec) usageExit() int {
@@ -146,19 +164,27 @@ func (sp Spec) usageExit() int {
 	return 3
 }
 
-// validate enforces that a spec holds exactly one rule kind.
+// validate enforces that a spec holds exactly one rule kind, and a value of only that kind.
 func (sp Spec) validate() error {
-	switch {
-	case (sp.Rule == nil) == (sp.Tree == nil):
-		return errors.New("lint: a Spec sets exactly one of Rule and Tree")
-	case sp.Rule != nil:
-		if _, ok := sp.Rule.(TreeRule); ok {
-			return errors.New("lint: rule " + sp.Rule.ID() + " implements both Rule and TreeRule")
-		}
-	default:
-		if _, ok := sp.Tree.(Rule); ok {
-			return errors.New("lint: rule " + sp.Tree.ID() + " implements both Rule and TreeRule")
-		}
+	if count(sp.Rule != nil, sp.Tree != nil, sp.Root != nil) != 1 {
+		return errors.New("lint: a Spec sets exactly one of Rule, Tree and Root")
+	}
+	r := sp.rule()
+	_, isRule := r.(Rule)
+	_, isTree := r.(TreeRule)
+	_, isRoot := r.(RootRule)
+	if count(isRule, isTree, isRoot) != 1 {
+		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
 	}
 	return nil
+}
+
+func count(bs ...bool) int {
+	n := 0
+	for _, b := range bs {
+		if b {
+			n++
+		}
+	}
+	return n
 }

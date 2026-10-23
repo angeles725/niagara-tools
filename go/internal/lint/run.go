@@ -27,25 +27,29 @@ import (
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
 // 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS and ADVISORY
 // rows never count). A spec prints its EmptyError row on a root where it selects no file and stops like
-// a walk error (exit 3).
+// a walk error (exit 3). A RootRule takes no part in the walk: it gets each root after the others' scan.
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs))}
 	defer r.out.Flush()
-	sel := union(specs)
+	sel, walks := union(specs)
 	stopped := make([]bool, len(specs)) // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
 	live := len(specs)
 	for _, root := range a.Roots {
-		files, err := Walk(root, sel)
+		var files []string
+		var err error
+		if walks {
+			files, err = Walk(root, sel)
+		}
 		if err != nil {
 			r.envError(0, fmt.Sprintf("cannot list every file under %s: %s", root, err))
 			for i, sp := range specs {
-				if !sp.ContinueOnWalkError && !stopped[i] {
+				if sp.Root == nil && !sp.ContinueOnWalkError && !stopped[i] {
 					stopped[i], live = true, live-1
 				}
 			}
 		} else { // a walk error wins: scan_files_or_exit exits before the K20 check
 			for i, sp := range specs {
-				if !stopped[i] && !selectsAny(sp.Select, root, files) {
+				if sp.Root == nil && !stopped[i] && !selectsAny(sp.Select, root, files) {
 					r.empty(i, sp, root)
 					stopped[i], live = true, live-1
 				}
@@ -65,7 +69,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 			f := javasrc.NewFile(p, lines)
 			for i, sp := range specs {
-				if stopped[i] || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+				if stopped[i] || sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
 					continue
 				}
 				if sp.Tree != nil {
@@ -84,6 +88,16 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])
+			r.findings(i, sp, "", fds)
+			if err != nil {
+				r.envError(i, err.Error())
+			}
+		}
+		for i, sp := range specs {
+			if sp.Root == nil || stopped[i] {
+				continue
+			}
+			fds, err := sp.Root.CheckRoot(root)
 			r.findings(i, sp, "", fds)
 			if err != nil {
 				r.envError(i, err.Error())
@@ -168,23 +182,28 @@ func (r *report) release() {
 	}
 }
 
-// union selects what any spec selects and prunes what every spec prunes.
-func union(specs []Spec) Selection {
-	var u Selection
+// union selects what any walking spec (every spec but a RootRule) selects and prunes what every walking
+// spec prunes; walks reports whether there is a walking spec at all.
+func union(specs []Spec) (u Selection, walks bool) {
 	count := map[string]int{}
+	n := 0
 	for _, sp := range specs {
+		if sp.Root != nil {
+			continue
+		}
+		n++
 		u.Names = append(u.Names, sp.Select.Names...)
 		for _, d := range sp.Select.Prune {
 			count[d]++
 		}
 	}
-	for d, n := range count {
-		if n == len(specs) {
+	for d, c := range count {
+		if c == n {
 			u.Prune = append(u.Prune, d)
 		}
 	}
 	sort.Strings(u.Prune)
-	return u
+	return u, n > 0
 }
 
 // selectsAny reports whether sel selects any of the listed files under root (read or not, as the
