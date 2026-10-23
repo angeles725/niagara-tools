@@ -607,6 +607,57 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
 | On-site HMI, narrow write API | custom `BWebServlet` (`dashboard.md`) | browser pulls JSON | write with the real user Context; CSRF is yours |
 | Station-served page, few live values | BajaScript (`dashboard.md` § Reading the station directly) | browser subscribes | the user's own permissions |
 
+## 11 · Field-bus rules — BACnet export, MS/TP and Modbus
+
+Rules that decide field behaviour when our module's points sit on, or are exposed through, the stock BACnet and
+Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
+
+### 11.1 · Exposing values over BACnet `[ev: retro devguide415-r2-drivers-protocols Δ5]`
+
+- **Never enable an export priority our module drives.** Each priority level ticked in a writable export
+  descriptor's `bacnetWritable` links that `inN` of the source point to the descriptor; the guide warns "Do not
+  select any priority level already linked or in use by the system, otherwise control contention occurs"
+  (`Bacnet/AddandEditExportObjectsWindow-540E5726.txt:27`). Reserve our level (`in8`, `types/logic-authoring.md`
+  § Authoring a driver) and list the levels left to remote writers in the module README.
+- **Remote writes run as the station user `BACnet`,** which has no permissions until granted: give it Operator
+  write on the category that holds the exported points and a non-blank password
+  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:15-45`).
+- **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
+  has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
+  Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
+- **The N4 level is the BACnet priority.** A proxy write goes out as `WriteProperty` at the winning N4 level and
+  relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
+  corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
+  A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
+  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`). `[ev: corpus B1327 rows 4-7]`
+- Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
+
+### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`
+
+- **COV is a tuning-policy setting:** `Use Cov`, `Cov Subscription Lifetime` (default 15 min) and `Accept
+  Unsolicited Cov` (default false) live on the BACnet tuning policy (`Bacnet/bacnet-BacnetTuningPolicy.txt:24-29`);
+  bind MS/TP and IP devices to separate policies (`Bacnet/AddingATuningPolicyBACnet-4FD602EE.txt:11`).
+- **Large MS/TP trunks:** a Boolean `skipUpload=true` slot on a `BacnetDevice` skips the device-object upload
+  at station start (`Bacnet/TroubleshootingBACnet-4FF09FBA.txt:27,57-58`); a duplicate Device ID faults the
+  device (`:17`).
+- **Worst-case wait per request = `apduTimeout` × (`numberOfApduRetries` + 1)** — defaults 3000 ms and 3 on
+  `BLocalBacnetDevice`; ping and poll threads queue behind it (corpus B1190 §1190.2, live on the PANCCADIA TC500:
+  10 s × 4 = 40 s). Raise the timeout only with the retry count in view.
+
+### 11.3 · Modbus data `[ev: retro devguide415-r2-drivers-protocols Δ6]`
+
+- Integer is unsigned 16-bit; Long/Float take two registers; Double and Long 64-bit take four (new in 4.15)
+  (`Modbus/ModbusData-5FD097AE.txt:18,28,34,37`).
+- Byte order for 32/64-bit values is set on the network or the device, default `Order3210` (big-endian)
+  (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). Modbus carries no type metadata, so a wrong order still
+  reads `{ok}` with a zero or absurd value `[INFER]` — check one known value at commissioning. Gotcha H4.
+- Writes are rounded and clamped by data type (Integer 0..65535, Signed Integer -32768..32767; Float and Double
+  not rounded) (`Modbus/ModbusData-5FD097AE.txt:64-79`).
+- Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
+  (`Modbus/ModbusRegisters-5E427D5B.txt:33`).
+- Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
+  `[ev: corpus B1327 rows 8-10]`
+
 ---
 
 **See also:** `types/logic.md` (BStatus bits, BControlPoint), `types/logic-authoring.md`
