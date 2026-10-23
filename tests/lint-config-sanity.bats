@@ -253,3 +253,16 @@ JAVA
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"*"CS1"*"5m"*"10m"* ]]
 }
+
+@test "LCS-awkfail: an unreadable source file is an env error (exit 3, cannot scan), never a pass on the other files' rows" {
+  # Mutation: LCS-awkfail -- skipping a file the scan cannot read exits by the other files' rows (0 or 1), never 3.
+  only SetpointZero.java
+  cp "$FX/IntervalBad.java" "$ONE/"
+  chmod 000 "$ONE/IntervalBad.java"
+  if [ -r "$ONE/IntervalBad.java" ]; then chmod 644 "$ONE/IntervalBad.java"; skip "running as root"; fi
+  run "$LCS" "$ONE"
+  chmod 644 "$ONE/IntervalBad.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-config-sanity: cannot scan $ONE/IntervalBad.java"* ]]
+  [[ "$output" == *"FAIL"*"SetpointZero.java"*"CS2"* ]]
+}
