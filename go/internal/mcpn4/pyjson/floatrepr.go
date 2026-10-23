@@ -70,3 +70,9 @@ func floatJSON(f float64) string {
 	}
 	return FloatRepr(f)
 }
+
+var (
+	nan    = math.NaN()
+	posInf = math.Inf(1)
+	negInf = math.Inf(-1)
+)
