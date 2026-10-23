@@ -71,15 +71,17 @@ type Context struct {
 	// Session is the active station session, nil when none.
 	Session *Session
 
+	authLatch
 	secret string
 }
 
 // New returns the context of a server started with cfg.
 func New(cfg Config) *Context {
 	start := time.Now()
-	ctx := &Context{Config: cfg, Getenv: os.Getenv,
+	ctx := &Context{Config: cfg, Getenv: os.Getenv, authLatch: authLatch{credKey: make([]byte, 32)},
 		Clock:     func() float64 { return time.Since(start).Seconds() },
 		TierOptIn: map[string]map[string]bool{"B": set(cfg.AllowTierB), "C": set(cfg.AllowTierC)}}
+	rand.Read(ctx.credKey)
 	return ctx
 }
 
