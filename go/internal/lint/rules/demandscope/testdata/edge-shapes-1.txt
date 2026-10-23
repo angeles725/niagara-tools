@@ -1,0 +1,44 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/B.java:13  a reads pressure with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:15  c reads cv with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:18  f reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:20  h reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:21  void reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:24  k reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:25  l reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:26  m reads temp with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/B.java:27  n reads temp with no demand-shaped input in scope
+-- stderr --
+-- m/B.java --
+class B {
+  static { int target = 1; }
+  int step(double suction,
+           double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+  class Inner {
+    int s2(double head) { int target = 0; if (head > 2) target = 1; return target; }
+  }
+  enum E { A, B; int f(double temp) { cmd[0] = temp > 2 ? 1 : 0; return 0; } }
+  void a(double pressureX) { if (pressureX >= 1) cmd[1] = 1; }
+  void b(BStatusBoolean inEnable, double cv) { if (cv > 1) setBool(true); }
+  void c(BStatusBoolean inx, double cv) { if (cv > 1) setBool(true); }
+  void d(BStatusBoolean   inX, double cv) { if (cv > 1) x.setValue(1); }
+  boolean e(double discharge) { return discharge > 3; }
+  void f(double temp) { target++; if (2 >= temp) target--; }
+  void g(int loopCount, double coil) { if (coil < 1) setX(2); }
+  void h(double SUCTION) { if (SUCTION < 1) setX(2); }
+  void (double temp) { if (temp < 1) setX(2); }
+  void i9(double temp){if(temp<1)setX(2);}
+  void j(double t) { if (t < 1 ) setX(2); }
+  void k(double t) { if (x <= temp) setX(2); }
+  void l(double t) { if (x < tempA.b) setX(2); }
+  void 9m(double t) { if (temp < 1) setX(2); }
+  public synchronized   void   n  (double t) { if (temp < 1) setX(2); }
+}
+interface I { int x = 1; }

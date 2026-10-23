@@ -6,6 +6,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
@@ -27,5 +28,6 @@ func All() []lint.Spec {
 		silentprotection.Spec(),
 		configsanity.Spec(),
 		delays.Spec(),
+		demandscope.Spec(),
 	}
 }

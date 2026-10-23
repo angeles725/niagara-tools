@@ -63,6 +63,13 @@ jobs:
           go-version-file: go/go.mod
           cache: false
 
+      # The mcp-n4 target (go/internal/mcpn4/pytarget.Minor): the Go differentials compare against
+      # it and skip on any other python3, so CI must provide it. Later steps run it too.
+      - name: Set up CPython 3.15 (the mcp-n4 target the Go differentials compare against)
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+
       - name: Go gofmt + vet + test (go/)
         run: |
           cd go
@@ -70,7 +77,8 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then printf 'gofmt -l lists unformatted files:\n%s\n' "$unformatted" >&2; exit 1; fi
           go vet ./...
-          go test ./...
+          # A differential against another python3 would skip, not pass: refuse that in CI.
+          MCP_N4_PYTHON="$(command -v python3)" go test ./...
 
       - name: Go build (go/bin — the binaries the toolbelt wrappers exec)
         run: cd go && go build -o bin/ ./cmd/...
