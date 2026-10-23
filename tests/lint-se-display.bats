@@ -66,5 +66,5 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$KIT/toolbelt/lint-se-display.sh" "$d"
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
-  [ "$output" = "lint-se-display: cannot scan $d/A.java: Permission denied" ]
+  [ "$output" = "lint-se-display: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
 }

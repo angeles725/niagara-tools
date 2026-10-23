@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/m/A.java:3  display class: /* import javax.swing.JFrame; */
+FAIL  lint-se-display  @DIR@/m/A.java:5  display class: String s = "new JFrame";
+-- stderr --
+-- m/A.java --
+import java.awt.Font;
+import java.awt.print.PrinterJob;
+/* import javax.swing.JFrame; */
+class A {
+  String s = "new JFrame";
+  String u = "http://h"; Object f = new JFrame();
+  // new JWindow()
+  Object o = new java.awt.Frame();
+}
