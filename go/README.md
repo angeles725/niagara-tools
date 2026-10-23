@@ -57,7 +57,8 @@ rule's rows stay contiguous.
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
    A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
-   (reference port: `rules/timers`, lint-timers, which also keeps gawk's matching and `for (k in a)` order):
+   (reference port: `rules/timers`, lint-timers, which also keeps gawk's matching and `for (k in a)` order;
+   that order lives in `rules/awkorder`, which the per-file `rules/configsanity` uses too):
    `CheckTree(files []*javasrc.File)` gets every selected file under the root in walk order, and sets
    `Path` on each finding; a non-nil error prints the findings returned with it, then `<lint>: <error>`
    (the rule writes the whole text) and exits 3. A spec sets exactly one of `Rule` and `Tree`, and its

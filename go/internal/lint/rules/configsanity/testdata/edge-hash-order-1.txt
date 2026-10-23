@@ -1,0 +1,72 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/Order.java:14  CS1: interval<=duration: heatInterval(49s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:14  CS1: interval<=duration: heatInterval(49s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:14  CS1: interval<=duration: heatInterval(49s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= pollIntervalDuration(42s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:2  CS1: interval<=duration: defrostInterval(7s) <= defrostDuration(40s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= pollIntervalDuration(42s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:10  CS1: interval<=duration: scanInterval(35s) <= defrostDuration(40s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= pollIntervalDuration(42s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:8  CS1: interval<=duration: zzInterval(28s) <= defrostDuration(40s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= pollIntervalDuration(42s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:4  CS1: interval<=duration: pollInterval(14s) <= defrostDuration(40s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= pollIntervalDuration(42s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:26  CS1: interval<=duration: aInterval(1s) <= defrostDuration(40s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:12  CS1: interval<=duration: pollIntervalDuration(42s) <= heatDuration(45s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:12  CS1: interval<=duration: pollIntervalDuration(42s) <= bDuration(50s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:12  CS1: interval<=duration: pollIntervalDuration(42s) <= runDuration(55s)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:12  CS1: interval<=duration: pollIntervalDuration(42s) <= xDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Order.java:12  CS1: interval<=duration: pollIntervalDuration(42s) <= pollIntervalDuration(42s)
+-- stderr --
+-- one/Order.java --
+class Order {
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeSeconds(7)")
+  int f1;
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(14)")
+  int f2;
+  @NiagaraProperty(name = "aInterval", defaultValue = "BRelTime.makeSeconds(21)")
+  int f3;
+  @NiagaraProperty(name = "zzInterval", defaultValue = "BRelTime.makeSeconds(28)")
+  int f4;
+  @NiagaraProperty(name = "scanInterval", defaultValue = "BRelTime.makeSeconds(35)")
+  int f5;
+  @NiagaraProperty(name = "pollIntervalDuration", defaultValue = "BRelTime.makeSeconds(42)")
+  int f6;
+  @NiagaraProperty(name = "heatInterval", defaultValue = "BRelTime.makeSeconds(49)")
+  int f7;
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeSeconds(40)")
+  int f8;
+  @NiagaraProperty(name = "heatDuration", defaultValue = "BRelTime.makeSeconds(45)")
+  int f9;
+  @NiagaraProperty(name = "bDuration", defaultValue = "BRelTime.makeSeconds(50)")
+  int f10;
+  @NiagaraProperty(name = "runDuration", defaultValue = "BRelTime.makeSeconds(55)")
+  int f11;
+  @NiagaraProperty(name = "xDuration", defaultValue = "BRelTime.makeSeconds(60)")
+  int f12;
+  @NiagaraProperty(name = "aInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int again;
+}

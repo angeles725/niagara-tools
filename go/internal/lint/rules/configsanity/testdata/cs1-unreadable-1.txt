@@ -1,0 +1,16 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  lint-config-sanity  @DIR@/one/U5.java:5  CS1: unreadable BRelTime default for defrostInterval (BRelTime.makeMinutes(DEFAULT_MIN)) -- interval/duration not compared; use a literal factory
+-- stderr --
+-- one/U5.java --
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+public final class U5 extends BComponent {
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeMinutes(DEFAULT_MIN)")
+  private BRelTime defrostInterval;
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeMinutes(45)")
+  private BRelTime defrostDuration;
+}
