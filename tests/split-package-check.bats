@@ -2,6 +2,8 @@
 # split-package-check.bats — project-level check: one Java package declared in two N4 modules (deferred-lints D5,
 # issue #142). [ev: retro module-hardening-failure-modes-deltas Δ12] [ev: corpus B1125]
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
@@ -133,4 +135,13 @@ SH
   PATH="$TMPDIR_T/bin:$PATH" run "$SPC" --strict "$P"
   [ "$status" -eq 3 ]
   [[ "$output" == *"No space left on device"* ]]
+}
+
+@test "SPC-symroot: a symlinked root is walked like find -H, same split WARN as the directory (issue #329)" {
+  # Mutation: SPC-symroot -- dropping -H from the marker find reports "no module" (exit 3) under a symlinked root.
+  module GrpA/A/A-rt; module GrpB/B/B-rt
+  jfile GrpA/A/A-rt/src/com/x/U.java com.shared.util
+  jfile GrpB/B/B-rt/src/com/x/U.java com.shared.util
+  assert_symroot_same "$P" "$SPC" "$P"
+  [ "$status" -eq 0 ] && [[ "$output" == *"WARN  split-package-check  com.shared.util"* ]]
 }

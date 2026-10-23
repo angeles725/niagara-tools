@@ -1,21 +1,22 @@
 package jarversion
 
 import (
-	"fmt"
 	"os"
 	"sort"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
-// ListJars lists the regular files named *.jar under root the way lib/scan-files.sh did with
-// `find <root> -mindepth 1 \( -type d \( -name '.*' -o -name build \) -prune \) -o -type f -name '*.jar' -print`
-// (no -L, LC_ALL=C sort): every sub-directory named build or starting with a dot is pruned (the root
-// itself never is), symlinks are neither listed nor followed (a symlinked root lists nothing, as find -P
-// does), and paths are built from root as given. walkErr is the first error find would have printed
+// ListJars lists the regular files named *.jar under root the way lib/scan-files.sh does with
+// `find -H <root> -mindepth 1 \( -type d \( -name '.*' -o -name build \) -prune \) -o -type f -name '*.jar' -print`
+// (LC_ALL=C sort): every sub-directory named build or starting with a dot is pruned (the root
+// itself never is), a symlinked root is followed (issue #329) but symlinks below it are neither listed
+// nor followed, and paths are built from root as given. walkErr is the first error find would have printed
 // ("find: '<dir>': <reason>"), "" for a complete walk; the files it did list are returned either way.
 func ListJars(root string) (jars []string, walkErr string) {
 	w := walker{}
-	if st, err := os.Lstat(root); err != nil {
+	if st, err := os.Stat(root); err != nil {
 		w.fail(root, err)
 	} else if st.IsDir() {
 		w.dir(root)
@@ -57,7 +58,7 @@ func (w *walker) dir(path string) {
 // fail records the first walk error in find's wording.
 func (w *walker) fail(path string, err error) {
 	if w.err == "" {
-		w.err = "find: " + findQuote(path) + ": " + Reason(err)
+		w.err = "find: " + strerror.FindQuote(path) + ": " + Reason(err)
 	}
 }
 
@@ -67,29 +68,4 @@ func join(dir, name string) string {
 		return dir + name
 	}
 	return dir + "/" + name
-}
-
-// findQuote quotes a path as GNU find does in an LC_ALL=C error message (gnulib locale_quoting_style):
-// single quotes; a backslash or a single quote is backslash-escaped, the C control escapes are used for
-// \a\b\f\n\r\t\v, and any other byte outside printable ASCII is a three-digit octal escape.
-func findQuote(s string) string {
-	var b strings.Builder
-	b.WriteByte('\'')
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		switch {
-		case c == '\\' || c == '\'':
-			b.WriteByte('\\')
-			b.WriteByte(c)
-		case strings.IndexByte("\a\b\f\n\r\t\v", c) >= 0:
-			b.WriteByte('\\')
-			b.WriteByte("abfnrtv"[strings.IndexByte("\a\b\f\n\r\t\v", c)])
-		case c < 0x20 || c >= 0x7f:
-			fmt.Fprintf(&b, "\\%03o", c)
-		default:
-			b.WriteByte(c)
-		}
-	}
-	b.WriteByte('\'')
-	return b.String()
 }

@@ -217,9 +217,27 @@ func TestWalkOrderAndSelection(t *testing.T) {
 	if got, _ := Walk(root+"//", sel); len(got) == 0 || got[0] != root+"//.dot.java" {
 		t.Errorf("Walk(root//) first = %q", got)
 	}
-	// A symlinked root is not followed (find -P lists nothing under it).
-	if got, err := Walk(filepath.Join(root, "link"), sel); err != nil || len(got) != 0 {
-		t.Errorf("Walk(symlink root) = %q, %v", got, err)
+	// A symlinked root is followed like find -H (issue #329), spelled as given; links below it are not.
+	// Mutation: WALK-symroot -- os.Lstat instead of os.Stat on the root lists nothing under a symlinked root.
+	outer := t.TempDir()
+	if err := os.Symlink(root, filepath.Join(outer, "mod")); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(outer, "mod")
+	want = []string{link + "/.dot.java", link + "/A.java", link + "/a/A.java", link + "/a/B.java", link + "/b/Z.java"}
+	if got, err := Walk(link, sel); err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Walk(symlink root) = %q, %v\nwant %q", got, err, want)
+	}
+	if got, err := Walk(filepath.Join(root, "link"), sel); err != nil || !reflect.DeepEqual(got, []string{root + "/link/A.java", root + "/link/B.java"}) {
+		t.Errorf("Walk(inner symlink as root) = %q, %v", got, err)
+	}
+	// A dangling root symlink is an incomplete walk, never an empty clean list.
+	dangling := filepath.Join(outer, "gone")
+	if err := os.Symlink(filepath.Join(outer, "nothing"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Walk(dangling, sel); err == nil || err.Error() != "find: '"+dangling+"': No such file or directory" || len(got) != 0 {
+		t.Errorf("Walk(dangling root) = %q, %v", got, err)
 	}
 }
 
