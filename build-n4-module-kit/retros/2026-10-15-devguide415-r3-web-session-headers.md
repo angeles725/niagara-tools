@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · devguide415-r3-web-session-headers
@@ -31,4 +31,4 @@
 - Slot flags are presentation, not access control — say so wherever a kit card hides slots from an external protocol.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | pending | 6 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/dashboard.md:158`, Δ2 `types/dashboard.md:168` + `types/security.md:263`, Δ3 `types/security.md:434`, Δ4 `types/theme.md:171`, Δ5 `types/security.md:445`, Δ6 `types/security.md:163`. INDEX row generated from the header: `| 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | folded | 6 |`

@@ -1,0 +1,17 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/MultiLineZeroFloor.java:6  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)
+-- stderr --
+-- t/MultiLineZeroFloor.java --
+package demo;
+import javax.baja.sys.*;
+public final class MultiLineZeroFloor extends BComponent {
+  private Clock.Ticket t;
+  public void arm(long delayMs) {
+    t = Clock.schedule(this,
+        BRelTime.make(Math.max(delayMs, 0L)),
+        null, null);   // FAIL zero-floor (the real bug shape split over lines)
+  }
+}

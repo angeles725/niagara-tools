@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · testing-parity-btestng
@@ -45,3 +45,6 @@ documents.
 - A rule written as "X cannot run here" needs the exact environment that failed (OS, plugin version). Without it, one environment's failure turns into a general rule and hides a route that works.
 - Station tests drive real slots. Each mutation here failed a test through runtime behaviour, which a source-text test cannot show.
 - Running Gradle against a niagara_home writes into its `modules/`. Back up before the run and restore after it.
+
+---
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/moduleTest.md:13` + `BUILD-LOOP.md:184`, Δ2 `types/moduleTest.md:460` (doc half; the `run-niagara-test` runner stays owed as G33 in `ledger.d/2026-10-23-r8-p1-tests.md`), Δ3 `:191`, Δ4 `:124` + `METHODOLOGY.md:92`, Δ5 `:131`, Δ6 `:145`. INDEX row generated from the header: `| 2026-10-15-testing-parity-btestng.md | kit | 2026-10-15 | folded | 6 |`

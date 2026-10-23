@@ -322,10 +322,11 @@ _kts_code() {
     print out }' "$1" 2>/dev/null
 }
 # The sample-sign requirements: SAMPLE_SIGN_ERE[k] (over the uncommented code) is named SAMPLE_SIGN_NAME[k] in the
-# FAIL detail. allowDefaultProfile takes the .set(false) call or the Kotlin-DSL `= false` assignment.
-SAMPLE_SIGN_ERE=('allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))'
-  'niagaraSigning[[:space:]]*\{' '(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)' 'signingProfileFile')
-SAMPLE_SIGN_NAME=('allowDefaultProfile.set(false) (or = false)' 'niagaraSigning {' 'aliases' 'signingProfileFile')
+# FAIL detail. The table is lib/signing-block.sh, shared with build.sh's dev-key WARN and mirrored by the Go lint-structure L15 (LS15-sync).
+# shellcheck disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/signing-block.sh"
+SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")
+SAMPLE_SIGN_NAME=("${SIGN_BLOCK_NAME[@]}")
 if [ "$SAMPLE" -eq 1 ] && [ "$WIN_PATH_FAIL" -eq 0 ]; then
   GP="$GR/gradle.properties"
   S_HOME=$(_prop "$GP" niagara_home)

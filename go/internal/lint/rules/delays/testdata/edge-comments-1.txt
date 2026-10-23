@@ -1,0 +1,47 @@
+Declared difference from the bash recording (truth fix T4): the calls on lines 5 (// comment), 6 (/* */),
+7 (string literal) and 16 (inside a block comment opened on line 15) are not code; bash FAILed them.
+Truth fix whole-name: bash bound z (line 26) to the "// zero" comment of line 10 (literal-zero) and w (line 27)
+to the "/* why */" comment of line 8 (clean); both are unfloored variables.
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/K.java:9  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/K.java:12  unfloored  cannot verify floor of variable: x
+FAIL  lint-delays     @DIR@/t/K.java:13  unfloored  cannot verify floor of variable: x
+FAIL  lint-delays     @DIR@/t/K.java:14  unfloored  cannot verify floor of variable: "x
+FAIL  lint-delays     @DIR@/t/K.java:18  unfloored  cannot verify floor of variable: x
+PASS  lint-delays     @DIR@/t/K.java:24  guarded at :23
+FAIL  lint-delays     @DIR@/t/K.java:26  unfloored  cannot verify floor of variable: z
+FAIL  lint-delays     @DIR@/t/K.java:27  unfloored  cannot verify floor of variable: w
+-- stderr --
+-- t/K.java --
+package demo;
+import javax.baja.sys.*;
+class K extends BComponent {
+  void a(long x) {
+    // t = Clock.schedule(this, BRelTime.make(x), go, null);
+    /* Clock.schedule(this, BRelTime.make(0), go, null); */
+    String s = "Clock.schedule(this, BRelTime.make(0), go, null)";
+    Clock.schedule(this, /* why */ BRelTime.make(5), go, null); // ok
+    Clock.schedule(this, // first
+        BRelTime.make(0), // zero
+        go, null);
+    Clock.schedule(this, BRelTime.make(x /* c */ ), go, null);
+    Clock.schedule(this, BRelTime.make(x), "a)b", null);
+    Clock.schedule(this, BRelTime.make("x)"), go, null);
+    /*
+     * Clock.schedule(this, BRelTime.make(0), go, null);
+     */
+    Clock.schedule(this, BRelTime.make(x), go, null); /* unclosed
+    Clock.schedule(this, BRelTime.make(5), go, null);
+    */
+  }
+  void b(long y) {
+    if (y > 0) // y > 0 guard
+      Clock.schedule(this, BRelTime.make(y), go, null);
+    // z > 0
+    Clock.schedule(this, BRelTime.make(z), go, null);
+    if (w > 0 /* w > 0 */) Clock.schedule(this, BRelTime.make(w), go, null);
+  }
+}

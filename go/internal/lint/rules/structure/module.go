@@ -21,8 +21,8 @@ var (
 	signingApply = regexp.MustCompile(`id[[:space:]]*\([[:space:]]*"com\.tridium\.niagara-signing"`)
 )
 
-// signBlock is the signing block L15 requires, each part named as its row names it. The patterns are
-// preflight.sh SAMPLE_SIGN_ERE, verbatim (tests/lint-structure.bats LS15-sync keeps them equal).
+// signBlock is the signing block L15 requires, each part named as its row names it: toolbelt/lib/signing-block.sh
+// SIGN_BLOCK_NAME and SIGN_BLOCK_ERE, entry by entry and in order (tests/lint-structure.bats LS15-sync keeps them equal).
 var signBlock = []struct {
 	name string
 	re   *regexp.Regexp

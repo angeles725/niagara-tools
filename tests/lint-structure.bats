@@ -330,14 +330,31 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: lint-structure L15 and preflight sample-sign use the same four requirement patterns" {
-  # The ERE table is duplicated (preflight.sh in bash, the L15 Go port's signBlock); this pins the two copies
-  # together: each of preflight's four patterns is a Go regexp verbatim, and signBlock holds exactly four.
+@test "LS15-sync: preflight sample-sign and build.sh take lib/signing-block.sh; the Go L15 signBlock equals it" {
+  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh or build.sh, or change, drop or reorder
+  # an entry (pattern or row name) of the Go signBlock -> this fails.
+  lib="$KIT/toolbelt/lib/signing-block.sh"
+  grep -q '^SIGN_BLOCK_ERE=(' "$lib"
+  # shellcheck disable=SC2016
+  # why: the consumer's literal source line is matched, so ${SIGN_BLOCK_ERE[@]} must stay unexpanded
+  grep -qxF 'SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/preflight.sh"
+  grep -q 'SIGN_BLOCK_ERE\[0\]' "$KIT/toolbelt/build.sh"
+  for f in preflight.sh build.sh; do
+    grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/$f"
+    run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
+    [ "$status" -ne 0 ]
+  done
+  # The Go port (lint-structure.sh is the n4lint wrapper) holds the same table, entry by entry and in order.
+  # shellcheck disable=SC1090
+  . "$lib"
   go="$KIT/../go/internal/lint/rules/structure/module.go"
-  mapfile -t eres < <(grep -A1 '^SAMPLE_SIGN_ERE=' "$KIT/toolbelt/preflight.sh" | grep -o "'[^']*'" | tr -d "'")
-  [ "${#eres[@]}" -eq 4 ]
-  for e in "${eres[@]}"; do grep -qF "regexp.MustCompile(\`$e\`)" "$go" || { echo "not in the Go port: $e"; false; }; done
-  [ "$(sed -n '/^var signBlock/,/^}$/p' "$go" | grep -c 'regexp.MustCompile(')" -eq 4 ]
+  mapfile -t rows < <(sed -n '/^var signBlock/,/^}$/p' "$go" |
+    sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
+  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ] && [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ] && [ "${#rows[@]}" -eq 4 ]
+  for k in "${!rows[@]}"; do
+    [ "${rows[$k]}" = "${SIGN_BLOCK_NAME[$k]}"$'\t'"${SIGN_BLOCK_ERE[$k]}" ] ||
+      { printf 'signBlock[%s] = %s\nlib       = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
+  done
 }
 
 @test "LS-symroot: a symlinked module root is walked like find -H, same rows as the directory (issue #329)" {
