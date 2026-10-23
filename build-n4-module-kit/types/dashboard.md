@@ -276,6 +276,10 @@ pages: devguide `autoLogoff`, `autoLogoffWeb`, `autoLogoffWb`.
   browser follows the user's `language` property, which must equal the lexicon folder name (`<lang>`).
   `[ev: corpus B1418 §1418.1]`
 - **Lexicon text written into HTML goes through `getHtmlSafeText`**, never raw `getText` (`types/security.md` §4.3).
+- **Resolution, lexicon-only modules, runtime text and the SPA's `lex!`:** `types/lexicon.md`. Two traps for a
+  dashboard: the SPA's `lex.get` substitutes `{n}` only and returns an empty string for a missing key, and every
+  module's lexicon is readable through the `unrestricted` `web:LexiconRpc`, so `module.lexicon` holds display text
+  only. `[ev: retro devguide415-lexicons-ux-i18n Δ5]`
 
 ## Reading the station directly with BajaScript `[ev: retro t9c-reference-gaps Δ5]`
 A page the station serves to a logged-in user can read the station with BajaScript instead of a custom JSON
