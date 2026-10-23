@@ -210,15 +210,15 @@ file, the build silently omits the test from `moduleTestJar` and `niagaraTest` /
 it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
 `[ev: corpus B961 §961.3, B958 §958.4]`
 
-### What the scaffold emits today: two hand steps
-- **Replace the scaffolded `module-permissions.xml` before adding a request.** Both fixtures, and so every
-  `scaffold-module.sh` module, ship `<?xml …?><modulePermissions/>`. The gradle plugin copies that root into
-  `META-INF/module.xml` as it is (niagara-plugins 7.6.22 `NiagaraModulePlugin` adds `module-permissions.xml` to
-  the include files, by javap; a scaffolded client jar's manifest holds `<modulePermissions/>`), and the NRE reads
-  only a `<permissions>` element (baja 4.14.0.162 vineflower `com/tridium/sys/module/NModule.java:442-452`). A
-  `<req-permission>` put inside `<modulePermissions>` is never read, and the call fails with
-  `AccessControlException`. Start from `templates/module-permissions.xml` (§ `module-permissions.xml` above). The
-  fixture fix is owed as G98 `fixture-permissions`. `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
+### What the scaffold emits today
+- **The scaffolded `module-permissions.xml` has a `<permissions/>` root.** The NRE reads only a `<permissions>`
+  element (baja 4.14.0.162 vineflower `com/tridium/sys/module/NModule.java:442-452`), and the gradle plugin copies
+  the root into `META-INF/module.xml` as it is (niagara-plugins 7.6.22 `NiagaraModulePlugin`, by javap). Until
+  kit #380 the fixtures shipped `<modulePermissions/>`, so a `<req-permission>` placed in a module scaffolded
+  before then is never read and the call fails with `AccessControlException`: rename that root to `<permissions>`,
+  or start again from `templates/module-permissions.xml` (§ `module-permissions.xml` above). Every tracked kit
+  file and every fresh scaffold is pinned by `tests/permissions-root.bats`. `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
+  `[ev: tests/permissions-root.bats PR1]`
 - **No `moduleTest-include.xml` is emitted yet.** Before the first `BTestNg` class, copy
   `templates/moduleTest-include.xml` (course shape: a bare `<types>` root) into the part; the stub above has the
   same shape. A comment placed before an `<?xml` declaration is not well-formed XML (expat: "XML or text
