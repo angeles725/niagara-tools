@@ -28,6 +28,11 @@ MAX_PENDING_EVENTS = 500
 FIRST_POLL_DELAY = 0.1
 MAX_POLL_DELAY = 0.8
 MAX_POLL_WAIT = 3.0
+#: Deepest BOX reply nesting (arrays and objects, the outer object counted) accepted; a deeper
+#: reply is a malformed BOX reply. Real replies nest a few levels per loaded slot. Same number
+#: and counting as `server.MAX_NESTING`, and the same reason: CPython's json raises
+#: RecursionError, not ValueError, past its C stack, while Go decodes any depth.
+MAX_REPLY_NESTING = 1000
 #: Actionable auth hints (retro 2026-10-02 D5). A failed login is never retried.
 AUTH_HINTS = {
     401: "check the user's Authentication Scheme Name = HTTPBasicScheme and the password; "
@@ -75,6 +80,34 @@ class HttpStatusError(BoxError):
     def __init__(self, code, message, channel=None, key=None):
         super().__init__(message, channel, key)
         self.code = code
+
+
+def _malformed(detail, channel=None, key=None):
+    return BoxError("malformed BOX reply: " + detail, channel, key)
+
+
+def _json_kind(value):
+    """The JSON kind of a decoded value, with its article: "an object", "a number", ..."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "a boolean"
+    if isinstance(value, (int, float)):
+        return "a number"
+    return {str: "a string", list: "a list", dict: "an object"}[type(value)]
+
+
+def _nests_deeper(value, limit):
+    """Whether lists/dicts nest deeper than `limit` in a decoded value (iterative)."""
+    stack = [(value, 1)]
+    while stack:
+        item, depth = stack.pop()
+        if isinstance(item, (list, dict)):
+            if depth > limit:
+                return True
+            stack.extend((child, depth + 1)
+                         for child in (item.values() if isinstance(item, dict) else item))
+    return False
 
 
 def _invalid_http(exc, channel, key):
@@ -250,9 +283,25 @@ def is_component_type(type_):
 
 
 def _flatten(node, path, out):
+    """Add `node` under `path` and each child under `path/<n>`; a bad shape raises BoxError.
+
+    "s" must be a list of objects, each with a non-empty string "n": anything else is a
+    "malformed BOX reply", never a TypeError/KeyError or a node under a non-string key.
+    """
     out[path] = node
-    for child in node.get("s", []):
-        _flatten(child, child["n"] if not path else path + "/" + child["n"], out)
+    where = "slot %s" % (path or "(root)")
+    kids = node.get("s", [])
+    if not isinstance(kids, list):
+        raise _malformed("%s has children that are %s, not a list" % (where, _json_kind(kids)),
+                         CHANNEL, "loadSlots")
+    for child in kids:
+        if not isinstance(child, dict):
+            raise _malformed("%s has a child that is %s, not an object"
+                             % (where, _json_kind(child)), CHANNEL, "loadSlots")
+        name = child.get("n")
+        if not isinstance(name, str) or not name:
+            raise _malformed("%s has a child without a slot name" % where, CHANNEL, "loadSlots")
+        _flatten(child, name if not path else path + "/" + name, out)
 
 
 # ---- client --------------------------------------------------------------
@@ -337,7 +386,16 @@ class BoxClient:
             if len(raw) > self.max_reply_bytes:
                 raise BoxError("BOX reply larger than %d bytes: refused, not parsed in part"
                                % self.max_reply_bytes, channel, key)
-            reply = json.loads(raw.decode())
+            try:
+                reply = json.loads(raw.decode())
+            except RecursionError:  # past CPython's C stack: deeper than any limit below
+                reply = None
+                deep = True
+            else:
+                deep = _nests_deeper(reply, MAX_REPLY_NESTING)
+            if deep:
+                raise _malformed("nested deeper than %d levels" % MAX_REPLY_NESTING,
+                                 channel, key)
         except BoxError:
             raise
         except urllib.error.HTTPError as exc:
@@ -476,7 +534,14 @@ class BoxClient:
                          {"id": self.sid, "scid": SESSION_COMPONENT_ID, "sck": key, "scarg": arg})
 
     def poll(self):
-        return self.call(CHANNEL, "pollchgs", {"id": self.sid}) or []
+        """The pending change events: a list (`null` reads as no events), else BoxError."""
+        events = self.call(CHANNEL, "pollchgs", {"id": self.sid})
+        if events is None:
+            return []
+        if not isinstance(events, list):
+            raise _malformed("pollchgs answered %s, not a list" % _json_kind(events),
+                             CHANNEL, "pollchgs")
+        return events
 
     # -- session
     def open(self):

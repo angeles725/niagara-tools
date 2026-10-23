@@ -379,6 +379,80 @@ class TestTransportTruth(unittest.TestCase):
         self.assertEqual(client.about(max_bytes=8), "a,b\na,b\n")
 
 
+def poll_hook(events_json):
+    """FakeStation hook answering every pollchgs with the raw JSON `events_json` as its body."""
+    def hook(frame):
+        if frame["m"][0]["k"] == "pollchgs":
+            body = '{"v": "2.3", "p": "box", "n": %d, "m": [{"t": "rp", "b": %s}]}' % (
+                frame["n"], events_json)
+            return 200, body.encode(), {"Content-Type": "application/json"}
+    return hook
+
+
+def load_event(tree):
+    """A pollchgs body holding one load op whose slot tree is `tree` (a JSON-ready value)."""
+    return json.dumps([{"evs": {"ops": [{"nm": "l", "h": "3", "b": tree}]}}])
+
+
+@go_server.go_twin("box", "unit")
+class TestReplyShapes(BoxTestCase):
+    """A reply of the wrong shape is a 'malformed BOX reply' BoxError, never data (0.9.2)."""
+
+    def assert_malformed(self, action, detail):
+        with self.assertRaises(box.BoxError) as cm:
+            action()
+        self.assertIs(type(cm.exception), box.BoxError)
+        self.assertEqual(str(cm.exception), "malformed BOX reply: " + detail)
+
+    def test_pollchgs_must_answer_a_list_of_events(self):
+        c = self.opened()
+        for body, kind in (('{"a": 1}', "an object"), ('"ab"', "a string"), ("5", "a number"),
+                           ("true", "a boolean"), ("{}", "an object"), ('""', "a string")):
+            self.fake.hook = poll_hook(body)
+            with self.subTest(body):
+                self.assert_malformed(c.poll, "pollchgs answered %s, not a list" % kind)
+        for body in ("null", "[]"):
+            self.fake.hook = poll_hook(body)
+            self.assertEqual(c.poll(), [], body)
+
+    def test_a_load_tree_of_the_wrong_shape_is_refused(self):
+        c = self.opened()
+        cases = (
+            ({"s": None}, "slot (root) has children that are null, not a list"),
+            ({"s": "ab"}, "slot (root) has children that are a string, not a list"),
+            ({"s": {"n": "a"}}, "slot (root) has children that are an object, not a list"),
+            ({"s": ["x"]}, "slot (root) has a child that is a string, not an object"),
+            ({"s": [{"t": "x"}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": 5}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": ""}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": "a", "s": [{"n": 5}]}]}, "slot a has a child without a slot name"),
+            ({"s": [{"n": "a", "s": [{"n": "b", "s": 1}]}]},
+             "slot a/b has children that are a number, not a list"),
+        )
+        for tree, detail in cases:
+            self.fake.hook = poll_hook(load_event(tree))
+            with self.subTest(tree):
+                self.assert_malformed(
+                    lambda: c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP), detail)
+
+    def test_a_well_formed_tree_still_loads(self):
+        c = self.opened()
+        self.fake.hook = poll_hook(load_event({"h": "3", "s": [{"n": "a", "s": [{"n": "b"}]}]}))
+        nodes = c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
+        self.assertEqual(sorted(nodes), ["", "a", "a/b"])
+
+    def test_a_reply_nested_past_the_limit_is_refused(self):
+        self.assertEqual(box.MAX_REPLY_NESTING, 1000)
+        c = self.opened()
+        # The frame wraps the body in 3 levels ({"m": [{"b": ...}]}): 997 more fit the limit.
+        self.fake.hook = poll_hook("[" * 997 + "]" * 997)
+        self.assertEqual(len(c.poll()), 1)
+        for depth in (998, 200000):  # 200000 is past CPython's C stack: RecursionError
+            self.fake.hook = poll_hook("[" * depth + "]" * depth)
+            with self.subTest(depth):
+                self.assert_malformed(c.poll, "nested deeper than 1000 levels")
+
+
 class TestSession(BoxTestCase):
     @go_server.go_twin("box", "unit")
     def test_open_returns_root(self):
