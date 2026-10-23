@@ -4,12 +4,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 var (
-	// annotation is an annotation's name and the blanks after it, at the "@" that starts it.
-	annotation = regexp.MustCompile(`^@[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*`)
 	// call is the leftmost identifier( of a header: the method name.
 	call    = regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\(`)
 	keyword = regexp.MustCompile(`^(if|for|while|switch|catch|try|else|do|synchronized|return|new)$`)
@@ -26,10 +25,10 @@ var (
 type scanner struct {
 	path     string
 	out      []lint.Finding
-	depth    int  // braces open
-	mdep     int  // depth of the method being read (0 outside one)
-	ann      int  // parentheses open in the annotation argument list being skipped (0 outside one)
-	negative bool // a "}" closed more than was open
+	depth    int                    // braces open
+	mdep     int                    // depth of the method being read (0 outside one)
+	ann      javasrc.AnnotationSkip // the header annotation being skipped
+	negative bool                   // a "}" closed more than was open
 	hdr      strings.Builder
 	pline    int // line of the header's first "(" (0 = none yet)
 	// the method being read
@@ -54,15 +53,16 @@ func (s *scanner) line(n int, raw, code string) {
 	}
 	for k := 0; k < len(code); k++ {
 		c := code[k]
-		switch {
-		case s.ann > 0:
-			if c == '(' {
-				s.ann++
-			} else if c == ')' {
-				if s.ann--; s.ann == 0 {
+		if s.mdep == 0 { // an annotation in a header (never in a body) is one blank
+			if n, ended := s.ann.Step(code, k); n > 0 {
+				if ended {
 					s.hdr.WriteByte(' ')
 				}
+				k += n - 1
+				continue
 			}
+		}
+		switch {
 		case s.mdep > 0:
 			if c == '{' {
 				s.depth++
@@ -75,14 +75,6 @@ func (s *scanner) line(n int, raw, code string) {
 				}
 			}
 			s.body.WriteByte(c)
-		case c == '@' && annotation.MatchString(code[k:]):
-			k += len(annotation.FindString(code[k:])) - 1
-			if k+1 < len(code) && code[k+1] == '(' {
-				s.ann = 1
-				k++
-			} else {
-				s.hdr.WriteByte(' ')
-			}
 		case c == '{':
 			s.depth++
 			if name := head(s.hdr.String()); name != "" && s.depth >= 2 {

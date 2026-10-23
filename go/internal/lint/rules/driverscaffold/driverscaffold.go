@@ -57,7 +57,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		why = "ends inside a text block"
 	case unterm:
 		why = "an unterminated string or char literal"
-	case s.ann > 0:
+	case s.ann.Open():
 		why = "an annotation's argument list does not close"
 	case s.depth != 0 || s.negative:
 		why = "braces do not balance"
