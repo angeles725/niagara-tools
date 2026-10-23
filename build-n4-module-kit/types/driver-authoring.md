@@ -658,6 +658,18 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
   `[ev: corpus B1327 rows 8-10]`
 
+### 11.4 · Weak peers — capability overrides and queue depth `[ev: retro devguide415-r2-drivers-protocols Δ10]`
+
+- **Capability overrides are a last resort.** For a BACnet device that claims what it cannot deliver, the
+  bacnetUtil children `RpmOverride`, `SegmentationOverride`, `ApduSizeOverride` and `ServicesSupportedOverride`
+  correct the claim; the guide calls them "features of last resort", temporary until firmware or network fixes
+  (guide 4.15.6.20 `EngNotes/BACnetOverridingADevice.txt:19`). Record each one in the site runbook.
+- **Expose bounded queues as diagnostics.** Stock MS/TP diagnostics count queue-full events (`rxQ_full`,
+  `apptxq_overflow`; `EngNotes/bacnetUtil-Tokens.txt:18-20,59-60`). A custom driver should show its own comm or
+  write queue depth and overflow count the same way (the spy page in `types/observability.md` § 2, plus a
+  read-only transient slot when a dashboard or alarm must see it `[INFER]`) and baseline it per trunk.
+  `[ev: corpus B1336 rows 4,6]` Watch-client leases and 503 back-off: `types/cloud-connector.md` § 10.
+
 ---
 
 **See also:** `types/logic.md` (BStatus bits, BControlPoint), `types/logic-authoring.md`

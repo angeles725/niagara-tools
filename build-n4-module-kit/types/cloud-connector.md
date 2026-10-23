@@ -8,6 +8,9 @@ are out of scope.
 Choosing between MQTT, OPC UA, oBIX, BACnet/IP export and a custom servlet for getting data out of a
 station: `types/driver-authoring.md` § 10 (egress decision). `[ev: retro t9c-reference-gaps Δ7]`
 
+Building a JSON payload: check the stock jsonToolkit schema before hand-rolling one (`types/json-toolkit.md` § 1;
+it has no transport, so § 9 MQTT or § 7 HTTP carries its `output`). `[ev: retro devguide415-r2-shipped-libraries Δ9]`
+
 ---
 
 ## 1 · Core service — `BCloudConnectionService`
@@ -319,6 +322,49 @@ public class BMyCloudConnector extends BConnectorImpl {
 ```
 
 **`nCloudDriver` bridge — device/point tree:** when the cloud service must map to a standard Niagara device/point tree, add an `nCloudDriver` module that bridges the `BICloudConnector` service to a `BDeviceNetwork`/`BDevice`/`BProxyExt` hierarchy. This keeps the cloud connector stateless (session management only) and the driver side standard (tuning, poll, subscription). `[ev: corpus B1076]`
+
+---
+
+## 9 · MQTT — broker auth and telemetry `[ev: retro devguide415-r2-drivers-protocols Δ2]`
+
+Stock driver first (§ 2.1 "MQTT: native first"). Guide paths are
+`niagara-help/versions/4.15.6.20/guides-clean/Mqtt/`.
+
+**Set the port explicitly.** The Generic authenticator defaults to `connectionType=UserLoginOverSSL` but
+`brokerPort` defaults to 1883 (javap of `abstractMqttDriver-rt.jar` 4.15.6.20, `BAbstractMqttAuthenticator`
+static init: `sipush 1883`; guide `abstractMqttDriver-GenericMqttAuthenticator.txt:19`). A TLS broker listens
+on 8883: set it, or the connection fails against a TLS listener. Owed Go lint G87 `mqtt-tls-port` (ledger).
+
+| Authenticator | Credentials | Note |
+|---|---|---|
+| Generic | user/password over TLS; mutual TLS with `useTlsClientAuth` + a certificate alias, optional Cert Signing Config renewal | `abstractMqttDriver-GenericMqttAuthenticator.txt:19-25`; `Anonymous` warns and is not secure |
+| AWS | client certificate from the AWS IoT portal, imported into the User Key Store | `abstractMqttDriver-AwsMqttAuthenticator.txt:19` |
+| AWS JITP | same, just-in-time provisioning | port preset to 8883 (`AwsJitpMqttAuthenticatorabstractMqt-061BB575.txt:18`) |
+| Azure SAS | SAS token, regenerated `Advance Expiration` (10 s) before expiry | `abstractMqttDriver-AzureMqttSasAuthenticator.txt:22`; port 8883 |
+| GCP (ClearBlade) | JWT keys | `AbstractMQTTDriverWithGCPAuth.txt:9`; port 8883 (`SettingUpStationToConnectToGCP-632BA3D9.txt:38`) |
+
+**Telemetry recipe** (cold-room or compressor values to a broker):
+- One publish extension per value; `Retained` and `Publish Message on Change` default true
+  (`abstractMqttDriver-MqttNumericObjectPublishExt.txt:25-26`). QoS 1 (at least once) is our choice for telemetry
+  `[INFER]`. Enable LWT on the device (default off, `abstractMqttDriver-AbstractMqttDevice.txt:19`) so the
+  consumer sees the station drop.
+- A publish while the broker link is down is dropped silently and the point still reports ok (vineflower
+  abstractMqttDriver-rt 4.14.0.162 `BMqttClientAbstractPublisherPoint.java:90-110`, corpus B1275 §1275.8). If
+  gaps matter, add a heartbeat (the `publish` action on a trigger) and let the consumer flag missing samples.
+- One scalar per topic: there is no JSON payload. A JSON document needs a String publish point fed by a
+  jsonToolkit schema `output` (`types/json-toolkit.md` § 1). `[ev: corpus B1323 rows 3-6]`
+
+## 10 · Watch and lease clients — leases, 503 and weak peers `[ev: retro devguide415-r2-drivers-protocols Δ10]`
+
+For any client our module runs that polls a watch on another station (oBIX watch, a fox or HTTP poller):
+- **Lease = max(2 × interval, interval + safety factor).** That is how the R2 oBIX client sizes its requested
+  lease (default interval 2 s, safety factor 10 s); raise the interval to 10 s or more for a weak peer
+  (guide 4.15.6.20 `EngNotes/aClientPollingTiming.txt:10-20`). Use the same rule for our own watch clients
+  `[INFER]`, and re-create the watch when the server reports it expired.
+- **HTTP 503 = the peer ran out of web-service threads** (`aClientPollingTiming.txt:34-36`): back off with a
+  growing delay, never retry at the poll rate. Debug logging on the serving station "greatly slows" its answers
+  (`:29`). `[ev: corpus B1336 row 3]`
+- Field-side counterparts (capability overrides, queue depth points): `types/driver-authoring.md` § 11.4.
 
 **See also:** `types/module-wiring.md` (fat-jar vs api-dep decision),
 `types/third-party-libraries.md` (uberjar rules), `types/security.md` (KeyRing,
