@@ -1,15 +1,13 @@
+Declared difference from the bash recording (truth fix T4): the calls on lines 5 (// comment), 6 (/* */),
+7 (string literal) and 16 (inside a block comment opened on line 15) are not code; bash FAILed them.
 -- args --
 @DIR@/t
 -- want --
 exit 1
-FAIL  lint-delays     @DIR@/t/K.java:5  unfloored  cannot verify floor of variable: x
-FAIL  lint-delays     @DIR@/t/K.java:6  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
-FAIL  lint-delays     @DIR@/t/K.java:7  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
 FAIL  lint-delays     @DIR@/t/K.java:9  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
 FAIL  lint-delays     @DIR@/t/K.java:12  unfloored  cannot verify floor of variable: x
 FAIL  lint-delays     @DIR@/t/K.java:13  unfloored  cannot verify floor of variable: x
 FAIL  lint-delays     @DIR@/t/K.java:14  unfloored  cannot verify floor of variable: "x
-FAIL  lint-delays     @DIR@/t/K.java:16  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
 FAIL  lint-delays     @DIR@/t/K.java:18  unfloored  cannot verify floor of variable: x
 PASS  lint-delays     @DIR@/t/K.java:24  guarded at :23
 FAIL  lint-delays     @DIR@/t/K.java:26  literal-zero  local z=BRelTime(0)

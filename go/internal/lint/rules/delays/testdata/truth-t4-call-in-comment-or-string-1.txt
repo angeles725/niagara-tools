@@ -1,0 +1,22 @@
+Truth fix T4 (truth audit 2026-10-22): a Clock.schedule( inside a // comment, a /* */ comment (also one
+opened on an earlier line) or a string literal is not a call. bash printed FAIL rows for lines 3, 4, 5 and 7
+and read line 9 from the string, reporting unclosed-call instead of the literal-zero delay of the real call.
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/T4.java:9  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+-- stderr --
+-- t/T4.java --
+class T4 {
+  void a(long x) {
+    // t = Clock.schedule(this, BRelTime.make(x), go, null);
+    /* Clock.schedule(this, BRelTime.make(0), go, null); */
+    String s = "Clock.schedule(this, BRelTime.make(0), go, null)";
+    /*
+     * Clock.schedule(this, BRelTime.make(0), go, null);
+     */
+    String u = "Clock.schedule("; Clock.schedule(this, BRelTime.make(0), go, null);
+    Clock.schedule(this, /* make(0) */ BRelTime.make(5), go, null);
+  }
+}
