@@ -227,14 +227,14 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-n4-course-as-exemplar-source.md | kit | 2026-10-15 | pending | 4 |
-| 2026-10-15-n4-course-authoring-files-and-libraries.md | kit | 2026-10-15 | pending | 5 |
+| 2026-10-15-n4-course-authoring-files-and-libraries.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-n4-course-drivers-bql-ords-files.md | kit | 2026-10-15 | pending | 5 |
 | 2026-10-15-n4-course-lexicon-logging-testing.md | kit | 2026-10-15 | pending | 5 |
 | 2026-10-15-n4-course-parity-observability-horizons.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-n4-course-slots-components-contracts.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-n4-course-threading-jobs-doctrine.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | pending | 6 |
+| 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-testing-parity-btestng.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | pending | 6 |
 | 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | pending | 8 |

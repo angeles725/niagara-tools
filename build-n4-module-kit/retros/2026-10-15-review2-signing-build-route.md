@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · review2-signing-build-route
@@ -41,3 +41,6 @@ had summed one group of retros by hand.
 - The Windows Gradle root works from WSL through `cmd.exe`, but it writes into that root's `niagara_home\modules`. Back up before the first run.
 - A worker thread inherits nothing from the action that started it. Carry the Context across explicitly, or the work runs with all permissions and the default locale.
 - Totals that appear in commit messages or reports come from a script, never from a hand sum.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u4-c58-build-reference`) — Δ1-Δ3 `build-verify.md` § Signing per deploy target; Δ4 `build-verify.md` § Raw gradle; Δ5 `types/security.md` § 2.4; Δ6 `METHODOLOGY.md` K34.
