@@ -2,7 +2,9 @@
 @DIR@/m
 -- want --
 exit 0
-WARN  lint-subscribe-without-unsubscribe  @DIR@/m/D.java:2  /* x.subscribe(y); */
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/A.java:3  void f() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/B.java:2  String u = "http://h"; void f() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/C.java:2  void f() { sub.subscribe(c); }
 -- stderr --
 -- m/A.java --
 class A {

@@ -15,9 +15,11 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_strip_run did).
 #
 # Usage:  lint-subscribe-without-unsubscribe.sh [--strict] <src-root>
-#   Scans *.java under <src-root>, dot-dirs pruned. Line // comments are stripped before
-#   matching, so commented-out code does not trigger. Per FILE: a `.subscribe(` call with no
-#   `unsubscribe` / `unsubscribeAll` anywhere in the same file is the leak shape.
+#   Scans *.java under <src-root>, dot-dirs pruned. Matches the code only: comments, Javadoc and
+#   literal text never count (a commented-out subscribe never WARNs, a commented or quoted
+#   unsubscribe never pairs a leak) and a `//` inside a string never hides the rest of a line.
+#   Per FILE: a `.subscribe(` call with no `unsubscribe` / `unsubscribeAll` anywhere in the same
+#   file is the leak shape.
 #   Row:   WARN  lint-subscribe-without-unsubscribe  <file>:<line>  <trimmed source>
 #   Exit:  0  no WARN (clean) or WARN-only · 1  any WARN under --strict · 3  usage/env
 #
@@ -25,6 +27,7 @@
 # assumed paired; a file that only subscribes is the leak candidate a reviewer must confirm.
 # `.subscribe(` (leading dot) is matched so it never collides with `.unsubscribe(`.
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
+# Mutation: SWU5 -- matching the raw line (no comment/literal blanking) lets a commented unsubscribe pair a leak
 # Mutation: SWU2 -- drop the unsubscribe-absent guard so a file WITH unsubscribe still WARNs
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

@@ -32,12 +32,11 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
-// Check reports the first `.subscribe(` line when no line holds `unsubscribe`, both in the code
-// before each line's first "//".
+// Check reports the first `.subscribe(` line when no line holds `unsubscribe`, both matched in the code
+// (linescan.Code: no comment, Javadoc or literal text), so a commented unsubscribe never pairs a leak.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	at := 0
-	for i, ln := range f.Raw {
-		code := linescan.Cut(ln)
+	for i, code := range linescan.Code(f) {
 		if strings.Contains(code, "unsubscribe") {
 			return nil, nil
 		}
