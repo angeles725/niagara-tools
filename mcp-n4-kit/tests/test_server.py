@@ -736,6 +736,39 @@ class TestDanglingOutputs(StationTestCase):
                                             ord="station:|slot:/Folder")["dangling"]]
         self.assertEqual(sorted(paths), sorted(["/Folder/" + a[0], "/Folder/" + b[0]]))
 
+    def link_with_source_ord(self, source_ord):
+        """A -> B link whose sourceOrd the station reports as `source_ord`."""
+        a, b = self.add_with_out("A"), self.add_with_out("B")
+        self.box.check_links(a[1], "out", b[1], "in10", add=True)
+        self.fake.by_handle[b[1]].child("Link").child("sourceOrd").value = source_ord
+        return a, b
+
+    def test_a_slot_path_source_is_resolved_like_a_handle(self):
+        a, b = self.link_with_source_ord("station:|slot:/Folder/A")
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder")
+        self.assertEqual([d["path"] for d in out["dangling"]], ["/Folder/" + b[0]])
+        self.assertEqual(out["unknown"], [])
+        links = self.ok("n4_list_links", ord="station:|slot:/Folder")["links"]
+        self.assertEqual(links[0]["source_path"], "/Folder/" + a[0])
+
+    def test_an_unresolvable_source_makes_candidates_unknown_not_dangling(self):
+        a, b = self.link_with_source_ord("local:|foxs:|station:|bql:select x from y")
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder")
+        self.assertEqual(out["dangling"], [])
+        self.assertEqual(sorted(d["path"] for d in out["unknown"]),
+                         sorted(["/Folder/" + a[0], "/Folder/" + b[0]]))
+        self.assertEqual(out["unresolved_links"], [{
+            "target_path": "/Folder/" + b[0], "link_name": "Link",
+            "source_ord": "local:|foxs:|station:|bql:select x from y", "source_slot": "out"}])
+        self.assertIn("unknown", out["scope_note"])
+
+    def test_a_handle_source_outside_the_subtree_keeps_candidates_dangling(self):
+        a, b = self.add_with_out("A"), self.add_with_out("B")
+        self.box.check_links(a[1], "out", b[1], "in10", add=True)
+        out = self.ok("n4_find_dangling_outputs", ord="station:|slot:/Folder/" + b[0], depth=1)
+        self.assertEqual((out["dangling"], out["unknown"]),
+                         ([{"path": "/Folder/" + b[0], "type": "kitControl:NumericConst"}], []))
+
 
 class TestDeepTargets(StationTestCase):
     """A link whose target is deeper than `depth` must not cause false positives."""

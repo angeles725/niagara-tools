@@ -28,6 +28,8 @@ def fixture(name):
 
 
 class _Resp(io.BytesIO):
+    headers = {"Content-Type": "text/csv"}
+
     def __enter__(self):
         return self
 
@@ -111,8 +113,24 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual(rows[0]["Name"], "Meter A")
         self.assertEqual(rows[0]["Slot Path"], "slot:/Drivers/ModbusTcpNetwork/Meter$20A")
 
-    def test_parse_csv_of_an_empty_body_has_no_columns(self):
-        self.assertEqual(bql.parse_csv("", max_rows=5), ([], [], False))
+    def test_complete_records_cuts_only_outside_quotes(self):
+        text = 'A,B\nz,"ok"\nx,"line one\nli'
+        self.assertEqual(bql.complete_records(text), 'A,B\nz,"ok"\n')
+        self.assertEqual(bql.complete_records('A\n"say ""hi""\nthere"\n'),
+                         'A\n"say ""hi""\nthere"\n')
+        self.assertEqual(bql.complete_records('A\r\n"x'), 'A\r\n')
+        self.assertEqual(bql.complete_records('A,B'), '')
+
+    def test_parse_csv_refuses_a_body_without_a_header_row(self):
+        for text in ("", "\ufeff", "\r\n"):
+            with self.assertRaisesRegex(ValueError, "no header row"):
+                bql.parse_csv(text, max_rows=5)
+        self.assertEqual(bql.parse_csv("\ufeffA,B\n", max_rows=5), (["A", "B"], [], False))
+
+    def test_parse_csv_refuses_a_ragged_record(self):
+        for text in ("A,B\nok,ok\nz\n", "A,B\nok,ok\nx,y,extra\n"):
+            with self.assertRaisesRegex(ValueError, "record 2 has [13] cell"):
+                bql.parse_csv(text, max_rows=5)
 
     def test_local_devices_are_flagged_and_counted_apart(self):
         dev = lambda name: {"Slot Path": "slot:/Drivers/SnmpNetwork/" + name, "Name": name,
@@ -222,6 +240,17 @@ class TestBqlQueryTool(BqlToolCase):
                       query="select slotPath from control:ControlPoint")
         self.assertEqual((out["row_count"], out["truncated"]), (2, True))
         self.assertEqual(self.opener.requests[0][1], 5)
+
+    def test_a_byte_cap_inside_a_quoted_cell_drops_the_torn_record(self):
+        body = (b'Slot Path,Name\nslot:/Z,"ok"\n'
+                b'slot:/A,"line one\nline two"\nslot:/B,"b"\n')
+        self.opener.routes = [("driver:Device", body)]
+        cap = body.index(b"line two") + 2  # the cap falls inside A's quoted cell
+        with mock.patch.object(bql, "MAX_RESPONSE_BYTES", cap):
+            out = self.ok("n4_bql_query", base="/Drivers",
+                          query="select slotPath, name from driver:Device")
+        self.assertEqual(out["rows"], [{"Slot Path": "slot:/Z", "Name": "ok"}])
+        self.assertTrue(out["truncated"])
 
     def test_non_select_and_pipe_injection_send_nothing(self):
         for query in ("delete from driver:Device",
@@ -371,14 +400,51 @@ class TestBqlOutputFile(BqlToolCase):
                                          query="select name from driver:Device"))
 
 
+class TestNonCsvAnswers(test_server.ToolTestCase):
+    """An HTTP 200 that is not a CSV table is an error, never a zero-row result."""
+
+    QUERY = "select slotPath, name from driver:Device"
+
+    def setUp(self):
+        super().setUp()
+        self.connect()
+
+    def answer(self, body):
+        self.fake.ord_routes = [("driver:Device", body)]
+
+    def test_an_html_page_is_an_error_whatever_its_content_type(self):
+        page = b"<!DOCTYPE html>\n<html><body>Login</body></html>\n"
+        for body in ((page, "text/html; charset=UTF-8"), (page, "text/csv"),
+                     (b"Slot Path,Name\n", "text/html")):
+            self.answer(body)
+            self.assertIn("HTML", self.err("n4_bql_query", base="/Drivers", query=self.QUERY))
+
+    def test_an_empty_body_is_an_error_not_zero_rows(self):
+        self.answer(b"")
+        text = self.err("n4_bql_query", base="/Drivers", query=self.QUERY)
+        self.assertIn("no header row", text)
+
+    def test_an_empty_body_fails_the_inventory_instead_of_zero_totals(self):
+        self.fake.ord_routes = [("driver:DeviceNetwork", fixture("bql_networks.csv")),
+                                ("driver:Device", b""),
+                                ("control:ControlPoint", fixture("bql_points.csv"))]
+        self.assertIn("no header row", self.err("n4_inventory"))
+
+    def test_a_ragged_row_is_an_error(self):
+        self.answer(b"Slot Path,Name\nslot:/A,a\nslot:/B\n")
+        text = self.err("n4_bql_query", base="/Drivers", query=self.QUERY)
+        self.assertIn("record 2 has 1 cell", text)
+
+
 @go_server.go_twin("bql", "injection")
 class TestH5aRegressions(BqlToolCase):
     """H5 review: an empty BQL body and a failed output_file write."""
 
-    def test_an_empty_body_counts_zero_rows_instead_of_failing_the_inventory(self):
+    def test_a_header_only_body_counts_zero_rows_instead_of_failing_the_inventory(self):
+        # a type with no instances: ITableToCsv still writes its BOM and header row
         self.opener.routes = [("driver:DeviceNetwork", fixture("bql_networks.csv")),
-                              ("driver:Device", b""),
-                              ("control:ControlPoint", b"")]
+                              ("driver:Device", b"\xef\xbb\xbfSlot Path,Name,Type\n"),
+                              ("control:ControlPoint", b"Slot Path,Name,Type,Out\n")]
         out = self.ok("n4_inventory")
         self.assertEqual((out["totals"]["field_devices"], out["totals"]["points"]), (0, 0))
 
