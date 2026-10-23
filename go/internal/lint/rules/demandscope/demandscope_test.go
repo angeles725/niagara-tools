@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -35,5 +37,47 @@ func TestLocked(t *testing.T) {
 	want := ID + ": cannot list every file under " + dir + ": find: '" + locked + "': Permission denied\n"
 	if code != 3 || o.String() != "" || e.String() != want {
 		t.Errorf("exit %d out %q err %q, want 3, no rows and %q", code, o.String(), e.String(), want)
+	}
+}
+
+// rows runs the rule alone on one file holding src and returns its stdout with the path cut to "A.java".
+func rows(t *testing.T, src string) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "A.java"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	lint.Command(Spec())([]string{ID, dir}, cli.Stdio{Out: &o, Err: &e})
+	return strings.ReplaceAll(o.String(), dir+"/", "")
+}
+
+// TestCommentsAndLiterals: comment and literal text is never code. The awk cut each line at its first
+// "//" (inside a string too) and read block comments, strings and chars as code, so a demand word in a
+// comment cleared the whole file, a brace in a literal shifted the depth and a string held a fake read.
+func TestCommentsAndLiterals(t *testing.T) {
+	warn := func(line int, m, pv string) string {
+		return "WARN  demand-in-scope  A.java:" + strconv.Itoa(line) + "  " + m + " reads " + pv + " with no demand-shaped input in scope\n"
+	}
+	for _, tc := range []struct{ name, src, want string }{
+		{"block comment field", "class A {\n  /* int demandCount; */\n  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n}\n",
+			warn(3, "s", "suction")},
+		{"javadoc field", "class A {\n  /**\n   * enable; */\n  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n}\n",
+			warn(4, "s", "suction")},
+		{"string field", "class A {\n  String n = \"callCount\";\n  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n}\n",
+			warn(3, "s", "suction")},
+		{"url keeps the rest", "class A {\n  String u = \"http://x\"; int demand;\n  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n}\n", ""},
+		{"brace in string", "class A {\n  int s(double suction) { String b = \"}\"; int target = 0; if (suction > 1) target = 1; return target; }\n  int t(double temp) { int target = 0; if (temp > 1) target = 1; return target; }\n}\n",
+			warn(2, "s", "suction") + warn(3, "t", "temp")},
+		{"brace in char", "class A {\n  int s(double head) { char c = '{'; int target = 0; if (head > 1) target = 1; return target; }\n}\n",
+			warn(2, "s", "head")},
+		{"read in string", "class A {\n  void s(double t) { setX(\"temp > 2\"); }\n}\n", ""},
+		{"write in comment", "class A {\n  void s(double t) { if (temp > 2) log(); // target = 1\n  }\n}\n", ""},
+		{"escaped quote", "class A {\n  void s(double t) { String q = \"\\\"// \"; if (temp > 2) setX(1); }\n}\n",
+			warn(2, "s", "temp")},
+	} {
+		if got := rows(t, tc.src); got != tc.want {
+			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
+		}
 	}
 }

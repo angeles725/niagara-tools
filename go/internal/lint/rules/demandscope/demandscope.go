@@ -61,12 +61,11 @@ func init() {
 	}
 }
 
-// Check is the awk's two passes over the file's lines, each cut at its first "//".
+// Check is the awk's two passes over the file's code: comments blanked and literal contents removed, so
+// no comment or literal text is read as a field, a brace, a write or a read (the awk cut each line at its
+// first "//" only, inside a string too).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := make([]string, len(f.Raw))
-	for i, ln := range f.Raw {
-		lines[i] = cutComment(ln)
-	}
+	lines, _ := javasrc.BlankLiterals(f.Stripped(), nil)
 	classDemand := false
 	depth := 0
 	for _, ln := range lines { // pass 1: class-level fields (depth 1, no "(", a ";")
@@ -107,14 +106,6 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			Msg: name(ln) + " reads " + pv + " with no demand-shaped input in scope"})
 	}
 	return out, nil
-}
-
-// cutComment is the awk gsub(/\/\/.*$/, ""): the line up to its first "//", in a literal or not.
-func cutComment(ln string) string {
-	if k := strings.Index(ln, "//"); k >= 0 {
-		return ln[:k]
-	}
-	return ln
 }
 
 // braces is the line's "{" count minus its "}" count.

@@ -2,6 +2,8 @@
 @DIR@/m
 -- want --
 exit 0
+WARN  demand-in-scope  @DIR@/m/A.java:3  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/A.java:15  demandless reads coil with no demand-shaped input in scope
 -- stderr --
 -- m/A.java --
 class A {
