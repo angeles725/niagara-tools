@@ -13,6 +13,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
 
@@ -29,5 +30,6 @@ func All() []lint.Spec {
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
 		clockzerofloor.Spec(),
+		subscribeleak.Spec(),
 	}
 }

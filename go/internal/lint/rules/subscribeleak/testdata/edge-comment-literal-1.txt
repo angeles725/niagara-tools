@@ -1,0 +1,29 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/D.java:2  /* x.subscribe(y); */
+-- stderr --
+-- m/A.java --
+class A {
+  /* sub.subscribe(c); */
+  void f() { sub.subscribe(c); }
+  /* TODO unsubscribe */
+}
+-- m/B.java --
+class B {
+  String u = "http://h"; void f() { sub.subscribe(c); }
+}
+-- m/C.java --
+class C {
+  void f() { sub.subscribe(c); }
+  String s = "unsubscribe";
+}
+-- m/D.java --
+class D {
+  /* x.subscribe(y); */
+}
+-- m/E.java --
+class E {
+  void f() { s.subscribe (c); x.Subscribe(c); }
+}
