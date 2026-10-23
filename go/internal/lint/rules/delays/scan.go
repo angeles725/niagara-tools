@@ -149,15 +149,14 @@ type file struct {
 	propMin    map[string]float64
 	getterSlot map[string]string
 	out        []lint.Finding
-	err        error
 }
 
-func scanFile(f *javasrc.File, helpers map[string]bool) ([]lint.Finding, error) {
+func scanFile(f *javasrc.File, helpers map[string]bool) []lint.Finding {
 	r := &file{path: f.Path, lines: f.Raw, code: f.Stripped(), helpers: helpers,
 		constMs: map[string]float64{}, propMin: map[string]float64{}, getterSlot: map[string]string{}}
 	r.declarations()
 	r.calls()
-	return r.out, r.err
+	return r.out
 }
 
 func (r *file) emit(sev lint.Severity, line int, msg string) {
@@ -255,10 +254,7 @@ func (r *file) calls() {
 			r.emit(lint.Fail, i+1, fmt.Sprintf("unclosed-call  Clock.schedule( not closed within %d lines -- cannot read the delay; wrap the call tighter", maxCont))
 			continue
 		}
-		if err := r.classify(i+1, secondArg(rest)); err != nil {
-			r.err = err
-			return
-		}
+		r.classify(i+1, secondArg(rest))
 	}
 }
 
@@ -274,7 +270,7 @@ func codeCall(ln string) []int {
 }
 
 // classify reports the delay argument arg of the call on line lnum (1-based).
-func (r *file) classify(lnum int, arg string) error {
+func (r *file) classify(lnum int, arg string) {
 	arg = trimSpace(arg)
 
 	// 1. An inline BRelTime literal.
@@ -282,7 +278,7 @@ func (r *file) classify(lnum int, arg string) error {
 		if v == 0 {
 			r.emit(lint.Fail, lnum, "literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0")
 		}
-		return nil
+		return
 	}
 
 	// 2. BRelTime.make(Math.max(x, k)).
@@ -311,17 +307,18 @@ func (r *file) classify(lnum int, arg string) error {
 				if n, _ := strconv.ParseFloat(k, 64); n <= 0 {
 					r.emit(lint.Fail, lnum, "zero-floor  Math.max floor="+num(n)+" (<=0) — use Math.max(x,1L)")
 				}
-				return nil
+				return
 			}
 		}
 		r.emit(lint.Fail, lnum, "zero-floor  cannot determine Math.max floor in: "+arg)
-		return nil
+		return
 	}
 
 	// 2.5 D2b: BRelTime.make(<method call>), the helper resolved one level across files.
 	if loc := makeOpen.FindStringIndex(arg); loc != nil {
 		if fn := helperName(strings.TrimLeft(arg[loc[1]:], " \t\n\v\f\r")); fn != "" {
-			return r.helper(lnum, fn, true)
+			r.helper(lnum, fn, true)
+			return
 		}
 	}
 
@@ -332,23 +329,23 @@ func (r *file) classify(lnum int, arg string) error {
 			seg = seg[:k]
 		}
 		v := trimSpace(seg)
-		if done, err := r.guarded(lnum, v); done || err != nil {
-			return err
+		if r.guarded(lnum, v) {
+			return
 		}
 		for j := lnum - 1; j >= 1 && j >= lnum-50; j-- {
 			if r.binding(lnum, v, r.lines[j-1]) {
-				return nil
+				return
 			}
 		}
 		r.emit(lint.Fail, lnum, "unfloored  cannot verify floor of variable: "+v)
-		return nil
+		return
 	}
 
 	// 4. A slot getter: getXxx().
 	if m := getterCall.FindString(arg); m != "" {
 		g := getterArgs.ReplaceAllString(m, "")
-		if done, err := r.guarded(lnum, g); done || err != nil {
-			return err
+		if r.guarded(lnum, g) {
+			return
 		}
 		slot, ok := r.getterSlot[g]
 		switch min, has := r.propMin[slot]; {
@@ -361,7 +358,7 @@ func (r *file) classify(lnum int, arg string) error {
 		default:
 			r.emit(lint.Fail, lnum, "facet-min-zero  slot "+slot+" facet MIN=0 — schedule can receive 0")
 		}
-		return nil
+		return
 	}
 
 	// 5. A known static final BRelTime constant.
@@ -369,27 +366,25 @@ func (r *file) classify(lnum int, arg string) error {
 		if v <= 0 {
 			r.emit(lint.Fail, lnum, "literal-zero  constant "+arg+"="+num(v)+"ms (<=0)")
 		}
-		return nil
+		return
 	}
 
 	// 6. Unresolved.
 	r.emit(lint.Fail, lnum, "unfloored  cannot verify floor: "+arg)
-	return nil
+	return
 }
 
 // helper reports a delay computed by method fn: proven floor, same-method guard, or FAIL. guard is false
 // for a variable bound to the call, which awk never checked for a guard on fn.
-func (r *file) helper(lnum int, fn string, guard bool) error {
+func (r *file) helper(lnum int, fn string, guard bool) {
 	if r.helpers[fn] {
-		return nil
+		return
 	}
-	if guard {
-		if done, err := r.guarded(lnum, fn); done || err != nil {
-			return err
-		}
+	if guard && r.guarded(lnum, fn) {
+		return
 	}
 	r.emit(lint.Fail, lnum, "zero-floor  helper "+fn+" has no visible strictly-positive floor")
-	return nil
+	return
 }
 
 // binding reads one earlier line ln for the binding of variable v; true when it decided the call.
@@ -414,7 +409,7 @@ func (r *file) binding(lnum int, v, ln string) bool {
 	after := ln[awkIndex(ln, v)-1+len(v):]
 	if loc := assign.FindStringIndex(after); loc != nil {
 		if fn := helperName(strings.TrimLeft(after[loc[1]:], " \t\n\v\f\r")); fn != "" {
-			_ = r.helper(lnum, fn, false)
+			r.helper(lnum, fn, false)
 			return true
 		}
 	}
@@ -423,9 +418,10 @@ func (r *file) binding(lnum int, v, ln string) bool {
 
 // guarded looks up to 80 lines back for a positivity guard on expr (`expr > 0`, `>= 1`, `== 0`, or the
 // same on `expr().getMillis()`), comments cut, and reports a PASS row at the call when one is found.
-func (r *file) guarded(lnum int, expr string) (bool, error) {
+// expr is matched as text: the bash lint spliced it into a regular expression.
+func (r *file) guarded(lnum int, expr string) bool {
 	if expr == "" {
-		return false, nil
+		return false
 	}
 	var pats []*regexp.Regexp
 	for j := lnum - 1; j >= 1 && j >= lnum-80; j-- {
@@ -438,23 +434,21 @@ func (r *file) guarded(lnum int, expr string) (bool, error) {
 			continue
 		}
 		if pats == nil {
-			var err error
-			if pats, err = guardPatterns(expr); err != nil {
-				return false, fmt.Errorf("cannot scan %s: guard pattern for %q at line %d is not a valid regular expression (awk died on it): %v", r.path, expr, lnum, err)
-			}
+			pats = guardPatterns(expr)
 		}
 		for _, p := range pats {
 			if p.MatchString(ln) {
 				r.emit(lint.Pass, lnum, "guarded at :"+strconv.Itoa(j))
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
-// guardPatterns are awk's dynamic guard regexps: expr is spliced in as a regular expression.
-func guardPatterns(expr string) ([]*regexp.Regexp, error) {
+// guardPatterns are the guard regexps on the literal text expr.
+func guardPatterns(expr string) []*regexp.Regexp {
+	q := regexp.QuoteMeta(expr)
 	var out []*regexp.Regexp
 	for _, tail := range []string{
 		`[[:space:]]*>[[:space:]]*0`,
@@ -464,11 +458,7 @@ func guardPatterns(expr string) ([]*regexp.Regexp, error) {
 		`\(\)\.getMillis\(\)[[:space:]]*>=[[:space:]]*1`,
 		`\(\)\.getMillis\(\)[[:space:]]*==[[:space:]]*0`,
 	} {
-		p, err := regexp.CompilePOSIX(expr + tail)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
+		out = append(out, re(q+tail))
 	}
-	return out, nil
+	return out
 }

@@ -1,19 +1,19 @@
-Declared difference from the bash recording: gawk died on the invalid dynamic regexp built from
-"(long" (stderr "awk: cmd. line:129: (FILENAME=@DIR@/t/R2.java FNR=10) fatal: invalid regexp: Unmatched ( or \(: ..."),
-dropped the rest of R2.java and the lint still exited 1. The port keeps the rows printed before the
-crash but fails closed: env line, exit 3.
+Declared difference from the bash recording: gawk died on the invalid dynamic regexp built from "(long"
+(stderr "awk: cmd. line:129: (FILENAME=@DIR@/t/R2.java FNR=10) fatal: invalid regexp: Unmatched ( or \(: ..."),
+dropped the rest of R2.java (lines 7-8) and still exited 1. The guard expression is now matched as text, so
+line 7 is classified like any other unresolved variable.
 -- args --
 @DIR@/t
 -- want --
-exit 3
+exit 1
 FAIL  lint-delays     @DIR@/t/R.java:5  unfloored  cannot verify floor of variable: a.b
 FAIL  lint-delays     @DIR@/t/R.java:6  unfloored  cannot verify floor of variable: x + 1
 FAIL  lint-delays     @DIR@/t/R.java:7  unfloored  cannot verify floor of variable: arr[i]
 FAIL  lint-delays     @DIR@/t/R.java:8  unfloored  cannot verify floor of variable: x * 2
 FAIL  lint-delays     @DIR@/t/R.java:9  unfloored  cannot verify floor of variable: x$y
 FAIL  lint-delays     @DIR@/t/R2.java:6  unfloored  cannot verify floor of variable: q
+FAIL  lint-delays     @DIR@/t/R2.java:7  unfloored  cannot verify floor of variable: (long
 -- stderr --
-lint-delays: cannot scan @DIR@/t/R2.java: guard pattern for "(long" at line 7 is not a valid regular expression (awk died on it): error parsing regexp: missing closing ): `(long[[:space:]]*>[[:space:]]*0`
 -- t/R.java --
 package demo;
 import javax.baja.sys.*;

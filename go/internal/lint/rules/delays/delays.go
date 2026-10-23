@@ -8,7 +8,6 @@
 package delays
 
 import (
-	"errors"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,16 +43,8 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 		positiveHelpers(f.Raw, helpers)
 	}
 	var out []lint.Finding
-	var errs []string
 	for _, f := range files {
-		fds, err := scanFile(f, helpers)
-		out = append(out, fds...)
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
-	}
-	if errs != nil {
-		return out, errors.New(strings.Join(errs, "\n"+id+": "))
+		out = append(out, scanFile(f, helpers)...)
 	}
 	return out, nil
 }

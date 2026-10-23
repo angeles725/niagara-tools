@@ -1,0 +1,25 @@
+Truth fix: the guard expression is matched as text, not spliced into a regular expression. bash built
+"(long" + "[[:space:]]*>..." for line 8, gawk died on the invalid regexp, the rest of the file (the
+literal-zero call on line 9) was never read and the lint still exited 1; "x$y" never matched its own guard
+($ is an anchor), so line 6 FAILed although line 5 guards it.
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/G.java:4  unfloored  cannot verify floor of variable: a.b
+PASS  lint-delays     @DIR@/t/G.java:6  guarded at :5
+FAIL  lint-delays     @DIR@/t/G.java:8  unfloored  cannot verify floor of variable: (long
+FAIL  lint-delays     @DIR@/t/G.java:9  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+-- stderr --
+-- t/G.java --
+class G {
+  void a(long x, long[] arr) {
+    if (aXb > 0) foo();
+    Clock.schedule(this, BRelTime.make(a.b), go, null);
+    if (x$y > 0) foo();
+    Clock.schedule(this, BRelTime.make(x$y), go, null);
+    if ((long) x > 0) foo();
+    Clock.schedule(this, BRelTime.make((long) x), go, null);
+    Clock.schedule(this, BRelTime.make(0), go, null);
+  }
+}
