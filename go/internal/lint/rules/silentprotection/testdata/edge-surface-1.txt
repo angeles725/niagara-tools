@@ -1,0 +1,64 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/com/x/Core.java:16  c forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/Core.java:27  e forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/BCore.java --
+package com.x;
+public class BCore extends BComponent {
+  @NiagaraProperty(
+    name = "lowSuctionAlarm",
+    type = "BStatusBoolean",
+    flags = Flags.SUMMARY | Flags.READONLY
+  )
+  @NiagaraProperty(name="headStatus", type="BString", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="headFault", type="BStatusBoolean", flags=Flags.SUMMARY)
+  @NiagaraProperty(name="privFallback", type="BStatusBoolean", flags=Flags.SUMMARY)
+  void sync(Core c) {
+    getLowSuctionAlarm().setValue(c.lowSuction);
+    getHeadFault().setValue( c . highHead );
+    setPrivFallback(privHead, null);
+  }
+}
+-- m/com/x/Core.java --
+package com.x;
+public class Core {
+  boolean lowSuction;
+  boolean highHead;
+  private boolean privHead;
+  int a(int target, int onCount) {
+    if (lowSuction) target = Math.min(target, onCount - 1);
+    return target;
+  }
+  int b(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    highHead = true;
+    return target;
+  }
+  int c(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    highHead == true;
+    privHead = true;
+    return target;
+  }
+  int d(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target , onCount - 1);
+    owner.setHeadStatus(x);
+    return target;
+  }
+  int e(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    int p1 = 1;
+    int p2 = 1;
+    int p3 = 1;
+    int p4 = 1;
+    int p5 = 1;
+    int p6 = 1;
+    int p7 = 1;
+    int p8 = 1;
+    highHead = false;
+    return target;
+  }
+}

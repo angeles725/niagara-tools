@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-ci-steps
@@ -50,4 +50,4 @@ pending until a fold review decides them.
 - `test -z "$(cmd)"` ignores the exit status of `cmd`; assign first (`out="$(cmd)"`) so `bash -e` stops on its failure.
 
 ---
-**Status**: PENDING (Δ1/Δ2 applied in T8j-2; fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-ci-steps.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 (`go/go-tool.sh` bullet, already on main); Δ2 § 2.2 "Fail closed on I/O".

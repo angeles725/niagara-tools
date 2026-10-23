@@ -43,4 +43,4 @@ had summed one group of retros by hand.
 - Totals that appear in commit messages or reports come from a script, never from a hand sum.
 
 ---
-**Status**: FOLDED 2026-10-23 (branch `docs/r8-u4-c58-build-reference`) — Δ1-Δ3 `build-verify.md` § Signing per deploy target; Δ4 `build-verify.md` § Raw gradle; Δ5 `types/security.md` § 2.4; Δ6 `METHODOLOGY.md` K34.
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u4-c58-build-reference`) — Δ1-Δ3 `build-verify.md` § Signing per deploy target; Δ4 `build-verify.md` § Raw gradle; Δ5 `types/security.md` § 2.4; Δ6 `METHODOLOGY.md` K34. Δ3: the root-block half is folded at `build-verify.md:202-205`; the `--info` "which profile signed" half is DROPPED: no source line for those log lines was ever located (`ledger.d/2026-10-23-r8-p1-sign.md` OWED), and an unverifiable claim does not enter the kit.

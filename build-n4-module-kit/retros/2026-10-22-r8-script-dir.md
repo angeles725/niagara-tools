@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · r8-script-dir
@@ -57,4 +57,4 @@ is sourced.
   lib-load error appears.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `tests/script-dir.bats:41` SD3; token in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | folded | 1 |`

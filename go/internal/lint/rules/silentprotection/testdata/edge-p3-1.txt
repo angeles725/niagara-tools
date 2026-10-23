@@ -1,0 +1,24 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/com/x/BUnit.java:7  a forces valveOut/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/BUnit.java:8  a forces fanOut/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/BUnit.java:13  a forces fanOut/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/BUnit.java --
+package com.x;
+public class BUnit extends BComponent {
+  @NiagaraProperty(name="valveOut", type="BStatusBoolean", flags=Flags.SUMMARY)
+  @NiagaraProperty(name="fanOut", type="BStatusBoolean", flags=Flags.OPERATOR)
+  @NiagaraProperty(name="pumpAlarm", type="BStatusBoolean", flags=Flags.TRANSIENT)
+  void a(boolean tripped) {
+    if (tripped) getValveOut().setValue(false);
+    if (!tripped ) getFanOut().setValue( false );
+    if (x && y) getValveOut().setValue(false);
+    if (tripped)
+      getValveOut().setValue(false);
+    if ((tripped)) getPumpAlarm().setValue(false);
+    if (tripped) { getFanOut().setValue(false); getValveOut().setValue(false); }
+  }
+}

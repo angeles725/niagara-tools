@@ -247,6 +247,15 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
   ships with a positive pin for each shape the old match covered. In the polish feature each stricter heuristic
   opened the next real fail-open (values-owed parser P3 → P3b → P3c → P3d; CS4 suffix rule P2b → P2e).
   `[ev: retro polish-2026-10-02-close Δ2]`
+- **Pipefail scripts test presence with a here-string, never `printf … | grep -q`:** a kit or client shell script
+  that sets `-o pipefail` writes `grep -q P <<< "$X"`, because an early-exiting `grep -q` kills its producer with
+  SIGPIPE (141) and pipefail turns a present pattern into a miss (a race on small input, near-certain over 64 KiB;
+  it made the ng-deploy schema-risk precheck fail open). A `$(… | head -1)` assignment there carries `|| true`
+  unless the producer finishes in one small write. Gate: `tests/pipefail-grep.bats` PG1 for the kit; the client
+  hook template `templates/client-pre-push` follows the same rule. `[ev: retro pipefail-grep-q-race Δ1]`
+- **A gate never reads an opt-out from the ambient environment:** skip, first-deploy and accept switches come from
+  a flag or an explicit env-file key only, so a variable left exported in a shell cannot silently disable a check
+  (`scripts/ng-deploy.sh` ambient `FIRST_DEPLOY=1` skipped the schema-risk precheck). `[ev: retro r8-t23-parked-advisories Δ2]`
 - **Two fail-closed guards on one fixture pin only the first.** When a new guard's observed mutation does not bite,
   look for an earlier fail-closed guard that catches the same fixture first, and separate their inputs (prune what
   the earlier pass does not need, or move the fixture out of its reach) so each guard is pinned by its own test — e.g.

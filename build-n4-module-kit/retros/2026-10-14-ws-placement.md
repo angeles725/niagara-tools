@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-14 · kit · ws-placement
@@ -51,4 +51,4 @@ flips this retro.
   rule, helper and check.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `METHODOLOGY.md:23`, Δ2 `types/logic-authoring.md:964` + `types/dashboard.md:21`, Δ3 `templates/ws-placement/`, Δ4 `toolbelt/lint-ws-placement.sh` + `toolbelt/report-module.sh:1320`; Δ tokens in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-14-ws-placement.md | kit | 2026-10-14 | folded | 4 |`

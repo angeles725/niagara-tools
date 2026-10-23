@@ -534,3 +534,27 @@ module itself supports the case.
 
 **Lint candidate:** none proposed — this is a design-review discipline, not a statically
 detectable code shape (the bypass lives on the wire sheet / in the bog, not in module source).
+
+---
+
+## K — Lexicon & i18n
+
+### K1 · A label shows its key, raw camelCase or English, and nobody knows which lexicon key backs it `[ev: retro devguide415-lexicons-ux-i18n Δ4]`
+
+**Symptom:** a Workbench or browser label is untranslated, shows `toFriendly` text, or equals a dotted key, and
+reading `module.lexicon` does not tell which module and key the framework asked for.
+
+**Root cause:** the key is absent from the language file and the root `module.lexicon`, so `getText` returned the
+key and a display name fell back to `toFriendly` (`types/lexicon.md` § 1); or the key exists in another module or
+form than the one the framework reads (`types/structure.md` § Lexicon key catalogue).
+
+**Fix/avoidance:** on a development Workbench, open Sys Home › `defaults/system.properties`, add
+`niagara.lexicon.diagnostics=true` and `niagara.lexicon.diagnostics.prefix=lexiconModule.lexiconLang.lexiconKey=`,
+and restart Workbench: every lexicon value is prefixed with its module, language and key; a label without the prefix
+did not come from a lexicon. `.suffix`, `.addMissing` and `.onlyMissing` (Java lexicon only) also exist. Remove the
+lines afterwards; every `Lexicon.make` returns the diagnostic lexicon while the flag is set.
+
+Evidence: guide `Lexicon/AddingDiagnosticLexiconFeature-56CED5AA.txt:10-38`; [CERT]
+`organized/baja/baja/decompiled/com/tridium/util/DiagnosticLexicon.java:30-34,138-140`,
+`organized/docSource/docSource-doc/extracted/baja/javax/baja/util/Lexicon.java:69-76`; corpus B1305 §1305.1 row 13,
+B1251 §1251.9. — **Kit coverage: this entry; `types/diagnostics.md` § 3**

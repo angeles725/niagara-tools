@@ -247,3 +247,18 @@ func TestMainStrayDeclaration(t *testing.T) {
 		t.Errorf("--strict: got exit %d, want %d", code, ExitWarn)
 	}
 }
+
+// GP-stray-only: a lint whose only declarations are below the header gets the stray WARN per line
+// and ONE no-declaration WARN that says why (the lines exist, but not in the header).
+func TestMainOnlyStrayDeclarations(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	mklint(t, d, "lint-so", "SO1", "SO1")
+	write(t, filepath.Join(d, "toolbelt", "lint-so.sh"),
+		"#!/usr/bin/env bash\n# lint-so\nset -u\n# Mutation: SO1 -- below the header\n")
+	want := "WARN  lint-guard-pins  " + d + "/toolbelt/lint-so.sh:4  mutation SO1 -> below the header (move it above the first code line)\n" +
+		"WARN  lint-guard-pins  " + d + "/toolbelt/lint-so.sh  no # Mutation: line in the header (K24(7): move the declarations below it above the first code line)\n"
+	if code, out, errs := run("--strict", d); code != ExitWarn || out != want || errs != "" {
+		t.Errorf("got (%d, %q, %q), want (%d, %q, \"\")", code, out, errs, ExitWarn, want)
+	}
+}

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-security-tags-analytics
@@ -34,4 +34,4 @@
 - A crypto call that names a provider is a FIPS-mode portability bug, not a style choice.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-security-tags-analytics.md | kit | 2026-10-15 | pending | 10 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u8-security-tags-analytics`) — Δ1 `types/security.md` § 9.1; Δ2 § 2.6; Δ3 `types/dashboard.md` § Session lifetime (C31, earlier); Δ4 `types/security.md` § 10.1; Δ5 and Δ7 `types/logic.md` § Ship a tag dictionary (C21, earlier); Δ6 `types/logic.md` § Our-modules tag recipe; Δ8 `types/logic.md` § Ship a tag dictionary (target `types/distribution.md` was outside the unit surface); Δ9 `types/logic-authoring.md` analytics bullet + § ORD scheme typology; Δ10 `types/logic-authoring.md` § Programmatic slot-name rules, scope corrected (forceUpdate = R2 oBIX only, B1353). Owed Go lints G80 `jca-named-provider` (Δ1), G81 `embedded-keystore` (Δ4), G82 `analytic-ord-scheme` (Δ9) in `ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`. Δ1 dropped "RC4/DES" (not in the FIPS guide; covered by "any other non-FIPS algorithm throws"); Δ9 "data definition per tag" not folded (no source line re-verified).
