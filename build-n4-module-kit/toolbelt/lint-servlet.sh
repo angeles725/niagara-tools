@@ -46,11 +46,12 @@
 # Usage:  lint-servlet.sh <src-dir> [--strict]
 #
 #   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>     (<file> relative to <src-dir>)
-#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20), an unreadable
-#                source file or a sub-directory find cannot enter (the files listed are still scanned)
+#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20), incl. a
+#                sub-directory the walk could not enter (no row is printed) or an unreadable source
+#                file (the other files are still scanned)
 #   Empty root:  a <src-dir> with no *.java under it is an env error (exit 3), never a clean pass; stdout
-#                gets `ERROR  lint-servlet  <src-dir>  no *.java sources found (wrong path or empty source
-#                tree)` (declared difference 2026-10-23: the bash lint exited 0 with no row).
+#                gets `ERROR  lint-servlet  <src-dir>  no files to scan (K20: wrong path or empty
+#                scaffold)`, the lib/scan-files.sh K20 row (go/internal/lint Spec.EmptyError keeps it).
 #
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.

@@ -137,17 +137,38 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
 }
 
+@test "LSV-walk-locked: a sub-directory find cannot enter is an env error (exit 3) naming the root, never a clean pass" {
+  # Mutation: LSV-walk-locked -- a find | sort process substitution drops find's status and exits 0.
+  only WithAuth.java
+  mkdir -p "$ONE/locked"; cp "$FX/NoAuth.java" "$ONE/locked/"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LS" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-servlet: cannot list every file under $ONE: "*"locked"* ]]
+}
+
+@test "LSV-worktrees: a *-worktrees sub-directory is pruned, so a checkout copy never doubles a finding" {
+  # Mutation: LSV-worktrees -- a walk without the *-worktrees prune prints the auth FAIL twice.
+  only NoAuth.java
+  mkdir -p "$ONE/mod-worktrees/feat"; cp "$FX/NoAuth.java" "$ONE/mod-worktrees/feat/"
+  run "$LS" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'FAIL  auth')" -eq 1 ]
+}
+
 @test "LSV-empty: a <src-dir> with no *.java is an env error (exit 3, ERROR row), never a clean pass" {
-  # Declared difference 2026-10-23 (Go engine, #351): the bash lint exited 0 with no row.
+  # The K20 row of lib/scan-files.sh scan_files_nonempty_or_exit, kept by the Go port (Spec.EmptyError).
   rm -rf "$ONE"; mkdir -p "$ONE"; echo x > "$ONE/a.txt"
   run "$LS" "$ONE"
   [ "$status" -eq 3 ]
-  [ "$output" = "ERROR  lint-servlet  $ONE  no *.java sources found (wrong path or empty source tree)" ]
+  [ "$output" = "ERROR  lint-servlet  $ONE  no files to scan (K20: wrong path or empty scaffold)" ]
 }
 
 @test "LSV-dotroot: a <src-dir> whose name starts with a dot is scanned, not pruned with it" {
-  # Declared difference 2026-10-23: find -name '.*' -prune also matched the start point, so the bash lint
-  # read no file under such a root and exited 0.
+  # The walk prunes dot sub-directories only (find -mindepth 1); a private find -name '.*' -prune once
+  # matched the start point too and read no file under such a root.
   mkdir -p "$BATS_TEST_TMPDIR/.src"; cp "$FX/NoAuth.java" "$BATS_TEST_TMPDIR/.src/"
   run "$LS" "$BATS_TEST_TMPDIR/.src"
   [ "$status" -eq 1 ]

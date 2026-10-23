@@ -21,7 +21,7 @@ usual `} catch (E e) {` on the try's closing line. The header now names catch-no
 the header never listed.
 
 ## Evidence
-- 45 golden cases recorded from the bash lint through a recording wrapper (15 bats runs + 30 edge runs:
+- 45 golden cases (46 after re-recording from main at the merge) recorded from the bash lint through a recording wrapper (15 bats runs + 30 edge runs:
   every check, `--strict`, 11 argument shapes, trailing slashes, sort order, handler shapes, unbalanced
   braces, comments and literals, CRLF, no final newline, an empty file, UTF-8 and 0xff bytes)
   `[ev: go/internal/lint/rules/servlet/servlet_test.go TestGolden]`
@@ -41,18 +41,19 @@ the header never listed.
   `[ev: tests/lint-servlet.bats]`
 
 ## Declared differences from the bash lint
-- An empty root (no `*.java`) is `ERROR  lint-servlet  <root>  no *.java sources found …` and exit 3 (#351);
-  bash exited 0 with no row.
-- A root whose name starts with a dot is scanned; bash's `find -name '.*' -prune` pruned the start point too
-  and read no file (`lint-servlet.sh .` passed clean).
-- `*-worktrees` sub-directories are pruned (engine walk); bash scanned sibling checkouts.
-- An unreadable file or directory prints the engine env line and exits 3 after scanning the listed files;
-  bash printed the awk/find error and kept its 0/1 exit.
+Measured against the bash lint on origin/main at the merge, which by then walked with
+`lib/scan-files.sh` `scan_files_nonempty_or_exit` (dot and `*-worktrees` sub-directories pruned, the root
+never pruned, a walk error or an empty root exit 3 with the K20 row): the port keeps all of that
+(`Spec.EmptyError` carries the K20 text, `ContinueOnWalkError` unset), and the goldens were re-recorded from
+that script (46 cases, identical apart from the truth fixes). Against the original private-`find` script
+the port also differed on an empty root, a dot-named root and `*-worktrees`, as main itself now does.
+- An unreadable source file prints the engine env line and exits 3 after scanning the other files; bash
+  printed gawk's error and kept its 0/1 exit.
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | **Before porting a lint, check whether its walk is `scan_files` or its own `find`**: a private `find -H root \( -type d -name '.*' -prune \)` also prunes a dot-named start point, so the bash lint passed `.` clean; record that as a declared difference, never reproduce it. | `go/README.md` § Adding a lint rule (step 5) | `[ev: retro go-lint-servlet]` |
+| Δ1 | **Before porting a lint, record its goldens from the bash on the current origin/main, and re-record at the merge**: main moved lint-servlet from a private `find` (which also pruned a dot-named start point, so `.` passed clean) onto `scan_files_nonempty_or_exit` while the port was in flight, which changed its empty-root, walk-error and prune contract. | `go/README.md` § Adding a lint rule (step 5) | `[ev: retro go-lint-servlet]` |
 
 ## Lessons
 - A lint whose bash rewrote its own severity column under `--strict`, printed relative paths or parsed

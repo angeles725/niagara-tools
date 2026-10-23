@@ -26,8 +26,8 @@ func Spec() lint.Spec {
 		Select:      lint.Selection{Names: []string{"*.java"}},
 		StrictFails: true,
 		RelPaths:    true,
-		// Reason: the bash find printed its error and the loop still scanned every file it listed.
-		ContinueOnWalkError: true,
+		// The K20 row of lib/scan-files.sh scan_files_nonempty_or_exit, which the bash lint printed.
+		EmptyError: lint.EmptyRow{Msg: "no files to scan (K20: wrong path or empty scaffold)"},
 	}
 }
 

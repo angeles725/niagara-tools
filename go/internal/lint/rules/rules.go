@@ -4,12 +4,14 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servlet"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
 
@@ -23,5 +25,7 @@ func All() []lint.Spec {
 		extordvalue.Spec(),
 		servicetypes.Spec(),
 		servlet.Spec(),
+		silentprotection.Spec(),
+		configsanity.Spec(),
 	}
 }

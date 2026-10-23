@@ -1,0 +1,33 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/com/x/Fan.java:4  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+ADVISORY  lint-silent-protection  @DIR@/m/com/x/Pump.java:4  console-only: a forces stage/sheds stage -- surfaced only by a console alarm; add a local *Status/*Reason SUMMARY slot (advisory, unattended console)
+-- stderr --
+-- m/com/x/BFan.java --
+package com.x;
+public class BFan extends BComponent implements BIAlarmSource {
+  // newOffnormalAlarm only in a comment
+}
+-- m/com/x/BPump.java --
+package com.x;
+/* class Wrong */ public class BPump extends BComponent {
+  BAlarmSourceExt ext;
+}
+-- m/com/x/Fan.java --
+package com.x;
+public class Fan {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}
+-- m/com/x/Pump.java --
+package com.x;
+public class Pump {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}

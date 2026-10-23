@@ -305,3 +305,26 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   assert_symroot_same "$FX_PS/src" "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
   [[ "$output" == *"MISSING"*"setpoint"* ]]
 }
+
+@test "SP-walk-locked: per-slot on a src/ with a sub-directory find cannot enter is an env error (exit 3)" {
+  # Mutation: SP-walk-locked -- a bare find | sort drops find's status and per-slot reports on a partial tree.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"; mkdir -p "$src/locked"
+  chmod 000 "$src/locked"
+  if [ -r "$src/locked" ]; then chmod 755 "$src/locked"; skip "running as root"; fi
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  chmod 755 "$src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"slot-coverage: cannot list every file under $src: "*"locked"* ]]
+}
+
+@test "SP-worktrees: per-slot prunes a *-worktrees sub-directory (a checkout copy adds no slot)" {
+  # Mutation: SP-worktrees -- without the prune the ghost OPERATOR slot of the copy is reported MISSING.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"; mkdir -p "$src/x-worktrees"
+  printf '@NiagaraProperty(name = "ghostSlot", type = "double", defaultValue = "0", flags = Flags.OPERATOR)\n' \
+    > "$src/x-worktrees/BGhost.java"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  [[ "$output" == *"setpoint"* ]]          # anchor: the real tree was scanned
+  [[ "$output" != *"ghostSlot"* ]]
+}

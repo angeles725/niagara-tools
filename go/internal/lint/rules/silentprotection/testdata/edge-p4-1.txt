@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/m/com/x/BLatch.java:17  a forces latched/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/BLatch.java:22  b forces latched/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/com/x/BLatch.java:25  b forces other/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- m/com/x/BLatch.java --
+package com.x;
+public class BLatch extends BComponent {
+  private boolean latched;
+  private boolean other = false;
+  boolean pub;
+  void a(boolean c) {
+    if (c) {
+      int a1 = 1;
+      int a2 = 2;
+      int a3 = 3;
+      int a4 = 4;
+      int a5 = 5;
+      int a6 = 6;
+      int a7 = 7;
+      int a8 = 8;
+      int a9 = 9;
+      this.latched = true;
+    }
+  }
+  void b(boolean c) {
+    if (c)
+      this.latched=false;
+    this.pub = true;
+    this.other == true;
+    if (c) this.other = false;
+  }
+  void c() {
+    this.latched = true;
+  }
+}

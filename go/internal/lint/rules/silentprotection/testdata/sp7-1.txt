@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/.deploy-baseline/com/x/Stale.java --
+package com.x;
+public class Stale {
+  int step(int target, int onCount, double suction, double lowLimit, boolean valid) {
+    if (valid && suction < lowLimit) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}
+-- src/com/x/Clean.java --
+package com.x;
+public class Clean { int noop(int t) { return t; } }

@@ -1,5 +1,3 @@
-Declared difference: the engine walk prunes *-worktrees sub-directories (sibling checkouts); bash
-scanned x-worktrees/W.java.
 -- args --
 @DIR@/m
 -- want --

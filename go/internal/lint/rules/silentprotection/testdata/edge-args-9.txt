@@ -1,0 +1,16 @@
+-- args --
+@DIR@/m/com/x/S.java
+-- want --
+exit 3
+-- stderr --
+lint-silent-protection: not a directory: @DIR@/m/com/x/S.java
+-- m/com/x/S.java --
+package com.x;
+public class S {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}
+-- other/README.txt --
+not java

@@ -1,11 +1,15 @@
 package servlet
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
@@ -15,10 +19,27 @@ import (
 // whose text starts with a note before "-- args --" is a declared difference from the bash lint.
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 45) }
 
-// TestUnreadable: the bash find printed its error and the loop scanned every file it listed, so the
-// spec sets ContinueOnWalkError (the engine adds the env lines and exit 3).
+// TestUnreadable: the bash lint walked with scan_files_nonempty_or_exit, which stops at a sub-directory
+// find cannot enter (env line, no row, exit 3), so ContinueOnWalkError stays unset.
 func TestUnreadable(t *testing.T) {
-	golden.Unreadable(t, Spec(), "class A extends BWebServlet {\n  void doPost(WebOp op) { c.set(\"a\", 1); }\n}\n")
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	dir := t.TempDir()
+	locked := filepath.Join(dir, "locked")
+	if err := os.WriteFile(filepath.Join(dir, "A.java"), []byte("class A extends BWebServlet {\n  void doPost(WebOp op) { c.set(\"a\", 1); }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	var o, e bytes.Buffer
+	code := lint.Command(Spec())([]string{id, dir}, cli.Stdio{Out: &o, Err: &e})
+	want := id + ": cannot list every file under " + dir + ": find: '" + locked + "': Permission denied\n"
+	if code != 3 || o.Len() != 0 || e.String() != want {
+		t.Errorf("exit %d out %q err %q, want 3, no row and %q", code, o.String(), e.String(), want)
+	}
 }
 
 // check runs the rule on src and returns its rows as "<SEV> <check> <line>".

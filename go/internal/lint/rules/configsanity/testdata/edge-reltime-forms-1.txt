@@ -1,0 +1,78 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+WARN  lint-config-sanity  @DIR@/one/Forms.java:34  CS1: unreadable BRelTime default for s17Interval (BRelTime.makeSeconds(1).add(BRelTime.SECOND)) -- interval/duration not compared; use a literal factory
+WARN  lint-config-sanity  @DIR@/one/Forms.java:36  CS1: unreadable BRelTime default for s18Interval (BRelTime.makeMillis(5)) -- interval/duration not compared; use a literal factory
+WARN  lint-config-sanity  @DIR@/one/Forms.java:38  CS1: unreadable BRelTime default for s19Interval (BRelTime.makeSeconds(-5)) -- interval/duration not compared; use a literal factory
+WARN  lint-config-sanity  @DIR@/one/Forms.java:56  CS1: unreadable BRelTime default for oddDuration (BRelTime.makeSeconds(DELAY)) -- interval/duration not compared; use a literal factory
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:24  CS1: interval<=duration: s12Interval(1m) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:40  CS1: interval<=duration: s20Interval(0s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:22  CS1: interval<=duration: s11Interval(1s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:20  CS1: interval<=duration: s10Interval(0s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:2  CS1: interval<=duration: s1Interval(1500ms) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:32  CS1: interval<=duration: s16Interval(1s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:48  CS1: interval<=duration: s24Interval(0s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:8  CS1: interval<=duration: s4Interval(30s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:30  CS1: interval<=duration: s15Interval(45s) <= refDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Forms.java:44  CS1: interval<=duration: s22Interval(1s) <= refDuration(1m)
+-- stderr --
+-- one/Forms.java --
+class Forms {
+  @NiagaraProperty(name = "s1Interval", defaultValue = "BRelTime.make(1500)")
+  int f1;
+  @NiagaraProperty(name = "s2Interval", defaultValue = "BRelTime.make(7200000L)")
+  int f2;
+  @NiagaraProperty(name = "s3Interval", defaultValue = "BRelTime.make(90000l)")
+  int f3;
+  @NiagaraProperty(name = "s4Interval", defaultValue = "BRelTime.makeSeconds(30)")
+  int f4;
+  @NiagaraProperty(name = "s5Interval", defaultValue = "BRelTime.makeMinutes(90)")
+  int f5;
+  @NiagaraProperty(name = "s6Interval", defaultValue = "BRelTime.makeHours(2)")
+  int f6;
+  @NiagaraProperty(name = "s7Interval", defaultValue = "BRelTime.makeDays(1)")
+  int f7;
+  @NiagaraProperty(name = "s8Interval", defaultValue = "BRelTime.make(1,2,3,4)")
+  int f8;
+  @NiagaraProperty(name = "s9Interval", defaultValue = "BRelTime.make(0,0,1,30)")
+  int f9;
+  @NiagaraProperty(name = "s10Interval", defaultValue = "BRelTime.DEFAULT")
+  int f10;
+  @NiagaraProperty(name = "s11Interval", defaultValue = "BRelTime.SECOND")
+  int f11;
+  @NiagaraProperty(name = "s12Interval", defaultValue = "BRelTime.MINUTE")
+  int f12;
+  @NiagaraProperty(name = "s13Interval", defaultValue = "BRelTime.HOUR")
+  int f13;
+  @NiagaraProperty(name = "s14Interval", defaultValue = "BRelTime.DAY")
+  int f14;
+  @NiagaraProperty(name = "s15Interval", defaultValue = "BRelTime.makeSeconds( 45 )")
+  int f15;
+  @NiagaraProperty(name = "s16Interval", defaultValue = "BRelTime.make(BRelTime.makeSeconds(1))")
+  int f16;
+  @NiagaraProperty(name = "s17Interval", defaultValue = "BRelTime.makeSeconds(1).add(BRelTime.SECOND)")
+  int f17;
+  @NiagaraProperty(name = "s18Interval", defaultValue = "BRelTime.makeMillis(5)")
+  int f18;
+  @NiagaraProperty(name = "s19Interval", defaultValue = "BRelTime.makeSeconds(-5)")
+  int f19;
+  @NiagaraProperty(name = "s20Interval", defaultValue = "BRelTime.make(0L)")
+  int f20;
+  @NiagaraProperty(name = "s21Interval", defaultValue = "BRelTime.make(123456789012)")
+  int f21;
+  @NiagaraProperty(name = "s22Interval", defaultValue = "BRelTime.make(1000)")
+  int f22;
+  @NiagaraProperty(name = "s23Interval", defaultValue = "BRelTime.makeSeconds(3600)")
+  int f23;
+  @NiagaraProperty(name = "s24Interval", defaultValue = "BRelTime.makeMinutes(0)")
+  int f24;
+  @NiagaraProperty(name = "refDuration", defaultValue = "BRelTime.makeSeconds(60)")
+  int r;
+  @NiagaraProperty(name = "zeroDuration", defaultValue = "BRelTime.DEFAULT")
+  int z;
+  @NiagaraProperty(name = "otherSlot", defaultValue = "BRelTime.makeSeconds(x)")
+  int o;
+  @NiagaraProperty(name = "oddDuration", defaultValue = "BRelTime.makeSeconds(DELAY)")
+  int d;
+}

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-build-signing-windows
@@ -80,4 +80,4 @@ added.
 - Diagnose the lock holder by process name; leftover `java.exe` after a station closes are Gradle daemons.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | pending | 6 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — carried by issue #260 into the folded retro `2026-10-22-n4-course-signed-jars-gate-fix` and its follow-up `2026-10-22-n4-course-sample-check-precision`: Δ1 `types/logic-authoring.md:409`, Δ2 `build-verify.md:99` (here-strings, `tests/pipefail-grep.bats`), Δ3 `build-verify.md:99` (`META-INF/versions/**` skipped and counted), Δ4 `build-verify.md:134`, Δ5 `build-verify.md:51` (`toolbelt/build.sh:310` route-independent exit 32), Δ6 `build-verify.md:58` (`toolbelt/preflight.sh --sample`, `sample-build` row at `toolbelt/preflight.sh:367`). INDEX row generated from the header: `| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | folded | 6 |`

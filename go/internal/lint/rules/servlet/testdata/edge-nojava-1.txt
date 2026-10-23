@@ -1,10 +1,8 @@
-Declared difference: bash exited 0 on a root with no *.java file; on the engine an empty root is an
-error for every rule (#351).
 -- args --
 @DIR@/m
 -- want --
 exit 3
-ERROR  lint-servlet  @DIR@/m  no *.java sources found (wrong path or empty source tree)
+ERROR  lint-servlet  @DIR@/m  no files to scan (K20: wrong path or empty scaffold)
 -- stderr --
 -- m/a.txt --
 x
