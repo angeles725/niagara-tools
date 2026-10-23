@@ -1,0 +1,7 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+-- stderr --
+-- one/README.txt --
+no java here

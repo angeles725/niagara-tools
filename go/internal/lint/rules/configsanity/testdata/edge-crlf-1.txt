@@ -1,0 +1,18 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  lint-config-sanity  @DIR@/one/Crlf.java:3  CS3: flag combo enforced only in comment: // only valid if the pump runs
+WARN  lint-config-sanity  @DIR@/one/Crlf.java:8  CS4: floor "stageMinOn"=2 with LP cutout "lowLimit"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+-- stderr --
+-- one/Crlf.java --
+class Crlf {
+  // only valid if the pump runs
+  @NiagaraProperty(name = "pumpLock", type = "boolean", defaultValue = "false")
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(5)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeMinutes(1)")
+  int b;
+  @NiagaraProperty(name = "stageMinOn", defaultValue = "BInteger.make(2)")
+  @NiagaraProperty(name = "lowLimit", defaultValue = "0.0")
+}

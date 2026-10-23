@@ -1,0 +1,22 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/Swallow.java:2  CS1: interval<=duration: aInterval(10s) <= bDuration(1m)
+FAIL  lint-config-sanity  @DIR@/one/Swallow.java:9  CS2: zero-default setpoint "spSet" with OPERATOR flag and no min>0 facet
+WARN  lint-config-sanity  @DIR@/one/Swallow.java:7  CS3: flag combo enforced only in comment: // only when enabled
+WARN  lint-config-sanity  @DIR@/one/Swallow.java:7  CS4: floor "minOn"=1 with LP cutout "lpCutout"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+-- stderr --
+-- one/Swallow.java --
+class Swallow {
+  @NiagaraProperty(name = "aInterval", defaultValue = "BRelTime.makeSeconds(10)")
+  @NiagaraProperty(name = "aDuration", defaultValue = "BRelTime.makeSeconds(60)")
+  @NiagaraProperty(name = "bDuration", defaultValue = "BRelTime.makeSeconds(60)")
+  private int x;
+  // only when enabled
+  @NiagaraProperty(name = "minOn", defaultValue = "1")
+  @NiagaraProperty(name = "lpCutout", defaultValue = "0")
+  @NiagaraProperty(name = "spSet", type = "double", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR)
+  @NiagaraProperty(name = "zSetpoint", type = "double", defaultValue = "BDouble.make(0.0)", flags = Flags.OPERATOR)
+  int y;
+}

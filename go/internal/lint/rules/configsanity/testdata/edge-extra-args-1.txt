@@ -1,0 +1,55 @@
+-- args --
+@DIR@/one
+/nonexistent
+--strict
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/Z.java:2  CS1: interval<=duration: pollInterval(1s) <= pollDuration(2s)
+FAIL  lint-config-sanity  @DIR@/one/a/X.java:2  CS1: interval<=duration: pollInterval(1s) <= pollDuration(2s)
+FAIL  lint-config-sanity  @DIR@/one/b/c/X.java:2  CS1: interval<=duration: pollInterval(1s) <= pollDuration(2s)
+-- stderr --
+-- one/.hidden/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/Z.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/a/Noeol.java (noeol) --
+class Empty {}
+-- one/a/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/a/Zero.java --
+-- one/a/notjava.txt --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/b/c/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
+-- one/x-worktrees/X.java --
+class X {
+  @NiagaraProperty(name = "pollInterval", defaultValue = "BRelTime.makeSeconds(1)")
+  int a;
+  @NiagaraProperty(name = "pollDuration", defaultValue = "BRelTime.makeSeconds(2)")
+  int b;
+}
