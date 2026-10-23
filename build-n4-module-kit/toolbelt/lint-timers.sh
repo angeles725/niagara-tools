@@ -16,6 +16,9 @@
 # Every check reads code: comments stripped and literal contents blanked by the shared javasrc helpers
 # (Strip, BlankLine), so a call, a guard or a cancel inside a comment or a string is never code.
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-timers  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # Evidence of the checks below (also cited at each check): [ev: corpus B800 §800.3] [ev: corpus B806] [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8] [ev: corpus B787] [ev: audit-2026-10-03 A1]

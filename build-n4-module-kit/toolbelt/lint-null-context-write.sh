@@ -33,6 +33,9 @@
 #   Row:  WARN  lint-null-context-write  <file>:<line>  null-Context write: <source>
 #   Row:  WARN  lint-null-context-write  <file>:<line>  bql: ORD resolved without the caller's Context (pass get(base, cx)): <source>
 #   Exit: 0  always (advisory) · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-null-context-write  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # Declared differences from the bash lint (truth fix 2026-10-23, R8-D14): the bash regex matched one line
 # (`\.(set|...|invoke)\(.*,\s*null\s*\)`), so it missed a multi-line write and `(Context) null`, and it
 # flagged a null that belonged to a nested call (`c.set(p, foo(x, null))`) or to another call on the line

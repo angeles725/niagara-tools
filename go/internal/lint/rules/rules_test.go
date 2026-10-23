@@ -69,3 +69,23 @@ func TestAllWalkError(t *testing.T) {
 		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), ncw, env)
 	}
 }
+
+// TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
+// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6).
+func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
+	root := t.TempDir()
+	main := lint.Command(All()...)
+	var all string
+	for _, sp := range All() {
+		row := "ERROR  " + sp.ID() + "  " + root + "  no *.java sources found (wrong path or empty source tree)\n"
+		all += row
+		var o, e bytes.Buffer
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)
+		}
+	}
+	var o, e bytes.Buffer
+	if code := main([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != all || e.Len() != 0 {
+		t.Errorf("--all: exit %d out %q err %q, want 3 and\n%s", code, o.String(), e.String(), all)
+	}
+}

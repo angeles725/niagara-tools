@@ -51,9 +51,10 @@ func TestRunEmptyError(t *testing.T) {
 		// The bash lint exits on its first empty root: rows before it stay, no later root is scanned.
 		{"empty among non-empty roots", []Spec{emptySpec("lint-e", Each)}, []string{full, empty, later},
 			"WARN  lint-e  " + full + "/A.java:1  saw: MARK\nERROR  lint-e  " + empty + "  " + k20 + "\n"},
-		// The decision is per spec: a rule without EmptyError, or that selects files there, goes on.
+		// The decision is per spec: a rule that selects files there goes on (and errors on its own empty root).
 		{"other rules continue", []Spec{emptySpec("lint-e", Each), other}, []string{empty, later},
-			"ERROR  lint-e  " + empty + "  " + k20 + "\nWARN  lint-o  " + empty + "/sub/a.txt:1  saw: MARK\n"},
+			"ERROR  lint-e  " + empty + "  " + k20 + "\nWARN  lint-o  " + empty + "/sub/a.txt:1  saw: MARK\n" +
+				"ERROR  lint-o  " + later + "  no *.txt sources found (wrong path or empty source tree)\n"},
 	} {
 		s, o, e := stdio()
 		if code := Run(tc.specs, "n4lint", Args{Strict: true, Roots: tc.roots}, s); code != 3 || o.String() != tc.want || e.Len() != 0 {
@@ -99,6 +100,30 @@ func TestCommandBareUsage(t *testing.T) {
 		s, o, e := stdio()
 		if code := main(tc.args, s); code != tc.code || e.String() != tc.wantStderr || o.Len() != 0 {
 			t.Errorf("%q: exit %d out %q err %q, want %d and %q", tc.args, code, o, e, tc.code, tc.wantStderr)
+		}
+	}
+}
+
+// TestRunEmptyDefault: a rule that leaves EmptyError unset still fails a root where it selects no file
+// (truth audit 2026-10-22 T6: an empty root is an error, never a clean pass); the default message names
+// the selected file patterns, and Msg overrides it.
+func TestRunEmptyDefault(t *testing.T) {
+	empty := tree(t, map[string]string{"sub/a.txt": "MARK\n"}) // a file, but none these rules select
+	plain := javaSpec(fakeRule{"lint-p", "MARK", Warn}, One)
+	two := javaSpec(fakeRule{"lint-t", "MARK", Fail}, One)
+	two.Select.Names = []string{"*.java", "*.xml"}
+	for _, tc := range []struct {
+		name string
+		sp   Spec
+		want string
+	}{
+		{"default message", plain, "ERROR  lint-p  " + empty + "  no *.java sources found (wrong path or empty source tree)\n"},
+		{"every pattern named", two, "ERROR  lint-t  " + empty + "  no *.java or *.xml sources found (wrong path or empty source tree)\n"},
+		{"Msg overrides", emptySpec("lint-e", One), "ERROR  lint-e  " + empty + "  " + k20 + "\n"},
+	} {
+		s, o, e := stdio()
+		if code := Run([]Spec{tc.sp}, tc.sp.ID(), Args{Roots: []string{empty}}, s); code != 3 || o.String() != tc.want || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", tc.name, code, o, e, tc.want)
 		}
 	}
 }

@@ -494,6 +494,7 @@ JAVA
 # NAMED MUTATION (post-green): remove the dot-dir prune -> BStale's leak is flagged again -> TC-D flips.
 @test "TC-D: a timer leak under .deploy-baseline/ is NOT flagged (dot-dir pruned)" {
   D="$BATS_TEST_TMPDIR/tcd"; mkdir -p "$D/.deploy-baseline/com/x"
+  printf 'class Keep {}\n' > "$D/Keep.java"  # a root with no source outside the dot-dir is an empty root (exit 3)
   cat > "$D/.deploy-baseline/com/x/BStale.java" <<'JAVA'
 package demo;
 import javax.baja.sys.*;

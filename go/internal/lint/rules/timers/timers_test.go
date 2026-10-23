@@ -146,8 +146,9 @@ func TestDiscardedLastLine(t *testing.T) {
 
 // TestArgs: the argument contract of lint-timers.sh (exactly one root, no flags, usage exits 2).
 func TestArgs(t *testing.T) {
-	dir := writeTree(t, map[string]string{"x.txt": ""})
+	dir := writeTree(t, map[string]string{"x.txt": "", "A.java": "class A {}\n"})
 	file := filepath.Join(dir, "x.txt")
+	empty := t.TempDir()
 	for _, tc := range []struct {
 		args     []string
 		out, err string
@@ -158,6 +159,7 @@ func TestArgs(t *testing.T) {
 		{[]string{"--strict"}, "exit 3\n", "lint-timers: not a directory: --strict\n"},
 		{[]string{file}, "exit 3\n", "lint-timers: not a directory: " + file + "\n"},
 		{[]string{dir}, "exit 0\n", ""},
+		{[]string{empty}, "exit 3\nERROR  lint-timers  " + empty + "  no *.java sources found (wrong path or empty source tree)\n", ""},
 	} {
 		if out, err := runLint(t, tc.args...); out != tc.out || err != tc.err {
 			t.Errorf("args %q: got %q %q, want %q %q", tc.args, out, err, tc.out, tc.err)

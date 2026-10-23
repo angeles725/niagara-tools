@@ -44,11 +44,15 @@ rule's rows stay contiguous.
    beside it (reference: `rules/nullcontext`).
    Severity `Advisory` prints `ADVISORY` and, like `Pass`, never affects the exit code, `--strict` and
    `--all` included: a note that must not turn into a failure.
-   `Spec.EmptyError` (`lint.EmptyRow{Check, Msg}`; an empty `Msg` turns it off) is the K20 guard of
-   `lint-silent-protection.sh`: a root where the rule selects no file prints
-   `ERROR  <check>  <root>  <msg>` on stdout (`<check>` is `Check`, or the rule ID when empty) and stops
-   the rule like a walk error (no later root, exit 3). It is decided per root after the walk, so a walk
-   error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
+   An empty root is an error, never a clean pass, for every rule (the K20 guard of
+   `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
+   the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk
+   error (no later root, exit 3). `Spec.EmptyError` (`lint.EmptyRow{Check, Msg}`) only shapes that row:
+   `<check>` is `Check`, or the rule ID when empty; `<msg>` is `Msg`, or by default
+   `no <pattern>[ or <pattern>...] sources found (wrong path or empty source tree)` from `Select.Names`.
+   There is no opt-out: every registered rule reads source files and has no meaning on a root without
+   them; a future rule that legitimately accepts an empty root adds an explicit, commented Spec field.
+   It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
