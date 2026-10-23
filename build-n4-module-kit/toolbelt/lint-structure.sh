@@ -393,13 +393,14 @@ fi
 # profile silently signs with the self-signed default key and the build stays green (issue #266).
 # Only uncommented code counts: lib/method-boundary.sh mb_strip drops comments (literal-aware) and the
 # local blank step empties string contents, so a commented-out or quoted block is absent.
-# L15_SIGN_ERE[k] is named L15_SIGN_NAME[k] in the row; the table is the same as preflight.sh
-# SAMPLE_SIGN_ERE (tests/lint-structure.bats LS15-sync keeps the two copies equal).
+# L15_SIGN_ERE[k] is named L15_SIGN_NAME[k] in the row; the table is lib/signing-block.sh, shared with
+# preflight.sh sample-sign and build.sh's mirror dev-key WARN (tests/lint-structure.bats LS15-sync).
 # [ev: retro n4-course-signed-jars-gate-fix Δ4] [ev: code devkit-wb.jar!gradle/build.gradle.kts.vm:18]
 # ---------------------------------------------------------------------------
-L15_SIGN_ERE=('allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))'
-  'niagaraSigning[[:space:]]*\{' '(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)' 'signingProfileFile')
-L15_SIGN_NAME=('allowDefaultProfile.set(false) (or = false)' 'niagaraSigning {' 'aliases' 'signingProfileFile')
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/signing-block.sh"
+L15_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")
+L15_SIGN_NAME=("${SIGN_BLOCK_NAME[@]}")
 _L15_ROOT="${_L14_SETTINGS%/settings.gradle.kts}/build.gradle.kts"
 if [ -n "$_L14_SETTINGS" ] && [ -f "$_L15_ROOT" ]; then
     # dirname, not ${BASH_SOURCE[0]%/*}: a bare-name run (bash lint-structure.sh) has no slash to strip

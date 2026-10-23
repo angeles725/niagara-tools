@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 0 -->
 <!-- index-comment: disposition: worklist-complete — ranked the 2026-09-20 corpus retros' Δ tokens; all of them were applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); not a delta retro, not retro debt (sweep --age skips it) -->
@@ -249,3 +249,6 @@ Addendum lessons:
   already applies configured headers globally, and A8 adds the CORS recipe — apply the four together.
 - **C45 adds one lint candidate** (`dynamic-slot-orphan-prune`), consistent with the failure-modes
   retro's lint-candidate additions.
+
+---
+**Status**: CLOSED (quality round 8 W23 U0, main e66da0a) — worklist complete: every ranked Δ was applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); flipped `folded` so it no longer reads as retro debt.

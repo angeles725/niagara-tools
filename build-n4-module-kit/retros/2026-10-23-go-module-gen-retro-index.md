@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-23 · kit · go-module-gen-retro-index
@@ -47,4 +47,4 @@ the retro stays pending until a fold review decides Δ1.
 - Search the tests for `cp …toolbelt/` before wrapping a script: a copied wrapper loses its repository context.
 
 ---
-**Status**: PENDING (Δ2 landed in T8j-1; Δ1 awaits fold review) — INDEX row generated from the header: `| 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | pending | 2 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `CONTRIBUTING.md:100-103` § 2.2, Δ2 `CONTRIBUTING.md:106-107` + `tests/build-retro-sync.bats:293` `_fixture_top`; tokens in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | folded | 2 |`

@@ -239,3 +239,11 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-delays: cannot list every file under $ONE: "* ]]
 }
+
+@test "LD-empty: a root with no *.java is an env error with the K20 row (exit 3), never a clean pass" {
+  # Mutation: LD-empty -- dropping Spec.EmptyError's K20 text prints the engine default row instead.
+  printf "x\n" > "$ONE/README.txt"
+  run "$LD" "$ONE"
+  [ "$status" -eq 3 ]
+  [ "$output" = "ERROR  lint-delays  $ONE  no files to scan (K20: wrong path or empty scaffold)" ]
+}

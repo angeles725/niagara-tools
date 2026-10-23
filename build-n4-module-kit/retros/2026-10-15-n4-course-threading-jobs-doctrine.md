@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-threading-jobs-doctrine
@@ -47,3 +47,6 @@ any kit file or retro (grep `MANAGE_EXECUTION`, `new Invocation` outside the wea
 - The permission system, not the API, is the gate: thread creation runs; thread modification (`shutdownNow`, `interrupt`) needs `MANAGE_EXECUTION`.
 - Offloading an action is two choices — which thread (dedicated, executor, worker) and how to invoke (`Invocation` keeps the action pipeline, a bare `doX()` does not).
 - `BSimpleJob` owns its thread; the shared job pool is opt-in, so pool-saturation advice does not apply to it.
+
+---
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/logic.md:411`, Δ2 `METHODOLOGY.md:186` + `toolbelt/lint-timers.sh:86` (jdk-thread re-scope), Δ3 `types/actions.md:46`, Δ4 `types/logic.md:238`, Δ5 `:239`, Δ6 `types/logic-authoring.md:258`. INDEX row generated from the header: `| 2026-10-15-n4-course-threading-jobs-doctrine.md | kit | 2026-10-15 | folded | 6 |`

@@ -1,0 +1,129 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/Tail.java:3  unclosed-call  Clock.schedule( not closed within 12 lines -- cannot read the delay; wrap the call tighter
+PASS  lint-delays     @DIR@/t/Win.java:83  guarded at :3
+FAIL  lint-delays     @DIR@/t/Win.java:84  unfloored  cannot verify floor of variable: y2
+FAIL  lint-delays     @DIR@/t/Win.java:85  unfloored  cannot verify floor: a
+FAIL  lint-delays     @DIR@/t/Win.java:98  unclosed-call  Clock.schedule( not closed within 12 lines -- cannot read the delay; wrap the call tighter
+-- stderr --
+-- t/Tail.java --
+class Tail {
+  void a() {
+    Clock.schedule(this, BRelTime.make(0),
+      go
+-- t/Win.java --
+class Win {
+  void a(long x, long y) {
+    if (x > 0) foo();
+    long y2 = Math.max(y, 0L);
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    bar();
+    Clock.schedule(this, BRelTime.make(x), go, null);
+    Clock.schedule(this, BRelTime.make(y2), go, null);
+    Clock.schedule(this,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      b);
+    Clock.schedule(this,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      a,
+      b);
+  }
+}
