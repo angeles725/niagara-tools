@@ -1,0 +1,28 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-wb-external-ord-value  @DIR@/m/A.java:4  a() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+WARN  lint-wb-external-ord-value  @DIR@/m/A.java:7  b() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+WARN  lint-wb-external-ord-value  @DIR@/m/A.java:10  c() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+WARN  lint-wb-external-ord-value  @DIR@/m/A.java:14  d() resolves an external ORD and reads its value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the resolved target
+-- stderr --
+-- m/A.java --
+class A {
+  void a()
+  {
+    Object o = ord.get(s);
+    BStatusValue v;
+  }
+  void b() { Object o = ord.get(s); BStatusValue v; }
+  void c() {
+    // ord.get(s);
+    String s = "ord.get(";
+    BStatusValue v;
+  }
+  void d() {
+    Object o = ord.get(s);
+    BStatusValue v;
+    /* registerForComponentEvents( */
+  }
+}

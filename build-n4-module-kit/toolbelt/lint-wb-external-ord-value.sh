@@ -19,11 +19,15 @@
 # [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3]
 # [ev: corpus B1140-G1; Apillm BApillmImporterManager.java rowFor()]
 #
+# Implementation: go/internal/lint/rules/extordvalue on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-wb-external-ord-value <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_run did).
+#
 # Usage:  lint-wb-external-ord-value.sh [--strict] <wb-src-root>
-#   Scans *.java under <wb-src-root> (dot-dirs pruned). Comments are stripped and method
-#   boundaries are found with the shared PEAK-depth parser (toolbelt/lib/method-boundary.sh
-#   mb_strip/mb_parse -- fragment rule: edit the shared fragment, never re-implement a
-#   parallel parser here). Per METHOD:
+#   Scans *.java under <wb-src-root> (dot and *-worktrees dirs pruned). Comments are stripped and
+#   method boundaries are found with the shared PEAK-depth parser (go/internal/javasrc Strip/Methods,
+#   the port of toolbelt/lib/method-boundary.sh mb_strip/mb_parse -- never re-implement a
+#   parallel parser in a rule). Per METHOD:
 #     1. a candidate ORD-resolve line: `<ident>Ord()<opt-space>.get(` (e.g.
 #        `getTargetOrd().get(`) or `<ident>Ord<opt-space>.get(` / a bare `ord.get(` (e.g.
 #        `folderOrd.get(`; `record.get(` is not an ORD);
@@ -48,68 +52,17 @@
 #   - an ORD resolved purely to navigate a CONTAINER (e.g. `folderOrd.get(...)` used only
 #     to find a folder to add a new point into) is exempted naturally: it only WARNs when
 #     the SAME method also reads a live value/status off the resolved object.
-# VCS-free by design (kit-links L2). LC_ALL=C.
+# VCS-free by design (kit-links L2).
 # Mutation: WEO2 -- drop the registerForComponentEvents(-absence check so a compliant method still WARNs
 # Mutation: WEO-record -- an unanchored [Oo]rd suffix takes record.get( for an ORD resolve
-# Mutation: WEO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
-# Mutation: WEO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: WEO-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
+# Mutation: WEO-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-wb-external-ord-value first 'usage: lint-wb-external-ord-value.sh [--strict] <wb-src-root>' "$@"
-printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
-# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
-AL_AWK_ARGS=(-f "$AL_TMP/method-boundary.awk")
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  mb_strip(lines, NR, slines)
-
-  n_meth = mb_parse(slines, NR, meth_start, meth_end, meth_name)
-
-  for (mi = 0; mi < n_meth; mi++) {
-    ms = meth_start[mi]; me = meth_end[mi]; mn = meth_name[mi]
-
-    # 1. Locate an ORD-resolve line inside this method.
-    resolve_line = 0
-    for (i = ms; i <= me; i++) {
-      ln = slines[i]
-      if (match(ln, /[A-Za-z_][A-Za-z0-9_]*Ord\(\)[[:space:]]*\.get\(/) ||
-          match(ln, /(^|[^A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*Ord|ord)[[:space:]]*\.get\(/)) {
-        # The second form is a whole identifier `ord` or a camelCase `...Ord` -- never a word
-        # that merely ends in "ord" (`record.get(`, `keyword.get(`).
-        resolve_line = i
-        break
-      }
-    }
-    if (resolve_line == 0) continue
-
-    # 2. Same method must also read a live value/status off the resolved object.
-    read_live = 0
-    for (i = ms; i <= me; i++) {
-      ln = slines[i]
-      if (index(ln, ".get(\"out\")") > 0 || index(ln, "getOutStatusValue(") > 0 ||
-          index(ln, "BStatusValue") > 0) { read_live = 1; break }
-    }
-    if (!read_live) continue
-
-    # 3. Same method must have NO registerForComponentEvents( call anywhere.
-    has_register = 0
-    for (i = ms; i <= me; i++) {
-      if (index(slines[i], "registerForComponentEvents(") > 0) { has_register = 1; break }
-    }
-    if (has_register) continue
-
-    printf "WARN  lint-wb-external-ord-value  %s:%d  %s() resolves an external ORD and reads its" \
-      " value/status with no registerForComponentEvents(target,0) lease in scope -- subject-subtree" \
-      " depth does not cover it; add loadSlots() + registerForComponentEvents(target,0) for the" \
-      " resolved target\n", FILE, resolve_line, mn
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-wb-external-ord-value: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-wb-external-ord-value "$@"

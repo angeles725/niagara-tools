@@ -1,0 +1,13 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-set-null-ord: not a directory: @DIR@/nope
+-- Mod/src/com/x/BMgr.java --
+package com.x;
+public class BMgr {
+  void addMapping(BComponent point, BImportMap m) {
+    m.setTargetOrd(point.getSlotPathOrd());
+  }
+}

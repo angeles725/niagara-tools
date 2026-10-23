@@ -1,0 +1,15 @@
+-- args --
+--bogus
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-set-null-ord: unknown flag: --bogus
+usage: lint-set-null-ord.sh [--strict] <src-root>
+-- Mod/src/com/x/BMgr.java --
+package com.x;
+public class BMgr {
+  void addMapping(BComponent point, BImportMap m) {
+    m.setTargetOrd(point.getSlotPathOrd());
+  }
+}
