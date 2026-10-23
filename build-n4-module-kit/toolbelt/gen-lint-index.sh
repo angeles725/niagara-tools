@@ -7,7 +7,7 @@
 # whether report-module.sh runs it automatically. Prose never enumerates lints or counts them.
 # [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 #
-# Header contract (lines 1-60 of every lint-*.sh):
+# Header contract (the leading run of '#' lines of every lint-*.sh, no line cap):
 #   line 2      # <script-name> — <what it checks>   (continuation lines joined until a blank '#',
 #               a keyword line or line 5: the description spans header lines 2-5 at most, so a
 #               longer explanation belongs below the blank '#' and stays out of the index)
