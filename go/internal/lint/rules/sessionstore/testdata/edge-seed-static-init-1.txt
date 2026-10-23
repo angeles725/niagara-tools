@@ -1,0 +1,20 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/T.java:8  static session/token map 'SLOT_TO_TRIGGER' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/T.java:4  static session/token map 'XHR' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/T.java --
+class T {
+  private static final Map<String, String> SLOT_TO_TRIGGER = new HashMap<String, String>();
+  private static final Map<String, String> XHR = new HashMap<String, String>();
+  static { XHR.put("X-Requested-With", "XMLHttpRequest"); }
+
+  static
+  {
+    SLOT_TO_TRIGGER.put("ampCompresor1",  "amperaje.compresorS1");
+    SLOT_TO_TRIGGER.put("ampCompresor2",  "amperaje.compresorS2");
+  }
+  static String trigger(String slot) { return SLOT_TO_TRIGGER.get(slot); }
+}

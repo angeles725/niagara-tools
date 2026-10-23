@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/E.java --
+class E {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void login(String id) {
+    SESSIONS.remove(stale());
+    SESSIONS.put(id, new Entry());
+  }
+  void relogin(String id) {
+    SESSIONS.put(id, new Entry());
+  }
+}

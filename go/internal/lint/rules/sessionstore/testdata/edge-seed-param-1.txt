@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/P.java:5  static session/token map 'out' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/P.java --
+class P {
+  private static void scan(BComponent c, String prefix, int depth, Map<String, String> out)
+  {
+    for (Object v : c.children())
+      out.put(prefix, token(v));
+  }
+}

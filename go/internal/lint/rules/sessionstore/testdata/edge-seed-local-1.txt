@@ -1,0 +1,30 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/L.java:12  static session/token map 'entries' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/L.java:20  static session/token map 'latches' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/L.java --
+class L {
+  public static List<Map<String, String>> readLoginEvents(BComponent context, String rangeStr)
+  {
+    List<Map<String, String>> out = new ArrayList<Map<String, String>>();
+    Map<String, String> entry = new LinkedHashMap<String, String>();
+    entry.put("ts", "1");
+    return out;
+  }
+  static void latch(String json)
+  {
+    java.util.LinkedHashMap<String, String> entries = parse(json);
+    entries.put("k", "v");
+  }
+  static java.util.LinkedHashMap<String, String> parse(String json) { return null; }
+  static String serialize(java.util.Map<String, String> entries) { return ""; }
+  static String _serializeLatchMap(Map<String, String> latches) { return ""; }
+  void latchAlarm(String k)
+  {
+    Map<String, String> latches = parse(k);
+    latches.put(k, "1");
+  }
+}

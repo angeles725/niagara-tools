@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/R.java:5  static session/token map 'statusOut' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/R.java:5  static session/token map 'statusOut' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/R.java --
+class R {
+  static Double readNumericNullable(BComponent comp, String name, Map<String,String> statusOut)
+  {
+    String code = "x";
+    if (statusOut != null) statusOut.put(name, code);
+    return null;
+  }
+  static Boolean readBoolNullable(BComponent comp, String name, Map<String,String> statusOut)
+  {
+    String code = "y";
+    if (statusOut != null) statusOut.put(name, code);
+    return null;
+  }
+}

@@ -1,0 +1,17 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/G.java:7  static session/token map 'FQ' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/G.java --
+class G {
+  private static final Map<String, List<String>> NESTED = new HashMap<String, List<String>>();
+  static final java.util.LinkedHashMap<String, Long> FQ = new java.util.LinkedHashMap<String, Long>();
+  private final Map<String, String> inst = new HashMap<String, String>(); // not static
+  void a(String id) {
+    NESTED.put(id, null);
+    FQ.put(id, 1L);
+    inst.put(id, id);
+  }
+}

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/srcTest/test/com/x/DispatchTest.java:4  static session/token map 'TOKENS' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {}
+-- Mod/srcTest/test/com/x/DispatchTest.java --
+public class DispatchTest
+{
+  private static final Map<String, String> TOKENS = new HashMap<String, String>();
+  void issue(String id) { TOKENS.put(id, "t"); }
+}
