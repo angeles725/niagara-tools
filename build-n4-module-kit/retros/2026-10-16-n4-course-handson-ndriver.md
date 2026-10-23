@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 8 -->
 # 2026-10-16 · kit · n4-course-handson-ndriver
@@ -76,4 +76,6 @@ matters for the private-API lint proposed on 2026-10-15.
   reference can carry a defect the kit lints for.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | pending | 8 |`
+**Status**: FOLDED 2026-10-23 (quality round 8 U5, branch `docs/r8-u5-c59-c62`) — Δ1-Δ4, Δ6 earlier (WU-P0-5,
+C83/C88/C89/C91); Δ5 `types/driver-authoring.md` § 2 (enum range step); Δ7 § 1.7 defect checklist, lint owed as G66;
+Δ8 (allow-list `com.tridium.ndriver.**` + `DrUtil`) deferred to owed lint G65 in `ledger.d/2026-10-23-r8-u5-c59-c62.md`.
