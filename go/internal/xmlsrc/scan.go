@@ -17,6 +17,10 @@ func (p *parser) run(data []byte) ([]Element, error) {
 	var elems []Element
 	var stack []int
 	rooted := false
+	begin := int64(0) // where an XML declaration may start: after a UTF-8 BOM
+	if bytes.HasPrefix(data, bom) {
+		begin = int64(len(bom))
+	}
 	for {
 		off := dec.InputOffset()
 		tok, err := dec.RawToken()
@@ -30,6 +34,13 @@ func (p *parser) run(data []byte) ([]Element, error) {
 		case xml.StartElement:
 			if len(stack) == 0 && rooted {
 				return nil, p.fail(off, "junk after document element")
+			}
+			raw := data[off:dec.InputOffset()]
+			if i := attrSpacing(raw); i >= 0 {
+				return nil, p.fail(off+int64(i), "missing white space between attributes")
+			}
+			if i := surrogateRef(raw); i >= 0 {
+				return nil, p.fail(off+int64(i), "reference to a surrogate character")
 			}
 			e, err := p.element(t, off, dec.InputOffset())
 			if err != nil {
@@ -54,6 +65,14 @@ func (p *parser) run(data []byte) ([]Element, error) {
 			top.end = off
 			stack = stack[:len(stack)-1]
 		case xml.CharData:
+			if raw := data[off:dec.InputOffset()]; !bytes.HasPrefix(raw, []byte("<![CDATA[")) {
+				if i := surrogateRef(raw); i >= 0 {
+					return nil, p.fail(off+int64(i), "reference to a surrogate character")
+				}
+			}
+			if off == 0 {
+				t = bytes.TrimPrefix(t, bom)
+			}
 			if len(stack) == 0 && !isSpace(t) {
 				lead := len(t) - len(bytes.TrimLeft(t, " \t\r\n"))
 				if rooted {
@@ -62,8 +81,12 @@ func (p *parser) run(data []byte) ([]Element, error) {
 				return nil, p.fail(off+int64(lead), "text outside the root element")
 			}
 		case xml.ProcInst:
-			if t.Target == "xml" && off != 0 {
-				return nil, p.fail(off, "XML declaration not at the start of the document")
+			if err := p.procInst(t, data[off:dec.InputOffset()], off, begin); err != nil {
+				return nil, err
+			}
+		case xml.Comment:
+			if !validChars(t) {
+				return nil, p.fail(off, "invalid character in comment")
 			}
 		case xml.Directive:
 			return nil, p.fail(off, "<!%s ...> is not supported", firstWord(t))
