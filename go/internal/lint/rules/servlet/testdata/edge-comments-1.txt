@@ -1,0 +1,26 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  C.java:3  handler writes without getRemoteUser()/getUser() auth gate
+WARN  log-in-handler  C.java:3  LOG.info inside request handler (per-request log spam)
+FAIL  input-400  C.java:8  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+FAIL  input-400  C.java:9  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+FAIL  input-400  C.java:10  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+WARN  cache-nofinger  C.java:11  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  cache-nofinger  C.java:12  Cache-Control max-age>0 on rc asset without fingerprint
+-- stderr --
+-- m/C.java --
+class C extends BWebServlet {
+  /* c.setDouble("a", 1); getRemoteUser() */
+  void doPost(WebOp op) {
+    String u = "http://x/"; c.setDouble("a", 1); // getRemoteUser()
+    /* LOG.info( */
+    String b = "}"; c.set("y", 2);
+  }
+  // Double.parseDouble(x)
+  /* Integer.parseInt(y) */
+  String s = "Integer.parseInt(";
+  // setHeader("Cache-Control", "max-age=10")
+  /* setHeader("Cache-Control", "max-age=20") */
+}

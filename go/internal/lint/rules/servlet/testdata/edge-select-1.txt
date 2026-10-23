@@ -1,0 +1,21 @@
+Declared difference: the engine walk prunes *-worktrees sub-directories (sibling checkouts); bash
+scanned x-worktrees/W.java.
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  ByHandler.java:1  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  input-400  Tab.java:1  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+-- stderr --
+-- m/.hidden/H.java --
+class H extends BWebServlet { void doGet(WebOp op) { c.set("a", 1); } }
+-- m/ByHandler.java --
+class ByHandler extends HttpServlet { protected void doGet(HttpServletRequest q, HttpServletResponse r) { c.set("a", 1); } }
+-- m/Plain.java --
+class Plain { void x() { c.set("a", 1); Double.parseDouble(s); } }
+-- m/Tab.java --
+class Tab extends	BWebServlet { void x() { Double.parseDouble(s); } }
+-- m/notjava.txt --
+class T extends BWebServlet { void doGet(WebOp op) { c.set("a", 1); } }
+-- m/x-worktrees/W.java --
+class W extends BWebServlet { void doGet(WebOp op) { c.set("a", 1); } }

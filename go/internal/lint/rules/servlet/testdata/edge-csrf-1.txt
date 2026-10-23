@@ -1,0 +1,30 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  csrf-xrw-only  A.java:2  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
+WARN  csrf-xrw-only  B.java:2  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
+-- stderr --
+-- m/A.java --
+/**
+ * Security: /api/* requires X-Requested-With: XMLHttpRequest
+ */
+class A extends BWebServlet {
+  // X-Requested-With in a line comment
+  void doGet(WebOp op) { String h = op.getHeader("X-Requested-With"); }
+  void x() { String h = op.getHeader("X-Requested-With"); }
+}
+-- m/B.java --
+class B extends BWebServlet {
+  void doGet(WebOp op) { String h = op.getHeader("X-Requested-With"); }
+  // csrfToken only in a comment
+}
+-- m/C.java --
+class C extends BWebServlet {
+  void doGet(WebOp op) { String h = op.getHeader("X-Requested-With"); CsrfUtil.check(op); }
+}
+-- m/D.java --
+class D extends BWebServlet {
+  /* csrfToken in a block comment */
+  void doGet(WebOp op) { String h = op.getHeader("X-Requested-With"); }
+}

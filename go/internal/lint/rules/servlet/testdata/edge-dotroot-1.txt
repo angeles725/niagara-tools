@@ -1,0 +1,10 @@
+Declared difference: bash ran find -name '.*' -prune on the start point too, so a root whose name
+starts with a dot was pruned and passed clean with no file read; the engine never prunes the root.
+-- args --
+@DIR@/.m
+-- want --
+exit 1
+FAIL  auth  A.java:1  handler writes without getRemoteUser()/getUser() auth gate
+-- stderr --
+-- .m/A.java --
+class A extends BWebServlet { void doGet(WebOp op) { c.set("a", 1); } }

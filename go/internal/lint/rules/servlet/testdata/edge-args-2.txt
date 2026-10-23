@@ -1,0 +1,9 @@
+-- args --
+@DIR@/m
+--bogus
+-- want --
+exit 3
+-- stderr --
+lint-servlet: unknown option: --bogus
+-- m/A.java --
+class A {}

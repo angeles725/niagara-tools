@@ -1,0 +1,19 @@
+-- args --
+@DIR@/one
+--strict
+-- want --
+exit 0
+INFO  api-response-headers  ApiRespNoHeader.java:5  response handler sets no headers; the station header providers apply (security.md §7)
+-- stderr --
+-- one/ApiRespNoHeader.java --
+package demo;
+import javax.baja.web.*;
+import java.io.PrintWriter;
+public class ApiRespNoHeader extends BWebServlet {
+  public void doGet(WebOp op) throws Exception {
+    if (op.getUser() == null) { op.getResponse().sendError(401); return; }
+    op.getResponse().setContentType("application/json");
+    PrintWriter out = op.getResponse().getWriter(); // no X-Content-Type-Options anywhere -> INFO
+    out.print("{\"ok\":true}");
+  }
+}

@@ -1,0 +1,34 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+WARN  log-in-handler  H.java:1  LOG.info inside request handler (per-request log spam)
+INFO  api-response-headers  H.java:1  response handler sets no headers; the station header providers apply (security.md §7)
+FAIL  auth  H.java:3  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  H.java:3  typed set* in handler without MIN/MAX facet enforcement
+FAIL  auth  H.java:4  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  H.java:4  typed set* in handler without MIN/MAX facet enforcement
+FAIL  auth  H.java:10  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  H.java:14  handler writes without getRemoteUser()/getUser() auth gate
+INFO  api-response-headers  H.java:15  response handler sets no headers; the station header providers apply (security.md §7)
+FAIL  auth  H.java:16  handler writes without getRemoteUser()/getUser() auth gate
+WARN  log-in-handler  H.java:16  LOG.info inside request handler (per-request log spam)
+-- stderr --
+-- m/H.java --
+// mentions void doGet( in a comment
+public class H extends HttpServlet {
+  /** void doPost(WebOp op) is documented here */
+  protected void service(HttpServletRequest req, HttpServletResponse rsp)
+      throws IOException
+  {
+    c.setInt("a", 1);
+  }
+  public void doGet(WebOp op) { }
+  public void doPost(WebOp op) {
+    if (x) { y(); }
+    set(a);
+  }
+  void doGet (WebOp op) { c.setFloat("f", 1f); c.setLong("l", 2L); c.setRelTime("r", t); getMax(); }
+  void doPost(WebOp op) { op.getResponse().getOutputStream(); c.setString("s", v); op.getRemoteUser(); }
+  void doGet(WebOp op) { String s = "{"; c.set("x", s); LOG.info("a"); // LOG.info( in comment
+  }
