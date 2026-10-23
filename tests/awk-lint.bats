@@ -317,14 +317,15 @@ EOF
 
 @test "AL23: every awk_lint_each lint runs by bare relative name from inside toolbelt/" {
   # Mutation: AL23 -- sourcing the lib via \${BASH_SOURCE[0]%/*} fails when BASH_SOURCE has no slash.
+  # Mutation: AL23-exact -- a lint that scans nothing here (ERROR row, exit 3) must fail this test, not pass it.
   local l n=0
+  # every awk_lint_each lint finds a clean input: A.java for the Java lints, a module-include.xml for agent-on-shape
+  printf '<module>\n  <on type="m:T"/>\n</module>\n' > "$TMPDIR_T/src/module-include.xml"
   for l in "$KIT"/toolbelt/lint-*.sh; do
     grep -q 'awk_lint_each' "$l" || continue
     n=$((n + 1))
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$KIT/toolbelt" "${l##*/}" "$TMPDIR_T/src"
-    # A lint whose inputs are not *.java finds nothing in this tree: the shared ERROR row, exit 3 (not a source failure).
-    { [ "$status" -eq 0 ] && [ -z "$output" ]; } || { [ "$status" -eq 3 ] && [[ "$output" == "ERROR  "* ]]; } \
-      || { echo "$l: $status $output"; return 1; }
+    { [ "$status" -eq 0 ] && [ -z "$output" ]; } || { echo "$l: $status $output"; return 1; }
   done
   [ "$n" -ge 6 ]
 }

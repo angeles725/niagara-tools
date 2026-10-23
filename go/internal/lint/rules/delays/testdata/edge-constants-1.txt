@@ -1,0 +1,42 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/C.java:9  literal-zero  constant ZERO=0ms (<=0)
+FAIL  lint-delays     @DIR@/t/C.java:11  literal-zero  constant DAYS=0ms (<=0)
+FAIL  lint-delays     @DIR@/t/C.java:12  unfloored  cannot verify floor: COMPUTED
+FAIL  lint-delays     @DIR@/t/C.java:13  unfloored  cannot verify floor: C.DELAY
+FAIL  lint-delays     @DIR@/t/C.java:15  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+FAIL  lint-delays     @DIR@/t/C.java:16  zero-floor  Math.max floor=0 (<=0) — use Math.max(x,1L)
+FAIL  lint-delays     @DIR@/t/C.java:18  zero-floor  cannot determine Math.max floor in: BRelTime.make(Math.max(x, -1L))
+FAIL  lint-delays     @DIR@/t/C.java:20  zero-floor  cannot determine Math.max floor in: BRelTime.make(Math.max(x))
+FAIL  lint-delays     @DIR@/t/C.java:21  unfloored  cannot verify floor: 
+FAIL  lint-delays     @DIR@/t/C.java:22  literal-zero  constant ZERO=0ms (<=0)
+FAIL  lint-delays     @DIR@/t/C.java:23  literal-zero  BRelTime(0) — Niagara rejects delay/period <= 0
+-- stderr --
+-- t/C.java --
+package demo;
+import javax.baja.sys.*;
+class C extends BComponent {
+  static final BRelTime ZERO = BRelTime.make(0);
+  private static final BRelTime DELAY = BRelTime.makeSeconds(3);
+  static final BRelTime DAYS = BRelTime.makeDays(000);
+  static final BRelTime COMPUTED = compute();
+  void a() {
+    Clock.schedule(this, ZERO, go, null);
+    Clock.schedule(this, DELAY, go, null);
+    Clock.schedule(this, DAYS, go, null);
+    Clock.schedule(this, COMPUTED, go, null);
+    Clock.schedule(this,  C.DELAY , go, null);
+    Clock.schedule(this, BRelTime.makeDays(99999999999), go, null);
+    Clock.schedule(this, BRelTime.makeHours(0), go, null);
+    Clock.schedule(this, BRelTime.make(Math.max(x, 0L)), go, null);
+    Clock.schedule(this, BRelTime.make(Math.max(x, 7)), go, null);
+    Clock.schedule(this, BRelTime.make(Math.max(x, -1L)), go, null);
+    Clock.schedule(this, BRelTime.make(Math.max(f(a, b), 1L)), go, null);
+    Clock.schedule(this, BRelTime.make(Math.max(x)), go, null);
+    Clock.schedule(this);
+    Clock.schedule(this, ZERO);
+    Clock.schedule(this, BRelTime.make(0), go, null); Clock.schedule(this, BRelTime.make(5), go, null);
+  }
+}

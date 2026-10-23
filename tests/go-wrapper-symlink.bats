@@ -7,6 +7,8 @@
 # that way when a lint became a Go wrapper). `pwd -P` alone does not help: the directory is real, the FILE
 # is the symlink. The fix resolves the file first: `$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)`.
 # GWS1 pins the behaviour on a real wrapper, GWS2 sweeps every Go wrapper, GWS3 is the static ratchet.
+# GWS4 proves a wrapper swap left no code below the `exec` tail: ports land the tail first and delete the
+# dead bash body in later commits, which a reviewer cannot locate findings on (removed lines only).
 
 load helpers/stub-toolbelt
 
@@ -69,4 +71,36 @@ SH
   [ "$status" -eq 0 ]
   [[ "$output" == *"w.sh:1:"* ]]
   if [[ "$output" == *"w.sh:2:"* ]]; then return 1; fi
+}
+
+# code_after_exec_rows <file>...: prints `<file>:<line>:<text>` for every non-blank, non-comment line below a
+# file's first top-level `exec`, and for any `disable=SC2093` left over from a staged wrapper swap; exit 1 = none.
+code_after_exec_rows() {
+  awk 'FNR == 1 { tail = 0 }
+       /disable=SC2093/ { print FILENAME ":" FNR ":" $0; found = 1 }
+       tail && $0 !~ /^[[:space:]]*(#.*)?$/ { print FILENAME ":" FNR ":" $0; found = 1 }
+       /^exec[[:space:]]/ { tail = 1 }
+       END { exit found ? 0 : 1 }' "$@"
+}
+
+@test "GWS4: every Go wrapper ends at its exec line (no dead bash body below it)" {
+  # Mutation: GWS4 -- leaving one line of the old bash body below a wrapper's exec names it here
+  local files=() w
+  for w in $(go_wrappers); do files+=("$KIT/toolbelt/$w"); done
+  [ "${#files[@]}" -ge 6 ]
+  run code_after_exec_rows "${files[@]}"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+}
+
+@test "GWS4-neg: the scan names code and a leftover SC2093 disable below exec, and passes comments and blanks" {
+  # shellcheck disable=SC2016  # the fixture lines are literal wrapper text, not expansions
+  printf '%s\n' 'set -u' '# shellcheck disable=SC2093' 'exec "$BIN" x "$@"' '' '# trailing note' 'old_body() { :; }' > "$BATS_TEST_TMPDIR/w.sh"
+  # shellcheck disable=SC2016
+  printf '%s\n' 'set -u' 'exec "$BIN" x "$@"' '' '# trailing note' > "$BATS_TEST_TMPDIR/ok.sh"
+  run code_after_exec_rows "$BATS_TEST_TMPDIR/w.sh" "$BATS_TEST_TMPDIR/ok.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"w.sh:2:"* ]]
+  [[ "$output" == *"w.sh:6:"* ]]
+  if [[ "$output" == *"ok.sh"* ]]; then return 1; fi
 }

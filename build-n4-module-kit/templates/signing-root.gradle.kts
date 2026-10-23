@@ -6,8 +6,8 @@
 // ~/.gradle/gradle.properties or -P), never as a host path in a tracked file (lint-structure L10 doctrine):
 //   niagaraSigningAlias=CodeSigning
 //   niagaraSigningProfile=/path/to/code_signing.xml
-// toolbelt/build.sh does not forward -P flags: through build.sh, export ORG_GRADLE_PROJECT_niagaraSigningAlias
-// and ORG_GRADLE_PROJECT_niagaraSigningProfile instead (kit issue #308).
+// Through toolbelt/build.sh pass them as --gradle-prop niagaraSigningAlias=... --gradle-prop
+// niagaraSigningProfile=... (forwarded as -P; ORG_GRADLE_PROJECT_* still works too, kit issue #308).
 // This is a property-driven variant of the N4 developer course block (Lab 5 signing_configuration.kts), which
 // sets the alias and the profile path as literals; the two signingServices/niagaraSigning settings are the same.
 // Offline build, N4 4.14.0.162 mirror (Honeywell OptimizerSupervisor), niagara-module plugin 7.6.17, Gradle 7.6,

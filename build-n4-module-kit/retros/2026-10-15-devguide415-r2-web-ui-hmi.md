@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-web-ui-hmi
@@ -35,4 +35,4 @@
 - Kiosk robustness is mostly user configuration (logoff, concurrent sessions, SSO), not module code.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | pending | 10 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u7-web-ui`) — Δ1 `types/dashboard.md` § Session lifetime + `types/security.md`; Δ2 `types/theme.md`; Δ3 `types/dashboard.md` § Deploy on a JACE (web profile); Δ4 `types/dashboard.md` § ux Px rules; Δ5, Δ7 `types/security.md`; Δ6 `types/dashboard.md` § Session lifetime; Δ8 `types/dashboard.md` § Charts on an HMI + `types/frontend-standard.md` § Technology choices; Δ9 `types/frontend-standard.md` § Profiles; Δ10 `types/dashboard.md` § Deploy on a JACE (Tridium DashboardService). Owed lints G77 `px-portability` (Δ4) and G78 `mobile-deprecated` (Δ9) in `ledger.d/2026-10-23-r8-u7-web-ui.md`; the `types/wb-widgets.md` "all positions are absolute" line is owed there too.

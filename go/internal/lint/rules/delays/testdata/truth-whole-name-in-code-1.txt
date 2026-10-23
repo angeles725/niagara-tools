@@ -1,0 +1,25 @@
+Truth fix: a delay variable or guard expression is found as a whole name in code, not as a substring of
+any raw line. bash bound z to the "// zero" comment of line 3 (false literal-zero), took the commented-out
+Math.max(d, 1L) of line 5 as the floor of d (false clean) and let "delayw > 0" guard w (false PASS).
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/B.java:4  unfloored  cannot verify floor of variable: z
+FAIL  lint-delays     @DIR@/t/B.java:6  unfloored  cannot verify floor of variable: d
+FAIL  lint-delays     @DIR@/t/B.java:8  unfloored  cannot verify floor of variable: w
+-- stderr --
+-- t/B.java --
+class B {
+  void a(long z, long d, long w) {
+    foo(BRelTime.make(0)); // zero delay elsewhere
+    Clock.schedule(this, BRelTime.make(z), go, null);
+    // d = Math.max(d, 1L) was here
+    Clock.schedule(this, BRelTime.make(d), go, null);
+    if (delayw > 0) foo();
+    Clock.schedule(this, BRelTime.make(w), go, null);
+    long n = Math.max(w, 1L);
+    Clock.schedule(this, BRelTime.make(n), go, null);
+    if (this.w > 0) Clock.schedule(this, BRelTime.make(n), go, null);
+  }
+}

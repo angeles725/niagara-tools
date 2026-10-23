@@ -301,6 +301,21 @@ setup() {
   # Named mutation: drop the major > 52 check -> RM23 exits 0 (no FAIL row).
 }
 
+@test "RM23b: a non-Java member's empty-root exit 3 is one ERROR row and exit 3; the other members still report" {
+  # Mutation: RM23b-env -- relaying the member's exit 3 without HAD_ENV=1 lets the report exit 1 (FAIL rows only)
+  # No module-include.xml under the root: lint-agent-on-shape (scans only module-include.xml) exits 3
+  # (lint-empty-root.bats); report-module relays it as an env fault, never a PASS and never an early abort.
+  local t="$BATS_TEST_TMPDIR/rm23b"
+  mkdir -p "$t/DemoPan-rt/src/com/x"
+  printf 'package com.x;\nclass A {}\n' > "$t/DemoPan-rt/src/com/x/A.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 3 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'lint-agent-on-shape')" -eq 1 ]
+  [[ "$output" == *$'\n''(module)  ERROR  lint-agent-on-shape  env fault (exit 3)'$'\n'* ]]
+  [[ "$output" == *"(module)  PASS  lint-bundled-jar-class-version  clean"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-no-system-out  clean"* ]]
+}
+
 # ===========================================================================
 # WU4 (fold-2026-10-02-pending-retros) — frontend tooling in the aggregated report.
 #   --profile <hmi|lan|both|unknown> and --legacy pass through to rc-scan.sh (RM24-RM26);

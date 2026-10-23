@@ -33,18 +33,18 @@ type Row struct {
 }
 
 var (
-	evTag        = regexp.MustCompile(`\[ev: [^]]*\]`)
-	separator    = regexp.MustCompile(`^[[:space:]]*(—|--|-)[[:space:]]*`)
-	blankHash    = regexp.MustCompile(`^#?[[:space:]]*$`)
-	keywordLine  = regexp.MustCompile(`^#[[:space:]]*(Usage|Exits?|Scope|Mutation|Row)`)
-	hashLead     = regexp.MustCompile(`^#[[:space:]]*`)
-	textLine     = regexp.MustCompile(`^#[[:space:]]*[^[:space:]]`)
-	wordColon    = regexp.MustCompile(`^#[[:space:]]*[A-Za-z][A-Za-z-]*:`)
-	usageLineRe  = regexp.MustCompile(`^#[[:space:]]*Usage:`)
-	usageValueRe = regexp.MustCompile(`^#[[:space:]]*Usage:[[:space:]]*`)
-	exitLine     = regexp.MustCompile(`^#[[:space:]]*Exits?[:[:space:]]`)
-	exitValue    = regexp.MustCompile(`^#[[:space:]]*Exits?:?[[:space:]]*`)
-	spaces       = regexp.MustCompile(`[[:space:]]+`)
+	evTag           = regexp.MustCompile(`\[ev: [^]]*\]`)
+	separator       = regexp.MustCompile(`^[[:space:]]*(—|--|-)[[:space:]]*`)
+	blankOrBareHash = regexp.MustCompile(`^#?[[:space:]]*$`)
+	keywordLine     = regexp.MustCompile(`^#[[:space:]]*(Usage|Exits?|Scope|Mutation|Row)`)
+	hashLead        = regexp.MustCompile(`^#[[:space:]]*`)
+	textLine        = regexp.MustCompile(`^#[[:space:]]*[^[:space:]]`)
+	wordColon       = regexp.MustCompile(`^#[[:space:]]*[A-Za-z][A-Za-z-]*:`)
+	usageLineRe     = regexp.MustCompile(`^#[[:space:]]*Usage:`)
+	usageValueRe    = regexp.MustCompile(`^#[[:space:]]*Usage:[[:space:]]*`)
+	exitLine        = regexp.MustCompile(`^#[[:space:]]*Exits?[:[:space:]]`)
+	exitValue       = regexp.MustCompile(`^#[[:space:]]*Exits?:?[[:space:]]*`)
+	spaces          = regexp.MustCompile(`[[:space:]]+`)
 )
 
 // Extract reads the header of lint script name from its text. It returns the row (Name set, Auto
@@ -75,7 +75,7 @@ func Extract(name, text string) (Row, string) {
 		}
 		// Description cap: header lines 3-5 only.
 		if joining && nr <= 5 {
-			if blankHash.MatchString(line) || keywordLine.MatchString(line) {
+			if blankOrBareHash.MatchString(line) || keywordLine.MatchString(line) {
 				joining = false
 			} else {
 				desc += " " + line[len(hashLead.FindString(line)):]

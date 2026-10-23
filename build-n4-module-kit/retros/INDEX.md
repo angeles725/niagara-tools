@@ -214,14 +214,14 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-14-ws-placement.md | kit | 2026-10-14 | folded | 4 |
 | 2026-10-15-devguide415-horizons-authoring-security.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-lexicons-ux-i18n.md | kit | 2026-10-15 | folded | 5 |
-| 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | pending | 9 |
 | 2026-10-15-devguide415-r2-security-tags-analytics.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-shipped-libraries.md | kit | 2026-10-15 | pending | 9 |
-| 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |
 | 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | folded | 6 |
@@ -285,8 +285,10 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-23-go-lint-config-sanity.md | kit | 2026-10-23 | pending | 3 |
+| 2026-10-23-go-lint-delays.md | kit | 2026-10-23 | pending | 2 |
 | 2026-10-23-go-lint-silent-protection.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | folded | 2 |
+| 2026-10-23-r8-buildsh-316-308.md | kit | 2026-10-23 | pending | 3 |
 | 2026-10-23-r8-mirror-userhome.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-control.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-drivers.md | kit | 2026-10-23 | folded | 1 |
@@ -300,6 +302,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | folded | 1 |
+| 2026-10-23-r9-followups.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-m1-walkers.md | kit | 2026-10-23 | pending | 4 |
