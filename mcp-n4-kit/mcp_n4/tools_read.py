@@ -569,7 +569,10 @@ def _bql(ctx, base, query, max_rows, timeout):
     slots = bql.selected_slots(query)  # localized headers: decode `name` by position (F12)
     positions = None if slots is None else [i for i, n in enumerate(slots)
                                              if n.lower() == "name"]
-    columns, rows, capped = bql.parse_csv(text, max_rows, name_positions=positions)
+    try:
+        columns, rows, capped = bql.parse_csv(text, max_rows, name_positions=positions)
+    except ValueError as exc:  # no header or a ragged record: never a guessed table
+        raise ToolError("%s (query: %s)" % (exc, query.strip())) from None
     return columns, rows, cut or capped, int(round((ctx.clock() - start) * 1000))
 
 

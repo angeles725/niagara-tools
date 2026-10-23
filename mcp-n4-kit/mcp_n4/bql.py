@@ -113,8 +113,9 @@ def unique_columns(header):
 def by_position(columns, rows, names):
     """Rows re-keyed by `names`, one per leading column (header text is not trusted).
 
-    No rows means nothing to map: an empty body (not even a header) is 0 rows, not an
-    error (H5 review R3: it used to fail the whole inventory).
+    No rows means nothing to map: a header-only body (a type with no instances) is 0 rows,
+    not an error (H5 review R3: it used to fail the whole inventory). A body without even
+    a header is refused earlier, by `parse_csv`.
     """
     if not rows:
         return []
@@ -149,11 +150,16 @@ def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
     Repeated headers are made unique (`unique_columns`). The slot-name cells to decode are
     the columns at `name_positions` (from the query's select list) or, without it, the
     columns whose header is in `NAME_COLUMNS`.
+
+    ValueError, never a guessed table: a body without a header row (ITableToCsv always
+    writes one, even for zero rows) and a record whose cell count differs from the
+    header's (padding or trimming it would shift or invent cells).
     """
     reader = csv.reader(io.StringIO(text.lstrip("\ufeff"), newline=""))
     header = next(reader, None)
     if not header:
-        return [], [], False
+        raise ValueError("the BQL answer has no header row (empty body): it is not a CSV "
+                         "table, so no rows can be read from it")
     columns = unique_columns([strip_control(h).strip() for h in header])
     decode = set(name_positions) if name_positions is not None else \
         {i for i, col in enumerate(columns) if col in NAME_COLUMNS}
@@ -164,9 +170,12 @@ def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
         if len(rows) >= max_rows:
             truncated = True
             break
+        if len(record) != len(columns):
+            raise ValueError("the BQL answer is ragged: record %d has %d cell(s), the header "
+                             "has %d" % (len(rows) + 1, len(record), len(columns)))
         row = {}
         for i, col in enumerate(columns):
-            cell = strip_control(record[i]) if i < len(record) else ""
+            cell = strip_control(record[i])
             row[col] = unescape_slot(cell) if i in decode else cell
         rows.append(row)
     return columns, rows, truncated

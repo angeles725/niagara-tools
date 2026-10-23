@@ -6,6 +6,7 @@ Importing this module has no side effects.
 import base64
 import json
 import math
+import re
 import ssl
 import time
 import urllib.error
@@ -286,6 +287,10 @@ class BoxClient:
     #: never read whole into memory nor parsed from a truncated body.
     max_reply_bytes = 32 * 1024 * 1024
 
+    #: Start of an HTML (or XML) page: a login or error page answered with HTTP 200.
+    _MARKUP_START = re.compile(rb"\s*(?:\xef\xbb\xbf)?\s*<(?:!doctype|html|head|body|\?xml)",
+                               re.I)
+
     # -- transport
     def call(self, channel, key, body):
         self._seq += 1
@@ -319,7 +324,9 @@ class BoxClient:
 
         Stateless HTTP Basic, no BOX session needed. The same opener refuses redirects,
         a 401/403 raises `AuthError` once (never retried), and at most `max_bytes` are
-        read; `truncated` is True when the body was longer. A truncated `text` ends
+        read; `truncated` is True when the body was longer. An HTML answer (by its
+        Content-Type or by its first bytes) raises `BoxError`: it is a login or error page,
+        never a table. A truncated `text` ends
         wherever the cap fell: the CSV reader drops the incomplete last record
         (`bql.complete_records`), since only it knows where a quoted cell ends.
         """
@@ -329,6 +336,7 @@ class BoxClient:
         try:
             with self._opener.open(req, timeout=timeout or self.timeout) as resp:
                 raw = resp.read(max_bytes + 1)
+                content_type = resp.headers.get("Content-Type") or ""
         except BoxError:
             raise
         except urllib.error.HTTPError as exc:
@@ -342,6 +350,10 @@ class BoxClient:
             raise BoxError("HTTP %d from station" % exc.code, "ord", "get") from None
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "ord", "get") from None
+        if "html" in content_type.lower() or self._MARKUP_START.match(raw[:256]):
+            raise BoxError("HTTP 200 from station with an HTML page (Content-Type %s), not a "
+                           "CSV table: a login or error page holds no rows"
+                           % (content_type or "none"), "ord", "get")
         truncated = len(raw) > max_bytes
         return raw[:max_bytes].decode("utf-8", "replace"), truncated
 
