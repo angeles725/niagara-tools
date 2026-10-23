@@ -5,6 +5,8 @@ package strerror
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"syscall"
 )
 
@@ -20,4 +22,29 @@ func Text(err error) string {
 		s = string(s[0]-'a'+'A') + s[1:]
 	}
 	return s
+}
+
+// FindQuote spells a path as GNU find quotes it in the C locale (quotearg locale style): always inside
+// '...', with \' and \\, C escapes for \a \b \f \n \r \t \v, and 3-digit octal for every other byte
+// outside printable ASCII (UTF-8 too: each byte is escaped on its own).
+func FindQuote(p string) string {
+	var b strings.Builder
+	b.WriteByte('\'')
+	for i := 0; i < len(p); i++ {
+		c := p[i]
+		switch esc := strings.IndexByte("\a\b\f\n\r\t\v", c); {
+		case c == '\'' || c == '\\':
+			b.WriteByte('\\')
+			b.WriteByte(c)
+		case esc >= 0:
+			b.WriteByte('\\')
+			b.WriteByte("abfnrtv"[esc])
+		case c < 0x20 || c >= 0x7f:
+			fmt.Fprintf(&b, "\\%03o", c)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	b.WriteByte('\'')
+	return b.String()
 }

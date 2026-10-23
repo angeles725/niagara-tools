@@ -100,3 +100,12 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" != *"A.java:2"* ]]
   [[ "$output" == *"A.java:3"*"bql"* ]]
 }
+
+@test "NCW-symroot: a symlinked module root is walked like find -H, never a silent clean pass (issue #329)" {
+  # Mutation: NCW-symroot -- os.Lstat instead of os.Stat on the root in go/internal/lint/walk.go Walk lists no file and exits 0.
+  printf 'class A { void f(){ parent.set(prop, val, null); } }\n' > "$TMPDIR_T/M/src/A.java"
+  ln -s "$TMPDIR_T/M" "$TMPDIR_T/link"
+  run "$L" "$TMPDIR_T/link"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"lint-null-context-write"*"$TMPDIR_T/link/src/A.java:1"* ]]
+}

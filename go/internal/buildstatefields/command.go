@@ -2,7 +2,6 @@ package buildstatefields
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gen"
 	"github.com/angeles725/niagara-tools/go/internal/retroindex"
 )
 
@@ -45,13 +45,13 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	state, retrodir, index := args[0], args[1], args[2]
 	switch {
-	case !isRegular(state):
+	case !gen.IsRegular(state):
 		fmt.Fprintf(s.Err, "sweep: no BUILD-STATE file: %s\n", state)
 		return ExitEnv
-	case !isDir(retrodir):
+	case !gen.IsDir(retrodir):
 		fmt.Fprintf(s.Err, "sweep: no retros dir: %s\n", retrodir)
 		return ExitEnv
-	case !isRegular(index):
+	case !gen.IsRegular(index):
 		fmt.Fprintf(s.Err, "sweep: no INDEX file: %s\n", index)
 		return ExitEnv
 	}
@@ -80,18 +80,31 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 	if err != nil {
 		return fmt.Sprintf("cannot read INDEX file: %s: %v", index, err), ExitEnv
 	}
+	rows, msg, code := indexRows(string(indexText), retrodir, s)
+	if code != ExitOK {
+		return msg, code
+	}
+	if msg, code := unindexedRetro(retrodir, rows); code != ExitOK {
+		return msg, code
+	}
+	return freshness(state, retrodir, index, string(indexText), s)
+}
+
+// indexRows checks every INDEX row against its retro (present, marker in domain and equal to the
+// row's status) and returns the set of indexed retro files.
+func indexRows(indexText, retrodir string, s cli.Stdio) (map[string]bool, string, int) {
 	rows := map[string]bool{}
-	for _, line := range Lines(string(indexText)) {
+	for _, line := range Lines(indexText) {
 		r, ok := ParseIndexRow(line)
 		if !ok {
 			continue
 		}
 		if r.Status == "" {
-			return fmt.Sprintf("INDEX row for %s has no valid review-status (pending|folded)", r.File), ExitFail
+			return nil, fmt.Sprintf("INDEX row for %s has no valid review-status (pending|folded)", r.File), ExitFail
 		}
 		path := retrodir + "/" + r.File
-		if !isRegular(path) {
-			return "INDEX row points at a missing retro: " + r.File, ExitFail
+		if !gen.IsRegular(path) {
+			return nil, "INDEX row points at a missing retro: " + r.File, ExitFail
 		}
 		b, err := os.ReadFile(path)
 		if err != nil {
@@ -99,14 +112,19 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 		}
 		if m := Marker(string(b)); m != "" {
 			if m != "pending" && m != "folded" {
-				return fmt.Sprintf("retro marker out of domain: %s has review-status '%s' (pending|folded)", r.File, m), ExitFail
+				return nil, fmt.Sprintf("retro marker out of domain: %s has review-status '%s' (pending|folded)", r.File, m), ExitFail
 			}
 			if m != r.Status {
-				return fmt.Sprintf("retro marker disagrees with INDEX row: %s marker='%s' INDEX='%s'", r.File, m, r.Status), ExitFail
+				return nil, fmt.Sprintf("retro marker disagrees with INDEX row: %s marker='%s' INDEX='%s'", r.File, m, r.Status), ExitFail
 			}
 		}
 		rows[r.File] = true
 	}
+	return rows, "", ExitOK
+}
+
+// unindexedRetro names the first retro (sorted, INDEX.md and dot-files excluded) with no INDEX row.
+func unindexedRetro(retrodir string, rows map[string]bool) (string, int) {
 	entries, err := os.ReadDir(retrodir)
 	if err != nil {
 		return fmt.Sprintf("cannot list retros dir: %s: %v", retrodir, err), ExitEnv
@@ -123,34 +141,35 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 			return "retro has no INDEX row: " + n, ExitFail
 		}
 	}
+	return "", ExitOK
+}
 
-	// 3. generated INDEX freshness, checked in-process by go/internal/retroindex.
+// freshness checks the generated INDEX and the generated kit ledger, when present, in process.
+func freshness(state, retrodir, index, indexText string, s cli.Stdio) (string, int) {
+	// 3. generated INDEX freshness, checked in-process by retroindex.Check. A generator's "is fresh"
+	// line is not sweep output, its diagnostics are (the bash tool ran `gen-*.sh --check ... >/dev/null`).
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas/module header drift pass the gate
-	if first, _, _ := strings.Cut(string(indexText), "\n"); strings.HasPrefix(first, generatedIndex) {
+	if first, _, _ := strings.Cut(indexText, "\n"); strings.HasPrefix(first, generatedIndex) {
 		if abs(retrodir) != abs(filepath.Dir(index)) {
 			return "generated INDEX must be <retros-dir>/INDEX.md: " + index, ExitFail
 		}
-		if retroindex.Main([]string{"--check", abs(retrodir + "/..")}, quiet(s)) != 0 {
+		if !retroindex.Check(abs(retrodir+"/.."), s.Err) {
 			return "retros/INDEX.md is stale vs the retro headers; run toolbelt/gen-retro-index.sh", ExitFail
 		}
 	}
 
-	// 4. generated kit ledger freshness, checked in-process by go/internal/buildstate.
+	// 4. generated kit ledger freshness, checked in-process by buildstate.Check.
 	// Mutation: GBS-sweep -- skipping this call lets a fragment land without its regenerated BUILD-STATE.md
-	if stateroot := abs(filepath.Dir(state)); isDir(stateroot + "/ledger.d") {
+	if stateroot := abs(filepath.Dir(state)); gen.IsDir(stateroot + "/ledger.d") {
 		if filepath.Base(state) != "BUILD-STATE.md" {
 			return "a ledger.d/ kit needs the state file named BUILD-STATE.md: " + state, ExitFail
 		}
-		if buildstate.Main([]string{"--check", stateroot}, quiet(s)) != 0 {
+		if !buildstate.Check(stateroot, s.Err) {
 			return "BUILD-STATE.md is stale vs ledger.d/ (or a fragment is malformed); run toolbelt/gen-build-state.sh", ExitFail
 		}
 	}
 	return "", ExitOK
 }
-
-// quiet is s with stdout discarded: a generator's "is fresh" line is not sweep output, its
-// diagnostics are (the bash tool ran `gen-*.sh --check ... >/dev/null`).
-func quiet(s cli.Stdio) cli.Stdio { return cli.Stdio{Out: io.Discard, Err: s.Err, Getenv: s.Getenv} }
 
 // abs is the logical absolute path, as `cd <dir> && pwd` printed it (no symlink resolution).
 func abs(path string) string {
@@ -164,30 +183,10 @@ func abs(path string) string {
 // age implements the --age report: total pending rows (dispositioned 0-delta rows excluded), how
 // many are older than --max-age days, and the oldest age, from each row's filename date.
 func age(args []string, s cli.Stdio) int {
-	today, maxAge := "", strconv.Itoa(DefaultMaxAge)
-flags:
-	for len(args) > 0 {
-		switch a := args[0]; {
-		case a == "--today" || a == "--max-age":
-			if len(args) < 2 {
-				fmt.Fprint(s.Err, ageUsageText)
-				return ExitEnv
-			}
-			if a == "--today" {
-				today = args[1]
-			} else {
-				maxAge = args[1]
-			}
-			args = args[2:]
-		case a == "--":
-			args = args[1:]
-			break flags
-		case strings.HasPrefix(a, "-"):
-			fmt.Fprint(s.Err, ageUsageText)
-			return ExitEnv
-		default:
-			break flags
-		}
+	today, maxAge, args, ok := parseAgeFlags(args)
+	if !ok {
+		fmt.Fprint(s.Err, ageUsageText)
+		return ExitEnv
 	}
 	if today == "" {
 		fmt.Fprint(s.Err, "sweep-build-state: --today <YYYY-MM-DD> is required\n")
@@ -198,11 +197,11 @@ flags:
 		return ExitEnv
 	}
 	retrodir, index := args[0], args[1]
-	if !isDir(retrodir) {
+	if !gen.IsDir(retrodir) {
 		fmt.Fprintf(s.Err, "sweep-build-state: no retros dir: %s\n", retrodir)
 		return ExitEnv
 	}
-	if !isRegular(index) {
+	if !gen.IsRegular(index) {
 		fmt.Fprintf(s.Err, "sweep-build-state: no INDEX file: %s\n", index)
 		return ExitEnv
 	}
@@ -222,8 +221,48 @@ flags:
 		return ExitEnv
 	}
 
-	total, escalated, oldest := 0, 0, -1
-	for _, line := range Lines(string(text)) {
+	total, escalated, oldest := pendingAges(string(text), day, limit)
+	fmt.Fprintf(s.Out, "total_pending=%d\nescalated_count=%d\n", total, escalated)
+	if total == 0 {
+		fmt.Fprint(s.Out, "oldest_age=N/A\n")
+	} else {
+		fmt.Fprintf(s.Out, "oldest_age=%d\n", oldest)
+	}
+	return ExitOK
+}
+
+// parseAgeFlags reads the --age flags (--today, --max-age, a closing --) and returns the operands
+// after them; ok is false on an unknown flag or a flag missing its value.
+func parseAgeFlags(args []string) (today, maxAge string, rest []string, ok bool) {
+	maxAge = strconv.Itoa(DefaultMaxAge)
+	for len(args) > 0 {
+		switch a := args[0]; {
+		case a == "--today" || a == "--max-age":
+			if len(args) < 2 {
+				return "", "", nil, false
+			}
+			if a == "--today" {
+				today = args[1]
+			} else {
+				maxAge = args[1]
+			}
+			args = args[2:]
+		case a == "--":
+			return today, maxAge, args[1:], true
+		case strings.HasPrefix(a, "-"):
+			return "", "", nil, false
+		default:
+			return today, maxAge, args, true
+		}
+	}
+	return today, maxAge, args, true
+}
+
+// pendingAges counts the INDEX's pending rows (dispositioned 0-delta rows excluded), how many were
+// filed more than limit days before day, and the oldest age in days (-1 when no row has a date).
+func pendingAges(indexText string, day time.Time, limit int) (total, escalated, oldest int) {
+	oldest = -1
+	for _, line := range Lines(indexText) {
 		r, ok := ParseIndexRow(line)
 		if !ok || r.Status != "pending" || DispositionSkips(line) {
 			continue
@@ -241,13 +280,7 @@ flags:
 			escalated++
 		}
 	}
-	fmt.Fprintf(s.Out, "total_pending=%d\nescalated_count=%d\n", total, escalated)
-	if total == 0 {
-		fmt.Fprint(s.Out, "oldest_age=N/A\n")
-	} else {
-		fmt.Fprintf(s.Out, "oldest_age=%d\n", oldest)
-	}
-	return ExitOK
+	return total, escalated, oldest
 }
 
 // parseDay reads a YYYY-MM-DD calendar date (UTC midnight).
@@ -261,14 +294,4 @@ func prefix(s string, n int) string {
 		return s
 	}
 	return s[:n]
-}
-
-func isRegular(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.Mode().IsRegular()
-}
-
-func isDir(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.IsDir()
 }

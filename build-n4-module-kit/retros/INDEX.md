@@ -241,7 +241,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |
 | 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |
 | 2026-10-16-n4-course-handson-workflow.md | kit | 2026-10-16 | pending | 4 |
-| 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | pending | 5 |
+| 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | folded | 5 |
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |
 | 2026-10-22-awk-lint-line-loops.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |
@@ -279,6 +279,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-r8-t9g-actions.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-lifecycle.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-r8-t9g-nav.md | kit | 2026-10-22 | folded | 2 |
+| 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-t9c-reference-gaps.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-verify-module-src-helper.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-ws-row-spacing.md | kit | 2026-10-22 | folded | 2 |
@@ -298,3 +299,4 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | pending | 1 |
+| 2026-10-23-r9-m2-gen.md | kit | 2026-10-23 | pending | 1 |

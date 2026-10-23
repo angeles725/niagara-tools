@@ -28,6 +28,18 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   `toolbelt/lint-service-types.sh` (FAIL empty/null, WARN no own type). `[ev: corpus B1419 §1419.1]` `[ev: retro course-recordings Δ8]`
 - [ ] **Text bytes name their charset:** `getBytes(StandardCharsets.UTF_8)` / `new String(b, UTF_8)`, never the
   platform default; a written text file ends lines with `System.lineSeparator()`. `[ev: corpus B1419 §1419.4 c]` `[ev: retro course-recordings Δ8]`
+- [ ] **One shared helper per concern, before a second copy lands:** logic that already exists in the module, or in a
+  sibling module of the same GROUP (parsing, decoding, formatting, status mapping, ORD building), is called or
+  extracted into one shared helper, never pasted as a second copy. Review check: a second definition of the same
+  shape in the diff (same name, or the same parsing/decoding body) is a finding. Recipe: `types/logic.md`
+  § Composition & organization; the kit's own Go code follows the same rule (`BUILD-LOOP.md` § 5 "One layered Go
+  lint stack"). Owed advisory: Go lint G41 `duplicate-helper`. `[ev: retro modular-line-efficient-quality Δ1]`
+- [ ] **No machine- or session-specific default paths in source:** a default value that points at a developer home,
+  a scratchpad, a temporary directory or one station's install path is removed; the value comes from a slot, a
+  station-relative ORD, an environment variable, or the site table (§ Domain correctness). Review check: `/home/`,
+  `/tmp/`, `C:\Users\`, scratchpad and station-name literals in default values. Gotcha:
+  `types/issues-and-gotchas.md` I3; owed advisory Go lint G43 `machine-default-path`. K8 and K16 apply the same rule
+  to kit checks and fixtures. `[ev: retro modular-line-efficient-quality Δ5]`
 - **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. The watchdog chain — niagarad daemon (PID poll → process exit → auto-restart with crash-loop backoff) → `EngineWatchdog` (hung engine heartbeat) → engine discipline — recovers a DEAD or HUNG station; a merely SLOW station is invisible to the watchdogs — engine-thread discipline (never block, `catch(Throwable)`) is the ONLY protection against slow callbacks. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B737 §A.3, B775]`
 
 ## Domain correctness
@@ -44,6 +56,12 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   - **Write UX:** what does the operator see and do when a write needs a login?
   - **Rollback:** how is a bad version recovered?
   [ev: retro behavior-decisions-ask-dont-assume Δ2]
+- [ ] **Site and station data live in one data table, never inline in logic:** room counts, ORDs, IPs, point names,
+  defrost types and per-site defaults sit in one named table (a constants class, a `BFacets`/config slot set, or a
+  JSON/CSV resource), and control and render code reads that table. Inline site data is copied into every branch
+  that needs it and makes the module unusable for a second site. Review check: a literal room count, ORD, IP or site
+  name outside the table is a finding. Facade side: `types/dashboard.md` § Facade contract; owed advisory Go lint G42
+  `inline-site-literal`. `[ev: retro modular-line-efficient-quality Δ2]`
 
 ## Schema / upgrade safety
 - **NEVER retype an existing slot on a live-instantiated module** (a complex `BStatusNumeric` → a simple `double` especially): a `.bog` binds to the class BY NAME and ungated, so retyping a frozen slot desalinates decoding — `ClassCastException` / `Cannot load station` / `App Failed`, a real refrigeration-production outage. ADDING a slot is safe; RETYPING one is not — to make a config oBIX-writable, add a NEW `double` slot (e.g. `setpointCmd`) and link it, do not re-type the original. [ev: retro slot-type-change · S1]
@@ -217,6 +235,11 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
 - **Human-review checklist (advisory rules, not lintable):** (a) does each non-HIDDEN `@NiagaraAction` intend its operator/admin gating? (b) does an order-sensitive container guard its children with `isChildLegal`? (c) does any fixed-interval poll of a sibling slot want a `Subscriber` instead? (d) does a `TypeSubscriber` component's `stopped()` call `unsubscribeAll()`? (`typeSubscriptionMap` holds strong refs per type per event-id — omitting the call leaks space entries until station restart; `verify-module.sh check_subscription_leak` WARNs on this). `[ev: corpus B776/B789, B867 §867.2]`
 - **A test of a NEGATIVE acceptance criterion ("X never sets Y") runs with the feature ENABLED and includes the near-miss case:** a negative test under a disabled feature flag is vacuous — it passes because nothing runs. Exercise the closest legitimate path (e.g. the operator writes OFF while a fault is accumulating but before its delay expires, so the automatic latch must NOT set) and apply the OBSERVED-mutation discipline: drop the guard, and the test must go red. [ev: retro comppan-auto-lock-indicator Δ2]
 - **Size is an advisory review smell, never a hard fail:** a `BComponent` with > ~800 hand-written lines (slotomatic regions excluded) or 3+ mixed concerns, or a pure method > ~80 lines, is a human-review question for NEW modules (`types/logic.md` § Composition & organization). `toolbelt/lint-size.sh` reports it as WARN rows only (hand-written lines per class with the slotomatic `BEGIN/END BAJA AUTO GENERATED CODE` regions excluded; each method of a pure class, i.e. no `@NiagaraType` / `extends B<Upper>`), and `report-module.sh` relays them with a PASS verdict row — a size row never blocks hand-off. [ev: retro decision-logic-decomposition Δ2]
+- **Line-efficient means less duplicated logic, never denser text:** never cut lines by deleting tests, assertions,
+  comments or blank lines, or by minifying or joining statements. A diff that removes any of these without removing
+  logic is rejected in review; the size smell above is answered by extracting shared helpers (§ rt "One shared
+  helper per concern") or by splitting concerns, never by compressing text. Human-review item, not lintable.
+  `[ev: retro modular-line-efficient-quality Δ3]`
 - **A heuristic parser over markdown tables or source text gets STRUCTURAL rules, decided at design time:** anchor on
   the header row, name the parser states, and classify whatever does not fit as fail-closed (MANUAL or WARN), never
   as clean. Before the first fix, write one RED fixture per known shape: a split table, a foreign table, a repeated

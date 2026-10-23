@@ -123,3 +123,19 @@ func TestMainUnlistableRetrosDirExits3(t *testing.T) {
 		t.Errorf("got (%d, %q, %q)", code, out, errs)
 	}
 }
+
+func TestCheck(t *testing.T) {
+	t.Parallel()
+	root := kit(t, map[string]string{"2026-10-01-a.md": okRetro})
+	var diag bytes.Buffer
+	if Check(root, &diag) || diag.String() != "gen-retro-index: "+root+"/retros/INDEX.md is missing; run gen-retro-index.sh\n" {
+		t.Errorf("no index: Check = true or diagnostics %q", diag.String())
+	}
+	if code, _, _ := run("", root); code != ExitOK {
+		t.Fatalf("write: exit %d", code)
+	}
+	diag.Reset()
+	if !Check(root, &diag) || diag.String() != "" {
+		t.Errorf("fresh index: Check = false or diagnostics %q", diag.String())
+	}
+}

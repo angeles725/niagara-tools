@@ -4,6 +4,8 @@
 
 load helpers/n4-fixtures
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   TMPDIR_T="$(mktemp -d)"; export TMPDIR_T
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
@@ -804,4 +806,12 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [ "$status" -eq 30 ]
   [[ "$output" == *"slotomatic --info"* ]]
   [[ "$output" != *"empty BEGIN/END"* ]]
+}
+
+@test "BS-symroot: a symlinked repo root lists the gradle roots below it like find -H (issue #329)" {
+  # Mutation: BS-symroot -- dropping -H from the BELOW find lists no candidate under a symlinked repo root.
+  repo="$TMPDIR_T/repo"; mkdir -p "$repo/GroupA" "$repo/GroupB"
+  make_fake_gradlew "$repo/GroupA"; make_fake_gradlew "$repo/GroupB"
+  assert_symroot_same "$repo" "$B" "$repo" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ] && [[ "$output" == *"GroupA"* ]] && [[ "$output" == *"GroupB"* ]]
 }
