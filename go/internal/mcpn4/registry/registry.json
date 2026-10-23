@@ -1,0 +1,694 @@
+{
+ "server": {
+  "name": "mcp-n4",
+  "version": "0.9.0",
+  "protocol_versions": [
+   "2025-06-18",
+   "2025-03-26",
+   "2024-11-05"
+  ]
+ },
+ "cli": {
+  "usage": "usage: mcp_n4.server [-h] [--allow-writes] [--write-scope ORD_PREFIX]\n                     [--state-dir STATE_DIR] [--token-ttl SECONDS]\n                     [--max-writes N] [--auth-cooldown SECONDS]\n                     [--load-wait SECONDS] [--http-timeout SECONDS]\n                     [--station NAME=URL] [--station-home NAME=PATH]\n                     [--credential-env PREFIX] [--insecure-tls NAME]\n                     [--allow-tier-b NAME] [--allow-tier-c NAME]\n                     [--progress-file PATH] [--allow-http-for-tests]\n",
+  "help": "usage: mcp_n4.server [-h] [--allow-writes] [--write-scope ORD_PREFIX]\n                     [--state-dir STATE_DIR] [--token-ttl SECONDS]\n                     [--max-writes N] [--auth-cooldown SECONDS]\n                     [--load-wait SECONDS] [--http-timeout SECONDS]\n                     [--station NAME=URL] [--station-home NAME=PATH]\n                     [--credential-env PREFIX] [--insecure-tls NAME]\n                     [--allow-tier-b NAME] [--allow-tier-c NAME]\n                     [--progress-file PATH] [--allow-http-for-tests]\n\nStdio MCP server for Niagara N4 stations (newline-delimited JSON-RPC 2.0). Run\nfrom `mcp-n4-kit/` with `python3 -m mcp_n4.server`. Importing this module has\nno side effects; `main()` is only called under `__main__`. MCP protocol\nversions: this server speaks 2025-06-18, 2025-03-26 and 2024-11-05\n(`SUPPORTED_PROTOCOL_VERSIONS`). A client asking for a newer revision is\nanswered with 2025-06-18. Only add a newer revision to that tuple once its\nsemantics (new message shapes, capabilities, required fields) are implemented\nand tested here.\n\noptions:\n  -h, --help            show this help message and exit\n  --allow-writes        register the write tools (dry run + confirmation token\n                        each)\n  --write-scope ORD_PREFIX\n                        ORD prefix writes may touch (repeatable); none = no\n                        writes\n  --state-dir STATE_DIR\n                        journal/audit directory (default\n                        ~/.local/state/mcp-n4)\n  --token-ttl SECONDS   confirmation token lifetime (default 300)\n  --max-writes N        executed writes allowed per server process (default\n                        200); a reconnect does not reset it\n  --auth-cooldown SECONDS\n                        after an authentication failure, refuse station calls\n                        this long (default and minimum 30: the lock-out\n                        window)\n  --load-wait SECONDS   total wait for one component load (default 3; 1-60):\n                        raise it for a slow or remote station\n  --http-timeout SECONDS\n                        HTTP timeout of one station request (default 20;\n                        5-300)\n  --station NAME=URL    station n4_connect may use (repeatable); NAME should\n                        equal the station's stationName; URL must be https://\n  --station-home NAME=PATH\n                        directory holding the config.bog of configured station\n                        NAME; lets n4_save_station prove persistence\n                        (repeatable)\n  --credential-env PREFIX\n                        env var prefix holding <PREFIX>_USER/<PREFIX>_PASSWORD\n                        (default MCP_N4)\n  --insecure-tls NAME   skip TLS certificate verification for this configured\n                        station (self-signed); repeatable\n  --allow-tier-b NAME   let writes run on configured station NAME although its\n                        version is tier B (4.15/4.3); only after a PoC matched\n                        that build (METHODOLOGY section 5); repeatable\n  --allow-tier-c NAME   let writes run on configured station NAME although its\n                        version is tier C (other or unknown); only after\n                        reg.loadContract, loadRoot and a harmless scratch\n                        write succeeded; repeatable\n  --progress-file PATH  append JSON progress lines of long reads\n                        (n4_inventory) to PATH\n  --allow-http-for-tests\n                        permit http:// base URLs (fake station in tests only)\n"
+ },
+ "read_tools": [
+  {
+   "name": "n4_connect",
+   "description": "Open a session to one of the stations the operator configured at server start (replaces any previous session). The URL, credentials and TLS policy are fixed by the operator and cannot be chosen here. The station's real stationName must equal expected_station (default: the configured station NAME), or the session is closed. Reports the detected version (oBIX productVersion) and its tier: A (4.13/4.14) writes; B (4.15/4.3) and C (other or unknown) refuse writes unless the operator opted the station in.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "station": {
+      "type": "string",
+      "description": "Configured station NAME (see n4_describe_session)"
+     },
+     "expected_station": {
+      "type": "string",
+      "description": "Required stationName; default: the station NAME"
+     }
+    },
+    "required": [
+     "station"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_describe_session",
+   "description": "Report whether a station session is active, which station, its version tier, and the server mode. Works without a session.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_navigate",
+   "description": "List the children of a component (name, type, handle, has_children). depth > 1 nests grandchildren under a 'children' key. elapsed_ms is the load time. For a station inventory use n4_bql_query or n4_inventory instead: one navigate is one round trip per component. types (optional) keeps only children whose type is one of the given specs (e.g. bacnet:BacnetDevice) plus the path to them; each kept entry then carries matched true/false. has_children ignores the types filter: it is true when the entry has any component child, matching or not.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Station ORD, default station:|slot:/",
+      "default": "station:|slot:/"
+     },
+     "depth": {
+      "type": "integer",
+      "description": "Levels to list (1-3)",
+      "minimum": 1,
+      "maximum": 3,
+      "default": 1
+     },
+     "types": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Optional type specs to keep, e.g. ['bacnet:BacnetDevice']; default: no filter"
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_read_slots",
+   "description": "Read all slots of one component as {name, type, value, status}. Status complexes add status_ok/status_null; omitted values take the type default. value_display carries the station's display string; a complex the reader cannot decode (e.g. a Modbus FlexAddress) returns that display string as value. elapsed_ms is the load time.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Component ORD, e.g. station:|slot:/Folder/Pump"
+     }
+    },
+    "required": [
+     "ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_links",
+   "description": "List baja:Link / baja:ConversionLink links of components up to depth levels below ord. source_path is null when the source handle is outside the loaded subtree.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Subtree root ORD"
+     },
+     "depth": {
+      "type": "integer",
+      "description": "Component levels below ord to scan (1-4)",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 2
+     }
+    },
+    "required": [
+     "ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_find_dangling_outputs",
+   "description": "List components (up to depth levels below ord) with an 'out' slot that no link in the subtree uses as a source. Links from outside the subtree are not seen.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Subtree root ORD"
+     },
+     "depth": {
+      "type": "integer",
+      "description": "Component levels below ord to scan (1-4)",
+      "minimum": 1,
+      "maximum": 4,
+      "default": 2
+     }
+    },
+    "required": [
+     "ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_bql_query",
+   "description": "Bulk read: one projected BQL select over a subtree, returned as rows (one HTTP GET, usually under a second, where a navigate crawl costs one round trip per component). Use it FIRST for any inventory. Only 'select <cols> from <type> [where ...]' is accepted; '|' is refused. Columns are the station's display headers (e.g. 'Slot Path', 'Name'; a localized station translates them, a repeated header becomes 'Type#2'); the queried name column is decoded ($20 -> space), 'Slot Path' stays ORD-ready. Proxy-extension fields project as proxyExt.<slot>, e.g. proxyExt.dataAddress. Rows are capped (truncated=true when cut).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Subtree ORD or slot path, e.g. station:|slot:/Drivers (default: the station root)"
+     },
+     "query": {
+      "type": "string",
+      "description": "select <columns> from <type> [where ...], e.g. select slotPath, name, out from control:ControlPoint"
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Row cap",
+      "minimum": 1,
+      "maximum": 50000,
+      "default": 5000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     },
+     "output_file": {
+      "type": "string",
+      "description": "Optional plain file name (.csv or .json): the rows go to <state-dir>/bql/<name> (0600, never overwritten) instead of the reply"
+     }
+    },
+    "required": [
+     "query"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_inventory",
+   "description": "Station inventory through three BQL queries: networks, devices and points below base (default /Drivers), counted per network and per device. A network's built-in local device slot (localDevice, e.g. SnmpNetwork's own agent) is flagged local=true and counted apart from field devices. progress lists each step's row count; the operator's --progress-file gets the same lines.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "base": {
+      "type": "string",
+      "description": "Subtree ORD, default station:|slot:/Drivers"
+     },
+     "include_points": {
+      "type": "boolean",
+      "default": false,
+      "description": "Also return the point rows"
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Row cap per query",
+      "minimum": 1,
+      "maximum": 50000,
+      "default": 5000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout per query in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_read_file",
+   "description": "Read one station file (e.g. a Px view file:^px/General.px) through the station's file servlet: GET /file/<path>. file_ord is a file:^ ORD or a path relative to the station home. Refused before any request: '..', '|', ':', absolute paths, directories, names ending in '.' or ' ' and .bog/.bog.gz (the station never serves them). Text types (px, xml, nav, chart, json, csv, html, txt, ...) return text; other files return size, sha256 and content type only (output_file saves the complete bytes under <state-dir>/files/). status is ok, forbidden (403: no read permission) or not_found (404); a 401 pauses station calls and is never retried. Reads are capped at max_bytes (truncated=true, sha256 null when cut).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "file_ord": {
+      "type": "string",
+      "description": "file:^px/General.px, station:|file:^px/General.px or px/General.px"
+     },
+     "max_bytes": {
+      "type": "integer",
+      "description": "Byte cap of the read",
+      "minimum": 1024,
+      "maximum": 16777216,
+      "default": 2097152
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     },
+     "output_file": {
+      "type": "string",
+      "description": "Optional plain file name with an extension: the complete bytes go to <state-dir>/files/<name> (0600, never overwritten)"
+     }
+    },
+    "required": [
+     "file_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_px_views",
+   "description": "List the Px views (baja:PxView) below root with one BQL query: display_name, px_file (the file:^ ORD to pass to n4_read_file / n4_px_summary) and media. A PxView is a property value, not a component, so the station usually answers its slot path as NULL: slot_path and owner_path are null then (see owner_note).",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "root": {
+      "type": "string",
+      "description": "Subtree ORD, default station:|slot:/",
+      "default": "station:|slot:/"
+     },
+     "max_rows": {
+      "type": "integer",
+      "description": "Row cap",
+      "minimum": 1,
+      "maximum": 50000,
+      "default": 5000
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_px_summary",
+   "description": "Fetch one .px file (like n4_read_file) and summarize it without returning the XML: media, imported modules, canvases and viewSize, layers, widget and binding type counts, bound ORDs grouped by component (a trailing value slot such as /out stripped), images, included Px files, charts, other ORDs and label texts. Every list is capped at max_items. A file larger than max_bytes is refused, not summarized in part.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "file_ord": {
+      "type": "string",
+      "description": "file:^px/General.px or px/General.px"
+     },
+     "max_bytes": {
+      "type": "integer",
+      "description": "Byte cap of the read",
+      "minimum": 1024,
+      "maximum": 16777216,
+      "default": 2097152
+     },
+     "max_items": {
+      "type": "integer",
+      "description": "Cap of every summary list",
+      "minimum": 1,
+      "maximum": 2000,
+      "default": 200
+     },
+     "timeout_s": {
+      "type": "integer",
+      "description": "HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 60
+     }
+    },
+    "required": [
+     "file_ord"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": true
+  },
+  {
+   "name": "n4_list_batches",
+   "description": "List the write batches in this server's journal, newest first: batch_id, tool, station_name, ts, state (completed / in-doubt), verdict, rollback_of and rolled_back_by. Use it to find the batch_id for n4_rollback. Reads the journal only; works without a session.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "description": "Most recent batches to return",
+      "minimum": 1,
+      "maximum": 1000,
+      "default": 50
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_session_retro_draft",
+   "description": "Draft the session retro: reads this server's audit and journal and returns markdown plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt batches, BOX errors, dangling outputs). Proposes only; never applies or stages anything. The window starts at the server start; pass since (ISO-8601, e.g. 1970-01-01T00:00:00Z for the whole history) to change it.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "since": {
+      "type": "string",
+      "description": "ISO-8601 timestamp; only newer entries are considered (default: when this server started)"
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  }
+ ],
+ "write_tools": [
+  {
+   "name": "n4_create_component",
+   "description": "Add a component under parent_ord (optionally with a wire sheet position). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "Parent component ORD"
+     },
+     "name": {
+      "type": "string",
+      "description": "Requested slot name (the station may rename on collision)"
+     },
+     "type": {
+      "type": "string",
+      "description": "Type spec module:Type, e.g. kitControl:NumericConst"
+     },
+     "wire_sheet": {
+      "type": "object",
+      "description": "Optional {x, y, w} wire sheet annotation (integers; w defaults to 8)"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "name",
+     "type"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_set_slot",
+   "description": "Set one slot to a value. Status slots are always written whole (value and status). Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Component ORD"
+     },
+     "slot": {
+      "type": "string",
+      "description": "Slot name; must exist"
+     },
+     "value": {
+      "description": "New value (number, boolean or string by value_type)"
+     },
+     "value_type": {
+      "type": "string",
+      "description": "One of baja:Double, baja:Boolean, baja:String, baja:StatusNumeric, baja:StatusBoolean",
+      "enum": [
+       "baja:Double",
+       "baja:Boolean",
+       "baja:String",
+       "baja:StatusNumeric",
+       "baja:StatusBoolean"
+      ]
+     },
+     "status": {
+      "type": "string",
+      "description": "Status string for Status types",
+      "default": "0"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "ord",
+     "slot",
+     "value",
+     "value_type"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false,
+    "idempotentHint": true
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_invoke_action",
+   "description": "Invoke a control action. Only set, active, inactive, auto are allowed in this version. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ord": {
+      "type": "string",
+      "description": "Component ORD"
+     },
+     "action": {
+      "type": "string",
+      "description": "Action name"
+     },
+     "arg": {
+      "description": "Argument, only for set"
+     },
+     "arg_type": {
+      "type": "string",
+      "description": "baja:Double or baja:Boolean, only for set"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "ord",
+     "action"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_create_link",
+   "description": "Create a link from a source slot to a target slot. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "source_ord": {
+      "type": "string",
+      "description": "Source component ORD"
+     },
+     "source_slot": {
+      "type": "string",
+      "description": "Source slot name"
+     },
+     "target_ord": {
+      "type": "string",
+      "description": "Target component ORD"
+     },
+     "target_slot": {
+      "type": "string",
+      "description": "Target slot name"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "source_ord",
+     "source_slot",
+     "target_ord",
+     "target_slot"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_remove_component",
+   "description": "Remove the child `name` of parent_ord with its whole subtree. The plan snapshots the subtree to depth 3 (type, plain slots, wsAnnotation, links inside it) as the inverse; n4_rollback can re-create only that snapshot, not a full restore. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "parent_ord": {
+      "type": "string",
+      "description": "Parent component ORD"
+     },
+     "name": {
+      "type": "string",
+      "description": "Child slot name"
+     },
+     "link_scan_ord": {
+      "type": "string",
+      "description": "Optional wider ORD (inside the write scope) to scan for links from the subtree into components outside it"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "parent_ord",
+     "name"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_rollback",
+   "description": "Undo a journaled batch by running its recorded inverse through the same dry run / token pipeline, as a new batch linked to the original. Refuses unknown, already rolled back, in-doubt and other-station batches. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "batch_id": {
+      "type": "string",
+      "description": "batch_id returned by an earlier write"
+     },
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": [
+     "batch_id"
+    ]
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  },
+  {
+   "name": "n4_save_station",
+   "description": "Save the station (persist the running config to disk). The BOX reply proves nothing; persisted is true/false/unknown from config.bog when the server has --station-home for this station. Dry run by default; to execute, repeat the call with dry_run=false and the confirmation_token from the dry run.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "dry_run": {
+      "type": "boolean",
+      "default": true,
+      "description": "true (default) returns the plan and a confirmation_token without touching the station; false executes and needs that token"
+     },
+     "confirmation_token": {
+      "type": "string",
+      "description": "Token returned by the matching dry run (single use)"
+     }
+    },
+    "required": []
+   },
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "openWorldHint": false
+   },
+   "needs_session": false
+  }
+ ]
+}

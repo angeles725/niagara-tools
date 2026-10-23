@@ -195,7 +195,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
 | `test_bql.py` | 32 | 13 | 0 | 19 | 0 | 32 | 0 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
+| `test_go_harness.py` | 20 | 0 | 0 | 0 | 0 | 0 | 20 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -206,5 +206,15 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **590** | **155** | **56** | **104** | **24** | **339** | **251** |
+| **Total** | **593** | **155** | **56** | **104** | **24** | **339** | **254** |
 <!-- go-skip-inventory:end -->
+
+## 6. S2 protocol layer
+
+**Registry.** `go/internal/mcpn4/registry/registry.json` is the Python surface the Go server
+serves verbatim: `SERVER_NAME`, `SERVER_VERSION`, `SUPPORTED_PROTOCOL_VERSIONS`, the argparse
+usage and help text (`server.build_parser()` at 80 columns, no color), and every tool's name,
+description, `inputSchema`, annotations and `needs_session` in table order. It is generated, never
+edited: after changing a tool table, a flag or the version, run
+`python3 mcp-n4-kit/tests/go_registry.py --write`. `test_go_harness.TestGoRegistry` fails while
+the file and the Python tables disagree, under both implementations.

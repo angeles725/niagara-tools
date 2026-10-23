@@ -227,7 +227,8 @@ def _bounded(kind, low, high):
     return parse
 
 
-def parse_args(argv=None):
+def build_parser():
+    """The command line parser (the Go port embeds its usage and help text verbatim)."""
     parser = argparse.ArgumentParser(prog="mcp_n4.server", description=__doc__)
     parser.add_argument("--allow-writes", action="store_true",
                         help="register the write tools (dry run + confirmation token each)")
@@ -275,7 +276,11 @@ def parse_args(argv=None):
                         help="append JSON progress lines of long reads (n4_inventory) to PATH")
     parser.add_argument("--allow-http-for-tests", action="store_true",
                         help="permit http:// base URLs (fake station in tests only)")
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv=None):
+    return build_parser().parse_args(argv)
 
 
 def main(argv=None):
