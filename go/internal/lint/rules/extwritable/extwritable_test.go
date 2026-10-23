@@ -142,3 +142,25 @@ func TestLiteralCode(t *testing.T) {
 		})
 	}
 }
+
+// TestWriteCallNames: a do<Action> body writes x only through a call named setX or getX: the awk matched
+// set[A-Z]...( and get[A-Z]...().setValue( inside any longer name, so resetX() or forgetX().setValue()
+// exempted x.
+func TestWriteCallNames(t *testing.T) {
+	for _, c := range []struct{ name, call, want string }{
+		{"setX( writes x", "setX(1);", ""},
+		{"this.setX( writes x", "this.setX(1);", ""},
+		{"resetX( does not write x", "resetX();", "x@2"},
+		{"getX().setValue( writes x", "getX().setValue(1);", ""},
+		{"forgetX().setValue( does not write x", "forgetX().setValue(1);", "x@2"},
+		{"a write after another call is seen", "f(setX(1));", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			src := "package a;\n" + prop("x", "") + `@NiagaraAction(name="go")` + "\n" +
+				"public class B {\n  public void doGo()\n  {\n    " + c.call + "\n  }\n}\n"
+			if got := warned(t, write(t, map[string]string{"B.java": src})); got != c.want {
+				t.Errorf("WARN rows %q, want %q", got, c.want)
+			}
+		})
+	}
+}

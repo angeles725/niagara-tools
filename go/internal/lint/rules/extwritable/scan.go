@@ -98,17 +98,24 @@ func annotations(lines, code []string, marker string, fn func(buf string, line i
 	}
 }
 
-// scanWrites marks every slot body writes through setX(, getX().setValue( or .set(x,
+// scanWrites marks every slot body writes through setX(, getX().setValue( or .set(x, where setX and getX
+// are whole names (resetX( or forgetX() write nothing).
 func scanWrites(body string, exempt map[string]bool) {
-	for _, m := range setCall.FindAllStringSubmatch(body, -1) {
-		exempt[lowerFirst(m[1])] = true
-	}
-	for _, m := range setValueCall.FindAllStringSubmatch(body, -1) {
-		exempt[lowerFirst(m[1])] = true
+	for _, re := range []*regexp.Regexp{setCall, setValueCall} {
+		for _, m := range re.FindAllStringSubmatchIndex(body, -1) {
+			if m[0] == 0 || !identByte(body[m[0]-1]) {
+				exempt[lowerFirst(body[m[2]:m[3]])] = true
+			}
+		}
 	}
 	for _, m := range propSetCall.FindAllStringSubmatch(body, -1) {
 		exempt[m[1]] = true
 	}
+}
+
+// identByte reports whether c can continue a Java identifier (ASCII letters, digits, _ and $).
+func identByte(c byte) bool {
+	return c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
 }
 
 // upperFirst and lowerFirst are awk's toupper/tolower of the first byte (ASCII only in the C locale).

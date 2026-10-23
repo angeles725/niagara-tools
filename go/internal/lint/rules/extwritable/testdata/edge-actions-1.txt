@@ -5,6 +5,7 @@ exit 0
 WARN  ext-writable-shape  @DIR@/ac/BA.java:5  run: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../run/value (bare <real>, B826) or add an OPERATOR action (B822)
 WARN  ext-writable-shape  @DIR@/ac/BA.java:6  other: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../other/value (bare <real>, B826) or add an OPERATOR action (B822)
 WARN  ext-writable-shape  @DIR@/ac/BB.java:4  c: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../c/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ac/BB.java:6  e: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../e/value (bare <real>, B826) or add an OPERATOR action (B822)
 WARN  ext-writable-shape  @DIR@/ac/BB.java:7  f: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../f/value (bare <real>, B826) or add an OPERATOR action (B822)
 -- stderr --
 -- ac/BA.java --
