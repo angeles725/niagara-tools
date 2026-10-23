@@ -195,7 +195,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
-| `test_go_harness.py` | 23 | 0 | 0 | 0 | 0 | 0 | 23 |
+| `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -206,7 +206,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **610** | **157** | **56** | **105** | **22** | **340** | **270** |
+| **Total** | **612** | **157** | **56** | **105** | **22** | **340** | **272** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -243,3 +243,46 @@ saturate, and Python's `str.isprintable` is approximated by `unicode.IsPrint` in
 `handle_line` and ended `serve`. Both servers now answer the normal parse error for a request
 nested deeper than `server.MAX_NESTING` (1000, arrays and objects with the outer object
 counted); Go checks the depth before decoding (`jsonrpc.NestsDeeper`).
+
+## 7. S3 `box` read side
+
+**Package.** `go/internal/mcpn4/box` ports `box.py:229-612` plus the helpers it needs
+(`poll_delays`, `auth_message`, `_flatten`): `New` (the http/https refusals), `Call`/`SSC`/`Poll`,
+`Open`/`Close` (no cleanup `del` after an AuthError), the pending-event split, `LoadTree` with the
+handle cache and the stale-handle early abort, `GetOrd` (HTML refusal; the cut-record trimming is
+`bql.complete_records`, slice S6), `GetFile` and `About`. Errors are one `*box.Error` (`Kind`:
+BoxError, AuthError, HttpStatusError), `*pyjson.ValueError`, or `*box.PyError` for the TypeError,
+KeyError and BadStatusLine the Python client lets escape (the server shows only their type). Every
+JSON body goes through `pyjson`; `pyjson.Loads` words a bad reply as `json.loads(raw.decode())`
+does. The readers `children`/`status_value`/`parse_status` and the write side (`sync` and the
+encoders) come with the slices that use them; no tool is wired yet (each read tool needs the S4
+session).
+
+**Proof.** `tests/go_box.py` holds one op language run by both clients:
+- *Recorded frames*: `SCENARIOS` port the read-side `test_box` cases (and pin a few malformed
+  replies). `python3 mcp-n4-kit/tests/go_box.py --write` runs them against the recording
+  FakeStation into `go/internal/mcpn4/box/testdata/replay.jsonl`; `TestReplayRecordedFrames`
+  replays the frames to Go and requires equal request bodies, no frame left over and equal op
+  results. Nothing is masked: the FakeStation session id and handles are deterministic.
+  `test_go_harness.TestGoBoxReplay` fails while the file is stale.
+- *Live*: `TestLiveDifferential` runs `go_box.py --live` and the Go client against the same Go
+  test server (redirects, statuses, caps, BOM, invalid UTF-8, a short body, a non-HTTP answer, a
+  timeout, a refused port, the GET reads) and compares results, request bodies and every request
+  header except User-Agent.
+
+**Target Python.** Every Go differential (pyjson, jsonrpc, cli, box) compares against one CPython,
+`pytarget.Minor` = 3.15: the `python3` the MCP config launches on the reference host. Some of the
+compared text moves between minors (JSON decode errors say "Illegal trailing comma" since 3.13),
+so `pytarget.Python` skips a differential, printing the version found and the target, when
+`python3` is another minor; with `MCP_N4_PYTHON` set the mismatch fails instead. CI installs 3.15
+with `actions/setup-python` before the Go step and runs `go test` with `MCP_N4_PYTHON` set to it,
+so a wrong interpreter fails CI rather than skipping; the mcp-n4-kit unittest step runs on it too.
+Locally `scripts/ci-local.sh` uses the `python3` on PATH. The kit suite, replay-corpus check
+included, also passes on 3.12.
+
+**Known differences.** The User-Agent is Go's, not `Python-urllib/3.x`. A TLS verification
+failure and other OS errors without an errno keep Go's wording inside `<urlopen error ...>`.
+A BOX reply nested past CPython's C stack raises RecursionError in Python; Go decodes it. A
+top-level load child whose `n` is not a string becomes a non-string dict key in Python; Go
+answers TypeError. `http_proxy`/`https_proxy` are honoured by both, but Go never proxies
+localhost.

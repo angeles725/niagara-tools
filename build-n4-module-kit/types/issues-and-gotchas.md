@@ -434,6 +434,29 @@ component is already mounted, so a row is a question ("can this component be unm
 [ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
 **Kit coverage: this entry (FOLDED); lint LANDED (`toolbelt/lint-set-null-ord.sh`)**
 
+### H4 · A Modbus point reads `{ok}` with zero or an absurd value `[ev: retro devguide415-r2-drivers-protocols Δ6]`
+
+**Symptom:** a Float, Long, Double or Long 64-bit Modbus proxy reads `{ok}` but shows 0, a huge number or a
+sign flip; the device's own display shows a sane value.
+**Root cause:** the registers carry no type: the driver assembles them with the byte order set on the network or
+the device (default `Order3210`), so a device that uses another order decodes as garbage and the read still
+succeeds `[INFER]` (guide 4.15.6.20 `Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). An off-by-one address
+(zero-based wire addresses, `Modbus/ModbusRegisters-5E427D5B.txt:33`) gives the same picture.
+**Fix:** at commissioning, compare one known value per data type with the device display; set the byte order on
+the device when devices differ. `types/driver-authoring.md` § 11.3. `[ev: corpus B1327 row 10]` —
+**Kit coverage: this entry (FOLDED); no lint (field-only check)**
+
+### H5 · An exported enum never appears on BACnet, with no error `[ev: retro devguide415-r2-drivers-protocols Δ5]`
+
+**Symptom:** a BACnet export descriptor for an `EnumPoint`/`EnumWritable` is configured, but peers never see the
+Multi-State object.
+**Root cause:** the range must start at ordinal 1 and be contiguous; otherwise "the object does not export to
+BACnet" (guide 4.15.6.20 `Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`). Our 0-based `BFrozenEnum`
+ranges (`auto/hand/off` = 0/1/2) hit this.
+**Fix:** export an enum through a point whose range is 1..n (or a numeric point); `types/driver-authoring.md`
+§ 11.1. `[ev: corpus B1327 row 6]` — **Kit coverage: this entry (FOLDED); owed Go lint G86
+`bacnet-export-enum-range`**
+
 ---
 
 ## I — Runtime & persistence discipline

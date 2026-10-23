@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  private int demandCount = 0;                              // demand-shaped field in scope
+  int step(long now, double suction, double suctionLowLimit) {
+    int target = demandCount;
+    if (suction < suctionLowLimit) target = Math.min(target, demandCount - 1);
+    return target;
+  }
+}

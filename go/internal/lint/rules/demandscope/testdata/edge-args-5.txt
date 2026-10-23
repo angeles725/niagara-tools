@@ -1,0 +1,16 @@
+-- args --
+--strict
+--
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-demand-scope: not a directory: --
+-- m/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
