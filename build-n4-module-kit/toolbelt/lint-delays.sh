@@ -23,6 +23,8 @@
 #   anything else FAIL unfloored.
 # A same-method guard (D2c) up to 80 lines back on the helper, variable or getter — `x > 0`, `x >= 1`,
 # `x == 0`, or the same on `x().getMillis()` — prints a PASS "guarded at :N" row instead.
+# Calls, their continuation lines and variable bindings are read from comment-free code (go/internal/javasrc
+# Strip; a call inside a string literal is skipped); a variable or guard must appear as a whole name.
 #
 # Implementation: rule package go/internal/lint/rules/delays on the shared engine go/internal/lint
 # (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
