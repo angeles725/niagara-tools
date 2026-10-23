@@ -24,6 +24,7 @@ shared_layer_lints() {
   for l in "$KIT"/toolbelt/lint-*.sh; do
     b="${l##*/}"
     case "$EXEMPT" in *" $b "*) continue ;; esac
+    # shellcheck disable=SC2016  # the wrapper's literal source text, not an expansion
     grep -qE 'lib/(awk-lint|scan-files)\.sh|go_tool_bin "\$GO_DIR" n4lint' "$l" || continue
     printf '%s\n' "$b"
   done
