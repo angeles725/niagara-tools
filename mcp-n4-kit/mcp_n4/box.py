@@ -655,7 +655,8 @@ class BoxClient:
         for event in self.poll():  # queued before the request: cannot be its reply
             self._keep(event)
             evs = event.get("evs") if isinstance(event, dict) else None
-            for op in (evs.get("ops") or []) if isinstance(evs, dict) else []:
+            ops = evs.get("ops") if isinstance(evs, dict) else None
+            for op in ops if isinstance(ops, list) else []:  # as _split: only a list is walked
                 self._settle(op)
         trusted = self._loads_outstanding == 0
         self._loads_outstanding += 1

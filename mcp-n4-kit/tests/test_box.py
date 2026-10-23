@@ -435,6 +435,18 @@ class TestReplyShapes(BoxTestCase):
                 self.assert_malformed(
                     lambda: c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP), detail)
 
+    def test_an_early_event_whose_ops_are_no_list_is_kept_not_walked(self):
+        # The poll before a loadSlots settles the load ops it sees; ops that are no list are
+        # kept with their event (as _split does), never iterated as keys or characters.
+        c = self.opened()
+        for ops in (5, "ab", {"nm": "l"}):
+            self.fake.hook = poll_hook(json.dumps([{"evs": {"ops": ops}}]))
+            with self.subTest(ops):
+                with self.assertRaises(box.BoxError) as cm:
+                    c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
+                self.assertIn("no load event", str(cm.exception))
+                self.assertIn({"evs": {"ops": ops}}, c.drain_pending_events())
+
     def test_a_well_formed_tree_still_loads(self):
         c = self.opened()
         self.fake.hook = poll_hook(load_event({"h": "3", "s": [{"n": "a", "s": [{"n": "b"}]}]}))
