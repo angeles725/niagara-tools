@@ -131,8 +131,25 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
 }
 
 @test "LSV-symroot: a symlinked <src-dir> is walked like find -H, same rows as the directory (issue #329)" {
-  # Mutation: LSV-symroot -- dropping -H from the find in _scan_files lists no file under a symlinked root.
+  # Mutation: LSV-symroot -- os.Lstat instead of os.Stat on the root in go/internal/lint/walk.go Walk lists no file under a symlinked root.
   only NoAuth.java
   assert_symroot_same "$ONE" "$LS" "$ONE"
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
+}
+
+@test "LSV-empty: a <src-dir> with no *.java is an env error (exit 3, ERROR row), never a clean pass" {
+  # Declared difference 2026-10-23 (Go engine, #351): the bash lint exited 0 with no row.
+  rm -rf "$ONE"; mkdir -p "$ONE"; echo x > "$ONE/a.txt"
+  run "$LS" "$ONE"
+  [ "$status" -eq 3 ]
+  [ "$output" = "ERROR  lint-servlet  $ONE  no *.java sources found (wrong path or empty source tree)" ]
+}
+
+@test "LSV-dotroot: a <src-dir> whose name starts with a dot is scanned, not pruned with it" {
+  # Declared difference 2026-10-23: find -name '.*' -prune also matched the start point, so the bash lint
+  # read no file under such a root and exited 0.
+  mkdir -p "$BATS_TEST_TMPDIR/.src"; cp "$FX/NoAuth.java" "$BATS_TEST_TMPDIR/.src/"
+  run "$LS" "$BATS_TEST_TMPDIR/.src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == "FAIL  auth  NoAuth.java:4  "* ]]
 }

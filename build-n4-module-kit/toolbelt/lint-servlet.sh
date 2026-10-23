@@ -2,18 +2,22 @@
 # lint-servlet.sh — BWebServlet security lint for Niagara N4 Java modules (Campaign 8 PR12, B813).
 #
 # Scans *.java files under <src-dir> that extend BWebServlet or declare doGet/doPost/service
-# handlers. Dot-directories are pruned (D9b). Reports per-check rows.
+# handlers. Dot-directories and *-worktrees sub-directories are pruned (D9b). Reports per-check rows.
 #
 # Checks:
-#   auth          FAIL  a doGet/doPost/service handler body contains a write (setDouble/setFloat/
-#                       setInt/setLong/setRelTime or .set() on a BComponent) with no
-#                       getRemoteUser()/getUser() gate in the same method body.
-#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( in the file not enclosed by a
-#                       try block (i.e. the enclosing scope has no 'try' within 5 lines above).
-#   unbounded-set WARN  setDouble/setFloat/setInt/setLong/setRelTime in a handler body with no
-#                       MIN/MAX/getFacets enforcement in the same body.
+#   auth          FAIL  a doGet/doPost/service handler body contains a write (.setDouble/.setFloat/
+#                       .setInt/.setLong/.setRelTime/.setString( or a set( not preceded by an identifier character) with no
+#                       getRemoteUser()/.getUser() gate in the same method body.
+#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( on a line with no 'try {' on it or
+#                       on the 5 lines above it.
+#   unbounded-set WARN  .setDouble/.setFloat/.setInt/.setLong/.setRelTime( in a handler body with no
+#                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
+#   catch-no-400  WARN  a 'try {' block that holds Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
+#                       Double.valueOf(, followed within 4 lines of its closing line by a catch whose
+#                       body has no 400 response (400, SC_BAD_REQUEST, sendError(, setStatus(,
+#                       jsonError( or sendJson(); the row is at the catch line.
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
-#                       (static detection: presence of max-age=[1-9] header call).
+#                       (static detection: Cache-Control and max-age=[1-9] on one line).
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
 #   csrf-xrw-only WARN  X-Requested-With check in the file with no CsrfUtil/x-niagara-csrfToken/
 #                       csrfToken reference — XHR-only guard is weaker than Niagara CSRF token.
@@ -27,17 +31,35 @@
 #
 # WARN -> FAIL under --strict; INFO rows never escalate. Deferred: R12.2 step-up re-auth (B803 — no static primitive).
 #
+# Implementation: rule package go/internal/lint/rules/servlet on the shared engine go/internal/lint
+# (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-servlet <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+#
 # Usage:  lint-servlet.sh <src-dir> [--strict]
 #
-#   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>
-#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20)
+#   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>     (<file> relative to <src-dir>)
+#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20), an unreadable
+#                source file or a sub-directory find cannot enter (the files listed are still scanned)
+#   Empty root:  a <src-dir> with no *.java under it is an env error (exit 3), never a clean pass; stdout
+#                gets `ERROR  lint-servlet  <src-dir>  no *.java sources found (wrong path or empty source
+#                tree)` (declared difference 2026-10-23: the bash lint exited 0 with no row).
 #
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
-# [ev: retro campaign8-lint-servlet]
+# [ev: retro campaign8-lint-servlet] [ev: retro go-lint-servlet]
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-servlet: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+# shellcheck disable=SC2093  # the bash body below is dead until the next commits delete it
+exec "$BIN" lint-servlet "$@"
 
 FAILED=0
 STRICT=0
