@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"syscall"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 func touch(t *testing.T, path string) {
@@ -123,7 +125,7 @@ func TestStrerror(t *testing.T) {
 		syscall.EIO:    "Input/output error",
 	}
 	for errno, want := range cases {
-		if got := strerror(errno); got != want {
+		if got := strerror.Text(errno); got != want {
 			t.Errorf("strerror(%d) = %q, want %q", errno, got, want)
 		}
 	}
