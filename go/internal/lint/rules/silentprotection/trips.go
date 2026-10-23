@@ -82,7 +82,7 @@ func (ix *index) surfaceWriteLines(lines []string) []bool {
 	marks := make([]bool, len(lines)+1)
 	for i, ln := range lines {
 		for _, s := range ix.surfSlots {
-			if strings.Contains(ln, getter(s)+"().setValue") || strings.Contains(ln, setter(s)+"(") {
+			if strings.Contains(ln, s.setValue) || strings.Contains(ln, s.setCall) {
 				marks[i+1] = true
 				break
 			}
@@ -126,9 +126,8 @@ func (ix *index) tripAction(st string, priv map[string]int) string {
 		return "stage"
 	}
 	for _, e := range ix.effectSlots {
-		g := getter(e)
-		if (strings.Contains(st, g+"().setValue(false)") || strings.Contains(st, g+"().setValue( false )")) && condField(st) != "" {
-			return e
+		if (strings.Contains(st, e.setFalse) || strings.Contains(st, e.setFalseSp)) && condField(st) != "" {
+			return e.name
 		}
 	}
 	if loc := thisWrite.FindStringIndex(st); loc != nil {

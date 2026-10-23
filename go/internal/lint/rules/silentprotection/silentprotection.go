@@ -91,8 +91,8 @@ func dedupeKey(fd lint.Finding) string {
 
 // index is what the bash passes 0, 0b and 1 computed over every file before the per-file check.
 type index struct {
-	surfSlots   []string // awk split of the sorted unique surface slot names
-	effectSlots []string // awk split of the sorted unique effect slot names
+	surfSlots   []slot   // awk split of the sorted unique surface slot names
+	effectSlots []slot   // awk split of the sorted unique effect slot names
 	surfFields  []string // fields written to a surface slot, sorted unique
 	surfList    string   // surfFields joined as the bash SURF_WRITE_FIELDS (in_list)
 	alarmList   string   // alarm class names joined as the bash ALARM_CLASSES (in_list)
@@ -119,7 +119,7 @@ func buildIndex(files []*javasrc.File) *index {
 			}
 		})
 	}
-	ix := &index{surfSlots: awkSplit(joinSorted(surf)), effectSlots: awkSplit(joinSorted(effect))}
+	ix := &index{surfSlots: slots(awkSplit(joinSorted(surf))), effectSlots: slots(awkSplit(joinSorted(effect)))}
 	fields := map[string]bool{}
 	for _, f := range files {
 		if xargsSafe(f.Path) {
@@ -207,19 +207,17 @@ func allowlisted(name string) bool {
 func (ix *index) surfaceWrites(raw []string, fields map[string]bool) {
 	for _, ln := range raw {
 		for _, s := range ix.surfSlots {
-			pat := getter(s) + "().setValue("
-			pos := strings.Index(ln, pat)
+			pos := strings.Index(ln, s.setValueCall)
 			if pos >= 0 {
-				arg := stripBlanks(cutAt(ln[pos+len(pat):], ")"))
+				arg := stripBlanks(cutAt(ln[pos+len(s.setValueCall):], ")"))
 				if m := dotIdent.FindString(arg); m != "" {
 					fields[m[1:]] = true
 				} else if identOnly.MatchString(arg) {
 					fields[arg] = true
 				}
 			}
-			pat2 := setter(s) + "("
-			if pos2 := strings.Index(ln, pat2); pos2 >= 0 && pos < 0 {
-				arg2 := stripBlanks(cutAt(ln[pos2+len(pat2):], ",)"))
+			if pos2 := strings.Index(ln, s.setCall); pos2 >= 0 && pos < 0 {
+				arg2 := stripBlanks(cutAt(ln[pos2+len(s.setCall):], ",)"))
 				if identOnly.MatchString(arg2) {
 					fields[arg2] = true
 				}
@@ -298,8 +296,25 @@ func cap1(s string) string {
 	return string(s[0]-'a'+'A') + s[1:]
 }
 
-func getter(s string) string { return "get" + cap1(s) }
-func setter(s string) string { return "set" + cap1(s) }
+// slot is a slot name and the accessor texts the checks look for, built once per run.
+type slot struct {
+	name         string
+	setValue     string // get<Name>().setValue
+	setValueCall string // get<Name>().setValue(
+	setCall      string // set<Name>(
+	setFalse     string // get<Name>().setValue(false)
+	setFalseSp   string // get<Name>().setValue( false )
+}
+
+func slots(names []string) []slot {
+	out := make([]slot, len(names))
+	for i, n := range names {
+		g := "get" + cap1(n) + "().setValue"
+		out[i] = slot{name: n, setValue: g, setValueCall: g + "(", setCall: "set" + cap1(n) + "(",
+			setFalse: g + "(false)", setFalseSp: g + "( false )"}
+	}
+	return out
+}
 
 // cutAt is awk's sub(/[<chars>].*/, "", s): s up to its first byte in chars.
 func cutAt(s, chars string) string {
