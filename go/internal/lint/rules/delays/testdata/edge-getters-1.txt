@@ -1,0 +1,43 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+WARN  lint-delays     @DIR@/t/G.java:18  facet-floor  slot interval facet MIN=2000ms (advisory)
+FAIL  lint-delays     @DIR@/t/G.java:19  facet-min-zero  slot zeroSlot facet MIN=0 — schedule can receive 0
+FAIL  lint-delays     @DIR@/t/G.java:20  facet-min-zero  slot odd has no MIN facet — can schedule 0
+FAIL  lint-delays     @DIR@/t/G.java:21  facet-min-zero  slot plain has no MIN facet — can schedule 0
+FAIL  lint-delays     @DIR@/t/G.java:22  facet-min-zero  slot plain has no MIN facet — can schedule 0
+FAIL  lint-delays     @DIR@/t/G.java:23  unfloored  unknown getter getMissing — cannot verify floor
+FAIL  lint-delays     @DIR@/t/G.java:24  facet-min-zero  slot plain has no MIN facet — can schedule 0
+WARN  lint-delays     @DIR@/t/G.java:25  facet-floor  slot interval facet MIN=2000ms (advisory)
+WARN  lint-delays     @DIR@/t/G.java:26  facet-floor  slot interval facet MIN=2000ms (advisory)
+-- stderr --
+-- t/G.java --
+package demo;
+import javax.baja.sys.*;
+class G extends BComponent {
+  public static final Property interval = newProperty(0, BRelTime.make(1000), BFacets.make(BFacets.MIN, BRelTime.makeSeconds(2)));
+  public static final Property zeroSlot = newProperty(0, BRelTime.make(1000), BFacets.make(BFacets.MIN, BRelTime.make(0)));
+  public static final Property odd = newProperty(0, BRelTime.make(1000), BFacets.make(BFacets.MIN, minVal));
+  public static final Property plain = newProperty(0, BRelTime.make(1000));
+  public BRelTime getInterval() { return (BRelTime) get(interval); }
+  public BRelTime getZeroSlot()
+  {
+    return (BRelTime)get("zeroSlot");
+  }
+  public BRelTime getOdd() { return (BRelTime) get(odd); }
+  public BRelTime getPlain() { return (BRelTime) get(plain); }
+  public BRelTime getNoSlot() { return computed(); }
+  public BRelTime getGuarded() { return (BRelTime) get("plain"); }
+  void a() {
+    Clock.schedule(this, getInterval(), go, null);
+    Clock.schedule(this, getZeroSlot(), go, null);
+    Clock.schedule(this, getOdd(), go, null);
+    Clock.schedule(this, getPlain(), go, null);
+    Clock.schedule(this, getNoSlot(), go, null);
+    Clock.schedule(this, getMissing(), go, null);
+    if (getGuarded().getMillis() >= 1) Clock.schedule(this, getGuarded(), go, null);
+    Clock.schedule(this, getInterval( ), go, null);
+    Clock.schedule(this, getInterval().add(x), go, null);
+  }
+}
