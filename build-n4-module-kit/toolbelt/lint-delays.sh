@@ -48,7 +48,7 @@ trap 'rm -rf "$_TMP"' EXIT
 SRC="$1"
 [ -d "$SRC" ] || { printf 'lint-delays: not a directory: %s\n' "$SRC" >&2; exit 3; }
 # One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
-scan_files_or_exit lint-delays 3 "$_TMP/files" "$SRC" -name '*.java'
+scan_files_nonempty_or_exit lint-delays "$_TMP/files" "$SRC" -name '*.java'
 
 # ---------------------------------------------------------------------------
 # D2b — Cross-file positive-floor helper registry.

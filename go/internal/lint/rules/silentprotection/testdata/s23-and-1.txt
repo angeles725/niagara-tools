@@ -1,0 +1,20 @@
+-- args --
+@DIR@/s23and
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/s23and/com/x/CompressorControl.java:4  step forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- s23and/com/x/BCompressorControl.java --
+package com.x;
+public class BCompressorControl extends BComponent {   // NOTE: does NOT implement BIAlarmSource
+  private AlarmSupport as = new AlarmSupport(this);
+  void raise() { as.newOffnormalAlarm(mkData()); }
+}
+-- s23and/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor trip
+    return target;
+  }
+}
