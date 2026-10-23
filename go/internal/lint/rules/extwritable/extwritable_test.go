@@ -164,3 +164,37 @@ func TestWriteCallNames(t *testing.T) {
 		})
 	}
 }
+
+// warnRow is the row of room's line-2 property in the file at path.
+func warnRow(path string) string {
+	return "WARN  ext-writable-shape  " + path + ":2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX " +
+		"write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)\n"
+}
+
+// TestUnreadableFile pins a declared difference: an unreadable .java file is an env error (exit 3, a
+// "cannot scan" line on stderr) and the other files are still scanned. The bash lint printed awk's own
+// error and exited 0.
+func TestUnreadableFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	dir := write(t, map[string]string{"A.java": room, "U.java": room})
+	if err := os.Chmod(filepath.Join(dir, "U.java"), 0); err != nil {
+		t.Fatal(err)
+	}
+	code, out, stderr := run(t, dir, dir)
+	wantErr := ID + ": cannot scan @DIR@/U.java: awk: fatal: cannot open file `@DIR@/U.java' for reading: Permission denied\n"
+	if code != 3 || out != warnRow("@DIR@/A.java") || stderr != wantErr {
+		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, out, stderr, warnRow("@DIR@/A.java"), wantErr)
+	}
+}
+
+// TestBackslashPath pins a declared difference: a row prints its path as listed. The bash lint passed it
+// through awk -v, which read its backslash escapes, so a directory named `a\nb` split the row in two.
+func TestBackslashPath(t *testing.T) {
+	dir := write(t, map[string]string{`a\nb/A.java`: room})
+	code, out, stderr := run(t, dir, dir)
+	if want := warnRow(`@DIR@/a\nb/A.java`); code != 0 || out != want || stderr != "" {
+		t.Errorf("exit %d out %q err %q, want 0 and %q", code, out, stderr, want)
+	}
+}
