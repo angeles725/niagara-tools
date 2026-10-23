@@ -1,0 +1,6 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-wb-external-ord-value: not a directory: @DIR@/nope

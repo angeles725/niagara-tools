@@ -1,0 +1,8 @@
+-- args --
+@DIR@/m/A.java
+-- want --
+exit 3
+-- stderr --
+lint-wb-external-ord-value: not a directory: @DIR@/m/A.java
+-- m/A.java --
+x

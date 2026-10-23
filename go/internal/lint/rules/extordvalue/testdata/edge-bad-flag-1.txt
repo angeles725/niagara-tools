@@ -1,0 +1,15 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-wb-external-ord-value: unknown flag: -x
+usage: lint-wb-external-ord-value.sh [--strict] <wb-src-root>
+-- m/A.java --
+class A {
+  void a() {
+    Object o = ord.get(s);
+    BStatusValue v;
+  }
+}

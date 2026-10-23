@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/R.java --
+public class R {
+  Object rowFor(Row record) {
+    Object v = record.get("out");
+    BStatusValue sv = (BStatusValue) v;
+    return sv;
+  }
+}

@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BMgr.java --
+package com.x;
+public class BMgr {
+  void addMapping(BComponent point, BImportMap m) {
+    BOrd ord = point.getSlotPathOrd();
+    if (ord == null || ord.isNull()) return;
+    m.setTargetOrd(ord);
+  }
+}
+-- Mod/src/com/x/BTern.java --
+package com.x;
+public class BTern {
+  void a(BComponent p, BImportMap m) {
+    BOrd o = p.getSlotPathOrd();
+    m.setTargetOrd(o == null ? BOrd.NULL : o);
+  }
+}

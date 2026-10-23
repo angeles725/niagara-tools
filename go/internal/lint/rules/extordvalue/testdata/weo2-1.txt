@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  String[] rowForGood(Object e) {
+    Object o = e.getOrd().get(subject, null);
+    if (o instanceof BComponent) {
+      BComponent targetComp = (BComponent) o;
+      if (!isRegisteredForComponentEvents(targetComp)) {
+        registerForComponentEvents(targetComp, 0);
+      }
+      Object out = targetComp.get("out");
+      if (out instanceof BStatusValue) {
+        BStatusValue sv = (BStatusValue) out;
+      }
+    }
+    return null;
+  }
+}
