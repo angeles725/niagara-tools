@@ -35,15 +35,15 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
-// Check reports every zero floor in the code before a line's first "//", only when the file names
-// Clock.schedule on some line (comments included).
+// Check reports every zero floor in the code (linescan.Code: no comment, Javadoc or literal text), only
+// when the file calls Clock.schedule in its code.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	sched := false
-	for i, ln := range f.Raw {
-		sched = sched || strings.Contains(ln, "Clock.schedule")
-		if zeroFloor.MatchString(linescan.Cut(ln)) {
-			out = append(out, lint.Finding{Line: i + 1, Msg: "zero-floor: " + linescan.Source(ln)})
+	for i, code := range linescan.Code(f) {
+		sched = sched || strings.Contains(code, "Clock.schedule")
+		if zeroFloor.MatchString(code) {
+			out = append(out, lint.Finding{Line: i + 1, Msg: "zero-floor: " + linescan.Source(f.Raw[i])})
 		}
 	}
 	if !sched {

@@ -2,10 +2,7 @@
 @DIR@/m
 -- want --
 exit 0
-WARN  lint-clock-zero-floor  @DIR@/m/A.java:3  zero-floor: long a = Math.max(0, d);
-WARN  lint-clock-zero-floor  @DIR@/m/A.java:7  zero-floor: String s = "Math.max(0, d)";
-WARN  lint-clock-zero-floor  @DIR@/m/B.java:3  zero-floor: /* long a = Math.max(0, d); */
-WARN  lint-clock-zero-floor  @DIR@/m/B.java:5  zero-floor: String s = "Math.max(0, d)";
+WARN  lint-clock-zero-floor  @DIR@/m/B.java:4  zero-floor: String u = "http://h"; long b = Math.max(0L, d);
 WARN  lint-clock-zero-floor  @DIR@/m/B.java:6  zero-floor: long c = Math.max(0l,d);
 -- stderr --
 -- m/A.java --

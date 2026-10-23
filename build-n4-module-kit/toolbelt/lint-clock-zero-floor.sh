@@ -11,12 +11,15 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
 #
 # Usage:  lint-clock-zero-floor.sh <src-root>
-#   Only files that also reference Clock.schedule are scanned (reduces false positives).
+#   Only files that also call Clock.schedule are reported (reduces false positives). Both the call
+#   and the floor are matched in the code only: a comment, Javadoc or string never counts, and a
+#   `//` inside a string never hides the rest of a line.
 #   Row:  WARN  lint-clock-zero-floor  <file>:<line>  zero-floor: <source>
 #   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: CZF2 -- drop the Math.max(0 match and CZF2 stops warning on a zero-floor near Clock.schedule
 # Mutation: CZF-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: CZF4 -- matching the raw line (no comment/literal blanking) WARNs a commented or string zero floor
 # Mutation: CZF-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
