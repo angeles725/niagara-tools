@@ -25,6 +25,8 @@ public final class Owner extends BComponent {
   public void arm() { ticket = Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); }
   // no stopped() override — the ticket leaks on station stop
 }
+-- tcd/Keep.java --
+class Keep {}
 -- tcd/.deploy-baseline/com/x/BStale.java --
 package demo;
 import javax.baja.sys.*;

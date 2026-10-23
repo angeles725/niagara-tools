@@ -41,6 +41,9 @@
 #         lease in scope -- subject-subtree depth does not cover it; add loadSlots() +
 #         registerForComponentEvents(target,0) for the resolved target
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-wb-external-ord-value  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 #
 # Known limitations (advisory heuristic, documented per kit style):
 #   - a resolve line and its value-read split across TWO methods (helper extraction) is

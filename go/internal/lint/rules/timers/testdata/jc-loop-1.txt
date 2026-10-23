@@ -2,7 +2,7 @@
 jcloop
 -- want --
 exit 0
-WARN  job-cancel  @DIR@/jcloop/BExportJob.java: BExportJob run() loops (line 11) with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
+WARN  job-cancel  @DIR@/jcloop/BExportJob.java:11  BExportJob run() loops with no isAlive() check -- cancel only interrupts the job thread; add if (!isAlive()) throw new JobCancelException(); (types/logic-authoring.md Job contract)
 -- jcloop/BExportJob.java --
 package demo;
 import javax.baja.job.*;

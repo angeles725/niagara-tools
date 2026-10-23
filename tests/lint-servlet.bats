@@ -14,6 +14,8 @@
 # NAMED MUTATIONS (post-green): drop the auth check -> LSV1 no longer FAILs; drop the input-400 check
 # -> LSV2 no longer FAILs; remove the dot-dir prune -> LSV-prune's stale NoAuth is flagged (D9b).
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LS="$KIT/toolbelt/lint-servlet.sh"
@@ -126,4 +128,32 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   run "$LS" "$ONE"
   [ "$status" -eq 0 ]
   [[ "$output" != *"api-response-headers"* ]]
+}
+
+@test "LSV-symroot: a symlinked <src-dir> is walked like find -H, same rows as the directory (issue #329)" {
+  # Mutation: LSV-symroot -- dropping -H from the find in _scan_files lists no file under a symlinked root.
+  only NoAuth.java
+  assert_symroot_same "$ONE" "$LS" "$ONE"
+  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"NoAuth"* ]]
+}
+
+@test "LSV-walk-locked: a sub-directory find cannot enter is an env error (exit 3) naming the root, never a clean pass" {
+  # Mutation: LSV-walk-locked -- a find | sort process substitution drops find's status and exits 0.
+  only WithAuth.java
+  mkdir -p "$ONE/locked"; cp "$FX/NoAuth.java" "$ONE/locked/"
+  chmod 000 "$ONE/locked"
+  if [ -r "$ONE/locked" ]; then chmod 755 "$ONE/locked"; skip "running as root"; fi
+  run "$LS" "$ONE"
+  chmod 755 "$ONE/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-servlet: cannot list every file under $ONE: "*"locked"* ]]
+}
+
+@test "LSV-worktrees: a *-worktrees sub-directory is pruned, so a checkout copy never doubles a finding" {
+  # Mutation: LSV-worktrees -- a walk without the *-worktrees prune prints the auth FAIL twice.
+  only NoAuth.java
+  mkdir -p "$ONE/mod-worktrees/feat"; cp "$FX/NoAuth.java" "$ONE/mod-worktrees/feat/"
+  run "$LS" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'FAIL  auth')" -eq 1 ]
 }

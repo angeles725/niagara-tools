@@ -29,3 +29,23 @@ func TestText(t *testing.T) {
 		}
 	}
 }
+
+func TestFindQuote(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"plain/path":    "'plain/path'",
+		"it's":          `'it\'s'`,
+		`back\slash`:    `'back\\slash'`,
+		"tab\there":     `'tab\there'`,
+		"nl\nx":         `'nl\nx'`,
+		"bell\a":        `'bell\a'`,
+		"del\x7f":       `'del\177'`,
+		"utf8-\xc3\xa9": `'utf8-\303\251'`,
+		`dq"x`:          `'dq"x'`,
+	}
+	for in, want := range cases {
+		if got := FindQuote(in); got != want {
+			t.Errorf("FindQuote(%q) = %s, want %s", in, got, want)
+		}
+	}
+}

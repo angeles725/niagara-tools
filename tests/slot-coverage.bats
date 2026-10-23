@@ -32,6 +32,8 @@
 #   - 0/0 -> 100 instead of N/A:              "" / "" -> pct=N/A                          (SC5)
 #   - missing computed as declared-required:  swaps missing/extra on SC2 and SC3
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   SC="$KIT/toolbelt/slot-coverage.sh"
@@ -296,4 +298,33 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [ "$status" -eq 0 ]
   [[ "$output" == *"pct=0.0 (type-set)"* ]]
   [[ "$output" == *"missing="*"Core"* ]]
+}
+
+@test "SP-symroot: per-slot on a symlinked <src-dir> walks it like find -H, same rows as the directory (issue #329)" {
+  # Mutation: SP-symroot -- dropping -H from the per-slot java find reads no source under a symlinked root.
+  assert_symroot_same "$FX_PS/src" "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$FX_PS/src"
+  [[ "$output" == *"MISSING"*"setpoint"* ]]
+}
+
+@test "SP-walk-locked: per-slot on a src/ with a sub-directory find cannot enter is an env error (exit 3)" {
+  # Mutation: SP-walk-locked -- a bare find | sort drops find's status and per-slot reports on a partial tree.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"; mkdir -p "$src/locked"
+  chmod 000 "$src/locked"
+  if [ -r "$src/locked" ]; then chmod 755 "$src/locked"; skip "running as root"; fi
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  chmod 755 "$src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"slot-coverage: cannot list every file under $src: "*"locked"* ]]
+}
+
+@test "SP-worktrees: per-slot prunes a *-worktrees sub-directory (a checkout copy adds no slot)" {
+  # Mutation: SP-worktrees -- without the prune the ghost OPERATOR slot of the copy is reported MISSING.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"; mkdir -p "$src/x-worktrees"
+  printf '@NiagaraProperty(name = "ghostSlot", type = "double", defaultValue = "0", flags = Flags.OPERATOR)\n' \
+    > "$src/x-worktrees/BGhost.java"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  [[ "$output" == *"setpoint"* ]]          # anchor: the real tree was scanned
+  [[ "$output" != *"ghostSlot"* ]]
 }

@@ -1,94 +1,97 @@
 package timers
 
 import (
-	"os"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 // ticketPass is the first loop of the bash lint: per file, every discarded-ticket row, then the
-// timer-ticket verdict of a file that owns a timer.
+// timer-ticket verdict of a file that owns a timer. Both read code (comments and literal contents
+// blanked): a Clock.schedule( or Clock.Ticket in a comment or a string owns no timer.
 func (r *run) ticketPass(srcs []*source) {
 	for _, s := range srcs {
 		r.discarded(s)
-		if !ownsTimer(s.Raw) {
+		at := timerLine(s)
+		if at == 0 {
 			continue // a timerless class is safe
 		}
 		const check = "timer-ticket"
 		switch verdict, missing := r.ticketVerdict(s); verdict {
 		case "OK":
-			r.row(lint.Pass, check, s, "timer cancelled in stopped()")
+			r.row(lint.Pass, check, s, at, "timer cancelled in stopped()")
 		case "NOSTOP":
-			r.row(lint.Fail, check, s, "schedules a Clock ticket but has no stopped() override to cancel it")
+			r.row(lint.Fail, check, s, at, "schedules a Clock ticket but has no stopped() override to cancel it")
 		case "MISSANY":
-			r.row(lint.Fail, check, s, "stopped() cancels no ticket (the Clock ticket is not kept in a named Clock.Ticket field, and no .cancel( call is reachable from stopped())")
+			r.row(lint.Fail, check, s, at, "stopped() cancels no ticket (the Clock ticket is not kept in a named Clock.Ticket field, and no .cancel( call is reachable from stopped())")
 		default:
 			for _, f := range missing {
-				r.row(lint.Fail, check, s, "stopped() does not cancel ticket "+f+" (a cancel in a comment, a string or of another ticket does not count)")
+				r.row(lint.Fail, check, s, f.line, "stopped() does not cancel ticket "+f.name+" (a cancel in a comment, a string or of another ticket does not count)")
 			}
 		}
 	}
 }
 
-// discarded is discarded-ticket: one FAIL per raw line holding a Clock.schedule(Periodically)( call
-// whose result is neither assigned (an "=" before it) nor returned. The bash loop read lines with
-// `read`, which skips an unterminated last line, and matched with grep, whose "." skips invalid UTF-8.
+// discarded is discarded-ticket: one FAIL per code line holding a Clock.schedule(Periodically)( call
+// whose result is neither assigned nor returned by its own statement.
 func (r *run) discarded(s *source) {
-	for i, ln := range s.Raw {
-		locs := scheduleCall.FindAllStringIndex(ln, -1)
-		if locs == nil || assigned(ln, locs) || returned.MatchString(ln) {
-			continue
+	code, _ := s.blanked()
+	for i, ln := range code {
+		for _, loc := range scheduleCall.FindAllStringIndex(ln, -1) {
+			if !kept(code, i, loc[0]) {
+				r.row(lint.Fail, "discarded-ticket", s, i+1, "Clock.schedule result is discarded — assign it to a Clock.Ticket field")
+				break
+			}
 		}
-		if i == len(s.Raw)-1 && !endsInNewline(s) {
-			continue
-		}
-		r.row(lint.Fail, "discarded-ticket", s, "Clock.schedule result is discarded — assign it to a Clock.Ticket field")
 	}
 }
 
-var returned = regexp.MustCompile(`return[[:space:]]+Clock\.schedule(Periodically)?\(`)
-
-// assigned is grep -E '=.*Clock\.schedule(Periodically)?\(' in a UTF-8 locale: an "=" before a call
-// with only valid UTF-8 between them (the nearest "=" gives the shortest span to test).
-func assigned(ln string, locs [][]int) bool {
-	for _, loc := range locs {
-		if p := strings.LastIndexByte(ln[:loc[0]], '='); p >= 0 && utf8.ValidString(ln[p+1:loc[0]]) {
-			return true
+// kept reports whether the statement holding the call at code[i][at:] assigns or returns its result:
+// an assignment "=" or a return between the statement start (the last ";", "{" or "}" before the call, read back
+// across lines) and the call. An "=" of an earlier statement on the same line does not count.
+func kept(code []string, i, at int) bool {
+	head := code[i][:at]
+	for {
+		if j := strings.LastIndexAny(head, ";{}"); j >= 0 {
+			head = head[j+1:]
+			break
 		}
+		if i == 0 {
+			break
+		}
+		i--
+		head = code[i] + " " + head
 	}
-	return false
+	return assign.MatchString(head) || returned.MatchString(head)
 }
 
-// endsInNewline reports whether the file's last line is newline-terminated (its size counts one "\n"
-// per line); a file that cannot be stat'ed counts as terminated.
-func endsInNewline(s *source) bool {
-	st, err := os.Stat(s.Path)
-	if err != nil {
-		return true
-	}
-	n := int64(0)
-	for _, ln := range s.Raw {
-		n += int64(len(ln)) + 1
-	}
-	return st.Size() == n
-}
+var (
+	assign   = regexp.MustCompile(`(^|[^=!<>])=($|[^=])`) // an assignment "=", not == != <= >=
+	returned = regexp.MustCompile(`(^|[^A-Za-z0-9_])return([^A-Za-z0-9_]|$)`)
+)
 
-// ownsTimer is the bash greps for Clock.Ticket or a Clock.schedule(Periodically)( call.
-func ownsTimer(raw []string) bool {
-	for _, ln := range raw {
+// timerLine is the first code line holding Clock.Ticket or a Clock.schedule(Periodically)( call: the
+// line a timer-ticket row points at (0 when the file owns no timer).
+func timerLine(s *source) int {
+	code, _ := s.blanked()
+	for i, ln := range code {
 		if strings.Contains(ln, "Clock.Ticket") || scheduleCall.MatchString(ln) {
-			return true
+			return i + 1
 		}
 	}
-	return false
+	return 0
+}
+
+// ticketField is a Clock.Ticket / Ticket field declared outside every method, and its line.
+type ticketField struct {
+	name string
+	line int
 }
 
 // ticketVerdict is ticket.awk: "OK", "NOSTOP", "MISSANY", or "MISS" with the ticket fields stopped()
 // does not cancel (see the lint-timers.sh header for the rules).
-func (r *run) ticketVerdict(s *source) (string, []string) {
+func (r *run) ticketVerdict(s *source) (string, []ticketField) {
 	code, ms := s.blanked()
 	body, params := map[string]string{}, map[string]string{}
 	for _, m := range ms {
@@ -107,9 +110,9 @@ func (r *run) ticketVerdict(s *source) (string, []string) {
 		}
 		return "MISSANY", nil
 	}
-	var missing []string
+	var missing []ticketField
 	for _, f := range fields {
-		if !r.cancels(body, params, scope, f) {
+		if !r.cancels(body, params, scope, f.name) {
 			missing = append(missing, f)
 		}
 	}
@@ -119,9 +122,9 @@ func (r *run) ticketVerdict(s *source) (string, []string) {
 	return "MISS", missing
 }
 
-// ticketFields lists the Clock.Ticket / Ticket field names declared outside every method, first seen first.
-func (r *run) ticketFields(code []string, in []bool) []string {
-	var fields []string
+// ticketFields lists the Clock.Ticket / Ticket fields declared outside every method, first seen first.
+func (r *run) ticketFields(code []string, in []bool) []ticketField {
+	var fields []ticketField
 	seen := map[string]bool{}
 	for i, ln := range code {
 		if in[i+1] || !strings.Contains(ln, "Ticket") {
@@ -130,7 +133,7 @@ func (r *run) ticketFields(code []string, in []bool) []string {
 		r.rx.each(ln, notWord+`(Clock`+sp+`*\.`+sp+`*)?Ticket`+sp+`*(\[`+sp+`*\])?`+sp+`+`+ident, func(_, d, _ string) bool {
 			if d = r.rx.sub(d, `.*`+sp); !seen[d] {
 				seen[d] = true
-				fields = append(fields, d)
+				fields = append(fields, ticketField{d, i + 1})
 			}
 			return true
 		})

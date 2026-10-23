@@ -1,0 +1,16 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/U2.java:5  CS1: interval<=duration: defrostInterval(30s) <= defrostDuration(1m)
+-- stderr --
+-- one/U2.java --
+package demo;
+import javax.baja.sys.*;
+@NiagaraType
+public final class U2 extends BComponent {
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.make(30000)")
+  private BRelTime defrostInterval;
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeSeconds(60)")
+  private BRelTime defrostDuration;
+}

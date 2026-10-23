@@ -35,6 +35,8 @@ counts an unreadable cell on its own line instead of as a "not cited" Δ.
 | Δ1 | **A byte-identical port keeps the old tool's fail-open quirks in its first commit and fixes them in a separate, droppable commit with a regression test each.** Why: the differential is the equivalence proof only while both sides behave the same; mixing a fix into the port hides which diff is which. | `CONTRIBUTING.md` § 2.2 Go module | `[ev: retro go-sweep-fold-audit]` |
 | Δ2 | **A bash tool that does arithmetic on a numeric cell from a file must force base 10 (`$((10#$n))`).** Why: a leading zero makes bash read the cell as octal, and `08`/`09` abort the loop with a stderr message while the row passes unchecked. | `toolbelt/` authoring rules | `[ev: retro go-sweep-fold-audit]` |
 
+Δ2 is OBSOLETE (quality round 8 W23 U0, main e66da0a): the bash tool it guarded is gone; `toolbelt/sweep-fold-audit.sh` execs the Go port, whose deltas cell is parsed by `go/internal/retrocells` `ParseDeltasCell` as decimal ("a leading zero is not octal", `toolbelt/sweep-fold-audit.sh` header). Δ1 stays pending: no kit doc states the quirks-first, fixes-in-a-separate-commit rule yet.
+
 ## Lessons
 - `while IFS= read -r line; do ...; done < file` never runs the body for a last line without a newline.
 - A seeded random differential (generated INDEX rows and corpus files) is cheap next to the named edge cases and
