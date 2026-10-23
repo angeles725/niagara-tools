@@ -250,7 +250,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
-    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A root with no input files is an ERROR (exit 3), never a
+    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A new bash lint never pastes the parse/walk/exit
+    skeleton: a per-file awk lint writes only its header, `awk_lint_parse`, its `main.awk` and `awk_lint_run`; a
+    flagless line-loop lint opens with `awk_lint_parse <name> raw` and `awk_lint_list`, and ends with
+    `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
+    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` A root with no input files is an ERROR (exit 3), never a
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
     owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
@@ -342,7 +346,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
       together. Before a heavy suite (`bats`, `make check`, a mutation run) read
       `/sys/fs/cgroup/init.scope/pids.current` and wait while it is above 20,000; run under `ulimit -u 4000`.
       `scripts/ci-local.sh` refuses to start (exit 4) while any cgroup is above 50% of its `pids.max`.
-      `[ev: retro r8-t41-host-safety Δ1]`
+      `[ev: retro r8-t41-host-safety Δ1]` One read covers this and the disk check below: `go/cmd/host-budget`
+      reports pids, threads, `GOCACHE` and `/`, `/mnt/c` (FAIL exits 1; ci-local runs it through `go/go-tool.sh`).
+      `[ev: retro r8-t47-host-budget Δ1]`
     - **Writer cap:** at most two writers per session run a heavy suite at the same time; the others edit,
       read or wait. The integrator runs the full `ci-local.sh -j 3` once, at the end. `[ev: retro r8-t41-host-safety Δ2]`
     - **Disk at round close:** Go never caps `~/.cache/go-build` (84 GB after five days of multi-worktree

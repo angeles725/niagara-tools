@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · awk-lint-line-loops
@@ -35,4 +35,4 @@ lint-jasmine-ux uses `raw` for its parse only (it scans a sub-root and exits 3 a
   names the script line, so the snapshot diff must normalize it and say so.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-awk-lint-line-loops.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `BUILD-LOOP.md` § 5 Kit tooling doctrine "Fail-closed input listing".

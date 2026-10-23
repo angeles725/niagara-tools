@@ -41,4 +41,4 @@ counts an unreadable cell on its own line instead of as a "not cited" Δ.
   covers argument and row shapes nobody listed.
 
 ---
-**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Port in two steps"; Δ2 OBSOLETE: the bash tool it targets is now `go/internal/foldaudit`, whose deltas cell is the decimal `go/internal/retrocells` `ParseDeltasCell`.
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Port in two steps"; Δ2 OBSOLETE (recorded by unit U0, branch `docs/r8-u0-retro-flips`; its bash target is now `go/internal/foldaudit`).
