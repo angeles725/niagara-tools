@@ -10,11 +10,13 @@ import (
 // more digits with a ValueError.
 const maxIntDigits = 4300
 
-// SyntaxError is a json.loads ValueError: the input is not a JSON document. Offset is the byte
-// where decoding stopped.
+// SyntaxError is a json.loads ValueError: the input is not a JSON document. Msg is CPython's
+// wording and Offset the byte it points at (see PyText). Plain marks a ValueError raised
+// without a position (the int digit limit).
 type SyntaxError struct {
 	Offset int
 	Msg    string
+	Plain  bool
 }
 
 func (e *SyntaxError) Error() string {
@@ -36,7 +38,7 @@ func Unmarshal(data []byte) (any, error) {
 	}
 	d.skipWS()
 	if d.i != len(d.s) {
-		return nil, d.fail("extra data")
+		return nil, d.fail("Extra data")
 	}
 	return v, nil
 }
@@ -99,7 +101,7 @@ func (d *decoder) value() (any, error) {
 	case c == '-' || c >= '0' && c <= '9':
 		return d.number()
 	}
-	return nil, d.fail("expecting value")
+	return nil, d.fail("Expecting value")
 }
 
 func (d *decoder) object() (any, error) {
@@ -110,9 +112,14 @@ func (d *decoder) object() (any, error) {
 		d.i++
 		return o, nil
 	}
+	comma := -1 // offset of the comma before this member, if any
 	for {
 		if d.peek(0) != '"' {
-			return nil, d.fail("expecting property name enclosed in double quotes")
+			if comma >= 0 && d.peek(0) == '}' {
+				d.i = comma
+				return nil, d.fail("Illegal trailing comma before end of object")
+			}
+			return nil, d.fail("Expecting property name enclosed in double quotes")
 		}
 		k, err := d.str()
 		if err != nil {
@@ -120,7 +127,7 @@ func (d *decoder) object() (any, error) {
 		}
 		d.skipWS()
 		if d.peek(0) != ':' {
-			return nil, d.fail("expecting ':' delimiter")
+			return nil, d.fail("Expecting ':' delimiter")
 		}
 		d.i++
 		d.skipWS()
@@ -135,10 +142,11 @@ func (d *decoder) object() (any, error) {
 			d.i++
 			return o, nil
 		case ',':
+			comma = d.i
 			d.i++
 			d.skipWS()
 		default:
-			return nil, d.fail("expecting ',' delimiter")
+			return nil, d.fail("Expecting ',' delimiter")
 		}
 	}
 }
@@ -151,7 +159,12 @@ func (d *decoder) array() (any, error) {
 		d.i++
 		return items, nil
 	}
+	comma := -1 // offset of the comma before this item, if any
 	for {
+		if comma >= 0 && d.peek(0) == ']' {
+			d.i = comma
+			return nil, d.fail("Illegal trailing comma before end of array")
+		}
 		v, err := d.value()
 		if err != nil {
 			return nil, err
@@ -163,10 +176,11 @@ func (d *decoder) array() (any, error) {
 			d.i++
 			return items, nil
 		case ',':
+			comma = d.i
 			d.i++
 			d.skipWS()
 		default:
-			return nil, d.fail("expecting ',' delimiter")
+			return nil, d.fail("Expecting ',' delimiter")
 		}
 	}
 }
@@ -193,7 +207,7 @@ func (d *decoder) number() (any, error) {
 		d.digits()
 	default:
 		d.i = start
-		return nil, d.fail("expecting value")
+		return nil, d.fail("Expecting value")
 	}
 	isFloat := false
 	if d.peek(0) == '.' && isDigit(d.peek(1)) {
@@ -223,8 +237,9 @@ func (d *decoder) number() (any, error) {
 		n--
 	}
 	if n > maxIntDigits {
-		d.i = start
-		return nil, d.fail("int literal exceeds the 4300 digit limit")
+		return nil, &SyntaxError{Offset: start, Plain: true, Msg: fmt.Sprintf("Exceeds the limit "+
+			"(%d digits) for integer string conversion: value has %d digits; use "+
+			"sys.set_int_max_str_digits() to increase the limit", maxIntDigits, n)}
 	}
 	return IntLiteral(lit), nil
 }
@@ -254,11 +269,13 @@ var unescape = map[byte]byte{'"': '"', '\\': '\\', '/': '/', 'b': '\b', 'f': '\f
 // str decodes a string (strict: a raw control character is an error). A high surrogate escape
 // followed by a low one joins into one code point; any other surrogate stays lone (WTF-8).
 func (d *decoder) str() (any, error) {
+	start := d.i
+	unterminated := &SyntaxError{Offset: start, Msg: "Unterminated string starting at"}
 	d.i++
 	var b []byte
 	for {
 		if d.i >= len(d.s) {
-			return nil, d.fail("unterminated string")
+			return nil, unterminated
 		}
 		c := d.s[d.i]
 		switch {
@@ -266,13 +283,16 @@ func (d *decoder) str() (any, error) {
 			d.i++
 			return string(b), nil
 		case c == '\\':
+			if d.i+1 >= len(d.s) { // a backslash ends the input
+				return nil, unterminated
+			}
 			r, err := d.escape()
 			if err != nil {
 				return nil, err
 			}
 			b = appendWTF8(b, r)
 		case c < 0x20:
-			return nil, d.fail("invalid control character")
+			return nil, d.fail("Invalid control character at")
 		case c < utf8.RuneSelf:
 			b = append(b, c)
 			d.i++
@@ -293,21 +313,22 @@ func (d *decoder) escape() (rune, error) {
 	if c != 'u' {
 		r, ok := unescape[c]
 		if !ok {
-			d.i++
-			return 0, d.fail("invalid escape")
+			return 0, d.fail("Invalid \\escape")
 		}
 		d.i += 2
 		return rune(r), nil
 	}
 	r, ok := hexVal(d.s[d.i+2:])
 	if !ok {
-		return 0, d.fail("invalid \\uXXXX escape")
+		d.i++ // CPython points at the 'u'
+		return 0, d.fail("Invalid \\uXXXX escape")
 	}
 	d.i += 6
 	if r >= 0xd800 && r <= 0xdbff && d.peek(0) == '\\' && d.peek(1) == 'u' {
 		lo, ok := hexVal(d.s[d.i+2:])
 		if !ok {
-			return 0, d.fail("invalid \\uXXXX escape")
+			d.i++
+			return 0, d.fail("Invalid \\uXXXX escape")
 		}
 		if lo >= 0xdc00 && lo <= 0xdfff {
 			d.i += 6
