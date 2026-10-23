@@ -2,8 +2,7 @@
 @DIR@/m
 -- want --
 exit 0
-WARN  lint-bql-string-concat  @DIR@/m/A.java:2  bql concat: /* q = BqlQuery.make("x" + u); */
-WARN  lint-bql-string-concat  @DIR@/m/A.java:7  bql concat: String t = "BqlQuery.make(" + v;
+WARN  lint-bql-string-concat  @DIR@/m/A.java:4  bql concat: BOrd.make("local:|foxs://" + host + "|station:|bql:select * where a=" + v);
 WARN  lint-bql-string-concat  @DIR@/m/A.java:8  bql concat: * bql: "a" + b
 -- stderr --
 -- m/A.java --

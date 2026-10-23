@@ -12,11 +12,15 @@
 # unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
 #
 # Usage:  lint-bql-string-concat.sh <src-root>
+#   Per line: a `bql:` text (in a literal) or a BqlQuery.make( call, and a `+` next to a quote, in the
+#   code only: comments and Javadoc never trigger, a quoted "BqlQuery.make(" is not a call, and a `//`
+#   inside a string (an ORD such as "foxs://host") never hides the rest of the line.
 #   Row:  WARN  lint-bql-string-concat  <file>:<line>  bql concat: <source>
 #   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: BSC2 -- drop the concat-operator test and BSC2 stops warning on a concatenated bql: string
 # Mutation: BSC-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: BSC4 -- matching the raw line (no comment/literal blanking) WARNs a commented or quoted BqlQuery.make concat
 # Mutation: BSC-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

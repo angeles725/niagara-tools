@@ -50,3 +50,12 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [ "$output" = "lint-bql-string-concat: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
 }
+
+@test "BSC4: a commented or quoted BqlQuery.make concat is clean; a bql: concat after a // inside a string is flagged" {
+  # Mutation: BSC4 -- matching the raw line (no comment/literal blanking) WARNs the commented and quoted lines.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* q = BqlQuery.make("x" + u); */\n  /**\n   * BqlQuery.make("select " + where)\n   */\n  BOrd o = BOrd.make("local:|foxs://" + host + "|station:|bql:select * where a=" + v);\n  String t = "BqlQuery.make(" + v;\n}\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-bql-string-concat  $TMPDIR_T/M/src/A.java:6  bql concat: BOrd o = BOrd.make(\"local:|foxs://\" + host + \"|station:|bql:select * where a=\" + v);" ]
+}
