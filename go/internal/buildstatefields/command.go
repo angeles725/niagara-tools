@@ -2,7 +2,6 @@ package buildstatefields
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/gen"
 	"github.com/angeles725/niagara-tools/go/internal/retroindex"
 )
 
@@ -45,13 +45,13 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	state, retrodir, index := args[0], args[1], args[2]
 	switch {
-	case !isRegular(state):
+	case !gen.IsRegular(state):
 		fmt.Fprintf(s.Err, "sweep: no BUILD-STATE file: %s\n", state)
 		return ExitEnv
-	case !isDir(retrodir):
+	case !gen.IsDir(retrodir):
 		fmt.Fprintf(s.Err, "sweep: no retros dir: %s\n", retrodir)
 		return ExitEnv
-	case !isRegular(index):
+	case !gen.IsRegular(index):
 		fmt.Fprintf(s.Err, "sweep: no INDEX file: %s\n", index)
 		return ExitEnv
 	}
@@ -90,7 +90,7 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 			return fmt.Sprintf("INDEX row for %s has no valid review-status (pending|folded)", r.File), ExitFail
 		}
 		path := retrodir + "/" + r.File
-		if !isRegular(path) {
+		if !gen.IsRegular(path) {
 			return "INDEX row points at a missing retro: " + r.File, ExitFail
 		}
 		b, err := os.ReadFile(path)
@@ -124,33 +124,30 @@ func content(state, retrodir, index string, s cli.Stdio) (string, int) {
 		}
 	}
 
-	// 3. generated INDEX freshness, checked in-process by go/internal/retroindex.
+	// 3. generated INDEX freshness, checked in-process by retroindex.Check. A generator's "is fresh"
+	// line is not sweep output, its diagnostics are (the bash tool ran `gen-*.sh --check ... >/dev/null`).
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas/module header drift pass the gate
 	if first, _, _ := strings.Cut(string(indexText), "\n"); strings.HasPrefix(first, generatedIndex) {
 		if abs(retrodir) != abs(filepath.Dir(index)) {
 			return "generated INDEX must be <retros-dir>/INDEX.md: " + index, ExitFail
 		}
-		if retroindex.Main([]string{"--check", abs(retrodir + "/..")}, quiet(s)) != 0 {
+		if !retroindex.Check(abs(retrodir+"/.."), s.Err) {
 			return "retros/INDEX.md is stale vs the retro headers; run toolbelt/gen-retro-index.sh", ExitFail
 		}
 	}
 
-	// 4. generated kit ledger freshness, checked in-process by go/internal/buildstate.
+	// 4. generated kit ledger freshness, checked in-process by buildstate.Check.
 	// Mutation: GBS-sweep -- skipping this call lets a fragment land without its regenerated BUILD-STATE.md
-	if stateroot := abs(filepath.Dir(state)); isDir(stateroot + "/ledger.d") {
+	if stateroot := abs(filepath.Dir(state)); gen.IsDir(stateroot + "/ledger.d") {
 		if filepath.Base(state) != "BUILD-STATE.md" {
 			return "a ledger.d/ kit needs the state file named BUILD-STATE.md: " + state, ExitFail
 		}
-		if buildstate.Main([]string{"--check", stateroot}, quiet(s)) != 0 {
+		if !buildstate.Check(stateroot, s.Err) {
 			return "BUILD-STATE.md is stale vs ledger.d/ (or a fragment is malformed); run toolbelt/gen-build-state.sh", ExitFail
 		}
 	}
 	return "", ExitOK
 }
-
-// quiet is s with stdout discarded: a generator's "is fresh" line is not sweep output, its
-// diagnostics are (the bash tool ran `gen-*.sh --check ... >/dev/null`).
-func quiet(s cli.Stdio) cli.Stdio { return cli.Stdio{Out: io.Discard, Err: s.Err, Getenv: s.Getenv} }
 
 // abs is the logical absolute path, as `cd <dir> && pwd` printed it (no symlink resolution).
 func abs(path string) string {
@@ -198,11 +195,11 @@ flags:
 		return ExitEnv
 	}
 	retrodir, index := args[0], args[1]
-	if !isDir(retrodir) {
+	if !gen.IsDir(retrodir) {
 		fmt.Fprintf(s.Err, "sweep-build-state: no retros dir: %s\n", retrodir)
 		return ExitEnv
 	}
-	if !isRegular(index) {
+	if !gen.IsRegular(index) {
 		fmt.Fprintf(s.Err, "sweep-build-state: no INDEX file: %s\n", index)
 		return ExitEnv
 	}
@@ -261,14 +258,4 @@ func prefix(s string, n int) string {
 		return s
 	}
 	return s[:n]
-}
-
-func isRegular(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.Mode().IsRegular()
-}
-
-func isDir(path string) bool {
-	st, err := os.Stat(path)
-	return err == nil && st.IsDir()
 }

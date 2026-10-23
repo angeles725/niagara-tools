@@ -2,6 +2,7 @@ package retroindex
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/gen"
@@ -29,6 +30,13 @@ func Main(args []string, s cli.Stdio) int {
 		return ExitEnv
 	}
 	return generate(root, check, s)
+}
+
+// Check reports whether <root>/retros/INDEX.md is fresh against the retro headers, as
+// `--check <root>` decides, without the "is fresh" line; its diagnostics (stale, missing,
+// violations) go to diag. It is the typed API sweep-build-state calls in process.
+func Check(root string, diag io.Writer) bool {
+	return generate(root, true, cli.Stdio{Out: io.Discard, Err: diag}) == ExitOK
 }
 
 // generate renders <root>/retros/INDEX.md and writes it, or compares it under check.

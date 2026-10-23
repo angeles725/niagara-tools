@@ -2,6 +2,7 @@ package buildstate
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -30,6 +31,13 @@ func Main(args []string, s cli.Stdio) int {
 		return ExitEnv
 	}
 	return generate(root, check, s)
+}
+
+// Check reports whether <root>/BUILD-STATE.md is fresh against ledger.d/, as `--check <root>`
+// decides, without the "is fresh" line; its diagnostics (stale, missing, violations) go to diag.
+// It is the typed API sweep-build-state calls in process.
+func Check(root string, diag io.Writer) bool {
+	return generate(root, true, cli.Stdio{Out: io.Discard, Err: diag}) == ExitOK
 }
 
 // generate regenerates <root>/BUILD-STATE.md from <root>/ledger.d/ and writes it, or compares it under check.
