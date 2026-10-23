@@ -6,7 +6,7 @@
 #   L3 pure-model pkg has tests + no baja/tridium imports     L4 lexicon non-empty per artifact w/ >=1 type
 #   L5 rt palette non-empty                                   L6 module-include.xml present/consistent
 #   L7 3-part dependency version floors                       L9 no empty skeleton artifact (0 class + 0 palette)
-#   L10 no absolute host paths in tracked gradle.properties   L11 mixed pure+Baja srcTest declares :test-wb AND junit
+#   L10 no absolute host paths in gradle.properties           L11 mixed pure+Baja srcTest declares :test-wb AND junit
 #
 # RED today: lint-structure.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (R18.5): remove a dependency's 3-part floor -> L7 FAIL on that entry.
@@ -31,7 +31,7 @@ setup() {
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L9"* ]]
 }
 
-@test "LS10: a tracked gradle.properties with an absolute host path (C:\\Honeywell\\...) FAILs L10" {
+@test "LS10: a gradle.properties with an absolute host path (C:\\Honeywell\\...) FAILs L10" {
   run "$LS" "$FX/client-gradleprops"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L10"* ]]

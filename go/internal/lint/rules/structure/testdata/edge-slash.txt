@@ -2,7 +2,7 @@
 @DIR@/slash/R/G/M/
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/slash/R/gradle.properties:1  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/slash/R/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
 FAIL  lint-structure  @DIR@/slash/R/settings.gradle.kts:1  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
 -- stderr --
 -- slash/R/.git/HEAD --

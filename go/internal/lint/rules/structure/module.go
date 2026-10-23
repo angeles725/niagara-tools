@@ -54,7 +54,7 @@ func (s *scan) hostPaths() {
 
 func (s *scan) hostPath(p string) {
 	if isFile(p) {
-		s.lineRows(p, hostPath, "L10: absolute host path in tracked gradle.properties")
+		s.lineRows(p, hostPath, "L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)")
 	}
 }
 

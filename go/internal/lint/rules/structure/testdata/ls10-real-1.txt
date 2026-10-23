@@ -2,7 +2,7 @@
 @DIR@/tree/proj/Mod
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/tree/gradle.properties:1  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/tree/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
 FAIL  lint-structure  Foo-wb  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
 FAIL  lint-structure  Foo-wb  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)
 -- stderr --

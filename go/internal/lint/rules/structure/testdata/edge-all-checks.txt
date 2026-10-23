@@ -2,10 +2,10 @@
 @DIR@/all-checks/G/M
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: absolute host path in tracked gradle.properties
-FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: absolute host path in tracked gradle.properties
-FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties:1  L10: absolute host path in tracked gradle.properties
-FAIL  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: absolute host path in tracked gradle.properties
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
 FAIL  lint-structure  A-rt/META-INF/module.xml  L6: hand-authored META-INF/module.xml found; author module-include.xml instead
 FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (2 type(s) declared, zero key=value entries)
 FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile
