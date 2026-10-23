@@ -211,3 +211,64 @@ func TestFileWriteFailure(t *testing.T) {
 		}
 	}
 }
+
+// TestFileSameTrimAsymmetry pins R3-asymmetric-trim (#344): under TrimNewlines the committed
+// file loses ALL trailing newlines but the generated content only ONE. Every generator renders
+// content ending in exactly one "\n" (pinned per generator), so the asymmetry only shows for
+// content ending in "\n\n": such a file is never fresh, not even right after a write.
+func TestFileSameTrimAsymmetry(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		content, committed string
+		same               bool
+	}{
+		{"a\nb\n", "a\nb\n", true},
+		{"a\nb\n", "a\nb", true},
+		{"a\nb\n", "a\nb\n\n\n", true},
+		{"a\nb", "a\nb\n", true},
+		{"a\nb\n\n", "a\nb\n\n", false}, // what a write stores is stale: content keeps one "\n"
+		{"a\nb\n\n", "a\nb\n", false},
+	}
+	for _, tt := range tests {
+		f := File{Content: tt.content, TrimNewlines: true}
+		if got := f.same(tt.committed); got != tt.same {
+			t.Errorf("same(content %q, committed %q) = %v, want %v", tt.content, tt.committed, got, tt.same)
+		}
+		f.TrimNewlines = false // ledger style: byte-exact
+		if got := f.same(tt.committed); got != (tt.content == tt.committed) {
+			t.Errorf("byte-exact same(content %q, committed %q) = %v", tt.content, tt.committed, got)
+		}
+	}
+}
+
+// TestFileWriteReadOnlyTarget pins how a read-only target is written (R4-atomic-mode-umask, #344):
+// the plain write fails (exit 3, target untouched); the atomic write replaces it through a
+// temporary file in the writable directory and keeps the read-only mode.
+func TestFileWriteReadOnlyTarget(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a mode-444 file")
+	}
+	for _, file := range []func(string) File{index, ledger} {
+		path := filepath.Join(t.TempDir(), "OUT.md")
+		write(t, path, "old\n")
+		if err := os.Chmod(path, 0o444); err != nil {
+			t.Fatal(err)
+		}
+		o, e, s := stdio("")
+		f := file(path)
+		code := f.Run(false, s)
+		b, _ := os.ReadFile(path)
+		st, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch {
+		case f.Atomic && (code != ExitOK || string(b) != "a\nb\n" || st.Mode().Perm() != 0o444 || e.String() != ""):
+			t.Errorf("atomic: got (%d, %q, %q), target %q mode %v", code, o.String(), e.String(), b, st.Mode().Perm())
+		case !f.Atomic && (code != ExitEnv || string(b) != "old\n" || o.String() != "" ||
+			!strings.HasPrefix(e.String(), "gen-x: cannot write "+path+": ")):
+			t.Errorf("plain: got (%d, %q, %q), target %q", code, o.String(), e.String(), b)
+		}
+	}
+}

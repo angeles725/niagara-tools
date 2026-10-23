@@ -1,0 +1,6 @@
+-- args --
+regex/R3.java
+-- want --
+exit 3
+-- stderr --
+lint-delays: not a directory: regex/R3.java
