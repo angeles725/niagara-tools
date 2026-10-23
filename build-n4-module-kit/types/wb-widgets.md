@@ -358,7 +358,7 @@ A missing key leaves that field null (`Lexicon.get` returns null, `javax/baja/ut
 `BAccelerator.make` rejects only prints "Invalid accelerator for Command <keyBase>" to stdout and the command loads
 without it (`:68-79`). Ship all four keys per command in `module.lexicon` (lexicon chain: `types/lexicon.md`), and
 override `doInvoke()` to do the work. Owed advisory: Go lint G91 `command-lexicon-keys`
-(ledger.d `2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ4]
+(`ledger.d/2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ4]
 
 ## PX authoring — binding taxonomy
 

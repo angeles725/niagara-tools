@@ -327,7 +327,7 @@ Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 and 4.15.6.20; a
 4.14.0.162 Optimizer install) is a different type. Behaviour: swapped limits (`inHigh < inLow`, `inMax < inMin`) set `out`
 to `fault` with a lexicon `faultCause` (`BHysteresis.java:234-238`, `BLimiter.java:192-196`); the hysteresis latch is
 a plain Java field (`previousOutput`, `:292`), so it restarts `false` after a station restart. Owed advisory: Go lint
-G90 `since-version-type` (ledger.d `2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ8]
+G90 `since-version-type` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ8]
 
 ## RT control logic `[ev: corpus B805]`
 

@@ -264,7 +264,7 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
   pins only the major, so a template built on a later minor deploys to stations on an earlier one
   (guide `Templates/TemplateOptions-49093F67.txt:9-11`).
-- Owed advisory: Go lint G92 `ntpl-manifest-deps` (ledger.d `2026-10-23-r8-u10-platform-templates.md`).
+- Owed advisory: Go lint G92 `ntpl-manifest-deps` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
   [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
 
 ### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]
