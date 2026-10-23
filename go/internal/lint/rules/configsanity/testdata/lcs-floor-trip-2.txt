@@ -1,0 +1,15 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  lint-config-sanity  @DIR@/one/FloorCamelNames.java:5  CS4: floor "comp2MinOn"=1 with LP cutout "lowLimitAlarm"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
+-- stderr --
+-- one/FloorCamelNames.java --
+package demo;
+import javax.baja.sys.*;
+// FloorCamelNames: a per-unit floor (comp2MinOn=1) beside a disabled LP cutout (lpCutout=0) -> CS4 WARN.
+@NiagaraType
+@NiagaraProperty(name = "comp2MinOn", type = "int", defaultValue = "1", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "lowLimitAlarm", type = "double", defaultValue = "0.0", flags = Flags.OPERATOR)
+public final class FloorCamelNames extends BComponent {
+}
