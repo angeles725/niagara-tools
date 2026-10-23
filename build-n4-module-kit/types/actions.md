@@ -84,7 +84,7 @@ every cycle). Without it, a per-minute callback **floods the audit trail**. Trid
 consistently sets `HIDDEN|NO_AUDIT|ASYNC` on internal callbacks (escalateAlarms, expire,
 retrieveResults). [ev: code `Flags.java` NO_AUDIT=0x800]
 
-Timer-callback actions are conventionally `HIDDEN|ASYNC` (+ `NO_AUDIT`). [ev: corpus slots-flags-java8]
+Timer-callback actions are conventionally `HIDDEN|ASYNC` (+ `NO_AUDIT`). [ev: code alarm-rt `BAlarmService.java:168` escalateAlarms = `newAction(2068)` = HIDDEN|ASYNC|NO_AUDIT]
 
 ## 4 · Typed arguments and return values
 
@@ -102,7 +102,7 @@ public BBoolean doAckAlarm(BAlarmRecord r) { ... }
 
 - `parameterType` / `returnType` are ORD type spec strings (`"baja:RelTime"`, `"BAlarmRecord"`).
 - **`defaultValue` is mandatory when `parameterType` is present** — omit it and slot-o-matic
-  errors at build. A `BStruct` parameter renders in Workbench as a multi-field argument dialog.
+  errors at build. A `BStruct` parameter renders in Workbench as a multi-field argument dialog [INFER].
 [ev: devguide `slot-o-matic.txt`; code ackAlarm(BAlarmRecord)]
 
 ## 5 · Actions vs `@NiagaraTopic`
