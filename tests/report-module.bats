@@ -789,6 +789,40 @@ JAVA
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is unknown version"* ]]
 }
 
+# r9 M3: every member's rows go through ONE shared parser (ROW_AWK via member_rows), one awk per member output.
+@test "RM-rows-multi: a member's rows are relayed in order with the shared grammar; non-row lines are dropped (r9 M3)" {
+  # Mutation: RM-rows-multi -- a whole-output parser that loses row order, keeps a non-row line or splits on a
+  # single space instead of 2+ whitespace changes these exact rows.
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" lint-delays.sh 'printf "%s\n" "FAIL  delay  /a/b/BOne.java:12  no floor" "scanning 3 files" "WARN  delay  /c/BTwo.java:7  short  extra note" ""; exit 1'
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *$'DemoPan-rt  FAIL  delay  BOne.java:12  no floor\nDemoPan-rt  WARN  delay  BTwo.java:7  short  extra note\n'* ]]
+  [[ "$output" != *"scanning 3 files"* ]]
+}
+
+@test "RM-row-parser: no pasted per-line row parser -- one awk call site parses every member's rows (r9 M3)" {
+  # Mutation: RM-row-parser -- re-pasting the per-line `printf '%s' "$_ln" | awk` parser forks awk once per row
+  # (kit retro rule: no per-line forks) and drifts from the shared ROW_AWK grammar.
+  run grep -c -F "printf '%s' \"\$_ln\" | awk" "$RM"
+  [ "$output" = "0" ]
+  run grep -c 'awk -v sel=' "$RM"
+  [ "$output" = "1" ]
+}
+
+@test "RM-exit-capture: every member capture keeps its exit on the same line -- no bare \$? after _o=\$(...) (r9 M3)" {
+  # Mutation: RM-exit-capture -- a bare `_o=$(member)` with "$?" read on the next line aborts the report under
+  # errexit on the first failing member and breaks as soon as a command is inserted between the two lines.
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
+  run grep -c '^[^#]*_o=\$(' "$RM"
+  [ "$output" -gt 0 ]
+  local total="$output"
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
+  run grep -c '^[^#]*_rc=0; _o=\$(.*) || _rc=\$?$' "$RM"
+  [ "$output" = "$total" ]
+  run grep -c '^[^#]*"\$?"' "$RM"
+  [ "$output" = "0" ]
+}
+
 @test "RM-symroot: a symlinked module root lists its artifacts like find -H, same report as the directory (issue #329)" {
   # Mutation: RM-symroot -- dropping -H from the artifact find lists no artifact under a symlinked root.
   assert_symroot_same "$FX/clean" "$RM" --lint-only "$FX/clean"
