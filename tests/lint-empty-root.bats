@@ -39,7 +39,7 @@ shared_layer_lints() {
       bad+=" $b(rc=$status)"
     fi
   done
-  [ "$n" -ge 25 ]
+  [ "$n" -ge 24 ]  # one fewer per lint ported to Go (lint-session-store-lazy-evict, 2026-10-23)
   [ -z "$bad" ] || { printf 'silent on an empty root:%s\n' "$bad"; return 1; }
 }
 
