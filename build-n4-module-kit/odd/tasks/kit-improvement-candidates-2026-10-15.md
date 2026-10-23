@@ -884,16 +884,25 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
 - **Evidence:** `Fips/DevelopersNotes-51FBF6BE.txt:29-41`, `StationSecurity/role_*`, corpus B1326.
 - **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ1, Δ2, Δ4): `types/security.md` § 9.1 FIPS, § 2.6 least privilege, § 10.1
+  TLS stores. Δ1 "RC4/DES" dropped (not in the guide). Lints owed G80 `jca-named-provider`, G81 `embedded-keystore`
+  (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`). Same unit: § 3.1 CSRF example corrected to the shipped
+  `httpMethod` values (no DELETE in any 4.15.6.20 `web.xml`).
 
 ### C66 — Equipment tagging for our logic points
 - **Sources:** sta#Δ6 (primary)
 - **Evidence:** `BContainmentRelation.java:65`, corpus B1329 rows 2-3.
 - **Target:** `types/logic.md` tag recipe. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ6): `types/logic.md` § Our-modules tag recipe, code-verified
+  (`BContainmentRelation.java:48-49`). No lint (partial, doc-only fold type).
 
 ### C67 — Analytics framework facts
 - **Sources:** sta#Δ9 (primary)
 - **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:9,23`, `ordSchemes.txt:15,25`, corpus B1338.
 - **Target:** `types/logic-authoring.md:31,101`. **Lint-able:** yes — grep `analytic:`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ9): `types/logic-authoring.md` analytics bullet + § ORD scheme typology
+  (no `analytic:` id, analytics-rt 4.15.6.20 `module.xml:106`). "Data definition per tag" not folded. Lint owed G82
+  `analytic-ord-scheme`.
 
 ### C68 — BACnet/Modbus field rules
 - **Sources:** drp#Δ5 (primary, BACnet export) · drp#Δ6 extends (MS/TP, Modbus byte order)
@@ -975,9 +984,13 @@ cursor recipe stays owed (WU-P0-6).
 - **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
 - **Evidence:** `EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8.
 - **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ10, r3-report R5): `types/logic-authoring.md` § Programmatic slot-name
+  rules, design note [INFER] with the R2-oBIX-only scope.
 
 ### C78 — ExportTags makes a copy, not a proxy
 - **Sources:** sta#Δ8 (primary). **Target:** `types/distribution.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ8): landed in `types/logic.md` § Ship a tag dictionary; `types/distribution.md`
+  was outside the unit's edit surface (a one-line pointer there stays optional).
 
 ### C79 — Coexisting with the Tridium DashboardService
 - **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
@@ -1104,16 +1117,16 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | folded (U8, `types/security.md` § 9.1); lint owed G80 |
+| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | folded (U8, `types/security.md` § 2.6) |
 | `devguide415-r2-security-tags-analytics#Δ3` | types/security.md §3, types/dashboard.md | 4.15 absolute logoff ends HMI sessions | C31 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | folded (U8, `types/security.md` § 10.1); lint owed G81 |
 | `devguide415-r2-security-tags-analytics#Δ5` | types/logic.md, types/cloud-connector.md:206-217 | Tag dictionary licence (2 dictionaries) | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | folded (U8, `types/logic.md` § Our-modules tag recipe) |
 | `devguide415-r2-security-tags-analytics#Δ7` | types/logic.md, types/logic-authoring.md:181 | Tag rules and hierarchies | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353) |
+| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | folded (U8, `types/logic.md` § Ship a tag dictionary) |
+| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | folded (U8, `types/logic-authoring.md` analytics + § ORD scheme typology); lint owed G82 |
+| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353); folded (U8, `types/logic-authoring.md` § Programmatic slot-name rules) |
 | `devguide415-r2-shipped-libraries#Δ1` | types/third-party-libraries.md, types/module-wiring.md | bin/ext first; nre("g:a") | C42 | P1 | accepted |
 | `devguide415-r2-shipped-libraries#Δ2` | types/cloud-connector.md:61-63, types/third-party-libraries.md:167,174 | okhttp ships in bin/ext, not net-rt | C27 | P0 | accepted |
 | `devguide415-r2-shipped-libraries#Δ3` | types/third-party-libraries.md | bin/ext version drift | C42 | P1 | accepted |
