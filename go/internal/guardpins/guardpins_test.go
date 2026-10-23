@@ -18,7 +18,8 @@ func TestDeclarations(t *testing.T) {
 			"#  Mutation: C -- indented\n# Mutation: D --\n# Mutation: E - single\n# Mutation: 9F -- digit start\n" +
 			"# Mutation: G_h-1 -- ok\n# Mutation: A -- repeat\n# Mutation: H — em dash\n",
 			[]Decl{{3, "A"}, {4, "B"}, {9, "G_h-1"}, {10, "A"}}},
-		{"line 60 is read, line 61 is not", "#!/bin/sh\n" + strings.Repeat("# f\n", 58) + "# Mutation: ON60 -- x\n# Mutation: L61 -- y\n", []Decl{{60, "ON60"}}},
+		{"the whole leading comment block is read, past line 60", "#!/bin/sh\n" + strings.Repeat("# f\n", 58) + "# Mutation: ON60 -- x\n\n# Mutation: L62 -- y\n", []Decl{{60, "ON60"}, {62, "L62"}}},
+		{"the first code line ends the header", "#!/bin/sh\n# Mutation: A -- x\nset -u\n# Mutation: B -- after code\n", []Decl{{2, "A"}}},
 		{"CRLF line", "#!/bin/sh\r\n# Mutation: A -- crlf\r\n", []Decl{{2, "A"}}},
 		{"an unterminated last line is read", "#!/bin/sh\n# Mutation: A -- no newline", []Decl{{2, "A"}}},
 		{"empty file", "", nil},

@@ -7,6 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 from mcp_n4 import safety  # noqa: E402
 
 
@@ -18,6 +19,7 @@ class Clock:
         return self.now
 
 
+@go_server.go_twin("token", "injection")
 class TestConfirmationTokens(unittest.TestCase):
     def setUp(self):
         self.clock = Clock()
@@ -107,6 +109,7 @@ class TestConfirmationTokens(unittest.TestCase):
         self.assertEqual(len(self.tokens._pending), 1)
 
 
+@go_server.go_twin("ord", "unit")
 class TestWriteScope(unittest.TestCase):
     def test_no_prefix_refuses_everything(self):
         with self.assertRaisesRegex(safety.SafetyError, "no --write-scope"):
@@ -182,6 +185,7 @@ class StateFileCase(unittest.TestCase):
             return [json.loads(line) for line in fh]
 
 
+@go_server.go_twin("journal", "unit")
 class TestJournal(StateFileCase):
     def test_append_writes_one_json_line_per_entry(self):
         journal = safety.Journal(self.state_dir)
@@ -243,6 +247,7 @@ class TestJournal(StateFileCase):
                          [("r1", "completed"), ("r2", "in-doubt")])
 
 
+@go_server.go_twin("journal", "unit")
 class TestJournalMergeRules(StateFileCase):
     def view(self, *entries):
         journal = safety.Journal(self.state_dir)
@@ -267,6 +272,7 @@ class TestJournalMergeRules(StateFileCase):
         self.assertEqual((view["relink_ops"], view["component_ops"]), ([1], [2]))
 
 
+@go_server.go_twin("journal", "unit")
 class TestExistingStateFiles(StateFileCase):
     def seed(self, mode):
         os.makedirs(self.state_dir, mode=0o700)
@@ -300,6 +306,7 @@ class TestExistingStateFiles(StateFileCase):
         safety.check_state_dir(self.state_dir)
 
 
+@go_server.go_twin("audit", "unit")
 class TestStateDirCheck(StateFileCase):
     def test_missing_dir_is_fine(self):
         safety.check_state_dir(self.state_dir)
@@ -338,6 +345,7 @@ class TestStateDirCheck(StateFileCase):
         self.assertFalse(os.path.exists(self.state_dir))
 
 
+@go_server.go_twin("audit", "unit")
 class TestAuditLog(StateFileCase):
     def test_append_and_modes(self):
         audit = safety.AuditLog(self.state_dir)

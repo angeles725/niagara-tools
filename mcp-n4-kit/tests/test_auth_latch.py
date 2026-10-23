@@ -15,6 +15,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 import test_server  # noqa: E402
 from mcp_n4 import box, server  # noqa: E402
 
@@ -46,6 +47,7 @@ class LatchCase(test_server.ToolTestCase):
 
 
 class TestConnectLatch(LatchCase):
+    @go_server.go_twin("session", "injection")
     def test_a_rejected_login_pauses_the_next_connect_with_the_same_credentials(self):
         self.wrong_password()
         self.err("n4_connect", station="FakeStation")
@@ -57,6 +59,7 @@ class TestConnectLatch(LatchCase):
         self.assertIn("30 s", text)
         self.assertNotIn("wrong-pw-1234", text)
 
+    @go_server.go_twin("session", "injection")
     def test_after_the_cooldown_one_more_attempt_is_allowed(self):
         self.wrong_password()
         self.err("n4_connect", station="FakeStation")
@@ -67,6 +70,7 @@ class TestConnectLatch(LatchCase):
         self.assertEqual(self.connect()["station_name"], "FakeStation")
         self.assertNotIn("auth_paused", self.ok("n4_describe_session"))
 
+    @go_server.go_twin("session", "injection")
     def test_other_credentials_may_reconnect_during_the_cooldown(self):
         self.wrong_password()
         self.err("n4_connect", station="FakeStation")
@@ -74,6 +78,7 @@ class TestConnectLatch(LatchCase):
         self.assertEqual(self.connect()["station_name"], "FakeStation")
         self.ok("n4_navigate", ord="station:|slot:/")  # a good login clears the latch
 
+    @go_server.go_twin("cli", "injection")
     def test_the_cooldown_is_configurable_but_never_below_30_seconds(self):
         self.srv = server.Server(allow_http=True, env=self.env, stations=self.stations,
                                  auth_cooldown=120)
@@ -105,6 +110,7 @@ class HooklessClient(box.BoxClient):
         raise AttributeError("this client has no auth hook")
 
 
+@go_server.go_twin("session", "injection")
 class TestHooklessClientLatch(LatchCase):
     """H2 review R4/R2/R3 fallback-latch: the `Server._call` fallback must record every
     failure, also while an earlier latch (for other credentials) is held."""
@@ -127,6 +133,7 @@ class TestHooklessClientLatch(LatchCase):
         self.assertEqual(self.requests(), before)
 
 
+@go_server.go_twin("session", "injection")
 class TestSessionLatch(LatchCase):
     def setUp(self):
         super().setUp()
@@ -162,6 +169,7 @@ class TestSessionLatch(LatchCase):
         self.ok("n4_navigate", ord="station:|slot:/")
 
 
+@go_server.go_twin("session", "injection")
 class TestAboutLatch(LatchCase):
     def test_an_about_rejection_during_connect_pauses_later_station_calls(self):
         def about_401(client, *a, **kw):
@@ -175,6 +183,7 @@ class TestAboutLatch(LatchCase):
         self.assertIn("authentication failure", self.err("n4_navigate"))
 
 
+@go_server.go_twin("session", "injection")
 class TestWriteLatch(LatchCase):
     def setUp(self):
         super().setUp()

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
@@ -177,8 +178,8 @@ func TestBlankStr(t *testing.T) {
 		`c = '\''; d = "x\"y";`:          `c = ''; d = "";`,
 		`no literals`:                    `no literals`,
 	} {
-		if got := blankStr(in); got != want {
-			t.Errorf("blankStr(%q) = %q, want %q", in, got, want)
+		if got := javasrc.BlankLine(in); got != want {
+			t.Errorf("javasrc.BlankLine(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

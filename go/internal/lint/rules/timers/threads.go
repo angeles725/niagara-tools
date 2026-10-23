@@ -10,6 +10,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // threadPass is jdk-thread (FAIL / WARN) and job-cancel (WARN). Per file: the job-cancel row, then for a
@@ -151,7 +152,7 @@ func (r *run) permsGrant(path string) (grant, error) {
 			}
 			data, err := os.ReadFile(p)
 			if err != nil {
-				return grant{}, fmt.Errorf("cannot read %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror(err))
+				return grant{}, fmt.Errorf("cannot read %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err))
 			}
 			if r.managesExecution(data) {
 				g.answer = "yes"
@@ -197,13 +198,4 @@ func splitTwo(s string) (string, string) {
 		return s, ""
 	}
 	return s[:i], strings.Trim(s[i:], " \t\n")
-}
-
-// strerror is the C library text of err (Go's errno text with a capital first letter), as awk prints it.
-func strerror(err error) string {
-	if pe, ok := err.(*os.PathError); ok {
-		err = pe.Err
-	}
-	s := err.Error()
-	return strings.ToUpper(s[:1]) + s[1:]
 }

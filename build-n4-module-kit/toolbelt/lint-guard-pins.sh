@@ -2,7 +2,7 @@
 # lint-guard-pins.sh — Guard-pin meta-check for the kit's own lint scripts (C11 T4, B833).
 # Scope: toolbelt/lint-*.sh only (D4b — non-lint toolbelt scripts are out of T4's scan).
 #
-# Every lint-*.sh must declare at least one header line (lines 1-60):
+# Every lint-*.sh must declare at least one header line (its leading comment block):
 #   # Mutation: <fixture-id> -- <what it flips>
 # Each declared id must resolve to an @test "<id>:" or "@test "<id> " entry in tests/*.bats.
 # A lint with no declaration is a latent unpinned guard — the defect C11 kept catching by hand
