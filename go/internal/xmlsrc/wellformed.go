@@ -19,6 +19,27 @@ var xmlDecl = regexp.MustCompile(`^<\?xml\s+version\s*=\s*("1\.[0-9]+"|'1\.[0-9]
 	`(\s+encoding\s*=\s*("[A-Za-z][A-Za-z0-9._-]*"|'[A-Za-z][A-Za-z0-9._-]*'))?` +
 	`(\s+standalone\s*=\s*("(yes|no)"|'(yes|no)'))?\s*\?>$`)
 
+// doctypeDecl is a DOCTYPE with an optional external ID and no internal subset, the only form in
+// Niagara's own files (JavaHelp toc.xml, Jetty jetty-web.xml). The DTD is never read.
+var doctypeDecl = regexp.MustCompile(`^<!DOCTYPE\s+[A-Za-z_:][-A-Za-z0-9._:]*` +
+	`(\s+(SYSTEM|PUBLIC\s+("[^"]*"|'[^']*'))\s+("[^"]*"|'[^']*'))?\s*>$`)
+
+// directive checks one <!...> declaration whose raw bytes start at off; late is true after the
+// root element or an earlier DOCTYPE. An internal subset is refused: its entities need a DTD reader.
+func (p *parser) directive(d xml.Directive, raw []byte, off int64, late bool) error {
+	switch {
+	case firstWord(d) != "DOCTYPE":
+		return p.fail(off, "<!%s ...> is not supported", firstWord(d))
+	case late:
+		return p.fail(off, "DOCTYPE after the root element or a DOCTYPE")
+	case doctypeDecl.Match(raw):
+		return nil
+	case bytes.IndexByte(raw, '[') >= 0:
+		return p.fail(off, "a DOCTYPE internal subset is not supported")
+	}
+	return p.fail(off, "DOCTYPE not well-formed")
+}
+
 func isWhite(b byte) bool { return b == ' ' || b == '\t' || b == '\r' || b == '\n' }
 
 // procInst checks one <?target ...?> whose raw bytes start at off.

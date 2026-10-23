@@ -10,14 +10,14 @@ import (
 // run tokenizes data once with encoding/xml in strict mode (entities, character references,
 // character ranges and UTF-8 are its checks) and adds the document-level checks RawToken leaves out:
 // matching end tags, one root, no text outside it, unique attributes and the XML declaration first.
-// A DOCTYPE is refused: Niagara never writes one, and its entities would need a DTD reader.
+// A DOCTYPE is read only as an external ID (wellformed.go: directive).
 func (p *parser) run(data []byte) ([]Element, error) {
 	dec := xml.NewDecoder(bytes.NewReader(data))
 	dec.Strict = true
 	dec.CharsetReader = sameReader
 	var elems []Element
 	var stack []int
-	rooted := false
+	rooted, doctype := false, false
 	begin := int64(0) // where an XML declaration may start: after a UTF-8 BOM
 	if bytes.HasPrefix(data, bom) {
 		begin = int64(len(bom))
@@ -90,7 +90,10 @@ func (p *parser) run(data []byte) ([]Element, error) {
 				return nil, p.fail(off, "invalid character in comment")
 			}
 		case xml.Directive:
-			return nil, p.fail(off, "<!%s ...> is not supported", firstWord(t))
+			if err := p.directive(t, data[off:dec.InputOffset()], off, rooted || doctype); err != nil {
+				return nil, err
+			}
+			doctype = true
 		}
 	}
 	end := int64(len(data))

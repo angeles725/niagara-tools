@@ -21,7 +21,12 @@ func TestParseMalformed(t *testing.T) {
 		{"CDATA before root", "<![CDATA[x]]><r/>", "m.xml:1:1: text outside the root element"},
 		{"duplicate attribute", "<r a='1' a='2'/>", "m.xml:1:1: duplicate attribute a"},
 		{"misplaced XML declaration", "<r/>\n<?xml version='1.0'?>", "m.xml:2:1: XML declaration not at the start of the document"},
-		{"DOCTYPE", "<!DOCTYPE r>\n<r/>", "m.xml:1:1: <!DOCTYPE ...> is not supported"},
+		{"DOCTYPE internal subset", "<!DOCTYPE r [<!ENTITY e 'x'>]>\n<r/>", "m.xml:1:1: a DOCTYPE internal subset is not supported"},
+		{"DOCTYPE after the root", "<r/>\n<!DOCTYPE r>", "m.xml:2:1: DOCTYPE after the root element or a DOCTYPE"},
+		{"two DOCTYPEs", "<!DOCTYPE r>\n<!DOCTYPE r>\n<r/>", "m.xml:2:1: DOCTYPE after the root element or a DOCTYPE"},
+		{"DOCTYPE without a name", "<!DOCTYPE>\n<r/>", "m.xml:1:1: DOCTYPE not well-formed"},
+		{"DOCTYPE with a bare SYSTEM", "<!DOCTYPE r SYSTEM>\n<r/>", "m.xml:1:1: DOCTYPE not well-formed"},
+		{"other declaration", "<!ELEMENT r ANY>\n<r/>", "m.xml:1:1: <!ELEMENT ...> is not supported"},
 		{"end without start", "<r/></x>", "m.xml:1:5: end tag </x> without a start tag"},
 		{"bad entity", "<r>\n a &foo; b</r>", "m.xml:2:9: invalid character entity &foo;"},
 		{"bad entity in attribute", "<r a='&foo;'/>", "m.xml:1:12: invalid character entity &foo;"},
@@ -53,6 +58,18 @@ func TestParseWellFormed(t *testing.T) {
 	}
 	if d.Path != "ok.xml" || len(d.Elements()) != 2 {
 		t.Fatalf("Doc = %q with %d elements, want ok.xml with 2", d.Path, len(d.Elements()))
+	}
+}
+
+func TestDoctypeExternalID(t *testing.T) {
+	for _, text := range []string{
+		"<!DOCTYPE r>\n<r/>",
+		"<?xml version='1.0' standalone='no'?>\n<!DOCTYPE toc\n  PUBLIC \"-//Sun//DTD TOC//EN\" \"http://x/toc.dtd\">\n<toc/>",
+		"<!DOCTYPE Configure SYSTEM 'configure.dtd' ><Configure/>",
+	} {
+		if _, err := Parse("d.xml", []byte(text)); err != nil {
+			t.Errorf("%q: %v", text, err)
+		}
 	}
 }
 

@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 )
 
 // The verdict to share with niagara-go (internal/bog CheckWellFormed, which matches pyexpat): only
 // "malformed or not"; the messages differ by design. Deliberate differences, all fail-closed and
-// none ever written by Niagara: any DOCTYPE (expat reads an internal DTD), a declared encoding
-// other than UTF-8, ISO-8859-1 and US-ASCII, and an XML version other than 1.0.
+// none in Niagara's files: a DOCTYPE internal subset (expat reads it), an undefined entity under
+// an external DTD (expat skips it), a declared encoding other than UTF-8, ISO-8859-1 and US-ASCII,
+// and an XML version other than 1.0.
 var parityProbes = []struct {
 	class     string
 	text      string
@@ -48,12 +50,19 @@ var parityProbes = []struct {
 	{"legal references", "<?xml version='1.0' encoding='UTF-8'?><r a='&#x9;&#65;&lt;&apos;'>&#x10FFFF;&amp;&gt;&quot;</r>", false},
 }
 
-// deliberate matches the xmlsrc errors of the deliberate differences.
-var deliberate = regexp.MustCompile(`<!DOCTYPE \.\.\.> is not supported$|is not supported \(UTF-8|unsupported version`)
+// deliberateErr matches the xmlsrc errors of the deliberate differences; an undefined entity is
+// one only under a DOCTYPE (expat then skips it, waiting for the external DTD it never reads).
+var deliberateErr = regexp.MustCompile(`DOCTYPE internal subset is not supported$|is not supported \(UTF-8|unsupported version`)
+
+func deliberate(text string, err error) bool {
+	return deliberateErr.MatchString(err.Error()) ||
+		strings.Contains(text, "<!DOCTYPE") && strings.Contains(err.Error(), "invalid character entity")
+}
 
 func TestDeliberateDifferences(t *testing.T) {
-	for _, text := range []string{"<!DOCTYPE b []><b/>", "<?xml version='1.0' encoding='UTF-16'?><b/>", "<?xml version='1.1'?><b/>"} {
-		if _, err := Parse("d.xml", []byte(text)); err == nil || !deliberate.MatchString(err.Error()) {
+	for _, text := range []string{"<!DOCTYPE b []><b/>", "<!DOCTYPE b SYSTEM 'b.dtd'><b>&e;</b>",
+		"<?xml version='1.0' encoding='UTF-16'?><b/>", "<?xml version='1.1'?><b/>"} {
+		if _, err := Parse("d.xml", []byte(text)); err == nil || !deliberate(text, err) {
 			t.Errorf("%q: err = %v, want a deliberate refusal", text, err)
 		}
 	}
@@ -102,7 +111,7 @@ func TestParityExpatSuite(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err := Parse("s.xml", []byte(text))
-		if err != nil && *c.Expat == "" && deliberate.MatchString(err.Error()) {
+		if err != nil && *c.Expat == "" && deliberate(text, err) {
 			skipped++
 			continue
 		}
