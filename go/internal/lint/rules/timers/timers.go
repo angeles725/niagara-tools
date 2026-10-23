@@ -1,5 +1,6 @@
 // Package timers is lint-timers: the timer-lifecycle checks of Niagara N4 module Java, ported
-// byte for byte from the bash/awk toolbelt/lint-timers.sh. Its report is ordered by check, each check
+// from the bash/awk toolbelt/lint-timers.sh (the declared differences are listed in its header: every
+// check reads code and every row carries its line). Its report is ordered by check, each check
 // over every file in walk order, so it is a lint.TreeRule. The check families live one per file:
 // ticket.go (discarded-ticket, timer-ticket), companion.go (companion-flag), threads.go (jdk-thread,
 // job-cancel), sched.go (changed-sched, atSteadyState-only-timer) and lifecycle.go (orphan-flag,
@@ -59,9 +60,10 @@ type run struct {
 	perms map[string]grant // nearest module-permissions.xml lookup, by directory
 }
 
-// row appends a file-level row "<SEV>  <check>  <path>: <msg>".
-func (r *run) row(sev lint.Severity, check string, f *source, msg string) {
-	r.out = append(r.out, lint.Finding{Severity: sev, Check: check, Path: f.Path, Msg: msg})
+// row appends the row "<SEV>  <check>  <path>:<line>  <msg>"; line is the 1-based line the check is
+// about (a row with line 0 would print the file-level "<path>: <msg>", which no check uses).
+func (r *run) row(sev lint.Severity, check string, f *source, line int, msg string) {
+	r.out = append(r.out, lint.Finding{Severity: sev, Check: check, Path: f.Path, Line: line, Msg: msg})
 }
 
 // source is one file plus the views the awk programs derived from it, each computed once.
@@ -71,13 +73,14 @@ type source struct {
 	methods []javasrc.Method
 }
 
-// blanked is code[] of ticket.awk and threads.awk: comments stripped, literal contents blanked.
+// blanked is the code every check reads: comments stripped, literal contents blanked (the shared
+// javasrc helpers), so a call or a brace in a comment or a string is never code.
 func (s *source) blanked() ([]string, []javasrc.Method) {
 	if s.code == nil {
 		st := s.Stripped()
 		s.code = make([]string, len(st))
 		for i, ln := range st {
-			s.code[i] = blankStr(ln)
+			s.code[i] = javasrc.BlankLine(ln)
 		}
 		s.methods = javasrc.Methods(s.code)
 	}
@@ -97,6 +100,16 @@ func joinLines(lines []string, a, b int, before, after string) string {
 		buf = append(buf, after...)
 	}
 	return string(buf)
+}
+
+// methodLine is the line of the opening brace of the first method named name, or 0 when there is none.
+func methodLine(ms []javasrc.Method, name string) int {
+	for _, m := range ms {
+		if m.Name == name {
+			return m.Start
+		}
+	}
+	return 0
 }
 
 // inMethod marks the lines inside any method body (inm[] of the awk programs).

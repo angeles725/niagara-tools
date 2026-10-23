@@ -137,6 +137,11 @@ func TestIssue282(t *testing.T) {
 		"annotation-array": {
 			"class BG extends BNDevice {\n  @Ann(v = {f(\"}\"), g(1)},\n      w = @Inner(h(2)))\n  @Other\n  public void doPing() { pingOk(); }\n}\n",
 			"exit 1\n" + fail + "A.java:5  " + pingOnly + "\n"},
+		// A "..." left open at its line end ends there, so the stub after it is still found, but the
+		// file's boundaries are not trusted: the stub's FAIL plus one WARN naming the literal.
+		"unterminated-literal": {
+			"class BH extends BNDevice {\n  String s = \"abc { ;\n  public void doPing() { pingOk(); }\n}\n",
+			"exit 1\n" + fail + "A.java:3  " + pingOnly + "\nWARN  lint-driver-scaffold  @DIR@/A.java:4  method boundaries not trusted (an unterminated string or char literal): a stub in this file may be missed\n"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := writeTree(t, map[string]string{"A.java": tc.src})
@@ -151,7 +156,7 @@ func TestIssue282(t *testing.T) {
 // TestArgs: the argument contract of lint-driver-scaffold.sh (awk_lint_parse raw: no flag is parsed,
 // only the first root counts, usage exits 3), recorded from the bash lint.
 func TestArgs(t *testing.T) {
-	dir := writeTree(t, map[string]string{"x.txt": ""})
+	dir := writeTree(t, map[string]string{"x.txt": "", "A.java": "class A {}\n"})
 	file := filepath.Join(dir, "x.txt")
 	missing := filepath.Join(dir, "missing")
 	for _, tc := range []struct {

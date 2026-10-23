@@ -10,6 +10,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 import fake_station  # noqa: E402
 import test_tools_write as ttw  # noqa: E402  (module import: its tests are not re-collected)
 from mcp_n4 import box, safety, server, tools_write  # noqa: E402
@@ -74,6 +75,7 @@ class TestRemoveComponent(DestructiveCase):
         self.assertEqual(len([e for e in plan["plan"]["inverse"] if "relink" in e]), 1)
         self.assertTrue(any("outside" in n and "not restored" in n for n in plan["plan"]["notes"]))
 
+    @go_server.go_twin("writeops", "internals")
     def test_execute_removes_verifies_and_journals_the_snapshot_as_the_inverse(self):
         nn, gh = self.group()
         out = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -94,6 +96,7 @@ class TestRemoveComponent(DestructiveCase):
         self.assertIn("outside the write scope", self.err(
             "n4_remove_component", parent_ord="station:|slot:/", name="Folder"))
 
+    @go_server.go_twin("writeops", "injection")
     def test_read_back_reports_a_child_that_is_still_there(self):
         self.add("Keep")
         plan = self.dry("n4_remove_component", parent_ord=FOLDER, name="Keep")
@@ -197,6 +200,7 @@ class TestRollback(DestructiveCase):
     def rollback(self, batch_id):
         return self.run_write("n4_rollback", batch_id=batch_id)
 
+    @go_server.go_twin("writeops", "internals")
     def test_rollback_of_a_create_removes_the_component_as_a_linked_batch(self):
         out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
                              type="kitControl:NumericConst")
@@ -224,6 +228,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified")
         self.assertEqual(self.fake.by_handle[h].child("out").child("value").value, "1.0")
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_slot_changed_after_the_batch_is_not_overwritten_by_its_rollback(self):
         # F6 (audit 2026-10-03): compare before restore.
         nn, h = self.add("Calc", out=1.0)
@@ -285,6 +290,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified")
         self.assertEqual(self.fake.by_handle[h].child("fallback").child("value").value, "0.0")
 
+    @go_server.go_twin("writeops", "internals")
     def test_rollback_of_a_remove_recreates_type_slots_annotation_and_links(self):
         nn, gh = self.group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -302,6 +308,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(view["inverse"], [{"nm": "v", "h": tgt_h, "n": "Link"},
                                            {"nm": "v", "h": "3", "n": nn}])
 
+    @go_server.go_twin("writeops", "injection")
     def test_the_snapshot_keeps_configuration_and_drops_runtime_output_slots(self):
         nn, gh = self.group()
         src_h = self.box.load_tree(FOLDER + "/%s/Src" % nn, depth=1, **NO_SLEEP)[""]["h"]
@@ -353,6 +360,7 @@ class TestRollback(DestructiveCase):
                 self.box.sync({"nm": "a", "h": "3", "n": "Bad", "b": body})
             self.assertIn("Unable to process request", str(caught.exception))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_linked_group_rolls_back_without_null_types_or_link_driven_inputs(self):
         nn = self.linked_group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -375,6 +383,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(self.fake.folder.child(nn).child("Tgt").child("Link")
                          .child("targetSlotName").value, "in10")
 
+    @go_server.go_twin("writeops", "unit")
     def test_snapshot_omits_t_for_typeless_nodes_and_recognizes_status_by_name(self):
         node = {"t": "baja:StatusNumeric", "h": "9", "s": [
             {"n": "value", "v": "1.0"}, {"n": "status", "v": "40;activeLevel=e:17"}]}
@@ -395,6 +404,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified", back)
         self.assertIsNotNone(self.fake.root.child(top).child("Src"))
 
+    @go_server.go_twin("writeops", "injection")
     def test_relinks_are_skipped_when_an_end_is_missing(self):
         nn, gh = self.group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -416,6 +426,7 @@ class TestRollback(DestructiveCase):
         nn, gh = self.group()
         return nn, self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
 
+    @go_server.go_twin("writeops", "internals")
     def test_relinks_are_journaled_with_intent_before_the_send_and_a_result(self):
         nn, removed = self.removed_group()
         back = self.rollback(removed["batch_id"])
@@ -432,6 +443,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(view["relink_ops"], relink_intent["ops"])
         self.assertEqual(view["relinks"], {"restored": 1, "skipped": 0})
 
+    @go_server.go_twin("writeops", "injection")
     def test_the_relink_intent_is_on_disk_before_the_relink_is_sent(self):
         nn, removed = self.removed_group()
         seen = []
@@ -444,6 +456,7 @@ class TestRollback(DestructiveCase):
         self.rollback(removed["batch_id"])
         self.assertIn("relink-intent", seen[-1])
 
+    @go_server.go_twin("writeops", "internals")
     def test_relinks_consume_the_write_budget(self):
         nn, removed = self.removed_group()
         before = self.srv.ctx.write.writes_executed
@@ -460,6 +473,7 @@ class TestRollback(DestructiveCase):
         self.assertIn("relink", text)
         self.assertNotIn(nn, self.children())  # nothing was re-created
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_relink_end_outside_the_write_scope_is_refused_and_nothing_is_sent(self):
         nn, removed = self.removed_group()
         real = self.srv.ctx.write.scope
@@ -484,6 +498,7 @@ class TestRollback(DestructiveCase):
             "source_path": "Src", "source_slot": "out", "target_path": "Tgt",
             "target_slot": "in10"}])
 
+    @go_server.go_twin("writeops", "internals")
     def test_the_rollback_journals_an_inverse_that_removes_the_links_it_created(self):
         nn, removed = self.removed_group()
         back = self.rollback(removed["batch_id"])
@@ -491,6 +506,7 @@ class TestRollback(DestructiveCase):
             self.box.sync(op)  # what undoing the rollback means, link first
         self.assertNotIn(nn, self.children())
 
+    @go_server.go_twin("writeops", "injection")
     def test_an_ambiguous_relink_reply_marks_the_batch_in_doubt(self):
         nn, removed = self.removed_group()
         self.patch(self.fake, "_check_link", lambda arg: [{"r": "huh"}])  # no verdict, no link name
@@ -521,6 +537,7 @@ class TestRollback(DestructiveCase):
             self.box.load_tree("station:|slot://Folder", depth=1, **NO_SLEEP)
         self.assertIn("Illegal double slashes", str(caught.exception))
 
+    @go_server.go_twin("writeops", "injection")
     def test_rollback_adds_one_component_per_op_parents_first_with_the_new_handle(self):
         nn, gh = self.group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -552,6 +569,7 @@ class TestRollback(DestructiveCase):
         self.assertIn('Illegal child "control:NullProxyExt" for parent '
                       '"control:NumericWritable".', str(caught.exception))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_group_with_writables_rolls_back_without_re_adding_frozen_children(self):
         nn, gh = self.writable_group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -569,6 +587,7 @@ class TestRollback(DestructiveCase):
                          [("proxyExt", "control:NullProxyExt")] * 2)
         self.assertEqual(sorted(f["path"].rsplit("/", 2)[-2] for f in frozen), ["En", "Sp"])
 
+    @go_server.go_twin("writeops", "injection")
     def test_descendants_of_a_skipped_frozen_child_are_skipped_too(self):
         nn, gh = self.writable_group()
         sp = self.fake.folder.child(nn).child("Sp")
@@ -598,6 +617,7 @@ class TestRollback(DestructiveCase):
                        "b": {"nm": "p", "t": "baja:String", "v": value}})
         return ext
 
+    @go_server.go_twin("writeops", "internals")
     def test_frozen_child_config_not_restored_downgrades_the_verdict_to_partial(self):
         nn, gh = self.writable_group()
         self.configure_proxy_ext(nn)
@@ -623,6 +643,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual((lost["type"], lost["live_type"]),
                          ("bacnet:BacnetNumericProxyExt", "control:NullProxyExt"))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_frozen_child_whose_config_matches_keeps_the_verdict_verified(self):
         """The fresh frozen child already holds the captured config: nothing was lost."""
         nn, gh = self.writable_group()
@@ -642,6 +663,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(back["verdict"], "verified", back)
         self.assertNotIn("frozen_config_not_restored", back)
 
+    @go_server.go_twin("writeops", "unit")
     def test_the_frozen_check_treats_an_omitted_default_as_equal(self):
         """The station omits slots at their default; a captured `0` status is not a loss."""
         captured = {"nm": "p", "t": "control:NullProxyExt", "s": [
@@ -666,6 +688,7 @@ class TestRollback(DestructiveCase):
         gap = tools_write._frozen_check(Client(live), check)
         self.assertEqual((gap["slots"], gap["missing"]), (["tuningPolicyName"], False))
 
+    @go_server.go_twin("writeops", "unit")
     def test_the_frozen_check_treats_an_omitted_nested_default_slot_as_equal(self):
         """A Status slot the station omits whole (value and status at default) is not a
         loss (v0.28.0 advisory review R4-002); one with a non-default nested value still is."""
@@ -683,6 +706,7 @@ class TestRollback(DestructiveCase):
         gap = tools_write._frozen_check(Client(), check)
         self.assertEqual((gap["slots"], gap["missing"]), (["readValue"], False))
 
+    @go_server.go_twin("writeops", "unit")
     def test_a_frozen_check_read_error_is_reported_distinctly_not_as_missing(self):
         """A station read error is not evidence the frozen child is gone (v0.28.0 advisory review
         R4-001/R2-001/R3-001)."""
@@ -696,6 +720,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(gap["readback_error"], "HTTP 503 from station")
         self.assertEqual(gap["path"], check["path"])
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_frozen_check_read_error_makes_the_rollback_unverified(self):
         nn, gh = self.writable_group()
         self.configure_proxy_ext(nn)
@@ -724,6 +749,7 @@ class TestRollback(DestructiveCase):
                 mock.patch.object(tools_write, "FROZEN_CHECK_DEPTH", 7):
             yield
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_frozen_check_read_error_is_scrubbed_of_the_session_secret(self):
         """The gap's readback_error goes through ctx.scrub (issue #190 R3-001)."""
         nn, gh = self.writable_group()
@@ -740,6 +766,7 @@ class TestRollback(DestructiveCase):
                              "HTTP 401 from station: credentials *** rejected")
         self.assertNotIn(self.PASSWORD, json.dumps(back))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_read_error_beside_a_real_frozen_gap_makes_the_rollback_unverified(self):
         """Precedence: an unread frozen child outranks a real config gap (issue #190 R3-002)."""
         nn, gh = self.writable_group()
@@ -762,6 +789,7 @@ class TestRollback(DestructiveCase):
                          (["tuningPolicyName"], False))
         self.assertEqual(self.journal().read(back["batch_id"])["verdict"], "unverified")
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_skipped_relink_beside_a_read_error_makes_the_rollback_a_mismatch(self):
         """Precedence: a skipped relink (mismatch) outranks an unread frozen child (#190 R3-002)."""
         nn, gh = self.writable_group()
@@ -802,6 +830,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual({c["n"]: c["v"] for c in seen["value"]["s"]},
                          {"value": "4.5", "status": "0"})  # facets dropped, bits kept
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_link_driven_value_that_changes_after_the_dry_run_keeps_the_token_valid(self):
         """The link source keeps propagating between dry run and confirm.
 
@@ -817,6 +846,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual({c["n"]: c["v"] for c in relink["prior"]["s"]},
                          {"value": "7.25", "status": "0"})  # the value seen at execution
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_skipped_relink_reports_the_captured_input_value(self):
         nn = self.linked_group()
         removed = self.run_write("n4_remove_component", parent_ord=FOLDER, name=nn)
@@ -838,6 +868,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual({c["n"]: c["v"] for c in lost["value"]["s"]},
                          {"value": "4.5", "status": "0"})
 
+    @go_server.go_twin("writeops", "internals")
     def test_an_input_linked_from_outside_the_subtree_is_reported_not_lost(self):
         nn = self.linked_group()
         other, other_h = self.add("Other", out=1.0)
@@ -857,6 +888,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual({c["n"]: c["v"] for c in lost["value"]["s"]},
                          {"value": "1.0", "status": "0"})
 
+    @go_server.go_twin("writeops", "injection")
     def test_grandchildren_are_added_after_their_parent_breadth_first(self):
         nn, gh = self.group()
         sub = self.box.add_component(gh, "Sub", "baja:Folder")["nn"]
@@ -888,6 +920,7 @@ class TestRollback(DestructiveCase):
         self.assertIn("2 component(s)", text)
         self.assertNotIn(nn, self.children())
 
+    @go_server.go_twin("writeops", "injection")
     def test_each_component_is_journaled_before_it_is_sent_and_counts_against_the_budget(self):
         nn, removed = self.removed_group()
         seen = []
@@ -906,6 +939,7 @@ class TestRollback(DestructiveCase):
         view = self.journal().read(back["batch_id"])
         self.assertEqual([op["n"] for op in view["component_ops"]], ["Src", "Tgt"])
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_failure_mid_way_is_in_doubt_and_lists_what_was_created(self):
         nn, removed = self.removed_group()
         orig = self.fake._sync
@@ -927,6 +961,7 @@ class TestRollback(DestructiveCase):
         self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
         self.assertIsNone(self.fake.folder.child(nn).child("Tgt"))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_failing_relink_load_is_in_doubt_not_a_crash(self):
         nn, removed = self.removed_group()
         orig = self.box.load_tree
@@ -944,6 +979,7 @@ class TestRollback(DestructiveCase):
                  if e.get("rollback_of") == removed["batch_id"]][0]
         self.assertEqual(self.journal().read(batch)["state"], "in-doubt")
 
+    @go_server.go_twin("writeops", "injection")
     def test_the_nested_read_back_checks_type_and_annotation_not_just_presence(self):
         nn, gh = self.group()
         src_h = self.box.load_tree(FOLDER + "/" + nn, depth=2, **NO_SLEEP)["Src"]["h"]
@@ -986,6 +1022,7 @@ class TestRollback(DestructiveCase):
             return orig_load(*a, **k)
         return self.patch(self.box, "load_tree", flaky).stop  # heal early; cleanup is a no-op
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_rollback_accepted_but_unverified_cannot_be_retried(self):
         self.add("Pump")
         out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
@@ -1001,6 +1038,7 @@ class TestRollback(DestructiveCase):
         self.assertIn("accepted", text)
         self.assertEqual(len(self.lines("journal.jsonl")), 4)  # no retry was journaled
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_failed_rollback_whose_ops_were_not_accepted_may_still_be_retried(self):
         out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
                              type="kitControl:NumericConst")
@@ -1020,6 +1058,7 @@ class TestRollback(DestructiveCase):
         self.assertIn("already rolled back", self.err("n4_rollback", batch_id=out["batch_id"]))
         self.assertIn("is itself a rollback", self.err("n4_rollback", batch_id=back["batch_id"]))
 
+    @go_server.go_twin("writeops", "injection")
     def test_in_doubt_batch_is_refused_and_shows_the_intent(self):
         plan = self.dry("n4_create_component", parent_ord=FOLDER, name="Pump",
                         type="kitControl:NumericConst")
@@ -1038,6 +1077,7 @@ class TestRollback(DestructiveCase):
         out = self.run_write("n4_invoke_action", ord=FOLDER + "/" + nn, action="active")
         self.assertIn("no inverse", self.err("n4_rollback", batch_id=out["batch_id"]))
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_batch_from_another_station_is_refused(self):
         self.journal().append({"batch_id": "ab" * 16, "phase": "intent", "tool": "n4_set_slot",
                                "station_name": "OtherStation", "ops": [], "inverse_plan": [],
@@ -1046,6 +1086,7 @@ class TestRollback(DestructiveCase):
                                "inverse": [{"nm": "v", "h": "3", "n": "x"}], "accepted": None})
         self.assertIn("OtherStation", self.err("n4_rollback", batch_id="ab" * 16))
 
+    @go_server.go_twin("writeops", "internals")
     def test_current_scope_is_enforced_on_every_recorded_target(self):
         out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
                              type="kitControl:NumericConst")
@@ -1062,6 +1103,7 @@ class TestRollback(DestructiveCase):
         text = self.err("n4_rollback", batch_id=out["batch_id"])
         self.assertIn("handle", text)
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_failed_rollback_may_be_retried(self):
         out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
                              type="kitControl:NumericConst")
@@ -1097,6 +1139,7 @@ class TestSaveStation(DestructiveCase):
         self.assertIn("--station-home FakeStation=", out["evidence"]["hint"])
         self.assertEqual(self.fake.saves, 1)
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_changed_config_bog_proves_persistence_with_evidence(self):
         path = self.home(b"bog-before")
         before = hashlib.sha256(b"bog-before").hexdigest()
@@ -1108,6 +1151,7 @@ class TestSaveStation(DestructiveCase):
         self.assertGreater(ev["after"]["mtime"], ev["before"]["mtime"])
         self.assertEqual(ev["path"], path)
 
+    @go_server.go_twin("writeops", "internals")
     def test_an_unchanged_config_bog_is_persisted_false_after_the_poll(self):
         self.home()
         self.fake.save_rewrites = False
@@ -1115,6 +1159,7 @@ class TestSaveStation(DestructiveCase):
         self.assertEqual((out["persisted"], out["verdict"]), (False, "mismatch"))
         self.assertEqual(out["evidence"]["before"], out["evidence"]["after"])
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_missing_config_bog_is_unknown(self):
         path = self.home()
         os.remove(path)
@@ -1122,6 +1167,7 @@ class TestSaveStation(DestructiveCase):
         self.assertEqual(out["persisted"], "unknown")
         self.assertIn("config.bog", out["evidence"]["hint"])
 
+    @go_server.go_twin("writeops", "internals")
     def test_the_reply_to_save_is_never_taken_as_proof(self):
         self.home()
         self.fake.save_rewrites = False
@@ -1137,11 +1183,13 @@ class TestSaveStation(DestructiveCase):
 
 
 class TestStationHomeFlag(unittest.TestCase):
+    @go_server.go_twin("cli", "in-process")
     def test_flag_is_repeatable_and_defaults_empty(self):
         self.assertEqual(server.parse_args([]).station_home, [])
         args = server.parse_args(["--station-home", "A=/x", "--station-home", "B=/y"])
         self.assertEqual(args.station_home, ["A=/x", "B=/y"])
 
+    @go_server.go_twin("cli", "in-process")
     def test_malformed_values_exit_2_with_a_clear_message(self):
         for bad in ("nopath", "=/x", "A="):
             err = io.StringIO()
@@ -1150,6 +1198,7 @@ class TestStationHomeFlag(unittest.TestCase):
             self.assertEqual(code, 2, bad)
             self.assertIn("--station-home expects NAME=PATH", err.getvalue(), bad)
 
+    @go_server.go_twin("cli", "internals")
     def test_server_passes_the_homes_to_the_write_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             srv = server.Server(allow_writes=True, state_dir=os.path.join(tmp, "s"),
@@ -1182,6 +1231,7 @@ class TestListBatches(DestructiveCase):
                          back["batch_id"])
         self.assertEqual(out["total"], 3)
 
+    @go_server.go_twin("journal", "internals")
     def test_it_is_read_only_and_works_without_a_session(self):
         self.srv.ctx.close()
         self.assertEqual(self.ok("n4_list_batches")["batches"], [])
@@ -1255,6 +1305,7 @@ class TestWriteBranchDebt(DestructiveCase):
         self.journal().append({"batch_id": bid, "phase": "result", "verdict": "verified",
                                "inverse": inverse, "accepted": None})
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_component_intent_that_cannot_be_written_stops_with_an_in_doubt_batch(self):
         nn, removed = self.removed_group()
         self.failing_append("component-intent")
@@ -1267,6 +1318,7 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIsNotNone(grp)  # the top add was sent before the failure
         self.assertEqual([c.name for c in grp.children if c.handle], [])  # no nested add
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_relink_intent_that_cannot_be_written_sends_no_link(self):
         nn, removed = self.removed_group()
         self.failing_append("relink-intent")
@@ -1284,6 +1336,7 @@ class TestWriteBranchDebt(DestructiveCase):
     def intent_ids(self):
         return [e["batch_id"] for e in self.lines("journal.jsonl") if e.get("phase") == "intent"]
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_failed_relink_intent_is_audited_as_an_in_doubt_error_with_its_batch(self):
         # Finding 1: components were re-created before the relink intent failed, so the
         # audit line is an error of that batch, not a "refused" call without a batch_id.
@@ -1314,6 +1367,7 @@ class TestWriteBranchDebt(DestructiveCase):
                 return 500, b"", {}
         self.fake.hook = hook
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_multi_op_batch_that_fails_mid_way_names_the_sent_ops_and_their_inverse(self):
         # Finding 2: op 2 of 2 fails; op 1 was sent and accepted. The error says so, gives
         # the partial replies and inverse, and the journal records an in-doubt result.
@@ -1340,6 +1394,7 @@ class TestWriteBranchDebt(DestructiveCase):
         audit = self.last_audit()
         self.assertEqual((audit["outcome"], audit["batch_id"]), ("error", batch))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_partial_result_that_cannot_be_journaled_is_said_and_stays_in_doubt(self):
         bid = self.craft_two_adds()
         plan = self.dry("n4_rollback", batch_id=bid)
@@ -1351,6 +1406,7 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIn("in-doubt result record could not be journaled", text)
         self.assertEqual(self.journal().read(self.intent_ids()[-1])["state"], "in-doubt")
 
+    @go_server.go_twin("writeops", "injection")
     def test_an_unexpected_failure_after_the_intent_keeps_the_batch_id(self):
         # Finding 3: a non-ToolError after the intent (here the result record cannot be
         # serialized) is the batch's in-doubt error, in the reply and in the audit line.
@@ -1367,6 +1423,7 @@ class TestWriteBranchDebt(DestructiveCase):
         audit = self.last_audit()
         self.assertEqual((audit["outcome"], audit["batch_id"]), ("error", batch))
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_malformed_relink_record_is_refused(self):
         bid = "ef" * 16
         self.craft(bid, [{"nm": "a", "h": "3", "n": "X",
@@ -1376,11 +1433,13 @@ class TestWriteBranchDebt(DestructiveCase):
         self.assertIn("malformed relink", self.err("n4_rollback", batch_id=bid))
         self.assertEqual(self.children(), [])
 
+    @go_server.go_twin("writeops", "internals")
     def test_a_batch_without_recorded_targets_is_refused(self):
         bid = "fe" * 16
         self.craft(bid, [{"nm": "v", "h": "3", "n": "x"}], {})
         self.assertIn("does not record which components", self.err("n4_rollback", batch_id=bid))
 
+    @go_server.go_twin("writeops", "injection")
     def test_a_config_bog_that_becomes_unreadable_after_the_save_is_unverified(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)

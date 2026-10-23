@@ -62,7 +62,7 @@ done
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 # One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
-scan_files_or_exit lint-wb-threading 3 "$_TMP/files" "$SRC" -name '*.java'
+scan_files_nonempty_or_exit lint-wb-threading "$_TMP/files" "$SRC" -name '*.java'
 _ROWS="$_TMP/rows.txt"
 touch "$_ROWS"
 

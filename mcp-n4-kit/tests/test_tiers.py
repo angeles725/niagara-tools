@@ -5,6 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 import test_server  # noqa: E402
 import test_tools_write  # noqa: E402
 from mcp_n4 import box, retro, safety, server, tiers, tools_write  # noqa: E402
@@ -24,6 +25,7 @@ MUTATING = [
 
 
 class TestTierClassification(unittest.TestCase):
+    @go_server.go_twin("tiers", "unit")
     def test_tier_table(self):
         table = {
             "4.13.2.18": "A", "4.14.0.162": "A", "4.14": "A", "4.13.0.0.1": "A",
@@ -35,6 +37,7 @@ class TestTierClassification(unittest.TestCase):
         for version, want in table.items():
             self.assertEqual(tiers.tier_of(version), want, version)
 
+    @go_server.go_twin("tiers", "unit")
     def test_product_version_is_read_from_the_about_document(self):
         xml = ('<obj is="obix:About"><str name="serverName" val="h"/>'
                '<str name="productVersion" val="4.15.3.28"/></obj>')
@@ -44,6 +47,7 @@ class TestTierClassification(unittest.TestCase):
         for text in ("", "<obj/>", '<str name="productName" val="Niagara"/>', None):
             self.assertIsNone(tiers.product_version(text))
 
+    @go_server.go_twin("tiers", "unit")
     def test_write_block_policy(self):
         self.assertIsNone(tiers.write_block("A", "4.14.0.162", "S", {}))
         self.assertIsNone(tiers.write_block("B", "4.15.3.28", "S", {"B": {"S"}}))
@@ -52,6 +56,7 @@ class TestTierClassification(unittest.TestCase):
         self.assertIsNotNone(tiers.write_block("B", "4.15.3.28", "S", {"C": {"S"}}))
         self.assertIsNotNone(tiers.write_block("C", None, "S", {"B": {"S"}}))
 
+    @go_server.go_twin("tiers", "unit")
     def test_refusals_name_the_routes(self):
         b = tiers.write_block("B", "4.15.3.28", "S", {})
         c = tiers.write_block("C", None, "S", {})
@@ -66,6 +71,7 @@ class TestTierClassification(unittest.TestCase):
         for step in ("reg.loadContract", "loadRoot", "scratch"):
             self.assertIn(step, c)
 
+    @go_server.go_twin("tiers", "unit")
     def test_the_retro_classifies_tier_refusals(self):
         needles = [n for r in retro._REFUSALS for n in r[1]]
         self.assertIn(safety.REASON_TIER, needles)
@@ -88,6 +94,7 @@ class TestConnectReportsTier(test_server.ToolTestCase):
     def test_a_detected_version_carries_no_version_error(self):
         self.assertNotIn("version_error", self.connect())
 
+    @go_server.go_twin("tiers", "internals")
     def test_an_about_auth_rejection_is_reported_not_swallowed(self):
         orig = box.BoxClient.about
 
@@ -106,6 +113,7 @@ class TestConnectReportsTier(test_server.ToolTestCase):
         self.fake.product_version = None
         self.assertIn("HTTP 404", self.connect()["version_error"])
 
+    @go_server.go_twin("tiers", "injection")
     def test_a_transport_failure_or_a_client_without_about_is_tier_c(self):
         def broken(client, *a, **kw):
             raise box.BoxError("transport failure: reset", "obix", "about")
@@ -132,11 +140,13 @@ class TestConnectReportsTier(test_server.ToolTestCase):
         self.assertIsNone(desc["tier"])
         self.assertIsNone(desc["version"])
 
+    @go_server.go_twin("tiers", "in-process")
     def test_opt_in_for_an_unconfigured_station_is_a_start_error(self):
         for kw in ({"allow_tier_b": ("ghost",)}, {"allow_tier_c": ("ghost",)}):
             with self.assertRaises(ValueError):
                 server.Server(allow_http=True, stations=self.stations, **kw)
 
+    @go_server.go_twin("cli", "in-process")
     def test_cli_parses_the_opt_in_flags(self):
         args = server.parse_args(["--allow-tier-b", "S1", "--allow-tier-b", "S2",
                                   "--allow-tier-c", "S3"])

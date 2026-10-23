@@ -42,9 +42,12 @@
 #   <module-dir> = the dir holding the profile dirs (e.g. .../Dashboard/DashboardPan); the profile is
 #   derived from each jar's basename (DashboardPan-rt.jar -> DashboardPan-rt/).
 # Report: one row per check per jar: PASS|FAIL|SKIP  <check>  <jar>  <detail>; a summary line closes it.
-# Exit: 0 every executed check passed · 1 at least one check FAILED · 2 usage · 3 environment (tool missing, jar unreadable).
+# Exit: 0 every executed check passed · 1 at least one check FAILED · 2 usage · 3 environment (tool missing, jar unreadable,
+#   or a --src sub-directory the walk could not enter: the rows still print, the verdict is INCOMPLETE).
 # Needs only unzip, od, grep, awk, sort — no JDK.
 set -euo pipefail
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via the script's real path
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/scan-files.sh"
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
 TARGET=""; STORED=0; SRC=""; STRICT=0; JARS=()
@@ -199,6 +202,8 @@ for t in unzip od awk grep sort; do command -v "$t" >/dev/null || { echo "verify
 for j in "${JARS[@]}"; do case "$j" in *.jar) ;; *) echo "verify-module: not a jar: $j" >&2; exit 2 ;; esac; done
 
 FAILED=0; NPASS=0; NFAIL=0; NSKIP=0; NWARN=0
+VM_TMP=$(mktemp -d)
+trap 'rm -rf "$VM_TMP"' EXIT
 row() { printf '%-4s  %-9s  %s  %s\n' "$1" "$2" "$3" "$4"; case "$1" in PASS) NPASS=$((NPASS+1));; FAIL) NFAIL=$((NFAIL+1));; SKIP) NSKIP=$((NSKIP+1));; WARN) NWARN=$((NWARN+1));; esac; }
 # version compare: 0 when $1 <= $2 (dot-separated numeric)
 ver_le() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
@@ -279,9 +284,22 @@ src_dir_or_skip() {
   src_or_skip "$1" "$2" || return 1
   [ -d "$pd/src" ] || { row SKIP "$1" "$2" "no $pd/src"; return 1; }
 }
-# java_files <dir>: every *.java under <dir>, in find order. D9b: dot-dirs (e.g. .deploy-baseline) are
-# pruned so stale snapshots are never scanned. Fail-open like the walk it replaced: find errors are not checked.
-java_files() { find "$1" -type d -name '.*' -prune -o -name '*.java' -print; }
+# java_files <dir>: every *.java under <dir>, C-sorted, through the shared lib/scan-files.sh walk. D9b: dot
+# and *-worktrees dirs (e.g. .deploy-baseline, a sibling checkout) are pruned so stale copies are never
+# scanned. A sub-directory find cannot enter is recorded once per root in $VM_TMP/walk-errors (a file, since
+# callers run this in a process substitution) and named on stderr; the run then exits 3. [ev: issue #226]
+java_files() {
+  local out msg
+  out=$(mktemp "$VM_TMP/walk.XXXXXX")
+  if ! scan_files "$out" "$out.err" "$1" -name '*.java'; then
+    msg="verify-module: cannot list every file under $1: $(head -n 1 "$out.err")"
+    if ! grep -qxF -- "$msg" "$VM_TMP/walk-errors" 2>/dev/null; then
+      printf '%s\n' "$msg" >> "$VM_TMP/walk-errors"
+      printf '%s\n' "$msg" >&2
+    fi
+  fi
+  cat "$out"
+}
 check_type_count() {
   local jar="$1" pd inc tn sn
   src_or_skip typecount "$jar" || return 0
@@ -581,7 +599,8 @@ check_moduletest_present() {
   case "$base" in *-rt) ;; *) row SKIP moduletest "$jar" "not an -rt jar"; return 0 ;; esac
   src_or_skip moduletest "$jar" || return 0
   [ -d "$pd" ] || { row SKIP moduletest "$jar" "no source dir $pd"; return 0; }
-  njava=$(find "$pd/src" -name '*.java' 2>/dev/null | grep -c . || true)
+  njava=0
+  [ ! -d "$pd/src" ] || njava=$(java_files "$pd/src" | grep -c . || true)
   [ "$njava" -ge 1 ] || { row SKIP moduletest "$jar" "no production .java under src/"; return 0; }
   mti=$(find "$pd" -name 'moduleTest-include.xml' 2>/dev/null | head -1 || true)
   if [ -z "$mti" ]; then
@@ -721,5 +740,8 @@ for JAR in "${JARS[@]}"; do
     if "$chk" "$JAR"; then :; else FAILED=1; fi
   done
 done
-printf 'verify-module: %d passed, %d failed, %d skipped, %d warned -> %s\n' "$NPASS" "$NFAIL" "$NSKIP" "$NWARN" "$([ "$FAILED" -eq 0 ] && echo ALL PASS || echo FAILED)"
+VERDICT="$([ "$FAILED" -eq 0 ] && echo ALL PASS || echo FAILED)"
+[ ! -s "$VM_TMP/walk-errors" ] || VERDICT="INCOMPLETE (a --src walk failed)"
+printf 'verify-module: %d passed, %d failed, %d skipped, %d warned -> %s\n' "$NPASS" "$NFAIL" "$NSKIP" "$NWARN" "$VERDICT"
+[ ! -s "$VM_TMP/walk-errors" ] || exit 3
 exit "$FAILED"

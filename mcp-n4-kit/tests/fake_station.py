@@ -54,6 +54,10 @@ class FakeStation:
         #: `GET /ord/<ORD>` answers: (substring of the decoded ORD, CSV bytes); else 404.
         self.ord_routes = []
         self.ord_requests = []  # decoded ORDs of every `GET /ord/...`
+        #: Frame recorder (Go-port replay differential), off by default: `record()` sets it
+        #: to a list of {"request", "status", "reply"} dicts, one per BOX POST, raw bodies.
+        self.frames = None
+        self._frames_lock = threading.Lock()
         self._next_handle = 0x10
         self._events = []
         self.root = _Node(None, "baja:Station", handle="2")
@@ -101,6 +105,7 @@ class FakeStation:
                 length = int(self.headers.get("Content-Length", 0))
                 raw = self.rfile.read(length)
                 if not station._authorized(self.headers.get("Authorization", "")):
+                    station._record(raw, 401, b"")
                     self.send_response(401)
                     self.send_header("WWW-Authenticate", 'Basic realm="station"')
                     self.send_header("Content-Length", "0")
@@ -110,6 +115,7 @@ class FakeStation:
                     injected = station.hook(json.loads(raw))
                     if injected is not None:
                         code, payload, headers = injected
+                        station._record(raw, code, payload)
                         self.send_response(code)
                         for name, value in headers.items():
                             self.send_header(name, value)
@@ -118,6 +124,7 @@ class FakeStation:
                         self.wfile.write(payload)
                         return
                 out = json.dumps(station.handle_frame(json.loads(raw))).encode()
+                station._record(raw, 200, out)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(out)))
@@ -128,6 +135,24 @@ class FakeStation:
         threading.Thread(target=self._server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True).start()
         self.url = "http://127.0.0.1:%d" % self._server.server_address[1]
         return self
+
+    def record(self):
+        """Start recording every BOX POST (request body, status, reply body) in `frames`."""
+        self.frames = []
+        return self
+
+    def _record(self, raw, code, payload):
+        if self.frames is None:
+            return
+        with self._frames_lock:
+            self.frames.append({"request": raw.decode("utf-8", "replace"), "status": code,
+                                "reply": payload.decode("utf-8", "replace")})
+
+    def dump_frames(self, path):
+        """Write the recorded frames as JSON Lines (one frame per line)."""
+        with open(path, "w", encoding="utf-8") as fh:
+            for frame in self.frames or []:
+                fh.write(json.dumps(frame, sort_keys=True) + "\n")
 
     def stop(self):
         self._server.shutdown()
@@ -151,9 +176,9 @@ class FakeStation:
         """`(code, body, content type)` of `GET /ord/<raw_ord>` from `ord_routes`."""
         ord_text = urllib.parse.unquote(raw_ord)
         self.ord_requests.append(ord_text)
-        for needle, body in self.ord_routes:
+        for needle, body in self.ord_routes:  # body, or (body, content type)
             if needle in ord_text:
-                return 200, body, "text/csv"
+                return (200,) + (body if isinstance(body, tuple) else (body, "text/csv"))
         return 404, b"", "text/html"
 
     def _authorized(self, header):

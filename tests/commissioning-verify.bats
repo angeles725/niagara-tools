@@ -10,6 +10,8 @@
 
 load helpers/stub-toolbelt   # stub_toolbelt <dir> <member> <body> (polish P1c)
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   CV="$KIT/toolbelt/commissioning-verify.sh"
@@ -277,4 +279,10 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
   run "$CV" "$r"
   [ "$status" -eq 1 ]
   [[ "$output" == *"(wiring-map Table 2: $r/docs/wiring-map.md)"* ]]
+}
+
+@test "CV-symroot: a symlinked module root finds its -rt/src like find -H, same rows as the directory (issue #329)" {
+  # Mutation: CV-symroot -- dropping -H from the -rt/src find drops every source-check row under a symlinked root.
+  assert_symroot_same "$MINIMAL" "$CV" "$MINIMAL"
+  [ "$status" -eq 0 ] && [[ "$output" == *"config-sanity"* ]]
 }

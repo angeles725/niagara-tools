@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 5 -->
 # 2026-10-21 · kit · modular-line-efficient-quality
@@ -51,4 +51,4 @@ items.
   checks it rewards deleting tests and comments.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | pending | 5 |`
+**Status**: FOLDED 2026-10-22 (branch `docs/r8-fold-modular-retro`) — Δ1 `METHODOLOGY.md` § rt (components) + `types/logic.md` § Composition & organization; Δ2 `METHODOLOGY.md` § Domain correctness + `types/dashboard.md` § Facade contract & commissioning links; Δ3 `METHODOLOGY.md` § Conformance rules (after the size smell); Δ4 `BUILD-LOOP.md` § 5 + `types/moduleTest.md` § What to test; Δ5 `METHODOLOGY.md` § rt (components) + `types/issues-and-gotchas.md` I3. Owed advisory Go lints G41 `duplicate-helper` (Δ1), G42 `inline-site-literal` (Δ2), G43 `machine-default-path` (Δ5) in `ledger.d/2026-10-22-modular-line-efficient-quality.md`. No extra delta: the layered "one rule file plus its registration" shape is already `retros/2026-10-22-r8-t22-retro-deltas.md` Δ9 (kit Go code), and Δ1 cross-references it.

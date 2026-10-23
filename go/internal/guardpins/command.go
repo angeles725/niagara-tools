@@ -61,7 +61,7 @@ func Main(args []string, s cli.Stdio) int {
 		if err != nil {
 			fmt.Fprintf(s.Err, "lint-guard-pins: cannot read %s: %v\n", script, err)
 		}
-		decls := Declarations(string(b))
+		decls, stray := Declarations(string(b))
 		for _, d := range decls {
 			if hit, ok := fixtures[d.ID]; ok {
 				fmt.Fprintf(s.Out, "MATCH  lint-guard-pins  %s:%d  mutation %s -> %s:%d\n",
@@ -70,6 +70,11 @@ func Main(args []string, s cli.Stdio) int {
 				fmt.Fprintf(s.Out, "WARN  lint-guard-pins  %s:%d  mutation %s -> no fixture\n", script, d.Line, d.ID)
 				warned = true
 			}
+		}
+		// Mutation: GP-stray -- skipping a declaration below the header hides a pin that is never checked
+		for _, d := range stray {
+			fmt.Fprintf(s.Out, "WARN  lint-guard-pins  %s:%d  mutation %s -> below the header (move it above the first code line)\n", script, d.Line, d.ID)
+			warned = true
 		}
 		// Mutation: T4-nomutation -- dropping the no-declaration WARN makes an unpinned lint vacuously clean
 		if len(decls) == 0 {

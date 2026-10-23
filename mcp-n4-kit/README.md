@@ -26,11 +26,16 @@ v0.7.3: `tools/mutation_check.py` exits 3 (environment error) when the command c
 launched, so a failed launch is never read as a RED.
 v0.8.1: a failed write keeps its batch id, a partial batch reports what was sent and its inverse, BOX replies capped at 32 MB.
 v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4_px_summary`.
+v0.9.1: read truth fixes: `n4_find_dangling_outputs` resolves slot-path link sources and reports
+an output an unresolved source may feed as `unknown`, not dangling; a BQL body cut at the byte
+cap keeps whole CSV records only; an HTML, empty or ragged BQL answer is an error, not rows.
 
 ## Methodology and skill
 
 - [METHODOLOGY.md](METHODOLOGY.md): route ladder, safety layers mapped to code and tests,
   live rules, the mandatory session checklist and version tiers. Read it before writing.
+- [docs/go-port-plan.md](docs/go-port-plan.md): the plan for porting the server to Go
+  (package layout, parity strategy, slices S0-S16, go/no-go criteria).
 - [skill/SKILL.md](skill/SKILL.md): the Claude Code skill launcher. Install it with
   (from the repository root; add `--dry-run` to preview, `--force` to overwrite a diverged copy):
 
@@ -181,6 +186,12 @@ For an inventory, use `n4_inventory` (networks, devices and points under `/Drive
 network's built-in `localDevice` flagged `local` and counted apart) or `n4_bql_query` first.
 Both send `GET /ord/<url-encoded station:|slot:<base>|bql:select ...|view:file:ITableToCsv>`.
 The query must be one `select`, `|` is refused, and rows are capped (default 5000).
+A body over 32 MB is cut at its last complete record (a newline inside a quoted cell does not
+end one), so a truncated result (`truncated: true`) never carries a torn last row.
+An answer that is not a CSV table is an error, never zero rows: an HTML page (by Content-Type
+or by its first bytes: a login or error page), an empty body (ITableToCsv writes a header row
+even for zero rows; a header-only body is 0 rows), or a record whose cell count differs from
+the header's (a ragged row is not padded or trimmed).
 CSV headers are the station's display names, which a localized station translates: the
 queried `name` column is decoded by its position in the select list, `n4_inventory` reads its
 columns by position, and a repeated header is kept as `Type#2`, `Type#3`. With
@@ -211,7 +222,10 @@ configured station names. `n4_list_links` and
 `n4_find_dangling_outputs` scan components up to `depth` levels below `ord`
 (the ord itself is level 0). Links are seen when their target is at most one level
 below `depth`; an out slot used only by a deeper target, or from outside the
-subtree, is reported as dangling.
+subtree, is reported as dangling. A link source given by handle (`h:`) or by absolute
+slot path (`station:|slot:/Folder/A`) is resolved; while any link reading `out` has a
+source in another form (listed in `unresolved_links`), every out slot not proven used
+is reported under `unknown`, never as dangling.
 
 ## Writing safely
 

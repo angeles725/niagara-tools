@@ -7,6 +7,7 @@ package lint
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
@@ -16,10 +17,11 @@ import (
 type Severity int
 
 const (
-	Unset Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
-	Warn                  // advisory: exit 0, or 1 under --strict
-	Fail                  // a failed check: exit 1 with or without --strict
-	Pass                  // a check that held (rows print PASS); never affects the exit code
+	Unset    Severity = iota // a Finding's "use Rule.Severity()"; never printed (the runner fills it)
+	Warn                     // a warning: exit 0, or 1 under --strict
+	Fail                     // a failed check: exit 1 with or without --strict
+	Pass                     // a check that held (rows print PASS); never affects the exit code
+	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -28,6 +30,8 @@ func (s Severity) String() string {
 		return "FAIL"
 	case Pass:
 		return "PASS"
+	case Advisory:
+		return "ADVISORY"
 	}
 	return "WARN"
 }
@@ -94,6 +98,30 @@ type Spec struct {
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
 	// comment naming the reason, normally that the bash lint being ported used awk_lint_run.
 	ContinueOnWalkError bool
+	// EmptyError shapes the row of a root where the rule selects no file. Such a root is always an
+	// environment error (a wrong path or an empty scaffold, never a clean pass), as the K20 guard of the
+	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
+	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
+	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
+	// without them.
+	EmptyError EmptyRow
+	// BareUsage prints only Usage on an unknown flag (no "<lint>: unknown flag: <flag>" line), as a bash
+	// lint with its own `-*) usage; exit 3` case does; the exit code stays UsageExit.
+	BareUsage bool
+}
+
+// EmptyRow is the ERROR row of Spec.EmptyError.
+type EmptyRow struct {
+	Check string // the check column; empty shows the rule ID
+	Msg   string // the message; empty shows "no <pattern>[ or <pattern>...] sources found (wrong path or empty source tree)"
+}
+
+// emptyMsg is the message of the spec's ERROR row on a root where it selects no file.
+func (sp Spec) emptyMsg() string {
+	if sp.EmptyError.Msg != "" {
+		return sp.EmptyError.Msg
+	}
+	return "no " + strings.Join(sp.Select.Names, " or ") + " sources found (wrong path or empty source tree)"
 }
 
 // ID is the registered rule's ID.

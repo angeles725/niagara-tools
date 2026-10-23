@@ -117,7 +117,7 @@ done
     echo "build.sh: no executable ./gradlew in $ROOT or any ancestor (the module needs the gradle wrapper)" >&2
     # comppan-fase2-amps-alarms Δ2: the opposite mistake — the REPO root was passed, one or more levels
     # ABOVE the gradle root (a client repo nests several gradle groups as siblings). List them.
-    _BELOW="$(find "$ROOT" -mindepth 2 -maxdepth 3 \( -type d \( -name '.*' -o -name node_modules -o -name build \) -prune \) \
+    _BELOW="$(find -H "$ROOT" -mindepth 2 -maxdepth 3 \( -type d \( -name '.*' -o -name node_modules -o -name build \) -prune \) \
         -o \( -type f -name gradlew -print \) 2>/dev/null | LC_ALL=C sort || true)"
     if [ -n "$_BELOW" ]; then
         echo "  found gradle root(s) BELOW $ROOT — pass the GROUP dir that holds <MOD>/, not the repo root:" >&2

@@ -11,6 +11,8 @@
 # RED today: lint-structure.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (R18.5): remove a dependency's 3-part floor -> L7 FAIL on that entry.
 
+load helpers/symroot   # assert_symroot_same <dir> <cmd...> (issue #329)
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   LS="$KIT/toolbelt/lint-structure.sh"
@@ -326,4 +328,10 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
   done
+}
+
+@test "LS-symroot: a symlinked module root is walked like find -H, same rows as the directory (issue #329)" {
+  # Mutation: LS-symroot -- dropping -H from the find in _find_files misses gradle.properties under a symlinked root.
+  assert_symroot_same "$FX/client-gradleprops" "$LS" "$FX/client-gradleprops"
+  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"L10"* ]]
 }

@@ -70,7 +70,7 @@ _row() {
 
 # Find helper: files under $1 matching name $2, dot-directories pruned (D9b)
 _find_files() {
-    find "$1" \( -type d -name '.*' -prune \) -o \( -type f -name "$2" -print \)
+    find -H "$1" \( -type d -name '.*' -prune \) -o \( -type f -name "$2" -print \)
 }
 
 # Find helper: *.java files under $1, dot-directories pruned (D9b)

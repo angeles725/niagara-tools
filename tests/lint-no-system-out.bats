@@ -60,8 +60,10 @@ teardown() { rm -rf "$TMPDIR_T"; }
 @test "NSO5: dot-directories are pruned" {
   mkdir -p "$TMPDIR_T/Mod/.git"
   printf 'class J { void f(){ System.out.println("x"); } }\n' > "$TMPDIR_T/Mod/.git/J.java"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/A.java"   # a scanned file: an empty list is now exit 3 (lint-empty-root.bats)
   run "$NSO" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "NSO-finderr: an unreadable sub-directory is an env error (exit 3, named on stderr), never a clean pass (audit A0)" {
@@ -88,4 +90,13 @@ teardown() { rm -rf "$TMPDIR_T"; }
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
   [ "$output" = "lint-no-system-out: cannot scan $d/A.java: Permission denied" ]
+}
+
+@test "NSO-symroot: a symlinked module root is scanned like find -H, never a silent clean pass (issue #329)" {
+  # Mutation: NSO-symroot -- dropping -H from the find in lib/scan-files.sh lists no file and exits 0.
+  printf 'class A {\n  void f() { System.out.println("debug"); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  ln -s "$TMPDIR_T/Mod" "$TMPDIR_T/link"
+  run "$NSO" "$TMPDIR_T/link"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"*"lint-no-system-out"*"$TMPDIR_T/link/src/com/x/A.java:2"* ]]
 }

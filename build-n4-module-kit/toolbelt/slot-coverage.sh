@@ -36,7 +36,7 @@
 #   exit 0   no MISSING slots
 #   exit 1   any MISSING slot
 #   exit 2   bad arity + "usage: slot-coverage.sh per-slot ..." on stderr
-#   exit 3   file/dir not found
+#   exit 3   file/dir not found, or a <src-dir> sub-directory the walk could not enter
 #
 # Usage (parse subcommand — reads module files, calls the same pure function):
 #   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
@@ -67,6 +67,8 @@
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via the script's real path
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/scan-files.sh"
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -159,7 +161,12 @@ if [ $# -ge 1 ] && [ "$1" = "per-slot" ]; then
   # STALE = lex_keys - known_sorted; known_sorted = all_annotation_slots ∪ type names ∪ @Range tags.
   # Type display-name keys and frozen-enum tag keys are live translations, not dead.
   # shellcheck disable=SC2016  # awk programs intentionally in single quotes (no shell expansion needed)
-  _java_files=$(find "$PS_SRC" -type d -name '.*' -prune -o -name '*.java' -print | sort)
+  # The shared lib/scan-files.sh walk (dot and *-worktrees dirs pruned): a sub-directory find cannot
+  # enter exits 3, never a coverage verdict on a partial tree. [ev: issue #226]
+  _ps_tmp=$(mktemp -d)
+  trap 'rm -rf "$_ps_tmp"' EXIT
+  scan_files_or_exit slot-coverage 3 "$_ps_tmp/java" "$PS_SRC" -name '*.java'
+  _java_files=$(cat "$_ps_tmp/java")
   # shellcheck disable=SC2016
   op_slots_raw=$(printf '%s\n' "$_java_files" | xargs awk '
     BEGIN { in_prop=0; prop_buf=""; prop_name=""; prop_op=0 }

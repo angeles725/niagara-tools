@@ -260,7 +260,7 @@ if [ "$WIN_PATH_FAIL" -eq 0 ] && [ -d "$GR" ]; then
   _ver_from_kts() {
     # Extract the first defaultModuleVersion("X.Y.Z") string from *.gradle.kts
     # under directory $1. Returns empty string if none found.
-    find "$1" -maxdepth 3 -name '*.gradle.kts' -print \
+    find -H "$1" -maxdepth 3 -name '*.gradle.kts' -print \
       | xargs grep -h 'defaultModuleVersion' 2>/dev/null \
       | grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' \
       | head -1 \
@@ -365,7 +365,7 @@ if [ "$SAMPLE" -eq 1 ] && [ "$WIN_PATH_FAIL" -eq 0 ]; then
   else
     row FAIL "sample-sign" "root $ROOT_KTS lacks (uncommented) $S_MISS — the signing block is signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile }"
   fi
-  S_BUILD=$(find "$GR" -mindepth 1 -maxdepth 3 -type d -name '.*' -prune -o -type d -name build -print -prune 2>/dev/null | sort | tr '\n' ' ' | sed 's/ *$//')
+  S_BUILD=$(find -H "$GR" -mindepth 1 -maxdepth 3 -type d -name '.*' -prune -o -type d -name build -print -prune 2>/dev/null | sort | tr '\n' ' ' | sed 's/ *$//')
   if [ -n "$S_BUILD" ]; then
     row WARN "sample-build" "shipped build/ output (delete it before the first build): $S_BUILD"
   else

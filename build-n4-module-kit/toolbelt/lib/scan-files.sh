@@ -11,7 +11,10 @@
 #   checkout would report every finding once per checkout), and so is every sub-directory named by a
 #   `--prune <dir-name>` (e.g. `--prune build` for gradle outputs) and every one whose path matches a
 #   `--prune-path <pattern>` (find -path, e.g. `--prune-path '*/rc/ext'`); the root itself never is (`-mindepth 1`),
-#   so `.`, `..` or a dot-named root is walked, not pruned whole. Returns 0 when the walk was
+#   so `.`, `..` or a dot-named root is walked, not pruned whole. A symlinked root is followed (find -H,
+#   paths still spelled from <root> as given); symlinks below it are never followed or listed, since a
+#   plain find lists nothing under a symlinked root and the lint passed clean. [ev: issue #329]
+#   Returns 0 when the walk was
 #   complete, and non-zero when <root> is not a directory, find could not enter a sub-directory or
 #   the sorted list could not be written; <err-file> then holds the reason.
 #
@@ -19,6 +22,12 @@
 #   scan_files for a caller with no partial-walk recovery: an incomplete walk prints
 #   "<prefix>: cannot list every file under <root>: <reason>" on stderr and EXITS <exit-code>
 #   (the caller's env-error code); <out-file>.err holds the reason. Returns 0 on a complete walk.
+#
+# scan_files_nonempty_or_exit <name> <out-file> <root> [--prune... | --prune-path...] <find-test...>
+#   scan_files_or_exit with the env-error code 3, for a LINT: a walk that lists NO file (an empty root, a
+#   typo'd sub-path, the wrong module) prints "ERROR  <name>  <root>  no files to scan (K20: wrong path or
+#   empty scaffold)" on stdout and exits 3. Returns 0 on a complete, non-empty walk.
+#   Why: 26 lints exited 0 with no output on an empty directory, a green verdict on input they never read.
 #
 # Why: a lint that reads `find ... | sort` through a process substitution never sees find's
 # exit status, so a sub-directory find cannot enter is skipped and the lint reports the
@@ -42,7 +51,7 @@ scan_files() {
     : > "$out"
     return 2
   fi
-  find "$root" -mindepth 1 \( -type d \( "${prune[@]}" \) -prune \) -o -type f \( "$@" \) -print > "$out.unsorted" 2> "$err" || rc=$?
+  find -H "$root" -mindepth 1 \( -type d \( "${prune[@]}" \) -prune \) -o -type f \( "$@" \) -print > "$out.unsorted" 2> "$err" || rc=$?
   { LC_ALL=C sort "$out.unsorted" > "$out"; } 2>> "$err" || rc=1
   rm -f "$out.unsorted"
   return "$rc"
@@ -54,4 +63,13 @@ scan_files_or_exit() {
   scan_files "$out" "$out.err" "$root" "$@" && return 0
   printf '%s: cannot list every file under %s: %s\n' "$prefix" "$root" "$(head -n 1 "$out.err")" >&2
   exit "$code"
+}
+
+scan_files_nonempty_or_exit() {
+  local name="$1" out="$2" root="$3"
+  shift 3
+  scan_files_or_exit "$name" 3 "$out" "$root" "$@"
+  [ -s "$out" ] && return 0
+  printf 'ERROR  %s  %s  no files to scan (K20: wrong path or empty scaffold)\n' "$name" "$root"
+  exit 3
 }

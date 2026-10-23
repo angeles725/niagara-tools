@@ -487,6 +487,24 @@ on the same real shape, from two different angles (callback fan-in vs. the sette
 [ev: corpus B1159; BCompressorControl.java:326,1403,2019] — **Kit coverage:
 lint-persist-hot-write.sh (FOLDED)**
 
+### I3 · A machine- or session-specific default path ships in source `[ev: retro modular-line-efficient-quality Δ5]`
+
+**Symptom:** a tool or module works on the machine that built it and fails elsewhere: a file is not found at a
+developer-home, scratchpad or `/tmp` path, or a value is read from another station's install directory, often long
+after the session that created the path has ended.
+
+**Root cause:** a convenience default (a password file, an export directory, a station home) was written as a
+literal default value; nothing creates that path on another machine, and a slot default persists into every station
+that instantiates the type.
+
+**Fix/avoidance:** remove the literal; take the value from a slot, a station-relative ORD, an environment variable,
+or the module's site table (`METHODOLOGY.md` § Domain correctness), and fail with a clear message when it is unset.
+Review check: search the diff for `/home/`, `/tmp/`, `C:\Users\`, scratchpad and station-name literals in default
+values. METHODOLOGY K8 and K16 state the same rule for kit checks and fixtures.
+
+Evidence: quality round 8, obix-nav kept a stale scratchpad path as its password-file default. — **Kit coverage: this
+entry + `METHODOLOGY.md` § rt (FOLDED); owed advisory Go lint G43 `machine-default-path`**
+
 ## J — Control contracts & requirements signals
 
 ### J1 · A field wire-sheet workaround bypassing a module's rule is a requirements signal, not a support ticket to close `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ4]`

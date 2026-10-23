@@ -1,0 +1,19 @@
+-- args --
+@DIR@/console
+-- want --
+exit 0
+ADVISORY  lint-silent-protection  @DIR@/console/com/x/CompressorControl.java:4  console-only: step forces stage/sheds stage -- surfaced only by a console alarm; add a local *Status/*Reason SUMMARY slot (advisory, unattended console)
+-- stderr --
+-- console/com/x/BCompressorControl.java --
+package com.x;
+public class BCompressorControl extends BComponent implements BIAlarmSource {
+  void raise() { alarmSupport.newOffnormalAlarm(mkData()); }
+}
+-- console/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  int step(int target, int onCount, double suction, double suctionLowLimit, boolean suctionValid) {
+    if (suctionValid && suction < suctionLowLimit) target = Math.min(target, onCount - 1); // LP floor shed (trip)
+    return target;
+  }
+}

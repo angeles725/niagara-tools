@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"syscall"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 func touch(t *testing.T, path string) {
@@ -61,7 +63,9 @@ func TestListJars(t *testing.T) {
 		{"a trailing slash is not doubled", m + "/", want},
 		{"a doubled slash is kept as given", m + "//", []string{m + "//.hidden.jar", m + "//deep/er/c.jar", m + "//libs/B.jar", m + "//libs/a.jar", m + "//libs/b.jar", m + "//x.jar/inner.jar"}},
 		{"a root named build or .dot is walked, not pruned", filepath.Join(m, "build"), []string{m + "/build/libs/out.jar"}},
-		{"a symlinked root is not followed (find -P)", filepath.Join(d, "modlink"), nil},
+		// Mutation: BJCV-symroot -- os.Lstat instead of os.Stat on the root lists nothing under a symlinked root.
+		{"a symlinked root is followed like find -H, links below it are not (issue #329)", filepath.Join(d, "modlink"),
+			[]string{d + "/modlink/.hidden.jar", d + "/modlink/deep/er/c.jar", d + "/modlink/libs/B.jar", d + "/modlink/libs/a.jar", d + "/modlink/libs/b.jar", d + "/modlink/x.jar/inner.jar"}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -94,26 +98,6 @@ func TestListJarsUnreadable(t *testing.T) {
 	}
 }
 
-func TestFindQuote(t *testing.T) {
-	t.Parallel()
-	cases := map[string]string{
-		"plain/path":    "'plain/path'",
-		"it's":          `'it\'s'`,
-		`back\slash`:    `'back\\slash'`,
-		"tab\there":     `'tab\there'`,
-		"nl\nx":         `'nl\nx'`,
-		"bell\a":        `'bell\a'`,
-		"del\x7f":       `'del\177'`,
-		"utf8-\xc3\xa9": `'utf8-\303\251'`,
-		`dq"x`:          `'dq"x'`,
-	}
-	for in, want := range cases {
-		if got := findQuote(in); got != want {
-			t.Errorf("findQuote(%q) = %s, want %s", in, got, want)
-		}
-	}
-}
-
 func TestStrerror(t *testing.T) {
 	t.Parallel()
 	cases := map[syscall.Errno]string{
@@ -123,7 +107,7 @@ func TestStrerror(t *testing.T) {
 		syscall.EIO:    "Input/output error",
 	}
 	for errno, want := range cases {
-		if got := strerror(errno); got != want {
+		if got := strerror.Text(errno); got != want {
 			t.Errorf("strerror(%d) = %q, want %q", errno, got, want)
 		}
 	}

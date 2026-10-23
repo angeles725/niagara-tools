@@ -1,0 +1,16 @@
+-- args --
+-h
+-- want --
+exit 3
+-- stderr --
+usage: lint-silent-protection.sh [--strict] <java-src-dir>
+-- m/com/x/S.java --
+package com.x;
+public class S {
+  int a(int target, int onCount, boolean c) {
+    if (c) target = Math.min(target, onCount - 1);
+    return target;
+  }
+}
+-- other/README.txt --
+not java
