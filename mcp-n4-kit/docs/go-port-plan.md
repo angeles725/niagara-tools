@@ -193,7 +193,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 |---|---|---|---|---|---|---|---|
 | `test_auth_latch.py` | 10 | 0 | 0 | 10 | 0 | 10 | 0 |
 | `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
-| `test_bql.py` | 32 | 13 | 0 | 19 | 0 | 32 | 0 |
+| `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
@@ -202,9 +202,9 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 93 | 4 | 14 | 5 | 9 | 32 | 61 |
+| `test_server.py` | 96 | 4 | 14 | 5 | 9 | 32 | 64 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **590** | **155** | **56** | **104** | **24** | **339** | **251** |
+| **Total** | **600** | **157** | **56** | **105** | **24** | **342** | **258** |
 <!-- go-skip-inventory:end -->
