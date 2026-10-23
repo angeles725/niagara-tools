@@ -1,0 +1,14 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-demand-scope.sh [--strict] <java-src-dir>
+-- m/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
