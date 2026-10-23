@@ -135,6 +135,7 @@ A `Type.slot` key is never read for the slot, and a bare `<Type>=` key does noth
 counts a type only through `<Type>.displayName` and WARNs a bare `<Type>=`; `per-slot` counts only bare slot keys and
 prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated slot. A coverage check counts only
 the key forms the framework looks up; a form it ignores is reported, never counted. `[ev: retro r8-t9g-actions Δ2]`
+How a key resolves (module chain, locale order) and lexicon-only translation modules: `types/lexicon.md` § 1-2.
 
 ## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
 
@@ -231,8 +232,8 @@ pre-configured, commissioning-ready **assembly templates**. Dragging one compone
 drops the correct sub-tree with every flag already set — no manual wiring required.
 
 A palette assembly is NOT a Niagara template. A template is a `.ntpl` file deployed from the Template sidebar or
-the Device Manager, with its own manifest, deploy, status and upgrade rules (`types/logic-authoring.md` § template
-bullet, `types/distribution.md` § 8); a palette drop is a plain copy that nothing tracks afterwards.
+the Device Manager, with its own manifest, deploy, status and upgrade rules (`types/logic-authoring.md` § Templates
+are artifact production, `types/distribution.md` § 8); a palette drop is a plain copy that nothing tracks afterwards.
 `[ev: corpus B1325 §1325.2 C2]` `[ev: retro devguide415-r2-packaging-platform-signing Δ4]`
 
 ### Authoring workflow

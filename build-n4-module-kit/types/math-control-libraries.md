@@ -43,6 +43,7 @@ detectable and must be identified per-library at design time.
 pauses last 500 ms–2 s on heap pressure. Heavy math that allocates large
 intermediate arrays amplifies this risk on rt — another reason to push
 optimization loops and matrix inversions off the engine thread. `[ev: corpus B31 §31.3.8]`
+NRE heap budget on a JACE and the reboot to apply it: `types/platform.md` § 3.
 
 ---
 

@@ -3,6 +3,7 @@
 A theme module customizes Niagara's visual identity across browser (bajaux/Hx) and Workbench
 (JavaFX/Swing). It is a **pure-resource ux jar** — no Java, no `@NiagaraType`, no palette.
 `[ev: code themeDistech-ux module.xml]`
+Login-page branding from a theme module (`logo`, `loginCss`, `favicon` on `WebService`): `types/horizons.md` § 2.
 
 ---
 
