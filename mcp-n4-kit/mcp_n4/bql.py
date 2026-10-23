@@ -124,6 +124,25 @@ def by_position(columns, rows, names):
     return [{name: row.get(col, "") for name, col in zip(names, columns)} for row in rows]
 
 
+def complete_records(text):
+    """`text` up to the end of its last complete CSV record (a cut body never tears a row).
+
+    A record ends at a newline outside quotes; a newline inside a quoted cell (`""` is an
+    escaped quote, so quote parity tells inside from outside) does not end it. Without a
+    complete record the result is empty. Walks back from the end with C-speed counts: a
+    capped body is up to 32 MB.
+    """
+    quotes, pos = text.count('"'), len(text)
+    while True:
+        newline = text.rfind("\n", 0, pos)
+        if newline < 0:
+            return ""
+        quotes -= text.count('"', newline, pos)  # quotes left are those before the newline
+        if quotes % 2 == 0:
+            return text[:newline + 1]
+        pos = newline
+
+
 def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
     """`(columns, rows, truncated)` from an ITableToCsv body; rows are dicts by column.
 

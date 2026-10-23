@@ -319,7 +319,9 @@ class BoxClient:
 
         Stateless HTTP Basic, no BOX session needed. The same opener refuses redirects,
         a 401/403 raises `AuthError` once (never retried), and at most `max_bytes` are
-        read; `truncated` is True when the body was longer.
+        read; `truncated` is True when the body was longer. A truncated `text` ends
+        wherever the cap fell: the CSV reader drops the incomplete last record
+        (`bql.complete_records`), since only it knows where a quoted cell ends.
         """
         url = self.base_url + "/ord/" + urllib.parse.quote(ord_text, safe="")
         req = urllib.request.Request(url, method="GET", headers={
@@ -341,10 +343,7 @@ class BoxClient:
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BoxError("transport failure: %s" % exc, "ord", "get") from None
         truncated = len(raw) > max_bytes
-        text = raw[:max_bytes].decode("utf-8", "replace")
-        if truncated:  # never hand back a torn last line
-            text = text[:text.rfind("\n") + 1]
-        return text, truncated
+        return raw[:max_bytes].decode("utf-8", "replace"), truncated
 
     def get_file(self, url_path, timeout=None, max_bytes=2 * 1024 * 1024):
         """`GET <url_path>` (a `/file/...` path) with HTTP Basic: a dict of the body.

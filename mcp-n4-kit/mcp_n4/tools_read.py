@@ -564,6 +564,8 @@ def _bql(ctx, base, query, max_rows, timeout):
     start = ctx.clock()
     text, cut = ctx.session.client.get_ord(ord_text, timeout=timeout,
                                            max_bytes=bql.MAX_RESPONSE_BYTES)
+    if cut:  # the byte cap may fall inside a quoted cell: keep whole records only
+        text = bql.complete_records(text)
     slots = bql.selected_slots(query)  # localized headers: decode `name` by position (F12)
     positions = None if slots is None else [i for i, n in enumerate(slots)
                                              if n.lower() == "name"]

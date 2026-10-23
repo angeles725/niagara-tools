@@ -111,6 +111,14 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual(rows[0]["Name"], "Meter A")
         self.assertEqual(rows[0]["Slot Path"], "slot:/Drivers/ModbusTcpNetwork/Meter$20A")
 
+    def test_complete_records_cuts_only_outside_quotes(self):
+        text = 'A,B\nz,"ok"\nx,"line one\nli'
+        self.assertEqual(bql.complete_records(text), 'A,B\nz,"ok"\n')
+        self.assertEqual(bql.complete_records('A\n"say ""hi""\nthere"\n'),
+                         'A\n"say ""hi""\nthere"\n')
+        self.assertEqual(bql.complete_records('A\r\n"x'), 'A\r\n')
+        self.assertEqual(bql.complete_records('A,B'), '')
+
     def test_parse_csv_of_an_empty_body_has_no_columns(self):
         self.assertEqual(bql.parse_csv("", max_rows=5), ([], [], False))
 
@@ -222,6 +230,17 @@ class TestBqlQueryTool(BqlToolCase):
                       query="select slotPath from control:ControlPoint")
         self.assertEqual((out["row_count"], out["truncated"]), (2, True))
         self.assertEqual(self.opener.requests[0][1], 5)
+
+    def test_a_byte_cap_inside_a_quoted_cell_drops_the_torn_record(self):
+        body = (b'Slot Path,Name\nslot:/Z,"ok"\n'
+                b'slot:/A,"line one\nline two"\nslot:/B,"b"\n')
+        self.opener.routes = [("driver:Device", body)]
+        cap = body.index(b"line two") + 2  # the cap falls inside A's quoted cell
+        with mock.patch.object(bql, "MAX_RESPONSE_BYTES", cap):
+            out = self.ok("n4_bql_query", base="/Drivers",
+                          query="select slotPath, name from driver:Device")
+        self.assertEqual(out["rows"], [{"Slot Path": "slot:/Z", "Name": "ok"}])
+        self.assertTrue(out["truncated"])
 
     def test_non_select_and_pipe_injection_send_nothing(self):
         for query in ("delete from driver:Device",
