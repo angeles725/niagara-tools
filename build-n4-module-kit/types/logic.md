@@ -319,6 +319,16 @@ invalid selector HOLDS the last `out` with an `invalidSelect` facet (`BSwitch.ja
 (`nullStatus` or `ok`) a faulted, down or stale probe yields an **OK-status** output carrying the bad value — set
 `propagateFlags` to `fault,down,stale,disabled` on every block fed by a probe or proxy point (LC3/LC4 below).
 
+**`kitControl:Hysteresis` and `kitControl:Limiter` are 4.15+** `[ev: corpus B1319 §1319.3 D3]` [ev: retro devguide415-r2-runtime-contracts-formats Δ8]:
+both carry `@since Niagara 4.15` (`niagara-help/versions/4.15.6.20/source/kitControl-rt/…/logic/BHysteresis.java:35`, `…/math/BLimiter.java:36`).
+Per-install jar check: present in `kitControl-rt.jar` 4.15.3.28 and 4.15.6.20; absent from 4.3.58.18,
+4.13.2.18 and 4.14.0.162. For a module or `.bog` that must run on 4.14 or earlier, build the latch from a
+`boolean` field (§ Deadband latch-on-cross) or clamp in code. `clHVAC:Hysteresis` (Honeywell `cl.hvac`, in the
+4.14.0.162 Optimizer install) is a different type. Behaviour: swapped limits (`inHigh < inLow`, `inMax < inMin`) set `out`
+to `fault` with a lexicon `faultCause` (`BHysteresis.java:234-238`, `BLimiter.java:192-196`); the hysteresis latch is
+a plain Java field (`previousOutput`, `:292`), so it restarts `false` after a station restart. Owed advisory: Go lint
+G90 `since-version-type` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`). [deferred: retro devguide415-r2-runtime-contracts-formats Δ8]
+
 ## RT control logic `[ev: corpus B805]`
 
 - **§805.9 flowchart template** — design every rt component's internal logic as SEVEN layers: STATES (the phase machine: idle / running / fault / …), INPUTS (read all sensor slots, check `isValid()`, fail-safe on invalid), TIMERS (which `Clock.Ticket`s are active and their cancel points), CONTROL (the decision core — PID/deadband/staging), PROTECTIONS (limits that RAISE a latch, independent of control), OUTPUTS (what the component writes to actuator slots plus the fail-safe value on fault), FEEDBACK (status/health/alarm surface visible to the operator). Draw this template before writing any `execute()`. `[ev: corpus B805]`
