@@ -1,0 +1,12 @@
+-- root --
+src
+-- want --
+exit 0
+-- src/BProbeTimerC.java --
+package demo;
+import javax.baja.sys.*;
+public final class BProbeTimerC extends BComponent {
+  public void arm() {
+    log("Clock.schedule(this, BRelTime.makeSeconds(5), armed, null); Clock.Ticket t;");
+  }
+}

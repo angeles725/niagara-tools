@@ -3,29 +3,32 @@ package timers
 import (
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
 // companionPass is companion-flag: a boolean/int/long class FIELD (declared at brace depth 1) assigned
 // true in the same method body as a Clock.schedule* call must be assigned false in stopped() or
-// started(); a clear only in the expiry handler does not survive a stop/restart cycle.
+// started(); a clear only in the expiry handler does not survive a stop/restart cycle. It reads code
+// (comments and literal contents blanked); the row points at the line that sets the flag true.
 func (r *run) companionPass(srcs []*source) {
 	for _, s := range srcs {
-		if flag := r.stuckFlag(s.Stripped(), s); flag != "" {
-			r.row(lint.Fail, "companion-flag", s, "flag '"+flag+"' set beside Clock.schedule* not cleared in stopped()/started()")
+		code, ms := s.blanked()
+		if flag, line := r.stuckFlag(code, ms); flag != "" {
+			r.row(lint.Fail, "companion-flag", s, line, "flag '"+flag+"' set beside Clock.schedule* not cleared in stopped()/started()")
 		}
 	}
 }
 
 // stuckFlag returns the first field flag set true beside a schedule and never cleared in a lifecycle
-// callback, or "".
-func (r *run) stuckFlag(st []string, s *source) string {
+// callback, with the line that sets it, or "".
+func (r *run) stuckFlag(st []string, ms []javasrc.Method) (string, int) {
 	fields := r.depthOneFields(st)
 	if len(fields) == 0 {
-		return ""
+		return "", 0
 	}
-	flag := ""
-	for _, m := range s.Methods() {
+	flag, line := "", 0
+	for _, m := range ms {
 		body := joinLines(st, m.Start, m.End, " ", "")
 		if !strings.Contains(body, "Clock.schedule") {
 			continue
@@ -39,17 +42,29 @@ func (r *run) stuckFlag(st []string, s *source) string {
 			return true
 		})
 		if flag != "" {
+			line = r.setLine(st, m, flag)
 			break
 		}
 	}
 	if flag == "" || r.clearedInLifecycle(st, flag) {
-		return ""
+		return "", 0
 	}
-	return flag
+	return flag, line
+}
+
+// setLine is the first line of method m that assigns flag = true, or m's brace line when the
+// assignment spans lines.
+func (r *run) setLine(st []string, m javasrc.Method, flag string) int {
+	for i := m.Start; i <= m.End; i++ {
+		if r.rx.has(st[i-1], notRef+flag+sp+`*=`+sp+`*true`) {
+			return i
+		}
+	}
+	return m.Start
 }
 
 // depthOneFields is Phase 1: boolean/int/long names declared on a line that starts at brace depth 1
-// (braces in literals counted too, as the awk did).
+// (code lines: a brace in a literal or a comment is not counted).
 func (r *run) depthOneFields(st []string) map[string]bool {
 	fields := map[string]bool{}
 	depth := 0
