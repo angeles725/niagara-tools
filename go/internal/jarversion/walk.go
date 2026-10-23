@@ -8,15 +8,15 @@ import (
 	"syscall"
 )
 
-// ListJars lists the regular files named *.jar under root the way lib/scan-files.sh did with
-// `find <root> -mindepth 1 \( -type d \( -name '.*' -o -name build \) -prune \) -o -type f -name '*.jar' -print`
-// (no -L, LC_ALL=C sort): every sub-directory named build or starting with a dot is pruned (the root
-// itself never is), symlinks are neither listed nor followed (a symlinked root lists nothing, as find -P
-// does), and paths are built from root as given. walkErr is the first error find would have printed
+// ListJars lists the regular files named *.jar under root the way lib/scan-files.sh does with
+// `find -H <root> -mindepth 1 \( -type d \( -name '.*' -o -name build \) -prune \) -o -type f -name '*.jar' -print`
+// (LC_ALL=C sort): every sub-directory named build or starting with a dot is pruned (the root
+// itself never is), a symlinked root is followed (issue #329) but symlinks below it are neither listed
+// nor followed, and paths are built from root as given. walkErr is the first error find would have printed
 // ("find: '<dir>': <reason>"), "" for a complete walk; the files it did list are returned either way.
 func ListJars(root string) (jars []string, walkErr string) {
 	w := walker{}
-	if st, err := os.Lstat(root); err != nil {
+	if st, err := os.Stat(root); err != nil {
 		w.fail(root, err)
 	} else if st.IsDir() {
 		w.dir(root)
