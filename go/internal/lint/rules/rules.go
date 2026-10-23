@@ -15,6 +15,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 )
 
 // All returns every registered rule, in the order --all runs them.
@@ -31,5 +32,6 @@ func All() []lint.Spec {
 		bqlconcat.Spec(),
 		clockzerofloor.Spec(),
 		subscribeleak.Spec(),
+		wbfilechooser.Spec(),
 	}
 }

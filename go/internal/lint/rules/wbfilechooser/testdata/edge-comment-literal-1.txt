@@ -1,0 +1,31 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-wb-file-chooser  @DIR@/m/B.java:2  void f() { BWbFieldEditor.dialog(p, t, o); }
+WARN  lint-wb-file-chooser  @DIR@/m/E.java:3  /* BWbFieldEditor.dialog(p, t, BOrd.NULL); */
+-- stderr --
+-- m/A.java --
+class A {
+  /* BComponentChooser c; */
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+}
+-- m/B.java --
+class B {
+  void f() { BWbFieldEditor.dialog(p, t, o); }
+  BOrd x = BOrd.NULL;
+}
+-- m/C.java --
+class C {
+  String u = "http://h"; void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+}
+-- m/D.java --
+class D {
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+  BFacets f = BFacets.make("targetType", x);
+}
+-- m/E.java --
+class E {
+  // BWbFieldEditor.dialog(p, t, BOrd.NULL);
+  /* BWbFieldEditor.dialog(p, t, BOrd.NULL); */
+}

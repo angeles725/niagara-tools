@@ -9,6 +9,10 @@
 # See types/wb-widgets.md "station-space picker" rule.
 # [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8]
 #
+# Implementation: go/internal/lint/rules/wbfilechooser on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-wb-file-chooser <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_strip_run did).
+#
 # Usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>
 #   Scans *.java under <wb-src-root>, dot-dirs pruned. Line // comments stripped before matching
 #   so commented-out code does not trigger.
@@ -23,28 +27,11 @@
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # Mutation: WFC2 -- remove the BComponentChooser/targetType-absent guard so a file WITH BComponentChooser still WARNs
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-wb-file-chooser first 'usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>' "$@"
-
-# check <file>: the line of the file-chooser dialog call, when the file has no station-space picker.
-check() {
-  local line
-  # Only files that call BWbFieldEditor.dialog( are candidates.
-  printf '%s\n' "$AL_TEXT" | grep -q 'BWbFieldEditor\.dialog(' || return 0
-  # Only files whose dialog call may receive BOrd.NULL (file-space default) are candidates.
-  printf '%s\n' "$AL_TEXT" | grep -q 'BOrd\.NULL' || return 0
-  # Exempt if the file already uses a station-component chooser or targetType facet.
-  printf '%s\n' "$AL_TEXT" | grep -q 'BComponentChooser' && return 0
-  printf '%s\n' "$AL_TEXT" | grep -q 'targetType' && return 0
-  # Report the first line that has both the dialog call and BOrd.NULL on the same line;
-  # fall back to the first dialog line if the argument spans multiple lines.
-  line=$(printf '%s\n' "$AL_TEXT" | grep -n 'BWbFieldEditor\.dialog(' | grep 'BOrd\.NULL' | head -1 | cut -d: -f1)
-  if [ -z "$line" ]; then
-    line=$(printf '%s\n' "$AL_TEXT" | grep -n 'BWbFieldEditor\.dialog(' | head -1 | cut -d: -f1)
-  fi
-  printf '%s\n' "$line"
-}
-
-# The lib strips // comments into AL_TEXT, walks fail closed, prints the WARN row and the exit code.
-awk_lint_strip_run check -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-wb-file-chooser: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-wb-file-chooser "$@"
