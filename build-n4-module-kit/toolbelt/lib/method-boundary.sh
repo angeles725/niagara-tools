@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # method-boundary.sh — shared awk method-boundary parser library (C11 T1).
 # ONE shell variable: MB_AWK — awk function definitions only (no BEGIN/END/pattern rules).
-# Consumed by lint-timers.sh, lint-silent-protection.sh, lint-ext-writable-shape.sh and the
-# later lints that source it (git grep -l method-boundary.sh build-n4-module-kit/toolbelt).
+# Consumed by the bash lints that source it (git grep -nE '^\s*(\.|source)\s.*method-boundary\.sh'
+# build-n4-module-kit/toolbelt); a lint ported to the Go engine drops it for go/internal/javasrc (Strip,
+# Methods), so lint-timers and lint-silent-protection no longer use it.
 #
 # Consumption forms (D1b):
 #   inline:   awk "$MB_AWK"' { lines[++n]=$0 } END { mb_strip(lines,n,slines); ... }' "$f"
