@@ -40,9 +40,9 @@ detectable and must be identified per-library at design time.
 > script has been created.
 
 **GC amplification on JACE:** ParallelGC (JDK 8 default) stop-the-world Full GC
-pauses last 500 ms–2 s on heap pressure. Heavy math that allocates large
+pauses run 100–500 ms on a 1 GB heap and 500 ms–2 s on a 4 GB heap. Heavy math that allocates large
 intermediate arrays amplifies this risk on rt — another reason to push
-optimization loops and matrix inversions off the engine thread. `[ev: corpus B31 §31.3.8]`
+optimization loops and matrix inversions off the engine thread. `[ev: corpus B31 §31.3.1, §31.3.8]`
 NRE heap budget on a JACE and the reboot to apply it: `types/platform.md` § 3.
 
 ---
@@ -76,8 +76,8 @@ reason BLoopPoint cannot meet the requirement. `[ev: corpus B539 §539.1–539.7
 
 ## Engine-thread / BWorker rule for heavy math `[ev: corpus B730 §730.8, B737, B31]`
 
-The engine thread must remain **< 10 ms per cycle**. Any computation that can
-take longer than ~2 ms must be posted off the engine thread.
+Keep each engine-thread callback **< 10 ms** (the HogsPage "normal" tier, B31 §31.1.5). Any computation that can
+take longer than ~2 ms [INFER — kit heuristic, no corpus source] must be posted off the engine thread.
 
 **What must go off-thread:** optimization loops (BOBYQA, CMA-ES, simplex),
 ODE integration, matrix inversion, state-observer updates, expression
@@ -131,7 +131,7 @@ smoke-test on the target JACE.
 
 | Library | Maven artifact | N4 verdict | Notes |
 |---------|---------------|-----------|-------|
-| **Apache Commons Math 3.6.1** | `org.apache.commons:commons-math3:3.6.1` | **Compact3-safe rt ✓** | Pure Java; no native; no excluded APIs. Covers stats, linear algebra, Brent/BOBYQA/CMA-ES/simplex/LSQ optimizers, Kalman (linear), ODE integrators, interpolation. Heavy calls (optimizer loops, ODE integration) → BWorker. B67 explicitly recommends it for percentile/variance/skewness extension. |
+| **Apache Commons Math 3.6.1** | `org.apache.commons:commons-math3:3.6.1` | **Compact3-safe rt ✓** | Pure Java; no native; no excluded APIs. Covers stats, linear algebra, Brent/BOBYQA/CMA-ES/simplex/LSQ optimizers, Kalman (linear), ODE integrators, interpolation. Heavy calls (optimizer loops, ODE integration) → BWorker. B67 lists the percentile, variance and skewness combiners Analytics lacks (noting Commons Math has percentiles) and suggests Apache Commons Statistics 1.0+ for them. |
 | **EJML 0.43** | `org.ejml:ejml-simple:0.43` | **Compact3-safe rt ✓** | Pure Java; compact matrices; recommended for state observers and own-Kalman implementations. Matrix inversions → BWorker. |
 | **ND4J** | `org.nd4j:nd4j-native-platform:*` | **NOT viable on JACE — Supervisor/offline only** | JNI-backed native binaries (OS/arch-specific `.so`/`.dll`); incompatible with Compact3 ZRE on QNX7 ARM. Hard binary incompatibility, not a configuration issue. Use on Supervisor or Windows offline analysis only. |
 | **MiniPID** | GitHub only (no Maven Central release) | **Skip — prefer kitControl.BLoopPoint** | Simple pure-Java PID. BLoopPoint already ships ramp anti-windup + bumpless transfer + loop alarms + priority-array output. Add MiniPID only when BLoopPoint's fixed API is genuinely insufficient. |

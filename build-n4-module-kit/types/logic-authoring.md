@@ -456,9 +456,10 @@ A **security module** provides a custom authentication scheme (e.g. LDAP, RADIUS
 first-class Niagara service.  The pattern is the same N4-extension idiom — subclass + register — but
 with a few module-specific rules:
 
-1. **Class hierarchy:** `extends BAbstractService` and `implements BAuthenticationScheme`.  `BAbstractService`
-   makes the scheme auto-discoverable under `/Services`; the `BAuthenticationScheme` interface is the
-   SPI contract that `AuthenticationService` calls.
+1. **Class hierarchy:** `extends BAuthenticationScheme`. It is an abstract class (`extends BComponent implements
+   BIAgent`), not an interface, so the scheme cannot also extend `BAbstractService`; shipped schemes such as
+   `BLdapAuthenticationScheme` and `BBacnetScAuthenticationScheme` extend it directly.
+   `[CERT: baja javax/baja/authn/BAuthenticationScheme.java:26]`
 
 2. **Permissions file (`module-permissions.xml`):** declare the scheme's required permissions in a
    `module-permissions.xml` alongside `module-include.xml` in the source tree.  The Gradle plugin
@@ -467,13 +468,24 @@ with a few module-specific rules:
    resource; the plugin merges it.  Example:
 
    ```xml
-   <!-- <part>/module-permissions.xml -->
    <?xml version="1.0" encoding="UTF-8"?>
-   <modulePermissions>
-     <permission name="javax.baja.sys.BajaPermission"
-                 actions="authenticationScheme"/>
-   </modulePermissions>
+   <!-- <part>/module-permissions.xml -->
+   <permissions>
+     <niagara-permission-groups type="station">
+       <req-permission>
+         <name>AUTHENTICATION</name>
+         <purposeKey>Log users in through the custom scheme</purposeKey>
+       </req-permission>
+     </niagara-permission-groups>
+   </permissions>
    ```
+
+   The NRE reads only a `<permissions>` root (`<java-permissions>` / `<niagara-permission-groups>` children);
+   any other root is silently ignored. `AUTHENTICATION` grants `AuthPermission("modifyPrincipals")`,
+   `MODIFY_SESSION_IDS` and `GET_AUTHENTICATED_USER`, and its risk text calls it "normal for a module that
+   offers a custom authentication scheme". The `purposeKey` is shown to the user who grants it; a lexicon key
+   works too. `[CERT: baja com/tridium/sys/module/NModule.java (manifest.elem("permissions")),
+   com/tridium/security/AuthenticationPermissionGroup.java, baja.lexicon:517]`
 
 3. **`@AgentOn` registration:** in `module-include.xml`, register the scheme as an agent on
    `"baja:AuthenticationScheme"` so `AuthenticationService` discovers it:
