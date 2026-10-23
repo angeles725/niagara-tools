@@ -31,8 +31,8 @@ func TestAllRuleOrder(t *testing.T) {
 	}
 	a := filepath.Join(root, "A.java")
 	ncw := "WARN  lint-null-context-write  " + a + ":2  null-Context write: void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n"
-	timers := "FAIL  discarded-ticket  " + a + ": Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
-		"FAIL  timer-ticket  " + a + ": schedules a Clock ticket but has no stopped() override to cancel it\n"
+	timers := "FAIL  discarded-ticket  " + a + ":2  Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
+		"FAIL  timer-ticket  " + a + ":2  schedules a Clock ticket but has no stopped() override to cancel it\n"
 	main := lint.Command(All()...)
 	for args, want := range map[string]string{
 		"--all":                               ncw + timers,

@@ -2,35 +2,35 @@
 src
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/src/BOrder.java: timer cancelled in stopped()
-WARN  orphan-flag  @DIR@/src/BOrder.java: killyankee() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killyankee() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killzeta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killzeta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killalpha() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killalpha() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killcharlie() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killcharlie() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killxray() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killxray() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killmike() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killmike() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killbravo() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killbravo() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killdelta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  orphan-flag  @DIR@/src/BOrder.java: killdelta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitValve() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitRun() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endRun() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endValve() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endDefrost() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitLight() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endLight() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endPump() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitPump() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitDefrost() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: exitFan() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
-WARN  release-gate-parity  @DIR@/src/BOrder.java: endFan() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+PASS  timer-ticket  @DIR@/src/BOrder.java:4  timer cancelled in stopped()
+WARN  orphan-flag  @DIR@/src/BOrder.java:20  killyankee() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:20  killyankee() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:16  killzeta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:16  killzeta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:17  killalpha() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:17  killalpha() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:21  killcharlie() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:21  killcharlie() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:22  killxray() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:22  killxray() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:18  killmike() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:18  killmike() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:19  killbravo() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:19  killbravo() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:23  killdelta() cancels tA but never clears its companion flag fA (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  orphan-flag  @DIR@/src/BOrder.java:23  killdelta() cancels tB but never clears its companion flag fB (set true beside the schedule) -- the expiry handler that clears it will not run
+WARN  release-gate-parity  @DIR@/src/BOrder.java:34  exitValve() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:26  exitRun() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:27  endRun() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:35  endValve() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:25  endDefrost() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:30  exitLight() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:31  endLight() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:33  endPump() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:32  exitPump() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:24  exitDefrost() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:28  exitFan() re-applies applyTwo() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
+WARN  release-gate-parity  @DIR@/src/BOrder.java:29  endFan() re-applies applyOne() without the beginGate() gate that started()/atSteadyState() uses (types/logic.md release-point gate rule 2)
 -- src/BOrder.java --
 package demo;
 import javax.baja.sys.*;

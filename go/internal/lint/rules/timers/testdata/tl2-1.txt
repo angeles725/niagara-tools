@@ -2,7 +2,7 @@
 src
 -- want --
 exit 0
-PASS  timer-ticket  @DIR@/src/Conformant.java: timer cancelled in stopped()
+PASS  timer-ticket  @DIR@/src/Conformant.java:4  timer cancelled in stopped()
 -- src/Conformant.java --
 package demo;
 import javax.baja.sys.*;
