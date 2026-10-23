@@ -14,8 +14,9 @@
 #                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
 #   catch-no-400  WARN  a 'try {' block that holds Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
 #                       Double.valueOf(, with a catch on its closing line ("} catch (E e) {") or
-#                       within the 4 lines after it, whose body has no 400 response (400, SC_BAD_REQUEST, sendError(, setStatus(,
-#                       jsonError( or sendJson(); the row is at the catch line.
+#                       within the 4 lines after it, whose body has no 400 response (400,
+#                       SC_BAD_REQUEST, sendError(, setStatus(, jsonError( or sendJson(); the row is
+#                       at the catch line.
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
 #                       (static detection: Cache-Control and max-age=[1-9] on one line).
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
