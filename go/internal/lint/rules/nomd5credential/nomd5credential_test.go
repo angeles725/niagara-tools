@@ -6,7 +6,8 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/golden"
 )
 
-// TestGolden: every tests/lint-no-md5-credential-digest.bats run and every edge tree, recorded from the bash lint.
+// TestGolden: every tests/lint-no-md5-credential-digest.bats run and every edge tree, recorded from the bash
+// lint, plus the hand-written truth-* cases of the comment- and string-aware match.
 func TestGolden(t *testing.T) { golden.Run(t, Spec(), 21) }
 
 // TestUnreadable: an unreadable sub-directory and file keep the awk_lint_list contract (ContinueOnWalkError):

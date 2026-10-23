@@ -38,12 +38,13 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
-// Check, over the code before each line's first "//" folded to ASCII lower case: a file that calls
+// Check, over the comment-blanked lines (javasrc Stripped: literal text kept, since both the "MD5"
+// argument and a "password" slot name live in literals) folded to ASCII lower case: a file that calls
 // MessageDigest.getInstance("MD5") and holds a credential context anywhere reports its first MD5 line.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	at, cred := 0, false
-	for i, ln := range f.Raw {
-		code := lower(linescan.Cut(ln))
+	for i, ln := range f.Stripped() {
+		code := lower(ln)
 		if at == 0 && strings.Contains(code, md5) {
 			at = i + 1
 		}
