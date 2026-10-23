@@ -37,7 +37,6 @@ set -u
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
 LC_ALL=C
 export LC_ALL
-
 STRICT=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -47,37 +46,23 @@ while [ $# -gt 0 ]; do
     *) break ;;
   esac
 done
-
 [ $# -ge 1 ] || { printf 'usage: lint-ext-writable-shape.sh [--strict] <java-src-dir>\n' >&2; exit 3; }
 SRC="$1"
 [ -d "$SRC" ] || { printf 'lint-ext-writable-shape: not a directory: %s\n' "$SRC" >&2; exit 3; }
-
-# K20 / EW11: a source dir with no *.java files is a configuration error -> exit 3.
-# Never emit a silent 0. Row contains ERROR + ext-writable-shape.
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
-# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
 scan_files_or_exit lint-ext-writable-shape 3 "$_TMP/files" "$SRC" -name '*.java'
 if [ ! -s "$_TMP/files" ]; then
   printf 'ERROR  ext-writable-shape  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"
   exit 3
 fi
-
 WARNED=0
-
 # shellcheck disable=SC2016  # awk program in single quotes — no shell expansion intended
 while IFS= read -r f; do
   out=$(awk -v FILE="$f" "$MB_AWK"'
   { lines[NR] = $0 }
-
   END {
     if (NR == 0) exit
-
-    # -------------------------------------------------------------------------
-    # Comment strip (D6): blank // and /* */ content; line numbers preserved.
-    # Runs over lines[] before every pass. A commented @NiagaraAction or
-    # @NiagaraProperty must NOT trigger any pattern. [ev: retro campaign9-close lesson 21]
-    # -------------------------------------------------------------------------
     in_bc = 0
     for (i = 1; i <= NR; i++) {
       ln = lines[i]; out = ""; j = 1
@@ -94,15 +79,6 @@ while IFS= read -r f; do
       }
       slines[i] = out
     }
-
-    # -------------------------------------------------------------------------
-    # Pass 1: harvest @NiagaraAction names (paren-balanced join, ALL actions).
-    # Replaces the C9 class-level has_action flag.
-    # action_names{x}           — raw annotation name, for name-pattern exemption (EW3).
-    # do_methods{"do"+cap1(x)}  — handler method names, for body-scan scope filter.
-    # Handles single-line and multi-line annotation forms. [ev: D2b step 1]
-    # [ev: client BCompressorControl.java:435-444 @ ff1b659]
-    # -------------------------------------------------------------------------
     in_ann = 0; buf = ""; depth = 0
     for (i = 1; i <= NR; i++) {
       ln = slines[i]
@@ -133,12 +109,6 @@ while IFS= read -r f; do
         }
       }
     }
-
-    # -------------------------------------------------------------------------
-    # Pass 2: shared fragment (PEAK depth) — do_method bodies via mb_parse (D1f).
-    # execute(), changed(), and slotomatic-generated setters fall out by construction
-    # — none is named do<Action>. [ev: D1f; lib/method-boundary.sh mb_parse]
-    # -------------------------------------------------------------------------
     if (length(do_methods) > 0) {
       _n = mb_parse(slines, NR, ms, me, mn)
       for (k = 0; k < _n; k++) {
@@ -148,21 +118,9 @@ while IFS= read -r f; do
         _scan_writes(body)
       }
     }
-
-    # -------------------------------------------------------------------------
-    # Pass 3: collect @NiagaraProperty annotations (paren-balanced multi-line
-    # join as in C8 D9b / bog-audit; handles nested @Facet(...) parens).
-    # For each: extract name, type, flags; emit WARN when:
-    #   type ~ BStatus(Numeric|Boolean|Enum) (complex)  AND
-    #   flags contain OPERATOR                           AND
-    #   slot NOT exempt (body-check + name-pattern check)
-    # [ev: D2b step 4; D2c; D2d; D2e]
-    # -------------------------------------------------------------------------
     in_prop = 0; buf = ""; depth = 0; prop_first = 0; prop_line = 0
-
     for (i = 1; i <= NR; i++) {
       ln = slines[i]
-
       if (!in_prop) {
         if (index(ln, "@NiagaraProperty") > 0 && index(ln, "(") > 0) {
           in_prop = 1; buf = ln; depth = 0; prop_first = 1; prop_line = i
@@ -190,9 +148,6 @@ while IFS= read -r f; do
       }
     }
   }
-
-  # Harvest one @NiagaraAction buffer: extract name="x", store in action_names{x}
-  # and compute do_methods{"do"+cap1(x)}. [ev: D2b step 1+2; B831-G1]
   function _harvest_action(buf,    aname, seg) {
     aname = ""
     if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
@@ -203,15 +158,8 @@ while IFS= read -r f; do
     }
     if (aname == "") return
     action_names[aname] = 1
-    # Resolve: action x -> "do" + toupper(first letter) + rest. [ev: D2b step 2; B831-G1]
     do_methods["do" toupper(substr(aname, 1, 1)) substr(aname, 2)] = 1
   }
-
-  # Scan a do<Action> body for writes; add found slot names to exempt_slot{}.
-  # Pattern 1: setX(           — standard setter (X = slot with capitalized first letter)
-  # Pattern 2: getX().setValue( — BSimple/BComplex setValue path
-  # Pattern 3: .set(prop,      — property-constant form (slotomatic generated region)
-  # [ev: D2b step 4]
   function _scan_writes(body,    tmp, frag, slot) {
     tmp = body
     while (match(tmp, /set[A-Z][A-Za-z0-9_]*\(/)) {
@@ -237,9 +185,7 @@ while IFS= read -r f; do
       tmp = substr(tmp, RSTART + RLENGTH)
     }
   }
-
   function _check_prop(buf, lineno,    pname, ptype, pflags, seg, uc, an) {
-    # Extract name
     pname = ""; ptype = ""; pflags = ""
     if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]*"/)) {
       seg = substr(buf, RSTART)
@@ -248,8 +194,6 @@ while IFS= read -r f; do
       pname = seg
     }
     if (pname == "") return
-
-    # Extract type
     if (match(buf, /type[[:space:]]*=[[:space:]]*"[^"]*"/)) {
       seg = substr(buf, RSTART)
       sub(/type[[:space:]]*=[[:space:]]*"/, "", seg)
@@ -257,33 +201,18 @@ while IFS= read -r f; do
       ptype = seg
     }
     if (ptype == "") return
-
-    # Complex check: BStatusNumeric, BStatusBoolean, BStatusEnum
-    # Accept with or without "B" prefix and with or without "baja:" namespace prefix.
     if (ptype !~ /([Bb]aja:)?(B)?[Ss]tatus[Nn]umeric|([Bb]aja:)?(B)?[Ss]tatus[Bb]oolean|([Bb]aja:)?(B)?[Ss]tatus[Ee]num/) return
-
-    # Extract flags
     if (match(buf, /flags[[:space:]]*=[[:space:]]*/)) {
       seg = substr(buf, RSTART + RLENGTH)
-      # grab until first "," or ")" that closes the flags value
       if (match(seg, /^[^,)]*/))
         pflags = substr(seg, 1, RLENGTH)
     }
     if (pflags !~ /OPERATOR/ && pflags !~ /"o"/) return
-
-    # Per-slot body-check exemption (D2b step 4; D2c):
-    # slot X is exempt when some do<Action> body was found to write X.
     if (pname in exempt_slot) return
-
-    # Name-pattern exemption (B822 / EW3 compatibility):
-    # An @NiagaraAction whose name encodes the write convention — set<X>/apply<X>/<x>Cmd
-    # — is itself a writing action without requiring the method body to be present.
-    # [ev: B822 additive-action doctrine]
     uc = toupper(substr(pname, 1, 1)) substr(pname, 2)
     for (an in action_names) {
       if (an == "set" uc || an == "apply" uc || an == pname "Cmd") return
     }
-
     printf "WARN  ext-writable-shape  %s:%d  %s: OPERATOR %s with no writing action" \
            " -- external oBIX write must use the child leaf .../%s/value (bare <real>, B826)" \
            " or add an OPERATOR action (B822)\n",
@@ -295,6 +224,5 @@ while IFS= read -r f; do
     WARNED=1
   fi
 done < "$_TMP/files"
-
 [ "$STRICT" -eq 1 ] && [ "$WARNED" -eq 1 ] && exit 1
 exit 0
