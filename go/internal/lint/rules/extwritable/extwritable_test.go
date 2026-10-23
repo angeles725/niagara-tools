@@ -117,3 +117,28 @@ func warned(t *testing.T, dir string) string {
 	}
 	return strings.Join(got, " ")
 }
+
+// TestLiteralCode: the text inside a string literal is never code. The awk counted a parenthesis in a
+// string, so an unbalanced one joined the next annotations into one (their rows were lost); it read an
+// "@NiagaraProperty(" in a string as an annotation that swallowed the real one after it; and it read a
+// setX( in a do<Action> body's string as a write that exempted x.
+func TestLiteralCode(t *testing.T) {
+	for _, c := range []struct{ name, src, want string }{
+		{"a ( in a property string joins no later property",
+			prop("d", `defaultValue="f(", `) + prop("e", "") + prop("f", `defaultValue="g())", `), "d@2 e@3 f@4"},
+		{"a ( in an action string hides no later action",
+			prop("q", "") + `@NiagaraAction(name="go", defaultValue="f(")` + "\n" + `@NiagaraAction(name="setQ")` + "\n", ""},
+		{"an @NiagaraProperty( in a string is not an annotation",
+			"class D { String s = \"@NiagaraProperty(\"; }\n" + prop("x", ""), "x@3"},
+		{"a setX( in a do-body string is not a write",
+			prop("x", "") + `@NiagaraAction(name="go")` + "\n" +
+				"public class C {\n  public void doGo()\n  {\n    log(\"setX(\");\n  }\n}\n", "x@2"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := write(t, map[string]string{"B.java": "package a;\n" + c.src + "public class B {}\n"})
+			if got := warned(t, dir); got != c.want {
+				t.Errorf("WARN rows %q, want %q", got, c.want)
+			}
+		})
+	}
+}

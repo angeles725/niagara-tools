@@ -16,8 +16,9 @@ var (
 
 // harvestActions returns every @NiagaraAction name and the do<Action> handler name of each. An annotation
 // is joined from the line holding "@NiagaraAction" to the line where its parentheses balance; the rest of
-// that line is not read for another annotation.
-func harvestActions(lines []string) (actions, handlers map[string]bool) {
+// that line is not read for another annotation. The marker and the parentheses are read in code, the
+// lines with literal contents blanked (see javasrc.BlankLiterals), and the name in lines.
+func harvestActions(lines, code []string) (actions, handlers map[string]bool) {
 	actions, handlers = map[string]bool{}, map[string]bool{}
 	harvest := func(buf string) {
 		m := nameAttr.FindStringSubmatch(buf)
@@ -28,12 +29,12 @@ func harvestActions(lines []string) (actions, handlers map[string]bool) {
 		handlers["do"+upperFirst(m[1])] = true
 	}
 	open, buf, depth := false, "", 0
-	for _, ln := range lines {
+	for i, ln := range code {
 		if !open {
 			if !strings.Contains(ln, "@NiagaraAction") {
 				continue
 			}
-			open, buf, depth = true, ln, 0
+			open, buf, depth = true, lines[i], 0
 			hasParen := strings.Contains(ln, "(")
 		first:
 			for ci := 0; ci < len(ln); ci++ {
@@ -55,7 +56,7 @@ func harvestActions(lines []string) (actions, handlers map[string]bool) {
 			}
 			continue
 		}
-		buf += " " + ln
+		buf += " " + lines[i]
 	next:
 		for ci := 0; ci < len(ln); ci++ {
 			switch ln[ci] {
@@ -76,17 +77,18 @@ func harvestActions(lines []string) (actions, handlers map[string]bool) {
 
 // annotations calls fn with each annotation named marker joined from the line holding it (and a "(") to
 // the line where its parentheses balance, with the 1-based line it starts on. Later text on that line is
-// not read for another annotation, and one still open at the end of the file is dropped.
-func annotations(lines []string, marker string, fn func(buf string, line int)) {
+// not read for another annotation, and one still open at the end of the file is dropped. The marker and
+// the parentheses are read in code (literal contents blanked), and buf joins lines.
+func annotations(lines, code []string, marker string, fn func(buf string, line int)) {
 	open, buf, depth, start := false, "", 0, 0
-	for i, ln := range lines {
+	for i, ln := range code {
 		if !open {
 			if !strings.Contains(ln, marker) || !strings.Contains(ln, "(") {
 				continue
 			}
-			open, buf, depth, start = true, ln, 0, i+1
+			open, buf, depth, start = true, lines[i], 0, i+1
 		} else {
-			buf += " " + ln
+			buf += " " + lines[i]
 		}
 		depth += strings.Count(ln, "(") - strings.Count(ln, ")")
 		if depth <= 0 {

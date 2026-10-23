@@ -52,7 +52,8 @@ var (
 // each OPERATOR complex @NiagaraProperty that neither a body nor an action name exempts.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	lines := f.Stripped()
-	actions, handlers := harvestActions(lines)
+	code, _ := javasrc.BlankLiterals(lines, nil) // a "(", marker or setX( inside a literal is not code
+	actions, handlers := harvestActions(lines, code)
 	exempt := map[string]bool{}
 	if len(handlers) > 0 {
 		for _, m := range f.Methods() {
@@ -62,13 +63,13 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			var body strings.Builder
 			for i := m.Start; i <= m.End; i++ {
 				body.WriteByte(' ')
-				body.WriteString(lines[i-1])
+				body.WriteString(code[i-1])
 			}
 			scanWrites(body.String(), exempt)
 		}
 	}
 	var out []lint.Finding
-	annotations(lines, "@NiagaraProperty", func(buf string, line int) {
+	annotations(lines, code, "@NiagaraProperty", func(buf string, line int) {
 		if msg, ok := checkProp(buf, actions, exempt); ok {
 			out = append(out, lint.Finding{Check: check, Line: line, Msg: msg})
 		}
