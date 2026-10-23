@@ -47,6 +47,17 @@ Seed pointers for the surface not yet proven; the sections below are proven from
 - **An AUTOMATIC lockout on a sustained proof-of-run fault is opt-in and AUTO-only — the inverse of HOA-OFF dominance:** (a) default it OFF/disabled (feedback sensors have proven unreliable in the field); (b) act ONLY on a unit in AUTO and NEVER override a manual HAND/ON — gate the request on the mode, not merely "not OFF"; (c) reuse the module's EXISTING OFF state rather than inventing a new one, so staging/UI/alarms need no new-state plumbing; (d) reset the fault-duration timer on EVERY step the unit is not in AUTO (not only when the fault clears), so a return to AUTO always starts a fresh full window, never an immediate re-trip. The automatic action leaves a latched, operator-cleared trace distinct from a manual OFF (`METHODOLOGY.md` § Domain correctness). Cross-link: HOA OFF lockout dominance, § Zero-demand / idle state item 5. [ev: retro panccadia-restart-seq-comp-lockout-hours Δ7]
 - **Changing what makes a persisted wear counter accrue is a ROTATION-LIVENESS change, not a metering change:** moving run-hour integration from "commanded" to "proven running" means a unit that never starts accrues zero hours and stays PINNED first in a least-hours rotation — commanded again and again while the rack runs one unit short. Any change to the predicate that drives a wear-based rotation/staging metric ships with (a) a rotation-consequence test (a no-start unit behaves as designed), and (b) the concrete regression test that least-hours rotation SKIPS a unit with an active proof fault (or that a rotation shipped without the opt-in auto-lockout forced on is flagged) — plus the consequence named in the feature's deploy checklist. Operator vigilance is not the escape hatch. [ev: retro comppan-fase2-amps-alarms Δ6] [ev: retro panccadia-commissioning-lessons Δ13]
 
+### Operator-entered bounds: handle `min > max` explicitly `[ev: retro n4-course-handson-slotomatic-authoring Δ4]`
+A component whose operator enters both bounds must decide what a swapped pair means. The course exam's `BLimiter`
+clamps with `if (in < min) out = min; else if (in > max) out = max; else out = in`
+(`CertificationExam/…/BLimiter.java:159-176`). Entered live as Max=25, Min=75 (`[ev: live 2026-10-16 BLimiter Max=25
+Min=75]`), it gives `out = 75` for every `in < 75` and `out = 25` for every other `in`, and never passes `in`
+through. Nothing in the status shows it. Remedy `[INFER]`: the exam accepted the unguarded code. Either set the
+output to fault (§ Tridium rt idioms, "Degrade honestly") while `min > max`, or refuse the edit. A validator only
+refuses edits from a user, not link-fed values (§ Tridium rt idioms, "A validator does not guard link-fed values"),
+so a linked bound still needs the fault path. The same `BLimiter` puts `if (!isRunning()) return;` first and
+dispatches on `in`, `min` and `max` only (`:153-159`), which is the callback contract in § Tridium rt idioms.
+
 ## Restart & persistence
 
 "Non-TRANSIENT" and "survives a restart" are NOT the same guarantee: a non-TRANSIENT slot reaches disk only when the station is SAVED (`config.bog`). The platform auto-save is periodic and coarse (as long as 24 h on a controller), so a watchdog crash/restart with no save in between loses every change since the last save — an accumulated wear counter dropped from tens of hours to single digits this way. Pick the mechanism by the kind of state:

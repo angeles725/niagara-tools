@@ -559,6 +559,10 @@ cursor recipe stays owed (WU-P0-6).
   states both and leaves "which remote surfaces ask canWrite" not verified. scc Δ5's `NoSuchSlotException`: javadoc
   (docSource 4.14.0.162 `BComplex.java:686-697`) vs a `Property` cast in the 4.14.0.162 body (`ComplexSlotMap.java:371-373`);
   the rule avoids the call (K30). Owed Go lints G29 `callback-running-guard`, G32 `slot-api-traps`.
+  **Extensions FOLDED** (U11, 2026-10-23; slo Δ2, Δ3): `types/logic-authoring.md` § Generated accessors and slot declaration
+  order (primitive accessors from devkit-wb 4.14.0.162 `PropertyProcessor.java:40-91`; low-before-high order). Premise
+  corrected: slo Δ3's "a later reorder is a schema change" — a `.bog` binds by name (`schema-risk.sh` `reorder_slot,SAFE`);
+  the reorder changes the operator's view only. Owed Go lint G96 `slot-pair-order`.
 
 ### C37 — Concurrency doctrine: no intrinsic locks, named threads, callback thread map
 - **Sources:** tjd#Δ4 (primary: `lint-intrinsic-lock.sh`) · tjd#Δ5 extends (naming/priority; reinforces rac Δ1's `defaultThreadFactory`) · poh#Δ1 extends (callback → thread map)
@@ -615,6 +619,9 @@ cursor recipe stays owed (WU-P0-6).
   `templates/moduleTest-include.xml`, `METHODOLOGY.md` tier note. LEFT: `scaffold-module.sh` emission (outside the
   surface); the structural-test advisory is owed as Go lint G34 `structural-tests` (a new check, not a small edit of
   L12). Whether 4.14+ tooling still discovers the older layout is `[INFER]`. Pin KPT1.
+  **Doc half of the emission FOLDED** (U11, 2026-10-23; tpb Δ6): `types/structure.md` § What the scaffold emits today (copy the
+  template by hand; the § PASS state stub is not well-formed XML). The fixture + scaffold emission is owed as G97
+  `fixture-moduletest-include` (`ledger.d/2026-10-23-r8-u11-leftovers.md`); the stub-block fix is an owed pointer (P4).
 
 ### C42 — Shipped libraries: `bin/ext` first, wrapper modules, version drift
 - **Sources:** shl#Δ1 (primary: `nre("g:a")` no version, catalog table) · shl#Δ3 extends (drift: httpclient 4.5 → 5) · shl#Δ4 extends (wrapper table; commonsLang-rt empty in 4.15) · shl#Δ6 extends (wrapper does not grant its permissions)
@@ -685,6 +692,9 @@ cursor recipe stays owed (WU-P0-6).
   devguide 4.15.6.20 `security/securityManager.txt:44-124`, `requestingPermissions.txt:40-80,142,596,653`). LEFT: the
   fixture copy and `scaffold-module.sh` emission (outside this unit's edit surface); the lint half is owed Go lint G21
   `permissions-xml`. Pin KPS2.
+  **Doc half of the fixture FOLDED** (U11, 2026-10-23; afl Δ2): `types/structure.md` § What the scaffold emits today — the fixtures'
+  `<modulePermissions/>` root is copied into `META-INF/module.xml` as is and never read (baja 4.14.0.162 `NModule.java:442-452`
+  reads only `<permissions>`). The fixture replacement is owed as G98 `fixture-permissions`.
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
@@ -735,6 +745,9 @@ cursor recipe stays owed (WU-P0-6).
   sum as the example). LEFT: cex Δ1's `SOURCES.md` § Exemplar source and `corpus-index.md` rows, and the `skill/SKILL.md`
   step-2 line — all three files are outside this unit's edit surface; the one-time "never"/"forbidden" sweep. Owed Go
   lint G38 `absolute-claims` and Go tool G39 `count-retro-deltas`.
+  U11 (2026-10-23): cex Δ1 still outside the surface; its exact `SOURCES.md` and `corpus-index.md` rows are recorded as owed
+  pointer P1 in `ledger.d/2026-10-23-r8-u11-leftovers.md` (`[deferred: …Δ1]`); hwf Δ1 (copy after a diff) FOLDED in
+  `METHODOLOGY.md` § Hands-on work, helper owed G93 `diff-vs-reference`.
 
 ### C52 — Client parity ticket (course convention wins on five points)
 - **Sources:** poh#Δ3 (primary)
@@ -803,6 +816,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: live 2026-10-16 BLimiter Max=25 Min=75]`.
 - **Target:** `types/logic.md` § Safety fail-modes & timers.
 - **Lint-able:** no. **Fold type:** doc rule.
+- **Fold status:** FOLDED (U11, 2026-10-23; slo Δ4): `types/logic.md` § Operator-entered bounds (symptom derived from
+  `BLimiter.java:159-176`: `out` = 75 below 75 and 25 otherwise; remedy `[INFER]`; a validator misses link-fed bounds).
 
 ---
 
@@ -983,6 +998,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11477]`.
 - **Target:** `BUILD-LOOP.md` § 0.a Orient from BUILD-STATE; optional `toolbelt/orient-guard.sh --recent <root>`.
 - **Lint-able:** no (procedure); the orient-guard option is the mechanical form. **Fold type:** doc procedure (+ optional helper).
+- **Fold status:** FOLDED (U11, 2026-10-23; hwf Δ2): `METHODOLOGY.md` § Hands-on work (resume from the workspace; `newest:` in the orient line).
+  Landed there, not in `BUILD-LOOP.md` § 0.a (outside the surface; pointer P2 owed). Owed G94 `orient-recent`.
 
 ### C93 — Shared-host rule: no heavy background jobs while Workbench or a station is open
 - **Sources:** hwf#Δ4 (primary)
@@ -990,6 +1007,8 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `[ev: engram obs 11095]`.
 - **Target:** `ORCHESTRATION.md` § 3 Delegation triggers, `toolbelt/preflight.sh`.
 - **Lint-able:** partial — preflight WARN when `tasklist.exe` shows `wb.exe`/`station.exe` before a heavy job. **Fold type:** doc rule + preflight row.
+- **Fold status:** FOLDED (U11, 2026-10-23; hwf Δ4): `METHODOLOGY.md` § Hands-on work (shared host; `wb.exe`, `wb_w.exe`, `station.exe` from the
+  4.15.6.20 `bin/`). Landed there, not in `ORCHESTRATION.md` § 3 (pointer P3 owed). Owed preflight row G95 `shared-host`.
 
 ---
 
@@ -1306,15 +1325,15 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
 | `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | accepted (remedy `[INFER]`) |
+| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | folded (U11, logic-authoring § Generated accessors) |
+| `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | folded doc (U11); lint owed G96 |
+| `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | folded (U11, logic.md § Operator-entered bounds; remedy `[INFER]`) |
 | `n4-course-handson-slotomatic-authoring#Δ5` | toolbelt/lint-agent-on-shape.sh, types/module-wiring.md | refines C25: processor never updates a stale `<type>` line | C25 | P0 | accepted |
 | `n4-course-handson-slotomatic-authoring#Δ6` | toolbelt/verify-module.sh `check_palette` | new: palette count misses non-first `n=` | C82 | P0 | accepted |
-| `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | accepted |
-| `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | accepted |
+| `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | folded doc (U11, METHODOLOGY § Hands-on work); helper owed G93 |
+| `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | folded doc (U11, METHODOLOGY § Hands-on work); owed G94, pointer P2 |
 | `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | folded doc (U4 C58); run-niagara-test.sh skip waits on that script |
-| `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | accepted |
+| `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | folded doc (U11, METHODOLOGY § Hands-on work); owed G95, pointer P3 |
 
 No-loss result for Appendix C (2026-10-22, T9a; ad-hoc comparison of the `| Δn |` rows of the five 2026-10-16 retros
 with the rows above, and of every C-id above with its `### Cnn` heading and tier):
