@@ -35,6 +35,9 @@
 # Row format:  FAIL|WARN  lint-config-sanity  <file>:<line>  CS<n>: <reason>
 # Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env, incl. a sub-directory find cannot enter (K20)
 #              or a source file it cannot read ("cannot scan"; the other files' rows still print)
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-config-sanity  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 #
 # Dot-directories and *-worktrees directories excluded (D9b). VCS-free by design. kit-links.bats L2 enforces
 # the no-version-control rule on all toolbelt scripts.
