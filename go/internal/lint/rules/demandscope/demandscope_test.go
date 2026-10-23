@@ -81,3 +81,23 @@ func TestCommentsAndLiterals(t *testing.T) {
 		}
 	}
 }
+
+// TestKeywords: a class, interface or enum declaration at class scope is neither a field nor a method.
+// The awk wrote those checks as /\bclass\b/, which gawk reads as backspaces, so a nested class named
+// Demand counted as a demand field and a method opened on an enum's line was checked at class scope.
+func TestKeywords(t *testing.T) {
+	const step = "  int s(double suction) { int target = 0; if (suction > 1) target = 1; return target; }\n"
+	for _, tc := range []struct{ name, src, want string }{
+		{"nested class", "class A {\n  class Demand { int x; }\n" + step + "}\n",
+			"WARN  demand-in-scope  A.java:3  s reads suction with no demand-shaped input in scope\n"},
+		{"nested interface", "class A {\n  interface Enable { int X = 1; }\n" + step + "}\n",
+			"WARN  demand-in-scope  A.java:3  s reads suction with no demand-shaped input in scope\n"},
+		{"enum line", "class A {\n  int demand;\n  enum E { A; int f(double temp) { cmd[0] = temp > 2 ? 1 : 0; return 0; } }\n}\n", ""},
+		{"enum line, no demand", "class A {\n  enum E { A; int f(double temp) { cmd[0] = temp > 2 ? 1 : 0; return 0; } }\n}\n", ""},
+		{"word inside a name", "class A {\n  int subclassCount;\n" + step + "}\n", ""},
+	} {
+		if got := rows(t, tc.src); got != tc.want {
+			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
+		}
+	}
+}

@@ -2,7 +2,6 @@
 @DIR@/m
 -- want --
 exit 0
-WARN  demand-in-scope  @DIR@/m/B.java:12  f reads temp with no demand-shaped input in scope
 WARN  demand-in-scope  @DIR@/m/B.java:13  a reads pressure with no demand-shaped input in scope
 WARN  demand-in-scope  @DIR@/m/B.java:15  c reads cv with no demand-shaped input in scope
 WARN  demand-in-scope  @DIR@/m/B.java:18  f reads temp with no demand-shaped input in scope

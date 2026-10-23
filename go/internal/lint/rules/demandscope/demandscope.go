@@ -43,10 +43,14 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 var pvs = []string{"suction", "pressure", "discharge", "temp", "cv", "coil", "head"}
 
 var (
-	// ctrl is rule 1, a control-decision body: it writes a target, a cmd slot, an output setter, or returns
-	// a comparison. The awk wrote the last as /\breturn.../, and gawk reads \b as a backspace, not a word
-	// boundary, so it is kept as the byte it matched.
-	ctrl = regexp.MustCompile(`target[[:space:]]*[+\-]?=|target[+\-][+\-]|cmd\[|setBool\(|\.setValue\(|set[A-Z][A-Za-z0-9]*\(|\x08return[^;]*[<>]`)
+	// ctrl is rule 1, a control-decision body: it writes a target, a cmd slot or an output setter. The awk
+	// also had /\breturn[^;]*[<>]/ ("returns a computed decision"), which never matched: gawk reads \b as
+	// a backspace. It stays out: as a word boundary it added 13 false rows on the real trees (2026-10-23:
+	// generics and predicates such as isValid, none a control decision).
+	ctrl = regexp.MustCompile(`target[[:space:]]*[+\-]?=|target[+\-][+\-]|cmd\[|setBool\(|\.setValue\(|set[A-Z][A-Za-z0-9]*\(`)
+	// declares is a class, interface or enum keyword on the line (the awk's /\bclass\b/ etc., which gawk
+	// read as backspaces and so never matched).
+	declares = map[string]*regexp.Regexp{}
 	// pvAt is rule 2 per stem: the stem (plus word chars) before " <"/" >", or "<"/">" (plus "=") and a
 	// blank before the stem.
 	pvAt       = map[string]*regexp.Regexp{}
@@ -56,6 +60,9 @@ var (
 )
 
 func init() {
+	for _, w := range []string{"class", "interface", "enum"} {
+		declares[w] = regexp.MustCompile(`\b` + w + `\b`)
+	}
 	for _, pv := range pvs {
 		pvAt[pv] = regexp.MustCompile(pv + `[a-z0-9_.]*[[:space:]][<>]|[<>][=]?[[:space:]][a-z0-9_.]*` + pv)
 	}
@@ -111,8 +118,8 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 // braces is the line's "{" count minus its "}" count.
 func braces(ln string) int { return strings.Count(ln, "{") - strings.Count(ln, "}") }
 
-// keyword is the awk's ln ~ /\b<word>\b/, which gawk reads as <word> between two backspaces.
-func keyword(ln, word string) bool { return strings.Contains(ln, "\b"+word+"\b") }
+// keyword reports the word (class, interface or enum) on the line as a whole word.
+func keyword(ln, word string) bool { return declares[word].MatchString(ln) }
 
 // demandShaped reports a lowered name list naming a demand-shaped input: demand*, *call*, enable, *count.
 func demandShaped(lo string) bool {
@@ -122,6 +129,9 @@ func demandShaped(lo string) bool {
 
 // readsPV is the first process-variable stem the lowered body compares, or "".
 func readsPV(lo string) string {
+	for _, w := range []string{"class", "interface", "enum"} {
+		declares[w] = regexp.MustCompile(`\b` + w + `\b`)
+	}
 	for _, pv := range pvs {
 		if pvAt[pv].MatchString(lo) {
 			return pv

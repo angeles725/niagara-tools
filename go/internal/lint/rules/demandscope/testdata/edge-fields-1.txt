@@ -3,6 +3,7 @@
 -- want --
 exit 0
 WARN  demand-in-scope  @DIR@/m/a/F2.java:3  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/a/F4.java:3  step reads suction with no demand-shaped input in scope
 -- stderr --
 -- m/a/F1.java --
 class F1 {
