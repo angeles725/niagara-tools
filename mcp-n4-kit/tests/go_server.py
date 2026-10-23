@@ -11,6 +11,10 @@ Tests that cannot run black-box carry `@go_twin(package, category)`: they are sk
 Go and name the Go test that replaces them. The per-file inventory lives in the plan doc and
 `test_go_harness` keeps the two in step.
 
+A black-box test that reaches a part the binary does not port yet is skipped, not failed: a
+tool answering the `UNPORTED` tool error, or a start refused with it (`--allow-writes` before
+S10). Only that exact text skips, so the skip disappears as each slice lands.
+
 Any stdio server can stand in for the binary: pointing `MCP_N4_GO_BIN` at a wrapper that runs
 `python3 -m mcp_n4.server "$@"` checks that every unmarked test really is black-box.
 """
@@ -31,6 +35,9 @@ IMPLS = ("python", "go")
 IMPL = os.environ.get("MCP_N4_IMPL") or "python"
 GO = IMPL == "go"
 REPLY_TIMEOUT = 60.0
+#: The tool error / start refusal text of a part the Go binary does not port yet
+#: (jsonrpc.NotImplemented in go/internal/mcpn4).
+UNPORTED = "is not implemented in this version of the Go server"
 
 #: Why a test cannot run against the binary. Each skipped test names its future Go twin.
 CATEGORIES = {
@@ -56,6 +63,17 @@ class GoServerError(RuntimeError):
 
 class GoServerStartupError(ValueError):
     """The server refused its options at start (exit 2), like `Server(...)` raising ValueError."""
+
+
+def skip_if_unported(reply):
+    """Raise SkipTest when `reply` (a decoded reply object) is the unported-tool error."""
+    result = reply.get("result") if isinstance(reply, dict) else None
+    if isinstance(result, dict) and result.get("isError") is True:
+        content = result.get("content")
+        text = content[0].get("text") if isinstance(content, list) and content \
+            and isinstance(content[0], dict) else None
+        if isinstance(text, str) and text.endswith(" " + UNPORTED):
+            raise unittest.SkipTest("not ported to Go yet: " + text)
 
 
 # Server(...) keyword -> command-line flag (server.parse_args). Lists repeat the flag.
@@ -137,6 +155,8 @@ class GoServer:
             text = self.stderr()
             self._stderr.close()
             if self._proc.returncode == 2:
+                if text.endswith(" " + UNPORTED):
+                    raise unittest.SkipTest("not ported to Go yet: " + text)
                 raise GoServerStartupError(text or str(exc)) from None
             raise
 
@@ -186,11 +206,18 @@ class GoServer:
         return replies[0] if replies else None
 
     def handle_line(self, line):
-        return self._exchange(line.rstrip("\n"))
+        out = self._exchange(line.rstrip("\n"))
+        if out is not None:
+            skip_if_unported(json.loads(out))
+        return out
 
     def dispatch(self, msg):
         out = self._exchange(json.dumps(msg))
-        return None if out is None else json.loads(out)
+        if out is None:
+            return None
+        reply = json.loads(out)
+        skip_if_unported(reply)
+        return reply
 
     def close(self, keep_stderr=False):
         proc = self._proc

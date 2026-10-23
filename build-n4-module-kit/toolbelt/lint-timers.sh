@@ -7,11 +7,21 @@
 #   atSteadyState-only-timer, orphan-flag, release-gate-parity).
 #   A class with no timers emits no FAIL (silently skipped).
 #
-# Row format: FAIL|PASS|WARN  <check>  <file>: <detail>   (WARN never changes the exit status)
+# Row format: FAIL|PASS|WARN  <check>  <file>:<line>  <detail>   (WARN never changes the exit status)
+#   <line> is the line the row is about: discarded-ticket the call; timer-ticket the first Clock.Ticket /
+#   Clock.schedule* line (a missed field: its declaration); companion-flag the `flag = true` line;
+#   jdk-thread the modifying call (FAIL) or the first JDK concurrency use (WARN); job-cancel the loop;
+#   changed-sched the changed()/started() line; atSteadyState-only-timer its declaration; orphan-flag
+#   and release-gate-parity the opening brace of the method they name.
+# Every check reads code: comments stripped and literal contents blanked by the shared javasrc helpers
+# (Strip, BlankLine), so a call, a guard or a cancel inside a comment or a string is never code.
 # Exit: 0 no FAIL · 1 any FAIL · 2 usage · 3 env (incl. a sub-directory find cannot enter)
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-timers  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
-# Evidence of the checks below (also cited at each check): [ev: corpus B800 §800.3] [ev: corpus B806] [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8]
+# Evidence of the checks below (also cited at each check): [ev: corpus B800 §800.3] [ev: corpus B806] [ev: corpus B816] [ev: retro continuous-fan-post-defrost-delay Δ2] [ev: retro panccadia-restart-seq-comp-lockout-hours Δ8] [ev: corpus B787] [ev: audit-2026-10-03 A1]
 # Mutation: S21-neg -- removes method-scope exclusion, causing method-local boolean + schedule to false-FAIL
 # Mutation: S21-misparse -- drops the javasrc.Methods depth>=2 guard, making @NiagaraProperty(defaultValue=new Foo()) false-parse as a method
 # Mutation: TT-comment -- matching the raw line (comments kept) lets a commented 'cancel' pass
@@ -42,6 +52,8 @@
 # Mutation: JT-comment -- matching comment and string text FAILs a shutdownNow() that is only mentioned
 # Mutation: JC-loop -- dropping the job-cancel pass lets a BSimpleJob loop run with no isAlive() check
 # Mutation: JC-comment -- matching comment text lets a commented-out isAlive() silence the WARN
+# Mutation: TR1-code -- scanning the raw lines (comments and strings kept) FAILs a schedule that is only mentioned
+# Mutation: TR1-shape -- leaving Line 0 prints the file-level "<file>: <msg>" row with no line
 #
 # Detects timer lifecycle defects in module Java source files:
 #
@@ -61,6 +73,9 @@
 #
 #   discarded-ticket  A Clock.schedule*() call whose return value is not captured
 #                     — the Clock.Ticket is immediately lost, no way to cancel it.
+#                     Captured means its own statement (from the last ; { or } before
+#                     the call, across lines) assigns (=, not == != <= >=) or returns it:
+#                     `t =\n Clock.schedule(...)` is kept, `y = 1; Clock.schedule(...)` is not.
 #
 #   companion-flag    A boolean/int flag assigned true beside a Clock.schedule*
 #                     call that is not assigned false inside stopped() or started();
@@ -126,6 +141,18 @@
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs
 # `n4lint lint-timers <args>`. Needs `go` on PATH to build (exit 3 otherwise). An unreadable
 # module-permissions.xml is an env error too: exit 3, the run stops at that file.
+#
+# Declared differences from the bash lint (truth fixes 2026-10-23, R8-D14 — a port keeps no known lie):
+#   - discarded-ticket, timer-ticket, companion-flag, changed-sched, atSteadyState-only-timer, orphan-flag
+#     and release-gate-parity read code, not raw or comment-stripped lines: a Clock.schedule, a guard or
+#     a flag assignment in a comment or a string no longer FAILs or passes a class.
+#   - discarded-ticket judges the call's own statement (an `=` of an earlier statement on the line no
+#     longer counts; a multi-line `t =\n Clock.schedule(` is kept); a call on an unterminated last line
+#     is reported (bash `read` skipped that line).
+#   - every row carries its line (above); job-cancel and jdk-thread moved the "line N" out of the text.
+#   - jdk-thread names the permissions file by its module directory (`m-rt/module-permissions.xml`), not
+#     a second absolute path, and reads the grant directly: a path with a space no longer FAILs a module
+#     that requests MANAGE_EXECUTION (bash `read -r` split the path).
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

@@ -1,8 +1,8 @@
 -- root --
 my mod/m-rt/src
 -- want --
-exit 1
-FAIL  jdk-thread  @DIR@/my mod/m-rt/src/demo/BExec.java: BExec modifies a thread (shutdownNow() at line 5) but @DIR@/my requests no MANAGE_EXECUTION (type station/all) -- modifyThread is denied at stop and the thread outlives the component (types/logic.md Off-engine work)
+exit 0
+WARN  jdk-thread  @DIR@/my mod/m-rt/src/demo/BExec.java:4  BExec uses a JDK thread/executor -- allowed (Tridium Lab 9); prefer Clock.schedule, an existing BWorker, a BSimpleJob or a named ExecutorUtil.newSingleThreadBackgroundExecutor; a shutdown/interrupt needs MANAGE_EXECUTION
 -- my mod/m-rt/module-permissions.xml --
 <permissions>
   <niagara-permission-groups type="station">

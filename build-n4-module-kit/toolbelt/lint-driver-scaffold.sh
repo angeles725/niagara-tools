@@ -13,6 +13,9 @@
 #                                                    | doSubmitDiscoveryJob() submits with a null Context
 #                                                    | method boundaries not trusted (<reason>)
 #   Exit: 0  no FAIL (WARN-only is 0) · 1  any FAIL · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-driver-scaffold  <root>  no *.java sources found (wrong path or empty source tree)` (go/internal/lint
+# Spec.EmptyError; declared difference 2026-10-23: the bash lint exited 0 with no row).
 # A method body is the text between a member header's `{` and its matching `}`, at any class depth (a nested
 # device class counts). The header is the code since the last `;`, `{` or `}`, with every annotation (its name
 # and its balanced argument list, on one line or several) dropped, so `@SuppressWarnings({"x"}) public void
