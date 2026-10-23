@@ -1,0 +1,30 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/MultiLineTooLong.java:6  unclosed-call  Clock.schedule( not closed within 12 lines -- cannot read the delay; wrap the call tighter
+-- stderr --
+-- t/MultiLineTooLong.java --
+package demo;
+import javax.baja.sys.*;
+public final class MultiLineTooLong extends BComponent {
+  private Clock.Ticket t;
+  public void arm() {
+    t = Clock.schedule(
+      this
+      // a long hand-wrapped argument list
+      //
+      //
+      //
+      //
+      //
+      //
+      //
+      //
+      //
+      //
+      //
+      ,
+      BRelTime.makeSeconds(5), null, null);
+  }
+}

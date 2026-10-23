@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-gen-lint-index
@@ -51,4 +51,4 @@ exit 3 with the committed INDEX.md untouched (approved edit of `tests/gen-lint-i
 - A bash redirect failure without `set -e` is only a stderr line; the next `printf 'wrote'` still runs.
 
 ---
-**Status**: PENDING (Δ1 applied to gen-lint-index; fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-gen-lint-index.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Pin the contract, not the old implementation".

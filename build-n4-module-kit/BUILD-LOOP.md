@@ -241,6 +241,23 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     bounds) or the Go Java scanner `go/internal/javasrc` (T8k-1, #297); a private stripper is a finding. Four fail-open bugs in
     one round came from private strippers (lint-driver-scaffold #277/#283, lint-service-types #279/#285,
     `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]`
+    Match on blanked source (comments and literal contents removed: `go/internal/javasrc` `Strip` then
+    `BlankLiterals`) and on the whole statement, not the raw line: raw lines flag a call inside a comment or a
+    string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
+    (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
+    or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14). Owed engine item G51.
+    `[ev: retro truth-audit Δ3]`
+  - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
+    with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
+    through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
+    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A new bash lint never pastes the parse/walk/exit
+    skeleton: a per-file awk lint writes only its header, `awk_lint_parse`, its `main.awk` and `awk_lint_run`; a
+    flagless line-loop lint opens with `awk_lint_parse <name> raw` and `awk_lint_list`, and ends with
+    `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
+    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` A root with no input files is an ERROR (exit 3), never a
+    silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
+    owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
+    `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro 2026-09-17-umbrelladashboard-module-creation] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
 - Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor

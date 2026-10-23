@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-sweep-build-state
@@ -68,4 +68,4 @@ row was skipped (in `--age` its debt was not counted; in the content check its r
   passes through the boolean check); pin the message when the rule matters.
 
 ---
-**Status**: PENDING (Δ1 applied to sweep-build-state; fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "A gate calls another kit tool's Go package in process".

@@ -1,0 +1,54 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/Use.java:6  zero-floor  helper bad has no visible strictly-positive floor
+FAIL  lint-delays     @DIR@/t/Use.java:11  zero-floor  helper bad has no visible strictly-positive floor
+FAIL  lint-delays     @DIR@/t/Use.java:13  zero-floor  helper bad has no visible strictly-positive floor
+FAIL  lint-delays     @DIR@/t/Use.java:17  zero-floor  helper unknownFn has no visible strictly-positive floor
+FAIL  lint-delays     @DIR@/t/Use.java:19  zero-floor  helper unknown has no visible strictly-positive floor
+-- stderr --
+-- t/Helpers.java --
+package demo;
+public final class Helpers {
+  public static long floor1(long x) { return Math.max(x, 1L); }
+  static final long fl2(long y)
+  {
+    if (y >= 1 ) return y;
+    return 5;
+  }
+  public static long bad(long x) {
+    return x;
+  }
+  static long ternary(long z) {
+    return z < 1L ? 1 : z;
+  }
+  static long ret1(long z) {
+    if (z == 0) {
+      return 1L;
+    }
+    return z;
+  }
+}
+-- t/Use.java --
+package demo;
+import javax.baja.sys.*;
+class Use extends BComponent {
+  void a(long x, long y) {
+    Clock.schedule(this, BRelTime.make(Helpers.floor1(x)), go, null);
+    Clock.schedule(this, BRelTime.make(bad(x)), go, null);
+    Clock.schedule(this, BRelTime.make(fl2(y)), go, null);
+    long d = Helpers.floor1(x);
+    Clock.schedule(this, BRelTime.make(d), go, null);
+    long d2 = bad(x);
+    Clock.schedule(this, BRelTime.make(d2), go, null);
+    if (bad(x) > 0) {
+      Clock.schedule(this, BRelTime.make(bad(x)), go, null);
+    }
+    Clock.schedulePeriodically(this, BRelTime.make(Helpers.ternary(x)), go, null);
+    Clock.schedule(this, BRelTime.make(Other.ret1(x)), go, null);
+    Clock.schedule(this, BRelTime.make(  unknownFn (x)), go, null);
+    long d3 = Other.unknown(x);
+    Clock.schedule(this, BRelTime.make(d3), go, null);
+  }
+}

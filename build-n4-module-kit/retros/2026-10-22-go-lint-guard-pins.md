@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-lint-guard-pins
@@ -53,4 +53,4 @@ instead of one grep per mutation, so a real-tree run drops from seconds to milli
   unchanged or the generated lint index moves with the port.
 
 ---
-**Status**: PENDING (Δ1 applied to lint-guard-pins; fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Fail closed on I/O".

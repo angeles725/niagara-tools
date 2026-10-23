@@ -227,3 +227,28 @@ func TestMainRealKit(t *testing.T) {
 		}
 	}
 }
+
+// TestMainReadOnlyIndex ports the read-only-target case of the gen.File parity matrix (#344): the
+// written index ends in exactly one newline, and a read-only INDEX.md is exit 3 and left untouched.
+func TestMainReadOnlyIndex(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a mode-444 file")
+	}
+	root, tb := kit(t, map[string]string{"lint-a.sh": lint("lint-a.sh", "a", "u", "e")})
+	out := filepath.Join(tb, "INDEX.md")
+	if code, _, _ := run("", root); code != ExitOK {
+		t.Fatalf("write: exit %d", code)
+	}
+	written := read(t, out)
+	if !strings.HasSuffix(written, "|\n") {
+		t.Errorf("written index does not end in exactly one newline: %q", written)
+	}
+	if err := os.Chmod(out, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, errs := run("", root)
+	if code != ExitEnv || stdout != "" || !strings.HasPrefix(errs, "gen-lint-index: cannot write "+out+": ") || read(t, out) != written {
+		t.Errorf("got (%d, %q, %q)", code, stdout, errs)
+	}
+}
