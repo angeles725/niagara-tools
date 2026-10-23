@@ -15,6 +15,7 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
 from mcp_n4 import box, bql, server, tools_read, tools_write  # noqa: E402
 
@@ -53,6 +54,7 @@ class FakeOpener:
         raise AssertionError("unexpected ORD %s" % ord_text)
 
 
+@go_server.go_twin("bql", "unit")
 class TestPureHelpers(unittest.TestCase):
     def test_unescape_slot_decodes_dollar_escapes(self):
         self.assertEqual(bql.unescape_slot("Meter$20Side$20A"), "Meter Side A")
@@ -134,6 +136,7 @@ class TestPureHelpers(unittest.TestCase):
         self.assertEqual((empty["field_devices"], empty["points"]), (0, 0))
 
 
+@go_server.go_twin("bql", "unit")
 class TestHeaderRobustness(unittest.TestCase):
     """Audit 2026-10-03 F7 (duplicate headers) and F12 (localized headers)."""
 
@@ -198,6 +201,7 @@ class BqlToolCase(test_server.ToolTestCase):
         client._opener = self.opener
 
 
+@go_server.go_twin("bql", "injection")
 class TestBqlQueryTool(BqlToolCase):
     def test_query_returns_rows_and_columns_from_the_path_form_ord(self):
         out = self.ok("n4_bql_query", base="station:|slot:/Drivers",
@@ -252,6 +256,7 @@ class TestBqlQueryTool(BqlToolCase):
         self.assertNotIn("n4_bql_query", tools_write.NAMES)
 
 
+@go_server.go_twin("bql", "injection")
 class TestBqlAuditInWritesMode(BqlToolCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -268,6 +273,7 @@ class TestBqlAuditInWritesMode(BqlToolCase):
 
 
 class TestInventoryTool(BqlToolCase):
+    @go_server.go_twin("bql", "injection")
     def test_inventory_counts_devices_and_points_per_network_with_local_apart(self):
         out = self.ok("n4_inventory")
         self.assertEqual(out["totals"]["field_devices"], 4)
@@ -277,6 +283,7 @@ class TestInventoryTool(BqlToolCase):
         self.assertEqual([p["rows"] for p in out["progress"]], [4, 5, 5])
         self.assertNotIn("point_rows", out)
 
+    @go_server.go_twin("bql", "injection")
     def test_progress_lines_go_to_the_operator_progress_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "progress.jsonl")
@@ -288,15 +295,18 @@ class TestInventoryTool(BqlToolCase):
                          [("n4_inventory", "networks", 4), ("n4_inventory", "devices", 5),
                           ("n4_inventory", "points", 5)])
 
+    @go_server.go_twin("bql", "injection")
     def test_include_points_returns_the_point_rows(self):
         out = self.ok("n4_inventory", include_points=True)
         self.assertEqual(len(out["point_rows"]), 5)
 
+    @go_server.go_twin("cli", "injection")
     def test_server_flag_sets_the_progress_file(self):
         args = server.parse_args(["--progress-file", "/x/p.jsonl"])
         self.assertEqual(args.progress_file, "/x/p.jsonl")
 
 
+@go_server.go_twin("bql", "injection")
 class TestLocalizedHeaders(BqlToolCase):
     def setUp(self):
         super().setUp()
@@ -320,6 +330,7 @@ class TestLocalizedHeaders(BqlToolCase):
                       [r["Ruta de slot"] for r in out["rows"]])
 
 
+@go_server.go_twin("bql", "injection")
 class TestBqlOutputFile(BqlToolCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -360,6 +371,7 @@ class TestBqlOutputFile(BqlToolCase):
                                          query="select name from driver:Device"))
 
 
+@go_server.go_twin("bql", "injection")
 class TestH5aRegressions(BqlToolCase):
     """H5 review: an empty BQL body and a failed output_file write."""
 

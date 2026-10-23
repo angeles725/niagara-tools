@@ -12,6 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 from fake_station import FakeStation  # noqa: E402
 from mcp_n4 import files, server, tools_read, tools_write  # noqa: E402
 
@@ -24,6 +25,7 @@ def synthetic_px():
         return fh.read()
 
 
+@go_server.go_twin("files", "unit")
 class TestFilePaths(unittest.TestCase):
     def test_a_file_ord_and_a_relative_path_name_the_same_station_file(self):
         for given in ("file:^px/General.px", "px/General.px", "station:|file:^px/General.px"):
@@ -67,6 +69,7 @@ class TestFilePaths(unittest.TestCase):
         self.assertFalse(files.is_text("blob.bin", "application/octet-stream"))
 
 
+@go_server.go_twin("px", "unit")
 class TestPxParser(unittest.TestCase):
     def setUp(self):
         self.summary = files.parse_px(synthetic_px().decode("utf-8"))
@@ -142,10 +145,10 @@ class FileToolCase(unittest.TestCase):
     def setUp(self, state_dir=None):
         self.fake = FakeStation(password=PASSWORD).start()
         self.addCleanup(self.fake.stop)
-        self.srv = server.Server(allow_http=True,
-                                 env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD},
-                                 stations={"FakeStation": self.fake.url}, state_dir=state_dir)
-        self.addCleanup(self.srv.ctx.close)
+        self.srv = go_server.make_server(
+            allow_http=True, env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD},
+            stations={"FakeStation": self.fake.url}, state_dir=state_dir)
+        self.addCleanup(go_server.close_server, self.srv)
         self.ok("n4_connect", station="FakeStation")
         self.fake.files["px/General.px"] = (synthetic_px(), "text/xml")
 
@@ -195,6 +198,7 @@ class TestReadFileTool(FileToolCase):
         self.assertIsNone(out["sha256"])  # a digest of a prefix would mislead
         self.assertEqual(out["content_length"], 5009)
 
+    @go_server.go_twin("files", "internals")
     def test_missing_and_forbidden_files_are_typed_results_without_a_latch(self):
         out = self.ok("n4_read_file", file_ord="file:^nav/NavFile.nav")
         self.assertEqual((out["status"], out["http_status"]), ("not_found", 404))
@@ -220,6 +224,7 @@ class TestReadFileTool(FileToolCase):
         self.assertIn("paused", self.err("n4_read_file", file_ord="px/General.px"))
         self.assertEqual(self.fake.about_requests - before, 1)  # the latch sent nothing
 
+    @go_server.go_twin("files", "internals")
     def test_the_read_is_recorded_as_a_session_observation(self):
         self.ok("n4_read_file", file_ord="file:^px/General.px")
         obs = self.srv.ctx.observations[-1]
