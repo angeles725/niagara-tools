@@ -908,21 +908,25 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** drp#Δ5 (primary, BACnet export) · drp#Δ6 extends (MS/TP, Modbus byte order)
 - **Evidence:** corpus B1327 rows 4-10.
 - **Target:** `types/driver-authoring.md` (new §), `types/logic-authoring.md:641`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; drp Δ5, Δ6): `types/driver-authoring.md` § 11.1-11.3, `types/logic-authoring.md` § Authoring a driver (`in8` vs the device array), `types/issues-and-gotchas.md` H4, H5. Owed Go lints G85 `bacnet-export-inN-contention`, G86 `bacnet-export-enum-range`.
 
 ### C69 — Cloud/MQTT telemetry and watch clients
 - **Sources:** drp#Δ2 (primary, MQTT auth matrix + telemetry) · drp#Δ10 extends (lease formula, 503 = out of web threads, queue depth points)
 - **Evidence:** corpus B1323 rows 3-6, B1336 rows 3,4,6.
 - **Target:** `types/cloud-connector.md`, `types/driver-authoring.md`, `types/observability.md`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; drp Δ2, Δ10): `types/cloud-connector.md` § 9 (auth matrix, 1883 default port, telemetry recipe), § 10 (lease formula, 503 back-off), `types/driver-authoring.md` § 11.4 (capability overrides, queue depth). `types/observability.md` pointer owed (outside the unit's surface). Owed Go lint G87 `mqtt-tls-port`.
 
 ### C70 — RDBMS: supported databases and export from code
 - **Sources:** shl#Δ8 (primary) · r3di#Δ6 extends (`histories.getExportDescriptorType()`, licence on the database)
 - **Evidence:** `Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:16,46`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
 - **Target:** `types/third-party-libraries.md:176-177`, `types/utility-lib.md:8`, `types/cloud-connector.md`. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (U9, 2026-10-23; shl Δ8, r3di Δ6): `types/cloud-connector.md` § 11. Landed there, not at `types/third-party-libraries.md:176-177` / `types/utility-lib.md:8` (outside the unit's surface; pointer lines owed). Owed Go lint G88 `rdbms-dialect-descriptor`.
 
 ### C71 — Extending jsonToolkit
 - **Sources:** shl#Δ9 (primary: decision rule + extension points) · r3pec#Δ2 corrects (`overrideValueEncoding`, not final `doOverride`) · r3-report#R4
 - **Evidence:** `BIJsonProperty.java:15-30`, `javap BTypeOverride`, corpus B1322, B1350.
 - **Target:** `types/dashboard.md:29`, `types/cloud-connector.md` §1, new § "Extending jsonToolkit". **Lint-able:** yes. **Fold type:** new doc section + lint.
+- **Fold status:** FOLDED (U9, 2026-10-23; shl Δ9, r3pec Δ2, r3-report#R4): new `types/json-toolkit.md` § 1-3 + `types/cloud-connector.md` pointer. `types/dashboard.md:29` pointer owed (outside the unit's surface). Owed Go lint G89 `jsontoolkit-licence-note`; the `doOverride`/dependency halves are compiler-enforced.
 
 ### C72 — Web UI reference: profiles, Px rules, charts, Mobile deprecated
 - **Sources:** wuh#Δ3 (primary, profiles) · wuh#Δ4 (Px rules) · wuh#Δ8 (stock ChartWidget first) · wuh#Δ9 (Mobile profile/Px deprecated since 4.6)
@@ -1089,15 +1093,15 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-control-alarms-schedules#Δ9` | types/logic.md | TriggerSchedule for wall-clock defrosts | C34 | P1 | accepted |
 | `devguide415-r2-control-alarms-schedules#Δ10` | types/logic-authoring.md:298 | Weekly schedule defaultOutput; sharing | C34 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ1` | types/cloud-connector.md, types/third-party-libraries.md:143,171 | MQTT native first; module abstractMqttDriver | C27 | P0 | accepted |
-| `devguide415-r2-drivers-protocols#Δ2` | types/cloud-connector.md | MQTT auth matrix and telemetry recipe | C69 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ2` | types/cloud-connector.md | MQTT auth matrix and telemetry recipe | C69 | P2 | folded (U9, `types/cloud-connector.md` § 9); lint owed G87 |
 | `devguide415-r2-drivers-protocols#Δ3` | types/driver-authoring.md:127-132 | staleTime 0 = stale immediately | C16 | P0 | accepted |
 | `devguide415-r2-drivers-protocols#Δ4` | types/driver-authoring.md, types/dashboard.md | BACnet statusFlags facet for health | C45 | P1 | accepted-corrected (COV and polled alike, r3di Δ3) |
-| `devguide415-r2-drivers-protocols#Δ5` | types/driver-authoring.md, types/logic-authoring.md:641 | Exposing values over BACnet | C68 | P2 | accepted |
-| `devguide415-r2-drivers-protocols#Δ6` | types/driver-authoring.md | MS/TP and Modbus rules | C68 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ5` | types/driver-authoring.md, types/logic-authoring.md:641 | Exposing values over BACnet | C68 | P2 | folded (U9, `types/driver-authoring.md` § 11.1, H5); lints owed G85, G86 |
+| `devguide415-r2-drivers-protocols#Δ6` | types/driver-authoring.md | MS/TP and Modbus rules | C68 | P2 | folded (U9, `types/driver-authoring.md` § 11.2-11.3, H4) |
 | `devguide415-r2-drivers-protocols#Δ7` | types/driver-authoring.md | Ping rules (faulted never pinged, alarm delay) | C44 | P1 | accepted |
 | `devguide415-r2-drivers-protocols#Δ8` | types/driver-authoring.md:121-122,205-213 | pollEnabled on poll service; tuning sizing | C16 | P0 | accepted |
 | `devguide415-r2-drivers-protocols#Δ9` | types/dashboard.md:23, types/logic-authoring.md:554, types/security.md | oBIX exposure rules | C46 | P1 | accepted |
-| `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | accepted |
+| `devguide415-r2-drivers-protocols#Δ10` | types/cloud-connector.md, types/driver-authoring.md, types/observability.md | Watch/lease clients; 503 back-off | C69 | P2 | folded (U9, `types/cloud-connector.md` § 10, `types/driver-authoring.md` § 11.4) |
 | `devguide415-r2-packaging-platform-signing#Δ1` | types/distribution.md:35-45 | Fix dist attribute table (noStation) | C23 | P0 | accepted-corrected (missing attribute = false, r3pec Δ1) |
 | `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | accepted |
@@ -1134,8 +1138,8 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-shipped-libraries#Δ5` | types/third-party-libraries.md:30,143,159-160,171 | Stale versions and MQTT module name | C27 | P0 | accepted |
 | `devguide415-r2-shipped-libraries#Δ6` | types/module-wiring.md | Wrapper does not grant permissions | C42 | P1 | accepted |
 | `devguide415-r2-shipped-libraries#Δ7` | types/cloud-connector.md §7, types/issues-and-gotchas.md | Outbound-HTTP decision ladder | C43 | P1 | accepted-corrected ((b) gate closed by default, r3di Δ4) |
-| `devguide415-r2-shipped-libraries#Δ8` | types/third-party-libraries.md:176-177, types/utility-lib.md:8 | Qualify native rdb (no Postgres) | C70 | P2 | accepted |
-| `devguide415-r2-shipped-libraries#Δ9` | types/dashboard.md:29, types/cloud-connector.md | jsonToolkit decision rule and extension card | C71 | P2 | accepted-corrected (overrideValueEncoding, r3pec Δ2) |
+| `devguide415-r2-shipped-libraries#Δ8` | types/third-party-libraries.md:176-177, types/utility-lib.md:8 | Qualify native rdb (no Postgres) | C70 | P2 | folded (U9, `types/cloud-connector.md` § 11); lint owed G88 |
+| `devguide415-r2-shipped-libraries#Δ9` | types/dashboard.md:29, types/cloud-connector.md | jsonToolkit decision rule and extension card | C71 | P2 | folded (U9, `types/json-toolkit.md` § 1-2, corrected per r3pec Δ2); lint owed G89 |
 | `devguide415-r2-web-ui-hmi#Δ1` | types/security.md:138-152, types/dashboard.md | Correct has Δ1/Δ2 (UserActivityFilter, CSRF scope) | C31 | P1 | accepted |
 | `devguide415-r2-web-ui-hmi#Δ2` | types/theme.md | Theme module rules | C30 | P0 | accepted |
 | `devguide415-r2-web-ui-hmi#Δ3` | types/dashboard.md | Web profiles and theme per profile | C72 | P2 | accepted |
@@ -1151,9 +1155,9 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r3-drivers-integration#Δ3` | types/driver-authoring.md:129 | statusFlags applies to COV and polled | C45 | P1 | accepted |
 | `devguide415-r3-drivers-integration#Δ4` | types/cloud-connector.md §7 | enableNonDriverClients default false; mountAtOrd | C43 | P1 | accepted |
 | `devguide415-r3-drivers-integration#Δ5` | types/cloud-connector.md, types/security.md | OAuth2 via oauth2-rt | C43 | P1 | accepted |
-| `devguide415-r3-drivers-integration#Δ6` | types/cloud-connector.md | RDBMS export from code | C70 | P2 | accepted |
+| `devguide415-r3-drivers-integration#Δ6` | types/cloud-connector.md | RDBMS export from code | C70 | P2 | folded (U9, `types/cloud-connector.md` § 11); lint owed G88 |
 | `devguide415-r3-packaging-extension-control#Δ1` | types/distribution.md:37 | noRunningApp enforced; missing = false | C23 | P0 | accepted |
-| `devguide415-r3-packaging-extension-control#Δ2` | types/ (new §) | Extending jsonToolkit (overrideValueEncoding) | C71 | P2 | accepted |
+| `devguide415-r3-packaging-extension-control#Δ2` | types/ (new §) | Extending jsonToolkit (overrideValueEncoding) | C71 | P2 | folded (U9, `types/json-toolkit.md` § 3) |
 | `devguide415-r3-packaging-extension-control#Δ3` | types/logic.md | LeadLag feedback links mandatory | C33 | P1 | accepted |
 | `devguide415-r3-packaging-extension-control#Δ4` | types/logic.md | Interstart min on/off inherited, default 0 | C33 | P1 | accepted |
 | `devguide415-r3-web-session-headers#Δ1` | types/dashboard.md | Session lifetime ladder; a poll is not activity | C31 | P1 | accepted |
