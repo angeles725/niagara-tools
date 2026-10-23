@@ -78,3 +78,18 @@ hb() {
   run "$HB" stray-argument
   [ "$status" -eq 3 ]
 }
+
+@test "HB7: toolbelt/host-budget.sh, called through a symlink from another cwd, runs the same Go tool" {
+  # Mutation: HB7 -- deleting the wrapper (or an unresolved here=) loses the toolbelt entry point.
+  # [ev: retro r8-t47-host-budget Δ1]
+  local w="$ROOT/build-n4-module-kit/toolbelt/host-budget.sh"
+  [ -f "$w" ]
+  ln -s "$w" "$BATS_TEST_TMPDIR/hb-link.sh"
+  cd "$BATS_TEST_TMPDIR"
+  run bash "$BATS_TEST_TMPDIR/hb-link.sh" --cgroup-root "$FX/cg-incident" --proc-root "$FX/proc" --gocache "$CACHE" \
+    --mount "$BATS_TEST_TMPDIR" --disk-pct 100
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL pids:init.scope 30000/48129"* ]]
+  run bash "$BATS_TEST_TMPDIR/hb-link.sh" stray-argument
+  [ "$status" -eq 3 ]
+}

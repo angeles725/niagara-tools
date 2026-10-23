@@ -45,8 +45,9 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   local EMPTY; EMPTY=$(mktemp -d)
   run "$LRP" "$EMPTY"
   rm -rf "$EMPTY"
-  # no Java files -> exit 0 (clean; empty tree has no violations)
-  [ "$status" -eq 0 ]
+  # no Java files -> ERROR row + exit 3: an empty tree is a wrong path, never a clean pass
+  [ "$status" -eq 3 ]
+  [[ "$output" == "ERROR  lint-recovery-path  $EMPTY  no files to scan"* ]]
 }
 
 @test "LRP-limitation: limitation comment present in script header (documented false-negative)" {

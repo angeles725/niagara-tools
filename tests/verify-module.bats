@@ -770,3 +770,32 @@ signed_jar() {
   [ "$status" -eq 1 ]
   printf '%s\n' "$output" | grep -E '^FAIL  bytecode ' | grep -qF 'com/x/versions/C.class major=55'
 }
+
+@test "VM-walk-locked: a --src sub-directory find cannot enter is an env error (exit 3), never ALL PASS" {
+  # Mutation: VM-walk-locked -- java_files as a bare find drops its status; every --src check passes on a partial tree.
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x" "$TMPDIR_T/mod/Foo-rt/src/locked"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  printf '@NiagaraProperty(name = "setpoint", flags = Flags.TRANSIENT | Flags.OPERATOR, value = "0.0")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/locked/A.java"
+  chmod 000 "$TMPDIR_T/mod/Foo-rt/src/locked"
+  if [ -r "$TMPDIR_T/mod/Foo-rt/src/locked" ]; then chmod 755 "$TMPDIR_T/mod/Foo-rt/src/locked"; skip "running as root"; fi
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  chmod 755 "$TMPDIR_T/mod/Foo-rt/src/locked"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"verify-module: cannot list every file under $TMPDIR_T/mod/Foo-rt/src: "*"locked"* ]]
+  [[ "$output" != *"ALL PASS"* ]]
+}
+
+@test "VM-worktrees: a *-worktrees sub-directory under --src is pruned, so a checkout copy never doubles a WARN" {
+  # Mutation: VM-worktrees -- java_files without the *-worktrees prune prints the transient-operator WARN twice.
+  good_dir "$TMPDIR_T/d"; make_jar "$TMPDIR_T/Foo-rt.jar" "$TMPDIR_T/d"
+  mkdir -p "$TMPDIR_T/mod/Foo-rt/src/com/x" "$TMPDIR_T/mod/Foo-rt/src/x-worktrees/feat"
+  make_module_include "$TMPDIR_T/mod/Foo-rt" com.x.A
+  printf '@NiagaraProperty(name = "setpoint", flags = Flags.TRANSIENT | Flags.OPERATOR, value = "0.0")\n' \
+    > "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java"
+  cp "$TMPDIR_T/mod/Foo-rt/src/com/x/A.java" "$TMPDIR_T/mod/Foo-rt/src/x-worktrees/feat/A.java"
+  run "$VM" --src "$TMPDIR_T/mod" "$TMPDIR_T/Foo-rt.jar"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'WARN  transient-operator')" -eq 1 ]
+}

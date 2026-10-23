@@ -15,7 +15,7 @@ bats_require_minimum_version 1.5.0
 #   2) .githooks/pre-push  — git ALLOWED (a hook is not toolbelt/*.sh).
 #        invoked: pre-push <remote> <url>, ref lines on stdin "<lref> <lsha> <rref> <rsha>".
 #        build-relevant IN this repo = build-n4-module-kit/** EXCLUDING BUILD-STATE.md,
-#          retros/, retros/INDEX.md; PLUS scripts/**.
+#          retros/, retros/INDEX.md; PLUS scripts/** and go/** (except go/bin/).
 #        if a build-relevant path changed in range AND NOT (BUILD-STATE.md + a pending
 #          retro + its INDEX row all in range) AND NOT a `Retro: none (trivial: …)` trailer
 #          in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep for the content half.
@@ -364,6 +364,23 @@ _fixture_ledger_top() {
   [ "$status" -eq 0 ]
 }
 
+@test "H17: a go/ source change with no state/retro/trailer FAILS (go/** is build-relevant)" {
+  # Mutation: H17 -- dropping go/ from the build-relevant set lets a Go port change lint behavior ungated.
+  # [ev: retro go-javasrc-scanner Δ1]
+  printf 'go/internal/javasrc/javasrc.go\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'feat: port a lint to Go\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -ne 0 ]
+}
+
+@test "H18: a go/bin/-only range is not build-relevant (built binaries, not source)" {
+  # Mutation: H18 -- matching go/ without the go/bin/ exclusion fires the gate on a rebuilt binary.
+  printf 'go/bin/n4lint\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'chore: rebuild\n' > "$BATS_TEST_TMPDIR/log"
+  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
 # ============ MARKER<->INDEX CONSISTENCY (campaign 6, Option 2-lite) ==========
 # Frozen contract (investigador, 2026-09-05): when a retro file carries a
 # `<!-- review-status: X -->` marker, X MUST equal that retro's INDEX row status;
@@ -439,5 +456,44 @@ _fixture_ledger_top() {
     > "$RETRODIR/2026-09-05-prose.md"
   write_index "2026-09-05-prose.md|folded"
   run "$SWEEP" "$STATE" "$RETRODIR" "$INDEX"
+  [ "$status" -eq 0 ]
+}
+
+# --- first push of a new branch (remote sha all zeros), against a REAL scratch repo -------------------
+# The range must be <merge-base with origin/main>..<local sha>. Diffing the lone local sha compared it with
+# the WORKING TREE (empty after a clean commit), so every new branch passed unchecked.
+newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; branch feat adds a kit toolbelt file
+  local d="$1"
+  git init -q -b main "$d"
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
+  git -C "$d" update-ref refs/remotes/origin/main HEAD
+  git -C "$d" checkout -q -b feat
+  mkdir -p "$d/build-n4-module-kit/toolbelt"
+  echo 'echo hi' > "$d/build-n4-module-kit/toolbelt/new.sh"
+  git -C "$d" add -A
+  git -C "$d" -c user.name=t -c user.email=t@t commit -q -m "feat: new toolbelt script"
+}
+
+@test "H19: the first push of a new branch gates the whole branch since main (no BUILD-STATE/retro -> FAIL)" {
+  # Mutation: H19-newbranch -- diffing the lone local sha (vs the working tree) passes every new branch unchecked
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"build-relevant kit files changed"* ]]
+}
+
+@test "H20: a new branch whose base cannot be found fails closed (never an unchecked pass)" {
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  git -C "$d" update-ref -d refs/remotes/origin/main
+  local lsha; lsha=$(git -C "$d" rev-parse HEAD)
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'refs/heads/feat $lsha refs/heads/feat 0000000000000000000000000000000000000000'"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"cannot find"* ]]
+}
+
+@test "H21: deleting a remote branch (local sha all zeros) is not gated" {
+  local d="$BATS_TEST_TMPDIR/nb"; newbranch_repo "$d"
+  run bash -c "cd '$d' && bash '$HOOK' origin x <<<'(delete) 0000000000000000000000000000000000000000 refs/heads/feat $(git -C "$d" rev-parse HEAD)'"
   [ "$status" -eq 0 ]
 }
