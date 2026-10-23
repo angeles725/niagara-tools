@@ -21,8 +21,11 @@
 #
 # Usage:  lint-session-store-lazy-evict.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot and *-worktrees dirs pruned). Run on any -ux profile with Java sources.
-#   Candidate: a `static ... Map<...> <field>` declaration with a `.put(` call on <field>
-#   somewhere in the file. WARNs unless EITHER (a) the method containing the `.put(` call
+#   Candidate: a class-level `static` field of a (java.util.) Map type -- Map, HashMap,
+#   ConcurrentHashMap, LinkedHashMap, TreeMap, ... with generics nested up to three levels --
+#   whose name is followed by `=` or `;` on the same line; a method parameter, a return type, a
+#   local and a declaration in a comment are not candidates, and each name counts once. A field
+#   with a `.put(` only inside `static { }` is a constant table (no row). WARNs unless EITHER (a) the method containing the `.put(` call
 #   also calls `<field>.remove(` in its own body (sweep-on-insert), or (b) the file contains
 #   a `Clock.schedule*` call whose scheduled body (one hop: the `do<Action>()` or `<action>()`
 #   method named by an argument of the call) calls `<field>.remove(` (scheduled purge). A `remove(` reachable only from an unrelated method (explicit logout,
@@ -35,6 +38,7 @@
 # false-WARNs
 # Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape
 # Mutation: SSL7 -- a probe without the return-type anchor takes `if (sweep(id)) {` for the declaration and its remove() for a purge
+# Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags a static method's Map parameter
 # Mutation: SSL-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
 # Mutation: SSL-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u

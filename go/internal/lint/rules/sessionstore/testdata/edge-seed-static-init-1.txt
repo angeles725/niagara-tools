@@ -1,9 +1,8 @@
+declared difference: T5-F1 a candidate is a class-level static Map field (outside every method and static initializer), deduped by name; a field filled only in static {} is a constant table
 -- args --
 @DIR@/Mod
 -- want --
 exit 0
-WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/T.java:8  static session/token map 'SLOT_TO_TRIGGER' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
-WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/T.java:4  static session/token map 'XHR' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
 -- stderr --
 -- Mod/src/com/x/T.java --
 class T {

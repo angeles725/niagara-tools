@@ -153,3 +153,18 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"SESSIONS"* ]]
 }
+
+@test "SSL-param: a static method's Map parameter, a local and a static {} table are not static fields (truth audit T5)" {
+  # Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags `out` here.
+  {
+    printf 'class P {\n'
+    printf '  private static final Map<String, String> TABLE = new HashMap<String, String>();\n'
+    printf '  static { TABLE.put("a", "b"); }\n'
+    printf '  private static void scan(BComponent c, Map<String, String> out)\n  {\n    out.put("k", "v");\n  }\n'
+    printf '  static void latch(String j)\n  {\n    Map<String, String> entries = parse(j);\n    entries.put(j, j);\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/P.java"
+  run "$SSL" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
