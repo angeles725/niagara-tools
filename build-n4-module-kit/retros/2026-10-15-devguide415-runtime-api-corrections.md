@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-runtime-api-corrections
@@ -37,3 +37,6 @@ Several kit cards name APIs that do not exist in the N4 source or describe real 
 - Every API a kit card names should be grep-resolvable in the source tree; nine of these defects would have failed a "does this symbol exist" check.
 - The cited corpus blocks were right where the kit was wrong — the transcription step needs the same source check as a block.
 - Mechanism tables (bit values, key lists) belong in generated or test-pinned form, not hand-copied prose.
+
+---
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/logic.md:413`, Δ2 `types/logic-authoring.md:254`, Δ3 `types/logic.md:22`, Δ4 `:277`, Δ5 `:308`, Δ6 `:395`, Δ7 `:390`, Δ8 `skill/SKILL.md:73` + `types/logic-authoring.md:556`, Δ9 `types/logic-authoring.md:232`, Δ10 `types/logic.md:125`. INDEX row generated from the header: `| 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | folded | 10 |`

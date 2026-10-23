@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 9 -->
 # 2026-10-22 · kit · r8-t22-retro-deltas
@@ -69,4 +69,4 @@ session is editing it in T9i), and the 8 baselined per-line forks are ported to 
   is not a clean result.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | pending | 9 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `BUILD-LOOP.md:214`, Δ2 `:232`, Δ3 `:238`, Δ4 `:317`, Δ5 `skill/SKILL.md:75`, Δ6 `BUILD-LOOP.md:63`, Δ7 `:321`, Δ8 `:219`, Δ9 `:226` (also `skill/SKILL.md:39-44`). INDEX row generated from the header: `| 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | folded | 9 |`
