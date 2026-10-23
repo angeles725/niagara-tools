@@ -8,6 +8,10 @@
 # before warning. See types/security.md §9.
 # [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ13]
 #
+# Implementation: go/internal/lint/rules/nomd5credential on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-no-md5-credential-digest <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_strip_run did).
+#
 # Usage:  lint-no-md5-credential-digest.sh [--strict] <src-root>
 #   Scans *.java under <src-root>, dot-dirs pruned. Line // comments are stripped before
 #   matching, so commented-out code does not trigger. Per FILE: warns when the file contains
@@ -20,19 +24,11 @@
 # Known limitation: a `//` inside a string literal can hide the call. VCS-free by design.
 # Mutation: NMD2 -- drop the credential context guard so MD5-only files also WARN
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-no-md5-credential-digest first 'usage: lint-no-md5-credential-digest.sh [--strict] <src-root>' "$@"
-
-# check <file>: the line of the first MD5 call when the file also has a credential context.
-check() {
-  # Only files that contain a MessageDigest.getInstance("MD5") call (case-insensitive on MD5).
-  printf '%s\n' "$AL_TEXT" | grep -qi 'MessageDigest\.getInstance("MD5")' || return 0
-  # Credential context: BPassword, BCredentials, or identifier containing password/credential/pin.
-  printf '%s\n' "$AL_TEXT" | grep -qiE '(BPassword|BCredentials|password|credential|pin)' || return 0
-  # Report the MD5 line (1-indexed, against the stripped view = same line numbers).
-  printf '%s\n' "$AL_TEXT" | grep -ni 'MessageDigest\.getInstance("MD5")' | head -1 | cut -d: -f1
-}
-
-# The lib strips // comments into AL_TEXT, walks fail closed, prints the WARN row and the exit code.
-awk_lint_strip_run check -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-no-md5-credential-digest: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-no-md5-credential-digest "$@"

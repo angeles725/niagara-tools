@@ -1,0 +1,35 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+-- stderr --
+-- m/.git/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/B.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/Z/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/a/A.JAVA --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/a/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/a/notes.txt --
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+-- m/b/c/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- m/x-worktrees/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}

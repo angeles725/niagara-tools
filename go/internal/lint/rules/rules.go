@@ -8,6 +8,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
@@ -33,5 +34,6 @@ func All() []lint.Spec {
 		clockzerofloor.Spec(),
 		subscribeleak.Spec(),
 		wbfilechooser.Spec(),
+		nomd5credential.Spec(),
 	}
 }
