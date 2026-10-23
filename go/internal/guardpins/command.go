@@ -77,7 +77,12 @@ func Main(args []string, s cli.Stdio) int {
 			warned = true
 		}
 		// Mutation: T4-nomutation -- dropping the no-declaration WARN makes an unpinned lint vacuously clean
-		if len(decls) == 0 {
+		switch {
+		case len(decls) > 0:
+		case len(stray) > 0: // declarations exist, but only below the header: say so instead of "add one"
+			fmt.Fprintf(s.Out, "WARN  lint-guard-pins  %s  no # Mutation: line in the header (K24(7): move the declarations below it above the first code line)\n", script)
+			warned = true
+		default:
 			fmt.Fprintf(s.Out, "WARN  lint-guard-pins  %s  no # Mutation: line (K24(7): add '# Mutation: <fixture-id> -- <what it flips>')\n", script)
 			warned = true
 		}

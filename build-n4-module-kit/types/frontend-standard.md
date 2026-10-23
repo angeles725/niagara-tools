@@ -28,6 +28,12 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   (LAN), sharing `js/` with a per-entry `config.js`, each linted against its own floor.
 - Tags used below: **[both]** applies to every profile; **[HMI]** applies to `hmi` and to a
   single-build `both`; **[LAN]** applies to `lan` (and to the LAN entry point of a two-entry `both`).
+- No Mobile Web Profile, Mobile Px or AX Mobile app in a new module: deprecated since Niagara 4.6 ("you should not
+  use it for any new projects"); a phone-usable module is a responsive view under `lan`. The BOX server cache
+  (default Medium; higher costs memory) is station tuning, not a module setting. [CERT-doc] niagara-help 4.15.6.20
+  `guides-clean/Mobile/Preface-22B940F3.txt:9`, `guides-clean/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:23-27,64`,
+  `guides-clean/Mobile/IncreasingBOXCacheToImprovePerforma-C3698B81.txt:15,27`. Owed lint: G78 `mobile-deprecated`.
+  `[ev: retro devguide415-r2-web-ui-hmi Δ9]`
 - A rule without a profile tag is not folded into this file. `[ev: retro dashboard-deployment-profiles Δ2]`
 
 ## Rule set `[ev: retro dashboard-frontend-standard Δ1]`
@@ -176,6 +182,7 @@ rc/
 | Small/medium SPA (today's dashboards) | Plain JS classic scripts + JSDoc types + ESLint (§ Component layout) | No build step; loads on Chromium 83; logic testable with Node |
 | Large NEW SPA with many screens or 3D | Vite + TypeScript (optionally React/Preact) built OUTSIDE gradle into a pre-built bundle in `src/rc/`, `build.target` = the panel engine (`chrome83`), bundle budget enforced in preview | Components and typed contracts; served by the pre-built bundle recipe (`dashboard.md` § JS build strategy) |
 | Charts on the panel | Hand-rolled SVG (`dashboard.md` § Charts on an HMI) or a small vetted library (§ Vendor catalog) | Large chart libraries add hundreds of KB to a panel that reloads the shell |
+| Charts in a Px/Hx page or a `lan` view | The stock webChart `ChartWidget`, or `/webChart/query/data/<ord>` from the SPA | Server-side query under the user's read permission, no library to vendor (`dashboard.md` § Charts on an HMI) `[ev: retro devguide415-r2-web-ui-hmi Δ8]` |
 | Live data inside the station | REST polling (~5 s) through the servlet | No BOX/Fox subscription in a plain `BWebServlet` |
 | Off-station, multi-site or cloud viewer | Separate frontend + its own backend reading oBIX; writes through one gated write service | Different trust boundary; never expose the station to browsers directly |
 | Styling | CSS design tokens (§ 1); utility-CSS frameworks only with a framework build | Utility CSS needs a build step |

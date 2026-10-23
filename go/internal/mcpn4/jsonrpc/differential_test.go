@@ -9,14 +9,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pytarget"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 )
 
 // TestDifferentialPython is the protocol-level equivalence proof: every line below goes through
 // the Python Server(...).handle_line (the in-process read-only server, decoding the bytes as its
 // stdin does) and through HandleLine; the reply bytes must be equal. Tool calls stop at the
-// layers ported in S2 (validation, the session gate), so no station is needed. It skips when
-// python3 is missing.
+// layers ported in S2 (validation, the session gate), so no station is needed.
+// It skips, naming the Python found, unless that is the target CPython (pytarget.Minor).
 
 const handleLineDriver = `
 import sys
@@ -68,10 +69,7 @@ var protocolLines = []string{
 }
 
 func TestDifferentialPython(t *testing.T) {
-	py, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 not on PATH")
-	}
+	py := pytarget.Python(t)
 	kit, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "mcp-n4-kit"))
 	if err != nil {
 		t.Fatal(err)

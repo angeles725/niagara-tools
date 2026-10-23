@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · r8-t23-parked-advisories
@@ -35,4 +35,4 @@ parser can do were recorded as owed Go-lint items, not written in bash.
 - A precision gap that needs a parser (call graph, generics, overloads) is an owed Go-lint item, not more awk.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-r8-t23-parked-advisories.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2 (one bats assertion per line); Δ2 `METHODOLOGY.md` § Conformance rules (no ambient opt-out).

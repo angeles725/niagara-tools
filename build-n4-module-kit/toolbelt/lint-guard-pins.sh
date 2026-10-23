@@ -14,6 +14,8 @@
 #   MATCH  lint-guard-pins  <script>:<line>  mutation <id> -> tests/<batsfile>.bats:<line>
 #   WARN   lint-guard-pins  <script>:<line>  mutation <id> -> no fixture
 #   WARN   lint-guard-pins  <script>  no # Mutation: line (K24(7): add '# Mutation: <fixture-id> -- <what it flips>')
+#   WARN   lint-guard-pins  <script>:<line>  mutation <id> -> below the header (move it above the first code line)
+#   WARN   lint-guard-pins  <script>  no # Mutation: line in the header (K24(7): move the declarations below it above the first code line)
 #
 # Usage:  lint-guard-pins.sh [--strict] <repo-root>
 #   <repo-root> holds tests/ and build-n4-module-kit/ (or toolbelt/); a kit root alone is exit 3.
