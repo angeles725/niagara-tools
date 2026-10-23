@@ -8,6 +8,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import go_server  # noqa: E402
 from mcp_n4 import retro, safety, server  # noqa: E402
 
 CANARY = "pw-Zk93-unique-canary"
@@ -70,6 +71,7 @@ class TestDerive(Fixture):
     def keys(self, out):
         return {c["key"]: c for c in out["candidates"]}
 
+    @go_server.go_twin("retro", "unit")
     def test_each_refusal_reason_becomes_a_candidate_citing_audit_timestamps(self):
         for i, (reason, _) in enumerate(REFUSALS):
             self.add_audit(audit_row("2026-10-01T10:00:%02d+00:00" % i, "n4_set_slot",
@@ -81,6 +83,7 @@ class TestDerive(Fixture):
         self.assertTrue(any("2026-10-01T10:00:05+00:00" in e for e in scope["evidence"]))
         self.assertEqual(scope["count"], 1)
 
+    @go_server.go_twin("retro", "unit")
     def test_same_reason_groups_into_one_candidate_with_a_count(self):
         for i in range(3):
             self.add_audit(audit_row("2026-10-01T10:00:0%d+00:00" % i, "n4_create_link",
@@ -89,6 +92,7 @@ class TestDerive(Fixture):
         self.assertEqual(cand["count"], 3)
         self.assertEqual(len(cand["evidence"]), 3)
 
+    @go_server.go_twin("retro", "unit")
     def test_readback_verdicts_mismatch_failed_unverified_cite_batch_ids(self):
         self.add_journal(journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"))
         self.add_journal(journal_batch(B2, "2026-10-01T11:01:00+00:00", "failed"))
@@ -100,6 +104,7 @@ class TestDerive(Fixture):
         self.assertIn(B3, " ".join(cands["verdict:unverified"]["evidence"]))
         self.assertNotIn(B4, json.dumps(cands))
 
+    @go_server.go_twin("retro", "unit")
     def test_in_doubt_batches_are_flagged_whether_result_missing_or_flagged(self):
         self.add_journal(journal_batch(B1, "2026-10-01T11:00:00+00:00", None, with_result=False))
         self.add_journal(journal_batch(B2, "2026-10-01T11:01:00+00:00", "unverified",
@@ -110,6 +115,7 @@ class TestDerive(Fixture):
         self.assertIn(B2, " ".join(cand["evidence"]))
         self.assertEqual(cand["priority"], "HIGH")
 
+    @go_server.go_twin("retro", "unit")
     def test_box_errors_are_grouped_by_op_name_from_the_journal(self):
         self.add_journal(journal_batch(B1, "2026-10-01T11:00:00+00:00", None, with_result=False,
                                        ops=({"nm": "a"}, {"nm": "s"})))
@@ -123,6 +129,7 @@ class TestDerive(Fixture):
         self.assertIn(B1, " ".join(cands["box_error:a"]["evidence"]))
         self.assertIn("box_error:n4_set_slot", cands)
 
+    @go_server.go_twin("retro", "unit")
     def test_dangling_observations_become_a_candidate(self):
         out = self.draft(observations=[{"ts": "2026-10-01T12:00:00+00:00",
                                         "ord": "station:|slot:/F", "count": 2},
@@ -134,6 +141,7 @@ class TestDerive(Fixture):
         self.assertIn("2026-10-01T12:00:00+00:00", " ".join(cand["evidence"]))
         self.assertIn("found 3", cand["evidence"][1])  # the magnitude lives in the evidence
 
+    @go_server.go_twin("retro", "unit")
     def test_count_means_the_number_of_evidence_items_on_every_candidate(self):
         for i in range(2):
             self.add_audit(audit_row("2026-10-01T10:00:0%d+00:00" % i, "n4_set_slot", "refused",
@@ -144,6 +152,7 @@ class TestDerive(Fixture):
         for cand in out["candidates"]:
             self.assertEqual(cand["count"], len(cand["evidence"]), cand["key"])
 
+    @go_server.go_twin("retro", "unit")
     def test_the_three_scope_reasons_are_one_candidate(self):
         for i, reason in enumerate(("no --write-scope configured: every write is refused",
                                     "ord 'x' is not a plain station ORD",
@@ -155,12 +164,14 @@ class TestDerive(Fixture):
         self.assertEqual(out["candidates"][0]["count"], 3)
         self.assertEqual(len([r for r in retro._REFUSALS if r[0] == "scope"]), 1)
 
+    @go_server.go_twin("retro", "unit")
     def test_every_shared_refusal_reason_is_classified_by_the_retro(self):
         needles = [n for r in retro._REFUSALS for n in r[1]]
         for name, text in sorted(vars(safety).items()):
             if name.startswith("REASON_"):
                 self.assertTrue(any(n in text for n in needles), name)
 
+    @go_server.go_twin("retro", "unit")
     def test_the_raise_sites_use_the_shared_reason_constants(self):
         scope = safety.WriteScope(["station:|slot:/A"])
         for ord_str, reason in (("station:|slot:/B", safety.REASON_SCOPE_OUTSIDE),
@@ -176,6 +187,7 @@ class TestDerive(Fixture):
             tokens.consume("t", {}, "h", None)
         self.assertIn(safety.REASON_TOKEN_MISSING, str(cm.exception))
 
+    @go_server.go_twin("retro", "injection")
     def test_draft_filters_by_since_once(self):
         self.add_audit(audit_row("2026-10-01T10:00:00+00:00", "n4_set_slot", "refused",
                                  "ord 'x' is outside the write scope"))
@@ -183,17 +195,20 @@ class TestDerive(Fixture):
             self.draft(since="2026-10-01T08:00:00Z")
         self.assertEqual(spy.call_count, 1)
 
+    @go_server.go_twin("retro", "unit")
     def test_the_state_dir_default_is_owned_by_safety_alone(self):
         from mcp_n4 import tools_write
         self.assertEqual(safety.DEFAULT_STATE_DIR, "~/.local/state/mcp-n4")
         self.assertFalse(hasattr(retro, "DEFAULT_STATE_DIR"))
         self.assertFalse(hasattr(tools_write, "DEFAULT_STATE_DIR"))
 
+    @go_server.go_twin("retro", "unit")
     def test_the_template_ships_inside_the_package(self):
         pkg = os.path.dirname(os.path.abspath(retro.__file__))
         self.assertEqual(retro.TEMPLATE, os.path.join(pkg, "templates", "retro.template.md"))
         self.assertTrue(os.path.isfile(retro.TEMPLATE))
 
+    @go_server.go_twin("retro", "unit")
     def test_since_filters_older_entries(self):
         self.add_audit(audit_row("2026-10-01T09:00:00+00:00", "n4_set_slot", "refused",
                                  "ord 'x' is outside the write scope"))
@@ -201,10 +216,12 @@ class TestDerive(Fixture):
         self.assertEqual(self.draft(since="2026-10-01T10:00:00Z")["candidates"], [])
         self.assertEqual(len(self.draft(since="2026-10-01T08:00:00+00:00")["candidates"]), 2)
 
+    @go_server.go_twin("retro", "unit")
     def test_bad_since_is_a_value_error(self):
         with self.assertRaises(ValueError):
             self.draft(since="yesterday")
 
+    @go_server.go_twin("retro", "unit")
     def test_no_secret_leaks_from_reasons_or_args(self):
         self.add_audit(audit_row("2026-10-01T10:00:00+00:00", "n4_connect", "error",
                                  "BoxError: login failed for %s" % CANARY,
@@ -217,11 +234,13 @@ class TestDerive(Fixture):
         self.assertTrue(out["candidates"])
         self.assertNotIn(CANARY, blob)
 
+    @go_server.go_twin("retro", "unit")
     def test_missing_state_dir_yields_no_candidates(self):
         out = retro.draft(os.path.join(self.dir, "nope"), station="LLM", date="2026-10-01")
         self.assertEqual(out["candidates"], [])
 
 
+@go_server.go_twin("retro", "unit")
 class TestRender(Fixture):
     def test_markdown_follows_the_template_with_delta_table(self):
         self.add_journal(journal_batch(B1, "2026-10-01T11:00:00+00:00", "mismatch"))
@@ -257,6 +276,7 @@ class TestRender(Fixture):
         self.assertEqual(retro.cell("a|b\nc"), "a\\|b c")
 
 
+@go_server.go_twin("retro", "in-process")
 class TestServerTool(unittest.TestCase):
     def rpc(self, srv, method, params=None):
         return srv.dispatch({"jsonrpc": "2.0", "id": 1, "method": method, "params": params})

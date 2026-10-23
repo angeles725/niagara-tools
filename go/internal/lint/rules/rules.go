@@ -7,6 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 )
@@ -19,5 +20,6 @@ func All() []lint.Spec {
 		driverscaffold.Spec(),
 		setnullord.Spec(),
 		extordvalue.Spec(),
+		servicetypes.Spec(),
 	}
 }
