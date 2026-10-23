@@ -604,6 +604,34 @@ corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a
 
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
 
+## Generated accessors and slot declaration order
+
+**Simple `B*` types get primitive accessors.** Slot-o-Matic picks the accessor pair from the `type` string
+(devkit-wb 4.14.0.162 vineflower `com/tridium/slottool/processor/PropertyProcessor.java:40-91`):
+
+| `type` | Generated getter / setter |
+|---|---|
+| `BBoolean`, `BInteger`, `BLong`, `BFloat`, `BDouble` (or `boolean` … `double`) | `boolean`/`int`/`long`/`float`/`double` via `getBoolean`/`getInt`/`getLong`/`getFloat`/`getDouble` and the matching `set*` |
+| `BString` (or `String`) | `String` via `getString`/`setString` |
+| `BValue` | `BValue` via `get`/`set` |
+| any other type | a cast, `(T) get(x)`, and `set(x, v, null)` |
+
+So logic reads and writes `double`, never `BDouble`: the 4.15.6.20 course exam's `BLimiter` (`type = "BDouble"`,
+`defaultValue = "BDouble.DEFAULT"`) generated `newProperty(0, BDouble.DEFAULT.as(BDouble.class).getDouble(), null)`,
+`public double getMax() { return getDouble(max); }` and `public void setMax(double v) { setDouble(max, v, null); }`
+(`CertificationExam/…/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
+
+**Declare paired bounds low before high.** Slot-o-Matic writes the `Property` fields in annotation order (`BLimiter`:
+annotations `out`, `in`, `max`, `min` at `:17-38`, fields at `:53`, `:76`, `:99`, `:122`), and the Type's slot list
+follows the field order, superclass first (baja 4.14.0.162 vineflower `ComplexIntrospector.resolveFields`
+`:104-133`, which reads `getDeclaredFields()`; that this keeps source order is HotSpot behaviour, not a JVM-spec
+guarantee `[INFER]`). The property sheet (observed in the exam, engram obs 11478) and the nav tree (§ Nav-tree
+ordering) show that order, so `max` above `min` is what the operator sees. Declare `min`/`low`/`lo` before
+`max`/`high`/`hi`, and the inputs the operator edits before outputs. A later reorder keeps saved data (a `.bog`
+binds by name: `types/distribution.md` § 6, `toolbelt/schema-risk.sh` `reorder_slot,SAFE`), but it changes every
+operator's view, so decide it at first authoring. The pair-order WARN is owed Go lint G96 `slot-pair-order`.
+`[ev: retro n4-course-handson-slotomatic-authoring Δ3]`
+
 ## `@NiagaraProperty` source comment → generated Javadoc (slotomatic keeps only the LAST line)
 
 slotomatic builds the generated Javadoc of a `@NiagaraProperty` / `newProperty(...)` field from the `//` comment block directly above the declaration, but keeps ONLY the LAST line of a multi-line block — every earlier line is discarded. A three-line comment whose last line is a sentence fragment ("compressors. 0 (default) = disabled, same convention as …") becomes a mid-sentence, near-meaningless Javadoc; it recurred on several slots in one feature before being recognized as structural.
