@@ -6,6 +6,10 @@
 # grants BPermissions.all, bypassing RBAC. A servlet/dashboard write must carry the invoking
 # user's Context: `new BasicContext(BUser.getUserFromSubject(...))`. See types/security.md §1.
 # Advisory (WARN): some framework-internal writes legitimately pass null. [ev: retro 2026-09-19-security-model]
+# A write is judged on its whole statement: the argument list of `.set(` `.setInt(` `.setBoolean(` `.setDouble(`
+# `.invoke(` is read to its balanced `)` across lines, and the row WARNs when it has two or more arguments and
+# the last one is `null` or a null cast to Context (`(Context) null`, `(javax.baja.sys.Context)null`). The row
+# line is the line of the call (where `.set(` is), and one line gives one row however many writes it holds.
 #
 # A bql: ORD resolved with no caller Context — `BOrd.make("…bql:…").get(base)`, `.resolve(base)`, a bare
 # `.get()`/`.resolve()` or a `null` Context — runs the query with no user, so it sees every component regardless
@@ -29,6 +33,10 @@
 #   Row:  WARN  lint-null-context-write  <file>:<line>  null-Context write: <source>
 #   Row:  WARN  lint-null-context-write  <file>:<line>  bql: ORD resolved without the caller's Context (pass get(base, cx)): <source>
 #   Exit: 0  always (advisory) · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Declared differences from the bash lint (truth fix 2026-10-23, R8-D14): the bash regex matched one line
+# (`\.(set|...|invoke)\(.*,\s*null\s*\)`), so it missed a multi-line write and `(Context) null`, and it
+# flagged a null that belonged to a nested call (`c.set(p, foo(x, null))`) or to another call on the line
+# (`a.set(p, v); b.foo(x, null);`). Both now follow the write's own argument list.
 # VCS-free by design.
 # Mutation: NCW2 -- drop the ,null match and NCW2 stops warning on set(...,null)
 # Mutation: NCW-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
@@ -36,6 +44,7 @@
 # Mutation: NCW-bql2 -- checking only the bql: line misses .get(base, null) on a later line
 # Mutation: NCW-literal -- matching the unblanked Strip text WARNs on a write quoted inside a string literal
 # Mutation: NCW-wb-write -- skipping -wb files for both rules drops the -wb null-Context write row
+# Mutation: NCW-stmt -- matching the write on one line misses c.set(p,\n v,\n null) and (Context) null
 # Mutation: NCW-bql-unrelated -- matching a one-argument get( anywhere in the window flags params.get("x") beside a clean get(base, cx)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

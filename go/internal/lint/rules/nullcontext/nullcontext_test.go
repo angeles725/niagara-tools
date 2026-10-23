@@ -57,6 +57,18 @@ var cases = []struct {
 	{"NCW CRLF lines keep their CR in the row", "M/src/A.java",
 		[]string{"c.set(a, b, null);\r", `BOrd.make("bql:x").get();` + "\r"},
 		[]string{"1: null-Context write: c.set(a, b, null);\r", "2: " + bqlMsg + `BOrd.make("bql:x").get();` + "\r"}},
+	// Truth audit 2026-10-22 T2: the write is judged on its whole statement (its own argument list).
+	{"T2 a multi-line write with a null last argument WARNs at the call's line", "M/src/A.java",
+		[]string{"class A { void f() {", "  c.set(p,", "      BDouble.make(2),", "      null);", "} }"},
+		[]string{"2: null-Context write: c.set(p,"}},
+	{"T2 a (Context) null last argument WARNs", "M/src/A.java",
+		[]string{"c.set(p, BDouble.make(2), (Context) null);", "c.invoke(a, v, (Context)null);"},
+		[]string{"1: null-Context write: c.set(p, BDouble.make(2), (Context) null);", "2: null-Context write: c.invoke(a, v, (Context)null);"}},
+	{"T2 a null inside a nested argument or in another call on the line is clean", "M/src/A.java",
+		[]string{"c.set(p, foo(x, null));", "a.set(p, v); b.foo(x, null);", "c.set(p, v, nullValue);"}, nil},
+	{"T2 two null writes on one line give one row", "M/src/A.java",
+		[]string{"c.set(p, v, null); d.set(q, w, null);"},
+		[]string{"1: null-Context write: c.set(p, v, null); d.set(q, w, null);"}},
 	// Issue #293 (2): resolve is judged like get.
 	{"I293-2 resolve(base) WARNs", "M/src/A.java",
 		[]string{`OrdTarget t = BOrd.make("bql:select *").resolve(base);`},

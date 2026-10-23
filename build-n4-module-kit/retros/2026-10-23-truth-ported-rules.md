@@ -21,11 +21,20 @@ rule wrapper header.
   directory instead of a second absolute path, and reads the grant directly (the bash `read -r` split a path
   with a space and FAILed a granted module). report-module.sh's lint-timers relay parsed `<file>: <msg>` and
   was moved to the lined shape.
+- **T2 lint-null-context-write.** The write regex matched one line, so `c.set(p,\n BDouble.make(2),\n null);` and
+  `c.set(p, v, (Context) null)` passed, while a null in a nested call (`c.set(p, foo(x, null))`) or in another
+  call on the line WARNed. The rule now reads the write's own argument list to its balanced `)` across lines
+  and WARNs when the last of two or more arguments is `null` or a null cast to Context; the row line is the
+  call's line (where `.set(` is), one row per line as before.
 
 ## Evidence
 - T1 RED: golden seeds `t1-schedule-in-comment`, `t1-schedule-in-string`, `t1-row-shape` failed on c853135 (FAIL rows / no lines); `t1-sched-comment` run through the c853135 binary gave 4 false rows and a missed changed-sched `[ev: go/internal/lint/rules/timers/testdata]`
 - T1 mutations observed: raw lines in ticket.go fail `TR1-code`; `Line` dropped fails `TR1-shape` `[ev: tests/lint-timers.bats]`
 - T1 real trees (main 3e59585 vs new, Honeywell / panccadia-leon / Leon-Guanjuato): 16 rows changed, every one only in shape (line added, jdk-thread text); no verdict added or removed; chihuahua setDaemon stays at :310 `[ev: retro truth-ported-rules]`
+
+- T2 RED: three `T2` table cases failed on c853135 (multi-line write, `(Context) null`, nested/other-call null) `[ev: go/internal/lint/rules/nullcontext/nullcontext_test.go]`
+- T2 mutation observed: stopping the argument scan at the line end fails `NCW-stmt` `[ev: tests/lint-null-context-write.bats]`
+- T2 real trees: no row changed on Honeywell (22), panccadia-leon (0) or Leon-Guanjuato (1) `[ev: retro truth-ported-rules]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
