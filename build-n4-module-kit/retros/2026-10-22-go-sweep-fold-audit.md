@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-sweep-fold-audit
@@ -41,4 +41,4 @@ counts an unreadable cell on its own line instead of as a "not cited" Δ.
   covers argument and row shapes nobody listed.
 
 ---
-**Status**: PENDING (fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Port in two steps"; Δ2 OBSOLETE: the bash tool it targets is now `go/internal/foldaudit`, whose deltas cell is the decimal `go/internal/retrocells` `ParseDeltasCell`.

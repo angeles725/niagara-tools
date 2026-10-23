@@ -48,4 +48,4 @@ caller can mark boundaries as not trusted, as 9c41fdf does.
   counter must skip literals on its own.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: PENDING — INDEX row appended: `| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |` Δ2 OBSOLETE 2026-10-23: lint-timers and lint-driver-scaffold are Go rules on the one shared blanker `go/internal/javasrc` `BlankLiterals`/`BlankLine`, so no bash `mb_blank_lit` is owed (`ledger.d/2026-10-23-r8-u1-tool-doctrine.md`); Δ1 stays pending.
