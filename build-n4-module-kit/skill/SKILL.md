@@ -53,6 +53,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 | Logic + dashboard | both |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` |
 | New module scaffold / source layout audit | `$KIT/types/structure.md` |
+| A shipped module's dependencies, reverse deps, java-permissions; a type's class and agents (`nh module`, `nh type`) | `$KIT/types/module-wiring.md` § 7 |
 
 **wb builders**: `types/wb-widgets.md` was a seed and is now exemplar-backed for the -wb model seam, but the guide is still thin — start from corpus B751–B753 and B762/B780 before the type guide. The Predicate-injection seam (DWB1) is the critical entry point.
 

@@ -241,6 +241,38 @@ your jar. The runtime picks one unpredictably; always choose one path. `[ev: WIR
 
 ---
 
+## 7 · Reading a shipped module's manifest — `nh module`
+
+Before declaring a dependency on a Tridium part, or copying its permission requests, read the shipped
+`module.xml` through niagara-help instead of unzipping jars: `nh module <part|module|glob>` (`nh` =
+`python3 ~/niagara-research/niagara-help/tools/niagara_help.py`) prints the dependencies with their floors, the
+reverse dependencies (who requires this part), counts of types/agents/defs and the java-permissions by profile;
+`--types`, `--agents`, `--permissions`, `--defs` and `--json` narrow it, and `--niagara-version <v>` (before the
+subcommand) picks another indexed release. Excerpt, 4.15.6.20 index:
+
+```text
+$ nh module kitControl-rt
+VENDOR: Tridium 4.15.6.20
+DEPENDENCIES (11):
+  alarm-rt       Tridium 4.15.6
+  baja           Tridium 4.15.6
+  bql-rt         Tridium 4.15.6
+  control-rt     Tridium 4.15.6
+  …
+REVERSE DEPENDENCIES (2):
+  kitControl-ux  requires 4.15.6
+  kitControl-wb  requires 4.15.6
+JAVA PERMISSIONS (15):
+  station    java.lang.RuntimePermission "modifyThread"
+  …
+```
+
+A shipped part's permission list is what Tridium requests, not a template for yours: request only what your code
+needs (`types/structure.md` § `module-include.xml` vs `META-INF/module.xml`). Which class and agents a single type
+has: `nh type` (`types/structure.md` § Naming).
+
+---
+
 **See also:** `types/structure.md` (L6/L7 dep-floor lint, module-include.xml vs module.xml),
 `types/third-party-libraries.md` (Shadow/uberjar bundling, classloader delegation order),
 `types/logic-authoring.md` (TYPE anchor lifecycle, `Sys.getService` usage).

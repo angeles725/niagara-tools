@@ -27,6 +27,23 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
   (ours: `com.angeles.<Module>`) — a leaf/OEM module NEVER declares `javax.baja.*` types.
 - One public `@NiagaraType` per `.java` file; `BXxx` class naming. `[ev: corpus B817]`
 - A `com.tridium.*` import is private API (`types/module-wiring.md` § 4.5).
+- **Which class, agents and views a shipped type has:** `nh type <module:Type>` (`nh` and version selection:
+  `types/module-wiring.md` § 7) prints the module, the class, javadoc/source availability, the agents registered
+  ON the type (views, editors, handlers) and the types it is itself an agent on. Excerpt, 4.15.6.20 index:
+
+  ```text
+  $ nh type ldap:LdapAuthenticationScheme
+  MODULE: ldap-rt (ldap-rt.jar)
+  CLASS: com.tridium.ldap.BLdapAuthenticationScheme
+  AGENTS ON THIS TYPE (5):
+    ldap:FoxLdapUsernamePasswordClientAuthnHandler  com.tridium.ldap.BFoxLdapUsernamePasswordClientAuthnHandler  (ldap-rt)
+    …
+    ldap:LdapWbDialogHandler  com.tridium.ldap.ui.BLdapWbDialogHandler  (ldap-wb)
+  AGENT ON (1):
+      on: baja:AuthenticationScheme
+  ```
+
+  The type name comes from `module.xml`, never from the class name; `nh module <part> --types` lists every one.
 
 ## `module-include.xml` vs `META-INF/module.xml` `[ev: corpus B817]`
 - You AUTHOR `module-include.xml` (the `<type>` list). The gradle plugin GENERATES `META-INF/module.xml` from it.
