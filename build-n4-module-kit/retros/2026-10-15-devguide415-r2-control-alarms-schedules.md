@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-control-alarms-schedules
@@ -35,4 +35,4 @@ The kit teaches alarm/history/timer mechanics but never the platform blocks our 
 - Persisted schedule state (`nextTrigger`) is what makes "missed" detection possible; a hand-made timer loses it.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | pending | 10 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `types/logic.md:384`, Δ2 `:403`, Δ3 `types/logic-authoring.md:636`, Δ4 `BUILD-LOOP.md:296`, Δ5-Δ8 `types/logic.md:396-402`, Δ9 `types/logic-authoring.md:362`, Δ10 `types/logic-authoring.md:360`. INDEX row generated from the header: `| 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | folded | 10 |`

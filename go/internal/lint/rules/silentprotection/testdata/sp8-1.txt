@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-silent-protection  @DIR@/src/com/x/BDefrostController.java:4  maybeSkip forces defrostSkipped/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+-- stderr --
+-- src/com/x/BDefrostController.java --
+package com.x;
+public class BDefrostController extends BComponent {
+  void maybeSkip(boolean overdue, boolean doorOpen) {
+    if (doorOpen) { this.defrostSkipped = true; return; } // trip with NO surfaced slot
+  }
+  private boolean defrostSkipped = false;
+}

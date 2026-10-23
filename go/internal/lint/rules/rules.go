@@ -7,6 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -15,6 +16,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
@@ -29,6 +31,7 @@ func All() []lint.Spec {
 		setnullord.Spec(),
 		extordvalue.Spec(),
 		servicetypes.Spec(),
+		silentprotection.Spec(),
 		nosystemout.Spec(),
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
@@ -37,5 +40,6 @@ func All() []lint.Spec {
 		wbfilechooser.Spec(),
 		nomd5credential.Spec(),
 		configsanity.Spec(),
+		delays.Spec(),
 	}
 }

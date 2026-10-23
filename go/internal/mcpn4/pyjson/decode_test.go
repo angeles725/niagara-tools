@@ -112,11 +112,12 @@ func TestUnmarshalKinds(t *testing.T) {
 	}
 }
 
-// TestUnmarshalErrorOffset checks a syntax error reports where decoding stopped.
+// TestUnmarshalErrorOffset checks a syntax error points where CPython points: at the comma of
+// a trailing comma.
 func TestUnmarshalErrorOffset(t *testing.T) {
 	_, err := Unmarshal([]byte(`[1, 2,]`))
 	se, ok := err.(*SyntaxError)
-	if !ok || se.Offset != 6 {
-		t.Fatalf("err = %#v, want *SyntaxError at offset 6", err)
+	if !ok || se.Offset != 5 || se.Msg != "Illegal trailing comma before end of array" {
+		t.Fatalf("err = %#v, want the trailing comma at offset 5", err)
 	}
 }

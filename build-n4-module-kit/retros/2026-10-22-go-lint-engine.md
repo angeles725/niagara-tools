@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-lint-engine
@@ -49,4 +49,4 @@ get/resolve call's own parentheses (an intended behavior change), (2) `resolve(b
 - A Go lint is 20-70x faster than one awk per file, so `--all` over one walk is worth the shared engine.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `go/README.md:26-90` (one rule package + `rules.All()`, byte identity, intended differences, no copied walker), Δ2 `BUILD-LOOP.md:340` + `tests/go-wrapper-symlink.bats:53` GWS3; tokens in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | folded | 2 |`

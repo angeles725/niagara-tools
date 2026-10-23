@@ -291,12 +291,29 @@ setup() {
   printf '\xca\xfe\xba\xbe\x00\x00\x00\x35\x00\x00' > "$tmpmod/Foo9.class"
   (cd "$tmpmod" && zip -q DemoPan-rt/libs/java9.jar Foo9.class)
   rm "$tmpmod/Foo9.class"
+  # A module root with no module-include.xml is a wrong root: lint-agent-on-shape exits 3 (lint-empty-root.bats).
+  printf '<types>\n</types>\n' > "$tmpmod/DemoPan-rt/module-include.xml"
   run "$RM" --lint-only "$tmpmod"
   rm -rf "$tmpmod"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]]
   [[ "$output" == *"lint-bundled-jar-class-version"* ]]
   # Named mutation: drop the major > 52 check -> RM23 exits 0 (no FAIL row).
+}
+
+@test "RM23b: a non-Java member's empty-root exit 3 is one ERROR row and exit 3; the other members still report" {
+  # Mutation: RM23b-env -- relaying the member's exit 3 without HAD_ENV=1 lets the report exit 1 (FAIL rows only)
+  # No module-include.xml under the root: lint-agent-on-shape (scans only module-include.xml) exits 3
+  # (lint-empty-root.bats); report-module relays it as an env fault, never a PASS and never an early abort.
+  local t="$BATS_TEST_TMPDIR/rm23b"
+  mkdir -p "$t/DemoPan-rt/src/com/x"
+  printf 'package com.x;\nclass A {}\n' > "$t/DemoPan-rt/src/com/x/A.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 3 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'lint-agent-on-shape')" -eq 1 ]
+  [[ "$output" == *$'\n''(module)  ERROR  lint-agent-on-shape  env fault (exit 3)'$'\n'* ]]
+  [[ "$output" == *"(module)  PASS  lint-bundled-jar-class-version  clean"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-no-system-out  clean"* ]]
 }
 
 # ===========================================================================
@@ -787,6 +804,40 @@ JAVA
   PATH="$BATS_TEST_TMPDIR/bin48b:$PATH" KIT_ESLINT='' KIT_ESLINT_PROBE_TIMEOUT=1 run timeout 50 "$RM" --lint-only "$t"
   [ "$(( $(date +%s) - start ))" -lt 40 ]
   [[ "$output" == *"DemoPan-ux  SKIP  eslint  unavailable: eslint on PATH is unknown version"* ]]
+}
+
+# r9 M3: every member's rows go through ONE shared parser (ROW_AWK via member_rows), one awk per member output.
+@test "RM-rows-multi: a member's rows are relayed in order with the shared grammar; non-row lines are dropped (r9 M3)" {
+  # Mutation: RM-rows-multi -- a whole-output parser that loses row order, keeps a non-row line or splits on a
+  # single space instead of 2+ whitespace changes these exact rows.
+  stub_toolbelt "$BATS_TEST_TMPDIR/tb" lint-delays.sh 'printf "%s\n" "FAIL  delay  /a/b/BOne.java:12  no floor" "scanning 3 files" "WARN  delay  /c/BTwo.java:7  short  extra note" ""; exit 1'
+  run "$BATS_TEST_TMPDIR/tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *$'DemoPan-rt  FAIL  delay  BOne.java:12  no floor\nDemoPan-rt  WARN  delay  BTwo.java:7  short  extra note\n'* ]]
+  [[ "$output" != *"scanning 3 files"* ]]
+}
+
+@test "RM-row-parser: no pasted per-line row parser -- one awk call site parses every member's rows (r9 M3)" {
+  # Mutation: RM-row-parser -- re-pasting the per-line `printf '%s' "$_ln" | awk` parser forks awk once per row
+  # (kit retro rule: no per-line forks) and drifts from the shared ROW_AWK grammar.
+  run grep -c -F "printf '%s' \"\$_ln\" | awk" "$RM"
+  [ "$output" = "0" ]
+  run grep -c 'awk -v sel=' "$RM"
+  [ "$output" = "1" ]
+}
+
+@test "RM-exit-capture: every member capture keeps its exit on the same line -- no bare \$? after _o=\$(...) (r9 M3)" {
+  # Mutation: RM-exit-capture -- a bare `_o=$(member)` with "$?" read on the next line aborts the report under
+  # errexit on the first failing member and breaks as soon as a command is inserted between the two lines.
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
+  run grep -c '^[^#]*_o=\$(' "$RM"
+  [ "$output" -gt 0 ]
+  local total="$output"
+  # shellcheck disable=SC2016  # literal regex, nothing to expand
+  run grep -c '^[^#]*_rc=0; _o=\$(.*) || _rc=\$?$' "$RM"
+  [ "$output" = "$total" ]
+  run grep -c '^[^#]*"\$?"' "$RM"
+  [ "$output" = "0" ]
 }
 
 @test "RM-symroot: a symlinked module root lists its artifacts like find -H, same report as the directory (issue #329)" {

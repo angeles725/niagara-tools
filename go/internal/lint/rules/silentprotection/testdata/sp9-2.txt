@@ -1,0 +1,8 @@
+-- args --
+@DIR@/nojava
+-- want --
+exit 3
+ERROR  lint-silent-protection  @DIR@/nojava  no Java sources found (K20: wrong path or empty scaffold)
+-- stderr --
+-- nojava/com/x/README.txt --
+not java

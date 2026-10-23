@@ -21,7 +21,7 @@ func TestAllUniqueIDs(t *testing.T) {
 	}
 }
 
-// TestAllRuleOrder: one walk over a file both registered rules report on prints each rule's rows
+// TestAllRuleOrder: one walk over a file several registered rules report on prints each rule's rows
 // contiguously, in registry order under --all and in the requested order for a rule list.
 func TestAllRuleOrder(t *testing.T) {
 	root := t.TempDir()
@@ -33,9 +33,10 @@ func TestAllRuleOrder(t *testing.T) {
 	ncw := "WARN  lint-null-context-write  " + a + ":2  null-Context write: void a() { parent.set(p, v, null); Clock.schedule(this, null, x, null); }\n"
 	timers := "FAIL  discarded-ticket  " + a + ":2  Clock.schedule result is discarded — assign it to a Clock.Ticket field\n" +
 		"FAIL  timer-ticket  " + a + ":2  schedules a Clock ticket but has no stopped() override to cancel it\n"
+	delays := "FAIL  lint-delays     " + a + ":2  unfloored  cannot verify floor: null\n"
 	main := lint.Command(All()...)
 	for args, want := range map[string]string{
-		"--all":                               ncw + timers,
+		"--all":                               ncw + timers + delays,
 		"lint-timers,lint-null-context-write": timers + ncw,
 	} {
 		var o, e bytes.Buffer
@@ -71,13 +72,22 @@ func TestAllWalkError(t *testing.T) {
 }
 
 // TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
-// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6).
+// file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6), in its
+// Spec.EmptyError shape when it overrides the default.
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
-		row := "ERROR  " + sp.ID() + "  " + root + "  no *.java sources found (wrong path or empty source tree)\n"
+		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
+		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
+		if sp.EmptyError.Check != "" {
+			check = sp.EmptyError.Check
+		}
+		if sp.EmptyError.Msg != "" {
+			msg = sp.EmptyError.Msg
+		}
+		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
 		all += row
 		var o, e bytes.Buffer
 		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-lint-bundled-jar-class-version
@@ -71,4 +71,4 @@ decides the rule.
   bytes; `zsh` may alias `find` to `bfs`, so probe through `bash -c`.
 
 ---
-**Status**: PENDING (Δ1 applied to lint-bundled-jar-class-version; fold review pending) — INDEX row generated from the header: `| 2026-10-22-go-lint-bundled-jar-class-version.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u1-tool-doctrine`; log in `ledger.d/2026-10-23-r8-u1-tool-doctrine.md`) — Δ1 `CONTRIBUTING.md` § 2.2 "Data is never a pattern".

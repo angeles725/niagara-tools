@@ -817,22 +817,26 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** lux#Δ2 (primary) · pps#Δ5 extends
 - **Evidence:** `Lexicon.java:313-334`, devguide `localization.txt:59-70,189-214`, `Lexicon/devkit-LexiconModuleBuilder.txt:14-43`, corpus B1305, B1330.
 - **Target:** `types/structure.md` L4, `types/dashboard.md` i18n. **Lint-able:** partial. **Fold type:** new doc section.
+- **Fold status:** FOLDED (U6, 2026-10-23; lux Δ2, pps Δ5): `types/lexicon.md` § 1-2 (lookup chain, locale order, lexicon-only modules, `!lexicon` overrides). Landed in a new card, not `types/structure.md` L4 (outside the unit's surface; a pointer line there is owed). Owed Go lint G71 `lexicon-manifest`.
 
 ### C55 — Runtime lexicon idiom and localizable exceptions
 - **Sources:** lex#Δ2 (primary: `LexiconModule.getText`, `lint-lexicon-keys.sh`) · lux#Δ3 extends (`LocalizableRuntimeException` + `toString(cx)`)
 - **Evidence:** course `Lab7/BWorkOrderService.java:107-185,272`, corpus B1236 §1236.4/§1236.7, B1305 §1305.1.
 - **Target:** `types/observability.md` §3, new `toolbelt/lint-lexicon-keys.sh`. **Lint-able:** yes. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (U6, 2026-10-23; lex Δ2, lux Δ3): `types/lexicon.md` § 3 (`LexiconModule`, MessageFormat, `LocalizableRuntimeException` + `toString(cx)`, `LexiconText.toLocalizable`); `types/observability.md` § 3 pointer owed (outside the surface). Owed Go lint G70 `lexicon-key` (replaces the proposed `toolbelt/lint-lexicon-keys.sh`).
 
 ### C56 — ux i18n: `lex!` plugin; lexicon content is public
 - **Sources:** lux#Δ5 (primary)
 - **Evidence:** `BLexiconRpc.java:44` (`unrestricted`), jsdoc `lex_lex.js.txt:157-208`.
 - **Target:** `types/frontend-standard.md` § i18n. **Lint-able:** yes. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (U6, 2026-10-23; lux Δ5): `types/lexicon.md` § 4 + `types/dashboard.md` § Module packaging pointer. **Added:** JS `lex.get` returns `def` or an empty string for a missing key (jsdoc `lex_lex.js.txt:422-436`). `types/frontend-standard.md` pointer owed (outside the surface). Owed Go lint G72 `lexicon-public`.
 
 ### C57 — Station diagnostics card, log levels, Spanish console levels
 - **Sources:** poh#Δ4 (primary) · lux#Δ4 duplicate (lexicon diagnostics switch) · lex#Δ5 extends (INFO default, DebugService, FINE in hot paths) · lex#Δ4 extends (`triage-console.sh` `DETALLADO` etc.)
 - **Evidence:** corpus B1255-B1257, B1251 §1251.9, B1236 §1236.2; `toolbelt/triage-console.sh:99-111`.
 - **Target:** `types/observability.md` (new § Station diagnostics, §1), `types/issues-and-gotchas.md`, `toolbelt/triage-console.sh` + bats.
 - **Lint-able:** yes (triage patterns, Spanish names; INFO in poll bodies). **Fold type:** doc section + script fix.
+- **Fold status:** FOLDED doc half (U6, 2026-10-23; poh Δ4, lux Δ4, lex Δ5, lex Δ4 doc half): `types/diagnostics.md` (new card, in place of a new § in `types/observability.md`, outside the surface) + `types/issues-and-gotchas.md` K1. **Premise corrected:** "Cannot stop component" is any throwable out of `stopped()` (`EngineUtil.java:105,123`), missing `MANAGE_EXECUTION` is the course case; the JDK 8 `es` names (`Configurar`, `Muy Detallado`, `Más Detallado`) are now read from OpenJDK 1.8.0 `rt.jar`, no longer `[INFER]`. Owed: G73 (`triage-console.sh` levels + patterns), G74 `info-in-poll`.
 
 ### C58 — Build reference: supertype modules, part gradle.kts, JDK-8 preflight, region-less sources
 - **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources) · rsb#Δ4 extends (Windows-native build route from WSL for any Windows-side Gradle root: cmd.exe + gradlew.bat slotomatic/jar; back up `<niagara_home>/modules` first)
@@ -863,26 +867,42 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** has#Δ2 (primary; its lint half is rejected — "every `<servlet-class>` needs `CsrfProtectedFilter`" fails 8 of 14 shipped Tridium `web.xml`; use wuh Δ1's scope: POST/PUT servlets only, see C31)
 - **Evidence:** devguide `servlets/webModules.txt:12`; corpus B1315 §1315.1 rank 2, B1318 §1318.3 C3-C4.
 - **Target:** `types/dashboard.md:29`. **Lint-able:** yes (scoped). **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; has Δ2): `types/dashboard.md` § ux web-module recipe
+  (devguide `servlets/webModules.txt`), CSRF scope re-measured: 6 of the 14 shipped 4.15.6.20 `web.xml` map
+  `CsrfProtectedFilter`, only POST, POST,PUT or GET,POST. OWED: lint G75 `web-xml-csrf-scope`
+  (`ledger.d/2026-10-23-r8-u7-web-ui.md`); the `POST,PUT,DELETE` example in `types/security.md` § 3.1.
 
 ### C64 — SPA live-data subscription contract (bajaScript)
 - **Sources:** nsto#Δ4 (primary)
 - **Evidence:** corpus B1306 §1306.1 row 11, B1311 §1311.1 row 14.
 - **Target:** `types/dashboard.md` (new § live data). **Lint-able:** yes (JS twin of subscribe-without-unsubscribe). **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; nsto Δ4): `types/dashboard.md` § Reading the station
+  directly with BajaScript, subscription lifetime (bajaScript-ux `Subscriber.js`, `Component.js`). OWED: lint G76
+  `spa-subscribe-without-unsubscribe`.
 
 ### C65 — Security hardening: FIPS, least privilege, platform TLS stores
 - **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
 - **Evidence:** `Fips/DevelopersNotes-51FBF6BE.txt:29-41`, `StationSecurity/role_*`, corpus B1326.
 - **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ1, Δ2, Δ4): `types/security.md` § 9.1 FIPS, § 2.6 least privilege, § 10.1
+  TLS stores. Δ1 "RC4/DES" dropped (not in the guide). Lints owed G80 `jca-named-provider`, G81 `embedded-keystore`
+  (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`). Same unit: § 3.1 CSRF example corrected to the shipped
+  `httpMethod` values (no DELETE in any 4.15.6.20 `web.xml`).
 
 ### C66 — Equipment tagging for our logic points
 - **Sources:** sta#Δ6 (primary)
 - **Evidence:** `BContainmentRelation.java:65`, corpus B1329 rows 2-3.
 - **Target:** `types/logic.md` tag recipe. **Lint-able:** partial. **Fold type:** doc section.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ6): `types/logic.md` § Our-modules tag recipe, code-verified
+  (`BContainmentRelation.java:48-49`). No lint (partial, doc-only fold type).
 
 ### C67 — Analytics framework facts
 - **Sources:** sta#Δ9 (primary)
 - **Evidence:** `DeveloperAnalytics/buildingAlgorithmBlocks.txt:9,23`, `ordSchemes.txt:15,25`, corpus B1338.
 - **Target:** `types/logic-authoring.md:31,101`. **Lint-able:** yes — grep `analytic:`. **Fold type:** doc section + lint.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ9): `types/logic-authoring.md` analytics bullet + § ORD scheme typology
+  (no `analytic:` id, analytics-rt 4.15.6.20 `module.xml:106`). "Data definition per tag" not folded. Lint owed G82
+  `analytic-ord-scheme`.
 
 ### C68 — BACnet/Modbus field rules
 - **Sources:** drp#Δ5 (primary, BACnet export) · drp#Δ6 extends (MS/TP, Modbus byte order)
@@ -908,6 +928,10 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** wuh#Δ3 (primary, profiles) · wuh#Δ4 (Px rules) · wuh#Δ8 (stock ChartWidget first) · wuh#Δ9 (Mobile profile/Px deprecated since 4.6)
 - **Evidence:** corpus B1328, B1339, B1342.
 - **Target:** `types/dashboard.md`, `types/wb-widgets.md:360`, `types/frontend-standard.md:22,175`. **Lint-able:** partial. **Fold type:** doc sections + lint.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; wuh Δ3, Δ4, Δ8, Δ9): `types/dashboard.md` § ux Px rules,
+  § Charts on an HMI, § Deploy on a JACE (web profile); `types/frontend-standard.md` § Profiles, § Technology
+  choices. Δ4 landed in `types/dashboard.md`, not `types/wb-widgets.md` (outside the unit's surfaces). OWED: lints G77
+  `px-portability`, G78 `mobile-deprecated`; the `types/wb-widgets.md` § PX authoring "all positions are absolute" line.
 
 ### C73 — Platform install and runtime profiles
 - **Sources:** pps#Δ9 (primary)
@@ -960,12 +984,19 @@ cursor recipe stays owed (WU-P0-6).
 - **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
 - **Evidence:** `EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8.
 - **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ10, r3-report R5): `types/logic-authoring.md` § Programmatic slot-name
+  rules, design note [INFER] with the R2-oBIX-only scope.
 
 ### C78 — ExportTags makes a copy, not a proxy
 - **Sources:** sta#Δ8 (primary). **Target:** `types/distribution.md`. **Lint-able:** no. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ8): landed in `types/logic.md` § Ship a tag dictionary; `types/distribution.md`
+  was outside the unit's edit surface (a one-line pointer there stays optional).
 
 ### C79 — Coexisting with the Tridium DashboardService
 - **Sources:** wuh#Δ10 (primary). **Evidence:** `EngNotes/dashboard-DashboardService.txt:14`. **Target:** `types/dashboard.md`. **Lint-able:** partial. **Fold type:** doc note.
+- **Fold status:** FOLDED (`docs/r8-u7-web-ui`, 2026-10-23; wuh Δ10): `types/dashboard.md` § Deploy on a JACE
+  (clean-text anchor `dashboard-DashboardService.txt:7`). The lint half stays human review: the state lives in the
+  station home, not the module tree.
 
 ### C80 — NRE memory budget and flash writes on a JACE
 - **Sources:** pps#Δ10 (primary). **Evidence:** corpus B1341 row 7, B1284. **Target:** `types/math-control-libraries.md:43`. **Lint-able:** no. **Fold type:** doc note.
@@ -1033,10 +1064,10 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-horizons-authoring-security#Δ9` | types/module-wiring.md | API stability labels; registry/agent lookups | C59 | P2 | accepted |
 | `devguide415-horizons-authoring-security#Δ10` | types/dashboard.md, types/theme.md, types/wb-widgets.md | Small horizons (promiseUtils, LocalizableError, login branding) | C76 | P3 | accepted |
 | `devguide415-lexicons-ux-i18n#Δ1` | types/dashboard.md:203, types/value-types.md:51, toolbelt/slot-coverage.sh, toolbelt/generate-wiring-map.sh | Slot/enum keys are bare names; drop Type.slot advice | C10 | P0 | accepted |
-| `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | accepted |
-| `devguide415-lexicons-ux-i18n#Δ3` | types/observability.md | LocalizableRuntimeException idiom | C55 | P2 | accepted |
-| `devguide415-lexicons-ux-i18n#Δ4` | types/issues-and-gotchas.md | Lexicon diagnostics triage note | C57 | P2 | accepted |
-| `devguide415-lexicons-ux-i18n#Δ5` | types/frontend-standard.md | ux i18n with lex!; LexiconRpc unrestricted | C56 | P2 | accepted |
+| `devguide415-lexicons-ux-i18n#Δ2` | types/structure.md L4 | Lexicon resolution and override chain | C54 | P2 | folded (U6, `types/lexicon.md` § 1); manifest lint owed G71 |
+| `devguide415-lexicons-ux-i18n#Δ3` | types/observability.md | LocalizableRuntimeException idiom | C55 | P2 | folded (U6, `types/lexicon.md` § 3); key lint owed G70 |
+| `devguide415-lexicons-ux-i18n#Δ4` | types/issues-and-gotchas.md | Lexicon diagnostics triage note | C57 | P2 | folded (U6, `types/issues-and-gotchas.md` K1) |
+| `devguide415-lexicons-ux-i18n#Δ5` | types/frontend-standard.md | ux i18n with lex!; LexiconRpc unrestricted | C56 | P2 | folded (U6, `types/lexicon.md` § 4); lint owed G72 |
 | `devguide415-nav-subscriptions-tags-ords#Δ1` | types/driver-authoring.md:54-70 | Fix inverted readSubscribed/readUnsubscribed | C15 | P0 | accepted |
 | `devguide415-nav-subscriptions-tags-ords#Δ2` | types/logic-authoring.md:9-24 | Subscribed semantics, leases, SELF_EVENTS ids | C20 | P0 | accepted |
 | `devguide415-nav-subscriptions-tags-ords#Δ3` | types/driver-authoring.md:234-240 | Virtual component ORD form and cache | C20 | P0 | accepted |
@@ -1071,7 +1102,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-packaging-platform-signing#Δ2` | types/logic-authoring.md:208-211 | Shipping a template module | C53 | P2 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ3` | METHODOLOGY.md:44-52 | What breaks on module upgrade | C53 | P2 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ4` | types/distribution.md, types/logic.md:185, types/structure.md:133 | Palette entry ≠ .ntpl; dangling §Templates; provisioning | C29 | P0 | accepted |
-| `devguide415-r2-packaging-platform-signing#Δ5` | types/structure.md, types/dashboard.md | Lexicon-only modules | C54 | P2 | accepted |
+| `devguide415-r2-packaging-platform-signing#Δ5` | types/structure.md, types/dashboard.md | Lexicon-only modules | C54 | P2 | folded (U6, `types/lexicon.md` § 2); lint owed G71 |
 | `devguide415-r2-packaging-platform-signing#Δ6` | build-verify.md, types/distribution.md:100 | Signing Service ≠ module signing; mode × status | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ7` | types/logic-authoring.md:917 | Program objects signed; load failure causes | C48 | P1 | accepted |
 | `devguide415-r2-packaging-platform-signing#Δ8` | types/structure.md:300 | se is Supervisor (Windows) only | C24 | P0 | accepted |
@@ -1086,16 +1117,16 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `devguide415-r2-runtime-contracts-formats#Δ7` | types/logic.md:252-256,335 | kitControl status families / propagateFlags defaults | C05 | P0 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ8` | types/logic.md | BHysteresis/BLimiter 4.15+ | C75 | P2 | accepted |
 | `devguide415-r2-runtime-contracts-formats#Δ9` | types/logic-authoring.md | NaN/null fallback before staging comparisons | C50 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ1` | types/security.md | FIPS-mode constraints | C65 | P2 | folded (U8, `types/security.md` § 9.1); lint owed G80 |
+| `devguide415-r2-security-tags-analytics#Δ2` | types/security.md §2 | Least privilege for module users | C65 | P2 | folded (U8, `types/security.md` § 2.6) |
 | `devguide415-r2-security-tags-analytics#Δ3` | types/security.md §3, types/dashboard.md | 4.15 absolute logoff ends HMI sessions | C31 | P1 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ4` | types/security.md §10 | Use platform TLS stores | C65 | P2 | folded (U8, `types/security.md` § 10.1); lint owed G81 |
 | `devguide415-r2-security-tags-analytics#Δ5` | types/logic.md, types/cloud-connector.md:206-217 | Tag dictionary licence (2 dictionaries) | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | accepted |
+| `devguide415-r2-security-tags-analytics#Δ6` | types/logic.md | Equipment tagging with direct equipRef | C66 | P2 | folded (U8, `types/logic.md` § Our-modules tag recipe) |
 | `devguide415-r2-security-tags-analytics#Δ7` | types/logic.md, types/logic-authoring.md:181 | Tag rules and hierarchies | C21 | P0 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | accepted |
-| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353) |
+| `devguide415-r2-security-tags-analytics#Δ8` | types/distribution.md | ExportTags ComponentTag copies | C78 | P3 | folded (U8, `types/logic.md` § Ship a tag dictionary) |
+| `devguide415-r2-security-tags-analytics#Δ9` | types/logic-authoring.md:31,101 | Analytics facts and ORD schemes | C67 | P2 | folded (U8, `types/logic-authoring.md` analytics + § ORD scheme typology); lint owed G82 |
+| `devguide415-r2-security-tags-analytics#Δ10` | types/value-types.md or types/logic-authoring.md | Preserve slot flags on rebuild | C77 | P3 | accepted-corrected (forceUpdate scope = R2 oBIX only, B1353); folded (U8, `types/logic-authoring.md` § Programmatic slot-name rules) |
 | `devguide415-r2-shipped-libraries#Δ1` | types/third-party-libraries.md, types/module-wiring.md | bin/ext first; nre("g:a") | C42 | P1 | accepted |
 | `devguide415-r2-shipped-libraries#Δ2` | types/cloud-connector.md:61-63, types/third-party-libraries.md:167,174 | okhttp ships in bin/ext, not net-rt | C27 | P0 | accepted |
 | `devguide415-r2-shipped-libraries#Δ3` | types/third-party-libraries.md | bin/ext version drift | C42 | P1 | accepted |
@@ -1162,14 +1193,14 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-drivers-bql-ords-files#Δ4` | types/logic-authoring.md | ORD call rules | C18 | P0 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ5` | types/logic-authoring.md | File-export recipe | C62 | P2 | accepted |
 | `n4-course-lexicon-logging-testing#Δ1` | types/structure.md, toolbelt/slot-coverage.sh | Lexicon key catalogue; Type.displayName | C10 | P0 | accepted-corrected (slot row per lux Δ1) |
-| `n4-course-lexicon-logging-testing#Δ2` | types/observability.md, toolbelt/lint-lexicon-keys.sh | Runtime lexicon idiom; key-exists lint | C55 | P2 | accepted |
+| `n4-course-lexicon-logging-testing#Δ2` | types/observability.md, toolbelt/lint-lexicon-keys.sh | Runtime lexicon idiom; key-exists lint | C55 | P2 | folded (U6, `types/lexicon.md` § 3); key lint owed G70 |
 | `n4-course-lexicon-logging-testing#Δ3` | types/moduleTest.md | moduleTest layout and idioms | C41 | P1 | accepted |
-| `n4-course-lexicon-logging-testing#Δ4` | toolbelt/triage-console.sh | Spanish JDK level names | C57 | P2 | accepted |
-| `n4-course-lexicon-logging-testing#Δ5` | types/observability.md | Log-level operating notes | C57 | P2 | accepted |
+| `n4-course-lexicon-logging-testing#Δ4` | toolbelt/triage-console.sh | Spanish JDK level names | C57 | P2 | doc half folded (U6, `types/diagnostics.md` § 3); script fix owed G73 |
+| `n4-course-lexicon-logging-testing#Δ5` | types/observability.md | Log-level operating notes | C57 | P2 | folded (U6, `types/diagnostics.md` § 2); lint owed G74 |
 | `n4-course-parity-observability-horizons#Δ1` | types/logic.md | Callback thread map | C37 | P1 | accepted |
 | `n4-course-parity-observability-horizons#Δ2` | types/value-types.md | Locale-safe BSimple encoding | C49 | P1 | accepted |
 | `n4-course-parity-observability-horizons#Δ3` | toolbelt/kit-ticket.sh, types/observability.md | Client parity ticket | C52 | P1 | accepted |
-| `n4-course-parity-observability-horizons#Δ4` | types/observability.md, toolbelt/triage-console.sh | Station diagnostics card | C57 | P2 | accepted |
+| `n4-course-parity-observability-horizons#Δ4` | types/observability.md, toolbelt/triage-console.sh | Station diagnostics card | C57 | P2 | folded (U6, `types/diagnostics.md`); triage patterns owed G73 |
 | `n4-course-parity-observability-horizons#Δ5` | types/logic-authoring.md:540, types/logic.md | History/tag commissioning items | C35 | P1 | accepted |
 | `n4-course-parity-observability-horizons#Δ6` | corpus-index.md, toolbelt/kit-ticket.sh | Course horizons list | C76 | P3 | accepted |
 | `n4-course-slots-components-contracts#Δ1` | types/actions.md:24-26 | Frozen action handler = type-load error | C09 | P0 | accepted |

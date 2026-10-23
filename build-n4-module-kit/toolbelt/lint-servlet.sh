@@ -2,7 +2,7 @@
 # lint-servlet.sh — BWebServlet security lint for Niagara N4 Java modules (Campaign 8 PR12, B813).
 #
 # Scans *.java files under <src-dir> that extend BWebServlet or declare doGet/doPost/service
-# handlers. Dot-directories are pruned (D9b). Reports per-check rows.
+# handlers. Dot and *-worktrees directories are pruned (D9b). Reports per-check rows.
 #
 # Checks:
 #   auth          FAIL  a doGet/doPost/service handler body contains a write (setDouble/setFloat/
@@ -30,7 +30,8 @@
 # Usage:  lint-servlet.sh <src-dir> [--strict]
 #
 #   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>
-#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20)
+#   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20), incl. a
+#                sub-directory the walk could not enter or no *.java to scan (ERROR row)
 #
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
@@ -38,6 +39,8 @@
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
+# shellcheck disable=SC1091  # sibling lib, resolved at runtime via the script's real path
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/scan-files.sh"
 
 FAILED=0
 STRICT=0
@@ -270,12 +273,11 @@ END {
 AWKEOF
 
 # ---------------------------------------------------------------------------
-# File walker: *.java under <src-dir>, dot-directories pruned (D9b).
+# File walker: *.java under <src-dir> via the shared lib/scan-files.sh (dot and *-worktrees
+# directories pruned, D9b). A sub-directory find cannot enter, or a tree with no *.java (an ERROR
+# row), is an env error (exit 3), never a clean pass. [ev: issue #226]
 # ---------------------------------------------------------------------------
-_scan_files() {
-    find -H "$1" \( -type d -name '.*' -prune \) \
-         -o \( -type f -name '*.java' -print \)
-}
+scan_files_nonempty_or_exit lint-servlet "$_TMP/files" "$SRC_DIR" -name '*.java'
 
 while IFS= read -r _file; do
     _rel="${_file#"$SRC_DIR/"}"
@@ -284,7 +286,7 @@ while IFS= read -r _file; do
         -v strict="$STRICT" \
         -f "$_TMP/scan.awk" \
         "$_file"
-done < <(_scan_files "$SRC_DIR" | LC_ALL=C sort) >> "$_ROWS"
+done < "$_TMP/files" >> "$_ROWS"
 
 LC_ALL=C grep -q '^FAIL' "$_ROWS" && FAILED=1
 

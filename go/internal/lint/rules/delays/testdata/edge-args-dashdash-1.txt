@@ -1,0 +1,7 @@
+-- args --
+--
+regex
+-- want --
+exit 3
+-- stderr --
+lint-delays: not a directory: --

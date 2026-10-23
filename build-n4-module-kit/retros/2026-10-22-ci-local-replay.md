@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · ci-local-replay
@@ -34,4 +34,4 @@ sha256-checked cache. A step it can neither run nor skip on purpose stops it wit
 - A tool pin only protects CI. A local run needs the same pinned binary, checked by hash on every use.
 
 ---
-**Status**: PENDING (the `CONTRIBUTING.md` §6 pointer to the script landed with it; a fold review decides Δ1) — INDEX row appended: `| 2026-10-22-ci-local-replay.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `CONTRIBUTING.md:193` § 6 Pre-commit checklist; token in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-22-ci-local-replay.md | kit | 2026-10-22 | folded | 1 |`

@@ -241,6 +241,23 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     bounds) or the Go Java scanner `go/internal/javasrc` (T8k-1, #297); a private stripper is a finding. Four fail-open bugs in
     one round came from private strippers (lint-driver-scaffold #277/#283, lint-service-types #279/#285,
     `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]`
+    Match on blanked source (comments and literal contents removed: `go/internal/javasrc` `Strip` then
+    `BlankLiterals`) and on the whole statement, not the raw line: raw lines flag a call inside a comment or a
+    string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
+    (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
+    or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14). Owed engine item G51.
+    `[ev: retro truth-audit Δ3]`
+  - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
+    with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
+    through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
+    check: `grep -n 'find "' toolbelt/*.sh` outside `lib/`. A new bash lint never pastes the parse/walk/exit
+    skeleton: a per-file awk lint writes only its header, `awk_lint_parse`, its `main.awk` and `awk_lint_run`; a
+    flagless line-loop lint opens with `awk_lint_parse <name> raw` and `awk_lint_list`, and ends with
+    `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
+    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` A root with no input files is an ERROR (exit 3), never a
+    silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
+    owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
+    `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro 2026-09-17-umbrelladashboard-module-creation] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
 - Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor
@@ -330,6 +347,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
       `/sys/fs/cgroup/init.scope/pids.current` and wait while it is above 20,000; run under `ulimit -u 4000`.
       `scripts/ci-local.sh` refuses to start (exit 4) while any cgroup is above 50% of its `pids.max`.
       `[ev: retro r8-t41-host-safety Δ1]`
+    - **One read:** `toolbelt/host-budget.sh` (wrapper of `go/cmd/host-budget`) reports pids, threads, GOCACHE
+      and `/`, `/mnt/c` in one run (exit 1 on a FAIL row); use it for the pids and disk reads here.
+      `[ev: retro r8-t47-host-budget Δ1]`
     - **Writer cap:** at most two writers per session run a heavy suite at the same time; the others edit,
       read or wait. The integrator runs the full `ci-local.sh -j 3` once, at the end. `[ev: retro r8-t41-host-safety Δ2]`
     - **Disk at round close:** Go never caps `~/.cache/go-build` (84 GB after five days of multi-worktree
@@ -347,7 +367,7 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 - A session that changed KIT files is NOT "done" until ONE of:
   - (a) it wrote a retro at `retros/<date>-<module>.md` (line 1 `<!-- review-status: pending -->`, lessons as PROPOSED kit deltas — propose-never-apply), recorded it in the retro index, and set `retro_pending: false` in `BUILD-STATE.md`; OR
   - **The retro index is GENERATED** — never hand-edit `retros/INDEX.md`. Each retro carries its row as header comments (`<!-- review-status: pending|folded -->` on line 1, then `<!-- module: X -->`, `<!-- deltas: N -->`, optional `<!-- index-comment: … -->`); edit the retro header and run `toolbelt/gen-retro-index.sh` (`--check` is the CI freshness gate and is called by `sweep-build-state.sh`). On a merge conflict in `INDEX.md`, take either side and regenerate. `.gitattributes` marks it `merge=union` so a conflict rarely stops a merge, but a union result is only valid after regeneration. `toolbelt/new-retro.sh` writes that header block into its stub and regenerates the index (it never appends a row). `[ev: retro generated-retro-index Δ1]` `[ev: retro generated-retro-index Δ2]`
-  - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope. A push that only records evidence in a feature doc (`odd/tasks/*.md`) is this case: `.githooks/pre-push` counts every kit file except `BUILD-STATE.md` and `retros/**` as build-relevant, so it carries `Retro: none (trivial: feature-doc evidence only)`. `Retro: promotion` does not fit it — with no in-range INDEX or BUILD-STATE anchor the gate rejects that trailer. `[ev: retro retro-fold-campaign-close Δ3]`; OR
+  - (b) it declared the change TRIVIAL: `Retro: none (trivial: <reason>)` in the commit trailer AND `retro_required: false` in the envelope. A push that only records evidence in a feature doc (`odd/tasks/*.md`) is this case: `.githooks/pre-push` counts every kit file except `BUILD-STATE.md` and `retros/**`, plus `scripts/**` and `go/**` (not `go/bin/`), as build-relevant, so it carries `Retro: none (trivial: feature-doc evidence only)`. `Retro: promotion` does not fit it — with no in-range INDEX or BUILD-STATE anchor the gate rejects that trailer. `[ev: retro retro-fold-campaign-close Δ3]`; OR
   - (c) it is a PROMOTION of already-filed lessons into the core: `Retro: promotion (folds <ids> from existing retros)` in the commit trailer AND a STRUCTURAL ANCHOR — either an in-range `retros/INDEX.md` change (a FULL promotion flips the retro's `review-status` header and regenerates the index) OR an in-range `BUILD-STATE.md` or `ledger.d/` fragment change (a PARTIAL promotion folds content while its source retro stays `pending` for owed halves, so it flips no row — it stamps the owed `open_issue:` line in its fragment instead). The trailer ALONE is not a blanket escape; with NEITHER anchor it fails. Either anchored path still runs `sweep` for ledger coherence. A promotion PR folds existing retros, so it owes no NEW retro.
 - **Envelope-pairing rule (all exits):** every close-exit — (a) new retro, (b) trivial trailer, (c) promotion — MUST pair its retro/INDEX anchor with the kit `BUILD-STATE.md` self-envelope in the SAME push range; a branch push is not proof — the hook evaluates the whole PR on `main`. [ev: retro doctrine-fold] [ev: retro types-fold] [ev: retro close-process-meta-lessons] [ev: retro campaign7-retro-fold]
 - The **Output Contract MUST print** `retro: <path> (N deltas, review-status: pending)` — or `retro: none (trivial: <reason>)` — as an explicit line. A written-but-invisible retro reads as a missing one.

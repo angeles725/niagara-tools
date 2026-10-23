@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-nav-subscriptions-tags-ords
@@ -35,3 +35,6 @@ The kit's examples in these areas contradict the source in ways that change beha
 - Example code is the most-copied text in the kit; an inverted example (`readUnsubscribed` polling) outweighs a correct one-line rule two screens later.
 - Recipes derived from an earlier retro (organization-tags) carried invented API names forward; a symbol-existence check at fold time would have stopped them.
 - "Who can see this" is a separate question from "what exists": nav and ORD APIs both return everything unless the caller filters with its Context.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u7-web-ui`) — Δ1, Δ3 `types/driver-authoring.md`; Δ2, Δ6 `types/logic-authoring.md`; Δ4 `types/dashboard.md` § Reading the station directly with BajaScript (subscription lifetime; owed lint G76 `spa-subscribe-without-unsubscribe` in `ledger.d/2026-10-23-r8-u7-web-ui.md`); Δ5 `types/structure.md`; Δ7 `types/moduleTest.md` + `types/logic-authoring.md`; Δ8 `types/module-wiring.md` + `types/security.md`; Δ9 `types/logic.md` + `types/security.md`; Δ10 `types/logic.md` + `types/logic-authoring.md`.
