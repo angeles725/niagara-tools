@@ -230,3 +230,20 @@ func TestMainRealKit(t *testing.T) {
 		t.Errorf("S21-misparse row missing (line %d)", ln)
 	}
 }
+
+// GP-stray: a declaration below the header pins nothing, so it is a WARN row, not a silent skip.
+func TestMainStrayDeclaration(t *testing.T) {
+	t.Parallel()
+	d := t.TempDir()
+	mklint(t, d, "lint-st", "ST1", "ST1")
+	write(t, filepath.Join(d, "toolbelt", "lint-st.sh"),
+		"#!/usr/bin/env bash\n# lint-st\n# Mutation: ST1 -- drops the guard\nset -u\n# Mutation: ST2 -- below the header\n")
+	want := "MATCH  lint-guard-pins  " + d + "/toolbelt/lint-st.sh:3  mutation ST1 -> tests/lint-st.bats:2\n" +
+		"WARN  lint-guard-pins  " + d + "/toolbelt/lint-st.sh:5  mutation ST2 -> below the header (move it above the first code line)\n"
+	if code, out, errs := run(d); code != ExitOK || out != want || errs != "" {
+		t.Errorf("got (%d, %q, %q), want (0, %q, \"\")", code, out, errs, want)
+	}
+	if code, _, _ := run("--strict", d); code != ExitWarn {
+		t.Errorf("--strict: got exit %d, want %d", code, ExitWarn)
+	}
+}
