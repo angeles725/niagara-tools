@@ -74,8 +74,9 @@ func findQuote(p string) string {
 
 // Walk lists the regular files under root that sel selects, sorted bytewise (LC_ALL=C sort), with
 // paths spelled as find spells them (root + "/" + name, or root + name when root ends in "/").
-// The root itself is never pruned and, being a symlink, is not followed (find -P); symlinks below it
-// are neither followed nor listed. A directory it cannot read is skipped and the first one is returned
+// The root itself is never pruned and, being a symlink, is followed (find -H, issue #329) with paths
+// still spelled from the root as given; symlinks below it are neither followed nor listed. A root that
+// cannot be stat'ed (a dangling symlink) is a *WalkError, never an empty clean list. A directory it cannot read is skipped and the first one is returned
 // as a *WalkError after the rest of the tree is walked: the caller must treat it as an incomplete scan
 // (fail closed), never as clean.
 func Walk(root string, sel Selection) ([]string, error) {
@@ -106,7 +107,7 @@ func Walk(root string, sel Selection) ([]string, error) {
 			}
 		}
 	}
-	if st, err := os.Lstat(root); err != nil {
+	if st, err := os.Stat(root); err != nil {
 		return nil, &WalkError{Path: root, Err: err}
 	} else if st.IsDir() {
 		walk(root)

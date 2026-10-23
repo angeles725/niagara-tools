@@ -273,7 +273,7 @@ AWKEOF
 # File walker: *.java under <src-dir>, dot-directories pruned (D9b).
 # ---------------------------------------------------------------------------
 _scan_files() {
-    find "$1" \( -type d -name '.*' -prune \) \
+    find -H "$1" \( -type d -name '.*' -prune \) \
          -o \( -type f -name '*.java' -print \)
 }
 

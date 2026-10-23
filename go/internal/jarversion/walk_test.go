@@ -63,7 +63,9 @@ func TestListJars(t *testing.T) {
 		{"a trailing slash is not doubled", m + "/", want},
 		{"a doubled slash is kept as given", m + "//", []string{m + "//.hidden.jar", m + "//deep/er/c.jar", m + "//libs/B.jar", m + "//libs/a.jar", m + "//libs/b.jar", m + "//x.jar/inner.jar"}},
 		{"a root named build or .dot is walked, not pruned", filepath.Join(m, "build"), []string{m + "/build/libs/out.jar"}},
-		{"a symlinked root is not followed (find -P)", filepath.Join(d, "modlink"), nil},
+		// Mutation: BJCV-symroot -- os.Lstat instead of os.Stat on the root lists nothing under a symlinked root.
+		{"a symlinked root is followed like find -H, links below it are not (issue #329)", filepath.Join(d, "modlink"),
+			[]string{d + "/modlink/.hidden.jar", d + "/modlink/deep/er/c.jar", d + "/modlink/libs/B.jar", d + "/modlink/libs/a.jar", d + "/modlink/libs/b.jar", d + "/modlink/x.jar/inner.jar"}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
