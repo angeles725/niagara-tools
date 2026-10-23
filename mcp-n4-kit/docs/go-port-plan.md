@@ -244,3 +244,35 @@ saturate, and Python's `str.isprintable` is approximated by `unicode.IsPrint` in
 nested deeper than `server.MAX_NESTING` (1000, arrays and objects with the outer object
 counted); Go checks the depth before decoding (`jsonrpc.NestsDeeper`).
 
+## 7. S3 `box` read side
+
+**Package.** `go/internal/mcpn4/box` ports `box.py:229-612` plus the helpers it needs
+(`poll_delays`, `auth_message`, `_flatten`): `New` (the http/https refusals), `Call`/`SSC`/`Poll`,
+`Open`/`Close` (no cleanup `del` after an AuthError), the pending-event split, `LoadTree` with the
+handle cache and the stale-handle early abort, `GetOrd` (HTML refusal; the cut-record trimming is
+`bql.complete_records`, slice S6), `GetFile` and `About`. Errors are one `*box.Error` (`Kind`:
+BoxError, AuthError, HttpStatusError), `*pyjson.ValueError`, or `*box.PyError` for the TypeError,
+KeyError and BadStatusLine the Python client lets escape (the server shows only their type). Every
+JSON body goes through `pyjson`; `pyjson.Loads` words a bad reply as `json.loads(raw.decode())`
+does. The readers `children`/`status_value`/`parse_status` and the write side (`sync` and the
+encoders) come with the slices that use them; no tool is wired yet (each read tool needs the S4
+session).
+
+**Proof.** `tests/go_box.py` holds one op language run by both clients:
+- *Recorded frames*: `SCENARIOS` port the read-side `test_box` cases (and pin a few malformed
+  replies). `python3 mcp-n4-kit/tests/go_box.py --write` runs them against the recording
+  FakeStation into `go/internal/mcpn4/box/testdata/replay.jsonl`; `TestReplayRecordedFrames`
+  replays the frames to Go and requires equal request bodies, no frame left over and equal op
+  results. Nothing is masked: the FakeStation session id and handles are deterministic.
+  `test_go_harness.TestGoBoxReplay` fails while the file is stale.
+- *Live*: `TestLiveDifferential` runs `go_box.py --live` and the Go client against the same Go
+  test server (redirects, statuses, caps, BOM, invalid UTF-8, a short body, a non-HTTP answer, a
+  timeout, a refused port, the GET reads) and compares results, request bodies and every request
+  header except User-Agent.
+
+**Known differences.** The User-Agent is Go's, not `Python-urllib/3.x`. A TLS verification
+failure and other OS errors without an errno keep Go's wording inside `<urlopen error ...>`.
+A BOX reply nested past CPython's C stack raises RecursionError in Python; Go decodes it. A
+top-level load child whose `n` is not a string becomes a non-string dict key in Python; Go
+answers TypeError. `http_proxy`/`https_proxy` are honoured by both, but Go never proxies
+localhost.
