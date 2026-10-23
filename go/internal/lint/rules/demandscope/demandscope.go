@@ -129,9 +129,6 @@ func demandShaped(lo string) bool {
 
 // readsPV is the first process-variable stem the lowered body compares, or "".
 func readsPV(lo string) string {
-	for _, w := range []string{"class", "interface", "enum"} {
-		declares[w] = regexp.MustCompile(`\b` + w + `\b`)
-	}
 	for _, pv := range pvs {
 		if pvAt[pv].MatchString(lo) {
 			return pv
