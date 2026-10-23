@@ -2,6 +2,7 @@ package box
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -33,23 +34,30 @@ func TestDroppedEventsStartsAtZero(t *testing.T) {
 	}
 }
 
-func TestFlattenTypeErrors(t *testing.T) {
+func TestFlattenRefusesMalformedTrees(t *testing.T) {
 	for _, tt := range []struct{ name, tree, want string }{
-		{"children not iterable", `{"s": null}`, "TypeError"},
-		{"a child that is a string", `{"s": ["x"]}`, "TypeError"},
-		{"a child without a name", `{"s": [{"t": "x"}]}`, "KeyError"},
-		{"a numeric name", `{"s": [{"n": 5}]}`, "TypeError"},
-		{"a nested numeric name", `{"s": [{"n": "a", "s": [{"n": 5}]}]}`, "TypeError"},
-		{"an empty children string", `{"s": ""}`, ""},
+		{"children that are null", `{"s": null}`, "slot (root) has children that are null, not a list"},
+		{"children that are a string", `{"s": ""}`, "slot (root) has children that are a string, not a list"},
+		{"a child that is a string", `{"s": ["x"]}`, "slot (root) has a child that is a string, not an object"},
+		{"a child without a name", `{"s": [{"t": "x"}]}`, "slot (root) has a child without a slot name"},
+		{"a numeric name", `{"s": [{"n": 5}]}`, "slot (root) has a child without a slot name"},
+		{"an empty name", `{"s": [{"n": ""}]}`, "slot (root) has a child without a slot name"},
+		{"a nested numeric name", `{"s": [{"n": "a", "s": [{"n": 5}]}]}`, "slot a has a child without a slot name"},
+		{"nested children that are a number", `{"s": [{"n": "a", "s": [{"n": "b", "s": 1}]}]}`,
+			"slot a/b has children that are a number, not a list"},
+		{"a well-formed tree", `{"s": [{"n": "a", "s": [{"n": "b"}]}]}`, ""},
 	} {
-		node := mustObject(t, tt.tree)
-		err := flatten(node, "", pyjson.NewObject())
+		err := flatten(mustObject(t, tt.tree), "", pyjson.NewObject())
 		got := ""
 		if err != nil {
-			got = err.(*PyError).Type
+			e := err.(*Error)
+			if e.Kind != KindBox || e.Channel != Channel || e.Key != "loadSlots" {
+				t.Errorf("%s: %#v", tt.name, e)
+			}
+			got = strings.TrimPrefix(e.Msg, "malformed BOX reply: ")
 		}
 		if got != tt.want {
-			t.Errorf("%s: %v, want %q", tt.name, err, tt.want)
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
 }

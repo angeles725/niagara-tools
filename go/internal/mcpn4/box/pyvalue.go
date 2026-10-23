@@ -3,7 +3,6 @@ package box
 import (
 	"math"
 	"math/big"
-	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -99,31 +98,54 @@ func pyEqual(a, b any) bool {
 	return false
 }
 
-// pyIter is list(v) for a value a for loop walks: a list's items, a dict's keys, a string's
-// characters. Anything else raises TypeError, as iterating None or a number does.
-func pyIter(v any) ([]any, error) {
-	switch x := v.(type) {
-	case []any:
-		return x, nil
-	case *pyjson.Object:
-		out := []any{}
-		for _, k := range x.Keys() {
-			out = append(out, k)
-		}
-		return out, nil
+// jsonKind is box._json_kind: a decoded value's JSON kind with its article ("an object", ...).
+func jsonKind(v any) string {
+	switch v.(type) {
+	case nil:
+		return "null"
+	case bool:
+		return "a boolean"
+	case pyjson.Number:
+		return "a number"
 	case string:
-		out := []any{}
-		for i := 0; i < len(x); {
-			_, size := utf8.DecodeRuneInString(x[i:])
-			if size == 1 && x[i] >= utf8.RuneSelf && i+3 <= len(x) { // a WTF-8 surrogate
-				size = 3
-			}
-			out = append(out, x[i:i+size])
-			i += size
-		}
-		return out, nil
+		return "a string"
+	case []any:
+		return "a list"
 	}
-	return nil, &PyError{"TypeError"}
+	return "an object"
+}
+
+// nestsDeeper is box._nests_deeper: whether lists and objects nest deeper than limit in a
+// decoded value (the outer one counted). Iterative, like the Python walk.
+func nestsDeeper(v any, limit int) bool {
+	type item struct {
+		v     any
+		depth int
+	}
+	stack := []item{{v, 1}}
+	for len(stack) > 0 {
+		it := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		var kids []any
+		switch x := it.v.(type) {
+		case []any:
+			kids = x
+		case *pyjson.Object:
+			for _, k := range x.Keys() {
+				kid, _ := x.Get(k)
+				kids = append(kids, kid)
+			}
+		default:
+			continue
+		}
+		if it.depth > limit {
+			return true
+		}
+		for _, kid := range kids {
+			stack = append(stack, item{kid, it.depth + 1})
+		}
+	}
+	return false
 }
 
 // get is v.get(k) when v is a dict: the value and true, else nil and false.

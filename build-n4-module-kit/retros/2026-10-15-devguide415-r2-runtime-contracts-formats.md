@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 9 -->
 # 2026-10-15 · kit · devguide415-r2-runtime-contracts-formats
@@ -35,4 +35,4 @@ Round 1 left nine child gaps that only source could settle. Reading them closed 
 - A block default that masks status bits turns a dead sensor into a valid reading; the kit must state each family's default, not one rule.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | pending | 9 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u10-platform-templates`) — Δ1 `types/actions.md`; Δ2 `types/security.md` + `types/logic-authoring.md`; Δ3, Δ7, Δ9 `types/logic.md`; Δ5 `types/structure.md`; Δ6 `types/logic.md` + `lint-bformat-call.sh`; Δ4 `types/wb-widgets.md` § Commands (lint owed: G91); Δ8 `types/logic.md` 4.15+ note (lint owed: G90; both in ledger.d `2026-10-23-r8-u10-platform-templates.md`).

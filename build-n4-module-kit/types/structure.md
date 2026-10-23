@@ -196,6 +196,21 @@ file, the build silently omits the test from `moduleTestJar` and `niagaraTest` /
 it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
 `[ev: corpus B961 §961.3, B958 §958.4]`
 
+### What the scaffold emits today: two hand steps
+- **Replace the scaffolded `module-permissions.xml` before adding a request.** Both fixtures, and so every
+  `scaffold-module.sh` module, ship `<?xml …?><modulePermissions/>`. The gradle plugin copies that root into
+  `META-INF/module.xml` as it is (niagara-plugins 7.6.22 `NiagaraModulePlugin` adds `module-permissions.xml` to
+  the include files, by javap; a scaffolded client jar's manifest holds `<modulePermissions/>`), and the NRE reads
+  only a `<permissions>` element (baja 4.14.0.162 vineflower `com/tridium/sys/module/NModule.java:442-452`). A
+  `<req-permission>` put inside `<modulePermissions>` is never read, and the call fails with
+  `AccessControlException`. Start from `templates/module-permissions.xml` (§ `module-permissions.xml` above). The
+  fixture fix is owed as G98 `fixture-permissions`. `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
+- **No `moduleTest-include.xml` is emitted yet.** Before the first `BTestNg` class, copy
+  `templates/moduleTest-include.xml` (course shape: a bare `<types>` root) into the part. Do not paste the stub
+  block above as written: its comment comes before the `<?xml` declaration, so it is not well-formed XML (expat:
+  "XML or text declaration not at start of entity"). The emission is owed as G97 `fixture-moduletest-include`.
+  `[ev: retro testing-parity-btestng Δ6]`
+
 ## Palette assembly templates `[ev: corpus B746 §746.3]`
 
 A `module.palette` `<p>` entry can nest child `<p>` elements with property overrides to form
