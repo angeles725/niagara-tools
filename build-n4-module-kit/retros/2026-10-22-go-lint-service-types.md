@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · go-lint-service-types
@@ -48,4 +48,4 @@ was already right on all seven; no bash bug was found there. The header keeps it
   match span is used (not just whether it matched) and uses byte columns consistently.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED (quality round 8 W23 U0, main e66da0a) — Δ1 `go/README.md:80` § Adding a lint rule step 3 (every golden case recorded from the old script); token in `ledger.d/2026-10-23-r8-u0-retro-flips.md`. INDEX row generated from the header: `| 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | folded | 1 |`

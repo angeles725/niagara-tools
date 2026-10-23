@@ -155,3 +155,35 @@ func TestCheck(t *testing.T) {
 		t.Error("Check rewrote BUILD-STATE.md")
 	}
 }
+
+// TestMainCommittedBytes ports the key cases of the gen.File parity matrix (#344). BUILD-STATE.md is
+// compared byte-exact, but the generator only rewrites the kit block and carries every byte outside
+// it through: an extra trailing newline is fresh because the generated file keeps it too, while a
+// stale kit block is stale. A read-only BUILD-STATE.md is replaced atomically (its directory is
+// writable) and keeps its mode.
+func TestMainCommittedBytes(t *testing.T) {
+	t.Parallel()
+	root := kit(t, fresh+"\n", map[string]string{"0000-archive-pre-2026-10-23.md": archiveText})
+	path := root + "/BUILD-STATE.md"
+	if code, out, errs := run("", "--check", root); code != ExitOK || out != "gen-build-state: "+path+" is fresh\n" || errs != "" {
+		t.Errorf("extra trailing newline: got (%d, %q, %q), want fresh", code, out, errs)
+	}
+	stale := strings.Replace(fresh, "late line", "edited line", 1) + "\n"
+	if err := os.WriteFile(path, []byte(stale), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	want := "gen-build-state: " + path + " is stale vs ledger.d/; run gen-build-state.sh and commit the result\n"
+	if code, out, errs := run("", "--check", root); code != ExitStale || out != "" || !strings.HasPrefix(errs, want) {
+		t.Errorf("stale kit block: got (%d, %q, %q), want stale", code, out, errs)
+	}
+	if code, out, errs := run("", root); code != ExitOK || out != "gen-build-state: wrote "+path+"\n" || errs != "" {
+		t.Errorf("read-only write: got (%d, %q, %q)", code, out, errs)
+	}
+	st, err := os.Stat(path)
+	if b, _ := os.ReadFile(path); err != nil || string(b) != fresh+"\n" || st.Mode().Perm() != 0o444 {
+		t.Errorf("read-only write: target %q, want the fresh content (trailing newline kept) with mode 0444", b)
+	}
+}

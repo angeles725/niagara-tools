@@ -1,0 +1,29 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/a/F2.java:3  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/a/F4.java:3  step reads suction with no demand-shaped input in scope
+-- stderr --
+-- m/a/F1.java --
+class F1 {
+  private BStatusBoolean callForCool;
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+}
+-- m/a/F2.java --
+class F2 {
+  int x = foo(); int demand;
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+}
+-- m/a/F3.java --
+class F3 {
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+  int enabled = 1;
+}
+-- m/a/F4.java --
+class F4 {
+  class Demand { int x; }
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+}
+-- m/a/F5.java --
+class F5 { int demandCount; int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; } }

@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/.deploy-baseline/com/x/Stale.java --
+package com.x;
+public class Stale {
+  int step(long now, double suction, double lowLimit) { int t=4; if (suction<lowLimit) t--; return t; }
+}
+-- src/com/x/Clean.java --
+package com.x;
+public class Clean {
+  int step(long now, int demandCount, double suction) { return demandCount <= 0 ? 0 : demandCount; }
+}

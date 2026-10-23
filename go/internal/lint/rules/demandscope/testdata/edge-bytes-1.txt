@@ -1,0 +1,25 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/m/C.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/D.java:2  step reads suction with no demand-shaped input in scope
+-- stderr --
+-- m/C.java --
+class C {
+  int step(double suction) {
+    int target = 0;
+    if (suction > 1) target = 1;
+    return target;
+  }
+}
+-- m/D.java (noeol) --
+class D {
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+}
+-- m/E.java --
+-- m/U.java --
+class U {
+  int step(double SUCTIÓN, double é) { int target = 0; if (SUCTIÓN > 1) target = 1; return target; }
+  int s(double DEMANDÉ) { int target = 0; if (temp > 1) target = 1; return target; }
+}

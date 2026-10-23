@@ -14,6 +14,7 @@
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
 set -o pipefail   # a git archive failure must not be masked by tar's status
+# Under pipefail, test presence with grep -q P <<< "$X", never printf | grep -q (METHODOLOGY.md § Conformance rules).
 
 block() { printf 'pre-push: %s\npre-push: push blocked.\n' "$1" >&2; exit "${2:-1}"; }
 

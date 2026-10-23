@@ -1,0 +1,12 @@
+-- args --
+@DIR@/t
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/t/Latin1.java:3  unfloored  cannot verify floor of variable: áx
+-- stderr --
+-- t/Latin1.java --
+class L {
+  void a(long x) {
+    Clock.schedule(this, BRelTime.make(áx), go, null);
+  }
+}
