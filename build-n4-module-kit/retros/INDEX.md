@@ -178,7 +178,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-09-20-wb-manager-framework-deltas.md | kit | 2026-09-20 | folded | 4 |
 | 2026-09-20-wb-vendor-ux-rt-wb-pattern-deltas.md | kit | 2026-09-20 | folded | 25 |
 | 2026-09-20-wb-vendor-ux-wave3-vendor-drivers-deltas.md | kit | 2026-09-20 | folded | 14 |
-| APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | pending | 0 | <!-- disposition: worklist-complete — ranked the 2026-09-20 corpus retros' Δ tokens; all of them were applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); not a delta retro, not retro debt (sweep --age skips it) -->
+| APPLY-PLAN-2026-09-20-module-corpus-deltas.md | kit | 2026-09-20 | folded | 0 | <!-- disposition: worklist-complete — ranked the 2026-09-20 corpus retros' Δ tokens; all of them were applied by the apply-deltas campaign (v0.23.0, PRs #124-#133); not a delta retro, not retro debt (sweep --age skips it) -->
 | 2026-09-21-apillm-wb-subscription-refresh-and-points-deltas.md | kit | 2026-09-21 | folded | 5 |
 | 2026-09-21-lint-servlet-api-response-headers.md | kit | 2026-09-21 | folded | 0 | <!-- api-response-headers check in lint-servlet (auto-wired §5.18) + 3 stale-doc fixes -->
 | 2026-09-21-live-diagnosis-hardening-deltas.md | kit | 2026-09-21 | folded | 6 |
@@ -211,11 +211,11 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-02-polish-2026-10-02-close.md | kit | 2026-10-02 | folded | 5 |
 | 2026-10-02-retro-fold-campaign-close.md | kit | 2026-10-02 | folded | 4 |
 | 2026-10-03-deferred-lints-2026-10-03-close.md | kit | 2026-10-03 | folded | 5 |
-| 2026-10-14-ws-placement.md | kit | 2026-10-14 | pending | 4 |
+| 2026-10-14-ws-placement.md | kit | 2026-10-14 | folded | 4 |
 | 2026-10-15-devguide415-horizons-authoring-security.md | kit | 2026-10-15 | pending | 10 |
-| 2026-10-15-devguide415-lexicons-ux-i18n.md | kit | 2026-10-15 | pending | 5 |
+| 2026-10-15-devguide415-lexicons-ux-i18n.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-devguide415-nav-subscriptions-tags-ords.md | kit | 2026-10-15 | pending | 10 |
-| 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-r2-control-alarms-schedules.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-devguide415-r2-drivers-protocols.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r2-runtime-contracts-formats.md | kit | 2026-10-15 | pending | 9 |
@@ -224,19 +224,19 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-devguide415-r2-web-ui-hmi.md | kit | 2026-10-15 | pending | 10 |
 | 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | pending | 4 |
-| 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | pending | 10 |
+| 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | folded | 6 |
+| 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | folded | 10 |
 | 2026-10-15-n4-course-as-exemplar-source.md | kit | 2026-10-15 | pending | 4 |
 | 2026-10-15-n4-course-authoring-files-and-libraries.md | kit | 2026-10-15 | pending | 5 |
 | 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | pending | 6 |
 | 2026-10-15-n4-course-drivers-bql-ords-files.md | kit | 2026-10-15 | pending | 5 |
-| 2026-10-15-n4-course-lexicon-logging-testing.md | kit | 2026-10-15 | pending | 5 |
+| 2026-10-15-n4-course-lexicon-logging-testing.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-n4-course-parity-observability-horizons.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-15-n4-course-slots-components-contracts.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-15-n4-course-threading-jobs-doctrine.md | kit | 2026-10-15 | pending | 6 |
+| 2026-10-15-n4-course-slots-components-contracts.md | kit | 2026-10-15 | folded | 6 |
+| 2026-10-15-n4-course-threading-jobs-doctrine.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-review2-signing-build-route.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-15-testing-parity-btestng.md | kit | 2026-10-15 | pending | 6 |
-| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-15-testing-parity-btestng.md | kit | 2026-10-15 | folded | 6 |
+| 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | folded | 6 |
 | 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | pending | 8 |
 | 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |
 | 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |
@@ -245,7 +245,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | pending | 2 |
 | 2026-10-22-awk-lint-line-loops.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-awk-lint-skeleton.md | kit | 2026-10-22 | pending | 2 |
-| 2026-10-22-ci-local-replay.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-ci-local-replay.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-course-recordings.md | kit | 2026-10-22 | folded | 8 |
 | 2026-10-22-fail-closed-walks.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-generated-retro-index.md | kit | 2026-10-22 | folded | 2 |
@@ -254,23 +254,23 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-22-go-gen-lint-index.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-javasrc-scanner.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-lint-bundled-jar-class-version.md | kit | 2026-10-22 | pending | 1 |
-| 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | pending | 1 |
-| 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-go-lint-driver-scaffold.md | kit | 2026-10-22 | folded | 1 |
+| 2026-10-22-go-lint-engine.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-go-lint-guard-pins.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | pending | 2 |
-| 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | pending | 1 |
+| 2026-10-22-go-lint-service-types.md | kit | 2026-10-22 | folded | 1 |
 | 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-go-sweep-build-state.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-ledger-fragments.md | kit | 2026-10-22 | folded | 2 |
-| 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | pending | 1 |
-| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | pending | 2 |
+| 2026-10-22-line-loop-lint-forks.md | kit | 2026-10-22 | folded | 1 |
+| 2026-10-22-mb-strip-string-literals.md | kit | 2026-10-22 | folded | 2 |
 | 2026-10-22-n4-course-sample-check-precision.md | kit | 2026-10-22 | folded | 5 |
 | 2026-10-22-n4-course-signed-jars-gate-fix.md | kit | 2026-10-22 | folded | 6 |
 | 2026-10-22-pipefail-grep-q-race.md | kit | 2026-10-22 | pending | 1 |
 | 2026-10-22-r8-276-driver-scaffold.md | kit | 2026-10-22 | folded | 2 |
-| 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | pending | 1 |
-| 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | pending | 9 |
+| 2026-10-22-r8-script-dir.md | kit | 2026-10-22 | folded | 1 |
+| 2026-10-22-r8-t22-retro-deltas.md | kit | 2026-10-22 | folded | 9 |
 | 2026-10-22-r8-t23-parked-advisories.md | kit | 2026-10-22 | pending | 2 |
 | 2026-10-22-r8-t41-host-safety.md | kit | 2026-10-22 | folded | 7 |
 | 2026-10-22-r8-t47-host-budget.md | kit | 2026-10-22 | pending | 2 |
@@ -287,6 +287,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-go-lint-silent-protection.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | pending | 2 |
 | 2026-10-23-r8-buildsh-316-308.md | kit | 2026-10-23 | pending | 3 |
+| 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-mirror-userhome.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-control.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-p1-drivers.md | kit | 2026-10-23 | folded | 1 |
@@ -299,7 +300,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r8-t9i-k15.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r8-t9i-libs.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r8-t9i-packaging.md | kit | 2026-10-23 | folded | 2 |
-| 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | pending | 1 |
+| 2026-10-23-r8-wrapper-real-path.md | kit | 2026-10-23 | folded | 1 |
 | 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-m1-walkers.md | kit | 2026-10-23 | pending | 4 |
