@@ -12,6 +12,7 @@ package silentprotection
 import (
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
@@ -54,11 +55,10 @@ var (
 	flagsVal  = rx(`^[^,)]*`)
 	className = rx(`class[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)`)
 	wsRun     = rx(`[[:space:]]+`)
-	rowFields = rx(`[[:space:]]{2,}`)
 )
 
 // CheckTree builds the tree-wide indexes, then checks every file in walk order and keeps the first row
-// of each dedupe key.
+// of each trip site.
 func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	ix := buildIndex(files)
 	var out []lint.Finding
@@ -75,19 +75,9 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// dedupeKey is the bash dedupe key: the third field of the printed row split on runs of two or more
-// blanks (the "<file>:<line>" column when the path holds no such run), or the whole row.
-func dedupeKey(fd lint.Finding) string {
-	fd.Rule = ID
-	if fd.Severity == lint.Unset {
-		fd.Severity = lint.Warn
-	}
-	row := fd.Row()
-	if a := rowFields.Split(row, -1); len(a) >= 3 {
-		return a[2]
-	}
-	return row
-}
+// dedupeKey is the trip site "<file>:<line>": one row per site (several *Inhibited methods returning
+// the same private field report its declaration line once).
+func dedupeKey(fd lint.Finding) string { return fd.Path + ":" + strconv.Itoa(fd.Line) }
 
 // index is what the bash passes 0, 0b and 1 computed over every file before the per-file check.
 type index struct {

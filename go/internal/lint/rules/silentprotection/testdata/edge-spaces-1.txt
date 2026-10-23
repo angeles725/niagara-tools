@@ -3,6 +3,9 @@
 -- want --
 exit 0
 WARN  lint-silent-protection  @DIR@/m/c  d/P.java:4  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/c  d/P.java:5  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/c  d/Q.java:4  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
+WARN  lint-silent-protection  @DIR@/m/c  d/Q.java:5  a forces stage/sheds stage on condition -- no status/reason/alarm surface in scope; add a *Alarm/*Reason SUMMARY slot or a BAlarmSourceExt
 -- stderr --
 -- m/a b/BS.java --
 package com.x;

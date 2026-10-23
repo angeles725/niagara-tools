@@ -149,3 +149,19 @@ func TestSpacedPathIndexed(t *testing.T) {
 		t.Errorf("exit %d err %q out\n%s\nwant no row", code, stderr, out)
 	}
 }
+
+// TestDedupeOnPathLine: the header promises one row per trip site, deduped on <file>:<line>. The bash
+// dedupe keyed on the third field of the row split on runs of two or more blanks, so under a path with
+// such a run every row of every file shared one key and only the first was printed.
+func TestDedupeOnPathLine(t *testing.T) {
+	two := "package com.x;\npublic class P {\n  int a(int target, int onCount, boolean c) {\n" +
+		"    if (c) target = Math.min(target, onCount - 1);\n    if (c) target = Math.min(target, onCount - 2);\n" +
+		"    return target;\n  }\n}\n"
+	dir := write(t, map[string]string{"c  d/P.java": two, "c  d/Q.java": two})
+	code, out, _ := run(t, dir, dir)
+	want := warnRow("@DIR@/c  d/P.java", 4) + warnRow("@DIR@/c  d/P.java", 5) +
+		warnRow("@DIR@/c  d/Q.java", 4) + warnRow("@DIR@/c  d/Q.java", 5)
+	if code != 0 || out != want {
+		t.Errorf("exit %d out\n%s\nwant\n%s", code, out, want)
+	}
+}
