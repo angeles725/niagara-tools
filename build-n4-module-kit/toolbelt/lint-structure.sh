@@ -37,7 +37,8 @@
 #
 # A file or directory it cannot read prints `lint-structure: cannot scan|list ...` on stderr (the rows still
 # print); an unreadable root build.gradle.kts stays the visible L15 WARN. Sub-directories named .* or
-# *-worktrees are never entered. A root without profiles gets the module-level checks only.
+# *-worktrees are never entered. A root without profiles prints only
+# `ERROR  lint-structure  <root>  no module profiles found (...)` and exits 3 (a wrong path, never a clean pass).
 #
 # VCS-free by design; version control is never invoked. The .git directory is used
 # only as a filesystem sentinel (stop-marker) for the L10 and L14 upward walks; no VCS
@@ -49,6 +50,7 @@
 # `n4lint lint-structure <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # [ev: retro campaign8-structure] [ev: retro go-lint-structure Δ1]
 # Mutation: LS10-shapes -- matching only key=X:\ (the bash regex) passes spaced, colon, indented, POSIX and UNC host paths
+# Mutation: LS-noprofile -- running the module-level checks on a profile-less root passes a wrong path (exit 0)
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
 # Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs

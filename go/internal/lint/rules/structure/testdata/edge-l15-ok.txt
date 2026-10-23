@@ -14,3 +14,7 @@ niagaraSigning {
 }
 -- l15-ok/M/settings.gradle.kts --
 val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7")
+-- l15-ok/M/A-rt/module-include.xml --
+<types/>
+-- l15-ok/M/A-rt/module.palette --
+<p n="A"/>

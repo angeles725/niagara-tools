@@ -96,7 +96,7 @@ func TestHostPathShapes(t *testing.T) {
 		`niagara_homeX=/opt`: false, `other=/opt/x`: false, `niagara_home=~/n`: false,
 	} {
 		dir := t.TempDir()
-		write(t, dir, map[string]string{".git/HEAD": "x\n", "M/gradle.properties": "x=1\n" + text + "\n"})
+		write(t, dir, map[string]string{".git/HEAD": "x\n", "M/gradle.properties": "x=1\n" + text + "\n", "M/A-rt/module-include.xml": "<types/>\n"})
 		_, out, _ := run(filepath.Join(dir, "M"))
 		if got := strings.Contains(out, "L10:"); got != want {
 			t.Errorf("%q: L10 row %v, want %v (out %q)", text, got, want, out)

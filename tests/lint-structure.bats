@@ -55,6 +55,17 @@ setup() {
   [[ "$output" != *"L10"* ]]                 # the .deploy-baseline gradle.properties is pruned
 }
 
+@test "LS-noprofile: a root without profiles is an ERROR row and exit 3, never a clean pass (#351)" {
+  # Mutation: LS-noprofile -- running the module-level checks on a profile-less root passes a wrong path (exit 0).
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git" "$ROOT/Group/notes"
+  printf 'org.gradle.java.installations.paths=/j\norg.gradle.java.installations.auto-detect=false\n' > "$ROOT/Group/gradle.properties"
+  run "$LS" "$ROOT/Group"
+  rm -rf "$ROOT"
+  [ "$status" -eq 3 ]
+  [ "$output" = "ERROR  lint-structure  $ROOT/Group  no module profiles found (no *-rt/-ux/-wb/-se/-doc or build-file sub-directory: wrong path or not a module root)" ]
+}
+
 @test "LS-usage: no <module-root> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]
@@ -155,7 +166,7 @@ setup() {
   # Pinned by the wrapper header line "Mutation: LS10-shapes".
   ROOT=$(mktemp -d)
   mkdir -p "$ROOT/.git"
-  for i in 1 2 3 4 5; do mkdir -p "$ROOT/M$i"; done
+  for i in 1 2 3 4 5; do mkdir -p "$ROOT/M$i/Foo-rt"; done   # a profile: a root without one is an ERROR row
   printf 'niagara_home = C:\\N\n' > "$ROOT/M1/gradle.properties"
   printf 'niagara_home:C:\\N\n' > "$ROOT/M2/gradle.properties"
   printf '  niagara_user_home=C:/U\n' > "$ROOT/M3/gradle.properties"

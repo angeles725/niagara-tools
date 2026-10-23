@@ -98,6 +98,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			fds, err := sp.Root.CheckRoot(root)
+			if errors.Is(err, ErrEmptyRoot) { // its ERROR row only, as for a walking rule's empty root
+				r.empty(i, sp, root)
+				stopped[i], live = true, live-1
+				continue
+			}
 			r.findings(i, sp, "", fds)
 			if err != nil {
 				r.envError(i, err.Error())

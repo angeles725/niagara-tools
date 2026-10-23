@@ -92,15 +92,19 @@ type TreeRule interface {
 // RootRule is a lint check that reads its root itself instead of the files the shared walk lists: a
 // structure lint over directories and over files above or beside the root (lint-structure, which walks
 // up to the .git sentinel and reads sibling modules). CheckRoot gets each root as given and sets Path on
-// each finding. Spec.Select, ContinueOnWalkError and EmptyError do not apply to it: the runner walks
-// nothing for it, and the rule owns its empty-root contract (a module root without profiles is clean
-// for lint-structure, as the bash lint printed it). A non-nil error fails the scan closed: the runner
-// prints the findings returned with it, then "<lint>: <error>" on stderr, and exits 3.
+// each finding. Spec.Select and ContinueOnWalkError do not apply to it: the runner walks nothing for it.
+// A root that holds nothing the rule checks (lint-structure: no profile) is an error like any empty root:
+// CheckRoot returns ErrEmptyRoot and the runner prints the Spec.EmptyError row (its Msg is required)
+// instead of any finding, stops the rule and exits 3. Any other non-nil error fails the scan closed: the
+// runner prints the findings returned with it, then "<lint>: <error>" on stderr, and exits 3.
 type RootRule interface {
 	ID() string
 	Severity() Severity
 	CheckRoot(root string) ([]Finding, error)
 }
+
+// ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
+var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
 // Exactly one of Rule, Tree and Root is set, and that value implements only its own interface;
@@ -123,7 +127,7 @@ type Spec struct {
 	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
 	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
-	// without them.
+	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg.
 	EmptyError EmptyRow
 	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
 	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".

@@ -104,13 +104,16 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	}
 }
 
-// TestRootRulesOnAnEmptyRoot pins the one registered RootRule's empty-root contract as the bash lint has
-// it: lint-structure on a module root without profiles prints nothing and exits 0 (rules/structure
-// golden edge-empty records the same bytes).
+// TestRootRulesOnAnEmptyRoot: a RootRule fails a root that holds nothing it checks like every other rule
+// fails an empty root (#351, truth audit 2026-10-22 T6): an ERROR row, no other row, exit 3. For
+// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean.
 func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
 		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "gradle.properties"), []byte("niagara_home=C:\\N\n"), 0o644); err != nil {
+		t.Fatal(err) // a module-level finding the ERROR row must not be mixed with
 	}
 	main := lint.Command(All()...)
 	var roots []string
@@ -120,11 +123,12 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		}
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
-			t.Errorf("%s: exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
 	if len(roots) != 1 || roots[0] != "lint-structure" {
-		t.Errorf("RootRules %q, want exactly lint-structure (a new one decides its empty-root contract here)", roots)
+		t.Errorf("RootRules %q, want exactly lint-structure", roots)
 	}
 }

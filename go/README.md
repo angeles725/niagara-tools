@@ -85,8 +85,9 @@ rule's rows stay contiguous.
    ```
    A lint that checks a module's layout rather than its sources (directories, files above or beside the
    root) implements `lint.RootRule` (`CheckRoot(root string)`; reference port: `rules/structure`) and sets
-   `Spec.Root`: the runner walks nothing for it, so `Select`, `ContinueOnWalkError` and `EmptyError` do not
-   apply and the rule owns its empty-root contract; it reads files itself and returns a non-nil error, which
+   `Spec.Root`: the runner walks nothing for it, so `Select` and `ContinueOnWalkError` do not
+   apply; a root with nothing it checks returns `lint.ErrEmptyRoot`, which prints the `Spec.EmptyError` row
+   (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
    fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
    out; it runs by name or in a rule list.
 2. Add the `Spec()` call to `rules.All()`.

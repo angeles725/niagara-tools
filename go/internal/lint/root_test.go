@@ -9,8 +9,8 @@ import (
 // rootFake is a RootRule: it records the roots it is given, reports one finding per root and fails
 // when broken is set.
 type rootFake struct {
-	seen   *[]string
-	broken bool
+	seen          *[]string
+	broken, empty bool
 }
 
 func (rootFake) ID() string         { return "lint-r" }
@@ -18,10 +18,21 @@ func (rootFake) Severity() Severity { return Fail }
 func (r rootFake) CheckRoot(root string) ([]Finding, error) {
 	*r.seen = append(*r.seen, root)
 	out := []Finding{{Path: root, Msg: "root seen"}}
-	if r.broken {
+	switch {
+	case r.empty:
+		return out, ErrEmptyRoot
+	case r.broken:
 		return out, errors.New("cannot scan " + root + "/x: broken")
 	}
 	return out, nil
+}
+
+// emptyRootSpec is a RootRule that finds nothing to check: it returns a finding with ErrEmptyRoot, which
+// the runner must drop in favour of the ERROR row.
+func emptyRootSpec() Spec {
+	sp := rootSpec(rootFake{empty: true})
+	sp.EmptyError = EmptyRow{Msg: "no module here"}
+	return sp
 }
 
 // rootAndCheck implements RootRule and Rule, which registration refuses.
@@ -51,6 +62,9 @@ func TestRunRootRule(t *testing.T) {
 		// No walk, no EmptyError: a root without any selected file is the rule's own business.
 		{"alone on an empty root", []Spec{rootSpec(rootFake{})}, []string{empty}, 1,
 			"FAIL  lint-r  " + empty + ": root seen\n", "", []string{empty}},
+		// ErrEmptyRoot: the spec's EmptyError row instead of any finding, and exit 3 (#351).
+		{"empty root", []Spec{emptyRootSpec()}, []string{empty}, 3,
+			"ERROR  lint-r  " + empty + "  no module here\n", "", []string{empty}},
 		{"error fails closed", []Spec{rootSpec(rootFake{broken: true})}, []string{empty}, 3,
 			"FAIL  lint-r  " + empty + ": root seen\n", "n4lint: cannot scan " + empty + "/x: broken\n", []string{empty}},
 		// Beside a walking rule: rows stay contiguous in spec order, and the root rule leaves the
