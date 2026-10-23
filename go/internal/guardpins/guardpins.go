@@ -21,16 +21,21 @@ type Decl struct {
 // some text after the `--`.
 var declaration = regexp.MustCompile(`^# Mutation: ([A-Za-z][A-Za-z0-9_-]*) -- .+$`)
 
-// Declarations returns the mutation declarations in the header of text (lintheader.Lines, which
-// replaced the former fixed 60-line window, D4c), in order.
-func Declarations(text string) []Decl {
-	var out []Decl
-	for i, line := range lintheader.Lines(text) {
+// Declarations returns the mutation declarations of text, in line order: those in the header
+// (lintheader.Lines, which replaced the former fixed 60-line window, D4c), and apart from them
+// every declaration line below the header, which declares nothing and is reported, never skipped.
+func Declarations(text string) (header, stray []Decl) {
+	n := len(lintheader.Lines(text))
+	for i, line := range lines(text) {
 		if m := declaration.FindStringSubmatch(line); m != nil {
-			out = append(out, Decl{i + 1, m[1]})
+			if d := (Decl{i + 1, m[1]}); i < n {
+				header = append(header, d)
+			} else {
+				stray = append(stray, d)
+			}
 		}
 	}
-	return out
+	return header, stray
 }
 
 // lines splits text into lines; a final newline ends the last line rather than starting one.

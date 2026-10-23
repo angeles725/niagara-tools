@@ -7,13 +7,13 @@
 # whether report-module.sh runs it automatically. Prose never enumerates lints or counts them.
 # [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 #
-# Header contract (the leading run of '#' lines of every lint-*.sh, no line cap):
+# Header contract (the leading run of '#' and blank lines of every lint-*.sh, no line cap):
 #   line 2      # <script-name> — <what it checks>   (continuation lines joined until a blank '#',
 #               a keyword line or line 5: the description spans header lines 2-5 at most, so a
 #               longer explanation belongs below the blank '#' and stays out of the index)
 #   Usage line  # Usage: <script-name> [flags] <arg>
 #   Exit line   # Exit: ... | # Exits: ... | # Exit <code> ...
-# Usage and Exit lines are read from the header block only (the leading run of '#' lines): a
+# Usage and Exit lines are read from the header block only (the leading run of '#' and blank lines): a
 # `# Exit ...` code comment below the first non-comment line never joins the cell (#226).
 # Every Usage and Exit line is kept, in order (joined with <br> in the cell). A '#' line whose text
 # starts at or right of the value column of the Usage/Exit line above it is a wrapped continuation

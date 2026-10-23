@@ -1,7 +1,7 @@
 // Package lintindex generates build-n4-module-kit/toolbelt/INDEX.md, the lint index, from the
 // header of each toolbelt/lint-*.sh (port of the awk in the former toolbelt/gen-lint-index.sh).
 //
-// Header contract (the header of every lint-*.sh: its leading run of '#' lines, lintheader.Lines):
+// Header contract (the header of every lint-*.sh: its leading run of '#' and blank lines, lintheader.Lines):
 //   - line 2 is `# <script-name> — <what it checks>` (also `--` or `-`); continuation lines are
 //     joined until a blank '#', a non-comment or keyword line, or line 5 (the description spans
 //     header lines 2-5 at most);
@@ -35,7 +35,7 @@ type Row struct {
 var (
 	evTag        = regexp.MustCompile(`\[ev: [^]]*\]`)
 	separator    = regexp.MustCompile(`^[[:space:]]*(—|--|-)[[:space:]]*`)
-	blankHash    = regexp.MustCompile(`^#[[:space:]]*$`)
+	blankHash    = regexp.MustCompile(`^#?[[:space:]]*$`)
 	keywordLine  = regexp.MustCompile(`^#[[:space:]]*(Usage|Exits?|Scope|Mutation|Row)`)
 	hashLead     = regexp.MustCompile(`^#[[:space:]]*`)
 	textLine     = regexp.MustCompile(`^#[[:space:]]*[^[:space:]]`)
@@ -81,8 +81,7 @@ func Extract(name, text string) (Row, string) {
 				desc += " " + line[len(hashLead.FindString(line)):]
 			}
 		}
-		// Mutation: GLI-exit-block -- reading Usage/Exit lines past the header joins a code comment
-		// (lintheader.Lines stops at the first non-comment line)
+		// Usage/Exit lines are read from the header only: lintheader.Lines stops at the first code line.
 		// Wrapped continuation of the Usage/Exit line above: text at or right of its value column.
 		// Mutation: GLI-wrap-exit -- dropping the continuation join truncates a wrapped exit contract
 		if cont != 0 {
