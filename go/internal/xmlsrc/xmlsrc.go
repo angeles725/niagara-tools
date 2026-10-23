@@ -7,7 +7,6 @@ package xmlsrc
 import (
 	"bytes"
 	"fmt"
-	"os"
 )
 
 // Attr is one attribute as written: Name keeps its prefix ("xmlns:p"), Value is entity-decoded.
@@ -35,9 +34,10 @@ type Doc struct {
 // Elements returns every element in document order; index i is the i-th start tag.
 func (d *Doc) Elements() []Element { return d.elems }
 
-// Open reads path once and parses it. A read error is returned as the os package words it.
+// Open reads path once and parses it; a zipped .bog is parsed from its file.xml member, with
+// positions inside that member. A read error is returned as the os package words it.
 func Open(path string) (*Doc, error) {
-	data, err := os.ReadFile(path)
+	data, err := readSource(path)
 	if err != nil {
 		return nil, err
 	}
