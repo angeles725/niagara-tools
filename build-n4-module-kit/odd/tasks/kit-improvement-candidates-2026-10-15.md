@@ -842,6 +842,11 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** bdps#Δ1 (primary: supertype rule + build.sh hint) · afl#Δ4 extends (part build script, bajadoc packages) · bdps#Δ5 extends (`javaToolchains` preflight) · cex#Δ4 extends (K15: `slotomatic` before `jar` for region-less sources) · rsb#Δ4 extends (Windows-native build route from WSL for any Windows-side Gradle root: cmd.exe + gradlew.bat slotomatic/jar; back up `<niagara_home>/modules` first)
 - **Evidence:** course `Lab Instructions.pdf` p81-86, `Slides/6` p6-18; `javap` on 4.15.6.20 jars; corpus B1235 §1235.2.
 - **Target:** `types/module-wiring.md`, `types/structure.md`, `toolbelt/build.sh`, `toolbelt/preflight.sh`, `build-verify.md`, `METHODOLOGY.md` K15. **Lint-able:** yes. **Fold type:** doc section + script.
+- **Fold status:** FOLDED doc (`docs/r8-u4-c58-build-reference`, 2026-10-23; bdps Δ1, Δ5, afl Δ4, cex Δ4, rsb Δ4, plus hw Δ3
+  in-place refinement of C12): `types/module-wiring.md` § 1.1 (supertypes verified by javap on 4.15.6.20; part script from
+  course `slides-rt.gradle.kts`), `build-verify.md` § Raw gradle, `BUILD-LOOP.md` § 4.b, `types/moduleTest.md` § Running
+  from WSL, METHODOLOGY K15. Lands in `module-wiring.md`, not `structure.md`. OWED code: G60 supertype-hint (`build.sh`),
+  G61 jdk-toolchain (`preflight.sh`), G62 bajadoc-packages, in `ledger.d/2026-10-23-r8-u4-c58-build-reference.md`.
 
 ### C59 — API stability: `com.tridium.*` is private; registry and agent lookups
 - **Sources:** bdps#Δ3 (primary) · has#Δ9 extends (apiInfo labels, `getDef`, `AgentFilter`)
@@ -1186,17 +1191,17 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `n4-course-as-exemplar-source#Δ1` | SOURCES.md, corpus-index.md | Register the course as a P0 source | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ2` | BUILD-LOOP.md §0, skill/SKILL.md | Reference-first rule at Orient | C51 | P1 | accepted |
 | `n4-course-as-exemplar-source#Δ3` | METHODOLOGY.md | K-rule: re-check absolute claims; one-time sweep | C51 | P1 | accepted |
-| `n4-course-as-exemplar-source#Δ4` | build-verify.md, METHODOLOGY.md K15 | slotomatic before jar for region-less sources | C58 | P2 | accepted |
+| `n4-course-as-exemplar-source#Δ4` | build-verify.md, METHODOLOGY.md K15 | slotomatic before jar for region-less sources | C58 | P2 | folded (U4 C58) |
 | `n4-course-authoring-files-and-libraries#Δ1` | types/third-party-libraries.md | Path 0 uberjar; library → permission table | C26 | P0 | accepted |
 | `n4-course-authoring-files-and-libraries#Δ2` | templates/module-permissions.xml, types/structure.md, fixture | Canonical permissions template | C47 | P1 | accepted |
 | `n4-course-authoring-files-and-libraries#Δ3` | types/structure.md:133-180, fixture palette, toolbelt/verify-module.sh | Fix palette example and format card | C11 | P0 | accepted |
-| `n4-course-authoring-files-and-libraries#Δ4` | types/structure.md or types/module-wiring.md | Part gradle.kts reference; bajadoc packages | C58 | P2 | accepted |
+| `n4-course-authoring-files-and-libraries#Δ4` | types/structure.md or types/module-wiring.md | Part gradle.kts reference; bajadoc packages | C58 | P2 | folded (U4 C58, module-wiring § 1.1); lint owed G62 |
 | `n4-course-authoring-files-and-libraries#Δ5` | types/module-wiring.md §2, toolbelt/verify-module.sh | module-include.xml lifecycle; dangling types | C25 | P0 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ1` | types/module-wiring.md, toolbelt/build.sh | Supertype module rule | C58 | P2 | folded doc (U4 C58); build.sh hint owed G60 |
 | `n4-course-build-deps-permissions-signing#Δ2` | types/structure.md, toolbelt/verify-module.sh | Permission-group roster with triggers | C28 | P0 | accepted |
 | `n4-course-build-deps-permissions-signing#Δ3` | types/module-wiring.md, toolbelt/verify-module.sh | Private-API rule (com.tridium.*) | C59 | P2 | accepted (lint owed G65; doc waits for U4) |
 | `n4-course-build-deps-permissions-signing#Δ4` | build-verify.md, toolbelt/lint-structure.sh | Signing hardening recipe | C48 | P1 | accepted |
-| `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | accepted |
+| `n4-course-build-deps-permissions-signing#Δ5` | toolbelt/preflight.sh, build-verify.md | JDK-8 toolchain preflight | C58 | P2 | folded doc (U4 C58); preflight owed G61 |
 | `n4-course-build-deps-permissions-signing#Δ6` | types/logic-authoring.md | BFacets multiLine, IDirectory, @Facet syntax | C06 | P0 | folded (WU-P0-3) |
 | `n4-course-drivers-bql-ords-files#Δ1` | types/logic-authoring.md, toolbelt/lint-null-context-write.sh | BQL consumer pattern with Context | C19 | P0 | accepted |
 | `n4-course-drivers-bql-ords-files#Δ2` | types/security.md §4 | BQL literal rules | C61 | P2 | folded (U5) |
@@ -1235,7 +1240,7 @@ Status: `accepted` · `accepted-corrected` (a later source or evidence corrects 
 | `review2-signing-build-route#Δ1` | build-verify.md § Verify, toolbelt/verify-module.sh | Signer-identity check by fingerprint | C48 | P1 | accepted |
 | `review2-signing-build-route#Δ2` | types/security.md § 3 | Signing-profile files are secret stores | C48 | P1 | accepted |
 | `review2-signing-build-route#Δ3` | build-verify.md § Signing per deploy target | Portable signing root blocks | C48 | P1 | accepted |
-| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | accepted |
+| `review2-signing-build-route#Δ4` | build-verify.md § Raw gradle | Windows-native build route from WSL | C58 | P2 | folded (U4 C58) |
 | `review2-signing-build-route#Δ5` | types/security.md § 2.4, types/logic-authoring.md | Worker threads keep the caller's Context | C39 | P1 | accepted |
 | `review2-signing-build-route#Δ6` | BUILD-LOOP.md § 7, toolbelt/ | Computed retro delta counts | C51 | P1 | accepted |
 
@@ -1302,7 +1307,7 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-slotomatic-authoring#Δ6` | toolbelt/verify-module.sh `check_palette` | new: palette count misses non-first `n=` | C82 | P0 | accepted |
 | `n4-course-handson-workflow#Δ1` | BUILD-LOOP.md § 0, new toolbelt/diff-vs-reference.sh | confirms C51: reference-first + copy decision helper | C51 | P1 | accepted |
 | `n4-course-handson-workflow#Δ2` | BUILD-LOOP.md § 0.a | new: orient reports the newest working-tree file | C92 | P2 | accepted |
-| `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | accepted |
+| `n4-course-handson-workflow#Δ3` | build-verify.md, types/moduleTest.md | refines C12: run `gradlew.bat` in place on `/mnt/<drive>` | C12 | P0 | folded doc (U4 C58); run-niagara-test.sh skip waits on that script |
 | `n4-course-handson-workflow#Δ4` | ORCHESTRATION.md § 3, toolbelt/preflight.sh | new: shared-host heavy-job rule | C93 | P2 | accepted |
 
 No-loss result for Appendix C (2026-10-22, T9a; ad-hoc comparison of the `| Δn |` rows of the five 2026-10-16 retros

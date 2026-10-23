@@ -178,10 +178,12 @@ test types never mix.  A WSL gate step to compile the test jar: `./gradlew :<MOD
 file schema and gradle dep block. `[ev: corpus B958 §958.3–958.4]`
 
 **From WSL:** a WSL-side Gradle `niagaraTest` (plugin 7.6.17) discovers 0 tests; run `gradlew.bat … :<part>:clean
-:<part>:niagaraTest` through `cmd.exe` on a Windows copy instead (`types/moduleTest.md` § Running from WSL), and
+:<part>:niagaraTest` through `cmd.exe` instead: in place when the gradle root is under `/mnt/<drive>/`, on a Windows
+copy only when it lives on ext4 (`build-verify.md` § Raw gradle, `types/moduleTest.md` § Running from WSL), and
 count the tests: `BUILD SUCCESSFUL` with 0 tests run is a failure. Workbench Tools → Run Tests is the fallback.
 Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: corpus B961 §961.3]`
 `[ev: retro testing-parity-btestng Δ1]`
+`[ev: retro n4-course-handson-workflow Δ3]`
 
 ### 4.c Version-bump checklist (before any shipped-bytes commit)
 - `vendorVersion` (in `module.xml` / `gradle.properties`) MUST be bumped on EVERY change to shipped bytes — a schema change (slot add, remove, retype, rename) OR a behavior-only change with no slot touched (Java logic, `rc/` assets, resources). Software Manager compares versions, not bytes: a same-version rebuild reports "Up to Date" and is silently skipped even when the fix is real. On reload the station re-decodes `config.bog` against the new module's type/slot registry; a retype or remove is a schema-risk OUTAGE. `[ev: corpus B807]` `[ev: corpus B795]` `[ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ2]`
