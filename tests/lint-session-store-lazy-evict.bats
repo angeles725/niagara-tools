@@ -185,3 +185,18 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "${#lines[@]}" -eq 1 ]
   [[ "${lines[0]}" == *"E.java:13  static session/token map 'SESSIONS'"* ]]
 }
+
+@test "SSL-literal: a sweep spelled in a string is not one, and a // in a string cuts nothing (truth audit T5)" {
+  # Mutation: SSL-literal -- matching the raw line counts the logged "SESSIONS.remove(id)" as a sweep and reports K clean
+  {
+    printf 'class K {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void login(String id) {\n    log("SESSIONS.remove(id) runs later");\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void relogin(String id) {\n    String u = "http://h/" + id; SESSIONS.remove(u);\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/K.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" == *"K.java:5  static session/token map 'SESSIONS'"* ]]
+}

@@ -52,13 +52,8 @@ const msg = "' inserted here with no sweep in the SAME method (no scheduled purg
 // scheduled action purges, every method that puts into it (a row at its first put) and does not sweep it.
 // A put outside a method (a static initializer: a constant table) is never checked.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := make([]string, len(f.Raw))
-	for i, ln := range f.Raw {
-		if k := strings.Index(ln, "//"); k >= 0 {
-			ln = ln[:k]
-		}
-		lines[i] = ln
-	}
+	// Every match reads comment- and literal-blanked code: a "//" in a string cuts nothing, and a
+	// put, sweep or schedule spelled in a comment or a string is not one.
 	code, _ := javasrc.BlankLiterals(f.Stripped(), nil)
 	methods := f.Methods()
 	fields := staticFields(code, methods, staticInits(code))
@@ -68,11 +63,11 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	for _, name := range fields {
 		put := use(name, `\.\s*put\s*\(`)
-		if scheduledPurge(lines, methods, name) {
+		if scheduledPurge(code, methods, name) {
 			continue
 		}
 		for _, m := range methods {
-			body := lines[m.Start-1 : m.End]
+			body := code[m.Start-1 : m.End]
 			for i, ln := range body {
 				if put.MatchString(ln) {
 					if !sweeps(body, name) {

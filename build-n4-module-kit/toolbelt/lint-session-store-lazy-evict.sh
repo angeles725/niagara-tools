@@ -24,7 +24,9 @@
 #   Candidate: a class-level `static` field of a (java.util.) Map type -- Map, HashMap,
 #   ConcurrentHashMap, LinkedHashMap, TreeMap, ... with generics nested up to three levels --
 #   whose name is followed by `=` or `;` on the same line; a method parameter, a return type, a
-#   local and a declaration in a comment are not candidates, and each name counts once. A field
+#   local and a declaration in a comment are not candidates, and each name counts once. Every
+#   match reads comment- and literal-blanked code (a put, sweep or schedule in a comment or a
+#   string is not one; a // inside a string cuts nothing). A field
 #   with a `.put(` only inside `static { }` is a constant table (no row). Every method that calls
 #   `<field>.put(` (the name as a whole identifier) is checked and WARNs at its first put unless
 #   EITHER (a) that same method sweeps the map -- `<field>.remove(`, a `removeIf(`/`remove(` on
@@ -42,6 +44,7 @@
 # Mutation: SSL7 -- a probe without the return-type anchor takes `if (sweep(id)) {` for the declaration and its remove() for a purge
 # Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags a static method's Map parameter
 # Mutation: SSL-everyput -- checking only the file's first put (a substring match) reports OLD_SESSIONS's put as SESSIONS and misses relogin
+# Mutation: SSL-literal -- matching the raw line counts a sweep spelled in a logged string as an eviction
 # Mutation: SSL-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
 # Mutation: SSL-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
