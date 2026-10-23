@@ -3,7 +3,7 @@
 #
 # Detects four unsafe default patterns in @NiagaraProperty annotations:
 #
-#   CS1 FAIL: *Interval default <= *Duration default in the same class, both read in MILLISECONDS from
+#   CS1 FAIL: *Interval default <= *Duration default in the same file, both read in MILLISECONDS from
 #             any literal BRelTime factory (make(ms), makeSeconds/Minutes/Hours/Days, make(d,h,m,s)) or
 #             constant (BRelTime.java:34-48, :56-83). A BRelTime default it cannot read (a variable, an
 #             expression) is a CS1 WARN "unreadable" row, never a silent skip. A pair where BOTH are 0
@@ -15,20 +15,20 @@
 #             BDouble.make(0)) and no min>0 facet (BFacets.MIN, BDouble.make(<positive>)).
 #             A zero setpoint on a cooling unit runs at ambient temperature, silently.
 #
-#   CS3 WARN: A boolean flag @NiagaraProperty immediately preceded by a comment containing
-#             "only when" or "only valid" or "only if" — a comment-only enforcement rule
-#             that has no runtime gate. See documented limitation below.
+#   CS3 WARN: A line holding @NiagaraProperty (any slot type) immediately preceded by a // comment line
+#             containing "only when", "only valid" or "only if" (O or o) — a comment-only enforcement
+#             rule that has no runtime gate. See documented limitation below.
 #
 #   CS4 WARN: a nonzero permanent-minimum floor default (...MinStagesOn / ...MinOn name on a
 #             camelCase boundary, NOT a BRelTime or *Time/*Delay/*Sec short-cycle timer) coexists in
-#             the same class with a *LowLimit* / *Cutout* (camelCase token, unit suffix allowed, timer and
+#             the same file with a *LowLimit* / *Cutout* (camelCase token, unit suffix allowed, timer and
 #             status/counter suffix excluded) numeric default of 0 (= protection disabled). Either default alone is fine; together one
 #             unit is held on with no LP cutout ("pulling with every solenoid closed").
 #             [ev: retro panccadia-commissioning-lessons Δ3]
 #
 # Usage:  lint-config-sanity.sh <java-src-dir>
 #
-#   Scans all *.java recursively under <java-src-dir>.
+#   Scans all *.java recursively under <java-src-dir> (only the first argument is read; no flags).
 #   Emits FAIL (CS1/CS2) or WARN (CS1 "unreadable", CS3/CS4) rows; exits 1 on any FAIL, 0 clean, 3 usage/env.
 #   The checks run in Go: n4lint lint-config-sanity (go/internal/lint/rules/configsanity).
 #
@@ -36,15 +36,18 @@
 # Exits:       0 no FAIL (WARN-only is 0) · 1 any FAIL · 3 usage/env, incl. a sub-directory find cannot enter (K20)
 #              or a source file it cannot read ("cannot scan"; the other files' rows still print)
 #
-# Dot-directories excluded (D9b). VCS-free by design. kit-links.bats L2 enforces
+# Dot-directories and *-worktrees directories excluded (D9b). VCS-free by design. kit-links.bats L2 enforces
 # the no-version-control rule on all toolbelt scripts.
 # [ev: retro live-commissioning-verification-gaps]
 #
-# Source of defaults (documented precedence):
-#   1. Java @NiagaraProperty defaultValue= literal (primary source).
-#   2. module-include.xml facets (fallback when Java literal is absent or unreadable).
-#   When neither source yields a readable value the check is skipped (never false-FAIL) — except a
-#   BRelTime default on an *Interval/*Duration slot, which is a CS1 "unreadable" WARN row.
+# Source of defaults: only the Java @NiagaraProperty annotation, read from the raw source (comments are
+#   not stripped): CS1/CS4 read its defaultValue= literal, CS2 a BDouble.make(0) anywhere in it. When
+#   that is absent or unreadable the check is skipped (never false-FAIL) — except a BRelTime default on
+#   an *Interval/*Duration slot, which is a CS1 "unreadable" WARN row.
+#
+# Documented limitation — CS1/CS2 annotation reader: it joins the @NiagaraProperty line with the lines
+#   after it until the parentheses balance, and always takes at least the next line, so an annotation
+#   on the line right after a one-line annotation is not read by CS1/CS2 (CS4 reads both).
 #
 # Documented limitation — CS3 (comment-only flag enforcement):
 #   The heuristic matches a comment containing "only when", "only valid", or "only if"
@@ -52,8 +55,8 @@
 #   conservative (WARN, not FAIL) because:
 #   (a) The pattern is grep-level; false positives are possible on unrelated comments.
 #   (b) No runtime AST is available to confirm the enforcement gap.
-#   Operators must review CS3 WARN rows manually and add runtime validation or suppress
-#   with a documented `// lint-config-sanity: ok` comment.
+#   Operators must review CS3 WARN rows manually and add runtime validation. There is no
+#   suppression marker: a CS3 row stays until the comment or the runtime gate changes.
 #
 # Mutation: LCS-interval -- removes interval<=duration comparison so CS1 shape passes instead of FAIL
 # Mutation: LCS-floor -- dropping the floor x disabled-cutout pairing lets the CS4 shape pass silently

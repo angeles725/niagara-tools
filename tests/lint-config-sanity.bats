@@ -266,3 +266,17 @@ JAVA
   [[ "$output" == *"lint-config-sanity: cannot scan $ONE/IntervalBad.java"* ]]
   [[ "$output" == *"FAIL"*"SetpointZero.java"*"CS2"* ]]
 }
+
+@test "LCS-doc: the header claims no suppression marker and no module-include.xml fallback (the lint has neither)" {
+  # A '// lint-config-sanity: ok' marker on the comment line or on the property line leaves CS3 in place.
+  only FlagCombo.java
+  sed -i -e 's|^  // Only valid when hasDefrost=true.*|& // lint-config-sanity: ok|' \
+         -e 's|"airDefrost", flags = Flags.OPERATOR)|&  // lint-config-sanity: ok|' "$ONE/FlagCombo.java"
+  [ "$(grep -c 'lint-config-sanity: ok' "$ONE/FlagCombo.java")" -eq 2 ]
+  run "$LCS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN"*"CS3"* ]]
+  # so the header must not promise that marker, nor defaults read from module-include.xml
+  if grep -qF 'lint-config-sanity: ok' "$LCS"; then echo "header claims an unimplemented suppression" >&2; return 1; fi
+  if grep -qF 'module-include.xml' "$LCS"; then echo "header claims an unimplemented module-include.xml fallback" >&2; return 1; fi
+}
