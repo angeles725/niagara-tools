@@ -232,8 +232,8 @@ pre-configured, commissioning-ready **assembly templates**. Dragging one compone
 drops the correct sub-tree with every flag already set — no manual wiring required.
 
 A palette assembly is NOT a Niagara template. A template is a `.ntpl` file deployed from the Template sidebar or
-the Device Manager, with its own manifest, deploy, status and upgrade rules (`types/logic-authoring.md` § Templates
-are artifact production, `types/distribution.md` § 8); a palette drop is a plain copy that nothing tracks afterwards.
+the Device Manager, with its own manifest, deploy, status and upgrade rules (`types/logic-authoring.md` § Shipping a template
+module, `types/distribution.md` § 8); a palette drop is a plain copy that nothing tracks afterwards.
 `[ev: corpus B1325 §1325.2 C2]` `[ev: retro devguide415-r2-packaging-platform-signing Δ4]`
 
 ### Authoring workflow
