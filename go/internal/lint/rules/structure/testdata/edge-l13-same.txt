@@ -1,7 +1,8 @@
 -- args --
 @DIR@/l13-same/G/M
 -- want --
-exit 0
+exit 1
+FAIL  lint-structure  @DIR@/l13-same/G/M/gradle.properties  L10: absolute host path in tracked gradle.properties
 -- stderr --
 -- l13-same/.git/HEAD --
 x

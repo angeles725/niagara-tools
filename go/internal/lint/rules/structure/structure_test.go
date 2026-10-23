@@ -83,3 +83,23 @@ func TestUnreadable(t *testing.T) {
 		t.Errorf("unlistable dir: exit %d out %q err %q, want 3, %q and %q", code, out, errs, l15, want)
 	}
 }
+
+// TestHostPathShapes (truth audit 2026-10-22 T7): L10 reads gradle.properties as java.util.Properties
+// does: a key, then "=", ":" or whitespace with blanks around it, possibly indented. An absolute value is a
+// drive path (an escaped "C\:" too), a POSIX path or a UNC share; a comment or a relative value is not.
+func TestHostPathShapes(t *testing.T) {
+	for text, want := range map[string]bool{
+		`niagara_home=C:\N`: true, `niagara_home = C:\N`: true, `niagara_home:C:\N`: true, `  niagara_home=C:\N`: true,
+		`niagara_home=/opt/Niagara-4.14`: true, `niagara_home=\\server\share`: true, `nodeHome D:/node`: true,
+		`niagara_user_home=C\:\\N`: true, "user_home\t=\t/home/u": true, "niagara_home=C:/N\r": true,
+		`#niagara_home=C:\N`: false, `!niagara_home=/opt`: false, `niagara_home=build/n`: false, `niagara_home=`: false,
+		`niagara_homeX=/opt`: false, `other=/opt/x`: false, `niagara_home=~/n`: false,
+	} {
+		dir := t.TempDir()
+		write(t, dir, map[string]string{".git/HEAD": "x\n", "M/gradle.properties": "x=1\n" + text + "\n"})
+		_, out, _ := run(filepath.Join(dir, "M"))
+		if got := strings.Contains(out, "L10:"); got != want {
+			t.Errorf("%q: L10 row %v, want %v (out %q)", text, got, want, out)
+		}
+	}
+}

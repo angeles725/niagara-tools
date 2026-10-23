@@ -151,6 +151,24 @@ setup() {
   [[ "$output" == *"L10"* ]]
 }
 
+@test "LS10-shapes: spaced, colon-separated, indented, POSIX and UNC host paths all FAIL L10 (truth audit T7)" {
+  # Pinned by the wrapper header line "Mutation: LS10-shapes".
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git"
+  for i in 1 2 3 4 5; do mkdir -p "$ROOT/M$i"; done
+  printf 'niagara_home = C:\\N\n' > "$ROOT/M1/gradle.properties"
+  printf 'niagara_home:C:\\N\n' > "$ROOT/M2/gradle.properties"
+  printf '  niagara_user_home=C:/U\n' > "$ROOT/M3/gradle.properties"
+  printf 'niagara_home=/opt/Niagara-4.14\n' > "$ROOT/M4/gradle.properties"
+  printf 'nodeHome=\\\\server\\node\n' > "$ROOT/M5/gradle.properties"
+  for i in 1 2 3 4 5; do
+    run "$LS" "$ROOT/M$i"
+    [ "$status" -eq 1 ] || { echo "M$i: status $status: $output"; rm -rf "$ROOT"; false; }
+    [[ "$output" == *"M$i/gradle.properties"*"L10: "* ]] || { echo "M$i: $output"; rm -rf "$ROOT"; false; }
+  done
+  rm -rf "$ROOT"
+}
+
 @test "LS-PASS: scaffold-module.sh output passes L1-L11 -> exit 0 (SKIP if scaffold absent)" {
   SC="$KIT/toolbelt/scaffold-module.sh"
   [ -x "$SC" ] || skip "scaffold-module.sh not present"

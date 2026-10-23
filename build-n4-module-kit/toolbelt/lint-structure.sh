@@ -48,6 +48,7 @@
 # builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
 # `n4lint lint-structure <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # [ev: retro campaign8-structure]
+# Mutation: LS10-shapes -- matching only key=X:\ (the bash regex) passes spaced, colon, indented, POSIX and UNC host paths
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
 # Mutation: LS14 -- drops the L14 hardcoded-gradlePluginVersion check, letting a literal pin pass instead of FAIL
 # Mutation: LS15 -- drops the L15 root signing-block check, so the wizard root (LS15) no longer WARNs

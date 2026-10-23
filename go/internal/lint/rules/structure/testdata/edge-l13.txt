@@ -2,6 +2,7 @@
 @DIR@/l13/G/M
 -- want --
 exit 1
+FAIL  lint-structure  @DIR@/l13/G/M/gradle.properties  L10: absolute host path in tracked gradle.properties
 FAIL  lint-structure  M/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
 FAIL  lint-structure  N/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
 FAIL  lint-structure  x	@DIR@/l13/G/O/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)

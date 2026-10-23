@@ -12,7 +12,9 @@ import (
 )
 
 var (
-	hostPath     = regexp.MustCompile(`^(niagara_home|niagara_user_home|user_home|nodeHome)=[A-Za-z]:[\\/]`)
+	// a java.util.Properties line: indent, key, "=" or ":" or blanks; then a drive path ("C\:" escaped
+	// too), a POSIX path or a UNC share (truth audit 2026-10-22 T7: the bash regex took only key=X:\)
+	hostPath     = regexp.MustCompile(`^[ \t\f]*(niagara_home|niagara_user_home|user_home|nodeHome)([ \t\f]*[=:][ \t\f]*|[ \t\f]+)([A-Za-z]\\?:[\\/]|/|\\\\)`)
 	jdkPaths     = regexp.MustCompile(`^[[:space:]]*org\.gradle\.java\.installations\.paths[[:space:]]*=`)
 	jdkAuto      = regexp.MustCompile(`^[[:space:]]*org\.gradle\.java\.installations\.auto-detect[[:space:]]*=`)
 	pluginLit    = regexp.MustCompile(`^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"`)
