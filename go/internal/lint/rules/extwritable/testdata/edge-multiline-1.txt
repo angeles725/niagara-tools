@@ -1,0 +1,33 @@
+-- args --
+@DIR@/ml
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/ml/BM.java:2  a: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../a/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ml/BM.java:9  b: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../b/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ml/BM.java:14  d: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../d/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/ml/BM.java:17  h: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../h/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- ml/BM.java --
+package ml;
+@NiagaraProperty(
+  name = "a",
+  type = "BStatusNumeric",
+  defaultValue = "new BStatusNumeric()",
+  facets = { @Facet(name = "BFacets.MIN", value = "0") },
+  flags = Flags.OPERATOR
+)
+@NiagaraProperty(name = "b",
+  type = "BStatusNumeric", flags = Flags.SUMMARY |
+  Flags.OPERATOR)
+@NiagaraProperty
+(name = "c", type = "BStatusNumeric", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "d", type = "BStatusNumeric", flags = Flags.OPERATOR, defaultValue = "f(")
+@NiagaraProperty(name = "e", type = "BStatusNumeric", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "f", type = "BStatusNumeric", defaultValue = "g())", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "h", type = "BStatusNumeric", flags = Flags.OPERATOR)
+public class BM extends BComponent {}
+-- ml/BOpen.java --
+package ml;
+@NiagaraProperty(name = "z", type = "BStatusNumeric", flags = Flags.OPERATOR,
+  defaultValue = "x"
+public class BOpen extends BComponent {}

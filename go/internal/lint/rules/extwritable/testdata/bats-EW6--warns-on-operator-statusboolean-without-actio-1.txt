@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/src/com/x/BRoom.java:3  manualEnable: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../manualEnable/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="manualEnable", type="BStatusBoolean", defaultValue="new BStatusBoolean()", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class BRoom extends BComponent {}

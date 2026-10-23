@@ -1,0 +1,10 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="zoneTemp1", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.SUMMARY)
+public class BRoom extends BComponent {}

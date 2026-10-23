@@ -1,0 +1,58 @@
+-- args --
+@DIR@/cm
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/cm/BC.java:9  f: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../f/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/cm/BC.java:11  g: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../g/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/cm/BC.java:13  h: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../h/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- cm/BC.java --
+package cm;
+// @NiagaraProperty(name="a", type="BStatusNumeric", flags=Flags.OPERATOR)
+/* @NiagaraProperty(name="b", type="BStatusNumeric", flags=Flags.OPERATOR) */
+/*
+@NiagaraProperty(name="c", type="BStatusNumeric", flags=Flags.OPERATOR)
+*/
+@NiagaraProperty(name="d", type="BStatusNumeric", flags=Flags.SUMMARY /* |Flags.OPERATOR */)
+@NiagaraProperty(name="e", type="BStatusNumeric", flags=Flags.SUMMARY) // Flags.OPERATOR
+@NiagaraProperty(name="f", type="BStatusNumeric", flags=Flags.OPERATOR)
+// @NiagaraAction(name="setF")
+@NiagaraProperty(name="g", type="BStatusNumeric", flags=Flags.OPERATOR)
+/** @NiagaraAction(name="setG") */
+@NiagaraProperty(name="h", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="hit")
+public class BC extends BComponent
+{
+  public void doHit()
+  {
+    // setH(1);
+    /* setH(2); */
+  }
+}
+-- cm/BL.java --
+package cm;
+@NiagaraProperty(name="a", type="BStatusNumeric", defaultValue="http://x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="b", type="BStatusNumeric", defaultValue="/*", flags=Flags.OPERATOR)
+@NiagaraProperty(name="c", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="d", type="BStatusNumeric", defaultValue="*/", flags=Flags.OPERATOR)
+@NiagaraProperty(name="e", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="go", defaultValue="BString.make(\"//\")")
+@NiagaraAction(name="setE")
+public class BL extends BComponent
+{
+  public void doGo() { String s = "{"; setE(1); }
+}
+-- cm/BT.java --
+package cm;
+@NiagaraProperty(name="a", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="go")
+public class BT extends BComponent
+{
+  public void doGo()
+  {
+    String s = """
+      }
+      """;
+    setA(1);
+  }
+}

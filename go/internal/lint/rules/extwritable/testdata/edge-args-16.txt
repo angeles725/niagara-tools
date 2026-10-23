@@ -1,0 +1,13 @@
+-- args --
+@DIR@/m
+--strict
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/m/BA.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- m/BA.java --
+package a;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class BA extends BComponent {}
+-- other/README.txt --
+x

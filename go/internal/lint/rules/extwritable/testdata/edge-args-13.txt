@@ -1,0 +1,12 @@
+-- args --
+@DIR@/missing
+-- want --
+exit 3
+-- stderr --
+lint-ext-writable-shape: not a directory: @DIR@/missing
+-- m/BA.java --
+package a;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class BA extends BComponent {}
+-- other/README.txt --
+x
