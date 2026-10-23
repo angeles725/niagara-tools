@@ -87,7 +87,8 @@ rule's rows stay contiguous.
    root) implements `lint.RootRule` (`CheckRoot(root string)`; reference port: `rules/structure`) and sets
    `Spec.Root`: the runner walks nothing for it, so `Select`, `ContinueOnWalkError` and `EmptyError` do not
    apply and the rule owns its empty-root contract; it reads files itself and returns a non-nil error, which
-   fails closed like a `TreeRule` error, for anything it cannot read.
+   fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
+   out; it runs by name or in a rule list.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,

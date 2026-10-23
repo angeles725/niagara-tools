@@ -101,3 +101,28 @@ func (r lineFake) CheckRoot(root string) ([]Finding, error) {
 	out, err := r.rootFake.CheckRoot(root)
 	return append(out, Finding{Path: root + "/A", Line: 3, Msg: "L1: line seen"}), err
 }
+
+// TestCommandAllSkipsRootRules: --all runs the walking rules over source roots and leaves a RootRule out;
+// the same rule still runs by name and in a rule list.
+func TestCommandAllSkipsRootRules(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var seen []string
+	main := Command(rootSpec(rootFake{seen: &seen}), javaSpec(fakeRule{"lint-a", "MARK", Warn}, Each))
+	java := "WARN  lint-a  " + root + "/A.java:1  saw: MARK\n"
+	for _, tc := range []struct {
+		args          []string
+		code          int
+		out           string
+		seenRootCalls int
+	}{
+		{[]string{"--all", root}, 0, java, 0},
+		{[]string{"lint-r", root}, 1, "FAIL  lint-r  " + root + ": root seen\n", 1},
+		{[]string{"lint-a,lint-r", root}, 1, java + "FAIL  lint-r  " + root + ": root seen\n", 1},
+	} {
+		seen = nil
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.Len() != 0 || len(seen) != tc.seenRootCalls {
+			t.Errorf("%q: exit %d out %q err %q root calls %d, want %d, %q and %d", tc.args, code, o, e, len(seen), tc.code, tc.out, tc.seenRootCalls)
+		}
+	}
+}

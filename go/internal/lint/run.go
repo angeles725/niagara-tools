@@ -238,9 +238,11 @@ const usage = "usage: n4lint <rule>[,<rule>...] <args>... | n4lint --all [--stri
 // Command is the n4lint entry point over specs. "n4lint <rule> <args>..." runs one rule with the
 // argument contract (Mode, Usage, UsageExit, message prefix) of its toolbelt wrapper; "n4lint <rule>,<rule>..."
 // and "n4lint --all" run several rules over one walk with the n4lint contract (Each mode, n4lint
-// prefix), in the requested (or registry) order with each rule's rows contiguous. Usage errors exit the
-// spec's UsageExit (3 by default, always 3 for a rule list or --all), environment errors 3. A duplicate
-// rule ID or a spec that is not exactly one of Rule and TreeRule panics (a registration bug).
+// prefix), in the requested (or registry) order with each rule's rows contiguous. --all takes source
+// roots, so it leaves out every RootRule (whose root is a module root, e.g. lint-structure's): such a
+// rule runs only by name. Usage errors exit the spec's UsageExit (3 by default, always 3 for a rule list
+// or --all), environment errors 3. A duplicate rule ID or a spec that is not exactly one of Rule,
+// TreeRule and RootRule panics (a registration bug).
 func Command(specs ...Spec) cli.Main {
 	byID := map[string]Spec{}
 	for _, sp := range specs {
@@ -264,9 +266,14 @@ func Command(specs ...Spec) cli.Main {
 			}
 			return 0
 		}
-		selected := specs
-		if args[0] != "--all" {
-			selected = nil
+		var selected []Spec
+		if args[0] == "--all" {
+			for _, sp := range specs {
+				if sp.Root == nil {
+					selected = append(selected, sp)
+				}
+			}
+		} else {
 			for _, id := range strings.Split(args[0], ",") {
 				sp, ok := byID[id]
 				if !ok {
