@@ -289,6 +289,8 @@ setup() {
   printf '\xca\xfe\xba\xbe\x00\x00\x00\x35\x00\x00' > "$tmpmod/Foo9.class"
   (cd "$tmpmod" && zip -q DemoPan-rt/libs/java9.jar Foo9.class)
   rm "$tmpmod/Foo9.class"
+  # A module root with no module-include.xml is a wrong root: lint-agent-on-shape exits 3 (lint-empty-root.bats).
+  printf '<types>\n</types>\n' > "$tmpmod/DemoPan-rt/module-include.xml"
   run "$RM" --lint-only "$tmpmod"
   rm -rf "$tmpmod"
   [ "$status" -eq 1 ]

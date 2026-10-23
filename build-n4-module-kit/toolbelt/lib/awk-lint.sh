@@ -35,12 +35,15 @@
 #   `awk <AL_AWK_ARGS...> -f "$AL_TMP/main.awk" <file>` on each with FILE set to the path (from
 #   ENVIRON["AL_FILE"] in a BEGIN ahead of main.awk, never -v, which escape-processes a backslash
 #   in the path [ev: retro go-lint-ord-ports Δ1]), and prints its rows. Exits 3 when a walk was
-#   incomplete or an awk run failed, 1 when a row was printed under --strict, 0 otherwise. Never returns.
+#   incomplete or listed no file (an "ERROR  <name>  <root>  no files to scan ..." row) or an awk run
+#   failed, 1 when a row was printed under --strict, 0 otherwise. Never returns.
 #
 # awk_lint_list <find-test...>
 #   Lists the files under the first root that match the find tests into "$AL_TMP/files" (scan_files).
 #   An incomplete walk prints "<name>: cannot list every file under <root>: <reason>" and sets
-#   AL_ERR=1; the files it did list are still written, so the caller scans them before exiting.
+#   AL_ERR=1; the files it did list are still written, so the caller scans them before exiting. A walk
+#   that lists no file prints "ERROR  <name>  <root>  no files to scan (K20: ...)" and sets AL_ERR=1,
+#   unless the caller set AL_EMPTY_OK=1 (only for a lint whose documented contract is "exit 0 always").
 #
 # awk_lint_each <awk-program>
 #   Runs `awk <awk-program>` once per file listed in "$AL_TMP/files", the file on stdin and its
@@ -78,6 +81,7 @@ export LC_ALL
 AL_AWK_ARGS=()
 AL_FLAG_HOOK=
 AL_SHIFT=0
+AL_EMPTY_OK=0
 AL_ERR=0
 
 awk_lint_parse() {
@@ -119,13 +123,18 @@ awk_lint_parse() {
   trap 'rm -rf "$AL_TMP"' EXIT
 }
 
-# _al_list <root> <find-test...>: the fail-closed walk shared by awk_lint_list and awk_lint_run.
+# _al_list <root> <find-test...>: the fail-closed walk shared by awk_lint_list, awk_lint_run and
+# awk_lint_strip_run. An incomplete walk, or a complete one that lists no file, sets AL_ERR (exit 3).
 _al_list() {
   local root="$1"
   shift
   # A sub-directory find cannot enter would be skipped silently: env error, never a clean pass.
   if ! scan_files "$AL_TMP/files" "$AL_TMP/find.err" "$root" "$@"; then
     printf '%s: cannot list every file under %s: %s\n' "$AL_NAME" "$root" "$(head -n 1 "$AL_TMP/find.err")" >&2
+    AL_ERR=1
+  elif [ "$AL_EMPTY_OK" -eq 0 ] && [ ! -s "$AL_TMP/files" ]; then
+    # An empty root or a typo'd sub-path is a green verdict on input never read: env error, never a clean pass.
+    printf 'ERROR  %s  %s  no files to scan (K20: wrong path or empty scaffold)\n' "$AL_NAME" "$root"
     AL_ERR=1
   fi
 }

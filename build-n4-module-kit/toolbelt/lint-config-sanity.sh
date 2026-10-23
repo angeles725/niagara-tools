@@ -82,7 +82,7 @@ touch "$_ROWS"
 # shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
 # A sub-directory find cannot enter is an env error (exit 3), never a shorter file list.
-scan_files_or_exit lint-config-sanity 3 "$_TMP/files" "$SRC" -name '*.java'
+scan_files_nonempty_or_exit lint-config-sanity "$_TMP/files" "$SRC" -name '*.java'
 
 _row() {
   local sev="$1" loc="$2" reason="$3"

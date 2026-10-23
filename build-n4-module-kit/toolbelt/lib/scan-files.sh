@@ -23,6 +23,12 @@
 #   "<prefix>: cannot list every file under <root>: <reason>" on stderr and EXITS <exit-code>
 #   (the caller's env-error code); <out-file>.err holds the reason. Returns 0 on a complete walk.
 #
+# scan_files_nonempty_or_exit <name> <out-file> <root> [--prune... | --prune-path...] <find-test...>
+#   scan_files_or_exit with the env-error code 3, for a LINT: a walk that lists NO file (an empty root, a
+#   typo'd sub-path, the wrong module) prints "ERROR  <name>  <root>  no files to scan (K20: wrong path or
+#   empty scaffold)" on stdout and exits 3. Returns 0 on a complete, non-empty walk.
+#   Why: 26 lints exited 0 with no output on an empty directory, a green verdict on input they never read.
+#
 # Why: a lint that reads `find ... | sort` through a process substitution never sees find's
 # exit status, so a sub-directory find cannot enter is skipped and the lint reports the
 # module clean. A caller treats a non-zero return as an env error (exit 3), never as a
@@ -57,4 +63,13 @@ scan_files_or_exit() {
   scan_files "$out" "$out.err" "$root" "$@" && return 0
   printf '%s: cannot list every file under %s: %s\n' "$prefix" "$root" "$(head -n 1 "$out.err")" >&2
   exit "$code"
+}
+
+scan_files_nonempty_or_exit() {
+  local name="$1" out="$2" root="$3"
+  shift 3
+  scan_files_or_exit "$name" 3 "$out" "$root" "$@"
+  [ -s "$out" ] && return 0
+  printf 'ERROR  %s  %s  no files to scan (K20: wrong path or empty scaffold)\n' "$name" "$root"
+  exit 3
 }

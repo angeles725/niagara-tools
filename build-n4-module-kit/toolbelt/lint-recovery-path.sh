@@ -50,7 +50,7 @@ SRC="$1"
 _TMP=$(mktemp -d)
 trap 'rm -rf "$_TMP"' EXIT
 # One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
-scan_files_or_exit lint-recovery-path 3 "$_TMP/files" "$SRC" -name '*.java'
+scan_files_nonempty_or_exit lint-recovery-path "$_TMP/files" "$SRC" -name '*.java'
 
 FAILED=0
 

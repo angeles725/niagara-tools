@@ -31,7 +31,7 @@
 #
 #   Row format:  FAIL|WARN|INFO  <check>  <file>:<line>  <detail>
 #   Exits:       0  no FAIL (WARN-only is still 0) · 1  any FAIL · 3  usage/env (K20), incl. a
-#                sub-directory the walk could not enter
+#                sub-directory the walk could not enter or no *.java to scan (ERROR row)
 #
 # This script is VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
@@ -274,14 +274,10 @@ AWKEOF
 
 # ---------------------------------------------------------------------------
 # File walker: *.java under <src-dir> via the shared lib/scan-files.sh (dot and *-worktrees
-# directories pruned, D9b). A sub-directory find cannot enter is an env error (exit 3), never a
-# clean pass; the files it did list are still scanned first. [ev: issue #226]
+# directories pruned, D9b). A sub-directory find cannot enter, or a tree with no *.java (an ERROR
+# row), is an env error (exit 3), never a clean pass. [ev: issue #226]
 # ---------------------------------------------------------------------------
-WALK_ERR=0
-if ! scan_files "$_TMP/files" "$_TMP/find.err" "$SRC_DIR" -name '*.java'; then
-    printf 'lint-servlet: cannot list every file under %s: %s\n' "$SRC_DIR" "$(head -n 1 "$_TMP/find.err")" >&2
-    WALK_ERR=1
-fi
+scan_files_nonempty_or_exit lint-servlet "$_TMP/files" "$SRC_DIR" -name '*.java'
 
 while IFS= read -r _file; do
     _rel="${_file#"$SRC_DIR/"}"
@@ -295,5 +291,4 @@ done < "$_TMP/files" >> "$_ROWS"
 LC_ALL=C grep -q '^FAIL' "$_ROWS" && FAILED=1
 
 cat "$_ROWS"
-[ "$WALK_ERR" -eq 0 ] || exit 3
 exit $FAILED
