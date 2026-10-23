@@ -113,8 +113,9 @@ def unique_columns(header):
 def by_position(columns, rows, names):
     """Rows re-keyed by `names`, one per leading column (header text is not trusted).
 
-    No rows means nothing to map: an empty body (not even a header) is 0 rows, not an
-    error (H5 review R3: it used to fail the whole inventory).
+    No rows means nothing to map: a header-only body (a type with no instances) is 0 rows,
+    not an error (H5 review R3: it used to fail the whole inventory). A body without even
+    a header is refused earlier, by `parse_csv`.
     """
     if not rows:
         return []
@@ -124,17 +125,41 @@ def by_position(columns, rows, names):
     return [{name: row.get(col, "") for name, col in zip(names, columns)} for row in rows]
 
 
+def complete_records(text):
+    """`text` up to the end of its last complete CSV record (a cut body never tears a row).
+
+    A record ends at a newline outside quotes; a newline inside a quoted cell (`""` is an
+    escaped quote, so quote parity tells inside from outside) does not end it. Without a
+    complete record the result is empty. Walks back from the end with C-speed counts: a
+    capped body is up to 32 MB.
+    """
+    quotes, pos = text.count('"'), len(text)
+    while True:
+        newline = text.rfind("\n", 0, pos)
+        if newline < 0:
+            return ""
+        quotes -= text.count('"', newline, pos)  # quotes left are those before the newline
+        if quotes % 2 == 0:
+            return text[:newline + 1]
+        pos = newline
+
+
 def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
     """`(columns, rows, truncated)` from an ITableToCsv body; rows are dicts by column.
 
     Repeated headers are made unique (`unique_columns`). The slot-name cells to decode are
     the columns at `name_positions` (from the query's select list) or, without it, the
     columns whose header is in `NAME_COLUMNS`.
+
+    ValueError, never a guessed table: a body without a header row (ITableToCsv always
+    writes one, even for zero rows) and a record whose cell count differs from the
+    header's (padding or trimming it would shift or invent cells).
     """
     reader = csv.reader(io.StringIO(text.lstrip("\ufeff"), newline=""))
     header = next(reader, None)
     if not header:
-        return [], [], False
+        raise ValueError("the BQL answer has no header row (empty body): it is not a CSV "
+                         "table, so no rows can be read from it")
     columns = unique_columns([strip_control(h).strip() for h in header])
     decode = set(name_positions) if name_positions is not None else \
         {i for i, col in enumerate(columns) if col in NAME_COLUMNS}
@@ -145,9 +170,12 @@ def parse_csv(text, max_rows=DEFAULT_MAX_ROWS, name_positions=None):
         if len(rows) >= max_rows:
             truncated = True
             break
+        if len(record) != len(columns):
+            raise ValueError("the BQL answer is ragged: record %d has %d cell(s), the header "
+                             "has %d" % (len(rows) + 1, len(record), len(columns)))
         row = {}
         for i, col in enumerate(columns):
-            cell = strip_control(record[i]) if i < len(record) else ""
+            cell = strip_control(record[i])
             row[col] = unescape_slot(cell) if i in decode else cell
         rows.append(row)
     return columns, rows, truncated

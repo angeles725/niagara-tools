@@ -431,9 +431,30 @@ def _abs_path(ord_str, path):
     return base + "/" + path if path else base or "/"
 
 
-#: Source ORDs name a component by handle: `h:<handle>` (BOX handle ORD), possibly
-#: prefixed by the station as `...|h:<handle>`. Only the part after the last `|` is used.
+#: Source ORDs name a component by handle: `h:<handle>` (BOX handle ORD), or by slot
+#: path: `slot:/Folder/A`; either may be prefixed by the station as `station:|...`.
+#: Only the part after the last `|` is used.
 HANDLE_PREFIX = "h:"
+SLOT_PREFIX = "slot:"
+#: Keys `_scan` adds to a link for its own callers; n4_list_links does not show them.
+_SCAN_KEYS = ("target_level", "source_resolved")
+
+
+def _source_path(by_handle, source_ord):
+    """`(path, resolved)` of a link's source component.
+
+    A handle is looked up among the loaded components (None: outside the subtree, since
+    every loaded component carries its handle); an absolute slot path is the path itself.
+    Any other form (a relative slot, another scheme, no sourceOrd) is not resolved: the
+    source may be any component, so `resolved` is False.
+    """
+    last = (source_ord or "").rsplit("|", 1)[-1]
+    if last.startswith(HANDLE_PREFIX):
+        return by_handle.get(last[len(HANDLE_PREFIX):]), True
+    path = last[len(SLOT_PREFIX):] if last.startswith(SLOT_PREFIX) else ""
+    if path.startswith("/"):
+        return path.rstrip("/") or "/", True
+    return None, False
 
 
 def _scan(ctx, args):
@@ -454,23 +475,21 @@ def _scan(ctx, args):
             continue
         slots = {k: v.get("v") for k, v in box.children(nodes, path).items()}
         source_ord = slots.get("sourceOrd")
-        handle = (source_ord or "").rsplit("|", 1)[-1]
+        source_path, resolved = _source_path(by_handle, source_ord)
         target = path.rpartition("/")[0]
-        is_handle = handle.startswith(HANDLE_PREFIX)
         links.append({"target_path": _abs_path(ord_str, target),
                       "link_name": path.rpartition("/")[2],
                       "source_ord": source_ord,
-                      "source_path": by_handle.get(handle[len(HANDLE_PREFIX):])
-                      if is_handle else None,
+                      "source_path": source_path,
                       "source_slot": slots.get("sourceSlotName"),
                       "target_slot": slots.get("targetSlotName"),
-                      "target_level": _level(target)})
+                      "target_level": _level(target), "source_resolved": resolved})
     return ord_str, nodes, links, depth
 
 
 def n4_list_links(ctx, args):
     ord_str, _, links, depth = _scan(ctx, args)
-    shown = [{k: v for k, v in l.items() if k != "target_level"}
+    shown = [{k: v for k, v in l.items() if k not in _SCAN_KEYS}
              for l in links if l["target_level"] <= depth]
     return {"ord": ord_str, "links": shown}
 
@@ -478,21 +497,31 @@ def n4_list_links(ctx, args):
 def n4_find_dangling_outputs(ctx, args):
     ord_str, nodes, links, depth = _scan(ctx, args)
     used = {(l["source_path"], l["source_slot"]) for l in links}
-    dangling = []
+    # a link whose source is not resolved may read the out slot of any candidate
+    unresolved = [{k: l[k] for k in ("target_path", "link_name", "source_ord", "source_slot")}
+                  for l in links if not l["source_resolved"]]
+    undecided = any(l["source_slot"] in ("out", None) for l in unresolved)
+    dangling, unknown = [], []
     for path, node in nodes.items():
         if _level(path) > depth or node.get("t") in LINK_TYPES:
             continue
         if "out" in box.children(nodes, path):
             abs_path = _abs_path(ord_str, path)
             if (abs_path, "out") not in used:
-                dangling.append({"path": abs_path, "type": node.get("t")})
+                (unknown if undecided else dangling).append(
+                    {"path": abs_path, "type": node.get("t")})
     if dangling:  # reads leave no audit line: remember it for the session retro
         ctx.observations.append({"ts": retro.now(), "ord": ord_str, "count": len(dangling)})
-    return {"ord": ord_str, "dangling": dangling,
+    return {"ord": ord_str, "dangling": dangling, "unknown": unknown,
+            "unresolved_links": unresolved,
             "scope_note": "Components are reported up to depth levels below ord. "
                           "Links are seen when their target is at most one level below "
                           "depth; an out slot used only by a deeper target, or by a "
-                          "target outside the subtree, is reported as dangling."}
+                          "target outside the subtree, is reported as dangling. A link "
+                          "source given by handle or by absolute slot path is resolved; "
+                          "while any link reading out has an unresolved source "
+                          "(unresolved_links), every out not proven used is reported "
+                          "as unknown, never as dangling."}
 
 
 # ---- bulk reads: n4_bql_query / n4_inventory (retro 2026-10-02 D1, D7, D8) ----
@@ -535,10 +564,15 @@ def _bql(ctx, base, query, max_rows, timeout):
     start = ctx.clock()
     text, cut = ctx.session.client.get_ord(ord_text, timeout=timeout,
                                            max_bytes=bql.MAX_RESPONSE_BYTES)
+    if cut:  # the byte cap may fall inside a quoted cell: keep whole records only
+        text = bql.complete_records(text)
     slots = bql.selected_slots(query)  # localized headers: decode `name` by position (F12)
     positions = None if slots is None else [i for i, n in enumerate(slots)
                                              if n.lower() == "name"]
-    columns, rows, capped = bql.parse_csv(text, max_rows, name_positions=positions)
+    try:
+        columns, rows, capped = bql.parse_csv(text, max_rows, name_positions=positions)
+    except ValueError as exc:  # no header or a ragged record: never a guessed table
+        raise ToolError("%s (query: %s)" % (exc, query.strip())) from None
     return columns, rows, cut or capped, int(round((ctx.clock() - start) * 1000))
 
 
@@ -868,7 +902,9 @@ TOOLS = [
          n4_list_links),
     Tool("n4_find_dangling_outputs",
          "List components (up to depth levels below ord) with an 'out' slot that no link in "
-         "the subtree uses as a source. Links from outside the subtree are not seen.",
+         "the subtree uses as a source. Links from outside the subtree are not seen. "
+         "A source ORD that is neither a handle nor an absolute slot path cannot be "
+         "resolved: outputs it may feed are listed as unknown, not dangling.",
          _schema({"ord": _str("Subtree root ORD"),
                   "depth": _int("Component levels below ord to scan (1-4)", 1, 4, 2)},
                  ["ord"]),
