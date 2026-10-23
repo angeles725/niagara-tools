@@ -172,3 +172,12 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [[ "$output" != *"input-400"* ]]
 }
+
+@test "LSV2d: a \"} catch\" on the try's closing line around a parse with a silent default WARNs (catch-no-400)" {
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class S extends BWebServlet {' '  void x(String s) {' '    try {' \
+    '      v = Double.parseDouble(s);' '    } catch (NumberFormatException e) {' '      v = 0;' '    }' '  }' '}' > "$ONE/S.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  catch-no-400  S.java:5  "* ]]
+}

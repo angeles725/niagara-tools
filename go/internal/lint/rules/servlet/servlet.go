@@ -150,7 +150,9 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			continue
 		}
 		catch := -1
-		for k := end + 1; k < len(lines) && k <= end+4; k++ {
+		// The try's closing line counts: "} catch (E e) {" is the usual shape (the awk began one line
+		// later and never read it).
+		for k := end; k < len(lines) && k <= end+4; k++ {
 			if catchOpen.MatchString(lines[k]) {
 				catch = k
 				break

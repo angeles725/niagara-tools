@@ -1,9 +1,10 @@
-Declared difference (truth fix T2): a "400" string literal in a catch is no 400 response, so the
-catch at K.java:28 now WARNs.
+Declared differences: (truth fix T2) a "400" string literal in a catch is no 400 response, so the
+catch at K.java:28 now WARNs; (truth fix T3) the "} catch" on the try's closing line K.java:5 is read.
 -- args --
 @DIR@/m
 -- want --
 exit 0
+WARN  catch-no-400  K.java:5  catch around parse without 400 response (silent default may write bad value)
 WARN  catch-no-400  K.java:21  catch around parse without 400 response (silent default may write bad value)
 WARN  catch-no-400  K.java:28  catch around parse without 400 response (silent default may write bad value)
 WARN  catch-no-400  K.java:26  catch around parse without 400 response (silent default may write bad value)

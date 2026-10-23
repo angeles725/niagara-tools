@@ -113,6 +113,32 @@ class A { void x() { Double.parseDouble(s); } }`, nil},
     catch (Exception e) { log("400"); }
   }
 }`, []string{"WARN catch-no-400 4"}},
+	// T3: the catch was searched from the line after the try's closing line, so the common
+	// "} catch (E e) {" on that very line was never read and a silent default passed.
+	{"T3 a catch on the try's closing line is read", `class A extends BWebServlet {
+  void x(String s) {
+    try {
+      v = Double.parseDouble(s);
+    } catch (NumberFormatException e) {
+      v = 0;
+    }
+  }
+}`, []string{"WARN catch-no-400 5"}},
+	{"T3 a one-line try/catch is read", `class A extends BWebServlet {
+  void x(String s) {
+    try { v = Double.parseDouble(s); } catch (Exception e) { v = 0; }
+    try { v = Double.parseDouble(s); } catch (Exception e) { rsp.sendError(400); }
+  }
+}`, []string{"WARN catch-no-400 3"}},
+	{"T3 a same-line catch that answers 400 is clean", `class A extends BWebServlet {
+  void x(String s) {
+    try {
+      v = Integer.parseInt(s);
+    } catch (NumberFormatException e) {
+      op.getResponse().setStatus(SC_BAD_REQUEST);
+    }
+  }
+}`, nil},
 }
 
 func TestTruth(t *testing.T) {

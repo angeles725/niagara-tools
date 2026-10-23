@@ -13,8 +13,8 @@
 #   unbounded-set WARN  .setDouble/.setFloat/.setInt/.setLong/.setRelTime( in a handler body with no
 #                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
 #   catch-no-400  WARN  a 'try {' block that holds Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
-#                       Double.valueOf(, followed within 4 lines of its closing line by a catch whose
-#                       body has no 400 response (400, SC_BAD_REQUEST, sendError(, setStatus(,
+#                       Double.valueOf(, with a catch on its closing line ("} catch (E e) {") or
+#                       within the 4 lines after it, whose body has no 400 response (400, SC_BAD_REQUEST, sendError(, setStatus(,
 #                       jsonError( or sendJson(); the row is at the catch line.
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
 #                       (static detection: Cache-Control and max-age=[1-9] on one line).
@@ -57,6 +57,7 @@
 # Mutation: LSV1 -- removes auth gate check, allowing a doPost with write but no getRemoteUser() to pass
 # Mutation: LSV4b -- reading the X-Requested-With flag from raw lines reports a guard documented only in a Javadoc
 # Mutation: LSV2c -- matching the parse calls on raw lines FAILs input-400 on a commented-out Double.parseDouble(
+# Mutation: LSV2d -- starting the catch search after the try's closing line passes "} catch (E e) { v = 0; }"
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
