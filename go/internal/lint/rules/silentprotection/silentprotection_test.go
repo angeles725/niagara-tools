@@ -129,3 +129,23 @@ func TestLiteralAlarmClass(t *testing.T) {
 		t.Errorf("exit %d out\n%s\nwant\n%s", code, out, want)
 	}
 }
+
+// TestSpacedPathIndexed: a surface slot declared in a file whose path holds a blank still counts. The
+// bash lint fed passes 0 and 1 through xargs, which split such a path, so awk never read the slot and
+// the surfaced trip was a false WARN.
+func TestSpacedPathIndexed(t *testing.T) {
+	dir := write(t, map[string]string{
+		"a b/BS.java": "public class BS extends BComponent {\n" +
+			"  @NiagaraProperty(name=\"tripReason\", type=\"BString\", flags=Flags.SUMMARY)\n" +
+			"  void a(boolean c) {\n    if (c) this.tripped = true;\n    setTripReason(\"x\");\n  }\n" +
+			"  private boolean tripped;\n}\n",
+		"it's/Core.java": shed,
+		"it's/BCore.java": "public class BCore extends BComponent {\n" +
+			"  @NiagaraProperty(name=\"lowAlarm\", type=\"BStatusBoolean\", flags=Flags.SUMMARY)\n" +
+			"  void s(boolean c) { getLowAlarm().setValue(core.c); }\n}\n",
+	})
+	code, out, stderr := run(t, dir, dir)
+	if code != 0 || out != "" || stderr != "" {
+		t.Errorf("exit %d err %q out\n%s\nwant no row", code, stderr, out)
+	}
+}

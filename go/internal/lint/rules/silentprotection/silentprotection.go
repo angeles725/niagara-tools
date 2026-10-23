@@ -101,9 +101,6 @@ type index struct {
 func buildIndex(files []*javasrc.File) *index {
 	var surf, effect []string
 	for _, f := range files {
-		if !xargsSafe(f.Path) {
-			continue
-		}
 		properties(f.Raw, func(name, flags string) {
 			// bash: IFS='|' read -r pname pflags splits "<name>|<flags>" at its first '|'
 			if i := strings.IndexByte(name, '|'); i >= 0 {
@@ -122,9 +119,7 @@ func buildIndex(files []*javasrc.File) *index {
 	ix := &index{surfSlots: slots(awkSplit(joinSorted(surf))), effectSlots: slots(awkSplit(joinSorted(effect)))}
 	fields := map[string]bool{}
 	for _, f := range files {
-		if xargsSafe(f.Path) {
-			ix.surfaceWrites(f.Raw, fields)
-		}
+		ix.surfaceWrites(f.Raw, fields)
 	}
 	for fld := range fields {
 		ix.surfFields = append(ix.surfFields, fld)
@@ -140,10 +135,6 @@ func buildIndex(files []*javasrc.File) *index {
 	ix.alarmList = joinSorted(alarms)
 	return ix
 }
-
-// xargsSafe reports whether passes 0 and 1 read the file: the bash fed the file list to awk through
-// xargs, which splits a path on blanks and quotes, so awk never opened a path holding one.
-func xargsSafe(p string) bool { return !strings.ContainsAny(p, " \t\n'\"\\") }
 
 // properties is pass 0: every @NiagaraProperty annotation of the raw lines (comments included), single-
 // or multi-line, closed when its parentheses balance; it calls emit with the name and the flags text.
