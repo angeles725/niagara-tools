@@ -26,6 +26,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
   keeps implementation under `com.tridium.<module>`. Honeywell/OEM modules use `com.<vendor>.<module>` throughout
   (ours: `com.angeles.<Module>`) — a leaf/OEM module NEVER declares `javax.baja.*` types.
 - One public `@NiagaraType` per `.java` file; `BXxx` class naming. `[ev: corpus B817]`
+- A `com.tridium.*` import is private API (`types/module-wiring.md` § 4.5).
 
 ## `module-include.xml` vs `META-INF/module.xml` `[ev: corpus B817]`
 - You AUTHOR `module-include.xml` (the `<type>` list). The gradle plugin GENERATES `META-INF/module.xml` from it.

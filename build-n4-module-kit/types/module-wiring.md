@@ -190,6 +190,28 @@ type visible. No extra plumbing needed. `[ev: corpus B617 §617.3; third-party-l
 Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every returned hop): `types/security.md`
 § 4.4. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ8]`
 
+### 4.4 Registry lookups — defs and agents `[ev: retro devguide415-horizons-authoring-security Δ9]`
+
+- **Defs** are name/value strings declared in `module-include.xml` (`<defs><def name="mymod.x" value="…"/></defs>`)
+  and collapsed by the registry into ONE global map, so prefix every name with `<moduleName>.` (devguide 4.15.6.20
+  `registry.txt:85-105`). Read one with `Sys.getRegistry().getDef(name, fallback)`; the one-argument form is
+  `getDef(name, null)` (`javax/baja/registry/Registry.java:109-119`).
+- **Agents** are queried by type filter: `file.getAgents(null).filter(AgentFilter.is(BExporter.TYPE))`. A query with
+  no registered agent throws `javax.baja.agent.NoSuchAgentException`, so wrap the lookup in
+  `try … catch (NoSuchAgentException)` (`registry.txt:37-50`). Registering one: § 3.
+
+### 4.5 API stability — `com.tridium.*` is private API `[ev: retro n4-course-build-deps-permissions-signing Δ3]` `[ev: retro devguide415-horizons-authoring-security Δ9]`
+
+- The devguide labels public APIs Stable, Evaluation or Development (`apiInfo.txt:16-22`) and says "com.tridium APIs
+  should never be used by developers, and no compatibility is guaranteed" (`apiInfo.txt:54`). No label is
+  machine-readable; the signals a check can read are the package prefix and `@Deprecated`.
+- Prefer the `javax.baja.*` equivalent, or write the function yourself (an exporter: `types/logic-authoring.md`
+  § File export, where `BHistoryToCsv` is the course's own private-API example, Lab Instructions p83).
+- When a `com.tridium.*` use is unavoidable (the NDriver framework, `com.tridium.ndriver.**`, is the sanctioned
+  case), record each class in the module README and pin that dependency's `vendorVersion` floor to the 3-part
+  release you built and tested against (§ 1, L7). The WARN for other imports is owed Go lint G65
+  `private-api-import` (ledger.d/2026-10-23-r8-u5-c59-c62.md).
+
 ---
 
 ## 5 · Version pinning summary
