@@ -43,14 +43,14 @@ var (
 		`\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*[=;]`)
 	ident     = rx(`[A-Za-z_][A-Za-z0-9_]*`)
 	schedHead = rx(`^.*Clock\.schedule[A-Za-z]*[[:space:]]*\(`)
-	signature = rx(`[A-Za-z_][A-Za-z0-9_<>\[\]]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([^;{}]*\)`)
 )
 
 const msg = "' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a" +
 	" scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id"
 
-// Check reports, per class-level static Map field (in declaration order, each name once), its first
-// `.put(` line outside a static initializer when neither the enclosing method nor a scheduled action's body removes from it.
+// Check reports, per class-level static Map field (in declaration order, each name once) that no
+// scheduled action purges, every method that puts into it (a row at its first put) and does not sweep it.
+// A put outside a method (a static initializer: a constant table) is never checked.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	lines := make([]string, len(f.Raw))
 	for i, ln := range f.Raw {
@@ -60,68 +60,59 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		lines[i] = ln
 	}
 	code, _ := javasrc.BlankLiterals(f.Stripped(), nil)
-	init := staticInits(code)
-	fields := staticFields(code, f.Methods(), init)
+	methods := f.Methods()
+	fields := staticFields(code, methods, staticInits(code))
 	if len(fields) == 0 {
 		return nil, nil
 	}
-	purged := scheduledPurges(lines, fields)
 	var out []lint.Finding
 	for _, name := range fields {
-		if purged[name] {
+		put := use(name, `\.\s*put\s*\(`)
+		if scheduledPurge(lines, methods, name) {
 			continue
 		}
-		put := -1 // the first put outside a static initializer: a table filled only there is a constant
-		for i := range lines {
-			if !init[i] && strings.Contains(lines[i], name+".put(") {
-				put = i
-				break
+		for _, m := range methods {
+			body := lines[m.Start-1 : m.End]
+			for i, ln := range body {
+				if put.MatchString(ln) {
+					if !sweeps(body, name) {
+						out = append(out, lint.Finding{Line: m.Start + i, Msg: "static session/token map '" + name + msg})
+					}
+					break
+				}
 			}
-		}
-		if put < 0 {
-			continue
-		}
-		from, to := enclosing(lines, put)
-		if firstLine(lines, from, to, name+".remove(") < 0 {
-			out = append(out, lint.Finding{Line: put + 1, Msg: "static session/token map '" + name + msg})
 		}
 	}
 	return out, nil
 }
 
-// firstLine is the first index in lines[from..to] containing s, or -1.
-func firstLine(lines []string, from, to int, s string) int {
-	for i := from; i <= to && i < len(lines); i++ {
-		if strings.Contains(lines[i], s) {
-			return i
-		}
-	}
-	return -1
+// use matches name as a whole identifier followed by the regexp tail.
+func use(name, tail string) *regexp.Regexp {
+	return regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])` + regexp.QuoteMeta(name) + `\s*` + tail)
 }
 
-// blockEnd is the line where the braces counted from line from first balance after one opened, or -1.
-func blockEnd(lines []string, from int) int {
-	depth, started := 0, false
-	for i := from; i < len(lines); i++ {
-		for k := 0; k < len(lines[i]); k++ {
-			switch lines[i][k] {
-			case '{':
-				depth, started = depth+1, true
-			case '}':
-				depth--
-			}
+// sweeps reports whether a method body evicts from the named map: name.remove(, a removeIf or remove(
+// on one of its views, or an iterator over it (or a view) together with a no-argument .remove().
+func sweeps(body []string, name string) bool {
+	view := `(?:\.\s*(?:keySet|values|entrySet)\s*\(\s*\)\s*)?`
+	remove, iter := use(name, view+`\.\s*(?:remove|removeIf)\s*\(`), use(name, view+`\.\s*iterator\s*\(`)
+	var iterated, removed bool
+	for _, ln := range body {
+		if remove.MatchString(ln) {
+			return true
 		}
-		if started && depth == 0 {
-			return i
-		}
+		iterated = iterated || iter.MatchString(ln)
+		removed = removed || itRemove.MatchString(ln)
 	}
-	return -1
+	return iterated && removed
 }
 
-// scheduledPurges is bash step 2: the fields a Clock.schedule* action's body (do<Action>() or <action>(),
-// the first declaration found) removes from, one hop.
-func scheduledPurges(lines, fields []string) map[string]bool {
-	purged := map[string]bool{}
+var itRemove = regexp.MustCompile(`\.\s*remove\s*\(\s*\)`)
+
+// scheduledPurge reports whether a Clock.schedule* call names an action (one hop: the method declared as
+// do<Action>() or <action>()) whose body sweeps the named map. The arguments are read up to the call's
+// ';', at most three lines.
+func scheduledPurge(lines []string, methods []javasrc.Method, name string) bool {
 	for i, ln := range lines {
 		if !strings.Contains(ln, "Clock.schedule") {
 			continue
@@ -141,40 +132,14 @@ func scheduledPurges(lines, fields []string) map[string]bool {
 		}
 		for _, act := range ident.FindAllString(call, -1) {
 			do := "do" + strings.ToUpper(act[:1]) + act[1:]
-			decl := regexp.MustCompile(`[A-Za-z0-9_>\]][[:space:]]+(` + do + `|` + act + `)[[:space:]]*\([^;]*\)[[:space:]]*(\{|$|throws)`)
-			for j := range lines {
-				if !decl.MatchString(" " + lines[j]) {
-					continue
+			for _, m := range methods {
+				if (m.Name == do || m.Name == act) && sweeps(lines[m.Start-1:m.End], name) {
+					return true
 				}
-				for j2, end := j, blockEnd(lines, j); j2 <= end; j2++ { // never closed: no body (bash send = 0)
-					for _, fl := range fields {
-						if strings.Contains(lines[j2], fl+".remove(") {
-							purged[fl] = true
-						}
-					}
-				}
-				break
 			}
 		}
 	}
-	return purged
-}
-
-// enclosing is bash step 3's scope of the put on line put: from the nearest method-signature-shaped line
-// at or above it (not a call ending in ';') to where its braces balance (the file end if they never do),
-// or the put line alone when no signature is found (a static initializer: fail closed).
-func enclosing(lines []string, put int) (int, int) {
-	for i := put; i >= 0; i-- {
-		loc := signature.FindStringIndex(lines[i])
-		if loc == nil || strings.HasPrefix(strings.TrimLeft(lines[i][loc[1]:], " \t\n\v\f\r"), ";") {
-			continue
-		}
-		if end := blockEnd(lines, i); end >= 0 {
-			return i, end
-		}
-		return i, len(lines) - 1
-	}
-	return put, put
+	return false
 }
 
 // staticFields is every class-level static Map field name (outside each method and static initializer),

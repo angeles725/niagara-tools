@@ -168,3 +168,20 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "SSL-everyput: every inserting method is checked, the name as a whole identifier (truth audit T5)" {
+  # Mutation: SSL-everyput -- checking only the file's first put (a substring match) reports OLD_SESSIONS's put as SESSIONS and misses relogin
+  {
+    printf 'class E {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  private static final Map<String, Entry> OLD_SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void archive(String id) {\n    OLD_SESSIONS.put(id, null);\n    OLD_SESSIONS.entrySet().removeIf(e -> e == null);\n  }\n'
+    printf '  void login(String id) {\n    SESSIONS.remove(stale());\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void relogin(String id) {\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/E.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" == *"E.java:13  static session/token map 'SESSIONS'"* ]]
+}

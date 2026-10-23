@@ -25,12 +25,14 @@
 #   ConcurrentHashMap, LinkedHashMap, TreeMap, ... with generics nested up to three levels --
 #   whose name is followed by `=` or `;` on the same line; a method parameter, a return type, a
 #   local and a declaration in a comment are not candidates, and each name counts once. A field
-#   with a `.put(` only inside `static { }` is a constant table (no row). WARNs unless EITHER (a) the method containing the `.put(` call
-#   also calls `<field>.remove(` in its own body (sweep-on-insert), or (b) the file contains
-#   a `Clock.schedule*` call whose scheduled body (one hop: the `do<Action>()` or `<action>()`
-#   method named by an argument of the call) calls `<field>.remove(` (scheduled purge). A `remove(` reachable only from an unrelated method (explicit logout,
-#   or a query-time expiry check) does NOT count as a guard -- that is exactly the shape
-#   this lint flags.
+#   with a `.put(` only inside `static { }` is a constant table (no row). Every method that calls
+#   `<field>.put(` (the name as a whole identifier) is checked and WARNs at its first put unless
+#   EITHER (a) that same method sweeps the map -- `<field>.remove(`, a `removeIf(`/`remove(` on
+#   its keySet()/values()/entrySet(), or an `iterator()` over it with a no-argument `.remove()`
+#   (sweep-on-insert) -- or (b) a `Clock.schedule*` call names an action (one hop: the method
+#   declared as `do<Action>()` or `<action>()`) whose body sweeps it (scheduled purge). A sweep
+#   reachable only from an unrelated method (explicit logout, or a query-time expiry check) does
+#   NOT count as a guard -- that is exactly the shape this lint flags.
 #   Row:  WARN  lint-session-store-lazy-evict  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # VCS-free by design (kit-links L2).
@@ -39,6 +41,7 @@
 # Mutation: SSL5 -- file-wide co-occurrence (any Clock.schedule + any remove) hides the logout-only shape
 # Mutation: SSL7 -- a probe without the return-type anchor takes `if (sweep(id)) {` for the declaration and its remove() for a purge
 # Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags a static method's Map parameter
+# Mutation: SSL-everyput -- checking only the file's first put (a substring match) reports OLD_SESSIONS's put as SESSIONS and misses relogin
 # Mutation: SSL-awkfail -- an unreadable source file read as empty (internal/lint Run) reports it clean
 # Mutation: SSL-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
