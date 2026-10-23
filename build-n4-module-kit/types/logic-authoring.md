@@ -245,6 +245,40 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
+## File export — history to CSV `[ev: corpus B1254 §1254.5]`
+
+A third-party module writes only under Station Home, `file:^…` = `stations/<name>/shared/`; the rest of the station
+folder is Protected Station Home, framework-only (devguide `directoryRestructure.txt:103,109`). A history goes to
+CSV without an exporter class (course certification exam `BHistoryExportService.doExport`, run live):
+
+```java
+BOrd target = getOutputFile();                                  // e.g. BOrd.make("file:^export/history.csv")
+if (target.isNull()) throw new IllegalArgumentException("output file not set");
+BOrd src = BOrd.make("history:" + getHistoryId().encodeToString() + "|bql:select *");
+BITable<BHistoryRecord> table = (BITable<BHistoryRecord>) src.get(this, cx);   // caller's Context
+BIFile file = BajaFileUtil.createFileToOverwrite(target, cx);   // re-runnable
+try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream(), StandardCharsets.UTF_8));
+     TableCursor<BHistoryRecord> c = table.cursor()) {
+  while (c.next()) {
+    BHistoryRecord r = c.get();
+    w.println(r.getTimestamp() + "," + r.get("operation"));    // audit history: columns by name
+  }
+}
+```
+
+- **`createFileToOverwrite`, not `createFile`:** `createFile` throws `FileAlreadyExistsException` when the file
+  exists, so the second run fails; both throw `IllegalArgumentException("Filename required")` for a null or empty
+  ORD (`baja/…/javax/baja/file/BajaFileUtil.java:82-121`, vineflower) — guard `isNull()` first.
+- **Explicit charset:** `getBytes()` and a bare `OutputStreamWriter` use the platform charset; pass
+  `StandardCharsets.UTF_8`. Close the stream and the cursor with try-with-resources (§ BQL from code).
+- **Exporters:** `ExportOp` is public (`javax.baja.file`), but `BHistoryToCsv` is `com.tridium.history.exporters`
+  — private API; the course itself says it "could change between minor version updates" (Lab Instructions p83).
+  Write the loop above instead.
+- Owed advisory lints G68 `file-export` (bare `getBytes()`, `BajaFileUtil.createFile(`) and G69, the
+  `lint-bql-string-concat.sh` precision fix that stops it WARNing on the `history:<id>|bql:` literal above
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ5]
+  [ev: retro n4-course-handson-services-history-threading Δ1]
+
 ## Templates are artifact production, not a type SPI
 
 - A "template type" is an `.ntpl` ZIP (a `.bog` + `template-manifest.xml`) produced by a make-job (`BMakeTemplateJob`/`NiagaraTemplate.createFrom().save()`) from a component subtree marked with a `BTemplateConfig` (+ `BConfigBinding` children + tagged parameter slots). Do NOT scaffold a `BTemplate` subclass — there is no such SPI. `[ev: corpus B783]`
