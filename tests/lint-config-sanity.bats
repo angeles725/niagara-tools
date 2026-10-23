@@ -280,3 +280,21 @@ JAVA
   if grep -qF 'lint-config-sanity: ok' "$LCS"; then echo "header claims an unimplemented suppression" >&2; return 1; fi
   if grep -qF 'module-include.xml' "$LCS"; then echo "header claims an unimplemented module-include.xml fallback" >&2; return 1; fi
 }
+
+@test "LCS-oneline: an annotation right after a one-line @NiagaraProperty is read by CS1 and CS2" {
+  # Mutation: LCS-oneline -- taking the next line into a one-line annotation hides the annotation on it from CS1/CS2.
+  rm -f "$ONE"/*.java
+  cat > "$ONE/OneLine.java" <<'JAVA'
+class OneLine {
+  @NiagaraProperty(name = "label", type = "String", defaultValue = "x")
+  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeSeconds(30)")
+  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeMinutes(1)")
+  @NiagaraProperty(name = "coolSetpoint", type = "double", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR)
+  int x;
+}
+JAVA
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"OneLine.java:3  CS1: interval<=duration: defrostInterval(30s) <= defrostDuration(1m)"* ]]
+  [[ "$output" == *"OneLine.java:5  CS2: zero-default setpoint \"coolSetpoint\""* ]]
+}

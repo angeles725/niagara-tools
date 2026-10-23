@@ -45,9 +45,10 @@
 #   that is absent or unreadable the check is skipped (never false-FAIL) — except a BRelTime default on
 #   an *Interval/*Duration slot, which is a CS1 "unreadable" WARN row.
 #
-# Documented limitation — CS1/CS2 annotation reader: it joins the @NiagaraProperty line with the lines
-#   after it until the parentheses balance, and always takes at least the next line, so an annotation
-#   on the line right after a one-line annotation is not read by CS1/CS2 (CS4 reads both).
+# Annotation reader: from the @NiagaraProperty line, lines are joined until the parentheses balance (CS1/CS2
+#   also wait for the first "(", so "@NiagaraProperty" alone on a line takes the next one). A one-line
+#   annotation closes on its own line, so the annotation on the line right after it is read too. An
+#   annotation still open at end of file is not read.
 #
 # Documented limitation — CS3 (comment-only flag enforcement):
 #   The heuristic matches a comment containing "only when", "only valid", or "only if"
@@ -72,6 +73,7 @@
 # Mutation: CS1-unreadable -- dropping the unreadable row skips an unparsed BRelTime default silently
 # Mutation: LCS-finderr -- ignoring the find status skips an unreadable sub-directory and reports clean
 # Mutation: LCS-awkfail -- skipping a file the scan cannot read exits by the other files' rows (0 or 1), never 3
+# Mutation: LCS-oneline -- taking the next line into a one-line annotation hides the annotation on it from CS1/CS2
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

@@ -94,15 +94,15 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 }
 
 // properties calls fn(text, line) for every @NiagaraProperty annotation the CS1/CS2 accumulator closes: the
-// opening line plus the next ones, joined by " ", until its parentheses balance. The opening line is
-// never tested alone, so a one-line annotation also takes the next line (which is then never an opening
-// line), and an annotation still open at the end of the file is dropped.
+// opening line and the next ones, joined by " ", until a "(" was seen and the parentheses balance. A
+// one-line annotation closes on its own line, as CS4's does, so an annotation on the next line is read
+// too (the bash lint always took the next line and hid it). An annotation still open at the end of the
+// file is dropped.
 func properties(raw []string, fn func(text string, line int)) {
 	open, buf, line := false, "", 0
 	for i, ln := range raw {
 		if !open && strings.Contains(ln, "@NiagaraProperty") {
-			open, buf, line = true, ln, i+1
-			continue
+			open, buf, line = true, "", i+1
 		}
 		if !open {
 			continue

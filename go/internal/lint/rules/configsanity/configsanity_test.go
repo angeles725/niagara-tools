@@ -2,8 +2,11 @@ package configsanity
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -47,5 +50,36 @@ func TestUnreadableFile(t *testing.T) {
 	wantErr := id + ": cannot scan " + u + ": awk: fatal: cannot open file `" + u + "' for reading: Permission denied\n"
 	if code != 3 || o.String() != wantOut || e.String() != wantErr {
 		t.Errorf("exit %d out %q err %q, want 3, %q and %q", code, o.String(), e.String(), wantOut, wantErr)
+	}
+}
+
+// TestOneLineAnnotation: a @NiagaraProperty that closes on its own line does not take the next line, so the
+// annotation on that line is read by CS1 and CS2 too (the bash lint hid it: declared difference).
+func TestOneLineAnnotation(t *testing.T) {
+	raw := []string{
+		"class OneLine {",
+		`  @NiagaraProperty(name = "label", type = "String", defaultValue = "x")`,
+		`  @NiagaraProperty(name = "defrostInterval", defaultValue = "BRelTime.makeSeconds(30)")`,
+		`  @NiagaraProperty(name = "defrostDuration", defaultValue = "BRelTime.makeMinutes(1)")`,
+		`  @NiagaraProperty(name = "coolSetpoint", type = "double", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR)`,
+		"  @NiagaraProperty(",
+		`    name = "heatSetpoint", type = "double", defaultValue = "BDouble.make(0)",`,
+		"    flags = Flags.OPERATOR)",
+		"  @NiagaraProperty",
+		`  (name = "fanSetpoint", type = "double", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR)`,
+		"}",
+	}
+	var got []string
+	for _, fd := range append(intervalPass(raw), setpointPass(raw)...) {
+		got = append(got, fmt.Sprintf("%d %s", fd.Line, fd.Msg))
+	}
+	want := []string{
+		"3 CS1: interval<=duration: defrostInterval(30s) <= defrostDuration(1m)",
+		`5 CS2: zero-default setpoint "coolSetpoint" with OPERATOR flag and no min>0 facet`,
+		`6 CS2: zero-default setpoint "heatSetpoint" with OPERATOR flag and no min>0 facet`,
+		`9 CS2: zero-default setpoint "fanSetpoint" with OPERATOR flag and no min>0 facet`,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }

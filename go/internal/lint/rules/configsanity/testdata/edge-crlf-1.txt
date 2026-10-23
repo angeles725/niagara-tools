@@ -1,7 +1,8 @@
 -- args --
 @DIR@/one
 -- want --
-exit 0
+exit 1
+FAIL  lint-config-sanity  @DIR@/one/Crlf.java:4  CS1: interval<=duration: pollInterval(5s) <= pollDuration(1m)
 WARN  lint-config-sanity  @DIR@/one/Crlf.java:3  CS3: flag combo enforced only in comment: // only valid if the pump runs
 WARN  lint-config-sanity  @DIR@/one/Crlf.java:8  CS4: floor "stageMinOn"=2 with LP cutout "lowLimit"=0 (disabled) -- a permanent minimum needs an enabled cutout that overrides it
 -- stderr --
