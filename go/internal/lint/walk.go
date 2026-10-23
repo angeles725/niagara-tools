@@ -1,7 +1,6 @@
 package lint
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"sort"
@@ -39,37 +38,14 @@ func (s Selection) prunes(dir string) bool {
 }
 
 // WalkError is a directory the walk could not read; its text is the line GNU find printed for it
-// under LC_ALL=C (exported by toolbelt/lib/awk-lint.sh), path quoted as findQuote spells it.
+// under LC_ALL=C (exported by toolbelt/lib/awk-lint.sh), path quoted as strerror.FindQuote spells it.
 type WalkError struct {
 	Path string
 	Err  error
 }
 
-func (e *WalkError) Error() string { return "find: " + findQuote(e.Path) + ": " + strerror.Text(e.Err) }
-
-// findQuote spells a path as GNU find quotes it in the C locale (quotearg locale style): always inside
-// '...', with \' and \\, C escapes for \a \b \f \n \r \t \v, and 3-digit octal for every other byte
-// outside printable ASCII (UTF-8 too: each byte is escaped on its own).
-func findQuote(p string) string {
-	var b strings.Builder
-	b.WriteByte('\'')
-	for i := 0; i < len(p); i++ {
-		c := p[i]
-		switch esc := strings.IndexByte("\a\b\f\n\r\t\v", c); {
-		case c == '\'' || c == '\\':
-			b.WriteByte('\\')
-			b.WriteByte(c)
-		case esc >= 0:
-			b.WriteByte('\\')
-			b.WriteByte("abfnrtv"[esc])
-		case c < 0x20 || c >= 0x7f:
-			fmt.Fprintf(&b, "\\%03o", c)
-		default:
-			b.WriteByte(c)
-		}
-	}
-	b.WriteByte('\'')
-	return b.String()
+func (e *WalkError) Error() string {
+	return "find: " + strerror.FindQuote(e.Path) + ": " + strerror.Text(e.Err)
 }
 
 // Walk lists the regular files under root that sel selects, sorted bytewise (LC_ALL=C sort), with
