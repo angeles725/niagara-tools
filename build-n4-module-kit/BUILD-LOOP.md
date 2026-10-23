@@ -248,7 +248,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
     (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
     or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14). Owed engine item G51.
-    `[ev: retro truth-audit Δ3]`
+    `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
+    word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
+    its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review

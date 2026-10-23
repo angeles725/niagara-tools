@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-23 -->
+<!-- last-change-note: quality round 8: truth-audit addendum 2 Δ8 (awk \y not \b), Δ9 (compare finding counts across a port), Δ10 (gate the whole landing range) -->
+log: 2026-10-23 · quality round 8 truth-audit addendum 2 → `BUILD-LOOP.md` § 5 Kit tooling doctrine: an awk regex never uses `\b` (a backspace in gawk/POSIX awk; the word boundary is `\y`), prefer the Go engine [ev: retro truth-audit Δ8] [ev: tests/awk-word-boundary.bats AWB1]; `CONTRIBUTING.md` § 2.2: compare finding counts across a port on real trees and explain every new row [ev: retro truth-audit Δ9]; `CONTRIBUTING.md` § 8: a landing script gates review coverage of every non-merge commit in `origin/main..<branch>`, not only the SHAs passed on the call [ev: retro truth-audit Δ10]. Retro retros/2026-10-22-truth-audit.md now 10Δ, folded.
