@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  demand-in-scope  @DIR@/src/com/x/CompressorControl.java:3  step reads suction with no demand-shaped input in scope
+-- stderr --
+-- src/com/x/CompressorControl.java --
+package com.x;
+public class CompressorControl {
+  int step(long now, double suction, double suctionLowLimit) {
+    int target = 4;
+    if (suction < suctionLowLimit) target = target - 1;     // pressure decides, nobody calls
+    return target;
+  }
+}
