@@ -314,10 +314,13 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
 }
 
 @test "LS15-sync: lint-structure L15 and preflight sample-sign use the same four requirement patterns" {
-  # The ERE table is duplicated (no shared lib file in the unit's surface); this pins the two copies together.
-  a=$(grep -A1 '^SAMPLE_SIGN_ERE=' "$KIT/toolbelt/preflight.sh" | sed 's/^SAMPLE_SIGN_ERE=//')
-  b=$(grep -A1 '^L15_SIGN_ERE=' "$KIT/toolbelt/lint-structure.sh" | sed 's/^L15_SIGN_ERE=//')
-  [ -n "$a" ] && [ "$a" = "$b" ]
+  # The ERE table is duplicated (preflight.sh in bash, the L15 Go port's signBlock); this pins the two copies
+  # together: each of preflight's four patterns is a Go regexp verbatim, and signBlock holds exactly four.
+  go="$KIT/../go/internal/lint/rules/structure/module.go"
+  mapfile -t eres < <(grep -A1 '^SAMPLE_SIGN_ERE=' "$KIT/toolbelt/preflight.sh" | grep -o "'[^']*'" | tr -d "'")
+  [ "${#eres[@]}" -eq 4 ]
+  for e in "${eres[@]}"; do grep -qF "regexp.MustCompile(\`$e\`)" "$go" || { echo "not in the Go port: $e"; false; }; done
+  [ "$(sed -n '/^var signBlock/,/^}$/p' "$go" | grep -c 'regexp.MustCompile(')" -eq 4 ]
 }
 
 @test "LS-symroot: a symlinked module root is walked like find -H, same rows as the directory (issue #329)" {
