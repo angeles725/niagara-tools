@@ -2,6 +2,8 @@ declared difference (truth fix T4, property flags): the awk read one declaration
 line's LAST "newProperty(" up to the first ",", on that line only: aHours, whose Flags.TRANSIENT is on the next line,
 counted as non-transient, and bHours took cHours' TRANSIENT while cHours was never read. Every declaration is read
 now, its flags from its own "newProperty(" to the first "," (across lines).
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not hot; the rows are unchanged.)
 -- args --
 @DIR@
 -- want --
@@ -14,6 +16,6 @@ class Y {
       Flags.TRANSIENT, 0.0, null);
   Property bHours = newProperty(0, 0.0, null); Property cHours = newProperty(Flags.TRANSIENT, 1, null);
   public void changed(Property p, Context cx) {
-    setAHours(1); setBHours(1); setCHours(1);
+    setAHours(getAHours() + 1); setBHours(getBHours() + 1); setCHours(getCHours() + 1);
   }
 }

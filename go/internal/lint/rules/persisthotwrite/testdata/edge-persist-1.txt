@@ -1,3 +1,6 @@
+declared difference (truth fix T5, truth-equal-value-skip-1): Baja skips a write of an equal simple value
+(ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set), so a constant written to a simple-typed slot
+dirties the station once, not every cycle: those rows are gone (truth-fresh-* keep the shapes with fresh values).
 declared difference (truth fix T3, truth-setter-name-1): Q1's resetXHours(3.0) at line 12 is not the setter
 setXHours(, so it is no longer a WARN row.
 declared difference (truth fix T1, truth-code-view-1): Q5's write after "http://" (line 4) WARNs; the
@@ -6,15 +9,6 @@ setXHours in a block comment (5) and in a string (6) are not code.
 @DIR@
 -- want --
 exit 0
-WARN  lint-persist-hot-write  @DIR@/Q1.java:7  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q1.java:9  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q1.java:21  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q1.java:24  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q2.java:16  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q3.java:8  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q4.java:5  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q4.java:5  setYHours(...) writes non-transient slot 'yHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
-WARN  lint-persist-hot-write  @DIR@/Q5.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
 -- stderr --
 -- Q1.java --
 class Q1 {

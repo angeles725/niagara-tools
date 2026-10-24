@@ -1,6 +1,8 @@
 declared difference (truth fix T2, method bodies): a callee's declaration was the first `tick()` not followed by
 ";", so `pending(tick())` in busy() was taken for it and tick()'s real body (line 5) was never read. Bodies now come
 from javasrc.Methods.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not hot; the rows are unchanged.)
 -- args --
 @DIR@
 -- want --
@@ -12,5 +14,5 @@ class V {
   static final Property xHours = newProperty(0, 0.0, null);
   public void changed(Property p, Context cx) { tick(); }
   boolean busy() { return pending(tick()); }
-  void tick() { setXHours(1.0); }
+  void tick() { setXHours(getXHours() + 1.0); }
 }

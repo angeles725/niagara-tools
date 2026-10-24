@@ -21,7 +21,7 @@ const ID = "lint-persist-hot-write"
 // Spec registers the rule with the argument contract of toolbelt/lint-persist-hot-write.sh.
 func Spec() lint.Spec {
 	return lint.Spec{
-		Rule:       rule{},
+		Tree:       rule{},
 		Mode:       lint.First,
 		Usage:      "usage: lint-persist-hot-write.sh [--strict] <src-root>",
 		Select:     lint.Selection{Names: []string{"*.java"}},
@@ -41,13 +41,26 @@ var (
 	modulo     = regexp.MustCompile(`%[[:space:]]*[A-Za-z0-9_]+[[:space:]]*(==|!=)`)
 )
 
-// Check WARNs every unguarded setter call (hotwrite.SetterCall) of a non-transient property in changed() or a one-hop callee,
-// property by property, body by body (changed() first), line by line.
-func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
+// CheckTree reads every file under the root once for the fields it accumulates (hotwrite.Accumulators), then
+// reports each file in walk order (check).
+func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
+	acc := hotwrite.Accumulators(files)
+	var out []lint.Finding
+	for _, f := range files {
+		out = append(out, check(f, acc)...)
+	}
+	return out, nil
+}
+
+// check WARNs every setter call (hotwrite.SetterCall) of a non-transient property in changed() or a one-hop
+// callee that has no cadence guard within 5 lines and can mark the station dirty on every cycle
+// (hotwrite.Hot: not under an on-change if, and not a simple value that is not computed fresh), property by
+// property, body by body (changed() first), line by line.
+func check(f *javasrc.File, acc map[string]bool) []lint.Finding {
 	lines := hotwrite.View(f)
 	changed, _, ok := hotwrite.ChangedBody(f, lines)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	bodies := []hotwrite.Body{changed}
 	for _, name := range hotwrite.Callees(lines, changed.Start, changed.End) {
@@ -56,20 +69,25 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	var out []lint.Finding
-	for _, prop := range hotwrite.NonTransient(lines) {
-		setter, call := hotwrite.Setter(prop)+"(", hotwrite.SetterCall(prop)
+	for _, prop := range hotwrite.Properties(lines) {
+		if prop.Transient {
+			continue
+		}
+		setter, call := hotwrite.Setter(prop.Name)+"(", hotwrite.SetterCall(prop.Name)
 		for _, b := range bodies {
 			for i := b.Start; i <= b.End; i++ {
-				if !call.MatchString(lines[i]) || setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) {
+				loc := call.FindStringIndex(lines[i])
+				if loc == nil || setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) ||
+					!hotwrite.Hot(lines, b, i, loc[1], prop, acc) {
 					continue
 				}
-				out = append(out, lint.Finding{Line: i + 1, Msg: setter + "...) writes non-transient slot '" + prop +
-					"' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines --" +
+				out = append(out, lint.Finding{Path: f.Path, Line: i + 1, Msg: setter + "...) writes non-transient slot '" +
+					prop.Name + "' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines --" +
 					" integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start"})
 			}
 		}
 	}
-	return out, nil
+	return out
 }
 
 // guarded reports a cadence guard on line i or the 5 above it, not above the body's first line.

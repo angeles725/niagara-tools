@@ -19,7 +19,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A {\n  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);\n' \
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) { execute(); }\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() {\n    setXHours(1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() {\n    setXHours(getXHours() + 1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]
@@ -31,7 +31,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A {\n  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);\n' \
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) { execute(); }\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() {\n    setXHours(1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() {\n    setXHours(getXHours() + 1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" --strict "$TMPDIR_T/Mod"
   [ "$status" -eq 1 ]
 }
@@ -40,7 +40,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A {\n  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);\n' \
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) { execute(); }\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() {\n    if (Clock.millis() - lastCheckpoint < 60000) return;\n    setXHours(1.0);\n  }\n}\n' \
+  printf '  void execute() {\n    if (Clock.millis() - lastCheckpoint < 60000) return;\n    setXHours(getXHours() + 1.0);\n  }\n}\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
@@ -52,7 +52,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   printf 'class A {\n  public static final Property xHours = newProperty(Flags.TRANSIENT | Flags.SUMMARY, 0d, null);\n' \
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) { execute(); }\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() {\n    setXHours(1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() {\n    setXHours(getXHours() + 1.0);\n  }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -61,7 +61,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 @test "PHW4: no changed(Property...) override at all is clean" {
   printf 'class A {\n  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);\n' \
     > "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() { setXHours(1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() { setXHours(getXHours() + 1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -82,7 +82,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   # Mutation: PHW7 -- cutting each line at its first "//" hides a setter written after a URL string
   # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-code-view-1.txt
   printf '%s\n' 'class T {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) {' \
-    '    String u = "http://x"; setXHours(1.0);' '    /* setXHours(2.0); */' '    log("setXHours(3.0)");' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/T.java"
+    '    String u = "http://x"; setXHours(getXHours() + 1.0);' '    /* setXHours(2.0); */' '    log("setXHours(3.0)");' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/T.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
@@ -92,7 +92,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   # Mutation: PHW8 -- taking the first tick() not followed by ";" as the declaration reads pending(tick()) instead of tick()'s body
   # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-method-bodies-1.txt
   printf '%s\n' 'class V {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) { tick(); }' \
-    '  boolean busy() { return pending(tick()); }' '  void tick() { setXHours(1.0); }' '}' > "$TMPDIR_T/Mod/src/com/x/V.java"
+    '  boolean busy() { return pending(tick()); }' '  void tick() { setXHours(getXHours() + 1.0); }' '}' > "$TMPDIR_T/Mod/src/com/x/V.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/V.java:5  setXHours(...)"* ]]
@@ -102,7 +102,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
   # Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
   # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-setter-name-1.txt
   printf '%s\n' 'class X {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) {' \
-    '    resetXHours(1.0);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/X.java"
+    '    resetXHours(getXHours() + 1.0);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/X.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
@@ -112,10 +112,23 @@ teardown() { rm -rf "$TMPDIR_T"; }
   # Mutation: PHW10 -- reading the flags on the declaration line only takes a wrapped Flags.TRANSIENT slot as persisted
   # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-property-flags-1.txt
   printf '%s\n' 'class Y {' '  public static final Property aHours = newProperty(' '      Flags.TRANSIENT, 0.0, null);' \
-    '  public void changed(Property p, Context cx) {' '    setAHours(1);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/Y.java"
+    '  public void changed(Property p, Context cx) {' '    setAHours(getAHours() + 1);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/Y.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+@test "PHW11: a simple-typed slot mirrored from an edge-flipped model field is not hot; an accumulator is" {
+  # Mutation: PHW11 -- ignoring Baja's equal-value skip WARNs setXAutoLocked(ctl.autoLocked[0]) every cycle
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-equal-value-skip-1.txt
+  printf '%s\n' 'class M {' '  double[] hours; boolean[] locked;' '  void step(double dtH) { hours[0] += dtH; if (trip) locked[0] = true; }' '}' \
+    > "$TMPDIR_T/Mod/src/com/x/M.java"
+  printf '%s\n' 'class A {' '  static final Property xHours = newProperty(0, 0d, null);' '  static final Property xLocked = newProperty(0, false, null);' \
+    '  public void changed(Property p, Context cx) { execute(); }' '  void execute() {' '    setXHours(m.hours[0]);' '    setXLocked(m.locked[0]);' '  }' '}' \
+    > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/A.java:6  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
 }
 
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
@@ -150,7 +163,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) {\n    accumulate();\n    repaint();\n  }\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void accumulate() {\n    setXHours(1.0);\n  }\n  void repaint() {\n    int a = 1;\n  }\n}\n' \
+  printf '  void accumulate() {\n    setXHours(getXHours() + 1.0);\n  }\n  void repaint() {\n    int a = 1;\n  }\n}\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$PHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]

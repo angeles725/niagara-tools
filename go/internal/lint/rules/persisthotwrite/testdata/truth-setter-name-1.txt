@@ -2,6 +2,8 @@ declared difference (truth fix T3, setter name): lint-persist-hot-write matched 
 resetXHours(1.0) and presetXHours(2.0) FAILed as writes of xHours while setXHours (3.0), with a blank before its
 "(", was missed. A setter call now starts at an identifier boundary and may have blanks before "(", as
 lint-changed-hot-write already read it (#151); both share hotwrite.SetterCall.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not hot; the rows are unchanged.)
 -- args --
 @DIR@
 -- want --
@@ -13,9 +15,9 @@ WARN  lint-persist-hot-write  @DIR@/X.java:7  setXHours(...) writes non-transien
 class X {
   static final Property xHours = newProperty(0, 0.0, null);
   public void changed(Property p, Context cx) {
-    resetXHours(1.0);
-    presetXHours(2.0);
-    setXHours (3.0);
-    this.setXHours(4.0);
+    resetXHours(getXHours() + 1.0);
+    presetXHours(getXHours() + 2.0);
+    setXHours (getXHours() + 3.0);
+    this.setXHours(getXHours() + 4.0);
   }
 }

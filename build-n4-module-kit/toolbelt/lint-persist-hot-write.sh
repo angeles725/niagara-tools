@@ -42,10 +42,23 @@
 # Truth fix T3 (2026-10-24): a setter call starts at an identifier boundary and may have blanks before "("
 # (hotwrite.SetterCall, shared with lint-changed-hot-write #151); the awk matched "set<X>(" as a substring, so
 # resetXHours( was a write of xHours and setXHours ( was missed.
+# Truth fix T5 (2026-10-24, equal-value skip): Baja's ComplexSlotMap skips a write whose new value equals the
+# current one for a simple value -- setDouble `!BDouble.equals(old, new)`, setBoolean `old != new`,
+# set(Property, BValue) `!old.isSimple() || !old.equals(new)` (niagara-research organized/baja/baja/vineflower/
+# com/tridium/sys/schema/ComplexSlotMap.java:1239, :860, :637). So a write reports only when it can dirty the
+# station every cycle: not under an `if` that tests the slot's own getter or a change flag (a name holding
+# Changed/Dirty), and, for a simple-typed slot (its newProperty default is a number, boolean or string literal
+# or a BDouble/BFloat/BInteger/BLong/BBoolean/BString value), only when the value is computed fresh: a clock
+# read, the slot's own getter in arithmetic, or a field the tree accumulates by a non-literal delta
+# (`hours[k] += dtH`). A non-simple value (a BStatusValue, a BRelTime, a component) has no framework skip and
+# keeps reporting. Statically the rule cannot prove that a mirrored model field changes on every call, nor
+# follow a value through a helper method: a field moved only by event counters (`++`, `+= 1`) or plain
+# assignments counts as changing on events, not every cycle.
 # Truth fix T4 (2026-10-24): every `Property <name> = newProperty(` of a line is read, its flags from its own
 # "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
 # flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: PHW11 -- ignoring Baja's equal-value skip WARNs setXAutoLocked(ctl.autoLocked[0]) every cycle
 # Mutation: PHW10 -- reading the flags on the declaration line only takes a wrapped Flags.TRANSIENT slot as persisted
 # Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
 # Mutation: PHW8 -- taking the first tick() not followed by ";" as the declaration reads pending(tick()) instead of tick()'s body

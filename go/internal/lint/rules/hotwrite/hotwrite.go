@@ -108,31 +108,80 @@ func Callees(lines []string, from, to int) []string {
 	return out
 }
 
-// NonTransient are the names of the raw slot-o-matic properties (`Property <name> = newProperty(<flags>,`)
-// whose flags do not mention TRANSIENT, in declaration order: every declaration of a line, its flags read from
-// its own "newProperty(" to the first "," (on the following lines when the call wraps before one).
-func NonTransient(lines []string) []string {
-	var out []string
+// Prop is one raw slot-o-matic property declaration (`Property <name> = newProperty(<flags>, <default>, ...`).
+type Prop struct {
+	Name      string
+	Transient bool // its flags mention TRANSIENT
+	Simple    bool // its default is a simple value (see simpleValue): Baja skips a write of an equal value
+}
+
+// simpleValue is a default whose slot holds a simple value: a number, boolean or string literal (contents
+// blanked in the code view) or a BDouble/BFloat/BInteger/BLong/BBoolean/BString constant or factory call.
+var simpleValue = rx(`^[[:space:]]*(-?[0-9][0-9.]*[dDfFlL]?|true|false|"[^"]*"|B(Double|Float|Integer|Long|Boolean|String)\.[A-Za-z_][A-Za-z0-9_]*(\([^()]*\))?)[[:space:]]*$`)
+
+// Properties are the file's slot-o-matic property declarations in order: every declaration of a line, its
+// flags and default read as the first two top-level arguments of its own newProperty( call (over up to 5
+// more lines when the call wraps).
+func Properties(lines []string) []Prop {
+	var out []Prop
 	for i, ln := range lines {
 		for _, loc := range propDecl.FindAllStringIndex(ln, -1) {
 			nm := propTail.ReplaceAllString(ln[loc[0]:loc[1]], "")
 			nm = nm[len(propHead.FindString(nm)):]
-			if nm != "" && !strings.Contains(flagsFrom(lines, i, loc[1]), "TRANSIENT") {
-				out = append(out, nm)
+			if nm == "" {
+				continue
 			}
+			args := Args(joined(lines, i, loc[1], 5))
+			p := Prop{Name: nm}
+			if len(args) > 0 {
+				p.Transient = strings.Contains(args[0], "TRANSIENT")
+			}
+			if len(args) > 1 {
+				p.Simple = simpleValue.MatchString(args[1])
+			}
+			out = append(out, p)
 		}
 	}
 	return out
 }
 
-// flagsFrom is the text from line i, byte at, up to the first ",", joined over at most 5 more lines.
-func flagsFrom(lines []string, i, at int) string {
-	text := lines[i][at:]
-	for j := i + 1; !strings.Contains(text, ",") && j < len(lines) && j <= i+5; j++ {
-		text += " " + lines[j]
+// NonTransient are the names of the properties whose flags do not mention TRANSIENT, in declaration order.
+func NonTransient(lines []string) []string {
+	var out []string
+	for _, p := range Properties(lines) {
+		if !p.Transient {
+			out = append(out, p.Name)
+		}
 	}
-	flags, _, _ := strings.Cut(text, ",")
-	return flags
+	return out
+}
+
+// joined is line i from byte at, then up to n more lines, joined by "\n".
+func joined(lines []string, i, at, n int) string {
+	return strings.Join(append([]string{lines[i][at:]}, lines[i+1:min(i+1+n, len(lines))]...), "\n")
+}
+
+// Args are the top-level arguments of a call whose "(" is just before s, up to its ")" (or the end of s):
+// split at commas outside (), [] and {}.
+func Args(s string) []string {
+	var out []string
+	depth, from := 0, 0
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[', '{':
+			depth++
+		case ')', ']', '}':
+			if depth == 0 {
+				return append(out, s[from:i])
+			}
+			depth--
+		case ',':
+			if depth == 0 {
+				out, from = append(out, s[from:i]), i+1
+			}
+		}
+	}
+	return append(out, s[from:])
 }
 
 // Setter is the setter name of property name: "set" and the name with its first byte upper-cased (C locale).
