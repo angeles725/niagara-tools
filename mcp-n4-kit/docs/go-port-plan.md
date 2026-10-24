@@ -319,8 +319,8 @@ and `n4_describe_session`; `cli.NewContext` builds the context from the flags `c
 accepted. `jsonrpc` now follows `Server._call`: a session tool needs a connection, then no auth
 pause, then its handler; an AuthError from a handler re-latches, a BoxError or ValueError shows
 its words, every tool error text is scrubbed (not the unported text the harness keys on), and
-`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`; `box` keeps its
-own copy until the in-flight box branch lands.
+`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`, the one
+truth test every package uses.
 
 **Proof.** Under `MCP_N4_IMPL=go` the black-box `TestConnect`, `TestDescribeSession` and
 `test_tiers.TestConnectReportsTier` tests run against the binary and FakeStation. Their marked
