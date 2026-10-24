@@ -5,6 +5,7 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
@@ -46,6 +47,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/writepath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
@@ -62,6 +64,7 @@ func All() []lint.Spec {
 		silentprotection.Spec(),
 		nosystemout.Spec(),
 		uberjarapi.Spec(),
+		arbitraryord.Spec(),
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
 		clockzerofloor.Spec(),
@@ -95,5 +98,6 @@ func All() []lint.Spec {
 		bformatcall.Spec(),
 		splitpackage.Spec(),
 		manuallabels.Spec(),
+		writepath.Spec(),
 	}
 }

@@ -114,9 +114,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			r.findings(i, sp, "", fds)
-			if err != nil {
-				r.envError(i, err.Error())
-			}
+			r.ruleError(i, err)
 		}
 		for i, sp := range specs {
 			if sp.Root == nil || stopped[i] {
@@ -129,18 +127,20 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			r.findings(i, sp, "", fds)
-			if err != nil {
-				r.envError(i, err.Error())
-			}
+			r.ruleError(i, err)
 		}
 	}
 	for i, sp := range specs {
 		if sp.Joined && !stopped[i] {
 			fds, err := sp.Tree.CheckTree(joined[i])
-			r.findings(i, sp, "", fds)
-			if err != nil {
-				r.envError(i, err.Error())
+			if errors.Is(err, ErrEmptyRoot) { // nothing it checks over every root: each root's ERROR row only
+				for _, root := range a.Roots {
+					r.empty(i, sp, root)
+				}
+				continue
 			}
+			r.findings(i, sp, "", fds)
+			r.ruleError(i, err)
 		}
 	}
 	r.release()
@@ -185,6 +185,19 @@ func (r *report) emit(i int, e event) {
 func (r *report) envError(i int, msg string) {
 	r.envErr = true
 	r.emit(i, event{err: true, text: msg})
+}
+
+// ruleError reports a TreeRule or RootRule error: a *RowError as its row on stdout, any other as
+// "<lint>: <error>" on stderr; either fails the scan closed (exit 3).
+func (r *report) ruleError(i int, err error) {
+	var re *RowError
+	switch {
+	case errors.As(err, &re):
+		r.envErr = true
+		r.emit(i, event{text: re.Row})
+	case err != nil:
+		r.envError(i, err.Error())
+	}
 }
 
 // findings fills each finding's Rule, an Unset Severity and an empty Path, then emits its row.
@@ -351,7 +364,7 @@ func Command(specs ...Spec) cli.Main {
 		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
 			sp := selected[0]
-			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict}
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict, Named: sp.ValuedNamed}
 		}
 		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {
@@ -369,10 +382,12 @@ func Command(specs ...Spec) cli.Main {
 		}
 		if len(selected) == 1 && args[0] != "--all" {
 			if c, ok := selected[0].rule().(Configurer); ok {
-				if err := c.Configure(a); err != nil {
+				r, err := c.Configure(a)
+				if err != nil {
 					fmt.Fprint(s.Err, err)
 					return 3
 				}
+				selected = []Spec{selected[0].withRule(r)}
 			}
 		}
 		return Run(selected, name, a, s)

@@ -792,12 +792,12 @@ type configFake struct {
 	seen *string
 }
 
-func (r configFake) Configure(a Args) error {
+func (r configFake) Configure(a Args) (Configured, error) {
 	*r.seen = a.Option
 	if a.Option == "bad" {
-		return errors.New("lint-c: --map file not found: bad\n")
+		return nil, errors.New("lint-c: --map file not found: bad\n")
 	}
-	return nil
+	return r, nil
 }
 
 // TestConfigure: a rule run alone that implements Configurer gets the parsed Args after the root check
@@ -908,7 +908,10 @@ type valuesFake struct {
 	seen *[]string
 }
 
-func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }
+func (r valuesFake) Configure(a Args) (Configured, error) {
+	*r.seen = a.Values["--table"]
+	return r, nil
+}
 
 // xmlFake is a Rule whose Check fails with a positioned XML error, as an internal/xmlsrc consumer does.
 type xmlFake struct{ fakeRule }
@@ -1042,5 +1045,21 @@ func TestFileFirstRunsOnlyAlone(t *testing.T) {
 	s, o, _ = stdio()
 	if code := main([]string{"lint-j", root + "/A.java", root}, s); code != 0 || o.String() != "WARN  lint-j  "+root+"/A.java:1  first\nSUMMARY  lint-j  files=1\n" {
 		t.Errorf("alone: exit %d out %q", code, o)
+	}
+}
+
+// TestJoinedEmptyRoot: a Spec.Joined TreeRule that finds nothing to check over every root (ErrEmptyRoot)
+// prints its EmptyError row for each root, as the per-root path prints it for one, and exits 3; its
+// findings and the error text never print.
+func TestJoinedEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "x\n"})
+	b := tree(t, map[string]string{"B.java": "x\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Joined, sp.EmptyError = true, EmptyRow{Msg: "nothing joined"}
+	s, o, e := stdio()
+	code := Run([]Spec{sp}, "lint-t", Args{Roots: []string{a, b}}, s)
+	want := "ERROR  lint-t  " + a + "  nothing joined\nERROR  lint-t  " + b + "  nothing joined\n"
+	if code != 3 || o.String() != want || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and %q", code, o, e, want)
 	}
 }

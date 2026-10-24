@@ -1,0 +1,27 @@
+-- args --
+@DIR@/audit-string-decoy
+-- want --
+exit 0
+WARN  lint-write-path  @DIR@/audit-string-decoy/src/com/x/BPanelServlet.java:3  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+-- stderr --
+-- .git/HEAD --
+x
+-- audit-string-decoy/docs/write-path-matrix.md --
+# Write-Path Matrix
+| Slot | Writer | Timing | Test |
+|------|--------|--------|------|
+| `setpoint` | Dashboard | mid-cycle | w1_setpoint |
+-- audit-string-decoy/src/com/x/BPanelServlet.java --
+package com.x;
+public class BPanelServlet extends BWebServlet {
+  public void doPost(WebOp op) throws Exception {
+    BComponent target = resolve(op);
+    target.set("setpoint", BDouble.make(parse(op)), cx(op));
+    log("TODO: appendAudit( once the store exists");   // a string mention is not an audit call
+    respond(op, "{\"ok\":true}");
+  }
+}
+-- audit-string-decoy/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

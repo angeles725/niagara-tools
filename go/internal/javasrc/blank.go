@@ -107,3 +107,27 @@ func pad(b *strings.Builder, fill byte, n int) {
 		b.WriteByte(fill)
 	}
 }
+
+// MaskLine is BlankLine with each removed literal byte replaced by a space, so every byte keeps its index
+// (a caller that finds a bracket or comma in the masked line slices the original line at the same index).
+func MaskLine(s string) string {
+	b := []byte(s)
+	var quote byte
+	for j := 0; j < len(b); j++ {
+		switch c := b[j]; {
+		case quote != 0 && c == '\\':
+			b[j] = ' '
+			if j+1 < len(b) {
+				j++
+				b[j] = ' '
+			}
+		case quote != 0 && c == quote:
+			quote = 0
+		case quote != 0:
+			b[j] = ' '
+		case c == '"' || c == '\'':
+			quote = c
+		}
+	}
+	return string(b)
+}

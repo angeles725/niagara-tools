@@ -1,0 +1,81 @@
+-- args --
+@DIR@/aud
+-- want --
+exit 0
+WARN  lint-write-path  @DIR@/aud/src/P1.java:2  write handler doPut: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/P2.java:2  write handler doPatch: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/P3.java:2  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/P5.java:4  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/P6.java:2  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/Q3.java:2  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+WARN  lint-write-path  @DIR@/aud/src/Q4.java:2  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+-- stderr --
+-- .git/HEAD --
+x
+-- aud/docs/write-path-matrix.md --
+| `setpoint` | a |
+-- aud/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- aud/src/P1.java --
+class P1 {
+  public void doPut(WebOp op) {}
+  void doDelete (WebOp op) {}
+}
+-- aud/src/P2.java --
+class P2 {
+  void  doPatch(WebOp op) { WriteAudit.record(op); }
+}
+-- aud/src/P3.java --
+class P3 {
+  void doPost(WebOp op) { x = getAudit(); y = isAudited(); }
+}
+-- aud/src/P4.java --
+class P4 {
+  void helper() { appendAudit (1); }
+  void doPost(WebOp op) {}
+}
+-- aud/src/P5.java --
+class P5 {
+  /* start
+  appendAudit(1);
+  */ void doPost(WebOp op) {}
+}
+-- aud/src/P6.java --
+class P6 {
+  char c = '"'; void doPost(WebOp op) { auditLog.record(1); }
+}
+-- aud/src/P7.java --
+class P7 {
+  String s = "a\"/*"; void doPost(WebOp op) { audit(1); }
+}
+-- aud/src/P8.java --
+class P8 {
+  // void doPost(WebOp op) {}
+  void dopost(WebOp op) {}
+  void doGet(WebOp op) {}
+}
+-- aud/src/P9.java --
+class P9 {
+  void/*x*/doPost(WebOp op) {}
+}
+-- aud/src/Q1.java --
+class Q1 {
+  void doPost(WebOp op) { log("x"); getaudit(); }
+}
+-- aud/src/Q2.java --
+class Q2 {
+  void doPost(WebOp op) {}
+  void doPut(WebOp op) {}
+  void x() { new Audit(); }
+}
+-- aud/src/Q3.java --
+class Q3 {
+  void doPost(WebOp op) { audit
+  (1); }
+}
+-- aud/src/Q4.java --
+class Q4 {
+  void doPost(WebOp op) {}
+}

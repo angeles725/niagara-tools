@@ -321,6 +321,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-fail-open-pipeline-checks.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-kit-cite-resolve.md | kit | 2026-10-24 | pending | 1 |
 | 2026-10-24-go-lint-agent-on-shape.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-arbitrary-ord.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-bformat-call.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-delays-method-scope.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-duplicate-helper.md | kit | 2026-10-24 | pending | 3 |
@@ -339,6 +340,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-lint-status-parity.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-uberjar-api.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-wb-threading.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-write-path.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-ws-placement.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-split-package-check.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-issue-459-truth.md | kit | 2026-10-24 | pending | 2 |
@@ -348,5 +350,6 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | pending | 1 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-slotomatic-skip-fail-open.md | kit | 2026-10-24 | folded | 1 |
+| 2026-10-24-r10-slotomatic-skip-srctest.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-stale-kit-resolution.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-user-level-gradle-keys.md | kit | 2026-10-24 | folded | 2 |
