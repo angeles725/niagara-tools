@@ -1,0 +1,15 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "Cinco" not found in the UI source
+SUMMARY  lint-manual-labels  checked=6 missing=1
+-- stderr --
+-- docs/m.md --
+"Uno" "Dos" "Tres Cuatro" "Cinco" "b && c" "Seis"
+-- ui/a.html --
+a>Uno<b>>Dos<<c>Tres
+Cuatro</c> >Cinco
+-- ui/b.js --
+if (a>b && c<d) x = 1; y = "Seis";

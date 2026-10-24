@@ -43,10 +43,11 @@ var regexAfter = map[string]bool{"return": true, "typeof": true, "case": true, "
 	"yield": true, "await": true}
 
 type scanner struct {
-	src  string
-	i    int
-	line int
-	out  []Token
+	src   string
+	i     int
+	line  int
+	out   []Token
+	blank [][2]int // the comment and literal-content byte spans Code blanks
 }
 
 // Tokens tokenizes lines (as javasrc.Lines splits them; a trailing "\r" is whitespace).
@@ -54,6 +55,23 @@ func Tokens(lines []string) []Token {
 	s := &scanner{src: strings.Join(lines, "\n")}
 	s.run(false)
 	return s.out
+}
+
+// Code is lines with every comment and the contents of every string, template and regex literal replaced by
+// blanks (quotes, backticks and slashes kept, line breaks kept), so each line keeps its length and a pattern
+// matched on it sees code only: a "//" in a string, a call quoted in a template or a brace in a regex is gone.
+func Code(lines []string) []string {
+	s := &scanner{src: strings.Join(lines, "\n")}
+	s.run(false)
+	b := []byte(s.src)
+	for _, sp := range s.blank {
+		for k := sp[0]; k < sp[1] && k < len(b); k++ {
+			if b[k] != '\n' {
+				b[k] = ' '
+			}
+		}
+	}
+	return strings.Split(string(b), "\n")
 }
 
 // run scans tokens until the input ends or, inside a template substitution (sub), its closing }.
@@ -72,20 +90,28 @@ func (s *scanner) run(sub bool) {
 			for s.i < len(s.src) && s.src[s.i] != '\n' {
 				s.i++
 			}
+			s.blank = append(s.blank, [2]int{start, s.i})
 		case strings.HasPrefix(s.src[s.i:], "/*"):
 			end := strings.Index(s.src[s.i+2:], "*/")
 			if end < 0 {
 				end = len(s.src) - s.i - 4
 			}
 			s.skip(s.i + 2 + end + 2)
+			s.blank = append(s.blank, [2]int{start, s.i})
 		case c == '"' || c == '\'':
-			s.emit(String, line, s.src[start+1:s.str(c)])
+			end := s.str(c)
+			s.blank = append(s.blank, [2]int{start + 1, end})
+			s.emit(String, line, s.src[start+1:end])
 		case c == '`':
 			s.i++
-			s.emit(Template, line, s.src[start+1:s.template()])
+			end := s.template()
+			s.blank = append(s.blank, [2]int{start + 1, end})
+			s.emit(Template, line, s.src[start+1:end])
 		case c == '/' && s.regexOK():
 			s.regex()
-			s.emit(Regex, line, s.src[start:s.i])
+			text := s.src[start:s.i]
+			s.blank = append(s.blank, [2]int{start + 1, start + max(strings.LastIndexByte(text, '/'), 1)})
+			s.emit(Regex, line, text)
 		case ident(c):
 			for s.i < len(s.src) && (ident(s.src[s.i]) || digit(s.src[s.i])) {
 				s.i++

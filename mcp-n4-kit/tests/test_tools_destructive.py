@@ -1048,6 +1048,33 @@ class TestRollback(DestructiveCase):
                                "inverse": [], "accepted": None})
         self.assertEqual(self.rollback(out["batch_id"])["verdict"], "verified")
 
+    def append_journal(self, data):
+        with open(os.path.join(self.state_dir, "journal.jsonl"), "ab") as fh:
+            fh.write(data)
+
+    def test_a_journal_line_whose_batch_is_unknown_refuses_every_rollback(self):  # issue #448
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst")
+        self.append_journal(b'{"batch_id": "\xff"}\n{"batch_id": [1], "phase": "intent", '
+                            b'"rollback_of": "%s"}\n' % out["batch_id"].encode())
+        text = self.err("n4_rollback", batch_id=out["batch_id"])
+        self.assertIn(safety.REASON_JOURNAL_UNREADABLE, text)
+        self.assertIn("line(s) 3 (UnicodeDecodeError), 4 (TypeError)", text)
+        self.assertEqual(self.children(), ["Pump"])
+
+    def test_an_unreadable_line_of_another_batch_does_not_block_a_rollback(self):
+        out = self.run_write("n4_create_component", parent_ord=FOLDER, name="Pump",
+                             type="kitControl:NumericConst")
+        self.append_journal(b'{"batch_id": [1], "phase": "intent"}\n'
+                            b'{"batch_id": "%s", "phase": "component-intent", "ops": 7}\n'
+                            % (b"ee" * 16))
+        self.assertEqual(self.rollback(out["batch_id"])["verdict"], "verified")
+        self.assertIn(safety.REASON_JOURNAL_UNREADABLE,
+                      self.err("n4_rollback", batch_id="ee" * 16))
+
+    def test_a_batch_id_with_a_trailing_newline_is_malformed(self):
+        self.assertIn("must be a 32-character", self.err("n4_rollback", batch_id="f" * 32 + "\n"))
+
     def test_unknown_batch_is_refused(self):
         self.assertIn("unknown batch", self.err("n4_rollback", batch_id="f" * 32))
 
@@ -1231,7 +1258,7 @@ class TestListBatches(DestructiveCase):
                          back["batch_id"])
         self.assertEqual(out["total"], 3)
 
-    @go_server.go_twin("journal", "internals")
+    @go_server.go_twin("readtools", "internals")
     def test_it_is_read_only_and_works_without_a_session(self):
         self.srv.ctx.close()
         self.assertEqual(self.ok("n4_list_batches")["batches"], [])

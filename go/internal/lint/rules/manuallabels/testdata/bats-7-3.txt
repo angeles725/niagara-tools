@@ -1,0 +1,16 @@
+-- args --
+@DIR@/docs/manual.md
+@DIR@/no-such-dir
+-- want --
+exit 3
+-- stderr --
+lint-manual-labels: not a directory: @DIR@/no-such-dir
+-- docs/manual.md --
+x
+-- rt/module.lexicon --
+pressure=Presi\u00f3n de succi\u00f3n
+-- ui/rc/app.js --
+var title = "Modo   manual";
+-- ui/rc/index.html --
+<button id="save">Guardar</button>
+<label>Temp. de corte</label>

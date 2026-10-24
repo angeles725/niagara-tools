@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+class A {
+// Commissioning link from the control
+@NiagaraProperty(name = "label", type = "baja:String", defaultValue = "BString.make(\"READONLY\")", flags = Flags.SUMMARY)
+@NiagaraProperty(name = "hoaNote", type = "baja:String", defaultValue = "BString.make(\"TRANSIENT\")", flags = Flags.OPERATOR)
+}

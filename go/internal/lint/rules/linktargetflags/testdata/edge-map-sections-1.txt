@@ -1,0 +1,43 @@
+-- args --
+--wiring-map
+@DIR@/map.md
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/M.java:3  LTF1: link-in target "t3" (wiring-map Table 2) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/M.java:4  LTF1: link-in target "sub3" (wiring-map Table 2) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- map.md --
+# Wiring map
+## Table 1 — facade → control
+| Facade slot | Name | Source RT slot |
+|---|---|---|
+| `t1` | x | `s` |
+## Table 2 — SUMMARY display slots (control → facade)
+| Facade slot | Name | Source RT slot |
+|---|---|---|
+| `t3` | x | `s` |
+| `evap-2` | x | `s` |
+| plain | x | `s` |
+| `dash` | x | — |
+| `bad` | x | (N/A) |
+### Table 2b
+| `sub3` | x | `s` |
+## Notes
+| `two` | x | `s` |
+## Table 2 — again
+| Slot | Source A | Source B | X |
+|---|---|---|---|
+| `two` | `a` | | |
+| `wide` | x |
+-- root/com/x/M.java --
+class M {
+@NiagaraProperty(name = "t1", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "t3", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "sub3", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "two", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "bad", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "wide", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "plain", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+@NiagaraProperty(name = "dash", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

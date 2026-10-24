@@ -1,0 +1,49 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/c1.js:1  setInterval/setTimeout poll loop 'tick()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/c2.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/c3.js:4  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/c4.js:3  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/c5.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/c9.js:4  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+-- stderr --
+-- c1.js --
+setTimeout( tick , 1000);
+function tick() { try { go(); } catch (e) { } }
+-- c2.js --
+setInterval(function () { go(); }, 1000);
+setInterval(poll, 1000);
+async function poll() { try { await go(); } catch(e) {} }
+-- c3.js --
+const poll = async () => {
+  try { await go(); } catch (e) {}
+};
+setInterval(poll, 1000);
+-- c4.js --
+let poll = x =>
+  fetch(x).catch(e => 0);
+setInterval(poll, 1000);
+function later() { lastOkAt = Date.now(); }
+-- c5.js --
+var poll = function(a) { if (a) { b(); } else { c(); } d().catch(e => 0); };
+setInterval(poll, 9);
+-- c6.js --
+setInterval(poll, 1000);
+-- c7.js --
+function poll() {
+  const s = "}";
+  x();
+}
+function other() { y().catch(e => 0); }
+setInterval(poll, 1);
+-- c8.js --
+setInterval(poll, 1000); setTimeout(other, 1);
+function other() { a().catch(e => 0); }
+function poll() { b(); }
+-- c9.js --
+const poll = () => fetch("/x")
+  .then(r => r.json())
+  .catch(e => 0);
+setInterval(poll, 1000);

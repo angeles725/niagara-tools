@@ -1,0 +1,15 @@
+declared difference: truth fix 2026-10-24, code elements of an HTML manual are code, not labels
+-- args --
+@DIR@/docs/m.html
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=1 missing=0
+-- stderr --
+-- docs/m.html --
+<p>"Guardar"</p>
+<pre><code>{"value": 5}</code></pre>
+<p><code>"Corte"</code></p>
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

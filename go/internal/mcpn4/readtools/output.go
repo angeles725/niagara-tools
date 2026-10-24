@@ -2,8 +2,6 @@ package readtools
 
 import (
 	"errors"
-	"fmt"
-	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -54,40 +52,11 @@ func writeFailed(path string, err error) error {
 	return toolError("output_file %s could not be written (%s)", path, why)
 }
 
-// isDir is os.path.isdir: false on any stat error.
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
-
-// makedirs is os.makedirs(name, mode, exist_ok=True): missing parents get 0777 (less the
-// umask), name gets mode.
-func makedirs(name string, mode fs.FileMode) error {
-	head := safety.Dirname(name)
-	if tail := name[len(head):]; strings.Trim(tail, "/") != "" && head != "" && head != name {
-		if _, err := os.Lstat(head); err != nil {
-			if err := makedirs(head, 0o777); err != nil && !errors.Is(err, fs.ErrExist) {
-				return err
-			}
-		}
-	}
-	if err := os.Mkdir(name, mode); err != nil && !isDir(name) {
-		return err
-	}
-	return nil
-}
-
 // privateDirs is _private_dirs: the state dir and the result subdir of path, created 0700 when
 // missing (an existing one is never chmodded).
 func privateDirs(path string) error {
 	for _, dir := range []string{safety.Dirname(safety.Dirname(path)), safety.Dirname(path)} {
-		if isDir(dir) {
-			continue
-		}
-		if err := makedirs(dir, 0o700); err != nil {
-			return err
-		}
-		if err := os.Chmod(dir, 0o700); err != nil {
+		if err := safety.PrivateDir(dir); err != nil {
 			return err
 		}
 	}
@@ -130,31 +99,6 @@ func csvLine(cells []string) string {
 	return strings.Join(out, ",") + "\r\n"
 }
 
-// utf8Strict is str.encode("utf-8") for one written chunk: a lone surrogate is the
-// UnicodeEncodeError (a ValueError) naming its position, or the run of them, in the chunk.
-func utf8Strict(s string) error {
-	start, end, first := -1, -1, rune(0)
-	for i, n := 0, 0; i < len(s) && (start < 0 || end == n); n++ {
-		r, size := pyjson.DecodeRune(s[i:])
-		i += size
-		switch surrogate := r >= 0xd800 && r <= 0xdfff; {
-		case surrogate && start < 0:
-			start, end, first = n, n+1, r
-		case surrogate:
-			end = n + 1
-		}
-	}
-	switch {
-	case start < 0:
-		return nil
-	case end == start+1:
-		return &pyjson.ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode character '\\u%04x' in position %d: "+
-			"surrogates not allowed", first, start)}
-	}
-	return &pyjson.ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode characters in position %d-%d: "+
-		"surrogates not allowed", start, end-1)}
-}
-
 // writeRows is _write_output: the rows as CSV (header first) or as the JSON of base, query,
 // columns and rows, by the file's extension.
 func writeRows(path, base, query string, columns []string, rows []*pyjson.Object) error {
@@ -177,7 +121,7 @@ func writeRows(path, base, query string, columns []string, rows []*pyjson.Object
 		}
 		for _, cells := range lines {
 			line := csvLine(cells)
-			if err := utf8Strict(line); err != nil {
+			if err := pyjson.EncodeUTF8(line); err != nil {
 				return err
 			}
 			if _, err := f.WriteString(line); err != nil {

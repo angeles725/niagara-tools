@@ -9,13 +9,15 @@ flows THROUGH all three. This file says WHEN each applies, WHICH model runs each
 
 | Tool | Use it to | Produces | Marker of "done" |
 |---|---|---|---|
-| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: research-sdd METHODOLOGY §3/§8/§11]` |
+| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: ~/investigacion/sdd-investigacion/research-sdd/METHODOLOGY.md §3 Provenance markers, §8 Stopping criterion, §11 Self-verification contract]` |
 | **gentle SDD** | turn a decided change into a durable, reviewable contract | `proposal → spec → design → tasks`, ledgered attempts | spec requirements have scenarios; tasks map to spec; verify passes `[ev: CLAUDE.md SDD workflow]` |
 | **BUILD-LOOP** (this kit) | build / verify / deploy an actual N4 module | a signed Java-8 jar past the verify gate + a per-module `BUILD-STATE` envelope | `verify-module.sh` passes; the HARD close gate (§7) is satisfied `[ev: BUILD-LOOP.md §5/§7]` |
 
 ## 2. Model table
 
-Gentle-SDD phase models are fixed by the CLAUDE.md **Model Assignments** table `[ev: CLAUDE.md Model Assignments]`:
+Gentle-SDD phase models are fixed by the `model:` frontmatter of the installed gentle-ai agent definitions
+(`~/.claude/agents/sdd-*.md`, `jd-*.md`: user-level, outside this repo; the repo `CLAUDE.md` has no model table);
+the generic-delegation default row is team practice `[ev: ~/.claude/agents/ model: frontmatter, read 2026-10-24]`:
 
 | Phase | Model | Why |
 |---|---|---|
@@ -34,7 +36,8 @@ Gentle-SDD phase models are fixed by the CLAUDE.md **Model Assignments** table `
 **research-sdd investigation lanes** (the corpus-block authoring that feeds the pipeline) run on **opus** — that
 is a heavier reasoning task than gentle-SDD's `sdd-research` PHASE (sonnet), which only collects external
 evidence. Do not conflate the two: `sdd-research` = a sonnet sub-agent phase; a research-sdd lane = an opus
-authoring session. `[ev: CLAUDE.md Model Assignments; team practice campaign-8]`
+authoring session. `[ev: ~/.claude/agents/sdd-research.md model: sonnet]` (opus for research-sdd lanes is campaign-8 team practice
+with no written record [INFER])
 
 ## 3. Delegation triggers
 
@@ -92,7 +95,7 @@ failed push, inspect `HEAD..origin/<branch>` before retrying, and never force ov
 ## 4. Escalation gate
 
 Boundaries between concurrent lanes are enforced by the multi-session rule: **check the tree before editing a
-shared file — a dirty working tree is a peer's live work, off-limits.** `[ev: retro dashboardpan-2d-to-3d-port · METHODOLOGY.md §Multi-session coordination]`
+shared file — a dirty working tree is a peer's live work, off-limits.** `[ev: retro dashboardpan-2d-to-3d-port-multi-session-coordination-retro · METHODOLOGY.md §Multi-session coordination]`
 
 The concurrent-lane roles here (coordinator / researcher / QA) are the build-n4-module half of a shared
 three-session template. The research-sdd half lives in `angeles725/sdd-investigacion` issue #867
@@ -125,7 +128,7 @@ returns the same lineage's START, and its exact replay (`replayed`) binds the ag
 3. **RED → apply (GREEN).** `sdd-apply` (sonnet) implements to green; the automated half of the gate is
    `verify-module.sh` — a jar that has not passed it does not go to a station. `[ev: BUILD-LOOP.md §5]`
 4. **Apply → retro.** The run writes its retro via `new-retro.sh` (the per-run precondition, below), capturing the
-   proposed kit delta as `propose-never-apply`. `[ev: retro research-sdd-retro-automation] [ev: retro campaign8-retro-loop]`
+   proposed kit delta as `propose-never-apply`. `[ev: retro research-sdd-retro-automation-and-campaign8-backlog-retro] [ev: retro campaign8-retro-loop]`
 
 ## 6. Keep-from-kit
 
@@ -184,7 +187,7 @@ Every run ENDS by writing its retro; the retro is a precondition for "done", not
 WHY this is a hard loop and not a manual habit: §-close retros fire only at STOP / focus-close, but a continuous
 lead-delegated chain (one unit → next task → next unit) NEVER reaches a STOP, so the trigger never arms — observed
 live at ~8:1 (units landed : retros written) until the operator asked why. The debt counter makes the retro
-un-skippable, same shape as the verify gate. `[ev: retro research-sdd-retro-automation §A]`
+un-skippable, same shape as the verify gate. `[ev: retro research-sdd-retro-automation-and-campaign8-backlog-retro §A]`
 
 ## 9. Incident journal
 

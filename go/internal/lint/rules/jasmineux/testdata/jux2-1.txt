@@ -1,0 +1,8 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-jasmine-ux  @DIR@  ux ships src/rc but no srcTest/rc/spec/*.js
+-- stderr --
+-- src/rc/index.html --
+<html></html>

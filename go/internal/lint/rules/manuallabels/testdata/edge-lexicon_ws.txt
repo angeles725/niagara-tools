@@ -1,0 +1,18 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=3 missing=0
+-- stderr --
+-- docs/m.md --
+"Uno" "Dos" "Tres"
+-- ui/a.lexicon --
+
+
+   
+	k=Uno
+k2=Dos
+ k3 =
+#x
+k4=Tres  

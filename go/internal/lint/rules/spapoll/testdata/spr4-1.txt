@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/rc/index.html --
+<script>
+function once() {
+  try { doThing(); } catch (e) { console.error(e); }
+}
+once();
+</script>

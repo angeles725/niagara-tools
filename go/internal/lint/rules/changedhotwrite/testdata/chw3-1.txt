@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public void changed(Property p, Context cx) {
+    if (Clock.millis() - lastRun < 200) return;
+    if (p == a || p == b || p == c || p == d || p == e || p == f || p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}

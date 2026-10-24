@@ -1,8 +1,9 @@
+declared difference (truth fix, try scope; truth-try-scope-1): the parse at line 9 is 6 lines into its own
+open try block, so it no longer FAILs input-400 (the 5-line look-back missed the try).
 -- args --
 @DIR@/m
 -- want --
 exit 1
-FAIL  input-400  I.java:9  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
 FAIL  input-400  I.java:12  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
 -- stderr --
 -- m/I.java --

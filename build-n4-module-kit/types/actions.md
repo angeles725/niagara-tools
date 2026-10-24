@@ -41,7 +41,7 @@ first and the Context one never runs. A check for that pair is owed as Go lint G
 **Gotcha:** every timer callback and every `ASYNC` action in the VM shares that one engine
 thread. Blocking inside an `ASYNC` action (HTTP call, disk I/O, `Thread.sleep`, a lock) stalls
 **all** timers and other async actions station-wide. Do blocking work on a `BWorker`/off-engine
-thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=Flags.ASYNC` on escalateAlarms/cleanup]
+thread, never in an `ASYNC` handler (alarm-rt `escalateAlarms` declares flags 2068 and schedule-rt `cleanup` flags 16, both carrying `Flags.ASYNC` = 16). [ev: devguide `execution.txt`; code alarm-rt BAlarmService escalateAlarms 2068; code schedule-rt BControlSchedule cleanup]
 
 **Which thread, exactly** (baja and fox-rt 4.14.0.162 vineflower; 4.15 not verified) `[ev: retro n4-course-threading-jobs-doctrine Δ3]` `[ev: corpus B1238 §1238.3-§1238.5]`:
 - A plain action invoked from Workbench runs inline on that session's ONE serial `Fox:Dispatcher:<hash>` thread
@@ -77,7 +77,7 @@ thread, never in an `ASYNC` handler. [ev: devguide `execution.txt`; code `flags=
 
 **`CONFIRM_REQUIRED`** is the right guard for destructive / irreversible actions — a
 `faultReset`, `resetStatistics`, `clearLastTimestamp`, `changeDeviceUuid`. Zero-cost safety
-against a fat-finger invoke. [ev: code `Flags.java` CONFIRM_REQUIRED=0x80; real uses resetStatistics/changeDeviceUuid]
+against a fat-finger invoke. [ev: code `Flags.java` CONFIRM_REQUIRED=0x80; code driver-rt javax/baja/driver/util/BPollScheduler.java:136 resetStatistics; code bacnet-rt javax/baja/bacnet/export/BLocalBacnetDevice.java:609 changeDeviceUuid]
 
 **`NO_AUDIT`** belongs on internal callback actions (a `HIDDEN|ASYNC` timer tick that fires
 every cycle). Without it, a per-minute callback **floods the audit trail**. Tridium's own code
@@ -103,7 +103,7 @@ public BBoolean doAckAlarm(BAlarmRecord r) { ... }
 - `parameterType` / `returnType` are ORD type spec strings (`"baja:RelTime"`, `"BAlarmRecord"`).
 - **`defaultValue` is mandatory when `parameterType` is present** — omit it and slot-o-matic
   errors at build. A `BStruct` parameter renders in Workbench as a multi-field argument dialog [INFER].
-[ev: devguide `slot-o-matic.txt`; code ackAlarm(BAlarmRecord)]
+[ev: devguide `slot-o-matic.txt`; code alarm-rt BArchiveAlarmProvider ackAlarm BAlarmRecord BBoolean]
 
 ## 5 · Actions vs `@NiagaraTopic`
 

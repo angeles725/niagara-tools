@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/D.java --
+class D {
+  public void doInvoke() {
+    // getNavChildren() is done in the job below
+    log("getNavNodes");
+  }
+}

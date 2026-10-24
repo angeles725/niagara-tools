@@ -13,7 +13,8 @@
 # Context leak shapes the kit already lints. Fix: leading-edge time debounce on the callback
 # path (Clock.millis() gate), or move periodic writes to a tick and keep changed() input-only.
 # See types/issues-and-gotchas.md §I1. [ev: retro live-diagnosis-hardening-deltas Δ1]
-# [ev: corpus B1158; BCompressorControl.java:1850-1871,2019-2021]
+# Real shape: CompPan v2.1.0 BCompressorControl changed() lines 1850-1871, hours writes 2019-2021 (in no
+# client checkout now; B1158 quotes them). [ev: corpus B1158 §1158.2]
 #
 # Usage:  lint-changed-hot-write.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot-dirs pruned) for a `changed(Property <name>, ...)`
@@ -24,130 +25,45 @@
 #   or a zero-arg `execute()` method it calls.
 #   Row:  WARN  lint-changed-hot-write  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java is `ERROR  lint-changed-hot-write  <root>  no files to scan (K20: wrong path or
+# empty scaffold)` on stdout, exit 3.
+#
+# Implementation: rule package go/internal/lint/rules/changedhotwrite on the shared engine go/internal/lint (walker,
+# parser, row formatter; go/README.md), sharing changed(), bodies, callees and properties with its sibling
+# lint through go/internal/lint/rules/hotwrite. This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-changed-hot-write <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+# Truth fix T1 (2026-10-24): code is read with comments blanked and literal contents removed (go/internal/javasrc
+# Strip + BlankLiterals, shared with the sibling lint): the bash/awk cut each line at its first "//" (inside a
+# string too) and read block comments, Javadoc and strings as code, so a Javadoc `{@code execute()}` was taken
+# for execute()'s declaration and a "}" in a string ended a body early.
+# Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
+# method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
+# as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
+# Truth fix T5 (2026-10-24, equal-value skip, shared with lint-persist-hot-write through hotwrite.Hot): the
+# persisted write that qualifies a hot changed() must be one that can dirty the station every cycle. Baja skips a
+# write of an equal simple value (ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set; niagara-research
+# organized/baja/baja/vineflower/com/tridium/sys/schema/), so a simple-typed slot counts only when its value is
+# computed fresh (a clock read, its own getter in arithmetic, a field accumulated by a non-literal delta), and no
+# write counts under an if that tests the slot's getter or a change flag; a non-simple value always counts.
+# Truth fix T4 (2026-10-24): every `Property <name> = newProperty(` of a line is read, its flags from its own
+# "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
+# flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: CHW9 -- ignoring Baja's equal-value skip counts setXLocked(m.locked[0]) as a per-cycle persisted write
+# Mutation: CHW8 -- reading one declaration per line, flags after the last newProperty(, misses bHours and misreads its flags
+# Mutation: CHW7 -- taking the first execute() not followed by ";" as the declaration reads if (execute()) instead of the body
+# Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs
 # Mutation: CHW-reset -- a bare `set<X>(` substring also matches `reset<X>(` and false-WARNs
 # Mutation: CHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: CHW-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-changed-hot-write first 'usage: lint-changed-hot-write.sh [--strict] <src-root>' "$@"
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  # Strip // line comments (block comments not handled -- advisory heuristic, documented).
-  for (i = 1; i <= NR; i++) { ln = lines[i]; sub(/\/\/.*$/, "", ln); lines[i] = ln }
-
-  # 1. Locate a `changed(Property <name>` override signature.
-  changed_line = 0; pname = ""
-  for (i = 1; i <= NR; i++) {
-    if (match(lines[i], /changed[[:space:]]*\([[:space:]]*Property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
-      seg = substr(lines[i], RSTART, RLENGTH)
-      sub(/^.*Property[[:space:]]+/, "", seg)
-      pname = seg
-      changed_line = i
-      break
-    }
-  }
-  if (changed_line == 0) exit 0
-
-  # 2. Brace-depth extract the changed() body.
-  depth = 0; started = 0; changed_end = 0
-  for (i = changed_line; i <= NR; i++) {
-    ln = lines[i]
-    for (ci = 1; ci <= length(ln); ci++) {
-      c = substr(ln, ci, 1)
-      if (c == "{") { depth++; started = 1 }
-      else if (c == "}") depth--
-    }
-    if (started && depth == 0) { changed_end = i; break }
-  }
-  if (changed_end == 0) exit 0
-  changed_body = ""
-  for (i = changed_line; i <= changed_end; i++) changed_body = changed_body "\n" lines[i]
-
-  # 3. Count `<pname> ==` branches (word-boundary via a leading non-identifier char).
-  cnt = 0; tmp = changed_body
-  while (match(tmp, "[^A-Za-z0-9_]" pname "[[:space:]]*==")) {
-    cnt++
-    tmp = substr(tmp, RSTART + RLENGTH)
-  }
-  if (cnt < 6) exit 0
-
-  # 4. Must call a heavy execute() control method.
-  if (index(changed_body, "execute()") == 0) exit 0
-
-  # 5. No rate guard in the changed() body.
-  if (index(changed_body, "Clock.millis(") > 0) exit 0
-  if (index(changed_body, "Clock.schedule") > 0) exit 0
-
-  # 6. Locate an execute() method DECLARATION (zero-arg). Distinguished from a CALL by what
-  #    immediately follows the "()" on the line: a call is "execute();" (trailing ';'); a
-  #    declaration is either bare (Allman '{' on the next line) or a one-liner "execute() { ... }".
-  exec_line = 0
-  for (i = 1; i <= NR; i++) {
-    probe = " " lines[i]
-    if (match(probe, /[^A-Za-z0-9_]execute[[:space:]]*\([[:space:]]*\)/)) {
-      trailing = substr(probe, RSTART + RLENGTH)
-      gsub(/^[[:space:]]*/, "", trailing)
-      if (substr(trailing, 1, 1) != ";") { exec_line = i; break }
-    }
-  }
-  exec_body = changed_body
-  if (exec_line > 0) {
-    depth = 0; started = 0; exec_end = 0
-    for (i = exec_line; i <= NR; i++) {
-      ln = lines[i]
-      for (ci = 1; ci <= length(ln); ci++) {
-        c = substr(ln, ci, 1)
-        if (c == "{") { depth++; started = 1 }
-        else if (c == "}") depth--
-      }
-      if (started && depth == 0) { exec_end = i; break }
-    }
-    if (exec_end > 0) {
-      exec_body = ""
-      for (i = exec_line; i <= exec_end; i++) exec_body = exec_body "\n" lines[i]
-    }
-  }
-
-  # 7. Collect NON-transient property names: `Property <name> = newProperty(<flags>, ...)`
-  #    where <flags> does not mention TRANSIENT (raw slot-o-matic form only, D-limitation).
-  n_nt = 0
-  for (i = 1; i <= NR; i++) {
-    ln = lines[i]
-    if (match(ln, /Property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*newProperty\(/)) {
-      nm = substr(ln, RSTART, RLENGTH)
-      sub(/[[:space:]]*=.*/, "", nm)
-      sub(/^.*Property[[:space:]]+/, "", nm)
-      rest = ln
-      sub(/^.*newProperty\(/, "", rest)
-      sub(/,.*/, "", rest)
-      if (index(rest, "TRANSIENT") == 0 && nm != "") {
-        n_nt++; nt_name[n_nt] = nm
-      }
-    }
-  }
-  if (n_nt == 0) exit 0
-
-  # 8. A non-transient property's setter reachable from changed() or its execute() callee.
-  wprop = ""
-  for (k = 1; k <= n_nt; k++) {
-    cap = toupper(substr(nt_name[k], 1, 1)) substr(nt_name[k], 2)
-    # anchored at an identifier boundary: `resetXHours(` is not the setter `setXHours(` (#151)
-    setter = "(^|[^A-Za-z0-9_])set" cap "[[:space:]]*\\("
-    if (exec_body ~ setter || changed_body ~ setter) { wprop = nt_name[k]; break }
-  }
-  if (wprop == "") exit 0
-
-  printf "WARN  lint-changed-hot-write  %s:%d  changed(%s) has %d '%s ==' branches guarding execute()," \
-    " no Clock.millis()/schedule rate guard, writes non-transient slot '%s' -- debounce the callback" \
-    " (leading-edge Clock.millis() gate) or move the periodic write to a tick\n", \
-    FILE, changed_line, pname, cnt, pname, wprop
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-changed-hot-write: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-changed-hot-write "$@"

@@ -36,7 +36,7 @@ annotation is comment proximity, not scope. The unlanded r10/recovery-path-go al
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | lint-servlet's input-400 check accepts a `try {` up to 5 lines back with no method boundary (servlet.go:174): bound it to the call's enclosing try block or scope through javasrc | `go/internal/lint/rules/servlet/servlet.go` | `[ev: go/internal/lint/rules/servlet/servlet.go input-400]` |
+| Δ1 | lint-servlet's input-400 check accepts a `try {` up to 5 lines back with no method boundary (servlet.go:174): bound it to the call's enclosing try block or scope through javasrc. DONE 2026-10-24 on r10/servlet-try-scope (retro go-lint-servlet-try-scope) | `go/internal/lint/rules/servlet/servlet.go` | `[ev: go/internal/lint/rules/servlet/servlet.go input-400]` |
 | Δ2 | The bash lints still on mb_parse (lint-bformat-call, lint-license-isoperational-gate, and lint-size / lint-ws-placement until their ports land) keep missing wrapped signatures; port them or give mb_parse the same back-scan | `build-n4-module-kit/toolbelt/lib/method-boundary.sh` | `[ev: go/internal/javasrc/javasrc.go wrappedEnd]` |
 | Δ3 | The unlanded r10/lint-size-go and r10/ws-placement-go goldens hold wrapped signatures (lint-size edge-methods, ws-placement edge-guard `wrapped()`): when they rebase on this, re-run and declare those rows | `go/internal/lint/rules/{size,wsplacement}/testdata` | `[ev: go/internal/javasrc/javasrc_test.go TestMethods]` |
 

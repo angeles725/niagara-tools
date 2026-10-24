@@ -134,8 +134,8 @@ Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side
 
 **Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
 `BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
-There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt 4.15.6.20
-`META-INF/module.xml:106`). Analytic values cannot be subscribed like points; the bindings poll them
+There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt
+`organized/analytics/analytics-rt/extracted/META-INF/module.xml:106`, the 4.14.0.162 copy; no 4.15.6.20 jar on this host). Analytic values cannot be subscribed like points; the bindings poll them
 (`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
 `analytic-ord-scheme` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
 `[deferred: retro devguide415-r2-security-tags-analytics Δ9]`
@@ -667,7 +667,7 @@ corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a
 So logic reads and writes `double`, never `BDouble`: the 4.15.6.20 course exam's `BLimiter` (`type = "BDouble"`,
 `defaultValue = "BDouble.DEFAULT"`) generated `newProperty(0, BDouble.DEFAULT.as(BDouble.class).getDouble(), null)`,
 `public double getMax() { return getDouble(max); }` and `public void setMax(double v) { setDouble(max, v, null); }`
-(`CertificationExam/…/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
+(`sources/n4-dev-course/solutions/cert-exam/Cristian_Angeles_Cert/Cristian_Angeles_Cert-rt/src/com/certexam/Cristian_Angeles_Cert/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
 
 **Declare paired bounds low before high.** Slot-o-Matic writes the `Property` fields in annotation order (`BLimiter`:
 annotations `out`, `in`, `max`, `min` at `:17-38`, fields at `:53`, `:76`, `:99`, `:122`), and the Type's slot list
@@ -1009,11 +1009,11 @@ public final class BLocalAlarmResolver extends BSingleton
 Rules:
 - **`extends BSingleton`** — `BIAgent` implementors that have no state extend `BSingleton`; stateful agents that need a lifecycle extend `BComponent` or `BAbstractService` instead.
 - **`@NiagaraSingleton`** — tells Slot-o-Matic to emit a `public static final INSTANCE` field next to `TYPE` (devguide `slot-o-matic.txt:427`).
-- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. Agents are registered on their target types in the module manifest and queried through the Registry (`getAgents(cx).filter(AgentFilter.is(T.TYPE))`, devguide `registry.txt:36-40`); `module.xml` carries `<agent><on type="baja:LocalHost"/></agent>` (alarm-rt `META-INF/module.xml:91-95`).
+- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. Agents are registered on their target types in the module manifest and queried through the Registry (`getAgents(cx).filter(AgentFilter.is(T.TYPE))`, devguide `registry.txt:36-40`); `module.xml` carries `<agent><on type="baja:LocalHost"/></agent>` (alarm-rt `organized/alarm/alarm-rt/extracted/META-INF/module.xml:91-95`).
 - **Private constructor + static `INSTANCE`** — enforces single-instance contract; the framework calls `INSTANCE` directly, never `new`.
 - **Does NOT appear in a palette** — a `BSingleton` cannot be dropped by the operator; it is registered in `module.xml` only. `[ev: code BLocalAlarmResolver.java]`
 
-## Lifecycle guard contract `[ev: code BColdRoom.java, BCompressorControl.java]`
+## Lifecycle guard contract `[ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BColdRoom.java:624-627,754-764; Cliente/panccadia-leon/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/BCompressorControl.java:3828-3845]`
 
 Every `changed` / `added` / `removed` override in a `BComponent` subclass must follow the same guard contract:
 
@@ -1058,7 +1058,7 @@ public void stopped() throws Exception {
 Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
-3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an `Exception` from `changed` does not kill the engine thread: `ComponentSlotMap.fireComponentEvent` catches it and only calls `printStackTrace()` (`com/tridium/sys/schema/ComponentSlotMap.java:770-823`, baja vineflower; corpus B1113), so the rest of the callback is skipped and the trace never reaches the module log. `[ev: code BColdRoom.java, BCompressorControl.java]`
+3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an `Exception` from `changed` does not kill the engine thread: `ComponentSlotMap.fireComponentEvent` catches it and only calls `printStackTrace()` (`com/tridium/sys/schema/ComponentSlotMap.java:770-823`, baja vineflower; corpus B1113), so the rest of the callback is skipped and the trace never reaches the module log. `[ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BColdRoom.java:641-648; Cliente/panccadia-leon/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/BCompressorControl.java:3838-3844]`
 4. **Reject a bad value by reverting it and logging why — never by throwing.** `changed()` runs after the value is
    already set, so a throw does not undo it; write the previous or safe value back and log the reason (the course's
    TLS-version slot: `READONLY` + `HIDDEN` + a reverting `changed()`). [CERT-a] corpus B1416 §1416.4 row d

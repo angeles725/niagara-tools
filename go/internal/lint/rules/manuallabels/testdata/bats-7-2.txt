@@ -1,0 +1,14 @@
+-- args --
+@DIR@/docs/missing.md
+@DIR@/ui
+-- want --
+exit 3
+-- stderr --
+lint-manual-labels: manual not found: @DIR@/docs/missing.md
+-- rt/module.lexicon --
+pressure=Presi\u00f3n de succi\u00f3n
+-- ui/rc/app.js --
+var title = "Modo   manual";
+-- ui/rc/index.html --
+<button id="save">Guardar</button>
+<label>Temp. de corte</label>

@@ -1,7 +1,7 @@
 # Module wiring — Gradle deps, type registration, agent-on, cross-module references
 
 How a module declares dependencies on other modules, registers its own types, and
-calls into types across module boundaries. `[ev: code nmodsreflow gradle.kts; corpus B802; real module.xml]`
+calls into types across module boundaries. `[ev: devguide build.txt:183-191; corpus B802; code nmodsreflow-rt module.xml]`
 
 ---
 
@@ -15,7 +15,7 @@ calls into types across module boundaries. `[ev: code nmodsreflow gradle.kts; co
 | `api(project(":mymod-rt"))` | Emits `<dependency name="mymod-rt" vendor="<OEM>" vendorVersion="<major.minor>"/>` | Sibling part dep; vendor and version stamped from `defaultModuleVersion` in the GROUP `build.gradle.kts`, NOT from the part's own `.kts` `[ev: nmodsreflow-ux module.xml; client-module-version-key memory]` |
 | `compileOnly("javax.servlet:...")` | **Nothing** in `module.xml` | Servlet API is provided by the container at runtime; compile-time only |
 | `compileOnly(files("$niagara_home/bin/ext/jetty-all-compact3-*.jar"))` | **Nothing** in `module.xml` | Niagara-private provided jar; no Maven coordinate → path-pinned; absent on JACE (Compact3 profile) |
-| `uberjar("group:artifact:version")` | **Nothing** in `module.xml` | Fat-jar embed built into the `com.tridium.niagara-module` plugin; simpler than Shadow for single-module bundling (no relocation); `third-party-libraries.md` teaches Shadow for shade/relocate scenarios `[ev: code nmodsreflow gradle.kts; WIR-G1]` |
+| `uberjar("group:artifact:version")` | **Nothing** in `module.xml` [INFER] | Fat-jar embed built into the `com.tridium.niagara-module` plugin ("automatically included in the generated module", devguide 4.15.6.20 `build.txt:203`); simpler than Shadow for single-module bundling (no relocation); `third-party-libraries.md` teaches Shadow for shade/relocate scenarios `[ev: devguide build.txt:187,203; odd/tasks/kit-improvement-candidates-2026-09-19.md § Part 1d (WIR-G1)]` |
 | `moduleTestImplementation(":test-wb")` | **Nothing** in `module.xml` (test scope only) | Feeds `moduleTestJar`; never appears in the shipping jar `[ev: corpus B958]` |
 
 **Version floor for Tridium deps:** Tridium modules are resolved from `niagara_home/!modules/`
@@ -108,7 +108,7 @@ public class BMyService extends BComponent {
 
 `Sys.loadType(BX.class)` is called once at class-init. The resulting `Type` object is the
 canonical identity token used everywhere — type comparisons, agent lookup, and ORD resolution
-all go through `BX.TYPE` [INFER]. `[ev: docSource baja/javax/baja/sys/Sys.java:443-446]`
+all go through `BX.TYPE` [INFER]. `[ev: organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/Sys.java:443-446]`
 
 ---
 
@@ -151,7 +151,7 @@ javac's annotation processor (not slot-o-matic) writes the identical `<agent><on
 (devguide `slot-o-matic.txt:193`).
 Both paths produce the same runtime behaviour — choose whichever is cleaner for
 the type. XML-first is typical for command types that carry no view class; `@AgentOn`
-fits plain Java-first authoring. `[ev: nmodsreflow module.xml]`
+fits plain Java-first authoring. `[ev: nmodsreflow-rt module.xml]`
 
 ---
 
@@ -165,7 +165,7 @@ Type t = Sys.getType("nmodsreflow:ReflowService");
 ```
 
 The 2-part colon form is the storable, version-stable ORD for types.
-The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: devguide build.txt:455-458,508; docSource baja/javax/baja/sys/Sys.java:421]`
+The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: devguide build.txt:455-458,508; organized/docSource/docSource-doc/extracted/baja/javax/baja/sys/Sys.java:421]`
 
 ### 4.2 Service lookup — same call, cross-module transparent
 
@@ -236,14 +236,14 @@ Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every re
 `module-include.xml` must resolve to a `<type name="Name">` registered in the module
 named `mod` (either in the same `module-include.xml` or in a declared `<dependency>`).
 A typo produces a **silent UI failure** — the agent simply never appears in Workbench,
-with no error at build or deploy time. `[ev: WIR-G6]`
+with no error at build or deploy time. `[ev: odd/tasks/kit-improvement-candidates-2026-09-19.md § Part 1d (WIR-G6)]`
 
 **`uberjar-vs-api-dep-conflict`** (proposed lint WIR-G7): a library declared both as
 `uberjar("group:artifact:ver")` and `api("group:artifact:ver")` creates a
 **classloader conflict**: the `api()` path emits a `<dependency>` entry that the NRE
 tries to satisfy with an external module, while the bundled copy is already present in
 your jar. The module's own classes load before a declared dependency's (B617 §617.2), so the `api()` copy is
-shadowed silently [INFER]; always choose one path. `[ev: WIR-G7; corpus B617 §617.2]`
+shadowed silently [INFER]; always choose one path. `[ev: odd/tasks/kit-improvement-candidates-2026-09-19.md § Part 1d (WIR-G7); corpus B617 §617.2]`
 
 ---
 

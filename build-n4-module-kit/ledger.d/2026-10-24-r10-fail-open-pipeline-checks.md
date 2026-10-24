@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: fail-open lander checks recorded, ratchet tests/fail-open-idioms.bats -->
+log: 2026-10-24 · quality round 10 → retro `retros/2026-10-24-fail-open-pipeline-checks.md` (pending, 2 Δ): the round's lander passed PR #409 with a non-compiling `lint_test.go` because `( build && vet && test | grep FAIL ) && exit` takes grep's status and `[ -z "$(gofmt -l go)" ]` drops gofmt's stderr. New ratchet `tests/fail-open-idioms.bats` (FOI1 seeded fixture, FOI2 two-way baseline over scripts/, .githooks/ and toolbelt/**/*.sh, FOI3 non-vacuous), baseline empty at 45ddb3b5.
+open_issue: fail-open-pipeline-checks Δ1-Δ2 (retro retros/2026-10-24-fail-open-pipeline-checks.md, 2026-10-24): fold the "verdict from the producer's exit status" rule into METHODOLOGY.md beside K20 and the "keep-both only for whole-line additions; test files and edited lines get a human merge plus a compile" rule into ORCHESTRATION.md's merge rules; the ratchet already landed.

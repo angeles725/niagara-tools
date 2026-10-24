@@ -59,3 +59,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 0 ]
   [ "$output" = "WARN  lint-bql-string-concat  $TMPDIR_T/M/src/A.java:6  bql concat: BOrd o = BOrd.make(\"local:|foxs://\" + host + \"|station:|bql:select * where a=\" + v);" ]
 }
+
+@test "BSC5: a long or int local concatenated into bql: is clean; a String param or a call stays flagged" {
+  # Mutation: BSC5 -- dropping the numeric-operand check WARNs the long/int line again (chihuahua ChiAlarmHelper.java:1943).
+  # [ev: issue #459 bql-string-concat]
+  printf 'class A {\n  void f(String u, int n) {\n    long start = w[0];\n    String a = "station:|alarm:|bql:select * where timestamp.millis >= " + start + " and n = " + n;\n    String b = "station:|bql:select * where u = " + u;\n    String c = "station:|bql:select * where n = " + stop();\n  }\n}\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"A.java:4 "* ]]
+  [[ "$output" == *"A.java:5  bql concat"* ]]
+  [[ "$output" == *"A.java:6  bql concat"* ]]
+}

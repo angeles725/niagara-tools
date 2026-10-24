@@ -1,0 +1,13 @@
+-- args --
+@DIR@/a/app.js
+-- want --
+exit 3
+-- stderr --
+lint-spa-poll-no-recovery: not a directory: @DIR@/a/app.js
+-- a/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- b/b.js --
+x();

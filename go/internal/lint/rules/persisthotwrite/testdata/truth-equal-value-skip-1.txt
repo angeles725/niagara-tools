@@ -1,0 +1,79 @@
+declared difference (truth fix T5, equal-value skip): Baja's ComplexSlotMap skips a write whose new value equals the
+current one for a simple value (setDouble's BDouble.equals test, setBoolean's oldValue != newValue test,
+set(Property, BValue)'s oldValue.isSimple() && equals test; organized/baja/baja/vineflower/com/tridium/sys/schema/
+ComplexSlotMap.java:1239, :860, :637), so a simple-typed slot only dirties the station when its value changes. The
+seven writes modelled on the live CompPan false positives no longer report: condenser1-3AutoLocked (flipped on
+edges by the model), faultReset (written under a test of its own getter), rotationLeadIndex /
+rotationLastChangeMs / stagingConfigRevision (event counters and an event timestamp in the model), and a
+non-simple stagingBackup written under a change flag. The three hours accumulators (the model adds a time delta
+every cycle: hours[k] += dtH) still report, as do a write of the slot's own value plus a delta, a clock read and
+a non-simple value written every cycle (no framework skip).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/BCC.java:20  setCondenser1Hours(...) writes non-transient slot 'condenser1Hours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BCC.java:21  setCondenser2Hours(...) writes non-transient slot 'condenser2Hours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BCC.java:22  setCondenser3Hours(...) writes non-transient slot 'condenser3Hours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BCC.java:30  setRunHours(...) writes non-transient slot 'runHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BCC.java:31  setLastRunMs(...) writes non-transient slot 'lastRunMs' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BCC.java:32  setStatusOut(...) writes non-transient slot 'statusOut' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- BCC.java --
+package com.x;
+public class BCC extends BComponent {
+  public static final Property condenser1Hours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public static final Property condenser2Hours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public static final Property condenser3Hours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public static final Property condenser1AutoLocked = newProperty(Flags.SUMMARY | Flags.READONLY, false, null);
+  public static final Property condenser2AutoLocked = newProperty(Flags.SUMMARY | Flags.READONLY, false, null);
+  public static final Property condenser3AutoLocked = newProperty(Flags.SUMMARY | Flags.READONLY, false, null);
+  public static final Property faultReset = newProperty(Flags.SUMMARY | Flags.OPERATOR, new BStatusBoolean(false), null);
+  public static final Property rotationLeadIndex = newProperty(Flags.SUMMARY | Flags.READONLY, 1d, null);
+  public static final Property rotationLastChangeMs = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public static final Property stagingConfigRevision = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public static final Property runHours = newProperty(Flags.SUMMARY, 0d, null);
+  public static final Property lastRunMs = newProperty(Flags.SUMMARY, 0d, null);
+  public static final Property statusOut = newProperty(Flags.SUMMARY, new BStatusNumeric(), null);
+  public static final Property stagingBackup = newProperty(Flags.SUMMARY, new BStatusString(""), null);
+  public void changed(Property p, Context cx) { execute(); }
+  void execute() {
+    ctl.step(now, dtH);
+    setCondenser1Hours(ctl.hours[0]);
+    setCondenser2Hours(ctl.hours[1]);
+    setCondenser3Hours(ctl.hours[2]);
+    setCondenser1AutoLocked(ctl.autoLocked[0]);
+    setCondenser2AutoLocked(ctl.autoLocked[1]);
+    setCondenser3AutoLocked(ctl.autoLocked[2]);
+    if (getFaultReset().getValue()) { ctl.resetFaults(); setFaultReset(new BStatusBoolean(false)); }
+    setRotationLeadIndex(CompressorControl.modelLeadIndexToSlot(ctl.rotationLeadIndex));
+    setRotationLastChangeMs(CompressorControl.modelLastChangeToSlot(ctl.lastRotationMs));
+    setStagingConfigRevision((double) ctl.configRevision);
+    setRunHours(getRunHours() + dtH);
+    setLastRunMs((double) BAbsTime.now().getMillis());
+    setStatusOut(new BStatusNumeric(ctl.demand));
+    if (stagingConfigChanged) setStagingBackup(new BStatusString(ctl.snapshot()));
+  }
+}
+
+-- CompressorControl.java --
+package com.x;
+class CompressorControl {
+  double[] hours = new double[3];
+  boolean[] autoLocked = new boolean[3];
+  int rotationLeadIndex = 0;
+  long lastRotationMs = 0L;
+  long configRevision = 0L;
+  void step(long now, double dtH) {
+    for (int k = 0; k < 3; k++) {
+      if (running[k]) hours[k] += dtH;
+      if (lockoutRequested[k]) autoLocked[k] = true;
+      else if (modes[k] != 0) autoLocked[k] = false;
+    }
+    if (configChangedThisStep) configRevision++;
+    if (rotate) {
+      rotationLeadIndex = (rotationLeadIndex + 1) % N;
+      lastRotationMs = now;
+    }
+  }
+}

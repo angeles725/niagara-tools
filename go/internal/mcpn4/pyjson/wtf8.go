@@ -1,6 +1,9 @@
 package pyjson
 
-import "unicode/utf8"
+import (
+	"fmt"
+	"unicode/utf8"
+)
 
 // A Python str as this package holds it is UTF-8, or WTF-8 when it holds a lone surrogate. These
 // helpers walk it by code point, as str indexing and len() do.
@@ -30,4 +33,29 @@ func Len(s string) int {
 		i += size
 	}
 	return n
+}
+
+// EncodeUTF8 checks s.encode("utf-8"): a lone surrogate is the UnicodeEncodeError (a ValueError)
+// naming its position, or the run of them, in s.
+func EncodeUTF8(s string) error {
+	start, end, first := -1, -1, rune(0)
+	for i, n := 0, 0; i < len(s) && (start < 0 || end == n); n++ {
+		r, size := DecodeRune(s[i:])
+		i += size
+		switch surrogate := r >= 0xd800 && r <= 0xdfff; {
+		case surrogate && start < 0:
+			start, end, first = n, n+1, r
+		case surrogate:
+			end = n + 1
+		}
+	}
+	switch {
+	case start < 0:
+		return nil
+	case end == start+1:
+		return &ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode character '\\u%04x' in position %d: "+
+			"surrogates not allowed", first, start)}
+	}
+	return &ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode characters in position %d-%d: "+
+		"surrogates not allowed", start, end-1)}
 }
