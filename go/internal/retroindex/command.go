@@ -42,7 +42,7 @@ func Main(args []string, s cli.Stdio) int {
 
 // Output is the generated retros/INDEX.md of root as a file to write; tool prefixes its messages.
 func Output(tool, root, content string) gen.File {
-	return gen.File{Tool: tool, Path: root + "/retros/INDEX.md", Content: content, Atomic: true}
+	return gen.File{Tool: tool, Path: root + "/retros/INDEX.md", Content: content}
 }
 
 // Generate returns the retros/INDEX.md that the headers of <root>/retros/*.md generate. A violation

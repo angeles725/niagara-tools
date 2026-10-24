@@ -115,7 +115,7 @@ jobs:
       - name: lint-guard-pins (every kit lint carries a resolvable "# Mutation:" guard-pin — strict)
         run: bash build-n4-module-kit/toolbelt/lint-guard-pins.sh --strict .
 
-      - name: gen-lint-index --check (generated toolbelt/INDEX.md is fresh vs the lint headers)
+      - name: gen-lint-index --check (every lint header generates its toolbelt/INDEX.md row — fails closed)
         run: bash build-n4-module-kit/toolbelt/gen-lint-index.sh --check
 
       - name: gen-retro-index --check (every retro header generates its INDEX row — fails closed)

@@ -52,7 +52,7 @@ func Main(args []string, s cli.Stdio) int {
 
 // Output is the generated BUILD-STATE.md of root as a file to write; tool prefixes its messages.
 func Output(tool, root, content string) gen.File {
-	return gen.File{Tool: tool, Path: root + "/" + OutputName, Content: content, Atomic: true}
+	return gen.File{Tool: tool, Path: root + "/" + OutputName, Content: content}
 }
 
 // Generate returns the BUILD-STATE.md that <root>/BUILD-STATE.src.md and <root>/ledger.d/ generate:

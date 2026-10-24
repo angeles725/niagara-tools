@@ -22,7 +22,9 @@ setup() {
   cp "$KIT"/BUILD-STATE*.md "$K/"
   cp -R "$KIT/ledger.d" "$K/"
   cp "$KIT"/retros/*.md "$K/retros/"
-  cp "$KIT/toolbelt/gen-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$K/toolbelt/"
+  cp "$KIT/toolbelt/gen-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$KIT/toolbelt/gen-lint-index.sh" \
+     "$KIT/toolbelt/report-module.sh" "$KIT"/toolbelt/lint-*.sh "$K/toolbelt/"
+  [ ! -f "$KIT/toolbelt/INDEX.md" ] || cp "$KIT/toolbelt/INDEX.md" "$K/toolbelt/"
   regen
   g add -A
   g commit -qm base
@@ -33,6 +35,7 @@ g() { git -C "$W" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=f
 regen() {
   bash "$K/toolbelt/gen-build-state.sh" "$K" >/dev/null
   bash "$K/toolbelt/gen-retro-index.sh" "$K" >/dev/null
+  bash "$K/toolbelt/gen-lint-index.sh" "$K" >/dev/null
 }
 
 # change <branch> <slug>: one PR's worth of kit state — a ledger fragment, a retro, regenerated, committed.
@@ -66,4 +69,26 @@ change() {
   grep -qF '| 2099-01-01-alpha-change.md |' "$K/retros/INDEX.md"
   grep -qF '| 2099-01-01-beta-change.md |' "$K/retros/INDEX.md"
   [ -z "$(g ls-files build-n4-module-kit/BUILD-STATE.md build-n4-module-kit/retros/INDEX.md)" ]
+}
+
+# lint <branch> <name>: one PR that adds a kit lint (its header is its toolbelt/INDEX.md row), regenerated.
+lint() {
+  g checkout -q -b "$1" main
+  printf '#!/usr/bin/env bash\n# %s — demo lint added by %s\n#\n# Usage:  %s <src-root>\n#   Exit: 0 clean · 1 any FAIL · 3 usage/env\nexit 0\n' \
+    "$2" "$1" "$2" > "$K/toolbelt/$2"
+  regen
+  g add -A
+  g commit -qm "feat: $2"
+}
+
+@test "LM3: two branches each adding a lint merge with plain git merge; toolbelt/INDEX.md is not tracked" {
+  lint pr-lint-a lint-zz-alpha-demo.sh
+  lint pr-lint-b lint-zz-beta-demo.sh
+  g checkout -q pr-lint-a
+  run g merge --no-edit pr-lint-b
+  [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; return 1; }
+  regen
+  grep -qF 'toolbelt/lint-zz-alpha-demo.sh' "$K/toolbelt/INDEX.md"
+  grep -qF 'toolbelt/lint-zz-beta-demo.sh' "$K/toolbelt/INDEX.md"
+  [ -z "$(g ls-files build-n4-module-kit/toolbelt/INDEX.md)" ]
 }

@@ -1,8 +1,8 @@
 // Package kitstate is the one reader command for the kit's generated state: the BUILD-STATE.md kit
-// ledger and the retros/INDEX.md promotion registry. Neither file is committed (two PRs that each add
-// a ledger.d/ fragment or a retro used to conflict on them); `kit-state` prints what the committed
+// ledger, the retros/INDEX.md promotion registry and the toolbelt/INDEX.md lint index. None of them is
+// committed (two PRs that each add a ledger.d/ fragment, a retro or a lint used to conflict on them); `kit-state` prints what the committed
 // sources generate now, or with --write materializes the files in the kit. It renders nothing itself:
-// the generators are go/internal/buildstate and go/internal/retroindex. [ev: retro ledger-generated-not-committed]
+// the generators are go/internal/buildstate, go/internal/retroindex and go/internal/lintindex. [ev: retro ledger-generated-not-committed]
 package kitstate
 
 import (
@@ -14,6 +14,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/gen"
+	"github.com/angeles725/niagara-tools/go/internal/lintindex"
 	"github.com/angeles725/niagara-tools/go/internal/retroindex"
 )
 
@@ -23,8 +24,8 @@ const DefaultRootEnv = "KIT_STATE_DEFAULT_ROOT"
 
 const (
 	tool  = "kit-state"
-	usage = "usage: kit-state.sh build-state|retro-index [<kit-root>]\n" +
-		"       kit-state.sh --write [build-state|retro-index] [<kit-root>]\n"
+	usage = "usage: kit-state.sh build-state|retro-index|lint-index [<kit-root>]\n" +
+		"       kit-state.sh --write [build-state|retro-index|lint-index] [<kit-root>]\n"
 )
 
 // view is one generated file: how it is generated and where --write puts it.
@@ -36,13 +37,14 @@ type view struct {
 var views = map[string]view{
 	"build-state": {buildstate.Generate, buildstate.Output},
 	"retro-index": {retroindex.Generate, retroindex.Output},
+	"lint-index":  {lintindex.Generate, lintindex.Output},
 }
 
-// order is the --write order with no view named (both files).
-var order = []string{"build-state", "retro-index"}
+// order is the --write order with no view named (every generated file).
+var order = []string{"build-state", "retro-index", "lint-index"}
 
-// Main implements `kit-state build-state|retro-index [<kit-root>]` (print the generated file to stdout)
-// and `kit-state --write [build-state|retro-index] [<kit-root>]` (write it, or both, into the kit and
+// Main implements `kit-state build-state|retro-index|lint-index [<kit-root>]` (print the generated file)
+// and `kit-state --write [build-state|retro-index|lint-index] [<kit-root>]` (write it, or all, into the kit and
 // print each path written). Every selected file is generated before any is written, so a violation
 // writes nothing, and a failed write removes the whole set (writeAll). Exits: 0 ok · 1 a fragment / source / retro-header violation · 3 usage or env.
 func Main(args []string, s cli.Stdio) int {
@@ -94,7 +96,7 @@ func writeAll(names, contents []string, root string, s cli.Stdio) int {
 }
 
 // parse reads the command line: --write, at most one view name, at most one kit root. Printing needs
-// exactly one view; --write with none writes both.
+// exactly one view; --write with none writes all of them.
 func parse(args []string) (write bool, names []string, root string, ok bool) {
 	for _, a := range args {
 		_, isView := views[a]

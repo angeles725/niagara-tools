@@ -8,7 +8,7 @@
 # (the SKILLS table below is the single source of these names and paths)
 #
 # --skill build-n4-module also MATERIALIZES the kit's generated state in the kit checkout the launcher
-# reads: BUILD-STATE.md and retros/INDEX.md are generated and not committed (R10-D1), so a fresh install
+# reads: BUILD-STATE.md, retros/INDEX.md and toolbelt/INDEX.md are generated and not committed (R10-D1), so a fresh install
 # runs `<kit>/toolbelt/kit-state.sh --write` (on every run, also when the launcher is already current).
 # The kit is $BUILD_N4_KIT when it holds METHODOLOGY.md (the launcher's own first rule), else this
 # repository's build-n4-module-kit/. [ev: retro ledger-generated-not-committed]

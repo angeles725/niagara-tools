@@ -34,3 +34,4 @@ go/bin/
 # fragment or a retro never conflict here. Sources: BUILD-STATE.src.md, ledger.d/*.md, retros/*.md.
 build-n4-module-kit/BUILD-STATE.md
 build-n4-module-kit/retros/INDEX.md
+build-n4-module-kit/toolbelt/INDEX.md

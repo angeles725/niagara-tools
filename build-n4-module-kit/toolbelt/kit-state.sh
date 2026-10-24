@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 # kit-state.sh — the ONE reader command for the kit's generated state.
 #
-# BUILD-STATE.md (the build-session ledger: every module envelope + the kit block) and retros/INDEX.md
-# (the retro promotion registry) are GENERATED and NOT committed (.gitignore): two PRs that each add a
-# ledger.d/ fragment or a retro used to conflict on them. Their only sources are committed:
+# BUILD-STATE.md (the build-session ledger: every module envelope + the kit block), retros/INDEX.md (the
+# retro promotion registry) and toolbelt/INDEX.md (the lint index) are GENERATED and NOT committed
+# (.gitignore): two PRs that each add a ledger.d/ fragment, a retro or a lint used to conflict on them.
+# Their only sources are committed:
 #   BUILD-STATE.src.md   every hand-kept field (module envelopes, kit fields); the kit envelope's
 #                        last_change / open_issues items / session log stay empty there
 #   ledger.d/*.md        one fragment per change (contract: toolbelt/gen-build-state.sh)
 #   retros/*.md          one retro each; the INDEX row comes from its header (toolbelt/gen-retro-index.sh)
+#   toolbelt/lint-*.sh   one lint each; the lint index row comes from its header (toolbelt/gen-lint-index.sh)
 # Read the state with this command, never from a possibly stale local file. `--write` materializes
-# both files in the kit (scripts/install-skill.sh and the .githooks post-merge/post-checkout/
+# every file in the kit (scripts/install-skill.sh and the .githooks post-merge/post-checkout/
 # post-rewrite hooks run it) and prints each path written. [ev: retro ledger-generated-not-committed]
 #
-# Implementation: go/internal/kitstate over the go/internal/buildstate and go/internal/retroindex
-# generators, built on demand by go/go-tool.sh `go_tool_bin` (as gen-build-state.sh). Needs `go` on PATH.
+# Implementation: go/internal/kitstate over the go/internal/buildstate, go/internal/retroindex and
+# go/internal/lintindex generators, built on demand by go/go-tool.sh `go_tool_bin` (as gen-build-state.sh). Needs `go` on PATH.
 #
-# Usage:  kit-state.sh build-state|retro-index [<kit-root>]            print to stdout
-#         kit-state.sh --write [build-state|retro-index] [<kit-root>]  write (default: both)
+# Usage:  kit-state.sh build-state|retro-index|lint-index [<kit-root>]            print to stdout
+#         kit-state.sh --write [build-state|retro-index|lint-index] [<kit-root>]  write (default: all)
 #         (default kit root: this script's ../)
-# Exits:  0 ok · 1 a ledger fragment, BUILD-STATE.src.md or retro-header violation (nothing written)
+# Exits:  0 ok · 1 a ledger fragment, BUILD-STATE.src.md, retro- or lint-header violation (nothing written)
 #         · 3 usage/env, including no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).
 set -u

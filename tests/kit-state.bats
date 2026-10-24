@@ -41,14 +41,16 @@ _copy_kit() {
   [ "$(printf '%s\n' "$output" | grep -cE '^\| [^ ]+\.md \|')" -eq "$n" ]
 }
 
-@test "KS3: --write materializes both files in the kit, prints each path, and equals the printed form" {
+@test "KS3: --write materializes every generated file in the kit, prints each path, and equals the printed form" {
   _copy_kit
   run bash "$TK/toolbelt/kit-state.sh" --write
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "kit-state: wrote $TK/BUILD-STATE.md" ]
   [ "${lines[1]}" = "kit-state: wrote $TK/retros/INDEX.md" ]
+  [ "${lines[2]}" = "kit-state: wrote $TK/toolbelt/INDEX.md" ]
   bash "$TK/toolbelt/kit-state.sh" build-state | cmp - "$TK/BUILD-STATE.md"
   bash "$TK/toolbelt/kit-state.sh" retro-index | cmp - "$TK/retros/INDEX.md"
+  bash "$TK/toolbelt/kit-state.sh" lint-index | cmp - "$TK/toolbelt/INDEX.md"
 }
 
 @test "KS4: a malformed fragment is exit 1 and writes neither file" {
@@ -91,7 +93,7 @@ GEN_TEXT=(build-n4-module-kit/types/logic.md scripts/check-client-source.sh)
   # generated file in an instruction sentence names its source or kit-state in it instead.
   cd "$REPO"
   # shellcheck disable=SC2016  # the pattern matches literal backticks and a literal $KIT
-  re='(?i)\b(read|open|orient from|see|update|record|write|written|set|edit|fill|appends? its)\b(?:(?!\. ).)*?(?<!generated )(?<!generated `)(?<!/)`?(\$KIT/)?(BUILD-STATE\.md|retros/INDEX\.md)\b|--build-state BUILD-STATE\.md|sweep-build-state\.sh <BUILD-STATE\.md>'
+  re='(?i)\b(read|open|orient from|see|update|record|write|written|set|edit|fill|appends? its)\b(?:(?!\. ).)*?(?<!generated )(?<!generated `)(?<!/)`?(\$KIT/)?(BUILD-STATE\.md|retros/INDEX\.md|toolbelt/INDEX\.md)\b|--build-state BUILD-STATE\.md|sweep-build-state\.sh <BUILD-STATE\.md>'
   run grep -nP "$re" "${READER_DOCS[@]}" "${GEN_TEXT[@]}"
   [ "$status" -eq 1 ] || { printf 'a generated file is read or written directly:\n%s\n' "$output" >&2; return 1; }
 }

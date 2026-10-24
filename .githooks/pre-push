@@ -29,14 +29,15 @@ read -r _ lsha _ rsha || exit 0
 [ -n "${lsha:-}" ] || exit 0
 [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
 refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
-# the content half: ledger + index coherence (one call shape for every exit). BUILD-STATE.md and INDEX.md
-# are not committed, so they are generated from the committed sources into a temp dir and swept there;
-# any generator violation fails it. Returns sweep's (or the generator's) exit code.
+# the content half: ledger + index coherence (one call shape for every exit). BUILD-STATE.md and the two
+# INDEX.md files are not committed, so they are generated from the committed sources (the lint index
+# only validated) into a temp dir and swept there; any generator violation fails it. Returns sweep's (or the generator's) exit code.
 run_sweep() {
   local t rc
   t=$(mktemp -d) || refuse "mktemp failed"
   bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
     && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
+    && bash "$kit/toolbelt/kit-state.sh" lint-index "$kit" > /dev/null \
     && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
   rc=$?
   rm -rf "$t"

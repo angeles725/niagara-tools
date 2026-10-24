@@ -31,6 +31,10 @@ so two PRs that each add a ledger fragment and a retro merge with a plain `git m
 - **Freshness everywhere.** `install-skill.sh` materializes the kit it resolves. `.githooks/post-merge`,
   `post-checkout` and `post-rewrite` (activated by `install-hooks.sh`) regenerate after every pull, checkout and
   rewrite. They exit 0 always; on a failure they print one warning line and delete both files, so no stale copy is left.
+- **The lint index joined later.** `toolbelt/INDEX.md` (fully generated from the lint headers) caused another
+  land conflict, so it follows the same model: `kit-state lint-index`, ignored, `gen-lint-index --check`
+  validates headers, and LM3 shows two lint-adding branches merging cleanly. The generators' shared
+  compare-with-committed code (`gen.File.Run`/`check`) had no caller left and was removed.
 - **Gates read generated output.** `gen-* --check` validates the inputs (fail closed). `sweep-build-state` compares a
   GENERATED file wherever it lives, and CI and pre-push sweep fresh kit-state output from a temp dir. The pre-push
   promotion anchor is now a retro header flip `pending` → `folded`. The stale `last_session:` head (2026-10-16) moved
