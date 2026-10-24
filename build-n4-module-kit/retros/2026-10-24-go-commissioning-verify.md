@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 4 -->
 # 2026-10-24 · kit · go-commissioning-verify
@@ -47,5 +47,13 @@ process through `go/internal/bogaudit` (Out and Err into one buffer, as `2>&1` d
 - Δ1-Δ4 are applied in this unit as code fixes; the retro stays pending until a fold review decides whether any of them
   becomes doctrine.
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 6.b commissioning-verify paragraph: a bog-audit exit 3 is a SKIP row naming an unreadable or malformed bog or no component of the module.
+- Δ2 → same paragraph: the station fold relays a fixed status set (FAIL, WARN, PASS) for every folded check, so CHECK15 and CHECK19 WARN rows reach the punch-list.
+- Δ3 → same paragraph: an orchestrated lint that exits non-zero with no row is a FAIL.
+- Δ4 → same paragraph: an unreadable values-owed table is exit 3 before any row; the exit contract reads "3 usage or environment".
+- Lessons 1 and 3 (unresolved toolbelt directory for stubbed tests; structural pins go vacuous at the switch) → `BUILD-LOOP.md` § 5 Kit tooling doctrine, new bullet "An orchestrator port keeps its tests' stubs and its structural pins". Lesson 2 is folded with Δ2. Lesson 4 records review follow-ups already applied in the unit; not doctrine.
+- Lesson 5 (golden cases run the real wrappers, which rebuild `go/bin/<tool>` inside the live tree) needs code: open issue in `ledger.d/2026-10-24-r10-fold-commissioning.md`.
+
 ---
-**Status**: PENDING
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-commissioning.md`) — Δ1-Δ4 cited in `BUILD-LOOP.md` § 6.b; lessons 1 and 3 in § 5; lesson 5 an open issue.

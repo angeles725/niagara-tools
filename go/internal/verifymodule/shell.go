@@ -47,15 +47,22 @@ func newGrepText(s string) grepText {
 // discarded or shared with the row stream's caller).
 func (t grepText) shown(out string) bool { return !t.binary && utf8.ValidString(out) }
 
-// numbered is grep -n: "<line>:<text>" for every printed line re matches.
-func (t grepText) numbered(re *regexp.Regexp) []string {
+// hits is `grep -an`: "<line>:<text>" for every line re matches, read as bytes, so a line with an encoding
+// error or in a file holding a NUL byte is a hit too (grep under C.UTF-8 never printed one). The text is
+// display(line).
+func (t grepText) hits(re *regexp.Regexp) []string {
 	var out []string
 	for i, ln := range t.lines {
-		if re.MatchString(ln) && t.shown(ln) {
-			out = append(out, itoa(i+1)+":"+ln)
+		if re.MatchString(ln) {
+			out = append(out, itoa(i+1)+":"+display(ln))
 		}
 	}
 	return out
+}
+
+// display is a source line as a report row quotes it: a NUL byte as \0, an invalid UTF-8 byte as U+FFFD.
+func display(ln string) string {
+	return strings.ToValidUTF8(strings.ReplaceAll(ln, "\x00", `\0`), "\uFFFD")
 }
 
 // only is grep -o: every printed match, line by line.
@@ -121,58 +128,10 @@ func basename(p, suffix string) string {
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// arithErr is a bash arithmetic error. msg is bash's text after its "<script>: line <n>: " prefix; unbound
-// is an operand naming an unset variable, which ends the script under set -u (exit 1).
-type arithErr struct {
-	msg     string
-	unbound bool
+// intOperand is s as a coverage count: a decimal integer with an optional sign
+// (a leading zero is decimal). ok is false for anything else, overflow included. Bash arithmetic read 010
+// as octal and, on 08, abandoned the block (TestIntegerOperands).
+func intOperand(s string) (n int64, ok bool) {
+	n, err := strconv.ParseInt(s, 10, 64)
+	return n, err == nil
 }
-
-// bashInt is s as an operand of bash arithmetic: an optional sign, then a decimal constant, an octal one
-// (a leading 0) or a hex one (0x), wrapping on overflow as bash does; the empty string is 0.
-func bashInt(s string) (int64, *arithErr) {
-	num := strings.TrimLeft(s, "+-")
-	neg := strings.Count(s[:len(s)-len(num)], "-")%2 == 1
-	base, digits := int64(10), num
-	switch {
-	case num == "":
-		return 0, nil
-	case identRe.MatchString(num):
-		return 0, &arithErr{msg: num + ": unbound variable", unbound: true}
-	case strings.HasPrefix(num, "0x") || strings.HasPrefix(num, "0X"):
-		base, digits = 16, num[2:]
-	case num[0] == '0':
-		base = 8
-	}
-	end := 0
-	for end < len(digits) && digitValue(digits[end]) < base {
-		end++
-	}
-	if end < len(digits) {
-		if base == 8 && strings.Trim(digits, "0123456789") == "" {
-			return 0, &arithErr{msg: s + ": value too great for base (error token is \"" + s + "\")"}
-		}
-		return 0, &arithErr{msg: s + ": syntax error: invalid arithmetic operator (error token is \"" + digits[end:] + "\")"}
-	}
-	var n int64
-	for i := 0; i < len(digits); i++ {
-		n = n*base + digitValue(digits[i])
-	}
-	if neg {
-		n = -n
-	}
-	return n, nil
-}
-
-// digitValue is c as a digit of base up to 16 (36 for a byte that is no digit).
-func digitValue(c byte) int64 {
-	switch l := c | 0x20; {
-	case '0' <= c && c <= '9':
-		return int64(c - '0')
-	case 'a' <= l && l <= 'f':
-		return int64(l-'a') + 10
-	}
-	return 36
-}
-
-var identRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)

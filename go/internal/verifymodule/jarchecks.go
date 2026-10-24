@@ -3,7 +3,6 @@ package verifymodule
 import (
 	"archive/zip"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/jarversion"
@@ -20,6 +19,10 @@ func (j *jarFile) classes() []string {
 	return out
 }
 
+// bytecode reads each class entry's CAFEBABE magic and two-byte major (jarversion.ClassMajor). The bash
+// read byte 7 alone with od, so a major of 308 passed as 52, and so did an entry without the magic; it also
+// named a class shorter than 6 bytes on stderr (od's error), which this does not (declared difference,
+// truth-bytecode-magic and edge-bytecode-mixed).
 func (r *run) bytecode() bool {
 	n, bad, mr, first, ign := 0, 0, 0, "", ""
 	for _, c := range r.jar.classes() {
@@ -28,20 +31,22 @@ func (r *run) bytecode() bool {
 			continue
 		}
 		n++
-		// od -t u1 -j6 -N2 | awk '{print $2}': byte 7 alone, empty for an entry shorter than 8 bytes; od
-		// names one too short to skip 6 bytes on stderr.
-		m := ""
 		h, err := jarversion.Head(r.jar.first[c])
-		if err != nil || len(h) < 6 {
-			fmt.Fprintln(r.s.Err, "od: cannot skip past end of combined input")
-		} else if len(h) >= 8 {
-			m = itoa(int(h[7]))
+		major, isClass := jarversion.ClassMajor(h)
+		if err == nil && isClass && major == jarversion.Java8Major {
+			continue
 		}
-		if m != "52" {
-			bad++
-			if first == "" {
-				first = c + " major=" + m
-			}
+		bad++
+		if first != "" {
+			continue
+		}
+		switch {
+		case err != nil:
+			first = c + " unreadable (" + jarversion.Reason(err) + ")"
+		case !isClass:
+			first = c + " not a class file (no CAFEBABE header)"
+		default:
+			first = c + " major=" + itoa(major)
 		}
 	}
 	if mr != 0 {
@@ -103,12 +108,9 @@ func (r *run) types() bool {
 	}
 	missing, firstMiss := 0, ""
 	for _, cls := range r.jar.types {
-		// grep -qx "$f": f is a basic regex, so its "." matches any byte.
-		parts := strings.Split(strings.ReplaceAll(cls, ".", "/")+".class", ".")
-		for i := range parts {
-			parts[i] = regexp.QuoteMeta(parts[i])
-		}
-		if r.jar.list.count(regexp.MustCompile("^"+strings.Join(parts, ".")+"$")) == 0 {
+		// The exact entry; the bash's grep -qx read it as a basic regex, its "." matching any byte
+		// (declared difference, truth-types-exact).
+		if !r.jar.has(strings.ReplaceAll(cls, ".", "/") + ".class") {
 			missing++
 			if firstMiss == "" {
 				firstMiss = cls
@@ -123,11 +125,6 @@ func (r *run) types() bool {
 	return false
 }
 
-var (
-	bajaDepRe = rx(`<dependency [^>]*name="baja"[^>]*vendorVersion="[^"]+"`)
-	lastVerRe = regexp.MustCompile(`^.*vendorVersion="([^"]+)"`)
-)
-
 func (r *run) baja() bool {
 	if r.target == "" {
 		r.row("SKIP", "baja", "no --target-version")
@@ -137,12 +134,20 @@ func (r *run) baja() bool {
 		r.row("FAIL", "baja", "META-INF/module.xml missing")
 		return false
 	}
-	deps := newGrepText(r.jar.mx).only(bajaDepRe)
-	if len(deps) == 0 {
+	bv := ""
+	for _, i := range r.jar.doc.Find("dependency") {
+		e := r.jar.doc.Elements()[i]
+		if name, _ := e.Attr("name"); name == "baja" {
+			if bv, _ = e.Attr("vendorVersion"); bv != "" {
+				break
+			}
+		}
+	}
+	if bv == "" {
 		r.row("FAIL", "baja", "no baja dependency in module.xml")
 		return false
 	}
-	bv, t := lastVerRe.FindStringSubmatch(deps[0])[1], r.target
+	t := r.target
 	if verLE(bv, t) {
 		r.row("PASS", "baja", fmt.Sprintf("stamped baja %s <= target %s", bv, t))
 		return true
@@ -151,19 +156,18 @@ func (r *run) baja() bool {
 	return false
 }
 
-// storedCheck counts what `unzip -v | grep -c 'Defl:'` counted: deflated entries, plus any entry name
-// and the "Archive:" path line that hold the text "Defl:".
+// storedCheck counts the entries whose zip method is not STORED: deflated, and any other compression
+// (bzip2), which Workbench cannot re-sign either. The kit calls them all "deflated". The bash counted the
+// `unzip -v` lines holding the text "Defl:", so an entry name or jar path holding it was miscounted
+// (declared difference, truth-stored-method).
 func (r *run) storedCheck() bool {
 	if !r.stored {
 		r.row("SKIP", "stored", "no --stored")
 		return true
 	}
 	d := 0
-	if strings.Contains(r.jar.path, "Defl:") {
-		d++
-	}
 	for _, f := range r.jar.zr.File {
-		if f.Method == zip.Deflate || strings.Contains(f.Name, "Defl:") {
+		if f.Method != zip.Store {
 			d++
 		}
 	}

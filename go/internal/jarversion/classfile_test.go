@@ -32,6 +32,26 @@ func TestMajor(t *testing.T) {
 	}
 }
 
+func TestClassMajor(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name  string
+		head  []byte
+		major int
+		ok    bool
+	}{
+		{"Java 8 header", []byte{0xca, 0xfe, 0xba, 0xbe, 0, 0, 0, 52}, 52, true},
+		{"two-byte major 308 is not 52", []byte{0xca, 0xfe, 0xba, 0xbe, 0, 0, 1, 52}, 308, true},
+		{"no magic", []byte{0, 0, 0, 0, 0, 0, 0, 52}, 0, false},
+		{"seven bytes", []byte{0xca, 0xfe, 0xba, 0xbe, 0, 0, 0}, 0, false},
+		{"empty entry", nil, 0, false},
+	} {
+		if major, ok := ClassMajor(tt.head); major != tt.major || ok != tt.ok {
+			t.Errorf("%s: ClassMajor(% x) = %d, %v; want %d, %v", tt.name, tt.head, major, ok, tt.major, tt.ok)
+		}
+	}
+}
+
 func TestAboveJava8(t *testing.T) {
 	t.Parallel()
 	// Mutation: BJCV2 -- dropping the > 52 comparison makes every bundled Java 9+ class pass.
