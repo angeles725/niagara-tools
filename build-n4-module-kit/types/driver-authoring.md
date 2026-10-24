@@ -488,6 +488,41 @@ for transient comm conditions (device unreachable, timeout, protocol error) — 
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ4]`
 
+### Licensing — how device and point counts are enforced
+
+Facts only, from docSource driver-rt (`D=organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver`
+below; full paths in the citations). The guide says only that "Licensing failures can also trigger fatal faults"
+(devguide `driverFramework.txt:48`).
+
+- **Two counts run when each component starts.** On `Fw.STARTED` a device calls
+  `checkFatalFault(Metrics.incrementDevice(this))` and a proxy ext `checkFatalFault(Metrics.incrementPoint(this))`
+  (`organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:630-633`,
+  `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/point/BProxyExt.java:1055-1059`). The
+  first is the station's global capacity count; over it, the component goes fatal with "Exceeded device limit
+  for …" / "Exceeded point limit for …" (`BDevice.java:471-479`; `point/BProxyExt.java:564-571`, which calls
+  `configFatal`).
+- **The driver's own limits apply only if the network names a feature.** `BDeviceNetwork.getLicenseFeature()`
+  returns `null` by default, and then no driver limit is checked
+  (`organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDeviceNetwork.java:581-589,678-681`).
+  When it returns a feature, the network checks it (`feature.check()`; a failure makes the network fatal with
+  "Unlicensed: …"), and turns every `*.limit` attribute of that feature into a counter, `none` meaning unlimited
+  (`BDeviceNetwork.java:594-655`). The counters are pooled per `vendor:feature` for the whole station, so several
+  network instances share one limit (`BDeviceNetwork.java:613-625`). Feature attributes are name/value pairs of a
+  signed, host-bound license file (devguide `licensing.txt:14,54-58`) `[ev: corpus B14]` `[ev: corpus B301]`.
+- **What is counted.** Each started device whose type is the network's `getDeviceType()` adds to `device.limit`;
+  each started proxy ext whose type is its point device ext's `getProxyExtType()` adds to `point.limit`
+  (`BDevice.java:520-531`; `point/BProxyExt.java:647-658`). The increment is 1; the sub-licence prefix and other
+  increments apply only to a fixed list of Tridium types
+  (`organized/baja/baja/vineflower/com/tridium/sys/metrics/BISubLicenseable.java:17-34,42-56`), so a custom
+  driver's keys are plain `device.limit` / `point.limit`.
+- **The faults.** A key missing from the feature counts as limit 0 and faults "Unlicensed: point.limit"; going
+  over faults "Exceeded point.limit of N" (`BDeviceNetwork.java:678-697`). Both set the component's fatal fault
+  (`BDevice.java:526-531`; `point/BProxyExt.java:653-657`), which only a station restart clears (card above). In
+  `BDeviceNetwork` the counter is only ever incremented (`BDeviceNetwork.java:690`): deleting points does not
+  return headroom before a restart `[INFER]` (no decrement in that file; other driver-rt paths not searched).
+- **Commissioning:** a point or device in fault with one of these causes is a licence problem, not a comm problem;
+  fix the licence or the count, then restart the station.
+
 ---
 
 ## 6 · Poll — rate buckets and subscription lifecycle
