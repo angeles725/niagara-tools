@@ -43,7 +43,7 @@
 #
 # Implementation: the Go module at <repo>/go (go/internal/obixlinkaudit). This wrapper is the stable
 # entry point: go/go-tool.sh `go_tool_bin` builds go/bin/obix-link-audit when the binary is missing or
-# older than a Go source, then this script execs it. Needs `go` on PATH to build.
+# older than a Go source, then this script execs it. Needs `go` on PATH to build. [ev: retro go-obix-link-audit]
 # Mutation pins (OLA-comp, OLA-http, OLA-insecure, OLA-malformed) live in
 # the Go source and tests.
 
