@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# gen-build-state.sh — generates the per-change parts of the kit block of BUILD-STATE.md from ledger.d/.
+# gen-build-state.sh — generates BUILD-STATE.md from BUILD-STATE.src.md + ledger.d/, or validates them.
 #
 # The kit block's `last_change:` line, its `open_issues:` items and its session log (the lines after
-# `last_session:`) used to be hand-edited by every kit PR at the same spots, so parallel sessions
-# conflicted there and "keep both sides" resolutions lost or duplicated entries. Each change now adds
-# ONE file, ledger.d/<YYYY-MM-DD>-<slug>.md, and these three parts are DERIVED from those files; on a
-# merge conflict in BUILD-STATE.md, keep either side and regenerate. [ev: retro ledger-fragments]
+# `last_session:`) used to be hand-edited by every kit PR at the same spots; then (ledger-fragments) they
+# were derived from one ledger.d/<YYYY-MM-DD>-<slug>.md per change but the derived file was still
+# committed, so every PR still conflicted on it. Now BUILD-STATE.md is GENERATED and NOT committed
+# (.gitignore): BUILD-STATE.src.md holds every hand-kept field with those three parts empty, and this
+# tool fills them in. Readers run toolbelt/kit-state.sh build-state. [ev: retro ledger-generated-not-committed]
 #
 # Fragment contract (line based; any other line is a violation naming the file and line):
 #   <!-- ledger: kit -->                   required
@@ -15,15 +16,16 @@
 #   open_issue: <text>                     zero or more; each becomes an `  - <text>` item
 # last_change = the newest date (tie: later filename); open_issues = newest fragment first; session log =
 # oldest first. ledger.d/0000-archive-pre-2026-10-23.md holds the ledger as it stood before fragments.
-# Module (non-kit) blocks and the other kit fields stay hand-kept.
+# Module (non-kit) blocks and the other kit fields stay hand-kept in BUILD-STATE.src.md; --check fails a
+# source whose kit envelope carries generated content (it would be dropped silently).
 #
 # Implementation: go/internal/buildstate, built on demand by go/go-tool.sh `go_tool_bin` (as
 # gen-retro-index.sh). Needs `go` on PATH to build. Mutation pins (GBS-stale, GBS-order, GBS-last,
-# GBS-tail) live in the Go source and tests.
+# GBS-tail, GBS-source) live in the Go source and tests.
 #
 # Usage:  gen-build-state.sh [--check] [<kit-root>]     (default kit root: this script's ../)
-# Exits:  0 written / fresh · 1 stale under --check, fragment or BUILD-STATE structure violation
-#         (nothing written) · 3 usage/env, including no Go toolchain or a failed build
+# Exits:  0 written / inputs valid under --check · 1 fragment or BUILD-STATE.src.md violation (nothing
+#         written) · 3 usage/env, including a missing source, no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).
 set -u
 
