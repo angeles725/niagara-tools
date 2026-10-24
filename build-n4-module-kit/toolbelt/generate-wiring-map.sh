@@ -35,6 +35,8 @@
 # Exits: 0 ok · 3 usage/env (K20)
 #   An unreadable *.java or lexicon is env (3, `generate-wiring-map: cannot read <file>: <reason>`, no map): the
 #   bash body skipped it and printed a map short of its slots or display names, exit 0.
+#   An --output file that cannot be written (or filled) is env too (3, `cannot write <file>: <reason>`); the bash
+#   body printed the shell's redirection error, then "wrote <file>", exit 0.
 #
 # [ev: retro live-commissioning-verification-gaps Δ6]
 # Dot-directories excluded (D9b). VCS-free by design.

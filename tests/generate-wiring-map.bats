@@ -198,3 +198,10 @@ setup() {
   [ "$status" -eq 3 ]
   [ "$output" = "generate-wiring-map: cannot read $BATS_TEST_TMPDIR/src/module.lexicon: Permission denied" ]
 }
+
+@test "GWM-output-unwritable: an --output file that cannot be written is exit 3, never \"wrote\"" {
+  # Mutation: GWM-output-unwritable -- ignoring the create error prints "wrote <file>" and exits 0 with no file
+  run "$SCRIPT" "$FX" --output "$BATS_TEST_TMPDIR/no/such/dir/wiring-map.md"
+  [ "$status" -eq 3 ]
+  [ "$output" = "generate-wiring-map: cannot write $BATS_TEST_TMPDIR/no/such/dir/wiring-map.md: No such file or directory" ]
+}

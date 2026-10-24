@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
 
 // TestSlots pins the harvest the golden cases replay end to end: OPERATOR wins over SUMMARY, READONLY is a
@@ -49,5 +51,17 @@ func TestRenderEmpty(t *testing.T) {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("render lacks %q", want)
 		}
+	}
+}
+
+// TestOutputWriteError: a write that fails after the create (a full device) is exit 3 with no "wrote" line.
+func TestOutputWriteError(t *testing.T) {
+	if _, err := os.Stat("/dev/full"); err != nil {
+		t.Skip("no /dev/full")
+	}
+	var o, e bytes.Buffer
+	code := Main([]string{t.TempDir(), "--output", "/dev/full"}, cli.Stdio{Out: &o, Err: &e})
+	if want := "generate-wiring-map: cannot write /dev/full: No space left on device\n"; code != 3 || o.Len() != 0 || e.String() != want {
+		t.Errorf("exit %d out %q err %q, want 3, nothing and %q", code, o.String(), e.String(), want)
 	}
 }

@@ -14,7 +14,8 @@ const usage = "usage: generate-wiring-map.sh <facade-src-dir> [--lexicon <module
 
 // Main parses `<facade-src-dir> [--lexicon <file>] [--output <file>]` (options after the directory, the last
 // of each wins) and prints the map, or writes it to the --output file. Exits 0, or 3 for usage and env errors:
-// a directory the walk cannot list or a source or lexicon it cannot read prints no map.
+// a directory the walk cannot list or a source or lexicon it cannot read prints no map, and an --output file
+// that cannot be written is no "wrote" line.
 func Main(args []string, s cli.Stdio) int {
 	fail := func(format string, a ...any) int {
 		fmt.Fprintf(s.Err, "generate-wiring-map: "+format+"\n", a...)
@@ -68,7 +69,7 @@ func Main(args []string, s cli.Stdio) int {
 		return 0
 	}
 	if err := writeFile(out, func(w io.Writer) { render(w, src, rows(op, names), rows(sum, names)) }); err != nil {
-		fmt.Fprintf(s.Err, "generate-wiring-map: %s: %s\n", out, strerror.Text(err))
+		return fail("cannot write %s: %s", out, strerror.Text(err))
 	}
 	fmt.Fprintf(s.Out, "generate-wiring-map: wrote %s\n", out)
 	return 0
@@ -80,11 +81,31 @@ func regular(p string) bool {
 	return err == nil && st.Mode().IsRegular()
 }
 
+// writeFile creates (or truncates) path and fills it; a failed write or close is its error.
 func writeFile(path string, fill func(io.Writer)) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	fill(f)
-	return f.Close()
+	w := &errWriter{w: f}
+	fill(w)
+	if err := f.Close(); w.err == nil {
+		w.err = err
+	}
+	return w.err
+}
+
+// errWriter keeps the first write error, so render needs no error plumbing.
+type errWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (e *errWriter) Write(p []byte) (int, error) {
+	if e.err != nil {
+		return 0, e.err
+	}
+	n, err := e.w.Write(p)
+	e.err = err
+	return n, err
 }
