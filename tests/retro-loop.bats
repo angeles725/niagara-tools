@@ -5,7 +5,8 @@
 #   new-retro.sh <module|kit> <slug>  atomically writes retros/<date>-<slug>.md (stub: the header
 #     block review-status/module/deltas on lines 1-3, 4 sections, Delta count) + REGENERATES
 #     retros/INDEX.md with toolbelt/gen-retro-index.sh (r8 T8i: the index is generated from the retro
-#     headers, never appended to) + sets retro_pending: true in BUILD-STATE.md. Idempotent: a second
+#     headers, never appended to) + sets retro_pending: true in BUILD-STATE.src.md (the committed source
+#     of the generated BUILD-STATE.md; R10-D1, neither generated file is committed). Idempotent: a second
 #     run with the same slug refuses (file exists) and the index keeps one row per retro.
 #   kit-ticket.sh "<one-line>"  opens a kit issue, or writes retros/tickets/<date>-<slug>.md offline
 #     (gh absent/unauthenticated) with a SKIP row and exit 0 — never exit 1 for missing gh.
@@ -22,7 +23,7 @@ setup() {
   NR="$KIT/toolbelt/new-retro.sh"; KT="$KIT/toolbelt/kit-ticket.sh"
   TK="$BATS_TEST_TMPDIR/kit"; mkdir -p "$TK/retros"
   printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK/retros/INDEX.md"
-  printf '<!-- build-state.v1 -->\n## kit\nretro_required: true\nretro_pending: false\n' > "$TK/BUILD-STATE.md"
+  printf '<!-- build-state.v1 -->\n## kit\nretro_required: true\nretro_pending: false\n' > "$TK/BUILD-STATE.src.md"
   DATE="$(date +%Y-%m-%d)"
 }
 nr() { run env -C "$TK" KIT="$TK" "$NR" "$@"; }
@@ -46,9 +47,9 @@ kt() { run env -C "$TK" KIT="$TK" "$@"; }   # first vararg is the command (for P
   [ "$(grep -c 'rl2slug' "$TK/retros/INDEX.md")" -eq 1 ]
 }
 
-@test "RL3: BUILD-STATE.md kit envelope flips retro_pending to true" {
+@test "RL3: the BUILD-STATE.src.md kit envelope flips retro_pending to true" {
   nr kit rl3slug
-  grep -qE 'retro_pending:[[:space:]]*true' "$TK/BUILD-STATE.md"
+  grep -qE 'retro_pending:[[:space:]]*true' "$TK/BUILD-STATE.src.md"
 }
 
 @test "RL4: kit-ticket.sh with gh ABSENT -> exit 0, SKIP row, writes the offline fallback file" {
@@ -107,22 +108,22 @@ retro_pending: false
   # Case 1: new-retro.sh kit <slug> → kit section flips; ModuleA + ModuleB stay false
   TK1="$BATS_TEST_TMPDIR/rl7kit"; mkdir -p "$TK1/retros"
   printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK1/retros/INDEX.md"
-  printf '%s\n' "$_bs_fixture" > "$TK1/BUILD-STATE.md"
+  printf '%s\n' "$_bs_fixture" > "$TK1/BUILD-STATE.src.md"
   run env -C "$TK1" KIT="$TK1" "$NR" kit rl7-kit-slug
   [ "$status" -eq 0 ]
-  [ "$(_pend kit "$TK1/BUILD-STATE.md")" = "true" ]
-  [ "$(_pend ModuleA "$TK1/BUILD-STATE.md")" = "false" ]
-  [ "$(_pend ModuleB "$TK1/BUILD-STATE.md")" = "false" ]
+  [ "$(_pend kit "$TK1/BUILD-STATE.src.md")" = "true" ]
+  [ "$(_pend ModuleA "$TK1/BUILD-STATE.src.md")" = "false" ]
+  [ "$(_pend ModuleB "$TK1/BUILD-STATE.src.md")" = "false" ]
 
   # Case 2 (symmetric): new-retro.sh ModuleA <slug> → ModuleA flips; kit + ModuleB stay false
   TK2="$BATS_TEST_TMPDIR/rl7crp"; mkdir -p "$TK2/retros"
   printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK2/retros/INDEX.md"
-  printf '%s\n' "$_bs_fixture" > "$TK2/BUILD-STATE.md"
+  printf '%s\n' "$_bs_fixture" > "$TK2/BUILD-STATE.src.md"
   run env -C "$TK2" KIT="$TK2" "$NR" ModuleA rl7-crp-slug
   [ "$status" -eq 0 ]
-  [ "$(_pend kit "$TK2/BUILD-STATE.md")" = "false" ]
-  [ "$(_pend ModuleA "$TK2/BUILD-STATE.md")" = "true" ]
-  [ "$(_pend ModuleB "$TK2/BUILD-STATE.md")" = "false" ]
+  [ "$(_pend kit "$TK2/BUILD-STATE.src.md")" = "false" ]
+  [ "$(_pend ModuleA "$TK2/BUILD-STATE.src.md")" = "true" ]
+  [ "$(_pend ModuleB "$TK2/BUILD-STATE.src.md")" = "false" ]
 }
 
 @test "RL8: slug shorter than 6 chars is rejected with exit 3; exactly 6 chars is accepted" {
@@ -140,7 +141,7 @@ retro_pending: false
   TK9="$BATS_TEST_TMPDIR/rl9kit"; mkdir -p "$TK9/retros"
   printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n' > "$TK9/retros/INDEX.md"
   printf '| %s-rl9slug.md | kit | %s | pending | 0 |\n' "$DATE" "$DATE" >> "$TK9/retros/INDEX.md"
-  printf '<!-- build-state.v1 -->\n## kit\nretro_required: true\nretro_pending: false\n' > "$TK9/BUILD-STATE.md"
+  printf '<!-- build-state.v1 -->\n## kit\nretro_required: true\nretro_pending: false\n' > "$TK9/BUILD-STATE.src.md"
   # Retro file must not exist (primary guard cannot fire; secondary INDEX guard must carry it)
   [ ! -f "$TK9/retros/$DATE-rl9slug.md" ]
   run env -C "$TK9" KIT="$TK9" "$NR" kit rl9slug
@@ -150,7 +151,7 @@ retro_pending: false
   # The index is regenerated from the retro headers (no append, so no duplicate guard is needed)
   [[ "$output" =~ index[[:space:]]+PASS.*regenerated ]]
   # Envelope must flip
-  grep -q 'retro_pending: true' "$TK9/BUILD-STATE.md"
+  grep -q 'retro_pending: true' "$TK9/BUILD-STATE.src.md"
   # INDEX must still have exactly ONE row for rl9slug (no duplicate)
   [ "$(grep -c 'rl9slug' "$TK9/retros/INDEX.md")" -eq 1 ]
 }
@@ -159,13 +160,21 @@ retro_pending: false
   # Another retro in the dir has no module/deltas headers, so gen-retro-index.sh exits 1.
   printf '<!-- review-status: pending -->\n# legacy\n' > "$TK/retros/2026-01-01-legacy.md"
   cp "$TK/retros/INDEX.md" "$BATS_TEST_TMPDIR/index.before"
-  cp "$TK/BUILD-STATE.md" "$BATS_TEST_TMPDIR/state.before"
+  cp "$TK/BUILD-STATE.src.md" "$BATS_TEST_TMPDIR/state.before"
   nr kit rl10slug
   [ "$status" -eq 1 ]
   [[ "$output" == *"2026-01-01-legacy.md"* ]]
   [ ! -f "$TK/retros/$DATE-rl10slug.md" ]
   cmp -s "$BATS_TEST_TMPDIR/index.before" "$TK/retros/INDEX.md"
-  cmp -s "$BATS_TEST_TMPDIR/state.before" "$TK/BUILD-STATE.md"
+  cmp -s "$BATS_TEST_TMPDIR/state.before" "$TK/BUILD-STATE.src.md"
+}
+
+@test "RL11: no INDEX.md beforehand (it is generated, not committed) -> the stub lands and the index is generated" {
+  rm "$TK/retros/INDEX.md"
+  nr kit rl11slug
+  [ "$status" -eq 0 ]
+  grep -qF "| $DATE-rl11slug.md | kit | $DATE | pending | 0 |" "$TK/retros/INDEX.md"
+  grep -q 'retro_pending: true' "$TK/BUILD-STATE.src.md"
 }
 
 # retro deltas 1928: gh PRESENT but with no known host / no auth must not just fail (exit 3, ticket lost) —

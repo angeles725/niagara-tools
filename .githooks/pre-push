@@ -5,20 +5,20 @@
 # ("no toolbelt script invokes git") does not apply. This hook owns the git-diff half of the
 # gate and delegates the content half to toolbelt/sweep-build-state.sh.
 #
-# Opt-in: enable with `git config core.hooksPath .githooks`. When active it BLOCKS a push that
-# changes build-relevant kit files unless the SAME range also carries a BUILD-STATE.md update +
-# a pending retro, OR a `Retro: none (trivial: <reason>)` commit trailer. retros/INDEX.md is
-# GENERATED (toolbelt/gen-retro-index.sh) from the retro headers, so it need not be in range:
-# sweep (the content half) fails the push when the committed index is stale. The kit block's
-# last_change, open_issues items and session log are GENERATED from ledger.d/*.md
-# (toolbelt/gen-build-state.sh): a new or changed ledger.d/ fragment in range counts as the BUILD-STATE.md
-# update of every exit, and sweep fails the push when BUILD-STATE.md is stale against ledger.d/.
+# Opt-in: enable with `scripts/install-hooks.sh` (core.hooksPath .githooks). When active it BLOCKS a push
+# that changes build-relevant kit files unless the SAME range also carries a ledger update + a pending
+# retro, OR a `Retro: none (trivial: <reason>)` commit trailer. BUILD-STATE.md and retros/INDEX.md are
+# GENERATED and NOT committed (toolbelt/kit-state.sh; .gitignore): the ledger update is a ledger.d/
+# fragment or a BUILD-STATE.src.md edit, and the content half runs sweep over FRESH kit-state output
+# in a temp dir, so a malformed fragment, source or retro header fails the push (fail closed).
+# [ev: retro ledger-generated-not-committed]
 #
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
-sweep="$toplevel/build-n4-module-kit/toolbelt/sweep-build-state.sh"
+kit="$toplevel/build-n4-module-kit"
+sweep="$kit/toolbelt/sweep-build-state.sh"
 
 # range from the first ref line; fields 1/3 (refs) are unused
 read -r _ lsha _ rsha || exit 0
@@ -38,13 +38,26 @@ fi
 changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
 log=$(git log --format=%B "$range") || refuse "git log $range failed"
 
-# build-relevant = kit files EXCEPT BUILD-STATE.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
+# content half: generate BUILD-STATE.md + retros/INDEX.md from the committed sources into a temp dir
+# (the files are not committed) and sweep them; any generator violation fails the push.
+run_sweep() {
+  local t rc
+  t=$(mktemp -d) || refuse "mktemp failed"
+  bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
+    && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
+    && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
+  rc=$?
+  rm -rf "$t"
+  exit "$rc"
+}
+
+# build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
 # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
 # behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
 relevant=$(printf '%s\n' "$changed" \
   | grep -E '^(build-n4-module-kit/|scripts/|go/)' \
   | grep -vE '^go/bin/' \
-  | grep -vE '^build-n4-module-kit/BUILD-STATE\.md$' \
+  | grep -vE '^build-n4-module-kit/BUILD-STATE(\.src)?\.md$' \
   | grep -vE '^build-n4-module-kit/ledger\.d/' \
   | grep -vE '^build-n4-module-kit/retros/' || true)
 [ -n "$relevant" ] || exit 0     # nothing build-relevant → nothing to gate
@@ -52,35 +65,33 @@ relevant=$(printf '%s\n' "$changed" \
 # trivial waiver short-circuits
 if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then exit 0; fi
 
-# a ledger.d/ fragment IS a BUILD-STATE.md update (the kit block is generated from it; sweep checks freshness)
-has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.md|ledger\.d/[^/]+\.md)$' || true)
+# a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
+has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' || true)
 has_retro=$(printf '%s\n' "$changed" | grep -E '^build-n4-module-kit/retros/[^/]+\.md$' | grep -vE '/INDEX\.md$' | head -1 || true)
-has_index=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/retros/INDEX\.md$' || true)
+# a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it)
+patch=$(git diff "$range" -- 'build-n4-module-kit/retros/*.md') || refuse "git diff $range -- retros failed"
+has_flip=0
+if printf '%s\n' "$patch" | grep -qE '^-<!-- review-status: pending' \
+   && printf '%s\n' "$patch" | grep -qE '^\+<!-- review-status: folded'; then has_flip=1; fi
 
 # promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
-# carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retros/INDEX.md diff (a full
-# promotion flips a row), OR an in-range BUILD-STATE.md diff (a PARTIAL promotion folds content but its
-# source retro stays pending, so it flips no row — it stamps the owed open_issue in BUILD-STATE, today as
-# an `open_issue:` line of a ledger.d/ fragment, which counts as the BUILD-STATE.md anchor).
+# carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retro header flip pending ->
+# folded (a full promotion; its generated INDEX row flips with it), OR an in-range ledger update (a
+# PARTIAL promotion folds content but its source retro stays pending, so it flips nothing — it stamps the
+# owed open_issue as an `open_issue:` line of a ledger.d/ fragment).
 # The trailer alone is NOT a blanket escape: with NEITHER anchor it falls through to the FAIL below.
 # Either anchored path still runs sweep for ledger coherence.
 if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' \
-   && { [ "${has_index:-0}" -ge 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
-  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
-                "$toplevel/build-n4-module-kit/retros" \
-                "$toplevel/build-n4-module-kit/retros/INDEX.md"
-  exit $?
+   && { [ "$has_flip" -eq 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
+  run_sweep
 fi
 
 if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
-  # content half: the ledger + index must actually cohere, and the generated index must be fresh
-  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
-                "$toplevel/build-n4-module-kit/retros" \
-                "$toplevel/build-n4-module-kit/retros/INDEX.md"
-  exit $?
+  # content half: the generated ledger + index must actually cohere
+  run_sweep
 fi
 
-echo "pre-push: build-relevant kit files changed without a BUILD-STATE.md update (or a ledger.d/ fragment) + a pending retro" >&2
-echo "          (then run toolbelt/gen-retro-index.sh), and no 'Retro: none (trivial: <reason>)' trailer." >&2
+echo "pre-push: build-relevant kit files changed without a ledger.d/ fragment (or a BUILD-STATE.src.md edit) + a pending retro," >&2
+echo "          and no 'Retro: none (trivial: <reason>)' trailer." >&2
 echo "          See BUILD-LOOP.md §7." >&2
 exit 1

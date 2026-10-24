@@ -14,11 +14,13 @@ bats_require_minimum_version 1.5.0
 #
 #   2) .githooks/pre-push  — git ALLOWED (a hook is not toolbelt/*.sh).
 #        invoked: pre-push <remote> <url>, ref lines on stdin "<lref> <lsha> <rref> <rsha>".
-#        build-relevant IN this repo = build-n4-module-kit/** EXCLUDING BUILD-STATE.md,
-#          retros/, retros/INDEX.md; PLUS scripts/** and go/** (except go/bin/).
-#        if a build-relevant path changed in range AND NOT (BUILD-STATE.md + a pending
-#          retro + its INDEX row all in range) AND NOT a `Retro: none (trivial: …)` trailer
-#          in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep for the content half.
+#        build-relevant IN this repo = build-n4-module-kit/** EXCLUDING BUILD-STATE.src.md,
+#          ledger.d/, retros/; PLUS scripts/** and go/** (except go/bin/).
+#        if a build-relevant path changed in range AND NOT (a ledger update — a ledger.d/
+#          fragment or BUILD-STATE.src.md — + a pending retro in range) AND NOT a
+#          `Retro: none (trivial: …)` trailer in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep
+#          for the content half over FRESH kit-state output (BUILD-STATE.md and retros/INDEX.md are
+#          generated, not committed). [ev: retro ledger-generated-not-committed]
 #        Must NOT fire on a module-repo path or a non-build-relevant path (no false fail).
 #
 # These bites are real: flip the guarded condition and the outcome flips. No real push,
@@ -42,10 +44,11 @@ setup() {
   mkdir -p "$FAKEBIN"
   cat > "$FAKEBIN/git" <<'GIT'
 #!/usr/bin/env bash
-# Scripted git for hook tests: reads FAKE_TOPLEVEL / FAKE_CHANGED_FILE / FAKE_LOG_FILE.
+# Scripted git for hook tests: reads FAKE_TOPLEVEL / FAKE_CHANGED_FILE / FAKE_LOG_FILE / FAKE_PATCH_FILE.
 case "$1" in
   rev-parse) echo "${FAKE_TOPLEVEL:-$PWD}" ;;
-  diff)      [ -f "$FAKE_CHANGED_FILE" ] && cat "$FAKE_CHANGED_FILE" ;;
+  diff)      if [ "${2:-}" = --name-only ]; then [ -f "$FAKE_CHANGED_FILE" ] && cat "$FAKE_CHANGED_FILE"
+             else [ -f "${FAKE_PATCH_FILE:-}" ] && cat "$FAKE_PATCH_FILE"; fi; exit 0 ;;
   log)       [ -f "$FAKE_LOG_FILE" ] && cat "$FAKE_LOG_FILE" ;;
   *)         exit 0 ;;
 esac
@@ -204,9 +207,9 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 0 ]
 }
 
-@test "H3: the SAME kit change WITH BUILD-STATE.md + a pending retro + INDEX row PASSES" {
+@test "H3: the SAME kit change WITH a BUILD-STATE.src.md edit + a pending retro PASSES" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
-  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\nbuild-n4-module-kit/retros/INDEX.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.src.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'feat: change a control rule + retro\n' > "$BATS_TEST_TMPDIR/log"
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
@@ -247,19 +250,30 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
 
 # --- third §7 exit: promotion (a fold-only PR fits neither "new retro" nor "trivial") ---
 # A promotion trailer is a valid close ONLY when it moves the registry with a STRUCTURAL ANCHOR in
-# range — either a retros/INDEX.md diff (a FULL promotion flips folded/pending marks) OR a
-# BUILD-STATE.md diff (a PARTIAL promotion folds content + narrows the owed open_issue list without
-# flipping a row, because the source retro stays pending). The trailer with NEITHER anchor must NOT
-# be a blanket escape. Both anchored paths still run sweep for ledger coherence.
-@test "H8: a kit change + 'Retro: promotion (folds …)' trailer AND an INDEX.md diff PASSES" {
+# range — either a retro header flip pending -> folded (a FULL promotion; the generated INDEX row
+# flips with it — the index itself is not committed) OR a ledger update (a PARTIAL promotion folds
+# content + narrows the owed open_issue list without flipping a header, because the source retro stays
+# pending). The trailer with NEITHER anchor must NOT be a blanket escape. Both anchored paths still run
+# sweep for ledger coherence.
+@test "H8: a kit change + 'Retro: promotion (folds …)' trailer AND a retro header flip pending->folded PASSES" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
-  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/INDEX.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3,L4 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
-  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  printf -- '--- a/build-n4-module-kit/retros/2026-09-04-demo.md\n+++ b/build-n4-module-kit/retros/2026-09-04-demo.md\n@@ -1 +1 @@\n-<!-- review-status: pending -->\n+<!-- review-status: folded -->\n' > "$BATS_TEST_TMPDIR/patch"
+  FAKE_PATCH_FILE="$BATS_TEST_TMPDIR/patch" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
 }
 
-@test "H9: a promotion trailer with NEITHER an INDEX diff NOR a BUILD-STATE diff FAILS (no blanket escape)" {
+@test "H8b: a promotion trailer + a retro edit that flips NO header (body only) FAILS" {
+  # Mutation: H8b -- anchoring the promotion on any retros/ path (the old INDEX.md rule's shape) passes this.
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
+  printf -- '@@ -9 +9 @@\n-old body line\n+new body line\n' > "$BATS_TEST_TMPDIR/patch"
+  FAKE_PATCH_FILE="$BATS_TEST_TMPDIR/patch" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -ne 0 ]
+}
+
+@test "H9: a promotion trailer with NEITHER a header flip NOR a ledger update FAILS (no blanket escape)" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
   printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"   # kit file only: no anchor
   printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
@@ -268,34 +282,36 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
 }
 
 # H10 drives the AG-PR1 fix: a PARTIAL promotion (folds content, source retro stays pending, so it
-# flips NO INDEX row) anchors on an in-range BUILD-STATE.md diff instead — the shape C4-PR2 shipped.
+# flips NO header) anchors on an in-range ledger update instead — the shape C4-PR2 shipped (then a
+# BUILD-STATE.md diff; today a BUILD-STATE.src.md edit or a ledger.d/ fragment).
 # RED today: the current hook (.githooks/pre-push line 43) requires an INDEX diff (has_index>=1), so
 # a BUILD-STATE-only promotion falls through to the FAIL. The fix accepts a BUILD-STATE diff as an
 # ALTERNATIVE structural anchor and still runs sweep for ledger coherence.
 # MUTATION (run post-green): drop the BUILD-STATE alt-anchor acceptance in the hook → H10 flips back
 # to FAIL, proving the acceptance clause (not sweep) is what carries it.
-@test "H10: a promotion trailer + an in-range BUILD-STATE.md diff (no INDEX) PASSES (partial promotion)" {
+@test "H10: a promotion trailer + an in-range BUILD-STATE.src.md edit (no header flip) PASSES (partial promotion)" {
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
-  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.src.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: fold B737 composition\n\nRetro: promotion (folds B737 into logic.md; source retro stays pending for the owed halves)\n' > "$BATS_TEST_TMPDIR/log"
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
 }
 
-# --- generated INDEX (r8 T8i): retros/INDEX.md is regenerated from the retro headers by
-# toolbelt/gen-retro-index.sh, so the new-retro exit no longer needs a hand-edited INDEX.md diff in
-# range: BUILD-STATE.md + a retro is enough WHEN the index is fresh, and sweep (the content half)
-# fails a stale one. RED before T8i: the hook required has_index>=1, so H11 fell through to FAIL.
-# _fixture_top — a fake toplevel with the real sweep + generator and a one-retro kit.
+# --- generated state (r8 T8i, R10-D1): retros/INDEX.md (from the retro headers) and BUILD-STATE.md (from
+# BUILD-STATE.src.md + ledger.d/*.md) are generated and NOT committed, so a range never carries them: a
+# ledger update (a fragment or a source edit) + a retro is the new-retro exit, and the content half
+# sweeps FRESH kit-state output, so a malformed retro header or fragment fails the push (fail closed).
+# _fixture_top — a fake toplevel with the real sweep + kit-state, a one-retro kit, a source and a ledger.
 _fixture_top() {
   TOP="$BATS_TEST_TMPDIR/top"; local k="$TOP/build-n4-module-kit"
-  mkdir -p "$k/toolbelt" "$k/retros"
+  mkdir -p "$k/toolbelt" "$k/retros" "$k/ledger.d"
   ln -s "$(cd "$KIT/.." && pwd)/go" "$TOP/go" # the wrapper execs <toplevel>/go/bin [ev: retro go-module-gen-retro-index Δ2]
-  cp "$KIT/toolbelt/sweep-build-state.sh" "$KIT/toolbelt/gen-retro-index.sh" "$k/toolbelt/"
+  cp "$KIT/toolbelt/sweep-build-state.sh" "$KIT/toolbelt/kit-state.sh" "$k/toolbelt/"
   printf '<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 1 -->\n# demo\n' > "$k/retros/2026-09-04-demo.md"
-  printf '<!-- build-state.v1 -->\nmodule: kit\nretro_required: true\nretro_pending: true\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
-  bash "$k/toolbelt/gen-retro-index.sh" "$k" >/dev/null
-  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: below\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.src.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n' > "$k/ledger.d/0000-archive-pre-2026-10-23.md"
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n' > "$k/ledger.d/2026-09-05-demo.md"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/BUILD-STATE.src.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'feat: change a control rule + retro\n' > "$BATS_TEST_TMPDIR/log"
 }
 run_hook_at() { # run_hook_at <toplevel>
@@ -303,56 +319,39 @@ run_hook_at() { # run_hook_at <toplevel>
   run env PATH="$FAKEBIN:$PATH" bash "$HOOK" origin https://example/repo.git <<<'refs/heads/main aaaa refs/heads/main bbbb'
 }
 
-@test "H11: BUILD-STATE.md + a retro with NO INDEX.md diff PASSES when the generated index is fresh" {
+@test "H11: BUILD-STATE.src.md + a retro (no generated file in range) PASSES; nothing is left in the kit" {
   _fixture_top
   run_hook_at "$TOP"
   [ "$status" -eq 0 ]
+  [ ! -e "$TOP/build-n4-module-kit/BUILD-STATE.md" ] && [ ! -e "$TOP/build-n4-module-kit/retros/INDEX.md" ]
 }
 
-@test "H12: the same range FAILS when the generated index is stale (retro header changed, not regenerated)" {
+@test "H12: the same range FAILS when a retro header is malformed (the generated index cannot be made)" {
   _fixture_top
-  sed -i 's/deltas: 1/deltas: 2/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  sed -i '/deltas: 1/d' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
   run_hook_at "$TOP"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"stale"* ]]
+  [[ "$output" == *"retro-header violation"* ]]
 }
 
-# --- ledger fragments (r8 T8i slice B): the kit block's last_change, open_issues and session log are
-# GENERATED from build-n4-module-kit/ledger.d/*.md by toolbelt/gen-build-state.sh. A new or changed
-# fragment in range satisfies the "BUILD-STATE.md in range" half of every exit, and sweep (the content
-# half) fails a BUILD-STATE.md that is stale against ledger.d/. RED before slice B: the hook counted
-# only a BUILD-STATE.md diff, and ledger.d/ was build-relevant.
-# _fixture_ledger_top — _fixture_top plus ledger.d/, the generator and a kit block generated from it.
-_fixture_ledger_top() {
-  _fixture_top; local k="$TOP/build-n4-module-kit"
-  cp "$KIT/toolbelt/gen-build-state.sh" "$k/toolbelt/"
-  mkdir -p "$k/ledger.d"
-  # BUILD-STATE.md is generated from BUILD-STATE.src.md + ledger.d/ (R10-D1); the source keeps the
-  # kit envelope's generated parts empty.
-  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: below\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.src.md"
-  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n' > "$k/ledger.d/0000-archive-pre-2026-10-23.md"
-  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n' > "$k/ledger.d/2026-09-05-demo.md"
-  bash "$k/toolbelt/gen-build-state.sh" "$k" >/dev/null
+@test "H13: a kit change + a ledger.d fragment + a retro (no BUILD-STATE.src.md edit) PASSES" {
+  _fixture_top
   printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
-}
-
-@test "H13: a kit change + a ledger.d fragment + a retro (no BUILD-STATE.md diff) PASSES when BUILD-STATE.md is fresh" {
-  _fixture_ledger_top
   run_hook_at "$TOP"
   [ "$status" -eq 0 ]
 }
 
-@test "H14: the same range FAILS when BUILD-STATE.md is stale against ledger.d (fragment added, not regenerated)" {
-  # Mutation: GBS-gate -- a hook that counts a fragment without sweep's freshness check passes this.
-  _fixture_ledger_top
-  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\nlog: 2026-09-06 · not regenerated\n' > "$TOP/build-n4-module-kit/ledger.d/2026-09-06-late.md"
+@test "H14: the same range FAILS when a ledger.d fragment is malformed (fail closed)" {
+  # Mutation: GBS-gate -- a hook that counts a fragment without generating from it passes this.
+  _fixture_top
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\n  - hand item\n' > "$TOP/build-n4-module-kit/ledger.d/2026-09-06-late.md"
   run_hook_at "$TOP"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"stale vs ledger.d"* ]]
+  [[ "$output" == *"2026-09-06-late.md"*"ledger fragment violation"* ]]
 }
 
-@test "H15: a promotion trailer + an in-range ledger.d fragment (no INDEX, no BUILD-STATE diff) PASSES" {
-  _fixture_ledger_top
+@test "H15: a promotion trailer + an in-range ledger.d fragment (no header flip, no source edit) PASSES" {
+  _fixture_top
   printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: fold demo\n\nRetro: promotion (folds demo Δ1; source retro stays pending)\n' > "$BATS_TEST_TMPDIR/log"
   run_hook_at "$TOP"
@@ -441,8 +440,10 @@ _fixture_ledger_top() {
   # GREEN today (marker-blind). When the impl reads markers this goes RED until the two real
   # 'fresh' retros are reconciled to 'folded' (INDEX is right — they were promoted in campaign 2),
   # forcing that reconciliation into the same PR and guarding future strays (ci.yml runs sweep on
-  # the real tree).
-  run "$SWEEP" "$KIT/BUILD-STATE.md" "$KIT/retros" "$KIT/retros/INDEX.md"
+  # the real tree). The real BUILD-STATE.md and INDEX.md are generated, not committed: sweep kit-state output.
+  bash "$KIT/toolbelt/kit-state.sh" build-state > "$BATS_TEST_TMPDIR/BUILD-STATE.md"
+  bash "$KIT/toolbelt/kit-state.sh" retro-index > "$BATS_TEST_TMPDIR/INDEX.md"
+  run "$SWEEP" "$BATS_TEST_TMPDIR/BUILD-STATE.md" "$KIT/retros" "$BATS_TEST_TMPDIR/INDEX.md"
   [ "$status" -eq 0 ]
 }
 
