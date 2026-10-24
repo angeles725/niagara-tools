@@ -1,0 +1,43 @@
+-- args --
+--package
+com.angeles
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE IllegalStateException: s1 @ com.angeles.A.noparen
+FAIL  triage-console  a.txt  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  SEVERE IllegalStateException: s7 @ angeles.(G.java:7)
+FAIL  triage-console  a.txt  1x 10:00:06 01-Oct-26 CST -> 10:00:06 01-Oct-26 CST  SEVERE IllegalStateException: s6 @ g.h(F.java:6) ~[mod.jar]
+FAIL  triage-console  a.txt  2x 10:00:03 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  SEVERE IllegalStateException: s4 @ D.first(D.java:10)
+FAIL  triage-console  a.txt  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  SEVERE IllegalStateException: s3 @ B.m(B.java:3)
+FAIL  triage-console  a.txt  1x 10:00:01 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  SEVERE IllegalStateException: s2 @ com.angeles(Native Method)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+SEVERE [10:00:00 01-Oct-26 CST][web] no paren
+  java.lang.IllegalStateException: s1
+  	at com.angeles.A.noparen
+SEVERE [10:00:01 01-Oct-26 CST][web] one part
+  java.lang.IllegalStateException: s2
+  	at com.angeles(Native Method)
+SEVERE [10:00:02 01-Oct-26 CST][web] prefix without dot boundary
+  java.lang.IllegalStateException: s3
+  	at com.angelesX.B.m(B.java:3)
+SEVERE [10:00:03 01-Oct-26 CST][web] first own frame wins
+  java.lang.IllegalStateException: s4
+  	at org.other.C.m(C.java:1)
+  	at com.angeles.D.first(D.java:10)
+  	at com.angeles.D.second(D.java:20)
+SEVERE [10:00:04 01-Oct-26 CST][web] same key other line
+  java.lang.IllegalStateException: s4
+  	at com.angeles.D.first(D.java:99)
+SEVERE [10:00:05 01-Oct-26 CST][web] at without blank
+  java.lang.IllegalStateException: s5
+  	atcom.angeles.E.m(E.java:1)
+SEVERE [10:00:06 01-Oct-26 CST][web] module-path frame
+  java.lang.IllegalStateException: s6
+  	at com.angeles.F.g.h(F.java:6) ~[mod.jar]
+SEVERE [10:00:07 01-Oct-26 CST][web] trailing dot
+  java.lang.IllegalStateException: s7
+  	at com.angeles.(G.java:7)

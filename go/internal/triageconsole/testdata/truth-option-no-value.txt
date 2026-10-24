@@ -1,0 +1,11 @@
+-- args --
+a.txt
+--package
+-- want --
+exit 3
+-- stderr --
+triage-console: --package requires a value
+-- @kind --
+truth: hand-written, the bash recorded at 79ca5a2c died on set -u ("<script>: line 35: $1: unbound variable", exit 1); an option without its value is a usage error, exit 3
+-- a.txt --
+WARNING [10:00:00 01-Oct-26 CST][plant] a warning

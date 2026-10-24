@@ -1,0 +1,25 @@
+-- args --
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE grave is severe @ [plant]
+FAIL  triage-console  a.txt  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  SEVERE severe block @ Late.frame(Late.java:9)
+FAIL  triage-console  a.txt  1x 10:00:01 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING advertencia is warning @ [plant]
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+GRAVE [10:00:00 01-Oct-26 CST][plant] grave is severe
+ADVERTENCIA [10:00:01 01-Oct-26 CST][plant] advertencia is warning
+INFO [10:00:02 01-Oct-26 CST][plant] info is not a row
+CONFIG [10:00:03 01-Oct-26 CST][plant] config is not a row
+FINE [10:00:04 01-Oct-26 CST][plant] fine
+FINER [10:00:05 01-Oct-26 CST][plant] finer
+FINEST [10:00:06 01-Oct-26 CST][plant] finest
+SEVERE [10:00:07 01-Oct-26 CST][plant] severe block
+INFORMACION [10:00:08 01-Oct-26 CST][sys] informacion does not end the block
+  	at com.angeles.Late.frame(Late.java:9)
+DEBUG [10:00:09 01-Oct-26 CST][plant] debug is no level
