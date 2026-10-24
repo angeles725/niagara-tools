@@ -26,6 +26,7 @@ const (
 	Vineflower   Kind = "vineflower"   // Target = <mod>-<profile>, File = path in its vineflower/ copy
 	Javap        Kind = "javap"        // Target = jar file name
 	Jar          Kind = "jar"          // Target = jar file name, File = the entry in it (`x.jar!entry`)
+	Archive      Kind = "archive"      // Target = path of a zip, File = the entry in it (`x.zip!entry`)
 	Course       Kind = "course"       // Target = path under the dev-course tree (or its course-text)
 	Bitacora     Kind = "bitacora"     // Target = slug of a client bitacora/<date>-<slug>.md
 	Bare         Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)

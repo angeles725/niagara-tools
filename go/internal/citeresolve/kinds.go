@@ -9,10 +9,11 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/citeparse"
 )
 
-// registerKinds adds the resolvers of the course and bitácora pointers.
+// registerKinds adds the resolvers of the course, bitácora and archive pointers.
 func (e *Engine) registerKinds() {
 	e.by[citeparse.Course] = courseResolver{e}
 	e.by[citeparse.Bitacora] = bitacoraResolver{e}
+	e.by[citeparse.Archive] = archiveResolver{e}
 }
 
 func (e *Engine) course() string {
@@ -128,4 +129,24 @@ func (r bitacoraResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	}
 	return r.e.pick(p, g.groups(), "bitacora/*-"+p.Target+".md",
 		Result{Status: MissingFile, Detail: "no bitacora/<date>-" + p.Target + ".md under " + t.root})
+}
+
+type archiveResolver struct{ e *Engine }
+
+// Resolve finds the zip under the card's directory, the kit, the repository, the research tree or the
+// course tree; no zip is opened, so the entry and its lines are reported, not checked.
+func (r archiveResolver) Resolve(p citeparse.Pointer, c *Card) Result {
+	ro := r.e.roots
+	bases := []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.course()}
+	if filepath.IsAbs(p.Target) {
+		bases = []string{"/"}
+	}
+	f, err := first(p.Target, bases...)
+	switch {
+	case err != nil:
+		return toolError(err)
+	case f == "":
+		return Result{Status: MissingFile, Detail: "no " + p.Target + " under the card, kit, repo, research or course trees"}
+	}
+	return Result{Status: Resolved, File: f, Detail: "zip " + r.e.short(f) + " [entry " + p.File + " not checked]"}
 }

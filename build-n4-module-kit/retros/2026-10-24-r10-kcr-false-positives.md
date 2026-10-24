@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-kcr-false-positives
@@ -54,3 +54,10 @@ existing table tests and then GREEN:
 ## Owed
 - The spaced-path rule is lexical: a capitalised or numbered first word opens a path. A capitalised label
   before a path (`Foo a/b.java` in backticks) would still be read as one spaced path. No kit card has one today.
+
+## Fold
+- Δ1 is code already shipped in the PR that wrote this retro (`go/internal/citeparse`, `go/internal/citeresolve`); not re-implemented. Its behavior and both lessons (kit-wide before/after row-key diff; a negative test per wider shape) → `BUILD-LOOP.md` § 5 "Citation pre-filter" bullet.
+- The owed capitalised-label case stays lexical; no kit card has one, so no issue is opened.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail2`; log in `ledger.d/2026-10-24-r10-fold-tail2.md`) — Δ1 shipped code, cited in the `BUILD-LOOP.md` § 5 Citation pre-filter bullet.

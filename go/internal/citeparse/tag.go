@@ -183,6 +183,8 @@ func clause(c string, aliases map[string]string) []Pointer {
 		return corpusClause(c, c)
 	case bareID.MatchString(c):
 		return []Pointer{{Kind: Bare, Target: c, Raw: c}}
+	case (word == "code" || word == "course") && zipEntry.MatchString(rest):
+		return archiveClause(c, rest)
 	case word == "course":
 		return courseClause(c, rest)
 	case word == "bitácora" || word == "bitacora":

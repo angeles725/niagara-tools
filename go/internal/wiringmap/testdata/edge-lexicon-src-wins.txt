@@ -40,14 +40,8 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at 15e792d1
--- @tools --
-GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)
-GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0)
-find (GNU findutils) 4.9.0
-sort (GNU coreutils) 9.4
-generate-wiring-map.sh sha256 310c9bd76b5f2767b648dca02315b1a8e78b02d4cda02853cef77f2542bd5b48
-lib/scan-files.sh sha256 7cafd5baa19f807165ae4ac74a76b0cc92f669ecf43ae94a3448d3ff58fd9b99
+recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at 15e792d1 (sha256 310c9bd76b5f2767b648dca02315b1a8e78b02d4cda02853cef77f2542bd5b48)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
 -- m/module.lexicon --
 a=In parent
 -- m/src/BA.java --
