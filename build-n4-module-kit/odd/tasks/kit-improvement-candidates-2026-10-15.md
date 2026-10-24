@@ -77,7 +77,7 @@ Appendix B, outside the 168 count):
 | r3-report#R2 | `types/logic-authoring.md:646` — `pingEnabled` is already ON by default (`<network>/monitor`) | `BPingMonitor.java:128`, corpus B1348 C1 | yes, r3di Δ2 |
 | r3-report#R3 | shl Δ7(b): the non-driver-client gate is CLOSED by default (`HttpClientService.enableNonDriverClients=false`) | `BHttpClientService.java:231-252,270`, corpus B1346 §1346.2 | yes, r3di Δ4 |
 | r3-report#R4 | shl Δ9: the jsonToolkit type-override hook is `overrideValueEncoding(BValue)`; `doOverride` is `final` in the 4.15 jar | `javap jsonToolkit-rt.jar!…/BTypeOverride`, corpus B1350 | yes, r3pec Δ2 |
-| r3-report#R5 | sta Δ10: the `forceUpdate` flag reset applies only to R2 oBIX proxy points ("Niagara R2 to AX via oBIX") | `guides-clean/EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8 | **no — only here** |
+| r3-report#R5 | sta Δ10: the `forceUpdate` flag reset applies only to R2 oBIX proxy points ("Niagara R2 to AX via oBIX") | `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15`, corpus B1353 §1353.2 row 8 | **no — only here** |
 | r3-report#R6 | pps Δ1: `noRunningApp`/`noStation`=true stops ALL apps incl. Sedona; Workbench aborts on decline; a missing attribute means false | `DistributionManifest.java:87`, `PlatformInstallManager.java:353-356`, `CommitCommand.java:74-86`, corpus B1345 | yes, r3pec Δ1 |
 
 ---
@@ -172,7 +172,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C04 — BStatus bit table is shifted from STALE on and misses ALARM
 - **Sources:** rac#Δ4 (primary)
 - **Winning text:** DISABLED 0x01, FAULT 0x02, DOWN 0x04, ALARM 0x08, STALE 0x10, OVERRIDDEN 0x20, NULL 0x40, UNACKED_ALARM 0x80; `isValid()` passes ALARM, OVERRIDDEN, UNACKED.
-- **Evidence:** `source/baja/javax/baja/status/BStatus.java:758-786`; corpus B736 already right (transcription error).
+- **Evidence:** `niagara-help/versions/4.15.6.20/source/baja/javax/baja/status/BStatus.java:758-786`; corpus B736 already right (transcription error).
 - **Target:** `types/logic.md:233-243`.
 - **Lint-able:** yes — bats row pins the table to the constants. **Fold type:** doc fix + test pin.
 - **Fold status:** FOLDED (WU-P0-2, `docs/r8-t9e-status-links`, 2026-10-22; rac Δ4): table = `BStatus` constants, pinned by
@@ -242,7 +242,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Evidence:** `Niagara-4.15.6.20/modules/kitControl-rt.jar!module.palette:133-141`; course `Slide Code/…/module.palette`; `fixtures/MinimalPan/MinimalPan/MinimalPan-rt/module.palette:3`.
 - **Target:** `types/structure.md:133-180`, fixture palette, `toolbelt/verify-module.sh`.
 - **Lint-able:** yes — FAIL `t="` with a `.`, undeclared prefix; WARN any `b:Folder`. **Fold type:** doc fix + template + lint.
-- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; afl Δ3): `types/structure.md` § Palette format card + example + key
+- **Fold status:** FOLDED (WU-P0-4, 2026-10-22; afl Δ3): `types/structure.md` § Format card (Palette assembly templates: card + example + key)
   rules; `verify-module.sh` `palette_scan` (`palette-type` FAIL, `palette-root` WARN on every baja Folder);
   `fixtures/MinimalPan` root `b:UnrestrictedFolder`. Premise confirmed in `ValueDocDecoder.java:1071-1073,1091`; the
   undeclared-symbol FAIL also catches a root without `m="b=baja"`. OWED: `fixtures/MinimalDash` palettes (two `b:Folder`
@@ -256,7 +256,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Lint-able:** no (doctrine; C40 adds the runner). **Fold type:** doc fix.
 - **Fold status:** FOLDED (WU-P0-9, `docs/r8-t9i-libs`, 2026-10-23; tpb Δ1, Δ3): `types/moduleTest.md` NRE note,
   checklist step 4, new § Running from WSL (cmd.exe on a `%TEMP%` copy, `:clean` first, count the tests, the
-  self-signed test-jar cause, back up `modules/<part>.jar`), Known gotchas; `BUILD-LOOP.md` § moduleTest;
+  self-signed test-jar cause, back up `modules/<part>.jar`), Known gotchas; `BUILD-LOOP.md` § 4.b Test layer;
   `build-verify.md` § Unit tests in WSL. The runner (tpb Δ2) stays with C40. Pin KL4.
 
 ### C13 — Security headers: station headers already apply to module servlets
@@ -292,7 +292,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C16 — Tuning facts: `staleTime=0` is not "off"; `pollEnabled` lives on the poll service
 - **Sources:** drp#Δ3 (primary, staleTime) · drp#Δ8 (primary, pollEnabled; extends with ≤75 % busy, Slow/Normal/Fast policies, no exts on proxy points)
-- **Evidence:** `guides-clean/Bacnet/bacnet-BacnetTuningPolicy.txt:66`; `driver-rt/…/util/BAbstractPollService.java:64`; corpus B1327 §1327.2 C1, B1337 §1337.2 C1-C2.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/bacnet-BacnetTuningPolicy.txt:20`; `driver-rt/…/util/BAbstractPollService.java:64`; corpus B1327 §1327.2 C1, B1337 §1337.2 C1-C2.
 - **Target:** `types/driver-authoring.md:121-132,205-213`.
 - **Lint-able:** yes for `:213`; partial otherwise. **Fold type:** doc fix.
 - **Fold status:** FOLDED (WU-P0-5, 2026-10-22; drp Δ3, Δ8; KD3 pins `:213`). The staleTime half is CORRECTED, not
@@ -335,7 +335,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C21 — Tag-dictionary recipe names APIs that do not exist; `hierarchy:` is client-only; dictionaries are licensed
 - **Sources:** nsto#Δ9 (primary, recipe rewrite) · nsto#Δ10 extends (tags-in-code card, `hierarchy:` client-only) · sta#Δ5 extends (licence: 2 dictionaries, `n` takes one) · sta#Δ7 reinforces (ScopedTagRule, implied index off, heap-only caches)
-- **Evidence:** `BSmartTagDictionary.java:71`, `BTagDictionary.java:144,200`, `BNamespace.java:19` (`@Deprecated`), devguide `neql.txt:18,28-46`, `hierarchy.txt:63-66`, `Tagging/LicenseRequirements-474FC1B4.txt:20`, corpus B1311 §1311.2, B1329.
+- **Evidence:** `BSmartTagDictionary.java:71`, `BTagDictionary.java:144,200`, `BNamespace.java:19` (`@Deprecated`), devguide `neql.txt:18,28-46`, `hierarchy.txt:63-66`, `niagara-help/versions/4.15.6.20/guides-clean/Tagging/LicenseRequirements-474FC1B4.txt:7`, corpus B1311 §1311.2, B1329.
 - **Target:** `types/logic.md:359-376`, `types/logic-authoring.md:148-154,181`, `types/security.md:220`, `types/cloud-connector.md:206-217`.
 - **Lint-able:** yes — doc grep FAIL `getRules()`, `SmartTagRule`, `tag::`, `tagInfoList.add`; grep `BOrd.make("hierarchy:` in `-rt`. **Fold type:** doc rewrite + lint.
 - **Fold status:** FOLDED doc + doc grep (WU-P0-6, 2026-10-22; nsto Δ9, Δ10, sta Δ5, Δ7): `types/logic.md` § Ship a tag
@@ -422,7 +422,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C29 — A palette entry is not a `.ntpl`; the `§Templates` link dangles
 - **Sources:** pps#Δ4 (primary; provisioning half rides along)
-- **Evidence:** `guides-clean/Templates/DeployingTemplates-054F175F.txt:33`, corpus B1325 C1-C2; reinforces afl Δ3.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Templates/DeployingTemplates-054F175F.txt:7-11`, corpus B1325 C1-C2; reinforces afl Δ3.
 - **Target:** `types/distribution.md`, `types/logic.md:185`, `types/structure.md:133`.
 - **Lint-able:** yes — dangling `§` link check. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-7, 2026-10-23; pps Δ4): `types/logic.md` UX row 5 link fixed, palette ≠ `.ntpl` note
@@ -459,7 +459,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C83 — The ping API is `void doPing()` with void `pingOk()`/`pingFail(String)`
 - **Sources:** ndh#Δ1 (primary) · ndh#Δ3 extends (reachability-only ping recipe: `Socket.connect(addr, timeoutMs)` → `pingOk()`, `IOException` → `pingFail(...)`; confirms bdps Δ2's `NETWORK_COMMUNICATION` grant live, `hosts="*"`/`ports="*"` stays WARN)
 - **Winning text:** ndh Δ1 — class-ladder row → `doPing()`; § 5 snippet `public void doPing() throws Exception { … if (ok) pingOk(); else pingFail("no response"); }`; keep the DOWN-propagation text.
-- **Evidence:** `[ev: code javap driver-rt.jar BDevice 4.15.6.20]`, `[ev: live 2026-10-16 exam P3 ping {ok} www.google.com:443]`.
+- **Evidence:** `niagara-help/versions/4.15.6.20/source/driver-rt/javax/baja/driver/BDevice.java:574,592,602` (first read with javap on driver-rt.jar 4.15.6.20), `[ev: live 2026-10-16 exam P3 ping {ok} www.google.com:443]`.
 - **Target:** `types/driver-authoring.md:15` + § 5 Health (:142-153).
 - **Lint-able:** yes — kit self-check FAILs on `BObject doPing` or `return pingOk` in `types/*.md`. **Fold type:** doc fix + self-check.
 - **Fold status:** FOLDED (WU-P0-5, 2026-10-22; ndh Δ1, Δ3): § 1.1 + § 5; self-check = `tests/kit-driver-pins.bats` KD1.
@@ -485,7 +485,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C31 — HMI session lifetime and the kiosk user (DashboardPan wall panel)
 - **Sources:** r3wsh#Δ1 (primary, supersedes the static part of has Δ1) · has#Δ1 superseded-in-part · wuh#Δ1 corrects has Δ1/Δ2 · wuh#Δ6 extends (kiosk user slots) · r3wsh#Δ2 extends (4.15 absolute logoff, both flags) · sta#Δ3 duplicate (absolute logoff) · wuh#Δ7 extends (client-cert SSO)
 - **Winning text:** "a poll is not activity"; ladder: (1) panel user Auto Logoff off AND Absolute Logoff off AND `allowConcurrentSessions=false`; (2) SPA keep-alive `POST /timeout` (CSRF) or `activityMonitor.keepAlive()`; (3) `UserActivityFilter` only for a war-style module. has Δ1's "map it on the poll servlet" is rejected as a primary route (no shipped precedent: only web-rt's `file` servlet).
-- **Evidence:** `NiagaraSuperSession.java:184-198,217-244`, `SessionTimeoutServlet.java:25-38`, web-rt `WEB-INF/web.xml:59-68,84-91`, corpus B1344, B1318 §1318.2, B1334, B1326 row 8.
+- **Evidence:** `NiagaraSuperSession.java:184-198,217-244`, `SessionTimeoutServlet.java:25-38`, web-rt `organized/web/web-rt/vineflower/WEB-INF/web.xml:59-68,84-91`, corpus B1344, B1318 §1318.2, B1334, B1326 row 8.
 - **Target:** `types/dashboard.md` (new § Session lifetime / HMI kiosk), `types/security.md` §3, commissioning checklist.
 - **Lint-able:** partial — poll loop must reference `/timeout`/`keepAlive` or document route (1); commissioning check of user slots. **Fold type:** new doc section + lint + commissioning item. Live proof B1315-G1 still open.
 - **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; r3wsh Δ1, Δ2, has Δ1, wuh Δ1, Δ6, Δ7, sta Δ3): the
@@ -496,13 +496,13 @@ cursor recipe stays owed (WU-P0-6).
   adopted: contract question, doc wins — devguide `autoLogoffWeb.txt:35,112-125` publishes only
   `keepAlive()`/`release(token)`; the raw POST (B1344 §1344.4, `[INFER]`) is the monitor's internal and defeats the
   logoff policy. has Δ1 "map the filter on the poll servlet" stays rejected (only shipped mapping: web-rt `file`,
-  vineflower 4.14.0.162 `WEB-INF/web.xml:84-91`). Not adopted: wuh Δ7 "assigning the cert restarts Fox/Web" (not
+  vineflower 4.14.0.162 `organized/web/web-rt/vineflower/WEB-INF/web.xml:84-91`). Not adopted: wuh Δ7 "assigning the cert restarts Fox/Web" (not
   found in the 4.15.6.20 Touch guide). Live proof B1315-G1 still open. Owed Go lint G18 `session-keepalive`.
 
 ### C32 — Alarms for control modules: inhibit during defrost, ext chooser, ext owns FAULT
 - **Sources:** cas#Δ2 (primary) · rac#Δ6 extends (alarm ext clears/owns ALARM|FAULT|UNACKED)
 - **Evidence:** `BAlarmSourceExt.java:326,1332,1954`, corpus B1324, B1314 §1314.1 row 13.
-- **Target:** `types/logic.md` § alarm decisions + `:336` LC5.
+- **Target:** `types/logic.md` LC5 and LC8 (proposed as a new alarm-decisions section plus LC5, then at line 336; landed as the fold status says).
 - **Lint-able:** yes — WARN `%parent.` in alarm text defaults. **Fold type:** new doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ2, rac Δ6): `types/logic.md` LC8 (ext chooser from the
   4.15.6.20 guide, `alarmInhibit` + `inhibitTime`, texts against the record) and LC5 corrected. **Premise corrected (kit
@@ -525,7 +525,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C34 — Timers and schedules: TriggerSchedule for defrost, `clockChanged` for absolute tickets
 - **Sources:** cas#Δ9 (primary) · rac#Δ3 extends (absolute-start `schedulePeriodically` needs `clockChanged`) · cas#Δ10 extends (weekly schedule `defaultOutput`, share via ScheduleSelector)
 - **Evidence:** `BTriggerSchedule.java:274,524,527,540`, devguide `execution.txt:131-137`, ColdRoomPan `BDefrostMode.java:16`, corpus B1335, B1304 §1304.2.
-- **Target:** `types/logic.md` § Watchdogs and timers, `types/logic-authoring.md:298`, `toolbelt/lint-timers.sh`.
+- **Target:** `types/logic.md` § Safety fail-modes & timers (proposed as a new watchdogs-and-timers section), `types/logic-authoring.md:298`, `toolbelt/lint-timers.sh`.
 - **Lint-able:** yes — WARN absolute `Clock.schedule`/`schedulePeriodically` without `clockChanged`. **Fold type:** new doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-control`, 2026-10-23; cas Δ9, rac Δ3, cas Δ10): `types/logic.md` § Safety
   fail-modes & timers (relative vs absolute tickets from the 4.15.6.20 `Clock.java` javadoc + `execution.txt:64-66`;
@@ -549,7 +549,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C36 — Slot and callback contracts
 - **Sources:** scc#Δ3 (primary: `isRunning()` first line) · scc#Δ4 (validators skip link writes) · scc#Δ5 (slot-API traps) · scc#Δ6 (one-shot status write, TRANSIENT run-state, single-flight, ids in `started()`) · scc#Δ2 (flags are UI, not security; `checkSetFlags`)
 - **Evidence:** corpus B1231 §1231.6/§1231.9/§1231.11, B1232 §1232.2/§1232.4, B1253 §1253.3 K1/K6, B1254 §1254.5.
-- **Target:** `types/logic.md` § Tridium rt idioms / Slots / Restart & persistence; `types/logic-authoring.md`; `types/security.md` §2.
+- **Target:** `types/logic.md` § Tridium rt idioms to adopt, § Slots — BStatus producers, § Restart & persistence; `types/logic-authoring.md`; `types/security.md` §2.
 - **Lint-able:** yes — WARN callback without `isRunning()` guard (B1242 K4); `get("…") != null`; `removeAll()`; `setValue` then `setStatus`. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-slots`, 2026-10-23; scc Δ2, Δ3, Δ4, Δ5, Δ6): `types/logic.md` § Tridium rt idioms
   (callback contract, validators skip link-fed writes, one-shot status write, TRANSIENT run-state, single-flight,
@@ -587,7 +587,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C39 — A null Context means `BPermissions.all`; `OrdTarget.can*` pass without a security target
 - **Sources:** rcf#Δ2 (primary) · nsto#Δ8 extends (custom `BOrdScheme` contract; gate every hop with `canRead()`) · rsb#Δ5 extends (worker threads must carry the action's Context: null Context = all permissions + default locale)
 - **Evidence:** `BComponent.java:1979-1982`, `OrdTarget.java:465-480`, corpus B1316 §1316.2, B1308 §1308.1.
-- **Target:** `types/security.md` §4, `types/logic-authoring.md:73`, `types/module-wiring.md` § ordScheme.
+- **Target:** `types/security.md` §4, `types/logic-authoring.md:73`, `types/module-wiring.md:203` (the ordScheme handler pointer; proposed as an ordScheme section).
 - **Lint-able:** partial — WARN `.resolve(x, null)` in a file that calls `.canRead(`. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-web`, 2026-10-23; rcf Δ2, nsto Δ8, rsb Δ5): `types/security.md` § 4.4
   (`getPermissions` → `BPermissions.all` with no user; `OrdTarget.can*` true with no security target; custom
@@ -656,14 +656,14 @@ cursor recipe stays owed (WU-P0-6).
 - **Lint-able:** partial. **Fold type:** doc section.
 - **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; r3di Δ1, drp Δ7): `types/driver-authoring.md` § 5 (a failed
   poll is not a failed ping; the BACnet `ping()` + `maxPollTimeouts` pattern; ping-monitor rules). **Premise checked:**
-  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`Drivers/driver-PingMonitor.txt:37-40`)
+  the 4.15.6.20 guide's "in most drivers a poll with no response notes a ping fail" (`niagara-help/versions/4.15.6.20/guides-clean/Drivers/driver-PingMonitor.txt:13`)
   vs code — code wins for behaviour: `BProxyExt.readFail` makes no device call (vineflower driver-rt 4.14.0.162
   `BProxyExt.java:463-469`); BACnet does it in its own poll path (vineflower bacnet-rt 4.14.0.162
   `BBacnetDevice.java:1093-1101`). 4.13/4.15 code not verified. No lint (policy in the module's own comm code).
 
 ### C45 — BACnet `statusFlags` facet or field alarm/fault never reaches Niagara status
 - **Sources:** drp#Δ4 (primary) · r3di#Δ3 corrects scope (COV and polled alike; cost note)
-- **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `Bacnet/TroubleshootingBACnet-4FF09FBA.txt:86`, corpus B1327 row 3, B1348 §1348.2.
+- **Evidence:** `BBacnetProxyExt.java:1404-1409`, `CovHandler.java:266-270`, `niagara-help/versions/4.15.6.20/guides-clean/Bacnet/TroubleshootingBACnet-4FF09FBA.txt:47-49`, corpus B1327 row 3, B1348 §1348.2.
 - **Target:** `types/driver-authoring.md:129`, `types/dashboard.md` health read.
 - **Lint-able:** yes — bog check. **Fold type:** doc section + bog lint.
 - **Fold status:** FOLDED (`docs/r8-p1-drivers`, 2026-10-23; drp Δ4, r3di Δ3): `types/driver-authoring.md` § 2 BACnet
@@ -698,7 +698,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C48 — Signing hardening and verification modes
 - **Sources:** bdps#Δ4 (primary: `allowDefaultProfile.set(false)`, `RestrictedSigningProfile`, TSA, Module Info) · pps#Δ6 extends (Signing Service ≠ module signing; mode × status table; read `niagara.moduleVerificationMode`) · pps#Δ7 extends (program objects, RSA 3072, "Unable to load" causes) · rsb#Δ1 extends (verify-module `--expect-signer <pem>` fingerprint check; WARN on the default `Niagara4Modules` signer) · rsb#Δ2 extends (signing-profile XML is a secret store: never print it, keep it out of repos) · rsb#Δ3 extends (the two root blocks are the portable signing unit; `--info` proof lines)
-- **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `ModuleSign/VerificationModesModuleSigning-182D0E86.txt:25-36`.
+- **Evidence:** corpus B1234 §1234.3/§1234.6, B1332; `niagara-help/versions/4.15.6.20/guides-clean/ModuleSign/VerificationModesModuleSigning-182D0E86.txt:7-19`.
 - **Target:** `build-verify.md` § signing, `types/distribution.md:100`, `types/logic-authoring.md:917`, `toolbelt/lint-structure.sh`.
 - **Lint-able:** yes — WARN signing plugin without `allowDefaultProfile.set(false)`. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (`docs/r8-p1-sign`, 2026-10-23; bdps Δ4, pps Δ6, Δ7, rsb Δ1, Δ2, Δ3): `build-verify.md`
@@ -746,7 +746,7 @@ cursor recipe stays owed (WU-P0-6).
   step-2 line — all three files are outside this unit's edit surface; the one-time "never"/"forbidden" sweep. Owed Go
   lint G38 `absolute-claims` and Go tool G39 `count-retro-deltas`.
   U11 (2026-10-23): cex Δ1 still outside the surface; its exact `SOURCES.md` and `corpus-index.md` rows are recorded as owed
-  pointer P1 in `ledger.d/2026-10-23-r8-u11-leftovers.md` (`[deferred: …Δ1]`); hwf Δ1 (copy after a diff) FOLDED in
+  pointer P1 in `ledger.d/2026-10-23-r8-u11-leftovers.md` (then a deferred tag; the fragment now cites `[ev: retro n4-course-as-exemplar-source Δ1]`); hwf Δ1 (copy after a diff) FOLDED in
   `METHODOLOGY.md` § Hands-on work, helper owed G93 `diff-vs-reference`.
 
 ### C52 — Client parity ticket (course convention wins on five points)
@@ -788,7 +788,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C87 — Sample / course project retarget preflight
 - **Sources:** bsw#Δ6 (primary). Extends cex Δ4 (C58), which covers only the missing slot-o-matic region.
 - **Winning text:** before building a project the user did not generate, check `gradle.properties` `niagara_home` exists and matches the installed version, `niagara_user_home` holds no `<…>` placeholder, the ROOT has the signing block (C85), and no shipped `build/` directory is present.
-- **Evidence:** `[ev: code Labs/Lab11 NDriver/trafficLightServer.zip!gradle.properties:5,8]`.
+- **Evidence:** `sources/n4-dev-course/course/Labs/Lab11 NDriver/trafficLightServer.zip` (entry `gradle.properties`, lines 5 and 8).
 - **Target:** `toolbelt/preflight.sh` (new check), `build-verify.md` § Build target & plugin version.
 - **Lint-able:** yes. **Fold type:** preflight check + bats + doc line.
 
@@ -837,14 +837,14 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C55 — Runtime lexicon idiom and localizable exceptions
 - **Sources:** lex#Δ2 (primary: `LexiconModule.getText`, `lint-lexicon-keys.sh`) · lux#Δ3 extends (`LocalizableRuntimeException` + `toString(cx)`)
-- **Evidence:** course `Lab7/BWorkOrderService.java:107-185,272`, corpus B1236 §1236.4/§1236.7, B1305 §1305.1.
+- **Evidence:** course `sources/n4-dev-course/course/Labs/Lab7 Testing, Lexicons, and Logging/BWorkOrderService.java:107-185,272`, corpus B1236 §1236.4/§1236.7, B1305 §1305.1.
 - **Target:** `types/observability.md` §3, new `toolbelt/lint-lexicon-keys.sh`. **Lint-able:** yes. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (U6, 2026-10-23; lex Δ2, lux Δ3): `types/lexicon.md` § 3 (`LexiconModule`, MessageFormat, `LocalizableRuntimeException` + `toString(cx)`, `LexiconText.toLocalizable`); `types/observability.md` § 3 pointer owed (outside the surface). Owed Go lint G70 `lexicon-key` (replaces the proposed `toolbelt/lint-lexicon-keys.sh`).
 
 ### C56 — ux i18n: `lex!` plugin; lexicon content is public
 - **Sources:** lux#Δ5 (primary)
 - **Evidence:** `BLexiconRpc.java:44` (`unrestricted`), jsdoc `lex_lex.js.txt:157-208`.
-- **Target:** `types/frontend-standard.md` § i18n. **Lint-able:** yes. **Fold type:** doc section + lint.
+- **Target:** `types/frontend-standard.md:121` (the i18n pointer row; proposed as an i18n section). **Lint-able:** yes. **Fold type:** doc section + lint.
 - **Fold status:** FOLDED (U6, 2026-10-23; lux Δ5): `types/lexicon.md` § 4 + `types/dashboard.md` § Module packaging pointer. **Added:** JS `lex.get` returns `def` or an empty string for a missing key (jsdoc `lex_lex.js.txt:422-436`). `types/frontend-standard.md` pointer owed (outside the surface). Owed Go lint G72 `lexicon-public`.
 
 ### C57 — Station diagnostics card, log levels, Spanish console levels
@@ -911,7 +911,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C65 — Security hardening: FIPS, least privilege, platform TLS stores
 - **Sources:** sta#Δ1 (primary, FIPS) · sta#Δ2 (least privilege) · sta#Δ4 (TLS stores)
-- **Evidence:** `Fips/DevelopersNotes-51FBF6BE.txt:29-41`, `StationSecurity/role_*`, corpus B1326.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Fips/DevelopersNotes-51FBF6BE.txt:9-24`, `StationSecurity/role_*`, corpus B1326.
 - **Target:** `types/security.md` (new §, §2, §10). **Lint-able:** yes — WARN two-arg `getInstance(…, "<provider>")`, `KeyStore.getInstance`. **Fold type:** doc sections + lint.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ1, Δ2, Δ4): `types/security.md` § 9.1 FIPS, § 2.6 least privilege, § 10.1
   TLS stores. Δ1 "RC4/DES" dropped (not in the guide). Lints owed G80 `jca-named-provider`, G81 `embedded-keystore`
@@ -947,7 +947,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C70 — RDBMS: supported databases and export from code
 - **Sources:** shl#Δ8 (primary) · r3di#Δ6 extends (`histories.getExportDescriptorType()`, licence on the database)
-- **Evidence:** `Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:16,46`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/Rdbms/DatabaseRequirement-Rdbms-7C2CBFED.txt:13-35`, `BHistoryExport.java:19-32`, `BRdbms.java:256-301`, corpus B1340, B1352.
 - **Target:** `types/third-party-libraries.md:176-177`, `types/utility-lib.md:8`, `types/cloud-connector.md`. **Lint-able:** partial. **Fold type:** doc section.
 - **Fold status:** FOLDED (U9, 2026-10-23; shl Δ8, r3di Δ6): `types/cloud-connector.md` § 11. Landed there, not at `types/third-party-libraries.md:176-177` / `types/utility-lib.md:8` (outside the unit's surface; pointer lines owed). Owed Go lint G88 `rdbms-dialect-descriptor`.
 
@@ -1023,7 +1023,7 @@ cursor recipe stays owed (WU-P0-6).
 ### C77 — Preserve author-set slot flags on rebuild (scope corrected)
 - **Sources:** sta#Δ10 (primary, accepted-corrected) · r3-report#R5
 - **Winning text:** keep as a design note only; its evidence (`forceUpdate` resets flags) applies to R2 oBIX proxy points, not to N4 drivers in general.
-- **Evidence:** `EngNotes/aForceUpdateAction.txt:2,13-15,27`, corpus B1353 §1353.2 row 8.
+- **Evidence:** `niagara-help/versions/4.15.6.20/guides-clean/EngNotes/aForceUpdateAction.txt:2,7,13-15`, corpus B1353 §1353.2 row 8.
 - **Target:** `types/value-types.md` or `types/logic-authoring.md`. **Lint-able:** no. **Fold type:** doc note.
 - **Fold status:** FOLDED (`docs/r8-u8-security-tags-analytics`, 2026-10-23; sta Δ10, r3-report R5): `types/logic-authoring.md` § Programmatic slot-name
   rules, design note [INFER] with the R2-oBIX-only scope.
@@ -1326,7 +1326,7 @@ reads only Appendix A and the 2026-10-15 retros; the no-loss result for this app
 | `n4-course-handson-services-history-threading#Δ5` | types/third-party-libraries.md | confirms C26: `uberjar` pulls transitives; multi-release result | C26 | P0 | accepted |
 | `n4-course-handson-services-history-threading#Δ6` | types/logic-authoring.md § Background jobs | confirms C03: job contract worked example | C03 | P0 | folded (WU-P0-1) |
 | `n4-course-handson-slotomatic-authoring#Δ1` | METHODOLOGY.md K15, toolbelt/build.sh | new: K15 marker mechanism + pre-gradle marker check | C84 | P0 | accepted |
-| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | folded (U11, logic-authoring § Generated accessors) |
+| `n4-course-handson-slotomatic-authoring#Δ2` | types/logic-authoring.md § New-type authoring checklists | extends C36: `BDouble` properties get primitive accessors | C36 | P1 | folded (U11, logic-authoring § Generated accessors) |
 | `n4-course-handson-slotomatic-authoring#Δ3` | types/logic-authoring.md, toolbelt/verify-module.sh --src | extends C36: slot declaration order (low before high) | C36 | P1 | folded doc (U11); lint owed G96 |
 | `n4-course-handson-slotomatic-authoring#Δ4` | types/logic.md § Safety fail-modes | new: `min > max` bounds inversion rule | C90 | P1 | folded (U11, logic.md § Operator-entered bounds; remedy `[INFER]`) |
 | `n4-course-handson-slotomatic-authoring#Δ5` | toolbelt/lint-agent-on-shape.sh, types/module-wiring.md | refines C25: processor never updates a stale `<type>` line | C25 | P0 | accepted |
