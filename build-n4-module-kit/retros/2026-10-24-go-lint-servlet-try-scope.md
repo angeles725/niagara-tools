@@ -27,7 +27,7 @@ still drops it, the mb_parse contract).
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | lint-servlet's catch-no-400 search still reads up to 4 lines after a try's end with no scope bound; a catch belongs to its try by brace structure, so read it from the try's closing line structurally | `go/internal/lint/rules/servlet/servlet.go` | `[ev: go/internal/lint/rules/servlet/servlet.go catch-no-400]` |
+| Δ1 | lint-servlet's catch-no-400 search still reads up to 4 lines after a try's end with no scope bound; a catch belongs to its try by brace structure, so read it from the try's closing line structurally. DONE 2026-10-24: javasrc.TryBlocks + the deciding-catch rule (first clause catching NumberFormatException or a supertype, innermost try outward, past rethrowing clauses); RED truth-catch-structure-1 / LSV2f; decompiled 24 → 22 (FileServlet's rethrowing :702/:728 dropped, :748 kept), Cliente unchanged | `go/internal/lint/rules/servlet/servlet.go` | `[ev: go/internal/lint/rules/servlet/servlet.go catch-no-400]` |
 | Δ2 | javasrc.Methods now differs from mb_parse in two declared shapes (wrapped signatures, body depth); the remaining bash lints on mb_parse keep the old reading until ported | `build-n4-module-kit/toolbelt/lib/method-boundary.sh` | `[ev: go/internal/javasrc/javasrc_test.go goOnlyMethodsCases]` |
 
 ## Lessons
