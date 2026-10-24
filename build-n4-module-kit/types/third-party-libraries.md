@@ -29,7 +29,7 @@ Guava, a commons-* version) **shadows your bundled copy** unless you relocate
 
 First-party precedent: Niagara's own `jsonToolkit-wb` bundles Gson 2.13.2 (4.15.6.20) as
 classes unpacked into its own jar (`com/google/gson/*`, no nested jar) — bundling a 3rd-party library is an accepted, working pattern.
-`[ev: corpus B347 §347.3 (4.14: Gson 2.9.0), B1321 §1321.2 C1]`
+`[ev: corpus B347 §347.3, B1321 §1321.2 C1]`
 
 ---
 
