@@ -4,6 +4,7 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
@@ -46,6 +47,7 @@ func All() []lint.Spec {
 		servlet.Spec(),
 		silentprotection.Spec(),
 		nosystemout.Spec(),
+		arbitraryord.Spec(),
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
 		clockzerofloor.Spec(),

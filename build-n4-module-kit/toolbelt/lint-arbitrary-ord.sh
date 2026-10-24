@@ -6,6 +6,11 @@
 # before resolving. See types/security.md §4. Advisory (WARN), FP-prone: many BOrd.make(var)
 # calls take a trusted internal value. [ev: retro 2026-09-19-security-model]
 #
+# Implementation: go/internal/lint/rules/arbitraryord on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-arbitrary-ord <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise).
+# The marker comment is found by javasrc.LineCommentAt (string-, char- and inline-block-comment-aware). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
+#
 # Usage:  lint-arbitrary-ord.sh <src-root>
 #   Flags BOrd.make(<lowercase-identifier>) — skips string literals and UPPER_CASE constants.
 #   Row:  WARN  lint-arbitrary-ord  <file>:<line>  BOrd.make from a variable: <source>
@@ -23,64 +28,11 @@
 # Mutation: AO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: AO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-arbitrary-ord raw 'usage: lint-arbitrary-ord.sh <src-root>' "$@"
-awk_lint_list -name '*.java'
-
-# One awk per file (was a printf|grep pipeline per source line plus a marker_state subshell per hit).
-#
-# marker_state(text): "reason" when the text carries the reviewed marker followed by a reason,
-# "bare" when it carries the marker with nothing after it, "" when there is no marker.
-#
-# code_part(s): the line up to its // line comment. A "//" inside a double-quoted string or a
-# single-quoted char literal is not a comment start, so it neither hides a call nor supplies a reviewed
-# marker; an inline /* ... */ block comment is skipped (kept in the code so it stays a prefix of the
-# line), so an apostrophe inside it opens no char literal. Block-comment state is not carried across
-# lines. Sibling string-aware strippers: lint-delays.sh strip_comment (awk), lint-write-path.sh audit
-# pass (awk). [polish-2026-10-02 P2a/P2b, #199 WU6a]
-# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
-awk_lint_each '
-    function marker_state(text) {
-        if (text ~ /lint-arbitrary-ord:[[:space:]]*reviewed[[:space:]]+[^[:space:]]/) return "reason"
-        if (text ~ /lint-arbitrary-ord:[[:space:]]*reviewed/) return "bare"
-        return ""
-    }
-    function code_part(s,    i, n, c, q, rest, e) {
-        if (!index(s, "//")) return s
-        if (!index(s, "\"") && !index(s, "\047") && !index(s, "/*")) return substr(s, 1, index(s, "//") - 1)
-        n = length(s); q = ""
-        for (i = 1; i <= n; i++) {
-            c = substr(s, i, 1)
-            if (q != "") {
-                if (c == "\\") i++; else if (c == q) q = ""
-                continue
-            }
-            if (c == "\"" || c == "\047") q = c
-            else if (c == "/") {
-                if (substr(s, i + 1, 1) == "/") return substr(s, 1, i - 1)
-                if (substr(s, i + 1, 1) == "*") {
-                    rest = substr(s, i + 2); e = index(rest, "*/")
-                    if (!e) return s   # unclosed block comment: no // comment on this line
-                    i += e + 2         # the loop i++ lands just past the */
-                }
-            }
-        }
-        return s
-    }
-    {
-        code = code_part($0)
-        # BOrd.make( <lowercase ident> ) — a bare variable, not a "literal" and not a CONST
-        if (code ~ /BOrd\.make\([[:space:]]*[a-z][A-Za-z0-9_]*[[:space:]]*\)/) {
-            t = $0; sub(/^[[:space:]]+/, "", t)
-            st = marker_state(substr($0, length(code) + 1))
-            if (st == "" && prev ~ /^[[:space:]]*\/\//) st = marker_state(prev)
-            if (st == "bare")
-                printf "WARN  lint-arbitrary-ord  %s:%d  reviewed marker without a reason (add one): %s\n", ENVIRON["AL_FILE"], FNR, t
-            else if (st != "reason")
-                printf "WARN  lint-arbitrary-ord  %s:%d  BOrd.make from a variable: %s\n", ENVIRON["AL_FILE"], FNR, t
-        }
-        prev = $0
-    }'
-
-awk_lint_exit 0
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-arbitrary-ord: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-arbitrary-ord "$@"

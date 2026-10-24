@@ -1,0 +1,43 @@
+-- args --
+@DIR@/c
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:3  BOrd.make from a variable: BOrd.make( q );
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:7  BOrd.make from a variable: xBOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:8  BOrd.make from a variable: BOrd.make(q); BOrd.make(r);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:9  BOrd.make from a variable: BOrd.make(q_1A);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:13  BOrd.make from a variable: /* BOrd.make(q) */
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:15  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:17  BOrd.make from a variable: log("BOrd.make(q)");
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:20  BOrd.make from a variable: /* open BOrd.make(q); // lint-arbitrary-ord: reviewed in open block
+WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:23  BOrd.make from a variable: BOrd.make(q) // x
+-- stderr --
+-- c/src/A.java --
+class A {
+  void f(String q) {
+    BOrd.make( q );
+    BOrd.make(q.x);
+    BOrd.make(q + "a");
+    BOrd .make(q);
+    xBOrd.make(q);
+    BOrd.make(q); BOrd.make(r);
+    BOrd.make(q_1A);
+    BOrd.make(Q);
+    BOrd.make(
+      q);
+    /* BOrd.make(q) */
+    /*
+     BOrd.make(q);
+    */
+    log("BOrd.make(q)");
+    char c = '"'; BOrd.make(q); // lint-arbitrary-ord: reviewed after char
+    char d = '\''; BOrd.make(q); // lint-arbitrary-ord: reviewed after escaped char
+    /* open BOrd.make(q); // lint-arbitrary-ord: reviewed in open block
+    */ BOrd.make(q); // lint-arbitrary-ord: reviewed after close
+    String s = """
+      BOrd.make(q) // x
+    """;
+    // BOrd.make(q);
+    BOrd.make(q) /* c */ ; // lint-arbitrary-ord: reviewed with block
+  }
+}
