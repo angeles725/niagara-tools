@@ -1,0 +1,15 @@
+declared difference: a malformed module.xml or module-include.xml is an env error with its xmlsrc position, exit 3, never a verdict on the tags a line grep found
+-- args --
+@DIR@/Foo-rt.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: @DIR@/Foo-rt.jar!META-INF/module.xml:4:1: element <type> opened at 3:1 closed by </types>
+-- Foo-rt.jar (jar) --
+--- META-INF/module.xml (stored) ---
+<module name="Foo">
+<types>
+<type name="A" class="com.x.A">
+</types>
+</module>
+--- com/x/A.class (stored) (class 52) ---

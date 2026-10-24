@@ -1,0 +1,60 @@
+declared difference: module.xml and module-include.xml are read through xmlsrc: a commented-out <type> or baja <dependency> is not read, and two <type> elements on one line count twice; the bash grepped them a line at a time (types required the commented com.x.Gone, baja read the commented 4.15, typecount and the palette counted lines, not elements)
+-- args --
+--target-version
+4.14
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-ux.jar  4 classes, all major 52
+PASS  signed     @DIR@/Foo-ux.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-ux.jar  4 declared types resolve to classes
+PASS  baja       @DIR@/Foo-ux.jar  stamped baja 4.14 <= target 4.14
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+PASS  typecount  @DIR@/Foo-ux.jar  jar declares 4 types == module-include.xml
+SKIP  facets     @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  facets-req  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  ord-literal  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+WARN  palette    @DIR@/Foo-ux.jar  empty palette but module declares 4 type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Foo-ux.jar  no *.gradle.kts in @DIR@/mod/Foo-ux
+SKIP  moduletest  @DIR@/Foo-ux.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  transient-operator  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  compact3-import  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  subscription-leak  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  slot-wall  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+verify-module: 5 passed, 0 failed, 12 skipped, 1 warned -> ALL PASS
+-- stderr --
+-- Foo-ux.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo" vendor="Angeles">
+<dependencies>
+<!-- <dependency name="baja" vendor="Tridium" vendorVersion="4.15"/> -->
+<dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>
+</dependencies>
+<types>
+<type name="A" class="com.x.A"/> <type name="B" class="com.x.B"/>
+<!-- <type name="Gone" class="com.x.Gone"/> -->
+<type name="C" class="com.x.C"/> <type name="D" class="com.x.D"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- module.palette (stored) ---
+<palette/>
+--- com/x/A.class (stored) (class 52) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/C.class (stored) (class 52) ---
+--- com/x/D.class (stored) (class 52) ---
+-- mod/Foo-ux/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/> <type name="B" class="com.x.B"/>
+<!-- <type name="Gone" class="com.x.Gone"/> -->
+<type name="C" class="com.x.C"/> <type name="D" class="com.x.D"/>
+</types>

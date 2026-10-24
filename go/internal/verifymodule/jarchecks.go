@@ -129,11 +129,6 @@ func (r *run) types() bool {
 	return false
 }
 
-var (
-	bajaDepRe = rx(`<dependency [^>]*name="baja"[^>]*vendorVersion="[^"]+"`)
-	lastVerRe = regexp.MustCompile(`^.*vendorVersion="([^"]+)"`)
-)
-
 func (r *run) baja() bool {
 	if r.target == "" {
 		r.row("SKIP", "baja", "no --target-version")
@@ -143,12 +138,20 @@ func (r *run) baja() bool {
 		r.row("FAIL", "baja", "META-INF/module.xml missing")
 		return false
 	}
-	deps := newGrepText(r.jar.mx).only(bajaDepRe)
-	if len(deps) == 0 {
+	bv := ""
+	for _, i := range r.jar.doc.Find("dependency") {
+		e := r.jar.doc.Elements()[i]
+		if name, _ := e.Attr("name"); name == "baja" {
+			if bv, _ = e.Attr("vendorVersion"); bv != "" {
+				break
+			}
+		}
+	}
+	if bv == "" {
 		r.row("FAIL", "baja", "no baja dependency in module.xml")
 		return false
 	}
-	bv, t := lastVerRe.FindStringSubmatch(deps[0])[1], r.target
+	t := r.target
 	if verLE(bv, t) {
 		r.row("PASS", "baja", fmt.Sprintf("stamped baja %s <= target %s", bv, t))
 		return true

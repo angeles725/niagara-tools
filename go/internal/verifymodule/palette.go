@@ -139,7 +139,7 @@ func (r *run) palette() bool {
 		r.row("FAIL", "palette-parse", "module.palette has an unterminated comment (<!-- with no -->): the rest of the document is not read")
 		return false
 	}
-	entries, types := countOf(scan, "ENTRY"), newGrepText(r.jar.mx).count(typeElemRe)
+	entries, types := countOf(scan, "ENTRY"), r.jar.typeCount()
 	if entries == 0 && types >= 1 {
 		msg := fmt.Sprintf("empty palette but module declares %d type(s) — nothing to drag in Workbench (add one <p n=.../> per exposed type)", types)
 		if r.strict {
@@ -152,8 +152,6 @@ func (r *run) palette() bool {
 	r.row("PASS", "palette", fmt.Sprintf("module.palette has %d component entries", entries))
 	return ok
 }
-
-var typeElemRe = regexp.MustCompile(`<type `)
 
 func (r *run) wbScaffold() bool {
 	if !strings.HasSuffix(basename(r.jar.path, ".jar"), "-wb") {

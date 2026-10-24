@@ -8,6 +8,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // srcOrSkip is the opening of every --src check: the jar's profile dir <src>/<jar basename>, or the
@@ -88,7 +89,12 @@ func (r *run) typeCount() bool {
 	if !ok {
 		return true
 	}
-	tn, sn := len(r.jar.types), itoa(newGrepText(string(data)).count(typeElemRe))
+	doc, err := xmlsrc.Parse(inc, data)
+	if err != nil {
+		r.envError(err.Error())
+		return true
+	}
+	tn, sn := r.jar.typeCount(), itoa(len(doc.Find("type")))
 	if itoa(tn) == sn {
 		r.row("PASS", "typecount", fmt.Sprintf("jar declares %d types == module-include.xml", tn))
 		return true
