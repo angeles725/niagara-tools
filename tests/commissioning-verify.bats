@@ -308,3 +308,18 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  commissioning  station-logic:link-direction  DashPanel_1  control 'Ctrl_1'"* ]]
 }
+
+# Go port truth fix T3 (retro go-commissioning-verify Δ3): CV-ltf4's fail-closed rule now holds for every source
+# lint. A config-sanity, status-parity or recovery-path lint that exits non-zero (not 3) with no row (127 missing,
+# 126 not executable, a crash) was a PASS row in the bash tool. Named mutation CV-srcfailopen (keep the rule for
+# link-target-flags only) -> CV-src-failclosed flips.
+@test "CV-src-failclosed: config-sanity/status-parity/recovery-path exit non-zero with no row -> FAIL row, never PASS, exit 1" {
+  local m tb
+  for m in lint-config-sanity lint-status-parity lint-recovery-path; do
+    tb="$BATS_TEST_TMPDIR/$m-tb"; stub_toolbelt "$tb" "$m.sh" 'exit 127'
+    run "$tb/commissioning-verify.sh" "$MINIMAL"
+    [ "$status" -eq 1 ] || { echo "$m: status $status"; return 1; }
+    [[ "$output" == *"FAIL  commissioning  "*":MinimalPan-rt  $m.sh exited 127 with no FAIL row"* ]] || { echo "$output"; return 1; }
+    [[ "$output" != *"PASS  commissioning  ${m#lint-}:"* ]] || { echo "$m: PASS row"; return 1; }
+  done
+}

@@ -80,8 +80,8 @@ var sourceLints = []sourceLint{
 }
 
 // sourceChecks runs every source lint on src. Exit 3 is a SKIP row, the lint's FAIL (and WARN) rows are relayed
-// with the lint prefix dropped, else the check PASSes; link-target-flags gets the wiring map, names it in its
-// Table 2 reason and PASS detail, and fails closed on a non-zero exit with no FAIL row.
+// with the lint prefix dropped, a non-zero exit with no such row is a FAIL row (never PASS), else the check
+// PASSes; link-target-flags gets the wiring map and names it in its Table 2 reason and PASS detail.
 func (r *report) sourceChecks(tb string, src srcDir, strict bool, wmap string) {
 	for _, l := range sourceLints {
 		var args []string
@@ -114,7 +114,7 @@ func (r *report) sourceChecks(tb string, src srcDir, strict bool, wmap string) {
 			for _, row := range rows {
 				r.emit(row[0], check, row[1])
 			}
-		case code != 0 && ltf: // 127 = lint missing, a crash: never PASS
+		case code != 0: // 127 = lint missing, 126 not executable, a crash: never PASS
 			r.emit(failed, check, fmt.Sprintf("%s.sh exited %d with no FAIL row (crash or unexpected output) -- run it manually", l.script, code))
 		default:
 			r.emit(pass, check, clean)

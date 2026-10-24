@@ -21,7 +21,9 @@
 #                       report-module; both resolve <repo>/docs/wiring-map.md. The chosen map is named in
 #                       the row detail. Exit 3 is SKIP here (this script's env convention for every source
 #                       lint; report-module maps it to ERROR + exit 3). A non-zero exit with no FAIL row is
-#                       a FAIL row, never PASS.
+#                       a FAIL row, never PASS -- for every source lint above, not only this one (the bash tool
+#                       PASSed config-sanity, status-parity and recovery-path on exit 126/127 or a crash).
+#                       [ev: retro go-commissioning-verify]
 #
 # Station checks (require --bog <config.bog> and --module <MOD>):
 #   proxy-link-safety        bog-audit.sh CHECK11
