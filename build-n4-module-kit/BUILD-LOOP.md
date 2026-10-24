@@ -502,7 +502,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     or the same after a tag's `guide <page>.txt:12`): the rendered guide copies shift on every re-render, so a bare line number
     drifts while still resolving. The phrase must sit on a cited line, give or take 2 lines; otherwise the pointer is
     DRIFT, naming the lines that hold it now (HISTORICAL_DRIFT on a history card). An anchor outside guides-clean is
-    shown, not checked. `[ev: retro r10-kcr-guide-anchor-drift Δ1]`
+    shown, not checked. `[ev: retro r10-kcr-guide-anchor-drift Δ1]` An ignored, regenerated tree (`versions/*/`) keeps
+    no history, so a re-render erases what an old pointer read; write the anchor at citation time (the #511 sweep had to
+    rebuild the old rendering with the renderer from git to recover it). `[ev: retro r10-kcr-guide-anchor-drift]`
     A pointer grammar matches every character a real file name uses: a pattern that rejects one (the dot inside
     `BUILD-STATE.src.md`) does not fail, its leftmost match silently reads a shorter, wrong name. Each such grammar
     pins a case per legal name shape (`go/internal/citeparse` `TestCardSources`), and a pointer that resolves only
