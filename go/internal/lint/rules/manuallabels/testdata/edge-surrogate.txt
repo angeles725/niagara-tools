@@ -1,0 +1,11 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=3 missing=0
+-- stderr --
+-- docs/m.md --
+"Uno" "Aé" "Aé\B"
+-- ui/a.js --
+var a = "Uno\ud800"; var b = "\u0041\u00e9\\u0042";

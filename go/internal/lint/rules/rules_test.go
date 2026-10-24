@@ -80,7 +80,7 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
-		if sp.Root != nil {
+		if sp.Root != nil || sp.Mode == lint.FileFirst { // a FileFirst rule's empty-root contract is in its goldens
 			continue
 		}
 		if sp.EmptyOK { // LA5 (pinned by tests/lint-empty-root.bats ER5): an empty root is clean, exit 0, no row in --all

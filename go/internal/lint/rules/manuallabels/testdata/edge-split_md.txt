@@ -1,0 +1,14 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/m.md:2  label "and then" not found in the UI source
+SUMMARY  lint-manual-labels  checked=1 missing=1
+-- stderr --
+-- docs/m.md --
+Press "Rearranque
+1" and then "Guardar" now
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>
