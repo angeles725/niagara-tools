@@ -15,15 +15,20 @@ import (
 // materialize writes a case's tree under dir and returns the toolbelt to run. "@DIR@" and "@REPO@" in a section
 // stand for dir and the repository root. "<path> (symlink)" is a symlink to the section's one line, "<path> (dir)"
 // an empty directory, "<path> (mode 000)" an unreadable file; "toolbelt/<member>" sections make dir/toolbelt a
-// copy of the toolbelt with those members replaced by executable stubs (tests/helpers/stub-toolbelt.bash).
+// copy of the toolbelt with those members replaced by executable stubs (tests/helpers/stub-toolbelt.bash);
+// "toolbelt/<member> (mode 644)" is such a stub written without the execute bit.
 func materialize(t *testing.T, dir, repo string, files map[string]string) string {
 	t.Helper()
 	tb := filepath.Join(repo, "build-n4-module-kit", "toolbelt")
 	sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)
-	stubs := map[string]string{}
+	stubs, modes := map[string]string{}, map[string]os.FileMode{}
 	for name, text := range files {
 		if m, ok := strings.CutPrefix(name, "toolbelt/"); ok {
-			stubs[m] = text
+			m, kind, _ := strings.Cut(m, " (")
+			stubs[m], modes[m] = text, 0o755
+			if kind == "mode 644)" {
+				modes[m] = 0o644
+			}
 			continue
 		}
 		path, kind, _ := strings.Cut(name, " (")
@@ -58,7 +63,9 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 		}
 	}
 	for m, text := range stubs {
-		must(t, os.WriteFile(filepath.Join(cp, m), []byte(text), 0o755))
+		p := filepath.Join(cp, m)
+		must(t, os.WriteFile(p, []byte(text), modes[m]))
+		must(t, os.Chmod(p, modes[m])) // WriteFile's mode is masked by the umask
 	}
 	return cp
 }
@@ -67,7 +74,7 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 // declared fix. Exact, so a lost or stray case file fails.
 const (
 	recordedCases = 77
-	truthCases    = 9
+	truthCases    = 10
 )
 
 // cases lists the testdata case files (absolute: the cases run with their tree as cwd) and checks the counts.

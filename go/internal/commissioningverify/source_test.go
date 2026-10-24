@@ -41,13 +41,19 @@ func TestRun(t *testing.T) {
 		must(t, os.WriteFile(p, []byte("#!/usr/bin/env bash\n"+body+"\n"), mode))
 		return p
 	}
+	raw := func(name, body string) string {
+		p := filepath.Join(d, name)
+		must(t, os.WriteFile(p, []byte(body), 0o755))
+		return p
+	}
 	for _, c := range []struct {
 		path, out string
 		code      int
 	}{
 		{script("ok", `echo "a $LC_ALL $*${NIAGARA_TOOLS_CV_LEAK-}"; echo b >&2; printf 'c\0\n\n\n'`, 0o755), "a C x y\nb\nc", 0},
 		{script("two", "exit 2", 0o755), "", 2},
-		{script("noexec", "exit 0", 0o644), "", 126},
+		{script("noexec", "exit 0", 0o644), "", 126}, // EACCES
+		{raw("noshebang", "exit 0\n"), "", 126},      // ENOEXEC: never run as a shell script, unlike bash
 		{filepath.Join(d, "missing"), "", 127},
 		{script("killed", "kill -TERM $$", 0o755), "", 143},
 	} {

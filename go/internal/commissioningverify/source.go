@@ -124,7 +124,8 @@ func (r *report) sourceChecks(tb string, src srcDir, strict bool, wmap string) {
 
 // run executes a toolbelt script with environment env plus LC_ALL=C and returns its stdout and stderr interleaved, like the shell's
 // "$(cmd 2>&1)" (NUL bytes and trailing newlines dropped), and its exit status (127 not found, 126 not
-// executable, 128+n killed by signal n).
+// executable or not an executable format, 128+n killed by signal n). Unlike bash, a file with no #! line is never
+// run as a shell script (ENOEXEC is 126): every toolbelt wrapper starts with #!/usr/bin/env bash.
 func run(path string, env []string, args ...string) (string, int) {
 	var b bytes.Buffer
 	cmd := exec.Command(path, args...)
