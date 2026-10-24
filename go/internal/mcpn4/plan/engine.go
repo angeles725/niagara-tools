@@ -13,7 +13,12 @@ import (
 // Handler is _make_handler(name): the tool's pipeline plus its audit line.
 func (e *Engine) Handler(name string, impl Impl) jsonrpc.Handler {
 	return func(args *pyjson.Object) (*pyjson.Object, error) {
-		out, batchID, err := e.process(name, impl, args)
+		batchID := ""
+		out, err := jsonrpc.Recover(func() (*pyjson.Object, error) { // a panic is audited as an error
+			out, id, err := e.process(name, impl, args)
+			batchID = id
+			return out, err
+		})
 		var te *jsonrpc.ToolError
 		var se *safety.Error
 		var doubt *InDoubt
@@ -112,7 +117,12 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 			"); the confirmation token is spent, run the dry run again")
 	}
 	w.WritesExecuted++ // counted once sent, whatever the station answers
-	// From here on the batch exists: execute's only error is its in-doubt one.
-	out, err = e.execute(client, impl, args, planned, batchID)
+	// From here on the batch exists: execute's only error is its in-doubt one, and a panic
+	// (Python's unexpected exception) leaves the batch in-doubt too.
+	out, err = jsonrpc.Recover(func() (*pyjson.Object, error) { return e.execute(client, impl, args, planned, batchID) })
+	var p *jsonrpc.Panic
+	if errors.As(err, &p) {
+		err = inDoubt(batchID, err)
+	}
 	return out, batchID, err
 }
