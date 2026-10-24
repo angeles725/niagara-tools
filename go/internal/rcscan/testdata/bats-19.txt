@@ -1,0 +1,13 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/api.js:2  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+WARN  rc-scan  rc/api.js:5  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+-- stderr --
+-- rc/api.js --
+function read(url) {
+  return fetch(url, { credentials: "same-origin" })
+    .then(function (r) { return r.json(); });
+}
+function probe() { return window.fetch("/api/version"); }

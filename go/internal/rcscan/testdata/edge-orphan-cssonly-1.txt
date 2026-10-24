@@ -1,0 +1,7 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- rc/a.css --
+x

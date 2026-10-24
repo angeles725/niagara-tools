@@ -1,0 +1,20 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  m/rc/app.js:1  null-branch: ? null : branch may blank UI on null field
+WARN  rc-scan  m/rc/vendor/three/lib.css:1  browser-floor: inset above the Chromium 83 panel floor
+WARN  rc-scan  m/rc/vendor/three/page.html:1  null-branch: ? null : branch may blank UI on null field
+-- stderr --
+-- m/rc/app.js --
+x = a ? null : b;
+-- m/rc/vendor/three/addons/postprocessing/RenderPass.js --
+this.clearColor = clearColor !== undefined ? null : x;
+y ??= 1;
+-- m/rc/vendor/three.module.js --
+v ||= 2;
+-- m/rc/vendor/three/lib.css --
+.a { inset: 0 }
+-- m/rc/vendor/three/page.html --
+x = a ? null : b;
+-- m/rc/js/vendorish.js --

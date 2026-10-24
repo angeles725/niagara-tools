@@ -1,0 +1,25 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:1  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:6  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:7  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:8  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:10  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:13  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+el.innerHTML = "<b>" + a.message + "</b>";
+const h = '<i>' + spec.unit; el.innerHTML = '<p>static</p>';
+el.innerHTML = '<b>' + val.toFixed(1) + Math.round(x) + rows.length;
+el.innerHTML = '<b>' + v.s.toFixed(2) + '</b>';
+el.innerHTML = '<b>' + v.name.length;
+el.innerHTML = `<i>${ r.text }</i>`;
+el.innerHTML = `<i>${ n.toFixed(1) }</i>` + a.b;
+el.insertAdjacentHTML("beforeend", "<p>" + r.text); x = '+' + q.w;
+el.insertAdjacentHTML("beforeend", "<p>" + n.toFixed(0)); y = 1 + q.w;
+a.innerHTML = '<b>' + x.length; b.innerHTML = '<i>' + r.text;
+el.innerHTML = '<b>' + esc(a.message) + '</b>'; z = 2 + a.b;
+o.innerHTML = rows.map(v => '<td>' + Math.min(v, 2) + '</td>').join(''); w = 1 + q.w;
+el.innerHTML = `<i>${ `${ r.text }` }</i>`;

@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- rc/ok.js --
+export const clean = true;   // rc/ file with nothing to flag
+-- src/Foo.java --
+package demo;
+public final class Foo {
+  static final String ORD = "station:|slot:/Services/Whatever"; // in src/, NOT rc/ -> must be ignored
+}

@@ -13,19 +13,27 @@ import (
 type Selection struct {
 	Names []string // find -name patterns, any of which selects a regular file
 	Prune []string // sub-directory names never entered (dot and *-worktrees sub-directories never are)
+	// Except are find -name patterns that drop a file Names selected (`-not -name '*.min.js'`).
+	Except []string
+	// Paths are find -path patterns on a selected file's whole path, one of which must match when set
+	// (`-path '*/rc/*'`), and PrunePaths those of a sub-directory never entered (`--prune-path '*/rc/ext'`).
+	// As in find, `*` and `?` match a "/" too; no other pattern character is supported.
+	Paths, PrunePaths []string
 }
 
 func (s Selection) selects(name string) bool {
-	for _, p := range s.Names {
-		if ok, _ := path.Match(p, name); ok {
-			return ok
-		}
-	}
-	return false
+	return matchAny(s.Names, name, false) && !matchAny(s.Except, name, false)
+}
+
+// keeps reports whether s reads file p, found under root: its name and path select it and no directory
+// between root and p is pruned.
+func (s Selection) keeps(root, p string) bool {
+	return s.selects(baseName(p)) && (len(s.Paths) == 0 || matchAny(s.Paths, p, true)) && !prunedFor(s, root, p)
 }
 
 // prunes also skips sibling "*-worktrees" checkouts, which would report every finding once per checkout.
-func (s Selection) prunes(dir string) bool {
+// dir is the sub-directory's name and full its path as the walk spells it.
+func (s Selection) prunes(dir, full string) bool {
 	if strings.HasPrefix(dir, ".") || strings.HasSuffix(dir, "-worktrees") {
 		return true
 	}
@@ -34,7 +42,41 @@ func (s Selection) prunes(dir string) bool {
 			return true
 		}
 	}
+	return matchAny(s.PrunePaths, full, true)
+}
+
+// matchAny reports whether one of patterns matches name: path.Match for a -name pattern, findPath for a
+// -path pattern (whole set).
+func matchAny(patterns []string, name string, whole bool) bool {
+	for _, p := range patterns {
+		if whole && findPath(p, name) {
+			return true
+		}
+		if ok, _ := path.Match(p, name); ok && !whole {
+			return true
+		}
+	}
 	return false
+}
+
+// findPath is find -path matching (fnmatch without FNM_PATHNAME) for patterns of literal bytes, `*` (any
+// run, "/" included) and `?` (any one byte).
+func findPath(pattern, s string) bool {
+	if pattern == "" {
+		return s == ""
+	}
+	switch pattern[0] {
+	case '*':
+		for i := 0; i <= len(s); i++ {
+			if findPath(pattern[1:], s[i:]) {
+				return true
+			}
+		}
+		return false
+	case '?':
+		return s != "" && findPath(pattern[1:], s[1:])
+	}
+	return s != "" && s[0] == pattern[0] && findPath(pattern[1:], s[1:])
 }
 
 // WalkError is a directory the walk could not read; its text is the line GNU find printed for it
@@ -75,10 +117,10 @@ func Walk(root string, sel Selection) ([]string, error) {
 			name := e.Name()
 			switch t := e.Type(); {
 			case t.IsDir():
-				if !sel.prunes(name) {
+				if !sel.prunes(name, prefix+name) {
 					walk(prefix + name)
 				}
-			case t.IsRegular() && sel.selects(name):
+			case t.IsRegular() && sel.selects(name) && (len(sel.Paths) == 0 || matchAny(sel.Paths, prefix+name, true)):
 				files = append(files, prefix+name)
 			}
 		}
