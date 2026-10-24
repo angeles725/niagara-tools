@@ -8,6 +8,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // grepLongest compiles an ERE that matches leftmost-longest, as grep -o does.
@@ -18,8 +19,6 @@ func grepLongest(expr string) *regexp.Regexp {
 }
 
 var (
-	typeTag    = grepLongest(`<type[[:space:]]+[^>]*\bname="[^"]*"`)
-	nameAttr   = grepLongest(`\bname="[^"]*"`)
 	skipLine   = regexp.MustCompile(`^[[:space:]]*#|^[[:space:]]*$`)
 	trailBlank = " \t\n\v\f\r"
 )
@@ -56,15 +55,21 @@ func readInput(path string, s cli.Stdio) ([]byte, bool) {
 	return data, true
 }
 
-// typeNames are the name="X" values of every <type ...> tag that grep -o finds on one line, in file order.
-func typeNames(xml []byte) []string {
+// typeNames are the name attributes of every <type> element of module-include.xml, in document order. A
+// malformed file prints its xmlsrc position and returns false (exit 3), never the tags a line grep finds.
+func typeNames(path string, data []byte, s cli.Stdio) ([]string, bool) {
+	doc, err := xmlsrc.Parse(path, data)
+	if err != nil {
+		fmt.Fprintf(s.Err, "slot-coverage: %s\n", err)
+		return nil, false
+	}
 	var out []string
-	for _, tag := range grepO(typeTag, xml) {
-		for _, attr := range nameAttr.FindAllString(tag, -1) {
-			out = append(out, strings.TrimSuffix(strings.TrimPrefix(attr, `name="`), `"`))
+	for _, i := range doc.Find("type") {
+		if name, ok := doc.Elements()[i].Attr("name"); ok {
+			out = append(out, name)
 		}
 	}
-	return out
+	return out, true
 }
 
 // lexiconKeys are the text before the first "=" of every lexicon line that is neither a comment nor blank

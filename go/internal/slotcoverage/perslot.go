@@ -102,10 +102,14 @@ func perSlot(xmlPath, lexPath, src string, s cli.Stdio) int {
 	if !ok {
 		return 3
 	}
+	types, ok := typeNames(xmlPath, xml, s)
+	if !ok {
+		return 3
+	}
 	allSlots, opSlots := slots(sources)
 	lexKeys := subst(sortU(trimKeys(lexiconKeys(lex))))
 	lexSlots, lexDotted := filterDot(lexKeys, false), filterDot(lexKeys, true)
-	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), typeNames(xml)...), rangeTags(sources)...)))
+	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), types...), rangeTags(sources)...)))
 	opSorted := sortU(opSlots)
 	var missing, stale []string
 	if lexSlots != "" {

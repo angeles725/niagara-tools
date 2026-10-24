@@ -351,3 +351,15 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [[ "$output" == *"slot-coverage: cannot read $src/com/x/BA.java: Permission denied"* ]]
   [[ "$output" != *"pct="* ]]
 }
+
+@test "SC-xml-multiline: a <type> tag over two lines is required; a commented-out one is not" {
+  # Mutation: SC-xml-multiline -- reading types one line at a time again misses Split and requires Old.
+  local d="$BATS_TEST_TMPDIR/m"
+  mkdir -p "$d"
+  printf '<types>\n  <type class="a.BSplit"\n        name="Split"/>\n  <!-- <type name="Old" class="a.BOld"/> -->\n</types>\n' > "$d/module-include.xml"
+  printf 'Split.displayName=Split\n' > "$d/module.lexicon"
+  run "$SC" "$d/module-include.xml" "$d/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pct=100.0 (type-set)"* ]]
+  [[ "$output" == *"missing="$'\n'* ]]
+}

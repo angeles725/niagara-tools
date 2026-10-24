@@ -41,7 +41,9 @@
 #
 # Usage (parse subcommand — reads module files, calls the same pure function):
 #   slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
-#   required   <- <type name="X"> entries in module-include.xml
+#   required   <- the name of every <type> element of module-include.xml, read through go/internal/xmlsrc (a tag
+#                 over several lines counts, a commented-out one does not; a malformed file is exit 3 with
+#                 "slot-coverage: <path>:<line>:<col>: <reason>")
 #   declared   <- "<Type>.displayName" keys in module.lexicon (comments and blank lines ignored): the
 #                 framework reads a type's display name from that key only (NTypeInfo.java:178). A bare
 #                 "<Type>=" key is ineffective -> "slot-coverage: WARN ineffective type key: <Type>=" and the
@@ -61,7 +63,8 @@
 #   --strict   -> exit 1 when missing is non-empty or WARN was emitted
 #   exit 0   clean (no FAIL, no WARN in strict); exit 1 dup-keys FAIL, empty-lexicon FAIL, facade FAIL or strict WARN
 #   exit 2   wrong argc
-#   exit 3   env (file missing, or the xml or lexicon unreadable: "slot-coverage: cannot read <path>: <reason>")
+#   exit 3   env (file missing, the xml or lexicon unreadable: "slot-coverage: cannot read <path>: <reason>",
+#            or a malformed module-include.xml)
 #
 # Integer-tenths rounding: t=(1000*present+R/2)/R; print "$((t/10)).$((t%10))"
 # (verbatim from verify-module.sh coverage — no awk/printf %.1f; no locale dependency)

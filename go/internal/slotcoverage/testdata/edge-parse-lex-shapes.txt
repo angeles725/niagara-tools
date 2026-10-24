@@ -1,3 +1,4 @@
+declared difference: <type> names are read through xmlsrc: the multi-line Split tag is now required, the commented-out Commented tag and the alias:name attribute (Zeta) no longer are (the bash grepped one line at a time)
 -- args --
 @DIR@/module-include.xml
 @DIR@/module.lexicon
@@ -6,8 +7,8 @@ exit 1
 slot-coverage: WARN ineffective type key: Delta= (Workbench reads Delta.displayName)
 slot-coverage: WARN ineffective type key: Eps= (Workbench reads Eps.displayName)
 slot-coverage: FAIL dup-keys: fan 
-pct=42.9 (type-set)
-missing=Beta,Commented,Eps,Zeta
+pct=50.0 (type-set)
+missing=Beta,Eps,Split
 extra=  Beta,last
 -- stderr --
 -- module-include.xml --

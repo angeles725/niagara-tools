@@ -1,3 +1,4 @@
+declared difference: <type> names are read through xmlsrc: the multi-line Split tag is now required, the commented-out Commented tag and the alias:name attribute (Zeta) no longer are (the bash grepped one line at a time)
 -- args --
 --strict
 --facade
@@ -7,13 +8,12 @@
 exit 1
 slot-coverage: WARN ineffective type key: Delta= (Workbench reads Delta.displayName)
 slot-coverage: FAIL dup-keys: fan 
-pct=42.9 (type-set)
-missing=Beta,Commented,Eps,Zeta
+pct=50.0 (type-set)
+missing=Beta,Eps,Split
 extra=  Beta,last
 slot-coverage: FAIL facade type without lexicon: Beta
-slot-coverage: FAIL facade type without lexicon: Commented
 slot-coverage: WARN facade type with only a bare key: Eps (add Eps.displayName)
-slot-coverage: FAIL facade type without lexicon: Zeta
+slot-coverage: FAIL facade type without lexicon: Split
 -- stderr --
 -- module-include.xml --
 <types>

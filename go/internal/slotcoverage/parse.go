@@ -42,9 +42,13 @@ func parseMode(xmlPath, lexPath string, strict, facade bool, s cli.Stdio) int {
 	if !ok {
 		return 3
 	}
+	names, ok := typeNames(xmlPath, xml, s)
+	if !ok {
+		return 3
+	}
 	if !isFile(lexPath) {
 		// WB-LEX1: a missing lexicon with >=1 declared type is a FAIL, not an env fault.
-		if n := len(grepO(typeTag, xml)); n >= 1 {
+		if n := len(names); n >= 1 {
 			fmt.Fprintf(s.Out, "slot-coverage: FAIL missing lexicon with %d declared type(s)\n", n)
 			return 1
 		}
@@ -55,7 +59,7 @@ func parseMode(xmlPath, lexPath string, strict, facade bool, s cli.Stdio) int {
 	if !ok {
 		return 3
 	}
-	requiredCSV := strings.Join(sortU(typeNames(xml)), ",")
+	requiredCSV := strings.Join(sortU(names), ",")
 	raw := lexiconKeys(lex)
 	keys := here(subst(trimKeys(raw)))
 	var declared []string
