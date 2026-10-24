@@ -128,6 +128,22 @@ setup() {
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-no-system-out"* ]] && [[ "$output" == *"BOut.java"* ]]
 }
 
+@test "RM7b: an empty Slot-o-Matic region surfaces a lint-slotomatic-markers FAIL row and exits 1" {
+  # Mutation: RM7b -- dropping step 5.7b loses the FAIL row and the report reads this module clean of it
+  local t="$BATS_TEST_TMPDIR/rm7b"
+  mkdir -p "$t/DemoPan-rt/src/com/x"
+  printf '<types>\n</types>\n' > "$t/DemoPan-rt/module-include.xml"
+  printf 'class BHmi\n{\n%s\n%s\n}\n' \
+    '//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/' \
+    '//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/' > "$t/DemoPan-rt/src/com/x/BHmi.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  lint-slotomatic-markers  BHmi.java:3  generated region holds 0 "* ]]
+  printf 'class BHmi {}\n' > "$t/DemoPan-rt/src/com/x/BHmi.java"
+  run "$RM" --lint-only "$t"
+  [[ "$output" == *"DemoPan-rt  PASS  lint-slotomatic-markers  clean"* ]]
+}
+
 @test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
   # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
   run "$RM" --lint-only "$FX/se-display"
