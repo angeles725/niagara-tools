@@ -339,3 +339,16 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [ "$status" -eq 3 ]
   [[ "$output" == *"rc-scan: cannot list every file under $BATS_TEST_TMPDIR/art: "* ]]
 }
+
+@test "RS-unreadable: an unreadable rc file is an env error (exit 3), never a skipped file" {
+  # Mutation: RS-unreadable -- skipping a file os.ReadFile cannot read (the awk's fatal-and-continue) passes clean
+  mkdir -p "$BATS_TEST_TMPDIR/art/rc"
+  printf 'var ok = 1;\n' > "$BATS_TEST_TMPDIR/art/rc/a.js"
+  printf 'var o = "station:|slot:/x";\n' > "$BATS_TEST_TMPDIR/art/rc/u.js"
+  chmod 000 "$BATS_TEST_TMPDIR/art/rc/u.js"
+  if [ -r "$BATS_TEST_TMPDIR/art/rc/u.js" ]; then chmod 644 "$BATS_TEST_TMPDIR/art/rc/u.js"; skip "running as root"; fi
+  run "$RS" "$BATS_TEST_TMPDIR/art"
+  chmod 644 "$BATS_TEST_TMPDIR/art/rc/u.js"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"rc-scan: cannot scan $BATS_TEST_TMPDIR/art/rc/u.js: Permission denied"* ]]
+}
