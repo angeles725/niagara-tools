@@ -7,7 +7,7 @@
 **Delta count**: 1
 
 ## What happened
-The last open lint shapes of kit issue #459 outside report-module, each checked against origin/main first
+The last open lint shapes of kit issue #459 outside report-module, plus one sibling of the slot-coverage shape, each checked against origin/main first
 (8 of the 9 issue bullets were already fixed by #464 / #474 / #483; lint-servlet cache-nofinger `?v=` is PR #528):
 
 - slot-coverage per-slot, OPERATOR in a comment: a FALSE POSITIVE, fixed. The OPERATOR test read the raw joined
@@ -18,6 +18,11 @@ The last open lint shapes of kit issue #459 outside report-module, each checked 
   set (STALE) are unchanged, so only the OPERATOR set moves. The recorded `edge-ps-java-shapes` golden had captured
   the bash behaviour for a trailing `// not OPERATOR` comment (`commentOp` MISSING); its want now drops it, a
   declared truth difference from the recording.
+- lint-config-sanity CS2, the same shape (Δ1 below, applied in this branch): the setpoint pass joined each
+  `@NiagaraProperty` from the raw lines, so a READONLY `*Setpoint` / `*Set` with a `BDouble.make(0)` default
+  whose annotation comment mentions OPERATOR FAILed as an operator setpoint. CS2 now runs over
+  `f.Stripped()` (comments blanked, literals kept, line numbers unchanged), as statusparity and facets-req
+  already did; CS1, CS3 and CS4 still read the raw lines. No recorded golden moved.
 - rc-scan host-literal, `base: "http://<host>/..."` in the config of an unselected mode: a TRUE POSITIVE, no
   change. Already decided on main (e991a8d7, recorded in the rc-scan.sh header and retro go-rc-scan (c)): a
   one-word mode edit makes the fixed plain-http host live; the fix is a relative base.
@@ -36,6 +41,12 @@ The last open lint shapes of kit issue #459 outside report-module, each checked 
 - Real tree (client station A rack-control rt module, lexicon with the three `*AutoLocked` keys removed so the slot needs
   one): origin/main `pct=98.0`, `MISSING condenser1AutoLocked`; branch `pct=100.0`, no row (only condenser1 carries
   the comment)
+- CS2 RED before the fix: `TestGolden/truth-cs2-comment-1` FAILed `heatSetpoint` (a `//` comment naming OPERATOR,
+  flags `SUMMARY | READONLY`) and `fanSet` (an inline `/* not OPERATOR */`) beside the expected `coolSetpoint`; the
+  true-positive neighbour `coolSetpoint` (Flags.OPERATOR, default 0, no min facet) still FAILs
+  `[ev: go/internal/lint/rules/configsanity/testdata/truth-cs2-comment-1.txt]`
+- CS2 mutation: `setpointPass(f.Raw)` again fails `truth-cs2-comment-1` and the bats pin LCS-cs2-comment
+  `[ev: tests/lint-config-sanity.bats LCS-cs2-comment]`
 - rc-scan re-check on main with a synthetic tree (`mode: "json"` beside `base: "http://example.invalid/..."`, a
   flex `gap` and an `inset`): host-literal FAIL under every profile; browser-floor WARN under unknown and lan,
   FAIL under hmi
@@ -43,7 +54,7 @@ The last open lint shapes of kit issue #459 outside report-module, each checked 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | A flag test over joined `@NiagaraProperty` text reads comment-stripped code: lint-config-sanity CS2 (`setpointPass` over `f.Raw`) still tests `OPERATOR` on raw text, so a zero-default setpoint whose annotation comment says "not OPERATOR" would FAIL; feed it `f.Stripped()` as statusparity and facets-req already do | `go/internal/lint/rules/configsanity/configsanity.go` setpointPass | `[ev: go/internal/slotcoverage/perslot.go slots]` |
+| Δ1 | A flag test over joined `@NiagaraProperty` text reads comment-stripped code: lint-config-sanity CS2 (`setpointPass` over `f.Raw`) tested `OPERATOR` on raw text, so a zero-default setpoint whose annotation comment says "not OPERATOR" FAILed; it now reads `f.Stripped()` as statusparity and facets-req already did. DONE in this branch | `go/internal/lint/rules/configsanity/configsanity.go` setpointPass | `[ev: go/internal/lint/rules/configsanity/testdata/truth-cs2-comment-1.txt]` |
 
 ## Lessons
 - A golden recorded from the bash for byte identity can pin a false positive; a truth fix updates that want and

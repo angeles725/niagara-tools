@@ -298,3 +298,24 @@ JAVA
   [[ "$output" == *"OneLine.java:3  CS1: interval<=duration: defrostInterval(30s) <= defrostDuration(1m)"* ]]
   [[ "$output" == *"OneLine.java:5  CS2: zero-default setpoint \"coolSetpoint\""* ]]
 }
+
+@test "LCS-cs2-comment: a comment naming OPERATOR inside a READONLY setpoint's annotation is no CS2; a real OPERATOR one still FAILs (issue #459)" {
+  # Mutation: LCS-cs2-comment -- reading CS2 from the raw lines again FAILs the READONLY heatSetpoint whose comment says OPERATOR
+  rm -f "$ONE"/*.java
+  cat > "$ONE/BFoo.java" <<'JAVA'
+class BFoo {
+  @NiagaraProperty(
+    name = "heatSetpoint",
+    // Read-only (never OPERATOR-writable): only the control logic sets it.
+    flags = Flags.SUMMARY | Flags.READONLY,
+    defaultValue = "BDouble.make(0.0)"
+  )
+  @NiagaraProperty(name = "coolSetpoint", defaultValue = "BDouble.make(0)", flags = Flags.OPERATOR) // knob
+  int x;
+}
+JAVA
+  run "$LCS" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"BFoo.java:8  CS2: zero-default setpoint \"coolSetpoint\""* ]]   # anchor: a real OPERATOR slot still FAILs
+  [[ "$output" != *"heatSetpoint"* ]]
+}
