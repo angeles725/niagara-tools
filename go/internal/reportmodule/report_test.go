@@ -3,6 +3,8 @@ package reportmodule
 import (
 	"bytes"
 	"testing"
+
+	"github.com/angeles725/niagara-tools/go/internal/cli"
 )
 
 func TestSummaryVerdictAndExit(t *testing.T) {
@@ -47,5 +49,21 @@ func TestEmitCounts(t *testing.T) {
 	}
 	if want := "A  PASS  c  d\n"; out.String()[:len(want)] != want {
 		t.Errorf("row = %q", out.String())
+	}
+}
+
+// TestMissingToolbeltIsRefused (W2): a toolbelt directory that does not exist would make every member exit 127
+// (rows members then read PASS clean); the report refuses before any member runs.
+func TestMissingToolbeltIsRefused(t *testing.T) {
+	t.Parallel()
+	root := tree(t, "A-rt/src/")
+	for _, tb := range []string{root + "/no-such-toolbelt", root + "/A-rt/src/x"} {
+		var out, errw bytes.Buffer
+		env := map[string]string{ToolbeltEnv: tb}
+		s := cli.Stdio{Out: &out, Err: &errw, Getenv: func(k string) string { return env[k] }}
+		code := mainEnv([]string{"--lint-only", root}, s, []string{"PATH=/usr/bin:/bin"})
+		if want := "report-module: toolbelt not found: " + tb + "\n"; code != ExitEnv || out.Len() != 0 || errw.String() != want {
+			t.Errorf("W2 %s: exit %d, out %q, err %q; want exit 3, no row, %q", tb, code, out.String(), errw.String(), want)
+		}
 	}
 }

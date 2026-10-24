@@ -51,6 +51,11 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		fmt.Fprintf(s.Err, "report-module: no artifacts found under %s\n", o.root)
 		return ExitEnv
 	}
+	tb := toolbelt(s)
+	if !isDir(tb) { // every member would exit 127: refuse before any runs
+		fmt.Fprintf(s.Err, "report-module: toolbelt not found: %s\n", tb)
+		return ExitEnv
+	}
 	env := make([]string, 0, len(environ))
 	for _, kv := range environ {
 		if !strings.HasPrefix(kv, ToolbeltEnv+"=") {
@@ -58,7 +63,7 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 		}
 	}
 	r := &report{out: s.Out, errw: s.Err, o: o, getenv: s.Env, n: map[string]int{},
-		x: runner{tb: toolbelt(s), env: env}}
+		x: runner{tb: tb, env: env}}
 	for _, a := range artifacts {
 		for _, m := range perArtifact {
 			r.step(a, m)
@@ -100,7 +105,8 @@ func errText(err error) string {
 }
 
 // toolbelt is the directory of the member wrappers: ToolbeltEnv, else build-n4-module-kit/toolbelt beside the
-// go/ module this binary was built in (go/bin/<tool>).
+// go/ module this binary was built in (go/bin/<tool>); "" when the executable cannot be resolved. Main refuses
+// one that is not a directory.
 func toolbelt(s cli.Stdio) string {
 	if d := s.Env(ToolbeltEnv); d != "" {
 		return d
