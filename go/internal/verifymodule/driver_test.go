@@ -142,3 +142,22 @@ func TestDriverScaffold(t *testing.T) {
 	wantRow(t, rows, "FAIL", "driver-scaffold", "BMinimalDriverDevice.java:", "only calls pingOk()")
 	wantRow(t, rows, "WARN", "driver-scaffold", "MinimalDriverCodec.java:", "wizard stub")
 }
+
+// TestDriverCommConfig: a network or device slot that holds a bare framework comm config FAILs (§ 1.9);
+// the same slot holding the driver's subclass passes, and a bare config on a non-driver class is not looked at.
+func TestDriverCommConfig(t *testing.T) {
+	dir := copyFixture(t)
+	edit(t, dir, fxRt+"BMinimalDriverNetwork.java", "  type = \"BMinimalDriverUdpCommConfig\",\n  defaultValue = \"new BMinimalDriverUdpCommConfig()\"",
+		"  type = \"BUdpCommConfig\",\n  defaultValue = \"new BUdpCommConfig()\"")
+	edit(t, dir, fxRt+"BMinimalDriverDevice.java", "@NiagaraProperty(\n  name = \"points\",",
+		"@NiagaraProperty(name = \"tcpConfig\", type = \"com.tridium.ndriver.datatypes.BTcpCommConfig\")\n@NiagaraProperty(\n  name = \"points\",")
+	edit(t, dir, fxRt+"BMinimalDriverPointFolder.java", "@NiagaraType", "@NiagaraType\n@NiagaraProperty(name = \"c\", type = \"BUdpCommConfig\", defaultValue = \"new BUdpCommConfig()\")")
+	rows := driverRows(t, dir)
+	wantRow(t, rows, "FAIL", "driver-comm-config", "BMinimalDriverNetwork.java:", "udpConfig", "BUdpCommConfig")
+	wantRow(t, rows, "FAIL", "driver-comm-config", "BMinimalDriverDevice.java:", "tcpConfig", "BTcpCommConfig")
+	for _, r := range rows {
+		if strings.Contains(r, "BMinimalDriverPointFolder.java") {
+			t.Errorf("non-network class flagged: %s", r)
+		}
+	}
+}

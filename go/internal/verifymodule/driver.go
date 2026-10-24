@@ -1,13 +1,16 @@
 package verifymodule
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 )
 
 // driverChecks are the rows driver mode prints, in order (types/driver-authoring.md is the doctrine).
-var driverChecks = []string{"driver-scaffold"}
+var driverChecks = []string{"driver-scaffold", "driver-comm-config"}
 
 // Driver detection: a profile dir is a driver module when a class under its src extends a Baja network
 // or device base (driverBases), directly or through another class of the same src. The source decides,
@@ -70,7 +73,7 @@ func (r *run) driver() bool {
 		return true
 	}
 	pass := true
-	for _, c := range []func(*driverModule) bool{r.driverScaffold} {
+	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig} {
 		if !c(m) {
 			pass = false
 		}
@@ -97,6 +100,62 @@ func (r *run) driverScaffold(m *driverModule) bool {
 	}
 	if rows == 0 {
 		r.row("PASS", "driver-scaffold", "no NDriver wizard stub under "+m.pd+"/src")
+	}
+	return !failed
+}
+
+// isDriverClassFile reports whether u declares a network or device class.
+func (m *driverModule) isDriverClassFile(u *javaUnit) bool {
+	for _, c := range u.classes {
+		if m.networks[c.Name] || m.devices[c.Name] {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	propNameRe = regexp.MustCompile(`\bname[[:space:]]*=[[:space:]]*"([^"]*)"`)
+	propTypeRe = regexp.MustCompile(`\btype[[:space:]]*=[[:space:]]*"([^"]*)"`)
+	propDefRe  = regexp.MustCompile(`\bdefaultValue[[:space:]]*=[[:space:]]*"([^"]*)"`)
+	// bareCommRe is a framework comm config named by its simple or qualified name, never a subclass.
+	bareCommRe = regexp.MustCompile(`^(new[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*\.)*(BUdpCommConfig|BTcpCommConfig)[[:space:]]*(\(|$)`)
+)
+
+// driverCommConfig FAILs a @NiagaraProperty of a network or device class whose value is a bare framework
+// comm config: its defaultValue constructs BUdpCommConfig or BTcpCommConfig, or its type is one of them
+// with no defaultValue. A bare config keeps the base message factory, whose NMessage throws on every
+// received frame. Doctrine: types/driver-authoring.md § 1.9 (Subclass the config; never ship a bare
+// BUdpCommConfig).
+func (r *run) driverCommConfig(m *driverModule) bool {
+	failed := false
+	for _, u := range m.units {
+		if !m.isDriverClassFile(u) {
+			continue
+		}
+		javasrc.NiagaraProperties(u.view.code, func(text string, line int) {
+			bare := ""
+			if d := propDefRe.FindStringSubmatch(text); d != nil {
+				if bareCommRe.MatchString(strings.TrimSpace(d[1])) {
+					bare = strings.TrimSpace(d[1])
+				}
+			} else if ty := propTypeRe.FindStringSubmatch(text); ty != nil && bareCommRe.MatchString(ty[1]) {
+				bare = ty[1]
+			}
+			if bare == "" {
+				return
+			}
+			name := ""
+			if n := propNameRe.FindStringSubmatch(text); n != nil {
+				name = n[1]
+			}
+			r.row("FAIL", "driver-comm-config", u.path+":"+itoa(line)+"  slot "+name+" holds a bare "+bare+
+				": subclass it with your message factories (types/driver-authoring.md § 1.9)")
+			failed = true
+		})
+	}
+	if !failed {
+		r.row("PASS", "driver-comm-config", "no network or device slot holds a bare comm config under "+m.pd+"/src")
 	}
 	return !failed
 }
