@@ -12,8 +12,12 @@
 // order, then source order) is a row when
 //   - its body has the same javasrc.Shape (whitespace and comments dropped, identifiers and literals
 //     kept) as an earlier body of at least minStatements javasrc.Statements, or else
-//   - it shares its name and parameter types with an earlier method of another class, neither being an
-//     @Override, an anonymous-class method or a constructor (they implement or construct their own type).
+//   - it is a helper (private or static: neither can override) sharing its name and parameter types with
+//     an earlier helper of another class, neither being an @Override, an anonymous-class method or a
+//     constructor. Left out (2026-10-24 real-tree tunings, each with a test): a public or package
+//     instance method (it may implement a supertype's method without @Override: TableModel getters, a
+//     command's doInvoke), a static factory returning its own class, and a one-statement delegate that
+//     calls the same-named method on another type (the shared helper's caller).
 //
 // The row names the first definition only, so N copies give N-1 rows.
 package duplicatehelper
@@ -96,8 +100,9 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 					shapes[shape] = at
 				}
 			}
-			if d.Override || d.Anonymous || d.Name == d.Class {
-				continue
+			if !d.Private && !d.Static || d.Override || d.Anonymous || d.Name == d.Class || d.Result == d.Class ||
+				delegates(body, d.Name) {
+				continue // not a helper copy: it may implement a supertype's method, construct its own type or call the helper
 			}
 			sig := d.Name + "(" + strings.Join(d.Params, ",") + ")"
 			first, ok := sigs[sig]
@@ -113,6 +118,20 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 		return nil, lint.ErrEmptyRoot
 	}
 	return out, nil
+}
+
+// delegates reports a one-statement body that calls name on another type (Other.name(...)): the caller of a
+// shared helper, which is the fix the rule asks for, not a copy.
+func delegates(body []javasrc.Token, name string) bool {
+	if javasrc.Statements(body) != 1 {
+		return false
+	}
+	for j := 1; j+1 < len(body); j++ {
+		if body[j].Text == name && body[j-1].Text == "." && body[j+1].Text == "(" {
+			return true
+		}
+	}
+	return false
 }
 
 // generated marks the 0-based lines inside slotomatic regions: from a line whose comment holds the BEGIN
