@@ -1,0 +1,24 @@
+-- args --
+@DIR@/A.java
+-- want --
+exit 3
+-- stderr --
+lint-status-parity: not a directory: @DIR@/A.java
+-- A.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}

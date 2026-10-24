@@ -31,14 +31,14 @@ component.invoke(myAction, arg, cx);              // same rule for invoke()
 ```
 
 Both `set()` and `invoke()` must receive a real `Context`. Passing `null` to either
-skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B1316 §1316.2; devguide security]
+skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B1316 §1316.2; devguide security/security.txt:159-173, :215]
 
 ### 1.2 oBIX PUT attribution gap (known limitation)
 
 Writes arriving via oBIX PUT go through a shared machine-level login user (not the
 individual browser user). The audit entry shows the shared user name, not the human
 operator. This is a Niagara platform limitation, not a module bug — document it in
-your module's README so integrators are not surprised. [ev: memory PANCCADIA-access-model; corpus B1273 §1273.2]
+your module's README so integrators are not surprised. [ev: corpus B829 §829.2; corpus B1273 §1273.2]
 
 ### 1.3 Servlet write audit — the customer-visible record `[ev: retro servlet-write-audit Δ1]`
 
@@ -87,7 +87,7 @@ write, and invoke:
 | `all` | 119 (0x77) | all bits set — null-Context grants this implicitly |
 
 Usage: `perms.has(BPermissions.operatorWrite)` — returns true when the permission set
-includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security]
+includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security/security.txt:97, :220-222]
 
 ### 2.2 Slot tier selection
 
@@ -202,8 +202,8 @@ guard. Wire it in `web.xml` for every servlet that mutates state:
 </filter-mapping>
 ```
 
-`httpMethod` is split on `,` and matched exactly against `getMethod()` (javap web-rt 4.15.6.20
-`CsrfProtectedFilter.init`/`doFilter`), so write it without spaces and list every mutating method the servlet
+`httpMethod` is split on `,` and matched exactly against `getMethod()` (javap of web-rt.jar 4.15.6.20
+`CsrfProtectedFilter.init`/`doFilter`; census: `unzip -p` of the 14 `WEB-INF/web.xml` under 4.15.6.20 `modules/`), so write it without spaces and list every mutating method the servlet
 accepts. The shipped 4.15.6.20 modules use `POST`, `POST,PUT`, `GET,POST` or `GET`; none lists `DELETE`
 (6 of the 14 jars with a `WEB-INF/web.xml` map the filter, e.g. web-rt `WEB-INF/web.xml:35` `POST,PUT`,
 bacnetAws-rt `:27` `GET,POST`). Add `DELETE` only if your servlet accepts it.
@@ -244,7 +244,7 @@ try (SecretChars sc = AccessController.doPrivileged(
 // Never: log.info("password=" + myBPassword.getValue())
 ```
 
-[ev: devguide security; code docSource BPassword.java:440-450, :486-492]
+[ev: javap of bin/ext/nre.jar 4.15.6.20 `SecretChars` (AutoCloseable; `close()` = `Arrays.fill(value, 0)`); code docSource BPassword.java:440-450, :486-492]
 
 ### 3.3 Credential header redaction in structured logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
 

@@ -1,0 +1,178 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  Both  N=3 per-instance config slots but 2 status slots
+WARN  lint-status-parity  EmptyName  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Filename  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  N2M0  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  N2M1  N=2 per-instance config slots but 1 status slots
+WARN  lint-status-parity  NoName  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Suffix  N=2 per-instance config slots but 1 status slots
+-- stderr --
+-- Both.java --
+class Both {
+  @NiagaraProperty(
+    name = "aDurationActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bDurationActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "cSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- EmptyName.java --
+class EmptyName {
+  @NiagaraProperty(
+    name = "",
+    type = "aInterval"
+  )
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Filename.java --
+class Filename {
+  @NiagaraProperty(
+    filename = "xInterval",
+    name = "y"
+  )
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Lower.java --
+class Lower {
+  @NiagaraProperty(
+    name = "setpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "interval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "statusX",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- N1.java --
+class N1 {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- N2M0.java --
+class N2M0 {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- N2M1.java --
+class N2M1 {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "runStatus",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- N2M2.java --
+class N2M2 {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "runStatus",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "onSince",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- NoName.java --
+class NoName {
+  @NiagaraProperty(
+    type = "int"
+  )
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Suffix.java --
+class Suffix {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aStartTime",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bStart",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}

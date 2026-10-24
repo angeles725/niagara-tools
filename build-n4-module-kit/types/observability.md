@@ -165,7 +165,7 @@ so the wire-sheet color-codes the component's health and operators see a one-lin
                  flags=Flags.READONLY|Flags.TRANSIENT|Flags.SUMMARY)
 ```
 
-[ev: code tagdictionary-rt `BTagDictionary.java` `faultCause` String `READONLY|TRANSIENT|SUMMARY`; code devIpDriver-rt `BDdfUdpMulticastHelper.java`]
+[ev: code tagdictionary-rt `BTagDictionary.java` `faultCause` String `flags = 67` = `READONLY|TRANSIENT|DEFAULT_ON_CLONE`; code devIpDriver-rt `BDdfUdpMulticastHelper.java` (`status` + `faultCause`, no flags); `SUMMARY` is kit choice [INFER]]
 
 ---
 
@@ -203,7 +203,7 @@ Prefer these surfaces in order:
 2. **`faultCause` string slot** — one-liner for the current fault; keep it actionable.
 3. **Spy page** — live snapshot of internal structures too large or volatile for a slot.
 4. **`WARNING`+ log messages** — auto-captured by `BLogHistoryService`; a BQL alarm rule
-   can pattern-match them. Use `WARNING` for any recoverable condition operators should know.
+   can pattern-match them [INFER — B33 §33.17.3 only shows LogHistory is BQL-queryable]. Use `WARNING` for any recoverable condition operators should know.
    [ev: corpus B33; code bacnetAws-rt `BBacnetAwsNetwork.java`]
 
 ---
@@ -217,7 +217,7 @@ find "$SRC" -name "*.java" | xargs grep -l "System\.out\.print" \
   && echo "HARD: System.out bypasses BLogHistoryService — use java.util.logging.Logger"
 ```
 
-[ev: corpus OBS-2]
+[ev: odd/tasks/kit-improvement-candidates-2026-09-19.md OBS-2]
 
 ---
 
