@@ -29,6 +29,10 @@ func TestCardPathGaps(t *testing.T) {
 		{"tokens stop at the first prose word", "[ev: code cloudLink-rt module.palette SmartTagDictionary entry with tags]",
 			[]full{{1, Code, "cloudLink-rt", "module.palette", "", "SmartTagDictionary"}}},
 		{"a capitalised prose word is a note", "[ev: CLAUDE.md Model Assignments]", []full{{1, Path, "CLAUDE.md", "", "", ""}}},
+		{"a comma after a listed file", "[ev: code basicDriver-rt vineflower `BBasicNetwork.java:30-66,240-278`, `util/B.java:17`]",
+			[]full{{1, Vineflower, "basicDriver-rt", "BBasicNetwork.java", "", ":30-66,240-278"}}},
+		{"more ranges of the same file", "[ev: code Tuning.java:332-333, :549-552, :629]", []full{{1, Code, "", "Tuning.java", "", ":332-333,549-552,629"}}},
+		{"a comma after a devguide file", "[ev: devguide security/security.txt:97, :220-222]", []full{{1, Devguide, "security/security.txt", "", "", ":97,220-222"}}},
 		{"`lines a-b` after a file is a line range", "[ev: code themeDistech-ux extracted/hx/theme.css lines 4-16]",
 			[]full{{1, Code, "themeDistech-ux", "extracted/hx/theme.css", "", ":4-16"}}},
 	}

@@ -88,7 +88,7 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 	switch word {
 	case "code":
 		for i := range f {
-			f[i] = strings.Trim(f[i], "`")
+			f[i] = strings.Trim(f[i], "`,;")
 		}
 		if len(f) >= 3 && copyWords[f[1]] && looksPath(f[2]) {
 			p := pathPointer(Vineflower, strings.Join(f[2:], " "), aliases, c)
@@ -150,7 +150,7 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 // pathPointer reads `<path>[:ranges][ § heading | token…]`.
 func pathPointer(k Kind, text string, aliases map[string]string, raw string) Pointer {
 	f := strings.Fields(text)
-	path, lines := splitLines(strings.Trim(f[0], "`"))
+	path, lines := splitLines(strings.Trim(f[0], "`,;"))
 	p := Pointer{Kind: k, Target: expand(path, aliases), Lines: lines, Raw: raw}
 	extra := f[1:]
 	if len(extra) > 0 && strings.HasPrefix(extra[0], "§") {
@@ -158,10 +158,12 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 		p.Sections = sectionRange(heading(h))
 		return p
 	}
-	if len(extra) > 0 && lines == nil && strings.HasPrefix(extra[0], ":") {
-		if rs, ok := ParseRanges(extra[0][1:]); ok {
-			p.Lines, extra = rs, extra[1:]
+	for len(extra) > 0 && strings.HasPrefix(extra[0], ":") {
+		rs, ok := ParseRanges(strings.Trim(extra[0], ":`,;"))
+		if !ok {
+			break
 		}
+		p.Lines, extra = append(p.Lines, rs...), extra[1:]
 	}
 	if len(extra) >= 2 && p.Lines == nil && (extra[0] == "line" || extra[0] == "lines") {
 		if rs, ok := ParseRanges(extra[1]); ok {
