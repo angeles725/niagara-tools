@@ -28,6 +28,7 @@ func TestFilePointers(t *testing.T) {
 		{"code file missing from its module", "[ev: code kitControl-rt BNope.java]", []want{{MissingFile, "kitControl-rt"}}},
 		{"vineflower prose citation", "vineflower kitControl-rt 4.14.0.162 `com/tridium/kitControl/BFoo.java:2-3`", []want{{Resolved, "// BFoo line 2"}}},
 		{"javap jar found", "javap of `kitControl-rt.jar` 4.15.6.20", []want{{Resolved, "javap output not checked"}}},
+		{"javap tag finds the jar", "[ev: javap kitControl-rt.jar 4.15.6.20]", []want{{Resolved, "javap output not checked"}}},
 		{"javap jar missing", "javap of `nope-rt.jar` 4.15.6.20", []want{{MissingFile, "nope-rt.jar"}}},
 		{"jar entry resolves the jar", "[ev: code kitControl-rt.jar!/com/x/Y.class]", []want{{Resolved, "entry com/x/Y.class not checked"}}},
 		{"jar entry of a missing jar", "[ev: code nope-rt.jar!gradle/b.vm:18]", []want{{MissingFile, "nope-rt.jar"}}},
