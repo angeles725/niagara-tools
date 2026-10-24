@@ -1,0 +1,12 @@
+TITLE: Station auto logoff
+SOURCE: guides/Platform/Rerendered.html
+
+A station logs off an idle user after the session timeout.
+
+If your station connection is via Workbench, a similar warning displays.
+
+As of Niagara 4.15, the Absolute Logoff option logs users out after an absolute timeout.
+
+Per user in the baja-User component by enabling the Absolute  Logoff Enabled property.
+
+Parent topic: User authentication

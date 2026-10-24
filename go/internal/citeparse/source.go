@@ -187,6 +187,9 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 			p.Lines, extra = rs, extra[2:]
 		}
 	}
+	if p.Lines != nil {
+		p.Anchor, extra = anchor(extra)
+	}
 	prose := p.Lines != nil
 	for _, w := range extra {
 		// A plain word (`list`, `Model`) opens prose: it and every word after it are notes.
@@ -198,6 +201,21 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 		}
 	}
 	return p
+}
+
+// anchor reads a quoted phrase that opens words (`"Absolute Logoff" read` → Absolute Logoff) and returns
+// the words after it; words that open no closed quote are returned as they are.
+func anchor(words []string) (string, []string) {
+	text := strings.Join(words, " ")
+	rest, ok := strings.CutPrefix(text, `"`)
+	if !ok {
+		return "", words
+	}
+	phrase, after, closed := strings.Cut(rest, `"`)
+	if !closed || strings.TrimSpace(phrase) == "" {
+		return "", words
+	}
+	return strings.TrimSpace(phrase), strings.Fields(after)
 }
 
 // sections reads a § reference: a list of section numbers (any title after them dropped; a bare number

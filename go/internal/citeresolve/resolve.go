@@ -27,6 +27,7 @@ const (
 	MissingSection   Status = "MISSING_SECTION"
 	MissingDelta     Status = "MISSING_DELTA"
 	LineOutOfRange   Status = "LINE_OUT_OF_RANGE"
+	Drift            Status = "DRIFT" // a quoted anchor is not on or near the cited line
 	BareID           Status = "BARE_ID"
 	Unparsed         Status = "UNPARSED"
 	Ambiguous        Status = "AMBIGUOUS" // a searched name matches several files: listed, never guessed
@@ -96,7 +97,8 @@ func New(r Roots) *Engine {
 // NewCard starts the state of the card at path.
 func (e *Engine) NewCard(path string) *Card { return &Card{Dir: filepath.Dir(path)} }
 
-// Resolve checks p; notes the parser kept and a deferred tag are appended to the detail.
+// Resolve checks p; notes the parser kept, an anchor no guide page checked and a deferred tag are appended
+// to the detail.
 func (e *Engine) Resolve(p citeparse.Pointer, c *Card) Result {
 	r, ok := e.by[p.Kind]
 	if !ok {
@@ -109,6 +111,9 @@ func (e *Engine) Resolve(p citeparse.Pointer, c *Card) Result {
 	var extra []string
 	if len(p.Notes) > 0 {
 		extra = append(extra, "unchecked: "+strings.Join(p.Notes, " "))
+	}
+	if p.Anchor != "" && res.Status == Resolved && !guidePage(res.File) {
+		extra = append(extra, "unchecked: anchor outside guides-clean")
 	}
 	if p.Deferred {
 		extra = append(extra, "deferred")
