@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/files"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyxml"
 )
@@ -91,7 +90,7 @@ func Parse(text string, maxItems int) (*pyjson.Object, error) {
 				if list, _ := group.([]any); !contains(list, value) {
 					bound.Set(key, append(list, value))
 				}
-			case tag == "PxInclude" || strings.HasPrefix(value, "file:^") && strings.HasSuffix(files.Lower(value), ".px"):
+			case tag == "PxInclude" || strings.HasPrefix(value, "file:^") && strings.HasSuffix(pyjson.Lower(value), ".px"):
 				included.add(value)
 			case isImage(value) || a.Name == "image":
 				images.add(value)

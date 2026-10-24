@@ -2,7 +2,6 @@ package readtools
 
 import (
 	"errors"
-	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -53,40 +52,11 @@ func writeFailed(path string, err error) error {
 	return toolError("output_file %s could not be written (%s)", path, why)
 }
 
-// isDir is os.path.isdir: false on any stat error.
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
-
-// makedirs is os.makedirs(name, mode, exist_ok=True): missing parents get 0777 (less the
-// umask), name gets mode.
-func makedirs(name string, mode fs.FileMode) error {
-	head := safety.Dirname(name)
-	if tail := name[len(head):]; strings.Trim(tail, "/") != "" && head != "" && head != name {
-		if _, err := os.Lstat(head); err != nil {
-			if err := makedirs(head, 0o777); err != nil && !errors.Is(err, fs.ErrExist) {
-				return err
-			}
-		}
-	}
-	if err := os.Mkdir(name, mode); err != nil && !isDir(name) {
-		return err
-	}
-	return nil
-}
-
 // privateDirs is _private_dirs: the state dir and the result subdir of path, created 0700 when
 // missing (an existing one is never chmodded).
 func privateDirs(path string) error {
 	for _, dir := range []string{safety.Dirname(safety.Dirname(path)), safety.Dirname(path)} {
-		if isDir(dir) {
-			continue
-		}
-		if err := makedirs(dir, 0o700); err != nil {
-			return err
-		}
-		if err := os.Chmod(dir, 0o700); err != nil {
+		if err := safety.PrivateDir(dir); err != nil {
 			return err
 		}
 	}

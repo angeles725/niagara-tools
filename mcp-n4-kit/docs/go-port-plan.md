@@ -24,7 +24,7 @@ that is slice S0.
 | `bql` | `bql.py:1-221`, `tools_read.py:500-654` (output files, private dirs) |
 | `files` / `px` / `pyxml` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:689-822`; `pyxml` is the expat parser `ET.fromstring` uses |
 | `token` | `safety.py:47-113` (canonical, `bound_args`, redact, `ConfirmationTokens`) |
-| `audit` / `journal` | `safety.py:156-311` (state-dir checks, `_JsonlFile`, `Journal` views, `AuditLog`) |
+| `journal` | `safety.py:156-311` (`_JsonlFile`, `Journal` views, `AuditLog`; the state-dir checks are `safety`'s since S6) |
 | `retro` | `retro.py:1-289` and `templates/retro.template.md` |
 | `plan` | `tools_write.py:76-216, 1260-1500` (coerce, to-BSON, `_process`, `_execute`, `_send_all`, `_record`) |
 | `writeops` | `tools_write.py:217-1240` (create, set, invoke, link, remove/snapshot/relink, rollback/frozen, save) |
@@ -196,6 +196,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
+| `test_list_batches.py` | 5 | 0 | 0 | 0 | 0 | 0 | 5 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -206,7 +207,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **622** | **166** | **56** | **105** | **22** | **349** | **273** |
+| **Total** | **627** | **166** | **56** | **105** | **22** | **349** | **278** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -451,3 +452,65 @@ and `readtools.TestFilesDifferentialPython` (the three tools: reply text and out
 mode). `pyxml.TestPinnedExpatAnswers` keeps the four fixes without a Python.
 
 **Known differences.** None found. A DOCTYPE never reaches the parser in either implementation.
+
+## 12. S8 tokens, write scope, journal and audit, `n4_list_batches`
+
+**Packages.** `token` ports `safety.py:47-113`: `BoundArgs`, `Redact` (`str.lower()` is
+`pyjson.Lower`, moved from `files`: U+212A lowers to `k`, U+0130 to `i` + U+0307) and `Tokens`
+(`ConfirmationTokens`: `<expiry>.<nonce>.<mac>`, HMAC-SHA256 over `canonical([tool,
+canonical(bound_args), plan_hash, expiry, nonce])` under a per-process random key; malformed,
+mismatch, expired and reused refusals in that order and in Python's words; an expired nonce is
+dropped; entries not after the clock are pruned on issue). `ord` ports `child_ord`/`join_ord`
+(`box.py:183-207`) and `_plain_slot_ord`/`WriteScope` (`Scope.Check` takes any value, as a
+caller's argument may be one). `journal` ports `_JsonlFile`, `Journal` and `AuditLog`
+(`safety.py:156-311`); the state-dir checks stay in `safety` (S6), which now also holds the
+`REASON_*` texts verbatim and the create-then-chmod rule (`PrivateDir`, `MakeDirs`, `IsDir`, moved
+from `readtools`). `journal.Batches` is `n4_list_batches`' list and `RollbackTarget` /
+`EarlierRollbacks` are the journal checks `_rollback_plan` makes before and after its station
+check (S13 composes them). `pyjson.ReadLines` is `open(path).readlines()` in UTF-8 mode.
+`readtools` serves `n4_list_batches` (no session, journal only). The server still refuses
+`--allow-writes` with the existing text: nothing in this slice writes.
+
+**Files.** An append creates the state dir 0700 only when it is not a directory yet (missing
+parents 0777 less the umask) and chmods only what it created; the file is opened
+`O_WRONLY|O_APPEND|O_CREAT|O_EXCL` 0600, and on `EEXIST` reopened without `O_CREAT` and refused
+with Python's `PermissionError` text when it is not private (never chmodded); one write of
+`json.dumps(entry) + "\n"`. Reading follows Python exactly: a file that cannot be opened is empty,
+a line that is not a JSON object is skipped, `\r` and `\r\n` end lines, and bytes that are not
+UTF-8 fail as `TextIOWrapper` fails, chunk by chunk (8192 bytes; positions count from the chunk;
+CPython keeps a cut `0xED` lead pending whatever its continuation byte). Batch ids are keyed as
+Python dict keys: `1`, `true` and `1.0` are one batch, every JSON `NaN` is one object, and a list
+or dict id is a `TypeError` (the tool answers `internal error (TypeError)`) only in a phase that
+keys it; `component-intent` ops extend as `list.extend` does (a string by characters, a dict by
+keys, a number is a `TypeError`).
+
+**Proof.** The 49 `@go_twin` tests of `test_safety` (46) and `test_box.TestChildOrd` (3) have Go twins of
+the same names (`token`, `ord`, `journal`; the `audit` markers now name `journal` and `token`,
+where the code lives) plus `readtools.TestItIsReadOnlyAndWorksWithoutASession`. The new
+`tests/test_list_batches.py` (5 tests) runs black-box under both implementations on a state dir
+the Python server wrote (`tests/fixtures/journal/generate.py` → `python-written/`: a create and
+its rollback, a remove and its rollback with component and relink records, an intent whose send
+failed, a link whose result is `in_doubt`) and requires `tools_read.n4_list_batches`' reply byte
+for byte, also after torn lines, a non-UTF-8 byte and an unhashable id. Under `MCP_N4_IMPL=go`:
+627 tests, 448 skipped (622 / 448 before; the 5 new ones run). Differentials on CPython 3.15:
+`token.TestTokensDifferentialPython` (key, clock and pending nonces injected into one
+`ConfirmationTokens` instance, never by patching the package: mac, bound args, redaction,
+consume verdict, pending set, issue expiry), `ord.TestScopeAndJoinDifferentialPython` (16
+scopes × 36 ORDs, 13 parents × 15 names), `pyjson.TestReadLinesDifferentialPython` (144 files
+around the chunk boundaries) and `journal.TestJournalDifferentialPython` (the Python-written
+dir and 16 edge journals: views, `read`, `rollbacks_of`, `n4_list_batches` at three limits and
+the journal verdict of the real `_rollback_plan`, every branch reached). Both in-doubt batches
+the Python server wrote are refused by `RollbackTarget` with Python's text
+(`journal.TestAPythonInDoubtBatchIsRefused`). 44 hand mutants of the refusal, binding, scope,
+view, append and read branches all go RED (two through a panic, none through a build failure),
+and a reversed batch order fails `test_list_batches` under Go.
+
+**Known differences.** Expiry and nonce tests are Go-only twins (no in-process clock exists
+across the process boundary). A journal line nested deeper than CPython's recursion limit makes
+Python's `n4_list_batches` answer `internal error (RecursionError)`; Go parses it (the server
+writes those lines itself). `File.Append` completes a short write, where `os.write` would leave a
+partial line, and an `OSError` from opening the file is Go's error text; no S8 caller shows it
+(the write tools of S10 will). `ChildOrd` and `JoinOrd` take strings: their non-string refusals
+are Python-only paths. Observed in Python and kept: one non-UTF-8 byte or one unhashable batch id
+anywhere in `journal.jsonl` makes `n4_list_batches` (and a rollback) fail for every batch, and
+`_BATCH_ID.match` accepts an id with one trailing newline (then refused as unknown).
