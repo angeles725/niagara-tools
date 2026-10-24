@@ -247,7 +247,11 @@ def n4_connect(ctx, args):
         raise ToolError("credentials missing: set env vars %s_USER and %s_PASSWORD"
                         % (prefix, prefix))
     ctx.set_secret(secret)
-    credentials = ctx.credentials_fingerprint(user, secret)
+    try:
+        credentials = ctx.credentials_fingerprint(user, secret)
+    except UnicodeEncodeError:  # its text names the bad character's position (R8-D19)
+        raise ToolError("credentials are not valid UTF-8: check env vars %s_USER and "
+                        "%s_PASSWORD" % (prefix, prefix)) from None
     block = ctx.auth_block(credentials)
     if block:  # the same credentials just failed: one more try would only near the lock-out
         raise ToolError(block)

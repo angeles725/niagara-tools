@@ -108,7 +108,7 @@ func (c *Client) Call(channel, key string, body any) (any, error) {
 	c.seq++
 	frame := obj("p", "box", "v", ProtocolVersion,
 		"m", []any{obj("r", 0, "t", "rt", "c", channel, "k", key, "b", body)}, "n", c.seq)
-	if truthy(c.sid) {
+	if pyjson.Truthy(c.sid) {
 		frame.Set("id", c.sid)
 	}
 	data, err := pyjson.Marshal(frame, pyjson.Options{})

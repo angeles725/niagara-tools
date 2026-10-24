@@ -12,6 +12,9 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/cli/` | injectable stdio (`cli.Stdio`) and the `cli.Main` signature every command uses |
 | `internal/strerror/` | `Text`: an OS error as C `strerror()` words it in the C locale, and `FindQuote`: a path as GNU find quotes it in that locale (the text find and awk print), shared by `lint` and `jarversion` |
 | `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
+| `internal/jssrc/` | the JavaScript tokenizer only: `Tokens` (comments dropped; strings, template literals with their `${...}` nesting and regex literals as single tokens, each with its line), for a rule that reads `rc/**/*.js` |
+| `internal/props/` | `Read`: a `.properties` file as `java.util.Properties.load` reads it (continuations, `#`/`!` comments, `=`/`:`/space separators, escapes), each entry with the line it starts on |
+| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
@@ -109,6 +112,9 @@ rule's rows stay contiguous.
    what hand-written expectations miss (row order, gawk hash order, read and grep quirks); a port whose
    tests restate the bats assertions as substrings, or that copies the golden parser into its own
    package, is a review finding. `[ev: retro go-lint-timers Δ1]` `[ev: retro go-lint-ord-ports Δ2]`
+   A new rule with no bash lint behind it (reference: `rules/machinedefaultpath`) writes its golden cases by
+   hand from the doctrine (usage, empty root, pruned directories, several roots) and its table tests from the
+   doctrine's positive and negative shapes, RED first.
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every

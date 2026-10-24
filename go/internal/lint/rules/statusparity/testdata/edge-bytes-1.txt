@@ -1,0 +1,36 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  Crlf  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Noeol  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Tabs  N=2 per-instance config slots but 0 status slots
+-- stderr --
+-- Crlf.java --
+class Crlf {
+  @NiagaraProperty(
+    name = "aInterval"
+  )
+  @NiagaraProperty(
+    name = "bInterval"
+  )
+}
+-- Empty.java --
+-- Noeol.java (noeol) --
+class Noeol {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval"
+  )
+-- Tabs.java --
+class Tabs {
+	@NiagaraProperty(
+		name	=	"aInterval"
+	)
+	@NiagaraProperty(
+		name="bInterval")
+}

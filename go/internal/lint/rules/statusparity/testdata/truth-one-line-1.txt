@@ -1,0 +1,23 @@
+declared difference (truth fix T1): the bash awk closed an annotation only from its second line, so a
+one-line @NiagaraProperty swallowed the next line and every other one of a run of one-line annotations
+went uncounted (it printed N=2 for OneLine, and nothing for Pair). Each one is counted now.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  OneLine  N=4 per-instance config slots but 1 status slots
+WARN  lint-status-parity  Pair  N=2 per-instance config slots but 0 status slots
+-- stderr --
+-- OneLine.java --
+class OneLine {
+  @NiagaraProperty(name = "aInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "bInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "cInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "dInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "xActive", type = "int", defaultValue = "1")
+}
+-- Pair.java --
+class Pair {
+  @NiagaraProperty(name = "aSetpoint", type = "double", defaultValue = "1")
+  @NiagaraProperty(name = "bSetpoint", type = "double", defaultValue = "1")
+}
