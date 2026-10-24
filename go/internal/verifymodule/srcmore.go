@@ -8,16 +8,40 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-var (
-	gradleDepRe     = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"`)
-	gradleProjectRe = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*project[[:space:]]*\([[:space:]]*":[^"]*"`)
-	quotedDepRe     = rx(`":[^"]*"`)
-	mxDependencyRe  = rx(`<dependency[[:space:]]+[^>]*\bname="[^"]*"`)
-	mxNameRe        = rx(`\bname="[^"]*"`)
-)
+// declaredDeps are the module names gradle.kts declares, read through ktssrc (comments and string
+// contents are no code): every api/nre/implementation call whose first argument is a ":X" string literal
+// or project(":X"). The bash grepped the text a line at a time, so a call in a comment or a string, or
+// one named xapi(), declared X too (declared difference, truth-kts-phantom).
+func declaredDeps(toks []ktssrc.Token) []string {
+	var out []string
+	at := func(i int, k ktssrc.Kind, text string) bool {
+		return i < len(toks) && toks[i].Kind == k && (text == "" || toks[i].Text == text)
+	}
+	dep := func(i int) (string, bool) {
+		if at(i, ktssrc.String, "") && strings.HasPrefix(toks[i].Value, ":") && !toks[i].Template {
+			return toks[i].Value[1:], true
+		}
+		return "", false
+	}
+	for i, t := range toks {
+		if t.Kind != ktssrc.Ident || (t.Text != "api" && t.Text != "nre" && t.Text != "implementation") ||
+			!at(i+1, ktssrc.Punct, "(") || (i > 0 && at(i-1, ktssrc.Punct, ".")) {
+			continue
+		}
+		if name, ok := dep(i + 2); ok {
+			out = append(out, name)
+		} else if at(i+2, ktssrc.Ident, "project") && at(i+3, ktssrc.Punct, "(") {
+			if name, ok := dep(i + 4); ok {
+				out = append(out, name)
+			}
+		}
+	}
+	return out
+}
 
 // firstGradleKts is `find <pd> -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1`: any type of
 // entry, pd itself included, a symlinked pd not entered (find -P).
@@ -59,21 +83,18 @@ func (r *run) phantomDep() bool {
 	if !ok {
 		return true
 	}
-	var declared []string
-	for _, re := range []*regexp.Regexp{gradleDepRe, gradleProjectRe} {
-		for _, m := range newGrepText(string(data)).only(re) {
-			for _, q := range newGrepText(m).only(quotedDepRe) {
-				declared = append(declared, strings.TrimSuffix(strings.TrimPrefix(q, `":`), `"`))
-			}
-		}
+	toks, err := ktssrc.Tokens(string(data))
+	if err != nil { // an unreadable script declares nothing we can trust
+		r.envError(gkt + ": " + err.Error())
+		return true
 	}
+	declared := sortU(declaredDeps(toks))
 	var deps, phantom []string
-	for _, m := range newGrepText(r.jar.mx).only(mxDependencyRe) {
-		for _, n := range newGrepText(m).only(mxNameRe) {
-			deps = append(deps, strings.TrimSuffix(strings.TrimPrefix(n, `name="`), `"`))
+	for _, i := range r.jar.doc.Find("dependency") {
+		if name, ok := r.jar.doc.Elements()[i].Attr("name"); ok {
+			deps = append(deps, name)
 		}
 	}
-	declared = sortU(declared)
 	for _, dep := range sortU(deps) {
 		if dep != "" && !contains(declared, dep) {
 			phantom = append(phantom, dep)
