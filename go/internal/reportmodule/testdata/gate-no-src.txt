@@ -1,0 +1,164 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 0
+A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-rt  SKIP  lint-lexicon-ascii  no *.lexicon under A-rt
+A-rt  SKIP  lint-delays  no src/
+A-rt  SKIP  lint-demand-scope  no src/
+A-rt  SKIP  lint-silent-protection  no src/
+A-rt  SKIP  lint-link-target-flags  no src/
+A-rt  SKIP  lint-ext-writable-shape  no src/
+A-rt  SKIP  lint-no-system-out  no src/
+A-rt  SKIP  lint-slotomatic-markers  no src/
+A-rt  SKIP  lint-clock-zero-floor  no src/
+A-rt  SKIP  lint-null-context-write  no src/
+A-rt  SKIP  lint-bql-string-concat  no src/
+A-rt  SKIP  lint-arbitrary-ord  no src/
+A-rt  SKIP  lint-persist-hot-write  no src/
+A-rt  SKIP  lint-changed-hot-write  no src/
+A-rt  SKIP  lint-inert-coordination  no src/
+A-rt  SKIP  lint-session-store-lazy-evict  no src/
+A-rt  SKIP  lint-bformat-call  no src/
+A-rt  SKIP  lint-service-types  no src/
+A-rt  SKIP  lint-driver-scaffold  no src/
+A-rt  SKIP  lint-subscribe-without-unsubscribe  no src/
+A-rt  SKIP  lint-recovery-path  no src/
+A-rt  SKIP  lint-config-sanity  no src/
+A-rt  SKIP  lint-status-parity  no src/
+A-rt  SKIP  lint-no-md5-credential-digest  no src/
+A-rt  SKIP  lint-size  no src/
+A-rt  SKIP  lint-license-isoperational-gate  no src/
+A-rt  SKIP  lint-set-null-ord  no src/
+A-rt  SKIP  lint-ws-placement  no src/
+A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+B-ux  SKIP  verify-module  no built jar under build/libs (floor check not run)
+B-ux  SKIP  lint-lexicon-ascii  no *.lexicon under B-ux
+B-ux  SKIP  lint-delays  no src/
+B-ux  SKIP  lint-demand-scope  no src/
+B-ux  SKIP  lint-silent-protection  no src/
+B-ux  SKIP  lint-link-target-flags  no src/
+B-ux  SKIP  lint-ext-writable-shape  no src/
+B-ux  SKIP  lint-no-system-out  no src/
+B-ux  SKIP  lint-slotomatic-markers  no src/
+B-ux  SKIP  lint-clock-zero-floor  no src/
+B-ux  SKIP  lint-null-context-write  no src/
+B-ux  SKIP  lint-bql-string-concat  no src/
+B-ux  SKIP  lint-arbitrary-ord  no src/
+B-ux  SKIP  lint-persist-hot-write  no src/
+B-ux  SKIP  lint-changed-hot-write  no src/
+B-ux  SKIP  lint-inert-coordination  no src/
+B-ux  SKIP  lint-session-store-lazy-evict  no src/
+B-ux  SKIP  lint-bformat-call  no src/
+B-ux  SKIP  lint-service-types  no src/
+B-ux  SKIP  lint-driver-scaffold  no src/
+B-ux  SKIP  lint-spa-poll-no-recovery  no src/rc/
+B-ux  SKIP  lint-servlet  no src/
+B-ux  SKIP  rc-scan  no src/rc/
+B-ux  SKIP  lint-no-md5-credential-digest  no src/
+B-ux  SKIP  lint-size  no src/
+B-ux  SKIP  lint-license-isoperational-gate  no src/
+B-ux  SKIP  lint-set-null-ord  no src/
+B-ux  SKIP  lint-ws-placement  no src/
+B-ux  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+C-wb  SKIP  verify-module  no built jar under build/libs (floor check not run)
+C-wb  SKIP  lint-lexicon-ascii  no *.lexicon under C-wb
+C-wb  SKIP  lint-delays  no src/
+C-wb  SKIP  lint-demand-scope  no src/
+C-wb  SKIP  lint-silent-protection  no src/
+C-wb  SKIP  lint-link-target-flags  no src/
+C-wb  SKIP  lint-ext-writable-shape  no src/
+C-wb  SKIP  lint-no-system-out  no src/
+C-wb  SKIP  lint-slotomatic-markers  no src/
+C-wb  SKIP  lint-clock-zero-floor  no src/
+C-wb  SKIP  lint-null-context-write  no src/
+C-wb  SKIP  lint-bql-string-concat  no src/
+C-wb  SKIP  lint-arbitrary-ord  no src/
+C-wb  SKIP  lint-persist-hot-write  no src/
+C-wb  SKIP  lint-changed-hot-write  no src/
+C-wb  SKIP  lint-inert-coordination  no src/
+C-wb  SKIP  lint-session-store-lazy-evict  no src/
+C-wb  SKIP  lint-bformat-call  no src/
+C-wb  SKIP  lint-service-types  no src/
+C-wb  SKIP  lint-driver-scaffold  no src/
+C-wb  SKIP  lint-wb-external-ord-value  no src/
+C-wb  SKIP  lint-wb-threading  no src/
+C-wb  SKIP  lint-no-md5-credential-digest  no src/
+C-wb  SKIP  lint-wb-file-chooser  no src/
+C-wb  SKIP  lint-size  no src/
+C-wb  SKIP  lint-license-isoperational-gate  no src/
+C-wb  SKIP  lint-set-null-ord  no src/
+C-wb  SKIP  lint-ws-placement  no src/
+C-wb  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+D-se  SKIP  verify-module  no built jar under build/libs (floor check not run)
+D-se  SKIP  lint-lexicon-ascii  no *.lexicon under D-se
+D-se  SKIP  lint-delays  no src/
+D-se  SKIP  lint-demand-scope  no src/
+D-se  SKIP  lint-silent-protection  no src/
+D-se  SKIP  lint-link-target-flags  no src/
+D-se  SKIP  lint-ext-writable-shape  no src/
+D-se  SKIP  lint-no-system-out  no src/
+D-se  SKIP  lint-slotomatic-markers  no src/
+D-se  SKIP  lint-clock-zero-floor  no src/
+D-se  SKIP  lint-null-context-write  no src/
+D-se  SKIP  lint-bql-string-concat  no src/
+D-se  SKIP  lint-arbitrary-ord  no src/
+D-se  SKIP  lint-persist-hot-write  no src/
+D-se  SKIP  lint-changed-hot-write  no src/
+D-se  SKIP  lint-inert-coordination  no src/
+D-se  SKIP  lint-session-store-lazy-evict  no src/
+D-se  SKIP  lint-bformat-call  no src/
+D-se  SKIP  lint-service-types  no src/
+D-se  SKIP  lint-driver-scaffold  no src/
+D-se  SKIP  lint-se-display  no src/
+D-se  SKIP  lint-no-md5-credential-digest  no src/
+D-se  SKIP  lint-size  no src/
+D-se  SKIP  lint-license-isoperational-gate  no src/
+D-se  SKIP  lint-set-null-ord  no src/
+D-se  SKIP  lint-ws-placement  no src/
+D-se  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+E  SKIP  verify-module  no built jar under build/libs (floor check not run)
+E  SKIP  lint-lexicon-ascii  no *.lexicon under E
+E  SKIP  lint-delays  no src/
+E  SKIP  lint-demand-scope  no src/
+E  SKIP  lint-silent-protection  no src/
+E  SKIP  lint-link-target-flags  no src/
+E  SKIP  lint-ext-writable-shape  no src/
+E  SKIP  lint-no-system-out  no src/
+E  SKIP  lint-slotomatic-markers  no src/
+E  SKIP  lint-clock-zero-floor  no src/
+E  SKIP  lint-null-context-write  no src/
+E  SKIP  lint-bql-string-concat  no src/
+E  SKIP  lint-arbitrary-ord  no src/
+E  SKIP  lint-persist-hot-write  no src/
+E  SKIP  lint-changed-hot-write  no src/
+E  SKIP  lint-inert-coordination  no src/
+E  SKIP  lint-session-store-lazy-evict  no src/
+E  SKIP  lint-bformat-call  no src/
+E  SKIP  lint-service-types  no src/
+E  SKIP  lint-driver-scaffold  no src/
+E  SKIP  lint-no-md5-credential-digest  no src/
+E  SKIP  lint-size  no src/
+E  SKIP  lint-license-isoperational-gate  no src/
+E  SKIP  lint-set-null-ord  no src/
+E  SKIP  lint-ws-placement  no src/
+E  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 5 artifacts · 5 PASS · 0 FAIL · 0 WARN · 142 SKIP · 0 ADVISORY  ->  CLEAN
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-rt (dir) --
+-- m/B-ux (dir) --
+-- m/C-wb (dir) --
+-- m/D-se (dir) --
+-- m/E (dir) --
+-- toolbelt/.stub-rest --

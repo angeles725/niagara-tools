@@ -1,0 +1,236 @@
+-- args --
+m
+-- want --
+exit 3
+N1  SKIP  verify-module  no built jar under build/libs (floor check not run)
+N1  SKIP  lint-lexicon-ascii  no *.lexicon under N1
+N1  SKIP  lint-delays  no src/
+N1  SKIP  lint-demand-scope  no src/
+N1  SKIP  lint-silent-protection  no src/
+N1  SKIP  lint-link-target-flags  no src/
+N1  SKIP  lint-ext-writable-shape  no src/
+N1  SKIP  lint-no-system-out  no src/
+N1  SKIP  lint-slotomatic-markers  no src/
+N1  SKIP  lint-clock-zero-floor  no src/
+N1  SKIP  lint-null-context-write  no src/
+N1  SKIP  lint-bql-string-concat  no src/
+N1  SKIP  lint-arbitrary-ord  no src/
+N1  SKIP  lint-persist-hot-write  no src/
+N1  SKIP  lint-changed-hot-write  no src/
+N1  SKIP  lint-inert-coordination  no src/
+N1  SKIP  lint-session-store-lazy-evict  no src/
+N1  SKIP  lint-bformat-call  no src/
+N1  SKIP  lint-service-types  no src/
+N1  SKIP  lint-driver-scaffold  no src/
+N1  SKIP  lint-no-md5-credential-digest  no src/
+N1  SKIP  lint-size  no src/
+N1  SKIP  lint-license-isoperational-gate  no src/
+N1  SKIP  lint-set-null-ord  no src/
+N1  SKIP  lint-ws-placement  no src/
+N1  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+S0  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S0  SKIP  lint-lexicon-ascii  no *.lexicon under S0
+S0  SKIP  lint-delays  no src/
+S0  SKIP  lint-demand-scope  no src/
+S0  SKIP  lint-silent-protection  no src/
+S0  SKIP  lint-link-target-flags  no src/
+S0  SKIP  lint-ext-writable-shape  no src/
+S0  SKIP  lint-no-system-out  no src/
+S0  SKIP  lint-slotomatic-markers  no src/
+S0  SKIP  lint-clock-zero-floor  no src/
+S0  SKIP  lint-null-context-write  no src/
+S0  SKIP  lint-bql-string-concat  no src/
+S0  SKIP  lint-arbitrary-ord  no src/
+S0  SKIP  lint-persist-hot-write  no src/
+S0  SKIP  lint-changed-hot-write  no src/
+S0  SKIP  lint-inert-coordination  no src/
+S0  SKIP  lint-session-store-lazy-evict  no src/
+S0  SKIP  lint-bformat-call  no src/
+S0  SKIP  lint-service-types  no src/
+S0  SKIP  lint-driver-scaffold  no src/
+S0  SKIP  lint-no-md5-credential-digest  no src/
+S0  SKIP  lint-size  no src/
+S0  SKIP  lint-license-isoperational-gate  no src/
+S0  SKIP  lint-set-null-ord  no src/
+S0  SKIP  lint-ws-placement  no src/
+S0  PASS  schema-risk  verdict=SAFE
+S1  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S1  SKIP  lint-lexicon-ascii  no *.lexicon under S1
+S1  SKIP  lint-delays  no src/
+S1  SKIP  lint-demand-scope  no src/
+S1  SKIP  lint-silent-protection  no src/
+S1  SKIP  lint-link-target-flags  no src/
+S1  SKIP  lint-ext-writable-shape  no src/
+S1  SKIP  lint-no-system-out  no src/
+S1  SKIP  lint-slotomatic-markers  no src/
+S1  SKIP  lint-clock-zero-floor  no src/
+S1  SKIP  lint-null-context-write  no src/
+S1  SKIP  lint-bql-string-concat  no src/
+S1  SKIP  lint-arbitrary-ord  no src/
+S1  SKIP  lint-persist-hot-write  no src/
+S1  SKIP  lint-changed-hot-write  no src/
+S1  SKIP  lint-inert-coordination  no src/
+S1  SKIP  lint-session-store-lazy-evict  no src/
+S1  SKIP  lint-bformat-call  no src/
+S1  SKIP  lint-service-types  no src/
+S1  SKIP  lint-driver-scaffold  no src/
+S1  SKIP  lint-no-md5-credential-digest  no src/
+S1  SKIP  lint-size  no src/
+S1  SKIP  lint-license-isoperational-gate  no src/
+S1  SKIP  lint-set-null-ord  no src/
+S1  SKIP  lint-ws-placement  no src/
+S1  WARN  schema-risk  verdict=LOSSY
+S2  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S2  SKIP  lint-lexicon-ascii  no *.lexicon under S2
+S2  SKIP  lint-delays  no src/
+S2  SKIP  lint-demand-scope  no src/
+S2  SKIP  lint-silent-protection  no src/
+S2  SKIP  lint-link-target-flags  no src/
+S2  SKIP  lint-ext-writable-shape  no src/
+S2  SKIP  lint-no-system-out  no src/
+S2  SKIP  lint-slotomatic-markers  no src/
+S2  SKIP  lint-clock-zero-floor  no src/
+S2  SKIP  lint-null-context-write  no src/
+S2  SKIP  lint-bql-string-concat  no src/
+S2  SKIP  lint-arbitrary-ord  no src/
+S2  SKIP  lint-persist-hot-write  no src/
+S2  SKIP  lint-changed-hot-write  no src/
+S2  SKIP  lint-inert-coordination  no src/
+S2  SKIP  lint-session-store-lazy-evict  no src/
+S2  SKIP  lint-bformat-call  no src/
+S2  SKIP  lint-service-types  no src/
+S2  SKIP  lint-driver-scaffold  no src/
+S2  SKIP  lint-no-md5-credential-digest  no src/
+S2  SKIP  lint-size  no src/
+S2  SKIP  lint-license-isoperational-gate  no src/
+S2  SKIP  lint-set-null-ord  no src/
+S2  SKIP  lint-ws-placement  no src/
+S2  FAIL  schema-risk  verdict=OUTAGE
+S3  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S3  SKIP  lint-lexicon-ascii  no *.lexicon under S3
+S3  SKIP  lint-delays  no src/
+S3  SKIP  lint-demand-scope  no src/
+S3  SKIP  lint-silent-protection  no src/
+S3  SKIP  lint-link-target-flags  no src/
+S3  SKIP  lint-ext-writable-shape  no src/
+S3  SKIP  lint-no-system-out  no src/
+S3  SKIP  lint-slotomatic-markers  no src/
+S3  SKIP  lint-clock-zero-floor  no src/
+S3  SKIP  lint-null-context-write  no src/
+S3  SKIP  lint-bql-string-concat  no src/
+S3  SKIP  lint-arbitrary-ord  no src/
+S3  SKIP  lint-persist-hot-write  no src/
+S3  SKIP  lint-changed-hot-write  no src/
+S3  SKIP  lint-inert-coordination  no src/
+S3  SKIP  lint-session-store-lazy-evict  no src/
+S3  SKIP  lint-bformat-call  no src/
+S3  SKIP  lint-service-types  no src/
+S3  SKIP  lint-driver-scaffold  no src/
+S3  SKIP  lint-no-md5-credential-digest  no src/
+S3  SKIP  lint-size  no src/
+S3  SKIP  lint-license-isoperational-gate  no src/
+S3  SKIP  lint-set-null-ord  no src/
+S3  SKIP  lint-ws-placement  no src/
+S3  ERROR  schema-risk  env fault (exit 3)
+S4  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S4  SKIP  lint-lexicon-ascii  no *.lexicon under S4
+S4  SKIP  lint-delays  no src/
+S4  SKIP  lint-demand-scope  no src/
+S4  SKIP  lint-silent-protection  no src/
+S4  SKIP  lint-link-target-flags  no src/
+S4  SKIP  lint-ext-writable-shape  no src/
+S4  SKIP  lint-no-system-out  no src/
+S4  SKIP  lint-slotomatic-markers  no src/
+S4  SKIP  lint-clock-zero-floor  no src/
+S4  SKIP  lint-null-context-write  no src/
+S4  SKIP  lint-bql-string-concat  no src/
+S4  SKIP  lint-arbitrary-ord  no src/
+S4  SKIP  lint-persist-hot-write  no src/
+S4  SKIP  lint-changed-hot-write  no src/
+S4  SKIP  lint-inert-coordination  no src/
+S4  SKIP  lint-session-store-lazy-evict  no src/
+S4  SKIP  lint-bformat-call  no src/
+S4  SKIP  lint-service-types  no src/
+S4  SKIP  lint-driver-scaffold  no src/
+S4  SKIP  lint-no-md5-credential-digest  no src/
+S4  SKIP  lint-size  no src/
+S4  SKIP  lint-license-isoperational-gate  no src/
+S4  SKIP  lint-set-null-ord  no src/
+S4  SKIP  lint-ws-placement  no src/
+S4  ERROR  schema-risk  env fault (exit 4)
+S5  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S5  SKIP  lint-lexicon-ascii  no *.lexicon under S5
+S5  SKIP  lint-delays  no src/
+S5  SKIP  lint-demand-scope  no src/
+S5  SKIP  lint-silent-protection  no src/
+S5  SKIP  lint-link-target-flags  no src/
+S5  SKIP  lint-ext-writable-shape  no src/
+S5  SKIP  lint-no-system-out  no src/
+S5  SKIP  lint-slotomatic-markers  no src/
+S5  SKIP  lint-clock-zero-floor  no src/
+S5  SKIP  lint-null-context-write  no src/
+S5  SKIP  lint-bql-string-concat  no src/
+S5  SKIP  lint-arbitrary-ord  no src/
+S5  SKIP  lint-persist-hot-write  no src/
+S5  SKIP  lint-changed-hot-write  no src/
+S5  SKIP  lint-inert-coordination  no src/
+S5  SKIP  lint-session-store-lazy-evict  no src/
+S5  SKIP  lint-bformat-call  no src/
+S5  SKIP  lint-service-types  no src/
+S5  SKIP  lint-driver-scaffold  no src/
+S5  SKIP  lint-no-md5-credential-digest  no src/
+S5  SKIP  lint-size  no src/
+S5  SKIP  lint-license-isoperational-gate  no src/
+S5  SKIP  lint-set-null-ord  no src/
+S5  SKIP  lint-ws-placement  no src/
+S5  ERROR  schema-risk  unexpected exit 5
+S6  SKIP  verify-module  no built jar under build/libs (floor check not run)
+S6  SKIP  lint-lexicon-ascii  no *.lexicon under S6
+S6  SKIP  lint-delays  no src/
+S6  SKIP  lint-demand-scope  no src/
+S6  SKIP  lint-silent-protection  no src/
+S6  SKIP  lint-link-target-flags  no src/
+S6  SKIP  lint-ext-writable-shape  no src/
+S6  SKIP  lint-no-system-out  no src/
+S6  SKIP  lint-slotomatic-markers  no src/
+S6  SKIP  lint-clock-zero-floor  no src/
+S6  SKIP  lint-null-context-write  no src/
+S6  SKIP  lint-bql-string-concat  no src/
+S6  SKIP  lint-arbitrary-ord  no src/
+S6  SKIP  lint-persist-hot-write  no src/
+S6  SKIP  lint-changed-hot-write  no src/
+S6  SKIP  lint-inert-coordination  no src/
+S6  SKIP  lint-session-store-lazy-evict  no src/
+S6  SKIP  lint-bformat-call  no src/
+S6  SKIP  lint-service-types  no src/
+S6  SKIP  lint-driver-scaffold  no src/
+S6  SKIP  lint-no-md5-credential-digest  no src/
+S6  SKIP  lint-size  no src/
+S6  SKIP  lint-license-isoperational-gate  no src/
+S6  SKIP  lint-set-null-ord  no src/
+S6  SKIP  lint-ws-placement  no src/
+S6  ERROR  schema-risk  unexpected exit 127
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 8 artifacts · 6 PASS · 1 FAIL · 1 WARN · 202 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/N1 (dir) --
+-- m/S0/.deploy-baseline (dir) --
+-- m/S1/.deploy-baseline (dir) --
+-- m/S2/.deploy-baseline (dir) --
+-- m/S3/.deploy-baseline (dir) --
+-- m/S4/.deploy-baseline (dir) --
+-- m/S5/.deploy-baseline (dir) --
+-- m/S6/.deploy-baseline (dir) --
+-- toolbelt/.stub-rest --
+-- toolbelt/schema-risk.sh (mode 755) --
+#!/usr/bin/env bash
+echo "noise that is discarded"; echo "err discarded" >&2
+case "$2" in */S0) exit 0 ;; */S1) exit 1 ;; */S2) exit 2 ;; */S3) exit 3 ;; */S4) exit 4 ;; */S5) exit 5 ;; */S6) exit 127 ;; esac

@@ -1,0 +1,281 @@
+-- args --
+--lint-only
+m
+-- want --
+exit 3
+A-dup  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-dup  FAIL  dup-keys  2
+A-dup  PASS  slot-coverage  100.0%
+A-dup  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-dup  SKIP  lint-delays  no src/
+A-dup  SKIP  lint-demand-scope  no src/
+A-dup  SKIP  lint-silent-protection  no src/
+A-dup  SKIP  lint-link-target-flags  no src/
+A-dup  SKIP  lint-ext-writable-shape  no src/
+A-dup  SKIP  lint-no-system-out  no src/
+A-dup  SKIP  lint-slotomatic-markers  no src/
+A-dup  SKIP  lint-clock-zero-floor  no src/
+A-dup  SKIP  lint-null-context-write  no src/
+A-dup  SKIP  lint-bql-string-concat  no src/
+A-dup  SKIP  lint-arbitrary-ord  no src/
+A-dup  SKIP  lint-persist-hot-write  no src/
+A-dup  SKIP  lint-changed-hot-write  no src/
+A-dup  SKIP  lint-inert-coordination  no src/
+A-dup  SKIP  lint-session-store-lazy-evict  no src/
+A-dup  SKIP  lint-bformat-call  no src/
+A-dup  SKIP  lint-service-types  no src/
+A-dup  SKIP  lint-driver-scaffold  no src/
+A-dup  SKIP  lint-no-md5-credential-digest  no src/
+A-dup  SKIP  lint-size  no src/
+A-dup  SKIP  lint-license-isoperational-gate  no src/
+A-dup  SKIP  lint-set-null-ord  no src/
+A-dup  SKIP  lint-ws-placement  no src/
+A-dup  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-env  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-env  ERROR  slot-coverage  env fault (exit 3)
+A-env  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-env  SKIP  lint-delays  no src/
+A-env  SKIP  lint-demand-scope  no src/
+A-env  SKIP  lint-silent-protection  no src/
+A-env  SKIP  lint-link-target-flags  no src/
+A-env  SKIP  lint-ext-writable-shape  no src/
+A-env  SKIP  lint-no-system-out  no src/
+A-env  SKIP  lint-slotomatic-markers  no src/
+A-env  SKIP  lint-clock-zero-floor  no src/
+A-env  SKIP  lint-null-context-write  no src/
+A-env  SKIP  lint-bql-string-concat  no src/
+A-env  SKIP  lint-arbitrary-ord  no src/
+A-env  SKIP  lint-persist-hot-write  no src/
+A-env  SKIP  lint-changed-hot-write  no src/
+A-env  SKIP  lint-inert-coordination  no src/
+A-env  SKIP  lint-session-store-lazy-evict  no src/
+A-env  SKIP  lint-bformat-call  no src/
+A-env  SKIP  lint-service-types  no src/
+A-env  SKIP  lint-driver-scaffold  no src/
+A-env  SKIP  lint-no-md5-credential-digest  no src/
+A-env  SKIP  lint-size  no src/
+A-env  SKIP  lint-license-isoperational-gate  no src/
+A-env  SKIP  lint-set-null-ord  no src/
+A-env  SKIP  lint-ws-placement  no src/
+A-env  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-facade  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-facade  PASS  dup-keys  0
+A-facade  FAIL  slot-coverage  facade type without lexicon: RoomPanel
+A-facade  WARN  slot-coverage  50.0% (missing RoomPanel)
+A-facade  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-facade  SKIP  lint-delays  no src/
+A-facade  SKIP  lint-demand-scope  no src/
+A-facade  SKIP  lint-silent-protection  no src/
+A-facade  SKIP  lint-link-target-flags  no src/
+A-facade  SKIP  lint-ext-writable-shape  no src/
+A-facade  SKIP  lint-no-system-out  no src/
+A-facade  SKIP  lint-slotomatic-markers  no src/
+A-facade  SKIP  lint-clock-zero-floor  no src/
+A-facade  SKIP  lint-null-context-write  no src/
+A-facade  SKIP  lint-bql-string-concat  no src/
+A-facade  SKIP  lint-arbitrary-ord  no src/
+A-facade  SKIP  lint-persist-hot-write  no src/
+A-facade  SKIP  lint-changed-hot-write  no src/
+A-facade  SKIP  lint-inert-coordination  no src/
+A-facade  SKIP  lint-session-store-lazy-evict  no src/
+A-facade  SKIP  lint-bformat-call  no src/
+A-facade  SKIP  lint-service-types  no src/
+A-facade  SKIP  lint-driver-scaffold  no src/
+A-facade  SKIP  lint-no-md5-credential-digest  no src/
+A-facade  SKIP  lint-size  no src/
+A-facade  SKIP  lint-license-isoperational-gate  no src/
+A-facade  SKIP  lint-set-null-ord  no src/
+A-facade  SKIP  lint-ws-placement  no src/
+A-facade  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-full  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-full  PASS  dup-keys  0
+A-full  PASS  slot-coverage  100.0%
+A-full  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-full  SKIP  lint-delays  no src/
+A-full  SKIP  lint-demand-scope  no src/
+A-full  SKIP  lint-silent-protection  no src/
+A-full  SKIP  lint-link-target-flags  no src/
+A-full  SKIP  lint-ext-writable-shape  no src/
+A-full  SKIP  lint-no-system-out  no src/
+A-full  SKIP  lint-slotomatic-markers  no src/
+A-full  SKIP  lint-clock-zero-floor  no src/
+A-full  SKIP  lint-null-context-write  no src/
+A-full  SKIP  lint-bql-string-concat  no src/
+A-full  SKIP  lint-arbitrary-ord  no src/
+A-full  SKIP  lint-persist-hot-write  no src/
+A-full  SKIP  lint-changed-hot-write  no src/
+A-full  SKIP  lint-inert-coordination  no src/
+A-full  SKIP  lint-session-store-lazy-evict  no src/
+A-full  SKIP  lint-bformat-call  no src/
+A-full  SKIP  lint-service-types  no src/
+A-full  SKIP  lint-driver-scaffold  no src/
+A-full  SKIP  lint-no-md5-credential-digest  no src/
+A-full  SKIP  lint-size  no src/
+A-full  SKIP  lint-license-isoperational-gate  no src/
+A-full  SKIP  lint-set-null-ord  no src/
+A-full  SKIP  lint-ws-placement  no src/
+A-full  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-na  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-na  PASS  dup-keys  0
+A-na  SKIP  slot-coverage  N/A (no types declared)
+A-na  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-na  SKIP  lint-delays  no src/
+A-na  SKIP  lint-demand-scope  no src/
+A-na  SKIP  lint-silent-protection  no src/
+A-na  SKIP  lint-link-target-flags  no src/
+A-na  SKIP  lint-ext-writable-shape  no src/
+A-na  SKIP  lint-no-system-out  no src/
+A-na  SKIP  lint-slotomatic-markers  no src/
+A-na  SKIP  lint-clock-zero-floor  no src/
+A-na  SKIP  lint-null-context-write  no src/
+A-na  SKIP  lint-bql-string-concat  no src/
+A-na  SKIP  lint-arbitrary-ord  no src/
+A-na  SKIP  lint-persist-hot-write  no src/
+A-na  SKIP  lint-changed-hot-write  no src/
+A-na  SKIP  lint-inert-coordination  no src/
+A-na  SKIP  lint-session-store-lazy-evict  no src/
+A-na  SKIP  lint-bformat-call  no src/
+A-na  SKIP  lint-service-types  no src/
+A-na  SKIP  lint-driver-scaffold  no src/
+A-na  SKIP  lint-no-md5-credential-digest  no src/
+A-na  SKIP  lint-size  no src/
+A-na  SKIP  lint-license-isoperational-gate  no src/
+A-na  SKIP  lint-set-null-ord  no src/
+A-na  SKIP  lint-ws-placement  no src/
+A-na  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-onlyxml  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-onlyxml  SKIP  lint-lexicon-ascii  no *.lexicon under A-onlyxml
+A-onlyxml  SKIP  lint-delays  no src/
+A-onlyxml  SKIP  lint-demand-scope  no src/
+A-onlyxml  SKIP  lint-silent-protection  no src/
+A-onlyxml  SKIP  lint-link-target-flags  no src/
+A-onlyxml  SKIP  lint-ext-writable-shape  no src/
+A-onlyxml  SKIP  lint-no-system-out  no src/
+A-onlyxml  SKIP  lint-slotomatic-markers  no src/
+A-onlyxml  SKIP  lint-clock-zero-floor  no src/
+A-onlyxml  SKIP  lint-null-context-write  no src/
+A-onlyxml  SKIP  lint-bql-string-concat  no src/
+A-onlyxml  SKIP  lint-arbitrary-ord  no src/
+A-onlyxml  SKIP  lint-persist-hot-write  no src/
+A-onlyxml  SKIP  lint-changed-hot-write  no src/
+A-onlyxml  SKIP  lint-inert-coordination  no src/
+A-onlyxml  SKIP  lint-session-store-lazy-evict  no src/
+A-onlyxml  SKIP  lint-bformat-call  no src/
+A-onlyxml  SKIP  lint-service-types  no src/
+A-onlyxml  SKIP  lint-driver-scaffold  no src/
+A-onlyxml  SKIP  lint-no-md5-credential-digest  no src/
+A-onlyxml  SKIP  lint-size  no src/
+A-onlyxml  SKIP  lint-license-isoperational-gate  no src/
+A-onlyxml  SKIP  lint-set-null-ord  no src/
+A-onlyxml  SKIP  lint-ws-placement  no src/
+A-onlyxml  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-part  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-part  PASS  dup-keys  0
+A-part  WARN  slot-coverage  66.6% (missing Foo,Bar)
+A-part  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-part  SKIP  lint-delays  no src/
+A-part  SKIP  lint-demand-scope  no src/
+A-part  SKIP  lint-silent-protection  no src/
+A-part  SKIP  lint-link-target-flags  no src/
+A-part  SKIP  lint-ext-writable-shape  no src/
+A-part  SKIP  lint-no-system-out  no src/
+A-part  SKIP  lint-slotomatic-markers  no src/
+A-part  SKIP  lint-clock-zero-floor  no src/
+A-part  SKIP  lint-null-context-write  no src/
+A-part  SKIP  lint-bql-string-concat  no src/
+A-part  SKIP  lint-arbitrary-ord  no src/
+A-part  SKIP  lint-persist-hot-write  no src/
+A-part  SKIP  lint-changed-hot-write  no src/
+A-part  SKIP  lint-inert-coordination  no src/
+A-part  SKIP  lint-session-store-lazy-evict  no src/
+A-part  SKIP  lint-bformat-call  no src/
+A-part  SKIP  lint-service-types  no src/
+A-part  SKIP  lint-driver-scaffold  no src/
+A-part  SKIP  lint-no-md5-credential-digest  no src/
+A-part  SKIP  lint-size  no src/
+A-part  SKIP  lint-license-isoperational-gate  no src/
+A-part  SKIP  lint-set-null-ord  no src/
+A-part  SKIP  lint-ws-placement  no src/
+A-part  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+A-partnomiss  SKIP  verify-module  no built jar under build/libs (floor check not run)
+A-partnomiss  PASS  dup-keys  0
+A-partnomiss  WARN  slot-coverage  99.9%
+A-partnomiss  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+A-partnomiss  SKIP  lint-delays  no src/
+A-partnomiss  SKIP  lint-demand-scope  no src/
+A-partnomiss  SKIP  lint-silent-protection  no src/
+A-partnomiss  SKIP  lint-link-target-flags  no src/
+A-partnomiss  SKIP  lint-ext-writable-shape  no src/
+A-partnomiss  SKIP  lint-no-system-out  no src/
+A-partnomiss  SKIP  lint-slotomatic-markers  no src/
+A-partnomiss  SKIP  lint-clock-zero-floor  no src/
+A-partnomiss  SKIP  lint-null-context-write  no src/
+A-partnomiss  SKIP  lint-bql-string-concat  no src/
+A-partnomiss  SKIP  lint-arbitrary-ord  no src/
+A-partnomiss  SKIP  lint-persist-hot-write  no src/
+A-partnomiss  SKIP  lint-changed-hot-write  no src/
+A-partnomiss  SKIP  lint-inert-coordination  no src/
+A-partnomiss  SKIP  lint-session-store-lazy-evict  no src/
+A-partnomiss  SKIP  lint-bformat-call  no src/
+A-partnomiss  SKIP  lint-service-types  no src/
+A-partnomiss  SKIP  lint-driver-scaffold  no src/
+A-partnomiss  SKIP  lint-no-md5-credential-digest  no src/
+A-partnomiss  SKIP  lint-size  no src/
+A-partnomiss  SKIP  lint-license-isoperational-gate  no src/
+A-partnomiss  SKIP  lint-set-null-ord  no src/
+A-partnomiss  SKIP  lint-ws-placement  no src/
+A-partnomiss  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  PASS  lint-write-path  clean
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 8 artifacts · 19 PASS · 2 FAIL · 3 WARN · 203 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- m/A-dup/module-include.xml --
+<types/>
+-- m/A-dup/module.lexicon --
+k=v
+-- m/A-env/module-include.xml --
+<types/>
+-- m/A-env/module.lexicon --
+k=v
+-- m/A-facade/module-include.xml --
+<types/>
+-- m/A-facade/module.lexicon --
+k=v
+-- m/A-full/module-include.xml --
+<types/>
+-- m/A-full/module.lexicon --
+k=v
+-- m/A-na/module-include.xml --
+<types/>
+-- m/A-na/module.lexicon --
+k=v
+-- m/A-onlyxml/module-include.xml --
+<types/>
+-- m/A-part/module-include.xml --
+<types/>
+-- m/A-part/module.lexicon --
+k=v
+-- m/A-partnomiss/module-include.xml --
+<types/>
+-- m/A-partnomiss/module.lexicon --
+k=v
+-- toolbelt/.stub-rest --
+-- toolbelt/slot-coverage.sh (mode 755) --
+#!/usr/bin/env bash
+case "$1" in
+  */A-dup/*) printf '%s\n' "slot-coverage: FAIL dup-keys: a" "slot-coverage: FAIL dup-keys: b" "pct=100.0 (type-set)" "missing=" "extra="; exit 1 ;;
+  */A-facade/*) printf '%s\n' "pct=50.0 (type-set)" "missing=RoomPanel" "extra=" "slot-coverage: FAIL facade type without lexicon: RoomPanel" "slot-coverage: WARN ineffective type key: X="; exit 1 ;;
+  */A-full/*) printf '%s\n' "pct=100.0 (type-set)" "missing=" "extra=" ;;
+  */A-part/*) printf '%s\n' "pct=66.6 (type-set)" "missing=Foo,Bar" "extra=" "missing=second" ;;
+  */A-partnomiss/*) printf '%s\n' "pct=99.9" "extra=" ;;
+  */A-na/*) printf '%s\n' "pct=N/A (type-set)" "missing=" "extra=" ;;
+  */A-env/*) echo "slot-coverage: not found" >&2; exit 3 ;;
+esac

@@ -1,0 +1,58 @@
+-- args --
+--lint-only
+@REPO@/tests/fixtures/report-module/write-path-fail
+-- want --
+exit 1
+DemoPan-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
+DemoPan-rt  PASS  dup-keys  0
+DemoPan-rt  PASS  slot-coverage  100.0%
+DemoPan-rt  PASS  lint-lexicon-ascii  all lexicon files are ASCII-clean
+DemoPan-rt  PASS  lint-link-target-flags  clean (no wiring map)
+DemoPan-rt  PASS  lint-no-system-out  clean
+DemoPan-rt  PASS  lint-slotomatic-markers  clean
+DemoPan-rt  PASS  lint-recovery-path  clean
+DemoPan-rt  PASS  lint-config-sanity  clean
+DemoPan-rt  PASS  lint-no-md5-credential-digest  clean
+DemoPan-rt  PASS  lint-size  clean
+DemoPan-rt  PASS  lint-license-isoperational-gate  clean
+DemoPan-rt  PASS  lint-set-null-ord  clean
+DemoPan-rt  PASS  lint-ws-placement  clean
+DemoPan-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+docs  SKIP  verify-module  no built jar under build/libs (floor check not run)
+docs  SKIP  lint-lexicon-ascii  no *.lexicon under docs
+docs  SKIP  lint-delays  no src/
+docs  SKIP  lint-demand-scope  no src/
+docs  SKIP  lint-silent-protection  no src/
+docs  SKIP  lint-link-target-flags  no src/
+docs  SKIP  lint-ext-writable-shape  no src/
+docs  SKIP  lint-no-system-out  no src/
+docs  SKIP  lint-slotomatic-markers  no src/
+docs  SKIP  lint-clock-zero-floor  no src/
+docs  SKIP  lint-null-context-write  no src/
+docs  SKIP  lint-bql-string-concat  no src/
+docs  SKIP  lint-arbitrary-ord  no src/
+docs  SKIP  lint-persist-hot-write  no src/
+docs  SKIP  lint-changed-hot-write  no src/
+docs  SKIP  lint-inert-coordination  no src/
+docs  SKIP  lint-session-store-lazy-evict  no src/
+docs  SKIP  lint-bformat-call  no src/
+docs  SKIP  lint-service-types  no src/
+docs  SKIP  lint-driver-scaffold  no src/
+docs  SKIP  lint-no-md5-credential-digest  no src/
+docs  SKIP  lint-size  no src/
+docs  SKIP  lint-license-isoperational-gate  no src/
+docs  SKIP  lint-set-null-ord  no src/
+docs  SKIP  lint-ws-placement  no src/
+docs  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
+(module)  PASS  lint-agent-on-shape  clean
+(module)  PASS  lint-agent-on-include-sync  clean
+(module)  PASS  lint-structure  clean
+(module)  FAIL  lint-write-path  DemoPan-rt:  slot setpoint: no matrix row
+(module)  PASS  lint-bundled-jar-class-version  clean
+(run)  SKIP  triage-console  no --console-dir
+report-module: 2 artifacts · 17 PASS · 1 FAIL · 0 WARN · 29 SKIP · 0 ADVISORY  ->  ISSUES
+-- stderr --
+report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
