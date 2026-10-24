@@ -59,3 +59,24 @@ hookspath() { git -C "$GR" config --local --get core.hooksPath 2>/dev/null || tr
   [ "$status" -ne 0 ]                     # must NOT silently overwrite a user's hooks
   [ "$(hookspath)" = ".customhooks" ]     # the custom path survives untouched
 }
+
+# R10-D1: the generated kit state (BUILD-STATE.md, retros/INDEX.md) is not committed; .githooks/post-merge,
+# post-checkout and post-rewrite regenerate it. core.hooksPath activates every hook in .githooks/ at once,
+# so the installer only has to ship them executable (git skips a non-executable hook silently) and
+# materialize the state once, right away. [ev: retro ledger-generated-not-committed]
+@test "I5: the regenerate hooks ship executable next to pre-push" {
+  # Mutation: I5 -- committing a hook without its exec bit makes git skip it with no message.
+  for h in pre-push post-merge post-checkout post-rewrite; do
+    [ -x "$REPO/.githooks/$h" ] || { echo "not executable: .githooks/$h" >&2; return 1; }
+  done
+}
+
+@test "I6: install runs post-merge once (materializes the kit state now) and names the live hooks" {
+  # shellcheck disable=SC2016  # the stub hook's own $(...), expanded when the hook runs
+  printf '#!/usr/bin/env bash\ntouch "$(git rev-parse --show-toplevel)/regenerated"\nexit 0\n' > "$GR/.githooks/post-merge"
+  chmod +x "$GR/.githooks/post-merge"
+  run bash -c "cd '$GR' && bash '$INSTALLER'"
+  [ "$status" -eq 0 ]
+  [ -f "$GR/regenerated" ]
+  [[ "$output" == *"post-merge, post-checkout, post-rewrite"* ]]
+}

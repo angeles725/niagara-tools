@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# install-hooks.sh — opt-in activation of the retro-enforcement pre-push gate.
-# Points git at the kit's hooks: `git config --local core.hooksPath .githooks`.
-# The gate ships INERT; this is what makes it bite in a live clone. Per-clone and reversible.
+# install-hooks.sh — opt-in activation of the kit's git hooks.
+# Points git at the kit's hooks: `git config --local core.hooksPath .githooks`, which activates every
+# hook there: the retro-enforcement pre-push gate, and post-merge / post-checkout / post-rewrite, which
+# regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md — not committed, R10-D1) with
+# toolbelt/kit-state.sh after every pull, checkout and rebase/amend. The install runs post-merge once
+# so the state is materialized right away. The hooks ship INERT; this is what makes them live in a
+# clone. Per-clone and reversible. [ev: retro ledger-generated-not-committed]
 #
 # Usage:
 #   scripts/install-hooks.sh              # activate (set core.hooksPath = .githooks)
@@ -47,6 +51,10 @@ if [ -n "$current" ] && [ "$current" != "$HOOKS_DIR" ] && [ "$FORCE" -eq 0 ]; th
 fi
 
 git config --local core.hooksPath "$HOOKS_DIR"
-printf 'install-hooks: activated — core.hooksPath = %s; the retro-enforcement pre-push gate is now live.\n' "$HOOKS_DIR"
+printf 'install-hooks: activated — core.hooksPath = %s; live: the retro-enforcement pre-push gate and the\n' "$HOOKS_DIR"
+printf '              kit-state regenerate hooks (post-merge, post-checkout, post-rewrite).\n'
+# materialize the generated kit state now (the hook never fails; it warns and removes stale files)
+top="$(git rev-parse --show-toplevel)"
+if [ -x "$top/$HOOKS_DIR/post-merge" ]; then (cd "$top" && "./$HOOKS_DIR/post-merge"); fi
 printf '              Undo with: scripts/install-hooks.sh --uninstall\n'
 exit 0
