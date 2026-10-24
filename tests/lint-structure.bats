@@ -359,6 +359,7 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   # shellcheck disable=SC1090
   . "$lib"
   go="$KIT/../go/internal/lint/rules/structure/module.go"
+  # shellcheck disable=SC2016  # the Go source's literal backquotes, not an expansion
   mapfile -t rows < <(sed -n '/^var signBlock/,/^}$/p' "$go" |
     sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
   [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ] && [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ] && [ "${#rows[@]}" -eq 4 ]
