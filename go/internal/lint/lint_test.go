@@ -622,3 +622,54 @@ func TestParseExactUsageError(t *testing.T) {
 		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
 	}
 }
+
+// TestCheckFirst: Spec.CheckFirst prints a finding as `<check>  <SEV>  <path>:<line>  <msg>` (lint-wb-threading's
+// rows, which report-module relays as a "swap" member); the empty-root ERROR row keeps the standard shape.
+func TestCheckFirst(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	sp := javaSpec(fakeRule{"lint-c", "MARK", Warn}, One)
+	sp.CheckFirst = true
+	s, o, _ := stdio()
+	if code := Command(sp)([]string{"lint-c", root}, s); code != 0 || o.String() != "lint-c  WARN  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("row: exit %d out %q", code, o)
+	}
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-c", empty}, s); code != 3 || !strings.HasPrefix(o.String(), "ERROR  lint-c  "+empty+"  ") {
+		t.Errorf("empty: exit %d out %q", code, o)
+	}
+}
+
+// TestParseAnywhere: Mode Anywhere is lint-wb-threading's loop: --strict anywhere, another "-" argument is
+// "<name>: unknown option: <arg>" and a second root "<name>: unexpected argument: <arg>" (exit 3, no usage
+// line), no argument or no root is the usage line.
+func TestParseAnywhere(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-w.sh [--strict] <src>"
+	for _, tc := range []struct {
+		args   []string
+		strict bool
+		err    string
+		usage  bool
+	}{
+		{[]string{dir}, false, "", false},
+		{[]string{dir, "--strict"}, true, "", false},
+		{[]string{"--strict", dir, "--strict"}, true, "", false},
+		{nil, false, use + "\n", true},
+		{[]string{"--strict"}, false, use + "\n", true},
+		{[]string{"-h", dir}, false, "lint-w: unknown option: -h\n", false},
+		{[]string{dir, "--"}, false, "lint-w: unknown option: --\n", false},
+		{[]string{dir, dir, "-x"}, false, "lint-w: unexpected argument: " + dir + "\n", false},
+		{[]string{dir + "/nope"}, false, "lint-w: not a directory: " + dir + "/nope\n", false},
+	} {
+		a, err := Parse(Anywhere, "lint-w", use, tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		var ue *UsageError
+		if got != tc.err || errors.As(err, &ue) != tc.usage || (err == nil && (a.Strict != tc.strict || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%q: args %+v err %q (usage %v), want strict %v err %q (usage %v)", tc.args, a, got, errors.As(err, &ue), tc.strict, tc.err, tc.usage)
+		}
+	}
+}

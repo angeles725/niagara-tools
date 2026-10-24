@@ -172,7 +172,7 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 		}
 		r.failed = r.failed || fd.Severity == Fail
 		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
-		r.emit(i, event{text: fd.row(sp.BarePathRow)})
+		r.emit(i, event{text: fd.row(sp.BarePathRow, sp.CheckFirst)})
 	}
 }
 

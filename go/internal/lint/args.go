@@ -18,6 +18,7 @@ const (
 	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
 	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	Anywhere             // [--strict] <root> [--strict]: --strict anywhere; another "-" argument or a second root is an env error naming it (lint-wb-threading)
 )
 
 // Args is a parsed command line.
@@ -45,6 +46,27 @@ func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 			a.Strict = true
 		}
 		args = args[:1]
+	}
+	if mode == Anywhere {
+		// the bash `while [ $# -gt 0 ]; case "$1" in --strict) ;; -*) unknown option ;; *) [ -z "$SRC" ] ||
+		// unexpected argument ;; esac` after a `[ $# -lt 1 ]` usage check
+		if len(args) == 0 {
+			return Args{}, &UsageError{usage + "\n"}
+		}
+		var roots []string
+		for _, arg := range args {
+			switch {
+			case arg == "--strict":
+				a.Strict = true
+			case strings.HasPrefix(arg, "-"):
+				return Args{}, errors.New(name + ": unknown option: " + arg + "\n")
+			case len(roots) == 1:
+				return Args{}, errors.New(name + ": unexpected argument: " + arg + "\n")
+			default:
+				roots = append(roots, arg)
+			}
+		}
+		args, mode = roots, Raw // the usage and root checks below
 	}
 	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
 		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots

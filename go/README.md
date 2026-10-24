@@ -57,6 +57,11 @@ rule's rows stay contiguous.
    keeps the whole path, as the expansion does). `Mode` `Trailing` parses `<root> [--strict]...`: the first
    argument is the root as given, every later one must be `--strict`, and anything else prints
    `<lint>: unknown option: <arg>` (exit 3) before the root is checked (reference: `rules/servlet`).
+   `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
+   `<lint>: unknown option: <arg>` and a second root `<lint>: unexpected argument: <arg>` (exit 3, no usage
+   line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
+   `<check>  <SEV>  <path>:<line>  <msg>` (the check before the severity), the row lint-wb-threading always
+   printed; the empty-root ERROR row keeps the standard shape.
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk
