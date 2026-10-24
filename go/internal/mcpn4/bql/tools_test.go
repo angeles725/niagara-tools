@@ -12,7 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools/readtoolstest"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
@@ -158,7 +160,27 @@ func TestItIsListedAsAReadOnlyTool(t *testing.T) {
 }
 
 func TestTheReadIsAuditedWithOutcomeRead(t *testing.T) {
-	t.Skip("the audit log runs only with --allow-writes, which the Go server refuses until S8/S10")
+	dir := t.TempDir()
+	s := bqlServer(t, dir) // the write machinery's audit log, as --allow-writes gives it
+	readtools.Register(s.Server, &readtools.Tools{Ctx: s.Ctx, NewClient: s.Station.Factory, ServerVersion: "test",
+		Audit: journal.NewAuditLog(dir)})
+	ok(t, s, "n4_bql_query", "base", "/Drivers", "query", "select name from driver:Device")
+	data, err := os.ReadFile(filepath.Join(dir, "audit.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lines []map[string]any
+	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
+		var e map[string]any
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			t.Fatal(err)
+		}
+		lines = append(lines, e)
+	}
+	if len(lines) != 1 || lines[0]["tool"] != "n4_bql_query" || lines[0]["outcome"] != "read" ||
+		strings.Contains(string(data), readtoolstest.Password) {
+		t.Errorf("audit %s", data)
+	}
 }
 
 func TestInventoryCountsDevicesAndPointsPerNetworkWithLocalApart(t *testing.T) {
