@@ -26,9 +26,9 @@ green on its own with RED quoted in its body.
   checkout left out): chihuahua, UmbrellaDashboard, Apillm, DashboardFord and the three panccadia-leon modules,
   15-200 ms each. Before tuning 12 rows, 7 false: query ORDs that name no slot below the station root
   (`station:|alarm:|bql:...` ×6 in chihuahua and DashboardPan, `station:|slot:/|bql:... from schedule:...` ×1).
-  After the tuning 5 rows, all true: `station:|slot:/Services/<Module>Service` inline (chihuahua 3 copies across
+  After the query-ORD tuning 5 rows, true by the spec text: `station:|slot:/Services/<Module>Service` inline (chihuahua 3 copies across
   BChiServlet, ChiEquipmentReader and rc AuditPage.js; UmbrellaReader; DashboardReader), the weakest by intent since
-  the path is the same on every site. No IPv4 row. No file carries a `// site-table` marker yet
+  the path is the same on every site; the Δ2 decision exempts them: 0 rows. No IPv4 row. No file carries a `// site-table` marker yet
 - With `--site-pattern 'Cuarto ?[0-9]+'` on DashboardPan: 7 rows, true by the doctrine (the five rooms are baked into
   `BDashboardService` as slot declarations, and `DashboardReader.ROOMS` is the de-facto table: passing it as
   `--site-table` clears its own row)
@@ -40,8 +40,8 @@ green on its own with RED quoted in its body.
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
 | Δ1 | **G42 reads site ORDs, not query ORDs; declared differences from the spec.** An ORD is a row only when it names a slot below the station root or a handle (`station:|alarm:|bql:...` and `station:|slot:/|bql:...` read the same on every station: 7/12 Cliente rows were those). Also declared: the check column is the lint ID, the row appends `: "<literal>"`, and `h:` means a handle (`h:<hex>`), never a `h:mm` format. | `toolbelt/lint-inline-site-literal.sh` header; ledger G42 clause | `[ev: go/internal/lint/rules/inlinesiteliteral/inlinesiteliteral.go]` |
-| Δ2 | **A module's own service ORD is the remaining class (5/5 rows).** `station:|slot:/Services/<Module>Service` is the same on every site but pasted per reader; the fix is one constant (or `Sys.getService(Type)`), which this lint asks for by naming every copy. If reviewers treat it as noise, add a `Services/` exemption with a test, never silently. | `types/dashboard.md` § Facade contract | `[ev: tests/lint-inline-site-literal.bats]` |
-| Δ3 | **`machinedefaultpath` keeps a private copy of the literal unescape.** `javasrc.Unescape` is now the shared helper; lint-machine-default-path still has its own `unescape` (same body) and moves to the helper in its next change (G41 doctrine: one helper per concern). | `go/internal/lint/rules/machinedefaultpath` | `[ev: go/internal/javasrc/unescape.go]` |
+| Δ2 | **DECIDED 2026-10-24: a service ORD is not site data.** `station:|slot:/Services/<Module>Service` (any path at or under /Services) is module structure identical on every site, so it is exempt like a query ORD; `station:|slot:/Rooms/Room1` and a `/ServicesX` folder still warn. Cliente live module roots 5 → 0 rows without `--site-pattern` (commit 663b7ac). A reader that pastes the service ORD per file is still a G41-style duplication for review; `Sys.getService(Type)` is the better lookup. | `toolbelt/lint-inline-site-literal.sh` header | `[ev: go/internal/lint/rules/inlinesiteliteral/inlinesiteliteral.go]` |
+| Δ3 | **`machinedefaultpath` keeps a private copy of the literal unescape (owed).** `javasrc.Unescape` is now the shared helper; lint-machine-default-path still has its own `unescape` (same body) and moves to the helper after Ayudante1's in-flight G43 change there lands (G41 doctrine: one helper per concern). | `go/internal/lint/rules/machinedefaultpath` | `[ev: go/internal/javasrc/unescape.go]` |
 
 ## Lessons
 - When the engine support a new rule needs sits on unlanded sibling branches, cherry-pick those commits unchanged and

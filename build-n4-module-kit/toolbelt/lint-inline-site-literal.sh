@@ -17,12 +17,15 @@
 # A literal is a row (the first one of its line) when it is
 #   ord   a slot ORD below the station root (`slot:/<path>`, alone or as one part: `station:|slot:/Rooms/Room1`)
 #         or a handle ORD (`h:2e4f`, `station:|h:2e4f`); a query ORD naming no slot below the root
-#         (`station:|alarm:|bql:...`, `station:|slot:/|bql:...`) is not site data, nor is `h:mm`;
+#         (`station:|alarm:|bql:...`, `station:|slot:/|bql:...`) is not site data, nor is a service ORD (any path at
+#         or under /Services: `station:|slot:/Services/ChiDashboardService`, module structure identical on every
+#         site), nor is `h:mm`;
 #   ip    it holds an IPv4 address (four 0-255 octets not inside a longer dotted number);
 #   site  it matches a --site-pattern <regex> (repeatable, Go RE2 syntax; a bad regex is exit 3), e.g. 'Room[0-9]+'.
 # Room counts (bare numbers) are not decidable and stay a human review item. The literal is shown up to 72 bytes.
 # Declared differences from the spec: the check column is the lint ID (kit lint-<name> convention), the row adds
-# `: "<literal>"` after the spec's text, and the query-ORD exemption above (retro go-lint-inline-site-literal Δ1).
+# `: "<literal>"` after the spec's text, and the query-ORD and service-ORD exemptions above (retro
+# go-lint-inline-site-literal Δ1, Δ2).
 # Not in n4lint --all (a module root and options that exist only alone: Spec.ModuleRoot).
 #
 # Implementation: rule package go/internal/lint/rules/inlinesiteliteral on the shared engine go/internal/lint
