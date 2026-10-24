@@ -1,0 +1,30 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 0
+stored-repack: @DIR@/out.jar  (5 entries, all STORED, signature entries kept: META-INF/NIAGARA4.SF META-INF/NIAGARA4.RSA)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- in.jar.spec --
+--- z.txt ---
+z
+--- a/b.txt ---
+b
+--- META-INF/NIAGARA4.SF ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/NIAGARA4.RSA (noeol) ---
+RSA
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+-- @after out.jar.listing --
+entries 5
+head META-INF/MANIFEST.MF stored size=22 sha256=51b6d211a461039a
+head META-INF/NIAGARA4.SF stored size=64 sha256=a5b08a1f5005d8df
+head META-INF/NIAGARA4.RSA stored size=3 sha256=87a10fd1d9e3a305
+rest a/b.txt stored size=2 sha256=0263829989b6fd95
+rest z.txt stored size=2 sha256=c865f6c5ab8d1b0b

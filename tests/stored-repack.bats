@@ -61,3 +61,75 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$(printf '%s\n' "${order[@]}" | grep -c '^META-INF/\(CODESIGN\|EC1\)\.')" -eq 4 ]   # each entry exactly once
   [[ "$output" == *"CODESIGN.SF"* ]] && [[ "$output" == *"EC1.EC"* ]]
 }
+
+# The Go port (go/internal/storedrepack) orders every top-level .SF by name with its .RSA, .DSA and .EC
+# blocks in that order; an orphan block, a nested .SF and a lowercase .sf are ordinary entries. The output
+# passes its consumer, verify-module --stored.
+@test "S5: several aliases (SERVER1 RSA, A RSA+DSA+EC) come in name order after MANIFEST.MF; verify-module --stored passes" {
+  # Mutation: S5 -- appending a .SF's blocks in another order than .RSA, .DSA, .EC, or not sorting the .SF names, breaks the head order
+  local s="$TMPDIR_T/src"
+  rm "$s/META-INF/NIAGARA4.SF" "$s/META-INF/NIAGARA4.RSA" "$TMPDIR_T/in.jar"
+  add_signature "$s" SERVER1 RSA; add_signature "$s" A RSA; add_signature "$s" A DSA; add_signature "$s" A EC
+  printf 'orphan' > "$s/META-INF/C.RSA"; mkdir -p "$s/META-INF/sub"; printf 'n' > "$s/META-INF/sub/N.SF"; printf 'l' > "$s/META-INF/low.sf"
+  make_jar "$TMPDIR_T/in.jar" "$s"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/out.jar"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"signature entries kept: META-INF/A.SF META-INF/A.RSA META-INF/A.DSA META-INF/A.EC META-INF/SERVER1.SF META-INF/SERVER1.RSA)" ]]
+  mapfile -t order < <(unzip -Z1 "$TMPDIR_T/out.jar")
+  [ "$(printf '%s ' "${order[@]:0:7}")" = \
+    "META-INF/MANIFEST.MF META-INF/A.SF META-INF/A.RSA META-INF/A.DSA META-INF/A.EC META-INF/SERVER1.SF META-INF/SERVER1.RSA " ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "${#order[@]}" -eq 13 ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "$(unzip -Z1 "$TMPDIR_T/out.jar" | grep -c '/$')" -eq 0 ]   # no directory entries
+  for f in META-INF/C.RSA META-INF/sub/N.SF META-INF/low.sf rc/index.html; do cmp <(unzip -p "$TMPDIR_T/in.jar" "$f") <(unzip -p "$TMPDIR_T/out.jar" "$f"); done
+  run "$KIT/toolbelt/verify-module.sh" --stored "$TMPDIR_T/out.jar"
+  [[ "$output" == *"PASS  stored"* ]] || { echo "$output"; return 1; }
+}
+
+@test "S6: an existing output directory, or the input itself as output, is refused (exit 1) and nothing is written beside it" {
+  # Mutation: S6 -- os.Rename in place of os.Link, with no up-front check, replaces in.jar named as its own output
+  mkdir "$TMPDIR_T/outdir"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/outdir"
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: refusing to overwrite existing $TMPDIR_T/outdir" ]
+  [ -z "$(ls -A "$TMPDIR_T/outdir")" ]
+  cp "$TMPDIR_T/in.jar" "$TMPDIR_T/in.copy"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/in.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"refusing to overwrite existing $TMPDIR_T/in.jar" ]]
+  cmp "$TMPDIR_T/in.jar" "$TMPDIR_T/in.copy"
+  [ "$(find "$TMPDIR_T" -maxdepth 1 -name '.*tmp-*' | wc -l)" -eq 0 ]
+}
+
+# The bash checked the output with [ -e ], which follows a symlink: a dangling link passed, zip replaced it
+# with a regular file and created its target, exit 0. The Go port refuses it like any existing output.
+@test "S7: an output path holding a dangling symlink is refused (exit 1); the link and its missing target stay" {
+  # Mutation: S7 -- os.Stat for os.Lstat (truth-out-dangling-symlink) reads the input first, and a rename fallback would replace the link
+  ln -s "$TMPDIR_T/nowhere" "$TMPDIR_T/link.jar"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/link.jar"
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: refusing to overwrite existing $TMPDIR_T/link.jar" ]
+  [ -L "$TMPDIR_T/link.jar" ]
+  [ ! -e "$TMPDIR_T/nowhere" ]
+}
+
+# The bash resolved OUT_ABS with $(cd "$(dirname "$OUT")" && pwd): a missing directory made it "/out.jar", and
+# zip tried to create that file in / (exit 15, or a stray /out.jar when / is writable).
+@test "S8: an output in a directory that does not exist is exit 1 'cannot write', nothing written" {
+  # Mutation: S8 -- creating the missing directory (os.MkdirAll before the temporary file) leaves nodir/ behind
+  cd "$TMPDIR_T"
+  run "$R" in.jar nodir/out.jar
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: cannot write nodir/out.jar: No such file or directory" ]
+  [ ! -e nodir ]
+}
+
+# The bash's last `zip -r . -x <manifest> <signatures>` had nothing to add for a manifest-only jar: "zip error:
+# Nothing to do!", exit 12 under set -e, a partial out.jar left behind.
+@test "S9: a jar holding only META-INF/MANIFEST.MF repacks to that one STORED entry (exit 0)" {
+  # Mutation: S9 -- failing when nothing follows the manifest (the bash's "Nothing to do!", truth-manifest-only) exits non-zero
+  mkdir -p "$TMPDIR_T/m"; add_manifest "$TMPDIR_T/m"; make_jar "$TMPDIR_T/m.jar" "$TMPDIR_T/m"
+  run "$R" "$TMPDIR_T/m.jar" "$TMPDIR_T/out.jar"
+  [ "$status" -eq 0 ]
+  [ "$output" = "stored-repack: $TMPDIR_T/out.jar  (1 entries, all STORED, signature entries kept: none)" ]
+  [ "$(unzip -Z1 "$TMPDIR_T/out.jar")" = "META-INF/MANIFEST.MF" ]
+}

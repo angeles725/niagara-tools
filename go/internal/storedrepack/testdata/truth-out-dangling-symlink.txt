@@ -1,0 +1,16 @@
+-- args --
+in.jar
+link.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: refusing to overwrite existing link.jar
+-- @kind --
+truth: an output that is a dangling symlink is refused; the bash ([ -e ] follows the link) let zip write through it: exit 0, the link replaced by a regular file and its target created
+-- in.jar.spec --
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- a.txt ---
+a
+-- link.jar (symlink) --
+nowhere

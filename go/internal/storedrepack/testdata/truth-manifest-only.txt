@@ -1,0 +1,16 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 0
+stored-repack: @DIR@/out.jar  (1 entries, all STORED, signature entries kept: none)
+-- stderr --
+-- @kind --
+truth: a jar that holds only its manifest repacks to that one entry; the bash's last zip -r had nothing to add ("zip error: Nothing to do!") and the script exited 12 with a manifest-only out.jar left behind
+-- in.jar.spec --
+--- META-INF/ ---
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+-- @after out.jar.listing --
+entries 1
+head META-INF/MANIFEST.MF stored size=22 sha256=51b6d211a461039a
