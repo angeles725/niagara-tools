@@ -235,10 +235,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `Go lint` item in a `ledger.d/` fragment `open_issue:` line — id, scanned files, rule, row format, exit
     contract and the cases that must WARN and stay clean (G1-G7 are the model). `[ev: retro r8-t22-retro-deltas Δ1]`
   - **What to port.** Port a tool to Go when it PARSES structured input (Java, XML, jars, ledgers) or has had a
-    parsing bug; pure orchestration glue (`toolbelt/build.sh`, `toolbelt/preflight.sh`, wrappers that only
-    sequence gradle or copy steps) stays bash. Every port proves stdout, stderr and exit code byte-identical to the
+    parsing bug; pure orchestration glue (`toolbelt/build.sh`, wrappers that only sequence gradle or copy steps)
+    stays bash. Every port proves stdout, stderr and exit code byte-identical to the
     bash version on the real `Cliente/` trees, records before/after timing, and keeps the existing bats suite as
-    its black-box test. `[ev: retro r8-t22-retro-deltas Δ8]`
+    its black-box test. `[ev: retro r8-t22-retro-deltas Δ8]` `toolbelt/preflight.sh` was counted as glue until its
+    checks proved to parse (settings scripts, the signing block, an `lsof` listing) and two truth bugs surfaced; it
+    is `go/cmd/preflight` now. `[ev: retro r10-preflight-go Δ1]`
   - **Port byte-identical first, then fix** (steps: `go/README.md` § Adding a lint rule). Record the goldens from
     the bash lint on the current origin/main and re-record at the merge (main moved lint-servlet's walk under its
     port). Keep the bash quirks until old and new agree byte for byte on fixtures and real trees; a difference the
@@ -258,6 +260,22 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro go-lint-structure Δ1]` `[ev: retro go-e2-tiny-lints Δ1]` `[ev: retro go-lint-demand-scope Δ1]`
   - **A test that needs files outside the repository never runs in CI** (`XMLSRC_EXPAT_SUITE`, `XMLSRC_SWEEP_ROOTS`,
     `JAVASRC_DIFF_ROOTS`): the landing PR states that it ran them, with the counts. `[ev: retro go-xmlsrc Δ3]`
+    Byte parity on client trees is such a test: the repository is public, so goldens, fixtures and test data come
+    from kit fixtures and hand-built edge trees only, and the PR reports the parity as run counts that name no
+    client. `[ev: retro go-slot-coverage Δ2]`
+  - **Record the shell's silent input drops as edge goldens before porting** (each is a fail-open the identity
+    port keeps and a truth fix removes): `xargs` splits a path on a blank; one unreadable file makes gawk's fatal
+    open skip every later file (clean under `2>/dev/null`); an open construct at a file end carries into the next
+    file `[ev: retro go-slot-coverage Δ3]`; awk `NR == FNR` is true for the second file when the first is empty, so
+    an empty "before" snapshot read every "after" slot as removed `[ev: retro go-schema-risk Δ1]`; grep under
+    C.UTF-8 counts a line with an encoding error (Latin-1) but never prints it, a file with a NUL byte prints
+    nothing and `$(...)` drops NUL bytes `[ev: retro go-verify-module Δ2]`; a `$(( ))` operand bash cannot evaluate
+    (`08`, `2.5`, a bare name) drops the whole top-level command and the script goes on
+    `[ev: retro go-verify-module Δ3]`; a `"<dir>"/*/` glob sorts with the trailing slash (`x-worktrees/` before
+    `x/`) `[ev: retro r10-preflight-go Δ2]`; `find -path "*V*"` matches V anywhere in the path, the start point
+    included, so a version is matched as an exact directory name `[ev: retro r10-preflight-go Δ3]`; the first hit
+    of a `find` is readdir order (host-dependent on ext4), so a Go walk reads in bytewise order
+    `[ev: retro r10-preflight-go Δ4]`.
   - **A network tool's bats run against a local `127.0.0.1` stand-in** (plain http and a throwaway self-signed
     https), never a stub of the client binary: curl stubs pinned argv/stdin plumbing the port no longer has, while
     the stand-in cases passed on the bash script and the port alike (`tests/obix-link-audit.bats` `_station`).
@@ -265,7 +283,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **XML and `.bog` lints port onto `go/internal/xmlsrc` only** (R8-D12, `go/README.md` § XML rules). Its first
     consumer is lint-agent-on-shape; split-package-check reads no XML. Change `Open`'s allocation (about 23 bytes
     per input byte) only after a measured slow sweep. `[ev: retro go-xmlsrc Δ1]` `[ev: retro go-split-package-check Δ1]`
-    `[ev: retro go-xmlsrc Δ2]`
+    `[ev: retro go-xmlsrc Δ2]` schema-risk and slot-coverage take the module type from the first `<type>` element
+    through it (a grep reader missed a tag over two lines, counted a commented-out one and named a `<dependency>`),
+    and a slot annotation that never balances is an UNKNOWN row, never dropped. `[ev: retro go-schema-risk Δ3]`
   - **A lint header claims only what a test pins.** A promised suppression marker or fallback with no code behind it
     is deleted, not kept as advice (lint-config-sanity LCS-doc). `[ev: retro go-lint-config-sanity Δ2]`
   - **Never splice source text into a regexp, never pass a path with `awk -v`.** A dynamic awk regexp built from
@@ -286,12 +306,15 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     fixed lines 1-60 window cut off header lines, `[ev:]` tags included) and `internal/gen` `File.Run` is the one
     check-or-write flow of a generator; a second copy of either is a finding. `[ev: retro r9-lintindex-header Δ1]`
     `[ev: retro r9-guardpins-header Δ1]` `[ev: retro truth-ported-rules Δ3]` `[ev: retro r9-m2-gen Δ1]`
-    `internal/ktssrc` `Tokens` is the one Kotlin-script reader; lint-structure L15 and split-package-check still
-    match raw `*.gradle.kts` text and move onto it when next touched. `[ev: retro go-lint-uberjar-api Δ2]`
+    `internal/ktssrc` `Tokens` is the one Kotlin-script reader. `[ev: retro go-lint-uberjar-api Δ2]` lint-structure
+    L15 (signing block) and L14 (plugin pin) match their patterns on its `Code` line view (comments dropped, literal
+    contents removed), never on raw `*.gradle.kts` text, and a script it cannot read is a visible WARN or exit 3;
+    split-package-check reads no gradle content (file-name markers only). `[ev: retro r10-ktssrc-gradle-lints Δ1]`
+    `[ev: retro r10-ktssrc-gradle-lints Δ2]`
   - **Pin every shared helper with a sync test.** A PR that moves copies into one `toolbelt/lib/*.sh` file or one
     shared function also adds a bats test that fails when a caller stops using it or a private copy comes back.
-    Models: `tests/lint-structure.bats` LS15-sync (`lib/signing-block.sh`, sourced by `build.sh`,
-    `lint-structure.sh` and `preflight.sh`) and `tests/report-module.bats` RM-row-parser (one row parser in
+    Models: `tests/lint-structure.bats` LS15-sync (`lib/signing-block.sh`, sourced by `build.sh`, equal entry by
+    entry to `go/internal/signblock`, read by lint-structure L15 and the preflight port) and `tests/report-module.bats` RM-row-parser (one row parser in
     `report-module.sh`). Without the pin, "never a private copy" is prose and the next quick fix pastes the copy
     back. Review check: the PR names the pinning test and shows an OBSERVED mutation (re-inline one copy, the test
     goes red). `[ev: retro r10-dedupe-pins-measured-cuts Δ1]` `[ev: retro r9-m3-report Δ1]`
@@ -355,6 +378,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     empty before a golden commit. `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
     `[ev: retro go-lint-link-target-flags Δ2]` Record the trees under a path with no segment the tool matches on:
     rc-scan's `-path '*/rc/*'` matched the recorder's own scratch directory. `[ev: retro go-rc-scan Δ2]`
+    A command that reads jars records them as `(jar)` sections (entries in archive order with their method, stored
+    or deflated), fixture class headers as `(class N)`, any other binary as `(base64)` and an empty directory as
+    `(dir)`; record only the paths an argument names, so a jar's source tree does not double the golden.
+    `[ev: retro go-verify-module Δ1]`
   - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
     only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
     line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
@@ -362,7 +389,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro go-lint-ws-placement Δ3]` `[ev: retro go-lint-size Δ3]` A tool whose contract is not a lint (its
     operand is not a source root, or its rows and arguments fit no engine mode) is its own `go/cmd/<tool>` over the
     shared packages, reusing the engine's walk, `Finding.Row` and `golden.Read`; its retro records the misfit
-    (rc-scan, bog-audit, obix-link-audit). `[ev: retro go-rc-scan Δ1]`
+    (rc-scan, bog-audit, obix-link-audit, schema-risk with its verdict exits, slot-coverage, verify-module,
+    preflight). Its goldens replay through `golden.RunMain` (`golden.Run` for a `cli.Main`), extended rather than
+    copied when a port needs a section it lacks. `[ev: retro go-rc-scan Δ1]` `[ev: retro go-slot-coverage Δ1]`
   - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
     is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
     printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
@@ -402,7 +431,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     follows a symlinked root like `find -H` (Go: `os.Stat` on the root), never a symlink below it and never `-L`
     (`tests/scan-files.bats` SF10, SF11). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
     `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
-    whitespace (owed in `verify-module.sh` and `slot-coverage.sh`). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
+    whitespace: the slot-coverage and schema-risk ports exit on an unreadable input now `[ev: retro go-schema-risk Δ2]`;
+    verify-module's `--src` reads stay owed (phase B). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
   - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
     changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
