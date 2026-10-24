@@ -898,13 +898,29 @@ JAVA
   local m fx
   for m in persist-hot-write:clean changed-hot-write:clean inert-coordination:clean session-store-lazy-evict:clean \
            bformat-call:clean service-types:clean driver-scaffold:clean duplicate-helper:clean \
-           machine-default-path:clean inline-site-literal:clean wb-external-ord-value:wb-file-chooser-warn \
+           machine-default-path:clean inline-site-literal:clean private-api-import:clean \
+           ndriver-static-collection:clean ndriver-tagless-correlation:clean wb-external-ord-value:wb-file-chooser-warn \
            spa-poll-no-recovery:rc-scan-fail; do
     fx="${m#*:}"; m="${m%%:*}"
     stub_toolbelt "$BATS_TEST_TMPDIR/tb-$m" "lint-$m.sh" "printf 'WARN  lint-$m  /x/A.java:7  seeded row\n'"
     run "$BATS_TEST_TMPDIR/tb-$m/report-module.sh" --lint-only "$FX/$fx"
     [[ "$output" == *"WARN  lint-$m  A.java:7  seeded row"* ]] || { echo "member $m not relayed: $output"; return 1; }
   done
+}
+
+@test "RM-driver-lints: a real NDriver module relays the driver lints' rows; a module with no -rt source SKIPs them" {
+  # Mutation: RM-driver-lints -- dropping the G66/G67 invocations from report-module.sh loses these rows
+  local drv="$BATS_TEST_TMPDIR/acmeDriver"
+  cp -r "$BATS_TEST_DIRNAME/fixtures/driver-lints/acmeDriver" "$drv"
+  run "$RM" --lint-only "$drv"
+  [[ "$output" == *"(module)  WARN  lint-ndriver-static-collection  BAcmeDevice.java:16  static Set<String> subscribed is shared"* ]]
+  [[ "$output" == *"(module)  WARN  lint-ndriver-tagless-correlation  AcmeReq.java:6  no getTag() override"* ]]
+  [[ "$output" != *"lint-private-api-import"* ]] # the NDriver framework imports are the default allow-list
+  rm -r "$drv/acmeDriver-rt"; mkdir -p "$drv/acmeDriver-ux/src"; printf 'class A {}\n' > "$drv/acmeDriver-ux/src/A.java"
+  run "$RM" --lint-only "$drv"
+  [[ "$output" == *"(module)  SKIP  lint-ndriver-static-collection  no *.java under a -rt part's src/"* ]]
+  [[ "$output" == *"(module)  SKIP  lint-ndriver-tagless-correlation  no *.java under a -rt part's src/"* ]]
+  [[ "$output" != *"ERROR  lint-private-api-import"* ]]
 }
 
 @test "RM-n4lint-skip: a module-root member with no source to read is a SKIP row, not an env fault" {

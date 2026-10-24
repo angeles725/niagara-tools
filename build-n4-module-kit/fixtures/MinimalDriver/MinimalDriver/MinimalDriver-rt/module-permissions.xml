@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MinimalDriver-rt: the station sends UDP requests to each device's host and port (types/driver-authoring.md § 5).
+  Device addresses are configured per station, so hosts and ports cannot be narrowed here; narrow them when the
+  real driver has a fixed port. Layout and rules: templates/module-permissions.xml.
+-->
+<permissions>
+  <niagara-permission-groups type="all">
+  </niagara-permission-groups>
+  <niagara-permission-groups type="workbench">
+  </niagara-permission-groups>
+  <niagara-permission-groups type="station">
+    <req-permission>
+      <name>NETWORK_COMMUNICATION</name>
+      <purposeKey>networkComm.purpose</purposeKey>
+      <parameters>
+        <parameter name="hosts" value="*"/>
+        <parameter name="ports" value="*"/>
+      </parameters>
+    </req-permission>
+  </niagara-permission-groups>
+</permissions>

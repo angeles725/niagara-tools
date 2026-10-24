@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic station for lint-bacnet-status-flags (G36): one BACnet device, three proxy points. -->
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='Drivers' h='2' m='d=driver' t='d:DriverContainer'>
+   <p n='BacnetNetwork' h='3' m='bac=bacnet' t='bac:BacnetNetwork'>
+    <p n='AcmeAhu1' h='4' t='bac:BacnetDevice'>
+     <p n='points' h='5' t='bac:BacnetPointDeviceExt'>
+      <p n='SupplyTemp' h='6' m='c=control' t='c:NumericPoint'>
+       <p n="facets" t="b:Facets" v="units=u:celsius;&#xb0;C;(K);+273.15;"/>
+       <p n='proxyExt' h='7' t='bac:BacnetNumericProxyExt'>
+        <p n="objectId" t="bac:BacnetObjectIdentifier" v="analogInput:1"/>
+       </p>
+      </p>
+      <p n='FanStatus' h='8' t='c:BooleanPoint'>
+       <p n="facets" t="b:Facets" v="trueText=s:active|falseText=s:inactive|statusFlags=b:true"/>
+       <p n='proxyExt' h='9' t='bac:BacnetBooleanProxyExt'>
+        <p n="objectId" t="bac:BacnetObjectIdentifier" v="binaryInput:1"/>
+       </p>
+      </p>
+      <p n='SupplyTempUnits' h='a' t='c:EnumPoint'>
+       <p n='proxyExt' h='b' t='bac:BacnetEnumProxyExt'>
+        <p n="objectId" t="bac:BacnetObjectIdentifier" v="analogInput:1"/>
+        <p n="propertyId" v="117"/>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

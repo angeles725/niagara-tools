@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-private-api-import  @DIR@/M  no *.java under a -rt, -ux, -wb or -se part's src/ (wrong path: pass the module root)
+-- stderr --
+-- M/README.txt --
+notes

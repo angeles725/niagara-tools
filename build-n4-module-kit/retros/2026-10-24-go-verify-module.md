@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-verify-module
@@ -49,3 +49,12 @@ with unzip's own status.
 - A command substitution drops NUL bytes and a grep pipeline drops badly encoded lines, so a bash gate can see less input than the file holds and still print a clean verdict.
 - A bash arithmetic error does not stop the script: it drops the top-level command around it, and a subcommand can then fall through into the main flow.
 - When a port needs the same zip or walk logic, export it from the existing package, as with `jarversion.Open`, `Index`, `Head` and `Read`. Never copy it.
+
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 Golden cases come from the recorder: `(jar)`, `(class N)`, `(base64)` and `(dir)` sections.
+- Δ2 → `BUILD-LOOP.md` § 5 Record the shell's silent input drops as edge goldens: grep under C.UTF-8 with a Latin-1 line or a NUL byte.
+- Δ3 → `BUILD-LOOP.md` § 5 same bullet: a `$(( ))` operand bash cannot evaluate drops the top-level command.
+- The phase B truth fixes stay open issues in `ledger.d/2026-10-24-go-verify-module.md`; the `--src` per-file reads keep the existing `[deferred: retro r9-m1-walkers Δ2]` token, now scoped to verify-module only.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1-Δ3 cited in `BUILD-LOOP.md` § 5.

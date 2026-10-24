@@ -1,0 +1,18 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-ndriver-tagless-correlation  @DIR@/M/M-rt/src/com/example/drv/message/AcmeMessage.java:2  no getTag() override and getMaxOutstandingTransactions() is not 1 -- a response can complete the wrong request
+-- stderr --
+-- M/M-rt/src/com/example/drv/message/AcmeMessage.java --
+package com.example.drv.message;
+public abstract class AcmeMessage extends NMessage { }
+-- M/M-rt/src/com/example/drv/message/AcmeReq.java --
+package com.example.drv.message;
+public class AcmeReq extends AcmeMessage {
+  // public Object getTag() { return tag; }
+  String s = "public Object getTag() { return tag; }";
+}
+-- M/M-rt/src/com/example/drv/util/AcmeTagged.java --
+package com.example.drv.util;
+public class AcmeTagged { public Object getTag() { return null; } }

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · r10-citeparse-dotted-section-path
@@ -32,11 +32,12 @@ directory (still not a citation) and a version string (still not a path).
 | 1 | **A pointer grammar matches every character a real file name uses.** A file-name pattern that rejects a character the kit's names hold (a dot inside `BUILD-STATE.src.md`) does not fail: the leftmost-match regex silently reads a shorter, wrong name. Each such grammar pins a case per legal name shape, and a pointer that resolves only after a rewording is a parser bug, not a doctrine edit. | BUILD-LOOP.md §7 | `pointer-grammar-full-names` |
 
 ## Fold
-- Δ1 is applied here as a code fix with its pins; it stays pending until a fold review decides whether it
-  becomes doctrine.
+- Δ1 → `BUILD-LOOP.md` § 5 Citation pre-filter: a pointer grammar matches every character a real file name uses,
+  pins a case per legal name shape, and a pointer that resolves only after a rewording is a parser bug. The code
+  fix and its `TestCardSources` pins landed with the retro.
 
 ## Lessons
 - A workaround rewording hides a parser defect; restoring the natural wording is the regression proof.
 
 ---
-**Status**: PENDING
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-tail`; log in `ledger.d/2026-10-24-r10-fold-tail.md`) — Δ1 cited on the `BUILD-LOOP.md` § 5 Citation pre-filter line.
