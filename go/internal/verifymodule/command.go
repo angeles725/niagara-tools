@@ -39,7 +39,8 @@ type check func(*run) bool
 var checks = []check{
 	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).typeCount,
 	(*run).facets, (*run).facetPresence, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
-	(*run).transientOperator, (*run).compact3Imports,
+	(*run).phantomDep, (*run).moduleTest, (*run).crossModuleType, (*run).transientOperator,
+	(*run).compact3Imports, (*run).subscriptionLeak, (*run).slotWall,
 }
 
 // Main is verify-module.sh. `coverage` and `--plano` are read before any flag. When bash arithmetic

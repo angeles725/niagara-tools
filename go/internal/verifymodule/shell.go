@@ -105,6 +105,11 @@ func contains(list []string, s string) bool {
 	return false
 }
 
+// awkFields is awk's default field split: runs of blanks, tabs and newlines.
+func awkFields(s string) []string {
+	return strings.FieldsFunc(s, func(c rune) bool { return c == ' ' || c == '\t' || c == '\n' })
+}
+
 // basename is basename(1) <p> <suffix>: the last component, minus suffix unless that is all of it.
 func basename(p, suffix string) string {
 	b := lint.Basename(p)
