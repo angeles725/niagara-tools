@@ -74,3 +74,18 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [ "$output" = "WARN  lint-status-parity  OneLine  N=4 per-instance config slots but 1 status slots" ]
 }
+
+@test "LSP-comment: a commented-out @NiagaraProperty is not a slot" {
+  # Mutation: LSP-comment -- reading the raw lines counts the commented aActive/bActive slots and hides the WARN
+  # Go golden: go/internal/lint/rules/statusparity/testdata/truth-comment-1.txt
+  {
+    printf 'class Hidden {\n'
+    printf '  @NiagaraProperty(name = "%s", type = "int", defaultValue = "1")\n' aInterval bInterval
+    printf '  // @NiagaraProperty(name = "aActive", type = "boolean", defaultValue = "false")\n'
+    printf '  /** Old: {@code @NiagaraProperty(name = "bActive")} */\n'
+    printf '}\n'
+  } > "$ONE/Hidden.java"
+  run "$LSP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-status-parity  Hidden  N=2 per-instance config slots but 0 status slots" ]
+}
