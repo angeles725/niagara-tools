@@ -200,6 +200,9 @@ rule's rows stay contiguous.
    `setup.sh` builds each input from a text spec, and the run goes through a wrapper that writes a listing
    of the output (entry names, order, method, size, content hash) that the Go replay writes too
    (reference: `internal/storedrepack`, `testdata/setup.sh`). `[ev: retro r10-stored-repack-go Δ1]`
+   Budget a port's tests against the code it replaces: reuse `golden.Runner` (its `Setup` hook, one shared
+   listing) before adding a test-only package, keep a unit test only for what no golden can see, and prove a
+   slimming with the same mutation table before and after. `[ev: retro r10-stored-repack-go Δ3]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every

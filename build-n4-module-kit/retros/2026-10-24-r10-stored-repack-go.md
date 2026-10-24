@@ -1,10 +1,10 @@
 <!-- review-status: folded -->
 <!-- module: kit -->
-<!-- deltas: 2 -->
+<!-- deltas: 3 -->
 # 2026-10-24 · kit · r10-stored-repack-go
 
 **Session**: niagara-research quality round 10, branch `r10/stored-repack-go` from origin/main 91b9e3d6
-**Delta count**: 2
+**Delta count**: 3
 
 ## What happened
 `toolbelt/stored-repack.sh` (45 lines: unzip, then `zip -0` in a set order) was ported to Go as
@@ -33,6 +33,11 @@ reopened and counted, then linked into place. No extraction, no zip/unzip tools,
   - A missing output directory is exit 1 `cannot write`. The bash's `cd` failed inside `OUT_ABS`, so it
     tried `/out.jar` and exited 15.
   - A manifest-only jar is exit 0. The bash hit `zip error: Nothing to do!`, exited 12 and left a partial jar.
+- **Slimming** (branch `r10/stored-repack-slim`). The tests were about 915 lines of Go and bats for a 45-line
+  script. Unit tests that restated a golden and jarlist's own test went, ten cases folded into equivalent or
+  merged ones (13 recorded cases, all re-recorded at 91b9e3d6, plus 8 truth), and bats kept the two wrapper
+  runs. The same 16 behaviour mutations of `storedrepack.go` were applied one at a time before and after, and
+  each one is still killed.
 
 ## Evidence
 - `go test ./internal/storedrepack/...` (30 goldens: 22 recorded, 8 truth; order, STORED headers, content identity,
@@ -45,6 +50,7 @@ reopened and counted, then linked into place. No extraction, no zip/unzip tools,
 |---|---|---|---|
 | Δ1 | A port whose output is a binary archive pins its observable contract: setup.sh builds inputs from text specs and a run wrapper writes a listing both sides compare | `go/README.md` § Adding a lint rule (step 3) | `[ev: go/internal/storedrepack/testdata/setup.sh]` |
 | Δ2 | A STORED zip entry from Go goes through `CreateRaw` with the source CRC and size, streamed from `File.Open`; `CreateHeader` sets the data-descriptor flag `ZipInputStream` rejects on STORED | `go/README.md` § Adding a lint rule (after the shared-code rule) | `[ev: go/internal/storedrepack/storedrepack.go]` |
+| Δ3 | For a port, budget the test code against the code it replaces, and reuse golden.Runner (Setup hook, shared listing) before adding any test-only package; prove a slimming with the same mutation table before and after | `go/README.md` § Adding a lint rule (step 3) | `[ev: go/internal/storedrepack/golden_test.go]` |
 
 ## Lessons
 - record.sh cannot spell a jar, but its `setup_case` and `RUN` hooks can build one and post-process the run.
