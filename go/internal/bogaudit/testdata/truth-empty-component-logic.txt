@@ -1,0 +1,94 @@
+-- args --
+@DIR@/f1/logic.bog
+--module
+ColdRoomPan
+--module
+DashboardPan
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=10
+CHECK1  PASS  DashboardPan  components=1
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK13  FAIL  Net/ew  relay slot 'in10' driven by 2 distinct sources: h:u1, h:u3
+CHECK14  WARN  ColdRoom_1/EvaporatorUnit  output slot 'evapOut' has no outgoing relay link (own-output-unlinked)
+CHECK14  WARN  ColdRoom_1/EvaporatorUnit  output slot 'fanOut' has no outgoing relay link (own-output-unlinked)
+CHECK14  WARN  ColdRoom_1/EvaporatorUnit_1  output slot 'condenser2' has no outgoing relay link (own-output-unlinked)
+CHECK14  WARN  ColdRoom_1/EvaporatorUnit_1  output slot 'evapOut' has no outgoing relay link (own-output-unlinked)
+CHECK15  WARN  ColdRoom_1  slot 'C02_temperature' (C-room 2) sourced from 'EvaporatorUnit_1' (unit index 1) — label mismatch
+CHECK15  WARN  ColdRoom_1  slot 'c1Temp' (C-room 1) sourced from 'EvaporatorUnit_3' (unit index 3) — label mismatch
+CHECK16  FAIL  ColdRoom_1/EvaporatorUnit_3  hasDefrost=true but no DefrostController sibling under 'ColdRoom_1'
+CHECK17  FAIL  ColdRoom_1  link 'evap4Fan' carries evap-index 4 but room suffix is 1
+CHECK18  FAIL  ColdRoom_1/EvaporatorUnit_1  link tile numbers 1, 2, 10 disagree across HOA/state/freeze links (tile-number mismatch)
+CHECK18  FAIL  ColdRoom_1/EvaporatorUnit_3  link tile numbers 2, 3, 4 disagree across HOA/state/freeze links (tile-number mismatch)
+CHECK19  WARN  ColdRoom_1  panel 'Panel' writes state slot 'roomStatus' into control container (reverse direction)
+CHECK19  WARN  Panel  control 'ColdRoom_1/EvaporatorUnit_1' writes config slot 'fanMode' into panel container (reverse direction)
+CHECK20  FAIL  NotGate  numeric/enum slot 'valveCmd' links directly into boolean gate 'CRP:BNotLogic' with no Equal(x,N) intermediate (!=0-as-true trap)
+CHECK20  FAIL  Gate2  numeric/enum slot "it'sMode" links directly into boolean gate 'CRP:BAndLogic' with no Equal(x,N) intermediate (!=0-as-true trap)
+# bog-audit: parse time 0.001s
+-- stderr --
+-- f1/logic.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='Net' h='n1' m='c=control' t='c:Folder'>
+  <p n='ew' h='w1' t='c:EnumWritable'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="in10"/></p>
+   <p n='L2' t='b:Link'><p n="sourceOrd" v="h:u3"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="in10"/></p>
+   <p n='L3' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="in9"/></p>
+   <p n='fallback' t='b:StatusEnum'/>
+  </p>
+  <p n='alarm' h='al' t='a:AlarmClass'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="alarm"/><p n="targetSlotName" v="routeAlarm"/></p>
+   <p n='L2' t='b:Link'><p n="sourceOrd" v="h:u3"/><p n="sourceSlotName" v="alarm"/><p n="targetSlotName" v="routeAlarm"/></p>
+  </p>
+ </p>
+ <p n='ColdRoom_1' h='cr1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="hasDefrost" t="b:boolean" v="false"/>
+  <p n='EvaporatorUnit_1' h='u1' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="false"/>
+   <p n="fanOut" f="o" t="b:StatusBoolean" v="false"/>
+   <p n="defrostOut" f="o" t="b:StatusBoolean" v="false"/>
+   <p n="condenser2" f="so" t="b:StatusBoolean" v="false"/>
+   <p n="valveMode" f="o" t="b:int" v="0"/>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:p1"/><p n="sourceSlotName" v="evap1Hoa"/><p n="targetSlotName" v="evap2Hoa"/></p>
+   <p n='L2' t='b:Link'><p n="sourceOrd" v="h:p1"/><p n="sourceSlotName" v="evap10Freeze"/><p n="targetSlotName" v="x"/></p>
+  </p>
+  <p n='EvaporatorUnit_3' h='u3' t='CRP:EvaporatorUnit'>
+   <p n="hasDefrost" t="b:boolean" v="true"/>
+   <p n="evapOut" f="o" t="b:StatusBoolean" v="false"/>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u3"/><p n="sourceSlotName" v="C3_temp"/><p n="targetSlotName" v="evap3State"/></p>
+  </p>
+  <p n='EvaporatorUnit' h='u9' t='CRP:EvaporatorUnit'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:p1"/><p n="sourceSlotName" v="evap1Hoa"/><p n="targetSlotName" v="evap2Hoa"/></p>
+  </p>
+  <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="C02_temperature"/><p n="targetSlotName" v="evap01Hoa"/></p>
+  <p n='L2' t='b:Link'><p n="sourceOrd" v="h:u3"/><p n="sourceSlotName" v="c1Temp"/><p n="targetSlotName" v="evap4Fan"/></p>
+  <p n='L3' t='b:Link'><p n="sourceOrd" v="h:p1"/><p n="sourceSlotName" v="stateOut"/><p n="targetSlotName" v="roomStatus"/></p>
+ </p>
+ <p n='Panel' h='p1' m='DPan=DashboardPan' t='DPan:RoomPanel'>
+  <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="fanMode"/></p>
+  <p n='L2' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="evap1FanState"/></p>
+  <p n='L3' t='b:Link'><p n="sourceOrd" v="h:u3"/><p n="sourceSlotName" v="evapOut"/><p n="targetSlotName" v="evap2FanState"/></p>
+ </p>
+ <p n="it's_2" h='q1' t='CRP:DefrostController'/>
+ <p n='Gate' h='g1' t='kitControl:OrLogic'>
+  <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="valveMode"/><p n="targetSlotName" v="inA"/></p>
+ </p>
+ <p n='NotGate' h='g2' t='CRP:BNotLogic'>
+  <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="valveCmd"/><p n="targetSlotName" v="in"/></p>
+  <p n='L2' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="valve"/><p n="targetSlotName" v="in"/></p>
+ </p>
+ <p n='Gate2' h='g3' t="CRP:BAndLogic">
+  <p n='L1' t='b:Link'><p n="sourceOrd" v="h:u1"/><p n="sourceSlotName" v="it'sMode"/><p n="targetSlotName" v="in"/></p>
+ </p>
+ <p n='DefrostController' h='dc0' t='CRP:DefrostController'/>
+ <p n='DefrostController_9' h='dc9' t='CRP:DefrostController'>
+ </p>
+ <p n='Stray' h='st' t='CRP:Thing'>
+  <p n="hasDefrost" t="b:boolean" v="true"/>
+ </p>
+</bajaObjectGraph>

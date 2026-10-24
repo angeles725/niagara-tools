@@ -18,8 +18,9 @@ type Element struct {
 	Attrs  []Attr // in document order
 	Line   int
 	Col    int
-	Depth  int // 0 for the root
-	Parent int // index of the parent in Elements(); -1 for the root
+	Depth  int  // 0 for the root
+	Parent int  // index of the parent in Elements(); -1 for the root
+	Empty  bool // written as an empty-element tag, <name .../>, not <name ...></name>
 
 	start, end int64 // byte span of the content, for Text
 }

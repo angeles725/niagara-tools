@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-recovery-path
@@ -39,4 +39,4 @@ T3, a write starts at an identifier boundary and every write on a line counts (L
 - Replacing a private brace-depth scope by the shared method scanner removed the lint's own parser (and its bugs) rather than patching it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-recovery-path.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 folded as code (`rules/recoverypath` resets), noted in `METHODOLOGY.md` § Kit maintenance; Δ2 not folded, needs code (a commissioning fixture), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues. INDEX row generated from the header: `| 2026-10-24-go-lint-recovery-path.md | kit | 2026-10-24 | folded | 2 |`

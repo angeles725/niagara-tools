@@ -1,0 +1,57 @@
+-- args --
+@DIR@/f1/synthetic.bog
+--module
+ColdRoomPan
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=3
+CHECK11  FAIL  NrioNetwork/io/ro1  own-module h:44b84.resistanceOut -> writable with no explicit fallback (relay holds last state on stop/reload)
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK16  FAIL  ColdRoom_3/DefrostController  DefrostController without hasDefrost=true unit sibling under 'ColdRoom_3'
+# bog-audit: parse time 0.006s
+-- stderr --
+-- f1/synthetic.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_3' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="differentialUp" t="b:double" v="-1.5"/>
+  <p n="ghostSlot" t="b:double" v="0"/>
+  <p n='DefrostController' h='44b84' t='CRP:DefrostController'>
+   <a n="intervalExpired" f="o"/>
+   <p n="interval" t="b:RelTime" v="1800000"/>
+   <p n="resistanceOut" t="b:StatusBoolean" v="false"/>
+  </p>
+  <p n='Evap1' h='e1' t='CRP:EvaporatorUnit'>
+   <p n="evapOut" t="b:StatusBoolean" v="false"/>
+   <p n='DangLink' t='b:Link'>
+    <p n="sourceOrd" v="h:44b84"/>
+    <p n="sourceSlotName" v="evapOut"/>
+    <p n="targetSlotName" v="ghostTarget"/>
+   </p>
+  </p>
+ </p>
+ <p n='NrioNetwork' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
+  <p n='io' h='n2' t='nrio:Nrio34Module'>
+   <p n='ro1' h='r1' t='c:BooleanWritable'>
+    <p n='InLink' t='b:Link'>
+     <p n="sourceOrd" v="h:44b84"/>
+     <p n="sourceSlotName" v="resistanceOut"/>
+     <p n="targetSlotName" v="in10"/>
+    </p>
+   </p>
+   <p n='ro2' h='r2' t='c:BooleanWritable'>
+    <p n='fallback' t='b:StatusBoolean'><p n="value" v="false"/></p>
+    <p n='InLink' t='b:Link'>
+     <p n="sourceOrd" v="h:e1"/>
+     <p n="sourceSlotName" v="evapOut"/>
+     <p n="targetSlotName" v="in10"/>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

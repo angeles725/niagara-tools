@@ -40,6 +40,10 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   `/tmp/`, `C:\Users\`, scratchpad and station-name literals in default values. Gotcha:
   `types/issues-and-gotchas.md` I3; advisory lint `toolbelt/lint-machine-default-path.sh` (G43: Java,
   rc JavaScript and .properties defaults, see its header). K8 and K16 apply the same rule to kit checks and fixtures. `[ev: retro modular-line-efficient-quality Δ5]`
+  G43 reads three default contexts only (an `@NiagaraProperty` defaultValue, a field initializer outside every
+  method, a getProperty/getOrDefault/orElse fallback); a path in a local or a call argument stays this review
+  check, and widening a context needs a real-tree row count with each row classified.
+  `[ev: retro go-lint-machine-default-path Δ1]` `[ev: retro go-lint-machine-default-path Δ2]`
 - **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. The watchdog chain — niagarad daemon (PID poll → process exit → auto-restart with crash-loop backoff) → `EngineWatchdog` (hung engine heartbeat) → engine discipline — recovers a DEAD or HUNG station; a merely SLOW station is invisible to the watchdogs — engine-thread discipline (never block, `catch(Throwable)`) is the ONLY protection against slow callbacks. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B737 §A.3, B775]`
 
 ## Domain correctness
@@ -63,6 +67,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   name outside the table is a finding. Facade side: `types/dashboard.md` § Facade contract; advisory lint
   `toolbelt/lint-inline-site-literal.sh` (G42; mark the table with a first-line `// site-table` or pass `--site-table`).
   `[ev: retro modular-line-efficient-quality Δ2]`
+  A query ORD (`station:|alarm:|bql:…`) or a service ORD (at or under `/Services`) is module structure, the same on
+  every site, not site data. `[ev: retro go-lint-inline-site-literal Δ1]` `[ev: retro go-lint-inline-site-literal Δ2]`
 
 ## Schema / upgrade safety
 - **Templates (`.ntpl`) and template modules:** what breaks when a deployed template or its module is upgraded: `types/logic-authoring.md` § What breaks on a module or template upgrade.
@@ -221,13 +227,27 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
 - folded as code: ORCHESTRATION.md (8-section session contract — roles, model table, delegation/escalation, artifact store, evidence discipline, retro/ticket loop, recovery) + skill/SKILL.md steps 1b/1c/5b + tests/kit-links.bats L8 (every ORCHESTRATION-named script resolves to toolbelt/<script>.sh). [ev: retro campaign8-orchestration]
 - Before naming a new kit-links.bats structural pin, confirm the current max L-number with `grep -c '"L[0-9]' tests/kit-links.bats` — not the wave spec's label (the wave-3 spec said "extend L7" but L7 already existed from PR13 §6.a, so the assertion is L8). [ev: retro campaign8-orchestration]
 - folded as code: toolbelt/lint-structure.sh (L1-L11 module-structure lint over a module root, iterating profiles by direct-child *-(rt|ux|wb|se|doc)/build-script discovery — NOT by module-include.xml, so an emptiest artifact is still visited; L10 walks parents to the .git sentinel; row FAIL|WARN lint-structure <path> L<n>: <reason>, exits 0/1/3). [ev: retro campaign8-structure]
-- folded as code: toolbelt/lint-write-path.sh (every Flags.OPERATOR @NiagaraProperty MUST have a docs/write-path-matrix.md row: slot·writer·timing·existing src/test; walk-up matrix resolution + --matrix override; --bog adds bog-derived slots; a MISSING matrix is ERROR exit 3, never a silent pass). [ev: retro campaign8-write-path] [ev: corpus B816]
+- folded as code: toolbelt/lint-write-path.sh (every Flags.OPERATOR @NiagaraProperty MUST have a docs/write-path-matrix.md row: slot·writer·timing·existing src/test; walk-up matrix resolution + --matrix override; --bog adds bog-derived slots; a MISSING matrix is ERROR exit 3, never a silent pass; since round 10 a wrapper over `go/internal/lint/rules/writepath`). [ev: retro campaign8-write-path] [ev: corpus B816] [ev: retro go-lint-write-path]
 - folded as code: toolbelt/bog-audit.sh CHECK13-CHECK19 (station-logic wiring: relay-double-source, own-output-unlinked, sensor-crossed-by-name, hasDefrost↔DefrostController sibling, roomN-index-mismatch, HOA-tile≠freeze-tile, control-writes-setpoint). [ev: retro campaign8-station-logic]
 - The campaign-8 close process meta-lessons (11 lessons: fixture-green≠real-green, four-file merge, ledger budget, /tmp wipe, GitHub outage ff-from-tracking, git-not-TaskOutput, OBSERVED-flip mutation tables, real-counts-over-estimates, K11→commit-msg hook, ff-verify-before-settle + rebase parallel workers, and presence-pin/one-lint-convention) were folded; the actionable deltas land as BUILD-LOOP §5/§7 + METHODOLOGY K22 and C9 seeds S9/S17. [ev: retro campaign8-close-process-meta-lessons]
 - The campaign-9 close process meta-lessons (25 lessons: stale-checkout reads, re-anchor-after-identify, executable-RED-wins, harness-only pins in RED header, design-re-apply to all gates, null-Context write security, BUser-is-Context, lockout-accounting, scheme-leak, tool-failure-not-zero, repo-visibility check, identity-vs-session columns, second-read cadence, repo-fixed≠deployed, resume-from-tree, negative-claim-needs-grep, fixture-fitting-production-code, golden-axis coverage, conservative-lag-inverts-lifecycle; W2/W3: TTL-never-compared, comment-satisfiable-pins, HashMap-on-servlet-field, pre-push-BUILD-STATE-pairing, workers-never-edit-QA-REDs, workers-never-write-outside-worktree) were folded at the C9 close (PR13). [ev: retro campaign9-close-process-meta-lessons]
 - **Truth-audit every round:** at a round close run `kit-cite-resolve --strict` on the live set (`scripts/lib/live-doctrine-set.sh`) and read the excerpts; a false claim is corrected in place, never waived. [ev: retro r10-close-process-meta-lessons Δ1]
 - **Every tool checkout is resolved fail-closed:** a launcher that runs tools from a checkout refuses a stale, dirty or diverged one, fast-forwards a clean one that is behind, and prints the path and SHA it runs (`scripts/kit-resolve.sh`; research-sdd's resolver). [ev: retro r10-close-process-meta-lessons Δ3]
 - triage-console.sh attribution contract = **C1** own frame · **C2** own tag · **C3** bog-drift (`Missing class "<prefix>:` / `Cannot load station` / `Missing frozen property`); locale = `LC_ALL=C`, byte-safe (`grep -a`/awk), EN + ES level names (mojibake-safe latin-1). PR7 states this CONTRACT; PR13 states the operator STEPS (non-duplicative). `[ev: corpus B800]` `[ev: retro campaign8-triage-console]`
+- folded as code (round-10 Go lint ports): lint-recovery-path's row names every reset method it accepts
+  (`rules/recoverypath` `resets`) `[ev: retro go-lint-recovery-path Δ1]`; lint-servlet catch-no-400 reads its catch by
+  structure (`javasrc.TryBlocks`) `[ev: retro go-lint-servlet-try-scope Δ1]`.
+- Owed round-10 lint follow-ups (needs code or a decision; each is an `open_issues` item in `BUILD-STATE.md`):
+  G43 report-module membership `[deferred: retro go-lint-machine-default-path Δ3]`; manual-labels comment
+  blanking, `props.Read` for lexicons and placeholder families `[deferred: retro go-lint-manual-labels Δ1]`
+  `[deferred: retro go-lint-manual-labels Δ2]` `[deferred: retro go-lint-manual-labels Δ3]`; recovery-path commissioning fixture
+  `[deferred: retro go-lint-recovery-path Δ2]`; lint-size one-line BEGIN/END `[deferred: retro go-lint-size Δ2]`;
+  status-parity per-class subject `[deferred: retro go-lint-status-parity Δ1]`; wb-threading one-character callees
+  and column-0 helpers `[deferred: retro go-lint-wb-threading Δ1]` `[deferred: retro go-lint-wb-threading Δ2]`;
+  write-path audit receiver, structure's private path helpers, the lint-arbitrary-ord sibling comment
+  `[deferred: retro go-lint-write-path Δ1]` `[deferred: retro go-lint-write-path Δ2]`
+  `[deferred: retro go-lint-write-path Δ3]`; ws-placement guard token and widget detection
+  `[deferred: retro go-lint-ws-placement Δ1]` `[deferred: retro go-lint-ws-placement Δ2]`.
 - Code-folded retros need a "folded as code: <script> [ev: retro <token>]" note in a prose kit file to be credited by the citation audit. [ev: retro campaign6-research-fold]
 
 ## Multi-session coordination
