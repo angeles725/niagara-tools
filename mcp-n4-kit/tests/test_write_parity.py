@@ -205,13 +205,14 @@ class TestSetSlotParity(ParityTestCase):
         self.assertSameRun(scenario)
 
 
-def fail_after_sync(side, key, reply):
-    """A hook: after the first syncTo, `key` (a callssc sck) answers `reply` (code, body)."""
-    seen = []
+def fail_after(side, first, key, reply):
+    """A hook: `key` (a callssc sck) answers `reply` (code, body) once a `first` callssc was
+    seen, or from the start when `first` is None."""
+    seen = [] if first else [True]
 
     def hook(frame):
         sck = [m.get("b", {}).get("sck") for m in frame["m"] if isinstance(m.get("b"), dict)]
-        if "syncTo" in sck:
+        if first is not None and first in sck:
             seen.append(True)
         elif seen and key in sck:
             return reply[0], reply[1], {}
@@ -236,7 +237,7 @@ class TestReadBackAndInDoubtParity(ParityTestCase):
                 side.fake.on_sync = None
                 side.box.set_slot(h, "out", box.bson_status_numeric(1.0))
             for reply in ((500, b"boom"), (200, ERROR_FRAME)):
-                fail_after_sync(side, "loadSlots", reply)
+                fail_after(side, "syncTo", "loadSlots", reply)
                 side.write("n4_set_slot", **SET)
                 side.fake.hook = None
             side.call("n4_list_batches")
@@ -249,9 +250,7 @@ class TestReadBackAndInDoubtParity(ParityTestCase):
             side.add("Sp", "control:NumericWritable")
             for key, reply in (("syncTo", (500, b"boom")), ("syncTo", (200, ERROR_FRAME)),
                                ("invokeAction", (500, b"boom"))):
-                side.fake.hook = lambda frame, k=key, r=reply: (r[0], r[1], {}) if any(
-                    isinstance(m.get("b"), dict) and m["b"].get("sck") == k
-                    for m in frame["m"]) else None
+                fail_after(side, None, key, reply)
                 if key == "syncTo":
                     side.write("n4_set_slot", **SET)
                 else:
@@ -394,3 +393,74 @@ class TestStateFileParity(ParityTestCase):
             self.assertTrue(os.path.isdir(self.path(side, "audit.jsonl")))
         python, under_test = (side.masked(side.state("audit.kept")) for side in sides)
         self.assertEqual(under_test, python)
+
+
+CREATE = dict(parent_ord=FOLDER, name="Pump", type="kitControl:NumericConst")
+
+
+def answering(side, name, reply):
+    """Make the fake's `name` handler (_sync, _check_link) do its work and answer `reply`."""
+    orig = getattr(side.fake, name)
+    setattr(side.fake, name, lambda arg: (orig(arg), reply)[1])
+    return orig
+
+
+class TestCreateComponentParity(ParityTestCase):
+    def test_creates_and_every_refusal(self):
+        def scenario(side):
+            side.call("n4_create_component", **CREATE)  # not connected
+            side.connect()
+            for kw in ({"name": "../x"}, {"name": "a b"}, {"name": ""}, {"name": "1x"},
+                       {"name": "Pump\n"}, {"name": "Pump\n\n"}, {"type": "NoModule"},
+                       {"type": "a:b:c"}, {"type": ":T"}, {"type": "k:T\n"}, {"type": "k:T\n\n"},
+                       {"type": "k:T-1"}, {"wire_sheet": {"x": 1}}, {"wire_sheet": {"x": "a", "y": 1}},
+                       {"wire_sheet": {"x": 1, "y": 2, "w": True}}, {"wire_sheet": {"x": True, "y": 2}},
+                       {"wire_sheet": {"x": 1.0, "y": 2}}, {"wire_sheet": {"x": 1, "y": 2, "w": 0}},
+                       {"wire_sheet": {"x": 1, "y": 2, "w": -10 ** 30}},
+                       {"wire_sheet": {"x": 1, "y": 2, "w": 1.5}}, {"wire_sheet": {"x": 1, "y": 2, "w": None}},
+                       {"wire_sheet": {"x": -3, "y": 10 ** 30, "w": 10 ** 25}}, {"wire_sheet": {}},
+                       {"wire_sheet": None}, {"wire_sheet": [1]}, {"name": "a b", "type": "x"},
+                       {"type": "x", "wire_sheet": {}}, {"wire_sheet": {}, "parent_ord": FOLDER + "/Missing"},
+                       {"parent_ord": FOLDER + "/Missing"}, {"parent_ord": "station:|slot:/Elsewhere"},
+                       {"parent_ord": FOLDER + "|h:3"}):
+                side.call("n4_create_component", **dict(CREATE, **kw))
+            side.write("n4_create_component", **CREATE)
+            side.write("n4_create_component", **CREATE)  # the station renames it Pump1
+            side.write("n4_create_component", wire_sheet={"x": 4, "y": 6, "w": 10},
+                       **dict(CREATE, name="Ws"))
+            side.write("n4_create_component", wire_sheet={"x": -1, "y": 0}, **dict(CREATE, name="Ws"))
+            token = side.call("n4_create_component", **dict(CREATE, name="Once"))["confirmation_token"]
+            for _ in range(2):  # reused
+                side.call("n4_create_component", dry_run=False, confirmation_token=token,
+                          **dict(CREATE, name="Once"))
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_read_back_and_odd_replies(self):
+        def scenario(side):
+            side.connect()
+
+            def drop_annotation(op):
+                node = side.fake.folder.child("Pump")
+                node.children = [c for c in node.children if c.name != "wsAnnotation"]
+            side.fake.on_sync = drop_annotation
+            side.write("n4_create_component", wire_sheet={"x": 1, "y": 2}, **CREATE)
+            side.fake.on_sync = lambda op: setattr(side.fake.folder.child("T"), "type", "k:Other")
+            side.write("n4_create_component", **dict(CREATE, name="T"))
+            side.fake.on_sync = None
+            for reply in ([], [{"nn": None}], [{"nn": "Ghost"}], [{"id": "a"}], ["x"], [[1]],
+                          "junk", "", {"a": 1}, 7, 0, True, None, [{"nn": ["l"]}], [{"nn": {"a": 1}}],
+                          [{"nn": 5}], [{"nn": "T"}], [{"nn": ""}]):
+                orig = answering(side, "_sync", reply)
+                side.write("n4_create_component", **dict(CREATE, name="R"))
+                side.fake._sync = orig
+            for key, reply in (("syncTo", (500, b"boom")), ("syncTo", (200, ERROR_FRAME))):
+                fail_after(side, None, key, reply)
+                side.write("n4_create_component", **dict(CREATE, name="D"))
+                side.fake.hook = None
+            fail_after(side, "syncTo", "loadSlots", (500, b"boom"))
+            side.write("n4_create_component", **dict(CREATE, name="L"))
+            side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
