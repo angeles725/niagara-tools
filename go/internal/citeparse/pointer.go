@@ -25,6 +25,8 @@ const (
 	Mem          Kind = "mem"          // Target = memory file name prefix
 	Vineflower   Kind = "vineflower"   // Target = <mod>-<profile>, File = path in its vineflower/ copy
 	Javap        Kind = "javap"        // Target = jar file name
+	Course       Kind = "course"       // Target = path under the dev-course tree (or its course-text)
+	Bitacora     Kind = "bitacora"     // Target = slug of a client bitacora/<date>-<slug>.md
 	Bare         Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)
 	Unparsed     Kind = "unparsed"     // text the grammar does not cover
 	Template     Kind = "template"     // a placeholder (`<stem>`, `B<n>`, `…`): not a pointer
@@ -44,6 +46,7 @@ type Pointer struct {
 	Lines    []Range
 	Sections []string // corpus § tokens, or the heading of a kit cross-reference
 	Rows     []Range
+	Pages    []Range  // course PDF pages
 	Claims   []string // corpus C<k>
 	Rules    []string // corpus rule k
 	Delta    int      // retro Δn (0 = none)
@@ -58,6 +61,9 @@ func (p Pointer) Locator() string {
 	var parts []string
 	if len(p.Lines) > 0 {
 		parts = append(parts, ":"+FormatRanges(p.Lines))
+	}
+	if len(p.Pages) > 0 {
+		parts = append(parts, "p"+FormatRanges(p.Pages))
 	}
 	for _, s := range p.Sections {
 		parts = append(parts, "§"+s)

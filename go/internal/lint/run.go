@@ -299,6 +299,7 @@ func Command(specs ...Spec) cli.Main {
 		if args[0] == "--all" {
 			for _, sp := range specs {
 				if sp.Root == nil && !sp.ModuleRoot { // --all runs on source roots
+					sp.EmptyOK = sp.EmptyOK || sp.OptionalInAll
 					selected = append(selected, sp)
 				}
 			}

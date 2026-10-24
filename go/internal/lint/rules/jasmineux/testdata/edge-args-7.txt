@@ -1,0 +1,8 @@
+-- args --
+@DIR@/src/rc/a.html
+-- want --
+exit 3
+-- stderr --
+lint-jasmine-ux: not a directory: @DIR@/src/rc/a.html
+-- src/rc/a.html --
+x

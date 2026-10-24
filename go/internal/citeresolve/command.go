@@ -21,10 +21,10 @@ const (
 )
 
 const usage = "usage: kit-cite-resolve [--kit <dir>] [--research <dir>] [--modules <dir>] [--memory <dir>]" +
-	" [--version <ver>] [--format tsv|json] [--strict] <card.md>...\n"
+	" [--clients <dir>] [--version <ver>] [--format tsv|json] [--strict] <card.md>...\n"
 
 // order is the status order of the summary line.
-var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, BareID, Unparsed, ToolError,
+var order = []Status{Resolved, MissingFile, MissingSection, MissingDelta, LineOutOfRange, BareID, Unparsed, Ambiguous, ToolError,
 	HistoricalDrift, UnverifiableKind, SkippedTemplate}
 
 // Row is one output row.
@@ -49,6 +49,7 @@ func Main(args []string, s cli.Stdio) int {
 	fs.StringVar(&r.Kit, "kit", "", "kit root (default: the nearest directory above the first card holding retros/INDEX.md)")
 	fs.StringVar(&r.Research, "research", filepath.Join(home, "niagara-research"), "research repository")
 	fs.StringVar(&r.Modules, "modules", filepath.Join(home, "modulos_niagara_n4"), "client module trees")
+	fs.StringVar(&r.Clients, "clients", "", "client checkouts searched by base name (default: <modules>/Cliente)")
 	fs.StringVar(&r.Memory, "memory", "", "memory directory (default: the Claude project memory of --research)")
 	fs.StringVar(&r.Version, "version", "4.15.6.20", "niagara-help version of unversioned devguide/guide pointers")
 	format := fs.String("format", "tsv", "tsv or json")
@@ -72,8 +73,12 @@ func Main(args []string, s cli.Stdio) int {
 		abs, _ := filepath.Abs(r.Research)
 		r.Memory = filepath.Join(home, ".claude", "projects", strings.ReplaceAll(abs, "/", "-"), "memory")
 	}
+	if r.Clients == "" {
+		r.Clients = filepath.Join(r.Modules, "Cliente")
+	}
 	r.Repo = filepath.Dir(filepath.Clean(r.Kit))
-	for _, root := range []struct{ name, dir string }{{"kit", r.Kit}, {"research", r.Research}, {"modules", r.Modules}, {"memory", r.Memory}} {
+	for _, root := range []struct{ name, dir string }{{"kit", r.Kit}, {"research", r.Research}, {"modules", r.Modules},
+		{"clients", r.Clients}, {"memory", r.Memory}} {
 		if _, err := os.ReadDir(root.dir); err != nil {
 			fmt.Fprintf(s.Err, "kit-cite-resolve: cannot read %s root %s: %v\n", root.name, root.dir, err)
 			return ExitEnv

@@ -100,7 +100,7 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		if !sp.ModuleRoot { // --all runs on source roots and leaves a module-root rule out
+		if !sp.ModuleRoot && !sp.OptionalInAll { // --all runs on source roots: no module-root rule, and a one-profile rule may find nothing
 			all += row
 		}
 		var o, e bytes.Buffer
@@ -134,6 +134,12 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
 		code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e})
+		if sp.EmptyOK { // lint-jasmine-ux (ER5): a module without src/rc is clean, exit 0, no row
+			if code != 0 || o.Len() != 0 || e.Len() != 0 {
+				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+			}
+			continue
+		}
 		if sp.ID() == "split-package-check" {
 			// its bash contract (kept by the port): "no module" on stderr, no row, exit 3; the client
 			// pre-push hook and CI template read only the exit code
@@ -148,7 +154,7 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if strings.Join(roots, " ") != "lint-structure split-package-check" {
-		t.Errorf("RootRules %q, want lint-structure and split-package-check", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux and split-package-check", roots)
 	}
 }

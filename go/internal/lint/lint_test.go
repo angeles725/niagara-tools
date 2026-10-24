@@ -927,3 +927,28 @@ func TestXMLErrorOnce(t *testing.T) {
 		t.Errorf("exit %d out %q err %q", code, o, e)
 	}
 }
+
+// TestCommandOptionalInAll: under --all a Spec.OptionalInAll rule that selects no file of a root is clean for
+// it (the other rules still report); run by name or in a rule list it keeps the empty-root ERROR row.
+func TestCommandOptionalInAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	js := Spec{Rule: fakeRule{"lint-js", "MARK", Warn}, Mode: Each, Usage: "u", Select: Selection{Names: []string{"*.js"}},
+		OptionalInAll: true}
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, Each), js)
+	java := "WARN  lint-a  " + root + "/A.java:1  saw: MARK\n"
+	empty := "ERROR  lint-js  " + root + "  no *.js sources found (wrong path or empty source tree)\n"
+	for _, tc := range []struct {
+		args []string
+		code int
+		out  string
+	}{
+		{[]string{"--all", root}, 0, java},
+		{[]string{"lint-js", root}, 3, empty},
+		{[]string{"lint-a,lint-js", root}, 3, java + empty},
+	} {
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.Len() != 0 {
+			t.Errorf("%q: exit %d out %q err %q, want %d and %q", tc.args, code, o, e, tc.code, tc.out)
+		}
+	}
+}
