@@ -133,6 +133,138 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
   (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
   [ev: retro n4-course-handson-ndriver Δ7]
 
+### 1.8 · Which driver framework `[ev: corpus B877 §877.6]` [ev: retro r10-dr1-driver-doctrine Δ2]
+
+Three generic chassis share the `javax.baja.driver` root; pick one before the first class.
+
+| Framework | Network base | Transport plug-in | You write | Pick it when |
+|---|---|---|---|---|
+| NDriver (`ndriver`) | `BNNetwork extends BDeviceNetwork` | a `BCommConfig` subclass: `makeLinkLayer(NComm)` → shipped TCP, UDP, serial and HTTP link layers | messages, a link message, a message factory, the comm config subclass (§ 1.9-§ 1.10) | **a new driver.** The New Driver Wizard scaffolds it, and the course says the older frameworks are deprecated or will be `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]` |
+| basicDriver (`basicDriver`) | `BBasicNetwork extends BLoadableNetwork` | `makeComm()` → a `Comm` subclass; serial through `BSerialNetwork`; no TCP transport (§ 1.2) | the `Comm` subclass, messages, the receiver | maintaining or extending a driver already on it (§ 3) |
+| DDF (`devDriver` + `devIpDriver` / `devSerialDriver` / `devHttpDriver`) | `BDdfNetwork extends BLoadableNetwork` | a `communicator` slot holding a `BIDdfCommunicator`; TCP, UDP, serial and HTTP networks ship (`BDdfUdpNetwork`, …) | the DDF request/response and discovery classes | maintaining or extending a driver already on it |
+| raw `javax.baja.driver` | `BDeviceNetwork` | none: you own sockets and threads | everything, including the worker threads | only to wrap an existing protocol stack that brings its own threads `[INFER]` |
+
+Chassis and transport columns: `[ev: corpus B877 §877.1]` `[ev: corpus B877 §877.5]`. There is no
+`BIpNetwork` class in the corpus: an NDriver IP driver uses `BTcpCommConfig` / `BUdpCommConfig`, a DDF one
+`BDdfTcpNetwork` / `BDdfUdpNetwork` (`organized/devIpDriver/devIpDriver-rt/vineflower/com/tridium/ddfIp/udp/BDdfUdpNetwork.java`).
+
+### 1.9 · NDriver comm config — TCP, UDP, serial [ev: retro r10-dr1-driver-doctrine Δ3]
+
+Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named; wizard templates are
+`organized/devkit/devkit-wb/extracted/gradle/ndriver/`.
+
+- **Hang the config on the network** as a property (`tcpConfig`, `udpConfig`, `serialConfig`) and reach the
+  stack with `(NComm) getUdpConfig().comm()`; call `statusUpdate()` on it when the network's `status` changes
+  (wizard `BNfooNetwork.java.vm:60-79,169-180,222-240`). `comm()` starts the stack on first use
+  (`datatypes/BCommConfig.java:250-260`).
+- **Subclass the config; never ship a bare `BUdpCommConfig`.** The wizard's UDP option declares a plain
+  `BUdpCommConfig` (`BNfooNetwork.java.vm:67-72`), which keeps the base message factory: it builds a plain
+  `NMessage` (`datatypes/BCommConfig.java:413-425`) whose `fromInputStream` throws "not implemented"
+  (`comm/NMessage.java:49-54`), so every received datagram fails. Override `makeMessageFactory()` (your
+  `IMessageFactory`) and `makeLinkMessageFactory()` (your `LinkMessage` subclass and its maximum length), as the
+  wizard's TCP template does (`BNfooTcpCommConfig.java.vm:25,44-57`).
+- **The config's `address` is the LOCAL side; the peer travels on each message.** `BTcpCommConfig.address`
+  (default `local:0`) is the listen address used only with `serverEnabled` (§ 1.6); `BUdpCommConfig.address`
+  (default `local:-1`) is the bind address: `local` binds every interface, a port ≤ 0 an ephemeral port
+  (`comm/udp/UdpLinkLayer.java:59-77,126-139`, `datatypes/BTcpCommConfig.java:28-36`). Both link layers send to
+  `(BIpAddress) msg.address`, which `LinkMessage.setMessage` copies from `NMessage.getAddress()`
+  (`comm/udp/UdpLinkLayer.java:164-172`, `comm/tcp/TcpLinkLayer.java:206-209`, `comm/LinkMessage.java:62-66`).
+  So keep the device's host and port on the DEVICE and set it on every request. A TCP connect is bounded at
+  1000 ms (`comm/tcp/TcpLinkLayer.java:432`).
+- **UDP: one datagram is one frame.** The UDP receiver sets the frame length and the source address from the
+  packet and never calls `LinkMessage.receive` (`comm/udp/UdpLinkLayer.java:193-208`); the TCP and serial
+  receivers do call it, so a stream protocol frames there (`comm/tcp/TcpLinkLayer.java:355`,
+  `comm/serial/SerialLinkLayer.java:322`). The receive buffer is the link message's array, 1500 bytes with the
+  default factory (`datatypes/BCommConfig.java:474-477`); size it to the protocol's largest datagram, since a longer
+  one is cut to the buffer `[INFER]` (Java `DatagramPacket`).
+- **UDP: check the sender.** A response is matched by tag alone (`comm/NComm.java:355`), so any host that
+  sends a matching tag completes the transaction; in `validateResponse` check
+  `getAddress().sameDevice(resp.getAddress())` (it compares the host, not the port,
+  `ndriver/datatypes/BIpAddress.java:196-204`) and return `FAILED_RESPONSE` on a mismatch (`comm/NMessage.java:94-103`).
+- **DNS per send.** `BIpAddress.getInetAddress()` calls `InetAddress.getByName` on every call and returns `null`
+  on failure (`ndriver/datatypes/BIpAddress.java:178-188`); prefer IP literals for devices, and see § 5 for a cached
+  resolve.
+
+### 1.10 · NDriver message framing — the skeleton [ev: retro r10-dr1-driver-doctrine Δ4]
+
+One request class and one response class per message type, one `LinkMessage` subclass for the wire frame, one
+factory. Shape (write the codec yourself; course Lab 11 is example code only and ships the defects of § 1.7):
+
+```java
+// Request: encode, tag, timeout. Keep the byte layout in a Baja-free codec class (§ 12).
+public class XReadReq extends NMessage {
+    public XReadReq(BIpAddress to, int seq, int reg) { super(to); this.seq = seq; this.reg = reg;
+        setResponseTimeOut(2000); setRetryCount(1); }               // real device latency, § 1.7
+    @Override public boolean toOutputStream(OutputStream out) throws Exception {
+        out.write(XCodec.encodeRead(seq, reg)); return false; }     // false = no more fragments
+    @Override public Object getTag() { return seq; }                 // same key on the response
+    @Override public int validateResponse(NMessage resp) {
+        if (!getAddress().sameDevice(resp.getAddress())) return FAILED_RESPONSE;   // UDP: § 1.9
+        return ((XResp) resp).isError() ? FAILED_RESPONSE : SUCCESS_RESPONSE; }
+    private final int seq, reg;
+}
+// Response: isResponse() true, decode, the same tag.
+public class XResp extends NMessage {
+    @Override public boolean isResponse() { return true; }
+    @Override public void fromInputStream(InputStream in) throws Exception { frame = XCodec.decode(in); }
+    @Override public Object getTag() { return frame.seq; }
+    public boolean isError() { return frame.error; }
+    XCodec.Frame frame;
+}
+// Factory: pick the class from the frame; return null for a frame you do not handle (NComm drops it).
+public NMessage makeMessage(LinkMessage lm) throws Exception {
+    NMessage m = new XResp(); m.setAddress((BAddress) lm.address);
+    m.fromInputStream(lm.getInputStream()); return m; }
+```
+
+- **Stream transports frame in `LinkMessage.receive(InputStream)`**: return true only for a complete frame,
+  bounds-check every write into `buffer` against its length, and resynchronise on a start byte; `setMessage`
+  writes start byte, payload and end byte to `getOutputStream()` (`comm/LinkMessage.java:36-66,140`).
+  `initReceive(msgToSend)` lets a streaming link layer constrain the next receive with the request just sent
+  (`comm/LinkMessage.java:105-118`). UDP skips `receive` (§ 1.9).
+- **Correlation:** a request with an id overrides `getTag()` on both classes; without one, return 1 from
+  `getMaxOutstandingTransactions()` (§ 1.7). `NComm.sendRequest(msg)` blocks for the matched response and
+  returns `msg.modifyResponse(resp)`; `sendMessage(msg)` sends with no response (`comm/NComm.java:150,226-240`).
+  A response with no open transaction is logged SEVERE and dropped (`comm/NComm.java:355-360`).
+- **Unsolicited frames** (`isResponse()` false) go to the config's default listener, set in the network's
+  `started()` with `setDefaultListener(...)` (`datatypes/BCommConfig.java:377-384`; wizard
+  `BNfooNetwork.java.vm:102-120`). The factory, the listener and the codec run on the comm receive thread, never
+  the engine thread.
+- Course reference for the shape only: `sources/n4-dev-course/course/Labs/Lab11 NDriver/1 Creating Common Classes/TrafficLightDriverLinkMessage.java:30-61`
+  (its `receive` has no bounds check) `[ev: corpus B1239 §1239.6]`.
+
+### 1.11 · NDriver discovery — the job body [ev: retro r10-dr1-driver-doctrine Δ5]
+
+You do not write a `BJob`. `BNDiscoveryJob.doRun` starts a `JobThread` that calls your
+`BINDiscoveryHost.getDiscoveryObjects(prefs)`, adds what it returns, and repeats while `prefs.isMultiStep()` is
+true, the call returned non-null and the job is running; `end()` then sets failed (an exception), canceled, or
+success (`discover/BNDiscoveryJob.java:150-157,186-210,256-271`). Cancel sets `canceling` and interrupts the
+thread (`discover/BNDiscoveryJob.java:163-173`). The network implements `BINDiscoveryHost` for devices, the
+point device ext for points (`point/BNPointDeviceExt.java:54,177-186`).
+
+Your `getDiscoveryObjects(prefs)`:
+1. Return `null` at once when `!prefs.getJob().isAlive()` (not running: canceled or done,
+   `baja/javax/baja/job/BJob.java:450-453`), and check it again between requests in a long scan.
+2. Send with the blocking `sendRequest` (this is the job thread, not the engine thread).
+3. Report progress: the job never calls `progress()` itself, so call `prefs.getJob().progress(pct)` per step
+   (it also heartbeats), or `heartbeat()` when the total is unknown (`baja/javax/baja/job/BJob.java:30-38,510-521`).
+   Log per item with `prefs.getJob().log()`.
+4. On a bad reply call `prefs.getJob().discoverFail(reason)` and return `null`: `discoverFail` only logs a
+   message (`discover/BNDiscoveryJob.java:282-288`), so the job still ends in success unless you throw.
+5. Return one discovery leaf per object. A `BNDiscoveryLeaf` subclass maps it to a component:
+   `getValidDatabaseTypes()` (first entry = best type), `getDiscoveryName()`, `updateTarget(target)` copies the
+   discovered address and settings, `isExisting(component)` greys rows already in the station
+   (`discover/BNDiscoveryLeaf.java:53-95`). The Workbench manager calls them
+   (`organized/ndriver/ndriver-wb/vineflower/com/tridium/ndriver/ui/NMgrLearn.java:91,121-122,145`); the browser
+   manager's `getProposedValuesFromDiscovery` asks the station for the same name and types over RPC
+   (`organized/ndriver/ndriver-ux/extracted/rc/Automanager.js:370,439-449`).
+6. Multi-step scans (an address range, a paged browse) return `true` from `isMultiStep()` in their preferences
+   and return `null` when finished (`discover/BNDiscoveryPreferences.java:104-108`).
+
+The framework's own `BNPointDeviceExt.doSubmitDiscoveryJob` submits with `job.submit(null)`
+(`point/BNPointDeviceExt.java:185`); override it with the `Context` form as in § 1.6 so the job runs as the user.
+Course device and point discovery: `[ev: corpus B1239 §1239.11]`.
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
@@ -355,6 +487,41 @@ for transient comm conditions (device unreachable, timeout, protocol error) — 
 (`pingFail()` propagates DOWN to every `BProxyExt` under the device).
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ4]`
+
+### Licensing — how device and point counts are enforced [ev: retro r10-dr1-driver-doctrine Δ6]
+
+Facts only, from docSource driver-rt (`D=organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver`
+below; full paths in the citations). The guide says only that "Licensing failures can also trigger fatal faults"
+(devguide `driverFramework.txt:48`).
+
+- **Two counts run when each component starts.** On `Fw.STARTED` a device calls
+  `checkFatalFault(Metrics.incrementDevice(this))` and a proxy ext `checkFatalFault(Metrics.incrementPoint(this))`
+  (`organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:630-633`,
+  `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/point/BProxyExt.java:1055-1059`). The
+  first is the station's global capacity count; over it, the component goes fatal with "Exceeded device limit
+  for …" / "Exceeded point limit for …" (`BDevice.java:471-479`; `point/BProxyExt.java:564-571`, which calls
+  `configFatal`).
+- **The driver's own limits apply only if the network names a feature.** `BDeviceNetwork.getLicenseFeature()`
+  returns `null` by default, and then no driver limit is checked
+  (`organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDeviceNetwork.java:581-589,678-681`).
+  When it returns a feature, the network checks it (`feature.check()`; a failure makes the network fatal with
+  "Unlicensed: …"), and turns every `*.limit` attribute of that feature into a counter, `none` meaning unlimited
+  (`BDeviceNetwork.java:594-655`). The counters are pooled per `vendor:feature` for the whole station, so several
+  network instances share one limit (`BDeviceNetwork.java:613-625`). Feature attributes are name/value pairs of a
+  signed, host-bound license file (devguide `licensing.txt:14,54-58`) `[ev: corpus B14]` `[ev: corpus B301]`.
+- **What is counted.** Each started device whose type is the network's `getDeviceType()` adds to `device.limit`;
+  each started proxy ext whose type is its point device ext's `getProxyExtType()` adds to `point.limit`
+  (`BDevice.java:520-531`; `point/BProxyExt.java:647-658`). The increment is 1; the sub-licence prefix and other
+  increments apply only to a fixed list of Tridium types
+  (`organized/baja/baja/vineflower/com/tridium/sys/metrics/BISubLicenseable.java:17-34,42-56`), so a custom
+  driver's keys are plain `device.limit` / `point.limit`.
+- **The faults.** A key missing from the feature counts as limit 0 and faults "Unlicensed: point.limit"; going
+  over faults "Exceeded point.limit of N" (`BDeviceNetwork.java:678-697`). Both set the component's fatal fault
+  (`BDevice.java:526-531`; `point/BProxyExt.java:653-657`), which only a station restart clears (card above). In
+  `BDeviceNetwork` the counter is only ever incremented (`BDeviceNetwork.java:690`): deleting points does not
+  return headroom before a restart `[INFER]` (no decrement in that file; other driver-rt paths not searched).
+- **Commissioning:** a point or device in fault with one of these causes is a licence problem, not a comm problem;
+  fix the licence or the count, then restart the station.
 
 ---
 
@@ -720,6 +887,32 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   write queue depth and overflow count the same way (the spy page in `types/observability.md` § 2, plus a
   read-only transient slot when a dashboard or alarm must see it `[INFER]`) and baseline it per trunk.
   `[ev: corpus B1336 rows 4,6]` Watch-client leases and 503 back-off: `types/cloud-connector.md` § 10.
+
+---
+
+## 12 · Testing a driver [ev: retro r10-dr1-driver-doctrine Δ7]
+
+The Baja offline boundary decides the tier: a `BComponent` needs a running NRE (`types/moduleTest.md`
+intro), and the network, device, point device ext, proxy ext and comm configs are all components, and
+`BIpAddress` is a `BStruct` (`ndriver/datatypes/BAddress.java:21`). Nothing NDriver-shaped is constructed in a WSL
+JUnit run until it has been proven to load there `[INFER]`. The devkit wizard ships no NDriver test template (its
+only driver test template is the video driver's,
+`organized/devkit/devkit-wb/extracted/gradle/videodriver/BNfooVideoDriverTest.java.vm`).
+
+| What | Tier | How |
+|---|---|---|
+| Frame encode/decode, checksum, escaping, length and bounds checks, error flag, tag extraction | **pure JUnit (WSL)**, `toolbelt/run-pure-test.sh` | Keep the byte layout in a Baja-free codec (`byte[]` ↔ plain fields, as `XCodec` in § 1.10); the `NMessage` / `LinkMessage` classes only delegate. Feed truncated, oversized and resynchronising frames. |
+| Correlation rules: which request a response completes, error → `FAILED_RESPONSE`, wrong sender | pure JUnit on the codec's tag and sender fields; the `NComm` path in a station test | § 1.7, § 1.9 |
+| Ping, read, write, timeout and retry against a device | **`BTestNgStation` + loopback mock** (`types/moduleTest.md` § TEST-G1) | The test opens a `DatagramSocket` / `ServerSocket` on `127.0.0.1` port 0 that answers with canned frames, adds the network and a device pointing at that port under the station's driver container, and waits with `TestHelper.assertWillBeTrue` (§ TEST-G2), never a fixed sleep. A mock that stops answering drives the timeout and DOWN paths. |
+| Proxy-ext status (`readOk` / `readFail`, DOWN propagation, tuning, fatal licence faults) | `BTestNgStation` | assert on the point's `status` and `faultCause` slots |
+| Discovery leaves and the manager | leaf mapping (`updateTarget`, `isExisting`) in `BTestNgStation`; the manager by hand in Workbench | § 1.11 |
+
+- Never point a test at a real device or a site address; the mock binds an ephemeral loopback port, so two
+  suites can run at once. The course's traffic-light simulator (`Lab11 NDriver/trafficLightServer.zip`) is an
+  out-of-process mock for a manual check, not a test fixture `[ev: corpus B1239 §1239.4]`.
+- Each codec test must bite: drop a bounds check or the tag override and see a test go red before calling the
+  suite done (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit).
+- Owed: the scaffold's `srcTest` (DR2) and a station-side loopback example built through the kit loop (DR5).
 
 ---
 
