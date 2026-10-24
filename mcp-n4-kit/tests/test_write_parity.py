@@ -886,6 +886,42 @@ class TestRollbackParity(ParityTestCase):
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
 
+    def test_journal_faults_in_rollback_runs(self):
+        """The journal turns unwritable mid-run: before a component intent, before the relink
+        intent, and before the in-doubt result of a batch whose op 2 of 3 failed."""
+        def scenario(side):
+            side.connect()
+            journal = os.path.join(side.state_dir, "journal.jsonl")
+
+            def lose_after_add(name):  # once the add of `name` is applied, until restored
+                def on_sync(op):
+                    if op["nm"] == "a" and op["n"] == name and not os.path.isdir(journal):
+                        os.rename(journal, journal + ".kept")
+                        os.makedirs(journal, mode=0o700)
+                side.fake.on_sync = on_sync
+
+            def run(bid, after, fail=None):
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                lose_after_add(after)
+                if fail:
+                    fail_nth(side, "syncTo", *fail)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.on_sync = side.fake.hook = None
+                os.rmdir(journal)
+                os.rename(journal + ".kept", journal)
+                return bid
+            nn = remove_group(side, "Jc")
+            bids = [run(removed(side, nn), nn)]  # the top add is sent, Src's intent is not
+            bids.append(run(removed(side, remove_group(side, "Jr")), "Tgt"))  # no relink sent
+            three = [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                     for n in ("A3", "B3", "C3")]
+            craft(side, "af" * 16, three, {FOLDER: "3"})
+            bids.append(run("af" * 16, "A3", fail=(2, (500, b"boom"))))
+            side.call("n4_list_batches")
+            for bid in bids:  # each stays in-doubt
+                side.call("n4_rollback", batch_id=bid)
+        self.assertSameRun(scenario)
+
 
 def save_and(side, then):
     """The FakeStation's save, then `then()` (until the next restore)."""
