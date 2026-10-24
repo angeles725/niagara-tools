@@ -20,7 +20,7 @@ const (
 	Trailing              // <root> [--strict]...: the root as given first; only --strict may follow
 	Leading               // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
 	Anywhere              // [--strict] <root> [--strict]: --strict anywhere; another "-" argument or a second root is an env error naming it (lint-wb-threading)
-	Valued                // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; each Spec.Options option keeps every value; --strict only with Spec.ValuedStrict; any other "-" argument, a missing value or a second root is the usage line alone
+	Valued                // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; each Spec.Options option keeps every value; each Spec.Flags flag sets Args.Flags; --strict only with Spec.ValuedStrict; any other "-" argument, a missing value or a second root is the usage line alone
 	FileFirst             // [--strict] <file> <root>...: only a first --strict is a flag; the file (Spec.Option names it in its error) must be a regular file, then every root is checked; Args.Option is the file
 )
 
@@ -30,14 +30,17 @@ type Args struct {
 	Roots  []string
 	Option string              // the value of Spec.Option (Mode Valued) or the file (Mode FileFirst), "" when absent
 	Values map[string][]string // every value of each repeatable option (Spec.Options), in order
+	Flags  map[string]bool     // each boolean flag (Spec.Flags) given, nil when none
 }
 
 // ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat
-// option keeps every value, and Strict accepts --strict. Under Mode FileFirst, Option is the noun of the
+// option keeps every value, each Flags flag takes no value (given as "--flag=v" it is an unknown option), and
+// Strict accepts --strict. Under Mode FileFirst, Option is the noun of the
 // file operand in its error ("<name>: <Option> not found: <file>"); Repeat and Strict do not apply.
 type ValueOptions struct {
 	Option string
 	Repeat []string
+	Flags  []string
 	Strict bool
 	Named  bool // lint-write-path's named errors and empty-argument root (Spec.ValuedNamed)
 }
@@ -87,6 +90,11 @@ func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) 
 					a.Values[arg] = append(a.Values[arg], args[i+1])
 				}
 				i++
+			case slices.Contains(vo.Flags, arg):
+				if a.Flags == nil {
+					a.Flags = map[string]bool{}
+				}
+				a.Flags[arg] = true
 			case arg == "--strict" && vo.Strict:
 				a.Strict = true
 			case strings.HasPrefix(arg, "-"):

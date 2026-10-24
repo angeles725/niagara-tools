@@ -209,6 +209,9 @@ type Spec struct {
 	// ValuedStrict accepts --strict in Mode Valued.
 	Options      []string
 	ValuedStrict bool
+	// Flags are Mode Valued boolean flags (e.g. "--no-default-allow"), anywhere in the arguments; the rule
+	// reads Args.Flags by implementing Configurer.
+	Flags []string
 	// ValuedNamed gives Mode Valued lint-write-path's named errors instead of the usage line alone: "<name>:
 	// unknown option: <arg>", "<name>: <option> requires a file argument", "<name>: unexpected argument:
 	// <arg>"; and an empty argument leaves the root unset, so a later one takes its place (`[ -z "$ROOT" ]`).
