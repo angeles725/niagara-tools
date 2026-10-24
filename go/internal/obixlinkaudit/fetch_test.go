@@ -70,7 +70,9 @@ func TestGetErrorsAndRedirects(t *testing.T) {
 	}{
 		{"404 fails like curl -f", http.StatusNotFound, "the station answered HTTP 404 Not Found"},
 		{"500 fails", http.StatusInternalServerError, "HTTP 500"},
-		{"302 is not followed (no -L)", http.StatusFound, ""},
+		{"302 is not followed and fails", http.StatusFound, "redirect not followed: HTTP 302 Found"},
+		{"304 fails too", http.StatusNotModified, "redirect not followed: HTTP 304 Not Modified"},
+		{"200 returns the body", http.StatusOK, ""},
 	} {
 		s := newStation(t, false, tc.status, "<obj/>")
 		body, err := get(s.URL+"/obix/config/P/", "u", "secret", false)
@@ -96,5 +98,14 @@ func TestGetVerifiesTheCertificateUnlessInsecure(t *testing.T) {
 	}
 	if body, err := get(s.URL+"/obix/config/P/", "u", "p", true); err != nil || string(body) != "<obj/>" {
 		t.Errorf("--insecure: get = %q, %v", body, err)
+	}
+}
+
+func TestGetCapsTheBody(t *testing.T) {
+	t.Parallel()
+	// Mutation: OLA-bodycap -- an unbounded read lets a hostile or broken station exhaust memory.
+	s := newStation(t, false, http.StatusOK, strings.Repeat("x", maxBody+1))
+	if body, err := get(s.URL+"/obix/config/P/", "u", "p", false); err == nil || !strings.Contains(err.Error(), "response larger than 32 MiB") {
+		t.Errorf("oversized body: %d bytes, err = %v; want the cap error", len(body), err)
 	}
 }

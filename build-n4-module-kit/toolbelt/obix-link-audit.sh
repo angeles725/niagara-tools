@@ -16,9 +16,11 @@
 #                        the FACADE; each facade slot must be linked from its declared RT slot.
 #   --table 1            "OPERATOR config slots (facade → control)": the audited component is
 #                        the CONTROL component; each RT slot must be linked from its facade slot.
-#   --obix               base like https://<station>/obix; GETs <base>/config/<path>/ once (no
-#                        redirect followed, HTTP >= 400 fails, 20 s bound). Credentials come from
-#                        OBIX_USER / OBIX_PASS only (basic auth header, never argv, never printed).
+#   --obix               base like https://<station>/obix; GETs <base>/config/<path>/ once (a 3xx
+#                        or >= 400 status fails, body capped at 32 MiB, 20 s bound). Credentials come
+#                        from OBIX_USER / OBIX_PASS only (basic auth header, never argv, never printed);
+#                        a base with user@, a query/fragment, no host or a non-http(s) scheme, and a
+#                        --component with a .. segment, ?, #, % or a control character are exit 3.
 #                        --insecure accepts a self-signed station certificate. An http:// base warns
 #                        on stderr (clear-text credentials).
 #
