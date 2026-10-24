@@ -253,6 +253,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `report-module.sh`). Without the pin, "never a private copy" is prose and the next quick fix pastes the copy
     back. Review check: the PR names the pinning test and shows an OBSERVED mutation (re-inline one copy, the test
     goes red). `[ev: retro r10-dedupe-pins-measured-cuts Δ1]`
+  - **A table-driven pin gives each row a positive control.** Each row carries a sample its pattern must match,
+    checked before the absence, so a mis-escaped regex cannot pass silently (`tests/kit-packaging-pins.bats` PINS,
+    #463). `[ev: retro r10-close-process-meta-lessons Δ6]`
   - **A dedupe stops at a call site that a generator or lint reads.** Before repeated call sites become a table,
     a loop or a generic runner, grep the kit for a generator, lint or test that matches them literally. Example:
     `toolbelt/gen-lint-index.sh` marks a lint Auto only when a non-comment line of `report-module.sh` invokes
@@ -287,6 +290,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
     word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
     its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
+  - **Fix a lint false positive by modeling the framework, never by suppressing it.** Encode the framework behavior
+    that makes the code correct, with a RED truth fixture (Baja's equal-value skip in `hotwrite.Hot`, #445); an
+    allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
@@ -331,6 +337,9 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   code,** and record the row count and one sample verdict (genuine / false) in the feature doc — the cheapest
   evidence of its noise level, and the place a scope rule (one checkout, not a directory of checkouts) shows up.
   Report counts only in this public repo. `[ev: retro deferred-lints-2026-10-03-close Δ5]`
+- **A lint row is a lead until it is read:** before reporting a row as a defect, read the code at the installed
+  commit and what the framework does there, and report what you read; two round-10 sweep rows were already guarded
+  or named the wrong failure. `[ev: retro r10-close-process-meta-lessons Δ2]`
 - The automated half of the gate is `toolbelt/verify-module.sh <jars…>` (bytecode 52, signature, type resolution; `--target-version` / `--stored` / `--src` opt-in). A jar that has not passed it does not go to a station. `--src` sub-checks: `typecount`, `facets` (raw-number MIN/MAX), `facets-req` (OPERATOR numeric without facets key; setpoint/count-like without UNITS/PRECISION — WARN), `ord-literal` (hardcoded station:|slot:/ string — WARN) [ev: retro campaign8-facets-lint].
 - **Aggregated punch-list before hand-off:** run automatically by `toolbelt/build.sh` at the end of every successful build (pass `--no-report` to skip for inner loops). To run standalone: `toolbelt/report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>] [--profile <ui_profile>] [--legacy] [--wiring-map <file>]` — composes the non-lint checks above per profile artifact (schema-risk per D9a, rc-scan per -ux artifact with the module's `ui_profile` from its BUILD-STATE envelope as `--profile` and `--legacy` for a deployed module not yet restructured, ESLint on -ux rc js, optionally triage-console) plus every lint marked Auto=`yes` in the generated `toolbelt/INDEX.md` (per-artifact or once per module-root, as its usage names) — the index, not this bullet, is the list of what it runs `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`; the link-target-flags lint gets the wiring map (`--wiring-map`, else `docs/wiring-map.md` in or beside the module root), a slot-coverage facade/empty-lexicon FAIL is a FAIL row, and ADVISORY rows (console-only trips) are relayed with their own count, never as PASS or FAIL `[ev: retro panccadia-commissioning-lessons Δ9]` `[ev: retro alarm-console-design Δ3]`; exit 1 = punch-list has FAILs that block hand-off. [ev: retro campaign7-report-module] [ev: retro campaign8-report-integration] [ev: retro report-module-orphan-wiring] [ev: retro build-sh-auto-chain]
 
