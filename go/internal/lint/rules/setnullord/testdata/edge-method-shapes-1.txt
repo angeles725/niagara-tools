@@ -1,8 +1,12 @@
+declared difference (javasrc.Methods, wrapped signatures 2026-10-24): c(int x) wraps its parameter list and
+closes it on the brace line; mb_parse missed that method, javasrc.Methods now reads it, so its
+m.setX(p.getSlotPathOrd()) WARNs at line 9.
 -- args --
 @DIR@/m
 -- want --
 exit 0
 WARN  lint-set-null-ord  @DIR@/m/A.java:4  getSlotPathOrd() passed straight to setX(...) -- null on an unmounted component and BComplex.set NPEs; assign it, guard `if (ord == null || ord.isNull())` (types/issues-and-gotchas.md §H3)
+WARN  lint-set-null-ord  @DIR@/m/A.java:9  getSlotPathOrd() passed straight to setX(...) -- null on an unmounted component and BComplex.set NPEs; assign it, guard `if (ord == null || ord.isNull())` (types/issues-and-gotchas.md §H3)
 -- stderr --
 -- m/A.java --
 class A {

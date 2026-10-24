@@ -83,6 +83,13 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 		if sp.Root != nil {
 			continue
 		}
+		if sp.EmptyOK { // LA5 (pinned by tests/lint-empty-root.bats ER5): an empty root is clean, exit 0, no row in --all
+			var o, e bytes.Buffer
+			if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
+				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+			}
+			continue
+		}
 		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
 		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
 		if sp.EmptyError.Check != "" {
@@ -92,7 +99,9 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		all += row
+		if !sp.ModuleRoot { // --all runs on source roots and leaves a module-root rule out
+			all += row
+		}
 		var o, e bytes.Buffer
 		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)

@@ -1,0 +1,20 @@
+declared difference: the bash `while read cls n m` split a class name holding a blank, so "A B.java"
+printed "A  N=B per-instance config slots but 2 1 status slots"; the port prints the whole name.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  A B  N=2 per-instance config slots but 1 status slots
+-- stderr --
+-- A B.java --
+class X {
+  @NiagaraProperty(
+    name = "aInterval"
+  )
+  @NiagaraProperty(
+    name = "bInterval"
+  )
+  @NiagaraProperty(
+    name = "cActive"
+  )
+}

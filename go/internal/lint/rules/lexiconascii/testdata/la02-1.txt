@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-lexicon-ascii  Mod-rt/module.lexicon:1  non-ASCII: 0xc3 0xb3
+-- stderr --
+-- Mod/Mod-rt/module.lexicon --
+pressure=Presión

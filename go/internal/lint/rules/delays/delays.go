@@ -42,7 +42,7 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	helpers := map[string]bool{}
 	for _, f := range files {
-		positiveHelpers(f.Raw, helpers)
+		positiveHelpers(f, helpers)
 	}
 	var out []lint.Finding
 	for _, f := range files {
@@ -66,42 +66,36 @@ var (
 	}
 )
 
-// positiveHelpers adds to set every `static [final] long <fn>(` method of one file whose body (raw text,
-// braces counted anywhere) holds a strictly-positive floor: Math.max(.., N>=1), a >= 1 comparison, a
-// `< 1 ? 1` ternary or a `return 1;` branch (D2b). A method still open at the end of the file is not one.
-func positiveHelpers(lines []string, set map[string]bool) {
-	fn, body, depth, inMeth := "", "", 0, false
-	adjust := func(ln string) { depth += strings.Count(ln, "{") - strings.Count(ln, "}") }
-	done := func() {
-		for _, r := range floors {
-			if r.MatchString(body) {
-				set[fn] = true
-				break
-			}
-		}
-		fn, body, depth, inMeth = "", "", 0, false
-	}
-	for _, ln := range lines {
-		if !inMeth && helperHead.MatchString(ln) {
-			// The name follows the FIRST `static [final] long` of the line, as awk's match() reads it.
-			loc := helperMods.FindStringIndex(ln)
-			fn = ident.FindString(ln[loc[1]:])
-			inMeth, body, depth = true, ln, 0
-			adjust(ln)
-			if depth == 0 && strings.Contains(ln, "{") {
-				done()
-			}
+// positiveHelpers adds to set every `static [final] long <fn>(` method of one file whose body holds a
+// strictly-positive floor: Math.max(.., N>=1), a >= 1 comparison, a `< 1 ? 1` ternary or a `return 1;`
+// branch (D2b). Bodies are javasrc.Methods over comment-free code (Strip), so a brace in a literal or a
+// comment never moves a body's end and a floor in a comment never counts; a method is a helper when the
+// text from the previous body's end to its opening line (its signature) declares it `static [final] long`.
+func positiveHelpers(f *javasrc.File, set map[string]bool) {
+	code, prev := f.Stripped(), 0
+	for _, m := range f.Methods() {
+		sig := strings.Join(code[max(prev, m.Start-1-sigLines):m.Start], "\n")
+		prev = m.End
+		heads := helperHead.FindAllStringIndex(sig, -1)
+		if len(heads) == 0 {
 			continue
 		}
-		if inMeth {
-			body += "\n" + ln
-			adjust(ln)
-			if depth <= 0 {
-				done()
+		h := sig[heads[len(heads)-1][0]:]
+		if fn := ident.FindString(h[len(helperMods.FindString(h)):]); fn != m.Name {
+			continue
+		}
+		body := strings.Join(code[m.Start-1:m.End], "\n")
+		for _, r := range floors {
+			if r.MatchString(body) {
+				set[m.Name] = true
+				break
 			}
 		}
 	}
 }
+
+// sigLines is how many lines above a body's opening line its signature may start (javasrc's back-scan).
+const sigLines = 20
 
 // num prints an awk number the way awk turns an integral value into a string.
 func num(v float64) string { return strconv.FormatFloat(v, 'f', 0, 64) }
