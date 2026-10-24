@@ -218,7 +218,8 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 101 | 4 | 24 | 28 | 2 | 58 | 43 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **642** | **166** | **56** | **105** | **18** | **345** | **297** |
+| `test_write_parity.py` | 3 | 0 | 0 | 0 | 0 | 0 | 3 |
+| **Total** | **645** | **166** | **56** | **105** | **18** | **345** | **300** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
