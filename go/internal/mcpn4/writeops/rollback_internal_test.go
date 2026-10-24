@@ -481,3 +481,16 @@ func TestTheFrozenCheckTreatsOmittedDefaultsAsEqualAndAReadErrorAsUnread(t *test
 		t.Errorf("read error: %s", pyjson.Repr(gap))
 	}
 }
+
+// One frozen child is echoed as frozen_children_not_restored too.
+func TestAGroupWithOneWritableEchoesItsFrozenChild(t *testing.T) {
+	r := newTRig(t, 200)
+	g := r.st.add(r.st.byH["3"], "One", "baja:Folder")
+	r.st.add(g, "Sp", "control:NumericWritable")
+	_, _, out := r.write(t, "n4_remove_component", obj("parent_ord", tFolder, "name", "One"))
+	_, _, back := r.write(t, "n4_rollback", obj("batch_id", get(out, "batch_id")))
+	if got := pyjson.Repr(get(back, "frozen_children_not_restored")); got !=
+		"[{'path': '"+tFolder+"/One/Sp/proxyExt', 'n': 'proxyExt', 'type': 'control:NullProxyExt'}]" {
+		t.Fatalf("%s", pyjson.Repr(back))
+	}
+}

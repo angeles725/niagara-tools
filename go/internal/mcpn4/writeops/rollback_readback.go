@@ -66,12 +66,9 @@ func rollbackReadback(c plan.Client, _ *pyjson.Object, p *plan.Planned, replies,
 			if good, err = typed(nodes, nn, get(op, "b").(*pyjson.Object)); err != nil {
 				return fail(err)
 			}
-			if len(d.relinks) > 0 {
+			if len(d.relinks) > 0 { // the runs always report; an ambiguous relink is also skipped
 				relinks = d.report
-				if relinks == nil {
-					relinks = obj("restored", 0, "skipped", 1)
-				}
-				good = good && get(relinks, "skipped") == 0 && !pyjson.Truthy(get(relinks, "ambiguous"))
+				good = good && get(relinks, "skipped") == 0
 			}
 			comp, err := childOrd(where, nn)
 			if err != nil {

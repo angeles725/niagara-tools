@@ -95,6 +95,7 @@ for line in sys.stdin:
         continue
     try:
         inverse = tools_write._inverse_list(impl.inverse(p, replies))
+        out["inverse"] = inverse
         out["readback"] = list(impl.readback(client, c["args"], p, replies, inverse))
     except Exception as e:
         out["readback_error"] = describe(e)
@@ -186,6 +187,7 @@ func goRollback(c *pyjson.Object) *pyjson.Object {
 	out.Set("runs", runs)
 	inverse, err := writeops.Rollback.Inverse(p, replies)
 	if err == nil {
+		out.Set("inverse", inverse)
 		var rq, ac, ob any
 		var v string
 		if rq, ac, ob, v, err = writeops.Rollback.Readback(client, args, p, replies, inverse); err == nil {
@@ -300,7 +302,10 @@ func statusBody(v, st string) string {
 
 // grpBody is a remove snapshot: wsAnnotation, Src (with a configured fallback), Tgt, a
 // writable with a configured frozen proxyExt, and Sub/Deep.
-func grpBody(extra string) string {
+func grpBody(extra string) string { return grpBodyWith(extra, "") }
+
+// grpBodyWith adds frozenExtra to the frozen proxyExt's captured slots.
+func grpBodyWith(extra, frozenExtra string) string {
 	return `{"nm": "p", "t": "baja:Folder", "s": [{"nm": "p", "t": "baja:WsAnnotation", "n": "wsAnnotation", "v": "1,2,3"}, ` +
 		`{"nm": "p", "t": "kitControl:NumericConst", "n": "Src", "s": [{"nm": "p", "t": "baja:WsAnnotation", "n": "wsAnnotation", "v": "5,6,7"}, ` +
 		`{"nm": "p", "t": "baja:StatusNumeric", "n": "fallback", "s": [{"nm": "p", "n": "value", "v": "7.0"}, {"nm": "p", "n": "status", "v": "40"}]}]}, ` +
@@ -308,7 +313,7 @@ func grpBody(extra string) string {
 		`{"nm": "p", "t": "control:NumericWritable", "n": "Sp", "s": [{"nm": "p", "t": "control:NullProxyExt", "n": "proxyExt", "s": [` +
 		`{"nm": "p", "t": "baja:String", "n": "tuningPolicyName", "v": "Fast"}, ` +
 		`{"nm": "p", "t": "baja:StatusNumeric", "n": "readValue", "s": [{"nm": "p", "n": "value", "v": "0.0"}, {"nm": "p", "n": "status", "v": "0"}]}, ` +
-		`{"nm": "p", "n": "status", "t": "baja:Status", "v": "0"}, {"nm": "p", "n": "enabled", "t": "baja:Boolean", "v": "false"}]}]}, ` +
+		`{"nm": "p", "n": "status", "t": "baja:Status", "v": "0"}, {"nm": "p", "n": "enabled", "t": "baja:Boolean", "v": "false"}` + frozenExtra + `]}]}, ` +
 		`{"nm": "p", "t": "baja:Folder", "n": "Sub", "s": [{"nm": "p", "t": "kitControl:NumericConst", "n": "Deep"}]}` + extra + `]}`
 }
 
@@ -333,7 +338,7 @@ func grpAfter(nn string, edit map[string]string) string {
 		g + "/Sub@1": `{"": {"h": "sb"}}`,
 		g + "/Sub@2": `{"": {"h": "sb"}, "Deep": {"t": "kitControl:NumericConst"}}`,
 		g + "/Sp@3": `{"": {"h": "sp"}, "proxyExt": {"t": "control:NullProxyExt"}, "proxyExt/tuningPolicyName": {"t": "baja:String", "v": "Fast"}, ` +
-			`"proxyExt/status": {"v": "0;x"}}`,
+			`"proxyExt/status": {"t": "baja:Status", "v": "0;x"}}`,
 	}
 	for k, v := range edit {
 		if v == "" {
@@ -422,6 +427,7 @@ func rollbackCases(t *testing.T) []string {
 			{g + "/Sp@3": `{"": {"h": "sp"}}`},
 			{g + "/Sp@3": `{"proxyExt": {"t": "bacnet:BacnetNumericProxyExt"}, "proxyExt/tuningPolicyName": {"v": "Fast"}}`},
 			{g + "/Sp@3": `{"proxyExt": {"t": "control:NullProxyExt", "v": "x"}, "proxyExt/tuningPolicyName": {"t": "baja:String", "v": "Slow"}, "proxyExt/readValue": {"t": "baja:StatusNumeric"}, "proxyExt/readValue/value": {"v": "2.0"}, "proxyExt/enabled": {"v": "true"}}`},
+			{g + "/Sp@3": `{"proxyExt": {"t": "control:NullProxyExt", "v": "x"}, "proxyExt/tuningPolicyName": {"t": "baja:String", "v": "Fast"}, "proxyExt/status": {"t": "baja:Status", "v": "0"}}`},
 			{g + "@2": `{"Src": {"t": "kitControl:BooleanConst"}, "Src/wsAnnotation": {"v": "5,6,7"}, "Tgt": {"t": "kitControl:NumericConst"}}`},
 			{g + "@2": `{"Src": {"t": "kitControl:NumericConst"}, "Tgt": {"t": "kitControl:NumericConst"}, "Sp": {}, "Sub": {"t": "baja:Folder"}}`},
 			{g + "@2": `{"error": "boom"}`},
@@ -451,6 +457,21 @@ func rollbackCases(t *testing.T) []string {
 		emit(rcase{journal: removeOf(`{"nm": "p", "t": "baja:Folder"}`, "", ft), replies: "[" + r + "]",
 			after: `{"` + fold + `@2": {"Grp": {"t": "baja:Folder"}}}`})
 	}
+	// captured frozen slots the station omits: a struct with its own value, a scalar without one
+	for _, fx := range []string{`, {"nm": "p", "n": "sv", "t": "baja:StatusNumeric", "v": "x", "s": [{"nm": "p", "n": "value", "v": "0.0"}]}`,
+		`, {"nm": "p", "n": "nv", "t": "baja:String"}`, `, {"nm": "p", "n": "value", "v": "0.0"}, {"nm": "p", "n": "q"}`} {
+		emit(rcase{journal: removeOf(grpBodyWith("", fx), ", "+relink, ft), after: grpAfter("Grp", nil)})
+	}
+	// two restored components: both relinked, their nested adds listed (sorted) when one fails
+	two := batch(rbid, "n4_remove_component", `[]`, `[{"nm": "a", "h": "3", "n": "Grp", "b": `+grpBody("")+`}, {"nm": "a", "h": "3", "n": "Alt", "b": `+
+		grpBody("")+`}, `+relink+`]`, ft, `"FakeStation"`, "verified", "")
+	merged := mergeLoads(t, grpAfter("Grp", map[string]string{fold + "@2": `{"": {"h": "3"}, "Grp": {"t": "baja:Folder"}, "Alt": {"t": "baja:Folder"}}`}), grpAfter("Alt", nil))
+	for _, syncs := range []string{``, `[[{"nn": "Src"}], [{"nn": "Tgt"}], {"error": "boom"}]`, `[[], [], [], [], [], [], {"error": "late"}]`} {
+		emit(rcase{journal: two, replies: `[[{"nn": "Grp"}], [{"nn": "Alt"}]]`, after: merged, syncs: syncs})
+	}
+	emit(rcase{journal: two, replies: `[[{"nn": "Grp"}], [{"nn": "Alt"}]]`, after: merged, sscs: `[[[{"v": true, "s": "L"}]], [[{"v": false}]]]`})
+	// a malformed unlinked input recorded before a malformed relink: the relinks are checked first
+	emit(rcase{journal: removeOf(grpBody(""), `, {"unlinked_input": 5}, {"relink": {"y": 1}}`, ft)})
 	// budget, scope and the journal and station checks
 	for _, b := range []struct{ max, executed int }{{9, 0}, {10, 0}, {200, 191}, {200, 190}} {
 		emit(rcase{journal: full, max: b.max, executed: b.executed, after: grpAfter("Grp", nil)})
@@ -573,4 +594,17 @@ func rollbackCases(t *testing.T) []string {
 			after: `{"` + fold + `": ` + after + `}`, replies: `[[]]`})
 	}
 	return out
+}
+
+// mergeLoads is the union of two load maps (JSON object texts); b wins on a shared key.
+func mergeLoads(t *testing.T, a, b string) string {
+	out := mustObj(t, a)
+	o := mustObj(t, b)
+	for _, k := range o.Keys() {
+		if _, ok := out.Get(k); !ok {
+			out.Set(k, get(o, k))
+		}
+	}
+	text, _ := pyjson.Marshal(out, pyjson.Options{})
+	return string(text)
 }

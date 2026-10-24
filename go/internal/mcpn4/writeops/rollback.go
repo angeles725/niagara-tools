@@ -104,8 +104,7 @@ func rollbackPlan(c plan.Client, args *pyjson.Object, w *plan.State, sess *sessi
 		if err != nil {
 			return nil, err
 		}
-		o = copyObj(o)
-		o.Set("b", top)
+		o.Set("b", top) // the view is this plan's own copy of the journal line
 		ops[i], components = o, append(components, specs...)
 	}
 	for _, op := range ops {
@@ -288,7 +287,7 @@ func rollbackNotes(view *pyjson.Object, bid string, relinks, unlinked, component
 				"read-back compares it with the snapshot and, when it differs, lists it "+
 				"in frozen_config_not_restored and the verdict is partial")
 	}
-	if len(own) == 0 || len(own) != len(ops) {
+	if len(own) != len(ops) { // ops is never empty: no add means no inverse either
 		notes = append(notes, "the rollback itself has no automatic inverse for slot restores or removals")
 	}
 	return notes
