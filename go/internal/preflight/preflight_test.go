@@ -17,7 +17,7 @@ type fakeHost struct {
 }
 
 func (f *fakeHost) host() Host {
-	return Host{Output: func(name string, args []string, combined bool) []byte {
+	return Host{Output: func(name string, args []string, combined bool, _ []string) []byte {
 		f.calls = append(f.calls, strings.TrimSpace(filepath.Base(name)+" "+strings.Join(args, " ")))
 		for suffix, o := range f.out {
 			if strings.HasSuffix(name, suffix) {

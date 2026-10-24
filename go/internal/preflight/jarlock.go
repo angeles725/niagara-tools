@@ -27,7 +27,7 @@ func (r *run) jarLock() {
 		r.row("SKIP", "jar-lock", "lsof not in PATH — install lsof to enable jar-lock detection")
 		return
 	}
-	listing := strings.TrimRight(string(r.h.Output(lsof, []string{"-Fn"}, false)), "\n")
+	listing := strings.TrimRight(string(r.h.output(lsof, []string{"-Fn"}, false)), "\n")
 	held := map[string]bool{}
 	for _, ln := range strings.Split(listing, "\n") {
 		held[ln] = true
@@ -55,7 +55,11 @@ func (r *run) jarLock() {
 func (r *run) fsType(path string) string {
 	mf := r.s.Env("N4_FSTYPE_MOUNTS_FILE")
 	if mf == "" || !lint.IsFile(mf) {
-		return field(line(r.h.Output("df", []string{"-T", "--", path}, false), 1), 1)
+		df, ok := lookPath("df", r.s.Env("PATH")) // found as bash finds it; none prints nothing
+		if !ok {
+			return ""
+		}
+		return field(line(r.h.output(df, []string{"-T", "--", path}, false), 1), 1)
 	}
 	b, _ := os.ReadFile(mf)
 	best, typ := 0, ""

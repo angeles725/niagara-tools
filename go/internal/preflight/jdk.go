@@ -55,7 +55,7 @@ func releaseIs8(path string) bool {
 
 // javaIs8 is `[ -x java ] && java -version 2>&1 | grep -q '"1\.8\.'`.
 func (r *run) javaIs8(java string) bool {
-	return syscall.Access(java, 1) == nil && bytes.Contains(r.h.Output(java, []string{"-version"}, true), []byte(`"1.8.`))
+	return syscall.Access(java, 1) == nil && bytes.Contains(r.h.output(java, []string{"-version"}, true), []byte(`"1.8.`))
 }
 
 // globDirs is the bash glob "<dir>"/*/ in the C locale: the non-hidden entries of dir that are

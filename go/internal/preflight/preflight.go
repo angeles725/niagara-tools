@@ -33,22 +33,31 @@ var quotedVersion = regexp.MustCompile(`"[0-9]+\.[0-9]+\.[0-9]+"`)
 
 // Host runs the external commands preflight shells out to (lsof, java -version, df); tests replace it.
 type Host struct {
-	// Output runs name with args and returns its stdout, with stderr interleaved when combined. A
-	// command that cannot start or fails returns whatever it printed, possibly nothing.
-	Output func(name string, args []string, combined bool) []byte
+	// Output runs name with args in the environment env (nil: this process's) and returns its stdout,
+	// with stderr interleaved when combined. A command that cannot start or fails returns whatever it
+	// printed, possibly nothing.
+	Output func(name string, args []string, combined bool, env []string) []byte
+	// Env is the environment of every command (nil: inherited). A golden case sets it to its declared
+	// variables, so a fake lsof or bin/java sees nothing of the test process.
+	Env []string
 }
 
 // System is the Host of the real process.
-var System = Host{Output: func(name string, args []string, combined bool) []byte {
+var System = Host{Output: func(name string, args []string, combined bool, env []string) []byte {
 	var b bytes.Buffer
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = &b
+	cmd.Stdout, cmd.Env = &b, env
 	if combined {
 		cmd.Stderr = &b
 	}
 	_ = cmd.Run() // a failed run is judged by its output, as the bash `... || true` did
 	return b.Bytes()
 }}
+
+// output runs one command through the host in its environment.
+func (h Host) output(name string, args []string, combined bool) []byte {
+	return h.Output(name, args, combined, h.Env)
+}
 
 // Main is preflight with the System host.
 func Main(args []string, s cli.Stdio) int { return Command(System)(args, s) }

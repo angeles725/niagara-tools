@@ -45,12 +45,15 @@ func TestJarLockOneLsofPassOverTheJarSet(t *testing.T) {
 
 func TestJarLockSkipsWithoutAnAnswer(t *testing.T) {
 	d := t.TempDir()
-	mk(t, d, "gr/", "nh/modules/A.jar")
+	mk(t, d, "gr/", "nh/modules/A.jar", "bin/df")
+	if err := os.Chmod(d+"/bin/df", 0o755); err != nil {
+		t.Fatal(err)
+	}
 	skip9p := "SKIP  jar-lock      niagara_home is on a 9p/drvfs mount (WSL) — lsof cannot see a Windows-side lock here"
 	for _, c := range []struct{ mounts, df, want string }{
 		{"9p / 9p rw 0 0\next4 " + d + " ext4\n9p " + d + "/n 9p rw 0 0\n", "", skip9p}, // longest prefix, as a string
 		{"ext4 / ext4\ndrvfs " + d + " drvfs rw 0 0\n", "", skip9p},
-		{"", "Filesystem Type 1K-blocks\nC:\\ 9p 1 1 1 1% " + d + "\n", skip9p}, // no mounts file: df -T
+		{"", "Filesystem Type 1K-blocks\nC:\\ 9p 1 1 1 1% " + d + "\n", skip9p}, // no mounts file: df -T, found in PATH
 		{"ext4 / ext4 rw 0 0\n", "", "SKIP  jar-lock      lsof not in PATH — install lsof to enable jar-lock detection"},
 	} {
 		f := &fakeHost{out: map[string]string{"df": c.df}}
@@ -75,5 +78,23 @@ func TestLookPathFallsBackToANonExecutableFile(t *testing.T) {
 		if got, ok := lookPath("lsof", path); got != want || ok != (want != "") {
 			t.Errorf("lookPath(%q) = %q %v, want %q", path, got, ok, want)
 		}
+	}
+}
+
+// TestCommandsSeeOnlyTheDeclaredEnvironment: the System host runs lsof in Host.Env, not in the test
+// process's environment: the fake lists the jar only when JAR is declared and HOME is not.
+func TestCommandsSeeOnlyTheDeclaredEnvironment(t *testing.T) {
+	d := t.TempDir()
+	mk(t, d, "gr/", "nh/modules/A.jar", "mounts=ext4 / ext4\n", "bin/lsof=#!/bin/sh\n[ -z \"$HOME\" ] && printf 'n%s\\n' \"$JAR\"\n")
+	if err := os.Chmod(d+"/bin/lsof", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", d)
+	env := []string{"PATH=" + d + "/bin", "JAR=" + d + "/nh/modules/A.jar"}
+	h := Host{Output: System.Output, Env: env}
+	vars := map[string]string{"PATH": d + "/bin", "N4_FSTYPE_MOUNTS_FILE": d + "/mounts"}
+	want := "WARN  jar-lock      jars held by a process (station running?): A.jar\n"
+	if _, out, _ := pf(h, vars, "--jvm-dir", d, d+"/nh", d+"/gr"); !strings.Contains(out, want) {
+		t.Errorf("rows\n%s\nwant %q: the fake saw the test process's environment", out, want)
 	}
 }
