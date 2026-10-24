@@ -1,0 +1,16 @@
+-- args --
+--max-class
+0
+@DIR@/
+-- want --
+exit 0
+WARN  lint-size  @DIR@/P.java:2  class P has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}

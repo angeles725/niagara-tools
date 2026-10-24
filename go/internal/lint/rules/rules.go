@@ -26,6 +26,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sessionstore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
@@ -60,6 +61,7 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		size.Spec(),
 		wsplacement.Spec(),
 		recoverypath.Spec(),
 		licensegate.Spec(),

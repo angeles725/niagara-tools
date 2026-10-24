@@ -1,0 +1,17 @@
+-- args --
+--strict
+--max-method
+1
+@DIR@
+-- want --
+exit 1
+WARN  lint-size  @DIR@/P.java:3  method a() in pure class P spans 4 lines (> 1) -- split into named phase methods (types/logic.md § Pure-class extraction)
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
