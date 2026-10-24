@@ -1,0 +1,8 @@
+-- args --
+
+-- want --
+exit 3
+-- stderr --
+lint-servlet: not a directory: 
+-- m/A.java --
+class A {}

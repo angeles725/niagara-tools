@@ -46,6 +46,13 @@ rule's rows stay contiguous.
    beside it (reference: `rules/nullcontext`).
    Severity `Advisory` prints `ADVISORY` and, like `Pass`, never affects the exit code, `--strict` and
    `--all` included: a note that must not turn into a failure.
+   Severity `Info` prints `INFO` and never affects the exit code either (lint-servlet's information rows).
+   `Spec.StrictFails` prints the rule's WARN rows as FAIL under `--strict`, for a bash lint that rewrote its
+   severity column (`v = strict ? "FAIL" : "WARN"`); the exit code is 1 either way. `Spec.RelPaths` prints a
+   per-file rule's row path as `${file#"$root/"}` (relative to the root; a root given with a trailing `/`
+   keeps the whole path, as the expansion does). `Mode` `Trailing` parses `<root> [--strict]...`: the first
+   argument is the root as given, every later one must be `--strict`, and anything else prints
+   `<lint>: unknown option: <arg>` (exit 3) before the root is checked (reference: `rules/servlet`).
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk

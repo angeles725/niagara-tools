@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  cache-nofinger  X.java:8  Cache-Control max-age>0 on rc asset without fingerprint
+-- stderr --
+-- m/X.java --
+class X extends BWebServlet {
+  void doGet(WebOp op) {
+    rsp.setHeader("Cache-Control", "max-age=0");
+    rsp.setHeader("Cache-Control", "no-cache");
+    rsp.setHeader("Cache-Control",
+        "max-age=60");
+    rsp.setHeader("cache-control", "max-age=60");
+    rsp.setHeader("Cache-Control", "max-age=09"); rsp.setHeader("Cache-Control", "max-age=5");
+  }
+}

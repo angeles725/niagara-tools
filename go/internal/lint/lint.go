@@ -22,6 +22,7 @@ const (
 	Fail                     // a failed check: exit 1 with or without --strict
 	Pass                     // a check that held (rows print PASS); never affects the exit code
 	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
+	Info                     // information only (rows print INFO); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -32,6 +33,8 @@ func (s Severity) String() string {
 		return "PASS"
 	case Advisory:
 		return "ADVISORY"
+	case Info:
+		return "INFO"
 	}
 	return "WARN"
 }
@@ -135,6 +138,13 @@ type Spec struct {
 	// BareUsage prints only Usage on an unknown flag (no "<lint>: unknown flag: <flag>" line), as a bash
 	// lint with its own `-*) usage; exit 3` case does; the exit code stays UsageExit.
 	BareUsage bool
+	// StrictFails prints a WARN row as FAIL under --strict, for a bash lint that rewrote the severity
+	// column itself (`v = strict ? "FAIL" : "WARN"`). The exit code is the same either way (1).
+	StrictFails bool
+	// RelPaths prints a per-file rule's row path with the "<root>/" prefix removed, as a bash lint that
+	// printed ${file#"$root/"} did (a root given with a trailing "/" keeps the whole path, as there). Env
+	// lines on stderr keep the walk path.
+	RelPaths bool
 }
 
 // EmptyRow is the ERROR row of Spec.EmptyError.
