@@ -1,11 +1,39 @@
 package journal
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
+
+// ListBatches is n4_list_batches' reply: the total and the newest limit batches; when a line is
+// unreadable (issue #448), a sentence saying the list is incomplete and one row per such line.
+func (j *Journal) ListBatches(limit int) (*pyjson.Object, error) {
+	views, bad, err := j.Scan()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := Batches(views)
+	if err != nil {
+		return nil, err
+	}
+	out := pyjson.NewObject()
+	out.Set("total", len(rows))
+	out.Set("batches", rows[:min(max(limit, 0), len(rows))])
+	if len(bad) > 0 {
+		out.Set("incomplete", fmt.Sprintf("this list is incomplete: %d journal line(s) are unreadable; a batch "+
+			"recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may "+
+			"belong to", len(bad)))
+		lines := make([]any, len(bad))
+		for i, u := range bad {
+			lines[i] = fmt.Sprintf("unreadable journal line %d: %s", u.Line, u.Reason)
+		}
+		out.Set("unreadable", lines)
+	}
+	return out, nil
+}
 
 // Batches is the batch list of n4_list_batches (tools_read.py): one summary per view, newest
 // first, with the ids of the batches recorded as rolling it back.
