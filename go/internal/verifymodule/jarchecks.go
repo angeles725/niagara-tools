@@ -20,6 +20,10 @@ func (j *jarFile) classes() []string {
 	return out
 }
 
+// bytecode reads each class entry's CAFEBABE magic and two-byte major (jarversion.ClassMajor). The bash
+// read byte 7 alone with od, so a major of 308 passed as 52, and so did an entry without the magic; it also
+// named a class shorter than 6 bytes on stderr (od's error), which this does not (declared difference,
+// truth-bytecode-magic and edge-bytecode-mixed).
 func (r *run) bytecode() bool {
 	n, bad, mr, first, ign := 0, 0, 0, "", ""
 	for _, c := range r.jar.classes() {
@@ -28,20 +32,22 @@ func (r *run) bytecode() bool {
 			continue
 		}
 		n++
-		// od -t u1 -j6 -N2 | awk '{print $2}': byte 7 alone, empty for an entry shorter than 8 bytes; od
-		// names one too short to skip 6 bytes on stderr.
-		m := ""
 		h, err := jarversion.Head(r.jar.first[c])
-		if err != nil || len(h) < 6 {
-			fmt.Fprintln(r.s.Err, "od: cannot skip past end of combined input")
-		} else if len(h) >= 8 {
-			m = itoa(int(h[7]))
+		major, isClass := jarversion.ClassMajor(h)
+		if err == nil && isClass && major == jarversion.Java8Major {
+			continue
 		}
-		if m != "52" {
-			bad++
-			if first == "" {
-				first = c + " major=" + m
-			}
+		bad++
+		if first != "" {
+			continue
+		}
+		switch {
+		case err != nil:
+			first = c + " unreadable (" + jarversion.Reason(err) + ")"
+		case !isClass:
+			first = c + " not a class file (no CAFEBABE header)"
+		default:
+			first = c + " major=" + itoa(major)
 		}
 	}
 	if mr != 0 {
