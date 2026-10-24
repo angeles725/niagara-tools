@@ -27,10 +27,16 @@ type Element struct {
 
 // Doc is one well-formed document.
 type Doc struct {
-	Path  string
-	data  []byte
-	elems []Element
+	Path   string
+	data   []byte
+	elems  []Element
+	warns  []*Error
+	masked bool // data holds nulMark for U+0000 (nul.go)
 }
+
+// Warnings are what Doc reads although XML 1.0 forbids it, because Niagara reads it: at most one per kind, at
+// its first occurrence. Every tool that reads a .bog prints them; none is silent.
+func (d *Doc) Warnings() []*Error { return d.warns }
 
 // Elements returns every element in document order; index i is the i-th start tag.
 func (d *Doc) Elements() []Element { return d.elems }
@@ -55,20 +61,32 @@ func Parse(path string, data []byte) (*Doc, error) {
 	if len(text) != len(data) {
 		p.pos = newPositions(text)
 	}
-	data = text
-	elems, err := p.run(data)
-	if err != nil {
+	if err := p.mask(text); err != nil {
 		return nil, err
 	}
-	return &Doc{Path: path, data: data, elems: elems}, nil
+	elems, err := p.run(p.text)
+	if warn, err := p.nulVerdict(err); err != nil {
+		return nil, err
+	} else if warn != nil {
+		return &Doc{Path: path, data: p.text, elems: elems, warns: []*Error{warn}, masked: true}, nil
+	}
+	return &Doc{Path: path, data: p.text, elems: elems}, nil
 }
 
 type parser struct {
-	path string
-	pos  positions
+	path  string
+	pos   positions // of the text as written; at maps an offset of the masked text onto it
+	text  []byte    // what run reads: the text with U+0000 masked (nul.go)
+	marks []mark
+	root  string // the first start tag's name
 }
 
 func (p *parser) fail(off int64, format string, args ...any) error {
+	return p.failAt(p.unmasked(off), format, args...)
+}
+
+// failAt is fail for an offset of the text as written.
+func (p *parser) failAt(off int64, format string, args ...any) *Error {
 	line, col := p.pos.at(off)
 	return &Error{Path: p.path, Line: line, Col: col, Msg: fmt.Sprintf(format, args...)}
 }

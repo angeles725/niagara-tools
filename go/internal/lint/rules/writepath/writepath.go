@@ -64,7 +64,7 @@ func (r *rule) CheckRoot(root string) ([]lint.Finding, error) {
 	for slot := range extra {
 		covered[slot] = true
 	}
-	var out []lint.Finding
+	out := s.bogWarns
 	lists := make([][]string, len(srcs))
 	for i, src := range srcs {
 		files, err := s.list(src, "")
@@ -110,8 +110,9 @@ func Spec() lint.Spec {
 // scan is one run over a module root; files caches each Java file, read and stripped once (the
 // matrix-root walk and a profile walk list the same files).
 type scan struct {
-	root  string
-	files map[string]*javasrc.File
+	root     string
+	files    map[string]*javasrc.File
+	bogWarns []lint.Finding // the --bog's xmlsrc warnings
 }
 
 func (s *scan) errorRow(reason string) error {

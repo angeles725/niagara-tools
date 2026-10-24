@@ -14,6 +14,7 @@ import (
 type stationCheck struct{ id, check string }
 
 var stationChecks = []stationCheck{
+	{"XML", "bog-xml"}, // what the bog holds that Niagara reads and XML 1.0 forbids (xmlsrc.Doc.Warnings)
 	{"CHECK11", "proxy-link-safety"},
 	{"CHECK13", "station-logic:relay-double-source"},
 	{"CHECK14", "station-logic:own-output-unlinked"},
@@ -25,7 +26,7 @@ var stationChecks = []stationCheck{
 	{"CHECK20", "numeric-to-bool-direct"},
 }
 
-// stationChecks runs bog-audit in process on the bog and relays its CHECK11 and CHECK13-20 rows, check by check
+// stationChecks runs bog-audit in process on the bog and relays its XML, CHECK11 and CHECK13-20 rows, check by check
 // in that order; a bog-audit exit 3 is one SKIP row.
 func (r *report) stationChecks(o options) {
 	args := []string{o.bog, "--module", o.mod}
