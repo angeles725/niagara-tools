@@ -2,8 +2,10 @@
 // parent (an add( call whose second argument is a creation expression or a local assigned from one) and
 // never mentions wsAnnotation, BWsAnnotation or WsGrid, so Workbench staggers the child onto its siblings.
 // Port of the awk in toolbelt/lint-ws-placement.sh (the wrapper keeps the user-facing contract and its
-// header documents the rule and its mutation pins). Code is the javasrc Strip view (comments blanked,
-// literal text kept) cut into javasrc Methods; matching keeps gawk's POSIX leftmost-longest semantics.
+// header documents the rule and its mutation pins). Code is the javasrc Strip view (comments blanked)
+// cut into javasrc Methods; add( calls and local assignments are matched with literal contents masked
+// (javasrc.MaskLiterals), so a quoted add is not code, while the guard words and a literal argument are
+// read in the Strip text. Matching keeps gawk's POSIX leftmost-longest semantics.
 package wsplacement
 
 import (
@@ -60,17 +62,19 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 
 // Check WARNs once per add( line of an unguarded method whose second argument is a new component.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code := f.Stripped()
+	text := f.Stripped()
+	mask := javasrc.MaskLiterals(text)
 	var out []lint.Finding
 	for _, m := range f.Methods() {
-		lines := code[m.Start-1 : m.End]
+		lines, code := text[m.Start-1:m.End], mask[m.Start-1:m.End]
 		if guarded(lines) {
 			continue
 		}
-		made := locals(lines)
-		for k, c := range lines {
-			joined := strings.Join(lines[k:min(k+6, len(lines))], " ")
-			if a1, what, ok := firstAdd(c, joined, made); ok {
+		made := locals(code)
+		for k, c := range code {
+			end := min(k+6, len(lines))
+			joined, joinedCode := strings.Join(lines[k:end], " "), strings.Join(code[k:end], " ")
+			if a1, what, ok := firstAdd(c, joined, joinedCode, made); ok {
 				out = append(out, lint.Finding{Line: m.Start + k, Msg: "add(" + a1 + ", " + what + ") in " + m.Name + "()" + advice})
 			}
 		}
@@ -107,16 +111,17 @@ func locals(lines []string) map[string]string {
 	return made
 }
 
-// firstAdd reads the add( calls of line c (arguments from joined, c and the next lines) and returns the
-// first one adding a new component: its trimmed first argument and what the second creates.
-func firstAdd(c, joined string, made map[string]string) (a1, what string, ok bool) {
+// firstAdd reads the add( calls of masked line c (arguments from joined, c and the next lines, split where
+// joinedCode, its masked copy, has commas and parentheses) and returns the first one adding a new
+// component: its trimmed first argument and what the second creates.
+func firstAdd(c, joined, joinedCode string, made map[string]string) (a1, what string, ok bool) {
 	for pos := 0; ; {
 		loc := addCall.FindStringIndex(c[pos:])
 		if loc == nil {
 			return "", "", false
 		}
 		pos += loc[1]
-		args, closed := splitArgs(joined, pos)
+		args, closed := splitArgs(joined, joinedCode, pos)
 		if !closed || len(args) < 2 || numeric.MatchString(linescan.Trimmed(args[0])) {
 			continue
 		}
@@ -131,19 +136,20 @@ func firstAdd(c, joined string, made map[string]string) (a1, what string, ok boo
 	}
 }
 
-// splitArgs reads the argument list that opens just before s[from]: its top-level arguments (untrimmed),
-// split at depth-0 commas outside "..." and '...' (\ escapes honoured), and whether its ")" was found.
-func splitArgs(s string, from int) (args []string, closed bool) {
+// splitArgs reads the argument list that opens just before text[from]: its top-level arguments (untrimmed
+// text), split at the depth-0 commas of code (text with its literal contents masked, the same length)
+// outside "..." and '...' (\ escapes honoured), and whether its ")" was found.
+func splitArgs(text, code string, from int) (args []string, closed bool) {
 	depth, quote := 0, byte(0)
 	var cur strings.Builder
-	for j := from; j < len(s); j++ {
-		c := s[j]
+	for j := from; j < len(code); j++ {
+		c := code[j]
 		switch {
 		case quote != 0:
-			cur.WriteByte(c)
-			if c == '\\' && j+1 < len(s) {
+			cur.WriteByte(text[j])
+			if c == '\\' && j+1 < len(code) {
 				j++
-				cur.WriteByte(s[j])
+				cur.WriteByte(text[j])
 			} else if c == quote {
 				quote = 0
 			}
@@ -165,7 +171,7 @@ func splitArgs(s string, from int) (args []string, closed bool) {
 			cur.Reset()
 			continue
 		}
-		cur.WriteByte(c)
+		cur.WriteByte(text[j])
 	}
 	return args, false
 }

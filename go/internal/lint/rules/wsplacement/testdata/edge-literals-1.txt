@@ -1,11 +1,10 @@
+declared difference (truth fix T1, truth-literals-1): the quoted add (lit1), the quoted assignment (lit2) and
+the add inside a text block (block) are literal text, not code, so only lit3 WARNs.
 -- args --
 @DIR@
 -- want --
 exit 0
-WARN  lint-ws-placement  @DIR@/BLit.java:4  add(x, new BFolder()) in lit1() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
-WARN  lint-ws-placement  @DIR@/BLit.java:8  add("f", f = new BFolder()) in lit2() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BLit.java:12  add("ok", new BFolder()) in lit3() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
-WARN  lint-ws-placement  @DIR@/BLit.java:20  add("z", new BFolder()) in block() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 -- stderr --
 -- BLit.java --
 package com.x;

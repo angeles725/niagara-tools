@@ -43,6 +43,9 @@
 # `n4lint lint-ws-placement <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # Declared difference from the bash lint (port 2026-10-24): an empty root among several stops the scan at its
 # K20 row (the engine contract); the bash lint went on to the later roots. The exit code (3) is the same.
+# Truth fix T1 (2026-10-24): add( calls and `<local> = <creation>` are matched with string, char and text-block
+# contents masked (go/internal/javasrc MaskLiterals), so a quoted add is not code; the guard words and a
+# literal argument's text are still read with literals kept.
 # VCS-free by design (kit-links L2).
 # Mutation: WSP1 -- dropping the creation rule passes parent.add(name, create(type)) clean
 # Mutation: WSP1-local -- dropping the local tracking passes `BFoo f = new BFoo(); add("f", f);` clean
@@ -51,6 +54,7 @@
 # Mutation: WSP-list -- reading the last argument of a one-argument add WARNs list.add(new BFoo())
 # Mutation: WSP-value -- dropping the value-type exclusion WARNs add("st", new BStatusNumeric())
 # Mutation: WSP-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
+# Mutation: WSP-literal -- matching the unmasked Strip view WARNs log("add(x, new BFolder())")
 # Mutation: WSP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
