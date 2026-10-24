@@ -1,0 +1,23 @@
+-- args --
+@DIR@/clean
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/clean  no write-path-matrix.md found (looked in @DIR@/clean/docs/write-path-matrix.md, @DIR@/docs/write-path-matrix.md)
+-- stderr --
+-- .git/HEAD --
+x
+-- clean/DemoPan-rt/module-include.xml --
+<types>
+  <type class="com.x.BFoo" name="Foo"/>
+</types>
+-- clean/DemoPan-rt/module.lexicon --
+# lexicon
+Foo.displayName=Foo
+-- clean/DemoPan-rt/module.palette --
+<p t="b:Folder">
+  <p n="Foo" t="x:Foo"/>
+</p>
+-- clean/DemoPan-rt/src/com/x/BFoo.java --
+package com.x;
+import javax.baja.sys.*;
+public final class BFoo extends BComponent { private int n; public void bump(){ n++; } }

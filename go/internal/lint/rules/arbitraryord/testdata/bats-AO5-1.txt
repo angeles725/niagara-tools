@@ -1,0 +1,10 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(){
+  // lint-arbitrary-ord: reviewed ord assembled from a code-controlled constant prefix
+  BOrd.make(tmpOrd);
+} }

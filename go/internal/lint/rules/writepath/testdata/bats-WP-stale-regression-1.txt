@@ -1,0 +1,16 @@
+-- args --
+@DIR@/14/staleok
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- 14/staleok/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- 14/staleok/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

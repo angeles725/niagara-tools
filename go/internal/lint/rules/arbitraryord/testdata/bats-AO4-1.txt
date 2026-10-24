@@ -1,0 +1,8 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(){ BOrd.make(tmpOrd); // lint-arbitrary-ord: reviewed backup file name built from a sanitized internal string
+} }

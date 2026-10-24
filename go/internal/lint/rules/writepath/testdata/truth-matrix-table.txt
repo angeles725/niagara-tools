@@ -1,0 +1,19 @@
+declared difference: T1: a matrix file with no table row (a heading, a stub, a blank line) no longer stops the walk-up; the bash grep -q '^\|' matched any line
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- docs/write-path-matrix.md --
+# M
+| Slot | W |
+|--|--|
+| `setpoint` | D |
+-- M/docs/write-path-matrix.md --
+# Write-path matrix
+See the repository matrix.
+-- M/src/com/x/B.java --
+@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)

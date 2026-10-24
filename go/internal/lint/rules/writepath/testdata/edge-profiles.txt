@@ -1,0 +1,34 @@
+-- args --
+@DIR@/prof
+-- want --
+exit 1
+FAIL  lint-write-path  .h-rt  slot shrt: no matrix row
+FAIL  lint-write-path  B-rt  slot srt: no matrix row
+FAIL  lint-write-path  C-wb  slot swb: no matrix row
+FAIL  lint-write-path  a-ux  slot saux: no matrix row
+FAIL  lint-write-path  d-se  slot sdse: no matrix row
+STALE  lint-write-path  @DIR@/prof/docs/write-path-matrix.md:4  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- prof/.h-rt/src/com/x/B.java --
+@NiagaraProperty(name="shrt", flags=Flags.OPERATOR)
+-- prof/B-rt/src/com/x/B.java --
+@NiagaraProperty(name="srt", flags=Flags.OPERATOR)
+-- prof/C-wb/src/com/x/B.java --
+@NiagaraProperty(name="swb", flags=Flags.OPERATOR)
+-- prof/a-ux/src/com/x/B.java --
+@NiagaraProperty(name="saux", flags=Flags.OPERATOR)
+-- prof/d-se/src/com/x/B.java --
+@NiagaraProperty(name="sdse", flags=Flags.OPERATOR)
+-- prof/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- prof/e-doc/src/com/x/B.java --
+@NiagaraProperty(name="sedoc", flags=Flags.OPERATOR)
+-- prof/f-rt/README --
+no src
+-- prof/g-rtx/src/B.java --
+@NiagaraProperty(name="sg", flags=Flags.OPERATOR)

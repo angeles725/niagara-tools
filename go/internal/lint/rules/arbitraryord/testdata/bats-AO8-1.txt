@@ -1,0 +1,8 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/repo/M/src/A.java:1  BOrd.make from a variable: class A { void f(String q){ BOrd.make(q); log("see http://x lint-arbitrary-ord: reviewed not a comment"); } }
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(String q){ BOrd.make(q); log("see http://x lint-arbitrary-ord: reviewed not a comment"); } }

@@ -442,3 +442,51 @@ MD
   assert_symroot_same "$repo/ColdRoomPan" "$LW" "$repo/ColdRoomPan"
   [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"fanMode"* ]]
 }
+
+# Truth fix T1 (r10 Go port): a matrix is "found" only when it has a table row. The bash walk-up used
+# `grep -q '^\|'`, which in GNU BRE is "^ or empty" and matches ANY line, so a heading-only
+# docs/write-path-matrix.md in the module stopped the walk and every OPERATOR slot FAILed against it.
+@test "WP-matrix-table: a module matrix with no table row is skipped and the walk reaches the real one" {
+  # Mutation: WP-matrix-table -- accepting any non-empty file stops at the heading-only matrix (FAIL setpoint).
+  r="$BATS_TEST_TMPDIR/mt"; mkdir -p "$r/.git" "$r/docs" "$r/M/docs" "$r/M/src/com/x"
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
+  printf '# M\n| Slot | W |\n|--|--|\n| `setpoint` | D |\n' > "$r/docs/write-path-matrix.md"
+  printf '# Write-path matrix\nSee the repository matrix.\n' > "$r/M/docs/write-path-matrix.md"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$r/M/src/com/x/B.java"
+  run "$LW" --strict "$r/M"
+  [[ "$output" != *"FAIL"* ]]
+  [ "$status" -eq 0 ]
+}
+
+# Truth fix T2: the per-row STALE pass read the matrix with `while read`, which drops a last line that
+# has no newline, so a stale last row was never reported.
+@test "WP-stale-noeol: a stale last matrix row without a trailing newline is still STALE" {
+  # Mutation: WP-stale-noeol -- skipping an unterminated last line hides its STALE row.
+  d="$BATS_TEST_TMPDIR/noeol"; mkdir -p "$d/src/com/x" "$d/docs"
+  printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$d/src/com/x/B.java"
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
+  printf '| `setpoint` | D |\n| `ghostLast` | D |' > "$d/docs/write-path-matrix.md"
+  run "$LW" --strict "$d"
+  [[ "$output" == *"STALE"*"ghostLast"* ]]
+  [ "$status" -eq 1 ]
+}
+
+# Truth fix T3: the OPERATOR scanner read raw lines, so a commented-out @NiagaraProperty or an OPERATOR
+# inside a comment demanded a matrix row, and a "(" inside a literal kept the annotation open, swallowing
+# the next annotations (and, across one `xargs awk`, the next files).
+@test "WP-scan-code: comments are not write paths and a literal paren does not swallow the next slot" {
+  # Mutation: WP-scan-code -- scanning raw lines FAILs commentedOut/opInComment and loses afterParen.
+  d="$BATS_TEST_TMPDIR/scancode"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/B.java" <<'JAVA'
+// @NiagaraProperty(name="commentedOut", flags=Flags.OPERATOR)
+@NiagaraProperty(name="opInComment", flags=Flags.SUMMARY /* not OPERATOR */)
+@NiagaraProperty(name="label", type="String", defaultValue="BString.make(\"(\")", flags=Flags.SUMMARY)
+@NiagaraProperty(name="afterParen", flags=Flags.OPERATOR)
+JAVA
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
+  printf '| `label` | D |\n| `opInComment` | D |\n| `commentedOut` [concept] | D |\n' > "$d/docs/write-path-matrix.md"
+  run "$LW" "$d"
+  [[ "$output" == *"FAIL"*"afterParen"* ]]
+  [[ "$output" != *"commentedOut"* && "$output" != *"slot opInComment"* ]]
+  [ "$status" -eq 1 ]
+}

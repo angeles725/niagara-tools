@@ -1,0 +1,183 @@
+// Package writepath is lint-write-path (toolbelt/lint-write-path.sh): every @NiagaraProperty with
+// Flags.OPERATOR (or "o") under a module root needs a row in docs/write-path-matrix.md (FAIL), every
+// matrix row names a source slot (STALE) or, marked [concept], none (DRIFT). It is a lint.RootRule and a lint.Configurer (its --bog and --matrix values): it
+// reads its module root itself, walks up to the matrix and, with --matrix, reads the given one instead.
+package writepath
+
+import (
+	"fmt"
+	"os"
+	"sort"
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
+)
+
+const id = "lint-write-path"
+
+// rule holds the --bog and --matrix values of its run (Configure); "" when not given.
+type rule struct{ bog, matrix string }
+
+func (*rule) ID() string              { return id }
+func (*rule) Severity() lint.Severity { return lint.Fail }
+
+// Configure is the rule with the last --bog and --matrix values (Mode Valued: each is a repeatable option,
+// and the bash loop kept the last one given).
+func (*rule) Configure(a lint.Args) (lint.Configured, error) {
+	return &rule{bog: last(a.Values["--bog"]), matrix: last(a.Values["--matrix"])}, nil
+}
+
+func last(vs []string) string {
+	if len(vs) == 0 {
+		return ""
+	}
+	return vs[len(vs)-1]
+}
+
+// CheckRoot prints the bash lint's rows in its order: FAIL per profile, the audit-call WARN rows per
+// profile, then STALE/DRIFT per matrix line. Its env errors are stdout rows (lint.RowError).
+func (r *rule) CheckRoot(root string) ([]lint.Finding, error) {
+	s := &scan{root: root, files: map[string]*javasrc.File{}}
+	m, err := s.matrix(r.matrix)
+	if err != nil {
+		return nil, err
+	}
+	matrixJava, err := s.list(lint.Dirname(lint.Dirname(m.path)), "build")
+	if err != nil {
+		return nil, err
+	}
+	covered, err := s.names(matrixJava)
+	if err != nil {
+		return nil, err
+	}
+	profiles, srcs := s.targets()
+	if len(srcs) == 0 {
+		return nil, s.errorRow("no src found")
+	}
+	rows := m.slots()
+	extra, err := s.bogSlots(r.bog)
+	if err != nil {
+		return nil, err
+	}
+	for slot := range extra {
+		covered[slot] = true
+	}
+	var out []lint.Finding
+	lists := make([][]string, len(srcs))
+	for i, src := range srcs {
+		files, err := s.list(src, "")
+		if err != nil {
+			return out, err
+		}
+		lists[i] = files
+		slots, err := s.operatorSlots(files)
+		if err != nil {
+			return out, err
+		}
+		if len(slots) > 0 && len(extra) > 0 { // bog links target runtime slots: only a profile that has some
+			set := map[string]bool{}
+			for _, slot := range append(slots, sorted(extra)...) {
+				set[slot] = true
+			}
+			slots = sorted(set)
+		}
+		for _, slot := range slots {
+			if !rows[slot] {
+				out = append(out, lint.Finding{Path: profiles[i], Msg: "slot " + slot + ": no matrix row"})
+			}
+		}
+	}
+	for _, files := range lists {
+		rows, err := s.audit(files)
+		if out = append(out, rows...); err != nil {
+			return out, err
+		}
+	}
+	return append(out, m.stale(covered)...), nil
+}
+
+// Spec is lint-write-path's contract: <module-root> [--bog <config.bog>] [--matrix <path>] [--strict] in any
+// order; FAIL rows "<profile>  slot <name>: no matrix row", STALE/DRIFT "<matrix>:<line>  slot <name>: ...";
+// exit 1 on a FAIL (or a STALE/DRIFT under --strict), 3 on a usage or env error.
+func Spec() lint.Spec {
+	return lint.Spec{Root: &rule{}, Mode: lint.Valued, Options: []string{"--bog", "--matrix"}, ValuedStrict: true,
+		ValuedNamed: true, BarePathRow: true,
+		Usage: "usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>] [--strict]"}
+}
+
+// scan is one run over a module root; files caches each Java file, read and stripped once (the
+// matrix-root walk and a profile walk list the same files).
+type scan struct {
+	root  string
+	files map[string]*javasrc.File
+}
+
+func (s *scan) errorRow(reason string) error {
+	return &lint.RowError{Row: id + "  ERROR  " + s.root + "  " + reason}
+}
+
+// list is list_java: every *.java under dir (dot, *-worktrees and prune sub-directories pruned), or the
+// ERROR row of a walk that could not read a directory (fail closed: a skipped file hides its slots).
+func (s *scan) list(dir, prune string) ([]string, error) {
+	sel := lint.Selection{Names: []string{"*.java"}}
+	if prune != "" {
+		sel.Prune = []string{prune}
+	}
+	files, err := lint.Walk(dir, sel)
+	if err != nil {
+		return nil, s.errorRow(fmt.Sprintf("cannot list every file under %s: %s", dir, err))
+	}
+	return files, nil
+}
+
+// file reads p once. An unreadable file fails closed (the bash awk and grep skipped it in silence).
+func (s *scan) file(p string) (*javasrc.File, error) {
+	if f, ok := s.files[p]; ok {
+		return f, nil
+	}
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return nil, fmt.Errorf("cannot scan %s: %s", p, strerror.Text(err))
+	}
+	ls, _ := javasrc.Lines(strings.NewReader(string(data))) // a strings.Reader never fails
+	s.files[p] = javasrc.NewFile(p, ls)
+	return s.files[p], nil
+}
+
+// targets are the profiles scanned: <root>/src alone, named after the root, or else every *-rt/-ux/-wb/-se
+// sub-directory holding a src (symlinks below the root not followed, as find -type d), in byte order.
+func (s *scan) targets() (names, srcs []string) {
+	if lint.IsDir(s.root + "/src") {
+		return []string{lint.Basename(s.root)}, []string{s.root + "/src"}
+	}
+	entries, _ := os.ReadDir(s.root) // an unreadable root lists no profile, as find 2>/dev/null did
+	prefix := strings.TrimSuffix(s.root, "/") + "/"
+	for _, e := range entries {
+		n := e.Name()
+		if e.Type().IsDir() && profile(n) && lint.IsDir(prefix+n+"/src") {
+			names, srcs = append(names, n), append(srcs, prefix+n+"/src")
+		}
+	}
+	return names, srcs
+}
+
+func profile(name string) bool {
+	for _, sfx := range []string{"-rt", "-ux", "-wb", "-se"} {
+		if strings.HasSuffix(name, sfx) {
+			return true
+		}
+	}
+	return false
+}
+
+// sorted is sort -u of a set.
+func sorted(set map[string]bool) []string {
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}

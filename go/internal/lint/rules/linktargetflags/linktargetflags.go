@@ -61,20 +61,18 @@ const (
 
 // Configure reads the --wiring-map file. A path that is not a regular file is the bash lint's error; a
 // file that cannot be read is an env error too (the bash awk printed its error and went on with no target).
-func (r *rule) Configure(a lint.Args) error {
-	r.targets = map[string]bool{}
+func (*rule) Configure(a lint.Args) (lint.Configured, error) {
 	if a.Option == "" {
-		return nil
+		return &rule{targets: map[string]bool{}}, nil
 	}
 	if st, err := os.Stat(a.Option); err != nil || !st.Mode().IsRegular() {
-		return fmt.Errorf("%s: --wiring-map file not found: %s\n", ID, a.Option)
+		return nil, fmt.Errorf("%s: --wiring-map file not found: %s\n", ID, a.Option)
 	}
 	data, err := os.ReadFile(a.Option)
 	if err != nil {
-		return fmt.Errorf("%s: cannot read --wiring-map %s: %v\n", ID, a.Option, err)
+		return nil, fmt.Errorf("%s: cannot read --wiring-map %s: %v\n", ID, a.Option, err)
 	}
-	r.targets = tableTwo(strings.TrimSuffix(string(data), "\n"))
-	return nil
+	return &rule{targets: tableTwo(strings.TrimSuffix(string(data), "\n"))}, nil
 }
 
 // tableTwo is the awk harvest: the backticked first-column slots of each Table 2 section whose Source cell,

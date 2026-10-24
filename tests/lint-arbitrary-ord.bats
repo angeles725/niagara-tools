@@ -99,3 +99,95 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [ "$output" = "lint-arbitrary-ord: cannot scan $d/A.java: Permission denied" ]
 }
+
+# Truth fix T1 (r10 Go port): the call is matched in code. The awk matched the raw line before its //
+# comment, so a BOrd.make(var) in a Javadoc or /* */ block line, or inside a string literal, WARNed (two
+# of the 20 Cliente rows were Javadoc lines of chihuahua).
+@test "AO13: BOrd.make(var) in a Javadoc, a block comment or a string literal is not a call" {
+  # Mutation: AO13 -- matching the raw line WARNs on the Javadoc, block-comment and string mentions.
+  printf 'class A {\n  /**\n   * Resolve via BOrd.make(parentOrd).get()\n   */\n  /* BOrd.make(q) */ void f(String q) {\n    log("BOrd.make(q)");\n    BOrd.make(q);\n  }\n}\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 1 ]
+  [[ "$output" == *"A.java:7  BOrd.make from a variable"* ]]
+}
+
+# Truth fix T2 (kit #459 a, PANCCADIA BDashboardServlet.java:279, guard :254): an ord built as a constant
+# prefix plus a client value that an earlier `if (<v>.contains(".."))` in the same method rejects (on the
+# value or a variable it is derived from) cannot leave the prefix: it is not an arbitrary ord.
+@test "AO14: a constant-prefixed ord whose client part is traversal-guarded earlier in the method is clean" {
+  # Mutation: AO14 -- ignoring the traversal guard WARNs on the guarded, prefixed relative ord.
+  cat > "$TMPDIR_T/M/src/A.java" <<'JAVA'
+class A {
+  void write(String json) {
+    String relOrd = JsonUtil.extractJsonValue(json, "ord");
+    relOrd = relOrd.trim();
+    if (relOrd.contains("..") || relOrd.contains("\\")) { return; }
+    int slashIdx = relOrd.lastIndexOf('/');
+    String parentRel = relOrd.substring(0, slashIdx);
+    String parentOrd = DashboardReader.SERVICE_ORD + "/" + parentRel;
+    BObject resolved = javax.baja.naming.BOrd.make(parentOrd).get(this, null);
+  }
+  void unguarded(String json) {
+    String rel = JsonUtil.extractJsonValue(json, "ord");
+    String ord = SERVICE_ORD + "/" + rel;
+    BOrd.make(ord);
+  }
+  void noPrefix(String json) {
+    String rel = JsonUtil.extractJsonValue(json, "ord");
+    if (rel.contains("..")) { return; }
+    BOrd.make(rel);
+  }
+  void guardAfter(String json) {
+    String rel = JsonUtil.extractJsonValue(json, "ord");
+    String ord = SERVICE_ORD + "/" + rel;
+    BOrd.make(ord);
+    if (rel.contains("..")) { return; }
+  }
+}
+JAVA
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"A.java:9 "* ]]
+  [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 3 ]
+}
+
+# Truth fix T3 (kit #459 b, PANCCADIA BDashboardServlet.java:804): an ord whose every origin is a framework
+# alarm record's source (BAlarmRecord.getSource()), followed through locals, the arguments of every call of
+# a private method and a private method's returns, is a station value, not client input.
+@test "AO15: an ord from BAlarmRecord.getSource() through private helpers is clean" {
+  # Mutation: AO15 -- not following the private helper chain WARNs on the alarm-source ord.
+  cat > "$TMPDIR_T/M/src/A.java" <<'JAVA'
+class A {
+  private void appendAlarm(StringBuilder sb, BAlarmRecord rec) throws Exception
+  {
+    String source     = safeSource(rec);
+    String label      = resolveSourceLabel(rec, source);
+  }
+  private static String safeSource(BAlarmRecord rec)
+  {
+    try { return rec.getSource().toString(); } catch (Exception e) { return ""; }
+  }
+  private String resolveSourceLabel(BAlarmRecord rec, String rawSource)
+  {
+    if (rawSource == null || rawSource.isEmpty()) return "";
+    BObject resolved = javax.baja.naming.BOrd.make(rawSource).get(this, null);
+    return "";
+  }
+  public String open(String clientOrd)
+  {
+    BOrd.make(clientOrd);
+    return resolveOther(clientOrd);
+  }
+  private String resolveOther(String raw)
+  {
+    BOrd.make(raw);
+    return "";
+  }
+}
+JAVA
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"A.java:14 "* ]]
+  [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 2 ]
+}
