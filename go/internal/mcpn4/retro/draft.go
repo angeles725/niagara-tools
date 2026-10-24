@@ -38,7 +38,7 @@ func filter(items []*pyjson.Object, keep keepFunc) []*pyjson.Object {
 	return out
 }
 
-// Draft is retro.draft: {candidates, station, date} for the entries of stateDir and
+// Draft is retro.draft: {markdown, candidates, station, date} for the entries of stateDir and
 // the observations at or after since ("" for the whole state dir), dated today in UTC.
 func Draft(stateDir, station, since string, observations []*pyjson.Object) (*pyjson.Object, error) {
 	return draft(stateDir, station, time.Now().UTC().Format("2006-01-02"), since, observations, sinceFilter)
@@ -69,11 +69,16 @@ func draft(stateDir, station, date, since string, observations []*pyjson.Object,
 	if err != nil {
 		return nil, err
 	}
+	markdown, err := render(candidates, station, date, audit, windowed, since)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]any, len(candidates))
 	for i, c := range candidates {
 		items[i] = c
 	}
 	out := pyjson.NewObject()
+	out.Set("markdown", markdown)
 	out.Set("candidates", items)
 	out.Set("station", station)
 	out.Set("date", date)
