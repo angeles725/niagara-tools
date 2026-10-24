@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	pageSection = re(`<section[^>]*[[:space:]]id=["']page-[A-Za-z0-9_-]+["']`)
+	pageSection = re(`<section[^>]*[[:space:]]id=["']page-[A-Za-z0-9_-]+["']`, "<section")
 	sectionID   = re(`^.*id=["']page-`)
-	navEntry    = re(`data-page=["'][A-Za-z0-9_-]+["']`)
+	navEntry    = re(`data-page=["'][A-Za-z0-9_-]+["']`, "data-page=")
 )
 
 // orphanPages is the cross-file orphan-page pass over every scanned .html and .js file, in walk order: a
@@ -33,7 +33,7 @@ func orphanPages(pages []*source, sev lint.Severity) []lint.Finding {
 			}
 			at := site{src.rel, i + 1}
 			if src.ext == "html" {
-				for _, m := range pageSection.FindAllString(line, -1) {
+				for _, m := range pageSection.FindAllString(line) {
 					id := strings.TrimRight(sectionID.ReplaceAllString(m, ""), `"'`)
 					if _, ok := sec[id]; !ok {
 						sec[id] = at
@@ -41,7 +41,7 @@ func orphanPages(pages []*source, sev lint.Severity) []lint.Finding {
 					}
 				}
 			}
-			for _, m := range navEntry.FindAllString(line, -1) {
+			for _, m := range navEntry.FindAllString(line) {
 				id := m[11 : len(m)-1]
 				if _, ok := nav[id]; !ok {
 					nav[id] = at

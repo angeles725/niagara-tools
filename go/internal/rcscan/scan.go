@@ -14,61 +14,106 @@ type source struct {
 	lines    []string
 }
 
-// re compiles an awk ERE with gawk's leftmost-longest match, so a match's span (RSTART, RLENGTH) is gawk's.
-func re(expr string) *regexp.Regexp {
-	r := regexp.MustCompile(expr)
-	r.Longest()
-	return r
+// pat is an awk ERE compiled with gawk's leftmost-longest match, so a match's span (RSTART, RLENGTH) is gawk's,
+// plus literals one of which every match contains: a line without it never reaches the regexp engine, whose linear NFA is
+// still slow on the 100-KB data-URI and minified lines of a real page.
+type pat struct {
+	lits  []string       // one of them is in every match; none: no pre-check
+	r, lr *regexp.Regexp // leftmost-first for a yes/no match (it stops at the first), leftmost-longest for a span
+}
+
+func re(expr string, lits ...string) *pat {
+	lr := regexp.MustCompile(expr)
+	lr.Longest()
+	return &pat{lits, regexp.MustCompile(expr), lr}
+}
+
+func (p *pat) on(s string) bool {
+	for _, l := range p.lits {
+		if strings.Contains(s, l) {
+			return true
+		}
+	}
+	return len(p.lits) == 0
+}
+
+func (p *pat) MatchString(s string) bool { return p.on(s) && p.r.MatchString(s) }
+
+// The span methods below use lr.
+
+func (p *pat) FindString(s string) string {
+	if !p.on(s) {
+		return ""
+	}
+	return p.lr.FindString(s)
+}
+
+func (p *pat) FindStringIndex(s string) []int {
+	if !p.on(s) {
+		return nil
+	}
+	return p.lr.FindStringIndex(s)
+}
+
+func (p *pat) FindAllString(s string) []string {
+	if !p.on(s) {
+		return nil
+	}
+	return p.lr.FindAllString(s, -1)
+}
+
+func (p *pat) ReplaceAllString(s, with string) string {
+	if !p.on(s) {
+		return s
+	}
+	return p.lr.ReplaceAllString(s, with)
 }
 
 var (
 	commentOnly = re(`^[[:space:]]*(//|/\*|\*+|<!--)`)
 
-	ordLiteral = re("(station:|local:|slot:/)|(^|[|\"'`])h:[0-9a-fA-F]+")
-	httpURL    = re(`http://[^ ` + "\t" + `"',;)>]+`)
-	ipv4       = re(`[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+`)
-	bareCatch  = re(`catch[[:space:]]*\([[:space:]]*\(\)[[:space:]]*=>[[:space:]]*\{[[:space:]]*\}[[:space:]]*\)`)
-	nullBranch = re(`\?[[:space:]]*null[[:space:]]*:`)
+	httpURL    = re(`http://[^ `+"\t"+`"',;)>]+`, "http://")
+	bareCatch  = re(`catch[[:space:]]*\([[:space:]]*\(\)[[:space:]]*=>[[:space:]]*\{[[:space:]]*\}[[:space:]]*\)`, "catch")
+	nullBranch = re(`\?[[:space:]]*null[[:space:]]*:`, "null")
 
-	scriptOpen  = re(`<script([[:space:]][^>]*)?>`)
-	styleOpen   = re(`<style([[:space:]][^>]*)?>`)
-	srcAttr     = re(`[[:space:]]src[[:space:]]*=`)
-	scriptClose = re(`</script>`)
-	styleClose  = re(`</style>`)
-	blockClose  = re(`</(script|style)>`)
+	scriptOpen  = re(`<script([[:space:]][^>]*)?>`, "<script")
+	styleOpen   = re(`<style([[:space:]][^>]*)?>`, "<style")
+	srcAttr     = re(`[[:space:]]src[[:space:]]*=`, "src")
+	scriptClose = re(`</script>`, "</script>")
+	styleClose  = re(`</style>`, "</style>")
+	blockClose  = re(`</(script|style)>`, "</")
 
-	dataURI   = re(`data:[^"')[:space:]]+`)
-	styleAttr = re(`style[[:space:]]*=[[:space:]]*("[^"]*"|'[^']*')`)
-	gapDecl   = re(`(^|[;{[:space:]"'])(row-|column-)?gap[[:space:]]*:`)
-	gridDecl  = re(`display[[:space:]]*:[[:space:]]*(inline-)?grid`)
-	insetDecl = re(`(^|[;{[:space:]"'])inset[[:space:]]*:`)
-	aspect    = re(`aspect-ratio[[:space:]]*:`)
-	minCall   = re(`(^|[^A-Za-z0-9_-])min\(`)
-	maxCall   = re(`(^|[^A-Za-z0-9_-])max\(`)
-	clampCall = re(`(^|[^A-Za-z0-9_-])clamp\(`)
-	topAwait  = re(`^await[[:space:]]`)
+	dataURI   = re(`data:[^"')[:space:]]+`, "data:")
+	styleAttr = re(`style[[:space:]]*=[[:space:]]*("[^"]*"|'[^']*')`, "style")
+	gapDecl   = re(`(^|[;{[:space:]"'])(row-|column-)?gap[[:space:]]*:`, "gap")
+	gridDecl  = re(`display[[:space:]]*:[[:space:]]*(inline-)?grid`, "grid")
+	insetDecl = re(`(^|[;{[:space:]"'])inset[[:space:]]*:`, "inset")
+	aspect    = re(`aspect-ratio[[:space:]]*:`, "aspect-ratio")
+	minCall   = re(`(^|[^A-Za-z0-9_-])min\(`, "min(")
+	maxCall   = re(`(^|[^A-Za-z0-9_-])max\(`, "max(")
+	clampCall = re(`(^|[^A-Za-z0-9_-])clamp\(`, "clamp(")
+	topAwait  = re(`^await[[:space:]]`, "await")
 
-	loginWord  = re(`login|step-?up`)
 	authWord   = re(`[Aa][Uu][Tt][Hh]`)
-	asyncFunc  = re(`async[[:space:]]+function[[:space:]]*\*?[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*`)
-	asyncFuncP = re(`^async[[:space:]]+function[[:space:]]*\*?[[:space:]]*`)
-	asyncConst = re(`(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*async([[:space:](]|$)`)
+	asyncFunc  = re(`async[[:space:]]+function[[:space:]]*\*?[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*`, "async")
+	asyncFuncP = re(`^async[[:space:]]+function[[:space:]]*\*?[[:space:]]*`, "async")
+	asyncConst = re(`(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*async([[:space:](]|$)`, "async")
 	declP      = re(`^(const|let|var)[[:space:]]+`)
-	assignS    = re(`[[:space:]]*=.*$`)
+	assignS    = re(`[[:space:]]*=.*$`, "=")
 
-	fetchCall     = re(`(^|[^A-Za-z0-9_$])fetch[[:space:]]*\(`)
-	intervalAsync = re(`setInterval\([[:space:]]*async([[:space:](]|$)`)
-	intervalName  = re(`setInterval\([[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*[,)]`)
-	intervalP     = re(`^setInterval\([[:space:]]*`)
+	fetchCall     = re(`(^|[^A-Za-z0-9_$])fetch[[:space:]]*\(`, "fetch")
+	intervalAsync = re(`setInterval\([[:space:]]*async([[:space:](]|$)`, "setInterval(")
+	intervalName  = re(`setInterval\([[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*[,)]`, "setInterval(")
+	intervalP     = re(`^setInterval\([[:space:]]*`, "setInterval(")
 	intervalS     = re(`[[:space:]]*[,)]$`)
-	htmlAssign    = re(`(inner|outer)HTML[[:space:]]*\+?=([^=]|$)|insertAdjacentHTML[[:space:]]*\(`)
-	memberConcat  = re(`\+[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]|\$\{[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]`)
-	escCall       = re(`esc[A-Za-z]*\(`)
-	disabledSet   = re(`\.disabled[[:space:]]*=([^=]|$)`)
+	htmlAssign    = re(`(inner|outer)HTML[[:space:]]*\+?=([^=]|$)|insertAdjacentHTML[[:space:]]*\(`, "HTML")
+	memberConcat  = re(`\+[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]|\$\{[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$]`, ".")
+	escCall       = re(`esc[A-Za-z]*\(`, "esc")
+	disabledSet   = re(`\.disabled[[:space:]]*=([^=]|$)`, ".disabled")
 	disabledRHS   = re(`^=?[[:space:]]*`)
 	notDisabled   = re(`^(false|0)([^A-Za-z0-9_$]|$)`)
-	disabledAttr  = re(`setAttribute\([[:space:]]*["']disabled["']`)
-	disabledTag   = re(`<(button|input|select|textarea)[^>]*[[:space:]]disabled([[:space:]=>/]|$)`)
+	disabledAttr  = re(`setAttribute\([[:space:]]*["']disabled["']`, "setAttribute(")
+	disabledTag   = re(`<(button|input|select|textarea)[^>]*[[:space:]]disabled([[:space:]=>/]|$)`, "disabled")
 )
 
 const (
@@ -197,7 +242,7 @@ func (s *fileScan) checks() {
 		s.cssFeed(line)
 	} else if s.src.ext == "html" && !s.ctxJS { // inline style="" attributes on markup lines
 		f := ""
-		for _, sv := range styleAttr.FindAllString(line, -1) {
+		for _, sv := range styleAttr.FindAllString(line) {
 			f += cssTokens(sv)
 			if gapDecl.MatchString(sv) && !gridDecl.MatchString(sv) && !strings.Contains(f, " gap") {
 				f += " gap"
@@ -223,10 +268,11 @@ func (s *fileScan) checks() {
 // Auth, authToken, getAuth) or after the gate prefixes o / re / un (OAuth, reauth, unauthorized), and not
 // author / authority (authorize / authorise still count).
 func mentionsGate(line string) bool {
-	if loginWord.MatchString(asciiLower(line)) {
+	low := asciiLower(line)
+	if strings.Contains(low, "login") || strings.Contains(low, "stepup") || strings.Contains(low, "step-up") {
 		return true
 	}
-	for t := line; ; {
+	for t := line; strings.Contains(low, "auth"); {
 		m := authWord.FindStringIndex(t)
 		if m == nil {
 			return false
@@ -249,6 +295,7 @@ func mentionsGate(line string) bool {
 		}
 		t = t[i+4:]
 	}
+	return false
 }
 
 func alnum(c byte) bool        { return lowerOrDigit(c) || 'A' <= c && c <= 'Z' }
@@ -397,22 +444,64 @@ func (s *fileScan) emit(sev lint.Severity, id, msg string) { s.emitAt(s.nr, sev,
 // allowed reports a trailing `rc-scan: allow <id>` marker on the line.
 func (s *fileScan) allowed(id string) bool { return strings.Contains(s.line, "rc-scan: allow "+id) }
 
+// ordLiteral is the ERE (station:|local:|slot:/)|(^|[|"'`])h:[0-9a-fA-F]+ (a scheme prefix, or a handle ORD
+// at a segment start), matched by hand: the regexp engine is slow on a 100-KB line full of "width:".
+func ordLiteral(line string) bool {
+	if strings.Contains(line, "station:") || strings.Contains(line, "local:") || strings.Contains(line, "slot:/") {
+		return true
+	}
+	for i := strings.Index(line, "h:"); i >= 0; {
+		if (i == 0 || strings.IndexByte("|\"'`", line[i-1]) >= 0) && i+2 < len(line) && hexDigit(line[i+2]) {
+			return true
+		}
+		j := strings.Index(line[i+1:], "h:")
+		if j < 0 {
+			break
+		}
+		i += 1 + j
+	}
+	return false
+}
+
+func hexDigit(c byte) bool { return '0' <= c && c <= '9' || 'a' <= c|0x20 && c|0x20 <= 'f' }
+
+// ipv4 is the ERE [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ matched by hand: some run of digits and dots holds four
+// non-empty digit groups joined by single dots.
+func ipv4(line string) bool {
+	groups := 0
+	for i := 0; i <= len(line); i++ {
+		switch {
+		case i < len(line) && '0' <= line[i] && line[i] <= '9':
+			if groups == 0 || i > 0 && line[i-1] == '.' {
+				groups++
+			}
+			if groups == 4 {
+				return true
+			}
+		case i < len(line) && line[i] == '.' && i > 0 && '0' <= line[i-1] && line[i-1] <= '9':
+		default:
+			groups = 0
+		}
+	}
+	return false
+}
+
 // legacy is the campaign-8 checks: the first one that matches reports the line (awk `next`).
 func (s *fileScan) legacy() {
 	line := s.line
-	if ordLiteral.MatchString(line) {
+	if ordLiteral(line) {
 		s.emit(lint.Fail, "ord-literal", "hardcoded ORD literal")
 		return
 	}
 	hasHTTP := strings.Contains(line, "http://")
-	for _, m := range httpURL.FindAllString(line, -1) {
+	for _, m := range httpURL.FindAllString(line) {
 		if !strings.HasPrefix(m, "http://www.w3.org/") {
 			s.emit(lint.Fail, "host-literal", m)
 			return
 		}
 	}
 	switch {
-	case ipv4.MatchString(line) && !hasHTTP:
+	case !hasHTTP && ipv4(line):
 		s.emit(lint.Fail, "host-literal", "bare IPv4 literal")
 	case bareCatch.MatchString(line):
 		s.emit(s.o.sevW(), "bare-catch", "bare .catch(()=>{}) swallows errors")
