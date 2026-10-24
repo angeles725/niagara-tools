@@ -1,0 +1,8 @@
+-- args --
+@DIR@/afile
+-- want --
+exit 3
+-- stderr --
+commissioning-verify: not a directory: @DIR@/afile
+-- afile --
+x

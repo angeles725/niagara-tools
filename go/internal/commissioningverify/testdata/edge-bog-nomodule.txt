@@ -1,0 +1,9 @@
+-- args --
+@REPO@/build-n4-module-kit/fixtures/MinimalPan
+--bog
+@DIR@/whatever.bog
+-- want --
+exit 3
+-- stderr --
+commissioning-verify: --bog requires --module
+usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--wiring-map <file>] [--strict]

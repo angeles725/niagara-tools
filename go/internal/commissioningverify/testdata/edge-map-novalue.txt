@@ -1,0 +1,7 @@
+-- args --
+@REPO@/build-n4-module-kit/fixtures/MinimalPan
+--wiring-map
+-- want --
+exit 3
+-- stderr --
+usage: commissioning-verify.sh <module-root> [--bog <config.bog>] [--module <MOD>] [--values-owed <file>] [--wiring-map <file>] [--strict]

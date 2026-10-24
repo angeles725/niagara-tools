@@ -1,0 +1,32 @@
+-- args --
+@REPO@/build-n4-module-kit/fixtures/MinimalPan
+--values-owed
+@DIR@/owed.md
+-- want --
+exit 0
+PASS  commissioning  config-sanity:MinimalPan-rt  CS1/CS2/CS3 clean
+PASS  commissioning  status-parity:MinimalPan-rt  N:M config/status parity clean
+PASS  commissioning  recovery-path:MinimalPan-rt  protection-output recovery path clean
+PASS  commissioning  link-target-flags:MinimalPan-rt  LTF1/LTF2 clean (no wiring map)
+PASS  commissioning  wiring-map  run generate-wiring-map.sh <facade-src-dir> to scaffold docs/wiring-map.md before commissioning
+SKIP  commissioning  proxy-link-safety  no --bog provided; pass --bog <config.bog> --module <MOD> to audit live station
+SKIP  commissioning  station-logic  no --bog provided; pass --bog <config.bog> --module <MOD> to audit live station
+SKIP  commissioning  numeric-to-bool-direct  no --bog provided; pass --bog <config.bog> --module <MOD> to audit live station
+MANUAL  commissioning  values-owed  a: owed by o, unit u, still at safe default 0
+MANUAL  commissioning  values-owed  b: owed by o, unit u, still at safe default 0
+MANUAL  commissioning  hot-reload-console  after deploy: run triage-console.sh — confirm no own-module load failures before hand-off
+MANUAL  commissioning  plant-control  confirm the station actually controls the plant (runtime only — not statically verifiable)
+MANUAL  commissioning  per-instance-values  confirm per-instance runtime values match physical setpoints for every room/unit
+MANUAL  commissioning  persisted-state-restart  persisted operator state (HOA modes, setpoints, run hours, backups) seeded or saved BEFORE the first restart and re-read after it (BUILD-LOOP §6.b)
+MANUAL  commissioning  alarm-routing  each alarm source has an alarm class and at least one recipient; a test alarm reaches the console and is acknowledged (BUILD-LOOP §6.b)
+MANUAL  commissioning  consumer-impact  every point whose meaning changed (feature doc Consumer impact table) was notified to its downstream consumers (BUILD-LOOP §6.b)
+MANUAL  commissioning  link-source-audit  run obix-link-audit.sh --map docs/wiring-map.md against the live facade: every declared link-in comes from its declared source (MATCH)
+MANUAL  commissioning  servlet-response-headers  BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options|content-security-policy' — the station's header providers must reach the servlet (see types/security.md §7)
+commissioning-verify: 5 PASS · 0 FAIL · 0 WARN · 3 SKIP · 10 MANUAL  ->  CLEAN
+-- stderr --
+-- owed.md --
+| a | o | u | 0 | owed |
+| b | o | u | 0 | owed |
+
+| Slot | Owed by | Unit | Safe default | Status |
+|---|---|---|---|---|
