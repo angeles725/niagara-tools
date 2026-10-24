@@ -1,0 +1,13 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 0
+pct=N/A (type-set)
+missing=
+extra=
+-- stderr --
+-- module-include.xml --
+<types>
+</types>
+-- module.lexicon --

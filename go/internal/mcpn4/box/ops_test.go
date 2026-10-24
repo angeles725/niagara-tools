@@ -101,6 +101,8 @@ func runOps(t *testing.T, c *Client, ops []any) []string {
 			res, err = c.Call(str("channel"), str("key"), field(op, "body"))
 		case "ssc":
 			res, err = c.SSC(str("key"), field(op, "arg"))
+		case "sync":
+			res, err = c.Sync(field(op, "sync"))
 		case "poll":
 			res, err = c.Poll()
 		case "load_tree":

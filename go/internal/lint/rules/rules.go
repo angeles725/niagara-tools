@@ -4,6 +4,7 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
@@ -44,6 +45,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/uberjarapi"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/writepath"
@@ -62,6 +64,7 @@ func All() []lint.Spec {
 		servlet.Spec(),
 		silentprotection.Spec(),
 		nosystemout.Spec(),
+		uberjarapi.Spec(),
 		arbitraryord.Spec(),
 		sedisplay.Spec(),
 		bqlconcat.Spec(),
@@ -93,6 +96,7 @@ func All() []lint.Spec {
 		persisthotwrite.Spec(),
 		slotomaticmarkers.Spec(),
 		agentonshape.Spec(),
+		agentonincludesync.Spec(),
 		bformatcall.Spec(),
 		splitpackage.Spec(),
 		manuallabels.Spec(),

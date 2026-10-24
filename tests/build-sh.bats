@@ -29,7 +29,12 @@ setup() {
   # why: ${FAKE_REPORT_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nexit "${FAKE_REPORT_EXIT:-0}"\n' > "$TMPDIR_T/kit/report-module.sh"
   chmod +x "$TMPDIR_T/kit/report-module.sh"
-  B="$TMPDIR_T/kit/build.sh"
+  B_RAW="$TMPDIR_T/kit/build.sh"   # never opted in: the BS-home-guard tests call this one
+  # The fake nh below stands for a real install that these tests deliberately build into (the drift gate and the
+  # restore paths read its modules/), so $B opts in with --install-into-home; exec keeps $0 = build.sh.
+  printf '#!/usr/bin/env bash\nexec "%s" --install-into-home "$@"\n' "$B_RAW" > "$TMPDIR_T/kit/build-into-home.sh"
+  chmod +x "$TMPDIR_T/kit/build-into-home.sh"
+  B="$TMPDIR_T/kit/build-into-home.sh"
   ROOT="$TMPDIR_T/mod"; mkdir -p "$ROOT"
   make_profile "$ROOT" Foo rt 1; make_profile "$ROOT" Foo ux 1; make_profile "$ROOT" Foo wb 0
   make_fake_gradlew "$ROOT"
@@ -1024,4 +1029,39 @@ _mk_gradlew_skip_success() {
   make_fake_gradlew "$repo/GroupA"; make_fake_gradlew "$repo/GroupB"
   assert_symroot_same "$repo" "$B" "$repo" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 10 ] && [[ "$output" == *"GroupA"* ]] && [[ "$output" == *"GroupB"* ]]
+}
+
+# gradlew stub that mimics the niagara-module plugin's last :jar step: it copies a jar into <niagara_home>/modules
+_install_gradlew() {
+  # shellcheck disable=SC2016
+  # why: the single-quoted $* must reach the generated stub unexpanded
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s/gradlew.calls.log"\nprintf jar > "%s/modules/Foo-rt.jar"\n' \
+    "$TMPDIR_T" "$1" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-home-guard: a niagara_home without .niagara-mirror exits 10 before gradle, nothing written to modules/" {
+  # Mutation: BS-home-guard -- dropping the marker check lets gradle's :jar step overwrite a real install's jar.
+  _install_gradlew "$TMPDIR_T/nh"
+  run "$B_RAW" --profiles rt --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 10 ]
+  [[ "$output" == *"mirror-niagara-home.sh"* ]] && [[ "$output" == *"--install-into-home"* ]]
+  [ ! -e "$TMPDIR_T/gradlew.calls.log" ]
+  [ -z "$(ls -A "$TMPDIR_T/nh/modules")" ]
+}
+
+@test "BS-home-guard-optin: --install-into-home lets the same marker-less home through (positive control)" {
+  _install_gradlew "$TMPDIR_T/nh"
+  run "$B_RAW" --install-into-home --profiles rt --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -s "$TMPDIR_T/gradlew.calls.log" ]
+  [ -f "$TMPDIR_T/nh/modules/Foo-rt.jar" ]
+}
+
+@test "BS-home-guard-mirror: a .niagara-mirror home builds without the flag (the default path)" {
+  _install_gradlew "$TMPDIR_T/nh"
+  : > "$TMPDIR_T/nh/.niagara-mirror"
+  run "$B_RAW" --profiles rt --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [ -f "$TMPDIR_T/nh/modules/Foo-rt.jar" ]
 }

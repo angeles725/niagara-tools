@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-status-parity
@@ -42,4 +42,4 @@ neither makes a false WARN nor hides a real one (LSP-comment).
 - A quirk-for-quirk accumulator kept only for the byte-identical commit, then replaced by the shared one in the truth fix, keeps each step provable without a shared option for the bug.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-status-parity.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 not folded, needs code (open_issue T5, a product decision), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues; Δ2 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-status-parity.md | kit | 2026-10-24 | folded | 2 |`

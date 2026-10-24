@@ -1,0 +1,61 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 1
+pct=25.0 (per-slot)
+MISSING commentOp
+MISSING crlf
+MISSING flagO
+MISSING noeol
+MISSING one
+MISSING tight
+STALE   spaced
+STALE setpoint
+STALE unknownKey
+DOTTED x.y.flagO (never read: the framework reads the bare key flagO)
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="Thing" class="a.BThing"/>
+</types>
+-- module.lexicon --
+multi=M
+late=L
+setpoint=S
+Thing.multi=dotted-with-bare
+x.y.flagO=deep dotted
+  spaced=lead
+fast=F
+Thing=bare type
+carried=C
+unknownKey=dead
+-- src/a/BA.java --
+package a;
+/** Docs mention @NiagaraProperty without parens */
+@NiagaraProperty(
+  name = "multi",
+  type = "double",
+  defaultValue = "BDouble.make(1.0)",
+  flags = Flags.OPERATOR
+)
+@NiagaraProperty(type = "int", defaultValue = "0",
+    flags = Flags.SUMMARY, name = "late")
+@NiagaraProperty(name = "flagO", flags = "o")
+@NiagaraProperty(name = "commentOp", flags = Flags.READONLY) // not OPERATOR
+@NiagaraProperty(name = "one", flags = Flags.OPERATOR) @NiagaraProperty(name = "two", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "", flags = Flags.OPERATOR)
+@NiagaraProperty(flags = Flags.OPERATOR)
+@NiagaraProperty
+@NiagaraProperty(name="tight",flags=Flags.OPERATOR)
+@Range("fast") @Range("slow") @Range("")
+@NiagaraProperty(name = "crlf", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "carried",
+-- src/a/BB.java (noeol) --
+  flags = Flags.OPERATOR)
+class BB {}
+@NiagaraProperty(name = "noeol", flags = Flags.OPERATOR)
+-- src/a/notes.txt --
+not java @NiagaraProperty(name = "txt", flags = Flags.OPERATOR)

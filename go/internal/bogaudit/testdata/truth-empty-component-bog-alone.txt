@@ -1,0 +1,66 @@
+-- args --
+@DIR@/f1/alone.bog
+--module
+ColdRoomPan
+-- want --
+exit 1
+CHECK10  FAIL  ColdRoom_1/Dup2  handle h:r1 appears 3 times (duplicate)
+CHECK9  FAIL  h:x9  link sourceOrd references an unknown handle (orphan)
+CHECK9  FAIL  h:zz  link sourceOrd references an unknown handle (orphan)
+CHECK1  PASS  ColdRoomPan  components=4
+CHECK8  WARN  Drivers/Net/ro2/in7  HOA override active (value='12.5')
+CHECK11  FAIL  Drivers/Net/ro3  own-module h:e1.evapOut -> writable with no explicit fallback (relay holds last state on stop/reload)
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK14  WARN  ColdRoom_1/Dup2  output slot 'evapOut' has no outgoing relay link (own-output-unlinked)
+# bog-audit: parse time 0.000s
+-- stderr --
+-- f1/alone.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='Drivers' h='2' t='b:DriverContainer'>
+   <p n='Net' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
+    <p n='ro1' h='r1' m='c=control' t='c:BooleanWritable'>
+     <p n="in1" t="b:StatusBoolean" v="true"/>
+     <p n="in2" v="null"/>
+     <p n="in3" v="it's"/>
+     <p n="in4" v='say "hi"'/>
+     <p n="in5" v="°C"/>
+     <p n="in9" v="true"/>
+     <p n="in10" v="FALSE"/>
+     <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="targetSlotName" v="in10"/></p>
+    </p>
+    <p n='ro2' h='r2' t='c:NumericWritable'>
+     <p n="in8" v="0"/>
+     <p n="in7" v="12.5"/>
+     <p n='fallback' t='b:StatusNumeric'/>
+     <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="tempOut"/><p n="targetSlotName" v="in10"/></p>
+    </p>
+    <p n='ro3' h='r3' t='c:FloatWritable'>
+     <p n='L' t='b:Link'><p n="sourceOrd" v="h:x9"/><p n="sourceSlotName" v="a"/><p n="targetSlotName" v="in10"/></p>
+     <p n='L2' t='b:Link'><p n="sourceOrd" v="h:"/><p n="sourceSlotName" v="a"/><p n="targetSlotName" v="in10"/></p>
+     <p n='L3' t='b:Link'><p n="sourceOrd" v="slot:/x"/><p n="sourceSlotName" v="a"/><p n="targetSlotName" v="in10"/></p>
+     <p n='L4' t='b:Link'><p n="sourceOrd" v="h:e1"/><p n="sourceSlotName" v="evapOut"/><p n="targetSlotName" v="in16"/></p>
+    </p>
+    <p n='ro4' h='r4' t='c:EnumWritable'>
+     <p n="in1" v="1"/>
+    </p>
+   </p>
+  </p>
+  <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+   <p n='EvaporatorUnit_1' h='e1' t='CRP:EvaporatorUnit'/>
+   <p n='Dup' h='r1' t='CRP:EvaporatorUnit'>
+   </p>
+   <p n='Dup2' h='r1' t='CRP:EvaporatorUnit'></p>
+   <p n='object$20tags' h='t1' t='CRP:Tags'>
+    <p n="na$u00efve" t="b:String" v="x"/>
+   </p>
+  </p>
+  <p n='Orphan' t='b:Link'><p n="sourceOrd" v="h:zz"/><p n="sourceSlotName" v="out"/><p n="targetSlotName" v="in"/></p>
+ </p>
+</bajaObjectGraph>

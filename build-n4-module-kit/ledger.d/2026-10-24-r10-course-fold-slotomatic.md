@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10 course retro fold: a later @AgentOn never reaches an agent-less module-include.xml line; slotomatic-authoring folded -->
+log: 2026-10-24 · quality round 10 course retro fold (`docs/r10-course-retro-fold`) → `types/module-wiring.md` § 2 (the annotation processor's "differs" test compares only the `<agent>` elements a `<type>` line already carries, nre 4.14.0.162 vineflower `ModuleInclude.entryMatches` lines 376-415, so an `@AgentOn` added to a type whose line has no `<agent>` is never written; seen live on 4.15.6.20 with the course Bonus Lab point manager; delete the line or the file). Retro n4-course-handson-slotomatic-authoring flipped to folded: Δ1 K15 + lint-slotomatic-markers + build.sh exits 30/34, Δ2-Δ4 quality round 8 U11, Δ6 verify-module.sh `check_palette` attribute-order fix (tests/verify-module.bats).

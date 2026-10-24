@@ -27,7 +27,7 @@ func obj(kv ...any) *pyjson.Object {
 }
 
 // reasonConstants are the Reason* constants of package safety, read from its source so a new
-// one cannot be missed.
+// one cannot be missed. REASON_TIER is tiers.ReasonTier (tiers.TestTheRetroClassifiesTierRefusals).
 func reasonConstants(t *testing.T) map[string]string {
 	f, err := parser.ParseFile(token.NewFileSet(), filepath.Join("..", "safety", "reasons.go"), nil, 0)
 	if err != nil {
@@ -45,7 +45,7 @@ func reasonConstants(t *testing.T) map[string]string {
 
 func TestEverySharedRefusalReasonIsClassifiedByTheRetro(t *testing.T) {
 	consts := reasonConstants(t)
-	if len(consts) != 17 {
+	if len(consts) != 16 {
 		t.Errorf("%d Reason constants", len(consts))
 	}
 	for name, text := range consts {

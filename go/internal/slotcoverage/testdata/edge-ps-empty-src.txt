@@ -1,0 +1,20 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/src
+-- want --
+exit 0
+pct=N/A (per-slot)
+STALE differential
+STALE fanMode
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="Thing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+fanMode=Fan Mode
+differential=Differential
+-- src/readme.txt --
+readme

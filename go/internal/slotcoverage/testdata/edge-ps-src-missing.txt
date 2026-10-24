@@ -1,0 +1,29 @@
+-- args --
+per-slot
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+@DIR@/nosrc
+-- want --
+exit 3
+-- stderr --
+slot-coverage: not a directory: @DIR@/nosrc
+-- module-include.xml --
+<types>
+<type name="Thing" class="com.x.BThing"/>
+</types>
+-- module.lexicon --
+fanMode=Fan Mode
+differential=Differential
+-- src/.deploy-baseline/com/x/BStale.java --
+package com.x;
+@NiagaraProperty(name = "staleKnob", flags = Flags.SUMMARY | Flags.OPERATOR)
+public class BStale extends BComponent {}
+-- src/com/x/BThing.java --
+package com.x;
+// setpoint: OPERATOR, NO lexicon key      -> MISSING (renders raw camelCase in operator views)
+@NiagaraProperty(name = "setpoint", flags = Flags.SUMMARY | Flags.OPERATOR)
+// fanMode: OPERATOR, HAS a lexicon key     -> covered
+@NiagaraProperty(name = "fanMode", flags = Flags.SUMMARY | Flags.OPERATOR)
+// internalState: READONLY (non-operator)   -> NOT operator-facing, must NOT be MISSING (the OPERATOR gate)
+@NiagaraProperty(name = "internalState", flags = Flags.READONLY | Flags.TRANSIENT)
+public class BThing extends BComponent {}

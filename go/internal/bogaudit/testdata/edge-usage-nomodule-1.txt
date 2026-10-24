@@ -1,0 +1,22 @@
+-- args --
+@DIR@/f1/base.bog
+-- want --
+exit 3
+-- stderr --
+usage: bog-audit.sh <config.bog|file.xml> --module <MOD>... [--source-dir <DIR>] [--strict]
+-- f1/base.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+   <p n="differentialUp" t="b:double" v="2"/>
+   <p n='EvaporatorUnit_1' h='e1' t='CRP:EvaporatorUnit'>
+    <p n="hasDefrost" t="b:boolean" v="true"/>
+    <p n="evapOut" f="o" t="b:StatusBoolean" v="false"/>
+   </p>
+   <p n='DefrostController' h='d1' t='CRP:DefrostController'>
+    <a n="intervalExpired" f="h"/>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

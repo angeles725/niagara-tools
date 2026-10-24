@@ -1,0 +1,11 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: FAIL missing lexicon with 1 declared type(s)
+-- stderr --
+-- module-include.xml --
+<types>
+<type name="BatchLinkEditor" class="com.angeles.chihuahua.wb.BBatchLinkEditor"/>
+</types>

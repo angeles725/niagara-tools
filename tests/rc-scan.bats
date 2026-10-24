@@ -339,3 +339,104 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [ "$status" -eq 3 ]
   [[ "$output" == *"rc-scan: cannot list every file under $BATS_TEST_TMPDIR/art: "* ]]
 }
+
+@test "RS-unreadable: an unreadable rc file is an env error (exit 3), never a skipped file" {
+  # Mutation: RS-unreadable -- skipping a file os.ReadFile cannot read (the awk's fatal-and-continue) passes clean
+  mkdir -p "$BATS_TEST_TMPDIR/art/rc"
+  printf 'var ok = 1;\n' > "$BATS_TEST_TMPDIR/art/rc/a.js"
+  printf 'var o = "station:|slot:/x";\n' > "$BATS_TEST_TMPDIR/art/rc/u.js"
+  chmod 000 "$BATS_TEST_TMPDIR/art/rc/u.js"
+  if [ -r "$BATS_TEST_TMPDIR/art/rc/u.js" ]; then chmod 644 "$BATS_TEST_TMPDIR/art/rc/u.js"; skip "running as root"; fi
+  run "$RS" "$BATS_TEST_TMPDIR/art"
+  chmod 644 "$BATS_TEST_TMPDIR/art/rc/u.js"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"rc-scan: cannot scan $BATS_TEST_TMPDIR/art/rc/u.js: Permission denied"* ]]
+}
+
+# Issue #459 (d): vendored libraries under rc/vendor/**/*.js belong to lint-vendor-floor.sh (acorn at the
+# Chromium 83 floor); rc-scan's line heuristics flagged three.js RenderPass.js / SSAOPass.js there.
+@test "RC33: rc/vendor/**/*.js is not scanned (lint-vendor-floor owns it); vendored CSS and the module's own JS are" {
+  # Mutation: RC33 -- scanning rc/vendor/**/*.js again flags the vendored null-branch and ??= rows
+  local T="$BATS_TEST_TMPDIR/rc33"
+  mkdir -p "$T/rc/vendor/three/addons" "$T/rc/js"
+  printf 'this.c = c !== undefined ? null : x;\ny ??= 1;\n' > "$T/rc/vendor/three/addons/RenderPass.js"
+  printf '.a { inset: 0 }\n' > "$T/rc/vendor/three/lib.css"
+  printf 'x = a ? null : b;\n' > "$T/rc/js/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/js/app.js:1  null-branch"* ]]
+  [[ "$output" == *"rc/vendor/three/lib.css:1  browser-floor"* ]]
+  if [[ "$output" == *"RenderPass.js"* ]]; then return 1; fi
+}
+
+# Issue #459 (b): a control disabled with a stated non-gate reason on the same element and line (a client page line,
+# `b.disabled = true; b.title = "Sin salida cableada";`) is meant to be inert, not gated.
+@test "RC34: disabled-gate — a literal non-gate title on the disabled element is a stated reason; a gate title or none still WARNs" {
+  # Mutation: RC34 -- ignoring the stated title reason WARNs the wiring-disabled control again
+  local T="$BATS_TEST_TMPDIR/rc34"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'if (!session.loggedIn) showLogin();' \
+    'if (unwired) { b.disabled = true; b.title = "Sin salida cableada"; }' \
+    'saveBtn.disabled = true;' \
+    'b.disabled = true; b.title = "Inicia sesion (login) para escribir";' > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:3  disabled-gate"* ]]
+  [[ "$output" == *"rc/app.js:4  disabled-gate"* ]]
+  if [[ "$output" == *"rc/app.js:2  disabled-gate"* ]]; then return 1; fi
+}
+
+# Issue #459 (a), part 1: innerhtml-server reads the sink's own value — a member elsewhere on a minified line,
+# a .length, a .toFixed( number or a Math.* value is not server text (client-D page lines).
+@test "RC35: innerhtml-server — only a raw member in the sink's own value WARNs; .toFixed(, .length, Math.* and a member beside it do not" {
+  # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (app.js:2)
+  local T="$BATS_TEST_TMPDIR/rc35"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'el.innerHTML = "<b>" + a.message;' \
+    "const h = '<i>' + spec.unit; el.innerHTML = '<p>static</p>';" \
+    "el.innerHTML = '<b>' + val.toFixed(1) + Math.round(x) + rows.length;" > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:1  innerhtml-server"* ]]
+  if [[ "$output" == *"rc/app.js:2  innerhtml-server"* || "$output" == *"rc/app.js:3  innerhtml-server"* ]]; then return 1; fi
+}
+
+# Issue #459 (a), part 2: a member of a const literal the page declares (a client-D page line,
+# units.map(u => ... + u.name)) is not server data; data from elsewhere, a let and a literal the page writes
+# into still WARN.
+@test "RC36: innerhtml-server — a member of a same-file const literal is no row; a non-literal, a let or a written literal still WARNs" {
+  # Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (app.js:2)
+  local T="$BATS_TEST_TMPDIR/rc36"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'const units = [{ id: "UP-01", name: "RH A" }];' \
+    "el.innerHTML = units.map(u => '<b>' + u.name).join('');" \
+    "el.innerHTML = data.map(u => '<b>' + u.name).join('');" \
+    "const live = [{ name: 'a' }]; live[0].name = srv; el.innerHTML = live.map(m => '<b>' + m.name).join('');" > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:3  innerhtml-server"* ]]
+  [[ "$output" == *"rc/app.js:4  innerhtml-server"* ]]
+  if [[ "$output" == *"rc/app.js:2  innerhtml-server"* ]]; then return 1; fi
+}
+
+# Walk contract (lib/scan-files.sh, kept by the Go port's lint.Walk): a sibling *-worktrees checkout is pruned,
+# a symlinked artifact root is followed (find -H) and a dot-named root is walked (find -mindepth 1).
+@test "RS-walk: a *-worktrees copy gives no row; a symlinked and a dot-named root are scanned" {
+  # Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal
+  local T="$BATS_TEST_TMPDIR/rswalk"
+  mkdir -p "$T/art/rc" "$T/art/x-worktrees/m/rc" "$T/.dotroot/rc"
+  printf 'var o = "station:|x";\n' > "$T/art/rc/b.js"
+  printf 'var o = "station:|x";\n' > "$T/art/x-worktrees/m/rc/a.js"
+  cp "$T/art/rc/b.js" "$T/.dotroot/rc/b.js"
+  ln -s "$T/art" "$T/link"
+  run "$RS" "$T/art"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"rc/b.js:1  ord-literal"* ]]
+  if [[ "$output" == *"x-worktrees"* ]]; then return 1; fi
+  run "$RS" "$T/link"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  rc/b.js:1  ord-literal"* ]]
+  run "$RS" "$T/.dotroot"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"rc/b.js:1  ord-literal"* ]]
+}

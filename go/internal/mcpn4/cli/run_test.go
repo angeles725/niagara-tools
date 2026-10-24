@@ -19,8 +19,8 @@ func run(args []string, stdin string) (code int, out, errOut string) {
 	return code, o.String(), e.String()
 }
 
-// argvCorpus runs through both servers with an empty stdin. --allow-writes without a flag error
-// is left out: this version refuses it on purpose (TestAllowWritesIsRefusedUntilS10).
+// argvCorpus runs through both servers with an empty stdin. A start with --allow-writes reads
+// the state dir: TestWriteStartDifferentialPython runs those on private temporary dirs.
 var argvCorpus = [][]string{
 	{}, {"--help"}, {"-h"}, {"--he"}, {"--h"}, {"-hx"}, {"-h-x"}, {"-h=x"}, {"--help=x"}, {"--station", "--", "x"}, {"--", "--", "-h"}, {"--allow"}, {"--allow=1"}, {"--bogus"}, {"x"}, {"-x"}, {"-5"},
 	{"--", "--allow-http-for-tests"}, {"--allow-http"}, {"--allow-http-for-tests=1"}, {"--allow-writes="},
@@ -96,14 +96,6 @@ func TestDifferentialPython(t *testing.T) {
 func lastLine(s string) string {
 	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
 	return lines[len(lines)-1]
-}
-
-func TestAllowWritesIsRefusedUntilS10(t *testing.T) {
-	t.Parallel()
-	code, out, errOut := run([]string{"--allow-writes", "--station", "s=https://h"}, `{"id":1,"method":"ping"}`)
-	if code != 2 || out != "" || errOut != "mcp_n4.server: --allow-writes "+"is not implemented in this version of the Go server\n" {
-		t.Errorf("got %d %q %q", code, out, errOut)
-	}
 }
 
 func TestEofEndsTheServerWithExitZero(t *testing.T) {

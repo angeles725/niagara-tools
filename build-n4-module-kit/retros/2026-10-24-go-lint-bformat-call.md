@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-bformat-call
@@ -47,4 +47,4 @@ and text blocks kept), which is exactly where BFormat patterns live; edge-java p
 - A RED that passes for the wrong reason (the stored zip) is caught only by asserting the test's own precondition.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-bformat-call.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine (a truth case is RED for the reason it names); Δ2 doctrine `BUILD-LOOP.md` § 5 kit tooling doctrine (XML lints), the `*.bog` text-reader inventory stays its `open_issue:`.

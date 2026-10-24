@@ -64,3 +64,11 @@ func (c *Client) Close() {
 	c.Call(Channel, "del", obj("id", c.sid))
 	c.sid = nil
 }
+
+// Sync is BoxClient.sync: exactly one op (a dict) per syncTo; anything else is a ValueError.
+func (c *Client) Sync(op any) (any, error) {
+	if _, ok := op.(*pyjson.Object); !ok {
+		return nil, &pyjson.ValueError{Msg: "sync() takes exactly one op dict"}
+	}
+	return c.SSC("syncTo", obj("nm", "sync", "ver", 1.0, "ops", []any{op}))
+}

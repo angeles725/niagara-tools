@@ -1,0 +1,7 @@
+-- args --
+set-coverage
+A,B
+-- want --
+exit 2
+-- stderr --
+usage: slot-coverage.sh set-coverage <declared-csv> <required-csv>

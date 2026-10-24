@@ -1,0 +1,4 @@
+<obj href="x/">
+<obj name="Link" is="baja:Link" display="Indirect: slot:/Plant/Rack1.comp1Running &#x2192; slot:/Plant/Facade2.comp1State"/>
+<obj name="Link1" is="baja:Link" display="Indirect: slot:/Plant/Rack2.comp2Running &#x2192; slot:/Plant/Facade2.comp2State"/>
+</obj>

@@ -1,0 +1,16 @@
+-- args --
+-x
+-- want --
+exit 2
+-- stderr --
+slot-coverage: unknown flag: -x
+usage: slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>
+-- module.lexicon --
+# facade lexicon: CompressorPanel has NO keys (renders raw camelCase in Workbench)
+RoomPanel.displayName=Cuarto
+RoomPanel.temperatureSetpoint=Setpoint de temperatura

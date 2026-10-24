@@ -1,0 +1,8 @@
+-- args --
+@DIR@/missing
+-- want --
+exit 3
+-- stderr --
+rc-scan: not a directory: @DIR@/missing
+-- README --
+nothing

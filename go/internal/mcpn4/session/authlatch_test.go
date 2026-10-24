@@ -2,7 +2,7 @@ package session_test
 
 // Go twins of the test_auth_latch tests (audit 2026-10-03 F4) that swap the clock, the
 // environment or the client in-process (go_server.go_twin("session", "injection")). The write
-// twin, TestAWriteDryRunIsRefusedWhilePaused, comes with the write tools (slice S10).
+// twin, TestAWriteDryRunIsRefusedWhilePaused, is in writelatch_test.go.
 
 import (
 	"strings"

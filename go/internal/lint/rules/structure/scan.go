@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
@@ -24,9 +25,9 @@ func (s *scan) row(sev lint.Severity, path, msg string) {
 	s.out = append(s.out, lint.Finding{Severity: sev, Path: path, Msg: msg})
 }
 
-// lineRows adds a finding at every line of p that re matches (path:line rows, one per offending line).
-func (s *scan) lineRows(p string, re *regexp.Regexp, msg string) {
-	for i, ln := range s.lines(p) {
+// lineRows adds a finding at every line of p's lines that re matches (path:line rows, one per offending line).
+func (s *scan) lineRows(p string, lines []string, re *regexp.Regexp, msg string) {
+	for i, ln := range lines {
 		if re.MatchString(ln) {
 			s.out = append(s.out, lint.Finding{Path: p, Line: i + 1, Msg: msg})
 		}
@@ -53,6 +54,22 @@ func (s *scan) lines(p string) []string {
 	}
 	lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 	return lines
+}
+
+// kotlinLines reads p as a Kotlin script and returns its code lines (ktssrc.Code: comments dropped, literal
+// contents removed, line numbers kept). A file it cannot read or scan is recorded and reads as empty.
+func (s *scan) kotlinLines(p string) []string {
+	data, err := os.ReadFile(p)
+	if err != nil {
+		s.fail(errors.New("cannot scan " + p + ": " + strerror.Text(err)))
+		return nil
+	}
+	toks, err := ktssrc.Tokens(string(data))
+	if err != nil {
+		s.fail(errors.New("cannot scan " + p + ": " + err.Error()))
+		return nil
+	}
+	return ktssrc.Code(toks)
 }
 
 // files lists the files named like any of names under dir, sorted, dot sub-directories pruned, as

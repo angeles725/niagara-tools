@@ -1,0 +1,17 @@
+-- args --
+@DIR@/module-include.xml
+--strict
+@DIR@/module.lexicon
+-- want --
+exit 2
+-- stderr --
+usage: slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>
+-- module.lexicon --
+# facade lexicon: CompressorPanel has NO keys (renders raw camelCase in Workbench)
+RoomPanel.displayName=Cuarto
+RoomPanel.temperatureSetpoint=Setpoint de temperatura

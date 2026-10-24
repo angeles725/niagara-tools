@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-slotomatic-authoring
@@ -71,5 +71,20 @@ course jars also showed the palette check miscounting palettes saved by Workbenc
   line removed, and only a source-vs-include check catches it.
 - Palettes saved by Workbench reorder attributes; text checks on XML must not assume attribute order.
 
+
+## Fold record (2026-10-24, quality round 10)
+- Δ1 FOLDED: `METHODOLOGY.md` K15 (reworded to the observed mechanism), `toolbelt/lint-slotomatic-markers.sh`
+  (pre-build marker check) and `toolbelt/build.sh` (skip detector, exits 30 and 34).
+- Δ2 FOLDED: `types/logic-authoring.md` § Generated accessors and slot declaration order (quality round 8 U11).
+- Δ3 FOLDED (doc): same §; U11 corrected "a reorder is a schema change" (a `.bog` binds by name, a reorder is safe
+  but changes the operator's view). Lint half owed as Go lint G96 `slot-pair-order` (BUILD-STATE open issue).
+- Δ4 FOLDED: `types/logic.md` § Operator-entered bounds (quality round 8 U11).
+- Δ5 FOLDED (doc): `types/module-wiring.md` § 2. Refined: the processor does rewrite a line whose existing `<agent>`
+  differs; only a line with no `<agent>` (or a subset that still matches) stays stale (`ModuleInclude.entryMatches`).
+  Lint half LANDED 2026-10-24 as `toolbelt/lint-agent-on-include-sync.sh` (Go lint G99, #473; retro
+  r10-g99-agent-on-include-sync).
+- Δ6 FOLDED: `toolbelt/verify-module.sh` `check_palette` counts `<p` entries with `n=` in any position;
+  `types/structure.md` § Palette assembly templates; pinned in `tests/verify-module.bats`.
+
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |`
+**Status**: FOLDED 2026-10-24 — Δ5 doc half by this commit, Δ1-Δ4 and Δ6 by earlier rounds; lint half owed as G96; G99 landed 2026-10-24 (#473); INDEX row flipped to folded.

@@ -1,0 +1,9 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 3
+-- stderr --
+slot-coverage: not found: @DIR@/module.lexicon
+-- module-include.xml --
+<types/>

@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # RED-FIRST pins for bog-audit.sh (campaign 8 PR10, shard c8-audit/bog.md). Audits a station config.bog
 # against the deployed module source. Row `<CHECK_ID>  PASS|FAIL|WARN  <path>  <detail>`; exit 0 clean /
-# 1 any FAIL / 3 parse error, prefix not found, or python3 missing.
+# 1 any FAIL / 3 usage, not a file, a malformed bog or prefix not found (Go port: go/internal/bogaudit).
 #
 # Grammar (aligned to the REAL PANCCADIA/MX60 bogs): a COMPONENT is `<p n='Name' h='handle' t='PFX:Type'>`
 # (single-quoted, carries a handle, optional m='pfx=module' on first use of a prefix); a VALUE property is
@@ -146,13 +146,43 @@ JAVA
   [[ "$output" == *"CHECK1"* ]]
 }
 
-@test "BA7: python3 missing -> exit 3 (command -v python3 guard)" {
+@test "BA7: python3 absent from PATH -> the audit still runs (Go port; exit 1 + the CHECK11 row on synthetic.bog)" {
+  # The python engine is gone (go/internal/bogaudit). Built once with the full PATH, the wrapper then needs only
+  # bash + the go_tool_bin staleness check. Mutation: BA7 -- reintroducing a `command -v python3` guard -> exit 3.
+  run "$BA" "$T/clean.bog" --module ColdRoomPan
+  [ "$status" -eq 0 ]
   NOPY="$T/nopy"; mkdir -p "$NOPY"
-  for t in bash sh env grep sed awk unzip dirname basename cat sort head printf; do
+  for t in bash sh env find readlink dirname; do
     p="$(command -v "$t" 2>/dev/null)"; [ -n "$p" ] && ln -sf "$p" "$NOPY/"
   done
+  [ -z "$(PATH="$NOPY" command -v python3)" ]
   PATH="$NOPY" run bash "$BA" "$T/synthetic.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK11  FAIL  NrioNetwork/io/ro1"* ]]
+}
+
+@test "BA7b: a .bog that is not a zip is refused by name (exit 3), never read as an empty station" {
+  # Mutation: BA7b -- dropping the zip-magic check in readBog -> a positioned XML error instead of the named refusal.
+  printf '\000\001binary\377' > "$T/binary.bog"
+  run "$BA" "$T/binary.bog" --module ColdRoomPan
   [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: cannot extract file.xml from $T/binary.bog" ]
+  ( cd "$T" && printf 'x\n' > other.xml && zip -q nofile.bog other.xml )
+  run "$BA" "$T/nofile.bog" --module ColdRoomPan
+  [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: cannot extract file.xml from $T/nofile.bog" ]
+}
+
+@test "BA7c: a zipped bog and its bare file.xml give the same rows; a malformed file.xml is a positioned error (exit 3)" {
+  run "$BA" "$T/synthetic.bog" --module ColdRoomPan
+  local zipped="${output%$'\n'# bog-audit: parse time*}"
+  run "$BA" "$T/synthetic.xml" --module ColdRoomPan
+  [ "${output%$'\n'# bog-audit: parse time*}" = "$zipped" ]
+  printf '<bajaObjectGraph>\n <p n="a" h="1" t="x:Y">\n</bajaObjectGraph>\n' > "$T/file.xml"
+  ( cd "$T" && zip -q bad.bog file.xml && rm -f file.xml )
+  run "$BA" "$T/bad.bog" --module ColdRoomPan
+  [ "$status" -eq 3 ]
+  [[ "$output" == "bog-audit: $T/bad.bog:3:1: element <p> opened at 2:2 closed by </bajaObjectGraph>" ]]
 }
 
 @test "BA8: no config.bog argument -> exit 3 (usage)" {
@@ -271,6 +301,118 @@ XML
   grep -qE '^CHECK5[[:space:]]+FAIL.*ghostFrozen' <<< "$output"
   # Exit must be 1 (at least one FAIL)
   [ "$status" -eq 1 ]
+}
+
+@test "BA13: a --source-dir that is not a directory stops the audit (exit 3), never an all-ghost CHECK5 run" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-source-missing-dir.txt): os.walk yielded nothing for a missing
+  # directory and every bog slot became a CHECK5 ghost FAIL. Mutation: BA13 -- dropping the os.Stat check in
+  # scanSources -> exit 1 with CHECK5 FAIL rows.
+  run "$BA" "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/no-such-dir"
+  [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: --source-dir is not a directory: $T/no-such-dir" ]
+}
+
+@test "BA14: CHECK4 reads a combined flags expression — Flags.SUMMARY | Flags.TRANSIENT (spaced or not) is TRANSIENT" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-spaced-flags-source.txt): the python flags pattern stopped at the
+  # first space or dot after the first name, so a TRANSIENT after "|" was never seen. Mutation: BA14 -- the old
+  # flagsArg pattern -> no CHECK4 row for live2/live4.
+  local S="$T/ba14/src"; mkdir -p "$S"
+  cat > "$S/BColdRoom.java" <<'JAVA'
+@NiagaraProperty(name="live2", type="boolean", defaultValue="false", flags = Flags.SUMMARY | Flags.TRANSIENT)
+@NiagaraProperty(name="live4", type="boolean", defaultValue="false", flags=Flags.SUMMARY|Flags.TRANSIENT)
+public class BColdRoom extends BComponent {}
+JAVA
+  _mkbog ba14 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="live2" t="b:boolean" v="true"/>
+  <p n="live4" t="b:boolean" v="true"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba14.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^CHECK4  WARN  ColdRoom_1/live[24]  TRANSIENT slot has persisted value in bog$' <<< "$output")" -eq 2 ]
+}
+
+@test "BA15: an annotation or a .set( inside a comment declares nothing (no CHECK6 / CHECK12 row from it)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-comments.txt): the python scanner read raw lines. Mutation:
+  # BA15 -- reading the raw lines instead of javasrc.Strip's -> CHECK6 'commented' and CHECK12 'real' rows.
+  local S="$T/ba15/src"; mkdir -p "$S"
+  cat > "$S/BColdRoom.java" <<'JAVA'
+@NiagaraProperty(name="real", type="int", defaultValue="0")
+// @NiagaraProperty(name="commented", type="int", defaultValue="0")
+public class BColdRoom extends BComponent { void w(C c) { /* c.set("real", 1); */ } }
+JAVA
+  _mkbog ba15 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="x"/><p n="targetSlotName" v="real"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba15.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHECK6  WARN  ColdRoom_1/real "* ]]
+  [[ "$output" != *"commented"* ]] && [[ "$output" != *"CHECK12"* ]]
+}
+
+@test "BA16: a b:ConversionLink is a link (CHECK11 sees an own output fed through a converter)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-conversion-link.txt): the python scanner knew only t='b:Link',
+  # so every converter link (EnumToStatusBoolean, NumberToStatusNumeric) was invisible to CHECK7/9/11/13-20.
+  # Mutation: BA16 -- matching only "b:Link" in isLinkType -> exit 0, no CHECK11 row.
+  _mkbog ba16 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='EvaporatorUnit_1' h='u1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'><p n="fanOut" v="false"/></p>
+ <p n='ro1' h='r1' m='c=control' t='c:BooleanWritable'>
+  <p n='Link' t='b:ConversionLink'><p n="sourceOrd" t="b:Ord" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="in10"/>
+   <p n="converter" m="conv=converters" t="conv:EnumToStatusBoolean"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba16.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK11  FAIL  ro1  own-module h:u1.fanOut -> writable with no explicit fallback"* ]]
+}
+
+@test "BA17: a component written as an empty-element tag is a component (no orphan, a DefrostController sibling counts)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-empty-component.txt): the python scanner registered a handle only
+  # on a non-empty <p h=...>, so a link from a defaulted component read as a CHECK9 orphan and a defaulted
+  # DefrostController as no sibling (CHECK16). Mutation: BA17 -- registering only non-empty components -> exit 1.
+  _mkbog ba17 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_1' h='u1' t='CRP:EvaporatorUnit'><p n="hasDefrost" v="true"/></p>
+  <p n='DefrostController' h='d1' t='CRP:DefrostController'/>
+  <p n='Clock' h='k1' t='CRP:RoomClock'/>
+  <p n='Display' h='x1' t='kitControl:NumericConst'>
+   <p n='L' t='b:Link'><p n="sourceOrd" v="h:k1"/><p n="sourceSlotName" v="minutes"/><p n="targetSlotName" v="in"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba17.bog" --module ColdRoomPan
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHECK1  PASS  ColdRoomPan  components=4"* ]]
+}
+
+@test "BA18: a composite property (a StatusNumeric setpoint with a nested value) is a slot in the bog (no CHECK6 row)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-composite-slot.txt): the python scanner recorded only empty-element
+  # value slots, so a stored StatusNumeric/StatusBoolean property read as "slot in source not in bog" (CHECK6) and an
+  # undeclared one was never a CHECK5 ghost. Mutation: BA18 -- dropping the composite slot in builder.start -> a
+  # CHECK6 row for setpoint.
+  local S="$T/ba18/src"; mkdir -p "$S"
+  printf '@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric()")\npublic class BColdRoom extends BComponent {}\n' > "$S/BColdRoom.java"
+  _mkbog ba18 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='setpoint' t='b:StatusNumeric'><p n="value" v="-18.0"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba18.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CHECK6"* ]] && [[ "$output" != *"CHECK5"* ]]
 }
 
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {

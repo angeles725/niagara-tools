@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-machine-default-path
@@ -68,4 +68,4 @@ getProperty/getOrDefault/requireNonNullElse/orElse fallback; a local variable or
   list, and exclude by a test, never by widening the comment.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-machine-default-path.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 and Δ2 `METHODOLOGY.md` § rt G43 pointer; Δ3 not folded, needs code (a decision on report-module membership), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues. INDEX row generated from the header: `| 2026-10-24-go-lint-machine-default-path.md | kit | 2026-10-24 | folded | 3 |`
