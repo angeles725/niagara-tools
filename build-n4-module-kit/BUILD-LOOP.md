@@ -242,7 +242,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   - **Port byte-identical first, then fix** (steps: `go/README.md` § Adding a lint rule). Record the goldens from
     the bash lint on the current origin/main and re-record at the merge (main moved lint-servlet's walk under its
     port). Keep the bash quirks until old and new agree byte for byte on fixtures and real trees; a difference the
-    shared code forces is declared in the port commit. Then fix each truth bug in its own RED-first commit, a known
+    shared code forces is declared in the port commit and pinned by its own case, never emulated: a raw-text
+    emulation of what `xmlsrc` reads is the second tokenizer R8-D12 forbids (bog-audit's malformed bog,
+    obix-link-audit's entity-spelled links). `[ev: retro go-bog-audit Δ8]` `[ev: retro go-obix-link-audit Δ1]`
+    Byte identity proves the port faithful, not right: where a sibling parser reads the same input, diff the
+    port's parsed graph against it once (bog-audit's env-gated dump against niagara-go `bog-nav` found three
+    blind spots the python shared). `[ev: retro go-bog-audit Δ9]` Then fix each truth bug in its own RED-first commit, a known
     false negative included (never kept as a "limitation"); a changed golden puts `declared difference: <why>`
     above `-- args --`. Only a cosmetic quirk no real tree hits may stay (split-package-check prints a root
     module's full path). Use the engine, never a private copy: gawk `for (k in a)` order from `rules/awkorder`, a
@@ -253,6 +258,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro go-lint-structure Δ1]` `[ev: retro go-e2-tiny-lints Δ1]` `[ev: retro go-lint-demand-scope Δ1]`
   - **A test that needs files outside the repository never runs in CI** (`XMLSRC_EXPAT_SUITE`, `XMLSRC_SWEEP_ROOTS`,
     `JAVASRC_DIFF_ROOTS`): the landing PR states that it ran them, with the counts. `[ev: retro go-xmlsrc Δ3]`
+  - **A network tool's bats run against a local `127.0.0.1` stand-in** (plain http and a throwaway self-signed
+    https), never a stub of the client binary: curl stubs pinned argv/stdin plumbing the port no longer has, while
+    the stand-in cases passed on the bash script and the port alike (`tests/obix-link-audit.bats` `_station`).
+    `[ev: retro go-obix-link-audit Δ2]`
   - **XML and `.bog` lints port onto `go/internal/xmlsrc` only** (R8-D12, `go/README.md` § XML rules). Its first
     consumer is lint-agent-on-shape; split-package-check reads no XML. Change `Open`'s allocation (about 23 bytes
     per input byte) only after a measured slow sweep. `[ev: retro go-xmlsrc Δ1]` `[ev: retro go-split-package-check Δ1]`
@@ -277,6 +286,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     fixed lines 1-60 window cut off header lines, `[ev:]` tags included) and `internal/gen` `File.Run` is the one
     check-or-write flow of a generator; a second copy of either is a finding. `[ev: retro r9-lintindex-header Δ1]`
     `[ev: retro r9-guardpins-header Δ1]` `[ev: retro truth-ported-rules Δ3]` `[ev: retro r9-m2-gen Δ1]`
+    `internal/ktssrc` `Tokens` is the one Kotlin-script reader; lint-structure L15 and split-package-check still
+    match raw `*.gradle.kts` text and move onto it when next touched. `[ev: retro go-lint-uberjar-api Δ2]`
   - **Pin every shared helper with a sync test.** A PR that moves copies into one `toolbelt/lib/*.sh` file or one
     shared function also adds a bats test that fails when a caller stops using it or a private copy comes back.
     Models: `tests/lint-structure.bats` LS15-sync (`lib/signing-block.sh`, sourced by `build.sh`,
@@ -312,8 +323,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     shared `toolbelt/lib/method-boundary.sh` (`mb_strip` for comments with literals kept, `mb_parse` for method
     bounds) or the Go Java scanner `go/internal/javasrc` (T8k-1, #297); a private stripper is a finding. Four fail-open bugs in
     one round came from private strippers (lint-driver-scaffold #277/#283, lint-service-types #279/#285,
-    `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]` `[ev: retro truth-ported-rules Δ1]` The lint-write-path port reads `linescan.Code`;
-    lint-arbitrary-ord's private `code_part` goes when it is ported. `[ev: retro go-lint-delays Δ2]`
+    `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]` `[ev: retro truth-ported-rules Δ1]` The lint-write-path and lint-arbitrary-ord
+    ports read `linescan.Code`. `[ev: retro go-lint-delays Δ2]` `[ev: retro go-lint-arbitrary-ord]`
     Match on blanked source (comments and literal contents removed: `go/internal/javasrc` `Strip` then
     `BlankLiterals`) and on the whole statement, not the raw line: raw lines flag a call inside a comment or a
     string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
@@ -342,12 +353,16 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     directory replays as a missing root) gets a direct Go test (`rules/licensegate` `TestEmptyDir`). The recorder
     copies every root argument (file roots too) so no machine path enters a golden: `grep -l /tmp/ testdata/*.txt` is
     empty before a golden commit. `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
-    `[ev: retro go-lint-link-target-flags Δ2]`
+    `[ev: retro go-lint-link-target-flags Δ2]` Record the trees under a path with no segment the tool matches on:
+    rc-scan's `-path '*/rc/*'` matched the recorder's own scratch directory. `[ev: retro go-rc-scan Δ2]`
   - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
     only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
     line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
     lands as its own green commit, then the port with its goldens. `[ev: retro go-lint-status-parity Δ2]`
-    `[ev: retro go-lint-ws-placement Δ3]` `[ev: retro go-lint-size Δ3]`
+    `[ev: retro go-lint-ws-placement Δ3]` `[ev: retro go-lint-size Δ3]` A tool whose contract is not a lint (its
+    operand is not a source root, or its rows and arguments fit no engine mode) is its own `go/cmd/<tool>` over the
+    shared packages, reusing the engine's walk, `Finding.Row` and `golden.Read`; its retro records the misfit
+    (rc-scan, bog-audit, obix-link-audit). `[ev: retro go-rc-scan Δ1]`
   - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
     is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
     printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
@@ -355,7 +370,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     one): a byte-identical port keeps the drop and its truth fix removes it; a bash lint that stays reads
     `while IFS= read -r x || [ -n "$x" ]`. `[ev: retro go-lint-lexicon-ascii Δ1]`
   - Owed code from the round-10 lint ports (client findings, rule gaps, engine fields) stays an `open_issue:` in
-    the port's `ledger.d/2026-10-24-go-lint-<name>.md` fragment, not doctrine:
+    the port's `ledger.d/2026-10-24-*` fragment (or `ledger.d/2026-10-24-r10-fold-late.md`), not doctrine:
+    `[deferred: retro go-bog-audit Δ1]` `[deferred: retro go-bog-audit Δ2]` `[deferred: retro go-bog-audit Δ3]`
+    `[deferred: retro go-bog-audit Δ4]` `[deferred: retro go-bog-audit Δ5]` `[deferred: retro go-bog-audit Δ7]`
+    `[deferred: retro go-lint-arbitrary-ord Δ1]` `[deferred: retro go-lint-arbitrary-ord Δ2]`
+    `[deferred: retro go-lint-arbitrary-ord Δ3]` `[deferred: retro go-lint-uberjar-api Δ1]`
+    `[deferred: retro go-rc-scan Δ3]`
     `[deferred: retro go-lint-delays-method-scope Δ2]` `[deferred: retro go-lint-duplicate-helper Δ2]`
     `[deferred: retro go-lint-duplicate-helper Δ3]` `[deferred: retro go-lint-hot-write Δ1]`
     `[deferred: retro go-lint-hot-write Δ2]` `[deferred: retro go-lint-hot-write Δ3]`
@@ -453,7 +473,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
 
 - **Before and after a live-station deploy — snapshot the audit surface first:** `toolbelt/station-snapshot.sh <station-dir> <out-dir>` copies `config.bog` + `console*.txt` into `<out-dir>`, records history/alarm db pointers (paths + sizes, never the db files), and writes `manifest.json` with sha256 per file; source dir is never opened for write; exit 0 ok / 1 copy failure / 3 usage. Keep the pre-deploy snapshot as a baseline for `schema-risk.sh` and `bog-audit.sh` after the deploy. [ev: retro campaign8-station-snapshot]
 - **After a reload (rt or full station restart), triage the console before closing the session:** `toolbelt/triage-console.sh --package com.vendor <station-dir>/console*.txt` surfaces own-module exceptions and load-time failures that the framework swallows silently (three attribution channels: own frame, own logger tag, [sys]/[sys.xml] load-fail shape). exit 1 = rows found; investigate before calling the deploy clean. [ev: retro campaign8-triage-console]
-- **Audit the station bog for ghost slots, dangling links, orphan handles, proxy-link safety, and station-logic wiring:** `toolbelt/bog-audit.sh <config.bog|file.xml> --module <MOD> [--source-dir <src-dir>] [--strict]` (CHECK1-CHECK20; exit 1 = any FAIL). Runs from the bog alone for CHECK1/8/9/10/11/12/13/14/15/16/17/18/19/20; add `--source-dir` for the source-coupled checks (CHECK2-7). Proxy-link-safety (CHECK11) fires when an own-module output is linked to a BooleanWritable/NumericWritable with no explicit fallback — the writable holds last state on station stop/reload, masking the fault. Station-logic checks (CHECK13-19): relay-double-source, own-output-unlinked, sensor-crossed-by-name, hasDefrost<->DefrostController sibling, roomN-index-mismatch, tile-number consistency, link-direction. Numeric-to-boolean-direct (CHECK20): a multi-state/enum slot (name contains Mode/Command/Cmd) linked directly into a boolean gate (BOrLogic/BAndLogic/BNotLogic) with no Equal(x,N) intermediate — the `!=0`-as-true coercion silently merges HAND and OFF states; add an `Equal(slot, value)` block between the numeric source and the gate. [ev: retro campaign8-bog-audit] [ev: retro campaign8-station-logic] [ev: retro control-model-limits-live-commissioning Δ4]
+- **Audit the station bog for ghost slots, dangling links, orphan handles, proxy-link safety, and station-logic wiring:** `toolbelt/bog-audit.sh <config.bog|file.xml> --module <MOD> [--source-dir <src-dir>] [--strict]` (CHECK1-CHECK20; exit 1 = any FAIL). Runs from the bog alone for CHECK1/8/9/10/11/12/13/14/15/16/17/18/19/20; add `--source-dir` for the source-coupled checks (CHECK2-7), pointed at ONE checkout's module sources: over a client folder every `B<Class>.java` copy (live, stale, salvage) merges into one class, last write wins `[ev: retro go-bog-audit Δ6]`. Proxy-link-safety (CHECK11) fires when an own-module output is linked to a BooleanWritable/NumericWritable with no explicit fallback — the writable holds last state on station stop/reload, masking the fault. Station-logic checks (CHECK13-19): relay-double-source, own-output-unlinked, sensor-crossed-by-name, hasDefrost<->DefrostController sibling, roomN-index-mismatch, tile-number consistency, link-direction. Numeric-to-boolean-direct (CHECK20): a multi-state/enum slot (name contains Mode/Command/Cmd) linked directly into a boolean gate (BOrLogic/BAndLogic/BNotLogic) with no Equal(x,N) intermediate — the `!=0`-as-true coercion silently merges HAND and OFF states; add an `Equal(slot, value)` block between the numeric source and the gate. [ev: retro campaign8-bog-audit] [ev: retro campaign8-station-logic] [ev: retro control-model-limits-live-commissioning Δ4]
 
 ### 6.a Post-deploy verification (after hot module reload or station restart)
 
