@@ -1,0 +1,29 @@
+declared difference: T5-F2 every put is checked, one row per method that inserts (its first put) with no sweep there; the name matches as a whole identifier; removeIf on a view and iterator().remove() in the inserting method are sweeps
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/S.java --
+class S {
+  private static final Map<String, Long> A = new ConcurrentHashMap<String, Long>();
+  private static final Map<String, Long> B = new ConcurrentHashMap<String, Long>();
+  private static final Map<String, Long> C = new ConcurrentHashMap<String, Long>();
+  void started() {
+    Clock.schedulePeriodically(this, BRelTime.makeMinutes(1), purge, null);
+  }
+  public void doPurge() {
+    C.remove("x");
+  }
+  void a(String id) {
+    A.entrySet().removeIf(e -> e.getValue() < now());
+    A.put(id, now());
+  }
+  void b(String id) {
+    for (Iterator<String> it = B.keySet().iterator(); it.hasNext();) { if (old(it.next())) it.remove(); }
+    B.put(id, now());
+  }
+  void c(String id) {
+    C.put(id, now());
+  }
+}
