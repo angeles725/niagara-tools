@@ -262,7 +262,12 @@ Your `getDiscoveryObjects(prefs)`:
    and return `null` when finished (`discover/BNDiscoveryPreferences.java:104-108`).
 
 The framework's own `BNPointDeviceExt.doSubmitDiscoveryJob` submits with `job.submit(null)`
-(`point/BNPointDeviceExt.java:185`); override it with the `Context` form as in § 1.6 so the job runs as the user.
+(`point/BNPointDeviceExt.java:185`), and a subclass cannot change that: Baja binds an action to
+`do<Action>(param)` first and only falls back to `do<Action>(param, Context)` when the one-argument form is missing
+(`organized/baja/baja/vineflower/com/tridium/sys/schema/ComplexIntrospector.java:316-333`), so a Context overload
+next to the inherited one-argument method is never called. The Context form works only on an action you declare
+yourself, as the network's `submitDiscoveryJob` (§ 1.6); point discovery runs with the framework's null Context.
+`[ev: retro r10-dr2-driver-scaffold Δ2]`
 Course device and point discovery: `[ev: corpus B1239 §1239.11]`.
 
 ## 2 · `BProxyExt` point SPI
@@ -402,7 +407,9 @@ extensions on the SOURCE point, not on the proxy. `[ev: corpus B1337 §1337.1 ro
 The API is `public abstract void doPing() throws Exception`; `pingOk()` and `pingFail(String cause)` are void calls
 routed to the device's health `[CERT]` `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/BDevice.java:552,570,580`.
 A device with no protocol of its own (reachability only) pings with a bounded socket connect (`getHost()`/`getPort()`
-are the device's own slots); the timeout bounds the
+stand for the device's own address slots; a real slot cannot be named `host`, because `BComponent` already has
+`BISpaceNode.getHost()` (`organized/docSource/docSource-doc/extracted/baja/javax/baja/space/BISpaceNode.java:44`) and the
+generated `String getHost()` does not compile, so name it e.g. `ipAddress` `[ev: retro r10-dr2-driver-scaffold Δ3]`); the timeout bounds the
 connect on the `Ping:` thread (not a DNS lookup, below), and the module needs the station-scoped `NETWORK_COMMUNICATION` permission:
 
 ```java
@@ -912,7 +919,11 @@ only driver test template is the video driver's,
   out-of-process mock for a manual check, not a test fixture `[ev: corpus B1239 §1239.4]`.
 - Each codec test must bite: drop a bounds check or the tag override and see a test go red before calling the
   suite done (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit).
-- Owed: the scaffold's `srcTest` (DR2) and a station-side loopback example built through the kit loop (DR5).
+- `toolbelt/scaffold-module.sh <Name> <out> --type driver` emits an NDriver module (fixture `fixtures/MinimalDriver`)
+  whose codec srcTest runs with `run-pure-test.sh`. Its `-rt` part needs `api(":alarm-rt")` (BDevice is an alarm
+  source, javac stops without it) and its `-wb` part `api(":bajaui-wb")` for the manager's widget base
+  `[ev: retro r10-dr2-driver-scaffold Δ1]`.
+- Owed: a station-side loopback example built through the kit loop (DR5).
 
 ---
 
