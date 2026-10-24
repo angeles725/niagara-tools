@@ -210,13 +210,13 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
-| `test_retro.py` | 35 | 20 | 0 | 1 | 0 | 21 | 14 |
+| `test_retro.py` | 36 | 20 | 0 | 1 | 0 | 21 | 15 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **637** | **166** | **56** | **105** | **18** | **345** | **292** |
+| **Total** | **638** | **166** | **56** | **105** | **18** | **345** | **293** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer

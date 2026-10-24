@@ -250,6 +250,34 @@ class _JsonlFile:
                 out.append(entry)
         return out
 
+    def _lines(self):
+        """`(n, entry)` for every JSON object line, `(n, None)` for a line that is not UTF-8.
+
+        Lines are numbered as readlines() splits them (LF, CRLF and CR) and decoded
+        one by one, so one bad byte costs one line, not the file (issues #448, #466). A
+        missing file or a torn line is skipped, as `entries()` skips them.
+        """
+        # Copy of #448's Journal._lines (PR #467): dedupe onto it once #467 merges.
+        try:
+            with open(self.path, "rb") as fh:
+                data = fh.read()
+        except OSError:
+            return []
+        out = []
+        for n, raw in enumerate(data.splitlines(), 1):
+            try:
+                line = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                out.append((n, None))
+                continue
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(entry, dict):
+                out.append((n, entry))
+        return out
+
 
 class Journal(_JsonlFile):
     """Append-only write-ahead record: an `intent` before each station op, a `result` after.
@@ -309,3 +337,14 @@ class AuditLog(_JsonlFile):
 
     def __init__(self, state_dir):
         super().__init__(state_dir, "audit.jsonl")
+
+    def scan(self):
+        """`(entries, unreadable)`: every JSON object line, and `{"line": n, "reason":
+        "UnicodeDecodeError"}` for each line that is not UTF-8 (left out; issue #466)."""
+        entries, bad = [], []
+        for n, entry in self._lines():
+            if entry is None:
+                bad.append({"line": n, "reason": "UnicodeDecodeError"})
+            else:
+                entries.append(entry)
+        return entries, bad
