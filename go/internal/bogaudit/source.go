@@ -82,15 +82,18 @@ func (s *sources) walk(dir string) error {
 }
 
 // file reads one class: its extends clause, its .set("SLOT", ...) writes, and each @NiagaraProperty or
-// @NiagaraAction line joined with the next lines while its parentheses stay open.
+// @NiagaraAction line joined with the next lines while its parentheses stay open. All of it is read on
+// javasrc.Strip's code (comments blanked, line numbers kept): the python scanner read raw lines, so an
+// annotation or a .set( left in a comment counted as a declared slot or a servlet write.
 func (s *sources) file(cls, content string) {
-	if m := regexp.MustCompile(`\bclass\s+` + regexp.QuoteMeta(cls) + `\s+extends\s+(\w+)`).FindStringSubmatch(content); m != nil {
+	lines, _ := javasrc.Strip(strings.Split(content, "\n"))
+	code := strings.Join(lines, "\n")
+	if m := regexp.MustCompile(`\bclass\s+` + regexp.QuoteMeta(cls) + `\s+extends\s+(\w+)`).FindStringSubmatch(code); m != nil {
 		s.extends[cls] = m[1]
 	}
-	for _, m := range setCall.FindAllStringSubmatch(content, -1) {
+	for _, m := range setCall.FindAllStringSubmatch(code, -1) {
 		s.writes[m[1]] = true
 	}
-	lines := strings.Split(content, "\n")
 	for i := 0; i < len(lines); {
 		ln := lines[i]
 		if !strings.Contains(ln, "@NiagaraProperty") && !strings.Contains(ln, "@NiagaraAction") {

@@ -335,6 +335,28 @@ XML
   [ "$(grep -c '^CHECK4  WARN  ColdRoom_1/live[24]  TRANSIENT slot has persisted value in bog$' <<< "$output")" -eq 2 ]
 }
 
+@test "BA15: an annotation or a .set( inside a comment declares nothing (no CHECK6 / CHECK12 row from it)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-comments.txt): the python scanner read raw lines. Mutation:
+  # BA15 -- reading the raw lines instead of javasrc.Strip's -> CHECK6 'commented' and CHECK12 'real' rows.
+  local S="$T/ba15/src"; mkdir -p "$S"
+  cat > "$S/BColdRoom.java" <<'JAVA'
+@NiagaraProperty(name="real", type="int", defaultValue="0")
+// @NiagaraProperty(name="commented", type="int", defaultValue="0")
+public class BColdRoom extends BComponent { void w(C c) { /* c.set("real", 1); */ } }
+JAVA
+  _mkbog ba15 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="x"/><p n="targetSlotName" v="real"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba15.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"CHECK6  WARN  ColdRoom_1/real "* ]]
+  [[ "$output" != *"commented"* ]] && [[ "$output" != *"CHECK12"* ]]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"

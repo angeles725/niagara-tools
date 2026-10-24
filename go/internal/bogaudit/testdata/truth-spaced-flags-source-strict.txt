@@ -23,7 +23,6 @@ CHECK4  WARN  ColdRoom_1/live2  TRANSIENT slot has persisted value in bog
 CHECK5  FAIL  ColdRoom_1/ghost  slot in bog not in source BColdRoom (ghost/orphan)
 CHECK5  FAIL  ColdRoom_1/frozenGhost  slot in bog not in source BColdRoom (ghost/orphan)
 CHECK5  FAIL  ColdRoom_1/hexy  slot in bog not in source BColdRoom (ghost/orphan)
-CHECK6  WARN  ColdRoom_1/commented  slot in source BColdRoom not in bog
 CHECK6  WARN  ColdRoom_1/later  slot in source BColdRoom not in bog
 CHECK2  FAIL  ColdRoom_1/DefrostController/intervalExpired  flag-drift: bog f='o' source expects f='h'
 CHECK5  WARN  ColdRoom_1/DefrostController/frozenD  frozen slot not in source BDefrostController — possibly inherited from BDefrostBase (not statically decidable; add @NiagaraProperty override to suppress)
