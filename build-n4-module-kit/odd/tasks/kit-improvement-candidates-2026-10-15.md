@@ -144,7 +144,7 @@ cursor recipe stays owed (WU-P0-6).
 - **Sources:** tjd#Δ1 (primary) · tjd#Δ2 extends (lint re-scope)
 - **Winning text:** tjd Δ1 — Tridium's ladder (Clock / BWorker / BSimpleJob first; a named `Thread` or `ExecutorService` is production-grade); `shutdownNow()`/`interrupt()` need `MANAGE_EXECUTION` (type="station"). The kit's "denied by the SecurityManager, throws at runtime" is wrong.
 - **Evidence:** course `Labs/Lab Instructions.pdf` p78-80; `Labs/Lab9 Multithreaded/module-permissions.xml`; user's live `training-rt` ran all three executors.
-- **Target:** `types/logic.md:344`, `types/math-control-libraries.md:91,132`, `toolbelt/lint-timers.sh:477-485` (+ bats, mutation).
+- **Target:** `types/logic.md:344`, `types/math-control-libraries.md:91,132`, `toolbelt/lint-timers.sh` jdk-thread check (+ bats, mutation; Go port: `go/internal/lint/rules/timers/threads.go:15-45`).
 - **Lint-able:** yes — FAIL only when `shutdownNow(`/`interrupt(`/`setDaemon(`/`setPriority(` appear without `MANAGE_EXECUTION`; else WARN. **Fold type:** doc fix + lint.
 - **Fold status:** FOLDED (WU-P0-1 doc + WU-P0 lints, 2026-10-22; tjd Δ1, Δ2, shs Δ3, Δ4). Open decision 2 answered by the
   Integrador: keep a blocking FAIL only for a thread-modifying call without `MANAGE_EXECUTION`.
@@ -609,7 +609,7 @@ cursor recipe stays owed (WU-P0-6).
 
 ### C41 — moduleTest doctrine, layout and template
 - **Sources:** tpb#Δ4 (primary: station tests for component behaviour, structural tests last resort) · tpb#Δ5 extends (structural-test advisory lint) · tpb#Δ6 extends (`moduleTest-include.xml` template + scaffold) · lex#Δ3 duplicate on the 4.14 layout + extends (BTestNg vs BTestNgStation, mockStatic, FINE assertions, no fixed sleeps)
-- **Evidence:** commit 337ee6c; corpus B1252 §1252.3, B1236 §1236.5-6; `toolbelt/lint-structure.sh:271-303`.
+- **Evidence:** commit 337ee6c; corpus B1252 §1252.3, B1236 §1236.5-6; `toolbelt/lint-structure.sh` L11 mixed-srcTest check (Go port: `go/internal/lint/rules/structure/profile.go:144-166`).
 - **Target:** `types/moduleTest.md`, `METHODOLOGY.md` testing tiers, `toolbelt/lint-structure.sh` (L12), `toolbelt/scaffold-module.sh`.
 - **Lint-able:** yes — WARN `srcTest` reading `.java` as text with no BTestNg class. **Fold type:** doc section + template + lint.
 - **Fold status:** PARTIALLY FOLDED (`docs/r8-p1-tests`, 2026-10-23; tpb Δ4, Δ5, Δ6, lex Δ3): `types/moduleTest.md`
