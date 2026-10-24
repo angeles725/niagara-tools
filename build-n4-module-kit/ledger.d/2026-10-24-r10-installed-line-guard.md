@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: scripts/check-installed-line.sh refuses a client branch that would downgrade an installed module group -->
+log: 2026-10-24 · quality round 10 → a PANCCADIA fix branch cut from an old commit would have shipped DashboardPan 2.9.2 over the installed 2.10.0. New `scripts/check-installed-line.sh <repo> <branch> <installed-ref>`: each GROUP build.gradle.kts carrying defaultModuleVersion at the installed ref must exist on the branch with a version >= installed; DOWNGRADE, MISSING and INCOMPARABLE exit 1, an unknown ref or an installed ref with no defaultModuleVersion exits 2. The source read (`vv_source_version`) and the compare (`vv_cmp`) live in the shared `toolbelt/lib/vendor-version.sh`. BUILD-LOOP §0.b runs it before building a fix branch. Pins ILG-* and VV-source-version*; retro 2026-10-24-r10-installed-line-guard.
