@@ -133,6 +133,12 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	for i, sp := range specs {
 		if sp.Joined && !stopped[i] {
 			fds, err := sp.Tree.CheckTree(joined[i])
+			if errors.Is(err, ErrEmptyRoot) { // nothing it checks over every root: each root's ERROR row only
+				for _, root := range a.Roots {
+					r.empty(i, sp, root)
+				}
+				continue
+			}
 			r.findings(i, sp, "", fds)
 			r.ruleError(i, err)
 		}

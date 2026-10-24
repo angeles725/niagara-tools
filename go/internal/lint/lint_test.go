@@ -1044,3 +1044,19 @@ func TestFileFirstRunsOnlyAlone(t *testing.T) {
 		t.Errorf("alone: exit %d out %q", code, o)
 	}
 }
+
+// TestJoinedEmptyRoot: a Spec.Joined TreeRule that finds nothing to check over every root (ErrEmptyRoot)
+// prints its EmptyError row for each root, as the per-root path prints it for one, and exits 3; its
+// findings and the error text never print.
+func TestJoinedEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "x\n"})
+	b := tree(t, map[string]string{"B.java": "x\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Joined, sp.EmptyError = true, EmptyRow{Msg: "nothing joined"}
+	s, o, e := stdio()
+	code := Run([]Spec{sp}, "lint-t", Args{Roots: []string{a, b}}, s)
+	want := "ERROR  lint-t  " + a + "  nothing joined\nERROR  lint-t  " + b + "  nothing joined\n"
+	if code != 3 || o.String() != want || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and %q", code, o, e, want)
+	}
+}
