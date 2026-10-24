@@ -13,7 +13,7 @@ func Batches(views []*pyjson.Object) ([]any, error) {
 	rolled := map[string][]any{}
 	for _, v := range views {
 		if of := get(v, "rollback_of"); pyjson.Truthy(of) {
-			key, err := dictKey(of)
+			key, err := pyjson.DictKey(of)
 			if err != nil {
 				return nil, err
 			}
@@ -23,7 +23,7 @@ func Batches(views []*pyjson.Object) ([]any, error) {
 	out := make([]any, 0, len(views))
 	for i := len(views) - 1; i >= 0; i-- {
 		v := views[i]
-		key, err := dictKey(get(v, "batch_id"))
+		key, err := pyjson.DictKey(get(v, "batch_id"))
 		if err != nil {
 			return nil, err
 		}
