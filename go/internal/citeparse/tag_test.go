@@ -29,6 +29,7 @@ func TestCardTags(t *testing.T) {
 	}{
 		{"retro with a delta", "x `[ev: retro go-ci-steps Δ2]` y", []brief{{1, Retro, "go-ci-steps", "Δ2"}}},
 		{"retro without a delta, .md suffix dropped", "[ev: retro 2026-09-25-outage.md]", []brief{{1, Retro, "2026-09-25-outage", ""}}},
+		{"retro file with lines", "[ev: retro 2026-09-25-outage.md:5-10]", []brief{{1, Retro, "2026-09-25-outage", ":5-10"}}},
 		{"two clauses are two pointers", "[ev: retro a Δ1; corpus B12 §12.3]", []brief{{1, Retro, "a", "Δ1"}, {1, Corpus, "B12", "§12.3"}}},
 		{"comma-joined retros", "[ev: retro a, retro b]", []brief{{1, Retro, "a", ""}, {1, Retro, "b", ""}}},
 		{"delta list", "[ev: retro a Δ1, Δ3]", []brief{{1, Retro, "a", "Δ1"}, {1, Retro, "a", "Δ3"}}},

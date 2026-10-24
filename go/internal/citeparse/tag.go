@@ -174,13 +174,17 @@ func unparsed(c, why string) []Pointer {
 // retroClause reads `retro <slug>[ Δn[, Δm]…][ note…]`.
 func retroClause(c, rest string) []Pointer {
 	f := strings.Fields(rest)
+	var lines []Range
+	if len(f) > 0 {
+		f[0], lines = splitLines(f[0])
+	}
 	if len(f) == 0 || !slugRe.MatchString(strings.TrimSuffix(f[0], ".md")) {
 		if len(f) > 0 && bareID.MatchString(rest) {
 			return []Pointer{{Kind: Bare, Target: rest, Raw: c}}
 		}
 		return unparsed(c, "retro slug not readable")
 	}
-	base := Pointer{Kind: Retro, Target: strings.TrimSuffix(f[0], ".md"), Raw: c}
+	base := Pointer{Kind: Retro, Target: strings.TrimSuffix(f[0], ".md"), Lines: lines, Raw: c}
 	var deltas []int
 	for _, w := range strings.FieldsFunc(strings.Join(f[1:], " "), func(r rune) bool { return r == ' ' || r == ',' || r == '/' }) {
 		if m := deltaTok.FindStringSubmatch(w); m != nil {
