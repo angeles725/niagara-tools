@@ -90,3 +90,13 @@ func TestFields(t *testing.T) {
 		}
 	}
 }
+
+// TestDescendants: direct and module-local chains reach a base; an unrelated class or a cycle does not.
+func TestDescendants(t *testing.T) {
+	toks := toksOf("class A extends BNDevice {}\nclass B extends A {}\nclass C extends B {}\nclass D extends Object {}\n" +
+		"class E extends F {}\nclass F extends E {}")
+	got := Descendants(Classes(toks), "BNDevice", "BNNetwork")
+	if len(got) != 3 || !got["A"] || !got["B"] || !got["C"] {
+		t.Errorf("Descendants = %v, want A B C", got)
+	}
+}

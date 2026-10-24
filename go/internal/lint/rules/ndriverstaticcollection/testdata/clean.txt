@@ -1,0 +1,22 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmePointDeviceExt.java --
+package com.example.drv;
+public class BAcmePointDeviceExt extends BNPointDeviceExt {
+  static final Set<String> NAMES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("a", "b")));
+  static final List<String> NONE = java.util.Collections.emptyList();
+  static final int MAX = 3;
+  static final String[] KEYS = { "a" };
+  // private static final Set<String> old = new HashSet<>();
+  String s = "static Set<String> x = new HashSet<>();";
+  static Set<String> make() { return new HashSet<>(); }
+}
+-- M/M-rt/src/com/example/drv/AcmeUtil.java --
+package com.example.drv;
+public final class AcmeUtil {
+  private static final Set<String> KNOWN = new HashSet<>();
+}

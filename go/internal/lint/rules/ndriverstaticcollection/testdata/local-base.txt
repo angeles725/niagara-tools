@@ -1,0 +1,17 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+WARN  lint-ndriver-static-collection  @DIR@/M/M-rt/src/com/example/drv/sub/BAcmeSubDevice.java:3  static List<String> q is shared by every instance -- keep it per instance
+WARN  lint-ndriver-static-collection  @DIR@/M/M-rt/src/com/example/drv/sub/BAcmeSubDevice.java:5  static Deque<Integer> d is shared by every instance -- keep it per instance
+-- stderr --
+-- M/M-rt/src/com/example/drv/BAcmeBaseDevice.java --
+package com.example.drv;
+public abstract class BAcmeBaseDevice extends BDevice {}
+-- M/M-rt/src/com/example/drv/sub/BAcmeSubDevice.java --
+package com.example.drv.sub;
+public class BAcmeSubDevice extends BAcmeBaseDevice {
+  protected static final List<String> q = new ArrayList<>();
+  static class Holder { static Set<String> inner = new HashSet<>(); }
+  static Deque<Integer> d = new ArrayDeque<>();
+}

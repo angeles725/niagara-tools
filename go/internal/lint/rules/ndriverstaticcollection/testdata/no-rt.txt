@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-ndriver-static-collection  @DIR@/M  no *.java under a -rt part's src/ (wrong path: pass the module root)
+-- stderr --
+-- M/M-ux/src/com/example/drv/ux/A.java --
+class A {}

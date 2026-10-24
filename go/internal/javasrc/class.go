@@ -214,3 +214,30 @@ func joinType(ts []Token) string {
 	}
 	return b.String()
 }
+
+// Descendants is the set of class names among classes whose superclass chain, followed through classes, reaches
+// one of bases (simple names). Names are simple, so two classes of one name in different packages are one.
+func Descendants(classes []Class, bases ...string) map[string]bool {
+	parent := map[string]string{}
+	for _, c := range classes {
+		if c.Extends != "" {
+			parent[c.Name] = c.Extends
+		}
+	}
+	want := map[string]bool{}
+	for _, b := range bases {
+		want[b] = true
+	}
+	out := map[string]bool{}
+	for name := range parent {
+		seen := map[string]bool{}
+		for p, ok := parent[name]; ok && !seen[p]; p, ok = parent[p] {
+			if want[p] {
+				out[name] = true
+				break
+			}
+			seen[p] = true
+		}
+	}
+	return out
+}
