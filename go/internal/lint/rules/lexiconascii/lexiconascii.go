@@ -9,7 +9,6 @@ package lexiconascii
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
@@ -38,15 +37,11 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Fail }
 
-// Check is the bash read loop: one row per line holding a byte above 0x7f, the bytes in order. Like `while
-// read`, it never reads a last line that has no final newline.
+// Check is the bash read loop: one row per line holding a byte above 0x7f, the bytes in order. Every line is
+// read, the last one too when it has no final newline (truth fix 2026-10-24: the bash `while read` skipped it).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := f.Raw
-	if len(lines) > 0 && !endsInNewline(f.Path) {
-		lines = lines[:len(lines)-1]
-	}
 	var out []lint.Finding
-	for i, ln := range lines {
+	for i, ln := range f.Raw {
 		var bad []string
 		for j := 0; j < len(ln); j++ {
 			if ln[j] > 0x7f {
@@ -58,11 +53,4 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	return out, nil
-}
-
-// endsInNewline reports a file whose last byte is "\n" (an unreadable file reads as ending in one: the
-// engine reported it already).
-func endsInNewline(path string) bool {
-	data, err := os.ReadFile(path)
-	return err != nil || len(data) == 0 || data[len(data)-1] == '\n'
 }

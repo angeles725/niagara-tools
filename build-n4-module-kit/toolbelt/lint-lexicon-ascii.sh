@@ -25,11 +25,15 @@
 # `n4lint lint-lexicon-ascii <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # Declared difference from the bash lint (port 2026-10-24): an unreadable *.lexicon is an env error (exit 3,
 # `cannot scan <file>` on stderr); the bash read loop printed the shell's error and went on, exit 0 or 1.
+# Truth fix 2026-10-24: every line is scanned, the last one too when the file has no final newline (the bash
+# `while read` skipped it, so a non-ASCII byte there passed clean); real trees unchanged (Cliente 7 rows,
+# sources/decompiled 0, though 7 of its 13 lexicons have no final newline).
 # VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro 2026-09-17-umbrelladashboard-module-creation]
 # Mutation: LA2 -- remove the non-ASCII byte scan and LA2 stops failing on a UTF-8 accented lexicon
 # Mutation: LA-unreadable -- skipping an unreadable lexicon reports the module clean
+# Mutation: LA-noeol -- reading lines like `while read` skips the last line when it has no final newline
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
