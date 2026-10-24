@@ -1,0 +1,25 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/src/rc/index.html:14  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- src/rc/index.html --
+<script>
+let lastOkAt = Date.now();
+function watchdog() {
+  if (Date.now() - lastOkAt > 30000) { location.reload(); }
+}
+async function poll() {
+  try {
+    await readJson();
+    paint("live");
+  } catch (err) {
+    paint("error");
+  } finally {
+    watchdog();
+    setTimeout(poll, 5000);
+  }
+}
+setTimeout(poll, 5000);
+</script>

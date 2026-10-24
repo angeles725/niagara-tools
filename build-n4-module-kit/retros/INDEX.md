@@ -327,6 +327,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-lint-hot-write.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-inert-coordination.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-inline-site-literal.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-js-pair.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-lexicon-ascii.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-license-gate.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-link-target-flags.md | kit | 2026-10-24 | pending | 2 |

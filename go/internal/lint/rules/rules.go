@@ -18,6 +18,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
@@ -35,6 +36,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/slotomaticmarkers"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
@@ -80,6 +82,8 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		spapoll.Spec(),
+		jasmineux.Spec(),
 		inertcoordination.Spec(),
 		changedhotwrite.Spec(),
 		persisthotwrite.Spec(),
