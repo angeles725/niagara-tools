@@ -1,10 +1,12 @@
+declared difference (truth fix, method scope): the 50-line binding window is now the method body, so y2's
+binding 79 lines above the call in the same method is read (zero-floor k=0) instead of "cannot verify".
 -- args --
 @DIR@/t
 -- want --
 exit 1
 FAIL  lint-delays     @DIR@/t/Tail.java:3  unclosed-call  Clock.schedule( not closed within 12 lines -- cannot read the delay; wrap the call tighter
 PASS  lint-delays     @DIR@/t/Win.java:83  guarded at :3
-FAIL  lint-delays     @DIR@/t/Win.java:84  unfloored  cannot verify floor of variable: y2
+FAIL  lint-delays     @DIR@/t/Win.java:84  zero-floor  local y2=Math.max(.,k) k=0 (<=0)
 FAIL  lint-delays     @DIR@/t/Win.java:85  unfloored  cannot verify floor: a
 FAIL  lint-delays     @DIR@/t/Win.java:98  unclosed-call  Clock.schedule( not closed within 12 lines -- cannot read the delay; wrap the call tighter
 -- stderr --
