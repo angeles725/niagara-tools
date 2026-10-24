@@ -37,6 +37,16 @@ go_wrappers() { grep -l 'go-tool\.sh"' "$KIT"/toolbelt/*.sh | xargs -n1 basename
   [[ "$output" == *"34 keys match"* ]]
 }
 
+@test "GWS1-sc: slot-coverage.sh run through the symlinked toolbelt copy (report-module's path) prints its verdict" {
+  # Mutation: GWS1-sc -- restoring the unresolved here= in slot-coverage.sh exits 3 "go-tool.sh missing"
+  local fx="$ROOT/tests/fixtures/slot-coverage/facade"
+  [ -L "$COPY/slot-coverage.sh" ]
+  cd "$BATS_TEST_TMPDIR"
+  run "$COPY/slot-coverage.sh" "$fx/module-include.xml" "$fx/module.lexicon"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL facade type without lexicon: CompressorPanel"* ]]
+}
+
 @test "GWS2: every Go wrapper invoked through the symlinked copy reaches its Go module" {
   # Mutation: GWS2 -- restoring the unresolved here= in any Go wrapper names it here
   local w bad=""

@@ -52,20 +52,40 @@ func (a *AnnotationSkip) Step(code string, k int) (n int, ended bool) {
 // read too. An annotation still open at the end of lines is dropped. Parentheses are counted as text,
 // inside literals too (the lints this serves always read them so).
 func NiagaraProperties(lines []string, fn func(text string, line int)) {
-	open, buf, line := false, "", 0
+	scan := PropertyScan{NeedParen: true}
 	for i, ln := range lines {
-		if !open && strings.Contains(ln, "@NiagaraProperty") {
-			open, buf, line = true, "", i+1
-		}
-		if !open {
-			continue
-		}
-		buf += " " + ln
-		if ParenDepth(buf) <= 0 && strings.Contains(buf, "(") {
-			fn(buf, line)
-			open, buf, line = false, "", 0
+		if text, line, ok := scan.Line(ln, i+1); ok {
+			fn(text, line)
 		}
 	}
+}
+
+// PropertyScan is the @NiagaraProperty accumulator NiagaraProperties runs, fed one line at a time so a
+// caller can carry an open annotation from one file into the next (one awk over several files does).
+// NeedParen closes an annotation only once a "(" was seen; without it a line that holds
+// "@NiagaraProperty" and no unbalanced "(" closes at once (the awk scan of slot-coverage.sh).
+type PropertyScan struct {
+	NeedParen bool
+	open      bool
+	buf       string
+	line      int
+}
+
+// Line reads ln (line n): when ln closes an annotation it returns the joined text and its opening line.
+func (p *PropertyScan) Line(ln string, n int) (text string, line int, ok bool) {
+	if !p.open && strings.Contains(ln, "@NiagaraProperty") {
+		p.open, p.buf, p.line = true, "", n
+	}
+	if !p.open {
+		return "", 0, false
+	}
+	p.buf += " " + ln
+	if ParenDepth(p.buf) > 0 || (p.NeedParen && !strings.Contains(p.buf, "(")) {
+		return "", 0, false
+	}
+	text, line = p.buf, p.line
+	p.open, p.buf, p.line = false, "", 0
+	return text, line, true
 }
 
 // ParenDepth is the count of "(" in s minus the count of ")".

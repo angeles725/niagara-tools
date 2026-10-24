@@ -66,6 +66,13 @@ func Read(path string) (Case, error) {
 // stdout and stderr byte for byte. It fails when testdata holds fewer than min cases.
 func Run(t *testing.T, spec lint.Spec, min int) {
 	t.Helper()
+	command := lint.Command(spec)
+	RunMain(t, func(args []string, s cli.Stdio) int { return command(append([]string{spec.ID()}, args...), s) }, min)
+}
+
+// RunMain is Run for a command that is not a lint rule: m gets each case's arguments as recorded.
+func RunMain(t *testing.T, m cli.Main, min int) {
+	t.Helper()
 	paths, _ := filepath.Glob("testdata/*.txt")
 	if len(paths) < min {
 		t.Fatalf("found %d golden cases, want at least %d", len(paths), min)
@@ -86,12 +93,12 @@ func Run(t *testing.T, spec lint.Spec, min int) {
 					t.Fatal(err)
 				}
 			}
-			args := []string{spec.ID()}
+			var args []string
 			for _, a := range c.Args {
 				args = append(args, strings.ReplaceAll(a, "@DIR@", dir))
 			}
 			var o, e bytes.Buffer
-			code := lint.Command(spec)(args, cli.Stdio{Out: &o, Err: &e})
+			code := m(args, cli.Stdio{Out: &o, Err: &e})
 			got := strings.ReplaceAll(fmt.Sprintf("exit %d\n%s", code, o.String()), dir, "@DIR@")
 			if stderr := strings.ReplaceAll(e.String(), dir, "@DIR@"); got != c.Want || stderr != c.Stderr {
 				t.Errorf("got\n%s-- stderr --\n%s\nwant\n%s-- stderr --\n%s", got, stderr, c.Want, c.Stderr)

@@ -80,3 +80,25 @@ func TestNiagaraProperties(t *testing.T) {
 		t.Errorf("ParenDepth(%q) = %d, want 1", "f((x)", d)
 	}
 }
+
+// TestPropertyScanWithoutNeedParen pins the awk-scan mode: a "@NiagaraProperty" line with no "(" closes at
+// once, a later "(" opens nothing, and an annotation left open carries into the next lines fed.
+func TestPropertyScanWithoutNeedParen(t *testing.T) {
+	var got []string
+	scan := PropertyScan{}
+	for i, ln := range []string{"/** see @NiagaraProperty */", "(", `@NiagaraProperty(name = "a",`} {
+		if text, _, ok := scan.Line(ln, i+1); ok {
+			got = append(got, text)
+		}
+	}
+	if text, line, ok := scan.Line(`  flags = 1)`, 1); ok {
+		got = append(got, text)
+		if line != 3 {
+			t.Errorf("carried annotation line %d, want 3", line)
+		}
+	}
+	want := []string{" /** see @NiagaraProperty */", ` @NiagaraProperty(name = "a",   flags = 1)`}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

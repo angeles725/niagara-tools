@@ -1,0 +1,10 @@
+-- args --
+per-slot
+a
+b
+c
+d
+-- want --
+exit 2
+-- stderr --
+usage: slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>

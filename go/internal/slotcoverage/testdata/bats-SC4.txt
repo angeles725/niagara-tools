@@ -1,0 +1,10 @@
+-- args --
+set-coverage
+
+A
+-- want --
+exit 0
+pct=0.0
+missing=A
+extra=
+-- stderr --

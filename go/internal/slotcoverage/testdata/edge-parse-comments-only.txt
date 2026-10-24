@@ -1,0 +1,21 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 1
+slot-coverage: FAIL empty lexicon with 3 declared type(s)
+pct=0.0 (type-set)
+missing=CompPanStatus,CompressorControl,CompressorPan
+extra=
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="CompPanStatus" class="com.angeles.CompPan.BCompPanStatus"/>
+  <type name="CompressorControl" class="com.angeles.CompPan.BCompressorControl"/>
+  <type name="CompressorPan" class="com.angeles.CompPan.BCompressorPan"/>
+</types>
+-- module.lexicon --
+# only
+
+   
+#x=y
