@@ -35,6 +35,10 @@ _close() { [ -n "${C11_CLOSE:-}" ] || skip "C11 close gate — set C11_CLOSE=1 t
 _gen_state() {
   bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" build-state > "$BATS_TEST_TMPDIR/BUILD-STATE.md"
   bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" retro-index > "$BATS_TEST_TMPDIR/INDEX.md"
+  # Non-vacuous: an empty or header-only output would pass a "zero pending rows" pin.
+  [ -s "$BATS_TEST_TMPDIR/BUILD-STATE.md" ]
+  [ -s "$BATS_TEST_TMPDIR/INDEX.md" ]
+  grep -qE '^\| [^|]+\.md \| .*\| *folded *\|' "$BATS_TEST_TMPDIR/INDEX.md"
 }
 
 @test "CLOSE-sweeps: sweep-fold-audit --strict exit 0 AND sweep-build-state exit 0" {
