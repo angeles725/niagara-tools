@@ -136,6 +136,10 @@ type Spec struct {
 	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
 	// implementing Configurer.
 	Option string
+	// Options are further Mode Valued value options, each repeatable (every value in Args.Values), and
+	// ValuedStrict accepts --strict in Mode Valued.
+	Options      []string
+	ValuedStrict bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a

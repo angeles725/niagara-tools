@@ -726,3 +726,41 @@ func TestConfigure(t *testing.T) {
 		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
 	}
 }
+
+// TestParseValuedRepeat: Mode Valued with repeatable options (Spec.Options: every value kept, in order, in
+// Args.Values) and --strict accepted (Spec.ValuedStrict), as lint-inline-site-literal takes them; without
+// ValuedStrict --strict stays a usage error (lint-link-target-flags).
+func TestParseValuedRepeat(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-r.sh [--strict] [--table <p>]... [--pattern <re>]... <root>"
+	vo := ValueOptions{Repeat: []string{"--table", "--pattern"}, Strict: true}
+	a, err := ParseValued(Valued, "lint-r", use, vo, []string{"--table", "a", dir, "--strict", "--pattern", "R[0-9]", "--table", "b"})
+	if err != nil || !a.Strict || len(a.Roots) != 1 || a.Roots[0] != dir ||
+		!reflect.DeepEqual(a.Values, map[string][]string{"--table": {"a", "b"}, "--pattern": {"R[0-9]"}}) {
+		t.Errorf("repeat: %+v %v", a, err)
+	}
+	for _, args := range [][]string{{dir, "--table"}, {"--other", dir}, {dir, dir}} {
+		if _, err := ParseValued(Valued, "lint-r", use, vo, args); err == nil || err.Error() != use+"\n" {
+			t.Errorf("%q: err %v, want the usage line", args, err)
+		}
+	}
+	if _, err := ParseValued(Valued, "lint-r", use, ValueOptions{Repeat: []string{"--table"}}, []string{"--strict", dir}); err == nil {
+		t.Errorf("--strict without ValueOptions.Strict parsed")
+	}
+	// Command passes the spec's options: Values reach Configure.
+	var seen []string
+	sp := Spec{Rule: valuesFake{fakeRule{"lint-r", "MARK", Warn}, &seen}, Mode: Valued, Options: []string{"--table"}, ValuedStrict: true,
+		Usage: use, Select: Selection{Names: []string{"*.java"}}}
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, _, _ := stdio()
+	if code := Command(sp)([]string{"lint-r", "--strict", "--table", "x", "--table", "y", root}, s); code != 1 || !reflect.DeepEqual(seen, []string{"x", "y"}) {
+		t.Errorf("command: exit %d seen %q, want 1 (WARN under --strict) and [x y]", code, seen)
+	}
+}
+
+type valuesFake struct {
+	fakeRule
+	seen *[]string
+}
+
+func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }

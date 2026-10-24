@@ -306,11 +306,12 @@ func Command(specs ...Spec) cli.Main {
 			sp := selected[0]
 			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
 		}
-		option := ""
+		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
-			option = selected[0].Option
+			sp := selected[0]
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict}
 		}
-		a, err := ParseOption(mode, name, use, option, args[1:])
+		a, err := ParseValued(mode, name, use, vo, args[1:])
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)

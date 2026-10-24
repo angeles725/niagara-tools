@@ -61,7 +61,9 @@ rule's rows stay contiguous.
    e.g. `--wiring-map`): the option and the root in any order, the last value wins, and a missing value, any
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
    `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
-   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`).
+   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
+   value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
+   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk
