@@ -48,7 +48,6 @@ var (
 	respWrite   = regexp.MustCompile(`getWriter\(\)|getOutputStream\(\)`)
 	tryOpen     = regexp.MustCompile(`(^|[[:space:]])try[[:space:]]*\{`)
 	anyParse    = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(|Long\.parseLong\(|Double\.valueOf\(`)
-	catchOpen   = regexp.MustCompile(`catch[[:space:]]*\(`)
 	badRequest  = regexp.MustCompile(`[^0-9]400[^0-9]|SC_BAD_REQUEST|sendError\(|setStatus\(|jsonError\(|sendJson\(`)
 	parse       = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(`)
 	maxAge      = regexp.MustCompile(`max-age=[1-9]`)
@@ -90,6 +89,69 @@ func block(lines []string, start int, needOpen bool) (text string, end int, clos
 		}
 	}
 	return b.String(), start, false
+}
+
+// rethrow is a throw statement in a catch body.
+var rethrow = regexp.MustCompile(`(^|[^A-Za-z0-9_$])throw[[:space:]]`)
+
+// parseFailure is the exceptions a parse call throws on bad input (NumberFormatException) and its supertypes.
+var parseFailure = map[string]bool{"NumberFormatException": true, "IllegalArgumentException": true,
+	"RuntimeException": true, "Exception": true, "Throwable": true}
+
+// decidingCatches are the catch clauses that decide catch-no-400, each once, in try order: for every parse
+// call (anyParse) in a try, the first clause catching its failure (parseFailure, a type's last name) on the
+// innermost enclosing try that has one, the failure propagating outward past a try without one and past a
+// clause that throws (it rethrows or replaces the failure, so an enclosing catch answers); when no enclosing
+// try catches it, the first clause of the innermost enclosing try that has clauses, unless a clause threw it
+// on. A parse in no try with a catch decides nothing (input-400 owns it).
+func decidingCatches(t javasrc.Tries) []javasrc.Catch {
+	type key struct{ try, clause int }
+	chosen := map[key]bool{}
+	for _, loc := range anyParse.FindAllStringIndex(t.Text, -1) {
+		first, found, thrown := key{-1, 0}, false, false
+		for i := len(t.List) - 1; i >= 0 && !found; i-- { // innermost first: a nested try comes after its outer one
+			tr := t.List[i]
+			if !(tr.At < loc[0] && loc[0] < tr.Body.Close) || len(tr.Catches) == 0 {
+				continue
+			}
+			if first.try < 0 {
+				first = key{i, 0}
+			}
+			for j, c := range tr.Catches {
+				if !catches(c) {
+					continue
+				}
+				if rethrow.MatchString(t.Text[c.Body.Open:min(c.Body.Close+1, len(t.Text))]) {
+					thrown = true // the failure leaves this try: an enclosing catch answers it
+				} else {
+					chosen[key{i, j}], found = true, true
+				}
+				break
+			}
+		}
+		if !found && !thrown && first.try >= 0 {
+			chosen[first] = true
+		}
+	}
+	var out []javasrc.Catch
+	for i, tr := range t.List {
+		for j, c := range tr.Catches {
+			if chosen[key{i, j}] {
+				out = append(out, c)
+			}
+		}
+	}
+	return out
+}
+
+// catches reports whether clause c catches a parse failure.
+func catches(c javasrc.Catch) bool {
+	for _, ty := range c.Types {
+		if parseFailure[ty[strings.LastIndexByte(ty, '.')+1:]] {
+			return true
+		}
+	}
+	return false
 }
 
 // inTry reports whether line i (0-based) lies inside a "try {" block opened on it or above it within the
@@ -160,28 +222,10 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 
-	for i, ln := range lines {
-		if !tryOpen.MatchString(ln) {
-			continue
-		}
-		body, end, _ := block(lines, i, false)
-		if !anyParse.MatchString(body) {
-			continue
-		}
-		catch := -1
-		// The try's closing line counts: "} catch (E e) {" is the usual shape (the awk began one line
-		// later and never read it).
-		for k := end; k < len(lines) && k <= end+4; k++ {
-			if catchOpen.MatchString(lines[k]) {
-				catch = k
-				break
-			}
-		}
-		if catch < 0 {
-			continue
-		}
-		if cbody, _, _ := block(lines, catch, true); !badRequest.MatchString(cbody) {
-			add(lint.Unset, "catch-no-400", catch+1, msgCatch)
+	tries := javasrc.TryBlocks(code)
+	for _, c := range decidingCatches(tries) {
+		if !badRequest.MatchString(tries.Text[c.Body.Open:min(c.Body.Close+1, len(tries.Text))]) {
+			add(lint.Unset, "catch-no-400", tries.Line(c.At), msgCatch)
 		}
 	}
 

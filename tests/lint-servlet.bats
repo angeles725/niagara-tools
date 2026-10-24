@@ -84,6 +84,17 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$output" = "FAIL  input-400  BSrv.java:7  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input" ]
 }
 
+@test "LSV2f: the catch that decides catch-no-400 is the one attached to the parse's try that catches it" {
+  # Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-catch-structure-1.txt
+  printf '%s\n' 'package com.x;' 'public class BCat extends BWebServlet {' '  void multi(String s) {' '    try { Long.parseLong(s); }' \
+    '    catch (IOException e) { op.getResponse().sendError(400); }' \
+    '    catch (IllegalStateException | NumberFormatException e) { v = 0; }' '  }' '}' > "$ONE/BCat.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  catch-no-400  BCat.java:6  catch around parse without 400 response (silent default may write bad value)" ]
+}
+
 @test "LSV-usage: no <src> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]
