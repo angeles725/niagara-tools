@@ -104,6 +104,8 @@ rule's rows stay contiguous.
    (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
    fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
    out; it runs by name or in a rule list.
+   A rule of another kind whose roots are module roots, not source roots (reference: `rules/duplicatehelper`),
+   sets `Spec.ModuleRoot`: `n4lint --all` leaves it out too.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,

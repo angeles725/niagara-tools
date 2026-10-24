@@ -287,7 +287,7 @@ func Command(specs ...Spec) cli.Main {
 		var selected []Spec
 		if args[0] == "--all" {
 			for _, sp := range specs {
-				if sp.Root == nil {
+				if sp.Root == nil && !sp.ModuleRoot { // --all runs on source roots
 					selected = append(selected, sp)
 				}
 			}

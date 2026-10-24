@@ -640,3 +640,20 @@ func TestTreeRuleEmptyRoot(t *testing.T) {
 		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
 	}
 }
+
+// TestModuleRootLeftOutOfAll: --all runs on source roots, so it leaves out a rule whose roots are module
+// roots (Spec.ModuleRoot), as it leaves out a RootRule; by name the rule runs.
+func TestModuleRootLeftOutOfAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	mod := treeSpec(treeFake{id: "lint-m"})
+	mod.ModuleRoot = true
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), mod)
+	s, o, _ := stdio()
+	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("--all: exit %d out\n%s\nwant the lint-a row only", code, o)
+	}
+	s, o, _ = stdio()
+	if code := main([]string{"lint-m", root}, s); code != 1 || o.String() != "FAIL  sub  "+root+"/A.java: tree saw MARK\n" {
+		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
+	}
+}
