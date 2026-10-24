@@ -463,7 +463,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro r10-path-keyed-gates-skip-data Δ2]`
   - **Citation pre-filter.** `toolbelt/kit-cite-resolve.sh [--strict] <card>...` (`go/cmd/kit-cite-resolve`)
     resolves every evidence pointer of the given cards and prints one row per pointer with its status
-    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
+    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, DRIFT, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
     and an excerpt of the cited line; a bare or partial path is searched in the repo, organized/, the versioned source
     and the client checkouts (`--clients`), every copy checked, and AMBIGUOUS lists the candidates, never a guess. RESOLVED means the cited place exists, never that it says the claim: a reviewer
     still reads the excerpt. Not findings: HISTORICAL_DRIFT (a moved target on a history card: retros/, ledger.d/,
@@ -471,6 +471,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     SKIPPED_TEMPLATE (`<stem>` placeholders); the summary counts LIVE and HISTORY apart. Exit 0 / 1 on a finding
     under `--strict` / 3 usage or an unreadable root. `[ev: retro go-kit-cite-resolve]` `[ev: ledger.d/2026-10-24-r10-kcr-status-split.md]`
     `[ev: ledger.d/2026-10-24-r10-kcr-paths-kinds.md]`
+    A `guides-clean` line pointer carries a quoted anchor right after its lines (`` `G/<page>.txt:12` "a phrase of line 12" ``
+    or the same after a tag's `guide <page>.txt:12`): the rendered guide copies shift on every re-render, so a bare line number
+    drifts while still resolving. The phrase must sit on a cited line, give or take 2 lines; otherwise the pointer is
+    DRIFT, naming the lines that hold it now (HISTORICAL_DRIFT on a history card). An anchor outside guides-clean is
+    shown, not checked. `[ev: retro r10-kcr-guide-anchor-drift Δ1]`
     A pointer grammar matches every character a real file name uses: a pattern that rejects one (the dot inside
     `BUILD-STATE.src.md`) does not fail, its leftmost match silently reads a shorter, wrong name. Each such grammar
     pins a case per legal name shape (`go/internal/citeparse` `TestCardSources`), and a pointer that resolves only
