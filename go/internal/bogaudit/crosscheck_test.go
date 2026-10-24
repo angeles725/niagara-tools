@@ -13,7 +13,7 @@ import (
 // tab-separated row per component (C handle path type count), slot (S handle name %q-value hasV) and link
 // (L srcHandle srcPath.slot targetPath.slot), paths $-decoded, for a diff against niagara-go's
 // `bog-nav --json <bog> tree|links|slot` (retro go-bog-audit: handles, paths, types and links agree on the
-// PANCCADIA and Harbor bogs). Skipped unless BOGAUDIT_DUMP is set.
+// client station A and client B bogs). Skipped unless BOGAUDIT_DUMP is set.
 func TestCrossCheckDump(t *testing.T) {
 	p := os.Getenv("BOGAUDIT_DUMP")
 	if p == "" {
