@@ -59,24 +59,22 @@ HINT=" -- take it from a slot, a station-relative ORD, an environment variable o
   [ "$output" = "WARN  lint-machine-default-path  $BATS_TEST_TMPDIR/Mod/gradle.properties:2  machine-specific default \"C:\\Users\\me\\N4\" in a .properties value$HINT" ]
 }
 
-KEYINFO=" is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)"
-
-@test "MDP6: a prescribed build-location key in gradle.properties is an INFO row, exit 0 under --strict" {
-  # Mutation: MDP6 -- dropping the prescribed-key check WARNs niagara_user_home=C:\\Users\\... and exits 1 under --strict
-  printf 'niagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n' > "$BATS_TEST_TMPDIR/Mod/gradle.properties"
+@test "MDP6: the four build-location keys in gradle.properties print no row, exit 0 under --strict (R10-D8: L10 owns them)" {
+  # Mutation: MDP6 -- dropping the build-location-key check WARNs niagara_user_home=C:\\Users\\... and exits 1 under --strict
+  printf 'niagara_home=/home/me/N4\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\nnodeHome=/home/me/node\norg.gradle.java.installations.paths=/home/me/jdk8\n' > "$BATS_TEST_TMPDIR/Mod/gradle.properties"
   run "$MDP" --strict "$BATS_TEST_TMPDIR/Mod"
   [ "$status" -eq 0 ]
-  [ "$output" = "INFO  lint-machine-default-path  $BATS_TEST_TMPDIR/Mod/gradle.properties:1  niagara_user_home$KEYINFO" ]
+  [ -z "$output" ]
 }
 
-@test "MDP7: the same key in a kit template fixture stays a WARN row (K16)" {
-  # Mutation: MDP7 -- dropping the kit-fixture check reports a fixture's niagara_user_home as INFO
+@test "MDP7: the same key in a kit template fixture prints no row either (lint-structure L10 FAILs it, K16)" {
+  # Mutation: MDP7 -- restoring a kit-fixture exception reports a fixture's niagara_user_home as a WARN row
   FIX="$BATS_TEST_TMPDIR/build-n4-module-kit/fixtures/MinimalPan"
   mkdir -p "$FIX"
-  printf 'niagara_user_home=C:\\\\Users\\\\me\\\\N4\n' > "$FIX/gradle.properties"
+  printf 'niagara_user_home=C:\\\\Users\\\\me\\\\N4\nexport_dir=/home/me/x\n' > "$FIX/gradle.properties"
   run "$MDP" --strict "$FIX"
   [ "$status" -eq 1 ]
-  [[ "$output" == "WARN  lint-machine-default-path  $FIX/gradle.properties:1  machine-specific default "* ]]
+  [ "$output" = "WARN  lint-machine-default-path  $FIX/gradle.properties:2  machine-specific default \"/home/me/x\" in a .properties value$HINT" ]
 }
 
 @test "MDP2: a path quoted in a Javadoc and a station-relative default are clean" {

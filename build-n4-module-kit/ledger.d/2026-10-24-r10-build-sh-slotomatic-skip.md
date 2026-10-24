@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: build.sh and ng-deploy fail when Slot-o-Matic skips a file — one shared detector, exit 34 / 15 -->
+log: 2026-10-24 · quality round 10 → a PANCCADIA DashboardPan-rt build passed with a file Slot-o-Matic skipped (stamp count != 1, "Could not process … Found multiple metadata blocks", task BUILD SUCCESSFUL, stale generated code compiled). New `toolbelt/lib/slotomatic-skip.sh` `slotomatic_skip_scan` names every skipped file once from both log forms; `toolbelt/build.sh` exits 34 on a passing run that skipped a file (pre-build modules/ jar restored, gate not run) and uses the same detector in its exit-30 hint; `scripts/ng-deploy.sh` `run_slotomatic` tees the output and dies 15. K15, build-verify.md exits and a BUILD-LOOP exit-34 recipe updated. Retro retros/2026-10-24-r10-slotomatic-skip-fail-open.md (1Δ, folded). [ev: retro r10-slotomatic-skip-fail-open]

@@ -102,12 +102,16 @@ check() {
   done
 }
 
-@test "MB-e2e: lint-size counts the lines after a \"/*\" string (they were blanked as a comment before)" {
-  # Mutation: MB-lit -- with no literal state the 801 lines after the string are blanked and the class passes
-  SRC="$BATS_TEST_TMPDIR/Mod/src/com/x"; mkdir -p "$SRC"
+@test "MB-e2e: mb_strip keeps the 805 code lines of a class after a \"/*\" string (they were blanked as a comment before)" {
+  # Mutation: MB-lit -- with no literal state the 801 lines after the string are blanked and the count drops to 3
+  # lint-size, which first showed this end to end, now runs on go/internal/javasrc (its own goldens pin it);
+  # this case keeps the same input on mb_strip itself for the bash lints that still source it.
   { printf 'package com.x;\npublic class Glob {\n  String g = "/*";\n'
-    for ((i = 1; i <= 801; i++)); do printf '  int f%d;\n' "$i"; done; printf '}\n'; } > "$SRC/Glob.java"
-  run "$KIT/toolbelt/lint-size.sh" "$BATS_TEST_TMPDIR/Mod"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"WARN  lint-size  "*"Glob.java:2  class Glob has 805 hand-written lines (> 800"* ]]
+    for ((i = 1; i <= 801; i++)); do printf '  int f%d;\n' "$i"; done; printf '}\n'; } > "$IN"
+  local a got
+  for a in "${AWKS[@]}"; do
+    # shellcheck disable=SC2086
+    got=$($a "$MB_AWK"' { l[++n] = $0 } END { mb_strip(l, n, o); for (i = 1; i <= n; i++) { t = o[i]; gsub(/[[:space:]]/, "", t); if (t != "") c++ } print c }' "$IN")
+    [ "$got" = 805 ] || { echo "awk=$a got=$got"; return 1; }
+  done
 }

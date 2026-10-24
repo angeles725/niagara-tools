@@ -1,0 +1,17 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+-- stderr --
+-- root/a.px --
+<x v="%user%"/>
+-- root/b.xml --
+%user%
+-- root/c.java.txt --
+%user%
+-- root/d.properties --
+k=%user%
+-- root/e.BOG --
+%user%
+-- root/f.lexicon --
+k=ok

@@ -1,0 +1,19 @@
+-- args --
+--max-method
+1
+--max-class
+3
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/P.java:2  class P has 7 hand-written lines (> 3, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/P.java:3  method a() in pure class P spans 4 lines (> 1) -- split into named phase methods (types/logic.md § Pure-class extraction)
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}

@@ -1,0 +1,12 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  unclosed-region  @DIR@/src/com/a/BOpen.java:3  BEGIN BAJA AUTO GENERATED CODE with no END marker after it -- Slot-o-Matic reads no region here
+-- stderr --
+-- src/com/a/BOpen.java --
+public class BOpen extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+}

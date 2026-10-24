@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/src/module.lexicon:2  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/src/module.lexicon:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/src/module.lexicon:5  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- src/module.lexicon --
+# %user% in a comment
+k1=%time(HH:mm)%
+k2=Hi \
+    %user%
+k3=\u0025user\u0025
+k4=%time().toDateString% %user()%

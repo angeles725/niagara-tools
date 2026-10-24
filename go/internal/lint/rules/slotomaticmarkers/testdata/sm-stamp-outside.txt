@@ -1,0 +1,13 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-slotomatic-markers  @DIR@/src/com/a/BOut.java:3  generated region holds 0 /*@ $...$ @*/ stamp lines, Slot-o-Matic needs exactly 1: it logs "Could not process <file>: Found multiple metadata blocks", skips the file and the build stays green -- delete the BEGIN/END markers and rerun :<part>:slotomatic
+-- stderr --
+-- src/com/a/BOut.java --
+public class BOut extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+}

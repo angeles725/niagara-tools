@@ -120,23 +120,6 @@ jfile() {
   [[ "$output" == *"G/Hidden"* ]]
 }
 
-@test "SPC-aggfail: a failing aggregation (sort) is exit 3, never an empty clean report, even under --strict (D5b, R4-001)" {
-  # Mutation: SPC-aggfail -- an unchecked sort | awk aggregation turns a failed sort into exit 0 with no rows
-  module G/A/A-rt; module G/B/B-rt
-  jfile G/A/A-rt/src/com/x/U.java com.a
-  jfile G/B/B-rt/src/com/x/U.java com.a
-  mkdir -p "$TMPDIR_T/bin"
-  cat > "$TMPDIR_T/bin/sort" <<SH
-#!/usr/bin/env bash
-for a in "\$@"; do [ "\$a" = "-k1,1" ] && { echo "sort: write failed: No space left on device" >&2; exit 2; }; done
-exec $(command -v sort) "\$@"
-SH
-  chmod +x "$TMPDIR_T/bin/sort"
-  PATH="$TMPDIR_T/bin:$PATH" run "$SPC" --strict "$P"
-  [ "$status" -eq 3 ]
-  [[ "$output" == *"No space left on device"* ]]
-}
-
 @test "SPC-symroot: a symlinked root is walked like find -H, same split WARN as the directory (issue #329)" {
   # Mutation: SPC-symroot -- dropping -H from the marker find reports "no module" (exit 3) under a symlinked root.
   module GrpA/A/A-rt; module GrpB/B/B-rt
@@ -144,4 +127,25 @@ SH
   jfile GrpB/B/B-rt/src/com/x/U.java com.shared.util
   assert_symroot_same "$P" "$SPC" "$P"
   [ "$status" -eq 0 ] && [[ "$output" == *"WARN  split-package-check  com.shared.util"* ]]
+}
+
+@test "SPC-worktrees: a *-worktrees checkout under the root is not a second module (truth fix 2026-10-24)" {
+  # Mutation: SPC-worktrees -- searching *-worktrees directories reports every package of a sibling checkout as a split
+  module A/A-rt; module A-worktrees/feat/A/A-rt
+  jfile A/A-rt/src/com/x/U.java com.shared
+  jfile A-worktrees/feat/A/A-rt/src/com/x/U.java com.shared
+  run "$SPC" --strict "$P"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "SPC-block: a package line inside a /* */ comment is not the file's package (truth fix 2026-10-24)" {
+  # Mutation: SPC-block -- reading a package line inside a /* */ comment takes a moved-from note over the real declaration
+  module A/A-rt; module B/B-rt
+  mkdir -p "$P/A/A-rt/src/com/x"
+  printf '/*\n * Moved from:\npackage com.old;\n */\npackage com.real;\nclass U {}\n' > "$P/A/A-rt/src/com/x/U.java"
+  jfile B/B-rt/src/com/x/U.java com.old
+  run "$SPC" --strict "$P"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }

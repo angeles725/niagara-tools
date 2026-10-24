@@ -1,0 +1,72 @@
+declared difference (truth fix T1, truth-marker-literal-1): R4's markers are quoted in string literals, so
+they open no region and its 8 lines count (the bash lint counted 4).
+-- args --
+--max-class
+0
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/R1.java:2  class R1 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R2.java:3  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
+WARN  lint-size  @DIR@/R2.java:2  class R2 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R3.java:3  stray-end: END BAJA AUTO GENERATED CODE with no open region
+WARN  lint-size  @DIR@/R3.java:4  stray-end: END BAJA AUTO GENERATED CODE with no open region
+WARN  lint-size  @DIR@/R3.java:7  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line 5 -- that region is counted as hand-written
+WARN  lint-size  @DIR@/R3.java:9  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line 7 -- that region is counted as hand-written
+WARN  lint-size  @DIR@/R3.java:9  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
+WARN  lint-size  @DIR@/R3.java:2  class R3 has 6 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R4.java:2  class R4 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R5.java:2  class R5 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R6.java:3  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
+WARN  lint-size  @DIR@/R6.java:2  class R6 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- R1.java --
+package com.x;
+public class R1 {
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g;
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  int h;
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g2;
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}
+-- R2.java --
+package com.x;
+public class R2 {
+  // BEGIN BAJA AUTO GENERATED CODE  END BAJA AUTO GENERATED CODE
+  int h;
+}
+-- R3.java --
+package com.x;
+public class R3 {
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g;
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g2;
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g3;
+}
+-- R4.java --
+package com.x;
+public class R4 {
+  String s = "BEGIN BAJA AUTO GENERATED CODE";
+  int h1;
+  int h2;
+  String e = "END BAJA AUTO GENERATED CODE";
+  int h3;
+}
+-- R5.java --
+package com.x;
+public class R5 {
+  /* BEGIN BAJA AUTO GENERATED CODE */ int h1;
+  int g;
+  int h2; // END BAJA AUTO GENERATED CODE
+}
+-- R6.java --
+package com.x;
+public class R6 {
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g;

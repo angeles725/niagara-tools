@@ -34,6 +34,9 @@
 #   snapshots what is CURRENTLY installed there; after the build, if the new jar's shipped bytes differ from
 #   that snapshot but the module's own vendorVersion did not change, the build FAILs (exit 51) — Software
 #   Manager compares versions, not bytes, and would silently report "Up to Date" and skip installing the fix.
+#   The version may be X.Y or X.Y.Z and compares numerically per component, missing = 0 (1.3 == 1.3.0), via
+#   lib/vendor-version.sh (shared with scripts/ng-deploy.sh). A LOWER version than the deployed jar WARNs
+#   ("vendorVersion went down") and passes: a deliberate rollback is legitimate.
 #   A jar the gate cannot list (unzip missing/failing) or a changed jar whose own vendorVersion cannot be
 #   read FAILs closed with exit 52 ("cannot verify"), never a silent pass.
 #   Retry-safe: gradle's :jar step already overwrote the deployed jar by the time this FAILs, so the gate
@@ -52,10 +55,14 @@
 #   plugin cannot read the real ~/.tridium keystore. A mirror path, or a $HOME used for that maven.repo.local, with
 #   whitespace is refused (exit 33); a signing profile in the mirror user home (always plugin-created, so a throwaway
 #   dev key) is a WARN on every build. [ev: retro r8-mirror-userhome Δ1, retro r8-buildsh-316-308]
+# Slot-o-Matic skip (exit 34): Slot-o-Matic logs a file it could not process ("Could not process <file>.java: …")
+#   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
+#   run whose log names a skipped file (lib/slotomatic-skip.sh) FAILs, the pre-build modules/ jar is restored
+#   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
 # Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
-#   50 gate or report-module FAIL · 51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify ·
-#   53 report-module INCOMPLETE (a floor check SKIPped)
+#   34 Slot-o-Matic skipped a file in a passing gradle run · 50 gate or report-module FAIL ·
+#   51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify · 53 report-module INCOMPLETE (a floor check SKIPped)
 set -euo pipefail
 
 # usage: print the leading comment block (line 2 up to the first non-comment line), never code.
@@ -98,6 +105,10 @@ HERE="$(CDPATH='' cd -- "$(dirname "$0")" >/dev/null && pwd)"
 . "$HERE/lib/method-boundary.sh"
 # shellcheck disable=SC1091
 . "$HERE/lib/signing-block.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/slotomatic-skip.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/vendor-version.sh"
 
 [ -d "$ROOT" ] || { echo "build.sh: module root not found: $ROOT" >&2; exit 10; }
 # B7: gradlew may live at an ANCESTOR (client multi-project layout — the module dir is passed as ROOT). Walk up to find it.
@@ -272,15 +283,6 @@ _content_hash() {
       | while IFS= read -r _entry; do unzip -p "$jar" "$_entry" 2>/dev/null; done
   } | sha256sum | awk '{print $1}'
 }
-_module_own_version() {
-  # The MODULE's own vendorVersion lives on the <module ...> root tag itself —
-  # NOT the <dependency name="baja" vendorVersion="..."/> floor, a different
-  # number entirely (METHODOLOGY.md "two version concepts").
-  { unzip -p "$1" META-INF/module.xml 2>/dev/null \
-      | grep -oE '<module [^>]*vendorVersion="[0-9]+\.[0-9]+\.[0-9]+[^"]*"' \
-      | head -1 | sed -E 's/.*vendorVersion="([^"]*)".*/\1/'
-  } || true
-}
 # _restore_baseline <profile> <ok-suffix> — put the part-1 backup back into modules/ and say so. A failed copy
 # prints cp's own reason and what modules/<jar> really holds now (the pre-build jar, or something else such as
 # the new jar gradle's :jar step installed), because a bare retry would snapshot a new jar as its own baseline.
@@ -302,7 +304,7 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
     _old="$NIAGARA_HOME/modules/$MOD-$p.jar"
     [ -f "$_old" ] || continue
     _content_hash "$_old" > "$DRIFT_DIR/$p.old.hash" || : > "$DRIFT_DIR/$p.old.hash"
-    _module_own_version "$_old" > "$DRIFT_DIR/$p.old.ver"
+    vv_module_version "$_old" > "$DRIFT_DIR/$p.old.ver"
     cp -p "$_old" "$DRIFT_DIR/$p.old.jar"
   done
 fi
@@ -312,6 +314,16 @@ GLOG="$(mktemp)"
 # Start-of-build marker: a build/libs jar NEWER than this was produced by this run (exit-32 report below).
 GSTAMP="$(mktemp)"
 if ( cd "$GRADLE_ROOT" && ./gradlew "${TASKS[@]}" "${GARGS[@]}" ) 2>&1 | tee "$GLOG"; then
+  # K15: a skipped file does not fail the gradle task, so check the log before anything trusts the jar.
+  if ! _SKIP_ROWS=$(slotomatic_skip_scan "$GLOG"); then
+    printf '%s\n' "$_SKIP_ROWS" >&2
+    echo "build.sh: Slot-o-Matic skipped the file(s) above, so the jar carries stale generated code (METHODOLOGY K15):" >&2
+    echo "  the generated region needs exactly one /*@ ... @*/ stamp — delete the BEGIN/END BAJA AUTO GENERATED region and re-run slotomatic." >&2
+    for p in "${SEL[@]}"; do
+      [ -n "$DRIFT_DIR" ] && [ -f "$DRIFT_DIR/$p.old.jar" ] && _restore_baseline "$p" "."
+    done
+    rm -f "$GLOG" "$GSTAMP"; exit 34
+  fi
   rm -f "$GLOG" "$GSTAMP"
   # A root without a signing block makes the plugin create a profile in the mirror user home and sign with a
   # throwaway Niagara4Modules dev key; the build still passes, so say it (WARN, exit unchanged). Every profile
@@ -359,9 +371,10 @@ else
   fi
   # slotomatic-authoring Δ1 (K15): slot-o-matic logs "Could not process <file>: …" as a WARNING and its task
   # succeeds, so the failure surfaces later in compileJava ("… have you run slot-o-matic?"). Name the skipped file.
-  # The capture ends at ".java" so a Windows drive letter (C:\...) does not cut the path short.
+  # lib/slotomatic-skip.sh names each skipped file once; its path ends at ".java" so a Windows drive letter
+  # (C:\...) does not cut it short.
   if grep -q 'have you run slot-o-matic' "$GLOG"; then
-    _SKIPPED=$(sed -n 's/.*Could not process \(.*\.java\): .*/  slot-o-matic skipped \1/p' "$GLOG" | sort -u)
+    _SKIPPED=$(slotomatic_skip_scan "$GLOG") || :
     echo "build.sh: compileJava found slots slot-o-matic never generated." >&2
     if [ -n "$_SKIPPED" ]; then
       printf '%s\n' "$_SKIPPED" >&2
@@ -394,7 +407,7 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
     [ -f "$_new" ] || continue
     _new_hash="$(_content_hash "$_new")" || _new_hash=""
     _old_hash="$(cat "$DRIFT_DIR/$p.old.hash")"
-    _new_ver="$(_module_own_version "$_new")"
+    _new_ver="$(vv_module_version "$_new")"
     _old_ver="$(cat "$DRIFT_DIR/$p.old.ver" 2>/dev/null || true)"
     # Fail closed: a jar the gate cannot list, or a changed jar whose own vendorVersion cannot be
     # read on either side, is UNVERIFIABLE (exit 52) -- never "unchanged" and never "bumped".
@@ -412,7 +425,14 @@ if [ "$SKIP_DRIFT_CHECK" -eq 0 ]; then
       continue
     fi
     [ "$_new_hash" = "$_old_hash" ] && continue   # nothing shipped actually changed
-    if [ "$_new_ver" = "$_old_ver" ]; then
+    # lib/vendor-version.sh vv_cmp: numeric per component, a missing component = 0, the suffix must match.
+    # "incomparable" (a differing suffix) keeps the gate's earlier reading: a changed version, no FAIL.
+    _cmp="$(vv_cmp "$_new_ver" "$_old_ver")"
+    if [ "$_cmp" = "-1" ]; then
+      # A lower version is a WARN, not a FAIL: a deliberate rollback below the deployed jar is legitimate.
+      echo "build.sh: WARN — $MOD-$p vendorVersion went down ($_old_ver -> $_new_ver) versus the deployed jar; fine for a deliberate rollback, otherwise bump defaultModuleVersion above $_old_ver." >&2
+    fi
+    if [ "$_cmp" = "0" ]; then
       echo "build.sh: FAIL — $MOD-$p shipped bytes changed but vendorVersion is still $_new_ver." >&2
       echo "  Software Manager compares versions, not bytes — it will report \"Up to Date\" and SKIP installing this jar." >&2
       echo "  Bump defaultModuleVersion(\"$_new_ver\") in $MOD-$p's build.gradle.kts (patch for a fix, minor for a feature), then rebuild." >&2

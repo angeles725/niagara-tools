@@ -15,6 +15,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
@@ -64,7 +65,24 @@ func NewContext(cfg Config) *session.Context {
 	return session.New(session.Config{AllowWrites: cfg.AllowWrites, AllowHTTP: cfg.AllowHTTP,
 		Stations: urls, CredentialEnv: cfg.CredentialEnv, InsecureTLS: cfg.InsecureTLS,
 		AllowTierB: cfg.AllowTierB, AllowTierC: cfg.AllowTierC, AuthCooldown: float64(cfg.AuthCooldown),
-		HTTPTimeout: float64(cfg.HTTPTimeout), LoadWait: cfg.LoadWait})
+		HTTPTimeout: float64(cfg.HTTPTimeout), LoadWait: cfg.LoadWait, StateDir: stateDir(cfg.StateDir),
+		ProgressPath: progressPath(cfg.ProgressFile)})
+}
+
+// stateDir is os.path.expanduser(state_dir or DEFAULT_STATE_DIR).
+func stateDir(dir string) string {
+	if dir == "" {
+		dir = safety.DefaultStateDir
+	}
+	return safety.ExpandUser(dir)
+}
+
+// progressPath is the expanded --progress-file, "" when none.
+func progressPath(file string) string {
+	if file == "" {
+		return ""
+	}
+	return safety.ExpandUser(file)
 }
 
 // stations is the stations dict of main(): NAME -> URL (the last repeat wins) and the names in

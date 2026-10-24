@@ -165,7 +165,7 @@ so the wire-sheet color-codes the component's health and operators see a one-lin
                  flags=Flags.READONLY|Flags.TRANSIENT|Flags.SUMMARY)
 ```
 
-[ev: code tagdictionary-rt `BTagDictionary.java` `faultCause` String `flags = 67` = `READONLY|TRANSIENT|DEFAULT_ON_CLONE`; code devIpDriver-rt `BDdfUdpMulticastHelper.java` (`status` + `faultCause`, no flags); `SUMMARY` is kit choice [INFER]]
+[ev: code tagdictionary-rt `BTagDictionary.java` `faultCause` String `flags = 67` = `READONLY|TRANSIENT|DEFAULT_ON_CLONE`; code devIpDriver-rt `BDdfUdpMulticastHelper.java` (`status` + `faultCause`, no flags)]; `SUMMARY` is a kit choice [INFER]
 
 ---
 

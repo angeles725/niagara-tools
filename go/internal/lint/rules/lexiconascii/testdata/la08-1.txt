@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-rt/.deploy-baseline/module.lexicon --
+bad=é
+-- Mod/Mod-rt/module.lexicon --
+ok=yes

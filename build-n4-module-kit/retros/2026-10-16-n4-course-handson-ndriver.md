@@ -67,6 +67,18 @@ matters for the private-API lint proposed on 2026-10-15.
 | Δ7 | Confirms `n4-course-drivers-bql-ords-files` Δ3 static-collection WARN with a real instance: Tridium's own course reference keeps the per-device subscription set `static` (`BTrafficLightDriverDevice.java:414`), so copying a reference is exactly how the defect enters a module; the WARN must also cover `private static final Set/Map/List` initialised with `new`. Lint: YES (that retro's WARN). Acceptance: the course reference device WARNs at :414. | `types/driver-authoring.md` (NDriver defect checklist) + the lint of that Δ3 | `[ev: code N4_Labs/…/BTrafficLightDriverDevice.java:414]` |
 | Δ8 | Refine `n4-course-build-deps-permissions-signing` Δ3 (private-API WARN on `import com.tridium.`): the allow-list must include `com.tridium.ndriver.**` (the wizard's framework: 79 imports in 32 of 36 files) and should list `com.tridium.driver.util.DrUtil` as a known reference use; otherwise every NDriver module floods the WARN and it gets ignored. Lint: YES (allow-list). Acceptance: the two course driver trees produce 0 rows with the allow-list and 80 rows without it. | `toolbelt/verify-module.sh --src` (that Δ3) + `types/module-wiring.md` § Private API | `[ev: live 2026-10-16 grep course driver sources]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ7:** the row and Evidence lines 52-53 put the static set at
+> "`BTrafficLightDriverDevice.java:414`" and call that file "Tridium's own course reference". Reading A (this
+> retro): the course reference has `private static final Set<String> subscribedPoints = new HashSet<>();` at :414.
+> Reading B (both files read): :414 is right in the session's own lab module
+> (`C:\N4-Developer-Training\Core-Class\N4_Labs\niagara_dev_home\trafficLightDriver\trafficLightDriver-rt\src\com\tridiumuniversity\trafficLightDriver\BTrafficLightDriverDevice.java`,
+> 418 lines, the reference copied whole plus wizard-added facets), which is outside the corpus; the course reference
+> in the corpus has the same line at :317 (`sources/n4-dev-course/course/Labs/Lab11 NDriver/4 Reading and Writing
+> Points/BTrafficLightDriverDevice.java`, 321 lines; the Bonus Labs device-manager copy has it at :318). Winner: B
+> for the reference's line; the static-set finding itself is right in both files. It was half right at the time:
+> the line was correct for the file the session had open, only the label "course reference" was loose. The row text
+> and this retro's review-status are left as they were.
+
 ## Lessons
 - Check every API shown in a kit snippet against `javap` of the target `niagara_home`; the driver page's
   `doPing` would not compile.

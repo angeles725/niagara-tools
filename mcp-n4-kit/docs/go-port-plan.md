@@ -22,7 +22,7 @@ that is slice S0.
 | `session` | `tools_read.py:33-195` (Context, auth latch/cooldown, scrub) |
 | `readtools` | `tools_read.py:198-500, 789-969` (connect … dangling outputs, `list_batches`, TOOLS) |
 | `bql` | `bql.py:1-221`, `tools_read.py:500-654` (output files, private dirs) |
-| `files` / `px` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:654-789` |
+| `files` / `px` / `pyxml` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:689-822`; `pyxml` is the expat parser `ET.fromstring` uses |
 | `token` | `safety.py:47-113` (canonical, `bound_args`, redact, `ConfirmationTokens`) |
 | `audit` / `journal` | `safety.py:156-311` (state-dir checks, `_JsonlFile`, `Journal` views, `AuditLog`) |
 | `retro` | `retro.py:1-289` and `templates/retro.template.md` |
@@ -365,3 +365,89 @@ does the same for `parse_status`. The replay corpus (section 7) is unchanged: th
 
 **Known differences.** None found. `"out" in children(nodes, path)` is a direct `path/out` lookup
 in Go, the same answer without a scan per component.
+
+## 10. S6 `bql`, inventory and output files
+
+**Packages.** `bql` ports `bql.py`: `query.go` (`validate_query`, `base_slot`, `compose_ord`,
+`selected_slots`, `unique_columns`, `by_position`, `unescape_slot`, `complete_records`; `\s`, `\S`
+and `str.strip()` use `str.isspace()`'s set, lengths count code points), `csv.go` (`parse_csv` on a
+port of `_csv.c`'s reader state machine for the excel dialect over `StringIO(newline="")` lines,
+with the 131072-character field limit) and `inventory.go` (`summarize_inventory`). `readtools`
+serves `n4_bql_query` and `n4_inventory` (`bql.go`: `_bql`, `_record_read`, `_progress`) through
+`box.Client.GetOrd` (S3), and writes result files (`output.go`: `_output_path`, `_private_dirs`,
+`_write_output`; S7's `n4_read_file` reuses them). `safety` starts with what result files need:
+`check_state_dir` and `loose_file_reason` (`statedir.go`) and the `os.path` rules the shown paths
+follow (`pypath.go`: `join` and `dirname` without cleaning, `expanduser`); `cli` expands
+`--state-dir` and `--progress-file` into `session.Config` as `server.py` does. `pyjson` gains WTF-8
+walking (`Chr`, `DecodeRune`, `Len`): an escape such as `$ud800` decodes to a lone surrogate, as
+`chr()` gives one.
+
+**Files.** As in Python: the state dir and `bql/` are created 0700 (missing parents 0777 less the
+umask, like `os.makedirs`) and chmodded only when this call created them; the result file is
+opened `O_WRONLY|O_CREAT|O_EXCL` 0600 after an `lexists` check, so a dangling link is refused and
+never written through, and it is removed on any failure. A CSV row is `csv.writer`'s excel line (a
+cell holding `,` `"` `\r` or `\n` quoted with its quotes doubled, one empty cell as `""`, `\r\n`
+ends); JSON is `json.dump`'s bytes. A lone surrogate in a CSV row fails as its
+`UnicodeEncodeError` text (position, or position range, within that row); JSON escapes it.
+`--progress-file` lines are appended best effort (0666 less the umask when created).
+
+**Proof.** Under `MCP_N4_IMPL=go` `test_bql.TestNonCsvAnswers` runs black-box: no test skips on
+`n4_bql_query` or `n4_inventory` any more (622 tests, 461 skipped, from 465). The 35 marked
+`test_bql` tests have Go twins: the 15 unit ones in `bql/query_test.go`, `csv_test.go` and
+`inventory_test.go`, the 19 injection ones in `bql/tools_test.go` and `output_test.go` on
+`readtoolstest.Station.OrdRoutes` (test_bql's FakeOpener: an answer per needle, an HTTP code, a
+byte cap), and `cli.TestServerFlagSetsTheProgressFile`. `bql.TestHelpersDifferentialPython` runs
+every helper in `bql.py` on CPython 3.15 and in Go on one corpus (csv quirks, Unicode spaces,
+`re.I`'s long s, escapes to control characters and surrogates, the inventory walk);
+`readtools.TestBqlDifferentialPython` runs both tools in `tools_read.py` and in Go on the same
+answers and state dir and requires the same reply text and the same result file bytes and mode.
+Extra Go tests pin the permission rules: an existing result dir keeps its mode, a link is never
+followed, a group-writable state dir or a loose `audit.jsonl` is refused and left unchanged.
+
+**Known differences.** None found. `TestBqlAuditInWritesMode` (the `read` line in `audit.jsonl`)
+has a named Go twin that skips: the audit log runs only with `--allow-writes`, which the Go server
+refuses until S8/S10.
+
+## 11. S7 `files`, `px` and the station file reads
+
+**Packages.** `files` ports the path helpers of `files.py`: `station_path` (every refusal in
+Python's order and words: prefixes, length in code points, control characters, `|`, absolute,
+home and drive paths, directories, empty / `.` / `..` segments, `:`, segments ending in `.` or
+space, `.bog` / `.bog.gz`), `url_path` (`quote(seg, safe="")`, a lone surrogate failing as its
+segment's UnicodeEncodeError) and `is_text`; `Lower` is `str.lower()` as an ASCII comparison sees
+it (U+0130 lowers to `i` + U+0307). `px` ports `parse_px` and `bound_component`: the DOCTYPE /
+ENTITY refusal is `re.I`'s match (U+0130 and U+0131 match `i`), lists are `_Bounded`, counts keep
+first-seen order, `strip()` uses `str.isspace()`'s set. `pyxml` is `ET.fromstring(str)`: expat fed
+UTF-8 (a declared encoding is ignored) with namespace processing, ported from niagara-go
+`internal/pyxml` (b291c25c) without its DTD and encoding parts (parse_px refuses a DOCTYPE first;
+`Parse` answers `ErrDoctype` there). The differential found four expat 2.9.0 behaviours that port
+missed, now fixed here: an XML declaration after the root is junk, not misplaced; any non-ASCII
+character after `<` outside the root starts an element; a declaration keyword (`<!KEYWORD`) is
+ASCII only; and a prolog name's `:` makes it prefixed or an NMTOKEN (`:?`, `a:b:c?` invalid,
+`a:` at the end unclosed), with `#` and `%` names stopping at `:`. `readtools` serves
+`n4_read_file`, `n4_list_px_views` and `n4_px_summary` (`files.go`) on `box.Client.GetFile` (S3,
+`KindHTTPStatus` for 403/404) and S6's `query`, `outputPath` and `writePrivate`; `recordRead`
+names its target key (`file_ord`, `root`). `pyjson.EncodeUTF8` (S6's `utf8Strict`, moved) serves
+both the CSV writer and `url_path`.
+
+**Files.** `output_file` is S6's rule: `<state-dir>/files/<name>` for a plain name with an
+extension, checked before the GET, the dirs 0700, the file `O_EXCL` 0600 and removed on failure,
+never over an existing name or a dangling link; a read cut at `max_bytes` is not saved
+(`output_skipped`). The read caps are `files.DefaultMaxBytes` (2 MiB) up to `MaxBytesLimit`
+(16 MiB); `n4_px_summary` refuses a cut file, naming the cap.
+
+**Proof.** Under `MCP_N4_IMPL=go` `TestReadFileTool`, `TestReadFileOutput`,
+`TestListPxViewsTool` and `TestPxSummaryTool` run black-box (with stub handlers they failed 13
+times): no test skips on these three tools any more (622 tests, 448 skipped, from 461). The 16
+marked tests have Go twins: `files/paths_test.go` (TestFilePaths, plus the refusal table with its
+words and order), `px/px_test.go` (TestPxParser) and `files/tools_test.go` (the two `internals`
+ones on `readtoolstest.Station.Files`, plus output mode, overwrite, link and refusal-before-GET
+checks). Differentials on CPython 3.15: `pyxml.TestDifferentialPython` (probes and 3,000 mutants
+of two documents, plus niagara-go's 3,000-document expat suite when `PYXML_EXPAT_SUITE` names
+it; 360,000 mutants were run once), `files.TestHelpersDifferentialPython` (the refusal table
+behind both ORD prefixes, `url_path`, `is_text` against 16 content types),
+`px.TestParseDifferentialPython` (edge documents at two caps, 1,500 mutants, `bound_component`)
+and `readtools.TestFilesDifferentialPython` (the three tools: reply text and output file bytes and
+mode). `pyxml.TestPinnedExpatAnswers` keeps the four fixes without a Python.
+
+**Known differences.** None found. A DOCTYPE never reaches the parser in either implementation.

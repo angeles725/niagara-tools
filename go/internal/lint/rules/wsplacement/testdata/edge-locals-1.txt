@@ -1,0 +1,50 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BLocals.java:5  add("f", f = new BFolder()) in before() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:8  add("g", g = new BFolder()) in after() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:13  add("h", h = create(...)) in cast() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:14  add("h2", h = create(...)) in cast() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:22  add("fld", fld = new BFolder()) in field() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:30  add("b", b = new BFolder()) in two() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BLocals.java:31  add("c", c = create(...)) in two() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BLocals.java --
+package com.x;
+public class BLocals extends BComponent {
+  void before() {
+    BFolder f = new BFolder();
+    add("f", f);
+  }
+   void after() {
+    add("g", g);
+    g = new BFolder();
+  }
+   void cast() {
+    BComponent h = (BComponent) create(t);
+    p.add("h", h);
+    p.add("h2", (BComponent) h);
+  }
+   void compare() {
+    if (k == new BFolder()) {}
+    add("k", k);
+  }
+   void field() {
+    this.fld = new BFolder();
+    add("fld", fld);
+  }
+   void value() {
+    BStatus st = new BStatus();
+    add("st", st);
+  }
+   void two() {
+    a = 1; b = new BFolder(); c = create(x);
+    add("b", b);
+    add("c", c);
+    add("a", a);
+  }
+   void other() {
+    add("z", f);
+  }
+}

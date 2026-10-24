@@ -85,8 +85,10 @@ public class BAmqpTransport extends BAbstractConnectedTransport
 Backed by **Apache Qpid Proton** (+ Microsoft Azure AMQP stack). Because no platform
 module ships Qpid Proton, cloudLink-rt fat-jars it directly — the `cloudLink-rt.jar`
 contains the full `org.apache.qpid.*` and `com.microsoft.azure.*` class trees.
-[ev: code cloudLink-rt BAmqpTransport imports org.apache.qpid.proton.*; META-INF/maven
-lists `org.apache.qpid` + `com.microsoft.azure`; DEPENDENCIES lists "Proton-J"]
+[ev: code cloudLink-rt BAmqpTransport imports org.apache.qpid.proton.*;
+organized/cloudLink/cloudLink-rt/extracted/META-INF/maven/org.apache.qpid/proton-j/pom.properties (bundled `org.apache.qpid`);
+organized/cloudLink/cloudLink-rt/extracted/META-INF/maven/com.microsoft.azure/qpid-proton-j-extensions/pom.properties (bundled `com.microsoft.azure`);
+organized/cloudLink/cloudLink-rt/extracted/META-INF/DEPENDENCIES:6 lists "Proton-J"]
 
 `connectionType` (`BAmqpConnectionType`: `amqp` / `amqpWs`) selects plain AMQP or
 WebSocket tunneling. `trustAnchors` (`BVector`, `security=true`) pins remote CA
@@ -275,7 +277,7 @@ No exception reaches the caller. Same message and health call in the 4.15.6.20 j
   through `BHttpClientService`. Our Apillm importer uses `HttpURLConnection` for this reason. Document in the
   module README which route applies.
 - **OAuth2:** no OAuth2 auth type ships. Subclass `BAuthorizationHeaderScheme` (abstract `getAuthHeaderValue`,
-  vineflower httpClient-rt 4.14.0.162 `datatypes/auth/BAuthorizationHeaderScheme.java:29`), fetch and cache the token in
+  vineflower httpClient-rt 4.14.0.162 `com/tridium/httpClient/datatypes/auth/BAuthorizationHeaderScheme.java:29`), fetch and cache the token in
   `getAuthHeaderValue` through `oauth2-rt` `OAuth2ClientCredentialsGrantRequest` (the `email-rt` pattern: `BOAuthEmailClientSecretAuthenticator.java:6`, email-rt 4.14.0.162), plug
   it in with `withAuthenticator(BTypeSpec)` (`HttpClientBuilder.java:93`) and depend on `oauth2-rt`; the client
   keeps the gate, throttle and audit. A static `withBearerAuthenticator(token)` (`:116`) with a token our code

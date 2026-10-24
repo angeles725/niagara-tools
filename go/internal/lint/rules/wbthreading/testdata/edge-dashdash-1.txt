@@ -1,0 +1,14 @@
+-- args --
+--
+@DIR@/root1
+-- want --
+exit 3
+-- stderr --
+lint-wb-threading: unknown option: --
+-- root1/com/x/A.java --
+class A {
+  public CommandArtifact doInvoke() {
+    BComponent[] k = root.getNavChildren();
+    return null;
+  }
+}
