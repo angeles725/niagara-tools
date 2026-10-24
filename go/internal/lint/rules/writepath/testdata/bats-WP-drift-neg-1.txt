@@ -1,0 +1,17 @@
+-- args --
+@DIR@/31/driftneg
+-- want --
+exit 0
+DRIFT  lint-write-path  @DIR@/31/driftneg/docs/write-path-matrix.md:4  slot setpoint: concept marker but a source slot exists
+-- stderr --
+-- .git/HEAD --
+x
+-- 31/driftneg/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` [concept] | D | mid | w1 |
+-- 31/driftneg/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

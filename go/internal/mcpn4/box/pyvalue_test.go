@@ -29,7 +29,7 @@ func TestPyValueSemantics(t *testing.T) {
 		{mustParse(t, `{"a": 1, "b": 2}`), mustParse(t, `{"b": 2, "a": 1}`), true},
 		{pyjson.FloatNumber(nanValue()), pyjson.FloatNumber(nanValue()), false},
 	} {
-		if pyEqual(tt.a, tt.b) != tt.eq {
+		if PyEqual(tt.a, tt.b) != tt.eq {
 			t.Errorf("%s == %s: want %v", pyjson.Repr(tt.a), pyjson.Repr(tt.b), tt.eq)
 		}
 	}

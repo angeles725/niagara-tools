@@ -1,0 +1,15 @@
+-- args --
+@DIR@/emptysrc
+-- want --
+exit 0
+STALE  lint-write-path  @DIR@/emptysrc/docs/write-path-matrix.md:4  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- emptysrc/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- emptysrc/src/README --
+x

@@ -1,6 +1,7 @@
 // Package cli is the mcp-n4 command line (mcp-n4-kit/mcp_n4/server.py:191-312): argparse's
 // flags, bounded ranges and error text, the start checks main() and Server(...) make, then the
-// stdio loop. Until the write slices land (S10), --allow-writes is refused at start.
+// stdio loop. With --allow-writes the write state is checked at start and the ported write
+// tools are served (writeops); the others answer that they are not ported yet.
 package cli
 
 import (
@@ -12,18 +13,17 @@ import (
 
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/writeops"
 )
 
 // Prog is the argparse prog name every message starts with.
 const Prog = "mcp_n4.server"
-
-// AllowWritesRefusal is the start refusal of --allow-writes in this version.
-const AllowWritesRefusal = "--allow-writes " + jsonrpc.NotImplemented
 
 // Main is the kitcli.Main entry point: it serves the process stdin.
 func Main(args []string, s kitcli.Stdio) int { return Run(args, os.Stdin, s) }
@@ -45,14 +45,35 @@ func Run(args []string, in io.Reader, s kitcli.Stdio) int {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 2
 	}
-	srv := jsonrpc.New(reg)
-	readtools.Register(srv, &readtools.Tools{Ctx: NewContext(cfg), NewClient: readtools.BoxFactory,
-		ServerVersion: reg.Version})
+	srv, err := NewServer(cfg)
+	if err != nil {
+		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
+		return 2
+	}
 	if err := srv.Serve(in, s.Out); err != nil {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 1
 	}
 	return 0
+}
+
+// NewServer is Server(...) for a cfg Check accepted: the read tools and, with --allow-writes,
+// the write state (WriteState's start checks: limits, state dir, scopes) and the write tools.
+func NewServer(cfg Config) (*jsonrpc.Server, error) {
+	reg := registry.Default()
+	srv := jsonrpc.New(reg)
+	ctx := NewContext(cfg)
+	tools := &readtools.Tools{Ctx: ctx, NewClient: readtools.BoxFactory, ServerVersion: reg.Version}
+	if cfg.AllowWrites {
+		state, err := plan.NewState(cfg.WriteScopes, stateDir(cfg.StateDir), int(cfg.TokenTTL), int(cfg.MaxWrites))
+		if err != nil {
+			return nil, err
+		}
+		tools.Audit = state.Audit
+		writeops.Register(srv, &plan.Engine{Ctx: ctx, State: state})
+	}
+	readtools.Register(srv, tools)
+	return srv, nil
 }
 
 type startError struct{ msg string }
@@ -105,7 +126,7 @@ func stations(cfg Config) (map[string]string, []string, error) {
 
 // Check makes the start checks of main() and Server(...) in their order: NAME=URL and
 // NAME=PATH pairs, https station URLs (http:// only with --allow-http-for-tests), station names
-// the per-station flags may name; then the --allow-writes refusal of this version.
+// the per-station flags may name.
 func Check(cfg Config) error {
 	urls, names, err := stations(cfg)
 	if err != nil {
@@ -141,9 +162,6 @@ func Check(cfg Config) error {
 			sort.Strings(list)
 			return &startError{f.flag + " names unconfigured station(s): " + strings.Join(list, ", ")}
 		}
-	}
-	if cfg.AllowWrites {
-		return &startError{AllowWritesRefusal}
 	}
 	return nil
 }

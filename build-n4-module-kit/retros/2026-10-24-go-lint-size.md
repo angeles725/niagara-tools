@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-size
@@ -48,4 +48,4 @@ slotomatic marker counts only inside a comment, so a string constant quoting it 
 - Running the port over the real trees after each truth fix shows which fixes change real rows (T1) and which only close synthetic shapes (T2, T3); both are reported.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-size.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 and Δ3 cross-cutting Go-port lessons, cited by the lints-a fold; Δ2 not folded, needs code (a decision on one-line BEGIN/END), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues. INDEX row generated from the header: `| 2026-10-24-go-lint-size.md | kit | 2026-10-24 | folded | 3 |`

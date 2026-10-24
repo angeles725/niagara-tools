@@ -1,0 +1,19 @@
+-- args --
+@DIR@/ovr/M
+--matrix
+@DIR@/ovr/mx/docs/write-path-matrix.md
+-- want --
+exit 0
+STALE  lint-write-path  @DIR@/ovr/mx/docs/write-path-matrix.md:1  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- ovr/M/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- ovr/mx/Z/src/BZ.java --
+@NiagaraProperty(name = "other")
+-- ovr/mx/docs/write-path-matrix.md --
+| `setpoint` | a |
+| `other` | b |

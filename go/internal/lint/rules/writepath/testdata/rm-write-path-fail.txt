@@ -1,0 +1,31 @@
+-- args --
+@DIR@/write-path-fail
+-- want --
+exit 1
+FAIL  lint-write-path  DemoPan-rt  slot setpoint: no matrix row
+-- stderr --
+-- .git/HEAD --
+x
+-- write-path-fail/DemoPan-rt/module-include.xml --
+<types>
+  <type class="com.x.BControl" name="Control"/>
+</types>
+-- write-path-fail/DemoPan-rt/module.lexicon --
+# lexicon
+Control.displayName=Control
+-- write-path-fail/DemoPan-rt/module.palette --
+<p t="b:Folder">
+  <p n="Control" t="x:Control"/>
+</p>
+-- write-path-fail/DemoPan-rt/src/com/x/BControl.java --
+package com.x;
+import javax.baja.sys.*;
+public final class BControl extends BComponent {
+    @NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)
+    private BDouble setpoint = BDouble.make(0.0);
+}
+-- write-path-fail/docs/write-path-matrix.md --
+# write-path-matrix
+
+| slot | write path |
+|------|-----------|

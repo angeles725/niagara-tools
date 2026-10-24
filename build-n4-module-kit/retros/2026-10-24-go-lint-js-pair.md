@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-js-pair
@@ -41,4 +41,4 @@ jasmine-ux needed none.
 - A golden tree cannot hold an empty directory; a RootRule over directories needs a Go test for those shapes beside its goldens.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-js-pair.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1, Δ2 and Δ3 (client review) parked as an owed `open_issue:` in its `ledger.d/` fragment, `[deferred:]` in `BUILD-LOOP.md` § 5 kit tooling doctrine (needs code).

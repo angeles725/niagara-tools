@@ -1,0 +1,19 @@
+-- args --
+--strict
+@DIR@/20/stalesum
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- 20/stalesum/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `statusLabel` | engine | n/a | wS |
+-- 20/stalesum/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+@NiagaraProperty(name="statusLabel", flags=Flags.SUMMARY | Flags.READONLY)
+public class BThing extends BComponent {}

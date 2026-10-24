@@ -1,0 +1,24 @@
+declared difference: the python helper caught the open error and exited 0, so a mistyped --bog path passed clean; an unreadable bog is an ERROR row, exit 3
+-- args --
+@DIR@/bad
+--bog
+@DIR@/bad/nope.bog
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/bad  --bog: open @DIR@/bad/nope.bog: no such file or directory
+-- stderr --
+-- .git/HEAD --
+x
+-- bad/config.bog --
+<bajaObjectGraph>
+<p n="x">
+</bajaObjectGraph>
+-- bad/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- bad/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
