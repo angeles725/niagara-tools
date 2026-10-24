@@ -1,0 +1,12 @@
+-- args --
+@DIR@/S
+-- want --
+exit 0
+WARN  lint-bacnet-status-flags  @DIR@/S/config.bog:3  col 32: U+0000 in 2 places (Niagara reads it; XML 1.0 forbids it)
+-- stderr --
+-- S/config.bog --
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='fw' t='b:String' v='1.9&#x0;&#x0;'/>
+ </p>
+</bajaObjectGraph>
