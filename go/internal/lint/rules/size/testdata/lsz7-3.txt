@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>

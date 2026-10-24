@@ -140,12 +140,21 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 			}
 			continue
 		}
+		if sp.ID() == "split-package-check" {
+			// its bash contract (kept by the port): "no module" on stderr, no row, exit 3; the client
+			// pre-push hook and CI template read only the exit code
+			want := "split-package-check: no module (a module-include.xml / build.gradle[.kts] next to src/) under " + root + "\n"
+			if code != 3 || o.Len() != 0 || e.String() != want {
+				t.Errorf("%s: exit %d out %q err %q, want 3 and %q on stderr", sp.ID(), code, o.String(), e.String(), want)
+			}
+			continue
+		}
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
 		if code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux" {
-		t.Errorf("RootRules %q, want lint-structure and lint-jasmine-ux", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux and split-package-check", roots)
 	}
 }

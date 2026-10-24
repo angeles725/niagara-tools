@@ -1,0 +1,18 @@
+-- args --
+--max-class
+1
+--bogus
+@DIR@
+-- want --
+exit 3
+-- stderr --
+lint-size: unknown flag: --bogus
+usage: lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}

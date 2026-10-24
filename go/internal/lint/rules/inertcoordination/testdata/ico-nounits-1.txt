@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/NoUnits.java --
+class NoUnits {
+  void doStuff() {}
+}

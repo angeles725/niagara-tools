@@ -1,0 +1,6 @@
+-- args --
+/nonexistent/__bfc__
+-- want --
+exit 3
+-- stderr --
+lint-bformat-call: not a directory: /nonexistent/__bfc__

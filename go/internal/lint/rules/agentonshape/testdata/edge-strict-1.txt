@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/M
+-- want --
+exit 3
+-- stderr --
+lint-agent-on-shape: not a directory: --strict
+-- M/Mod-rt/module-include.xml --
+<types><type name="X"><agent><on type="Bad"/></agent></type></types>

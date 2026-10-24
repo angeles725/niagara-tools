@@ -1,0 +1,31 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 0
+agent-breadth  WARN  @DIR@/root1/com/x/K.java:9  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/K.java:15  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/K.java:18  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+-- stderr --
+-- root1/com/x/K.java --
+// justified: broad on purpose
+@NiagaraType(agent = @AgentOn(types = "baja:Component"))
+class K {}
+
+/*
+ * no reason given here
+ *
+ */
+@NiagaraType(agent = @AgentOn(types = "baja:Component"))
+class L {}
+// Why: every component
+x
+y
+z
+@AgentOn(types = {"baja:Component"})
+class M {}
+int whyNot = 1;
+@AgentOn(types="baja:Component")
+class N {}
+@AgentOn(types = "baja:Folder")
+// @AgentOn(types = "baja:Component")
+class O {}

@@ -24,133 +24,60 @@
 #   in the SAME method.
 #   Row:  WARN  lint-persist-hot-write  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java is `ERROR  lint-persist-hot-write  <root>  no files to scan (K20: wrong path or
+# empty scaffold)` on stdout, exit 3.
+#
+# Implementation: rule package go/internal/lint/rules/persisthotwrite on the shared engine go/internal/lint (walker,
+# parser, row formatter; go/README.md), sharing changed(), bodies, callees and properties with its sibling
+# lint through go/internal/lint/rules/hotwrite. This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-persist-hot-write <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+# Truth fix T1 (2026-10-24): code is read with comments blanked and literal contents removed (go/internal/javasrc
+# Strip + BlankLiterals, shared with the sibling lint): the bash/awk cut each line at its first "//" (inside a
+# string too) and read block comments, Javadoc and strings as code, so a Javadoc `{@code execute()}` was taken
+# for execute()'s declaration and a "}" in a string ended a body early.
+# Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
+# method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
+# as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
+# Truth fix T3 (2026-10-24): a setter call starts at an identifier boundary and may have blanks before "("
+# (hotwrite.SetterCall, shared with lint-changed-hot-write #151); the awk matched "set<X>(" as a substring, so
+# resetXHours( was a write of xHours and setXHours ( was missed.
+# Truth fix T6 (2026-10-24): a Clock.millis() read is a cadence guard only in a condition that gates the write --
+# a comparison or if on one of the 5 lines above (reading Clock.millis() or a local assigned from it), or an if
+# before the setter on its own line; the awk counted any `Clock.millis(` on the write's line or above, so
+# `setX((double) Clock.millis())` and a write after a bare `long now = Clock.millis();` were suppressed.
+# Truth fix T5 (2026-10-24, equal-value skip): Baja's ComplexSlotMap skips a write whose new value equals the
+# current one for a simple value -- setDouble `!BDouble.equals(old, new)`, setBoolean `old != new`,
+# set(Property, BValue) `!old.isSimple() || !old.equals(new)` (niagara-research organized/baja/baja/vineflower/
+# com/tridium/sys/schema/ComplexSlotMap.java:1239, :860, :637). So a write reports only when it can dirty the
+# station every cycle: not under an `if` that tests the slot's own getter or a change flag (a name holding
+# Changed/Dirty), and, for a simple-typed slot (its newProperty default is a number, boolean or string literal
+# or a BDouble/BFloat/BInteger/BLong/BBoolean/BString value), only when the value is computed fresh: a clock
+# read, the slot's own getter in arithmetic, or a field the tree accumulates by a non-literal delta
+# (`hours[k] += dtH`). A non-simple value (a BStatusValue, a BRelTime, a component) has no framework skip and
+# keeps reporting. Statically the rule cannot prove that a mirrored model field changes on every call, nor
+# follow a value through a helper method: a field moved only by event counters (`++`, `+= 1`) or plain
+# assignments counts as changing on events, not every cycle.
+# Truth fix T4 (2026-10-24): every `Property <name> = newProperty(` of a line is read, its flags from its own
+# "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
+# flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: PHW12 -- counting any Clock.millis( within 5 lines suppresses setLastRunMs((double) Clock.millis())
+# Mutation: PHW11 -- ignoring Baja's equal-value skip WARNs setXAutoLocked(ctl.autoLocked[0]) every cycle
+# Mutation: PHW10 -- reading the flags on the declaration line only takes a wrapped Flags.TRANSIENT slot as persisted
+# Mutation: PHW9 -- matching "setXHours(" as a substring FAILs resetXHours(1.0) as a write of xHours
+# Mutation: PHW8 -- taking the first tick() not followed by ";" as the declaration reads pending(tick()) instead of tick()'s body
+# Mutation: PHW7 -- cutting each line at its first "//" hides a setter written after a URL string
 # Mutation: PHW2 -- drop the cadence-guard lookback so a guarded setter call still false-WARNs
 # Mutation: PHW6 -- keeping only the last callee drops a hot write in an earlier callee
 # Mutation: PHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: PHW-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-persist-hot-write first 'usage: lint-persist-hot-write.sh [--strict] <src-root>' "$@"
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  for (i = 1; i <= NR; i++) { ln = lines[i]; sub(/\/\/.*$/, "", ln); lines[i] = ln }
-
-  # 1. Locate changed(Property ...) -- no callback, nothing to check.
-  changed_line = 0
-  for (i = 1; i <= NR; i++) {
-    if (match(lines[i], /changed[[:space:]]*\([[:space:]]*Property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
-      changed_line = i; break
-    }
-  }
-  if (changed_line == 0) exit 0
-
-  depth = 0; started = 0; changed_end = 0
-  for (i = changed_line; i <= NR; i++) {
-    ln = lines[i]
-    for (ci = 1; ci <= length(ln); ci++) {
-      c = substr(ln, ci, 1)
-      if (c == "{") { depth++; started = 1 }
-      else if (c == "}") depth--
-    }
-    if (started && depth == 0) { changed_end = i; break }
-  }
-  if (changed_end == 0) exit 0
-
-  # 2. One-hop callees: EVERY zero-arg method invoked from changed() (identifier immediately
-  #    followed by "()" and ";", not a keyword) -- each one's body is scanned, not only one.
-  n_kw = split("if for while switch catch try finally return new else do super this Clock Sys", KW, " ")
-  for (k = 1; k <= n_kw; k++) kw[KW[k]] = 1
-  n_callee = 0
-  for (i = changed_line; i <= changed_end; i++) {
-    rest = lines[i]
-    while (match(rest, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([[:space:]]*\)[[:space:]]*;/)) {
-      cand = substr(rest, RSTART, RLENGTH)
-      rest = substr(rest, RSTART + RLENGTH)
-      sub(/[[:space:]]*\([[:space:]]*\)[[:space:]]*;.*/, "", cand)
-      if (!(cand in kw) && !(cand in seen_callee)) { seen_callee[cand] = 1; n_callee++; callee_name[n_callee] = cand }
-    }
-  }
-  # A declaration is distinguished from a call by what follows "()" on the line: a call ends
-  # in ';' right after the parens (possibly with trailing whitespace); a declaration is either
-  # bare (Allman '{' on the next line) or a one-liner "name() { ... }".
-  # Scope slot 1 is changed() itself; slots 2.. are the one-hop callees found below.
-  n_scope = 1; scope_start[1] = changed_line; scope_end[1] = changed_end
-  for (c = 1; c <= n_callee; c++) {
-    callee_line = 0
-    for (i = 1; i <= NR; i++) {
-      probe = " " lines[i]
-      if (match(probe, "[^A-Za-z0-9_]" callee_name[c] "[[:space:]]*\\([[:space:]]*\\)")) {
-        trailing = substr(probe, RSTART + RLENGTH)
-        gsub(/^[[:space:]]*/, "", trailing)
-        if (substr(trailing, 1, 1) != ";") { callee_line = i; break }
-      }
-    }
-    if (callee_line == 0) continue
-    depth = 0; started = 0; callee_end = 0
-    for (i = callee_line; i <= NR; i++) {
-      ln = lines[i]
-      for (ci = 1; ci <= length(ln); ci++) {
-        ch = substr(ln, ci, 1)
-        if (ch == "{") { depth++; started = 1 }
-        else if (ch == "}") depth--
-      }
-      if (started && depth == 0) { callee_end = i; break }
-    }
-    if (callee_end > 0) { n_scope++; scope_start[n_scope] = callee_line; scope_end[n_scope] = callee_end }
-  }
-
-  # 3. Collect NON-transient property names (raw slot-o-matic form).
-  n_nt = 0
-  for (i = 1; i <= NR; i++) {
-    ln = lines[i]
-    if (match(ln, /Property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*newProperty\(/)) {
-      nm = substr(ln, RSTART, RLENGTH)
-      sub(/[[:space:]]*=.*/, "", nm)
-      sub(/^.*Property[[:space:]]+/, "", nm)
-      rest = ln
-      sub(/^.*newProperty\(/, "", rest)
-      sub(/,.*/, "", rest)
-      if (index(rest, "TRANSIENT") == 0 && nm != "") { n_nt++; nt_name[n_nt] = nm }
-    }
-  }
-  if (n_nt == 0) exit 0
-
-  # 4. Scan changed()'s body and every one-hop callee's body for setter CALLS (not
-  #    declarations) to any non-transient property, with no cadence guard within 5 lines above
-  #    (same scope).
-
-  for (k = 1; k <= n_nt; k++) {
-    cap = toupper(substr(nt_name[k], 1, 1)) substr(nt_name[k], 2)
-    setter = "set" cap "("
-    for (s = 1; s <= n_scope; s++) {
-      ms = scope_start[s]; me = scope_end[s]
-      for (i = ms; i <= me; i++) {
-        ln = lines[i]
-        pos = index(ln, setter)
-        if (pos == 0) continue
-        # Skip a DECLARATION line (has a Java type keyword before the setter name on the line).
-        if (ln ~ /(void|public|private|protected|static)[[:space:]]+[A-Za-z_<>\[\],. ]*set[A-Z]/) continue
-        # Cadence guard: look back up to 5 lines, same scope, for Clock.millis( or a % test.
-        guarded = 0
-        for (j = i; j >= ms && j >= i - 5; j--) {
-          if (index(lines[j], "Clock.millis(") > 0) { guarded = 1; break }
-          if (match(lines[j], /%[[:space:]]*[A-Za-z0-9_]+[[:space:]]*(==|!=)/)) { guarded = 1; break }
-        }
-        if (!guarded) {
-          printf "WARN  lint-persist-hot-write  %s:%d  %s...) writes non-transient slot '%s'" \
-            " reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines --" \
-            " integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start\n", \
-            FILE, i, setter, nt_name[k]
-        }
-      }
-    }
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-persist-hot-write: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-persist-hot-write "$@"

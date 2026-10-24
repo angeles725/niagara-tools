@@ -1,0 +1,16 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+ERROR  lint-size  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
+-- e/x.txt --
+x

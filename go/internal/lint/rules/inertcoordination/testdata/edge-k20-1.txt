@@ -1,0 +1,17 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+ERROR  lint-inert-coordination  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- a/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+-- b/B.java --
+class B {}
+-- e/x.txt --
+x

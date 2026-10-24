@@ -1,0 +1,7 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+-- stderr --
+-- root/B.java --
+class B { String f = "%time().toDateString% by %user()% at 100%% %time()%"; }

@@ -322,12 +322,14 @@ EOF
   # every awk_lint_each lint finds a clean input: A.java for the Java lints, a module-include.xml for agent-on-shape
   printf '<module>\n  <on type="m:T"/>\n</module>\n' > "$TMPDIR_T/src/module-include.xml"
   for l in "$KIT"/toolbelt/lint-*.sh; do
-    grep -q 'awk_lint_each' "$l" || continue
+    grep -qE '^[[:space:]]*awk_lint_each[[:space:]]' "$l" || continue  # a real call, not a comment naming it
     n=$((n + 1))
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$KIT/toolbelt" "${l##*/}" "$TMPDIR_T/src"
     { [ "$status" -eq 0 ] && [ -z "$output" ]; } || { echo "$l: $status $output"; return 1; }
   done
-  [ "$n" -ge 6 ]
+  # The bash awk_lint_each lints are being ported to n4lint one by one; the loop must have run while any is
+  # left, and says so when none is (never a vacuous pass).
+  [ "$n" -ge 1 ] || skip "no awk_lint_each lint left (all ported to n4lint)"
 }
 
 @test "AL24: awk_lint_run hands the path to main.awk verbatim; a backslash in it is never escape-processed" {

@@ -1,0 +1,23 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/J.java:4  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/J.java:6  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/J.java:7  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/J.java:9  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/J.java:11  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- root/J.java --
+class J {
+  // "%user%" in a line comment
+  /* "%time(x)%" in a block
+     still %user% */ String a = "%user%";
+  String b = "%time()% %time().toDateString% %user()%";
+  String c = "%time( )%"; String d = "%time(";
+  String e = "100%% %user%%";
+  char q = '%'; String t = """
+    %time(HH)%
+    """;
+  String u = "url http://x/%user%"; // %time(y)%
+}

@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/Mod/src/com/x/Asl.java:4  units() returns a structurally singleton list while pending, defrostToken (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- Mod/src/com/x/Asl.java --
+class Asl {
+  private final Queue<Integer> pending = new ArrayDeque<Integer>();
+  int defrostToken;
+  private List<Unit> units() {
+    return java.util.Arrays.asList((Unit) getParent());
+  }
+}
