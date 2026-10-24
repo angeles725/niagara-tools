@@ -155,7 +155,8 @@ func (s *scan) siblingHomes() {
 
 // pluginPin is L14 and L15 over the gradle root: the root's own settings.gradle.kts, else the nearest
 // ancestor's (the walk stops at a directory holding .git). L14: it may not pin gradlePluginVersion to a
-// literal. L15: the build.gradle.kts beside it, when it applies the signing plugin, carries the block.
+// literal, matched on the script's code lines (comments and literal contents out). L15: the build.gradle.kts
+// beside it, when it applies the signing plugin, carries the block.
 func (s *scan) pluginPin() {
 	settings := ""
 	for dir := s.root; ; {
@@ -175,7 +176,7 @@ func (s *scan) pluginPin() {
 	if settings == "" {
 		return
 	}
-	s.lineRows(settings, pluginLit, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
+	s.lineRows(settings, s.kotlinLines(settings), pluginLit, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
 	if build := strings.TrimSuffix(settings, "/settings.gradle.kts") + "/build.gradle.kts"; lint.IsFile(build) {
 		s.signing(build)
 	}

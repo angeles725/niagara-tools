@@ -265,6 +265,23 @@ _ls14_tree() {
   [[ "$output" != *"L14"* ]]
 }
 
+@test "LS14-block: a hardcoded literal inside a /* */ comment is not code, so it is not flagged" {
+  # Mutation: LS14-block -- matching the raw settings lines instead of ktssrc code lines FAILs a commented-out pin
+  ROOT=$(mktemp -d)
+  _ls14_tree "$ROOT" '/*
+  val gradlePluginVersion: String = "7.6.17"
+*/'
+  run "$LS" "$ROOT/Group/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"L14"* ]]
+  # positive control: the same pin out of the comment FAILs, so the settings file was read
+  printf '%s\n' '  val gradlePluginVersion: String = "7.6.17"' >> "$ROOT/Group/settings.gradle.kts"
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/Group/settings.gradle.kts:4  L14: "* ]]
+}
+
 # ---------------------------------------------------------------------------
 # L15 — the ROOT build.gradle.kts (the dir holding settings.gradle.kts) applies com.tridium.niagara-signing
 # without the signing block (issue #266, register C85). Same uncommented-code rule as preflight.sh sample-sign.

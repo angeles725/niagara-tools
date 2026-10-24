@@ -58,6 +58,9 @@
 # scanner: a block in a nested /* */ comment or in a string inside a ${...} template is not code, a raw """ string
 # takes no \ escape, an id("com.tridium.niagara-signing") split over lines applies the plugin, and a script the
 # scanner cannot read is the visible L15 WARN. Real trees unchanged. [ev: retro r10-ktssrc-gradle-lints Δ1]
+# Truth fix 2026-10-24: L14 matches settings.gradle.kts on its ktssrc code lines, not the raw text: a pin inside a
+# /* */ comment or a raw string is not flagged, one after a leading comment is, and a script the scanner cannot read
+# is `cannot scan`, exit 3. Real trees unchanged. [ev: retro r10-ktssrc-gradle-lints Δ2]
 # Mutation: LS10-keys -- dropping the kit-template check WARNs a fixture's build-location key instead of FAILing it
 # Mutation: LS10-userhome -- adding user_home to the build-location keys turns its host-path FAIL into a WARN
 # Mutation: LS10-shapes -- matching only key=X:\ (the bash regex) passes spaced, colon, indented, POSIX and UNC host paths

@@ -46,3 +46,26 @@ func TestSigningKotlin(t *testing.T) {
 		t.Errorf("not Kotlin: exit %d err %q out %q, want 0 and %q", code, errs, out, want)
 	}
 }
+
+// TestPluginPinKotlin (truth fix 2026-10-24): L14 matches its line pattern on the settings script's code lines
+// (go/internal/ktssrc Code), not on the raw text, so a literal pin inside a /* */ comment or a raw string is not a
+// pin, and one after a leading comment is. A script ktssrc cannot read is a scan error (exit 3), as an
+// unreadable one is.
+func TestPluginPinKotlin(t *testing.T) {
+	pin := `val gradlePluginVersion = "7.6.17"`
+	for settings, want := range map[string]bool{
+		pin + "\n":              true,
+		"/*\n" + pin + "\n*/\n": false,
+		"val doc = \"\"\"\n" + pin + "\n\"\"\"\n": false,
+		"/* old */ " + pin + "\n":                 true,
+	} {
+		_, out, _, _ := kotlinRoot(t, settings, "\n")
+		if got := strings.Contains(out, "L14:"); got != want {
+			t.Errorf("%q: L14 row %v, want %v (out %q)", settings, got, want, out)
+		}
+	}
+	code, out, errs, dir := kotlinRoot(t, pin+"\n/* open\n", "\n")
+	if want := "lint-structure: cannot scan " + dir + "/settings.gradle.kts: line 2: unterminated /* comment\n"; code != 3 || errs != want {
+		t.Errorf("not Kotlin: exit %d out %q err %q, want 3 and %q", code, out, errs, want)
+	}
+}
