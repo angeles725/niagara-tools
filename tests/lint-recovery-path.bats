@@ -46,6 +46,16 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [ -z "$output" ]
 }
 
+@test "LRP-scope: a nested class's started() reset counts (method names come from the shared method scanner)" {
+  # Mutation: LRP-scope -- naming methods by a 5-line back-scan gives Inner.started() the name of the call above it
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-method-scope-1.txt
+  printf '%s\n' 'package com.x;' 'public class Nested extends BComponent {' '  void execute() {' '    setHeatOut(false);' '  }' \
+    '  static class Inner {' '    void started() {' '      setHeatOut(false);' '    }' '  }' '}' > "$ONE/Nested.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "LRP-usage: no argument -> exit 3 (usage)" {
   run "$LRP"
   [ "$status" -eq 3 ]

@@ -13,7 +13,7 @@ import (
 
 // TestGolden: every tests/lint-recovery-path.bats run of the lint (LRP-locked aside: TestLocked pins it)
 // and every edge tree, recorded from the bash lint-recovery-path.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 20) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 21) }
 
 // TestLocked is LRP-locked: an unreadable sub-directory stops the scan with exit 3 and no rows, as
 // scan_files_nonempty_or_exit did, even beside a file that FAILs.

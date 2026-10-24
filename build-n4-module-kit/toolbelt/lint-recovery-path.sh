@@ -47,9 +47,13 @@
 # Truth fix T1 (2026-10-24): braces and safe-off writes are read in code only (go/internal/javasrc Strip, literal
 # contents removed); the bash awk cut each line at its first "//" (inside a string too) and read block comments
 # and string literals as code.
+# Truth fix T2 (2026-10-24): the method of a write comes from javasrc.Methods (the mb_parse port shared by the
+# method-scoped lints); the bash awk took the first lower-case call within 5 lines above a "{", so a(), If() or a
+# nested class's started() took the name of a call on an earlier line. A write outside every method is "unknown".
 #
 # Mutation: LRP-noguard -- removes the guarded-only classification so mode-gated-only safe-offs pass instead of FAIL
 # Mutation: LRP-comment -- matching the raw line cut at "//" FAILs a commented-out write and misreads started()
+# Mutation: LRP-scope -- naming methods by a 5-line back-scan gives Inner.started() the name of the call above it
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

@@ -3,7 +3,8 @@
 // methods other than started, atSteadyState, changed, enable or start FAILs: nothing resets it when the
 // mode that gated it clears (the PANCCADIA stranded heater). Port of the awk in
 // toolbelt/lint-recovery-path.sh (the wrapper keeps the user-facing contract and its header documents the
-// rule and its mutation pin). Per-file rule; a file's rows come in gawk's `for (slot in a)` order.
+// rule and its mutation pins). Per-file rule over javasrc.Methods; a file's rows come in gawk's
+// `for (slot in a)` order.
 package recoverypath
 
 import (
@@ -40,9 +41,6 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); return re }
 
 var (
-	callName  = rx(`[a-z][A-Za-z0-9_]+[[:space:]]*\(`)
-	leadName  = rx(`^[a-z][A-Za-z0-9_]+`)
-	keyword   = rx(`^(if|for|while|switch|try|catch|super|this|return|throw|new|else|assert|synchronized|do)$`)
 	getterOff = rx(`get[A-Za-z][A-Za-z0-9_]*\(\)\.setValue\([[:space:]]*false[[:space:]]*\)`)
 	setterOff = rx(`set[A-Za-z][A-Za-z0-9_]*\([[:space:]]*false[[:space:]]*\)`)
 	outSlot   = rx(`(Out|Resistance|Heat|Resistencia)$`)
@@ -57,24 +55,22 @@ type guard struct {
 
 // Check FAILs every slot of the file written OFF outside a reset method and never inside one.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code := linescan.Code(f) // comments blanked and literal contents removed: braces and writes are code only
-	depth, method := 0, ""
+	code := linescan.Code(f) // comments blanked and literal contents removed: writes are code only
+	method := make([]string, len(code))
+	for _, m := range f.Methods() { // the shared method scanner (javasrc.Methods): name and body lines
+		for i := m.Start - 1; i < m.End; i++ {
+			method[i] = m.Name
+		}
+	}
 	reset := map[string]bool{}
 	guards := map[string]guard{}
 	var order []string // guarded slots in first-write order, the order gawk inserted them
 	for i, s := range code {
-		open := strings.Count(s, "{")
-		if depth == 1 && open > 0 {
-			method = enclosing(code, i)
-		}
-		if depth += open - strings.Count(s, "}"); depth <= 1 {
-			method = ""
-		}
 		slot := offSlot(s)
 		if slot == "" {
 			continue
 		}
-		m := method
+		m := method[i]
 		if m == "" {
 			m = "unknown"
 		}
@@ -93,19 +89,6 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 	return out, nil
-}
-
-// enclosing names the method a "{" on line i opens: the first lower-case call name on that line or one of
-// the 5 above it that is not a keyword ("" when there is none).
-func enclosing(code []string, i int) string {
-	for j := i; j >= i-5 && j >= 0; j-- {
-		if loc := callName.FindStringIndex(code[j]); loc != nil {
-			if nm := leadName.FindString(code[j][loc[0]:]); !keyword.MatchString(nm) {
-				return nm
-			}
-		}
-	}
-	return ""
 }
 
 // offSlot is the protection slot line s writes OFF, or "": the first getX().setValue(false), else the first

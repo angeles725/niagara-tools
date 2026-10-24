@@ -1,0 +1,44 @@
+declared difference (truth fix T2): the bash awk named the method by scanning up to 5 lines above a "{" for
+the first lower-case call, so a one-letter or upper-case method name (a(), If()) took the call on the line
+above it (the previous body's setAOut / setBOut), a signature wrapped over more than 5 lines was "unknown",
+and a nested class's started() took the name of a call above its class line, so its reset did not count
+(Nested). Methods now come from javasrc.Methods, the shared method scanner.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/Far.java:13  LRP: BOut has guarded-only safe-off in method "If" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Far.java:16  LRP: COut has guarded-only safe-off in method "a" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/Far.java:10  LRP: AOut has guarded-only safe-off in method "longSignatureName" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- Far.java --
+package com.x;
+public class Far extends BComponent {
+  void longSignatureName(
+      int a,
+      int b,
+      int c,
+      int d,
+      int e)
+  {
+    setAOut(false);
+  }
+  void If() {
+    setBOut(false);
+  }
+  void a() {
+    setCOut(false);
+  }
+}
+-- Nested.java --
+package com.x;
+public class Nested extends BComponent {
+  void execute() {
+    setHeatOut(false);
+  }
+  static class Inner {
+    void started() {
+      setHeatOut(false);
+    }
+  }
+}
