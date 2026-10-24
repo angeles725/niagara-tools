@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -260,6 +261,44 @@ func TestWalkOrderAndSelection(t *testing.T) {
 	}
 	if got, err := Walk(dangling, sel); err == nil || err.Error() != "find: '"+dangling+"': No such file or directory" || len(got) != 0 {
 		t.Errorf("Walk(dangling root) = %q, %v", got, err)
+	}
+}
+
+// TestWalkPathSelection pins the find tests rc-scan.sh passed to scan_files: -path '*/rc/*' on the file,
+// -not -name '*.min.js', and --prune-path '*/rc/ext' (a pruned directory is never entered, so an unreadable
+// one is no walk error); the root itself is never pruned.
+func TestWalkPathSelection(t *testing.T) {
+	root := tree(t, map[string]string{
+		"rc/a.js": "", "rc/a.min.js": "", "rc/ext/x.js": "", "rc/js/ext/y.js": "", "rc/sub/rc/ext/z.js": "",
+		"src/b.js": "", "rcx/c.js": "", "m/rc/d.css": "", "rc/ext2/e.js": "",
+	})
+	if err := os.Mkdir(filepath.Join(root, "rc", "ext", "locked"), 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(filepath.Join(root, "rc", "ext", "locked"), 0o755) })
+	sel := Selection{Names: []string{"*.js", "*.css"}, Except: []string{"*.min.js"}, Paths: []string{"*/rc/*"}, PrunePaths: []string{"*/rc/ext"}}
+	got, err := Walk(root, sel)
+	want := []string{root + "/m/rc/d.css", root + "/rc/a.js", root + "/rc/ext2/e.js", root + "/rc/js/ext/y.js"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Walk = %q, %v\nwant %q", got, err, want)
+	}
+	for _, p := range append(want, root+"/rc/ext/x.js", root+"/rc/a.min.js", root+"/src/b.js") {
+		if keep := sel.keeps(root, p); keep != slices.Contains(want, p) {
+			t.Errorf("keeps(%q) = %v", p, keep)
+		}
+	}
+	// The root is never pruned: under <root>/rc/ext every file is listed.
+	if got, err := Walk(root+"/rc/ext", sel); err == nil || len(got) != 1 || got[0] != root+"/rc/ext/x.js" {
+		t.Errorf("Walk(rc/ext root) = %q, %v; want x.js and the locked directory's error", got, err)
+	}
+	for _, tc := range []struct {
+		pat, s string
+		want   bool
+	}{{"*/rc/*", "a/rc/b/c", true}, {"*/rc/*", "rc/b", false}, {"*/rc/ext", "a/rc/ext", true},
+		{"*/rc/ext", "a/rc/ext/b", false}, {"a?c", "a/c", true}, {"", "", true}, {"*", "", true}} {
+		if got := findPath(tc.pat, tc.s); got != tc.want {
+			t.Errorf("findPath(%q, %q) = %v", tc.pat, tc.s, got)
+		}
 	}
 }
 
