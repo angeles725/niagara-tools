@@ -927,6 +927,16 @@ only driver test template is the video driver's,
   whose codec srcTest runs with `run-pure-test.sh`. Its `-rt` part needs `api(":alarm-rt")` (BDevice is an alarm
   source, javac stops without it) and its `-wb` part `api(":bajaui-wb")` for the manager's widget base
   `[ev: retro r10-dr2-driver-scaffold Δ1]`.
+- **Verify gate, driver mode.** `toolbelt/verify-module.sh --src <module-dir> <jar>` treats a profile dir as a driver
+  module when a class under its `src` extends a network or device base (`BDeviceNetwork`, `BLoadableNetwork`,
+  `BBasicNetwork`, `BSerialNetwork`, `BNNetwork`; `BDevice`, `BLoadableDevice`, `BBasicDevice`, `BNDevice`), directly or
+  through its own classes, and adds five rows: `driver-scaffold` (lint-driver-scaffold, always on, § 5),
+  `driver-comm-config` (no network or device slot holds a bare `BUdpCommConfig`/`BTcpCommConfig`, § 1.9),
+  `driver-discovery-alive` (every `getDiscoveryObjects` calls `isAlive()`, § 1.11), `driver-server-enabled` (a
+  `BTcpCommConfig` subclass never defaults `serverEnabled` to true, § 1.6) and `driver-manager` (a point manager is
+  `@AgentOn` the driver's point device ext, § 1.6; a `BBasicNetwork` driver ships a manager `@AgentOn` its network or
+  device, PD-01 § 1.3). Any other module prints no driver row. The enum-proxy range (§ 2) is a station facet set at
+  commissioning, so the gate does not check it `[ev: retro r10-dr4-verify-driver Δ1]`.
 - Owed: a station-side loopback example built through the kit loop (DR5).
 
 ---
