@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<obj href="https://station.example/obix/config/Plant/Facade/" is="obix:obj" display="Facade">
+  <bool name="comp1State" href="comp1State/" val="true"/>
+  <bool name="comp2State" href="comp2State/" val="false"/>
+  <obj name="Link" href="Link/" is="baja:Link" dis

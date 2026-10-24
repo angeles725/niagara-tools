@@ -6,7 +6,17 @@ import (
 	"testing"
 )
 
+// TestDirnameBasename: expected values from GNU coreutils; the walks up to a .git sentinel (lint-structure,
+// lint-write-path) step with Dirname and keep its spelling (a relative root stops at ".").
 func TestDirnameBasename(t *testing.T) {
+	for in, want := range map[string]string{
+		"a/b": "a", "a/b/": "a", "a//b": "a", "a": ".", "a/": ".", ".": ".", "./": ".", "..": ".",
+		"/": "/", "//": "/", "/a": "/", "/a/b/c": "/a/b", "a/b//": "a",
+	} {
+		if got := Dirname(in); got != want {
+			t.Errorf("Dirname(%q) = %q, want %q", in, got, want)
+		}
+	}
 	for _, tc := range []struct{ in, dir, base string }{
 		{"a/b", "a", "b"}, {"a/b/", "a", "b"}, {"a", ".", "a"}, {".", ".", "."}, {"/", "/", "/"},
 		{"/a", "/", "a"}, {"//a//b//", "//a", "b"}, {"a//b", "a", "b"},

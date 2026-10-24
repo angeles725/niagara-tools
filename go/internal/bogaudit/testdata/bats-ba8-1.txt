@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: bog-audit.sh <config.bog|file.xml> --module <MOD>... [--source-dir <DIR>] [--strict]

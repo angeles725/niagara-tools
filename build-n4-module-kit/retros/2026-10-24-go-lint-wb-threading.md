@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-wb-threading
@@ -51,4 +51,4 @@ comments, `Strip` delegates to it), not a second scanner.
   the duplicate G41 flags.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-wb-threading.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 and Δ2 not folded, needs code (truth fixes measured on real trees), owed in `METHODOLOGY.md` § Kit maintenance (round-10 lint follow-ups) and `BUILD-STATE.md` open_issues; Δ3 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-wb-threading.md | kit | 2026-10-24 | folded | 3 |`

@@ -1,0 +1,27 @@
+-- args --
+@DIR@/f1/station-logic-CHECK13-clean.bog
+--module
+ColdRoomPan
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=1
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+# bog-audit: parse time 0.003s
+-- stderr --
+-- f1/station-logic-CHECK13-clean.bog (zip) --
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='NrioNet' h='n1' m='nrio=nrio' t='nrio:NrioNetwork'>
+  <p n='ro1' h='r1' t='c:BooleanWritable'>
+   <p n='fallback' t='b:StatusBoolean'><p n="value" v="false"/></p>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:s1"/><p n="sourceSlotName" v="evapOut"/><p n="targetSlotName" v="in10"/></p>
+  </p>
+ </p>
+ <p n='SrcA' h='s1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="evapOut" f="o" t="b:StatusBoolean" v="false"/>
+ </p>
+</bajaObjectGraph>

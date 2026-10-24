@@ -100,10 +100,10 @@ func (c *Client) split(events []any, handle any) (*pyjson.Object, bool) {
 			_, bIsObj := b.(*pyjson.Object)
 			h, _ := get(op, "h")
 			loadWithBody := isLoadOp(op) && bIsObj
-			if found == nil && loadWithBody && (handle == nil || pyEqual(h, handle)) {
+			if found == nil && loadWithBody && (handle == nil || PyEqual(h, handle)) {
 				found = op.(*pyjson.Object)
 			} else {
-				if handle != nil && loadWithBody && !pyEqual(h, handle) {
+				if handle != nil && loadWithBody && !PyEqual(h, handle) {
 					sawOther = true
 				}
 				rest = append(rest, op)

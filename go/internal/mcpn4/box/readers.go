@@ -104,7 +104,7 @@ func pyIntBase16(s string) (*big.Int, bool) {
 			continue
 		case r < utf8.RuneSelf && strings.ContainsRune("0123456789abcdefABCDEF", r):
 		case unicode.Is(unicode.Nd, r):
-			r = '0' + decimalValue(r)
+			r = '0' + pyjson.DecimalValue(r)
 		default:
 			return nil, false
 		}
@@ -119,13 +119,4 @@ func pyIntBase16(s string) (*big.Int, bool) {
 		n.Neg(n)
 	}
 	return n, true
-}
-
-// decimalValue is the digit value of a decimal digit: Unicode encodes each set as a run of ten.
-func decimalValue(r rune) rune {
-	start := r
-	for unicode.Is(unicode.Nd, start-1) {
-		start--
-	}
-	return (r - start) % 10
 }

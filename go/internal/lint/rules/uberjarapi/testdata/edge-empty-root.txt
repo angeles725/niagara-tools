@@ -1,0 +1,10 @@
+-- args --
+@DIR@/empty
+-- want --
+exit 0
+-- stderr --
+-- empty/README --
+x
+-- empty/build.gradle --
+api("g:a:1")
+uberjar("g:a:1")

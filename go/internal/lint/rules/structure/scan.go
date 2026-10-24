@@ -81,34 +81,6 @@ func dotName(p string) bool {
 	return strings.HasPrefix(p[strings.LastIndexByte(p, '/')+1:], ".")
 }
 
-// dirname is POSIX dirname(1): "." for a name without a slash, "/" for the root.
-func dirname(p string) string {
-	p = strings.TrimRight(p, "/")
-	if p == "" {
-		return "/"
-	}
-	i := strings.LastIndexByte(p, '/')
-	if i < 0 {
-		return "."
-	}
-	if p = strings.TrimRight(p[:i], "/"); p == "" {
-		return "/"
-	}
-	return p
-}
-
-// isFile is test -f: a regular file, symlinks followed.
-func isFile(p string) bool {
-	st, err := os.Stat(p)
-	return err == nil && st.Mode().IsRegular()
-}
-
-// isDir is test -d: a directory, symlinks followed.
-func isDir(p string) bool {
-	st, err := os.Stat(p)
-	return err == nil && st.IsDir()
-}
-
 // grep reports whether any line matches re (grep -qE).
 func grep(lines []string, re *regexp.Regexp) bool { return count(lines, re) > 0 }
 

@@ -47,7 +47,7 @@ func (p *parser) run(data []byte) ([]Element, error) {
 			if err != nil {
 				return nil, err
 			}
-			e.Depth, e.Parent = len(stack), -1
+			e.Depth, e.Parent, e.Empty = len(stack), -1, bytes.HasSuffix(raw, []byte("/>"))
 			if len(stack) > 0 {
 				e.Parent = stack[len(stack)-1]
 			}

@@ -1,0 +1,10 @@
+-- args --
+@DIR@/a
+extra
+--strict
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/a/src/A.java:1  BOrd.make from a variable: class A { void f(String q){ BOrd.make(q); } }
+-- stderr --
+-- a/src/A.java --
+class A { void f(String q){ BOrd.make(q); } }

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · go-lint-silent-protection
@@ -55,4 +55,4 @@ so `gawkOrder` stayed in rules/timers.
 - An xargs file list is not path-safe; neither is a key cut from formatted output.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-silent-protection.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 port rule.

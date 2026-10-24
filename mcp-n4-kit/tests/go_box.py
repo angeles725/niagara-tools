@@ -72,6 +72,8 @@ def run_ops(client, ops):
                 res = client.call(op["channel"], op["key"], op.get("body"))
             elif kind == "ssc":
                 res = client.ssc(op["key"], op.get("arg"))
+            elif kind == "sync":
+                res = client.sync(op["sync"])
             elif kind == "poll":
                 res = list(client.poll())
             elif kind == "load_tree":
@@ -164,6 +166,10 @@ def _nested(depth):
     for _ in range(depth - 1):
         out = [out]
     return out
+
+
+def _sync(nm, h="3", **body):
+    return {"op": "sync", "sync": dict({"nm": nm, "h": h}, **body)}
 
 
 def _lt(ord_str=FOLDER, **kw):
@@ -288,6 +294,22 @@ SCENARIOS = [
     dict(name="a_load_with_an_empty_child_name_is_malformed", ports=None,
          hook=Script(muted=1, polls=[[], [_load("2", h="2", s=[{"n": "", "t": "x", "s": [{"n": "k"}]}])]]),
          ops=[OPEN, _lt("station:"), STATE]),
+    # The write side (S10): the plan engine sends a set as one syncTo op and an action as an
+    # invokeAction ssc; the load after it reads the written Status slot back.
+    dict(name="set_slot_whole_status_numeric_reads_back_ok", ops=[
+        OPEN, _sync("a", n="Temp", b={"nm": "p", "t": "kitControl:NumericConst", "s": []}),
+        _sync("s", h="10", n="out", b=box.bson_status_numeric(30.0)), _lt(depth=3), STATE]),
+    dict(name="invoke_action_set_writes_fallback_whole", ops=[
+        OPEN, _sync("a", n="W", b={"nm": "p", "t": "control:NumericWritable", "s": []}),
+        {"op": "ssc", "key": "invokeAction", "arg": {"h": "10", "a": "set",
+                                                     "b": box.bson_double(7.5)}},
+        _lt(depth=3), STATE]),
+    dict(name="sync_rejects_multiple_ops", ops=[
+        OPEN, {"op": "sync", "sync": [{"nm": "v", "h": "3", "n": "a"}]}, STATE]),
+    dict(name="sync_station_error_is_boxerror", ports=None,
+         ops=[OPEN, _sync("q", n="x"), _sync("s", h="99", n="x", b=box.bson_bool(True))]),
+    dict(name="sync_http_500_is_boxerror", ports=None, hook=Script(fail={"syncTo": 500}),
+         ops=[OPEN, _sync("s", h="3", n="x", b=box.bson_bool(True))]),
 ]
 
 

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-24 · kit · go-kit-cite-resolve
@@ -47,4 +47,4 @@ pinned by a case, before the first push.
 - RESOLVED only says the cited place exists; the excerpt is what the human judges.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-kit-cite-resolve.md | kit | 2026-10-24 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 K22 real-tree line (any new checker).

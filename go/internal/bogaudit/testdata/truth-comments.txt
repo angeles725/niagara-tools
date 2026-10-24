@@ -1,0 +1,34 @@
+-- args --
+@DIR@/c.bog
+--module
+ColdRoomPan
+--source-dir
+@DIR@/src
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=1
+CHECK6  WARN  ColdRoom_1/real  slot in source BColdRoom not in bog
+# bog-audit: parse time 0.001s
+-- stderr --
+-- c.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='L' t='b:Link'><p n="sourceOrd" v="h:c1"/><p n="sourceSlotName" v="x"/><p n="targetSlotName" v="real"/></p>
+ </p>
+</bajaObjectGraph>
+-- src/BColdRoom.java --
+@NiagaraProperty(name="real", type="int", defaultValue="0")
+// @NiagaraProperty(name="commented", type="int", defaultValue="0")
+/*
+@NiagaraProperty(name="blockCommented", type="int", defaultValue="0")
+ */
+/** Javadoc naming {@code @NiagaraProperty(name="javadoc")}. */
+public class BColdRoom extends BComponent {}
+-- src/Servlet.java --
+class Servlet {
+  void w(C c) {
+    // c.set("real", v);  a write left as a comment
+    String doc = "c.set(\"x\", v)"; /* c.set("real", w); */
+  }
+}
