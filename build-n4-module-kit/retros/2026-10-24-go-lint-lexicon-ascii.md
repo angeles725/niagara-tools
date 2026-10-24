@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-lexicon-ascii
@@ -48,4 +48,4 @@ byte-identical first, then one truth fix with RED first.
   format.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-lexicon-ascii.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine (`while read` drops an unterminated last line); Δ2 parked as an owed `open_issue:` in its `ledger.d/` fragment, `[deferred:]` in `BUILD-LOOP.md` § 5 kit tooling doctrine (needs code).

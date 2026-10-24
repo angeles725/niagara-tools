@@ -35,10 +35,10 @@ func (s *scan) profiles() []string {
 	var out []string
 	for _, e := range entries {
 		name, p := e.Name(), s.root+"/"+e.Name()
-		if strings.HasPrefix(name, ".") || !isDir(p) {
+		if strings.HasPrefix(name, ".") || !lint.IsDir(p) {
 			continue
 		}
-		if hasProfileSuffix(name) || isFile(p+"/build.gradle.kts") || isFile(p+"/build.gradle") || isFile(p+"/module-include.xml") {
+		if hasProfileSuffix(name) || lint.IsFile(p+"/build.gradle.kts") || lint.IsFile(p+"/build.gradle") || lint.IsFile(p+"/module-include.xml") {
 			out = append(out, p)
 		}
 	}
@@ -58,25 +58,25 @@ func hasProfileSuffix(name string) bool {
 func (s *scan) profile(dir string) {
 	name, rel := dir[strings.LastIndexByte(dir, '/')+1:], s.rel(dir)
 	inc, lex, pal, src := dir+"/module-include.xml", dir+"/module.lexicon", dir+"/module.palette", dir+"/src"
-	hasInc := isFile(inc)
+	hasInc := lint.IsFile(inc)
 	if !hasInc {
 		s.row(lint.Unset, rel, "L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)")
-	} else if meta := dir + "/META-INF/module.xml"; isFile(meta) {
+	} else if meta := dir + "/META-INF/module.xml"; lint.IsFile(meta) {
 		s.row(lint.Unset, s.rel(meta), "L6: hand-authored META-INF/module.xml found; author module-include.xml instead")
 	}
 	if hasInc {
 		if types := countText(s.lines(inc), "<type "); types > 0 {
 			n := strconv.Itoa(types)
-			if !isFile(lex) {
+			if !lint.IsFile(lex) {
 				s.row(lint.Unset, rel, "L4: module.lexicon missing ("+n+" type(s) declared in module-include.xml)")
 			} else if !grep(s.lines(lex), lexiconKey) {
 				s.row(lint.Unset, s.rel(lex), "L4: lexicon empty ("+n+" type(s) declared, zero key=value entries)")
 			}
 		}
 	}
-	named := func() bool { return isFile(pal) && countText(s.lines(pal), "<p n=") > 0 } // grep -q '<p n='
+	named := func() bool { return lint.IsFile(pal) && countText(s.lines(pal), "<p n=") > 0 } // grep -q '<p n='
 	if strings.HasSuffix(name, "-rt") {
-		if !isFile(pal) {
+		if !lint.IsFile(pal) {
 			s.row(lint.Unset, rel, "L5: module.palette missing for -rt profile")
 		} else if !named() {
 			s.row(lint.Unset, s.rel(pal), "L5: module.palette has no named component entries (empty palette — see B788)")
@@ -89,7 +89,7 @@ func (s *scan) profile(dir string) {
 		}
 	}
 	var java []string
-	if isDir(src) {
+	if lint.IsDir(src) {
 		java = s.files(src, false, "*.java")
 	}
 	if (strings.HasSuffix(name, "-wb") || strings.HasSuffix(name, "-ux")) && !named() && len(java) == 0 {
@@ -145,7 +145,7 @@ func (s *scan) pureModel(src string, java []string) {
 // declaration in the profile's *.gradle.kts files.
 func (s *scan) mixedTests(dir string, gradle []string) {
 	srcTest := dir + "/srcTest"
-	if !isDir(srcTest) {
+	if !lint.IsDir(srcTest) {
 		return
 	}
 	var hasBTest, hasJUnit, hasTestWb, hasJUnitDep bool

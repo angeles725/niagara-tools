@@ -1,0 +1,6 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-uberjar-api-conflict.sh <src-root>
+-- .keep --

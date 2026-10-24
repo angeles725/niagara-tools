@@ -21,6 +21,11 @@ func numeric(v any) (*big.Rat, bool) {
 		return new(big.Rat), true
 	case int:
 		return new(big.Rat).SetInt64(int64(x)), true
+	case float64: // a float the server computed, e.g. float(v) of a read-back
+		if math.IsNaN(x) || math.IsInf(x, 0) {
+			return nil, false
+		}
+		return new(big.Rat).SetFloat64(x), true
 	case pyjson.Number:
 		if i, ok := x.BigInt(); ok {
 			return new(big.Rat).SetInt(i), true
@@ -34,8 +39,8 @@ func numeric(v any) (*big.Rat, bool) {
 	return nil, false
 }
 
-// pyEqual is a == b for decoded values (a dict compares by keys, not by order).
-func pyEqual(a, b any) bool {
+// PyEqual is a == b for decoded values (a dict compares by keys, not by order).
+func PyEqual(a, b any) bool {
 	if ra, ok := numeric(a); ok {
 		rb, ok := numeric(b)
 		return ok && ra.Cmp(rb) == 0
@@ -52,7 +57,7 @@ func pyEqual(a, b any) bool {
 			return false
 		}
 		for i := range x {
-			if !pyEqual(x[i], y[i]) {
+			if !PyEqual(x[i], y[i]) {
 				return false
 			}
 		}
@@ -65,7 +70,7 @@ func pyEqual(a, b any) bool {
 		for _, k := range x.Keys() {
 			xv, _ := x.Get(k)
 			yv, ok := y.Get(k)
-			if !ok || !pyEqual(xv, yv) {
+			if !ok || !PyEqual(xv, yv) {
 				return false
 			}
 		}

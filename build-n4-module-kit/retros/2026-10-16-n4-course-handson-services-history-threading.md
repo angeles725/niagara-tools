@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-16 · kit · n4-course-handson-services-history-threading
@@ -65,5 +65,18 @@ export recipe that wrote `history.csv` into the station's `shared/` folder.
 - The course's JDK-thread and executor code runs in production shape once `MANAGE_EXECUTION` is granted; the kit's
   absolute ban is contradicted by a live module.
 
+
+## Fold record (2026-10-24, quality round 10)
+- Δ1 FOLDED (doc): `types/logic-authoring.md` § File export (quality round 8 U5). Lint half owed as Go lint G69
+  `bql-concat-history-prefix` (BUILD-STATE open issue, `[deferred]` in `ledger.d/2026-10-23-r8-u5-c59-c62.md`).
+- Δ2 FOLDED (doc): `types/actions.md` § 2, short bounded work on a plain `ASYNC` action. Lint half: the acceptance
+  cases are added to the owed Go lint G28 `async-blocking-action` (`ledger.d/2026-10-24-r10-course-fold-services.md`).
+- Δ3 FOLDED: `toolbelt/lint-timers.sh` jdk-thread header spans lines up to the first `{` (pinned in its bats).
+- Δ4 FOLDED: `types/logic.md` § Tridium rt idioms, off-engine work ladder with `MANAGE_EXECUTION`.
+- Δ5 FOLDED: `types/third-party-libraries.md` § multi-release jars, transitive pull made explicit; the "kit gate
+  rejects multi-release jars" half is superseded: retro n4-course-signed-jars-gate-fix Δ3 made the gate skip
+  `META-INF/versions/**`.
+- Δ6 FOLDED: `types/logic-authoring.md` § Background jobs, `BHistoriesToCsvJob` worked example.
+
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |`
+**Status**: FOLDED 2026-10-24 — Δ2 and the Δ5 token by this commit, Δ1/Δ3/Δ4/Δ6 by quality round 8; lint halves owed as G28 and G69; INDEX row flipped to folded.

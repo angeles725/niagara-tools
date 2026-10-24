@@ -225,7 +225,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
   (1610 → 885 at merge 9213b39). Review check: the counts reproduce from the stated SHAs.
   `[ev: retro r10-dedupe-pins-measured-cuts Δ3]`
 - **Pre-gate (run before `verify-module.sh`) — the lint list is GENERATED, not enumerated here:** `toolbelt/INDEX.md` lists every `toolbelt/lint-*.sh` with what it checks, its usage, its exit contract, its evidence and whether `report-module.sh` already runs it (**Auto** column). `toolbelt/build.sh` → `report-module.sh` runs the Auto=`yes` lints per profile; run each Auto=`no` lint by hand on every profile its usage names (e.g. a `<wb-src-root>` lint on each -wb profile with Java sources, an `<ux-src-root>` lint on each -ux profile with an rc/ SPA). A new or changed lint updates its own header (line 2 `# <name> — <what it checks>`, a `# Usage:` line, an `# Exit:`/`# Exits:` line, its evidence tags), then `toolbelt/gen-lint-index.sh` regenerates the index; `toolbelt/gen-lint-index.sh --check` (CI) exits 1 on a stale index. Never enumerate or count lints in this file — that inline list was a merge-conflict hotspot that drifted. `[ev: retro kit-meta-hygiene-2026-10-01 Δ3]`
-- **Non-lint pre-gate tools (not in the lint index):** `toolbelt/split-package-check.sh [--strict] <project-root>` (PROJECT-level, run on the project checkout before a release, not per module: a Java package declared under the `src/` of two or more modules is a WARN row — N4 class loading is first-dependency-wins, so one copy is silently shadowed; `--strict` exit 1 is the client-repository gate, issue #142: install it per client clone with `scripts/install-client-hooks.sh [--force] <client-repo>` — copies `templates/client-pre-push` to `<client-repo>/.githooks/pre-push` (commit it), sets that clone's `core.hooksPath` and its local `n4kit.toolbelt`, and refuses (exit 3, nothing changed) when that would silently stop other hooks — an active hook in `.git/hooks`, or a global/system hooksPath — until they are moved into `.githooks/` and it is re-run with `--force`; the hook checks every pushed COMMIT and blocks on a split package (exit 1) and on any check it cannot run (exit 3, no toolbelt) — never a silent pass; a client repo with GitHub CI copies `templates/split-package-check.yml` instead, which pins the kit to a release tag) [ev: retro module-hardening-failure-modes-deltas Δ12]; `toolbelt/slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>` (type-set lexicon coverage; empty or missing lexicon with declared types exits 1; a missing `*Panel`/`*Facade` type — every missing type under `--facade` — FAILs by default) [ev: retro panccadia-commissioning-lessons Δ9]; `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro campaign7-tool-integration] [ev: retro campaign7-plano]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present); `toolbelt/rc-scan.sh <ux-artifact-dir> [--strict] [--profile <ui_profile>] [--legacy]` (browser-resource lint over rc/ assets: hardcoded ORD/host literals, bare .catch(()=>{}), null display branches, plus the frontend-standard checks browser-floor (FAIL under --profile hmi|both), disabled-gate, fetch-no-signal, setinterval-async, innerhtml-server, datauri-budget, orphan-page, inline-block-size — check ids and severities in its header; exit 1 = FAIL) [ev: retro campaign8-rc-scan] [ev: retro dashboard-frontend-reliability-rules Δ5]; `toolbelt/generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>]` (scaffolds `docs/wiring-map.md` from the facade @NiagaraProperty OPERATOR-config + SUMMARY-display slots, each row with the Workbench display name from the lexicon and a full-ord column, for §6.b commissioning verification) [ev: retro live-commissioning-verification-gaps]; `toolbelt/lib/method-boundary.sh` (shared method-boundary awk library — sourced, not invoked; fragment rule: edit the shared fragment, never overwrite a consumer lint's parser block separately) [ev: retro campaign11-shared-method-boundary]; `toolbelt/eslint.config.mjs` (the kit ESLint flat config for `-ux` rc js — ecmaVersion 2020 = the panel floor, `max-lines-per-function` 60, `no-unused-vars`, `eqeqeq`, `no-console` except error; run by report-module.sh; pinned install `npm install --prefix toolbelt/eslint`, which also provides acorn for `lint-vendor-floor.sh`) [ev: retro dashboard-frontend-standard Δ10]; `node toolbelt/hmi-sweep.js --url <preview-url> [--scenario name=query] [--subtab <sel>] [--target <sel>]` (HMI no-scroll + target-visibility sweep over every nav view at 1280×800; puppeteer-core + Chrome, exit 4 when unavailable) [ev: retro comppan-fase2-amps-alarms Δ3].
+- **Non-lint pre-gate tools (not in the lint index):** `toolbelt/split-package-check.sh [--strict] <project-root>` (PROJECT-level, run on ONE project checkout before a release, never on a folder of several checkouts, which reports every package as split (`split-package-check.sh:16`) `[ev: retro go-split-package-check Δ2]`, not per module: a Java package declared under the `src/` of two or more modules is a WARN row — N4 class loading is first-dependency-wins, so one copy is silently shadowed; `--strict` exit 1 is the client-repository gate, issue #142: install it per client clone with `scripts/install-client-hooks.sh [--force] <client-repo>` — copies `templates/client-pre-push` to `<client-repo>/.githooks/pre-push` (commit it), sets that clone's `core.hooksPath` and its local `n4kit.toolbelt`, and refuses (exit 3, nothing changed) when that would silently stop other hooks — an active hook in `.git/hooks`, or a global/system hooksPath — until they are moved into `.githooks/` and it is re-run with `--force`; the hook checks every pushed COMMIT and blocks on a split package (exit 1) and on any check it cannot run (exit 3, no toolbelt) — never a silent pass; a client repo with GitHub CI copies `templates/split-package-check.yml` instead, which pins the kit to a release tag) [ev: retro module-hardening-failure-modes-deltas Δ12]; `toolbelt/slot-coverage.sh [--strict] [--facade] <module-include.xml> <module.lexicon>` (type-set lexicon coverage; empty or missing lexicon with declared types exits 1; a missing `*Panel`/`*Facade` type — every missing type under `--facade` — FAILs by default) [ev: retro panccadia-commissioning-lessons Δ9]; `toolbelt/schema-risk.sh <before-dir> <after-dir>` (two-snapshot slot diff before deploy; verdict SAFE/LOSSY/OUTAGE, exits 0/1/2/3/4 — exit 2 means the slot change would break saved data) [ev: retro campaign7-tool-integration] [ev: retro campaign7-plano]; `toolbelt/verify-module.sh --plano <ux-profile>/src/rc/index.html` (when a -ux profile is present); `toolbelt/rc-scan.sh <ux-artifact-dir> [--strict] [--profile <ui_profile>] [--legacy]` (browser-resource lint over rc/ assets: hardcoded ORD/host literals, bare .catch(()=>{}), null display branches, plus the frontend-standard checks browser-floor (FAIL under --profile hmi|both), disabled-gate, fetch-no-signal, setinterval-async, innerhtml-server, datauri-budget, orphan-page, inline-block-size — check ids and severities in its header; exit 1 = FAIL) [ev: retro campaign8-rc-scan] [ev: retro dashboard-frontend-reliability-rules Δ5]; `toolbelt/generate-wiring-map.sh <facade-src-dir> [--lexicon <module.lexicon>]` (scaffolds `docs/wiring-map.md` from the facade @NiagaraProperty OPERATOR-config + SUMMARY-display slots, each row with the Workbench display name from the lexicon and a full-ord column, for §6.b commissioning verification) [ev: retro live-commissioning-verification-gaps]; `toolbelt/lib/method-boundary.sh` (shared method-boundary awk library — sourced, not invoked; fragment rule: edit the shared fragment, never overwrite a consumer lint's parser block separately) [ev: retro campaign11-shared-method-boundary]; `toolbelt/eslint.config.mjs` (the kit ESLint flat config for `-ux` rc js — ecmaVersion 2020 = the panel floor, `max-lines-per-function` 60, `no-unused-vars`, `eqeqeq`, `no-console` except error; run by report-module.sh; pinned install `npm install --prefix toolbelt/eslint`, which also provides acorn for `lint-vendor-floor.sh`) [ev: retro dashboard-frontend-standard Δ10]; `node toolbelt/hmi-sweep.js --url <preview-url> [--scenario name=query] [--subtab <sel>] [--target <sel>]` (HMI no-scroll + target-visibility sweep over every nav view at 1280×800; puppeteer-core + Chrome, exit 4 when unavailable) [ev: retro comppan-fase2-amps-alarms Δ3].
 - **Lint doctrine the index rows do not carry (rules, not an index — do not append new lints here):** run `toolbelt/lint-guard-pins.sh --strict` as the LAST pre-gate step; every lint declares a `# Mutation: <fixture-id> -- <what it flips>` guard-pin resolved against a bats `@test` [ev: retro campaign11-lint-guard-pins]. `lint-timers.sh` splits usage (exit 2) from env (exit 3) — the K20 per-lint contract, `lint-timers.sh:49/:72/:77` [ev: retro campaign10-lint-timers-scope]. `lint-timers.sh`, `lint-silent-protection.sh` and `lint-ext-writable-shape.sh` share the PEAK-depth parser in `lib/method-boundary.sh` [ev: retro campaign11-shared-method-boundary]. `lint-ext-writable-shape.sh` exempts PER SLOT: a `do<Action>()` body must write THAT slot (S22 contract change; a newly reported slot is a fixed false negative, not a regression) [ev: retro campaign10-ext-writable-per-slot]. `lint-write-path.sh` semantics: uncovered OPERATOR slot FAIL always exits 1; STALE (matrix row naming a slot absent from all source names, per-row, `[concept]` exempts only the marked row) and DRIFT (a `[concept]` row whose slot IS in the covered set) are advisory, promoted to exit 1 by `--strict`; `--bog` adds link-traced dashboard slots [ev: retro campaign8-write-path] [ev: retro campaign10-write-path-stale] [ev: retro campaign11-concept-row-drift].
 - **Kit tooling doctrine (rules for whoever writes or changes a kit check):**
   - **Go first.** A new tool or check is written in Go in the niagara-tools `go/` module
@@ -239,13 +239,40 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     sequence gradle or copy steps) stays bash. Every port proves stdout, stderr and exit code byte-identical to the
     bash version on the real `Cliente/` trees, records before/after timing, and keeps the existing bats suite as
     its black-box test. `[ev: retro r8-t22-retro-deltas Δ8]`
+  - **Port byte-identical first, then fix** (steps: `go/README.md` § Adding a lint rule). Record the goldens from
+    the bash lint on the current origin/main and re-record at the merge (main moved lint-servlet's walk under its
+    port). Keep the bash quirks until old and new agree byte for byte on fixtures and real trees; a difference the
+    shared code forces is declared in the port commit. Then fix each truth bug in its own RED-first commit, a known
+    false negative included (never kept as a "limitation"); a changed golden puts `declared difference: <why>`
+    above `-- args --`. Only a cosmetic quirk no real tree hits may stay (split-package-check prints a root
+    module's full path). Use the engine, never a private copy: gawk `for (k in a)` order from `rules/awkorder`, a
+    layout lint as a `lint.RootRule`, awk_lint_each's unreadable-file text via `Spec.ShortScanError`. An awk `\b`
+    stays the backspace byte in the identity port, then is decided per check with real-tree row counts.
+    `[ev: retro go-lint-silent-protection Δ1]` `[ev: retro go-lint-servlet Δ1]` `[ev: retro go-lint-config-sanity Δ3]`
+    `[ev: retro go-lint-session-store Δ1]` `[ev: retro go-split-package-check Δ3]` `[ev: retro go-lint-config-sanity Δ1]`
+    `[ev: retro go-lint-structure Δ1]` `[ev: retro go-e2-tiny-lints Δ1]` `[ev: retro go-lint-demand-scope Δ1]`
+  - **A test that needs files outside the repository never runs in CI** (`XMLSRC_EXPAT_SUITE`, `XMLSRC_SWEEP_ROOTS`,
+    `JAVASRC_DIFF_ROOTS`): the landing PR states that it ran them, with the counts. `[ev: retro go-xmlsrc Δ3]`
+  - **XML and `.bog` lints port onto `go/internal/xmlsrc` only** (R8-D12, `go/README.md` § XML rules). Its first
+    consumer is lint-agent-on-shape; split-package-check reads no XML. Change `Open`'s allocation (about 23 bytes
+    per input byte) only after a measured slow sweep. `[ev: retro go-xmlsrc Δ1]` `[ev: retro go-split-package-check Δ1]`
+    `[ev: retro go-xmlsrc Δ2]`
+  - **A lint header claims only what a test pins.** A promised suppression marker or fallback with no code behind it
+    is deleted, not kept as advice (lint-config-sanity LCS-doc). `[ev: retro go-lint-config-sanity Δ2]`
+  - **Never splice source text into a regexp, never pass a path with `awk -v`.** A dynamic awk regexp built from
+    source text (`ln ~ expr "..."`) that is not a valid ERE kills gawk on that file while the lint keeps exit 0/1:
+    quote it or use `index()` (none left in the three bash lints, 2026-10-24). `awk -v FILE="$f"` reads the path's
+    backslash escapes and mangles the row: use `ENVIRON` or `FILENAME` (left: `verify-module.sh:336`).
+    `[ev: retro go-lint-delays Δ1]` `[ev: retro go-lint-ext-writable-shape Δ1]`
   - **One layered Go lint stack (user requirement).** `internal/javasrc` is the Java scanner only;
     `internal/lint` holds the `Rule` interface, the registry, the shared `Finding` type, the one output formatter
     and the one walker that parses each file once; each lint is `internal/lint/rules/<lint>/` (the rule and its
     tests); `cmd/<tool>/` stays a thin `main.go`, as in `go/cmd/gen-retro-index` and `go/cmd/check-facets-card`
     (PRs #288, #296). Adding a lint is one rule file plus its registration — never a copied walker, formatter or
     stripper. Bash follows the same rule: reuse `toolbelt/lib/*` (`scan-files.sh`, `awk-lint.sh`,
-    `method-boundary.sh`) instead of a private copy. `[ev: retro r8-t22-retro-deltas Δ9]`
+    `method-boundary.sh`) instead of a private copy. `[ev: retro r8-t22-retro-deltas Δ9]` A scanner helper only one
+    rule needs stays in that rule; the second rule that needs it moves it into `javasrc` with a test.
+    `[ev: retro go-lint-session-store Δ2]`
   - **Pin every shared helper with a sync test.** A PR that moves copies into one `toolbelt/lib/*.sh` file or one
     shared function also adds a bats test that fails when a caller stops using it or a private copy comes back.
     Models: `tests/lint-structure.bats` LS15-sync (`lib/signing-block.sh`, sourced by `build.sh`,
@@ -281,18 +308,58 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     shared `toolbelt/lib/method-boundary.sh` (`mb_strip` for comments with literals kept, `mb_parse` for method
     bounds) or the Go Java scanner `go/internal/javasrc` (T8k-1, #297); a private stripper is a finding. Four fail-open bugs in
     one round came from private strippers (lint-driver-scaffold #277/#283, lint-service-types #279/#285,
-    `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]`
+    `mb_strip` itself #278). `[ev: retro r8-t22-retro-deltas Δ3]` The lint-write-path port reads `linescan.Code`;
+    lint-arbitrary-ord's private `code_part` goes when it is ported. `[ev: retro go-lint-delays Δ2]`
     Match on blanked source (comments and literal contents removed: `go/internal/javasrc` `Strip` then
     `BlankLiterals`) and on the whole statement, not the raw line: raw lines flag a call inside a comment or a
     string (lint-delays, lint-timers, lint-no-system-out) and miss a call split over lines
     (lint-null-context-write). A finding row carries `file:line` with a real line number, never an empty line
     or a rule ID in that position (lint-timers file-level rows, lint-structure L10/L14). Owed engine item G51.
+    `[ev: retro go-lint-structure Δ3]`
     `[ev: retro truth-audit Δ3]` An awk regex never uses `\b`: in gawk and POSIX awk it is a backspace (0x08), the
     word boundary is `\y`, so `/\bclass\b/` never matches and the lint can never fire (lint-demand-scope, fixed by
     its Go port). Prefer the Go engine. `[ev: retro truth-audit Δ8]` `[ev: tests/awk-word-boundary.bats AWB1]`
+    A backward walk (the binding or guard "N lines up") stops at the enclosing method or class-level lambda body
+    (`javasrc.Scopes`, `Enclosing`), never at a line budget alone: lint-delays took an earlier method's floor and
+    lint-servlet an earlier method's `try {`. A change to the shared scanner re-runs every rule's goldens and
+    declares each changed row (#405 wrapped signatures: lint-size, lint-ws-placement). `javasrc.Methods` now reads two
+    shapes (wrapped signatures, body depth) unlike `mb_parse`; a bash lint on `mb_parse` keeps the old reading until ported.
+    `[ev: retro go-lint-delays-method-scope Δ1]` `[ev: retro go-lint-delays-method-scope Δ3]` `[ev: retro go-lint-servlet-try-scope Δ2]`
   - **Fix a lint false positive by modeling the framework, never by suppressing it.** Encode the framework behavior
     that makes the code correct, with a RED truth fixture (Baja's equal-value skip in `hotwrite.Hot`, #445); an
     allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]`
+  - **A truth case is RED on the old code for the reason it names** (METHODOLOGY.md § Kit maintenance, observed
+    flips): a case that only exercises the bug can pass before the fix (a brace in a literal where the body already
+    acts; a short zip payload stored, not deflated, so the old byte read found it). Pick the input that flips the
+    outcome and assert the test's own precondition. A mutation spot check likewise uses a case that reaches the
+    guarded code. `[ev: retro go-lint-license-gate Δ1]` `[ev: retro go-lint-bformat-call Δ1]` `[ev: retro go-lint-wb-threading Δ3]`
+  - **Golden cases come from the recorder or `golden.Run`'s replay, never a second tree builder:** a rebuilt tree
+    lost a final newline and moved an error position (3:1 vs 2:11). A shape the format cannot hold (an empty
+    directory replays as a missing root) gets a direct Go test (`rules/licensegate` `TestEmptyDir`). The recorder
+    copies every root argument (file roots too) so no machine path enters a golden: `grep -l /tmp/ testdata/*.txt` is
+    empty before a golden commit. `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
+    `[ev: retro go-lint-link-target-flags Δ2]`
+  - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
+    only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
+    line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
+    lands as its own green commit, then the port with its goldens. `[ev: retro go-lint-status-parity Δ2]`
+    `[ev: retro go-lint-ws-placement Δ3]` `[ev: retro go-lint-size Δ3]`
+  - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
+    is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
+    printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
+  - **A bash `while IFS= read -r x` loop drops an unterminated last line** (7 of the 13 Tridium lexicons end without
+    one): a byte-identical port keeps the drop and its truth fix removes it; a bash lint that stays reads
+    `while IFS= read -r x || [ -n "$x" ]`. `[ev: retro go-lint-lexicon-ascii Δ1]`
+  - Owed code from the round-10 lint ports (client findings, rule gaps, engine fields) stays an `open_issue:` in
+    the port's `ledger.d/2026-10-24-go-lint-<name>.md` fragment, not doctrine:
+    `[deferred: retro go-lint-delays-method-scope Δ2]` `[deferred: retro go-lint-duplicate-helper Δ2]`
+    `[deferred: retro go-lint-duplicate-helper Δ3]` `[deferred: retro go-lint-hot-write Δ1]`
+    `[deferred: retro go-lint-hot-write Δ2]` `[deferred: retro go-lint-hot-write Δ3]`
+    `[deferred: retro go-lint-inert-coordination Δ1]` `[deferred: retro go-lint-inert-coordination Δ2]`
+    `[deferred: retro go-lint-inert-coordination Δ3]` `[deferred: retro go-lint-inline-site-literal Δ3]`
+    `[deferred: retro go-lint-js-pair Δ1]` `[deferred: retro go-lint-js-pair Δ2]` `[deferred: retro go-lint-js-pair Δ3]`
+    `[deferred: retro go-lint-lexicon-ascii Δ2]`. Moving the Python `str` helpers (`internal/htmltext/unicode.go`) to
+    their own package waits for a second consumer (one today): `[deferred: retro go-lint-manual-labels Δ4]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
@@ -300,7 +367,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     skeleton: a per-file awk lint writes only its header, `awk_lint_parse`, its `main.awk` and `awk_lint_run`; a
     flagless line-loop lint opens with `awk_lint_parse <name> raw` and `awk_lint_list`, and ends with
     `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
-    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` A root with no input files is an ERROR (exit 3), never a
+    `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` `scan_files` never prunes its start point
+    (`-mindepth 1`); the Go lint-structure still does (`dotName`, kept for byte identity, so `lint-structure.sh .`
+    skips L10), owed. Its list is newline-separated, so a path holding a newline becomes two missing paths; NUL
+    separation is owed (needs code: `lib/scan-files.sh` and its `while read` callers). `[ev: retro go-lint-structure Δ2]`
+    `[deferred: retro go-e2-tiny-lints Δ2]` A root with no input files is an ERROR (exit 3), never a
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
     owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
@@ -332,7 +403,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     under `--strict` / 3 usage or an unreadable root. `[ev: retro go-kit-cite-resolve]` `[ev: ledger.d/2026-10-24-r10-kcr-status-split.md]`
     `[ev: ledger.d/2026-10-24-r10-kcr-paths-kinds.md]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro umbrelladashboard-module-creation] [ev: retro dashboard-status-state-modeling Δ3] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
-- Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]`
+- Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]` Any new checker runs once on the real tree before its first push, and each false-finding class it shows becomes a pinned case before release (kit-cite-resolve: green fixtures, then 2046 non-RESOLVED rows on its first real run, 9 classes false). `[ev: retro go-kit-cite-resolve Δ1]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor
   code,** and record the row count and one sample verdict (genuine / false) in the feature doc — the cheapest
   evidence of its noise level, and the place a scope rule (one checkout, not a directory of checkouts) shows up.

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-delays-method-scope
@@ -47,4 +47,4 @@ annotation is comment proximity, not scope. The unlanded r10/recovery-path-go al
   recognises good bindings turns every bad one into a fall-through.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-delays-method-scope.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 (done on r10/servlet-try-scope) and Δ3 (lint-size, lint-ws-placement re-ran and declared after #405) `BUILD-LOOP.md` § 5 kit tooling doctrine (scope-bounded backward walks); Δ2 parked as an owed `open_issue:` in its `ledger.d/` fragment, `[deferred:]` in `BUILD-LOOP.md` § 5 kit tooling doctrine (needs code).

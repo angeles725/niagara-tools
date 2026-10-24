@@ -24,6 +24,7 @@ The 90% rule: before investigating anything, search the corpus. Most of module-b
 - Control: `/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Paccadia/ColdRoomPan/` (WSL primary — holds ColdRoomPan-rt + gradlew at the Paccadia level; the same tree under the `/mnt/c` Windows mount is a fallback only).
 - Dashboard (this project's clean build): `/home/cristian/modulos_niagara_n4/Cliente/Leon-Guanjuato/Dashboard/`.
 - Original Tridium javadoc: `organized/docSource/docSource-doc/extracted/`.
+- N4 Developer Certification Course (Tridium, 4.15.6.20): `Labs/` (Lab1-Lab11, Bonus Labs, Lab Instructions.pdf), `Slide Code/` (`slides-rt`), `References/BQL Reference.pdf`, `Review Assignments/`; every file is headed "example code only, not intended for production"; apply corpus B1242 §1242.4 fixes only as named opt-in changes. Preserved copy: `/home/cristian/niagara-research/sources/n4-dev-course/course/` (`MANIFEST.sha256`). Reference-first rule: `BUILD-LOOP.md` § 0. `[ev: retro n4-course-as-exemplar-source Δ1]`
 
 ## Memory
 Engram topic `research/niagara/coldroom-ux/progress` holds this project's build log + every hard lesson.

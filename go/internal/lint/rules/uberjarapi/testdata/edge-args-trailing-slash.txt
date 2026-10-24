@@ -1,0 +1,11 @@
+-- args --
+@DIR@/a/
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/a/b-rt.gradle.kts  g.x:lib-a is both uberjar()d and api()d
+-- stderr --
+-- a/b-rt.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}
