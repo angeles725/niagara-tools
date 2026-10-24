@@ -10,7 +10,9 @@
 //     or more (I1), names it from a single-line signature or, for a brace alone on its line, from a
 //     backward scan that stops at an annotation, a prior statement or a prior block (I2), never names
 //     if/for/while/switch/catch/try/else/do/new (I3) and skips one-liner get/set/is accessors (I4).
-//   - One declared difference from mb_parse (2026-10-24): the same backward scan also names a signature
+//   - Declared differences from mb_parse (2026-10-24): a method's body is the block of the brace that opens
+//     it, not the deepest block its first line opens (`void x() { if (a) {` ends where x's brace closes; mb_parse
+//     ended it with the if); and the same backward scan also names a signature
 //     wrapped over several lines whose last line holds ") {" (`void m(int a,` / `    int b) {`); mb_parse
 //     missed that method, a false negative for every method-scoped lint. TestDifferentialAwk's inputs do
 //     not hold that shape; the bash lints still on mb_parse keep the old behaviour.
@@ -187,6 +189,7 @@ func bodies(stripped []string, lambdas bool) []Method {
 	for i, ln := range stripped {
 		oldDepth, peak := depth, depth
 		var quote byte
+		opened := map[int]int{} // the depth each code "{" of the line opens, by its byte index
 		for j := 0; j < len(ln); j++ {
 			c := ln[j]
 			switch {
@@ -211,20 +214,28 @@ func bodies(stripped []string, lambdas bool) []Method {
 			case c == '{':
 				depth++
 				peak = max(peak, depth)
+				opened[j] = depth
 			case c == '}':
 				depth--
 			}
 		}
 		if !inBody && peak > oldDepth && peak >= 2 {
-			name := methodName(stripped, i)
+			name, brace := methodName(stripped, i)
 			if name != "" && depth <= oldDepth && accessor.MatchString(name) {
 				name = ""
 			}
 			if name == "" && lambdas && lambdaOpen(stripped, i) {
-				name = "lambda"
+				arrow := max(strings.Index(ln, "->"), 0) // -1 on a lone "{" after a "->" line
+				name, brace = "lambda", arrow+strings.IndexByte(ln[arrow:], '{')
 			}
 			if name != "" {
-				inBody, bodyDepth, cur = true, peak, Method{Name: name, Start: i + 1}
+				// The body is the block of the brace that opens it, not the deepest block of the line:
+				// `void x() { if (a) {` ends where x's brace closes.
+				bd, ok := opened[brace]
+				if !ok {
+					bd = peak
+				}
+				inBody, bodyDepth, cur = true, bd, Method{Name: name, Start: i + 1}
 			}
 		}
 		if inBody && depth < bodyDepth {
@@ -236,23 +247,25 @@ func bodies(stripped []string, lambdas bool) []Method {
 	return methods
 }
 
-// methodName names the method opening on line i (0-based), or returns "".
-func methodName(stripped []string, i int) string {
+// methodName names the method opening on line i (0-based), or returns "", and the byte index of the "{"
+// that opens its body on that line.
+func methodName(stripped []string, i int) (string, int) {
 	ln := stripped[i]
 	// The '(' checks only skip regexp work on lines that cannot match.
 	if strings.Contains(ln, "(") {
 		if loc := signature.FindStringIndex(ln); loc != nil {
 			if name := leadIdent.FindString(ln[loc[0]:]); !keyword.MatchString(name) {
-				return name
+				return name, loc[1] - 1
 			}
-			return ""
+			return "", 0
 		}
 	}
 	// A lone "{" (awk: the line is "{" once all whitespace is removed), or the ") {" end of a signature
 	// wrapped over several lines: the name is on the line above that opened the parameter list.
 	if strings.Trim(ln, space) != "{" && !wrappedEnd.MatchString(ln) {
-		return ""
+		return "", 0
 	}
+	brace := strings.IndexByte(ln, '{')
 	for k := i - 1; k >= 0 && k >= i-backScanLines; k-- {
 		lk := stripped[k]
 		if strings.HasPrefix(strings.TrimLeft(lk, space), "@") {
@@ -266,9 +279,9 @@ func methodName(stripped []string, i int) string {
 		}
 		if loc := call.FindStringIndex(lk); loc != nil {
 			if name := leadIdent.FindString(lk[loc[0]:]); !typeOrKw.MatchString(name) {
-				return name
+				return name, brace
 			}
 		}
 	}
-	return ""
+	return "", 0
 }

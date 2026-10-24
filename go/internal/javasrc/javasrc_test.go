@@ -209,6 +209,16 @@ var methodsCases = []methodsCase{
 // goOnlyMethodsCases are the declared differences of Methods from mb_parse (package doc): TestMethods runs
 // them, TestDifferentialAwk does not feed them to the awk lib.
 var goOnlyMethodsCases = []methodsCase{
+	{"a body ends where its own brace closes, not the deepest block of its first line", `class B {
+  void x() { if (a) {
+      y();
+    }
+    z();
+  }
+  void w(String s) {	try	{ p(s); }
+    catch (Exception e) { q(); }
+  }
+}`, []Method{{"x", 2, 6}, {"w", 7, 9}}},
 	{"wrapped signature closing on the brace line", `class W {
   void m(int a,
       int b) {
