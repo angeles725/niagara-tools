@@ -61,7 +61,8 @@ log: 2099-01-01 · $2 landed}" > "$1/build-n4-module-kit/ledger.d/2099-01-01-$2.
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -cF "$WARN")" -eq 1 ]
   [[ "$output" == *"$WARN"*") — generated files removed"* ]]
-  [ ! -e "$C/build-n4-module-kit/BUILD-STATE.md" ] && [ ! -e "$C/build-n4-module-kit/retros/INDEX.md" ]
+  [ ! -e "$C/build-n4-module-kit/BUILD-STATE.md" ]
+  [ ! -e "$C/build-n4-module-kit/retros/INDEX.md" ]
   [ ! -e "$C/build-n4-module-kit/toolbelt/INDEX.md" ]
   run env -C "$C" bash .githooks/post-merge
   [ "$status" -eq 0 ]
@@ -115,6 +116,21 @@ private_go() {
   [ "$(grep -c '^kit-state: rebuilding' <<<"$output")" -eq 1 ]
   grep -qx 'GOTOOLCHAIN=local' "$BATS_TEST_TMPDIR/go.log"
   [ -f "$C/build-n4-module-kit/BUILD-STATE.md" ]
+}
+
+@test "HK8: no go on PATH when kit-state must be built -> one warning, all three files removed, exit 0" {
+  bash "$C/build-n4-module-kit/toolbelt/kit-state.sh" --write >/dev/null
+  private_go
+  NOGO="$BATS_TEST_TMPDIR/nogo"; mkdir -p "$NOGO"
+  ln -s "$(command -v git)" "$NOGO/git"
+  run env PATH="$NOGO:/usr/bin:/bin" git -C "$C" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false \
+    commit -q --allow-empty -m "chore: empty"
+  [ "$status" -eq 0 ]
+  [ "$(grep -cF "$WARN" <<<"$output")" -eq 1 ]
+  [[ "$output" == *"$WARN"*"go is not on PATH"*") — generated files removed"* ]]
+  [ ! -e "$C/build-n4-module-kit/BUILD-STATE.md" ]
+  [ ! -e "$C/build-n4-module-kit/retros/INDEX.md" ]
+  [ ! -e "$C/build-n4-module-kit/toolbelt/INDEX.md" ]
 }
 
 @test "HK5: a checkout without toolbelt/kit-state.sh (before R10-D1) is a silent no-op, exit 0" {
