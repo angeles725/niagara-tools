@@ -162,16 +162,25 @@ func (r *report) step(a artifact, m member) {
 }
 
 // lintRows is the common lint shape: exit 3 is an ERROR env row; any other exit relays the selected rows and
-// then the verdict row.
+// then the verdict row, or a FAIL row when the exit was non-zero and no FAIL row was relayed.
 func (r *report) lintRows(label, check string, code int, out string, f filter, v verdict) {
 	if code == 3 {
 		r.envFault(label, check, "env fault (exit 3)")
 		return
 	}
 	rl := r.memberRows(label, out, f)
-	if v == rows && rl.rows == 0 || v == failRows && !rl.fail {
+	switch {
+	case code != 0 && !rl.fail:
+		r.exitedNoFail(label, check, code)
+	case v == rows && rl.rows == 0 || v == failRows && !rl.fail:
 		r.emit(label, pass, check, "clean")
 	}
+}
+
+// exitedNoFail is the fail-closed row of a member that exited non-zero (not 3) with no FAIL row: 127 (the lint
+// missing), a crash or an unexpected row format is never PASS "clean" and never silent.
+func (r *report) exitedNoFail(label, check string, code int) {
+	r.emit(label, failed, check, fmt.Sprintf("exited %d with no FAIL row (crash or unexpected output) -- run %s.sh manually", code, check))
 }
 
 // advisoryMember is a WARN-only lint run without --strict: exit 0 relays its rows and the passAfterRelay

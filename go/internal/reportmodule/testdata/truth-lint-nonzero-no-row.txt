@@ -2,11 +2,12 @@
 --lint-only
 m
 -- want --
-exit 0
+exit 1
 A-rt  SKIP  verify-module  no built jar under build/libs (floor check not run)
-A-rt  SKIP  lint-lexicon-ascii  no *.lexicon under A-rt
+A-rt  FAIL  lint-lexicon-ascii  exited 2 with no FAIL row (crash or unexpected output) -- run lint-lexicon-ascii.sh manually
+A-rt  FAIL  lint-delays  exited 2 with no FAIL row (crash or unexpected output) -- run lint-delays.sh manually
 A-rt  PASS  lint-link-target-flags  clean (no wiring map)
-A-rt  PASS  lint-no-system-out  clean
+A-rt  FAIL  lint-no-system-out  exited 127 with no FAIL row (crash or unexpected output) -- run lint-no-system-out.sh manually
 A-rt  PASS  lint-slotomatic-markers  clean
 A-rt  PASS  lint-recovery-path  clean
 A-rt  PASS  lint-config-sanity  clean
@@ -18,16 +19,15 @@ A-rt  PASS  lint-ws-placement  clean
 A-rt  SKIP  schema-risk  no .deploy-baseline (floor check not run; extract the deployed baseline, build-verify.md § Schema-risk deploy workflow, or --first-deploy)
 (module)  PASS  lint-agent-on-shape  clean
 (module)  PASS  lint-agent-on-include-sync  clean
-(module)  PASS  lint-structure  clean
-(module)  PASS  lint-write-path  clean
+(module)  FAIL  lint-structure  exited 1 with no FAIL row (crash or unexpected output) -- run lint-structure.sh manually
+(module)  FAIL  lint-write-path  exited 2 with no FAIL row (crash or unexpected output) -- run lint-write-path.sh manually
 (module)  PASS  lint-bundled-jar-class-version  clean
 (run)  SKIP  triage-console  no --console-dir
-report-module: 1 artifact · 15 PASS · 0 FAIL · 0 WARN · 4 SKIP · 0 ADVISORY  ->  CLEAN
+report-module: 1 artifact · 12 PASS · 5 FAIL · 0 WARN · 3 SKIP · 0 ADVISORY  ->  ISSUES
 -- stderr --
 report-module: --lint-only — floor checks (verify-module, schema-risk) were not run and are not part of this verdict
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/report-module.sh at a98c3357 (sha256 fc0714ee8b06167bf7d22012dda79a35c7990e7be48fedb53e74e12ac586033e)
-tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+truth: a lint that exits non-zero (not 3) with no FAIL row is a FAIL row naming the exit, never PASS clean or silent (the bash lint_rows, lint-write-path and lint-lexicon-ascii failed open; lint-link-target-flags alone failed closed)
 -- m/A-rt/src (dir) --
 -- toolbelt/.stub-rest --
 -- toolbelt/lint-delays.sh (mode 755) --
@@ -42,3 +42,8 @@ exit 1
 -- toolbelt/lint-write-path.sh (mode 755) --
 #!/usr/bin/env bash
 exit 2
+-- m/A-rt/module.lexicon --
+k=v
+-- toolbelt/lint-lexicon-ascii.sh (mode 755) --
+#!/usr/bin/env bash
+echo "lexicon-ascii: cannot read" >&2; exit 2

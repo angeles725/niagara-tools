@@ -187,7 +187,10 @@ func (r *report) lexiconASCII(a artifact) {
 			fail = true
 		}
 	}
-	if !fail {
+	switch {
+	case !fail && code != 0:
+		r.exitedNoFail(a.name, "lint-lexicon-ascii", code)
+	case !fail:
 		r.emit(a.name, pass, "lint-lexicon-ascii", "all lexicon files are ASCII-clean")
 	}
 }
@@ -345,7 +348,8 @@ func (r *report) schemaRisk(a artifact) {
 }
 
 // writePath is §11 (module root): its no-matrix exit 3 is a SKIP, any other exit 3 an ERROR naming the first
-// output line; its FAIL rows are relayed with the STALE/DRIFT advisories as WARN, then PASS when no FAIL* row.
+// output line; its FAIL rows are relayed with the STALE/DRIFT advisories as WARN, then PASS when no FAIL* row
+// (a non-zero exit with none is a FAIL row).
 func (r *report) writePath(a artifact) {
 	const check = "lint-write-path"
 	out, code := r.x.member(check, a.dir)
@@ -355,7 +359,11 @@ func (r *report) writePath(a artifact) {
 	case code == 3:
 		r.envFault(a.name, check, "env fault (exit 3): "+cutBefore(out, "\n"))
 	default:
-		if !r.memberRows(a.name, out, filter{sel: "FAIL", asw: "STALE|DRIFT"}).failP {
+		switch rl := r.memberRows(a.name, out, filter{sel: "FAIL", asw: "STALE|DRIFT"}); {
+		case rl.failP:
+		case code != 0:
+			r.exitedNoFail(a.name, check, code)
+		default:
 			r.emit(a.name, pass, check, "clean")
 		}
 	}

@@ -37,6 +37,8 @@ func TestLintRowsVerdicts(t *testing.T) {
 		{"rows: a WARN row blocks the PASS", 0, "WARN  c  /a:1  r", rows, "A  WARN  c  a:1  r\n"},
 		{"fail: a WARN row does not", 0, "WARN  c  /a:1  r", failRows, "A  WARN  c  a:1  r\nA  PASS  l  clean\n"},
 		{"fail: a FAIL row does", 1, "FAIL  c  /a:1  r", failRows, "A  FAIL  c  a:1  r\n"},
+		{"a non-zero exit with no FAIL row fails closed", 127, "WARN  c  /a:1  r", none,
+			"A  WARN  c  a:1  r\nA  FAIL  l  exited 127 with no FAIL row (crash or unexpected output) -- run l.sh manually\n"},
 	}
 	for _, tt := range tests {
 		var b bytes.Buffer
