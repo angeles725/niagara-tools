@@ -13,7 +13,7 @@ match, and a line with no `<agent>` matches any annotation (`ModuleInclude.entry
 `javax/baja/nre/annotations/processors/ModuleInclude.java:376-415`), so an `@AgentOn` added later never reaches the
 file. `lint-agent-on-shape.sh` checks only the `module:Type` shape of each `<on type>`. The new rule reads Java as
 `javasrc.Tokens` (a commented-out or quoted `@AgentOn` is not one) and the include as `xmlsrc` XML. Real trees: the
-six `@AgentOn` part sources (Cliente `Apillm-wb` x2, `chihuahua-wb`; course `envCtrlDriver-wb` x2,
+six `@AgentOn` part sources (three -wb parts in the client trees; course `envCtrlDriver-wb` x2,
 `typeExtensionDemo-ux`) are clean, and each FAILs once its `<agent>` blocks are stripped from a scratch copy.
 
 ## Deltas
