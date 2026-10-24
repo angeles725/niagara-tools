@@ -149,19 +149,27 @@ func (r *report) lintTimers(a artifact) {
 		if !hasPrefixIn(ln, "PASS|FAIL|WARN") { // the rule's WARN rows too (job-cancel, jdk-thread, ...)
 			continue
 		}
-		rest := cutAfter(ln, "  ")
-		detail := cutAfter(rest, "  ")
+		st, chk, detail := splitStatusCheck(ln)
 		at := cutBefore(detail, "  ")
 		path, line := at, at // ${site%:*} and ${site##*:}
 		if i := strings.LastIndexByte(at, ':'); i >= 0 {
 			path, line = at[:i], at[i+1:]
 		}
-		r.emit(a.name, cutBefore(ln, "  "), cutBefore(rest, "  "), baseName(path)+":"+line+"  "+cutAfter(detail, "  "))
+		r.emit(a.name, st, chk, baseName(path)+":"+line+"  "+cutAfter(detail, "  "))
 	}
 }
 
+// splitStatusCheck is the shell split `st=${l%%  *}; r=${l#*  }; chk=${r%%  *}; rest=${r#*  }` of a row line
+// (a missing separator leaves the text whole at each step).
+func splitStatusCheck(ln string) (st, check, rest string) {
+	r := cutAfter(ln, "  ")
+	return cutBefore(ln, "  "), cutBefore(r, "  "), cutAfter(r, "  ")
+}
+
 // baseName is basename(1) of a path: trailing slashes dropped, then the last component ("/" for all slashes,
-// "" for ""). (A path starting with "-" was an option to the bash's basename; the lints never print one.)
+// "" for ""). Declared waiver: the bash handed a path starting with "-" to basename(1) as an option (an error,
+// an empty name); this cuts it as a path. No lint prints one: their paths start with the module root, and a root
+// starting with "-" is a usage error.
 func baseName(p string) string {
 	t := strings.TrimRight(p, "/")
 	if t == "" {
@@ -208,8 +216,8 @@ func (r *report) lexiconASCII(a artifact) {
 	fail := false
 	for _, ln := range strings.Split(out, "\n") {
 		if strings.HasPrefix(ln, "FAIL") {
-			rest := cutAfter(ln, "  ")
-			r.emit(a.name, cutBefore(ln, "  "), cutBefore(rest, "  "), cutAfter(rest, "  "))
+			st, chk, detail := splitStatusCheck(ln)
+			r.emit(a.name, st, chk, detail)
 			fail = true
 		}
 	}

@@ -44,7 +44,19 @@ func (x runner) member(script string, args ...string) (string, int, bool) {
 func (x runner) run(dir, path string, args ...string) (out string, code int, ok bool) {
 	w := &capWriter{max: x.bound()}
 	code = x.exec(dir, w, path, args...)
-	return strings.TrimRight(strings.ReplaceAll(w.b.String(), "\x00", ""), "\n"), code, w.dropped == 0
+	return trimOutput(w.b.Bytes()), code, w.dropped == 0
+}
+
+// trimOutput is "$(...)" over b: NUL bytes dropped in place and trailing newlines trimmed (one copy, the string).
+func trimOutput(b []byte) string {
+	n := 0
+	for _, c := range b {
+		if c != 0 {
+			b[n] = c
+			n++
+		}
+	}
+	return string(bytes.TrimRight(b[:n], "\n"))
 }
 
 // quiet runs path with its output discarded (`cmd >/dev/null 2>&1`) and returns its exit status.
@@ -72,7 +84,7 @@ func (x runner) firstLine(path string, args ...string) string {
 	line, _ := bufio.NewReaderSize(io.LimitReader(out, maxOutput), 4096).ReadString('\n')
 	out.Close()
 	_ = cmd.Wait()
-	return strings.TrimRight(strings.ReplaceAll(line, "\x00", ""), "\n")
+	return trimOutput([]byte(line))
 }
 
 func exitCode(err error) int {

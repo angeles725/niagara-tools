@@ -92,3 +92,23 @@ func TestShellCuts(t *testing.T) {
 		t.Error("a missing separator must leave the text whole, as ${s%%  *} and ${s#*  } do")
 	}
 }
+
+func TestSplitStatusCheck(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string][3]string{
+		"FAIL  chk  /p/F.java:3  msg  more": {"FAIL", "chk", "/p/F.java:3  msg  more"},
+		"FAIL  x":                           {"FAIL", "x", "x"},
+		"FAIL":                              {"FAIL", "FAIL", "FAIL"},
+	} {
+		if st, c, r := splitStatusCheck(in); [3]string{st, c, r} != want {
+			t.Errorf("splitStatusCheck(%q) = %q %q %q, want %q", in, st, c, r, want)
+		}
+	}
+}
+
+func TestTrimOutput(t *testing.T) {
+	t.Parallel()
+	if got := trimOutput([]byte("a\x00b\n\x00\n\n")); got != "ab" {
+		t.Errorf("trimOutput = %q, want \"ab\"", got)
+	}
+}

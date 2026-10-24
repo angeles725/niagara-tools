@@ -25,7 +25,9 @@ func TestBashInt(t *testing.T) {
 
 func TestBaseName(t *testing.T) {
 	t.Parallel()
-	for in, want := range map[string]string{"": "", "/": "/", "//": "/", "/t/dir/": "dir", "a/b": "b", "b": "b", "/a//": "a"} {
+	// "-z" pins the declared waiver: the bash ran basename(1) with it as an option; the port cuts it as a path.
+	for in, want := range map[string]string{"": "", "/": "/", "//": "/", "/t/dir/": "dir", "a/b": "b", "b": "b", "/a//": "a",
+		"-x/-y": "-y", "-z": "-z"} {
 		if got := baseName(in); got != want {
 			t.Errorf("baseName(%q) = %q, want %q", in, got, want)
 		}

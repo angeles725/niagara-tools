@@ -26,7 +26,8 @@ const (
 // member is one step of the report. A table member runs <toolbelt>/<script>.sh on its input and relays the
 // rows filter f selects, then its verdict; an advisory one relays its WARN rows with a PASS verdict row and turns
 // any non-zero exit into an ERROR row; a module member with a noSource text SKIPs on its own "no ... sources"
-// exit 3. A special member (special.go) does its own rows. The check name is always the script name.
+// exit 3; a table member's rows carry its script name as the check. A special member (special.go) does its own
+// rows and names its own checks (plano, vendor-floor, eslint, dup-keys, ...).
 type member struct {
 	script   string // toolbelt member, without .sh ("" for ESLint, which is not a toolbelt script)
 	suffix   string // the artifact name must end with it ("" any artifact)
@@ -140,10 +141,10 @@ func (r *report) step(a artifact, m member) {
 	dir := a.dir
 	switch m.in {
 	case inSrc:
-		if dir += "/src"; !isDir(dir) {
-			r.emit(a.name, skip, m.script, "no src/")
+		if !r.haveSrc(a, m.script) {
 			return
 		}
+		dir += "/src"
 	case inRc:
 		if dir += "/src/rc"; !isDir(dir) {
 			r.emit(a.name, skip, m.script, "no src/rc/")
