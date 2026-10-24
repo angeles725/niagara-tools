@@ -8,8 +8,8 @@
 #
 # Usage:
 #   kit-resolve.sh [--refresh] [--offline-ok]
-#     --refresh     kit-main worktree only: when clean and behind, check out origin/main, then resolve.
-#                   Never applied to $BUILD_N4_KIT or the default checkout.
+#     --refresh     accepted for compatibility, no longer needed: a clean kit-main strictly behind a
+#                   freshly fetched origin/main is fast-forwarded automatically (see below).
 #     --offline-ok  when `git fetch origin` fails, accept the local origin/main (named WARN, line says
 #                   "unfetched"); without it an unreachable origin is a refusal.
 #
@@ -21,7 +21,11 @@
 #
 # Success: stdout line 1 is exactly `KIT=<abs path> SHA=<short sha> (origin/main, clean)`; every other
 # message goes to stderr. Refused when HEAD is behind origin/main or the work tree is dirty.
-# Exit: 0 resolved · 2 refused (stale, dirty, not a git work tree, origin unreachable) ·
+# Auto-refresh: when the winner is the kit-main worktree, its tree is clean, origin was fetched and HEAD
+# is a strict ancestor of origin/main, it is checked out (detached) at origin/main and stderr says
+# `kit-resolve: refreshed <old>→<new>`. A diverged kit-main is refused; $BUILD_N4_KIT and the default
+# checkout are never touched.
+# Exit: 0 resolved · 2 refused (stale, dirty, diverged, not a git work tree, origin unreachable) ·
 #       3 usage or no candidate
 set -u
 
@@ -63,7 +67,7 @@ TOP="$(git -C "$KIT" rev-parse --show-toplevel 2>/dev/null)" \
 
 # the remedy printed with every refusal, by candidate
 case "$SOURCE" in
-  kit-main) REMEDY="refresh: git -C $TOP checkout --detach origin/main (or rerun with --refresh)" ;;
+  kit-main) REMEDY="refresh: git -C $TOP checkout --detach origin/main" ;;
   env)      REMEDY="update $TOP to origin/main, or unset BUILD_N4_KIT to use the kit-main worktree" ;;
   *)        REMEDY="use the kit-main worktree: git -C $TOP worktree add --detach $KIT_MAIN origin/main" ;;
 esac
@@ -79,13 +83,18 @@ git -C "$TOP" rev-parse -q --verify origin/main >/dev/null || refuse "no origin/
 dirty() { [ -n "$(git -C "$TOP" status --porcelain)" ]; }
 behind() { git -C "$TOP" rev-list --count HEAD..origin/main; }
 
-if [ "$REFRESH" -eq 1 ]; then
-  if [ "$SOURCE" != kit-main ]; then
-    say "--refresh applies only to the kit-main worktree; not refreshing $TOP"
-  elif ! dirty && [ "$(behind)" -gt 0 ]; then
-    git -C "$TOP" checkout -q --detach origin/main || refuse "refresh failed in $TOP"
-    say "refreshed $TOP to origin/main"
-  fi
+short() { git -C "$TOP" rev-parse --short=7 "$1"; }
+
+if [ "$REFRESH" -eq 1 ] && [ "$SOURCE" != kit-main ]; then
+  say "--refresh applies only to the kit-main worktree; not refreshing $TOP"
+fi
+# auto-refresh: kit-main only, only after a successful fetch, only clean, only a strict fast-forward
+if [ "$SOURCE" = kit-main ] && [ "$FRESH" = origin/main ] && ! dirty && [ "$(behind)" -gt 0 ]; then
+  git -C "$TOP" merge-base --is-ancestor HEAD origin/main \
+    || refuse "diverged: $TOP HEAD $(short HEAD) has commits not on origin/main ($(short origin/main)); not fast-forwarding — inspect, then $REMEDY"
+  old="$(short HEAD)"
+  git -C "$TOP" checkout -q --detach origin/main || refuse "refresh failed in $TOP"
+  say "refreshed $old→$(short HEAD)"
 fi
 
 if dirty; then

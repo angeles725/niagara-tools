@@ -3,7 +3,7 @@
 The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 0. Orient (before touching anything)
-- **Run a current kit:** `scripts/kit-resolve.sh` (niagara-tools repo root; the launcher runs it first) must print `KIT=<path> SHA=<sha> (origin/main, clean)`. Exit 2 = the chosen kit is behind origin/main, dirty or unfetchable: refresh as printed (`--refresh` for a clean kit-main worktree) before any build or gate. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2). `[ev: retro r10-stale-kit-resolution Δ1]`
+- **Run a current kit:** `scripts/kit-resolve.sh` (niagara-tools repo root; the launcher runs it first) must print `KIT=<path> SHA=<sha> (origin/main, clean)`. A clean kit-main worktree strictly behind origin/main is fast-forwarded automatically (`kit-resolve: refreshed <old>→<new>`). Exit 2 = the chosen kit is dirty, unfetchable, a diverged kit-main, or a stale `$BUILD_N4_KIT`/default checkout (never touched): fix as printed before any build or gate. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2). `[ev: retro r10-stale-kit-resolution Δ1]`
 - `corpus-nav find "<topic>"` — read the matching blocks. 90% is already documented; don't re-derive.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
 - **Reference first:** when the user supplies a reference implementation (a course lab, a vendor sample, an earlier
