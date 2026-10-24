@@ -1,0 +1,42 @@
+declared difference: --stored counts the entries whose zip method is not STORED; the bash counted the lines of `unzip -v` holding the text "Defl:", so a STORED jar whose path or entry name holds "Defl:" failed
+-- args --
+--stored
+@DIR@/Defl:x.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Defl:x.jar  1 classes, all major 52
+PASS  signed     @DIR@/Defl:x.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Defl:x.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Defl:x.jar  no --target-version
+PASS  stored     @DIR@/Defl:x.jar  0 deflated entries (Workbench re-sign safe)
+SKIP  typecount  @DIR@/Defl:x.jar  no --src
+SKIP  facets     @DIR@/Defl:x.jar  no --src
+SKIP  facets-req  @DIR@/Defl:x.jar  no --src
+SKIP  ord-literal  @DIR@/Defl:x.jar  no --src
+SKIP  palette    @DIR@/Defl:x.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Defl:x.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Defl:x.jar  no --src
+SKIP  moduletest  @DIR@/Defl:x.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Defl:x.jar  no --src
+SKIP  transient-operator  @DIR@/Defl:x.jar  no --src
+SKIP  compact3-import  @DIR@/Defl:x.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/Defl:x.jar  no --src
+SKIP  slot-wall  @DIR@/Defl:x.jar  no --src
+verify-module: 4 passed, 0 failed, 14 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- Defl:x.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo" vendor="Angeles">
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- com/x/A.class (stored) (class 52) ---
+--- rc/Defl:notes.txt (stored) ---
+x

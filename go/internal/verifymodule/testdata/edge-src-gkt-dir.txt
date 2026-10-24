@@ -1,9 +1,10 @@
+declared difference: the first *.gradle.kts entry is a directory, which cannot be read: the run stops at phantom-dep with "cannot read <path>: Is a directory", exit 3 (the bash printed grep's error twice and gave a WARN verdict on an empty dependency list)
 -- args --
 --src
 @DIR@/mod
 @DIR@/Qux-rt.jar
 -- want --
-exit 0
+exit 3
 PASS  bytecode   @DIR@/Qux-rt.jar  2 classes, all major 52
 PASS  signed     @DIR@/Qux-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
 PASS  types      @DIR@/Qux-rt.jar  1 declared types resolve to classes
@@ -15,17 +16,8 @@ PASS  facets-req  @DIR@/Qux-rt.jar  no missing required facets under @DIR@/mod/Q
 PASS  ord-literal  @DIR@/Qux-rt.jar  no hardcoded ORD literals under @DIR@/mod/Qux-rt/src
 SKIP  palette    @DIR@/Qux-rt.jar  no module.palette
 SKIP  wb-scaffold  @DIR@/Qux-rt.jar  not a -wb jar
-WARN  phantom-dep  @DIR@/Qux-rt.jar  module.xml dependency not declared in gradle.kts api()/nre(): baja
-WARN  moduletest  @DIR@/Qux-rt.jar  production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)
-PASS  cross-module-type  @DIR@/Qux-rt.jar  no cross-module type references in @DIR@/mod/Qux-rt/src
-PASS  transient-operator  @DIR@/Qux-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Qux-rt/src
-PASS  compact3-import  @DIR@/Qux-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Qux-rt/src
-PASS  subscription-leak  @DIR@/Qux-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Qux-rt/src
-PASS  slot-wall  @DIR@/Qux-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Qux-rt/src
-verify-module: 12 passed, 0 failed, 4 skipped, 2 warned -> ALL PASS
 -- stderr --
-grep: @DIR@/mod/Qux-rt/x.gradle.kts: Is a directory
-grep: @DIR@/mod/Qux-rt/x.gradle.kts: Is a directory
+verify-module: cannot read @DIR@/mod/Qux-rt/x.gradle.kts: Is a directory
 -- Qux-rt.jar (jar) --
 --- META-INF/ (stored) ---
 --- META-INF/MANIFEST.MF (stored) ---

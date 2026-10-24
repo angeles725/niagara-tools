@@ -1,0 +1,36 @@
+declared difference: types requires the exact entry <class path>.class; the bash matched it with grep -qx as a basic regex, so the "." before "class" matched any byte and an entry com/x/B_class resolved type com.x.B
+-- args --
+@DIR@/t.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/t.jar  1 classes, all major 52
+FAIL  signed     @DIR@/t.jar  no META-INF/*.SF (jar not signed)
+FAIL  types      @DIR@/t.jar  1 of 2 declared types have no class; first: com.x.B
+SKIP  baja       @DIR@/t.jar  no --target-version
+SKIP  stored     @DIR@/t.jar  no --stored
+SKIP  typecount  @DIR@/t.jar  no --src
+SKIP  facets     @DIR@/t.jar  no --src
+SKIP  facets-req  @DIR@/t.jar  no --src
+SKIP  ord-literal  @DIR@/t.jar  no --src
+SKIP  palette    @DIR@/t.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/t.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/t.jar  no --src
+SKIP  moduletest  @DIR@/t.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/t.jar  no --src
+SKIP  transient-operator  @DIR@/t.jar  no --src
+SKIP  compact3-import  @DIR@/t.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/t.jar  no --src
+SKIP  slot-wall  @DIR@/t.jar  no --src
+verify-module: 1 passed, 2 failed, 15 skipped, 0 warned -> FAILED
+-- stderr --
+-- t.jar (jar) --
+--- META-INF/module.xml (stored) ---
+<module name="Foo">
+<types>
+<type name="A" class="com.x.A"/>
+<type name="B" class="com.x.B"/>
+</types>
+</module>
+--- com/x/A.class (stored) (class 52) ---
+--- com/x/B_class (stored) ---
+x

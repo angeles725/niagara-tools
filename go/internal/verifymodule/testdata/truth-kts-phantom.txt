@@ -1,0 +1,57 @@
+declared difference: phantom-dep reads gradle.kts through ktssrc and module.xml through xmlsrc: an api()/nre()/implementation() call inside a // or /* */ comment or a string literal, or a call named xapi(), no longer declares a dependency, and a commented-out module.xml <dependency> is not one; the bash grepped both files a line at a time
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-ux.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-ux.jar  1 classes, all major 52
+PASS  signed     @DIR@/Foo-ux.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-ux.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-ux.jar  no --target-version
+SKIP  stored     @DIR@/Foo-ux.jar  no --stored
+SKIP  typecount  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/module-include.xml
+SKIP  facets     @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  facets-req  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  ord-literal  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  palette    @DIR@/Foo-ux.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-ux.jar  not a -wb jar
+WARN  phantom-dep  @DIR@/Foo-ux.jar  module.xml dependency not declared in gradle.kts api()/nre(): ghost, other, strdep, xdep
+SKIP  moduletest  @DIR@/Foo-ux.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  transient-operator  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  compact3-import  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  subscription-leak  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+SKIP  slot-wall  @DIR@/Foo-ux.jar  no @DIR@/mod/Foo-ux/src
+verify-module: 3 passed, 0 failed, 14 skipped, 1 warned -> ALL PASS
+-- stderr --
+-- Foo-ux.jar (jar) --
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (stored) ---
+<module name="Foo-ux" vendor="Angeles">
+<dependencies>
+<dependency name="baja" vendor="Tridium" vendorVersion="4.14"/>
+<dependency name="ghost" vendor="Angeles" vendorVersion="1.0"/>
+<dependency name="xdep" vendor="Angeles" vendorVersion="1.0"/>
+<dependency name="strdep" vendor="Angeles" vendorVersion="1.0"/>
+<dependency name="other" vendor="Angeles" vendorVersion="1.0"/>
+<!-- <dependency name="cdep" vendor="Angeles" vendorVersion="1.0"/> -->
+</dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-ux/Foo-ux.gradle.kts --
+dependencies {
+  api(":baja")
+  // api(":ghost")
+  /* nre(":xdep") */
+  val s = """api(":strdep")"""
+  xapi(":other")
+}

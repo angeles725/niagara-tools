@@ -1,3 +1,4 @@
+declared difference: module.xml is read through xmlsrc: the commented-out <type> Gone is no longer declared (types and typecount count 4 elements, not the 5 a line grep found)
 -- args --
 --target-version
 4.14.01
@@ -8,10 +9,10 @@
 exit 1
 PASS  bytecode   @DIR@/Foo-rt.jar  3 classes, all major 52
 PASS  signed     @DIR@/Foo-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
-FAIL  types      @DIR@/Foo-rt.jar  2 of 5 declared types have no class; first: com.x.Gone
+FAIL  types      @DIR@/Foo-rt.jar  1 of 4 declared types have no class; first: com.xQA
 FAIL  baja       @DIR@/Foo-rt.jar  stamped baja 4.14.1 > target 4.14.01 (a 4.14.01 station rejects it; build against the 4.14.01 niagara_home)
 SKIP  stored     @DIR@/Foo-rt.jar  no --stored
-FAIL  typecount  @DIR@/Foo-rt.jar  jar declares 5 types, @DIR@/mod/Foo-rt/module-include.xml declares 2 (stale build or missing slotomatic)
+FAIL  typecount  @DIR@/Foo-rt.jar  jar declares 4 types, @DIR@/mod/Foo-rt/module-include.xml declares 2 (stale build or missing slotomatic)
 SKIP  facets     @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
 SKIP  facets-req  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
 SKIP  ord-literal  @DIR@/Foo-rt.jar  no @DIR@/mod/Foo-rt/src
