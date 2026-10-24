@@ -76,6 +76,10 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
   shared `odd/tasks/<feature-name>.md`, resolve by APPEND per the fragment-merge rule (`METHODOLOGY.md` § Kit
   maintenance) — keep both sections, never overwrite — or name one doc owner per checkout who applies every writer's
   section text serially. `[ev: retro comppan-fase2-amps-alarms Δ8]`
+- **Keep-both only for whole-line additions:** an automatic keep-both conflict resolution applies only to hunks where
+  both sides add whole lines; a test file or an edited line needs a human merge, then a compile and a test run before
+  the commit (a keep-both cut two test functions and PR #409 shipped a file that did not compile).
+  `[ev: retro fail-open-pipeline-checks Δ2]`
 - **Count what ran:** the writer runs `bats tests/*.bats` serially unless GNU `parallel` is installed. Without it,
   `bats -j` runs 0 tests and prints no `not ok` line. A parallel run reports its `ok` count next to `bats --count`,
   and the two must be equal. `[ev: retro retro-fold-campaign-close Δ2]`

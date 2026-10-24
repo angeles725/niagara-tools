@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · r9-guardpins-header
@@ -30,10 +30,13 @@ cannot declare a pin.
 |---|---|---|---|
 | Δ1 | A header reader takes the leading comment block, never a fixed line count; a fixed window must report what it cuts off | `go/internal/guardpins/guardpins.go` § Declarations | `[ev: go/internal/guardpins/guardpins_test.go TestDeclarations]` |
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 One layered Go lint stack (one header reader, `go/internal/lintheader` `Lines`, no line cap); guardpins uses it.
+
 ## Lessons
 - A fixed read window is a silent cap: when the input outgrows it, the tool reports less and still passes.
 - `gen-lint-index` (`go/internal/lintindex`) has the same 60-line window for `# Usage:`/`# Exit:`; moving it to
   the comment block can change `toolbelt/INDEX.md`, so it is a separate unit.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-23-r9-guardpins-header.md | kit | 2026-10-23 | folded | 1 |`

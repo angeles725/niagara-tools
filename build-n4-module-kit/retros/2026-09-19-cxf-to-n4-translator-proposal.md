@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 0 -->
 <!-- index-comment: disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
@@ -68,8 +68,15 @@ A toolbelt tool (e.g. `toolbelt/cxf-to-n4.sh` + a translator lib) that:
 Start the build ONLY when there is a concrete HVAC/datacenter CDL sequence to deploy, plus a node.js +
 `modelica-json` environment. Until then this stays a `pending` proposal.
 
+## Fold
+- 0 enumerated Δ (a BUILD proposal). Doctrine independent of building it → `METHODOLOGY.md` § Kit maintenance (a BUILD proposal waits for its trigger and the user decision; the kit cites the corpus, never ingests it).
+- Proposed build steps 1-4 (CXF input, CDL↔kitControl map, `config.bog` fragment writer, verify gate) → rejected-for-now: awaiting user decision (#122).
+
 ## References
 
 Corpus blocks: B1040 (CDL↔kitControl map), B1041/B1042 (G36 sequences), B1044 (codeGeneration/CXF),
 B1045 (verification), B1046 (modelica-json), B1047 (s223ToMo). Kit: `bog-nav.py`, `bog-audit.sh`,
 `verify-module.sh`, `types/logic.md`.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | folded | 0 |`; the build itself stays open in #122.

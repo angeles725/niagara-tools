@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-22 · kit · symlink-root-walk
@@ -47,6 +47,9 @@ symlink or a root symlink to a file was already fail-closed by the `[ -d ]` / `o
 |---|---|---|---|
 | Δ1 | A walk over a lint root follows the root like `find -H` (bash `find -H`, Go `os.Stat` on the root) and never a symlink below it; SF10/SF11 and TestWalk pin it | `toolbelt/lib/scan-files.sh` § header | `[ev: tests/scan-files.bats SF10]` |
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 Fail-closed input listing (the code landed with this retro: `lib/scan-files.sh` header, Go `Walk`/`ListJars`).
+
 ## Lessons
 - `find` without `-H` lists nothing under a symlinked root and exits 0; a lint root needs `find -H`, never `-L`.
 - `find -H` on a dangling or file root symlink also exits 0 with no output; only an explicit `[ -d ]` keeps it fail-closed.
@@ -55,4 +58,4 @@ symlink or a root symlink to a file was already fail-closed by the `[ -d ]` / `o
 - A Go port of a find walk must pick `os.Stat` (find -H) or `os.Lstat` (find -P) for the root on purpose and pin it.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-22-symlink-root-walk.md | kit | 2026-10-22 | folded | 1 |`
