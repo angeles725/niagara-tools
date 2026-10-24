@@ -1,0 +1,16 @@
+-- args --
+@DIR@/crlf
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/crlf/a.gradle.kts  g:b is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/crlf/a.gradle.kts  g:crlf is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/crlf/a.gradle.kts  g:z is both uberjar()d and api()d
+-- stderr --
+-- crlf/a.gradle.kts (noeol) --
+dependencies {
+  api("g:crlf:1")
+  uberjar("g:crlf:1")
+  uberjar("g:z:1")
+  api("g:z:1")
+  uberjar("g:b:1")
+  api("g:b:1")}
