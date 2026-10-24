@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-23 · kit · r10-thin-entry-one-concern
@@ -53,7 +53,8 @@ may go, and both reported their size in ways that did not agree.
 | 2 | **A dedupe stops at a call site that a generator or lint reads.** Before repeated call sites are replaced by a table, a loop or a generic runner, grep the kit for a generator, lint or test that matches those call sites literally (`gen-lint-index` reads `"$TOOLBELT/<lint>.sh"` in `report-module.sh`). If one exists, keep the literal call and share everything after it. Why: a table there removes lines and silently breaks a generated index. Reviewer check: a refactor that turns literal invocations into data shows the grep and an unchanged `gen-*.sh --check`. | `BUILD-LOOP.md` § 5 kit tooling doctrine | `[ev: retro r9-m3-report]` |
 | 3 | **A claimed line reduction is measured on named commits.** A PR or retro that claims fewer lines states `wc -l` of each touched file at the base commit and at the tip it is merged from, with both SHAs, next to the unchanged-output proof (`BUILD-LOOP.md` § 5, modular-line-efficient-quality Δ4). An estimate ("~900") is not a measurement. Why: one file was reported as ~900, 882 and 885. Reviewer check: the numbers can be reproduced with `git show <sha>:<path> \| wc -l`. | `BUILD-LOOP.md` § 5 (refactor-keeps-output bullet) | `[ev: retro r9-m3-report]` |
 
-None of the three is applied here; a fold decides each one and flips this retro.
+All three are folded in this branch (see Status). No owed lint: Δ1 and Δ2 are review checks backed by existing
+bats pins, and Δ3 is a PR-body rule.
 
 ## Lessons
 - Most of a restated rule is usually already folded. Check the folded retros and their landing files first, and
@@ -62,4 +63,4 @@ None of the three is applied here; a fold decides each one and flips this retro.
 - Line counts drift between the PR title, the retro and the merge. Measure once, on named commits.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r10-thin-entry-one-concern.md | kit | 2026-10-23 | pending | 3 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r10-modular-doctrine`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine "Pin every shared helper with a sync test" (`:241`); Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine "A dedupe stops at a call site that a generator or lint reads" (`:248`); Δ3 `BUILD-LOOP.md` § 5 "A refactor keeps observable output" bullet, line-count paragraph (`:214`). Dropped as covered: thin entry points (`types/logic.md` § Pure-class extraction, `types/dashboard.md` DUX1, r8-t22 Δ1/Δ9) and bash one-module-per-concern (r8-t22 Δ9). INDEX row generated from the header: `| 2026-10-23-r10-thin-entry-one-concern.md | kit | 2026-10-23 | folded | 3 |`
