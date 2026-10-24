@@ -51,7 +51,8 @@ var (
 	blank     = rx(`^[[:space:]]*$`)
 	openBrace = rx(`^[[:space:]]*\{`)
 	catchCall = rx(`catch[[:space:]]*\(`)
-	hrefSet   = rx(`location\.href[[:space:]]*=`)
+	reload    = rx(`location\.reload[[:space:]]*\(`)
+	hrefSet   = rx(`location\.href[[:space:]]*=([^=]|$)`) // an assignment, not == or ===
 	okSet     = rx(`lastOk[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(\+[[:space:]]*)?(Date\.now\(|performance\.now\(|new[[:space:]]+Date)`)
 	okMinus   = rx(`-[[:space:]]*lastOk[A-Za-z0-9_]*`)
 	okCompare = rx(`lastOk[A-Za-z0-9_]*[[:space:]]*[<>]`)
@@ -95,7 +96,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	prefix := "setInterval/setTimeout poll loop '" + fn + "()'"
 	recovery := false
 	for _, ln := range lines {
-		if strings.Contains(ln, "location.reload(") || hrefSet.MatchString(ln) {
+		if reload.MatchString(ln) || hrefSet.MatchString(ln) {
 			recovery = true
 			break
 		}

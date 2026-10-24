@@ -46,11 +46,14 @@
 # Truth fix T2 (2026-10-24): a line longer than 1000 bytes is minified code (a bundled library such as three.js,
 # inlined in a page or shipped as *.min.js) and is not searched for the poll call, so a library's internal
 # setTimeout(n, 0) is neither reported nor taken for the page's own poll loop.
+# Truth fix T3 (2026-10-24): a recovery is a `location.reload(` call (blanks allowed before "(") or an assignment
+# to `location.href` (not `==`/`===`); the bash took `location.href ==` for a recovery and missed `reload (`.
 # Implementation: rule package go/internal/lint/rules/spapoll on the shared engine go/internal/lint (walker,
 # parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery
 # Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
 # Mutation: SPR13 -- reading block comments as code takes /* location.reload(); */ for the recovery
 # Mutation: SPR2 -- drop the lastOk success-time requirement so a failure-count-only watchdog passes clean

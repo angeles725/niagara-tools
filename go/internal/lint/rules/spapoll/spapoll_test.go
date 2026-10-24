@@ -14,7 +14,7 @@ import (
 
 // TestGolden: every tests/lint-spa-poll-no-recovery.bats run (SPR-awkfail and SPR-finderr aside:
 // TestUnreadable pins them) and every edge tree, recorded from the bash lint-spa-poll-no-recovery.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 34) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 35) }
 
 // TestUnreadable is SPR-awkfail and SPR-finderr under awk_lint_run's contract (ContinueOnWalkError): an
 // unreadable sub-directory and an unreadable file beside a.js print the walk and scan env lines, a.js's row
