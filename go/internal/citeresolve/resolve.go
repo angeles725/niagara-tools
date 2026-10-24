@@ -29,6 +29,7 @@ const (
 	LineOutOfRange   Status = "LINE_OUT_OF_RANGE"
 	BareID           Status = "BARE_ID"
 	Unparsed         Status = "UNPARSED"
+	Ambiguous        Status = "AMBIGUOUS" // a searched name matches several files: listed, never guessed
 	ToolError        Status = "TOOL_ERROR"
 	HistoricalDrift  Status = "HISTORICAL_DRIFT"
 	UnverifiableKind Status = "UNVERIFIABLE_KIND"
@@ -44,6 +45,7 @@ type Roots struct {
 	Repo     string // the repository holding the kit (CONTRIBUTING.md, tests/, go/)
 	Research string // niagara-research (blocks, niagara-help/, organized/)
 	Modules  string // the client module trees (Cliente/…)
+	Clients  string // the client checkouts searched by base name (Modules/Cliente by default)
 	Memory   string // the memory directory (mem pointers)
 	Version  string // the niagara-help version an unversioned devguide/guide pointer means
 }
