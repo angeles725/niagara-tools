@@ -1,3 +1,4 @@
+declared difference (truth fix T3, truth-array-1): add("k", new BFoo[2]) adds an array, not a component.
 -- args --
 @DIR@
 -- want --
@@ -11,7 +12,6 @@ WARN  lint-ws-placement  @DIR@/BShapes.java:30  add("f", new BFolder()) in three
 WARN  lint-ws-placement  @DIR@/BShapes.java:33  add("g", new BFolder()) in casts() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BShapes.java:34  add("h", new BFolder()) in casts() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BShapes.java:38  add("j", new BFoo()) in generic() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
-WARN  lint-ws-placement  @DIR@/BShapes.java:39  add("k", new BFoo()) in generic() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BShapes.java:42  add("n", new BBar()) in generic() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BShapes.java:45  add("p", new BFolder()) in two() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
 WARN  lint-ws-placement  @DIR@/BShapes.java:48  add(name(x, y), new BFoo()) in nested() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)

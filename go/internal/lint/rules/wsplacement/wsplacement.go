@@ -200,11 +200,12 @@ func stripCasts(a string) string {
 }
 
 // creates is what a creation expression at the start of a creates, or "" when it is not one (a value
-// type or one of the file's imported widget types is not).
+// type, one of the file's imported widget types or an array creation `new BFoo[n]` is not).
 func creates(a string, widgets map[string]bool) string {
 	if t := newType.FindString(a); t != "" {
+		array := strings.HasPrefix(linescan.Trimmed(a[len(t):]), "[")
 		t = t[len(newHead.FindString(t)):]
-		if valueType.MatchString(t) || widgets[t] {
+		if valueType.MatchString(t) || widgets[t] || array {
 			return ""
 		}
 		return "new " + t + "()"

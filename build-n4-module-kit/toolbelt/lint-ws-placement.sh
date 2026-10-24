@@ -49,6 +49,8 @@
 # Truth fix T2 (2026-10-24): a `new B<Type>` whose type the file imports by name from javax.baja.ui or
 # javax.baja.workbench (or a sub-package) is a bajaui widget, a Workbench view child that never gets a
 # wire-sheet glyph, and is not flagged (a wildcard import or a same-package widget still is).
+# Truth fix T3 (2026-10-24): an array creation `new BFoo[n]` is not a component (the bash lint read it as
+# `new BFoo()`).
 # VCS-free by design (kit-links L2).
 # Mutation: WSP1 -- dropping the creation rule passes parent.add(name, create(type)) clean
 # Mutation: WSP1-local -- dropping the local tracking passes `BFoo f = new BFoo(); add("f", f);` clean
@@ -59,6 +61,7 @@
 # Mutation: WSP-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: WSP-literal -- matching the unmasked Strip view WARNs log("add(x, new BFolder())")
 # Mutation: WSP-widget -- dropping the javax.baja.ui import check WARNs buttons.add(null, new BButton(cmd))
+# Mutation: WSP-array -- reading new BFolder[2] as new BFolder() WARNs add("a", new BFolder[2])
 # Mutation: WSP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
