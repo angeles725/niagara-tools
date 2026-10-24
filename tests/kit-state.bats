@@ -68,10 +68,13 @@ _copy_kit() {
   [ "$status" -eq 3 ]
 }
 
-# Every reader doc names kit-state; none tells the reader to read/open/orient from/update a generated
-# file (an edit of hand-kept state goes to BUILD-STATE.src.md, a reader runs kit-state).
+# Every reader doc names kit-state; none tells the reader to read, open, see or write (update, record, set,
+# edit, fill, written ...) a generated file: a reader runs kit-state, a writer edits BUILD-STATE.src.md or adds
+# a ledger.d/ fragment. KS6 scopes READER_DOCS; KS7 also scans GEN_TEXT (the docs and tool messages that name
+# the files without being a reader path).
 READER_DOCS=(build-n4-module-kit/BUILD-LOOP.md build-n4-module-kit/METHODOLOGY.md build-n4-module-kit/ORCHESTRATION.md
   build-n4-module-kit/build-verify.md build-n4-module-kit/skill/SKILL.md CONTRIBUTING.md)
+GEN_TEXT=(build-n4-module-kit/types/logic.md scripts/check-client-source.sh)
 
 @test "KS6: every reader doc points at kit-state" {
   # Mutation: KS6 -- drop the kit-state pointer from any reader doc and this names it.
@@ -81,10 +84,14 @@ READER_DOCS=(build-n4-module-kit/BUILD-LOOP.md build-n4-module-kit/METHODOLOGY.m
   [ ${#missing[@]} -eq 0 ] || { printf 'reader doc without a kit-state pointer: %s\n' "${missing[@]}" >&2; return 1; }
 }
 
-@test "KS7: no reader doc tells the reader to open a generated file" {
+@test "KS7: no reader doc or tool message tells anyone to read or write a generated file" {
   # Mutation: KS7 -- restore "Read \`BUILD-STATE.md\`" (BUILD-LOOP §0.a before R10-D1) and this names the line.
+  # Sentence-scoped (up to the next ". "): an instruction verb, then the generated file, unless the file is
+  # named as "the generated ..." (a description, not an instruction). A doc that must still name the
+  # generated file in an instruction sentence names its source or kit-state in it instead.
   cd "$REPO"
   # shellcheck disable=SC2016  # the pattern matches literal backticks and a literal $KIT
-  run grep -nEi '(read|open|orient from|update|appends? its)[^.;]{0,25}`(\$KIT/)?(BUILD-STATE\.md|retros/INDEX\.md)`|--build-state BUILD-STATE\.md|sweep-build-state\.sh <BUILD-STATE\.md>' "${READER_DOCS[@]}"
-  [ "$status" -eq 1 ] || { printf 'reader doc opens a generated file:\n%s\n' "$output" >&2; return 1; }
+  re='(?i)\b(read|open|orient from|see|update|record|write|written|set|edit|fill|appends? its)\b(?:(?!\. ).)*?(?<!generated )(?<!generated `)(?<!/)`?(\$KIT/)?(BUILD-STATE\.md|retros/INDEX\.md)\b|--build-state BUILD-STATE\.md|sweep-build-state\.sh <BUILD-STATE\.md>'
+  run grep -nP "$re" "${READER_DOCS[@]}" "${GEN_TEXT[@]}"
+  [ "$status" -eq 1 ] || { printf 'a generated file is read or written directly:\n%s\n' "$output" >&2; return 1; }
 }

@@ -109,7 +109,7 @@ fi
 
 if [ -z "$DECL_PATH" ]; then
   if [ -z "$DECLARED" ]; then
-    row WARN "source_of_truth undeclared for this module — record <path>@<branch>@<commit> in BUILD-STATE.md"
+    row WARN "source_of_truth undeclared for this module — record <path>@<branch>@<commit> in its BUILD-STATE.src.md envelope"
   else
     row WARN "source_of_truth is unknown — honest, but this checkout ($TOP) is unchecked"
   fi
