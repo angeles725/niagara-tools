@@ -128,10 +128,6 @@ func simple(typ string) bool { return !strings.Contains(typ, ":") }
 // order: the after snapshot's for additions, the before snapshot's for the others (bash printed gawk for-in
 // hash order).
 func Diff(before, after []Slot) []Change {
-	if len(before) == 0 {
-		// bash quirk kept: awk's NR==FNR read an empty first file's partner as the before snapshot.
-		before, after = after, nil
-	}
 	b, a := index(before), index(after)
 	removed := b.names(func(s Slot) bool { _, ok := a.by[s.Name]; return !ok })
 	added := a.names(func(s Slot) bool { _, ok := b.by[s.Name]; return !ok })

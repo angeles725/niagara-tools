@@ -103,3 +103,14 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [ "$status" -eq 4 ]
   [[ "$output" == *"error: cannot list every file under $BATS_TEST_TMPDIR/after: "* ]]
 }
+
+@test "SR-empty-before a before snapshot with no slot adds every after slot (SAFE), never removes them" {
+  # Mutation: SR-empty-before -- reading the after slots as the before side (awk NR==FNR on an empty first file) prints remove_slot rows, LOSSY
+  mkdir -p "$BATS_TEST_TMPDIR/before"
+  cp "$FX/add_slot/before/module-include.xml" "$BATS_TEST_TMPDIR/before/"
+  run "$SR" "$BATS_TEST_TMPDIR/before" "$FX/add_slot/after"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"add_slot  MinimalPan.setpoint"* ]]
+  [[ "$output" != *"remove_"* ]]
+  [[ "$output" == *"verdict=SAFE"* ]]
+}

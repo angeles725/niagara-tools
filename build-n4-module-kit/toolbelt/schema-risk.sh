@@ -30,8 +30,9 @@
 # Implementation: go/internal/schemarisk (the B795 §795.4 table is go/internal/schemarisk/b795-795.4.csv,
 # diff-guarded by SR-CSV in schema-risk.bats). go/go-tool.sh `go_tool_bin` builds go/bin/schema-risk when it
 # is missing or older than a Go source, then this script execs it. VCS-free by design (kit-links L2).
-# Known bash-era quirks kept by the port (retro go-schema-risk): an empty before snapshot reads the after slots
-# as removed; an unreadable *.java stops the harvest (awk's fatal line on stderr) instead of exiting 4.
+# An empty before snapshot (no slot) adds every after slot: SAFE (the bash classifier read them as removed).
+# Known bash-era quirk kept by the port (retro go-schema-risk): an unreadable *.java stops the harvest (awk's
+# fatal line on stderr) instead of exiting 4.
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

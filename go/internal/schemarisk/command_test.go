@@ -98,9 +98,9 @@ func TestMainEdges(t *testing.T) {
 		{"complex retype: retype_unknown", snapshot(t, xml, "@NiagaraProperty(name=\"t\", type=\"baja:RelTime\")\n"),
 			snapshot(t, xml, "@NiagaraProperty(name=\"t\", type=\"baja:AbsTime\")\n"), 2,
 			"OUTAGE  retype_unknown  Pan.t: B754-754.6-r10r11-failsafe (use-when-subtype-unknown)\nverdict=OUTAGE\n", ""},
-		// bash quirk kept (awk NR==FNR on an empty first file): a before with no slot reads the after slots as removed.
-		{"empty before reads after as removed", none, snapshot(t, xml, prop), 1,
-			"LOSSY  remove_slot_simple  Pan.sp: B754-754.6-r7 (value-dropped)\nverdict=LOSSY\n", ""},
+		// T1: a before with no slot adds every after slot (bash read them as removed: awk NR==FNR on an empty first file).
+		{"empty before adds every after slot", none, snapshot(t, xml, prop+act), 0,
+			"SAFE  add_slot  Pan.sp: B754-754.6-r1 (new-default)\nSAFE  add_slot  Pan.go: B754-754.6-r1 (new-default)\nverdict=SAFE\n", ""},
 		{"no slot either side: SAFE", none, none, 0, "verdict=SAFE\n", ""},
 		{"missing module-include.xml: env", t.TempDir(), none, 4, "", "error: cannot read %B/module-include.xml\n"},
 	}
