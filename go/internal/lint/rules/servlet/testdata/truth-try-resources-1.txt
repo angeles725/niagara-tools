@@ -1,0 +1,27 @@
+declared difference (truth fix, try structure): input-400 found its try by the `try {` regex, so a parse inside a
+try-with-resources body (line 5) or its resource specification (line 9) FAILed although the try catches it. The
+enclosing try now comes from javasrc.TryBlocks; a parse after a closed try (line 15) still FAILs.
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  input-400  BRes.java:15  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+-- stderr --
+-- m/BRes.java --
+package com.x;
+public class BRes extends BWebServlet {
+  void body(WebOp op) {
+    try (Reader r = open()) {
+      int a = Integer.parseInt(op.get("a"));
+    } catch (NumberFormatException e) { op.getResponse().sendError(400); }
+  }
+  void resource(WebOp op) {
+    try (Reader r = open(Integer.parseInt(op.get("b")))) {
+      use(r);
+    } catch (NumberFormatException e) { op.getResponse().sendError(400); }
+  }
+  void after(WebOp op) {
+    try (Reader r = open()) { use(r); } catch (Exception e) { op.getResponse().sendError(400); }
+    int c = Integer.parseInt(op.get("c"));
+  }
+}
