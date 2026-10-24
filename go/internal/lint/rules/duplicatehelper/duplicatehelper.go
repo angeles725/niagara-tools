@@ -12,9 +12,9 @@
 // order, then source order) is a row when
 //   - its body has the same javasrc.Shape (whitespace and comments dropped, identifiers and literals
 //     kept) as an earlier body of at least minStatements javasrc.Statements, or else
-//   - it is a helper (private or static: neither can override) sharing its name and parameter types with
-//     an earlier helper of another class, neither being an @Override, an anonymous-class method or a
-//     constructor. Left out (2026-10-24 real-tree tunings, each with a test): a public or package
+//   - it is a helper (private or static: neither can override, so an @Override method never is one)
+//     sharing its name and parameter types with an earlier helper of another class, neither being an
+//     anonymous-class method or a constructor. Left out (2026-10-24 real-tree tunings, each with a test): a public or package
 //     instance method (it may implement a supertype's method without @Override: TableModel getters, a
 //     command's doInvoke), a static factory returning its own class, and a one-statement delegate that
 //     calls the same-named method on another type (the shared helper's caller).
@@ -100,7 +100,7 @@ func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 					shapes[shape] = at
 				}
 			}
-			if !d.Private && !d.Static || d.Override || d.Anonymous || d.Name == d.Class || d.Result == d.Class ||
+			if !d.Private && !d.Static || d.Anonymous || d.Name == d.Class || d.Result == d.Class ||
 				delegates(body, d.Name) {
 				continue // not a helper copy: it may implement a supertype's method, construct its own type or call the helper
 			}
