@@ -50,6 +50,8 @@ var (
 	valueType = rx(`^(BStatus[A-Za-z0-9_]*|BWsAnnotation|BFacets|BOrd|BLink|BConversionLink|BAbsTime|BRelTime|BString|BDouble|BFloat|BInteger|BLong|BBoolean|BEnumRange|BFormat|BIcon|BNameMap)$`)
 	factory   = rx(`^([A-Za-z_][A-Za-z0-9_.]*\.)?(create|newInstance|newCopy)[[:space:]]*\(`)
 	openParen = rx(`[[:space:]]*\($`)
+	// a bajaui widget type imported by name: a Workbench view child, never a wire-sheet node
+	widgetImport = rx(`^[[:space:]]*import[[:space:]]+javax\.baja\.(ui|workbench)(\.[A-Za-z0-9_]+)*\.(B[A-Z][A-Za-z0-9_]*)[[:space:]]*;`)
 )
 
 const advice = " never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position" +
@@ -64,17 +66,18 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	text := f.Stripped()
 	mask := javasrc.MaskLiterals(text)
+	w := widgets(mask)
 	var out []lint.Finding
 	for _, m := range f.Methods() {
 		lines, code := text[m.Start-1:m.End], mask[m.Start-1:m.End]
 		if guarded(lines) {
 			continue
 		}
-		made := locals(code)
+		made := locals(code, w)
 		for k, c := range code {
 			end := min(k+6, len(lines))
 			joined, joinedCode := strings.Join(lines[k:end], " "), strings.Join(code[k:end], " ")
-			if a1, what, ok := firstAdd(c, joined, joinedCode, made); ok {
+			if a1, what, ok := firstAdd(c, joined, joinedCode, made, w); ok {
 				out = append(out, lint.Finding{Line: m.Start + k, Msg: "add(" + a1 + ", " + what + ") in " + m.Name + "()" + advice})
 			}
 		}
@@ -92,8 +95,19 @@ func guarded(lines []string) bool {
 	return false
 }
 
+// widgets is the set of bajaui widget types the file imports by name.
+func widgets(code []string) map[string]bool {
+	w := map[string]bool{}
+	for _, c := range code {
+		if m := widgetImport.FindStringSubmatch(c); m != nil {
+			w[m[3]] = true
+		}
+	}
+	return w
+}
+
 // locals maps every `<name> = [casts] <creation>` of the method to what it creates.
-func locals(lines []string) map[string]string {
+func locals(lines []string, widgets map[string]bool) map[string]string {
 	made := map[string]string{}
 	for _, t := range lines {
 		for {
@@ -103,7 +117,7 @@ func locals(lines []string) map[string]string {
 			}
 			s := t[loc[0]:loc[1]]
 			t = t[loc[1]:]
-			if w := creates(stripCasts(s[len(assignHead.FindString(s)):])); w != "" {
+			if w := creates(stripCasts(s[len(assignHead.FindString(s)):]), widgets); w != "" {
 				made[ident.FindString(s)] = w
 			}
 		}
@@ -114,7 +128,7 @@ func locals(lines []string) map[string]string {
 // firstAdd reads the add( calls of masked line c (arguments from joined, c and the next lines, split where
 // joinedCode, its masked copy, has commas and parentheses) and returns the first one adding a new
 // component: its trimmed first argument and what the second creates.
-func firstAdd(c, joined, joinedCode string, made map[string]string) (a1, what string, ok bool) {
+func firstAdd(c, joined, joinedCode string, made map[string]string, widgets map[string]bool) (a1, what string, ok bool) {
 	for pos := 0; ; {
 		loc := addCall.FindStringIndex(c[pos:])
 		if loc == nil {
@@ -126,7 +140,7 @@ func firstAdd(c, joined, joinedCode string, made map[string]string) (a1, what st
 			continue
 		}
 		a2 := stripCasts(args[1])
-		what = creates(a2)
+		what = creates(a2, widgets)
 		if w, ok := made[a2]; what == "" && ok {
 			what = a2 + " = " + w
 		}
@@ -185,11 +199,12 @@ func stripCasts(a string) string {
 	return a
 }
 
-// creates is what a creation expression at the start of a creates, or "" when it is not one.
-func creates(a string) string {
+// creates is what a creation expression at the start of a creates, or "" when it is not one (a value
+// type or one of the file's imported widget types is not).
+func creates(a string, widgets map[string]bool) string {
 	if t := newType.FindString(a); t != "" {
 		t = t[len(newHead.FindString(t)):]
-		if valueType.MatchString(t) {
+		if valueType.MatchString(t) || widgets[t] {
 			return ""
 		}
 		return "new " + t + "()"

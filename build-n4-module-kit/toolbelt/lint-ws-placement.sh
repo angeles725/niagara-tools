@@ -46,6 +46,9 @@
 # Truth fix T1 (2026-10-24): add( calls and `<local> = <creation>` are matched with string, char and text-block
 # contents masked (go/internal/javasrc MaskLiterals), so a quoted add is not code; the guard words and a
 # literal argument's text are still read with literals kept.
+# Truth fix T2 (2026-10-24): a `new B<Type>` whose type the file imports by name from javax.baja.ui or
+# javax.baja.workbench (or a sub-package) is a bajaui widget, a Workbench view child that never gets a
+# wire-sheet glyph, and is not flagged (a wildcard import or a same-package widget still is).
 # VCS-free by design (kit-links L2).
 # Mutation: WSP1 -- dropping the creation rule passes parent.add(name, create(type)) clean
 # Mutation: WSP1-local -- dropping the local tracking passes `BFoo f = new BFoo(); add("f", f);` clean
@@ -55,6 +58,7 @@
 # Mutation: WSP-value -- dropping the value-type exclusion WARNs add("st", new BStatusNumeric())
 # Mutation: WSP-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: WSP-literal -- matching the unmasked Strip view WARNs log("add(x, new BFolder())")
+# Mutation: WSP-widget -- dropping the javax.baja.ui import check WARNs buttons.add(null, new BButton(cmd))
 # Mutation: WSP-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
