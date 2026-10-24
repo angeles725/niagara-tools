@@ -1,0 +1,41 @@
+declared difference (truth fix T2): the bash awk read @NiagaraType, `extends B<Upper>` and `class <Name>` in the
+comment-blanked text, where string literals are still text, so a pure class quoting "@NiagaraType" or
+"extends BFoo" lost its method rule (Quote, Ext) and a literal "class Lit" named the file (Named). They are
+read in code only now (literal contents blanked).
+-- args --
+--max-class
+0
+--max-method
+2
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Ext.java:2  class Ext has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/Ext.java:4  method m() in pure class Ext spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/Named.java:3  class Named has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/Quote.java:2  class Quote has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/Quote.java:4  method m() in pure class Quote spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+-- stderr --
+-- Ext.java --
+package com.x;
+public class Ext {
+  String t = "x extends BFoo";
+  void m() {
+    a();
+    b();
+  }
+}
+-- Named.java --
+package com.x;
+String banner = "a class Lit";
+public class Named {
+}
+-- Quote.java --
+package com.x;
+public class Quote {
+  String t = "@NiagaraType";
+  void m() {
+    a();
+    b();
+  }
+}

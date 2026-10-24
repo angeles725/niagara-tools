@@ -1,0 +1,27 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BOther.java:7  licensed class: doA() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BOther.java --
+package com.x;
+public class BOther extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void doA() {
+    if (!child.isOperational()) return;
+    a();
+  }
+  public void doB() {
+    if (!this.isOperational()) return;
+    b();
+  }
+  public void doC() {
+    if (isOperational()) {
+      c();
+    }
+  }
+}

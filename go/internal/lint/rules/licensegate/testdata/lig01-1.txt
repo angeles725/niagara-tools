@@ -1,0 +1,23 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BSvc.java:8  licensed class: changed() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BSvc.java --
+package com.x;
+public class BSvc extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  @Override
+  public void changed(Property p, Context cx) {
+    super.changed(p, cx);
+    recompute();
+  }
+  public void doTick() {
+    if (!isOperational()) return;
+    recompute();
+  }
+}

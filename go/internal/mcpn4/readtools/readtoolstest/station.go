@@ -4,6 +4,8 @@
 package readtoolstest
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -31,7 +33,18 @@ type Station struct {
 	// Trees maps an ORD to the nodes a load of it answers (any depth); an ORD missing here
 	// answers the root with its stationName.
 	Trees map[string]*pyjson.Object
-	next  int
+	// OrdRoutes answer GET /ord/ (test_bql's FakeOpener): the first route whose Needle the ORD
+	// holds answers Body, or the error of HTTP status Code. OrdCap, when set, is the byte cap
+	// in place of the caller's; OrdRequests is every ORD read, in order.
+	OrdRoutes   []OrdRoute
+	OrdCap      int
+	OrdRequests []OrdRequest
+	// Files answer GET /file/<path> (FakeStation.files): a path's body and content type, or
+	// the HTTP status Code to answer instead; a missing path or a .bog is a 404 / 403.
+	// FileRequests is every decoded path read, in order.
+	Files        map[string]File
+	FileRequests []string
+	next         int
 }
 
 // NewStation is a tier A station named FakeStation.
@@ -94,6 +107,85 @@ func (c *client) LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.O
 	nodes.Set("", root)
 	nodes.Set("stationName", name)
 	return nodes, nil
+}
+
+// OrdRoute is one answer of GET /ord/.
+type OrdRoute struct {
+	Needle, Body string
+	Code         int
+}
+
+// OrdRequest is one GET /ord/ that reached the station.
+type OrdRequest struct {
+	Ord     string
+	Timeout float64
+}
+
+// GetOrd answers from the station's OrdRoutes like box.Client.GetOrd: a 401/403 is an
+// AuthError (latched through the hook), a 400 names the query, a body longer than the cap is
+// cut and reported truncated.
+func (c *client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error) {
+	c.st.OrdRequests = append(c.st.OrdRequests, OrdRequest{ord, timeout})
+	for _, r := range c.st.OrdRoutes {
+		if !strings.Contains(ord, r.Needle) {
+			continue
+		}
+		switch {
+		case r.Code == 401 || r.Code == 403:
+			return "", false, c.authError("ord", "get")
+		case r.Code == 400:
+			return "", false, &box.Error{Kind: box.KindBox, Msg: "HTTP 400 from station: the ORD or BQL query was " +
+				"rejected (check the type spec, column names and where clause)", Channel: "ord", Key: "get"}
+		case r.Code != 0:
+			return "", false, &box.Error{Kind: box.KindBox, Msg: fmt.Sprintf("HTTP %d from station", r.Code), Channel: "ord", Key: "get"}
+		}
+		if c.st.OrdCap > 0 {
+			maxBytes = c.st.OrdCap
+		}
+		if len(r.Body) > maxBytes {
+			return r.Body[:maxBytes], true, nil
+		}
+		return r.Body, false, nil
+	}
+	return "", false, &box.Error{Kind: box.KindBox, Msg: "unexpected ORD " + ord, Channel: "ord", Key: "get"}
+}
+
+// File is one answer of GET /file/; NoType sends no Content-Type header.
+type File struct {
+	Body, ContentType string
+	NoType            bool
+	Code              int
+}
+
+// GetFile answers from the station's Files like box.Client.GetFile: a wrong password is an
+// AuthError, a 403/404 an HttpStatusError, a body longer than maxBytes cut and truncated.
+func (c *client) GetFile(urlPath string, timeout float64, maxBytes int) (*box.File, error) {
+	path, _ := url.PathUnescape(strings.TrimPrefix(urlPath, "/file/"))
+	c.st.FileRequests = append(c.st.FileRequests, path)
+	if c.cfg.Password != c.st.Password {
+		return nil, c.authError("file", "get")
+	}
+	f, ok := c.st.Files[path]
+	lower := strings.ToLower(path)
+	switch {
+	case strings.HasSuffix(lower, ".bog") || strings.HasSuffix(lower, ".bog.gz"):
+		f = File{Code: 403}
+	case !ok:
+		f = File{Code: 404}
+	}
+	if f.Code != 0 {
+		return nil, &box.Error{Kind: box.KindHTTPStatus, Msg: fmt.Sprintf("HTTP %d from station", f.Code),
+			Channel: "file", Key: "get", Code: f.Code}
+	}
+	body := []byte(f.Body)
+	out := &box.File{Body: body, Truncated: len(body) > maxBytes, ContentLength: pyjson.IntLiteral(fmt.Sprint(len(body)))}
+	if !f.NoType {
+		out.ContentType = &f.ContentType
+	}
+	if out.Truncated {
+		out.Body = body[:maxBytes]
+	}
+	return out, nil
 }
 
 func (c *client) BaseURL() string { return strings.TrimRight(c.cfg.BaseURL, "/") }

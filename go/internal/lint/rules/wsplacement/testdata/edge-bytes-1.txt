@@ -1,0 +1,46 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BCrlf.java:4  add("a", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BNoeol.java:4  add("a", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BTabs.java:4  add("a", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BUnbal.java:4  add("a", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BCrlf.java --
+package com.x;
+public class BCrlf extends BComponent {
+  void seed() {
+    add("a", new BFolder());
+  }
+}
+-- BNoeol.java (noeol) --
+package com.x;
+public class BNoeol extends BComponent {
+  void seed() {
+    add("a", new BFolder());
+  }
+}
+-- BOpen.java --
+package com.x;
+public class BOpen extends BComponent {
+  void seed() {
+    add("a", new BFolder());
+-- BTabs.java --
+package com.x;
+public class BTabs extends BComponent {
+	void seed() {
+		add(	"a",	new	BFolder());
+	}
+}
+-- BUnbal.java --
+package com.x;
+public class BUnbal extends BComponent {
+  void seed() {
+    add("a", new BFolder());
+  }}}
+  void more() {
+    add("b", new BFolder());
+  }
+}
+-- Empty.java --

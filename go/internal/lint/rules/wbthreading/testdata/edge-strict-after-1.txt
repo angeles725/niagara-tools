@@ -1,0 +1,14 @@
+-- args --
+@DIR@/root1
+--strict
+-- want --
+exit 1
+ui-thread-traversal  WARN  @DIR@/root1/com/x/A.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+-- stderr --
+-- root1/com/x/A.java --
+class A {
+  public CommandArtifact doInvoke() {
+    BComponent[] k = root.getNavChildren();
+    return null;
+  }
+}

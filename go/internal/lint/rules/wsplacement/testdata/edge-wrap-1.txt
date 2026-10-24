@@ -1,0 +1,39 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BWrap.java:4  add("a", new BFolder()) in five() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BWrap.java:21  add("a2", new BFolder()) in args() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BWrap.java --
+package com.x;
+public class BWrap extends BComponent {
+  void five() {
+    add("a",
+    
+    
+    
+    
+    new BFolder());
+  }
+   void six() {
+    add("b",
+    
+    
+    
+    
+    
+    new BFolder());
+  }
+   void args() {
+    add("a2", new BFolder(1,
+    2));
+  }
+   void tail() {
+    add("c",
+  }
+   void unclosed() {
+    add("d", new BFolder(;
+    x();
+  }
+}

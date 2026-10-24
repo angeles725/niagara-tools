@@ -1,0 +1,26 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:2  LTF2: operator mode/HOA slot "fooMode2" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:3  LTF2: operator mode/HOA slot "fooHOA" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:4  LTF2: operator mode/HOA slot "hoaX" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:5  LTF2: operator mode/HOA slot "xHoa12" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:7  LTF2: operator mode/HOA slot "Mode" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:12  LTF1: link-in target "bothMode" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/B.java:12  LTF2: operator mode/HOA slot "bothMode" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+-- stderr --
+-- root/com/x/B.java --
+class B {
+@NiagaraProperty(name = "fooMode2", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "fooHOA", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "hoaX", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "xHoa12", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "modeX", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "Mode", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+@NiagaraProperty(name = "statusMode", type = "double", flags = Flags.SUMMARY | Flags.TRANSIENT)
+@NiagaraProperty(name = "persistMode", type = "double", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "HoaY", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT)
+// link-in
+@NiagaraProperty(name = "bothMode", type = "double", flags = Flags.OPERATOR | Flags.TRANSIENT | Flags.READONLY)
+}

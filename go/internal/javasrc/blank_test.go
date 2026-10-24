@@ -77,3 +77,28 @@ func TestBlankLine(t *testing.T) {
 		}
 	}
 }
+
+// TestMaskLiterals: the bytes BlankLiterals removes are blanked in place, so every line keeps its length.
+func TestMaskLiterals(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		in, want []string
+	}{
+		{"no literal", []string{`a(); { b; }`}, []string{`a(); { b; }`}},
+		{"string", []string{`a("x;{}") b`}, []string{`a("    ") b`}},
+		{"escapes", []string{`s = "a\"b" + 'c' + '\''; c();`}, []string{`s = "    " + ' ' + '  '; c();`}},
+		{"open at line end", []string{`foo("ab\`, `bar();`}, []string{`foo("   `, `bar();`}},
+		{"text block", []string{`s = """`, `  add(x);`, `  end""";`, `x();`},
+			[]string{`s = """`, `         `, `     """;`, `x();`}},
+	} {
+		got := MaskLiterals(tc.in)
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+		for i := range got {
+			if len(got[i]) != len(tc.in[i]) {
+				t.Errorf("%s: line %d length %d, want %d", tc.name, i, len(got[i]), len(tc.in[i]))
+			}
+		}
+	}
+}

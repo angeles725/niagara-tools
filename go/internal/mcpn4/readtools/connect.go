@@ -1,6 +1,7 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
-// (mcp-n4-kit/mcp_n4/tools_read.py:198-500, 789-969): n4_connect, n4_describe_session and the
-// tree reads; every other read tool still answers jsonrpc.NotImplemented.
+// (mcp-n4-kit/mcp_n4/tools_read.py:198-822 and its TOOLS table): n4_connect,
+// n4_describe_session, the tree reads, the BQL bulk reads and the station file reads; every
+// other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
 import (
@@ -23,6 +24,8 @@ const RootOrd = "station:|slot:/"
 type Client interface {
 	Open() (any, error)
 	LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.Object, error)
+	GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error)
+	GetFile(urlPath string, timeout float64, maxBytes int) (*box.File, error)
 	BaseURL() string
 	Close()
 }
@@ -62,6 +65,11 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_read_slots"] = t.ReadSlots
 	s.Handlers["n4_list_links"] = t.ListLinks
 	s.Handlers["n4_find_dangling_outputs"] = t.FindDanglingOutputs
+	s.Handlers["n4_bql_query"] = t.BqlQuery
+	s.Handlers["n4_inventory"] = t.Inventory
+	s.Handlers["n4_read_file"] = t.ReadFile
+	s.Handlers["n4_list_px_views"] = t.ListPxViews
+	s.Handlers["n4_px_summary"] = t.PxSummary
 }
 
 func toolError(format string, a ...any) error {

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"fmt"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
@@ -691,3 +692,219 @@ func TestEmptyOK(t *testing.T) {
 		t.Errorf("full: exit %d out %q", code, o)
 	}
 }
+
+// flagRule reports its configured n once per file (Spec.IntFlags).
+type flagRule struct{ n int }
+
+func (flagRule) ID() string { return "lint-f" }
+
+func (flagRule) Severity() Severity { return Warn }
+
+func (r flagRule) Check(*javasrc.File) ([]Finding, error) {
+	return []Finding{{Line: 1, Msg: fmt.Sprintf("n=%d", r.n)}}, nil
+}
+
+// TestCommandIntFlags: Spec.IntFlags are read among the leading flags in any order with --strict (the last
+// one wins), fail with the "needs a non-negative integer" line on a bad value, leave an unknown flag to
+// Parse, stop at "--", and do not exist for a rule list.
+func TestCommandIntFlags(t *testing.T) {
+	sp := javaSpec(flagRule{80}, First)
+	sp.IntFlags = []IntFlag{{Name: "--max", Default: 80}}
+	sp.Configure = func(v map[string]int) Rule { return flagRule{v["--max"]} }
+	main := Command(sp, javaSpec(fakeRule{"lint-a", "MARK", Warn}, First))
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	row := func(n string) string { return "WARN  lint-f  " + root + "/A.java:1  n=" + n + "\n" }
+	bad := func(f string) string {
+		return "lint-f: " + f + " needs a non-negative integer\nusage: lint-f.sh <src-root>\n"
+	}
+	for _, tc := range []struct {
+		name     string
+		args     []string
+		code     int
+		out, err string
+	}{
+		{"default", []string{"lint-f", root}, 0, row("80"), ""},
+		{"given", []string{"lint-f", "--max", "5", root}, 0, row("5"), ""},
+		{"with strict", []string{"lint-f", "--max", "007", "--strict", root}, 1, row("7"), ""},
+		{"last wins", []string{"lint-f", "--max", "5", "--max", "0", root}, 0, row("0"), ""},
+		{"missing value", []string{"lint-f", "--max"}, 3, "", bad("--max")},
+		{"not a count", []string{"lint-f", "--max", "-1", root}, 3, "", bad("--max")},
+		{"empty value", []string{"lint-f", "--max", "", root}, 3, "", bad("--max")},
+		{"unknown flag first", []string{"lint-f", "--bogus", "--max", "x", root}, 3, "",
+			"lint-f: unknown flag: --bogus\nusage: lint-f.sh <src-root>\n"},
+		{"after --", []string{"lint-f", "--", "--max", root}, 3, "", "lint-f: not a directory: --max\n"},
+		{"rule list", []string{"lint-f,lint-a", "--max", "5", root}, 3, "",
+			"n4lint: unknown flag: --max\n" + usage + "\n"},
+	} {
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.String() != tc.err {
+			t.Errorf("%s: exit %d out %q err %q, want %d %q %q", tc.name, code, o, e, tc.code, tc.out, tc.err)
+		}
+	}
+	defer func() {
+		if recover() == nil {
+			t.Error("IntFlags without Configure: no panic")
+		}
+	}()
+	noConf := javaSpec(flagRule{1}, First)
+	noConf.IntFlags = sp.IntFlags
+	Command(noConf)
+}
+
+// TestParseValued: Mode Valued is `[<option> <value>]... <root>` (lint-link-target-flags): the option and the
+// root in any order, the last value wins, a missing value, any other "-" argument, a second root or no root is
+// the usage line alone, and the root must be a directory.
+func TestParseValued(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-v.sh [--map <file>] <src>"
+	for _, tc := range []struct {
+		name string
+		args []string
+		opt  string
+		err  string
+	}{
+		{"option first", []string{"--map", "m.md", dir}, "m.md", ""},
+		{"option after the root", []string{dir, "--map", "m.md"}, "m.md", ""},
+		{"last value wins", []string{"--map", "a", "--map", "b", dir}, "b", ""},
+		{"no option", []string{dir}, "", ""},
+		{"missing value", []string{dir, "--map"}, "", use + "\n"},
+		{"another flag", []string{"--strict", dir}, "", use + "\n"},
+		{"-h", []string{"-h"}, "", use + "\n"},
+		{"two roots", []string{dir, dir}, "", use + "\n"},
+		{"no root", []string{"--map", "m"}, "", use + "\n"},
+		{"not a directory", []string{"--map", "m", dir + "/nope"}, "", "lint-v: not a directory: " + dir + "/nope\n"},
+	} {
+		a, err := ParseOption(Valued, "lint-v", use, "--map", tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		if got != tc.err || (err == nil && (a.Option != tc.opt || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%s: args %+v err %q, want option %q root %q err %q", tc.name, a, got, tc.opt, dir, tc.err)
+		}
+	}
+}
+
+// configFake is a Rule that is also a Configurer: it fails Configure when the option names "bad".
+type configFake struct {
+	fakeRule
+	seen *string
+}
+
+func (r configFake) Configure(a Args) error {
+	*r.seen = a.Option
+	if a.Option == "bad" {
+		return errors.New("lint-c: --map file not found: bad\n")
+	}
+	return nil
+}
+
+// TestConfigure: a rule run alone that implements Configurer gets the parsed Args after the root check
+// and before the walk; its error is printed verbatim on stderr and exits 3 with no row.
+func TestConfigure(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var seen string
+	sp := Spec{Rule: configFake{fakeRule{"lint-c", "MARK", Fail}, &seen}, Mode: Valued, Option: "--map",
+		Usage: "usage: lint-c.sh [--map <file>] <src>", Select: Selection{Names: []string{"*.java"}}}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "good", root}, s); code != 1 || seen != "good" || o.String() != "FAIL  lint-c  "+root+"/A.java:1  saw: MARK\n" || e.Len() != 0 {
+		t.Errorf("good: exit %d seen %q out %q err %q", code, seen, o, e)
+	}
+	s, o, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root}, s); code != 3 || o.Len() != 0 || e.String() != "lint-c: --map file not found: bad\n" {
+		t.Errorf("bad: exit %d out %q err %q", code, o, e)
+	}
+	s, _, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root + "/nope"}, s); code != 3 || e.String() != "lint-c: not a directory: "+root+"/nope\n" {
+		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
+	}
+}
+
+// TestCheckFirst: Spec.CheckFirst prints a finding as `<check>  <SEV>  <path>:<line>  <msg>` (lint-wb-threading's
+// rows, which report-module relays as a "swap" member); the empty-root ERROR row keeps the standard shape.
+func TestCheckFirst(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	sp := javaSpec(fakeRule{"lint-c", "MARK", Warn}, One)
+	sp.CheckFirst = true
+	s, o, _ := stdio()
+	if code := Command(sp)([]string{"lint-c", root}, s); code != 0 || o.String() != "lint-c  WARN  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("row: exit %d out %q", code, o)
+	}
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-c", empty}, s); code != 3 || !strings.HasPrefix(o.String(), "ERROR  lint-c  "+empty+"  ") {
+		t.Errorf("empty: exit %d out %q", code, o)
+	}
+}
+
+// TestParseAnywhere: Mode Anywhere is lint-wb-threading's loop: --strict anywhere, another "-" argument is
+// "<name>: unknown option: <arg>" and a second root "<name>: unexpected argument: <arg>" (exit 3, no usage
+// line), no argument or no root is the usage line.
+func TestParseAnywhere(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-w.sh [--strict] <src>"
+	for _, tc := range []struct {
+		args   []string
+		strict bool
+		err    string
+		usage  bool
+	}{
+		{[]string{dir}, false, "", false},
+		{[]string{dir, "--strict"}, true, "", false},
+		{[]string{"--strict", dir, "--strict"}, true, "", false},
+		{nil, false, use + "\n", true},
+		{[]string{"--strict"}, false, use + "\n", true},
+		{[]string{"-h", dir}, false, "lint-w: unknown option: -h\n", false},
+		{[]string{dir, "--"}, false, "lint-w: unknown option: --\n", false},
+		{[]string{dir, dir, "-x"}, false, "lint-w: unexpected argument: " + dir + "\n", false},
+		{[]string{dir + "/nope"}, false, "lint-w: not a directory: " + dir + "/nope\n", false},
+	} {
+		a, err := Parse(Anywhere, "lint-w", use, tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		var ue *UsageError
+		if got != tc.err || errors.As(err, &ue) != tc.usage || (err == nil && (a.Strict != tc.strict || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%q: args %+v err %q (usage %v), want strict %v err %q (usage %v)", tc.args, a, got, errors.As(err, &ue), tc.strict, tc.err, tc.usage)
+		}
+	}
+}
+
+// TestParseValuedRepeat: Mode Valued with repeatable options (Spec.Options: every value kept, in order, in
+// Args.Values) and --strict accepted (Spec.ValuedStrict), as lint-inline-site-literal takes them; without
+// ValuedStrict --strict stays a usage error (lint-link-target-flags).
+func TestParseValuedRepeat(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-r.sh [--strict] [--table <p>]... [--pattern <re>]... <root>"
+	vo := ValueOptions{Repeat: []string{"--table", "--pattern"}, Strict: true}
+	a, err := ParseValued(Valued, "lint-r", use, vo, []string{"--table", "a", dir, "--strict", "--pattern", "R[0-9]", "--table", "b"})
+	if err != nil || !a.Strict || len(a.Roots) != 1 || a.Roots[0] != dir ||
+		!reflect.DeepEqual(a.Values, map[string][]string{"--table": {"a", "b"}, "--pattern": {"R[0-9]"}}) {
+		t.Errorf("repeat: %+v %v", a, err)
+	}
+	for _, args := range [][]string{{dir, "--table"}, {"--other", dir}, {dir, dir}} {
+		if _, err := ParseValued(Valued, "lint-r", use, vo, args); err == nil || err.Error() != use+"\n" {
+			t.Errorf("%q: err %v, want the usage line", args, err)
+		}
+	}
+	if _, err := ParseValued(Valued, "lint-r", use, ValueOptions{Repeat: []string{"--table"}}, []string{"--strict", dir}); err == nil {
+		t.Errorf("--strict without ValueOptions.Strict parsed")
+	}
+	// Command passes the spec's options: Values reach Configure.
+	var seen []string
+	sp := Spec{Rule: valuesFake{fakeRule{"lint-r", "MARK", Warn}, &seen}, Mode: Valued, Options: []string{"--table"}, ValuedStrict: true,
+		Usage: use, Select: Selection{Names: []string{"*.java"}}}
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, _, _ := stdio()
+	if code := Command(sp)([]string{"lint-r", "--strict", "--table", "x", "--table", "y", root}, s); code != 1 || !reflect.DeepEqual(seen, []string{"x", "y"}) {
+		t.Errorf("command: exit %d seen %q, want 1 (WARN under --strict) and [x y]", code, seen)
+	}
+}
+
+type valuesFake struct {
+	fakeRule
+	seen *[]string
+}
+
+func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }

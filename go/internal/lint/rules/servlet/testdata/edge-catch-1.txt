@@ -1,13 +1,18 @@
+declared difference (truth fix, catch structure; truth-catch-structure-1): the catch at K.java:21 follows a
+statement, not c()'s try block, so it is not that try's catch; in d() the inner try's own catch (K.java:26) decides
+the nested parse, so the outer catch at K.java:28 no longer WARNs.
+declared difference (truth fix, try scope; truth-try-scope-1): `retry { Double.parseDouble(s); }` at line 36
+is not a try, and the `try { foo(); }` above it closed before it, so the parse FAILs input-400 (the 5-line look-back
+took that closed try as its guard).
 Declared differences: (truth fix T2) a "400" string literal in a catch is no 400 response, so the
 catch at K.java:28 now WARNs; (truth fix T3) the "} catch" on the try's closing line K.java:5 is read.
 -- args --
 @DIR@/m
 -- want --
-exit 0
+exit 1
 WARN  catch-no-400  K.java:5  catch around parse without 400 response (silent default may write bad value)
-WARN  catch-no-400  K.java:21  catch around parse without 400 response (silent default may write bad value)
-WARN  catch-no-400  K.java:28  catch around parse without 400 response (silent default may write bad value)
 WARN  catch-no-400  K.java:26  catch around parse without 400 response (silent default may write bad value)
+FAIL  input-400  K.java:36  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
 -- stderr --
 -- m/K.java --
 class K extends BWebServlet {
