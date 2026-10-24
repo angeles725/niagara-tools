@@ -204,3 +204,193 @@ class TestSetSlotParity(ParityTestCase):
             side.call("n4_set_slot", ord=CALC, slot="out", value_type="baja:StatusNumeric")
         self.assertSameRun(scenario)
 
+
+def fail_after_sync(side, key, reply):
+    """A hook: after the first syncTo, `key` (a callssc sck) answers `reply` (code, body)."""
+    seen = []
+
+    def hook(frame):
+        sck = [m.get("b", {}).get("sck") for m in frame["m"] if isinstance(m.get("b"), dict)]
+        if "syncTo" in sck:
+            seen.append(True)
+        elif seen and key in sck:
+            return reply[0], reply[1], {}
+        return None
+    side.fake.hook = hook
+
+
+ERROR_FRAME = b'{"m": [{"t": "e", "b": {"m": "boom"}}]}'
+
+
+class TestReadBackAndInDoubtParity(ParityTestCase):
+    def test_read_back_outcomes(self):
+        def scenario(side):
+            side.connect()
+            h = status_numeric(side)
+            node = side.fake.by_handle[h]
+            for tamper in (lambda: setattr(node.child("out").child("value"), "value", "99.0"),
+                           lambda: setattr(node.child("out").child("value"), "value", "x y"),
+                           lambda: node.children.remove(node.child("out"))):
+                side.fake.on_sync = lambda op, t=tamper: t()
+                side.write("n4_set_slot", **SET)
+                side.fake.on_sync = None
+                side.box.set_slot(h, "out", box.bson_status_numeric(1.0))
+            for reply in ((500, b"boom"), (200, ERROR_FRAME)):
+                fail_after_sync(side, "loadSlots", reply)
+                side.write("n4_set_slot", **SET)
+                side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_a_failed_send_leaves_an_in_doubt_batch(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            side.add("Sp", "control:NumericWritable")
+            for key, reply in (("syncTo", (500, b"boom")), ("syncTo", (200, ERROR_FRAME)),
+                               ("invokeAction", (500, b"boom"))):
+                side.fake.hook = lambda frame, k=key, r=reply: (r[0], r[1], {}) if any(
+                    isinstance(m.get("b"), dict) and m["b"].get("sck") == k
+                    for m in frame["m"]) else None
+                if key == "syncTo":
+                    side.write("n4_set_slot", **SET)
+                else:
+                    side.write("n4_invoke_action", ord=FOLDER + "/Sp", action="auto")
+                side.fake.hook = None
+            side.write("n4_invoke_action", ord=CALC, action="active")  # sent: no read-back
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+
+class TestInvokeActionParity(ParityTestCase):
+    def test_every_action_and_refusal(self):
+        def scenario(side):
+            side.connect()
+            side.add("Sp", "control:NumericWritable")
+            side.add("Flag", "control:BooleanWritable")
+            sp = FOLDER + "/Sp"
+            for action in ("save", "restart", "emergencyOverride", "Set", "x"):
+                side.call("n4_invoke_action", ord=sp, action=action)
+            side.write("n4_invoke_action", ord=sp, action="set", arg=7.0, arg_type="baja:Double")
+            side.write("n4_invoke_action", ord=sp, action="set", arg=7, arg_type="baja:Double")
+            for kw in ({}, {"arg": 1.0}, {"arg_type": "baja:Double"},
+                       {"arg": 1.0, "arg_type": "baja:Int"}, {"arg": True, "arg_type": "baja:Double"},
+                       {"arg": 10 ** 400, "arg_type": "baja:Double"}):
+                side.call("n4_invoke_action", ord=sp, action="set", **kw)
+            for action in ("active", "inactive", "auto"):
+                side.write("n4_invoke_action", ord=sp, action=action)
+            side.call("n4_invoke_action", ord=sp, action="auto", arg=1.0)
+            side.call("n4_invoke_action", ord=sp, action="auto", arg_type="baja:Double")
+            side.call("n4_invoke_action", ord=FOLDER, action="set", arg=1.0, arg_type="baja:Double")
+            side.write("n4_invoke_action", ord=FOLDER + "/Flag", action="set", arg=True,
+                       arg_type="baja:Boolean")  # the fake station sets numeric writables only
+            orig = side.fake._invoke
+
+            def lying(arg):
+                orig(arg)
+                side.fake.by_handle[arg["h"]].child("fallback").child("value").value = "1.0"
+            side.fake._invoke = lying
+            side.write("n4_invoke_action", ord=sp, action="set", arg=7.0, arg_type="baja:Double")
+            side.fake._invoke = orig
+        self.assertSameRun(scenario)
+
+
+class TestPolicyParity(ParityTestCase):
+    def test_the_process_budget(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", **SET)
+            side.connect()
+            side.write("n4_set_slot", **dict(SET, value=6.0))
+        self.assertSameRun(scenario, max_writes=1)
+
+    def test_no_write_scope(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", **SET)
+        self.assertSameRun(scenario, write_scopes=[])
+
+    def test_the_tier_gate_annotates_a_dry_run_and_refuses_the_write(self):
+        def scenario(side):
+            side.fake.product_version = "4.15.0.1"
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", **SET)
+            side.fake.product_version = None  # undetected: tier C
+            side.connect()
+            side.write("n4_invoke_action", ord=CALC, action="auto")
+        self.assertSameRun(scenario)
+
+    def test_an_opt_in_lets_the_write_through(self):
+        def scenario(side):
+            side.fake.product_version = "4.15.0.1"
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", **SET)
+        self.assertSameRun(scenario, allow_tier_b=["FakeStation"])
+
+    def test_secrets_are_redacted_and_reads_are_audited(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", password="hunter2", api_Token=["x"], **SET)
+            side.fake.ord_routes = [("baja:Component", b"Slot Path,Name\n/Folder/Calc,Calc\n")]
+            side.call("n4_bql_query", base=FOLDER, query="select slotPath, name from baja:Component",
+                      password="p")
+        self.assertSameRun(scenario)
+
+
+class TestStateFileParity(ParityTestCase):
+    def path(self, side, name):
+        return os.path.join(side.state_dir, name)
+
+    def test_a_loose_state_file_fails_before_the_token_is_spent(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            side.write("n4_set_slot", **SET)  # creates journal and audit, both 0600
+            for name in ("journal.jsonl", "audit.jsonl"):
+                token = side.call("n4_set_slot", **SET)["confirmation_token"]
+                os.chmod(self.path(side, name), 0o644)
+                side.call("n4_set_slot", dry_run=False, confirmation_token=token, **SET)
+                os.chmod(self.path(side, name), 0o600)
+                side.call("n4_set_slot", dry_run=False, confirmation_token=token, **SET)
+        self.assertSameRun(scenario)
+
+    def test_an_unwritable_intent_sends_nothing_and_spends_the_token(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            os.makedirs(self.path(side, "journal.jsonl"), mode=0o700)
+            token = side.call("n4_set_slot", **SET)["confirmation_token"]
+            side.call("n4_set_slot", dry_run=False, confirmation_token=token, **SET)
+            os.rmdir(self.path(side, "journal.jsonl"))
+            side.call("n4_set_slot", dry_run=False, confirmation_token=token, **SET)
+        self.assertSameRun(scenario)
+
+    def test_an_unwritable_result_or_audit_line_is_a_warning(self):
+        def scenario(side):
+            side.connect()
+            status_numeric(side)
+            journal = self.path(side, "journal.jsonl")
+
+            def lose_the_journal(op):
+                os.rename(journal, journal + ".kept")
+                os.makedirs(journal, mode=0o700)
+            side.fake.on_sync = lose_the_journal
+            side.write("n4_invoke_action", ord=CALC, action="auto")  # an ssc: no on_sync
+            side.write("n4_set_slot", **SET)
+            side.fake.on_sync = None
+            os.rmdir(journal)
+            os.rename(journal + ".kept", journal)
+            os.rename(self.path(side, "audit.jsonl"), self.path(side, "audit.kept"))
+            os.makedirs(self.path(side, "audit.jsonl"), mode=0o700)
+            side.write("n4_set_slot", **dict(SET, value=6.0))
+            side.call("n4_set_slot", **dict(SET, slot="out/value"))
+        sides = self.assertSameRun(scenario)
+        for side in sides:
+            self.assertTrue(os.path.isdir(self.path(side, "audit.jsonl")))
+        python, under_test = (side.masked(side.state("audit.kept")) for side in sides)
+        self.assertEqual(under_test, python)
