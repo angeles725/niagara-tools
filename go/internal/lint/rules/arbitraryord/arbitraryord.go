@@ -43,19 +43,20 @@ type rule struct{}
 func (rule) ID() string              { return ID }
 func (rule) Severity() lint.Severity { return lint.Warn }
 
-// Check reports each line whose code (the line before its // comment, javasrc.LineCommentAt) calls
-// BOrd.make on a lowercase identifier: "BOrd.make from a variable", or "reviewed marker without a reason"
-// when the line's // comment, or else a // comment line right above, carries a bare marker. A marker with
-// a reason suppresses the row.
+// Check reports each line whose code (linescan.Code: no comment, Javadoc or literal text; truth fix T1,
+// the awk matched the raw text before the // comment) calls BOrd.make on a lowercase identifier: "BOrd.make
+// from a variable", or "reviewed marker without a reason" when the line's // comment (javasrc.LineCommentAt),
+// or else a // comment line right above, carries a bare marker. A marker with a reason suppresses the row.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
+	code := linescan.Code(f)
 	prev := ""
 	for i, ln := range f.Raw {
-		code, comment := ln, ""
+		comment := ""
 		if at := javasrc.LineCommentAt(ln); at >= 0 {
-			code, comment = ln[:at], ln[at:]
+			comment = ln[at:]
 		}
-		if call.MatchString(code) {
+		if call.MatchString(code[i]) {
 			st := state(comment)
 			if st == "" && commentLine.MatchString(prev) {
 				st = state(prev)

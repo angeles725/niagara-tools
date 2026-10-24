@@ -1,3 +1,4 @@
+declared difference: T1: the call is matched in code (linescan.Code): the block-comment lines 13 and 15, the string at 17, the open block comment at 20 and the text block at 23 are no calls
 -- args --
 @DIR@/c
 -- want --
@@ -6,11 +7,6 @@ WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:3  BOrd.make from a variable: BOrd.
 WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:7  BOrd.make from a variable: xBOrd.make(q);
 WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:8  BOrd.make from a variable: BOrd.make(q); BOrd.make(r);
 WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:9  BOrd.make from a variable: BOrd.make(q_1A);
-WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:13  BOrd.make from a variable: /* BOrd.make(q) */
-WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:15  BOrd.make from a variable: BOrd.make(q);
-WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:17  BOrd.make from a variable: log("BOrd.make(q)");
-WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:20  BOrd.make from a variable: /* open BOrd.make(q); // lint-arbitrary-ord: reviewed in open block
-WARN  lint-arbitrary-ord  @DIR@/c/src/A.java:23  BOrd.make from a variable: BOrd.make(q) // x
 -- stderr --
 -- c/src/A.java --
 class A {

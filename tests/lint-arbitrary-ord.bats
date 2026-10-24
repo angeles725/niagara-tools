@@ -99,3 +99,15 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [ "$output" = "lint-arbitrary-ord: cannot scan $d/A.java: Permission denied" ]
 }
+
+# Truth fix T1 (r10 Go port): the call is matched in code. The awk matched the raw line before its //
+# comment, so a BOrd.make(var) in a Javadoc or /* */ block line, or inside a string literal, WARNed (two
+# of the 20 Cliente rows were Javadoc lines of chihuahua).
+@test "AO13: BOrd.make(var) in a Javadoc, a block comment or a string literal is not a call" {
+  # Mutation: AO13 -- matching the raw line WARNs on the Javadoc, block-comment and string mentions.
+  printf 'class A {\n  /**\n   * Resolve via BOrd.make(parentOrd).get()\n   */\n  /* BOrd.make(q) */ void f(String q) {\n    log("BOrd.make(q)");\n    BOrd.make(q);\n  }\n}\n' > "$TMPDIR_T/M/src/A.java"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 1 ]
+  [[ "$output" == *"A.java:7  BOrd.make from a variable"* ]]
+}
