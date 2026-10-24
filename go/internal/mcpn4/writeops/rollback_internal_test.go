@@ -47,6 +47,7 @@ type tstation struct {
 	failLoad func(ord string, depth int) error
 	onSync   func(op *pyjson.Object)
 	assign   func(name string) string // the name an add gets (nil: the one asked for)
+	failSSC  error                    // every checkLinks fails with it, before it is applied
 }
 
 func newTStation() *tstation {
@@ -167,6 +168,9 @@ func (s *tstation) Sync(op any) (any, error) {
 
 func (s *tstation) SSC(key string, arg any) (any, error) {
 	s.sent = append(s.sent, arg)
+	if s.failSSC != nil {
+		return nil, s.failSSC
+	}
 	a := arg.(*pyjson.Object)
 	tgt := s.byH[get(a, "t").(string)]
 	name := "Link"
@@ -368,6 +372,27 @@ func TestAComponentOrRelinkIntentThatCannotBeWrittenStopsInDoubt(t *testing.T) {
 		if last := lines[len(lines)-1]; !strings.Contains(last, `"outcome": "error"`) || strings.Contains(last, `"batch_id": null`) {
 			t.Errorf("%s: audit %s", c.phase, last)
 		}
+	}
+}
+
+// A relink send that fails with anything but a station error (Python's `except Exception`,
+// which no station reply reaches: box raises only BoxError) leaves the batch in-doubt with the
+// class name, listing the components created; a station error is no verdict instead.
+func TestARelinkSendThatFailsUnexpectedlyIsInDoubtListingTheComponents(t *testing.T) {
+	r := newTRig(t, 200)
+	bid := r.removed(t)
+	r.st.failSSC = &plan.PyError{Type: "TypeError", Msg: "odd reply"}
+	text, isErr, _ := r.write(t, "n4_rollback", obj("batch_id", bid))
+	if !isErr || !strings.Contains(text, "in-doubt (the station may or may not have applied it; inspect it before retrying): TypeError. "+
+		"Components already created by this batch (remove the top-level one to clean up): "+tFolder+"/Grp, ") ||
+		!strings.Contains(text, tFolder+"/Grp/Sub/Deep") {
+		t.Fatal(text)
+	}
+	r = newTRig(t, 200)
+	bid = r.removed(t)
+	r.st.failSSC = &box.Error{Kind: box.KindBox, Msg: "HTTP 500 from station"}
+	if _, isErr, out := r.write(t, "n4_rollback", obj("batch_id", bid)); isErr || get(out, "in_doubt") != true {
+		t.Fatalf("a station error: %v %s", isErr, pyjson.Repr(out))
 	}
 }
 
