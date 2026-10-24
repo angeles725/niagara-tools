@@ -143,7 +143,8 @@ func helperName(s string) string {
 type file struct {
 	path       string
 	lines      []string
-	code       []string // the lines with comments removed (javasrc.Strip): where calls are read
+	code       []string         // the lines with comments removed (javasrc.Strip): where calls are read
+	scopes     []javasrc.Method // the method and class-level lambda bodies (javasrc.Scopes)
 	helpers    map[string]bool
 	constMs    map[string]float64
 	propMin    map[string]float64
@@ -152,7 +153,7 @@ type file struct {
 }
 
 func scanFile(f *javasrc.File, helpers map[string]bool) []lint.Finding {
-	r := &file{path: f.Path, lines: f.Raw, code: f.Stripped(), helpers: helpers,
+	r := &file{path: f.Path, lines: f.Raw, code: f.Stripped(), scopes: f.Scopes(), helpers: helpers,
 		constMs: map[string]float64{}, propMin: map[string]float64{}, getterSlot: map[string]string{}}
 	r.declarations()
 	r.calls()
@@ -322,7 +323,7 @@ func (r *file) classify(lnum int, arg string) {
 		}
 	}
 
-	// 3. BRelTime.make(VAR): a same-method guard, else the variable's binding up to 50 lines back.
+	// 3. BRelTime.make(VAR): a same-method guard, else the variable's nearest binding in the same body.
 	if loc := makeVar.FindStringIndex(arg); loc != nil {
 		seg := strings.Replace(arg[loc[0]:], "BRelTime.make(", "", 1)
 		if k := strings.IndexByte(seg, ')'); k >= 0 {
@@ -332,7 +333,7 @@ func (r *file) classify(lnum int, arg string) {
 		if r.guarded(lnum, v) {
 			return
 		}
-		for j := lnum - 1; j >= 1 && j >= lnum-50; j-- {
+		for j := lnum - 1; j >= r.scopeStart(lnum); j-- {
 			if r.binding(lnum, v, r.code[j-1]) {
 				return
 			}
@@ -387,35 +388,56 @@ func (r *file) helper(lnum int, fn string, guard bool) {
 	return
 }
 
-// binding reads one earlier code line ln (comments removed) for the binding of variable v; true when it
-// decided the call. v must appear there as a whole name.
+// scopeStart is the first line (1-based) of the method or lambda body holding line lnum (javasrc.Scopes),
+// where a backward walk from the call stops; lnum itself when no body holds it (nothing is read).
+func (r *file) scopeStart(lnum int) int {
+	if m, ok := javasrc.Enclosing(r.scopes, lnum); ok {
+		return m.Start
+	}
+	return lnum
+}
+
+// binding reads one earlier code line ln (comments removed) for an assignment of variable v (a whole name
+// followed by "=", not "=="); false when ln assigns no v. The nearest assignment decides the call: a
+// Math.max(., k) floor (FAIL when k <= 0), a BRelTime literal (FAIL when 0) or a helper call, and any other
+// value FAILs unfloored; it never falls through to an earlier binding.
 func (r *file) binding(lnum int, v, ln string) bool {
-	pos := nameAt(ln, v)
-	if pos < 0 {
+	rhs, ok := assigned(ln, v)
+	if !ok {
 		return false
 	}
-	if loc := maxBinding.FindStringIndex(ln); loc != nil {
-		if k := digits.FindString(ln[loc[1]:]); k != "" {
+	if loc := maxBinding.FindStringIndex(rhs); loc != nil {
+		if k := digits.FindString(rhs[loc[1]:]); k != "" {
 			if n, _ := strconv.ParseFloat(k, 64); n <= 0 {
 				r.emit(lint.Fail, lnum, "zero-floor  local "+v+"=Math.max(.,k) k="+num(n)+" (<=0)")
 			}
 			return true
 		}
 	}
-	if ms := literalMs(ln); ms >= 0 {
+	if ms := literalMs(rhs); ms >= 0 {
 		if ms == 0 {
 			r.emit(lint.Fail, lnum, "literal-zero  local "+v+"=BRelTime(0)")
 		}
 		return true
 	}
-	after := ln[pos+len(v):]
-	if loc := assign.FindStringIndex(after); loc != nil {
-		if fn := helperName(strings.TrimLeft(after[loc[1]:], " \t\n\v\f\r")); fn != "" {
-			r.helper(lnum, fn, false)
-			return true
+	if fn := helperName(strings.TrimLeft(rhs, " \t\n\v\f\r")); fn != "" {
+		r.helper(lnum, fn, false)
+		return true
+	}
+	r.emit(lint.Fail, lnum, "unfloored  cannot verify floor of variable: "+v)
+	return true
+}
+
+// assigned is the text after the "=" of the first whole-name v in s that is assigned (v, blanks, "=" not
+// followed by "="), ok false when s assigns no v.
+func assigned(s, v string) (rhs string, ok bool) {
+	for pos := nameAt(s, v); pos >= 0; pos = nameFrom(s, v, pos+1) {
+		after := s[pos+len(v):]
+		if loc := assign.FindStringIndex(after); loc != nil {
+			return after[loc[1]-1:], true
 		}
 	}
-	return false
+	return "", false
 }
 
 func isNameByte(c byte) bool {
@@ -424,11 +446,14 @@ func isNameByte(c byte) bool {
 
 // nameAt is the byte offset of the first whole-name occurrence of v in s (no name character glued to an
 // end of v that is itself a name character), -1 when there is none.
-func nameAt(s, v string) int {
+func nameAt(s, v string) int { return nameFrom(s, v, 0) }
+
+// nameFrom is nameAt from byte offset off of s on.
+func nameFrom(s, v string, off int) int {
 	if v == "" {
 		return -1
 	}
-	for off := 0; ; {
+	for {
 		i := strings.Index(s[off:], v)
 		if i < 0 {
 			return -1

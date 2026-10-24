@@ -228,6 +228,17 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [[ "$output" == *"BlockCommentApostrophe.java:7  unfloored"* ]]
 }
 
+@test "LD25: an unfloored re-binding in a second method FAILs, never borrowing the first method's floor" {
+  # Mutation: LD25 -- walking 50 lines back past the method start lets second() borrow first()'s Math.max(p, 1L)
+  # Go golden: go/internal/lint/rules/delays/testdata/truth-binding-scope-1.txt
+  printf '%s\n' 'package com.x;' 'public class BT extends BComponent {' '  void first(long p) {' '    long ms = Math.max(p, 1L);' \
+    '    Clock.schedule(this, BRelTime.make(ms), a, null);' '  }' '  void second(long p) {' '    long ms = p;' \
+    '    Clock.schedule(this, BRelTime.make(ms), a, null);' '  }' '}' > "$ONE/BT.java"
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-delays     $ONE/BT.java:9  unfloored  cannot verify floor of variable: ms" ]
+}
+
 @test "LD-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
   # Mutation: LD-locked -- a raw find walk skips the locked directory and passes clean.
   printf "class A {}\n" > "$ONE/A.java"
