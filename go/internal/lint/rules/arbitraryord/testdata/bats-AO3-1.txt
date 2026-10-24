@@ -1,0 +1,7 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(){ BOrd.make(SERVICE_ORD); } }

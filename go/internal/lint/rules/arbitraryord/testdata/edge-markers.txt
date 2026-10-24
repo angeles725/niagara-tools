@@ -1,0 +1,34 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:4  reviewed marker without a reason (add one): BOrd.make(q); // lint-arbitrary-ord: reviewed	
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:5  reviewed marker without a reason (add one): BOrd.make(q); // lint-arbitrary-ord: reviewedx
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:6  BOrd.make from a variable: BOrd.make(q); // LINT-ARBITRARY-ORD: reviewed caps
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:8  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:10  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:12  BOrd.make from a variable: BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:16  reviewed marker without a reason (add one): BOrd.make(q);
+WARN  lint-arbitrary-ord  @DIR@/m/src/A.java:18  reviewed marker without a reason (add one): BOrd.make(q); // lint-arbitrary-ord: reviewed
+-- stderr --
+-- m/src/A.java --
+class A {
+  void f(String q) {
+    BOrd.make(q); //lint-arbitrary-ord:reviewed tight
+    BOrd.make(q); // lint-arbitrary-ord: reviewed	
+    BOrd.make(q); // lint-arbitrary-ord: reviewedx
+    BOrd.make(q); // LINT-ARBITRARY-ORD: reviewed caps
+    int y = 0; // lint-arbitrary-ord: reviewed not above
+    BOrd.make(q);
+    /* lint-arbitrary-ord: reviewed block */
+    BOrd.make(q);
+    String s = "x"; // lint-arbitrary-ord: reviewed code line above
+    BOrd.make(q);
+	// lint-arbitrary-ord: reviewed tab indent
+    BOrd.make(q);
+    // lint-arbitrary-ord: reviewed
+    BOrd.make(q);
+    // lint-arbitrary-ord: reviewed first
+    BOrd.make(q); // lint-arbitrary-ord: reviewed
+  }
+}
