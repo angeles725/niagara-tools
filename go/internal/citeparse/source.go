@@ -11,5 +11,3 @@ func aliases(_ []string, _ []bool) map[string]string { return nil }
 // inline reads the prose citations of line i; none are read yet.
 func (sc *scan) inline(_ int) []Pointer { return nil }
 
-// corpusClause reads a research-block clause; not covered yet.
-func corpusClause(c, _ string) []Pointer { return unparsed(c, "kind not covered") }
