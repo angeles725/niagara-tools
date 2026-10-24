@@ -11,6 +11,8 @@ PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
 FAIL  plugin-pin    plugin 7.6.2 (from --plugin-version) missing from @DIR@/nh22/etc/m2 — pick the version this install ships
 PASS  jar-lock      no locked jars under @DIR@/nh22/modules/
 -- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

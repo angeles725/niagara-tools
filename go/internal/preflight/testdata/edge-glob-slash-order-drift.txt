@@ -14,6 +14,8 @@ WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/w/p/a version 2.
 WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/w/p version 2.0.0
 WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/w version 2.0.0
 -- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

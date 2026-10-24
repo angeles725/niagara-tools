@@ -9,6 +9,8 @@ PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
 FAIL  plugin-pin    plugin 7.6.17 missing from @DIR@/n4-7.6.17/etc/m2 — copy from Niagara install
 PASS  jar-lock      no locked jars under @DIR@/n4-7.6.17/modules/
 -- stderr --
+-- @kind --
+truth: hand-edited want of the case edge-plugin-substring-home recorded at 5a4668f0: plugin-pin matches the settings version as an exact etc/m2 directory name (retro r10-preflight-go Δ3)
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

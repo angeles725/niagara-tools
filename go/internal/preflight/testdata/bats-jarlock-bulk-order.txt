@@ -9,6 +9,8 @@ PASS  jdk8          JDK 8 found: @DIR@/jvm/java-8-openjdk-amd64/
 FAIL  plugin-pin    plugin 7.6.17 missing from @DIR@/nh2/etc/m2 — copy from Niagara install
 WARN  jar-lock      jars held by a process (station running?): Mod007.jar Mod250.jar Mod399.jar
 -- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

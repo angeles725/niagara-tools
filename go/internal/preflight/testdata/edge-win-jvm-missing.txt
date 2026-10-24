@@ -8,6 +8,8 @@ exit 1
 FAIL  win-path      niagara_home is a Windows path — use /mnt/c/... in WSL instead
 FAIL  jdk8          JDK 8 not found under @DIR@/none (or JAVA_HOME); use --jvm-dir to override
 -- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

@@ -7,6 +7,8 @@
 exit 3
 -- stderr --
 preflight: niagara_home not found: @DIR@/nope
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

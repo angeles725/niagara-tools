@@ -14,6 +14,8 @@ PASS  sample-user   niagara_user_home has no <…> placeholder
 FAIL  sample-sign   root @DIR@/tls/build.gradle.kts lacks (uncommented) allowDefaultProfile.set(false) (or = false) — the signing block is signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile }
 PASS  sample-build  no shipped build/ directory
 -- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

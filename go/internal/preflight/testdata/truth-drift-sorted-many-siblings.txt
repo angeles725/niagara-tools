@@ -13,6 +13,8 @@ WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w/p/c version 10
 WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w/p version 9.0.0
 WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w version 9.0.0
 -- stderr --
+-- @kind --
+truth: hand-edited want of the case edge-drift-many-siblings recorded at 5a4668f0: version-drift reads each tree in sorted order (retro r10-preflight-go Δ4)
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts

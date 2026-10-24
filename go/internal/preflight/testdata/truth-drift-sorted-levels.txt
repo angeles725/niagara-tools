@@ -11,6 +11,8 @@ PASS  jar-lock      no locked jars under @DIR@/nh/modules/
 WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/w/q version 3.0.0
 WARN  version-drift  @DIR@/w/p/me version 1.0.0 < sibling @DIR@/v version 4.0.0
 -- stderr --
+-- @kind --
+truth: hand-edited want of the case edge-drift-levels recorded at 5a4668f0: version-drift reads each tree in sorted order (retro r10-preflight-go Δ4)
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
