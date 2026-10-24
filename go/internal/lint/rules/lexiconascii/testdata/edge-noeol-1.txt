@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-rt/module.lexicon (noeol) --
+a=b
+bad=café
+-- Mod/Mod-rt/one.lexicon (noeol) --
+only=é
