@@ -338,6 +338,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-lint-servlet-try-scope.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-size.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-status-parity.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-uberjar-api.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-wb-threading.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-write-path.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-ws-placement.md | kit | 2026-10-24 | pending | 3 |

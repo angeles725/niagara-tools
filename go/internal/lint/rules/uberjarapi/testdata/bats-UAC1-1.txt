@@ -1,0 +1,10 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+-- stderr --
+-- repo/M/x-rt.gradle.kts --
+dependencies {
+  api(":baja")
+  uberjar("com.opencsv:opencsv:5.7.1")
+}
