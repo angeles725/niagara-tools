@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · r10-path-keyed-gates-skip-data
@@ -71,4 +71,4 @@ gate only gives late feedback. The kit has no identity pin of the drifting shape
 - Drift is found in worktrees and CI, so a pin that skips there gives no protection where it is needed.
 
 ---
-**Status**: PENDING 2026-10-24 — 2 deltas proposed; fold in the same branch.
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-gate-data-retro`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine "A path filter in a gate skips only paths no check applies to" (`:287`) and `CONTRIBUTING.md` § 6.1 stale-index paragraph (`:248`), corrected to say the pre-push content half does not run on a `retros/`/`ledger.d/`/`BUILD-STATE.md`-only range; the hook fix itself is owed (ledger.d `open_issue` "pre-push data-only skip"); Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine "An identity pin between shared copies does not skip where drift happens" (`:297`). INDEX row generated from the header: `| 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |`
