@@ -63,14 +63,12 @@ const (
 	msgCsrfOnly = "X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]"
 )
 
-// block is the text of the brace block that opens at or after line start (0-based): the lines, each
-// prefixed by " ", from start to the line where the depth counted over them returns to 0, or to the end
-// of the file. needOpen ignores a "}" before the first "{" counted (the catch scan) instead of
-// only a "}" at depth 0 (the handler and try scans). end is the closing line, or start when the block
-// never closes (the awk's try_end kept its initial value); closed tells the two apart.
-func block(lines []string, start int, needOpen bool) (text string, end int, closed bool) {
+// block is the text of the handler body that opens at or after line start (0-based): the lines, each
+// prefixed by " ", from start to the line where the brace depth counted over them returns to 0 (a "}" at
+// depth 0 is skipped), or to the end of the file.
+func block(lines []string, start int) string {
 	var b strings.Builder
-	depth, opened := 0, false
+	depth := 0
 	for j := start; j < len(lines); j++ {
 		b.WriteString(" ")
 		b.WriteString(lines[j])
@@ -78,16 +76,14 @@ func block(lines []string, start int, needOpen bool) (text string, end int, clos
 			switch {
 			case ch == '{':
 				depth++
-				opened = true
-			case ch == '}' && depth > 0 && (opened || !needOpen):
-				depth--
-				if depth == 0 {
-					return b.String(), j, true
+			case ch == '}' && depth > 0:
+				if depth--; depth == 0 {
+					return b.String()
 				}
 			}
 		}
 	}
-	return b.String(), start, false
+	return b.String()
 }
 
 // rethrow is a throw statement in a catch body.
@@ -205,7 +201,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if !handler.MatchString(ln) {
 			continue
 		}
-		body, _, _ := block(lines, i, false)
+		body := block(lines, i)
 		if write.MatchString(body) && !auth.MatchString(body) {
 			add(lint.Fail, "auth", i+1, msgAuth)
 		}
