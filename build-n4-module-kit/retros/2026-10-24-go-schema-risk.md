@@ -19,13 +19,13 @@ retype) print in declaration order; bash printed gawk `for (nm in …)` hash ord
 
 ## Evidence
 - RED (package missing) → GREEN; 8 fixture goldens recorded from bash byte-identical `[ev: go/internal/schemarisk/command_test.go TestGolden]`
-- 330 real snapshot pairs (14 Cliente modules crossed, 67 consecutive git-revision pairs of 10 tracked modules, both
+- 330 real snapshot pairs (14 client-tree modules crossed, 67 consecutive git-revision pairs of 10 tracked modules, both
   ways), stdout + stderr + exit: port commit 142 byte-identical + 188 order-only, 0 other; after the order fix 140 +
   190, 0 other (every order-only pair permutes rows inside one category only)
 - Order fix RED: name order put `Multi.alpha` before `Multi.zeta` `[ev: go/internal/schemarisk/testdata/multi_row.golden]`
 - SR-multi fails on the bash body before the swap `[ev: tests/schema-risk.bats SR-multi]`
 - Truth fixes T1-T3 (Δ1-Δ3 below), each one commit with its RED, a Go test and a bats pin `[ev: tests/schema-risk.bats SR-empty-before]` `[ev: tests/schema-risk.bats SR-unreadable-java]` `[ev: tests/schema-risk.bats SR-unbalanced]` `[ev: tests/schema-risk.bats SR-type-name]`
-- 330 real pairs after T1-T3, against the origin/main bash: 140 byte-identical, 145 order-only, 45 changed beyond order, all 45 T1: the five slotless -ux/-wb modules (UmbrellaDashboard-ux, Apillm-wb, two client dashboard -ux modules, the client-E dashboard -ux) as before against the nine slotted ones, LOSSY remove rows in bash, the same slots as add_slot SAFE now. T2 and T3 change no real row: no client Java file is unreadable or holds an unparsed annotation, and every client module-include.xml parses and names the same type
+- 330 real pairs after T1-T3, against the origin/main bash: 140 byte-identical, 145 order-only, 45 changed beyond order, all 45 T1: the five slotless -ux/-wb modules (the client-D dashboard -ux, a client -wb module, two client dashboard -ux modules, the client-E dashboard -ux) as before against the nine slotted ones, LOSSY remove rows in bash, the same slots as add_slot SAFE now. T2 and T3 change no real row: no client Java file is unreadable or holds an unparsed annotation, and every client module-include.xml parses and names the same type
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
