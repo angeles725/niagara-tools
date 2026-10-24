@@ -589,7 +589,7 @@ JAVA
 #   RM43  the chosen wiring map is named in the row detail (PASS row and the Table 2 FAIL reason), so a
 #         false FAIL from the parent-dir fallback can be traced. (R4-parent-map-discovery)
 #   RM44  the full summary string of a zero-ADVISORY run is pinned. (R3-summary-format-change)
-#   RM45  structural: the optional-argument arrays are expanded with ${A[@]+"${A[@]}"} (an empty
+#   RM45  structural: report-module's optional-argument array is expanded with ${A[@]+"${A[@]}"} (an empty
 #         "${A[@]}" is an unbound-variable error under set -u on bash < 4.4). (R3/R4-empty-array-set-u)
 # The member is replaced through a symlinked copy of the toolbelt (TOOLBELT resolves to the dir of the
 # invoked path), so no env override is added to the production script.
@@ -640,13 +640,12 @@ JAVA
 }
 
 @test "RM45: optional-argument arrays use the set -u safe \${A[@]+\"\${A[@]}\"} expansion" {
-  run grep -nE '[^+]"\$\{(LTF_ARGS|ltf_args|sp_args)\[@\]\}"' \
-    "$KIT/toolbelt/report-module.sh" "$KIT/toolbelt/commissioning-verify.sh"
+  # report-module.sh only: commissioning-verify.sh is a Go wrapper now and holds no optional-argument array.
+  # Mutation: RM-setu (unguard "${LTF_ARGS[@]}" in report-module.sh) -> RM45 flips.
+  run grep -nE '[^+]"\$\{LTF_ARGS\[@\]\}"' "$KIT/toolbelt/report-module.sh"
   [ "$status" -eq 1 ]
   # shellcheck disable=SC2016  # literal source text, not an expansion
   grep -qF '${LTF_ARGS[@]+"${LTF_ARGS[@]}"}' "$KIT/toolbelt/report-module.sh"
-  # shellcheck disable=SC2016  # literal source text, not an expansion
-  grep -qF '${ltf_args[@]+"${ltf_args[@]}"}' "$KIT/toolbelt/commissioning-verify.sh"
 }
 
 # polish-2026-10-02 P1c (#199, P1b review advisories): the map path is a literal in the substituted

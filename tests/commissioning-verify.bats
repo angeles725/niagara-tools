@@ -286,3 +286,56 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
   assert_symroot_same "$MINIMAL" "$CV" "$MINIMAL"
   [ "$status" -eq 0 ] && [[ "$output" == *"config-sanity"* ]]
 }
+
+# Go port truth fix T1 (retro go-commissioning-verify Δ1): bog-audit is Go and needs no python3, so its exit-3
+# SKIP row names what exit 3 means (unreadable or malformed bog, no component of the module), not python3.
+# Named mutation CV-skiptext (restore the python3 text) -> CV-bog-skip flips.
+@test "CV-bog-skip: bog-audit exit 3 (no component of --module) -> one SKIP station-checks row, no python3, exit 0" {
+  run "$CV" "$MINIMAL" --bog "$BOG_DIR/station-logic-CHECK13.bog" --module NoSuchModule
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP  commissioning  station-checks  bog-audit exit 3 (unreadable or malformed bog, or no component of the module) — run bog-audit.sh manually"* ]]
+  [[ "$output" != *"python3"* ]]
+}
+
+# Go port truth fix T2 (retro go-commissioning-verify Δ2): bog-audit reports CHECK15 (sensor-crossed) and CHECK19
+# (link-direction) as WARN only; the bash fold relayed FAIL/PASS for them, so neither check ever reached the
+# punch-list. Every folded check now relays FAIL, WARN and PASS. Named mutation CV-warndrop (relay FAIL/PASS only
+# for CHECK15/CHECK19 again) -> CV-bog-warn flips.
+@test "CV-bog-warn: CHECK15 and CHECK19 WARN rows reach the punch-list as WARN rows" {
+  # station-warn.xml: one generic own module holding the CHECK15 and CHECK19 shapes of the station-logic bog fixtures
+  run "$CV" "$MINIMAL" --bog "$BATS_TEST_DIRNAME/fixtures/commissioning-verify/station-warn.xml" --module DemoPan
+  [[ "$output" == *"WARN  commissioning  station-logic:sensor-crossed  Station/EvaporatorUnit_3  slot 'C1_temperature'"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  commissioning  station-logic:link-direction  DashPanel_1  control 'Ctrl_1'"* ]]
+}
+
+# Go port truth fix T3 (retro go-commissioning-verify Δ3): CV-ltf4's fail-closed rule now holds for every source
+# lint. A config-sanity, status-parity or recovery-path lint that exits non-zero (not 3) with no row (127 missing,
+# 126 not executable, a crash) was a PASS row in the bash tool. Named mutation CV-srcfailopen (keep the rule for
+# link-target-flags only) -> CV-src-failclosed flips.
+@test "CV-src-failclosed: config-sanity/status-parity/recovery-path exit non-zero with no row -> FAIL row, never PASS, exit 1" {
+  local m tb
+  for m in lint-config-sanity lint-status-parity lint-recovery-path; do
+    tb="$BATS_TEST_TMPDIR/$m-tb"; stub_toolbelt "$tb" "$m.sh" 'exit 127'
+    run "$tb/commissioning-verify.sh" "$MINIMAL"
+    [ "$status" -eq 1 ] || { echo "$m: status $status"; return 1; }
+    [[ "$output" == *"FAIL  commissioning  "*":MinimalPan-rt  $m.sh exited 127 with no FAIL row"* ]] || { echo "$output"; return 1; }
+    [[ "$output" != *"PASS  commissioning  ${m#lint-}:"* ]] || { echo "$m: PASS row"; return 1; }
+  done
+}
+
+# Go port truth fix T4 (retro go-commissioning-verify Δ4): an unreadable values-owed table was a PASS row ("every
+# value owed by the field is provided") beside an awk error on stderr. It is now env (exit 3) before any row, as a
+# missing table is (CV-owed5). Named mutation CV-owedread (ignore the read error) -> CV-owed-unreadable flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-unreadable: an unreadable values-owed table -> exit 3, no row, never PASS" {
+  [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `a` | t | psig | 0 | owed |\n' > "$f"
+  chmod 000 "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  chmod 644 "$f"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"commissioning-verify: values-owed table not readable: $f"* ]]
+  [[ "$output" != *"PASS  commissioning"* ]]
+}
