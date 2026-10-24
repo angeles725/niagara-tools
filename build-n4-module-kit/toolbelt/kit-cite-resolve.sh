@@ -21,7 +21,8 @@
 #         TOOL_ERROR. Not findings: RESOLVED; HISTORICAL_DRIFT (a missing or out-of-range
 #         target on a history card: retros/, ledger.d/, BUILD-STATE.md, BUILD-STATE.src.md, CHANGELOG.md;
 #         the original status stays in the detail); UNVERIFIABLE_KIND (evidence no tree holds: memory-tool,
-#         live, VCS/tracker, command run, decision ID, self-marked); SKIPPED_TEMPLATE (a `<stem>` placeholder).
+#         live, VCS/tracker, command run, decision ID, self-marked, an http(s) URL: never a file lookup);
+#         SKIPPED_TEMPLATE (a `<stem>` placeholder).
 # Exits:  0 no finding, or findings without --strict · 1 any finding under --strict · 3 usage, a missing
 #         or unreadable root or card, a tool error row, no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).

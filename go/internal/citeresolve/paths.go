@@ -120,8 +120,10 @@ func boldBullet(l string) (string, bool) {
 
 var titleCut = regexp.MustCompile("\\s[—–]\\s|\\(|\\[|:\\s|`")
 
-// titleWords lowercases the words of a title up to its first cut, numbering and punctuation dropped.
+// titleWords lowercases the words of a title up to its first cut, numbering and punctuation dropped. A
+// title that opens with a code span (`module-include.xml` vs …) keeps that span's text as its first word.
 func titleWords(s string) []string {
+	s = unwrapLeadingCode(s)
 	if loc := titleCut.FindStringIndex(s); loc != nil {
 		s = s[:loc[0]]
 	}
@@ -132,6 +134,19 @@ func titleWords(s string) []string {
 		}
 	}
 	return out
+}
+
+// unwrapLeadingCode drops the backticks of a code span that opens s, so the backtick cut of titleWords
+// ends the title after it, not before it.
+func unwrapLeadingCode(s string) string {
+	rest, ok := strings.CutPrefix(strings.TrimSpace(s), "`")
+	if !ok {
+		return s
+	}
+	if code, after, closed := strings.Cut(rest, "`"); closed {
+		return code + after
+	}
+	return s
 }
 
 type pathResolver struct{ e *Engine }
