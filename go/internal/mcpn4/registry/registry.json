@@ -1,7 +1,7 @@
 {
  "server": {
   "name": "mcp-n4",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "protocol_versions": [
    "2025-06-18",
    "2025-03-26",
@@ -361,7 +361,7 @@
   },
   {
    "name": "n4_list_batches",
-   "description": "List the write batches in this server's journal, newest first: batch_id, tool, station_name, ts, state (completed / in-doubt), verdict, rollback_of and rolled_back_by. Use it to find the batch_id for n4_rollback. Reads the journal only; works without a session.",
+   "description": "List the write batches in this server's journal, newest first: batch_id, tool, station_name, ts, state (completed / in-doubt), verdict, rollback_of and rolled_back_by. Use it to find the batch_id for n4_rollback. A journal line that cannot be read is listed in unreadable and the reply says the list is incomplete. Reads the journal only; works without a session.",
    "inputSchema": {
     "type": "object",
     "properties": {

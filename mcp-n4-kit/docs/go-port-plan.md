@@ -99,13 +99,14 @@ refuses `--allow-writes` with the existing "not in this version" refusal.
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
-**Status (origin/main `818d573e`, server v0.9.3).** S0-S7 merged: #337, #345, #353, #365, #383,
-#399, #413, #435. `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves 11 read
-tools: `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
+**Status (server v0.9.4).** S0-S9 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462; issue #448 (unreadable journal lines) then changed both servers together (section 12).
+`readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
+`n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
 `n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
-`n4_px_summary`. S8-S16 are not started: `n4_list_batches`, `n4_session_retro_draft` and the
-seven write tools answer the "not implemented" text (section 6), and `--allow-writes` is refused
-at start. Under the Go binary the suite runs 622 tests with 448 skipped (section 11).
+`n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10-S16 are not started: the seven
+write tools answer the "not implemented" text (section 6), and `--allow-writes` is refused at
+start. Under the Go binary the suite runs 641 tests with 448 skipped (sections 12 and 13).
 
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
@@ -205,7 +206,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
-| `test_list_batches.py` | 5 | 0 | 0 | 0 | 0 | 0 | 5 |
+| `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
@@ -214,9 +215,9 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
+| `test_tools_destructive.py` | 101 | 4 | 24 | 28 | 2 | 58 | 43 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **637** | **166** | **56** | **105** | **18** | **345** | **292** |
+| **Total** | **641** | **166** | **56** | **105** | **18** | **345** | **296** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -485,13 +486,27 @@ parents 0777 less the umask) and chmods only what it created; the file is opened
 `O_WRONLY|O_APPEND|O_CREAT|O_EXCL` 0600, and on `EEXIST` reopened without `O_CREAT` and refused
 with Python's `PermissionError` text when it is not private (never chmodded); one write of
 `json.dumps(entry) + "\n"`. Reading follows Python exactly: a file that cannot be opened is empty,
-a line that is not a JSON object is skipped, `\r` and `\r\n` end lines, and bytes that are not
-UTF-8 fail as `TextIOWrapper` fails, chunk by chunk (8192 bytes; positions count from the chunk;
-CPython keeps a cut `0xED` lead pending whatever its continuation byte). Batch ids are keyed as
-Python dict keys: `1`, `true` and `1.0` are one batch, every JSON `NaN` is one object, and a list
-or dict id is a `TypeError` (the tool answers `internal error (TypeError)`) only in a phase that
-keys it; `component-intent` ops extend as `list.extend` does (a string by characters, a dict by
-keys, a number is a `TypeError`).
+a line that is not a JSON object is skipped, and `\r` and `\r\n` end lines. Batch ids are keyed
+as Python dict keys: `1`, `true` and `1.0` are one batch, every JSON `NaN` is one object, and a
+list or dict id cannot key a batch only in a phase that keys it; `component-intent` ops extend as
+`list.extend` does (a string by characters, a dict by keys, a number cannot).
+
+**Unreadable lines (issue #448, v0.9.4, both servers).** The journal is read as bytes, split as
+`bytes.splitlines` splits (the line ends `readlines()` honours) and decoded line by line, so the
+`TextIOWrapper` chunk quirk no longer applies to it (`pyjson.ReadLines` keeps it for the audit
+log). A line is *unreadable* when it is not UTF-8 (`UnicodeDecodeError`: its batch is unknown) or
+when, in a batch phase, its `batch_id` (or, in an `intent` or `result`, a truthy `rollback_of`)
+cannot key a dict, or its component ops cannot extend a list (`TypeError`: its batch is known).
+An unreadable line is left out of every view. `n4_list_batches` lists the readable batches as
+before and, only when a line is unreadable, adds `incomplete` (a sentence saying the list is
+incomplete) and `unreadable` (one `unreadable journal line N: <error class>` row per line; no
+byte of the line is echoed). The rollback rule: `n4_rollback` of batch B is refused with
+`journal line unreadable: batch B may be recorded on journal.jsonl line(s) N (reason), ...`,
+before B is looked up, when an unreadable line has an unknown batch, or its `batch_id` is B, or its
+`rollback_of` is B (a lost rollback of B could let B be rolled back twice); an unreadable line of
+another known batch does not block B. `_BATCH_ID` is `[0-9a-f]{32}\Z` under `re.match` and the Go
+pattern `^[0-9a-f]{32}$`: an id with a trailing newline is malformed in both. A torn line (not
+JSON) is still skipped silently, as before: the server writes each line in one `write`.
 
 **Proof.** The 49 `@go_twin` tests of `test_safety` (46) and `test_box.TestChildOrd` (3) have Go twins of
 the same names (`token`, `ord`, `journal`; the `audit` markers now name `journal` and `token`,
@@ -500,14 +515,16 @@ where the code lives) plus `readtools.TestItIsReadOnlyAndWorksWithoutASession`. 
 the Python server wrote (`tests/fixtures/journal/generate.py` → `python-written/`: a create and
 its rollback, a remove and its rollback with component and relink records, an intent whose send
 failed, a link whose result is `in_doubt`) and requires `tools_read.n4_list_batches`' reply byte
-for byte, also after torn lines, a non-UTF-8 byte and an unhashable id. Under `MCP_N4_IMPL=go`:
-627 tests, 448 skipped (622 / 448 before; the 5 new ones run). Differentials on CPython 3.15:
+for byte, also after torn lines, a non-UTF-8 line and unhashable ids in the middle of the journal
+(6 tests since #448). Under `MCP_N4_IMPL=go`: 627 tests, 448 skipped at S8; #448 (after S9)
+adds one list test and three rollback tests of `test_tools_destructive`, which skip until S13
+(their journal checks have Go tests of the same names in `journal`): 641 / 448. Differentials on CPython 3.15:
 `token.TestTokensDifferentialPython` (key, clock and pending nonces injected into one
 `ConfirmationTokens` instance, never by patching the package: mac, bound args, redaction,
 consume verdict, pending set, issue expiry), `ord.TestScopeAndJoinDifferentialPython` (16
 scopes × 36 ORDs, 13 parents × 15 names), `pyjson.TestReadLinesDifferentialPython` (144 files
 around the chunk boundaries) and `journal.TestJournalDifferentialPython` (the Python-written
-dir and 16 edge journals: views, `read`, `rollbacks_of`, `n4_list_batches` at three limits and
+dir and 18 edge journals, two with a bad line between two batches: views, `read`, `rollbacks_of`, `n4_list_batches` at three limits and
 the journal verdict of the real `_rollback_plan`, every branch reached). Both in-doubt batches
 the Python server wrote are refused by `RollbackTarget` with Python's text
 (`journal.TestAPythonInDoubtBatchIsRefused`). 44 hand mutants of the refusal, binding, scope,
@@ -520,9 +537,11 @@ Python's `n4_list_batches` answer `internal error (RecursionError)`; Go parses i
 writes those lines itself). `File.Append` completes a short write, where `os.write` would leave a
 partial line, and an `OSError` from opening the file is Go's error text; no S8 caller shows it
 (the write tools of S10 will). `ChildOrd` and `JoinOrd` take strings: their non-string refusals
-are Python-only paths. Observed in Python and kept: one non-UTF-8 byte or one unhashable batch id
-anywhere in `journal.jsonl` makes `n4_list_batches` (and a rollback) fail for every batch, and
-`_BATCH_ID.match` accepts an id with one trailing newline (then refused as unknown).
+are Python-only paths. Observed in Python 0.9.3 and fixed in both servers by issue #448 (v0.9.4): one non-UTF-8 byte
+or one unhashable batch id anywhere in `journal.jsonl` made `n4_list_batches` and every rollback
+fail, and `_BATCH_ID.match` accepted an id with one trailing newline. The audit log
+(`AuditLog.entries`, read by the session retro in S9) still reads as `readlines()` reads: one
+non-UTF-8 byte there still fails the retro draft.
 
 ## 13. S9 `retro` and `n4_session_retro_draft`
 
