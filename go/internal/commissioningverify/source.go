@@ -94,7 +94,7 @@ func (r *report) sourceChecks(tb string, src srcDir, strict bool, wmap string) {
 		case ltf:
 			clean = "LTF1/LTF2 clean (no wiring map)"
 		}
-		out, code := run(filepath.Join(tb, l.script+".sh"), append(args, src.path)...)
+		out, code := run(filepath.Join(tb, l.script+".sh"), r.env, append(args, src.path)...)
 		if ltf && wmap != "" {
 			out = strings.ReplaceAll(out, "(wiring-map Table 2)", "(wiring-map Table 2: "+wmap+")")
 		}
@@ -122,13 +122,13 @@ func (r *report) sourceChecks(tb string, src srcDir, strict bool, wmap string) {
 	}
 }
 
-// run executes a toolbelt script under LC_ALL=C and returns its stdout and stderr interleaved, like the shell's
+// run executes a toolbelt script with environment env plus LC_ALL=C and returns its stdout and stderr interleaved, like the shell's
 // "$(cmd 2>&1)" (NUL bytes and trailing newlines dropped), and its exit status (127 not found, 126 not
 // executable, 128+n killed by signal n).
-func run(path string, args ...string) (string, int) {
+func run(path string, env []string, args ...string) (string, int) {
 	var b bytes.Buffer
 	cmd := exec.Command(path, args...)
-	cmd.Stdout, cmd.Stderr, cmd.Env = &b, &b, append(os.Environ(), "LC_ALL=C")
+	cmd.Stdout, cmd.Stderr, cmd.Env = &b, &b, append(append([]string(nil), env...), "LC_ALL=C")
 	err := cmd.Run()
 	out := strings.TrimRight(strings.ReplaceAll(b.String(), "\x00", ""), "\n")
 	var ee *exec.ExitError

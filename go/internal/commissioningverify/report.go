@@ -18,6 +18,7 @@ const (
 type report struct {
 	out io.Writer
 	n   map[string]int
+	env []string // environment of the source lints, LC_ALL=C added
 }
 
 func (r *report) emit(status, check, detail string) {

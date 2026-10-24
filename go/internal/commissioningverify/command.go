@@ -58,8 +58,12 @@ func parseArgs(args []string) (o options, ok bool) {
 	return o, true
 }
 
-// Main runs commissioning-verify: exit 0 clean, 1 on a FAIL row, 3 on usage or an environment error.
-func Main(args []string, s cli.Stdio) int {
+// Main runs commissioning-verify: exit 0 clean, 1 on a FAIL row, 3 on usage or an environment error. The source
+// lints inherit the process environment (plus LC_ALL=C).
+func Main(args []string, s cli.Stdio) int { return mainEnv(args, s, os.Environ()) }
+
+// mainEnv is Main with the lints' environment given: tests pass a minimal one so no host variable leaks in.
+func mainEnv(args []string, s cli.Stdio, environ []string) int {
 	fail := func(format string, a ...any) int {
 		fmt.Fprintf(s.Err, "commissioning-verify: "+format+"\n", a...)
 		return ExitEnv
@@ -101,7 +105,7 @@ func Main(args []string, s cli.Stdio) int {
 	if len(srcs) == 0 {
 		return fail("no -rt/src or src/ found under %s", o.root)
 	}
-	r := &report{out: s.Out, n: map[string]int{}}
+	r := &report{out: s.Out, n: map[string]int{}, env: environ}
 	tb := toolbelt(s)
 	for _, src := range srcs {
 		r.sourceChecks(tb, src, o.strict, o.wmap)

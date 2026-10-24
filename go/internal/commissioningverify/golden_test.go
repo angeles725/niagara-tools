@@ -95,7 +95,7 @@ func TestGolden(t *testing.T) {
 				}
 				return os.Getenv(n)
 			}
-			code := Main(args, cli.Stdio{Out: &o, Err: &e, Getenv: getenv})
+			code := mainEnv(args, cli.Stdio{Out: &o, Err: &e, Getenv: getenv}, minimalEnv())
 			back := strings.NewReplacer(dir, "@DIR@", repo, "@REPO@")
 			got, stderr := back.Replace(fmt.Sprintf("exit %d\n%s", code, o.String())), back.Replace(e.String())
 			if got != c.Want || stderr != c.Stderr {

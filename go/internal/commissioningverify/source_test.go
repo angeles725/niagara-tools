@@ -34,7 +34,7 @@ func TestSourceDirs(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	t.Parallel()
+	t.Setenv("NIAGARA_TOOLS_CV_LEAK", " leaked") // a host variable outside env must not reach the script
 	d := t.TempDir()
 	script := func(name, body string, mode os.FileMode) string {
 		p := filepath.Join(d, name)
@@ -45,17 +45,20 @@ func TestRun(t *testing.T) {
 		path, out string
 		code      int
 	}{
-		{script("ok", `echo "a $LC_ALL $*"; echo b >&2; printf 'c\0\n\n\n'`, 0o755), "a C x y\nb\nc", 0},
+		{script("ok", `echo "a $LC_ALL $*${NIAGARA_TOOLS_CV_LEAK-}"; echo b >&2; printf 'c\0\n\n\n'`, 0o755), "a C x y\nb\nc", 0},
 		{script("two", "exit 2", 0o755), "", 2},
 		{script("noexec", "exit 0", 0o644), "", 126},
 		{filepath.Join(d, "missing"), "", 127},
 		{script("killed", "kill -TERM $$", 0o755), "", 143},
 	} {
-		if out, code := run(c.path, "x", "y"); out != c.out || code != c.code {
+		if out, code := run(c.path, minimalEnv(), "x", "y"); out != c.out || code != c.code {
 			t.Errorf("run(%s) = %q, %d; want %q, %d", filepath.Base(c.path), out, code, c.out, c.code)
 		}
 	}
 }
+
+// minimalEnv is the only environment the tests give the lints: PATH (bash, go) and HOME (the go build cache).
+func minimalEnv() []string { return []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME")} }
 
 func must(t *testing.T, err error) {
 	t.Helper()
