@@ -56,6 +56,9 @@ type Config struct {
 	InsecureTLS, AllowTierB, AllowTierC []string
 	AuthCooldown                        float64 // seconds, >= AuthCooldownMin
 	HTTPTimeout, LoadWait               float64 // seconds per request, total wait of one load
+	// StateDir is the expanded --state-dir (result files, journal, audit); ProgressPath the
+	// expanded --progress-file, "" when none.
+	StateDir, ProgressPath string
 }
 
 // Context is tools_read.Context.

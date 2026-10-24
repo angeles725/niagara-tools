@@ -10,8 +10,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
@@ -55,5 +57,7 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		lexiconascii.Spec(),
+		duplicatehelper.Spec(),
 	}
 }

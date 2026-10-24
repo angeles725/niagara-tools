@@ -31,10 +31,44 @@ setup() {
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L9"* ]]
 }
 
-@test "LS10: a gradle.properties with an absolute host path (C:\\Honeywell\\...) FAILs L10" {
+@test "LS10: a client gradle.properties with a host niagara_home (C:\\Honeywell\\...) WARNs L10 to migrate it (R10-D8)" {
   run "$LS" "$FX/client-gradleprops"
+  [ "$status" -eq 1 ]                        # the fixture's L4/L5/L12 FAILs
+  [[ "$output" == *"WARN  lint-structure  $FX/client-gradleprops/gradle.properties:2  L10: niagara_home is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)"* ]]
+}
+
+@test "LS10-userhome: user_home is not a build-location key: a host path under it stays the L10 FAIL (R10-D8)" {
+  # Mutation: LS10-userhome -- adding user_home to the build-location keys turns this FAIL into a WARN.
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git" "$ROOT/M/Foo-doc"
+  printf '<types/>\n' > "$ROOT/M/Foo-doc/module-include.xml"
+  printf 'user_home=/home/u\norg.gradle.java.installations.auto-detect=false\n' > "$ROOT/M/gradle.properties"
+  run "$LS" "$ROOT/M"
+  rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L10"* ]]
+  [ "$output" = "FAIL  lint-structure  $ROOT/M/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)" ]
+}
+
+@test "LS10-keys: the four build-location keys WARN in a client root (exit 0) and FAIL in a kit fixture (R10-D8, K16)" {
+  # Mutation: LS10-keys -- dropping the kit-template check WARNs a fixture's niagara_home instead of FAILing it.
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git"
+  for d in M kit/build-n4-module-kit/fixtures/MinimalPan; do
+    mkdir -p "$ROOT/$d/Foo-doc"
+    printf '<types/>\n' > "$ROOT/$d/Foo-doc/module-include.xml"
+    printf 'niagara_home=C:\\\\N\nniagara_user_home=C:\\\\U\nnodeHome=/n\norg.gradle.java.installations.paths=/j\norg.gradle.java.installations.auto-detect=false\n' > "$ROOT/$d/gradle.properties"
+  done
+  run "$LS" "$ROOT/M"
+  m_status=$status m_output=$output
+  run "$LS" "$ROOT/kit/build-n4-module-kit/fixtures/MinimalPan"
+  rm -rf "$ROOT"
+  [ "$m_status" -eq 0 ] || { echo "$m_output"; false; }
+  i=0
+  for k in niagara_home niagara_user_home nodeHome org.gradle.java.installations.paths; do
+    i=$((i + 1))
+    [[ "$m_output" == *"WARN  lint-structure  $ROOT/M/gradle.properties:$i  L10: $k is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)"* ]] || { echo "$m_output"; false; }
+  done
+  [ "$status" -eq 1 ] && [ "$(grep -c '^FAIL  lint-structure  .*gradle.properties:[1-4]  L10: absolute host path' <<<"$output")" -eq 4 ]
 }
 
 @test "LS11: a mixed BTest+JUnit srcTest without both :test-wb and junit gradle decls FAILs L11" {
@@ -72,10 +106,10 @@ setup() {
 }
 
 # ---------------------------------------------------------------------------
-# L12 — absent/commented org.gradle.java.installations block -> FAIL
+# L12 — absent/commented org.gradle.java.installations.auto-detect=false -> FAIL (R10-D8: paths may be user-level)
 # Named mutation: LS7 -- remove the L12 check -> LS12 exits 0
 # ---------------------------------------------------------------------------
-@test "LS12: gradle.properties missing org.gradle.java.installations block -> FAIL L12" {
+@test "LS12: gradle.properties missing org.gradle.java.installations.auto-detect=false -> FAIL L12" {
   ROOT=$(mktemp -d)
   # Minimal module root with a profile and gradle.properties WITHOUT the JDK installation block
   mkdir -p "$ROOT/Foo-rt/src"
@@ -89,11 +123,10 @@ setup() {
   [[ "$output" == *"L12"* ]]
 }
 
-@test "LS12-clean: gradle.properties with both installations keys -> no L12" {
+@test "LS12-clean: gradle.properties with auto-detect=false and no paths key (paths are user-level, R10-D8) -> no L12" {
   ROOT=$(mktemp -d)
   mkdir -p "$ROOT/Foo-rt/src"
-  printf 'org.gradle.java.installations.paths=/usr/lib/jvm/java-8\norg.gradle.java.installations.auto-detect=false\n' \
-    > "$ROOT/gradle.properties"
+  printf 'org.gradle.java.installations.auto-detect=false\n' > "$ROOT/gradle.properties"
   printf '<module><type name="Foo"/></module>\n' > "$ROOT/Foo-rt/module-include.xml"
   printf 'test\n' > "$ROOT/Foo-rt/module.lexicon"
   printf 'test\n' > "$ROOT/Foo-rt/module.palette"
@@ -149,7 +182,7 @@ setup() {
   [[ "$output" == *"L9"* ]]
 }
 
-@test "LS10-real: gradle.properties two levels above module root fires L10" {
+@test "LS10-real: gradle.properties two levels above module root fires L10 (a build-location key: WARN)" {
   local ROOT
   ROOT=$(mktemp -d)
   mkdir -p "$ROOT/.git"                                  # .git sentinel — upward walk stops here
@@ -159,10 +192,10 @@ setup() {
   run "$LS" "$ROOT/proj/Mod"
   rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"FAIL  lint-structure  $ROOT/gradle.properties:1  L10: "* ]]   # path:line (truth audit T7)
+  [[ "$output" == *"WARN  lint-structure  $ROOT/gradle.properties:1  L10: niagara_home "* ]]   # path:line (truth audit T7)
 }
 
-@test "LS10-shapes: spaced, colon-separated, indented, POSIX and UNC host paths all FAIL L10 (truth audit T7)" {
+@test "LS10-shapes: spaced, colon-separated, indented, POSIX and UNC host paths all fire L10 (truth audit T7)" {
   # Pinned by the wrapper header line "Mutation: LS10-shapes".
   ROOT=$(mktemp -d)
   mkdir -p "$ROOT/.git"
@@ -174,7 +207,7 @@ setup() {
   printf 'nodeHome=\\\\server\\node\n' > "$ROOT/M5/gradle.properties"
   for i in 1 2 3 4 5; do
     run "$LS" "$ROOT/M$i"
-    [ "$status" -eq 1 ] || { echo "M$i: status $status: $output"; rm -rf "$ROOT"; false; }
+    [ "$status" -eq 1 ] || { echo "M$i: status $status: $output"; rm -rf "$ROOT"; false; }   # L12: no auto-detect
     [[ "$output" == *"M$i/gradle.properties"*"L10: "* ]] || { echo "M$i: $output"; rm -rf "$ROOT"; false; }
   done
   rm -rf "$ROOT"
@@ -372,5 +405,5 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
 @test "LS-symroot: a symlinked module root is walked like find -H, same rows as the directory (issue #329)" {
   # Mutation: LS-symroot -- dropping -H from the find in _find_files misses gradle.properties under a symlinked root.
   assert_symroot_same "$FX/client-gradleprops" "$LS" "$FX/client-gradleprops"
-  [ "$status" -eq 1 ] && [[ "$output" == *"FAIL"*"L10"* ]]
+  [ "$status" -eq 1 ] && [[ "$output" == *"WARN"*"L10: niagara_home"* ]]
 }
