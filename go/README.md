@@ -14,9 +14,11 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
 | `internal/jssrc/` | the JavaScript tokenizer only: `Tokens` (comments dropped; strings, template literals with their `${...}` nesting and regex literals as single tokens, each with its line), for a rule that reads `rc/**/*.js` |
 | `internal/props/` | `Read`: a `.properties` file as `java.util.Properties.load` reads it (continuations, `#`/`!` comments, `=`/`:`/space separators, escapes), each entry with the line it starts on |
+| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
+| `internal/xmlsrc/` | the XML scanner the XML and `.bog` lints share: `Open` (a zipped `.bog` is read through the same call) and `Parse` return a well-formed `Doc` or a positioned `*Error`; `Doc.Elements`, `Find`, `Children`, `Text`, `Element.Attr` and `UnescapeName` (`.bog` slot names) |
 | `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
 | `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
@@ -124,3 +126,12 @@ rule's rows stay contiguous.
 
 Do not copy the walker, the formatter, the argument parser or the comment stripper into a rule package;
 change the shared code instead.
+
+## XML rules
+
+R8-D12: an XML or `.bog` lint is ported only onto `internal/xmlsrc`, never onto its own regexes or a second
+tokenizer. Each file is read once (UTF-8, ISO-8859-1 or US-ASCII; a zipped `.bog` unzipped in memory) and is either
+a well-formed `Doc` or an `*Error` printed as `path:line:col: message`; a malformed file is a finding, never an empty
+result. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
+`internal/pyxml/testdata/xmlerrors.json`) checks the well-formedness verdict against expat; `TestSweepRealFiles`
+(`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `split-package-check.sh`.

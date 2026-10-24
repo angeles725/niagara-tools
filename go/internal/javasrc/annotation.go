@@ -1,6 +1,9 @@
 package javasrc
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 // annotationName is an annotation's name and the blanks after it, at the "@" that starts it.
 var annotationName = regexp.MustCompile(`^@[A-Za-z_][A-Za-z0-9_.]*[[:space:]]*`)
@@ -41,3 +44,29 @@ func (a *AnnotationSkip) Step(code string, k int) (n int, ended bool) {
 	}
 	return 0, false
 }
+
+// NiagaraProperties calls fn(text, line) for every @NiagaraProperty annotation in lines (raw or Strip
+// output; the caller picks the view): from the line holding "@NiagaraProperty" on, each line prefixed with
+// " " and joined, until a "(" was seen and the parentheses balance (ParenDepth <= 0). line is the 1-based
+// line of the opening. A one-line annotation closes on its own line, so an annotation on the next line is
+// read too. An annotation still open at the end of lines is dropped. Parentheses are counted as text,
+// inside literals too (the lints this serves always read them so).
+func NiagaraProperties(lines []string, fn func(text string, line int)) {
+	open, buf, line := false, "", 0
+	for i, ln := range lines {
+		if !open && strings.Contains(ln, "@NiagaraProperty") {
+			open, buf, line = true, "", i+1
+		}
+		if !open {
+			continue
+		}
+		buf += " " + ln
+		if ParenDepth(buf) <= 0 && strings.Contains(buf, "(") {
+			fn(buf, line)
+			open, buf, line = false, "", 0
+		}
+	}
+}
+
+// ParenDepth is the count of "(" in s minus the count of ")".
+func ParenDepth(s string) int { return strings.Count(s, "(") - strings.Count(s, ")") }

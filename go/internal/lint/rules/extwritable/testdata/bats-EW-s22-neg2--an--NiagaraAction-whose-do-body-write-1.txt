@@ -1,0 +1,16 @@
+-- args --
+@DIR@/s22neg2
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/s22neg2/com/x/BAckWriter.java:3  faultReset: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../faultReset/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- s22neg2/com/x/BAckWriter.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="alarmAck",   type="BStatusBoolean", flags=Flags.SUMMARY|Flags.READONLY)
+@NiagaraAction(name="ackAlarm")
+public class BAckWriter extends BComponent {
+  // action→do<Action>: ackAlarm's write lives in doAckAlarm, but it writes alarmAck, NOT faultReset.
+  public void doAckAlarm() { setAlarmAck(new BStatusBoolean(true)); }
+}

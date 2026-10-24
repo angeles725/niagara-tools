@@ -153,3 +153,64 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" == *"WARN"* ]]
   [[ "$output" == *"SESSIONS"* ]]
 }
+
+@test "SSL-param: a static method's Map parameter, a local and a static {} table are not static fields (truth audit T5)" {
+  # Mutation: SSL-param -- taking any line with `static` and a Map<...> name as a field flags `out` here.
+  {
+    printf 'class P {\n'
+    printf '  private static final Map<String, String> TABLE = new HashMap<String, String>();\n'
+    printf '  static { TABLE.put("a", "b"); }\n'
+    printf '  private static void scan(BComponent c, Map<String, String> out)\n  {\n    out.put("k", "v");\n  }\n'
+    printf '  static void latch(String j)\n  {\n    Map<String, String> entries = parse(j);\n    entries.put(j, j);\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/P.java"
+  run "$SSL" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "SSL-everyput: every inserting method is checked, the name as a whole identifier (truth audit T5)" {
+  # Mutation: SSL-everyput -- checking only the file's first put (a substring match) reports OLD_SESSIONS's put as SESSIONS and misses relogin
+  {
+    printf 'class E {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  private static final Map<String, Entry> OLD_SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void archive(String id) {\n    OLD_SESSIONS.put(id, null);\n    OLD_SESSIONS.entrySet().removeIf(e -> e == null);\n  }\n'
+    printf '  void login(String id) {\n    SESSIONS.remove(stale());\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void relogin(String id) {\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/E.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" == *"E.java:13  static session/token map 'SESSIONS'"* ]]
+}
+
+@test "SSL-literal: a sweep spelled in a string is not one, and a // in a string cuts nothing (truth audit T5)" {
+  # Mutation: SSL-literal -- matching the raw line counts the logged "SESSIONS.remove(id)" as a sweep and reports K clean
+  {
+    printf 'class K {\n'
+    printf '  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();\n'
+    printf '  void login(String id) {\n    log("SESSIONS.remove(id) runs later");\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '  void relogin(String id) {\n    String u = "http://h/" + id; SESSIONS.remove(u);\n    SESSIONS.put(id, new Entry());\n  }\n'
+    printf '}\n'
+  } > "$TMPDIR_T/Mod/src/com/x/K.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [[ "${lines[0]}" == *"K.java:5  static session/token map 'SESSIONS'"* ]]
+}
+
+@test "SSL-srctest: srcTest is pruned, a production -rt store is still scanned (truth audit T5)" {
+  # Mutation: SSL-srctest -- scanning srcTest reports the test's static map as a production session store
+  mkdir -p "$TMPDIR_T/Mod/srcTest/test/com/x" "$TMPDIR_T/Mod-rt/src/com/x"
+  printf 'class T {\n  private static final Map<String, String> XHR = new HashMap<String, String>();\n  void a(String k) { XHR.put(k, k); }\n}\n' > "$TMPDIR_T/Mod/srcTest/test/com/x/T.java"
+  printf 'class A {}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$SSL" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  cp "$TMPDIR_T/Mod/srcTest/test/com/x/T.java" "$TMPDIR_T/Mod-rt/src/com/x/S.java"
+  run "$SSL" "$TMPDIR_T/Mod-rt"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"S.java:3  static session/token map 'XHR'"* ]]
+}

@@ -31,14 +31,14 @@ component.invoke(myAction, arg, cx);              // same rule for invoke()
 ```
 
 Both `set()` and `invoke()` must receive a real `Context`. Passing `null` to either
-skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B507; devguide security]
+skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B1316 §1316.2; devguide security/security.txt:159-173, :215]
 
 ### 1.2 oBIX PUT attribution gap (known limitation)
 
 Writes arriving via oBIX PUT go through a shared machine-level login user (not the
 individual browser user). The audit entry shows the shared user name, not the human
 operator. This is a Niagara platform limitation, not a module bug — document it in
-your module's README so integrators are not surprised. [ev: memory PANCCADIA-access-model; corpus B507 §SEC-02]
+your module's README so integrators are not surprised. [ev: corpus B829 §829.2; corpus B1273 §1273.2]
 
 ### 1.3 Servlet write audit — the customer-visible record `[ev: retro servlet-write-audit Δ1]`
 
@@ -87,7 +87,7 @@ write, and invoke:
 | `all` | 119 (0x77) | all bits set — null-Context grants this implicitly |
 
 Usage: `perms.has(BPermissions.operatorWrite)` — returns true when the permission set
-includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security]
+includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security/security.txt:97, :220-222]
 
 ### 2.2 Slot tier selection
 
@@ -95,10 +95,10 @@ includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`
 `OPERATOR` flag; it picks the operator tier for that slot's permission check.
 Slots without `OPERATOR` default to the admin tier.
 
-**Rule of thumb:** use `ADMIN_INVOKE` on every destructive or irreversible action
+**Rule of thumb:** leave `Flags.OPERATOR` off every destructive or irreversible action, so it needs `adminInvoke`
 (`faultReset`, `clearHistory`, device wipe). For a read-only status action that
 an operator panel calls, add `Flags.OPERATOR` to reduce the required permission
-to `operatorInvoke`. [ev: code Flags.java; corpus B507 §SEC-05]
+to `operatorInvoke`. [ev: code docSource Flags.java:191,451; BUser.java:1680-1686]
 
 ### 2.2a Slot flags are not a security boundary `[ev: retro n4-course-slots-components-contracts Δ2]`
 
@@ -115,7 +115,7 @@ in the setter path with the Context's permissions, and override `checkSetFlags` 
 
 A control whose authorization mixin or PIN slot is absent must be **DISABLED and HIDDEN** by default — never open-by-default. The rule applies to both Workbench manager rows and PX widgets:
 
-1. Default the authorization slot/PIN to `-1` (no assignment = no access).
+1. Treat an absent authorization mixin as no access. In Galileo a pin of `-1` means any level passes once the user carries the mixin, so `-1` is not the closed state (corpus B1079).
 2. On `loadValue()` or render, check the pin against the current session's permissions.
 3. If absent or insufficient: call `widget.setEnabled(false)` **and** `widget.setVisible(false)`.
 4. Never fall through with `setEnabled(true)` when the authorization check returns an inconclusive or missing result.
@@ -132,9 +132,10 @@ A missing mixin ≠ "unprotected"; it equals "no access". See `types/wb-widgets.
 
 ```java
 // Before posting a privileged action
-Context cx = SessionManager.getCurrentNiagaraContext(); // or pass cx from the caller
-cx.checkPermission(BPermissions.operatorInvoke, myComponent, myAction);  // throws PermissionException if denied
-post(myAction, arg);  // safe to post after the check
+BUser user = cx.getUser();  // cx = the caller's Context
+if (user == null) throw new PermissionException("no user");
+user.checkInvoke(myComponent, myAction);  // throws PermissionException if denied
+post(myAction, arg, cx);  // safe to post after the check
 ```
 
 Never rely on the framework to enforce RBAC across the `post()` boundary. This complements §1.1 (null-Context write hazard): that rule covers `set()`/`invoke()` with explicit null; this rule covers `post()` which implicitly drops context on every call.
@@ -201,8 +202,8 @@ guard. Wire it in `web.xml` for every servlet that mutates state:
 </filter-mapping>
 ```
 
-`httpMethod` is split on `,` and matched exactly against `getMethod()` (javap web-rt 4.15.6.20
-`CsrfProtectedFilter.init`/`doFilter`), so write it without spaces and list every mutating method the servlet
+`httpMethod` is split on `,` and matched exactly against `getMethod()` (javap of web-rt.jar 4.15.6.20
+`CsrfProtectedFilter.init`/`doFilter`; census: `unzip -p` of the 14 `WEB-INF/web.xml` under 4.15.6.20 `modules/`), so write it without spaces and list every mutating method the servlet
 accepts. The shipped 4.15.6.20 modules use `POST`, `POST,PUT`, `GET,POST` or `GET`; none lists `DELETE`
 (6 of the 14 jars with a `WEB-INF/web.xml` map the filter, e.g. web-rt `WEB-INF/web.xml:35` `POST,PUT`,
 bacnetAws-rt `:27` `GET,POST`). Add `DELETE` only if your servlet accepts it.
@@ -228,7 +229,7 @@ not a token-based proof. Migrate to `CsrfProtectedFilter` in new modules; keep t
 
 - `toString()` returns the masked string `"--password--"` — safe to log, safe in
   error messages.
-- `getValue()` returns the plaintext `char[]`. It requires a Java security privilege;
+- `getValue()` returns the plaintext `String`; `getSecretChars()` returns a `SecretChars`. It requires a Java security privilege;
   call it inside `AccessController.doPrivileged(...)`. **Never log the result.**
 - Use `SecretChars` (try-with-resources) to zero the char array after use — prevents
   the plaintext from sitting in a GC-able heap object.
@@ -236,15 +237,14 @@ not a token-based proof. Migrate to `CsrfProtectedFilter` in new modules; keep t
   and is lost on restart. `[ev: corpus B1416 §1416.4 b]` `[ev: retro course-recordings Δ7]`
 
 ```java
-char[] plain = AccessController.doPrivileged(
-    (PrivilegedAction<char[]>) () -> myBPassword.getValue());
-try (SecretChars sc = SecretChars.of(plain)) {
-    // use sc.chars() — zeroed on close
+try (SecretChars sc = AccessController.doPrivileged(
+         (PrivilegedAction<SecretChars>) myBPassword::getSecretChars)) {
+    // use the chars; zeroed on close
 }
 // Never: log.info("password=" + myBPassword.getValue())
 ```
 
-[ev: devguide security; corpus B507 §SEC-06]
+[ev: javap of bin/ext/nre.jar 4.15.6.20 `SecretChars` (AutoCloseable; `close()` = `Arrays.fill(value, 0)`); code docSource BPassword.java:440-450, :486-492]
 
 ### 3.3 Credential header redaction in structured logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
 
@@ -287,7 +287,7 @@ default) with Auto Attempt Single Sign-On = true and Ignore Auto SSO if User Coo
 
 BQL has **no parameterized query API**. Constructing a query by string concatenation
 with user-supplied input is a direct injection vector. Where tags can express the query, NEQL is the
-injection-safe route: it "supports parameterized queries" (devguide `neql.txt:18`), reading `{facetName}`
+injection-safe route: it "supports parameterized queries" (devguide `neql.txt:16`), reading `{facetName}`
 values from the resolve Context — `BOrd.make("neql:childValue50 = {integerValue50}").resolve(root, facets)` with
 `facets = BFacets.make("integerValue50", 50)` (`neql.txt:262-285`; recipe in `types/logic.md` § Ship a tag dictionary). `[ev: corpus B1308 §1308.2 C3]`
 `[ev: retro devguide415-nav-subscriptions-tags-ords Δ9]`
@@ -304,7 +304,7 @@ String bql      = "bql:select * from module:MyType where displayName=" + literal
 String safeName = SlotPath.escape(rawSlotName);
 ```
 
-[ev: code BRelationInfoList.java `SlotPath.escape(...)`; tagdictionary-rt; corpus B507 §SEC-09]
+[ev: code BRelationInfoList.java `SlotPath.escape(...)`; tagdictionary-rt; code BqlQuery.java:87 `toBqlLiteral`]
 
 ### 4.1a BQL literal rules `[ev: corpus B1237 §1237.6]`
 
@@ -340,7 +340,7 @@ BOrd ord = BOrd.make(raw);   // only after allowlist check
 ```
 
 Never accept an arbitrary BOrd from client-supplied input without an allowlist prefix
-check. [ev: corpus B507 §SEC-10]
+check. [INFER]
 
 ### 4.3 Lexicon text in HTML — `getHtmlSafeText`
 
@@ -391,7 +391,7 @@ public final Feature getLicenseFeature() {
 }
 ```
 
-[ev: code BAaPhpNetwork.java `getLicenseFeature()`; code BBacnetAwsNetwork.java; corpus B507 §SEC-07]
+[ev: code BAaPhpNetwork.java `getLicenseFeature()`; code BBacnetAwsNetwork.java `getAwsLicenseFeature()` :127]
 
 ### 5.1 · Ongoing-work gate — `serviceStarted()` only guards STARTUP `[ev: retro secure-authoring-isoperational-gate Δ1]`
 
@@ -445,11 +445,11 @@ Do not reproduce them.
 
 | Anti-pattern | Risk | Evidence |
 |---|---|---|
-| HTTP (plain) license phone-home including `hostId` (IP) in the payload | Exposes station identity; MITM-able | corpus B507 §SEC-08; clOnboardIO Helper.java `hostId = "ip:" + ...` |
-| Destructive action reachable via HTTP GET | CSRF-exploitable via `<img>` tag; no browser CORS protection on GETs | corpus B507 §SEC-11 (Reflow FileTree) |
-| `BOrd.make(clientInput)` used as an open gateway without an allowlist prefix | Full resource traversal from the browser | corpus B507 §SEC-10 |
-| `FilePath("^")` root enumeration without a permission check | Lets authenticated users list all station files | corpus B507 §SEC-11 |
-| `BqlQuery.make("...select...where name='" + userInput + "'")` | BQL injection | corpus B507 §SEC-09 |
+| HTTP (plain) license phone-home including `hostId` (IP) in the payload | Exposes station identity; MITM-able | [INFER] — no source found |
+| Destructive action reachable via HTTP GET | CSRF-exploitable via `<img>` tag; no browser CORS protection on GETs | corpus B65 AP-10 (Reflow backups via GET) |
+| `BOrd.make(clientInput)` used as an open gateway without an allowlist prefix | Full resource traversal from the browser | [INFER] |
+| `FilePath("^")` root enumeration without a permission check | Lets authenticated users list all station files | corpus B57 (AP-33, filesystem listing without RBAC) |
+| `BqlQuery.make("...select...where name='" + userInput + "'")` | BQL injection | corpus B65 AP-21 |
 
 **Proposed lint checks** (not yet in verify-module.sh):
 - `null-context-write` — flag `set(slot, val, null)` / `invoke(action, val, null)` outside framework internals.
@@ -558,7 +558,7 @@ if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
 
 When a Niagara module stores a credential digest (e.g. a password hash, a PIN hash, or a device challenge-response seed) inside its own component slots or configuration files, use **SHA-256 or stronger**. MD5 is broken for collision resistance and must not be used for credential storage.
 
-**Observed pattern to avoid (honAdvWirelessCfg, corpus B1104):** the WB Platform-tab credential storage computes an MD5 digest of the credential string and stores it as a hex slot value:
+**Observed pattern to avoid (honAdvWirelessCfg, corpus B1104):** the WB Platform-tab credential storage computes an MD5 digest of the provisioning password and stores the hex digest in the BLE config it pushes to the controller:
 ```java
 // WRONG — MD5 is not suitable for credential storage
 MessageDigest md = MessageDigest.getInstance("MD5");
@@ -593,7 +593,7 @@ module must run unchanged in both modes (4.15.6.20 `Fips/` guide; corpus B1326 r
   a named provider works in one mode only (`Fips/DevelopersNotes-51FBF6BE.txt:14-20`). The same holds for
   `MessageDigest`, `Signature`, `Mac` and `KeyStore`. [INFER: the guide shows `Cipher` only]
 - **Legacy algorithms are decrypt-only.** Blowfish, MD5 and MD5withRSA remain only to read old data (decrypt
-  Blowfish, never encrypt); any other non-FIPS algorithm throws (`Fips/Non-FIPS-compliantAlgorithms-520109A5.txt:7-23`).
+  Blowfish, never encrypt); FIPS mode removes most other non-FIPS algorithms from the JCA provider list, so a `getInstance` for one fails `[INFER]` (`Fips/Non-FIPS-compliantAlgorithms-520109A5.txt:7-23`).
   New data uses AES and SHA-256 or stronger (§ 9).
 - **Secrets are 14 characters or more:** user passwords, certificate passwords and the system passphrase
   (`Fips/FIPS1402-51D87C8C.txt:13`). Size the module's machine users (oBIX, station links) for that and plan their
@@ -629,5 +629,5 @@ connection's last failure cause (`SSLAllowedHostsTab.txt:17`), so the module rep
 "offline". No kit lint checks this yet: owed G81 `embedded-keystore`
 (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`). `[deferred: retro devguide415-r2-security-tags-analytics Δ4]`
 
-**See also:** `types/actions.md` §3 (ADMIN_INVOKE flag), `types/actions.md` §6
+**See also:** `types/actions.md` §3 (action flags; OPERATOR vs admin invoke), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).

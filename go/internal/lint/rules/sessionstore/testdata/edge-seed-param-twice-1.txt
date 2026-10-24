@@ -1,0 +1,21 @@
+declared difference: T5-F1 a candidate is a class-level static Map field (outside every method and static initializer), deduped by name; a field filled only in static {} is a constant table
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/R.java --
+class R {
+  static Double readNumericNullable(BComponent comp, String name, Map<String,String> statusOut)
+  {
+    String code = "x";
+    if (statusOut != null) statusOut.put(name, code);
+    return null;
+  }
+  static Boolean readBoolNullable(BComponent comp, String name, Map<String,String> statusOut)
+  {
+    String code = "y";
+    if (statusOut != null) statusOut.put(name, code);
+    return null;
+  }
+}

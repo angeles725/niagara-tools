@@ -1,0 +1,47 @@
+-- args --
+@DIR@/t
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/t/BT.java:2  a: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../a/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:3  b: OPERATOR baja:StatusNumeric with no writing action -- external oBIX write must use the child leaf .../b/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:4  c: OPERATOR statusBoolean with no writing action -- external oBIX write must use the child leaf .../c/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:5  d: OPERATOR BStatusEnum with no writing action -- external oBIX write must use the child leaf .../d/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:7  f: OPERATOR BStatusNumericX with no writing action -- external oBIX write must use the child leaf .../f/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:8  g: OPERATOR javax.baja.status.BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../g/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:9  h: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../h/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:11  j: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../j/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:15  m: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../m/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:16  n: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../n/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:17  o: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../o/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:18  p: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../p/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:19  q: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../q/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:20  s%d: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../s%d/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:22  u: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../u/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/t/BT.java:24  w: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../w/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- t/BT.java --
+package t;
+@NiagaraProperty(name="a", type="BStatusNumeric", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="b", type="baja:StatusNumeric", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="c", type="statusBoolean", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="d", type="BStatusEnum", defaultValue="x", flags=Flags.SUMMARY|Flags.OPERATOR|Flags.READONLY)
+@NiagaraProperty(name="e", type="BStatusString", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="f", type="BStatusNumericX", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="g", type="javax.baja.status.BStatusNumeric", defaultValue="x", flags=Flags.OPERATOR)
+@NiagaraProperty(name="h", type="BStatusNumeric", defaultValue="x", flags="o")
+@NiagaraProperty(name="i", type="BStatusNumeric", defaultValue="x", flags=Flags.SUMMARY, facets={@Facet("OPERATOR")})
+@NiagaraProperty(flags=Flags.OPERATOR, name="j", type="BStatusNumeric", defaultValue="x")
+@NiagaraProperty(name="k", type="BStatusNumeric", defaultValue="x")
+@NiagaraProperty(name="", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="l", type="", flags=Flags.OPERATOR)
+@NiagaraProperty(name = "m" , type = "BStatusNumeric" , defaultValue = "x" , flags = Flags.OPERATOR )
+@NiagaraProperty(type="BStatusNumeric", name="n", flags=Flags.OPERATOR|Flags.SUMMARY)
+@NiagaraProperty(name="o", displayName="x", type="BStatusBoolean", flags=Flags.OPERATOR)
+@NiagaraProperty(name="p", type="BStatusNumeric", defaultValue="new BStatusNumeric(1, BStatus.ok)", flags=Flags.OPERATOR)
+@NiagaraProperty(name="q", type="BStatusNumeric", flags=Flags.OPERATOR, defaultValue="x") @NiagaraProperty(name="r", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="s%d", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraProperty(name="t", type="BSTATUSNUMERIC", flags=Flags.OPERATOR)
+@NiagaraProperty(name="u", type="BStatusNumeric", flags=Flags.OPERATOR_NOT)
+@NiagaraProperty(name="v", type="BStatusNumeric", flags=0)
+@NiagaraProperty(name="w", type="BStatusNumeric", defaultValue="a,b", flags=Flags.OPERATOR)
+public class BT extends BComponent {}

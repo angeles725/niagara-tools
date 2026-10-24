@@ -11,6 +11,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
@@ -18,8 +19,10 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servlet"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sessionstore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
@@ -49,5 +52,8 @@ func All() []lint.Spec {
 		structure.Spec(),
 		demandscope.Spec(),
 		machinedefaultpath.Spec(),
+		statusparity.Spec(),
+		sessionstore.Spec(),
+		extwritable.Spec(),
 	}
 }

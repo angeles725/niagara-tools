@@ -1,0 +1,66 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/A/B.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/a/B.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/a/b/C.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/build/I.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/it's/E.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/pct%d/F.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/real/R.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/sp ace/D.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/z/.M.java:2  sp: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../sp/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- .hid/G.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- A/B.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- a/B.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- a/J.JAVA --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- a/K.java.bak --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- a/b/C.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- build/I.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- it's/E.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- pct%d/F.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- real/R.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class R {}
+-- sp ace/D.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- x-worktrees/H.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}
+-- z/.M.java --
+package w;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class X {}

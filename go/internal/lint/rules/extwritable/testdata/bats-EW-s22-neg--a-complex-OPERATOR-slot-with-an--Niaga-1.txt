@@ -1,0 +1,16 @@
+-- args --
+@DIR@/s22neg
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/s22neg/com/x/BUnrelatedAction.java:3  faultReset: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../faultReset/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- s22neg/com/x/BUnrelatedAction.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraAction(name="tick", flags=Flags.HIDDEN)
+@NiagaraAction(name="ackAlarm")
+public class BUnrelatedAction extends BComponent {
+  public void doTick() { /* housekeeping — does not write faultReset */ }
+  public void doAckAlarm() { /* clears an alarm — does not write faultReset */ }
+}
