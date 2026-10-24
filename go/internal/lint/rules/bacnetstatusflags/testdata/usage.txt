@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-bacnet-status-flags.sh [--strict] <station-dir>...

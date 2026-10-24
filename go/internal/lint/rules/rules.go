@@ -7,6 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/arbitraryord"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bacnetstatusflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
@@ -107,5 +108,6 @@ func All() []lint.Spec {
 		privateapiimport.Spec(),
 		ndriverstaticcollection.Spec(),
 		ndrivertaglesscorrelation.Spec(),
+		bacnetstatusflags.Spec(),
 	}
 }

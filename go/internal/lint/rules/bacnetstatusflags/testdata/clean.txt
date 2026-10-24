@@ -1,0 +1,39 @@
+-- args --
+--strict
+@DIR@/S
+-- want --
+exit 0
+-- stderr --
+-- S/config.bog --
+<?xml version="1.0" encoding="UTF-8"?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='Drivers' h='2' m='d=driver' t='d:DriverContainer'>
+   <p n='BacnetNetwork' h='3' m='bac=bacnet' t='bac:BacnetNetwork'>
+    <p n='AcmeAhu1' h='4' t='bac:BacnetDevice'>
+     <p n='points' h='5' t='bac:BacnetPointDeviceExt'>
+      <p n='SpaceTemp' h='6' m='c=control' t='c:NumericPoint'>
+       <p n="facets" t="b:Facets" v="units=u:celsius;&#xb0;C;(K);+273.15;|statusFlags=b:true"/>
+       <p n='proxyExt' h='7' t='bac:BacnetNumericProxyExt'/>
+      </p>
+      <p n='Units' h='8' t='c:EnumPoint'>
+       <p n='proxyExt' h='9' t='bac:BacnetEnumProxyExt'>
+        <p n="propertyId" v="117"/>
+       </p>
+      </p>
+      <p n='Desc' h='a' t='c:StringPoint'>
+       <p n='proxyExt' h='b' t='bac:BacnetStringProxyExt'>
+        <p n="propertyId" t="b:DynamicEnum" v="28@bacnet:BacnetPropertyIdentifier"/>
+       </p>
+      </p>
+      <p n='Override' h='c' t='c:NumericPoint'>
+       <p n='proxyExt' h='d' t='bac:BacnetNumericProxyExt'>
+        <p n="useStatusFlags" v="true"/>
+       </p>
+      </p>
+     </p>
+    </p>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>
