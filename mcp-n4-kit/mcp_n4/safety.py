@@ -234,31 +234,13 @@ class _JsonlFile:
         finally:
             os.close(fd)
 
-    def entries(self):
-        """Every parseable JSON object line; a missing file or a torn line is skipped."""
-        try:
-            with open(self.path) as fh:
-                lines = fh.readlines()
-        except OSError:
-            return []
-        out = []
-        for line in lines:
-            try:
-                entry = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(entry, dict):
-                out.append(entry)
-        return out
-
     def _lines(self):
         """`(n, entry)` for every JSON object line, `(n, None)` for a line that is not UTF-8.
 
         Lines are numbered as readlines() splits them (LF, CRLF and CR) and decoded
         one by one, so one bad byte costs one line, not the file (issues #448, #466). A
-        missing file or a torn line is skipped, as `entries()` skips them.
+        missing file or a torn line (not a JSON object) is skipped.
         """
-        # Copy of #448's Journal._lines (PR #467): dedupe onto it once #467 merges.
         try:
             with open(self.path, "rb") as fh:
                 data = fh.read()
@@ -304,33 +286,6 @@ class Journal(_JsonlFile):
             view["result_ts"] = result.get("ts")
         view["state"] = "in-doubt" if result is None or result.get("in_doubt") else "completed"
         return view
-
-    def _lines(self):
-        """`(n, entry)` for every JSON object line, `(n, None)` for a line that is not UTF-8.
-
-        Lines are numbered as readlines() splits them (LF, CRLF and CR) and decoded
-        one by one, so one bad byte costs one line, not the file (issue #448). A missing file
-        or a torn line is skipped, as `entries()` skips them.
-        """
-        try:
-            with open(self.path, "rb") as fh:
-                data = fh.read()
-        except OSError:
-            return []
-        out = []
-        for n, raw in enumerate(data.splitlines(), 1):
-            try:
-                line = raw.decode("utf-8")
-            except UnicodeDecodeError:
-                out.append((n, None))
-                continue
-            try:
-                entry = json.loads(line)
-            except ValueError:
-                continue
-            if isinstance(entry, dict):
-                out.append((n, entry))
-        return out
 
     def _scan(self):
         """`({batch_id: view}, unreadable)`: the merged views and the lines they could not use.
