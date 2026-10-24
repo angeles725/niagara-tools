@@ -653,3 +653,219 @@ class TestRemoveComponentParity(ParityTestCase):
                 side.fake.hook = None
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
+
+
+def fail_nth(side, key, nth, reply):
+    """A hook: the nth callssc `key` from now on answers `reply` (code, body)."""
+    seen = []
+
+    def hook(frame):
+        sck = [m.get("b", {}).get("sck") for m in frame["m"] if isinstance(m.get("b"), dict)]
+        if key in sck:
+            seen.append(True)
+            if len(seen) == nth:
+                return reply[0], reply[1], {}
+        return None
+    side.fake.hook = hook
+
+
+def craft(side, bid, inverse, targets, station="FakeStation", verdict="verified", **intent):
+    """Journal a batch the server never ran (an intent and its result), through the file."""
+    journal = safety.Journal(side.state_dir)
+    journal.append(dict({"batch_id": bid, "phase": "intent", "tool": "n4_remove_component",
+                         "station_name": station, "ops": [], "inverse_plan": inverse,
+                         "targets": targets}, **intent))
+    journal.append({"batch_id": bid, "phase": "result", "verdict": verdict, "inverse": inverse,
+                    "accepted": None})
+
+
+def writable_group(side, name="Wg"):
+    """remove_group plus a NumericWritable whose frozen proxyExt is configured and a
+    BooleanWritable: frozen children the rollback must not re-add."""
+    nn = remove_group(side, name)
+    gh = side.box.load_tree(FOLDER + "/" + nn, depth=1, **NO_SLEEP)[""]["h"]
+    side.box.add_component(gh, "Sp", "control:NumericWritable")
+    side.box.add_component(gh, "En", "control:BooleanWritable")
+    ext = side.fake.folder.child(nn).child("Sp").child("proxyExt")
+    side.box.sync({"nm": "s", "h": ext.handle, "n": "tuningPolicyName",
+                   "b": {"nm": "p", "t": "baja:String", "v": "Fast"}})
+    sub = side.box.add_component(gh, "Sub", "baja:Folder")["nn"]
+    sub_h = side.box.load_tree(FOLDER + "/%s/%s" % (nn, sub), depth=1, **NO_SLEEP)[""]["h"]
+    side.box.add_component(sub_h, "Deep", "kitControl:NumericConst")
+    return nn
+
+
+def removed(side, nn, **kw):
+    return side.write("n4_remove_component", parent_ord=FOLDER, name=nn, **kw)["batch_id"]
+
+
+class TestRollbackParity(ParityTestCase):
+    def test_rollbacks_of_every_tool_and_every_refusal(self):
+        def scenario(side):
+            side.call("n4_rollback", batch_id="ab" * 16)  # not connected
+            side.connect()
+            for bid in ("f" * 32 + "\n", "F" * 32, "f" * 31, 7, "f" * 32):
+                side.call("n4_rollback", batch_id=bid)
+            created = side.write("n4_create_component", **CREATE)["batch_id"]
+            side.write("n4_rollback", batch_id=created)
+            side.call("n4_rollback", batch_id=created)  # already rolled back
+            last = [json.loads(line) for line in side.state("journal.jsonl").splitlines()][-1]
+            side.call("n4_rollback", batch_id=last["batch_id"])  # a rollback of a rollback
+            h = status_numeric(side)
+            set_id = side.write("n4_set_slot", **SET)["batch_id"]
+            token = side.call("n4_rollback", batch_id=set_id)["confirmation_token"]
+            side.box.set_slot(h, "out", box.bson_status_numeric(4.0))  # changed after the dry run
+            side.call("n4_rollback", batch_id=set_id, dry_run=False, confirmation_token=token)
+            side.box.set_slot(h, "out", box.bson_status_numeric(5.5))
+            side.write("n4_rollback", batch_id=set_id)
+            sp = side.add("Sp", "control:NumericWritable")
+            invoked = side.write("n4_invoke_action", ord=FOLDER + "/Sp", action="set", arg=7.0,
+                                 arg_type="baja:Double")["batch_id"]
+            side.box.set_slot(sp, "fallback", box.bson_status_numeric(3.0))
+            side.call("n4_rollback", batch_id=invoked)  # the fallback changed
+            side.box.set_slot(sp, "fallback", box.bson_status_numeric(7.0))
+            side.write("n4_rollback", batch_id=invoked)
+            active = side.write("n4_invoke_action", ord=FOLDER + "/Sp", action="active")["batch_id"]
+            side.call("n4_rollback", batch_id=active)  # no inverse
+            side.add("Tgt")
+            linked = side.write("n4_create_link", source_ord=CALC, source_slot="out",
+                                target_ord=FOLDER + "/Tgt", target_slot="in10")["batch_id"]
+            side.write("n4_rollback", batch_id=linked)
+            calc = side.write("n4_set_slot", **dict(SET, value=6.5))["batch_id"]
+            side.box.remove_component("3", "Calc")
+            status_numeric(side)  # same ORD, a new component
+            side.call("n4_rollback", batch_id=calc)
+            side.write("n4_rollback", batch_id=removed(side, remove_group(side)))
+            nn = writable_group(side)
+            bid = removed(side, nn)
+            for _ in range(2):
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+            for _ in range(2):  # reused
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_crafted_journal_records(self):
+        def scenario(side):
+            side.connect()
+            side.add("Calc")
+            ok_add = {"nm": "a", "h": "3", "n": "X", "b": {"nm": "p", "t": "baja:Folder"}}
+            cases = [
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "3"}, {"station": "OtherStation"}),
+                ([ok_add, {"relink": {"source_path": 1, "source_slot": "out"}}], {FOLDER: "3"}, {}),
+                ([ok_add, {"relink": {"source_path": "a b", "source_slot": "out",
+                                      "target_path": "", "target_slot": "x"}}], {FOLDER: "3"}, {}),
+                ([ok_add, {"unlinked_input": 5}], {FOLDER: "3"}, {}),
+                ([ok_add, {"unlinked_input": {"source_slot": "o", "target_path": "Y",
+                                              "target_slot": "in", "prior": {"v": 1}}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {}, {}),
+                ([{"nm": "v", "h": "9", "n": "x"}], {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], [FOLDER], {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "4"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {"station:|slot:/Elsewhere": "3"}, {}),
+                ([], {FOLDER: "3"}, {}),
+                ("ab", {FOLDER: "3"}, {}),
+                (7, {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "Y", "b": {"nm": "p", "t": "baja:Folder", "s": [
+                    {"nm": "p", "t": "kitControl:NumericConst", "n": "bad name"}]}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "Z", "b": [1]}], {FOLDER: "3"}, {}),
+                ([{"nm": "a", "h": "3", "n": "W"}], {FOLDER: "3"}, {}),
+                ([{"nm": "s", "h": "3", "n": "q", "b": {"nm": "p", "t": "baja:Double", "v": "1"}}],
+                 {FOLDER: "3"}, {}),
+                ([{"nm": "v", "h": "3", "n": "x"}], {FOLDER: "3"},
+                 {"rollback_of": "cd" * 16}),
+            ]
+            for i, (inverse, targets, kw) in enumerate(cases):
+                bid = "%02x" % i * 16
+                station = kw.pop("station", "FakeStation")
+                craft(side, bid, inverse, targets, station=station, **kw)
+                side.call("n4_rollback", batch_id=bid)
+            for verdict, extra in (("failed", {}), ("failed", {"readback_failed": True})):
+                done = side.write("n4_create_component", **dict(CREATE, name="F"))["batch_id"]
+                journal = safety.Journal(side.state_dir)
+                journal.append({"batch_id": "ee" * 16, "phase": "intent", "rollback_of": done})
+                journal.append(dict({"batch_id": "ee" * 16, "phase": "result", "verdict": verdict,
+                                     "inverse": [], "accepted": [1]}, **extra))
+                side.write("n4_rollback", batch_id=done)
+            with open(os.path.join(side.state_dir, "journal.jsonl"), "ab") as fh:
+                fh.write(b'{"batch_id": [1], "phase": "intent"}\n{"batch_id": "\xff"}\n')
+            side.call("n4_rollback", batch_id="00" * 16)
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_budget_scope_and_station_root(self):
+        def scenario(side):
+            side.connect()
+            side.call("n4_rollback", batch_id=removed(side, remove_group(side)))
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario, max_writes=3)
+
+        def root(side):
+            side.connect()
+            top = side.box.add_component("2", "RootGrp", "baja:Folder")["nn"]
+            top_h = side.box.load_tree("station:|slot:/" + top, depth=1, **NO_SLEEP)[""]["h"]
+            side.box.add_component(top_h, "Src", "kitControl:NumericConst")
+            side.write("n4_rollback", batch_id=side.write(
+                "n4_remove_component", parent_ord="station:|slot:/", name=top)["batch_id"])
+        self.assertSameRun(root, write_scopes=["station:|slot:/"])
+
+    def test_read_back_outcomes_and_in_doubt_runs(self):
+        def scenario(side):
+            side.connect()
+            nn = writable_group(side, "A")
+            bid = removed(side, nn)
+            orig = side.fake._sync
+
+            def drop(name, kind="drop"):
+                def sync(op):
+                    res = orig(op)
+                    if op["nm"] == "a" and op["n"] == name:
+                        node = side.fake.folder.child(nn) if name != nn else side.fake.folder
+                        kid = node.child(name)
+                        if kind == "type":
+                            kid.type = "kitControl:BooleanConst"
+                        elif kind == "ws":
+                            kid.children = [c for c in kid.children if c.name != "wsAnnotation"]
+                        else:
+                            node.children = [c for c in node.children if c.name != name]
+                    return res
+                return sync
+            side.fake._sync = drop("Src")  # a relink end is missing: skipped, mismatch
+            side.write("n4_rollback", batch_id=bid)
+            for name, kind in (("Tgt", "type"), (nn, "ws")):
+                nn2 = remove_group(side, "B" + kind)
+                bid2 = removed(side, nn2)
+                nn = nn2
+                side.fake._sync = drop(name if name != "Tgt" else "Tgt", kind)
+                side.write("n4_rollback", batch_id=bid2)
+            side.fake._sync = orig
+            orig_link = side.fake._check_link
+            for reply in ([{"r": "huh"}], [{"v": False}], [{"v": True}], "junk"):
+                nn = remove_group(side, "L")
+                bid = removed(side, nn)
+                side.fake._check_link = lambda arg, reply=reply: reply
+                side.write("n4_rollback", batch_id=bid)
+            side.fake._check_link = orig_link
+            for key, nth, reply in (("syncTo", 1, (500, b"boom")), ("syncTo", 2, (200, ERROR_FRAME)),
+                                    ("syncTo", 3, (500, b"boom")), ("checkLinks", 1, (500, b"boom")),
+                                    ("checkLinks", 1, (200, ERROR_FRAME))) + tuple(
+                                        ("loadSlots", n, (500, b"boom")) for n in range(1, 12)):
+                nn = remove_group(side, "D")
+                bid = removed(side, nn)
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                fail_nth(side, key, nth, reply)
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.hook = None
+            three = [{"nm": "a", "h": "3", "n": n, "b": {"nm": "p", "t": "baja:Folder"}}
+                     for n in ("A2", "B2", "C2")]
+            for bid, nth in (("ab" * 16, 2), ("ac" * 16, 1), ("ad" * 16, 3)):  # op nth fails
+                craft(side, bid, three, {FOLDER: "3"})
+                token = side.call("n4_rollback", batch_id=bid)["confirmation_token"]
+                fail_nth(side, "syncTo", nth, (500, b"boom"))
+                side.call("n4_rollback", batch_id=bid, dry_run=False, confirmation_token=token)
+                side.fake.hook = None
+                side.call("n4_rollback", batch_id=bid)  # its rollback is in-doubt now
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
