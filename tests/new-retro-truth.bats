@@ -24,3 +24,22 @@ nothing_landed() { [ -z "$(ls -A "$TK/retros")" ] && cmp -s "$BATS_TEST_TMPDIR/s
     nothing_landed
   done
 }
+
+@test "NRT2: --date must be a YYYY-MM-DD date and --deltas a non-negative integer, else exit 3 and nothing lands" {
+  # Mutation: NR-values -- accepting any value writes kit/x-slugabc.md outside retros/ for --date ../x
+  # (golden truth-date-escapes-retros) and fails --deltas -1 late in the index generator, exit 1
+  # (truth-deltas-negative); truth-date-not-a-date and truth-deltas-not-a-number pin the other two shapes.
+  local opt val
+  while read -r opt val want; do
+    nr kit slugabc "$opt" "$val"
+    [ "$status" -eq 3 ]
+    [ "$output" = "new-retro: $opt must be $want: $val" ]
+    nothing_landed
+    [ ! -e "$TK/x-slugabc.md" ]
+  done <<'ROWS'
+--date ../x a YYYY-MM-DD date
+--date 2026-13-01 a YYYY-MM-DD date
+--deltas -1 a non-negative integer
+--deltas x a non-negative integer
+ROWS
+}

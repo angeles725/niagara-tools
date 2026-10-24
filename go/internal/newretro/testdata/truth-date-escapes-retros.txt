@@ -1,16 +1,14 @@
 -- args --
 kit
 slugabc
---deltas
--1
+--date
+../x
 -- want --
-exit 1
+exit 3
 -- stderr --
-gen-retro-index: 2026-01-02-slugabc.md: needs exactly one <!-- deltas: <N> --> header (N an integer) in lines 1-10
-gen-retro-index: retro-header violation; index not generated
-new-retro: gen-retro-index.sh failed; retro removed, INDEX.md and BUILD-STATE.src.md unchanged
+new-retro: --date must be a YYYY-MM-DD date: ../x
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+truth: hand-edited want of the case edge-date-escapes-retros recorded at 15e792d1: --date must be a YYYY-MM-DD date (the bash wrote kit/x-slugabc.md outside retros/ and flipped the envelope)
 -- @env --
 KIT=@DIR@/kit
 -- @expect kit/BUILD-STATE.src.md --

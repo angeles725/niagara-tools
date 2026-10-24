@@ -79,16 +79,22 @@ func parse(args []string, today func() string) (retro, string) {
 	}
 	for rest := args[2:]; len(rest) > 0; rest = rest[2:] {
 		var dst *string
+		var valid func(string) bool
+		var want string
 		switch rest[0] {
 		case "--date":
-			dst = &r.date
+			dst, valid, want = &r.date, isDate, "a YYYY-MM-DD date"
 		case "--deltas":
-			dst = &r.deltas
+			dst, valid, want = &r.deltas, isCount, "a non-negative integer"
 		default:
 			return r, "new-retro: unknown option: " + rest[0] + "\n"
 		}
 		if len(rest) < 2 {
 			return r, "new-retro: " + rest[0] + " requires a value\n"
+		}
+		// Mutation: NR-values -- accepting any value lets --date ../x write outside retros/ and --deltas -1 fail late
+		if !valid(rest[1]) {
+			return r, "new-retro: " + rest[0] + " must be " + want + ": " + rest[1] + "\n"
 		}
 		*dst = rest[1]
 	}
@@ -108,6 +114,15 @@ func slugOK(slug string) bool {
 	}
 	return true
 }
+
+// isDate: a calendar date spelled YYYY-MM-DD (it names the retro file, so no path can hide in it).
+func isDate(v string) bool {
+	_, err := time.Parse("2006-01-02", v)
+	return err == nil
+}
+
+// isCount: decimal digits only, the deltas header gen-retro-index accepts.
+func isCount(v string) bool { return v != "" && strings.Trim(v, "0123456789") == "" }
 
 func alnum(c byte) bool { return c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' }
 

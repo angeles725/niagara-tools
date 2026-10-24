@@ -42,8 +42,8 @@ new; kit kit; ENVV=(KIT="$D/kit"); rec edge-unknown-option kit slugabc --force
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-option-before-slug kit --date 2026-03-04 slugabc
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-options-last-wins kit slugabc --date 2026-03-04 --deltas 1 --date 2026-05-06 --deltas 2
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-deltas-leading-zeros kit slugabc --deltas 007
-new; kit kit; ENVV=(KIT="$D/kit"); rec edge-deltas-negative kit slugabc --deltas -1
-new; kit kit; ENVV=(KIT="$D/kit"); rec edge-date-escapes-retros kit slugabc --date ../x
+# edge-deltas-negative (--deltas -1, exit 1 in the bash) is now the hand-edited truth-deltas-negative.
+# edge-date-escapes-retros (--date ../x wrote outside retros/ in the bash) is now the hand-edited truth-date-escapes-retros.
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-bad-first-char kit _abcdef
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-charset kit A0.b_c-d
 # edge-slug-space-after-six (kit 'abcdef ghi', exit 0 in the bash) is now the hand-edited truth-slug-space-after-six.
