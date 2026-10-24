@@ -1,0 +1,6 @@
+-- args --
+@DIR@/a.txt
+-- want --
+exit 2
+-- stderr --
+verify-module: not a jar: @DIR@/a.txt
