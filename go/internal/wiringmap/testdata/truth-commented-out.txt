@@ -40,7 +40,7 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-truth: an annotation inside a // or /* */ comment is no slot (edge-commented-out at fa1201e6 listed old and gone)
+truth: an annotation inside a // or /* */ comment is no slot (edge-commented-out at 15e792d1 listed old and gone)
 -- src/BA.java --
 // @NiagaraProperty(name = "old", flags = Flags.OPERATOR)
 /* @NiagaraProperty(name = "gone", flags = Flags.SUMMARY) */

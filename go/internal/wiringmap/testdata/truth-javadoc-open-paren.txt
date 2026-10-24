@@ -40,7 +40,7 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-truth: a "(" in a javadoc after @NiagaraProperty no longer swallows the annotations below it (edge-javadoc-open-paren at fa1201e6 listed none)
+truth: a "(" in a javadoc after @NiagaraProperty no longer swallows the annotations below it (edge-javadoc-open-paren at 15e792d1 listed none)
 -- src/BA.java --
 /**
  * see {@code @NiagaraProperty(} below

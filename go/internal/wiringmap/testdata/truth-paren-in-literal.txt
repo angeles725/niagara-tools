@@ -40,7 +40,7 @@ Run after wiring, before operator hand-off:
 - [ ] obix-nav.py facade<->rt link batch audit: all expected links present and values in range
 -- stderr --
 -- @kind --
-truth: a "(" inside a string literal is not counted, so the annotation closes on its line (edge-paren-in-literal at fa1201e6 listed neither slot)
+truth: a "(" inside a string literal is not counted, so the annotation closes on its line (edge-paren-in-literal at 15e792d1 listed neither slot)
 -- src/BA.java --
 @NiagaraProperty(name = "lit", defaultValue = "BString.make(\"(\")", flags = Flags.OPERATOR)
 @NiagaraProperty(name = "after", type = "double", defaultValue = "0", flags = Flags.SUMMARY)

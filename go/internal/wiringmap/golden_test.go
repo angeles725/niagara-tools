@@ -16,10 +16,10 @@ import (
 )
 
 // goldenCases is the exact number of testdata cases: a lost or an extra case fails the run.
-const goldenCases = 64
+const goldenCases = 65
 
 // recordedKind is the @kind of a case testdata/record/record.sh wrote; any other @kind must be a truth-* case.
-const recordedKind = "recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6\n"
+const recordedKind = "recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at 15e792d1\n"
 
 // TestGolden runs every testdata case (written by testdata/record/record.sh from the bash
 // generate-wiring-map.sh, or hand-written as a truth-* case) in the golden format of

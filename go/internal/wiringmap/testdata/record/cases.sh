@@ -1,7 +1,8 @@
 # cases.sh — the golden cases, sourced by record.sh: bats-* mirror tests/generate-wiring-map.bats runs, edge-* are
 # extra. new: a fresh case dir $D; fx: copy the bats fixtures in; put <path> <body>: write a file (printf %b);
-# EXP: files the run must leave; rec <name> <args...>: run and write <name>.txt.
-# shellcheck shell=bash disable=SC2034  # EXP is read by record.sh
+# rec <name> <args...>: run and write <name>.txt (the files the run writes are found, not listed). record.sh
+# runs this under set -euo pipefail, so a failed cp, ln, mkdir or chmod stops the recording.
+# shellcheck shell=bash
 fx() { cp -r "$FIX/generate-wiring-map" "$D/fx"; cp -r "$FIX/generate-wiring-map-lex" "$D/fx-lex"; }
 op() { printf '@NiagaraProperty(name = "%s", type = "double", defaultValue = "0", flags = Flags.%s)\\n' "$1" "${2:-OPERATOR}"; }
 
@@ -10,7 +11,7 @@ new; rec bats-usage
 new; rec bats-notdir /nonexistent/__gwm_xyz__
 new; fx; rec bats-unknown-opt "$D/fx" --unknown-flag
 new; fx; rec bats-tables "$D/fx"
-new; fx; EXP=(wiring-map.md); rec bats-output-file "$D/fx" --output "$D/wiring-map.md"
+new; fx; rec bats-output-file "$D/fx" --output "$D/wiring-map.md"
 new; mkdir -p "$D/empty_gwm"; rec bats-empty-src "$D/empty_gwm"
 new; fx; rec bats-display "$D/fx-lex/Facade-rt/src" --lexicon "$D/fx-lex/Facade-rt/module.lexicon"
 new; fx; rec bats-display-auto "$D/fx-lex/Facade-rt/src"
@@ -28,7 +29,7 @@ new; fx; rec edge-unknown-before-lexicon "$D/fx" --bogus --lexicon /nonexistent/
 new; fx; mkdir -p "$D/lexdir"; rec edge-lexicon-is-dir "$D/fx" --lexicon "$D/lexdir"
 new; fx; put a.lexicon 'temperatureSetpoint=A\n'; put b.lexicon 'temperatureSetpoint=B\n'
 rec edge-lexicon-last-wins "$D/fx" --lexicon "$D/a.lexicon" --lexicon "$D/b.lexicon"
-new; fx; EXP=(b.md); rec edge-output-last-wins "$D/fx" --output "$D/a.md" --output "$D/b.md"
+new; fx; rec edge-output-last-wins "$D/fx" --output "$D/a.md" --output "$D/b.md"
 new; put f.java "$(op x)"; rec edge-src-is-file "$D/f.java"
 new; rec edge-src-empty-string ''
 new; fx; rec edge-src-relative fx
@@ -36,7 +37,7 @@ new; fx; rec edge-src-trailing-slash "$D/fx/"
 new; fx; rec edge-src-dot-relative ./fx/.
 new; put 'my src/BA.java' "$(op a)"; rec edge-src-space "$D/my src"
 new; put real/BA.java "$(op a)"; ln -s real "$D/link"; rec edge-src-symlink-root "$D/link"
-new; fx; EXP=(out.md); rec edge-output-relative "$D/fx" --output out.md
+new; fx; rec edge-output-relative "$D/fx" --output out.md
 
 # --- lexicon discovery and reading ---
 new; put m/src/BA.java "$(op a)"; put m/src/module.lexicon 'a=In src\n'; put m/module.lexicon 'a=In parent\n'
@@ -96,6 +97,6 @@ new; put src/BA.java "$(op a)"; put other/BO.java "$(op linked)"; ln -s ../other
 rec edge-symlinks-below "$D/src"
 new; put src/x/BA.java "$(op a)"; put src/y/BA.java "$(op a SUMMARY)"; put src/module.lexicon 'a=Same\n'
 rec edge-duplicate-slot "$D/src"
-new; put src/A.java 'class A {}\n'; mkdir -p "$D/src/z/locked" "$D/src/a/locked"; chmod 000 "$D/src/z/locked" "$D/src/a/locked"
-rec edge-two-locked "$D/src"
+new; put src/A.java 'class A {}\n'; mkdir -p "$D/src/a/b/locked"; chmod 000 "$D/src/a/b/locked"; rec edge-locked-nested "$D/src"
+new; put src/BA.java "$(op a)"; mkdir -p "$D/src/locked"; chmod 000 "$D/src/locked"; rec edge-locked-output "$D/src" --output "$D/out.md"
 new; put src/BRoom.java "$(op a)"; put src/Bx.java "$(op b)"; put src/B.java "$(op c)"; rec edge-type-names "$D/src"

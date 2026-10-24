@@ -12,9 +12,14 @@
 `lint.Walk` for the fail-closed walk, `javasrc.NiagaraProperties` (later `PropertyScan`) for the annotation join
 and `strerror` for the error text.
 
-- **Goldens.** `testdata/record/record.sh` and `cases.sh` recorded 62 cases from the bash at fa1201e6: every
+- **Goldens.** `testdata/record/record.sh` and `cases.sh` recorded 62 cases from the bash at 15e792d1: every
   bats run plus 52 edge trees (option order, lexicon discovery and line shapes, annotation shapes, walk pruning,
   symlinks, unreadable inputs). A case also holds the files the run writes, as `@expect <file>` sections.
+  A review then hardened the recorder: it runs the bash under `env -i PATH=/usr/bin:/bin LC_ALL=C`, pins the
+  script and `lib/scan-files.sh` hashes (the first labels said fa1201e6, the script's last commit, but the walk
+  lib is the base's), refuses the Go wrapper and root, finds the written files itself, and the runner compares
+  the whole tree after the run. The 58 recorded cases now include a nested locked directory and a locked walk
+  with `--output` (no file written).
 - **Byte identity.** 62/62 goldens. Bash and Go on 23 real facade trees (client source dirs, worktrees pruned):
   identical stdout, stderr and exit, 1354 rows.
 - **Truth fixes.** Each one is its own commit with a `truth-*` case and a bats pin:
@@ -31,7 +36,7 @@ and `strerror` for the error text.
   It now finds the column by its `... RT slot` header cell.
 
 ## Evidence
-- `go test ./internal/wiringmap/` (63 goldens, `TestSlots`, `TestDisplayNames`, `TestOutputWriteError`,
+- `go test ./internal/wiringmap/` (65 goldens: 58 recorded, 7 truth; `TestSlots`, `TestDisplayNames`, `TestOutputWriteError`,
   `TestMapReadBack`) and `TestDeclaredRowsDisplayColumn` green `[ev: go/internal/wiringmap/testdata]`
 - bats GWM-comments, GWM-literal-paren, GWM-unreadable, GWM-output-unwritable `[ev: tests/generate-wiring-map.bats]`
 - Real-tree parity (local, not committed): 23/23 identical before the truth fixes; after them, 2/23 trees differ,
