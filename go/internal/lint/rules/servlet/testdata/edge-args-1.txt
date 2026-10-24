@@ -1,0 +1,7 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-servlet.sh <src-dir> [--strict]
+-- m/A.java --
+class A {}

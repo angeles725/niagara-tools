@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/m/A.java:4  bql concat: BOrd.make("local:|foxs://" + host + "|station:|bql:select * where a=" + v);
+WARN  lint-bql-string-concat  @DIR@/m/A.java:8  bql concat: * bql: "a" + b
+-- stderr --
+-- m/A.java --
+class A {
+  /* q = BqlQuery.make("x" + u); */
+  // BqlQuery.make("x" + u)
+  BOrd.make("local:|foxs://" + host + "|station:|bql:select * where a=" + v);
+  q = BqlQuery.make("x") // + "y"
+  String s = "bql:" ;
+  String t = "BqlQuery.make(" + v;
+   * bql: "a" + b
+}

@@ -1,0 +1,24 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-clock-zero-floor  @DIR@/m/B.java:4  zero-floor: String u = "http://h"; long b = Math.max(0L, d);
+WARN  lint-clock-zero-floor  @DIR@/m/B.java:6  zero-floor: long c = Math.max(0l,d);
+-- stderr --
+-- m/A.java --
+class A {
+  /* Clock.schedule(this, t, a, null); */
+  long a = Math.max(0, d);
+  String u = "http://h"; long b = Math.max(0L, d);
+  // long c = Math.max(0, d);
+  long e = Math.max(1L, d);
+  String s = "Math.max(0, d)";
+}
+-- m/B.java --
+class B {
+  void f() { Clock.schedule(this, t, a, null); }
+  /* long a = Math.max(0, d); */
+  String u = "http://h"; long b = Math.max(0L, d);
+  String s = "Math.max(0, d)";
+  long c = Math.max(0l,d);
+}

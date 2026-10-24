@@ -1,0 +1,12 @@
+-- args --
+--strict
+@DIR@/src
+-- want --
+exit 1
+WARN  ext-writable-shape  @DIR@/src/com/x/BRoom.java:3  setpoint: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../setpoint/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric(0d)", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class BRoom extends BComponent {}

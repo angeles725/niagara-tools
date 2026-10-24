@@ -1,0 +1,27 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-no-md5-credential-digest  @DIR@/m/B.java:2  String u = "http://h"; MessageDigest m = MessageDigest.getInstance("MD5");
+WARN  lint-no-md5-credential-digest  @DIR@/m/G.java:2  MessageDigest m = MessageDigest.getInstance("MD5");
+-- stderr --
+-- m/A.java --
+class A {
+  /* MessageDigest.getInstance("MD5") */
+  BPassword p;
+}
+-- m/B.java --
+class B {
+  String u = "http://h"; MessageDigest m = MessageDigest.getInstance("MD5");
+  String password;
+}
+-- m/C.java --
+class C {
+  MessageDigest m = MessageDigest.getInstance("MD5");
+  /* hash the password */
+}
+-- m/G.java --
+class G {
+  MessageDigest m = MessageDigest.getInstance("MD5");
+  String key = "password";
+}

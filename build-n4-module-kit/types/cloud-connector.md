@@ -26,11 +26,11 @@ via the Baja type registry at service start:
 
 | Static field | Type | Key |
 |---|---|---|
-| `msgFactoryMap` | `Map<String, BAbstractCloudLinkHandlerFactory>` | `platform + "." + transportType` |
+| `msgFactoryMap` | `Map<String, BAbstractCloudLinkHandlerFactory>` | `platform + ';' + transportType` |
 | `configFactoryMap` | `Map<String, BAbstractChannelConfigFactory>` | `platform` string |
 | `fileUploadManagerMap` | `Map<String, BAbstractFileUploadManager>` | `platform` string |
 
-Registration happens lazily at first lookup via `Sys.getRegistry().getConcreteTypes(Factory.TYPE.getTypeInfo())` — the registry scans every loaded module for concrete subtypes
+Registration happens lazily at first lookup (config factories also in `descendantsStarted()`) via `Sys.getRegistry().getConcreteTypes(Factory.TYPE.getTypeInfo())` — the registry scans every loaded module for concrete subtypes
 and populates the map. [ev: code cloudLink-rt BCloudConnectionService.registerHandlerFactories/registerConfigFactories/registerFileUploadManagers]
 
 Three `@NiagaraProperty` folders hang off the service as `flags=256` (hidden) children:
@@ -112,27 +112,28 @@ public abstract class BAbstractClientAuthenticator extends BAbstractService {
 [ev: code cloudLink-rt BAbstractClientAuthenticator]
 
 **Security pattern — credentials live in the platform KeyRing, not in component
-properties.** Each backend module declares a `KeyRingPermission` named after itself in
-`module.xml`; the authenticator calls the platform KeyRing API at runtime to read tokens
-or certificates. This keeps secrets out of the station database (config.bog).
+properties.** Only the Azure SAS authenticator stores its token parameters in the platform KeyRing
+(`KeyRingPermission("*")` in cloudLinkAzure-rt); cloudLinkForge-rt declares `KeyRingPermission("cloudLinkNcs")`
+and `("cloudLinkHonSbp")` for those backends, which declare none. The other authenticators keep a `BPassword`
+property or a key-store alias.
 
 | Concrete class | Backend | Credential store |
 |---|---|---|
-| `BPasswordAuthenticator` | core | KeyRing via `SYSTEM_PASSWORD` |
-| `BTokenAuthenticator` | core | KeyRing |
+| `BPasswordAuthenticator` | core | `usernameAndPassword` property (BPassword) |
+| `BTokenAuthenticator` | core | `tokenProvider` child |
 | `BAzureSasAuthenticator` | cloudLinkAzure | `KeyRingPermission("*")` |
-| `BFederatedIdentityAuthenticator` | cloudLinkForge | KeyRing |
-| `BRpkAuthenticator` | cloudLinkForge | KeyRing (RPK certificate) |
-| `BRpkAuthenticatorHonSbp` | cloudLinkHonSbp | KeyRing |
+| `BFederatedIdentityAuthenticator` | cloudLinkForge | key store (X.509) |
+| `BRpkAuthenticator` | cloudLinkForge | key store (cert alias + password) |
+| `BRpkAuthenticatorHonSbp` | cloudLinkHonSbp | as Rpk (extends `BRpkAuthenticator`) |
 
 [ev: code cloudLink-rt module.xml types list; cloudLinkAzure module.xml
-`KeyRingPermission("*")`; cloudLinkNcs module.xml `KeyRingPermission("cloudLinkNcs")`;
-cloudLinkHonSbp module.xml `KeyRingPermission("cloudLinkHonSbp")`]
+`KeyRingPermission("*")`; cloudLinkForge module.xml `KeyRingPermission("cloudLinkNcs")` +
+`KeyRingPermission("cloudLinkHonSbp")` (:114-115)]
 
 **Gotcha:** `BUsernameAndPassword` is a helper struct — it is NOT `BAbstractClientAuthenticator`.
 The actual authenticator calls `canAuthenticate()` / `isRegistered()` before any message
 send; a false return from either will gate outbound traffic. [INFER: method contract
-derived from abstract signature + call site in BCloudConnectionService]
+derived from abstract signature + call site in BHeartbeatChannel:112 (isRegistered)]
 
 ---
 
@@ -211,7 +212,7 @@ public class BForgeChannelConfigFactory extends BAbstractChannelConfigFactory   
     name="${protected.station.home}${/}cloudLinkSchedule${/}-"/>
 ```
 
-[ev: cloudLinkNcs module.xml `KeyRingPermission("cloudLinkNcs")`; cloudLink-rt module.xml
+[ev: cloudLinkForge module.xml `KeyRingPermission("cloudLinkNcs")`; cloudLink-rt module.xml
 FilePermission cloudLinkModel + cloudLinkSchedule]
 
 ---
@@ -261,7 +262,7 @@ of `httpClient-rt.jar` 4.15.6.20 static init: `iconst_0`). Every builder client 
 `BHttpClient.isDriverBasedClient()` is `final` and returns false (same copy `BHttpClient.java:302-306`), whatever
 module calls it. With the gate closed, `permittedByService` catches the refusal, writes it to the client's
 health as a fault ("Non driver clients are disabled in the HttpClientService") and returns false
-(`BHttpClientService.java:231-252`); `sendSync()` then returns `""` (`BHttpClient.java:277`, `sendSync` = `commonPoll(null)`).
+(`BHttpClientService.java:231-252`); `sendSync()` then returns `""` (`BHttpClient.java:277-285`, `sendSync` = `commonPoll(null)`).
 No exception reaches the caller. Same message and health call in the 4.15.6.20 jar (javap). `[ev: corpus B1346 §1346.2]`
 `[ev: retro devguide415-r3-drivers-integration Δ4]`
 - **Commissioning item:** a module on route 2 states "set `HttpClientService.enableNonDriverClients=true`" (and
@@ -294,29 +295,24 @@ No exception reaches the caller. Same message and health call in the 4.15.6.20 j
 ```java
 public class BMyCloudConnector extends BConnectorImpl {
 
-    @Override protected CompletableFuture<Void> doConnect() {
+    @Override protected void doConnect() throws Exception {
         // open the connection / authenticate
-        return CompletableFuture.completedFuture(null);
     }
 
-    @Override protected CompletableFuture<Void> registerDevice(String deviceId) {
+    @Override protected void registerDevice() throws Exception {
         // register or claim the device in the cloud backend
-        return CompletableFuture.completedFuture(null);
     }
 
-    @Override protected CompletableFuture<Void> doDisconnect() {
+    @Override protected void doDisconnect() throws Exception {
         // graceful close
-        return CompletableFuture.completedFuture(null);
     }
 
-    @Override protected CompletableFuture<Boolean> doPing() {
-        // liveness check; return true when the cloud endpoint is reachable
-        return CompletableFuture.completedFuture(true);
+    @Override protected void doPing() throws Exception {
+        // liveness check; throw when the cloud endpoint is unreachable
     }
 
-    @Override protected CompletableFuture<Void> sendMessage(BCloudMessage msg) {
-        // serialize msg to the protocol format and POST/AMQP/MQTT send
-        return CompletableFuture.completedFuture(null);
+    @Override public void sendMessage(byte[] payload, Map<String, String> props, CompletableFuture<String> result) {
+        // serialize to the protocol format, send, then result.complete(...)
     }
 }
 ```

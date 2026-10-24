@@ -1,0 +1,12 @@
+-- args --
+@DIR@/deps
+-- want --
+exit 1
+FAIL  lint-structure  Foo-rt  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
+FAIL  lint-structure  Foo-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  Foo-rt/Foo-rt.gradle.kts  L7: dependency version is not a 3-part floor (use X.Y.Z e.g. 4.14.0, not X.Y e.g. 4.14)
+-- stderr --
+-- deps/Foo-rt/Foo-rt.gradle.kts --
+dependencies { api(":baja:4.14") }   // 2-part floor, not 3-part (4.14.0) -> L7 FAIL
+-- deps/Foo-rt/module-include.xml --
+<types><type name="Foo" class="com.x.BFoo"/></types>

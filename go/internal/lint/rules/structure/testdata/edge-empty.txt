@@ -1,0 +1,10 @@
+-- args --
+@DIR@/empty
+-- want --
+exit 3
+ERROR  lint-structure  @DIR@/empty  no module profiles found (no *-rt/-ux/-wb/-se/-doc or build-file sub-directory: wrong path or not a module root)
+-- stderr --
+-- empty/.git/HEAD --
+x
+-- empty/README --
+x

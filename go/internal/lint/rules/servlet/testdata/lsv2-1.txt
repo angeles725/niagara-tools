@@ -1,0 +1,17 @@
+-- args --
+@DIR@/one
+-- want --
+exit 1
+FAIL  input-400  BadParse.java:6  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+-- stderr --
+-- one/BadParse.java --
+package demo;
+import javax.baja.web.*;
+public class BadParse extends BWebServlet {
+  public void doGet(WebOp op) throws Exception {
+    if (op.getUser() == null) { op.getResponse().sendError(401); return; }
+    double v = Double.parseDouble(op.getRequest().getParameter("v")); // no try/catch -> 400
+    use(v);
+  }
+  void use(double v) {}
+}

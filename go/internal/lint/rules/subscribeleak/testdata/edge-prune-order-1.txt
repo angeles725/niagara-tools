@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/B.java:2  void started() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/Z/A.java:2  void started() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/a/A.java:2  void started() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  @DIR@/m/b/c/A.java:2  void started() { sub.subscribe(c); }
+-- stderr --
+-- m/.git/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/B.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/Z/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/a/A.JAVA --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/a/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/a/notes.txt --
+  void started() { sub.subscribe(c); }
+-- m/b/c/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- m/x-worktrees/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}

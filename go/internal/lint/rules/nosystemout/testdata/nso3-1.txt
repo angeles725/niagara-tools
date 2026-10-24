@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-no-system-out  @DIR@/Mod/src/com/x/A.java:2  void f() { System.err.print("oops"); }
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void f() { System.err.print("oops"); }
+}

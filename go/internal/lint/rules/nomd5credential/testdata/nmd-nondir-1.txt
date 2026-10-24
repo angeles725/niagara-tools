@@ -1,0 +1,6 @@
+-- args --
+@DIR@/does-not-exist
+-- want --
+exit 3
+-- stderr --
+lint-no-md5-credential-digest: not a directory: @DIR@/does-not-exist

@@ -22,6 +22,7 @@ const (
 	Fail                     // a failed check: exit 1 with or without --strict
 	Pass                     // a check that held (rows print PASS); never affects the exit code
 	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
+	Info                     // information only (rows print INFO); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -32,6 +33,8 @@ func (s Severity) String() string {
 		return "PASS"
 	case Advisory:
 		return "ADVISORY"
+	case Info:
+		return "INFO"
 	}
 	return "WARN"
 }
@@ -51,10 +54,16 @@ type Finding struct {
 
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
 // for a file-level finding (Line 0). The check column is Check, or Rule when Check is empty.
-func (f Finding) Row() string {
+func (f Finding) Row() string { return f.row(false) }
+
+// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
+func (f Finding) row(bare bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
+	}
+	if f.Line == 0 && bare {
+		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
 		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
@@ -83,12 +92,30 @@ type TreeRule interface {
 	CheckTree(files []*javasrc.File) ([]Finding, error)
 }
 
+// RootRule is a lint check that reads its root itself instead of the files the shared walk lists: a
+// structure lint over directories and over files above or beside the root (lint-structure, which walks
+// up to the .git sentinel and reads sibling modules). CheckRoot gets each root as given and sets Path on
+// each finding. Spec.Select and ContinueOnWalkError do not apply to it: the runner walks nothing for it.
+// A root that holds nothing the rule checks (lint-structure: no profile) is an error like any empty root:
+// CheckRoot returns ErrEmptyRoot and the runner prints the Spec.EmptyError row (its Msg is required)
+// instead of any finding, stops the rule and exits 3. Any other non-nil error fails the scan closed: the
+// runner prints the findings returned with it, then "<lint>: <error>" on stderr, and exits 3.
+type RootRule interface {
+	ID() string
+	Severity() Severity
+	CheckRoot(root string) ([]Finding, error)
+}
+
+// ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
+var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
+
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
-// Exactly one of Rule and Tree is set, and that value implements only its own interface; Command
-// panics on any other spec (a registration bug).
+// Exactly one of Rule, Tree and Root is set, and that value implements only its own interface;
+// Command panics on any other spec (a registration bug).
 type Spec struct {
 	Rule      Rule      // a per-file rule, or
-	Tree      TreeRule  // a whole-tree rule
+	Tree      TreeRule  // a whole-tree rule, or
+	Root      RootRule  // a rule that reads its root itself
 	Mode      Mode      // how the rule's arguments are parsed when it runs alone
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
@@ -103,11 +130,21 @@ type Spec struct {
 	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
 	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
-	// without them.
+	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg.
 	EmptyError EmptyRow
+	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
+	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".
+	BarePathRow bool
 	// BareUsage prints only Usage on an unknown flag (no "<lint>: unknown flag: <flag>" line), as a bash
 	// lint with its own `-*) usage; exit 3` case does; the exit code stays UsageExit.
 	BareUsage bool
+	// StrictFails prints a WARN row as FAIL under --strict, for a bash lint that rewrote the severity
+	// column itself (`v = strict ? "FAIL" : "WARN"`). The exit code is the same either way (1).
+	StrictFails bool
+	// RelPaths prints a per-file rule's row path with the "<root>/" prefix removed, as a bash lint that
+	// printed ${file#"$root/"} did (a root given with a trailing "/" keeps the whole path, as there). Env
+	// lines on stderr keep the walk path.
+	RelPaths bool
 }
 
 // EmptyRow is the ERROR row of Spec.EmptyError.
@@ -125,18 +162,22 @@ func (sp Spec) emptyMsg() string {
 }
 
 // ID is the registered rule's ID.
-func (sp Spec) ID() string {
-	if sp.Tree != nil {
-		return sp.Tree.ID()
-	}
-	return sp.Rule.ID()
-}
+func (sp Spec) ID() string { return sp.rule().ID() }
 
-func (sp Spec) severity() Severity {
-	if sp.Tree != nil {
-		return sp.Tree.Severity()
+func (sp Spec) severity() Severity { return sp.rule().Severity() }
+
+// rule is the one rule value the spec sets.
+func (sp Spec) rule() interface {
+	ID() string
+	Severity() Severity
+} {
+	switch {
+	case sp.Tree != nil:
+		return sp.Tree
+	case sp.Root != nil:
+		return sp.Root
 	}
-	return sp.Rule.Severity()
+	return sp.Rule
 }
 
 func (sp Spec) usageExit() int {
@@ -146,19 +187,27 @@ func (sp Spec) usageExit() int {
 	return 3
 }
 
-// validate enforces that a spec holds exactly one rule kind.
+// validate enforces that a spec holds exactly one rule kind, and a value of only that kind.
 func (sp Spec) validate() error {
-	switch {
-	case (sp.Rule == nil) == (sp.Tree == nil):
-		return errors.New("lint: a Spec sets exactly one of Rule and Tree")
-	case sp.Rule != nil:
-		if _, ok := sp.Rule.(TreeRule); ok {
-			return errors.New("lint: rule " + sp.Rule.ID() + " implements both Rule and TreeRule")
-		}
-	default:
-		if _, ok := sp.Tree.(Rule); ok {
-			return errors.New("lint: rule " + sp.Tree.ID() + " implements both Rule and TreeRule")
-		}
+	if count(sp.Rule != nil, sp.Tree != nil, sp.Root != nil) != 1 {
+		return errors.New("lint: a Spec sets exactly one of Rule, Tree and Root")
+	}
+	r := sp.rule()
+	_, isRule := r.(Rule)
+	_, isTree := r.(TreeRule)
+	_, isRoot := r.(RootRule)
+	if count(isRule, isTree, isRoot) != 1 {
+		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
 	}
 	return nil
+}
+
+func count(bs ...bool) int {
+	n := 0
+	for _, b := range bs {
+		if b {
+			n++
+		}
+	}
+	return n
 }

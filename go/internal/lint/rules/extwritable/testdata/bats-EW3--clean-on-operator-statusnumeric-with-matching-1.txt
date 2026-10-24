@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric(0d)", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraAction(name="setSetpoint", parameterType="BDouble", defaultValue="BDouble.make(0)", flags=Flags.OPERATOR)
+public class BRoom extends BComponent {}

@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="defrostInterval", type="BRelTime", defaultValue="BRelTime.make(1800000)", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="coolOnSensorFault", type="boolean", defaultValue="false", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class BRoom extends BComponent {}

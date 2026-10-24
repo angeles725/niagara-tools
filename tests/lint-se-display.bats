@@ -66,5 +66,15 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$KIT/toolbelt/lint-se-display.sh" "$d"
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
-  [ "$output" = "lint-se-display: cannot scan $d/A.java: Permission denied" ]
+  [ "$output" = "lint-se-display: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
+}
+
+@test "SED5: a display class in a block comment, Javadoc or string is clean; one after a // in a string is flagged" {
+  # Mutation: SED5 -- matching the raw line (no comment/literal blanking) FAILs the commented and string lines.
+  # [ev: truth audit 2026-10-22 T3]
+  printf '/* import javax.swing.JFrame; */\n/**\n * new JFrame() is never used here\n */\nclass A {\n  String s = "new JFrame";\n  String u = "http://h"; Object f = new JFrame();\n}\n' \
+    > "$TMPDIR_T/Mod-se/src/com/x/A.java"
+  run "$SED_L" "$TMPDIR_T/Mod-se"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-se-display  $TMPDIR_T/Mod-se/src/com/x/A.java:7  display class: String u = \"http://h\"; Object f = new JFrame();" ]
 }

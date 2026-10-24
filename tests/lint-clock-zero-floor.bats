@@ -61,5 +61,15 @@ teardown() { rm -rf "$TMPDIR_T"; }
   run "$KIT/toolbelt/lint-clock-zero-floor.sh" "$d"
   chmod 644 "$d/A.java"
   [ "$status" -eq 3 ]
-  [ "$output" = "lint-clock-zero-floor: cannot scan $d/A.java: Permission denied" ]
+  [ "$output" = "lint-clock-zero-floor: cannot scan $d/A.java: awk: fatal: cannot open file \`$d/A.java' for reading: Permission denied" ]
+}
+
+@test "CZF4: a Clock.schedule or zero floor in a comment or string does not count; a floor after a // inside a string is flagged" {
+  # Mutation: CZF4 -- matching the raw line (no comment/literal blanking) WARNs A.java and the commented and string floors.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* the delay goes to Clock.schedule(this, t, a, null) elsewhere */\n  long a = Math.max(0, d);\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class B {\n  void f() { Clock.schedule(this, t, a, null); }\n  /* long a = Math.max(0, d); */\n  String u = "http://h"; long b = Math.max(0L, d);\n  String s = "Math.max(0, d)";\n}\n' > "$TMPDIR_T/Mod/src/com/x/B.java"
+  run "$CZF" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-clock-zero-floor  $TMPDIR_T/Mod/src/com/x/B.java:4  zero-floor: String u = \"http://h\"; long b = Math.max(0L, d);" ]
 }

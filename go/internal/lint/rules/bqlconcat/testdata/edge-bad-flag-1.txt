@@ -1,0 +1,15 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-bql-string-concat: not a directory: -x
+-- m/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}
+-- n/A.java --
+class A {
+  BOrd.make("station:|bql:select * where a = '" + v + "'");
+}

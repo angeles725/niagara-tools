@@ -75,3 +75,17 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-wb-file-chooser: cannot list every file under $TMPDIR_T/Mod: "* ]]
 }
+
+@test "WFC5: a commented dialog is clean; a commented or quoted BComponentChooser never exempts; a dialog after a // inside a string is WARNed" {
+  # Mutation: WFC5 -- matching the raw line (no comment/literal blanking) exempts A.java and F.java.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* BComponentChooser c; */\n  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class C {\n  String u = "http://h"; void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/C.java"
+  printf 'class E {\n  /* BWbFieldEditor.dialog(p, t, BOrd.NULL); */\n}\n' > "$TMPDIR_T/Mod/src/com/x/E.java"
+  printf 'class F {\n  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }\n  String s = "BComponentChooser";\n}\n' > "$TMPDIR_T/Mod/src/com/x/F.java"
+  run "$WFC" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-wb-file-chooser  $TMPDIR_T/Mod/src/com/x/A.java:3  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+WARN  lint-wb-file-chooser  $TMPDIR_T/Mod/src/com/x/C.java:2  String u = \"http://h\"; void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+WARN  lint-wb-file-chooser  $TMPDIR_T/Mod/src/com/x/F.java:2  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }" ]
+}

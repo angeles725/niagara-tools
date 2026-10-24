@@ -1,0 +1,19 @@
+declared difference: T5-F1 a candidate is a class-level static Map field (outside every method and static initializer), deduped by name; a field filled only in static {} is a constant table
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/T.java --
+class T {
+  private static final Map<String, String> SLOT_TO_TRIGGER = new HashMap<String, String>();
+  private static final Map<String, String> XHR = new HashMap<String, String>();
+  static { XHR.put("X-Requested-With", "XMLHttpRequest"); }
+
+  static
+  {
+    SLOT_TO_TRIGGER.put("ampCompresor1",  "amperaje.compresorS1");
+    SLOT_TO_TRIGGER.put("ampCompresor2",  "amperaje.compresorS2");
+  }
+  static String trigger(String slot) { return SLOT_TO_TRIGGER.get(slot); }
+}

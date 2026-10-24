@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void started(){ mySub.subscribe(comp); }
+  void stopped(){ mySub.unsubscribe(comp); }
+}

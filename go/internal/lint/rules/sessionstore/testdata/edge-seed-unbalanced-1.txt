@@ -1,0 +1,19 @@
+declared difference: T5-F1 a candidate is a class-level static Map field (outside every method and static initializer), deduped by name; a field filled only in static {} is a constant table
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/U.java --
+class U {
+  private static final Map<String, Long> A = new ConcurrentHashMap<String, Long>();
+  void a(String id) {
+    A.put(id, 1L);
+  void b(String id) {
+    A.remove(id);
+-- Mod/src/com/x/V.java --
+class V {
+  private static final Map<String, Long> A = new ConcurrentHashMap<String, Long>();
+  static { A.put("k", 1L); }
+  void b(String id) { A.remove(id); }
+}

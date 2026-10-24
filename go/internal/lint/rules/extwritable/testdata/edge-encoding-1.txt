@@ -1,0 +1,33 @@
+-- args --
+@DIR@/e
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/e/BCr.java:2  a: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../a/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/e/BCr2.java:2  cr: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../cr/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/e/BLat.java:3  été: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../été/value (bare <real>, B826) or add an OPERATOR action (B822)
+WARN  ext-writable-shape  @DIR@/e/BNoEol.java:2  a: OPERATOR BStatusNumeric with no writing action -- external oBIX write must use the child leaf .../a/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- e/BCr.java --
+package e;
+@NiagaraProperty(name="a", type="BStatusNumeric", flags=Flags.OPERATOR)
+public class BCr {}
+-- e/BCr2.java --
+package e;
+@NiagaraProperty(name="cr", type="BStatusNumeric", flags=Flags.OPERATOR
+)
+public class BCr2 {}
+-- e/BEmpty.java --
+-- e/BLat.java --
+package e;
+// café
+@NiagaraProperty(name="été", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="setÉté")
+public class BLat {}
+-- e/BNoEol.java (noeol) --
+package e;
+@NiagaraProperty(name="a", type="BStatusNumeric", flags=Flags.OPERATOR)
+-- e/BUtf.java --
+package e;
+@NiagaraProperty(name="Ã©a", type="BStatusNumeric", flags=Flags.OPERATOR)
+@NiagaraAction(name="setÃ©a")
+public class BUtf {}
