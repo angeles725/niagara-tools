@@ -33,7 +33,7 @@
 # go/internal/newretro/testdata/record/record.sh). go/go-tool.sh `go_tool_bin` builds go/bin/new-retro when
 # it is missing or older than a Go source, then this script execs it with NEW_RETRO_DEFAULT_ROOT = its ../.
 # VCS-free by design; kit-links.bats L2 enforces.
-# [ev: retro campaign8-retro-loop]
+# [ev: retro campaign8-retro-loop] [ev: retro go-new-retro]
 set -u
 # readlink -f: resolve a symlinked copy of this file (report-module test toolbelts) to the real kit, so ../../go exists.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
