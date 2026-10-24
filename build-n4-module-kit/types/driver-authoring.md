@@ -890,5 +890,31 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 
 ---
 
+## 12 · Testing a driver
+
+The Baja offline boundary decides the tier: a `BComponent` needs a running NRE (`types/moduleTest.md`
+intro), and the network, device, point device ext, proxy ext and comm configs are all components, and
+`BIpAddress` is a `BStruct` (`ndriver/datatypes/BAddress.java:21`). Nothing NDriver-shaped is constructed in a WSL
+JUnit run until it has been proven to load there `[INFER]`. The devkit wizard ships no NDriver test template (its
+only driver test template is the video driver's,
+`organized/devkit/devkit-wb/extracted/gradle/videodriver/BNfooVideoDriverTest.java.vm`).
+
+| What | Tier | How |
+|---|---|---|
+| Frame encode/decode, checksum, escaping, length and bounds checks, error flag, tag extraction | **pure JUnit (WSL)**, `toolbelt/run-pure-test.sh` | Keep the byte layout in a Baja-free codec (`byte[]` ↔ plain fields, as `XCodec` in § 1.10); the `NMessage` / `LinkMessage` classes only delegate. Feed truncated, oversized and resynchronising frames. |
+| Correlation rules: which request a response completes, error → `FAILED_RESPONSE`, wrong sender | pure JUnit on the codec's tag and sender fields; the `NComm` path in a station test | § 1.7, § 1.9 |
+| Ping, read, write, timeout and retry against a device | **`BTestNgStation` + loopback mock** (`types/moduleTest.md` § TEST-G1) | The test opens a `DatagramSocket` / `ServerSocket` on `127.0.0.1` port 0 that answers with canned frames, adds the network and a device pointing at that port under the station's driver container, and waits with `TestHelper.assertWillBeTrue` (§ TEST-G2), never a fixed sleep. A mock that stops answering drives the timeout and DOWN paths. |
+| Proxy-ext status (`readOk` / `readFail`, DOWN propagation, tuning, fatal licence faults) | `BTestNgStation` | assert on the point's `status` and `faultCause` slots |
+| Discovery leaves and the manager | leaf mapping (`updateTarget`, `isExisting`) in `BTestNgStation`; the manager by hand in Workbench | § 1.11 |
+
+- Never point a test at a real device or a site address; the mock binds an ephemeral loopback port, so two
+  suites can run at once. The course's traffic-light simulator (`Lab11 NDriver/trafficLightServer.zip`) is an
+  out-of-process mock for a manual check, not a test fixture `[ev: corpus B1239 §1239.4]`.
+- Each codec test must bite: drop a bounds check or the tag override and see a test go red before calling the
+  suite done (`types/moduleTest.md` § What to test in a moduleTest vs pure JUnit).
+- Owed: the scaffold's `srcTest` (DR2) and a station-side loopback example built through the kit loop (DR5).
+
+---
+
 **See also:** `types/logic.md` (BStatus bits, BControlPoint), `types/logic-authoring.md`
 (§Authoring a driver — write-path safety checklist, writeOnUp/fallback lints).
