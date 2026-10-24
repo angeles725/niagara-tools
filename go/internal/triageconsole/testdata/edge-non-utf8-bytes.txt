@@ -1,0 +1,26 @@
+-- args --
+--tag
+plant
+--site
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:01 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  WARNING escritura falló ÿ€ bytes @ [plant]
+SITE  triage-console  a.txt  comm-timeout  1x 10:00:05 01-Oct-26 CST -> 10:00:05 01-Oct-26 CST  WARNING [bacnet] TIEMPO DE ESPERA agotado (distinct 1)
+SITE  triage-console  a.txt  comm-timeout  1x 10:00:06 01-Oct-26 CST -> 10:00:06 01-Oct-26 CST  WARNING [bacnet] sin respuesta del equipo (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  WARNING [bacnet] dispositivo fuera de línea 4 (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:04 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  WARNING [bacnet] dispositivo fuera de linea 6 (distinct 1)
+SITE  triage-console  a.txt  device-offline  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  WARNING [Ã©t] Ã‰TAT HORS LIGNE offline (distinct 1)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+INFORMACIÓN [10:00:00 01-Oct-26 CST][sys] arranque
+ADVERTENCIA [10:00:01 01-Oct-26 CST][plant] escritura falló ÿ€ bytes
+ADVERTENCIA [10:00:02 01-Oct-26 CST][bacnet] dispositivo fuera de línea 4
+ADVERTENCIA [10:00:03 01-Oct-26 CST][bacnet] dispositivo fuera de lÃ­nea 5
+ADVERTENCIA [10:00:04 01-Oct-26 CST][bacnet] dispositivo fuera de linea 6
+ADVERTENCIA [10:00:05 01-Oct-26 CST][bacnet] TIEMPO DE ESPERA agotado
+ADVERTENCIA [10:00:06 01-Oct-26 CST][bacnet] sin respuesta del equipo
+ADVERTENCIA [10:00:07 01-Oct-26 CST][Ã©t] Ã‰TAT HORS LIGNE offline
