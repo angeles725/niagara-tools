@@ -32,132 +32,27 @@
 # Mutation: LTF-backtick -- matching the sentinels on the raw cell FAILs a backticked `self` row
 # Mutation: LTF-header -- detecting the header on any row drops a data row whose display name starts with Source
 # Mutation: LTF-transient -- dropping the TRANSIENT operator-mode check lets a non-persisted HOA pass
+# Mutation: LTF-mapread -- going on with no Table 2 target passes a mapped READONLY slot clean on an unreadable map
+#
+# Implementation: rule package go/internal/lint/rules/linktargetflags on the shared engine go/internal/lint
+# (walker, Mode Valued parser, row formatter; go/README.md); the --wiring-map Table 2 harvest keeps the
+# toolbelt/generate-wiring-map.sh layout above. This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-link-target-flags <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 #
 # Row:    FAIL  lint-link-target-flags  <file>:<line>  LTF<n>: <reason>
 # Usage:  lint-link-target-flags.sh [--wiring-map <docs/wiring-map.md>] <java-src-dir>
 # Exits:  0 clean · 1 any FAIL · 3 usage/env (K20; no Java sources is exit 3 + ERROR row)
-# Dot-directories pruned (D9b). VCS-free by design (kit-links L2). LC_ALL=C.
+# Dot-directories pruned (D9b). VCS-free by design (kit-links L2). ASCII matching (the bash ran LC_ALL=C).
+# Declared difference from the bash lint (port 2026-10-24): a --wiring-map file that exists but cannot be read
+# is an env error (exit 3, `cannot read --wiring-map <file>: <reason>` on stderr); the bash awk printed its
+# error and went on with no Table 2 target.
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
-LC_ALL=C
-export LC_ALL
-
-usage_exit() {
-  printf 'usage: lint-link-target-flags.sh [--wiring-map <docs/wiring-map.md>] <java-src-dir>\n' >&2
-  exit 3
-}
-
-MAP=""
-SRC=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --wiring-map)
-      [ $# -ge 2 ] || usage_exit
-      MAP="$2"; shift 2 ;;
-    -*) usage_exit ;;
-    *) [ -z "$SRC" ] || usage_exit; SRC="$1"; shift ;;
-  esac
-done
-[ -n "$SRC" ] || usage_exit
-[ -d "$SRC" ] || { printf 'lint-link-target-flags: not a directory: %s\n' "$SRC" >&2; exit 3; }
-if [ -n "$MAP" ] && [ ! -f "$MAP" ]; then
-  printf 'lint-link-target-flags: --wiring-map file not found: %s\n' "$MAP" >&2
-  exit 3
-fi
-
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-
-# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
-scan_files_or_exit lint-link-target-flags 3 "$_TMP/files.txt" "$SRC" -name '*.java'
-if [ ! -s "$_TMP/files.txt" ]; then
-  printf 'ERROR  lint-link-target-flags  %s  no Java sources found (K20: wrong path or empty scaffold)\n' "$SRC"
-  exit 3
-fi
-
-# Table 2 (control -> facade) first-column slots of the wiring map that name a source: the facade
-# link-in targets. generate-wiring-map.sh scaffolds Table 2 from every SUMMARY/READONLY slot, including
-# slots the component sets itself, with a `_(fill)_` Source RT slot; such a row (or one whose WHOLE
-# source cell is empty, a dash, self, self-set, n/a or none, optionally parenthesised, after markdown
-# backticks are stripped) is not a link-in target; a source NAME containing "fill" or "self" (fillLevel, selfTestOk) is a real source.
-# The source column is the header-row cell that starts with "Source" (the first table row of the
-# section), else the third column. [polish-2026-10-02 P2b/P2c/P2d, #199 WU6b]
-MAP_TARGETS=" "
-if [ -n "$MAP" ]; then
-  MAP_TARGETS=" $(awk '
-    function trim(x) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", x); return x }
-    /^##[[:space:]]/ { in2 = ($0 ~ /Table 2/); scol = 3; hdr = 0; next }
-    in2 && /^\|/ {
-      n = split($0, c, /\|/)          # c[1] is the text before the leading pipe
-      if (!hdr) {                      # the first row of the table is its header
-        hdr = 1
-        for (k = 2; k <= n; k++) if (trim(c[k]) ~ /^Source/) scol = k - 1
-        next
-      }
-      slot = trim(c[2]); src = tolower(trim(c[scol + 1]))
-      gsub(/`/, "", src); src = trim(src)   # `self` in code formatting is still the self sentinel
-      if (slot !~ /^`[A-Za-z_][A-Za-z0-9_]*`$/) next
-      if (src !~ /[a-z]/ || src ~ /^_\(fill\)_$/ || src ~ /^\(?(self|self-set|n\/a|none)\)?$/) next
-      gsub(/`/, "", slot); print slot
-    }
-  ' "$MAP" | sort -u | tr '\n' ' ') "
-fi
-
-: > "$_TMP/rows.txt"
-while IFS= read -r f; do
-  awk -v FILE="$f" -v MAP_TARGETS="$MAP_TARGETS" '
-  function is_comment(s) { return (s ~ /^[[:space:]]*(\/\/|\/\*|\*)/) }
-  BEGIN { in_prop = 0; buf = ""; pline = 0; cmt = ""; prev_cmt = 0 }
-  {
-    line = $0
-    if (!in_prop) {
-      if (index(line, "@NiagaraProperty") > 0) {
-        in_prop = 1; buf = line; pline = FNR
-      } else if (is_comment(line)) {
-        cmt = (prev_cmt ? cmt " " : "") line   # a comment after a property starts a new block
-        prev_cmt = 1
-        next
-      } else {   # blank line, code or another annotation (@NiagaraType): the block ends
-        cmt = ""; prev_cmt = 0
-        next
-      }
-    } else {
-      buf = buf " " line
-    }
-    depth = 0
-    for (ci = 1; ci <= length(buf); ci++) {
-      c = substr(buf, ci, 1)
-      if (c == "(") depth++
-      else if (c == ")") depth--
-    }
-    if (depth > 0 || index(buf, "(") == 0) next
-
-    pname = ""
-    if (match(buf, /name[[:space:]]*=[[:space:]]*"[^"]+"/)) {
-      seg = substr(buf, RSTART); sub(/name[[:space:]]*=[[:space:]]*"/, "", seg); sub(/".*/, "", seg)
-      pname = seg
-    }
-    if (pname != "") {
-      lc = tolower(cmt)
-      linked = (lc ~ /link-in|linked from|commissioning link|written by (a )?blink/)
-      mapped = (index(MAP_TARGETS, " " pname " ") > 0)
-      if (index(buf, "READONLY") > 0 && (linked || mapped)) {
-        why = linked ? "link comment" : "wiring-map Table 2"   # "(wiring-map Table 2)" is matched by report-module.sh and commissioning-verify.sh
-        printf "FAIL  lint-link-target-flags  %s:%d  LTF1: link-in target \"%s\" (%s) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side\n", FILE, pline, pname, why
-      }
-      if (index(buf, "TRANSIENT") > 0 && index(buf, "OPERATOR") > 0 &&
-          (pname ~ /(Mode|Hoa|HOA)[0-9]*$/ || pname ~ /^hoa/)) {
-        printf "FAIL  lint-link-target-flags  %s:%d  LTF2: operator mode/HOA slot \"%s\" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it\n", FILE, pline, pname
-      }
-    }
-    in_prop = 0; buf = ""; pline = 0; prev_cmt = 0   # cmt kept: a block heads its run of properties
-  }
-  ' "$f" >> "$_TMP/rows.txt"
-done < "$_TMP/files.txt"
-
-if [ -s "$_TMP/rows.txt" ]; then
-  cat "$_TMP/rows.txt"
-  grep -q '^FAIL' "$_TMP/rows.txt" && exit 1
-fi
-exit 0
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-link-target-flags: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-link-target-flags "$@"

@@ -145,3 +145,14 @@ MD
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-link-target-flags: cannot list every file under $BATS_TEST_TMPDIR/src: "* ]]
 }
+
+@test "LTF-mapread: an existing but unreadable --wiring-map is an env error (exit 3), never a map with no targets" {
+  # Mutation: LTF-mapread -- going on with no Table 2 target passes a mapped READONLY slot clean on an unreadable map
+  local m="$BATS_TEST_TMPDIR/locked.md"
+  cp "$FX/map/docs/wiring-map.md" "$m"; chmod 000 "$m"
+  if [ -r "$m" ]; then chmod 644 "$m"; skip "running as root"; fi
+  run "$LTF" --wiring-map "$m" "$FX/map/src"
+  chmod 644 "$m"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-link-target-flags: cannot read --wiring-map $m: "* ]]
+}

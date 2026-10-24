@@ -48,3 +48,25 @@ func TestLocked(t *testing.T) {
 		t.Errorf("exit %d out %q err %q, want 3, no rows and %q", code, o.String(), e.String(), want)
 	}
 }
+
+// TestUnreadableMap: a --wiring-map file that exists but cannot be read is an env error before the walk
+// (declared port difference: the bash awk printed its error and went on with no Table 2 target).
+func TestUnreadableMap(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "A.java"), []byte("class A {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := filepath.Join(t.TempDir(), "map.md")
+	if err := os.WriteFile(m, []byte("## Table 2\n"), 0); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	code := lint.Command(Spec())([]string{ID, "--wiring-map", m, dir}, cli.Stdio{Out: &o, Err: &e})
+	want := ID + ": cannot read --wiring-map " + m + ": open " + m + ": permission denied\n"
+	if code != 3 || o.Len() != 0 || e.String() != want {
+		t.Errorf("exit %d out %q err %q, want 3 and %q", code, o.String(), e.String(), want)
+	}
+}
