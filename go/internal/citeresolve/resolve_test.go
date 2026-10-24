@@ -14,7 +14,7 @@ func fixtureRoots(t *testing.T) Roots {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Roots{Kit: abs + "/kit", Repo: abs, Research: abs + "/research", Modules: abs + "/modules",
+	return Roots{Kit: abs + "/kit", Repo: abs, Research: abs + "/research", Modules: abs + "/modules", Clients: abs + "/modules/Cliente",
 		Memory: abs + "/memory", Version: "4.15.6.20"}
 }
 

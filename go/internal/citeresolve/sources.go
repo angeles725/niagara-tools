@@ -26,22 +26,6 @@ func (r codeResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	return pathResolver{r.e}.Resolve(q, c)
 }
 
-// decompiled finds a package path (javax/baja/…/X.java) in every organized/ copy and versioned source tree.
-func (e *Engine) decompiled(p citeparse.Pointer) Result {
-	dirs, err := e.sourceDirs()
-	if err != nil {
-		return toolError(err)
-	}
-	f, err := e.inTrees(p.Target, dirs, copies)
-	switch {
-	case err != nil:
-		return toolError(err)
-	case f == "":
-		return Result{Status: MissingFile, Detail: p.Target + " not under a root, organized/ copy or " + e.roots.Version + " source"}
-	}
-	return e.hit(p, f)
-}
-
 // infix resolves `<dir or part>/…/<suffix>`: a file below that directory (or module part's copies)
 // whose path ends in /<suffix>.
 func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
@@ -57,7 +41,7 @@ func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
 		dirs = append(dirs, d)
 	}
 	for _, d := range dirs {
-		idx, err := e.fs.index(d)
+		idx, err := e.fs.index(d, baseSkip, nil)
 		if err != nil {
 			return toolError(err)
 		}
@@ -68,33 +52,6 @@ func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
 		}
 	}
 	return Result{Status: MissingFile, Detail: "no " + suffix + " below " + prefix}
-}
-
-// sourceDirs lists every organized/<mod>/<part>/ and niagara-help/versions/<version>/source/<part>/.
-func (e *Engine) sourceDirs() ([]string, error) {
-	var out []string
-	mods, err := e.fs.names(e.organized())
-	if err != nil {
-		return nil, err
-	}
-	for _, m := range mods {
-		parts, err := e.fs.names(filepath.Join(e.organized(), m))
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range parts {
-			out = append(out, filepath.Join(e.organized(), m, p))
-		}
-	}
-	src := filepath.Join(e.help(), "versions", e.roots.Version, "source")
-	parts, err := e.fs.names(src)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range parts {
-		out = append(out, filepath.Join(src, p))
-	}
-	return out, nil
 }
 
 type guideResolver struct {

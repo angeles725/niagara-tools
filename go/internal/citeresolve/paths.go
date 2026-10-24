@@ -126,9 +126,9 @@ func titleWords(s string) []string {
 type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
-// niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that order;
-// `…/rest` under an earlier hit of the card, `dir/…/rest` below dir, and a .java path not found there in
-// the decompile copies.
+// niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that
+// order; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
+// found under none of them (a bare file name, a partial package path, an ellipsis) is searched in the trees.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
 		for i := len(c.files) - 1; i >= 0; i-- {
@@ -140,31 +140,39 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 				}
 			}
 		}
-		return Result{Status: MissingFile, Detail: "ellipsis prefix: no earlier hit on this card holds " + rest}
+		return r.e.search(p, rest, "ellipsis prefix: no earlier hit on this card holds "+rest+", nor a searched tree")
 	}
 	if strings.Contains(p.Target, "/…/") {
 		return r.e.infix(p, c)
 	}
 	ro := r.e.roots
 	ver := filepath.Join(r.e.help(), "versions", ro.Version)
-	bases := []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules}
-	if filepath.IsAbs(p.Target) {
+	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules,
+		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
+		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean")}
+	if filepath.IsAbs(target) {
 		bases = []string{"/"}
 	}
-	f, err := first(p.Target, append(bases,
-		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
-		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean"))...)
+	f, err := first(target, bases...)
 	switch {
 	case err != nil:
 		return toolError(err)
 	case f != "":
 		return r.e.hit(p, f)
-	case !strings.Contains(p.Target, "/"):
-		return Result{Status: Unparsed, Detail: "bare file name: not in the card directory or a root, no tree named to search"}
-	case strings.HasSuffix(p.Target, ".java"):
-		return r.e.decompiled(p)
+	case filepath.IsAbs(target):
+		return Result{Status: MissingFile, Detail: target + " does not exist"}
 	}
-	return Result{Status: MissingFile, Detail: p.Target + " not under the card, kit, repo, research or modules roots"}
+	return r.e.search(p, target, target+" not under the card, kit, repo, research or modules roots, nor a searched tree")
+}
+
+// search resolves p by the files named, or ending in, target in the trees (repository, organized/,
+// versioned source, clients).
+func (e *Engine) search(p citeparse.Pointer, target, missing string) Result {
+	groups, err := e.lookup(target, nil)
+	if err != nil {
+		return toolError(err)
+	}
+	return e.pick(p, groups, target, Result{Status: MissingFile, Detail: missing})
 }
 
 // moduleDirs are the copies of a module part: organized/<mod>/<part>/ (also organized/<part>/<part>/)
@@ -192,7 +200,7 @@ func (e *Engine) inTrees(file string, dirs []string, subs []string) (string, err
 		return "", nil
 	}
 	for _, d := range dirs {
-		idx, err := e.fs.index(d)
+		idx, err := e.fs.index(d, baseSkip, nil)
 		if err != nil {
 			return "", err
 		}
@@ -203,8 +211,9 @@ func (e *Engine) inTrees(file string, dirs []string, subs []string) (string, err
 	return "", nil
 }
 
-// index maps each base name below dir to its paths, in walk order (cached; a missing dir is empty).
-func (f *files) index(dir string) (map[string][]string, error) {
+// index maps each base name below dir to its paths, in walk order, entering no directory named in skip and
+// no other tree root (cached; a missing dir is empty).
+func (f *files) index(dir string, skip, roots map[string]bool) (map[string][]string, error) {
 	if f.idx == nil {
 		f.idx = map[string]map[string][]string{}
 	}
@@ -220,7 +229,7 @@ func (f *files) index(dir string) (map[string][]string, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() && (d.Name() == ".git" || d.Name() == "pipeline") {
+		if d.IsDir() && path != dir && (skip[d.Name()] || roots[path]) {
 			return filepath.SkipDir
 		}
 		if !d.IsDir() {

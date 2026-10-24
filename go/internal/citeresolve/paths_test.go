@@ -49,6 +49,6 @@ func TestFilePointers(t *testing.T) {
 		{"absolute path is not joined to a root", "[ev: /METHODOLOGY.md]", []want{{MissingFile, "/METHODOLOGY.md"}}},
 		{"client module path", "[ev: Cliente/Pan/BPan.java:5]", []want{{Resolved, "// pan 5"}}},
 		{"missing path", "[ev: go/internal/nope/x.go:1]", []want{{MissingFile, "go/internal/nope/x.go"}}},
-		{"bare file name with no root", "[ev: BEvaporatorUnit.java:1224]", []want{{Unparsed, "bare file name"}}},
+		{"bare file name in no tree", "[ev: BEvaporatorUnit.java:1224]", []want{{MissingFile, "BEvaporatorUnit.java"}}},
 	})
 }
