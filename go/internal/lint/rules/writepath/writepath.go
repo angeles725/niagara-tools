@@ -45,6 +45,13 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 		return nil, s.errorRow("no src found")
 	}
 	rows := m.slots()
+	extra, err := s.bogSlots(values["--bog"])
+	if err != nil {
+		return nil, err
+	}
+	for slot := range extra {
+		covered[slot] = true
+	}
 	var out []lint.Finding
 	lists := make([][]string, len(srcs))
 	for i, src := range srcs {
@@ -56,6 +63,13 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 		slots, err := s.operatorSlots(files)
 		if err != nil {
 			return out, err
+		}
+		if len(slots) > 0 && len(extra) > 0 { // bog links target runtime slots: only a profile that has some
+			set := map[string]bool{}
+			for _, slot := range append(slots, sorted(extra)...) {
+				set[slot] = true
+			}
+			slots = sorted(set)
 		}
 		for _, slot := range slots {
 			if !rows[slot] {
