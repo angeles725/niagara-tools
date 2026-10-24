@@ -76,12 +76,16 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [[ "$output" == *"add_slot"* ]]
 }
 
-@test "SR-CSV embedded CSV_TABLE heredoc byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
-  local script="$SR"
-  local oracle="$FX/b795-795.4.csv"
-  local extracted
-  extracted=$(awk '/^CSV_TABLE=\$\(cat <</{f=1;next} f&&/^CSV$/{exit} f{print}' "$script")
-  [ "$extracted" = "$(cat "$oracle")" ]
+@test "SR-CSV the embedded Go classifier table byte-equals tests/fixtures/schema-risk/b795-795.4.csv" {
+  # The table moved from the bash CSV_TABLE heredoc to go/internal/schemarisk/b795-795.4.csv (go:embed).
+  cmp "$KIT/../go/internal/schemarisk/b795-795.4.csv" "$FX/b795-795.4.csv"
+}
+
+@test "SR-multi several rows of one category list in declaration order (after for add_slot, before for the rest)" {
+  # Mutation: SR-multi -- listing a category by name (or map order) puts alpha before zeta and fails here
+  pair multi_row
+  [ "$status" -eq 2 ]
+  [ "$output" = "$(cat "$BATS_TEST_DIRNAME/../go/internal/schemarisk/testdata/multi_row.golden")" ]
 }
 
 @test "SR-locked: an unreadable sub-directory is an env error (exit 4), never a clean pass" {
