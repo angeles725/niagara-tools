@@ -1,0 +1,28 @@
+declared difference (truth fix T2): the bash awk matched "@NiagaraProperty" on the raw line, so a
+commented-out slot counted: Ghost's two commented Interval slots made a false WARN (N=3 M=1) and
+Hidden's commented status slots hid a real one (N=2 M=2). Comments are blanked first now.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  Hidden  N=2 per-instance config slots but 0 status slots
+-- stderr --
+-- Ghost.java --
+class Ghost {
+  // @NiagaraProperty(name = "xInterval", type = "int", defaultValue = "1")
+  /*
+  @NiagaraProperty(
+    name = "yInterval",
+    type = "int"
+  )
+  */
+  @NiagaraProperty(name = "aInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "bActive", type = "boolean", defaultValue = "false")
+}
+-- Hidden.java --
+class Hidden {
+  @NiagaraProperty(name = "aInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "bInterval", type = "int", defaultValue = "1")
+  // @NiagaraProperty(name = "aActive", type = "boolean", defaultValue = "false")
+  /** Old: {@code @NiagaraProperty(name = "bActive")} */
+}

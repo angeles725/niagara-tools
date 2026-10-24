@@ -28,7 +28,10 @@ type Station struct {
 	Requests, AboutRequests int
 	Sessions                map[int]bool // open station sessions
 	Configs                 []box.Config // every client made, in order
-	next                    int
+	// Trees maps an ORD to the nodes a load of it answers (any depth); an ORD missing here
+	// answers the root with its stationName.
+	Trees map[string]*pyjson.Object
+	next  int
 }
 
 // NewStation is a tier A station named FakeStation.
@@ -81,6 +84,9 @@ func (c *client) LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.O
 	c.st.Requests++
 	if !c.st.Sessions[c.sid] {
 		return nil, &box.Error{Kind: box.KindBox, Msg: "no such session", Channel: box.Channel, Key: "loadSlots"}
+	}
+	if nodes, ok := c.st.Trees[ord]; ok {
+		return nodes, nil
 	}
 	root, name, nodes := pyjson.NewObject(), pyjson.NewObject(), pyjson.NewObject()
 	root.Set("h", opt.Handle)
