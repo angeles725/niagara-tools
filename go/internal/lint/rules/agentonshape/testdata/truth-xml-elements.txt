@@ -1,0 +1,23 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:2  malformed agent-on target (need module:Type): First
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:2  malformed agent-on target (need module:Type): Second
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:3  malformed agent-on target (need module:Type): Single
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:4  malformed agent-on target (need module:Type): a&b
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:6  malformed agent-on target (need module:Type): Split
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:9  malformed agent-on target (need module:Type): 
+-- stderr --
+-- M/Mod-rt/module-include.xml --
+<agent>
+<on type="First"/><on type="Second"/>
+<on requiredPermissions="r" type='Single'/>
+<on type="a&amp;b"/><on type="m:T&#36;X"/>
+<!-- <on type="Commented"/> -->
+<on
+  type="Split"/>
+<![CDATA[ <on type="InCdata"/> ]]>
+<on type=""/>
+<on/>
+</agent>
