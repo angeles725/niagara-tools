@@ -2,34 +2,17 @@ package preflight
 
 import (
 	"os"
-	"regexp"
 	"sort"
 	"strings"
-)
 
-// signBlock is toolbelt/lib/signing-block.sh (SIGN_BLOCK_NAME, SIGN_BLOCK_ERE), entry by entry and in
-// order; TestSignBlockMatchesTheShellTable keeps them equal.
-var signBlock = []struct {
-	name string
-	re   *regexp.Regexp
-}{
-	{"allowDefaultProfile.set(false) (or = false)", regexp.MustCompile(`allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))`)},
-	{"niagaraSigning {", regexp.MustCompile(`niagaraSigning[[:space:]]*\{`)},
-	{"aliases", regexp.MustCompile(`(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)`)},
-	{"signingProfileFile", regexp.MustCompile(`signingProfileFile`)},
-}
+	"github.com/angeles725/niagara-tools/go/internal/signblock"
+)
 
 // sampleSign checks the root build.gradle.kts code (comments removed, strings emptied) for every part of
 // the signing block: without allowDefaultProfile off a missing profile signs with the default key.
 func (r *run) sampleSign() {
 	kts := r.gr + "/build.gradle.kts"
-	code := ktsCode(kts)
-	var miss []string
-	for _, part := range signBlock {
-		if !anyLine(code, part.re) {
-			miss = append(miss, part.name)
-		}
-	}
+	miss := signblock.Missing(ktsCode(kts))
 	if len(miss) == 0 {
 		r.row("PASS", "sample-sign", "root build.gradle.kts has allowDefaultProfile.set(false) + niagaraSigning { aliases; signingProfileFile }")
 	} else {
@@ -44,15 +27,6 @@ func (r *run) sampleBuild() {
 	} else {
 		r.row("PASS", "sample-build", "no shipped build/ directory")
 	}
-}
-
-func anyLine(lines []string, re *regexp.Regexp) bool {
-	for _, ln := range lines {
-		if re.MatchString(ln) {
-			return true
-		}
-	}
-	return false
 }
 
 // ktsCode is the Kotlin script file with // and /* */ comments removed (not nested: the first */

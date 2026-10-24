@@ -9,6 +9,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/props"
+	"github.com/angeles725/niagara-tools/go/internal/signblock"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
@@ -21,18 +22,6 @@ var (
 	jdkAuto   = regexp.MustCompile(`^[[:space:]]*org\.gradle\.java\.installations\.auto-detect[[:space:]]*=[[:space:]]*false[[:space:]]*$`)
 	pluginLit = regexp.MustCompile(`^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"`)
 )
-
-// signBlock is the signing block L15 requires, each part named as its row names it: toolbelt/lib/signing-block.sh
-// SIGN_BLOCK_NAME and SIGN_BLOCK_ERE, entry by entry and in order (tests/lint-structure.bats LS15-sync keeps them equal).
-var signBlock = []struct {
-	name string
-	re   *regexp.Regexp
-}{
-	{"allowDefaultProfile.set(false) (or = false)", regexp.MustCompile(`allowDefaultProfile[[:space:]]*(\.set\([[:space:]]*false[[:space:]]*\)|=[[:space:]]*false([^[:alnum:]_]|$))`)},
-	{"niagaraSigning {", regexp.MustCompile(`niagaraSigning[[:space:]]*\{`)},
-	{"aliases", regexp.MustCompile(`(^|[^[:alnum:]_])aliases([^[:alnum:]_]|$)`)},
-	{"signingProfileFile", regexp.MustCompile(`signingProfileFile`)},
-}
 
 // hostPaths is L10: every gradle.properties under the root (dot directories pruned), then the one in
 // each parent directory up to the first holding a .git directory, may not pin an absolute host path.
@@ -201,13 +190,7 @@ func (s *scan) signing(build string) {
 		return
 	}
 	code := ktssrc.Code(toks)
-	var miss []string
-	for _, part := range signBlock {
-		if !grep(code, part.re) {
-			miss = append(miss, part.name)
-		}
-	}
-	if len(miss) > 0 {
+	if miss := signblock.Missing(code); len(miss) > 0 {
 		s.row(lint.Warn, build, "L15: applies com.tridium.niagara-signing without (uncommented) "+strings.Join(miss, ", ")+
 			" — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)")
 	}

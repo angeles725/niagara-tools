@@ -404,9 +404,9 @@ $_LS15_BLOCK
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: preflight sample-sign and build.sh take lib/signing-block.sh; the Go L15 signBlock equals it" {
+@test "LS15-sync: preflight sample-sign and build.sh take lib/signing-block.sh; the Go signblock.Parts equals it" {
   # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh or build.sh, or change, drop or reorder
-  # an entry (pattern or row name) of the Go signBlock -> this fails.
+  # an entry (pattern or row name) of the Go signblock.Parts -> this fails.
   lib="$KIT/toolbelt/lib/signing-block.sh"
   grep -q '^SIGN_BLOCK_ERE=(' "$lib"
   # shellcheck disable=SC2016
@@ -418,17 +418,20 @@ $_LS15_BLOCK
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
   done
-  # The Go port (lint-structure.sh is the n4lint wrapper) holds the same table, entry by entry and in order.
+  # The Go table (go/internal/signblock, read by lint-structure L15 and the preflight port) holds the same
+  # entries in the same order; no other Go package may keep a copy.
   # shellcheck disable=SC1090
   . "$lib"
-  go="$KIT/../go/internal/lint/rules/structure/module.go"
+  go="$KIT/../go/internal/signblock/signblock.go"
+  run grep -rlF 'allowDefaultProfile[[:space:]]' "$KIT/../go/internal" --include='*.go'
+  [ "$output" = "$go" ] || { printf 'Go copies of the table outside signblock:\n%s\n' "$output"; false; }
   # shellcheck disable=SC2016  # the Go source's literal backquotes, not an expansion
-  mapfile -t rows < <(sed -n '/^var signBlock/,/^}$/p' "$go" |
+  mapfile -t rows < <(sed -n '/^var Parts/,/^}$/p' "$go" |
     sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
   [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ] && [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ] && [ "${#rows[@]}" -eq 4 ]
   for k in "${!rows[@]}"; do
     [ "${rows[$k]}" = "${SIGN_BLOCK_NAME[$k]}"$'\t'"${SIGN_BLOCK_ERE[$k]}" ] ||
-      { printf 'signBlock[%s] = %s\nlib       = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
+      { printf 'Parts[%s] = %s\nlib      = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
   done
 }
 
