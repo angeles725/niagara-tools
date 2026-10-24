@@ -385,7 +385,7 @@ cadence starts. [ev: corpus B872 §872.1]
 
 One poll thread per network, named `"Poll:<networkName>"`. `pollEnabled` is a property of the network's POLL
 SERVICE (`BAbstractPollService.java:62`, default true) and gates the entire loop. [ev: corpus B872 §872.1;
-corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
+corpus B810 §810.3] (B810 is cited in `logic-authoring.md §Authoring a driver`) `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
 
 ---
 
