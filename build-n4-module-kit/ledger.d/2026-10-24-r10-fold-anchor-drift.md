@@ -1,0 +1,6 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: round-10 fold sweep: kcr-guide-anchor-drift retro folded; every kit retro folded, kit retro_pending cleared -->
+log: 2026-10-24 · round-10 fold sweep, anchor drift → retro r10-kcr-guide-anchor-drift folded: Δ1 (guides-clean anchors, DRIFT) was already cited in the `BUILD-LOOP.md` § 5 Citation pre-filter bullet [ev: retro r10-kcr-guide-anchor-drift Δ1]; that bullet gains the lesson that an ignored, regenerated tree keeps no history, so the anchor is written at citation time. Every kit retro is now folded, so the kit block's `retro_pending` in `BUILD-STATE.src.md` is false.
+open_issue: the `toolbelt/kit-cite-resolve.sh` header lists the finding statuses without DRIFT (retro r10-kcr-guide-anchor-drift, 2026-10-24 fold; one-line header edit).
+open_issue: two kit guides-clean citations were not swept because their lines name a client (retro r10-kcr-guide-anchor-drift, 2026-10-24 fold): a register line citing the OBIXDriver licence-requirement guide page at `:19` (now line 9), and a `types/dashboard.md` line citing the dashboard pane guide page at `:7,22` (correct, no anchor); repoint and anchor them without copying the client name.
