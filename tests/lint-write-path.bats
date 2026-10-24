@@ -449,6 +449,7 @@ MD
 @test "WP-matrix-table: a module matrix with no table row is skipped and the walk reaches the real one" {
   # Mutation: WP-matrix-anyline -- accepting any non-empty file stops at the heading-only matrix (FAIL setpoint).
   r="$BATS_TEST_TMPDIR/mt"; mkdir -p "$r/.git" "$r/docs" "$r/M/docs" "$r/M/src/com/x"
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
   printf '# M\n| Slot | W |\n|--|--|\n| `setpoint` | D |\n' > "$r/docs/write-path-matrix.md"
   printf '# Write-path matrix\nSee the repository matrix.\n' > "$r/M/docs/write-path-matrix.md"
   printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$r/M/src/com/x/B.java"
@@ -463,6 +464,7 @@ MD
   # Mutation: WP-stale-noeol -- skipping an unterminated last line hides its STALE row.
   d="$BATS_TEST_TMPDIR/noeol"; mkdir -p "$d/src/com/x" "$d/docs"
   printf '@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)\n' > "$d/src/com/x/B.java"
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
   printf '| `setpoint` | D |\n| `ghostLast` | D |' > "$d/docs/write-path-matrix.md"
   run "$LW" --strict "$d"
   [[ "$output" == *"STALE"*"ghostLast"* ]]
@@ -481,6 +483,7 @@ MD
 @NiagaraProperty(name="label", type="String", defaultValue="BString.make(\"(\")", flags=Flags.SUMMARY)
 @NiagaraProperty(name="afterParen", flags=Flags.OPERATOR)
 JAVA
+  # shellcheck disable=SC2016  # the backticks are markdown, not command substitution
   printf '| `label` | D |\n| `opInComment` | D |\n| `commentedOut` [concept] | D |\n' > "$d/docs/write-path-matrix.md"
   run "$LW" "$d"
   [[ "$output" == *"FAIL"*"afterParen"* ]]
