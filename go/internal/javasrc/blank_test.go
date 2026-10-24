@@ -102,3 +102,18 @@ func TestMaskLiterals(t *testing.T) {
 		}
 	}
 }
+
+func TestMaskLine(t *testing.T) {
+	for in, want := range map[string]string{
+		`f("a,b", c)`:     `f("   ", c)`,
+		`x = 'q'; y`:      `x = ' '; y`,
+		`s = "a\"b(" + t`: `s = "     " + t`,
+		`open "abc`:       `open "   `,
+		"plain":           "plain",
+	} {
+		got := MaskLine(in)
+		if got != want || len(got) != len(in) {
+			t.Errorf("MaskLine(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

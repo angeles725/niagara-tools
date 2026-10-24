@@ -77,10 +77,11 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 }
 
 // proven reports whether the call on 0-based line i provably resolves no client-chosen ord (kit #459):
-// a constant prefix whose client part is traversal-guarded earlier in the method.
+// a constant prefix whose client part is traversal-guarded earlier in the method, or a value whose every
+// origin is a BAlarmRecord's getSource().
 func proven(f *javasrc.File, i int) bool {
 	t, v, ok := newTracer(f, i)
-	return ok && t.prefixedAndGuarded(v)
+	return ok && (t.prefixedAndGuarded(v) || t.fromAlarmSource(v, 0))
 }
 
 // state is the awk marker_state: "reason", "bare" (a marker with nothing after it) or "" (no marker).

@@ -151,3 +151,43 @@ JAVA
   [[ "$output" != *"A.java:9 "* ]]
   [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 3 ]
 }
+
+# Truth fix T3 (kit #459 b, PANCCADIA BDashboardServlet.java:804): an ord whose every origin is a framework
+# alarm record's source (BAlarmRecord.getSource()), followed through locals, the arguments of every call of
+# a private method and a private method's returns, is a station value, not client input.
+@test "AO15: an ord from BAlarmRecord.getSource() through private helpers is clean" {
+  # Mutation: AO15 -- not following the private helper chain WARNs on the alarm-source ord.
+  cat > "$TMPDIR_T/M/src/A.java" <<'JAVA'
+class A {
+  private void appendAlarm(StringBuilder sb, BAlarmRecord rec) throws Exception
+  {
+    String source     = safeSource(rec);
+    String label      = resolveSourceLabel(rec, source);
+  }
+  private static String safeSource(BAlarmRecord rec)
+  {
+    try { return rec.getSource().toString(); } catch (Exception e) { return ""; }
+  }
+  private String resolveSourceLabel(BAlarmRecord rec, String rawSource)
+  {
+    if (rawSource == null || rawSource.isEmpty()) return "";
+    BObject resolved = javax.baja.naming.BOrd.make(rawSource).get(this, null);
+    return "";
+  }
+  public String open(String clientOrd)
+  {
+    BOrd.make(clientOrd);
+    return resolveOther(clientOrd);
+  }
+  private String resolveOther(String raw)
+  {
+    BOrd.make(raw);
+    return "";
+  }
+}
+JAVA
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"A.java:14 "* ]]
+  [ "$(printf '%s\n' "$output" | grep -c 'BOrd.make from a variable')" -eq 2 ]
+}
