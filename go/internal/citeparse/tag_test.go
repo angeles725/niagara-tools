@@ -49,6 +49,9 @@ func TestCardTags(t *testing.T) {
 		{"placeholder is a template", "[ev: retro <stem> Δk]", []brief{{1, Template, "retro <stem> Δk", ""}}},
 		{"unknown kind is unparsed", "[ev: lecture Review 2 build]", []brief{{1, Unparsed, "lecture Review 2 build", ""}}},
 		{"fenced block is skipped", "```\n[ev: retro x]\n```\n[ev: retro y]", []brief{{4, Retro, "y", ""}}},
+		{"an unclosed tag in a closed code span is literal", "x `[ev: retro foo Δ1` is code", nil},
+		{"an unclosed code-span tag does not swallow the next line's tag", "x `[ev: retro foo Δ1` y\n`[deferred: retro <stem> Δk]`",
+			[]brief{{2, Template, "retro <stem> Δk", ""}}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

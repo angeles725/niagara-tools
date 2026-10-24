@@ -5,18 +5,31 @@ import (
 	"strings"
 )
 
+// secNum is a section number or a range of two (`11.1-11.3`, `2.4a`, `12.3-§12.5`); secList and secListLoose
+// are lists of them after one § or after §§.
+const (
+	secNum       = `\d+(?:\.\d+)*(?:\.?[a-z])?(?:[–-]§?\d+(?:\.\d+)*)?`
+	secList      = secNum + `(?:\s*,\s*§\s*` + secNum + `)*`
+	secListLoose = secNum + `(?:\s*,\s*§?\s*` + secNum + `)*`
+)
+
 var (
 	fileExt    = regexp.MustCompile(`\.[A-Za-z][A-Za-z0-9]{0,9}$`)
 	identRe    = regexp.MustCompile(`^[A-Za-z][\w.-]*$`)
 	className  = regexp.MustCompile(`^[A-Z][A-Za-z0-9_$]*$`)
 	versionSeg = regexp.MustCompile(`^[\d.]+$`)
-	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*(?:\.?[a-z])?(?:-\d+)?`)
+	sectionNum = regexp.MustCompile(secNum)
 	aliasEq    = regexp.MustCompile("`([A-Z]{1,3})=([\\w./-]+)`")
 	aliasDir   = regexp.MustCompile("`([A-Z]{1,3})/` = `([\\w./-]+)`")
 	aliasCited = regexp.MustCompile("`([\\w./-]+)`, cited `([A-Z]{1,3}):`")
 	aliasHelp  = regexp.MustCompile("\\b([A-Z]{1,3})\\s+=\\s+niagara-help\\s+(\\d+(?:\\.\\d+)+)\\s+`([\\w./-]+)`")
 	plainWord  = regexp.MustCompile(`^[A-Za-z][a-z]*$`)
 	copyWords  = map[string]bool{"vineflower": true, "decompiled": true, "extracted": true}
+
+	// sectionList is a list of section numbers, each after the first opening with §; sectionListLoose
+	// (after §§) also takes a bare number after a comma.
+	sectionList      = regexp.MustCompile(`^` + secList)
+	sectionListLoose = regexp.MustCompile(`^` + secListLoose)
 )
 
 // maxAliasDepth bounds the expansion of an alias defined by another (`V=R/vineflower`).
@@ -101,8 +114,12 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 		switch {
 		case len(f) == 0:
 			return unparsed(c, "no file named")
+		case strings.Contains(f[0], ".jar!"):
+			jar, entry, _ := strings.Cut(f[0], ".jar!")
+			entry, lines := splitLines(strings.TrimPrefix(entry, "/"))
+			return []Pointer{{Kind: Jar, Target: jar + ".jar", File: entry, Lines: lines, Notes: f[1:], Raw: c}}
 		case strings.Contains(f[0], "!"):
-			return unparsed(c, "jar entry")
+			return unparsed(c, "archive entry")
 		case len(f) >= 2 && !strings.ContainsAny(f[0], "/.:") && className.MatchString(f[1]):
 			return []Pointer{{Kind: Code, Target: f[0], File: f[1] + ".java", Notes: f[2:], Raw: c}}
 		case len(f) >= 2 && !strings.ContainsAny(f[0], "/.:") && looksPath(f[1]):
@@ -154,8 +171,8 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 	p := Pointer{Kind: k, Target: expand(path, aliases), Lines: lines, Raw: raw}
 	extra := f[1:]
 	if len(extra) > 0 && strings.HasPrefix(extra[0], "§") {
-		h := strings.TrimSpace(strings.TrimPrefix(strings.Join(extra, " "), "§"))
-		p.Sections = sectionRange(heading(h))
+		h := strings.TrimPrefix(strings.Join(extra, " "), "§")
+		p.Sections = sections(strings.TrimLeft(h, "§ "), strings.HasPrefix(h, "§"))
 		return p
 	}
 	for len(extra) > 0 && strings.HasPrefix(extra[0], ":") {
@@ -183,12 +200,25 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 	return p
 }
 
-// heading reads a § reference: a section number (any title after it dropped) or a title, unquoted.
-func heading(h string) string {
-	if n := sectionNum.FindString(h); n != "" {
-		return n
+// sections reads a § reference: a list of section numbers (any title after them dropped; a bare number
+// after a comma only under §§, many), each range as its two ends, or one title, unquoted.
+func sections(h string, many bool) []string {
+	list := sectionList
+	if many {
+		list = sectionListLoose
 	}
-	return strings.TrimSpace(strings.Trim(h, "\"`"))
+	l := list.FindString(h)
+	if l == "" {
+		if t := strings.TrimSpace(strings.Trim(h, "\"`")); t != "" {
+			return []string{t}
+		}
+		return nil
+	}
+	var out []string
+	for _, n := range sectionNum.FindAllString(l, -1) {
+		out = append(out, sectionRange(n)...)
+	}
+	return out
 }
 
 // notAPath says why a path-like word is not one file: a glob, or a list of version numbers.

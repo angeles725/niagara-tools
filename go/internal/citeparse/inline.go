@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 const javaPath = "`?([\\w/.$…-]+\\.java)(?::(\\d[\\d,-]*))?`?"
@@ -17,8 +18,8 @@ var (
 	javapOf      = regexp.MustCompile("javap of `?([^`\\s]+\\.jar)`?(?:\\s+(\\d+(?:\\.\\d+){3}))?")
 	devguideRef  = regexp.MustCompile("\\(devguide `([^`]+)`")
 	certPath     = regexp.MustCompile("\\[CERT[^\\]]*\\]\\s+`?(organized/[^\\s`]+)")
-	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? § (\"[^\"]+\"|`[^`]+`|[^,;)\\]`|]+)")
-	tickedPath   = regexp.MustCompile("`((?:[\\w.$…-]+/)+[\\w.$-]*\\.\\w{1,10}):(\\d[\\d,-]*)`")
+	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? (?:§§ (" + secListLoose + ")|§ (\"[^\"]+\"|`[^`]+`|" + secList + "|[^,;)\\]`|]+))")
+	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,-]*)`")
 	tickedAlias  = regexp.MustCompile("`([A-Z]{1,3}):(\\d[\\d,-]*)`")
 )
 
@@ -64,15 +65,17 @@ func (sc *scan) inline(i int) []Pointer {
 		return pathPointer(Path, strings.TrimRight(m[1], ".,;)"), sc.aliases, ""), true
 	})
 	take(crossRef, func(m []string) (Pointer, bool) {
-		h := m[2]
-		if !strings.HasPrefix(h, "\"") && !strings.HasPrefix(h, "`") {
+		h, many := m[2]+m[3], m[2] != ""
+		if !many && !strings.HasPrefix(h, "\"") && !strings.HasPrefix(h, "`") {
 			h, _, _ = strings.Cut(h, ". ")
 			h = strings.TrimRight(strings.TrimSpace(h), ".:")
 		}
-		return Pointer{Kind: Path, Target: m[1], Sections: sectionRange(heading(h))}, heading(h) != ""
+		s := sections(h, many)
+		return Pointer{Kind: Path, Target: m[1], Sections: s}, len(s) > 0
 	})
-	take(tickedPath, func(m []string) (Pointer, bool) {
-		return pathPointer(Path, m[1]+":"+m[2], sc.aliases, ""), true
+	take(tickedPath, func(m []string) (Pointer, bool) { // the path may hold spaces, so it is not split into words
+		lines, _ := ParseRanges(m[2])
+		return Pointer{Kind: Path, Target: expand(m[1], sc.aliases), Lines: lines}, onePath(m[1])
 	})
 	take(tickedAlias, func(m []string) (Pointer, bool) {
 		a, ok := sc.aliases[m[1]]
@@ -85,4 +88,18 @@ func (sc *scan) inline(i int) []Pointer {
 		out[k] = h.p
 	}
 	return out
+}
+
+// onePath reports whether a backticked path is one path. A path with spaces is, when its first space falls
+// after a `/` or it opens with a capitalised or numbered directory (`Slide Code/`, `Lab11 NDriver/`), and no
+// ellipsis follows a space; else it is a label before a path (`code x-rt a/B.java`, `FMT …/y.sh`).
+func onePath(p string) bool {
+	sp := strings.IndexByte(p, ' ')
+	switch {
+	case sp < 0:
+		return true
+	case strings.Contains(p, " …"):
+		return false
+	}
+	return strings.Contains(p[:sp], "/") || unicode.IsUpper(rune(p[0])) || unicode.IsDigit(rune(p[0]))
 }

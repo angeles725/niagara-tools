@@ -151,14 +151,16 @@ func (e *Engine) treeRoots() map[string]bool {
 	return m
 }
 
-// covered reports whether dir is a tree root or below one, so the trees' indexes already list it.
+// covered reports whether the trees' indexes already list dir: the deepest of treeRoots holding it is a
+// tree root, not the research root, which no tree's walk enters.
 func (e *Engine) covered(dir string) bool {
-	for _, t := range e.trees() {
-		if dir == t.root || strings.HasPrefix(dir, t.root+"/") {
-			return true
+	deepest := ""
+	for r := range e.treeRoots() {
+		if (dir == r || strings.HasPrefix(dir, r+"/")) && len(r) > len(deepest) {
+			deepest = r
 		}
 	}
-	return false
+	return deepest != "" && deepest != e.roots.Research
 }
 
 // pick resolves p against what lookup found: one logical file is checked copy by copy; several are
