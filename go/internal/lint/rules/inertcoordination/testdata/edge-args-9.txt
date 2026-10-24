@@ -1,0 +1,15 @@
+-- args --
+@DIR@/a/H.java
+-- want --
+exit 3
+-- stderr --
+lint-inert-coordination: not a directory: @DIR@/a/H.java
+-- a/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+-- b/B.java --
+class B {}

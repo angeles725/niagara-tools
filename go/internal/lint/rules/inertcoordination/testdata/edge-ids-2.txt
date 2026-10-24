@@ -1,0 +1,42 @@
+declared difference (truth fix T3, truth-queue-names-1): every Deque/Queue declarator is named and names
+dedupe exactly: I1 lists q, waitingQueue, spaced, two, three, eq; I4 lists waitingQueue, waiting, Queue (FAIL rows).
+declared difference (truth fix T1, truth-code-view-1): I3's names live only in a // comment, a string and a
+block comment, so I3 no longer FAILs.
+-- args --
+--strict
+@DIR@
+-- want --
+exit 1
+WARN  lint-inert-coordination  @DIR@/I1.java:6  units() returns a structurally singleton list while q, waitingQueue, spaced, two, three, eq (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/I2.java:5  units() returns a structurally singleton list while staggerDelay, defrostToken, tokenHolder, Token, Stagger, getStaggerDelay, myTokenizer, tokens, isStaggered (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/I4.java:5  units() returns a structurally singleton list while waitingQueue, waiting, Queue (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- I1.java --
+class I1 {
+  Queue<B> q;
+  Deque<B> waitingQueue = new ArrayDeque<>();
+  Queue <B> spaced = x; Deque<B> two = a, three = b;
+  boolean a = x == y; Queue<B> eq = null;
+  List<B> units() { return Collections.singletonList(a); }
+}
+-- I2.java --
+class I2 {
+  long staggerDelay; long defrostToken; long tokenHolder; Token t; Stagger s;
+  long getStaggerDelay() { return staggerDelay; }
+  long myTokenizer, tokens, isStaggered, STAGGER_MS, xtoken, atokenx;
+  List<B> units() { return Collections.singletonList(a); }
+}
+-- I3.java --
+class I3 {
+  // long staggerDelay;
+  String s = "tokenHolder";
+  /* long defrostToken; */
+  List<B> units() { return Collections.singletonList(a); }
+}
+-- I4.java --
+class I4 {
+  Deque<B> waitingQueue = new ArrayDeque<>();
+  Deque<B> waiting = new ArrayDeque<>();
+  Deque<B> Queue = x;
+  List<B> units() { return Collections.singletonList(a); }
+}

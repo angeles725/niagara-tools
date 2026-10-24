@@ -1,0 +1,21 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- .h/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+-- ok/B.java --
+class B {}
+-- x-worktrees/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
