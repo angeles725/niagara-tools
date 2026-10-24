@@ -25,11 +25,11 @@ var inventoryQueries = [][2]string{
 // inventory query selects them.
 var inventoryColumns = []string{"Slot Path", "Name", "Type"}
 
-// recordRead is _record_read: a session observation of a read (no audit log runs without
-// --allow-writes, which this version refuses).
-func (t *Tools) recordRead(tool string, args *pyjson.Object, rows int) {
+// recordRead is _record_read: a session observation of a read naming args[key] (no audit log
+// runs without --allow-writes, which this version refuses).
+func (t *Tools) recordRead(tool, key string, args *pyjson.Object, rows int) {
 	ord := ""
-	if v, ok := args.Get("base"); ok {
+	if v, ok := args.Get(key); ok {
 		ord = pyjson.Str(v)
 	}
 	t.Ctx.Observations = append(t.Ctx.Observations, obj("ts", session.Now(), "tool", tool, "rows", rows,
@@ -101,7 +101,7 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.recordRead("n4_bql_query", args, len(rows))
+	t.recordRead("n4_bql_query", "base", args, len(rows))
 	out := obj("base", base, "query", bql.Strip(q), "columns", strs(columns), "row_count", len(rows),
 		"truncated", truncated, "elapsed_ms", elapsed)
 	if path == "" {
@@ -142,7 +142,7 @@ func (t *Tools) Inventory(args *pyjson.Object) (*pyjson.Object, error) {
 	if err != nil {
 		return nil, toolError("%s", err.Error())
 	}
-	t.recordRead("n4_inventory", args, rowCount)
+	t.recordRead("n4_inventory", "base", args, rowCount)
 	out.Set("base", base)
 	out.Set("truncated", truncated)
 	out.Set("progress", log)

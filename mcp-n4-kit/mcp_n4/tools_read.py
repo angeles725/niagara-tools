@@ -830,7 +830,8 @@ def n4_list_batches(ctx, args):
     Audit 2026-10-03 F14: before this, finding a `batch_id` for `n4_rollback` meant reading
     `journal.jsonl` by hand.
     """
-    views = safety.Journal(ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR)).views()
+    journal = safety.Journal(ctx.state_dir or os.path.expanduser(safety.DEFAULT_STATE_DIR))
+    views, bad = journal.scan()
     rolled = {}
     for view in views:
         if view.get("rollback_of"):
@@ -842,7 +843,14 @@ def n4_list_batches(ctx, args):
                 "verdict": v.get("verdict"), "rollback_of": v.get("rollback_of"),
                 "rolled_back_by": rolled.get(v.get("batch_id"), [])}
                for v in reversed(views)]
-    return {"total": len(batches), "batches": batches[:limit]}
+    out = {"total": len(batches), "batches": batches[:limit]}
+    if bad:  # issue #448: list what is readable and say exactly what is not
+        out["incomplete"] = ("this list is incomplete: %d journal line(s) are unreadable; a batch "
+                             "recorded on one is missing or partial here, and n4_rollback "
+                             "refuses every batch such a line may belong to" % len(bad))
+        out["unreadable"] = ["unreadable journal line %d: %s" % (u["line"], u["reason"])
+                             for u in bad]
+    return out
 
 
 def n4_session_retro_draft(ctx, args):
@@ -993,15 +1001,17 @@ TOOLS = [
     Tool("n4_list_batches",
          "List the write batches in this server's journal, newest first: batch_id, tool, "
          "station_name, ts, state (completed / in-doubt), verdict, rollback_of and "
-         "rolled_back_by. Use it to find the batch_id for n4_rollback. Reads the journal "
-         "only; works without a session.",
+         "rolled_back_by. Use it to find the batch_id for n4_rollback. A journal line that "
+         "cannot be read is listed in unreadable and the reply says the list is incomplete. "
+         "Reads the journal only; works without a session.",
          _schema({"limit": _int("Most recent batches to return", 1, 1000, 50)}),
          n4_list_batches, needs_session=False),
     Tool("n4_session_retro_draft",
          "Draft the session retro: reads this server's audit and journal and returns markdown "
          "plus evidence-backed CANDIDATE kit deltas (refusals, bad read-back verdicts, in-doubt "
          "batches, BOX errors, dangling outputs). Proposes only; never applies or stages "
-         "anything. The window starts at the server start; pass since (ISO-8601, e.g. "
+         "anything. An audit line that cannot be read is named in the summary, which says the "
+         "draft is incomplete. The window starts at the server start; pass since (ISO-8601, e.g. "
          "1970-01-01T00:00:00Z for the whole history) to change it.",
          _schema({"since": _str("ISO-8601 timestamp; only newer entries are considered "
                                 "(default: when this server started)")}),

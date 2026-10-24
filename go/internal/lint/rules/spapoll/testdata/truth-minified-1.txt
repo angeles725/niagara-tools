@@ -1,0 +1,21 @@
+declared difference (truth fix T2, minified code): the first setInterval/setTimeout(<name>, of a file was taken as its
+poll loop even on a minified line (a bundled library such as three.js, inlined in a page or shipped as *.min.js), so
+the library's internal setTimeout(n,0) was reported (lib.min.js) or masked the page's own poll loop (page.html). A
+line longer than 1000 bytes is minified code and is not searched for the poll call now.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/page.html:5  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+-- stderr --
+-- lib.min.js --
+/*! lib */
+!function(t){function n(){try{t()}catch(e){}}setTimeout(n,0);var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;}(this);
+-- page.html --
+<html>
+<script>!function(t){function n(){try{t()}catch(e){}}setTimeout(n,0);var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;var a=1;}(this);</script>
+<script>
+function poll() { fetch("/x").catch(e => show(e)); }
+setInterval(poll, 5000);
+</script>
+</html>

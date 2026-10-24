@@ -1,0 +1,25 @@
+truth fix 2026-10-24: a label is also found when the UI builds it from a string literal ending in a space, "(" or ":" plus one runtime value; a stem with a longer tail, a stem without a letter and a stem that is not a literal still WARN
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/m.md:2  label "Corte N" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:2  label "HTTP 400 Bad Request" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:3  label "(N)" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:3  label "Modo AUTO" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:3  label "Paro N" not found in the UI source
+SUMMARY  lint-manual-labels  checked=9 missing=5
+-- stderr --
+-- docs/m.md --
+Saved: "Guardado (N)", "HTTP 400", "Deshielo omitido: razón", "próx. deshielo en…"
+Stale: "Corte N", "HTTP 400 Bad Request"
+Not a stem: "(N)", "Modo AUTO", "Paro N"
+-- ui/rc/app.js --
+el.textContent = "Guardado (" + n + ")";
+msg = "HTTP " + r.status;
+why = "Deshielo omitido: " + reason;
+next = "próx. deshielo en " + fmtDur(ms);
+open = "(" + x;
+-- ui/rc/index.html --
+<span>Modo </span><b>Paro 1</b>

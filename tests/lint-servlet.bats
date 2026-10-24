@@ -73,6 +73,39 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"csrf-xrw-only"* ]]
 }
 
+@test "LSV2e: a try in another handler, or one closed before the parse, does not guard it (input-400)" {
+  # Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-try-scope-1.txt
+  printf '%s\n' 'package com.x;' 'public class BSrv extends BWebServlet {' '  public void doGet(WebOp op) {' \
+    '    try { a(); } catch (Exception e) { op.getResponse().sendError(400); }' '  }' '  public void doPost(WebOp op) {' \
+    '    int b = Integer.parseInt(op.get("b"));' '  }' '}' > "$ONE/BSrv.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  input-400  BSrv.java:7  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input" ]
+}
+
+@test "LSV2f: the catch that decides catch-no-400 is the one attached to the parse's try that catches it" {
+  # Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-catch-structure-1.txt
+  printf '%s\n' 'package com.x;' 'public class BCat extends BWebServlet {' '  void multi(String s) {' '    try { Long.parseLong(s); }' \
+    '    catch (IOException e) { op.getResponse().sendError(400); }' \
+    '    catch (IllegalStateException | NumberFormatException e) { v = 0; }' '  }' '}' > "$ONE/BCat.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  catch-no-400  BCat.java:6  catch around parse without 400 response (silent default may write bad value)" ]
+}
+
+@test "LSV2g: a parse inside a try-with-resources is in a try (no input-400)" {
+  # Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-try-resources-1.txt
+  printf '%s\n' 'package com.x;' 'public class BRes extends BWebServlet {' '  void body(WebOp op) {' '    try (Reader r = open()) {' \
+    '      int a = Integer.parseInt(op.get("a"));' '    } catch (NumberFormatException e) { op.getResponse().sendError(400); }' \
+    '  }' '}' > "$ONE/BRes.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "LSV-usage: no <src> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]
@@ -201,4 +234,19 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   run "$LS" "$ONE"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN  catch-no-400  S.java:5  "* ]]
+}
+
+@test "LSV2h: a catch that re-reads the parse input (enum ordinal-or-tag) is no catch-no-400 row; a constant return still WARNs" {
+  # Mutation: LSV2h -- dropping the re-read check WARNs the enum tag fallback again (PANCCADIA BDashboardServlet.java:623).
+  # [ev: issue #459 catch-no-400]
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf '%s\n' 'public class S extends BWebServlet {' '  BValue e(BEnum e, String tag) {' \
+    '    try { return e.getRange().get((int) Double.parseDouble(tag), false); }' \
+    '    catch (NumberFormatException nfe) { return e.getRange().get(tag); }' '  }' \
+    '  double d(String s) {' '    try { return Double.parseDouble(s.trim()); }' \
+    '    catch (NumberFormatException x) { return 0.0; }' '  }' '}' > "$ONE/S.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"S.java:4  "* ]]
+  [[ "$output" == *"WARN  catch-no-400  S.java:8  "* ]]
 }

@@ -17,21 +17,28 @@ var (
 
 type retroResolver struct{ e *Engine }
 
-// Resolve finds retros/<slug>.md or retros/<date>-<slug>.md and, for Δn, the line that defines it.
+// Resolve finds retros/<slug>.md or retros/<date>-<slug>.md in the kit, else in the research repository,
+// and, for Δn, the line that defines it.
 func (r retroResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
-	dir := filepath.Join(r.e.roots.Kit, "retros")
-	names, err := r.e.fs.names(dir)
-	if err != nil {
-		return toolError(err)
-	}
+	var dir string
 	var hit []string
-	for _, n := range names {
-		if m := datedRetro.FindStringSubmatch(n); n == p.Target+".md" || (m != nil && m[1] == p.Target) {
-			hit = append(hit, n)
+	for _, root := range []string{r.e.roots.Kit, r.e.roots.Research} {
+		dir = filepath.Join(root, "retros")
+		names, err := r.e.fs.names(dir)
+		if err != nil {
+			return toolError(err)
+		}
+		for _, n := range names {
+			if m := datedRetro.FindStringSubmatch(n); n == p.Target+".md" || (m != nil && m[1] == p.Target) {
+				hit = append(hit, n)
+			}
+		}
+		if len(hit) > 0 {
+			break
 		}
 	}
 	if len(hit) == 0 {
-		return Result{Status: MissingFile, Detail: "no retros/" + p.Target + ".md or retros/<date>-" + p.Target + ".md"}
+		return Result{Status: MissingFile, Detail: "no retros/" + p.Target + ".md or retros/<date>-" + p.Target + ".md in the kit or the research repository"}
 	}
 	file := filepath.Join(dir, hit[0])
 	lines, err := r.e.fs.lines(file)
@@ -55,6 +62,9 @@ func (r retroResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 			return lr
 		}
 		res.Detail = lr.Detail
+	}
+	if dir != filepath.Join(r.e.roots.Kit, "retros") {
+		res.Detail += " [research " + r.e.short(file) + "]"
 	}
 	return res
 }

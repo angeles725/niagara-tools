@@ -1,0 +1,57 @@
+declared difference (truth fix T5, truth-equal-value-skip-1): Baja skips a write of an equal simple value
+(ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set), so a constant written to a simple-typed slot
+dirties the station once, not every cycle: those rows are gone (truth-fresh-* keep the shapes with fresh values).
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Crlf.java (noeol) --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- Empty.java --
+-- Noeol.java (noeol) --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- Tabs.java --
+class Tabs {
+	static	final	Property	xHours	=	newProperty(0, 0.0, null);
+	public void changed(Property	p, Context cx) {
+		if (p == a) execute();
+		if (p == b) execute();
+		if (p == c) execute();
+		if (p == d) execute();
+		if (p == e) execute();
+		if (p == f) execute();
+		if (p == g) execute();
+	}
+	void execute() {
+		setXHours(1.0);
+	}
+}

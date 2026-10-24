@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -78,15 +78,23 @@ func TestAllWalkError(t *testing.T) {
 // selects no file, --all leaves it out, and its empty-root contract is its own (TestRootRulesOnAnEmptyRoot).
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
+	manual := filepath.Join(t.TempDir(), "manual.md")
+	if err := os.WriteFile(manual, []byte("Press \"Guardar\".\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
 		if sp.Root != nil {
 			continue
 		}
+		args := []string{sp.ID(), root}
+		if sp.Mode == lint.FileFirst { // lint-manual-labels: the manual comes before the roots
+			args = []string{sp.ID(), manual, root}
+		}
 		if sp.EmptyOK { // LA5 (pinned by tests/lint-empty-root.bats ER5): an empty root is clean, exit 0, no row in --all
 			var o, e bytes.Buffer
-			if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
+			if code := main(args, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.Len() != 0 || e.Len() != 0 {
 				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
 			}
 			continue
@@ -100,11 +108,11 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		if !sp.ModuleRoot { // --all runs on source roots and leaves a module-root rule out
+		if !sp.ModuleRoot && !sp.OptionalInAll && sp.Mode != lint.FileFirst { // --all runs on source roots: no module-root rule, a one-profile rule may find nothing, a FileFirst rule needs its file
 			all += row
 		}
 		var o, e bytes.Buffer
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
+		if code := main(args, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)
 		}
 	}
@@ -134,17 +142,33 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		}
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
+		code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e})
+		if sp.EmptyOK { // lint-jasmine-ux (ER5): a module without src/rc is clean, exit 0, no row
+			if code != 0 || o.Len() != 0 || e.Len() != 0 {
+				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+			}
+			continue
+		}
+		if sp.ID() == "split-package-check" {
+			// its bash contract (kept by the port): "no module" on stderr, no row, exit 3; the client
+			// pre-push hook and CI template read only the exit code
+			want := "split-package-check: no module (a module-include.xml / build.gradle[.kts] next to src/) under " + root + "\n"
+			if code != 3 || o.Len() != 0 || e.String() != want {
+				t.Errorf("%s: exit %d out %q err %q, want 3 and %q on stderr", sp.ID(), code, o.String(), e.String(), want)
+			}
+			continue
+		}
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
 		ok := sp.EmptyError.Msg != ""
 		if sp.ID() == "lint-write-path" { // its own fail-closed row, the text report-module.sh greps for
 			want = "lint-write-path  ERROR  " + root + "  no write-path-matrix.md found (looked in " + root + "/docs/write-path-matrix.md)\n"
 			ok = true
 		}
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || !ok || o.String() != want || e.Len() != 0 {
+		if code != 3 || !ok || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if !reflect.DeepEqual(roots, []string{"lint-structure", "lint-write-path"}) {
-		t.Errorf("RootRules %q, want exactly lint-structure and lint-write-path", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check and lint-write-path", roots)
 	}
 }

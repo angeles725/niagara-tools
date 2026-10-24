@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+class A {
+// Commissioning link from the control
+@NiagaraProperty(
+  name = "linked",
+  type = "double",
+  flags = Flags.SUMMARY // was: | Flags.READONLY (LinkCheck refused it)
+)
+}

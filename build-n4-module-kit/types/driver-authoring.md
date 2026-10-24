@@ -33,7 +33,7 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 
 ### 1.3 · WB device-manager presence rule and plugin-extensible SPI [ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]
 
-**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; CCN example B1057]`
+**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; corpus B1057 (CCN example)]`
 
 **Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
 
@@ -244,7 +244,7 @@ default `"defaultPolicy"`).
 | `writeOnUp` | **true** | Re-write when device returns UP after comm loss |
 | `writeOnEnabled` | **true** | Write when point re-enabled |
 
-[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; writeOnStart advice: corpus B1327 row 2]
+[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; corpus B1327 §1327.1 row 2 (writeOnStart advice)]
 
 **Gotcha:** the Tuning scan thread runs at `min(minWriteTime/2, maxWriteTime/2, staleTime/2)`
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
@@ -385,7 +385,7 @@ cadence starts. [ev: corpus B872 §872.1]
 
 One poll thread per network, named `"Poll:<networkName>"`. `pollEnabled` is a property of the network's POLL
 SERVICE (`BAbstractPollService.java:62`, default true) and gates the entire loop. [ev: corpus B872 §872.1;
-corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
+corpus B810 §810.3] (B810 is cited in `logic-authoring.md §Authoring a driver`) `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
 
 ---
 
@@ -471,12 +471,12 @@ public class BEibnetIpNetwork extends BLoadableNetwork implements EibnetConst, B
 ```
 
 KNX addressing is by **group address**, not by object/property (unlike BACnet). Each proxy ext holds
-its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, `point/BKnxProxyExt.java:54`). The network owns two stack layers as
+its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, eibnetIp-rt `com/tridium/eibnetIp/point/BKnxProxyExt.java:54`). The network owns two stack layers as
 `@NiagaraProperty` children: `linkLayer` (`BEibnetIpLinkLayer`) for UDP multicast/unicast
 EIBnet/IP discovery, and `tunnelLayer` (`BEibnetIpTunnelLayer`) for the tunneled connection.
 Per-datatype proxy families: `BKnxBooleanProxyExt`, `BKnxEnumProxyExt`, `BKnxStringProxyExt` —
 pick by KNX DPT, not by a single generic proxy ext. Point discovery reads an ETS export (`.esf` session file)
-chosen in the point manager's Discover (eibnetIp-wb `ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
+chosen in the point manager's Discover (eibnetIp-wb `com/tridium/eibnetIp/ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
 is a KNXnet/IP device search. [ev: code eibnetIp-rt vineflower BEibnetIpNetwork.java:28-35; corpus B1357]
 
 ### 8.2 · Z-Wave (`zwave` driver)
@@ -675,7 +675,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29`).
 - **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
   has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
-  Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
+  Import-side non-contiguous ranges: `types/logic-authoring.md` § BEnumRange authoring grammar (its Non-contiguous-ordinal gotcha). Gotcha H5.
 - **The N4 level is the BACnet priority.** A proxy write goes out as `WriteProperty` at the winning N4 level and
   relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.

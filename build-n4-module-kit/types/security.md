@@ -31,7 +31,7 @@ component.invoke(myAction, arg, cx);              // same rule for invoke()
 ```
 
 Both `set()` and `invoke()` must receive a real `Context`. Passing `null` to either
-skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B1316 §1316.2; devguide security/security.txt:159-173, :215]
+skips the record and opens the permission gate. [ev: code BAlarmList.java `new BasicContext(user)`; corpus B1316 §1316.2; devguide security/security.txt:159-173,215]
 
 ### 1.2 oBIX PUT attribution gap (known limitation)
 
@@ -87,7 +87,7 @@ write, and invoke:
 | `all` | 119 (0x77) | all bits set — null-Context grants this implicitly |
 
 Usage: `perms.has(BPermissions.operatorWrite)` — returns true when the permission set
-includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security/security.txt:97, :220-222]
+includes the required bit. [ev: code BPxViewTag.java `BPermissions.operatorRead`; devguide security/security.txt:97,220-222]
 
 ### 2.2 Slot tier selection
 
@@ -205,7 +205,8 @@ guard. Wire it in `web.xml` for every servlet that mutates state:
 `httpMethod` is split on `,` and matched exactly against `getMethod()` (javap of web-rt.jar 4.15.6.20
 `CsrfProtectedFilter.init`/`doFilter`; census: `unzip -p` of the 14 `WEB-INF/web.xml` under 4.15.6.20 `modules/`), so write it without spaces and list every mutating method the servlet
 accepts. The shipped 4.15.6.20 modules use `POST`, `POST,PUT`, `GET,POST` or `GET`; none lists `DELETE`
-(6 of the 14 jars with a `WEB-INF/web.xml` map the filter, e.g. web-rt `WEB-INF/web.xml:35` `POST,PUT`,
+(6 of the 14 jars with a `WEB-INF/web.xml` map the filter, e.g. web-rt `POST,PUT`
+(`organized/web/web-rt/extracted/WEB-INF/web.xml:35`, the 4.14.0.162 copy),
 bacnetAws-rt `:27` `GET,POST`). Add `DELETE` only if your servlet accepts it.
 
 The token must travel with every mutating request. Three carrier options:
@@ -216,7 +217,7 @@ The token must travel with every mutating request. Three carrier options:
 
 Retrieve the token in JS: `csrfUtil.getCsrfToken()` (bajaux) or `hx.getCsrfToken()`
 (HxViews). In Java: `SessionManager.getCurrentNiagaraSuperSession().getCsrfToken()`.
-[ev: devguide csrfProtection.html; code bacnetAws BackupCommand.js `x-niagara-csrfToken`]
+[ev: devguide security/csrfProtection.txt:81-98; code bacnetAws BackupCommand.js `x-niagara-csrfToken`]
 
 **Legacy fallback note:** our modules currently use the `X-Requested-With` header
 guard as the CSRF check. That is a weaker heuristic — valid for same-origin XHR, but
@@ -244,7 +245,8 @@ try (SecretChars sc = AccessController.doPrivileged(
 // Never: log.info("password=" + myBPassword.getValue())
 ```
 
-[ev: javap of bin/ext/nre.jar 4.15.6.20 `SecretChars` (AutoCloseable; `close()` = `Arrays.fill(value, 0)`); code docSource BPassword.java:440-450, :486-492]
+`SecretChars` is `AutoCloseable` and its `close()` is `Arrays.fill(value, 0)` (javap on the 4.15.6.20 bin/ext nre jar).
+[ev: code docSource BPassword.java:440-450, :486-492] [deferred: unverifiable — the nre jar lives only in the Windows Niagara 4.15.6.20 home, in no tree the resolver reads]
 
 ### 3.3 Credential header redaction in structured logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
 
@@ -304,7 +306,7 @@ String bql      = "bql:select * from module:MyType where displayName=" + literal
 String safeName = SlotPath.escape(rawSlotName);
 ```
 
-[ev: code BRelationInfoList.java `SlotPath.escape(...)`; tagdictionary-rt; code BqlQuery.java:87 `toBqlLiteral`]
+[ev: code tagdictionary-rt javax/baja/tagdictionary/BRelationInfoList.java:98,100 `SlotPath.escape(...)`; code bql-rt javax/baja/bql/BqlQuery.java:87 `toBqlLiteral`]
 
 ### 4.1a BQL literal rules `[ev: corpus B1237 §1237.6]`
 

@@ -6,7 +6,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
 - A module splits into per-`runtimeProfile` artifacts `<module>-{rt,ux,wb,se,doc}`: `-rt` runtime (compact3, every
   host), `-ux` browser (BajaScript), `-wb` Workbench (Swing), `-se` code that depends on Java SE APIs (JDBC, AWT,
-  Swing; § The `-se` runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
+  Swing; § The `-se` (Java SE) runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
   plugin writes the `<moduleParts>` element of the generated `META-INF/module.xml`, never an authored file.
   `[ev: corpus B1313 §1313.3 C2-C3]` `[ev: retro devguide415-horizons-authoring-security Δ8]`
 - **Allowed part dependencies** (devguide `modules.txt:148-155`): `rt`→rt · `ux`→rt, ux · `wb`→rt, ux, wb ·
@@ -57,7 +57,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
 - **Start from `templates/module-permissions.xml`** (the wizard shape: `<permissions>` root, three
   `<niagara-permission-groups>` blocks `all`/`workbench`/`station`, devkit-wb 4.14.0.162
-  `gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
+  `organized/devkit/devkit-wb/extracted/gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
   MANAGE_EXECUTION requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`, plus a commented `<opt-permission>`).
   `<name>` and `<purposeKey>` are both required; `purposeKey` may be a lexicon key of the module, else the text is
   shown as-is (devguide 4.15.6.20 `security/requestingPermissions.txt:40-80`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
@@ -137,20 +137,20 @@ prints a `DOTTED` row for a `Type.slot` key that is the only key of an annotated
 the key forms the framework looks up; a form it ignores is reported, never counted. `[ev: retro r8-t9g-actions Δ2]`
 How a key resolves (module chain, locale order) and lexicon-only translation modules: `types/lexicon.md` § 1-2.
 
-## L10 doctrine — gradle.properties template + git-ignored local override `[ev: retro gradle-properties-consistency Δ3]`
+## L10 doctrine — host paths live in the user-level gradle.properties `[ev: retro gradle-properties-consistency Δ3]` `[ev: retro r10-user-level-gradle-keys Δ1]`
 
-L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niagara_home=`, `user_home=`, `nodeHome=`). The correct pattern is:
+L10 fires when `gradle.properties` gives an absolute host path to `niagara_home`, `niagara_user_home`, `nodeHome`, `org.gradle.java.installations.paths` (the four host build-location keys: a WARN to migrate them; a FAIL inside the kit's fixtures or templates, K16) or `user_home` (always a FAIL). The correct pattern is:
 
 1. **Commit a template** `gradle.properties` with paths commented out (or with a safe placeholder), so a fresh checkout builds without host-path edits.
-2. **Git-ignore a local override** `gradle.properties.local` (or `local.properties`) where each developer stores their actual `niagara_home`, `org.gradle.java.installations.paths`, etc. The build script reads the local override if present; Gradle's `gradle.properties` in `$GRADLE_USER_HOME` also works.
+2. **Set the four host build-location keys in the user-level `gradle.properties`** (`~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set)), once per machine. Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
 3. **`build.sh` overrides `niagara_home` via arg 3** — so a WSL build always gets the correct path from the operator regardless of what `gradle.properties` says. But a Windows `gradlew` build reads `gradle.properties` directly and will fail if it still points at a Windows path that differs on the build machine.
-4. **`org.gradle.java.installations.paths` / `auto-detect`:** commit `auto-detect=false` + a commented-out `paths=` line in the template. A commented-out or absent block means auto-detect, which is machine-dependent and can pick the wrong JDK major (the "gradle :jar with the default JDK is NOT a build" hazard). The local override sets the real path.
+4. **`org.gradle.java.installations.paths` / `auto-detect`:** commit `org.gradle.java.installations.auto-detect=false` (L12 requires it, uncommented, in a module-root `gradle.properties`) and at most a commented-out `paths=` line. Without it Gradle auto-detects, which is machine-dependent and can pick the wrong JDK major (the "gradle :jar with the default JDK is NOT a build" hazard). The user-level file sets the real path.
 
 **Why this matters:** three modules in the same group deploying to ONE station had three different `niagara_home` versions in committed `gradle.properties`. A WSL `build.sh` build (which overrides niagara_home) masked the divergence — all jars were major-52. A Windows `gradlew` build would have picked up the divergent paths and built against different API versions. [ev: retro gradle-properties-consistency Δ3]
 
 5. **`nodeHome` is a REQUIRED `gradle.properties` key for any ux/JS module** (alongside `niagara_home` and
    `org.gradle.java.installations.paths`).  Without it the Grunt/babel build task cannot locate Node.  Add
-   it to the `.EXAMPLE` template (commented-out or with a placeholder) and to the local override.
+   it to the `.EXAMPLE` template (commented-out or with a placeholder) and to the user-level `gradle.properties`.
    Corroborated by the SDK `gradle.properties.EXAMPLE` (`nodeHome=` at line 8–9). `[ev: corpus B960 §960.3]`
 
 6. **Point `org.gradle.java.installations.paths` at Niagara's own bundled JRE, not a system JDK:**
@@ -160,19 +160,21 @@ L10 fires when `gradle.properties` contains absolute host paths (`C:\...`, `niag
    using a system JDK risks a different major version and produces a jar the NRE rejects.
    `[ev: corpus B960 §960.3]`
 
-7. **New-module bring-up — align to a sibling of the same SDK:** a fresh scaffold's
-   `gradle.properties` JDK/node block is COMMENTED (auto-detect). Before the first build, copy
-   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths`
-   from an existing sibling module that deploys to the same station and SDK family — all modules
-   in the group must target one consistent `niagara_home`. For a **ux/JS module** (`-ux` profile)
-   the node and JDK path lines are REQUIRED (points 5–6 above); a logic-only module with no `-ux`
-   profile may leave them commented. Also align `gradlePluginVersion` and `settingsPluginVersion`
-   in `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
-   plugin version — see `build-verify.md`). `[ev: corpus B1016]`
+7. **New-module bring-up — set the keys once in the user-level `gradle.properties`:** a fresh
+   scaffold's `gradle.properties` JDK/node block is COMMENTED. Before the first build, set
+   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` in the
+   user-level file (point 2; `BUILD-LOOP.md` bring-up step 2) — one file per machine, so every module
+   in the group targets the same `niagara_home`. A **ux/JS module** (`-ux` profile) needs the node and
+   JDK keys (points 5–6). Also align `gradlePluginVersion` and `settingsPluginVersion` in
+   `settings.gradle.kts` to a sibling's SDK family (each Niagara install ships exactly one plugin
+   version — see `build-verify.md`). `[ev: corpus B1016]` `[ev: retro r10-user-level-gradle-keys Δ1]`
+   > **Superseded (2026-10-24, R10-D8):** "copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
+   > `org.gradle.java.installations.paths` from an existing sibling module that deploys to the same
+   > station and SDK family." Copying them committed host paths that L10 forbids.
 
 ## JDK-pinning block in `gradle.properties` (REQUIRED for every module)
 
-**`gradle.properties` MUST carry the JDK-pinning block** (`org.gradle.java.installations.paths`, `org.gradle.jvm.toolchain.auto-detect=false`, `org.gradle.jvm.toolchain.auto-download=false`). A module without this block triggers `lint-structure` FAIL on every build. The scaffold MUST emit the pinning block (commented-out or with a placeholder) so a fresh checkout does not immediately fail the lint. For the full pinning recipe and what each key does, see §L10 doctrine above. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ16]`
+**A module-root `gradle.properties` MUST carry `org.gradle.java.installations.auto-detect=false`**, uncommented: without it `lint-structure` L12 FAILs. The machine-specific `org.gradle.java.installations.paths` goes in the user-level `gradle.properties` (R10-D8), so the scaffold emits it commented-out at most. For the full pinning recipe and what each key does, see §L10 doctrine above. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ16]`
 
 ## Slotomatic checksum — use `0`, not `(auto)`
 

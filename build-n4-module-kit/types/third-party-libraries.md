@@ -174,7 +174,7 @@ heavy library.
 
 ## Hard constraints
 
-### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §1023.3, build-verify.md §"Profile constraints — rt/ux Compact 3"]`
+### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §1023.3]` `[ev: build-verify.md §Profile constraints — rt/ux Compact 3]`
 
 The JACE JVM is Azul ZRE `azul-zre-compact3-qnx7-arm` v1.8.0 (Java 8,
 Compact3 profile). The following packages are **absent** on the station:

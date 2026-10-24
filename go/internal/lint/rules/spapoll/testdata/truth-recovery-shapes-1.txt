@@ -1,0 +1,19 @@
+declared difference (truth fix T3, recovery shapes): `location.href ==` (a comparison) counted as an href recovery,
+so Cmp's poll was NOT-KEYED instead of having no recovery, and `location.reload ( )` with a blank before "(" was not
+a reload, so Space's poll had "no recovery". A recovery is now a location.reload( call (blanks allowed) or an
+assignment to location.href (not ==/===).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/Cmp.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/Space.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- Cmp.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+if (location.href == "/x") go();
+-- Space.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+window.location.reload ( );

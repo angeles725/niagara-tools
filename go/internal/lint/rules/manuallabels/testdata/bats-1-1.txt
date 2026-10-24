@@ -1,0 +1,18 @@
+-- args --
+@DIR@/docs/manual.md
+@DIR@/ui
+-- want --
+exit 0
+SUMMARY  lint-manual-labels  checked=1 missing=0
+-- stderr --
+-- docs/manual.md --
+# Manual
+
+Press "Guardar" to store the value.
+-- rt/module.lexicon --
+pressure=Presi\u00f3n de succi\u00f3n
+-- ui/rc/app.js --
+var title = "Modo   manual";
+-- ui/rc/index.html --
+<button id="save">Guardar</button>
+<label>Temp. de corte</label>

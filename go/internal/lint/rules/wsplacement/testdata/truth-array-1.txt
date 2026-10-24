@@ -1,0 +1,18 @@
+declared difference (truth fix T3): `new BFolder[n]` creates an array, not a component, but the bash lint
+read it as `new BFolder()` (directly and through a local). An array creation is not flagged now.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BArr.java:6  add("c", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BArr.java --
+package com.x;
+public class BArr extends BComponent {
+  void seed() {
+    list.add("a", new BFolder[2]);
+    BFolder[] kids = new BFolder [n];
+    add("c", new BFolder());
+    add("b", kids);
+  }
+}

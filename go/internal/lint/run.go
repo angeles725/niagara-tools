@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
@@ -32,7 +35,8 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs)), strict: a.Strict}
 	defer r.out.Flush()
 	sel, walks := union(specs)
-	stopped := make([]bool, len(specs)) // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
+	stopped := make([]bool, len(specs))           // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
+	joined := make([][]*javasrc.File, len(specs)) // a Spec.Joined rule's files over every root
 	live := len(specs)
 	for _, root := range a.Roots {
 		var files []string
@@ -62,8 +66,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 		for _, p := range files {
 			data, err := os.ReadFile(p)
 			if err != nil {
-				// awk_lint_run printed the first line of awk's own error.
-				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				if shortScanError(specs, root, p) { // awk_lint_each printed the shell's reason only
+					r.envError(0, fmt.Sprintf("cannot scan %s: %s", p, strerror.Text(err)))
+				} else { // awk_lint_run printed the first line of awk's own error
+					r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				}
 				continue
 			}
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
@@ -83,12 +90,21 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				}
 				r.findings(i, sp, shown, fds)
 				if err != nil {
-					r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					var xe *xmlsrc.Error
+					if errors.As(err, &xe) { // it names its own path:line:col: print it once
+						r.envError(i, xe.Error())
+					} else {
+						r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					}
 				}
 			}
 		}
 		for i, sp := range specs {
 			if sp.Tree == nil || stopped[i] {
+				continue
+			}
+			if sp.Joined {
+				joined[i] = append(joined[i], trees[i]...)
 				continue
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])
@@ -104,18 +120,19 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			if sp.Root == nil || stopped[i] {
 				continue
 			}
-			var fds []Finding
-			var err error
-			if opt, ok := sp.Root.(OptionRule); ok {
-				fds, err = opt.CheckRootOptions(root, a.Values)
-			} else {
-				fds, err = sp.Root.CheckRoot(root)
-			}
+			fds, err := sp.Root.CheckRoot(root)
 			if errors.Is(err, ErrEmptyRoot) { // its ERROR row only, as for a walking rule's empty root
 				r.empty(i, sp, root)
 				stopped[i], live = true, live-1
 				continue
 			}
+			r.findings(i, sp, "", fds)
+			r.ruleError(i, err)
+		}
+	}
+	for i, sp := range specs {
+		if sp.Joined && !stopped[i] {
+			fds, err := sp.Tree.CheckTree(joined[i])
 			r.findings(i, sp, "", fds)
 			r.ruleError(i, err)
 		}
@@ -192,7 +209,7 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 		}
 		r.failed = r.failed || fd.Severity == Fail
 		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
-		r.emit(i, event{text: fd.row(sp.BarePathRow)})
+		r.emit(i, event{text: fd.row(sp.BarePathRow, sp.CheckFirst)})
 	}
 }
 
@@ -302,7 +319,8 @@ func Command(specs ...Spec) cli.Main {
 		var selected []Spec
 		if args[0] == "--all" {
 			for _, sp := range specs {
-				if sp.Root == nil && !sp.ModuleRoot { // --all runs on source roots
+				if sp.Root == nil && !sp.ModuleRoot && sp.Mode != FileFirst { // --all runs on source roots
+					sp.EmptyOK = sp.EmptyOK || sp.OptionalInAll
 					selected = append(selected, sp)
 				}
 			}
@@ -315,17 +333,34 @@ func Command(specs ...Spec) cli.Main {
 				}
 				selected = append(selected, sp)
 			}
+			for _, sp := range selected {
+				if sp.Mode == FileFirst && len(selected) > 1 {
+					fmt.Fprintf(s.Err, "n4lint: %s runs only alone (it takes a %s operand)\n%s\n", sp.ID(), sp.Option, usage)
+					return 3
+				}
+			}
 		}
 		mode, name, use, usageExit, bare := Each, "n4lint", usage, 3, false
+		rest := args[1:]
 		if len(selected) == 1 && args[0] != "--all" {
 			sp := selected[0]
 			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
+			if len(sp.IntFlags) > 0 {
+				vals, left, err := intFlags(sp, rest)
+				if err != nil {
+					fmt.Fprint(s.Err, err)
+					return 3
+				}
+				sp.Rule, rest = sp.Configure(vals), left
+				selected = []Spec{sp}
+			}
 		}
-		var flags []string
+		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
-			flags = selected[0].ValueFlags
+			sp := selected[0]
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict, Named: sp.ValuedNamed}
 		}
-		a, err := Parse(mode, name, use, args[1:], flags...)
+		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)
@@ -339,6 +374,59 @@ func Command(specs ...Spec) cli.Main {
 			}
 			return 3
 		}
+		if len(selected) == 1 && args[0] != "--all" {
+			if c, ok := selected[0].rule().(Configurer); ok {
+				if err := c.Configure(a); err != nil {
+					fmt.Fprint(s.Err, err)
+					return 3
+				}
+			}
+		}
 		return Run(selected, name, a, s)
 	}
+}
+
+// intFlags takes sp's IntFlags out of the leading flags of args (see Spec.IntFlags) and returns their
+// values and the arguments left for Parse. It stops at "--", the first root and the first unknown flag.
+func intFlags(sp Spec, args []string) (map[string]int, []string, error) {
+	vals := map[string]int{}
+	for _, fl := range sp.IntFlags {
+		vals[fl.Name] = fl.Default
+	}
+	var rest []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if _, ok := vals[arg]; !ok {
+			if arg != "--strict" {
+				return vals, append(rest, args[i:]...), nil
+			}
+			rest = append(rest, arg)
+			continue
+		}
+		if i+1 == len(args) || strings.Trim(args[i+1], "0123456789") != "" || args[i+1] == "" {
+			return nil, nil, fmt.Errorf("%s: %s needs a non-negative integer\n%s\n", sp.ID(), arg, sp.Usage)
+		}
+		n, err := strconv.Atoi(args[i+1])
+		if err != nil {
+			n = math.MaxInt // all digits but past int: awk compared it as a huge number
+		}
+		vals[arg] = n
+		i++
+	}
+	return vals, rest, nil
+}
+
+// shortScanError reports that every walking spec selecting file p words its read error as awk_lint_each did.
+func shortScanError(specs []Spec, root, p string) bool {
+	any := false
+	for _, sp := range specs {
+		if sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+			continue
+		}
+		if !sp.ShortScanError {
+			return false
+		}
+		any = true
+	}
+	return any
 }

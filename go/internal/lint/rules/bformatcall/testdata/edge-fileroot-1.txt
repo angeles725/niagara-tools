@@ -1,0 +1,8 @@
+-- args --
+@DIR@/file.java
+-- want --
+exit 3
+-- stderr --
+lint-bformat-call: not a directory: @DIR@/file.java
+-- file.java --
+class A { String f = "%time(HH:mm)%"; }

@@ -12,20 +12,25 @@ import (
 // Kind names what a pointer points at, and so which resolver checks it.
 type Kind string
 
-// The pointer kinds. Bare and Unparsed are findings of the parser itself.
+// The pointer kinds. Bare and Unparsed are findings of the parser itself; Template and Unverifiable are
+// refinements of a parsed clause (refine.go): no tree can hold what they name.
 const (
-	Retro      Kind = "retro"        // Target = retro slug
-	Corpus     Kind = "corpus"       // Target = B<n> research block
-	Code       Kind = "code"         // Target = <mod>-<profile>, File = file in that module part
-	Path       Kind = "path"         // Target = a path relative to one of the roots
-	Devguide   Kind = "devguide"     // Target = file under devguide-clean/
-	Guide      Kind = "guide"        // Target = file under guides-clean/
-	Help       Kind = "niagara-help" // Target = path under niagara-help/versions/<Version>/
-	Mem        Kind = "mem"          // Target = memory file name prefix
-	Vineflower Kind = "vineflower"   // Target = <mod>-<profile>, File = path in its vineflower/ copy
-	Javap      Kind = "javap"        // Target = jar file name
-	Bare       Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)
-	Unparsed   Kind = "unparsed"     // text the grammar does not cover
+	Retro        Kind = "retro"        // Target = retro slug
+	Corpus       Kind = "corpus"       // Target = B<n> research block
+	Code         Kind = "code"         // Target = <mod>-<profile>, File = file in that module part
+	Path         Kind = "path"         // Target = a path relative to one of the roots
+	Devguide     Kind = "devguide"     // Target = file under devguide-clean/
+	Guide        Kind = "guide"        // Target = file under guides-clean/
+	Help         Kind = "niagara-help" // Target = path under niagara-help/versions/<Version>/
+	Mem          Kind = "mem"          // Target = memory file name prefix
+	Vineflower   Kind = "vineflower"   // Target = <mod>-<profile>, File = path in its vineflower/ copy
+	Javap        Kind = "javap"        // Target = jar file name
+	Course       Kind = "course"       // Target = path under the dev-course tree (or its course-text)
+	Bitacora     Kind = "bitacora"     // Target = slug of a client bitacora/<date>-<slug>.md
+	Bare         Kind = "bare"         // an ID with no source (OBS-2, WIR-G3, Δn TOKEN)
+	Unparsed     Kind = "unparsed"     // text the grammar does not cover
+	Template     Kind = "template"     // a placeholder (`<stem>`, `B<n>`, `…`): not a pointer
+	Unverifiable Kind = "unverifiable" // evidence of a kind no tree holds; Notes[0] names the class
 )
 
 // Range is an inclusive 1-based line or row range.
@@ -41,6 +46,7 @@ type Pointer struct {
 	Lines    []Range
 	Sections []string // corpus § tokens, or the heading of a kit cross-reference
 	Rows     []Range
+	Pages    []Range  // course PDF pages
 	Claims   []string // corpus C<k>
 	Rules    []string // corpus rule k
 	Delta    int      // retro Δn (0 = none)
@@ -55,6 +61,9 @@ func (p Pointer) Locator() string {
 	var parts []string
 	if len(p.Lines) > 0 {
 		parts = append(parts, ":"+FormatRanges(p.Lines))
+	}
+	if len(p.Pages) > 0 {
+		parts = append(parts, "p"+FormatRanges(p.Pages))
 	}
 	for _, s := range p.Sections {
 		parts = append(parts, "§"+s)

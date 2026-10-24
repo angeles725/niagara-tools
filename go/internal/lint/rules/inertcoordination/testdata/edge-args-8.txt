@@ -1,0 +1,15 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-inert-coordination.sh [--strict] <src-root>
+-- a/H.java --
+class H {
+  private long staggerDelay = 5;
+  List<BComponent> units() {
+    return Collections.singletonList(getParent());
+  }
+}
+-- b/B.java --
+class B {}

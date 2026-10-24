@@ -1,0 +1,16 @@
+truth fix 2026-10-24: the second ui-dir holds no UI source file (a typo'd path); the rule stops with its ERROR row, no WARN or SUMMARY row, exit 3 even under --strict
+-- args --
+--strict
+@DIR@/docs/m.md
+@DIR@/ui
+@DIR@/typo
+-- want --
+exit 3
+ERROR  lint-manual-labels  @DIR@/typo  no UI source files found (*.html *.htm *.js *.mjs *.cjs *.json *.lexicon *.properties *.java *.xml; wrong path or empty source tree)
+-- stderr --
+-- docs/m.md --
+Press "Corte".
+-- typo/README.txt --
+notes
+-- ui/rc/index.html --
+<button>Guardar</button>

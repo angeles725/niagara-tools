@@ -19,15 +19,21 @@ import (
 type Status string
 
 // The statuses. ToolError is a failure of the tool (an unreadable file), never a negative finding.
+// HistoricalDrift, UnverifiableKind and SkippedTemplate are not findings either: a history card's moved
+// target, evidence no tree holds, and a template placeholder that is not a pointer.
 const (
-	Resolved       Status = "RESOLVED"
-	MissingFile    Status = "MISSING_FILE"
-	MissingSection Status = "MISSING_SECTION"
-	MissingDelta   Status = "MISSING_DELTA"
-	LineOutOfRange Status = "LINE_OUT_OF_RANGE"
-	BareID         Status = "BARE_ID"
-	Unparsed       Status = "UNPARSED"
-	ToolError      Status = "TOOL_ERROR"
+	Resolved         Status = "RESOLVED"
+	MissingFile      Status = "MISSING_FILE"
+	MissingSection   Status = "MISSING_SECTION"
+	MissingDelta     Status = "MISSING_DELTA"
+	LineOutOfRange   Status = "LINE_OUT_OF_RANGE"
+	BareID           Status = "BARE_ID"
+	Unparsed         Status = "UNPARSED"
+	Ambiguous        Status = "AMBIGUOUS" // a searched name matches several files: listed, never guessed
+	ToolError        Status = "TOOL_ERROR"
+	HistoricalDrift  Status = "HISTORICAL_DRIFT"
+	UnverifiableKind Status = "UNVERIFIABLE_KIND"
+	SkippedTemplate  Status = "SKIPPED_TEMPLATE"
 )
 
 // excerptLen is how many characters of each cited line the excerpt keeps.
@@ -39,8 +45,11 @@ type Roots struct {
 	Repo     string // the repository holding the kit (CONTRIBUTING.md, tests/, go/)
 	Research string // niagara-research (blocks, niagara-help/, organized/)
 	Modules  string // the client module trees (Cliente/…)
+	Clients  string // the client checkouts searched by base name (Modules/Cliente by default)
 	Memory   string // the memory directory (mem pointers)
 	Version  string // the niagara-help version an unversioned devguide/guide pointer means
+	Home     string // the user's home, which a `~/` path pointer names ("" leaves `~/` unexpanded)
+	Gradle   string // the Gradle user home, whose caches/ a javap jar is also looked up in
 }
 
 // Result is the outcome of one pointer: its status, a detail (excerpt and notes) and the file it hit.
@@ -73,10 +82,12 @@ type Engine struct {
 func New(r Roots) *Engine {
 	e := &Engine{roots: r, fs: newFiles()}
 	e.by = map[citeparse.Kind]Resolver{
-		citeparse.Retro:    retroResolver{e},
-		citeparse.Corpus:   corpusResolver{e},
-		citeparse.Bare:     fixed{BareID, "an ID with no source file"},
-		citeparse.Unparsed: fixed{Unparsed, ""},
+		citeparse.Retro:        retroResolver{e},
+		citeparse.Corpus:       corpusResolver{e},
+		citeparse.Bare:         fixed{BareID, "an ID with no source file"},
+		citeparse.Unparsed:     fixed{Unparsed, ""},
+		citeparse.Unverifiable: fixed{UnverifiableKind, "no tree holds this kind"},
+		citeparse.Template:     fixed{SkippedTemplate, "a template placeholder, not a pointer"},
 	}
 	e.registerFiles()
 	return e

@@ -10,7 +10,8 @@
 # [ev: corpus B1143] [ev: corpus B1145] [ev: corpus B1146]
 # [ev: code javax/baja/sys/BAbstractService.java:87-90,148-150,152-190] [ev: code com/tridium/sys/service/ServiceManager.java:297-298]
 #
-# Structural rules (comments blanked by lib/method-boundary.sh mb_strip; methods from mb_parse):
+# Structural rules (read on code: comments blanked and literal contents removed by the shared scanner
+# go/internal/javasrc, so nothing quoted in a string counts; methods from javasrc Methods, the port of mb_parse):
 #   Licensed  — the file declares `Feature getLicenseFeature()` and its body is not just `return null;` (the
 #               BAbstractService default). A file with no declaration is out of scope.
 #   Callback  — a method named `changed` (the property callback), `do<Upper>…` (an action: Clock.schedule timers and
@@ -24,76 +25,35 @@
 #   Overlap   — none with lint-status-parity (config/status slot ratio) or lint-silent-protection (a protection trip
 #               with no operator surface): neither reads getLicenseFeature() or the operational gate.
 #
+# Implementation: rule package go/internal/lint/rules/licensegate on the shared engine go/internal/lint
+# (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-license-isoperational-gate <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+#
 # Usage:  lint-license-isoperational-gate.sh [--strict] <src-root>
 #   Row:  WARN  lint-license-isoperational-gate  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
+# `ERROR  lint-license-isoperational-gate  <root>  no files to scan (K20: wrong path or empty scaffold)`.
+# Declared difference from the bash lint (truth fix 2026-10-24): the bash read mb_strip's text, literal contents
+# kept, so a quoted "isOperational()" gated a callback, a quoted getLicenseFeature() declaration licensed a class
+# and a ";" inside a string cut the first statement before its gate. No real-tree row changed (Cliente 0,
+# sources/decompiled 31).
 # VCS-free by design (kit-links L2).
+# Mutation: LIG-literal -- reading literal text as code passes a callback whose only "gate" is log("isOperational()")
 # Mutation: LIG1 -- dropping the gate check WARNs a callback that returns early on !isOperational()
 # Mutation: LIG2 -- treating `return null;` as a license feature WARNs an unlicensed service
 # Mutation: LIG3 -- counting a super.changed() call as acting WARNs a callback that only delegates
 # Mutation: LIG8 -- accepting a gate anywhere in the body passes a callback that acts before it checks
 # Mutation: LIG9 -- accepting a qualified call passes child.isOperational() as this service's gate
-# Mutation: LIG-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
-# Mutation: LIG-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: LIG-awkfail -- ignoring an unreadable file (internal/lint Run) reports it as clean
+# Mutation: LIG-finderr -- ignoring the walk error (internal/lint Walk) skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-license-isoperational-gate one 'usage: lint-license-isoperational-gate.sh [--strict] <src-root>' "$@"
-printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
-# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
-AL_AWK_ARGS=(-f "$AL_TMP/method-boundary.awk")
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-# body text of the brace block that opens on line `from` (from the first `{` to its matching `}`)
-function block_body(from, n,    i, j, ch, d, started, out) {
-  d = 0; started = 0; out = ""
-  for (i = from; i <= n; i++) {
-    for (j = 1; j <= length(code[i]); j++) {
-      ch = substr(code[i], j, 1)
-      if (ch == "{") { d++; if (!started) { started = 1; continue } }
-      else if (ch == "}") { d--; if (started && d == 0) return out }
-      if (started) out = out ch
-    }
-    if (started) out = out "\n"
-  }
-  return out
-}
-{ raw[NR] = $0 }
-END {
-  n = NR
-  mb_strip(raw, n, code)
-  lic = 0
-  for (i = 1; i <= n; i++) {
-    if (code[i] ~ /getLicenseFeature[[:space:]]*\([[:space:]]*\)[[:space:]]*;/) continue  # abstract / interface
-    if (code[i] ~ /Feature[[:space:]]+getLicenseFeature[[:space:]]*\([[:space:]]*\)/) {
-      b = block_body(i, n); gsub(/[[:space:]]/, "", b)
-      if (b != "" && b != "returnnull;") lic = 1
-    }
-  }
-  if (!lic) exit 0
-  cnt = mb_parse(code, n, ms, me, mn)
-  for (k = 0; k < cnt; k++) {
-    m = mn[k]
-    if (m != "changed" && m !~ /^do[A-Z]/) continue
-    if (m ~ /^do(Get|Head|Options|Trace)$/) continue
-    b = block_body(ms[k], n)
-    # drop super.<name>(...); calls, then the gate must open the callback: an UNQUALIFIED (or this.) gate call in
-    # the first statement (`if (!isOperational()) return;` / `if (isOperational()) {`). A check placed after the
-    # acting statements, or another object's x.isOperational(), is not this class's gate.
-    t = b
-    gsub(/super\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([^;]*\)[[:space:]]*;/, "", t)
-    head = t; sub(/^[[:space:]]+/, "", head)
-    if (match(head, /[{;]/)) head = substr(head, 1, RSTART)
-    if (head ~ /(^|[^A-Za-z0-9_.])(this\.)?(isOperational|isFault|isFatalFault)[[:space:]]*\(/) continue
-    # acts? drop a bare return; then look for any remaining statement text
-    gsub(/return[[:space:]]*;/, "", t)
-    gsub(/[[:space:]]/, "", t)
-    if (t == "") continue
-    printf "WARN  lint-license-isoperational-gate  %s:%d  licensed class: %s() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)\n", FILE, ms[k], m
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-license-isoperational-gate: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-license-isoperational-gate "$@"

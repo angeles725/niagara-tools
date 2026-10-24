@@ -128,6 +128,22 @@ setup() {
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"lint-no-system-out"* ]] && [[ "$output" == *"BOut.java"* ]]
 }
 
+@test "RM7b: an empty Slot-o-Matic region surfaces a lint-slotomatic-markers FAIL row and exits 1" {
+  # Mutation: RM7b -- dropping step 5.7b loses the FAIL row and the report reads this module clean of it
+  local t="$BATS_TEST_TMPDIR/rm7b"
+  mkdir -p "$t/DemoPan-rt/src/com/x"
+  printf '<types>\n</types>\n' > "$t/DemoPan-rt/module-include.xml"
+  printf 'class BHmi\n{\n%s\n%s\n}\n' \
+    '//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/' \
+    '//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/' > "$t/DemoPan-rt/src/com/x/BHmi.java"
+  run "$RM" --lint-only "$t"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"DemoPan-rt  FAIL  lint-slotomatic-markers  BHmi.java:3  generated region holds 0 "* ]]
+  printf 'class BHmi {}\n' > "$t/DemoPan-rt/src/com/x/BHmi.java"
+  run "$RM" --lint-only "$t"
+  [[ "$output" == *"DemoPan-rt  PASS  lint-slotomatic-markers  clean"* ]]
+}
+
 @test "RM8: display class import in a -se artifact surfaces lint-se-display FAIL row and exits 1" {
   # se-display/DemoPan-se/src/com/x/BPanel.java imports javax.swing.JFrame
   run "$RM" --lint-only "$FX/se-display"
@@ -259,9 +275,10 @@ setup() {
 @test "RM19-line: a lint-structure L10 row relays its gradle.properties line (path:line, truth audit T7)" {
   # lint-structure prints L10/L14 as <path>:<line>; the site-mode relay keeps the line (it printed "gradle.properties:"
   # with an empty line while the lint put the rule ID where the line belongs).
+  # user_home: a host path that stays the L10 FAIL (R10-D8 made the four build-location keys a WARN).
   ROOT="$BATS_TEST_TMPDIR/l10"
   mkdir -p "$ROOT/.git" "$ROOT/M/A-rt"
-  printf 'x=1\nniagara_home=C:\\N\n' > "$ROOT/M/gradle.properties"
+  printf 'x=1\nuser_home=C:\\N\n' > "$ROOT/M/gradle.properties"
   printf '<types/>\n' > "$ROOT/M/A-rt/module-include.xml"
   printf '<p n="A"/>\n' > "$ROOT/M/A-rt/module.palette"
   run "$RM" --lint-only "$ROOT/M"
@@ -632,7 +649,7 @@ JAVA
 # polish-2026-10-02 P5 (#199 WU4): a frontend member with WARN rows and no FAIL is not "clean" —
 # the PASS detail counts the relayed rows; an eslint found only on PATH must be the flat-config
 # major (>= 9) the kit config needs, else a SKIP row naming its version.
-@test "RM47: rc-scan / eslint WARN-only -> PASS detail 'no FAIL (N WARN …)', never 'clean'" {
+@test "RM47: rc-scan / eslint WARN-only -> PASS detail 'no failing row (N WARN …)', never 'clean'" {
   local t="$BATS_TEST_TMPDIR/rm47"; _ux_tree "$t"
   printf '<!DOCTYPE html><html><head><style>\n.bg { inset: 0; }\n</style></head><body></body></html>\n' \
     > "$t/DemoPan-ux/src/rc/index.html"
@@ -644,8 +661,8 @@ JAVA
   KIT_ESLINT="$stub" run "$RM" --lint-only "$t"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-ux  WARN  rc-scan  index.html:2  browser-floor"* ]]
-  [[ "$output" == *"DemoPan-ux  PASS  rc-scan  no FAIL (1 WARN row above)"* ]]
-  [[ "$output" == *"DemoPan-ux  PASS  eslint  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-ux  PASS  rc-scan  no failing row (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-ux  PASS  eslint  no failing row (1 WARN row above)"* ]]
   if [[ "$output" == *"PASS  rc-scan  clean"* ]]; then return 1; fi
   if [[ "$output" == *"PASS  eslint  clean"* ]]; then return 1; fi
 }
@@ -670,14 +687,14 @@ JAVA
 # deferred-lints-2026-10-03 D2: advisory member lint-size (WARN-only) — relayed rows, PASS verdict row,
 # any non-zero member exit is an ERROR row (never a silent PASS).
 
-@test "RM49: a pure method over 80 lines -> lint-size WARN row relayed, PASS 'no FAIL (1 WARN row above)', exit 0" {
+@test "RM49: a pure method over 80 lines -> lint-size WARN row relayed, PASS 'no failing row (1 WARN row above)', exit 0" {
   cp -r "$FX/clean" "$BATS_TEST_TMPDIR/rm49"
   { printf 'package com.x;\npublic class Core {\n  int step() {\n'
     for i in $(seq 1 85); do printf '    a%d();\n' "$i"; done; printf '  }\n}\n'; } > "$BATS_TEST_TMPDIR/rm49/DemoPan-rt/src/com/x/Core.java"
   run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm49"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-size  Core.java:3  method step() in pure class Core spans 87 lines"* ]]
-  [[ "$output" == *"DemoPan-rt  PASS  lint-size  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-size  no failing row (1 WARN row above)"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
 
@@ -704,7 +721,7 @@ JAVA
   run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm52"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-license-isoperational-gate  BSvc.java:6  licensed class: changed()"* ]]
-  [[ "$output" == *"DemoPan-rt  PASS  lint-license-isoperational-gate  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-license-isoperational-gate  no failing row (1 WARN row above)"* ]]
 }
 
 @test "RM53: an advisory member ERROR row carries the member's own reason line (D2 review R4/R2)" {
@@ -722,7 +739,7 @@ JAVA
   run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm54"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-set-null-ord  BMgr.java:4  getSlotPathOrd() passed straight to setTargetOrd(...)"* ]]
-  [[ "$output" == *"DemoPan-rt  PASS  lint-set-null-ord  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-set-null-ord  no failing row (1 WARN row above)"* ]]
 }
 
 @test "RM55: the advisory ERROR reason skips the member's WARN rows and names the failure (D3b, R4/R2/R3)" {
@@ -744,7 +761,7 @@ JAVA
   run "$RM" --lint-only "$BATS_TEST_TMPDIR/rm56"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DemoPan-rt  WARN  lint-ws-placement  BSync.java:4  add(\"n1\", new BFolder()) in doSync() never sets a wsAnnotation"* ]]
-  [[ "$output" == *"DemoPan-rt  PASS  lint-ws-placement  no FAIL (1 WARN row above)"* ]]
+  [[ "$output" == *"DemoPan-rt  PASS  lint-ws-placement  no failing row (1 WARN row above)"* ]]
   [[ "$output" == *"CLEAN"* ]]
 }
 
@@ -857,4 +874,31 @@ JAVA
   # Mutation: RM-symroot -- dropping -H from the artifact find lists no artifact under a symlinked root.
   assert_symroot_same "$FX/clean" "$RM" --lint-only "$FX/clean"
   [ "$status" -eq 0 ] && [[ "$output" == *"CLEAN"* ]]
+}
+
+# Issue #459: report-module runs every Go-ported (n4lint) lint that applies to a module. Each member is stubbed
+# to print one WARN row (or FAIL for the FAIL-capable ones); the report must relay it under the member's
+# check name. RM-n4lint-skip: a module-root member's own "no ... sources" exit 3 is a SKIP row, not an env fault.
+@test "RM-n4lint: every wired n4lint member's row is relayed (persist-hot-write, inert-coordination, duplicate-helper, ...)" {
+  # Mutation: RM-n4lint -- dropping a member's invocation from report-module.sh loses its relayed row here.
+  local m fx
+  for m in persist-hot-write:clean changed-hot-write:clean inert-coordination:clean session-store-lazy-evict:clean \
+           bformat-call:clean service-types:clean driver-scaffold:clean duplicate-helper:clean \
+           machine-default-path:clean inline-site-literal:clean wb-external-ord-value:wb-file-chooser-warn \
+           spa-poll-no-recovery:rc-scan-fail; do
+    fx="${m#*:}"; m="${m%%:*}"
+    stub_toolbelt "$BATS_TEST_TMPDIR/tb-$m" "lint-$m.sh" "printf 'WARN  lint-$m  /x/A.java:7  seeded row\n'"
+    run "$BATS_TEST_TMPDIR/tb-$m/report-module.sh" --lint-only "$FX/$fx"
+    [[ "$output" == *"WARN  lint-$m  A.java:7  seeded row"* ]] || { echo "member $m not relayed: $output"; return 1; }
+  done
+}
+
+@test "RM-n4lint-skip: a module-root member with no source to read is a SKIP row, not an env fault" {
+  local tb="$BATS_TEST_TMPDIR/rmskip"
+  stub_toolbelt "$tb" lint-inline-site-literal.sh \
+    "printf 'ERROR  lint-inline-site-literal  /x  no *.java under a -rt or -ux part'\\''s src/ and no *.js under an rc/ (wrong path: pass the module root)\n'; exit 3"
+  run "$tb/report-module.sh" --lint-only "$FX/clean"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"(module)  SKIP  lint-inline-site-literal  no *.java under a -rt or -ux part's src/"* ]]
+  [[ "$output" != *"ERROR  lint-inline-site-literal"* ]]
 }

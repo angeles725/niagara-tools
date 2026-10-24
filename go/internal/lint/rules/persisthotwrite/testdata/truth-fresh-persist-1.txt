@@ -1,0 +1,90 @@
+Hand-written from edge-persist-1 (recorded from the bash lint) with every constant setter value made fresh
+(setXHours(N) -> setXHours(getXHours() + N)), so the callee, guard and body shapes keep their rows after truth
+fix T5 (a constant written to a simple slot is not hot).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/Q1.java:7  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q1.java:9  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q1.java:21  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q1.java:24  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q2.java:16  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q3.java:8  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q4.java:5  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q4.java:5  setYHours(...) writes non-transient slot 'yHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Q5.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- Q1.java --
+class Q1 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    first(); this.second(); helper.third(); super(); bar(1); fourth( ) ; if (ready()) go();
+  }
+  void first() {
+    setXHours(getXHours() + 1.0);
+  }
+  void second() { setXHours(getXHours() + 2.0); }
+  void third()
+  {
+    resetXHours(3.0);
+  }
+  void fourth() {
+    x();
+    x();
+    x();
+    x();
+    x();
+    x();
+    setXHours(getXHours() + 4.0);
+  }
+  boolean ready() { return true; }
+  void go() { setXHours(getXHours() + 5.0); }
+}
+-- Q2.java --
+class Q2 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) { tick(); }
+  public void setXHours(double v) { set(xHours, v); }
+  void tick() {
+    if (Clock.millis() - last > 1000) {
+      setXHours(getXHours() + 1.0);
+    }
+    if (n % 10 == 0) setXHours(getXHours() + 2.0);
+    if (n % 10 != 0) { a(); }
+    b();
+    c();
+    d();
+    e();
+    f();
+    setXHours(getXHours() + 3.0);
+  }
+}
+-- Q3.java --
+class Q3 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  long last = Clock.millis();
+  void elsewhere() {
+    if (Clock.millis() > 0) x();
+  }
+  public void changed(Property p, Context cx) {
+    setXHours(getXHours() + 1.0);
+  }
+}
+-- Q4.java --
+class Q4 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  static final Property yHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) { step(); step(); }
+  void step() { setYHours(getYHours() + 1); setXHours(getXHours() + 1); }
+  void step2() { }
+}
+-- Q5.java --
+class Q5 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    String u = "http://x"; setXHours(getXHours() + 1.0);
+    /* setXHours(getXHours() + 2.0); */
+    log("setXHours(getXHours() + 3.0)");
+  }
+}

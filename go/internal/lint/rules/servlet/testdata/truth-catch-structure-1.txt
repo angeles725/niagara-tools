@@ -1,0 +1,46 @@
+declared difference (truth fix, catch structure): catch-no-400 took the first "catch (" within 4 lines after a
+try's end, with no structural link: an unrelated catch after a finally-only try WARNed (line 7), the outer catch
+of a nested try whose own catch answers 400 WARNed (line 13), a multi-catch was judged by its first clause
+(IOException, line 17) and a try-with-resources was never read. The deciding catch is now the first clause
+attached to the innermost enclosing try that catches the parse failure (NumberFormatException or a supertype),
+read with javasrc.TryBlocks, and its own body decides; a catch that rethrows passes the failure to the enclosing
+try's catch (rethrow(): the outer catch at line 28 decides, the inner one is no row).
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  catch-no-400  BCat.java:18  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:22  catch around parse without 400 response (silent default may write bad value)
+WARN  catch-no-400  BCat.java:28  catch around parse without 400 response (silent default may write bad value)
+-- stderr --
+-- m/BCat.java --
+package com.x;
+public class BCat extends BWebServlet {
+  void unrelated(String s) {
+    try { Double.parseDouble(s); } finally { done(); }
+    if (s != null) { use(s); }
+    try { other(); }
+    catch (Exception e) { log(e); }
+  }
+  void nested(String s) {
+    try {
+      try { Integer.parseInt(s); }
+      catch (NumberFormatException e) { op.getResponse().sendError(400); }
+    } catch (Exception e) { log(e); }
+  }
+  void multi(String s) {
+    try { Long.parseLong(s); }
+    catch (IOException e) { op.getResponse().sendError(400); }
+    catch (IllegalStateException | NumberFormatException e) { v = 0; }
+  }
+  void resources(String s) {
+    try (Reader r = open()) { Double.valueOf(s); }
+    catch (NumberFormatException e) { v = 0; }
+  }
+  void rethrow(String s) {
+    try {
+      try { Integer.parseInt(s); }
+      catch (Exception e) { throw e; }
+    } catch (Exception e) { v = 0; }
+  }
+}
