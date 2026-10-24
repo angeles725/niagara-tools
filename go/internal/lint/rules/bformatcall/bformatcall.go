@@ -3,8 +3,7 @@
 // %time(<arg>)% and %user% fall through to reflection and print %err:...%. Port of toolbelt/lint-bformat-call.sh (the
 // wrapper keeps the user-facing contract and its header documents the rule and its mutation pins).
 //
-// It is a per-file lint.Rule over *.java (javasrc.Stripped: comments blanked, string literals kept, since BFormat
-// patterns live in strings), *.lexicon, *.bog and *.palette (read as text).
+// It is a per-file lint.Rule over *.java, *.lexicon, *.bog and *.palette; Check says how each is read.
 package bformatcall
 
 import (
@@ -13,6 +12,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // ID is the lint name printed in every row.
@@ -47,13 +47,41 @@ const (
 	bfc2 = "BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)"
 )
 
-// Check is the awk END block: per line, a BFC1 row, then a BFC2 row.
+// Check scans each file where its patterns live: *.java on javasrc.Stripped (comments blanked, string literals kept,
+// since BFormat patterns live in strings), *.bog and *.palette through the shared XML scanner (xml), *.lexicon as
+// text.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	lines := f.Raw
-	if strings.HasSuffix(f.Path, ".java") {
-		lines = f.Stripped()
+	switch {
+	case strings.HasSuffix(f.Path, ".java"):
+		return scan(f.Stripped(), func(i int) int { return i + 1 }), nil
+	case strings.HasSuffix(f.Path, ".bog") || strings.HasSuffix(f.Path, ".palette"):
+		return xml(f.Path)
 	}
-	return scan(lines, func(i int) int { return i + 1 }), nil
+	return scan(f.Raw, func(i int) int { return i + 1 }), nil
+}
+
+// xml reads a .bog or .palette through xmlsrc (R8-D12; a zipped .bog through its file.xml): every element's attribute
+// values and text, entity-decoded, one BFC1 and one BFC2 row at most per element, at the element's line. A malformed
+// file is the positioned *xmlsrc.Error (exit 3). Truth fix 2026-10-24 over the awk, which read the text line by line:
+// a pattern in an XML comment counted, an entity-encoded one (&#37;user&#37;) was missed, a value wrapped onto the
+// next line was reported there, and a zipped bog was read as its compressed bytes.
+func xml(path string) ([]lint.Finding, error) {
+	doc, err := xmlsrc.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	elems := doc.Elements()
+	texts := make([]string, len(elems))
+	for i, e := range elems {
+		var b strings.Builder
+		for _, a := range e.Attrs {
+			b.WriteString(a.Value)
+			b.WriteByte(0) // a pattern never spans two values
+		}
+		b.WriteString(doc.Text(i))
+		texts[i] = b.String()
+	}
+	return scan(texts, func(i int) int { return elems[i].Line }), nil
 }
 
 // scan reports each text's BFC1 and BFC2 rows at line(i).

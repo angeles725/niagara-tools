@@ -4,7 +4,8 @@
 exit 0
 WARN  lint-bformat-call  @DIR@/root/s/config.bog:4  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
 WARN  lint-bformat-call  @DIR@/root/s/config.bog:5  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
-WARN  lint-bformat-call  @DIR@/root/s/config.bog:6  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/s/config.bog:7  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/s/config.bog:8  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
 -- stderr --
 -- root/s/config.bog --
 <?xml version="1.0" encoding="UTF-8"?>

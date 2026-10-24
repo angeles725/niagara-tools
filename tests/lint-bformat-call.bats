@@ -48,3 +48,11 @@ setup() {
   run "$LINT"
   [ "$status" -eq 3 ]
 }
+
+@test "BF-xml: a .bog is read as XML: a comment is not read, an entity-encoded %user% is (truth fix 2026-10-24)" {
+  # Mutation: BF-xml -- reading a .bog as text counts a commented-out pattern and misses an entity-encoded %user%
+  printf '<bajaObjectGraph>\n<!-- <p v="%%time(x)%%"/> -->\n<p v="&#37;user&#37;"/>\n</bajaObjectGraph>\n' > "$SRC/config.bog"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-bformat-call  $SRC/config.bog:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)" ]
+}
