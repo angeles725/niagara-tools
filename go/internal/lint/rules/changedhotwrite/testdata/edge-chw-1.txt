@@ -1,3 +1,5 @@
+declared difference (truth fix T2, truth-method-bodies-1): R5's `if (execute())` in ok() is no longer taken for
+execute()'s declaration, so its real body's write is read and R5 WARNs at line 3.
 declared difference (truth fix T1, truth-code-view-1): R8's "setXHours(" is a string, not a write, so R8 no
 longer WARNs.
 -- args --
@@ -5,6 +7,7 @@ longer WARNs.
 -- want --
 exit 0
 WARN  lint-changed-hot-write  @DIR@/R2.java:3  changed(p) has 6 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/R5.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 WARN  lint-changed-hot-write  @DIR@/R6.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 -- stderr --
 -- R1.java --

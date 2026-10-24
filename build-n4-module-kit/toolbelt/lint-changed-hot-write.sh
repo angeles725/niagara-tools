@@ -36,7 +36,11 @@
 # Strip + BlankLiterals, shared with the sibling lint): the bash/awk cut each line at its first "//" (inside a
 # string too) and read block comments, Javadoc and strings as code, so a Javadoc `{@code execute()}` was taken
 # for execute()'s declaration and a "}" in a string ended a body early.
+# Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
+# method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
+# as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
 # VCS-free by design (kit-links L2).
+# Mutation: CHW7 -- taking the first execute() not followed by ";" as the declaration reads if (execute()) instead of the body
 # Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs
 # Mutation: CHW-reset -- a bare `set<X>(` substring also matches `reset<X>(` and false-WARNs

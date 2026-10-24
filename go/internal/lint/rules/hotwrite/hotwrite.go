@@ -1,5 +1,5 @@
 // Package hotwrite holds what lint-changed-hot-write and lint-persist-hot-write share: the changed()
-// callback they start from, the method bodies they read, the zero-arg methods changed() calls and the
+// callback they start from, the method bodies they read (javasrc.Methods), the zero-arg methods changed() calls and the
 // non-transient slot-o-matic properties whose setters they look for. Both rules (rules/changedhotwrite,
 // rules/persisthotwrite) read a file through View and these helpers, never a private copy.
 package hotwrite
@@ -45,37 +45,45 @@ func Changed(lines []string) (line int, prop string, ok bool) {
 	return 0, "", false
 }
 
-// BodyEnd is the 0-based line where the braces counted from line start (the whole line) first return to
-// depth 0 after one opened, ok false when they never do.
-func BodyEnd(lines []string, start int) (int, bool) {
-	depth, started := 0, false
-	for i := start; i < len(lines); i++ {
-		for _, c := range []byte(lines[i]) {
-			switch c {
-			case '{':
-				depth, started = depth+1, true
-			case '}':
-				depth--
-			}
-		}
-		if started && depth == 0 {
-			return i, true
+// Body is a method body as both rules read it: its first and last 0-based lines.
+type Body struct{ Start, End int }
+
+// ChangedBody is the body of the first `changed(Property <name>` method and that name: from its signature
+// line to the end of the javasrc.Methods body that opens there or after it; ok false when there is none.
+func ChangedBody(f *javasrc.File, lines []string) (b Body, prop string, ok bool) {
+	sig, prop, ok := Changed(lines)
+	if !ok {
+		return Body{}, "", false
+	}
+	for _, m := range f.Methods() {
+		if m.Name == "changed" && m.Start-1 >= sig {
+			return Body{sig, m.End - 1}, prop, true
 		}
 	}
-	return 0, false
+	return Body{}, "", false
 }
 
-// Decl is the 0-based line of the first `name()` (a non-identifier byte before it, blanks allowed in the
-// parentheses) not followed by ";", the zero-arg method's declaration; ok false when there is none.
-func Decl(lines []string, name string) (int, bool) {
-	re := rx(`[^A-Za-z0-9_]` + regexp.QuoteMeta(name) + `[[:space:]]*\([[:space:]]*\)`)
-	for i, ln := range lines {
-		probe := " " + ln
-		if loc := re.FindStringIndex(probe); loc != nil && !strings.HasPrefix(strings.TrimLeft(probe[loc[1]:], " \t\n\v\f\r"), ";") {
-			return i, true
+// sigLines is how many lines above a body's opening line its signature may start (javasrc's back-scan).
+const sigLines = 20
+
+// ZeroArg is the body of the first zero-arg method name (javasrc.Methods): a body named name whose signature,
+// the code from the previous body's end to its opening line, holds `name()` not followed by ";".
+func ZeroArg(f *javasrc.File, lines []string, name string) (Body, bool) {
+	decl := rx(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(name) + `[[:space:]]*\([[:space:]]*\)`)
+	prev := 0
+	for _, m := range f.Methods() {
+		sig := strings.Join(lines[max(prev, m.Start-1-sigLines):m.Start], "\n")
+		prev = m.End
+		if m.Name != name {
+			continue
+		}
+		for _, loc := range decl.FindAllStringIndex(sig, -1) {
+			if !strings.HasPrefix(strings.TrimLeft(sig[loc[1]:], " \t\n\v\f\r"), ";") {
+				return Body{m.Start - 1, m.End - 1}, true
+			}
 		}
 	}
-	return 0, false
+	return Body{}, false
 }
 
 // Callees are the names of the zero-arg methods lines[from..to] call (`name();`), keywords out, each once

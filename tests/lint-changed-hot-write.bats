@@ -98,6 +98,17 @@ _write_hot() {
   [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  changed(p) has 7 'p ==' branches"* ]]
 }
 
+@test "CHW7: if (execute()) before the declaration does not hide execute()'s write" {
+  # Mutation: CHW7 -- taking the first execute() not followed by ";" as the declaration reads if (execute()) instead of the body
+  # Go golden: go/internal/lint/rules/changedhotwrite/testdata/truth-method-bodies-1.txt
+  { printf 'class W {\n  static final Property xHours = newProperty(0, 0.0, null);\n  public void changed(Property p, Context cx) {\n'
+    for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
+    printf '  }\n  boolean ok() { if (execute()) return true; return false; }\n  void execute() { setXHours(1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/W.java"
+  run "$CHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/W.java:3  changed(p) has 7"* ]]
+}
+
 @test "CHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: CHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

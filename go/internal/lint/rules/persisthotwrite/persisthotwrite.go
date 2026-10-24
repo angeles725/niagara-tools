@@ -41,34 +41,26 @@ var (
 	modulo     = regexp.MustCompile(`%[[:space:]]*[A-Za-z0-9_]+[[:space:]]*(==|!=)`)
 )
 
-type body struct{ start, end int } // 0-based lines
-
 // Check WARNs every unguarded setter call of a non-transient property in changed() or a one-hop callee,
 // property by property, body by body (changed() first), line by line.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	lines := hotwrite.View(f)
-	start, _, ok := hotwrite.Changed(lines)
+	changed, _, ok := hotwrite.ChangedBody(f, lines)
 	if !ok {
 		return nil, nil
 	}
-	end, ok := hotwrite.BodyEnd(lines, start)
-	if !ok {
-		return nil, nil
-	}
-	bodies := []body{{start, end}}
-	for _, name := range hotwrite.Callees(lines, start, end) {
-		if d, ok := hotwrite.Decl(lines, name); ok {
-			if e, ok := hotwrite.BodyEnd(lines, d); ok {
-				bodies = append(bodies, body{d, e})
-			}
+	bodies := []hotwrite.Body{changed}
+	for _, name := range hotwrite.Callees(lines, changed.Start, changed.End) {
+		if b, ok := hotwrite.ZeroArg(f, lines, name); ok {
+			bodies = append(bodies, b)
 		}
 	}
 	var out []lint.Finding
 	for _, prop := range hotwrite.NonTransient(lines) {
 		setter := hotwrite.Setter(prop) + "("
 		for _, b := range bodies {
-			for i := b.start; i <= b.end; i++ {
-				if !strings.Contains(lines[i], setter) || setterDecl.MatchString(lines[i]) || guarded(lines, b.start, i) {
+			for i := b.Start; i <= b.End; i++ {
+				if !strings.Contains(lines[i], setter) || setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) {
 					continue
 				}
 				out = append(out, lint.Finding{Line: i + 1, Msg: setter + "...) writes non-transient slot '" + prop +

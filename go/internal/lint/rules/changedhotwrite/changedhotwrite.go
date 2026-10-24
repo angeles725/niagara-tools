@@ -51,31 +51,25 @@ func text(lines []string, from, to int) string {
 
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	lines := hotwrite.View(f)
-	start, prop, ok := hotwrite.Changed(lines)
+	body, prop, ok := hotwrite.ChangedBody(f, lines)
 	if !ok {
 		return nil, nil
 	}
-	end, ok := hotwrite.BodyEnd(lines, start)
-	if !ok {
-		return nil, nil
-	}
-	changed := text(lines, start, end)
+	changed := text(lines, body.Start, body.End)
 	n := len(regexp.MustCompile(`[^A-Za-z0-9_]`+regexp.QuoteMeta(prop)+`[[:space:]]*==`).FindAllStringIndex(changed, -1))
 	if n < minBranches || !strings.Contains(changed, "execute()") ||
 		strings.Contains(changed, "Clock.millis(") || strings.Contains(changed, "Clock.schedule") {
 		return nil, nil
 	}
 	exec := changed
-	if d, ok := hotwrite.Decl(lines, "execute"); ok {
-		if e, ok := hotwrite.BodyEnd(lines, d); ok {
-			exec = text(lines, d, e)
-		}
+	if b, ok := hotwrite.ZeroArg(f, lines, "execute"); ok {
+		exec = text(lines, b.Start, b.End)
 	}
 	for _, slot := range hotwrite.NonTransient(lines) {
 		// anchored at an identifier boundary: `resetXHours(` is not the setter `setXHours(` (#151)
 		setter := regexp.MustCompile(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(hotwrite.Setter(slot)) + `[[:space:]]*\(`)
 		if setter.MatchString(exec) || setter.MatchString(changed) {
-			return []lint.Finding{{Line: start + 1, Msg: fmt.Sprintf("changed(%s) has %d '%s ==' branches guarding execute(),"+
+			return []lint.Finding{{Line: body.Start + 1, Msg: fmt.Sprintf("changed(%s) has %d '%s ==' branches guarding execute(),"+
 				" no Clock.millis()/schedule rate guard, writes non-transient slot '%s' -- debounce the callback"+
 				" (leading-edge Clock.millis() gate) or move the periodic write to a tick", prop, n, prop, slot)}}, nil
 		}

@@ -88,6 +88,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
 }
 
+@test "PHW8: a callee mentioned inside another call before its declaration keeps its own body" {
+  # Mutation: PHW8 -- taking the first tick() not followed by ";" as the declaration reads pending(tick()) instead of tick()'s body
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-method-bodies-1.txt
+  printf '%s\n' 'class V {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) { tick(); }' \
+    '  boolean busy() { return pending(tick()); }' '  void tick() { setXHours(1.0); }' '}' > "$TMPDIR_T/Mod/src/com/x/V.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/V.java:5  setXHours(...)"* ]]
+}
+
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
