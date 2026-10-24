@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
@@ -24,12 +23,12 @@ const auditMsg = ": no audit call (record user, ord, old, new, source before ans
 func (s *scan) audit(files []string) ([]lint.Finding, error) {
 	var out []lint.Finding
 	for _, p := range files {
-		lines, err := s.lines(p)
+		f, err := s.file(p)
 		if err != nil {
 			return out, err
 		}
 		at, method, audited := 0, "", false
-		for i, ln := range linescan.Code(javasrc.NewFile(p, lines)) {
+		for i, ln := range linescan.Code(f) {
 			if m := handler.FindStringSubmatch(ln); at == 0 && m != nil {
 				at, method = i+1, m[1]
 			}

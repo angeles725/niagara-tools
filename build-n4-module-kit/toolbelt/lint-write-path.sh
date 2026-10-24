@@ -53,6 +53,7 @@
 # Mutation: WP-finderr-matrix -- ignoring the matrix-root find status drops names from the covered set
 # Mutation: WP-matrix-anyline -- accepting any non-empty matrix file stops the walk at a heading-only matrix
 # Mutation: WP-stale-noeol -- skipping an unterminated last matrix line hides its STALE row
+# Mutation: WP-scan-raw -- scanning raw lines makes a commented-out annotation or comment OPERATOR a write path
 set -u
 
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

@@ -468,3 +468,22 @@ MD
   [[ "$output" == *"STALE"*"ghostLast"* ]]
   [ "$status" -eq 1 ]
 }
+
+# Truth fix T3: the OPERATOR scanner read raw lines, so a commented-out @NiagaraProperty or an OPERATOR
+# inside a comment demanded a matrix row, and a "(" inside a literal kept the annotation open, swallowing
+# the next annotations (and, across one `xargs awk`, the next files).
+@test "WP-scan-code: comments are not write paths and a literal paren does not swallow the next slot" {
+  # Mutation: WP-scan-raw -- scanning raw lines FAILs commentedOut/opInComment and loses afterParen.
+  d="$BATS_TEST_TMPDIR/scancode"; mkdir -p "$d/src/com/x" "$d/docs"
+  cat > "$d/src/com/x/B.java" <<'JAVA'
+// @NiagaraProperty(name="commentedOut", flags=Flags.OPERATOR)
+@NiagaraProperty(name="opInComment", flags=Flags.SUMMARY /* not OPERATOR */)
+@NiagaraProperty(name="label", type="String", defaultValue="BString.make(\"(\")", flags=Flags.SUMMARY)
+@NiagaraProperty(name="afterParen", flags=Flags.OPERATOR)
+JAVA
+  printf '| `label` | D |\n| `opInComment` | D |\n| `commentedOut` [concept] | D |\n' > "$d/docs/write-path-matrix.md"
+  run "$LW" "$d"
+  [[ "$output" == *"FAIL"*"afterParen"* ]]
+  [[ "$output" != *"commentedOut"* && "$output" != *"slot opInComment"* ]]
+  [ "$status" -eq 1 ]
+}

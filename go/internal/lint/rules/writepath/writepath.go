@@ -27,7 +27,7 @@ func (r rule) CheckRoot(root string) ([]lint.Finding, error) { return r.CheckRoo
 // CheckRootOptions prints the bash lint's rows in its order: FAIL per profile, the audit-call WARN rows
 // per profile, then STALE/DRIFT per matrix line. Its env errors are stdout rows (lint.RowError).
 func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Finding, error) {
-	s := &scan{root: root, files: map[string][]string{}}
+	s := &scan{root: root, files: map[string]*javasrc.File{}}
 	m, err := s.matrix(values["--matrix"])
 	if err != nil {
 		return nil, err
@@ -94,11 +94,11 @@ func Spec() lint.Spec {
 		Usage: "usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>] [--strict]"}
 }
 
-// scan is one run over a module root; files caches each Java file's lines, read once (the matrix-root
-// walk and a profile walk list the same files).
+// scan is one run over a module root; files caches each Java file, read and stripped once (the
+// matrix-root walk and a profile walk list the same files).
 type scan struct {
 	root  string
-	files map[string][]string
+	files map[string]*javasrc.File
 }
 
 func (s *scan) errorRow(reason string) error {
@@ -119,18 +119,18 @@ func (s *scan) list(dir, prune string) ([]string, error) {
 	return files, nil
 }
 
-// lines reads p once. An unreadable file fails closed (the bash awk and grep skipped it in silence).
-func (s *scan) lines(p string) ([]string, error) {
-	if ls, ok := s.files[p]; ok {
-		return ls, nil
+// file reads p once. An unreadable file fails closed (the bash awk and grep skipped it in silence).
+func (s *scan) file(p string) (*javasrc.File, error) {
+	if f, ok := s.files[p]; ok {
+		return f, nil
 	}
 	data, err := os.ReadFile(p)
 	if err != nil {
 		return nil, fmt.Errorf("cannot scan %s: %s", p, strerror.Text(err))
 	}
 	ls, _ := javasrc.Lines(strings.NewReader(string(data))) // a strings.Reader never fails
-	s.files[p] = ls
-	return ls, nil
+	s.files[p] = javasrc.NewFile(p, ls)
+	return s.files[p], nil
 }
 
 // targets are the profiles scanned: <root>/src alone, named after the root, or else every *-rt/-ux/-wb/-se

@@ -1,13 +1,16 @@
+declared difference: T3: the slot scanner and the name harvest read code: commentedOut and opInComment are no write paths, a "(" in the paren( name no longer keeps the annotation open (afterParen is found), and the annotation left open at A.java's end no longer swallows B.java's inB
 -- args --
 @DIR@/scan
 -- want --
 exit 1
-FAIL  lint-write-path  scan  slot commentedOut: no matrix row
+FAIL  lint-write-path  scan  slot afterParen: no matrix row
 FAIL  lint-write-path  scan  slot displayFirst: no matrix row
+FAIL  lint-write-path  scan  slot inB: no matrix row
 FAIL  lint-write-path  scan  slot multiLine: no matrix row
 FAIL  lint-write-path  scan  slot oFlag: no matrix row
-FAIL  lint-write-path  scan  slot opInComment: no matrix row
+FAIL  lint-write-path  scan  slot paren(: no matrix row
 FAIL  lint-write-path  scan  slot secondOfBlock: no matrix row
+FAIL  lint-write-path  scan  slot srcBuild: no matrix row
 STALE  lint-write-path  @DIR@/scan/docs/write-path-matrix.md:1  slot setpoint: no source slot with that name
 -- stderr --
 -- .git/HEAD --
