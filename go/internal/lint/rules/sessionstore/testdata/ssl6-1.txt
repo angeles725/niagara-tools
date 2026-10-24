@@ -1,0 +1,21 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/E.java --
+class E {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void started() {
+    Clock.schedulePeriodically(this, BRelTime.makeMinutes(1), sweep, null);
+  }
+  public void doSweep() {
+    for (String k : SESSIONS.keySet()) if (expired(k)) SESSIONS.remove(k);
+  }
+  void login(String id) {
+    SESSIONS.put(id, new Entry());
+  }
+  void logout(String id) {
+    SESSIONS.remove(id);
+  }
+}

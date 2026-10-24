@@ -1,0 +1,21 @@
+-- args --
+@DIR@/missing
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-session-store-lazy-evict: not a directory: @DIR@/missing
+-- Mod/src/com/x/E.java --
+class E {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void login(String id) {
+    SESSIONS.put(id, new Entry());
+  }
+}
+-- Other/src/O.java --
+class E {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void login(String id) {
+    SESSIONS.put(id, new Entry());
+  }
+}

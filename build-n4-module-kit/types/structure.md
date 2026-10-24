@@ -213,7 +213,8 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
 ### What the scaffold emits today
 - **The scaffolded `module-permissions.xml` has a `<permissions/>` root.** The NRE reads only a `<permissions>`
   element (baja 4.14.0.162 vineflower `com/tridium/sys/module/NModule.java:442-452`), and the gradle plugin copies
-  the root into `META-INF/module.xml` as it is (niagara-plugins 7.6.22 `NiagaraModulePlugin`, by javap). Until
+  the root into `META-INF/module.xml` as it is (javap of niagara-plugins-7.6.22.jar from `~/.gradle/caches`: `NiagaraModulePlugin` adds `module-permissions.xml` to
+  `ModuleXml.includeFiles`, and `ModuleXml.mergeIncludeFile` adds each top-level element under its own name). Until
   kit #380 the fixtures shipped `<modulePermissions/>`, so a `<req-permission>` placed in a module scaffolded
   before then is never read and the call fails with `AccessControlException`: rename that root to `<permissions>`,
   or start again from `templates/module-permissions.xml` (§ `module-permissions.xml` above). Every tracked kit

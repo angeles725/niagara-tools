@@ -93,13 +93,13 @@ imageOverrides/
       bacObject.png
   history/com/tridium/history/ui/icons/
       delete.png
-  icons/x16/                            ← generic 16×16 framework icons (~800 in themeDistech)
+  icons/x16/                            ← generic 16×16 framework icons (405 in themeDistech; 802 PNGs under imageOverrides/)
       action.png  alarm.png  …
   icons/sprite/sprite.png
 ```
 
 **Path rule:** must exactly match the resource path inside the target jar. A wrong path
-silently leaves the default icon in place — no error at deploy. `[ev: code themeDistech-ux imageOverrides/]`
+silently leaves the default icon in place — no error at deploy [INFER]. `[ev: code themeDistech-ux imageOverrides/]`
 
 ---
 
