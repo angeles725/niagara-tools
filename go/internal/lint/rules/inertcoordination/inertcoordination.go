@@ -101,14 +101,42 @@ func bodyEnd(lines []string, start int) (int, bool) {
 	return len(lines) - 1, started
 }
 
-// singleton reports a singletonList( on a body line, or an Arrays.asList( with no "," after it on its line.
+// singleton reports a singletonList( in the body, or an Arrays.asList( call with exactly one argument: its
+// arguments counted by parenthesis depth up to the call's own ")", over lines (code only, literals blanked).
 func singleton(body []string) bool {
-	for _, ln := range body {
-		if strings.Contains(ln, "singletonList(") {
+	text := strings.Join(body, "\n")
+	if strings.Contains(text, "singletonList(") {
+		return true
+	}
+	for rest := text; ; {
+		_, after, ok := strings.Cut(rest, "Arrays.asList(")
+		if !ok {
+			return false
+		}
+		if oneArg(after) {
 			return true
 		}
-		if _, tail, ok := strings.Cut(ln, "Arrays.asList("); ok && !strings.Contains(tail, ",") {
-			return true
+		rest = after
+	}
+}
+
+// oneArg reports whether the argument list s (the text after a call's "(") closes and holds exactly one
+// argument: something before its ")" and no comma outside nested (), [] and {}.
+func oneArg(s string) bool {
+	depth := 0
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[', '{':
+			depth++
+		case ')', ']', '}':
+			if depth == 0 {
+				return strings.Trim(s[:i], " \t\n\v\f\r") != ""
+			}
+			depth--
+		case ',':
+			if depth == 0 {
+				return false
+			}
 		}
 	}
 	return false

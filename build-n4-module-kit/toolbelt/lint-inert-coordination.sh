@@ -39,11 +39,10 @@
 #     in the body, not that it is the actual `return` expression -- an unrelated local variable
 #     using the same call shape is a false-positive risk, cheap to accept per
 #     kit style (mirrors lint-wb-external-ord-value's same-method text-presence checks).
-#   - the `Arrays.asList(` single-argument check is a same-line no-comma-to-end-of-line
-#     heuristic (no real paren-depth tracking): a multi-line call, or a two-argument call whose
-#     first argument itself contains no comma but a later unrelated comma appears further on
-#     the SAME line, can mis-classify -- rare in this shape (a coordinator's argument is always
-#     `getParent()`/a single component reference).
+#   - the `Arrays.asList(` single-argument check counts the call's arguments by parenthesis depth up to its own
+#     ")" (over lines; truth fix T2 2026-10-24 -- the bash took "no comma after the call on its line", so a call
+#     wrapped before two arguments was singleton and `asList(pick(a, b))` was not); `asList(new B[]{a, b})`
+#     (one array argument) still counts as singleton.
 #   - `Token`/`Stagger` matching follows camelCase (a leading `token`/`stagger` word or a later
 #     `Token`/`Stagger` word); an ALL-CAPS constant (`STAGGER_MS`) is a false-negative risk.
 #   - a `Deque`/`Queue` field used for something UNRELATED to unit coordination (rare in a
@@ -61,6 +60,7 @@
 # Mutation: ICO-lower -- requiring a capitalized Stagger/Token misses the lowerCamel staggerDelay field
 # Mutation: ICO-call -- taking `return units()...;` for the declaration checks the wrong body
 # Mutation: ICO-comment -- reading block comments as code WARNs a units() whose singletonList is commented out
+# Mutation: ICO-args -- the same-line no-comma test takes a wrapped two-argument Arrays.asList( for a singleton
 # Mutation: ICO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: ICO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
