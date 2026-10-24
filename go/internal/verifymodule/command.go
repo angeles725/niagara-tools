@@ -45,6 +45,7 @@ var checks = []check{
 	(*run).facets, (*run).facetPresence, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
 	(*run).phantomDep, (*run).moduleTest, (*run).crossModuleType, (*run).transientOperator,
 	(*run).compact3Imports, (*run).subscriptionLeak, (*run).slotWall,
+	(*run).driver,
 }
 
 // Main is verify-module.sh. `coverage` and `--plano` are read before any flag.
