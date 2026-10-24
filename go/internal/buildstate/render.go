@@ -11,7 +11,7 @@ const (
 	openMarker  = "<!-- build-state.v1 -->"
 	closeMarker = "<!-- /build-state.v1 -->"
 
-	errNoKit   = "BUILD-STATE.md needs exactly one closed build-state.v1 envelope with `module: kit`"
+	errNoKit   = "needs exactly one closed build-state.v1 envelope with `module: kit`"
 	errFields  = "the kit envelope needs one `last_change:` line, then one `open_issues:` line, then one `last_session:` line"
 	errLogTail = "not a session-log line; the generated session log runs from `last_session:` to the closing marker, so a hand-kept field belongs above `last_session:`"
 )
@@ -81,7 +81,7 @@ func Render(state string, frags []Fragment) (string, error) {
 	// Mutation: GBS-tail -- a hand-added field after last_session would be dropped silently on regeneration
 	for i := ls + 1; i < end; i++ {
 		if !logPattern.MatchString(lines[i]) {
-			return "", fmt.Errorf("BUILD-STATE.md line %d (`%s`): %s", i+1, lines[i], errLogTail)
+			return "", fmt.Errorf("line %d (`%s`): %s", i+1, lines[i], errLogTail)
 		}
 	}
 

@@ -206,3 +206,23 @@ func TestMainWriteReadOnlyTarget(t *testing.T) {
 		t.Errorf("read-only write: target %q, want the generated content with mode 0444", b)
 	}
 }
+
+// TestGenerateNamesTheSourceFile: a structure error is in BUILD-STATE.src.md (the only file read), so the
+// message names that file once, never the generated BUILD-STATE.md.
+func TestGenerateNamesTheSourceFile(t *testing.T) {
+	t.Parallel()
+	end := strings.LastIndex(source, "<!-- /build-state.v1 -->") // the kit envelope closes last
+	src := source[:end] + "last_commit: abc\n" + source[end:]    // a hand-kept field after last_session:
+	root := kit(t, src, archiveOnly)
+	var diag bytes.Buffer
+	if _, code := Generate(root, &diag); code != ExitStale {
+		t.Fatalf("exit %d, want %d: %s", code, ExitStale, diag.String())
+	}
+	got := diag.String()
+	if !strings.HasPrefix(got, "gen-build-state: BUILD-STATE.src.md: line ") || strings.Contains(got, "BUILD-STATE.md line") {
+		t.Errorf("diagnostic %q does not name BUILD-STATE.src.md alone", got)
+	}
+	if !strings.Contains(got, "(`last_commit: abc`): "+errLogTail) {
+		t.Errorf("diagnostic %q lacks the offending line", got)
+	}
+}

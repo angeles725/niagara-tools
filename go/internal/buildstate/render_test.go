@@ -84,7 +84,7 @@ func TestRenderStructureViolations(t *testing.T) {
 			"open_issues:\n", "last_session: x\nopen_issues:\n", 1), errFields},
 		// Mutation: GBS-tail -- a hand-added field after last_session would be dropped silently on regeneration
 		{"a field after the session log", strings.Replace(ok, "<!-- /build-state.v1 -->\n", "last_commit: abc\n<!-- /build-state.v1 -->\n", 2),
-			"BUILD-STATE.md line 24 (`last_commit: abc`): " + errLogTail},
+			"line 24 (`last_commit: abc`): " + errLogTail},
 	}
 	for _, c := range cases {
 		_, err := Render(c.in, []Fragment{archive})
