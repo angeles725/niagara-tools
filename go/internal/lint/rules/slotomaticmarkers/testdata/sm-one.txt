@@ -1,0 +1,16 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/a/BOne.java --
+@NiagaraType
+public class BOne extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//@formatter:off
+	/*@ $com.a.BOne(2979906276)1.0$ @*/
+  /* Generated Fri Oct 24 10:00:00 CST 2026 by Slot-o-Matic (c) Tridium, Inc. 2012-2026 */
+//@formatter:on
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}
