@@ -471,12 +471,12 @@ public class BEibnetIpNetwork extends BLoadableNetwork implements EibnetConst, B
 ```
 
 KNX addressing is by **group address**, not by object/property (unlike BACnet). Each proxy ext holds
-its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, `point/BKnxProxyExt.java:54`). The network owns two stack layers as
+its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, eibnetIp-rt `com/tridium/eibnetIp/point/BKnxProxyExt.java:54`). The network owns two stack layers as
 `@NiagaraProperty` children: `linkLayer` (`BEibnetIpLinkLayer`) for UDP multicast/unicast
 EIBnet/IP discovery, and `tunnelLayer` (`BEibnetIpTunnelLayer`) for the tunneled connection.
 Per-datatype proxy families: `BKnxBooleanProxyExt`, `BKnxEnumProxyExt`, `BKnxStringProxyExt` —
 pick by KNX DPT, not by a single generic proxy ext. Point discovery reads an ETS export (`.esf` session file)
-chosen in the point manager's Discover (eibnetIp-wb `ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
+chosen in the point manager's Discover (eibnetIp-wb `com/tridium/eibnetIp/ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
 is a KNXnet/IP device search. [ev: code eibnetIp-rt vineflower BEibnetIpNetwork.java:28-35; corpus B1357]
 
 ### 8.2 · Z-Wave (`zwave` driver)
@@ -675,7 +675,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29`).
 - **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
   has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
-  Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
+  Import-side non-contiguous ranges: `types/logic-authoring.md` § BEnumRange authoring grammar (its Non-contiguous-ordinal gotcha). Gotcha H5.
 - **The N4 level is the BACnet priority.** A proxy write goes out as `WriteProperty` at the winning N4 level and
   relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.

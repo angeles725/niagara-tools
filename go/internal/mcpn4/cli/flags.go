@@ -5,7 +5,6 @@ import (
 	"math"
 	"math/big"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -89,7 +88,7 @@ func intFlag(field func(*Config) *int64, low int64, note string) func(*Config, s
 }
 
 func loadWait(c *Config, v string) error {
-	f, ok := pyFloat(v)
+	f, ok := pyjson.ParseFloat(v)
 	if !ok {
 		return fmt.Errorf("%s is not a number", pyjson.StrRepr(v))
 	}
@@ -123,28 +122,12 @@ func saturate(n *big.Int) int64 {
 // pyMaxIntDigits is CPython's int_max_str_digits: int() refuses a longer literal.
 const pyMaxIntDigits = 4300
 
-var (
-	intRE   = regexp.MustCompile(`^[+-]?[0-9](_?[0-9])*$`)
-	digits  = `[0-9](_?[0-9])*`
-	floatRE = regexp.MustCompile(`^[+-]?((` + digits + `(\.(` + digits + `)?)?|\.` + digits + `)([eE][+-]?` + digits + `)?|(?i:inf|infinity|nan))$`)
-)
-
-// trimPySpace is str.strip(), which int() and float() apply to their argument.
-func trimPySpace(s string) string {
-	return strings.TrimFunc(s, func(r rune) bool {
-		switch {
-		case r >= 0x09 && r <= 0x0d, r >= 0x1c && r <= 0x20, r == 0x85, r == 0xa0, r == 0x1680,
-			r >= 0x2000 && r <= 0x200a, r == 0x2028, r == 0x2029, r == 0x202f, r == 0x205f, r == 0x3000:
-			return true
-		}
-		return false
-	})
-}
+var intRE = regexp.MustCompile(`^[+-]?[0-9](_?[0-9])*$`)
 
 // pyInt is int(text) for ASCII digits: surrounding whitespace, a sign and single underscores
 // between digits are accepted. (Python also takes non-ASCII decimal digits; this does not.)
 func pyInt(text string) (*big.Int, bool) {
-	s := trimPySpace(text)
+	s := strings.TrimFunc(text, pyjson.IsSpace)
 	if !intRE.MatchString(s) {
 		return nil, false
 	}
@@ -154,21 +137,4 @@ func pyInt(text string) (*big.Int, bool) {
 	}
 	n, ok := new(big.Int).SetString(strings.TrimPrefix(s, "+"), 10)
 	return n, ok
-}
-
-// pyFloat is float(text): decimal literals (underscores between digits), inf, infinity and nan
-// in any case with an optional sign; a literal past the float range is ±inf, as in Python.
-func pyFloat(text string) (float64, bool) {
-	s := trimPySpace(text)
-	if !floatRE.MatchString(s) {
-		return 0, false
-	}
-	if strings.HasSuffix(strings.ToLower(s), "nan") { // Go refuses a signed NaN
-		return math.NaN(), true
-	}
-	f, err := strconv.ParseFloat(strings.ReplaceAll(s, "_", ""), 64)
-	if err != nil && !math.IsInf(f, 0) {
-		return 0, false
-	}
-	return f, true
 }

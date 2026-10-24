@@ -1013,7 +1013,7 @@ Rules:
 - **Private constructor + static `INSTANCE`** — enforces single-instance contract; the framework calls `INSTANCE` directly, never `new`.
 - **Does NOT appear in a palette** — a `BSingleton` cannot be dropped by the operator; it is registered in `module.xml` only. `[ev: code BLocalAlarmResolver.java]`
 
-## Lifecycle guard contract `[ev: code BColdRoom.java, BCompressorControl.java]`
+## Lifecycle guard contract `[ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BColdRoom.java:624-627,754-764; Cliente/panccadia-leon/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/BCompressorControl.java:3828-3845]`
 
 Every `changed` / `added` / `removed` override in a `BComponent` subclass must follow the same guard contract:
 
@@ -1058,7 +1058,7 @@ public void stopped() throws Exception {
 Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
-3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an `Exception` from `changed` does not kill the engine thread: `ComponentSlotMap.fireComponentEvent` catches it and only calls `printStackTrace()` (`com/tridium/sys/schema/ComponentSlotMap.java:770-823`, baja vineflower; corpus B1113), so the rest of the callback is skipped and the trace never reaches the module log. `[ev: code BColdRoom.java, BCompressorControl.java]`
+3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an `Exception` from `changed` does not kill the engine thread: `ComponentSlotMap.fireComponentEvent` catches it and only calls `printStackTrace()` (`com/tridium/sys/schema/ComponentSlotMap.java:770-823`, baja vineflower; corpus B1113), so the rest of the callback is skipped and the trace never reaches the module log. `[ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BColdRoom.java:641-648; Cliente/panccadia-leon/Compresores/CompPan/CompPan-rt/src/com/angeles/CompPan/BCompressorControl.java:3838-3844]`
 4. **Reject a bad value by reverting it and logging why — never by throwing.** `changed()` runs after the value is
    already set, so a throw does not undo it; write the previous or safe value back and log the reason (the course's
    TLS-version slot: `READONLY` + `HIDDEN` + a reverting `changed()`). [CERT-a] corpus B1416 §1416.4 row d

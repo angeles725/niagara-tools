@@ -6,7 +6,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
 - A module splits into per-`runtimeProfile` artifacts `<module>-{rt,ux,wb,se,doc}`: `-rt` runtime (compact3, every
   host), `-ux` browser (BajaScript), `-wb` Workbench (Swing), `-se` code that depends on Java SE APIs (JDBC, AWT,
-  Swing; § The `-se` runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
+  Swing; § The `-se` (Java SE) runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
   plugin writes the `<moduleParts>` element of the generated `META-INF/module.xml`, never an authored file.
   `[ev: corpus B1313 §1313.3 C2-C3]` `[ev: retro devguide415-horizons-authoring-security Δ8]`
 - **Allowed part dependencies** (devguide `modules.txt:148-155`): `rt`→rt · `ux`→rt, ux · `wb`→rt, ux, wb ·

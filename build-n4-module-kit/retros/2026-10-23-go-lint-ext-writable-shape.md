@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · go-lint-ext-writable-shape
@@ -51,4 +51,4 @@ what the code checks.
   must read markers and parentheses in the blanked lines but the values in the stripped ones, line by line.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-ext-writable-shape.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 (no path through `awk -v`); three of the four scripts are fixed, `verify-module.sh:336` is left (open issue updated).

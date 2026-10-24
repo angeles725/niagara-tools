@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-24 · kit · go-lint-inline-site-literal
@@ -50,4 +50,4 @@ green on its own with RED quoted in its body.
   every commit.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-inline-site-literal.md | kit | 2026-10-24 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-a`) — Δ1 (already in the wrapper header and `toolbelt/INDEX.md`) and Δ2 `METHODOLOGY.md` § Domain correctness site-data rule; Δ3 parked as an owed `open_issue:` in its `ledger.d/` fragment, `[deferred:]` in `BUILD-LOOP.md` § 5 kit tooling doctrine (needs code).

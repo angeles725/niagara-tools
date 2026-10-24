@@ -1,0 +1,24 @@
+declared difference: the python helper swallowed every parse failure (2>/dev/null, regex scan) and exited 0 with no bog slots; R8-D12 reads the bog through xmlsrc, so a malformed bog is a positioned ERROR row, exit 3
+-- args --
+@DIR@/bad
+--bog
+@DIR@/bad/config.bog
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/bad  --bog: @DIR@/bad/config.bog:3:1: element <p> opened at 2:1 closed by </bajaObjectGraph>
+-- stderr --
+-- .git/HEAD --
+x
+-- bad/config.bog --
+<bajaObjectGraph>
+<p n="x">
+</bajaObjectGraph>
+-- bad/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- bad/src/B.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

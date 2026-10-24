@@ -53,7 +53,7 @@ defined in `tests/lib/client-root.bash`, which exports `CLIENT_READ_ROOT`, `C9_C
 `load lib/client-root` at file scope — never hardcode the path in the bats body. To run against a
 different tree, set the relevant variable in the environment before invoking bats:
 `C9_CLIENT_ROOT=/path/to/tree bats tests/` — the `:=` default is skipped when the variable is
-already set. [ev: retro campaign11-client-root; design.md D3a/D3b]
+already set. [ev: retro campaign11-client-root; openspec/changes/archive/2026-09-06-build-n4-module-campaign11/design.md D3a D3b]
 
 - **In a gawk toolbelt script, call `delete arr` in `BEGIN` before `length(arr)`:** checking array length without initializing triggers a gawk warning on some platforms; `delete arr` at the top of `BEGIN` ensures a clean start. [ev: retro campaign7-schema-risk]
 - **Diff heredoc-embedded reference tables against an oracle file as a named mutation:** embed the reference CSV/table as a heredoc, store the same bytes in `tests/fixtures/<name>.csv`, and assert byte equality as a named mutation — the oracle file is the contract. [ev: retro campaign7-schema-risk]

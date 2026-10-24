@@ -61,9 +61,17 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	report := func(i int, msg string) {
 		out = append(out, lint.Finding{Line: i + 1, Msg: msg + strings.TrimLeft(f.Raw[i], space)})
 	}
+	var own *seeds // built on the first null-Context write: most files have none
 	for i, ln := range code {
 		for _, loc := range write.FindAllStringIndex(ln, -1) {
-			if nullLastArg(code, i, loc[1]) {
+			args, ok := nullLastArg(code, i, loc[1])
+			if !ok {
+				continue
+			}
+			if own == nil {
+				own = newSeeds(code)
+			}
+			if !own.internal(i, ln[:loc[0]], args[:len(args)-1]) {
 				report(i, "null-Context write: ") // one row per line, at the line of the call
 				break
 			}
@@ -117,9 +125,10 @@ func nullContext(args string) bool {
 }
 
 // nullLastArg reports whether the call whose argument list opens at code[i][at:] has two or more
-// arguments and its last one is a null Context. The list is read to its balanced ")" across lines (the
-// whole statement, not one line); an argument list still open at the end of the file is not judged.
-func nullLastArg(code []string, i, at int) bool {
+// arguments and its last one is a null Context, and returns the arguments. The list is read to its balanced
+// ")" across lines (the whole statement, not one line); an argument list still open at the end of the file
+// is not judged.
+func nullLastArg(code []string, i, at int) ([]string, bool) {
 	var args []string
 	var cur strings.Builder
 	depth := 0
@@ -132,7 +141,7 @@ func nullLastArg(code []string, i, at int) bool {
 				depth--
 			case c == ')':
 				args = append(args, cur.String())
-				return len(args) >= 2 && nullArg.MatchString(strings.Trim(args[len(args)-1], space))
+				return args, len(args) >= 2 && nullArg.MatchString(strings.Trim(args[len(args)-1], space))
 			case c == ',' && depth == 0:
 				args = append(args, cur.String())
 				cur.Reset()
@@ -141,7 +150,7 @@ func nullLastArg(code []string, i, at int) bool {
 			cur.WriteByte(ln[k])
 		}
 		if j++; j == len(code) {
-			return false
+			return nil, false
 		}
 		ln = code[j]
 		cur.WriteByte(' ')

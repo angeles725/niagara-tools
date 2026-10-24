@@ -31,7 +31,7 @@ RUNTIME_OUTPUT_SLOTS = ("out",)
 #: Actions `n4_invoke_action` may call. Destructive ones (emergency*, save, restart)
 #: arrive later under a separate class.
 ALLOWED_ACTIONS = ("set", "active", "inactive", "auto")
-_BATCH_ID = re.compile(r"^[0-9a-f]{32}$")
+_BATCH_ID = re.compile(r"[0-9a-f]{32}\Z")  # under .match; "$" also took a final "\n"
 VALUE_TYPES = ("baja:Double", "baja:Boolean", "baja:String",
                "baja:StatusNumeric", "baja:StatusBoolean")
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -617,6 +617,13 @@ def _rollback_plan(client, args, ctx):
     write, sess, bid = ctx.write, ctx.session, args["batch_id"]
     if not isinstance(bid, str) or not _BATCH_ID.match(bid):
         raise ToolError("batch_id must be a 32-character hex batch id")
+    bad = write.journal.unreadable_for(bid)
+    if bad:  # before read(): the batch itself may be on the bad line (issue #448)
+        raise ToolError("%s: batch %s may be recorded on journal.jsonl line(s) %s; rolling it "
+                        "back from an incomplete record could repeat or skip its inverse, "
+                        "refusing: repair or remove the line(s) by hand"
+                        % (safety.REASON_JOURNAL_UNREADABLE, bid,
+                           ", ".join("%d (%s)" % (u["line"], u["reason"]) for u in bad)))
     view = write.journal.read(bid)
     if view is None:
         raise ToolError("unknown batch %s: it is not in the journal" % bid)

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-23 · kit · go-lint-session-store
@@ -51,3 +51,6 @@ byte for byte first, then its false results were fixed (policy R8-D14), one RED-
   other case stayed byte-identical to the bash lint.
 - A structural rule cannot tell a session store from a registry: on the decompiled corpus the fixed rule still
   reports static caches with puts and no sweep (37 distinct rows), which is the rule's stated shape, not a lie.
+
+---
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 `BUILD-LOOP.md` § 5 port rule (`declared difference` golden, already the practice in 118 testdata cases); Δ2 on the one-layered-stack line; Δ3 rejected for now, a product decision on the lint's scope (its open issue in `ledger.d/2026-10-23-go-lint-session-store.md` stays).

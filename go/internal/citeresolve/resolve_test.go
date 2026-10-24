@@ -15,7 +15,7 @@ func fixtureRoots(t *testing.T) Roots {
 		t.Fatal(err)
 	}
 	return Roots{Kit: abs + "/kit", Repo: abs, Research: abs + "/research", Modules: abs + "/modules", Clients: abs + "/modules/Cliente",
-		Memory: abs + "/memory", Version: "4.15.6.20"}
+		Memory: abs + "/memory", Version: "4.15.6.20", Home: abs + "/home", Gradle: abs + "/gradle"}
 }
 
 // statuses resolves every pointer of text as a card at kit/types/card.md.

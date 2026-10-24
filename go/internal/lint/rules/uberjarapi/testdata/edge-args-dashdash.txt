@@ -1,0 +1,12 @@
+-- args --
+--
+@DIR@/a
+-- want --
+exit 3
+-- stderr --
+lint-uberjar-api-conflict: not a directory: --
+-- a/b-rt.gradle.kts --
+dependencies {
+  api("g.x:lib-a:1.0")
+  uberjar("g.x:lib-a:1.0")
+}

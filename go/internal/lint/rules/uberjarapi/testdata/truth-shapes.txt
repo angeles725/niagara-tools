@@ -1,0 +1,39 @@
+declared difference: T1: the calls are Kotlin tokens (ktssrc): commented (cmt, blk), string (str) and xapi calls are not dependencies; the split (ml) and spaced (space) calls are
+-- args --
+@DIR@/s
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  G_1.x-y:A.b_c-9 is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:ml is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:nover is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:one is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:space is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:tpl is both uberjar()d and api()d
+WARN  lint-uberjar-api-conflict  @DIR@/s/a.gradle.kts  g:two is both uberjar()d and api()d
+-- stderr --
+-- s/a.gradle.kts --
+dependencies {
+  uberjar("g:nover")
+  implementation("g:nover:9")
+  uberjar( "g:space:1" )
+  api( "g:space:1" )
+  uberjar("g:tpl:$v")
+  api("g:tpl:${v}")
+  uberjar("g:one:1"); api("g:one:1"); uberjar("g:two:1"); api("g:two:2")
+  testImplementation("g:test:1"); uberjar("g:test:1")
+  xapi("g:xapi:1"); uberjar("g:xapi:1")
+  compileOnly("g:co:1"); uberjar("g:co:1")
+  // api("g:cmt:1")
+  uberjar("g:cmt:1")
+  /* implementation("g:blk:1") */ uberjar("g:blk:1")
+  val s = """api("g:str:1")"""
+  uberjar("g:str:1")
+  api(
+    "g:ml:1"
+  )
+  uberjar("g:ml:1")
+  api(platform("g:plat:1")); uberjar("g:plat:1")
+  api(project(":g:prj")); uberjar(":g:prj")
+  uberjar("G_1.x-y:A.b_c-9:1+2"); api("G_1.x-y:A.b_c-9")
+  uberjar("g:$name:1"); api("g:$name:1")
+}

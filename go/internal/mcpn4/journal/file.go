@@ -6,9 +6,11 @@
 package journal
 
 import (
+	"bytes"
 	"errors"
 	"io/fs"
 	"os"
+	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
@@ -79,27 +81,41 @@ func (f File) Append(entry *pyjson.Object) error {
 	return err
 }
 
-// Entries is entries: every line that parses as a JSON object, in file order. A file that
-// cannot be opened is empty and a torn line is skipped; bytes that are not UTF-8 fail as
-// readlines() fails (a *pyjson.ValueError).
-func (f File) Entries() ([]*pyjson.Object, error) {
+// line is one line of lines: its 1-based number and its JSON object, nil when it is not UTF-8.
+type line struct {
+	n     int
+	entry *pyjson.Object
+}
+
+// lines is _JsonlFile._lines: the file split as bytes.splitlines splits it (LF, CRLF and CR,
+// the line ends readlines() honours) and decoded line by line, so one bad byte costs one line,
+// not the file (issues #448, #466). A missing file or a torn line is skipped.
+func (f File) lines() []line {
 	data, err := os.ReadFile(f.Path)
 	if err != nil {
-		return nil, nil
+		return nil
 	}
-	lines, err := pyjson.ReadLines(data)
-	if err != nil {
-		return nil, err
-	}
-	var out []*pyjson.Object
-	for _, line := range lines {
-		if v, err := pyjson.Loads([]byte(line)); err == nil {
+	var out []line
+	for n := 1; len(data) > 0; n++ {
+		raw, end := data, len(data)
+		if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
+			raw, end = data[:i], i+1
+			if data[i] == '\r' && i+1 < len(data) && data[i+1] == '\n' {
+				end++
+			}
+		}
+		data = data[end:]
+		if !utf8.Valid(raw) { // strict UTF-8, as bytes.decode("utf-8") (surrogates refused)
+			out = append(out, line{n, nil})
+			continue
+		}
+		if v, err := pyjson.Loads(raw); err == nil {
 			if o, ok := v.(*pyjson.Object); ok {
-				out = append(out, o)
+				out = append(out, line{n, o})
 			}
 		}
 	}
-	return out, nil
+	return out
 }
 
 // AuditLog is the append-only record of every write call: planned, executed or refused.
@@ -107,3 +123,18 @@ type AuditLog struct{ File }
 
 // NewAuditLog is AuditLog(state_dir): <state_dir>/audit.jsonl.
 func NewAuditLog(stateDir string) *AuditLog { return &AuditLog{newFile(stateDir, "audit.jsonl")} }
+
+// Scan is AuditLog.scan: every JSON object line, and each line that is not UTF-8 as an
+// Unreadable (Reason "UnicodeDecodeError"), left out of the entries (issue #466).
+func (a *AuditLog) Scan() ([]*pyjson.Object, []Unreadable) {
+	var entries []*pyjson.Object
+	var bad []Unreadable
+	for _, l := range a.lines() {
+		if l.entry == nil {
+			bad = append(bad, Unreadable{Line: l.n, Reason: "UnicodeDecodeError"})
+			continue
+		}
+		entries = append(entries, l.entry)
+	}
+	return entries, bad
+}

@@ -6,15 +6,7 @@ import (
 )
 
 // ListBatches is n4_list_batches: the journaled write batches, newest first, at most limit of
-// them, with the total. It reads the journal only, never the station, and needs no session.
+// them, with the total, and the unreadable lines when there are any (issue #448). It reads the journal only, never the station, and needs no session.
 func (t *Tools) ListBatches(args *pyjson.Object) (*pyjson.Object, error) {
-	views, err := journal.New(t.stateDir()).Views()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := journal.Batches(views)
-	if err != nil {
-		return nil, err
-	}
-	return obj("total", len(rows), "batches", rows[:min(intArg(args, "limit", 50), len(rows))]), nil
+	return journal.New(t.stateDir()).ListBatches(intArg(args, "limit", 50))
 }

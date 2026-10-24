@@ -1,0 +1,16 @@
+-- args --
+@DIR@/prune
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/prune/build/A.java:1  BOrd.make from a variable: BOrd.make(q);
+-- stderr --
+-- prune/.d/A.java --
+BOrd.make(q);
+-- prune/A.txt --
+BOrd.make(q);
+-- prune/B.java --
+class B {}
+-- prune/build/A.java --
+BOrd.make(q);
+-- prune/x-worktrees/A.java --
+BOrd.make(q);

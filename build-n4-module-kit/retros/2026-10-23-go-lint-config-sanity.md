@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-23 · kit · go-lint-config-sanity
@@ -64,4 +64,4 @@ row changes there.
 - The golden format has no empty-directory section; an empty-root case needs a non-Java placeholder file.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-go-lint-config-sanity.md | kit | 2026-10-23 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-go-infra`) — Δ1 and Δ3 `BUILD-LOOP.md` § 5 port rule; Δ2 `BUILD-LOOP.md` § 5 (a lint header claims only what a test pins).

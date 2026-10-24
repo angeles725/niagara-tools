@@ -76,6 +76,8 @@ type Context struct {
 	// Observations are the in-memory read observations for the session retro (no audit line
 	// exists for reads).
 	Observations []*pyjson.Object
+	// StartedAt is when this server started (Now()): the default window of the session retro.
+	StartedAt string
 
 	authLatch
 	secret string
@@ -86,7 +88,8 @@ func New(cfg Config) *Context {
 	start := time.Now()
 	ctx := &Context{Config: cfg, Getenv: os.Getenv, authLatch: authLatch{credKey: make([]byte, 32)},
 		Clock:     func() float64 { return time.Since(start).Seconds() },
-		TierOptIn: map[string]map[string]bool{"B": set(cfg.AllowTierB), "C": set(cfg.AllowTierC)}}
+		TierOptIn: map[string]map[string]bool{"B": set(cfg.AllowTierB), "C": set(cfg.AllowTierC)},
+		StartedAt: Now()}
 	rand.Read(ctx.credKey)
 	return ctx
 }

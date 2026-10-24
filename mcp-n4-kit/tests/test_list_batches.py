@@ -54,15 +54,36 @@ class TestListBatchesOnAPythonJournal(test_server.ToolTestCase):
         self.assertEqual(result["content"][0]["text"], json.dumps(self.expected()))
         self.assertEqual(result["structuredContent"]["total"], 7)
 
-    def test_a_journal_python_cannot_decode_is_the_same_tool_error(self):
-        self.append(b"\xff\n")
-        with self.assertRaises(ValueError) as cm:
-            self.expected()
-        self.assertEqual(self.err("n4_list_batches"), str(cm.exception))
+    def insert(self, after, data):
+        """Put data after line `after` of the journal (1-based), between two batches."""
+        with open(self.journal, "rb") as fh:
+            lines = fh.read().splitlines(keepends=True)
+        with open(self.journal, "wb") as fh:
+            fh.write(b"".join(lines[:after]) + data + b"".join(lines[after:]))
 
-    def test_an_unhashable_batch_id_is_an_internal_error(self):
-        self.append(b'{"batch_id": [1], "phase": "intent"}\n')
-        self.assertEqual(self.err("n4_list_batches"), "internal error (TypeError)")
+    def assert_listed(self, unreadable):
+        for args in ({}, {"limit": 1}):
+            result = self.call("n4_list_batches", **args)
+            self.assertEqual(result["content"][0]["text"], json.dumps(self.expected(**args)))
+        reply = self.ok("n4_list_batches")
+        self.assertEqual((reply["total"], reply["unreadable"]), (6, unreadable))
+        self.assertIn("incomplete", reply["incomplete"])
+        return reply
+
+    def test_a_line_python_cannot_decode_is_one_unreadable_row_not_a_failed_list(self):
+        self.insert(4, b'{"batch_id": "\xff", "phase": "result"}\n')  # issue #448
+        self.assert_listed(["unreadable journal line 5: UnicodeDecodeError"])
+
+    def test_an_unhashable_batch_id_is_one_unreadable_row_not_a_failed_list(self):
+        self.insert(2, b'{"batch_id": [1], "phase": "intent"}\n')
+        self.append(b'{"batch_id": "ee", "phase": "component-intent", "ops": 7}\n'
+                    b'{"batch_id": "ef", "phase": "result", "rollback_of": {"a": 1}}\n')
+        self.assert_listed(["unreadable journal line 3: TypeError",
+                            "unreadable journal line 16: TypeError",
+                            "unreadable journal line 17: TypeError"])
+
+    def test_a_readable_journal_says_nothing_about_unreadable_lines(self):
+        self.assertEqual(sorted(self.ok("n4_list_batches")), ["batches", "total"])
 
     def test_it_needs_no_session_and_no_journal_lists_nothing(self):
         os.remove(self.journal)

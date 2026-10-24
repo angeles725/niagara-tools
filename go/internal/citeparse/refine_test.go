@@ -40,6 +40,8 @@ func TestCardRefinesTemplatesAndUnverifiableKinds(t *testing.T) {
 		{"user directive", "[ev: user directive 2026-09-20]", kindNote{Unverifiable, "decision or plan ID"}},
 		{"all-letter hex word stays unparsed", "[ev: defaced thing]", kindNote{Unparsed, "kind not covered"}},
 		{"a glob stays unparsed", "[ev: tests/lint-*.bats]", kindNote{Unparsed, "glob, not one file"}},
+		{"web URL", "[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]", kindNote{Unverifiable, "web page"}},
+		{"plain http URL", "[ev: http://example.com/a.txt]", kindNote{Unverifiable, "web page"}},
 		{"a real retro is not a template", "[ev: retro go-ci-steps Δ1]", kindNote{Retro, ""}},
 	}
 	for _, tt := range cases {
