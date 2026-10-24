@@ -1,0 +1,13 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 0
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "½ carga" not found in the UI source
+WARN  lint-manual-labels  @DIR@/docs/m.md:1  label "_ab" not found in the UI source
+SUMMARY  lint-manual-labels  checked=8 missing=2
+-- stderr --
+-- docs/m.md --
+"STRASSE" "abc" "filtro" "IV fase" "izmir" "ωmega" "½ carga" "²" "_ab" "Ⅳ"
+-- ui/a.html --
+<b>Straße</b><b>ＡＢＣ</b><b>ﬁltro</b><b>Ⅳ fase</b><b>İzmir</b><b>Ωmega</b>

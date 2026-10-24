@@ -1,0 +1,13 @@
+-- args --
+--
+@DIR@/docs/m.md
+@DIR@/ui
+-- want --
+exit 3
+-- stderr --
+lint-manual-labels: manual not found: --
+-- docs/m.md --
+"Guardar"
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

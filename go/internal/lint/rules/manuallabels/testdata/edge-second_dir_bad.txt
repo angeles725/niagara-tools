@@ -1,0 +1,14 @@
+-- args --
+@DIR@/docs/m.md
+@DIR@/ui
+@DIR@/nodir
+@DIR@/nodir2
+-- want --
+exit 3
+-- stderr --
+lint-manual-labels: not a directory: @DIR@/nodir
+-- docs/m.md --
+"Guardar"
+-- ui/rc/index.html --
+<button>Guardar</button>
+<span>Rearranque 1</span>

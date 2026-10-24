@@ -23,6 +23,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/manuallabels"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
@@ -91,5 +92,6 @@ func All() []lint.Spec {
 		agentonshape.Spec(),
 		bformatcall.Spec(),
 		splitpackage.Spec(),
+		manuallabels.Spec(),
 	}
 }
