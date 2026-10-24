@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-23 -->
+<!-- last-change-note: quality round 10: modular doctrine gaps — pin shared helpers, keep generator-read call sites, measure line cuts -->
+log: 2026-10-23 · quality round 10 → the user's "modular, maintainable, fewer lines with quality" rule was checked against the folded doctrine (modular-line-efficient-quality Δ1-Δ5, r8-t22-retro-deltas Δ1/Δ8/Δ9, types/logic.md thin slot adapter, types/dashboard.md DUX1); thin entry points and bash one-module-per-concern were already covered. Three gaps remain, from PRs #352 and #360: a shared helper is pinned by a sync test (LS15-sync, RM-row-parser), a dedupe keeps a call site that a generator reads literally (gen-lint-index Auto column), and a claimed line reduction is measured on named commits (report-module.sh 1610 → 885, reported as ~900/882/885). Retro retros/2026-10-23-r10-dedupe-pins-measured-cuts.md (3Δ). [ev: retro r10-dedupe-pins-measured-cuts]

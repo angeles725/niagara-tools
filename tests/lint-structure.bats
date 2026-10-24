@@ -6,7 +6,7 @@
 #   L3 pure-model pkg has tests + no baja/tridium imports     L4 lexicon non-empty per artifact w/ >=1 type
 #   L5 rt palette non-empty                                   L6 module-include.xml present/consistent
 #   L7 3-part dependency version floors                       L9 no empty skeleton artifact (0 class + 0 palette)
-#   L10 no absolute host paths in tracked gradle.properties   L11 mixed pure+Baja srcTest declares :test-wb AND junit
+#   L10 no absolute host paths in gradle.properties           L11 mixed pure+Baja srcTest declares :test-wb AND junit
 #
 # RED today: lint-structure.sh does not exist -> every pin fails for the right reason (tool absent).
 # NAMED MUTATION (R18.5): remove a dependency's 3-part floor -> L7 FAIL on that entry.
@@ -31,7 +31,7 @@ setup() {
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L9"* ]]
 }
 
-@test "LS10: a tracked gradle.properties with an absolute host path (C:\\Honeywell\\...) FAILs L10" {
+@test "LS10: a gradle.properties with an absolute host path (C:\\Honeywell\\...) FAILs L10" {
   run "$LS" "$FX/client-gradleprops"
   [ "$status" -eq 1 ]
   [[ "$output" == *"FAIL"* ]] && [[ "$output" == *"L10"* ]]
@@ -53,6 +53,17 @@ setup() {
   run "$LS" "$FX/coldroompan-rt"
   [[ "$output" == *"L11"* ]]                 # anchor: the scan ran and flagged the real L11
   [[ "$output" != *"L10"* ]]                 # the .deploy-baseline gradle.properties is pruned
+}
+
+@test "LS-noprofile: a root without profiles is an ERROR row and exit 3, never a clean pass (#351)" {
+  # Mutation: LS-noprofile -- running the module-level checks on a profile-less root passes a wrong path (exit 0).
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git" "$ROOT/Group/notes"
+  printf 'org.gradle.java.installations.paths=/j\norg.gradle.java.installations.auto-detect=false\n' > "$ROOT/Group/gradle.properties"
+  run "$LS" "$ROOT/Group"
+  rm -rf "$ROOT"
+  [ "$status" -eq 3 ]
+  [ "$output" = "ERROR  lint-structure  $ROOT/Group  no module profiles found (no *-rt/-ux/-wb/-se/-doc or build-file sub-directory: wrong path or not a module root)" ]
 }
 
 @test "LS-usage: no <module-root> argument -> exit 3" {
@@ -148,7 +159,25 @@ setup() {
   run "$LS" "$ROOT/proj/Mod"
   rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"L10"* ]]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/gradle.properties:1  L10: "* ]]   # path:line (truth audit T7)
+}
+
+@test "LS10-shapes: spaced, colon-separated, indented, POSIX and UNC host paths all FAIL L10 (truth audit T7)" {
+  # Pinned by the wrapper header line "Mutation: LS10-shapes".
+  ROOT=$(mktemp -d)
+  mkdir -p "$ROOT/.git"
+  for i in 1 2 3 4 5; do mkdir -p "$ROOT/M$i/Foo-rt"; done   # a profile: a root without one is an ERROR row
+  printf 'niagara_home = C:\\N\n' > "$ROOT/M1/gradle.properties"
+  printf 'niagara_home:C:\\N\n' > "$ROOT/M2/gradle.properties"
+  printf '  niagara_user_home=C:/U\n' > "$ROOT/M3/gradle.properties"
+  printf 'niagara_home=/opt/Niagara-4.14\n' > "$ROOT/M4/gradle.properties"
+  printf 'nodeHome=\\\\server\\node\n' > "$ROOT/M5/gradle.properties"
+  for i in 1 2 3 4 5; do
+    run "$LS" "$ROOT/M$i"
+    [ "$status" -eq 1 ] || { echo "M$i: status $status: $output"; rm -rf "$ROOT"; false; }
+    [[ "$output" == *"M$i/gradle.properties"*"L10: "* ]] || { echo "M$i: $output"; rm -rf "$ROOT"; false; }
+  done
+  rm -rf "$ROOT"
 }
 
 @test "LS-PASS: scaffold-module.sh output passes L1-L11 -> exit 0 (SKIP if scaffold absent)" {
@@ -183,8 +212,7 @@ _ls14_tree() {
   run "$LS" "$ROOT/Group/Mod"
   rm -rf "$ROOT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"L14"* ]]
-  [[ "$output" == *"settings.gradle.kts"* ]]
+  [[ "$output" == *"FAIL  lint-structure  $ROOT/Group/settings.gradle.kts:1  L14: "* ]]   # path:line (truth audit T7)
 }
 
 @test "LS14-clean: providers.gradleProperty(\"niagaraPluginVersion\").getOrElse(...) -> no L14" {
@@ -313,20 +341,31 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: lint-structure L15, preflight sample-sign and build.sh take the one table in lib/signing-block.sh" {
-  # Mutation: re-inline a copy of the ERE table in any consumer -> its literal line appears and this fails.
-  grep -q '^SIGN_BLOCK_ERE=(' "$KIT/toolbelt/lib/signing-block.sh"
+@test "LS15-sync: preflight sample-sign and build.sh take lib/signing-block.sh; the Go L15 signBlock equals it" {
+  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh or build.sh, or change, drop or reorder
+  # an entry (pattern or row name) of the Go signBlock -> this fails.
+  lib="$KIT/toolbelt/lib/signing-block.sh"
+  grep -q '^SIGN_BLOCK_ERE=(' "$lib"
   # shellcheck disable=SC2016
   # why: the consumer's literal source line is matched, so ${SIGN_BLOCK_ERE[@]} must stay unexpanded
-  grep -qxF 'L15_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/lint-structure.sh"
-  # shellcheck disable=SC2016
-  # why: same literal match as the line above
   grep -qxF 'SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/preflight.sh"
   grep -q 'SIGN_BLOCK_ERE\[0\]' "$KIT/toolbelt/build.sh"
-  for f in lint-structure.sh preflight.sh build.sh; do
+  for f in preflight.sh build.sh; do
     grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/$f"
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
+  done
+  # The Go port (lint-structure.sh is the n4lint wrapper) holds the same table, entry by entry and in order.
+  # shellcheck disable=SC1090
+  . "$lib"
+  go="$KIT/../go/internal/lint/rules/structure/module.go"
+  # shellcheck disable=SC2016  # the Go source's literal backquotes, not an expansion
+  mapfile -t rows < <(sed -n '/^var signBlock/,/^}$/p' "$go" |
+    sed -n 's/^\t{"\(.*\)", regexp\.MustCompile(`\(.*\)`)},$/\1\t\2/p')
+  [ "${#rows[@]}" -eq "${#SIGN_BLOCK_ERE[@]}" ] && [ "${#rows[@]}" -eq "${#SIGN_BLOCK_NAME[@]}" ] && [ "${#rows[@]}" -eq 4 ]
+  for k in "${!rows[@]}"; do
+    [ "${rows[$k]}" = "${SIGN_BLOCK_NAME[$k]}"$'\t'"${SIGN_BLOCK_ERE[$k]}" ] ||
+      { printf 'signBlock[%s] = %s\nlib       = %s\t%s\n' "$k" "${rows[$k]}" "${SIGN_BLOCK_NAME[$k]}" "${SIGN_BLOCK_ERE[$k]}"; false; }
   done
 }
 
