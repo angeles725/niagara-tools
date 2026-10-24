@@ -1,0 +1,26 @@
+declared difference: awk_lint_run printed the K20 row of an empty root and went on to the later roots;
+the engine stops the rule at its first empty root (Spec.EmptyError), so the later roots' rows are not
+printed. The exit code (3) is the same; report-module passes one root.
+-- args --
+@DIR@/e
+@DIR@/a
+-- want --
+exit 3
+ERROR  lint-ws-placement  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- a/BP.java --
+package com.x;
+public class BP extends BComponent {
+  void seed() {
+    add("n", new BFolder());
+  }
+}
+-- b/BQ.java --
+package com.x;
+public class BQ extends BComponent {
+  void go() {
+    x.add("q", create(t));
+  }
+}
+-- e/x.txt --
+hi
