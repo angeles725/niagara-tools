@@ -1,0 +1,26 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+ERROR  lint-changed-hot-write  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- a/A.java --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- b/B.java --
+class B {}
+-- e/x.txt --
+x

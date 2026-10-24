@@ -1,0 +1,24 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-changed-hot-write  @DIR@/a/A.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+-- stderr --
+-- a/A.java --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- b/B.java --
+class B {}

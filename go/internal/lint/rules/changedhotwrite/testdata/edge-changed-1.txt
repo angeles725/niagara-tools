@@ -1,0 +1,87 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-changed-hot-write  @DIR@/C1.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/C5.java:4  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/C6.java:3  changed(p) has 6 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+-- stderr --
+-- C1.java --
+class C1 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed (  Property   p , Context cx)
+  {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C2.java --
+class C2 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  // public void changed(Property p, Context cx) { execute(); }
+  /* public void changed(Property q, Context cx) { */
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C3.java --
+class C3 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    String s = "}";
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C4.java --
+class C4 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+-- C5.java --
+class C5 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  void other() { setXHours(2.0); }
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  public void changed(Property q, Context cx) { setXHours(3.0); }
+  void execute() { setXHours(1.0); }
+}
+-- C6.java --
+class C6 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) { if (p == a) execute(); if (p == b) execute(); if (p == c) execute(); if (p == d) execute(); if (p == e) execute(); if (p == f) execute(); }
+  void execute() { setXHours(1.0); }
+}

@@ -1,0 +1,121 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-changed-hot-write  @DIR@/R2.java:3  changed(p) has 6 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/R6.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/R8.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+-- stderr --
+-- R1.java --
+class R1 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- R2.java --
+class R2 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p==z) x(); if (xp == y) x();
+    // if (p == q) x();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- R3.java --
+class R3 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) reexecute();
+    if (p == b) reexecute();
+    if (p == c) reexecute();
+    if (p == d) reexecute();
+    if (p == e) reexecute();
+    if (p == f) reexecute();
+    if (p == g) reexecute();
+  }
+  void reexecute() { setXHours(1.0); }
+}
+-- R4.java --
+class R4 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    Clock.schedule(this, d, a, null);
+  }
+  void execute() { setXHours(1.0); }
+}
+-- R5.java --
+class R5 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  boolean ok() { if (execute()) return true; return false; }
+  void execute() { setXHours(1.0); }
+}
+-- R6.java --
+class R6 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    setXHours (2.0);
+  }
+  void execute() { }
+}
+-- R7.java --
+class R7 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+}
+-- R8.java --
+class R8 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    String s = "setXHours(";
+  }
+  void execute() { }
+}
