@@ -119,6 +119,15 @@ wrap() {
   [ -z "$output" ]
 }
 
+@test "WSP-array: an array creation is not a component" {
+  # Mutation: WSP-array -- reading new BFolder[2] as new BFolder() WARNs add("a", new BFolder[2])
+  # Go golden: go/internal/lint/rules/wsplacement/testdata/truth-array-1.txt
+  wrap 'list.add("a", new BFolder[2]);' 'BFolder[] kids = new BFolder[n];' 'add("b", kids);' > "$SRC/BSvc.java"
+  run "$WSP" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "WSP-roots: every src root given is scanned" {
   run "$WSP" "$FX/annotated" "$FX/positive"
   [ "$status" -eq 0 ]
