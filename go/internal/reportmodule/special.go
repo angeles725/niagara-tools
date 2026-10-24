@@ -57,7 +57,8 @@ func firstJar(libs string) string {
 }
 
 // slotCoverage is §2: slot-coverage on module-include.xml and module.lexicon when both are files: the dup-keys
-// count, every other "slot-coverage: FAIL" line, then the pct= coverage as PASS (>= 100), WARN or SKIP N/A.
+// count, every other "slot-coverage: FAIL" line, then the pct= coverage as PASS (>= 100), WARN or SKIP N/A;
+// output with no pct= line is an env fault.
 func (r *report) slotCoverage(a artifact) {
 	mixin, lex := a.dir+"/module-include.xml", a.dir+"/module.lexicon"
 	if !isFile(mixin) || !isFile(lex) {
@@ -69,6 +70,11 @@ func (r *report) slotCoverage(a artifact) {
 		return
 	}
 	lines := strings.Split(out, "\n")
+	pctLine := firstWithPrefix(lines, "pct=")
+	if pctLine == "" { // no coverage was computed: never a "%" WARN after a PASS dup-keys 0
+		r.envFault(a.name, "slot-coverage", fmt.Sprintf("env fault (exit %d): no pct= line", code))
+		return
+	}
 	dups := 0
 	for _, ln := range lines {
 		if strings.HasPrefix(ln, "slot-coverage: FAIL dup-keys:") {
@@ -85,7 +91,7 @@ func (r *report) slotCoverage(a artifact) {
 			r.emit(a.name, failed, "slot-coverage", rest)
 		}
 	}
-	pct := cutBefore(strings.TrimPrefix(firstWithPrefix(lines, "pct="), "pct="), " ")
+	pct := cutBefore(strings.TrimPrefix(pctLine, "pct="), " ")
 	if pct == "N/A" {
 		r.emit(a.name, skip, "slot-coverage", "N/A (no types declared)")
 		return
