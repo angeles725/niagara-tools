@@ -1,0 +1,14 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+agent-breadth  WARN  @DIR@/src/K.java:3  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+-- stderr --
+-- src/K.java --
+class K {
+  int whyNot = 1;
+  @AgentOn(types = "baja:Component") class N {}
+  // @AgentOn(types = "baja:Component") was here
+  /* broad: every component needs it */
+  @AgentOn(types = "baja:Component") class P {}
+}

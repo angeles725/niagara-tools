@@ -1,0 +1,22 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 0
+ui-thread-traversal  WARN  @DIR@/root1/com/x/B.java:2  doInvoke -> gamma() -> walk() -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+-- stderr --
+-- root1/com/x/B.java --
+class B {
+  public CommandArtifact doInvoke() {
+    alpha(); beta(); gamma(); delta(); epsilon(); zeta();
+    return null;
+  }
+  private void alpha() { x(); }
+  private void beta() { walk(); }
+  private void gamma() { walk(); }
+  private void delta() { scan(); }
+  private void epsilon() { scan(); }
+  private void zeta() { q(); }
+  private void walk() { node.getNavChildren(); }
+  private void scan() { BqlQuery.make(s); }
+  private void q() { getNavNodes(); }
+}

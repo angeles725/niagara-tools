@@ -33,6 +33,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
@@ -62,6 +63,7 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		wbthreading.Spec(),
 		linktargetflags.Spec(),
 		size.Spec(),
 		wsplacement.Spec(),

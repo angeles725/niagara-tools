@@ -54,21 +54,26 @@ type Finding struct {
 
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
 // for a file-level finding (Line 0). The check column is Check, or Rule when Check is empty.
-func (f Finding) Row() string { return f.row(false) }
+func (f Finding) Row() string { return f.row(false, false) }
 
-// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
-func (f Finding) row(bare bool) string {
+// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow) and the
+// check column before the severity when checkFirst is set (Spec.CheckFirst).
+func (f Finding) row(bare, checkFirst bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
 	}
+	first, second := f.Severity.String(), check
+	if checkFirst {
+		first, second = check, first
+	}
 	if f.Line == 0 && bare {
-		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s  %s", first, second, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
-		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s: %s", first, second, f.Path, f.Msg)
 	}
-	return fmt.Sprintf("%s  %s  %s:%d  %s", f.Severity, check, f.Path, f.Line, f.Msg)
+	return fmt.Sprintf("%s  %s  %s:%d  %s", first, second, f.Path, f.Line, f.Msg)
 }
 
 // Rule is one lint check over one Java file. Check returns its findings in report order; a non-nil
@@ -129,6 +134,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
+	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
+	CheckFirst bool
 	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
 	// implementing Configurer.
 	Option string
