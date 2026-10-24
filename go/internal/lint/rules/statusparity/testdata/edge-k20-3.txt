@@ -1,0 +1,42 @@
+-- args --
+@DIR@
+-- want --
+exit 3
+ERROR  lint-status-parity  @DIR@  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- .hid/A.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- x-worktrees/B.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}

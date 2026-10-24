@@ -1,0 +1,115 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  Bare  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Nested  N=2 per-instance config slots but 1 status slots
+WARN  lint-status-parity  OneLine  N=2 per-instance config slots but 1 status slots
+WARN  lint-status-parity  OneLineField  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Parens  N=3 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Two  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Unclosed  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  Wrapped  N=2 per-instance config slots but 0 status slots
+-- stderr --
+-- Bare.java --
+class Bare {
+  @NiagaraProperty
+  (
+    name = "aInterval"
+  )
+  @NiagaraProperty
+  int x;
+  @NiagaraProperty(name = "bInterval")
+  int y;
+}
+-- Nested.java --
+class Nested {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  static class Inner {
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "cActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  }
+}
+-- OneLine.java --
+class OneLine {
+  @NiagaraProperty(name = "aInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "bInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "cInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "dInterval", type = "int", defaultValue = "1")
+  @NiagaraProperty(name = "xActive", type = "int", defaultValue = "1")
+}
+-- OneLineField.java --
+class OneLineField {
+  @NiagaraProperty(name = "aInterval", type = "int", defaultValue = "1")
+  int a;
+  @NiagaraProperty(name = "bInterval", type = "int", defaultValue = "1")
+  int b;
+}
+-- Parens.java --
+class Parens {
+  @NiagaraProperty(
+    name = "aInterval",
+    defaultValue = "BRelTime.make(\")\")"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    defaultValue = "BRelTime.makeSeconds(30)"
+  )
+  @NiagaraProperty(
+    name = "cInterval"
+  )
+}
+-- Two.java --
+class Two {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+class Other {
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Unclosed.java --
+class Unclosed {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "cActive",
+-- Wrapped.java --
+class Wrapped {
+  @NiagaraProperties({
+    @NiagaraProperty(
+      name = "aDuration",
+      type = "BRelTime"
+    ),
+    @NiagaraProperty(
+      name = "bDuration",
+      type = "BRelTime"
+    )
+  })
+}

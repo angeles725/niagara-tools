@@ -1,0 +1,61 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  Comment  N=3 per-instance config slots but 1 status slots
+WARN  lint-status-parity  Javadoc  N=2 per-instance config slots but 1 status slots
+-- stderr --
+-- Comment.java --
+class Comment {
+  // @NiagaraProperty(name = "xInterval")
+  /*
+  @NiagaraProperty(
+    name = "yInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  */
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Javadoc.java --
+class Javadoc {
+  /** Declared with {@code @NiagaraProperty} below. */
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "cActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- Literal.java --
+class Literal {
+  String s = "@NiagaraProperty(name = \"zInterval\")";
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
