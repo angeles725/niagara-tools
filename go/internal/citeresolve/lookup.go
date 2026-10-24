@@ -26,6 +26,7 @@ var (
 	repoSkip    = map[string]bool{".git": true, "testdata": true}
 	clientSkip  = map[string]bool{".git": true, "build": true, ".gradle": true, "node_modules": true, "_salvage": true}
 	copyDirs    = map[string]bool{"vineflower": true, "decompiled": true, "extracted": true}
+	copyOrder   = []string{"vineflower", "decompiled", "extracted"} // the copyDirs in search order
 	worktreeDir = regexp.MustCompile(`^(.+)-worktrees$`)
 )
 
@@ -78,8 +79,8 @@ func copyRank(p string) int {
 	if strings.Contains(p, "/"+docSourcePart+"/") {
 		return len(copyDirs)
 	}
-	for i, c := range []string{"/vineflower/", "/decompiled/", "/extracted/"} {
-		if strings.Contains(p, c) {
+	for i, c := range copyOrder {
+		if strings.Contains(p, "/"+c+"/") {
 			return i
 		}
 	}

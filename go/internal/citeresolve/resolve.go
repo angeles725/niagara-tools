@@ -48,6 +48,8 @@ type Roots struct {
 	Clients  string // the client checkouts searched by base name (Modules/Cliente by default)
 	Memory   string // the memory directory (mem pointers)
 	Version  string // the niagara-help version an unversioned devguide/guide pointer means
+	Home     string // the user's home, which a `~/` path pointer names ("" leaves `~/` unexpanded)
+	Gradle   string // the Gradle user home, whose caches/ a javap jar is also looked up in
 }
 
 // Result is the outcome of one pointer: its status, a detail (excerpt and notes) and the file it hit.
