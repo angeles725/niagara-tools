@@ -3,6 +3,7 @@ package preflight
 import (
 	"bytes"
 	"os"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -58,7 +59,8 @@ func (r *run) javaIs8(java string) bool {
 }
 
 // globDirs is the bash glob "<dir>"/*/ in the C locale: the non-hidden entries of dir that are
-// directories (symlinks followed), bytewise sorted, each spelled dir + "/" + name.
+// directories (symlinks followed), each spelled dir + "/" + name, in the glob's order: bytewise over
+// "<name>/", the slash included, so a-b/ and a.b/ sort before a/.
 func globDirs(dir string) []string {
 	entries, _ := os.ReadDir(dir) // an unreadable dir globs to nothing
 	var out []string
@@ -67,5 +69,6 @@ func globDirs(dir string) []string {
 			out = append(out, p)
 		}
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i]+"/" < out[j]+"/" })
 	return out
 }
