@@ -1,0 +1,29 @@
+-- args --
+demo
+out
+-- want --
+exit 1
+FAIL  station-snap    config.bog  copy failed
+FAIL  station-snap    console_1.txt  copy failed
+FAIL  station-snap    console_2.txt  copy failed
+station-snapshot: 0 file(s) copied; manifest.json written to out
+-- stderr --
+@DIR@/toolbelt/station-snapshot.sh: line 61: cd: out: Permission denied
+cp: cannot stat 'out/config.bog': Permission denied
+cp: cannot stat 'out/console_1.txt': Permission denied
+cp: cannot stat 'out/console_2.txt': Permission denied
+@DIR@/toolbelt/station-snapshot.sh: line 172: out/manifest.json: Permission denied
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/station-snapshot.sh at 4d602a9b (sha256 31610a29d4a92fd3b1ecebeb390eef2c9f936e4cc773614628c3fd068326cf68)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/.tools
+-- demo/config.bog --
+<bajaObjectGraph/>
+-- demo/console_1.txt --
+INFO station started
+-- demo/console_2.txt --
+WARNING something
+-- demo/history/old.log --
+old history data
+-- out (dir) (mode 600) --

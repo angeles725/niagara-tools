@@ -1,0 +1,32 @@
+-- args --
+my station
+out
+-- want --
+exit 0
+PASS  station-snap    config.bog  sha256=4795c60e2b422c87f84c0f0c58b1eb315ab780b201e72e5be306825e981b391e bytes=4
+PASS  station-snap    console 1.txt  sha256=e65a5bc49ba58962511a947768a9a239355aa5c9ae7f9dbd64f9031512896a0f bytes=15
+station-snapshot: 2 file(s) copied; manifest.json written to out
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/station-snapshot.sh at 4d602a9b (sha256 31610a29d4a92fd3b1ecebeb390eef2c9f936e4cc773614628c3fd068326cf68)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/.tools
+-- my station/config.bog --
+bog
+-- my station/console 1.txt --
+spaced console
+-- @after out/config.bog --
+bog
+-- @after out/console 1.txt --
+spaced console
+-- @after out/manifest.json --
+{
+  "station": "my station",
+  "ts": "20260102T030405Z",
+  "files": [
+    {"relpath": "config.bog", "sha256": "4795c60e2b422c87f84c0f0c58b1eb315ab780b201e72e5be306825e981b391e", "bytes": 4},
+    {"relpath": "console 1.txt", "sha256": "e65a5bc49ba58962511a947768a9a239355aa5c9ae7f9dbd64f9031512896a0f", "bytes": 15}
+  ],
+  "pointers": [  ]
+}

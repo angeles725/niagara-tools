@@ -1,0 +1,42 @@
+-- args --
+demo
+demo/../out
+-- want --
+exit 0
+PASS  station-snap    config.bog  sha256=b9b58ba4ee4a0cccb26d97882ce630dda4b5fe40496a526acde6dd5671a648c7 bytes=19
+PASS  station-snap    console_1.txt  sha256=8890e6a5417244ca648ad5dc18f32e438c2bbc899fbec0531bd6c35653759a7d bytes=21
+PASS  station-snap    console_2.txt  sha256=d389ed92b9ae45da56f1f72877ba0387bcfec6c07910f833b4618fc157361fd5 bytes=18
+station-snapshot: 3 file(s) copied; manifest.json written to demo/../out
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/station-snapshot.sh at 4d602a9b (sha256 31610a29d4a92fd3b1ecebeb390eef2c9f936e4cc773614628c3fd068326cf68)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/.tools
+-- demo/config.bog --
+<bajaObjectGraph/>
+-- demo/console_1.txt --
+INFO station started
+-- demo/console_2.txt --
+WARNING something
+-- demo/history/old.log --
+old history data
+-- @after out/config.bog --
+<bajaObjectGraph/>
+-- @after out/console_1.txt --
+INFO station started
+-- @after out/console_2.txt --
+WARNING something
+-- @after out/manifest.json --
+{
+  "station": "demo",
+  "ts": "20260102T030405Z",
+  "files": [
+    {"relpath": "config.bog", "sha256": "b9b58ba4ee4a0cccb26d97882ce630dda4b5fe40496a526acde6dd5671a648c7", "bytes": 19},
+    {"relpath": "console_1.txt", "sha256": "8890e6a5417244ca648ad5dc18f32e438c2bbc899fbec0531bd6c35653759a7d", "bytes": 21},
+    {"relpath": "console_2.txt", "sha256": "d389ed92b9ae45da56f1f72877ba0387bcfec6c07910f833b4618fc157361fd5", "bytes": 18}
+  ],
+  "pointers": [
+    {"relpath": "history/old.log", "bytes": 17}
+  ]
+}

@@ -1128,6 +1128,19 @@ class TestSaveStation(DestructiveCase):
         self.srv.ctx.write.save_timeout, self.srv.ctx.write.save_interval = 1.0, 0.01
         return path
 
+    def home_server(self, content=b"bog"):
+        """home() through the command line: the server restarts with --station-home (the
+        poll keeps its 30 s timeout, so only for a config.bog that changes or goes away)."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "config.bog")
+        with open(path, "wb") as fh:
+            fh.write(content)
+        self.fake.config_path = path
+        self.start_server(station_homes={"FakeStation": tmp.name})
+        self.connect_verified()
+        return path
+
     def test_plan_is_a_save_on_the_root_handle_with_no_inverse(self):
         plan = self.dry("n4_save_station")
         self.assertEqual(plan["plan"]["ops"], [{"ssc": "invokeAction",
@@ -1141,9 +1154,8 @@ class TestSaveStation(DestructiveCase):
         self.assertIn("--station-home FakeStation=", out["evidence"]["hint"])
         self.assertEqual(self.fake.saves, 1)
 
-    @go_server.go_twin("writeops", "internals")
     def test_a_changed_config_bog_proves_persistence_with_evidence(self):
-        path = self.home(b"bog-before")
+        path = self.home_server(b"bog-before")
         before = hashlib.sha256(b"bog-before").hexdigest()
         out = self.run_write("n4_save_station")
         self.assertEqual((out["persisted"], out["verdict"]), (True, "verified"))
@@ -1161,9 +1173,8 @@ class TestSaveStation(DestructiveCase):
         self.assertEqual((out["persisted"], out["verdict"]), (False, "mismatch"))
         self.assertEqual(out["evidence"]["before"], out["evidence"]["after"])
 
-    @go_server.go_twin("writeops", "internals")
     def test_a_missing_config_bog_is_unknown(self):
-        path = self.home()
+        path = self.home_server()
         os.remove(path)
         out = self.run_write("n4_save_station")
         self.assertEqual(out["persisted"], "unknown")
@@ -1438,15 +1449,14 @@ class TestWriteBranchDebt(DestructiveCase):
         self.craft(bid, [{"nm": "v", "h": "3", "n": "x"}], {})
         self.assertIn("does not record which components", self.err("n4_rollback", batch_id=bid))
 
-    @go_server.go_twin("writeops", "injection")
     def test_a_config_bog_that_becomes_unreadable_after_the_save_is_unverified(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "config.bog")
         with open(path, "wb") as fh:
             fh.write(b"bog")
-        self.srv.ctx.write.station_homes = {"FakeStation": tmp.name}
-        self.srv.ctx.write.save_timeout, self.srv.ctx.write.save_interval = 1.0, 0.01
+        self.start_server(station_homes={"FakeStation": tmp.name})
+        self.connect_verified()
         orig = self.fake._invoke
 
         def save_and_lose(arg):

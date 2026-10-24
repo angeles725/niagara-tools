@@ -165,3 +165,42 @@ teardown() {
   run "$SCRIPT" "/some/path" "/extra/arg"
   [ "$status" -eq 3 ]
 }
+
+# ---------------------------------------------------------------------------
+# OG10 — the default legal root is derived from $HOME (no user path in the kit)
+# Named mutation: OG10 — a hardcoded home directory as the default prefix
+# ---------------------------------------------------------------------------
+@test "OG10a: no seam -> the default legal root is \$HOME/modulos_niagara_n4/Cliente/, PASS with no WARN" {
+  # Mutation: OG10 -- a hardcoded home directory as the default prefix fails this PASS under a temp HOME
+  target="${TMPDIR_T}/modulos_niagara_n4/Cliente/Mod"
+  mkdir -p "$target"
+  run env -u BUILD_N4_LEGAL_ROOT_PREFIX HOME="$TMPDIR_T" "$SCRIPT" "$target"
+  [ "$status" -eq 0 ]
+  [ "$output" = "PASS  orient-guard  $(cd "$target" && pwd -P)" ]
+}
+
+@test "OG10b: no seam, outside \$HOME's legal root -> FAIL names the derived prefix" {
+  outside="${TMPDIR_T}/elsewhere"
+  mkdir -p "$outside"
+  run env -u BUILD_N4_LEGAL_ROOT_PREFIX HOME="$TMPDIR_T" "$SCRIPT" "$outside"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"must be under ${TMPDIR_T}/modulos_niagara_n4/Cliente/;"* ]]
+}
+
+@test "OG10c: HOME unset or empty with no seam -> env error exit 3, never a PASS" {
+  # Mutation: OG10c -- deriving the prefix from an empty HOME makes it /modulos_niagara_n4/Cliente/
+  run env -u BUILD_N4_LEGAL_ROOT_PREFIX -u HOME "$SCRIPT" /tmp
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"HOME is not set"* ]]
+  run env -u BUILD_N4_LEGAL_ROOT_PREFIX HOME= "$SCRIPT" /tmp
+  [ "$status" -eq 3 ]
+}
+
+@test "OG10d: the seam still wins over \$HOME and stays loud (WARN row)" {
+  target="${PREFIX_DIR}Mod"
+  mkdir -p "$target"
+  run env BUILD_N4_LEGAL_ROOT_PREFIX="$PREFIX_DIR" HOME="$TMPDIR_T/nowhere" "$SCRIPT" "$target"
+  [ "$status" -eq 0 ]
+  [[ "${lines[0]}" == "WARN  orient-guard  non-default legal root ${PREFIX_DIR} (test seam)" ]]
+  [[ "${lines[1]}" == PASS* ]]
+}

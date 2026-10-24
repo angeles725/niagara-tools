@@ -1,0 +1,55 @@
+-- args --
+--package
+com.angeles
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:02 01-Oct-26 CST -> 10:00:02 01-Oct-26 CST  SEVERE BadError: lued @ A.three(A.java:3)
+FAIL  triage-console  a.txt  1x 10:00:01 01-Oct-26 CST -> 10:00:01 01-Oct-26 CST  SEVERE NotRunningException @ A.two(A.java:2)
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  SEVERE IllegalStateException: state bad @ A.one(A.java:1)
+FAIL  triage-console  a.txt  1x 10:00:06 01-Oct-26 CST -> 10:00:06 01-Oct-26 CST  SEVERE no class line @ A.seven(A.java:7)
+FAIL  triage-console  a.txt  1x 10:00:05 01-Oct-26 CST -> 10:00:05 01-Oct-26 CST  SEVERE RuntimeException: outer @ A.six(A.java:6)
+FAIL  triage-console  a.txt  1x 10:00:04 01-Oct-26 CST -> 10:00:04 01-Oct-26 CST  SEVERE caused by is no class @ A.five(A.java:5)
+FAIL  triage-console  a.txt  1x 10:00:07 01-Oct-26 CST -> 10:00:07 01-Oct-26 CST  SEVERE Bad	Exception: tabbed @ A.eight(A.java:8)
+FAIL  triage-console  a.txt  1x 10:00:09 01-Oct-26 CST -> 10:00:09 01-Oct-26 CST  SEVERE IllegalStateException @ A.ten(A.java:10)
+FAIL  triage-console  a.txt  1x 10:00:03 01-Oct-26 CST -> 10:00:03 01-Oct-26 CST  SEVERE Weird: thing @ A.four(A.java:4)
+FAIL  triage-console  a.txt  1x 10:00:10 01-Oct-26 CST -> 10:00:10 01-Oct-26 CST  SEVERE class only colon @ A.eleven(A.java:11)
+FAIL  triage-console  a.txt  1x 10:00:08 01-Oct-26 CST -> 10:00:08 01-Oct-26 CST  SEVERE Throwable: spaced @ A.nine(A.java:9)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/triage-console.sh at 79ca5a2c (sha256 c6c6a1526a4252bd8c6f078a6e23702e3f0ea628679e4e2c0903b6ccafae5920)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- a.txt --
+SEVERE [10:00:00 01-Oct-26 CST][web] colon form
+  java.lang.IllegalStateException: state bad
+  	at com.angeles.A.one(A.java:1)
+SEVERE [10:00:01 01-Oct-26 CST][web] bare form
+  javax.baja.sys.NotRunningException
+  	at com.angeles.A.two(A.java:2)
+SEVERE [10:00:02 01-Oct-26 CST][web] glued colon
+  com.x.BadError:glued
+  	at com.angeles.A.three(A.java:3)
+SEVERE [10:00:03 01-Oct-26 CST][web] java prefix without suffix
+  java.util.Weird: thing
+  	at com.angeles.A.four(A.java:4)
+SEVERE [10:00:04 01-Oct-26 CST][web] caused by is no class
+  Caused by: java.lang.RuntimeException: inner
+  	at com.angeles.A.five(A.java:5)
+SEVERE [10:00:05 01-Oct-26 CST][web] first class wins
+  java.lang.RuntimeException: outer
+  java.lang.IllegalArgumentException: second
+  	at com.angeles.A.six(A.java:6)
+SEVERE [10:00:06 01-Oct-26 CST][web] no class line
+  	at com.angeles.A.seven(A.java:7)
+SEVERE [10:00:07 01-Oct-26 CST][web] tab inside the class
+  java.lang.Bad	Exception: tabbed
+  	at com.angeles.A.eight(A.java:8)
+SEVERE [10:00:08 01-Oct-26 CST][web] colon and blanks
+  java.lang.Throwable:    spaced
+  	at com.angeles.A.nine(A.java:9)
+SEVERE [10:00:09 01-Oct-26 CST][web] empty message
+  java.lang.IllegalStateException:
+  	at com.angeles.A.ten(A.java:10)
+SEVERE [10:00:10 01-Oct-26 CST][web] class only colon
+  :x
+  	at com.angeles.A.eleven(A.java:11)

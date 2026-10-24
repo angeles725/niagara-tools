@@ -1,0 +1,43 @@
+-- args --
+fix the timer leak
+-- want --
+exit 4
+gh [issue] [create] [--title] [[kit] fix the timer leak] [--label] [kit,from-run,campaign-9] [--body-file] [BODY]
+[kit] fix the timer leak
+
+**Retro**: <no retro>
+**What happened**: <see retro>
+
+**Proposed kit deltas**
+| Δ | Delta | Target file / § | Token |
+|---|---|---|---|
+
+Labels: `kit`, `from-run`, `campaign-9`
+not a git repository
+ticket  LOCAL  <no retro>  gh issue create failed; wrote retros/tickets/2026-01-02-fix-the-timer-leak.md (file it by hand)
+-- stderr --
+kit-ticket: gh issue create failed
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/kit-ticket.sh at 5179bf23 (sha256 ee676fced95713766c51fc13ca8eb73b05fd99901fe28f93138dd343504219ea)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- @env --
+PATH=@DIR@/ghbin:@DIR@/.tools
+-- ghbin/gh (mode 755) --
+#!/bin/sh
+printf 'gh'
+for a in "$@"; do case "$a" in *.kit-ticket-tmp-*) a=BODY ;; esac; printf ' [%s]' "$a"; done
+printf '\n'
+while [ $# -gt 0 ]; do if [ "$1" = --body-file ]; then cat "$2"; fi; shift; done
+printf '%s\n' 'not a git repository' >&2
+exit 1
+-- @after retros/tickets/2026-01-02-fix-the-timer-leak.md --
+[kit] fix the timer leak
+
+**Retro**: <no retro>
+**What happened**: <see retro>
+
+**Proposed kit deltas**
+| Δ | Delta | Target file / § | Token |
+|---|---|---|---|
+
+Labels: `kit`, `from-run`, `campaign-9`
