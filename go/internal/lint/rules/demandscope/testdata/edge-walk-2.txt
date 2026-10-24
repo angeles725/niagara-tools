@@ -1,0 +1,102 @@
+-- args --
+--strict
+@DIR@/m
+-- want --
+exit 1
+WARN  demand-in-scope  @DIR@/m/B/A.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/.A.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/Q.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/Z.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/a-b.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/a.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/b/a_b.java:2  step reads suction with no demand-shaped input in scope
+WARN  demand-in-scope  @DIR@/m/sp ace/S p.java:2  step reads suction with no demand-shaped input in scope
+-- stderr --
+-- m/.hid/H.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/B/A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/.A.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/A.JAVA --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/Q.java --
+class Q {
+  int step(double suction) {
+    int target = 0;
+    if (suction > 1) target = 1;
+-- m/b/R.java --
+class R { } }
+  int step(double suction) { int target = 0; if (suction > 1) target = 1; return target; }
+-- m/b/Z.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/a-b.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/a.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/b/a_b.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/sp ace/S p.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}
+-- m/x-worktrees/W.java --
+class A {
+  int step(double suction, double lim) {
+    int target = 4;
+    if (suction < lim) target = 3;
+    return target;
+  }
+}

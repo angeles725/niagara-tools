@@ -1,0 +1,8 @@
+-- args --
+@DIR@/nojava
+-- want --
+exit 3
+ERROR  demand-in-scope  @DIR@/nojava  no *.java sources found
+-- stderr --
+-- nojava/com/x/README.txt --
+not java

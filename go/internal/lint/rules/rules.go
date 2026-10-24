@@ -8,6 +8,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -41,5 +42,6 @@ func All() []lint.Spec {
 		nomd5credential.Spec(),
 		configsanity.Spec(),
 		delays.Spec(),
+		demandscope.Spec(),
 	}
 }

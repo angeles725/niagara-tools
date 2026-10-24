@@ -29,6 +29,10 @@ v0.9.0: station file reads and Px views: `n4_read_file`, `n4_list_px_views`, `n4
 v0.9.1: read truth fixes: `n4_find_dangling_outputs` resolves slot-path link sources and reports
 an output an unresolved source may feed as `unknown`, not dangling; a BQL body cut at the byte
 cap keeps whole CSV records only; an HTML, empty or ragged BQL answer is an error, not rows.
+v0.9.2: BOX transport truth: an answer that is not HTTP, or a body cut before its
+Content-Length, is a `transport failure`, never an internal error or a complete result; a
+`pollchgs` or load reply of the wrong shape, or nested deeper than 1000 levels, is a
+`malformed BOX reply`.
 
 ## Methodology and skill
 

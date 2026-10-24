@@ -121,6 +121,10 @@ Tool-authoring rules for a Go tool or port (what to port and the lint stack: `bu
   its own droppable commit with a seeded RED test, and the PR lists them. A port is not done while it keeps a known
   lie: an unfixed one is an owed `ledger.d/` item. `[ev: retro go-check-facets-card Δ1]`
   `[ev: retro go-sweep-fold-audit Δ1]` `[ev: retro truth-audit Δ1]`
+- **Compare finding counts across a port.** A port can reveal a dead rule. Run old and new on the real trees,
+  compare the finding counts, and explain every new or lost row in the PR (a fixed dead rule, or a regression).
+  Example: the lint-structure L10/L14 truth fixes took the real-tree output from 56 to 86 rows, each with a line
+  number (as reported). `[ev: retro truth-audit Δ9]`
 - **Fail closed on I/O.** An unlistable directory, a failed listing or an unreadable input is exit 3 with nothing
   rendered or reported; only a vanished entry or a dangling symlink may be skipped. An empty input set is the same
   error for a lint (BUILD-LOOP.md § 5). `[ev: retro go-ci-steps Δ2]` `[ev: retro go-lint-guard-pins Δ1]`
@@ -307,6 +311,19 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
   merging any other head merges unreviewed code. Incident 2026-10-22: a helper piped `git push` through
   `grep | tail`, a rejected non-fast-forward push looked successful, and PR #346 merged the stale remote head, WIP
   commit 79ca5a2, with CI green. `[ev: retro truth-audit Δ5]`
+- **Gate the whole landing range.** Before it pushes, a landing script checks review coverage of every non-merge
+  commit in `origin/main..<branch>`, not only the SHAs passed on this call: each one has an acknowledged review run,
+  or is declared unreviewed and named in the PR body. A review-only mode may review without pushing. A commit
+  outside the reviewed SHAs (79ca5a2 in the #346 incident) lands unreviewed otherwise. `[ev: retro truth-audit Δ10]`
+- **Settle a testable review claim by running it.** A reviewer claim that can be disproved by running a test at
+  the exact reviewed SHA is answered with that command and its output (in the PR body and any review disposition),
+  not argued. Example: a BLOCKER on 5b8eac9 said BSC4 fails because the bash scan is unchanged; the `.sh` is the
+  `n4lint` wrapper since c15f6cd, and `bats -f BSC tests/lint-bql-string-concat.bats` at 5b8eac9 is 7/7.
+  `[ev: retro truth-audit Δ6]`
+- **Prove a dead-code deletion mechanically.** A deletion-only commit that removes the old bash body after a Go
+  wrapper's `exec` tail draws inconclusive review findings; prove it with the no-code-after-exec check
+  (`bats -f GWS4 tests/go-wrapper-symlink.bats`: no non-comment line and no leftover `disable=SC2093` below the
+  first top-level `exec`) and cite its output, instead of arguing. `[ev: retro truth-audit Δ7]`
 - **No automated check that flag-surface changes bump VERSION**. Enforced by §1 step 4 + §6
   checklist + agent discipline. Future: a pre-commit hook.
 - **CI active** (`ci.yml`, since Campaign 5): GitHub Actions on `origin` runs shellcheck + bats + sweep on every push and PR — server-side, un-bypassable complement to the opt-in client hook. **Pin every tool the CI gate depends on** (shellcheck version, Java version, junit sha256); an unpinned tool drifts newer on the runner and turns green→red with no code change. [ev: retro ci-server-side-enforcement] (K10/A10)

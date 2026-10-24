@@ -74,7 +74,15 @@ var liveCases = []liveCase{
 		return &reply{Raw: "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n{\"m\": [{\"b\": 1}]}"}
 	}, ops: `[{"op": "call", "channel": "ssession", "key": "make", "body": {}}, {"op": "about"}, {"op": "get_ord", "ord": "x"}]`},
 	{name: "not http at all", answer: func(seen) *reply { return &reply{Raw: "SSH-2.0-OpenSSH\r\n"} },
-		ops: `[{"op": "open"}, {"op": "about"}]`},
+		ops: `[{"op": "open"}, {"op": "about"}, {"op": "get_ord", "ord": "x"}, {"op": "get_file", "path": "/file/x"}]`},
+	{name: "a short body on every read", answer: func(seen) *reply {
+		return &reply{Raw: "HTTP/1.1 200 OK\r\nContent-Type: text/csv\r\nContent-Length: 50\r\n\r\na,b\n"}
+	}, ops: `[{"op": "get_file", "path": "/file/x"}, {"op": "get_ord", "ord": "x", "max_bytes": 3}, {"op": "about", "max_bytes": 4}]`},
+	{name: "a cut chunked body", answer: func(seen) *reply {
+		return &reply{Raw: "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nab"}
+	}, ops: `[{"op": "call", "channel": "ssession", "key": "make", "body": {}}, {"op": "get_ord", "ord": "x"}, {"op": "get_file", "path": "/file/x"}, {"op": "about"}]`},
+	{name: "a reply nested past the C stack", answer: body(200, `{"n": 1, "m": [{"b": `+strings.Repeat("[", 200000)+
+		strings.Repeat("]", 200000)+`}]}`), ops: `[{"op": "call", "channel": "ssession", "key": "make", "body": {}}]`},
 	{name: "http refused without allow_http", client: `{"allow_http": false}`, ops: openOps},
 	{name: "csv over get_ord", answer: body(200, "a,b\r\n1,\"x\ny\"\r\n", "Content-Type", "text/csv"),
 		ops: `[{"op": "get_ord", "ord": "station:|slot:/A B/\u00e9|bql:select * from control:NumericPoint"}]`},
