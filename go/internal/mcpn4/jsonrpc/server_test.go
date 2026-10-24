@@ -3,9 +3,11 @@ package jsonrpc
 import (
 	"bytes"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 )
@@ -150,3 +152,97 @@ func TestStripRemovesPythonWhitespaceOnly(t *testing.T) {
 		}
 	}
 }
+
+// fakeContext is a session.Context stand-in that records what the dispatcher asks of it.
+type fakeContext struct {
+	connected bool
+	block     string
+	noted     []string
+	closed    int
+}
+
+func (c *fakeContext) Connected() bool           { return c.connected }
+func (c *fakeContext) AuthBlock() string         { return c.block }
+func (c *fakeContext) NoteAuthFailure(err error) { c.noted = append(c.noted, err.Error()) }
+func (c *fakeContext) Scrub(text string) string  { return strings.ReplaceAll(text, "pw-1", "***") }
+func (c *fakeContext) Close()                    { c.closed++ }
+
+const callNavigate = `{"id": 1, "method": "tools/call", "params": {"name": "n4_navigate", "arguments": {}}}`
+
+func navigateServer(ctx *fakeContext, h Handler) *Server {
+	s := New(registry.Default())
+	s.Ctx = ctx
+	if h != nil {
+		s.Handlers["n4_navigate"] = h
+	}
+	return s
+}
+
+func TestASessionToolNeedsAConnectionThenNoAuthPauseThenItsHandler(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	h := func(*pyjson.Object) (*pyjson.Object, error) { calls++; return obj("ok", true), nil }
+	for _, tc := range []struct {
+		name string
+		ctx  *fakeContext
+		h    Handler
+		want string
+	}{
+		{"no session", &fakeContext{block: "paused"}, h, `"text": "not connected: call n4_connect first"}], "isError": true`},
+		{"paused", &fakeContext{connected: true, block: "paused pw-1"}, h, `"text": "paused ***"}], "isError": true`},
+		{"unported", &fakeContext{connected: true}, nil, `"text": "n4_navigate ` + NotImplemented + `"}], "isError": true`},
+		{"served", &fakeContext{connected: true}, h, `"structuredContent": {"ok": true}}`},
+	} {
+		if got := handle(t, navigateServer(tc.ctx, tc.h), callNavigate); !strings.Contains(got, tc.want) {
+			t.Errorf("%s: %s", tc.name, got)
+		}
+	}
+	if calls != 1 {
+		t.Errorf("handler ran %d times, want only when connected and not paused", calls)
+	}
+}
+
+func TestAnAuthErrorLatchesAndEveryShownTextIsScrubbed(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		err   error
+		text  string
+		noted int
+	}{
+		{&box.Error{Kind: box.KindAuth, Msg: "HTTP 401 pw-1"}, "HTTP 401 ***", 1},
+		{&box.Error{Kind: box.KindBox, Msg: "no load event pw-1"}, "no load event ***", 0},
+		{&box.Error{Kind: box.KindHTTPStatus, Msg: "HTTP 404", Code: 404}, "HTTP 404", 0},
+		{&pyjson.ValueError{Msg: "bad value pw-1"}, "bad value ***", 0},
+		{&ToolError{"refused pw-1"}, "refused ***", 0},
+		{escaped("KeyError"), "internal error (KeyError)", 0},
+	} {
+		ctx := &fakeContext{connected: true}
+		s := navigateServer(ctx, func(*pyjson.Object) (*pyjson.Object, error) { return nil, tc.err })
+		if got := handle(t, s, callNavigate); !strings.Contains(got, `"text": "`+tc.text+`"}], "isError": true`) {
+			t.Errorf("%T: %s", tc.err, got)
+		}
+		if len(ctx.noted) != tc.noted || tc.noted == 1 && ctx.noted[0] != "HTTP 401 pw-1" {
+			t.Errorf("%T: latched %q", tc.err, ctx.noted)
+		}
+	}
+}
+
+func TestServeClosesTheContextWhenTheInputEnds(t *testing.T) {
+	t.Parallel()
+	for _, in := range []io.Reader{strings.NewReader("{\"id\":1,\"method\":\"ping\"}\n"), &brokenReader{}} {
+		ctx := &fakeContext{connected: true}
+		s := New(registry.Default())
+		s.Ctx = ctx
+		var out bytes.Buffer
+		s.Serve(in, &out)
+		if ctx.closed != 1 {
+			t.Errorf("%T: closed %d times", in, ctx.closed)
+		}
+	}
+}
+
+// escaped is an exception that escapes a handler unwrapped (readtoolstest.Escaped would cycle).
+type escaped string
+
+func (e escaped) Error() string  { return string(e) }
+func (e escaped) PyType() string { return string(e) }
