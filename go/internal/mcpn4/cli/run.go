@@ -1,7 +1,7 @@
 // Package cli is the mcp-n4 command line (mcp-n4-kit/mcp_n4/server.py:191-312): argparse's
 // flags, bounded ranges and error text, the start checks main() and Server(...) make, then the
-// stdio loop. With --allow-writes the write state is checked at start and the ported write
-// tools are served (writeops); the others answer that they are not ported yet.
+// stdio loop. With --allow-writes the write state is checked at start and the write tools are
+// served (writeops).
 package cli
 
 import (
