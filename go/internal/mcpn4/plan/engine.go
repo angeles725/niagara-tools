@@ -96,7 +96,7 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 		return nil, "", err
 	}
 	if dry {
-		return e.dryRun(name, args, plan, planHash, tierBlock)
+		return e.dryRun(name, args, plan, planHash, tierBlock, list(planned.Inverse))
 	}
 	if err := w.checkStateFiles(); err != nil { // a loose file fails before the token and any send
 		return nil, "", err
@@ -112,6 +112,7 @@ func (e *Engine) process(name string, impl Impl, args *pyjson.Object) (out *pyjs
 	}
 	intent := obj("batch_id", batchID, "ts", session.Now(), "tool", name, "ops", list(planned.Ops),
 		"inverse_plan", list(planned.Inverse), "station_name", sess.StationName, "phase", "intent", "targets", targets)
+	withKeys(intent, planned, IntentKeys)
 	if w.Journal.Append(intent) != nil { // write-ahead: no intent on disk, no op on the wire
 		return nil, "", ToolError("nothing was sent: the journal intent could not be written (batch " + batchID +
 			"); the confirmation token is spent, run the dry run again")
