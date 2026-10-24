@@ -91,7 +91,8 @@ func TestStepGates(t *testing.T) {
 // TestTruncatedMemberIsAnEnvFault (W1): a member whose output passes the bound lost its rows past it (a FAIL row
 // among them), so it is an ERROR row and an env fault, never PASS clean.
 func TestTruncatedMemberIsAnEnvFault(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it writes an executable and runs it; a parallel test forking meanwhile holds the write fd
+	// and the exec fails ETXTBSY (126). Sequential tests run before the parallel ones resume.
 	root := tree(t, "A-rt/src/")
 	tb := t.TempDir()
 	script(t, tb, "lint-no-system-out.sh", "#!/bin/sh\nprintf 'scanning many files, a long line\\nFAIL  sysout  /x/A.java:3  System.out\\n'\n", 0o755)

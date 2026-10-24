@@ -14,7 +14,8 @@ func script(t *testing.T, dir, name, body string, mode os.FileMode) string {
 }
 
 func TestRunExitCodesAndOutput(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it writes an executable and runs it; a parallel test forking meanwhile holds the write fd
+	// and the exec fails ETXTBSY (126). Sequential tests run before the parallel ones resume.
 	dir := t.TempDir()
 	x := runner{env: []string{"PATH=/usr/bin:/bin"}}
 	tests := []struct {
@@ -53,7 +54,8 @@ func TestRunBoundsOutput(t *testing.T) {
 }
 
 func TestFirstLine(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it writes an executable and runs it; a parallel test forking meanwhile holds the write fd
+	// and the exec fails ETXTBSY (126). Sequential tests run before the parallel ones resume.
 	dir := t.TempDir()
 	x := runner{env: []string{"PATH=/usr/bin:/bin"}}
 	p := script(t, dir, "v", "#!/bin/sh\necho err >&2\nprintf 'v9.1.0\\nmore\\n'\nwhile :; do echo y || exit 0; done\n", 0o755)
