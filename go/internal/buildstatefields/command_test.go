@@ -178,26 +178,36 @@ func TestMainGeneratedIndex(t *testing.T) {
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas header drift pass
 	writeFile(t, filepath.Join(f.retros, "2026-09-01-alpha.md"), "<!-- review-status: pending -->\n<!-- module: kit -->\n<!-- deltas: 2 -->\n# alpha\n")
 	code, out, errs := f.sweep()
-	stale := "gen-retro-index: " + f.root + "/retros/INDEX.md is stale; run gen-retro-index.sh and commit the result\n"
-	if code != ExitFail || out != "" || !strings.HasPrefix(errs, stale) ||
-		!strings.HasSuffix(errs, "sweep: retros/INDEX.md is stale vs the retro headers; run toolbelt/gen-retro-index.sh\n") {
+	if code != ExitFail || out != "" || errs != "sweep: "+f.index+" is stale vs the retro headers; run toolbelt/gen-retro-index.sh\n" {
 		t.Errorf("GRI-sweep stale: got (%d, %q, %q)", code, out, errs)
+	}
+	writeFile(t, filepath.Join(f.retros, "2026-09-01-alpha.md"), "<!-- review-status: pending -->\n# alpha\n")
+	code, _, errs = f.sweep()
+	if code != ExitFail || !strings.HasSuffix(errs, "sweep: the retro headers under "+f.retros+" do not generate an INDEX\n") {
+		t.Errorf("GRI-sweep malformed header: got (%d, %q)", code, errs)
 	}
 }
 
-func TestMainGeneratedIndexElsewhere(t *testing.T) {
+// TestMainGeneratedIndexFromATempDir: the index is not committed, so CI and the pre-push hook pass
+// fresh kit-state output from a temp dir; a generated INDEX is compared wherever it lives.
+func TestMainGeneratedIndexFromATempDir(t *testing.T) {
 	t.Parallel()
 	f := genKit(t)
-	other := filepath.Join(f.root, "other")
-	mustMkdir(t, other)
+	other := filepath.Join(t.TempDir(), "INDEX.md")
 	b, err := os.ReadFile(f.index)
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(other, "INDEX.md"), string(b))
-	code, _, errs := run(f.state, f.retros, filepath.Join(other, "INDEX.md"))
-	if code != ExitFail || errs != "sweep: generated INDEX must be <retros-dir>/INDEX.md: "+filepath.Join(other, "INDEX.md")+"\n" {
-		t.Errorf("got (%d, %q)", code, errs)
+	writeFile(t, other, string(b))
+	if err := os.Remove(f.index); err != nil {
+		t.Fatal(err)
+	}
+	if code, out, errs := run(f.state, f.retros, other); code != ExitOK || out != "" || errs != "" {
+		t.Errorf("fresh temp index: got (%d, %q, %q)", code, out, errs)
+	}
+	writeFile(t, other, string(b)+"| 2026-09-02-ghost.md | kit | 2026-09-02 | pending | 1 |\n")
+	if code, _, errs := run(f.state, f.retros, other); code != ExitFail || errs != "sweep: INDEX row points at a missing retro: 2026-09-02-ghost.md\n" {
+		t.Errorf("stale temp index: got (%d, %q)", code, errs)
 	}
 }
 
