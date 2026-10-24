@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lib/vendor-version.sh — the ONE reader and comparator for a module's own vendorVersion.
-# Sourced only (never invoked directly) by toolbelt/build.sh (deployed-baseline drift gate) and scripts/ng-deploy.sh
-# (version-bump precheck). Fragment rule: edit THIS shared fragment, never re-implement the read or the compare in
+# Sourced only (never invoked directly) by toolbelt/build.sh (deployed-baseline drift gate), scripts/ng-deploy.sh
+# (version-bump precheck) and scripts/check-installed-line.sh (installed-line downgrade guard). Fragment rule: edit THIS shared fragment, never re-implement the read or the compare in
 # a consumer — mirrors lib/slotomatic-skip.sh's fragment rule (follow-up to kit #437).
 #
 # vv_module_version <jar> — prints the MODULE's own vendorVersion: the one on the <module ...> root tag of
@@ -13,6 +13,13 @@ vv_module_version() {
       | grep -oE '<module [^>]*vendorVersion="[0-9]+(\.[0-9]+)+[^"]*"' \
       | head -1 | sed -E 's/.*vendorVersion="([^"]*)".*/\1/'
   } || true
+}
+
+# vv_source_version — reads a GROUP build.gradle.kts on stdin and prints its SOURCE-side module version: the first
+#   uncommented `defaultModuleVersion("X")` call (the client version key, not vendorVersion). Prints nothing (status 0)
+#   when there is none: callers fail closed on empty. Pure text — the git read stays in the caller (kit-links L2).
+vv_source_version() {
+  sed -nE '/^[[:space:]]*defaultModuleVersion\([[:space:]]*"[^"]*"/{s/^[[:space:]]*defaultModuleVersion\([[:space:]]*"([^"]*)".*/\1/p;q}'
 }
 
 # vv_cmp <a> <b> — prints -1 (a < b), 0 (same version) or 1 (a > b), always status 0. Each dotted component
