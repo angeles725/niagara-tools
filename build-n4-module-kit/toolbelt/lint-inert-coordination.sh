@@ -13,7 +13,8 @@
 # types/logic.md "RT control logic" for the fix (coordinate at the parent that actually
 # aggregates multiple units, or drop the dead machinery).
 # [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5]
-# [ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BDefrostController.java:1190-1199,343-364,1261 (client source, not a corpus block: units() singleton + inert comment; staggerDelay slot; waitingQueue)]
+# [ev: Cliente/panccadia-leon/Paccadia/ColdRoomPan/ColdRoomPan-rt/src/com/angeles/ColdRoomPan/BDefrostController.java:1190-1199,343-364,1261]
+# (client source, not a corpus block: the units() singleton and its inert comment, the staggerDelay slot, the waitingQueue)
 #
 # Usage:  lint-inert-coordination.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot-dirs pruned). Run on any -rt profile with Java sources.

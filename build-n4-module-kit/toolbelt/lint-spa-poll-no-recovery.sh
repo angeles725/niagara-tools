@@ -7,7 +7,9 @@
 #
 # Shape 1 (no recovery, 2.4.2): `catch` only marks data stale and repaints "error"; a fixed HMI
 # panel stays on dead values until power-cycled. [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1]
-# [ev: Cliente/panccadia-leon/Dashboard/DashboardPan/DashboardPan-ux/src/rc/index.html:2855-2880 (client source, not a corpus block: today's lastOkAt-watchdog poll(); the 2.4.2 catch-only shape survives only in the retro's evidence, 2.4.2 L2427)]
+# [ev: Cliente/panccadia-leon/Dashboard/DashboardPan/DashboardPan-ux/src/rc/index.html:2855-2880]
+# (client source, not a corpus block: today's lastOkAt-watchdog poll(); the 2.4.2 catch-only shape survives only in
+# the retro's evidence, 2.4.2 L2427)
 # Shape 2 (failure-count watchdog, 2.4.3..2.8.0): reload after N consecutive failures; recovered ten
 # restarts and froze on the eleventh because a fetch without timeout hung and the counter never
 # advanced. Doctrine: types/dashboard.md § Poll loop reliability (watchdog on `lastOkAt`, set only by

@@ -31,7 +31,7 @@ via the Baja type registry at service start:
 | `fileUploadManagerMap` | `Map<String, BAbstractFileUploadManager>` | `platform` string |
 
 Registration happens lazily at first lookup (config factories also in `descendantsStarted()`) via `Sys.getRegistry().getConcreteTypes(Factory.TYPE.getTypeInfo())` — the registry scans every loaded module for concrete subtypes
-and populates the map. [ev: code cloudLink-rt BCloudConnectionService.registerHandlerFactories/registerConfigFactories/registerFileUploadManagers]
+and populates the map. [ev: code cloudLink-rt BCloudConnectionService registerHandlerFactories registerConfigFactories registerFileUploadManagers]
 
 Three `@NiagaraProperty` folders hang off the service as `flags=256` (hidden) children:
 `authenticators` (`BClientAuthenticatorsFolder`), `transports` (`BTransportsFolder`),
@@ -39,7 +39,7 @@ Three `@NiagaraProperty` folders hang off the service as `flags=256` (hidden) ch
 
 **Gotcha:** `BIRestrictedComponent` forces placement inside a `ServiceContainer` (the
 Services component). Do NOT add the service as a free-standing component. [ev: code
-BCloudConnectionService.checkParentForRestrictedComponent]
+cloudLink-rt BCloudConnectionService checkParentForRestrictedComponent]
 
 ---
 
@@ -129,7 +129,7 @@ property or a key-store alias.
 | `BRpkAuthenticatorHonSbp` | cloudLinkHonSbp | as Rpk (extends `BRpkAuthenticator`) |
 
 [ev: code cloudLink-rt module.xml types list; cloudLinkAzure module.xml
-`KeyRingPermission("*")`; cloudLinkForge module.xml `KeyRingPermission("cloudLinkNcs")` +
+`KeyRingPermission("*")`; cloudLinkForge-rt module.xml `KeyRingPermission("cloudLinkNcs")` +
 `KeyRingPermission("cloudLinkHonSbp")` (:114-115)]
 
 **Gotcha:** `BUsernameAndPassword` is a helper struct — it is NOT `BAbstractClientAuthenticator`.
@@ -172,7 +172,7 @@ Named channel types registered in `BClientChannelsFolder`:
 Each backend supplies its own `B<Backend><ChannelType>Config` and a
 `BAbstractChannelConfigFactory` (e.g. `BForgeChannelConfigFactory`,
 `BNcsChannelConfigFactory`) which is auto-discovered via the registry map (§1).
-[ev: code cloudLinkForge module.xml BForgeAmqpAlarmChannelConfig … BForgeChannelConfigFactory;
+[ev: code cloudLinkForge-rt module.xml BForgeAmqpAlarmChannelConfig … BForgeChannelConfigFactory;
 cloudLinkNcs module.xml BNcsChannelConfigFactory]
 
 ---
@@ -188,7 +188,7 @@ cloudLink-rt (core service + transport + channel SPI)
 ```
 
 [ev: cloudLinkAzure-rt module.xml dep `cloudLink-rt`; cloudLinkForge-rt module.xml
-dep `cloudLinkAzure-rt`; cloudLinkNcs-rt and cloudLinkHonSbp-rt module.xml dep
+dep `cloudLinkAzure-rt`; cloudLinkNcs-rt module.xml dep `cloudLinkForge-rt`; cloudLinkHonSbp-rt module.xml dep
 `cloudLinkForge-rt`]
 
 Each backend registers two handler factories (AMQP + HTTP), one channel-config factory,
@@ -201,7 +201,7 @@ public class BForgeHttpHandlerFactory  extends BAbstractCloudLinkHandlerFactory 
 public class BForgeChannelConfigFactory extends BAbstractChannelConfigFactory   { ... }
 ```
 
-[ev: code cloudLinkForge module.xml]
+[ev: code cloudLinkForge-rt module.xml]
 
 **Module permissions per backend** (template for your own module.xml):
 
@@ -214,7 +214,7 @@ public class BForgeChannelConfigFactory extends BAbstractChannelConfigFactory   
     name="${protected.station.home}${/}cloudLinkSchedule${/}-"/>
 ```
 
-[ev: cloudLinkForge module.xml `KeyRingPermission("cloudLinkNcs")`; cloudLink-rt module.xml
+[ev: cloudLinkForge-rt module.xml `KeyRingPermission("cloudLinkNcs")`; cloudLink-rt module.xml
 FilePermission cloudLinkModel + cloudLinkSchedule]
 
 ---
