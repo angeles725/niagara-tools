@@ -19,10 +19,12 @@ Improve the kit and the modules as an "Excavador Técnico" (R&D engineer + syste
 
 ## Resolve the kit (do this first)
 
-`KIT` = the directory holding `METHODOLOGY.md`, `BUILD-LOOP.md`, `types/`, `toolbelt/`. Resolve once:
-1. `$BUILD_N4_KIT` if set and contains `METHODOLOGY.md`.
-2. Else the default: `/home/cristian/modulos_niagara_n4/niagara-tools/build-n4-module-kit` (confirm `METHODOLOGY.md` exists).
-3. Else locate it: `fd -t f METHODOLOGY.md` under the user's module dirs; the kit also has `BUILD-LOOP.md` + `types/`. Never treat `$HOME` or any dir missing those as the kit; if unfound, ask.
+`KIT` = the directory holding `METHODOLOGY.md`, `BUILD-LOOP.md`, `types/`, `toolbelt/`. Resolve it with the fail-closed resolver, never by hand:
+`/home/cristian/modulos_niagara_n4/niagara-tools-worktrees/kit-main/scripts/kit-resolve.sh` (no kit-main yet: the same `scripts/kit-resolve.sh` in `/home/cristian/modulos_niagara_n4/niagara-tools`).
+- It tries `$BUILD_N4_KIT`, then the `kit-main` worktree (`$BUILD_N4_KIT_MAIN`), then the default checkout `/home/cristian/modulos_niagara_n4/niagara-tools/build-n4-module-kit`, and accepts the first one only if it is at `origin/main` and clean.
+- Exit 0: its first line `KIT=<path> SHA=<sha> (origin/main, clean)` is your first output; use that `KIT`.
+- Then materialize the generated ledger on that resolved checkout: `kit-state build-state --write` and `kit-state retro-index --write` (BUILD-STATE.md and retros/INDEX.md are generated, not tracked).
+- Exit 2 (stale, dirty, origin unreachable): do not build. Run the refresh command it prints (`--refresh` does it for a clean kit-main), or `--offline-ok` when offline is known and accepted. Exit 3: no kit or a bad `$BUILD_N4_KIT`; ask. `[ev: retro r10-stale-kit-resolution Δ1]`
 
 Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run the loop.
 
