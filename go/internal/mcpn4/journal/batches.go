@@ -3,9 +3,11 @@ package journal
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
 // ListBatches is n4_list_batches' reply: the total and the newest limit batches; when a line is
@@ -69,8 +71,8 @@ func Batches(views []*pyjson.Object) ([]any, error) {
 	return out, nil
 }
 
-// batchIDPattern is _BATCH_ID under re.match: "$" also matches before a final newline.
-var batchIDPattern = regexp.MustCompile(`^[0-9a-f]{32}\n?$`)
+// batchIDPattern is _BATCH_ID under re.match ("\Z": a final newline is not accepted).
+var batchIDPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 func toolError(msg string) error { return &jsonrpc.ToolError{Msg: msg} }
 
@@ -86,6 +88,15 @@ func (j *Journal) RollbackTarget(batchID any) (*pyjson.Object, error) {
 	bid, ok := batchID.(string)
 	if !ok || !batchIDPattern.MatchString(bid) {
 		return nil, toolError("batch_id must be a 32-character hex batch id")
+	}
+	if bad := j.UnreadableFor(bid); len(bad) > 0 { // before Read: the batch may be on the bad line
+		where := make([]string, len(bad))
+		for i, u := range bad {
+			where[i] = fmt.Sprintf("%d (%s)", u.Line, u.Reason)
+		}
+		return nil, toolError(safety.ReasonJournalUnreadable + ": batch " + bid + " may be recorded on journal.jsonl " +
+			"line(s) " + strings.Join(where, ", ") + "; rolling it back from an incomplete record could repeat or " +
+			"skip its inverse, refusing: repair or remove the line(s) by hand")
 	}
 	view, err := j.Read(bid)
 	if err != nil {
