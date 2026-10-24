@@ -86,7 +86,7 @@ _frag() { # _frag <file> <date> <log text> [open_issue text]
 }
 
 @test "GBS-sweep: sweep-build-state fails on a generated BUILD-STATE.md that is stale vs ledger.d/" {
-  printf '| Retro file | review-status |\n|---|---|\n' > "$FK/retros/INDEX.md"
+  bash "$KIT/toolbelt/gen-retro-index.sh" "$FK" >/dev/null   # a ledger.d/ kit takes only the generated INDEX
   bash "$GEN" "$FK" >/dev/null
   run bash "$SWEEP" "$FK/BUILD-STATE.md" "$FK/retros" "$FK/retros/INDEX.md"
   [ "$status" -eq 0 ]

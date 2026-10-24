@@ -226,7 +226,23 @@ func ledgerKit(t *testing.T) fixture {
 	if buildstate.Main([]string{f.root}, cli.Stdio{Out: &o, Err: &e}) != 0 {
 		t.Fatalf("gen-build-state: %s", e.String())
 	}
+	if retroindex.Main([]string{f.root}, cli.Stdio{Out: &o, Err: &e}) != 0 {
+		t.Fatalf("gen-retro-index: %s", e.String())
+	}
 	return f
+}
+
+// TestMainLedgerKitRefusesHandIndex: in the generated model a hand-written INDEX would skip the
+// freshness check unseen, so a ledger.d/ kit refuses it as it refuses a hand-written BUILD-STATE file.
+func TestMainLedgerKitRefusesHandIndex(t *testing.T) {
+	t.Parallel()
+	f := ledgerKit(t)
+	writeFile(t, f.index, hand)
+	code, out, errs := f.sweep()
+	if code != ExitFail || out != "" ||
+		errs != "sweep: a ledger.d/ kit takes the GENERATED INDEX (toolbelt/kit-state.sh retro-index), not "+f.index+"\n" {
+		t.Errorf("hand-written INDEX: got (%d, %q, %q)", code, out, errs)
+	}
 }
 
 func TestMainLedger(t *testing.T) {

@@ -145,13 +145,19 @@ func unindexedRetro(retrodir string, rows map[string]bool) (string, int) {
 // freshness checks a GENERATED INDEX and a GENERATED BUILD-STATE file (line 1 = gen.GeneratedLine)
 // against what the kit at <retros-dir>/.. generates now, in process. The generated files are not
 // committed, so the callers (CI, .githooks/pre-push) pass fresh `kit-state` output from a temp dir:
-// either file may live anywhere. A hand-written file (test fixtures) skips its check, except that a
-// kit with a ledger.d/ never takes a hand-written BUILD-STATE file.
+// either file may live anywhere. A hand-written file (test fixtures) skips its check, except in a kit with
+// a ledger.d/ (the generated model): it takes neither a hand-written BUILD-STATE file nor a hand-written
+// INDEX, since either would skip its freshness check.
 func freshness(state, retrodir, index, indexText string, s cli.Stdio) (string, int) {
 	root := abs(retrodir + "/..")
+	ledgerKit := gen.IsDir(root + "/ledger.d")
 	// 3. generated INDEX freshness. A generator's diagnostics are sweep output; its result is compared here.
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas/module header drift pass the gate
-	if strings.HasPrefix(indexText, gen.GeneratedLine) {
+	// Mutation: GRI-hand -- accepting a hand-written INDEX in a ledger.d/ kit skips this check unseen
+	switch generated := strings.HasPrefix(indexText, gen.GeneratedLine); {
+	case !generated && ledgerKit:
+		return "a ledger.d/ kit takes the GENERATED INDEX (toolbelt/kit-state.sh retro-index), not " + index, ExitFail
+	case generated:
 		want, code := retroindex.Generate(root, s.Err)
 		if code != ExitOK {
 			return "the retro headers under " + retrodir + " do not generate an INDEX", ExitFail
@@ -176,7 +182,7 @@ func freshness(state, retrodir, index, indexText string, s cli.Stdio) (string, i
 		if string(text) != want {
 			return state + " is stale vs ledger.d/ and " + buildstate.SourceName + "; regenerate it with toolbelt/kit-state.sh build-state", ExitFail
 		}
-	case gen.IsDir(root + "/ledger.d"):
+	case ledgerKit:
 		return "a ledger.d/ kit takes the GENERATED BUILD-STATE.md (toolbelt/kit-state.sh build-state), not " + state, ExitFail
 	}
 	return "", ExitOK
