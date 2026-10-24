@@ -62,6 +62,11 @@ func TestFindings(t *testing.T) {
 		{"orElse", "class A {\n  String f() { return Optional.ofNullable(System.getenv(\"D\")).orElse(\"/home/me\"); }\n}\n", row(2, "/home/me", fall)},
 		{"getOrDefault", "class A {\n  String f() { return System.getenv().getOrDefault(\"D\", \"/Users/me\"); }\n}\n", row(2, "/Users/me", fall)},
 		{"requireNonNullElse", "class A {\n  String f() { return Objects.requireNonNullElse(System.getenv(\"D\"), \"/tmp/d\"); }\n}\n", row(2, "/tmp/d", fall)},
+		// The two Java cases of the deferred G43 spec (ledger.d/2026-10-22-modular-line-efficient-quality.md).
+		{"ledger defaultValue windows", "@NiagaraProperty(name = \"e\", type = \"baja:String\", defaultValue = \"BString.make(\\\"C:\\\\\\\\Users\\\\\\\\ops\\\\\\\\export\\\")\")\nclass A {}\n",
+			row(1, `C:\Users\ops\export`, slot)},
+		{"ledger getProperty scratchpad", "class A {\n  String f() { return System.getProperty(\"pw.file\", \"/tmp/scratchpad/pw\"); }\n}\n",
+			row(2, "/tmp/scratchpad/pw", fall)},
 		{"one row per line", "class A {\n  String a = \"/home/a\", b = \"/home/b\";\n}\n", row(2, "/home/a", field)},
 	} {
 		if got := rows(t, tc.src); got != tc.want {
