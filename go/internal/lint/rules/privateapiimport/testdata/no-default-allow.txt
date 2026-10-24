@@ -1,7 +1,6 @@
 -- args --
---default-allow
-off
 @DIR@/M
+--no-default-allow
 -- want --
 exit 0
 WARN  lint-private-api-import  @DIR@/M/M-rt/src/com/example/drv/BAcmeNetwork.java:2  com.tridium.ndriver.BNNetwork is private API (devguide apiInfo: no compatibility guaranteed)

@@ -58,6 +58,55 @@ func TestParseValuedNamed(t *testing.T) {
 	}
 }
 
+// TestParseValuedFlags: a Mode Valued boolean flag (ValueOptions.Flags) may appear anywhere, with the value
+// options, --strict and the root, and repeats harmlessly; in a value position it is that option's value; a
+// flag given a value (--no-x=1), an unknown flag and "--" stay the usage error they are today.
+func TestParseValuedFlags(t *testing.T) {
+	const name, usage = "lint-f", "usage: lint-f.sh [--strict] [--o <v>] [--r <v>]... [--no-x] <root>"
+	vo := ValueOptions{Option: "--o", Repeat: []string{"--r"}, Strict: true, Flags: []string{"--no-x"}}
+	dir := t.TempDir()
+	on := map[string]bool{"--no-x": true}
+	for _, tc := range []struct {
+		args   []string
+		flags  map[string]bool
+		values map[string][]string
+		option string
+		strict bool
+		errMsg string
+	}{
+		{args: []string{dir}},
+		{args: []string{"--no-x", dir}, flags: on},
+		{args: []string{dir, "--no-x"}, flags: on},
+		{args: []string{"--no-x", "--no-x", dir}, flags: on},
+		{args: []string{"--r", "a", "--no-x", "--o", "v", dir, "--strict"}, flags: on, values: map[string][]string{"--r": {"a"}}, option: "v", strict: true},
+		{args: []string{"--r", "--no-x", dir}, values: map[string][]string{"--r": {"--no-x"}}},
+		{args: []string{"--o", "--no-x", dir}, option: "--no-x"},
+		{args: []string{"--no-x=1", dir}, errMsg: usage + "\n"},
+		{args: []string{"--no-y", dir}, errMsg: usage + "\n"},
+		{args: []string{"--", "--no-x", dir}, errMsg: usage + "\n"},
+		{args: []string{"--no-x"}, errMsg: usage + "\n"},
+	} {
+		got, err := ParseValued(Valued, name, usage, vo, tc.args)
+		if tc.errMsg != "" {
+			var ue *UsageError
+			if err == nil || err.Error() != tc.errMsg || !errors.As(err, &ue) {
+				t.Errorf("ParseValued(%q) error = %v, want usage error %q", tc.args, err, tc.errMsg)
+			}
+			continue
+		}
+		if err != nil || !reflect.DeepEqual(got.Flags, tc.flags) || !reflect.DeepEqual(got.Values, tc.values) ||
+			got.Option != tc.option || got.Strict != tc.strict || !reflect.DeepEqual(got.Roots, []string{dir}) {
+			t.Errorf("ParseValued(%q) = %+v, %v; want flags=%v values=%v option=%q strict=%v", tc.args, got, err, tc.flags, tc.values, tc.option, tc.strict)
+		}
+	}
+	// under Named a flag given a value is named like any unknown option
+	named := vo
+	named.Named = true
+	if _, err := ParseValued(Valued, name, usage, named, []string{"--no-x=1", dir}); err == nil || err.Error() != name+": unknown option: --no-x=1\n" {
+		t.Errorf("named: error = %v, want the unknown-option line", err)
+	}
+}
+
 func TestRowStatus(t *testing.T) {
 	f := Finding{Rule: "lint-w", Severity: Warn, Status: "STALE", Path: "docs/m.md", Line: 4, Msg: "slot x: gone"}
 	if got, want := f.Row(), "STALE  lint-w  docs/m.md:4  slot x: gone"; got != want {
