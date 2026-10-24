@@ -9,14 +9,6 @@ new-retro: slug must be [A-Za-z0-9][A-Za-z0-9._-]+ and >= 6 chars: abcdef/../../
 truth: hand-written from the case edge-slug-space-after-six recorded at 15e792d1: a slug with a / after its 6th char is refused, not handed to the write (the bash failed in cp, exit 1)
 -- @env --
 KIT=@DIR@/kit
--- @expect kit/BUILD-STATE.src.md --
-<!-- build-state.v1 -->
-## kit
-retro_required: true
-retro_pending: false
--- @expect kit/retros/INDEX.md --
-| Retro file | Module | Date | review-status | deltas |
-|---|---|---|---|---|
 -- kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
 ## kit
