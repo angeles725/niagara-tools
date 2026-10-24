@@ -18,12 +18,16 @@ type Planned struct {
 	Data                any
 }
 
-// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only) and
-// its read-back. The inverse it journals is the planned one.
+// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only), the
+// inverse it journals (nil: the planned one; else built from the station's replies, where an
+// error means the reply cannot be trusted), the recover hook of such a reply (nil: none) and
+// its read-back.
 type Impl struct {
 	ScopeOrds func(args *pyjson.Object) []any
 	Plan      func(c Client, args *pyjson.Object) (*Planned, error)
-	Readback  func(c Client, args *pyjson.Object, p *Planned, replies []any) (requested, accepted, observed any, verdict string, err error)
+	Inverse   func(p *Planned, replies []any) ([]any, error)
+	Recover   func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
+	Readback  func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
 }
 
 // Engine runs the write tools of one server process.

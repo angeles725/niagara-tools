@@ -1,7 +1,6 @@
 package plan_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/plan"
@@ -29,14 +28,11 @@ func TestAPanickingPlanIsAnAuditedInternalError(t *testing.T) {
 	}
 }
 
-func TestAPanicAfterTheIntentLeavesAnInDoubtBatch(t *testing.T) {
+func TestAPanickingSendLeavesAnInDoubtBatch(t *testing.T) {
 	r := newRig(t)
-	impl := writeops.SetSlot
-	impl.Readback = func(plan.Client, *pyjson.Object, *plan.Planned, []any) (any, any, any, string, error) {
-		panic("boom")
-	}
-	panicked(r, impl)
-	text, isErr, _ := r.execute(t, "n4_set_slot", setArgs(), r.dry(t, "n4_set_slot", setArgs()))
+	tok := r.dry(t, "n4_set_slot", setArgs())
+	r.st.onSend = func() { panic("boom") }
+	text, isErr, _ := r.execute(t, "n4_set_slot", setArgs(), tok)
 	journal, audit := r.lines(t, "journal.jsonl"), r.lines(t, "audit.jsonl")
 	batch := get(journal[0], "batch_id").(string)
 	want := "station call failed after the intent was journaled: batch " + batch + " is in-doubt (the station " +
@@ -45,7 +41,42 @@ func TestAPanicAfterTheIntentLeavesAnInDoubtBatch(t *testing.T) {
 		t.Fatalf("%s %v %s", text, isErr, pyjson.Repr(journal))
 	}
 	last := audit[len(audit)-1]
-	if get(last, "outcome") != "error" || get(last, "batch_id") != batch || !strings.HasSuffix(get(last, "reason").(string), ": Exception") {
+	if get(last, "outcome") != "error" || get(last, "batch_id") != batch || get(last, "reason") != want {
 		t.Fatal(pyjson.Repr(last))
+	}
+}
+
+// The read-back, inverse and recover steps catch every exception (_execute): a panic there is
+// a result, not an in-doubt error.
+func TestAPanickingReadBackIsAFailedVerdict(t *testing.T) {
+	r := newRig(t)
+	impl := writeops.SetSlot
+	impl.Readback = func(plan.Client, *pyjson.Object, *plan.Planned, []any, []any) (any, any, any, string, error) {
+		panic("boom")
+	}
+	panicked(r, impl)
+	_, isErr, out := r.execute(t, "n4_set_slot", setArgs(), r.dry(t, "n4_set_slot", setArgs()))
+	result := r.lines(t, "journal.jsonl")[1]
+	if isErr || get(out, "verdict") != "failed" || get(out, "readback_error") != "Exception: boom" ||
+		get(result, "readback_failed") != true {
+		t.Fatal(pyjson.Repr(out), pyjson.Repr(result))
+	}
+}
+
+func TestAPanickingInverseOrRecoverIsUnverifiedAndInDoubt(t *testing.T) {
+	for _, recov := range []bool{false, true} {
+		r := newRig(t)
+		impl := writeops.SetSlot
+		impl.Inverse = func(*plan.Planned, []any) ([]any, error) { panic("boom") }
+		if recov {
+			impl.Recover = func(plan.Client, *pyjson.Object, *plan.Planned, []any) (any, []any, error) { panic("again") }
+		}
+		panicked(r, impl)
+		_, isErr, out := r.execute(t, "n4_set_slot", setArgs(), r.dry(t, "n4_set_slot", setArgs()))
+		result := r.lines(t, "journal.jsonl")[1]
+		if isErr || get(out, "verdict") != "unverified" || get(out, "readback_error") != "Exception" ||
+			get(out, "observed") != nil || pyjson.Repr(get(out, "inverse")) != "[]" || get(result, "in_doubt") != true {
+			t.Fatal(recov, pyjson.Repr(out), pyjson.Repr(result))
+		}
 	}
 }
