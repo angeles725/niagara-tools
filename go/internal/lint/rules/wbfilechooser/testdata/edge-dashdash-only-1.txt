@@ -1,0 +1,14 @@
+-- args --
+--
+-- want --
+exit 3
+-- stderr --
+usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>
+-- m/A.java --
+class A {
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+}
+-- n/A.java --
+class A {
+  void g() { BWbFieldEditor.dialog(p, t,
+}

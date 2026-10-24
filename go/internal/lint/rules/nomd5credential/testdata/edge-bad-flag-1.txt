@@ -1,0 +1,16 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-no-md5-credential-digest: unknown flag: -x
+usage: lint-no-md5-credential-digest.sh [--strict] <src-root>
+-- m/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- n/A.java --
+class A {
+  BPassword password; MessageDigest m2 = MessageDigest.getInstance("md5");
+}

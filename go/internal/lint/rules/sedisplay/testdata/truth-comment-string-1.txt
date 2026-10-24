@@ -1,0 +1,16 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/m/A.java:8  display class: String u = "http://h"; Object f = new JFrame();
+-- stderr --
+-- m/A.java --
+import java.awt.Font;
+/* import javax.swing.JFrame; */
+/**
+ * new JFrame() is never used here
+ */
+class A {
+  String s = "new JFrame";
+  String u = "http://h"; Object f = new JFrame();
+}

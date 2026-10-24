@@ -1,0 +1,9 @@
+-- args --
+@DIR@/m/
+-- want --
+exit 0
+-- stderr --
+-- m/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}

@@ -1,0 +1,6 @@
+-- args --
+@DIR@/does-not-exist
+-- want --
+exit 3
+-- stderr --
+lint-subscribe-without-unsubscribe: not a directory: @DIR@/does-not-exist

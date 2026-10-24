@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
 )
@@ -29,14 +30,25 @@ const NotImplemented = "is not implemented in this version of the Go server"
 const ReasonNotConnected = "not connected"
 
 // Handler runs one tool on validated arguments. Its result becomes structuredContent and the
-// text content. A *ToolError is shown to the model; *pyjson.OverflowError and any other error
-// become "internal error (<Python type>)".
+// text content. A *ToolError, *box.Error or *pyjson.ValueError is shown to the model (an auth
+// *box.Error latches the Context first); *pyjson.OverflowError and any other error become
+// "internal error (<Python type>)".
 type Handler func(args *pyjson.Object) (*pyjson.Object, error)
 
 // ToolError is tools_read.ToolError (and box.BoxError): a failure whose text is safe to show.
 type ToolError struct{ Msg string }
 
 func (e *ToolError) Error() string { return e.Msg }
+
+// Context is the per-process state a tool call consults (session.Context): the station session,
+// the authentication-failure latch and the secret scrub of every tool error text.
+type Context interface {
+	Connected() bool
+	AuthBlock() string
+	NoteAuthFailure(err error)
+	Scrub(text string) string
+	Close()
+}
 
 // PyTyped is an error that names the Python exception type it stands for.
 type PyTyped interface{ PyType() string }
@@ -50,6 +62,9 @@ type Server struct {
 	// Handlers maps a tool name to its implementation; a tool without one answers the
 	// NotImplemented tool error.
 	Handlers map[string]Handler
+	// Ctx is the session state; nil means no session can exist (every session tool answers
+	// not connected) and nothing to scrub.
+	Ctx Context
 }
 
 // New returns the read-only server over reg: the read tools are listed and callable, and a
@@ -68,8 +83,12 @@ func New(reg *registry.Registry) *Server {
 
 // Serve is Server.serve: one reply line per answered input line, flushed at once, until EOF.
 // Lines end at "\n" only, as Python's stdin splits them on POSIX; a last line without one is
-// still handled. A read or write error ends the loop and is returned.
+// still handled. A read or write error ends the loop and is returned. However the loop ends, the
+// station session is closed.
 func (s *Server) Serve(in io.Reader, out io.Writer) error {
+	if s.Ctx != nil {
+		defer s.Ctx.Close()
+	}
 	r := bufio.NewReader(in)
 	for {
 		line, err := r.ReadBytes('\n')
@@ -219,36 +238,62 @@ func (s *Server) call(params any) (any, error) {
 	if err := Validate(tool.Schema, args); err != nil {
 		return nil, err
 	}
-	if tool.NeedsSession { // no session can exist before n4_connect is ported
-		return toolError(ReasonNotConnected + ": call n4_connect first"), nil
+	if tool.NeedsSession { // a station call: refused while the auth latch holds (F4)
+		if s.Ctx == nil || !s.Ctx.Connected() {
+			return s.toolError(ReasonNotConnected + ": call n4_connect first"), nil
+		}
+		if block := s.Ctx.AuthBlock(); block != "" {
+			return s.toolError(block), nil
+		}
 	}
 	h := s.Handlers[name]
-	if h == nil {
+	if h == nil { // never scrubbed: the harness skips on this exact text
 		return toolError(name + " " + NotImplemented), nil
 	}
 	out, err := h(args)
+	var be *box.Error
+	if errors.As(err, &be) && be.IsAuth() && s.Ctx != nil {
+		// Always (re)latch: a client without the hook still latches here, and a held latch
+		// may name other credentials (H2 review R4-001).
+		s.Ctx.NoteAuthFailure(be)
+	}
 	if err != nil {
-		return toolError(errorText(err)), nil
+		return s.toolError(errorText(err)), nil
 	}
 	return obj("content", []any{obj("type", "text", "text", string(encode(out)))},
 		"structuredContent", out), nil
 }
 
-// errorText is the text of a failed tool: a ToolError's own words, else the Python type only,
-// never the message (it could hold a secret).
+// errorText is the text of a failed tool: the words of a ToolError, BoxError (AuthError and
+// HttpStatusError included) or ValueError, else the Python type only, never the message (it
+// could hold a secret).
 func errorText(err error) string {
 	var te *ToolError
+	var be *box.Error
+	var ve *pyjson.ValueError
 	var oe *pyjson.OverflowError
 	var typed PyTyped
 	switch {
 	case errors.As(err, &te):
 		return te.Msg
+	case errors.As(err, &be):
+		return be.Msg
+	case errors.As(err, &ve):
+		return ve.Msg
 	case errors.As(err, &oe):
 		return "internal error (OverflowError)"
 	case errors.As(err, &typed):
 		return "internal error (" + typed.PyType() + ")"
 	}
 	return "internal error (Exception)"
+}
+
+// toolError is Server._tool_error: the text, scrubbed of the secret.
+func (s *Server) toolError(text string) *pyjson.Object {
+	if s.Ctx != nil {
+		text = s.Ctx.Scrub(text)
+	}
+	return toolError(text)
 }
 
 func toolError(text string) *pyjson.Object {
