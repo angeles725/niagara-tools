@@ -1,0 +1,57 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/Crlf.java:13  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Noeol.java:13  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/Tabs.java:13  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- Crlf.java (noeol) --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- Empty.java --
+-- Noeol.java (noeol) --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- Tabs.java --
+class Tabs {
+	static	final	Property	xHours	=	newProperty(0, 0.0, null);
+	public void changed(Property	p, Context cx) {
+		if (p == a) execute();
+		if (p == b) execute();
+		if (p == c) execute();
+		if (p == d) execute();
+		if (p == e) execute();
+		if (p == f) execute();
+		if (p == g) execute();
+	}
+	void execute() {
+		setXHours(1.0);
+	}
+}

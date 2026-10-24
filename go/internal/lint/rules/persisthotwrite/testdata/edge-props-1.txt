@@ -1,0 +1,26 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/P1.java:15  setBHours(...) writes non-transient slot 'bHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/P1.java:15  setEHours(...) writes non-transient slot 'eHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- P1.java --
+class P1 {
+  public static final Property aHours = newProperty(Flags.SUMMARY | Flags.TRANSIENT, 0.0, null);
+  public static final Property bHours = newProperty(
+      Flags.TRANSIENT, 0.0, null);
+  Property cHours=newProperty(0,0.0,null); Property dHours = newProperty(Flags.TRANSIENT, 1, null);
+  static final Property  eHours  =  newProperty( 0 , 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    setAHours(1); setBHours(1); setCHours(1); setDHours(1); setEHours(1);
+  }
+  void execute() { }
+}

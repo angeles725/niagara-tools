@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/Mod/src/com/x/A.java:5  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  public void changed(Property p, Context cx) { execute(); }
+  void execute() {
+    setXHours(1.0);
+  }
+}

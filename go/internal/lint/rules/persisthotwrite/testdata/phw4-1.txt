@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  public static final Property xHours = newProperty(Flags.SUMMARY | Flags.READONLY, 0d, null);
+  void execute() { setXHours(1.0); }
+}
