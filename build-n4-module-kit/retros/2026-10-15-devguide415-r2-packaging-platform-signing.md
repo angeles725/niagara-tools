@@ -11,10 +11,10 @@ Packaging and deployment rules the kit states are partly inverted and mostly mis
 
 ## Evidence
 - `noStation` `[ev: code organized/platform/platform-rt/vineflower/com/tridium/install/installable/DistributionManifest.java:87,130]` `[ev: niagara-help 4.15.6.20 devguide-clean/distribution.txt:112-118]` vs `[ev: code types/distribution.md:37,40]` `[ev: corpus B1318 §1318.1]` (B1023:284 already correct)
-- Templates `[ev: niagara-help 4.15.6.20 guides-clean/Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:25]` `[ev: …/Templates/DeployingTemplates-054F175F.txt:33]` vs `[ev: code types/logic.md:185]` `[ev: code types/structure.md:133]` `[ev: corpus B1325]`
-- Lexicon modules `[ev: niagara-help 4.15.6.20 guides-clean/Lexicon/devkit-LexiconModuleBuilder.txt:14-43]` `[ev: corpus B1330]`
-- Signing `[ev: niagara-help 4.15.6.20 guides-clean/SigningService/signingService-SigningService.txt:16]` `[ev: …/ModuleSign/VerificationModesModuleSigning-182D0E86.txt:25-36]` `[ev: …/ModuleSign/SignatureStatusesModuleSigning-1F0024B2.txt:22-45]` `[ev: corpus B1332]`
-- Platform `[ev: niagara-help 4.15.6.20 guides-clean/Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:49-51]` vs `[ev: code types/structure.md:300]` `[ev: corpus B1341]`
+- Templates `[ev: niagara-help 4.15.6.20 guides-clean/Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12 "CAUTION: Upgrading deployed templates wipes out any local"]` `[ev: …/Templates/DeployingTemplates-054F175F.txt:13 "template is first created (or edited), and during"]` vs `[ev: code types/logic.md:185]` `[ev: code types/structure.md:133]` `[ev: corpus B1325]`
+- Lexicon modules `[ev: niagara-help 4.15.6.20 guides-clean/Lexicon/devkit-LexiconModuleBuilder.txt:9-27 "The lexicons available for use are those lexicon"]` `[ev: corpus B1330]`
+- Signing `[ev: niagara-help 4.15.6.20 guides-clean/SigningService/signingService-SigningService.txt:7 "Niagara 4.13, it allows components within remote"]` `[ev: …/ModuleSign/VerificationModesModuleSigning-182D0E86.txt:11-17 "Low — Any modules that are not signed"]` `[ev: …/ModuleSign/SignatureStatusesModuleSigning-1F0024B2.txt:9-23 "Ok – The module is signed with a"]` `[ev: corpus B1332]`
+- Platform `[ev: niagara-help 4.15.6.20 guides-clean/Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:30 "Java 8 Standard Edition (SE) platform API. Currently,"]` vs `[ev: code types/structure.md:300]` `[ev: corpus B1341]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
