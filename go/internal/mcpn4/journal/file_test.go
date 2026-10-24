@@ -100,6 +100,13 @@ func TestCreatedDirIs0700WhateverTheUmask(t *testing.T) {
 	if mode(t, j.StateDir) != 0o700 || mode(t, j.Path) != 0o600 {
 		t.Fatalf("modes %o %o", mode(t, j.StateDir), mode(t, j.Path))
 	}
+	parent := t.TempDir()
+	syscall.Umask(0o277) // mkdir alone would leave 0500: the dir it created is chmodded
+	j = New(filepath.Join(parent, "s"))
+	appendAll(t, j.File, `{"batch_id": "b1"}`)
+	if mode(t, j.StateDir) != 0o700 {
+		t.Fatalf("dir mode %o", mode(t, j.StateDir))
+	}
 }
 
 // seed creates the state dir 0700 and an empty journal.jsonl with perm.
