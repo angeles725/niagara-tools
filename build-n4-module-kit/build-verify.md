@@ -118,6 +118,10 @@ unzip -p <jar> META-INF/module.xml | grep baja
 
 `--src` also runs `facets-req` (WARN): an OPERATOR numeric slot without a `facets` key, a setpoint-like slot without a unit, a count-like slot without a precision. `BFacets.makeNumeric(<unit>, <precision>, ...)` satisfies the unit test (it carries a real unit without the literal `UNITS` token) and any `makeNumeric(` satisfies the precision test; a precision-only `makeNumeric(<int>)` still WARNs missing UNITS. Do not hand-rewrite a working `makeNumeric` facet to silence the check. `[ev: retro comppan-fase2-amps-alarms Δ1]`
 
+`--src` on a driver module (a class extending a network or device base) adds the `driver-*` rows: `driver-scaffold`,
+`driver-comm-config`, `driver-discovery-alive`, `driver-server-enabled`, `driver-manager`; the rules and their doctrine
+sections are in `types/driver-authoring.md` § 12. A non-driver module prints none of them. `[ev: retro r10-dr4-verify-driver Δ1]`
+
 Reviewed false positives in the advisory source lints: `lint-arbitrary-ord.sh` WARNs on every `BOrd.make(<variable>)`; when the value is built from a code-controlled internal string (never client input), put `// lint-arbitrary-ord: reviewed <reason>` on the same line or the line directly above the call. The reason is mandatory — a bare marker still WARNs ("reviewed marker without a reason"). The marker records a review; it is not an allowlist for client-supplied ORDs (types/security.md §4). `[ev: retro panccadia-restart-seq-comp-lockout-hours Δ4]`
 
 ## Pre-release real-jar smoke test

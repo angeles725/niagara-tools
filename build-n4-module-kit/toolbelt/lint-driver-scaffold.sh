@@ -33,6 +33,7 @@
 # (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
 # `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
 # `n4lint lint-driver-scaffold <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+# verify-module.sh --src runs the same rule on every driver module (its driver-scaffold rows, types/driver-authoring.md § 12).
 # Mutation: LDS2 -- drop the pingOk-only body match and the TODO match, and the wizard doPing stops failing
 # Mutation: LDS3 -- drop the TODO-in-doPing match and a half-edited wizard doPing passes
 # Mutation: LDS4 -- drop the submit(null) match and the wizard discovery job stops warning
