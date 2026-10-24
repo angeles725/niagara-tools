@@ -54,8 +54,8 @@ func writeTree(t *testing.T, dir string, files map[string]string) {
 // case) and compares exit code, stdout and stderr byte for byte, the parse-time line aside.
 func TestGolden(t *testing.T) {
 	paths, _ := filepath.Glob("testdata/*.txt")
-	if len(paths) < 38 {
-		t.Fatalf("found %d golden cases, want at least 38", len(paths))
+	if len(paths) < 56 {
+		t.Fatalf("found %d golden cases, want at least 56", len(paths))
 	}
 	for _, p := range paths {
 		t.Run(strings.TrimSuffix(filepath.Base(p), ".txt"), func(t *testing.T) {
