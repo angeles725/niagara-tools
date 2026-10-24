@@ -1,0 +1,17 @@
+-- args --
+--wiring-map
+@DIR@/map.md
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/M.java:2  LTF1: link-in target "mapped" (wiring-map Table 2) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- map.md --
+## Table 2 — SUMMARY display slots (control → facade)
+| Facade slot | Name | Source RT slot | Ord |
+|---|---|---|---|
+| `mapped` | M | `src1` | |
+-- root/com/x/M.java --
+class M {
+@NiagaraProperty(name = "mapped", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

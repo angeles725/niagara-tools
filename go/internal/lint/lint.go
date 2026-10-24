@@ -108,6 +108,13 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
+// Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk. A
+// non-nil error is printed verbatim on stderr (the rule writes the whole text) and exits 3 with no row.
+type Configurer interface {
+	Configure(a Args) error
+}
+
 // ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
@@ -122,6 +129,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
+	// implementing Configurer.
+	Option string
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
 	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.

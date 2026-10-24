@@ -15,6 +15,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
@@ -61,6 +62,7 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		linktargetflags.Spec(),
 		size.Spec(),
 		wsplacement.Spec(),
 		recoverypath.Spec(),

@@ -1,0 +1,11 @@
+-- args --
+@DIR@/file.java
+-- want --
+exit 3
+-- stderr --
+lint-link-target-flags: not a directory: @DIR@/file.java
+-- file.java --
+class A {
+// Commissioning link from control
+@NiagaraProperty(name = "sl", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
