@@ -12,6 +12,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
 
 // JSON-RPC error codes (server.py:24).
@@ -27,7 +28,7 @@ const (
 const NotImplemented = "is not implemented in this version of the Go server"
 
 // ReasonNotConnected is safety.REASON_NOT_CONNECTED.
-const ReasonNotConnected = "not connected"
+const ReasonNotConnected = safety.ReasonNotConnected
 
 // Handler runs one tool on validated arguments. Its result becomes structuredContent and the
 // text content. A *ToolError, *box.Error or *pyjson.ValueError is shown to the model (an auth
