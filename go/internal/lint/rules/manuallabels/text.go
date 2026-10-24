@@ -9,6 +9,8 @@ import (
 
 func firstRune(s string) rune { r, _ := utf8.DecodeRuneInString(s); return r }
 
+func lastRune(s string) rune { r, _ := utf8.DecodeLastRuneInString(s); return r }
+
 // label is one quoted label of the manual and its 1-based line.
 type label struct {
 	text string
@@ -54,19 +56,25 @@ func hasLetter(s string) bool {
 
 // units are the UI text units of one decoded file (\uNNNN escapes, then HTML entities, decoded): HTML text
 // nodes (>…<), string literals ("…", '…' with backslash escapes on one line, `…`) and lexicon or properties
-// values (key=value), each as the three Python regexes find them; empty units are dropped.
-func units(s string) []string {
+// values (key=value), each as the three Python regexes find them; empty units are dropped. stems are the
+// string literals that end in a space, "(" or ":", the text the UI joins a runtime value to
+// ("Guardado (" + n + ")", "HTTP " + status).
+func units(s string) (out, stems []string) {
 	s = htmltext.Unescape(unicodeEscapes(s))
-	var out []string
 	add := func(u string) {
 		if u != "" {
 			out = append(out, u)
 		}
 	}
 	textNodes(s, add)
-	literals(s, add)
+	literals(s, func(u string) {
+		add(u)
+		if u != "" && strings.ContainsAny(u[len(u)-1:], " \t(:") {
+			stems = append(stems, u)
+		}
+	})
 	values(s, add)
-	return out
+	return out, stems
 }
 
 // unicodeEscapes is re.sub(r"\\u([0-9a-fA-F]{4})", chr): a surrogate code point is written as its three

@@ -14,7 +14,7 @@ func TestUnits(t *testing.T) {
 		"\n\n  \n\tk=Uno\n#c=1\n!c=2\n=c=3\n k2 = Dos \nnovalue\n": {"Uno", " Dos "},
 		`k=\u00e1&amp;\\u0042`:                                     {`á&\B`},
 	} {
-		if got := units(in); !reflect.DeepEqual(got, want) {
+		if got, _ := units(in); !reflect.DeepEqual(got, want) {
 			t.Errorf("units(%q) = %q, want %q", in, got, want)
 		}
 	}

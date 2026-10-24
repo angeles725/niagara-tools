@@ -11,7 +11,9 @@
 # value — or be its prefix ending at a word boundary ("Rearranque" matches "Rearranque 1",
 # "Guardado" matches "Guardado (" + n + ")"), ignoring case, accents, collapsed whitespace and a
 # trailing ':'. A mid-unit substring is not a match: a manual quoting "Corte" after the UI
-# renamed it "Temp. de corte" is the drift to catch.
+# renamed it "Temp. de corte" is the drift to catch. A label the UI builds at runtime is found too:
+# a string literal ending in a space, "(" or ":" (a stem) followed, at a word boundary, by one more
+# word ("Guardado (N)" for "Guardado (" + n + ")", "HTTP 400" for "HTTP " + status).
 # A label not found is a WARN — labels may be paraphrased on purpose, so a human reads each row.
 #
 # Usage:  lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]
@@ -29,6 +31,7 @@
 # Mutation: ML4 -- dropping the \uNNNN decode makes an accented lexicon label look missing
 # Mutation: ML8 -- dropping the word-boundary test lets "Guard" match the unit "Guardar"
 # Mutation: ML11 -- opting out of the empty-root ERROR reports every label missing on a typo'd ui-dir (exit 0)
+# Mutation: ML12 -- dropping the stem match WARNs on a label the UI joins to a runtime value
 #
 # Implementation: rule package go/internal/lint/rules/manuallabels on the shared engine go/internal/lint
 # (walker, Mode FileFirst parser, Joined TreeRule, row formatter; go/README.md) and go/internal/htmltext

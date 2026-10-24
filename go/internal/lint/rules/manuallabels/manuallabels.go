@@ -72,10 +72,16 @@ func (r *rule) Configure(a lint.Args) error {
 
 // CheckTree builds the haystack of every UI file under every <ui-dir>, then checks each label of the manual.
 func (r *rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
-	hay := map[string]bool{}
+	hay, stems := map[string]bool{}, map[string]bool{}
 	for _, f := range files {
-		for _, u := range units(htmltext.Decode([]byte(strings.Join(f.Raw, "\n")))) {
+		us, ss := units(htmltext.Decode([]byte(strings.Join(f.Raw, "\n"))))
+		for _, u := range us {
 			hay[norm(u)] = true
+		}
+		for _, u := range ss {
+			if n := norm(u); hasLetter(n) {
+				stems[n] = true
+			}
 		}
 	}
 	sorted := make([]string, 0, len(hay))
@@ -87,7 +93,7 @@ func (r *rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 	checked, missing := 0, 0
 	for _, l := range labels(r.text) {
 		checked++
-		if !found(norm(l.text), sorted) {
+		if n := norm(l.text); !found(n, sorted) && !templated(n, stems) {
 			missing++
 			out = append(out, lint.Finding{Path: r.manual, Line: l.line, Msg: `label "` + l.text + `" not found in the UI source`})
 		}
@@ -100,6 +106,21 @@ func (r *rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
 func norm(s string) string {
 	s = htmltext.Strip(htmltext.CollapseSpace(htmltext.StripMarks(s)))
 	return htmltext.CaseFold(htmltext.Strip(strings.TrimRight(s, ":")))
+}
+
+// templated reports whether a normalized label is a stem the UI joins a runtime value to, at a word boundary,
+// plus one word: "Guardado (N)" for "Guardado (" + n + ")", "HTTP 400" for "HTTP " + status (truth fix
+// 2026-10-24: the manual quotes the label as the operator reads it, with a placeholder or a sample value).
+func templated(label string, stems map[string]bool) bool {
+	for i := range label {
+		if i == 0 || (htmltext.IsAlnum(firstRune(label[i:])) && htmltext.IsAlnum(lastRune(label[:i]))) {
+			continue
+		}
+		if rest := strings.TrimLeft(label[i:], " :"); stems[label[:i]] && rest != "" && !strings.Contains(rest, " ") {
+			return true
+		}
+	}
+	return false
 }
 
 // found reports whether a normalized label equals a unit or is its prefix ending at a word boundary (the

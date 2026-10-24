@@ -114,3 +114,14 @@ teardown() { rm -rf "$T"; }
   [[ "$output" != *"WARN"* ]]
   [[ "$output" != *"SUMMARY"* ]]
 }
+
+@test "ML12: a label the UI builds from a literal stem plus one runtime value is found; a longer tail still WARNs" {
+  printf 'el.textContent = "Guardado (" + n + ")";\nmsg = "HTTP " + r.status;\nwhy = "Deshielo omitido: " + reason;\n' > "$T/ui/rc/save.js"
+  printf 'See "Guardado (N)", "HTTP 400", "Deshielo omitido: razón", "Corte N" and "HTTP 400 Bad Request".\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"Corte N"'* ]]
+  [[ "$output" == *'"HTTP 400 Bad Request"'* ]]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 2 ]
+  [[ "$output" == *"checked=5 missing=2"* ]]
+}
