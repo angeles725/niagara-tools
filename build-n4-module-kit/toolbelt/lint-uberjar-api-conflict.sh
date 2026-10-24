@@ -15,7 +15,7 @@
 # module root; tests/lint-empty-root.bats ER5).
 #
 # Usage:  lint-uberjar-api-conflict.sh <src-root>     (finds *.gradle.kts under it)
-#   Row:  WARN  lint-uberjar-api-conflict  <file>  <group:artifact> is both uberjar()'d and api()'d
+#   Row:  WARN  lint-uberjar-api-conflict  <file>  <group:artifact> is both uberjar()d and api()d
 #   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: UAC2 -- skip the intersection and UAC2 stops warning on a lib both uberjar'd and api'd
