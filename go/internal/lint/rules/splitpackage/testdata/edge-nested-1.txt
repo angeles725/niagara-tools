@@ -1,0 +1,27 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  n  declared in 2 modules: A (A/src/a/X.java), A/A-rt (A/A-rt/src/a/X.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+WARN  split-package-check  n2  declared in 2 modules: A (A/src/a/Y2.java), A/A-rt (A/A-rt/src/build/Y.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/.d/Y.java --
+package n3;
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/a/X.java --
+package n;
+-- proj/A/A-rt/src/build/Y.java --
+package n2;
+-- proj/A/A-rt/src/x-worktrees/Y.java --
+package n4;
+-- proj/A/A-rt/srcTest/Y.java --
+package n2;
+-- proj/A/build.gradle.kts --
+-- proj/A/src/.keep --
+k
+-- proj/A/src/a/X.java --
+package n;
+-- proj/A/src/a/Y2.java --
+package n2;

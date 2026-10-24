@@ -1,0 +1,16 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+ERROR  lint-recovery-path  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- a/G.java --
+package com.x;
+public class G extends BComponent {
+  void execute() {
+    if (inDefrost) return;
+    setHeatOut(false);
+  }
+}
+-- e/x.txt --
+x

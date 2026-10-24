@@ -1,0 +1,17 @@
+-- args --
+--max-class
+4
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Mod/src/com/x/Open.java:3  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
+WARN  lint-size  @DIR@/Mod/src/com/x/Open.java:2  class Open has 6 hand-written lines (> 4, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- Mod/src/com/x/Open.java --
+package com.x;
+public class Open {
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g1;
+  int g2;
+  int g3;
+}

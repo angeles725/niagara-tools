@@ -1,0 +1,86 @@
+declared difference (truth fix T3, truth-array-1): add("k", new BFoo[2]) adds an array, not a component.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BShapes.java:4  add("a", new BFolder()) in bare() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:7  add("b", new BFolder()) in recv() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:16  add("d", new BFolder()) in spaced() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:17  add("e", new BFolder()) in spaced() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:27  add(i, new BFolder()) in numeric() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:30  add("f", new BFolder()) in three() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:33  add("g", new BFolder()) in casts() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:34  add("h", new BFolder()) in casts() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:38  add("j", new BFoo()) in generic() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:42  add("n", new BBar()) in generic() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:45  add("p", new BFolder()) in two() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:48  add(name(x, y), new BFoo()) in nested() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:49  add("r,)", new BFoo()) in nested() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:50  add('(', new BFoo()) in nested() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:54  add("t", create(...)) in creators() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:55  add("u", x.y.create(...)) in creators() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:56  add("v", T.class.newInstance(...)) in creators() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BShapes.java:57  add("w", tmpl.newCopy(...)) in creators() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BShapes.java --
+package com.x;
+public class BShapes extends BComponent {
+  void bare() {
+    add("a", new BFolder());
+  }
+   void recv() {
+    parent.getParent().add("b", new BFolder());
+  }
+   void notAdd() {
+    addAll("c", new BFolder());
+    addLink("c", new BFolder());
+    my_add("c", new BFolder());
+    xadd("c", new BFolder());
+  }
+   void spaced() {
+    p.add   ("d", new BFolder());
+    p . add ("e", new BFolder());
+  }
+   void oneArg() {
+    list.add(new BFolder());
+    add(new BFolder(), );
+  }
+   void numeric() {
+    list.add(0, new BFolder());
+    list.add(-1, new BFolder());
+    list.add(2L, new BFolder());
+    list.add(i, new BFolder());
+  }
+   void three() {
+    add("f", new BFolder(), Flags.READONLY | Flags.HIDDEN);
+  }
+   void casts() {
+    add("g", (BComponent) new BFolder());
+    add("h", (BComponent)(BValue) new BFolder());
+    add("i", (BComponent) (x));
+  }
+   void generic() {
+    add("j", new BFoo<String>());
+    add("k", new BFoo[2]);
+    add("l", new Bx());
+    add("m", new Foo());
+    add("n", new  BBar ());
+  }
+   void two() {
+    add("o", x); add("p", new BFolder()); add("q", new BFolder());
+  }
+   void nested() {
+    add(name(x, y), new BFoo(a, (b), c[1], d{}));
+    add("r,)", new BFoo());
+    add('(', new BFoo());
+    add("s\\")", new BFoo());
+  }
+   void creators() {
+    add("t", create(t));
+    add("u", x.y.create (t));
+    add("v", T.class.newInstance());
+    add("w", tmpl.newCopy());
+    add("x", recreate(t));
+    add("y", createFoo(t));
+  }
+}

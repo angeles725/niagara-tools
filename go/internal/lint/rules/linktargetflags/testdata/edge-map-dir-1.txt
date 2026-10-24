@@ -1,0 +1,13 @@
+-- args --
+--wiring-map
+/
+@DIR@/root
+-- want --
+exit 3
+-- stderr --
+lint-link-target-flags: --wiring-map file not found: /
+-- root/com/x/A.java --
+class A {
+// Commissioning link from control
+@NiagaraProperty(name = "sl", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

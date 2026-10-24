@@ -1,0 +1,119 @@
+declared difference (truth fix T2, truth-literal-code-1): B2 and B3 only quote "@NiagaraType" and
+"extends BFoo" in string literals, so they are pure classes and their m() is measured;
+(truth fix T3, truth-type-name-1) the interface N2 and the enum N6 name their rows (the bash lint printed "class ?" at line 1 and "class Inner").
+-- args --
+--max-class
+0
+--max-method
+2
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/B1.java:3  class B1 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B1.java:4  method m() in pure class B1 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/B2.java:2  class B2 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B2.java:4  method m() in pure class B2 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/B3.java:2  class B3 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B3.java:4  method m() in pure class B3 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/B4.java:2  class B4 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B4.java:3  method m() in pure class B4 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/B5.java:2  class B5 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B6.java:2  class B6 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/B6.java:3  method m() in pure class B6 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/N1.java:1  class ? has 2 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N2.java:2  class N2 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N3.java:4  class N3 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N4.java:2  class N4 has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N5.java:2  class Tabbed has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N6.java:2  class N6 has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/N7.java:1  class ? has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- B1.java --
+package com.x;
+// @NiagaraType
+public class B1 {
+  void m() {
+    a();
+    b();
+  }
+}
+-- B2.java --
+package com.x;
+public class B2 {
+  String t = "@NiagaraType";
+  void m() {
+    a();
+    b();
+  }
+}
+-- B3.java --
+package com.x;
+public class B3 {
+  String t = "x extends BFoo";
+  void m() {
+    a();
+    b();
+  }
+}
+-- B4.java --
+package com.x;
+public class B4 extends Bx {
+  void m() {
+    a();
+    b();
+  }
+}
+-- B5.java --
+package com.x;
+public class B5
+    extends BComponent {
+  void m() {
+    a();
+    b();
+  }
+}
+-- B6.java --
+package com.x;
+public class B6 implements BIface {
+  void m() {
+    a();
+    b();
+  }
+}
+-- N1.java --
+package com.x;
+import a.b;
+-- N2.java --
+package com.x;
+public interface N2 {
+  void a();
+}
+-- N3.java --
+package com.x;
+// class Fake
+/* class Fake2 */
+public final class N3<T> extends Object {
+}
+-- N4.java --
+package com.x;
+public class N4 {
+  String s = "a class Lit";
+  Class<?> k = N4.class;
+}
+-- N5.java --
+package com.x;
+class	Tabbed {
+}
+class Second {
+}
+-- N6.java --
+package com.x;
+public enum N6 {
+  A, B;
+  static class Inner {}
+}
+-- N7.java --
+package com.x;
+public classy N7 {
+  int a;
+}

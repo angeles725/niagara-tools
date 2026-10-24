@@ -3,6 +3,7 @@
 The contract the launcher runs. Follow it in order; the gates are not optional.
 
 ## 0. Orient (before touching anything)
+- **Run a current kit:** `scripts/kit-resolve.sh` (niagara-tools repo root; the launcher runs it first) must print `KIT=<path> SHA=<sha> (origin/main, clean)`. Exit 2 = the chosen kit is behind origin/main, dirty or unfetchable: refresh as printed (`--refresh` for a clean kit-main worktree) before any build or gate. It lives in `scripts/` because toolbelt scripts never call version control (kit-links L2). `[ev: retro r10-stale-kit-resolution Δ1]`
 - `corpus-nav find "<topic>"` — read the matching blocks. 90% is already documented; don't re-derive.
 - Read the EXEMPLAR source for the type (SOURCES.md), verbatim — not from memory.
 - **Reference first:** when the user supplies a reference implementation (a course lab, a vendor sample, an earlier
@@ -85,15 +86,19 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 
 1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
    bit; `./gradlew` is non-functional without it.
-2. **Align `gradle.properties` + `settings.gradle.kts` to a SIBLING module of the same SDK family:**
-   copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
-   `org.gradle.java.installations.paths` from an existing sibling that deploys to the same
-   station. Do NOT leave the scaffold's commented-out (auto-detect) JDK/node block: a commented
-   block builds in WSL (where `build.sh` overrides the path via `-P`) but fails reproducibility
-   on a Windows `gradlew` build. Also align `gradlePluginVersion` / `settingsPluginVersion` in
-   `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
-   plugin version — see `build-verify.md §Build target & plugin version`). For a logic-only
-   module with no `-ux` profile the node/JDK lines may stay commented.
+2. **Set the host build-location keys once per machine, in the user-level `gradle.properties`:**
+   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` go in
+   `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),
+   never in the repository; the repository keeps only the machine-independent
+   `org.gradle.java.installations.auto-detect=false` (lint-structure L12). Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
+   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties`. Also align
+   `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` to a sibling of the same
+   SDK family (each Niagara install ships exactly one plugin version — see
+   `build-verify.md §Build target & plugin version`). `[ev: retro r10-user-level-gradle-keys Δ1]`
+   > **Superseded (2026-10-24, R10-D8):** "copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
+   > `org.gradle.java.installations.paths` from an existing sibling … Do NOT leave the scaffold's
+   > commented-out (auto-detect) JDK/node block: a commented block … fails reproducibility on a Windows
+   > `gradlew` build." The user-level file gives the Windows build its paths without committing them.
 3. **Run `toolbelt/preflight.sh` + first build:** `preflight.sh <niagara_home> <gradle-root>`
    validates the environment (§0.b); then `toolbelt/build.sh <group-dir> <MOD>` runs the first
    full clean+slotomatic+jar+verify cycle.
@@ -149,6 +154,8 @@ Safe combinations: `clean slotomatic jar` — the only correct kit build (`build
 **Station-lock recipe (exit 31):** `:clean` fails with "Unable to delete `<niagara_home>/modules/<jar>`" when a running station holds the lock (`toolbelt/build.sh:15,:82-88`). Fix: `toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>` creates a writable mirror so the plugin can copy freely without touching the live install (see §0.b). `[ev: corpus B807]`
 
 **Post-jar copy lock (exit 32):** the plugin's LAST step copies the new jar into `<niagara_home>/modules/`; a Windows-side process (Workbench, a station) holding the old jar open on a `/mnt/c` mount makes that copy fail with `FileAlreadyExistsException` — invisible to `preflight.sh`'s jar-lock scan, which SKIPs 9p/drvfs mounts by design. `build.sh` recognizes the signature, exits 32 (not an opaque 30), and names each `build/libs/<jar>` rebuilt THIS run as the artifact of record (a profile gradle never reached is flagged "not rebuilt"). The verify gate did NOT run: either close the holder and re-run, or run `verify-module.sh` on the `build/libs` jar before any deploy. `[ev: retro panccadia-restart-seq-comp-lockout-hours Δ3]` The classifier is route-independent: the Windows `gradlew.bat` route's backslash paths and Kotlin message (`Tried to overwrite the destination, but failed to delete it`) also exit 32. Always run QUALIFIED tasks (`:<MOD>-<part>:jar`) — a bare `gradlew jar` builds every subproject and fails on an unrelated jar the station holds; on Windows identify the holder with `tasklist` (`station.exe`, `wb.exe`): leftover `java.exe` processes are Gradle daemons (`gradlew --stop`). `[ev: retro n4-course-signed-jars-gate-fix Δ5]`
+
+**Slot-o-Matic skip (exit 34):** gradle ended BUILD SUCCESSFUL but Slot-o-Matic logged `Could not process <file>.java` for a generated region whose stamp count is not exactly one, so the jar carries stale generated code. `build.sh` prints one `FAIL slotomatic-skip <path> (<reason>)` row per file (`toolbelt/lib/slotomatic-skip.sh`), restores the pre-build `modules/` jar and skips the gate. Fix: delete that file's generated region and re-run (METHODOLOGY K15). `[ev: retro r10-slotomatic-skip-fail-open Δ1]`
 
 ### 4.b Test layer — BTestNg station-lifecycle tests `[ev: corpus B815]`
 

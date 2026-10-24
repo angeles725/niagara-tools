@@ -1,0 +1,18 @@
+-- args --
+--max-class
+0
+--strict
+--max-class
+99
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
