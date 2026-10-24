@@ -106,7 +106,28 @@ func liveURL(base, comp string) (string, error) {
 	case u.RawQuery != "" || u.ForceQuery || u.Fragment != "":
 		return "", fmt.Errorf("--obix must not carry a query or fragment: %s", base)
 	}
-	return strings.TrimSuffix(base, "/") + "/config/" + strings.TrimSuffix(strings.TrimPrefix(comp, "/"), "/") + "/", nil
+	path := strings.TrimSuffix(strings.TrimPrefix(comp, "/"), "/")
+	// Mutation: OLA-component -- a raw .., ?, # or % in the path GETs a different resource than the component.
+	if !slotPath(path) {
+		return "", fmt.Errorf("--component must be a slot path without .. segments, ?, #, %% or control characters: %q", comp)
+	}
+	return strings.TrimSuffix(base, "/") + "/config/" + path + "/", nil
+}
+
+// slotPath: path is pasted into the URL as is, so it may hold no .. segment, no ?, # or % (which would
+// end or re-encode the path) and no control character.
+func slotPath(path string) bool {
+	for _, r := range path {
+		if r < 0x20 || r == 0x7f || strings.ContainsRune("?#%", r) {
+			return false
+		}
+	}
+	for _, seg := range strings.Split(path, "/") {
+		if seg == ".." {
+			return false
+		}
+	}
+	return true
 }
 
 // parseArgs reads the flags as the bash loop did (a later flag wins); ok is false on an unknown

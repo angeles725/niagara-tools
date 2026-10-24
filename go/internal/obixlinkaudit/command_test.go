@@ -3,6 +3,7 @@ package obixlinkaudit
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,6 +126,11 @@ func TestLive(t *testing.T) {
 	}
 }
 
+// compErr is the --component refusal for comp.
+func compErr(comp string) string {
+	return fmt.Sprintf("obix-link-audit: --component must be a slot path without .. segments, ?, #, %% or control characters: %q\n", comp)
+}
+
 // TestLiveArgumentGuards: a base or component that cannot name one station GET is exit 3 before any
 // request, and no password given in the URL reaches the output.
 func TestLiveArgumentGuards(t *testing.T) {
@@ -146,6 +152,14 @@ func TestLiveArgumentGuards(t *testing.T) {
 		{"query in the base", s.URL + "/obix?x=1", "/Plant/Facade",
 			"obix-link-audit: --obix must not carry a query or fragment: " + s.URL + "/obix?x=1\n"},
 		{"unparseable base", "http://[::1/obix", "/Plant/Facade", "obix-link-audit: --obix is not a URL\n"},
+		{"component dot-dot segment", s.URL + "/obix", "/Plant/../Services/UserService", compErr("/Plant/../Services/UserService")},
+		{"component dot-dot alone", s.URL + "/obix", "..", compErr("..")},
+		{"component query", s.URL + "/obix", "/Plant/Facade?x=1", compErr("/Plant/Facade?x=1")},
+		{"component fragment", s.URL + "/obix", "/Plant#x", compErr("/Plant#x")},
+		{"component percent", s.URL + "/obix", "/Plant%2F..%2FServices", compErr("/Plant%2F..%2FServices")},
+		{"component newline", s.URL + "/obix", "/Plant\nFacade", compErr("/Plant\nFacade")},
+		{"component tab", s.URL + "/obix", "/Plant\tFacade", compErr("/Plant\tFacade")},
+		{"component DEL", s.URL + "/obix", "/Plant\x7f", compErr("/Plant\x7f")},
 	} {
 		code, out, errs := run(creds, "--map", wiring, "--obix", tc.base, "--component", tc.comp)
 		if code != ExitEnv || out != "" || errs != tc.stderr {
