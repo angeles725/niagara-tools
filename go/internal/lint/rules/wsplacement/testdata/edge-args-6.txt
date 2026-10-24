@@ -1,0 +1,20 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-ws-placement.sh [--strict] <src-root>...
+-- a/BP.java --
+package com.x;
+public class BP extends BComponent {
+  void seed() {
+    add("n", new BFolder());
+  }
+}
+-- b/BQ.java --
+package com.x;
+public class BQ extends BComponent {
+  void go() {
+    x.add("q", create(t));
+  }
+}

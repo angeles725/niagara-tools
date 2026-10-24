@@ -20,6 +20,8 @@ func TestParseArgs(t *testing.T) {
 		{"positional only", []string{"I", "K"}, options{index: "I", root: "K"}, ""},
 		{"strict and since", []string{"--strict", "--deltas-since", "2026-09-24", "I", "K"},
 			options{strict: true, since: "2026-09-24", index: "I", root: "K"}, ""},
+		{"exact stems", []string{"--exact-stems", "--strict", "I", "K"},
+			options{strict: true, exactStems: true, index: "I", root: "K"}, ""},
 		{"last --deltas-since wins", []string{"--deltas-since", "2026-01-01", "--deltas-since", "2026-02-02", "I", "K"},
 			options{since: "2026-02-02", index: "I", root: "K"}, ""},
 		{"-- ends the flags", []string{"--", "--strict", "K"}, options{index: "--strict", root: "K"}, ""},
@@ -59,7 +61,7 @@ func TestHarvestText(t *testing.T) {
 	}
 	for _, c := range cases {
 		h := newHarvest(true)
-		h.add([]byte(c.text))
+		h.add("f.md", []byte(c.text))
 		gotT := h.sortedTokens()
 		gotD := keys(h.deltas)
 		if !reflect.DeepEqual(gotT, c.tokens) || !reflect.DeepEqual(gotD, c.delta) {

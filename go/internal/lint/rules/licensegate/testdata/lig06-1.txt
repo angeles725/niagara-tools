@@ -1,0 +1,21 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BAlt.java --
+package com.x;
+public class BAlt extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void doA() {
+    if (isFault()) return;
+    a();
+  }
+  public void doB() {
+    if (isFatalFault()) return;
+    b();
+  }
+}

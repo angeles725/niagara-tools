@@ -1,0 +1,12 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Mod/src/com/x/Stray.java:4  stray-end: END BAJA AUTO GENERATED CODE with no open region
+-- stderr --
+-- Mod/src/com/x/Stray.java --
+package com.x;
+public class Stray {
+  int a;
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}
