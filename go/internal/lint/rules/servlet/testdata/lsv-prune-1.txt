@@ -1,0 +1,23 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+-- stderr --
+-- one/.deploy-baseline/Stale.java --
+package demo;
+import javax.baja.web.*;
+public class NoAuth extends BWebServlet {
+  public void doPost(WebOp op) throws Exception {
+    // no getRemoteUser()/op.getUser() gate before a mutating write
+    ((BComponent) resolve(op)).set("setpoint", op.getRequest().getParameter("v"));
+  }
+}
+-- one/WithAuth.java --
+package demo;
+import javax.baja.web.*;
+public class WithAuth extends BWebServlet {
+  public void doPost(WebOp op) throws Exception {
+    if (op.getUser() == null) { op.getResponse().sendError(401); return; }
+    ((BComponent) resolve(op)).set("setpoint", op.getRequest().getParameter("v"));
+  }
+}

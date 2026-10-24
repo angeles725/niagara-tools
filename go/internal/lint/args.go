@@ -11,12 +11,13 @@ import (
 type Mode int
 
 const (
-	One     Mode = iota // [--strict] [--] <root>: exactly one root
-	First               // [--strict] [--] <root>...: only the first root is checked and scanned
-	Each                // [--strict] [--] <root>...: every root is checked first, then scanned in order
-	Raw                 // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
-	Exact               // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
-	Leading             // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	One      Mode = iota // [--strict] [--] <root>: exactly one root
+	First                // [--strict] [--] <root>...: only the first root is checked and scanned
+	Each                 // [--strict] [--] <root>...: every root is checked first, then scanned in order
+	Raw                  // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
+	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
+	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
 )
 
 // Args is a parsed command line.
@@ -32,15 +33,25 @@ type UsageError struct{ Text string }
 func (e *UsageError) Error() string { return e.Text }
 
 // Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting
-// 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, or "<name>: not a directory: <root>".
+// 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>"
+// (Trailing), or "<name>: not a directory: <root>".
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 	var a Args
+	if mode == Trailing && len(args) > 0 {
+		for _, arg := range args[1:] {
+			if arg != "--strict" {
+				return Args{}, &UsageError{name + ": unknown option: " + arg + "\n"}
+			}
+			a.Strict = true
+		}
+		args = args[:1]
+	}
 	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
 		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots
 		a.Strict, args = true, args[1:]
 	}
 flags:
-	for mode != Raw && mode != Exact && mode != Leading && len(args) > 0 {
+	for mode != Raw && mode != Exact && mode != Trailing && mode != Leading && len(args) > 0 {
 		switch arg := args[0]; {
 		case arg == "--strict":
 			a.Strict = true
@@ -54,7 +65,7 @@ flags:
 			break flags
 		}
 	}
-	if len(args) < 1 || ((mode == One || mode == Exact) && len(args) != 1) {
+	if len(args) < 1 || ((mode == One || mode == Exact || mode == Trailing) && len(args) != 1) {
 		return Args{}, &UsageError{usage + "\n"}
 	}
 	a.Roots = args[:1]

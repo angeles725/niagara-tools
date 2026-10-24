@@ -1,0 +1,127 @@
+-- args --
+@DIR@/all-checks/G/M
+-- want --
+exit 1
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  A-rt/META-INF/module.xml  L6: hand-authored META-INF/module.xml found; author module-include.xml instead
+FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (2 type(s) declared, zero key=value entries)
+FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  A-rt/A-rt.gradle.kts  L7: dependency version is not a 3-part floor (use X.Y.Z e.g. 4.14.0, not X.Y e.g. 4.14)
+FAIL  lint-structure  A-rt/src/com/x/Bad.java  L1: package declares javax.baja.* (framework namespace; OEM modules use com.<vendor>.*)
+FAIL  lint-structure  A-rt/src/com/x/Bad.java  L2: 2 @NiagaraType annotations in one file (one public type per file)
+WARN  lint-structure  A-rt/src/com/x/model  L3: pure-model package contains javax.baja.* imports (advisory; isolate control logic from Baja for testability)
+WARN  lint-structure  A-rt/src/com/x/model/sub/model  L3: pure-model package contains javax.baja.* imports (advisory; isolate control logic from Baja for testability)
+FAIL  lint-structure  A-rt  L11: mixed BTest+JUnit srcTest without both :test-wb and junit gradle declarations
+FAIL  lint-structure  B-ux  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+FAIL  lint-structure  B-ux  L9: empty skeleton artifact (0 Java classes, empty palette — delete or populate the profile)
+FAIL  lint-structure  D-se  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+FAIL  lint-structure  E-doc  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+FAIL  lint-structure  plain  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
+FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.installations block (add paths + auto-detect=false to pin JDK 8)
+FAIL  lint-structure  M/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: C:\\Niagara)
+FAIL  lint-structure  S1/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
+FAIL  lint-structure  S2/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/b)
+FAIL  lint-structure  @DIR@/all-checks/G/M/settings.gradle.kts:2  L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)
+WARN  lint-structure  @DIR@/all-checks/G/M/build.gradle.kts  L15: applies com.tridium.niagara-signing without (uncommented) allowDefaultProfile.set(false) (or = false), niagaraSigning {, signingProfileFile — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)
+-- stderr --
+-- all-checks/.git/HEAD --
+ref: refs/heads/main
+-- all-checks/G/M/.dot-rt/module-include.xml --
+<types/>
+-- all-checks/G/M/A-rt/A-rt.gradle.kts --
+dependencies { api(":baja:4.14") }
+-- all-checks/G/M/A-rt/META-INF/module.xml --
+<module/>
+-- all-checks/G/M/A-rt/extra/z.gradle.kts --
+dependencies { api(":test-wb") }
+-- all-checks/G/M/A-rt/module-include.xml --
+<types>
+<type name="A"/>
+<type name="B"/>
+</types>
+-- all-checks/G/M/A-rt/module.lexicon --
+# only a comment
+
+ k=indented
+-- all-checks/G/M/A-rt/src/.hidden/H.java --
+package javax.baja.hidden;
+-- all-checks/G/M/A-rt/src/com/x/Bad.java --
+  package javax.baja.foo;
+@NiagaraType
+class A {}
+  @NiagaraType(x)
+class B {}
+// @NiagaraType
+-- all-checks/G/M/A-rt/src/com/x/model/M.java --
+package com.x.model;
+import javax.baja.sys.BObject;
+-- all-checks/G/M/A-rt/src/com/x/model/sub/model/N.java --
+package com.x.model.sub.model;
+   import javax.baja.nre.Foo;
+-- all-checks/G/M/A-rt/src/com/x/model2/O.java --
+import javax.baja.sys.BObject;
+-- all-checks/G/M/A-rt/src/com/x/other/model/Clean.java --
+import java.util.List;
+-- all-checks/G/M/A-rt/srcTest/test/T1.java --
+import javax.baja.test.BTestNg;
+-- all-checks/G/M/A-rt/srcTest/test/T2.java --
+  import org.junit.Test;
+-- all-checks/G/M/B-ux/module.palette --
+<palette><folder/></palette>
+-- all-checks/G/M/C-wb/module-include.xml --
+<types/>
+-- all-checks/G/M/C-wb/src/X.java --
+class X {}
+-- all-checks/G/M/D-se/README --
+x
+-- all-checks/G/M/E-doc/README --
+x
+-- all-checks/G/M/F-rt/module-include.xml --
+<types/>
+-- all-checks/G/M/F-rt/module.palette --
+<p n="F"/>
+-- all-checks/G/M/build.gradle.kts --
+plugins {
+  id ( "com.tridium.niagara-signing" )
+}
+val t = """
+niagaraSigning {
+"""
+val c = '{'
+// signingProfileFile
+aliases.set(listOf("A"))
+-- all-checks/G/M/gradle.properties --
+#org.gradle.java.installations.paths=/jdk
+org.gradle.java.installations.auto-detect=false
+niagara_home=C:\\Niagara
+nodeHome=D:/node
+-- all-checks/G/M/inc-only/module-include.xml --
+<types>
+<type name="Q"/>
+</types>
+-- all-checks/G/M/inc-only/module.lexicon --
+Q.displayName=Q
+-- all-checks/G/M/notprofile/README --
+x
+-- all-checks/G/M/plain/build.gradle --
+// groovy
+-- all-checks/G/M/settings.gradle.kts --
+pluginManagement {}
+  val gradlePluginVersion = "7.6.17"
+-- all-checks/G/M/sub/.x/gradle.properties --
+niagara_home=C:\\pruned
+-- all-checks/G/M/sub/gradle.properties --
+user_home=e:\\u
+-- all-checks/G/S1/gradle.properties --
+niagara_home=/opt/a
+-- all-checks/G/S2/gradle.properties --
+x=1
+niagara_home=/opt/b
+niagara_home=/opt/c
+-- all-checks/G/S3/gradle.properties --
+x=1
+-- all-checks/gradle.properties --
+niagara_home=C:\\above

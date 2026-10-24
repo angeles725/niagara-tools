@@ -322,7 +322,7 @@ _kts_code() {
     print out }' "$1" 2>/dev/null
 }
 # The sample-sign requirements: SAMPLE_SIGN_ERE[k] (over the uncommented code) is named SAMPLE_SIGN_NAME[k] in the
-# FAIL detail. The table is lib/signing-block.sh, shared with lint-structure L15 and build.sh's dev-key WARN.
+# FAIL detail. The table is lib/signing-block.sh, shared with build.sh's dev-key WARN and mirrored by the Go lint-structure L15 (LS15-sync).
 # shellcheck disable=SC1091
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/signing-block.sh"
 SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")

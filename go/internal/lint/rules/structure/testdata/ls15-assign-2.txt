@@ -1,0 +1,23 @@
+-- args --
+@DIR@/tree/Group/Mod
+-- want --
+exit 0
+WARN  lint-structure  @DIR@/tree/Group/build.gradle.kts  L15: applies com.tridium.niagara-signing without (uncommented) allowDefaultProfile.set(false) (or = false) — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)
+-- stderr --
+-- tree/Group/Mod/Foo-rt/build.gradle.kts --
+plugins { id("com.tridium.niagara-module") }
+-- tree/Group/Mod/Foo-rt/module-include.xml --
+<types><type name="Foo" class="com.x.Foo"/></types>
+-- tree/Group/Mod/Foo-rt/module.lexicon --
+Foo.displayName=Foo
+-- tree/Group/Mod/Foo-rt/module.palette --
+<p n="Foo" t="x:Foo"/>
+-- tree/Group/build.gradle.kts --
+plugins { id("com.tridium.niagara-signing") }
+signingServices { signingProfileFactory { allowDefaultProfile = true } }
+niagaraSigning {
+  aliases.set(listOf("CodeSigning"))
+  signingProfileFile.set(layout.projectDirectory.file("profile.xml"))
+}
+-- tree/Group/settings.gradle.kts --
+  val gradlePluginVersion: String = providers.gradleProperty("niagaraPluginVersion").getOrElse("7.6.17")

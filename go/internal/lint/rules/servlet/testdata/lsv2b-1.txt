@@ -1,0 +1,20 @@
+-- args --
+@DIR@/one
+-- want --
+exit 0
+WARN  unbounded-set  CatchNo400.java:4  typed set* in handler without MIN/MAX facet enforcement
+WARN  catch-no-400  CatchNo400.java:9  catch around parse without 400 response (silent default may write bad value)
+-- stderr --
+-- one/CatchNo400.java --
+package demo;
+import javax.baja.web.*;
+public class CatchNo400 extends BWebServlet {
+  public void doPost(WebOp op) throws Exception {
+    if (op.getUser() == null) { op.getResponse().sendError(401); return; }
+    String raw = op.getRequest().getParameter("v");
+    double v;
+    try { v = Double.parseDouble(raw); }
+    catch (NumberFormatException e) { v = 0.0; } // silent default, no 400 -> WARN
+    ((BComponent) resolve(op)).setDouble("setpoint", v);
+  }
+}
