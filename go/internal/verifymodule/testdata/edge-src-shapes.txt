@@ -1,0 +1,248 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-rt.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/Foo-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Foo-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-rt.jar  no --target-version
+SKIP  stored     @DIR@/Foo-rt.jar  no --stored
+PASS  typecount  @DIR@/Foo-rt.jar  jar declares 1 types == module-include.xml
+FAIL  facets     @DIR@/Foo-rt.jar  raw-number MIN/MAX facet (wrap in BDouble.make): @DIR@/mod/Foo-rt/src/com/x/BFacets.java:30:  public static final Property withFacets = newProperty(Flags.OPERATOR, 0, BFacets.make(BFacets.MIN, 5));
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:3 OPERATOR numeric without facets (slot=roomTemp)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:4 setpoint-like slot highLimit missing UNITS
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:8 count-like slot demandLevel missing PRECISION
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:12 OPERATOR numeric without facets (slot=multiSetpoint)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:24 OPERATOR numeric null facets (slot=counter)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:29 OPERATOR numeric null facets (slot=bad)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Crlf.java:1 setpoint-like slot crlfSetpoint missing UNITS
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Crlf.java:2 OPERATOR numeric without facets (slot=crlfMulti)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Long.java:48 OPERATOR numeric without facets (slot=next)
+WARN  facets-req  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/NoEol.java:1 OPERATOR numeric without facets (slot=lastTemp)
+WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:32:  String ord = "station:|slot:/Drivers";
+WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:33:  String ord2 = "local:|foxs:"; // x
+WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BareOrdConstants.java:1:String s = "slot:/x";
+WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Latin.java:1:a "station:|ok"
+SKIP  palette    @DIR@/Foo-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-rt.jar  not a -wb jar
+PASS  phantom-dep  @DIR@/Foo-rt.jar  all module.xml dependencies declared in gradle.kts
+PASS  moduletest  @DIR@/Foo-rt.jar  moduleTest-include.xml present
+WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.bar.Thing
+WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.foo.Ext
+WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.lat.Valid
+WARN  transient-operator  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:16:  flags = Flags.OPERATOR | Flags.TRANSIENT
+WARN  transient-operator  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/BFacets.java:35:  String t = "TRANSIENT, then OPERATOR";
+WARN  compact3-import  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Imp.java:1:import java.awt.Color;
+WARN  compact3-import  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Imp.java:3:import javax.swing.JPanel;
+WARN  compact3-import  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Imp.java:4:  import java.sql.Connection;
+WARN  subscription-leak  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Nul.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
+WARN  subscription-leak  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/x/Sub.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
+WARN  subscription-leak  @DIR@/Foo-rt.jar  @DIR@/mod/Foo-rt/src/com/y/Sub3.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
+WARN  slot-wall  @DIR@/Foo-rt.jar  16 properties in class Wall (@DIR@/mod/Foo-rt/src/com/x/Wall.java) — compose into child BComponents (logic.md L21)
+WARN  slot-wall  @DIR@/Foo-rt.jar  16 properties in class NoClass (@DIR@/mod/Foo-rt/src/com/x/inner/NoClass.java) — compose into child BComponents (logic.md L21)
+verify-module: 6 passed, 1 failed, 4 skipped, 27 warned -> FAILED
+-- stderr --
+-- Foo-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Foo-rt/b.gradle.kts --
+dependencies {
+  api(":baja")
+  nre ( ":nre" )
+  implementation(project( ":Foo-ux"))
+  // api(":commented")
+  testImplementation(":tst")
+}
+-- mod/Foo-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- mod/Foo-rt/z.gradle.kts --
+api(":ignored")
+-- mod/Foo-rt/.deploy-baseline/moduleTest-include.xml --
+-- mod/Foo-rt/src/.hidden/H.java --
+String s = "station:|x";
+Object f = BFacets.make(BFacets.MIN, 1);
+-- mod/Foo-rt/src/com/x/BFacets.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name = "roomTemp", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "highLimit", type = "double", defaultValue = "0", flags = Flags.OPERATOR, facets = @Facet("BFacets.makeNumeric(1)"))
+@NiagaraProperty(name = "lowLimit", type = "double", defaultValue = "0", facets = @Facet("BFacets.makeNumeric(BUnit.getUnit(\"fahrenheit\"), 1)"))
+@NiagaraProperty(name = "bandPsi", type = "double", defaultValue = "0", facets = @Facet("BFacets.makeNumeric(PSI_UNIT)"))
+@NiagaraProperty(name = "stageCount", type = "int", defaultValue = "0", facets = @Facet("BFacets.makeNumeric( 0 )"))
+@NiagaraProperty(name = "demandLevel", type = "int", defaultValue = "0")
+@NiagaraProperty(name = "stages", type = "int", defaultValue = "0", facets = @Facet("PRECISION"))
+@NiagaraProperty(name = "roomTemp", type = "double", defaultValue = "0", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "", type = "double", flags = Flags.OPERATOR)
+@NiagaraProperty(
+  name = "multiSetpoint",
+  type = "BStatusNumeric",
+  defaultValue = "new BStatusNumeric()",
+  flags = Flags.OPERATOR | Flags.TRANSIENT
+)
+@NiagaraProperty(name = "flag", type = "boolean", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "str", type = "BString", flags = Flags.OPERATOR)
+@NiagaraProperty(name = "notype", flags = Flags.OPERATOR,
+  defaultValue = "x")
+@NiagaraProperty(name = "facetsSpace", type = "double", flags = Flags.OPERATOR,facets = x)
+public class BFacets extends BComponent {
+  public static final Property counter = newProperty(Flags.OPERATOR, 0, null);
+  public static final Property flag = newProperty(Flags.OPERATOR, false, null);
+  public static final Property wide =
+     newProperty(Flags.OPERATOR,
+       0, null);
+  public static final Property spaced  Property  bad = newProperty(Flags.OPERATOR, 1,null);
+  public static final Property withFacets = newProperty(Flags.OPERATOR, 0, BFacets.make(BFacets.MIN, 5));
+  Object o = BFacets.make(BFacets.MAX,   -5);
+  String ord = "station:|slot:/Drivers";
+  String ord2 = "local:|foxs:"; // x
+  @NiagaraProperty(name = "ordSlot", type = "BOrd", defaultValue = "BOrd.make(\"station:|slot:/x\")")
+  String t = "TRANSIENT, then OPERATOR";
+  String t2 = "OPERATOR; TRANSIENT";
+}
+-- mod/Foo-rt/src/com/x/BareOrdConstants.java --
+String s = "slot:/x";
+-- mod/Foo-rt/src/com/x/Crlf.java (base64) --
+QE5pYWdhcmFQcm9wZXJ0eShuYW1lID0gImNybGZTZXRwb2ludCIsIHR5cGUgPSAiZG91YmxlIikNCkBOaWFnYXJhUHJvcGVydHkoDQogbmFtZSA9ICJjcmxmTXVsdGkiLA0KIHR5cGUgPSAiZG91YmxlIiwNCiBmbGFncyA9IEZsYWdzLk9QRVJBVE9SDQopDQo=
+-- mod/Foo-rt/src/com/x/Imp.java --
+import java.awt.Color;
+import java.sqlx.Foo;
+import javax.swing.JPanel;
+  import java.sql.Connection;
+class Imp {}
+-- mod/Foo-rt/src/com/x/Latin.java (base64) --
+YSAic3RhdGlvbjp8b2siCmIg6SAic3RhdGlvbjp8bGF0aW4iCmMgT1BFUkFUT1Ig6SBUUkFOU0lFTlQKZCB0eXBlID0gIm9yZy5sYXQu6SIKZSB0eXBlID0gIm9yZy5sYXQuVmFsaWQiCg==
+-- mod/Foo-rt/src/com/x/Long.java --
+@NiagaraProperty(name = "longOne",
+  // filler 1
+  // filler 2
+  // filler 3
+  // filler 4
+  // filler 5
+  // filler 6
+  // filler 7
+  // filler 8
+  // filler 9
+  // filler 10
+  // filler 11
+  // filler 12
+  // filler 13
+  // filler 14
+  // filler 15
+  // filler 16
+  // filler 17
+  // filler 18
+  // filler 19
+  // filler 20
+  // filler 21
+  // filler 22
+  // filler 23
+  // filler 24
+  // filler 25
+  // filler 26
+  // filler 27
+  // filler 28
+  // filler 29
+  // filler 30
+  // filler 31
+  // filler 32
+  // filler 33
+  // filler 34
+  // filler 35
+  // filler 36
+  // filler 37
+  // filler 38
+  // filler 39
+  // filler 40
+  // filler 41
+  // filler 42
+  // filler 43
+  // filler 44
+  // filler 45
+  flags = Flags.OPERATOR)
+@NiagaraProperty(name = "next", type = "double", flags = Flags.OPERATOR)
+-- mod/Foo-rt/src/com/x/MyOrdConstants.java --
+// sanctioned
+String s = "station:|x";
+-- mod/Foo-rt/src/com/x/NoEol.java (noeol) --
+@NiagaraProperty(name = "lastTemp", type = "double", flags = Flags.OPERATOR)
+-- mod/Foo-rt/src/com/x/Nul.java (base64) --
+eCAic3RhdGlvbjp8YmVmb3JlIgoACnkgInN0YXRpb246fGFmdGVyIiBPUEVSQVRPUiBUUkFOU0lFTlQKaW1wb3J0IGphdmEuYXd0Llg7CmNsYXNzIE51bCBleHRlbmRzIFR5cGVTdWJzY3JpYmVyIHt9Cg==
+-- mod/Foo-rt/src/com/x/Sub.java --
+class Sub extends TypeSubscriber {}
+-- mod/Foo-rt/src/com/x/Sub2.java --
+class Sub2 { TypeSubscriber  s; void stopped () {} }
+-- mod/Foo-rt/src/com/x/Types.java --
+@NiagaraProperty(name = "a", type = "com.x.Own")
+@NiagaraProperty(name = "b", type = "com.y.Other")
+@NiagaraProperty(name = "c", type = "org.foo.Ext")
+String type = "org.bar.Thing"; String datatype="lower.case"; x(type="NoDot"); y(type = "javax.baja.sys.BX"); z(type="com.tridiumx.Q"); w(type="com.honeywell.H"); v(type="com.tridium.T"); u(type=".Lead") t(type="org.foo.Ext")
+-- mod/Foo-rt/src/com/x/Wall.java --
+/* a subclass Wall of things */
+public  interface   Wall {
+@NiagaraProperty(name = "p1", type = "BString")
+@NiagaraProperty(name = "p2", type = "BString")
+@NiagaraProperty(name = "p3", type = "BString")
+@NiagaraProperty(name = "p4", type = "BString")
+@NiagaraProperty(name = "p5", type = "BString")
+@NiagaraProperty(name = "p6", type = "BString")
+@NiagaraProperty(name = "p7", type = "BString")
+@NiagaraProperty(name = "p8", type = "BString")
+@NiagaraProperty(name = "p9", type = "BString")
+@NiagaraProperty(name = "p10", type = "BString")
+@NiagaraProperty(name = "p11", type = "BString")
+@NiagaraProperty(name = "p12", type = "BString")
+@NiagaraProperty(name = "p13", type = "BString")
+@NiagaraProperty(name = "p14", type = "BString")
+@NiagaraProperty(name = "p15", type = "BString")
+@NiagaraProperty(name = "p16", type = "BString")
+}
+-- mod/Foo-rt/src/com/x/notes.txt --
+not java "station:|x"
+-- mod/Foo-rt/src/com/x/inner/NoClass.java --
+@NiagaraProperty(name = "q1", type = "BString")
+@NiagaraProperty(name = "q2", type = "BString")
+@NiagaraProperty(name = "q3", type = "BString")
+@NiagaraProperty(name = "q4", type = "BString")
+@NiagaraProperty(name = "q5", type = "BString")
+@NiagaraProperty(name = "q6", type = "BString")
+@NiagaraProperty(name = "q7", type = "BString")
+@NiagaraProperty(name = "q8", type = "BString")
+@NiagaraProperty(name = "q9", type = "BString")
+@NiagaraProperty(name = "q10", type = "BString")
+@NiagaraProperty(name = "q11", type = "BString")
+@NiagaraProperty(name = "q12", type = "BString")
+@NiagaraProperty(name = "q13", type = "BString")
+@NiagaraProperty(name = "q14", type = "BString")
+@NiagaraProperty(name = "q15", type = "BString")
+@NiagaraProperty(name = "q16", type = "BString")
+-- mod/Foo-rt/src/com/x/srcTest/InTest.java --
+String s = "station:|x";
+-- mod/Foo-rt/src/com/y/Sub3.java --
+class Sub3 { TypeSubscriber	s; }
+-- mod/Foo-rt/src/peer-worktrees/H.java --
+String s = "station:|x";
+Object f = BFacets.make(BFacets.MIN, 1);
+-- mod/Foo-rt/srcTest/com/x/Out.java --
+String s = "station:|x";
