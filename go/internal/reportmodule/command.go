@@ -73,13 +73,13 @@ func mainEnv(args []string, s cli.Stdio, environ []string) int {
 }
 
 // discover lists the profile artifacts like `find -H <root> -mindepth 1 -maxdepth 1 -type d | sort` in the C
-// locale: every entry of root (a symlinked root followed) that is a directory and not a symlink, in byte order,
-// spelled <root>/<name> (no separator added when root already ends in one).
+// locale: every entry of root (a symlinked root followed) that is a directory, not a symlink and not a
+// dot-directory, in byte order, spelled <root>/<name> (no separator added when root already ends in one).
 func discover(root string) ([]artifact, error) {
 	entries, err := os.ReadDir(root)
 	var out []artifact
 	for _, e := range entries {
-		if e.IsDir() {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") { // a dot-directory (.git, .gradle) is no artifact
 			dir := root + "/" + e.Name()
 			if strings.HasSuffix(root, "/") {
 				dir = root + e.Name()
