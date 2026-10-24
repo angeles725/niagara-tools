@@ -1,0 +1,46 @@
+-- args --
+--max-class
+9999
+--max-method
+2
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/M1.java:3  method M1() in pure class M1 spans 3 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/M1.java:13  method brace() in pure class M1 spans 3 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/M1.java:16  method lam() in pure class M1 spans 5 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/M1.java:22  method deep() in pure class M1 spans 4 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/M1.java:28  method setY() in pure class M1 spans 3 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+-- stderr --
+-- M1.java --
+package com.x;
+public class M1 {
+  M1() {
+    a();
+  }
+  int one() { return 1; }
+  void wrapped(int a,
+      int b) {
+    a();
+    b();
+  }
+  void brace()
+  {
+    a();
+  }
+  void lam() {
+    Runnable r = () -> {
+      a();
+    };
+  }
+  static class In {
+    void deep() {
+      a();
+      b();
+    }
+  }
+  int getX() { return x; }
+  void setY(int y) {
+    this.y = y;
+  }
+}

@@ -1,0 +1,15 @@
+-- args --
+--strict
+--
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
