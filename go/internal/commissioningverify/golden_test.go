@@ -43,9 +43,6 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 			must(t, os.WriteFile(full, []byte(text), 0o644))
 		}
 		if kind == "mode 000)" {
-			if os.Geteuid() == 0 {
-				t.Skip("running as root: chmod 000 does not block reads")
-			}
 			must(t, os.Chmod(full, 0))
 			t.Cleanup(func() { os.Chmod(full, 0o644) })
 		}
@@ -68,6 +65,25 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 		must(t, os.Chmod(p, modes[m])) // WriteFile's mode is masked by the umask
 	}
 	return cp
+}
+
+// RootOptIn is the variable that lets a run as root skip the cases holding a "(mode 000)" file (root reads it,
+// so the case would test nothing); without it such a run fails.
+const RootOptIn = "CV_GOLDEN_ALLOW_ROOT_SKIP"
+
+// unreadableAsRoot fails (or, with RootOptIn=1, skips) a case holding a "(mode 000)" file when the test runs as
+// root. It runs before anything of the case is written, so a case is never skipped half materialized.
+func unreadableAsRoot(t *testing.T, files map[string]string) {
+	t.Helper()
+	for name := range files {
+		if !strings.HasSuffix(name, " (mode 000)") || os.Geteuid() != 0 {
+			continue
+		}
+		if os.Getenv(RootOptIn) == "1" {
+			t.Skip("running as root: chmod 000 does not block reads (" + RootOptIn + "=1)")
+		}
+		t.Fatalf("running as root: %s cannot be made unreadable; run as a normal user or set %s=1 to skip", name, RootOptIn)
+	}
 }
 
 // Case counts of testdata (README.md): recorded from the bash tool, and truth-* cases whose expectation is a
@@ -107,6 +123,7 @@ func TestGolden(t *testing.T) {
 		t.Run(strings.TrimSuffix(filepath.Base(p), ".txt"), func(t *testing.T) {
 			c, err := golden.Read(p)
 			must(t, err)
+			unreadableAsRoot(t, c.Files)
 			dir := t.TempDir()
 			tb := materialize(t, dir, repo, c.Files)
 			sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)

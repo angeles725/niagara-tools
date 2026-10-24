@@ -36,6 +36,7 @@ func TestRecord(t *testing.T) {
 		c, err := golden.Read(p)
 		must(t, err)
 		c.Files["toolbelt/commissioning-verify.sh"] = string(bash)
+		unreadableAsRoot(t, c.Files)
 		dir := t.TempDir()
 		tb := materialize(t, dir, repo, c.Files)
 		sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)
