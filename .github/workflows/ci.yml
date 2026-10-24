@@ -109,8 +109,9 @@ jobs:
         run: |
           K=build-n4-module-kit
           # --deltas-since: rows from the 2026-09-24 Δ-citation convention on must cite (or defer)
-          # every Δ1..Δn, not just their stem.
-          bash "$K/toolbelt/sweep-fold-audit.sh" --strict --deltas-since 2026-09-24 "$K/retros/INDEX.md" "$K"
+          # every Δ1..Δn, not just their stem. --exact-stems: a citation credits a fold only by the
+          # retro's exact stem, and a short alias token fails (kit #419).
+          bash "$K/toolbelt/sweep-fold-audit.sh" --strict --exact-stems --deltas-since 2026-09-24 "$K/retros/INDEX.md" "$K"
 
       - name: lint-guard-pins (every kit lint carries a resolvable "# Mutation:" guard-pin — strict)
         run: bash build-n4-module-kit/toolbelt/lint-guard-pins.sh --strict .

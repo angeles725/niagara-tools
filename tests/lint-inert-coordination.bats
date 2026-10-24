@@ -102,6 +102,36 @@ EOF
   [[ "$output" == *"WARN"* ]]
 }
 
+@test "ICO-comment: a commented-out singletonList and names only in comments or strings do not WARN" {
+  # Mutation: ICO-comment -- reading block comments as code WARNs a units() whose singletonList is commented out
+  # Go golden: go/internal/lint/rules/inertcoordination/testdata/truth-code-view-1.txt
+  printf '%s\n' 'class A {' '  long staggerDelay;' '  List<B> units() {' '    /* return Collections.singletonList(a); */' \
+    '    return parent.units();' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$ICO" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "ICO-args: Arrays.asList( wrapped before two arguments is not singleton; one argument holding a comma is" {
+  # Mutation: ICO-args -- the same-line no-comma test takes a wrapped two-argument Arrays.asList( for a singleton
+  # Go golden: go/internal/lint/rules/inertcoordination/testdata/truth-aslist-args-1.txt
+  printf '%s\n' 'class Two {' '  long staggerDelay;' '  List<B> units() {' '    return Arrays.asList(' '        first, second);' \
+    '  }' '}' > "$TMPDIR_T/Mod/src/com/x/Two.java"
+  run "$ICO" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "ICO-queue: every Deque/Queue declarator is named, a substring name included" {
+  # Mutation: ICO-queue -- deduping names by substring hides the waiting queue behind waitingQueue
+  # Go golden: go/internal/lint/rules/inertcoordination/testdata/truth-queue-names-1.txt
+  printf '%s\n' 'class Q {' '  Deque<B> waitingQueue = new ArrayDeque<>();' '  Deque<B> waiting = new ArrayDeque<>();' \
+    '  List<B> units() { return Collections.singletonList(getParent()); }' '}' > "$TMPDIR_T/Mod/src/com/x/Q.java"
+  run "$ICO" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"singleton list while waitingQueue, waiting (queue/token/stagger state)"* ]]
+}
+
 @test "ICO-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: ICO-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

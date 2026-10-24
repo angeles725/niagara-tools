@@ -1,0 +1,74 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/D1.java:3  units() returns a structurally singleton list while waitingQueue (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D2.java:3  units() returns a structurally singleton list while Token (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D3.java:4  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D6.java:4  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D7.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D8.java:6  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/D9.java:3  units() returns a structurally singleton list while tokenCount (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- D1.java --
+class D1 {
+  Deque<BComponent> waitingQueue = new ArrayDeque<>();
+  List<BComponent> units()
+  {
+    return Collections.singletonList(this);
+  }
+}
+-- D2.java --
+class D2 {
+  Token t;
+  public List<BComponent> units() throws Exception {
+    return Arrays.asList(getParent());
+  }
+}
+-- D3.java --
+class D3 {
+  int n = list.size(); List<BComponent> x = units();
+  int tokenCount;
+  private List<BComponent> units() { return singletonList(a); }
+}
+-- D4.java --
+class D4 {
+  int tokenCount;
+  abstract List<BComponent> units();
+}
+-- D5.java --
+interface D5 {
+  int staggerMs = 1;
+  List<BComponent> units()
+}
+-- D6.java --
+class D6 {
+  int tokenCount;
+  // List<BComponent> units() {
+  List<BComponent> units() {
+    return Collections.singletonList(a);
+  }
+}
+-- D7.java --
+class D7 {
+  int tokenCount;
+  Map<String, List<B>> units() {
+    return Collections.singletonList(a);
+  }
+}
+-- D8.java --
+class D8 {
+  int tokenCount;
+  List<BComponent>units() {
+    return Collections.singletonList(a);
+  }
+  List<BComponent> units() {
+    return Collections.singletonList(a);
+  }
+}
+-- D9.java --
+class D9 {
+  int tokenCount;
+  List<BComponent> units() {
+    if (x) {
+      return Collections.singletonList(a);

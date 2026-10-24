@@ -1,0 +1,34 @@
+declared difference (truth fix T2, argument count): the one-argument Arrays.asList( test was "no comma after the
+call on its line", so a call wrapped before its two arguments (Two) counted as singleton and one argument that
+holds a comma (One: pick(a, b)) did not. The arguments are now counted by parenthesis depth to the call's own
+")", across lines.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/One.java:3  units() returns a structurally singleton list while staggerDelay (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+WARN  lint-inert-coordination  @DIR@/Wrapped.java:3  units() returns a structurally singleton list while staggerDelay (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- One.java --
+class One {
+  long staggerDelay;
+  List<B> units() {
+    return Arrays.asList(pick(a, b));
+  }
+}
+-- Two.java --
+class Two {
+  long staggerDelay;
+  List<B> units() {
+    return Arrays.asList(
+        first, second);
+  }
+}
+-- Wrapped.java --
+class Wrapped {
+  long staggerDelay;
+  List<B> units() {
+    return Arrays.asList(
+        (B) getParent());
+  }
+}

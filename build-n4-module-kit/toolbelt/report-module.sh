@@ -36,6 +36,8 @@
 # Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
 # lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
 # of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
+# lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region
+# whose stamp count is not 1 is skipped by Slot-o-Matic while the build stays green (METHODOLOGY.md K15).
 #
 # Usage: report-module.sh <module-root> [--target-version x.y] [--console-dir <dir>]
 #                         [--profile hmi|lan|both|unknown] [--legacy] [--wiring-map <file>]
@@ -497,6 +499,14 @@ for ADIR in "${ARTIFACTS[@]}"; do
   if have_src lint-no-system-out; then
     _rc=0; _o=$("$TOOLBELT/lint-no-system-out.sh" "$ADIR/src" 2>&1) || _rc=$?
     lint_rows "$ANAME" lint-no-system-out "$_rc" "$_o" FAIL rows
+  fi
+
+  # ----------------------------------------------------------------
+  # 5.7b. lint-slotomatic-markers.sh <artifact>/src (FAIL, WARN unclosed-region; SKIP if no src/)
+  # ----------------------------------------------------------------
+  if have_src lint-slotomatic-markers; then
+    _rc=0; _o=$("$TOOLBELT/lint-slotomatic-markers.sh" "$ADIR/src" 2>&1) || _rc=$?
+    lint_rows "$ANAME" lint-slotomatic-markers "$_rc" "$_o" 'FAIL|WARN' rows
   fi
 
   # ----------------------------------------------------------------
