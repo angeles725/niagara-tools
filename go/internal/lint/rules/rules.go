@@ -13,6 +13,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/machinedefaultpath"
@@ -65,5 +66,6 @@ func All() []lint.Spec {
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
 		spapoll.Spec(),
+		jasmineux.Spec(),
 	}
 }

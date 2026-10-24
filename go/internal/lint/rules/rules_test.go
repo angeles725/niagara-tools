@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -132,12 +133,19 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		}
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
+		code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e})
+		if sp.EmptyOK { // lint-jasmine-ux (ER5): a module without src/rc is clean, exit 0, no row
+			if code != 0 || o.Len() != 0 || e.Len() != 0 {
+				t.Errorf("%s (EmptyOK): exit %d out %q err %q, want 0 and nothing", sp.ID(), code, o.String(), e.String())
+			}
+			continue
+		}
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+		if code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if len(roots) != 1 || roots[0] != "lint-structure" {
-		t.Errorf("RootRules %q, want exactly lint-structure", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux" {
+		t.Errorf("RootRules %q, want lint-structure and lint-jasmine-ux", roots)
 	}
 }

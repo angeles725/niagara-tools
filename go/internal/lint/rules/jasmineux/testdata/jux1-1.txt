@@ -1,0 +1,5 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --

@@ -1,0 +1,9 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/rc/a.html --
+x
+-- srcTest/rc/spec/deep/aSpec.js --
+x

@@ -124,7 +124,8 @@ type Spec struct {
 	Select    Selection // the files under a root the rule reads
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
-	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3. A RootRule
+	// that returns no ErrEmptyRoot for such a root (lint-jasmine-ux) sets it to record the same exception.
 	EmptyOK bool
 	// OptionalInAll makes a root where the rule selects no file clean for it under n4lint --all (no ERROR
 	// row), for a rule whose files belong to one profile only (lint-spa-poll-no-recovery reads the *.html/*.js
