@@ -362,6 +362,17 @@ class TestConnect(ToolTestCase):
                                     env={"LAB_USER": "admin", "LAB_PASSWORD": self.PASSWORD})
         self.assertEqual(self.connect()["station_name"], "FakeStation")
 
+    def test_a_non_utf8_credential_is_refused_without_its_position(self):
+        # R8-D19: the UnicodeEncodeError text named the bad character's position, so the
+        # reply leaked how long the credential is. A non-UTF-8 env byte reads as a surrogate.
+        for env in ({"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "pw-\udcff-tail"},
+                    {"MCP_N4_USER": "ad\udcffmin", "MCP_N4_PASSWORD": self.PASSWORD}):
+            self.srv = self.make_server(allow_http=True, env=env, stations=self.stations)
+            self.assertEqual(self.err("n4_connect", station="FakeStation"),
+                             "credentials are not valid UTF-8: check env vars MCP_N4_USER and "
+                             "MCP_N4_PASSWORD")
+        self.assertEqual(self.fake.requests, 0)
+
     def test_credential_env_is_not_a_tool_argument(self):
         props = [t for t in tools_read.TOOLS if t.name == "n4_connect"][0].input_schema
         self.assertEqual(set(props["properties"]), {"station", "expected_station"})
