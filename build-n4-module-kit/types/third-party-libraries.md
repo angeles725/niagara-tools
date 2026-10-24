@@ -8,7 +8,7 @@
 > `javax.swing`, `java.sql` absent on JACE) is already enforced at the
 > source-check gate by `check_compact3_imports` (WARN in
 > `toolbelt/verify-module.sh`). No new check is needed; the viability table
-> below identifies which libraries trigger this constraint. `[ev: Δ3 TPL-COMPACT3-XREF1]`
+> below identifies which libraries trigger this constraint. `[ev: retro third-party-library-integration-deltas Δ3]`
 
 ---
 
@@ -27,9 +27,9 @@ library without clashing. It also means an NRE-shipped class (e.g. an older
 Guava, a commons-* version) **shadows your bundled copy** unless you relocate
 (shade) it to a private package. `[ev: corpus B617 §617.5]`
 
-First-party precedent: Niagara's own `jsonToolkit-wb` bundles Gson 2.13.2 (4.15.6.20) as an
-embedded extJar — bundling a 3rd-party JAR is an accepted, working pattern.
-`[ev: corpus B347 §347.3]`
+First-party precedent: Niagara's own `jsonToolkit-wb` bundles Gson 2.13.2 (4.15.6.20) as
+classes unpacked into its own jar (`com/google/gson/*`, no nested jar) — bundling a 3rd-party library is an accepted, working pattern.
+`[ev: corpus B347 §347.3, B1321 §1321.2 C1]`
 
 ---
 
@@ -98,7 +98,7 @@ dependencies {
 may not interact correctly with the Niagara build environment" (devguide
 `build.txt:187-193`). `uberjar` does not relocate, so the boot-parent shadowing
 rule below still applies; Path A is the fallback only when a library must be
-relocated. `[ev: corpus B1313 §1313.3 C5]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
+relocated. `[ev: corpus B1313 §1313.3 C1]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
 `[ev: retro n4-course-authoring-files-and-libraries Δ1]`
 
 ### Path A — Shade with relocation (Shadow plugin; unsupported fallback)
@@ -130,11 +130,11 @@ not support, so the build is ours to keep working:
    ```
 
 2. Do **not** declare the 3rd-party library as a `module.xml <dependency>` — that
-   is for cross-module Niagara deps only. `[ev: corpus B756 §756.1]`
+   is for cross-module Niagara deps only. `[ev: corpus B617 §617.3]`
 
 3. Do **not** use `compileOnly` for a bundled library — it must be `implementation`
    so the classes are included in the output jar (gradle-niagara requires the jar
-   to be self-contained / packaged). `[ev: corpus B756]`
+   to be self-contained / packaged). `[INFER]`
 
 4. The resulting merged jar is signed end-to-end by the `niagara-signing` plugin
    under the signing alias's `META-INF/<ALIAS>.SF` — no extra signing step needed. The only constraint: do
@@ -174,7 +174,7 @@ heavy library.
 
 ## Hard constraints
 
-### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §ND4, build-verify.md §"Profile constraints — rt/ux Compact 3"]`
+### Compact3 gate — rt/ux JVM `[ev: corpus B1023 §1023.3, build-verify.md §"Profile constraints — rt/ux Compact 3"]`
 
 The JACE JVM is Azul ZRE `azul-zre-compact3-qnx7-arm` v1.8.0 (Java 8,
 Compact3 profile). The following packages are **absent** on the station:
@@ -211,8 +211,9 @@ The JACE is QNX7 ARM EABI5. A library that bundles native `.so` files (Linux
 x64, Windows DLL, macOS dylib) will:
 
 - Load and run correctly on a Supervisor (Linux x64 / Windows x64).
-- Throw `UnsatisfiedLinkError` at runtime on a JACE — there is no QNX7/ARM .so
-  in any general-purpose Maven artifact.
+- Throw `UnsatisfiedLinkError` at runtime on a JACE — no general-purpose Maven
+  artifact is known to ship a QNX7/ARM .so [INFER]; JNI itself loads on a JACE when built for it
+  (`libciper.so`, ARM EABI5, B26 §26.7).
 
 This is **not** a packaging problem; the binary simply does not exist. The
 solution is to use the equivalent Niagara native driver (platform serial, rdb,
@@ -247,16 +248,16 @@ the user trust store); unsigned, the group is dropped with a WARNING
 | Typesafe Config | `com.typesafe:config:1.4.x` | **Yes** | No | No | Bundle; pure config parsing (HOCON/properties); no forbidden API |
 | Eclipse Paho MQTT | `org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.x` | **Yes** | No | No | Bundle; NOTE: Niagara ships the licensed `abstractMqttDriver` (Paho 1.2.5, Jackson 2.22.1, JJWT 0.12.7 inside in 4.15.6.20) — prefer it for production (`types/cloud-connector.md` § 2.1); a bundled Paho bypasses its licence and device cap `[ev: retro devguide415-r2-shipped-libraries Δ5]` |
 | modbus4j | `com.infiniteautomation:modbus4j:3.0.x` | **Yes** | No | No | Bundle; NOTE: Niagara has a native modbus-driver — prefer it; modbus4j for custom protocol logic only |
-| jSerialComm | `com.fazecast:jSerialComm:2.10.x` | N/A | Supervisor (Linux/Win) only | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE: bundles Linux-x64/Win/macOS .so only; `UnsatisfiedLinkError` at runtime on QNX ARM `[ev: B26]`; use Niagara's platform serial driver instead |
+| jSerialComm | `com.fazecast:jSerialComm:2.10.x` | N/A | Supervisor (Linux/Win) only | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE: bundles Linux-x64/Win/macOS .so only; `UnsatisfiedLinkError` at runtime on QNX ARM `[INFER]`; use Niagara's platform serial driver instead |
 | OkHttp | `com.squareup.okhttp3:okhttp:4.12.x` | **Yes** | No | No | Do NOT bundle: the NRE ships okhttp 4.12.0 + okio + kotlin-stdlib in `bin/ext`; compile with `nre("com.squareup.okhttp3:okhttp")` (`types/cloud-connector.md` § 2.1) |
 | RxJava2 | `io.reactivex.rxjava2:rxjava:2.2.21` | **Yes** | No | No | Bundle; ~900 KB; fine for complex async orchestration |
 | H2 | `com.h2database:h2:2.2.x` | **No** (`java.sql` throughout) | **Supervisor-only** (-wb or -se profile) | No | `java.sql`-BLOCKED on rt/ux (station Compact3 has no `java.sql`); Supervisor only; use Niagara's native rdb module for database needs, within its limits (`types/cloud-connector.md` § 11) |
 | SQLite-JDBC | `org.xerial:sqlite-jdbc:3.x` | **No** (JNI + `java.sql`) | Neither (no QNX .so) | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE (no QNX .so) AND `java.sql`-blocked on rt/ux; neither path works on JACE; use Niagara's rdb driver |
 | **Weka 3.8.x** | `nz.ac.waikato.cms.weka:weka-stable:3.8.6` | Yes (core; shade if GUI code paths touch AWT — absent on Compact3) | No (core algos) | No | **GPL-3.0 — NOT safe for distributed closed-source module.** Viable for offline training only (dev env; never ships in module). See `types/ml-libraries.md`. |
 | **Smile 2.6.x** | `com.github.haifengl:smile-core:2.6.0` | Yes — core tabular algos (RF, logistic, k-means, SVM, LDA) are pure Java; avoid `smile-nlp` (native) | No (tabular core; JACE: BWorker required for heavy models) | No | Apache 2.0; Java 8 compat. **Pin to 2.x — Smile 3.x+ requires Java 11+.** Preferred tabular ML library. Bundle + shade. See `types/ml-libraries.md`. |
-| **Deeplearning4j (DL4J) 1.0-M2.1+** | `org.deeplearning4j:deeplearning4j-core:*` | Yes (API) | **No — JNI (ND4J native backend)** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; Apache 2.0; Supervisor-only. See `types/ml-libraries.md`. |
-| **ONNX Runtime Java** | `com.microsoft.onnxruntime:onnxruntime:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; MIT; Supervisor-only. **Preferred inference path** for offline-trained Python models. See `types/ml-libraries.md`. |
-| **XGBoost4J** | `ml.dmlc:xgboost4j:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[ev: B26]`; Apache 2.0; Supervisor-only. Train in Python, export to ONNX, infer via ONNX Runtime Java. See `types/ml-libraries.md`. |
+| **Deeplearning4j (DL4J) 1.0-M2.1+** | `org.deeplearning4j:deeplearning4j-core:*` | Yes (API) | **No — JNI (ND4J native backend)** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[INFER]`; Apache 2.0; Supervisor-only. See `types/ml-libraries.md`. |
+| **ONNX Runtime Java** | `com.microsoft.onnxruntime:onnxruntime:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[INFER]`; MIT; Supervisor-only. **Preferred inference path** for offline-trained Python models. See `types/ml-libraries.md`. |
+| **XGBoost4J** | `ml.dmlc:xgboost4j:1.x` | Yes (API) | **No — JNI** | **YES — no QNX7/ARM .so** | NATIVE-BLOCKED on JACE `[INFER]`; Apache 2.0; Supervisor-only. Train in Python, export to ONNX, infer via ONNX Runtime Java. See `types/ml-libraries.md`. |
 
 **ML libraries:** see `types/ml-libraries.md` for the placement rule
 (Supervisor vs. JACE-rt), the full library verdict table with safety architecture,
