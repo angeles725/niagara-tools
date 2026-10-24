@@ -49,6 +49,19 @@ the client module; proposing the fixture/doc deltas so the next servlet-in-rt bu
 | 23 | **RULE: one-step "create the referenced component" in a manager.** When a manager's rows point at station components (importer mapping → writable point), the "Add…" flow should let the user CREATE the target in one dialog (type dropdown Numeric/Boolean/String/Enum + name + folder → `new B*Writable()` + `folder.add(uniqueName, point)` + wire the ref ord), with a "(use existing…)" fallback — never force pre-creating points + hand-picking ORDs. For `BEnumWritable` set a minimal `BEnumRange` facet so it constructs. | `types/wb-widgets.md` | `[ev: Apillm BApillmImporterManager AddMappingCmd 2026-09-20; corpus B1087]` |
 | 24 | **Slotomatic checksum gotcha:** when hand-adding a `@NiagaraProperty` to an already-generated class, set the auto-region checksum to `0` (a plain integer), NOT the literal `(auto)` placeholder — `(auto)` triggers a cosmetic slotomatic parse error (build still passes but noisy); `0` regenerates cleanly. | `types/structure.md` / `BUILD-LOOP.md` §slotomatic | `[ev: Apillm BApillmImporter.targetFolder add 2026-09-20]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ5:** the row says "`<agent>` in `module-include.xml` AND inline
+> `@AgentOn` in `@NiagaraType` — inline-only does not emit", and Evidence line 22 says the inline `@AgentOn` "did
+> not emit" the `<agent>` block. Reading A (this retro): an inline `@AgentOn` is not enough, the `<agent>` block must
+> be written by hand. Reading B (official doc): `@NiagaraType` "is processed at compile time by an annotation
+> processor and not by Slot-o-matic. This compile-time processing is responsible for updating the
+> module-include.xml or moduleTest-include.xml files with the correct Baja type information"
+> (niagara-help 4.15.6.20 `devguide-clean/slot-o-matic.txt:191-193`), and its `agent` attribute "is an array of
+> @AgentOn annotations" (`:199-201`), so the inline `@AgentOn` in `@NiagaraType` is what writes the `<agent>`
+> entry. Winner: B, a vendor doc against one build observation. The Apillm build most likely did not run the
+> processor; that cause is inferred, not observed. `types/wb-widgets.md` already carries reading B (its
+> wb-agent registration bullet), and corpus B780 was corrected the same way in niagara-research PR #45
+> (ba52824). The row text and this retro's review-status are left as they were.
+
 ## Lessons
 - A BWebServlet in -rt is a first-class shape; the scaffold assumes -ux and silently drops the servlet API + palette hygiene there.
 - Root-cause servlet override errors with `javap` of the target-version's `BWebServlet`, never from memory — the overridable set is `service/doGet/doPost/doPut/doDelete(WebOp)`, not `doService(WebOp)`.
