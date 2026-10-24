@@ -6,8 +6,8 @@
 // header documents the rule and its mutation pins).
 //
 // It is a per-file lint.Rule: the traversal rows of a file, then its agent rows, each row check first
-// (Spec.CheckFirst). The awk read raw lines and visited a callee set with `for (k in a)`, so the call chain a
-// row names follows gawk's hash order (rules/awkorder).
+// (Spec.CheckFirst). The awk visited a callee set with `for (k in a)`, so the call chain a row names follows
+// gawk's hash order (rules/awkorder). What each check reads is in Check.
 package wbthreading
 
 import (
@@ -17,6 +17,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/awkorder"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // ID is the lint name n4lint accepts.
@@ -57,9 +58,14 @@ const (
 	depth     = 3 // call levels expanded below doInvoke
 )
 
-// Check runs the traversal awk, then the agent awk, over the file's raw lines.
+// Check runs the traversal check, then the agent check. Truth fix 2026-10-24: the awk read raw lines, so a nav
+// call or a guard named in a comment or a string counted, a brace in a string cut a body short, a commented-out
+// @AgentOn was a row and any line holding "why" (code too) justified one. The traversal now reads code
+// (linescan.Code: comments blanked, literal contents removed); the agent check reads its marker on the
+// stripped lines (the baja:Component string is a literal) and its justification in the comment text.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	return append(traversals(f.Raw), agents(f.Raw)...), nil
+	stripped, comments, _ := javasrc.StripComments(f.Raw)
+	return append(traversals(linescan.Code(f)), agents(stripped, comments)...), nil
 }
 
 // traversals is the thread awk: phase 1 collects the private/protected method bodies, phase 2 checks each
@@ -169,8 +175,9 @@ func chain(mb map[string]string, body string, d int, vis map[string]bool) string
 	return "?"
 }
 
-// agents is the agent awk: an @AgentOn line naming baja:Component with no justif|why|broad on the 3 lines above.
-func agents(lines []string) []lint.Finding {
+// agents is the agent awk: an @AgentOn line naming baja:Component (in code) with no justif|why|broad in the
+// comments of the 3 lines above.
+func agents(lines, comments []string) []lint.Finding {
 	var out []lint.Finding
 	for i, ln := range lines {
 		if !strings.Contains(ln, "@AgentOn") || !strings.Contains(ln, "baja:Component") {
@@ -178,7 +185,7 @@ func agents(lines []string) []lint.Finding {
 		}
 		found := false
 		for k := i - 1; k >= i-3 && k >= 0; k-- {
-			if justified.MatchString(lines[k]) {
+			if justified.MatchString(comments[k]) {
 				found = true
 				break
 			}

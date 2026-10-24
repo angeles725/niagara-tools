@@ -3,6 +3,7 @@
 -- want --
 exit 0
 ui-thread-traversal  WARN  @DIR@/root1/com/x/U.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+ui-thread-traversal  WARN  @DIR@/root1/com/x/V.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
 -- stderr --
 -- root1/com/x/U.java --
 class U {

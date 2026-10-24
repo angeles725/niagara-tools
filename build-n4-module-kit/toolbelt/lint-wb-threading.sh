@@ -29,7 +29,11 @@
 # older than a Go source, then this script execs `n4lint lint-wb-threading <args>`. Needs `go` on PATH.
 # VCS-free by design; kit-links.bats L2 enforces the no-VCS rule.
 # [ev: retro campaign8-wb-audit]
+# Truth fix 2026-10-24: both checks read code, not raw text. A nav call or a guard named only in a comment or
+# a string no longer counts, a brace in a string no longer cuts a body short, a commented-out @AgentOn is not
+# a row, and the justification must be in a comment (a `whyNot` variable does not justify).
 # Mutation: WBT1c -- changes the invokeLater exemption, making an invokeLater-wrapped traversal false-WARN
+# Mutation: WBT-code -- reading raw text passes a doInvoke whose only guard is a comment and flags a commented-out @AgentOn
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

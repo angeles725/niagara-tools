@@ -97,3 +97,13 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-wb-threading: cannot list every file under $ONE: "* ]]
 }
+
+@test "WBT-code: comments and strings are not code for either check (truth fix 2026-10-24)" {
+  # Mutation: WBT-code -- reading raw text passes a doInvoke whose only guard is a comment and flags a commented-out @AgentOn
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf 'class E {\n  public void doInvoke() { root.getNavChildren(); /* TODO: invokeLater */ }\n}\n' > "$ONE/E.java"
+  printf 'class K {\n  // @AgentOn(types = "baja:Component") was here\n  int x;\n}\n' > "$ONE/K.java"
+  run "$LW" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ui-thread-traversal  WARN  $ONE/E.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)" ]
+}

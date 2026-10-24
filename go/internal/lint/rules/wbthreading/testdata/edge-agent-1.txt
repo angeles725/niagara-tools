@@ -4,7 +4,7 @@
 exit 0
 agent-breadth  WARN  @DIR@/root1/com/x/K.java:9  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
 agent-breadth  WARN  @DIR@/root1/com/x/K.java:15  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
-agent-breadth  WARN  @DIR@/root1/com/x/K.java:21  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+agent-breadth  WARN  @DIR@/root1/com/x/K.java:18  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
 -- stderr --
 -- root1/com/x/K.java --
 // justified: broad on purpose
