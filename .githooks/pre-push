@@ -68,11 +68,15 @@ if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then exit 0; fi
 # a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
 has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' || true)
 has_retro=$(printf '%s\n' "$changed" | grep -E '^build-n4-module-kit/retros/[^/]+\.md$' | grep -vE '/INDEX\.md$' | head -1 || true)
-# a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it)
+# a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it):
+# the -pending and +folded header lines must sit in the SAME file's diff, so deleting one pending retro and
+# adding another one born folded is not a flip.
 patch=$(git diff "$range" -- 'build-n4-module-kit/retros/*.md') || refuse "git diff $range -- retros failed"
-has_flip=0
-if printf '%s\n' "$patch" | grep -qE '^-<!-- review-status: pending' \
-   && printf '%s\n' "$patch" | grep -qE '^\+<!-- review-status: folded'; then has_flip=1; fi
+has_flip=$(printf '%s\n' "$patch" | awk '
+  /^diff --git / { file = $0; next }
+  /^-<!-- review-status: pending/ { pend[file] = 1 }
+  /^\+<!-- review-status: folded/ { fold[file] = 1 }
+  END { for (f in pend) if (f in fold) { print 1; exit } print 0 }')
 
 # promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
 # carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retro header flip pending ->

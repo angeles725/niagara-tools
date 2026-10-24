@@ -259,9 +259,18 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
   printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3,L4 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
-  printf -- '--- a/build-n4-module-kit/retros/2026-09-04-demo.md\n+++ b/build-n4-module-kit/retros/2026-09-04-demo.md\n@@ -1 +1 @@\n-<!-- review-status: pending -->\n+<!-- review-status: folded -->\n' > "$BATS_TEST_TMPDIR/patch"
+  printf -- 'diff --git a/build-n4-module-kit/retros/2026-09-04-demo.md b/build-n4-module-kit/retros/2026-09-04-demo.md\n--- a/build-n4-module-kit/retros/2026-09-04-demo.md\n+++ b/build-n4-module-kit/retros/2026-09-04-demo.md\n@@ -1 +1 @@\n-<!-- review-status: pending -->\n+<!-- review-status: folded -->\n' > "$BATS_TEST_TMPDIR/patch"
   FAKE_PATCH_FILE="$BATS_TEST_TMPDIR/patch" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
   [ "$status" -eq 0 ]
+}
+
+@test "H8c: a promotion trailer + one retro deleted (-pending) and ANOTHER added folded (+folded) FAILS" {
+  # Mutation: H8c -- matching any -pending line and any +folded line across files counts this as a flip.
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/2026-09-04-old.md\nbuild-n4-module-kit/retros/2026-09-05-new.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold logic lessons\n\nRetro: promotion (folds L3 from existing retros)\n' > "$BATS_TEST_TMPDIR/log"
+  printf -- 'diff --git a/build-n4-module-kit/retros/2026-09-04-old.md b/build-n4-module-kit/retros/2026-09-04-old.md\ndeleted file mode 100644\n@@ -1 +0,0 @@\n-<!-- review-status: pending -->\ndiff --git a/build-n4-module-kit/retros/2026-09-05-new.md b/build-n4-module-kit/retros/2026-09-05-new.md\nnew file mode 100644\n@@ -0,0 +1 @@\n+<!-- review-status: folded -->\n' > "$BATS_TEST_TMPDIR/patch"
+  FAKE_PATCH_FILE="$BATS_TEST_TMPDIR/patch" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -ne 0 ]
 }
 
 @test "H8b: a promotion trailer + a retro edit that flips NO header (body only) FAILS" {
