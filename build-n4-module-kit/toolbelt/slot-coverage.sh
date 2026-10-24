@@ -19,7 +19,8 @@
 # Usage (per-slot subcommand — Campaign 8 PR5, D6):
 #   slot-coverage.sh per-slot <module-include.xml> <module.lexicon> <src-dir>
 #   required   <- OPERATOR-flagged @NiagaraProperty slots from *.java under <src-dir>
-#                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key)
+#                 (dot-dirs pruned — D9b; non-OPERATOR slots are NOT required to have a key). OPERATOR is read
+#                 from the annotation's code: a comment inside it ("never OPERATOR-writable") flags nothing (#459)
 #   declared   <- BARE lexicon keys only: the framework reads a slot's display name from the bare slot key in the
 #                 declaring type's module (NSlot.java:42); "FanMode.fan" is never read for slot fan.
 #   MISSING    <- OPERATOR slot with no bare lexicon key (renders raw camelCase in operator views)

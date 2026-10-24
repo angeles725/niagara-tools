@@ -30,20 +30,30 @@ func readSources(files []string, s cli.Stdio) ([][]byte, bool) {
 
 // slots runs the awk scan of the per-slot mode over the sources, one awk over all of them: an annotation
 // open at the end of one file carries into the next. all holds every named annotation, op the OPERATOR ones.
+// The OPERATOR test reads the annotation's code only (javasrc.Strip, mirrored line for line beside the scan):
+// a comment inside the annotation that mentions OPERATOR ("never OPERATOR-writable") flags nothing (issue #459).
 func slots(sources [][]byte) (all, op []string) {
 	scan := javasrc.PropertyScan{}
+	open, code := false, ""
 	for _, data := range sources {
-		for i, ln := range lines(data) {
+		raw := lines(data)
+		stripped, _ := javasrc.Strip(raw)
+		for i, ln := range raw {
+			if open = open || strings.Contains(ln, "@NiagaraProperty"); open {
+				code += " " + stripped[i]
+			}
 			text, _, ok := scan.Line(ln, i+1)
 			if !ok {
 				continue
 			}
+			flags := code
+			open, code = false, ""
 			m := propName.FindStringSubmatch(text)
 			if m == nil || m[1] == "" {
 				continue
 			}
 			all = append(all, m[1])
-			if strings.Contains(text, "OPERATOR") || strings.Contains(text, `"o"`) {
+			if strings.Contains(flags, "OPERATOR") || strings.Contains(flags, `"o"`) {
 				op = append(op, m[1])
 			}
 		}
