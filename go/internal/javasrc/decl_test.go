@@ -79,3 +79,16 @@ func TestDeclModifiers(t *testing.T) {
 		t.Errorf("got %s\nwant %s", strings.Join(got, " "), want)
 	}
 }
+
+// TestDeclResult: Result is the last token of the return type (the token before the name).
+func TestDeclResult(t *testing.T) {
+	src := "class A {\n  static A of(int v) { return new A(); }\n  List<String> names() { return l; }\n  int[] all() { return a; }\n  A() { }\n}"
+	lines, _ := Strip(strings.Split(src, "\n"))
+	var got []string
+	for _, d := range Decls(Tokens(lines)) {
+		got = append(got, d.Name+":"+d.Result)
+	}
+	if want := "of:A names:> all:] A:"; strings.Join(got, " ") != want {
+		t.Errorf("got %s\nwant %s", strings.Join(got, " "), want)
+	}
+}

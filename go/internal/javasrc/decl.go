@@ -12,6 +12,7 @@ type Decl struct {
 	Anonymous bool
 	Private   bool   // declared private
 	Static    bool   // declared static
+	Result    string // the return type's last token ("A", ">" of List<A>, "]" of int[]); "" for a constructor
 	Line      int    // the 0-based line of the name token
 	Body      [2]int // the body's token range [Body[0], Body[1]): inside its braces
 }
@@ -22,6 +23,10 @@ var classKeyword = map[string]bool{"class": true, "interface": true, "enum": tru
 // notMethod are the keywords that take a parenthesized header before a block.
 var notMethod = map[string]bool{"if": true, "for": true, "while": true, "switch": true, "catch": true,
 	"synchronized": true, "try": true, "do": true, "else": true, "new": true, "return": true}
+
+// modifier are the keywords that may stand right before a constructor's name.
+var modifier = map[string]bool{"public": true, "protected": true, "private": true, "static": true, "final": true,
+	"abstract": true, "synchronized": true, "native": true, "strictfp": true, "default": true}
 
 type frame struct {
 	class  string // set on a class body
@@ -128,6 +133,9 @@ func method(toks []Token, k int) (Decl, bool) {
 		return Decl{}, false
 	}
 	d := Decl{Name: toks[n].Text, Line: toks[n].Line, Params: params(toks[l+1 : r]), Body: [2]int{k + 1, 0}}
+	if p := n - 1; p >= start && !modifier[toks[p].Text] && toks[p].Text != ")" && toks[p].Kind != TokLiteral {
+		d.Result = toks[p].Text // a constructor has a modifier, an annotation or nothing there
+	}
 	depth := 0 // inside an annotation's arguments
 	for j := start; j < n; j++ {
 		switch t := toks[j]; {
