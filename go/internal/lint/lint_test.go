@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // fakeRule reports every raw line that contains its marker.
@@ -659,6 +660,25 @@ func TestModuleRootLeftOutOfAll(t *testing.T) {
 	}
 }
 
+// TestShortScanError: Spec.ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan
+// <path>: <reason>"), not as awk_lint_run's awk error; the other files are still scanned and the exit is 3.
+func TestShortScanError(t *testing.T) {
+	skipIfRoot(t)
+	root := tree(t, map[string]string{"A.java": "MARK\n", "U.java": "x\n"})
+	u := filepath.Join(root, "U.java")
+	if err := os.Chmod(u, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(u, 0o644) })
+	sp := javaSpec(fakeRule{"lint-s", "MARK", Fail}, Raw)
+	sp.ShortScanError = true
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-s", root}, s); code != 3 || o.String() != "FAIL  lint-s  "+root+"/A.java:1  saw: MARK\n" ||
+		e.String() != "lint-s: cannot scan "+u+": Permission denied\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
+	}
+}
+
 func TestEmptyOK(t *testing.T) {
 	sp := javaSpec(fakeRule{"lint-e", "MARK", Fail}, Raw)
 	sp.EmptyOK = true
@@ -889,3 +909,21 @@ type valuesFake struct {
 }
 
 func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }
+
+// xmlFake is a Rule whose Check fails with a positioned XML error, as an internal/xmlsrc consumer does.
+type xmlFake struct{ fakeRule }
+
+func (xmlFake) Check(f *javasrc.File) ([]Finding, error) {
+	return nil, &xmlsrc.Error{Path: f.Path, Line: 3, Col: 1, Msg: "element <a> opened at 2:1 is never closed"}
+}
+
+// TestXMLErrorOnce: an *xmlsrc.Error from a rule names its file itself, so the runner prints it once
+// ("<lint>: <path>:<line>:<col>: <msg>"), not behind "cannot scan <path>: <rule>:"; exit 3.
+func TestXMLErrorOnce(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	s, o, e := stdio()
+	if code := Command(javaSpec(xmlFake{fakeRule{"lint-x", "MARK", Fail}}, One))([]string{"lint-x", root}, s); code != 3 || o.Len() != 0 ||
+		e.String() != "lint-x: "+root+"/A.java:3:1: element <a> opened at 2:1 is never closed\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
+	}
+}
