@@ -67,6 +67,9 @@ rule's rows stay contiguous.
    `no <pattern>[ or <pattern>...] sources found (wrong path or empty source tree)` from `Select.Names`.
    The one opt-out is `Spec.EmptyOK`, for a lint whose own contract makes an empty root clean (reference:
    `rules/lexiconascii`, LA5: a module with no `*.lexicon` has nothing to check): no ERROR row, exit 0.
+   `Spec.OptionalInAll` applies that opt-out under `n4lint --all` only, for a rule whose files belong to one
+   profile (`rules/spapoll` reads a -ux root's `*.html`/`*.js`; `--all` also runs on -rt roots without them);
+   run by name or in a rule list the rule keeps the ERROR row.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
