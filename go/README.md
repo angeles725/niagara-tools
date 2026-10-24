@@ -69,6 +69,8 @@ rule's rows stay contiguous.
    `rules/lexiconascii`, LA5: a module with no `*.lexicon` has nothing to check): no ERROR row, exit 0.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
+   `Spec.ShortScanError` words an unreadable file as `awk_lint_each` did (`<lint>: cannot scan <path>: <reason>`)
+   instead of `awk_lint_run`'s awk error (reference: `rules/agentonshape`).
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
    A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
@@ -140,4 +142,4 @@ tokenizer. Each file is read once (UTF-8, ISO-8859-1 or US-ASCII; a zipped `.bog
 a well-formed `Doc` or an `*Error` printed as `path:line:col: message`; a malformed file is a finding, never an empty
 result. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
 `internal/pyxml/testdata/xmlerrors.json`) checks the well-formedness verdict against expat; `TestSweepRealFiles`
-(`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `split-package-check.sh`.
+(`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `lint-agent-on-shape.sh` (`rules/agentonshape`: every `<on>` element of each module-include.xml, a malformed file a positioned `path:line:col` error, exit 3); `split-package-check.sh` only looks for its build markers by name and reads no XML.
