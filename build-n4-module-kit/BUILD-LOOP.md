@@ -240,6 +240,14 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `report-module.sh`). Without the pin, "never a private copy" is prose and the next quick fix pastes the copy
     back. Review check: the PR names the pinning test and shows an OBSERVED mutation (re-inline one copy, the test
     goes red). `[ev: retro r10-thin-entry-one-concern Δ1]`
+  - **A dedupe stops at a call site that a generator or lint reads.** Before repeated call sites become a table,
+    a loop or a generic runner, grep the kit for a generator, lint or test that matches them literally. Example:
+    `toolbelt/gen-lint-index.sh` marks a lint Auto only when a non-comment line of `report-module.sh` invokes
+    `"$TOOLBELT/<lint>.sh"`, so a generic `"$TOOLBELT/$tool.sh"` runner would turn the whole Auto column to "no"
+    (PR #352 kept a two-line call site per member: the literal invocation, then the shared `lint_rows`). When such a
+    reader exists, keep the literal call and share everything after it. The site-data table rule
+    (`METHODOLOGY.md` § Domain correctness) does not override this. Review check: a refactor that turns literal
+    invocations into data shows that grep and an unchanged `gen-*.sh --check`. `[ev: retro r10-thin-entry-one-concern Δ2]`
   - **No fork per input line.** A shell `while read` loop whose body pipes `printf`/`echo` of the record into
     `grep`/`sed`/`awk` (or reads it with `<<<`) costs a clone and an exec per line: 35-97 s on a client tree
     against 0.13-1.25 s for one awk per file with byte-identical output. Use `toolbelt/lib/awk-lint.sh`
