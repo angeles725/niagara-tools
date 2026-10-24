@@ -1,7 +1,7 @@
 <!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
-# 2026-10-23 · kit · r10-thin-entry-one-concern
+# 2026-10-23 · kit · r10-dedupe-pins-measured-cuts
 
 **Session**: niagara-research quality round 10 (`odd/tasks/quality-round10-ayudante1.md`, unit R10-1), branch
 `docs/r10-modular-doctrine` from origin/main 80fef28
@@ -63,4 +63,4 @@ bats pins, and Δ3 is a PR-body rule.
 - Line counts drift between the PR title, the retro and the merge. Measure once, on named commits.
 
 ---
-**Status**: FOLDED 2026-10-23 (branch `docs/r10-modular-doctrine`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine "Pin every shared helper with a sync test" (`:241`); Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine "A dedupe stops at a call site that a generator or lint reads" (`:248`); Δ3 `BUILD-LOOP.md` § 5 "A refactor keeps observable output" bullet, line-count paragraph (`:214`). Dropped as covered: thin entry points (`types/logic.md` § Pure-class extraction, `types/dashboard.md` DUX1, r8-t22 Δ1/Δ9) and bash one-module-per-concern (r8-t22 Δ9). INDEX row generated from the header: `| 2026-10-23-r10-thin-entry-one-concern.md | kit | 2026-10-23 | folded | 3 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r10-modular-doctrine`) — Δ1 `BUILD-LOOP.md` § 5 kit tooling doctrine "Pin every shared helper with a sync test" (`:241`); Δ2 `BUILD-LOOP.md` § 5 kit tooling doctrine "A dedupe stops at a call site that a generator or lint reads" (`:248`); Δ3 `BUILD-LOOP.md` § 5 "A refactor keeps observable output" bullet, line-count paragraph (`:214`). Dropped as covered: thin entry points (`types/logic.md` § Pure-class extraction, `types/dashboard.md` DUX1, r8-t22 Δ1/Δ9) and bash one-module-per-concern (r8-t22 Δ9). INDEX row generated from the header: `| 2026-10-23-r10-dedupe-pins-measured-cuts.md | kit | 2026-10-23 | folded | 3 |`
