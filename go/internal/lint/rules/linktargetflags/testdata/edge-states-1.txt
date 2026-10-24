@@ -1,0 +1,48 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:5  LTF1: link-in target "multi" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:11  LTF1: link-in target "runKept" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:21  LTF1: link-in target "blockComment" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:23  LTF1: link-in target "aBlink" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:24  LTF1: link-in target "nextNoComment" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:28  LTF1: link-in target "nameLast" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:30  LTF1: link-in target "tight" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- root/com/x/A.java --
+class A {
+// @NiagaraProperty(name = "commented", type = "double", flags = Flags.READONLY)
+  String s = "@NiagaraProperty(name = \"inString\", flags = Flags.READONLY)";
+// link-in from control
+@NiagaraProperty(
+  name = "multi",
+  type = "double",
+  defaultValue = "BString.make(\"(x)\")",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(name = "runKept", type = "double", flags = Flags.READONLY)
+
+// linked from the network
+int code;
+@NiagaraProperty(name = "afterCode", type = "double", flags = Flags.READONLY)
+// Written By BLink
+@NiagaraType
+@NiagaraProperty(name = "afterType", type = "double", flags = Flags.READONLY)
+/* LINK-IN target
+ * from control */
+@NiagaraProperty(name = "blockComment", type = "double", flags = Flags.READONLY)
+// written by a blink
+@NiagaraProperty(name = "aBlink", type = "double", flags = Flags.READONLY)
+@NiagaraProperty(name = "nextNoComment", type = "double", flags = Flags.READONLY)
+// unrelated note
+@NiagaraProperty(name = "unrelated", type = "double", flags = Flags.READONLY)
+// commissioning link
+@NiagaraProperty(type = "double", flags = Flags.READONLY, name = "nameLast")
+// commissioning link
+@NiagaraProperty(name="tight",type="double",flags=Flags.READONLY)
+// commissioning link
+@NiagaraProperty(name = "inDefault", type = "baja:String", defaultValue = "BString.make(\"READONLY\")")
+// commissioning link
+@NiagaraProperty(name = "noFlags")
+}

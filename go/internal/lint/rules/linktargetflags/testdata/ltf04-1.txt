@@ -1,0 +1,21 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/BCompressorPanel.java:5  LTF2: operator mode/HOA slot "comp3Mode" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+FAIL  lint-link-target-flags  @DIR@/root/com/x/BCompressorPanel.java:11  LTF2: operator mode/HOA slot "fanHoa" is TRANSIENT -- it reverts to its default on restart and a link re-pushes it; persist it
+-- stderr --
+-- root/com/x/BCompressorPanel.java --
+package com.x;
+import javax.baja.sys.*;
+@NiagaraType
+// Operator HOA for compressor 3 (0=AUTO, 1=OFF, 2=HAND), linked facade->control.
+@NiagaraProperty(
+  name = "comp3Mode",
+  type = "int",
+  defaultValue = "0",
+  flags = Flags.SUMMARY | Flags.OPERATOR | Flags.TRANSIENT
+)
+@NiagaraProperty(name = "fanHoa", type = "int", defaultValue = "0", flags = Flags.OPERATOR | Flags.TRANSIENT)
+public final class BCompressorPanel extends BComponent {
+}

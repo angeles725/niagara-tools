@@ -1,0 +1,19 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BDel.java --
+package com.x;
+public class BDel extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void changed(Property p, Context cx) {
+    super.changed(p, cx);
+  }
+  public void doNothing() {
+    return;
+  }
+}

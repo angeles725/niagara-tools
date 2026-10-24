@@ -1,0 +1,12 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+-- stderr --
+-- proj/G/A/A-rt/build.gradle.kts --
+-- proj/G/A/A-rt/src/com/x/U.java --
+package com.a;
+class C {}
+-- proj/G/A/A-rt/src/com/x/V.java --
+package com.a;
+class C {}

@@ -1,0 +1,6 @@
+-- args --
+-h
+-- want --
+exit 3
+-- stderr --
+lint-recovery-path: not a directory: -h
