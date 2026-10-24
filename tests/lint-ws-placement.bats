@@ -107,6 +107,18 @@ wrap() {
   [ -z "$output" ]
 }
 
+@test "WSP-widget: a bajaui widget added to a pane is not a wire-sheet node" {
+  # Mutation: WSP-widget -- dropping the javax.baja.ui import check WARNs buttons.add(null, new BButton(cmd))
+  # Go golden: go/internal/lint/rules/wsplacement/testdata/truth-widgets-1.txt
+  { printf 'package com.x;\nimport javax.baja.ui.BButton;\nimport javax.baja.ui.pane.BGridPane;\n'
+    printf 'public class BMgr extends BWbView {\n  void build() {\n'
+    printf '    BGridPane buttons = new BGridPane(4);\n    buttons.add(null, new BButton(cmd));\n    add(null, buttons);\n'
+    printf '  }\n}\n'; } > "$SRC/BMgr.java"
+  run "$WSP" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "WSP-roots: every src root given is scanned" {
   run "$WSP" "$FX/annotated" "$FX/positive"
   [ "$status" -eq 0 ]

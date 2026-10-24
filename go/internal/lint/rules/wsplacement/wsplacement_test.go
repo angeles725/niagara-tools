@@ -8,7 +8,7 @@ import (
 
 // TestGolden: every tests/lint-ws-placement.bats run (WSP-awkfail and WSP-finderr aside: TestUnreadable pins
 // them) and every edge tree, recorded from the bash lint-ws-placement.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 37) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 38) }
 
 // TestUnreadable: WSP-awkfail and WSP-finderr keep awk_lint_run's contract (ContinueOnWalkError).
 func TestUnreadable(t *testing.T) {
