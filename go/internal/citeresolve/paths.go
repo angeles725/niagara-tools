@@ -58,6 +58,9 @@ func (e *Engine) hit(p citeparse.Pointer, path string) Result {
 	if !ok {
 		return res
 	}
+	if drift, ok := checkAnchor(p, path, lines); !ok {
+		return drift
+	}
 	var ex []string
 	if res.Detail != "" {
 		ex = append(ex, res.Detail)

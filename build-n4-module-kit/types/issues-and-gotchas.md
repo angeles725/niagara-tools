@@ -441,8 +441,8 @@ The Apillm-wb fix of 2026-09-21 (`BApillmImporterManager`) is recorded in that r
 sign flip; the device's own display shows a sane value.
 **Root cause:** the registers carry no type: the driver assembles them with the byte order set on the network or
 the device (default `Order3210`), so a device that uses another order decodes as garbage and the read still
-succeeds `[INFER]` (guide 4.15.6.20 `Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). An off-by-one address
-(zero-based wire addresses, `Modbus/ModbusRegisters-5E427D5B.txt:33`) gives the same picture.
+succeeds `[INFER]` (guide 4.15.6.20 `Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28` "the byte-order used to assemble or receive floating-point"). An off-by-one address
+(zero-based wire addresses, `Modbus/ModbusRegisters-5E427D5B.txt:33` "Data addressing (at least in decimal and hex") gives the same picture.
 **Fix:** at commissioning, compare one known value per data type with the device display; set the byte order on
 the device when devices differ. `types/driver-authoring.md` § 11.3. `[ev: corpus B1327 row 10]` —
 **Kit coverage: this entry (FOLDED); no lint (field-only check)**
@@ -452,7 +452,7 @@ the device when devices differ. `types/driver-authoring.md` § 11.3. `[ev: corpu
 **Symptom:** a BACnet export descriptor for an `EnumPoint`/`EnumWritable` is configured, but peers never see the
 Multi-State object.
 **Root cause:** the range must start at ordinal 1 and be contiguous; otherwise "the object does not export to
-BACnet" (guide 4.15.6.20 `Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`). Our 0-based `BFrozenEnum`
+BACnet" (guide 4.15.6.20 `Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17` "Multi State Input"). Our 0-based `BFrozenEnum`
 ranges (`auto/hand/off` = 0/1/2) hit this.
 **Fix:** export an enum through a point whose range is 1..n (or a numeric point); `types/driver-authoring.md`
 § 11.1. `[ev: corpus B1327 row 6]` — **Kit coverage: this entry (FOLDED); owed Go lint G86
@@ -580,7 +580,7 @@ and restart Workbench: every lexicon value is prefixed with its module, language
 did not come from a lexicon. `.suffix`, `.addMissing` and `.onlyMissing` (Java lexicon only) also exist. Remove the
 lines afterwards; every `Lexicon.make` returns the diagnostic lexicon while the flag is set.
 
-Evidence: guide `Lexicon/AddingDiagnosticLexiconFeature-56CED5AA.txt:10-38`; [CERT]
+Evidence: guide `Lexicon/AddingDiagnosticLexiconFeature-56CED5AA.txt:10-38` "To enable the Diagnostic Lexicon feature, you need"; [CERT]
 `organized/baja/baja/decompiled/com/tridium/util/DiagnosticLexicon.java:30-34,138-140`,
 `organized/docSource/docSource-doc/extracted/baja/javax/baja/util/Lexicon.java:69-76`; corpus B1305 §1305.1 row 13,
 B1251 §1251.9. — **Kit coverage: this entry; `types/diagnostics.md` § 3**

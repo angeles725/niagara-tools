@@ -490,7 +490,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[ev: retro r10-path-keyed-gates-skip-data Δ2]`
   - **Citation pre-filter.** `toolbelt/kit-cite-resolve.sh [--strict] <card>...` (`go/cmd/kit-cite-resolve`)
     resolves every evidence pointer of the given cards and prints one row per pointer with its status
-    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
+    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, DRIFT, BARE_ID, UNPARSED, AMBIGUOUS, TOOL_ERROR)
     and an excerpt of the cited line; a bare or partial path is searched in the repo, organized/, the versioned source
     and the client checkouts (`--clients`), every copy checked, and AMBIGUOUS lists the candidates, never a guess. RESOLVED means the cited place exists, never that it says the claim: a reviewer
     still reads the excerpt. Not findings: HISTORICAL_DRIFT (a moved target on a history card: retros/, ledger.d/,
@@ -498,6 +498,11 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     SKIPPED_TEMPLATE (`<stem>` placeholders); the summary counts LIVE and HISTORY apart. Exit 0 / 1 on a finding
     under `--strict` / 3 usage or an unreadable root. `[ev: retro go-kit-cite-resolve]` `[ev: ledger.d/2026-10-24-r10-kcr-status-split.md]`
     `[ev: ledger.d/2026-10-24-r10-kcr-paths-kinds.md]`
+    A `guides-clean` line pointer carries a quoted anchor right after its lines (`` `G/<page>.txt:12` "a phrase of line 12" ``
+    or the same after a tag's `guide <page>.txt:12`): the rendered guide copies shift on every re-render, so a bare line number
+    drifts while still resolving. The phrase must sit on a cited line, give or take 2 lines; otherwise the pointer is
+    DRIFT, naming the lines that hold it now (HISTORICAL_DRIFT on a history card). An anchor outside guides-clean is
+    shown, not checked. `[ev: retro r10-kcr-guide-anchor-drift Δ1]`
     A pointer grammar matches every character a real file name uses: a pattern that rejects one (the dot inside
     `BUILD-STATE.src.md`) does not fail, its leftmost match silently reads a shorter, wrong name. Each such grammar
     pins a case per legal name shape (`go/internal/citeparse` `TestCardSources`), and a pointer that resolves only
@@ -574,7 +579,7 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 6. **Persisted operator state survives the first restart:** HOA modes, setpoints, run hours and any new backup/persistence slot are SEEDED from the live values (or saved) BEFORE the first restart after the feature ships, and re-read after it. A brand-new backup starts empty on its first boot by construction — the first restart after a new hours backup reset a wear counter to ~0 — so either seed it or record the one-time reset as accepted in the feature doc. Mechanism: `types/logic.md` § Restart & persistence. `[ev: retro panccadia-commissioning-lessons Δ5]` `[ev: retro station-backup-before-deploy Δ3]`
 7. **Alarm routing is proven end-to-end:** every alarm source has an alarm class and at least one recipient, and a test alarm per class reaches the console and is acknowledged there. Which faults are console alarms and which are flags: `types/logic.md` § Flag vs console alarm. `[ev: retro alarm-console-design Δ2]`
    Size the store at the same time: the file alarm DB keeps 500 records by default and overwrites the oldest
-   (4.15.6.20 guide `Alarms/Alarm-FileAlarmDbConfig-92D9119A.txt:10`); every module history ext is enabled, named by
+   (4.15.6.20 guide `Alarms/Alarm-FileAlarmDbConfig-92D9119A.txt:10` "1–250,000 records (defaults to 500)"); every module history ext is enabled, named by
    script and sized (`types/logic-authoring.md` § Logging a point to history). `[ev: retro devguide415-r2-control-alarms-schedules Δ4]`
 8. **Consumer impact notified:** every point whose MEANING changed (proof threshold, predicate, mode semantics, default, reset by a first boot — see `METHODOLOGY.md` § Schema / upgrade safety, Consumer impact) was notified to its downstream consumers (web viewers, oBIX/cloud readers, other stations), with the date it takes effect. `schema-risk.sh` SAFE proves decode survival, not semantic stability. `[ev: retro panccadia-commissioning-lessons Δ8]`
 9. **Values owed by the field — a table that stays open until filled:** every slot shipped at a "disabled / no value yet" default because the field has not supplied the real value (a nameplate current limit, a low-pressure cutout) gets a row in `docs/values-owed.md` (`| Slot | Owed by | Unit | Safe default | Status |`; Status `owed` until `filled <date>`/`provided`). `commissioning-verify.sh` prints a `MANUAL values-owed` row per still-owed slot, so the debt cannot age out when the feature doc is archived. Where the client keeps a version ledger, its `Open items` appendix aggregates these rows across features (together with pending manual links and open behavior assumptions) — cross-reference the module table, do not restate it. `[ev: retro panccadia-commissioning-lessons Δ11]` `[ev: retro panccadia-version-defect-ledger Δ4]`

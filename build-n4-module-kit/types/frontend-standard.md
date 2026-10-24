@@ -31,8 +31,8 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
 - No Mobile Web Profile, Mobile Px or AX Mobile app in a new module: deprecated since Niagara 4.6 ("you should not
   use it for any new projects"); a phone-usable module is a responsive view under `lan`. The BOX server cache
   (default Medium; higher costs memory) is station tuning, not a module setting. [CERT-doc] niagara-help 4.15.6.20
-  `guides-clean/Mobile/Preface-22B940F3.txt:9`, `guides-clean/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:23-27,64`,
-  `guides-clean/Mobile/IncreasingBOXCacheToImprovePerforma-C3698B81.txt:15,27`. Owed lint: G78 `mobile-deprecated`.
+  `guides-clean/Mobile/Preface-22B940F3.txt:9` "NOTE: With the release of Niagara 4.6, Mobile", `guides-clean/Graphics/AboutTypesOfPxTargetMediaGraphicsN4-504311E0.txt:23-27,64` "Mobile PxMedia (obsolete)",
+  `guides-clean/Mobile/IncreasingBOXCacheToImprovePerforma-C3698B81.txt:15,27` "NOTE: Increasing the server cache consumes more memory.". Owed lint: G78 `mobile-deprecated`.
   `[ev: retro devguide415-r2-web-ui-hmi Δ9]`
 - A rule without a profile tag is not folded into this file. `[ev: retro dashboard-deployment-profiles Δ2]`
 

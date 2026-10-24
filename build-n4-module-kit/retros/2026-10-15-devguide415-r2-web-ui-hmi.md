@@ -12,8 +12,8 @@
 ## Evidence
 - web.xml scan `[ev: /mnt/c/Niagara/Niagara-4.15.6.20/modules/web-rt.jar!WEB-INF/web.xml:84-91]` `[ev: code organized/web/web-rt/vineflower/javax/baja/web/filters/UserActivityFilter.java:21]` `[ev: corpus B1318 §1318.2]` vs `[ev: retro 2026-10-15-devguide415-horizons-authoring-security Δ1-Δ2]`
 - Themes `[ev: code organized/baja/baja/vineflower/com/tridium/util/CustomThemeModuleManager.java:24,47]` `[ev: code organized/hx/hx-wb/vineflower/javax/baja/hx/BHxProfile.java:291]` vs `[ev: code types/theme.md:41-43]` `[ev: corpus B1328]`
-- Touch `[ev: niagara-help 4.15.6.20 guides-clean/Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:43]` `[ev: …/Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:41]` `[ev: corpus B1334]`
-- Charts `[ev: niagara-help 4.15.6.20 guides-clean/WebCharts/AddingDataToAChart-959F4DCC.txt:40,44]` `[ev: /mnt/c/Niagara/Niagara-4.15.6.20/modules/seriesTransform-rt.jar!WEB-INF/web.xml]` `[ev: corpus B1339]`; Mobile `[ev: niagara-help 4.15.6.20 guides-clean/Mobile/Preface-22B940F3.txt:23]` `[ev: corpus B1342]`; dashboards `[ev: niagara-help 4.15.6.20 guides-clean/EngNotes/dashboard-DashboardService.txt:14]` `[ev: corpus B1336]`
+- Touch `[ev: niagara-help 4.15.6.20 guides-clean/Touch/SettingUpADisplayUser-EntsecInstall-4CB4BEC4.txt:24 "Under Auto Logoff Settings, remove the check"]` `[ev: …/Touch/UpdatingTheIntrusionDisplayUserEnts-5053926B.txt:23 "For Allow Concurrent Sessions, select false"]` `[ev: corpus B1334]`
+- Charts `[ev: niagara-help 4.15.6.20 guides-clean/WebCharts/AddingDataToAChart-959F4DCC.txt:22,25 "NOTE: When adding a points folder to a"]` `[ev: /mnt/c/Niagara/Niagara-4.15.6.20/modules/seriesTransform-rt.jar!WEB-INF/web.xml]` `[ev: corpus B1339]`; Mobile `[ev: niagara-help 4.15.6.20 guides-clean/Mobile/Preface-22B940F3.txt:9 "Niagara 4.6, Mobile features are deprecated, being"]` `[ev: corpus B1342]`; dashboards `[ev: niagara-help 4.15.6.20 guides-clean/EngNotes/dashboard-DashboardService.txt:7 "to db*.json files stored in the dashboards directory"]` `[ev: corpus B1336]`
 
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |

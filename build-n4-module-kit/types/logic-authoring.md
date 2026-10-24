@@ -31,14 +31,14 @@ Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
   **Documented scope** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: the 4.15.6.20 developer guide covers only
   data-processing blocks (extend `BAlgorithmBlock` or `BOutputBlock`, pins are `BBlockPin`;
-  `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22,28-30`). `AnalyticDataSource.Provider` lives in the internal
+  `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22,28-30` "Developer guide on how to develop algorithmic blocks."). `AnalyticDataSource.Provider` lives in the internal
   `com.tridiumx.analytics.data` package (analytics-rt 4.15.6.20 jar listing) and is undocumented: a design that
   depends on it is [INFER] and needs a version pin. Consume results through an analytic proxy ext on a point or the
   ORD schemes (§ ORD scheme typology), not by reaching into the framework. **Licence:** every point the framework
   uses carries the `a:a` tag and counts against the licence; when the count exceeds it the framework stops, so turn
-  `AutoTagAnalyticPoint` off after commissioning (`AnalyticsGuide/AboutLicensing-2CF33B35.txt:7-11`,
+  `AutoTagAnalyticPoint` off after commissioning (`AnalyticsGuide/AboutLicensing-2CF33B35.txt:7-11` "For a point to be used by the",
   `ConfiguringTheServiceForLicensing-2D096CAA.txt:17`). An alert raises no alarm unless its `Alarm` property is set
-  (default false, `AnalyticsGuide/CreatingAnAlert-4506D8F3.txt:42`). Corpus B1338.
+  (default false, `AnalyticsGuide/CreatingAnAlert-4506D8F3.txt:42` "Alarm controls alarm generation. The default is false"). Corpus B1338.
 
 ### Nav-tree ordering and visibility `[ev: corpus B757 §757.3–757.4]`
 
@@ -133,7 +133,7 @@ schemes into space and query):
 Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side SPIs for the authoring recipe.
 
 **Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
-`BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
+`BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36` "Value requests (analyticValue:)").
 There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt
 `organized/analytics/analytics-rt/extracted/META-INF/module.xml:106`, the 4.14.0.162 copy; no 4.15.6.20 jar on this host). Analytic values cannot be subscribed like points; the bindings poll them
 (`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
@@ -310,7 +310,7 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
 
 - **Package:** select the templates in the Template sidebar → **Make Module**; the result is one `.jar` named by
   `moduleName` in Sys Home `modules/`. A template inside a module is read-only (the Template view shows
-  `ReadOnly`; Save As copies it to `~templates` to edit) (guide `Templates/MakingATemplateModule-8A3D4B56.txt:7,16,21,31`).
+  `ReadOnly`; Save As copies it to `~templates` to edit) (guide `Templates/MakingATemplateModule-8A3D4B56.txt:7,16,21,31` "A template module is a group of templates").
 - **Dependencies:** the `.ntpl` carries `template-manifest.xml` (the guide spells it `template.manifest.xml`;
   shipped `.ntpl` files use the hyphen) whose `<dependencies>` holds one `<dependency name vendor vendorVersion rel>`
   per module (`template-rt` `ManifestXMLWriter.java:129-140`). List every module the component tree AND the Px
@@ -319,16 +319,16 @@ try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream
   `ApplicationTemplateInstaller.java:81-85`, corpus B578). Its `signature` attribute detects a modified template (`:13`).
 - **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
   pins only the major, so a template built on a later minor deploys to stations on an earlier one
-  (guide `Templates/TemplateOptions-49093F67.txt:9-11`).
+  (guide `Templates/TemplateOptions-49093F67.txt:9-11` "Minor Version On Deployment is set to true,").
 - Owed advisory: Go lint G92 `ntpl-manifest-deps` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
   [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
 
 ### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]
 
 - Template changes are never applied to deployed copies; redeploy is the only path
-  (guide `Templates/DeployingTemplates-054F175F.txt:13`).
+  (guide `Templates/DeployingTemplates-054F175F.txt:13` "NOTE: To avoid future problems, make sure that").
 - Upgrade, downgrade and redeploy of a deployed template remove it and install the new one: local edits to those
-  objects are lost (guide `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12,22`); links and history names
+  objects are lost (guide `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12,22` "CAUTION: Upgrading deployed templates wipes out any local"); links and history names
   survive by handle (corpus B579). Record which edits an operator made before an upgrade.
 - An application template install is destructive (existing station components are deleted), needs the `-wb`
   profile, and has no version or change tracking — record the installed version in the site ledger
@@ -647,7 +647,7 @@ add(escaped, BDouble.DEFAULT);
 refresh or rediscover action that removes and re-adds dynamic slots must carry over the flags an integrator set
 (HIDDEN, OPERATOR, READONLY): read `getFlags(slot)` before removing and `setFlags` after re-adding, or update the
 slot in place. Tridium's counter-example is scoped narrowly: `forceUpdate` resets hidden or changed action flags to
-defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `EngNotes/aForceUpdateAction.txt:2,13`;
+defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `EngNotes/aForceUpdateAction.txt:2,13` "However, sometimes you may wish to hide the";
 corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a design note [INFER].
 
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
@@ -770,7 +770,7 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
   enables it or code calls `setEnabled(true)`; a Paste Special copy also arrives disabled with an empty History
   Name (corpus B1257 row L10.20, §1257.10). `[ev: retro devguide415-r2-control-alarms-schedules Δ3]` `[ev: retro n4-course-parity-observability-horizons Δ5]`
 - **Keep `historyName` a script** (default `%parent.name%`, same file `:122`): a literal name loses the automatic
-  numbering, so a duplicated ext collides (4.15.6.20 guide `Histories/aHistoryNames.txt:7,11`); never rename a
+  numbering, so a duplicated ext collides (4.15.6.20 guide `Histories/aHistoryNames.txt:7,11` "By default, when a history extension is added"); never rename a
   history from the History space (it splits too, corpus B1324 row 9).
 - **Size it:** `capacity` defaults to 500 records (`javax/baja/history/BHistoryConfig.java:93`, same copy) — at a
   15 min interval that is about five days; set it for defrost and compressor trends. Counters (run hours, kWh) set
@@ -1233,7 +1233,7 @@ Security model:
   `program.failedVerification`, `:254-268`),
   while an unsigned blob without that property only logs `program.notSigned` as a WARNING (vineflower program-rt
   4.14.0.162 `com/tridium/program/BCode.java:202-215`; 4.13/4.15 not verified). The 4.15.6.20 guide agrees that
-  enforcement is off by default and asks for signing anyway (`User/ProgramObjectSigning-10F25D1D.txt:7,16`); sign
+  enforcement is off by default and asks for signing anyway (`User/ProgramObjectSigning-10F25D1D.txt:7,16` "Any code that can run in a station,"); sign
   existing objects with the Program Service's Program Recompile Tool (`:46`). An earlier version of this line said
   an unsigned blob is rejected at instantiation; the code does not. `[ev: retro devguide415-r2-packaging-platform-signing Δ7]`
 - **`compactProfile` = `"compact3"` (default)** — the Workbench program compiler builds a program that depends only on `-rt` modules with `javac -profile compact3` (a `-ux`/`-wb` dependency drops the profile), so code outside compact3 fails to compile (program-wb `com/tridium/program/ui/Compiler.java:385-399,423`, vineflower); no runtime reader of the service slot was found [INFER].

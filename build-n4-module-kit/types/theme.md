@@ -50,8 +50,8 @@ plugin writes into the generated `module.xml`:
   vineflower `CustomThemeModuleManager.java:64-72`).
 - **A missing theme falls back silently** to Zebra, then Lucid, then the first listed theme (`getDefaultThemeEnum`).
 - **Choosing a theme is per web profile, not per module:** the user's (or prototype's) web profile carries
-  `selectedHxTheme` / `selectedWorkbenchTheme` ("Hx Theme … defaults to Zebra", guide `User/baja-User.txt:54`); the
-  Workbench theme is picked in Tools › Options › General (`User/aAboutWorkbenchThemes.txt:26`). There is no Platform ›
+  `selectedHxTheme` / `selectedWorkbenchTheme` ("Hx Theme … defaults to Zebra", guide `User/baja-User.txt:54` "drop-down list (defaults to Zebra)"); the
+  Workbench theme is picked in Tools › Options › General (`User/aAboutWorkbenchThemes.txt:26` "To change the Workbench theme, click Tools >"). There is no Platform ›
   User Interface picker.
 
 `[ev: corpus B1328 §1328.2 C1]` `[ev: corpus B1328 row 3]` `[ev: retro devguide415-r2-web-ui-hmi Δ2]`

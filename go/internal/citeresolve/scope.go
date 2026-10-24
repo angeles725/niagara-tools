@@ -50,8 +50,9 @@ func NewClassifier(kit string, rules []PathRule) Classifier {
 	}
 }
 
-// drifting are the statuses that become HISTORICAL_DRIFT on a history card: the cited place moved or shrank.
-var drifting = map[Status]bool{MissingFile: true, MissingSection: true, MissingDelta: true, LineOutOfRange: true}
+// drifting are the statuses that become HISTORICAL_DRIFT on a history card: the cited place moved or shrank,
+// or its anchored text moved.
+var drifting = map[Status]bool{MissingFile: true, MissingSection: true, MissingDelta: true, LineOutOfRange: true, Drift: true}
 
 // passing are the statuses --strict accepts.
 var passing = map[Status]bool{Resolved: true, HistoricalDrift: true, UnverifiableKind: true, SkippedTemplate: true}
