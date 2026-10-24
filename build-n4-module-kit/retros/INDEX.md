@@ -330,6 +330,17 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-go-lint-js-pair.md | kit | 2026-10-24 | folded | 3 |
 | 2026-10-24-go-lint-lexicon-ascii.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-go-lint-license-gate.md | kit | 2026-10-24 | folded | 2 |
+| 2026-10-24-go-lint-agent-on-shape.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-arbitrary-ord.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-bformat-call.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-delays-method-scope.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-duplicate-helper.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-hot-write.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-inert-coordination.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-inline-site-literal.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-js-pair.md | kit | 2026-10-24 | pending | 3 |
+| 2026-10-24-go-lint-lexicon-ascii.md | kit | 2026-10-24 | pending | 2 |
+| 2026-10-24-go-lint-license-gate.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-link-target-flags.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-machine-default-path.md | kit | 2026-10-24 | pending | 3 |
 | 2026-10-24-go-lint-manual-labels.md | kit | 2026-10-24 | pending | 4 |
@@ -348,5 +359,6 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | pending | 1 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-slotomatic-skip-fail-open.md | kit | 2026-10-24 | folded | 1 |
+| 2026-10-24-r10-slotomatic-skip-srctest.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-stale-kit-resolution.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-user-level-gradle-keys.md | kit | 2026-10-24 | folded | 2 |

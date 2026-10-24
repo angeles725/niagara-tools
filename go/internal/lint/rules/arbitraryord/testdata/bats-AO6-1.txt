@@ -1,0 +1,9 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+WARN  lint-arbitrary-ord  @DIR@/repo/M/src/A.java:1  reviewed marker without a reason (add one): class A { void f(String q){ BOrd.make(q); // lint-arbitrary-ord: reviewed
+-- stderr --
+-- repo/M/src/A.java --
+class A { void f(String q){ BOrd.make(q); // lint-arbitrary-ord: reviewed
+} }
