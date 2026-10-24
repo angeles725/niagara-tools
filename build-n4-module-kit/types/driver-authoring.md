@@ -133,7 +133,7 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
   (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
   [ev: retro n4-course-handson-ndriver Δ7]
 
-### 1.8 · Which driver framework `[ev: corpus B877 §877.6]`
+### 1.8 · Which driver framework `[ev: corpus B877 §877.6]` [ev: retro r10-dr1-driver-doctrine Δ2]
 
 Three generic chassis share the `javax.baja.driver` root; pick one before the first class.
 
@@ -148,7 +148,7 @@ Chassis and transport columns: `[ev: corpus B877 §877.1]` `[ev: corpus B877 §8
 `BIpNetwork` class in the corpus: an NDriver IP driver uses `BTcpCommConfig` / `BUdpCommConfig`, a DDF one
 `BDdfTcpNetwork` / `BDdfUdpNetwork` (`organized/devIpDriver/devIpDriver-rt/vineflower/com/tridium/ddfIp/udp/BDdfUdpNetwork.java`).
 
-### 1.9 · NDriver comm config — TCP, UDP, serial
+### 1.9 · NDriver comm config — TCP, UDP, serial [ev: retro r10-dr1-driver-doctrine Δ3]
 
 Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named; wizard templates are
 `organized/devkit/devkit-wb/extracted/gradle/ndriver/`.
@@ -185,7 +185,7 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named; wizard 
   on failure (`ndriver/datatypes/BIpAddress.java:178-188`); prefer IP literals for devices, and see § 5 for a cached
   resolve.
 
-### 1.10 · NDriver message framing — the skeleton
+### 1.10 · NDriver message framing — the skeleton [ev: retro r10-dr1-driver-doctrine Δ4]
 
 One request class and one response class per message type, one `LinkMessage` subclass for the wire frame, one
 factory. Shape (write the codec yourself; course Lab 11 is example code only and ships the defects of § 1.7):
@@ -233,7 +233,7 @@ public NMessage makeMessage(LinkMessage lm) throws Exception {
 - Course reference for the shape only: `sources/n4-dev-course/course/Labs/Lab11 NDriver/1 Creating Common Classes/TrafficLightDriverLinkMessage.java:30-61`
   (its `receive` has no bounds check) `[ev: corpus B1239 §1239.6]`.
 
-### 1.11 · NDriver discovery — the job body
+### 1.11 · NDriver discovery — the job body [ev: retro r10-dr1-driver-doctrine Δ5]
 
 You do not write a `BJob`. `BNDiscoveryJob.doRun` starts a `JobThread` that calls your
 `BINDiscoveryHost.getDiscoveryObjects(prefs)`, adds what it returns, and repeats while `prefs.isMultiStep()` is
@@ -488,7 +488,7 @@ for transient comm conditions (device unreachable, timeout, protocol error) — 
 
 `[ev: retro module-hardening-reqexec-closed-deltas Δ4]`
 
-### Licensing — how device and point counts are enforced
+### Licensing — how device and point counts are enforced [ev: retro r10-dr1-driver-doctrine Δ6]
 
 Facts only, from docSource driver-rt (`D=organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver`
 below; full paths in the citations). The guide says only that "Licensing failures can also trigger fatal faults"
@@ -890,7 +890,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 
 ---
 
-## 12 · Testing a driver
+## 12 · Testing a driver [ev: retro r10-dr1-driver-doctrine Δ7]
 
 The Baja offline boundary decides the tier: a `BComponent` needs a running NRE (`types/moduleTest.md`
 intro), and the network, device, point device ext, proxy ext and comm configs are all components, and

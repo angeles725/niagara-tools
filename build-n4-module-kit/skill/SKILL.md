@@ -52,7 +52,7 @@ Then read `$KIT/METHODOLOGY.md` + `$KIT/BUILD-LOOP.md` + the type guide, and run
 |----------|------|
 | Pure logic (rt control) | `$KIT/types/logic.md` |
 | Framework extension (service, ORD scheme, point ext, analytics node, job, watchdog, provider) | `$KIT/types/logic-authoring.md` |
-| Driver / device network (network, device, proxy ext, comm stack, discovery, licensing) | `$KIT/types/driver-authoring.md` (§ 1.8 picks the framework, § 12 testing) |
+| Driver / device network (network, device, proxy ext, comm stack, discovery, licensing) | `$KIT/types/driver-authoring.md` (§ 1.8 picks the framework, § 12 testing) `[ev: retro r10-dr1-driver-doctrine Δ1]` |
 | Dashboard (facade + servlet + SPA) | `$KIT/types/dashboard.md` (+ `$KIT/types/frontend-standard.md` for the SPA side) |
 | Logic + dashboard | both |
 | Workbench widget / PX (wb) | `$KIT/types/wb-widgets.md` |
