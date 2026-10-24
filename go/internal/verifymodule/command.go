@@ -37,8 +37,9 @@ type check func(*run) bool
 
 // checks is the bash loop's order.
 var checks = []check{
-	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).rcBackup,
-	(*run).palette, (*run).wbScaffold,
+	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).typeCount,
+	(*run).facets, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
+	(*run).transientOperator, (*run).compact3Imports,
 }
 
 // Main is verify-module.sh. `coverage` and `--plano` are read before any flag. When bash arithmetic
