@@ -60,6 +60,11 @@ func batch(id any, ts, verdict any, ops any, inDoubt, result bool) string {
 // read-back verdicts, in-doubt batches, BOX errors, dangling observations, windows, odd values
 // in the summary, the errors Python raises, and template placeholders in the station name.
 func sessionStates() []sessionState {
+	// chunkCut is one audit line whose bad byte pair straddles the 8192-byte read chunk, then a
+	// readable row whose two-byte character straddles the 16384-byte one (issue #466).
+	pad := func(n int) string { return strings.Repeat("a", n) }
+	chunkCut := []byte(`{"x": "` + pad(8191-7) + "\xc3(\"}\r\n")
+	chunkCut = append(chunkCut, `{"ts": "x", "outcome": "`+pad(16384-len(chunkCut)-25)+"\u00e9\"}\n"...)
 	var every string
 	for i, r := range append(refusalReasons(), "nothing a class knows") {
 		every += refused("2026-10-01T10:00:00+00:00", "n4_set_slot", r) + refused(i, "n4_link", r)
@@ -123,6 +128,9 @@ func sessionStates() []sessionState {
 			since: whole, station: "LLM"},
 		{audit: errored(whole, "t", "x", []any{1}), since: whole, station: "LLM"},
 		{audit: refused(whole, "t", "write budget exhausted") + "\xff\n", since: whole, station: "LLM"},
+		{audit: "\xff\r\n" + refused(whole, "t", "write budget exhausted") + "\xed\xa0\x80\r" + many + "\xfe",
+			since: whole, station: "LLM"}, // issue #466: bad lines across CRLF, CR and at EOF
+		{audit: string(chunkCut) + many, since: whole, station: "LLM"},
 		{journal: line("batch_id", []any{1}, "phase", "intent"), since: "nope", station: "LLM"},
 	}
 }
@@ -205,7 +213,7 @@ func TestDraftDifferentialPython(t *testing.T) {
 			t.Errorf("state %d (%s):\nPython %s\nGo     %s", i, dirs[i], w, got)
 		}
 		for _, k := range []string{"refusal:tier", "verdict:partial", "in_doubt", "box_error:", "dangling", "+2 more",
-			"no new deltas", "ValueError: not an ISO", "ValueError: 'utf-8'", "TypeError"} {
+			"no new deltas", "ValueError: not an ISO", "unreadable audit line", "TypeError"} {
 			if strings.Contains(got, k) {
 				kinds[k]++
 			}
