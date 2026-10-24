@@ -8,31 +8,7 @@ import (
 )
 
 // The helpers below give decoded JSON values (pyjson types) the Python semantics box.py relies
-// on: truth tests, ==, iteration and dict.get.
-
-// truthy is bool(v).
-func truthy(v any) bool {
-	switch x := v.(type) {
-	case nil:
-		return false
-	case bool:
-		return x
-	case string:
-		return x != ""
-	case pyjson.Number:
-		if x.IsFloat() {
-			f, _ := x.Float64()
-			return f != 0
-		}
-		i, _ := x.BigInt()
-		return i.Sign() != 0
-	case []any:
-		return len(x) > 0
-	case *pyjson.Object:
-		return x.Len() > 0
-	}
-	return true
-}
+// on: ==, iteration and dict.get (truth tests are pyjson.Truthy).
 
 // numeric returns a number or bool as an exact rational (Python compares int, float and bool
 // by value), or false for anything else and for nan/inf.

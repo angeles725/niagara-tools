@@ -33,12 +33,6 @@ func TestPyValueSemantics(t *testing.T) {
 			t.Errorf("%s == %s: want %v", pyjson.Repr(tt.a), pyjson.Repr(tt.b), tt.eq)
 		}
 	}
-	for v, want := range map[string]bool{`0`: false, `0.0`: false, `-0.0`: false, `""`: false, `[]`: false,
-		`{}`: false, `null`: false, `false`: false, `"0"`: true, `[0]`: true, `NaN`: true, `2`: true} {
-		if truthy(mustParse(t, v)) != want {
-			t.Errorf("bool(%s) != %v", v, want)
-		}
-	}
 }
 
 func TestJSONKindAndNesting(t *testing.T) {
