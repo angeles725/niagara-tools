@@ -2,9 +2,12 @@ package wiringmap
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -13,16 +16,18 @@ import (
 )
 
 // goldenCases is the exact number of testdata cases: a lost or an extra case fails the run.
-const goldenCases = 63
+const goldenCases = 64
 
 // recordedKind is the @kind of a case testdata/record/record.sh wrote; any other @kind must be a truth-* case.
 const recordedKind = "recorded from build-n4-module-kit/toolbelt/generate-wiring-map.sh at fa1201e6\n"
 
 // TestGolden runs every testdata case (written by testdata/record/record.sh from the bash
 // generate-wiring-map.sh, or hand-written as a truth-* case) in the golden format of
-// internal/lint/rules/golden, with the section keys record.sh documents: "@kind", "@expect <file>" (a file
-// the run must leave with that content), "<dir> (dir)", "<dir> (locked)", "<file> (unreadable)" and
-// "<link> (symlink)". Each case runs with its tree as the working directory, as record.sh ran it.
+// internal/lint/rules/golden, with the section keys record.sh documents: "@kind", "@tools" (ignored here),
+// "@expect <file>" (a file the run creates or changes, with its content after the run), "<dir> (dir)",
+// "<dir> (locked)", "<file> (unreadable)" and "<link> (symlink)". Each case runs with its tree as the working
+// directory, as record.sh ran it. After the run the whole tree must be the case tree with the @expect files
+// applied: a missing, extra or changed file fails, so a run that must write nothing is pinned too.
 func TestGolden(t *testing.T) {
 	paths, _ := filepath.Glob("testdata/*.txt")
 	if len(paths) != goldenCases {
@@ -43,15 +48,18 @@ func TestGolden(t *testing.T) {
 			for _, d := range c.Dirs {
 				materialize(t, dir, d+" (dir)", "")
 			}
-			expect := map[string]string{}
+			want := map[string]string{} // the tree after the run: path -> entry (see entry)
 			for key, body := range c.Files {
 				body = strings.ReplaceAll(body, "@DIR@", dir)
-				switch {
-				case key == "@kind":
+				switch name, kind, _ := strings.Cut(key, " ("); {
 				case strings.HasPrefix(key, "@expect "):
-					expect[strings.TrimPrefix(key, "@expect ")] = body
+					want[strings.TrimPrefix(key, "@expect ")] = "file " + body
+				case strings.HasPrefix(key, "@"):
 				default:
 					materialize(t, dir, key, body)
+					if _, set := want[name]; !set && kind != "dir)" && kind != "locked)" {
+						want[name] = map[string]string{"": "file " + body, "symlink)": "symlink " + body, "unreadable)": "unreadable"}[kind]
+					}
 				}
 			}
 			args := make([]string, len(c.Args))
@@ -65,16 +73,48 @@ func TestGolden(t *testing.T) {
 			if stderr := strings.ReplaceAll(e.String(), dir, "@DIR@"); got != c.Want || stderr != c.Stderr {
 				t.Errorf("got\n%s-- stderr --\n%s\nwant\n%s-- stderr --\n%s", got, stderr, c.Want, c.Stderr)
 			}
-			for f, want := range expect {
-				if b, err := os.ReadFile(filepath.Join(dir, f)); err != nil || string(b) != want {
-					t.Errorf("%s after the run = %q (%v), want %q", f, b, err, want)
-				}
+			if got := tree(t, dir); !reflect.DeepEqual(got, want) {
+				t.Errorf("tree after the run\n got %q\nwant %q", got, want)
 			}
 		})
 	}
 }
 
-// materialize creates one tree section under dir; a mode-000 entry cannot block root, so such a case skips.
+// tree is every file and symlink under dir after a run, keyed by its path relative to dir: "file <bytes>",
+// "symlink <target>" or "unreadable" (a mode-000 file). A directory the walk cannot enter holds nothing.
+func tree(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	got := map[string]string{}
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		rel, _ := filepath.Rel(dir, p)
+		switch {
+		case err != nil && d != nil && d.IsDir():
+			return fs.SkipDir
+		case err != nil:
+			return err
+		case d.Type()&fs.ModeSymlink != 0:
+			target, err := os.Readlink(p)
+			got[rel] = "symlink " + target
+			return err
+		case d.Type().IsRegular():
+			if b, err := os.ReadFile(p); err == nil {
+				got[rel] = "file " + string(b)
+			} else if errors.Is(err, fs.ErrPermission) {
+				got[rel] = "unreadable"
+			} else {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+// materialize creates one tree section under dir. A mode-000 entry cannot block root: the run fails unless
+// WIRINGMAP_GOLDEN_ALLOW_ROOT_SKIP=1 says skipping those cases is intended.
 func materialize(t *testing.T, dir, key, body string) {
 	t.Helper()
 	name, kind, _ := strings.Cut(key, " (")
@@ -83,7 +123,10 @@ func materialize(t *testing.T, dir, key, body string) {
 		t.Fatal(err)
 	}
 	if (kind == "locked)" || kind == "unreadable)") && os.Geteuid() == 0 {
-		t.Skip("running as root: mode 000 does not block reads")
+		if os.Getenv("WIRINGMAP_GOLDEN_ALLOW_ROOT_SKIP") != "1" {
+			t.Fatal("running as root: mode 000 does not block reads; set WIRINGMAP_GOLDEN_ALLOW_ROOT_SKIP=1 to skip")
+		}
+		t.Skip("running as root: mode 000 does not block reads (WIRINGMAP_GOLDEN_ALLOW_ROOT_SKIP=1)")
 	}
 	var err error
 	switch kind {
