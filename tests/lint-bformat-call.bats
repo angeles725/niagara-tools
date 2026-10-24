@@ -56,3 +56,11 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$output" = "WARN  lint-bformat-call  $SRC/config.bog:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)" ]
 }
+
+@test "BF-lexicon: a .lexicon is read as properties: a comment is not read, a continued value is its entry (truth fix 2026-10-24)" {
+  # Mutation: BF-lexicon -- reading a .lexicon as text reports a pattern quoted in a # comment
+  printf '# was %%user%%\nk=Hi \\\n    %%user%%\n' > "$SRC/module.lexicon"
+  run "$LINT" "$SRC"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-bformat-call  $SRC/module.lexicon:2  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)" ]
+}

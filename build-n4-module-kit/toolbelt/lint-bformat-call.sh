@@ -15,6 +15,9 @@
 # values and text, entity-decoded, one row per rule and element at the element's line; an XML comment is not
 # read; a zipped bog is read through its file.xml; a malformed file is `lint-bformat-call: <file>:<line>:<col>:
 # <reason>` on stderr (exit 3, the other files still scanned). The awk read their text line by line.
+# *.lexicon is read as the java.util.Properties file it is (go/internal/props; truth fix 2026-10-24): every value,
+# escapes read, at the line its entry starts on; a # or ! comment is not read. Java keeps its string literals and
+# loses its comments (BFormat patterns live in strings). Real trees unchanged by either fix.
 #
 # Usage:  lint-bformat-call.sh [--strict] <src-root>
 #   Row:  WARN  lint-bformat-call  <file>:<line>  <detail>
@@ -30,6 +33,7 @@
 # Mutation: BF2 -- dropping the bare-user rule passes %user% clean
 # Mutation: BF-ok -- dropping the not-`)` guard WARNs the valid %time()% and %time().toDateString%
 # Mutation: BF-xml -- reading a .bog as text counts a commented-out pattern and misses an entity-encoded %user%
+# Mutation: BF-lexicon -- reading a .lexicon as text reports a pattern quoted in a # comment
 # Mutation: BF-comment -- not blanking Java comments reports a pattern quoted in a comment
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

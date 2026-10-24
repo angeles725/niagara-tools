@@ -2,11 +2,10 @@
 @DIR@/root
 -- want --
 exit 0
-WARN  lint-bformat-call  @DIR@/root/module.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
 WARN  lint-bformat-call  @DIR@/root/module.lexicon:2  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
 WARN  lint-bformat-call  @DIR@/root/module.lexicon:3  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
 WARN  lint-bformat-call  @DIR@/root/module.lexicon:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
-WARN  lint-bformat-call  @DIR@/root/module.lexicon:6  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/module.lexicon:5  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
 -- stderr --
 -- root/module.lexicon --
 # %user% in a comment

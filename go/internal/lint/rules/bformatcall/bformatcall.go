@@ -12,6 +12,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/props"
 	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
@@ -49,7 +50,7 @@ const (
 
 // Check scans each file where its patterns live: *.java on javasrc.Stripped (comments blanked, string literals kept,
 // since BFormat patterns live in strings), *.bog and *.palette through the shared XML scanner (xml), *.lexicon as
-// text.
+// a properties file (lexicon).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	switch {
 	case strings.HasSuffix(f.Path, ".java"):
@@ -57,7 +58,19 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	case strings.HasSuffix(f.Path, ".bog") || strings.HasSuffix(f.Path, ".palette"):
 		return xml(f.Path)
 	}
-	return scan(f.Raw, func(i int) int { return i + 1 }), nil
+	return lexicon(f.Raw), nil
+}
+
+// lexicon reads a .lexicon as the java.util.Properties file it is (internal/props): every value, its escapes read, at
+// the line its entry starts on. Truth fix 2026-10-24 over the awk's line read: a # or ! comment is not read, a value
+// continued onto the next line is reported at its entry, and a \u0025 escape is the percent it stands for.
+func lexicon(raw []string) []lint.Finding {
+	entries := props.Read(raw)
+	values := make([]string, len(entries))
+	for i, e := range entries {
+		values[i] = e.Value
+	}
+	return scan(values, func(i int) int { return entries[i].Line + 1 })
 }
 
 // xml reads a .bog or .palette through xmlsrc (R8-D12; a zipped .bog through its file.xml): every element's attribute
