@@ -1,0 +1,37 @@
+-- args --
+@DIR@/c.bog
+--module
+ColdRoomPan
+-- want --
+exit 1
+CHECK9  FAIL  h:gone  link sourceOrd references an unknown handle (orphan)
+CHECK1  PASS  ColdRoomPan  components=1
+CHECK11  FAIL  ro1  own-module h:u1.fanOut -> writable with no explicit fallback (relay holds last state on stop/reload)
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+# bog-audit: parse time 0.001s
+-- stderr --
+-- c.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='EvaporatorUnit_1' h='u1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="fanOut" t="b:StatusBoolean" v="false"/>
+ </p>
+ <p n='ro1' h='r1' m='c=control' t='c:BooleanWritable'>
+  <p n='Link' t='b:ConversionLink'>
+   <p n="sourceOrd" t="b:Ord" v="h:u1"/>
+   <p n="sourceSlotName" v="fanOut"/>
+   <p n="targetSlotName" v="in10"/>
+   <p n="converter" m="conv=converters" t="conv:EnumToStatusBoolean"/>
+  </p>
+  <p n='Link1' t='b:ConversionLink'>
+   <p n="sourceOrd" t="b:Ord" v="h:gone"/>
+   <p n="sourceSlotName" v="out"/>
+   <p n="targetSlotName" v="in9"/>
+  </p>
+ </p>
+</bajaObjectGraph>

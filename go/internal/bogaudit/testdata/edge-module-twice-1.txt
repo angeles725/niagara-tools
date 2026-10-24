@@ -1,0 +1,36 @@
+-- args --
+@DIR@/f1/base.bog
+--module
+ColdRoomPan
+--module
+ColdRoomPan
+--module
+Nope
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=3
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK14  WARN  ColdRoom_1/EvaporatorUnit_1  output slot 'evapOut' has no outgoing relay link (own-output-unlinked)
+# bog-audit: parse time 0.004s
+-- stderr --
+-- f1/base.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p h='1' m='b=baja' t='b:Station'>
+  <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+   <p n="differentialUp" t="b:double" v="2"/>
+   <p n='EvaporatorUnit_1' h='e1' t='CRP:EvaporatorUnit'>
+    <p n="hasDefrost" t="b:boolean" v="true"/>
+    <p n="evapOut" f="o" t="b:StatusBoolean" v="false"/>
+   </p>
+   <p n='DefrostController' h='d1' t='CRP:DefrostController'>
+    <a n="intervalExpired" f="h"/>
+   </p>
+  </p>
+ </p>
+</bajaObjectGraph>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<obj>
+  <obj display="Indirect: slot:/Plant/A/B.src1 &#x2192; slot:/F.s1"/>
+  <obj display="Direct: slot:/Plant/C.src2 → slot:/F.s2"/>
+  <obj display="Direct: slot:/Plant/C.other → slot:/F.s2"/>
+  <obj display="Indirect: src3 -> s3"/>
+  <obj display="Knob: slot:/Deep/Comp.src4 -> slot:/F.s4"/>
+  <obj display="Direct: slot:/Deep/Comp.src4 to slot:/F.s4"/>
+  <obj display="Direct:   slot:/Plant/X.src7	->	slot:/F.s7  "/>
+  <obj display="Indirect: slot:/W/Y/Z.src8 -> slot:/F.s8"/>
+  <obj display="Indirect: slot:/Y.Z.src8 -> slot:/F.s8"/>
+  <obj display="Indirect: a.b -> F.s9 -> G.s10"/>
+  <obj display="Direct: -> slot:/F.s6"/>
+</obj>

@@ -1,0 +1,25 @@
+-- args --
+@DIR@/f1/station-logic-CHECK19.bog
+--module
+ColdRoomPan
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=1
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK19  WARN  DashPanel_1  control 'Ctrl_1' writes config slot 'temperatureSetpoint' into panel container (reverse direction)
+# bog-audit: parse time 0.003s
+-- stderr --
+-- f1/station-logic-CHECK19.bog (zip) --
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='DashPanel_1' h='dp1' m='DPan=DashboardPan' t='DPan:DashUnit'>
+  <p n='SpLink' t='b:Link'><p n="sourceOrd" v="h:crp1"/><p n="sourceSlotName" v="temperatureOut"/><p n="targetSlotName" v="temperatureSetpoint"/></p>
+ </p>
+ <p n='Ctrl_1' h='crp1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'>
+  <p n="temperatureOut" f="o" t="b:StatusNumeric" v="0"/>
+ </p>
+</bajaObjectGraph>
