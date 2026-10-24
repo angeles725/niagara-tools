@@ -15,7 +15,9 @@ type entry struct {
 }
 
 // findWalk walks root as GNU find does: the root first (followed when it is a symlink and followRoot,
-// find -H), then depth-first in directory (readdir) order, children spelled root + "/" + name. visit
+// find -H), then depth-first, children spelled root + "/" + name, but in bytewise name order where find
+// takes readdir order: the bash version-drift took the first version in readdir order, which differs
+// between filesystems (ext4 hash order), so the same tree drifted on one host and not on another. visit
 // returns whether to enter a directory; maxDepth bounds the entered depth (find -maxdepth). An
 // unreadable directory goes to onErr (nil: ignored) and the walk goes on.
 func findWalk(root string, followRoot bool, maxDepth int, visit func(entry) bool, onErr func(path string, err error)) {
@@ -35,12 +37,7 @@ func findWalk(root string, followRoot bool, maxDepth int, visit func(entry) bool
 		if !visit(e) || !e.dir || e.depth >= maxDepth {
 			return
 		}
-		f, err := os.Open(e.path)
-		var kids []os.DirEntry
-		if err == nil {
-			kids, err = f.ReadDir(-1) // unsorted: the readdir order find visits
-			_ = f.Close()
-		}
+		kids, err := os.ReadDir(e.path)
 		if err != nil && onErr != nil {
 			onErr(e.path, err)
 		}

@@ -10,6 +10,8 @@ PASS  plugin-pin    plugin 7.6.17 found in niagara_home/etc/m2
 PASS  jar-lock      no locked jars under @DIR@/nh/modules/
 WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w/p/b version 2.0.10
 WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w/p/c version 10.0.0
+WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w/p version 9.0.0
+WARN  version-drift  @DIR@/w/p/me version 2.0.0 < sibling @DIR@/w version 9.0.0
 -- stderr --
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
