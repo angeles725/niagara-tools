@@ -30,7 +30,7 @@
 # sources/decompiled 0, though 7 of its 13 lexicons have no final newline).
 # VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
-# [ev: retro 2026-09-17-umbrelladashboard-module-creation]
+# [ev: retro umbrelladashboard-module-creation]
 # Mutation: LA2 -- remove the non-ASCII byte scan and LA2 stops failing on a UTF-8 accented lexicon
 # Mutation: LA-unreadable -- skipping an unreadable lexicon reports the module clean
 # Mutation: LA-noeol -- reading lines like `while read` skips the last line when it has no final newline
