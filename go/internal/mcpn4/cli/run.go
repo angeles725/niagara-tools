@@ -13,7 +13,9 @@ import (
 	kitcli "github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/readtools"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/registry"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
 
 // Prog is the argparse prog name every message starts with.
@@ -42,7 +44,10 @@ func Run(args []string, in io.Reader, s kitcli.Stdio) int {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 2
 	}
-	if err := jsonrpc.New(reg).Serve(in, s.Out); err != nil {
+	srv := jsonrpc.New(reg)
+	readtools.Register(srv, &readtools.Tools{Ctx: NewContext(cfg), NewClient: readtools.BoxFactory,
+		ServerVersion: reg.Version})
+	if err := srv.Serve(in, s.Out); err != nil {
 		fmt.Fprintf(s.Err, "%s: %s\n", Prog, err)
 		return 1
 	}
@@ -53,21 +58,40 @@ type startError struct{ msg string }
 
 func (e *startError) Error() string { return e.msg }
 
-// Check makes the start checks of main() and Server(...) in their order: NAME=URL and
-// NAME=PATH pairs, https station URLs (http:// only with --allow-http-for-tests), station names
-// the per-station flags may name; then the --allow-writes refusal of this version.
-func Check(cfg Config) error {
+// NewContext is the session state of a server started with cfg, which Check accepted.
+func NewContext(cfg Config) *session.Context {
+	urls, _, _ := stations(cfg)
+	return session.New(session.Config{AllowWrites: cfg.AllowWrites, AllowHTTP: cfg.AllowHTTP,
+		Stations: urls, CredentialEnv: cfg.CredentialEnv, InsecureTLS: cfg.InsecureTLS,
+		AllowTierB: cfg.AllowTierB, AllowTierC: cfg.AllowTierC, AuthCooldown: float64(cfg.AuthCooldown),
+		HTTPTimeout: float64(cfg.HTTPTimeout), LoadWait: cfg.LoadWait})
+}
+
+// stations is the stations dict of main(): NAME -> URL (the last repeat wins) and the names in
+// insertion order.
+func stations(cfg Config) (map[string]string, []string, error) {
 	urls := map[string]string{}
-	var names []string // insertion order of the stations dict
+	var names []string
 	for _, item := range cfg.Stations {
 		name, url, ok := strings.Cut(item, "=")
 		if !ok || name == "" || url == "" {
-			return &startError{"--station expects NAME=URL, got " + pyjson.StrRepr(item)}
+			return nil, nil, &startError{"--station expects NAME=URL, got " + pyjson.StrRepr(item)}
 		}
 		if _, seen := urls[name]; !seen {
 			names = append(names, name)
 		}
 		urls[name] = url
+	}
+	return urls, names, nil
+}
+
+// Check makes the start checks of main() and Server(...) in their order: NAME=URL and
+// NAME=PATH pairs, https station URLs (http:// only with --allow-http-for-tests), station names
+// the per-station flags may name; then the --allow-writes refusal of this version.
+func Check(cfg Config) error {
+	urls, names, err := stations(cfg)
+	if err != nil {
+		return err
 	}
 	for _, item := range cfg.StationHomes {
 		name, path, ok := strings.Cut(item, "=")
