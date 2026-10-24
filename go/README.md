@@ -108,6 +108,9 @@ rule's rows stay contiguous.
    what hand-written expectations miss (row order, gawk hash order, read and grep quirks); a port whose
    tests restate the bats assertions as substrings, or that copies the golden parser into its own
    package, is a review finding. `[ev: retro go-lint-timers Δ1]` `[ev: retro go-lint-ord-ports Δ2]`
+   A new rule with no bash lint behind it (reference: `rules/machinedefaultpath`) writes its golden cases by
+   hand from the doctrine (usage, empty root, pruned directories, several roots) and its table tests from the
+   doctrine's positive and negative shapes, RED first.
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every

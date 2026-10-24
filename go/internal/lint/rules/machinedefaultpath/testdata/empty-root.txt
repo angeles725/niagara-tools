@@ -1,0 +1,8 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-machine-default-path  @DIR@/m  no *.java sources found (wrong path or empty source tree)
+-- stderr --
+-- m/README.txt --
+notes

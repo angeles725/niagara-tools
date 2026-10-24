@@ -1,0 +1,22 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+ADVISORY  lint-machine-default-path  @DIR@/m/src/A.java:2  machine-specific default path "/home/me" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+-- stderr --
+-- m/src/A.java --
+class A {
+  String d = "/home/me";
+}
+-- m/srcTest/T.java --
+class T {
+  String d = "/home/test";
+}
+-- m/x-worktrees/w/src/A.java --
+class A {
+  String d = "/home/wt";
+}
+-- m/.git/A.java --
+class A {
+  String d = "/home/dot";
+}
