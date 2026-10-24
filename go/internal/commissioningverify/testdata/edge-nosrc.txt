@@ -1,0 +1,7 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+-- stderr --
+commissioning-verify: no -rt/src or src/ found under @DIR@/e
+-- e (dir) --

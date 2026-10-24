@@ -1,0 +1,8 @@
+-- args --
+@REPO@/build-n4-module-kit/fixtures/MinimalPan
+--values-owed
+@DIR@/absent.md
+-- want --
+exit 3
+-- stderr --
+commissioning-verify: values-owed table not found: @DIR@/absent.md

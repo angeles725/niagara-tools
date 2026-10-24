@@ -1,0 +1,26 @@
+-- args --
+@DIR@/r
+--wiring-map
+@DIR@/nope.md
+-- want --
+exit 3
+-- stderr --
+commissioning-verify: wiring map not found: @DIR@/nope.md
+-- r/Map/Map-rt/src/com/x/BRoomPanel.java --
+package com.x;
+import javax.baja.sys.*;
+@NiagaraType
+@NiagaraProperty(
+  name = "evap2InDrip",
+  type = "boolean",
+  defaultValue = "false",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+@NiagaraProperty(
+  name = "temperatureSetpoint",
+  type = "double",
+  defaultValue = "-5.0",
+  flags = Flags.SUMMARY | Flags.OPERATOR
+)
+public final class BRoomPanel extends BComponent {
+}
