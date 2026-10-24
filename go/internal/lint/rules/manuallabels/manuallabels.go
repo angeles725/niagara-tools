@@ -60,19 +60,19 @@ func (*rule) Severity() lint.Severity { return lint.Warn }
 // code elements, comments and tags (line numbers kept), then html.unescape'd (a pre element without code
 // stays text, as a bare Markdown fence: a diagram); a Markdown manual (.md, .markdown) without its
 // language-tagged fenced blocks and code spans (markdownCode); any other manual as is.
-func (r *rule) Configure(a lint.Args) error {
+func (*rule) Configure(a lint.Args) (lint.Configured, error) {
 	data, err := os.ReadFile(a.Option)
 	if err != nil {
-		return fmt.Errorf("%s: cannot read manual %s: %s\n", ID, a.Option, strerror.Text(err))
+		return nil, fmt.Errorf("%s: cannot read manual %s: %s\n", ID, a.Option, strerror.Text(err))
 	}
-	r.manual, r.text = a.Option, htmltext.Decode(data)
+	r := &rule{manual: a.Option, text: htmltext.Decode(data)}
 	switch low := strings.ToLower(a.Option); {
 	case strings.HasSuffix(low, ".html") || strings.HasSuffix(low, ".htm"):
 		r.text = htmltext.Unescape(htmltext.DropMarkup(r.text, "code"))
 	case strings.HasSuffix(low, ".md") || strings.HasSuffix(low, ".markdown"):
 		r.text = markdownCode(r.text)
 	}
-	return nil
+	return r, nil
 }
 
 // CheckTree builds the haystack of every UI file under every <ui-dir>, then checks each label of the manual.

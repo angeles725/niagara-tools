@@ -50,6 +50,7 @@ type Finding struct {
 	Rule     string
 	Check    string // the sub-check shown in the check column; empty shows Rule
 	Severity Severity
+	Status   string // the first column printed instead of the severity's name (lint-write-path's STALE, DRIFT); it still counts as Severity
 	Path     string
 	Line     int
 	Msg      string
@@ -68,6 +69,9 @@ func (f Finding) row(bare, checkFirst bool) string {
 		check = f.Rule
 	}
 	first, second := f.Severity.String(), check
+	if f.Status != "" {
+		first = f.Status
+	}
 	if checkFirst {
 		first, second = check, first
 	}
@@ -120,11 +124,45 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
+// RowError is a TreeRule or RootRule error printed as Row on stdout, after the findings returned with it,
+// instead of "<lint>: <error>" on stderr; it fails the scan closed like any error (exit 3). It is for a
+// bash lint whose env errors were stdout rows (lint-write-path's "lint-write-path  ERROR  <root>  <why>").
+type RowError struct{ Row string }
+
+func (e *RowError) Error() string { return e.Row }
+
 // Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
-// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk. A
-// non-nil error is printed verbatim on stderr (the rule writes the whole text) and exits 3 with no row.
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk and
+// returns a NEW rule value of the same kind (Rule, TreeRule or RootRule) holding what it read, which runs
+// instead; the registered rule is never changed, so in one process a later run (alone or in a rule list,
+// where Configure is not called) never sees an earlier run's values. A non-nil error is printed verbatim on
+// stderr (the rule writes the whole text) and exits 3 with no row.
 type Configurer interface {
-	Configure(a Args) error
+	Configure(a Args) (Configured, error)
+}
+
+// Configured is the rule value a Configurer returns: a Rule, a TreeRule or a RootRule, of its spec's kind.
+type Configured interface {
+	ID() string
+	Severity() Severity
+}
+
+// withRule is sp running r, the value its rule's Configure returned, in place of its registered rule; a
+// value of another kind is a registration bug (panic).
+func (sp Spec) withRule(r Configured) Spec {
+	var ok bool
+	switch {
+	case sp.Tree != nil:
+		sp.Tree, ok = r.(TreeRule)
+	case sp.Root != nil:
+		sp.Root, ok = r.(RootRule)
+	default:
+		sp.Rule, ok = r.(Rule)
+	}
+	if !ok {
+		panic("lint: rule " + sp.ID() + ": Configure returned a value of another kind")
+	}
+	return sp
 }
 
 // ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
@@ -171,6 +209,10 @@ type Spec struct {
 	// ValuedStrict accepts --strict in Mode Valued.
 	Options      []string
 	ValuedStrict bool
+	// ValuedNamed gives Mode Valued lint-write-path's named errors instead of the usage line alone: "<name>:
+	// unknown option: <arg>", "<name>: <option> requires a file argument", "<name>: unexpected argument:
+	// <arg>"; and an empty argument leaves the root unset, so a later one takes its place (`[ -z "$ROOT" ]`).
+	ValuedNamed bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
@@ -234,10 +276,7 @@ func (sp Spec) ID() string { return sp.rule().ID() }
 func (sp Spec) severity() Severity { return sp.rule().Severity() }
 
 // rule is the one rule value the spec sets.
-func (sp Spec) rule() interface {
-	ID() string
-	Severity() Severity
-} {
+func (sp Spec) rule() Configured {
 	switch {
 	case sp.Tree != nil:
 		return sp.Tree

@@ -1,0 +1,17 @@
+-- args --
+@DIR@/repo/ColdRoomPan
+-- want --
+exit 3
+lint-write-path  ERROR  @DIR@/repo/ColdRoomPan  no src found
+-- stderr --
+-- .git/HEAD --
+x
+-- repo/.git/.keep --
+-- repo/.git/HEAD --
+x
+-- repo/ColdRoomPan/ColdRoomPan-rt/.keep --
+-- repo/docs/write-path-matrix.md --
+# Write-Path Matrix
+| Slot | Writer | Timing | Test |
+|---|---|---|---|
+| setpoint | Dashboard | mid-cycle | w1 |

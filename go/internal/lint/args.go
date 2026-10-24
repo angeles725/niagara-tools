@@ -39,6 +39,7 @@ type ValueOptions struct {
 	Option string
 	Repeat []string
 	Strict bool
+	Named  bool // lint-write-path's named errors and empty-argument root (Spec.ValuedNamed)
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -75,7 +76,7 @@ func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) 
 			switch arg := args[i]; {
 			case arg != "" && (arg == vo.Option || slices.Contains(vo.Repeat, arg)):
 				if i+1 >= len(args) {
-					return Args{}, &UsageError{usage + "\n"}
+					return Args{}, valuedError(vo, usage, name+": "+arg+" requires a file argument")
 				}
 				if arg == vo.Option {
 					a.Option = args[i+1]
@@ -88,11 +89,18 @@ func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) 
 				i++
 			case arg == "--strict" && vo.Strict:
 				a.Strict = true
-			case strings.HasPrefix(arg, "-") || len(roots) == 1:
-				return Args{}, &UsageError{usage + "\n"}
+			case strings.HasPrefix(arg, "-"):
+				return Args{}, valuedError(vo, usage, name+": unknown option: "+arg)
+			case vo.Named && len(roots) == 1 && roots[0] == "": // `[ -z "$ROOT" ]`: an empty root is unset
+				roots[0] = arg
+			case len(roots) == 1:
+				return Args{}, valuedError(vo, usage, name+": unexpected argument: "+arg)
 			default:
 				roots = append(roots, arg)
 			}
+		}
+		if vo.Named && len(roots) == 1 && roots[0] == "" {
+			roots = nil // the usage line below
 		}
 		args, mode = roots, Raw // the root check below
 	}
@@ -156,6 +164,14 @@ flags:
 		return Args{}, err
 	}
 	return a, nil
+}
+
+// valuedError is a Mode Valued argument error: the usage line alone, or under vo.Named the named text.
+func valuedError(vo ValueOptions, usage, named string) error {
+	if vo.Named {
+		return &UsageError{named + "\n"}
+	}
+	return &UsageError{usage + "\n"}
 }
 
 func checkRoots(name string, roots []string) error {

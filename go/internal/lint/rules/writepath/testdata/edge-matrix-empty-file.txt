@@ -1,0 +1,17 @@
+-- args --
+@DIR@/emp/M
+-- want --
+exit 0
+-- stderr --
+-- .git/HEAD --
+x
+-- emp/M/docs/write-path-matrix.md --
+-- emp/M/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}
+-- emp/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |

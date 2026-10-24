@@ -124,7 +124,8 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 
 // TestRootRulesOnAnEmptyRoot: a RootRule fails a root that holds nothing it checks like every other rule
 // fails an empty root (#351, truth audit 2026-10-22 T6): an ERROR row, no other row, exit 3. For
-// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean.
+// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean; for
+// lint-write-path a root without a matrix, its own "lint-write-path  ERROR" row (report-module.sh reads it).
 func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
@@ -158,11 +159,16 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 			continue
 		}
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
-		if code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+		ok := sp.EmptyError.Msg != ""
+		if sp.ID() == "lint-write-path" { // its own fail-closed row, the text report-module.sh greps for
+			want = "lint-write-path  ERROR  " + root + "  no write-path-matrix.md found (looked in " + root + "/docs/write-path-matrix.md)\n"
+			ok = true
+		}
+		if code != 3 || !ok || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check" {
-		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux and split-package-check", roots)
+	if strings.Join(roots, " ") != "lint-structure lint-jasmine-ux split-package-check lint-write-path" {
+		t.Errorf("RootRules %q, want lint-structure, lint-jasmine-ux, split-package-check and lint-write-path", roots)
 	}
 }

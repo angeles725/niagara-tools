@@ -45,6 +45,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/writepath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
@@ -93,5 +94,6 @@ func All() []lint.Spec {
 		bformatcall.Spec(),
 		splitpackage.Spec(),
 		manuallabels.Spec(),
+		writepath.Spec(),
 	}
 }

@@ -1,0 +1,28 @@
+-- args --
+@DIR@/bog2/CompPan
+--bog
+@DIR@/bog2/config.bog
+--strict
+-- want --
+exit 1
+STALE  lint-write-path  @DIR@/bog2/docs/write-path-matrix.md:1  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- bog2/CompPan/src/B.java --
+class B {}
+-- bog2/config.bog --
+<bajaObjectGraph>
+<p n="D" h="1" t="x:D" m="x=dashPanelThing">
+<p n="c" v="1"/>
+</p>
+<p n="C" h="2" t="c:C" m="c=CompPan">
+<p n="L" t="b:Link">
+<p n="sourceOrd" v="h:1"/>
+<p n="targetSlotName" v="bogOnly"/>
+</p>
+</p>
+</bajaObjectGraph>
+-- bog2/docs/write-path-matrix.md --
+| `setpoint` | a |
+| `bogOnly` | b |
