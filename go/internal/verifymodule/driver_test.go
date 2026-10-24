@@ -200,3 +200,38 @@ func TestDriverServerEnabled(t *testing.T) {
 	})
 	wantRow(t, driverRows(t, dir), "PASS", "driver-server-enabled", "1 TCP comm config")
 }
+
+const pointMgrAgent = `@NiagaraType(agent = @AgentOn(types = { "MinimalDriver:MinimalDriverPointDeviceExt", "MinimalDriver:MinimalDriverPointFolder" }))`
+
+// TestDriverManager: a point manager must be @AgentOn this driver's point device ext (§ 1.6), and a
+// BBasicNetwork driver must ship a manager @AgentOn its network or device (PD-01, § 1.3).
+func TestDriverManager(t *testing.T) {
+	t.Run("point-manager-wrong-target", func(t *testing.T) {
+		dir := copyFixture(t)
+		edit(t, dir, fxWb+"BMinimalDriverPointManager.java", `"MinimalDriver:MinimalDriverPointDeviceExt"`, `"MinimalDriver:Nope"`)
+		wantRow(t, driverRows(t, dir), "FAIL", "driver-manager", "BMinimalDriverPointManager.java:", "MinimalDriver:MinimalDriverPointDeviceExt")
+	})
+	t.Run("point-manager-no-agent", func(t *testing.T) {
+		dir := copyFixture(t)
+		edit(t, dir, fxWb+"BMinimalDriverPointManager.java", pointMgrAgent, "@NiagaraType")
+		wantRow(t, driverRows(t, dir), "FAIL", "driver-manager", "BMinimalDriverPointManager.java:", "MinimalDriver:MinimalDriverPointDeviceExt")
+	})
+	t.Run("pd01-basic-network-no-manager", func(t *testing.T) {
+		dir := copyFixture(t)
+		edit(t, dir, fxRt+"BMinimalDriverNetwork.java", "  extends BNNetwork\n", "  extends BBasicNetwork\n")
+		wantRow(t, driverRows(t, dir), "FAIL", "driver-manager", "PD-01", "MinimalDriver:MinimalDriverNetwork")
+	})
+	t.Run("pd01-basic-network-with-manager", func(t *testing.T) {
+		dir := copyFixture(t)
+		edit(t, dir, fxRt+"BMinimalDriverNetwork.java", "  extends BNNetwork\n", "  extends BBasicNetwork\n")
+		write(t, dir, map[string]string{fxWb + "BMinimalDriverDeviceManager.java": "package com.angeles.MinimalDriver.wb;\n" +
+			"@NiagaraType(agent = @AgentOn(types = \"MinimalDriver:MinimalDriverNetwork\"))\npublic class BMinimalDriverDeviceManager extends BAbstractManager {}\n"})
+		rows := driverRows(t, dir)
+		wantRow(t, rows, "PASS", "driver-manager", "PD-01", "BMinimalDriverDeviceManager")
+		for _, r := range rows {
+			if strings.HasPrefix(r, "FAIL") && strings.Contains(r, "driver-manager") {
+				t.Errorf("unexpected %s", r)
+			}
+		}
+	})
+}

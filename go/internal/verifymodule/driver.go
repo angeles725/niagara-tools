@@ -1,16 +1,19 @@
 package verifymodule
 
 import (
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonincludesync"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // driverChecks are the rows driver mode prints, in order (types/driver-authoring.md is the doctrine).
-var driverChecks = []string{"driver-scaffold", "driver-comm-config", "driver-discovery-alive", "driver-server-enabled"}
+var driverChecks = []string{"driver-scaffold", "driver-comm-config", "driver-discovery-alive", "driver-server-enabled", "driver-manager"}
 
 // Driver detection: a profile dir is a driver module when a class under its src extends a Baja network
 // or device base (driverBases), directly or through another class of the same src. The source decides,
@@ -75,7 +78,7 @@ func (r *run) driver() bool {
 		return true
 	}
 	pass := true
-	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig, r.driverDiscoveryAlive, r.driverServerEnabled} {
+	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig, r.driverDiscoveryAlive, r.driverServerEnabled, r.driverManager} {
 		if !c(m) {
 			pass = false
 		}
@@ -255,4 +258,161 @@ func (r *run) driverServerEnabled(m *driverModule) bool {
 		r.row("PASS", "driver-server-enabled", itoa(configs)+" TCP comm config keeps serverEnabled false under "+m.pd+"/src")
 	}
 	return !failed
+}
+
+// groupUnit is one parsed source of the module group (every <module>-* part beside the profile dir).
+type groupUnit struct {
+	path    string
+	classes []javasrc.Class
+	agents  []agentonincludesync.AgentType
+}
+
+// group parses every part of the module the jar belongs to (<src>/<module>-*/src, the module being the jar
+// basename up to its last "-") and maps each class's simple name to its type name from the parts'
+// module-include.xml (<type class=... name=...>; a class not declared there maps to its name without the
+// leading B). ok is false when an input cannot be read or parsed (the run then ends, exit 3).
+func (r *run) group() (module string, units []groupUnit, typeName func(string) string, ok bool) {
+	base := basename(r.jar.path, ".jar")
+	module = base
+	if i := strings.LastIndexByte(base, '-'); i > 0 {
+		module = base[:i]
+	}
+	names := map[string]string{}
+	entries, _ := os.ReadDir(r.src)
+	for _, e := range entries {
+		part := r.src + "/" + e.Name()
+		if !e.IsDir() || (e.Name() != base && !strings.HasPrefix(e.Name(), module+"-")) {
+			continue
+		}
+		if inc := part + "/module-include.xml"; lint.IsFile(inc) {
+			data, ok := r.readFile(inc)
+			if !ok {
+				return "", nil, nil, false
+			}
+			doc, err := xmlsrc.Parse(inc, data)
+			if err != nil {
+				r.envError(err.Error())
+				return "", nil, nil, false
+			}
+			for _, i := range doc.Find("type") {
+				el := doc.Elements()[i]
+				c, _ := el.Attr("class")
+				n, _ := el.Attr("name")
+				names[simpleName(c)] = n
+			}
+		}
+		if !lint.IsDir(part + "/src") {
+			continue
+		}
+		for _, f := range r.javaFiles(part + "/src") {
+			v, ok := r.java(f)
+			if !ok {
+				return "", nil, nil, false
+			}
+			toks := javasrc.Tokens(v.code)
+			units = append(units, groupUnit{path: f, classes: javasrc.Classes(toks), agents: agentonincludesync.AgentTypes(toks)})
+		}
+	}
+	typeName = func(class string) string {
+		if n, ok := names[class]; ok && n != "" {
+			return n
+		}
+		return strings.TrimPrefix(class, "B")
+	}
+	return module, units, typeName, true
+}
+
+// simpleName is the last part of a binary class name (pkg.Outer$Inner -> Inner).
+func simpleName(c string) string {
+	return c[strings.LastIndexAny(c, ".$")+1:]
+}
+
+// driverManager checks the Workbench managers of a driver module group:
+//   - every point manager (a BNPointManager or BPointManager subclass in any part) is @AgentOn one of this
+//     driver's point device exts, else it never shows: types/driver-authoring.md § 1.6 (a point manager is
+//     @AgentOn the <mod>:<X>PointDeviceExt and <mod>:<X>PointFolder);
+//   - a BBasicNetwork driver ships a manager @AgentOn its network or device type: PD-01,
+//     types/driver-authoring.md § 1.3. An NDriver network has the framework's device and point managers,
+//     so PD-01 (which names BBasicNetwork) does not bind it.
+func (r *run) driverManager(m *driverModule) bool {
+	module, units, typeName, ok := r.group()
+	if !ok {
+		return true
+	}
+	var all []javasrc.Class
+	for _, u := range units {
+		all = append(all, u.classes...)
+	}
+	exts := javasrc.Descendants(m.all, "BNPointDeviceExt", "BPointDeviceExt")
+	var extTargets []string
+	for _, c := range m.all {
+		if exts[c.Name] {
+			extTargets = append(extTargets, module+":"+typeName(c.Name))
+		}
+	}
+	extTargets = sortU(extTargets)
+	managers := javasrc.Descendants(all, "BNPointManager", "BPointManager")
+	failed := false
+	var held []string
+	for _, u := range units {
+		for _, c := range u.classes {
+			if !managers[c.Name] || len(extTargets) == 0 {
+				continue
+			}
+			var on []string
+			for _, a := range u.agents {
+				if simpleName(a.Class) == c.Name {
+					on = append(on, a.Types...)
+				}
+			}
+			if anyIn(on, extTargets) {
+				held = append(held, "point manager "+c.Name+" @AgentOn "+strings.Join(on, ","))
+				continue
+			}
+			r.row("FAIL", "driver-manager", u.path+":"+itoa(c.Line+1)+"  point manager "+c.Name+" is not @AgentOn "+
+				strings.Join(extTargets, " or ")+": it never shows (types/driver-authoring.md § 1.6)")
+			failed = true
+		}
+	}
+	basic := javasrc.Descendants(m.all, "BBasicNetwork", "BSerialNetwork")
+	if len(basic) > 0 {
+		var targets []string
+		for _, c := range m.all {
+			if m.networks[c.Name] || m.devices[c.Name] {
+				targets = append(targets, module+":"+typeName(c.Name))
+			}
+		}
+		targets = sortU(targets)
+		by := ""
+		for _, u := range units {
+			for _, a := range u.agents {
+				if by == "" && anyIn(a.Types, targets) {
+					by = simpleName(a.Class)
+				}
+			}
+		}
+		if by == "" {
+			r.row("FAIL", "driver-manager", m.pd+"/src  PD-01: a BBasicNetwork driver ships no manager @AgentOn "+
+				strings.Join(targets, " or ")+" (types/driver-authoring.md § 1.3)")
+			failed = true
+		} else {
+			held = append(held, "PD-01 "+by+" @AgentOn the network or device")
+		}
+	} else {
+		held = append(held, "PD-01 n/a (no BBasicNetwork: framework device manager)")
+	}
+	if !failed {
+		r.row("PASS", "driver-manager", strings.Join(held, "; "))
+	}
+	return !failed
+}
+
+// anyIn reports whether some element of xs is in set.
+func anyIn(xs, set []string) bool {
+	for _, x := range xs {
+		if contains(set, x) {
+			return true
+		}
+	}
+	return false
 }
