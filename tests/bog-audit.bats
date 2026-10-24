@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # RED-FIRST pins for bog-audit.sh (campaign 8 PR10, shard c8-audit/bog.md). Audits a station config.bog
 # against the deployed module source. Row `<CHECK_ID>  PASS|FAIL|WARN  <path>  <detail>`; exit 0 clean /
-# 1 any FAIL / 3 parse error, prefix not found, or python3 missing.
+# 1 any FAIL / 3 usage, not a file, a malformed bog or prefix not found (Go port: go/internal/bogaudit).
 #
 # Grammar (aligned to the REAL PANCCADIA/MX60 bogs): a COMPONENT is `<p n='Name' h='handle' t='PFX:Type'>`
 # (single-quoted, carries a handle, optional m='pfx=module' on first use of a prefix); a VALUE property is
@@ -146,13 +146,43 @@ JAVA
   [[ "$output" == *"CHECK1"* ]]
 }
 
-@test "BA7: python3 missing -> exit 3 (command -v python3 guard)" {
+@test "BA7: python3 absent from PATH -> the audit still runs (Go port; exit 1 + the CHECK11 row on synthetic.bog)" {
+  # The python engine is gone (go/internal/bogaudit). Built once with the full PATH, the wrapper then needs only
+  # bash + the go_tool_bin staleness check. Mutation: BA7 -- reintroducing a `command -v python3` guard -> exit 3.
+  run "$BA" "$T/clean.bog" --module ColdRoomPan
+  [ "$status" -eq 0 ]
   NOPY="$T/nopy"; mkdir -p "$NOPY"
-  for t in bash sh env grep sed awk unzip dirname basename cat sort head printf; do
+  for t in bash sh env find readlink dirname; do
     p="$(command -v "$t" 2>/dev/null)"; [ -n "$p" ] && ln -sf "$p" "$NOPY/"
   done
+  [ -z "$(PATH="$NOPY" command -v python3)" ]
   PATH="$NOPY" run bash "$BA" "$T/synthetic.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK11  FAIL  NrioNetwork/io/ro1"* ]]
+}
+
+@test "BA7b: a .bog that is not a zip is refused by name (exit 3), never read as an empty station" {
+  # Mutation: BA7b -- dropping the zip-magic check in readBog -> a positioned XML error instead of the named refusal.
+  printf '\000\001binary\377' > "$T/binary.bog"
+  run "$BA" "$T/binary.bog" --module ColdRoomPan
   [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: cannot extract file.xml from $T/binary.bog" ]
+  ( cd "$T" && printf 'x\n' > other.xml && zip -q nofile.bog other.xml )
+  run "$BA" "$T/nofile.bog" --module ColdRoomPan
+  [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: cannot extract file.xml from $T/nofile.bog" ]
+}
+
+@test "BA7c: a zipped bog and its bare file.xml give the same rows; a malformed file.xml is a positioned error (exit 3)" {
+  run "$BA" "$T/synthetic.bog" --module ColdRoomPan
+  local zipped="${output%$'\n'# bog-audit: parse time*}"
+  run "$BA" "$T/synthetic.xml" --module ColdRoomPan
+  [ "${output%$'\n'# bog-audit: parse time*}" = "$zipped" ]
+  printf '<bajaObjectGraph>\n <p n="a" h="1" t="x:Y">\n</bajaObjectGraph>\n' > "$T/file.xml"
+  ( cd "$T" && zip -q bad.bog file.xml && rm -f file.xml )
+  run "$BA" "$T/bad.bog" --module ColdRoomPan
+  [ "$status" -eq 3 ]
+  [[ "$output" == "bog-audit: $T/bad.bog:3:1: element <p> opened at 2:2 closed by </bajaObjectGraph>" ]]
 }
 
 @test "BA8: no config.bog argument -> exit 3 (usage)" {
