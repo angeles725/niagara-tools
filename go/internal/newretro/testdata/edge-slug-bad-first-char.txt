@@ -6,7 +6,7 @@ exit 3
 -- stderr --
 new-retro: slug must be [A-Za-z0-9][A-Za-z0-9._-]+ and >= 6 chars: _abcdef
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity
 -- @env --
 KIT=@DIR@/kit
 -- @expect kit/BUILD-STATE.src.md --

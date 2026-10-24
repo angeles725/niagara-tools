@@ -6,7 +6,8 @@
 # dir D, the script copied to D/toolbelt/new-retro.sh beside a symlink to this checkout's gen-retro-index.sh
 # (so the script's own default kit root is D, the NEW_RETRO_DEFAULT_ROOT the Go test passes), under
 # `env -i PATH=D/fakebin:/usr/bin:/bin` plus the case's ENVV; D/fakebin/date prints 2026-01-02, the date the
-# Go test injects. The case file holds args, want (exit + stdout), stderr, @kind (the source and sha), @env,
+# Go test injects. The index half is NOT bash parity: gen-retro-index.sh is this checkout's (Go retroindex since
+# r8 T8j), and @kind says so. The case file holds args, want (exit + stdout), stderr, @kind (the source and sha), @env,
 # one @expect section per file the run left (the whole tree after the run, toolbelt/ and fakebin/ excluded),
 # then the tree as it was before the run. A truth-* case is hand-written and says so in its @kind; this
 # script never writes one.
@@ -60,7 +61,7 @@ rec() {
     printf -- '-- args --\n'; local a; for a in "$@"; do printf '%s\n' "$(sub "$a")"; done
     printf -- '-- want --\nexit %s\n' "$rc"; sed "s#$D#@DIR@#g" "$WORK/out"
     printf -- '-- stderr --\n'; sed "s#$D#@DIR@#g" "$WORK/err"
-    printf -- '-- @kind --\nrecorded from build-n4-module-kit/toolbelt/new-retro.sh at %s\n' "$SHA"
+    printf -- "-- @kind --\nrecorded from build-n4-module-kit/toolbelt/new-retro.sh at %s; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity\n" "$SHA"
     printf -- '-- @env --\n'; for a in "${ENVV[@]}"; do printf '%s\n' "$(sub "$a")"; done
     serialize "@expect "
     printf '%s' "$tree"

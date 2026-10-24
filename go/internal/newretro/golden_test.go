@@ -17,7 +17,7 @@ import (
 const goldenCases = 44
 
 // recordedKind is the @kind of a case testdata/record/record.sh wrote; any other @kind must be a truth-* case.
-const recordedKind = "recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1\n"
+const recordedKind = "recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity\n"
 
 // today is the date record.sh's fake `date` prints.
 func today() string { return "2026-01-02" }
