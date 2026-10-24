@@ -161,3 +161,16 @@ func TestDriverCommConfig(t *testing.T) {
 		}
 	}
 }
+
+// TestDriverDiscoveryAlive: a getDiscoveryObjects that never asks job.isAlive() FAILs (§ 1.11 step 1),
+// in each discovery host; an isAlive() left only in a comment or a string does not count.
+func TestDriverDiscoveryAlive(t *testing.T) {
+	dir := copyFixture(t)
+	edit(t, dir, fxRt+"BMinimalDriverNetwork.java", "if (job == null || !job.isAlive()) return null;", "if (job == null) return null; // !job.isAlive()")
+	edit(t, dir, fxRt+"BMinimalDriverNetwork.java", "      if (!job.isAlive()) return null;\n", "      String s = \"isAlive()\";\n")
+	edit(t, dir, fxRt+"BMinimalDriverPointDeviceExt.java", "if (job == null || !job.isAlive()) return null;", "if (job == null) return null;")
+	edit(t, dir, fxRt+"BMinimalDriverPointDeviceExt.java", "      if (!job.isAlive()) return null;\n", "")
+	rows := driverRows(t, dir)
+	wantRow(t, rows, "FAIL", "driver-discovery-alive", "BMinimalDriverNetwork.java:", "getDiscoveryObjects")
+	wantRow(t, rows, "FAIL", "driver-discovery-alive", "BMinimalDriverPointDeviceExt.java:", "getDiscoveryObjects")
+}

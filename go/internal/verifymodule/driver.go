@@ -10,7 +10,7 @@ import (
 )
 
 // driverChecks are the rows driver mode prints, in order (types/driver-authoring.md is the doctrine).
-var driverChecks = []string{"driver-scaffold", "driver-comm-config"}
+var driverChecks = []string{"driver-scaffold", "driver-comm-config", "driver-discovery-alive"}
 
 // Driver detection: a profile dir is a driver module when a class under its src extends a Baja network
 // or device base (driverBases), directly or through another class of the same src. The source decides,
@@ -73,7 +73,7 @@ func (r *run) driver() bool {
 		return true
 	}
 	pass := true
-	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig} {
+	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig, r.driverDiscoveryAlive} {
 		if !c(m) {
 			pass = false
 		}
@@ -158,4 +158,53 @@ func (r *run) driverCommConfig(m *driverModule) bool {
 		r.row("PASS", "driver-comm-config", "no network or device slot holds a bare comm config under "+m.pd+"/src")
 	}
 	return !failed
+}
+
+// driverDiscoveryAlive FAILs a getDiscoveryObjects body (a BINDiscoveryHost: the network for devices, the
+// point device ext for points) that never calls isAlive(): a canceled discovery job then keeps scanning.
+// Read in the bare view, so an isAlive() in a comment or a string is no call. Doctrine:
+// types/driver-authoring.md § 1.11 step 1 (return null at once when !prefs.getJob().isAlive()).
+func (r *run) driverDiscoveryAlive(m *driverModule) bool {
+	failed, hosts := false, 0
+	for _, u := range m.units {
+		for _, meth := range javasrc.Methods(u.view.code) {
+			if meth.Name != "getDiscoveryObjects" {
+				continue
+			}
+			hosts++
+			if !hasCall(u.view.bare, meth.Start, meth.End, "isAlive") {
+				r.row("FAIL", "driver-discovery-alive", u.path+":"+itoa(meth.Start)+
+					"  getDiscoveryObjects never checks job.isAlive(): a canceled job keeps scanning (types/driver-authoring.md § 1.11)")
+				failed = true
+			}
+		}
+	}
+	switch {
+	case hosts == 0:
+		r.row("SKIP", "driver-discovery-alive", "no getDiscoveryObjects under "+m.pd+"/src")
+	case !failed:
+		r.row("PASS", "driver-discovery-alive", itoa(hosts)+" getDiscoveryObjects check job.isAlive() under "+m.pd+"/src")
+	}
+	return !failed
+}
+
+// hasCall reports whether name( is called in the lines [from, to] (1-based, inclusive) of bare.
+func hasCall(bare []string, from, to int, name string) bool {
+	for i := from - 1; i < to && i < len(bare); i++ {
+		for ln, off := bare[i], 0; ; {
+			j := strings.Index(ln[off:], name+"(")
+			if j < 0 {
+				break
+			}
+			if j += off; j == 0 || !identChar(ln[j-1]) {
+				return true
+			}
+			off = j + 1
+		}
+	}
+	return false
+}
+
+func identChar(c byte) bool {
+	return c == '_' || c == '$' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')
 }
