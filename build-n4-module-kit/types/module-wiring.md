@@ -12,7 +12,7 @@ calls into types across module boundaries. `[ev: code nmodsreflow gradle.kts; co
 | `nre(":nre")` | Sets `nre="true"` attribute on `<module>` — NO `<dependency>` entry | Marks the module as NRE-level; every production module should carry this |
 | `nre("group:artifact")` (no version) | Nothing in `module.xml` | Compile against a library the NRE ships in `!bin/ext` (devguide 4.15.6.20 `build.txt:186`); never bundle it — `types/third-party-libraries.md` § Before bundling `[ev: retro devguide415-r2-shipped-libraries Δ1]` |
 | `api(":baja")` / `api(":web-rt")` | Emits `<dependency name="baja" vendor="Tridium" vendorVersion="X.Y.Z"/>` | Transitive: a module that `api()`s yours also sees baja; 3-part floor required (L7) |
-| `api(project(":mymod-rt"))` | Emits `<dependency name="mymod-rt" vendor="<OEM>" vendorVersion="<major.minor>"/>` | Sibling part dep; vendor and version stamped from `defaultModuleVersion` in the GROUP `build.gradle.kts`, NOT from the part's own `.kts` `[ev: corpus B802; nmodsreflow-ux module.xml]` |
+| `api(project(":mymod-rt"))` | Emits `<dependency name="mymod-rt" vendor="<OEM>" vendorVersion="<major.minor>"/>` | Sibling part dep; vendor and version stamped from `defaultModuleVersion` in the GROUP `build.gradle.kts`, NOT from the part's own `.kts` `[ev: nmodsreflow-ux module.xml; client-module-version-key memory]` |
 | `compileOnly("javax.servlet:...")` | **Nothing** in `module.xml` | Servlet API is provided by the container at runtime; compile-time only |
 | `compileOnly(files("$niagara_home/bin/ext/jetty-all-compact3-*.jar"))` | **Nothing** in `module.xml` | Niagara-private provided jar; no Maven coordinate → path-pinned; absent on JACE (Compact3 profile) |
 | `uberjar("group:artifact:version")` | **Nothing** in `module.xml` | Fat-jar embed built into the `com.tridium.niagara-module` plugin; simpler than Shadow for single-module bundling (no relocation); `third-party-libraries.md` teaches Shadow for shade/relocate scenarios `[ev: code nmodsreflow gradle.kts; WIR-G1]` |
@@ -64,12 +64,13 @@ generates `META-INF/module.xml` from it. **Never hand-author `META-INF/module.xm
 
 - **`module-include.xml` holds only `<types>`.** Defs, lexicons, installation and finer-grained dependencies
   go in the part's `moduleManifest { … }` block, and the parts come from the root `niagara-module.xml`
-  (devguide `upgradingBuild.txt:95,115`); a `<defs>`, `<lexicons>` or `<moduleParts>` element in it is
+  (devguide `upgradingBuild.txt:95,107`); a `<defs>`, `<lexicons>` or `<moduleParts>` element in it is
   Gradle-6-era residue. `[ev: corpus B1313 §1313.3 C2]` `[ev: retro devguide415-horizons-authoring-security Δ6]`
 - **javac's annotation processor writes it, append-only.** For each `@NiagaraType` whose `<type>` line is missing
   or differs, `NiagaraTypeAnnotationProcessor` adds one and saves the file; it never removes or renames one. After
   renaming or deleting a type, delete its stale line (or the file, to regenerate it), or registry build logs
-  SEVERE `Missing Sys.loadType() <type>` at station start (`Builder.java:776`). Test types
+  SEVERE `Missing class for "<type>"` at station start (`Builder.java:766`; a listed class without `Sys.loadType()`
+  logs `Missing Sys.loadType() <type>`, `:776`). Test types
   (`test.com.<vendor>…B*Test`) belong only in `moduleTest-include.xml`: the processor picks that file for classes
   under a configured test root. `[ev: corpus B1233 §1233.4]` `[ev: corpus B1128]`
   `[ev: retro n4-course-authoring-files-and-libraries Δ5]`
@@ -107,7 +108,7 @@ public class BMyService extends BComponent {
 
 `Sys.loadType(BX.class)` is called once at class-init. The resulting `Type` object is the
 canonical identity token used everywhere — type comparisons, agent lookup, and ORD resolution
-all go through `BX.TYPE`. `[ev: corpus B802 §802.3]`
+all go through `BX.TYPE` [INFER]. `[ev: docSource baja/javax/baja/sys/Sys.java:443-446]`
 
 ---
 
@@ -125,8 +126,9 @@ An *agent* type is one that attaches itself to a target type in the Workbench si
 </type>
 ```
 
-`requiredPermissions` governs who sees the agent in Workbench: `"r"` = read-only user;
-`"rw"` = operator; `""` = admin only. `[ev: code nmodsreflow-rt module.xml; nmodsreflow-ux module.xml]`
+`requiredPermissions` is the permission the user needs on the target to get the agent: `"r"` = operator read,
+`"rw"` = operator read + write; with none declared a view requires admin write (devguide `security/security.txt:191`,
+`slot-o-matic.txt:221`). `[ev: code nmodsreflow-rt module.xml; nmodsreflow-ux module.xml]`
 
 A ux view that opens on `ReflowService` uses the same pattern:
 
@@ -138,17 +140,18 @@ A ux view that opens on `ReflowService` uses the same pattern:
 </type>
 ```
 
-### Path B — `@AgentOn` annotation (slot-o-matic generates the XML)
+### Path B — `@AgentOn` annotation (the annotation processor writes the XML)
 
 ```java
 @NiagaraType(agent = @AgentOn(types = "mymod:MyService", requiredPermissions = "r"))
 public class BMyCommands extends BComponent { ... }
 ```
 
-Slot-o-matic expands this into the identical `<agent><on type>` XML above.
+javac's annotation processor (not slot-o-matic) writes the identical `<agent><on type>` XML above
+(devguide `slot-o-matic.txt:193`).
 Both paths produce the same runtime behaviour — choose whichever is cleaner for
 the type. XML-first is typical for command types that carry no view class; `@AgentOn`
-fits plain Java-first authoring. `[ev: corpus B802 §802.5; nmodsreflow module.xml]`
+fits plain Java-first authoring. `[ev: nmodsreflow module.xml]`
 
 ---
 
@@ -158,11 +161,11 @@ fits plain Java-first authoring. `[ev: corpus B802 §802.5; nmodsreflow module.x
 
 ```java
 // Resolve the type object by its module-qualified name
-Type t = Sys.loadType("nmodsreflow:ReflowService");
+Type t = Sys.getType("nmodsreflow:ReflowService");
 ```
 
 The 2-part colon form is the storable, version-stable ORD for types.
-The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: corpus B35]`
+The `moduleName` comes from `niagara-module.xml`, not the jar name. `[ev: devguide build.txt:455-458,508; docSource baja/javax/baja/sys/Sys.java:421]`
 
 ### 4.2 Service lookup — same call, cross-module transparent
 
@@ -185,14 +188,16 @@ type visible. No extra plumbing needed. `[ev: corpus B617 §617.3; third-party-l
 | `BOrd.make(...)` | `BOrd.make("myord:/...")` | Dispatch through a registered `ordScheme` handler |
 
 `BOrd.make("myord:/...")` routes to the `BMyScheme` registered under `ordScheme="myord"` in
-`module.xml`. The scheme handler's class must be visible to the caller's classloader
-(i.e., the module carrying it must be in the `<dependency>` chain). `[ev: corpus B35 §35.2]`
+`module.xml`: `BOrdScheme.lookup(id)` asks the registry for the scheme type and instantiates it
+(docSource `baja/javax/baja/naming/BOrdScheme.java:55-57`), so resolving the ORD needs no `<dependency>` on the
+scheme's module; only code that names the handler class does. `[ev: corpus B35 §35.7; B617 §617.3]`
 Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every returned hop): `types/security.md`
 § 4.4. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ8]`
 
 ### 4.4 Registry lookups — defs and agents `[ev: retro devguide415-horizons-authoring-security Δ9]`
 
-- **Defs** are name/value strings declared in `module-include.xml` (`<defs><def name="mymod.x" value="…"/></defs>`)
+- **Defs** are name/value strings declared in the part's `moduleManifest { defines { define("mymod.x", "…") } }`
+  (devguide `build.txt:342-344,593`; the older `registry.txt:93` still shows `<defs>` in `module-include.xml`)
   and collapsed by the registry into ONE global map, so prefix every name with `<moduleName>.` (devguide 4.15.6.20
   `registry.txt:85-105`). Read one with `Sys.getRegistry().getDef(name, fallback)`; the one-argument form is
   `getDef(name, null)` (`javax/baja/registry/Registry.java:109-119`).
@@ -237,7 +242,8 @@ with no error at build or deploy time. `[ev: WIR-G6]`
 `uberjar("group:artifact:ver")` and `api("group:artifact:ver")` creates a
 **classloader conflict**: the `api()` path emits a `<dependency>` entry that the NRE
 tries to satisfy with an external module, while the bundled copy is already present in
-your jar. The runtime picks one unpredictably; always choose one path. `[ev: WIR-G7]`
+your jar. The module's own classes load before a declared dependency's (B617 §617.2), so the `api()` copy is
+shadowed silently [INFER]; always choose one path. `[ev: WIR-G7; corpus B617 §617.2]`
 
 ---
 
