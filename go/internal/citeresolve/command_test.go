@@ -92,3 +92,42 @@ func TestDefaultKitFromCard(t *testing.T) {
 		t.Errorf("exit %d, stderr %q; want the kit found above the card", code, errs)
 	}
 }
+
+// TestFindKitWithoutAGeneratedIndex: the build-n4-module kit does not commit retros/INDEX.md (R10-D1), so
+// a clean clone is found by its committed BUILD-STATE.src.md.
+func TestFindKitWithoutAGeneratedIndex(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "types"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "BUILD-STATE.src.md"), []byte("# source\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want, _ := filepath.Abs(root)
+	if got := findKit(filepath.Join(root, "types", "card.md")); got != want {
+		t.Errorf("findKit = %q, want %q", got, want)
+	}
+
+	// The nearest kit root wins: a kit with BUILD-STATE.src.md nested under a directory whose retros/INDEX.md
+	// sits further up is found first.
+	outer := t.TempDir()
+	inner := filepath.Join(outer, "nested", "kit")
+	for _, d := range []string{filepath.Join(outer, "retros"), filepath.Join(inner, "types")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for path, text := range map[string]string{
+		filepath.Join(outer, "retros", "INDEX.md"): "| Retro file |\n",
+		filepath.Join(inner, "BUILD-STATE.src.md"): "# source\n",
+	} {
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, _ = filepath.Abs(inner)
+	if got := findKit(filepath.Join(inner, "types", "card.md")); got != want {
+		t.Errorf("nearer BUILD-STATE.src.md: findKit = %q, want %q", got, want)
+	}
+}

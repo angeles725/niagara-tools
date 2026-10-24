@@ -1,0 +1,4 @@
+SAFE  reorder_slot  MinimalPan.setpoint: B754-754.6-r2 (index-free-byName)
+SAFE  reorder_slot  MinimalPan.interval: B754-754.6-r2 (index-free-byName)
+SAFE  reorder_slot  MinimalPan.tickExpired: B754-754.6-r2 (index-free-byName)
+verdict=SAFE

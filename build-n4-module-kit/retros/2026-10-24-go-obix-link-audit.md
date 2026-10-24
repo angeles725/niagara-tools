@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-obix-link-audit
@@ -47,6 +47,10 @@ being audited; the body is capped at 32 MiB.
 | Δ1 | **When the shared reader a port must use (R8-D12 `xmlsrc`) itself removes a false result, the port commit carries that difference, declared and pinned, instead of a byte-identical emulation of the old text scan.** Why: a raw-grep emulation in the first commit is the second tokenizer R8-D12 forbids, and dropping the "fix" commit would restore it; "Port in two steps" stays for every difference the reader does not force. | `CONTRIBUTING.md` § 2.2 "Port in two steps" | `[ev: retro go-obix-link-audit]` |
 | Δ2 | **A network tool's bats pin behavior against a local 127.0.0.1 stand-in (http and a throwaway self-signed https), never a stub of the client binary.** Why: the curl stubs pinned argv/stdin plumbing (`-k`, `-K -`, `CURL_RC`) that the port no longer has; the stand-in tests passed on the bash script and on the port alike, so one file proved both before the switch. | `CONTRIBUTING.md` § 2.2 Go module | `[ev: tests/obix-link-audit.bats _station]` |
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 Port byte-identical first (declared and pinned, never emulated), the existing two-step port rule, not `CONTRIBUTING.md`, which the fold audit does not read.
+- Δ2 → `BUILD-LOOP.md` § 5, a new bullet beside the out-of-repo test rule: a network tool's bats use a local `127.0.0.1` stand-in.
+
 ## Lessons
 - `grep -o` over XML text is not an attribute reader: entity spellings, quote style and `=` spacing are all the
   same attribute to XML and invisible to the pattern.
@@ -54,4 +58,4 @@ being audited; the body is capped at 32 MiB.
   the audit.
 
 ---
-**Status**: PENDING — INDEX row generated from the header.
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-late`) — INDEX row: `| 2026-10-24-go-obix-link-audit.md | kit | 2026-10-24 | folded | 2 |`

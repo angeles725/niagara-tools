@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 3 -->
 # 2026-10-23 · kit · truth-ported-rules
@@ -55,10 +55,15 @@ rule wrapper header.
 | Δ2 | A rule row names its line: `Line` 0 (the file-level `<file>: <msg>` row) only for a finding about a whole file, so relays can split `<file>:<line>  <msg>` on the two-space separator | `go/README.md` § Adding a lint rule | `[ev: tests/report-module.bats RM2]` |
 | Δ3 | A lint header keeps every `[ev:]` tag on its evidence line (lines 1-60): gen-lint-index drops a tag that header growth pushes past line 60, silently | `toolbelt/gen-lint-index.sh` header contract; `CONTRIBUTING.md` | `[ev: tests/gen-lint-index.bats GLI-real]` |
 
+## Fold
+- Δ1 → already folded in `BUILD-LOOP.md` § 5 Literal-aware and scope-aware Java scanning (a private stripper is a finding; match on `Strip` + `BlankLiterals`); token added. The `go/README.md` target is outside this fold's surfaces.
+- Δ2 → `BUILD-LOOP.md` § 5, same bullet (`Line` 0 only for a whole-file finding; `go/README.md` already defines the row).
+- Δ3 → superseded: `go/internal/lintheader` has no line cap since r9-lintindex-header, so a tag past line 60 is no longer dropped; recorded as history in the `BUILD-LOOP.md` § 5 lintheader line.
+
 ## Lessons
 - A byte-for-byte port keeps the bash lint's lies with its behaviour; the golden files make each truth fix a reviewable diff of rows, not a silent change.
 - An empty root is the cheapest wrong input a lint can get; an engine default catches it for every rule at once, where a per-rule opt-in had been taken by none.
 - A consumer that re-parses rows (report-module.sh) breaks on a row-shape change without failing loudly; pin the relayed shape in its bats.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-truth-ported-rules.md | kit | 2026-10-23 | pending | 3 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-23-truth-ported-rules.md | kit | 2026-10-23 | folded | 3 |`

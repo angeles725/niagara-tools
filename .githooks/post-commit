@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# post-commit — regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md)
+# after a plain commit: a commit that adds a ledger.d/ fragment, a retro or a lint changes what they
+# generate, and no merge, checkout or rewrite follows it. The logic lives in .githooks/post-merge; like
+# it, this never blocks git (exit 0 always). [ev: retro ledger-generated-not-committed]
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 0
+[ -f "$here/post-merge" ] || exit 0
+bash "$here/post-merge" </dev/null
+exit 0

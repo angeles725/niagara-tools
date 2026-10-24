@@ -22,18 +22,30 @@ setup() {
   TAG="v${VERSION_TARGET}"
 }
 _close() { [ -n "${C10_CLOSE:-}" ] || skip "C10 close gate — set C10_CLOSE=1 to run"; }
+# _gen_state — BUILD-STATE.md and retros/INDEX.md are generated, not committed (R10-D1): pin the kit-state
+# output instead of a possibly stale local file. [ev: retro ledger-generated-not-committed]
+_gen_state() {
+  bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" build-state > "$BATS_TEST_TMPDIR/BUILD-STATE.md"
+  bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" retro-index > "$BATS_TEST_TMPDIR/INDEX.md"
+  # Non-vacuous: an empty or header-only output would pass a "zero pending rows" pin.
+  [ -s "$BATS_TEST_TMPDIR/BUILD-STATE.md" ]
+  [ -s "$BATS_TEST_TMPDIR/INDEX.md" ]
+  grep -qE '^\| [^|]+\.md \| .*\| *folded *\|' "$BATS_TEST_TMPDIR/INDEX.md"
+}
 
 @test "CLOSE-sweeps: sweep-fold-audit --strict exit 0 AND sweep-build-state exit 0" {
   _close
-  run "$REPO/build-n4-module-kit/toolbelt/sweep-fold-audit.sh" --strict "$REPO/build-n4-module-kit/retros/INDEX.md" "$REPO/build-n4-module-kit"
+  _gen_state
+  run "$REPO/build-n4-module-kit/toolbelt/sweep-fold-audit.sh" --strict "$BATS_TEST_TMPDIR/INDEX.md" "$REPO/build-n4-module-kit"
   [ "$status" -eq 0 ]
-  run bash "$REPO/build-n4-module-kit/toolbelt/sweep-build-state.sh" "$REPO/build-n4-module-kit/BUILD-STATE.md" "$REPO/build-n4-module-kit/retros" "$REPO/build-n4-module-kit/retros/INDEX.md"
+  run bash "$REPO/build-n4-module-kit/toolbelt/sweep-build-state.sh" "$BATS_TEST_TMPDIR/BUILD-STATE.md" "$REPO/build-n4-module-kit/retros" "$BATS_TEST_TMPDIR/INDEX.md"
   [ "$status" -eq 0 ]
 }
 
 @test "CLOSE-index-pending: retros/INDEX.md has ZERO '| pending |' rows after the fold PR" {
   _close
-  [ "$(grep -cE '\| *pending *\|' "$REPO/build-n4-module-kit/retros/INDEX.md")" -eq 0 ]
+  _gen_state
+  [ "$(grep -cE '\| *pending *\|' "$BATS_TEST_TMPDIR/INDEX.md")" -eq 0 ]
 }
 
 @test "CLOSE-version: VERSION == the C10 target" {

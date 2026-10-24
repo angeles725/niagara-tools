@@ -76,6 +76,10 @@ artifact in the feature doc — or an explicit waiver `Design shard: waived (<re
   shared `odd/tasks/<feature-name>.md`, resolve by APPEND per the fragment-merge rule (`METHODOLOGY.md` § Kit
   maintenance) — keep both sections, never overwrite — or name one doc owner per checkout who applies every writer's
   section text serially. `[ev: retro comppan-fase2-amps-alarms Δ8]`
+- **Keep-both only for whole-line additions:** an automatic keep-both conflict resolution applies only to hunks where
+  both sides add whole lines; a test file or an edited line needs a human merge, then a compile and a test run before
+  the commit (a keep-both cut two test functions and PR #409 shipped a file that did not compile).
+  `[ev: retro fail-open-pipeline-checks Δ2]`
 - **Count what ran:** the writer runs `bats tests/*.bats` serially unless GNU `parallel` is installed. Without it,
   `bats -j` runs 0 tests and prints no `not ok` line. A parallel run reports its `ok` count next to `bats --count`,
   and the two must be equal. `[ev: retro retro-fold-campaign-close Δ2]`
@@ -176,7 +180,9 @@ exists. Record in the feature doc which one it was ("folded into the D3 PR" / "o
 Every run ENDS by writing its retro; the retro is a precondition for "done", not an at-STOP afterthought.
 
 - `toolbelt/new-retro.sh <module|kit> <slug>` emits the retro stub (What happened / Evidence / Proposed kit deltas
-  table / Lessons) and appends its `retros/INDEX.md` row (`pending`). `[ev: retro campaign8-retro-loop]`
+  table / Lessons) whose header block IS its retro-index row (`pending`); the index itself is generated, not
+  committed — read it with `toolbelt/kit-state.sh retro-index`. `[ev: retro campaign8-retro-loop]`
+  `[ev: retro ledger-generated-not-committed]`
 - A defect in a KIT CHECK or DOCTRINE (a lint that misses/over-fires, a stale rule) additionally opens
   `toolbelt/kit-ticket.sh "<one line>"` (labels `kit`/`from-run`/`campaign-9`). `[ev: retro campaign8-retro-loop]`
 - `toolbelt/sweep-build-state.sh --age` at orient (BUILD-LOOP §0.a) surfaces the accrued retro DEBT so it cannot

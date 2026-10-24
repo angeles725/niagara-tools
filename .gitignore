@@ -29,3 +29,9 @@ openspec/**/.gentle-ai-instance
 
 # Go build output (go/bin/gen-retro-index is built on demand by toolbelt/gen-retro-index.sh)
 go/bin/
+
+# Generated kit state (toolbelt/kit-state.sh): never committed, so two PRs that each add a ledger.d/
+# fragment or a retro never conflict here. Sources: BUILD-STATE.src.md, ledger.d/*.md, retros/*.md.
+build-n4-module-kit/BUILD-STATE.md
+build-n4-module-kit/retros/INDEX.md
+build-n4-module-kit/toolbelt/INDEX.md

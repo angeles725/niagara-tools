@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 1 -->
 # 2026-10-23 · kit · r9-lintindex-header
@@ -37,9 +37,12 @@ below it, so neither choice changes real output.
 |---|---|---|---|
 | Δ1 | Every reader of a lint header goes through `go/internal/lintheader` `Lines`; a second header definition is a defect | `go/internal/lintheader/lintheader.go` | `[ev: go/internal/lintheader/lintheader_test.go TestLines]` |
 
+## Fold
+- Δ1 → `BUILD-LOOP.md` § 5 One layered Go lint stack, the same line as r9-guardpins-header Δ1.
+
 ## Lessons
 - Two tools reading "the header" with their own copies drift apart; one helper keeps the definition in one place.
 - A fixed window failed the same way in two tools; when one is found, search for its siblings in the same change set.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | pending | 1 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-meta`) — INDEX row: `| 2026-10-23-r9-lintindex-header.md | kit | 2026-10-23 | folded | 1 |`

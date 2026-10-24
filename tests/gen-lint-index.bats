@@ -2,8 +2,9 @@
 # Tests for build-n4-module-kit/toolbelt/gen-lint-index.sh — the GENERATED lint index.
 # BUILD-LOOP §5/§6.b used to enumerate every lint inline (a merge-conflict hotspot that drifts);
 # the index is now generated from each toolbelt/lint-*.sh header (description line, Usage:,
-# Exit:/Exits:, [ev: ...] tags) into toolbelt/INDEX.md, and `--check` fails when it is stale.
-# Exits: 0 written / fresh · 1 stale index or header-contract violation · 3 usage/env.
+# Exit:/Exits:, [ev: ...] tags) into toolbelt/INDEX.md. The index is NOT committed (R10-D1, .gitignore):
+# `--check` validates the lint headers (fails closed) and readers run toolbelt/kit-state.sh lint-index.
+# Exits: 0 written / headers valid · 1 header-contract violation · 3 usage/env.
 # [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
 
 setup() {
@@ -97,7 +98,7 @@ _mklint() {
   [[ "$output" == *"lint-noexit.sh"* ]]
 }
 
-@test "GLI-fresh: --check exits 0 right after a generate, and a re-generate is byte-identical" {
+@test "GLI-fresh: --check exits 0 on valid headers, and a re-generate is byte-identical" {
   _mklint lint-alpha.sh "flags alpha things."
   bash "$GEN" "$FK"
   cp "$FK/toolbelt/INDEX.md" "$TMPDIR_T/first.md"
@@ -107,20 +108,24 @@ _mklint() {
   cmp "$TMPDIR_T/first.md" "$FK/toolbelt/INDEX.md"
 }
 
-@test "GLI-stale: --check exits 1 when a lint is added without regenerating the index" {
-  # Mutation pin: if --check stops comparing the generated text against INDEX.md, this flips GREEN->RED.
+@test "GLI-check: --check validates the headers (a new lint needs no regenerate) and fails on a broken one" {
+  # The index is not committed, so there is no file to be stale: --check fails closed on the headers.
   _mklint lint-alpha.sh "flags alpha things."
   bash "$GEN" "$FK"
   _mklint lint-new.sh "a lint landed without regenerating."
   run bash "$GEN" --check "$FK"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"stale"* ]]
-}
-
-@test "GLI-missing: --check exits 1 when INDEX.md does not exist" {
-  _mklint lint-alpha.sh "flags alpha things."
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"are valid"* ]]
+  _mklint lint-broken.sh "no usage line." ""
   run bash "$GEN" --check "$FK"
   [ "$status" -eq 1 ]
+  [[ "$output" == *"lint-broken.sh"* ]]
+}
+
+@test "GLI-missing: --check exits 0 and writes nothing when INDEX.md does not exist (not committed)" {
+  _mklint lint-alpha.sh "flags alpha things."
+  run bash "$GEN" --check "$FK"
+  [ "$status" -eq 0 ]
   [ ! -f "$FK/toolbelt/INDEX.md" ]
 }
 
@@ -133,7 +138,7 @@ _mklint() {
   cmp "$TMPDIR_T/before.md" "$FK/toolbelt/INDEX.md"
 }
 
-@test "GLI-real: the committed kit toolbelt/INDEX.md is fresh (default kit root)" {
+@test "GLI-real: every lint header of the kit is valid (default kit root)" {
   run bash "$GEN" --check
   [ "$status" -eq 0 ]
 }
@@ -141,9 +146,10 @@ _mklint() {
 # polish-2026-10-02 P2b (#199 WU6b): the lint-write-path exit cell was cut mid-sentence ("· 1 any
 # uncovered, or any") because its Exits contract wrapped onto a second header line and the index keeps
 # the first line only (a general multi-line fix is P4). The header now holds the contract on one line.
-@test "GLI-wp: the committed INDEX row for lint-write-path carries the full exit contract (0 · 1 · 3)" {
+@test "GLI-wp: the generated INDEX row for lint-write-path carries the full exit contract (0 · 1 · 3)" {
+  bash "$KIT/toolbelt/kit-state.sh" lint-index > "$TMPDIR_T/INDEX.md"
   # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
-  run grep -F '| `toolbelt/lint-write-path.sh` |' "$KIT/toolbelt/INDEX.md"
+  run grep -F '| `toolbelt/lint-write-path.sh` |' "$TMPDIR_T/INDEX.md"
   [ "$status" -eq 0 ]
   [[ "$output" == *"under --strict · 3 usage/env/missing-matrix or a sub-directory find cannot enter (K20) |"* ]]
 }
@@ -202,7 +208,7 @@ RM
   grep -q 'lines 2-5' "$GEN"
 }
 
-@test "GLI-awkfail: an unreadable lint header exits 3 and leaves the committed INDEX.md untouched" {
+@test "GLI-awkfail: an unreadable lint header exits 3 and leaves an existing INDEX.md untouched" {
   # The generator is Go (go/internal/lintindex); a header it cannot read is the env failure that a
   # failing awk used to be. Mutation: GLI-awkfail -- treating it like a contract violation exits 1.
   [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
@@ -217,9 +223,10 @@ RM
   cmp "$TMPDIR_T/before.md" "$FK/toolbelt/INDEX.md"
 }
 
-@test "GLI-timers: the committed INDEX row for lint-timers carries its full exit contract (2 usage · 3 env)" {
+@test "GLI-timers: the generated INDEX row for lint-timers carries its full exit contract (2 usage · 3 env)" {
+  bash "$KIT/toolbelt/kit-state.sh" lint-index > "$TMPDIR_T/INDEX.md"
   # shellcheck disable=SC2016  # literal markdown backticks, not a command substitution
-  run grep -F '| `toolbelt/lint-timers.sh` |' "$KIT/toolbelt/INDEX.md"
+  run grep -F '| `toolbelt/lint-timers.sh` |' "$TMPDIR_T/INDEX.md"
   [ "$status" -eq 0 ]
   [[ "$output" == *"2 usage · 3 env (incl. a sub-directory find cannot enter) |"* ]]
 }

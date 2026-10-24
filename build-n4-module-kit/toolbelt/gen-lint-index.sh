@@ -5,7 +5,10 @@
 # (a merge-conflict hotspot) and the prose drifted. The index is now DERIVED: one row per
 # toolbelt/lint-*.sh with its header description, Usage:, Exit contract, [ev: ...] tags and
 # whether report-module.sh runs it automatically. Prose never enumerates lints or counts them.
-# [ev: retro kit-meta-hygiene-2026-10-01 Δ3]
+# [ev: retro kit-meta-hygiene-2026-10-01 Δ3] The index is NOT committed (.gitignore), so two PRs that
+# each add a lint never conflict on it: readers run toolbelt/kit-state.sh lint-index, `kit-state --write`
+# (install-skill.sh, the .githooks) materializes it, and --check validates the lint headers (CI, pre-push).
+# [ev: retro ledger-generated-not-committed]
 #
 # Header contract (the leading run of '#' and blank lines of every lint-*.sh, no line cap):
 #   line 2      # <script-name> — <what it checks>   (continuation lines joined until a blank '#',
@@ -26,12 +29,11 @@
 # Implementation: the Go module at <repo>/go (go/internal/lintindex). This wrapper is the stable entry
 # point: go/go-tool.sh `go_tool_bin` builds go/bin/gen-lint-index when the binary is missing or older
 # than a Go source, then this script execs it. Needs `go` on PATH to build. [ev: retro go-gen-lint-index]
-# Mutation pins (GLI-stale, GLI-auto, GLI-wrap-exit, GLI-multi, GLI-exit-block, GLI-awkfail) live in the Go source and tests.
+# Mutation pins (GLI-auto, GLI-wrap-exit, GLI-multi, GLI-exit-block, GLI-awkfail) live in the Go source and tests.
 #
 # Usage:  gen-lint-index.sh [--check] [<kit-root>]     (default kit root: this script's ../)
-# Exits:  0 written / index fresh · 1 stale or missing index under --check, or header-contract
-#         violation · 3 usage/env, an unreadable lint header, no Go toolchain or a failed build
-#         (nothing written)
+# Exits:  0 written / headers valid under --check · 1 header-contract violation · 3 usage/env, an
+#         unreadable lint header, no Go toolchain or a failed build (nothing written)
 # VCS-free by design (kit-links L2). Deterministic: C byte order, no timestamps.
 set -u
 

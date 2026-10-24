@@ -1,0 +1,10 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-agent-on-include-sync  @DIR@/M  no module-include.xml under the root (wrong path: pass a module or part root)
+-- stderr --
+-- M/M-wb/src/com/x/ui/BMgr.java --
+package com.x.ui;
+@NiagaraType(agent = @AgentOn(types = "m:Ext"))
+public class BMgr {}

@@ -36,6 +36,8 @@
 # Advisory members (deferred-lints-2026-10-03): lint-size.sh, lint-license-isoperational-gate.sh,
 # lint-set-null-ord.sh and lint-ws-placement.sh [ev: retro ws-placement] on <artifact>/src — their WARN rows are relayed with a PASS verdict row; any non-zero exit
 # of an advisory member is an ERROR row carrying the member's first non-row output line (exit 3), never PASS.
+# lint-agent-on-include-sync.sh <module-root> once per run (FAIL, step 8b): a @NiagaraType @AgentOn type whose
+# module-include.xml <type> line lacks one of its <on type> entries (types/module-wiring.md § 2).
 # lint-slotomatic-markers.sh <artifact>/src (FAIL; a WARN unclosed-region row relayed): a generated region
 # whose stamp count is not 1 is skipped by Slot-o-Matic while the build stays green (METHODOLOGY.md K15).
 # Go-ported members (issue #459): lint-persist-hot-write, lint-changed-hot-write, lint-inert-coordination,
@@ -870,6 +872,13 @@ done
 # ----------------------------------------------------------------
 _rc=0; _o=$("$TOOLBELT/lint-agent-on-shape.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
 lint_rows "(module)" lint-agent-on-shape "$_rc" "$_o" FAIL rows
+
+# ----------------------------------------------------------------
+# 8b. lint-agent-on-include-sync.sh <module-root> — once per run (FAIL): a @NiagaraType @AgentOn type whose
+#     module-include.xml line lacks an <on type> (the processor never updates an agent-less line).
+# ----------------------------------------------------------------
+_rc=0; _o=$("$TOOLBELT/lint-agent-on-include-sync.sh" "$MODULE_ROOT" 2>&1) || _rc=$?
+lint_rows "(module)" lint-agent-on-include-sync "$_rc" "$_o" FAIL rows
 
 # ----------------------------------------------------------------
 # 9. lint-uberjar-api-conflict.sh <module-root> — once per run (WARN)

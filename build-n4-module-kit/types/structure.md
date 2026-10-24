@@ -221,7 +221,7 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
   before then is never read and the call fails with `AccessControlException`: rename that root to `<permissions>`,
   or start again from `templates/module-permissions.xml` (§ `module-permissions.xml` above). Every tracked kit
   file and every fresh scaffold is pinned by `tests/permissions-root.bats`. `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
-  `[ev: tests/permissions-root.bats PR1, PR2]`
+  `[ev: tests/permissions-root.bats PR1, PR2]` `[ev: retro r9-permissions-root Δ1]`
 - **No `moduleTest-include.xml` is emitted yet.** Before the first `BTestNg` class, copy
   `templates/moduleTest-include.xml` (course shape: a bare `<types>` root) into the part; the stub above has the
   same shape. A comment placed before an `<?xml` declaration is not well-formed XML (expat: "XML or text
