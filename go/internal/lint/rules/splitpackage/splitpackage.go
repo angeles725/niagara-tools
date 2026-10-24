@@ -118,8 +118,9 @@ func aggregate(decls []decl) []lint.Finding {
 	return out
 }
 
-// findModules is the module search: `find -H root -mindepth 1` pruning dot directories, build, node_modules, src
-// and srcTest, a module being the directory of a marker file that has a src/ directory beside it (sorted). The
+// findModules is the module search: `find -H root -mindepth 1` pruning dot directories, build, node_modules, src,
+// srcTest and *-worktrees (truth fix 2026-10-24: a sibling checkout's copies of every package were reported as
+// splits; the root itself is never pruned, so a worktree checkout can be the root), a module being the directory of a marker file that has a src/ directory beside it (sorted). The
 // root is followed when it is a symlink; links below it are neither followed nor listed. The first directory it
 // cannot read is the error, after the rest is searched.
 func findModules(root string) ([]string, error) {
@@ -139,7 +140,7 @@ func findModules(root string) ([]string, error) {
 			p := dir + "/" + e.Name()
 			switch {
 			case e.IsDir():
-				if !strings.HasPrefix(e.Name(), ".") && !pruned[e.Name()] {
+				if !strings.HasPrefix(e.Name(), ".") && !pruned[e.Name()] && !strings.HasSuffix(e.Name(), "-worktrees") {
 					walk(p)
 				}
 			case e.Type().IsRegular() && markers[e.Name()]:

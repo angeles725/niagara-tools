@@ -2,7 +2,6 @@
 @DIR@/proj
 -- want --
 exit 0
-WARN  split-package-check  k  declared in 2 modules: A/A-rt (A/A-rt/src/K.java), x-worktrees/W-rt (x-worktrees/W-rt/src/K.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
 -- stderr --
 -- proj/.hidden/H-rt/build.gradle.kts --
 -- proj/.hidden/H-rt/src/.keep --

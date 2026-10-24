@@ -128,3 +128,13 @@ jfile() {
   assert_symroot_same "$P" "$SPC" "$P"
   [ "$status" -eq 0 ] && [[ "$output" == *"WARN  split-package-check  com.shared.util"* ]]
 }
+
+@test "SPC-worktrees: a *-worktrees checkout under the root is not a second module (truth fix 2026-10-24)" {
+  # Mutation: SPC-worktrees -- searching *-worktrees directories reports every package of a sibling checkout as a split
+  module A/A-rt; module A-worktrees/feat/A/A-rt
+  jfile A/A-rt/src/com/x/U.java com.shared
+  jfile A-worktrees/feat/A/A-rt/src/com/x/U.java com.shared
+  run "$SPC" --strict "$P"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

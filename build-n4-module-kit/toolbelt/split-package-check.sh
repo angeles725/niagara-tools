@@ -35,11 +35,14 @@
 # `go` on PATH to build (exit 3 otherwise).
 # Declared differences from the bash (port 2026-10-24): a missing root given with a trailing slash is named with it;
 # the aggregation runs in process, so there is no external sort whose failure SPC-aggfail pinned.
+# Truth fix 2026-10-24: `*-worktrees` directories are pruned from the module search (a sibling checkout's copies of
+# every package were reported as splits; the root itself may be a worktree). Cliente 8 -> 4 rows.
 # VCS-free by design (kit-links L2).
 # Mutation: SPC2 -- counting files instead of distinct modules WARNs a package spread over two files of ONE module
 # Mutation: SPC4 -- scanning srcTest/ as well WARNs a test fixture that mirrors a runtime package
 # Mutation: SPC-finderr -- ignoring the per-module listing status skips the unreadable directory and reports clean
 # Mutation: SPC-findtree -- ignoring the module-search status skips a module under an unreadable directory
+# Mutation: SPC-worktrees -- searching *-worktrees directories reports every package of a sibling checkout as a split
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
