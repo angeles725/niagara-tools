@@ -45,11 +45,13 @@ var (
 	helperDecl = regexp.MustCompile(`^[[:space:]]+(private|protected)[[:space:]]`)
 	helperName = regexp.MustCompile(`^[a-z][a-zA-Z0-9_]*$`)
 	doInvoke   = regexp.MustCompile(`[[:space:]]doInvoke[[:space:]]*\(`)
-	nav        = regexp.MustCompile(`getNavChildren|getNavNodes|BqlQuery`)
-	guard      = regexp.MustCompile(`invokeLater|BJobService|JobThread`)
-	nonIdent   = regexp.MustCompile(`[^a-zA-Z_0-9]`)
-	idWord     = regexp.MustCompile(`^[a-z][a-zA-Z0-9_]+$`)
-	justified  = regexp.MustCompile(`justif|why|broad`)
+	// nav and guard match whole words (truth fix 2026-10-24: the awk matched substrings, so BBqlQueryBuilder,
+	// a UI dialog, was a BqlQuery and invokeLaterLike() a guard).
+	nav       = regexp.MustCompile(`\b(getNavChildren|getNavNodes|BqlQuery)\b`)
+	guard     = regexp.MustCompile(`\b(invokeLater|BJobService|JobThread)\b`)
+	nonIdent  = regexp.MustCompile(`[^a-zA-Z_0-9]`)
+	idWord    = regexp.MustCompile(`^[a-z][a-zA-Z0-9_]+$`)
+	justified = regexp.MustCompile(`justif|why|broad`)
 )
 
 const (
@@ -155,11 +157,11 @@ func expand(mb map[string]string, body string, d int, vis map[string]bool) strin
 	return body
 }
 
-// chain is the awk chain_from(): "getNavChildren" when body holds a nav call (whichever one), the first
-// callee path to one ("helper() -> getNavChildren"), or "?".
+// chain is the awk chain_from(): the nav call body holds (its first one), the first callee path to one
+// ("helper() -> getNavNodes"), or "?". The awk named every nav call "getNavChildren" (truth fix 2026-10-24).
 func chain(mb map[string]string, body string, d int, vis map[string]bool) string {
-	if nav.MatchString(body) {
-		return "getNavChildren"
+	if m := nav.FindStringSubmatch(body); m != nil {
+		return m[1]
 	}
 	if d <= 0 {
 		return "?"

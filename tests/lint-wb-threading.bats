@@ -107,3 +107,12 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [ "$status" -eq 0 ]
   [ "$output" = "ui-thread-traversal  WARN  $ONE/E.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)" ]
 }
+
+@test "WBT-words: BBqlQueryBuilder is not a BqlQuery, and the row names the nav call found (truth fix 2026-10-24)" {
+  # Mutation: WBT-words -- matching substrings flags new BBqlQueryBuilder(...) in a doInvoke as a BqlQuery traversal
+  rm -rf "$ONE"; mkdir -p "$ONE"
+  printf 'class W {\n  public void doInvoke() { builder = new BBqlQueryBuilder(s, o, false); }\n  public void doInvoke() { BqlQuery q = BqlQuery.make(t); }\n}\n' > "$ONE/W.java"
+  run "$LW" "$ONE"
+  [ "$status" -eq 0 ]
+  [ "$output" = "ui-thread-traversal  WARN  $ONE/W.java:3  doInvoke -> BqlQuery without invokeLater/BJobService (B809: flag for human review)" ]
+}
