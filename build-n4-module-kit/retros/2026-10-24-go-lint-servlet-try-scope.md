@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-24 · kit · go-lint-servlet-try-scope
@@ -36,4 +36,4 @@ still drops it, the mb_parse contract).
 - "Inside a try" is containment, not proximity: the deciding try is the one whose block still holds the parse.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-lint-servlet-try-scope.md | kit | 2026-10-24 | pending | 2 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-lints-b`) — Δ1 folded as code (`javasrc.TryBlocks` catch-no-400), noted in `METHODOLOGY.md` § Kit maintenance; Δ2 cross-cutting Go-port lesson, cited by the lints-a fold. INDEX row generated from the header: `| 2026-10-24-go-lint-servlet-try-scope.md | kit | 2026-10-24 | folded | 2 |`
