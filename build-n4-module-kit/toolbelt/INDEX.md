@@ -4,7 +4,7 @@
 
 One row per `toolbelt/lint-*.sh`, derived from the script's own header: the description (line 2,
 `# <name> — <what it checks>`, up to header line 5), every `Usage:` line, every `Exit:`/`Exits:` line
-(wrapped lines joined; several lines separated by a line break) and any `[ev: ...]` tags. **Auto** says
+(wrapped lines joined; several lines separated by a line break) and its evidence tags. **Auto** says
 whether `report-module.sh` (run by `build.sh` after every successful build) invokes the lint; a `no`
 lint is run by hand on the profiles its usage names.
 
