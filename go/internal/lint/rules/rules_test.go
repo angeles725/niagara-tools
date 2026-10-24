@@ -14,7 +14,7 @@ func TestAllUniqueIDs(t *testing.T) {
 	seen := map[string]bool{}
 	for _, sp := range All() {
 		id := sp.ID()
-		if id == "" || seen[id] || sp.Usage == "" || len(sp.Select.Names) == 0 {
+		if id == "" || seen[id] || sp.Usage == "" || (len(sp.Select.Names) == 0) != (sp.Root != nil) {
 			t.Errorf("bad or duplicate spec %q: %+v", id, sp)
 		}
 		seen[id] = true
@@ -73,12 +73,16 @@ func TestAllWalkError(t *testing.T) {
 
 // TestEveryRuleFailsAnEmptyRoot: every registered rule, alone and under --all, reports a root with no
 // file it selects as an ERROR row and exit 3, never a clean pass (truth audit 2026-10-22 T6), in its
-// Spec.EmptyError shape when it overrides the default.
+// Spec.EmptyError shape when it overrides the default. A RootRule (lint-structure) is out of scope: it
+// selects no file, --all leaves it out, and its empty-root contract is its own (TestRootRulesOnAnEmptyRoot).
 func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	main := lint.Command(All()...)
 	var all string
 	for _, sp := range All() {
+		if sp.Root != nil {
+			continue
+		}
 		// a rule may keep its bash lint's own K20 row (Spec.EmptyError override); every other rule gets the default
 		check, msg := sp.ID(), "no *.java sources found (wrong path or empty source tree)"
 		if sp.EmptyError.Check != "" {
@@ -97,5 +101,34 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 	var o, e bytes.Buffer
 	if code := main([]string{"--all", root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != all || e.Len() != 0 {
 		t.Errorf("--all: exit %d out %q err %q, want 3 and\n%s", code, o.String(), e.String(), all)
+	}
+}
+
+// TestRootRulesOnAnEmptyRoot: a RootRule fails a root that holds nothing it checks like every other rule
+// fails an empty root (#351, truth audit 2026-10-22 T6): an ERROR row, no other row, exit 3. For
+// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean.
+func TestRootRulesOnAnEmptyRoot(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "gradle.properties"), []byte("niagara_home=C:\\N\n"), 0o644); err != nil {
+		t.Fatal(err) // a module-level finding the ERROR row must not be mixed with
+	}
+	main := lint.Command(All()...)
+	var roots []string
+	for _, sp := range All() {
+		if sp.Root == nil {
+			continue
+		}
+		roots = append(roots, sp.ID())
+		var o, e bytes.Buffer
+		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
+		}
+	}
+	if len(roots) != 1 || roots[0] != "lint-structure" {
+		t.Errorf("RootRules %q, want exactly lint-structure", roots)
 	}
 }

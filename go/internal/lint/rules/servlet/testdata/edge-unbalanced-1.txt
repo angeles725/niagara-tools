@@ -1,0 +1,13 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  U.java:2  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  U.java:2  typed set* in handler without MIN/MAX facet enforcement
+-- stderr --
+-- m/U.java --
+class U extends BWebServlet {
+  void doPost(WebOp op) {
+    c.setDouble("a", 1);
+    try {
+      Double.parseDouble(s);

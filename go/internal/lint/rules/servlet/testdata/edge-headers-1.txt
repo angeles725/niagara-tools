@@ -1,0 +1,26 @@
+Declared difference (truth fix T8): B.java's applyHeaders( lives only in a block comment, so it
+sets no header and the INFO row stays.
+-- args --
+@DIR@/m
+-- want --
+exit 0
+INFO  api-response-headers  B.java:2  response handler sets no headers; the station header providers apply (security.md §7)
+INFO  api-response-headers  C.java:2  response handler sets no headers; the station header providers apply (security.md §7)
+INFO  api-response-headers  C.java:3  response handler sets no headers; the station header providers apply (security.md §7)
+-- stderr --
+-- m/A.java --
+class A extends BWebServlet {
+  void doGet(WebOp op) { op.getResponse().getWriter(); }
+  void x() { setApiHeaders (rsp); }
+}
+-- m/B.java --
+class B extends BWebServlet {
+  void doGet(WebOp op) { op.getResponse().getWriter(); }
+  // X-Content-Type-Options only in a comment
+  /* applyHeaders( in a block comment */
+}
+-- m/C.java --
+class C extends BWebServlet {
+  void doGet(WebOp op) { op.getResponse().getOutputStream(); }
+  void doPost(WebOp op) { op.getResponse().getWriter(); }
+}

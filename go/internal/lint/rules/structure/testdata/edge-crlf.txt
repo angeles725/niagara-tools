@@ -1,0 +1,31 @@
+-- args --
+@DIR@/crlf/M
+-- want --
+exit 1
+FAIL  lint-structure  @DIR@/crlf/M/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
+FAIL  lint-structure  A-rt/A-rt.gradle.kts  L7: dependency version is not a 3-part floor (use X.Y.Z e.g. 4.14.0, not X.Y e.g. 4.14)
+FAIL  lint-structure  A-rt/src/A.java  L1: package declares javax.baja.* (framework namespace; OEM modules use com.<vendor>.*)
+FAIL  lint-structure  A-rt/src/A.java  L2: 2 @NiagaraType annotations in one file (one public type per file)
+-- stderr --
+-- crlf/.git/HEAD --
+x
+-- crlf/M/A-rt/A-rt.gradle.kts (noeol) --
+api(":baja:4.14")
+-- crlf/M/A-rt/module-include.xml (noeol) --
+<types>
+<type name="A"/>
+</types>
+-- crlf/M/A-rt/module.lexicon --
+
+#c
+-- crlf/M/A-rt/module.palette (noeol) --
+<p n="A"/>
+-- crlf/M/A-rt/src/A.java (noeol) --
+package javax.baja.x;
+@NiagaraType
+@NiagaraType
+-- crlf/M/gradle.properties --
+niagara_home=C:\\x
+org.gradle.java.installations.paths=/j
+org.gradle.java.installations.auto-detect=false

@@ -1,0 +1,32 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  auth  All.java:4  handler writes without getRemoteUser()/getUser() auth gate
+WARN  unbounded-set  All.java:4  typed set* in handler without MIN/MAX facet enforcement
+WARN  log-in-handler  All.java:4  LOG.info inside request handler (per-request log spam)
+INFO  api-response-headers  All.java:4  response handler sets no headers; the station header providers apply (security.md §7)
+WARN  catch-no-400  All.java:16  catch around parse without 400 response (silent default may write bad value)
+FAIL  input-400  All.java:9  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+WARN  cache-nofinger  All.java:10  Cache-Control max-age>0 on rc asset without fingerprint
+WARN  csrf-xrw-only  All.java:7  X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]
+-- stderr --
+-- m/All.java --
+package demo;
+public class All extends BWebServlet {
+  static final Logger LOG = null;
+  public void doPost(WebOp op) throws Exception {
+    LOG.info("x");
+    c.setDouble("a", 1.0);
+    String x = op.getRequest().getHeader("X-Requested-With");
+    PrintWriter out = op.getResponse().getWriter();
+    int n = Integer.parseInt(x);
+    op.getResponse().setHeader("Cache-Control", "public, max-age=60");
+  }
+  void parse(String s) {
+    try {
+      Long.parseLong(s);
+    }
+    catch (Exception e) { }
+  }
+}

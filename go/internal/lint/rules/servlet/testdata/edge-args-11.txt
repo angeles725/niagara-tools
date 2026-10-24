@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m
+--strict
+-x
+-- want --
+exit 3
+-- stderr --
+lint-servlet: unknown option: -x
+-- m/A.java --
+class A {}

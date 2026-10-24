@@ -1,0 +1,20 @@
+-- args --
+@DIR@/m//
+-- want --
+exit 1
+FAIL  auth  @DIR@/m//A.java:1  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  @DIR@/m//a-b/C.java:1  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  @DIR@/m//a/B.java:1  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  @DIR@/m//a/aa/D.java:1  handler writes without getRemoteUser()/getUser() auth gate
+FAIL  auth  @DIR@/m//b/Z.java:1  handler writes without getRemoteUser()/getUser() auth gate
+-- stderr --
+-- m/A.java --
+class X extends BWebServlet { void doGet(WebOp op) { c.set("v", 1); } }
+-- m/a-b/C.java --
+class X extends BWebServlet { void doGet(WebOp op) { c.set("v", 1); } }
+-- m/a/B.java --
+class X extends BWebServlet { void doGet(WebOp op) { c.set("v", 1); } }
+-- m/a/aa/D.java --
+class X extends BWebServlet { void doGet(WebOp op) { c.set("v", 1); } }
+-- m/b/Z.java --
+class X extends BWebServlet { void doGet(WebOp op) { c.set("v", 1); } }

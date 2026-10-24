@@ -2,8 +2,9 @@ package lint
 
 import "testing"
 
-// The Spec features a port opts into by field: Severity Advisory, Spec.EmptyError and Spec.BareUsage.
-// Expected bytes were recorded from toolbelt/lint-silent-protection.sh.
+// The Spec features a port opts into by field: Severity Advisory, Spec.EmptyError and Spec.BareUsage
+// (expected bytes recorded from toolbelt/lint-silent-protection.sh); Severity Info, Spec.StrictFails and
+// Spec.RelPaths (from toolbelt/lint-servlet.sh).
 
 const k20 = "no Java sources found (K20: wrong path or empty scaffold)"
 
@@ -124,6 +125,61 @@ func TestRunEmptyDefault(t *testing.T) {
 		s, o, e := stdio()
 		if code := Run([]Spec{tc.sp}, tc.sp.ID(), Args{Roots: []string{empty}}, s); code != 3 || o.String() != tc.want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", tc.name, code, o, e, tc.want)
+		}
+	}
+}
+
+func TestRunInfoNeverExits(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	main := Command(javaSpec(fakeRule{"lint-i", "MARK", Info}, One))
+	for _, args := range [][]string{{"lint-i", root}, {"lint-i", "--strict", root}, {"--all", "--strict", root}} {
+		s, o, e := stdio()
+		want := "INFO  lint-i  " + root + "/A.java:1  saw: MARK\n"
+		if code := main(args, s); code != 0 || o.String() != want || e.Len() != 0 {
+			t.Errorf("%q: exit %d out %q err %q, want 0 and %q", args, code, o, e, want)
+		}
+	}
+}
+
+// TestRunStrictFails: under --strict a StrictFails rule prints its WARN rows as FAIL; other rules and
+// other severities are unchanged.
+func TestRunStrictFails(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	sf := javaSpec(fakeRule{"lint-s", "MARK", Warn}, One)
+	sf.StrictFails = true
+	info := javaSpec(fakeRule{"lint-i", "MARK", Info}, One)
+	info.StrictFails = true
+	plain := javaSpec(fakeRule{"lint-w", "MARK", Warn}, One)
+	row := func(sev, id string) string { return sev + "  " + id + "  " + root + "/A.java:1  saw: MARK\n" }
+	for _, tc := range []struct {
+		strict bool
+		code   int
+		want   string
+	}{
+		{false, 0, row("WARN", "lint-s") + row("INFO", "lint-i") + row("WARN", "lint-w")},
+		{true, 1, row("FAIL", "lint-s") + row("INFO", "lint-i") + row("WARN", "lint-w")},
+	} {
+		s, o, e := stdio()
+		if code := Run([]Spec{sf, info, plain}, "n4lint", Args{Strict: tc.strict, Roots: []string{root}}, s); code != tc.code || o.String() != tc.want || e.Len() != 0 {
+			t.Errorf("strict=%v: exit %d out %q err %q, want %d and %q", tc.strict, code, o, e, tc.code, tc.want)
+		}
+	}
+}
+
+// TestRunRelPaths: a RelPaths rule prints ${file#"$root/"}; a root with a trailing "/" keeps the whole
+// path, as the bash expansion does; a rule without it prints the walk path.
+func TestRunRelPaths(t *testing.T) {
+	root := tree(t, map[string]string{"a/A.java": "MARK\n"})
+	rel := javaSpec(fakeRule{"lint-r", "MARK", Warn}, Each)
+	rel.RelPaths = true
+	plain := javaSpec(fakeRule{"lint-p", "MARK", Warn}, Each)
+	for _, tc := range []struct{ root, want string }{
+		{root, "WARN  lint-r  a/A.java:1  saw: MARK\nWARN  lint-p  " + root + "/a/A.java:1  saw: MARK\n"},
+		{root + "/", "WARN  lint-r  " + root + "/a/A.java:1  saw: MARK\nWARN  lint-p  " + root + "/a/A.java:1  saw: MARK\n"},
+	} {
+		s, o, e := stdio()
+		if code := Run([]Spec{rel, plain}, "n4lint", Args{Roots: []string{tc.root}}, s); code != 0 || o.String() != tc.want || e.Len() != 0 {
+			t.Errorf("root %q: exit %d out %q err %q, want 0 and %q", tc.root, code, o, e, tc.want)
 		}
 	}
 }

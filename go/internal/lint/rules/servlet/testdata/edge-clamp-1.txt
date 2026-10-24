@@ -1,0 +1,17 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+WARN  unbounded-set  M.java:7  typed set* in handler without MIN/MAX facet enforcement
+FAIL  auth  M.java:8  handler writes without getRemoteUser()/getUser() auth gate
+-- stderr --
+-- m/M.java --
+class M extends BWebServlet {
+  void doGet(WebOp op) { op.getUser(); c.setDouble("a", 1); MIN_X(); }
+  void doPost(WebOp op) { op.getUser(); c.setDouble("a", 1); clamp(v); }
+  void service(WebOp op) { op.getUser(); c.setDouble("a", 1); getFacets(); }
+  void doGet(WebOp op) { op.getUser(); c.setDouble("a", 1); getMin(); }
+  void doGet(WebOp op) { op.getUser(); c.setDouble("a", 1); MAXIMUM(); }
+  void doGet(WebOp op) { op.getUser(); c.setDouble("a", 1); getMinimum(); }
+  void doGet(WebOp op) { op.getUser; c.setDouble ("a", 1); reset(1); c . set(2); }
+}
