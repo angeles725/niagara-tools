@@ -10,6 +10,8 @@ type Decl struct {
 	Override bool     // an @Override annotation precedes it
 	// Anonymous is set in an anonymous class body: its methods implement the type it instantiates.
 	Anonymous bool
+	Private   bool   // declared private
+	Static    bool   // declared static
 	Line      int    // the 0-based line of the name token
 	Body      [2]int // the body's token range [Body[0], Body[1]): inside its braces
 }
@@ -126,9 +128,21 @@ func method(toks []Token, k int) (Decl, bool) {
 		return Decl{}, false
 	}
 	d := Decl{Name: toks[n].Text, Line: toks[n].Line, Params: params(toks[l+1 : r]), Body: [2]int{k + 1, 0}}
-	for j := start; j+1 < n; j++ {
-		if toks[j].Text == "@" && toks[j+1].Text == "Override" {
-			d.Override = true
+	depth := 0 // inside an annotation's arguments
+	for j := start; j < n; j++ {
+		switch t := toks[j]; {
+		case t.Text == "(":
+			depth++
+		case t.Text == ")":
+			depth--
+		case depth > 0 || t.Kind != TokIdent:
+			if t.Text == "@" && toks[j+1].Text == "Override" {
+				d.Override = true
+			}
+		case t.Text == "private":
+			d.Private = true
+		case t.Text == "static":
+			d.Static = true
 		}
 	}
 	return d, true

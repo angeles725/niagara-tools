@@ -65,3 +65,17 @@ func TestShape(t *testing.T) {
 		t.Errorf("token boundaries are lost: %q", e)
 	}
 }
+
+// TestDeclModifiers: private and static are read from the header, never from an annotation's arguments.
+func TestDeclModifiers(t *testing.T) {
+	src := "class A {\n  private static int a() { return 1; }\n  static int b() { return 1; }\n  private int c() { return 1; }\n" +
+		"  public int d() { return 1; }\n  @Tag(kind = \"static\", v = private_) int e() { return 1; }\n}"
+	lines, _ := Strip(strings.Split(src, "\n"))
+	var got []string
+	for _, d := range Decls(Tokens(lines)) {
+		got = append(got, fmt.Sprintf("%s:%v%v", d.Name, d.Private, d.Static))
+	}
+	if want := "a:truetrue b:falsetrue c:truefalse d:falsefalse e:falsefalse"; strings.Join(got, " ") != want {
+		t.Errorf("got %s\nwant %s", strings.Join(got, " "), want)
+	}
+}
