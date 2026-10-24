@@ -49,3 +49,24 @@ func TestLocked(t *testing.T) {
 		t.Errorf("exit %d out %q err %q, want 3, no rows and %q", code, o.String(), e.String(), want)
 	}
 }
+
+// TestUnreadable: an unreadable lexicon is an env error, the other files still scanned (declared port
+// difference: the bash read loop printed the shell's error and went on).
+func TestUnreadable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.lexicon"), []byte("k=\xc3\xa9\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	u := filepath.Join(dir, "u.lexicon")
+	if err := os.WriteFile(u, []byte("k=x\n"), 0); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	code := lint.Command(Spec())([]string{ID, dir}, cli.Stdio{Out: &o, Err: &e})
+	if code != 3 || o.String() != "FAIL  "+ID+"  a.lexicon:1  non-ASCII: 0xc3 0xa9\n" || !bytes.Contains(e.Bytes(), []byte(ID+": cannot scan "+u)) {
+		t.Errorf("exit %d out %q err %q", code, o.String(), e.String())
+	}
+}

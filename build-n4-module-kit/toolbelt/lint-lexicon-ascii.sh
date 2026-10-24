@@ -18,57 +18,24 @@
 #   Exits: 0  no FAIL (clean) · 1  any FAIL · 3  usage/env
 #
 # Row format: FAIL  lint-lexicon-ascii  <path>:<line>  non-ASCII: 0x<HH> ...
+# Empty root: a module with no *.lexicon is clean (exit 0, no output; LA5, tests/lint-empty-root.bats ER5).
+# Implementation: rule package go/internal/lint/rules/lexiconascii on the shared engine go/internal/lint (walker,
+# parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin`
+# builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-lexicon-ascii <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+# Declared difference from the bash lint (port 2026-10-24): an unreadable *.lexicon is an env error (exit 3,
+# `cannot scan <file>` on stderr); the bash read loop printed the shell's error and went on, exit 0 or 1.
 # VCS-free by design; version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # [ev: retro 2026-09-17-umbrelladashboard-module-creation]
 # Mutation: LA2 -- remove the non-ASCII byte scan and LA2 stops failing on a UTF-8 accented lexicon
+# Mutation: LA-unreadable -- skipping an unreadable lexicon reports the module clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/scan-files.sh"
-LC_ALL=C
-export LC_ALL
-
-if [ $# -lt 1 ]; then
-    printf 'usage: lint-lexicon-ascii.sh <module-root>\n' >&2
-    exit 3
-fi
-
-MODULE_ROOT="$1"
-
-if [ ! -d "$MODULE_ROOT" ]; then
-    printf 'lint-lexicon-ascii: not a directory: %s\n' "$MODULE_ROOT" >&2
-    exit 3
-fi
-
-# Require od (POSIX; present on all target systems)
-command -v od >/dev/null 2>&1 || {
-    printf 'lint-lexicon-ascii: missing tool: od\n' >&2
-    exit 3
-}
-
-_TMP=$(mktemp -d)
-trap 'rm -rf "$_TMP"' EXIT
-# One fail-closed walk (lib/scan-files.sh): a sub-directory find cannot enter is exit 3, never a shorter list.
-scan_files_or_exit lint-lexicon-ascii 3 "$_TMP/files" "$MODULE_ROOT" -name '*.lexicon'
-
-_FAILED=0
-
-# Find every *.lexicon under module root, dot-dirs pruned (D9b)
-while IFS= read -r _lex; do
-    _lrel="${_lex#"$MODULE_ROOT/"}"
-    _lineno=0
-    while IFS= read -r _raw_line; do
-        _lineno=$((_lineno + 1))
-        # Check for non-ASCII bytes using od -An -tx1 and filter for bytes > 7f.
-        # We pass the raw line through od and look for any hex value > 7f.
-        _bad=$(printf '%s\n' "$_raw_line" | od -An -tx1 | tr ' ' '\n' | grep -E '^[89a-fA-F][0-9a-fA-F]$' || true)
-        if [ -n "$_bad" ]; then
-            _hex=$(printf '%s\n' "$_bad" | while read -r _b; do printf '0x%s ' "$_b"; done | sed 's/ $//')
-            printf 'FAIL  lint-lexicon-ascii  %s:%d  non-ASCII: %s\n' "$_lrel" "$_lineno" "$_hex"
-            _FAILED=1
-        fi
-    done < "$_lex"
-done < "$_TMP/files"
-
-[ "$_FAILED" -eq 0 ] && exit 0
-exit 1
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-lexicon-ascii: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-lexicon-ascii "$@"

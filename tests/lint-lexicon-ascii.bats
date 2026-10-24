@@ -86,3 +86,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-lexicon-ascii: cannot list every file under $TMPDIR_T/Mod: "* ]]
 }
+
+@test "LA-unreadable: an unreadable lexicon is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: LA-unreadable -- skipping an unreadable lexicon reports the module clean
+  printf 'k=ok\n' > "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  chmod 000 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  if [ -r "$TMPDIR_T/Mod/Mod-rt/module.lexicon" ]; then chmod 644 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"; skip "running as root"; fi
+  run "$LA" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-lexicon-ascii: cannot scan $TMPDIR_T/Mod/Mod-rt/module.lexicon"* ]]
+}
