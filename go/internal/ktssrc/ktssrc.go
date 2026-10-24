@@ -213,5 +213,7 @@ func (s *scanner) char() error {
 	return s.fail(line, "unterminated char literal")
 }
 
-func isIdentStart(c byte) bool { return c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= 0x80 }
-func isIdentPart(c byte) bool  { return isIdentStart(c) || c >= '0' && c <= '9' }
+func isIdentStart(c byte) bool {
+	return c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= 0x80
+}
+func isIdentPart(c byte) bool { return isIdentStart(c) || c >= '0' && c <= '9' }
