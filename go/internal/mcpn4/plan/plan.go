@@ -19,16 +19,38 @@ type Planned struct {
 	Data                any
 }
 
-// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only), the
-// inverse it journals (nil: the planned one; else built from the station's replies, where an
-// error means the reply cannot be trusted), the recover hook of such a reply (nil: none) and
-// its read-back.
+// Impl is one write tool (_Impl): the ORDs its scope check covers, its plan (reads only; PlanWith
+// instead when it also reads the write state and session, Python's needs_ctx), the inverse it
+// journals (nil: the planned one; else built from the station's replies, where an error means
+// the reply cannot be trusted), the recover hook of such a reply (nil: none), the follow-up
+// runs of the same batch (nil: none) and its read-back.
 type Impl struct {
 	ScopeOrds func(args *pyjson.Object) []any
 	Plan      func(c Client, args *pyjson.Object) (*Planned, error)
+	PlanWith  func(c Client, args *pyjson.Object, w *State, sess *session.Session) (*Planned, error)
+	Run       func(b *Batch, p *Planned, replies []any) (*Runs, error)
 	Inverse   func(p *Planned, replies []any) ([]any, error)
 	Recover   func(c Client, args *pyjson.Object, p *Planned, replies []any) (observed any, inverse []any, err error)
 	Readback  func(c Client, args *pyjson.Object, p *Planned, replies, inverse []any) (requested, accepted, observed any, verdict string, err error)
+}
+
+// Batch is one executing batch as its follow-up runs see it: the station client, the write
+// state (scope, journal, budget) and the batch id.
+type Batch struct {
+	Client Client
+	State  *State
+	ID     string
+}
+
+// Runs is what follow-up runs leave for the execution (_run_components, _run_relinks): the
+// frozen children not re-created (echoed when any), the relink report the result records (nil:
+// no relinks), the inverse of the links created (journaled before the tool's own) and whether
+// a relink reply was ambiguous (the batch is in-doubt).
+type Runs struct {
+	Frozen  []any
+	Report  *pyjson.Object
+	Inverse []any
+	Doubt   bool
 }
 
 // Engine runs the write tools of one server process.
