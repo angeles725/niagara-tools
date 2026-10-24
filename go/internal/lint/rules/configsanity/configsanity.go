@@ -93,31 +93,6 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// properties calls fn(text, line) for every @NiagaraProperty annotation the CS1/CS2 accumulator closes: the
-// opening line and the next ones, joined by " ", until a "(" was seen and the parentheses balance. A
-// one-line annotation closes on its own line, as CS4's does, so an annotation on the next line is read
-// too (the bash lint always took the next line and hid it). An annotation still open at the end of the
-// file is dropped.
-func properties(raw []string, fn func(text string, line int)) {
-	open, buf, line := false, "", 0
-	for i, ln := range raw {
-		if !open && strings.Contains(ln, "@NiagaraProperty") {
-			open, buf, line = true, "", i+1
-		}
-		if !open {
-			continue
-		}
-		buf += " " + ln
-		if depth(buf) <= 0 && strings.Contains(buf, "(") {
-			fn(buf, line)
-			open, buf, line = false, "", 0
-		}
-	}
-}
-
-// depth is the count of "(" minus the count of ")".
-func depth(s string) int { return strings.Count(s, "(") - strings.Count(s, ")") }
-
 // attr is the first group of re's leftmost match in s, or "" when there is none.
 func attr(re *regexp.Regexp, s string) (string, bool) {
 	m := re.FindStringSubmatch(s)
@@ -145,7 +120,7 @@ func intervalPass(raw []string) []lint.Finding {
 		}
 		m[name] = s
 	}
-	properties(raw, func(text string, line int) {
+	javasrc.NiagaraProperties(raw, func(text string, line int) {
 		pname, _ := attr(nameAttr, text)
 		dexpr, _ := attr(defaultAttr, text)
 		dexpr = spaceRun.ReplaceAllLiteralString(dexpr, "")
@@ -275,7 +250,7 @@ func awkNum(s string) float64 {
 // BFacets.MIN of a positive BDouble FAILs.
 func setpointPass(raw []string) []lint.Finding {
 	var out []lint.Finding
-	properties(raw, func(text string, line int) {
+	javasrc.NiagaraProperties(raw, func(text string, line int) {
 		pname, _ := attr(nameAttr, text)
 		if !setpointName.MatchString(pname) || !strings.Contains(text, "OPERATOR") {
 			return
@@ -346,7 +321,7 @@ func floorPass(raw []string) []lint.Finding {
 			continue
 		}
 		buf += " " + ln
-		if depth(buf) > 0 {
+		if javasrc.ParenDepth(buf) > 0 {
 			continue
 		}
 		open = false

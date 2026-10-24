@@ -1,12 +1,13 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
-// (mcp-n4-kit/mcp_n4/tools_read.py:198-500, 789-969). This slice serves n4_connect and
-// n4_describe_session; every other read tool still answers jsonrpc.NotImplemented.
+// (mcp-n4-kit/mcp_n4/tools_read.py:198-688, 789-969): n4_connect, n4_describe_session, the
+// tree reads and the BQL bulk reads; every other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
 import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
@@ -22,6 +23,7 @@ const RootOrd = "station:|slot:/"
 type Client interface {
 	Open() (any, error)
 	LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.Object, error)
+	GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error)
 	BaseURL() string
 	Close()
 }
@@ -57,6 +59,12 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Ctx = t.Ctx
 	s.Handlers["n4_connect"] = t.Connect
 	s.Handlers["n4_describe_session"] = t.DescribeSession
+	s.Handlers["n4_navigate"] = t.Navigate
+	s.Handlers["n4_read_slots"] = t.ReadSlots
+	s.Handlers["n4_list_links"] = t.ListLinks
+	s.Handlers["n4_find_dangling_outputs"] = t.FindDanglingOutputs
+	s.Handlers["n4_bql_query"] = t.BqlQuery
+	s.Handlers["n4_inventory"] = t.Inventory
 }
 
 func toolError(format string, a ...any) error {
@@ -84,6 +92,10 @@ func (t *Tools) Connect(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, toolError("credentials missing: set env vars %s_USER and %s_PASSWORD", prefix, prefix)
 	}
 	ctx.SetSecret(secret)
+	if !utf8.ValidString(user) || !utf8.ValidString(secret) {
+		// Python's UnicodeEncodeError named the bad character's position (R8-D19)
+		return nil, toolError("credentials are not valid UTF-8: check env vars %s_USER and %s_PASSWORD", prefix, prefix)
+	}
 	credentials := ctx.CredentialsFingerprint(user, secret)
 	if block := ctx.AuthBlockFor(credentials); block != "" {
 		// the same credentials just failed: one more try would only near the lock-out

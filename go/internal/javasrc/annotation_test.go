@@ -46,3 +46,37 @@ func TestAnnotationSkip(t *testing.T) {
 		}
 	}
 }
+
+// TestNiagaraProperties pins the shared @NiagaraProperty accumulator: one-line and multi-line annotations,
+// the opening line number, a bare name with its "(" on a later line, and an annotation open at the end.
+func TestNiagaraProperties(t *testing.T) {
+	type ann struct {
+		text string
+		line int
+	}
+	for _, tc := range []struct {
+		name  string
+		lines []string
+		want  []ann
+	}{
+		{"one-line pair", []string{`@NiagaraProperty(name = "a")`, `@NiagaraProperty(name = "b")`},
+			[]ann{{` @NiagaraProperty(name = "a")`, 1}, {` @NiagaraProperty(name = "b")`, 2}}},
+		{"multi-line", []string{"class A {", "  @NiagaraProperty(", `    name = "a",`, "  )", "  int a;"},
+			[]ann{{`   @NiagaraProperty(     name = "a",   )`, 2}}},
+		{"bare name", []string{"@NiagaraProperty", "(", `name = "a"`, ")"},
+			[]ann{{` @NiagaraProperty ( name = "a" )`, 1}}},
+		{"literal paren", []string{`@NiagaraProperty(name = "a", defaultValue = "f(")`, ")", "@NiagaraProperty(name = \"b\")"},
+			[]ann{{` @NiagaraProperty(name = "a", defaultValue = "f(") )`, 1}, {` @NiagaraProperty(name = "b")`, 3}}},
+		{"open at end", []string{`@NiagaraProperty(name = "a")`, "@NiagaraProperty(", `name = "b",`}, []ann{{` @NiagaraProperty(name = "a")`, 1}}},
+		{"none", []string{"class A {}"}, nil},
+	} {
+		var got []ann
+		NiagaraProperties(tc.lines, func(text string, line int) { got = append(got, ann{text, line}) })
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: got %+v, want %+v", tc.name, got, tc.want)
+		}
+	}
+	if d := ParenDepth("f((x)"); d != 1 {
+		t.Errorf("ParenDepth(%q) = %d, want 1", "f((x)", d)
+	}
+}

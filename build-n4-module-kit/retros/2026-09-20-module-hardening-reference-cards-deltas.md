@@ -32,6 +32,19 @@ Seven reference-card blocks (B1106–B1112) completed the "REF cluster" — auth
 | Δ7 | PD-MH-REF5 add a BFormat reference for alarm/history/display-name templating (`%script%`, `.` chaining, `?` fallback, reflection order, special functions) plus a SECURITY note: never construct a BFormat pattern from untrusted input — the pattern language is reflective code execution and is restricted by FormatDenylist for a reason | `types/logic.md` / `docs/module-best-practices.md` MBP1 / `lint/` (lint candidate: `no-bformat-untrusted-input`) | `[ev: corpus B1112]` |
 | Δ8 | PD-MH-RUN1 add a "wrap your callback bodies" rule to the rt authoring guidance: changed(), timer callbacks, and lifecycle overrides are BARE — a thrown exception aborts the invocation and silently drops any re-arm that follows; always wrap callback bodies in try/catch and re-arm timers in a finally block; add a lint candidate: flag a `Clock.schedule` re-arm not protected by try/finally in a callback body | `types/logic.md` §RT-control-logic / `docs/module-best-practices.md` MBP1 / `lint/` (lint candidate: `timer-rearm-not-in-finally`) | `[ev: corpus B1113]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ3:** the row says a custom BQL function is declared as "a public
+> static method on a BObject library class, register it via `moduleSpec::fn()` in the module manifest", and Evidence
+> line 16 says the same method is called with `moduleSpec::fn()`. Reading A (this retro, copied from corpus B1108
+> §4): the function is registered in the manifest and called as `moduleSpec::fn()`. Reading B (the bql-rt code):
+> nothing is registered; the parser resolves a type spec followed by `.` and an identifier and `(` as a function on
+> that type (`organized/bql/bql-rt/vineflower/com/tridium/bql/compiler/ExprParser.java:390`, `:396-403`; no
+> docSource tree exists for bql-rt), so the call form is `<module>:<Type>.fn(args)`, which the devguide spells
+> `(<type spec>.)<function name>(<parameter list>)` (niagara-help 4.15.6.20 `devguide-clean/bql.txt:165`). The `::`
+> token is tokenized but never consumed (corpus B1237 §1237.6; B1108 carries the matching correction, dated
+> 2026-10-10).
+> Winner: B, the code and the devguide agree. The row was wrong when written: the parser did not change, the retro
+> faithfully carried B1108's error. The row text and this retro's review-status are left as they were.
+
 ## Lessons
 - **Actionable for our modules (5):** Δ2 (isValid status-check), Δ5 (SlotPath.escape for external names), Δ6 (BRelTime wire conversion for oBIX/REST), Δ7 (BFormat security — never untrusted input), Δ8 (timer re-arm in finally). Each of these maps to a real failure mode in ColdRoomPan/CompPan/DashboardPan code paths and warrants a lint or explicit rule in the next campaign.
 - **Pure reference cards (3):** Δ1 (BFacets key catalogue), Δ3 (BQL function catalogue + custom-fn how-to), Δ4 (BEnumRange grammar + non-contiguous-ordinal warning). Valuable as lookup material that replaces source-diving, but no immediate correctness risk in our current modules.

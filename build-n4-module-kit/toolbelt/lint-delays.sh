@@ -15,14 +15,21 @@
 #   Math.max      BRelTime.make(Math.max(x, k)): FAIL zero-floor when k <= 0 or k is not a literal.
 #   helper (D2b)  BRelTime.make([Class.]fn(...)): clean when fn is a `static [final] long fn(` method, in any
 #                 file under the root, whose body holds Math.max(.., N>=1), `>= 1`, `< 1 ? 1` or `return 1;`.
-#   variable      BRelTime.make(v): the binding of v up to 50 lines back (Math.max floor, BRelTime literal or
-#                 a helper call), else FAIL unfloored.
+#                 Bodies are javasrc.Methods over comment-free code (fixed 2026-10-24: raw brace counting let a
+#                 "{" in a string stretch a helper over the next method's floor, and a floor in a comment counted).
+#   variable      BRelTime.make(v): the nearest assignment of v (`v = ...`) in the same method or class-level
+#                 lambda body (go/internal/javasrc Scopes) decides: a Math.max floor, a BRelTime literal or a helper
+#                 call; any other value, or no assignment in the body, FAILs unfloored. It never falls through to
+#                 an earlier binding or into another method (fixed 2026-10-24: the bash/awk walk went 50 lines back
+#                 past the method start and skipped a plain re-assignment such as `long ms = p;`).
 #   getter        getXxx(): the slot it reads (get("slot") or get(slot) within 3 lines) and that slot's
 #                 BFacets.MIN: WARN facet-floor when >= 1 ms, else FAIL facet-min-zero.
 #   constant      a `static final BRelTime NAME = <literal>` of the same file: FAIL literal-zero when 0.
 #   anything else FAIL unfloored.
-# A same-method guard (D2c) up to 80 lines back on the helper, variable or getter — `x > 0`, `x >= 1`,
-# `x == 0`, or the same on `x().getMillis()` — prints a PASS "guarded at :N" row instead.
+# A same-method guard (D2c) on the helper, variable or getter — `x > 0`, `x >= 1`, `x == 0`, or the same on
+# `x().getMillis()` — between the start of the call's method or class-level lambda body and the call prints a
+# PASS "guarded at :N" row instead (fixed 2026-10-24: the walk went 80 lines back past the method start, so a
+# guard in another method counted).
 # Calls, their continuation lines and variable bindings are read from comment-free code (go/internal/javasrc
 # Strip; a call inside a string literal is skipped); a variable or guard must appear as a whole name.
 #
@@ -47,6 +54,9 @@
 # This script is VCS-free by design. version control is never invoked.
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # Mutation: LD1 -- removes delay-floor check, allowing Math.max(x,0L) pattern to pass instead of FAIL
+# Mutation: LD25 -- walking 50 lines back past the method start lets second() borrow first()'s Math.max(p, 1L)
+# Mutation: LD26 -- walking 80 lines back past the method start lets first()'s ms == 0 guard second()'s call
+# Mutation: LD27 -- counting braces in raw text lets open() borrow later()'s Math.max(y, 1L) and pass
 # Mutation: LD13 -- drop Minutes from the facet_min unit alternation -> makeMinutes MIN reads as unreadable, FAIL
 # Mutation: LD16 -- stop accumulating continuation lines -> a multi-line Clock.schedule( FAILs unfloored
 #

@@ -1,0 +1,17 @@
+-- args --
+--strict
+@DIR@/a
+@DIR@/b
+-- want --
+exit 1
+WARN  lint-machine-default-path  @DIR@/a/A.java:2  machine-specific default "/tmp/a" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+WARN  lint-machine-default-path  @DIR@/b/B.java:2  machine-specific default "C:/Users/b" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+-- stderr --
+-- a/A.java --
+class A {
+  String d = "/tmp/a";
+}
+-- b/B.java --
+class B {
+  String d = "C:/Users/b";
+}

@@ -252,9 +252,13 @@ that do so on every pull (on a generator failure they remove both files and prin
 stale copy is left). The sources are committed: the retro's header comments (`review-status`, `module`,
 `deltas`, optional `index-comment`); one `build-n4-module-kit/ledger.d/<YYYY-MM-DD>-<slug>.md` fragment per
 change for the kit block's `last_change:` line, `open_issues:` items and session log (format in
-`BUILD-LOOP.md` §7); and `build-n4-module-kit/BUILD-STATE.src.md` for every hand-kept field. CI and the
-gate's content half run `gen-retro-index.sh --check` / `gen-build-state.sh --check` and sweep fresh
-kit-state output, so a malformed header or fragment fails closed. `[ev: retro ledger-generated-not-committed]`
+`BUILD-LOOP.md` §7); and `build-n4-module-kit/BUILD-STATE.src.md` for every hand-kept field. CI runs
+`gen-retro-index.sh --check` / `gen-build-state.sh --check` and sweeps fresh kit-state output on every push
+and PR, so a malformed header or fragment fails closed. `[ev: retro ledger-generated-not-committed]`
+The gate's content half (`sweep-build-state.sh` over fresh kit-state output) runs on every pushed range that
+changes `retros/`, `ledger.d/` or `BUILD-STATE.src.md`, including a range with no other build-relevant file
+and one under a `Retro: none (trivial: …)` trailer, and refuses an incoherent one (`.githooks/pre-push`,
+`pass_early`). `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
 
 Retro citation tags name the retro by its stem, the filename without the `YYYY-MM-DD-` prefix and `.md`:
 `[ev: retro <stem> Δn]` and `[deferred: retro <stem> Δn]`. `toolbelt/sweep-fold-audit.sh` matches the stem

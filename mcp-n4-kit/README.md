@@ -33,6 +33,9 @@ v0.9.2: BOX transport truth: an answer that is not HTTP, or a body cut before it
 Content-Length, is a `transport failure`, never an internal error or a complete result; a
 `pollchgs` or load reply of the wrong shape, or nested deeper than 1000 levels, is a
 `malformed BOX reply`.
+v0.9.3: a non-UTF-8 credential is refused with a fixed message that no longer reveals a
+character position (R8-D19); the Go server serves `n4_navigate`, `n4_read_slots`,
+`n4_list_links` and `n4_find_dangling_outputs` (still opt-in via `MCP_N4_IMPL=go`).
 
 ## Methodology and skill
 

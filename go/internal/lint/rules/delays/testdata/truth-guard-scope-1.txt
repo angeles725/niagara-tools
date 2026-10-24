@@ -1,0 +1,28 @@
+declared difference (truth fix, method scope): the guard walk went 80 lines back with no method boundary, so
+first()'s `ms == 0` guarded second()'s call and third()'s getInterval().getMillis() > 0 guarded fourth()'s:
+both unfloored delays passed. A guard counts only in the same method or lambda body now.
+-- args --
+@DIR@
+-- want --
+exit 1
+PASS  lint-delays     @DIR@/BG.java:5  guarded at :4
+FAIL  lint-delays     @DIR@/BG.java:8  unfloored  cannot verify floor of variable: ms
+FAIL  lint-delays     @DIR@/BG.java:14  unfloored  unknown getter getInterval — cannot verify floor
+-- stderr --
+-- BG.java --
+package com.x;
+public class BG extends BComponent {
+  void first(long ms) {
+    if (ms == 0) return;
+    Clock.schedule(this, BRelTime.make(ms), a, null);
+  }
+  void second(long ms) {
+    Clock.schedule(this, BRelTime.make(ms), a, null);
+  }
+  void third() {
+    if (getInterval().getMillis() > 0) x();
+  }
+  void fourth() {
+    Clock.schedule(this, getInterval(), a, null);
+  }
+}

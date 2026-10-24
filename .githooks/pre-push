@@ -12,6 +12,8 @@
 # fragment or a BUILD-STATE.src.md edit, and the content half runs sweep over FRESH kit-state output
 # in a temp dir, so a malformed fragment, source or retro header fails the push (fail closed).
 # [ev: retro ledger-generated-not-committed]
+# BUILD-STATE.src.md, ledger.d/ and retros/ are not build-relevant (they need no retro of their own), but they are
+# exactly what sweep checks: a range that changes any of them runs sweep at every exit, even the trivial one.
 #
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
@@ -25,6 +27,19 @@ read -r _ lsha _ rsha || exit 0
 [ -n "${lsha:-}" ] || exit 0
 [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
 refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
+# the content half: ledger + index coherence (one call shape for every exit). BUILD-STATE.md and INDEX.md
+# are not committed, so they are generated from the committed sources into a temp dir and swept there;
+# any generator violation fails it. Returns sweep's (or the generator's) exit code.
+run_sweep() {
+  local t rc
+  t=$(mktemp -d) || refuse "mktemp failed"
+  bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
+    && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
+    && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
+  rc=$?
+  rm -rf "$t"
+  return "$rc"
+}
 if [[ "${rsha:-}" =~ ^0*$ ]]; then
   # A new remote branch: gate everything since it left main. Diffing the lone $lsha would compare it with
   # the WORKING TREE (empty after a clean commit) and pass every new branch unchecked.
@@ -38,19 +53,6 @@ fi
 changed=$(git diff --name-only "$range") || refuse "git diff $range failed"
 log=$(git log --format=%B "$range") || refuse "git log $range failed"
 
-# content half: generate BUILD-STATE.md + retros/INDEX.md from the committed sources into a temp dir
-# (the files are not committed) and sweep them; any generator violation fails the push.
-run_sweep() {
-  local t rc
-  t=$(mktemp -d) || refuse "mktemp failed"
-  bash "$kit/toolbelt/kit-state.sh" build-state "$kit" > "$t/BUILD-STATE.md" \
-    && bash "$kit/toolbelt/kit-state.sh" retro-index "$kit" > "$t/INDEX.md" \
-    && bash "$sweep" "$t/BUILD-STATE.md" "$kit/retros" "$t/INDEX.md"
-  rc=$?
-  rm -rf "$t"
-  exit "$rc"
-}
-
 # build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
 # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
 # behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
@@ -60,10 +62,21 @@ relevant=$(printf '%s\n' "$changed" \
   | grep -vE '^build-n4-module-kit/BUILD-STATE(\.src)?\.md$' \
   | grep -vE '^build-n4-module-kit/ledger\.d/' \
   | grep -vE '^build-n4-module-kit/retros/' || true)
-[ -n "$relevant" ] || exit 0     # nothing build-relevant → nothing to gate
+# ledger data = the files sweep checks. The two early exits below waive the retro bookkeeping only, never
+# the coherence of ledger data the range changes. [ev: retro r10-path-keyed-gates-skip-data]
+has_ledger_data=$(printf '%s\n' "$changed" \
+  | grep -cE '^build-n4-module-kit/(BUILD-STATE(\.src)?\.md|ledger\.d/|retros/)' || true)
+pass_early() {   # exit 0, after sweep when the range changed ledger data
+  [ "${has_ledger_data:-0}" -ge 1 ] || exit 0
+  run_sweep && exit 0
+  local rc=$?
+  echo "pre-push: ledger data in range is incoherent (BUILD-STATE.src.md, ledger.d/ or retros/; sweep-build-state.sh above); refusing to push" >&2
+  exit "$rc"
+}
+[ -n "$relevant" ] || pass_early   # nothing build-relevant → only the content half of changed ledger data
 
-# trivial waiver short-circuits
-if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then exit 0; fi
+# trivial waiver short-circuits the retro bookkeeping (not the content half of changed ledger data)
+if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then pass_early; fi
 
 # a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
 has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' || true)
@@ -88,11 +101,13 @@ has_flip=$(printf '%s\n' "$patch" | awk '
 if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' \
    && { [ "$has_flip" -eq 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
   run_sweep
+  exit $?
 fi
 
 if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
   # content half: the generated ledger + index must actually cohere
   run_sweep
+  exit $?
 fi
 
 echo "pre-push: build-relevant kit files changed without a ledger.d/ fragment (or a BUILD-STATE.src.md edit) + a pending retro," >&2
