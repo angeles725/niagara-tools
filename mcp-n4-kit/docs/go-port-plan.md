@@ -99,6 +99,14 @@ refuses `--allow-writes` with the existing "not in this version" refusal.
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
+**Status (origin/main `818d573e`, server v0.9.3).** S0-S7 merged: #337, #345, #353, #365, #383,
+#399, #413, #435. `readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves 11 read
+tools: `n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
+`n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
+`n4_px_summary`. S8-S16 are not started: `n4_list_batches`, `n4_session_retro_draft` and the
+seven write tools answer the "not implemented" text (section 6), and `--allow-writes` is refused
+at start. Under the Go binary the suite runs 622 tests with 448 skipped (section 11).
+
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
 - `_in_doubt` (1075),
@@ -167,8 +175,9 @@ MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests
 
 **Validating the inventory.** Any stdio server can stand in for the binary. With
 `MCP_N4_GO_BIN` pointing at a wrapper that runs `python3 -m mcp_n4.server "$@"` from the kit
-directory, the whole suite passes under `MCP_N4_IMPL=go` (590 tests, 339 skipped): every unmarked
-server test is black-box over stdio.
+directory, the whole suite passes under `MCP_N4_IMPL=go` (590 tests, 339 skipped at S0; 622 tests,
+349 skipped at `818d573e`, the inventory total below): every unmarked server test is black-box
+over stdio.
 
 **Categories.**
 
