@@ -3,8 +3,8 @@
 // isFault() / isFatalFault() gate opening it. Port of the awk in toolbelt/lint-license-isoperational-gate.sh
 // (the wrapper keeps the user-facing contract and its header documents the rule and its mutation pins).
 //
-// It is a per-file lint.Rule: a file's rows depend on that file alone. The awk read mb_strip's lines
-// (javasrc.Stripped: comments blanked, literal text kept) and mb_parse's methods (javasrc.Methods); regex
+// It is a per-file lint.Rule: a file's rows depend on that file alone. Methods come from mb_parse's port
+// (javasrc.Methods); the rule reads linescan.Code (see Check); regex
 // matching keeps gawk's POSIX leftmost-longest semantics (regexp Longest) under LC_ALL=C.
 package licensegate
 
@@ -15,6 +15,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // ID is the lint name printed in every row.
@@ -54,9 +55,12 @@ var (
 
 const msg = "licensed class: %s() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)"
 
-// Check is the awk's END block over the file's stripped lines.
+// Check is the awk's END block over the file's code: comments blanked and literal contents removed
+// (linescan.Code), so a gate, a getLicenseFeature() declaration or a ; { } quoted in a string is never code.
+// The awk read mb_strip's lines, literal text kept (truth fix 2026-10-24: a quoted "isOperational()" gated
+// a callback, a quoted declaration licensed a class, and a ";" in a literal cut the first statement short).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code := f.Stripped()
+	code := linescan.Code(f)
 	if !licensed(code) {
 		return nil, nil
 	}
@@ -97,7 +101,7 @@ func licensed(code []string) bool {
 
 // blockBody is the awk block_body(): the text of the brace block that opens at or after 0-based line from,
 // from the first "{" to its matching "}" (exclusive), a "\n" after each line it spans. Like the awk it counts
-// every brace, inside literals too.
+// every brace; the caller hands it code whose literal contents are removed.
 func blockBody(code []string, from int) string {
 	var b strings.Builder
 	depth, started := 0, false

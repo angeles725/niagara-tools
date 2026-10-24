@@ -10,8 +10,8 @@
 # [ev: corpus B1143] [ev: corpus B1145] [ev: corpus B1146]
 # [ev: code javax/baja/sys/BAbstractService.java:87-90,148-150,152-190] [ev: code com/tridium/sys/service/ServiceManager.java:297-298]
 #
-# Structural rules (comments blanked by the shared scanner go/internal/javasrc Strip, the port of
-# lib/method-boundary.sh mb_strip; methods from javasrc Methods, the port of mb_parse):
+# Structural rules (read on code: comments blanked and literal contents removed by the shared scanner
+# go/internal/javasrc, so nothing quoted in a string counts; methods from javasrc Methods, the port of mb_parse):
 #   Licensed  — the file declares `Feature getLicenseFeature()` and its body is not just `return null;` (the
 #               BAbstractService default). A file with no declaration is out of scope.
 #   Callback  — a method named `changed` (the property callback), `do<Upper>…` (an action: Clock.schedule timers and
@@ -35,7 +35,12 @@
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 # Empty root: a root with no *.java under it is an env error (exit 3), never a clean pass; stdout gets
 # `ERROR  lint-license-isoperational-gate  <root>  no files to scan (K20: wrong path or empty scaffold)`.
+# Declared difference from the bash lint (truth fix 2026-10-24): the bash read mb_strip's text, literal contents
+# kept, so a quoted "isOperational()" gated a callback, a quoted getLicenseFeature() declaration licensed a class
+# and a ";" inside a string cut the first statement before its gate. No real-tree row changed (Cliente 0,
+# sources/decompiled 31).
 # VCS-free by design (kit-links L2).
+# Mutation: LIG-literal -- reading literal text as code passes a callback whose only "gate" is log("isOperational()")
 # Mutation: LIG1 -- dropping the gate check WARNs a callback that returns early on !isOperational()
 # Mutation: LIG2 -- treating `return null;` as a license feature WARNs an unlicensed service
 # Mutation: LIG3 -- counting a super.changed() call as acting WARNs a callback that only delegates

@@ -2,6 +2,7 @@
 @DIR@/Mod
 -- want --
 exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:14  licensed class: doE() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
 WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:15  licensed class: doF() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
 WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:16  licensed class: doG() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
 WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:17  licensed class: doH() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)

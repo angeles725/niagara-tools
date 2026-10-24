@@ -1,0 +1,19 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/BS.java --
+class BS {
+  public Feature getLicenseFeature() {
+    return f;
+  }
+  public void doB() {
+    if (!ready("a;b") || !isOperational()) return;
+    b();
+  }
+  public void doC() {
+    if (!ready("{") || !isOperational()) return;
+    c();
+  }
+}
