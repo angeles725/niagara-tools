@@ -67,6 +67,10 @@ _REFUSALS = [
     ("unsupported", (safety.REASON_TYPE_SPEC,),
      "Document the module:Type spec expected for component creation",
      "README.md · write tools", "LOW"),
+    ("journal", (safety.REASON_JOURNAL_UNREADABLE,),
+     "Find what wrote the unreadable journal.jsonl line(s); repair or remove them by hand "
+     "before deciding the rollback",
+     "METHODOLOGY.md · section 2 (L6)", "HIGH"),
 ]
 _VERDICTS = {
     "mismatch": ("Investigate why the read-back differs from the request and document the cause",

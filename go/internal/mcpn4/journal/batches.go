@@ -1,11 +1,41 @@
 package journal
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
 )
+
+// ListBatches is n4_list_batches' reply: the total and the newest limit batches; when a line is
+// unreadable (issue #448), a sentence saying the list is incomplete and one row per such line.
+func (j *Journal) ListBatches(limit int) (*pyjson.Object, error) {
+	views, bad, err := j.Scan()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := Batches(views)
+	if err != nil {
+		return nil, err
+	}
+	out := pyjson.NewObject()
+	out.Set("total", len(rows))
+	out.Set("batches", rows[:min(max(limit, 0), len(rows))])
+	if len(bad) > 0 {
+		out.Set("incomplete", fmt.Sprintf("this list is incomplete: %d journal line(s) are unreadable; a batch "+
+			"recorded on one is missing or partial here, and n4_rollback refuses every batch such a line may "+
+			"belong to", len(bad)))
+		lines := make([]any, len(bad))
+		for i, u := range bad {
+			lines[i] = fmt.Sprintf("unreadable journal line %d: %s", u.Line, u.Reason)
+		}
+		out.Set("unreadable", lines)
+	}
+	return out, nil
+}
 
 // Batches is the batch list of n4_list_batches (tools_read.py): one summary per view, newest
 // first, with the ids of the batches recorded as rolling it back.
@@ -41,8 +71,8 @@ func Batches(views []*pyjson.Object) ([]any, error) {
 	return out, nil
 }
 
-// batchIDPattern is _BATCH_ID under re.match: "$" also matches before a final newline.
-var batchIDPattern = regexp.MustCompile(`^[0-9a-f]{32}\n?$`)
+// batchIDPattern is _BATCH_ID under re.match ("\Z": a final newline is not accepted).
+var batchIDPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 func toolError(msg string) error { return &jsonrpc.ToolError{Msg: msg} }
 
@@ -58,6 +88,15 @@ func (j *Journal) RollbackTarget(batchID any) (*pyjson.Object, error) {
 	bid, ok := batchID.(string)
 	if !ok || !batchIDPattern.MatchString(bid) {
 		return nil, toolError("batch_id must be a 32-character hex batch id")
+	}
+	if bad := j.UnreadableFor(bid); len(bad) > 0 { // before Read: the batch may be on the bad line
+		where := make([]string, len(bad))
+		for i, u := range bad {
+			where[i] = fmt.Sprintf("%d (%s)", u.Line, u.Reason)
+		}
+		return nil, toolError(safety.ReasonJournalUnreadable + ": batch " + bid + " may be recorded on journal.jsonl " +
+			"line(s) " + strings.Join(where, ", ") + "; rolling it back from an incomplete record could repeat or " +
+			"skip its inverse, refusing: repair or remove the line(s) by hand")
 	}
 	view, err := j.Read(bid)
 	if err != nil {

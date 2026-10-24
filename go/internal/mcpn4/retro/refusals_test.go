@@ -45,7 +45,7 @@ func reasonConstants(t *testing.T) map[string]string {
 
 func TestEverySharedRefusalReasonIsClassifiedByTheRetro(t *testing.T) {
 	consts := reasonConstants(t)
-	if len(consts) != 16 {
+	if len(consts) != 17 {
 		t.Errorf("%d Reason constants", len(consts))
 	}
 	for name, text := range consts {

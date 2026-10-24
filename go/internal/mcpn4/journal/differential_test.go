@@ -20,7 +20,7 @@ from mcp_n4 import safety, tools_read, tools_write
 class AnyStation:
     def __eq__(self, other): return True
     def __ne__(self, other): return False
-GATE = re.compile(r"batch_id must be|unknown batch|batch \S+ is itself|batch \S+ is in-doubt|a rollback of batch|batch \S+ was already")
+GATE = re.compile(r"batch_id must be|journal line unreadable|unknown batch|batch \S+ is itself|batch \S+ is in-doubt|a rollback of batch|batch \S+ was already")
 def run(fn):
     try:
         return fn()
@@ -99,11 +99,31 @@ var edgeJournals = []string{
 	"{\"batch_id\": \"" + idA + "\", \"phase\": \"intent\"}\n{\"batch_id\": \"" + idA + "\", \"phase\": \"result\"}\n{\"batch_id\": \"" + idB + "\", \"phase\": \"intent\", \"rollback_of\": \"" + idA + "\"}\n",
 	"{\"batch_id\": \"" + idA + "\", \"phase\": \"intent\"}\n\xff\n",
 	"{\"batch_id\": \"" + idA + "\", \"phase\": \"intent\", \"ops\": \"" + strings.Repeat("x", 9000) + "\"}\n\xe2\x82\n",
+	// Issue #448: one bad line in the middle of a multi-batch journal. Not UTF-8 (its batch is
+	// unknown: every rollback is refused), across CR, CRLF and an 8192-byte chunk boundary.
+	twoBatches("{\"batch_id\": \"\xff\", \"phase\": \"result\"}\r{\"batch_id\": \"" + idC + "\", \"phase\": \"intent\", \"x\": \"" +
+		strings.Repeat("y", 8200) + "\xe2\"}\r\n\xfe\n"),
+	// Known batches: an unhashable id naming idB in rollback_of, idC's ops that are a number,
+	// an unhashable rollback_of on a result: each blocks only the batches it names.
+	twoBatches("{\"batch_id\": [1], \"phase\": \"intent\", \"rollback_of\": \"" + idB + "\"}\n" +
+		"{\"batch_id\": \"" + idC + "\", \"phase\": \"component-intent\", \"ops\": 7}\n" +
+		"{\"batch_id\": \"" + idD + "\", \"phase\": \"intent\", \"station_name\": \"S\"}\n" +
+		"{\"batch_id\": \"" + idD + "\", \"phase\": \"result\", \"rollback_of\": {\"k\": 1}}\n" +
+		"{\"batch_id\": \"" + idC + "\", \"phase\": \"intent\", \"rollback_of\": \"" + idA + "\"}\n"),
+}
+
+// twoBatches is a journal of two completed batches, idA and idB, with middle between them.
+func twoBatches(middle string) string {
+	batch := func(id string) string {
+		return "{\"batch_id\": \"" + id + "\", \"phase\": \"intent\", \"station_name\": \"S\", \"tool\": \"t\"}\n" +
+			"{\"batch_id\": \"" + id + "\", \"phase\": \"result\", \"verdict\": \"verified\", \"inverse\": [{\"nm\": \"v\", \"h\": \"3\", \"n\": \"A\"}]}\n"
+	}
+	return batch(idA) + middle + batch(idB)
 }
 
 // gateKinds are the outcomes of the rollback journal checks the corpus must reach.
 var gateKinds = []string{"must be a 32-character", "unknown batch", "is itself a rollback", "is in-doubt (the station",
-	") is in-doubt: inspect", "was already rolled back", "read-back failed", "passed", "TypeError", "ValueError:", "KeyError"}
+	") is in-doubt: inspect", "was already rolled back", "read-back failed", "passed", "journal line unreadable", "UnicodeDecodeError", "TypeError", "KeyError"}
 
 // ids are the batch ids every state dir is asked about.
 var ids = []any{idA, idB, idC, idD, idA + "\n", idA + "\n\n", "x", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", nil, 5}
@@ -203,20 +223,7 @@ func goSide(dir string, ids []any) []any {
 	return out
 }
 
-func listBatches(j *Journal, limit int) (any, error) {
-	views, err := j.Views()
-	if err != nil {
-		return nil, err
-	}
-	rows, err := Batches(views)
-	if err != nil {
-		return nil, err
-	}
-	o := pyjson.NewObject()
-	o.Set("total", len(rows))
-	o.Set("batches", rows[:min(limit, len(rows))])
-	return o, nil
-}
+func listBatches(j *Journal, limit int) (any, error) { return j.ListBatches(limit) }
 
 func gate(j *Journal, id any) string {
 	view, err := j.RollbackTarget(id)

@@ -44,16 +44,19 @@ func TestThePythonWrittenJournalIsListedNewestFirst(t *testing.T) {
 	}
 }
 
-func TestAJournalThatCannotBeReadIsAToolErrorOrAnInternalError(t *testing.T) {
+// Issue #448: an unreadable line is one row of the reply, never a failed list.
+func TestAnUnreadableJournalLineIsListedNotAnError(t *testing.T) {
 	for body, want := range map[string]string{
-		"{\"batch_id\": \"b\", \"phase\": \"intent\"}\n\xff\n":                 "'utf-8' codec can't decode byte 0xff in position 37: invalid start byte",
-		"{\"batch_id\": [1], \"phase\": \"intent\"}\n":                         "internal error (TypeError)",
-		"{\"batch_id\": \"r\", \"phase\": \"intent\", \"rollback_of\": [1]}\n": "internal error (TypeError)",
+		"{\"batch_id\": \"b\", \"phase\": \"intent\"}\n\xff\n":                 "line 2: UnicodeDecodeError",
+		"{\"batch_id\": [1], \"phase\": \"intent\"}\n":                         "line 1: TypeError",
+		"{\"batch_id\": \"r\", \"phase\": \"intent\", \"rollback_of\": [1]}\n": "line 1: TypeError",
 	} {
 		dir := t.TempDir()
 		os.WriteFile(filepath.Join(dir, "journal.jsonl"), []byte(body), 0o600)
 		s := readtoolstest.NewServer(readtoolstest.NewStation(), session.Config{StateDir: dir})
-		if text, isErr, _ := s.Call(t, "n4_list_batches"); !isErr || text != want {
+		text, isErr, _ := s.Call(t, "n4_list_batches")
+		if isErr || !strings.Contains(text, `"incomplete": "this list is incomplete: 1 journal line(s)`) ||
+			!strings.HasSuffix(text, `"unreadable": ["unreadable journal `+want+`"]}`) {
 			t.Errorf("%q: %v %s", body, isErr, text)
 		}
 	}

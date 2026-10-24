@@ -19,4 +19,6 @@ const (
 	ReasonValueType     = "value_type must be one of"
 	ReasonTypeSpec      = "type must look like"
 	ReasonTier          = "version tier refuses writes"
+
+	ReasonJournalUnreadable = "journal line unreadable"
 )
