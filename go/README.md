@@ -71,6 +71,8 @@ rule's rows stay contiguous.
    `rules/lexiconascii`, LA5: a module with no `*.lexicon` has nothing to check): no ERROR row, exit 0.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
+   `Spec.ShortScanError` words an unreadable file as `awk_lint_each` did (`<lint>: cannot scan <path>: <reason>`)
+   instead of `awk_lint_run`'s awk error (reference: `rules/agentonshape`).
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
    A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
