@@ -1,0 +1,20 @@
+-- args --
+@DIR@/coldroompan-rt
+-- want --
+exit 1
+FAIL  lint-structure  ColdRoomPan-rt  L4: module.lexicon missing (1 type(s) declared in module-include.xml)
+FAIL  lint-structure  ColdRoomPan-rt  L5: module.palette missing for -rt profile
+FAIL  lint-structure  ColdRoomPan-rt  L11: mixed BTest+JUnit srcTest without both :test-wb and junit gradle declarations
+-- stderr --
+-- coldroompan-rt/.deploy-baseline/gradle.properties --
+org.gradle.jvmargs=-Xmx2g
+niagara_home=C:\Honeywell\OptimizerSupervisor-N4.14.0.162
+-- coldroompan-rt/ColdRoomPan-rt/ColdRoomPan-rt.gradle.kts --
+dependencies { api(":baja") }   // MISSING both :test-wb and junit for the mixed srcTest -> L11 FAIL
+-- coldroompan-rt/ColdRoomPan-rt/module-include.xml --
+<types><type name="Cold" class="com.x.BCold"/></types>
+-- coldroompan-rt/ColdRoomPan-rt/srcTest/test/com/x/BColdTest.java --
+package com.x;
+import javax.baja.test.BTest;   // Baja test
+import org.junit.Test;          // + JUnit
+public class BColdTest extends BTest { @Test public void t() {} }

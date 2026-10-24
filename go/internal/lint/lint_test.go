@@ -538,6 +538,9 @@ func TestCommandRegistration(t *testing.T) {
 		"both fields":     {Rule: fakeRule{id: "lint-a"}, Tree: treeFake{id: "lint-a"}, Usage: "u"},
 		"Rule is a tree":  {Rule: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
 		"Tree is a check": {Tree: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
+		"Root and Rule":   {Rule: fakeRule{id: "lint-a"}, Root: rootFake{}, Usage: "u"},
+		"Root is a check": {Root: rootAndCheck{fakeRule{id: "lint-a"}}, Usage: "u"},
+		"Rule is a root":  {Rule: rootAndCheck{fakeRule{id: "lint-a"}}, Usage: "u"},
 	} {
 		func() {
 			defer func() {
@@ -548,7 +551,7 @@ func TestCommandRegistration(t *testing.T) {
 			Command(sp)
 		}()
 	}
-	Command(javaSpec(fakeRule{id: "lint-a"}, One), treeSpec(treeFake{id: "lint-t"})) // a valid mix registers
+	Command(javaSpec(fakeRule{id: "lint-a"}, One), treeSpec(treeFake{id: "lint-t"}), rootSpec(rootFake{})) // a valid mix registers
 }
 
 func TestCommandUsageExit(t *testing.T) {

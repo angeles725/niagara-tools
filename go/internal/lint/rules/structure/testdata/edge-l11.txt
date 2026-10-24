@@ -1,0 +1,32 @@
+-- args --
+@DIR@/l11/M
+-- want --
+exit 1
+FAIL  lint-structure  B-rt  L11: mixed BTest+JUnit srcTest without both :test-wb and junit gradle declarations
+-- stderr --
+-- l11/.git/HEAD --
+x
+-- l11/M/A-rt/a.gradle.kts --
+api(":test-wb")
+api(":baja:4.14.0")
+-- l11/M/A-rt/b.gradle.kts --
+testImplementation("junit/junit:4")
+implementation("com.x:foo:1.2")
+-- l11/M/A-rt/module-include.xml --
+<types/>
+-- l11/M/A-rt/module.palette --
+<p n="A"/>
+-- l11/M/A-rt/srcTest/T1.java --
+import com.tridium.btest.X;
+-- l11/M/A-rt/srcTest/T2.java --
+import org.junit.Assert;
+-- l11/M/B-rt/b.gradle.kts --
+api(":test-wb")
+-- l11/M/B-rt/module-include.xml --
+<types/>
+-- l11/M/B-rt/module.palette --
+<p n="B"/>
+-- l11/M/B-rt/srcTest/T1.java --
+import javax.baja.test.BTest;
+-- l11/M/B-rt/srcTest/T2.java --
+import org.junit.Assert;
