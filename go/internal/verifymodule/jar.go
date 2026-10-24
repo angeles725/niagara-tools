@@ -66,7 +66,11 @@ func (j *jarFile) has(name string) bool {
 
 // text is entry name as `$(unzip -p jar name 2>/dev/null || true)` kept it: "" when it cannot be read.
 func (j *jarFile) text(name string) string {
-	data, err := jarversion.Read(j.first[name])
+	f, ok := j.first[name]
+	if !ok {
+		return ""
+	}
+	data, err := jarversion.Read(f)
 	if err != nil {
 		return ""
 	}
