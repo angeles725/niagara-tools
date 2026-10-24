@@ -323,3 +323,19 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
     [[ "$output" != *"PASS  commissioning  ${m#lint-}:"* ]] || { echo "$m: PASS row"; return 1; }
   done
 }
+
+# Go port truth fix T4 (retro go-commissioning-verify Δ4): an unreadable values-owed table was a PASS row ("every
+# value owed by the field is provided") beside an awk error on stderr. It is now env (exit 3) before any row, as a
+# missing table is (CV-owed5). Named mutation CV-owedread (ignore the read error) -> CV-owed-unreadable flips.
+# shellcheck disable=SC2016  # literal markdown backticks in the table, not expansions
+@test "CV-owed-unreadable: an unreadable values-owed table -> exit 3, no row, never PASS" {
+  [ "$(id -u)" -ne 0 ] || skip "root reads a mode-000 file"
+  local f="$BATS_TEST_TMPDIR/owed.md"
+  printf '| Slot | Owed by | Unit | Safe default | Status |\n|---|---|---|---|---|\n| `a` | t | psig | 0 | owed |\n' > "$f"
+  chmod 000 "$f"
+  run "$CV" "$MINIMAL" --values-owed "$f"
+  chmod 644 "$f"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"commissioning-verify: values-owed table not readable: $f"* ]]
+  [[ "$output" != *"PASS  commissioning"* ]]
+}

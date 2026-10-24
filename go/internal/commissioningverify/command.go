@@ -85,6 +85,13 @@ func Main(args []string, s cli.Stdio) int {
 			*f.path = o.root + f.def
 		}
 	}
+	var owedText []byte // an unreadable table is env, never a PASS (the bash tool's awk failed and it PASSed)
+	if o.owed != "" {
+		var err error
+		if owedText, err = os.ReadFile(o.owed); err != nil {
+			return fail("values-owed table not readable: %s", o.owed)
+		}
+	}
 	if o.bog != "" && o.mod == "" {
 		fail("--bog requires --module")
 		fmt.Fprint(s.Err, usage)
@@ -109,7 +116,7 @@ func Main(args []string, s cli.Stdio) int {
 	} else {
 		r.stationChecks(o)
 	}
-	r.valuesOwed(o.owed, s.Err)
+	r.valuesOwed(o.owed, string(owedText))
 	for _, m := range footer {
 		r.emit(manual, m[0], m[1])
 	}

@@ -38,6 +38,9 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 			must(t, os.WriteFile(full, []byte(text), 0o644))
 		}
 		if kind == "mode 000)" {
+			if os.Geteuid() == 0 {
+				t.Skip("running as root: chmod 000 does not block reads")
+			}
 			must(t, os.Chmod(full, 0))
 			t.Cleanup(func() { os.Chmod(full, 0o644) })
 		}
@@ -67,8 +70,8 @@ func TestGolden(t *testing.T) {
 	repo, err := filepath.Abs("../../..")
 	must(t, err)
 	paths, _ := filepath.Glob(filepath.Join(repo, "go/internal/commissioningverify/testdata/*.txt"))
-	if len(paths) < 85 {
-		t.Fatalf("found %d golden cases, want at least 85", len(paths))
+	if len(paths) < 86 {
+		t.Fatalf("found %d golden cases, want at least 86", len(paths))
 	}
 	cwd, err := os.Getwd()
 	must(t, err)

@@ -3,7 +3,6 @@ package commissioningverify
 import (
 	"fmt"
 	"io"
-	"os"
 )
 
 // Row statuses.
@@ -26,18 +25,14 @@ func (r *report) emit(status, check, detail string) {
 	r.n[status]++
 }
 
-// valuesOwed prints the values-owed rows: one MANUAL row per open value, one PASS row when none is open, one
-// MANUAL row when the module declares no table.
-func (r *report) valuesOwed(path string, stderr io.Writer) {
+// valuesOwed prints the values-owed rows of the table at path (text read by Main): one MANUAL row per open value,
+// one PASS row when none is open, one MANUAL row when the module declares no table.
+func (r *report) valuesOwed(path, text string) {
 	if path == "" {
 		r.emit(manual, "values-owed", "no docs/values-owed.md — declare the values owed by the field (slot, owed by, unit, safe default, status) or state none (BUILD-LOOP §6.b)")
 		return
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Fprintf(stderr, "commissioning-verify: %v\n", err)
-	}
-	rows := owedRows(path, string(data))
+	rows := owedRows(path, text)
 	for _, d := range rows {
 		r.emit(manual, "values-owed", d)
 	}

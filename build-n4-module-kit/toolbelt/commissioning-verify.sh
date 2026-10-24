@@ -41,6 +41,7 @@
 #                filled/provided (columns: Slot | Owed by | Unit | Safe default | Status); a row
 #                with fewer cells is a MANUAL "malformed" row (fails closed); alignment rows skip;
 #                one PASS row when every value is provided; one MANUAL row when no table exists.
+#                An unreadable table is exit 3 before any row (the bash tool PASSed it). [ev: retro go-commissioning-verify]
 #   [ev: retro panccadia-commissioning-lessons Δ11] [ev: retro panccadia-version-defect-ledger Δ4]
 #
 # Manual-only footer (MANUAL rows — informational, never FAIL):
