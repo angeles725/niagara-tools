@@ -1,0 +1,27 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/BRoomPanel.java:6  LTF1: link-in target "evap1FreezeActive" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- root/com/x/BRoomPanel.java --
+package com.x;
+import javax.baja.sys.*;
+// Facade room panel: link-in display slots + operator config.
+@NiagaraType
+// Commissioning link: written by BLink from the evaporator freeze-stat point.
+@NiagaraProperty(
+  name = "evap1FreezeActive",
+  type = "boolean",
+  defaultValue = "false",
+  flags = Flags.SUMMARY | Flags.READONLY
+)
+// Linked from the control module compressor state point (link-in display slot).
+@NiagaraProperty(
+  name = "comp1State",
+  type = "int",
+  defaultValue = "0",
+  flags = Flags.SUMMARY
+)
+public final class BRoomPanel extends BComponent {
+}

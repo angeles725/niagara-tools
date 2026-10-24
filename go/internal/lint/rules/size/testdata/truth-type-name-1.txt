@@ -1,0 +1,23 @@
+declared difference (truth fix T3): the header names the row after the file's first top-level class, but the
+bash awk matched `class` only, so an interface printed "class ?" at line 1 and an enum was named after its
+nested class (Inner). The first class, interface or enum declaration names the row now.
+-- args --
+--max-class
+0
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/E.java:2  class E has 5 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/I.java:2  class I has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- E.java --
+package com.x;
+public enum E {
+  A, B;
+  static class Inner {}
+}
+-- I.java --
+package com.x;
+public interface I {
+  void a();
+}

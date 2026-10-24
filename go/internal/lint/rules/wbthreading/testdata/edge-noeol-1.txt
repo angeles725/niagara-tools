@@ -1,0 +1,15 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 0
+ui-thread-traversal  WARN  @DIR@/root1/com/x/A.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+agent-breadth  WARN  @DIR@/root1/com/x/B.java:1  @AgentOn(baja:Component) without justification comment within 3 lines above (B809)
+-- stderr --
+-- root1/com/x/A.java (noeol) --
+class A {
+  public void doInvoke() {
+    a.getNavChildren();
+  }
+}
+-- root1/com/x/B.java (noeol) --
+@AgentOn(types = "baja:Component")

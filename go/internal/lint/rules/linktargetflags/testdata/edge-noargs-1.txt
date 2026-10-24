@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-link-target-flags.sh [--wiring-map <docs/wiring-map.md>] <java-src-dir>

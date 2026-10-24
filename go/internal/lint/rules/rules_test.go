@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -132,12 +133,22 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		}
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
+		code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e})
+		if sp.ID() == "split-package-check" {
+			// its bash contract (kept by the port): "no module" on stderr, no row, exit 3; the client
+			// pre-push hook and CI template read only the exit code
+			want := "split-package-check: no module (a module-include.xml / build.gradle[.kts] next to src/) under " + root + "\n"
+			if code != 3 || o.Len() != 0 || e.String() != want {
+				t.Errorf("%s: exit %d out %q err %q, want 3 and %q on stderr", sp.ID(), code, o.String(), e.String(), want)
+			}
+			continue
+		}
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+		if code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if len(roots) != 1 || roots[0] != "lint-structure" {
-		t.Errorf("RootRules %q, want exactly lint-structure", roots)
+	if strings.Join(roots, " ") != "lint-structure split-package-check" {
+		t.Errorf("RootRules %q, want lint-structure and split-package-check", roots)
 	}
 }
