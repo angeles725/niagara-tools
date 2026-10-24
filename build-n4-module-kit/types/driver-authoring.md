@@ -444,7 +444,7 @@ Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium s
 - **Recipe — receive:** build the record with the ext as source, `new BAlarmRecord(ext, ext.getAlarmClass(),
   alarmData, BUuid.make())`, put the field point in the `sourceName` facet, `ext.routeAlarm(record)`, then
   `setLastReceivedTime`. `doRouteAlarm` hands it to `BAlarmService.routeAlarm(record)`. [CERT]
-  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:1330-1335`;
+  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:893-895,1330-1335`;
   `D/bacnet-rt/javax/baja/bacnet/alarm/BBacnetAlarmDeviceExt.java:121-163`
 - **Recipe — ack:** the alarm service routes an ack to a `BIRemoteAlarmSource` source (`doRouteToSource` →
   `ackAlarm` → your `doAckAlarm`). [CERT] `D/alarm-rt/javax/baja/alarm/BAlarmService.java:1003-1006,1108-1114`.
@@ -470,13 +470,14 @@ Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium s
 public class BEibnetIpNetwork extends BLoadableNetwork implements EibnetConst, BIService
 ```
 
-KNX addressing is by **group address**, not by object/property (unlike BACnet). Points are
-organized under `BGroupAddressFolder` children. The network owns two stack layers as
+KNX addressing is by **group address**, not by object/property (unlike BACnet). Each proxy ext holds
+its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, `point/BKnxProxyExt.java:54`). The network owns two stack layers as
 `@NiagaraProperty` children: `linkLayer` (`BEibnetIpLinkLayer`) for UDP multicast/unicast
 EIBnet/IP discovery, and `tunnelLayer` (`BEibnetIpTunnelLayer`) for the tunneled connection.
 Per-datatype proxy families: `BKnxBooleanProxyExt`, `BKnxEnumProxyExt`, `BKnxStringProxyExt` —
-pick by KNX DPT, not by a single generic proxy ext. ETS project import available via
-`BKnxDiscoverDevicesJob`. [ev: code BEibnetIpNetwork.java:63-77; corpus DR-01]
+pick by KNX DPT, not by a single generic proxy ext. Point discovery reads an ETS export (`.esf` session file)
+chosen in the point manager's Discover (eibnetIp-wb `ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
+is a KNXnet/IP device search. [ev: code eibnetIp-rt vineflower BEibnetIpNetwork.java:28-35; corpus B1357]
 
 ### 8.2 · Z-Wave (`zwave` driver)
 
@@ -485,32 +486,35 @@ public class BZWaveNetwork extends BBasicNetwork implements ZWaveMessageConst
 ```
 
 Z-Wave device discovery ("inclusion") is not a one-shot job — it is a persistent lifecycle.
-The network holds a `BInclusionMonitor extends BComponent` that tracks completion flags
+Each `BZWaveDevice` adds a `BInclusionMonitor extends BComponent` as a hidden, transient `inclusionMonitor`
+slot (flags 71, `BZWaveDevice.java:1783-1786`), so it is not persisted; it tracks completion flags
 (`commandClassParsingComplete`, `wakeUpDataRetrievalComplete`, `associationsRetrevalComplete`,
-etc.) as `@NiagaraProperty` booleans across station restarts. A node is usable only when all
-flags are true. [ev: code BInclusionMonitor.java:26-52; BZWaveNetwork.java:101; corpus DR-02]
+etc.) as readonly properties. Inclusion succeeds only when all complete and every command class is processed
+(`getIsInclusionSucessful`, `BInclusionMonitor.java:477-479`). [ev: code BInclusionMonitor.java:26-52; corpus B1384]
 
-Command-class capability tree: each `BZWaveDevice` carries a `BCmdClassObject` subtree;
-`BZWaveCommandClass` is a frozen enum of class IDs. Firmware upgrade: `.hex` image +
-device template files are bundled inside the jar under `rc/` and served at runtime via
-`module://` ORDs. [ev: code BZWaveNetwork.java imports; corpus DR-02]
+Command classes: the network maps each class id to a registered `BCmdClassObject` subtype
+(`getCommandClassInstance`, `BZWaveNetwork.java:2292-2299`), whose `addCmdClass` adds the matching proxy points
+under the device (`BZWaveDevice.java:1081-1084`); `BZWaveCommandClass` is a frozen enum of class IDs. Firmware
+upgrade is for the Z-Wave option card: the `.hex` image ships in the jar and is copied to `/tmp` before upload
+(`comm/serial/fw/BZWaveFirmwareUpgrade.java:41-54`); device templates (`.info`) are read from the station's
+`^zwaveDevTemplates/` first, then from the jar (`BZWaveDevice.java:588-600`). [ev: corpus B1102] [ev: corpus B1384]
 
 ---
 
 ### `getDeviceManagerSubscribeDepth()` — deep slot-tree discovery `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ20]`
 
-**Override `getDeviceManagerSubscribeDepth()` in a `BNNetwork` subclass to return >1 for deep slot trees (PD-20):** the default implementation is hardcoded to return `1`, which subscribes only the immediate children of the device manager. When a device exposes a multi-level slot hierarchy (e.g. zone → device → point), override this method to return the correct depth (e.g. `3`). Without the override, discover and poll only reach the first level and the deeper points are never subscribed.
+**Override `getDeviceManagerSubscribeDepth()` in a `BNNetwork` subclass to return >1 for deep slot trees (PD-20):** the default implementation is hardcoded to return `1` (`BNNetwork.java:174-183`, docSource). It is the subscribe depth of the auto device manager (`NDeviceModel.getSubscribeDepth()`, ndriver-wb `device/NDeviceModel.java:84-87`, docSource; also sent to the ux manager as `sd`). When the manager's columns must show values deeper in the device tree, return that depth (e.g. `3`). It does not drive discovery or polling: proxy points subscribe through their own exts `[INFER]`.
 
 ```java
 @Override
 public int getDeviceManagerSubscribeDepth() {
-    return 3;  // depth: network → device → proxy ext → point
+    return 3;  // levels below the network the device manager subscribes
 }
 ```
 
 `[ev: corpus B1072]`
 
-**`NMgrControllerUtil.network.getAgents().filter()` is the NATIVE device-manager-agent extension point (PD-14):** the static utility `NMgrControllerUtil.getAgents(network)` returns the list of registered `BINDeviceMgrAgent` implementations that apply to the current network. Filter this list in `getAgents()` to include only the agents that are relevant to the current device type. This is NOT CCN-specific — any `BNNetwork` subclass may override `getAgents()` and use this filter. Registering a `BINDeviceMgrAgent` via a plain `<type>` in `module.xml` is sufficient; no `@AgentOn` is required. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ14]` `[ev: corpus B1066]`
+**`NMgrControllerUtil.makeCommands()` turns the network's agents into device-manager commands — the NATIVE device-manager-agent extension point (PD-14):** it filters `network.getAgents()` with `AgentFilter.is(BINDeviceMgrAgent.TYPE)` and wraps each agent in an `NDeviceMgrAgentCommand`; the point-manager variant filters the device and point-ext agents for `BINPointMgrAgent` (ndriver-wb `ui/NMgrControllerUtil.java:92-98,121-141`, docSource). This is NOT CCN-specific — any `BNNetwork` subclass may override `getAgents()` to add or drop agents, or register a `BINDeviceMgrAgent` on the network type through the standard agent registry `[INFER]`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ14]` `[ev: corpus B1066]`
 
 ---
 
@@ -522,16 +526,16 @@ Reference archetypes from obixDriver, lonworks, honBACnetUtilities, niagaraDrive
 
 **Driver vs. servlet decision:** use the Network/Device/ProxyExt driver pattern for bidirectional telemetry where the external system initiates reads/writes and the driver provides subscription + polling. Use a `BWebServlet` / SPA when you need a browser-facing UI on top of data that already lives in the station.
 
-**Local-export-discover idiom** (pushing local N4 data outward, e.g. oBIX export): resolve the `slot:/` ORD to the station component space, then filter children by `BIWritablePoint` to discover exportable points. Iterate the filtered set to build the export payload; no separate Network subclass is needed for a pure-export path.
+**Local-export-discover idiom** (pushing local N4 data outward, e.g. oBIX export): resolve the `slot:/` ORD to the station component space, then filter children by `BIWritablePoint` to discover exportable points. Iterate the filtered set to build the export payload; no separate Network subclass is needed for a pure-export path `[INFER]`.
 
 ```java
-// Resolve local station space and collect all writable points for export
+// Resolve the local station root and collect its writable points for export
 BOrd root = BOrd.make("slot:/");
-BComponent space = (BComponent) root.get(cx);
-for (BObject child : space.getChildObjects()) {
+BComponent space = (BComponent) root.get(base, cx);   // base: any mounted component
+for (BComponent child : space.getChildComponents()) {
     if (child instanceof BIWritablePoint) {
-        BIWritablePoint wp = (BIWritablePoint) child;
-        // push wp.getOut() to the external system
+        BControlPoint wp = (BControlPoint) child;
+        // push wp.getOutStatusValue() to the external system
     }
 }
 ```
@@ -544,11 +548,11 @@ LonWorks commissioning requires three **distinct** manager patterns — do NOT c
 
 | Phase | Pattern |
 |-------|---------|
-| **XIF/LNML typing** | Load the `.xif` / `.lnml` descriptor; type each network variable (NV) from the device template, not from a live poll. A manager that shows raw poll values before typing is misleading. |
-| **Changeable-NV discovery** | Some NV slots are dynamically changeable; a separate Discover manager enumerates them from the device and lets the user bind them. |
-| **Service-pin commissioning** | Physical button press on the device triggers a service-pin message; the manager listens for this event to associate the node address — not a scripted API call. |
+| **XIF/LNML typing** | The `.xif` / `.lnml` interface file types each network variable (NV): `BLocalNvManager` keeps the LNML ORD and the parsed type as slot facets (`LnmlOrd`, `XType`), and a device's NV table is learned when the device is added (`learnNv()`), not by a separate scan. A manager that shows raw values before typing misleads `[INFER]`. |
+| **Changeable-NV type editing** | NVs whose SNVT type is declared changeable get their own panel, `BChangeableNvManager` (a `BWbComponentView`, not a table manager), which changes the NV type and offers to delete the links and proxy points the change breaks. NV bindings live in `BLonLinkManager`. |
+| **Service-pin commissioning** | Pressing the device's service pin raises `BLonNetmgmt.servicePinReceived`; the device manager matches the Neuron ID to a table row and selects it, and `doCommission()` then maps that Neuron ID to a subnet/node. |
 
-NV-binding UX is a separate workflow from point-list monitoring. Merging them into one manager produces a table that is either incomplete (pre-typing) or misleading (post-typing polluted by unbound NVs). [ev: corpus B1095]
+NV-binding UX is a separate workflow from point-list monitoring. Merging them into one manager produces a table that is either incomplete (pre-typing) or misleading (post-typing polluted by unbound NVs) `[INFER]`. [ev: corpus B1095]
 
 ### 9.3 · OEM-on-stock-driver patterns (honBACnetUtilities) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ3]
 
@@ -556,28 +560,28 @@ When building an OEM module on top of a stock Tridium driver (e.g. the stock BAC
 
 | Pattern | Mechanism |
 |---------|-----------|
-| **Type-float slot** | Add a `@NiagaraProperty BTypeSpec deviceModel` slot to the device subclass; the WB manager reads this slot to determine which OEM device-model plugin to activate — enables polymorphic behaviour without a Manager subclass per device family. |
-| **Two-anchor manager mount** | The shared manager container registers two `@AgentOn` anchors: one on the stock base type (e.g. `bacnet:BacnetDevice`) and one on the OEM type; only the OEM anchor activates OEM columns/commands. |
-| **Dual FE registration** | The OEM module registers its own `BWbFieldEditor` on the OEM slot type; the stock FE remains registered on the stock slot type. Both coexist without conflict — Workbench dispatches by the exact type match. |
-| **ORD-carrier navigation** | ORDs that carry a type annotation (`ord|view:module:MyView`) let the WB tree navigate directly to the OEM view for devices that match the OEM type spec, without touching the stock driver's navigation. |
+| **Type-float slot** | The OEM device manager (`BHonBacnetDeviceManager extends BBacnetDeviceManager`) floats the OEM device type to index [0] in `getNewTypes()`, `doAdd()` and `doNew()`, so it is the default choice — no Manager subclass per device family. |
+| **Two-anchor manager mount** | One manager is `@AgentOn` two tree locations (`BHonBacnetAlarmManager` on `HonBacnetAlarmDeviceExt` and `HonBacnetNotificationClassFolder`) and dispatches on `instanceof` in `doLoadValue()`. |
+| **Dual FE registration** | A thin subclass of the stock FE is `@AgentOn` the stock type (`BHonBacnetBitStringEditor extends BBacnetBitStringFE`, WB render path only) next to a fresh `BWbFieldEditor` `@AgentOn` the OEM wrapper type (`BHonBacnetBitStringFE`); each FE is registered on its own type, so they coexist. |
+| **ORD-carrier navigation** | rt point types carry an ORD (`getAlarmViewHyperlink()`); a WB dialog reads it per point and `BHonWbService.hyperlink(ord)` syncs the space on a background thread, then hyperlinks. |
 
 See also `types/wb-widgets.md §Plugin-extensible device-type manager via SPI` for the complementary WB-side pattern. [ev: corpus B1096]
 
 ### 9.4 · Command-driven manager SPI — BStationMgrCommand registry discovery [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ4]
 
-`BStationMgrCommand` is a registry-discovered command SPI for adding toolbar commands to a station-navigation manager (e.g. the Drivers Manager). Key points:
+`BStationMgrCommand` is a registry-discovered command SPI for adding toolbar commands to the Niagara-driver station manager (`BStationManager`, `@AgentOn niagaraDriver:NiagaraNetwork`). Key points:
 
-- Implementers register via a plain `<type>` in `module.xml`; the framework discovers all registered `BStationMgrCommand` implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()` — no static registration call required.
-- **Session-keyed learn state:** each learn session holds its progress in a per-session map keyed by `Context.getSessionId()`. On manager close/reopen the session key is different; old state is GC'd automatically. Do NOT use a static map for session learn state — it causes cross-session contamination.
-- **Offline `.bog` guard:** before executing any command that modifies the station model, check `Sys.isOnline()` / `BStation.isRunning()`. Commands that run against an offline `.bog` snapshot must be read-only; write-mode operations must be gated with a "Station must be running" error.
-- **`CredentialsColumn` lease + `newCopy`:** when a manager column carries credentials, call `column.getCredentials().lease()` to get a snapshot and `snapshot.newCopy()` to produce a safe copy for the background thread — never hold a reference to the live `BCredentials` object across a thread boundary.
-- **Shorthand `HistoryId`:** use `BHistoryId.make(stationName, historyName)` rather than constructing the ORD string manually; the shorthand handles the namespace separator rules correctly across Fox links.
+- Implementers register via a plain `<type>` in `module.xml`; `makeCommands()` discovers them via `Sys.getRegistry().getConcreteTypes(BStationMgrCommand.TYPE.getTypeInfo())` and keeps those whose `isCommandActive(mgr)` is true (niagaraDriver-wb vineflower `BStationManager.java:302-311`) — no static registration call required.
+- **Session-keyed learn state:** `BNiagaraFileManager`'s `State` saves the Fox session id it learned under and drops the cached learn roots when the id changes on restore (`file/BNiagaraFileManager.java:238-266`), so a reconnect never shows a stale learn table. Do NOT keep session learn state in a static map.
+- **Offline `.bog` guard:** `BStationMgrTable.reload()` checks `getSpace().getType().is(BBogSpace.TYPE)` and never subscribes `FoxService.serverConnections` against an offline `.bog` (`BStationMgrTable.java:43-48`); gate live-only work the same way.
+- **`CredentialsColumn` lease + `newCopy`:** the column's `load()` leases the `BClientCredentials` and returns `val.newCopy()` with the `BPassword` copied in; `save()` copies the same way (`BStationManager.java:330-370`). Never hand the live `BCredentials` to the edit row.
+- **Shorthand `HistoryId`:** match an existing import with `id.equals(impId) || impId.equals(id.toShorthand(stationName))` (`history/NiagaraImportLearn.java:85-86`); `BHistoryId.make(deviceName, historyName)` builds an id (history-rt `BHistoryId.java:54`).
 
 [ev: corpus B1097]
 
 ### 9.5 · Field-bus protocol driver archetype — dual-addressing discovery wizard (M-Bus) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ7]
 
-M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard** — a two-phase discovery manager that handles both address spaces:
+M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard**: `BMbusDeviceManager.doDiscover()` offers five discovery modes (database scan, single device, primary-address range, full secondary scan, secondary-address scan) across both address spaces (B1100); the scan shapes below are protocol background `[INFER]`:
 
 | Phase | Address type | Range | Manager pattern |
 |-------|-------------|-------|----------------|
@@ -585,8 +589,8 @@ M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard
 | **Secondary scan** | Secondary address (8 bytes: manufacturer + ident + medium + version) | 2³² filtered bitmask walk | Wildcarded broadcast; narrows on each confirmed response |
 
 Additional patterns for field-bus protocol drivers:
-- **Multi-baud scan:** the wizard must iterate across supported baud rates (300/600/1200/2400/4800/9600) if the device baud rate is unknown at commissioning; cache the confirmed baud on the device component.
-- **Manufacturer-specific data model:** `DataRecord` (DIF + VIF + data) is decoded differently per manufacturer extension code; keep the decoder table in a separate `ManufacturerDecoder` registry, not inlined in the proxy ext — this allows new manufacturer codes to be added without touching the polling path.
+- **Multi-baud scan:** the wizard must iterate across supported baud rates (300 to 38400, mbus-rt `BMbusBaudRate.java:47-54`) if the device baud rate is unknown at commissioning; cache the confirmed baud on the device component.
+- **Manufacturer-specific data model:** `DataRecord` (DIF + VIF + data) is decoded differently per manufacturer extension code; the driver keeps manufacturer-specific layouts as station data: a `ManuSpecDataNetworkExt` holds `ManuSpecDef` components whose elements give `offset`/`length`/`byteMask`/`bitMask`/`orFlag`, edited by `BManuSpecDefManager`/`BManuSpecDefElementManager` and referenced via `manuSpecDefElementOrd`, so a new manufacturer needs no code change.
 - **Hardcoded-facet lint candidate:** when a history import assigns `facet precision=4` independently of the proxy point's `-exponent` facet, the two can diverge silently. Flag this mismatch in import-learn flows (see `types/issues-and-gotchas.md §H1` for the proposed lint). [ev: corpus B1100]
 
 [ev: corpus B1100]
@@ -597,22 +601,22 @@ This section is about the classic OPC DA (COM) manager. For OPC UA client/server
 
 OPC and similar protocol-adapter drivers expose three recurring WB patterns that differ from standard BACnet/Modbus drivers:
 
-**Action-slot bridge:** OPC items are exposed as Niagara action slots rather than as proxy points; invoking the action calls the underlying COM/native OPC operation. Keep the COM/native error handling inside the driver layer — never let `COMException` or `NativeException` propagate to the WB view. Decode the HRESULT/native error code into a Niagara `BFacets` display string before reporting to the manager.
+**Action-slot bridge:** OPC items are proxy points (`OpcPointModel.newInstance()` auto-attaches a `BOpcProxyExt`); the WB→rt→COM bridge is action-slot invocation (`submitDeviceDiscoveryJob`, `discover()`, `invoke(BOpcDaClient.setSecurity)`). Keep the COM/native error handling inside the driver layer: the JNI bridge throws `HresultException` (an `OpcException`) whose `toString()` decodes the HRESULT with `OpcEnv.getDescription` (opc-rt vineflower `jni/HresultException.java:6-24`), and the point device ext turns a failure into `writeFail(msg)` on the points (`client/point/BOpcPointDeviceExt.java:668-681`).
 
 ```java
-// Inside the driver comm layer — structured COM error decode
+// Inside the driver comm layer: a failed COM call through the JNI bridge
 try {
-    opcServer.write(itemId, value);
-} catch (COMException e) {
-    String decoded = OpcErrorDecoder.decode(e.getHResult()); // map HRESULT → human string
-    throw new DriverException("OPC write failed: " + decoded); // stripped of COM type
+    syncIo = peer.getSyncIo();
+} catch (Exception e) {                                   // HresultException: "[hex - description] msg"
+    for (BOpcProxyExt ext : points) ext.writeFail(e.getMessage());
+    return;
 }
-// WB view receives only DriverException — no COM imports needed in -wb
+// The WB view never sees the exception; it reads the point's fault cause
 ```
 
-**Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. Implement `isLeaf(node)` and `getChildren(node)` on demand (on node expand only); cache expanded nodes in a `WeakHashMap` keyed by node path.
+**Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. `OpcPointLearn.getChildren()` checks a lazy flag (`getKidCheck()`) and only then calls `r.discover()` (COM `IOPCBrowse.Browse()`) under a 10 s lease; the manager clears the learn table on focus because COM browse sessions expire.
 
-**Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. Model this as a distinct `SECURITY_FAULT` status separate from `COMM_FAULT` — display a locked-padlock column in the manager and gate write actions on `isSecurityReady()`. The WB manager must never expose a write path when the security state is not fully resolved. [ev: corpus B1103]
+**Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. `BOpcPointManager.isFocusTraversable()` reads `BOpcDaClient.getServerSecured`; if it is set, it clears it and marks `IsUserLoggedIn`, and saved learn state is never restored while `IsUserLoggedIn` is set. There is no `SECURITY_FAULT` status in `BStatus`; security edits go through `BOpcDASecurityView`. [ev: corpus B1103]
 
 ## 10 · OPC UA and the data-egress choice `[ev: retro t9c-reference-gaps Δ7]`
 
