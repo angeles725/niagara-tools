@@ -40,7 +40,7 @@ type trip struct {
 func (ix *index) check(f *javasrc.File) []lint.Finding {
 	lines := f.Stripped()
 	priv := privateBooleans(lines)
-	trips := ix.trips(lines, f.Methods(), priv)
+	trips := ix.trips(lines, newCode(lines), f.Methods(), priv)
 	if len(trips) == 0 {
 		return nil
 	}
@@ -95,7 +95,7 @@ func (ix *index) surfaceWriteLines(lines []string) []bool {
 // Pattern 3 an effect slot's setValue(false) under an inline if(<identifier>), Pattern 4 this.<private
 // boolean> = true/false, each guarded by an if( at most guardLines above it in the method; and Pattern 7,
 // an *Inhibited/*Trip method returning x || <private field>, reported at the field's declaration line.
-func (ix *index) trips(lines []string, methods []javasrc.Method, priv map[string]int) []trip {
+func (ix *index) trips(lines []string, src code, methods []javasrc.Method, priv map[string]int) []trip {
 	var trips []trip
 	for _, m := range methods {
 		p7 := tripName.MatchString(m.Name)
@@ -110,8 +110,8 @@ func (ix *index) trips(lines []string, methods []javasrc.Method, priv map[string
 					continue
 				}
 			}
-			out := ix.tripAction(st, priv)
-			if out == "" || !guarded(lines, m.Start, i) {
+			out, col := ix.tripAction(st, priv)
+			if out == "" || !guarded(lines, src, m.Start, i, col) {
 				continue
 			}
 			trips = append(trips, trip{line: i, method: m, out: out, cond: condField(st)})
@@ -120,29 +120,38 @@ func (ix *index) trips(lines []string, methods []javasrc.Method, priv map[string
 	return trips
 }
 
-// tripAction is the output a Pattern 1, 3 or 4 action on the line forces, or "".
-func (ix *index) tripAction(st string, priv map[string]int) string {
-	if strings.Contains(st, "Math.min(target,") || strings.Contains(st, "Math.min(target ,") {
-		return "stage"
+// tripAction is the output a Pattern 1, 3 or 4 action on the line forces and the column the action
+// starts at, or "".
+func (ix *index) tripAction(st string, priv map[string]int) (string, int) {
+	for _, m := range []string{"Math.min(target,", "Math.min(target ,"} {
+		if k := strings.Index(st, m); k >= 0 {
+			return "stage", k
+		}
 	}
 	for _, e := range ix.effectSlots {
-		if (strings.Contains(st, e.setFalse) || strings.Contains(st, e.setFalseSp)) && condField(st) != "" {
-			return e.name
+		k := strings.Index(st, e.setFalse)
+		if k < 0 {
+			k = strings.Index(st, e.setFalseSp)
+		}
+		if k >= 0 && condField(st) != "" {
+			return e.name, k
 		}
 	}
 	if loc := thisWrite.FindStringIndex(st); loc != nil {
 		name := ident.FindString(strings.Replace(st[loc[0]:], "this.", "", 1))
 		if _, ok := priv[name]; ok {
-			return name
+			return name, loc[0]
 		}
 	}
-	return ""
+	return "", 0
 }
 
-// guarded reports an if( on line i or on one of the guardLines lines above it, inside the method.
-func guarded(lines []string, start, i int) bool {
+// guarded reports an if( on line i or on one of the guardLines lines above it, inside the method, whose if
+// statement holds the action at column col of line i (code.governs): an if that ended above the trip does
+// not guard it.
+func guarded(lines []string, src code, start, i, col int) bool {
 	for j := i; j >= start && j >= i-guardLines; j-- {
-		if ifOpen.MatchString(cutComment(lines[j-1])) {
+		if ifOpen.MatchString(cutComment(lines[j-1])) && src.governs(j-1, i-1, col) {
 			return true
 		}
 	}

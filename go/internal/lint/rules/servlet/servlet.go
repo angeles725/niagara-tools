@@ -46,9 +46,7 @@ var (
 	typedSet    = regexp.MustCompile(`\.(setDouble|setFloat|setInt|setLong|setRelTime)\(`)
 	clamp       = regexp.MustCompile(`getMin\(\)|getMax\(\)|getFacets\(\)|MIN|MAX|clamp`)
 	respWrite   = regexp.MustCompile(`getWriter\(\)|getOutputStream\(\)`)
-	tryOpen     = regexp.MustCompile(`(^|[[:space:]])try[[:space:]]*\{`)
 	anyParse    = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(|Long\.parseLong\(|Double\.valueOf\(`)
-	catchOpen   = regexp.MustCompile(`catch[[:space:]]*\(`)
 	badRequest  = regexp.MustCompile(`[^0-9]400[^0-9]|SC_BAD_REQUEST|sendError\(|setStatus\(|jsonError\(|sendJson\(`)
 	parse       = regexp.MustCompile(`Double\.parseDouble\(|Integer\.parseInt\(`)
 	maxAge      = regexp.MustCompile(`max-age=[1-9]`)
@@ -65,14 +63,12 @@ const (
 	msgCsrfOnly = "X-Requested-With guard without CsrfUtil/csrfToken (use Niagara CSRF token) [ev: corpus B813]"
 )
 
-// block is the text of the brace block that opens at or after line start (0-based): the lines, each
-// prefixed by " ", from start to the line where the depth counted over them returns to 0, or to the end
-// of the file. needOpen ignores a "}" before the first "{" counted (the catch scan) instead of
-// only a "}" at depth 0 (the handler and try scans). end is the closing line, or start when the block
-// never closes (the awk's try_end kept its initial value).
-func block(lines []string, start int, needOpen bool) (text string, end int) {
+// block is the text of the handler body that opens at or after line start (0-based): the lines, each
+// prefixed by " ", from start to the line where the brace depth counted over them returns to 0 (a "}" at
+// depth 0 is skipped), or to the end of the file.
+func block(lines []string, start int) string {
 	var b strings.Builder
-	depth, opened := 0, false
+	depth := 0
 	for j := start; j < len(lines); j++ {
 		b.WriteString(" ")
 		b.WriteString(lines[j])
@@ -80,16 +76,107 @@ func block(lines []string, start int, needOpen bool) (text string, end int) {
 			switch {
 			case ch == '{':
 				depth++
-				opened = true
-			case ch == '}' && depth > 0 && (opened || !needOpen):
-				depth--
-				if depth == 0 {
-					return b.String(), j
+			case ch == '}' && depth > 0:
+				if depth--; depth == 0 {
+					return b.String()
 				}
 			}
 		}
 	}
-	return b.String(), start
+	return b.String()
+}
+
+// rethrow is a throw statement in a catch body.
+var rethrow = regexp.MustCompile(`(^|[^A-Za-z0-9_$])throw[[:space:]]`)
+
+// parseFailure is the exceptions a parse call throws on bad input (NumberFormatException) and its supertypes.
+var parseFailure = map[string]bool{"NumberFormatException": true, "IllegalArgumentException": true,
+	"RuntimeException": true, "Exception": true, "Throwable": true}
+
+// decidingCatches are the catch clauses that decide catch-no-400, each once, in try order: for every parse
+// call (anyParse) in a try, the first clause catching its failure (parseFailure, a type's last name) on the
+// innermost enclosing try that has one, the failure propagating outward past a try without one and past a
+// clause that throws (it rethrows or replaces the failure, so an enclosing catch answers); when no enclosing
+// try catches it, the first clause of the innermost enclosing try that has clauses, unless a clause threw it
+// on. A parse in no try with a catch decides nothing (input-400 owns it).
+func decidingCatches(t javasrc.Tries) []javasrc.Catch {
+	type key struct{ try, clause int }
+	chosen := map[key]bool{}
+	for _, loc := range anyParse.FindAllStringIndex(t.Text, -1) {
+		first, found, thrown := key{-1, 0}, false, false
+		for i := len(t.List) - 1; i >= 0 && !found; i-- { // innermost first: a nested try comes after its outer one
+			tr := t.List[i]
+			if !(tr.At < loc[0] && loc[0] < tr.Body.Close) || len(tr.Catches) == 0 {
+				continue
+			}
+			if first.try < 0 {
+				first = key{i, 0}
+			}
+			for j, c := range tr.Catches {
+				if !catches(c) {
+					continue
+				}
+				if rethrow.MatchString(t.Text[c.Body.Open:min(c.Body.Close+1, len(t.Text))]) {
+					thrown = true // the failure leaves this try: an enclosing catch answers it
+				} else {
+					chosen[key{i, j}], found = true, true
+				}
+				break
+			}
+		}
+		if !found && !thrown && first.try >= 0 {
+			chosen[first] = true
+		}
+	}
+	var out []javasrc.Catch
+	for i, tr := range t.List {
+		for j, c := range tr.Catches {
+			if chosen[key{i, j}] {
+				out = append(out, c)
+			}
+		}
+	}
+	return out
+}
+
+// owner is the try statement clause c is attached to.
+func owner(t javasrc.Tries, c javasrc.Catch) javasrc.Try {
+	for _, tr := range t.List {
+		for _, x := range tr.Catches {
+			if x.At == c.At {
+				return tr
+			}
+		}
+	}
+	return javasrc.Try{}
+}
+
+// catches reports whether clause c catches a parse failure.
+func catches(c javasrc.Catch) bool {
+	for _, ty := range c.Types {
+		if parseFailure[ty[strings.LastIndexByte(ty, '.')+1:]] {
+			return true
+		}
+	}
+	return false
+}
+
+// inTry reports whether offset off (in t.Text) lies inside a try statement, its resource specification or its
+// block (javasrc.TryBlocks), whose try keyword is in the same method or class-level lambda body as off
+// (javasrc.Scopes, 1-based line): a try of another method, or one that closed before off, guards nothing; one
+// that never closes (an unbalanced file) still counts. A line in no body has no try.
+func inTry(t javasrc.Tries, scopes []javasrc.Method, line, off int) bool {
+	m, ok := javasrc.Enclosing(scopes, line)
+	if !ok {
+		return false
+	}
+	start := t.Offset(m.Start)
+	for _, tr := range t.List {
+		if tr.At >= start && tr.At < off && off < tr.Body.Close {
+			return true
+		}
+	}
+	return false
 }
 
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
@@ -126,7 +213,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if !handler.MatchString(ln) {
 			continue
 		}
-		body, _ := block(lines, i, false)
+		body := block(lines, i)
 		if write.MatchString(body) && !auth.MatchString(body) {
 			add(lint.Fail, "auth", i+1, msgAuth)
 		}
@@ -141,43 +228,17 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		}
 	}
 
-	for i, ln := range lines {
-		if !tryOpen.MatchString(ln) {
-			continue
-		}
-		body, end := block(lines, i, false)
-		if !anyParse.MatchString(body) {
-			continue
-		}
-		catch := -1
-		// The try's closing line counts: "} catch (E e) {" is the usual shape (the awk began one line
-		// later and never read it).
-		for k := end; k < len(lines) && k <= end+4; k++ {
-			if catchOpen.MatchString(lines[k]) {
-				catch = k
-				break
-			}
-		}
-		if catch < 0 {
-			continue
-		}
-		if cbody, _ := block(lines, catch, true); !badRequest.MatchString(cbody) {
-			add(lint.Unset, "catch-no-400", catch+1, msgCatch)
+	tries := javasrc.TryBlocks(code)
+	for _, c := range decidingCatches(tries) {
+		if !badRequest.MatchString(tries.Text[c.Body.Open:min(c.Body.Close+1, len(tries.Text))]) &&
+			!rereads(tries.Text, owner(tries, c), c) {
+			add(lint.Unset, "catch-no-400", tries.Line(c.At), msgCatch)
 		}
 	}
 
+	scopes := f.Scopes()
 	for i, ln := range lines {
-		if !parse.MatchString(ln) {
-			continue
-		}
-		inTry := false
-		for k := max(i-5, 0); k <= i; k++ {
-			if tryOpen.MatchString(lines[k]) {
-				inTry = true
-				break
-			}
-		}
-		if !inTry {
+		if loc := parse.FindStringIndex(ln); loc != nil && !inTry(tries, scopes, i+1, tries.Offset(i+1)+loc[0]) {
 			add(lint.Fail, "input-400", i+1, msgInput)
 		}
 	}

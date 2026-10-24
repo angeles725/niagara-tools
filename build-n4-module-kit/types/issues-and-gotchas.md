@@ -82,7 +82,7 @@ The `started()` + `Sys.atSteadyState()` guard fires exactly-once across both pat
 the NotRunningException race on boot.  Missing `clockChanged` leaves a stale absolute
 next-fire target after an NTP/DST shift.
 **Live case:** BDefrostController (ColdRoomPan-rt), PANCCADIA León, defrost never fired.
-[ev: corpus B729 §729.4, retro self-firing-timer] — **Kit coverage: types/logic.md § Safety fail-modes & timers (FOLDED)**
+[ev: corpus B729 §729.4; retro self-firing-timer-needs-started-not-only-atsteadystate #1] — **Kit coverage: types/logic.md § Safety fail-modes & timers (FOLDED)**
 **Lint check:** `lint-timers.sh atSteadyState-only-timer` WARN — detects a class that arms in
 `atSteadyState()` without a `started()` override.
 [ev: retro 2026-09-18-insights-issues-catalog-deltas Δ2]
@@ -104,7 +104,7 @@ the display anchor slot (e.g., `nextDefrostTime`) remains null/uninitialized per
 **Fix:** write all state and anchor slots BEFORE calling `Clock.schedule(...)`.  Guard any
 `Clock.schedule` that is reachable from `activateLinks`/`changed` with
 `if(!Sys.atSteadyState()) return;` to prevent early scheduling on boot.
-[ev: corpus B729 §729.4, retro self-firing-timer item 3] — **Kit coverage: retro self-firing-timer
+[ev: corpus B729 §729.4; retro self-firing-timer-needs-started-not-only-atsteadystate #3; retro self-firing-timer-needs-started-not-only-atsteadystate #2] — **Kit coverage: retro self-firing-timer-needs-started-not-only-atsteadystate
 (FOLDED); not yet a lint check**
 
 ### B4 · Clock.schedule zero-delay: Math.max(0L, delay) floor at 0 is still rejected
@@ -431,7 +431,8 @@ component is already mounted, so a row is a question ("can this component be unm
 [ev: code javax/baja/sys/BComponent.java:321-324] [ev: code javax/baja/sys/BComplex.java:386-390]
 [ev: retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ1]
 
-[ev: code BComplex.java:850-851; code BComponent.java:630-635; Apillm fix 2026-09-21] —
+The Apillm-wb fix of 2026-09-21 (`BApillmImporterManager`) is recorded in that retro.
+[ev: code BComplex.java:850-851; code BComponent.java:630-635; retro wb-mapping-ord-npe-and-wsl-windows-jdk Δ1] —
 **Kit coverage: this entry (FOLDED); lint LANDED (`toolbelt/lint-set-null-ord.sh`)**
 
 ### H4 · A Modbus point reads `{ok}` with zero or an absurd value `[ev: retro devguide415-r2-drivers-protocols Δ6]`
@@ -482,8 +483,9 @@ throttling — only the CALL FREQUENCY needed bounding, not the math.
 
 **Lint check:** `lint-changed-hot-write.sh` WARN — a `changed(Property, …)` override with >=6
 `p ==` branches guarding `execute()`, no `Clock.millis()`/`Clock.schedule` rate guard in the
-callback body, AND a non-transient slot write reachable from it.
-[ev: corpus B1158; BCompressorControl.java:1850-1871,2019-2021] — **Kit coverage:
+callback body, AND a non-transient slot write reachable from it. Real shape: CompPan v2.1.0 `BCompressorControl`,
+changed() at lines 1850-1871 and the hours writes at 2019-2021; that version is in no client checkout now, B1158 quotes it.
+[ev: corpus B1158 §1158.2] — **Kit coverage:
 lint-changed-hot-write.sh (FOLDED)**
 
 ### I2 · A correctly non-transient accumulator is WRITTEN every cycle instead of on a checkpoint tick `[ev: retro live-diagnosis-hardening-deltas Δ4]`
@@ -506,8 +508,9 @@ once on start from the persisted slot.
 **Lint check:** `lint-persist-hot-write.sh` WARN — a non-transient property setter called from
 `changed()` or its one-hop callee with no cadence guard (`Clock.millis()` comparison or a `%`
 counter test) within 5 lines of the call. Pairs with `lint-changed-hot-write.sh` (I1): both fire
-on the same real shape, from two different angles (callback fan-in vs. the setter call site).
-[ev: corpus B1159; BCompressorControl.java:326,1403,2019] — **Kit coverage:
+on the same real shape, from two different angles (callback fan-in vs. the setter call site). Real shape: CompPan
+v2.1.0 `BCompressorControl` lines 326, 1403 and 2019 (in no client checkout now; B1159 quotes them).
+[ev: corpus B1159 §1159.1] — **Kit coverage:
 lint-persist-hot-write.sh (FOLDED)**
 
 ### I3 · A machine- or session-specific default path ships in source `[ev: retro modular-line-efficient-quality Δ5]`

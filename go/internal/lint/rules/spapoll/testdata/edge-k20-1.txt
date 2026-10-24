@@ -1,0 +1,15 @@
+-- args --
+@DIR@/e
+-- want --
+exit 3
+ERROR  lint-spa-poll-no-recovery  @DIR@/e  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- a/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- b/b.js --
+x();
+-- e/x.css --
+x

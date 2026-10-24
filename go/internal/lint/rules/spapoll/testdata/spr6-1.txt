@@ -1,0 +1,32 @@
+-- args --
+--strict
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/rc/index.html --
+<script>
+const T = { pollMs: 5000, fetchTimeoutMs: 8000, recoverMs: 30000, ceilingMs: 600000 };
+let lastOkAt = Date.now();
+function watchdog() {
+  const since = Date.now() - lastOkAt;
+  if (since > T.ceilingMs) { location.reload(); }
+  if (since > T.recoverMs) {
+    fetchT("/api/data", {}, T.fetchTimeoutMs).then(function (r) { return r.json(); })
+      .then(function () { location.reload(); }).catch(function () {});
+  }
+}
+async function poll() {
+  try {
+    await readJson();
+    lastOkAt = Date.now();
+    paint("live");
+  } catch (err) {
+    paint("error");
+  } finally {
+    watchdog();
+    setTimeout(poll, T.pollMs);
+  }
+}
+setTimeout(poll, T.pollMs);
+</script>

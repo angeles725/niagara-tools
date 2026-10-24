@@ -1,0 +1,23 @@
+-- args --
+@DIR@/src
+-- want --
+exit 3
+WARN  lint-bformat-call  @DIR@/src/a/config.bog:3  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/src/a/config.bog:4  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/src/a/config.bog:6  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/src/p/x.palette:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+lint-bformat-call: @DIR@/src/z/bad.bog:2:1: element <p> opened at 1:1 is never closed
+-- src/a/config.bog --
+<bajaObjectGraph version="4.0">
+<!-- <p v="%user%"/> -->
+<p n="ent" v="&#37;user&#37;"/>
+<p n="split"
+   v="%time(HH:mm)%"/>
+<p n="txt">Hi %user%</p>
+<p n="ok" v="%time()% %user()%"/>
+</bajaObjectGraph>
+-- src/p/x.palette --
+<palette><p v="%time()%"/><![CDATA[ x ]]><q>%user%</q></palette>
+-- src/z/bad.bog --
+<p v="%user%">

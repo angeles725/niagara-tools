@@ -23,6 +23,8 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "${TMPDIR_T}/gradlew.args"
 printf '%s\n' "$*" >> "${TMPDIR_T}/gradlew.calls.log"
+# FAKE_GRADLEW_STDOUT: text a slotomatic invocation prints (a Slot-o-Matic skip report, K15)
+if [[ -n "${FAKE_GRADLEW_STDOUT:-}" && "$*" == *slotomatic* ]]; then printf '%s\n' "$FAKE_GRADLEW_STDOUT"; fi
 exit "${FAKE_GRADLEW_EXIT:-0}"
 STUB
     chmod +x "$TMPDIR_T/fakebin/gradlew"
@@ -392,6 +394,25 @@ ENVEOF
     [ -f "$TMPDIR_T/gradlew.calls.log" ]
     [ "$(wc -l < "$TMPDIR_T/gradlew.calls.log")" -eq 1 ]
     [[ "$(cat "$TMPDIR_T/gradlew.calls.log")" == *"slotomatic"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# T19b: slotomatic exits 0 but skipped a file (K15) → exit 15, file named, sin build
+# The shared detector (toolbelt/lib/slotomatic-skip.sh) reads the captured slotomatic output.
+# [ev: retro r10-slotomatic-skip-fail-open Δ1]
+# Named mutation: drop the slotomatic_skip_scan call in run_slotomatic -> T19b exits 0 and builds.
+# ---------------------------------------------------------------------------
+@test "T19b: slotomatic that skipped a file exits 15, names it, and does not build" {
+    export FAKE_GRADLEW_STDOUT="WARNING: Could not process /x/src/BHmiStatus.java: Found multiple metadata blocks"
+    run bash "$SCRIPT" \
+        --env-file "$TMPDIR_T/dot_env_local" \
+        --no-backup \
+        --mode A \
+        --with-slotomatic
+    [ "$status" -eq 15 ]
+    [[ "$output" == *"FAIL slotomatic-skip /x/src/BHmiStatus.java"* ]]
+    [[ "$output" == *"K15"* ]]
+    [ "$(wc -l < "$TMPDIR_T/gradlew.calls.log")" -eq 1 ]
 }
 
 # ---------------------------------------------------------------------------
@@ -831,4 +852,45 @@ STUB
     unset FAKE_OLD_VERSION FAKE_NEW_VERSION
     run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
     [ "$status" -eq 52 ]
+}
+
+# R10 shared compare (build-n4-module-kit/toolbelt/lib/vendor-version.sh vv_cmp, the same helper build.sh's drift
+# gate uses): the built version must be numerically HIGHER than the deployed one. 1.3 -> 1.3.0 is the same version
+# (exit 51), a lower version is a downgrade (exit 54), and a differing non-numeric suffix cannot be ordered (exit 52).
+@test "NG-version-trailing-zero: 1.3 -> 1.3.0 with changed bytes is not a bump (exit 51)" {
+    # Mutation: NG-version-numeric -- a string compare reads '1.3' != '1.3.0' as a bump and deploys (exit 0).
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.3.0
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 51 ]
+    [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+}
+
+@test "NG-version-downgrade: a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) is refused as a downgrade (exit 54); 1.3 -> 1.4 deploys" {
+    # Mutation: NG-version-downgrade -- dropping the vv_cmp -1 branch counts a downgrade as a bump (exit 0).
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    local pair
+    for pair in 1.4:1.3 1.10:1.9; do
+        export FAKE_OLD_VERSION="${pair%%:*}" FAKE_NEW_VERSION="${pair##*:}"
+        run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+        [ "$status" -eq 54 ]
+        [[ "$output" == *"vendorVersion went down (${pair%%:*} -> ${pair##*:})"* ]]
+        [ "$(cat "$TMPDIR_T/modules/test-rt.jar")" = "old" ]
+    done
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.4
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"version-bump ok (test-rt.jar: 1.3 -> 1.4)"* ]]
+}
+
+@test "NG-version-incomparable: a differing non-numeric suffix (1.3 -> 1.3-rc) cannot be ordered (exit 52), never a bump" {
+    # Mutation: NG-version-incomparable -- treating an incomparable pair as 'different' deploys an unordered version.
+    _gate_env; _fake_gate 0
+    printf 'old' > "$TMPDIR_T/modules/test-rt.jar"; printf 'new' > "$TMPDIR_T/fakebin/test/test-rt/build/libs/test-rt.jar"
+    export FAKE_OLD_VERSION=1.3 FAKE_NEW_VERSION=1.3-rc
+    run bash "$SCRIPT" --env-file "$TMPDIR_T/env_gate" --no-backup --mode C
+    [ "$status" -eq 52 ]
+    [[ "$output" == *"not comparable"* ]]
 }

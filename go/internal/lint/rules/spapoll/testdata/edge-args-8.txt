@@ -1,0 +1,13 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-spa-poll-no-recovery.sh [--strict] <ux-src-root>
+-- a/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- b/b.js --
+x();

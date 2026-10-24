@@ -10,19 +10,28 @@ var (
 	identRe    = regexp.MustCompile(`^[A-Za-z][\w.-]*$`)
 	className  = regexp.MustCompile(`^[A-Z][A-Za-z0-9_$]*$`)
 	versionSeg = regexp.MustCompile(`^[\d.]+$`)
-	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*[a-z]?(?:-\d+)?`)
+	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*(?:\.?[a-z])?(?:-\d+)?`)
 	aliasEq    = regexp.MustCompile("`([A-Z]{1,3})=([\\w./-]+)`")
 	aliasDir   = regexp.MustCompile("`([A-Z]{1,3})/` = `([\\w./-]+)`")
 	aliasCited = regexp.MustCompile("`([\\w./-]+)`, cited `([A-Z]{1,3}):`")
+	aliasHelp  = regexp.MustCompile("\\b([A-Z]{1,3})\\s+=\\s+niagara-help\\s+(\\d+(?:\\.\\d+)+)\\s+`([\\w./-]+)`")
+	plainWord  = regexp.MustCompile(`^[A-Za-z][a-z]*$`)
+	copyWords  = map[string]bool{"vineflower": true, "decompiled": true, "extracted": true}
 )
 
-// aliases reads the per-card path aliases: `V=dir`, `G/` = `dir`, and (`file`, cited `CL:`).
+// maxAliasDepth bounds the expansion of an alias defined by another (`V=R/vineflower`).
+const maxAliasDepth = 3
+
+// aliases reads the per-card path aliases: `V=dir`, `G/` = `dir`, (`file`, cited `CL:`), and a legend
+// GD = niagara-help <ver> `dir/`, that may wrap a line.
 func aliases(lines []string, fenced []bool) map[string]string {
 	m := map[string]string{}
+	var prose []string
 	for i, l := range lines {
 		if fenced[i] {
 			continue
 		}
+		prose = append(prose, l)
 		for _, re := range []*regexp.Regexp{aliasEq, aliasDir} {
 			for _, s := range re.FindAllStringSubmatch(l, -1) {
 				m[s[1]] = strings.TrimSuffix(s[2], "/")
@@ -32,19 +41,29 @@ func aliases(lines []string, fenced []bool) map[string]string {
 			m[s[2]] = s[1]
 		}
 	}
+	for _, s := range aliasHelp.FindAllStringSubmatch(strings.Join(prose, " "), -1) {
+		m[s[1]] = "niagara-help/versions/" + s[2] + "/" + strings.TrimSuffix(s[3], "/")
+	}
 	return m
 }
 
-// expand rewrites `X/rest` to `<alias X>/rest` and a bare `X` to its alias.
+// expand rewrites `X/rest` to `<alias X>/rest` and a bare `X` to its alias, through aliases of aliases,
+// and an ASCII `...` segment to the `…` ellipsis.
 func expand(path string, aliases map[string]string) string {
-	head, rest, slash := strings.Cut(path, "/")
-	if a, ok := aliases[head]; ok {
-		if !slash {
-			return a
+	for i := 0; i < maxAliasDepth; i++ {
+		head, rest, slash := strings.Cut(path, "/")
+		a, ok := aliases[head]
+		if !ok {
+			break
 		}
-		return a + "/" + rest
+		if path = a; slash {
+			path = a + "/" + rest
+		}
 	}
-	return path
+	if rest, ok := strings.CutPrefix(path, ".../"); ok {
+		path = "…/" + rest
+	}
+	return strings.ReplaceAll(path, "/.../", "/…/")
 }
 
 // splitLines cuts `path:ranges` into the path and its ranges (nil when the suffix is no range list).
@@ -68,6 +87,17 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 	f := strings.Fields(rest)
 	switch word {
 	case "code":
+		for i := range f {
+			f[i] = strings.Trim(f[i], "`,;")
+		}
+		if len(f) >= 3 && copyWords[f[1]] && looksPath(f[2]) {
+			p := pathPointer(Vineflower, strings.Join(f[2:], " "), aliases, c)
+			p.Target, p.File = f[0], p.Target
+			if f[1] != "vineflower" {
+				p.Kind, p.File = Code, f[1]+"/"+p.File
+			}
+			return []Pointer{p}
+		}
 		switch {
 		case len(f) == 0:
 			return unparsed(c, "no file named")
@@ -81,6 +111,13 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 			return []Pointer{p}
 		}
 		p := pathPointer(Code, rest, aliases, c)
+		p.Target, p.File = "", p.Target
+		return []Pointer{p}
+	case "vineflower":
+		if len(f) == 0 || !looksPath(strings.Trim(f[0], "`")) {
+			return unparsed(c, "no file named")
+		}
+		p := pathPointer(Vineflower, rest, aliases, c)
 		p.Target, p.File = "", p.Target
 		return []Pointer{p}
 	case "devguide", "guide":
@@ -113,7 +150,7 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 // pathPointer reads `<path>[:ranges][ § heading | token…]`.
 func pathPointer(k Kind, text string, aliases map[string]string, raw string) Pointer {
 	f := strings.Fields(text)
-	path, lines := splitLines(strings.Trim(f[0], "`"))
+	path, lines := splitLines(strings.Trim(f[0], "`,;"))
 	p := Pointer{Kind: k, Target: expand(path, aliases), Lines: lines, Raw: raw}
 	extra := f[1:]
 	if len(extra) > 0 && strings.HasPrefix(extra[0], "§") {
@@ -121,11 +158,26 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 		p.Sections = sectionRange(heading(h))
 		return p
 	}
+	for len(extra) > 0 && strings.HasPrefix(extra[0], ":") {
+		rs, ok := ParseRanges(strings.Trim(extra[0], ":`,;"))
+		if !ok {
+			break
+		}
+		p.Lines, extra = append(p.Lines, rs...), extra[1:]
+	}
+	if len(extra) >= 2 && p.Lines == nil && (extra[0] == "line" || extra[0] == "lines") {
+		if rs, ok := ParseRanges(extra[1]); ok {
+			p.Lines, extra = rs, extra[2:]
+		}
+	}
+	prose := p.Lines != nil
 	for _, w := range extra {
-		if lines == nil && identRe.MatchString(w) {
-			p.Tokens = append(p.Tokens, w)
-		} else {
+		// A plain word (`list`, `Model`) opens prose: it and every word after it are notes.
+		prose = prose || plainWord.MatchString(w)
+		if prose || !identRe.MatchString(w) {
 			p.Notes = append(p.Notes, w)
+		} else {
+			p.Tokens = append(p.Tokens, w)
 		}
 	}
 	return p

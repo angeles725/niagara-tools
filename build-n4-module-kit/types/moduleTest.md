@@ -358,7 +358,7 @@ public boolean isPlatformReady() { return ...; }
 `Requires.OsType` values: `WIN32`, `LINUX`, `QNX` (from the decompiled enum).  The listener
 (`RequiresListener`) is wired into the TestNG suite by `test-wb`; no extra setup needed.
 
-`[ev: code docSource RequiresListener.java :25-196, TestRunnerNg.java:341; vineflower annotation/Requires.java :11-19]`
+`[ev: code docSource RequiresListener.java :25-196, TestRunnerNg.java:341; organized/test/test-wb/vineflower/com/tridium/testng/annotation/Requires.java:11-19]`
 
 ---
 
@@ -414,7 +414,7 @@ Pair with the known gap: `-ux` modules lack Jasmine palette coverage (see R6 / D
 ### File layout
 
 Two layouts exist. The 4.14+ wizard and course layout puts tests under a `test.` package root — the devkit-wb
-4.14.0.162 test template declares `package test.${package};` (`gradle/videodriver/BNfooVideoDriverTest.java.vm:4`), and the
+4.14.0.162 test template declares `package test.${package};` (`organized/devkit/devkit-wb/extracted/gradle/videodriver/BNfooVideoDriverTest.java.vm:4`), and the
 course suite lives in `srcTest/test/com/tridiumuniversity/slides/…` with `package test.com.tridiumuniversity.slides.<topic>`
 and a class-level `@Test` (corpus B1252 §1252.3.1). New modules use it. The older layout below is what the kit showed before; whether 4.14+ tooling still discovers it was not verified `[INFER]`. Start the
 registration file from `templates/moduleTest-include.xml`. `[ev: retro n4-course-lexicon-logging-testing Δ3]`
@@ -476,6 +476,6 @@ the main Gradle section above).
 - **`-ux` modules lack Jasmine:** JS-side palette/component tests for dashboard UX modules must use the
   Jasmine harness documented in `types/dashboard.md §DUX-TEST1` — `moduleTest` covers the Java side only.
 
-`[ev: corpus B1028 SDE7-G1; code BTestNgStation.java, TestHelper.java]`
+`[ev: corpus B1028 SDE7-G1; code BTestNgStation.java; code TestHelper.java]`
 
 <!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro moduletest-patterns] -->

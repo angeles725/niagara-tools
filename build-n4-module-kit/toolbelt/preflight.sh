@@ -224,14 +224,24 @@ if [ "$WIN_PATH_FAIL" -eq 0 ]; then
   elif ! command -v lsof >/dev/null 2>&1; then
     row SKIP "jar-lock" "lsof not in PATH — install lsof to enable jar-lock detection"
   else
-    LOCKED=""
     LSOF_OUT="$(lsof -Fn 2>/dev/null || true)"
+    # The jar set and the listing meet in ONE awk: a per-jar `printf "$LSOF_OUT" | grep` re-forks and
+    # re-scans the whole listing for every jar (410 jars on a busy host: >10 min, #432). awk reads the
+    # jar paths (regular files, glob order) as a set, then the listing once, then prints the held jars'
+    # basenames in glob order. A match is a whole `n<path>` line, as `grep -xF` matched before.
+    # [ev: retro r10-fork-per-line-again Δ1]
+    JARS=()
     for jar in "$NH/modules/"*.jar; do
-      [ -f "$jar" ] || continue
-      if printf '%s\n' "$LSOF_OUT" | grep -qxF "n$jar"; then
-        LOCKED="$LOCKED $(basename "$jar")"
-      fi
+      [ -f "$jar" ] && JARS+=("$jar")
     done
+    LOCKED=""
+    if [ "${#JARS[@]}" -gt 0 ] && [ -n "$LSOF_OUT" ]; then
+      LOCKED="$(printf '%s\n' "$LSOF_OUT" | awk '
+        NR == FNR { n++; path[n] = $0; want["n" $0] = n; next }
+        ($0 in want) { held[want[$0]] = 1 }
+        END { for (i = 1; i <= n; i++) if (i in held) { b = path[i]; sub(/.*\//, "", b); printf " %s", b } }
+      ' <(printf '%s\n' "${JARS[@]}") -)"
+    fi
     if [ -n "$LOCKED" ]; then
       row WARN "jar-lock" "jars held by a process (station running?):$LOCKED"
     elif [ -z "$LSOF_OUT" ]; then

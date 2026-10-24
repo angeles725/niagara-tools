@@ -11,10 +11,10 @@ setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   # copy build.sh next to a stub gate so the sibling lookup resolves to the stub
   mkdir -p "$TMPDIR_T/kit"; cp "$KIT/toolbelt/build.sh" "$TMPDIR_T/kit/build.sh"
-  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh and lib/signing-block.sh relative to its own
-  # dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
+  # build.sh sources lib/fs-type.sh (Δ7/Δ2), lib/method-boundary.sh, lib/signing-block.sh and lib/slotomatic-skip.sh
+  # relative to its own dir — copy the real libs alongside the copied build.sh so that sibling lookup resolves too.
   mkdir -p "$TMPDIR_T/kit/lib"
-  cp "$KIT/toolbelt/lib/fs-type.sh" "$KIT/toolbelt/lib/method-boundary.sh" "$KIT/toolbelt/lib/signing-block.sh" "$TMPDIR_T/kit/lib/"
+  cp "$KIT"/toolbelt/lib/*.sh "$TMPDIR_T/kit/lib/"
   # shellcheck disable=SC2016
   # why: $* and ${FAKE_VERIFY_EXIT} must reach the generated stub unexpanded
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" > "%s/verify.args"\nexit "${FAKE_VERIFY_EXIT:-0}"\n' "$TMPDIR_T" > "$TMPDIR_T/kit/verify-module.sh"
@@ -318,6 +318,90 @@ _mkjar_ver() {
   run "$B" --no-drift-check "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 0 ]
   [ -e "$TMPDIR_T/verify.args" ]
+}
+
+# ================= R10 two-part vendorVersion (chihuahua defaultModuleVersion("1.3")) =================
+# Niagara accepts an X.Y module vendorVersion; the gate used to read only X.Y.Z, so a valid two-part
+# module was reported "vendorVersion is unreadable" (exit 52). Versions compare numerically per
+# component with a missing component = 0, so 1.3 -> 1.3.0 is NOT a bump.
+# Mutation: BS-drift-two-part -- reverting _module_own_version's regex to X.Y.Z turns these red (52).
+@test "BS-drift-two-part-fail: two-part vendorVersion unchanged with changed bytes -> exit 51 (drift), not 52" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.3" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+  [[ "$output" == *"vendorVersion is still 1.3."* ]]
+  [[ "$output" != *"cannot verify"* ]]
+}
+
+@test "BS-drift-two-part-pass: two-part vendorVersion bumped (1.3 -> 1.4, 1.3 -> 1.3.1) -> no drift FAIL" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for nv in 1.4 1.3.1; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/verify.args"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$nv" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [ -e "$TMPDIR_T/verify.args" ]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
+@test "BS-drift-two-part-trailing-zero: 1.3 -> 1.3.0 is the same version (missing component = 0) -> exit 51" {
+  # Mutation: BS-drift-version-numeric -- a string comparison sees '1.3' != '1.3.0' as a bump (exit 0).
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.3.0" "NEW-behavior-fix"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 51 ]
+}
+
+# R10 shared compare (lib/vendor-version.sh vv_cmp): a LOWER vendorVersion than the deployed jar is a WARN row,
+# not a FAIL — a deliberate rollback is legitimate — and the build still passes. A differing non-numeric suffix
+# is "incomparable" and keeps the gate's earlier reading: a changed version, no FAIL and no WARN.
+# Mutation: BS-drift-downgrade -- dropping the vv_cmp -1 branch loses the WARN row (the run still exits 0).
+@test "BS-drift-downgrade: changed bytes with a LOWER vendorVersion (1.4 -> 1.3, 1.10 -> 1.9) -> WARN 'vendorVersion went down', exit 0" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for pair in 1.4:1.3 1.10:1.9; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "${pair%%:*}" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "$TMPDIR_T/verify.args"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "${pair##*:}" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARN"*"Foo-rt vendorVersion went down (${pair%%:*} -> ${pair##*:})"* ]]
+    [ -e "$TMPDIR_T/verify.args" ]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
+@test "BS-drift-up-no-warn: a raised (1.9 -> 1.10) or incomparable-suffix (1.3 -> 1.3-rc) version passes with no downgrade WARN" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  for pair in 1.9:1.10 1.3:1.3-rc; do
+    _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "${pair%%:*}" "old-behavior"
+    rm -f "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar"
+    _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "${pair##*:}" "NEW-behavior-fix"
+    run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"went down"* ]]
+    rm -f "$TMPDIR_T/nh/modules/Foo-rt.jar"
+  done
+}
+
+@test "BS-drift-dependency-only: only a <dependency vendorVersion> floor, no module version -> exit 52 (fail closed)" {
+  mkdir -p "$TMPDIR_T/nh/modules"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.3" "old-behavior"
+  mkdir -p "$ROOT/Foo/Foo-rt/build/libs"
+  d="$(mktemp -d)"; mkdir -p "$d/META-INF"
+  printf '<module name="X" vendor="Angeles"><dependencies><dependency name="baja" vendorVersion="4.13"/></dependencies></module>\n' \
+    > "$d/META-INF/module.xml"
+  printf 'NEW-behavior-fix' > "$d/payload.txt"
+  (cd "$d" && zip -q -r "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" .); rm -rf "$d"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 52 ]
+  [[ "$output" == *"new=''"* ]]
 }
 
 # ================= R4-drift-gate-not-retry-safe (RDD resilience correction) =================
@@ -864,7 +948,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" == *"slot-o-matic skipped"*"BLimiter.java"* ]]
+  [[ "$output" == *"FAIL slotomatic-skip /x/src/com/a/BLimiter.java"* ]]
   [[ "$output" == *"K15"* ]]
 }
 
@@ -873,7 +957,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" != *"slot-o-matic skipped"* ]]
+  [[ "$output" != *"slotomatic-skip"* ]]
   [[ "$output" != *"K15"* ]]
 }
 
@@ -882,7 +966,7 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   chmod +x "$ROOT/gradlew"
   run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
   [ "$status" -eq 30 ]
-  [[ "$output" == *"slot-o-matic skipped C:"*"BLimiter.java"* ]]
+  [[ "$output" == *"FAIL slotomatic-skip C:"*"BLimiter.java"* ]]
 }
 
 @test "BS-slotomatic-hint-noskip: no 'Could not process' line -> generic rerun hint, no empty-marker advice" {
@@ -892,6 +976,46 @@ mkdir -p "%s/nh/.mirror-user-home/.tridium/security"
   [ "$status" -eq 30 ]
   [[ "$output" == *"slotomatic --info"* ]]
   [[ "$output" != *"empty BEGIN/END"* ]]
+}
+
+# BS-slotomatic-skip-on-success: the same skip when compileJava still PASSES (a stale region with two stamps keeps the
+# old generated slots compiling) — gradle ends BUILD SUCCESSFUL with a jar built from stale generated code. build.sh
+# must not pass it: exit 34, every skipped file named once, the K15 recovery. [ev: retro r10-slotomatic-skip-fail-open Δ1]
+# Named mutation: delete the success-branch slotomatic_skip_scan call in build.sh -> BS-slotomatic-skip-on-success
+# exits 0 (the build passes the skip through).
+_mk_gradlew_skip_success() {
+  printf '#!/usr/bin/env bash\necho "WARNING: Could not process /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "WARNING: The following files failed to compile: "\necho "WARNING:   /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks"\necho "BUILD SUCCESSFUL in 4s"\n%s\nexit 0\n' "${1:-}" > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+}
+
+@test "BS-slotomatic-skip-on-success: a skipped file in a passing gradle run -> exit 34 with the file and K15" {
+  _mk_gradlew_skip_success
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 34 ]
+  [ "$(grep -c 'FAIL slotomatic-skip /x/src/com/a/BHmiStatus.java' <<< "$output")" -eq 1 ]
+  [[ "$output" == *"K15"* ]]
+  [ ! -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-slotomatic-skip-clean: a passing gradle run with no skip is unchanged (exit 0, gate runs)" {
+  printf '#!/usr/bin/env bash\necho "> Task :Foo-rt:slotomatic"\necho "BUILD SUCCESSFUL in 4s"\nexit 0\n' > "$ROOT/gradlew"
+  chmod +x "$ROOT/gradlew"
+  run "$B" "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"slotomatic-skip"* ]]
+  [ -e "$TMPDIR_T/verify.args" ]
+}
+
+@test "BS-slotomatic-skip-restore: exit 34 restores the pre-build modules/<jar> (retry-safe like the drift gate)" {
+  mkdir -p "$TMPDIR_T/nh/modules" "$ROOT/Foo/Foo-rt/build/libs"
+  _mkjar_ver "$TMPDIR_T/nh/modules/Foo-rt.jar" "1.0.0" "old-behavior"
+  cp "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
+  _mkjar_ver "$ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar" "1.0.1" "stale-generated"
+  _mk_gradlew_skip_success "cp -p $ROOT/Foo/Foo-rt/build/libs/Foo-rt.jar $TMPDIR_T/nh/modules/Foo-rt.jar"
+  run "$B" --profiles rt "$ROOT" Foo "$TMPDIR_T/nh"
+  [ "$status" -eq 34 ]
+  [[ "$output" == *"Restored"* ]]
+  cmp -s "$TMPDIR_T/nh/modules/Foo-rt.jar" "$TMPDIR_T/pre-build-baseline.jar"
 }
 
 @test "BS-symroot: a symlinked repo root lists the gradle roots below it like find -H (issue #329)" {

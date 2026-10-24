@@ -1,0 +1,24 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+ui-thread-traversal  WARN  @DIR@/src/W.java:5  doInvoke -> BqlQuery without invokeLater/BJobService (B809: flag for human review)
+ui-thread-traversal  WARN  @DIR@/src/W.java:8  doInvoke -> helper() -> getNavNodes without invokeLater/BJobService (B809: flag for human review)
+ui-thread-traversal  WARN  @DIR@/src/W.java:12  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+-- stderr --
+-- src/W.java --
+class W {
+  public void doInvoke() {
+    builder = new BBqlQueryBuilder(service, ord, false);
+  }
+  public void doInvoke() {
+    BqlQuery q = BqlQuery.make(text);
+  }
+  public void doInvoke() { helper(); }
+  private void helper() {
+    BINavNode[] n = node.getNavNodes();
+  }
+  public void doInvoke() {
+    root.getNavChildren(); invokeLaterLike();
+  }
+}

@@ -1,0 +1,13 @@
+-- args --
+@DIR@/b
+@DIR@/a
+-- want --
+exit 0
+-- stderr --
+-- a/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- b/b.js --
+x();

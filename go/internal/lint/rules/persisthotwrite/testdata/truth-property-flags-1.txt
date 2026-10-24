@@ -1,0 +1,21 @@
+declared difference (truth fix T4, property flags): the awk read one declaration per line and its flags after the
+line's LAST "newProperty(" up to the first ",", on that line only: aHours, whose Flags.TRANSIENT is on the next line,
+counted as non-transient, and bHours took cHours' TRANSIENT while cHours was never read. Every declaration is read
+now, its flags from its own "newProperty(" to the first "," (across lines).
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not hot; the rows are unchanged.)
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/Y.java:6  setBHours(...) writes non-transient slot 'bHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- Y.java --
+class Y {
+  public static final Property aHours = newProperty(
+      Flags.TRANSIENT, 0.0, null);
+  Property bHours = newProperty(0, 0.0, null); Property cHours = newProperty(Flags.TRANSIENT, 1, null);
+  public void changed(Property p, Context cx) {
+    setAHours(getAHours() + 1); setBHours(getBHours() + 1); setCHours(getCHours() + 1);
+  }
+}

@@ -209,6 +209,16 @@ var methodsCases = []methodsCase{
 // goOnlyMethodsCases are the declared differences of Methods from mb_parse (package doc): TestMethods runs
 // them, TestDifferentialAwk does not feed them to the awk lib.
 var goOnlyMethodsCases = []methodsCase{
+	{"a body ends where its own brace closes, not the deepest block of its first line", `class B {
+  void x() { if (a) {
+      y();
+    }
+    z();
+  }
+  void w(String s) {	try	{ p(s); }
+    catch (Exception e) { q(); }
+  }
+}`, []Method{{"x", 2, 6}, {"w", 7, 9}}},
 	{"wrapped signature closing on the brace line", `class W {
   void m(int a,
       int b) {
@@ -302,5 +312,9 @@ func TestScopes(t *testing.T) {
 	f := NewFile("L.java", strings.Split(src, "\n"))
 	if !reflect.DeepEqual(f.Scopes(), want) {
 		t.Errorf("File.Scopes() = %v", f.Scopes())
+	}
+	open, _ := Strip([]string{"class U {", "  void a() {", "    try {", "      x();"})
+	if got, ms := Scopes(open), Methods(open); !reflect.DeepEqual(got, []Method{{"a", 2, 4}}) || ms != nil {
+		t.Errorf("unbalanced file: Scopes %v (want a 2-4), Methods %v (want none)", got, ms)
 	}
 }

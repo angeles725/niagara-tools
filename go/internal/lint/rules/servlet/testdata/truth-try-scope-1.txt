@@ -1,0 +1,37 @@
+declared difference (truth fix, try scope): input-400 accepted any "try {" on the parse line or the 5 lines above,
+with no method boundary and no check that the try is still open: doGet's one-line try covered doPost's parse
+(line 7), a try that closed before the parse covered it (line 11), and a parse 6 lines into its own try FAILed
+(line 20). A parse is guarded only by a try block of the same method or lambda body that encloses it now.
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  input-400  BSrv.java:7  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+FAIL  input-400  BSrv.java:11  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+-- stderr --
+-- m/BSrv.java --
+package com.x;
+public class BSrv extends BWebServlet {
+  public void doGet(WebOp op) {
+    try { a(); } catch (Exception e) { op.getResponse().sendError(400); }
+  }
+  public void doPost(WebOp op) {
+    int b = Integer.parseInt(op.get("b"));
+  }
+  public void service(WebOp op) {
+    try { a(); } catch (Exception e) { op.getResponse().sendError(400); }
+    int c = Integer.parseInt(op.get("c"));
+  }
+  void deep(WebOp op) {
+    try {
+      a();
+      a();
+      a();
+      a();
+      a();
+      int d = Integer.parseInt(op.get("d"));
+    } catch (NumberFormatException e) {
+      op.getResponse().sendError(400);
+    }
+  }
+}

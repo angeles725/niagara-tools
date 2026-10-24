@@ -22,9 +22,9 @@ that is slice S0.
 | `session` | `tools_read.py:33-195` (Context, auth latch/cooldown, scrub) |
 | `readtools` | `tools_read.py:198-500, 789-969` (connect … dangling outputs, `list_batches`, TOOLS) |
 | `bql` | `bql.py:1-221`, `tools_read.py:500-654` (output files, private dirs) |
-| `files` / `px` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:654-789` |
+| `files` / `px` / `pyxml` | `files.py:1-233` (Windows alias refusals at `station_path` 38-86), `tools_read.py:689-822`; `pyxml` is the expat parser `ET.fromstring` uses |
 | `token` | `safety.py:47-113` (canonical, `bound_args`, redact, `ConfirmationTokens`) |
-| `audit` / `journal` | `safety.py:156-311` (state-dir checks, `_JsonlFile`, `Journal` views, `AuditLog`) |
+| `journal` | `safety.py:156-311` (`_JsonlFile`, `Journal` views, `AuditLog`; the state-dir checks are `safety`'s since S6) |
 | `retro` | `retro.py:1-289` and `templates/retro.template.md` |
 | `plan` | `tools_write.py:76-216, 1260-1500` (coerce, to-BSON, `_process`, `_execute`, `_send_all`, `_record`) |
 | `writeops` | `tools_write.py:217-1240` (create, set, invoke, link, remove/snapshot/relink, rollback/frozen, save) |
@@ -99,6 +99,16 @@ refuses `--allow-writes` with the existing "not in this version" refusal.
 | S15 | #304 in-doubt matrix | See below |
 | S16 | Switch the default launcher to Go | Python kept one release as fallback |
 
+**Status (server v0.9.5).** S0-S9 merged: #337, #345, #353, #365, #383, #399, #413, #435, #451,
+#462; issues #448 (unreadable journal lines, section 12) and #466 (unreadable audit lines,
+section 13) then changed both servers together.
+`readtools.Register` (`go/internal/mcpn4/readtools/connect.go`) serves all 13 read tools:
+`n4_connect`, `n4_describe_session`, `n4_navigate`, `n4_read_slots`, `n4_list_links`,
+`n4_find_dangling_outputs`, `n4_bql_query`, `n4_inventory`, `n4_read_file`, `n4_list_px_views`,
+`n4_px_summary`, `n4_list_batches`, `n4_session_retro_draft`. S10-S16 are not started: the seven
+write tools answer the "not implemented" text (section 6), and `--allow-writes` is refused at
+start. Under the Go binary the suite runs 642 tests with 448 skipped (sections 12 and 13).
+
 **S15 in-doubt matrix.** Each branch gets an explicit Go test plus the black-box Python test,
 driven by `hook` faults and an unwritable state dir:
 - `_in_doubt` (1075),
@@ -167,8 +177,9 @@ MCP_N4_IMPL=go python3 -m unittest discover -s mcp-n4-kit/tests
 
 **Validating the inventory.** Any stdio server can stand in for the binary. With
 `MCP_N4_GO_BIN` pointing at a wrapper that runs `python3 -m mcp_n4.server "$@"` from the kit
-directory, the whole suite passes under `MCP_N4_IMPL=go` (590 tests, 339 skipped): every unmarked
-server test is black-box over stdio.
+directory, the whole suite passes under `MCP_N4_IMPL=go` (590 tests, 339 skipped at S0; 622 tests,
+349 skipped at `818d573e`, the inventory total below): every unmarked server test is black-box
+over stdio.
 
 **Categories.**
 
@@ -182,8 +193,8 @@ server test is black-box over stdio.
 `test_live_smoke.py`, `test_mutation_check.py`, `test_new_retro.py` and
 `test_methodology_names.py` cover dev tooling that stays Python, and `test_go_harness.py` covers
 the harness itself: they run unchanged under both implementations. Several `in-process` tests
-(start refusals, `TestRobustness` id handling, `TestServerTool`) can move to `make_server` in the
-slice that ports their code instead of getting a Go twin.
+(start refusals, `TestRobustness` id handling) can move to `make_server` in the slice that ports
+their code instead of getting a Go twin; S9 moved `test_retro.TestServerTool` this way.
 
 The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 `test_go_harness` fails when it and the markers disagree.
@@ -196,17 +207,18 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
+| `test_list_batches.py` | 6 | 0 | 0 | 0 | 0 | 0 | 6 |
 | `test_live_smoke.py` | 30 | 0 | 0 | 0 | 0 | 0 | 30 |
 | `test_methodology_names.py` | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 | `test_mutation_check.py` | 7 | 0 | 0 | 0 | 0 | 0 | 7 |
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
-| `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
+| `test_retro.py` | 36 | 20 | 0 | 1 | 0 | 21 | 15 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
+| `test_tools_destructive.py` | 101 | 4 | 24 | 28 | 2 | 58 | 43 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **622** | **166** | **56** | **105** | **22** | **349** | **273** |
+| **Total** | **642** | **166** | **56** | **105** | **18** | **345** | **297** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -407,3 +419,185 @@ followed, a group-writable state dir or a loose `audit.jsonl` is refused and lef
 **Known differences.** None found. `TestBqlAuditInWritesMode` (the `read` line in `audit.jsonl`)
 has a named Go twin that skips: the audit log runs only with `--allow-writes`, which the Go server
 refuses until S8/S10.
+
+## 11. S7 `files`, `px` and the station file reads
+
+**Packages.** `files` ports the path helpers of `files.py`: `station_path` (every refusal in
+Python's order and words: prefixes, length in code points, control characters, `|`, absolute,
+home and drive paths, directories, empty / `.` / `..` segments, `:`, segments ending in `.` or
+space, `.bog` / `.bog.gz`), `url_path` (`quote(seg, safe="")`, a lone surrogate failing as its
+segment's UnicodeEncodeError) and `is_text`; `Lower` is `str.lower()` as an ASCII comparison sees
+it (U+0130 lowers to `i` + U+0307). `px` ports `parse_px` and `bound_component`: the DOCTYPE /
+ENTITY refusal is `re.I`'s match (U+0130 and U+0131 match `i`), lists are `_Bounded`, counts keep
+first-seen order, `strip()` uses `str.isspace()`'s set. `pyxml` is `ET.fromstring(str)`: expat fed
+UTF-8 (a declared encoding is ignored) with namespace processing, ported from niagara-go
+`internal/pyxml` (b291c25c) without its DTD and encoding parts (parse_px refuses a DOCTYPE first;
+`Parse` answers `ErrDoctype` there). The differential found four expat 2.9.0 behaviours that port
+missed, now fixed here: an XML declaration after the root is junk, not misplaced; any non-ASCII
+character after `<` outside the root starts an element; a declaration keyword (`<!KEYWORD`) is
+ASCII only; and a prolog name's `:` makes it prefixed or an NMTOKEN (`:?`, `a:b:c?` invalid,
+`a:` at the end unclosed), with `#` and `%` names stopping at `:`. `readtools` serves
+`n4_read_file`, `n4_list_px_views` and `n4_px_summary` (`files.go`) on `box.Client.GetFile` (S3,
+`KindHTTPStatus` for 403/404) and S6's `query`, `outputPath` and `writePrivate`; `recordRead`
+names its target key (`file_ord`, `root`). `pyjson.EncodeUTF8` (S6's `utf8Strict`, moved) serves
+both the CSV writer and `url_path`.
+
+**Files.** `output_file` is S6's rule: `<state-dir>/files/<name>` for a plain name with an
+extension, checked before the GET, the dirs 0700, the file `O_EXCL` 0600 and removed on failure,
+never over an existing name or a dangling link; a read cut at `max_bytes` is not saved
+(`output_skipped`). The read caps are `files.DefaultMaxBytes` (2 MiB) up to `MaxBytesLimit`
+(16 MiB); `n4_px_summary` refuses a cut file, naming the cap.
+
+**Proof.** Under `MCP_N4_IMPL=go` `TestReadFileTool`, `TestReadFileOutput`,
+`TestListPxViewsTool` and `TestPxSummaryTool` run black-box (with stub handlers they failed 13
+times): no test skips on these three tools any more (622 tests, 448 skipped, from 461). The 16
+marked tests have Go twins: `files/paths_test.go` (TestFilePaths, plus the refusal table with its
+words and order), `px/px_test.go` (TestPxParser) and `files/tools_test.go` (the two `internals`
+ones on `readtoolstest.Station.Files`, plus output mode, overwrite, link and refusal-before-GET
+checks). Differentials on CPython 3.15: `pyxml.TestDifferentialPython` (probes and 3,000 mutants
+of two documents, plus niagara-go's 3,000-document expat suite when `PYXML_EXPAT_SUITE` names
+it; 360,000 mutants were run once), `files.TestHelpersDifferentialPython` (the refusal table
+behind both ORD prefixes, `url_path`, `is_text` against 16 content types),
+`px.TestParseDifferentialPython` (edge documents at two caps, 1,500 mutants, `bound_component`)
+and `readtools.TestFilesDifferentialPython` (the three tools: reply text and output file bytes and
+mode). `pyxml.TestPinnedExpatAnswers` keeps the four fixes without a Python.
+
+**Known differences.** None found. A DOCTYPE never reaches the parser in either implementation.
+
+## 12. S8 tokens, write scope, journal and audit, `n4_list_batches`
+
+**Packages.** `token` ports `safety.py:47-113`: `BoundArgs`, `Redact` (`str.lower()` is
+`pyjson.Lower`, moved from `files`: U+212A lowers to `k`, U+0130 to `i` + U+0307) and `Tokens`
+(`ConfirmationTokens`: `<expiry>.<nonce>.<mac>`, HMAC-SHA256 over `canonical([tool,
+canonical(bound_args), plan_hash, expiry, nonce])` under a per-process random key; malformed,
+mismatch, expired and reused refusals in that order and in Python's words; an expired nonce is
+dropped; entries not after the clock are pruned on issue). `ord` ports `child_ord`/`join_ord`
+(`box.py:183-207`) and `_plain_slot_ord`/`WriteScope` (`Scope.Check` takes any value, as a
+caller's argument may be one). `journal` ports `_JsonlFile`, `Journal` and `AuditLog`
+(`safety.py:156-311`); the state-dir checks stay in `safety` (S6), which now also holds the
+`REASON_*` texts verbatim and the create-then-chmod rule (`PrivateDir`, `MakeDirs`, `IsDir`, moved
+from `readtools`). `journal.Batches` is `n4_list_batches`' list and `RollbackTarget` /
+`EarlierRollbacks` are the journal checks `_rollback_plan` makes before and after its station
+check (S13 composes them).
+`readtools` serves `n4_list_batches` (no session, journal only). The server still refuses
+`--allow-writes` with the existing text: nothing in this slice writes.
+
+**Files.** An append creates the state dir 0700 only when it is not a directory yet (missing
+parents 0777 less the umask) and chmods only what it created; the file is opened
+`O_WRONLY|O_APPEND|O_CREAT|O_EXCL` 0600, and on `EEXIST` reopened without `O_CREAT` and refused
+with Python's `PermissionError` text when it is not private (never chmodded); one write of
+`json.dumps(entry) + "\n"`. Reading follows Python exactly: a file that cannot be opened is empty,
+a line that is not a JSON object is skipped, and `\r` and `\r\n` end lines. Batch ids are keyed
+as Python dict keys: `1`, `true` and `1.0` are one batch, every JSON `NaN` is one object, and a
+list or dict id cannot key a batch only in a phase that keys it; `component-intent` ops extend as
+`list.extend` does (a string by characters, a dict by keys, a number cannot).
+
+**Unreadable lines (issue #448, v0.9.4, both servers).** The journal is read as bytes, split as
+`bytes.splitlines` splits (the line ends `readlines()` honours) and decoded line by line, so the
+`TextIOWrapper` chunk quirk no longer applies to it. Since #466 (v0.9.5) the audit log uses the
+same splitter (`_JsonlFile._lines`, Go `File.lines`; section 13), and the `readlines()` readers
+(`entries()`, `File.Entries`, `pyjson.ReadLines`) are gone. A line is *unreadable* when it is not
+UTF-8 (`UnicodeDecodeError`: its batch is unknown) or when, in a batch phase, its `batch_id` (or, in an `intent` or `result`, a truthy `rollback_of`)
+cannot key a dict, or its component ops cannot extend a list (`TypeError`: its batch is known).
+An unreadable line is left out of every view. `n4_list_batches` lists the readable batches as
+before and, only when a line is unreadable, adds `incomplete` (a sentence saying the list is
+incomplete) and `unreadable` (one `unreadable journal line N: <error class>` row per line; no
+byte of the line is echoed). The rollback rule: `n4_rollback` of batch B is refused with
+`journal line unreadable: batch B may be recorded on journal.jsonl line(s) N (reason), ...`,
+before B is looked up, when an unreadable line has an unknown batch, or its `batch_id` is B, or its
+`rollback_of` is B (a lost rollback of B could let B be rolled back twice); an unreadable line of
+another known batch does not block B. `_BATCH_ID` is `[0-9a-f]{32}\Z` under `re.match` and the Go
+pattern `^[0-9a-f]{32}$`: an id with a trailing newline is malformed in both. A torn line (not
+JSON) is still skipped silently, as before: the server writes each line in one `write`.
+
+**Proof.** The 49 `@go_twin` tests of `test_safety` (46) and `test_box.TestChildOrd` (3) have Go twins of
+the same names (`token`, `ord`, `journal`; the `audit` markers now name `journal` and `token`,
+where the code lives) plus `readtools.TestItIsReadOnlyAndWorksWithoutASession`. The new
+`tests/test_list_batches.py` (5 tests) runs black-box under both implementations on a state dir
+the Python server wrote (`tests/fixtures/journal/generate.py` → `python-written/`: a create and
+its rollback, a remove and its rollback with component and relink records, an intent whose send
+failed, a link whose result is `in_doubt`) and requires `tools_read.n4_list_batches`' reply byte
+for byte, also after torn lines, a non-UTF-8 line and unhashable ids in the middle of the journal
+(6 tests since #448). Under `MCP_N4_IMPL=go`: 627 tests, 448 skipped at S8; #448 (after S9)
+adds one list test and three rollback tests of `test_tools_destructive`, which skip until S13
+(their journal checks have Go tests of the same names in `journal`): 641 / 448. Differentials on CPython 3.15:
+`token.TestTokensDifferentialPython` (key, clock and pending nonces injected into one
+`ConfirmationTokens` instance, never by patching the package: mac, bound args, redaction,
+consume verdict, pending set, issue expiry), `ord.TestScopeAndJoinDifferentialPython` (16
+scopes × 36 ORDs, 13 parents × 15 names), `pyjson.TestReadLinesDifferentialPython` (144 files
+around the chunk boundaries; retired with `pyjson.ReadLines` by #466) and `journal.TestJournalDifferentialPython` (the Python-written
+dir and 18 edge journals, two with a bad line between two batches: views, `read`, `rollbacks_of`, `n4_list_batches` at three limits and
+the journal verdict of the real `_rollback_plan`, every branch reached). Both in-doubt batches
+the Python server wrote are refused by `RollbackTarget` with Python's text
+(`journal.TestAPythonInDoubtBatchIsRefused`). 44 hand mutants of the refusal, binding, scope,
+view, append and read branches all go RED (two through a panic, none through a build failure),
+and a reversed batch order fails `test_list_batches` under Go.
+
+**Known differences.** Expiry and nonce tests are Go-only twins (no in-process clock exists
+across the process boundary). A journal line nested deeper than CPython's recursion limit makes
+Python's `n4_list_batches` answer `internal error (RecursionError)`; Go parses it (the server
+writes those lines itself). `File.Append` completes a short write, where `os.write` would leave a
+partial line, and an `OSError` from opening the file is Go's error text; no S8 caller shows it
+(the write tools of S10 will). `ChildOrd` and `JoinOrd` take strings: their non-string refusals
+are Python-only paths. Observed in Python 0.9.3 and fixed in both servers by issue #448 (v0.9.4): one non-UTF-8 byte
+or one unhashable batch id anywhere in `journal.jsonl` made `n4_list_batches` and every rollback
+fail, and `_BATCH_ID.match` accepted an id with one trailing newline.
+
+## 13. S9 `retro` and `n4_session_retro_draft`
+
+**Packages.** `retro` ports `retro.py`: `refusals.go` (`_REFUSALS` and `_VERDICTS` in their
+order, `_safe`; `RefusalClass` is the class lookup the derive loop and the tier twin share),
+`derive.go` (`_derive`: refusal groups keyed by class in first-seen order with their first row's
+advice, verdict and in-doubt evidence, BOX errors by op from the unfiltered journal, dangling
+observations), `draft.go` (`_since_filter`, `_window`, `draft`) and `render.go` (`_summary`,
+`_delta_table`, `cell`, `render`). `isodate.go` and `isotime.go` are `datetime.fromisoformat` as
+CPython 3.15's `_datetimemodule.c` runs it on the UTF-8 bytes (the NUL past the end and an
+embedded NUL stop a parse alike; every date form, the separator rules, a surrogate separator,
+fractions, offsets, hour 24 rolling over, `0000-12-31T24:00` becoming year 1), behind
+`_parse_ts`'s `strip()` and `Z` replacement; the `Z` branch of the C parser is left out, since no
+`Z` reaches it. The template is embedded: `retro/retro.template.md` must equal
+`mcp_n4/templates/retro.template.md` byte for byte. `journal.dictKey` moved to `pyjson.DictKey`:
+the summary counts outcomes and verdicts as dict keys (`1`, `true` and `1.0` are one key, the
+first one kept and sorted by its `str()`), and an audit `batch_id` is looked up the same way, so
+a list or dict is the `TypeError` Python raises. `session.Context.StartedAt` is `ctx.started_at`
+(`session.Now()` at start), and `readtools` serves `n4_session_retro_draft` (no session, the
+server's state dir, `since` or the server start, `ctx.observations`). Nothing in this slice
+writes.
+
+**Proof.** `test_retro.TestServerTool` now runs black-box through `make_server` (its
+`--allow-writes` case still skips under Go), and the new `TestTheDraftIsPythonsDraft` (9) and
+`TestDanglingReadsReachTheDraft` (1) run black-box under both implementations: the reply text
+must be the one `tools_read.n4_session_retro_draft` computes in-process on the same state dir
+(every refusal class with the tier refusal, verdicts, in-doubt and BOX errors with odd ops, the
+S8 Python-written state dir, odd timestamps and windows, bad `since` values, odd and unhashable
+summary values, the secret canary). With a stub handler 13 of them failed. Under
+`MCP_N4_IMPL=go`: 637 tests, 445 skipped (627 / 448 before; 345 of them carry `@go_twin`). The
+21 `retro` markers have Go twins in `retro/refusals_test.go`, `derive_test.go` and
+`render_test.go` (`count_deltas` is tooling-only, so its twin counts rows with a test helper),
+and `tiers.TestTheRetroClassifiesTierRefusals` is in `tiers/retro_test.go`;
+`readtools.TestTheRetroDraftCoversThisSession` drives the tool through the dispatcher.
+Differentials on CPython 3.15: `retro.TestParseTimestampDifferentialPython` (112 seeds and 40,000
+mutants; 1,000,000 mutants were run once) requires `_parse_ts`'s instant or refusal for each, and
+`retro.TestDraftDifferentialPython` requires `retro.draft`'s JSON, byte for byte, or its error,
+for 27 session states (the Python-written fixture, a missing dir, every refusal class including
+both tier refusals, all verdicts, in-doubt and BOX errors, dangling and BQL observations, windows,
+`+N more` evidence, 64- and 65-character names, template placeholders in the station name, a
+non-UTF-8 audit lines across CRLF, CR, end of file and the 8192-byte chunk boundary, unhashable
+and non-iterable values). 42 hand mutants of the classification,
+window, summary, render, parse and tool-wiring branches all go RED, none through a panic or a
+build failure.
+
+**Known differences.** None found. `since=""` is `None` for the Go `retro.Draft` API (the tool
+maps an empty `since` to the server start, as Python's `or` does). An observation's `count` is
+printed with `str()`, where Python calls `int()`: the server only records whole counts.
+
+**Unreadable audit lines (issue #466, v0.9.5, both servers).** `audit.jsonl` is read as the
+journal is since #448: bytes, split as `bytes.splitlines` splits, decoded line by line
+(`AuditLog.scan`, Go `AuditLog.Scan`). A line that is not UTF-8 is left out of the draft; the
+session summary then adds `- Incomplete: N audit line(s) are unreadable and left out of this
+draft` and one `- unreadable audit line N: UnicodeDecodeError` row per line (numbered as
+`readlines()` numbers; no byte of the line is echoed; never filtered by `since`, having no
+timestamp). Before, one such byte anywhere failed the whole draft in both servers. Proof:
+`test_retro.TestTheDraftIsPythonsDraft.test_an_unreadable_audit_line_costs_that_line_only`
+(black-box), its Go twin `retro.TestAnUnreadableAuditLineCostsThatLineOnly`, and two new
+differential states. Under `MCP_N4_IMPL=go`: 642 tests, 448 skipped (the black-box test runs).

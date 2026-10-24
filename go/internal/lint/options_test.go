@@ -8,10 +8,12 @@ import (
 	"testing"
 )
 
-// TestParseOptions: Mode Options is lint-write-path's argument loop, read left to right: --strict and the
-// value flags anywhere, the first bad argument reported, an empty argument leaving the root unset.
-func TestParseOptions(t *testing.T) {
+// TestParseValuedNamed: Mode Valued under ValueOptions.Named is lint-write-path's argument loop, read left
+// to right: --strict and the value options anywhere (every value kept, the rule reads the last), the
+// first bad argument reported with its named text, an empty argument leaving the root unset.
+func TestParseValuedNamed(t *testing.T) {
 	const name, usage = "lint-w", "usage: lint-w.sh <module-root> [--bog <f>] [--strict]"
+	vo := ValueOptions{Repeat: []string{"--bog"}, Strict: true, Named: true}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "f")
 	if err := os.WriteFile(file, nil, 0o644); err != nil {
@@ -20,12 +22,12 @@ func TestParseOptions(t *testing.T) {
 	for _, tc := range []struct {
 		args   []string
 		strict bool
-		values map[string]string
+		values map[string][]string
 		errMsg string
 	}{
-		{[]string{dir}, false, map[string]string{}, ""},
-		{[]string{"--strict", "--bog", "b", dir, "--strict", "--bog", ""}, true, map[string]string{"--bog": ""}, ""},
-		{[]string{"", dir}, false, map[string]string{}, ""},
+		{[]string{dir}, false, nil, ""},
+		{[]string{"--strict", "--bog", "b", dir, "--strict", "--bog", ""}, true, map[string][]string{"--bog": {"b", ""}}, ""},
+		{[]string{"", dir}, false, nil, ""},
 		{nil, false, nil, usage + "\n"},
 		{[]string{"--strict"}, false, nil, usage + "\n"},
 		{[]string{""}, false, nil, usage + "\n"},
@@ -37,17 +39,21 @@ func TestParseOptions(t *testing.T) {
 		{[]string{dir, dir, "--x"}, false, nil, name + ": unexpected argument: " + dir + "\n"},
 		{[]string{file}, false, nil, name + ": not a directory: " + file + "\n"},
 	} {
-		got, err := Parse(Options, name, usage, tc.args, "--bog")
+		got, err := ParseValued(Valued, name, usage, vo, tc.args)
 		if tc.errMsg != "" {
 			var ue *UsageError
 			if err == nil || err.Error() != tc.errMsg || errors.As(err, &ue) == (tc.args != nil && tc.args[0] == file) {
-				t.Errorf("Parse(Options, %q) error = %v, want %q", tc.args, err, tc.errMsg)
+				t.Errorf("ParseValued(%q) error = %v, want %q", tc.args, err, tc.errMsg)
 			}
 			continue
 		}
 		if err != nil || got.Strict != tc.strict || !reflect.DeepEqual(got.Roots, []string{dir}) || !reflect.DeepEqual(got.Values, tc.values) {
-			t.Errorf("Parse(Options, %q) = %+v, %v; want strict=%v values=%v", tc.args, got, err, tc.strict, tc.values)
+			t.Errorf("ParseValued(%q) = %+v, %v; want strict=%v values=%v", tc.args, got, err, tc.strict, tc.values)
 		}
+	}
+	// without Named the same loop keeps the usage line alone and an empty argument is a root
+	if _, err := ParseValued(Valued, name, usage, ValueOptions{Repeat: []string{"--bog"}}, []string{"", dir}); err == nil || err.Error() != usage+"\n" {
+		t.Errorf("unnamed: error = %v, want the usage line", err)
 	}
 }
 
@@ -58,37 +64,44 @@ func TestRowStatus(t *testing.T) {
 	}
 }
 
-// optionFake is an OptionRule: it reports the --bog value it got, a STALE row (a Warn), then fails with a
-// RowError when the value is "broken".
-type optionFake struct{}
+// configuredRoot is a RootRule and a Configurer: it reports the last --bog value it was configured with as a
+// STALE row (a Warn), then fails with a RowError when that value is "broken".
+type configuredRoot struct{ bog string }
 
-func (optionFake) ID() string                          { return "lint-w" }
-func (optionFake) Severity() Severity                  { return Fail }
-func (optionFake) CheckRoot(string) ([]Finding, error) { return nil, errors.New("CheckRoot called") }
-func (optionFake) CheckRootOptions(root string, v map[string]string) ([]Finding, error) {
-	out := []Finding{{Path: root, Msg: "bog=" + v["--bog"], Severity: Warn, Status: "STALE"}}
-	if v["--bog"] == "broken" {
+func (*configuredRoot) ID() string         { return "lint-w" }
+func (*configuredRoot) Severity() Severity { return Fail }
+func (r *configuredRoot) Configure(a Args) error {
+	r.bog = ""
+	if vs := a.Values["--bog"]; len(vs) > 0 {
+		r.bog = vs[len(vs)-1]
+	}
+	return nil
+}
+func (r *configuredRoot) CheckRoot(root string) ([]Finding, error) {
+	out := []Finding{{Path: root, Msg: "bog=" + r.bog, Severity: Warn, Status: "STALE"}}
+	if r.bog == "broken" {
 		return out, &RowError{Row: "lint-w  ERROR  " + root + "  broken bog"}
 	}
 	return out, nil
 }
 
-// TestCommandOptionRule: a rule run alone parses its Spec.ValueFlags and gets their values; a Status row
-// counts as its severity (exit 1 only under --strict); a RowError prints on stdout after the rows, exit 3.
-// In a rule list the flag is not parsed and the rule sees no value.
-func TestCommandOptionRule(t *testing.T) {
+// TestCommandValuedRootRule: a RootRule run alone in Mode Valued gets its option values through Configure; a
+// Status row counts as its severity (exit 1 only under --strict); a RowError prints on stdout after the rows,
+// exit 3. In a rule list no option is parsed.
+func TestCommandValuedRootRule(t *testing.T) {
 	dir := t.TempDir()
-	sp := Spec{Root: optionFake{}, Mode: Options, Usage: "usage: lint-w.sh <root>", ValueFlags: []string{"--bog"}}
+	sp := Spec{Root: &configuredRoot{}, Mode: Valued, Usage: "usage: lint-w.sh <root>", Options: []string{"--bog"},
+		ValuedStrict: true, ValuedNamed: true}
 	main := Command(sp, rootSpec(rootFake{seen: new([]string)}))
 	for _, tc := range []struct {
 		args     []string
 		code     int
 		out, err string
 	}{
-		{[]string{"lint-w", dir, "--bog", "b"}, 0, "STALE  lint-w  " + dir + ": bog=b\n", ""},
+		{[]string{"lint-w", dir, "--bog", "a", "--bog", "b"}, 0, "STALE  lint-w  " + dir + ": bog=b\n", ""},
 		{[]string{"lint-w", "--strict", dir}, 1, "STALE  lint-w  " + dir + ": bog=\n", ""},
 		{[]string{"lint-w", dir, "--bog", "broken"}, 3, "STALE  lint-w  " + dir + ": bog=broken\nlint-w  ERROR  " + dir + "  broken bog\n", ""},
-		{[]string{"lint-w,lint-r", dir}, 1, "STALE  lint-w  " + dir + ": bog=\nFAIL  lint-r  " + dir + ": root seen\n", ""},
+		{[]string{"lint-w", dir, "--nope"}, 3, "", "lint-w: unknown option: --nope\n"},
 		{[]string{"lint-w,lint-r", dir, "--bog", "b"}, 3, "", "n4lint: not a directory: --bog\n"},
 	} {
 		s, o, e := stdio()

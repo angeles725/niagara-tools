@@ -1,0 +1,18 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Mod/src/com/x/Nest.java:7  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line 3 -- that region is counted as hand-written
+-- stderr --
+-- Mod/src/com/x/Nest.java --
+package com.x;
+public class Nest {
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int a1;
+  int a2;
+  int a3;
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int b1;
+  int b2;
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}

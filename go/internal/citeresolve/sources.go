@@ -9,37 +9,44 @@ import (
 
 type codeResolver struct{ e *Engine }
 
-// Resolve finds File in the copies of module part Target; with no part, as a path pointer.
+// Resolve finds File in the copies of module Target (organized/, versioned source, client trees); with no
+// module, as a path pointer. A File ending in `/` names a directory of one of the module's copies.
 func (r codeResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	q := p
 	q.Target = p.File
-	if p.Target != "" {
-		f, err := r.e.inTrees(p.File, r.e.moduleDirs(p.Target), copies)
-		switch {
-		case err != nil:
-			return toolError(err)
-		case f == "":
-			return Result{Status: MissingFile, Detail: "no " + p.File + " in the copies of " + p.Target}
-		}
-		return r.e.hit(q, f)
+	if p.Target == "" {
+		return pathResolver{r.e}.Resolve(q, c)
 	}
-	return pathResolver{r.e}.Resolve(q, c)
-}
-
-// decompiled finds a package path (javax/baja/…/X.java) in every organized/ copy and versioned source tree.
-func (e *Engine) decompiled(p citeparse.Pointer) Result {
-	dirs, err := e.sourceDirs()
+	if dir, ok := strings.CutSuffix(p.File, "/"); ok {
+		return r.e.moduleDir(q, p.Target, dir)
+	}
+	groups, err := r.e.lookup(p.File, r.e.inModule(p.Target, r.e.moduleDirs(p.Target)))
 	if err != nil {
 		return toolError(err)
 	}
-	f, err := e.inTrees(p.Target, dirs, copies)
+	return r.e.pick(q, groups, p.File, Result{Status: MissingFile, Detail: "no " + p.File + " in the copies of " + p.Target})
+}
+
+// moduleDir resolves a directory of module part module: dir below one of its directories or below one of
+// their vineflower, decompiled or extracted copies. A file index lists no directory, so it is stat'ed.
+func (e *Engine) moduleDir(p citeparse.Pointer, module, dir string) Result {
+	var bases []string
+	for _, d := range e.moduleDirs(module) {
+		bases = append(bases, d)
+		for _, c := range copyOrder {
+			bases = append(bases, filepath.Join(d, c))
+		}
+	}
+	f, err := first(dir, bases...)
 	switch {
 	case err != nil:
 		return toolError(err)
 	case f == "":
-		return Result{Status: MissingFile, Detail: p.Target + " not under a root, organized/ copy or " + e.roots.Version + " source"}
+		return Result{Status: MissingFile, Detail: "no " + dir + "/ in the copies of " + module}
 	}
-	return e.hit(p, f)
+	res := e.hit(p, f)
+	res.Detail = strings.TrimSpace(res.Detail + " [read " + e.short(f) + "]")
+	return res
 }
 
 // infix resolves `<dir or part>/…/<suffix>`: a file below that directory (or module part's copies)
@@ -47,54 +54,22 @@ func (e *Engine) decompiled(p citeparse.Pointer) Result {
 func (e *Engine) infix(p citeparse.Pointer, c *Card) Result {
 	prefix, suffix, _ := strings.Cut(p.Target, "/…/")
 	ro := e.roots
-	var dirs []string
+	var dirs, extra []string
 	if !strings.Contains(prefix, "/") {
 		dirs = e.moduleDirs(prefix)
 	}
 	if d, err := first(prefix, c.Dir, ro.Kit, ro.Repo, ro.Research, e.help(), ro.Modules); err != nil {
 		return toolError(err)
 	} else if d != "" {
-		dirs = append(dirs, d)
-	}
-	for _, d := range dirs {
-		idx, err := e.fs.index(d)
-		if err != nil {
-			return toolError(err)
-		}
-		for _, h := range idx[filepath.Base(suffix)] {
-			if strings.HasSuffix(h, "/"+suffix) {
-				return e.hit(p, h)
-			}
+		if dirs = append(dirs, d); !e.covered(d) {
+			extra = append(extra, d)
 		}
 	}
-	return Result{Status: MissingFile, Detail: "no " + suffix + " below " + prefix}
-}
-
-// sourceDirs lists every organized/<mod>/<part>/ and niagara-help/versions/<version>/source/<part>/.
-func (e *Engine) sourceDirs() ([]string, error) {
-	var out []string
-	mods, err := e.fs.names(e.organized())
+	groups, err := e.lookup(suffix, e.inModule(prefix, dirs), extra...)
 	if err != nil {
-		return nil, err
+		return toolError(err)
 	}
-	for _, m := range mods {
-		parts, err := e.fs.names(filepath.Join(e.organized(), m))
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range parts {
-			out = append(out, filepath.Join(e.organized(), m, p))
-		}
-	}
-	src := filepath.Join(e.help(), "versions", e.roots.Version, "source")
-	parts, err := e.fs.names(src)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range parts {
-		out = append(out, filepath.Join(src, p))
-	}
-	return out, nil
+	return e.pick(p, groups, suffix, Result{Status: MissingFile, Detail: "no " + suffix + " below " + prefix})
 }
 
 type guideResolver struct {
@@ -108,7 +83,7 @@ func (r guideResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	ver := filepath.Join(r.e.help(), "versions", r.e.roots.Version, r.dir)
 	old := filepath.Join(r.e.help(), r.dir)
 	for _, d := range []string{ver, old} {
-		f, err := r.e.inTrees(p.Target, []string{d}, []string{""})
+		f, err := r.e.inTrees(p.Target, []string{d})
 		if err != nil {
 			return toolError(err)
 		}
@@ -160,19 +135,21 @@ func (r memResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 
 type vineResolver struct{ e *Engine }
 
-// Resolve finds File in the vineflower/ copy of module part Target; the copy's version is not checked.
+// Resolve finds File in the vineflower/ copy of module part Target (of any module when Target is empty);
+// the copy's version is not checked.
 func (r vineResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
-	f, err := r.e.inTrees(p.File, r.e.moduleDirs(p.Target)[:2], []string{"vineflower"})
-	switch {
-	case err != nil:
+	in := func(string) bool { return true }
+	if p.Target != "" {
+		in = r.e.inModule(p.Target, r.e.organizedDirs(p.Target))
+	}
+	groups, err := r.e.lookup(p.File, func(f string) bool { return in(f) && strings.Contains(f, "/vineflower/") })
+	if err != nil {
 		return toolError(err)
-	case f == "":
-		return Result{Status: MissingFile, Detail: "no " + p.File + " in the vineflower copy of " + p.Target}
 	}
 	q := p
 	q.Target = p.File
-	res := r.e.hit(q, f)
-	if p.Version != "" {
+	res := r.e.pick(q, groups, p.File, Result{Status: MissingFile, Detail: "no " + p.File + " in the vineflower copy of " + p.Target})
+	if p.Version != "" && res.Status == Resolved {
 		res.Detail += " [copy version not checked against " + p.Version + "]"
 	}
 	return res
@@ -180,15 +157,45 @@ func (r vineResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 
 type javapResolver struct{ e *Engine }
 
-// Resolve finds the jar in organized/; what javap printed is not reproduced.
+// Resolve finds the jar in organized/, else in the Gradle cache; what javap printed is not reproduced.
 func (r javapResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	jar := filepath.Base(p.Target)
-	f, err := first(jar, r.e.moduleDirs(strings.TrimSuffix(jar, ".jar"))[:2]...)
+	f, err := first(jar, r.e.organizedDirs(strings.TrimSuffix(jar, ".jar"))...)
+	if err == nil && f == "" {
+		f, err = r.e.gradleJar(jar)
+	}
 	switch {
 	case err != nil:
 		return toolError(err)
 	case f == "":
-		return Result{Status: MissingFile, Detail: "no " + jar + " under organized/"}
+		return Result{Status: MissingFile, Detail: "no " + jar + " under organized/ or the Gradle cache"}
 	}
 	return Result{Status: Resolved, File: f, Detail: "jar " + f + " [javap output not checked]"}
 }
+
+// gradleCacheJars are the Gradle cache layouts that hold a jar by its file name, relative to the Gradle
+// user home: the plugin jars cache and the dependency cache. Fixed depths, so a lookup never walks the cache.
+var gradleCacheJars = [][]string{
+	{"caches", "jars-*", "*"},
+	{"caches", "modules-2", "files-2.1", "*", "*", "*", "*"},
+}
+
+// gradleJar is the first copy of jar in the Gradle cache ("" when none, or no Gradle home is known).
+func (e *Engine) gradleJar(jar string) (string, error) {
+	if e.roots.Gradle == "" {
+		return "", nil
+	}
+	for _, layout := range gradleCacheJars {
+		hits, err := filepath.Glob(filepath.Join(append(append([]string{e.roots.Gradle}, layout...), globEscape.Replace(jar))...))
+		if err != nil {
+			return "", err
+		}
+		if len(hits) > 0 {
+			return hits[0], nil
+		}
+	}
+	return "", nil
+}
+
+// globEscape quotes the glob metacharacters of a file name.
+var globEscape = strings.NewReplacer(`\`, `\\`, "*", `\*`, "?", `\?`, "[", `\[`)

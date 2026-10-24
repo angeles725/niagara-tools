@@ -1,0 +1,238 @@
+// Package inertcoordination is the lint-inert-coordination rule: a class whose units() method returns a
+// structurally singleton list (singletonList(, or a one-argument Arrays.asList() while it still declares
+// queue/token/stagger coordination state WARNs at the units() declaration: the coordination machinery is
+// dead code after a per-unit move (PANCCADIA BDefrostController, 2026-09-23). Port of the awk in
+// toolbelt/lint-inert-coordination.sh (the wrapper keeps the user-facing contract and its header documents
+// the rule, its limitations and its mutation pins).
+package inertcoordination
+
+import (
+	"regexp"
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
+)
+
+// ID is the lint name printed in every row.
+const ID = "lint-inert-coordination"
+
+// Spec registers the rule with the argument contract of toolbelt/lint-inert-coordination.sh.
+func Spec() lint.Spec {
+	return lint.Spec{
+		Rule:       rule{},
+		Mode:       lint.First,
+		Usage:      "usage: lint-inert-coordination.sh [--strict] <src-root>",
+		Select:     lint.Selection{Names: []string{"*.java"}},
+		EmptyError: lint.EmptyRow{Msg: "no files to scan (K20: wrong path or empty scaffold)"},
+		// Reason: bash used awk_lint_run, which scans the partial list (env line, then rows, exit 3).
+		ContinueOnWalkError: true,
+	}
+}
+
+type rule struct{}
+
+func (rule) ID() string              { return ID }
+func (rule) Severity() lint.Severity { return lint.Warn }
+
+func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); return re }
+
+var (
+	unitsDecl = rx(`[A-Za-z_][A-Za-z0-9_<>\[\], ]*[[:space:]]units\(\)`)
+	queueType = rx(`(Deque|Queue)[[:space:]]*<`)
+	coordName = rx(`[^A-Za-z0-9_]([a-z][A-Za-z0-9_]*(Token|Stagger)|token|stagger|Token|Stagger)[A-Za-z0-9_]*`)
+)
+
+// Check WARNs once at the units() declaration when its body is singleton-shaped and the file declares
+// coordination state.
+func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
+	lines := linescan.Code(f) // code only: comments blanked, literal contents removed
+	decl, ok := declaration(lines)
+	if !ok {
+		return nil, nil
+	}
+	end, started := bodyEnd(lines, decl)
+	if !started || !singleton(lines[decl:end+1]) {
+		return nil, nil
+	}
+	found := coordination(lines)
+	if len(found) == 0 {
+		return nil, nil
+	}
+	return []lint.Finding{{Line: decl + 1, Msg: "units() returns a structurally singleton list while " +
+		strings.Join(found, ", ") + " (queue/token/stagger state) are still declared -- the coordination machinery" +
+		" is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop" +
+		" the unused fields"}}, nil
+}
+
+// declaration is the first line whose `<type> units()` is followed by nothing, "{" or "throws": a
+// declaration, not a call such as `return units().size();`.
+func declaration(lines []string) (int, bool) {
+	for i, ln := range lines {
+		if loc := unitsDecl.FindStringIndex(ln); loc != nil {
+			t := strings.TrimLeft(ln[loc[1]:], " \t\n\v\f\r")
+			if t == "" || strings.HasPrefix(t, "{") || strings.HasPrefix(t, "throws") {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// bodyEnd is the line where the braces counted from line start return to depth 0 after one opened (the last
+// line when they never do) and whether one opened.
+func bodyEnd(lines []string, start int) (int, bool) {
+	depth, started := 0, false
+	for i := start; i < len(lines); i++ {
+		for _, c := range []byte(lines[i]) {
+			switch c {
+			case '{':
+				depth, started = depth+1, true
+			case '}':
+				depth--
+			}
+		}
+		if started && depth == 0 {
+			return i, true
+		}
+	}
+	return len(lines) - 1, started
+}
+
+// singleton reports a singletonList( in the body, or an Arrays.asList( call with exactly one argument: its
+// arguments counted by parenthesis depth up to the call's own ")", over lines (code only, literals blanked).
+func singleton(body []string) bool {
+	text := strings.Join(body, "\n")
+	if strings.Contains(text, "singletonList(") {
+		return true
+	}
+	for rest := text; ; {
+		_, after, ok := strings.Cut(rest, "Arrays.asList(")
+		if !ok {
+			return false
+		}
+		if oneArg(after) {
+			return true
+		}
+		rest = after
+	}
+}
+
+// oneArg reports whether the argument list s (the text after a call's "(") closes and holds exactly one
+// argument: something before its ")" and no comma outside nested (), [] and {}.
+func oneArg(s string) bool {
+	depth := 0
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[', '{':
+			depth++
+		case ')', ']', '}':
+			if depth == 0 {
+				return strings.Trim(s[:i], " \t\n\v\f\r") != ""
+			}
+			depth--
+		case ',':
+			if depth == 0 {
+				return false
+			}
+		}
+	}
+	return false
+}
+
+// coordination are the coordination-state names of the file in first-seen order, each once: per line, every
+// declarator of a Deque<…>/Queue<…> type (queueNames), then every token/stagger identifier.
+func coordination(lines []string) []string {
+	var found []string
+	add := func(name string) {
+		if !contains(found, name) {
+			found = append(found, name)
+		}
+	}
+	for _, ln := range lines {
+		for _, name := range queueNames(ln) {
+			add(name)
+		}
+		for _, m := range coordName.FindAllString(" "+ln, -1) {
+			add(m[1:])
+		}
+	}
+	return found
+}
+
+// queueNames are the names a line declares with a Deque<…> or Queue<…> type (`Deque<B> a = x, b;` gives a and b),
+// not the type of a `new ArrayDeque<>()` it is assigned.
+func queueNames(ln string) []string {
+	var out []string
+	for _, loc := range queueType.FindAllStringIndex(ln, -1) {
+		word := strings.LastIndexFunc(ln[:loc[0]], func(r rune) bool { return !isIdent(byte(r)) }) + 1
+		if strings.HasSuffix(strings.TrimRight(ln[:word], " \t"), "new") {
+			continue
+		}
+		depth, p := 0, loc[1]-1 // at the "<"
+		for ; p < len(ln); p++ {
+			if ln[p] == '<' {
+				depth++
+			} else if ln[p] == '>' {
+				if depth--; depth == 0 {
+					break
+				}
+			}
+		}
+		for p++; p < len(ln); {
+			for p < len(ln) && (ln[p] == ' ' || ln[p] == '\t') {
+				p++
+			}
+			q := p
+			for q < len(ln) && isIdent(ln[q]) {
+				q++
+			}
+			if q == p {
+				break
+			}
+			out = append(out, ln[p:q])
+			if p = nextDeclarator(ln, q); p < 0 {
+				break
+			}
+		}
+	}
+	return out
+}
+
+// nextDeclarator is the offset after the top-level "," that ends the declarator at s[from:] (its initializer
+// skipped by bracket depth), -1 when a ";" or a closing bracket ends the declaration first.
+func nextDeclarator(s string, from int) int {
+	depth := 0
+	for i := from; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[', '{', '<':
+			depth++
+		case ')', ']', '}', '>':
+			if depth == 0 {
+				return -1
+			}
+			depth--
+		case ';':
+			return -1
+		case ',':
+			if depth == 0 {
+				return i + 1
+			}
+		}
+	}
+	return -1
+}
+
+func isIdent(c byte) bool {
+	return c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
+}
+
+func contains(list []string, s string) bool {
+	for _, x := range list {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}

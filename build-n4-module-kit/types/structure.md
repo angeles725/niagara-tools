@@ -6,7 +6,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 ## Layout — one `moduleName`, per-profile parts `[ev: corpus B817]`
 - A module splits into per-`runtimeProfile` artifacts `<module>-{rt,ux,wb,se,doc}`: `-rt` runtime (compact3, every
   host), `-ux` browser (BajaScript), `-wb` Workbench (Swing), `-se` code that depends on Java SE APIs (JDBC, AWT,
-  Swing; § The `-se` runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
+  Swing; § The `-se` (Java SE) runtime profile), `-doc` help. The parts are declared in the root `niagara-module.xml`; the
   plugin writes the `<moduleParts>` element of the generated `META-INF/module.xml`, never an authored file.
   `[ev: corpus B1313 §1313.3 C2-C3]` `[ev: retro devguide415-horizons-authoring-security Δ8]`
 - **Allowed part dependencies** (devguide `modules.txt:148-155`): `rt`→rt · `ux`→rt, ux · `wb`→rt, ux, wb ·
@@ -57,7 +57,7 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
 - **Start from `templates/module-permissions.xml`** (the wizard shape: `<permissions>` root, three
   `<niagara-permission-groups>` blocks `all`/`workbench`/`station`, devkit-wb 4.14.0.162
-  `gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
+  `organized/devkit/devkit-wb/extracted/gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
   MANAGE_EXECUTION requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`, plus a commented `<opt-permission>`).
   `<name>` and `<purposeKey>` are both required; `purposeKey` may be a lexicon key of the module, else the text is
   shown as-is (devguide 4.15.6.20 `security/requestingPermissions.txt:40-80`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`

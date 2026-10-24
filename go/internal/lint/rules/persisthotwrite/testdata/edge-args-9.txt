@@ -1,0 +1,24 @@
+-- args --
+@DIR@/a/A.java
+-- want --
+exit 3
+-- stderr --
+lint-persist-hot-write: not a directory: @DIR@/a/A.java
+-- a/A.java --
+class A {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() {
+    setXHours(1.0);
+  }
+}
+-- b/B.java --
+class B {}

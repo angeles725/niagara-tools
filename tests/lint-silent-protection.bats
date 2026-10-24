@@ -379,3 +379,30 @@ JAVA
   [ "$status" -eq 3 ]
   [[ "$output" == *"locked"* ]]
 }
+
+# ---- SP10: an if statement that ended above an unconditional cap does not guard it (issue #459) ----
+@test "SP10: a cap below a closed if block is no trip; the same cap inside the block still WARNs" {
+  # Mutation: SP10 -- dropping the if-statement scope (any if( within 10 lines guards) WARNs the line-8 cap again.
+  # [ev: issue #459 silent-protection; PANCCADIA CompressorControl.java:963 at 17c80d3]
+  fresh
+  cat > "$S/com/x/CompressorControl.java" <<'JAVA'
+package com.x;
+public class CompressorControl {
+  int step(int target, int available, Cfg c) {
+    if (c.minStagesOn > 0)
+    {
+      target = Math.max(target, c.minStagesOn);
+    }
+    target = Math.min(target, available);
+    if (c.x) {
+      target = Math.min(target, 1);
+    }
+    return target;
+  }
+}
+JAVA
+  run "$LSP" "$S"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"CompressorControl.java:8 "* ]]
+  [[ "$output" == *"CompressorControl.java:10  step forces stage"* ]]
+}

@@ -1,6 +1,6 @@
 // Package writepath is lint-write-path (toolbelt/lint-write-path.sh): every @NiagaraProperty with
 // Flags.OPERATOR (or "o") under a module root needs a row in docs/write-path-matrix.md (FAIL), every
-// matrix row names a source slot (STALE) or, marked [concept], none (DRIFT). It is a lint.OptionRule: it
+// matrix row names a source slot (STALE) or, marked [concept], none (DRIFT). It is a lint.RootRule and a lint.Configurer (its --bog and --matrix values): it
 // reads its module root itself, walks up to the matrix and, with --matrix, reads the given one instead.
 package writepath
 
@@ -17,18 +17,31 @@ import (
 
 const id = "lint-write-path"
 
-type rule struct{}
+// rule holds the --bog and --matrix values of its run (Configure); "" when not given.
+type rule struct{ bog, matrix string }
 
-func (rule) ID() string              { return id }
-func (rule) Severity() lint.Severity { return lint.Fail }
+func (*rule) ID() string              { return id }
+func (*rule) Severity() lint.Severity { return lint.Fail }
 
-func (r rule) CheckRoot(root string) ([]lint.Finding, error) { return r.CheckRootOptions(root, nil) }
+// Configure reads the last --bog and --matrix values (Mode Valued: each is a repeatable option, and the
+// bash loop kept the last one given).
+func (r *rule) Configure(a lint.Args) error {
+	r.bog, r.matrix = last(a.Values["--bog"]), last(a.Values["--matrix"])
+	return nil
+}
 
-// CheckRootOptions prints the bash lint's rows in its order: FAIL per profile, the audit-call WARN rows
-// per profile, then STALE/DRIFT per matrix line. Its env errors are stdout rows (lint.RowError).
-func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Finding, error) {
+func last(vs []string) string {
+	if len(vs) == 0 {
+		return ""
+	}
+	return vs[len(vs)-1]
+}
+
+// CheckRoot prints the bash lint's rows in its order: FAIL per profile, the audit-call WARN rows per
+// profile, then STALE/DRIFT per matrix line. Its env errors are stdout rows (lint.RowError).
+func (r *rule) CheckRoot(root string) ([]lint.Finding, error) {
 	s := &scan{root: root, files: map[string]*javasrc.File{}}
-	m, err := s.matrix(values["--matrix"])
+	m, err := s.matrix(r.matrix)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +58,7 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 		return nil, s.errorRow("no src found")
 	}
 	rows := m.slots()
-	extra, err := s.bogSlots(values["--bog"])
+	extra, err := s.bogSlots(r.bog)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +103,8 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 // order; FAIL rows "<profile>  slot <name>: no matrix row", STALE/DRIFT "<matrix>:<line>  slot <name>: ...";
 // exit 1 on a FAIL (or a STALE/DRIFT under --strict), 3 on a usage or env error.
 func Spec() lint.Spec {
-	return lint.Spec{Root: rule{}, Mode: lint.Options, ValueFlags: []string{"--bog", "--matrix"}, BarePathRow: true,
+	return lint.Spec{Root: &rule{}, Mode: lint.Valued, Options: []string{"--bog", "--matrix"}, ValuedStrict: true,
+		ValuedNamed: true, BarePathRow: true,
 		Usage: "usage: lint-write-path.sh <module-root> [--bog <config.bog>] [--matrix <path>] [--strict]"}
 }
 

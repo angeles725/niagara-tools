@@ -104,3 +104,51 @@ teardown() { rm -rf "$T"; }
   grep -qF "#   $warn_prefix  <manual>:<line>" "$ML"
   grep -qF "#   $sum_prefix  checked=<n>" "$ML"
 }
+
+@test "ML11: a ui-dir with no UI source file is an ERROR row and exit 3, never every label missing" {
+  mkdir -p "$T/typo"; printf 'notes\n' > "$T/typo/README.txt"
+  printf 'Press "Guardar".\n' > "$T/docs/manual.md"
+  run "$ML" --strict "$T/docs/manual.md" "$T/ui" "$T/typo"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"ERROR  lint-manual-labels  $T/typo  no UI source files found"* ]]
+  [[ "$output" != *"WARN"* ]]
+  [[ "$output" != *"SUMMARY"* ]]
+}
+
+@test "ML12: a label the UI builds from a literal stem plus one runtime value is found; a longer tail still WARNs" {
+  printf 'el.textContent = "Guardado (" + n + ")";\nmsg = "HTTP " + r.status;\nwhy = "Deshielo omitido: " + reason;\n' > "$T/ui/rc/save.js"
+  printf 'See "Guardado (N)", "HTTP 400", "Deshielo omitido: razón", "Corte N" and "HTTP 400 Bad Request".\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"Corte N"'* ]]
+  [[ "$output" == *'"HTTP 400 Bad Request"'* ]]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 2 ]
+  [[ "$output" == *"checked=5 missing=2"* ]]
+}
+
+@test "ML13: quoted strings in code (tagged markdown fences, code spans, html code) are not labels; a bare-fence diagram is" {
+  # shellcheck disable=SC2016  # literal Markdown backticks, not a command substitution
+  printf 'Press "Guardar".\n\n```json\n{"value": 5}\n```\n\nRun `curl -d "mode=auto"` and see "Corte".\n```\n[ "Rearranque" ] --> pump\n```\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"value"'* ]]
+  [[ "$output" != *'"mode=auto"'* ]]
+  [[ "$output" == *"manual.md:7  label \"Corte\""* ]]
+  [[ "$output" == *"manual.md:9  label \"Rearranque\""* ]]
+  [[ "$output" == *"checked=3 missing=2"* ]]
+  printf '<p>Press "Guardar".</p>\n<pre><code>{"value": 5}</code></pre>\n<p><CODE>x = "Corte"</CODE> and "Corte"</p>\n' > "$T/docs/manual.html"
+  run "$ML" "$T/docs/manual.html" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"value"'* ]]
+  [[ "$output" == *"checked=2 missing=1"* ]]
+}
+
+@test "ML14: a label wrapped onto the next line is one label at its first line; a blank line ends it" {
+  printf 'Press "Modo\n  manual" and then "Guardar" now.\nAn open "quote\n\nthen "Corte" here.\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"and then"'* ]]
+  [[ "$output" == *'manual.md:5  label "Corte"'* ]]
+  [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 1 ]
+  [[ "$output" == *"checked=3 missing=1"* ]]
+}

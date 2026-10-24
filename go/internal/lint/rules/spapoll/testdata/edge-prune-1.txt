@@ -1,0 +1,17 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- .h/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- ok/b.js --
+x();
+-- x-worktrees/app.js --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);

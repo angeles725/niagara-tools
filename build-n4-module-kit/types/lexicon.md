@@ -66,7 +66,7 @@ require(["lex!myModule,bajaui"], function (lexicons) {
 
 - `lex.get(key, …args)` replaces `{n}` only; there is no MessageFormat, so an entry written with `''` for Java shows
   both quotes in the browser. A missing key returns the `def` argument or an empty string, not the key. Use
-  `getSafe` (4.8+) for text placed in HTML. (jsdoc `js-ux/lex_lex.js.txt:275-288,422-436,441-455,987-997`.)
+  `getSafe` (4.8+) for text placed in HTML. (devguide `jsdoc/js-ux/lex_lex.js.txt:275-288,422-436,441-455,987-997`.)
 - **Lexicon content is public.** Every `web:LexiconRpc` method is `@NiagaraRpc(permissions="unrestricted")`, and
   `getLexicon(moduleName, lang, cx)` returns the full root + language property set of any installed module in any
   language (web-rt decompile `com/tridium/web/rpc/BLexiconRpc.java:44-70`). Put only display text in

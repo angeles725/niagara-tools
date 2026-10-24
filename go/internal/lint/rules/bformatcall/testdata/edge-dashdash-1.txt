@@ -1,0 +1,9 @@
+-- args --
+--
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/A.java:1  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+-- stderr --
+-- root/A.java --
+class A { String f = "%time(HH:mm)%"; }
