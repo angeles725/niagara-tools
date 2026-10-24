@@ -18,12 +18,15 @@ import (
 // an empty directory, "<path> (mode 000)" an unreadable file; "toolbelt/<member>" sections make dir/toolbelt a
 // copy of the toolbelt with those members replaced by executable stubs (tests/helpers/stub-toolbelt.bash);
 // "toolbelt/<member> (mode 644)" is such a stub written without the execute bit.
-func materialize(t *testing.T, dir, repo string, files map[string]string) string {
+func materialize(t *testing.T, dir, repo string, c golden.Case) string {
 	t.Helper()
 	tb := filepath.Join(repo, "build-n4-module-kit", "toolbelt")
 	sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)
 	stubs, modes := map[string]string{}, map[string]os.FileMode{}
-	for name, text := range files {
+	for _, d := range c.Dirs { // golden.Read reads "<path> (dir)" sections into Dirs
+		must(t, os.MkdirAll(filepath.Join(dir, d), 0o755))
+	}
+	for name, text := range c.Files {
 		if m, ok := strings.CutPrefix(name, "toolbelt/"); ok {
 			m, kind, _ := strings.Cut(m, " (")
 			stubs[m], modes[m] = text, 0o755
@@ -38,8 +41,6 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 		switch kind {
 		case "symlink)":
 			must(t, os.Symlink(sub.Replace(strings.TrimSuffix(text, "\n")), full))
-		case "dir)":
-			must(t, os.MkdirAll(full, 0o755))
 		default:
 			must(t, os.WriteFile(full, []byte(text), 0o644))
 		}
@@ -166,7 +167,7 @@ func TestGolden(t *testing.T) {
 			must(t, err)
 			unreadableAsRoot(t, c.Files)
 			dir := t.TempDir()
-			tb := materialize(t, dir, repo, c.Files)
+			tb := materialize(t, dir, repo, c)
 			sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)
 			args := make([]string, len(c.Args))
 			for i, a := range c.Args {

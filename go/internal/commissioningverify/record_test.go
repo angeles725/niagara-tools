@@ -45,7 +45,7 @@ func TestRecord(t *testing.T) {
 		c := all[i]
 		c.Files["toolbelt/commissioning-verify.sh"] = string(bash)
 		dir := t.TempDir()
-		tb := materialize(t, dir, repo, c.Files)
+		tb := materialize(t, dir, repo, c)
 		sub := strings.NewReplacer("@DIR@", dir, "@REPO@", repo)
 		args := make([]string, len(c.Args))
 		for i, a := range c.Args {
