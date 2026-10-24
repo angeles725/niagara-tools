@@ -119,3 +119,30 @@ func TestArithmeticFallThrough(t *testing.T) {
 		})
 	}
 }
+
+// TestStoredByMethod: --stored reads each entry's zip method. A STORED jar whose path or entry name holds
+// "Defl:" passes (the bash counted that text in `unzip -v`), and an entry compressed by a method other than
+// deflate (bzip2, which unzip -v shows as "BZip2") fails: neither is a STORED entry Workbench can re-sign.
+func TestStoredByMethod(t *testing.T) {
+	dir := t.TempDir()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, e := range []struct {
+		name   string
+		method uint16
+	}{{"META-INF/module.xml", zip.Store}, {"com/x/A.class", zip.Store}, {"rc/big.txt", 12}} {
+		w, err := zw.CreateRaw(&zip.FileHeader{Name: e.name, Method: e.method})
+		if err != nil {
+			t.Fatal(err)
+		}
+		w.Write([]byte("x"))
+	}
+	zw.Close()
+	if err := os.WriteFile(filepath.Join(dir, "bz.jar"), buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, out, _ := runMain(dir, "--stored", "@DIR@/bz.jar")
+	if !strings.Contains(out, "FAIL  stored     @DIR@/bz.jar  1 deflated entries") {
+		t.Errorf("a bzip2 entry must fail --stored:\n%s", out)
+	}
+}

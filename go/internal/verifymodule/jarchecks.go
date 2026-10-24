@@ -151,19 +151,18 @@ func (r *run) baja() bool {
 	return false
 }
 
-// storedCheck counts what `unzip -v | grep -c 'Defl:'` counted: deflated entries, plus any entry name
-// and the "Archive:" path line that hold the text "Defl:".
+// storedCheck counts the entries whose zip method is not STORED: deflated, and any other compression
+// (bzip2), which Workbench cannot re-sign either. The kit calls them all "deflated". The bash counted the
+// `unzip -v` lines holding the text "Defl:", so an entry name or jar path holding it was miscounted
+// (declared difference, truth-stored-method).
 func (r *run) storedCheck() bool {
 	if !r.stored {
 		r.row("SKIP", "stored", "no --stored")
 		return true
 	}
 	d := 0
-	if strings.Contains(r.jar.path, "Defl:") {
-		d++
-	}
 	for _, f := range r.jar.zr.File {
-		if f.Method == zip.Deflate || strings.Contains(f.Name, "Defl:") {
+		if f.Method != zip.Store {
 			d++
 		}
 	}
