@@ -337,6 +337,19 @@ val note = \"allowDefaultProfile.set(false) niagaraSigning { aliases signingProf
   [[ "$output" == *"L15"* ]]
 }
 
+@test "LS15-kotlin: a block inside a nested /* */ comment is not code, so L15 still WARNs" {
+  # Mutation: LS15-kotlin -- reading the root script with the Java scanner ends the nested comment at its first */ and passes the block
+  ROOT=$(mktemp -d)
+  _ls15_tree "$ROOT" "$_LS15_SIGN
+/* outer /* inner */
+$_LS15_BLOCK
+*/"
+  run "$LS" "$ROOT/Group/Mod"
+  rm -rf "$ROOT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: applies"* ]]
+}
+
 @test "LS15-nosign: a root that does not apply niagara-signing is not checked" {
   ROOT=$(mktemp -d)
   _ls15_tree "$ROOT" 'plugins { id("com.tridium.niagara") }'

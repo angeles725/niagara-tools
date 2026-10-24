@@ -1,13 +1,12 @@
 package structure
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/ktssrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/props"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
@@ -19,9 +18,8 @@ var (
 	// keys are the shared host build-location keys (props.BuildLocationKeys, R10-D8) plus user_home.
 	hostPath = regexp.MustCompile(`^[ \t\f]*(` + hostKeys() + `)([ \t\f]*[=:][ \t\f]*|[ \t\f]+)([A-Za-z]\\?:[\\/]|/|\\\\)`)
 	// L12 asks only for the machine-independent half of the JDK pin (R10-D8): the paths are host keys.
-	jdkAuto      = regexp.MustCompile(`^[[:space:]]*org\.gradle\.java\.installations\.auto-detect[[:space:]]*=[[:space:]]*false[[:space:]]*$`)
-	pluginLit    = regexp.MustCompile(`^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"`)
-	signingApply = regexp.MustCompile(`id[[:space:]]*\([[:space:]]*"com\.tridium\.niagara-signing"`)
+	jdkAuto   = regexp.MustCompile(`^[[:space:]]*org\.gradle\.java\.installations\.auto-detect[[:space:]]*=[[:space:]]*false[[:space:]]*$`)
+	pluginLit = regexp.MustCompile(`^[[:space:]]*val[[:space:]]+gradlePluginVersion[[:space:]]*(:[[:space:]]*String[[:space:]]*)?=[[:space:]]*"`)
 )
 
 // signBlock is the signing block L15 requires, each part named as its row names it: toolbelt/lib/signing-block.sh
@@ -183,21 +181,25 @@ func (s *scan) pluginPin() {
 	}
 }
 
-// signing is L15 on one root build file: only uncommented code counts, and the block's names are
-// matched with string contents blanked; the plugin id, itself a string, before blanking.
+// signing is L15 on one root build file, read as Kotlin (go/internal/ktssrc): it applies the signing plugin when
+// an id("com.tridium.niagara-signing") call is code, and the block's names are matched on the code lines, comments
+// dropped and literal contents removed. A file it cannot read or scan leaves a visible row, never a silent skip.
 func (s *scan) signing(build string) {
 	data, err := os.ReadFile(build)
-	if err != nil { // a visible row, never a silent skip
+	if err != nil {
 		s.row(lint.Warn, build, "L15: could not scan the root for the signing block (awk exit 2: awk: fatal: cannot open file `"+
 			build+"' for reading: "+strerror.Text(err)+") — signing block unchecked")
 		return
 	}
-	lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
-	stripped, _ := javasrc.Strip(lines)
-	if !grep(stripped, signingApply) {
+	toks, err := ktssrc.Tokens(string(data))
+	if err != nil {
+		s.row(lint.Warn, build, "L15: could not scan the root for the signing block ("+err.Error()+") — signing block unchecked")
 		return
 	}
-	code, _ := javasrc.BlankLiterals(stripped, nil)
+	if !appliesSigning(toks) {
+		return
+	}
+	code := ktssrc.Code(toks)
 	var miss []string
 	for _, part := range signBlock {
 		if !grep(code, part.re) {
@@ -208,4 +210,15 @@ func (s *scan) signing(build string) {
 		s.row(lint.Warn, build, "L15: applies com.tridium.niagara-signing without (uncommented) "+strings.Join(miss, ", ")+
 			" — add signingServices { signingProfileFactory { allowDefaultProfile.set(false) } } + niagaraSigning { aliases; signingProfileFile } (templates/signing-root.gradle.kts)")
 	}
+}
+
+// appliesSigning: the script calls id("com.tridium.niagara-signing").
+func appliesSigning(toks []ktssrc.Token) bool {
+	for k := 0; k+2 < len(toks); k++ {
+		if toks[k].Kind == ktssrc.Ident && toks[k].Text == "id" && toks[k+1].Text == "(" &&
+			toks[k+2].Kind == ktssrc.String && toks[k+2].Value == "com.tridium.niagara-signing" {
+			return true
+		}
+	}
+	return false
 }
