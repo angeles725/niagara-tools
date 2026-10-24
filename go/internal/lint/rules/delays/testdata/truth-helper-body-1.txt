@@ -1,0 +1,31 @@
+declared difference (truth fix, helper bodies): the helper scan counted braces in raw text, so the "{" in
+open()'s string kept its body open over the next methods and later()'s Math.max(y, 1L) made open() a proven floor
+(an unfloored delay passed) while later() and commented() were never read as helpers; a floor in a comment
+also counted. Helper bodies come from javasrc.Methods over comment-free code now.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/H.java:15  zero-floor  helper open has no visible strictly-positive floor
+FAIL  lint-delays     @DIR@/H.java:16  zero-floor  helper commented has no visible strictly-positive floor
+-- stderr --
+-- H.java --
+package com.x;
+public class H extends BComponent {
+  static long open(long x) {
+    String s = "{";
+    return x;
+  }
+  static long later(long y) {
+    return Math.max(y, 1L);
+  }
+  static long commented(long x) {
+    // return Math.max(x, 1L);
+    return x;
+  }
+  void go(long p) {
+    Clock.schedule(this, BRelTime.make(open(p)), a, null);
+    Clock.schedule(this, BRelTime.make(commented(p)), a, null);
+    Clock.schedule(this, BRelTime.make(later(p)), a, null);
+  }
+}

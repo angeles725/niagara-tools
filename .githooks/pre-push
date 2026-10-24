@@ -13,6 +13,8 @@
 # last_change, open_issues items and session log are GENERATED from ledger.d/*.md
 # (toolbelt/gen-build-state.sh): a new or changed ledger.d/ fragment in range counts as the BUILD-STATE.md
 # update of every exit, and sweep fails the push when BUILD-STATE.md is stale against ledger.d/.
+# BUILD-STATE.md, ledger.d/ and retros/ are not build-relevant (they need no retro of their own), but they are
+# exactly what sweep checks: a range that changes any of them runs sweep at every exit, even the trivial one.
 #
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
@@ -25,6 +27,12 @@ read -r _ lsha _ rsha || exit 0
 [ -n "${lsha:-}" ] || exit 0
 [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
 refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }
+# the content half: ledger + index coherence and generated-file freshness (one call shape for every exit)
+run_sweep() {
+  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
+                "$toplevel/build-n4-module-kit/retros" \
+                "$toplevel/build-n4-module-kit/retros/INDEX.md"
+}
 if [[ "${rsha:-}" =~ ^0*$ ]]; then
   # A new remote branch: gate everything since it left main. Diffing the lone $lsha would compare it with
   # the WORKING TREE (empty after a clean commit) and pass every new branch unchecked.
@@ -47,10 +55,21 @@ relevant=$(printf '%s\n' "$changed" \
   | grep -vE '^build-n4-module-kit/BUILD-STATE\.md$' \
   | grep -vE '^build-n4-module-kit/ledger\.d/' \
   | grep -vE '^build-n4-module-kit/retros/' || true)
-[ -n "$relevant" ] || exit 0     # nothing build-relevant → nothing to gate
+# ledger data = the files sweep checks. The two early exits below waive the retro bookkeeping only, never
+# the coherence of ledger data the range changes. [ev: retro r10-path-keyed-gates-skip-data]
+has_ledger_data=$(printf '%s\n' "$changed" \
+  | grep -cE '^build-n4-module-kit/(BUILD-STATE\.md|ledger\.d/|retros/)' || true)
+pass_early() {   # exit 0, after sweep when the range changed ledger data
+  [ "${has_ledger_data:-0}" -ge 1 ] || exit 0
+  run_sweep && exit 0
+  local rc=$?
+  echo "pre-push: ledger data in range is incoherent (BUILD-STATE.md, ledger.d/ or retros/; sweep-build-state.sh above); refusing to push" >&2
+  exit "$rc"
+}
+[ -n "$relevant" ] || pass_early   # nothing build-relevant → only the content half of changed ledger data
 
-# trivial waiver short-circuits
-if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then exit 0; fi
+# trivial waiver short-circuits the retro bookkeeping (not the content half of changed ledger data)
+if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then pass_early; fi
 
 # a ledger.d/ fragment IS a BUILD-STATE.md update (the kit block is generated from it; sweep checks freshness)
 has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.md|ledger\.d/[^/]+\.md)$' || true)
@@ -66,17 +85,13 @@ has_index=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/retros/IND
 # Either anchored path still runs sweep for ledger coherence.
 if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' \
    && { [ "${has_index:-0}" -ge 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
-  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
-                "$toplevel/build-n4-module-kit/retros" \
-                "$toplevel/build-n4-module-kit/retros/INDEX.md"
+  run_sweep
   exit $?
 fi
 
 if [ "${has_state:-0}" -ge 1 ] && [ -n "$has_retro" ]; then
   # content half: the ledger + index must actually cohere, and the generated index must be fresh
-  bash "$sweep" "$toplevel/build-n4-module-kit/BUILD-STATE.md" \
-                "$toplevel/build-n4-module-kit/retros" \
-                "$toplevel/build-n4-module-kit/retros/INDEX.md"
+  run_sweep
   exit $?
 fi
 
