@@ -9,13 +9,6 @@ new-retro: the build-state.v1 section of kit in @DIR@/kit/BUILD-STATE.src.md has
 truth: hand-written from the case bats-rl1-stub recorded at 15e792d1: the module's section holds no retro_pending line, so nothing is written and the run exits 3
 -- @env --
 KIT=@DIR@/kit
--- @expect kit/BUILD-STATE.src.md --
-<!-- build-state.v1 -->
-## kit
-retro_required: true
--- @expect kit/retros/INDEX.md --
-| Retro file | Module | Date | review-status | deltas |
-|---|---|---|---|---|
 -- kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
 ## kit

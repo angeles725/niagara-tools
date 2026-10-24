@@ -6,19 +6,10 @@ exit 3
 -- stderr --
 new-retro: retro already exists: @DIR@/kit/retros/2026-01-02-rl2slug.md
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1; retros/INDEX.md written by the recording checkout's gen-retro-index (Go retroindex), so the index half is not bash parity
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1 (sha256 e32de0a0525042038688f23476c9981c039c52b81fbfc739dc29a7d9706c0156)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
 -- @env --
 KIT=@DIR@/kit
--- @expect kit/BUILD-STATE.src.md --
-<!-- build-state.v1 -->
-## kit
-retro_required: true
-retro_pending: false
--- @expect kit/retros/2026-01-02-rl2slug.md --
-first run
--- @expect kit/retros/INDEX.md --
-| Retro file | Module | Date | review-status | deltas |
-|---|---|---|---|---|
 -- kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
 ## kit

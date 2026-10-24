@@ -6,6 +6,9 @@
 exit 3
 -- stderr --
 commissioning-verify: wiring map not found: @DIR@/nope.md
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/commissioning-verify.sh at f86eeddf (sha256 04686cdbce0de529a90a782ea54e7628feba017151739e8c3834ba990f919850)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
 -- r/Map/Map-rt/src/com/x/BRoomPanel.java --
 package com.x;
 import javax.baja.sys.*;

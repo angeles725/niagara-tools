@@ -6,6 +6,8 @@
 exit 3
 -- stderr --
 commissioning-verify: values-owed table not readable: @DIR@/owed.md
+-- @kind --
+truth: a declared difference from the bash tool (testdata/README.md, Truth cases)
 -- owed.md (mode 000) --
 | Slot | Owed by | Unit | Safe default | Status |
 | a | t | u | 0 | owed |

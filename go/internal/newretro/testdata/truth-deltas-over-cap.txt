@@ -11,14 +11,6 @@ new-retro: --deltas must be an integer from 0 to 99: 100
 truth: hand-written from the case edge-deltas-negative recorded at 15e792d1: --deltas is capped at 99, so 100 is refused as usage before anything is written (the bash rendered 100 placeholder rows)
 -- @env --
 KIT=@DIR@/kit
--- @expect kit/BUILD-STATE.src.md --
-<!-- build-state.v1 -->
-## kit
-retro_required: true
-retro_pending: false
--- @expect kit/retros/INDEX.md --
-| Retro file | Module | Date | review-status | deltas |
-|---|---|---|---|---|
 -- kit/BUILD-STATE.src.md --
 <!-- build-state.v1 -->
 ## kit

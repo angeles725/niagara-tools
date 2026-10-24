@@ -33,33 +33,36 @@ MANUAL  commissioning  link-source-audit  run obix-link-audit.sh --map docs/wiri
 MANUAL  commissioning  servlet-response-headers  BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options|content-security-policy' — the station's header providers must reach the servlet (see types/security.md §7)
 commissioning-verify: 17 PASS · 0 FAIL · 0 WARN · 3 SKIP · 9 MANUAL  ->  CLEAN
 -- stderr --
--- r/B/B-rt/src/com/x/BB.java --
-package com.x;
-public class BB {}
--- r/A/A-rt/src/com/x/BA.java --
-package com.x;
-public class BA {}
--- r/.h/H-rt/src/com/x/BH.java --
-package com.x;
-public class BH {}
--- r/A/notrt/src/com/x/BN.java --
-package com.x;
-public class BN {}
--- r/A/A-rt/src/deep/Z-rt/src/BZ.java --
-package com.x;
-public class BZ {}
--- r/C/C-rt/src --
-file
--- r/src/com/x/BR.java --
-package com.x;
-public class BR {}
--- r/L (symlink) --
-@DIR@/linked
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/commissioning-verify.sh at f86eeddf (sha256 04686cdbce0de529a90a782ea54e7628feba017151739e8c3834ba990f919850)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
 -- linked/Y/Y-rt/src/com/x/BY.java --
 package com.x;
 public class BY {}
--- r/D/S-rt (symlink) --
-@DIR@/linked/Y/Y-rt
 -- r/-rt/-rt/src/com/x/BM.java --
 package com.x;
 public class BM {}
+-- r/.h/H-rt/src/com/x/BH.java --
+package com.x;
+public class BH {}
+-- r/A/A-rt/src/com/x/BA.java --
+package com.x;
+public class BA {}
+-- r/A/A-rt/src/deep/Z-rt/src/BZ.java --
+package com.x;
+public class BZ {}
+-- r/A/notrt/src/com/x/BN.java --
+package com.x;
+public class BN {}
+-- r/B/B-rt/src/com/x/BB.java --
+package com.x;
+public class BB {}
+-- r/C/C-rt/src --
+file
+-- r/D/S-rt (symlink) --
+@DIR@/linked/Y/Y-rt
+-- r/L (symlink) --
+@DIR@/linked
+-- r/src/com/x/BR.java --
+package com.x;
+public class BR {}

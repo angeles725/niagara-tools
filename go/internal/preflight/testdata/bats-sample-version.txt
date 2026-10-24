@@ -15,11 +15,12 @@ PASS  sample-sign   root build.gradle.kts has allowDefaultProfile.set(false) + n
 PASS  sample-build  no shipped build/ directory
 -- stderr --
 -- @kind --
-recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0
+recorded from build-n4-module-kit/toolbelt/preflight.sh at 5a4668f0 (sha256 3555450153f6188faf9d4e6fbb7a9b3be9a25dff6d7cc929221a3c02c2fce909)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
 -- @env --
 PATH=@DIR@/fakebin:@DIR@/.tools
 N4_FSTYPE_MOUNTS_FILE=@DIR@/mounts
--- fakebin/lsof (exec) --
+-- fakebin/lsof (mode 755) --
 #!/usr/bin/env bash
 printf "p1\nn/usr/bin/lsof\n"
 -- gr/settings.gradle.kts --
@@ -30,7 +31,7 @@ val niagaraPluginVersion = "7.6.17"
 IMPLEMENTOR="Adoptium"
 JAVA_VERSION="1.8.0_302"
 JAVA_VERSION_DATE="2021-10-19"
--- jvmnr/java-8-openjdk-wsl/bin/java (exec) --
+-- jvmnr/java-8-openjdk-wsl/bin/java (mode 755) --
 #!/usr/bin/env bash
 # Fakebin: simulates WSL openjdk-8 that has no release file but reports 1.8 via -version.
 printf 'openjdk version "1.8.0_412" 2020-04-14\nOpenJDK Runtime Environment (build 1.8.0_412-8u412-b08-0ubuntu1~22.04-b08)\n' >&2
@@ -41,7 +42,7 @@ ext4 / ext4 rw 0 0
 -- nh/modules/demo-rt.jar --
 -- nhnp/etc/m2/.gitkeep --
 -- nhnp/modules/.gitkeep --
--- niagara-4.15.4.24/ --
+-- niagara-4.15.4.24 (dir) --
 -- niagara-4.15.6.20/etc/m2/repository/com/tridium/niagara-module/com.tridium.niagara-module.gradle.plugin/7.6.17/.gitkeep --
 -- niagara-4.15.6.20/modules/demo-rt.jar --
 -- tls/build.gradle.kts --

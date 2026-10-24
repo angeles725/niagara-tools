@@ -24,6 +24,9 @@ MANUAL  commissioning  link-source-audit  run obix-link-audit.sh --map docs/wiri
 MANUAL  commissioning  servlet-response-headers  BWebServlet module: curl -sI -H 'X-Requested-With: XMLHttpRequest' -u admin:pass http://<station>/<module>/api/equipment | grep -iE 'x-content-type-options|x-frame-options|content-security-policy' — the station's header providers must reach the servlet (see types/security.md §7)
 commissioning-verify: 4 PASS · 2 FAIL · 2 WARN · 3 SKIP · 9 MANUAL  ->  ISSUES
 -- stderr --
--- toolbelt/lint-config-sanity.sh --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/commissioning-verify.sh at f86eeddf (sha256 04686cdbce0de529a90a782ea54e7628feba017151739e8c3834ba990f919850)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- toolbelt/lint-config-sanity.sh (mode 755) --
 #!/usr/bin/env bash
 printf "FAIL  lint-config-sanity  a.java:1 CS1 x\nWARN other-prefix y\nnoise\nFAILx\n  FAIL indented\n" ; echo "WARN  lint-config-sanity  from stderr" >&2; exit 1
