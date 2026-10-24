@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-lint-timers
@@ -48,4 +48,4 @@ for a thread modification without MANAGE_EXECUTION.
 - A lint that runs one process per line is the first one to port: 66-99 s became under 0.4 s.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED (quality round 8 pointer unit, `docs/r8-pointer-lines`) — Δ1 `go/README.md:86-94` § Adding a lint rule step 3, Δ2 `CONTRIBUTING.md:225-229` § 6; tokens in `ledger.d/2026-10-23-r8-pointer-lines.md`. INDEX row generated from the header: `| 2026-10-22-go-lint-timers.md | kit | 2026-10-22 | folded | 2 |`

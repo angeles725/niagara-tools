@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m/
+-- want --
+exit 0
+WARN  lint-clock-zero-floor  @DIR@/m/A.java:2  zero-floor: long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+-- stderr --
+-- m/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-r2-packaging-platform-signing
@@ -36,4 +36,4 @@ Packaging and deployment rules the kit states are partly inverted and mostly mis
 - The same word ("signing") names two unrelated services; disambiguate in the kit.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r2-packaging-platform-signing.md | kit | 2026-10-15 | pending | 10 |`
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u10-platform-templates`) — Δ1, Δ4 `types/distribution.md`; Δ5 `types/lexicon.md` (lint owed in ledger.d `2026-10-23-r8-u6-c54-c57.md`); Δ6, Δ7 `build-verify.md`; Δ8 `types/structure.md`; Δ2, Δ3 `types/logic-authoring.md` § Templates (Δ2 lint owed: G92 in ledger.d `2026-10-23-r8-u10-platform-templates.md`); Δ9, Δ10 new `types/platform.md` (landed there, not in `BUILD-LOOP.md:207` / `types/math-control-libraries.md:43`, which are outside the unit's surface; pointer lines owed).

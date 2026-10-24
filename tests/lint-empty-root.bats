@@ -16,15 +16,16 @@ setup() {
 # LA5 contract is "no *.lexicon files exits 0". lint-structure.sh is out of scope (Go port).
 EXEMPT=" lint-jasmine-ux.sh lint-lexicon-ascii.sh lint-structure.sh lint-uberjar-api-conflict.sh "
 
-# shared_layer_lints: every toolbelt lint-*.sh that sources lib/awk-lint.sh or lib/scan-files.sh and is not
-# a Go wrapper, minus EXEMPT; one basename per line.
+# shared_layer_lints: every toolbelt lint-*.sh that sources lib/awk-lint.sh or lib/scan-files.sh, or is an n4lint
+# wrapper (the Go lint engine prints the same ERROR row, go/internal/lint Spec.EmptyError), minus EXEMPT; one basename
+# per line. Counting the Go wrappers keeps ER1's floor steady as bash lints are ported.
 shared_layer_lints() {
   local l b
   for l in "$KIT"/toolbelt/lint-*.sh; do
     b="${l##*/}"
     case "$EXEMPT" in *" $b "*) continue ;; esac
-    grep -q 'go-tool\.sh"' "$l" && continue
-    grep -qE 'lib/(awk-lint|scan-files)\.sh' "$l" || continue
+    # shellcheck disable=SC2016  # the wrapper's literal source text, not an expansion
+    grep -qE 'lib/(awk-lint|scan-files)\.sh|go_tool_bin "\$GO_DIR" n4lint' "$l" || continue
     printf '%s\n' "$b"
   done
 }
@@ -39,7 +40,7 @@ shared_layer_lints() {
       bad+=" $b(rc=$status)"
     fi
   done
-  [ "$n" -ge 24 ]
+  [ "$n" -ge 25 ]
   [ -z "$bad" ] || { printf 'silent on an empty root:%s\n' "$bad"; return 1; }
 }
 

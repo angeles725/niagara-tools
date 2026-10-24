@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 2 -->
 # 2026-10-22 · kit · go-lint-ord-ports
@@ -49,4 +49,4 @@ no check logic, so no rule helper was added; the golden-case runner became the t
   by a longer header is dropped without a finding (WEO-finderr was, until the wrapper paragraph was shortened).
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | pending | 2 |`
+**Status**: FOLDED (quality round 8 pointer unit, `docs/r8-pointer-lines`) — Δ1 ab15c4c (PR #354) `toolbelt/lib/awk-lint.sh` awk_lint_run via ENVIRON + `tests/awk-lint.bats` AL24, Δ2 `go/README.md:86-94` § Adding a lint rule step 3; tokens in `ledger.d/2026-10-23-r8-pointer-lines.md`. INDEX row generated from the header: `| 2026-10-22-go-lint-ord-ports.md | kit | 2026-10-22 | folded | 2 |`

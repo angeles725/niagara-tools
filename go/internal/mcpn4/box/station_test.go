@@ -80,8 +80,16 @@ func (st *scriptedStation) serve(w http.ResponseWriter, r *http.Request) {
 		rep = defaultAnswer(s)
 	}
 	if rep.Hang || rep.Raw != "" {
+		// The request body is read in full above, so no unread byte turns the close into a
+		// RST; the write side is still shut first and the socket drained, so the client
+		// always sees a FIN right after the raw answer.
 		conn, _, _ := w.(http.Hijacker).Hijack()
 		io.WriteString(conn, rep.Raw)
+		if tc, ok := conn.(*net.TCPConn); ok {
+			tc.CloseWrite()
+			tc.SetReadDeadline(time.Now().Add(5 * time.Second))
+			io.Copy(io.Discard, tc)
+		}
 		conn.Close()
 		return
 	}

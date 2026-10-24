@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m
+@DIR@/n
+-- want --
+exit 0
+-- stderr --
+-- m/A.java --
+class A {
+  MessageDigest md = MessageDigest.getInstance("MD5"); // password
+}
+-- n/A.java --
+class A {
+  BPassword password; MessageDigest m2 = MessageDigest.getInstance("md5");
+}

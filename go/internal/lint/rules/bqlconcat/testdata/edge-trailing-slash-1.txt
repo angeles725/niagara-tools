@@ -1,0 +1,10 @@
+-- args --
+@DIR@/m/
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/m/A.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+-- stderr --
+-- m/A.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+}

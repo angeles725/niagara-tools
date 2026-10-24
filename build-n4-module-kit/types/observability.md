@@ -20,6 +20,8 @@ integrator can raise one module to FINE. The course follows it in shipped code e
 `BWorkOrderService.java:271`) (corpus B1236). A logger-name check (`Logger.getLogger("<x>")` ≠ `moduleName` → WARN) is
 owed as Go lint G40 `logger-name`. `[ev: retro n4-course-parity-observability-horizons Δ3]`
 
+Default level, raising one category at FINE, and the console's localized level names: `types/diagnostics.md` § 2.
+
 A `BDevice` inherits the network's logger name + device path automatically:
 `device.getLogger()` returns a logger named `"<moduleShortName>.<deviceName>"` —
 do not construct a separate one in the device class. [ev: code modbusCore-rt `BModbusClientPollGroup.java` `device.getLogger()`; code bacnetAws-rt `BacnetAwsServlet.java` `Logger.getLogger("bacnetAws")`]
@@ -79,6 +81,8 @@ public void started() throws Exception {
 ```
 
 [ev: code workbench-wb `NavMonitor.java` `Spy.ROOT.add("navMonitor", ...)`; code fox-rt `BFoxConnection.java` `Spy.ROOT.add("fox", ...)`]
+
+A custom driver's comm or write queue depth and overflow count, shown like the stock MS/TP diagnostics: `types/driver-authoring.md` § 11.4.
 
 ### `SpyDir` + `SpyWriter` recipe
 
@@ -149,6 +153,7 @@ if (!licensed) { configFatal("Unlicensed: " + toPathString()); return; }
 
 **Lexiconize the fault cause:** the `configFail(cause)` / `appFail(msg)` text shows on the property sheet, so build
 it from a lexicon key (`lex.getText("fault.readTimeout")`), not a hard-coded English literal. `[ev: corpus B1419 §1419.4 c]`
+The `LexiconModule` idiom, MessageFormat quoting and `LocalizableRuntimeException`: `types/lexicon.md` § 3.
 
 Pair `appFail`/`configFail` with `READONLY|TRANSIENT|SUMMARY` status and `faultCause` slots
 so the wire-sheet color-codes the component's health and operators see a one-line reason:

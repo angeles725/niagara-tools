@@ -1,0 +1,12 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-no-md5-credential-digest  @DIR@/Mod/src/com/x/BAuth.java:3  byte[] h(String s) throws Exception { return java.security.MessageDigest.getInstance("MD5").digest(s.getBytes()); }
+-- stderr --
+-- Mod/src/com/x/BAuth.java --
+class BAuth {
+  BPassword pwd;
+  byte[] h(String s) throws Exception { return java.security.MessageDigest.getInstance("MD5").digest(s.getBytes()); }
+}

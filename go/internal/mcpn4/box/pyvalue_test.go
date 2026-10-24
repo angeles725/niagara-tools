@@ -1,6 +1,7 @@
 package box
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
@@ -38,13 +39,18 @@ func TestPyValueSemantics(t *testing.T) {
 			t.Errorf("bool(%s) != %v", v, want)
 		}
 	}
-	keys, _ := pyIter(mustParse(t, `{"b": 1, "a": 2}`))
-	chars, _ := pyIter("aé\xed\xa0\x80")
-	if pyjson.Repr(keys) != "['b', 'a']" || len(chars) != 3 {
-		t.Fatalf("iter: %s %q", pyjson.Repr(keys), chars)
+}
+
+func TestJSONKindAndNesting(t *testing.T) {
+	for text, want := range map[string]string{`null`: "null", `true`: "a boolean", `1`: "a number",
+		`1.5`: "a number", `"x"`: "a string", `[]`: "a list", `{}`: "an object"} {
+		if got := jsonKind(mustParse(t, text)); got != want {
+			t.Errorf("jsonKind(%s) = %q, want %q", text, got, want)
+		}
 	}
-	if _, err := pyIter(one); err == nil {
-		t.Fatal("iterating an int succeeded")
+	deep := strings.Repeat("[", 3) + `{"a": [1]}` + strings.Repeat("]", 3)
+	if nestsDeeper(mustParse(t, deep), 5) || !nestsDeeper(mustParse(t, deep), 4) {
+		t.Fatal("a 5-level value must fit 5 and exceed 4")
 	}
 }
 

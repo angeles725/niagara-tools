@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-clock-zero-floor  @DIR@/m/B.java:2  zero-floor: long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+WARN  lint-clock-zero-floor  @DIR@/m/Z/A.java:2  zero-floor: long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+WARN  lint-clock-zero-floor  @DIR@/m/a/A.java:2  zero-floor: long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+WARN  lint-clock-zero-floor  @DIR@/m/b/c/A.java:2  zero-floor: long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+-- stderr --
+-- m/.git/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/B.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/Z/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/a/A.JAVA --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/a/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/a/notes.txt --
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+-- m/b/c/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}
+-- m/x-worktrees/A.java --
+class A {
+  long d = Math.max(0L, delay); Clock.schedule(this, BRelTime.make(d), t, null);
+}

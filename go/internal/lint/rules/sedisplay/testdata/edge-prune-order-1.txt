@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/m/B.java:2  display class: import javax.swing.JFrame;
+FAIL  lint-se-display  @DIR@/m/Z/A.java:2  display class: import javax.swing.JFrame;
+FAIL  lint-se-display  @DIR@/m/a/A.java:2  display class: import javax.swing.JFrame;
+FAIL  lint-se-display  @DIR@/m/b/c/A.java:2  display class: import javax.swing.JFrame;
+-- stderr --
+-- m/.git/A.java --
+class A {
+import javax.swing.JFrame;
+}
+-- m/B.java --
+class A {
+import javax.swing.JFrame;
+}
+-- m/Z/A.java --
+class A {
+import javax.swing.JFrame;
+}
+-- m/a/A.JAVA --
+class A {
+import javax.swing.JFrame;
+}
+-- m/a/A.java --
+class A {
+import javax.swing.JFrame;
+}
+-- m/a/notes.txt --
+import javax.swing.JFrame;
+-- m/b/c/A.java --
+class A {
+import javax.swing.JFrame;
+}
+-- m/x-worktrees/A.java --
+class A {
+import javax.swing.JFrame;
+}

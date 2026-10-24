@@ -1,0 +1,16 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-bql-string-concat  @DIR@/m/C.java:2  bql concat: q = BqlQuery.make("select * where n=" + u);
+WARN  lint-bql-string-concat  @DIR@/m/C.java:3  bql concat: BOrd.make("station:|bql:select * where a = '" + v + "'");
+-- stderr --
+-- m/B.java --
+
+
+-- m/C.java --
+class A {
+  q = BqlQuery.make("select * where n=" + u);
+  BOrd.make("station:|bql:select * where a = '" + v + "'");
+}
+-- m/E.java --

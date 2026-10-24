@@ -1,0 +1,15 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-wb-file-chooser  @DIR@/m/C.java:2  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+-- stderr --
+-- m/B.java --
+
+
+-- m/C.java --
+class A {
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+  void g() { BWbFieldEditor.dialog(p, t,
+}
+-- m/E.java --

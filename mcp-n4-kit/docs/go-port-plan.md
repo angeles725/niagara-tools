@@ -192,7 +192,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | Test file | Tests | unit | internals | injection | in-process | Skipped under Go | Runs under Go |
 |---|---|---|---|---|---|---|---|
 | `test_auth_latch.py` | 10 | 0 | 0 | 10 | 0 | 10 | 0 |
-| `test_box.py` | 83 | 60 | 0 | 23 | 0 | 83 | 0 |
+| `test_box.py` | 92 | 69 | 0 | 23 | 0 | 92 | 0 |
 | `test_bql.py` | 39 | 15 | 0 | 20 | 0 | 35 | 4 |
 | `test_files.py` | 30 | 14 | 2 | 0 | 0 | 16 | 14 |
 | `test_go_harness.py` | 25 | 0 | 0 | 0 | 0 | 0 | 25 |
@@ -206,7 +206,7 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **612** | **157** | **56** | **105** | **22** | **340** | **272** |
+| **Total** | **621** | **166** | **56** | **105** | **22** | **349** | **272** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -229,7 +229,8 @@ NAME=PATH pairs, https URLs, names the per-station flags may use). `go/cmd/mcp-n
 python3 and compares the bytes.
 
 **Not ported yet.** A read tool that needs a session answers `not connected: call n4_connect
-first` (no session can exist yet); any other tool answers `<name> is not implemented in this
+first` without one and the auth pause while it holds (section 8), as Python does; past those
+checks, and for any other tool, an unported tool answers `<name> is not implemented in this
 version of the Go server`, and `--allow-writes` is refused at start with
 `mcp_n4.server: --allow-writes is not implemented in this version of the Go server` (exit 2)
 until S10. Under `MCP_N4_IMPL=go` the harness skips a test that meets exactly that text
@@ -251,8 +252,9 @@ counted); Go checks the depth before decoding (`jsonrpc.NestsDeeper`).
 `Open`/`Close` (no cleanup `del` after an AuthError), the pending-event split, `LoadTree` with the
 handle cache and the stale-handle early abort, `GetOrd` (HTML refusal; the cut-record trimming is
 `bql.complete_records`, slice S6), `GetFile` and `About`. Errors are one `*box.Error` (`Kind`:
-BoxError, AuthError, HttpStatusError), `*pyjson.ValueError`, or `*box.PyError` for the TypeError,
-KeyError and BadStatusLine the Python client lets escape (the server shows only their type). Every
+BoxError, AuthError, HttpStatusError) or `*pyjson.ValueError`. Since 0.9.2 no Python exception
+escapes the client: a non-HTTP answer, a cut body and a reply of the wrong shape are BoxErrors in
+both (see "Reply truth" below). Every
 JSON body goes through `pyjson`; `pyjson.Loads` words a bad reply as `json.loads(raw.decode())`
 does. The readers `children`/`status_value`/`parse_status` and the write side (`sync` and the
 encoders) come with the slices that use them; no tool is wired yet (each read tool needs the S4
@@ -282,7 +284,53 @@ included, also passes on 3.12.
 
 **Known differences.** The User-Agent is Go's, not `Python-urllib/3.x`. A TLS verification
 failure and other OS errors without an errno keep Go's wording inside `<urlopen error ...>`.
-A BOX reply nested past CPython's C stack raises RecursionError in Python; Go decodes it. A
-top-level load child whose `n` is not a string becomes a non-string dict key in Python; Go
-answers TypeError. `http_proxy`/`https_proxy` are honoured by both, but Go never proxies
+`http_proxy`/`https_proxy` are honoured by both, but Go never proxies
 localhost.
+
+**Reply truth (0.9.2).** The S3 port pinned three Python behaviours that misreported a failure;
+both clients now share the fixed behaviour, proven by `test_box.TestTransportTruth` /
+`TestReplyShapes` on the Python side and by the replay corpus and the live differential on Go's:
+- An answer that is not HTTP (`BadStatusLine`) or a chunked body cut short (`IncompleteRead`) is
+  `transport failure: invalid HTTP answer (<type>)`; Go maps its "malformed HTTP" error and a
+  chunked `io.ErrUnexpectedEOF` to the same names.
+- A body shorter than both its Content-Length and the read cap is `transport failure: incomplete
+  read (got N of M bytes)`, never a complete result (`truncated=false` on a cut table). A body
+  longer than the cap stays the documented truncation.
+- `pollchgs` must answer a list (`null` reads as none); a load tree's `s` must be a list of objects,
+  each with a non-empty string `n`; otherwise `malformed BOX reply: ...`. An early event whose
+  ops are no list is kept, never walked.
+
+The two S3 divergences are closed the same way: a load child whose `n` is not a string (a
+non-string dict key in Python, TypeError in Go) is `malformed BOX reply: slot ... has a child
+without a slot name` in both, and a reply nested deeper than `MAX_REPLY_NESTING` (1000, the
+server's request limit) is `malformed BOX reply: nested deeper than 1000 levels` in both, so
+CPython's RecursionError past its C stack no longer differs from Go decoding any depth. One edge
+remains: a reply that is both invalid JSON and nested deeper than CPython's C stack (~52k) is a
+nesting error in Python and a JSON error in Go.
+
+## 8. S4 `tiers`, `session`, connect/describe
+
+**Packages.** `tiers` ports `tiers.py` (`TierOf`, `ProductVersion`, `WriteBlock`); the About scan
+keeps Python's Unicode `\s` and `\b` (`pyjson.IsSpace`, shared with `jsonrpc.Strip`).
+`session` ports `Context` and `Session` (`tools_read.py:33-195`): the operator policy, the active
+session, the tier report, the scrub and the auth latch (keyed credential fingerprint, whole-second
+`retry in`, `AuthBlockFor` letting other credentials reconnect). `readtools` serves `n4_connect`
+and `n4_describe_session`; `cli.NewContext` builds the context from the flags `cli.Check`
+accepted. `jsonrpc` now follows `Server._call`: a session tool needs a connection, then no auth
+pause, then its handler; an AuthError from a handler re-latches, a BoxError or ValueError shows
+its words, every tool error text is scrubbed (not the unported text the harness keys on), and
+`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`; `box` keeps its
+own copy until the in-flight box branch lands.
+
+**Proof.** Under `MCP_N4_IMPL=go` the black-box `TestConnect`, `TestDescribeSession` and
+`test_tiers.TestConnectReportsTier` tests run against the binary and FakeStation. Their marked
+tests and every `test_auth_latch` test have Go twins: `session/connect_test.go`,
+`session/authlatch_test.go`, `tiers/connect_test.go` and `cli/context_test.go`, on
+`readtools/readtoolstest` (an in-memory station and a server whose environment, clock and client
+factory a test sets). `tiers.TestDifferentialPython` compares the three tier functions with
+`tiers.py` on the target CPython. Twins still owed: `TestAWriteDryRunIsRefusedWhilePaused` (S10)
+and `TestTheRetroClassifiesTierRefusals` (S9).
+
+**Known differences.** A credential value that is not UTF-8 makes Python's fingerprint
+`.encode()` raise UnicodeEncodeError, so its connect answers that error text (with a position);
+Go sends the bytes and logs in, or gets the station's 401.

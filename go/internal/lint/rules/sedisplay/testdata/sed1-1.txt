@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod-se
+-- want --
+exit 0
+-- stderr --
+-- Mod-se/src/com/x/P.java --
+import java.awt.print.PrinterJob;
+class P { }
