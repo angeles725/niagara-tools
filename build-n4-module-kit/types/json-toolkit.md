@@ -47,10 +47,10 @@ Depend on it with `api("Tridium:jsonToolkit-rt")`; the compiler enforces the dep
 - **Property:** `BJsonSchemaProperty<T>` is abstract and leaves one abstract method, `T getJsonValue()` from
   `BIJsonProperty`; `process(JSONWriter, boolean)` is a default method that writes the key and the converted value
   (javap of `jsonToolkit-rt.jar` 4.15.6.20). It refuses placement directly under the schema root ("Properties not
-  valid at the top level", vineflower 4.14.0.162 `outbound/schema/BIJsonProperty.java:19-30`): put it inside an
+  valid at the top level", vineflower 4.14.0.162 `outbound/schema/BIJsonProperty.java:20-31`): put it inside an
   object or array member. `getJsonValue()` runs on the regeneration thread, so never block in it.
 - **Type override:** extend the concrete `BTypeOverride` and override `overrideValueEncoding(BValue)`. The guide
-  says to override `doOverride(BValue)` (`TypeOverrideExample-94E2114D.txt:52`), but `doOverride` is `public final`
+  says to override `doOverride(BValue)` (`TypeOverrideExample-94E2114D.txt:42`), but `doOverride` is `public final`
   in the 4.15.6.20 jar and delegates to `overrideValueEncoding` (javap; vineflower `program/BTypeOverride.java:38-46`),
   so javac rejects the guide's version. Return the same instance to leave a value unchanged `[INFER]`.
 
