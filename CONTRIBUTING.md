@@ -111,7 +111,7 @@ over shared `go/internal/` packages (`internal/cli` holds the injectable stdio).
   `scripts/ci-local.sh`. `[ev: retro go-ci-steps Δ1]`
 - Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates `BUILD-STATE.md` from
   `BUILD-STATE.src.md` + `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]` The reader
-  command over both generators is `toolbelt/kit-state.sh` → `go/internal/kitstate` (§ 6.1).
+  command over the generators is `toolbelt/kit-state.sh` → `go/internal/kitstate` (§ 6.1).
 
 Tool-authoring rules for a Go tool or port (what to port and the lint stack: `build-n4-module-kit/BUILD-LOOP.md`
 § 5 "Kit tooling doctrine"):
@@ -244,12 +244,13 @@ build-relevant kit files unless it also records continuity (a ledger update — 
 `BUILD-STATE.src.md` edit — + a pending retro), carries a `Retro: none (trivial: <reason>)` trailer, or is a
 promotion with a structural anchor (a retro header flipped `pending` → `folded`, **or** a ledger update).
 
-`build-n4-module-kit/BUILD-STATE.md` and `build-n4-module-kit/retros/INDEX.md` are GENERATED and NOT
-committed (`.gitignore`), so two PRs that each add a ledger fragment or a retro never conflict on them.
-Read them with `build-n4-module-kit/toolbelt/kit-state.sh build-state` / `retro-index`; `--write`
-materializes both, and `scripts/install-hooks.sh` installs post-merge/post-checkout/post-rewrite hooks
-that do so on every pull (on a generator failure they remove both files and print one warning, so no
-stale copy is left). The sources are committed: the retro's header comments (`review-status`, `module`,
+`build-n4-module-kit/BUILD-STATE.md`, `build-n4-module-kit/retros/INDEX.md` and
+`build-n4-module-kit/toolbelt/INDEX.md` are GENERATED and NOT committed (`.gitignore`), so two PRs that each
+add a ledger fragment, a retro or a lint never conflict on them. Read them with
+`build-n4-module-kit/toolbelt/kit-state.sh build-state` / `retro-index` / `lint-index`; `--write`
+materializes all three, and `scripts/install-hooks.sh` installs post-merge/post-checkout/post-rewrite/
+post-commit hooks that do so on every pull, checkout, rewrite and commit (on a generator failure they remove
+all three files and print one warning, so no stale copy is left). The sources are committed: the retro's header comments (`review-status`, `module`,
 `deltas`, optional `index-comment`); one `build-n4-module-kit/ledger.d/<YYYY-MM-DD>-<slug>.md` fragment per
 change for the kit block's `last_change:` line, `open_issues:` items and session log (format in
 `BUILD-LOOP.md` §7); and `build-n4-module-kit/BUILD-STATE.src.md` for every hand-kept field. CI runs

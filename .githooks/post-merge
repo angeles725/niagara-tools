@@ -8,7 +8,7 @@
 # rebase/amend and commit.
 # It NEVER blocks git: exit 0 always. Quiet on success (one "kit-state: rebuilding…" line when a Go
 # source changed and the binary is rebuilt). On a failure it prints ONE named warning line
-# and deletes both generated files, so no reader is left with stale data.
+# and deletes all three generated files, so no reader is left with stale data.
 # Activated with scripts/install-hooks.sh (core.hooksPath .githooks). [ev: retro ledger-generated-not-committed]
 set -u
 

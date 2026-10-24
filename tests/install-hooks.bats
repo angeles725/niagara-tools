@@ -60,8 +60,8 @@ hookspath() { git -C "$GR" config --local --get core.hooksPath 2>/dev/null || tr
   [ "$(hookspath)" = ".customhooks" ]     # the custom path survives untouched
 }
 
-# R10-D1: the generated kit state (BUILD-STATE.md, retros/INDEX.md) is not committed; .githooks/post-merge,
-# post-checkout and post-rewrite regenerate it. core.hooksPath activates every hook in .githooks/ at once,
+# R10-D1: the generated kit state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md) is not committed;
+# .githooks/post-merge, post-checkout, post-rewrite and post-commit regenerate it. core.hooksPath activates every hook in .githooks/ at once,
 # so the installer only has to ship them executable (git skips a non-executable hook silently) and
 # materialize the state once, right away. [ev: retro ledger-generated-not-committed]
 @test "I5: the regenerate hooks ship executable next to pre-push" {

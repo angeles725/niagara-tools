@@ -3,7 +3,7 @@
 # state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md; not committed since R10-D1) fresh in every clone that runs
 # scripts/install-hooks.sh: after a pull, a checkout, a rebase/amend or a commit, `kit-state --write` runs. They
 # never block git: exit 0 always; when generation fails they print ONE named warning line and delete
-# both generated files, so no reader is left with stale data. [ev: retro ledger-generated-not-committed]
+# all three generated files, so no reader is left with stale data. [ev: retro ledger-generated-not-committed]
 #
 # git is REAL here, on throwaway repos: an "origin" with the kit layout (real sources, real hooks and
 # kit-state wrapper, go/ symlinked to this repo's Go module) and a clone with the hooks active.
@@ -51,7 +51,7 @@ log: 2099-01-01 · $2 landed}" > "$1/build-n4-module-kit/ledger.d/2099-01-01-$2.
   [ -z "$(g "$C" status --porcelain)" ]
 }
 
-@test "HK2: a generator failure prints one named warning, removes both files and exits 0" {
+@test "HK2: a generator failure prints one named warning, removes all three files and exits 0" {
   bash "$C/build-n4-module-kit/toolbelt/kit-state.sh" --write >/dev/null
   [ -f "$C/build-n4-module-kit/BUILD-STATE.md" ]
   frag "$O" broken '<!-- ledger: kit -->
