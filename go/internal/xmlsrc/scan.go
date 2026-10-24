@@ -51,6 +51,9 @@ func (p *parser) run(data []byte) ([]Element, error) {
 			if len(stack) > 0 {
 				e.Parent = stack[len(stack)-1]
 			}
+			if !rooted {
+				p.root = e.Name
+			}
 			rooted = true
 			stack = append(stack, len(elems))
 			elems = append(elems, e)
@@ -108,13 +111,13 @@ func (p *parser) run(data []byte) ([]Element, error) {
 }
 
 func (p *parser) element(t xml.StartElement, off, contentStart int64) (Element, error) {
-	line, col := p.pos.at(off)
+	line, col := p.pos.at(p.unmasked(off))
 	e := Element{Name: qname(t.Name), Line: line, Col: col, start: contentStart, end: contentStart}
 	if len(t.Attr) > 0 {
 		e.Attrs = make([]Attr, len(t.Attr))
 	}
 	for i, a := range t.Attr {
-		e.Attrs[i] = Attr{Name: qname(a.Name), Value: a.Value}
+		e.Attrs[i] = Attr{Name: qname(a.Name), Value: unmask(a.Value, len(p.marks) > 0)}
 		for _, prev := range e.Attrs[:i] {
 			if prev.Name == e.Attrs[i].Name {
 				return Element{}, p.fail(off, "duplicate attribute %s", prev.Name)

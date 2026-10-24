@@ -68,6 +68,9 @@ func Main(args []string, s cli.Stdio) int {
 		return code
 	}
 	a := &audit{out: s.Out, g: build(doc), own: map[string]bool{}, strict: o.strict}
+	for _, w := range doc.Warnings() { // read as Niagara reads it, never silently
+		a.emit("XML", "WARN", fmt.Sprintf("%s:%d:%d", w.Path, w.Line, w.Col), w.Msg)
+	}
 	for _, m := range o.modules {
 		a.own[m] = true
 	}

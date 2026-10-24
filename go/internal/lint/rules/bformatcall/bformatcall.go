@@ -94,7 +94,7 @@ func xml(path string) ([]lint.Finding, error) {
 		b.WriteString(doc.Text(i))
 		texts[i] = b.String()
 	}
-	return scan(texts, func(i int) int { return elems[i].Line }), nil
+	return append(lint.XMLWarnings(doc), scan(texts, func(i int) int { return elems[i].Line })...), nil
 }
 
 // scan reports each text's BFC1 and BFC2 rows at line(i).
