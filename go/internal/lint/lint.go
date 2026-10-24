@@ -47,6 +47,7 @@ type Finding struct {
 	Rule     string
 	Check    string // the sub-check shown in the check column; empty shows Rule
 	Severity Severity
+	Status   string // the first column printed instead of the severity's name (lint-write-path's STALE, DRIFT); it still counts as Severity
 	Path     string
 	Line     int
 	Msg      string
@@ -62,13 +63,17 @@ func (f Finding) row(bare bool) string {
 	if check == "" {
 		check = f.Rule
 	}
+	status := f.Severity.String()
+	if f.Status != "" {
+		status = f.Status
+	}
 	if f.Line == 0 && bare {
-		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s  %s", status, check, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
-		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s: %s", status, check, f.Path, f.Msg)
 	}
-	return fmt.Sprintf("%s  %s  %s:%d  %s", f.Severity, check, f.Path, f.Line, f.Msg)
+	return fmt.Sprintf("%s  %s  %s:%d  %s", status, check, f.Path, f.Line, f.Msg)
 }
 
 // Rule is one lint check over one Java file. Check returns its findings in report order; a non-nil
@@ -106,6 +111,20 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
+// OptionRule is a RootRule that also reads the values of its Spec.ValueFlags (Mode Options): the runner
+// calls CheckRootOptions instead of CheckRoot, with Args.Values (empty when the rule runs in a list).
+type OptionRule interface {
+	RootRule
+	CheckRootOptions(root string, values map[string]string) ([]Finding, error)
+}
+
+// RowError is a TreeRule or RootRule error printed as Row on stdout, after the findings returned with it,
+// instead of "<lint>: <error>" on stderr; it fails the scan closed like any error (exit 3). It is for a
+// bash lint whose env errors were stdout rows (lint-write-path's "lint-write-path  ERROR  <root>  <why>").
+type RowError struct{ Row string }
+
+func (e *RowError) Error() string { return e.Row }
+
 // ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
@@ -120,6 +139,9 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ValueFlags are the flags that take a value in Mode Options ("--bog", "--matrix"); an OptionRule
+	// reads their values.
+	ValueFlags []string
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a

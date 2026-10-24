@@ -18,12 +18,14 @@ const (
 	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
 	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	Options              // <root> with --strict and the Spec.ValueFlags (each "<flag> <value>") anywhere; any other -* is an unknown option
 )
 
 // Args is a parsed command line.
 type Args struct {
 	Strict bool
 	Roots  []string
+	Values map[string]string // Options mode: each value flag given, to its last value (which may be "")
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -32,10 +34,15 @@ type UsageError struct{ Text string }
 
 func (e *UsageError) Error() string { return e.Text }
 
-// Parse reads args under mode. The error text is what the bash lint printed on stderr before exiting
-// 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>"
-// (Trailing), or "<name>: not a directory: <root>".
-func Parse(mode Mode, name, usage string, args []string) (Args, error) {
+// Parse reads args under mode; valueFlags are the flags that take a value (Options mode only). The error
+// text is what the bash lint printed on stderr before exiting 3: the usage line, "<name>: unknown flag:
+// <flag>" plus the usage line, "<name>: unknown option: <arg>" (Trailing, Options), "<name>: <flag>
+// requires a file argument" or "<name>: unexpected argument: <arg>" (Options), or "<name>: not a
+// directory: <root>".
+func Parse(mode Mode, name, usage string, args []string, valueFlags ...string) (Args, error) {
+	if mode == Options {
+		return parseOptions(name, usage, args, valueFlags)
+	}
 	var a Args
 	if mode == Trailing && len(args) > 0 {
 		for _, arg := range args[1:] {
@@ -77,5 +84,45 @@ flags:
 			return Args{}, errors.New(name + ": not a directory: " + root + "\n")
 		}
 	}
+	return a, nil
+}
+
+// parseOptions is lint-write-path's `while [ $# -gt 0 ]; case "$1"` loop: flags and the root in any
+// order, read left to right so the first bad argument is the one reported. An empty argument leaves the
+// root unset, as `[ -z "$MODULE_ROOT" ]` did, so a later argument still takes the root's place.
+func parseOptions(name, usage string, args, valueFlags []string) (Args, error) {
+	a := Args{Values: map[string]string{}}
+	root := ""
+next:
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		for _, f := range valueFlags {
+			if arg == f {
+				if i+1 == len(args) {
+					return Args{}, &UsageError{name + ": " + f + " requires a file argument\n"}
+				}
+				i++
+				a.Values[f] = args[i]
+				continue next
+			}
+		}
+		switch {
+		case arg == "--strict":
+			a.Strict = true
+		case strings.HasPrefix(arg, "-"):
+			return Args{}, &UsageError{name + ": unknown option: " + arg + "\n"}
+		case root == "":
+			root = arg
+		default:
+			return Args{}, &UsageError{name + ": unexpected argument: " + arg + "\n"}
+		}
+	}
+	if root == "" {
+		return Args{}, &UsageError{usage + "\n"}
+	}
+	if st, err := os.Stat(root); err != nil || !st.IsDir() {
+		return Args{}, errors.New(name + ": not a directory: " + root + "\n")
+	}
+	a.Roots = []string{root}
 	return a, nil
 }

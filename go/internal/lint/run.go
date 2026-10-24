@@ -93,24 +93,26 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])
 			r.findings(i, sp, "", fds)
-			if err != nil {
-				r.envError(i, err.Error())
-			}
+			r.ruleError(i, err)
 		}
 		for i, sp := range specs {
 			if sp.Root == nil || stopped[i] {
 				continue
 			}
-			fds, err := sp.Root.CheckRoot(root)
+			var fds []Finding
+			var err error
+			if opt, ok := sp.Root.(OptionRule); ok {
+				fds, err = opt.CheckRootOptions(root, a.Values)
+			} else {
+				fds, err = sp.Root.CheckRoot(root)
+			}
 			if errors.Is(err, ErrEmptyRoot) { // its ERROR row only, as for a walking rule's empty root
 				r.empty(i, sp, root)
 				stopped[i], live = true, live-1
 				continue
 			}
 			r.findings(i, sp, "", fds)
-			if err != nil {
-				r.envError(i, err.Error())
-			}
+			r.ruleError(i, err)
 		}
 	}
 	r.release()
@@ -155,6 +157,19 @@ func (r *report) emit(i int, e event) {
 func (r *report) envError(i int, msg string) {
 	r.envErr = true
 	r.emit(i, event{err: true, text: msg})
+}
+
+// ruleError reports a TreeRule or RootRule error: a *RowError as its row on stdout, any other as
+// "<lint>: <error>" on stderr; either fails the scan closed (exit 3).
+func (r *report) ruleError(i int, err error) {
+	var re *RowError
+	switch {
+	case errors.As(err, &re):
+		r.envErr = true
+		r.emit(i, event{text: re.Row})
+	case err != nil:
+		r.envError(i, err.Error())
+	}
 }
 
 // findings fills each finding's Rule, an Unset Severity and an empty Path, then emits its row.
@@ -301,7 +316,11 @@ func Command(specs ...Spec) cli.Main {
 			sp := selected[0]
 			mode, name, use, usageExit, bare = sp.Mode, sp.ID(), sp.Usage, sp.usageExit(), sp.BareUsage
 		}
-		a, err := Parse(mode, name, use, args[1:])
+		var flags []string
+		if len(selected) == 1 && args[0] != "--all" {
+			flags = selected[0].ValueFlags
+		}
+		a, err := Parse(mode, name, use, args[1:], flags...)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)

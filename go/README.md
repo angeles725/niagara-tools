@@ -99,6 +99,15 @@ rule's rows stay contiguous.
    (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
    fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
    out; it runs by name or in a rule list.
+   A RootRule that takes flags with values uses `Mode` `Options` (`<root>` with `--strict` and each
+   `Spec.ValueFlags` flag as `<flag> <value>` anywhere, read left to right; another `-*` prints
+   `<lint>: unknown option: <arg>`, a second root `<lint>: unexpected argument: <arg>`, a flag without its
+   value `<lint>: <flag> requires a file argument`, all exit 3) and implements `lint.OptionRule`
+   (`CheckRootOptions(root, values)`, with `Args.Values`; reference port: `rules/writepath`). A `TreeRule`
+   or `RootRule` error that is a `*lint.RowError` prints its `Row` on stdout (after the findings returned
+   with it) instead of `<lint>: <error>` on stderr, still exit 3, for a bash lint whose env errors were
+   stdout rows. `Finding.Status` prints another first column (`STALE`, `DRIFT`) for a row that counts as
+   its `Severity`.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,
