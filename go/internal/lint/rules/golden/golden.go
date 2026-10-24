@@ -4,10 +4,17 @@
 // A case file holds "-- args --" (one argument per line), "-- want --" ("exit <n>" then the exact stdout),
 // "-- stderr --" and one "-- <path> --" section per file of the tree; "-- <path> (noeol) --" is a file whose
 // last line has no "\n". "@DIR@" stands for the tree's absolute path in every section.
+//
+// A file that is not plain text is spelled by a marker after its path: "(base64)" (the body is the bytes in
+// base64), "(class N)" (no body: an 8-byte class header, CAFEBABE, minor 0, major N), "(dir)" (an empty
+// directory) and "(jar)": a zip whose entries are the body's "--- <entry> (stored|deflated)[ <marker>] ---"
+// sub-sections, in archive order, each spelled as a file is (an entry name ending in "/" is a directory).
 package golden
 
 import (
+	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,11 +25,12 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 )
 
-// Case is one recorded run of the bash lint.
+// Case is one recorded run of the bash lint. Files maps a tree path to its bytes; Dirs are empty directories.
 type Case struct {
 	Args         []string
 	Want, Stderr string
 	Files        map[string]string
+	Dirs         []string
 }
 
 // Read parses one case file.
@@ -32,9 +40,9 @@ func Read(path string) (Case, error) {
 		return Case{}, err
 	}
 	c := Case{Files: map[string]string{}}
-	name, body := "", ""
-	flush := func() {
-		switch {
+	var bad error
+	for _, sec := range sections(string(data), "-- ", " --\n") {
+		switch name, body := sec[0], sec[1]; {
 		case name == "args":
 			c.Args = strings.Split(strings.TrimSuffix(body, "\n"), "\n")
 			if body == "" {
@@ -44,22 +52,82 @@ func Read(path string) (Case, error) {
 			c.Want = body
 		case name == "stderr":
 			c.Stderr = body
-		case strings.HasSuffix(name, " (noeol)"):
-			c.Files[strings.TrimSuffix(name, " (noeol)")] = strings.TrimSuffix(body, "\n")
-		case name != "":
-			c.Files[name] = body
+		case strings.HasSuffix(name, " (dir)"):
+			c.Dirs = append(c.Dirs, strings.TrimSuffix(name, " (dir)"))
+		case strings.HasSuffix(name, " (jar)"):
+			jar, err := buildJar(body)
+			if err != nil && bad == nil {
+				bad = fmt.Errorf("%s: %s: %w", path, name, err)
+			}
+			c.Files[strings.TrimSuffix(name, " (jar)")] = jar
+		default:
+			p, text, err := decode(name, body)
+			if err != nil && bad == nil {
+				bad = fmt.Errorf("%s: %s: %w", path, name, err)
+			}
+			c.Files[p] = text
 		}
 	}
-	for _, ln := range strings.SplitAfter(string(data), "\n") {
-		if strings.HasPrefix(ln, "-- ") && strings.HasSuffix(ln, " --\n") {
-			flush()
-			name, body = strings.TrimSuffix(strings.TrimPrefix(ln, "-- "), " --\n"), ""
-			continue
+	return c, bad
+}
+
+// sections splits text at its header lines (open + name + close) into {name, body} pairs; text before the
+// first header is dropped.
+func sections(text, open, close string) [][2]string {
+	var out [][2]string
+	for _, ln := range strings.SplitAfter(text, "\n") {
+		if strings.HasPrefix(ln, open) && strings.HasSuffix(ln, close) {
+			out = append(out, [2]string{strings.TrimSuffix(strings.TrimPrefix(ln, open), close), ""})
+		} else if len(out) > 0 {
+			out[len(out)-1][1] += ln
 		}
-		body += ln
 	}
-	flush()
-	return c, nil
+	return out
+}
+
+// decode is one file or jar entry section: its path without the marker and its bytes.
+func decode(name, body string) (string, string, error) {
+	switch {
+	case strings.HasSuffix(name, " (noeol)"):
+		return strings.TrimSuffix(name, " (noeol)"), strings.TrimSuffix(body, "\n"), nil
+	case strings.HasSuffix(name, " (base64)"):
+		b, err := base64.StdEncoding.DecodeString(strings.TrimSpace(body))
+		return strings.TrimSuffix(name, " (base64)"), string(b), err
+	}
+	var major int
+	if i := strings.LastIndex(name, " (class "); i >= 0 && strings.HasSuffix(name, ")") {
+		if _, err := fmt.Sscanf(name[i:], " (class %d)", &major); err == nil {
+			return name[:i], string([]byte{0xca, 0xfe, 0xba, 0xbe, 0, 0, 0, byte(major)}), nil
+		}
+	}
+	return name, body, nil
+}
+
+// buildJar is the zip a "(jar)" section spells.
+func buildJar(body string) (string, error) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, sec := range sections(body, "--- ", " ---\n") {
+		method, name := zip.Deflate, sec[0]
+		for marker, m := range map[string]uint16{" (stored)": zip.Store, " (deflated)": zip.Deflate} {
+			if i := strings.LastIndex(name, marker); i >= 0 {
+				method, name = m, name[:i]+name[i+len(marker):]
+			}
+		}
+		entry, data, err := decode(name, sec[1])
+		if err != nil {
+			return "", err
+		}
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: entry, Method: method})
+		if err == nil {
+			_, err = w.Write([]byte(data))
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	err := zw.Close()
+	return buf.String(), err
 }
 
 // Run checks that spec, run alone as its toolbelt wrapper runs it, prints every case's recorded exit code,
@@ -84,6 +152,11 @@ func RunMain(t *testing.T, m cli.Main, min int) {
 				t.Fatal(err)
 			}
 			dir := t.TempDir()
+			for _, d := range c.Dirs {
+				if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
 			for f, text := range c.Files {
 				full := filepath.Join(dir, f)
 				if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {

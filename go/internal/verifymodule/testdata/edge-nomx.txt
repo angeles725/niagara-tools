@@ -1,0 +1,45 @@
+-- args --
+--target-version
+4.14
+--stored
+--src
+@DIR@/mod
+@DIR@/Nomx-wb.jar
+-- want --
+exit 1
+PASS  bytecode   @DIR@/Nomx-wb.jar  1 classes, all major 52
+PASS  signed     @DIR@/Nomx-wb.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+FAIL  types      @DIR@/Nomx-wb.jar  META-INF/module.xml missing (not an N4 module jar)
+FAIL  baja       @DIR@/Nomx-wb.jar  META-INF/module.xml missing
+PASS  stored     @DIR@/Nomx-wb.jar  0 deflated entries (Workbench re-sign safe)
+SKIP  typecount  @DIR@/Nomx-wb.jar  no @DIR@/mod/Nomx-wb/module-include.xml
+PASS  facets     @DIR@/Nomx-wb.jar  no raw-number MIN/MAX facet under @DIR@/mod/Nomx-wb/src
+PASS  facets-req  @DIR@/Nomx-wb.jar  no missing required facets under @DIR@/mod/Nomx-wb/src
+PASS  ord-literal  @DIR@/Nomx-wb.jar  no hardcoded ORD literals under @DIR@/mod/Nomx-wb/src
+SKIP  palette    @DIR@/Nomx-wb.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Nomx-wb.jar  no module.palette
+SKIP  phantom-dep  @DIR@/Nomx-wb.jar  no META-INF/module.xml
+SKIP  moduletest  @DIR@/Nomx-wb.jar  not an -rt jar
+PASS  cross-module-type  @DIR@/Nomx-wb.jar  no cross-module type references in @DIR@/mod/Nomx-wb/src
+PASS  transient-operator  @DIR@/Nomx-wb.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Nomx-wb/src
+SKIP  compact3-import  @DIR@/Nomx-wb.jar  not an -rt or -ux jar
+PASS  subscription-leak  @DIR@/Nomx-wb.jar  no TypeSubscriber without stopped() under @DIR@/mod/Nomx-wb/src
+PASS  slot-wall  @DIR@/Nomx-wb.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Nomx-wb/src
+verify-module: 10 passed, 2 failed, 6 skipped, 0 warned -> FAILED
+-- stderr --
+-- Nomx-wb.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Nomx-wb/Nomx-wb.gradle.kts --
+-- mod/Nomx-wb/src/com/x/A.java --
+class A {}

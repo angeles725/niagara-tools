@@ -1,0 +1,52 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Empty-rt.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Empty-rt.jar  2 classes, all major 52
+PASS  signed     @DIR@/Empty-rt.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Empty-rt.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Empty-rt.jar  no --target-version
+SKIP  stored     @DIR@/Empty-rt.jar  no --stored
+PASS  typecount  @DIR@/Empty-rt.jar  jar declares 1 types == module-include.xml
+PASS  facets     @DIR@/Empty-rt.jar  no raw-number MIN/MAX facet under @DIR@/mod/Empty-rt/src
+PASS  facets-req  @DIR@/Empty-rt.jar  no missing required facets under @DIR@/mod/Empty-rt/src
+PASS  ord-literal  @DIR@/Empty-rt.jar  no hardcoded ORD literals under @DIR@/mod/Empty-rt/src
+SKIP  palette    @DIR@/Empty-rt.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Empty-rt.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/Empty-rt.jar  no *.gradle.kts in @DIR@/mod/Empty-rt
+SKIP  moduletest  @DIR@/Empty-rt.jar  no production .java under src/
+PASS  cross-module-type  @DIR@/Empty-rt.jar  no cross-module type references in @DIR@/mod/Empty-rt/src
+PASS  transient-operator  @DIR@/Empty-rt.jar  no TRANSIENT+OPERATOR slot combination under @DIR@/mod/Empty-rt/src
+PASS  compact3-import  @DIR@/Empty-rt.jar  no Compact3 non-safe imports under @DIR@/mod/Empty-rt/src
+PASS  subscription-leak  @DIR@/Empty-rt.jar  no TypeSubscriber without stopped() under @DIR@/mod/Empty-rt/src
+PASS  slot-wall  @DIR@/Empty-rt.jar  no flat slot wall (>15 @NiagaraProperty per class) under @DIR@/mod/Empty-rt/src
+verify-module: 12 passed, 0 failed, 6 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- Empty-rt.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---
+-- mod/Empty-rt/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+-- mod/Empty-rt/src/com/x (dir) --

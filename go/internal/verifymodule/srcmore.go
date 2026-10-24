@@ -1,0 +1,231 @@
+package verifymodule
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
+)
+
+var (
+	gradleDepRe     = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*":[^"]*"`)
+	gradleProjectRe = rx(`(api|nre|implementation)[[:space:]]*\([[:space:]]*project[[:space:]]*\([[:space:]]*":[^"]*"`)
+	quotedDepRe     = rx(`":[^"]*"`)
+	mxDependencyRe  = rx(`<dependency[[:space:]]+[^>]*\bname="[^"]*"`)
+	mxNameRe        = rx(`\bname="[^"]*"`)
+)
+
+// firstGradleKts is `find <pd> -maxdepth 1 -name '*.gradle.kts' 2>/dev/null | sort | head -1`: any type of
+// entry, pd itself included, a symlinked pd not entered (find -P).
+func firstGradleKts(pd string) string {
+	var hits []string
+	if ok, _ := path.Match("*.gradle.kts", lint.Basename(pd)); ok {
+		hits = append(hits, pd)
+	}
+	if st, err := os.Lstat(pd); err == nil && st.IsDir() {
+		entries, _ := os.ReadDir(pd)
+		for _, e := range entries {
+			if ok, _ := path.Match("*.gradle.kts", e.Name()); ok {
+				hits = append(hits, pd+"/"+e.Name())
+			}
+		}
+	}
+	if len(hits) == 0 {
+		return ""
+	}
+	sort.Strings(hits)
+	return hits[0]
+}
+
+func (r *run) phantomDep() bool {
+	pd, ok := r.srcOrSkip("phantom-dep")
+	if !ok {
+		return true
+	}
+	gkt := firstGradleKts(pd)
+	if gkt == "" {
+		r.row("SKIP", "phantom-dep", "no *.gradle.kts in "+pd)
+		return true
+	}
+	if r.jar.mx == "" {
+		r.row("SKIP", "phantom-dep", "no META-INF/module.xml")
+		return true
+	}
+	data, err := os.ReadFile(gkt)
+	if err != nil { // both greps had no 2>/dev/null
+		msg := "grep: " + gkt + ": " + strerror.Text(err) + "\n"
+		fmt.Fprint(r.s.Err, msg+msg)
+	}
+	var declared []string
+	for _, re := range []*regexp.Regexp{gradleDepRe, gradleProjectRe} {
+		for _, m := range newGrepText(string(data)).only(re) {
+			for _, q := range newGrepText(m).only(quotedDepRe) {
+				declared = append(declared, strings.TrimSuffix(strings.TrimPrefix(q, `":`), `"`))
+			}
+		}
+	}
+	var deps, phantom []string
+	for _, m := range newGrepText(r.jar.mx).only(mxDependencyRe) {
+		for _, n := range newGrepText(m).only(mxNameRe) {
+			deps = append(deps, strings.TrimSuffix(strings.TrimPrefix(n, `name="`), `"`))
+		}
+	}
+	declared = sortU(declared)
+	for _, dep := range sortU(deps) {
+		if dep != "" && !contains(declared, dep) {
+			phantom = append(phantom, dep)
+		}
+	}
+	if len(phantom) > 0 {
+		r.row("WARN", "phantom-dep", "module.xml dependency not declared in gradle.kts api()/nre(): "+strings.Join(phantom, ", "))
+		return true
+	}
+	r.row("PASS", "phantom-dep", "all module.xml dependencies declared in gradle.kts")
+	return true
+}
+
+// hasEntryNamed is `find <dir> -name <name> 2>/dev/null | head -1` being non-empty: nothing pruned, no
+// symlink followed, unreadable directories skipped.
+func hasEntryNamed(dir, name string) bool {
+	found := false
+	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
+		if d != nil && d.Name() == name {
+			found = true
+			return fs.SkipAll
+		}
+		return nil
+	})
+	return found
+}
+
+func (r *run) moduleTest() bool {
+	if !strings.HasSuffix(basename(r.jar.path, ".jar"), "-rt") {
+		r.row("SKIP", "moduletest", "not an -rt jar")
+		return true
+	}
+	pd, ok := r.srcOrSkip("moduletest")
+	if !ok {
+		return true
+	}
+	if !lint.IsDir(pd) {
+		r.row("SKIP", "moduletest", "no source dir "+pd)
+		return true
+	}
+	if !lint.IsDir(pd+"/src") || len(r.javaFiles(pd+"/src")) == 0 {
+		r.row("SKIP", "moduletest", "no production .java under src/")
+		return true
+	}
+	msg := "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"
+	switch {
+	case hasEntryNamed(pd, "moduleTest-include.xml"):
+		r.row("PASS", "moduletest", "moduleTest-include.xml present")
+	case r.strict:
+		r.row("FAIL", "moduletest", msg)
+		return false
+	default:
+		r.row("WARN", "moduletest", msg)
+	}
+	return true
+}
+
+var typeValueRe = rx(`type[[:space:]]*=[[:space:]]*"[^"]*"`)
+
+func (r *run) crossModuleType() bool {
+	pd, ok := r.srcDirOrSkip("cross-module-type")
+	if !ok {
+		return true
+	}
+	var types []string
+	for _, f := range r.javaFiles(pd + "/src") {
+		for _, m := range r.text(f).only(typeValueRe) {
+			types = append(types, typeAttrRe.FindStringSubmatch(m)[1])
+		}
+	}
+	warned := false
+	for _, t := range sortU(types) {
+		dot := strings.LastIndexByte(t, '.')
+		if dot < 0 || dot+1 == len(t) || t[dot+1] < 'A' || t[dot+1] > 'Z' {
+			continue
+		}
+		if hasAnyPrefix(t, "javax.baja.", "com.tridium.", "com.tridiumx.", "com.honeywell.") ||
+			lint.IsDir(pd+"/src/"+strings.ReplaceAll(t[:dot], ".", "/")) {
+			continue
+		}
+		r.row("WARN", "cross-module-type", "foreign type in @NiagaraProperty: "+t)
+		warned = true
+	}
+	if !warned {
+		r.row("PASS", "cross-module-type", "no cross-module type references in "+pd+"/src")
+	}
+	return true
+}
+
+func hasAnyPrefix(s string, prefixes ...string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	subscriberRe = regexp.MustCompile(`(extends[[:space:]]+TypeSubscriber|TypeSubscriber[[:space:]]+)`)
+	stoppedRe    = regexp.MustCompile(`void[[:space:]]+stopped[[:space:]]*\(`)
+)
+
+func (r *run) subscriptionLeak() bool {
+	pd, ok := r.srcDirOrSkip("subscription-leak")
+	if !ok {
+		return true
+	}
+	warned := false
+	for _, f := range r.javaFiles(pd + "/src") {
+		if t := r.text(f); t.count(subscriberRe) > 0 && t.count(stoppedRe) == 0 {
+			r.row("WARN", "subscription-leak", f+": TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart")
+			warned = true
+		}
+	}
+	if !warned {
+		r.row("PASS", "subscription-leak", "no TypeSubscriber without stopped() under "+pd+"/src")
+	}
+	return true
+}
+
+var (
+	niagaraPropertyRe = regexp.MustCompile(`@NiagaraProperty`)
+	classDeclRe       = rx(`(public[[:space:]]+)?(class|interface)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*`)
+)
+
+func (r *run) slotWall() bool {
+	pd, ok := r.srcDirOrSkip("slot-wall")
+	if !ok {
+		return true
+	}
+	warned := false
+	for _, f := range r.javaFiles(pd + "/src") {
+		t := r.text(f)
+		count := t.count(niagaraPropertyRe)
+		if count <= 15 {
+			continue
+		}
+		class := basename(f, ".java")
+		if ms := t.only(classDeclRe); len(ms) > 0 {
+			fields := awkFields(ms[0])
+			class = fields[len(fields)-1]
+		}
+		r.row("WARN", "slot-wall", fmt.Sprintf("%d properties in class %s (%s) — compose into child BComponents (logic.md L21)", count, class, f))
+		warned = true
+	}
+	if !warned {
+		r.row("PASS", "slot-wall", "no flat slot wall (>15 @NiagaraProperty per class) under "+pd+"/src")
+	}
+	return true
+}

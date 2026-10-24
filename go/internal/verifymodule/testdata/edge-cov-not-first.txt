@@ -1,0 +1,11 @@
+-- args --
+--strict
+coverage
+1
+1
+1
+1
+-- want --
+exit 2
+-- stderr --
+verify-module: not a jar: coverage

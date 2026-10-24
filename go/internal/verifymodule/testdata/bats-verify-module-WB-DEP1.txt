@@ -1,0 +1,65 @@
+-- args --
+--src
+@DIR@/mod
+@DIR@/Foo-wb.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/Foo-wb.jar  1 classes, all major 52
+PASS  signed     @DIR@/Foo-wb.jar  signed by alias NIAGARA4 (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/Foo-wb.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/Foo-wb.jar  no --target-version
+SKIP  stored     @DIR@/Foo-wb.jar  no --stored
+PASS  typecount  @DIR@/Foo-wb.jar  jar declares 1 types == module-include.xml
+SKIP  facets     @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  facets-req  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  ord-literal  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  palette    @DIR@/Foo-wb.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/Foo-wb.jar  no module.palette
+WARN  phantom-dep  @DIR@/Foo-wb.jar  module.xml dependency not declared in gradle.kts api()/nre(): schedule-rt
+SKIP  moduletest  @DIR@/Foo-wb.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  transient-operator  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  compact3-import  @DIR@/Foo-wb.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+SKIP  slot-wall  @DIR@/Foo-wb.jar  no @DIR@/mod/Foo-wb/src
+verify-module: 4 passed, 0 failed, 13 skipped, 1 warned -> ALL PASS
+-- stderr --
+-- Foo-wb.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/><dependency name="schedule-rt" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/A.class (stored) (class 52) ---
+-- dep/META-INF/MANIFEST.MF --
+Manifest-Version: 1.0
+-- dep/META-INF/NIAGARA4.RSA (noeol) --
+RSA
+-- dep/META-INF/NIAGARA4.SF --
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+-- dep/META-INF/module.xml --
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/><dependency name="schedule-rt" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types><type name="A" class="com.x.A"/></types>
+</module>
+-- dep/com/x/A.class (class 52) --
+-- mod/Foo-wb/Foo-wb.gradle.kts --
+niagaraModule { runtimeProfile.set(wb); moduleName.set("Foo") }
+dependencies { nre(":nre"); api(":baja") }   // schedule-rt is NOT declared -> phantom
+-- mod/Foo-wb/module-include.xml --
+<types>
+<type name="A" class="com.x.A"/>
+</types>

@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/no-rc.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/no-rc.html  Rc: IMG_W/IMG_H not found
+-- stderr --
+-- no-rc.html --
+<svg id="zonas"></svg>

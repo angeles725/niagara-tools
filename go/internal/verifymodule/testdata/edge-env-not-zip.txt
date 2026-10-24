@@ -1,0 +1,8 @@
+-- args --
+@DIR@/bad.jar
+-- want --
+exit 3
+-- stderr --
+verify-module: not a zip: @DIR@/bad.jar
+-- bad.jar --
+not a zip

@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/no-img.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/no-img.html  Ri: no #planoImg with data:image/png;base64 found
+-- stderr --
+-- no-img.html --
+<script>IMG_W=2;IMG_H=3</script><svg id="zonas" viewBox="0 0 2 3"></svg>
