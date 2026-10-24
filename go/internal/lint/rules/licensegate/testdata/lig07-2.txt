@@ -1,0 +1,19 @@
+-- args --
+--bogus
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-license-isoperational-gate: unknown flag: --bogus
+usage: lint-license-isoperational-gate.sh [--strict] <src-root>
+-- Mod/src/com/x/BSvc.java --
+package com.x;
+public class BSvc extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void doPoll() {
+    poll();
+  }
+}
