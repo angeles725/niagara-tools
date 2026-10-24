@@ -1,6 +1,6 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
-// (mcp-n4-kit/mcp_n4/tools_read.py:198-500, 789-969): n4_connect, n4_describe_session and the
-// tree reads; every other read tool still answers jsonrpc.NotImplemented.
+// (mcp-n4-kit/mcp_n4/tools_read.py:198-688, 789-969): n4_connect, n4_describe_session, the
+// tree reads and the BQL bulk reads; every other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
 import (
@@ -23,6 +23,7 @@ const RootOrd = "station:|slot:/"
 type Client interface {
 	Open() (any, error)
 	LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.Object, error)
+	GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error)
 	BaseURL() string
 	Close()
 }
@@ -62,6 +63,8 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_read_slots"] = t.ReadSlots
 	s.Handlers["n4_list_links"] = t.ListLinks
 	s.Handlers["n4_find_dangling_outputs"] = t.FindDanglingOutputs
+	s.Handlers["n4_bql_query"] = t.BqlQuery
+	s.Handlers["n4_inventory"] = t.Inventory
 }
 
 func toolError(format string, a ...any) error {
