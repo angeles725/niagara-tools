@@ -1,0 +1,20 @@
+declared difference (truth fix T3, queue field names): the awk named a Deque/Queue line after its first `<name> =`
+and skipped a name that was a substring of the names so far, so `Queue<B> pending;` printed "(Deque/Queue field)",
+`waiting` was hidden by `waitingQueue`, `busy = a == b; Queue<B> spare` printed busy, and `head = null, tail`
+lost tail. Every declarator of a Deque<…>/Queue<…> type is named now (not the `new ArrayDeque<>()` it is
+assigned), each once by exact name.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-inert-coordination  @DIR@/Q.java:7  units() returns a structurally singleton list while pending, waitingQueue, waiting, spare, head, tail (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- Q.java --
+class Q {
+  Queue<BComponent> pending;
+  Deque<BComponent> waitingQueue = new ArrayDeque<>();
+  Deque<BComponent> waiting = new ArrayDeque<>();
+  boolean busy = a == b; Queue<BComponent> spare = null;
+  Deque<BComponent> head = null, tail = null;
+  List<BComponent> units() { return Collections.singletonList(getParent()); }
+}

@@ -1,0 +1,6 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-changed-hot-write: not a directory: @DIR@/nope

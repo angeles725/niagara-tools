@@ -215,6 +215,35 @@ EOF2
   # Named mutation SPR9: count a clock assignment anywhere in the file -> SPR9 passes clean.
 }
 
+@test "SPR13: a location.reload() quoted in a comment or a string is not a recovery" {
+  # Mutation: SPR13 -- reading block comments as code takes /* location.reload(); */ for the recovery
+  # Go golden: go/internal/lint/rules/spapoll/testdata/truth-code-view-1.txt
+  printf '%s\n' 'function poll() { a().catch(e => 0); }' 'setInterval(poll, 1);' '/* location.reload(); */' > "$TMPDIR_T/Mod/src/rc/a.js"
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"a.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload("* ]]
+}
+
+@test "SPR14: a minified library line does not stand for the page's poll loop" {
+  # Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
+  # Go golden: go/internal/lint/rules/spapoll/testdata/truth-minified-1.txt
+  { printf '<script>!function(t){function n(){try{t()}catch(e){}}setTimeout(n,0);'
+    for _ in $(seq 150); do printf 'var a=1;'; done
+    printf '}(this);</script>\n'; } > "$TMPDIR_T/Mod/src/rc/lib.html"
+  run "$SPR" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "SPR15: a location.href comparison is not a recovery" {
+  # Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery
+  # Go golden: go/internal/lint/rules/spapoll/testdata/truth-recovery-shapes-1.txt
+  printf '%s\n' 'function poll() { a().catch(e => 0); }' 'setInterval(poll, 1);' 'if (location.href == "/x") go();' > "$TMPDIR_T/Mod/src/rc/a.js"
+  run "$SPR" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"a.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload("* ]]
+}
+
 @test "SPR-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: SPR-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/rc/u.js")"

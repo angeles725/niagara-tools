@@ -15,6 +15,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
@@ -65,8 +66,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 		for _, p := range files {
 			data, err := os.ReadFile(p)
 			if err != nil {
-				// awk_lint_run printed the first line of awk's own error.
-				r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				if shortScanError(specs, root, p) { // awk_lint_each printed the shell's reason only
+					r.envError(0, fmt.Sprintf("cannot scan %s: %s", p, strerror.Text(err)))
+				} else { // awk_lint_run printed the first line of awk's own error
+					r.envError(0, fmt.Sprintf("cannot scan %s: awk: fatal: cannot open file `%s' for reading: %s", p, p, strerror.Text(err)))
+				}
 				continue
 			}
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
@@ -86,7 +90,12 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				}
 				r.findings(i, sp, shown, fds)
 				if err != nil {
-					r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					var xe *xmlsrc.Error
+					if errors.As(err, &xe) { // it names its own path:line:col: print it once
+						r.envError(i, xe.Error())
+					} else {
+						r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					}
 				}
 			}
 		}
@@ -193,7 +202,7 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 		}
 		r.failed = r.failed || fd.Severity == Fail
 		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
-		r.emit(i, event{text: fd.row(sp.BarePathRow)})
+		r.emit(i, event{text: fd.row(sp.BarePathRow, sp.CheckFirst)})
 	}
 }
 
@@ -304,6 +313,7 @@ func Command(specs ...Spec) cli.Main {
 		if args[0] == "--all" {
 			for _, sp := range specs {
 				if sp.Root == nil && !sp.ModuleRoot && sp.Mode != FileFirst { // --all runs on source roots
+					sp.EmptyOK = sp.EmptyOK || sp.OptionalInAll
 					selected = append(selected, sp)
 				}
 			}
@@ -338,11 +348,12 @@ func Command(specs ...Spec) cli.Main {
 				selected = []Spec{sp}
 			}
 		}
-		option := ""
+		var vo ValueOptions
 		if len(selected) == 1 && args[0] != "--all" {
-			option = selected[0].Option
+			sp := selected[0]
+			vo = ValueOptions{Option: sp.Option, Repeat: sp.Options, Strict: sp.ValuedStrict}
 		}
-		a, err := ParseOption(mode, name, use, option, rest)
+		a, err := ParseValued(mode, name, use, vo, rest)
 		if err != nil {
 			var ue *UsageError
 			usageErr := errors.As(err, &ue)
@@ -396,4 +407,19 @@ func intFlags(sp Spec, args []string) (map[string]int, []string, error) {
 		i++
 	}
 	return vals, rest, nil
+}
+
+// shortScanError reports that every walking spec selecting file p words its read error as awk_lint_each did.
+func shortScanError(specs []Spec, root, p string) bool {
+	any := false
+	for _, sp := range specs {
+		if sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+			continue
+		}
+		if !sp.ShortScanError {
+			return false
+		}
+		any = true
+	}
+	return any
 }

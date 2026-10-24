@@ -35,7 +35,15 @@ Content-Length, is a `transport failure`, never an internal error or a complete 
 `malformed BOX reply`.
 v0.9.3: a non-UTF-8 credential is refused with a fixed message that no longer reveals a
 character position (R8-D19); the Go server serves `n4_navigate`, `n4_read_slots`,
-`n4_list_links` and `n4_find_dangling_outputs` (still opt-in via `MCP_N4_IMPL=go`).
+`n4_list_links` and `n4_find_dangling_outputs` (slice S5), after S4's `n4_connect` and
+`n4_describe_session`. Go port status, still at v0.9.3 (docs/go-port-plan.md section 3):
+S6 added `n4_bql_query` and `n4_inventory`, S7 `n4_read_file`, `n4_list_px_views` and
+`n4_px_summary`, so the Go server (`go/cmd/mcp-n4`) serves 11 of the 13 read tools;
+`n4_list_batches` (S8), `n4_session_retro_draft` (S9) and every write tool answer "is not
+implemented in this version of the Go server", and it refuses `--allow-writes` at start.
+It is opt-in until S16: the `.mcp.json` example below launches Python; to try Go, launch
+`go/bin/mcp-n4` with the same flags. `MCP_N4_IMPL=go` only selects the server the test suite
+drives (docs/go-port-plan.md section 5).
 
 ## Methodology and skill
 
@@ -74,12 +82,15 @@ scripts/install-skill.sh --skill mcp-n4
   the tests).
 - `tests/fake_station.py`: fake BOX station on `127.0.0.1` (plain HTTP, tests only).
 - `tests/test_box.py`: unit tests.
+- `tests/go_server.py`, `tests/go_registry.py`, `tests/go_box.py`: the Go-port parity harness
+  (`MCP_N4_IMPL=go`; docs/go-port-plan.md sections 5-7).
 
 Security defaults: `http://` is refused unless `allow_http=True` (tests only),
 the password is never in `repr`, and HTTP 401/403 raises `AuthError` with no
 retry (5 failures in 30 s lock the account). A 401 names what to check: the
 user's Authentication Scheme Name must be `HTTPBasicScheme`, then the password.
-The server also latches on any `AuthError` (login, `/obix/about/`, `/ord` GET, BOX call):
+The server also latches on any `AuthError` (login, `/obix/about/`, `/ord` GET, `/file/` GET,
+BOX call):
 every station call is refused for `--auth-cooldown` seconds (default and minimum 30), with
 the reason and the seconds left; `n4_describe_session` shows `auth_paused`. Only an
 `n4_connect` with other credentials may try during the cooldown; a good login clears it.
@@ -270,7 +281,8 @@ Every write call goes through these layers:
    The plan names the station (`station: {name, base_url, session_id}`, a fresh id per
    `n4_connect`), so a token never executes after a reconnect or on another station.
 7. **Write-ahead journal.** Before any op is sent, an `intent` record
-   `{batch_id, ts, tool, ops, inverse_plan, station_name, phase}` is appended to
+   `{batch_id, ts, tool, ops, inverse_plan, station_name, phase, targets}` (a rollback adds
+   `rollback_of` and, when present, `relinks` and `components`) is appended to
    `<state-dir>/journal.jsonl`; if that fails nothing is sent (the token stays
    spent). After the reply a `result` record `{batch_id, phase, accepted, inverse,
    verdict}` follows, holding the real inverse (for example the server-assigned
@@ -465,4 +477,5 @@ percentage is a pointer, not a gate. Delete the coverdir afterwards.
 - B1197: MCP synthesis.
 - B1199: live PoC on station `LLM`.
 
-Note: this kit is not covered by the repo pre-push retro gate yet.
+Note: `mcp-n4-kit/` is not covered by the repo pre-push retro gate yet; its Go port under `go/`
+is, like every `go/**` change (`.githooks/pre-push`, build-relevant paths).

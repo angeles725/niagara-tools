@@ -1,0 +1,18 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  com.s  declared in 2 modules: A/A-rt (A/A-rt/src/x/U.java), A/A-ux (A/A-ux/src/x/V.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/x/U.java --
+package com.s;
+-- proj/A/A-rt/src/x/W.java --
+package com.a;
+-- proj/A/A-ux/build.gradle.kts --
+-- proj/A/A-ux/src/.keep --
+k
+-- proj/A/A-ux/src/x/V.java --
+package com.s;

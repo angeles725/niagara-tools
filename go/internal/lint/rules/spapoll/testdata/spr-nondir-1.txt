@@ -1,0 +1,6 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-spa-poll-no-recovery: not a directory: @DIR@/nope

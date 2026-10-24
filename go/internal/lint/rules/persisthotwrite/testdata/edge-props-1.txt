@@ -1,0 +1,29 @@
+declared difference (truth fix T5, truth-equal-value-skip-1): Baja skips a write of an equal simple value
+(ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set), so a constant written to a simple-typed slot
+dirties the station once, not every cycle: those rows are gone (truth-fresh-* keep the shapes with fresh values).
+declared difference (truth fix T4, truth-property-flags-1): bHours' Flags.TRANSIENT on the next line makes it
+transient, and cHours (declared beside dHours on line 5) is read with its own flags (0, non-transient).
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- P1.java --
+class P1 {
+  public static final Property aHours = newProperty(Flags.SUMMARY | Flags.TRANSIENT, 0.0, null);
+  public static final Property bHours = newProperty(
+      Flags.TRANSIENT, 0.0, null);
+  Property cHours=newProperty(0,0.0,null); Property dHours = newProperty(Flags.TRANSIENT, 1, null);
+  static final Property  eHours  =  newProperty( 0 , 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    setAHours(1); setBHours(1); setCHours(1); setDHours(1); setEHours(1);
+  }
+  void execute() { }
+}

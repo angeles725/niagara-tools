@@ -58,24 +58,29 @@ type Finding struct {
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
 // for a file-level finding (Line 0), or "SUMMARY  <check>  <msg>" for a finding about the whole run (Line 0 and
 // no Path, which only a TreeRule can leave empty). The check column is Check, or Rule when Check is empty.
-func (f Finding) Row() string { return f.row(false) }
+func (f Finding) Row() string { return f.row(false, false) }
 
-// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
-func (f Finding) row(bare bool) string {
+// row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow) and the
+// check column before the severity when checkFirst is set (Spec.CheckFirst).
+func (f Finding) row(bare, checkFirst bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
 	}
+	first, second := f.Severity.String(), check
+	if checkFirst {
+		first, second = check, first
+	}
 	if f.Line == 0 && f.Path == "" {
-		return fmt.Sprintf("%s  %s  %s", f.Severity, check, f.Msg)
+		return fmt.Sprintf("%s  %s  %s", first, second, f.Msg)
 	}
 	if f.Line == 0 && bare {
-		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s  %s", first, second, f.Path, f.Msg)
 	}
 	if f.Line == 0 {
-		return fmt.Sprintf("%s  %s  %s: %s", f.Severity, check, f.Path, f.Msg)
+		return fmt.Sprintf("%s  %s  %s: %s", first, second, f.Path, f.Msg)
 	}
-	return fmt.Sprintf("%s  %s  %s:%d  %s", f.Severity, check, f.Path, f.Line, f.Msg)
+	return fmt.Sprintf("%s  %s  %s:%d  %s", first, second, f.Path, f.Line, f.Msg)
 }
 
 // Rule is one lint check over one Java file. Check returns its findings in report order; a non-nil
@@ -136,20 +141,36 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
-	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
-	// implementing Configurer.
-	Option string
+	// ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan <path>: <reason>")
+	// instead of awk_lint_run's awk error text (lint-agent-on-shape).
+	ShortScanError bool
+	// CheckFirst prints a finding's check column before its severity (`<check>  <SEV>  <path>:<line>  <msg>`),
+	// the row of lint-wb-threading; the empty-root ERROR row keeps the standard shape.
+	CheckFirst bool
 	// Joined gives a TreeRule the files of every root in one CheckTree call, after the last root, for a lint
 	// whose report spans its roots (lint-manual-labels: one UI haystack and one SUMMARY row over every <ui-dir>).
 	Joined bool
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
-	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3. A RootRule
+	// that returns no ErrEmptyRoot for such a root (lint-jasmine-ux) sets it to record the same exception.
 	EmptyOK bool
+	// OptionalInAll makes a root where the rule selects no file clean for it under n4lint --all (no ERROR
+	// row), for a rule whose files belong to one profile only (lint-spa-poll-no-recovery reads the *.html/*.js
+	// of a -ux root, and --all also runs on -rt roots that have none). Run by name or in a rule list it keeps
+	// the empty-root error.
+	OptionalInAll bool
 	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
 	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
 	// RootRule; it runs by name or in a rule list.
 	ModuleRoot bool
+	// Option is the value option Mode Valued parses (e.g. "--wiring-map"), or the noun of the file operand of
+	// Mode FileFirst ("manual"); the rule reads its value (Args.Option) by implementing Configurer.
+	Option string
+	// Options are further Mode Valued value options, each repeatable (every value in Args.Values), and
+	// ValuedStrict accepts --strict in Mode Valued.
+	Options      []string
+	ValuedStrict bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a

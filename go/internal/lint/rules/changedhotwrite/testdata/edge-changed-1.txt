@@ -1,0 +1,89 @@
+declared difference (truth fix T5, truth-equal-value-skip-1): Baja skips a write of an equal simple value
+(ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set), so a constant written to a simple-typed slot is
+not a per-cycle persisted write and does not qualify a hot changed() (truth-fresh-* keep the shapes).
+declared difference (truth fix T1, truth-code-view-1): C2's commented-out changed(Property q ...) is no
+longer the callback, so the real one (line 5) WARNs; C3's "}" in a string no longer ends changed() early (line 3 WARNs).
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- C1.java --
+class C1 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed (  Property   p , Context cx)
+  {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C2.java --
+class C2 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  // public void changed(Property p, Context cx) { execute(); }
+  /* public void changed(Property q, Context cx) { */
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C3.java --
+class C3 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    String s = "}";
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(1.0); }
+}
+-- C4.java --
+class C4 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+-- C5.java --
+class C5 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  void other() { setXHours(2.0); }
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  public void changed(Property q, Context cx) { setXHours(3.0); }
+  void execute() { setXHours(1.0); }
+}
+-- C6.java --
+class C6 {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) { if (p == a) execute(); if (p == b) execute(); if (p == c) execute(); if (p == d) execute(); if (p == e) execute(); if (p == f) execute(); }
+  void execute() { setXHours(1.0); }
+}

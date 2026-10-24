@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 # kit-cite-resolve.sh — resolves every evidence pointer of kit cards (`[ev: …]` / `[deferred: …]` tags and
 # prose citations: retro deltas, corpus blocks and sections, code, devguide/guide lines, memories, kit
-# cross-references) and prints its status with an excerpt of the cited line, so a reviewer only judges
-# whether the source says it. A pre-filter: RESOLVED means the cited place exists, never that it is true.
+# cross-references, course pages, client bitácoras) and prints its status with an excerpt of the cited line,
+# so a reviewer only judges whether the source says it. A pre-filter: RESOLVED means the cited place exists,
+# never that it is true. A bare file name or partial path found under no root is searched by base name in the
+# repository, organized/, the versioned niagara-help source and the client checkouts (one indexed walk per
+# tree per run); a line range is checked in every copy of the file (the detail names the copy read).
 #
 # Implementation: the Go module at <repo>/go (go/internal/citeparse, go/internal/citeresolve). This wrapper
 # is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/kit-cite-resolve when the binary is
 # missing or older than a Go source, then this script execs it. Needs `go` on PATH to build.
 #
-# Usage:  kit-cite-resolve.sh [--kit DIR] [--research DIR] [--modules DIR] [--memory DIR] [--version VER]
-#                             [--format tsv|json] [--strict] <card.md>...
-# Output: card line kind target locator status detail (TSV, or a JSON array), then per-status counts on
-#         stderr. Status: RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE,
-#         BARE_ID, UNPARSED, TOOL_ERROR.
-# Exits:  0 every pointer resolved, or findings without --strict · 1 any pointer not resolved under
-#         --strict · 3 usage, a missing or unreadable root or card, a tool error row, no Go toolchain or a
-#         failed build
+# Usage:  kit-cite-resolve.sh [--kit DIR] [--research DIR] [--modules DIR] [--clients DIR] [--memory DIR]
+#                             [--version VER] [--format tsv|json] [--strict] <card.md>...
+#         --clients defaults to <modules>/Cliente; a <checkout>-worktrees/<tree>/ copy is the same file.
+# Output: card line kind target locator status detail (TSV, or a JSON array that adds the scope), then on
+#         stderr the per-status counts of all rows, of the LIVE rows and of the HISTORY rows, and the strict
+#         findings of each scope. Findings: MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE,
+#         BARE_ID, UNPARSED, AMBIGUOUS (a searched name matches several files: listed, never guessed),
+#         TOOL_ERROR. Not findings: RESOLVED; HISTORICAL_DRIFT (a missing or out-of-range
+#         target on a history card: retros/, ledger.d/, BUILD-STATE.md, BUILD-STATE.src.md, CHANGELOG.md;
+#         the original status stays in the detail); UNVERIFIABLE_KIND (evidence no tree holds: memory-tool,
+#         live, VCS/tracker, command run, decision ID, self-marked); SKIPPED_TEMPLATE (a `<stem>` placeholder).
+# Exits:  0 no finding, or findings without --strict · 1 any finding under --strict · 3 usage, a missing
+#         or unreadable root or card, a tool error row, no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).
 set -u
 

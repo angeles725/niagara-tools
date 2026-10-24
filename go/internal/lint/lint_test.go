@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // fakeRule reports every raw line that contains its marker.
@@ -659,6 +660,25 @@ func TestModuleRootLeftOutOfAll(t *testing.T) {
 	}
 }
 
+// TestShortScanError: Spec.ShortScanError words an unreadable file as awk_lint_each did ("<lint>: cannot scan
+// <path>: <reason>"), not as awk_lint_run's awk error; the other files are still scanned and the exit is 3.
+func TestShortScanError(t *testing.T) {
+	skipIfRoot(t)
+	root := tree(t, map[string]string{"A.java": "MARK\n", "U.java": "x\n"})
+	u := filepath.Join(root, "U.java")
+	if err := os.Chmod(u, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(u, 0o644) })
+	sp := javaSpec(fakeRule{"lint-s", "MARK", Fail}, Raw)
+	sp.ShortScanError = true
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-s", root}, s); code != 3 || o.String() != "FAIL  lint-s  "+root+"/A.java:1  saw: MARK\n" ||
+		e.String() != "lint-s: cannot scan "+u+": Permission denied\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
+	}
+}
+
 func TestEmptyOK(t *testing.T) {
 	sp := javaSpec(fakeRule{"lint-e", "MARK", Fail}, Raw)
 	sp.EmptyOK = true
@@ -732,6 +752,9 @@ func TestCommandIntFlags(t *testing.T) {
 	Command(noConf)
 }
 
+// TestParseValued: Mode Valued is `[<option> <value>]... <root>` (lint-link-target-flags): the option and the
+// root in any order, the last value wins, a missing value, any other "-" argument, a second root or no root is
+// the usage line alone, and the root must be a directory.
 func TestParseValued(t *testing.T) {
 	dir := t.TempDir()
 	const use = "usage: lint-v.sh [--map <file>] <src>"
@@ -795,6 +818,138 @@ func TestConfigure(t *testing.T) {
 	s, _, e = stdio()
 	if code := Command(sp)([]string{"lint-c", "--map", "bad", root + "/nope"}, s); code != 3 || e.String() != "lint-c: not a directory: "+root+"/nope\n" {
 		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
+	}
+}
+
+// TestCheckFirst: Spec.CheckFirst prints a finding as `<check>  <SEV>  <path>:<line>  <msg>` (lint-wb-threading's
+// rows, which report-module relays as a "swap" member); the empty-root ERROR row keeps the standard shape.
+func TestCheckFirst(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	sp := javaSpec(fakeRule{"lint-c", "MARK", Warn}, One)
+	sp.CheckFirst = true
+	s, o, _ := stdio()
+	if code := Command(sp)([]string{"lint-c", root}, s); code != 0 || o.String() != "lint-c  WARN  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("row: exit %d out %q", code, o)
+	}
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-c", empty}, s); code != 3 || !strings.HasPrefix(o.String(), "ERROR  lint-c  "+empty+"  ") {
+		t.Errorf("empty: exit %d out %q", code, o)
+	}
+}
+
+// TestParseAnywhere: Mode Anywhere is lint-wb-threading's loop: --strict anywhere, another "-" argument is
+// "<name>: unknown option: <arg>" and a second root "<name>: unexpected argument: <arg>" (exit 3, no usage
+// line), no argument or no root is the usage line.
+func TestParseAnywhere(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-w.sh [--strict] <src>"
+	for _, tc := range []struct {
+		args   []string
+		strict bool
+		err    string
+		usage  bool
+	}{
+		{[]string{dir}, false, "", false},
+		{[]string{dir, "--strict"}, true, "", false},
+		{[]string{"--strict", dir, "--strict"}, true, "", false},
+		{nil, false, use + "\n", true},
+		{[]string{"--strict"}, false, use + "\n", true},
+		{[]string{"-h", dir}, false, "lint-w: unknown option: -h\n", false},
+		{[]string{dir, "--"}, false, "lint-w: unknown option: --\n", false},
+		{[]string{dir, dir, "-x"}, false, "lint-w: unexpected argument: " + dir + "\n", false},
+		{[]string{dir + "/nope"}, false, "lint-w: not a directory: " + dir + "/nope\n", false},
+	} {
+		a, err := Parse(Anywhere, "lint-w", use, tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		var ue *UsageError
+		if got != tc.err || errors.As(err, &ue) != tc.usage || (err == nil && (a.Strict != tc.strict || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%q: args %+v err %q (usage %v), want strict %v err %q (usage %v)", tc.args, a, got, errors.As(err, &ue), tc.strict, tc.err, tc.usage)
+		}
+	}
+}
+
+// TestParseValuedRepeat: Mode Valued with repeatable options (Spec.Options: every value kept, in order, in
+// Args.Values) and --strict accepted (Spec.ValuedStrict), as lint-inline-site-literal takes them; without
+// ValuedStrict --strict stays a usage error (lint-link-target-flags).
+func TestParseValuedRepeat(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-r.sh [--strict] [--table <p>]... [--pattern <re>]... <root>"
+	vo := ValueOptions{Repeat: []string{"--table", "--pattern"}, Strict: true}
+	a, err := ParseValued(Valued, "lint-r", use, vo, []string{"--table", "a", dir, "--strict", "--pattern", "R[0-9]", "--table", "b"})
+	if err != nil || !a.Strict || len(a.Roots) != 1 || a.Roots[0] != dir ||
+		!reflect.DeepEqual(a.Values, map[string][]string{"--table": {"a", "b"}, "--pattern": {"R[0-9]"}}) {
+		t.Errorf("repeat: %+v %v", a, err)
+	}
+	for _, args := range [][]string{{dir, "--table"}, {"--other", dir}, {dir, dir}} {
+		if _, err := ParseValued(Valued, "lint-r", use, vo, args); err == nil || err.Error() != use+"\n" {
+			t.Errorf("%q: err %v, want the usage line", args, err)
+		}
+	}
+	if _, err := ParseValued(Valued, "lint-r", use, ValueOptions{Repeat: []string{"--table"}}, []string{"--strict", dir}); err == nil {
+		t.Errorf("--strict without ValueOptions.Strict parsed")
+	}
+	// Command passes the spec's options: Values reach Configure.
+	var seen []string
+	sp := Spec{Rule: valuesFake{fakeRule{"lint-r", "MARK", Warn}, &seen}, Mode: Valued, Options: []string{"--table"}, ValuedStrict: true,
+		Usage: use, Select: Selection{Names: []string{"*.java"}}}
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, _, _ := stdio()
+	if code := Command(sp)([]string{"lint-r", "--strict", "--table", "x", "--table", "y", root}, s); code != 1 || !reflect.DeepEqual(seen, []string{"x", "y"}) {
+		t.Errorf("command: exit %d seen %q, want 1 (WARN under --strict) and [x y]", code, seen)
+	}
+}
+
+type valuesFake struct {
+	fakeRule
+	seen *[]string
+}
+
+func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }
+
+// xmlFake is a Rule whose Check fails with a positioned XML error, as an internal/xmlsrc consumer does.
+type xmlFake struct{ fakeRule }
+
+func (xmlFake) Check(f *javasrc.File) ([]Finding, error) {
+	return nil, &xmlsrc.Error{Path: f.Path, Line: 3, Col: 1, Msg: "element <a> opened at 2:1 is never closed"}
+}
+
+// TestXMLErrorOnce: an *xmlsrc.Error from a rule names its file itself, so the runner prints it once
+// ("<lint>: <path>:<line>:<col>: <msg>"), not behind "cannot scan <path>: <rule>:"; exit 3.
+func TestXMLErrorOnce(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	s, o, e := stdio()
+	if code := Command(javaSpec(xmlFake{fakeRule{"lint-x", "MARK", Fail}}, One))([]string{"lint-x", root}, s); code != 3 || o.Len() != 0 ||
+		e.String() != "lint-x: "+root+"/A.java:3:1: element <a> opened at 2:1 is never closed\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
+	}
+}
+
+// TestCommandOptionalInAll: under --all a Spec.OptionalInAll rule that selects no file of a root is clean for
+// it (the other rules still report); run by name or in a rule list it keeps the empty-root ERROR row.
+func TestCommandOptionalInAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	js := Spec{Rule: fakeRule{"lint-js", "MARK", Warn}, Mode: Each, Usage: "u", Select: Selection{Names: []string{"*.js"}},
+		OptionalInAll: true}
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, Each), js)
+	java := "WARN  lint-a  " + root + "/A.java:1  saw: MARK\n"
+	empty := "ERROR  lint-js  " + root + "  no *.js sources found (wrong path or empty source tree)\n"
+	for _, tc := range []struct {
+		args []string
+		code int
+		out  string
+	}{
+		{[]string{"--all", root}, 0, java},
+		{[]string{"lint-js", root}, 3, empty},
+		{[]string{"lint-a,lint-js", root}, 3, java + empty},
+	} {
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.Len() != 0 {
+			t.Errorf("%q: exit %d out %q err %q, want %d and %q", tc.args, code, o, e, tc.code, tc.out)
+		}
 	}
 }
 

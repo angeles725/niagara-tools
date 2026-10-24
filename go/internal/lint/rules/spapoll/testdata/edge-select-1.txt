@@ -1,0 +1,22 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- app.HTML --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- app.htm --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- app.jsx --
+function poll() {
+  fetch("/x").then(r => r.json()).catch(e => show(e));
+}
+setInterval(poll, 5000);
+-- ok.js --
+x();

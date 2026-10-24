@@ -9,28 +9,19 @@
 # Usage:  lint-jasmine-ux.sh <ux-module-root>   (a -ux part root containing src/)
 #   Row:  WARN  lint-jasmine-ux  <root>  ux ships src/rc but no srcTest/rc/spec/*.js
 #   Exit: 0  always (advisory) · 3  usage/env or a spec sub-directory find cannot enter
+# Implementation: rule package go/internal/lint/rules/jasmineux on the shared engine go/internal/lint (walker,
+# parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
+# go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-jasmine-ux <args>`.
+# Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design.
 # Mutation: JUX2 -- drop the empty-specs check and JUX2 stops warning on a rc/ module without specs
 # Mutation: JUX-finderr -- ignoring the find exit status reads an unreadable spec directory as no specs (or hides it)
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-jasmine-ux raw 'usage: lint-jasmine-ux.sh <ux-module-root>' "$@"
-ROOT="${AL_ROOTS[0]}"
-
-# Only applies when the module actually ships a browser rc/ tree.
-if [ ! -d "$ROOT/src/rc" ]; then
-    exit 0
-fi
-
-specs=""
-if [ -d "$ROOT/srcTest/rc/spec" ]; then
-    # A spec sub-directory find cannot enter is an env error, never "no specs" and never a clean pass.
-    scan_files_or_exit lint-jasmine-ux 3 "$AL_TMP/files" "$ROOT/srcTest/rc/spec" -name '*.js'
-    specs=$(head -n 1 "$AL_TMP/files")
-fi
-if [ -z "$specs" ]; then
-    printf 'WARN  lint-jasmine-ux  %s  ux ships src/rc but no srcTest/rc/spec/*.js\n' "$ROOT"
-fi
-
-exit 0
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-jasmine-ux: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-jasmine-ux "$@"

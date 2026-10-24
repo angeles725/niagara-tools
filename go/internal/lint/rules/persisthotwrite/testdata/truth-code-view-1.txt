@@ -1,0 +1,25 @@
+declared difference (truth fix T1, code view): the awk cut each line at its first "//" (inside a string too) and
+read block comments and string literals as code, so the write after "http://" (line 4) was hidden, a commented
+and a quoted setXHours FAILed (lines 5, 6) and the "}" in a string ended changed() early, hiding step()'s write
+(line 10). Both hot-write lints read code with comments blanked and literal contents removed now.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not hot; the rows are unchanged.)
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/T.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/T.java:10  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- T.java --
+class T {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    String u = "http://x"; setXHours(getXHours() + 1.0);
+    /* setXHours(getXHours() + 2.0); */
+    log("setXHours(getXHours() + 3.0)");
+    String b = "}";
+    step();
+  }
+  void step() { setXHours(getXHours() + 4.0); }
+}

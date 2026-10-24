@@ -7,7 +7,7 @@
 #
 # Shape 1 (no recovery, 2.4.2): `catch` only marks data stale and repaints "error"; a fixed HMI
 # panel stays on dead values until power-cycled. [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1]
-# [ev: corpus DashboardPan-ux index.html poll() 2.4.2 -> 2.4.3]
+# [ev: Cliente/panccadia-leon/Dashboard/DashboardPan/DashboardPan-ux/src/rc/index.html:2855-2880 (client source, not a corpus block: today's lastOkAt-watchdog poll(); the 2.4.2 catch-only shape survives only in the retro's evidence, 2.4.2 L2427)]
 # Shape 2 (failure-count watchdog, 2.4.3..2.8.0): reload after N consecutive failures; recovered ten
 # restarts and froze on the eleventh because a fetch without timeout hung and the counter never
 # advanced. Doctrine: types/dashboard.md § Poll loop reliability (watchdog on `lastOkAt`, set only by
@@ -36,7 +36,26 @@
 # positive — rename it or accept the WARN; a success timestamp set in a helper the poll calls
 # (`.then(onOk)`) is not seen either — set it in the poll body; naive `//` stripping can cut a `//`
 # inside a string/URL.
+# Empty root: a root with no *.html/*.js is `ERROR  lint-spa-poll-no-recovery  <root>  no files to scan (K20: wrong
+# path or empty scaffold)` on stdout, exit 3 (under `n4lint --all` such a root is clean for this -ux rule).
+#
+# Truth fix T1 (2026-10-24): code is read with comments and string/template/regex contents blanked (go/internal/
+# jssrc Code; an .html file through jssrc HTMLScripts, its <script> contents only): the bash/awk cut each line at
+# its first "//" (inside a string too) and read block comments, strings and templates as code, so a commented or
+# quoted location.reload() counted as recovery and a quoted setInterval(...) as the poll call.
+# Truth fix T2 (2026-10-24): a line longer than 1000 bytes is minified code (a bundled library such as three.js,
+# inlined in a page or shipped as *.min.js) and is not searched for the poll call, so a library's internal
+# setTimeout(n, 0) is neither reported nor taken for the page's own poll loop.
+# Truth fix T3 (2026-10-24): a recovery is a `location.reload(` call (blanks allowed before "(") or an assignment
+# to `location.href` (not `==`/`===`); the bash took `location.href ==` for a recovery and missed `reload (`.
+# Implementation: rule package go/internal/lint/rules/spapoll on the shared engine go/internal/lint (walker,
+# parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
+# go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
+# Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR15 -- matching location.href = also inside location.href == takes a comparison for the recovery
+# Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
+# Mutation: SPR13 -- reading block comments as code takes /* location.reload(); */ for the recovery
 # Mutation: SPR2 -- drop the lastOk success-time requirement so a failure-count-only watchdog passes clean
 # Mutation: SPR8 -- drop the location.reload(/location.href recovery check so a lastOk timestamp that never reloads passes clean
 # Mutation: SPR9 -- count a clock assignment anywhere in the file so a lastOk set only at load passes clean
@@ -45,103 +64,11 @@
 # Mutation: SPR-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: SPR-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-spa-poll-no-recovery first 'usage: lint-spa-poll-no-recovery.sh [--strict] <ux-src-root>' "$@"
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  for (i = 1; i <= NR; i++) { ln = lines[i]; sub(/\/\/.*$/, "", ln); lines[i] = ln }
-
-  # 1. First setInterval(<name>, ...) or setTimeout(<name>, ...) call.
-  fn = ""; call_line = 0
-  for (i = 1; i <= NR; i++) {
-    if (match(lines[i], /(setInterval|setTimeout)\([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,/)) {
-      seg = substr(lines[i], RSTART, RLENGTH)
-      match(seg, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,$/)
-      fn = substr(seg, RSTART, RLENGTH)
-      gsub(/[[:space:]]*,$/, "", fn)
-      call_line = i
-      break
-    }
-  }
-  if (fn == "") exit 0
-
-  # 2. Locate the function declaration and brace-extract its body forward.
-  decl_line = 0
-  for (i = 1; i <= NR; i++) {
-    # `function poll(` / `async function poll(`, or a binding `const|let|var poll = [async]
-    # function(...)` / `(...) =>` / `x =>` (an arrow-function poll is the common SPA form).
-    if (match(lines[i], "function[[:space:]]+" fn "[[:space:]]*\\(") ||
-        match(lines[i], "(const|let|var)[[:space:]]+" fn "[[:space:]]*=[[:space:]]*(async[[:space:]]*)?(function[[:space:]]*\\(|\\([^)]*\\)[[:space:]]*=>|[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=>)")) {
-      decl_line = i; decl_rest = substr(lines[i], RSTART + RLENGTH); decl_arrow = (substr(lines[i], RSTART + RLENGTH - 2, 2) == "=>")
-      break
-    }
-  }
-  if (decl_line == 0) exit 0
-
-  # A concise-body arrow (`() => fetch(...).catch(...)`, no `{` after the `=>`) has no braces to extract: its
-  # body is the statement, up to the first line holding a `;` (bounded at 20 lines). Brace extraction would run
-  # to the next unrelated `{...}` or to end of file and read a later function's lastOk* as the poll's (#226).
-  concise = 0
-  if (decl_arrow) {
-    nxt = decl_rest
-    for (i = decl_line + 1; nxt ~ /^[[:space:]]*$/ && i <= NR; i++) nxt = lines[i]
-    if (nxt !~ /^[[:space:]]*\{/) concise = 1
-  }
-  depth = 0; started = 0; body_end = NR
-  if (concise) {
-    for (i = decl_line; i <= NR && i < decl_line + 20; i++) if (index(lines[i], ";") > 0) break
-    body_end = (i <= NR) ? i : NR
-  }
-  for (i = decl_line; !concise && i <= NR; i++) {
-    ln = lines[i]
-    for (ci = 1; ci <= length(ln); ci++) {
-      c = substr(ln, ci, 1)
-      if (c == "{") { depth++; started = 1 }
-      else if (c == "}") depth--
-    }
-    if (started && depth == 0) { body_end = i; break }
-  }
-
-  # 2b. The body must contain a catch clause -- otherwise this is not the flagged shape.
-  has_catch = 0
-  for (i = decl_line; i <= body_end; i++) {
-    if (match(lines[i], /catch[[:space:]]*\(/)) { has_catch = 1; break }
-  }
-  if (!has_catch) exit 0
-
-  # 3. Whole-file recovery signal.
-  has_recovery = 0
-  for (i = 1; i <= NR; i++) {
-    if (index(lines[i], "location.reload(") > 0 || match(lines[i], /location\.href[[:space:]]*=/)) {
-      has_recovery = 1; break
-    }
-  }
-  if (!has_recovery) {
-    printf "WARN  lint-spa-poll-no-recovery  %s:%d  setInterval/setTimeout poll loop '%s()' has a" \
-      " catch path with no location.reload(/location.href recovery anywhere in the file --" \
-      " kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last" \
-      " success (lastOkAt) -> fetchT probe of the app marker -> location.reload()\n", FILE, call_line, fn
-    exit 0
-  }
-
-  # 4. Success-time key: lastOk* assigned from a clock inside the poll body (the success path;
-  #    a load-time initializer alone never advances) AND read in a subtraction/comparison anywhere.
-  ok_set = 0; ok_read = 0
-  for (i = 1; i <= NR; i++) {
-    if (i >= decl_line && i <= body_end && match(lines[i], /lastOk[A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(\+[[:space:]]*)?(Date\.now\(|performance\.now\(|new[[:space:]]+Date)/)) ok_set = 1
-    if (match(lines[i], /-[[:space:]]*lastOk[A-Za-z0-9_]*/) || match(lines[i], /lastOk[A-Za-z0-9_]*[[:space:]]*[<>]/)) ok_read = 1
-  }
-  if (ok_set && ok_read) exit 0
-
-  printf "WARN  lint-spa-poll-no-recovery  %s:%d  setInterval/setTimeout poll loop '%s()' reloads," \
-    " but the recovery is not keyed on time since the last success (no lastOk* timestamp set from" \
-    " a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung" \
-    " request; key it on lastOkAt (types/dashboard.md Poll loop reliability)\n", FILE, call_line, fn
-}
-AWKEOF
-
-awk_lint_run -name '*.html' -o -name '*.js'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-spa-poll-no-recovery: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-spa-poll-no-recovery "$@"

@@ -4,7 +4,10 @@ package rules
 
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
@@ -13,6 +16,9 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/jasmineux"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linktargetflags"
@@ -21,6 +27,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
@@ -29,11 +36,15 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/slotomaticmarkers"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbfilechooser"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wbthreading"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/wsplacement"
 )
 
@@ -63,6 +74,8 @@ func All() []lint.Spec {
 		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		inlinesiteliteral.Spec(),
+		wbthreading.Spec(),
 		linktargetflags.Spec(),
 		size.Spec(),
 		wsplacement.Spec(),
@@ -70,6 +83,15 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		spapoll.Spec(),
+		jasmineux.Spec(),
+		inertcoordination.Spec(),
+		changedhotwrite.Spec(),
+		persisthotwrite.Spec(),
+		slotomaticmarkers.Spec(),
+		agentonshape.Spec(),
+		bformatcall.Spec(),
+		splitpackage.Spec(),
 		manuallabels.Spec(),
 	}
 }

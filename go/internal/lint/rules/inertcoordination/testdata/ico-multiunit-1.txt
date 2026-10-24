@@ -1,0 +1,15 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BDefrostController.java --
+class BDefrostController {
+  private final Deque<Integer> waitingQueue = new ArrayDeque<Integer>();
+  private List<BEvaporatorUnit> units() {
+    Object parent = getParent();
+    if (parent instanceof BColdRoom)
+      return ((BColdRoom)parent).getUnits();
+    return java.util.Collections.emptyList();
+  }
+}

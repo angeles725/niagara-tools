@@ -11,7 +11,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/<tool>/` | a thin `main` that calls one package's entry point; no logic |
 | `internal/cli/` | injectable stdio (`cli.Stdio`) and the `cli.Main` signature every command uses |
 | `internal/strerror/` | `Text`: an OS error as C `strerror()` words it in the C locale, and `FindQuote`: a path as GNU find quotes it in that locale (the text find and awk print), shared by `lint` and `jarversion` |
-| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `MaskLiterals` (the same contents replaced by blanks, line lengths kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`), `Tokens` (Strip output as tokens, a literal or text block one token), `Decls` (the method and constructor bodies of each class body, with class, parameter types and `@Override`), `Statements` and `Shape` (a body's statement count and normalized token sequence) — the lint rules share these — and `File` (one file's lines plus its scan results, computed once) |
+| `internal/javasrc/` | the Java scanner only: `Strip` (and `StripComments`, which also returns each line's comment text), `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `MaskLiterals` (the same contents replaced by blanks, line lengths kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`), `Tokens` (Strip output as tokens, a literal or text block one token), `Decls` (the method and constructor bodies of each class body, with class, parameter types and `@Override`), `Statements` and `Shape` (a body's statement count and normalized token sequence), `Unescape` (the \\ \" \' \` escapes of a literal's text read) — the lint rules share these — and `File` (one file's lines plus its scan results, computed once; `File.Marker`: a Slot-o-Matic `RegionBegin`/`RegionEnd` marker inside a comment, never in a literal) |
 | `internal/jssrc/` | the JavaScript tokenizer only: `Tokens` (comments dropped; strings, template literals with their `${...}` nesting and regex literals as single tokens, each with its line), for a rule that reads `rc/**/*.js` |
 | `internal/props/` | `Read`: a `.properties` file as `java.util.Properties.load` reads it (continuations, `#`/`!` comments, `=`/`:`/space separators, escapes), each entry with the line it starts on |
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
@@ -66,11 +66,19 @@ rule's rows stay contiguous.
    e.g. `--wiring-map`): the option and the root in any order, the last value wins, and a missing value, any
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
    `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
-   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`).
+   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
+   value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
+   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
+   `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
+   `<lint>: unknown option: <arg>` and a second root `<lint>: unexpected argument: <arg>` (exit 3, no usage
+   line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
+   `<check>  <SEV>  <path>:<line>  <msg>` (the check before the severity), the row lint-wb-threading always
+   printed; the empty-root ERROR row keeps the standard shape.
    `Mode` `FileFirst` parses `[--strict] <file> <root>...` for a lint whose first operand is a file (only a
    first `--strict` is a flag; the file must be a regular file, its error `<lint>: <Spec.Option> not found:
-   <file>` printed before any root is checked; every later operand is a root). The rule reads the file in
-   `Configure` (`Args.Option`); `n4lint --all` leaves it out and a rule list refuses it. `Spec.Joined` gives
+   <file>` printed before any root is checked; every later operand is a root). `Spec.Option` is the file's
+   noun here, read by the same `ParseValued`/`ValueOptions.Option` as a `Valued` option; the rule reads the
+   file (`Args.Option`) in `Configure`; `n4lint --all` leaves it out and a rule list refuses it. `Spec.Joined` gives
    a `TreeRule` the files of every root in one `CheckTree` call after the last root, and a finding with
    `Line` 0 and no `Path` prints `<SEV>  <check>  <msg>`; severity `Summary` prints `SUMMARY` and never
    affects the exit code (reference: `rules/manuallabels`, one UI haystack and one total over its roots).
@@ -82,11 +90,16 @@ rule's rows stay contiguous.
    `no <pattern>[ or <pattern>...] sources found (wrong path or empty source tree)` from `Select.Names`.
    The one opt-out is `Spec.EmptyOK`, for a lint whose own contract makes an empty root clean (reference:
    `rules/lexiconascii`, LA5: a module with no `*.lexicon` has nothing to check): no ERROR row, exit 0.
+   `Spec.OptionalInAll` applies that opt-out under `n4lint --all` only, for a rule whose files belong to one
+   profile (`rules/spapoll` reads a -ux root's `*.html`/`*.js`; `--all` also runs on -rt roots without them);
+   run by name or in a rule list the rule keeps the ERROR row.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
    `Spec.IntFlags` (with `Spec.Configure`) takes a bash lint's own numeric options (`--max-class <n>`, its
    `AL_FLAG_HOOK`) among the leading flags and builds the rule from their values; a bad value prints
    `<lint>: <flag> needs a non-negative integer` and the usage line (exit 3).
+   `Spec.ShortScanError` words an unreadable file as `awk_lint_each` did (`<lint>: cannot scan <path>: <reason>`)
+   instead of `awk_lint_run`'s awk error (reference: `rules/agentonshape`).
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
    A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
@@ -156,6 +169,7 @@ change the shared code instead.
 R8-D12: an XML or `.bog` lint is ported only onto `internal/xmlsrc`, never onto its own regexes or a second
 tokenizer. Each file is read once (UTF-8, ISO-8859-1 or US-ASCII; a zipped `.bog` unzipped in memory) and is either
 a well-formed `Doc` or an `*Error` printed as `path:line:col: message`; a malformed file is a finding, never an empty
-result. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
+result. A rule that returns that `*Error` from `Check` has it printed once, `<lint>: path:line:col: message` (exit 3),
+not behind the engine's `cannot scan <path>: <rule>:` prefix. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
 `internal/pyxml/testdata/xmlerrors.json`) checks the well-formedness verdict against expat; `TestSweepRealFiles`
-(`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `split-package-check.sh`.
+(`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `lint-agent-on-shape.sh` (`rules/agentonshape`: every `<on>` element of each module-include.xml, a malformed file a positioned `path:line:col` error, exit 3); `split-package-check.sh` only looks for its build markers by name and reads no XML.
