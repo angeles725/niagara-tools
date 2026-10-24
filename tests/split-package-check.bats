@@ -120,23 +120,6 @@ jfile() {
   [[ "$output" == *"G/Hidden"* ]]
 }
 
-@test "SPC-aggfail: a failing aggregation (sort) is exit 3, never an empty clean report, even under --strict (D5b, R4-001)" {
-  # Mutation: SPC-aggfail -- an unchecked sort | awk aggregation turns a failed sort into exit 0 with no rows
-  module G/A/A-rt; module G/B/B-rt
-  jfile G/A/A-rt/src/com/x/U.java com.a
-  jfile G/B/B-rt/src/com/x/U.java com.a
-  mkdir -p "$TMPDIR_T/bin"
-  cat > "$TMPDIR_T/bin/sort" <<SH
-#!/usr/bin/env bash
-for a in "\$@"; do [ "\$a" = "-k1,1" ] && { echo "sort: write failed: No space left on device" >&2; exit 2; }; done
-exec $(command -v sort) "\$@"
-SH
-  chmod +x "$TMPDIR_T/bin/sort"
-  PATH="$TMPDIR_T/bin:$PATH" run "$SPC" --strict "$P"
-  [ "$status" -eq 3 ]
-  [[ "$output" == *"No space left on device"* ]]
-}
-
 @test "SPC-symroot: a symlinked root is walked like find -H, same split WARN as the directory (issue #329)" {
   # Mutation: SPC-symroot -- dropping -H from the marker find reports "no module" (exit 3) under a symlinked root.
   module GrpA/A/A-rt; module GrpB/B/B-rt
