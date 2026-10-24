@@ -25,6 +25,8 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/citeparse/` | the kit citation grammar, pure: `Card` returns every evidence pointer of a card (`[ev: …]`/`[deferred: …]` clauses, per-card path aliases, prose citations) as a `Pointer` |
 | `internal/citeresolve/` | one `Resolver` per pointer kind over injected `Roots` and one file cache; `Main` of `kit-cite-resolve` (status per pointer with an excerpt; a pre-filter, never a truth verdict) |
 | `cmd/kit-cite-resolve/` | `kit-cite-resolve [--kit DIR] [--research DIR] [--modules DIR] [--memory DIR] [--version VER] [--format tsv\|json] [--strict] <card.md>...` |
+| `internal/schemarisk/` | `Main` of `schema-risk`: the B795 §795.4 slot-diff classifier of toolbelt/schema-risk.sh. `Parse` harvests the `@NiagaraProperty`/`@NiagaraAction`/`@NiagaraTopic` slots of a snapshot (an annotation joined until its parentheses balance, `javasrc.ParenDepth`), `Diff` classifies each change, and the embedded `b795-795.4.csv` gives its verdict; exit 0 SAFE / 1 LOSSY / 2 OUTAGE / 3 usage / 4 env |
+| `cmd/schema-risk/` | `schema-risk <before-dir> <after-dir>` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
 `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>:<line>  <message>`, or `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>: <message>` for a
