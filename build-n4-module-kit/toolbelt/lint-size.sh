@@ -10,7 +10,7 @@
 # [ev: retro decision-logic-decomposition Δ2]
 #
 # Structural rules (decided up front; METHODOLOGY.md § Conformance rules, heuristic parsers):
-#   - Hand-written lines = non-blank lines after comments are blanked (lib/method-boundary.sh mb_strip), outside
+#   - Hand-written lines = non-blank lines after comments are blanked (go/internal/javasrc Strip), outside
 #     every slotomatic region. A region opens on a line containing `BEGIN BAJA AUTO GENERATED CODE` and closes on
 #     the next line containing `END BAJA AUTO GENERATED CODE` (the marker text slot-o-matic emits; matched on the
 #     RAW line because the marker sits inside a comment). [ev: corpus B711] [ev: code docDeveloper slot-o-matic.html:421,459]
@@ -19,7 +19,7 @@
 #     WARN `nested-region` (the earlier region counts as hand-written); an END with no open region is a WARN
 #     `stray-end`.
 #   - Pure class = a file with no `@NiagaraType` annotation and no `extends B<Upper>` declaration. Only pure classes
-#     get the method rule (the BComponent shell is measured by the class rule). Methods come from mb_parse (a
+#     get the method rule (the BComponent shell is measured by the class rule). Methods come from javasrc.Methods (a
 #     signature whose `(...)` closes on the `{` line, or a `{` alone after it; a signature wrapped over several
 #     lines before `{` is not seen — a false negative, never a false WARN).
 #   - One row per file for the class rule, named after the first top-level `class` declaration.
@@ -28,6 +28,14 @@
 #   Defaults: --max-class 800, --max-method 80 (strictly greater than the limit WARNs).
 #   Row:  WARN  lint-size  <file>:<line>  <detail>
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
+# Empty root: a root with no *.java is `ERROR  lint-size  <root>  no files to scan (K20: wrong path or empty
+# scaffold)` on stdout, exit 3. A bad --max-class/--max-method value prints `lint-size: <flag> needs a
+# non-negative integer` and the usage line, exit 3.
+#
+# Implementation: rule package go/internal/lint/rules/size on the shared engine go/internal/lint (walker,
+# parser, row formatter, Spec.IntFlags for the two limits; go/README.md). This wrapper is the stable entry
+# point: go/go-tool.sh `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then
+# this script execs `n4lint lint-size <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2).
 # Mutation: LSZ2 -- counting the slotomatic region lines as hand-written WARNs a small class with a large generated block
 # Mutation: LSZ4 -- applying the method rule to a Baja (BComponent) class WARNs its long callback
@@ -36,93 +44,11 @@
 # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LSZ-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/method-boundary.sh"
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-
-MAXC=800
-MAXM=80
-is_count() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
-# size_flag: the --max-class/--max-method flags, called by awk_lint_parse for a flag it does not own.
-size_flag() {
-  case "$1" in
-    --max-class|--max-method)
-      if [ $# -lt 2 ] || ! is_count "$2"; then
-        printf 'lint-size: %s needs a non-negative integer\n%s\n' "$1" "$AL_USAGE" >&2
-        exit 3
-      fi
-      if [ "$1" = --max-class ]; then MAXC="$2"; else MAXM="$2"; fi
-      # shellcheck disable=SC2034  # read by awk_lint_parse (lib/awk-lint.sh)
-      AL_SHIFT=2 ;;
-  esac
-}
-# shellcheck disable=SC2034  # read by awk_lint_parse (lib/awk-lint.sh)
-AL_FLAG_HOOK=size_flag
-awk_lint_parse lint-size one 'usage: lint-size.sh [--strict] [--max-class <n>] [--max-method <n>] <src-root>' "$@"
-printf '%s\n' "$MB_AWK" > "$AL_TMP/method-boundary.awk"
-# shellcheck disable=SC2034  # read by awk_lint_run (lib/awk-lint.sh)
-AL_AWK_ARGS=(-v MAXC="$MAXC" -v MAXM="$MAXM" -f "$AL_TMP/method-boundary.awk")
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ raw[NR] = $0 }
-END {
-  n = NR
-  mb_strip(raw, n, code)
-  # Pass 1: slotomatic regions on the RAW lines (the markers live inside comments).
-  in_gen = 0; open_line = 0
-  for (i = 1; i <= n; i++) {
-    gen[i] = 0
-    is_begin = index(raw[i], "BEGIN BAJA AUTO GENERATED CODE") > 0
-    is_end = index(raw[i], "END BAJA AUTO GENERATED CODE") > 0
-    if (is_begin) {
-      if (in_gen) {
-        # A BEGIN inside an open region: the earlier region never closed, so count it (fail closed).
-        for (k = open_line; k < i; k++) gen[k] = 0
-        printf "WARN  lint-size  %s:%d  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line %d -- that region is counted as hand-written\n", FILE, i, open_line
-      }
-      in_gen = 1; open_line = i; gen[i] = 1; continue
-    }
-    if (is_end && !in_gen) {
-      printf "WARN  lint-size  %s:%d  stray-end: END BAJA AUTO GENERATED CODE with no open region\n", FILE, i
-      continue
-    }
-    if (in_gen) {
-      gen[i] = 1
-      if (is_end) in_gen = 0
-    }
-  }
-  if (in_gen) {
-    # Unclassifiable: count the unterminated region as hand-written and say so.
-    for (i = open_line; i <= n; i++) gen[i] = 0
-    printf "WARN  lint-size  %s:%d  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written\n", FILE, open_line
-  }
-  # Pass 2: hand-written line count, class name, pure-class test.
-  hand = 0; cname = ""; cline = 0; baja = 0
-  for (i = 1; i <= n; i++) {
-    c = code[i]
-    if (index(c, "@NiagaraType") > 0) baja = 1
-    if (match(c, /extends[[:space:]]+B[A-Z][A-Za-z0-9_]*/)) baja = 1
-    if (cname == "" && match(c, /(^|[[:space:]])class[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/)) {
-      s = substr(c, RSTART, RLENGTH); sub(/^[[:space:]]*class[[:space:]]+/, "", s)
-      cname = s; cline = i
-    }
-    if (gen[i]) continue
-    t = c; gsub(/[[:space:]]/, "", t)
-    if (t != "") hand++
-  }
-  if (cname == "") { cname = "?"; cline = 1 }
-  if (hand > MAXC)
-    printf "WARN  lint-size  %s:%d  class %s has %d hand-written lines (> %d, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)\n", FILE, cline, cname, hand, MAXC
-  if (baja) exit 0
-  # Pass 3: method spans of a pure class.
-  cnt = mb_parse(code, n, ms, me, mn)
-  for (k = 0; k < cnt; k++) {
-    span = me[k] - ms[k] + 1
-    if (span > MAXM)
-      printf "WARN  lint-size  %s:%d  method %s() in pure class %s spans %d lines (> %d) -- split into named phase methods (types/logic.md § Pure-class extraction)\n", FILE, ms[k], mn[k], cname, span, MAXM
-  }
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-size: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-size "$@"
