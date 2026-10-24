@@ -1,0 +1,16 @@
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  rc-scan  rc/handle.js:2  ord-literal: hardcoded ORD literal
+-- stderr --
+-- rc/handle.js --
+// hardcoded handle ORD — station-specific hex, changes per JACE deployment
+const AMP_CONDENSADORA1 = "h:45ef7";
+export function ampOrd() { return AMP_CONDENSADORA1; }
+-- rc/page.html --
+<!doctype html><html><body>
+<div style="width:100px;height:50px">ok</div>
+</body></html>
+-- rc/style.css --
+.x { width: 100px; depth: 1; }

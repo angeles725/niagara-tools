@@ -1,0 +1,8 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- rc/index.html --
+<!doctype html><html><head><meta name="author" content="Plant team"></head>
+<body><button id="b" disabled>Export</button><p>Data authority: plant</p></body></html>
