@@ -27,7 +27,7 @@ import (
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
 // 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS, ADVISORY
 // and INFO rows never count). A spec prints its EmptyError row on a root where it selects no file and stops like
-// a walk error (exit 3). A RootRule takes no part in the walk: it gets each root after the others' scan.
+// a walk error (exit 3); so does a TreeRule or a RootRule that returns ErrEmptyRoot. A RootRule takes no part in the walk: it gets each root after the others' scan.
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs)), strict: a.Strict}
 	defer r.out.Flush()
@@ -92,6 +92,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])
+			if errors.Is(err, ErrEmptyRoot) { // nothing it checks among the selected files: its ERROR row only
+				r.empty(i, sp, root)
+				stopped[i], live = true, live-1
+				continue
+			}
 			r.findings(i, sp, "", fds)
 			if err != nil {
 				r.envError(i, err.Error())
