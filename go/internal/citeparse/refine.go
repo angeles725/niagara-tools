@@ -18,6 +18,7 @@ const (
 	selfMarked = "self-marked unverifiable"
 	commandRun = "command run"
 	decision   = "decision or plan ID"
+	webPage    = "web page"
 )
 
 // unverifiableWords maps the first word of an unparsed clause to its class. The words are the leading
@@ -41,12 +42,18 @@ var (
 	shortSHA     = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
 	campaignUnit = regexp.MustCompile(`^r\d+$`)
 	planID       = regexp.MustCompile(`^(?:[CDT]\d+[a-z]?(?:-\d+)?|audit-\d{4}-\d{2}-\d{2})$`)
+	webURL       = regexp.MustCompile(`^https?://`)
 )
 
-// refine marks a placeholder pointer Template and an unparsed clause of an unverifiable kind Unverifiable.
+// refine marks a placeholder pointer Template, and a web URL or an unparsed clause of an unverifiable kind
+// Unverifiable: a URL names a page no source tree holds, so it is never looked up as a file.
 func refine(p *Pointer) {
 	if placeholder.MatchString(p.Target) || placeholder.MatchString(p.File) {
 		p.Kind, p.Notes = Template, nil
+		return
+	}
+	if webURL.MatchString(p.Target) {
+		p.Kind, p.Notes = Unverifiable, []string{webPage}
 		return
 	}
 	if p.Kind != Unparsed {

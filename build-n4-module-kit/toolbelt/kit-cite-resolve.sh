@@ -6,6 +6,10 @@
 # never that it is true. A bare file name or partial path found under no root is searched by base name in the
 # repository, organized/, the versioned niagara-help source and the client checkouts (one indexed walk per
 # tree per run); a line range is checked in every copy of the file (the detail names the copy read).
+# A `~/` path expands to $HOME and resolves by existence like an absolute path (RESOLVED, not a separate
+# status: the file is there to read; a `kit` path is never expanded). A `code <module> <dir>/` pointer names
+# a directory of the module's copies. A javap jar is looked up in organized/, then in the Gradle cache
+# ($GRADLE_USER_HOME, else ~/.gradle: caches/jars-*/*/ and caches/modules-2/files-2.1/*/*/*/*/ only).
 #
 # Implementation: the Go module at <repo>/go (go/internal/citeparse, go/internal/citeresolve). This wrapper
 # is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/kit-cite-resolve when the binary is
@@ -21,7 +25,8 @@
 #         TOOL_ERROR. Not findings: RESOLVED; HISTORICAL_DRIFT (a missing or out-of-range
 #         target on a history card: retros/, ledger.d/, BUILD-STATE.md, BUILD-STATE.src.md, CHANGELOG.md;
 #         the original status stays in the detail); UNVERIFIABLE_KIND (evidence no tree holds: memory-tool,
-#         live, VCS/tracker, command run, decision ID, self-marked); SKIPPED_TEMPLATE (a `<stem>` placeholder).
+#         live, VCS/tracker, command run, decision ID, self-marked, an http(s) URL: never a file lookup);
+#         SKIPPED_TEMPLATE (a `<stem>` placeholder).
 # Exits:  0 no finding, or findings without --strict · 1 any finding under --strict · 3 usage, a missing
 #         or unreadable root or card, a tool error row, no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).
