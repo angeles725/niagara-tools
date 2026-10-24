@@ -1,0 +1,61 @@
+-- args --
+@DIR@/sig.jar
+-- want --
+exit 0
+PASS  bytecode   @DIR@/sig.jar  2 classes, all major 52
+PASS  signed     @DIR@/sig.jar  signed by alias ECK, NIAGARA4, ZZ (META-INF/<ALIAS>.SF + signature block)
+PASS  types      @DIR@/sig.jar  1 declared types resolve to classes
+SKIP  baja       @DIR@/sig.jar  no --target-version
+SKIP  stored     @DIR@/sig.jar  no --stored
+SKIP  typecount  @DIR@/sig.jar  no --src
+SKIP  facets     @DIR@/sig.jar  no --src
+SKIP  facets-req  @DIR@/sig.jar  no --src
+SKIP  ord-literal  @DIR@/sig.jar  no --src
+SKIP  palette    @DIR@/sig.jar  no module.palette
+SKIP  wb-scaffold  @DIR@/sig.jar  not a -wb jar
+SKIP  phantom-dep  @DIR@/sig.jar  no --src
+SKIP  moduletest  @DIR@/sig.jar  not an -rt jar
+SKIP  cross-module-type  @DIR@/sig.jar  no --src
+SKIP  transient-operator  @DIR@/sig.jar  no --src
+SKIP  compact3-import  @DIR@/sig.jar  not an -rt or -ux jar
+SKIP  subscription-leak  @DIR@/sig.jar  no --src
+SKIP  slot-wall  @DIR@/sig.jar  no --src
+verify-module: 3 passed, 0 failed, 15 skipped, 0 warned -> ALL PASS
+-- stderr --
+-- sig.jar (jar) --
+--- META-INF/ (stored) ---
+--- META-INF/MANIFEST.MF (stored) ---
+Manifest-Version: 1.0
+--- META-INF/ORPH.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/ECK.EC (stored) (noeol) ---
+EC
+--- META-INF/ECK.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/ZZ.DSA (stored) (noeol) ---
+DSA
+--- META-INF/module.xml (deflated) ---
+<module name="Foo" vendor="Angeles">
+<dependencies><dependency name="baja" vendor="Tridium" vendorVersion="4.14"/></dependencies>
+<types>
+<type name="A" class="com.x.A"/>
+</types>
+</module>
+--- META-INF/NIAGARA4.RSA (stored) (noeol) ---
+RSA
+--- META-INF/NIAGARA4.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/ZZ.SF (stored) ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- com/ (stored) ---
+--- com/x/ (stored) ---
+--- com/x/B.class (stored) (class 52) ---
+--- com/x/A.class (stored) (class 52) ---

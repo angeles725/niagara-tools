@@ -60,6 +60,8 @@ func TestLastChange(t *testing.T) {
 		{"an older fragment never wins", []Fragment{archive, older}, "last_change: 2026-10-22              # old note"},
 		{"a date tie goes to the later name", []Fragment{archive, same}, "last_change: 2026-10-22              # same day, later name"},
 		{"no note, no comment", []Fragment{archive, bare}, "last_change: 2026-10-25"},
+		{"no fragment: the BUILD-STATE.src.md placeholder", nil,
+			"last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state"},
 	}
 	for _, c := range cases {
 		if got := LastChange(c.frags); got != c.want {
@@ -82,7 +84,7 @@ func TestRenderStructureViolations(t *testing.T) {
 			"open_issues:\n", "last_session: x\nopen_issues:\n", 1), errFields},
 		// Mutation: GBS-tail -- a hand-added field after last_session would be dropped silently on regeneration
 		{"a field after the session log", strings.Replace(ok, "<!-- /build-state.v1 -->\n", "last_commit: abc\n<!-- /build-state.v1 -->\n", 2),
-			"BUILD-STATE.md line 24 (`last_commit: abc`): " + errLogTail},
+			"line 24 (`last_commit: abc`): " + errLogTail},
 	}
 	for _, c := range cases {
 		_, err := Render(c.in, []Fragment{archive})

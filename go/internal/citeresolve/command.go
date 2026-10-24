@@ -46,7 +46,7 @@ func Main(args []string, s cli.Stdio) int {
 	fs.SetOutput(io.Discard)
 	home := s.Env("HOME")
 	var r Roots
-	fs.StringVar(&r.Kit, "kit", "", "kit root (default: the nearest directory above the first card holding retros/INDEX.md)")
+	fs.StringVar(&r.Kit, "kit", "", "kit root (default: the nearest directory above the first card holding retros/INDEX.md or BUILD-STATE.src.md)")
 	fs.StringVar(&r.Research, "research", filepath.Join(home, "niagara-research"), "research repository")
 	fs.StringVar(&r.Modules, "modules", filepath.Join(home, "modulos_niagara_n4"), "client module trees")
 	fs.StringVar(&r.Clients, "clients", "", "client checkouts searched by base name (default: <modules>/Cliente)")
@@ -65,7 +65,7 @@ func Main(args []string, s cli.Stdio) int {
 	cards := fs.Args()
 	if r.Kit == "" {
 		if r.Kit = findKit(cards[0]); r.Kit == "" {
-			fmt.Fprintf(s.Err, "kit-cite-resolve: no kit root (retros/INDEX.md) above %s; pass --kit\n", cards[0])
+			fmt.Fprintf(s.Err, "kit-cite-resolve: no kit root (retros/INDEX.md or BUILD-STATE.src.md) above %s; pass --kit\n", cards[0])
 			return ExitEnv
 		}
 	}
@@ -184,7 +184,9 @@ func countList(n map[Status]int) string {
 	return strings.Join(parts, ", ")
 }
 
-// findKit is the nearest directory at or above card's directory holding retros/INDEX.md.
+// findKit is the nearest directory at or above card's directory that is a kit root: one holding
+// retros/INDEX.md, or BUILD-STATE.src.md (the build-n4-module kit, whose retros/INDEX.md is generated and
+// not committed, so a clean clone has none).
 func findKit(card string) string {
 	d, err := filepath.Abs(filepath.Dir(card))
 	if err != nil {
@@ -192,6 +194,9 @@ func findKit(card string) string {
 	}
 	for {
 		if st, err := os.Stat(filepath.Join(d, "retros", "INDEX.md")); err == nil && !st.IsDir() {
+			return d
+		}
+		if st, err := os.Stat(filepath.Join(d, "BUILD-STATE.src.md")); err == nil && !st.IsDir() {
 			return d
 		}
 		parent := filepath.Dir(d)

@@ -1,0 +1,21 @@
+-- args --
+--plano
+@DIR@/two-ar-line.html
+-- want --
+exit 1
+FAIL  plano      @DIR@/two-ar-line.html  aspect-ratio 2/3
+4/6 != Rc(2/3)
+FAIL  plano      @DIR@/two-ar-line.html  aspect-ratio 2/3
+1/1 != Rc(2/3)
+FAIL  plano      @DIR@/two-ar-line.html  unparseable aspect-ratio: 16/9extra
+FAIL  plano      @DIR@/two-ar-line.html  unparseable aspect-ratio: x/3
+2/y
+2/3/4
+-- stderr --
+-- two-ar-line.html --
+<script>IMG_W=2;IMG_H=3</script><svg id="zonas" viewBox="0 0 2 3"></svg><img id="planoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAMCAAAAAB69aNBAAAADUlEQVR4nGNoaGAAIwANiQMBNh/1KwAAAABJRU5ErkJggg==">
+<style>.a{aspect-ratio: 2/3} .b{aspect-ratio: 4/6}</style>
+<style>.c{aspect-ratio: 2/3} .d{aspect-ratio: 1/1}</style>
+<style>.e{aspect-ratio: 16/9 extra}</style>
+<style>.f{aspect-ratio: x/3} .g{aspect-ratio: 2/y} .h{aspect-ratio: 2/3/4}</style>
+<style>.i{aspect-ratio: ;}</style>

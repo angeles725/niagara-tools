@@ -1,0 +1,15 @@
+-- args --
+@REPO@/build-n4-module-kit/fixtures/MinimalPan
+--bog
+@DIR@/no.bog
+--module
+X
+-- want --
+exit 3
+PASS  commissioning  config-sanity:MinimalPan-rt  CS1/CS2/CS3 clean
+PASS  commissioning  status-parity:MinimalPan-rt  N:M config/status parity clean
+PASS  commissioning  recovery-path:MinimalPan-rt  protection-output recovery path clean
+PASS  commissioning  link-target-flags:MinimalPan-rt  LTF1/LTF2 clean (no wiring map)
+PASS  commissioning  wiring-map  run generate-wiring-map.sh <facade-src-dir> to scaffold docs/wiring-map.md before commissioning
+-- stderr --
+commissioning-verify: bog not found: @DIR@/no.bog

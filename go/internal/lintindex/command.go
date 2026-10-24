@@ -2,6 +2,7 @@ package lintindex
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -11,8 +12,8 @@ import (
 
 // Exit codes of gen-lint-index (unchanged from the bash tool).
 const (
-	ExitOK    = gen.ExitOK    // index written, or fresh under --check
-	ExitStale = gen.ExitStale // stale or missing index under --check, or a header-contract violation
+	ExitOK    = gen.ExitOK    // index written, or the lint headers are valid under --check
+	ExitStale = gen.ExitStale // a header-contract violation; nothing written
 	ExitEnv   = gen.ExitEnv   // usage or environment error, or a lint header that cannot be read; nothing written
 )
 
@@ -65,47 +66,59 @@ func Scan(tb string) (rows []Row, problems []Problem, warn string, err error) {
 	return rows, problems, warn, nil
 }
 
-// Main implements `gen-lint-index [--check] [<kit-root>]`: it writes <kit-root>/toolbelt/INDEX.md,
-// or with --check compares it with what the lint headers generate. Any problem means nothing is
-// written.
+// Main implements `gen-lint-index [--check] [<kit-root>]`: it writes <kit-root>/toolbelt/INDEX.md, or
+// with --check only validates the lint headers (the index is not committed, so there is nothing to
+// compare). Any problem means nothing is written.
 func Main(args []string, s cli.Stdio) int {
 	check, root, ok := gen.ParseArgs(tool, DefaultRootEnv, args, s)
 	if !ok {
 		return ExitEnv
 	}
-	return generate(root, check, s)
+	content, code := Generate(root, s.Err)
+	if code != ExitOK {
+		return code
+	}
+	if check {
+		fmt.Fprintf(s.Out, "gen-lint-index: the lint headers under %s/toolbelt are valid\n", root)
+		return ExitOK
+	}
+	return Output(tool, root, content).Write(s)
 }
 
-// generate renders <root>/toolbelt/INDEX.md and writes it, or compares it under check.
-func generate(root string, check bool, s cli.Stdio) int {
-	tb, ok := gen.SubDir(tool, root, "toolbelt", s)
-	if !ok {
-		return ExitEnv
-	}
-	out := tb + "/INDEX.md"
+// Output is the generated toolbelt/INDEX.md of root as a file to write; tool prefixes its messages.
+func Output(tool, root, content string) gen.File {
+	return gen.File{Tool: tool, Path: root + "/toolbelt/INDEX.md", Content: content}
+}
 
+// Generate returns the toolbelt/INDEX.md that the toolbelt/lint-*.sh headers of root generate. A
+// header-contract violation is reported to diag and returned as ExitStale; a missing toolbelt/ or an
+// unreadable header is ExitEnv.
+func Generate(root string, diag io.Writer) (string, int) {
+	tb, ok := gen.SubDir(tool, root, "toolbelt", cli.Stdio{Out: io.Discard, Err: diag})
+	if !ok {
+		return "", ExitEnv
+	}
 	rows, problems, warn, err := Scan(tb)
 	if err != nil {
-		fmt.Fprintf(s.Err, "gen-lint-index: cannot list %s: %v; index not written\n", tb, err)
-		return ExitEnv
+		fmt.Fprintf(diag, "gen-lint-index: cannot list %s: %v; index not generated\n", tb, err)
+		return "", ExitEnv
 	}
 	if warn != "" {
-		fmt.Fprintf(s.Err, "gen-lint-index: %s\n", warn)
+		fmt.Fprintf(diag, "gen-lint-index: %s\n", warn)
 	}
 	unreadable := false
 	for _, p := range problems {
-		fmt.Fprintf(s.Err, "gen-lint-index: %s: %s\n", p.Name, p.Reason)
+		fmt.Fprintf(diag, "gen-lint-index: %s: %s\n", p.Name, p.Reason)
 		unreadable = unreadable || p.IO
 	}
 	// Mutation: GLI-awkfail -- treating an unreadable header like a missing one writes nothing but exits 1, not 3
 	if unreadable {
-		fmt.Fprint(s.Err, "gen-lint-index: a lint header could not be read; index not written\n")
-		return ExitEnv
+		fmt.Fprint(diag, "gen-lint-index: a lint header could not be read; index not generated\n")
+		return "", ExitEnv
 	}
 	if len(problems) > 0 {
-		fmt.Fprint(s.Err, "gen-lint-index: header-contract violation; index not written\n")
-		return ExitStale
+		fmt.Fprint(diag, "gen-lint-index: header-contract violation; index not generated\n")
+		return "", ExitStale
 	}
-	// Mutation: GLI-stale -- the shared compare in gen.File; dropping it makes --check vacuously clean
-	return gen.File{Tool: tool, Path: out, Content: Render(rows) + "\n", TrimNewlines: true}.Run(check, s)
+	return Render(rows) + "\n", ExitOK
 }
