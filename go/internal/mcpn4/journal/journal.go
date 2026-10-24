@@ -1,9 +1,6 @@
 package journal
 
 import (
-	"math"
-	"math/big"
-
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
 
@@ -17,37 +14,6 @@ func New(stateDir string) *Journal { return &Journal{newFile(stateDir, "journal.
 
 // typeError is the TypeError Python raises; the server names only its type.
 func typeError() error { return &pyjson.Exception{Type: "TypeError"} }
-
-// dictKey is the identity of v as a key of a Python dict: equal keys collide as hash and ==
-// make them (True is 1 is 1.0, False is 0 is -0.0), every NaN json.loads returns is the same
-// object, and a list or dict cannot be a key (TypeError).
-func dictKey(v any) (string, error) {
-	switch x := v.(type) {
-	case nil:
-		return "None", nil
-	case bool:
-		if x {
-			return "i1", nil
-		}
-		return "i0", nil
-	case string:
-		return "s" + x, nil
-	case pyjson.Number:
-		if !x.IsFloat() {
-			return "i" + x.String(), nil
-		}
-		f, _ := x.Float64()
-		switch {
-		case math.IsNaN(f):
-			return "nan", nil
-		case math.IsInf(f, 0) || f != math.Trunc(f):
-			return "f" + pyjson.FloatRepr(f), nil
-		}
-		n, _ := big.NewFloat(f).Int(nil)
-		return "i" + n.String(), nil
-	}
-	return "", typeError()
-}
 
 // extend is list.extend(ops): a list adds its items, a string its characters, a dict its keys;
 // a number or bool is not iterable (TypeError).
@@ -134,7 +100,7 @@ func (j *Journal) views() ([]string, map[string]*pyjson.Object, error) {
 		if phase != "intent" && phase != "relink-intent" && phase != "component-intent" && phase != "result" {
 			continue
 		}
-		key, err := dictKey(get(e, "batch_id"))
+		key, err := pyjson.DictKey(get(e, "batch_id"))
 		if err != nil {
 			return nil, nil, err
 		}
