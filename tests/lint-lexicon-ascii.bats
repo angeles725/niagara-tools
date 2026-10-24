@@ -86,3 +86,22 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-lexicon-ascii: cannot list every file under $TMPDIR_T/Mod: "* ]]
 }
+
+@test "LA-unreadable: an unreadable lexicon is an env error (exit 3, named on stderr), never a clean pass" {
+  # Mutation: LA-unreadable -- skipping an unreadable lexicon reports the module clean
+  printf 'k=ok\n' > "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  chmod 000 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  if [ -r "$TMPDIR_T/Mod/Mod-rt/module.lexicon" ]; then chmod 644 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"; skip "running as root"; fi
+  run "$LA" "$TMPDIR_T/Mod"
+  chmod 644 "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"lint-lexicon-ascii: cannot scan $TMPDIR_T/Mod/Mod-rt/module.lexicon"* ]]
+}
+
+@test "LA-noeol: a non-ASCII byte on a last line with no final newline FAILs (truth fix 2026-10-24)" {
+  # Mutation: LA-noeol -- reading lines like `while read` skips the last line when it has no final newline
+  printf 'ok=yes\nbad=caf\xc3\xa9' > "$TMPDIR_T/Mod/Mod-rt/module.lexicon"
+  run "$LA" "$TMPDIR_T/Mod"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-lexicon-ascii  Mod-rt/module.lexicon:2  non-ASCII: 0xc3 0xa9" ]
+}

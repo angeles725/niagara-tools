@@ -1,0 +1,12 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/BT.java --
+class BT {
+  String s = "Feature getLicenseFeature() { return f; }";
+  public void doA() {
+    a();
+  }
+}

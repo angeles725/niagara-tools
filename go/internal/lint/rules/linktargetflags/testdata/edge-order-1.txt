@@ -1,0 +1,41 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:3  LTF1: link-in target "sA" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/Z.java:3  LTF1: link-in target "sZ" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/m.java:3  LTF1: link-in target "sm" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+FAIL  lint-link-target-flags  @DIR@/root/com/x/sub/S.java:3  LTF1: link-in target "sub" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- root/.hidden/A.java --
+class A {
+// link-in
+@NiagaraProperty(name = "sA", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
+-- root/com/x/A.java --
+class A {
+// link-in
+@NiagaraProperty(name = "sA", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
+-- root/com/x/Z.java --
+class Z {
+// link-in
+@NiagaraProperty(name = "sZ", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
+-- root/com/x/m.java --
+class m {
+// link-in
+@NiagaraProperty(name = "sm", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
+-- root/com/x/notes.txt --
+x
+-- root/com/x/sub/S.java --
+class S {
+// link-in
+@NiagaraProperty(name = "sub", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}
+-- root/w-worktrees/A.java --
+class A {
+// link-in
+@NiagaraProperty(name = "sA", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

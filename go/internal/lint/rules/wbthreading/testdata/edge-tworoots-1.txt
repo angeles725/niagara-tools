@@ -1,0 +1,21 @@
+-- args --
+@DIR@/root1
+@DIR@/root2
+-- want --
+exit 3
+-- stderr --
+lint-wb-threading: unexpected argument: @DIR@/root2
+-- root1/com/x/A.java --
+class A {
+  public CommandArtifact doInvoke() {
+    BComponent[] k = root.getNavChildren();
+    return null;
+  }
+}
+-- root2/com/x/A.java --
+class A {
+  public CommandArtifact doInvoke() {
+    BComponent[] k = root.getNavChildren();
+    return null;
+  }
+}

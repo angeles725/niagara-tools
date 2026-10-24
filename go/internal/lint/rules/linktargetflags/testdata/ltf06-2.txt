@@ -1,0 +1,6 @@
+-- args --
+/nonexistent/__ltf__
+-- want --
+exit 3
+-- stderr --
+lint-link-target-flags: not a directory: /nonexistent/__ltf__

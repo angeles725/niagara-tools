@@ -1,0 +1,9 @@
+-- args --
+/nonexistent/path/that/does/not/exist
+-- want --
+exit 3
+-- stderr --
+lint-lexicon-ascii: not a directory: /nonexistent/path/that/does/not/exist
+-- Mod/Mod-rt/module.lexicon --
+a=b
+bad=café

@@ -1,0 +1,39 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BVals.java:24  add("BOrdList", new BOrdList()) in vals() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BVals.java:25  add("BFacetsX", new BFacetsX()) in vals() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BVals.java --
+package com.x;
+public class BVals extends BComponent {
+  void vals() {
+    add("BStatusNumeric", new BStatusNumeric());
+    add("BStatus", new BStatus());
+    add("BStatusBoolean", new BStatusBoolean());
+    add("BFacets", new BFacets());
+    add("BOrd", new BOrd());
+    add("BLink", new BLink());
+    add("BConversionLink", new BConversionLink());
+    add("BAbsTime", new BAbsTime());
+    add("BRelTime", new BRelTime());
+    add("BString", new BString());
+    add("BDouble", new BDouble());
+    add("BFloat", new BFloat());
+    add("BInteger", new BInteger());
+    add("BLong", new BLong());
+    add("BBoolean", new BBoolean());
+    add("BEnumRange", new BEnumRange());
+    add("BFormat", new BFormat());
+    add("BIcon", new BIcon());
+    add("BNameMap", new BNameMap());
+    add("BStatusX", new BStatusX());
+    add("BOrdList", new BOrdList());
+    add("BFacetsX", new BFacetsX());
+  }
+   void ws() {
+    add(\"w\", new BWsAnnotation());
+    add(\"x\", new BWsAnnotationX());
+  }
+}

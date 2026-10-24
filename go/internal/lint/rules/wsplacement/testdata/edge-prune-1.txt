@@ -1,0 +1,21 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- .hid/BP.java --
+package com.x;
+public class BP extends BComponent {
+  void seed() {
+    add("n", new BFolder());
+  }
+}
+-- ok/A.java --
+class A {}
+-- x-worktrees/BP.java --
+package com.x;
+public class BP extends BComponent {
+  void seed() {
+    add("n", new BFolder());
+  }
+}

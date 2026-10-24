@@ -19,4 +19,4 @@ Building a Niagara N4 module — control logic (rt), a browser dashboard for an 
 v0.2, GROWING. The dashboard and build/verify paths are proven end-to-end (DashboardPan + ColdRoomPan, 2026-08/09) and gated by toolbelt/verify-module.sh. The wb path is still a stub to feed from real builds via retros/.
 
 ## Resolve
-Default path: `/home/cristian/modulos_niagara_n4/niagara-tools/build-n4-module-kit`. Override with `$BUILD_N4_KIT`.
+Run `scripts/kit-resolve.sh` (repo root): it picks `$BUILD_N4_KIT`, else the `kit-main` worktree, else the default checkout `/home/cristian/modulos_niagara_n4/niagara-tools/build-n4-module-kit`, and refuses (exit 2) a kit that is behind origin/main or dirty, printing the refresh command. Its first line is `KIT=<path> SHA=<sha> (origin/main, clean)`.

@@ -259,9 +259,10 @@ setup() {
 @test "RM19-line: a lint-structure L10 row relays its gradle.properties line (path:line, truth audit T7)" {
   # lint-structure prints L10/L14 as <path>:<line>; the site-mode relay keeps the line (it printed "gradle.properties:"
   # with an empty line while the lint put the rule ID where the line belongs).
+  # user_home: a host path that stays the L10 FAIL (R10-D8 made the four build-location keys a WARN).
   ROOT="$BATS_TEST_TMPDIR/l10"
   mkdir -p "$ROOT/.git" "$ROOT/M/A-rt"
-  printf 'x=1\nniagara_home=C:\\N\n' > "$ROOT/M/gradle.properties"
+  printf 'x=1\nuser_home=C:\\N\n' > "$ROOT/M/gradle.properties"
   printf '<types/>\n' > "$ROOT/M/A-rt/module-include.xml"
   printf '<p n="A"/>\n' > "$ROOT/M/A-rt/module.palette"
   run "$RM" --lint-only "$ROOT/M"

@@ -1,0 +1,29 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-lexicon-ascii  Mod-rt/Z.lexicon:1  non-ASCII: 0xc3 0xa9
+FAIL  lint-lexicon-ascii  Mod-rt/a.lexicon:1  non-ASCII: 0xc3 0xa9
+FAIL  lint-lexicon-ascii  Mod-ux/b.lexicon:1  non-ASCII: 0xc3 0xa9
+FAIL  lint-lexicon-ascii  Mod-ux/lex/b.lexicon:1  non-ASCII: 0xc3 0xa9
+FAIL  lint-lexicon-ascii  Mod-wb/b.lexicon:1  non-ASCII: 0xc3 0xa9
+FAIL  lint-lexicon-ascii  build/b.lexicon:1  non-ASCII: 0xc3 0xa9
+-- stderr --
+-- Mod/.dot/b.lexicon --
+k=é
+-- Mod/Mod-rt/Z.lexicon --
+k=é
+-- Mod/Mod-rt/a.lexicon --
+k=é
+-- Mod/Mod-rt/plain.lexicon.bak --
+k=x
+-- Mod/Mod-ux/b.lexicon --
+k=é
+-- Mod/Mod-ux/lex/b.lexicon --
+k=é
+-- Mod/Mod-wb/b.lexicon --
+k=é
+-- Mod/build/b.lexicon --
+k=é
+-- Mod/x-worktrees/w/b.lexicon --
+k=é
