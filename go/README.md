@@ -42,6 +42,8 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/obix-link-audit/` | `obix-link-audit --map <wiring-map.md> (--xml <component.xml> \| --obix <base-url> --component <path>) [--table 1\|2] [--insecure]` |
 | `internal/wiringmap/` | `Main` of `generate-wiring-map` (`toolbelt/generate-wiring-map.sh`): `Slots` (the OPERATOR and SUMMARY/READONLY `@NiagaraProperty` slots of one source, read through `javasrc.NiagaraProperties`), the bare-key lexicon display names and the three-section render whose tables `internal/obixlinkaudit` reads back; `testdata/*.txt` are golden runs recorded from the bash script by `testdata/record/record.sh` (an `@expect <file>` section is a file the run leaves) |
 | `cmd/generate-wiring-map/` | `generate-wiring-map <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]` |
+| `internal/storedrepack/` | `Main` of `stored-repack` (`toolbelt/stored-repack.sh`): the entries of a jar streamed through `archive/zip` into a temporary file beside the output, every one STORED with its sizes in the local header, in signed-jar order (manifest, each `META-INF/<ALIAS>.SF` with its blocks, then the rest in input order), checked and linked into place; `jarlist/` (test side) builds input jars from text specs and lists an output jar; `testdata/*.txt` are golden runs recorded from the bash script with the `testdata/setup.sh` hooks, compared through that listing |
+| `cmd/stored-repack/` | `stored-repack <in.jar> <out.jar>` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
 `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>:<line>  <message>`, or `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>: <message>` for a
@@ -188,6 +190,10 @@ rule's rows stay contiguous.
    A command that writes files records each one as an `@expect <file>` section of its case, and runs
    every case with the case tree as its working directory, so relative `--output` paths replay too
    (reference: `internal/wiringmap`, `testdata/record/record.sh`). `[ev: retro r10-generate-wiring-map-go Δ1]`
+   A command whose output is a binary archive pins its observable contract, not its bytes: the case's
+   `setup.sh` builds each input from a text spec, and the run goes through a wrapper that writes a listing
+   of the output (entry names, order, method, size, content hash) that the Go replay writes too
+   (reference: `internal/storedrepack`, `testdata/setup.sh`). `[ev: retro r10-stored-repack-go Δ1]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
@@ -207,6 +213,10 @@ A tool that writes a file another tool reads (generate-wiring-map writes the map
 tests its output through the reader's parser (`wiringmap.TestMapReadBack` calls `obixlinkaudit.DeclaredRows`),
 and the reader finds a column by its header cell, never by a fixed index: a column added to the generator
 shifted the audited RT slot onto the display name. `[ev: retro r10-generate-wiring-map-go Δ2]`
+A STORED zip entry written from Go goes through `zip.Writer.CreateRaw` with the CRC and size of the source
+header and the bytes streamed from `zip.File.Open`, which fails at EOF when they do not match: `CreateHeader`
+always sets the data-descriptor flag, and `java.util.zip.ZipInputStream` rejects a STORED entry that has one.
+`[ev: retro r10-stored-repack-go Δ2]`
 
 ## XML rules
 

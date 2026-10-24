@@ -66,6 +66,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 # blocks in that order; an orphan block, a nested .SF and a lowercase .sf are ordinary entries. The output
 # passes its consumer, verify-module --stored.
 @test "S5: several aliases (SERVER1 RSA, A RSA+DSA+EC) come in name order after MANIFEST.MF; verify-module --stored passes" {
+  # Mutation: S5 -- appending a .SF's blocks in another order than .RSA, .DSA, .EC, or not sorting the .SF names, breaks the head order
   local s="$TMPDIR_T/src"
   rm "$s/META-INF/NIAGARA4.SF" "$s/META-INF/NIAGARA4.RSA" "$TMPDIR_T/in.jar"
   add_signature "$s" SERVER1 RSA; add_signature "$s" A RSA; add_signature "$s" A DSA; add_signature "$s" A EC
@@ -85,6 +86,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 }
 
 @test "S6: an existing output directory, or the input itself as output, is refused (exit 1) and nothing is written beside it" {
+  # Mutation: S6 -- os.Rename in place of os.Link, with no up-front check, replaces in.jar named as its own output
   mkdir "$TMPDIR_T/outdir"
   run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/outdir"
   [ "$status" -eq 1 ]
@@ -101,6 +103,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 # The bash checked the output with [ -e ], which follows a symlink: a dangling link passed, zip replaced it
 # with a regular file and created its target, exit 0. The Go port refuses it like any existing output.
 @test "S7: an output path holding a dangling symlink is refused (exit 1); the link and its missing target stay" {
+  # Mutation: S7 -- os.Stat for os.Lstat (truth-out-dangling-symlink) reads the input first, and a rename fallback would replace the link
   ln -s "$TMPDIR_T/nowhere" "$TMPDIR_T/link.jar"
   run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/link.jar"
   [ "$status" -eq 1 ]
@@ -112,6 +115,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 # The bash resolved OUT_ABS with $(cd "$(dirname "$OUT")" && pwd): a missing directory made it "/out.jar", and
 # zip tried to create that file in / (exit 15, or a stray /out.jar when / is writable).
 @test "S8: an output in a directory that does not exist is exit 1 'cannot write', nothing written" {
+  # Mutation: S8 -- creating the missing directory (os.MkdirAll before the temporary file) leaves nodir/ behind
   cd "$TMPDIR_T"
   run "$R" in.jar nodir/out.jar
   [ "$status" -eq 1 ]
@@ -122,6 +126,7 @@ teardown() { rm -rf "$TMPDIR_T"; }
 # The bash's last `zip -r . -x <manifest> <signatures>` had nothing to add for a manifest-only jar: "zip error:
 # Nothing to do!", exit 12 under set -e, a partial out.jar left behind.
 @test "S9: a jar holding only META-INF/MANIFEST.MF repacks to that one STORED entry (exit 0)" {
+  # Mutation: S9 -- failing when nothing follows the manifest (the bash's "Nothing to do!", truth-manifest-only) exits non-zero
   mkdir -p "$TMPDIR_T/m"; add_manifest "$TMPDIR_T/m"; make_jar "$TMPDIR_T/m.jar" "$TMPDIR_T/m"
   run "$R" "$TMPDIR_T/m.jar" "$TMPDIR_T/out.jar"
   [ "$status" -eq 0 ]
