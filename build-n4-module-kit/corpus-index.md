@@ -1,10 +1,10 @@
-# Corpus index — the curated map of the niagara-research corpus for module builders (B29–B1027)
+# Corpus index — the curated map of the niagara-research corpus for module builders (B29–B1258)
 
 The niagara-research corpus carries a COMPLETE N4 module-authoring body — the RT campaign (B729–B746),
 the Wire-Sheet + organization work (B747–B750), the WB/UX authoring taxonomy (B751–B753), and the
 module-authoring axes (B754–B760: versioning/upgrade-safety, bits, build/signing, integration, tags,
 lexicon, and a consolidated audit). Later campaigns extended it with exemplar, own-module, distribution and
-platform blocks (B29–B1027), so the title names the full range it cites. This index points the builder at the
+platform blocks, and the N4 Developer course focus (B29–B1258), so the title names the full range it cites. This index points the builder at the
 block that answers each need. `[ev: retro kit-meta-hygiene-2026-10-01 Δ2]`
 
 **How to use it:** `corpus-nav FIRST` when you have a TERM to look up (`corpus-nav find "<topic>"`); use THIS
@@ -148,6 +148,24 @@ Added by the research fold (PR7). Idiom note: B778 + B782 + B785 are three insta
 | **B1025** | N4 Distribution ND6 — the shipped modules set: 721 jars, the 4.13.2.18.5 manifest, OEM-vs-stock families (vs the installed N4.14 corpus) | distribution |
 | **B1026** | N4 Distribution ND7 — Installer mechanics: `Installer_x64.exe`, overlay-merge sequence, `niagarad`/Service setup | distribution |
 | **B1027** | N4 Distribution ND8 — SDK dev examples (`dev/`) and default security material (`overlay/security/`) — file layout and what is shipped | distribution |
+
+## n4-dev-course — the N4 Developer Certification Course (B1230–B1258)
+
+The Tridium-authored course (N4.15.6.20) digested topic by topic: 29 blocks, a 73-rule checklist (B1242 §1242.3)
+and a ranked "what not to copy" list (B1242 §1242.4). Course files are example code only: mirror them first,
+apply the §1242.4 fixes only as named opt-in changes (`BUILD-LOOP.md` § 0, `SOURCES.md` § Exemplar source).
+`[ev: retro n4-course-as-exemplar-source Δ1]`
+
+| Block | What it gives the builder | Layer |
+|---|---|---|
+| **B1242** | **P0** — the course SYNTHESIS: ordered learning path, the Tridium rules-of-thumb checklist, what not to copy (ranked), 4.15 vs 4.14 deltas, proposed kit deltas; START HERE for course work | reference |
+| **B1238** | **P0** — multithreaded development and Jobs: the station thread map, which thread runs a sync / ASYNC / scheduled action, the Lab 9 executors, the `BSimpleJob` lifecycle (deck 9, Labs 9–10) | rt / threading |
+| **B1235** | **P0** — Gradle and permissions: the 4.12→4.14 build DSL ladder, the plugin pin, `module-permissions.xml` groups → Java permissions | build / permissions |
+| **B1236** | **P0** — logging, lexicons and testing: the DebugService logging model, the `<Type>.displayName` lexicon key, `BTestNg`/`BTestNgStation` + Mockito | lexicon / test |
+| **B1237** | **P0** — ORDs and BQL: the ORD query chain, `BOrd.resolve`/`get`, a custom `BOrdScheme`, the BQL grammar against `bql-rt` code | ord / bql |
+| **B1239** | **P0** — drivers / NDriver: the NMessage/NComm/ILinkLayer model, the Lab 11 driver, and the lab solution's latent defects | driver |
+| **B1230** | The course map (decks 0–10 + bonus, labs 1–11 + bonus) and the N4.15.6.20 developer environment | reference |
+| **`docs/n4-module-development-course-guide.md`** | How to develop an N4 module as Tridium teaches it (N4.15), every rule linked to its block (B1230–B1258). Lives in `niagara-research/docs/`. | reference |
 
 ---
 
