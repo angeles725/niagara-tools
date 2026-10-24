@@ -24,8 +24,9 @@ go_tool_bin() {
     [ -f "$go_dir/go.mod" ] || { printf '%s: no Go module at %s\n' "$tool" "$go_dir" >&2; return 3; }
     command -v go >/dev/null 2>&1 || { printf '%s: go is not on PATH; it is needed to build %s\n' "$tool" "$bin" >&2; return 3; }
     # Build to a private name, then rename: concurrent callers never exec a half-written binary.
+    # -buildvcs=false: no VCS stamping, so a test's fake `git` on PATH cannot fail the rebuild.
     tmp="$bin.tmp.$$"
-    if ! (mkdir -p "$go_dir/bin" && cd "$go_dir" && go build -o "$tmp" "./cmd/$tool") >&2; then
+    if ! (mkdir -p "$go_dir/bin" && cd "$go_dir" && go build -buildvcs=false -o "$tmp" "./cmd/$tool") >&2; then
       rm -f "$tmp"; printf '%s: go build failed in %s\n' "$tool" "$go_dir" >&2; return 3
     fi
     mv -f "$tmp" "$bin"
