@@ -60,7 +60,7 @@ Two dialects for delivering data to a bajaux `@AgentOn` view:
 10. **Declare what you reference, no phantoms**: `module.xml` declares the companion `-rt`, `workbench-wb`, `bajaui-wb` and every module whose types the code uses — a MISSING companion `-rt` is the hard failure (`ClassNotFound` at Workbench start); a dep listed but never referenced is a phantom (`verify-module.sh` `phantom-dep` WARN, advisory). [ev: corpus B809 §809.5]
 11. **Fail-closed authorization for WB controls:** a control whose authorization mixin or PIN is absent must be DISABLED **and** HIDDEN by default — never open-by-default. An ABSENT mixin is the closed case; a pin of `-1` is not — in the Galileo exemplar `-1` means any level passes. On `loadValue()`, check the pin; if the user lacks the required permission call `widget.setEnabled(false)` **and** `widget.setVisible(false)`. A missing mixin ≠ "unprotected" — it equals "no access". `[ev: retro honeywell-wb-rt-wb-deltas Δ3]` `[ev: corpus B1079]`
 
-**DWB1 exemplar — chihuahua-wb `model/` tree** (commit `175eee8`, `angeles725/chihuahua`):
+**DWB1 exemplar — chihuahua-wb `model/` tree** (commit `175eee8` [deferred: unverifiable — no local chihuahua checkout and no corpus block names the commit], `angeles725/chihuahua`):
 ```
 chihuahua-wb/src/com/angeles/chihuahua/wb/
   model/
@@ -316,17 +316,15 @@ When a `-wb` view needs multiple sections (e.g. status tab + config tab + diagno
 ```java
 private BTabbedPane tabs;
 
-@Override
-protected void buildImpl(BWbTablePane parent) {
-    tabs = new BTabbedPane();
-    tabs.add(createTPageStatus(),     "Status");
-    tabs.add(createTPageConfig(),     "Configuration");
-    tabs.add(createTPageDiagnostics(),"Diagnostics");
-    parent.add(tabs, BorderLayout.CENTER);
-}
+// in the view's constructor
+tabs = new BTabbedPane();
+tabs.addPane("Status",        createTPageStatus());       // BLabelPaneContainer.addPane(String, BWidget)
+tabs.addPane("Configuration", createTPageConfig());
+tabs.addPane("Diagnostics",   createTPageDiagnostics());
+setContent(tabs);                                          // BWbPlugin.setContent
 
-private BLabelPane createTPageStatus() {
-    BLabelPane p = new BLabelPane();
+private BWidget createTPageStatus() {
+    BEdgePane p = new BEdgePane();
     // … add widgets …
     return p;
 }
@@ -336,11 +334,11 @@ private BLabelPane createTPageStatus() {
 - One `createTPage*()` factory method per tab — keeps the constructor compact.
 - **Conditional tab:** wrap in `if (childIsPresent())` before `tabs.add(...)` to hide a tab when the required child is absent.
 - **`doLoad`/`doSave` symmetry:** override `doLoadValue()` to set widget values from the loaded component; override `doSaveValue()` to write widget values back. Keep them paired — a missing `doSaveValue()` causes silent loss of edits.
-- **Status tab layout:** place a `BJobBar` in `NORTH` and a `BTable` in `CENTER` — the standard vendor layout for a status/command tab.
+- **Status tab layout:** a `BEdgePane` with the `BJobBar` in `setNorth(...)` and the `BTable` in `setCenter(...)` — the standard vendor layout for a status/command tab.
 
 `[ev: corpus B1070]`
 
-**`BTabbedPane.selection` is TRANSIENT — persist the tab by label text (PD-24):** `BTabbedPane.selection` is NOT annotated with `@NiagaraProperty`, so it is TRANSIENT — it does not survive a view close/reopen or a `doSaveValue()` call. To remember the selected tab across open/close, persist the tab's **label text** (not its index, which is unstable if tabs are added/removed) in a per-user pref file (see `§WB user preferences`) or in a `String` field. Restore in `doLoadValue()` with `tabs.setSelection(tabs.find(savedLabel))`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ24]` `[ev: corpus B1076]`
+**The `BTabbedPane` selection is TRANSIENT — persist the tab by label text (PD-24):** `BTabbedPane` has no selection property (only `getSelectedLabelPane()`/`selectLabelPane(...)`), so the selected tab does not survive a view close/reopen or a `doSaveValue()` call. To remember the selected tab across open/close, persist the tab's **label text** (not its index, which is unstable if tabs are added/removed) in a per-user pref file (see `§WB user preferences`) or in a `String` field. Restore in `doLoadValue()` by walking `tabs.getChildren(BLabelPane.class)` for the pane whose `getLabel().getText()` equals the saved label and calling `tabs.selectLabelPane(p)`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ24]` `[ev: corpus B1076]`
 
 **Popup editor — one editor for the whole component** `[ev: corpus B1315 §1315.1 rank 7]` [ev: retro devguide415-horizons-authoring-security Δ10]:
 a class that extends `BWbEditor` and implements `BIPopupEditor` (`workbench-wb` `javax.baja.workbench.popup`) opens
@@ -374,23 +372,23 @@ When PX is the right recipe and how a Px page is laid out: `types/dashboard.md` 
 | Hyperlink to a view | any binding | ORD ends in `\|view:<module>:<ViewName>`; `\|` = cross-space separator |
 
 **Geometry:** only a `CanvasPane` lays out its children by position: it reads each child's `layout="x,y,w,h"`, where
-each value is px, `%` of the pane, or `pref` (preferred size) (`organized/bajaui/bajaui-wb/vineflower/javax/baja/ui/pane/BCanvasPane.java:160-185`, `BLayout.ABS/PERCENT/PREF`);
+each value is px, `%` of the pane, or `pref` (preferred size) (`organized/docSource/docSource-doc/extracted/bajaui-wb/javax/baja/ui/pane/BCanvasPane.java:355-405`, `BLayout.ABS/PERCENT/PREF`);
 `GridPane`, `BorderPane`, `EdgePane` and the other panes ignore `layout` and size children by their own rules
 (`columnCount`, edges). Cross-space ords use `|` (pipe) as the space separator; e.g. `station:|slot:/Services/MyService`.
 
-**Minimal read-label + write-setpoint snippet** (from `VENOM_VAV_003n.px:32-35`, `Smart_IO.px:134` — [ev: corpus B752 §752.3]):
+**Minimal read-label + write-setpoint snippet** (from `VENOM_VAV_003n.px:36-40, :375-377` — [ev: corpus B752 §752.3]):
 ```xml
-<!-- Read label: displays current value, tints red on fault -->
-<Label layout="10,10,100,20">
+<!-- Read label: displays current value with status coloring -->
+<BoundLabel layout="10,10,100,20">
   <BoundLabelBinding ord="slot:/Setpoint" statusEffect="color">
-    <ObjectToString format="%out.value% °C"/>
+    <ObjectToString name="text" format="%out.value% °C"/>
   </BoundLabelBinding>
-</Label>
-<!-- Write-back setpoint control -->
-<SpinnerWidget layout="10,35,100,24">
-  <SetPointBinding ord="slot:/Setpoint"
+</BoundLabel>
+<!-- Write-back boolean setpoint (check box) -->
+<CheckBox layout="10,35,40,20">
+  <SetPointBinding ord="slot:/AlarmEnable"
     widgetEvent="actionPerformed" widgetProperty="selected"/>
-</SpinnerWidget>
+</CheckBox>
 ```
 
 See also: `types/dashboard.md §serving recipe` for the PX-vs-servlet decision and the PX complement use case.
@@ -406,7 +404,7 @@ The wave-3 survey (B1094–B1105) identified a second axis that extends the rung
 | Target axis | `@AgentOn` anchor | Lifecycle / contract | Typical `@NiagaraType` base |
 |-------------|-------------------|----------------------|-----------------------------|
 | **station-component / driver** | A `BComponent`, `BNetwork`, `BDevice`, or `BService` subclass in the station component space | Opened from the Workbench Nav tree; participates in the normal station lifecycle | `BWbComponentView`, `BAbstractManager`, `BWbFieldEditor` |
-| **platform-service-plugin** | A `platform:*Service` agent (e.g. `PlatformServiceAgent`) resolved via `@AgentOn` | Opened from the **Platform tab**; accesses the Platform daemon via `poll`/`lease`/`savePlatformServiceProperties` — NOT the station daemon | `BPlatformServiceView` or equivalent |
+| **platform-service-plugin** | A platform-service type (e.g. `platPower:PowerMonitorPlatformService`, `requiredPermissions="W"`) | Opened from the **Platform tab**; calls `poll()`/`lease(…)`/`savePlatformServiceProperties()` on the platform service — NOT the station | `BWbComponentView` |
 | **platform-daemon-file** | A `BDaemonSessionView` with a `DaemonFileUtil` file-push contract | Opened from the **Platform tab** alongside the platform-service-plugin; pushes files to the host OS via the Platform daemon; feature tabs are NRE-version-gated | `BDaemonSessionView` |
 
 This taxonomy extends B751's rung ladder with a second "target" axis — ladder rung says HOW MUCH WB, target axis says WHERE. All three targets can appear at any rung (rung 1 FE or rung 2 Manager). [ev: corpus B1105]
@@ -415,8 +413,8 @@ This taxonomy extends B751's rung ladder with a second "target" axis — ladder 
 
 `PlatformServicePlugin` is a distinct WB view-target pattern for Platform-tab integration. It differs from the station-component pattern:
 
-- **`@AgentOn` anchor:** the platform service agent (`platform:*Service`) — NOT a `BComponent` in the station space.
-- **API contract:** the view must implement `poll()` (one-shot data refresh from the platform daemon), `lease()` (keep-alive while the view is open), and optionally `savePlatformServiceProperties()` (write config back to the daemon).
+- **`@AgentOn` anchor:** the platform-service type (e.g. `platPower:PowerMonitorPlatformService`) — NOT a `BComponent` in the station space; the view itself is a plain `BWbComponentView`.
+- **API contract:** the view CALLS these on the platform service — `poll()` + `lease(5)` in `doLoadValue()` (activates a polling lease on the remote daemon), then `registerForComponentEvents()`; `doSaveValue()` sets the values and calls `savePlatformServiceProperties()` to persist them to the daemon.
 - **No station-space writes:** mutations go through the Platform daemon pathway, not through `BComponent.set()` with a station Context.
 - **Commissioning note:** the Platform tab is only accessible when connected to the Platform node (not the station node); views registered here are invisible when connected to the station node only.
 
@@ -425,10 +423,12 @@ This taxonomy extends B751's rung ladder with a second "target" axis — ladder 
 @NiagaraType(agent = @AgentOn(types = {"platform:MyPlatformService"}, requiredPermissions = "r"))
 public class BMyPlatformServiceView extends BWbComponentView {
     @Override public void doLoadValue(BObject value, Context cx) {
-        poll();   // fetch current state from the platform daemon
+        BMyPlatformService service = (BMyPlatformService) value;
+        service.poll();       // refresh state from the platform daemon
+        service.lease(5);     // keep the polling lease alive while the view is open
+        registerForComponentEvents(service);
+        // build or update widgets
     }
-    private void poll() { /* call platform daemon API, update widgets */ }
-    private void lease() { /* keep-alive ping to the daemon while the view is open */ }
 }
 ```
 
@@ -439,27 +439,27 @@ public class BMyPlatformServiceView extends BWbComponentView {
 The `BDaemonSessionView` + `DaemonFileUtil` pair is the Niagara Platform pattern for pushing host-OS configuration files from the WB Platform tab:
 
 - **`BDaemonSessionView`** opens a session to the platform daemon and provides an API to read/write files on the host OS (not in the station BOG).
-- **`DaemonFileUtil.pushFile(session, localFile, remotePath)`** copies a local temp file to the host OS path via the daemon session — the correct path for config files that live outside the station (e.g. `/etc/network/interfaces`, driver license files).
-- **NRE-version-gated feature tabs:** when a feature requires a minimum NRE version, check `Sys.getNiagaraVersion()` at tab-render time and call `tab.setEnabled(false)` + tooltip explanation if the version is insufficient. Never silently hide tabs — always explain why they are disabled.
+- **`DaemonFileUtil` + `FileTransferMessage` + `BDaemonFileSpace`** (the platform-daemon file channel, the same one firmware update and cert install use) carry config files to and from the host OS — the correct path for config that lives outside the station; the exemplar exchanges WiFi config as XML and BLE config as JSON. `DaemonFileUtil` has no `pushFile` method (its statics include `transfer`, `pipe`, `listFiles`, `findFile`).
+- **NRE-version-gated feature tabs:** when a feature requires a minimum NRE version, check `Sys.getBajaVersion()` (`Sys.java:272`) at tab-render time. The exemplar suppresses the BLE tab below its minimum version; the kit prefers disabling it and showing why `[INFER — kit doctrine]`.
 
 ```java
 // NRE-version gate on a Platform tab
-Version minVersion = Version.make("4.14.0");
-if (Sys.getNiagaraVersion().compareTo(minVersion) < 0) {
-    advancedTab.setEnabled(false);
-    advancedTab.setToolTipText("Requires Niagara 4.14 or later");
+Version minVersion = new Version("4.14.0");
+if (Sys.getBajaVersion().compareTo(minVersion) < 0) {
+    tabs.setEnabledLabelPane(advancedTab, false);   // BTabbedPane.setEnabledLabelPane
+    // put "Requires Niagara 4.14 or later" in a label inside the tab
 }
 ```
 
-**Security note:** `BDaemonSessionView` carries MD5-digested credential storage in the `honAdvWirelessCfg` reference module (corpus B1104). When implementing a daemon-file view that stores credentials, use SHA-256 or stronger (see `types/security.md §9`). [ev: corpus B1104]
+**Security note:** in the `honAdvWirelessCfg` reference module the BLE manager (`BHoneywellControllerBleManager`, a `BWbComponentView`) stores the BLE password as an MD5 hex digest in the BLE config it pushes (corpus B1104). When implementing a daemon-file view that stores credentials, use SHA-256 or stronger (see `types/security.md §9`). [ev: corpus B1104]
 
 ### OEM-on-stock-driver WB side notes [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ3]
 
 For the full OEM-on-stock-driver pattern (type-float slot, two-anchor manager mount, dual-FE registration, ORD-carrier navigation), see `types/driver-authoring.md §9.3`. WB-specific notes:
 
-- **Dual-FE registration** is safe: Workbench dispatches by the exact `BTypeSpec` match; the OEM FE and the stock FE coexist without conflict as long as the OEM FE is `@AgentOn` the OEM type (not the stock base type).
-- **Two-anchor manager mount:** register the shared OEM manager with `@AgentOn(types={"bacnet:BacnetDevice", "myOem:MyOemDevice"})` — the framework opens the OEM manager for both; the type-float slot discriminates which OEM plugin activates.
-- **ORD-carrier navigation:** `ord|view:myOem:MyOemDeviceView` in a `<b-hyperlink>` PX widget opens the OEM view only for devices whose type matches `myOem:MyOemDevice`; the stock view remains active for untyped BACnet devices.
+- **Dual-FE registration:** a thin subclass of the stock FE `@AgentOn` the stock type (`BHonBacnetBitStringEditor extends BBacnetBitStringFE`, overriding only the WB-context render path) next to a fresh `BWbFieldEditor` `@AgentOn` the OEM wrapper type (`BHonBacnetBitStringFE`); each FE is `@AgentOn` its own type, so they coexist.
+- **Two-anchor manager mount:** one manager `@AgentOn` two tree locations (`BHonBacnetAlarmManager` on `HonBacnetAlarmDeviceExt` and `HonBacnetNotificationClassFolder`), dispatching on `instanceof` in `doLoadValue()`.
+- **ORD-carrier navigation:** rt point types carry an ORD (`getAlarmViewHyperlink()`); a WB dialog reads it per point and a WB service hyperlinks to it (`BHonWbService.hyperlink(ord)`).
 
 [ev: corpus B1096]
 
@@ -467,61 +467,45 @@ For the full OEM-on-stock-driver pattern (type-float slot, two-anchor manager mo
 
 For the full `BStationMgrCommand` command SPI (registry discovery, CredentialsColumn lease+newCopy, HistoryId shorthand), see `types/driver-authoring.md §9.4`. WB-specific note for session-keyed state:
 
-The `Static State for manager view continuity` pattern (see `§Static State` above) applies to **domain state that must survive a close/reopen**. For **learn/discovery state scoped to one session**, use a session key instead:
-
-```java
-// Per-session learn state — cleared automatically when the session ends
-private static final Map<String, LearnState> SESSION_STATES =
-    Collections.synchronizedMap(new WeakHashMap<>());
-
-private LearnState getLearnState(Context cx) {
-    return SESSION_STATES.computeIfAbsent(cx.getSessionId(), k -> new LearnState());
-}
-```
-
-`WeakHashMap` keyed by session ID allows old sessions to be GC'd without an explicit cleanup hook. Do NOT use a `HashMap` with no eviction — it leaks one `LearnState` per Workbench session. [ev: corpus B1097]
+The `Static State for manager view continuity` pattern (see `§Static State` above) applies to **domain state that must survive a close/reopen**. For **learn/discovery state scoped to one session**, key the cache by the session: `BNiagaraFileManager` saves the Fox session id it learned under and invalidates the cached learn state when the id changes, so a reconnect never shows a stale learn table. [ev: corpus B1097]
 
 ### Thin non-driver CRUD manager template — SNMP pattern [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ8]
 
-When a **service** (not a driver) needs a table-manager CRUD view with credential support, the nSnmp module (~50–70 lines) is the reference archetype. It is smaller than the `BAbstractManager` non-driver template (`wb-widgets.md §Minimal non-driver custom-manager template`) because it needs no Discover:
+When a config table (not a driver) needs a table-manager CRUD view with credential support, the nSnmp module (~50–70 lines) is the reference archetype. It is smaller than the `BAbstractManager` non-driver template (`wb-widgets.md §Minimal non-driver custom-manager template`) because it needs no Discover:
 
 Key structural rules:
-- `@AgentOn` the service type (not a network or device).
+- `@AgentOn` the `*Table` type (e.g. `nSnmp:UsmUserTable`, `requiredPermissions="r"`), not a network or device.
 - Use `MgrColumn.Prop` only — no `MgrColumn.PropPath`, no discover columns.
-- Credential variant: add a `BPassword` prop column; in `MgrEdit.validate()` check `BPasswordStrength.DEFAULT` — reject credentials that do not meet the minimum strength:
+- Credential variant: add a `BPassword` prop column; in the inner `Edit`'s `MgrEdit.validate()` check the pass phrase against `BPasswordStrength.DEFAULT` — reject credentials that do not meet the minimum strength:
 
 ```java
 // Inside MgrEdit.validate() — credential strength check
-BPassword pw = (BPassword) record.get(passwordProp);
-if (!BPasswordStrength.DEFAULT.isSatisfiedBy(pw)) {
-    throw new ValidationException("Password does not meet minimum strength requirements");
+// isPasswordValid(char[], Consumer<Localizable>) — BPasswordStrength.java:392; there is no isSatisfiedBy
+if (!BPasswordStrength.DEFAULT.isPasswordValid(passPhrase, msg -> { /* collect the reason */ })) {
+    // reject: report the collected reason and keep the dialog open
 }
 ```
 
 - `isLearnable() = false`, `makeLearn() = null`.
 - Override `getNewTypes()` to restrict the allowed row type to the credential record type.
 
-The ~50–70 line target is achievable only if column definitions and the MgrModel inner class are kept flat. Split into a separate `MgrModel` inner class as soon as it exceeds 3 columns. [ev: corpus B1101]
+The ~50–70 line target is achievable only if column definitions and the inner `MgrModel` (`makeColumns()` + `getNewTypes()`) are kept flat. [ev: corpus B1101]
 
 ### Multi-perspective managers over one object graph [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ9]
 
-The Z-Wave module (corpus B1102) demonstrates the **multi-perspective manager** pattern: two or more `BAbstractManager` subclasses that present DIFFERENT VIEWS over the SAME underlying object graph (the `BZWaveNetwork` device subtree).
+The Z-Wave module (corpus B1102) demonstrates the **multi-perspective manager** pattern: three `BFolderManager` views (`BDeviceSceneManager`, `BNetworkSceneManager`, `BNetworkSceneExtManager`) that present DIFFERENT VIEWS over the SAME underlying scene objects from the device, one-scene and catalogue viewpoints.
 
 Key design rules for this pattern:
 
-- **One source of truth:** all managers read and write the SAME `BZWaveDevice` components in the station space. Never duplicate data across manager-local state and the component tree.
-- **Firmware-capability-gated columns:** show/hide manager columns based on a per-device capability flag (e.g. `device.supportsSecureCommands()`). Implement gating in `MgrModel.getColumnCount()` and `MgrModel.getColumnAt(i)` — return a shorter column array when the capability is absent. Never show a column that the device cannot support.
-- **Raw-payload byte FE:** for columns that carry raw byte-array payloads (e.g. Z-Wave command-class data), register a custom `BWbFieldEditor` for `BByteArray` (or equivalent) that renders the bytes as hex with a length counter. Keep the byte FE in the `-wb` profile; never decode raw command-class data in the rt.
-- **Device power-state column:** expose `devicePowerState` (mains / battery / unknown) as a dedicated `MgrColumn.Prop` with a custom `MgrCellRenderer` that renders a battery/plug icon. This column is always present regardless of firmware capability — power state is never gated.
+- **One source of truth:** all managers read and write the SAME RT scene components (`BZWaveSceneActuatorConf`, `BZWaveNetworkSceneConfig`, `BZWaveNetworkScene`) in the station space. Never duplicate data across manager-local state and the component tree.
+- **Firmware-capability-gated UI:** gate what the dialog offers on the device's capability — the inclusion dialog shows its `networkWide` check box only when `BFirmwareCapability.getSupportsExplorerFrames()` is true. Never offer an option the device cannot support.
+- **Raw-payload byte FE:** for raw byte payloads (Z-Wave command-class data) the module ships its own `-wb` FE (`BZWaveBlobFE`, comma-delimited bytes). Keep the byte FE in the `-wb` profile; never decode raw command-class data in the rt `[INFER]`.
+- **Battery wake-up column:** `BZWavePointManager` adds a `BZWaveProxyExt.nextWakeUpIn` column (battery devices report their next scheduled wake-up) plus `age` (value staleness).
 
 ```java
-// Firmware-capability-gated column in MgrModel
-@Override public int getColumnCount() {
-    return device.supportsSecureCommands() ? FULL_COLUMNS.length : BASE_COLUMNS.length;
-}
-@Override public MgrColumn getColumnAt(int i) {
-    return device.supportsSecureCommands() ? FULL_COLUMNS[i] : BASE_COLUMNS[i];
-}
+// Capability-gated option (the BZWaveDeviceManager inclusion pattern)
+boolean explorer = capability.getSupportsExplorerFrames();
+// open the inclusion options dialog; show its networkWide check box only when explorer is true
 ```
 
 [ev: corpus B1102]
@@ -544,7 +528,7 @@ A `-ux` module that authors its own AMD/RequireJS JavaScript (a bajaux `@AgentOn
 
 | Component | Role |
 |---|---|
-| **`grunt-niagara`** | Grunt task library — provides `babel:dist`, `copy:dist`, `requirejs`, `karma` tasks |
+| **`grunt-niagara`** | Grunt task library — provides `babel:dist`, `copy:dist`, `requirejs`, `karma` `[INFER]` tasks |
 | **Gradle `com.tridium.niagara-grunt` plugin** | Wires the Gradle build to `grunt`: `gruntBuild` task → runs grunt tasks in order |
 | **RequireJS/AMD** | Module loader at runtime — modules are referenced by `nmodule/<module>/rc/<path>` IDs |
 | **Babel** | ES6→ES5 transpilation (the `babel:dist` grunt task) |
@@ -577,9 +561,7 @@ define(["nmodule/mymod/rc/myWidget", "nmodule/bajaui/rc/bajaui"], function(myWid
 
 ### When grunt IS required vs. when it must be removed
 
-- **Keep `niagara-grunt`** when: the module AUTHORS its own AMD modules (bajaux type-extension, custom widget with its own `.js` files that need `babel:dist` + `requirejs` bundling).
-- **Remove `niagara-grunt` entirely** when: the module only serves a pre-built static bundle (three.js, Chart.js, etc.) from `src/rc/` with no authored AMD modules — a leftover `niagara-grunt` dep adds a phantom `nodeHome` requirement and a no-op build step on every compile.
+- **Keep `niagara-grunt`** when: the module AUTHORS its own AMD modules (bajaux type-extension, custom widget with its own `.js` files that need `babel:dist` + `requirejs` bundling) `[INFER — kit doctrine]`.
+- **Remove `niagara-grunt` entirely** when: the module only serves a pre-built static bundle (three.js, Chart.js, etc.) from `src/rc/` with no authored AMD modules — a leftover `niagara-grunt` dep adds a phantom `nodeHome` requirement and a no-op build step on every compile `[INFER — kit doctrine]`.
 
 See `types/dashboard.md §JS build strategy` for the full decision matrix. `[ev: corpus B1132]`
-
-[ev: corpus B1103]
