@@ -2,7 +2,7 @@
 @DIR@/m
 -- want --
 exit 3
-ERROR  lint-machine-default-path  @DIR@/m  no *.java sources found (wrong path or empty source tree)
+ERROR  lint-machine-default-path  @DIR@/m  no *.java or *.js or *.properties sources found (wrong path or empty source tree)
 -- stderr --
 -- m/README.txt --
 notes

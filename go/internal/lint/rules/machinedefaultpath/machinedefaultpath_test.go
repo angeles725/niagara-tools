@@ -13,21 +13,31 @@ import (
 )
 
 // rows runs the rule alone on one file A.java holding src and returns its stdout with the path cut to "A.java".
-func rows(t *testing.T, src string) string {
+func rows(t *testing.T, src string) string { t.Helper(); return rowsIn(t, "A.java", src) }
+
+// rowsIn runs the rule alone on one file at rel (under the root) holding src; the root is cut from the rows.
+func rowsIn(t *testing.T, rel, src string) string {
 	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "A.java"), []byte(src), 0o644); err != nil {
+	full := filepath.Join(dir, rel)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	var o, e bytes.Buffer
 	if code := lint.Command(Spec())([]string{ID, dir}, cli.Stdio{Out: &o, Err: &e}); code != 0 || e.Len() != 0 {
-		t.Fatalf("exit %d stderr %q, want 0 and none (advisory)", code, e.String())
+		t.Fatalf("exit %d stderr %q, want 0 and none (WARN without --strict)", code, e.String())
 	}
 	return strings.ReplaceAll(o.String(), dir+"/", "")
 }
 
-func row(line int, path, where string) string {
-	return "ADVISORY  " + ID + "  A.java:" + strconv.Itoa(line) + "  machine-specific default path \"" + path +
+func row(line int, path, where string) string { return rowAt("A.java", line, path, where) }
+
+// rowAt is the row the deferred G43 spec names (its text a prefix of the message), plus the remediation hint.
+func rowAt(file string, line int, path, where string) string {
+	return "WARN  " + ID + "  " + file + ":" + strconv.Itoa(line) + "  machine-specific default \"" + path +
 		"\" in " + where + " -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)\n"
 }
 
@@ -35,11 +45,18 @@ const (
 	field = "a field initializer"
 	slot  = "an @NiagaraProperty defaultValue"
 	fall  = "a fallback argument"
+	decl  = "a const/let/var initializer"
+	prop  = "an object-literal property default"
+	value = "a .properties value"
 )
 
 // TestFindings: each default context and each machine-path shape the doctrine names.
 func TestFindings(t *testing.T) {
 	for _, tc := range []struct{ name, src, want string }{
+		// The deferred G43 spec's first case, verbatim.
+		{"ledger static final field", "class A {\n  private static final String PW_FILE = \"/home/dev/.n4/pw\";\n}\n", row(2, "/home/dev/.n4/pw", field)},
+		// The spec's prefixes are case-insensitive.
+		{"case-insensitive prefix", "class A {\n  String d = \"/TMP/x\";\n  String e = \"/Home/me\";\n}\n", row(2, "/TMP/x", field) + row(3, "/Home/me", field)},
 		{"static final field", "class A {\n  static final String DIR = \"/home/cristian/x\";\n}\n", row(2, "/home/cristian/x", field)},
 		{"instance field", "class A {\n  private String d = \"/Users/me/x\";\n}\n", row(2, "/Users/me/x", field)},
 		{"field on the next line", "class A {\n  static final String D =\n      \"/tmp/run\";\n}\n", row(3, "/tmp/run", field)},
@@ -85,6 +102,7 @@ func TestClean(t *testing.T) {
 		{"install root windows", "class A {\n  String d = \"C:\\\\Niagara\\\\Niagara-4.15\";\n}\n"},
 		{"relative", "class A {\n  String d = \"shared/home/x\";\n  String e = \"tmp/x\";\n}\n"},
 		{"station-relative ord", "class A {\n  String d = \"file:^data/x\";\n}\n"},
+		{"ledger station-relative ord", "class A {\n  static final String PW = \"file:^config/pw\";\n}\n"},
 		{"local in a method", "class A {\n  void f() {\n    String d = \"/home/me\";\n  }\n}\n"},
 		{"split concatenation", "class A {\n  String d = \"/ho\" + \"me/x\";\n}\n"},
 		{"property key", "class A {\n  void f() { System.getProperty(\"/home/key\"); }\n}\n"},
@@ -100,6 +118,50 @@ func TestClean(t *testing.T) {
 	} {
 		if got := rows(t, tc.src); got != "" {
 			t.Errorf("%s: got\n%s\nwant no row", tc.name, got)
+		}
+	}
+}
+
+// TestJavaScript: rc/**/*.js const/let/var initializers and object-literal property defaults.
+func TestJavaScript(t *testing.T) {
+	const js = "m/src/rc/js/app.js"
+	at := func(line int, p, where string) string { return rowAt(js, line, p, where) }
+	for _, tc := range []struct{ name, src, want string }{
+		{"const", "const DIR = \"/home/me/x\";\n", at(1, "/home/me/x", decl)},
+		{"let and var in a function", "(function () {\n  'use strict';\n  let a = '/tmp/a';\n  var b = `C:\\\\Users\\\\me`;\n})();\n",
+			at(3, "/tmp/a", decl) + at(4, `C:\Users\me`, decl)},
+		{"object property", "var cfg = {\n  url: \"/api\",\n  dir: \"/Users/me/out\",\n  'pw': \"/home/me/.pw\"\n};\n",
+			at(3, "/Users/me/out", prop) + at(4, "/home/me/.pw", prop)},
+		{"scratchpad", "export const OUT = \"/srv/scratchpad/o\";\n", at(1, "/srv/scratchpad/o", decl)},
+		{"comment", "// const D = \"/home/me\";\n/* var e = '/tmp/x'; */\nconst ok = 1;\n", ""},
+		{"call argument and assignment", "fetch(\"/home/me\");\nx = \"/tmp/x\";\n", ""},
+		{"template with a substitution", "const d = `/home/${user}/x`;\n", ""},
+		{"ternary", "var d = a ? b : \"/tmp/x\";\n", ""},
+		{"regex holding quotes", "var r = /\"/g; var s = \"ok\";\n", ""},
+		{"jace platform home", "const P = \"/home/niagara/x\";\n", ""},
+	} {
+		if got := rowsIn(t, js, tc.src); got != tc.want {
+			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
+		}
+	}
+	if got := rowsIn(t, "m/src/tools/gen.js", "const D = \"/home/me\";\n"); got != "" {
+		t.Errorf("a .js outside rc/: got\n%s\nwant no row", got)
+	}
+}
+
+// TestProperties: every .properties value, read as java.util.Properties.load reads it.
+func TestProperties(t *testing.T) {
+	const pf = "m/gradle.properties"
+	for _, tc := range []struct{ name, src, want string }{
+		// As the real gradle.properties write it: a properties backslash is doubled.
+		{"windows user home", "niagara_home=C:\\\\Niagara\\\\Niagara-4.14\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n",
+			rowAt(pf, 2, `C:\Users\equipo\Niagara4.14\X`, value)},
+		{"colon separator and continuation", "# out=/home/x\nout : /home/\\\n    me/out\nnext=1\n", rowAt(pf, 2, "/home/me/out", value)},
+		{"relative and install root", "a=build/out\nb=/opt/Niagara\n", ""},
+		{"single backslash loads as C:Users", "u=C:\\Users\\me\n", ""},
+	} {
+		if got := rowsIn(t, pf, tc.src); got != tc.want {
+			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
 		}
 	}
 }

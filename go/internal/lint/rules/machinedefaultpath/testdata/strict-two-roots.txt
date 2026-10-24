@@ -3,9 +3,9 @@
 @DIR@/a
 @DIR@/b
 -- want --
-exit 0
-ADVISORY  lint-machine-default-path  @DIR@/a/A.java:2  machine-specific default path "/tmp/a" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
-ADVISORY  lint-machine-default-path  @DIR@/b/B.java:2  machine-specific default path "C:/Users/b" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+exit 1
+WARN  lint-machine-default-path  @DIR@/a/A.java:2  machine-specific default "/tmp/a" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+WARN  lint-machine-default-path  @DIR@/b/B.java:2  machine-specific default "C:/Users/b" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
 -- stderr --
 -- a/A.java --
 class A {
