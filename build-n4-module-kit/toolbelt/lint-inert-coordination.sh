@@ -17,7 +17,8 @@
 #
 # Usage:  lint-inert-coordination.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot-dirs pruned). Run on any -rt profile with Java sources.
-#   Comments are line-stripped (`//...`, naive -- see limitations). Per file:
+#   Code only: comments blanked and literal contents removed (go/internal/javasrc Strip + BlankLiterals; truth fix
+#   T1 2026-10-24, the bash cut each line at its first "//" and read block comments and strings as code). Per file:
 #     1. locate a `<ret-type> units()` method declaration and brace-extract its body forward;
 #     2. the body must return a STRUCTURALLY singleton list: `singletonList(` anywhere in the
 #        body, OR `Arrays.asList(` with no comma between the call's opening paren and the end
@@ -34,9 +35,9 @@
 #   Exit: 0  no WARN (or WARN without --strict) · 1  any WARN under --strict · 3  usage/env, an unscannable source file or a sub-directory find cannot enter
 #
 # Known limitations (advisory heuristic, documented per kit style):
-#   - the singleton-return check only looks for `singletonList(`/`Arrays.asList(` text ANYWHERE
-#     in the body, not that it is the actual `return` expression -- a comment or an unrelated
-#     local variable using the same call shape is a false-positive risk, cheap to accept per
+#   - the singleton-return check only looks for `singletonList(`/`Arrays.asList(` code ANYWHERE
+#     in the body, not that it is the actual `return` expression -- an unrelated local variable
+#     using the same call shape is a false-positive risk, cheap to accept per
 #     kit style (mirrors lint-wb-external-ord-value's same-method text-presence checks).
 #   - the `Arrays.asList(` single-argument check is a same-line no-comma-to-end-of-line
 #     heuristic (no real paren-depth tracking): a multi-line call, or a two-argument call whose
@@ -59,6 +60,7 @@
 # Mutation: ICO2 -- drop the coordination-state (queue/token/stagger) requirement so any singleton units() WARNs even with no dead machinery
 # Mutation: ICO-lower -- requiring a capitalized Stagger/Token misses the lowerCamel staggerDelay field
 # Mutation: ICO-call -- taking `return units()...;` for the declaration checks the wrong body
+# Mutation: ICO-comment -- reading block comments as code WARNs a units() whose singletonList is commented out
 # Mutation: ICO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: ICO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u

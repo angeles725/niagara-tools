@@ -102,6 +102,16 @@ EOF
   [[ "$output" == *"WARN"* ]]
 }
 
+@test "ICO-comment: a commented-out singletonList and names only in comments or strings do not WARN" {
+  # Mutation: ICO-comment -- reading block comments as code WARNs a units() whose singletonList is commented out
+  # Go golden: go/internal/lint/rules/inertcoordination/testdata/truth-code-view-1.txt
+  printf '%s\n' 'class A {' '  long staggerDelay;' '  List<B> units() {' '    /* return Collections.singletonList(a); */' \
+    '    return parent.units();' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  run "$ICO" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "ICO-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: ICO-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
