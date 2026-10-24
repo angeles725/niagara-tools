@@ -1,0 +1,24 @@
+-- args --
+@DIR@/f1/c15sl.bog
+--module
+ColdRoomPan
+-- want --
+exit 0
+CHECK1  PASS  ColdRoomPan  components=2
+CHECK2  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK3  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK4  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK5  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK6  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK7  SKIP  --source-dir  not provided; skipping source-dependent check
+CHECK15  WARN  Station/EvaporatorUnit_3  slot 'C1_temperature' (C-room 1) sourced from 'EvaporatorUnit_3' (unit index 3) — label mismatch
+# bog-audit: parse time 0.003s
+-- stderr --
+-- f1/c15sl.bog (zip) --
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='Station' h='st' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='EvaporatorUnit_3' h='e3' t='CRP:EvaporatorUnit'>
+   <p n='L1' t='b:Link'><p n="sourceOrd" v="h:e3"/><p n="sourceSlotName" v="C1_temperature"/><p n="targetSlotName" v="tempOut"/></p>
+  </p>
+ </p>
+</bajaObjectGraph>
