@@ -10,6 +10,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/demandscope"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/driverscaffold"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
@@ -51,5 +52,6 @@ func All() []lint.Spec {
 		demandscope.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
+		duplicatehelper.Spec(),
 	}
 }
