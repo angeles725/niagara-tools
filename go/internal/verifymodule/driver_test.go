@@ -1,6 +1,7 @@
 package verifymodule
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -173,4 +174,29 @@ func TestDriverDiscoveryAlive(t *testing.T) {
 	rows := driverRows(t, dir)
 	wantRow(t, rows, "FAIL", "driver-discovery-alive", "BMinimalDriverNetwork.java:", "getDiscoveryObjects")
 	wantRow(t, rows, "FAIL", "driver-discovery-alive", "BMinimalDriverPointDeviceExt.java:", "getDiscoveryObjects")
+}
+
+const tcpConfigSrc = "package com.angeles.MinimalDriver;\nimport com.tridium.ndriver.datatypes.BTcpCommConfig;\n@NiagaraType\n%s\npublic class %s extends BTcpCommConfig\n{\n  public %s() { %s }\n}\n"
+
+func tcpConfig(name, ann, ctor string) string {
+	return fmt.Sprintf(tcpConfigSrc, ann, name, name, ctor)
+}
+
+// TestDriverServerEnabled: a TCP comm config subclass that defaults serverEnabled to true, by a property
+// override or a setServerEnabled(true) call, FAILs (§ 1.6); one that keeps the false default passes.
+func TestDriverServerEnabled(t *testing.T) {
+	dir := copyFixture(t)
+	write(t, dir, map[string]string{
+		fxRt + "BAnnTcpCommConfig.java":  tcpConfig("BAnnTcpCommConfig", "@NiagaraProperty(name = \"serverEnabled\", type = \"boolean\", defaultValue = \"true\", override = true)", ""),
+		fxRt + "BCtorTcpCommConfig.java": tcpConfig("BCtorTcpCommConfig", "", "setServerEnabled(true);"),
+	})
+	rows := driverRows(t, dir)
+	wantRow(t, rows, "FAIL", "driver-server-enabled", "BAnnTcpCommConfig.java:", "serverEnabled")
+	wantRow(t, rows, "FAIL", "driver-server-enabled", "BCtorTcpCommConfig.java:", "setServerEnabled(true)")
+
+	dir = copyFixture(t)
+	write(t, dir, map[string]string{
+		fxRt + "BOkTcpCommConfig.java": tcpConfig("BOkTcpCommConfig", "@NiagaraProperty(name = \"serverEnabled\", type = \"boolean\", defaultValue = \"false\", override = true)", "// setServerEnabled(true);"),
+	})
+	wantRow(t, driverRows(t, dir), "PASS", "driver-server-enabled", "1 TCP comm config")
 }

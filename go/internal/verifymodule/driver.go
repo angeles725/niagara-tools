@@ -10,7 +10,7 @@ import (
 )
 
 // driverChecks are the rows driver mode prints, in order (types/driver-authoring.md is the doctrine).
-var driverChecks = []string{"driver-scaffold", "driver-comm-config", "driver-discovery-alive"}
+var driverChecks = []string{"driver-scaffold", "driver-comm-config", "driver-discovery-alive", "driver-server-enabled"}
 
 // Driver detection: a profile dir is a driver module when a class under its src extends a Baja network
 // or device base (driverBases), directly or through another class of the same src. The source decides,
@@ -36,6 +36,7 @@ type javaUnit struct {
 type driverModule struct {
 	pd       string
 	units    []*javaUnit
+	all      []javasrc.Class // every class of the src, for Descendants
 	networks map[string]bool
 	devices  map[string]bool
 }
@@ -55,6 +56,7 @@ func (r *run) loadDriver(pd string) (*driverModule, bool) {
 		all = append(all, u.classes...)
 		m.units = append(m.units, u)
 	}
+	m.all = all
 	m.networks, m.devices = javasrc.Descendants(all, networkBases...), javasrc.Descendants(all, deviceBases...)
 	return m, len(m.networks)+len(m.devices) > 0
 }
@@ -73,7 +75,7 @@ func (r *run) driver() bool {
 		return true
 	}
 	pass := true
-	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig, r.driverDiscoveryAlive} {
+	for _, c := range []func(*driverModule) bool{r.driverScaffold, r.driverCommConfig, r.driverDiscoveryAlive, r.driverServerEnabled} {
 		if !c(m) {
 			pass = false
 		}
@@ -207,4 +209,50 @@ func hasCall(bare []string, from, to int, name string) bool {
 
 func identChar(c byte) bool {
 	return c == '_' || c == '$' || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')
+}
+
+// serverOnRe is a setServerEnabled(true) call in the bare view.
+var serverOnRe = regexp.MustCompile(`(^|[^A-Za-z0-9_$])setServerEnabled[[:space:]]*\([[:space:]]*true[[:space:]]*\)`)
+
+// driverServerEnabled FAILs a BTcpCommConfig subclass that turns serverEnabled on by default: a property
+// override with defaultValue "true", or a setServerEnabled(true) call in its file. A client driver that
+// listens holds the device's port (Address already in use) and never connects. Doctrine:
+// types/driver-authoring.md § 1.6 (Client drivers keep serverEnabled false).
+func (r *run) driverServerEnabled(m *driverModule) bool {
+	tcp := javasrc.Descendants(m.all, "BTcpCommConfig")
+	failed, configs := false, 0
+	for _, u := range m.units {
+		mine := false
+		for _, c := range u.classes {
+			if tcp[c.Name] {
+				mine = true
+				configs++
+			}
+		}
+		if !mine {
+			continue
+		}
+		javasrc.NiagaraProperties(u.view.code, func(text string, line int) {
+			n, d := propNameRe.FindStringSubmatch(text), propDefRe.FindStringSubmatch(text)
+			if n != nil && n[1] == "serverEnabled" && d != nil && strings.TrimSpace(d[1]) == "true" {
+				r.row("FAIL", "driver-server-enabled", u.path+":"+itoa(line)+
+					"  serverEnabled defaults to true: a client driver keeps it false (types/driver-authoring.md § 1.6)")
+				failed = true
+			}
+		})
+		for i, ln := range u.view.bare {
+			if serverOnRe.MatchString(ln) {
+				r.row("FAIL", "driver-server-enabled", u.path+":"+itoa(i+1)+
+					"  setServerEnabled(true): a client driver keeps serverEnabled false (types/driver-authoring.md § 1.6)")
+				failed = true
+			}
+		}
+	}
+	switch {
+	case configs == 0:
+		r.row("SKIP", "driver-server-enabled", "no TCP comm config under "+m.pd+"/src")
+	case !failed:
+		r.row("PASS", "driver-server-enabled", itoa(configs)+" TCP comm config keeps serverEnabled false under "+m.pd+"/src")
+	}
+	return !failed
 }
