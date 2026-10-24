@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -115,7 +116,8 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 
 // TestRootRulesOnAnEmptyRoot: a RootRule fails a root that holds nothing it checks like every other rule
 // fails an empty root (#351, truth audit 2026-10-22 T6): an ERROR row, no other row, exit 3. For
-// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean.
+// lint-structure that is a root without profiles, a wrong path that the bash lint passed clean; for
+// lint-write-path a root without a matrix, its own "lint-write-path  ERROR" row (report-module.sh reads it).
 func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil { // stop the upward walk here
@@ -133,11 +135,16 @@ func TestRootRulesOnAnEmptyRoot(t *testing.T) {
 		roots = append(roots, sp.ID())
 		var o, e bytes.Buffer
 		want := "ERROR  " + sp.ID() + "  " + root + "  " + sp.EmptyError.Msg + "\n"
-		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || sp.EmptyError.Msg == "" || o.String() != want || e.Len() != 0 {
+		ok := sp.EmptyError.Msg != ""
+		if sp.ID() == "lint-write-path" { // its own fail-closed row, the text report-module.sh greps for
+			want = "lint-write-path  ERROR  " + root + "  no write-path-matrix.md found (looked in " + root + "/docs/write-path-matrix.md)\n"
+			ok = true
+		}
+		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || !ok || o.String() != want || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), want)
 		}
 	}
-	if len(roots) != 1 || roots[0] != "lint-structure" {
-		t.Errorf("RootRules %q, want exactly lint-structure", roots)
+	if !reflect.DeepEqual(roots, []string{"lint-structure", "lint-write-path"}) {
+		t.Errorf("RootRules %q, want exactly lint-structure and lint-write-path", roots)
 	}
 }
