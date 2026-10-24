@@ -119,6 +119,7 @@ type files struct {
 	text map[string][]string
 	errs map[string]error
 	dirs map[string][]string
+	idx  map[string]map[string][]string
 }
 
 func newFiles() *files {
