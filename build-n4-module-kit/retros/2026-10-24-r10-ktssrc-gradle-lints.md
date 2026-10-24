@@ -24,7 +24,7 @@ nothing to move.
 
 ## Evidence
 - Goldens: `n4lint lint-structure` from origin/main on 336 roots (every module root of modulos_niagara_n4 with
-  `*-worktrees` pruned, Cliente's 18 included, plus the kit fixtures and templates): stdout, stderr and exit `cmp`
+  `*-worktrees` pruned, the client trees' 18 included, plus the kit fixtures and templates): stdout, stderr and exit `cmp`
   identical after the port; 21 L14/L15 rows before and after.
 - `ktssrc.TestSweepRealFiles` over modulos_niagara_n4: 60 real build scripts tokenized clean.
 
