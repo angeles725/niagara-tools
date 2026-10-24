@@ -5,7 +5,8 @@
 // byte-identical to the bash tool under the C.UTF-8 locale the repository and CI run in, except
 // four fail-open cases it fixes: a leading-zero deltas cell is decimal (bash read it as octal, and
 // 08/09 skipped the Δ check), an unterminated last INDEX row is audited, and an unreadable INDEX
-// exits 3.
+// exits 3. It also reports retro aliases (#419): a tag token that is not an exact stem but a
+// segment-aligned part of one, as advisory rows.
 // VCS-free by design (kit-links L2).
 package foldaudit
 
@@ -21,6 +22,8 @@ import (
 var (
 	// The token harvest of the bash tool: grep -ohE over every corpus file.
 	tokenRe = regexp.MustCompile(`\[ev: retro ([A-Za-z0-9][A-Za-z0-9._-]*)`)
+	// Every retro tag, [ev: ...] or [deferred: ...], for the alias check (#419).
+	citeRe  = regexp.MustCompile(`\[(?:ev|deferred): retro ([A-Za-z0-9][A-Za-z0-9._-]*)`)
 	deltaRe = regexp.MustCompile(`\[(?:ev|deferred): retro ([A-Za-z0-9][A-Za-z0-9._-]* Δ[0-9]+)\]`)
 	// INDEX row filters.
 	datedRe = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}[^|]*\.md`)
@@ -36,11 +39,20 @@ func init() { fileRe.Longest() } // grep -o is leftmost-longest
 const minToken = 6
 
 // harvest collects the citation tokens of the corpus: stem tokens for the stem check and, when
-// enabled, "<stem> Δ<k>" entries from [ev: ...] and [deferred: ...] markers for the Δ check.
+// enabled, "<stem> Δ<k>" entries from [ev: ...] and [deferred: ...] markers for the Δ check, plus
+// every tag's file:line for the alias check.
 type harvest struct {
 	tokens   map[string]bool
 	deltas   map[string]bool
 	withDelt bool
+	cites    []cite
+}
+
+// cite is one retro tag of the corpus, once per token per line.
+type cite struct {
+	path  string
+	line  int
+	token string
 }
 
 func newHarvest(withDeltas bool) *harvest {
@@ -49,9 +61,20 @@ func newHarvest(withDeltas bool) *harvest {
 
 // add harvests one corpus file. A file holding a NUL byte is binary to grep, which then prints no
 // matching text (only a "binary file matches" notice on stderr, discarded by the bash tool).
-func (h *harvest) add(b []byte) {
+func (h *harvest) add(path string, b []byte) {
 	if bytes.IndexByte(b, 0) >= 0 {
 		return
+	}
+	line, from, seen := 1, 0, map[string]bool{}
+	for _, m := range citeRe.FindAllSubmatchIndex(b, -1) {
+		if n := bytes.Count(b[from:m[0]], []byte("\n")); n > 0 {
+			line, seen = line+n, map[string]bool{}
+		}
+		from = m[0]
+		if tok := string(b[m[2]:m[3]]); !seen[tok] {
+			seen[tok] = true
+			h.cites = append(h.cites, cite{path, line, tok})
+		}
 	}
 	for _, m := range tokenRe.FindAllSubmatch(b, -1) {
 		h.tokens[string(m[1])] = true
@@ -103,7 +126,7 @@ func walk(dir string, slashed bool, h *harvest) {
 			continue
 		}
 		if b, err := os.ReadFile(p); err == nil {
-			h.add(b)
+			h.add(p, b)
 		}
 	}
 }
@@ -183,13 +206,33 @@ func stem(file string) string {
 // is a hyphen-segment-aligned part of "-stem-" and T has at least minToken characters.
 func citedBy(stem string, tokens []string) []string {
 	var hits []string
-	padded := "-" + stem + "-"
 	for _, t := range tokens {
-		if len(t) >= minToken && strings.Contains(padded, "-"+t+"-") {
+		if segmentOf(t, stem) {
 			hits = append(hits, t)
 		}
 	}
 	return hits
+}
+
+// segmentOf reports whether token t (at least minToken characters) is a hyphen-segment-aligned part
+// of stem: "-t-" inside "-stem-".
+func segmentOf(t, stem string) bool {
+	return len(t) >= minToken && strings.Contains("-"+stem+"-", "-"+t+"-")
+}
+
+// aliasOf returns the stems (sorted) that token t aliases: none when t is itself a stem or is no
+// segment-aligned part of any stem.
+func aliasOf(t string, stems map[string]bool, sorted []string) []string {
+	if stems[t] {
+		return nil
+	}
+	var out []string
+	for _, s := range sorted {
+		if segmentOf(t, s) {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // options is the parsed command line.

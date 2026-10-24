@@ -3,6 +3,7 @@ package foldaudit
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -43,9 +44,11 @@ func Main(args []string, s cli.Stdio) int {
 		return ExitEnv
 	}
 	t := audit{o: o, h: h, tokens: tokens, s: s}
-	for _, line := range indexLines(data) {
+	lines := indexLines(data)
+	for _, line := range lines {
 		t.row(line)
 	}
+	t.aliases(indexStems(lines))
 	t.summary()
 	if t.warned && o.strict {
 		return ExitStrict
@@ -71,17 +74,70 @@ type audit struct {
 	s      cli.Stdio
 
 	nFolded, nCited, nUncited, dChecked, dMissing, dUnreadable int
+	nAlias, nAmbiguous                                         int
 	warned                                                     bool
+}
+
+// indexRow returns the retro filename of a dated INDEX row ("" for any other line).
+func indexRow(line string) string {
+	line = strings.ReplaceAll(line, "\x00", "") // `read` drops NUL bytes
+	if !strings.HasPrefix(line, "|") || !datedRow(line) {
+		return ""
+	}
+	return rowFile(line)
+}
+
+// indexStems is the stem of every dated INDEX row, whatever its status: the names a tag may use.
+func indexStems(lines []string) map[string]bool {
+	stems := map[string]bool{}
+	for _, line := range lines {
+		if file := indexRow(line); file != "" {
+			stems[stem(file)] = true
+		}
+	}
+	return stems
+}
+
+// aliases reports every corpus tag whose token is not an exact stem but is a segment-aligned part
+// of one (#419, CONTRIBUTING.md:261) as an advisory WARN row that never changes the exit code. A
+// token that matches no stem is left alone, as before.
+func (t *audit) aliases(stems map[string]bool) {
+	sorted := make([]string, 0, len(stems))
+	for s := range stems {
+		sorted = append(sorted, s)
+	}
+	sort.Strings(sorted)
+	kind, memo := "WARN", map[string][]string{}
+	for _, c := range t.h.cites {
+		cands, ok := memo[c.token]
+		if !ok {
+			cands = aliasOf(c.token, stems, sorted)
+			memo[c.token] = cands
+		}
+		if len(cands) == 0 {
+			continue
+		}
+		t.nAlias++
+		where := fmt.Sprintf("fold-audit: %s %s:%d retro alias %q", kind, c.path, c.line, c.token)
+		if len(cands) == 1 {
+			fmt.Fprintf(t.s.Out, "%s — use the exact stem %q (CONTRIBUTING.md:261)\n", where, cands[0])
+		} else {
+			t.nAmbiguous++
+			quoted := make([]string, len(cands))
+			for i, s := range cands {
+				quoted[i] = fmt.Sprintf("%q", s)
+			}
+			fmt.Fprintf(t.s.Out, "%s is ambiguous — use one exact stem of %s (CONTRIBUTING.md:261)\n", where, strings.Join(quoted, " "))
+		}
+		// Mutation: F20 -- setting warned for the advisory WARN rows turns the CI run (--strict) red.
+	}
 }
 
 // row audits one INDEX line: a folded dated row must be cited, and since --deltas-since each of its
 // deltas too.
 func (t *audit) row(line string) {
-	line = strings.ReplaceAll(line, "\x00", "") // `read` drops NUL bytes
-	if !strings.HasPrefix(line, "|") || !datedRow(line) {
-		return
-	}
-	file := rowFile(line)
+	file := indexRow(line)
+	line = strings.ReplaceAll(line, "\x00", "")
 	if file == "" || rowStatus(line) != "folded" {
 		return
 	}
@@ -136,6 +192,9 @@ func (t *audit) summary() {
 		if t.dUnreadable > 0 {
 			fmt.Fprintf(t.s.Out, "fold-audit: deltas: %d unreadable cells\n", t.dUnreadable)
 		}
+	}
+	if t.nAlias > 0 {
+		fmt.Fprintf(t.s.Out, "fold-audit: aliases: %d tokens are not an exact stem (%d ambiguous)\n", t.nAlias, t.nAmbiguous)
 	}
 }
 

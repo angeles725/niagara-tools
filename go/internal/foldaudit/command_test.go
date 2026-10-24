@@ -57,7 +57,9 @@ func TestMainStemFixture(t *testing.T) {
 	want := w + "2026-01-01-orphan-report.md" + nocit +
 		w + "2026-01-03-self-ref-only.md" + nocit +
 		w + "2026-01-06-detail-render-doors.md" + nocit +
-		"fold-audit: 5 folded, 2 cited, 3 uncited\n"
+		w + dir + `/core.md:8 retro alias "5rooms" — use the exact stem "dashboardpan-5rooms" (CONTRIBUTING.md:261)` + "\n" +
+		"fold-audit: 5 folded, 2 cited, 3 uncited\n" +
+		"fold-audit: aliases: 1 tokens are not an exact stem (0 ambiguous)\n"
 	for _, c := range []struct {
 		args []string
 		code int
@@ -221,5 +223,81 @@ func TestMainUnreadableCellCounter(t *testing.T) {
 		"fold-audit: deltas: 1 unreadable cells\n"
 	if code != ExitStrict || out != want {
 		t.Errorf("got (%d, %q), want (1, %q)", code, out, want)
+	}
+}
+
+// aliasKit: unique, ambiguous and alias-only citations next to exact stems (#419, CONTRIBUTING.md:261).
+func aliasKit(t *testing.T) string {
+	return kit(t, map[string]string{
+		"retros/INDEX.md": "| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n" +
+			"| 2026-10-01-comppan-fase1-staging.md | kit | 2026-10-01 | folded | 1 |\n" +
+			"| 2026-10-01-schema-risk-gate.md | kit | 2026-10-01 | folded | 0 |\n" +
+			"| 2026-10-01-schema-risk-ledger.md | kit | 2026-10-01 | pending | 0 |\n" +
+			"| 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | folded | 0 |\n" +
+			"| 2026-10-01-alias-only-row.md | kit | 2026-10-01 | folded | 1 |\n",
+		"core.md": "Rule [ev: retro comppan-fase1-staging Δ1] cites the exact stem.\n" +
+			"Short [ev: retro comppan-fase1] is a unique alias.\n" +
+			"Gate [ev: retro schema-risk-gate]; [ev: retro schema-risk] has two candidates.\n" +
+			"Tool [ev: retro fold-audit] and [ev: retro go-sweep-fold-audit].\n" +
+			"Only [ev: retro alias-only] and [deferred: retro alias-only Δ1] cite the last row.\n" +
+			"No stem [ev: retro unrelated-token], a placeholder [ev: retro X].\n",
+	})
+}
+
+func TestMainAliases(t *testing.T) {
+	t.Parallel()
+	root := aliasKit(t)
+	index := root + "/retros/INDEX.md"
+	core := root + "/core.md"
+	aliasRows := func(kind string) string {
+		p := "fold-audit: " + kind + " " + core
+		return p + `:2 retro alias "comppan-fase1" — use the exact stem "comppan-fase1-staging" (CONTRIBUTING.md:261)` + "\n" +
+			p + `:3 retro alias "schema-risk" is ambiguous — use one exact stem of "schema-risk-gate" "schema-risk-ledger" (CONTRIBUTING.md:261)` + "\n" +
+			p + `:4 retro alias "fold-audit" — use the exact stem "go-sweep-fold-audit" (CONTRIBUTING.md:261)` + "\n" +
+			p + `:5 retro alias "alias-only" — use the exact stem "alias-only-row" (CONTRIBUTING.md:261)` + "\n"
+	}
+	const deltas = "fold-audit: deltas: 2 checked, 1 not cited (folded rows since 2026-09-24)\n"
+	const aliasSum = "fold-audit: aliases: 4 tokens are not an exact stem (1 ambiguous)\n"
+	// Default: aliases still credit (the NOTE case stays) and the alias rows are advisory WARN rows.
+	wantDefault := "fold-audit: NOTE ambiguous citation token credits 2026-10-01-comppan-fase1-staging.md: comppan-fase1 comppan-fase1-staging\n" +
+		"fold-audit: NOTE ambiguous citation token credits 2026-10-01-schema-risk-gate.md: schema-risk schema-risk-gate\n" +
+		"fold-audit: NOTE ambiguous citation token credits 2026-10-22-go-sweep-fold-audit.md: fold-audit go-sweep-fold-audit\n" +
+		w + "2026-10-01-alias-only-row.md Δ1 not cited\n" +
+		aliasRows("WARN") +
+		"fold-audit: 4 folded, 4 cited, 0 uncited\n" + deltas + aliasSum
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--deltas-since", "2026-09-24", index, root}, wantDefault},
+	} {
+		code, out, errs := run("", c.args...)
+		if code != ExitOK || out != c.want || errs != "" {
+			t.Errorf("%q: got (%d, %q, %q)\nwant (0, %q, \"\")", c.args, code, out, errs, c.want)
+		}
+	}
+}
+
+// The alias rows are advisory: they never change the exit code.
+func TestMainAliasExit(t *testing.T) {
+	t.Parallel()
+	root := kit(t, map[string]string{
+		"retros/INDEX.md": "| 2026-10-01-exact-stem-row.md | folded | 0 |\n",
+		"core.md":         "[ev: retro exact-stem-row] and the alias [ev: retro stem-row]\n",
+	})
+	index := root + "/retros/INDEX.md"
+	row := `:1 retro alias "stem-row" — use the exact stem "exact-stem-row" (CONTRIBUTING.md:261)` + "\n"
+	tail := "fold-audit: 1 folded, 1 cited, 0 uncited\nfold-audit: aliases: 1 tokens are not an exact stem (0 ambiguous)\n"
+	for _, c := range []struct {
+		args []string
+		code int
+		want string
+	}{
+		{[]string{"--strict", index, root}, ExitOK, "fold-audit: NOTE ambiguous citation token credits 2026-10-01-exact-stem-row.md: exact-stem-row stem-row\nfold-audit: WARN " + root + "/core.md" + row + tail},
+	} {
+		code, out, errs := run("", c.args...)
+		if code != c.code || out != c.want || errs != "" {
+			t.Errorf("%q: got (%d, %q, %q)\nwant (%d, %q, \"\")", c.args, code, out, errs, c.code, c.want)
+		}
 	}
 }

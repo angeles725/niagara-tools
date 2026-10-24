@@ -59,7 +59,7 @@ func TestHarvestText(t *testing.T) {
 	}
 	for _, c := range cases {
 		h := newHarvest(true)
-		h.add([]byte(c.text))
+		h.add("f.md", []byte(c.text))
 		gotT := h.sortedTokens()
 		gotD := keys(h.deltas)
 		if !reflect.DeepEqual(gotT, c.tokens) || !reflect.DeepEqual(gotD, c.delta) {

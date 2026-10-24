@@ -189,3 +189,43 @@ _delta_fixture() {
   [[ "$output" == *"deltas: 0 checked, 0 not cited"* ]]
   [[ "$output" == *"fold-audit: deltas: 1 unreadable cells"* ]]
 }
+
+# Retro aliases (#419): a citation token must be the exact stem (CONTRIBUTING.md:261). A token that is
+# not a stem but is a hyphen-segment-aligned part of one (the rule that credits it today) is an alias
+# row naming the stem, or the candidate stems when ambiguous: an advisory WARN that never changes the exit.
+_alias_fixture() {
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros"
+  {
+    printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n'
+    printf '| 2026-10-01-comppan-fase1-staging.md | kit | 2026-10-01 | folded | 1 |\n'
+    printf '| 2026-10-01-schema-risk-gate.md | kit | 2026-10-01 | folded | 0 |\n'
+    printf '| 2026-10-01-schema-risk-ledger.md | kit | 2026-10-01 | pending | 0 |\n'
+    printf '| 2026-10-22-go-sweep-fold-audit.md | kit | 2026-10-22 | folded | 0 |\n'
+    printf '| 2026-10-01-alias-only-row.md | kit | 2026-10-01 | folded | 1 |\n'
+  } > "$D/retros/INDEX.md"
+  {
+    printf 'Rule [ev: retro comppan-fase1-staging Δ1] cites the exact stem.\n'
+    printf 'Short [ev: retro comppan-fase1] is a unique alias.\n'
+    printf 'Gate [ev: retro schema-risk-gate]; [ev: retro schema-risk] has two candidates.\n'
+    printf 'Tool [ev: retro fold-audit] and [ev: retro go-sweep-fold-audit].\n'
+    printf 'Only [ev: retro alias-only] and [deferred: retro alias-only Δ1] cite the last row.\n'
+  } > "$D/core.md"
+}
+
+@test "F16: a unique alias is a row naming the alias and the exact stem (advisory WARN by default)" {
+  _alias_fixture
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"fold-audit: WARN $D/core.md:2 retro alias \"comppan-fase1\" — use the exact stem \"comppan-fase1-staging\" (CONTRIBUTING.md:261)"* ]]
+  [[ "$output" == *"aliases: 4 tokens are not an exact stem (1 ambiguous)"* ]]
+}
+
+@test "F20: by default an alias still credits (the ambiguous-credit NOTE stays) and alias rows never fail --strict" {
+  # Mutation: F20 -- counting the advisory alias WARN rows toward --strict turns the default run exit 1.
+  _alias_fixture
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"fold-audit: NOTE ambiguous citation token credits 2026-10-22-go-sweep-fold-audit.md: fold-audit go-sweep-fold-audit"* ]]
+  [[ "$output" == *"4 folded, 4 cited, 0 uncited"* ]]
+}
