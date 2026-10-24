@@ -94,14 +94,13 @@ func (e *Engine) execute(c Client, impl Impl, args *pyjson.Object, planned *Plan
 	return out, nil
 }
 
-// inverse is the inverse a batch journals: the planned one, or the one built from the replies;
-// None is [] (_inverse_list).
+// inverse is the inverse a batch journals: the planned one, or the one built from the replies
+// (a nil one is written as [], _inverse_list).
 func (impl Impl) inverse(planned *Planned, replies []any) ([]any, error) {
 	if impl.Inverse == nil {
 		return list(planned.Inverse), nil
 	}
-	inv, err := impl.Inverse(planned, replies)
-	return list(inv), err
+	return impl.Inverse(planned, replies)
 }
 
 // send is _send: an ssc op or one sync op; a removal makes every cached handle stale.

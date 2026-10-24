@@ -85,7 +85,9 @@ func linkCases() []string {
 		after(link("Link1", `"h:10"`, `"out"`, `"in10"`) + link("Link2", `"h:10"`, `"out"`, `"in10"`)),
 		after(link("Link1", `"h:10"`, `"out"`, `"x"`)), after(link("Link1", `5`, `"out"`, `"in10"`)),
 		after(link("Link1", `null`, `"out"`, `"in10"`)), after(link("Link1", `"h:16"`, `"out"`, `"in10\n"`)),
-		after(link("Link1", `"h:10"`, `5`, `"in10"`)), `{}`, `{"` + tgtOrd + `": {"": {"t": "k:T"}}}`}
+		after(link("Link1", `"h:10"`, `5`, `"in10"`)), `{}`, `{"` + tgtOrd + `": {"": {"t": "k:T"}}}`,
+		after(link("Link1", `"station:|slot:/a|h:10"`, `"out"`, `"in10"`)),                       // only the last "|" part counts
+		after(strings.Replace(link("Fake", `"h:10"`, `"out"`, `"in10"`), "baja:Link", "k:T", 1))} // not a link
 	out := casesOf("n4_create_link", accepted, befores, replies, afters)
 	out = append(out, casesOf("n4_create_link", refused, befores, replies[:1], afters[:1])...)
 	return append(out, casesOf("n4_create_link", accepted[:1], odd, replies[:1], afters[:1])...)

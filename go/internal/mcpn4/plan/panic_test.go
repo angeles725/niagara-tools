@@ -80,3 +80,28 @@ func TestAPanickingInverseOrRecoverIsUnverifiedAndInDoubt(t *testing.T) {
 		}
 	}
 }
+
+// An inverse that cannot be built, or a recover hook that fails, journals no inverse and
+// observes nothing, whatever the tool returned with its error (Python's exception returns
+// nothing).
+func TestAnInverseOrRecoverErrorDiscardsWhatTheToolReturned(t *testing.T) {
+	for _, recov := range []bool{false, true} {
+		r := newRig(t)
+		impl := writeops.SetSlot
+		impl.Inverse = func(*plan.Planned, []any) ([]any, error) {
+			return []any{node("nm", "v")}, plan.ToolError("cannot tell")
+		}
+		if recov {
+			impl.Recover = func(plan.Client, *pyjson.Object, *plan.Planned, []any) (any, []any, error) {
+				return node("link", "L"), []any{node("nm", "v")}, plan.ToolError("lost")
+			}
+		}
+		panicked(r, impl)
+		_, _, out := r.execute(t, "n4_set_slot", setArgs(), r.dry(t, "n4_set_slot", setArgs()))
+		result := r.lines(t, "journal.jsonl")[1]
+		if pyjson.Repr(get(out, "inverse")) != "[]" || pyjson.Repr(get(result, "inverse")) != "[]" ||
+			get(out, "observed") != nil || get(out, "readback_error") != "ToolError" {
+			t.Fatal(recov, pyjson.Repr(out), pyjson.Repr(result))
+		}
+	}
+}
