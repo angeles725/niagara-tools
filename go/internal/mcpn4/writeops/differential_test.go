@@ -135,7 +135,7 @@ func TestPlanAndReadbackDifferentialPython(t *testing.T) {
 		kinds[outcome(sc.Text())]++
 	}
 	t.Logf("%d cases: %v", len(cases), kinds)
-	for _, k := range []string{"refused", "internal", "verified", "mismatch", "readback_error"} {
+	for _, k := range []string{"refused", "internal", "verified", "mismatch", "unverified", "readback_error"} {
 		if kinds[k] == 0 {
 			t.Errorf("no case reaches %s", k)
 		}

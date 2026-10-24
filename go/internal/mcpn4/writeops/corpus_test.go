@@ -96,7 +96,7 @@ func corpus() []string {
 				`{"`+calcOrd+`": {"": {"h": "10"}}}`)
 		}
 	}
-	return out
+	return append(out, invokeCases()...)
 }
 
 // addCase appends one case line per after load.
