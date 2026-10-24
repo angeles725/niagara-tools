@@ -24,8 +24,10 @@
 #                 BFacets.MIN: WARN facet-floor when >= 1 ms, else FAIL facet-min-zero.
 #   constant      a `static final BRelTime NAME = <literal>` of the same file: FAIL literal-zero when 0.
 #   anything else FAIL unfloored.
-# A same-method guard (D2c) up to 80 lines back on the helper, variable or getter — `x > 0`, `x >= 1`,
-# `x == 0`, or the same on `x().getMillis()` — prints a PASS "guarded at :N" row instead.
+# A same-method guard (D2c) on the helper, variable or getter — `x > 0`, `x >= 1`, `x == 0`, or the same on
+# `x().getMillis()` — between the start of the call's method or class-level lambda body and the call prints a
+# PASS "guarded at :N" row instead (fixed 2026-10-24: the walk went 80 lines back past the method start, so a
+# guard in another method counted).
 # Calls, their continuation lines and variable bindings are read from comment-free code (go/internal/javasrc
 # Strip; a call inside a string literal is skipped); a variable or guard must appear as a whole name.
 #
@@ -51,6 +53,7 @@
 # kit-links.bats L2 enforces the no-version-control rule on all toolbelt scripts.
 # Mutation: LD1 -- removes delay-floor check, allowing Math.max(x,0L) pattern to pass instead of FAIL
 # Mutation: LD25 -- walking 50 lines back past the method start lets second() borrow first()'s Math.max(p, 1L)
+# Mutation: LD26 -- walking 80 lines back past the method start lets first()'s ms == 0 guard second()'s call
 # Mutation: LD13 -- drop Minutes from the facet_min unit alternation -> makeMinutes MIN reads as unreadable, FAIL
 # Mutation: LD16 -- stop accumulating continuation lines -> a multi-line Clock.schedule( FAILs unfloored
 #
