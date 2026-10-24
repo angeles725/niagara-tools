@@ -4,8 +4,10 @@
 package newretro
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -126,8 +128,9 @@ func isCount(v string) bool { return v != "" && strings.Trim(v, "0123456789") ==
 
 func alnum(c byte) bool { return c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' }
 
-// write lands the stub, then the regenerated index (the stub is removed again when that fails), then the
-// flipped envelope, and prints the three PASS rows.
+// write lands the stub, then the regenerated index, then the flipped envelope (both through a temporary
+// file and a rename), and prints the three PASS rows. A failure at any step undoes the earlier ones: the
+// stub is removed and INDEX.md restored (or removed when there was none), so nothing lands.
 func (r retro) write(root string, s cli.Stdio) int {
 	retros, state := root+"/retros", root+"/BUILD-STATE.src.md"
 	file := retros + "/" + r.date + "-" + r.slug + ".md"
@@ -147,21 +150,31 @@ func (r retro) write(root string, s cli.Stdio) int {
 		fmt.Fprint(s.Err, "new-retro: failed to stage BUILD-STATE.src.md\n")
 		return ExitWrite
 	}
+	index := retros + "/INDEX.md"
+	oldIndex, indexErr := os.ReadFile(index)
 	if err := create(file, r.stub()); err != nil {
 		fmt.Fprint(s.Err, "new-retro: failed to write retro file\n")
 		return ExitWrite
 	}
+	quiet := cli.Stdio{Out: io.Discard, Err: s.Err}
 	content, code := retroindex.Generate(root, s.Err)
 	if code == retroindex.ExitOK {
-		code = retroindex.Output("gen-retro-index", root, content).Write(cli.Stdio{Out: io.Discard, Err: s.Err})
+		code = retroindex.Output("gen-retro-index", root, content).Write(quiet)
 	}
 	if code != retroindex.ExitOK {
 		_ = os.Remove(file)
 		fmt.Fprint(s.Err, "new-retro: gen-retro-index.sh failed; retro removed, INDEX.md and BUILD-STATE.src.md unchanged\n")
 		return ExitWrite
 	}
-	if err := os.WriteFile(state, []byte(Flip(string(src), r.module)), 0o666); err != nil {
-		fmt.Fprint(s.Err, "new-retro: failed to update BUILD-STATE.src.md\n")
+	// Mutation: NR-rollback -- keeping the stub and the new INDEX.md when the envelope write fails lands half a run
+	if (gen.File{Tool: "new-retro", Path: state, Content: Flip(string(src), r.module)}).Write(quiet) != gen.ExitOK {
+		_ = os.Remove(file)
+		if indexErr == nil {
+			_ = (gen.File{Tool: "new-retro", Path: index, Content: string(oldIndex)}).Write(quiet)
+		} else if errors.Is(indexErr, fs.ErrNotExist) {
+			_ = os.Remove(index)
+		}
+		fmt.Fprint(s.Err, "new-retro: failed to update BUILD-STATE.src.md; retro removed, INDEX.md restored\n")
 		return ExitWrite
 	}
 	fmt.Fprintf(s.Out, "retro    PASS  %s  written\n", file)
@@ -170,7 +183,7 @@ func (r retro) write(root string, s cli.Stdio) int {
 	return ExitOK
 }
 
-// create writes a new file; an existing path is an error, never overwritten.
+// create writes a new file; an existing path is an error, never overwritten, and a failed write removes it.
 func create(path, content string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
 	if err != nil {
@@ -179,6 +192,9 @@ func create(path, content string) error {
 	_, err = f.WriteString(content)
 	if cerr := f.Close(); err == nil {
 		err = cerr
+	}
+	if err != nil {
+		_ = os.Remove(path) // never leave a truncated stub behind
 	}
 	return err
 }
