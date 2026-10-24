@@ -235,3 +235,47 @@ func TestLines(t *testing.T) {
 		}
 	}
 }
+
+// TestScopes: Scopes is Methods plus the lambda bodies opened outside a method; a lambda inside a method
+// stays part of the method's body, and Enclosing finds the scope of a line.
+func TestScopes(t *testing.T) {
+	src := `class L {
+  Runnable r = () -> {
+    a();
+  };
+  Runnable s = () ->
+  {
+    b();
+  };
+  void m() {
+    Runnable q = () -> {
+      c();
+    };
+  }
+  int f = 1;
+  Object o = new Object() {
+    public String toString() {
+      return "x";
+    }
+  };
+}`
+	stripped, _ := Strip(strings.Split(src, "\n"))
+	want := []Method{{"lambda", 2, 4}, {"lambda", 6, 8}, {"m", 9, 13}, {"Object", 15, 19}}
+	got := Scopes(stripped)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Scopes\n got %v\nwant %v", got, want)
+	}
+	if ms := Methods(stripped); !reflect.DeepEqual(ms, []Method{{"m", 9, 13}, {"Object", 15, 19}}) {
+		t.Errorf("Methods changed: %v", ms)
+	}
+	for line, w := range map[int]string{3: "lambda", 7: "lambda", 11: "m", 17: "Object", 14: "", 1: ""} {
+		m, ok := Enclosing(got, line)
+		if ok != (w != "") || m.Name != w {
+			t.Errorf("Enclosing(%d) = %v %v, want %q", line, m, ok, w)
+		}
+	}
+	f := NewFile("L.java", strings.Split(src, "\n"))
+	if !reflect.DeepEqual(f.Scopes(), want) {
+		t.Errorf("File.Scopes() = %v", f.Scopes())
+	}
+}

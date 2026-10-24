@@ -142,7 +142,35 @@ const space = " \t\n\v\f\r"
 const backScanLines = 20
 
 // Methods finds the method bodies in already-stripped lines (the output of Strip).
-func Methods(stripped []string) []Method {
+func Methods(stripped []string) []Method { return bodies(stripped, false) }
+
+// Scopes is Methods plus every lambda body opened outside a method (a field initializer such as
+// `Runnable r = () -> {`, its "->" on the line of the "{" or the line before), named "lambda": the
+// bodies a statement can belong to, in source order and never nested. A lambda inside a method belongs to
+// that method's body, as the locals it captures do.
+func Scopes(stripped []string) []Method { return bodies(stripped, true) }
+
+// Enclosing is the scope holding 1-based line, ok false when no scope holds it.
+func Enclosing(scopes []Method, line int) (m Method, ok bool) {
+	for _, m := range scopes {
+		if m.Start <= line && line <= m.End {
+			return m, true
+		}
+	}
+	return Method{}, false
+}
+
+// lambdaOpen reports whether the body opening on line i (0-based) is a lambda's: "->" on that line, or
+// a lone "{" right after a line ending in "->".
+func lambdaOpen(stripped []string, i int) bool {
+	if strings.Contains(stripped[i], "->") {
+		return true
+	}
+	return i > 0 && strings.Trim(stripped[i], space) == "{" && strings.HasSuffix(strings.TrimRight(stripped[i-1], space), "->")
+}
+
+// bodies scans the method bodies, and the lambda bodies opened outside a method when lambdas is set.
+func bodies(stripped []string, lambdas bool) []Method {
 	var (
 		methods        []Method
 		depth          int
@@ -185,6 +213,9 @@ func Methods(stripped []string) []Method {
 			name := methodName(stripped, i)
 			if name != "" && depth <= oldDepth && accessor.MatchString(name) {
 				name = ""
+			}
+			if name == "" && lambdas && lambdaOpen(stripped, i) {
+				name = "lambda"
 			}
 			if name != "" {
 				inBody, bodyDepth, cur = true, peak, Method{Name: name, Start: i + 1}
