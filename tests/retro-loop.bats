@@ -18,6 +18,14 @@
 # NAMED MUTATION (R16.6): append an INDEX row instead of regenerating -> RL9 sees a second row for a
 #   pre-seeded stale row, and RL6 misses the GENERATED first line.
 
+# RL4 runs kit-ticket.sh (a wrapper over go/bin/kit-ticket) under a PATH without go: build the binary here,
+# with the full PATH, through the same go_tool_bin the wrapper calls, so RL4 only needs it to be current.
+setup_file() {
+  # shellcheck disable=SC1091  # go/ helper of this repository
+  . "$BATS_TEST_DIRNAME/../go/go-tool.sh"
+  go_tool_bin "$BATS_TEST_DIRNAME/../go" kit-ticket >/dev/null
+}
+
 setup() {
   KIT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)/build-n4-module-kit"
   NR="$KIT/toolbelt/new-retro.sh"; KT="$KIT/toolbelt/kit-ticket.sh"
@@ -54,7 +62,8 @@ kt() { run env -C "$TK" KIT="$TK" "$@"; }   # first vararg is the command (for P
 
 @test "RL4: kit-ticket.sh with gh ABSENT -> exit 0, SKIP row, writes the offline fallback file" {
   NOGH="$TK/nogh"; mkdir -p "$NOGH"
-  for t in bash sh env grep sed awk cat date dirname basename mkdir printf; do
+  # find and readlink: the wrapper resolves itself and checks go/bin/kit-ticket is current (go_tool_bin); no gh.
+  for t in bash sh env grep sed awk cat date dirname basename mkdir printf find readlink; do
     p="$(command -v "$t" 2>/dev/null)"; [ -n "$p" ] && ln -sf "$p" "$NOGH/"
   done
   run env -C "$TK" KIT="$TK" PATH="$NOGH" bash "$KT" "fix the timer leak"
