@@ -224,6 +224,17 @@ EOF2
   [[ "$output" == *"a.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload("* ]]
 }
 
+@test "SPR14: a minified library line does not stand for the page's poll loop" {
+  # Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
+  # Go golden: go/internal/lint/rules/spapoll/testdata/truth-minified-1.txt
+  { printf '<script>!function(t){function n(){try{t()}catch(e){}}setTimeout(n,0);'
+    for _ in $(seq 150); do printf 'var a=1;'; done
+    printf '}(this);</script>\n'; } > "$TMPDIR_T/Mod/src/rc/lib.html"
+  run "$SPR" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "SPR-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: SPR-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/rc/u.js")"

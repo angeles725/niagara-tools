@@ -43,11 +43,15 @@
 # jssrc Code; an .html file through jssrc HTMLScripts, its <script> contents only): the bash/awk cut each line at
 # its first "//" (inside a string too) and read block comments, strings and templates as code, so a commented or
 # quoted location.reload() counted as recovery and a quoted setInterval(...) as the poll call.
+# Truth fix T2 (2026-10-24): a line longer than 1000 bytes is minified code (a bundled library such as three.js,
+# inlined in a page or shipped as *.min.js) and is not searched for the poll call, so a library's internal
+# setTimeout(n, 0) is neither reported nor taken for the page's own poll loop.
 # Implementation: rule package go/internal/lint/rules/spapoll on the shared engine go/internal/lint (walker,
 # parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
 # go/bin/n4lint when it is missing or older than a Go source, then this script execs `n4lint lint-spa-poll-no-recovery <args>`.
 # Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
+# Mutation: SPR14 -- searching minified lines takes a bundled library's setTimeout(n,0) for the poll call
 # Mutation: SPR13 -- reading block comments as code takes /* location.reload(); */ for the recovery
 # Mutation: SPR2 -- drop the lastOk success-time requirement so a failure-count-only watchdog passes clean
 # Mutation: SPR8 -- drop the location.reload(/location.href recovery check so a lastOk timestamp that never reloads passes clean

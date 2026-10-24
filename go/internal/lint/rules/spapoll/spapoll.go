@@ -42,6 +42,9 @@ func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); re
 
 const name = `[A-Za-z_][A-Za-z0-9_]*`
 
+// minified is the length above which a line is minified code: it is not searched for the poll call.
+const minified = 1000
+
 var (
 	pollCall  = rx(`(setInterval|setTimeout)\([[:space:]]*` + name + `[[:space:]]*,`)
 	callName  = rx(name + `[[:space:]]*,$`)
@@ -73,6 +76,9 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	lines := jssrc.Code(src) // code only: comments and literal contents blanked, line lengths kept
 	call, fn := -1, ""
 	for i, ln := range lines {
+		if len(ln) > minified {
+			continue // a minified bundle's line (a library such as three.js), not the page's poll loop
+		}
 		if m := pollCall.FindString(ln); m != "" {
 			fn = strings.TrimRight(callName.FindString(m), " \t\n\v\f\r,")
 			call = i
