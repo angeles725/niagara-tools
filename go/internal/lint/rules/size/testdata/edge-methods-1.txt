@@ -1,3 +1,5 @@
+declared difference: javasrc.Methods reads a signature wrapped before its brace (#405): wrapped(int a,
+int b) is now a method (body from its brace line 8), so its span is measured and WARNs.
 -- args --
 --max-class
 9999
@@ -8,6 +10,7 @@
 exit 0
 WARN  lint-size  @DIR@/M1.java:3  method M1() in pure class M1 spans 3 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/M1.java:6  method one() in pure class M1 spans 1 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/M1.java:8  method wrapped() in pure class M1 spans 4 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/M1.java:13  method brace() in pure class M1 spans 3 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/M1.java:16  method lam() in pure class M1 spans 5 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)
 WARN  lint-size  @DIR@/M1.java:22  method deep() in pure class M1 spans 4 lines (> 0) -- split into named phase methods (types/logic.md § Pure-class extraction)

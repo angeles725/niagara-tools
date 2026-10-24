@@ -81,6 +81,15 @@ func (n Number) String() string {
 	return n.lit
 }
 
+// Exception is a Python exception the server reports by its type only ("internal error
+// (<Type>)"), such as the AttributeError a str method raises on a value that is not a str.
+type Exception struct{ Type string }
+
+func (e *Exception) Error() string { return e.Type }
+
+// PyType is the Python class name.
+func (e *Exception) PyType() string { return e.Type }
+
 // OverflowError is Python's OverflowError from float(int) for an int beyond the float range.
 type OverflowError struct{}
 

@@ -245,8 +245,11 @@ structural anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff).
 
 `build-n4-module-kit/retros/INDEX.md` is GENERATED: edit the retro's header comments (`review-status`,
 `module`, `deltas`, optional `index-comment`) and run `build-n4-module-kit/toolbelt/gen-retro-index.sh`;
-on a merge conflict in `INDEX.md`, regenerate it instead of resolving rows by hand. CI and the gate's
-content half (`sweep-build-state.sh`) fail a stale index.
+on a merge conflict in `INDEX.md`, regenerate it instead of resolving rows by hand. CI fails a stale index on
+every push and PR. The gate's content half (`sweep-build-state.sh`) runs on every pushed range that changes
+`retros/`, `ledger.d/` or `BUILD-STATE.md`, including a range with no other build-relevant file and one under a
+`Retro: none (trivial: …)` trailer, and refuses an incoherent one (`.githooks/pre-push`, `pass_early`).
+`[ev: retro r10-path-keyed-gates-skip-data Δ1]`
 
 The kit block of `build-n4-module-kit/BUILD-STATE.md` is partly GENERATED too: its `last_change:` line,
 `open_issues:` items and session log come from one fragment per change in `build-n4-module-kit/ledger.d/`
