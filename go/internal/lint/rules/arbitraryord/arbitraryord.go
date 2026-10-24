@@ -46,7 +46,8 @@ func (rule) Severity() lint.Severity { return lint.Warn }
 // Check reports each line whose code (linescan.Code: no comment, Javadoc or literal text; truth fix T1,
 // the awk matched the raw text before the // comment) calls BOrd.make on a lowercase identifier: "BOrd.make
 // from a variable", or "reviewed marker without a reason" when the line's // comment (javasrc.LineCommentAt),
-// or else a // comment line right above, carries a bare marker. A marker with a reason suppresses the row.
+// or else a // comment line right above, carries a bare marker. A marker with a reason suppresses the row,
+// and so does a proof that the ord is not client-chosen (proven).
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	var out []lint.Finding
 	code := linescan.Code(f)
@@ -65,12 +66,21 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 			case "bare":
 				out = append(out, lint.Finding{Line: i + 1, Msg: "reviewed marker without a reason (add one): " + linescan.Source(ln)})
 			case "":
-				out = append(out, lint.Finding{Line: i + 1, Msg: "BOrd.make from a variable: " + linescan.Source(ln)})
+				if !proven(f, i) {
+					out = append(out, lint.Finding{Line: i + 1, Msg: "BOrd.make from a variable: " + linescan.Source(ln)})
+				}
 			}
 		}
 		prev = ln
 	}
 	return out, nil
+}
+
+// proven reports whether the call on 0-based line i provably resolves no client-chosen ord (kit #459):
+// a constant prefix whose client part is traversal-guarded earlier in the method.
+func proven(f *javasrc.File, i int) bool {
+	t, v, ok := newTracer(f, i)
+	return ok && t.prefixedAndGuarded(v)
 }
 
 // state is the awk marker_state: "reason", "bare" (a marker with nothing after it) or "" (no marker).

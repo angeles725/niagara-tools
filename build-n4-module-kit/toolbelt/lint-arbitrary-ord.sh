@@ -28,6 +28,7 @@
 # Mutation: AO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 # Mutation: AO-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 # Mutation: AO13 -- matching the raw line (no comment/literal blanking) WARNs on a Javadoc or string mention
+# Mutation: AO14 -- ignoring a traversal guard WARNs on a constant-prefixed, guarded relative ord (kit #459)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
