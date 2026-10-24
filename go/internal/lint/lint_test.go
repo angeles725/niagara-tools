@@ -178,6 +178,14 @@ func TestParse(t *testing.T) {
 		{First, []string{"--strict"}, true, nil, usage + "\n"},
 		{Each, []string{dir, dir}, false, []string{dir, dir}, ""},
 		{Each, []string{dir, "missing"}, false, nil, name + ": not a directory: missing\n"},
+		{Leading, nil, false, nil, usage + "\n"},
+		{Leading, []string{"--strict"}, true, nil, usage + "\n"},
+		{Leading, []string{"--strict", dir, "missing"}, true, []string{dir}, ""},
+		{Leading, []string{dir, "--strict"}, false, []string{dir}, ""},
+		{Leading, []string{"--strict", "--strict", dir}, true, nil, name + ": not a directory: --strict\n"},
+		{Leading, []string{"--", dir}, false, nil, name + ": not a directory: --\n"},
+		{Leading, []string{"-h", dir}, false, nil, name + ": not a directory: -h\n"},
+		{Leading, []string{""}, false, nil, name + ": not a directory: \n"},
 	} {
 		got, err := Parse(tc.mode, name, usage, tc.args)
 		if tc.errMsg != "" {

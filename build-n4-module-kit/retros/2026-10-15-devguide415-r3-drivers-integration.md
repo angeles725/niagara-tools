@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · devguide415-r3-drivers-integration
@@ -31,4 +31,4 @@
 - Prefer the shipped library a sibling Tridium module already uses (`oauth2-rt` via `email-rt`) over bundling a new one.
 
 ---
-**Status**: PENDING — INDEX row appended: `| 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | pending | 6 |`
+**Status**: FOLDED (quality round 8 U9, base f2cf198) — Δ1 `types/driver-authoring.md:268`, Δ2 `types/logic-authoring.md:755`, Δ3 `types/driver-authoring.md:141`, Δ4 `types/cloud-connector.md:266` + `types/issues-and-gotchas.md` H2, Δ5 `types/cloud-connector.md:281`, Δ6 `types/cloud-connector.md` § 11; owed Go lint G88 (ledger.d). INDEX row generated from the header: `| 2026-10-15-devguide415-r3-drivers-integration.md | kit | 2026-10-15 | folded | 6 |`

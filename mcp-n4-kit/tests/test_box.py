@@ -4,6 +4,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import unittest
 import urllib.error
 from unittest import mock
@@ -282,6 +283,213 @@ class TestTransportErrors(BoxTestCase):
         with mock.patch.object(c, "call", side_effect=RuntimeError("password=secret")):
             c.close()
         self.assertIsNone(c.sid)
+
+
+class RawStation:
+    """Loopback TCP server answering every request with the same raw bytes, then closing.
+
+    It stands in for a station (or a proxy) whose answer is not well-formed HTTP; the
+    FakeStation always writes a correct status line and Content-Length.
+    """
+
+    def __init__(self, answer):
+        self.answer = answer
+        self._sock = socket.create_server(("127.0.0.1", 0))
+        self.url = "http://127.0.0.1:%d" % self._sock.getsockname()[1]
+        threading.Thread(target=self._serve, daemon=True).start()
+
+    def _serve(self):
+        while True:
+            try:
+                conn, _ = self._sock.accept()
+            except OSError:  # closed by stop()
+                return
+            with conn:
+                conn.settimeout(5)
+                try:
+                    self._answer(conn)
+                except OSError:  # the client gave up: nothing left to prove on this socket
+                    pass
+
+    def _answer(self, conn):
+        """Read the whole request, answer, then end with a FIN, never a RST.
+
+        Closing a socket that still holds unread request bytes makes Linux send RST, and the
+        client then sees "Connection reset by peer" instead of the short body. So the head
+        and its Content-Length body are read first, the write side is shut down (FIN after
+        the answer), and the socket is drained until the client closes.
+        """
+        data = b""
+        while b"\r\n\r\n" not in data:
+            chunk = conn.recv(65536)
+            if not chunk:
+                return
+            data += chunk
+        head, _, body = data.partition(b"\r\n\r\n")
+        length = 0
+        for line in head.split(b"\r\n")[1:]:
+            name, _, value = line.partition(b":")
+            if name.strip().lower() == b"content-length":
+                length = int(value.strip())
+        while len(body) < length:
+            chunk = conn.recv(65536)
+            if not chunk:
+                return
+            body += chunk
+        conn.sendall(self.answer)
+        conn.shutdown(socket.SHUT_WR)
+        while conn.recv(65536):
+            pass
+
+    def stop(self):
+        self._sock.close()
+
+
+#: Every client read: (label, callable(client)). Each one must turn a bad answer into BoxError.
+CLIENT_READS = (
+    ("call", lambda c: c.call("ssession", "make", {})),
+    ("get_ord", lambda c: c.get_ord("station:|slot:/")),
+    ("get_file", lambda c: c.get_file("/file/a.txt")),
+    ("about", lambda c: c.about()),
+)
+
+
+@go_server.go_twin("box", "unit")
+class TestTransportTruth(unittest.TestCase):
+    """An answer that is not complete HTTP is a transport failure, never data (0.9.2)."""
+
+    def reads_against(self, answer):
+        """(label, raised exception or the returned value) of every client read."""
+        station = RawStation(answer)
+        self.addCleanup(station.stop)
+        client = box.BoxClient(station.url, "u", "p", allow_http=True, timeout=5)
+        outcomes = []
+        for label, read in CLIENT_READS:
+            try:
+                outcomes.append((label, read(client)))
+            except Exception as exc:  # noqa: BLE001 - the type is what is asserted
+                outcomes.append((label, exc))
+        return outcomes
+
+    def test_a_non_http_answer_is_a_transport_failure(self):
+        for label, exc in self.reads_against(b"NOT HTTP AT ALL\r\n\r\n"):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: invalid HTTP answer (BadStatusLine)",
+                             label)
+
+    def test_a_body_shorter_than_its_content_length_is_never_returned(self):
+        answer = (b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 100\r\n"
+                  b"\r\n" + b'{"m": [{"b": 1}]}')
+        for label, exc in self.reads_against(answer):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: incomplete read (got 17 of 100 "
+                             "bytes)", label)
+
+    def test_a_cut_chunked_body_is_a_transport_failure(self):
+        answer = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nab"
+        for label, exc in self.reads_against(answer):
+            self.assertIs(type(exc), box.BoxError, label)
+            self.assertEqual(str(exc), "transport failure: invalid HTTP answer (IncompleteRead)",
+                             label)
+
+    def test_a_body_longer_than_the_cap_is_still_only_truncated(self):
+        # The Content-Length check compares with what was asked for: a capped read of a long,
+        # complete body is the documented truncation, not an incomplete read.
+        body = b"a,b\n" * 64
+        answer = (b"HTTP/1.1 200 OK\r\nContent-Type: text/csv\r\nContent-Length: %d\r\n\r\n"
+                  % len(body)) + body
+        station = RawStation(answer)
+        self.addCleanup(station.stop)
+        client = box.BoxClient(station.url, "u", "p", allow_http=True, timeout=5)
+        self.assertEqual(client.get_ord("station:|slot:/", max_bytes=10),
+                         (("a,b\n" * 3)[:10], True))
+        self.assertEqual(client.about(max_bytes=8), "a,b\na,b\n")
+
+
+def poll_hook(events_json):
+    """FakeStation hook answering every pollchgs with the raw JSON `events_json` as its body."""
+    def hook(frame):
+        if frame["m"][0]["k"] == "pollchgs":
+            body = '{"v": "2.3", "p": "box", "n": %d, "m": [{"t": "rp", "b": %s}]}' % (
+                frame["n"], events_json)
+            return 200, body.encode(), {"Content-Type": "application/json"}
+    return hook
+
+
+def load_event(tree):
+    """A pollchgs body holding one load op whose slot tree is `tree` (a JSON-ready value)."""
+    return json.dumps([{"evs": {"ops": [{"nm": "l", "h": "3", "b": tree}]}}])
+
+
+@go_server.go_twin("box", "unit")
+class TestReplyShapes(BoxTestCase):
+    """A reply of the wrong shape is a 'malformed BOX reply' BoxError, never data (0.9.2)."""
+
+    def assert_malformed(self, action, detail):
+        with self.assertRaises(box.BoxError) as cm:
+            action()
+        self.assertIs(type(cm.exception), box.BoxError)
+        self.assertEqual(str(cm.exception), "malformed BOX reply: " + detail)
+
+    def test_pollchgs_must_answer_a_list_of_events(self):
+        c = self.opened()
+        for body, kind in (('{"a": 1}', "an object"), ('"ab"', "a string"), ("5", "a number"),
+                           ("true", "a boolean"), ("{}", "an object"), ('""', "a string")):
+            self.fake.hook = poll_hook(body)
+            with self.subTest(body):
+                self.assert_malformed(c.poll, "pollchgs answered %s, not a list" % kind)
+        for body in ("null", "[]"):
+            self.fake.hook = poll_hook(body)
+            self.assertEqual(c.poll(), [], body)
+
+    def test_a_load_tree_of_the_wrong_shape_is_refused(self):
+        c = self.opened()
+        cases = (
+            ({"s": None}, "slot (root) has children that are null, not a list"),
+            ({"s": "ab"}, "slot (root) has children that are a string, not a list"),
+            ({"s": {"n": "a"}}, "slot (root) has children that are an object, not a list"),
+            ({"s": ["x"]}, "slot (root) has a child that is a string, not an object"),
+            ({"s": [{"t": "x"}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": 5}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": ""}]}, "slot (root) has a child without a slot name"),
+            ({"s": [{"n": "a", "s": [{"n": 5}]}]}, "slot a has a child without a slot name"),
+            ({"s": [{"n": "a", "s": [{"n": "b", "s": 1}]}]},
+             "slot a/b has children that are a number, not a list"),
+        )
+        for tree, detail in cases:
+            self.fake.hook = poll_hook(load_event(tree))
+            with self.subTest(tree):
+                self.assert_malformed(
+                    lambda: c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP), detail)
+
+    def test_an_early_event_whose_ops_are_no_list_is_kept_not_walked(self):
+        # The poll before a loadSlots settles the load ops it sees; ops that are no list are
+        # kept with their event (as _split does), never iterated as keys or characters.
+        c = self.opened()
+        for ops in (5, "ab", {"nm": "l"}):
+            self.fake.hook = poll_hook(json.dumps([{"evs": {"ops": ops}}]))
+            with self.subTest(ops):
+                with self.assertRaises(box.BoxError) as cm:
+                    c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
+                self.assertIn("no load event", str(cm.exception))
+                self.assertIn({"evs": {"ops": ops}}, c.drain_pending_events())
+
+    def test_a_well_formed_tree_still_loads(self):
+        c = self.opened()
+        self.fake.hook = poll_hook(load_event({"h": "3", "s": [{"n": "a", "s": [{"n": "b"}]}]}))
+        nodes = c.load_tree("station:|slot:/Folder", attempts=2, **NO_SLEEP)
+        self.assertEqual(sorted(nodes), ["", "a", "a/b"])
+
+    def test_a_reply_nested_past_the_limit_is_refused(self):
+        self.assertEqual(box.MAX_REPLY_NESTING, 1000)
+        c = self.opened()
+        # The frame wraps the body in 3 levels ({"m": [{"b": ...}]}): 997 more fit the limit.
+        self.fake.hook = poll_hook("[" * 997 + "]" * 997)
+        self.assertEqual(len(c.poll()), 1)
+        for depth in (998, 200000):  # 200000 is past CPython's C stack: RecursionError
+            self.fake.hook = poll_hook("[" * depth + "]" * depth)
+            with self.subTest(depth):
+                self.assert_malformed(c.poll, "nested deeper than 1000 levels")
 
 
 class TestSession(BoxTestCase):

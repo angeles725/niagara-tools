@@ -1,0 +1,6 @@
+-- args --
+@DIR@
+-- want --
+exit 3
+ERROR  demand-in-scope  @DIR@  no *.java sources found
+-- stderr --

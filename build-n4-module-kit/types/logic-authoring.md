@@ -29,6 +29,16 @@ Every `subscribe()` call in `started()` MUST have a matching `unsubscribe()` (or
 
 - **`BEventService` routing — routing IS the Baja link graph, no imperative registry:** `BEventSource.routeTo(name, routable)` = `add(name, consumer)` + `linkTo(source.event → consumer.process)`. `BEventFilter` chains (consumer = process action, producer = event topic). `BEventRecipient` is terminal async delivery via `ThreadPoolWorker`. The event envelope is a uniform `BEvent` (uuid / timestamp / source ORD / open value). Cross-station delivery uses `BStationRecipient` (Fox `EventChannel`). `BComponentEventSource` wraps a `Subscriber.event(BComponentEvent)` into a `BEvent`; `BComponentTypeEventSource` uses `TypeSubscriber` internally — the event module is an OVERLAY on the B867 subscription primitives. **License required:** `tridium:eventService`. `[ev: corpus B873 §873.1-4]`
 - **EXCEPTION — analytics nodes register by TYPE, not by an agent:** a custom analytics node is a `@NiagaraType` subclass of `javax.bajax.analytics.algorithm.BOutputBlock` (implement `getValue`/`getTrend`, or `BFunctionBlock.apply` for single-input); inputs are `BBlockPin` `@NiagaraProperty` wired by `BLink` DAG edges; registered by a plain `module.xml <type>` with NO `@AgentOn`; external feed = the duck-typed `AnalyticDataSource.Provider`. `[ev: corpus B773]`
+  **Documented scope** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: the 4.15.6.20 developer guide covers only
+  data-processing blocks (extend `BAlgorithmBlock` or `BOutputBlock`, pins are `BBlockPin`;
+  `DeveloperAnalytics/buildingAlgorithmBlocks.txt:8,22,28-30`). `AnalyticDataSource.Provider` lives in the internal
+  `com.tridiumx.analytics.data` package (analytics-rt 4.15.6.20 jar listing) and is undocumented: a design that
+  depends on it is [INFER] and needs a version pin. Consume results through an analytic proxy ext on a point or the
+  ORD schemes (§ ORD scheme typology), not by reaching into the framework. **Licence:** every point the framework
+  uses carries the `a:a` tag and counts against the licence; when the count exceeds it the framework stops, so turn
+  `AutoTagAnalyticPoint` off after commissioning (`AnalyticsGuide/AboutLicensing-2CF33B35.txt:7-11`,
+  `ConfiguringTheServiceForLicensing-2D096CAA.txt:17`). An alert raises no alarm unless its `Alarm` property is set
+  (default false, `AnalyticsGuide/CreatingAnAlert-4506D8F3.txt:42`). Corpus B1338.
 
 ### Nav-tree ordering and visibility `[ev: corpus B757 §757.3–757.4]`
 
@@ -119,6 +129,14 @@ BObject result = target.get();
 | **query** | Runs a search or query | `bql:`, `neql:`, `hierarchy:`, `nav:` |
 
 Custom schemes register via `@NiagaraType(ordScheme="id")` — see §Author-side SPIs for the authoring recipe.
+
+**Analytics schemes** `[ev: retro devguide415-r2-security-tags-analytics Δ9]`: `analyticValue:` and `analyticRollup:` give a
+`BStatusValue`, `analyticTrend:` and `alerts:` a `BITable` (4.15.6.20 `DeveloperAnalytics/ordSchemes.txt:14-36`).
+There is no `analytic:` scheme: `BAnalyticOrdScheme` is registered without an `ordScheme` id (analytics-rt 4.15.6.20
+`META-INF/module.xml:106`). Analytic values cannot be subscribed like points; the bindings poll them
+(`ordSchemes.txt:24`), so do not hang a fast control loop on one. No kit lint flags `analytic:` yet: owed G82
+`analytic-ord-scheme` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
+`[deferred: retro devguide415-r2-security-tags-analytics Δ9]`
 
 ### `service:` lookup scheme `[ev: corpus B5 §5.1.1; B38 §38.1]`
 
@@ -245,9 +263,74 @@ try (TableCursor<?> c = t.cursor()) {           // TableCursor is AutoCloseable
 - oBIX exposes the same query as `/obix/bql/<url-encoded-query>`.
 - **Contrast with the PROVIDER surface** (`§Query/search/index surface` above): implementing `BQueryEngine` / `BColumnsProvider` is the server side that declares what a query can return; the cursor pattern here is the CALLER side that drives a query from Java code (a servlet, a `serviceStarted()` scan, a background job). Both sides are needed to build a full query-driven feature.
 
+## File export — history to CSV `[ev: corpus B1254 §1254.5]`
+
+A third-party module writes only under Station Home, `file:^…` = `stations/<name>/shared/`; the rest of the station
+folder is Protected Station Home, framework-only (devguide `directoryRestructure.txt:103,109`). A history goes to
+CSV without an exporter class (course certification exam `BHistoryExportService.doExport`, run live):
+
+```java
+BOrd target = getOutputFile();                                  // e.g. BOrd.make("file:^export/history.csv")
+if (target.isNull()) throw new IllegalArgumentException("output file not set");
+BOrd src = BOrd.make("history:" + getHistoryId().encodeToString() + "|bql:select *");
+BITable<BHistoryRecord> table = (BITable<BHistoryRecord>) src.get(this, cx);   // caller's Context
+BIFile file = BajaFileUtil.createFileToOverwrite(target, cx);   // re-runnable
+try (PrintWriter w = new PrintWriter(new OutputStreamWriter(file.getOutputStream(), StandardCharsets.UTF_8));
+     TableCursor<BHistoryRecord> c = table.cursor()) {
+  while (c.next()) {
+    BHistoryRecord r = c.get();
+    w.println(r.getTimestamp() + "," + r.get("operation"));    // audit history: columns by name
+  }
+}
+```
+
+- **`createFileToOverwrite`, not `createFile`:** `createFile` throws `FileAlreadyExistsException` when the file
+  exists, so the second run fails; both throw `IllegalArgumentException("Filename required")` for a null or empty
+  ORD (`baja/…/javax/baja/file/BajaFileUtil.java:82-121`, vineflower) — guard `isNull()` first.
+- **Explicit charset:** `getBytes()` and a bare `OutputStreamWriter` use the platform charset; pass
+  `StandardCharsets.UTF_8`. Close the stream and the cursor with try-with-resources (§ BQL from code).
+- **Exporters:** `ExportOp` is public (`javax.baja.file`), but `BHistoryToCsv` is `com.tridium.history.exporters`
+  — private API; the course itself says it "could change between minor version updates" (Lab Instructions p83).
+  Write the loop above instead.
+- Owed advisory lints G68 `file-export` (bare `getBytes()`, `BajaFileUtil.createFile(`) and G69, the
+  `lint-bql-string-concat.sh` precision fix that stops it WARNing on the `history:<id>|bql:` literal above
+  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ5]
+  [ev: retro n4-course-handson-services-history-threading Δ1]
+
 ## Templates are artifact production, not a type SPI
 
 - A "template type" is an `.ntpl` ZIP (a `.bog` + `template-manifest.xml`) produced by a make-job (`BMakeTemplateJob`/`NiagaraTemplate.createFrom().save()`) from a component subtree marked with a `BTemplateConfig` (+ `BConfigBinding` children + tagged parameter slots). Do NOT scaffold a `BTemplate` subclass — there is no such SPI. `[ev: corpus B783]`
+- A palette entry (`module.palette`) is a drop of components, not a `.ntpl`; only a `.ntpl` has a manifest, a
+  deployed-template status and an upgrade path (`types/structure.md` § Palette assembly templates).
+
+### Shipping a template module `[ev: corpus B1325 §1325.1 rows 1-3]` [ev: retro devguide415-r2-packaging-platform-signing Δ2]
+
+- **Package:** select the templates in the Template sidebar → **Make Module**; the result is one `.jar` named by
+  `moduleName` in Sys Home `modules/`. A template inside a module is read-only (the Template view shows
+  `ReadOnly`; Save As copies it to `~templates` to edit) (guide `Templates/MakingATemplateModule-8A3D4B56.txt:7,16,21,31`).
+- **Dependencies:** the `.ntpl` carries `template-manifest.xml` (the guide spells it `template.manifest.xml`;
+  shipped `.ntpl` files use the hyphen) whose `<dependencies>` holds one `<dependency name vendor vendorVersion rel>`
+  per module (`template-rt` `ManifestXMLWriter.java:129-140`). List every module the component tree AND the Px
+  need, both `-rt` and `-ux`: install hard-fails on a missing one (guide `ExampleTemplate.manifest.xmlFileTem-9BAE5349.txt:11`,
+  corpus B578). Its `signature` attribute detects a modified template (`:13`).
+- **Version pinning:** set **Use Minor Version On Deployment** on purpose: `true` pins the minor version; `false`
+  pins only the major, so a template built on a later minor deploys to stations on an earlier one
+  (guide `Templates/TemplateOptions-49093F67.txt:9-11`).
+- Owed advisory: Go lint G92 `ntpl-manifest-deps` (`ledger.d/2026-10-23-r8-u10-platform-templates.md`).
+  [deferred: retro devguide415-r2-packaging-platform-signing Δ2]
+
+### What breaks on a module or template upgrade `[ev: corpus B1325 §1325.1 rows 4-6]` [ev: retro devguide415-r2-packaging-platform-signing Δ3]
+
+- Template changes are never applied to deployed copies; redeploy is the only path
+  (guide `Templates/DeployingTemplates-054F175F.txt:13`).
+- Upgrade, downgrade and redeploy of a deployed template remove it and install the new one: local edits to those
+  objects are lost (guide `Templates/UpgradingADeployedTemplateTemplates-9A17381D.txt:12,22`); links and history names
+  survive by handle (corpus B579). Record which edits an operator made before an upgrade.
+- An application template install is destructive (existing station components are deleted), needs the `-wb`
+  profile, and has no version or change tracking — record the installed version in the site ledger
+  (guide `Templates/InstallingAnApplicationTemplate-B8DEEB83.txt`).
+- `[INFER]` renaming a slot of a type used by a deployed template breaks an exposed `BConfigBinding` on the next
+  template upgrade (open: niagara-research B1325-G1). Treat a slot rename as a breaking change (`types/distribution.md` § 6).
 
 ## Background jobs
 
@@ -373,9 +456,10 @@ A **security module** provides a custom authentication scheme (e.g. LDAP, RADIUS
 first-class Niagara service.  The pattern is the same N4-extension idiom — subclass + register — but
 with a few module-specific rules:
 
-1. **Class hierarchy:** `extends BAbstractService` and `implements BAuthenticationScheme`.  `BAbstractService`
-   makes the scheme auto-discoverable under `/Services`; the `BAuthenticationScheme` interface is the
-   SPI contract that `AuthenticationService` calls.
+1. **Class hierarchy:** `extends BAuthenticationScheme`. It is an abstract class (`extends BComponent implements
+   BIAgent`), not an interface, so the scheme cannot also extend `BAbstractService`; shipped schemes such as
+   `BLdapAuthenticationScheme` and `BBacnetScAuthenticationScheme` extend it directly.
+   `[CERT: baja javax/baja/authn/BAuthenticationScheme.java:26]`
 
 2. **Permissions file (`module-permissions.xml`):** declare the scheme's required permissions in a
    `module-permissions.xml` alongside `module-include.xml` in the source tree.  The Gradle plugin
@@ -384,13 +468,24 @@ with a few module-specific rules:
    resource; the plugin merges it.  Example:
 
    ```xml
-   <!-- <part>/module-permissions.xml -->
    <?xml version="1.0" encoding="UTF-8"?>
-   <modulePermissions>
-     <permission name="javax.baja.sys.BajaPermission"
-                 actions="authenticationScheme"/>
-   </modulePermissions>
+   <!-- <part>/module-permissions.xml -->
+   <permissions>
+     <niagara-permission-groups type="station">
+       <req-permission>
+         <name>AUTHENTICATION</name>
+         <purposeKey>Log users in through the custom scheme</purposeKey>
+       </req-permission>
+     </niagara-permission-groups>
+   </permissions>
    ```
+
+   The NRE reads only a `<permissions>` root (`<java-permissions>` / `<niagara-permission-groups>` children);
+   any other root is silently ignored. `AUTHENTICATION` grants `AuthPermission("modifyPrincipals")`,
+   `MODIFY_SESSION_IDS` and `GET_AUTHENTICATED_USER`, and its risk text calls it "normal for a module that
+   offers a custom authentication scheme". The `purposeKey` is shown to the user who grants it; a lexicon key
+   works too. `[CERT: baja com/tridium/sys/module/NModule.java (manifest.elem("permissions")),
+   com/tridium/security/AuthenticationPermissionGroup.java, baja.lexicon:517]`
 
 3. **`@AgentOn` registration:** in `module-include.xml`, register the scheme as an agent on
    `"baja:AuthenticationScheme"` so `AuthenticationService` discovers it:
@@ -543,7 +638,42 @@ String escaped = SlotPath.escape(bacnetDeviceName);  // handles spaces, leading 
 add(escaped, BDouble.DEFAULT);
 ```
 
+**Keep author-set flags when an action rebuilds slots** `[ev: retro devguide415-r2-security-tags-analytics Δ10]`: a
+refresh or rediscover action that removes and re-adds dynamic slots must carry over the flags an integrator set
+(HIDDEN, OPERATOR, READONLY): read `getFlags(slot)` before removing and `setFlags` after re-adding, or update the
+slot in place. Tridium's counter-example is scoped narrowly: `forceUpdate` resets hidden or changed action flags to
+defaults only on R2 oBIX proxy points ("Niagara R2 to AX via oBIX", 4.15.6.20 `EngNotes/aForceUpdateAction.txt:2,13`;
+corpus B1353 §1353.2 row 8), not on N4 drivers in general. The rule itself is a design note [INFER].
+
 **Display name is INDEPENDENT of slot name:** the slot name is the programmatic key; the display name (shown in Workbench and oBIX) is set separately. Setting a human-readable display name does not require a human-readable slot name. `[ev: retro module-hardening-reference-cards-deltas Δ5]`
+
+## Generated accessors and slot declaration order
+
+**Simple `B*` types get primitive accessors.** Slot-o-Matic picks the accessor pair from the `type` string
+(devkit-wb 4.14.0.162 vineflower `com/tridium/slottool/processor/PropertyProcessor.java:40-91`):
+
+| `type` | Generated getter / setter |
+|---|---|
+| `BBoolean`, `BInteger`, `BLong`, `BFloat`, `BDouble` (or `boolean` … `double`) | `boolean`/`int`/`long`/`float`/`double` via `getBoolean`/`getInt`/`getLong`/`getFloat`/`getDouble` and the matching `set*` |
+| `BString` (or `String`) | `String` via `getString`/`setString` |
+| `BValue` | `BValue` via `get`/`set` |
+| any other type | a cast, `(T) get(x)`, and `set(x, v, null)` |
+
+So logic reads and writes `double`, never `BDouble`: the 4.15.6.20 course exam's `BLimiter` (`type = "BDouble"`,
+`defaultValue = "BDouble.DEFAULT"`) generated `newProperty(0, BDouble.DEFAULT.as(BDouble.class).getDouble(), null)`,
+`public double getMax() { return getDouble(max); }` and `public void setMax(double v) { setDouble(max, v, null); }`
+(`CertificationExam/…/BLimiter.java:99-111`). `[ev: retro n4-course-handson-slotomatic-authoring Δ2]`
+
+**Declare paired bounds low before high.** Slot-o-Matic writes the `Property` fields in annotation order (`BLimiter`:
+annotations `out`, `in`, `max`, `min` at `:17-38`, fields at `:53`, `:76`, `:99`, `:122`), and the Type's slot list
+follows the field order, superclass first (baja 4.14.0.162 vineflower `ComplexIntrospector.resolveFields`
+`:104-133`, which reads `getDeclaredFields()`; that this keeps source order is HotSpot behaviour, not a JVM-spec
+guarantee `[INFER]`). The property sheet (observed in the exam, engram obs 11478) and the nav tree (§ Nav-tree
+ordering) show that order, so `max` above `min` is what the operator sees. Declare `min`/`low`/`lo` before
+`max`/`high`/`hi`, and the inputs the operator edits before outputs. A later reorder keeps saved data (a `.bog`
+binds by name: `types/distribution.md` § 6, `toolbelt/schema-risk.sh` `reorder_slot,SAFE`), but it changes every
+operator's view, so decide it at first authoring. The pair-order WARN is owed Go lint G96 `slot-pair-order`.
+`[ev: retro n4-course-handson-slotomatic-authoring Δ3]`
 
 ## `@NiagaraProperty` source comment → generated Javadoc (slotomatic keeps only the LAST line)
 
@@ -744,6 +874,10 @@ A boolean flag that gates ALL output writers (e.g. `if(inDefrost) return;` at th
 When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable` that sits above a driver point), follow these rules to avoid silent command loss and stuck relays.
 
 - **Write to `in8`, not `in1`:** Niagara's priority-16 array arbitrates commands; level 8 is the MANUAL/OPERATOR write level (persisted across restarts). Writing to `in1` (supervisor override) can lock out the operator; writing to `in8` is the correct level for our own module's command. (`BBooleanWritable.java:490` — `in8` is the persisted manual level.)
+- **`in8` is a local choice, not a guarantee on BACnet:** the winning N4 level is the BACnet `WriteProperty`
+  priority, so a device program at priority 1-7 still wins in the device, and panels differ (`in10`/`in16`,
+  corpus B846). Never tick a BACnet export priority our module drives (`types/driver-authoring.md` § 11.1).
+  `[ev: corpus B1327 §1327.2 C2]` `[ev: retro devguide415-r2-drivers-protocols Δ5]`
 - **Set a non-null `fallback`:** the `fallback` slot is the value the writable holds when ALL 16 priority levels are null (the relinquished state). If `fallback` is null on a `BBooleanWritable`, the relay HOLDS its last command on station stop/reload — 22 PANCCADIA relays exhibited this until the fallback was set. (`BBooleanWritable.java:726`: `fallback = newProperty(0, new BStatusBoolean(false, ...))`.)
 - **`writeOnUp=true` (verify it is set):** `BTuningPolicy.writeOnUp` defaults `true` (`BTuningPolicy.java:206`), so a proxy point whose TuningPolicy uses the default is self-correcting — on device-UP it replays the last desired write. If `writeOnUp` is `false`, a write that was issued while the device was DOWN is silently dropped and the relay never receives the command. (`Tuning.java:201-204`.) Do NOT override `writeOnUp=false`.
 - **Verify the write landed — read the DOWN/STALE status bit:** `set()` returning normally does NOT mean the device received the command; it means Niagara queued it. Always check the proxy point's `BStatus.isDown()` / `isStale()` bit after a write and surface it via an alarm or a health-status slot.

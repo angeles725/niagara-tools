@@ -118,6 +118,7 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   concatenated into `innerHTML`.
 - [both] No swallowed errors; log on state transitions, not on every failed poll.
 - [both] User-facing errors are plain operator-language messages; technical detail goes to the console.
+- [both] Operator text from a module lexicon in the browser (`lex!`; lexicon content is public): `types/lexicon.md` § 4.
 
 ### 9. Industrial states and units
 - [both] One state vocabulary with one visual treatment everywhere (online, off, on, alarm, manual,

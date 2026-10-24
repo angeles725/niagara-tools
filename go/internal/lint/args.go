@@ -11,11 +11,12 @@ import (
 type Mode int
 
 const (
-	One   Mode = iota // [--strict] [--] <root>: exactly one root
-	First             // [--strict] [--] <root>...: only the first root is checked and scanned
-	Each              // [--strict] [--] <root>...: every root is checked first, then scanned in order
-	Raw               // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
-	Exact             // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
+	One     Mode = iota // [--strict] [--] <root>: exactly one root
+	First               // [--strict] [--] <root>...: only the first root is checked and scanned
+	Each                // [--strict] [--] <root>...: every root is checked first, then scanned in order
+	Raw                 // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+	Exact               // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
+	Leading             // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
 )
 
 // Args is a parsed command line.
@@ -34,8 +35,12 @@ func (e *UsageError) Error() string { return e.Text }
 // 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, or "<name>: not a directory: <root>".
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 	var a Args
+	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
+		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots
+		a.Strict, args = true, args[1:]
+	}
 flags:
-	for mode != Raw && mode != Exact && len(args) > 0 {
+	for mode != Raw && mode != Exact && mode != Leading && len(args) > 0 {
 		switch arg := args[0]; {
 		case arg == "--strict":
 			a.Strict = true

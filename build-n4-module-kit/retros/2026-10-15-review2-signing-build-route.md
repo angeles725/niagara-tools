@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · review2-signing-build-route
@@ -43,4 +43,4 @@ had summed one group of retros by hand.
 - Totals that appear in commit messages or reports come from a script, never from a hand sum.
 
 ---
-**Status**: PENDING (quality round 8 W23 U0, main e66da0a) — Δ1 `build-verify.md:210` (doc half; the signer-identity check is owed Go lint G22), Δ2 `build-verify.md:213`, Δ5 `types/security.md:145`, Δ6 `METHODOLOGY.md:170` K34. Δ3: the root-block half is folded at `build-verify.md:202-205`; the `--info` "which profile signed" half is DROPPED: no source line for those log lines was ever located (`ledger.d/2026-10-23-r8-p1-sign.md` OWED), and an unverifiable claim does not enter the kit. Δ4 (Windows-native `cmd.exe` + `gradlew.bat` route for a Windows-side root) is not on main (only the `niagaraTest` copy route in `types/moduleTest.md:195`), so the retro stays pending for a fold unit.
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-u4-c58-build-reference`) — Δ1-Δ3 `build-verify.md` § Signing per deploy target; Δ4 `build-verify.md` § Raw gradle; Δ5 `types/security.md` § 2.4; Δ6 `METHODOLOGY.md` K34. Δ3: the root-block half is folded at `build-verify.md:202-205`; the `--info` "which profile signed" half is DROPPED: no source line for those log lines was ever located (`ledger.d/2026-10-23-r8-p1-sign.md` OWED), and an unverifiable claim does not enter the kit.

@@ -163,6 +163,19 @@ The PANCCADIA read/write users talk oBIX (`types/dashboard.md` § Facade contrac
   `[ev: retro devguide415-r3-web-session-headers Δ6]`
 - Bind each oBIX user to the authentication scheme its client actually speaks (corpus B605).
 
+### 2.6 Least privilege for a module's users `[ev: retro devguide415-r2-security-tags-analytics Δ2]`
+
+The README names the category and role each module user needs (read user, write user, kiosk user) instead of
+`admin`. Facts that shape that role (4.15.6.20 `StationSecurity/` guide; corpus B1326 rows 4-7):
+- **Ancestors are automatic:** a user granted a component by category gets operator read-only on its ancestors so
+  the tree stays navigable; the station recomputes this periodically, and CategoryService `Update` forces it
+  (`role_AncestorPermissions.txt:7-9`). Do not add categories to parent folders just for navigation.
+- **Histories need the operator tier:** history views open only with the operator permission level set and
+  operator read (`r`) granted (`role_HistoryPermissions.txt:7`). Test a module's history ext with an operator user.
+- **`UserService` slots are per own account:** with the Operator flag on the slot, `r` reads and `rw` writes the
+  user's own Email, Password, Cell Phone and Facets; all other users stay hidden. A self-service password change
+  needs `rw` on `UserService.Password` (`role_UserServiceComponentPermission.txt:26-39`).
+
 ---
 
 ## 3 · CSRF + secrets
@@ -179,7 +192,7 @@ guard. Wire it in `web.xml` for every servlet that mutates state:
   <filter-class>javax.baja.web.filters.CsrfProtectedFilter</filter-class>
   <init-param>
     <param-name>httpMethod</param-name>
-    <param-value>POST,PUT,DELETE</param-value>
+    <param-value>POST,PUT</param-value>
   </init-param>
 </filter>
 <filter-mapping>
@@ -187,6 +200,12 @@ guard. Wire it in `web.xml` for every servlet that mutates state:
   <url-pattern>/myServlet</url-pattern>
 </filter-mapping>
 ```
+
+`httpMethod` is split on `,` and matched exactly against `getMethod()` (javap web-rt 4.15.6.20
+`CsrfProtectedFilter.init`/`doFilter`), so write it without spaces and list every mutating method the servlet
+accepts. The shipped 4.15.6.20 modules use `POST`, `POST,PUT`, `GET,POST` or `GET`; none lists `DELETE`
+(6 of the 14 jars with a `WEB-INF/web.xml` map the filter, e.g. web-rt `WEB-INF/web.xml:35` `POST,PUT`,
+bacnetAws-rt `:27` `GET,POST`). Add `DELETE` only if your servlet accepts it.
 
 The token must travel with every mutating request. Three carrier options:
 
@@ -286,6 +305,24 @@ String safeName = SlotPath.escape(rawSlotName);
 ```
 
 [ev: code BRelationInfoList.java `SlotPath.escape(...)`; tagdictionary-rt; corpus B507 §SEC-09]
+
+### 4.1a BQL literal rules `[ev: corpus B1237 §1237.6]`
+
+Paths are `bql-rt/…` (vineflower) unless named.
+
+- **The whole query text is slot-unescaped before it is tokenized** (`javax/baja/bql/BqlQuery.java:22-25`): a `$xx`
+  sequence in an embedded value is decoded first. To match a literal `$20` write `'%$2420%'`. `toBqlLiteral`
+  slot-escapes the encoded value (`BqlQuery.java:87-97`), so § 4.1 round-trips; a raw string concatenation does not.
+- **Enum literals** take the frozen-enum dot form `<module>:<Enum>.<tag>` (`alarm:SourceState.offnormal`); the
+  parser accepts only a `BFrozenEnum` there, else `invalid.enum.tag` (`com/tridium/bql/compiler/ExprParser.java:398-414`).
+  A dynamic enum cannot use the dot form.
+- **Alarm scans:** query `FROM openAlarms` (or `ackPendingAlarms`) when only those rows matter — the extent names
+  are case-sensitive (`alarm-rt/…/BAlarmDatabase.java:228-231`); a BQLTIME window bounds the rest, and that it
+  narrows the record scan is `[INFER]`.
+- **Custom functions** are called `<module>:<Type>.<fn>(args)` (`ExprParser.java:390,398-403`; devguide `bql.txt:165`);
+  user-defined aggregates are "still considered experimental" (devguide `bql.txt:232`).
+
+[ev: retro n4-course-drivers-bql-ords-files Δ2]
 
 ### 4.2 BOrd from client input — allowlist prefix mandatory
 
@@ -548,6 +585,22 @@ If the protocol requires a specific digest algorithm (e.g. a device that mandate
 
 **See also:** `types/security.md §3.2` (`BPassword` safe handling), `types/issues-and-gotchas.md §H1` (precision-consistency lint). [ev: corpus B1104]
 
+### 9.1 FIPS-mode constraints `[ev: retro devguide415-r2-security-tags-analytics Δ1]`
+
+A station licensed for FIPS 140-2 mode puts the FIPS providers first and removes most non-FIPS algorithms, so a
+module must run unchanged in both modes (4.15.6.20 `Fips/` guide; corpus B1326 rows 1-3):
+- **Never name a provider.** Call `Cipher.getInstance("AES/GCM/NoPadding")`, not `getInstance(alg, "BCFIPS")`:
+  a named provider works in one mode only (`Fips/DevelopersNotes-51FBF6BE.txt:14-20`). The same holds for
+  `MessageDigest`, `Signature`, `Mac` and `KeyStore`. [INFER: the guide shows `Cipher` only]
+- **Legacy algorithms are decrypt-only.** Blowfish, MD5 and MD5withRSA remain only to read old data (decrypt
+  Blowfish, never encrypt); any other non-FIPS algorithm throws (`Fips/Non-FIPS-compliantAlgorithms-520109A5.txt:7-23`).
+  New data uses AES and SHA-256 or stronger (§ 9).
+- **Secrets are 14 characters or more:** user passwords, certificate passwords and the system passphrase
+  (`Fips/FIPS1402-51D87C8C.txt:13`). Size the module's machine users (oBIX, station links) for that and plan their
+  change before the FIPS licence is installed (`Fips/UpdatingUserPasswordsFIPS_N4-1E65C4B9.txt:7`).
+- No kit lint checks this yet: owed G80 `jca-named-provider` (`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`).
+  `[deferred: retro devguide415-r2-security-tags-analytics Δ1]`
+
 ---
 
 ---
@@ -564,6 +617,17 @@ Two orthogonal security axes govern a module that makes HTTP calls AND accepts i
 **Key rule:** the `enableNonDriverClients` gate is OUTBOUND-only. It has zero effect on who can connect TO the station. A module that sets `enableNonDriverClients=true` is opting into outbound HTTP, not opening inbound auth. Documenting both axes is mandatory in any module that touches either, so integrators do not mistake an outbound-gate change for an inbound auth weakening. `[ev: corpus B1075]`
 
 **See also:** `types/cloud-connector.md §2` (transport dual model + HTTP transport), `types/issues-and-gotchas.md §H2` (`enableNonDriverClients` gotcha).
+
+### 10.1 TLS uses the platform stores `[ev: retro devguide415-r2-security-tags-analytics Δ4]`
+
+Certificates and trust live in the platform: the User Key Store, the System and User Trust Stores, the Allowed
+Hosts exemptions and the `CertManagerService` (4.15.6.20 `StationSecurity/SSLAllowedHostsTab.txt:7-19`; corpus
+B1326 row 9). A module never ships or loads its own keystore or truststore file and never installs a trust-all
+`TrustManager`; the commissioning step is importing the peer's CA into the station's trust store. A
+station-to-station connection with a bad certificate fails silently, with no approval prompt; the cause is the
+connection's last failure cause (`SSLAllowedHostsTab.txt:17`), so the module reports that field, not a generic
+"offline". No kit lint checks this yet: owed G81 `embedded-keystore`
+(`ledger.d/2026-10-23-r8-u8-sec-tags-analytics.md`). `[deferred: retro devguide415-r2-security-tags-analytics Δ4]`
 
 **See also:** `types/actions.md` §3 (ADMIN_INVOKE flag), `types/actions.md` §6
 (`@NiagaraRpc` CSRF surface), `types/observability.md` (audit vs log decision table).
