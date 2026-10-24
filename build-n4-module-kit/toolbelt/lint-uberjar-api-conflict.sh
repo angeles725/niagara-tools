@@ -7,6 +7,13 @@
 # provides it (api). See types/module-wiring.md §1. Advisory (WARN).
 # [ev: retro 2026-09-19-module-wiring]
 #
+# Implementation: go/internal/lint/rules/uberjarapi on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-uberjar-api-conflict <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3
+# otherwise). An unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as
+# awk_lint_list did); an unreadable *.gradle.kts is "cannot scan <file>: <reason>", exit 3 (the bash grep
+# skipped it in silence). A root with no *.gradle.kts stays a clean exit 0 (report-module runs it on every
+# module root; tests/lint-empty-root.bats ER5).
+#
 # Usage:  lint-uberjar-api-conflict.sh <src-root>     (finds *.gradle.kts under it)
 #   Row:  WARN  lint-uberjar-api-conflict  <file>  <group:artifact> is both uberjar()'d and api()'d
 #   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
@@ -14,34 +21,11 @@
 # Mutation: UAC2 -- skip the intersection and UAC2 stops warning on a lib both uberjar'd and api'd
 # Mutation: UAC-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-uberjar-api-conflict raw 'usage: lint-uberjar-api-conflict.sh <src-root>' "$@"
-# Advisory, "Exit: 0 always": a root with no *.gradle.kts has nothing to check (report-module runs it on
-# every module root), so an empty list stays a clean exit 0.
-# shellcheck disable=SC2034  # read by lib/awk-lint.sh _al_list
-AL_EMPTY_OK=1
-awk_lint_list -name '*.gradle.kts'
-
-# extract group:artifact (drop :version) from a config line
-coords() {
-    # $1 = config keyword (uberjar|api|implementation)
-    grep -Eo "$1\\([\"']([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)(:[^\"']*)?[\"']\\)" "$f" 2>/dev/null \
-        | sed -nE "s/.*[\"']([A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+)(:[^\"']*)?[\"'].*/\\1/p" | sort -u
-}
-
-while IFS= read -r f; do
-    ub=$(coords uberjar)
-    [ -n "$ub" ] || continue
-    apis=$( { coords api; coords implementation; } | sort -u )
-    [ -n "$apis" ] || continue
-    dup=$(comm -12 <(printf '%s\n' "$ub") <(printf '%s\n' "$apis") 2>/dev/null)
-    if [ -n "$dup" ]; then
-        while IFS= read -r ga; do
-            [ -n "$ga" ] || continue
-            printf 'WARN  lint-uberjar-api-conflict  %s  %s is both uberjar()d and api()d\n' "$f" "$ga"
-        done <<< "$dup"
-    fi
-done < "$AL_TMP/files"
-
-awk_lint_exit 0
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-uberjar-api-conflict: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-uberjar-api-conflict "$@"

@@ -85,7 +85,7 @@ SH
 }
 
 @test "ER5: the documented exit-0 exceptions stay exit 0 with no output on an empty root" {
-  # Mutation: ER5 -- dropping AL_EMPTY_OK from lint-uberjar-api-conflict.sh turns every report-module run ERROR.
+  # Mutation: ER5 -- dropping EmptyOK from rules/uberjarapi (lint-uberjar-api-conflict) turns every report-module run ERROR.
   local b
   for b in lint-jasmine-ux.sh lint-lexicon-ascii.sh lint-uberjar-api-conflict.sh; do
     run bash "$KIT/toolbelt/$b" "$EMPTY"
