@@ -1,0 +1,6 @@
+-- args --
+@DIR@
+-- want --
+exit 3
+ERROR  lint-status-parity  @DIR@  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --

@@ -21,6 +21,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sessionstore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/timers"
@@ -49,6 +50,7 @@ func All() []lint.Spec {
 		delays.Spec(),
 		structure.Spec(),
 		demandscope.Spec(),
+		statusparity.Spec(),
 		sessionstore.Spec(),
 		extwritable.Spec(),
 	}

@@ -1,0 +1,24 @@
+-- args --
+-h
+-- want --
+exit 3
+-- stderr --
+usage: lint-status-parity.sh [--strict] <java-src-dir>
+-- A.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
