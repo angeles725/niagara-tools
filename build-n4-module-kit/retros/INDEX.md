@@ -226,7 +226,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-devguide415-r3-packaging-extension-control.md | kit | 2026-10-15 | folded | 4 |
 | 2026-10-15-devguide415-r3-web-session-headers.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-devguide415-runtime-api-corrections.md | kit | 2026-10-15 | folded | 10 |
-| 2026-10-15-n4-course-as-exemplar-source.md | kit | 2026-10-15 | pending | 4 |
+| 2026-10-15-n4-course-as-exemplar-source.md | kit | 2026-10-15 | folded | 4 |
 | 2026-10-15-n4-course-authoring-files-and-libraries.md | kit | 2026-10-15 | folded | 5 |
 | 2026-10-15-n4-course-build-deps-permissions-signing.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-15-n4-course-drivers-bql-ords-files.md | kit | 2026-10-15 | folded | 5 |
@@ -238,8 +238,8 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-15-testing-parity-btestng.md | kit | 2026-10-15 | folded | 6 |
 | 2026-10-16-n4-course-handson-build-signing-windows.md | kit | 2026-10-16 | folded | 6 |
 | 2026-10-16-n4-course-handson-ndriver.md | kit | 2026-10-16 | folded | 8 |
-| 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | pending | 6 |
-| 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | pending | 6 |
+| 2026-10-16-n4-course-handson-services-history-threading.md | kit | 2026-10-16 | folded | 6 |
+| 2026-10-16-n4-course-handson-slotomatic-authoring.md | kit | 2026-10-16 | folded | 6 |
 | 2026-10-16-n4-course-handson-workflow.md | kit | 2026-10-16 | folded | 4 |
 | 2026-10-21-modular-line-efficient-quality.md | kit | 2026-10-21 | folded | 5 |
 | 2026-10-21-shared-sha256-fail-closed.md | kit | 2026-10-21 | folded | 2 |

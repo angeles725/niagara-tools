@@ -70,7 +70,15 @@ generates `META-INF/module.xml` from it. **Never hand-author `META-INF/module.xm
   or differs, `NiagaraTypeAnnotationProcessor` adds one and saves the file; it never removes or renames one. After
   renaming or deleting a type, delete its stale line (or the file, to regenerate it), or registry build logs
   SEVERE `Missing class for "<type>"` at station start (`Builder.java:766`; a listed class without `Sys.loadType()`
-  logs `Missing Sys.loadType() <type>`, `:776`). Test types
+  logs `Missing Sys.loadType() <type>`, `:776`). An `@AgentOn` added to a type that already has a line is not
+  written either: the "differs" test compares only the `<agent>` elements the line already carries
+  (`entryMatches` in nre 4.14.0.162 vineflower
+  `sources/decompiled/nre-ext/javax/baja/nre/annotations/processors/ModuleInclude.java:376-415`), so a line with no
+  `<agent>` matches any annotation and is never rewritten. Live on 4.15.6.20 the course Bonus Lab
+  `BTrafficLightDriverPointManager` kept its agent-less line until the file was deleted and rebuilt. After adding
+  or changing an `@AgentOn`, delete the type's line (or the file); `lint-agent-on-shape.sh` checks the shape of
+  `<on type>` only, and the source-vs-include check is owed Go lint G99 `agent-on-include-sync`.
+  `[ev: retro n4-course-handson-slotomatic-authoring Δ5]` Test types
   (`test.com.<vendor>…B*Test`) belong only in `moduleTest-include.xml`: the processor picks that file for classes
   under a configured test root. `[ev: corpus B1233 §1233.4]` `[ev: corpus B1128]`
   `[ev: retro n4-course-authoring-files-and-libraries Δ5]`
