@@ -27,29 +27,29 @@ type saveData struct {
 	w             *plan.State
 }
 
-// bogPath is os.path.join(home, "config.bog").
+// bogPath is os.path.join(home, "config.bog") for the non-empty home a plan checks.
 func bogPath(home string) string {
-	if home == "" || strings.HasSuffix(home, "/") {
+	if strings.HasSuffix(home, "/") {
 		return home + "config.bog"
 	}
 	return home + "/config.bog"
 }
 
 // bogState is _bog_state: config.bog's mtime (st_mtime), size and sha256, nil when it cannot be
-// read (an OSError).
+// read (an OSError). The file is stat'ed once open, not by path first: the same outcome bar a
+// race.
 func bogState(home string) *pyjson.Object {
-	path := bogPath(home)
-	st, err := os.Stat(path)
-	if err != nil {
-		return nil
-	}
-	f, err := os.Open(path)
+	f, err := os.Open(bogPath(home))
 	if err != nil {
 		return nil
 	}
 	defer f.Close()
+	st, err := f.Stat()
 	digest := sha256.New()
-	if _, err := io.Copy(digest, f); err != nil {
+	if err == nil {
+		_, err = io.Copy(digest, f)
+	}
+	if err != nil {
 		return nil
 	}
 	t := st.ModTime() // st_mtime is sec + nsec * 1e-9 as a double
@@ -68,7 +68,7 @@ func savePlan(_ plan.Client, _ *pyjson.Object, w *plan.State, sess *session.Sess
 		note += "no --station-home for this station, so persistence cannot be checked"
 	}
 	op := obj("ssc", "invokeAction", "arg", obj("h", sess.RootHandle, "a", "save"))
-	return &plan.Planned{Ops: []any{op}, Inverse: []any{}, Notes: []any{note, "no inverse: a save cannot be undone"},
+	return &plan.Planned{Ops: []any{op}, Notes: []any{note, "no inverse: a save cannot be undone"},
 		Data: d}, nil
 }
 

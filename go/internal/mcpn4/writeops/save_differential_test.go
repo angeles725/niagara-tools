@@ -171,11 +171,13 @@ func saveCorpus() []saveCase {
 		"touch-1us":    {obj("mtime_ns", baseNS+1000)},
 		"older-bytes":  {obj("write", "older", "mtime_ns", baseNS-5_000_000_000)},
 		"older-touch":  {obj("mtime_ns", baseNS-1)},
+		"older-1us":    {obj("mtime_ns", baseNS-1000)},
+		"same-size":    {obj("write", "gob", "mtime_ns", baseNS)},
 		"remove":       {obj("remove", true)},
 		"empty":        {obj("write", "", "mtime_ns", baseNS)},
 		"remove-write": {obj("remove", true), obj("write", "bog", "mtime_ns", baseNS)},
 	}
-	order := []string{"none", "rewrite", "same-bytes", "touch-1ns", "touch-1us", "older-bytes", "older-touch", "remove", "empty", "remove-write"}
+	order := []string{"none", "rewrite", "same-bytes", "touch-1ns", "touch-1us", "older-bytes", "older-touch", "older-1us", "same-size", "remove", "empty", "remove-write"}
 	none := pyjson.NewObject()
 	var cases []saveCase
 	base := saveCase{fixture: "bog", mtime: baseNS, polls: none, timeout: 1.0, interval: 0.25, station: "FakeStation",

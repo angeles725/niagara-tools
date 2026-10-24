@@ -49,8 +49,10 @@ func TestServerPassesTheHomesToTheWriteState(t *testing.T) {
 	if state.SaveTimeout != 30.0 || state.SaveInterval != 0.5 || state.Sleep == nil || state.Monotonic == nil {
 		t.Errorf("timing = %v %v", state.SaveTimeout, state.SaveInterval)
 	}
-	if a, b := state.Monotonic(), state.Monotonic(); b < a {
-		t.Errorf("monotonic went back: %v then %v", a, b)
+	a := state.Monotonic()
+	state.Sleep(0.02)
+	if b := state.Monotonic(); b-a < 0.02 || b-a > 5 {
+		t.Errorf("a 0.02 s sleep moved the clock from %v to %v", a, b)
 	}
 	cfg.StationHomes = nil
 	if state, err = NewWriteState(cfg); err != nil || state.StationHomes == nil || len(state.StationHomes) != 0 {
