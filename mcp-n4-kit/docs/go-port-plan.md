@@ -220,10 +220,10 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
 | `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
-| `test_tools_destructive.py` | 101 | 4 | 9 | 14 | 2 | 29 | 72 |
+| `test_tools_destructive.py` | 101 | 4 | 7 | 13 | 2 | 26 | 75 |
 | `test_tools_write.py` | 76 | 2 | 10 | 4 | 7 | 23 | 53 |
 | `test_write_parity.py` | 24 | 0 | 0 | 0 | 0 | 0 | 24 |
-| **Total** | **666** | **166** | **36** | **91** | **18** | **311** | **355** |
+| **Total** | **666** | **166** | **34** | **90** | **18** | **308** | **358** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
