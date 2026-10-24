@@ -206,13 +206,38 @@ var methodsCases = []methodsCase{
 }`, []Method{{"deep", 3, 5}}},
 }
 
+// goOnlyMethodsCases are the declared differences of Methods from mb_parse (package doc): TestMethods runs
+// them, TestDifferentialAwk does not feed them to the awk lib.
+var goOnlyMethodsCases = []methodsCase{
+	{"wrapped signature closing on the brace line", `class W {
+  void m(int a,
+      int b) {
+    x();
+  }
+  public void t(int a,
+      int b)
+      throws Exception {
+    y();
+  }
+  void z(int a, int b) {
+  }
+}`, []Method{{"m", 3, 5}, {"t", 8, 10}, {"z", 11, 12}}},
+	{"a wrapped ) { after a statement is not a signature", `class S {
+  int f = g(1,
+      2);
+  void a(int x,
+      int y) {
+  }
+}`, []Method{{"a", 5, 6}}},
+}
+
 func methodsOf(src string) []Method {
 	stripped, _ := Strip(strings.Split(src, "\n"))
 	return Methods(stripped)
 }
 
 func TestMethods(t *testing.T) {
-	for _, tc := range methodsCases {
+	for _, tc := range append(append([]methodsCase{}, methodsCases...), goOnlyMethodsCases...) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := methodsOf(tc.src); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("Methods\n got %v\nwant %v", got, tc.want)

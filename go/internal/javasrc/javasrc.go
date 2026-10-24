@@ -10,6 +10,10 @@
 //     or more (I1), names it from a single-line signature or, for a brace alone on its line, from a
 //     backward scan that stops at an annotation, a prior statement or a prior block (I2), never names
 //     if/for/while/switch/catch/try/else/do/new (I3) and skips one-liner get/set/is accessors (I4).
+//   - One declared difference from mb_parse (2026-10-24): the same backward scan also names a signature
+//     wrapped over several lines whose last line holds ") {" (`void m(int a,` / `    int b) {`); mb_parse
+//     missed that method, a false negative for every method-scoped lint. TestDifferentialAwk's inputs do
+//     not hold that shape; the bash lints still on mb_parse keep the old behaviour.
 //
 // Scanning is byte-wise: every character the rules test is ASCII, so multi-byte UTF-8 text passes
 // through unchanged, as it does in awk.
@@ -133,6 +137,8 @@ var (
 	keyword   = regexp.MustCompile(`^(if|for|while|switch|catch|try|else|do|new)$`)
 	typeOrKw  = regexp.MustCompile(`^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$`)
 	accessor  = regexp.MustCompile(`^(get|set|is)[A-Z_]`)
+	// the last line of a wrapped signature: a ")" with no "(" before it, or a throws clause, then the "{"
+	wrappedEnd = regexp.MustCompile(`^[^(]*\)[[:space:]]*(throws[^{]*)?\{|^[[:space:]]*throws[^{(]*\{`)
 )
 
 // space is awk's [[:space:]] in the C locale.
@@ -242,7 +248,9 @@ func methodName(stripped []string, i int) string {
 			return ""
 		}
 	}
-	if strings.Trim(ln, space) != "{" { // awk: the line is "{" once all whitespace is removed
+	// A lone "{" (awk: the line is "{" once all whitespace is removed), or the ") {" end of a signature
+	// wrapped over several lines: the name is on the line above that opened the parameter list.
+	if strings.Trim(ln, space) != "{" && !wrappedEnd.MatchString(ln) {
 		return ""
 	}
 	for k := i - 1; k >= 0 && k >= i-backScanLines; k-- {
