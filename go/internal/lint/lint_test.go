@@ -792,12 +792,12 @@ type configFake struct {
 	seen *string
 }
 
-func (r configFake) Configure(a Args) error {
+func (r configFake) Configure(a Args) (Configured, error) {
 	*r.seen = a.Option
 	if a.Option == "bad" {
-		return errors.New("lint-c: --map file not found: bad\n")
+		return nil, errors.New("lint-c: --map file not found: bad\n")
 	}
-	return nil
+	return r, nil
 }
 
 // TestConfigure: a rule run alone that implements Configurer gets the parsed Args after the root check
@@ -908,7 +908,10 @@ type valuesFake struct {
 	seen *[]string
 }
 
-func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }
+func (r valuesFake) Configure(a Args) (Configured, error) {
+	*r.seen = a.Values["--table"]
+	return r, nil
+}
 
 // xmlFake is a Rule whose Check fails with a positioned XML error, as an internal/xmlsrc consumer does.
 type xmlFake struct{ fakeRule }

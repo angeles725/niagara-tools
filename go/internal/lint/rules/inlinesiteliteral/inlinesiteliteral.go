@@ -39,7 +39,7 @@ func Spec() lint.Spec {
 	}
 }
 
-// rule holds the options Configure read: the site-table files (absolute) and the site patterns.
+// rule holds the options Configure read (a configured copy; the registered rule holds none): the site-table files (absolute) and the site patterns.
 type rule struct {
 	tables   map[string]bool
 	patterns []*regexp.Regexp
@@ -62,22 +62,22 @@ var (
 const maxShown = 72 // bytes of a literal a row shows before "..."
 
 // Configure reads --site-table (each a regular file) and --site-pattern (each a valid regex).
-func (r *rule) Configure(a lint.Args) error {
-	r.tables, r.patterns = map[string]bool{}, nil
+func (*rule) Configure(a lint.Args) (lint.Configured, error) {
+	r := &rule{tables: map[string]bool{}}
 	for _, p := range a.Values["--site-table"] {
 		if st, err := os.Stat(p); err != nil || !st.Mode().IsRegular() {
-			return fmt.Errorf("%s: --site-table file not found: %s\n", ID, p)
+			return nil, fmt.Errorf("%s: --site-table file not found: %s\n", ID, p)
 		}
 		r.tables[abs(p)] = true
 	}
 	for _, p := range a.Values["--site-pattern"] {
 		re, err := regexp.Compile(p)
 		if err != nil {
-			return fmt.Errorf("%s: bad --site-pattern %s: %v\n", ID, p, err)
+			return nil, fmt.Errorf("%s: bad --site-pattern %s: %v\n", ID, p, err)
 		}
 		r.patterns = append(r.patterns, re)
 	}
-	return nil
+	return r, nil
 }
 
 // CheckTree reports, per file in walk order, the first site literal of each line outside the site table.

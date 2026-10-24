@@ -23,11 +23,10 @@ type rule struct{ bog, matrix string }
 func (*rule) ID() string              { return id }
 func (*rule) Severity() lint.Severity { return lint.Fail }
 
-// Configure reads the last --bog and --matrix values (Mode Valued: each is a repeatable option, and the
-// bash loop kept the last one given).
-func (r *rule) Configure(a lint.Args) error {
-	r.bog, r.matrix = last(a.Values["--bog"]), last(a.Values["--matrix"])
-	return nil
+// Configure is the rule with the last --bog and --matrix values (Mode Valued: each is a repeatable option,
+// and the bash loop kept the last one given).
+func (*rule) Configure(a lint.Args) (lint.Configured, error) {
+	return &rule{bog: last(a.Values["--bog"]), matrix: last(a.Values["--matrix"])}, nil
 }
 
 func last(vs []string) string {

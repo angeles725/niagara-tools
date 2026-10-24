@@ -132,10 +132,37 @@ type RowError struct{ Row string }
 func (e *RowError) Error() string { return e.Row }
 
 // Configurer is implemented by a rule that reads a value option (Spec.Option, Mode Valued) before it scans:
-// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk. A
-// non-nil error is printed verbatim on stderr (the rule writes the whole text) and exits 3 with no row.
+// when the rule runs alone, Configure gets the parsed Args after the root check and before the walk and
+// returns a NEW rule value of the same kind (Rule, TreeRule or RootRule) holding what it read, which runs
+// instead; the registered rule is never changed, so in one process a later run (alone or in a rule list,
+// where Configure is not called) never sees an earlier run's values. A non-nil error is printed verbatim on
+// stderr (the rule writes the whole text) and exits 3 with no row.
 type Configurer interface {
-	Configure(a Args) error
+	Configure(a Args) (Configured, error)
+}
+
+// Configured is the rule value a Configurer returns: a Rule, a TreeRule or a RootRule, of its spec's kind.
+type Configured interface {
+	ID() string
+	Severity() Severity
+}
+
+// withRule is sp running r, the value its rule's Configure returned, in place of its registered rule; a
+// value of another kind is a registration bug (panic).
+func (sp Spec) withRule(r Configured) Spec {
+	var ok bool
+	switch {
+	case sp.Tree != nil:
+		sp.Tree, ok = r.(TreeRule)
+	case sp.Root != nil:
+		sp.Root, ok = r.(RootRule)
+	default:
+		sp.Rule, ok = r.(Rule)
+	}
+	if !ok {
+		panic("lint: rule " + sp.ID() + ": Configure returned a value of another kind")
+	}
+	return sp
 }
 
 // ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
@@ -249,10 +276,7 @@ func (sp Spec) ID() string { return sp.rule().ID() }
 func (sp Spec) severity() Severity { return sp.rule().Severity() }
 
 // rule is the one rule value the spec sets.
-func (sp Spec) rule() interface {
-	ID() string
-	Severity() Severity
-} {
+func (sp Spec) rule() Configured {
 	switch {
 	case sp.Tree != nil:
 		return sp.Tree

@@ -28,6 +28,7 @@ func TestParseValuedNamed(t *testing.T) {
 		{[]string{dir}, false, nil, ""},
 		{[]string{"--strict", "--bog", "b", dir, "--strict", "--bog", ""}, true, map[string][]string{"--bog": {"b", ""}}, ""},
 		{[]string{"", dir}, false, nil, ""},
+		{[]string{"", "", dir}, false, nil, ""}, // each empty argument leaves the root unset in turn
 		{nil, false, nil, usage + "\n"},
 		{[]string{"--strict"}, false, nil, usage + "\n"},
 		{[]string{""}, false, nil, usage + "\n"},
@@ -70,12 +71,12 @@ type configuredRoot struct{ bog string }
 
 func (*configuredRoot) ID() string         { return "lint-w" }
 func (*configuredRoot) Severity() Severity { return Fail }
-func (r *configuredRoot) Configure(a Args) error {
-	r.bog = ""
+func (r *configuredRoot) Configure(a Args) (Configured, error) {
+	c := &configuredRoot{}
 	if vs := a.Values["--bog"]; len(vs) > 0 {
-		r.bog = vs[len(vs)-1]
+		c.bog = vs[len(vs)-1]
 	}
-	return nil
+	return c, nil
 }
 func (r *configuredRoot) CheckRoot(root string) ([]Finding, error) {
 	out := []Finding{{Path: root, Msg: "bog=" + r.bog, Severity: Warn, Status: "STALE"}}
@@ -102,11 +103,35 @@ func TestCommandValuedRootRule(t *testing.T) {
 		{[]string{"lint-w", "--strict", dir}, 1, "STALE  lint-w  " + dir + ": bog=\n", ""},
 		{[]string{"lint-w", dir, "--bog", "broken"}, 3, "STALE  lint-w  " + dir + ": bog=broken\nlint-w  ERROR  " + dir + "  broken bog\n", ""},
 		{[]string{"lint-w", dir, "--nope"}, 3, "", "lint-w: unknown option: --nope\n"},
+		{[]string{"lint-w,lint-r", dir}, 1, "STALE  lint-w  " + dir + ": bog=\nFAIL  lint-r  " + dir + ": root seen\n", ""},
 		{[]string{"lint-w,lint-r", dir, "--bog", "b"}, 3, "", "n4lint: not a directory: --bog\n"},
 	} {
 		s, o, e := stdio()
 		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.String() != tc.err {
 			t.Errorf("%q: exit %d out %q err %q, want %d, %q and %q", tc.args, code, o, e, tc.code, tc.out, tc.err)
+		}
+	}
+}
+
+// TestConfigureNeverMutatesTheRegisteredRule: Configure returns a configured copy, so in one process a
+// configured run leaves no option value behind: the next run of the same Command, alone without the option
+// or in a rule list (where Configure is not called), sees none.
+func TestConfigureNeverMutatesTheRegisteredRule(t *testing.T) {
+	dir := t.TempDir()
+	sp := Spec{Root: &configuredRoot{}, Mode: Valued, Usage: "usage: lint-w.sh <root>", Options: []string{"--bog"},
+		ValuedStrict: true, ValuedNamed: true}
+	main := Command(sp, rootSpec(rootFake{seen: new([]string)}))
+	for _, tc := range []struct {
+		args []string
+		out  string
+	}{
+		{[]string{"lint-w", dir, "--bog", "x"}, "STALE  lint-w  " + dir + ": bog=x\n"},
+		{[]string{"lint-w,lint-r", dir}, "STALE  lint-w  " + dir + ": bog=\nFAIL  lint-r  " + dir + ": root seen\n"},
+		{[]string{"lint-w", dir}, "STALE  lint-w  " + dir + ": bog=\n"},
+	} {
+		s, o, _ := stdio()
+		if main(tc.args, s); o.String() != tc.out {
+			t.Errorf("%q: out %q, want %q", tc.args, o, tc.out)
 		}
 	}
 }
