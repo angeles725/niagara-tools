@@ -233,6 +233,13 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     (PRs #288, #296). Adding a lint is one rule file plus its registration — never a copied walker, formatter or
     stripper. Bash follows the same rule: reuse `toolbelt/lib/*` (`scan-files.sh`, `awk-lint.sh`,
     `method-boundary.sh`) instead of a private copy. `[ev: retro r8-t22-retro-deltas Δ9]`
+  - **Pin every shared helper with a sync test.** A PR that moves copies into one `toolbelt/lib/*.sh` file or one
+    shared function also adds a bats test that fails when a caller stops using it or a private copy comes back.
+    Models: `tests/lint-structure.bats` LS15-sync (`lib/signing-block.sh`, sourced by `build.sh`,
+    `lint-structure.sh` and `preflight.sh`) and `tests/report-module.bats` RM-row-parser (one row parser in
+    `report-module.sh`). Without the pin, "never a private copy" is prose and the next quick fix pastes the copy
+    back. Review check: the PR names the pinning test and shows an OBSERVED mutation (re-inline one copy, the test
+    goes red). `[ev: retro r10-thin-entry-one-concern Δ1]`
   - **No fork per input line.** A shell `while read` loop whose body pipes `printf`/`echo` of the record into
     `grep`/`sed`/`awk` (or reads it with `<<<`) costs a clone and an exec per line: 35-97 s on a client tree
     against 0.13-1.25 s for one awk per file with byte-identical output. Use `toolbelt/lib/awk-lint.sh`
