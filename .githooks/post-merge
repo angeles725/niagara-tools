@@ -16,7 +16,7 @@ kit="$toplevel/build-n4-module-kit"
 
 if ! err=$(bash "$kit/toolbelt/kit-state.sh" --write "$kit" 2>&1 >/dev/null); then
   rm -f "$kit/BUILD-STATE.md" "$kit/retros/INDEX.md"
-  reason=$(printf '%s\n' "$err" | grep -m1 . || true)
+  reason=$(grep -m1 . <<<"$err" || true)   # a here-string: no printf to break the pipe of
   printf 'kit-state: could not regenerate BUILD-STATE.md/retros/INDEX.md (%s) — generated files removed\n' \
     "${reason:-kit-state --write failed}" >&2
 fi

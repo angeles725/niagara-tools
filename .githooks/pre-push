@@ -15,6 +15,8 @@
 # BUILD-STATE.src.md, ledger.d/ and retros/ are not build-relevant (they need no retro of their own), but they are
 # exactly what sweep checks: a range that changes any of them runs sweep at every exit, even the trivial one.
 #
+# Every grep reads its input from a here-string, never `printf … | grep -q`: git runs this hook with SIGPIPE
+# ignored, so an early-exiting grep made printf report "write error: Broken pipe" (tests H29).
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
 
@@ -56,16 +58,14 @@ log=$(git log --format=%B "$range") || refuse "git log $range failed"
 # build-relevant = kit files EXCEPT BUILD-STATE.src.md, ledger.d/** and retros/**, PLUS scripts/**, PLUS
 # go/** except the built go/bin/ (the toolbelt wrappers exec the Go tools, so a go/ change changes lint
 # behavior like a toolbelt script change). [ev: retro go-javasrc-scanner Δ1]
-relevant=$(printf '%s\n' "$changed" \
-  | grep -E '^(build-n4-module-kit/|scripts/|go/)' \
+relevant=$(grep -E '^(build-n4-module-kit/|scripts/|go/)' <<<"$changed" \
   | grep -vE '^go/bin/' \
   | grep -vE '^build-n4-module-kit/BUILD-STATE(\.src)?\.md$' \
   | grep -vE '^build-n4-module-kit/ledger\.d/' \
   | grep -vE '^build-n4-module-kit/retros/' || true)
 # ledger data = the files sweep checks. The two early exits below waive the retro bookkeeping only, never
 # the coherence of ledger data the range changes. [ev: retro r10-path-keyed-gates-skip-data]
-has_ledger_data=$(printf '%s\n' "$changed" \
-  | grep -cE '^build-n4-module-kit/(BUILD-STATE(\.src)?\.md|ledger\.d/|retros/)' || true)
+has_ledger_data=$(grep -cE '^build-n4-module-kit/(BUILD-STATE(\.src)?\.md|ledger\.d/|retros/)' <<<"$changed" || true)
 pass_early() {   # exit 0, after sweep when the range changed ledger data
   [ "${has_ledger_data:-0}" -ge 1 ] || exit 0
   run_sweep && exit 0
@@ -76,20 +76,20 @@ pass_early() {   # exit 0, after sweep when the range changed ledger data
 [ -n "$relevant" ] || pass_early   # nothing build-relevant → only the content half of changed ledger data
 
 # trivial waiver short-circuits the retro bookkeeping (not the content half of changed ledger data)
-if printf '%s\n' "$log" | grep -qE 'Retro: none \(trivial:'; then pass_early; fi
+if grep -qE 'Retro: none \(trivial:' <<<"$log"; then pass_early; fi
 
 # a ledger update = a ledger.d/ fragment or a BUILD-STATE.src.md edit (BUILD-STATE.md is generated from them)
-has_state=$(printf '%s\n' "$changed" | grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' || true)
-has_retro=$(printf '%s\n' "$changed" | grep -E '^build-n4-module-kit/retros/[^/]+\.md$' | grep -vE '/INDEX\.md$' | head -1 || true)
+has_state=$(grep -cE '^build-n4-module-kit/(BUILD-STATE\.src\.md|ledger\.d/[^/]+\.md)$' <<<"$changed" || true)
+has_retro=$(grep -E '^build-n4-module-kit/retros/[^/]+\.md$' <<<"$changed" | grep -vE '/INDEX\.md$' | sed -n 1p || true)
 # a full promotion flips a retro header pending -> folded in range (the generated INDEX row follows it):
 # the -pending and +folded header lines must sit in the SAME file's diff, so deleting one pending retro and
 # adding another one born folded is not a flip.
 patch=$(git diff "$range" -- 'build-n4-module-kit/retros/*.md') || refuse "git diff $range -- retros failed"
-has_flip=$(printf '%s\n' "$patch" | awk '
+has_flip=$(awk '
   /^diff --git / { file = $0; next }
   /^-<!-- review-status: pending/ { pend[file] = 1 }
   /^\+<!-- review-status: folded/ { fold[file] = 1 }
-  END { for (f in pend) if (f in fold) { print 1; exit } print 0 }')
+  END { for (f in pend) if (f in fold) { print 1; exit } print 0 }' <<<"$patch")
 
 # promotion exit (§7 third exit) — folding already-filed lessons into the core. Valid ONLY when it
 # carries a STRUCTURAL ANCHOR proving it is a real promotion: an in-range retro header flip pending ->
@@ -98,7 +98,7 @@ has_flip=$(printf '%s\n' "$patch" | awk '
 # owed open_issue as an `open_issue:` line of a ledger.d/ fragment).
 # The trailer alone is NOT a blanket escape: with NEITHER anchor it falls through to the FAIL below.
 # Either anchored path still runs sweep for ledger coherence.
-if printf '%s\n' "$log" | grep -qE 'Retro: promotion \(folds' \
+if grep -qE 'Retro: promotion \(folds' <<<"$log" \
    && { [ "$has_flip" -eq 1 ] || [ "${has_state:-0}" -ge 1 ]; }; then
   run_sweep
   exit $?

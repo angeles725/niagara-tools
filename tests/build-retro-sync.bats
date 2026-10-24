@@ -608,3 +608,20 @@ newbranch_repo() { # newbranch_repo <dir> — main + origin/main at commit A; br
   [[ "$output" == *"build-relevant kit files changed"* ]]
   [[ "$output" != *"cannot find"* ]]
 }
+
+# A `printf "$log" | grep -q` pipe: grep -q exits at the first match and printf, still writing a log larger
+# than the pipe buffer, reports "printf: write error: Broken pipe" on stderr (the push still succeeds).
+# The hooks feed grep with here-strings instead. Mutation: SIGPIPE -- restore the printf pipe and this fails.
+@test "H29: a trivial-trailer push with a long log prints no 'Broken pipe'" {
+  printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"
+  { printf 'chore: typo\n\nRetro: none (trivial: wording fix)\n'
+    for _ in $(seq 1 4000); do printf 'filler line of a long multi-commit push log, enough to pass the pipe buffer\n'; done
+  } > "$BATS_TEST_TMPDIR/log"
+  # git runs pre-push with SIGPIPE ignored (it writes the ref lines to the hook's stdin), so the shell
+  # builtin printf reports EPIPE instead of dying silently: reproduce that disposition.
+  FAKE_TOPLEVEL="$REPO" FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" \
+    run bash -c 'trap "" PIPE; exec env PATH="$1:$PATH" bash "$2" origin https://example/repo.git' _ "$FAKEBIN" "$HOOK" \
+    <<<'refs/heads/main aaaa refs/heads/main bbbb'
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Broken pipe"* ]] || { printf '%s\n' "$output" >&2; return 1; }
+}
