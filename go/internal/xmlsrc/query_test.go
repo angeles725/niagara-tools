@@ -97,3 +97,18 @@ func TestText(t *testing.T) {
 		}
 	}
 }
+
+// TestEmpty pins Element.Empty: true only for a tag written as <name/>, never for <name></name>.
+func TestEmpty(t *testing.T) {
+	d, err := Parse("e.xml", []byte(`<r><a/><b></b><c x="/>"  /><d>t</d></r>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []bool
+	for _, e := range d.Elements() {
+		got = append(got, e.Empty)
+	}
+	if want := []bool{false, true, false, true, false}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("Empty = %v, want %v", got, want)
+	}
+}
