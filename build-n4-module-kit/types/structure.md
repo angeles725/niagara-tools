@@ -49,16 +49,16 @@ in how Tridium/Honeywell lay out their own modules and an audit of our four. `[e
 - You AUTHOR `module-include.xml` (the `<type>` list). The gradle plugin GENERATES `META-INF/module.xml` from it.
 - **After renaming or deleting a type, delete `module-include.xml` (or its stale `<type>` line) and rebuild.** The
   build adds lines for new `@NiagaraType` classes but never rewrites or removes an existing line, so a renamed
-  type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1417 §1417.3 e]` `[ev: retro course-recordings Δ1]`
+  type keeps a dangling registration (METHODOLOGY § Schema / upgrade safety). `[ev: corpus B1233 §1233.4]` `[ev: corpus B1417 §1417.3 e]` `[ev: retro course-recordings Δ1]`
 - A hand-authored `META-INF/module.xml` in source is WRONG (L6): it will be overwritten and drifts from the plugin
   output. Edit `module-include.xml`; never the generated manifest. `[ev: corpus B817]`
 - **`module-permissions.xml` — developer source-only permission declaration (JVM sandbox layer):** a module that needs JVM-level capabilities (network access, reflection, JMX) declares SEMANTIC group names in `src/module-permissions.xml` using `<niagara-permission-groups type="…"> / <req-permission> / <name>NETWORK_COMMUNICATION</name> / <purposeKey>…</purposeKey> / <parameters>…`. This is a distinct concern from the RBAC bit checks in `dashboard.md §RBAC` and from `module-include.xml`; it governs what the module's JVM code is ALLOWED to do, not what a station user is allowed to do. [ev: corpus B18 §18.4.1] Six of the groups (REFLECTION, ACCESS_CLASS, MBEAN_PERMISSION, THIRD_PARTY_PERMISSION, PROTECTION_DOMAIN, HSM_SIGNING) also need a signed, trusted module, or the station drops them with a WARNING (`build-verify.md` § Signing per deploy target). [ev: corpus B1312 §1312.3 C1]
-- **Source→runtime inlining:** the Gradle signing plugin (`NiagaraPermissionGroupFactory`) expands the high-level group names into concrete `<java-permission class="…">` entries and INLINES them into the built JAR's `META-INF/module.xml` `<permissions>` element. There is NO `module-permissions.xml` in the deployed artifact (confirmed zero across all corpus JARs). To inspect deployed grants: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -A20 permissions`. [ev: corpus B18 §18.4.2-18.4.3; B777 §777.4]
+- **Source→runtime inlining:** the Gradle plugin INLINES the source `<permissions>` element (its `<niagara-permission-groups>` children) into the built JAR's `META-INF/module.xml`; the NRE expands each group at load (`NiagaraPermissionGroupFactory.parse`, baja `com/tridium/sys/module/NModule.java:450-452`), and a `<java-permissions>` child is read directly (`:444-447`). There is NO `module-permissions.xml` in a deployed module jar (the only copy in the corpus is the wizard template under `wbutil-wb/rc/`). To inspect deployed grants: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -A20 permissions`. [ev: corpus B18 §18.4.2-18.4.3; B777 §777.4]
 - **Profile scoping** — each `<niagara-permission-groups>` block carries `type="station"`, `"workbench"`, or `"all"`. A `type="workbench"` group is never granted on the station daemon. A permission needed by the NRE MUST be declared under `type="station"` or `"all"`; declaring it only under `type="workbench"` silently leaves the daemon ungrated. Verify the deployed partition: `unzip -p <mod>-rt.jar META-INF/module.xml | grep -B2 'java-permission'`. [ev: corpus B18 §18.4.7]
 - **Start from `templates/module-permissions.xml`** (the wizard shape: `<permissions>` root, three
   `<niagara-permission-groups>` blocks `all`/`workbench`/`station`, devkit-wb 4.14.0.162
   `gradle/includes/niagara/module-permissions.xml.vm:1-19`, with commented NETWORK_COMMUNICATION, REFLECTION,
-  MANAGE_EXECUTION and `<opt-permission>` requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`).
+  MANAGE_EXECUTION requests as in course `Labs/Lab9 Multithreaded/module-permissions.xml`, plus a commented `<opt-permission>`).
   `<name>` and `<purposeKey>` are both required; `purposeKey` may be a lexicon key of the module, else the text is
   shown as-is (devguide 4.15.6.20 `security/requestingPermissions.txt:40-80`). `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
 - **When a privileged call fails** with `AccessControlException`: read the `java.*` permission it names, find the
@@ -107,7 +107,7 @@ Row format: `FAIL|WARN  lint-structure  <path>  L<n>: <reason>`. Exit **0** clea
 | L4 | `module.lexicon` present AND non-empty (≥1 `key=value`) when ≥1 type is declared | FAIL | chihuahua-rt + -ux lexicons EMPTY → **L4 FAIL** |
 | L5 | `module.palette` present AND non-empty on a component module | FAIL | empty palette = the B788 footgun |
 | L6 | source ships `module-include.xml`, NOT a hand-authored `META-INF/module.xml` | FAIL | plugin generates the manifest |
-| L7 | every `<dependency>` `vendorVersion` is a 3-part floor (`4.14.0`), not 2-part or the 4-part self-stamp | FAIL | mutation `:baja:4.14` (2-part) → **L7 FAIL** |
+| L7 | every `<dependency>` `vendorVersion` is a 3-part floor (`4.14.0`), not 2-part or the 4-part self-stamp `[INFER — kit rule; B784 §784.2 records a valid 2-part legacy floor]` | FAIL | mutation `:baja:4.14` (2-part) → **L7 FAIL** |
 | L8 | signed jar present (`NIAGARA4`/vendor `.SF`+`.RSA`) | FAIL | shared with `verify-module.sh` |
 | L9 | no empty skeleton part — a declared `-wb`/`-ux` with 0 `.java` AND empty palette/lexicon | FAIL | DashboardPan-wb (0 source, empty palette) → **L9 FAIL** |
 | L10 | no absolute HOST paths in a tracked `gradle.properties` (`C:\…` `niagara_home`/`user_home`/`nodeHome`) | FAIL | client `ColdRoomPan`/`CompPan` `gradle.properties` hardcode `C:\Honeywell\…` → **L10 FAIL** (`.deploy-baseline/` pruned) |
@@ -218,7 +218,7 @@ it.  An empty stub costs nothing and prevents the "my test vanished" diagnosis.
   before then is never read and the call fails with `AccessControlException`: rename that root to `<permissions>`,
   or start again from `templates/module-permissions.xml` (§ `module-permissions.xml` above). Every tracked kit
   file and every fresh scaffold is pinned by `tests/permissions-root.bats`. `[ev: retro n4-course-authoring-files-and-libraries Δ2]`
-  `[ev: tests/permissions-root.bats PR1]`
+  `[ev: tests/permissions-root.bats PR1, PR2]`
 - **No `moduleTest-include.xml` is emitted yet.** Before the first `BTestNg` class, copy
   `templates/moduleTest-include.xml` (course shape: a bare `<types>` root) into the part; the stub above has the
   same shape. A comment placed before an `<?xml` declaration is not well-formed XML (expat: "XML or text
@@ -249,7 +249,7 @@ module, `types/distribution.md` § 8); a palette drop is a plain copy that nothi
 ### Format card `[ev: retro n4-course-authoring-files-and-libraries Δ3]`
 
 A palette is a BOG document, decoded like a `.bog` (`bajaObjectGraph`). Tridium's own palettes follow it
-(`kitControl-rt.jar!module.palette:1-11,130-135`, 4.15 corpus `organized/kitControl/kitControl-rt/extracted/`):
+(`kitControl-rt.jar!module.palette:1-11,130-135`, 4.14.0.162 corpus `organized/kitControl/kitControl-rt/extracted/`):
 
 - Root `<p m="b=baja" t="b:UnrestrictedFolder">`; nested folders `<p n="<Folder>" t="b:UnrestrictedFolder">`.
 - A module symbol is declared once, `m="<x>=<moduleName>"`, on the first element that uses it (an earlier
@@ -270,8 +270,8 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
 
 ```xml
 <p m="b=baja" t="b:UnrestrictedFolder">
-  <!-- b:UnrestrictedFolder, never b:Folder: b:Folder is access-controlled and causes "access denied"
-       palette expansion for engineers without the folder's category permission. [ev: corpus B746 §746.1] -->
+  <!-- b:UnrestrictedFolder, never b:Folder: it bypasses the isParentLegal() checks a b:Folder applies
+       (BUnrestrictedFolder.java). [ev: corpus B746 §746.1] -->
   <p n="ColdRoom" m="cr=ColdRoomPan" t="cr:ColdRoomPan">
     <p n="hasDefrost" v="true"/>
     <p n="airDefrost" v="true"/>
@@ -286,9 +286,10 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
 
 ### Key rules
 
-- Every folder (root or nested) uses `t="b:UnrestrictedFolder"`, never `t="b:Folder"`: the latter is
-  access-controlled and causes silent "access denied" palette expansion in Workbench for engineers who lack
-  the folder's category permission. `verify-module.sh` WARNs (`palette-root`) on every `b:Folder`.
+- Every folder (root or nested) uses `t="b:UnrestrictedFolder"`, never `t="b:Folder"`:
+  `b:UnrestrictedFolder` bypasses the `isParentLegal()` checks a `b:Folder` applies, so any component type can sit
+  under it (docSource `javax/baja/util/BUnrestrictedFolder.java:7-9`); `b:Folder` loads but is not the idiomatic
+  palette root. `verify-module.sh` WARNs (`palette-root`) on every `b:Folder`.
   `scaffold-module.sh` copies `fixtures/MinimalPan`, whose palette root is `b:UnrestrictedFolder`, so a
   freshly scaffolded module carries no `palette-root` WARN. `[ev: corpus B746 §746.1]`
   `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ4]`
@@ -312,7 +313,7 @@ disabled) by setting both flags correctly in the palette entry so every drag-dro
 A `-doc` part has its own runtime profile (`runtimeProfile="doc"`) and no types. The devguide puts help
 "in a part with a runtime profile of doc" of the code module (`deployingHelp.txt:8`); a separate `doc*`
 module is also legitimate. Its sole job is to ship HTML help pages that Workbench's F1 help system finds in
-the module's own `doc/` directory. `[ev: corpus B1313 §1313.3 C1]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
+the module's own `doc/` directory. `[ev: corpus B1313 §1313.3 C4]` `[ev: retro devguide415-horizons-authoring-security Δ7]`
 
 Our modules ship none today — that is architecturally correct. This recipe documents the path for
 any future help investment.
@@ -370,9 +371,9 @@ Two Gradle plugins cooperate:
 | Plugin | Role |
 |--------|------|
 | `com.tridium.niagara-doc` | Packages help HTML + TOC into the `-doc` jar |
-| `com.tridium.bajadoc-module` | Generates API Javadoc pages from type annotations |
+| `com.tridium.bajadoc-module` | Aggregating part for the API reference that `com.tridium.bajadoc` builds from Javadoc |
 
-Both are applied in `<Mod>-doc.gradle.kts`. The `niagara-doc` plugin is the mandatory one for
+`niagara-doc` is applied in `<Mod>-doc.gradle.kts`; bajadoc is a separate plugin plus its own aggregating part (B759 §759.6). The `niagara-doc` plugin is the mandatory one for
 F1-accessible help; `bajadoc-module` adds the API documentation layer.
 
 `[ev: corpus B759 §759.6]`
@@ -412,9 +413,9 @@ session-lifetime staleness to design around. `[ev: corpus B1307 §1307.2 C2]`
 ## The `-se` (Java SE) runtime profile
 
 A `-se` part is needed when code requires Java SE APIs that Niagara's Compact 3 profile does not
-provide: `java.awt` / `javax.swing`, `java.sql` (JDBC), or native libraries linked via JNI.
+provide: `java.awt` / `javax.swing`, `java.sql` (JDBC), and anything else with a direct dependence on Java SE.
 It is built against Java 8 SE — NOT synonymous with "JACE-exclusive".
-`[ev: devguide modules.txt]`
+`[ev: devguide modules.txt:50]`
 
 ### Load profile on each host type
 
@@ -422,7 +423,7 @@ It is built against Java 8 SE — NOT synonymous with "JACE-exclusive".
 |------|---------------------------|
 | Station daemon on a Windows-based host (Supervisor) launched with `-rp:se` | `{rt, se}` — rt is always prepended |
 | JACE | never `-se`: the platform guide says `se` jars "can run on Windows-based hosts only" and a JACE runs a Java 8 compact3 VM |
-| Workbench | `{rt, ux, wb}` (+ `se` when `-rp:se` passed) |
+| Workbench | `rt` + the profiles its `-rp:` list names (Workbench adds `wb` and `doc`; no `-rp:` = all five, `Nre.java:1374`) |
 
 A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags. Keep JACE logic in `-rt`.
 `[ev: corpus B630]` `[ev: corpus B1341 §1341.2 C1]` (guide `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30`;
@@ -445,8 +446,9 @@ check, or move the wb-dependent code into the `-wb` part and keep `-se` wb-free.
 A Supervisor station daemon runs headless. Display-dependent classes
 (`JFrame`, `JDialog`, any component that opens a native window) fail at runtime with
 `HeadlessException`. Headless-safe AWT is fine: `java.awt.print`, `Font`, image I/O,
-`java.awt.AWTPermission` (clipboard, window-without-warning-banner) — `obix-se` uses exactly
-these. `[ev: code obix-se module.xml; code alarm-se BPrinterRecipient.java vs obix-se Shell.java]`
+`java.awt.AWTPermission` (clipboard, window-without-warning-banner) — `alarm-se` uses the print/Font set
+(`BPrinterRecipient.java`); `obix-se` grants exactly these two `AWTPermission`s (`module.xml`), but its `Shell.java`
+opens a `JFrame`, so that path is display-dependent. `[ev: code obix-se module.xml; code alarm-se BPrinterRecipient.java vs obix-se Shell.java]`
 
 ### `plat moduleinstall` mechanics (JACE install)
 
@@ -462,14 +464,14 @@ Three places to touch (beyond the new `-se` source tree):
 1. `<Mod>-se.gradle.kts` — `runtimeProfile.set("se")`
 2. `niagara-module.xml` (module root) — add `se` to the `runtimeProfiles` list
 3. nothing in `module-include.xml`: it holds only `<types>`, and the plugin writes `<moduleParts>` into the
-   generated `module.xml` from `niagara-module.xml` (devguide `upgradingBuild.txt:95,115`)
+   generated `module.xml` from `niagara-module.xml` (devguide `upgradingBuild.txt:95,107`)
 
 `[ev: corpus B784]` `[ev: corpus B1313 §1313.3 C2]`
 
 ### JACE resource limits
 
 JACE hardware (1 GB DDR3, ARM, QNX) never loads `-se`, so code a JACE needs stays in `-rt` and within
-compact3: no OrientDB, Swing UI components or heavy JNI libraries there. `[ev: corpus B473]`
+compact3: no OrientDB, Swing UI components or heavy JNI libraries there. `[ev: corpus B459, B473]`
 
 ### Real `-se` modules for reference (Tridium 4.14)
 
@@ -487,12 +489,12 @@ above for doc-profile modules.
 ## Deployed version publication `[ev: retro dashboard-deployment-profiles Δ6]`
 "Which build runs on this station" must be observable without opening Workbench or the Software Manager:
 - Each module exposes a read-only version on its service component: `defaultModuleVersion` plus the build
-  time (millis), as a `SUMMARY|READONLY` slot (the Reflow pattern, corpus B153). It is never OPERATOR-writable and
+  time (millis), as a `SUMMARY|READONLY` slot `[INFER — kit design]`. It is never OPERATOR-writable and
   is re-derived from the module itself at every start.
 - A module with a `-ux` servlet also serves it as `GET /api/version` and the SPA shows it in an About/footer
-  (`dashboard.md` § Deploy on a JACE).
+  (`dashboard.md` § Deploy on a JACE); the Reflow SPA embeds its build stamp (corpus B153 §153.1).
 - An off-station collector (e.g. an oBIX poller feeding a database) reads the slot per site and flags drift
-  against the latest packaged release (the package's `SOURCE.txt`). `[ev: corpus B153 §153]`
+  against the latest packaged release (the package's `SOURCE.txt`). `[INFER — kit design, retro dashboard-deployment-profiles Δ6]`
 
 ## Recommendations for our modules (impact ÷ cost) `[ev: corpus B817]`
 R1 chihuahua — populate rt+ux `module.lexicon` (10 types unlocalized; cheap, operator-visible). R2 DashboardPan-wb

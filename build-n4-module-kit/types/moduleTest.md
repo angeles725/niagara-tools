@@ -103,7 +103,7 @@ dependencies {
 
 **Rule:** every dep the test exercises but the production code does NOT use goes under
 `moduleTestImplementation(…)`.  `test-wb` is always required.  `bajaui-wb` is needed whenever the test
-station needs UI services (common in practice). `[ev: corpus B958 §958.4]`
+station needs UI services (common in practice) `[INFER]`; the example declares it without a reason. `[ev: corpus B958 §958.4]`
 
 ---
 
@@ -119,7 +119,7 @@ station needs UI services (common in practice). `[ev: corpus B958 §958.4]`
 | oBIX read/write round-trip | ❌ | ✅ |
 | Slot-o-matic / type hash | check at build | rarely needed |
 
-`[ev: corpus B958 §958.3]`
+`[ev: corpus B958 §958.3]` (the link-validation row); the other rows `[INFER]`.
 
 **Client parity doctrine — behaviour is tested through real slots** `[ev: retro testing-parity-btestng Δ4]`:
 component behaviour (slot outputs, notify chains, HOA/defrost interplay, links) is a `BTestNgStation` test that drives
@@ -146,7 +146,7 @@ a structural test in a part with no `BTestNg` class is owed as Go lint G34 `stru
 
 **A BQL query needs no station:** build the tree in a plain `BFolder` and run
 `BqlQuery.make(bql).resolve(OrdTarget.unmounted(folder)).get()`; give points values with `setOut(...)`, because
-`set()` does not work on an unmounted component. [CERT-doc] devguide `bql.txt:453-460`; `OrdTarget.java:196,208`
+`set()` does not work on an unmounted component. [CERT-doc] devguide `bql.txt:338-357`; `OrdTarget.java:196,208`
 (corpus B1308 §1308.1 row 4). `[ev: retro devguide415-nav-subscriptions-tags-ords Δ7]`
 
 **A dedupe or helper extraction is tested at two levels** (`BUILD-LOOP.md` § 5): the new helper gets a pure JUnit
@@ -161,17 +161,21 @@ is slot behaviour, a golden or pure test otherwise. `[ev: retro modular-line-eff
 From `componentLinks-rt` (B958 §958.3):
 
 ```java
-@Test
-public void ngTestLinkCheck1() throws Exception {
-    // A BRamp→BLinkCheckTest link MUST succeed (doCheckLink returns makeValid())
-    station.getDriver().link(ramp, BRamp.output, root, BLinkCheckTest.rampPoint);
+@Test(enabled = true)
+public void ngTestLinkCheck1() {
+    root.removeAll();
+    buildStation();
+    // Link from ramp to linkCheckTest should succeed (doCheckLink returns makeValid())
+    ramp.add("link", new BLink(linkCheckTest.getHandleOrd(), "p", "p", true));
     Assert.assertEquals(ramp.getLinks().length, 1);
 }
 
-@Test
-public void ngTestLinkCheck2() throws Exception {
-    // A BSineWave→BLinkCheckTest link MUST be rejected (BRamp required)
-    station.getDriver().link(sineWave, BSineWave.output, root, BLinkCheckTest.rampPoint);
+@Test(enabled = true)
+public void ngTestLinkCheck2() {
+    root.removeAll();
+    buildStation();
+    // Link from sineWave to linkCheckTest should fail (BRamp required)
+    sineWave.add("link", new BLink(linkCheckTest.getHandleOrd(), "p", "p", true));
     Assert.assertEquals(ramp.getLinks().length, 0);  // rejected → no link
 }
 ```
@@ -191,7 +195,7 @@ public void ngTestLinkCheck2() throws Exception {
      `test <module:Type.method>` for one module, class or method (the course instructor's choice).
    - **Gradle `niagaraTest`** (+ JaCoCo), as the course uses it (Lab 7, 9/9), on Windows; from WSL through
      `cmd.exe` (§ Running from WSL). This is the primary route; Workbench Run Tests is the fallback.
-   `[ev: corpus B1418 §1418.5 f]` `[ev: corpus B961 §961.3]` `[ev: retro course-recordings Δ7]`
+   `[ev: corpus B1418 §1418.5 f]` `[ev: corpus B807 §807.1]` `[ev: retro course-recordings Δ7]`
 
 ### Running from WSL `[ev: retro testing-parity-btestng Δ1]` `[ev: retro testing-parity-btestng Δ3]` `[ev: retro n4-course-handson-workflow Δ3]`
 
@@ -252,7 +256,7 @@ public class BYourIntegrationTest extends BTestNgStation {
 - Alarm routing, FOX round-trips, history writes, job scheduling — anything that requires real services.
 - Use bare `createTestStation()` (from `BTestNg`) when you only need the NRE with no pre-configured services.
 
-`[ev: code BTestNgStation.java :96-270]`
+`[ev: code docSource BTestNgStation.java :93-129, :370-404, :760-763, :954-957, :985]`
 
 ---
 
@@ -276,7 +280,7 @@ boolean settled = TestHelper.waitFor(() -> myComp.isRunning(), 3_000L, 50L);
 Signature: `waitFor(BooleanSupplier condition, long timeout, long interval)`.
 `assertWillBeTrue` delegates to `waitFor` and calls `Assert.assertTrue` on the result.
 
-`[ev: code TestHelper.java :97-145]`
+`[ev: code docSource TestHelper.java :75-197]`
 
 ---
 
@@ -310,7 +314,7 @@ return StreamSupport.stream(cases.spliterator(), false)
     ).toArray();
 ```
 
-`[ev: code BTridiumTestNg.java :49-233]`
+`[ev: code docSource BTridiumTestNg.java :59-111, :228-482]`
 
 ---
 
@@ -329,7 +333,7 @@ public void sometimesFlaky() throws Exception { ... }
 - Use sparingly — only for genuinely non-deterministic timing issues.  Fix the flakiness first; add the
   retry only when timing is inherent (e.g., network-dependent FOX handshake).
 
-`[ev: code NRetryAnalyzer.java :30-40]`
+`[ev: code docSource NRetryAnalyzer.java :33-64]`
 
 ---
 
@@ -351,10 +355,10 @@ public void conditionalTest() throws Exception { ... }
 public boolean isPlatformReady() { return ...; }
 ```
 
-`Requires.OsType` values: `LINUX`, `WINDOWS`, `MAC` (from the decompiled enum).  The listener
+`Requires.OsType` values: `WIN32`, `LINUX`, `QNX` (from the decompiled enum).  The listener
 (`RequiresListener`) is wired into the TestNG suite by `test-wb`; no extra setup needed.
 
-`[ev: code RequiresListener.java :10-111, annotation/Requires.java :14-20]`
+`[ev: code docSource RequiresListener.java :25-196, TestRunnerNg.java:341; vineflower annotation/Requires.java :11-19]`
 
 ---
 
@@ -378,7 +382,7 @@ runner.stop();
 
 Use `StationRunner.make(debugPort)` to attach a debugger to the spawned JVM.
 
-`[ev: code StationRunner.java :66-164]`
+`[ev: code docSource StationRunner.java :90-102, :142-154, :179-272, :289, :399-400]`
 
 ---
 
@@ -401,7 +405,7 @@ public void paletteEntryPresent() throws Exception {
 `loadPaletteItem(BModule, String...)` accepts a vararg path for nested palette folders.
 Pair with the known gap: `-ux` modules lack Jasmine palette coverage (see R6 / DUX-TEST1).
 
-`[ev: code TestHelper.java :494]`
+`[ev: code docSource TestHelper.java :999]`
 
 ---
 
@@ -460,7 +464,7 @@ the main Gradle section above).
 ### Known gotchas (R6)
 
 - **`niagaraTest` from a WSL-side Gradle (plugin 7.6.17) discovers 0 `moduleTest` tests.** Run it on Windows
-  (§ Running from WSL); a 0-test `BUILD SUCCESSFUL` is a failure, never a pass. `[ev: corpus B961 §961.3]`
+  (§ Running from WSL); a 0-test `BUILD SUCCESSFUL` is a failure, never a pass. `[ev: corpus B807 §807.1]`
 - **`niagaraTest` can report BUILD SUCCESSFUL with zero tests or a rejected test jar.** Until the owed runner exists
   (Go tool G33 `run-niagara-test`: scratch copy, `:clean` first, PASS only when every `Total tests run: N` has N > 0
   and 0 failures, FAIL on `invalid test target(s)` or `failed signature validation`, back up and restore
@@ -474,4 +478,4 @@ the main Gradle section above).
 
 `[ev: corpus B1028 SDE7-G1; code BTestNgStation.java, TestHelper.java]`
 
-<!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro 2026-09-19-test-wb-extension] -->
+<!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro moduletest-patterns] -->
