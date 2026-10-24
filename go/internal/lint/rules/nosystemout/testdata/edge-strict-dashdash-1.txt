@@ -1,0 +1,16 @@
+-- args --
+--strict
+--
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-no-system-out: not a directory: --strict
+-- m/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- n/A.java --
+class A {
+  void g() { System.err.print(1); }
+}

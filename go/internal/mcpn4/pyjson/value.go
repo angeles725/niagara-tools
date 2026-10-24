@@ -98,3 +98,29 @@ func (n Number) Float64() (float64, error) {
 	}
 	return f, nil
 }
+
+// Truthy is bool(v) in Python for a decoded value: None, False, zero, "", [] and {} are false.
+func Truthy(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return false
+	case bool:
+		return x
+	case string:
+		return x != ""
+	case Number:
+		if x.IsFloat() {
+			f, _ := x.Float64()
+			return f != 0
+		}
+		i, _ := x.BigInt()
+		return i.Sign() != 0
+	case int:
+		return x != 0
+	case []any:
+		return len(x) > 0
+	case *Object:
+		return x.Len() > 0
+	}
+	return true
+}

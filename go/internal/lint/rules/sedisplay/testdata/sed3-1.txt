@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod-se
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/Mod-se/src/com/x/S.java:1  display class: class S { void f(){ Object d = new JDialog(); } }
+-- stderr --
+-- Mod-se/src/com/x/S.java --
+class S { void f(){ Object d = new JDialog(); } }

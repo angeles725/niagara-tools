@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-se-display  @DIR@/m/A.java:2  display class: import javax.swing.JFrame;	 
+FAIL  lint-se-display  @DIR@/m/A.java:3  display class: Object w = new JDialog(); 
+-- stderr --
+-- m/A.java (noeol) --
+class A {
+import javax.swing.JFrame;	 
+  Object w = new JDialog(); 
+}

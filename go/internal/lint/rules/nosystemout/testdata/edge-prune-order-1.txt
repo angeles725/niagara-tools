@@ -1,0 +1,39 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-no-system-out  @DIR@/m/B.java:2  void f() { System.out.println("x"); }
+FAIL  lint-no-system-out  @DIR@/m/Z/A.java:2  void f() { System.out.println("x"); }
+FAIL  lint-no-system-out  @DIR@/m/a/A.java:2  void f() { System.out.println("x"); }
+FAIL  lint-no-system-out  @DIR@/m/b/c/A.java:2  void f() { System.out.println("x"); }
+-- stderr --
+-- m/.git/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/B.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/Z/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/a/A.JAVA --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/a/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/a/notes.txt --
+  void f() { System.out.println("x"); }
+-- m/b/c/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}
+-- m/x-worktrees/A.java --
+class A {
+  void f() { System.out.println("x"); }
+}

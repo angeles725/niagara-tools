@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m/A.java
+-- want --
+exit 3
+-- stderr --
+lint-subscribe-without-unsubscribe: not a directory: @DIR@/m/A.java
+-- m/A.java --
+class A {
+  void started() { sub.subscribe(c); }
+}
+-- n/A.java --
+class A {
+  void more() { other.subscribe(d); }
+}
