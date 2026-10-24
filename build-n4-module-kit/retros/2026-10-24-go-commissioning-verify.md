@@ -35,8 +35,8 @@ process through `go/internal/bogaudit` (Out and Err into one buffer, as `2>&1` d
 - An orchestrator whose tests stub toolbelt members needs the invoked (unresolved) toolbelt directory passed to the Go
   binary; resolving it like `here=` would silently run the real lints instead of the stubs.
 - A fold that lists statuses per check drops whatever status a check later starts emitting; relay a fixed status set.
-- RM45 in `tests/report-module.bats` still greps this wrapper for the retired bash array idiom (the wrapper header names
-  it); that half of RM45 is moot and should be dropped in report-module.bats (outside this unit's edit surface).
+- A structural pin over a ported script goes vacuous at the switch: RM45 grepped commissioning-verify.sh for the bash
+  `set -u` array idiom, so it now covers report-module.sh only (mutation RM-setu).
 - Δ1-Δ4 are applied in this unit as code fixes; the retro stays pending until a fold review decides whether any of them
   becomes doctrine.
 

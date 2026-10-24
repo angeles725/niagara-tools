@@ -64,8 +64,7 @@
 # unresolved, so a stubbed toolbelt copy runs its stubs); bog-audit runs in process (go/internal/bogaudit). This
 # wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/commissioning-verify when it is
 # missing or older than a Go source, then this script execs it. Needs `go` on PATH to build (exit 3 otherwise).
-# RM45 (tests/report-module.bats) still greps this file for the bash body's set -u idiom ${ltf_args[@]+"${ltf_args[@]}"};
-# the Go port has no such array, so that half of RM45 is moot. [ev: retro go-commissioning-verify]
+# [ev: retro go-commissioning-verify]
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
