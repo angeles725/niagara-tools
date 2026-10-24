@@ -732,6 +732,9 @@ func TestCommandIntFlags(t *testing.T) {
 	Command(noConf)
 }
 
+// TestParseValued: Mode Valued is `[<option> <value>]... <root>` (lint-link-target-flags): the option and the
+// root in any order, the last value wins, a missing value, any other "-" argument, a second root or no root is
+// the usage line alone, and the root must be a directory.
 func TestParseValued(t *testing.T) {
 	dir := t.TempDir()
 	const use = "usage: lint-v.sh [--map <file>] <src>"
@@ -797,3 +800,92 @@ func TestConfigure(t *testing.T) {
 		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
 	}
 }
+
+// TestCheckFirst: Spec.CheckFirst prints a finding as `<check>  <SEV>  <path>:<line>  <msg>` (lint-wb-threading's
+// rows, which report-module relays as a "swap" member); the empty-root ERROR row keeps the standard shape.
+func TestCheckFirst(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	sp := javaSpec(fakeRule{"lint-c", "MARK", Warn}, One)
+	sp.CheckFirst = true
+	s, o, _ := stdio()
+	if code := Command(sp)([]string{"lint-c", root}, s); code != 0 || o.String() != "lint-c  WARN  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("row: exit %d out %q", code, o)
+	}
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-c", empty}, s); code != 3 || !strings.HasPrefix(o.String(), "ERROR  lint-c  "+empty+"  ") {
+		t.Errorf("empty: exit %d out %q", code, o)
+	}
+}
+
+// TestParseAnywhere: Mode Anywhere is lint-wb-threading's loop: --strict anywhere, another "-" argument is
+// "<name>: unknown option: <arg>" and a second root "<name>: unexpected argument: <arg>" (exit 3, no usage
+// line), no argument or no root is the usage line.
+func TestParseAnywhere(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-w.sh [--strict] <src>"
+	for _, tc := range []struct {
+		args   []string
+		strict bool
+		err    string
+		usage  bool
+	}{
+		{[]string{dir}, false, "", false},
+		{[]string{dir, "--strict"}, true, "", false},
+		{[]string{"--strict", dir, "--strict"}, true, "", false},
+		{nil, false, use + "\n", true},
+		{[]string{"--strict"}, false, use + "\n", true},
+		{[]string{"-h", dir}, false, "lint-w: unknown option: -h\n", false},
+		{[]string{dir, "--"}, false, "lint-w: unknown option: --\n", false},
+		{[]string{dir, dir, "-x"}, false, "lint-w: unexpected argument: " + dir + "\n", false},
+		{[]string{dir + "/nope"}, false, "lint-w: not a directory: " + dir + "/nope\n", false},
+	} {
+		a, err := Parse(Anywhere, "lint-w", use, tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		var ue *UsageError
+		if got != tc.err || errors.As(err, &ue) != tc.usage || (err == nil && (a.Strict != tc.strict || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%q: args %+v err %q (usage %v), want strict %v err %q (usage %v)", tc.args, a, got, errors.As(err, &ue), tc.strict, tc.err, tc.usage)
+		}
+	}
+}
+
+// TestParseValuedRepeat: Mode Valued with repeatable options (Spec.Options: every value kept, in order, in
+// Args.Values) and --strict accepted (Spec.ValuedStrict), as lint-inline-site-literal takes them; without
+// ValuedStrict --strict stays a usage error (lint-link-target-flags).
+func TestParseValuedRepeat(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-r.sh [--strict] [--table <p>]... [--pattern <re>]... <root>"
+	vo := ValueOptions{Repeat: []string{"--table", "--pattern"}, Strict: true}
+	a, err := ParseValued(Valued, "lint-r", use, vo, []string{"--table", "a", dir, "--strict", "--pattern", "R[0-9]", "--table", "b"})
+	if err != nil || !a.Strict || len(a.Roots) != 1 || a.Roots[0] != dir ||
+		!reflect.DeepEqual(a.Values, map[string][]string{"--table": {"a", "b"}, "--pattern": {"R[0-9]"}}) {
+		t.Errorf("repeat: %+v %v", a, err)
+	}
+	for _, args := range [][]string{{dir, "--table"}, {"--other", dir}, {dir, dir}} {
+		if _, err := ParseValued(Valued, "lint-r", use, vo, args); err == nil || err.Error() != use+"\n" {
+			t.Errorf("%q: err %v, want the usage line", args, err)
+		}
+	}
+	if _, err := ParseValued(Valued, "lint-r", use, ValueOptions{Repeat: []string{"--table"}}, []string{"--strict", dir}); err == nil {
+		t.Errorf("--strict without ValueOptions.Strict parsed")
+	}
+	// Command passes the spec's options: Values reach Configure.
+	var seen []string
+	sp := Spec{Rule: valuesFake{fakeRule{"lint-r", "MARK", Warn}, &seen}, Mode: Valued, Options: []string{"--table"}, ValuedStrict: true,
+		Usage: use, Select: Selection{Names: []string{"*.java"}}}
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, _, _ := stdio()
+	if code := Command(sp)([]string{"lint-r", "--strict", "--table", "x", "--table", "y", root}, s); code != 1 || !reflect.DeepEqual(seen, []string{"x", "y"}) {
+		t.Errorf("command: exit %d seen %q, want 1 (WARN under --strict) and [x y]", code, seen)
+	}
+}
+
+type valuesFake struct {
+	fakeRule
+	seen *[]string
+}
+
+func (r valuesFake) Configure(a Args) error { *r.seen = a.Values["--table"]; return nil }

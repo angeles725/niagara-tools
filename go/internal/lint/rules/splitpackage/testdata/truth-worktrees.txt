@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Proj
+-- want --
+exit 0
+-- stderr --
+-- Proj/A/A-rt/build.gradle.kts --
+-- Proj/A/A-rt/src/a/U.java --
+package com.shared;
+-- Proj-worktrees/feat/A/A-rt/build.gradle.kts --
+-- Proj-worktrees/feat/A/A-rt/src/a/U.java --
+package com.shared;
+-- Proj/A-worktrees/fix/A/A-rt/build.gradle.kts --
+-- Proj/A-worktrees/fix/A/A-rt/src/a/U.java --
+package com.shared;

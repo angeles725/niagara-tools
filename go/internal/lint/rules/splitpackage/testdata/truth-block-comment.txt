@@ -1,0 +1,19 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  com.real  declared in 2 modules: A/A-rt (A/A-rt/src/a/U.java), B/B-rt (B/B-rt/src/b/U.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/build.gradle.kts --
+-- proj/A/A-rt/src/a/U.java --
+/*
+ * Moved from:
+package com.old;
+ */
+package com.real;
+-- proj/B/B-rt/build.gradle.kts --
+-- proj/B/B-rt/src/b/U.java --
+package com.real;
+-- proj/C/C-rt/build.gradle.kts --
+-- proj/C/C-rt/src/c/U.java --
+package com.old;

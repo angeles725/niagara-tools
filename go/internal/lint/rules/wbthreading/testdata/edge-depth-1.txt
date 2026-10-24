@@ -1,0 +1,23 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 0
+ui-thread-traversal  WARN  @DIR@/root1/com/x/G.java:9  doInvoke -> c1() -> c2() -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+-- stderr --
+-- root1/com/x/G.java --
+class G {
+  public void doInvoke() { l1(); }
+  private void l1() { l2(); }
+  private void l2() { l3(); }
+  private void l3() { l4(); }
+  private void l4() { a.getNavChildren(); }
+}
+class H {
+  public void doInvoke() { c1(); }
+  private void c1() { c2(); }
+  private void c2() { c1(); a.getNavChildren(); }
+}
+class I {
+  public void doInvoke() { r(); invokeLaterLike(); }
+  private void r() { a.getNavChildren(); }
+}

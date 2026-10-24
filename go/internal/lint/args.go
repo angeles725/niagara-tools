@@ -3,6 +3,7 @@ package lint
 import (
 	"errors"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -18,14 +19,24 @@ const (
 	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
 	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
-	Valued               // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; any other "-" argument, a missing value or a second root is the usage line alone
+	Anywhere             // [--strict] <root> [--strict]: --strict anywhere; another "-" argument or a second root is an env error naming it (lint-wb-threading)
+	Valued               // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; each Spec.Options option keeps every value; --strict only with Spec.ValuedStrict; any other "-" argument, a missing value or a second root is the usage line alone
 )
 
 // Args is a parsed command line.
 type Args struct {
 	Strict bool
 	Roots  []string
-	Option string // the value of Spec.Option (Mode Valued), "" when absent
+	Option string              // the value of Spec.Option (Mode Valued), "" when absent
+	Values map[string][]string // every value of each repeatable option (Spec.Options), in order
+}
+
+// ValueOptions is the option contract of Mode Valued: Option takes one value (the last wins), each Repeat
+// option keeps every value, and Strict accepts --strict.
+type ValueOptions struct {
+	Option string
+	Repeat []string
+	Strict bool
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -43,6 +54,11 @@ func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 
 // ParseOption is Parse for a mode that takes a value option (Valued: option is its name, e.g. "--wiring-map").
 func ParseOption(mode Mode, name, usage, option string, args []string) (Args, error) {
+	return ParseValued(mode, name, usage, ValueOptions{Option: option}, args)
+}
+
+// ParseValued is Parse under the full Mode Valued contract (vo); every other mode ignores vo.
+func ParseValued(mode Mode, name, usage string, vo ValueOptions, args []string) (Args, error) {
 	var a Args
 	if mode == Valued {
 		// the bash `while [ $# -gt 0 ]; case "$1" in <option>) [ $# -ge 2 ] || usage; v=$2; shift 2 ;;
@@ -50,11 +66,21 @@ func ParseOption(mode Mode, name, usage, option string, args []string) (Args, er
 		var roots []string
 		for i := 0; i < len(args); i++ {
 			switch arg := args[i]; {
-			case arg == option:
+			case arg != "" && (arg == vo.Option || slices.Contains(vo.Repeat, arg)):
 				if i+1 >= len(args) {
 					return Args{}, &UsageError{usage + "\n"}
 				}
-				a.Option, i = args[i+1], i+1
+				if arg == vo.Option {
+					a.Option = args[i+1]
+				} else {
+					if a.Values == nil {
+						a.Values = map[string][]string{}
+					}
+					a.Values[arg] = append(a.Values[arg], args[i+1])
+				}
+				i++
+			case arg == "--strict" && vo.Strict:
+				a.Strict = true
 			case strings.HasPrefix(arg, "-") || len(roots) == 1:
 				return Args{}, &UsageError{usage + "\n"}
 			default:
@@ -71,6 +97,27 @@ func ParseOption(mode Mode, name, usage, option string, args []string) (Args, er
 			a.Strict = true
 		}
 		args = args[:1]
+	}
+	if mode == Anywhere {
+		// the bash `while [ $# -gt 0 ]; case "$1" in --strict) ;; -*) unknown option ;; *) [ -z "$SRC" ] ||
+		// unexpected argument ;; esac` after a `[ $# -lt 1 ]` usage check
+		if len(args) == 0 {
+			return Args{}, &UsageError{usage + "\n"}
+		}
+		var roots []string
+		for _, arg := range args {
+			switch {
+			case arg == "--strict":
+				a.Strict = true
+			case strings.HasPrefix(arg, "-"):
+				return Args{}, errors.New(name + ": unknown option: " + arg + "\n")
+			case len(roots) == 1:
+				return Args{}, errors.New(name + ": unexpected argument: " + arg + "\n")
+			default:
+				roots = append(roots, arg)
+			}
+		}
+		args, mode = roots, Raw // the usage and root checks below
 	}
 	if mode == Leading && len(args) > 0 && args[0] == "--strict" {
 		// the bash `[ "${1:-}" = "--strict" ] && { STRICT=1; shift; }`: one optional flag, then raw roots

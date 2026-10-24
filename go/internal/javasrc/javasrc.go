@@ -67,11 +67,20 @@ const textBlock = `"""`
 
 // Strip returns the lines with comments blanked (literal text kept) and the state the input ends in.
 func Strip(lines []string) ([]string, EndState) {
-	out := make([]string, len(lines))
+	code, _, state := StripComments(lines)
+	return code, state
+}
+
+// StripComments is Strip that also returns each line's comment text, delimiters included ("// why", "/* x */",
+// "   more */" for the tail of a block comment): the bytes Strip drops, in order. A comment marker inside a
+// literal is code, as in Strip.
+func StripComments(lines []string) (code, comments []string, state EndState) {
+	code, comments = make([]string, len(lines)), make([]string, len(lines))
 	inComment, inText := false, false
-	var b strings.Builder
+	var b, c strings.Builder
 	for i, ln := range lines {
 		b.Reset()
+		c.Reset()
 		var quote byte
 	scan:
 		for j := 0; j < len(ln); {
@@ -79,9 +88,11 @@ func Strip(lines []string) ([]string, EndState) {
 			switch {
 			case inComment:
 				if strings.HasPrefix(rest, "*/") {
+					c.WriteString("*/")
 					inComment = false
 					j += 2
 				} else {
+					c.WriteByte(ln[j])
 					j++
 				}
 			case (inText || quote != 0) && ln[j] == '\\':
@@ -107,9 +118,11 @@ func Strip(lines []string) ([]string, EndState) {
 				inText = true
 				j += 3
 			case strings.HasPrefix(rest, "/*"):
+				c.WriteString("/*")
 				inComment = true
 				j += 2
 			case strings.HasPrefix(rest, "//"):
+				c.WriteString(rest)
 				break scan
 			default:
 				if ln[j] == '"' || ln[j] == '\'' {
@@ -119,15 +132,15 @@ func Strip(lines []string) ([]string, EndState) {
 				j++
 			}
 		}
-		out[i] = b.String()
+		code[i], comments[i] = b.String(), c.String()
 	}
-	state := Closed
+	state = Closed
 	if inComment {
 		state = OpenComment
 	} else if inText {
 		state = OpenTextBlock
 	}
-	return out, state
+	return code, comments, state
 }
 
 const ident = `[A-Za-z_][A-Za-z0-9_<>\[\]]*`

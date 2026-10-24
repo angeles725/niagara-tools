@@ -11,7 +11,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/<tool>/` | a thin `main` that calls one package's entry point; no logic |
 | `internal/cli/` | injectable stdio (`cli.Stdio`) and the `cli.Main` signature every command uses |
 | `internal/strerror/` | `Text`: an OS error as C `strerror()` words it in the C locale, and `FindQuote`: a path as GNU find quotes it in that locale (the text find and awk print), shared by `lint` and `jarversion` |
-| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `MaskLiterals` (the same contents replaced by blanks, line lengths kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`), `Tokens` (Strip output as tokens, a literal or text block one token), `Decls` (the method and constructor bodies of each class body, with class, parameter types and `@Override`), `Statements` and `Shape` (a body's statement count and normalized token sequence) — the lint rules share these — and `File` (one file's lines plus its scan results, computed once) |
+| `internal/javasrc/` | the Java scanner only: `Strip` (and `StripComments`, which also returns each line's comment text), `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `MaskLiterals` (the same contents replaced by blanks, line lengths kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`), `Tokens` (Strip output as tokens, a literal or text block one token), `Decls` (the method and constructor bodies of each class body, with class, parameter types and `@Override`), `Statements` and `Shape` (a body's statement count and normalized token sequence), `Unescape` (the \\ \" \' \` escapes of a literal's text read) — the lint rules share these — and `File` (one file's lines plus its scan results, computed once) |
 | `internal/jssrc/` | the JavaScript tokenizer only: `Tokens` (comments dropped; strings, template literals with their `${...}` nesting and regex literals as single tokens, each with its line), for a rule that reads `rc/**/*.js` |
 | `internal/props/` | `Read`: a `.properties` file as `java.util.Properties.load` reads it (continuations, `#`/`!` comments, `=`/`:`/space separators, escapes), each entry with the line it starts on |
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
@@ -65,7 +65,14 @@ rule's rows stay contiguous.
    e.g. `--wiring-map`): the option and the root in any order, the last value wins, and a missing value, any
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
    `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
-   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`).
+   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
+   value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
+   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
+   `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
+   `<lint>: unknown option: <arg>` and a second root `<lint>: unexpected argument: <arg>` (exit 3, no usage
+   line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
+   `<check>  <SEV>  <path>:<line>  <msg>` (the check before the severity), the row lint-wb-threading always
+   printed; the empty-root ERROR row keeps the standard shape.
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk

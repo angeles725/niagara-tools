@@ -51,14 +51,18 @@ _resolve() { HOME="$H" run "$KR" "$@"; }
   [[ "${lines[0]}" == "KIT=$KM/build-n4-module-kit SHA="*" (origin/main, clean)" ]]
 }
 
-@test "KR3: kit-main behind origin/main -> exit 2, names the behind count and the refresh command" {
+@test "KR3: clean kit-main strictly behind origin/main -> auto fast-forward, refreshed <old>→<new> on stderr, exit 0" {
+  # changed by r10-kit-resolve-autoff: behind + clean kit-main used to be exit 2 REFUSED stale
   _clone "$KM"
+  old=$(git -C "$KM" rev-parse --short=7 HEAD)
   _advance
-  _resolve
-  [ "$status" -eq 2 ]
-  [[ "$output" == *"kit-resolve: REFUSED stale"*"1 commit(s) behind origin/main"* ]]
-  [[ "$output" == *"git -C $KM checkout --detach origin/main"* ]]
-  [[ "$output" != *"KIT="* ]]
+  new=$(git -C "$ORIGIN" rev-parse --short=7 main)
+  HOME="$H" run --separate-stderr "$KR"
+  [ "$status" -eq 0 ]
+  # shellcheck disable=SC2154  # $stderr is set by bats run --separate-stderr
+  [[ "$stderr" == *"kit-resolve: refreshed $old→$new"* ]]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$(git -C "$ORIGIN" rev-parse main)" ]
+  [[ "${lines[0]}" == "KIT=$KM/build-n4-module-kit SHA="*" (origin/main, clean)" ]]
 }
 
 @test "KR4: dirty kit tree -> exit 2 REFUSED dirty, even when current" {
@@ -154,4 +158,101 @@ _resolve() { HOME="$H" run "$KR" "$@"; }
   _resolve --bogus
   [ "$status" -eq 3 ]
   [[ "$output" == *"usage: kit-resolve.sh"* ]]
+}
+
+@test "KR14: dirty kit-main behind origin/main -> exit 2 REFUSED dirty, HEAD unchanged (no auto-refresh)" {
+  _clone "$KM"
+  _advance
+  before=$(git -C "$KM" rev-parse HEAD)
+  printf 'edit\n' >> "$KM/build-n4-module-kit/METHODOLOGY.md"
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED dirty"* ]]
+  [[ "$output" != *"refreshed"* ]]
+}
+
+@test "KR15: diverged kit-main (local commit not on origin/main) -> exit 2 REFUSED diverged, HEAD unchanged" {
+  _clone "$KM"
+  git -C "$KM" checkout -q --detach
+  git -C "$KM" commit -q --allow-empty -m local
+  _advance
+  before=$(git -C "$KM" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED diverged"* ]]
+  [[ "$output" != *"KIT="* ]]
+}
+
+@test "KR16: offline kit-main behind its local origin/main -> exit 2, HEAD unchanged, also with --offline-ok" {
+  _clone "$KM"
+  _advance
+  git -C "$KM" fetch -q origin                                 # local origin/main is ahead of HEAD
+  git -C "$KM" remote set-url origin "$TMPDIR_T/missing.git"
+  before=$(git -C "$KM" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: WARN offline"* ]]
+  _resolve --offline-ok
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED stale"* ]]
+  [[ "$output" != *"refreshed"* ]]
+  _resolve --offline-ok --refresh                              # an explicit --refresh never refreshes unfetched
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" != *"refreshed"* ]]
+}
+
+@test "KR17: stale \$BUILD_N4_KIT without flags -> exit 2 REFUSED stale, HEAD untouched" {
+  _clone "$TMPDIR_T/dev"
+  _advance
+  before=$(git -C "$TMPDIR_T/dev" rev-parse HEAD)
+  BUILD_N4_KIT="$TMPDIR_T/dev/build-n4-module-kit" HOME="$H" run "$KR"
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$TMPDIR_T/dev" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED stale"* ]]
+  [[ "$output" != *"refreshed"* ]]
+}
+
+@test "KR18: stale default checkout without flags -> exit 2 REFUSED stale naming the behind count, HEAD untouched" {
+  _clone "$DEF"
+  _advance
+  before=$(git -C "$DEF" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$DEF" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED stale"*"1 commit(s) behind origin/main"* ]]
+  [[ "$output" != *"refreshed"* ]]
+}
+
+@test "KR19: kit-main ahead of origin/main (one local commit on top) -> exit 2 REFUSED ahead, HEAD unchanged" {
+  _clone "$KM"
+  git -C "$KM" checkout -q --detach
+  git -C "$KM" commit -q --allow-empty -m local
+  before=$(git -C "$KM" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$KM" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
+  [[ "$output" != *"KIT="* ]]
+}
+
+@test "KR20: \$BUILD_N4_KIT or default checkout ahead of origin/main -> exit 2 REFUSED ahead, HEAD unchanged" {
+  _clone "$TMPDIR_T/dev"
+  git -C "$TMPDIR_T/dev" commit -q --allow-empty -m local
+  before=$(git -C "$TMPDIR_T/dev" rev-parse HEAD)
+  BUILD_N4_KIT="$TMPDIR_T/dev/build-n4-module-kit" HOME="$H" run "$KR"
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$TMPDIR_T/dev" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
+  _clone "$DEF"
+  git -C "$DEF" commit -q --allow-empty -m local
+  before=$(git -C "$DEF" rev-parse HEAD)
+  _resolve
+  [ "$status" -eq 2 ]
+  [ "$(git -C "$DEF" rev-parse HEAD)" = "$before" ]
+  [[ "$output" == *"kit-resolve: REFUSED ahead"* ]]
 }

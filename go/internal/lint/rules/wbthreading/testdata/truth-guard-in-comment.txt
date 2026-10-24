@@ -1,0 +1,10 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+ui-thread-traversal  WARN  @DIR@/src/E.java:2  doInvoke -> getNavChildren without invokeLater/BJobService (B809: flag for human review)
+-- stderr --
+-- src/E.java --
+class E {
+  public void doInvoke() { root.getNavChildren(); /* TODO: SwingUtilities.invokeLater */ }
+}

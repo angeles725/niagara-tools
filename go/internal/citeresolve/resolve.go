@@ -19,15 +19,20 @@ import (
 type Status string
 
 // The statuses. ToolError is a failure of the tool (an unreadable file), never a negative finding.
+// HistoricalDrift, UnverifiableKind and SkippedTemplate are not findings either: a history card's moved
+// target, evidence no tree holds, and a template placeholder that is not a pointer.
 const (
-	Resolved       Status = "RESOLVED"
-	MissingFile    Status = "MISSING_FILE"
-	MissingSection Status = "MISSING_SECTION"
-	MissingDelta   Status = "MISSING_DELTA"
-	LineOutOfRange Status = "LINE_OUT_OF_RANGE"
-	BareID         Status = "BARE_ID"
-	Unparsed       Status = "UNPARSED"
-	ToolError      Status = "TOOL_ERROR"
+	Resolved         Status = "RESOLVED"
+	MissingFile      Status = "MISSING_FILE"
+	MissingSection   Status = "MISSING_SECTION"
+	MissingDelta     Status = "MISSING_DELTA"
+	LineOutOfRange   Status = "LINE_OUT_OF_RANGE"
+	BareID           Status = "BARE_ID"
+	Unparsed         Status = "UNPARSED"
+	ToolError        Status = "TOOL_ERROR"
+	HistoricalDrift  Status = "HISTORICAL_DRIFT"
+	UnverifiableKind Status = "UNVERIFIABLE_KIND"
+	SkippedTemplate  Status = "SKIPPED_TEMPLATE"
 )
 
 // excerptLen is how many characters of each cited line the excerpt keeps.
@@ -73,10 +78,12 @@ type Engine struct {
 func New(r Roots) *Engine {
 	e := &Engine{roots: r, fs: newFiles()}
 	e.by = map[citeparse.Kind]Resolver{
-		citeparse.Retro:    retroResolver{e},
-		citeparse.Corpus:   corpusResolver{e},
-		citeparse.Bare:     fixed{BareID, "an ID with no source file"},
-		citeparse.Unparsed: fixed{Unparsed, ""},
+		citeparse.Retro:        retroResolver{e},
+		citeparse.Corpus:       corpusResolver{e},
+		citeparse.Bare:         fixed{BareID, "an ID with no source file"},
+		citeparse.Unparsed:     fixed{Unparsed, ""},
+		citeparse.Unverifiable: fixed{UnverifiableKind, "no tree holds this kind"},
+		citeparse.Template:     fixed{SkippedTemplate, "a template placeholder, not a pointer"},
 	}
 	e.registerFiles()
 	return e

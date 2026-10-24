@@ -1,0 +1,8 @@
+-- args --
+--wiring-map
+x
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+usage: lint-inline-site-literal.sh [--strict] [--site-table <path>]... [--site-pattern <regex>]... <module-root>

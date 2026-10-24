@@ -1,0 +1,6 @@
+-- args --
+/nonexistent/__wbt__
+-- want --
+exit 3
+-- stderr --
+lint-wb-threading: not a directory: /nonexistent/__wbt__
