@@ -5,8 +5,8 @@ Workbench-side UI: Swing `BWbView`/editor tools, or PX views/widgets. Exemplar t
 Not yet fully documented — seed pointers, feed via the retro step when you build one:
 
 - **`-wb` profile** only; register the view type + an `@AgentOn` (agent-on the component type) so it opens from the tree. `requiredPermissions` on the agent = view VISIBILITY only, never security.
-- **`-wb` gradle MUST include `com.tridium.convention.niagara-home-repositories` plugin:** a `-wb` subproject cannot resolve `:baja`/`:web` unless `id("com.tridium.convention.niagara-home-repositories")` is declared in its `<mod>-wb.gradle.kts`. The `-rt` profile gets this transitively from `niagara-home-repositories`; the `-wb` profile does NOT inherit it automatically. Missing this plugin causes "Could not resolve `:baja`" at Gradle sync time. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ3]`
-- **wb-agent registration requires BOTH `<agent>` in `module-include.xml` AND `@AgentOn` in `@NiagaraType`:** registering `@AgentOn` inline in `@NiagaraType` alone does NOT emit the `<agent>` block into `module-include.xml` — Workbench will not discover the agent. Both are required: the `@AgentOn` annotation on the class AND an explicit `<agent>` block in `module-include.xml`. Verify with `grep -r '<agent>' <mod>-wb/` after adding an `@AgentOn`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ5]`
+- **`-wb` gradle MUST include `com.tridium.convention.niagara-home-repositories` plugin:** a `-wb` subproject cannot resolve `:baja`/`:web` unless `id("com.tridium.convention.niagara-home-repositories")` is declared in its `<mod>-wb.gradle.kts`. The `-rt` gradle already declares it (chihuahua-wb relies on that); the `-wb` gradle does NOT inherit it, so declare it there too. Missing this plugin causes "Could not resolve `:baja`" at Gradle sync time. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ3]`
+- **wb-agent registration — the `@AgentOn` in `@NiagaraType` is what writes the `<agent>` entry:** at compile time javac's `@NiagaraType` annotation processor (not Slot-o-Matic) updates `module-include.xml` with the type's registry information, its agents included (devguide `slot-o-matic.txt:191-193`). The Apillm build saw no `<agent>` block from an inline-only `@AgentOn` and added one by hand `[INFER — the processor did not run in that build]`; if Workbench does not discover the agent, check that the processor ran before hand-writing the block. Verify with `grep -r '<agent>' <mod>-wb/` after adding an `@AgentOn`. `[ev: retro apillm-headless-servlet-rt-4.14-deltas Δ5]`
 - **PX views:** authored in Workbench PxEditor (GUI), shipped as module resources + registered as an agent view on a type; the same `.px` renders in the browser via the Hx/HTML5 profile. Editable fields via kitPx field editors; background image as a module resource. (Corpus B180/B194/B202/B203.)
 - **PX vs custom servlet dashboard:** PX = declarative, Workbench-authored, native. A `BWebServlet` + SPA (types/dashboard.md) = custom HTML5, no PxEditor. Pick per need; an HMI that just points a browser at a URL takes either.
 - Same build (Java 8 + slotomatic) and METHODOLOGY rules.
@@ -22,43 +22,43 @@ Not yet fully documented — seed pointers, feed via the retro step when you bui
 `[ev: user directive 2026-09-20]`
 
 ## How much wb is enough — the ladder (climb ONLY when needed)
-- **Author the LEAST wb the ladder allows:** rung 0 = **nothing** — the default property-sheet/wire-sheet views already render standard slots (kitControl ships 152 rt types with only 2 wb field editors); rung 1 = a `BWbFieldEditor @AgentOn(<value type>)` for ONE composite value that renders badly; rung 2 = a `BAbstractManager`/`BDeviceManager` ONLY when the component is a container of learned/discovered children; rung 3 = a `BWbComponentView` ONLY for non-tabular interaction. **Our ColdRoomPan/CompPan components sit at rung 0 — do not build a Manager.** [ev: retro corpus-index · B751]
+- **Author the LEAST wb the ladder allows:** rung 0 = **nothing** — the default property-sheet/wire-sheet views already render standard slots (kitControl ships 152 rt types with only 2 wb field editors); rung 1 = a `BWbFieldEditor @AgentOn(<value type>)` for ONE composite value that renders badly; rung 2 = a `BAbstractManager`/`BDeviceManager` ONLY when the component is a container of learned/discovered children; rung 3 = a `BWbComponentView` ONLY for non-tabular interaction. **Our ColdRoomPan/CompPan components sit at rung 0 — do not build a Manager.** [ev: retro corpus-index-rt-authoring-and-organization-blocks · B751]
 - **Rung-2 has two authoring recipes — pick by context:** (a) **Tridium subclass recipe** — extend `BAbstractManager`/`BDeviceManager`, override `makeModel`/`makeController`/`makeLearn` (`BDriverManager.java:33-85`); use for a standalone driver that owns its own Manager container. (b) **Honeywell device-model PLUGIN recipe** — implement only `BIHonDeviceModel` (or `BIHonBacnetDeviceModel`); the plugin contributes columns, supported models, and commands (`BThermostatDeviceModel.java:22-53`); the shared `HonDeviceModel` framework (`HonDeviceModel.java:23`) discovers plugins from the registry — **zero Manager subclass code**. Prefer (b) for a device-family module that slots into an existing Manager framework; prefer (a) only when no shared framework exists. [ev: corpus B751 §751.3]
-- **FieldEditor recipe (rung 1):** ctor builds the widgets → `linkTo(widget, textModified, setModified)` → override `doLoadValue`/`doSaveValue`/`doSetReadonly`; compose child editors via `BWbFieldEditor.makeFor(value)`; register with `@AgentOn(<that value type>)`. [ev: retro corpus-index · B751]
-- **A Honeywell "Wizard" is usually a tabbed `BWbComponentView`, not a `BWizard`:** step-panes = tabs, backed by rt `BJob`s launched from an agent `BMenu`. Always mutate through the space (`newTransaction` / `tx.commit`); undo is inherited from the space, never hand-rolled. [ev: retro corpus-index · B751]
-- **Rung 4+ (reference ceiling — do NOT imitate):** a "vendor programming environment" tier exists above rung 3 in the Honeywell `ace` module: own wire sheet + app wizard + catalog palette + opcode expression editor. This is the ceiling of the rung ladder, documented here as a concrete upper bound for scope and code-review discussions. Our modules stay at rung 0–1. Reaching rung 4 implies owning a custom Baja domain language runtime — not a practical target for our use cases. `[ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ5]` `[ev: corpus B1098]`
+- **FieldEditor recipe (rung 1):** ctor builds the widgets → `linkTo(widget, textModified, setModified)` → override `doLoadValue`/`doSaveValue`/`doSetReadonly`; compose child editors via `BWbFieldEditor.makeFor(value)`; register with `@AgentOn(<that value type>)`. [ev: retro corpus-index-rt-authoring-and-organization-blocks · B751]
+- **A Honeywell "Wizard" is usually a tabbed `BWbComponentView`, not a `BWizard`:** step-panes = tabs, backed by rt `BJob`s launched from an agent `BMenu`. Always mutate through the space (`newTransaction` / `tx.commit`); undo is inherited from the `Command`/`MgrEdit` framework, never hand-rolled. [ev: retro corpus-index-rt-authoring-and-organization-blocks · B751]
+- **Rung 4+ (reference ceiling — do NOT imitate):** a "vendor programming environment" tier exists above rung 3 in the Tridium `ace` module (the ACE driver for Distech "Titan" controllers): own wire sheet + app wizard + catalog palette + opcode expression editor. This is the ceiling of the rung ladder, documented here as a concrete upper bound for scope and code-review discussions. Our modules stay at rung 0–1. Reaching rung 4 implies owning a custom Baja domain language runtime — not a practical target for our use cases. `[ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ5]` `[ev: corpus B1098]`
 
 ## wb/model testable seam — exemplar-backed
 
 - **DWB1 — `-wb` is off-station testable via a `model/` lambda-injection seam (HIGH):** keep the business logic in a Baja-free `model/` package; inject the slot-availability check as a `Predicate<String>` so the model has zero Baja imports. The `BWidget` view stays the thin adapter. `chihuahua-wb`'s `LinkSlotNameUtil` + 33 pure `@Test` cases are the proven pattern. **This upgrades `-wb` from seed to exemplar-backed for the model layer.** [ev: corpus B762]
-- **Dual-surface `@AgentOn` registration:** write `@NiagaraType(agent={@AgentOn(types={"mod:Type"}, requiredPermissions="r")})` on the view/FE; Slot-o-Matic emits `<type><agent><on type=…/></agent></type>`; multi-type `types={…}` = one view over several source types. `[ev: corpus B780]`
+- **Dual-surface `@AgentOn` registration:** write `@NiagaraType(agent={@AgentOn(types={"mod:Type"}, requiredPermissions="r")})` on the view/FE; javac's `@NiagaraType` annotation processor (not Slot-o-Matic) emits `<type><agent><on type=…/></agent></type>` (devguide `slot-o-matic.txt:193`); multi-type `types={…}` = one view over several source types. `[ev: corpus B780]`
 
 ## bajaux data-channel dialects
 
-> Applies only when you choose the **bajaux `@AgentOn` + `BIJavaScript`** recipe. Our servlet-SPA uses REST-poll and needs neither dialect — this section guides builders who pick the bajaux path. [ev: corpus B752 §752.2]
+> Applies only when you choose the **bajaux `@AgentOn` + `BIJavaScript`** recipe. Our servlet-SPA uses REST-poll and needs neither dialect — this section guides builders who pick the bajaux path. [ev: corpus B752 §752.2, §752.4]
 
 Two dialects for delivering data to a bajaux `@AgentOn` view:
 
 - **(a) `fal.serverSideCall` dialect (`BSingleton` channel):** implement `BIServerSideCallHandler` on a `@NiagaraSingleton`; annotate the view with `@AgentOn(requiredPermissions="ri")`. The server returns `BValue`/JSON; live refresh via Fox `subscriberMixIn` in the JS view. Exemplar: `BFALServerSideCallHandler.java:29-176` (EagleHawk). Use when the view needs reactive/push-style updates from a singleton service.
-- **(b) `baja.rpc` dialect (`@NiagaraRpc` channel):** annotate static methods on a `BComponent` with `@NiagaraRpc(permissions="…", transports={web,box})`; the browser calls `baja.rpc({typeSpec, method, args})`. Exemplar: `BThermostatWizardRPC.java:168-176` (TC/Sylk React SPA). Use when the view calls discrete wizard-style operations.
+- **(b) `baja.rpc` dialect (`@NiagaraRpc` channel):** annotate static methods on a `BComponent` with `@NiagaraRpc(permissions="…", transports={web,box})`; the browser calls `baja.rpc({typeSpec, method, args})`. Exemplar: `BThermostatWizardRPC.java:106-114` (TC/Sylk React SPA). Use when the view calls discrete wizard-style operations.
 
-**Anti-pattern — `permissions="unrestricted"` on dialect (b):** Honeywell TC/Sylk RPCs ship `permissions="unrestricted"` — no server-side auth check. Do NOT copy this; the browser is never the security boundary. Add a server-side `OPERATOR_WRITE` (or stricter) check on every mutating RPC, matching the pattern in `dashboard.md §RBAC`. [ev: corpus B752 §752.2]
+**Anti-pattern — `permissions="unrestricted"` on dialect (b):** Honeywell TC/Sylk RPCs ship `permissions="unrestricted"` — no server-side auth check. Do NOT copy this; the browser is never the security boundary. Add a server-side `OPERATOR_WRITE` (or stricter) check on every mutating RPC, matching the pattern in `dashboard.md §RBAC`. [ev: corpus B752 §752.5]
 
-## Good -wb artifact doctrine (DWB1 exemplar — 10 rules)
+## Good -wb artifact doctrine (DWB1 exemplar — 11 rules)
 
 > Every line applies to any -wb profile with Java sources. [ev: corpus B809] [ev: corpus B817]
 
-1. **Profile isolation**: keep all -wb code in the `-wb` Gradle profile; never import `-wb` classes from `-rt` or `-ux`. [ev: corpus B809] [ev: corpus B817]
+1. **Profile isolation**: keep all -wb code in the `-wb` Gradle profile; never import `-wb` classes from `-rt` or `-ux`. `[INFER — kit doctrine]`
 2. **Model/view split (DWB1)**: isolate business logic in a Baja-free `model/` package; the view injects Baja access as a `Predicate<String>` or similar lambda — zero Baja imports in `model/`. [ev: corpus B809] [ev: corpus B817]
 3. **Thin view adapter**: the `BWbComponentView`/`BWbFieldEditor` subclass does layout + delegation only; it never contains business logic that belongs in `model/`. [ev: corpus B809] [ev: corpus B817]
-4. **Off-load UI-thread traversal**: `doInvoke` bodies must NOT call `getNavChildren`/`getNavNodes`/`BqlQuery` directly on the Swing EDT; use `invokeLater` or `BJobService` for any nav-tree walk. [ev: corpus B809] [ev: corpus B817]
-5. **Justify broad `@AgentOn`**: `@AgentOn(types="baja:Component")` (or any super-type) requires a comment explaining WHY the agent must attach to every component of that type. [ev: corpus B809] [ev: corpus B817]
-6. **`requiredPermissions` = view only**: never use the agent's `requiredPermissions` as a security gate; it controls VISIBILITY, not authorisation — authorisation belongs in the action/servlet. [ev: corpus B809] [ev: corpus B817]
-7. **Pure `@Test` in `srcTest`**: the `model/` package must be testable without a running station; aim for ≥20 pure unit tests covering the predicate-injection seam. [ev: corpus B809] [ev: corpus B817]
-8. **No `getNavChildren` in `doInvoke`**: if a search or tree-walk is needed, extract it into a named method called via `invokeLater`; the `doInvoke` body stays a one-liner. [ev: corpus B809] [ev: corpus B817]
-9. **Non-empty scaffold gate**: ship a `-wb` jar only when it has ≥1 `.class` OR ≥1 palette `<p n=` entry; an all-empty scaffold (`verify-module.sh` `wb-scaffold` WARN) means nothing was compiled or registered. [ev: corpus B809] [ev: corpus B817]
-10. **Declare every transitive dep**: every `<dependency>` in `META-INF/module.xml` MUST appear as `api(":X")` or `nre(":X")` in the profile `.gradle.kts`; phantom deps (`verify-module.sh` `phantom-dep` WARN) disappear silently after Gradle updates. [ev: corpus B809] [ev: corpus B817]
-11. **Fail-closed authorization for WB controls:** a control whose authorization mixin or PIN is absent must be DISABLED **and** HIDDEN by default — never open-by-default. Default authorization slots/PINs to `-1` (no assignment = no access). On `loadValue()`, check the pin; if the user lacks the required permission call `widget.setEnabled(false)` **and** `widget.setVisible(false)`. A missing mixin ≠ "unprotected" — it equals "no access". `[ev: retro honeywell-wb-rt-wb-deltas Δ3]` `[ev: corpus B1079]`
+4. **Off-load UI-thread traversal**: `doInvoke` bodies must NOT call `getNavChildren`/`getNavNodes`/`BqlQuery` directly on the Swing EDT; put any station traversal in a `BSimpleJob.run()` and marshal the UI update back with `WbViewEventWorker.invokeLater()`. [ev: corpus B809] [ev: corpus B817]
+5. **Narrow `@AgentOn`**: target the narrowest specific type(s), never `@AgentOn(types="baja:Component")`. [ev: corpus B809] [ev: corpus B817]
+6. **`requiredPermissions` = view only**: never use the agent's `requiredPermissions` as a security gate; it controls VISIBILITY, not authorisation — authorisation belongs in the action/servlet. [ev: corpus B752 §752.5] [ev: corpus B809]
+7. **Pure `@Test` in `srcTest`**: the `model/` package must be testable without a running station; aim for ≥20 pure unit tests covering the predicate-injection seam `[INFER]`. [ev: corpus B762]
+8. **No `getNavChildren` in `doInvoke`**: if a search or tree-walk is needed, run it in a `BSimpleJob` (rule 4); the `doInvoke` body only submits the job. [ev: corpus B809] [ev: corpus B817]
+9. **Non-empty scaffold gate**: ship a `-wb` jar only when it has ≥1 `.class` OR ≥1 palette `<p n=` entry; an all-empty scaffold (`verify-module.sh` `wb-scaffold` WARN) means nothing was compiled or registered. [ev: corpus B817 §817.9 L9]
+10. **Declare what you reference, no phantoms**: `module.xml` declares the companion `-rt`, `workbench-wb`, `bajaui-wb` and every module whose types the code uses — a MISSING companion `-rt` is the hard failure (`ClassNotFound` at Workbench start); a dep listed but never referenced is a phantom (`verify-module.sh` `phantom-dep` WARN, advisory). [ev: corpus B809 §809.5]
+11. **Fail-closed authorization for WB controls:** a control whose authorization mixin or PIN is absent must be DISABLED **and** HIDDEN by default — never open-by-default. An ABSENT mixin is the closed case; a pin of `-1` is not — in the Galileo exemplar `-1` means any level passes. On `loadValue()`, check the pin; if the user lacks the required permission call `widget.setEnabled(false)` **and** `widget.setVisible(false)`. A missing mixin ≠ "unprotected" — it equals "no access". `[ev: retro honeywell-wb-rt-wb-deltas Δ3]` `[ev: corpus B1079]`
 
 **DWB1 exemplar — chihuahua-wb `model/` tree** (commit `175eee8`, `angeles725/chihuahua`):
 ```
@@ -66,13 +66,13 @@ chihuahua-wb/src/com/angeles/chihuahua/wb/
   model/
     DirectionButtonUtil.java   — Baja-free direction label logic
     DirectionLabelUtil.java    — Baja-free label text util
-    LinkSlotNameUtil.java      — slot name parsing, 33 pure @Test cases
+    LinkSlotNameUtil.java      — slot name generation, Predicate-injected
     PendingLink.java           — Baja-free pending-link value object
     PendingLinkBuilder.java    — builder for PendingLink
     SearchResultUtil.java      — Baja-free search-result formatter
   BBatchLinkEditor.java        — thin BWbComponentView adapter
 ```
-The `model/` package has zero Baja imports; all station access is injected via `Predicate<String>` at construction time. 33 `@Test` cases run without a station. [ev: corpus B809] [ev: corpus B817]
+The `model/` package has zero Baja imports; station access is passed per call as a `Predicate<String>` (`LinkSlotNameUtil.generate(Predicate<String>, String)`). 33 `@Test` cases across the six classes run without a station. [ev: corpus B762]
 
 ## Manager recipe — `BAbstractManager` wiring reference [ev: retro wb-manager-framework-deltas Δ1]
 
@@ -80,24 +80,26 @@ The `model/` package has zero Baja imports; all station access is injected via `
 
 ### 6-object anatomy and boolean gates
 
-Every `BAbstractManager` subclass is wired by six support objects plus three boolean gates on the container class:
+Every `BAbstractManager` owns six support objects, each built once in `init()` from a protected factory method, plus three read-only gates derived from them:
 
-| Object | Role |
-|--------|------|
-| `BAbstractManager` | The Swing panel — top of the stack; owns `BTable` + toolbar; calls `makeModel`/`makeController`/`makeLearn` |
-| `MgrModel` | Table model — owns `cols[]` (the database/display columns) |
-| `MgrController` | Actions — New, Delete, Edit, Discover; owns `promptForNew()` / `promptForEdit()` |
-| `MgrLearn` | Discover/learn contract — returns its own `cols[]` **independent** of `MgrModel.cols[]` (separate column sets); called from the Discover toolbar button |
-| `MgrColumn` | Column descriptor — see taxonomy below |
-| `BMgrEditDialog` | Cell-edit bridge — `ColumnInput` inner class routes cell edits to the slot pathway (`BAbstractManagerFE` is NOT a class; "FE" is a driver-naming convention only) |
+| Object | Factory | Role |
+|--------|---------|------|
+| `MgrModel` | `makeModel()` → `new MgrModel(this)` | Database-side table model; owns the columns from its `makeColumns()` |
+| `MgrController` | `makeController()` → `new MgrController(this)` | Commands — New, Edit, Delete, Discover; `promptForNew()` lives here |
+| `MgrLearn` | `makeLearn()` (null by default) | Discover/learn pane — its own `makeColumns()`, **independent** of `MgrModel`'s columns |
+| `MgrTagDictionary` | `makeTagDictionary()` (null when the target has no `TagDictionaryService`) | Tags pane |
+| `MgrTemplate` | `makeTemplate()` (null by default) | Device-template pane |
+| `MgrState` | `makeState()` → `new MgrState()` | State cached across a close/reopen |
 
-Three boolean gates on the `BAbstractManager` subclass drive pane visibility:
+The other classes you meet: `MgrColumn` (column descriptor — see taxonomy below) and `BMgrEditDialog` (the Add/Edit dialog; one inner `ColumnInput` per edit column, `BMgrEditDialog.java:225-227`; `BAbstractManagerFE` is NOT a class, "FE" is a driver-naming convention only).
 
-| Gate method | Controls |
-|-------------|---------|
-| `isLearnable()` | Shows/hides the Discover button |
-| `isTaggable()` | Shows/hides the Tags pane |
-| `isTemplatable()` | Shows/hides the Template pane |
+The three gates are `public final` — you cannot override them; return null from the factory instead (`BAbstractManager.java:354-395`):
+
+| Gate method | Is | Controls |
+|-------------|----|---------|
+| `isLearnable()` | `getLearn() != null` | Shows/hides the Discover button |
+| `isTaggable()` | `getMgrTagDictionary() != null` | Shows/hides the Tags pane |
+| `isTemplatable()` | `getMgrTemplate() != null` | Shows/hides the Template pane |
 
 `[ev: corpus B1088]`
 
@@ -108,7 +110,7 @@ Three boolean gates on the `BAbstractManager` subclass drive pane visibility:
 | `MgrColumn.Name` | Display name of the child component | — |
 | `MgrColumn.Type` | Tridium type spec of the child (e.g. `"mod:MyPoint"`) | `typeSpec` |
 | `MgrColumn.Prop` | A **flat** slot on the child component (accessible directly via `slot.asProperty()`) | `prop` name |
-| `MgrColumn.PropPath` | A **nested** slot via a dot-path (e.g. `"proxyExt.precision"`); traverses the child component tree | `propPath` dot string |
+| `MgrColumn.PropPath` | A **nested** slot via a property path (e.g. `{proxyExt, precision}`); traverses the child component tree | `Property[]` path |
 
 Use `Prop` for direct slots; use `PropPath` for mixin or extension slots. The discover table (`MgrLearn.cols[]`) and database table (`MgrModel.cols[]`) carry **independent** column arrays — do not share or reuse the same `MgrColumn` instances across both.
 
@@ -118,7 +120,7 @@ Use `Prop` for direct slots; use `PropPath` for mixin or extension slots. The di
 
 **`addDefault*Columns()` + `addCustom*Columns()` template hook (PD-16):** structure a manager's column definition as two protected methods: `addDefaultColumns(List<MgrColumn>)` (supplies the built-in columns every subclass gets) and `addCustomColumns(List<MgrColumn>)` (empty by default; subclasses override to extend). Call both from `makeModel()`. This lets a subclass add columns without replacing the default set. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ16]`
 
-**`isDefault` blank-suppression for polymorphic manager columns (PD-17):** when a manager row type can be one of several subtypes (e.g. digital vs analog vs enum proxy), some columns are irrelevant for certain row types. Override `MgrColumn.isDefault(BComponent row)` to return `false` for rows where the column does not apply — the manager hides the cell rather than showing a blank or a cast exception. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ17]`
+**`isDefault` blank-suppression for polymorphic manager columns (PD-17):** when a manager row type can be one of several subtypes (e.g. digital vs analog vs enum proxy), some columns are irrelevant for certain row types. Override `MgrColumn.isCellValid(MgrEditRow row)` to return `false` for rows where the column does not apply — the manager greys the cell out rather than showing a blank or a cast exception (`MgrColumn.java:220-228`; there is no `isDefault`). `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ17]`
 
 **Boolean-flag column-switch template (PD-22):** when a manager must show entirely different column sets based on a runtime flag (e.g. client mode vs slave mode), hold two `MgrColumn[]` arrays as private static finals and dispatch in `makeColumns()` via an `isX()` hook:
 
@@ -143,10 +145,10 @@ Never collapse the two sets into one wide array with conditional visibility — 
 | Need Discover/New/Delete toolbar | YES | No |
 | Need paging, column sort, inline cell-edit via `BMgrEditDialog` | YES | Optional |
 | Non-tabular interaction (forms, wizards, status dashboards) | No | YES |
-| Simple container with hand-curated children (our Apillm importers/exporters) | No | YES (hand-built BTable suffices) |
+| Container whose hand-curated children you create/edit/delete in a table (our Apillm importers/exporters) | YES (B1091: migrate to it) | Only for a pure display view |
 | Standalone driver that owns its Manager container | YES (Tridium subclass recipe) | No |
 
-Our Apillm importer/exporter managers use the hand-built `BWbComponentView`+`BTable` recipe: no discovery, no learn, hand-curated children — the full `BAbstractManager` framework adds no value there.
+Our Apillm importer/exporter managers are hand-built `BWbComponentView`+`BTable` today; B1091 recommends migrating any create/edit/delete manager view to `BAbstractManager` + `MgrColumn.Prop` (free `MgrEdit` dialog, column reordering, CSV export, tags) and keeping the hand-built recipe for pure display views.
 
 **`BWbComponentView` for non-table specialized UIs — terminals, schedule editors (PD-08):** use `BWbComponentView` (not a `BAbstractManager`) for any UI that is not a table of discovered/learned rows — VT100 terminals, job schedule editors, wizard flows, or any non-tabular interaction. These views live at the same rung-3 as a manager but serve fundamentally different UX patterns. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ8]` `[ev: corpus B1058]`
 
@@ -154,38 +156,35 @@ Our Apillm importer/exporter managers use the hand-built `BWbComponentView`+`BTa
 
 ### Plugin-extensible device-type manager via SPI (Honeywell recipe) [ev: retro honeywell-wb-rt-wb-deltas Δ1]
 
-When multiple device families share one manager container, use the **plugin SPI** instead of subclassing `BAbstractManager` for each family. Implement only `BIHonDeviceModel` (or `BIHonBacnetDeviceModel`); the plugin contributes columns, supported model specs, and commands. The shared framework discovers plugins at runtime via `NiagaraRegistryUtil.getImplementersOfTypeSpec(BIHonDeviceModel.TYPE)` — zero Manager subclass code per device-family module.
+When multiple device families share one manager container, use the **plugin SPI** instead of subclassing `BAbstractManager` for each family. Implement only `BIHonDeviceModel` (or `BIHonBacnetDeviceModel`); the plugin contributes columns, supported model specs, and commands. The shared framework discovers plugins at runtime through Honeywell's own helper `NiagaraRegistryUtil.instance().getImplementersOfTypeSpec(String typeSpec)` (`com.honeywell.devicemanager.util`, called from `HonDeviceCache.java:120`) — zero Manager subclass code per device-family module.
 
 Key responsibilities of a `BIHonDeviceModel` implementer:
-- `getSupportedModelSpecs()` — returns the `BTypeSpec[]` this plugin handles.
-- `createColumns()` — returns the `MgrColumn[]` the plugin contributes to the shared table.
-- `createCommands()` — returns any toolbar commands scoped to devices this plugin owns.
+- `getSupportedModels()` — returns the `List<String>` of device model names this plugin handles.
+- `getSupportedColumns()` / `getSupportedDiscoveryColumns()` — return the `List<HonColumn>` / `List<HonDiscoveryColumn>` the plugin contributes to the shared tables.
+- `getSupportedCommands(BWidget)` — returns the `List<HonMgrCommand>` scoped to devices this plugin owns; `getDeviceType()` names the device `Type` (`BIHonDeviceModel.java`).
 
 Register each plugin via a plain `<type>` in `module.xml`; no `@AgentOn` is required. Prefer this recipe over a Manager subclass when a shared framework already exists and you are adding a new device family on top of it; prefer the Tridium subclass recipe (rung-2(a) above) only when no shared framework exists. `[ev: corpus B1077]`
 
 ### Static State for manager view continuity [ev: retro honeywell-wb-rt-wb-deltas Δ8]
 
-When a manager must survive a close/reopen without losing subscription or discovery state (e.g. a scan still in progress), hold that domain state in a `static` inner class scoped to the manager class:
+When a manager must survive a close/reopen without losing discovery state (e.g. the last learn result or a scan job still in progress), use the framework's `MgrState` seam: override `makeState()` to return a `static` inner `State extends MgrState` (the Honeywell Modbus manager's `State extends DeviceState` keeps `lastLearn` and `lrnJob`). `saveState()` caches it on deactivation under `MgrState.toKey(manager)` (the manager type) and `restoreState()` calls `restore(manager)` on the next load (`BAbstractManager.java:533-559`).
 
 ```java
 public class BMyDeviceManager extends BAbstractManager {
 
-    // Survives manager close/reopen: the static class lives with the classloader,
-    // not with the Swing panel instance.
-    private static class State {
-        volatile boolean discoveryInProgress;
-        final List<DiscoveredDevice> found = Collections.synchronizedList(new ArrayList<>());
-    }
-    private static final State STATE = new State();
+    // Cached by the framework across close/reopen, keyed by the manager type.
+    static class State extends MgrState {
+        BObject[] lastLearn;   // domain state only — never widgets
 
-    @Override
-    protected void doLoadValue(BObject value, Context cx) {
-        // read STATE.found — may already be populated by a background scan
+        @Override public void save(BAbstractManager manager)    { super.save(manager);    /* copy from the manager */ }
+        @Override public void restore(BAbstractManager manager) { super.restore(manager); /* copy back */ }
     }
+
+    @Override protected MgrState makeState() { return new State(); }
 }
 ```
 
-**Anti-pattern:** do NOT make Swing *widgets* (e.g. a `JList` or `BTable` model) static — only DOMAIN STATE. Widget singletons across two simultaneously open manager windows cause threading violations. The static field must hold only value-typed or thread-safe domain state. `[ev: corpus B1078]`
+**Anti-pattern:** do NOT put Swing *widgets* (e.g. a `BTable` model) in the state — only DOMAIN STATE. Widget singletons across two simultaneously open manager windows cause threading violations. `[ev: corpus B1078]`
 
 ### Dialog pre-population — live RT objects and toRow() [ev: retro wb-vendor-ux-rt-wb-pattern-deltas]
 
