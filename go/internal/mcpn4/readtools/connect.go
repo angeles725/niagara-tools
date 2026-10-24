@@ -1,6 +1,6 @@
 // Package readtools holds the read-only station tools of the mcp-n4 server
-// (mcp-n4-kit/mcp_n4/tools_read.py:198-500, 789-969). This slice serves n4_connect and
-// n4_describe_session; every other read tool still answers jsonrpc.NotImplemented.
+// (mcp-n4-kit/mcp_n4/tools_read.py:198-500, 789-969): n4_connect, n4_describe_session and the
+// tree reads; every other read tool still answers jsonrpc.NotImplemented.
 package readtools
 
 import (
@@ -58,6 +58,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Ctx = t.Ctx
 	s.Handlers["n4_connect"] = t.Connect
 	s.Handlers["n4_describe_session"] = t.DescribeSession
+	s.Handlers["n4_navigate"] = t.Navigate
 }
 
 func toolError(format string, a ...any) error {
