@@ -470,3 +470,9 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
 - **Installed-skill drift (close gate):** run **`scripts/check-skill-drift.sh`** (read-only; `--skill <name>`, `--home <dir>`). A FAIL means the launcher an agent actually follows (`~/.claude/skills/<skill>/SKILL.md`) differs from the tracked `skill/SKILL.md` — the session is not closed until `scripts/install-skill.sh --force` restores parity. It is a session-close check, not a CI step (CI has no installed skill). `[ev: retro client-source-of-truth Δ3]`
 - **Source of truth moved?** If the authoritative checkout, branch or commit of a module changed this session, update its `source_of_truth` field in `BUILD-STATE.md` in the same close — never only in session memory. `[ev: retro client-source-of-truth Δ2]`
 - Machine enforcement (opt-in, per-clone, reversible): activate with **`scripts/install-hooks.sh`** (sets `git config core.hooksPath .githooks`; `--uninstall` restores the default; it REFUSES to clobber a pre-existing custom `hooksPath` unless `--force`). Once active, `.githooks/pre-push` blocks a build-relevant push that skips the close gate, delegating the ledger check to `toolbelt/sweep-build-state.sh`.
+  - **A local-only gate skips only on a named, matched absence.** A check CI cannot run (its inputs live only on a
+    developer machine) runs in the local hook, before every early exit. Its one skip matches the tool's exact
+    message for an absent input and prints a named stderr line; every other non-zero exit refuses, the same exit
+    code for another cause included. The pre-push live cite check (`kit-cite-resolve --strict` on
+    `scripts/lib/live-doctrine-set.sh`) skips only on `cannot read <research|modules|clients|memory> root …: no such
+    file or directory`. `[ev: retro r10-live-cite-prepush-gate Δ1]`

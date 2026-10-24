@@ -230,6 +230,7 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
 - **Every tool checkout is resolved fail-closed:** a launcher that runs tools from a checkout refuses a stale, dirty or diverged one, fast-forwards a clean one that is behind, and prints the path and SHA it runs (`scripts/kit-resolve.sh`; research-sdd's resolver). [ev: retro r10-close-process-meta-lessons Δ3]
 - triage-console.sh attribution contract = **C1** own frame · **C2** own tag · **C3** bog-drift (`Missing class "<prefix>:` / `Cannot load station` / `Missing frozen property`); locale = `LC_ALL=C`, byte-safe (`grep -a`/awk), EN + ES level names (mojibake-safe latin-1). PR7 states this CONTRACT; PR13 states the operator STEPS (non-duplicative). `[ev: corpus B800]` `[ev: retro campaign8-triage-console]`
 - Code-folded retros need a "folded as code: <script> [ev: retro <token>]" note in a prose kit file to be credited by the citation audit. [ev: retro campaign6-research-fold]
+- **A BUILD proposal (a new toolbelt capability) is not built from its retro:** it waits for its build trigger and the user's decision (CXF → N4 translator: issue #122), and the kit keeps only mechanics, citing domain knowledge in the `niagara-research` corpus, never copying it in. [ev: retro cxf-to-n4-translator-proposal]
 
 ## Multi-session coordination
 - **Several sessions committing in the SAME checkout** follow the shared working-tree git discipline in `ORCHESTRATION.md` §3.d (status first, stage own paths only, never reset/rebase/stash over a peer's files).

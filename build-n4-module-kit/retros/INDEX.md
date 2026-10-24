@@ -146,7 +146,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-09-19-ci-green.md | kit | 2026-09-19 | folded | 5 | <!-- green the CI: .shellcheckrc + 2 bats error fixes + Mutation-pin headers (10 lints) + BUILD-LOOP lint-listing + dangling-ref fixes -->
 | 2026-09-19-cloud-connector.md | kit | 2026-09-19 | folded | 4 | <!-- new types/cloud-connector.md: BCloudConnectionService SPI maps + transport dual model + KeyRing auth + backend plugin chain -->
 | 2026-09-19-commissioning-verify.md | kit | 2026-09-19 | folded | 2 | <!-- issue #114: new commissioning-verify.sh (orchestrates config-sanity/status-parity/recovery-path + bog-audit CHECK11/13-19/20 + MANUAL footer) closes BUILD-LOOP §6.b -->
-| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | pending | 0 | <!-- disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
+| 2026-09-19-cxf-to-n4-translator-proposal.md | kit | 2026-09-19 | folded | 0 | <!-- disposition: tracked-by-issue #122 — BUILD proposal (new toolbelt capability), not a delta retro; 0 enumerated deltas; awaits a build trigger, not retro debt (sweep --age skips it) -->
 | 2026-09-19-dashboard-scaffold.md | kit | 2026-09-19 | folded | 3 | <!-- issue #115: fixtures/MinimalDash (-rt+-ux) + scaffold-module.sh --type dashboard + CI scaffold-diff step + TC-DASH1/2 -->
 | 2026-09-19-distribution.md | kit | 2026-09-19 | folded | 9 | <!-- new types/distribution.md: .dist/dist.xml, OEM overlay+trust certs, BOG schema-safety, version floor, .ntpl, AX->N4 -->
 | 2026-09-19-driver-authoring.md | kit | 2026-09-19 | folded | 9 | <!-- new types/driver-authoring.md: network/device/BProxyExt SPI + tuning/ping/poll + KNX/Z-Wave twists -->
@@ -345,7 +345,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-24-r10-close-process-meta-lessons.md | kit | 2026-10-24 | folded | 6 |
 | 2026-10-24-r10-fork-per-line-again.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-installed-line-guard.md | kit | 2026-10-24 | folded | 1 |
-| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | pending | 1 |
+| 2026-10-24-r10-live-cite-prepush-gate.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-path-keyed-gates-skip-data.md | kit | 2026-10-24 | folded | 2 |
 | 2026-10-24-r10-slotomatic-skip-fail-open.md | kit | 2026-10-24 | folded | 1 |
 | 2026-10-24-r10-stale-kit-resolution.md | kit | 2026-10-24 | folded | 1 |
