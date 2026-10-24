@@ -4,7 +4,6 @@
 exit 0
 WARN  lint-machine-default-path  @DIR@/Mod/Mod-rt/src/com/x/BCfg.java:3  machine-specific default "/home/dev/.n4/pw" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
 WARN  lint-machine-default-path  @DIR@/Mod/Mod-ux/src/rc/js/app.js:2  machine-specific default "/Users/me/out" in an object-literal property default -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
-INFO  lint-machine-default-path  @DIR@/Mod/gradle.properties:2  niagara_user_home is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)
 -- stderr --
 -- Mod/gradle.properties --
 niagara_home=C:\\Niagara\\Niagara-4.14
