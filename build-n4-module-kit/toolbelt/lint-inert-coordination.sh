@@ -43,6 +43,10 @@
 #     ")" (over lines; truth fix T2 2026-10-24 -- the bash took "no comma after the call on its line", so a call
 #     wrapped before two arguments was singleton and `asList(pick(a, b))` was not); `asList(new B[]{a, b})`
 #     (one array argument) still counts as singleton.
+#   - every declarator of a `Deque<...>`/`Queue<...>` type is named (`Deque<B> a = x, b;` gives a and b; the type of
+#     a `new ArrayDeque<>()` initializer is not a declaration), each name once (truth fix T3 2026-10-24 -- the bash
+#     took the line's first `<name> =`, printed "(Deque/Queue field)" when there was none, and dropped a name that
+#     was a substring of the names so far); a method parameter of such a type counts too.
 #   - `Token`/`Stagger` matching follows camelCase (a leading `token`/`stagger` word or a later
 #     `Token`/`Stagger` word); an ALL-CAPS constant (`STAGGER_MS`) is a false-negative risk.
 #   - a `Deque`/`Queue` field used for something UNRELATED to unit coordination (rare in a
@@ -61,6 +65,7 @@
 # Mutation: ICO-call -- taking `return units()...;` for the declaration checks the wrong body
 # Mutation: ICO-comment -- reading block comments as code WARNs a units() whose singletonList is commented out
 # Mutation: ICO-args -- the same-line no-comma test takes a wrapped two-argument Arrays.asList( for a singleton
+# Mutation: ICO-queue -- deduping names by substring hides the waiting queue behind waitingQueue
 # Mutation: ICO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: ICO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u

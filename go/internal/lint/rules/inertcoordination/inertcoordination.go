@@ -41,7 +41,6 @@ func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); re
 var (
 	unitsDecl = rx(`[A-Za-z_][A-Za-z0-9_<>\[\], ]*[[:space:]]units\(\)`)
 	queueType = rx(`(Deque|Queue)[[:space:]]*<`)
-	assigned  = rx(`[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=`)
 	coordName = rx(`[^A-Za-z0-9_]([a-z][A-Za-z0-9_]*(Token|Stagger)|token|stagger|Token|Stagger)[A-Za-z0-9_]*`)
 )
 
@@ -142,28 +141,91 @@ func oneArg(s string) bool {
 	return false
 }
 
-// coordination are the coordination-state names of the file in first-seen order: per line, the first
-// `<name> =` of a line typed Deque<…>/Queue<…> (or "(Deque/Queue field)"; skipped when it is a substring of
-// the names so far, as the awk's index() test did), then every token/stagger identifier, each once.
+// coordination are the coordination-state names of the file in first-seen order, each once: per line, every
+// declarator of a Deque<…>/Queue<…> type (queueNames), then every token/stagger identifier.
 func coordination(lines []string) []string {
 	var found []string
+	add := func(name string) {
+		if !contains(found, name) {
+			found = append(found, name)
+		}
+	}
 	for _, ln := range lines {
-		if queueType.MatchString(ln) {
-			name := "(Deque/Queue field)"
-			if m := assigned.FindString(ln); m != "" {
-				name = strings.TrimRight(m[:len(m)-1], " \t\n\v\f\r")
-			}
-			if !strings.Contains(strings.Join(found, ", "), name) {
-				found = append(found, name)
-			}
+		for _, name := range queueNames(ln) {
+			add(name)
 		}
 		for _, m := range coordName.FindAllString(" "+ln, -1) {
-			if seg := m[1:]; !contains(found, seg) {
-				found = append(found, seg)
-			}
+			add(m[1:])
 		}
 	}
 	return found
+}
+
+// queueNames are the names a line declares with a Deque<…> or Queue<…> type (`Deque<B> a = x, b;` gives a and b),
+// not the type of a `new ArrayDeque<>()` it is assigned.
+func queueNames(ln string) []string {
+	var out []string
+	for _, loc := range queueType.FindAllStringIndex(ln, -1) {
+		word := strings.LastIndexFunc(ln[:loc[0]], func(r rune) bool { return !isIdent(byte(r)) }) + 1
+		if strings.HasSuffix(strings.TrimRight(ln[:word], " \t"), "new") {
+			continue
+		}
+		depth, p := 0, loc[1]-1 // at the "<"
+		for ; p < len(ln); p++ {
+			if ln[p] == '<' {
+				depth++
+			} else if ln[p] == '>' {
+				if depth--; depth == 0 {
+					break
+				}
+			}
+		}
+		for p++; p < len(ln); {
+			for p < len(ln) && (ln[p] == ' ' || ln[p] == '\t') {
+				p++
+			}
+			q := p
+			for q < len(ln) && isIdent(ln[q]) {
+				q++
+			}
+			if q == p {
+				break
+			}
+			out = append(out, ln[p:q])
+			if p = nextDeclarator(ln, q); p < 0 {
+				break
+			}
+		}
+	}
+	return out
+}
+
+// nextDeclarator is the offset after the top-level "," that ends the declarator at s[from:] (its initializer
+// skipped by bracket depth), -1 when a ";" or a closing bracket ends the declaration first.
+func nextDeclarator(s string, from int) int {
+	depth := 0
+	for i := from; i < len(s); i++ {
+		switch s[i] {
+		case '(', '[', '{', '<':
+			depth++
+		case ')', ']', '}', '>':
+			if depth == 0 {
+				return -1
+			}
+			depth--
+		case ';':
+			return -1
+		case ',':
+			if depth == 0 {
+				return i + 1
+			}
+		}
+	}
+	return -1
+}
+
+func isIdent(c byte) bool {
+	return c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
 }
 
 func contains(list []string, s string) bool {

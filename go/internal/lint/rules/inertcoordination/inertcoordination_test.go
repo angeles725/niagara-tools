@@ -8,7 +8,7 @@ import (
 
 // TestGolden: every tests/lint-inert-coordination.bats run (ICO-awkfail and ICO-finderr aside: TestUnreadable
 // pins them) and every edge tree, recorded from the bash lint-inert-coordination.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 30) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 31) }
 
 // TestUnreadable: ICO-awkfail and ICO-finderr keep awk_lint_run's contract (ContinueOnWalkError).
 func TestUnreadable(t *testing.T) {
