@@ -17,9 +17,14 @@
 #   L6  FAIL  module-include.xml present; no hand-authored META-INF/module.xml in source
 #   L7  FAIL  dependency version is a 3-part floor (4.14.0), not 2-part (4.14)
 #   L9  FAIL  no empty skeleton artifact: -wb/-ux with 0 Java classes AND empty palette
-#   L10 FAIL  no absolute host paths in gradle.properties (module root + upward to .git root)
+#   L10 FAIL  no absolute host paths in gradle.properties (module root + upward to .git root). R10-D8: one of
+#             the four host build-location keys (niagara_home, niagara_user_home, nodeHome,
+#             org.gradle.java.installations.paths; props.BuildLocationKeys) outside build-n4-module-kit/fixtures/
+#             and templates/ is a WARN instead: migrate it to the user-level gradle.properties (BUILD-LOOP.md
+#             bring-up step 2). user_home, and those keys in a kit fixture or template (K16), stay the FAIL
 #   L11 FAIL  mixed srcTest (BTest+JUnit) without both :test-wb AND junit gradle declarations
-#   L12 FAIL  org.gradle.java.installations.paths/.auto-detect absent or commented in gradle.properties
+#   L12 FAIL  org.gradle.java.installations.auto-detect=false absent or commented in the module root's
+#             gradle.properties (R10-D8: the paths key may live in the user-level gradle.properties)
 #   L13 FAIL  >=2 sibling gradle.properties under group dir with divergent niagara_home=
 #   L14 FAIL  settings.gradle.kts (module root, else nearest ancestor up to the .git sentinel) hardcodes
 #             gradlePluginVersion as a string literal instead of
@@ -49,6 +54,8 @@
 # builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
 # `n4lint lint-structure <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # [ev: retro campaign8-structure] [ev: retro go-lint-structure Δ1]
+# Mutation: LS10-keys -- dropping the kit-template check WARNs a fixture's build-location key instead of FAILing it
+# Mutation: LS10-userhome -- adding user_home to the build-location keys turns its host-path FAIL into a WARN
 # Mutation: LS10-shapes -- matching only key=X:\ (the bash regex) passes spaced, colon, indented, POSIX and UNC host paths
 # Mutation: LS-noprofile -- running the module-level checks on a profile-less root passes a wrong path (exit 0)
 # Mutation: LS7 -- removes 3-part version floor check, allowing :baja:4.14 (2-part) to pass instead of FAIL
