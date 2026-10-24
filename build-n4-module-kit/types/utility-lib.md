@@ -84,24 +84,26 @@ Registers agent/abstract helper types that auto-attach to driver or framework ty
 
 `[ev: code clUtils-rt module.xml]`
 
-Types expose a static `registerHelper()` method; the NRE calls it at module load. Agent types
-appear automatically as extensions on their target type — no station wiring by the operator.
+The base helper keeps a static map: on first use it asks the registry for every concrete subtype
+(`Sys.getRegistry().getConcreteTypes(...)`) and each registers itself through the protected static `registerHelper()`;
+nothing runs at module load (`organized/clUtils/clUtils-rt/vineflower/com/tridium/clUtils/device/BDeviceInfoHelper.java:30-55`).
+Agent types are registered on their target type through the registry — no station wiring by the operator.
 
 ---
 
 ## 3 · Protocol-specialization split convention
 
 A base library (`<base>-rt`) holds generic helpers with **no protocol dep**. Each protocol
-specialization (`<base><Protocol>-rt`) adds exactly one driver dep and **narrows** `<on type>`:
+specialization (`<base><Protocol>-rt`) adds its driver deps and **narrows** `<on type>`:
 
 ```
 clUtils-rt            ← no bacnet-rt / niagaraDriver-rt
                          <on type="driver:Device">              ← widest
 
-clUtilsBacnet-rt      ← adds bacnet-rt + clUtils-rt dep
+clUtilsBacnet-rt      ← adds bacnet-rt + niagaraDriver-rt + fox-rt + schedule-rt + clUtils-rt dep
                          <on type="bacnet:BacnetDevice">        ← narrowed
 
-clUtilsNiagara-rt     ← adds niagaraDriver-rt + fox-rt + clUtils-rt dep
+clUtilsNiagara-rt     ← adds niagaraDriver-rt + niagaraVirtual-rt + fox-rt + schedule-rt + clUtils-rt dep
                          <on type="niagaraDriver:NiagaraStation"> ← narrowed
 ```
 
