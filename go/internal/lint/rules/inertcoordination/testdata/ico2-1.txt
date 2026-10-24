@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/Solo.java --
+class Solo {
+  private List<Unit> units() {
+    return java.util.Collections.singletonList((Unit) getParent());
+  }
+}

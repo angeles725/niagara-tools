@@ -16,6 +16,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/duplicatehelper"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extordvalue"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/extwritable"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inertcoordination"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/inlinesiteliteral"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/lexiconascii"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/licensegate"
@@ -79,6 +80,7 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		inertcoordination.Spec(),
 		changedhotwrite.Spec(),
 		persisthotwrite.Spec(),
 		slotomaticmarkers.Spec(),

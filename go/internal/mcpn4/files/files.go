@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 )
@@ -79,7 +78,7 @@ func StationPath(fileOrd string) (string, error) {
 	case anySegment(segments, func(s string) bool { return s[len(s)-1] == '.' || s[len(s)-1] == ' ' }):
 		return "", refuse("file path segments must not end in '.' or ' ' (a Windows station strips " +
 			"them, aliasing another name): " + r)
-	case strings.HasSuffix(Lower(path), ".bog") || strings.HasSuffix(Lower(path), ".bog.gz"):
+	case strings.HasSuffix(pyjson.Lower(path), ".bog") || strings.HasSuffix(pyjson.Lower(path), ".bog.gz"):
 		return "", refuse("the station never serves .bog / .bog.gz files (FileServlet); use the " +
 			"offline config.bog route instead")
 	}
@@ -124,35 +123,15 @@ func URLPath(path string) (string, error) {
 // content type (nil when the header is absent) is text/*, */xml, *+xml or */json.
 func IsText(path string, contentType *string) bool {
 	if last := path[strings.LastIndexByte(path, '/')+1:]; strings.Contains(last, ".") {
-		if textExtensions[Lower(path[strings.LastIndexByte(path, '.')+1:])] {
+		if textExtensions[pyjson.Lower(path[strings.LastIndexByte(path, '.')+1:])] {
 			return true
 		}
 	}
 	kind := ""
 	if contentType != nil {
 		kind, _, _ = strings.Cut(*contentType, ";")
-		kind = Lower(strings.TrimFunc(kind, pyjson.IsSpace))
+		kind = pyjson.Lower(strings.TrimFunc(kind, pyjson.IsSpace))
 	}
 	return strings.HasPrefix(kind, "text/") || strings.HasSuffix(kind, "+xml") ||
 		strings.HasSuffix(kind, "/xml") || strings.HasSuffix(kind, "/json")
-}
-
-// Lower is str.lower() as far as a comparison with ASCII text can tell: U+0130 lowers to "i"
-// and U+0307 (Unicode SpecialCasing), every other code point to its simple lowercase; bytes
-// that are not UTF-8 (a WTF-8 surrogate) are kept.
-func Lower(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); {
-		r, size := pyjson.DecodeRune(s[i:])
-		switch {
-		case r == 0x130:
-			b.WriteString("i̇")
-		case r >= 0xd800 && r <= 0xdfff:
-			b.WriteString(s[i : i+size])
-		default:
-			b.WriteRune(unicode.ToLower(r))
-		}
-		i += size
-	}
-	return b.String()
 }

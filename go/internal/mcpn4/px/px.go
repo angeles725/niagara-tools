@@ -10,7 +10,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/files"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyxml"
 )
@@ -55,7 +54,7 @@ func isOrd(v string) bool {
 func isSlotOrd(v string) bool { return hasAnyPrefix(v, "station:|slot:", "slot:", "local:|slot:") }
 
 func isImage(v string) bool {
-	head := files.Lower(v)
+	head := pyjson.Lower(v)
 	if i := strings.LastIndexByte(head, '?'); i >= 0 {
 		head = head[:i]
 	}

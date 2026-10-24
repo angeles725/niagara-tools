@@ -1,0 +1,20 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-inert-coordination  @DIR@/Mod/src/com/x/BDefrostController.java:5  units() returns a structurally singleton list while waitingQueue, staggerDelay, getStaggerDelay, acquireDefrostToken (queue/token/stagger state) are still declared -- the coordination machinery is dead code after the per-unit move; coordinate at the parent that aggregates multiple units, or drop the unused fields
+-- stderr --
+-- Mod/src/com/x/BDefrostController.java --
+class BDefrostController {
+  private final Deque<Integer> waitingQueue = new ArrayDeque<Integer>();
+  public static final Property staggerDelay = newProperty(0, BRelTime.make(240000), null);
+  public BRelTime getStaggerDelay() { return (BRelTime)get(staggerDelay); }
+  private List<BEvaporatorUnit> units() {
+    Object parent = getParent();
+    if (parent instanceof BEvaporatorUnit)
+      return java.util.Collections.singletonList((BEvaporatorUnit)parent);
+    return java.util.Collections.emptyList();
+  }
+  void acquireDefrostToken() {}
+}
