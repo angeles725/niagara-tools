@@ -11,21 +11,22 @@ import (
 type Mode int
 
 const (
-	One      Mode = iota // [--strict] [--] <root>: exactly one root
-	First                // [--strict] [--] <root>...: only the first root is checked and scanned
-	Each                 // [--strict] [--] <root>...: every root is checked first, then scanned in order
-	Raw                  // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
-	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
-	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
-	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
-	Valued               // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; any other "-" argument, a missing value or a second root is the usage line alone
+	One       Mode = iota // [--strict] [--] <root>: exactly one root
+	First                 // [--strict] [--] <root>...: only the first root is checked and scanned
+	Each                  // [--strict] [--] <root>...: every root is checked first, then scanned in order
+	Raw                   // <root>...: no flag is parsed (-h, -- or --strict is a root); only the first counts
+	Exact                 // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
+	Trailing              // <root> [--strict]...: the root as given first; only --strict may follow
+	Leading               // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	Valued                // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; any other "-" argument, a missing value or a second root is the usage line alone
+	FileFirst             // [--strict] <file> <root>...: only a first --strict is a flag; the file (Spec.Option names it) must be a regular file, then every root is checked
 )
 
 // Args is a parsed command line.
 type Args struct {
 	Strict bool
 	Roots  []string
-	Option string // the value of Spec.Option (Mode Valued), "" when absent
+	Option string // the value of Spec.Option (Mode Valued) or the file (Mode FileFirst), "" when absent
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -41,9 +42,13 @@ func Parse(mode Mode, name, usage string, args []string) (Args, error) {
 	return ParseOption(mode, name, usage, "", args)
 }
 
-// ParseOption is Parse for a mode that takes a value option (Valued: option is its name, e.g. "--wiring-map").
+// ParseOption is Parse for a mode that takes a value option (Valued: option is its name, e.g. "--wiring-map")
+// or a file operand (FileFirst: option is its noun in "<name>: <option> not found: <file>", e.g. "manual").
 func ParseOption(mode Mode, name, usage, option string, args []string) (Args, error) {
 	var a Args
+	if mode == FileFirst {
+		return parseFileFirst(name, usage, option, args)
+	}
 	if mode == Valued {
 		// the bash `while [ $# -gt 0 ]; case "$1" in <option>) [ $# -ge 2 ] || usage; v=$2; shift 2 ;;
 		// -*) usage ;; *) [ -z "$root" ] || usage; root=$1 ;; esac`
@@ -98,10 +103,34 @@ flags:
 	if mode == Each {
 		a.Roots = args
 	}
-	for _, root := range a.Roots {
+	return a, checkRoots(name, a.Roots)
+}
+
+func checkRoots(name string, roots []string) error {
+	for _, root := range roots {
 		if st, err := os.Stat(root); err != nil || !st.IsDir() {
-			return Args{}, errors.New(name + ": not a directory: " + root + "\n")
+			return errors.New(name + ": not a directory: " + root + "\n")
 		}
+	}
+	return nil
+}
+
+// parseFileFirst is the bash `case "${1:-}" in --strict) STRICT=1; shift ;; esac; [ $# -ge 2 ] || usage;
+// [ -f "$1" ] || <not found>; for d in "${@:2}"; do [ -d "$d" ] || <not a directory>; done`.
+func parseFileFirst(name, usage, noun string, args []string) (Args, error) {
+	var a Args
+	if len(args) > 0 && args[0] == "--strict" {
+		a.Strict, args = true, args[1:]
+	}
+	if len(args) < 2 {
+		return Args{}, &UsageError{usage + "\n"}
+	}
+	if st, err := os.Stat(args[0]); err != nil || !st.Mode().IsRegular() {
+		return Args{}, errors.New(name + ": " + noun + " not found: " + args[0] + "\n")
+	}
+	a.Option, a.Roots = args[0], args[1:]
+	if err := checkRoots(name, a.Roots); err != nil {
+		return Args{}, err
 	}
 	return a, nil
 }

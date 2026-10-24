@@ -23,6 +23,7 @@ const (
 	Pass                     // a check that held (rows print PASS); never affects the exit code
 	Advisory                 // a note that is not a failure (rows print ADVISORY); never affects the exit code
 	Info                     // information only (rows print INFO); never affects the exit code
+	Summary                  // a run total (rows print SUMMARY); never affects the exit code
 )
 
 func (s Severity) String() string {
@@ -35,6 +36,8 @@ func (s Severity) String() string {
 		return "ADVISORY"
 	case Info:
 		return "INFO"
+	case Summary:
+		return "SUMMARY"
 	}
 	return "WARN"
 }
@@ -53,7 +56,8 @@ type Finding struct {
 }
 
 // Row is the line the bash lints print: "WARN  <check>  <path>:<line>  <msg>", or "WARN  <check>  <path>: <msg>"
-// for a file-level finding (Line 0). The check column is Check, or Rule when Check is empty.
+// for a file-level finding (Line 0), or "SUMMARY  <check>  <msg>" for a finding about the whole run (Line 0 and
+// no Path, which only a TreeRule can leave empty). The check column is Check, or Rule when Check is empty.
 func (f Finding) Row() string { return f.row(false) }
 
 // row is Row, with a file-level finding printed "<path>  <msg>" when bare is set (Spec.BarePathRow).
@@ -61,6 +65,9 @@ func (f Finding) row(bare bool) string {
 	check := f.Check
 	if check == "" {
 		check = f.Rule
+	}
+	if f.Line == 0 && f.Path == "" {
+		return fmt.Sprintf("%s  %s  %s", f.Severity, check, f.Msg)
 	}
 	if f.Line == 0 && bare {
 		return fmt.Sprintf("%s  %s  %s  %s", f.Severity, check, f.Path, f.Msg)
@@ -132,6 +139,9 @@ type Spec struct {
 	// Option is the value option Mode Valued parses (e.g. "--wiring-map"); the rule reads its value by
 	// implementing Configurer.
 	Option string
+	// Joined gives a TreeRule the files of every root in one CheckTree call, after the last root, for a lint
+	// whose report spans its roots (lint-manual-labels: one UI haystack and one SUMMARY row over every <ui-dir>).
+	Joined bool
 	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
 	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
 	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
@@ -234,6 +244,9 @@ func (sp Spec) validate() error {
 	_, isRoot := r.(RootRule)
 	if count(isRule, isTree, isRoot) != 1 {
 		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
+	}
+	if sp.Mode == FileFirst && sp.Option == "" {
+		return errors.New("lint: rule " + r.ID() + " has Mode FileFirst without an Option noun")
 	}
 	if len(sp.IntFlags) > 0 && (sp.Configure == nil || sp.Rule == nil) {
 		return errors.New("lint: rule " + r.ID() + " has IntFlags without a per-file Rule and Configure")

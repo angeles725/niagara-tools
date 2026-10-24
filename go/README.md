@@ -66,6 +66,13 @@ rule's rows stay contiguous.
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
    `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
    non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`).
+   `Mode` `FileFirst` parses `[--strict] <file> <root>...` for a lint whose first operand is a file (only a
+   first `--strict` is a flag; the file must be a regular file, its error `<lint>: <Spec.Option> not found:
+   <file>` printed before any root is checked; every later operand is a root). The rule reads the file in
+   `Configure` (`Args.Option`); `n4lint --all` leaves it out and a rule list refuses it. `Spec.Joined` gives
+   a `TreeRule` the files of every root in one `CheckTree` call after the last root, and a finding with
+   `Line` 0 and no `Path` prints `<SEV>  <check>  <msg>`; severity `Summary` prints `SUMMARY` and never
+   affects the exit code (reference: `rules/manuallabels`, one UI haystack and one total over its roots).
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk
