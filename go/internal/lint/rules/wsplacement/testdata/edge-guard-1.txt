@@ -1,0 +1,63 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BGuard.java:20  add("e", new BFolder()) in g5() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BGuard.java:26  add("g", new BFolder()) in g7() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BNested.java:4  add("a", new BFolder()) in outer() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BNested.java:5  add("b", new BFolder()) in outer() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BNested.java:12  add("c", new BFolder()) in seed() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+WARN  lint-ws-placement  @DIR@/BNested.java:16  add("d", new BFolder()) in BNested() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BGuard.java --
+package com.x;
+public class BGuard extends BComponent {
+  void g1() {
+    add("a", new BFolder());
+    c.add("wsAnnotation", ws, Flags.READONLY);
+  }
+   void g2() {
+    BWsAnnotation.make(1,1,8);
+    add("b", new BFolder());
+  }
+   void g3() {
+    WsGrid.place(c);
+    add("c", new BFolder());
+  }
+   void g4() {
+    log("no wsAnnotation yet");
+    add("d", new BFolder());
+  }
+   void g5() {
+    /* wsAnnotation */ add("e", new BFolder());
+  }
+   void g6() {
+    hasWsGridX(); add("f", new BFolder());
+  }
+   void g7() {
+    getWsAnnotation(); add("g", new BFolder());
+  }
+}
+-- BNested.java --
+package com.x;
+public class BNested extends BComponent {
+  void outer() {
+    Runnable r = () -> add("a", new BFolder());
+    new Thread() { public void run() { add("b", new BFolder()); } };
+  }
+  static class Inner {
+    void place() {
+      c.add("wsAnnotation", ws);
+    }
+    void seed() {
+      add("c", new BFolder());
+    }
+  }
+  BNested() {
+    add("d", new BFolder());
+  }
+  void wrapped(String a,
+      String b) {
+    add("e", new BFolder());
+  }
+}

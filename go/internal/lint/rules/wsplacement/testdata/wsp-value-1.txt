@@ -1,0 +1,14 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BSvc.java --
+package com.x;
+public class BSvc extends BComponent {
+  void seed() {
+    add("st", new BStatusNumeric());
+    add("tm", new BAbsTime());
+  }
+}
