@@ -9,14 +9,15 @@ import (
 const javaPath = "`?([\\w/.$…-]+\\.java)(?::(\\d[\\d,-]*))?`?"
 
 // The prose citation forms, tried in this order; each match is blanked before the next form runs,
-// so the generic backticked `path:lines` form never reads a span a specific form already took.
+// so the generic backticked `path:lines` form never reads a span a specific form already took. A
+// cross-reference file name may hold dots before `.md` (`BUILD-STATE.src.md` § X), read whole.
 var (
 	vineModFirst = regexp.MustCompile(`vineflower\s+([A-Za-z][\w.-]*)\s+(\d+(?:\.\d+){2,3})\s+` + javaPath)
 	vineVerFirst = regexp.MustCompile(`([A-Za-z][\w.]*-[a-z]+)\s+(\d+(?:\.\d+){2,3})\s+vineflower\s+` + javaPath)
 	javapOf      = regexp.MustCompile("javap of `?([^`\\s]+\\.jar)`?(?:\\s+(\\d+(?:\\.\\d+){3}))?")
 	devguideRef  = regexp.MustCompile("\\(devguide `([^`]+)`")
 	certPath     = regexp.MustCompile("\\[CERT[^\\]]*\\]\\s+`?(organized/[^\\s`]+)")
-	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+\\.md)`? § (\"[^\"]+\"|`[^`]+`|[^,;)\\]`|]+)")
+	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? § (\"[^\"]+\"|`[^`]+`|[^,;)\\]`|]+)")
 	tickedPath   = regexp.MustCompile("`((?:[\\w.$…-]+/)+[\\w.$-]*\\.\\w{1,10}):(\\d[\\d,-]*)`")
 	tickedAlias  = regexp.MustCompile("`([A-Z]{1,3}):(\\d[\\d,-]*)`")
 )
