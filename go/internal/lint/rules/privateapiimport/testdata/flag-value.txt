@@ -1,0 +1,9 @@
+-- args --
+--no-default-allow=off
+@DIR@/M
+-- want --
+exit 3
+-- stderr --
+usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>
+-- M/M-rt/src/A.java --
+class A {}

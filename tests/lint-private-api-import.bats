@@ -18,7 +18,7 @@ MSG='is private API (devguide apiInfo: no compatibility guaranteed)'
 @test "PAI-usage: no argument prints the usage and exits 3" {
   run "$L"
   [ "$status" -eq 3 ]
-  [ "$output" = "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow | --default-allow on|off] <module-root>" ]
+  [ "$output" = "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>" ]
 }
 
 @test "PAI1: the NDriver fixture module is clean with the default allow-list and WARNs every import without it" {
@@ -30,6 +30,18 @@ MSG='is private API (devguide apiInfo: no compatibility guaranteed)'
   [ "$status" -eq 0 ]
   [ "$(grep -c "^WARN  lint-private-api-import  " <<< "$output")" -eq 7 ]
   [[ "$output" == *"BAcmeNetwork.java:6  com.tridium.driver.util.DrUtil $MSG"* ]]
+}
+
+@test "PAI-flag: --no-default-allow is the engine's own flag, anywhere; a value or --default-allow is a usage error" {
+  run "$L" "$DRV" --allow 'com.tridium.none.*' --no-default-allow
+  [ "$status" -eq 0 ]
+  [ "$(grep -c "^WARN  lint-private-api-import  " <<< "$output")" -eq 7 ]
+  run "$L" --no-default-allow=1 "$DRV"
+  [ "$status" -eq 3 ]
+  [ "$output" = "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>" ]
+  run "$L" --default-allow off "$DRV"
+  [ "$status" -eq 3 ]
+  ! grep -q 'default-allow off' "$L"
 }
 
 @test "PAI2: an import in a comment or a string is not one; com.tridiumx is another prefix" {
