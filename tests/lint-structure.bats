@@ -404,17 +404,15 @@ $_LS15_BLOCK
   [[ "$output" == *"WARN  lint-structure  $ROOT/Group/build.gradle.kts  L15: could not scan"* ]]
 }
 
-@test "LS15-sync: preflight sample-sign and build.sh take lib/signing-block.sh; the Go signblock.Parts equals it" {
-  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh or build.sh, or change, drop or reorder
+@test "LS15-sync: build.sh takes lib/signing-block.sh; the Go signblock.Parts equals it" {
+  # Mutation: LS15-sync -- re-inline a copy of the ERE table in preflight.sh, build.sh or a Go package, or change, drop or reorder
   # an entry (pattern or row name) of the Go signblock.Parts -> this fails.
   lib="$KIT/toolbelt/lib/signing-block.sh"
   grep -q '^SIGN_BLOCK_ERE=(' "$lib"
-  # shellcheck disable=SC2016
-  # why: the consumer's literal source line is matched, so ${SIGN_BLOCK_ERE[@]} must stay unexpanded
-  grep -qxF 'SAMPLE_SIGN_ERE=("${SIGN_BLOCK_ERE[@]}")' "$KIT/toolbelt/preflight.sh"
   grep -q 'SIGN_BLOCK_ERE\[0\]' "$KIT/toolbelt/build.sh"
+  grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/build.sh"
+  # preflight.sh is the Go wrapper (sample-sign reads signblock.Parts); neither script re-inlines the table.
   for f in preflight.sh build.sh; do
-    grep -q 'lib/signing-block.sh"' "$KIT/toolbelt/$f"
     run grep -q 'allowDefaultProfile\[\[:space:\]\]' "$KIT/toolbelt/$f"
     [ "$status" -ne 0 ]
   done
