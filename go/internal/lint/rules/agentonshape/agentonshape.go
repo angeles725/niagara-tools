@@ -6,10 +6,10 @@ package agentonshape
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // ID is the lint name printed in every row.
@@ -42,43 +42,22 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 // shape is a well-formed agent-on target: exactly one colon, non-empty module and type parts.
 var shape = regexp.MustCompile(`^[A-Za-z0-9_.-]+:[A-Za-z0-9_$]+$`)
 
-// Check is the awk program, line by line: the value of the line's last `<on<space>` tag that holds a quoted type=,
-// and inside it the last `type="` before the tag's ">" (the GNU sed capture it replaced).
+// Check reads the file through the shared XML scanner (R8-D12): every <on> element's type attribute, decoded, at the
+// element's own line. A malformed module-include.xml is an error naming path:line:col (exit 3, the other files still
+// scanned), never a guess. Truth fix 2026-10-24 over the awk, which read text line by line: it took only the last
+// <on per line, never a single-quoted value, counted an <on> inside a comment or CDATA, reported entity text undecoded
+// and an empty type="" as clean, and read a malformed file as if it were well-formed.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
+	doc, err := xmlsrc.Open(f.Path)
+	if err != nil {
+		return nil, err
+	}
 	var out []lint.Finding
-	for i, ln := range f.Raw {
-		if val := onType(ln); val != "" && !shape.MatchString(val) {
-			out = append(out, lint.Finding{Line: i + 1, Msg: "malformed agent-on target (need module:Type): " + val})
+	elems := doc.Elements()
+	for _, i := range doc.Find("on") {
+		if val, ok := elems[i].Attr("type"); ok && !shape.MatchString(val) {
+			out = append(out, lint.Finding{Line: elems[i].Line, Msg: "malformed agent-on target (need module:Type): " + val})
 		}
 	}
 	return out, nil
-}
-
-// onType is the awk's backward scan of one line; "" when no <on tag on it holds a quoted type=.
-func onType(ln string) string {
-	for p := len(ln) - 4; p >= 0; p-- { // awk p = length-3 .. 1, 1-based
-		if !strings.HasPrefix(ln[p:], "<on") || p+3 >= len(ln) || !isSpace(ln[p+3]) {
-			continue
-		}
-		tag := ln[p+4:]
-		gt := strings.IndexByte(tag, '>')
-		if gt < 0 {
-			gt = len(tag)
-		}
-		for q := gt - 1; q >= 0; q-- {
-			if !strings.HasPrefix(tag[q:], `type="`) {
-				continue
-			}
-			v := tag[q+6:]
-			if e := strings.IndexByte(v, '"'); e >= 0 {
-				return v[:e]
-			}
-		}
-	}
-	return ""
-}
-
-// isSpace is awk's [[:space:]] in the C locale.
-func isSpace(c byte) bool {
-	return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r'
 }

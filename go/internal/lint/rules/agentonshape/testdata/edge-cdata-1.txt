@@ -1,8 +1,7 @@
 -- args --
 @DIR@/M
 -- want --
-exit 1
-FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:1  malformed agent-on target (need module:Type): InCdata
+exit 0
 -- stderr --
 -- M/Mod-rt/module-include.xml --
 <agent><![CDATA[ <on type="InCdata"/> ]]></agent>

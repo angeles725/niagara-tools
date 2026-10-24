@@ -53,3 +53,15 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [ "$output" = "lint-agent-on-shape: cannot scan $d/module-include.xml: Permission denied" ]
 }
+
+@test "AOS-xml: read as XML: a commented-out <on> is not one, two on a line are both read, malformed is exit 3 (truth fix 2026-10-24)" {
+  # Mutation: AOS-xml -- reading lines instead of XML counts a commented-out <on> and misses a second <on> on its line
+  printf '<agent>\n<!-- <on type="Old"/> -->\n<on type="a:B"/><on type="NoPrefix"/>\n</agent>\n' > "$TMPDIR_T/M/Mod-rt/module-include.xml"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-agent-on-shape  $TMPDIR_T/M/Mod-rt/module-include.xml:3  malformed agent-on target (need module:Type): NoPrefix" ]
+  printf '<agent><on type="a:B"/>\n' > "$TMPDIR_T/M/Mod-rt/module-include.xml"
+  run "$L" "$TMPDIR_T/M"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"module-include.xml:2:1: "* ]]
+}
