@@ -1,0 +1,9 @@
+-- args --
+--plano
+@DIR@/pl6.html
+-- want --
+exit 0
+SKIP  plano      @DIR@/pl6.html  not a plano dashboard (3D/self-contained SPA) — IMG_W/IMG_H and overlay markers absent
+-- stderr --
+-- pl6.html --
+<!doctype html><html><body><canvas id="app"></canvas><script>// three.js SPA</script></body></html>
