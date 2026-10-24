@@ -56,6 +56,16 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [ -z "$output" ]
 }
 
+@test "LRP-word: resetX(false) is not a write of slot X, and a second write on a line counts" {
+  # Mutation: LRP-word -- matching set/get inside an identifier FAILs resetBoilerHeat(false) as slot BoilerHeat
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-slot-names-1.txt
+  printf '%s\n' 'package com.x;' 'public class S extends BComponent {' '  void execute() {' '    resetBoilerHeat(false);' \
+    '    getC().setValue(false); setDOut(false);' '  }' '  void started() {' '    setDOut(false);' '  }' '}' > "$ONE/S.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "LRP-usage: no argument -> exit 3 (usage)" {
   run "$LRP"
   [ "$status" -eq 3 ]

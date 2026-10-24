@@ -1,0 +1,23 @@
+declared difference (truth fix T3): the bash awk matched "get"/"set" anywhere in an identifier and only the
+first write of each shape on a line, so resetBoilerHeat(false) and targetFanHeat().setValue(false) became
+writes of the slots BoilerHeat and FanHeat, while setDOut(false) after getC().setValue(false) and setBOut(false)
+after getAOut().setValue(false) were never read. A write now starts at an identifier boundary and every write
+on the line counts.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/S.java:7  LRP: BOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:6  LRP: DOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/S.java:7  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- S.java --
+package com.x;
+public class S extends BComponent {
+  void execute() {
+    resetBoilerHeat(false);
+    x = targetFanHeat().setValue(false);
+    getC().setValue(false); setDOut(false);
+    a.getAOut().setValue(false); setBOut(false);
+  }
+}

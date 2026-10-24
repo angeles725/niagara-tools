@@ -9,7 +9,6 @@ package recoverypath
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
@@ -41,10 +40,10 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 func rx(s string) *regexp.Regexp { re := regexp.MustCompile(s); re.Longest(); return re }
 
 var (
-	getterOff = rx(`get[A-Za-z][A-Za-z0-9_]*\(\)\.setValue\([[:space:]]*false[[:space:]]*\)`)
-	setterOff = rx(`set[A-Za-z][A-Za-z0-9_]*\([[:space:]]*false[[:space:]]*\)`)
-	outSlot   = rx(`(Out|Resistance|Heat|Resistencia)$`)
-	resetter  = rx(`^(started|atSteadyState|changed|enable|start)$`)
+	// a safe-off write at an identifier boundary: getX().setValue(false) (group 2) or setX(false) (group 3)
+	offWrite = rx(`(^|[^A-Za-z0-9_$])(?:get([A-Za-z][A-Za-z0-9_]*)\(\)\.setValue|set([A-Za-z][A-Za-z0-9_]*))\([[:space:]]*false[[:space:]]*\)`)
+	outSlot  = rx(`(Out|Resistance|Heat|Resistencia)$`)
+	resetter = rx(`^(started|atSteadyState|changed|enable|start)$`)
 )
 
 // guard is the first write of a slot outside a reset method.
@@ -66,19 +65,17 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	guards := map[string]guard{}
 	var order []string // guarded slots in first-write order, the order gawk inserted them
 	for i, s := range code {
-		slot := offSlot(s)
-		if slot == "" {
-			continue
-		}
 		m := method[i]
 		if m == "" {
 			m = "unknown"
 		}
-		if resetter.MatchString(m) {
-			reset[slot] = true
-		} else if _, seen := guards[slot]; !seen {
-			guards[slot] = guard{i + 1, m}
-			order = append(order, slot)
+		for _, slot := range offSlots(s) {
+			if resetter.MatchString(m) {
+				reset[slot] = true
+			} else if _, seen := guards[slot]; !seen {
+				guards[slot] = guard{i + 1, m}
+				order = append(order, slot)
+			}
 		}
 	}
 	var out []lint.Finding
@@ -91,22 +88,14 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// offSlot is the protection slot line s writes OFF, or "": the first getX().setValue(false), else the first
-// setX(false), whose X ends in Out, Resistance, Heat or Resistencia.
-func offSlot(s string) string {
-	if loc := getterOff.FindStringIndex(s); loc != nil {
-		name := s[loc[0]+len("get"):]
-		name = name[:strings.Index(name, "().setValue")]
-		if outSlot.MatchString(name) {
-			return name
+// offSlots are the protection slots line s writes OFF, in line order: every getX().setValue(false) and
+// setX(false) starting at an identifier boundary whose X ends in Out, Resistance, Heat or Resistencia.
+func offSlots(s string) []string {
+	var out []string
+	for _, m := range offWrite.FindAllStringSubmatch(s, -1) {
+		if name := m[2] + m[3]; outSlot.MatchString(name) {
+			out = append(out, name)
 		}
 	}
-	if loc := setterOff.FindStringIndex(s); loc != nil {
-		name := s[loc[0]+len("set"):]
-		name = name[:strings.IndexByte(name, '(')]
-		if outSlot.MatchString(name) {
-			return name
-		}
-	}
-	return ""
+	return out
 }
