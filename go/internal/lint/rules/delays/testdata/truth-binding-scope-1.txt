@@ -1,0 +1,33 @@
+declared difference (truth fix, method scope): the binding walk went 50 lines back with no method boundary and
+skipped a plain re-assignment, so second() took first()'s Math.max(p, 1L) and fourth() took a Math.max line
+that only uses ms3: both unfloored delays passed. The nearest assignment of the variable in the same method
+or lambda body decides the call now.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-delays     @DIR@/BT.java:9  unfloored  cannot verify floor of variable: ms
+FAIL  lint-delays     @DIR@/BT.java:12  unfloored  cannot verify floor of variable: ms2
+FAIL  lint-delays     @DIR@/BT.java:18  unfloored  cannot verify floor of variable: ms3
+-- stderr --
+-- BT.java --
+package com.x;
+public class BT extends BComponent {
+  void first(long p) {
+    long ms = Math.max(p, 1L);
+    Clock.schedule(this, BRelTime.make(ms), a, null);
+  }
+  void second(long p) {
+    long ms = p;
+    Clock.schedule(this, BRelTime.make(ms), a, null);
+  }
+  void third(long p) {
+    Clock.schedule(this, BRelTime.make(ms2), a, null);
+  }
+  void fourth(long p) {
+    long d = Math.max(p, 1L);
+    long ms3 = p;
+    long e = Math.max(ms3, 1L);
+    Clock.schedule(this, BRelTime.make(ms3), a, null);
+  }
+}

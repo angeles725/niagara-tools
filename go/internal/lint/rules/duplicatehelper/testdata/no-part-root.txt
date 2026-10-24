@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-duplicate-helper  @DIR@/Mod  no *.java under a -rt, -ux or -wb part's src/ (wrong path: pass the module root)
+-- stderr --
+-- Mod/tools/src/G.java --
+class G {
+  static int scale(int v) { return v; }
+}
+-- Mod/Mod-rt/srcTest/T.java --
+class T {
+  static int scale(int v) { return v; }
+}

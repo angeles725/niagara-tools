@@ -10,6 +10,10 @@
 //     or more (I1), names it from a single-line signature or, for a brace alone on its line, from a
 //     backward scan that stops at an annotation, a prior statement or a prior block (I2), never names
 //     if/for/while/switch/catch/try/else/do/new (I3) and skips one-liner get/set/is accessors (I4).
+//   - One declared difference from mb_parse (2026-10-24): the same backward scan also names a signature
+//     wrapped over several lines whose last line holds ") {" (`void m(int a,` / `    int b) {`); mb_parse
+//     missed that method, a false negative for every method-scoped lint. TestDifferentialAwk's inputs do
+//     not hold that shape; the bash lints still on mb_parse keep the old behaviour.
 //
 // Scanning is byte-wise: every character the rules test is ASCII, so multi-byte UTF-8 text passes
 // through unchanged, as it does in awk.
@@ -133,6 +137,8 @@ var (
 	keyword   = regexp.MustCompile(`^(if|for|while|switch|catch|try|else|do|new)$`)
 	typeOrKw  = regexp.MustCompile(`^(if|for|while|switch|catch|try|else|do|new|class|interface|enum)$`)
 	accessor  = regexp.MustCompile(`^(get|set|is)[A-Z_]`)
+	// the last line of a wrapped signature: a ")" with no "(" before it, or a throws clause, then the "{"
+	wrappedEnd = regexp.MustCompile(`^[^(]*\)[[:space:]]*(throws[^{]*)?\{|^[[:space:]]*throws[^{(]*\{`)
 )
 
 // space is awk's [[:space:]] in the C locale.
@@ -142,7 +148,35 @@ const space = " \t\n\v\f\r"
 const backScanLines = 20
 
 // Methods finds the method bodies in already-stripped lines (the output of Strip).
-func Methods(stripped []string) []Method {
+func Methods(stripped []string) []Method { return bodies(stripped, false) }
+
+// Scopes is Methods plus every lambda body opened outside a method (a field initializer such as
+// `Runnable r = () -> {`, its "->" on the line of the "{" or the line before), named "lambda": the
+// bodies a statement can belong to, in source order and never nested. A lambda inside a method belongs to
+// that method's body, as the locals it captures do.
+func Scopes(stripped []string) []Method { return bodies(stripped, true) }
+
+// Enclosing is the scope holding 1-based line, ok false when no scope holds it.
+func Enclosing(scopes []Method, line int) (m Method, ok bool) {
+	for _, m := range scopes {
+		if m.Start <= line && line <= m.End {
+			return m, true
+		}
+	}
+	return Method{}, false
+}
+
+// lambdaOpen reports whether the body opening on line i (0-based) is a lambda's: "->" on that line, or
+// a lone "{" right after a line ending in "->".
+func lambdaOpen(stripped []string, i int) bool {
+	if strings.Contains(stripped[i], "->") {
+		return true
+	}
+	return i > 0 && strings.Trim(stripped[i], space) == "{" && strings.HasSuffix(strings.TrimRight(stripped[i-1], space), "->")
+}
+
+// bodies scans the method bodies, and the lambda bodies opened outside a method when lambdas is set.
+func bodies(stripped []string, lambdas bool) []Method {
 	var (
 		methods        []Method
 		depth          int
@@ -186,6 +220,9 @@ func Methods(stripped []string) []Method {
 			if name != "" && depth <= oldDepth && accessor.MatchString(name) {
 				name = ""
 			}
+			if name == "" && lambdas && lambdaOpen(stripped, i) {
+				name = "lambda"
+			}
 			if name != "" {
 				inBody, bodyDepth, cur = true, peak, Method{Name: name, Start: i + 1}
 			}
@@ -211,7 +248,9 @@ func methodName(stripped []string, i int) string {
 			return ""
 		}
 	}
-	if strings.Trim(ln, space) != "{" { // awk: the line is "{" once all whitespace is removed
+	// A lone "{" (awk: the line is "{" once all whitespace is removed), or the ") {" end of a signature
+	// wrapped over several lines: the name is on the line above that opened the parameter list.
+	if strings.Trim(ln, space) != "{" && !wrappedEnd.MatchString(ln) {
 		return ""
 	}
 	for k := i - 1; k >= 0 && k >= i-backScanLines; k-- {

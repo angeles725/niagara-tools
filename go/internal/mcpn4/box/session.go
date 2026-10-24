@@ -1,6 +1,10 @@
 package box
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
+)
 
 // SSC is BoxClient.ssc: a callssc on the session component.
 func (c *Client) SSC(key string, arg any) (any, error) {
@@ -46,7 +50,7 @@ func (c *Client) Open() (any, error) {
 		}
 		return nil, err
 	}
-	if h, _ := get(root, "h"); truthy(h) {
+	if h, _ := get(root, "h"); pyjson.Truthy(h) {
 		c.handles.set("station:", h)
 	}
 	return root, nil
@@ -54,7 +58,7 @@ func (c *Client) Open() (any, error) {
 
 // Close is BoxClient.close: delete the server session, swallowing any failure.
 func (c *Client) Close() {
-	if !truthy(c.sid) {
+	if !pyjson.Truthy(c.sid) {
 		return
 	}
 	c.Call(Channel, "del", obj("id", c.sid))
