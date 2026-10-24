@@ -145,6 +145,21 @@ type Spec struct {
 	// printed ${file#"$root/"} did (a root given with a trailing "/" keeps the whole path, as there). Env
 	// lines on stderr keep the walk path.
 	RelPaths bool
+	// IntFlags are the "<name> <n>" options (n a non-negative integer, e.g. "--max-class 800") the rule takes
+	// when it runs alone, as a bash lint's AL_FLAG_HOOK took them: among the leading flags, before "--" and
+	// the roots, any order with --strict, the last one given winning. A value that is missing or not all
+	// digits prints "<lint>: <name> needs a non-negative integer" and the usage line (exit 3); an unknown flag
+	// before it stays Parse's unknown-flag error. Configure (required with IntFlags) builds the rule from
+	// the values, every flag not given at its Default; in a rule list or under --all the rule runs as
+	// registered (its defaults).
+	IntFlags  []IntFlag
+	Configure func(vals map[string]int) Rule
+}
+
+// IntFlag is one Spec.IntFlags option: its name as typed ("--max-class") and its value when not given.
+type IntFlag struct {
+	Name    string
+	Default int
 }
 
 // EmptyRow is the ERROR row of Spec.EmptyError.
@@ -198,6 +213,9 @@ func (sp Spec) validate() error {
 	_, isRoot := r.(RootRule)
 	if count(isRule, isTree, isRoot) != 1 {
 		return errors.New("lint: rule " + r.ID() + " implements more than one of Rule, TreeRule and RootRule")
+	}
+	if len(sp.IntFlags) > 0 && (sp.Configure == nil || sp.Rule == nil) {
+		return errors.New("lint: rule " + r.ID() + " has IntFlags without a per-file Rule and Configure")
 	}
 	return nil
 }

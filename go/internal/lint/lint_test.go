@@ -3,6 +3,7 @@ package lint
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -621,4 +622,60 @@ func TestParseExactUsageError(t *testing.T) {
 	if code := main([]string{"lint-e", "-h"}, s); code != 3 || e.String() != "lint-e: not a directory: -h\n" {
 		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
 	}
+}
+
+// flagRule reports its configured n once per file (Spec.IntFlags).
+type flagRule struct{ n int }
+
+func (flagRule) ID() string         { return "lint-f" }
+func (flagRule) Severity() Severity { return Warn }
+func (r flagRule) Check(*javasrc.File) ([]Finding, error) {
+	return []Finding{{Line: 1, Msg: fmt.Sprintf("n=%d", r.n)}}, nil
+}
+
+// TestCommandIntFlags: Spec.IntFlags are read among the leading flags in any order with --strict (the last
+// one wins), fail with the "needs a non-negative integer" line on a bad value, leave an unknown flag to
+// Parse, stop at "--", and do not exist for a rule list.
+func TestCommandIntFlags(t *testing.T) {
+	sp := javaSpec(flagRule{80}, First)
+	sp.IntFlags = []IntFlag{{Name: "--max", Default: 80}}
+	sp.Configure = func(v map[string]int) Rule { return flagRule{v["--max"]} }
+	main := Command(sp, javaSpec(fakeRule{"lint-a", "MARK", Warn}, First))
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	row := func(n string) string { return "WARN  lint-f  " + root + "/A.java:1  n=" + n + "\n" }
+	bad := func(f string) string {
+		return "lint-f: " + f + " needs a non-negative integer\nusage: lint-f.sh <src-root>\n"
+	}
+	for _, tc := range []struct {
+		name     string
+		args     []string
+		code     int
+		out, err string
+	}{
+		{"default", []string{"lint-f", root}, 0, row("80"), ""},
+		{"given", []string{"lint-f", "--max", "5", root}, 0, row("5"), ""},
+		{"with strict", []string{"lint-f", "--max", "007", "--strict", root}, 1, row("7"), ""},
+		{"last wins", []string{"lint-f", "--max", "5", "--max", "0", root}, 0, row("0"), ""},
+		{"missing value", []string{"lint-f", "--max"}, 3, "", bad("--max")},
+		{"not a count", []string{"lint-f", "--max", "-1", root}, 3, "", bad("--max")},
+		{"empty value", []string{"lint-f", "--max", "", root}, 3, "", bad("--max")},
+		{"unknown flag first", []string{"lint-f", "--bogus", "--max", "x", root}, 3, "",
+			"lint-f: unknown flag: --bogus\nusage: lint-f.sh <src-root>\n"},
+		{"after --", []string{"lint-f", "--", "--max", root}, 3, "", "lint-f: not a directory: --max\n"},
+		{"rule list", []string{"lint-f,lint-a", "--max", "5", root}, 3, "",
+			"n4lint: unknown flag: --max\n" + usage + "\n"},
+	} {
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.String() != tc.err {
+			t.Errorf("%s: exit %d out %q err %q, want %d %q %q", tc.name, code, o, e, tc.code, tc.out, tc.err)
+		}
+	}
+	defer func() {
+		if recover() == nil {
+			t.Error("IntFlags without Configure: no panic")
+		}
+	}()
+	noConf := javaSpec(flagRule{1}, First)
+	noConf.IntFlags = sp.IntFlags
+	Command(noConf)
 }

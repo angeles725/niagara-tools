@@ -63,6 +63,9 @@ rule's rows stay contiguous.
    them; a future rule that legitimately accepts an empty root adds an explicit, commented Spec field.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
+   `Spec.IntFlags` (with `Spec.Configure`) takes a bash lint's own numeric options (`--max-class <n>`, its
+   `AL_FLAG_HOOK`) among the leading flags and builds the rule from their values; a bad value prints
+   `<lint>: <flag> needs a non-negative integer` and the usage line (exit 3).
    Every engine feature lands as one `Spec` field (or severity) plus a doc and a table test; a rule opts
    in by setting it, never by a private copy.
    A lint whose report is ordered by check rather than by file implements `lint.TreeRule` instead
