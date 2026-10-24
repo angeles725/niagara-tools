@@ -1,8 +1,12 @@
+declared difference (truth fix T1, truth-code-view-1): C2's commented-out changed(Property q ...) is no
+longer the callback, so the real one (line 5) WARNs; C3's "}" in a string no longer ends changed() early (line 3 WARNs).
 -- args --
 @DIR@
 -- want --
 exit 0
 WARN  lint-changed-hot-write  @DIR@/C1.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/C2.java:5  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/C3.java:3  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 WARN  lint-changed-hot-write  @DIR@/C5.java:4  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 WARN  lint-changed-hot-write  @DIR@/C6.java:3  changed(p) has 6 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 -- stderr --

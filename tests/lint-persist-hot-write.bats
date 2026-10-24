@@ -78,6 +78,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [[ "$output" != *"WARN"* ]]
 }
 
+@test "PHW7: a write after an http:// string counts, and commented or quoted writes do not" {
+  # Mutation: PHW7 -- cutting each line at its first "//" hides a setter written after a URL string
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-code-view-1.txt
+  printf '%s\n' 'class T {' '  static final Property xHours = newProperty(0, 0.0, null);' '  public void changed(Property p, Context cx) {' \
+    '    String u = "http://x"; setXHours(1.0);' '    /* setXHours(2.0); */' '    log("setXHours(3.0)");' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/T.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-persist-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  setXHours(...) writes non-transient slot 'xHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start" ]
+}
+
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

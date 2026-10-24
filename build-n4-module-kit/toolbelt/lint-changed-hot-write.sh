@@ -32,7 +32,12 @@
 # lint through go/internal/lint/rules/hotwrite. This wrapper is the stable entry point: go/go-tool.sh
 # `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
 # `n4lint lint-changed-hot-write <args>`. Needs `go` on PATH to build (exit 3 otherwise).
+# Truth fix T1 (2026-10-24): code is read with comments blanked and literal contents removed (go/internal/javasrc
+# Strip + BlankLiterals, shared with the sibling lint): the bash/awk cut each line at its first "//" (inside a
+# string too) and read block comments, Javadoc and strings as code, so a Javadoc `{@code execute()}` was taken
+# for execute()'s declaration and a "}" in a string ended a body early.
 # VCS-free by design (kit-links L2).
+# Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs
 # Mutation: CHW-reset -- a bare `set<X>(` substring also matches `reset<X>(` and false-WARNs
 # Mutation: CHW-awkfail -- ignoring the awk exit status reports an unreadable source file as clean

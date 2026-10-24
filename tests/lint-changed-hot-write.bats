@@ -86,6 +86,18 @@ _write_hot() {
   [[ "$output" != *"WARN"* ]]
 }
 
+@test "CHW6: a commented-out changed() is not the callback, and a setter in a string is not a write" {
+  # Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one
+  # Go golden: go/internal/lint/rules/changedhotwrite/testdata/truth-code-view-1.txt
+  { printf 'class T {\n  static final Property xHours = newProperty(0, 0.0, null);\n'
+    printf '  /* public void changed(Property q, Context cx) { */\n  public void changed(Property p, Context cx) {\n'
+    for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
+    printf '  }\n  void execute() { setXHours(1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/T.java"
+  run "$CHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  changed(p) has 7 'p ==' branches"* ]]
+}
+
 @test "CHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: CHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // rx compiles a gawk regular expression: leftmost-longest.
@@ -29,15 +30,9 @@ var keywords = map[string]bool{"if": true, "for": true, "while": true, "switch":
 	"finally": true, "return": true, "new": true, "else": true, "do": true, "super": true, "this": true,
 	"Clock": true, "Sys": true}
 
-// View is a file's lines as both rules read them: each raw line cut at its first "//" (the awk's
-// sub(/\/\/.*$/, "")).
-func View(f *javasrc.File) []string {
-	out := make([]string, len(f.Raw))
-	for i, ln := range f.Raw {
-		out[i], _, _ = strings.Cut(ln, "//")
-	}
-	return out
-}
+// View is a file's lines as both rules read them: code only, comments blanked and literal contents removed
+// (linescan.Code), so a brace, a call or a setter inside a comment or a string is never code.
+func View(f *javasrc.File) []string { return linescan.Code(f) }
 
 // Changed is the 0-based line of the first `changed(Property <name>` and that name, ok false when the file
 // has none.
