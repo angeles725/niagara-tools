@@ -38,7 +38,7 @@ type check func(*run) bool
 // checks is the bash loop's order.
 var checks = []check{
 	(*run).bytecode, (*run).signed, (*run).types, (*run).baja, (*run).storedCheck, (*run).typeCount,
-	(*run).facets, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
+	(*run).facets, (*run).facetPresence, (*run).ordLiteral, (*run).rcBackup, (*run).palette, (*run).wbScaffold,
 	(*run).transientOperator, (*run).compact3Imports,
 }
 
