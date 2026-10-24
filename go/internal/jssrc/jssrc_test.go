@@ -67,3 +67,12 @@ func TestCode(t *testing.T) {
 		}
 	}
 }
+
+// TestHTMLScripts: only the contents of <script> elements stay, line lengths kept; an open <script> runs on.
+func TestHTMLScripts(t *testing.T) {
+	in := []string{`<p>it's <a href="http://x">x</a></p>`, `<SCRIPT type="module">poll();`, `go();</script><b>`, `<script>tail();`}
+	want := []string{strings.Repeat(" ", 36), strings.Repeat(" ", 22) + "poll();", "go();" + strings.Repeat(" ", 12), strings.Repeat(" ", 8) + "tail();"}
+	if got := HTMLScripts(in); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+}
