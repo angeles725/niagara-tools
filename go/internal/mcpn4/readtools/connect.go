@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
@@ -84,6 +85,10 @@ func (t *Tools) Connect(args *pyjson.Object) (*pyjson.Object, error) {
 		return nil, toolError("credentials missing: set env vars %s_USER and %s_PASSWORD", prefix, prefix)
 	}
 	ctx.SetSecret(secret)
+	if !utf8.ValidString(user) || !utf8.ValidString(secret) {
+		// Python's UnicodeEncodeError named the bad character's position (R8-D19)
+		return nil, toolError("credentials are not valid UTF-8: check env vars %s_USER and %s_PASSWORD", prefix, prefix)
+	}
 	credentials := ctx.CredentialsFingerprint(user, secret)
 	if block := ctx.AuthBlockFor(credentials); block != "" {
 		// the same credentials just failed: one more try would only near the lock-out

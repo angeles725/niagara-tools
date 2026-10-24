@@ -154,3 +154,20 @@ func TestInsecureTlsForAnUnconfiguredStationIsAStartError(t *testing.T) {
 		t.Errorf("Check = %v", err)
 	}
 }
+
+// R8-D19: a credential that is not UTF-8 is refused with one fixed text and no station call;
+// Python's UnicodeEncodeError named the bad byte's position, i.e. the credential length.
+func TestANonUTF8CredentialIsRefusedWithoutItsPosition(t *testing.T) {
+	for _, env := range []map[string]string{{"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": "pw-\xff-tail"},
+		{"MCP_N4_USER": "ad\xed\xa0\x80min", "MCP_N4_PASSWORD": readtoolstest.Password}} {
+		s := server()
+		s.Env = env
+		const want = "credentials are not valid UTF-8: check env vars MCP_N4_USER and MCP_N4_PASSWORD"
+		if text := mustErr(t, s, "n4_connect", "station", "FakeStation"); text != want {
+			t.Errorf("got %q", text)
+		}
+		if s.Station.Requests != 0 {
+			t.Errorf("requests %d", s.Station.Requests)
+		}
+	}
+}

@@ -202,11 +202,11 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 100 | 4 | 14 | 5 | 7 | 30 | 70 |
+| `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **621** | **166** | **56** | **105** | **22** | **349** | **272** |
+| **Total** | **622** | **166** | **56** | **105** | **22** | **349** | **273** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -331,6 +331,9 @@ factory a test sets). `tiers.TestDifferentialPython` compares the three tier fun
 `tiers.py` on the target CPython. Twins still owed: `TestAWriteDryRunIsRefusedWhilePaused` (S10)
 and `TestTheRetroClassifiesTierRefusals` (S9).
 
-**Known differences.** A credential value that is not UTF-8 makes Python's fingerprint
-`.encode()` raise UnicodeEncodeError, so its connect answers that error text (with a position);
-Go sends the bytes and logs in, or gets the station's 401.
+**Non-UTF-8 credentials (R8-D19).** Python's fingerprint `.encode()` raised UnicodeEncodeError on a
+credential that is not UTF-8, and its text named the bad character's position: the credential's
+length. Both servers now refuse it before any station call with `credentials are not valid UTF-8:
+check env vars <PREFIX>_USER and <PREFIX>_PASSWORD`
+(`test_server.TestConnect.test_a_non_utf8_credential_is_refused_without_its_position`, black-box,
+and its Go twin in `session/connect_test.go`). No S4 difference is left.
