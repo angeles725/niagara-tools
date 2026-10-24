@@ -1,0 +1,14 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:2  malformed agent-on target (need module:Type): Commented
+FAIL  lint-agent-on-shape  @DIR@/M/Mod-rt/module-include.xml:4  malformed agent-on target (need module:Type): InBlock
+-- stderr --
+-- M/Mod-rt/module-include.xml --
+<agent>
+<!-- <on type="Commented"/> -->
+<!--
+  <on type="InBlock"/>
+-->
+</agent>

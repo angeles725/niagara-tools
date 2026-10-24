@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/Mod-rt/module-include.xml --
+<agent><on requiredPermissions="r" type="Bad1"/><on type="mymod:Ok"
+ requiredPermissions="rwi"/></agent>
