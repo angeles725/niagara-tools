@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10 R10-D8: host build-location keys live in the user-level gradle.properties; lint-structure L10 owns them, L12 pins only auto-detect=false, G43 drops them -->
+log: 2026-10-24 · quality round 10 R10-D8 → the four host build-location keys (niagara_home, niagara_user_home, nodeHome, org.gradle.java.installations.paths) belong in the user-level gradle.properties, which Gradle reads before the build root's (command-line -P still wins). One shared set in go/internal/props; lint-structure L10 WARNs them in a client tree and FAILs them in kit fixtures/templates and for user_home; L12 asks only for org.gradle.java.installations.auto-detect=false; lint-machine-default-path prints no row for them. Cliente: L10 24 FAIL → 31 WARN (7 new paths rows), G43 9 INFO → 0. Client repos untouched until each machine has the user-level file. [ev: retro r10-user-level-gradle-keys]

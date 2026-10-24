@@ -1,0 +1,22 @@
+-- args --
+--max-class
+5
+--max-method
+2
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Mod/src/com/x/Small.java:6  class Small has 6 hand-written lines (> 5, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/Mod/src/com/x/Small.java:7  method a() in pure class Small spans 3 lines (> 2) -- split into named phase methods (types/logic.md § Pure-class extraction)
+-- stderr --
+-- Mod/src/com/x/Small.java --
+package com.x;
+// a comment
+
+/* block
+   comment */
+public class Small {
+  int a() {
+    x();
+  }
+}

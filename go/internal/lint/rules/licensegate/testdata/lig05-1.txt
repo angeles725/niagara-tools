@@ -1,0 +1,22 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BPlain.java --
+package com.x;
+public class BPlain extends BComponent {
+  public void changed(Property p, Context cx) {
+    recompute();
+  }
+}
+-- Mod/src/com/x/ILic.java --
+package com.x;
+public interface ILic {
+  Feature getLicenseFeature();
+}
+class Impl {
+  public void doRun() {
+    go();
+  }
+}

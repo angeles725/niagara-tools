@@ -55,9 +55,9 @@ different tree, set the relevant variable in the environment before invoking bat
 `C9_CLIENT_ROOT=/path/to/tree bats tests/` — the `:=` default is skipped when the variable is
 already set. [ev: retro campaign11-client-root; design.md D3a/D3b]
 
-- **In a gawk toolbelt script, call `delete arr` in `BEGIN` before `length(arr)`:** checking array length without initializing triggers a gawk warning on some platforms; `delete arr` at the top of `BEGIN` ensures a clean start. [ev: retro schema-risk]
-- **Diff heredoc-embedded reference tables against an oracle file as a named mutation:** embed the reference CSV/table as a heredoc, store the same bytes in `tests/fixtures/<name>.csv`, and assert byte equality as a named mutation — the oracle file is the contract. [ev: retro schema-risk]
-- **Place `shellcheck disable` directives BEFORE the entire compound command, not inside its body:** a disable inside a `while ... done` body triggers SC1123 ("ShellCheck directives are only valid in front of complete compound commands"); the correct form is one line immediately before `while ... do`. [ev: retro logic-split]
+- **In a gawk toolbelt script, call `delete arr` in `BEGIN` before `length(arr)`:** checking array length without initializing triggers a gawk warning on some platforms; `delete arr` at the top of `BEGIN` ensures a clean start. [ev: retro campaign7-schema-risk]
+- **Diff heredoc-embedded reference tables against an oracle file as a named mutation:** embed the reference CSV/table as a heredoc, store the same bytes in `tests/fixtures/<name>.csv`, and assert byte equality as a named mutation — the oracle file is the contract. [ev: retro campaign7-schema-risk]
+- **Place `shellcheck disable` directives BEFORE the entire compound command, not inside its body:** a disable inside a `while ... done` body triggers SC1123 ("ShellCheck directives are only valid in front of complete compound commands"); the correct form is one line immediately before `while ... do`. [ev: retro campaign7-logic-split]
 
 - **Quote every pattern-substitution replacement: `${v//pat/"$rep"}`.** Under bash 5.2 `patsub_replacement` an
   unquoted `&` in the replacement (or in the value of an unquoted `$rep`) expands to the matched text, so a path with
@@ -338,5 +338,5 @@ It is `--local` (this clone only) and idempotent. It REFUSES to overwrite a pre-
 - **One active attempt per change** regardless of work-unit label: the ledger is serial — a new acquire blocks while a prior attempt for the same change is open. [ev: retro campaign7-retro-fold]
 - **Evidence goal = one short line:** `--evidence-goal` must be a single terse sentence parseable at a glance.
 - **Inventory sha from the error, not cached:** the untracked inventory sha changes whenever files appear; always read it from the error output, never from a prior run.
-- **Doc-store commits early or budget sized to content:** a large openspec commit blows a code-sized `--max-changed-lines` budget; commit docs early or pass a budget that matches the PR's real content. [ev: retro close-process-meta-lessons]
-- **Two independent reads for every research fold:** author fidelity read + a mechanical gate with verbatim spot-checks of each correction — one read cannot catch what two can. [ev: retro research-fold] [ev: retro close-process-meta-lessons] [ev: retro campaign7-retro-fold]
+- **Doc-store commits early or budget sized to content:** a large openspec commit blows a code-sized `--max-changed-lines` budget; commit docs early or pass a budget that matches the PR's real content. [ev: retro campaign6-close-process-meta-lessons]
+- **Two independent reads for every research fold:** author fidelity read + a mechanical gate with verbatim spot-checks of each correction — one read cannot catch what two can. [ev: retro campaign6-research-fold] [ev: retro campaign6-close-process-meta-lessons] [ev: retro campaign7-retro-fold]
