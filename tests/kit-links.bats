@@ -183,3 +183,12 @@ kit_refs() {
   done
   if [ ${#missing[@]} -gt 0 ]; then printf 'scripts helper not routed in BUILD-LOOP.md: %s\n' "${missing[@]}" >&2; return 1; fi
 }
+
+@test "L-hooks: the CI shellcheck step covers every .githooks/* hook" {
+  # A hook is shell the gate and the regenerate path run on every push/pull; the CI shellcheck step named
+  # scripts/, toolbelt/ and tests/ only, so the four hooks were checked by hand.
+  # Mutation: L-hooks -- drop .githooks/* from the ci.yml shellcheck line and this names the step.
+  # [ev: retro ledger-generated-not-committed Δ3]
+  line=$(grep -E '^ +run: shellcheck ' "$BATS_TEST_DIRNAME/../.github/workflows/ci.yml")
+  [[ "$line" == *" .githooks/*"* ]] || { printf 'ci.yml shellcheck step misses .githooks/*: %s\n' "$line" >&2; return 1; }
+}
