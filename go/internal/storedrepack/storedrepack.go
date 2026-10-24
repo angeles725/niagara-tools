@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -51,6 +52,11 @@ func Main(args []string, s cli.Stdio) int {
 		return 2
 	}
 	in, out := args[0], args[1]
+	// unreadable is an input the bash's unzip refused: the Go reason, then the bash's own line.
+	unreadable := func(reason error) int {
+		fmt.Fprintf(s.Err, "stored-repack: %s: %v\n", in, reason)
+		return fail("cannot unzip %s", in)
+	}
 	if st, err := os.Stat(in); err != nil || !st.Mode().IsRegular() {
 		return fail("input jar not found: %s", in)
 	}
@@ -64,14 +70,12 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	zr, err := zip.OpenReader(in)
 	if err != nil {
-		fmt.Fprintf(s.Err, "stored-repack: %s: %v\n", in, err)
-		return fail("cannot unzip %s", in)
+		return unreadable(err)
 	}
 	defer zr.Close()
 	files, sigs, err := order(zr.File)
 	if err != nil {
-		fmt.Fprintf(s.Err, "stored-repack: %s: %v\n", in, err)
-		return fail("cannot unzip %s", in)
+		return unreadable(err)
 	}
 	if len(files) == 0 || files[0].Name != manifest {
 		return fail("no %s in %s (not a jar)", manifest, in)
@@ -82,8 +86,7 @@ func Main(args []string, s cli.Stdio) int {
 	case deflated > 0:
 		return fail("%d deflated entries remain in %s", deflated, abs)
 	case errors.As(err, &bad):
-		fmt.Fprintf(s.Err, "stored-repack: %s: %v\n", in, bad)
-		return fail("cannot unzip %s", in)
+		return unreadable(bad)
 	case errors.Is(err, fs.ErrExist):
 		return fail("refusing to overwrite existing %s", out)
 	case err != nil:
@@ -124,7 +127,8 @@ func order(all []*zip.File) (files []*zip.File, sigs []string, err error) {
 		files, first[manifest] = append(files, f), true
 	}
 	for _, sf := range sfs {
-		for _, name := range []string{sf, strings.TrimSuffix(sf, "SF") + "RSA", strings.TrimSuffix(sf, "SF") + "DSA", strings.TrimSuffix(sf, "SF") + "EC"} {
+		stem := strings.TrimSuffix(sf, "SF")
+		for _, name := range []string{sf, stem + "RSA", stem + "DSA", stem + "EC"} {
 			if f := byName[name]; f != nil {
 				files, first[name], sigs = append(files, f), true, append(sigs, name)
 			}
@@ -140,13 +144,8 @@ func order(all []*zip.File) (files []*zip.File, sigs []string, err error) {
 
 // safeName refuses an entry name that would land outside an extraction dir; the bash's unzip failed on it.
 func safeName(name string) error {
-	if name == "" || strings.HasPrefix(name, "/") {
+	if name == "" || strings.HasPrefix(name, "/") || slices.Contains(strings.Split(name, "/"), "..") {
 		return fmt.Errorf("unsafe entry name %q", name)
-	}
-	for _, part := range strings.Split(name, "/") {
-		if part == ".." {
-			return fmt.Errorf("unsafe entry name %q", name)
-		}
 	}
 	return nil
 }
