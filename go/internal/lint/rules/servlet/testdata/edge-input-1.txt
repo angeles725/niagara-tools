@@ -1,0 +1,21 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  input-400  I.java:9  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+FAIL  input-400  I.java:12  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input
+-- stderr --
+-- m/I.java --
+class I extends BWebServlet {
+  void a(String s) {
+    try {
+      x();
+      x();
+      x();
+      x();
+      Double.parseDouble(s);
+      Integer.parseInt(s);
+    } finally {}
+  }
+  void b(String s) { Double.parseDouble(s); Integer.parseInt(s); }
+}

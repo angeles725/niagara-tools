@@ -190,6 +190,28 @@ type visible. No extra plumbing needed. `[ev: corpus B617 §617.3; third-party-l
 Writing the handler (own `OrdQuery`, the two exceptions, `canRead()` on every returned hop): `types/security.md`
 § 4.4. `[ev: retro devguide415-nav-subscriptions-tags-ords Δ8]`
 
+### 4.4 Registry lookups — defs and agents `[ev: retro devguide415-horizons-authoring-security Δ9]`
+
+- **Defs** are name/value strings declared in `module-include.xml` (`<defs><def name="mymod.x" value="…"/></defs>`)
+  and collapsed by the registry into ONE global map, so prefix every name with `<moduleName>.` (devguide 4.15.6.20
+  `registry.txt:85-105`). Read one with `Sys.getRegistry().getDef(name, fallback)`; the one-argument form is
+  `getDef(name, null)` (`javax/baja/registry/Registry.java:109-119`).
+- **Agents** are queried by type filter: `file.getAgents(null).filter(AgentFilter.is(BExporter.TYPE))`. A query with
+  no registered agent throws `javax.baja.agent.NoSuchAgentException`, so wrap the lookup in
+  `try … catch (NoSuchAgentException)` (`registry.txt:37-50`). Registering one: § 3.
+
+### 4.5 API stability — `com.tridium.*` is private API `[ev: retro n4-course-build-deps-permissions-signing Δ3]` `[ev: retro devguide415-horizons-authoring-security Δ9]`
+
+- The devguide labels public APIs Stable, Evaluation or Development (`apiInfo.txt:16-22`) and says "com.tridium APIs
+  should never be used by developers, and no compatibility is guaranteed" (`apiInfo.txt:54`). No label is
+  machine-readable; the signals a check can read are the package prefix and `@Deprecated`.
+- Prefer the `javax.baja.*` equivalent, or write the function yourself (an exporter: `types/logic-authoring.md`
+  § File export, where `BHistoryToCsv` is the course's own private-API example, Lab Instructions p83).
+- When a `com.tridium.*` use is unavoidable (the NDriver framework, `com.tridium.ndriver.**`, is the sanctioned
+  case), record each class in the module README and pin that dependency's `vendorVersion` floor to the 3-part
+  release you built and tested against (§ 1, L7). The WARN for other imports is owed Go lint G65
+  `private-api-import` (ledger.d/2026-10-23-r8-u5-c59-c62.md).
+
 ---
 
 ## 5 · Version pinning summary
@@ -216,6 +238,38 @@ with no error at build or deploy time. `[ev: WIR-G6]`
 **classloader conflict**: the `api()` path emits a `<dependency>` entry that the NRE
 tries to satisfy with an external module, while the bundled copy is already present in
 your jar. The runtime picks one unpredictably; always choose one path. `[ev: WIR-G7]`
+
+---
+
+## 7 · Reading a shipped module's manifest — `nh module`
+
+Before declaring a dependency on a Tridium part, or copying its permission requests, read the shipped
+`module.xml` through niagara-help instead of unzipping jars: `nh module <part|module|glob>` (`nh` =
+`python3 ~/niagara-research/niagara-help/tools/niagara_help.py`) prints the dependencies with their floors, the
+reverse dependencies (who requires this part), counts of types/agents/defs and the java-permissions by profile;
+`--types`, `--agents`, `--permissions`, `--defs` and `--json` narrow it, and `--niagara-version <v>` (before the
+subcommand) picks another indexed release. Excerpt, 4.15.6.20 index:
+
+```text
+$ nh module kitControl-rt
+VENDOR: Tridium 4.15.6.20
+DEPENDENCIES (11):
+  alarm-rt       Tridium 4.15.6
+  baja           Tridium 4.15.6
+  bql-rt         Tridium 4.15.6
+  control-rt     Tridium 4.15.6
+  …
+REVERSE DEPENDENCIES (2):
+  kitControl-ux  requires 4.15.6
+  kitControl-wb  requires 4.15.6
+JAVA PERMISSIONS (15):
+  station    java.lang.RuntimePermission "modifyThread"
+  …
+```
+
+A shipped part's permission list is what Tridium requests, not a template for yours: request only what your code
+needs (`types/structure.md` § `module-include.xml` vs `META-INF/module.xml`). Which class and agents a single type
+has: `nh type` (`types/structure.md` § Naming).
 
 ---
 

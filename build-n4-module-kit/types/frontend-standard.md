@@ -118,6 +118,7 @@ This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `das
   concatenated into `innerHTML`.
 - [both] No swallowed errors; log on state transitions, not on every failed poll.
 - [both] User-facing errors are plain operator-language messages; technical detail goes to the console.
+- [both] Operator text from a module lexicon in the browser (`lex!`; lexicon content is public): `types/lexicon.md` § 4.
 
 ### 9. Industrial states and units
 - [both] One state vocabulary with one visual treatment everywhere (online, off, on, alarm, manual,
@@ -290,7 +291,7 @@ then **Execute**, with a backup first. [CERT] niagara-research
 `organized/pxEditor/pxEditor-wb/extracted/module.palette:31`; [CERT-doc] `niagara-help/devguide-clean/ui/uxMediaMigration.txt:6-12`.
 To preview pages in UxMedia without rewriting them: system property `niagara.preferUxMedia=true` [CERT-doc]
 `niagara-help/devguide-clean/ui/uxMedia.txt:56`. The page also ships in the 4.13.2.18 docs, so it is not
-4.15-only as B1315 states [CERT-doc] `niagara-help/versions/4.13.2.18/devguide-clean/ui/uxMediaMigration.txt:1`.
+4.15-only as B1315 first stated (corrected in its 2026-10-22 header, B1315:21-27) [CERT-doc] `niagara-help/versions/4.13.2.18/devguide-clean/ui/uxMediaMigration.txt:1`.
 
 ## Enforcement
 `toolbelt/rc-scan.sh` gates the checkable browser rules (row format and flags in its header):

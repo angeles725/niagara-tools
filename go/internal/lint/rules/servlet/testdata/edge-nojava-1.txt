@@ -1,0 +1,8 @@
+-- args --
+@DIR@/m
+-- want --
+exit 3
+ERROR  lint-servlet  @DIR@/m  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- m/a.txt --
+x

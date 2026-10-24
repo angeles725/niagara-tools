@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-no-md5-credential-digest.sh [--strict] <src-root>

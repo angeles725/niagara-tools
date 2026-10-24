@@ -9,6 +9,7 @@ This doc is the **packaging and field-delivery** companion.
 For signing gates and `verify-module.sh`, see `build-verify.md`.
 Which profile jars a host holds, which Software Manager operations stop the station or reboot the host, and NRE
 memory on a JACE: `types/platform.md`. [ev: retro devguide415-r2-packaging-platform-signing Δ9]
+Shipping a tag dictionary with a module (ExportTags copies a tag, it is no proxy): `types/logic.md` § Ship a tag dictionary.
 
 ---
 
@@ -33,7 +34,7 @@ Critical attributes — wrong values corrupt field devices:
 | Attribute / Element | Type | Effect / Gotcha |
 |---|---|---|
 | `@name` | string | display name in the Supervisor distribution manager |
-| `@version` | string | the version string presented to `installDist.query` |
+| `@version` | string | the bundle version |
 | `@vendor` | string | vendor identity |
 | `@reboot` | boolean | `true` reboots the controller after install; a missing attribute reads `false` (`DistributionManifest.java:130`) |
 | `@noStation` | boolean | **GOTCHA:** `true` = the installer stops EVERY running app (stations and Sedona) before it commits; a missing attribute reads `false` (install while running). `noStation` is the shipped alias of the devguide's `noRunningApp` (`DistributionManifest.java:87`); 22 of 26 shipped 4.15.6.20 dists set it `true`. Workbench asks first and aborts the install on "no" |
@@ -47,7 +48,7 @@ Critical attributes — wrong values corrupt field devices:
 **Always write `reboot` and `noStation` explicitly** in a dist we build: the devguide says both default
 to true (devguide `distribution.txt:86,88`), the code reads a missing attribute as false, so only an explicit value means the same to both readers.
 A dist that replaces jars a running station has loaded sets `noStation="true"` (or `noRunningStation="true"`
-to spare Sedona). `[ev: corpus B1023 §1023.7]` `[ev: corpus B1318 §1318.2 C1-C2]` `[ev: corpus B1345]`
+to spare Sedona). `[ev: corpus B1023 §1023.7]` `[ev: corpus B1318 §1318.3 C1-C2]` `[ev: corpus B1345]`
 `[ev: retro devguide415-r2-packaging-platform-signing Δ1]` `[ev: retro devguide415-r3-packaging-extension-control Δ1]`
 
 ---
@@ -57,9 +58,10 @@ to spare Sedona). `[ev: corpus B1023 §1023.7]` `[ev: corpus B1318 §1318.2 C1-C
 The Supervisor is the install tool for field controllers (JACE, Atlas):
 
 1. Upload the `.dist` to the Supervisor distribution manager.
-2. The Supervisor sends `installDist.query` to the target controller.
-3. The controller validates `dist.xml` (@version, @dependencies, @osInstall compatibility).
-4. On success it pulls the payload and applies it; `@reboot`/`@noStation` govern restart.
+2. The Supervisor pushes it to the target controller through the Software Manager. (`installDist.query` is
+   not a message: it is the installer's question whether this Supervisor acts as an installation tool.)
+3. The controller validates `dist.xml` (@version, @dependencies, @osInstall compatibility) `[INFER]`.
+4. On success it pulls the payload and applies it; `@reboot`/`@noStation` govern restart `[INFER]`.
 
 **Gotcha:** a `.dist` whose `@noStation=false` (or missing) and `@reboot=false` that still
 touches station files is installed under the running station and can corrupt it. Test the
@@ -99,8 +101,7 @@ validate the module's signing chain.
 
 ```
 overlay/security/certificates/
-  <vendorCert>.properties     # mandatory: description, version, enabled=true
-  <vendorCert>.certificate    # Tridium-proprietary XML: DSA PUBLIC key only
+  <Vendor>.certificate        # Tridium-proprietary XML: DSA PUBLIC key + signature; the only file shipped there
 ```
 
 The `.certificate` file is a **DSA public key** in Tridium's XML envelope — no
@@ -112,7 +113,7 @@ build environment only. `[ev: corpus B1027 §1027.4]`
 During development, import the self-signed dev cert into the **Workbench user
 trust store** (`<user_home>/security/cacerts.jceks`). The production cert goes
 into the station's trust store through the overlay; it is never hand-imported
-into a production JACE. `[ev: corpus B18 §18.9]` Which signature statuses each verification mode accepts, and
+into a production JACE. `[ev: corpus B18 §18.2.2]` Which signature statuses each verification mode accepts, and
 how to read a host's mode: `build-verify.md` § Signing per deploy target. `[ev: retro devguide415-r2-packaging-platform-signing Δ6]`
 
 **The default dev key (no signing block in the build):** the plugin's `LocalSigningProfile` signs with a
@@ -152,7 +153,7 @@ the station drops the group with a WARNING (`Skipping element`).
 → Full signing gate details and `skipModuleValidation` semantics are in
 `build-verify.md §Signing per deploy target`. Do not duplicate here.
 
-`[ev: corpus B1027 §1027.4, B18 §18.3-18.4]` `[ev: corpus B1312 §1312.3 C1-C2]`
+`[ev: corpus B18 §18.3-18.4]` `[ev: corpus B1312 §1312.3 C1-C2]`
 
 ### Signing-profile build-triage
 
@@ -216,11 +217,11 @@ Rule of thumb: **ADD, never retype.**
 | ADD new slot | Safe | new slot gets default value; existing rows unaffected |
 | REORDER slots | Safe | `.bog` binding is by NAME, not ordinal |
 | RENAME slot | **Orphaned** | old name creates an orphan child; new slot gets default; data is NOT migrated automatically |
-| RETYPE slot (different `BTypeSpec`) | **OUTAGE** | decoder throws; station fails to start until the data is repaired |
+| RETYPE simple slot (saved value no longer parses) | **OUTAGE** | decoder throws unwrapped; station fails to start until the data is repaired (a retyped complex slot reverts to its default instead) |
 | REMOVE simple slot (leaf value) | **Lossy** | value is silently discarded at load; no error |
-| REMOVE complex slot (sub-component) | **Shunt** | sub-component is detached and moved to an orphan folder; links break |
+| REMOVE complex slot (sub-component) | **Shunt** | recreated as a dynamic slot under the old name, value preserved |
 | Enum tag rename / remove | **OUTAGE** | stored ordinal maps to a missing label; decode throws |
-| Class missing (module removed/renamed) | **OUTAGE** | `MissingClass` at boot for every instance of that type |
+| Type missing (module removed/renamed) | **Lossy** | `warningAndSkip("Type not found")`: the subtree is skipped and the station boots; a missing cross-module class that a deployed type needs is fatal (`Missing class`) for every instance |
 
 **Complex migration recipe (the safe path):**
 
@@ -258,7 +259,7 @@ Rule of thumb: **ADD, never retype.**
 
 Set `defaultModuleVersion` in the **GROUP** `build.gradle.kts` (the one that
 applies to all sub-projects). Never set it per-part `.gradle.kts` — the GROUP
-setting propagates automatically. `[ev: corpus B755 §755.4]`
+setting propagates automatically. `[INFER — kit convention; B755 §755.4 covers only the BVersion relation bits]`
 
 ### 3-part floor, not 4-part build-stamp
 
@@ -274,12 +275,14 @@ The 3-part form (`4.14.0`) means "any 4.14 build at or above base 0".
 
 ### `BVersion.MEETS_MINIMUM`
 
-Use `BVersion.MEETS_MINIMUM` (not `==`) for runtime version guards:
+`BVersion` (`com.tridium.install`, `MEETS_MINIMUM` = 115) is the install-time dependency check: a minimum passes
+for a later, equal or more/less specific version, not an earlier one. A runtime guard compares
+`javax.baja.util.Version` with `compareTo` (not `==`):
 
 ```java
-BVersion actual = Sys.getModuleManager().getModule("mymod").getVersion();
-if (!actual.meetsMinimum(new BVersion("1.3.0"))) {
-    appFail("mymod 1.3.0 or later required");
+Version actual = Sys.loadModule("mymod").getVendorVersion(RuntimeProfile.rt);
+if (actual == null || actual.compareTo(new Version("1.3.0")) < 0) {
+    throw new IllegalStateException("mymod 1.3.0 or later required");
 }
 ```
 
@@ -290,7 +293,7 @@ if (!actual.meetsMinimum(new BVersion("1.3.0"))) {
 ## 8 · Station template `.ntpl` for OEM commissioning
 
 A `.ntpl` file is a ZIP containing a pre-configured station BOG
-(`config.bog`) plus a `template-manifest.xml` that declares the template's
+(`template.bog`) plus a `template-manifest.xml` that declares the template's
 display name and description.
 
 ### Placement
@@ -316,11 +319,11 @@ The migration tool is an **offline tool operation**, not a runtime hook. Key rul
 | Rule | Detail |
 |---|---|
 | N4 module must exist first | Run `install` or overlay-deploy the N4 JAR **before** running migrate; the migration tool resolves the new type at startup |
-| `BModuleRemovalConverter` handles removals | Handles cases where a module is removed entirely and not replaced; does NOT handle type replacements (that requires a custom `BConverter`) |
-| Replacements need `BConverter` | Write a `BConverter` and register it in `module-include.xml` to remap old-AX type names to new-N4 type names |
-| Migration is offline | The NRE must be stopped; migration mutates `.bog` files directly |
-| What migrates | Logic programs, alarm classes, history extensions, px view refs (limited); complex graphics and AX drivers do NOT migrate |
-| What does NOT migrate | Driver points, schedule DBs, alarm routing full, graphics/PX bound to AX-only widgets |
+| `BModuleRemovalConverter` handles removals | Handles cases where a module is removed entirely and not replaced; does NOT handle type replacements (that requires a custom `BIBogElementConverter`) |
+| Replacements need `BIBogElementConverter` | Write a concrete `BIBogElementConverter` type whose `getConvertTypes()` names the old AX type specs; `ConverterRegistry` finds it through the type registry and remaps those types to new N4 types |
+| Migration is offline | `migrator-wb` reads an AX station backup `.dist` and writes a new N4 station folder; it is not a hook in the normal station load |
+| What migrates | Station `.bog` (per-type converters), Px files, alarm and history databases, users (permissions → roles), provisioning, LDAP/keytab, Program objects, lexicons; protocol converters ship as separate `*Migrator-wb` modules (BACnet, oBIX, SNMP, video, …) |
+| What does NOT migrate | AX licences and TLS certificates (export them first), dropped modules (EAS, FLR, Dust, rdbDb2, Fox/HTTP/Lon tunneling, OpenADR, legacy video), and any custom module that has no N4 build yet |
 
 `[ev: corpus B1024 §1024.3-1024.5, B405]`
 
@@ -340,7 +343,7 @@ while the **station is DOWN** (the platform daemon must be running):
 2. Open **Platform > Software Manager**.
 3. Identify the offending module — it appears as:
    - **"Bad Target"** — bad manifest or otherwise unusable (incompatible/corrupt).
-   - **"Out of Date"** — module version does not match the installed platform family.
+   - **"Out of Date"** — the installed version differs from the one in the local software database.
 4. Select the module and choose a remediation action:
 
 | Action | When to use |
@@ -367,7 +370,7 @@ module-verification check on next boot, even if the JAR bytes are correct.
 
 ## 11 · Firmware/file OTA via chunked Base64 action invocations [ev: retro honeywell-wb-rt-wb-deltas Δ5]
 
-When an rt action can accept only small strings and you need to push a firmware image or large file from the WB to a device, use ≈5 000-character Base64 segments sent as repeated action invocations, terminated by a sentinel string `"END"`. The rt side accumulates segments in a `StringBuilder`, Base64-decodes on the sentinel, then writes the binary. This avoids any single-payload size limit without a custom Fox file channel.
+When an rt action can accept only small strings and you need to push a firmware image or large file from the WB to a device, split the file into 5 000-byte chunks, Base64-encode each chunk and send it as one action invocation. The shipped Honeywell HMI menu opens with an `initiateFileCopy` action, sends each chunk with `copyBinaryString`, aborts on any reply other than `"SUCCESS"`, and finishes with a separate `firmwareUpdateHMI` action; how the device side reassembles the chunks is not shown `[INFER]`. This avoids any single-payload size limit without a custom Fox file channel.
 
 See `types/logic-authoring.md §Chunked Base64 transfer for firmware/file OTA` for the full WB + rt code recipe. `[ev: corpus B1080]`
 

@@ -25,27 +25,31 @@ import (
 // an unreadable file is reported on stderr when it happens with the texts of toolbelt/lib/awk-lint.sh,
 // a file a per-file rule could not analyze as "cannot scan <path>: <rule>: <error>", a TreeRule error as
 // its own text, and the scan goes on. Exit: 3 when anything could not be scanned (it wins over 1), else
-// 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS and ADVISORY
-// rows never count). A spec prints its EmptyError row on a root where it selects no file and stops like
-// a walk error (exit 3).
+// 1 when a FAIL row was printed or a WARN/FAIL row was printed under a.Strict, else 0 (PASS, ADVISORY
+// and INFO rows never count). A spec prints its EmptyError row on a root where it selects no file and stops like
+// a walk error (exit 3). A RootRule takes no part in the walk: it gets each root after the others' scan.
 func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
-	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs))}
+	r := &report{name: name, out: bufio.NewWriter(s.Out), err: s.Err, held: make([][]event, len(specs)), strict: a.Strict}
 	defer r.out.Flush()
-	sel := union(specs)
+	sel, walks := union(specs)
 	stopped := make([]bool, len(specs)) // rules a walk error has stopped (Spec.ContinueOnWalkError unset)
 	live := len(specs)
 	for _, root := range a.Roots {
-		files, err := Walk(root, sel)
+		var files []string
+		var err error
+		if walks {
+			files, err = Walk(root, sel)
+		}
 		if err != nil {
 			r.envError(0, fmt.Sprintf("cannot list every file under %s: %s", root, err))
 			for i, sp := range specs {
-				if !sp.ContinueOnWalkError && !stopped[i] {
+				if sp.Root == nil && !sp.ContinueOnWalkError && !stopped[i] {
 					stopped[i], live = true, live-1
 				}
 			}
 		} else { // a walk error wins: scan_files_or_exit exits before the K20 check
 			for i, sp := range specs {
-				if !stopped[i] && !selectsAny(sp.Select, root, files) {
+				if sp.Root == nil && !stopped[i] && !selectsAny(sp.Select, root, files) {
 					r.empty(i, sp, root)
 					stopped[i], live = true, live-1
 				}
@@ -65,7 +69,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			lines, _ := javasrc.Lines(bytes.NewReader(data)) // a bytes.Reader never fails
 			f := javasrc.NewFile(p, lines)
 			for i, sp := range specs {
-				if stopped[i] || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
+				if stopped[i] || sp.Root != nil || !sp.Select.selects(baseName(p)) || prunedFor(sp.Select, root, p) {
 					continue
 				}
 				if sp.Tree != nil {
@@ -73,7 +77,11 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 					continue
 				}
 				fds, err := sp.Rule.Check(f)
-				r.findings(i, sp, p, fds)
+				shown := p
+				if sp.RelPaths {
+					shown = strings.TrimPrefix(p, root+"/")
+				}
+				r.findings(i, sp, shown, fds)
 				if err != nil {
 					r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
 				}
@@ -84,6 +92,21 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				continue
 			}
 			fds, err := sp.Tree.CheckTree(trees[i])
+			r.findings(i, sp, "", fds)
+			if err != nil {
+				r.envError(i, err.Error())
+			}
+		}
+		for i, sp := range specs {
+			if sp.Root == nil || stopped[i] {
+				continue
+			}
+			fds, err := sp.Root.CheckRoot(root)
+			if errors.Is(err, ErrEmptyRoot) { // its ERROR row only, as for a walking rule's empty root
+				r.empty(i, sp, root)
+				stopped[i], live = true, live-1
+				continue
+			}
 			r.findings(i, sp, "", fds)
 			if err != nil {
 				r.envError(i, err.Error())
@@ -113,6 +136,7 @@ type report struct {
 	err                  io.Writer
 	held                 [][]event
 	envErr, rows, failed bool
+	strict               bool // --strict: a Spec.StrictFails rule prints WARN rows as FAIL
 }
 
 func (r *report) emit(i int, e event) {
@@ -143,9 +167,12 @@ func (r *report) findings(i int, sp Spec, path string, fds []Finding) {
 		if fd.Severity == Unset {
 			fd.Severity = sp.severity()
 		}
+		if fd.Severity == Warn && r.strict && sp.StrictFails {
+			fd.Severity = Fail
+		}
 		r.failed = r.failed || fd.Severity == Fail
 		r.rows = r.rows || fd.Severity == Warn || fd.Severity == Fail
-		r.emit(i, event{text: fd.Row()})
+		r.emit(i, event{text: fd.row(sp.BarePathRow)})
 	}
 }
 
@@ -168,23 +195,28 @@ func (r *report) release() {
 	}
 }
 
-// union selects what any spec selects and prunes what every spec prunes.
-func union(specs []Spec) Selection {
-	var u Selection
+// union selects what any walking spec (every spec but a RootRule) selects and prunes what every walking
+// spec prunes; walks reports whether there is a walking spec at all.
+func union(specs []Spec) (u Selection, walks bool) {
 	count := map[string]int{}
+	n := 0
 	for _, sp := range specs {
+		if sp.Root != nil {
+			continue
+		}
+		n++
 		u.Names = append(u.Names, sp.Select.Names...)
 		for _, d := range sp.Select.Prune {
 			count[d]++
 		}
 	}
-	for d, n := range count {
-		if n == len(specs) {
+	for d, c := range count {
+		if c == n {
 			u.Prune = append(u.Prune, d)
 		}
 	}
 	sort.Strings(u.Prune)
-	return u
+	return u, n > 0
 }
 
 // selectsAny reports whether sel selects any of the listed files under root (read or not, as the
@@ -219,9 +251,11 @@ const usage = "usage: n4lint <rule>[,<rule>...] <args>... | n4lint --all [--stri
 // Command is the n4lint entry point over specs. "n4lint <rule> <args>..." runs one rule with the
 // argument contract (Mode, Usage, UsageExit, message prefix) of its toolbelt wrapper; "n4lint <rule>,<rule>..."
 // and "n4lint --all" run several rules over one walk with the n4lint contract (Each mode, n4lint
-// prefix), in the requested (or registry) order with each rule's rows contiguous. Usage errors exit the
-// spec's UsageExit (3 by default, always 3 for a rule list or --all), environment errors 3. A duplicate
-// rule ID or a spec that is not exactly one of Rule and TreeRule panics (a registration bug).
+// prefix), in the requested (or registry) order with each rule's rows contiguous. --all takes source
+// roots, so it leaves out every RootRule (whose root is a module root, e.g. lint-structure's): such a
+// rule runs only by name. Usage errors exit the spec's UsageExit (3 by default, always 3 for a rule list
+// or --all), environment errors 3. A duplicate rule ID or a spec that is not exactly one of Rule,
+// TreeRule and RootRule panics (a registration bug).
 func Command(specs ...Spec) cli.Main {
 	byID := map[string]Spec{}
 	for _, sp := range specs {
@@ -245,9 +279,14 @@ func Command(specs ...Spec) cli.Main {
 			}
 			return 0
 		}
-		selected := specs
-		if args[0] != "--all" {
-			selected = nil
+		var selected []Spec
+		if args[0] == "--all" {
+			for _, sp := range specs {
+				if sp.Root == nil {
+					selected = append(selected, sp)
+				}
+			}
+		} else {
 			for _, id := range strings.Split(args[0], ",") {
 				sp, ok := byID[id]
 				if !ok {

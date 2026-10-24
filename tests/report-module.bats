@@ -256,6 +256,19 @@ setup() {
   [[ "$output" == *"lint-structure"* ]]
 }
 
+@test "RM19-line: a lint-structure L10 row relays its gradle.properties line (path:line, truth audit T7)" {
+  # lint-structure prints L10/L14 as <path>:<line>; the site-mode relay keeps the line (it printed "gradle.properties:"
+  # with an empty line while the lint put the rule ID where the line belongs).
+  ROOT="$BATS_TEST_TMPDIR/l10"
+  mkdir -p "$ROOT/.git" "$ROOT/M/A-rt"
+  printf 'x=1\nniagara_home=C:\\N\n' > "$ROOT/M/gradle.properties"
+  printf '<types/>\n' > "$ROOT/M/A-rt/module-include.xml"
+  printf '<p n="A"/>\n' > "$ROOT/M/A-rt/module.palette"
+  run "$RM" --lint-only "$ROOT/M"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"(module)  FAIL  lint-structure  gradle.properties:2  L10: absolute host path"* ]]
+}
+
 @test "RM20: uncovered OPERATOR slot surfaces lint-write-path FAIL row and exits 1" {
   # write-path-fail/DemoPan-rt/src/com/x/BControl.java has OPERATOR property \"setpoint\" not in matrix
   run "$RM" --lint-only "$FX/write-path-fail"

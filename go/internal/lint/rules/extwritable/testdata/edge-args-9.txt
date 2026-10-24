@@ -1,0 +1,12 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-ext-writable-shape.sh [--strict] <java-src-dir>
+-- m/BA.java --
+package a;
+@NiagaraProperty(name="sp", type="BStatusNumeric", defaultValue="new BStatusNumeric()", flags=Flags.OPERATOR)
+public class BA extends BComponent {}
+-- other/README.txt --
+x

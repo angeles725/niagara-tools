@@ -33,6 +33,7 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **The SPA side (structure, naming, data/state, transfer, memory, `rc/` component layout, technology choices, vendored libraries and the vetted vendor catalog) follows [`frontend-standard.md`](frontend-standard.md)** — this section keeps the servlet, reader, RBAC and serving rules; do not restate the frontend rules here. `[ev: retro dashboard-frontend-standard Δ1]`
 - **Declare `ui_profile` for every `-ux` dashboard** (its BUILD-STATE row and the module docs) before writing a rule or a line of CSS. The values (`hmi | lan | both | unknown`), the `both` single-build/two-entry rule and the per-rule tags are defined once in [`frontend-standard.md`](frontend-standard.md) § Profiles; the HMI-specific rules below apply to `hmi` and a single-build `both`. `[ev: retro dashboard-deployment-profiles Δ1]`
 - **Pick the right serving recipe first (three exist; a fourth, the web-module recipe, follows):** a bespoke dashboard with a custom JSON API → **servlet-SPA** (a `BWebServlet` that self-registers by `getServletName()`); a view bound to a component TYPE → **bajaux `@AgentOn` + `BIJavaScript`** (`getJsInfo` → `module://…/rc/X.js`); engineer-authored equipment graphics → **PX** (XML bound to slot ords, no Java). PX is also a zero-Java **complement** to an existing servlet-SPA: an integrator can add a `.px` bound to the facade slot ords for equipment schematics without touching the servlet — the facade's `OPERATOR` slots are already the write surface, no servlet change needed. **Our DashboardPan is servlet-SPA — the correct choice for a bespoke HMI; do not migrate it to bajaux.** [ev: retro corpus-index · B752, corpus B752 §752.1, B753 §753.2]
+- **Before a JSON servlet for off-station consumers, check whether a jsonToolkit component does it:** `types/json-toolkit.md` § 1.
 - **Web-module recipe — a standard `HttpServlet`/`Filter` declared in `WEB-INF/web.xml`; choose it when the endpoint
   needs `web.xml` filters (`CsrfProtectedFilter`, `UserActivityFilter`):** the class extends
   `javax.servlet.http.HttpServlet` (no `WebOp`; the user is `req.getUserPrincipal()` cast to `BUser`, the locale
@@ -70,6 +71,7 @@ Proven end-to-end on DashboardPan (2026-08). A browser dashboard for an HMI, ser
 - **DUX-TEST1 — browser test harness (Jasmine + Karma + grunt-niagara):** the first-party pattern for
   executable browser-side assertions on ux code — entirely absent from our kit until now; `dashboard-preview.py`
   runs a layout preview but asserts nothing. Pattern from `typeExtensionDemo-ux` (B957 §957.5):
+  Async spec helper `promiseUtils` (`srcTest` only): `types/horizons.md` § 2.
   - **Specs:** `srcTest/rc/spec/DemoSizeSpec.js` — Jasmine `describe/it` blocks; `require` the type under
     test via `baja!` so the type-extension registration fires, then assert codec + type resolution.
   - **Aggregator:** `srcTest/rc/spec/allSpecs.js` — a plain AMD module listing every spec as a dep; add

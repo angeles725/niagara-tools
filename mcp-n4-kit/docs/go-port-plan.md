@@ -229,7 +229,8 @@ NAME=PATH pairs, https URLs, names the per-station flags may use). `go/cmd/mcp-n
 python3 and compares the bytes.
 
 **Not ported yet.** A read tool that needs a session answers `not connected: call n4_connect
-first` (no session can exist yet); any other tool answers `<name> is not implemented in this
+first` without one and the auth pause while it holds (section 8), as Python does; past those
+checks, and for any other tool, an unported tool answers `<name> is not implemented in this
 version of the Go server`, and `--allow-writes` is refused at start with
 `mcp_n4.server: --allow-writes is not implemented in this version of the Go server` (exit 2)
 until S10. Under `MCP_N4_IMPL=go` the harness skips a test that meets exactly that text
@@ -306,3 +307,30 @@ server's request limit) is `malformed BOX reply: nested deeper than 1000 levels`
 CPython's RecursionError past its C stack no longer differs from Go decoding any depth. One edge
 remains: a reply that is both invalid JSON and nested deeper than CPython's C stack (~52k) is a
 nesting error in Python and a JSON error in Go.
+
+## 8. S4 `tiers`, `session`, connect/describe
+
+**Packages.** `tiers` ports `tiers.py` (`TierOf`, `ProductVersion`, `WriteBlock`); the About scan
+keeps Python's Unicode `\s` and `\b` (`pyjson.IsSpace`, shared with `jsonrpc.Strip`).
+`session` ports `Context` and `Session` (`tools_read.py:33-195`): the operator policy, the active
+session, the tier report, the scrub and the auth latch (keyed credential fingerprint, whole-second
+`retry in`, `AuthBlockFor` letting other credentials reconnect). `readtools` serves `n4_connect`
+and `n4_describe_session`; `cli.NewContext` builds the context from the flags `cli.Check`
+accepted. `jsonrpc` now follows `Server._call`: a session tool needs a connection, then no auth
+pause, then its handler; an AuthError from a handler re-latches, a BoxError or ValueError shows
+its words, every tool error text is scrubbed (not the unported text the harness keys on), and
+`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`; `box` keeps its
+own copy until the in-flight box branch lands.
+
+**Proof.** Under `MCP_N4_IMPL=go` the black-box `TestConnect`, `TestDescribeSession` and
+`test_tiers.TestConnectReportsTier` tests run against the binary and FakeStation. Their marked
+tests and every `test_auth_latch` test have Go twins: `session/connect_test.go`,
+`session/authlatch_test.go`, `tiers/connect_test.go` and `cli/context_test.go`, on
+`readtools/readtoolstest` (an in-memory station and a server whose environment, clock and client
+factory a test sets). `tiers.TestDifferentialPython` compares the three tier functions with
+`tiers.py` on the target CPython. Twins still owed: `TestAWriteDryRunIsRefusedWhilePaused` (S10)
+and `TestTheRetroClassifiesTierRefusals` (S9).
+
+**Known differences.** A credential value that is not UTF-8 makes Python's fingerprint
+`.encode()` raise UnicodeEncodeError, so its connect answers that error text (with a position);
+Go sends the bytes and logs in, or gets the station's 401.

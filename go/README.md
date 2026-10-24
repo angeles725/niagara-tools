@@ -15,6 +15,7 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
+| `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
 | `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
 
@@ -34,7 +35,8 @@ rule's rows stay contiguous.
    on stderr and exits 3, as for an unreadable file. Never drop a file silently.
    Row columns: `Finding.Check` is the sub-check shown in the check column (empty shows the rule ID), so
    one rule can report several named checks. `Line` 0 is a file-level finding printed as `<path>: <msg>`;
-   rows with `Line` ≥ 1 are unchanged. Severity `Pass` prints `PASS` and never affects the exit code.
+   rows with `Line` ≥ 1 are unchanged. `Spec.BarePathRow` prints a `Line` 0 finding as `<path>  <msg>`
+   instead (two spaces, no colon), the row of lint-structure. Severity `Pass` prints `PASS` and never affects the exit code.
    `Spec.UsageExit` is the exit code of a usage error when the rule runs alone (0 means 3).
    A directory the walk cannot read prints `<lint>: cannot list every file under <root>: find: '<dir>': <reason>`
    (`<dir>` quoted as GNU find does under `LC_ALL=C`: `\'`, `\\`, `\n`-style C escapes, 3-digit octal for
@@ -44,6 +46,13 @@ rule's rows stay contiguous.
    beside it (reference: `rules/nullcontext`).
    Severity `Advisory` prints `ADVISORY` and, like `Pass`, never affects the exit code, `--strict` and
    `--all` included: a note that must not turn into a failure.
+   Severity `Info` prints `INFO` and never affects the exit code either (lint-servlet's information rows).
+   `Spec.StrictFails` prints the rule's WARN rows as FAIL under `--strict`, for a bash lint that rewrote its
+   severity column (`v = strict ? "FAIL" : "WARN"`); the exit code is 1 either way. `Spec.RelPaths` prints a
+   per-file rule's row path as `${file#"$root/"}` (relative to the root; a root given with a trailing `/`
+   keeps the whole path, as the expansion does). `Mode` `Trailing` parses `<root> [--strict]...`: the first
+   argument is the root as given, every later one must be `--strict`, and anything else prints
+   `<lint>: unknown option: <arg>` (exit 3) before the root is checked (reference: `rules/servlet`).
    An empty root is an error, never a clean pass, for every rule (the K20 guard of
    `lint-silent-protection.sh`, made the engine default after the 2026-10-22 truth audit): a root where
    the rule selects no file prints `ERROR  <check>  <root>  <msg>` on stdout and stops the rule like a walk
@@ -82,15 +91,31 @@ rule's rows stay contiguous.
    		Select: lint.Selection{Names: []string{"*.java"}}}
    }
    ```
+   A lint that checks a module's layout rather than its sources (directories, files above or beside the
+   root) implements `lint.RootRule` (`CheckRoot(root string)`; reference port: `rules/structure`) and sets
+   `Spec.Root`: the runner walks nothing for it, so `Select` and `ContinueOnWalkError` do not
+   apply; a root with nothing it checks returns `lint.ErrEmptyRoot`, which prints the `Spec.EmptyError` row
+   (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
+   fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
+   out; it runs by name or in a rule list.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,
    stderr and the tree in the `golden` format; reference: `rules/setnullord`), add edge trees, and call
-   `golden.Run(t, Spec(), <cases>)`.
+   `golden.Run(t, Spec(), <min cases>)`. The format is in the `rules/golden` package comment (a
+   `-- <path> (noeol) --` section is a file whose last line has no newline). A port of an `awk_lint_run`
+   lint also calls `golden.Unreadable(t, Spec(), <src>)` for its walk-error contract. Recorded rows catch
+   what hand-written expectations miss (row order, gawk hash order, read and grep quirks); a port whose
+   tests restate the bats assertions as substrings, or that copies the golden parser into its own
+   package, is a review finding. `[ev: retro go-lint-timers Δ1]` `[ev: retro go-lint-ord-ports Δ2]`
 4. Make `toolbelt/lint-<name>.sh` a wrapper like `lint-null-context-write.sh`: keep its header (description,
    Usage, Exit, `# Mutation:` lines) and exec `n4lint <rule-id> "$@"` via `go_tool_bin`.
 5. Prove the old and new scripts print the same bytes on the bats fixtures and real trees; list every
    intended difference in the PR.
+6. Fix the bash lint's truth bugs only after the byte-identical port, one commit each, RED first: a
+   hand-written `testdata/truth-*.txt` case (same format) plus a bats test whose `# Mutation:` pin names it.
+   A line-matching rule reads `linescan.Code(f)` (or `f.Stripped()` when the token lives in a literal),
+   never the raw line cut at its first `//` (string-unaware: a `//` in "http://h" hid the rest of the line).
 
 Do not copy the walker, the formatter, the argument parser or the comment stripper into a rule package;
 change the shared code instead.

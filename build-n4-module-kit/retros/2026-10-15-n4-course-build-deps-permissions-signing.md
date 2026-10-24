@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 6 -->
 # 2026-10-15 · kit · n4-course-build-deps-permissions-signing
@@ -45,3 +45,6 @@ expression syntax.
 - Each sensitive JVM capability maps to one permission group; the source code that needs it can be found mechanically.
 - `com.tridium.*` is private API even when Tridium's own course uses it.
 - Signing must fail closed: a default profile that silently self-signs hides a mistyped alias until the station refuses the module.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-pointer-lines`) — Δ3 doc half `types/module-wiring.md` § 4.5 (lint half owed as Go lint G65 `private-api-import`); Δ1, Δ2, Δ4-Δ6 were already cited on main.

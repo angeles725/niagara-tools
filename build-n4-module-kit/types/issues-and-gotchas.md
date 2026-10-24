@@ -14,7 +14,7 @@ in `ValueDocDecoder`) after deploying a module update.
 longer matches the class, `ValueDocDecoder` cannot decode → OUTAGE.
 **Fix:** NEVER retype a live slot.  ADD a new slot with the new type; optionally migrate
 the value in `started()` by detecting the orphaned dynamic slot name; deprecate the old slot.
-[ev: corpus B739 §739.2] — **Kit coverage: METHODOLOGY.md S28 + schema-risk.sh (FOLDED)**
+[ev: corpus B739 §739.2] — **Kit coverage: METHODOLOGY.md § Schema / upgrade safety + schema-risk.sh (FOLDED)**
 
 ### A2 · Remove/rename stored enum tag → OUTAGE
 **Symptom:** station fails to boot or throws `InvalidEnumException` on a `.bog` with a stored
@@ -24,7 +24,7 @@ enum value whose tag was removed.
 `schema-risk.sh parse_slots()` — it harvests only `@NiagaraProperty` entries.
 **Fix:** ADD enum tags, never remove or rename a tag deployed to a live station.  Manually diff
 `@Range({...})` declarations before a schema-change deploy.
-[ev: corpus B754 §754.6] — **Kit coverage: METHODOLOGY.md S29 + schema-risk.sh; @Range blind spot
+[ev: corpus B754 §754.6] — **Kit coverage: METHODOLOGY.md § Schema / upgrade safety + schema-risk.sh; @Range blind spot
 = schema-versioning-upgrade-safety-deltas Δ4 (PENDING)**
 
 ### A3 · Cross-module @NiagaraProperty type= → Missing class at station load
@@ -82,7 +82,7 @@ The `started()` + `Sys.atSteadyState()` guard fires exactly-once across both pat
 the NotRunningException race on boot.  Missing `clockChanged` leaves a stale absolute
 next-fire target after an NTP/DST shift.
 **Live case:** BDefrostController (ColdRoomPan-rt), PANCCADIA León, defrost never fired.
-[ev: corpus B729 §729.4, retro self-firing-timer] — **Kit coverage: types/logic.md §17 (FOLDED)**
+[ev: corpus B729 §729.4, retro self-firing-timer] — **Kit coverage: types/logic.md § Safety fail-modes & timers (FOLDED)**
 **Lint check:** `lint-timers.sh atSteadyState-only-timer` WARN — detects a class that arms in
 `atSteadyState()` without a `started()` override.
 [ev: retro 2026-09-18-insights-issues-catalog-deltas Δ2]
@@ -94,7 +94,7 @@ unless debug logging is enabled.  The component appears healthy (running, no fau
 if `period <= 0`.  A user config value of 0 (default before commissioning) reaches this code.
 **Fix:** validate `delay > 0` before every `Clock.schedule`/`schedulePeriodically` call;
 set the property's `min` facet > 0 so the UI enforces the constraint.
-[ev: corpus B801] — **Kit coverage: METHODOLOGY.md S139 + lint-delays.sh FAIL check (FOLDED)**
+[ev: corpus B801] — **Kit coverage: METHODOLOGY.md § Kit maintenance + lint-delays.sh FAIL check (FOLDED)**
 
 ### B3 · State/anchor slots must be set BEFORE calling Clock.schedule
 **Symptom:** after a schedule that throws (e.g., `NotRunningException` in `activateLinks`),
@@ -116,7 +116,7 @@ NOT equivalent to "validate delay > 0" (B2): the safe minimum is 1 ms, not 0.
 **Fix:** replace `Math.max(0L, delay)` with `Math.max(1L, delay)` before every
 `Clock.schedule` / `schedulePeriodically` call.  Enforce at the property level with a
 `min >= 1` facet so the UI prevents zero entry.
-[ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: METHODOLOGY.md S139 +
+[ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: METHODOLOGY.md § Kit maintenance +
 lint-delays.sh FAIL check (B2 sibling; FOLDED)**
 
 ---
@@ -136,7 +136,7 @@ to srcTest; verify `moduleTest-include.xml` is produced; check `niagaraTest` cou
 **Note:** even without the bug, `niagaraTest` ONLY runs BTestNg/TestNG tests discovered via the XML.
 Pure `org.junit.Test` classes are never run by `niagaraTest` regardless of plugin version.
 [ev: corpus B807, B1028 §1028.2] — **Kit coverage: retro qa-stack (FOLDED); proposed verify-module.sh
-WARN for missing moduleTest-include.xml = sdk-examples-kit-deltas Δ1 (PENDING)**
+WARN for missing moduleTest-include.xml = sdk-examples-kit-deltas Δ2 (PENDING)**
 
 ### C2 · BComponent cannot be constructed in plain JUnit / WSL (offline instantiation boundary)
 **Symptom:** `NullPointerException` or `ExceptionInInitializerError: Sys not initialized`
@@ -161,7 +161,7 @@ The incorrect cancel intent silently passes every offline check.
 described lifecycle contract; supplement with a live-harness or BTestNg station check on
 Windows.
 [ev: mem coldroompan-defrost-time-le-0-bug] — **Kit coverage: none (gap; live harness check
-recommended per retro C9-QA)**
+recommended per the C9 bless gap in the same memory)**
 
 ### C4 · -ux modules missing Jasmine → silent browser-side test failures
 **Symptom:** no JavaScript/Jasmine tests run for a `-ux` module; the build stays GREEN;
@@ -205,7 +205,7 @@ points to a different SDK version.
 plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a version mismatch.
 **Fix:** keep `gradlePluginVersion` in `settings.gradle.kts` aligned with the SDK family in
 `gradle.properties niagara_home`.  Changing the SDK requires a matching plugin version change.
-[ev: corpus B1016 §1016.2] — **Kit coverage: n4-client-build-config-standard Δ2 (PENDING)**
+[ev: corpus B1016 §1016.2] — **Kit coverage: n4-client-build-config-standard Δ1 (PENDING)**
 
 ### D4c · Split-package first-dependency-wins silent shadow `[ev: retro module-hardening-failure-modes-deltas Δ12]`
 
@@ -229,7 +229,7 @@ plugins resolve from `niagara_home/etc/m2`; mixing SDK families creates a versio
 
 **Lint candidate:** `bundled-jar-class-version` — check the class-file major version of every bundled ext-jar in `src/`, not just the module's own compiled classes.
 
-[ev: corpus B1124] — **Kit coverage: see distribution.md §7 `sourceCompatibility`**
+[ev: corpus B1124] — **Kit coverage: build-verify.md verify gate (every class at bytecode major 52)**
 
 ### D4 · `LocalSigningProfile` auto-generates a dev cert on missing alias → silent station load failure
 **Symptom:** `gradlew build` succeeds and the jar is signed, but the station rejects the module at
@@ -275,16 +275,16 @@ there.
 
 ## E — Client / HMI compatibility
 
-### E1 · EC-Net 4.3/Hx browser: BooleanWritable set(value) fails silently
-**Symptom:** calling `set(value)` on a writable point in the EC-Net 4.3/Hx browser HMI
+### E1 · EC-Net 4.3/Hx browser: a fixed-value `set` button on a NumericWritable fails silently
+**Symptom:** a Px button that invokes `set` with a fixed `actionArg` on a `NumericWritable` in the EC-Net 4.3/Hx browser HMI
 silently has no effect; the output value does not change and no error is reported.
-**Root cause:** EC-Net 4.3/Hx browser incompatibility with the standard Niagara `set(value)`
-call path for writable points.
+**Root cause:** Hx passes the `actionArg` as a raw `BString`; it is not decoded to the `BDouble`
+that `BNumericWritable.set` takes, so the invoke fails silently (Workbench decodes it).
 **Fix:** model the control as a `BooleanWritable` HOA with states `active` / `inactive` /
 `auto` (empty Override); drive the point through the `/set` dialog and use
 "Paste Special → Keep all links" when wiring.  Do not rely on a direct `set(value)` call
 from EC-Net 4.3/Hx.
-[ev: mem harbor-greenmax-b851-pilot] — **Kit coverage: none**
+[ev: corpus B853] — **Kit coverage: none**
 
 ---
 
@@ -299,7 +299,7 @@ carry no CSRF protection; any same-origin `<img>`, link, or redirect can trigger
 user intent.
 **Fix:** require HTTP POST + a CSRF token for every endpoint that mutates state.  Audit all
 `GET` routes in web-facing module servlets and move destructive actions to POST handlers.
-[ev: mem nmodsreflow] — **Kit coverage: none (security audit = PENDING)**
+[ev: corpus B143, B145] — **Kit coverage: none (security audit = PENDING)**
 
 ### F2 · A `static` `-ux` session/token store evicted only lazily survives a servlet re-mount → session-fixation shape `[ev: retro live-diagnosis-hardening-deltas Δ6]`
 

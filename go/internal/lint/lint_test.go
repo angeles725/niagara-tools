@@ -178,6 +178,15 @@ func TestParse(t *testing.T) {
 		{First, []string{"--strict"}, true, nil, usage + "\n"},
 		{Each, []string{dir, dir}, false, []string{dir, dir}, ""},
 		{Each, []string{dir, "missing"}, false, nil, name + ": not a directory: missing\n"},
+		{Trailing, nil, false, nil, usage + "\n"},
+		{Trailing, []string{dir}, false, []string{dir}, ""},
+		{Trailing, []string{dir, "--strict", "--strict"}, true, []string{dir}, ""},
+		{Trailing, []string{dir, "--strict", "-x"}, false, nil, name + ": unknown option: -x\n"},
+		{Trailing, []string{dir, dir}, false, nil, name + ": unknown option: " + dir + "\n"},
+		{Trailing, []string{"--strict", dir}, false, nil, name + ": unknown option: " + dir + "\n"}, // options are checked before the root
+		{Trailing, []string{"--strict"}, false, nil, name + ": not a directory: --strict\n"},
+		{Trailing, []string{"--", dir}, false, nil, name + ": unknown option: " + dir + "\n"},
+		{Trailing, []string{"-h"}, false, nil, name + ": not a directory: -h\n"},
 		{Leading, nil, false, nil, usage + "\n"},
 		{Leading, []string{"--strict"}, true, nil, usage + "\n"},
 		{Leading, []string{"--strict", dir, "missing"}, true, []string{dir}, ""},
@@ -538,6 +547,9 @@ func TestCommandRegistration(t *testing.T) {
 		"both fields":     {Rule: fakeRule{id: "lint-a"}, Tree: treeFake{id: "lint-a"}, Usage: "u"},
 		"Rule is a tree":  {Rule: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
 		"Tree is a check": {Tree: bothRule{fakeRule{id: "lint-a"}}, Usage: "u"},
+		"Root and Rule":   {Rule: fakeRule{id: "lint-a"}, Root: rootFake{}, Usage: "u"},
+		"Root is a check": {Root: rootAndCheck{fakeRule{id: "lint-a"}}, Usage: "u"},
+		"Rule is a root":  {Rule: rootAndCheck{fakeRule{id: "lint-a"}}, Usage: "u"},
 	} {
 		func() {
 			defer func() {
@@ -548,7 +560,7 @@ func TestCommandRegistration(t *testing.T) {
 			Command(sp)
 		}()
 	}
-	Command(javaSpec(fakeRule{id: "lint-a"}, One), treeSpec(treeFake{id: "lint-t"})) // a valid mix registers
+	Command(javaSpec(fakeRule{id: "lint-a"}, One), treeSpec(treeFake{id: "lint-t"}), rootSpec(rootFake{})) // a valid mix registers
 }
 
 func TestCommandUsageExit(t *testing.T) {
