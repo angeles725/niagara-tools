@@ -49,8 +49,8 @@ func TestATransportFailureOrAClientWithoutAboutIsTierC(t *testing.T) {
 		{"transport", func(st *readtoolstest.Station) {
 			st.AboutErr = &box.Error{Kind: box.KindBox, Msg: "transport failure: reset", Channel: "obix", Key: "about"}
 		}, "/obix/about/ unreadable: transport failure: reset"},
-		{"escaped", func(st *readtoolstest.Station) { st.AboutErr = &box.PyError{Type: "BadStatusLine"} },
-			"/obix/about/ unreadable (BadStatusLine)"},
+		{"escaped", func(st *readtoolstest.Station) { st.AboutErr = readtoolstest.Escaped("TypeError") },
+			"/obix/about/ unreadable (TypeError)"},
 		{"no about", func(st *readtoolstest.Station) { st.NoAbout = true }, "this client cannot read /obix/about/"},
 		{"no version", func(st *readtoolstest.Station) { st.Version = "" }, "/obix/about/ unreadable: HTTP 404 from station"},
 	} {

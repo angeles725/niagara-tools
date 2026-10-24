@@ -214,7 +214,7 @@ func TestAnAuthErrorLatchesAndEveryShownTextIsScrubbed(t *testing.T) {
 		{&box.Error{Kind: box.KindHTTPStatus, Msg: "HTTP 404", Code: 404}, "HTTP 404", 0},
 		{&pyjson.ValueError{Msg: "bad value pw-1"}, "bad value ***", 0},
 		{&ToolError{"refused pw-1"}, "refused ***", 0},
-		{&box.PyError{Type: "KeyError"}, "internal error (KeyError)", 0},
+		{escaped("KeyError"), "internal error (KeyError)", 0},
 	} {
 		ctx := &fakeContext{connected: true}
 		s := navigateServer(ctx, func(*pyjson.Object) (*pyjson.Object, error) { return nil, tc.err })
@@ -240,3 +240,9 @@ func TestServeClosesTheContextWhenTheInputEnds(t *testing.T) {
 		}
 	}
 }
+
+// escaped is an exception that escapes a handler unwrapped (readtoolstest.Escaped would cycle).
+type escaped string
+
+func (e escaped) Error() string  { return string(e) }
+func (e escaped) PyType() string { return string(e) }

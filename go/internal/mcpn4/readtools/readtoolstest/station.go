@@ -185,3 +185,11 @@ func (s *Server) Connect(t testing.TB, kv ...any) *pyjson.Object {
 	}
 	return out
 }
+
+// Escaped is a Python exception the client lets escape unwrapped: only its type name shows.
+type Escaped string
+
+func (e Escaped) Error() string { return string(e) }
+
+// PyType is the Python class name.
+func (e Escaped) PyType() string { return string(e) }
