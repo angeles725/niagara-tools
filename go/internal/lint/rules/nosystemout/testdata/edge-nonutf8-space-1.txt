@@ -1,0 +1,12 @@
+-- args --
+@DIR@/m
+-- want --
+exit 1
+FAIL  lint-no-system-out  @DIR@/m/a b/A.java:2  void f() { System.out.println("x"); } ÿþ
+FAIL  lint-no-system-out  @DIR@/m/a b/A.java:3  void g() { System.err.print(1); }
+-- stderr --
+-- m/a b/A.java --
+class A {
+  void f() { System.out.println("x"); } ÿþ
+  void g() { System.err.print(1); }
+}

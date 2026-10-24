@@ -1,0 +1,9 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void f(long d){ Clock.schedule(this, BRelTime.make(Math.max(1L, d)), a, null); }
+}

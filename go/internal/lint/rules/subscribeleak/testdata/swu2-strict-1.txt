@@ -1,0 +1,11 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 1
+WARN  lint-subscribe-without-unsubscribe  @DIR@/Mod/src/com/x/A.java:2  void started(){ mySub.subscribe(comp); }
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void started(){ mySub.subscribe(comp); }
+}
