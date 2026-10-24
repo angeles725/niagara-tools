@@ -1,0 +1,63 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:1  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+WARN  rc-scan  rc/a.js:12  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+WARN  rc-scan  rc/a.js:18  browser-floor: top-level-await above the Chromium 83 panel floor
+WARN  rc-scan  rc/b.html:2  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+WARN  rc-scan  rc/b.html:6  fetch-no-signal: fetch( with no signal/timeout -- route it through the fetchT helper (AbortController + timeout)
+-- stderr --
+-- rc/a.js --
+fetch(u);
+fetch(u, { signal: s });
+const c = new AbortController();
+const signal = c.signal;
+
+fetch(u, o);
+fetch(u, {
+  method: "POST",
+  // signal: x
+  body: b
+});
+window.fetch(u).then(r => r.json());
+refetch(u); prefetch(x); $fetch(y); _fetch(z);
+fetch (u,
+ a(
+ b)
+ , { signal })
+await fetch(u); fetch(v)
+fetch(u) // rc-scan: allow fetch-no-signal
+fetch(a,
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+12,
+13,
+14,
+15,
+signal)
+x = fetch("(" , o)
+fetch(u, {
+-- rc/b.html --
+<script>
+fetch(u)
+</script>
+<p>fetch(u)</p>
+<script src="x.js"></script>
+<script>fetch(u,
+</script>
+<p>signal</p>
+<script>
+)
+</script>
+-- rc/c.css --
+.a { content: "fetch(u)"; }

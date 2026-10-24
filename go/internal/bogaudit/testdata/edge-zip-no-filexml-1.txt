@@ -1,0 +1,12 @@
+-- args --
+@DIR@/f1/nofile.bog
+--module
+ColdRoomPan
+-- want --
+exit 3
+-- stderr --
+bog-audit: cannot extract file.xml from @DIR@/f1/nofile.bog
+-- f1/nofile.bog (b64) --
+UEsDBAoAAAAAADdNWF0fCOpGAgAAAAIAAAAJABwAb3RoZXIueG1sVVQJAAO50dxqudHcanV4CwAB
+BOgDAAAE6AMAAHgKUEsBAh4DCgAAAAAAN01YXR8I6kYCAAAAAgAAAAkAGAAAAAAAAQAAAKSBAAAA
+AG90aGVyLnhtbFVUBQADudHcanV4CwABBOgDAAAE6AMAAFBLBQYAAAAAAQABAE8AAABFAAAAAAA=

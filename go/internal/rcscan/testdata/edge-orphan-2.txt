@@ -1,0 +1,30 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 1
+FAIL  rc-scan  rc/b.html:1  orphan-page: nav entry data-page="a1" has no section#page-a1
+FAIL  rc-scan  rc/index.html:1  orphan-page: nav entry data-page="ghost" has no section#page-ghost
+FAIL  rc-scan  rc/index.html:10  orphan-page: section#page-nope has no nav entry data-page="nope"
+-- stderr --
+-- rc/b.html --
+<a data-page="a1">x</a><a data-page="b2">y</a> <a data-page="a1">dup</a>
+-- rc/index.html --
+<nav><a data-page="home">H</a><a data-page='alarms'>A</a> <a data-page="ghost">G</a></nav>
+<section class="page" id="page-home"></section>
+<section id='page-alarms' data-x="1"></section><section id="page-two"></section>
+<section class="p" data-id="q" id="page-a1" id="page-b2"></section>
+<!-- <section id="page-commented"></section> -->
+<section id="page-allowed"></section> <!-- rc-scan: allow orphan-page -->
+<section
+ id="page-split"></section>
+<section id="page-home"></section>
+<sectionx id="page-nope"></sectionx>
+<section data-page="self" id="page-self"></section>
+-- rc/js/nav.js --
+go({ "data-page": 1 }); el.innerHTML = '<a data-page="two">2</a>';
+const s = '<section id="page-injs"></section>';
+// data-page="commented"
+b.setAttribute("x", "data-page=\"ghost\"");
+-- rc/z.css --
+[data-page="cssonly"] {}

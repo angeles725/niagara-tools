@@ -1,0 +1,14 @@
+declared difference: a malformed module-include.xml is an env error with its position (xmlsrc), never a verdict on the tags a line grep found
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 3
+-- stderr --
+slot-coverage: @DIR@/module-include.xml:3:1: element <type> opened at 2:3 closed by </types>
+-- module-include.xml --
+<types>
+  <type name="Room" class="a.BRoom">
+</types>
+-- module.lexicon --
+Room.displayName=Room

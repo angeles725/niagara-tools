@@ -2,7 +2,8 @@
 // script into identifiers, string literals, char literals, numbers and punctuation, with // and nested
 // /* */ comments dropped. A "..." string honours \ escapes, a """...""" raw string none (it closes on the
 // last three quotes of a run), and both carry $name and ${...} templates (the code inside a ${...} is read
-// to its matching brace, strings and comments in it included, and stays part of the string token).
+// to its matching brace, strings and comments in it included, and stays part of the string token). Code renders
+// tokens back as code lines, comments dropped and literal contents removed, for a rule that matches line-wise.
 // Scanning is byte-wise: every character it tests is ASCII, so UTF-8 text passes through unchanged.
 package ktssrc
 
@@ -29,6 +30,7 @@ type Token struct {
 	Value    string // String: the text between the quotes, escapes and templates as written
 	Template bool   // String: it holds a $name or ${...} template
 	Line     int    // 1-based line of its first byte
+	Off, End int    // byte offsets of its first byte and just past its last (a `name`'s backquotes included)
 }
 
 // Error is a script Tokens cannot read: an unterminated string, char, template or block comment.
@@ -59,7 +61,7 @@ func (s *scanner) tokens(inTemplate bool) ([]Token, error) {
 	depth := 0
 	for s.i < len(s.src) {
 		c, rest := s.src[s.i], s.src[s.i:]
-		start, line := s.i, s.line
+		start, line, n := s.i, s.line, len(s.out)
 		switch {
 		case c == '\n':
 			s.line++
@@ -118,6 +120,9 @@ func (s *scanner) tokens(inTemplate bool) ([]Token, error) {
 				depth--
 			}
 			s.out = append(s.out, Token{Kind: Punct, Text: string(c), Line: line})
+		}
+		if len(s.out) > n {
+			s.out[n].Off, s.out[n].End = start, s.i
 		}
 	}
 	if inTemplate {
@@ -217,3 +222,43 @@ func isIdentStart(c byte) bool {
 	return c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= 0x80
 }
 func isIdentPart(c byte) bool { return isIdentStart(c) || c >= '0' && c <= '9' }
+
+// Code renders toks as the code lines a line-wise rule matches: each token on its source line, comments gone, a
+// string or char literal reduced to its quotes (the lines a multi-line one spans kept, empty), and one blank where
+// the source had a gap between two tokens of a line. Line k of the result is line k+1 of the script.
+func Code(toks []Token) []string {
+	var lines []string
+	var b strings.Builder
+	line, end := 1, 0
+	for _, t := range toks {
+		for ; line < t.Line; line++ {
+			lines = append(lines, b.String())
+			b.Reset()
+		}
+		if b.Len() > 0 && t.Off > end {
+			b.WriteByte(' ')
+		}
+		text := t.Text
+		switch t.Kind {
+		case String:
+			q := 1
+			if strings.HasPrefix(t.Text, `"""`) {
+				q = 3
+			}
+			text = t.Text[:q] + strings.Repeat("\n", strings.Count(t.Value, "\n")) + t.Text[len(t.Text)-q:]
+		case Char:
+			text = "''"
+		}
+		for seg, rest, more := strings.Cut(text, "\n"); ; seg, rest, more = strings.Cut(rest, "\n") {
+			b.WriteString(seg)
+			if !more {
+				break
+			}
+			lines = append(lines, b.String())
+			b.Reset()
+			line++
+		}
+		end = t.End
+	}
+	return append(lines, b.String())
+}

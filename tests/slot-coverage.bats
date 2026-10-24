@@ -328,3 +328,38 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [[ "$output" == *"setpoint"* ]]          # anchor: the real tree was scanned
   [[ "$output" != *"ghostSlot"* ]]
 }
+
+@test "SP-path-space: per-slot reads a source whose path holds a blank (its OPERATOR slot is MISSING)" {
+  # Mutation: SP-path-space -- splitting the file list on blanks again (xargs) drops spacedSlot.
+  local src="$BATS_TEST_TMPDIR/my src"
+  mkdir -p "$src/a b"
+  printf '@NiagaraProperty(name = "spacedSlot", flags = Flags.OPERATOR)\n' > "$src/a b/BS.java"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISSING spacedSlot"* ]]
+}
+
+@test "SP-unreadable: per-slot on a src/ holding a *.java it cannot read is an env error (exit 3), no verdict" {
+  # Mutation: SP-unreadable -- skipping an unreadable source (the bash awk stopped there) reports pct=N/A, exit 0.
+  local src="$BATS_TEST_TMPDIR/src"
+  cp -r "$FX_PS/src" "$src"
+  cp "$src/com/x/BThing.java" "$src/com/x/BA.java"; chmod 000 "$src/com/x/BA.java"
+  if [ -r "$src/com/x/BA.java" ]; then chmod 644 "$src/com/x/BA.java"; skip "running as root"; fi
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  chmod 644 "$src/com/x/BA.java"
+  [ "$status" -eq 3 ]
+  [[ "$output" == *"slot-coverage: cannot read $src/com/x/BA.java: Permission denied"* ]]
+  [[ "$output" != *"pct="* ]]
+}
+
+@test "SC-xml-multiline: a <type> tag over two lines is required; a commented-out one is not" {
+  # Mutation: SC-xml-multiline -- reading types one line at a time again misses Split and requires Old.
+  local d="$BATS_TEST_TMPDIR/m"
+  mkdir -p "$d"
+  printf '<types>\n  <type class="a.BSplit"\n        name="Split"/>\n  <!-- <type name="Old" class="a.BOld"/> -->\n</types>\n' > "$d/module-include.xml"
+  printf 'Split.displayName=Split\n' > "$d/module.lexicon"
+  run "$SC" "$d/module-include.xml" "$d/module.lexicon"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"pct=100.0 (type-set)"* ]]
+  [[ "$output" == *"missing="$'\n'* ]]
+}

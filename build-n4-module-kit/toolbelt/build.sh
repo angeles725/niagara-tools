@@ -4,11 +4,15 @@
 # Deploying to a station is ng-deploy.sh's job (backup -> build -> copy -> type-count verify).
 #
 # Usage: build.sh [--profiles rt,ux,wb] [--target-version X.Y] [--plugin-version V] [--ui-profile P] [--legacy]
-#                 [--gradle-prop k=v]... [--no-preflight] [--no-report] [--no-drift-check] <module-root> <MOD> [niagara_home]
+#                 [--gradle-prop k=v]... [--no-preflight] [--no-report] [--no-drift-check] [--install-into-home]
+#                 <module-root> <MOD> [niagara_home]
 #   <module-root>   the dir holding ./gradlew and <MOD>/<MOD>-{rt,ux,wb}/ (the GROUP dir). When neither it nor
 #                   an ancestor holds ./gradlew (the REPO root was passed), the error lists every gradle root
 #                   found up to 3 levels BELOW it — descend into one. [ev: retro comppan-fase2-amps-alarms Δ2]
-#   niagara_home    arg 3, else $niagara_home. On WSL use the /mnt/c/... mount or a mirror (mirror-niagara-home.sh).
+#   niagara_home    arg 3, else $niagara_home. It must be a mirror (mirror-niagara-home.sh, holds .niagara-mirror):
+#                   gradle's :jar step copies the jar into <niagara_home>/modules, so a marker-less home exits 10.
+#   --install-into-home  opt in to building into a real (marker-less) niagara_home; its modules/ jar is replaced.
+#                   [ev: retro r10-buildsh-mirror-guard]
 #   --plugin-version / $NIAGARA_PLUGIN_VERSION   forwarded as -PniagaraPluginVersion (each install ships ONE
 #                   niagara-module plugin: 4.13.2 -> 7.3.40, 4.14 -> 7.6.17, 4.15.3 -> 7.6.22); also forwarded to
 #                   preflight.sh --plugin-version so its plugin-pin check tests the version gradle will actually
@@ -59,7 +63,8 @@
 #   at WARNING level and gradle still ends BUILD SUCCESSFUL; the jar then carries stale generated code. A passing
 #   run whose log names a skipped file (lib/slotomatic-skip.sh) FAILs, the pre-build modules/ jar is restored
 #   like a drift FAIL, and the gate is not run (METHODOLOGY K15). [ev: retro r10-slotomatic-skip-fail-open Δ1]
-# Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, no profile) ·
+# Exit: 0 chain passed · 2 usage · 10 environment (preflight FAIL, no JDK 8, not a niagara_home, a real niagara_home
+#   without --install-into-home, no profile) ·
 #   30 gradle failed · 31 :clean locked · 32 post-jar modules/ copy locked · 33 mirror path or $HOME has whitespace ·
 #   34 Slot-o-Matic skipped a file in a passing gradle run · 50 gate or report-module FAIL ·
 #   51 deployed-baseline drift (Δ2) · 52 drift gate cannot verify · 53 report-module INCOMPLETE (a floor check SKIPped)
@@ -68,7 +73,7 @@ set -euo pipefail
 # usage: print the leading comment block (line 2 up to the first non-comment line), never code.
 usage() { awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; }
 PROFILES=""; TARGET=""; PLUGIN="${NIAGARA_PLUGIN_VERSION:-}"; UI_PROFILE=""; LEGACY=0
-SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0; FIRST_DEPLOY=0; GPROPS=()
+SKIP_PREFLIGHT=0; SKIP_REPORT=0; SKIP_DRIFT_CHECK=0; FIRST_DEPLOY=0; INTO_HOME=0; GPROPS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --profiles)       [ $# -ge 2 ] || { usage >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
@@ -89,6 +94,7 @@ while [ $# -gt 0 ]; do
     --no-report)    SKIP_REPORT=1;    shift ;;
     --no-drift-check) SKIP_DRIFT_CHECK=1; shift ;;
     --first-deploy) FIRST_DEPLOY=1; shift ;;
+    --install-into-home) INTO_HOME=1; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "build.sh: unknown flag $1" >&2; usage >&2; exit 2 ;;
     *) break ;;
@@ -140,6 +146,13 @@ done
 [ -d "$J8" ] || { echo "build.sh: Java 8 not found at $J8 — check 'ls /usr/lib/jvm' or set JAVA8" >&2; exit 10; }
 [ -n "$NIAGARA_HOME" ] || { echo "build.sh: pass niagara_home (arg 3) or export niagara_home" >&2; exit 10; }
 [ -d "$NIAGARA_HOME/etc/m2/repository" ] || { echo "build.sh: not a niagara_home (no etc/m2/repository): $NIAGARA_HOME" >&2; exit 10; }
+# Fail closed: gradle's :jar step replaces <niagara_home>/modules/<jar>, so only a mirror is written by default.
+# [ev: retro r10-buildsh-mirror-guard]
+if [ ! -f "$NIAGARA_HOME/.niagara-mirror" ] && [ "$INTO_HOME" -eq 0 ]; then
+  echo "build.sh: $NIAGARA_HOME is a real niagara_home (no .niagara-mirror): gradle's :jar step would replace its modules/ jars" >&2
+  echo "  build against a mirror (toolbelt/mirror-niagara-home.sh <niagara_home> <mirror_dir>), or pass --install-into-home" >&2
+  exit 10
+fi
 [ -x "$HERE/verify-module.sh" ] || { echo "build.sh: gate not found next to this script: $HERE/verify-module.sh" >&2; exit 10; }
 
 # ---------------------------------------------------------------------------

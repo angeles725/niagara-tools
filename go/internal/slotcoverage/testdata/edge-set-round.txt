@@ -1,0 +1,10 @@
+-- args --
+set-coverage
+A
+A,B,C,D,E,F,G,H
+-- want --
+exit 0
+pct=12.5
+missing=B,C,D,E,F,G,H
+extra=
+-- stderr --

@@ -1,0 +1,12 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-agent-on-include-sync  @DIR@/M/M-wb/src/com/x/ui/BMgr.java:3  com.x.ui.BMgr: no <type class="com.x.ui.BMgr"> line in @DIR@/M/M-wb/module-include.xml (needs <on type> for: m:Ext)
+-- stderr --
+-- M/M-wb/module-include.xml --
+<types><type name="Other" class="com.x.ui.BOther"/></types>
+-- M/M-wb/src/com/x/ui/BMgr.java --
+package com.x.ui;
+@NiagaraType(agent = @AgentOn(types = "m:Ext"))
+public class BMgr {}

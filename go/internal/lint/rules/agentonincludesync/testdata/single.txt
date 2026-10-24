@@ -1,0 +1,11 @@
+-- args --
+@DIR@/M
+-- want --
+exit 0
+-- stderr --
+-- M/M-wb/module-include.xml --
+<types><type name="Mgr" class="com.x.ui.BMgr"><agent><on type="m:Ext"/></agent></type></types>
+-- M/M-wb/src/com/x/ui/BMgr.java --
+package com.x.ui;
+@NiagaraType(agent = @AgentOn(types = "m:Ext"))
+public class BMgr {}

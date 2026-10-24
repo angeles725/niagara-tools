@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import go_server  # noqa: E402
 import test_server  # noqa: E402  (module import: its test classes are not re-collected here)
-from mcp_n4 import box, server, tools_write  # noqa: E402
+from mcp_n4 import box, safety, server, tools_write  # noqa: E402
 
 WRITE_TOOLS = ["n4_create_component", "n4_set_slot", "n4_invoke_action", "n4_create_link"]
 DESTRUCTIVE_TOOLS = ["n4_remove_component", "n4_rollback", "n4_save_station"]
@@ -75,6 +75,10 @@ class WriteTestCase(test_server.ToolTestCase):
     def run_write(self, tool, /, **args):
         plan = self.dry(tool, **args)
         return self.ok(tool, dry_run=False, confirmation_token=plan["confirmation_token"], **args)
+
+    def batch(self, batch_id):
+        """The merged journal view of a batch, read from the state file the server wrote."""
+        return safety.Journal(self.state_dir).read(batch_id)
 
     def lines(self, name):
         path = os.path.join(self.state_dir, name)
@@ -637,7 +641,6 @@ class TestCreateLink(WriteTestCase):
         self.assertEqual(out["verdict"], "mismatch")
 
 
-@go_server.go_twin("plan", "internals")
 class TestCreateLinkRejected(WriteTestCase):
     def test_station_rejection_is_failed_with_reason_and_nothing_journaled(self):
         self.connect_verified()
@@ -654,10 +657,9 @@ class TestCreateLinkRejected(WriteTestCase):
         intent, result = self.lines("journal.jsonl")
         self.assertEqual((intent["phase"], result["phase"], result["verdict"], result["inverse"]),
                          ("intent", "result", "failed", []))
-        self.assertEqual(self.srv.ctx.write.journal.read(out["batch_id"])["state"], "completed")
+        self.assertEqual(self.batch(out["batch_id"])["state"], "completed")
 
 
-@go_server.go_twin("plan", "internals")
 class TestLinkReplies(WriteTestCase):
     def setUp(self):
         super().setUp()
@@ -668,7 +670,7 @@ class TestLinkReplies(WriteTestCase):
                          target_ord=FOLDER + "/" + self.tgt, target_slot="in10")
 
     def journal_view(self, out):
-        view = self.srv.ctx.write.journal.read(out["batch_id"])
+        view = self.batch(out["batch_id"])
         self.assertIsNotNone(view, "every returned batch_id has a journal entry")
         return view
 

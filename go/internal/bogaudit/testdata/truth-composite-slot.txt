@@ -1,0 +1,32 @@
+-- args --
+@DIR@/c.bog
+--module
+ColdRoomPan
+--source-dir
+@DIR@/src
+-- want --
+exit 1
+CHECK1  PASS  ColdRoomPan  components=1
+CHECK5  FAIL  ColdRoom_1/oldSetpoint  slot in bog not in source BColdRoom (ghost/orphan)
+CHECK6  WARN  ColdRoom_1/differential  slot in source BColdRoom not in bog
+# bog-audit: parse time 0.001s
+-- stderr --
+-- c.bog (zip) --
+<?xml version='1.0' encoding='UTF-8'?>
+<bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n='setpoint' t='b:StatusNumeric'>
+   <p n="value" v="-18.0"/>
+  </p>
+  <p n='oldSetpoint' t='b:StatusNumeric'>
+   <p n="value" v="2.0"/>
+  </p>
+  <p n='status' t='b:Status'>
+   <p n="x" v="1"/>
+  </p>
+ </p>
+</bajaObjectGraph>
+-- src/BColdRoom.java --
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric()")
+@NiagaraProperty(name="differential", type="double", defaultValue="2")
+public class BColdRoom extends BComponent {}

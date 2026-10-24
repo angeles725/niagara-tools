@@ -166,6 +166,7 @@ class TestOutgoingLinks(DestructiveCase):
 
 
 class TestPlannedDataGuards(DestructiveCase):
+    @go_server.go_twin("plan", "injection")
     def test_a_plan_whose_data_is_not_a_dict_still_executes(self):
         from mcp_n4 import tools_write
         impl = tools_write._IMPLS["n4_create_component"]

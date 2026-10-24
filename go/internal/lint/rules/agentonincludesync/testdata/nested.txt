@@ -1,0 +1,16 @@
+-- args --
+@DIR@/M
+-- want --
+exit 1
+FAIL  lint-agent-on-include-sync  @DIR@/M/M-wb/src/com/x/ui/BOuter.java:6  com.x.ui.BOuter$BInner: no <type class="com.x.ui.BOuter$BInner"> line in @DIR@/M/M-wb/module-include.xml (needs <on type> for: m:Ext)
+-- stderr --
+-- M/M-wb/module-include.xml --
+<types><type name="Outer" class="com.x.ui.BOuter"><agent><on type="m:Folder"/></agent></type></types>
+-- M/M-wb/src/com/x/ui/BOuter.java --
+package com.x.ui;
+@NiagaraType(agent = @AgentOn(types = "m:Folder"))
+public class BOuter {
+  Class<?> c = String.class;
+  @NiagaraType(agent = @AgentOn(types = "m:Ext"))
+  public static class BInner { }
+}
