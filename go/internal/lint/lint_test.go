@@ -626,9 +626,38 @@ func TestParseExactUsageError(t *testing.T) {
 	}
 }
 
-// TestParseValued: Mode Valued is `[<option> <value>]... <root>` (lint-link-target-flags): the option and the
-// root in any order, the last value wins, a missing value, any other "-" argument, a second root or no root is
-// the usage line alone, and the root must be a directory.
+// TestTreeRuleEmptyRoot: a TreeRule whose selected files hold nothing it checks (lint-duplicate-helper: no
+// -rt/-ux/-wb src/ under the root) returns ErrEmptyRoot: the EmptyError row instead of its findings, the
+// rule stops (no later root) and the exit is 3, as for a RootRule.
+func TestTreeRuleEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "MARK\n"})
+	b := tree(t, map[string]string{"B.java": "MARK\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Mode = Each
+	sp.EmptyError = EmptyRow{Msg: "nothing to compare"}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-t", a, b}, s); code != 3 || o.String() != "ERROR  lint-t  "+a+"  nothing to compare\n" || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
+	}
+}
+
+// TestModuleRootLeftOutOfAll: --all runs on source roots, so it leaves out a rule whose roots are module
+// roots (Spec.ModuleRoot), as it leaves out a RootRule; by name the rule runs.
+func TestModuleRootLeftOutOfAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	mod := treeSpec(treeFake{id: "lint-m"})
+	mod.ModuleRoot = true
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), mod)
+	s, o, _ := stdio()
+	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("--all: exit %d out\n%s\nwant the lint-a row only", code, o)
+	}
+	s, o, _ = stdio()
+	if code := main([]string{"lint-m", root}, s); code != 1 || o.String() != "FAIL  sub  "+root+"/A.java: tree saw MARK\n" {
+		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
+	}
+}
+
 func TestParseValued(t *testing.T) {
 	dir := t.TempDir()
 	const use = "usage: lint-v.sh [--map <file>] <src>"
@@ -692,34 +721,5 @@ func TestConfigure(t *testing.T) {
 	s, _, e = stdio()
 	if code := Command(sp)([]string{"lint-c", "--map", "bad", root + "/nope"}, s); code != 3 || e.String() != "lint-c: not a directory: "+root+"/nope\n" {
 		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
-// TestTreeRuleEmptyRoot: a TreeRule whose selected files hold nothing it checks (lint-duplicate-helper: no
-// -rt/-ux/-wb src/ under the root) returns ErrEmptyRoot: the EmptyError row instead of its findings, the
-// rule stops (no later root) and the exit is 3, as for a RootRule.
-func TestTreeRuleEmptyRoot(t *testing.T) {
-	a := tree(t, map[string]string{"A.java": "MARK\n"})
-	b := tree(t, map[string]string{"B.java": "MARK\n"})
-	sp := treeSpec(treeFake{id: "lint-t", empty: true})
-	sp.Mode = Each
-	sp.EmptyError = EmptyRow{Msg: "nothing to compare"}
-	s, o, e := stdio()
-	if code := Command(sp)([]string{"lint-t", a, b}, s); code != 3 || o.String() != "ERROR  lint-t  "+a+"  nothing to compare\n" || e.Len() != 0 {
-		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
-	}
-}
-
-// TestModuleRootLeftOutOfAll: --all runs on source roots, so it leaves out a rule whose roots are module
-// roots (Spec.ModuleRoot), as it leaves out a RootRule; by name the rule runs.
-func TestModuleRootLeftOutOfAll(t *testing.T) {
-	root := tree(t, map[string]string{"A.java": "MARK\n"})
-	mod := treeSpec(treeFake{id: "lint-m"})
-	mod.ModuleRoot = true
-	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), mod)
-	s, o, _ := stdio()
-	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
-		t.Errorf("--all: exit %d out\n%s\nwant the lint-a row only", code, o)
-	}
-	s, o, _ = stdio()
-	if code := main([]string{"lint-m", root}, s); code != 1 || o.String() != "FAIL  sub  "+root+"/A.java: tree saw MARK\n" {
-		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
 	}
 }
