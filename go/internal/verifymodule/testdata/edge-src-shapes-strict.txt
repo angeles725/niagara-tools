@@ -1,3 +1,4 @@
+declared difference: the only moduleTest-include.xml is a stale copy under .deploy-baseline/, which the shared walk prunes: moduletest no longer passes on it
 -- args --
 --strict
 --src
@@ -29,7 +30,7 @@ WARN  ord-literal  @DIR@/Foo-rt.jar  @DIR@/mod//Foo-rt/src/com/x/Latin.java:1:a 
 SKIP  palette    @DIR@/Foo-rt.jar  no module.palette
 SKIP  wb-scaffold  @DIR@/Foo-rt.jar  not a -wb jar
 PASS  phantom-dep  @DIR@/Foo-rt.jar  all module.xml dependencies declared in gradle.kts
-PASS  moduletest  @DIR@/Foo-rt.jar  moduleTest-include.xml present
+FAIL  moduletest  @DIR@/Foo-rt.jar  production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)
 WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.bar.Thing
 WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.foo.Ext
 WARN  cross-module-type  @DIR@/Foo-rt.jar  foreign type in @NiagaraProperty: org.lat.Valid
@@ -43,7 +44,7 @@ WARN  subscription-leak  @DIR@/Foo-rt.jar  @DIR@/mod//Foo-rt/src/com/x/Sub.java:
 WARN  subscription-leak  @DIR@/Foo-rt.jar  @DIR@/mod//Foo-rt/src/com/y/Sub3.java: TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart
 WARN  slot-wall  @DIR@/Foo-rt.jar  16 properties in class Wall (@DIR@/mod//Foo-rt/src/com/x/Wall.java) — compose into child BComponents (logic.md L21)
 WARN  slot-wall  @DIR@/Foo-rt.jar  16 properties in class NoClass (@DIR@/mod//Foo-rt/src/com/x/inner/NoClass.java) — compose into child BComponents (logic.md L21)
-verify-module: 6 passed, 1 failed, 4 skipped, 27 warned -> FAILED
+verify-module: 5 passed, 2 failed, 4 skipped, 27 warned -> FAILED
 -- stderr --
 -- Foo-rt.jar (jar) --
 --- META-INF/ (stored) ---

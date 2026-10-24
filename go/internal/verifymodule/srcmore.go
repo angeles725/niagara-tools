@@ -2,10 +2,8 @@ package verifymodule
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -89,20 +87,9 @@ func (r *run) phantomDep() bool {
 	return true
 }
 
-// hasEntryNamed is `find <dir> -name <name> 2>/dev/null | head -1` being non-empty: nothing pruned, no
-// symlink followed, unreadable directories skipped.
-func hasEntryNamed(dir, name string) bool {
-	found := false
-	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
-		if d != nil && d.Name() == name {
-			found = true
-			return fs.SkipAll
-		}
-		return nil
-	})
-	return found
-}
-
+// moduleTest looks for moduleTest-include.xml through the shared walk: a copy under a dot directory
+// (.deploy-baseline/) or a sibling *-worktrees checkout is not this module's. The bash's unpruned find took
+// one as present (declared difference, truth-moduletest-pruned).
 func (r *run) moduleTest() bool {
 	if !strings.HasSuffix(basename(r.jar.path, ".jar"), "-rt") {
 		r.row("SKIP", "moduletest", "not an -rt jar")
@@ -122,7 +109,7 @@ func (r *run) moduleTest() bool {
 	}
 	msg := "production .java in src/ but no moduleTest-include.xml — add BTestNg station-integration tests (see types/moduleTest.md)"
 	switch {
-	case hasEntryNamed(pd, "moduleTest-include.xml"):
+	case len(r.walk(pd, "moduleTest-include.xml")) > 0:
 		r.row("PASS", "moduletest", "moduleTest-include.xml present")
 	case r.strict:
 		r.row("FAIL", "moduletest", msg)

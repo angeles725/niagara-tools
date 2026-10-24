@@ -33,13 +33,17 @@ func (r *run) srcDirOrSkip(check string) (string, bool) {
 // javaFiles is the bash java_files: every *.java under root through the shared walk (dot and *-worktrees
 // dirs pruned, D9b). A sub-directory the walk cannot enter is named on stderr once per run and makes the
 // verdict INCOMPLETE (exit 3); the files it did list are still checked.
-func (r *run) javaFiles(root string) []string {
-	files, err := lint.Walk(root, lint.Selection{Names: []string{"*.java"}})
+func (r *run) javaFiles(root string) []string { return r.walk(root, "*.java") }
+
+// walk is every regular file named name under root through the shared walk, a walk error handled as
+// javaFiles says.
+func (r *run) walk(root, name string) []string {
+	files, err := lint.Walk(root, lint.Selection{Names: []string{name}})
 	if err != nil {
-		msg := "verify-module: cannot list every file under " + root + ": " + err.Error()
-		if !contains(r.walkErrs, msg) {
-			r.walkErrs = append(r.walkErrs, msg)
-			fmt.Fprintln(r.s.Err, msg)
+		// One line per unreadable directory, however many walks (src/ and the profile dir) reach it.
+		if !contains(r.walkErrs, err.Error()) {
+			r.walkErrs = append(r.walkErrs, err.Error())
+			fmt.Fprintln(r.s.Err, "verify-module: cannot list every file under "+root+": "+err.Error())
 		}
 	}
 	return files

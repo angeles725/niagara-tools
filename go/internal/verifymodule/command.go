@@ -28,7 +28,7 @@ type run struct {
 	jar                        *jarFile
 	failed                     bool
 	npass, nfail, nskip, nwarn int
-	walkErrs                   []string // every "cannot list every file" line already printed
+	walkErrs                   []string // the walk error of every "cannot list every file" line printed
 	unread                     string   // the "cannot read" line of an input no check may give a verdict on
 	texts                      map[string]grepText
 }
