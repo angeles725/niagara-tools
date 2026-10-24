@@ -302,7 +302,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `awk_lint_exit` (`toolbelt/lib/awk-lint.sh` header); its own `scan_files` call or `had_err` tail is a finding.
     `[ev: retro awk-lint-skeleton Δ1]` `[ev: retro awk-lint-line-loops Δ1]` A root with no input files is an ERROR (exit 3), never a
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
-    owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
+    owed item G50; the four bash lints with a private empty-root row are Go rules with `EmptyError` now, and
+    lint-vendor-floor exits 0 on an rc dir with no `vendor/` by its header). `[ev: retro r9-m1-walkers Δ1]` A walk
+    follows a symlinked root like `find -H` (Go: `os.Stat` on the root), never a symlink below it and never `-L`
+    (`tests/scan-files.bats` SF10, SF11). `[ev: retro symlink-root-walk Δ1]` A per-file read fails closed too:
+    `grep … "$f" 2>/dev/null || true` reads an unreadable file as no hit and `xargs awk` splits a path on
+    whitespace (owed in `verify-module.sh` and `slot-coverage.sh`). `[deferred: retro r9-m1-walkers Δ2]` Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
   - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
     changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
@@ -314,6 +319,10 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `retros/`/`ledger.d/`/`BUILD-STATE.md`-only range, the files sweep checks; CI runs sweep unfiltered, and the
     hook fix is an owed `open_issue`. Review check: the PR names the data-only test and shows it red on the old
     filter. `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
+  - **A hook that computes a push range handles both all-zero shas.** A new remote branch (all-zero remote sha) is
+    gated from its merge-base with `origin/main`, never by diffing the lone local sha against the working tree; a
+    delete (all-zero local sha) has nothing to gate; every git call refuses on failure (`.githooks/pre-push`,
+    `tests/build-retro-sync.bats` H19-H21). `[ev: retro r9-m1-walkers Δ4]`
   - **An identity pin between shared copies does not skip where drift happens.** A test that keeps copies in two
     repositories byte-identical compares with the upstream's committed `origin/main`
     (`git -C <upstream> show origin/main:<path>`), not a sibling working tree, and skips only when the upstream
@@ -417,7 +426,8 @@ The kit verify gate (§5) is **code-level and blind to live commissioning.** It 
   - **Shared host:** when other sessions run on the same machine, cap test parallelism at `-j 3` (at load 28 a
     wider run made `verify-module.bats` flake). GNU `parallel` children inherit an open `flock` fd and hold the
     lock after the parent exits: start a locked parallel run with `setsid` and stop it with `kill -- -<PGID>`.
-    `[ev: retro r8-t22-retro-deltas Δ7]`
+    `[ev: retro r8-t22-retro-deltas Δ7]` bats 1.14 has no `--keep-order` (a GNU parallel flag): `bats -j 4
+    --keep-order` printed zero oks, so count what ran (`ORCHESTRATION.md` § Count what ran). `[ev: retro r9-m1-walkers Δ3]`
     - **Host pids budget:** on WSL every session shares the `init.scope` cgroup (`pids.max` = systemd
       TasksMax, 15% of `threads-max`; 48,129 here). When it fills, every fork fails and all sessions abort
       together. Before a heavy suite (`bats`, `make check`, a mutation run) read
