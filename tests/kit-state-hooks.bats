@@ -94,6 +94,29 @@ log: 2099-01-01 · $2 landed}" > "$1/build-n4-module-kit/ledger.d/2099-01-01-$2.
   grep -qF '2099-01-01 · committed-change landed' "$C/build-n4-module-kit/BUILD-STATE.md"
 }
 
+# private_go — give the clone its own go/ (symlinks to this repo's sources, no bin/), so the hook's
+# kit-state call must build its binary; and a `go` shim first on PATH that logs GOTOOLCHAIN.
+private_go() {
+  rm "$C/go"; mkdir -p "$C/go"
+  for f in go.mod go-tool.sh cmd internal; do ln -s "$REPO/go/$f" "$C/go/$f"; done
+  SHIM="$BATS_TEST_TMPDIR/shim"; mkdir -p "$SHIM"
+  # shellcheck disable=SC2016  # the shim's own ${GOTOOLCHAIN} and "$@", expanded when the shim runs
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "GOTOOLCHAIN=${GOTOOLCHAIN-unset}" >> "%s/go.log"\nexec %s "$@"\n' \
+    "$BATS_TEST_TMPDIR" "$(command -v go)" > "$SHIM/go"
+  chmod +x "$SHIM/go"
+}
+
+@test "HK7: a hook that must rebuild kit-state says so on stderr and never lets Go fetch a toolchain" {
+  # Mutation: HK7 -- dropping GOTOOLCHAIN=local lets a `go 1.x` line in go.mod download a toolchain mid-pull.
+  private_go
+  run env PATH="$SHIM:$PATH" git -C "$C" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false \
+    commit -q --allow-empty -m "chore: empty"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^kit-state: rebuilding' <<<"$output")" -eq 1 ]
+  grep -qx 'GOTOOLCHAIN=local' "$BATS_TEST_TMPDIR/go.log"
+  [ -f "$C/build-n4-module-kit/BUILD-STATE.md" ]
+}
+
 @test "HK5: a checkout without toolbelt/kit-state.sh (before R10-D1) is a silent no-op, exit 0" {
   rm "$C/build-n4-module-kit/toolbelt/kit-state.sh"
   for h in post-merge post-checkout post-rewrite; do
