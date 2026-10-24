@@ -1,0 +1,10 @@
+LOSSY  remove_slot_simple  Multi.zeta: B754-754.6-r7 (value-dropped)
+LOSSY  remove_slot_simple  Multi.alpha: B754-754.6-r7 (value-dropped)
+LOSSY  remove_slot_simple  Multi.mid: B754-754.6-r7 (value-dropped)
+SAFE  add_slot  Multi.yank: B754-754.6-r1 (new-default)
+SAFE  add_slot  Multi.beta: B754-754.6-r1 (new-default)
+OUTAGE  UNKNOWN  Multi.kappa: B795-795.2-failsafe (default-fail-safe)
+OUTAGE  UNKNOWN  Multi.gamma: B795-795.2-failsafe (default-fail-safe)
+OUTAGE  retype_simple  Multi.omega: B754-754.6-r11-B739 (unparseable-v-propagates)
+OUTAGE  retype_unknown  Multi.delta: B754-754.6-r10r11-failsafe (use-when-subtype-unknown)
+verdict=OUTAGE

@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 9 -->
 # 2026-10-24 · kit · go-bog-audit
@@ -67,10 +67,21 @@ niagara-go `bog-nav` (internal/bog) that found three of them.
 | Δ8 | **A brief's "malformed bog is an xmlsrc error" was a behaviour change, not a port detail.** The python scanner never refused a bog; the positioned error is listed as a declared difference with its own case. | go/README.md § XML rules | `[ev: go/internal/bogaudit/testdata/truth-declared-malformed.txt]` |
 | Δ9 | **Cross-check a port against a sibling parser, not only against its original.** Byte identity proved the port faithful to the python and blind to the same three things; the bog-nav diff found them in one pass. | go/README.md § Adding a lint rule step 5 | `[ev: go/internal/bogaudit/crosscheck_test.go]` |
 
+## Fold
+- Δ1 → deferred (needs code and a cited BStatus null-bit encoding): `BUILD-LOOP.md` § 5 owed-code line; open issue item (1) in `ledger.d/2026-10-24-go-bog-audit.md`.
+- Δ2 → deferred (niagara-go `bog-nav hoa`, out of this repo): same owed-code line; open issue item (2).
+- Δ3 → deferred (re-pin the smokes to a frozen fixture, test code): same owed-code line; open issue item (3).
+- Δ4 → deferred (SKIP text in `toolbelt/commissioning-verify.sh`, code): same owed-code line; open issue item (4). The stale python3 note in `skill/SKILL.md` is fixed.
+- Δ5 → deferred (CHECK6 scope change, code): same owed-code line; open issue item (5).
+- Δ6 → `BUILD-LOOP.md` § 6 bog-audit line: `--source-dir` takes one checkout's module sources.
+- Δ7 → deferred (skip `srcTest/`, code): same owed-code line; open issue item (5).
+- Δ8 → `BUILD-LOOP.md` § 5 Port byte-identical first: a forced reader difference is declared and pinned, never emulated (go/README.md never counts).
+- Δ9 → `BUILD-LOOP.md` § 5 Port byte-identical first: cross-check a port against a sibling parser once.
+
 ## Lessons
 - A recorder that names cases from `$BATS_TEST_NAME` must make names unique: three CHECK20 tests collapsed into one
   file until re-recorded.
 - An env-gated dump test (`BOGAUDIT_DUMP`) is the cheapest honest cross-check: it reads the graph the checks read.
 
 ---
-**Status**: PENDING — INDEX row generated from the header: `| 2026-10-24-go-bog-audit.md | kit | 2026-10-24 | pending | 9 |`
+**Status**: FOLDED 2026-10-24 (branch `docs/r10-fold-late`) — INDEX row: `| 2026-10-24-go-bog-audit.md | kit | 2026-10-24 | folded | 9 |`
