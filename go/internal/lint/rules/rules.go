@@ -7,6 +7,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/changedhotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/delays"
@@ -23,6 +24,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nomd5credential"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nosystemout"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/nullcontext"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/persisthotwrite"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/recoverypath"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sedisplay"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/servicetypes"
@@ -77,6 +79,8 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		changedhotwrite.Spec(),
+		persisthotwrite.Spec(),
 		slotomaticmarkers.Spec(),
 		agentonshape.Spec(),
 		bformatcall.Spec(),
