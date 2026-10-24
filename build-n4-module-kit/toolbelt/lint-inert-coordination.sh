@@ -48,6 +48,13 @@
 #   - a `Deque`/`Queue` field used for something UNRELATED to unit coordination (rare in a
 #     control component) would false-positive; only fires when a singleton units() ALSO exists,
 #     which narrows the risk considerably.
+# Empty root: a root with no *.java is `ERROR  lint-inert-coordination  <root>  no files to scan (K20: wrong path
+# or empty scaffold)` on stdout, exit 3.
+#
+# Implementation: rule package go/internal/lint/rules/inertcoordination on the shared engine go/internal/lint
+# (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
+# `go_tool_bin` builds go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-inert-coordination <args>`. Needs `go` on PATH to build (exit 3 otherwise).
 # VCS-free by design (kit-links L2). LC_ALL=C.
 # Mutation: ICO2 -- drop the coordination-state (queue/token/stagger) requirement so any singleton units() WARNs even with no dead machinery
 # Mutation: ICO-lower -- requiring a capitalized Stagger/Token misses the lowerCamel staggerDelay field
@@ -55,86 +62,11 @@
 # Mutation: ICO-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: ICO-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-inert-coordination first 'usage: lint-inert-coordination.sh [--strict] <src-root>' "$@"
-
-cat > "$AL_TMP/main.awk" << 'AWKEOF'
-{ lines[NR] = $0 }
-
-END {
-  for (i = 1; i <= NR; i++) { ln = lines[i]; sub(/\/\/.*$/, "", ln); lines[i] = ln }
-
-  # 1. Locate a `units()` method declaration.
-  decl_line = 0
-  for (i = 1; i <= NR; i++) {
-    # A declaration, not a call: what follows "units()" is '{', 'throws' or the end of the line
-    # (Allman brace) -- `return units().size();` or `x = units();` above the declaration must
-    # not be taken for it.
-    if (match(lines[i], /[A-Za-z_][A-Za-z0-9_<>\[\], ]*[[:space:]]units\(\)/)) {
-      trailing = substr(lines[i], RSTART + RLENGTH)
-      gsub(/^[[:space:]]*/, "", trailing)
-      if (trailing == "" || substr(trailing, 1, 1) == "{" || trailing ~ /^throws/) { decl_line = i; break }
-    }
-  }
-  if (decl_line == 0) exit 0
-
-  depth = 0; started = 0; body_end = NR
-  for (i = decl_line; i <= NR; i++) {
-    ln = lines[i]
-    for (ci = 1; ci <= length(ln); ci++) {
-      c = substr(ln, ci, 1)
-      if (c == "{") { depth++; started = 1 }
-      else if (c == "}") depth--
-    }
-    if (started && depth == 0) { body_end = i; break }
-  }
-  if (!started) exit 0   # declaration only (interface/abstract) -- nothing to check
-
-  # 2. Structurally-singleton return shape.
-  is_singleton = 0
-  for (i = decl_line; i <= body_end; i++) {
-    ln = lines[i]
-    if (index(ln, "singletonList(") > 0) { is_singleton = 1; break }
-    p = index(ln, "Arrays.asList(")
-    if (p > 0) {
-      tail = substr(ln, p + length("Arrays.asList("))
-      # Heuristic (documented limitation): no comma from the call open to end-of-line means a
-      # single argument -- a nested no-comma call (e.g. `(Unit) getParent()`) still matches.
-      if (index(tail, ",") == 0) { is_singleton = 1; break }
-    }
-  }
-  if (!is_singleton) exit 0
-
-  # 3. Coordination-state identifiers anywhere in the file: Deque/Queue typed field, or an
-  #    identifier containing Token or Stagger.
-  found = ""
-  for (i = 1; i <= NR; i++) {
-    ln = lines[i]
-    if (match(ln, /(Deque|Queue)[[:space:]]*</)) {
-      m = match(ln, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=/)
-      name = ""
-      if (m) { seg = substr(ln, RSTART, RLENGTH); sub(/[[:space:]]*=$/, "", seg); split(seg, parts, " "); name = parts[length(parts)] }
-      if (name == "") name = "(Deque/Queue field)"
-      if (index(found, name) == 0) found = found (found == "" ? "" : ", ") name
-    }
-    # An identifier that STARTS with token/stagger (lowerCamel field: `staggerDelay`,
-    # `tokenHolder`) or carries Token/Stagger after its first word (`defrostToken`,
-    # `getStaggerDelay`).
-    probe = " " ln
-    while (match(probe, /[^A-Za-z0-9_]([a-z][A-Za-z0-9_]*(Token|Stagger)|token|stagger|Token|Stagger)[A-Za-z0-9_]*/)) {
-      seg = substr(probe, RSTART + 1, RLENGTH - 1)
-      probe = substr(probe, RSTART + RLENGTH)
-      if (index(", " found ", ", ", " seg ", ") == 0) found = found (found == "" ? "" : ", ") seg
-    }
-  }
-  if (found == "") exit 0
-
-  printf "WARN  lint-inert-coordination  %s:%d  units() returns a structurally singleton list" \
-    " while %s (queue/token/stagger state) are still declared -- the coordination machinery is" \
-    " dead code after the per-unit move; coordinate at the parent that aggregates multiple" \
-    " units, or drop the unused fields\n", FILE, decl_line, found
-}
-AWKEOF
-
-awk_lint_run -name '*.java'
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-inert-coordination: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-inert-coordination "$@"
