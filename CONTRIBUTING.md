@@ -109,8 +109,9 @@ over shared `go/internal/` packages (`internal/cli` holds the injectable stdio).
   a source change pays one `go build`. `go/go-tool.sh` sits in `go/` so a fixture that symlinks `go/` next to a
   copied wrapper still finds it. Second port: `scripts/lib/ci_steps.py` → `go/cmd/ci-steps`, used by
   `scripts/ci-local.sh`. `[ev: retro go-ci-steps Δ1]`
-- Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates the kit ledger parts of
-  `BUILD-STATE.md` from `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]`
+- Third tool, `toolbelt/gen-build-state.sh` → `go/internal/buildstate`: generates `BUILD-STATE.md` from
+  `BUILD-STATE.src.md` + `build-n4-module-kit/ledger.d/` (§ 6.1). `[ev: retro ledger-fragments]` The reader
+  command over both generators is `toolbelt/kit-state.sh` → `go/internal/kitstate` (§ 6.1).
 
 Tool-authoring rules for a Go tool or port (what to port and the lint stack: `build-n4-module-kit/BUILD-LOOP.md`
 § 5 "Kit tooling doctrine"):
@@ -239,21 +240,21 @@ Before `git commit`:
 ### 6.1 Enabling the retro-enforcement gate (opt-in, per-clone, reversible)
 
 The `build-n4-module` kit ships a pre-push gate (`.githooks/pre-push`) that blocks a push touching
-build-relevant kit files unless it also records continuity (a `BUILD-STATE.md` update + a pending retro,
-with a fresh generated index), carries a `Retro: none (trivial: <reason>)` trailer, or is a promotion with a
-structural anchor (an `INDEX.md` **or** `BUILD-STATE.md` diff).
+build-relevant kit files unless it also records continuity (a ledger update — a `ledger.d/` fragment or a
+`BUILD-STATE.src.md` edit — + a pending retro), carries a `Retro: none (trivial: <reason>)` trailer, or is a
+promotion with a structural anchor (a retro header flipped `pending` → `folded`, **or** a ledger update).
 
-`build-n4-module-kit/retros/INDEX.md` is GENERATED: edit the retro's header comments (`review-status`,
-`module`, `deltas`, optional `index-comment`) and run `build-n4-module-kit/toolbelt/gen-retro-index.sh`;
-on a merge conflict in `INDEX.md`, regenerate it instead of resolving rows by hand. CI and the gate's
-content half (`sweep-build-state.sh`) fail a stale index.
-
-The kit block of `build-n4-module-kit/BUILD-STATE.md` is partly GENERATED too: its `last_change:` line,
-`open_issues:` items and session log come from one fragment per change in `build-n4-module-kit/ledger.d/`
-(`<YYYY-MM-DD>-<slug>.md`; format in `BUILD-LOOP.md` §7). A kit PR adds its fragment, runs
-`build-n4-module-kit/toolbelt/gen-build-state.sh` and commits both; it never edits those lines by hand. The
-fragment counts as the `BUILD-STATE.md` update for the gate, and CI plus `sweep-build-state.sh` fail a stale
-`BUILD-STATE.md`. On a merge conflict there, take either side of the generated lines and regenerate.
+`build-n4-module-kit/BUILD-STATE.md` and `build-n4-module-kit/retros/INDEX.md` are GENERATED and NOT
+committed (`.gitignore`), so two PRs that each add a ledger fragment or a retro never conflict on them.
+Read them with `build-n4-module-kit/toolbelt/kit-state.sh build-state` / `retro-index`; `--write`
+materializes both, and `scripts/install-hooks.sh` installs post-merge/post-checkout/post-rewrite hooks
+that do so on every pull (on a generator failure they remove both files and print one warning, so no
+stale copy is left). The sources are committed: the retro's header comments (`review-status`, `module`,
+`deltas`, optional `index-comment`); one `build-n4-module-kit/ledger.d/<YYYY-MM-DD>-<slug>.md` fragment per
+change for the kit block's `last_change:` line, `open_issues:` items and session log (format in
+`BUILD-LOOP.md` §7); and `build-n4-module-kit/BUILD-STATE.src.md` for every hand-kept field. CI and the
+gate's content half run `gen-retro-index.sh --check` / `gen-build-state.sh --check` and sweep fresh
+kit-state output, so a malformed header or fragment fails closed. `[ev: retro ledger-generated-not-committed]`
 
 Retro citation tags name the retro by its stem, the filename without the `YYYY-MM-DD-` prefix and `.md`:
 `[ev: retro <stem> Δn]` and `[deferred: retro <stem> Δn]`. `toolbelt/sweep-fold-audit.sh` matches the stem

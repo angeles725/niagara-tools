@@ -173,7 +173,9 @@ exists. Record in the feature doc which one it was ("folded into the D3 PR" / "o
 Every run ENDS by writing its retro; the retro is a precondition for "done", not an at-STOP afterthought.
 
 - `toolbelt/new-retro.sh <module|kit> <slug>` emits the retro stub (What happened / Evidence / Proposed kit deltas
-  table / Lessons) and appends its `retros/INDEX.md` row (`pending`). `[ev: retro campaign8-retro-loop]`
+  table / Lessons) whose header block IS its retro-index row (`pending`); the index itself is generated, not
+  committed — read it with `toolbelt/kit-state.sh retro-index`. `[ev: retro campaign8-retro-loop]`
+  `[ev: retro ledger-generated-not-committed]`
 - A defect in a KIT CHECK or DOCTRINE (a lint that misses/over-fires, a stale rule) additionally opens
   `toolbelt/kit-ticket.sh "<one line>"` (labels `kit`/`from-run`/`campaign-9`). `[ev: retro campaign8-retro-loop]`
 - `toolbelt/sweep-build-state.sh --age` at orient (BUILD-LOOP §0.a) surfaces the accrued retro DEBT so it cannot

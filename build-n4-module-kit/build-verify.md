@@ -267,8 +267,8 @@ For any decision/safety logic, "done" means all four layers ran, in order:
 ## Frontend verify step (`-ux` dashboards)
 For every `-ux` change, after the build and before hand-off:
 1. `toolbelt/report-module.sh <module-root> --profile <ui_profile> [--legacy]` — the module's
-   `ui_profile` comes from its BUILD-STATE envelope (the caller passes it; the toolbelt never parses
-   BUILD-STATE). It relays `rc-scan.sh` (browser-floor FAIL for `hmi`/`both`), the kit ESLint config
+   `ui_profile` comes from its BUILD-STATE envelope (read it with `toolbelt/kit-state.sh build-state`;
+   the caller passes it; the toolbelt never parses BUILD-STATE). It relays `rc-scan.sh` (browser-floor FAIL for `hmi`/`both`), the kit ESLint config
    on the artifact's own rc js, and `lint-vendor-floor.sh` on `rc/vendor`. `--legacy` only for a
    deployed module not yet restructured (data-URI budget WARN instead of FAIL).
    `[ev: retro dashboard-frontend-standard Δ10]` `[ev: retro dashboard-frontend-standard Δ16]`

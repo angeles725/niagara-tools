@@ -67,3 +67,24 @@ _copy_kit() {
   run bash "$KS" --bogus build-state
   [ "$status" -eq 3 ]
 }
+
+# Every reader doc names kit-state; none tells the reader to read/open/orient from/update a generated
+# file (an edit of hand-kept state goes to BUILD-STATE.src.md, a reader runs kit-state).
+READER_DOCS=(build-n4-module-kit/BUILD-LOOP.md build-n4-module-kit/METHODOLOGY.md build-n4-module-kit/ORCHESTRATION.md
+  build-n4-module-kit/build-verify.md build-n4-module-kit/skill/SKILL.md CONTRIBUTING.md)
+
+@test "KS6: every reader doc points at kit-state" {
+  # Mutation: KS6 -- drop the kit-state pointer from any reader doc and this names it.
+  cd "$REPO"
+  missing=()
+  for d in "${READER_DOCS[@]}"; do grep -qF 'kit-state' "$d" || missing+=("$d"); done
+  [ ${#missing[@]} -eq 0 ] || { printf 'reader doc without a kit-state pointer: %s\n' "${missing[@]}" >&2; return 1; }
+}
+
+@test "KS7: no reader doc tells the reader to open a generated file" {
+  # Mutation: KS7 -- restore "Read \`BUILD-STATE.md\`" (BUILD-LOOP §0.a before R10-D1) and this names the line.
+  cd "$REPO"
+  # shellcheck disable=SC2016  # the pattern matches literal backticks and a literal $KIT
+  run grep -nEi '(read|open|orient from|update|appends? its)[^.;]{0,25}`(\$KIT/)?(BUILD-STATE\.md|retros/INDEX\.md)`|--build-state BUILD-STATE\.md|sweep-build-state\.sh <BUILD-STATE\.md>' "${READER_DOCS[@]}"
+  [ "$status" -eq 1 ] || { printf 'reader doc opens a generated file:\n%s\n' "$output" >&2; return 1; }
+}
