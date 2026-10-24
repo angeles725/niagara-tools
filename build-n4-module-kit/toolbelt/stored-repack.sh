@@ -13,33 +13,24 @@
 #
 # Usage: stored-repack.sh <in.jar> <out.jar>      (refuses to overwrite an existing out.jar)
 # Check: verify-module.sh --stored <out.jar>      (0 "Defl:" entries)
-set -euo pipefail
+#
+# Exits: 0 ok; 1 an input that is no readable jar (missing, not a zip, no manifest, a bad entry), an existing
+# output (a file, a directory or a symlink) or an output that cannot be written; 2 usage, or the Go tool
+# cannot be built (the bash's "missing tool: zip/unzip" exit 2: the Go port needs neither tool).
+# The output is the contract, not its bytes: the entry names and order above, every entry STORED with the
+# input's bytes and its sizes in the local header, no directory entries; the rest keep their input order.
+#
+# Implementation: go/internal/storedrepack (golden runs recorded from the bash body at 91b9e3d6 by
+# go/internal/lint/rules/golden/record/record.sh with go/internal/storedrepack/testdata/setup.sh). go/go-tool.sh
+# `go_tool_bin` builds go/bin/stored-repack when it is missing or older than a Go source, then this script
+# execs it; no Go toolchain or a failed build is exit 2.
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
-[ $# -eq 2 ] || { usage >&2; exit 2; }
-IN="$1"; OUT="$2"
-[ -f "$IN" ] || { echo "stored-repack: input jar not found: $IN" >&2; exit 1; }
-[ ! -e "$OUT" ] || { echo "stored-repack: refusing to overwrite existing $OUT" >&2; exit 1; }
-for t in unzip zip; do command -v "$t" >/dev/null || { echo "stored-repack: missing tool: $t" >&2; exit 2; }; done
-
-OUT_ABS="$(cd "$(dirname "$OUT")" && pwd)/$(basename "$OUT")"
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-unzip -q "$IN" -d "$TMP/ex" || { echo "stored-repack: cannot unzip $IN" >&2; exit 1; }
-cd "$TMP/ex"
-[ -f META-INF/MANIFEST.MF ] || { echo "stored-repack: no META-INF/MANIFEST.MF in $IN (not a jar)" >&2; exit 1; }
-
-# -0 store only, -X no extra attrs, -D no directory entries
-zip -q -0 -X -D "$OUT_ABS" META-INF/MANIFEST.MF
-# the signature files are named after the signing alias [ev: retro n4-course-sample-check-precision Δ4]
-SIG=()
-for f in META-INF/*.SF; do
-  [ -f "$f" ] || continue; SIG+=("$f")
-  for k in RSA DSA EC; do [ -f "${f%.SF}.$k" ] && SIG+=("${f%.SF}.$k"); done
-done
-[ ${#SIG[@]} -eq 0 ] || zip -q -0 -X -D "$OUT_ABS" "${SIG[@]}"
-zip -q -0 -X -D -r "$OUT_ABS" . -x META-INF/MANIFEST.MF "${SIG[@]}"
-
-d=$(unzip -v "$OUT_ABS" | grep -c 'Defl:' || true)
-[ "$d" -eq 0 ] || { echo "stored-repack: $d deflated entries remain in $OUT_ABS" >&2; exit 1; }
-n=$(unzip -Z1 "$OUT_ABS" | wc -l)
-echo "stored-repack: $OUT_ABS  ($n entries, all STORED, signature entries kept: ${SIG[*]:-none})"
+set -u
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'stored-repack: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 2; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" stored-repack)" || exit 2
+exec "$BIN" "$@"

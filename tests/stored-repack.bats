@@ -61,3 +61,39 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$(printf '%s\n' "${order[@]}" | grep -c '^META-INF/\(CODESIGN\|EC1\)\.')" -eq 4 ]   # each entry exactly once
   [[ "$output" == *"CODESIGN.SF"* ]] && [[ "$output" == *"EC1.EC"* ]]
 }
+
+# The Go port (go/internal/storedrepack) orders every top-level .SF by name with its .RSA, .DSA and .EC
+# blocks in that order; an orphan block, a nested .SF and a lowercase .sf are ordinary entries. The output
+# passes its consumer, verify-module --stored.
+@test "S5: several aliases (SERVER1 RSA, A RSA+DSA+EC) come in name order after MANIFEST.MF; verify-module --stored passes" {
+  local s="$TMPDIR_T/src"
+  rm "$s/META-INF/NIAGARA4.SF" "$s/META-INF/NIAGARA4.RSA" "$TMPDIR_T/in.jar"
+  add_signature "$s" SERVER1 RSA; add_signature "$s" A RSA; add_signature "$s" A DSA; add_signature "$s" A EC
+  printf 'orphan' > "$s/META-INF/C.RSA"; mkdir -p "$s/META-INF/sub"; printf 'n' > "$s/META-INF/sub/N.SF"; printf 'l' > "$s/META-INF/low.sf"
+  make_jar "$TMPDIR_T/in.jar" "$s"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/out.jar"
+  [ "$status" -eq 0 ] || { echo "$output"; return 1; }
+  [[ "$output" == *"signature entries kept: META-INF/A.SF META-INF/A.RSA META-INF/A.DSA META-INF/A.EC META-INF/SERVER1.SF META-INF/SERVER1.RSA)" ]]
+  mapfile -t order < <(unzip -Z1 "$TMPDIR_T/out.jar")
+  [ "$(printf '%s ' "${order[@]:0:7}")" = \
+    "META-INF/MANIFEST.MF META-INF/A.SF META-INF/A.RSA META-INF/A.DSA META-INF/A.EC META-INF/SERVER1.SF META-INF/SERVER1.RSA " ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "${#order[@]}" -eq 13 ] || { printf '%s\n' "${order[@]}"; return 1; }
+  [ "$(unzip -Z1 "$TMPDIR_T/out.jar" | grep -c '/$')" -eq 0 ]   # no directory entries
+  for f in META-INF/C.RSA META-INF/sub/N.SF META-INF/low.sf rc/index.html; do cmp <(unzip -p "$TMPDIR_T/in.jar" "$f") <(unzip -p "$TMPDIR_T/out.jar" "$f"); done
+  run "$KIT/toolbelt/verify-module.sh" --stored "$TMPDIR_T/out.jar"
+  [[ "$output" == *"PASS  stored"* ]] || { echo "$output"; return 1; }
+}
+
+@test "S6: an existing output directory, or the input itself as output, is refused (exit 1) and nothing is written beside it" {
+  mkdir "$TMPDIR_T/outdir"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/outdir"
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: refusing to overwrite existing $TMPDIR_T/outdir" ]
+  [ -z "$(ls -A "$TMPDIR_T/outdir")" ]
+  cp "$TMPDIR_T/in.jar" "$TMPDIR_T/in.copy"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/in.jar"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"refusing to overwrite existing $TMPDIR_T/in.jar" ]]
+  cmp "$TMPDIR_T/in.jar" "$TMPDIR_T/in.copy"
+  [ "$(find "$TMPDIR_T" -maxdepth 1 -name '.*tmp-*' | wc -l)" -eq 0 ]
+}
