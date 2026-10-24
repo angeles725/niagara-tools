@@ -149,21 +149,14 @@ func TestJavaScript(t *testing.T) {
 	}
 }
 
-// infoAt is the INFO row of a prescribed build-location key (R10-D5): the kit tells a module to copy it.
-func infoAt(file string, line int, key string) string {
-	return "INFO  " + ID + "  " + file + ":" + strconv.Itoa(line) + "  " + key +
-		" is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)\n"
-}
-
 // TestProperties: every .properties value, read as java.util.Properties.load reads it.
 func TestProperties(t *testing.T) {
 	const pf = "m/gradle.properties"
 	for _, tc := range []struct{ name, src, want string }{
 		// As the real gradle.properties write it: a properties backslash is doubled.
-		{"windows user home", "niagara_home=C:\\\\Niagara\\\\Niagara-4.14\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n",
-			infoAt(pf, 2, "niagara_user_home")},
-		{"other prescribed keys", "niagara_home=/home/me/N4\nnodeHome=C:\\\\Users\\\\me\\\\node\norg.gradle.java.installations.paths=/home/me/jdk8\n",
-			infoAt(pf, 1, "niagara_home") + infoAt(pf, 2, "nodeHome") + infoAt(pf, 3, "org.gradle.java.installations.paths")},
+		// R10-D8: the four host build-location keys are lint-structure L10's; G43 prints no row for them.
+		{"windows user home", "niagara_home=C:\\\\Niagara\\\\Niagara-4.14\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n", ""},
+		{"other build-location keys", "niagara_home=/home/me/N4\nnodeHome=C:\\\\Users\\\\me\\\\node\norg.gradle.java.installations.paths=/home/me/jdk8\n", ""},
 		{"another key in gradle.properties", "some_other=C:\\\\Users\\\\equipo\\\\x\n", rowAt(pf, 1, `C:\Users\equipo\x`, value)},
 		{"colon separator and continuation", "# out=/home/x\nout : /home/\\\n    me/out\nnext=1\n", rowAt(pf, 2, "/home/me/out", value)},
 		{"relative and install root", "a=build/out\nb=/opt/Niagara\n", ""},
@@ -175,15 +168,14 @@ func TestProperties(t *testing.T) {
 	}
 }
 
-// TestPrescribedKeyScope: the four keys are INFO only in a gradle.properties outside the kit's template
-// fixtures (K16 keeps dev-machine paths out of those); INFO never fails, also under --strict.
-func TestPrescribedKeyScope(t *testing.T) {
+// TestBuildKeysOwnedByL10 (R10-D8): the four keys print no row in any gradle.properties, a kit fixture's
+// too (lint-structure L10 FAILs those, K16), and exit 0 under --strict; another .properties file still WARNs.
+func TestBuildKeysOwnedByL10(t *testing.T) {
 	const line = "niagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n"
 	const p = `C:\Users\equipo\Niagara4.14\X`
 	for _, tc := range []struct{ name, rel, want string }{
 		{"other properties file", "m/local.properties", rowAt("m/local.properties", 1, p, value)},
-		{"kit template fixture", "kit/build-n4-module-kit/fixtures/MinimalPan/gradle.properties",
-			rowAt("kit/build-n4-module-kit/fixtures/MinimalPan/gradle.properties", 1, p, value)},
+		{"kit template fixture", "kit/build-n4-module-kit/fixtures/MinimalPan/gradle.properties", ""},
 	} {
 		if got := rowsIn(t, tc.rel, line); got != tc.want {
 			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
@@ -194,7 +186,7 @@ func TestPrescribedKeyScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	var o, e bytes.Buffer
-	if code := lint.Command(Spec())([]string{ID, "--strict", dir}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.String() != infoAt(dir+"/gradle.properties", 1, "niagara_user_home") {
-		t.Errorf("--strict: exit %d out %q, want 0 and the INFO row", code, o.String())
+	if code := lint.Command(Spec())([]string{ID, "--strict", dir}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.String() != "" {
+		t.Errorf("--strict: exit %d out %q, want 0 and no row", code, o.String())
 	}
 }

@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10 #432: preflight jar-lock matches the module jar set against the lsof listing in one awk pass instead of one printf | grep per jar -->
+log: 2026-10-24 · quality round 10 #432 → preflight.sh Check 4 (jar-lock) kept one lsof -Fn call but forked printf | grep -qxF once per jar over the whole captured listing; 410 jars on a busy host hung preflight for more than 10 minutes. The jar set (regular files, glob order) and the listing now meet in one awk; rows, the 9p/drvfs, lsof-absent and empty-listing SKIPs, glob order and whole-line n<path> matching are unchanged. 400 jars against a 60000-line listing: >10 s (timeout) before, 154 ms after. BUILD-LOOP § 5 "No fork per input line" now names per-item forks over a captured listing and the guard's scope limit. Closes #432. [ev: retro r10-fork-per-line-again]

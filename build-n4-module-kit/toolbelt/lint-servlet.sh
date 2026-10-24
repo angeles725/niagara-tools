@@ -8,15 +8,23 @@
 #   auth          FAIL  a doGet/doPost/service handler body contains a write (.setDouble/.setFloat/
 #                       .setInt/.setLong/.setRelTime/.setString( or a set( not preceded by an identifier character) with no
 #                       getRemoteUser()/.getUser() gate in the same method body.
-#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( on a line with no 'try {' on it or
-#                       on the 5 lines above it.
+#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( that no try statement encloses (its block or a
+#                       try-with-resources specification, go/internal/javasrc TryBlocks) whose try keyword is in
+#                       the same method or class-level lambda body (javasrc Scopes) (fixed 2026-10-24: the 5-line
+#                       look-back took a try of another handler, or one already closed, as the guard, and the
+#                       `try {` regex missed try-with-resources).
 #   unbounded-set WARN  .setDouble/.setFloat/.setInt/.setLong/.setRelTime( in a handler body with no
 #                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
-#   catch-no-400  WARN  a 'try {' block that holds Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
-#                       Double.valueOf(, with a catch on its closing line ("} catch (E e) {") or
-#                       within the 4 lines after it, whose body has no 400 response (400,
-#                       SC_BAD_REQUEST, sendError(, setStatus(, jsonError( or sendJson(); the row is
-#                       at the catch line.
+#   catch-no-400  WARN  the catch that answers a Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
+#                       Double.valueOf( call has no 400 response in its own body (400, SC_BAD_REQUEST,
+#                       sendError(, setStatus(, jsonError( or sendJson(); the row is at the catch line. That
+#                       catch is read structurally (go/internal/javasrc TryBlocks: try-with-resources, catch
+#                       clauses attached to the try block's closing brace): the first clause catching
+#                       NumberFormatException or a supertype on the innermost enclosing try, outward past a
+#                       try without one and past a clause that throws; when none catches it, the first clause
+#                       of the innermost try that has one (fixed 2026-10-24: the bash/awk took the first catch
+#                       within 4 lines after the try's end, unrelated or of an outer try, and missed
+#                       try-with-resources and the right multi-catch clause).
 #   cache-nofinger WARN Cache-Control max-age>0 in the file without a fingerprinted resource
 #                       (static detection: Cache-Control and max-age=[1-9] on one line).
 #   log-in-handler WARN LOG.info( inside a doGet/doPost/service handler body.
@@ -60,6 +68,9 @@
 # Mutation: LSV4b -- reading the X-Requested-With flag from raw lines reports a guard documented only in a Javadoc
 # Mutation: LSV2c -- matching the parse calls on raw lines FAILs input-400 on a commented-out Double.parseDouble(
 # Mutation: LSV2d -- starting the catch search after the try's closing line passes "} catch (E e) { v = 0; }"
+# Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
+# Mutation: LSV2f -- taking the first catch within 4 lines of the try's end judges a multi-catch by its IOException clause
+# Mutation: LSV2g -- finding the try by the "try {" regex FAILs a parse inside try (Reader r = open()) { ... }
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

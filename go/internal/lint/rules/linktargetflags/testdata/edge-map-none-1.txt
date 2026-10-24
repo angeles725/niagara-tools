@@ -1,0 +1,13 @@
+-- args --
+--wiring-map
+@DIR@/map.md
+@DIR@/root
+-- want --
+exit 0
+-- stderr --
+-- map.md --
+# nothing here
+-- root/com/x/M.java --
+class M {
+@NiagaraProperty(name = "mapped", type = "double", defaultValue = "0d", flags = Flags.SUMMARY | Flags.READONLY)
+}

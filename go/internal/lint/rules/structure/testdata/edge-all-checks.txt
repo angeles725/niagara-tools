@@ -2,10 +2,10 @@
 @DIR@/all-checks/G/M
 -- want --
 exit 1
-FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
-FAIL  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+WARN  lint-structure  @DIR@/all-checks/G/M/gradle.properties:3  L10: niagara_home is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
+WARN  lint-structure  @DIR@/all-checks/G/M/gradle.properties:4  L10: nodeHome is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
 FAIL  lint-structure  @DIR@/all-checks/G/M/sub/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
-FAIL  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+WARN  lint-structure  @DIR@/all-checks/gradle.properties:1  L10: niagara_home is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
 FAIL  lint-structure  A-rt/META-INF/module.xml  L6: hand-authored META-INF/module.xml found; author module-include.xml instead
 FAIL  lint-structure  A-rt/module.lexicon  L4: lexicon empty (2 type(s) declared, zero key=value entries)
 FAIL  lint-structure  A-rt  L5: module.palette missing for -rt profile
@@ -20,7 +20,6 @@ FAIL  lint-structure  B-ux  L9: empty skeleton artifact (0 Java classes, empty p
 FAIL  lint-structure  D-se  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
 FAIL  lint-structure  E-doc  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
 FAIL  lint-structure  plain  L6: module-include.xml missing (author it; the gradle plugin generates META-INF/module.xml)
-FAIL  lint-structure  gradle.properties  L12: absent/commented org.gradle.java.installations block (add paths + auto-detect=false to pin JDK 8)
 FAIL  lint-structure  M/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: C:\\Niagara)
 FAIL  lint-structure  S1/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/a)
 FAIL  lint-structure  S2/gradle.properties  L13: divergent niagara_home across sibling gradle.properties (value: /opt/b)

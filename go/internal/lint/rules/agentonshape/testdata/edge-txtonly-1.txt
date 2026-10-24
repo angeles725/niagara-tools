@@ -1,0 +1,8 @@
+-- args --
+@DIR@/M
+-- want --
+exit 3
+ERROR  lint-agent-on-shape  @DIR@/M  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- M/Mod-rt/notes.txt --
+x

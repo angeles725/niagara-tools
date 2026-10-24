@@ -245,6 +245,92 @@ _pf_fakebin() {
   [[ "$out" != *"PASS  jar-lock"* ]]
 }
 
+# ================= #432: jar-lock matches the jar set in ONE pass =================
+# The single `lsof -Fn` call (Δ8 above) still forked `printf | grep -qxF` once per jar over the whole
+# captured listing: 410 jars on a busy host hung preflight for more than 10 minutes. The jar set is now
+# matched against the listing in one awk. The fixture is 400 jars and a 60000-line listing.
+# [ev: retro r10-fork-per-line-again Δ1]
+
+# _pf_bigjars <nh> <listing> <locked-index...>: creates 400 jars Mod001.jar..Mod400.jar under <nh>/modules
+# and a 60000-line lsof -Fn listing in <listing> that holds the named jars (plus unrelated files).
+_pf_bigjars() {
+  local nh="$1" listing="$2"; shift 2
+  mkdir -p "$nh/etc/m2" "$nh/modules"
+  awk -v nh="$nh" -v locked="$*" 'BEGIN {
+    for (i = 1; i <= 400; i++) { f = sprintf("%s/modules/Mod%03d.jar", nh, i); printf "" > f; close(f) }
+    n = split(locked, L, " ")
+    for (i = 1; i <= 30000; i++) { printf "p%d\nn/usr/lib/x86_64-linux-gnu/libfile%d.so\n", i, i }
+    for (i = n; i >= 1; i--) printf "p9\nn%s/modules/Mod%03d.jar\n", nh, L[i]
+  }' > "$listing"
+}
+
+# _pf_cat_lsof <fakebin> <listing>: a fake lsof that prints <listing>.
+_pf_cat_lsof() {
+  printf '#!/usr/bin/env bash\nexec awk 1 "%s"\n' "$2" > "$1/lsof"
+  chmod +x "$1/lsof"
+}
+
+@test "PF-jarlock-bulk-order: 400 jars, 3 locked -> WARN lists exactly the locked basenames in glob order" {
+  FAKEBIN="$TMPDIR_T/fakebin-bulk"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-bulk"; _pf_bigjars "$NH2" "$TMPDIR_T/listing" 7 250 399
+  _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing"
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  # The listing names the jars in reverse order; the row keeps glob order.
+  row=$(printf '%s\n' "$out" | grep 'jar-lock')
+  [ "$(printf '%s\n' "$row" | wc -l)" -eq 1 ]
+  [[ "$row" =~ ^WARN\ +jar-lock\ +jars\ held\ by\ a\ process\ \(station\ running\?\):\ Mod007\.jar\ Mod250\.jar\ Mod399\.jar$ ]]
+}
+
+@test "PF-jarlock-bulk-timeout: 400 jars against a 60000-line listing finish under 10 s" {
+  # NAMED MUTATION: restore the per-jar `printf '%s\n' "$LSOF_OUT" | grep -qxF "n$jar"` loop -> 400 forks
+  # over the whole listing -> this run exceeds the bound and timeout exits 124.
+  FAKEBIN="$TMPDIR_T/fakebin-bulkt"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-bulkt"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-t" 1
+  _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing-t"
+  TIMEOUT="$(command -v timeout)"
+  rc=0; PATH="$FAKEBIN" "$TIMEOUT" 10 "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" >"$TMPDIR_T/out" 2>&1 || rc=$?
+  [ "$rc" -ne 124 ]
+  grep -q 'WARN  jar-lock .*Mod001.jar' "$TMPDIR_T/out"
+}
+
+@test "PF-jarlock-bulk-pass: 400 jars, none in the listing -> PASS" {
+  FAKEBIN="$TMPDIR_T/fakebin-bulkp"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-bulkp"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-p"
+  _pf_cat_lsof "$FAKEBIN" "$TMPDIR_T/listing-p"
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  [[ "$out" == *"PASS  jar-lock"*"no locked jars under $NH2/modules/"* ]]
+}
+
+@test "PF-jarlock-bulk-empty: 400 jars, empty lsof output -> SKIP, never PASS" {
+  FAKEBIN="$TMPDIR_T/fakebin-bulke"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-bulke"; _pf_bigjars "$NH2" "$TMPDIR_T/listing-e"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$FAKEBIN/lsof"; chmod +x "$FAKEBIN/lsof"
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  [[ "$out" == *"SKIP  jar-lock"* ]]
+  [[ "$out" != *"PASS  jar-lock"* ]]
+}
+
+@test "PF-jarlock-whole-line: a listing path that is a prefix or extension of a jar path does not match" {
+  FAKEBIN="$TMPDIR_T/fakebin-whole"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-whole"; mkdir -p "$NH2/etc/m2" "$NH2/modules"
+  : > "$NH2/modules/Mod.jar"; : > "$NH2/modules/Other.jar"
+  # Prefix of Mod.jar's path, a longer path that starts with it, and the path without the `n` field tag.
+  printf '#!/usr/bin/env bash\nprintf "p1\\nn%s\\nn%s.bak\\n%s\\n"\n' \
+    "$NH2/modules/Mod.ja" "$NH2/modules/Mod.jar" "$NH2/modules/Other.jar" > "$FAKEBIN/lsof"
+  chmod +x "$FAKEBIN/lsof"
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  [[ "$out" == *"PASS  jar-lock"* ]]
+}
+
+@test "PF-jarlock-regular-only: a directory named *.jar is not a jar" {
+  FAKEBIN="$TMPDIR_T/fakebin-dir"; _pf_fakebin "$FAKEBIN"
+  NH2="$TMPDIR_T/nh-dir"; mkdir -p "$NH2/etc/m2" "$NH2/modules/Dir.jar"
+  printf '#!/usr/bin/env bash\nprintf "p1\\nn%s\\n"\n' "$NH2/modules/Dir.jar" > "$FAKEBIN/lsof"
+  chmod +x "$FAKEBIN/lsof"
+  out=$(PATH="$FAKEBIN" "$PREFLIGHT" --jvm-dir "$JVMDIR" "$NH2" "$GR" 2>&1) || true
+  [[ "$out" == *"PASS  jar-lock"* ]]
+}
+
 # ================= WU7 fold: [ev: retro continuous-fan-post-defrost-delay Δ1] =================
 # The repo's settings.gradle.kts default (7.6.17 in the fixture) has drifted from the niagara_home
 # actually configured (here: one that ships only 7.6.22). build.sh forwards -PniagaraPluginVersion,

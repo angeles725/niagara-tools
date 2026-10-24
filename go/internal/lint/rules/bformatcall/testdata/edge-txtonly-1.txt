@@ -1,0 +1,8 @@
+-- args --
+@DIR@/root
+-- want --
+exit 3
+ERROR  lint-bformat-call  @DIR@/root  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- root/notes.txt --
+%user%

@@ -32,6 +32,9 @@ func Card(text string) []Pointer {
 		out = append(out, sc.tags(i)...)
 		out = append(out, sc.inline(i)...)
 	}
+	for i := range out {
+		refine(&out[i])
+	}
 	return out
 }
 

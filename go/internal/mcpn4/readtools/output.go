@@ -2,7 +2,6 @@ package readtools
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"regexp"
@@ -130,31 +129,6 @@ func csvLine(cells []string) string {
 	return strings.Join(out, ",") + "\r\n"
 }
 
-// utf8Strict is str.encode("utf-8") for one written chunk: a lone surrogate is the
-// UnicodeEncodeError (a ValueError) naming its position, or the run of them, in the chunk.
-func utf8Strict(s string) error {
-	start, end, first := -1, -1, rune(0)
-	for i, n := 0, 0; i < len(s) && (start < 0 || end == n); n++ {
-		r, size := pyjson.DecodeRune(s[i:])
-		i += size
-		switch surrogate := r >= 0xd800 && r <= 0xdfff; {
-		case surrogate && start < 0:
-			start, end, first = n, n+1, r
-		case surrogate:
-			end = n + 1
-		}
-	}
-	switch {
-	case start < 0:
-		return nil
-	case end == start+1:
-		return &pyjson.ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode character '\\u%04x' in position %d: "+
-			"surrogates not allowed", first, start)}
-	}
-	return &pyjson.ValueError{Msg: fmt.Sprintf("'utf-8' codec can't encode characters in position %d-%d: "+
-		"surrogates not allowed", start, end-1)}
-}
-
 // writeRows is _write_output: the rows as CSV (header first) or as the JSON of base, query,
 // columns and rows, by the file's extension.
 func writeRows(path, base, query string, columns []string, rows []*pyjson.Object) error {
@@ -177,7 +151,7 @@ func writeRows(path, base, query string, columns []string, rows []*pyjson.Object
 		}
 		for _, cells := range lines {
 			line := csvLine(cells)
-			if err := utf8Strict(line); err != nil {
+			if err := pyjson.EncodeUTF8(line); err != nil {
 				return err
 			}
 			if _, err := f.WriteString(line); err != nil {

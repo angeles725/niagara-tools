@@ -46,7 +46,7 @@ func TestCardTags(t *testing.T) {
 		{"unterminated tag", "a [ev: retro x\n\nnext", []brief{{1, Unparsed, "[ev: retro x", ""}}},
 		{"a tag wrapped over two lines", "a `[ev: retro\n  x Δ1]` b", []brief{{1, Retro, "x", "Δ1"}}},
 		{"deferred tag", "[deferred: retro mb Δ1]", []brief{{1, Retro, "mb", "Δ1"}}},
-		{"placeholder is unparsed", "[ev: retro <stem> Δk]", []brief{{1, Unparsed, "retro <stem> Δk", ""}}},
+		{"placeholder is a template", "[ev: retro <stem> Δk]", []brief{{1, Template, "retro <stem> Δk", ""}}},
 		{"unknown kind is unparsed", "[ev: course Review 2 build]", []brief{{1, Unparsed, "course Review 2 build", ""}}},
 		{"fenced block is skipped", "```\n[ev: retro x]\n```\n[ev: retro y]", []brief{{4, Retro, "y", ""}}},
 	}

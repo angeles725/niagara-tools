@@ -1,0 +1,6 @@
+-- args --
+--strict
+-- want --
+exit 3
+-- stderr --
+usage: lint-wb-threading.sh [--strict] <wb-src-dir>

@@ -1,0 +1,31 @@
+declared difference (truth fix T1): the bash awk matched add( and `<local> = <creation>` in the Strip view,
+where string and text-block contents are still text, so a log message quoting an add (lit1), a quoted
+assignment that made `f` a new component (lit2) and an add inside a text block (block) WARNed. Literal
+contents are not code now; an argument that is a literal is still printed with its text (keep).
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-ws-placement  @DIR@/BLit.java:13  add("r,)", new BFolder()) in keep() never sets a wsAnnotation -- the wire sheet staggers it onto its siblings; add a grid position if absent with Flags.READONLY, never re-place one (types/logic-authoring.md §Wire-sheet placement)
+-- stderr --
+-- BLit.java --
+package com.x;
+public class BLit extends BComponent {
+  void lit1() {
+    log("add(x, new BFolder())");
+  }
+  void lit2(BComponent f) {
+    log("f = new BFolder()");
+    add("f", f);
+  }
+  void keep() {
+    String s = "add(";
+    char c = '(';
+    add("r,)", new BFolder());
+  }
+  void block() {
+    String t = """
+      add("z", new BFolder());
+      """;
+  }
+}
