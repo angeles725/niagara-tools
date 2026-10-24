@@ -29,8 +29,8 @@
 #   Legitimately aggregated rollup facades may trigger a WARN when they intentionally
 #   have more config slots than status slots (e.g. a master facade aggregating N rooms
 #   with one global active flag). Use --strict only after auditing the WARN list.
-#   Source of slot names: the first name="..." of each @NiagaraProperty annotation, read
-#   to its balanced ")" across lines; module-include.xml facets are NOT consulted for this check.
+#   Source of slot names: the first name="..." of each @NiagaraProperty annotation outside comments,
+#   read to its balanced ")" across lines; module-include.xml facets are NOT consulted for this check.
 #
 # Implementation: rule package go/internal/lint/rules/statusparity on the shared engine go/internal/lint
 # (walker, parser, row formatter; go/README.md). This wrapper is the stable entry point: go/go-tool.sh
@@ -43,9 +43,12 @@
 # Truth fix T1 (2026-10-24): a one-line @NiagaraProperty closes on its own line (javasrc.NiagaraProperties,
 # shared with lint-config-sanity); the bash awk always took the next line too, so every other annotation of
 # a run of one-line ones went uncounted.
+# Truth fix T2 (2026-10-24): annotations are read with comments blanked (go/internal/javasrc Strip), so a
+# commented-out @NiagaraProperty is not a slot; the bash awk counted it.
 #
 # Mutation: LSP-asymmetric -- removes N>M asymmetry detection so all facades pass regardless of parity
 # Mutation: LSP-oneline -- closing an annotation only from its second line drops every other one-line slot
+# Mutation: LSP-comment -- reading the raw lines counts commented-out slots (a false WARN, or a hidden one)
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

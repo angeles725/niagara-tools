@@ -47,11 +47,11 @@ var (
 )
 
 // Check counts the config and status slot names of the file's @NiagaraProperty annotations (as
-// javasrc.NiagaraProperties joins them, each read to its balanced ")") and WARNs once when N > 1 and
-// M < N. It never fails: a file it cannot read is the runner's "cannot scan" error.
+// javasrc.NiagaraProperties joins them, each read to its balanced ")"), read in f.Stripped() so a
+// commented-out slot is not one, and WARNs once when N > 1 and M < N. It never fails: a file it cannot read is the runner's "cannot scan" error.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	n, m := 0, 0
-	javasrc.NiagaraProperties(f.Raw, func(text string, _ int) {
+	javasrc.NiagaraProperties(f.Stripped(), func(text string, _ int) {
 		sub := nameAttr.FindStringSubmatch(text)
 		if sub == nil {
 			return

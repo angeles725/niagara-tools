@@ -1,8 +1,9 @@
+declared difference (truth fix T2, truth-comment-1): Comment's commented-out xInterval and yInterval are
+not slots, so it no longer WARNs (the bash lint printed N=3 M=1).
 -- args --
 @DIR@
 -- want --
 exit 0
-WARN  lint-status-parity  Comment  N=3 per-instance config slots but 1 status slots
 WARN  lint-status-parity  Javadoc  N=2 per-instance config slots but 1 status slots
 -- stderr --
 -- Comment.java --
