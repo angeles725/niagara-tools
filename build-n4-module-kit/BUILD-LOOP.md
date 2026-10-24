@@ -370,7 +370,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     one): a byte-identical port keeps the drop and its truth fix removes it; a bash lint that stays reads
     `while IFS= read -r x || [ -n "$x" ]`. `[ev: retro go-lint-lexicon-ascii Δ1]`
   - Owed code from the round-10 lint ports (client findings, rule gaps, engine fields) stays an `open_issue:` in
-    the port's `ledger.d/2026-10-24-*` fragment (or `2026-10-24-r10-fold-late.md`), not doctrine:
+    the port's `ledger.d/2026-10-24-*` fragment (or `ledger.d/2026-10-24-r10-fold-late.md`), not doctrine:
     `[deferred: retro go-bog-audit Δ1]` `[deferred: retro go-bog-audit Δ2]` `[deferred: retro go-bog-audit Δ3]`
     `[deferred: retro go-bog-audit Δ4]` `[deferred: retro go-bog-audit Δ5]` `[deferred: retro go-bog-audit Δ7]`
     `[deferred: retro go-lint-arbitrary-ord Δ1]` `[deferred: retro go-lint-arbitrary-ord Δ2]`
