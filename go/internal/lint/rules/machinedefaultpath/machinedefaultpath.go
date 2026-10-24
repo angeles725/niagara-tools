@@ -19,10 +19,12 @@
 // In a *.js file under an rc/ directory (jssrc tokens, comments dropped), a string or a template literal with
 // no ${...} that is a const/let/var initializer (`const X = "..."`, at any depth: rc code lives in IIFE and
 // AMD wrappers, so a top-level-only rule would read nothing) or an object-literal property default
-// (`{ key: "..." }`). In a *.properties file (props.Read), every value.
+// (`{ key: "..." }`). In a *.properties file (props.Read), every value; in a gradle.properties outside the
+// kit's template fixtures, a machine path under one of the buildKeys is an INFO row instead (R10-D5).
 package machinedefaultpath
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -64,6 +66,16 @@ var (
 
 const platformHome = "/home/niagara/"
 
+// buildKeys are the Gradle build-location keys the kit tells a client module to copy from a sibling into
+// its gradle.properties (BUILD-LOOP.md bring-up step 2; types/structure.md point 7): a machine path there is
+// prescribed, so the row is INFO. K16 still keeps dev-machine paths out of the kit's template fixtures.
+var buildKeys = map[string]bool{"niagara_home": true, "niagara_user_home": true, "nodeHome": true, "org.gradle.java.installations.paths": true}
+
+const (
+	buildKeyMsg = " is a prescribed build-location key (BUILD-LOOP.md bring-up step 2; types/structure.md point 7)"
+	kitFixtures = "/build-n4-module-kit/fixtures/" // the template fixtures K16 covers, matched on the absolute path
+)
+
 const lookBack = 3 // earlier lines the text before a literal may start on
 
 // Check reports the first machine path per line among the file's default values.
@@ -93,18 +105,38 @@ type perLine struct {
 }
 
 func (r *perLine) add(i int, p, where string) {
-	if p != "" && (len(r.out) == 0 || i != r.last) {
-		r.out, r.last = append(r.out, finding(i, p, where)), i
+	if p != "" {
+		r.push(i, finding(i, p, where))
 	}
 }
 
-// properties is every value of a .properties file.
+func (r *perLine) push(i int, fd lint.Finding) {
+	if len(r.out) == 0 || i != r.last {
+		r.out, r.last = append(r.out, fd), i
+	}
+}
+
+// properties is every value of a .properties file; a machine path under a buildKeys key of a module's
+// gradle.properties is an INFO row.
 func properties(f *javasrc.File) []lint.Finding {
+	prescribed := filepath.Base(f.Path) == "gradle.properties" && !inKitFixture(f.Path)
 	var r perLine
 	for _, e := range props.Read(f.Raw) {
-		r.add(e.Line, path(e.Value), "a .properties value")
+		if p := path(e.Value); p != "" && prescribed && buildKeys[e.Key] {
+			r.push(e.Line, lint.Finding{Severity: lint.Info, Line: e.Line + 1, Msg: e.Key + buildKeyMsg})
+		} else {
+			r.add(e.Line, p, "a .properties value")
+		}
 	}
 	return r.out
+}
+
+// inKitFixture: p, made absolute so a relative root resolves too, lies under the kit's template fixtures.
+func inKitFixture(p string) bool {
+	if abs, err := filepath.Abs(p); err == nil {
+		p = abs
+	}
+	return strings.Contains(filepath.ToSlash(p), kitFixtures)
 }
 
 // script is the const/let/var initializers and object-literal property defaults of an rc JavaScript file.

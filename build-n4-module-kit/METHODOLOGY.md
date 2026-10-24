@@ -33,7 +33,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   extracted into one shared helper, never pasted as a second copy. Review check: a second definition of the same
   shape in the diff (same name, or the same parsing/decoding body) is a finding. Recipe: `types/logic.md`
   § Composition & organization; the kit's own Go code follows the same rule (`BUILD-LOOP.md` § 5 "One layered Go
-  lint stack"). Owed advisory: Go lint G41 `duplicate-helper`. `[ev: retro modular-line-efficient-quality Δ1]`
+  lint stack"). Advisory lint: `toolbelt/lint-duplicate-helper.sh` (G41). `[ev: retro modular-line-efficient-quality Δ1]`
 - [ ] **No machine- or session-specific default paths in source:** a default value that points at a developer home,
   a scratchpad, a temporary directory or one station's install path is removed; the value comes from a slot, a
   station-relative ORD, an environment variable, or the site table (§ Domain correctness). Review check: `/home/`,
