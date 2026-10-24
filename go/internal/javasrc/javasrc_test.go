@@ -206,13 +206,38 @@ var methodsCases = []methodsCase{
 }`, []Method{{"deep", 3, 5}}},
 }
 
+// goOnlyMethodsCases are the declared differences of Methods from mb_parse (package doc): TestMethods runs
+// them, TestDifferentialAwk does not feed them to the awk lib.
+var goOnlyMethodsCases = []methodsCase{
+	{"wrapped signature closing on the brace line", `class W {
+  void m(int a,
+      int b) {
+    x();
+  }
+  public void t(int a,
+      int b)
+      throws Exception {
+    y();
+  }
+  void z(int a, int b) {
+  }
+}`, []Method{{"m", 3, 5}, {"t", 8, 10}, {"z", 11, 12}}},
+	{"a wrapped ) { after a statement is not a signature", `class S {
+  int f = g(1,
+      2);
+  void a(int x,
+      int y) {
+  }
+}`, []Method{{"a", 5, 6}}},
+}
+
 func methodsOf(src string) []Method {
 	stripped, _ := Strip(strings.Split(src, "\n"))
 	return Methods(stripped)
 }
 
 func TestMethods(t *testing.T) {
-	for _, tc := range methodsCases {
+	for _, tc := range append(append([]methodsCase{}, methodsCases...), goOnlyMethodsCases...) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := methodsOf(tc.src); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("Methods\n got %v\nwant %v", got, tc.want)
@@ -233,5 +258,49 @@ func TestLines(t *testing.T) {
 		if err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("Lines(%q) = %q, %v; want %q", in, got, err, want)
 		}
+	}
+}
+
+// TestScopes: Scopes is Methods plus the lambda bodies opened outside a method; a lambda inside a method
+// stays part of the method's body, and Enclosing finds the scope of a line.
+func TestScopes(t *testing.T) {
+	src := `class L {
+  Runnable r = () -> {
+    a();
+  };
+  Runnable s = () ->
+  {
+    b();
+  };
+  void m() {
+    Runnable q = () -> {
+      c();
+    };
+  }
+  int f = 1;
+  Object o = new Object() {
+    public String toString() {
+      return "x";
+    }
+  };
+}`
+	stripped, _ := Strip(strings.Split(src, "\n"))
+	want := []Method{{"lambda", 2, 4}, {"lambda", 6, 8}, {"m", 9, 13}, {"Object", 15, 19}}
+	got := Scopes(stripped)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Scopes\n got %v\nwant %v", got, want)
+	}
+	if ms := Methods(stripped); !reflect.DeepEqual(ms, []Method{{"m", 9, 13}, {"Object", 15, 19}}) {
+		t.Errorf("Methods changed: %v", ms)
+	}
+	for line, w := range map[int]string{3: "lambda", 7: "lambda", 11: "m", 17: "Object", 14: "", 1: ""} {
+		m, ok := Enclosing(got, line)
+		if ok != (w != "") || m.Name != w {
+			t.Errorf("Enclosing(%d) = %v %v, want %q", line, m, ok, w)
+		}
+	}
+	f := NewFile("L.java", strings.Split(src, "\n"))
+	if !reflect.DeepEqual(f.Scopes(), want) {
+		t.Errorf("File.Scopes() = %v", f.Scopes())
 	}
 }
