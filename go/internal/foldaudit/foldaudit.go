@@ -6,7 +6,8 @@
 // four fail-open cases it fixes: a leading-zero deltas cell is decimal (bash read it as octal, and
 // 08/09 skipped the Δ check), an unterminated last INDEX row is audited, and an unreadable INDEX
 // exits 3. It also reports retro aliases (#419): a tag token that is not an exact stem but a
-// segment-aligned part of one, as advisory rows.
+// segment-aligned part of one, advisory by default and a FAIL row with exact-stem credit under
+// --exact-stems.
 // VCS-free by design (kit-links L2).
 package foldaudit
 
@@ -203,10 +204,15 @@ func stem(file string) string {
 }
 
 // citedBy returns the tokens (already sorted) that credit stem: a token T credits it when "-T-"
-// is a hyphen-segment-aligned part of "-stem-" and T has at least minToken characters.
-func citedBy(stem string, tokens []string) []string {
+// is a hyphen-segment-aligned part of "-stem-" and T has at least minToken characters; with exact,
+// only T == stem credits (--exact-stems).
+func citedBy(stem string, tokens []string, exact bool) []string {
 	var hits []string
 	for _, t := range tokens {
+		// Mutation: F19 -- keeping segment credit under --exact-stems lets an alias credit a fold.
+		if exact && t != stem {
+			continue
+		}
 		if segmentOf(t, stem) {
 			hits = append(hits, t)
 		}
@@ -237,11 +243,11 @@ func aliasOf(t string, stems map[string]bool, sorted []string) []string {
 
 // options is the parsed command line.
 type options struct {
-	strict             bool
+	strict, exactStems bool
 	since, index, root string
 }
 
-// parseArgs reads `[--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`; on a usage
+// parseArgs reads `[--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`; on a usage
 // error it returns the exact stderr text of the bash tool.
 func parseArgs(args []string) (options, string) {
 	var o options
@@ -252,6 +258,9 @@ loop:
 		switch {
 		case a == "--strict":
 			o.strict = true
+			i++
+		case a == "--exact-stems":
+			o.exactStems = true
 			i++
 		case a == "--deltas-since":
 			if i+1 >= len(args) || !dateArg.MatchString(args[i+1]) {

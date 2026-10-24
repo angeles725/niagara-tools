@@ -192,7 +192,8 @@ _delta_fixture() {
 
 # Retro aliases (#419): a citation token must be the exact stem (CONTRIBUTING.md:261). A token that is
 # not a stem but is a hyphen-segment-aligned part of one (the rule that credits it today) is an alias
-# row naming the stem, or the candidate stems when ambiguous: an advisory WARN that never changes the exit.
+# row naming the stem, or the candidate stems when ambiguous. Advisory WARN by default; under
+# --exact-stems it is a FAIL row, only an exact stem credits a fold, and --strict exits 1.
 _alias_fixture() {
   D="$BATS_TEST_TMPDIR/kit"
   mkdir -p "$D/retros"
@@ -219,6 +220,31 @@ _alias_fixture() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"fold-audit: WARN $D/core.md:2 retro alias \"comppan-fase1\" — use the exact stem \"comppan-fase1-staging\" (CONTRIBUTING.md:261)"* ]]
   [[ "$output" == *"aliases: 4 tokens are not an exact stem (1 ambiguous)"* ]]
+}
+
+@test "F17: an ambiguous alias lists every candidate stem" {
+  _alias_fixture
+  run "$SCRIPT" --exact-stems "$D/retros/INDEX.md" "$D"
+  [[ "$output" == *"fold-audit: FAIL $D/core.md:3 retro alias \"schema-risk\" is ambiguous — use one exact stem of \"schema-risk-gate\" \"schema-risk-ledger\" (CONTRIBUTING.md:261)"* ]]
+}
+
+@test "F18: an exact stem is never an alias row and still credits under --exact-stems" {
+  _alias_fixture
+  run "$SCRIPT" --exact-stems --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [[ "$output" != *"\"comppan-fase1-staging\" —"* ]]
+  [[ "$output" != *"retro alias \"go-sweep-fold-audit\""* ]]
+  [[ "$output" != *"2026-10-01-comppan-fase1-staging.md"* ]]
+  [[ "$output" != *"2026-10-22-go-sweep-fold-audit.md"* ]]
+}
+
+@test "F19: under --exact-stems an alias-only citation credits neither the fold nor its Δ; --strict exits 1" {
+  # Mutation: F19 -- keeping segment credit under --exact-stems leaves alias-only-row cited.
+  _alias_fixture
+  run "$SCRIPT" --strict --exact-stems --deltas-since 2026-09-24 "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"fold-audit: WARN 2026-10-01-alias-only-row.md folded with no [ev: retro …] citation"* ]]
+  [[ "$output" == *"fold-audit: WARN 2026-10-01-alias-only-row.md Δ1 not cited"* ]]
+  [[ "$output" == *"4 folded, 3 cited, 1 uncited"* ]]
 }
 
 @test "F20: by default an alias still credits (the ambiguous-credit NOTE stays) and alias rows never fail --strict" {

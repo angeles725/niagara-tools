@@ -17,9 +17,9 @@ const (
 	ExitEnv    = 3 // usage or environment error
 )
 
-const usage = "usage: sweep-fold-audit.sh [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
+const usage = "usage: sweep-fold-audit.sh [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>"
 
-// Main implements `sweep-fold-audit [--strict] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`.
+// Main implements `sweep-fold-audit [--strict] [--exact-stems] [--deltas-since <YYYY-MM-DD>] <INDEX.md> <kit-root>`.
 func Main(args []string, s cli.Stdio) int {
 	o, usageErr := parseArgs(args)
 	if usageErr != "" {
@@ -99,8 +99,8 @@ func indexStems(lines []string) map[string]bool {
 }
 
 // aliases reports every corpus tag whose token is not an exact stem but is a segment-aligned part
-// of one (#419, CONTRIBUTING.md:261) as an advisory WARN row that never changes the exit code. A
-// token that matches no stem is left alone, as before.
+// of one (#419, CONTRIBUTING.md:261): an advisory WARN row by default, a FAIL row that fails
+// --strict under --exact-stems. A token that matches no stem is left alone, as before.
 func (t *audit) aliases(stems map[string]bool) {
 	sorted := make([]string, 0, len(stems))
 	for s := range stems {
@@ -108,6 +108,9 @@ func (t *audit) aliases(stems map[string]bool) {
 	}
 	sort.Strings(sorted)
 	kind, memo := "WARN", map[string][]string{}
+	if t.o.exactStems {
+		kind = "FAIL"
+	}
 	for _, c := range t.h.cites {
 		cands, ok := memo[c.token]
 		if !ok {
@@ -129,7 +132,11 @@ func (t *audit) aliases(stems map[string]bool) {
 			}
 			fmt.Fprintf(t.s.Out, "%s is ambiguous — use one exact stem of %s (CONTRIBUTING.md:261)\n", where, strings.Join(quoted, " "))
 		}
-		// Mutation: F20 -- setting warned for the advisory WARN rows turns the CI run (--strict) red.
+		// Mutation: F21 -- treating a FAIL alias row as advisory lets --exact-stems --strict exit 0.
+		// Mutation: F20 -- setting warned for the default WARN rows turns the CI run (--strict) red.
+		if t.o.exactStems {
+			t.warned = true
+		}
 	}
 }
 
@@ -143,7 +150,7 @@ func (t *audit) row(line string) {
 	}
 	t.nFolded++
 	st := stem(file)
-	hits := citedBy(st, t.tokens)
+	hits := citedBy(st, t.tokens, t.o.exactStems)
 
 	if t.o.since != "" && !(prefix(file, 10) < t.o.since) {
 		t.deltas(line, file, st)

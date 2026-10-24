@@ -265,11 +265,17 @@ func TestMainAliases(t *testing.T) {
 		w + "2026-10-01-alias-only-row.md Δ1 not cited\n" +
 		aliasRows("WARN") +
 		"fold-audit: 4 folded, 4 cited, 0 uncited\n" + deltas + aliasSum
+	// --exact-stems: only an exact stem credits, so the alias-only row is uncited and every alias is a FAIL row.
+	wantExact := w + "2026-10-01-alias-only-row.md Δ1 not cited\n" +
+		w + "2026-10-01-alias-only-row.md" + nocit +
+		aliasRows("FAIL") +
+		"fold-audit: 4 folded, 3 cited, 1 uncited\n" + deltas + aliasSum
 	for _, c := range []struct {
 		args []string
 		want string
 	}{
 		{[]string{"--deltas-since", "2026-09-24", index, root}, wantDefault},
+		{[]string{"--exact-stems", "--deltas-since", "2026-09-24", index, root}, wantExact},
 	} {
 		code, out, errs := run("", c.args...)
 		if code != ExitOK || out != c.want || errs != "" {
@@ -278,7 +284,7 @@ func TestMainAliases(t *testing.T) {
 	}
 }
 
-// The alias rows are advisory: they never change the exit code.
+// The alias rows are advisory by default and fail --strict only under --exact-stems.
 func TestMainAliasExit(t *testing.T) {
 	t.Parallel()
 	root := kit(t, map[string]string{
@@ -294,6 +300,9 @@ func TestMainAliasExit(t *testing.T) {
 		want string
 	}{
 		{[]string{"--strict", index, root}, ExitOK, "fold-audit: NOTE ambiguous citation token credits 2026-10-01-exact-stem-row.md: exact-stem-row stem-row\nfold-audit: WARN " + root + "/core.md" + row + tail},
+		// Mutation: F21 -- counting a FAIL alias row as advisory lets --exact-stems --strict exit 0.
+		{[]string{"--strict", "--exact-stems", index, root}, ExitStrict, "fold-audit: FAIL " + root + "/core.md" + row + tail},
+		{[]string{"--exact-stems", index, root}, ExitOK, "fold-audit: FAIL " + root + "/core.md" + row + tail},
 	} {
 		code, out, errs := run("", c.args...)
 		if code != c.code || out != c.want || errs != "" {
