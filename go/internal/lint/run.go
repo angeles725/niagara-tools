@@ -49,7 +49,7 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 			}
 		} else { // a walk error wins: scan_files_or_exit exits before the K20 check
 			for i, sp := range specs {
-				if sp.Root == nil && !stopped[i] && !selectsAny(sp.Select, root, files) {
+				if sp.Root == nil && !stopped[i] && !sp.EmptyOK && !selectsAny(sp.Select, root, files) {
 					r.empty(i, sp, root)
 					stopped[i], live = true, live-1
 				}

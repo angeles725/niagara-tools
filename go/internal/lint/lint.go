@@ -122,6 +122,10 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// EmptyOK opts a rule out of the empty-root error for a root where it selects no file: no ERROR row,
+	// exit 0. Only for a lint whose contract says so (lint-lexicon-ascii LA5: a module with no *.lexicon
+	// has nothing to check, and report-module runs it on every module); a walk error still exits 3.
+	EmptyOK bool
 	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
 	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
 	// RootRule; it runs by name or in a rule list.
