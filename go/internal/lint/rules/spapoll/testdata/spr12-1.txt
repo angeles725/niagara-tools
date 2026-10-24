@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/src/rc/concise2.js:5  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+-- stderr --
+-- src/rc/concise2.js --
+const poll = () =>
+  fetch('/api/state')
+    .then((r) => r.json())
+    .catch(markStale);
+setInterval(poll, 5000);

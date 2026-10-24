@@ -1,0 +1,18 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/src/rc/index.html:10  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- src/rc/index.html --
+<script>
+async function poll() {
+  try {
+    await readJson();
+    paint("live");
+  } catch (err) {
+    location.href = location.href;
+  }
+}
+setInterval(poll, 5000);
+</script>

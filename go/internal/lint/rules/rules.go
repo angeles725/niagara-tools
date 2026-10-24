@@ -26,6 +26,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/sessionstore"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/spapoll"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
@@ -63,5 +64,6 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		spapoll.Spec(),
 	}
 }

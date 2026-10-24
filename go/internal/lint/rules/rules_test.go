@@ -99,7 +99,7 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		if !sp.ModuleRoot { // --all runs on source roots and leaves a module-root rule out
+		if !sp.ModuleRoot && !sp.OptionalInAll { // --all runs on source roots: no module-root rule, and a one-profile rule may find nothing
 			all += row
 		}
 		var o, e bytes.Buffer

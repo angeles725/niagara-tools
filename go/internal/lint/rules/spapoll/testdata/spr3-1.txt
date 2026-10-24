@@ -1,0 +1,12 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- src/rc/index.html --
+<script>
+function poll() {
+  readJson().then(function () { paint("live"); });
+}
+setInterval(poll, 5000);
+</script>

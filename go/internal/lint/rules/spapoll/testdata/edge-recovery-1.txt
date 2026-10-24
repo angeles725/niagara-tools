@@ -1,0 +1,77 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-spa-poll-no-recovery  @DIR@/r11.js:5  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r13.js:1  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r14.html:3  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r2.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/r3.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r5.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/r6.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/r7.js:2  setInterval/setTimeout poll loop 'poll()' has a catch path with no location.reload(/location.href recovery anywhere in the file -- kiosk/HMI will stay blank after a station restart; add a watchdog on time since the last success (lastOkAt) -> fetchT probe of the app marker -> location.reload()
+WARN  lint-spa-poll-no-recovery  @DIR@/r8.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+WARN  lint-spa-poll-no-recovery  @DIR@/r9.js:2  setInterval/setTimeout poll loop 'poll()' reloads, but the recovery is not keyed on time since the last success (no lastOk* timestamp set from a clock in the poll body and compared) -- a failure-count or reload-on-error watchdog is blind to a hung request; key it on lastOkAt (types/dashboard.md Poll loop reliability)
+-- stderr --
+-- r1.js --
+let lastOkAt = 0;
+function poll() {
+  fetch("/x").then(r => { lastOkAt = Date.now(); }).catch(e => 0);
+  if (Date.now() - lastOkAt > 60000) location.reload();
+}
+setInterval(poll, 5000);
+-- r10.js --
+function poll() {
+  // a().catch(e => 0);
+  b();
+}
+setInterval(poll, 1);
+-- r11.js --
+function poll() {
+  /* a().catch(e => 0); */
+  b();
+}
+setInterval(poll, 1);
+-- r12.js --
+function poll() { const u = "http://x"; a().catch(e => 0); }
+setInterval(poll, 1);
+-- r13.js --
+const t = `setInterval(poll, 1)`;
+function poll() { a().catch(e => 0); }
+-- r14.html --
+<html><script>
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+</script></html>
+-- r2.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+if (location.href == "/x") go();
+-- r3.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+window.location.reload ( );
+-- r4.js --
+function poll() { lastOkStamp = +new Date(); a().catch(e => 0); }
+setInterval(poll, 1);
+if (lastOkStamp < x) location.href = "/";
+-- r5.js --
+function poll() { lastOk = performance.now(); a().catch(e => 0); }
+setInterval(poll, 1);
+location.reload();
+-- r6.js --
+function poll() { lastOkAt = Date.now(); a().catch(e => 0); }
+setInterval(poll, 1);
+location.reload();
+-- r7.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+// location.reload();
+-- r8.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+/* location.reload(); */
+-- r9.js --
+function poll() { a().catch(e => 0); }
+setInterval(poll, 1);
+log("location.reload()");
