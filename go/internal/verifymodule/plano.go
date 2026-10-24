@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -28,8 +30,8 @@ var (
 )
 
 // plano is --plano: Rc (IMG_W/IMG_H) == Ri (the #planoImg PNG header) == Rv (the zones viewBox) and every
-// numeric aspect-ratio == Rc, by integer cross-multiplication. An operand that is no decimal integer (a
-// viewBox of 2.5) is a usage error naming it, exit 2.
+// numeric aspect-ratio == Rc, by cross-multiplication. A viewBox is SVG numbers (1920.5 is valid); one
+// whose width or height is no finite number > 0 is a FAIL row.
 func plano(args []string, s cli.Stdio) int {
 	if len(args) != 1 {
 		fmt.Fprintln(s.Err, "usage: verify-module.sh --plano <index.html|jar>")
@@ -103,6 +105,10 @@ func (p *planoRun) check(t grepText) int {
 		return 1
 	}
 	rv := awkFields(vb)
+	if !positive(rv[0]) || !positive(rv[1]) {
+		p.row("FAIL", "Rv: viewBox width/height is not a finite number > 0: "+vb)
+		return 1
+	}
 	b64 := ""
 	if ms := linesHolding(t, `id="planoImg"`).only(pngB64Re); len(ms) > 0 {
 		b64 = strings.TrimPrefix(ms[0], "data:image/png;base64,")
@@ -118,22 +124,10 @@ func (p *planoRun) check(t grepText) int {
 		return 1
 	}
 	ri := []string{itoa(int(riW)), itoa(int(riH))}
-	steps := []func() (string, bool){
-		func() (string, bool) {
-			return p.unless(rcW, rcH, ri[0], ri[1], fmt.Sprintf("Rc(%s/%s) != Ri(%s/%s): IMG_W/IMG_H vs intrinsic PNG", rcW, rcH, ri[0], ri[1]))
-		},
-		func() (string, bool) {
-			return p.unless(rcW, rcH, rv[0], rv[1], fmt.Sprintf("Rv(%s/%s) != Rc(%s/%s): viewBox vs IMG_W/IMG_H", rv[0], rv[1], rcW, rcH))
-		},
-	}
+	p.unless(rcW, rcH, ri[0], ri[1], fmt.Sprintf("Rc(%s/%s) != Ri(%s/%s): IMG_W/IMG_H vs intrinsic PNG", rcW, rcH, ri[0], ri[1]))
+	p.unless(rcW, rcH, rv[0], rv[1], fmt.Sprintf("Rv(%s/%s) != Rc(%s/%s): viewBox vs IMG_W/IMG_H", rv[0], rv[1], rcW, rcH))
 	for _, ln := range linesHolding(t, "aspect-ratio:").lines {
-		steps = append(steps, func() (string, bool) { return p.aspect(ln, rcW, rcH) })
-	}
-	for _, step := range steps {
-		if bad, ok := step(); !ok {
-			fmt.Fprintf(p.s.Err, "verify-module: --plano: %s: not an integer: %s\n", p.in, bad)
-			return 2
-		}
+		p.aspect(ln, rcW, rcH)
 	}
 	if !p.fail {
 		p.row("PASS", fmt.Sprintf("Rc=%s/%s Ri=%s/%s Rv=%s/%s — all agree", rcW, rcH, ri[0], ri[1], rv[0], rv[1]))
@@ -142,27 +136,34 @@ func (p *planoRun) check(t grepText) int {
 	return 1
 }
 
-// unless prints a FAIL row with msg unless a/b == c/d (a*d == b*c); ok is false, with the operand, when
-// one is no decimal integer.
-func (p *planoRun) unless(a, b, c, d, msg string) (bad string, ok bool) {
-	var v [4]int64
+// ratioTolerance is the relative difference a*d vs b*c within which two ratios agree: float rounding
+// only. The bash compared integers exactly, which a decimal viewBox (1920.5) cannot be.
+const ratioTolerance = 1e-9
+
+// unless prints a FAIL row with msg unless a/b == c/d (a*d == b*c in float, within ratioTolerance).
+// Every operand is a number: digits (IMG_W/IMG_H, the PNG size, an aspect-ratio) or a viewBox value
+// positive() accepted.
+func (p *planoRun) unless(a, b, c, d, msg string) {
+	var v [4]float64
 	for i, x := range []string{a, d, b, c} {
-		n, ok := intOperand(x)
-		if !ok {
-			return x, false
-		}
-		v[i] = n
+		v[i], _ = strconv.ParseFloat(x, 64)
 	}
-	if v[0]*v[1] != v[2]*v[3] {
+	l, r := v[0]*v[1], v[2]*v[3]
+	if math.Abs(l-r) > ratioTolerance*math.Max(math.Abs(l), math.Abs(r)) {
 		p.row("FAIL", msg)
 		p.fail = true
 	}
-	return "", true
+}
+
+// positive is whether s is an SVG viewBox width or height the check can use: a finite number > 0.
+func positive(s string) bool {
+	f, err := strconv.ParseFloat(s, 64)
+	return err == nil && f > 0 && !math.IsInf(f, 0)
 }
 
 // aspect checks every aspect-ratio of one CSS line against Rc, as the bash read it: all of the line's
 // values joined by newlines, blanks and tabs dropped, then cut at its first and last "/".
-func (p *planoRun) aspect(ln, rcW, rcH string) (string, bool) {
+func (p *planoRun) aspect(ln, rcW, rcH string) {
 	var vals []string
 	for _, m := range newGrepText(ln).only(aspectRe) {
 		k := aspectHead.FindStringIndex(m) // sed s/aspect-ratio:[[:space:]]*//: the first one only
@@ -171,20 +172,20 @@ func (p *planoRun) aspect(ln, rcW, rcH string) (string, bool) {
 	raw := subst(strings.Join(vals, "\n"))
 	v := strings.NewReplacer(" ", "", "\t", "").Replace(raw)
 	if raw == "" || v == "auto" {
-		return "", true
+		return
 	}
 	if !ratioGlob.MatchString(v) {
 		p.row("FAIL", "unparseable aspect-ratio: "+v)
 		p.fail = true
-		return "", true
+		return
 	}
 	n, d := v[:strings.IndexByte(v, '/')], v[strings.LastIndexByte(v, '/')+1:]
 	if n == "" || d == "" || strings.Trim(n, "0123456789") != "" || strings.Trim(d, "0123456789") != "" {
 		p.row("FAIL", "unparseable aspect-ratio: "+v)
 		p.fail = true
-		return "", true
+		return
 	}
-	return p.unless(n, d, rcW, rcH, fmt.Sprintf("aspect-ratio %s != Rc(%s/%s)", v, rcW, rcH))
+	p.unless(n, d, rcW, rcH, fmt.Sprintf("aspect-ratio %s != Rc(%s/%s)", v, rcW, rcH))
 }
 
 // firstDigits is `| grep -oE '[0-9]+$' | head -1` over grep -o matches.

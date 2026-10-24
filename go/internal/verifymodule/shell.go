@@ -128,9 +128,9 @@ func basename(p, suffix string) string {
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// intOperand is s as a coverage count or a --plano ratio operand: a decimal integer with an optional sign
+// intOperand is s as a coverage count: a decimal integer with an optional sign
 // (a leading zero is decimal). ok is false for anything else, overflow included. Bash arithmetic read 010
-// as octal and, on 08 or 2.5, abandoned the block (TestIntegerOperands).
+// as octal and, on 08, abandoned the block (TestIntegerOperands).
 func intOperand(s string) (n int64, ok bool) {
 	n, err := strconv.ParseInt(s, 10, 64)
 	return n, err == nil

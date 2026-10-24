@@ -79,11 +79,13 @@ func TestUnreadableSource(t *testing.T) {
 	}
 }
 
-// TestIntegerOperands: the coverage counts and the --plano ratio operands are decimal integers. A
-// leading zero is decimal (08 is 8), and an operand that is no integer (2.5, abc, one past int64) is a
-// usage error, exit 2, naming it. Declared difference: bash arithmetic read 010 as octal 8, and on 08 or
-// 2.5 left the coverage or --plano block and parsed the rest of the arguments as the gate's (a non-jar,
-// exit 2 "not a jar"); an operand naming an unset variable (abc) ended the run under set -u, exit 1.
+// TestIntegerOperands: the coverage counts are decimal integers (a leading zero is decimal, 08 is 8) and
+// one that is not (one past int64) is a usage error, exit 2, naming it. A --plano viewBox is SVG numbers:
+// a decimal one is compared in float, and a width or height that is no finite number > 0 (abc, -2) is a
+// FAIL row, exit 1. Declared difference: bash arithmetic read 010 as octal 8, and on 08 or 2.5 left the
+// coverage or --plano block and parsed the rest of the arguments as the gate's (a non-jar, exit 2 "not a
+// jar"); an operand naming an unset variable (abc) ended the run under set -u, exit 1, with no row; a
+// negative viewBox passed.
 func TestIntegerOperands(t *testing.T) {
 	head := append([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR"), 0, 0, 0, 2, 0, 0, 0, 3)
 	html := func(vb string) string {
@@ -103,12 +105,14 @@ func TestIntegerOperands(t *testing.T) {
 			"verify-module: coverage: not an integer: 99999999999999999999\n" + usageCoverage},
 		{"plano-08", html("0 0 02 03"), []string{"--plano", "@DIR@/p.html"}, 0,
 			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=02/03 — all agree\n", ""},
-		{"plano-2.5", html("0 0 2.5 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
-			"verify-module: --plano: @DIR@/p.html: not an integer: 2.5\n"},
-		{"plano-abc", html("0 0 abc 3"), []string{"--plano", "@DIR@/p.html"}, 2, "",
-			"verify-module: --plano: @DIR@/p.html: not an integer: abc\n"},
-		{"plano-negative", html("0 0 -2 -3"), []string{"--plano", "@DIR@/p.html"}, 0,
-			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=-2/-3 — all agree\n", ""},
+		{"plano-2.5", html("0 0 2.5 3"), []string{"--plano", "@DIR@/p.html"}, 1,
+			"FAIL  plano      @DIR@/p.html  Rv(2.5/3) != Rc(2/3): viewBox vs IMG_W/IMG_H\n", ""},
+		{"plano-4.5", html("0 0 4.5 6.75"), []string{"--plano", "@DIR@/p.html"}, 0,
+			"PASS  plano      @DIR@/p.html  Rc=2/3 Ri=2/3 Rv=4.5/6.75 — all agree\n", ""},
+		{"plano-abc", html("0 0 abc 3"), []string{"--plano", "@DIR@/p.html"}, 1,
+			"FAIL  plano      @DIR@/p.html  Rv: viewBox width/height is not a finite number > 0: abc 3\n", ""},
+		{"plano-negative", html("0 0 -2 -3"), []string{"--plano", "@DIR@/p.html"}, 1,
+			"FAIL  plano      @DIR@/p.html  Rv: viewBox width/height is not a finite number > 0: -2 -3\n", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
