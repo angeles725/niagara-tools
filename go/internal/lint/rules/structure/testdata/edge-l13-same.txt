@@ -1,0 +1,18 @@
+-- args --
+@DIR@/l13-same/G/M
+-- want --
+exit 1
+FAIL  lint-structure  @DIR@/l13-same/G/M/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+-- stderr --
+-- l13-same/.git/HEAD --
+x
+-- l13-same/G/M/A-rt/module-include.xml --
+<types/>
+-- l13-same/G/M/A-rt/module.palette --
+<p n="A"/>
+-- l13-same/G/M/gradle.properties --
+niagara_home=/opt/a
+org.gradle.java.installations.paths=/j
+org.gradle.java.installations.auto-detect=false
+-- l13-same/G/N/gradle.properties --
+niagara_home=/opt/a

@@ -35,7 +35,8 @@ rule's rows stay contiguous.
    on stderr and exits 3, as for an unreadable file. Never drop a file silently.
    Row columns: `Finding.Check` is the sub-check shown in the check column (empty shows the rule ID), so
    one rule can report several named checks. `Line` 0 is a file-level finding printed as `<path>: <msg>`;
-   rows with `Line` ≥ 1 are unchanged. Severity `Pass` prints `PASS` and never affects the exit code.
+   rows with `Line` ≥ 1 are unchanged. `Spec.BarePathRow` prints a `Line` 0 finding as `<path>  <msg>`
+   instead (two spaces, no colon), the row of lint-structure. Severity `Pass` prints `PASS` and never affects the exit code.
    `Spec.UsageExit` is the exit code of a usage error when the rule runs alone (0 means 3).
    A directory the walk cannot read prints `<lint>: cannot list every file under <root>: find: '<dir>': <reason>`
    (`<dir>` quoted as GNU find does under `LC_ALL=C`: `\'`, `\\`, `\n`-style C escapes, 3-digit octal for
@@ -83,6 +84,13 @@ rule's rows stay contiguous.
    		Select: lint.Selection{Names: []string{"*.java"}}}
    }
    ```
+   A lint that checks a module's layout rather than its sources (directories, files above or beside the
+   root) implements `lint.RootRule` (`CheckRoot(root string)`; reference port: `rules/structure`) and sets
+   `Spec.Root`: the runner walks nothing for it, so `Select` and `ContinueOnWalkError` do not
+   apply; a root with nothing it checks returns `lint.ErrEmptyRoot`, which prints the `Spec.EmptyError` row
+   (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
+   fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
+   out; it runs by name or in a rule list.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,

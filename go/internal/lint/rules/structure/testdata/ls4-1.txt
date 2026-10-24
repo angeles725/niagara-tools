@@ -1,0 +1,12 @@
+-- args --
+@DIR@/chihuahua-rt
+-- want --
+exit 1
+FAIL  lint-structure  chihuahua-rt/module.lexicon  L4: lexicon empty (1 type(s) declared, zero key=value entries)
+FAIL  lint-structure  chihuahua-rt  L5: module.palette missing for -rt profile
+-- stderr --
+-- chihuahua-rt/chihuahua-rt/module-include.xml --
+<types>
+<type name="ChiThing" class="com.angeles.chihuahua.BChiThing"/>
+</types>
+-- chihuahua-rt/chihuahua-rt/module.lexicon --

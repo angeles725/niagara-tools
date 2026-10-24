@@ -289,6 +289,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-go-lint-delays.md | kit | 2026-10-23 | pending | 2 |
 | 2026-10-23-go-lint-demand-scope.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-go-lint-silent-protection.md | kit | 2026-10-23 | pending | 1 |
+| 2026-10-23-go-lint-structure.md | kit | 2026-10-23 | pending | 3 |
 | 2026-10-23-go-module-gen-retro-index.md | kit | 2026-10-23 | folded | 2 |
 | 2026-10-23-r10-dedupe-pins-measured-cuts.md | kit | 2026-10-23 | folded | 3 |
 | 2026-10-23-r8-buildsh-316-308.md | kit | 2026-10-23 | pending | 3 |
