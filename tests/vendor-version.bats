@@ -69,3 +69,20 @@ _mkjar() {
   run vv_module_version "$TMPDIR_T/no-such.jar"
   [ "$status" -eq 0 ]; [ -z "$output" ]
 }
+
+@test "VV-source-version: reads the first uncommented defaultModuleVersion(\"X\") of a build.gradle.kts on stdin" {
+  run vv_source_version <<'KTS'
+niagaraModule {
+  // defaultModuleVersion sets the "vendorVersion" attribute on all modules
+  // defaultModuleVersion("9.9.9")
+  defaultModuleVersion( "2.10.0" )
+  defaultModuleVersion("1.0.0")
+}
+KTS
+  [ "$status" -eq 0 ]; [ "$output" = "2.10.0" ]
+}
+
+@test "VV-source-version-missing: no defaultModuleVersion call prints nothing, status 0" {
+  run vv_source_version <<<'plugins { id("x") }'
+  [ "$status" -eq 0 ]; [ -z "$output" ]
+}
