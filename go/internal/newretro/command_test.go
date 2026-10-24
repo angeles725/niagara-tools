@@ -63,3 +63,23 @@ func TestEnvelopeWriteFailureLandsNothing(t *testing.T) {
 		t.Errorf("exit %d, stdout %q, tree after %q; want exit 1, no stdout and the tree before %q", code, out, after, before)
 	}
 }
+
+// TestDeltasRefusedBeforeRender: an over-cap or overflowing --deltas is refused while parsing, so nothing is
+// rendered or written (the inputs stay small or are never rendered: an overflowing count must never size a loop).
+func TestDeltasRefusedBeforeRender(t *testing.T) {
+	for _, v := range []string{"100", "99999999999999999999", "18446744073709551616", "-1", "x", ""} {
+		if _, msg := parse([]string{"kit", "slugabc", "--deltas", v}, today); msg != "new-retro: --deltas must be an integer from 0 to 99: "+v+"\n" {
+			t.Errorf("parse --deltas %q: message %q, want the 0-99 refusal", v, msg)
+		}
+	}
+	saved := render
+	t.Cleanup(func() { render = saved })
+	render = func(retro) string { t.Fatal("the stub was rendered for a refused --deltas"); return "" }
+	root := fixture(t)
+	if code, _, _ := runIn(root, "kit", "slugabc", "--deltas", "99999999999999999999"); code != ExitUsage {
+		t.Errorf("exit %d, want %d", code, ExitUsage)
+	}
+	if _, err := os.Stat(filepath.Join(root, "retros", "2026-01-02-slugabc.md")); err == nil {
+		t.Error("a stub was written for a refused --deltas")
+	}
+}

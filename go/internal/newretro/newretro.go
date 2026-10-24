@@ -68,7 +68,13 @@ func kitRoot(args []string, s cli.Stdio) (string, []string) {
 	return wd, args
 }
 
-type retro struct{ module, slug, date, deltas string }
+type retro struct {
+	module, slug, date, deltas string
+	rows                       int // the validated --deltas count (0..maxDeltas); only parse sets it
+}
+
+// maxDeltas caps --deltas: the stub renders one placeholder row per delta, so no input may size that loop.
+const maxDeltas = 99
 
 // parse reads `<module> <slug> [--date D] [--deltas N]...`; a non-empty message is a usage error.
 func parse(args []string, today func() string) (retro, string) {
@@ -87,7 +93,7 @@ func parse(args []string, today func() string) (retro, string) {
 		case "--date":
 			dst, valid, want = &r.date, isDate, "a YYYY-MM-DD date"
 		case "--deltas":
-			dst, valid, want = &r.deltas, isCount, "a non-negative integer"
+			dst, valid, want = &r.deltas, isCount, "an integer from 0 to 99"
 		default:
 			return r, "new-retro: unknown option: " + rest[0] + "\n"
 		}
@@ -100,6 +106,7 @@ func parse(args []string, today func() string) (retro, string) {
 		}
 		*dst = rest[1]
 	}
+	r.rows, _ = count(r.deltas) // validated above, or the default "0"
 	return r, ""
 }
 
@@ -123,8 +130,21 @@ func isDate(v string) bool {
 	return err == nil
 }
 
-// isCount: decimal digits only, the deltas header gen-retro-index accepts.
-func isCount(v string) bool { return v != "" && strings.Trim(v, "0123456789") == "" }
+// count is v as a delta count: decimal digits only (the deltas header gen-retro-index accepts), parsed with its
+// overflow error checked, and at most maxDeltas.
+// Mutation: NR-cap -- dropping the cap or the Atoi error lets an overflowing --deltas size the stub's row loop
+func count(v string) (int, bool) {
+	if v == "" || strings.Trim(v, "0123456789") != "" {
+		return 0, false
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n > maxDeltas {
+		return 0, false
+	}
+	return n, true
+}
+
+func isCount(v string) bool { _, ok := count(v); return ok }
 
 func alnum(c byte) bool { return c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' }
 
@@ -162,7 +182,7 @@ func (r retro) write(root string, s cli.Stdio) int {
 	}
 	index := retros + "/INDEX.md"
 	oldIndex, indexErr := os.ReadFile(index)
-	if err := create(file, r.stub()); err != nil {
+	if err := create(file, render(r)); err != nil {
 		fmt.Fprint(s.Err, "new-retro: failed to write retro file\n")
 		return ExitWrite
 	}
@@ -212,11 +232,13 @@ func create(path, content string) error {
 	return err
 }
 
+// render is the stub renderer; a test swaps it to prove a refused run never renders.
+var render = retro.stub
+
 // stub is the retro template with the header block on lines 1-3 and one placeholder row per delta.
 func (r retro) stub() string {
 	var rows strings.Builder
-	n, _ := strconv.Atoi(r.deltas)
-	for i := 1; i <= n; i++ {
+	for i := 1; i <= min(r.rows, maxDeltas); i++ {
 		fmt.Fprintf(&rows, "| Δ%d | <the change, one line> | `<kit file>` § `<exact heading>` | `[ev: corpus B<n>]` |\n", i)
 	}
 	row := "| " + r.date + "-" + r.slug + ".md | " + r.module + " | " + r.date + " | pending | " + r.deltas + " |"

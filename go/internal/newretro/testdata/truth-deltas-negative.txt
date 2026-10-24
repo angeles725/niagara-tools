@@ -6,7 +6,7 @@ slugabc
 -- want --
 exit 3
 -- stderr --
-new-retro: --deltas must be a non-negative integer: -1
+new-retro: --deltas must be an integer from 0 to 99: -1
 -- @kind --
 truth: hand-edited want of the case edge-deltas-negative recorded at 15e792d1: --deltas must be a non-negative integer, refused as usage (the bash wrote the stub, the index generator rejected it, exit 1)
 -- @env --

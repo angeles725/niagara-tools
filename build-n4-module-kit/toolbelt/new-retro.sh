@@ -3,7 +3,7 @@
 #
 # Usage: new-retro.sh <module|kit> <slug> [--date YYYY-MM-DD] [--deltas N]
 #   <slug>: [A-Za-z0-9][A-Za-z0-9._-]+, at least 6 chars, checked whole (the bash glob checked only the first 6)
-#   --date: a calendar date spelled YYYY-MM-DD (default today) · --deltas: decimal digits (default 0);
+#   --date: a calendar date spelled YYYY-MM-DD (default today) · --deltas: an integer from 0 to 99, decimal digits (default 0);
 #   any other value is a usage error, exit 3 (the bash accepted any value)
 #
 # Resolves the kit root from $KIT (env) → first positional arg if it is a directory
