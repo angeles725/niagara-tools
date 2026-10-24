@@ -1,0 +1,12 @@
+<!-- Module Include File -->
+<!-- Fixture for tests/lint-agent-on-include-sync.bats: the course Bonus Lab trafficLightDriver-wb part's line as the
+     annotation processor writes it for BTrafficLightDriverPointManager once regenerated. -->
+<types>
+  <!--com.tridiumuniversity.trafficLightDriver.ui-->
+  <type class="com.tridiumuniversity.trafficLightDriver.ui.BTrafficLightDriverPointManager" name="TrafficLightDriverPointManager">
+    <agent>
+      <on type="trafficLightDriver:TrafficLightDriverPointDeviceExt"/>
+      <on type="trafficLightDriver:TrafficLightDriverPointFolder"/>
+    </agent>
+  </type>
+</types>
