@@ -190,7 +190,7 @@ func ParseCSV(text string, maxRows int, namePositions []int) ([]string, []*pyjso
 	}
 	names := make([]string, len(header))
 	for i, h := range header {
-		names[i] = strip(StripControl(h))
+		names[i] = Strip(StripControl(h))
 	}
 	columns := UniqueColumns(names)
 	decode := map[int]bool{}

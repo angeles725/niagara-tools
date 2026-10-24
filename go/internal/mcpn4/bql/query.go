@@ -43,8 +43,8 @@ var NameColumns = []string{"Name"}
 // LocalDeviceSlots are the frozen slots where a network keeps the station's own device.
 var LocalDeviceSlots = []string{"localDevice"}
 
-// strip is str.strip(): leading and trailing str.isspace() code points removed.
-func strip(s string) string { return strings.TrimFunc(s, pyjson.IsSpace) }
+// Strip is str.Strip(): leading and trailing str.isspace() code points removed.
+func Strip(s string) string { return strings.TrimFunc(s, pyjson.IsSpace) }
 
 // UnescapeSlot decodes Niagara slot-name escaping: $20 is a space, $u00e9 is é. A surrogate
 // escape decodes to a lone surrogate (WTF-8), as chr() gives one.
@@ -65,7 +65,7 @@ func ValidateQuery(query any) (string, error) {
 	if !ok {
 		return "", valueError("query must be a string starting with select")
 	}
-	q = strip(q)
+	q = Strip(q)
 	switch {
 	case strings.Contains(q, "|"):
 		return "", valueError("query must not contain '|': only one select is composed into the ORD")
@@ -118,13 +118,13 @@ func ComposeOrd(base, query any) (string, error) {
 // name). The CSV headers are display names a localized station translates; the select list is
 // ours, so it names the columns by position.
 func SelectedSlots(query string) []string {
-	m := selectListRe.FindStringSubmatch(strip(query))
+	m := selectListRe.FindStringSubmatch(Strip(query))
 	if m == nil {
 		return nil
 	}
 	var names []string
 	for _, part := range strings.Split(m[1], ",") {
-		n := strip(part)
+		n := Strip(part)
 		if n == "*" || n == "" {
 			return nil
 		}
