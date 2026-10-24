@@ -2,6 +2,7 @@
 # new-retro.sh — Atomic retro stub writer for the build-n4-module kit.
 #
 # Usage: new-retro.sh <module|kit> <slug> [--date YYYY-MM-DD] [--deltas N]
+#   <slug>: [A-Za-z0-9][A-Za-z0-9._-]+, at least 6 chars, checked whole (the bash glob checked only the first 6)
 #
 # Resolves the kit root from $KIT (env) → first positional arg if it is a directory
 # with a retros/ dir → this script's ../ (unresolved: a symlinked toolbelt copy names its own parent) → cwd.

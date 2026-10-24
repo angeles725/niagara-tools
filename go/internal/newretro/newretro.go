@@ -95,12 +95,13 @@ func parse(args []string, today func() string) (retro, string) {
 	return r, ""
 }
 
-// slugOK is the bash case glob: an alphanumeric, then five of [A-Za-z0-9._-], then anything.
+// slugOK: an alphanumeric, then at least five of [A-Za-z0-9._-], and nothing else.
 func slugOK(slug string) bool {
 	if len(slug) < 6 || !alnum(slug[0]) {
 		return false
 	}
-	for i := 1; i < 6; i++ {
+	for i := 1; i < len(slug); i++ {
+		// Mutation: NR-slug -- checking only slug[1:6] (the bash glob) lets "abcdef/../../x" reach the write
 		if c := slug[i]; !alnum(c) && c != '.' && c != '_' && c != '-' {
 			return false
 		}

@@ -1,5 +1,6 @@
 # shellcheck shell=bash
 # cases.sh — the golden cases record.sh writes: the tests/retro-loop.bats runs (bats-*) and edge cases (edge-*).
+# A case the Go port changed on purpose is a truth-* case (hand-written) and is no longer recorded here.
 # Sourced by record.sh, which defines new/kit/put/rec, D (the case dir) and ENVV (the case's environment).
 # shellcheck disable=SC2034  # ENVV is read by record.sh's rec
 
@@ -45,7 +46,7 @@ new; kit kit; ENVV=(KIT="$D/kit"); rec edge-deltas-negative kit slugabc --deltas
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-date-escapes-retros kit slugabc --date ../x
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-bad-first-char kit _abcdef
 new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-charset kit A0.b_c-d
-new; kit kit; ENVV=(KIT="$D/kit"); rec edge-slug-space-after-six kit 'abcdef ghi'
+# edge-slug-space-after-six (kit 'abcdef ghi', exit 0 in the bash) is now the hand-edited truth-slug-space-after-six.
 new; kit kit; ENVV=(KIT="$D/kit")
 # shellcheck disable=SC2016  # the module name is literal on purpose
 rec edge-module-with-specials 'Mod $x `y`' slugabc
