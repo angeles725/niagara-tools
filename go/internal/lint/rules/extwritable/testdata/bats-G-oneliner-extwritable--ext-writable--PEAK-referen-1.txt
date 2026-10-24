@@ -1,0 +1,13 @@
+-- args --
+@DIR@/g-ol-ew
+-- want --
+exit 0
+-- stderr --
+-- g-ol-ew/com/x/BWithWriter.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraAction(name="bumpSetpoint")
+public class BWithWriter extends BComponent {
+  public void doBumpSetpoint() { setSetpoint(new BStatusNumeric(getSetpoint().getValue()+1)); }
+}

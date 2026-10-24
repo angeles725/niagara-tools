@@ -1,0 +1,19 @@
+-- args --
+@DIR@/s22nondo
+-- want --
+exit 0
+WARN  ext-writable-shape  @DIR@/s22nondo/com/x/BNonDoWriter.java:3  faultReset: OPERATOR BStatusBoolean with no writing action -- external oBIX write must use the child leaf .../faultReset/value (bare <real>, B826) or add an OPERATOR action (B822)
+-- stderr --
+-- s22nondo/com/x/BNonDoWriter.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="faultReset", type="BStatusBoolean", flags=Flags.SUMMARY|Flags.OPERATOR)
+@NiagaraProperty(name="alarmAck",   type="BStatusBoolean", flags=Flags.SUMMARY|Flags.READONLY)
+@NiagaraAction(name="ackAlarm")
+public class BNonDoWriter extends BComponent {
+  // do-body writes alarmAck (exempt). faultReset's ONLY writer is execute() — a NON-do body,
+  // OUT of the do<Action> scan scope, so faultReset must still WARN. "scan all method bodies"
+  // would find setFaultReset in execute() and wrongly exempt it.
+  public void doAckAlarm() { setAlarmAck(new BStatusBoolean(true)); }
+  public void execute() { setFaultReset(new BStatusBoolean(false)); }
+}
