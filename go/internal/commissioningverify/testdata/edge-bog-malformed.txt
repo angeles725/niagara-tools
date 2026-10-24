@@ -11,7 +11,7 @@ PASS  commissioning  status-parity:MinimalPan-rt  N:M config/status parity clean
 PASS  commissioning  recovery-path:MinimalPan-rt  protection-output recovery path clean
 PASS  commissioning  link-target-flags:MinimalPan-rt  LTF1/LTF2 clean (no wiring map)
 PASS  commissioning  wiring-map  run generate-wiring-map.sh <facade-src-dir> to scaffold docs/wiring-map.md before commissioning
-SKIP  commissioning  station-checks  bog-audit env fault (exit 3) — check python3 availability and bog path
+SKIP  commissioning  station-checks  bog-audit exit 3 (unreadable or malformed bog, or no component of the module) — run bog-audit.sh manually
 MANUAL  commissioning  values-owed  no docs/values-owed.md — declare the values owed by the field (slot, owed by, unit, safe default, status) or state none (BUILD-LOOP §6.b)
 MANUAL  commissioning  hot-reload-console  after deploy: run triage-console.sh — confirm no own-module load failures before hand-off
 MANUAL  commissioning  plant-control  confirm the station actually controls the plant (runtime only — not statically verifiable)

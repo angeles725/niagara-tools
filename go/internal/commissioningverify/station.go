@@ -36,7 +36,7 @@ func (r *report) stationChecks(o options) {
 	}
 	var b bytes.Buffer
 	if bogaudit.Main(args, cli.Stdio{Out: &b, Err: &b}) == 3 {
-		r.emit(skip, "station-checks", "bog-audit env fault (exit 3) — check python3 availability and bog path")
+		r.emit(skip, "station-checks", "bog-audit exit 3 (unreadable or malformed bog, or no component of the module) — run bog-audit.sh manually")
 		return
 	}
 	lines := strings.Split(b.String(), "\n")

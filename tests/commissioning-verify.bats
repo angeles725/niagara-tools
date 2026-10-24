@@ -286,3 +286,13 @@ _cv_map_tree() {  # $1 = module root; one Map-rt artifact holding the Table 2 RE
   assert_symroot_same "$MINIMAL" "$CV" "$MINIMAL"
   [ "$status" -eq 0 ] && [[ "$output" == *"config-sanity"* ]]
 }
+
+# Go port truth fix T1 (retro go-commissioning-verify Δ1): bog-audit is Go and needs no python3, so its exit-3
+# SKIP row names what exit 3 means (unreadable or malformed bog, no component of the module), not python3.
+# Named mutation CV-skiptext (restore the python3 text) -> CV-bog-skip flips.
+@test "CV-bog-skip: bog-audit exit 3 (no component of --module) -> one SKIP station-checks row, no python3, exit 0" {
+  run "$CV" "$MINIMAL" --bog "$BOG_DIR/station-logic-CHECK13.bog" --module NoSuchModule
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP  commissioning  station-checks  bog-audit exit 3 (unreadable or malformed bog, or no component of the module) — run bog-audit.sh manually"* ]]
+  [[ "$output" != *"python3"* ]]
+}
