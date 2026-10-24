@@ -56,6 +56,9 @@ type Config struct {
 	InsecureTLS, AllowTierB, AllowTierC []string
 	AuthCooldown                        float64 // seconds, >= AuthCooldownMin
 	HTTPTimeout, LoadWait               float64 // seconds per request, total wait of one load
+	// StateDir is the expanded --state-dir (result files, journal, audit); ProgressPath the
+	// expanded --progress-file, "" when none.
+	StateDir, ProgressPath string
 }
 
 // Context is tools_read.Context.
@@ -70,6 +73,9 @@ type Context struct {
 	Clock func() float64
 	// Session is the active station session, nil when none.
 	Session *Session
+	// Observations are the in-memory read observations for the session retro (no audit line
+	// exists for reads).
+	Observations []*pyjson.Object
 
 	authLatch
 	secret string
@@ -174,3 +180,6 @@ func (c *Context) Scrub(text string) string {
 	}
 	return strings.ReplaceAll(text, c.secret, "***")
 }
+
+// Now is retro.now(): the current UTC time as the ISO text the audit log uses.
+func Now() string { return time.Now().UTC().Format("2006-01-02T15:04:05+00:00") }

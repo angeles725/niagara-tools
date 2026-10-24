@@ -1,0 +1,21 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-machine-default-path  @DIR@/Mod/Mod-rt/src/com/x/BCfg.java:3  machine-specific default "/home/dev/.n4/pw" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+WARN  lint-machine-default-path  @DIR@/Mod/Mod-ux/src/rc/js/app.js:2  machine-specific default "/Users/me/out" in an object-literal property default -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+-- stderr --
+-- Mod/gradle.properties --
+niagara_home=C:\\Niagara\\Niagara-4.14
+niagara_user_home=C:\\Users\\equipo\\Niagara4.14\\X
+-- Mod/Mod-rt/src/com/x/BCfg.java --
+package com.x;
+public class BCfg {
+  private static final String PW_FILE = "/home/dev/.n4/pw";
+}
+-- Mod/Mod-ux/src/rc/js/app.js --
+var cfg = {
+  out: "/Users/me/out"
+};
+-- Mod/Mod-ux/tools/gen.js --
+const D = "/home/me";

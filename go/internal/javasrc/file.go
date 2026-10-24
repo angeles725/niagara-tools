@@ -10,8 +10,10 @@ type File struct {
 	stripped []string
 	end      EndState
 	methods  []Method
+	scopes   []Method
 	scanned  bool // stripped and end are set
 	parsed   bool // methods is set
+	scoped   bool // scopes is set
 }
 
 // NewFile wraps raw lines read from path.
@@ -37,4 +39,13 @@ func (f *File) Methods() []Method {
 		f.parsed = true
 	}
 	return f.methods
+}
+
+// Scopes is Scopes(Stripped()).
+func (f *File) Scopes() []Method {
+	if !f.scoped {
+		f.scopes = Scopes(f.Stripped())
+		f.scoped = true
+	}
+	return f.scopes
 }

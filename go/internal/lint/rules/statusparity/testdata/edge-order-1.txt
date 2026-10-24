@@ -1,0 +1,71 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-status-parity  C  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  B  N=3 per-instance config slots but 1 status slots
+WARN  lint-status-parity  C  N=2 per-instance config slots but 0 status slots
+WARN  lint-status-parity  B  N=2 per-instance config slots but 0 status slots
+-- stderr --
+-- C.java --
+class C {
+  @NiagaraProperty(
+    name = "aDuration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bDuration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- a/B.java --
+class B {
+  @NiagaraProperty(
+    name = "aSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "cSetpoint",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "dActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- m/sub/C.java --
+class C {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- z/B.java --
+class B {
+  @NiagaraProperty(
+    name = "aInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "bInterval",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}

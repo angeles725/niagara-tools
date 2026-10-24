@@ -1,0 +1,8 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-lexicon-ascii.sh <module-root>
+-- Mod/Mod-rt/module.lexicon --
+a=b
+bad=café

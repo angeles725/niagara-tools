@@ -85,15 +85,19 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 
 1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
    bit; `./gradlew` is non-functional without it.
-2. **Align `gradle.properties` + `settings.gradle.kts` to a SIBLING module of the same SDK family:**
-   copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
-   `org.gradle.java.installations.paths` from an existing sibling that deploys to the same
-   station. Do NOT leave the scaffold's commented-out (auto-detect) JDK/node block: a commented
-   block builds in WSL (where `build.sh` overrides the path via `-P`) but fails reproducibility
-   on a Windows `gradlew` build. Also align `gradlePluginVersion` / `settingsPluginVersion` in
-   `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
-   plugin version — see `build-verify.md §Build target & plugin version`). For a logic-only
-   module with no `-ux` profile the node/JDK lines may stay commented.
+2. **Set the host build-location keys once per machine, in the user-level `gradle.properties`:**
+   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` go in
+   `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),
+   never in the repository; the repository keeps only the machine-independent
+   `org.gradle.java.installations.auto-detect=false` (lint-structure L12). Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
+   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties`. Also align
+   `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` to a sibling of the same
+   SDK family (each Niagara install ships exactly one plugin version — see
+   `build-verify.md §Build target & plugin version`). `[ev: retro r10-user-level-gradle-keys Δ1]`
+   > **Superseded (2026-10-24, R10-D8):** "copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
+   > `org.gradle.java.installations.paths` from an existing sibling … Do NOT leave the scaffold's
+   > commented-out (auto-detect) JDK/node block: a commented block … fails reproducibility on a Windows
+   > `gradlew` build." The user-level file gives the Windows build its paths without committing them.
 3. **Run `toolbelt/preflight.sh` + first build:** `preflight.sh <niagara_home> <gradle-root>`
    validates the environment (§0.b); then `toolbelt/build.sh <group-dir> <MOD>` runs the first
    full clean+slotomatic+jar+verify cycle.
@@ -284,6 +288,28 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
     owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
+  - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
+    changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
+    doc, data, generated), which check runs or why none applies. An early exit is proven by a test that changes
+    ONLY a skipped class, with a defect the gate's checks would catch, and asserts the outcome; a skip test that
+    changes a clean file proves nothing. A data class that has a check gets one that fails closed: data paths
+    configured with no check is an error, not a pass (niagara-research PR #46, `GATE_DATA_PATHS` +
+    `GATE_DATA_CHECK`). Kit instance: `.githooks/pre-push:44-50` skips `sweep-build-state.sh` for a
+    `retros/`/`ledger.d/`/`BUILD-STATE.md`-only range, the files sweep checks; CI runs sweep unfiltered, and the
+    hook fix is an owed `open_issue`. Review check: the PR names the data-only test and shows it red on the old
+    filter. `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
+  - **An identity pin between shared copies does not skip where drift happens.** A test that keeps copies in two
+    repositories byte-identical compares with the upstream's committed `origin/main`
+    (`git -C <upstream> show origin/main:<path>`), not a sibling working tree, and skips only when the upstream
+    repository is really absent, naming what it looked for. The niagara-research hook pins skipped in every
+    worktree, and both downstream copies drifted unseen (module-navigator #11, niagara-help #10). Review check:
+    the pin fails in a scratch layout with an old copy, and the message names the sync command.
+    `[ev: retro r10-path-keyed-gates-skip-data Δ2]`
+  - **Citation pre-filter.** `toolbelt/kit-cite-resolve.sh [--strict] <card>...` (`go/cmd/kit-cite-resolve`)
+    resolves every evidence pointer of the given cards and prints one row per pointer with its status
+    (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, TOOL_ERROR) and an
+    excerpt of the cited line. RESOLVED means the cited place exists, never that it says the claim: a reviewer
+    still reads the excerpt. Exit 0 / 1 under `--strict` / 3 usage or an unreadable root. `[ev: retro go-kit-cite-resolve]`
 - Provenance of the former inline lint enumeration (frozen; new lints cite in their own header, which the index carries): [ev: retro 2026-09-17-umbrelladashboard-module-creation] [ev: retro apillm-headless-servlet-rt-4.14-deltas Δ8] [ev: retro apillm-wb-subscription-refresh-and-points-deltas Δ3] [ev: retro campaign8-lint-delays] [ev: retro campaign8-lint-servlet] [ev: retro campaign8-structure] [ev: retro campaign8-wb-audit] [ev: retro campaign9-demand-scope] [ev: retro campaign9-ext-writable-shape] [ev: retro campaign9-silent-protection] [ev: retro live-diagnosis-hardening-deltas Δ1] [ev: retro live-diagnosis-hardening-deltas Δ3] [ev: retro live-diagnosis-hardening-deltas Δ5] [ev: retro module-hardening-failure-modes-deltas Δ11 BLD2] [ev: retro module-hardening-failure-modes-deltas] [ev: retro new-lints] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ1] [ev: retro panccadia-defrost-sequencing-hmi-reload-deltas Δ5] [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas].
 - Every lint that ships in a campaign carries a REAL-TREE smoke on the four client module roots: exact COUNT + SUBJECT of each finding + one ABSENCE pin (a slot that must NOT be flagged) — a bats fixture alone is not acceptance (METHODOLOGY K22). `[ev: retro campaign8-close-process-meta-lessons §lesson 11]`
 - **Before releasing a new ADVISORY lint, smoke it read-only on one real client checkout and on decompiled vendor

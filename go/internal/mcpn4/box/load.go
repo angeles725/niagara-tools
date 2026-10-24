@@ -207,7 +207,7 @@ func (c *Client) LoadTree(ord string, depth int, opt LoadOptions) (*pyjson.Objec
 		return nil, err
 	}
 	root, _ := nodes.Get("")
-	if h, _ := get(root, "h"); truthy(h) {
+	if h, _ := get(root, "h"); pyjson.Truthy(h) {
 		c.handles.set(ord, h)
 	}
 	return nodes, nil
