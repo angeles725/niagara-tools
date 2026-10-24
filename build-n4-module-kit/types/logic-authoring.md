@@ -1008,8 +1008,8 @@ public final class BLocalAlarmResolver extends BSingleton
 
 Rules:
 - **`extends BSingleton`** — `BIAgent` implementors that have no state extend `BSingleton`; stateful agents that need a lifecycle extend `BComponent` or `BAbstractService` instead.
-- **`@NiagaraSingleton`** — tells Slot-o-Matic to emit the singleton registration; required alongside `BSingleton`.
-- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. The framework finds the agent by iterating mounted instances that `is(BIAgent.TYPE)` and comparing the registered target type.
+- **`@NiagaraSingleton`** — tells Slot-o-Matic to emit a `public static final INSTANCE` field next to `TYPE` (devguide `slot-o-matic.txt:427`).
+- **`@AgentOn(types = {"module:TypeName"})`** — the target type the framework looks up; multiple targets are an array. Agents are registered on their target types in the module manifest and queried through the Registry (`getAgents(cx).filter(AgentFilter.is(T.TYPE))`, devguide `registry.txt:36-40`); `module.xml` carries `<agent><on type="baja:LocalHost"/></agent>` (alarm-rt `META-INF/module.xml:91-95`).
 - **Private constructor + static `INSTANCE`** — enforces single-instance contract; the framework calls `INSTANCE` directly, never `new`.
 - **Does NOT appear in a palette** — a `BSingleton` cannot be dropped by the operator; it is registered in `module.xml` only. `[ev: code BLocalAlarmResolver.java]`
 
@@ -1058,7 +1058,7 @@ public void stopped() throws Exception {
 Summary of the three rules:
 1. **`super` FIRST in `changed`/`added`/`removed`**, `super` **LAST in `stopped`** — the framework uses these calls to maintain its own internal state; violating the order leaves the component in a half-initialized or half-stopped state.
 2. **`if (!isRunning()) return;`** immediately after `super.*` in `changed`/`added`/`removed` — guards against calls that arrive during start-up or shut-down before the component is fully operational.
-3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an uncaught exception from `changed` kills the engine thread. `[ev: code BColdRoom.java, BCompressorControl.java]`
+3. **Wrap the body in `try/catch(Throwable)`** in `changed` and related callbacks — an `Exception` from `changed` does not kill the engine thread: `ComponentSlotMap.fireComponentEvent` catches it and only calls `printStackTrace()` (`com/tridium/sys/schema/ComponentSlotMap.java:770-823`, baja vineflower; corpus B1113), so the rest of the callback is skipped and the trace never reaches the module log. `[ev: code BColdRoom.java, BCompressorControl.java]`
 4. **Reject a bad value by reverting it and logging why — never by throwing.** `changed()` runs after the value is
    already set, so a throw does not undo it; write the previous or safe value back and log the reason (the course's
    TLS-version slot: `READONLY` + `HIDDEN` + a reverting `changed()`). [CERT-a] corpus B1416 §1416.4 row d
@@ -1089,7 +1089,7 @@ The full lifecycle callback contract for a `BComponent` subclass:
 All spoken by the course instructor ([CERT-a]) unless a code cite is given.
 
 - **`HIDDEN` is not a lock:** a user can clear `HIDDEN` on a frozen slot at runtime, unlike `READONLY`; if hiding
-  matters, re-assert it in a flags-changed callback (B1416 row a; open child gap B1416-G2).
+  matters, re-assert it in a flags-changed callback (B1416 row a; B1416-G2 closed by B1420 §1420.2: veto in `checkSetFlags`, or re-assert from `flagsChanged`).
 - **Frozen slots keep declaration order:** the Reorder dialog (and Sort by name) moves only dynamic slots, so declare
   frozen properties in the order the operator should read them (B1416 row c).
 - **A frozen action without a `do<Action>()` handler fails the type**, so the component also disappears from the
@@ -1170,7 +1170,7 @@ for (Property p : getDynamicPropertiesArray()) {          // BComplex.java:606
 
 **Mark ephemeral dynamic slots `TRANSIENT`:** if a dynamic slot carries only in-memory state that
 need not survive a restart, create it with `Flags.TRANSIENT` (`0x00000002`) — the BOG encoder
-skips transient slots (`Flags.java:184,389`), so they are never persisted and never become orphans.
+skips transient dynamic slots (`Flags.java:184`; `javax/baja/io/ValueDocEncoder.java:326-328`, baja vineflower), so they are never persisted and never become orphans.
 
 **Proposed lint candidate:** `dynamic-slot-orphan-prune` — flag a component that calls `add(name,
 value)` without a corresponding orphan-prune loop in `started()`.
@@ -1190,7 +1190,7 @@ public void started() throws Exception {
     Property orphan = getProperty("oldSlotName");         // BComplex.java:527
     if (orphan != null && orphan.isDynamic()) {           // Slot.java:59
         Object oldValue = get(orphan);                    // BComplex.java:666
-        set(newSlotProperty, (BValue) oldValue);          // BComponent.java:854 — copy to new frozen slot
+        set(newSlotProperty, (BValue) oldValue);          // BComplex.java:854 — copy to new frozen slot
         remove(orphan);                                   // BComponent.java:957 — prune the orphan
     }
 }
@@ -1198,8 +1198,8 @@ public void started() throws Exception {
 
 **Contract:**
 - `getProperty(name)` returns `null` after the first migration — the block is **idempotent** (no-op
-  on subsequent enable cycles).
-- `started()` runs on every enable cycle (station start, component enable, re-enable after a fault),
+  on later starts).
+- `started()` runs on every start (station start, a drop onto a running station, a parent's stop/start; disabling does not stop it, B1416 §1416.2),
   so idempotence is a requirement, not just a convenience.
 - For **many slots**, snapshot `getDynamicPropertiesArray()` FIRST — never remove a slot while
   iterating a live cursor.
@@ -1213,14 +1213,14 @@ that a renamed slot's value is safely copied before it is pruned as "unknown".
 
 ---
 
-## BProgram / BRobotCode scripting SPI `[ev: corpus B-program]`
+## BProgram / BRobotCode scripting SPI `[ev: corpus B541]`
 
 `BProgram` is a `BComponent` that hosts a signed `BProgramCode` (which hosts `BRobotCode`). The execution entry point is `BProgramService`:
 
 ```java
 // Look up the service and run a robot synchronously (blocks until done):
 BProgramService svc = (BProgramService) Sys.getService(BProgramService.TYPE);
-BRobotResult result = svc.runRobot(myRobotCode);  // superuser only
+BRobotResult result = svc.runRobot(myRobotCode);  // null Context: no super-user check
 
 // Or run a batch routine (returns a log string):
 BString log = svc.runBatchRoutine(myBatchRoutine);
@@ -1236,10 +1236,10 @@ Security model:
   enforcement is off by default and asks for signing anyway (`User/ProgramObjectSigning-10F25D1D.txt:7,16`); sign
   existing objects with the Program Service's Program Recompile Tool (`:46`). An earlier version of this line said
   an unsigned blob is rejected at instantiation; the code does not. `[ev: retro devguide415-r2-packaging-platform-signing Δ7]`
-- **`compactProfile` = `"compact3"` (default)** — the sandbox ClassLoader enforces the Java SE compact3 API subset; classes that reference SE APIs outside compact3 fail to load.
-- **`allowProgramRuntimeExec` gate** — `BProgramService` has a `HIDDEN` boolean property `allowProgramRuntimeExec` (default `false`). When `false`, the sandbox SecurityManager denies `Runtime.exec()` calls; when `true`, the station administrator has explicitly opened that gate. Leave it `false` for normal automation scripts.
-- **`doRunRobot` checks `cx.getUser().getPermissions().isSuperUser()`** — only a super-user may invoke `runRobot`; all other users get `PermissionException`.
-- **`BProgramService` is `BIRestrictedComponent`** — it can only be placed under `/Services` (see `§BIRestrictedComponent` below). `[ev: corpus B-program]`
+- **`compactProfile` = `"compact3"` (default)** — the Workbench program compiler builds a program that depends only on `-rt` modules with `javac -profile compact3` (a `-ux`/`-wb` dependency drops the profile), so code outside compact3 fails to compile (program-wb `com/tridium/program/ui/Compiler.java:385-399,423`, vineflower); no runtime reader of the service slot was found [INFER].
+- **`allowProgramRuntimeExec` gate** — `BProgramService` has a `HIDDEN` boolean property `allowProgramRuntimeExec` (default `false`). It gates the exec path a program gets, `ProgramRuntime.getRuntime().exec(this, …)`, which throws `RuntimeException("ProgramRuntime.exec() not allowed")` while it is `false` (`com/tridium/program/ProgramRuntime.java:55-57`, program-rt vineflower; corpus B541); when `true`, the station administrator has explicitly opened that gate. Leave it `false` for normal automation scripts.
+- **`doRunRobot` checks `cx.getUser().getPermissions().isSuperUser()`** — a non-super-user Context gets `PermissionException("Run Robot not allowed by this user.")`, which the handler's own `catch (Throwable)` turns into a failed `BRobotResult`; a null Context (the `runRobot(code)` convenience) skips the check (`BProgramService.java:102-135`, program-rt vineflower).
+- **`BProgramService` is `BIRestrictedComponent`** — it can only be placed under `/Services` (see `§BIRestrictedComponent` below). `[ev: corpus B541]`
 
 ## BBatchRoutine mass-edit SPI `[ev: code BRenameBatchRoutine.java]`
 
@@ -1254,7 +1254,7 @@ public class BMyBatchRoutine extends BBatchRoutine {
     @Override
     public void run(BComponent component, PrintWriter log, Lexicon lex, Context cx) {
         // called once per resolved target; log.println() for the report;
-        // throw to skip and continue (runAll catches per-target exceptions)
+        // catch here to skip one target: a throw stops runAll for every remaining target
     }
 }
 
@@ -1267,7 +1267,7 @@ BString report = svc.runBatchRoutine(routine);  // returns the log as a string
 
 Contract:
 - **`targets: BOrdList`** (the one property inherited from `BBatchRoutine`) holds the component ORDs to iterate.
-- **`runAll(BObject base, PrintWriter log, Context cx)`** resolves each ORD against `base`, calls `run(component, log, lex, cx)` for each; errors per target are logged but do not abort the remaining targets.
+- **`runAll(BObject base, PrintWriter log, Context cx)`** resolves each ORD against `base`, calls `run(component, log, lex, cx)` for each; there is no per-target catch, so the first throw stops the loop and `doRunBatchRoutine` prints its stack trace into the returned report (`batch/BBatchRoutine.java:43-49`, `BProgramService.java:138-149`, program-rt vineflower).
 - **Abstract `run(BComponent, PrintWriter, Lexicon, Context)`** is the only method you must implement; log each action to `PrintWriter` so the returned report is useful.
 - **`runBatchRoutine` is `HIDDEN` on `BProgramService`** (flags = 4); invoke it programmatically, not from a Workbench action. `[ev: code BRenameBatchRoutine.java]`
 
@@ -1278,19 +1278,16 @@ Send an email from a `BSimpleJob` or service method:
 ```java
 BEmailService emailSvc = (BEmailService) Sys.getService(BEmailService.TYPE);
 
-BEmail email = new BEmail();
-email.setAddressList("ops@example.com");
-email.setSubject("Alarm notification");
-email.setTextPart("Sensor fault detected on room 3.");
-// Optional: email.setBlobPart(BBlob.make(pdfBytes));
+BEmail email = new BEmail("ops@example.com", "Alarm notification", "Sensor fault detected on room 3.");
+// Optional attachment: a BBlobPart(filename, blob) in getAttachments()
 
 emailSvc.send(email);  // queues the message; delivery is async via the outgoing account
 ```
 
 Rules:
-- **`BEmailService` is license-gated** — `getLicenseFeature()` returns `"tridium:email"`. If the license is absent the service starts but `doSend` throws at delivery time.
+- **`BEmailService` is license-gated** — `getLicenseFeature()` returns the `tridium`/`email` license feature (`BEmailService.java:111-112`); without it the service goes fatal-fault with fault cause `Unlicensed: …` at service start (`BAbstractService.java:332-392`, docSource); `doSend` does no license check.
 - **`send(BEmail)` is an `@NiagaraAction`** — it calls `invoke(send, email, null)` internally; the actual delivery runs in `doSend(BEmail, Context)` through the first registered `BOutgoingAccount`.
-- **Exactly one `BOutgoingAccount` child must be configured** under the service; if none exists `doSend` throws `BajaRuntimeException`.
+- **`doSend` uses the FIRST `BOutgoingAccount` child** (`getDefaultOutgoingAccount`, `BEmailService.java:119-126`); if none exists `doSend` throws `BajaRuntimeException`.
 - **`BEmailService` is `BIRestrictedComponent`** — it may only be placed under `/Services`; any other parent rejects the add with a framework diagnostic (see `§BIRestrictedComponent` below). `[ev: code BEmailService.java]`
 
 ## BIRestrictedComponent — placement constraint `[ev: code BEmailService.java]`
@@ -1311,7 +1308,7 @@ public class BMyRestrictedService extends BAbstractService
 ```
 
 Rules:
-- **Always delegate to the static `BIRestrictedComponent.checkParentForRestrictedComponent(parent, this)`** unless you need a custom placement rule — the static form checks that `parent` is a `BIService` container (i.e., the `/Services` subtree).
+- **Always delegate to the static `BIRestrictedComponent.checkParentForRestrictedComponent(parent, this)`** unless you need a custom placement rule — the static form checks that `parent` is a `BServiceContainer` and that no instance of the same type, or a super/sub type, already lives under the station's Services; each failure throws `IllegalChildException` (`javax/baja/util/BIRestrictedComponent.java:92-135`, docSource).
 - **The check is `final` by convention** — mark `checkParentForRestrictedComponent` as `final` so subclasses cannot accidentally remove the constraint.
 - **No explicit placement description needed** — the framework exception message names the required parent type automatically.
 - Used by: `BEmailService`, `BProgramService`, and any service whose mis-placement would cause a silent malfunction. `[ev: code BEmailService.java]`
@@ -1407,7 +1404,7 @@ public class BFoxBackupJob extends BSimpleJob {
             Context sessionCx = chan.getSessionContext();
 
             // 3. Permission check using the session's credentials
-            if (!service.getPermissions(sessionCx).has(48 /*backup-read|backup-write*/))
+            if (!service.getPermissions(sessionCx).has(48 /*ADMIN_READ|ADMIN_WRITE*/))
                 throw new PermissionException();
 
             FilePath path = new FilePath(getPostPath());
@@ -1435,37 +1432,43 @@ Rules:
 
 ## Chunked Base64 transfer for firmware/file OTA [ev: retro honeywell-wb-rt-wb-deltas Δ5]
 
-When an rt action can accept only small strings (e.g. a `BString` action argument with a platform cap near 4–8 KB), split the binary payload into ≈5 000-character Base64-encoded segments and invoke the action once per segment. The rt side accumulates segments, reassembles on a terminal sentinel, then Base64-decodes and writes the binary to disk.
+When an rt action accepts only small arguments, send a file as 5 000-byte chunks, each Base64-encoded, one action
+invocation per chunk. The shipped Honeywell HMI menu (`honPlantControllerHMI`) uses three actions on the device:
+`initiateFileCopy(fileName)` deletes any old `<stationHome>/firmware/<fileName>` and creates it empty;
+`copyBinaryString` carries one `{fileName, binaryString}` parameter per chunk, and its handler decodes the chunk and
+APPENDS the bytes to that file, answering `"SUCCESS"` (the WB loop stops at the first other reply);
+`firmwareUpdateHMI(fileName)` then installs. There is no terminal sentinel: each chunk is decoded when it arrives.
+`[ev: corpus B1080 §3.3]`
 
 ```java
-// WB side — split and send (in a BSimpleJob or manager command)
-private static final int CHUNK = 5_000;
-
-byte[] fw = Files.readAllBytes(fwPath);
-String b64 = Base64.getEncoder().encodeToString(fw);
-for (int i = 0; i < b64.length(); i += CHUNK) {
-    String seg = b64.substring(i, Math.min(i + CHUNK, b64.length()));
-    component.invoke(UPLOAD_CHUNK_ACTION, BString.make(seg), cx);
+// WB side, after honPlantControllerHMI-wb BHonPlantControllerHMIMenuAgent.java:155-179 (vineflower)
+BString reply = device.initiateFileCopy(BString.make(fileName));
+for (int i = 0; i < bytes.length && "SUCCESS".equals(reply.getString()); i += 5000) {
+    byte[] chunk = Arrays.copyOfRange(bytes, i, Math.min(i + 5000, bytes.length));
+    String b64 = new String(Base64.getEncoder().encode(chunk), StandardCharsets.ISO_8859_1);
+    reply = device.copyBinaryString(BHMIFirmwareDownloadConfig.make(fileName, b64));
 }
-component.invoke(UPLOAD_CHUNK_ACTION, BString.make("END"), cx);
+if ("SUCCESS".equals(reply.getString())) device.firmwareUpdateHMI(BString.make(fileName));
 ```
 
 ```java
-// rt side — accumulate in a StringBuilder field
-@Override
-public BObject uploadChunk(BString chunk, Context cx) {
-    if ("END".equals(chunk.getString())) {
-        byte[] data = Base64.getDecoder().decode(buf.toString());
-        writeFirmwareToFlash(data);  // platform-specific
-        buf.setLength(0);
-    } else {
-        buf.append(chunk.getString());
+// rt side, the chunk handler (honPlantControllerHMI-rt BHonHMIDevice.java:1828-1847, vineflower)
+public BString doCopyBinaryString(BHMIFirmwareDownloadConfig config) {
+    try {
+        byte[] bytes = Base64.getDecoder().decode(config.getBinaryString());
+        Path file = Sys.getStationHome().toPath().resolve("firmware").resolve(config.getFileName());
+        Files.write(file, bytes, StandardOpenOption.APPEND);
+    } catch (IOException e) {
+        return BString.make("copy failed: " + e);
     }
-    return null;
+    return BString.make("SUCCESS");
 }
 ```
 
-`CHUNK` ≈ 5 000 characters leaves headroom under typical Niagara action-arg limits. For large transfers wrap the WB loop in a `BSimpleJob` so it runs off the EDT and reports progress. `[ev: corpus B1080]`
+Install only after every chunk answered `"SUCCESS"`: the shipped menu calls `firmwareUpdateHMI` even after a failed
+copy (`BHonPlantControllerHMIMenuAgent.java:209-214`). B1080 does not say why 5 000 was chosen. For your own module
+use your own action names and a two-field parameter type; run the WB loop in a `BSimpleJob` so it stays off the EDT
+and reports progress [INFER — kit advice].
 
 See also: `types/distribution.md §11` for the distribution-side note on this pattern.
 
@@ -1513,7 +1516,7 @@ Reading a control point's current value/status from rt code (station-side, not `
 - **Generic accessor:** `BControlPoint.getOutStatusValue()` returns the type-erased `BStatusValue` — use it when you only hold a `BControlPoint` reference. Concrete subtypes narrow the return type via `getOut()`: `BNumericPoint`/`BNumericWritable` → `BStatusNumeric`, `BBooleanPoint`/`BBooleanWritable` → `BStatusBoolean`, `BEnumPoint`/`BEnumWritable` → `BStatusEnum`, `BStringPoint`/`BStringWritable` → `BStatusString`. `[ev: corpus B1141 §1141.1]`
 - **Typed value extraction:** `BStatusNumeric.getValue()` (or `.getNumeric()` / `point.getNumeric()`); `BStatusBoolean.getValue()` (or `.getBoolean()`); `BStatusString.getValue()`. For enum, `BStatusEnum.getValue()` returns a `BDynamicEnum`: `dyn.getOrdinal()`, `dyn.getTag()` (stable machine key, not locale-sensitive), `dyn.getDisplayTag(cx)` (locale-sensitive label). `[ev: corpus B1141 §1141.2]`
 - **`BStatus.isValid()` vs `isOk()` — do not use them interchangeably:** `isValid()` passes when the DATA-QUALITY bits are clear (fails on DISABLED/FAULT/DOWN/STALE/NULL); `isOk()` passes only when ALL bits are zero, including ALARM/OVERRIDDEN/UNACKED_ALARM. A point in ALARM but otherwise communicating normally is `isValid()==true`, `isOk()==false`. **Rule for rt code:** use `isValid()` to decide whether a value is usable for control logic; reserve `isOk()` for a case that genuinely needs a fully clean status (no override, no alarm). `[ev: corpus B1141 §1141.3]`
-- **`BOrd.get()` and dangling resolution:** `ord.get()` resolves against the local station root; `ord.get(myComponent)` resolves relative to `myComponent`. A dangling ORD (deleted/moved slot) throws `UnresolvedException` — always wrap a resolve in `try/catch` and log-and-skip rather than letting the exception propagate out of a control callback. `[ev: corpus B1141 §1141.5–1141.6]`
+- **`BOrd.get()` and dangling resolution:** `ord.get()` resolves against `BLocalHost.INSTANCE` with a null Context (`javax/baja/naming/BOrd.java:201-212`, docSource), so use an absolute `station:|slot:` ORD; `ord.get(myComponent)` resolves relative to `myComponent`. A dangling ORD (deleted/moved slot) throws `UnresolvedException` — always wrap a resolve in `try/catch` and log-and-skip rather than letting the exception propagate out of a control callback. `[ev: corpus B1141 §1141.5–1141.6]`
 
 ```java
 // Canonical rt resolve + typed read + validity check
