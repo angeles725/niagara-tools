@@ -2,6 +2,8 @@ declared difference (truth fix T1, code view): the awk read block comments and s
 commented-out changed(Property q ...) was taken as the callback and the real one was never read (T), the "}" in a
 string could end changed() early, and a setter quoted in a string counted as a write (U). Both hot-write lints read
 code with comments blanked and literal contents removed now.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not a per-cycle write; the rows are unchanged.)
 -- args --
 @DIR@
 -- want --
@@ -22,7 +24,7 @@ class T {
     if (p == f) execute();
     if (p == g) execute();
   }
-  void execute() { setXHours(1.0); }
+  void execute() { setXHours(getXHours() + 1.0); }
 }
 -- U.java --
 class U {

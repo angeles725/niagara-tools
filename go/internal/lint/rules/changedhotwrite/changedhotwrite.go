@@ -25,7 +25,7 @@ const minBranches = 6
 // Spec registers the rule with the argument contract of toolbelt/lint-changed-hot-write.sh.
 func Spec() lint.Spec {
 	return lint.Spec{
-		Rule:       rule{},
+		Tree:       rule{},
 		Mode:       lint.First,
 		Usage:      "usage: lint-changed-hot-write.sh [--strict] <src-root>",
 		Select:     lint.Selection{Names: []string{"*.java"}},
@@ -49,29 +49,47 @@ func text(lines []string, from, to int) string {
 	return b.String()
 }
 
-func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
+// CheckTree reads every file under the root once for the fields it accumulates (hotwrite.Accumulators), then
+// reports each file in walk order (check).
+func (rule) CheckTree(files []*javasrc.File) ([]lint.Finding, error) {
+	acc := hotwrite.Accumulators(files)
+	var out []lint.Finding
+	for _, f := range files {
+		out = append(out, check(f, acc)...)
+	}
+	return out, nil
+}
+
+// check WARNs a hot changed() whose execute() (or its own body) holds a setter call of a non-transient slot
+// that can dirty the station every cycle (hotwrite.HotCalls), naming the first such slot.
+func check(f *javasrc.File, acc map[string]bool) []lint.Finding {
 	lines := hotwrite.View(f)
 	body, prop, ok := hotwrite.ChangedBody(f, lines)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	changed := text(lines, body.Start, body.End)
 	n := len(regexp.MustCompile(`[^A-Za-z0-9_]`+regexp.QuoteMeta(prop)+`[[:space:]]*==`).FindAllStringIndex(changed, -1))
 	if n < minBranches || !strings.Contains(changed, "execute()") ||
 		strings.Contains(changed, "Clock.millis(") || strings.Contains(changed, "Clock.schedule") {
-		return nil, nil
+		return nil
 	}
-	exec := changed
+	bodies := []hotwrite.Body{body}
 	if b, ok := hotwrite.ZeroArg(f, lines, "execute"); ok {
-		exec = text(lines, b.Start, b.End)
+		bodies = []hotwrite.Body{b, body}
 	}
-	for _, slot := range hotwrite.NonTransient(lines) {
-		setter := hotwrite.SetterCall(slot)
-		if setter.MatchString(exec) || setter.MatchString(changed) {
-			return []lint.Finding{{Line: body.Start + 1, Msg: fmt.Sprintf("changed(%s) has %d '%s ==' branches guarding execute(),"+
-				" no Clock.millis()/schedule rate guard, writes non-transient slot '%s' -- debounce the callback"+
-				" (leading-edge Clock.millis() gate) or move the periodic write to a tick", prop, n, prop, slot)}}, nil
+	for _, slot := range hotwrite.Properties(lines) {
+		if slot.Transient {
+			continue
+		}
+		for _, b := range bodies {
+			if len(hotwrite.HotCalls(lines, b, slot, acc)) > 0 {
+				return []lint.Finding{{Path: f.Path, Line: body.Start + 1, Msg: fmt.Sprintf("changed(%s) has %d '%s =="+
+					"' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot '%s'"+
+					" -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick",
+					prop, n, prop, slot.Name)}}
+			}
 		}
 	}
-	return nil, nil
+	return nil
 }

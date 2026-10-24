@@ -23,7 +23,7 @@ _write_hot() {
   printf '  public void changed(Property p, Context cx) {\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '    if (p == a || p == b || p == c || p == d || p == e || p == f || p == g)\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '      execute();\n  }\n  void execute() {\n    setXHours(1.0);\n  }\n}\n' \
+  printf '      execute();\n  }\n  void execute() {\n    setXHours(getXHours() + 1.0);\n  }\n}\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
 }
 
@@ -47,7 +47,7 @@ _write_hot() {
     > "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '  public void changed(Property p, Context cx) {\n    if (p == a || p == b) execute();\n  }\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() { setXHours(1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() { setXHours(getXHours() + 1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -61,7 +61,7 @@ _write_hot() {
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '    if (p == a || p == b || p == c || p == d || p == e || p == f || p == g) execute();\n  }\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() { setXHours(1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() { setXHours(getXHours() + 1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -73,14 +73,14 @@ _write_hot() {
   printf '  public void changed(Property p, Context cx) {\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   printf '    if (p == a || p == b || p == c || p == d || p == e || p == f || p == g) execute();\n  }\n' \
     >> "$TMPDIR_T/Mod/src/com/x/A.java"
-  printf '  void execute() { setXHours(1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf '  void execute() { setXHours(getXHours() + 1.0); }\n}\n' >> "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
 }
 
 @test "CHW5: no changed(Property...) override at all is clean" {
-  printf 'class A {\n  void execute() { setXHours(1.0); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class A {\n  void execute() { setXHours(getXHours() + 1.0); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -92,7 +92,7 @@ _write_hot() {
   { printf 'class T {\n  static final Property xHours = newProperty(0, 0.0, null);\n'
     printf '  /* public void changed(Property q, Context cx) { */\n  public void changed(Property p, Context cx) {\n'
     for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
-    printf '  }\n  void execute() { setXHours(1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/T.java"
+    printf '  }\n  void execute() { setXHours(getXHours() + 1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/T.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/T.java:4  changed(p) has 7 'p ==' branches"* ]]
@@ -103,7 +103,7 @@ _write_hot() {
   # Go golden: go/internal/lint/rules/changedhotwrite/testdata/truth-method-bodies-1.txt
   { printf 'class W {\n  static final Property xHours = newProperty(0, 0.0, null);\n  public void changed(Property p, Context cx) {\n'
     for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
-    printf '  }\n  boolean ok() { if (execute()) return true; return false; }\n  void execute() { setXHours(1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/W.java"
+    printf '  }\n  boolean ok() { if (execute()) return true; return false; }\n  void execute() { setXHours(getXHours() + 1.0); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/W.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/W.java:3  changed(p) has 7"* ]]
@@ -115,10 +115,22 @@ _write_hot() {
   { printf 'class Y {\n  Property bHours = newProperty(Flags.TRANSIENT, 0.0, null); Property cHours = newProperty(0, 1, null);\n'
     printf '  public void changed(Property p, Context cx) {\n'
     for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
-    printf '  }\n  void execute() { setCHours(1); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/Y.java"
+    printf '  }\n  void execute() { setCHours(getCHours() + 1); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/Y.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == *"writes non-transient slot 'cHours'"* ]]
+}
+
+@test "CHW9: a hot changed() whose only persisted write mirrors an edge-flipped field is not reported" {
+  # Mutation: CHW9 -- ignoring Baja's equal-value skip counts setXLocked(m.locked[0]) as a per-cycle persisted write
+  # Go golden: go/internal/lint/rules/changedhotwrite/testdata/truth-equal-value-skip-1.txt
+  printf '%s\n' 'class M {' '  boolean[] locked;' '  void step() { if (trip) locked[0] = true; }' '}' > "$TMPDIR_T/Mod/src/com/x/M.java"
+  { printf 'class Edge {\n  static final Property xLocked = newProperty(0, false, null);\n  public void changed(Property p, Context cx) {\n'
+    for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
+    printf '  }\n  void execute() { setXLocked(m.locked[0]); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/Edge.java"
+  run "$CHW" --strict "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
 }
 
 @test "CHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
@@ -150,7 +162,7 @@ _write_hot() {
 @test "CHW-reset: resetXHours() is not the setter setXHours( -- no WARN on a reset-only write (#151)" {
   # Mutation: CHW-reset -- a bare substring `setXHours(` also matches inside `resetXHours(` and false-WARNs.
   _write_hot
-  sed -i 's/    setXHours(1.0);/    resetXHours();/' "$TMPDIR_T/Mod/src/com/x/A.java"
+  sed -i 's/    setXHours(getXHours() + 1.0);/    resetXHours();/' "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" != *"WARN"* ]]
@@ -158,7 +170,7 @@ _write_hot() {
 
 @test "CHW-qualified: a qualified this.setXHours( still counts as the setter (#151)" {
   _write_hot
-  sed -i 's/    setXHours(1.0);/    this.setXHours(1.0);/' "$TMPDIR_T/Mod/src/com/x/A.java"
+  sed -i 's/    setXHours(getXHours() + 1.0);/    this.setXHours(getXHours() + 1.0);/' "$TMPDIR_T/Mod/src/com/x/A.java"
   run "$CHW" "$TMPDIR_T/Mod"
   [ "$status" -eq 0 ]
   [[ "$output" == *"WARN"* ]]

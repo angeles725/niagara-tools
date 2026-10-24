@@ -39,10 +39,17 @@
 # Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
 # method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
 # as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
+# Truth fix T5 (2026-10-24, equal-value skip, shared with lint-persist-hot-write through hotwrite.Hot): the
+# persisted write that qualifies a hot changed() must be one that can dirty the station every cycle. Baja skips a
+# write of an equal simple value (ComplexSlotMap.java:1239 setDouble, :860 setBoolean, :637 set; niagara-research
+# organized/baja/baja/vineflower/com/tridium/sys/schema/), so a simple-typed slot counts only when its value is
+# computed fresh (a clock read, its own getter in arithmetic, a field accumulated by a non-literal delta), and no
+# write counts under an if that tests the slot's getter or a change flag; a non-simple value always counts.
 # Truth fix T4 (2026-10-24): every `Property <name> = newProperty(` of a line is read, its flags from its own
 # "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
 # flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: CHW9 -- ignoring Baja's equal-value skip counts setXLocked(m.locked[0]) as a per-cycle persisted write
 # Mutation: CHW8 -- reading one declaration per line, flags after the last newProperty(, misses bHours and misreads its flags
 # Mutation: CHW7 -- taking the first execute() not followed by ";" as the declaration reads if (execute()) instead of the body
 # Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one

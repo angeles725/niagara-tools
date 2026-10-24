@@ -73,12 +73,10 @@ func check(f *javasrc.File, acc map[string]bool) []lint.Finding {
 		if prop.Transient {
 			continue
 		}
-		setter, call := hotwrite.Setter(prop.Name)+"(", hotwrite.SetterCall(prop.Name)
+		setter := hotwrite.Setter(prop.Name) + "("
 		for _, b := range bodies {
-			for i := b.Start; i <= b.End; i++ {
-				loc := call.FindStringIndex(lines[i])
-				if loc == nil || setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) ||
-					!hotwrite.Hot(lines, b, i, loc[1], prop, acc) {
+			for _, i := range hotwrite.HotCalls(lines, b, prop, acc) {
+				if setterDecl.MatchString(lines[i]) || guarded(lines, b.Start, i) {
 					continue
 				}
 				out = append(out, lint.Finding{Path: f.Path, Line: i + 1, Msg: setter + "...) writes non-transient slot '" +

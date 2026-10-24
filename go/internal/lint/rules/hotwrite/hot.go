@@ -103,3 +103,16 @@ func guardedBy(lines []string, b Body, line, at int, getter string) bool {
 	}
 	return false
 }
+
+// HotCalls are the lines of body b holding a call of p's setter (the first one of the line) that can dirty
+// the station every cycle (Hot), in line order.
+func HotCalls(lines []string, b Body, p Prop, acc map[string]bool) []int {
+	var out []int
+	call := SetterCall(p.Name)
+	for i := b.Start; i <= b.End; i++ {
+		if loc := call.FindStringIndex(lines[i]); loc != nil && Hot(lines, b, i, loc[1], p, acc) {
+			out = append(out, i)
+		}
+	}
+	return out
+}
