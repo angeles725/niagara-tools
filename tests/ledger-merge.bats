@@ -92,3 +92,16 @@ lint() {
   grep -qF 'toolbelt/lint-zz-beta-demo.sh' "$K/toolbelt/INDEX.md"
   [ -z "$(g ls-files build-n4-module-kit/toolbelt/INDEX.md)" ]
 }
+
+@test "LM4: negative control — force-committing the generated files brings the conflict back" {
+  # Proves LM1-LM3 can see a conflict: the fix is not committing the files, not a lucky layout.
+  for b in alpha beta; do
+    change "pr-$b" "$b-change"
+    g add -f build-n4-module-kit/BUILD-STATE.md build-n4-module-kit/retros/INDEX.md
+    g commit -qm "chore: force-commit the generated files ($b)"
+  done
+  g checkout -q pr-alpha
+  run g merge --no-edit pr-beta
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CONFLICT"*"build-n4-module-kit/BUILD-STATE.md"* ]]
+}
