@@ -15,6 +15,9 @@ func showDecls(src string) string {
 		if d.Override {
 			o = "@"
 		}
+		if d.Anonymous {
+			o += "~"
+		}
 		b = append(b, fmt.Sprintf("%s%s.%s(%s)@%d#%d", o, d.Class, d.Name, strings.Join(d.Params, ","), d.Line+1, Statements(toks[d.Body[0]:d.Body[1]])))
 	}
 	return strings.Join(b, " ")
@@ -30,7 +33,7 @@ func TestDecls(t *testing.T) {
 		{"override", "class A {\n  @Override\n  public String toString() { return \"a\"; }\n  @SuppressWarnings(\"x\") @Override void h() {}\n}",
 			"@A.toString()@3#1 @A.h()@4#0"},
 		{"nested, inner and anonymous classes", "class A {\n  class B { void f() {} }\n  void g() { Runnable r = new Runnable() { public void run() { go(); } }; }\n}\nenum E { X; void k() {} }",
-			"B.f()@2#0 A.g()@3#2 Runnable.run()@3#1 E.k()@5#0"},
+			"B.f()@2#0 A.g()@3#2 ~Runnable.run()@3#1 E.k()@5#0"},
 		{"for header counts once", "class A {\n  void f() { for (int i = 0; i < n; i++) { a(); } }\n}", "A.f()@2#1"},
 		{"control blocks and lambdas are not methods", "class A {\n  void f() { if (x) { y(); } while (z) { w(); } r(() -> { q(); }); synchronized (this) { s(); } }\n  static { init(); }\n}",
 			"A.f()@2#5"},

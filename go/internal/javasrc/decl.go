@@ -8,8 +8,10 @@ type Decl struct {
 	Name     string   // the method name (a constructor: the class name)
 	Params   []string // the parameter types, annotations, final and names dropped ("Map<K,V>", "byte[]", "String...")
 	Override bool     // an @Override annotation precedes it
-	Line     int      // the 0-based line of the name token
-	Body     [2]int   // the body's token range [Body[0], Body[1]): inside its braces
+	// Anonymous is set in an anonymous class body: its methods implement the type it instantiates.
+	Anonymous bool
+	Line      int    // the 0-based line of the name token
+	Body      [2]int // the body's token range [Body[0], Body[1]): inside its braces
 }
 
 // classKeyword opens a class body; it never names one after a "." (Foo.class).
@@ -21,6 +23,7 @@ var notMethod = map[string]bool{"if": true, "for": true, "while": true, "switch"
 
 type frame struct {
 	class  string // set on a class body
+	anon   bool   // the class body is anonymous
 	method int    // index into the result of an open method body, or -1
 }
 
@@ -38,11 +41,11 @@ func Decls(toks []Token) []Decl {
 		switch t.Text {
 		case "{":
 			f := frame{method: -1}
-			if name, ok := classBody(toks, k); ok {
-				f.class = name
+			if name, anon, ok := classBody(toks, k); ok {
+				f.class, f.anon = name, anon
 			} else if len(stack) > 0 && stack[len(stack)-1].class != "" {
 				if d, ok := method(toks, k); ok {
-					d.Class = stack[len(stack)-1].class
+					d.Class, d.Anonymous = stack[len(stack)-1].class, stack[len(stack)-1].anon
 					f.method = len(out)
 					out = append(out, d)
 				}
@@ -77,12 +80,12 @@ func headerStart(toks []Token, k int) int {
 	return 0
 }
 
-// classBody reports whether the "{" at k opens a class body, and the class name.
-func classBody(toks []Token, k int) (string, bool) {
+// classBody reports whether the "{" at k opens a class body, the class name and whether it is anonymous.
+func classBody(toks []Token, k int) (string, bool, bool) {
 	for j := headerStart(toks, k); j < k-1; j++ {
 		if toks[j].Kind == TokIdent && classKeyword[toks[j].Text] && (j == 0 || toks[j-1].Text != ".") &&
 			toks[j+1].Kind == TokIdent {
-			return toks[j+1].Text, true
+			return toks[j+1].Text, false, true
 		}
 	}
 	if k > 0 && toks[k-1].Text == ")" { // new Foo<Bar>(...) { : an anonymous class
@@ -97,11 +100,11 @@ func classBody(toks []Token, k int) (string, bool) {
 				q -= 2
 			}
 			if q >= 1 && toks[q-1].Text == "new" {
-				return toks[p].Text, true
+				return toks[p].Text, true, true
 			}
 		}
 	}
-	return "", false
+	return "", false, false
 }
 
 // method reads the declaration whose body opens at the "{" at k: "name(params) [throws A, B] {".
