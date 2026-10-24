@@ -45,6 +45,7 @@ type Pointer struct {
 	File     string // Code and Vineflower only
 	Version  string // Help, Vineflower and Javap only
 	Lines    []Range
+	Anchor   string   // a quoted phrase after the lines that must be on or near them
 	Sections []string // corpus § tokens, or the heading of a kit cross-reference
 	Rows     []Range
 	Pages    []Range  // course PDF pages
@@ -62,6 +63,9 @@ func (p Pointer) Locator() string {
 	var parts []string
 	if len(p.Lines) > 0 {
 		parts = append(parts, ":"+FormatRanges(p.Lines))
+	}
+	if p.Anchor != "" {
+		parts = append(parts, `"`+p.Anchor+`"`)
 	}
 	if len(p.Pages) > 0 {
 		parts = append(parts, "p"+FormatRanges(p.Pages))

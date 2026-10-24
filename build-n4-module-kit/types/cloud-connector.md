@@ -71,7 +71,7 @@ copy with `nre("com.squareup.okhttp3:okhttp")` (the `nre` configuration = jars i
 
 **MQTT: native first.** The stock driver is the `abstractMqttDriver` module, a licensed
 feature, capped by default at 25 devices on a JACE and 50 on a Supervisor (guide
-`Mqtt/MQTTRequirements-74179811.txt:11,17`). Model one broker connection with many points before many devices. A
+`Mqtt/MQTTRequirements-74179811.txt:11,17` "The abstract abstractMqttDriver module is a licensed feature."). Model one broker connection with many points before many devices. A
 bundled Paho client bypasses the licence, the cap and the User Key Store; record why when you choose it.
 `[ev: corpus B1323 §1323.1-2]` `[ev: retro devguide415-r2-drivers-protocols Δ1]`
 
@@ -357,7 +357,7 @@ on 8883: set it, or the connection fails against a TLS listener. Owed Go lint G8
 For any client our module runs that polls a watch on another station (oBIX watch, a fox or HTTP poller):
 - **Lease = max(2 × interval, interval + safety factor).** That is how the R2 oBIX client sizes its requested
   lease (default interval 2 s, safety factor 10 s); raise the interval to 10 s or more for a weak peer
-  (guide 4.15.6.20 `EngNotes/aClientPollingTiming.txt:10-20`). Use the same rule for our own watch clients
+  (guide 4.15.6.20 `EngNotes/aClientPollingTiming.txt:10-20` "An R2ObixClient device’s Watch Interval property controls the"). Use the same rule for our own watch clients
   `[INFER]`, and re-create the watch when the server reports it expired.
 - **HTTP 503 = the peer ran out of web-service threads** (`aClientPollingTiming.txt:34-36`): back off with a
   growing delay, never retry at the poll rate. Debug logging on the serving station "greatly slows" its answers
@@ -372,9 +372,9 @@ For any client our module runs that polls a watch on another station (oBIX watch
   `rdbOracle`, `rdbSqlServer` and `rdbHsqlDb` and no Postgres module. The external database runs on the
   Supervisor; a controller gets HSQLDB only (`:7-11`).
 - **JDBC by hand:** the MySQL connector, renamed `mysql-connector-java.jar`, and Oracle's ojdbc go in
-  `<niagara_home>/jre/lib/ext` (`:25`; `Rdbms/OracleDatabaseAndJDKCompatibility-2F50143A.txt:13`);
+  `<niagara_home>/jre/lib/ext` (`:25`; `Rdbms/OracleDatabaseAndJDKCompatibility-2F50143A.txt:13` "Paste the extracted .jar file into niagara_home/jre/lib/ext.");
   `rdbSqlServer-rt.jar` bundles the Microsoft driver. Each database type needs its own licence feature
-  (`Rdbms/PrereqChecklist-7B2F6B77.txt:17`).
+  (`Rdbms/PrereqChecklist-7B2F6B77.txt:17` "A Niagara license for a specific database type").
 - **Export semantics:** a daily or interval trigger appends from the last exported timestamp with no retry; the
   driver creates the tables, by history id (default) or by type (corpus B1340 row 6, B407).
 - **Postgres or Supabase:** a custom `BRdbms` dialect with its own licence feature (corpus B785), or, as PANCCADIA

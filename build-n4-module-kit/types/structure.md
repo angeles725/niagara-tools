@@ -429,7 +429,7 @@ It is built against Java 8 SE — NOT synonymous with "JACE-exclusive".
 | Workbench | `rt` + the profiles its `-rp:` list names (Workbench adds `wb` and `doc`; no `-rp:` = all five, `Nre.java:1374`) |
 
 A `-wb` part is **invisible** to any station daemon regardless of `-rp` flags. Keep JACE logic in `-rt`.
-`[ev: corpus B630]` `[ev: corpus B1341 §1341.2 C1]` (guide `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30`;
+`[ev: corpus B630]` `[ev: corpus B1341 §1341.2 C1]` (guide `Platform/aPlat4PlatformAdminConfigureRuntimeProfiles.txt:24,30` "The following table lists the types of software";
 the JACE row is doc-proven, not run on a JACE) `[ev: retro devguide415-r2-packaging-platform-signing Δ8]`
 `[ev: retro r8-t9i-packaging Δ2]`
 

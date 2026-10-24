@@ -11,7 +11,8 @@ const javaPath = "`?([\\w/.$…-]+\\.java)(?::(\\d[\\d,-]*))?`?"
 
 // The prose citation forms, tried in this order; each match is blanked before the next form runs,
 // so the generic backticked `path:lines` form never reads a span a specific form already took. A
-// cross-reference file name may hold dots before `.md` (`BUILD-STATE.src.md` § X), read whole.
+// cross-reference file name may hold dots before `.md` (`BUILD-STATE.src.md` § X), read whole. A quoted
+// phrase right after a backticked `path:lines` is its anchor.
 var (
 	vineModFirst = regexp.MustCompile(`vineflower\s+([A-Za-z][\w.-]*)\s+(\d+(?:\.\d+){2,3})\s+` + javaPath)
 	vineVerFirst = regexp.MustCompile(`([A-Za-z][\w.]*-[a-z]+)\s+(\d+(?:\.\d+){2,3})\s+vineflower\s+` + javaPath)
@@ -19,7 +20,7 @@ var (
 	devguideRef  = regexp.MustCompile("\\(devguide `([^`]+)`")
 	certPath     = regexp.MustCompile("\\[CERT[^\\]]*\\]\\s+`?(organized/[^\\s`]+)")
 	crossRef     = regexp.MustCompile("`?((?:[\\w.-]+/)*[\\w-]+(?:\\.[\\w-]+)*\\.md)`? (?:§§ (" + secListLoose + ")|§ (\"[^\"]+\"|`[^`]+`|" + secList + "|[^,;)\\]`|]+))")
-	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,-]*)`")
+	tickedPath   = regexp.MustCompile("`((?:[\\w.$… -]+/)+[\\w.$ -]*\\.\\w{1,10}):(\\d[\\d,-]*)`(?:\\s+\"([^\"]+)\")?")
 	tickedAlias  = regexp.MustCompile("`([A-Z]{1,3}):(\\d[\\d,-]*)`")
 )
 
@@ -75,7 +76,7 @@ func (sc *scan) inline(i int) []Pointer {
 	})
 	take(tickedPath, func(m []string) (Pointer, bool) { // the path may hold spaces, so it is not split into words
 		lines, _ := ParseRanges(m[2])
-		return Pointer{Kind: Path, Target: expand(m[1], sc.aliases), Lines: lines}, onePath(m[1])
+		return Pointer{Kind: Path, Target: expand(m[1], sc.aliases), Lines: lines, Anchor: strings.TrimSpace(m[3])}, onePath(m[1])
 	})
 	take(tickedAlias, func(m []string) (Pointer, bool) {
 		a, ok := sc.aliases[m[1]]
