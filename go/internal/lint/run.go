@@ -382,10 +382,12 @@ func Command(specs ...Spec) cli.Main {
 		}
 		if len(selected) == 1 && args[0] != "--all" {
 			if c, ok := selected[0].rule().(Configurer); ok {
-				if err := c.Configure(a); err != nil {
+				r, err := c.Configure(a)
+				if err != nil {
 					fmt.Fprint(s.Err, err)
 					return 3
 				}
+				selected = []Spec{selected[0].withRule(r)}
 			}
 		}
 		return Run(selected, name, a, s)

@@ -65,8 +65,10 @@ rule's rows stay contiguous.
    `Mode` `Valued` parses `[<option> <value>]... <root>` for a lint with one value option (`Spec.Option`,
    e.g. `--wiring-map`): the option and the root in any order, the last value wins, and a missing value, any
    other `-` argument or a second root prints the usage line alone. The rule reads the value by implementing
-   `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk, and a
-   non-nil error is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
+   `lint.Configurer`: run alone, it gets the parsed `Args` after the root check and before the walk and
+   returns a new rule value of its kind holding what it read, which runs instead (never mutate the
+   registered rule: a later run in the same process, or a rule list, would see the values); a non-nil error
+   is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
    value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
    flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
    `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
