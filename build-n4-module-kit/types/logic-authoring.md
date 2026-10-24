@@ -445,7 +445,7 @@ Rules for integrating a control component with a `BControlSchedule`:
 - **A link on `schedule.in` OUTRANKS ALL tree rules:** `BControlSchedule.doExecute()` checks the `in` slot FIRST — if anything is linked to `in`, its value wins over every week/special/event entry in the schedule tree. Always check whether a `schedule.in` link is active before assuming the schedule tree is driving output.
 - **Composite priority = FIRST SLOT WINS (positional, no numeric field):** `getOutputSource(now)` does a positional walk and returns the FIRST slot whose time range covers `now`. There is no numeric priority field — slot order is the only arbitrator. `BWeeklySchedule` places `specialEvents` at slot 0 (beats `week` at slot 1 by the positional rule).
 - **ONE `Clock.Ticket` per transition — no polling loop:** the scheduler arms a single `Clock.Ticket` at each transition and reschedules it at the NEXT transition boundary. There is no polling loop. A custom component that wraps a schedule must not substitute a periodic poll for this ticket.
-- **Scan horizon = 90 days:** `scanLimit` defaults to 90 days. A schedule with no event within 90 days of `now` returns null from `getOutputSource`, so the linked output sees null/invalid. Design schedules so there is always a reachable event within the horizon.
+- **Scan horizon = 90 days:** `scanLimit` defaults to 90 days and bounds only the forward search for the next change (`nextTime`/`nextVal`); with no matching entry `getOutputSource` returns the schedule itself and `out` takes `defaultOutput`, never null (schedule-rt vineflower `javax/baja/schedule/BControlSchedule.java:89,218-227,259-271`).
 - **Out of every effective period a weekly schedule outputs its `defaultOutput`:** false for a Boolean schedule, null (relinquish the linked level) for the others; In > special event > weekly > default. Specials rank by list order, and `cleanupExpiredEvents` (default true) deletes past one-time events (4.15.6.20 guides, corpus B1335 rows 5-6). `[ev: retro devguide415-r2-control-alarms-schedules Δ10]`
 - **One schedule, many rooms:** fan the one schedule's `out` to each room's input, or use a `BooleanScheduleSelector`/`EnumScheduleSelector` (container ORD + schedule choice; it makes and type-checks the link, corpus B1335 row 7). Never one schedule copy per room.
 - **Wall-clock triggers:** a `TriggerSchedule` fires `trigger` at listed times (`addTime(h, m)`), keeps a persisted `nextTrigger` and fires `triggerMissed` after a missed time; rule and code lines in `types/logic.md` § Safety fail-modes & timers. `[ev: retro devguide415-r2-control-alarms-schedules Δ9]`
@@ -456,7 +456,7 @@ Rules for integrating a control component with a `BControlSchedule`:
 
 ## Minimal module (copy-start)
 
-### Security module skeleton `[ev: corpus B777 §777.2–777.4]`
+### Security module skeleton `[ev: corpus B777 §777.2–777.6]`
 
 A **security module** provides a custom authentication scheme (e.g. LDAP, RADIUS, custom SSO) as a
 first-class Niagara service.  The pattern is the same N4-extension idiom — subclass + register — but
@@ -591,7 +591,7 @@ public final class BMyEnum extends BFrozenEnum {
     }
 
     public static BMyEnum make(String tag) {
-        return (BMyEnum) BFrozenEnum.make(TYPE, tag);
+        return (BMyEnum) OFF.getRange().get(tag);
     }
 
     @Override public Type getType() { return TYPE; }
@@ -604,17 +604,16 @@ Rules: static `int ORD_*` constants with EXPLICIT ordinals; one static instance 
 
 `BEnumRange` carries the {ordinal → tag} map for a **dynamic enum slot** — one whose value set is configured at runtime or driven by protocol metadata (DIFFERENT from `BFrozenEnum`, which bakes ordinals into the class at compile time). Use it when the options vary by hardware or installation.
 
-**Inline BNF (BOG `E:` prefix form):**
+**Inline BNF (`BEnumRange` javadoc; a BOG facet stores it after an `E:` type tag):**
 ```
-rangeExpr  ::= ["frozen+"] "{" pairs "}" ["?" opts]
-pairs      ::= pair ("," pair)*
-pair       ::= integer ":" identifier
-opts       ::= optEntry ("," optEntry)*
-optEntry   ::= "def=" integer | "null=" integer
+range    ::= [frozen "+"] dynamic ["?" facets]
+frozen   ::= typeSpec                (e.g. baja:Weekday)
+dynamic  ::= "{" pair ("," pair)* "}"
+pair     ::= slotName "=" ordinal
 ```
 
-Example: `E:{0:auto,1:hand,2:off}` — three ordinals, not frozen.  
-Frozen example: `frozen+{0:off,1:stage1,2:stage2}` — operator cannot add/remove entries.
+Example: `{auto=0,hand=1,off=2}` — three ordinals, not frozen.  
+Frozen example: `baja:Month+{Never=13}` — the frozen `baja:Month` range extended with one dynamic pair (`frozen` is a type spec, not a keyword).
 
 **`make()` overload catalogue:**
 
@@ -622,20 +621,20 @@ Frozen example: `frozen+{0:off,1:stage1,2:stage2}` — operator cannot add/remov
 |----------|-------------|
 | `BEnumRange.make(String[] tags)` | Sequential ordinals 0..n-1 — ONLY when ordinals are truly contiguous |
 | `BEnumRange.make(int[] ordinals, String[] tags)` | Non-contiguous ordinals — REQUIRED for protocol enums with gaps |
-| `BEnumRange.make(int count)` | Placeholder range of `count` ordinals (default tag names) |
+| `BEnumRange.make(Type frozenType)` | Frozen range of a `BFrozenEnum` type |
 
 **Non-contiguous-ordinal gotcha:** `make(String[])` FORCES ordinals 0..n-1. If a BACnet Multi-state object or Modbus register defines non-sequential codes (e.g. values 1, 3, 7), you MUST use `make(int[], String[])` — using `make(String[])` silently remaps ordinals and breaks any control logic that compares them. `[ev: retro module-hardening-reference-cards-deltas Δ4]`
 
 ## Programmatic slot-name rules `[ev: corpus B1110]`
 
-When adding dynamic slots (`add(name, value)`) or forming `SlotPath` strings from external data (BACnet device names, meter IDs, spreadsheet rows), the name must satisfy the slot-name grammar or the slot is created in a broken state with NO error at creation time.
+When adding dynamic slots (`add(name, value)`) or forming `SlotPath` strings from external data (BACnet device names, meter IDs, spreadsheet rows), the name must satisfy the slot-name grammar or `add()` throws `IllegalNameException`.
 
 **Grammar:**
 - First character: MUST be alphabetic (`[a-zA-Z]`) — no leading digit, no leading underscore, no space
 - Subsequent characters: `[a-zA-Z0-9_]` — only underscore is allowed unescaped
 - `$` prefix: used to escape special characters (e.g. `$20` for space)
 
-**Silent failure mode:** a slot name with a leading digit or space is accepted by `add()` without exception, but the resulting `SlotPath` is malformed — ORD resolution fails, Workbench cannot navigate it, and links break silently.
+**Failure mode:** `add()` rejects a name with a leading digit, a leading underscore or a space: `ComponentSlotMap.add` calls `SlotPath.verifyValidName`, which throws `IllegalNameException` (baja vineflower `com/tridium/sys/schema/ComponentSlotMap.java:1739`, `javax/baja/naming/SlotPath.java:125-129`), so a raw external name fails at the first `add()`.
 
 **Rule:** always call `SlotPath.escape(name)` on any name derived from external data before passing it to `add()` or embedding it in a `SlotPath`:
 
@@ -769,7 +768,7 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
 - **A history extension records nothing until enabled.** `enabled` defaults false with DEFAULT_ON_CLONE (flags 64,
   `javax/baja/history/ext/BHistoryExt.java:119`, same copy), so a palette-shipped ext is dead until commissioning
   enables it or code calls `setEnabled(true)`; a Paste Special copy also arrives disabled with an empty History
-  Name (corpus B1256 §1256.6). `[ev: retro devguide415-r2-control-alarms-schedules Δ3]` `[ev: retro n4-course-parity-observability-horizons Δ5]`
+  Name (corpus B1257 row L10.20, §1257.10). `[ev: retro devguide415-r2-control-alarms-schedules Δ3]` `[ev: retro n4-course-parity-observability-horizons Δ5]`
 - **Keep `historyName` a script** (default `%parent.name%`, same file `:122`): a literal name loses the automatic
   numbering, so a duplicated ext collides (4.15.6.20 guide `Histories/aHistoryNames.txt:7,11`); never rename a
   history from the History space (it splits too, corpus B1324 row 9).
@@ -777,10 +776,10 @@ Check the card after a Niagara upgrade: `toolbelt/check-facets-card.sh types/log
   15 min interval that is about five days; set it for defrost and compressor trends. Counters (run hours, kWh) set
   Min/Max Rollover for delta logging (corpus B1324 row 10).
 - **Readers use `out.value`** in BQL, not the `out` display string; units and min/max facets on the point give the
-  implied tags (`n:qudtUnit`, `h4:minVal`/`maxVal`) for free (corpus B1256 §1256.6).
+  implied tags (`n:qudtUnit`, `h4:minVal`/`maxVal`) for free (corpus B1256 §1256.2, §1256.6).
 - **CSV export needs no servlet code:** the stock `…|view:file:ITableToCsv?fileName=<name>` ORD view downloads any
   table, a history query included (devguide 4.15.6.20 `servlets/exporters.txt:24`).
-- **B804-G1 OPEN (requires-execution):** `BHistoryExt` on a custom `BComponent` (vs a `BControlPoint`) needs a live station smoke to confirm the extension mechanism works with a non-point parent. `[ev: corpus B804]`
+- **A history ext cannot sit on a custom `BComponent`:** `BPointExtension.isParentLegal` accepts only a `BControlPoint` (control-rt vineflower `javax/baja/control/BPointExtension.java:64-66`), and the typed exts narrow it further (`BNumericIntervalHistoryExt` → `BNumericPoint`, history-rt vineflower `javax/baja/history/ext/BNumericIntervalHistoryExt.java:78-80`). Log a custom component's value through a point linked to it [INFER].
 
 ## Slot types for externally written values `[ev: corpus B823]`
 When a value is written by an EXTERNAL client (oBIX/write-server, the -ux servlet, a fox/BajaScript client), the slot
@@ -791,7 +790,7 @@ TYPE decides whether the write is even possible and whether it lands safely. Pic
 | numeric setpoint / config | plain `double` (if oBIX writes it) — or `BStatusNumeric` ONLY when the status must display | `SUMMARY\|OPERATOR` | `double`: oBIX bare `<real val="..">`. `BStatusNumeric`: the WRAPPED body `<obj is="…:StatusNumeric"><real name="value" val=".."/></obj>` (LIVE-verified) — NEVER attr-only `<obj … val>` (200 but writes 0.0); OR the servlet `POST /api/setpoint`; OR an OPERATOR action | servlet `auditLog` / write-server audit / a Niagara event when via an action | a bare `BStatusNumeric` written by external clients → the silent-zero footgun `[ev: corpus B823]` |
 | timing / delay | `BRelTime` | `SUMMARY\|OPERATOR` | oBIX `<reltime val="PT..S"/>` | as above | a `double` seconds field that skips the reltime unit `[ev: corpus B823]` |
 | switch / on-off | `boolean` | `SUMMARY\|OPERATOR` | oBIX `<bool val="true">` | as above | a `BStatusBoolean` (complex) written bare → "Cannot translate" `[ev: corpus B823]` |
-| mode / HOA | today `double` 0/1/2 written as `<real>`; for future modules a **FROZEN enum** (`BFrozenEnum` via `@NiagaraEnum`/`@Range`, e.g. a `BHoaMode` auto/hand/off = 0/1/2) carries its range INTRINSICALLY — no explicit facet needed | `SUMMARY\|OPERATOR` | `double`: `<real val="2"/>`. FROZEN enum: renders `<enum val="hand" display=… range=…/>` and decodes `<enum val="hand"/>` with NO explicit `BFacets.RANGE` — the encoder (`ObixUtils:358`) and decoder (`ObixDecoder:184/245/333`, `setFromVal`) fall back to the value's `getRange()`. A DYNAMIC enum is the only case that needs an explicit range facet. The `@Range` tags need `module.lexicon` keys (SP6 known set). `[ev: corpus B828]` | as above | a `double`→enum switch is a LOSSY retype (OUTAGE) → future modules only; existing RoomPanel modes stay `double` 0/1/2 `[ev: corpus B828]` Carve-out: a FROZEN enum HOA is for an INTERNAL, single-module slot (it self-describes over oBIX); a value LINKED across custom modules stays a plain `double` (see `logic.md` §Linking) — a shared enum forces the cross-module dependency and re-invites the deleted-`BHoaMode` `Missing class ColdRoomPan:HoaMode` station crash. `[ev: corpus B828]` `[ev: corpus B818]` |
+| mode / HOA | today `double` 0/1/2 written as `<real>`; for future modules a **FROZEN enum** (`BFrozenEnum` via `@NiagaraEnum`/`@Range`, e.g. a `BHoaMode` auto/hand/off = 0/1/2) carries its range INTRINSICALLY — no explicit facet needed | `SUMMARY\|OPERATOR` | `double`: `<real val="2"/>`. FROZEN enum: renders `<enum val="hand" display=… range=…/>` and decodes `<enum val="hand"/>` with NO explicit `BFacets.RANGE` — the encoder (`ObixUtils:358`) and decoder (`ObixDecoder:184/245/333`, `setFromVal`) fall back to the value's `getRange()`. A DYNAMIC enum is the only case that needs an explicit range facet. The `@Range` tags need `module.lexicon` keys (SP6 known set). `[ev: corpus B828]` | as above | a `double`→enum switch is a LOSSY retype (OUTAGE) → future modules only; existing RoomPanel modes stay `double` 0/1/2 `[ev: corpus B828]` Carve-out: a FROZEN enum HOA is for an INTERNAL, single-module slot (it self-describes over oBIX); a value LINKED across custom modules stays a plain `double` (see `logic.md` §Linking) — a shared enum forces the cross-module dependency and risks a registry `SEVERE … Missing class` once the owning type is gone (B818: a dangling `<type>` for the never-built `BHoaMode` logged `Missing class for "ColdRoomPan:HoaMode"` on every module reload). `[ev: corpus B828]` `[ev: corpus B818]` |
 | button / command | an OPERATOR `@NiagaraAction` | `Flags.OPERATOR` | oBIX `<op>` — POST → `BComponent.invoke` under `OPERATOR_INVOKE`, arg from `<real>`/`<bool>` `[ev: corpus B822]` | the Niagara invoke event (attributed) | a `HIDDEN` action (0 oBIX exposure) or a boolean "pulse" slot |
 
 **The rule:** a slot that EXTERNAL clients write is **either a SIMPLE value or has an ACTION — never a bare complex
@@ -825,7 +824,7 @@ link-TARGET side (which the next source propagation overwrites, B816 §816.2), d
 EPHEMERAL — the next propagation overwrites it (B816 §816.2). Confirm write-source vs write-target before relying on
 the write sticking. `[ev: corpus B816]`
 
-**`BRelTime` wire encoding is raw milliseconds, NOT ISO-8601:** `BRelTime.encodeToString()` emits `String.valueOf(millis)` — a plain decimal integer. This is ASYMMETRIC with `BAbsTime` (which uses `"13,<ISO-8601Z>"`). An external client (oBIX/REST/JSON) receiving a `BRelTime` value must explicitly convert: divide by 1000 for seconds, by 60000 for minutes, etc. Never assume ISO-8601 duration format (`PT30M` etc.) from a `BRelTime`. When exposing a duration slot to external clients, document the unit in the slot's facets or in the API contract. `[ev: retro module-hardening-reference-cards-deltas Δ6]`
+**`BRelTime` wire encoding is raw milliseconds, NOT ISO-8601:** `BRelTime.encodeToString()` emits `String.valueOf(millis)` — a plain decimal integer. This is ASYMMETRIC with `BAbsTime`, whose `encodeToString()` emits ISO-8601 with an offset (`2026-10-24T10:00:00.000-06:00`, or `Z` for UTC; baja vineflower `javax/baja/sys/BAbsTime.java:669-704`). An external client (oBIX/REST/JSON) receiving a `BRelTime` value must explicitly convert: divide by 1000 for seconds, by 60000 for minutes, etc. Never assume ISO-8601 duration format (`PT30M` etc.) from a `BRelTime`. When exposing a duration slot to external clients, document the unit in the slot's facets or in the API contract. `[ev: retro module-hardening-reference-cards-deltas Δ6]`
 
 `toolbelt/lint-ext-writable-shape.sh <src>` flags the anti-shape (an OPERATOR complex property with no `@NiagaraAction` whose body writes the slot). The exemption is per-slot: action `x` maps to `doX()` (B831-G1 convention); a `doAckAlarm` body writing `alarmAck` must NOT exempt `faultReset` — the write-target must match the OPERATOR slot being checked. The adapter→pure follow uses the `B<Pure>` naming pair only (prepend `"B"` to the pure class name). `[ev: retro campaign9-ext-writable-shape]` `[ev: retro campaign10-ext-writable-per-slot]`
 
@@ -890,13 +889,13 @@ When a module WRITES to a proxy point (a `BBooleanWritable` or `BNumericWritable
 - **Device-side `relinquishDefault`:** configure the field device's own relinquish-default so the device falls back safely (e.g. valve closed) when the network drops, independent of the Niagara priority array.
 - **`pingEnabled` monitor — never disable it:** `<network>/monitor/pingEnabled` is ON by default (`BPingMonitor.java:128`, `newProperty(0, true, null)`); tune `pingFrequency` and `numRetriesUntilPingFail` for prompt DOWN detection instead. A disabled monitor leaves a stale ping-less point UP in Niagara while the physical relay is unresponsive. `[ev: corpus B1348 C1]` [ev: retro devguide415-r3-drivers-integration Δ2]
 
-- **Demand-based native-COV subscription via `SubscribeCallbacks`:** when the driver should register a native device COV subscription only while at least one client is watching a space component, implement `SubscribeCallbacks` and set it via `space.setSubscribeCallbacks(impl)`. Override `subscribe(BComponent[] c, int depth)` to register the native subscription when subscriber count goes 0→1; override `unsubscribe(BComponent[] c)` to deregister on 1→0. Use `BComponentSpace.update(c, depth)` for a one-time snapshot (no ongoing subscription). Rule: the framework tracks the subscriber count — one `subscribe()` call per 0→1 crossing, not per individual client joining. `[ev: corpus B408 §408.4]`
+- **Demand-based native-COV subscription via `SubscribeCallbacks`:** when the driver should register a native device COV subscription only while at least one client is watching a space component, subclass `SubscribeCallbacks` (a class with no-op methods, `javax/baja/space/SubscribeCallbacks.java:5`) and set it via `space.setSubscribeCallbacks(impl)`. Override `subscribe(BComponent[] c, int depth)` to register the native subscription when subscriber count goes 0→1; override `unsubscribe(BComponent[] c)` to deregister on 1→0. Use `BComponentSpace.update(c, depth)` for a one-time snapshot (no ongoing subscription). Rule: the framework tracks the subscriber count — one `subscribe()` call per 0→1 crossing, not per individual client joining. `[ev: corpus B408 §408.4]`
 - **DDF driver: pick the transaction manager to match device concurrency:** DDF comm splits solicited (request→response) from unsolicited via two SPI managers. **`defaultComm`** (serialized, one-outstanding-at-a-time, `Clock.Ticket` timeout, blocking-queue dequeue) is for devices that cannot handle overlapping requests. **`multipleTransaction`** (tag-correlated concurrent, `Hashtable<tag, requests>` two-level map) is for capable protocols that can pipeline. Wrong pick = poll jams (serialized device overwhelmed by pipelined requests) or framing errors (pipelined device receiving one request at a time in the wrong order). `[ev: corpus B909 §909.1-3]`
 - **`BPollScheduler` diagnostics — ONE thread per network, three rate buckets:** `BPollScheduler` runs ONE poll thread per `BDeviceNetwork`, named `"Poll:<networkName>"`. Three rate buckets: fast = 1 000 ms, normal = 5 000 ms, slow = 30 000 ms (defaults). `dibs` stack = immediate first-poll on subscribe (the proxy point is polled once right away before entering the regular bucket). Debugging a non-updating proxy point: (1) check which `BPollFrequency` bucket it is in; (2) check `pollEnabled` on the network's poll service — a `BAbstractPollService` property, not a network one (`javax/baja/driver/util/BAbstractPollService.java:26`, driver-rt vineflower; `types/driver-authoring.md` § 6); (3) confirm the `"Poll:<networkName>"` thread is alive in JVM diagnostics. `[ev: corpus B872 §872.1]`
 
 - **Type-factory hooks: a `BPointDeviceExt` subclass must override three hooks** to tell the framework which concrete types to instantiate for the driver subtree: `getDeviceType()→BMyDevice.TYPE`, `getProxyExtType()→BMyProxyExt.TYPE`, `getPointFolderType()→BMyPointFolder.TYPE`. Pair these with trivial `extends BDeviceFolder` / `extends BPointFolder` subclasses (empty body + generated `TYPE`) — they exist solely to supply a driver-specific concrete `Type` handle; copy them verbatim, no business logic belongs in them. Without these hooks the framework cannot build the driver-specific subtree. `[ev: corpus B955 §955.1]`
 
-- **Discovery learn-entry: discovery jobs `extend BSimpleJob`; each discovered entity is a `B<X>LearnEntry extends BStruct`** (fields: deviceName/deviceId or pointName/pointId/pointType) added to a `HIDDEN|READONLY|TRANSIENT BFolder` held on the job itself. The wb manager reads this transient folder after the job completes and calls `addDevice(entry, cx)` to build the real component tree. **Rule:** the learn-entry must carry enough state to reconstruct the full device/point representation at instantiation time — device address, type discriminator, and any runtime-fixed config the wizard dialog cannot infer. `[ev: corpus B955 §955.2]`
+- **Discovery learn-entry: discovery jobs `extend BSimpleJob`; each discovered entity is a `B<X>LearnEntry extends BStruct`** (fields: deviceName/deviceId or pointName/pointId/pointType) added to a `HIDDEN|READONLY|TRANSIENT BFolder` held on the job itself. The wb manager reads this transient folder after the job completes and builds the real component tree from it. **Rule:** the learn-entry must carry enough state to reconstruct the full device/point representation at instantiation time — device address, type discriminator, and any runtime-fixed config the wizard dialog cannot infer. `[ev: corpus B955 §955.2]`
 
 - **Async write via `CoalesceQueue`:** `write(Context)` posts an `ASYNC` action (`postWrite`) and returns `false` — NEVER block the engine thread in `write()`. Override `post(Action, BValue, Context)` to wrap each incoming action as an `Invocation` and route it to `getWriteHandler().postWork(...)`. The handler is a `BWorker` subclass holding a `CoalesceQueue(1000)` backed by a background `Worker` thread; `CoalesceQueue` collapses duplicate-key pending writes that have not yet been sent, so rapid setpoint changes coalesce instead of flooding the wire. This is the canonical "never block the calling thread" write pattern. `[ev: corpus B955 §955.5]`
 
