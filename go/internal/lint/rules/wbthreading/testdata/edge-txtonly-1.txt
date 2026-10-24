@@ -1,0 +1,8 @@
+-- args --
+@DIR@/root1
+-- want --
+exit 3
+ERROR  lint-wb-threading  @DIR@/root1  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- root1/com/x/notes.txt --
+x

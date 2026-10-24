@@ -1,0 +1,8 @@
+-- args --
+@DIR@/root
+-- want --
+exit 3
+ERROR  lint-link-target-flags  @DIR@/root  no Java sources found (K20: wrong path or empty scaffold)
+-- stderr --
+-- root/com/x/notes.txt --
+x

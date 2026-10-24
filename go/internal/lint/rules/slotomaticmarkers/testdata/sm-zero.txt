@@ -1,0 +1,30 @@
+-- args --
+@DIR@/src
+-- want --
+exit 1
+FAIL  lint-slotomatic-markers  @DIR@/src/com/a/BHmiStatus.java:4  generated region holds 0 /*@ $...$ @*/ stamp lines, Slot-o-Matic needs exactly 1: it logs "Could not process <file>: Found multiple metadata blocks", skips the file and the build stays green -- delete the BEGIN/END markers and rerun :<part>:slotomatic
+-- stderr --
+-- src/com/a/BHmiStatus.java --
+public final class BHmiStatus
+  extends BFrozenEnum
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//@formatter:off
+
+  public static final int SANO = 0;
+
+//@formatter:on
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}
+-- src/com/a/BOk.java --
+public class BOk extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//@formatter:off
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+  /* Generated Fri Oct 24 10:00:00 CST 2026 by Slot-o-Matic (c) Tridium, Inc. 2012-2026 */
+
+  public static final Type TYPE = Sys.loadType(BOk.class);
+//@formatter:on
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}

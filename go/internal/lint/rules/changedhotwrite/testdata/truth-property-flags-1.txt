@@ -1,0 +1,25 @@
+declared difference (truth fix T4, property flags): the awk read one declaration per line and its flags after the
+line's LAST "newProperty(" up to the first ",", on that line only: aHours, whose Flags.TRANSIENT is on the next line,
+counted as non-transient, and bHours took cHours' TRANSIENT while cHours was never read. Every declaration is read
+now, its flags from its own "newProperty(" to the first "," (across lines).
+-- args --
+@DIR@
+-- want --
+exit 0
+-- stderr --
+-- Y.java --
+class Y {
+  public static final Property aHours = newProperty(
+      Flags.TRANSIENT, 0.0, null);
+  Property bHours = newProperty(0, 0.0, null); Property cHours = newProperty(Flags.TRANSIENT, 1, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setAHours(1); setCHours(1); }
+}

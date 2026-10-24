@@ -1,0 +1,27 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  k  declared in 3 modules: A/A-rt (A/A-rt/src/x/K.java), B/B-rt (B/B-rt/src/x/K.java), C/C-rt (C/C-rt/src/x/K.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/A/A-rt/module-include.xml --
+-- proj/A/A-rt/src/.keep --
+k
+-- proj/A/A-rt/src/x/K.java --
+package k;
+-- proj/B/B-rt/build.gradle --
+-- proj/B/B-rt/src/.keep --
+k
+-- proj/B/B-rt/src/x/K.java --
+package k;
+-- proj/C/C-rt/build.gradle.kts --
+-- proj/C/C-rt/module-include.xml --
+<module/>
+-- proj/C/C-rt/src/.keep --
+k
+-- proj/C/C-rt/src/x/K.java --
+package k;
+-- proj/D/D-rt/src/.keep --
+k
+-- proj/D/D-rt/src/x/K.java --
+package k;

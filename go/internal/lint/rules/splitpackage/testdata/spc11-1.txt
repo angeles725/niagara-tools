@@ -1,0 +1,14 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 0
+WARN  split-package-check  com.shared.util  declared in 2 modules: GrpA/A/A-rt (GrpA/A/A-rt/src/com/x/U.java), GrpB/B/B-rt (GrpB/B/B-rt/src/com/x/U.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
+-- stderr --
+-- proj/GrpA/A/A-rt/build.gradle.kts --
+-- proj/GrpA/A/A-rt/src/com/x/U.java --
+package com.shared.util;
+class C {}
+-- proj/GrpB/B/B-rt/build.gradle.kts --
+-- proj/GrpB/B/B-rt/src/com/x/U.java --
+package com.shared.util;
+class C {}

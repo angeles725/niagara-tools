@@ -1,0 +1,8 @@
+-- args --
+/nonexistent/__aos__
+-- want --
+exit 3
+-- stderr --
+lint-agent-on-shape: not a directory: /nonexistent/__aos__
+-- M/Mod-rt/module-include.xml --
+<types><type name="X"><agent><on type="Bad"/></agent></type></types>

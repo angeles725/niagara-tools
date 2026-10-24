@@ -1,0 +1,11 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/a/BNone.java --
+@NiagaraType
+public class BNone extends BComponent
+{
+  public static final Type TYPE = Sys.loadType(BNone.class);
+}

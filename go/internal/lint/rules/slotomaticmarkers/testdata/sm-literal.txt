@@ -1,0 +1,23 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/a/BLit.java --
+public class BLit
+{
+  static final String B = "//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/";
+  static final String E = "//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/";
+  static final String T = """
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  """;
+}
+-- src/com/a/BStampString.java --
+public class BStampString extends BComponent
+{
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  /*@ $com.x.BLimiter(2047217791)1.0$ @*/
+  static final String S = "/*@ $fake$ @*/";
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+}

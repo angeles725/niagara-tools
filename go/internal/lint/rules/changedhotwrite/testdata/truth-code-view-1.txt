@@ -1,0 +1,43 @@
+declared difference (truth fix T1, code view): the awk read block comments and string literals as code, so a
+commented-out changed(Property q ...) was taken as the callback and the real one was never read (T), the "}" in a
+string could end changed() early, and a setter quoted in a string counted as a write (U). Both hot-write lints read
+code with comments blanked and literal contents removed now.
+(Tree values made fresh, setX(N) -> setX(getX() + N), after truth fix T5: a constant written to a simple
+slot is not a per-cycle write; the rows are unchanged.)
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-changed-hot-write  @DIR@/T.java:4  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'xHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+-- stderr --
+-- T.java --
+class T {
+  static final Property xHours = newProperty(0, 0.0, null);
+  /* public void changed(Property q, Context cx) { */
+  public void changed(Property p, Context cx) {
+    String s = "}";
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+  }
+  void execute() { setXHours(getXHours() + 1.0); }
+}
+-- U.java --
+class U {
+  static final Property xHours = newProperty(0, 0.0, null);
+  public void changed(Property p, Context cx) {
+    if (p == a) execute();
+    if (p == b) execute();
+    if (p == c) execute();
+    if (p == d) execute();
+    if (p == e) execute();
+    if (p == f) execute();
+    if (p == g) execute();
+    String s = "setXHours(";
+  }
+  void execute() { }
+}

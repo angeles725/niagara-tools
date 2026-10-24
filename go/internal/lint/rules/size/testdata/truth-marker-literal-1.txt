@@ -1,0 +1,31 @@
+declared difference (truth fix T1): the bash awk matched the slotomatic markers on the raw line, so a string
+literal holding "BEGIN BAJA AUTO GENERATED CODE" opened a region and its lines stopped counting (Lit
+reported 4 hand-written lines, not 8; a long one hid a real WARN). A marker counts only inside a comment
+now, the only place slot-o-matic writes it.
+-- args --
+--max-class
+5
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/Lit.java:2  class Lit has 8 hand-written lines (> 5, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- Gen.java --
+package com.x;
+public class Gen {
+//region /*+ ------------ BEGIN BAJA AUTO GENERATED CODE ------------ +*/
+  int g1;
+  int g2;
+  int g3;
+//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- +*/
+  int h;
+}
+-- Lit.java --
+package com.x;
+public class Lit {
+  String s = "BEGIN BAJA AUTO GENERATED CODE";
+  int h1;
+  int h2;
+  String e = "END BAJA AUTO GENERATED CODE";
+  int h3;
+}

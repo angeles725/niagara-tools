@@ -1,0 +1,6 @@
+-- args --
+-h
+-- want --
+exit 3
+-- stderr --
+lint-wb-threading: unknown option: -h

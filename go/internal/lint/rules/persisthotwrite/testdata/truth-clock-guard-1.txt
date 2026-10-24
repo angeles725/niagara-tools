@@ -1,0 +1,30 @@
+declared difference (truth fix T6, cadence guard): any `Clock.millis(` on the write's line or the 5 above counted
+as a cadence guard, so a write of the clock itself (line 8) and a write after a bare `long now = Clock.millis();`
+(line 10) were suppressed by their own clock reads. A Clock.millis() read now guards only from a condition that
+gates the write: a comparison or if on a line above (directly or through a local assigned from Clock.millis(),
+lines 11 and 14), or an if before the setter on its own line; never inside the written value.
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  lint-persist-hot-write  @DIR@/BClk.java:8  setLastRunMs(...) writes non-transient slot 'lastRunMs' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/BClk.java:10  setRunHours(...) writes non-transient slot 'runHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+-- stderr --
+-- BClk.java --
+class BClk {
+  static final Property lastRunMs = newProperty(0, 0d, null);
+  static final Property runHours = newProperty(0, 0d, null);
+  static final Property idleHours = newProperty(0, 0d, null);
+  static final Property saveHours = newProperty(0, 0d, null);
+  public void changed(Property p, Context cx) { execute(); }
+  void execute() {
+    setLastRunMs((double) Clock.millis());
+    long now = Clock.millis();
+    setRunHours(getRunHours() + dt);
+    if (now - lastSave > 60000) {
+      setSaveHours(getSaveHours() + dt);
+    }
+    if (Clock.millis() - lastIdle < 60000) return;
+    setIdleHours(getIdleHours() + dt);
+  }
+}
