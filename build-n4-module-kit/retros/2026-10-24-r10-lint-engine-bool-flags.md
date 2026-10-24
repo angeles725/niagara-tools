@@ -18,4 +18,4 @@ wrapper is the plain `exec n4lint` its siblings are and `--default-allow` is gon
 | Δ1 | Mode Valued boolean flags: anywhere in argv, repeatable, read through `Configure` as `Args.Flags`; `<flag>=<v>`, an unknown flag and `--` stay usage errors; a flag in a value position is that option's value. Existing rules unchanged (goldens and bats untouched). | `go/internal/lint/args.go`, `lint.go`, `run.go`; `go/README.md` | `TestParseValuedFlags` |
 | Δ2 | G65 declares `--no-default-allow` natively; the wrapper's translation loop and the `--default-allow on\|off` option are removed; usage `[--strict] [--allow <glob>]... [--no-default-allow] <module-root>`. | `go/internal/lint/rules/privateapiimport`, `toolbelt/lint-private-api-import.sh` | goldens `no-default-allow`, `flag-value`, `usage`; bats PAI-flag |
 
-**Status**: FOLDED 2026-10-24 — Δ1 in `go/README.md` (Mode Valued), Δ2 in the wrapper header (its user-facing contract).
+**Status**: FOLDED 2026-10-24 — Δ1 in `go/README.md` (Mode Valued), Δ2 in the wrapper header (its user-facing contract); both cited in the ledger fragment.
