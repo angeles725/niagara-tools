@@ -1,11 +1,10 @@
+declared difference: truth fix 2026-10-24, code elements of an HTML manual are code, not labels
 -- args --
 @DIR@/docs/m.html
 @DIR@/ui
 -- want --
 exit 0
-WARN  lint-manual-labels  @DIR@/docs/m.html:2  label "value" not found in the UI source
-WARN  lint-manual-labels  @DIR@/docs/m.html:3  label "Corte" not found in the UI source
-SUMMARY  lint-manual-labels  checked=3 missing=2
+SUMMARY  lint-manual-labels  checked=1 missing=0
 -- stderr --
 -- docs/m.html --
 <p>"Guardar"</p>

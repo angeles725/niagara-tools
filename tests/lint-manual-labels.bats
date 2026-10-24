@@ -125,3 +125,20 @@ teardown() { rm -rf "$T"; }
   [ "$(printf '%s\n' "$output" | grep -c '^WARN')" -eq 2 ]
   [[ "$output" == *"checked=5 missing=2"* ]]
 }
+
+@test "ML13: quoted strings in code (tagged markdown fences, code spans, html code) are not labels; a bare-fence diagram is" {
+  # shellcheck disable=SC2016  # literal Markdown backticks, not a command substitution
+  printf 'Press "Guardar".\n\n```json\n{"value": 5}\n```\n\nRun `curl -d "mode=auto"` and see "Corte".\n```\n[ "Rearranque" ] --> pump\n```\n' > "$T/docs/manual.md"
+  run "$ML" "$T/docs/manual.md" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"value"'* ]]
+  [[ "$output" != *'"mode=auto"'* ]]
+  [[ "$output" == *"manual.md:7  label \"Corte\""* ]]
+  [[ "$output" == *"manual.md:9  label \"Rearranque\""* ]]
+  [[ "$output" == *"checked=3 missing=2"* ]]
+  printf '<p>Press "Guardar".</p>\n<pre><code>{"value": 5}</code></pre>\n<p><CODE>x = "Corte"</CODE> and "Corte"</p>\n' > "$T/docs/manual.html"
+  run "$ML" "$T/docs/manual.html" "$T/ui"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *'"value"'* ]]
+  [[ "$output" == *"checked=2 missing=1"* ]]
+}

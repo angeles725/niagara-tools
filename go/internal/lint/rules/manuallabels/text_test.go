@@ -34,3 +34,11 @@ func TestLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestMarkdownCode(t *testing.T) {
+	in := "a `x \"k\"` b ``y ` z`` c `open\n```json\n{\"v\": 1}\n  ``\nstill \"code\"\n````\n\"Guardar\"\n~~~\nsee \"Modo\" `x`\n~~~"
+	want := "a   b   c `open\n\n\n\n\n\n\"Guardar\"\n~~~\nsee \"Modo\" `x`\n~~~"
+	if got := markdownCode(in); got != want {
+		t.Errorf("markdownCode = %q, want %q", got, want)
+	}
+}

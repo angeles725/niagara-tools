@@ -24,4 +24,8 @@ func TestDropMarkup(t *testing.T) {
 			t.Errorf("DropMarkup(%q) = %q, want %q", in, got, want)
 		}
 	}
+	in := "<p>a<pre x>\n\"v\"</PRE>b<code>c</code>d<!-- <pre> -->e<precise>f</precise></p>"
+	if got, want := DropMarkup(in, "pre", "code"), "a\nbdef"; got != want {
+		t.Errorf("DropMarkup(%q, pre, code) = %q, want %q", in, got, want)
+	}
 }

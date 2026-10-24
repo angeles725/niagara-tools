@@ -56,16 +56,21 @@ type rule struct{ manual, text string }
 func (*rule) ID() string              { return ID }
 func (*rule) Severity() lint.Severity { return lint.Warn }
 
-// Configure reads the manual. An HTML manual (.html/.htm in any case) is read without its script and style
-// elements, comments and tags (line numbers kept), then html.unescape'd; any other manual is read as is.
+// Configure reads the manual. An HTML manual (.html/.htm in any case) is read without its script, style and
+// code elements, comments and tags (line numbers kept), then html.unescape'd (a pre element without code
+// stays text, as a bare Markdown fence: a diagram); a Markdown manual (.md, .markdown) without its
+// language-tagged fenced blocks and code spans (markdownCode); any other manual as is.
 func (r *rule) Configure(a lint.Args) error {
 	data, err := os.ReadFile(a.Option)
 	if err != nil {
 		return fmt.Errorf("%s: cannot read manual %s: %s\n", ID, a.Option, strerror.Text(err))
 	}
 	r.manual, r.text = a.Option, htmltext.Decode(data)
-	if low := strings.ToLower(a.Option); strings.HasSuffix(low, ".html") || strings.HasSuffix(low, ".htm") {
-		r.text = htmltext.Unescape(htmltext.DropMarkup(r.text))
+	switch low := strings.ToLower(a.Option); {
+	case strings.HasSuffix(low, ".html") || strings.HasSuffix(low, ".htm"):
+		r.text = htmltext.Unescape(htmltext.DropMarkup(r.text, "code"))
+	case strings.HasSuffix(low, ".md") || strings.HasSuffix(low, ".markdown"):
+		r.text = markdownCode(r.text)
 	}
 	return nil
 }

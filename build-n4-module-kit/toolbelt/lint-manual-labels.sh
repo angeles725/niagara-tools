@@ -4,7 +4,8 @@
 # A manual is code that nobody compiles: when a UI label is renamed and the manual still quotes
 # the old one, nothing fails. This lint takes every quoted label of the manual — "…", “…” and
 # «…» (HTML entities &quot; &ldquo; &rdquo; &laquo; &raquo; decoded; tags and their attribute
-# values dropped, so href="x.html" is never a label) — and looks for it in the UI source:
+# values dropped, so href="x.html" is never a label; code is not a label either: <code> elements,
+# language-tagged ``` fences and `code spans`, while a bare fence, a diagram, is) — and looks for it in the UI source:
 # *.html *.htm *.js *.mjs *.cjs *.json *.lexicon *.properties *.java *.xml under each <ui-dir>
 # (dot-dirs and node_modules pruned; \uNNNN escapes and HTML entities decoded). The label must
 # EQUAL one whole UI text unit — an HTML text node, a string literal, or a lexicon/properties
@@ -32,6 +33,7 @@
 # Mutation: ML8 -- dropping the word-boundary test lets "Guard" match the unit "Guardar"
 # Mutation: ML11 -- opting out of the empty-root ERROR reports every label missing on a typo'd ui-dir (exit 0)
 # Mutation: ML12 -- dropping the stem match WARNs on a label the UI joins to a runtime value
+# Mutation: ML13 -- dropping the code blanking reports a JSON key in a ```json fence as a missing label
 #
 # Implementation: rule package go/internal/lint/rules/manuallabels on the shared engine go/internal/lint
 # (walker, Mode FileFirst parser, Joined TreeRule, row formatter; go/README.md) and go/internal/htmltext

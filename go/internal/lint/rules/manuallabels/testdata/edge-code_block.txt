@@ -1,13 +1,11 @@
+declared difference: truth fix 2026-10-24, the language-tagged fenced block and the code span are code, not labels; an indented line stays text (a list continuation looks the same)
 -- args --
 @DIR@/docs/m.md
 @DIR@/ui
 -- want --
 exit 0
-WARN  lint-manual-labels  @DIR@/docs/m.md:4  label "value" not found in the UI source
-WARN  lint-manual-labels  @DIR@/docs/m.md:4  label "Corte" not found in the UI source
-WARN  lint-manual-labels  @DIR@/docs/m.md:7  label "Corte" not found in the UI source
 WARN  lint-manual-labels  @DIR@/docs/m.md:8  label "Corte" not found in the UI source
-SUMMARY  lint-manual-labels  checked=5 missing=4
+SUMMARY  lint-manual-labels  checked=2 missing=1
 -- stderr --
 -- docs/m.md --
 Text "Guardar".

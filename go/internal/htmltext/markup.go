@@ -8,10 +8,14 @@ import (
 // DropMarkup is the text of an HTML page as three Python re.sub passes leave it, each match replaced by
 // the newlines it held so line numbers stay: (?is)<(script|style)\b.*?</\1\s*>, then (?s)<!--.*?-->, then
 // (?s)<[^>]*>. Entities are left for Unescape. The tag names match in ASCII case only: Python's IGNORECASE
-// also takes "<SCRİPT>" (U+0130) for a script element.
-func DropMarkup(s string) string {
-	s = replace(s, rawElement)
+// also takes "<SCRİPT>" (U+0130) for a script element. Each of elements (lower-case names, e.g. "pre") is
+// dropped with its content like a script element, after the comments and before the tags.
+func DropMarkup(s string, elements ...string) string {
+	s = replace(s, func(s string, i int) int { return element(s, i, "script", "style") })
 	s = replace(s, func(s string, i int) int { return closeAfter(s, i, "<!--", "-->") })
+	if len(elements) > 0 {
+		s = replace(s, func(s string, i int) int { return element(s, i, elements...) })
+	}
 	return replace(s, func(s string, i int) int { return closeAfter(s, i, "<", ">") })
 }
 
@@ -64,10 +68,10 @@ func asciiFold(s, name string) bool {
 	return true
 }
 
-// rawElement is the end of <script ...</script> or <style ...</style> at i: the name followed by a \b, the
-// first "</" + the same name (case-insensitive) + \s* + ">" after it, or -1.
-func rawElement(s string, i int) int {
-	for _, name := range []string{"script", "style"} {
+// element is the end of <name ...</name> at i for the first of names that matches: the name followed by a
+// \b, the first "</" + the same name (case-insensitive) + \s* + ">" after it, or -1.
+func element(s string, i int, names ...string) int {
+	for _, name := range names {
 		j := i + 1 + len(name)
 		if j > len(s) || !asciiFold(s[i+1:j], name) {
 			continue
