@@ -318,6 +318,7 @@ retro header and run `toolbelt/gen-retro-index.sh`; on a merge conflict in this 
 | 2026-10-23-r9-m3-report.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-r9-permissions-root.md | kit | 2026-10-23 | pending | 1 |
 | 2026-10-23-truth-ported-rules.md | kit | 2026-10-23 | pending | 3 |
+| 2026-10-24-fail-open-pipeline-checks.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-kit-cite-resolve.md | kit | 2026-10-24 | pending | 1 |
 | 2026-10-24-go-lint-agent-on-shape.md | kit | 2026-10-24 | pending | 2 |
 | 2026-10-24-go-lint-bformat-call.md | kit | 2026-10-24 | pending | 2 |
