@@ -1,0 +1,16 @@
+-- args --
+-x
+@DIR@/m
+-- want --
+exit 3
+-- stderr --
+lint-wb-file-chooser: unknown flag: -x
+usage: lint-wb-file-chooser.sh [--strict] <wb-src-root>
+-- m/A.java --
+class A {
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+}
+-- n/A.java --
+class A {
+  void g() { BWbFieldEditor.dialog(p, t,
+}

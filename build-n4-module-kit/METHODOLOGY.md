@@ -64,6 +64,7 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   `inline-site-literal`. `[ev: retro modular-line-efficient-quality Δ2]`
 
 ## Schema / upgrade safety
+- **Templates (`.ntpl`) and template modules:** what breaks when a deployed template or its module is upgraded: `types/logic-authoring.md` § What breaks on a module or template upgrade.
 - **NEVER retype an existing slot on a live-instantiated module** (a complex `BStatusNumeric` → a simple `double` especially): a `.bog` binds to the class BY NAME and ungated, so retyping a frozen slot desalinates decoding — `ClassCastException` / `Cannot load station` / `App Failed`, a real refrigeration-production outage. ADDING a slot is safe; RETYPING one is not — to make a config oBIX-writable, add a NEW `double` slot (e.g. `setpointCmd`) and link it, do not re-type the original. [ev: retro slot-type-change · S1]
 - **Know the saved-data survival matrix before a schema-change deploy (a `.bog` binds to the class BY NAME, ungated):** SAFE (boots, data kept) = add a slot, reorder, change default/flags/facets, add an enum tag; LOSSY (boots, data dropped with only a warning count) = remove/rename a slot; OUTAGE (won't boot) = retype a frozen simple slot, remove/rename a stored enum tag. There is no per-module migration hook and "it booted" ≠ "data survived" — bump `vendorVersion` and back up `config.bog` on every schema-change deploy. The Slot-o-Matic type-hash `/*@ …(hash)… @*/` in the AUTO region is a BUILD-TIME staleness marker only — `ValueDocEncoder.encodeType` never writes it to the `.bog` and the loader never reads it; a deployed schema change is invisible to the `.bog` decoder regardless of whether the hash changed. Renumbering enum ordinals is SAFE for `.bog` (tag-based) but UNSAFE for Fox/binary links (ordinal-encoded); avoid it if the value crosses a Fox link. [ev: retro corpus-index · S2] [ev: retro schema-risk] [ev: corpus B754 §754.4 · slotomatic-hash-buildtime-only] [ev: corpus B754 §754.6 · fox-ordinal-renumber-warn]
 - **An additive slot change preserves instances/links (keyed by name), BUT the JACE won't auto-install it without a version bump:** new frozen slots load at default on the existing bog; Software Manager compares versions, so a same-version jar shows "Up to Date" and is never offered — bump the module version (or force Re-Install). [ev: retro coldroompan-fan-mode-defrost · S3]
@@ -263,6 +264,26 @@ See `types/wb-widgets.md §How much wb is enough` for the full rung ladder. `[ev
   locked directory. `[ev: retro deferred-lints-2026-10-03-close Δ3]`
 - **A facade link-in status mirror is never `READONLY`, and that rule is LINTABLE:** `LinkCheck` rejects a link whose target carries `READONLY`, so it is statically decidable — `toolbelt/lint-link-target-flags.sh` LTF1 FAILs it. Protecting the mirror from operator writes is NOT done with `READONLY`: omit `Flags.OPERATOR` and enforce a server-side write policy that rejects READONLY/TRANSIENT/non-OPERATOR targets (`types/dashboard.md`). [ev: retro panccadia-persistent-config-hoa Δ3]
 - folded as code: sweep-build-state.sh + BUILD-STATE.md + BUILD-LOOP.md §7 + retros/INDEX.md [ev: retro kit-continuity]
+
+## Hands-on work — reference copies, resume, shared host
+These extend `BUILD-LOOP.md` § 0 (reference first) and § 0.a (orient) for work against a reference someone else
+owns, such as a course lab or a vendor sample, on the operator's own laptop.
+- **Copy a reference file whole only after a diff.** Before replacing a generated file with the reference, diff the
+  two and ignore line endings, the copyright header, `@author` and the wizard's TODO template lines. Copy whole only
+  when nothing is left; otherwise merge by hand. Keep the reference's line endings (the course files are CRLF), and
+  say so when you add a comment to a mirrored file. In the course Bonus Lab every file was copied whole after the
+  diff showed only those differences. The helper is owed Go tool G93 `diff-vs-reference`.
+  `[ev: retro n4-course-handson-workflow Δ1]`
+- **Resume from the workspace, not from the newest note.** Before trusting a session summary, list the most
+  recently modified files of the working tree (`ls -t`, or `find <root> -name '*.java' -newer <summary date>`)
+  and read the latest transcript; add `newest: <file> <mtime>` to the orient line. A course resume once started
+  from a summary older than the last edit. The mechanical form is owed as G94 `orient-recent`.
+  `[ev: retro n4-course-handson-workflow Δ2]`
+- **A laptop with Workbench or a station open is a shared host.** WSL and Windows share its cores. While `wb.exe`,
+  `wb_w.exe` or `station.exe` runs (the 4.15.6.20 `bin/` launchers), defer index builds, full suites and parallel
+  batches, or cap them with `nice` and `-j` at half the cores. A corpus index build at ~560 % CPU kept Workbench
+  from opening during the course. The preflight WARN is owed as G95 `shared-host`.
+  `[ev: retro n4-course-handson-workflow Δ4]`
 
 ## Live-verify safety
 - **Never perform a state-changing write on a production station during verification:** do read-only prod checks + an out-of-band negative check (no-token → 401). [ev: retro live-cutover-and-authenticated-control, retro obix-and-loginless-dashboard-runbooks]

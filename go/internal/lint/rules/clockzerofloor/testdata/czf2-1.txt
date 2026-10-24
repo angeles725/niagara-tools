@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-clock-zero-floor  @DIR@/Mod/src/com/x/A.java:2  zero-floor: void f(long d){ Clock.schedule(this, BRelTime.make(Math.max(0L, d)), a, null); }
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  void f(long d){ Clock.schedule(this, BRelTime.make(Math.max(0L, d)), a, null); }
+}

@@ -28,7 +28,7 @@ source in `docSource` for this module, so every `[CERT]` below is the 4.14.0.162
   `V/com/tridium/seriestransform/rollup/BRollupNode.java:30-31`; `.../rollup/BRollupIntervalEnum.java:12-31`
 - **Schema:** `BSeriesSchema` (`javax.baja.seriestransform.graph`) lists the fields each record carries
   (`addField(name, BTypeSpec, BFacets)`, `getFieldNames`, `equivalent`); the key field is the one faceted
-  `primaryKeyField=true`, else the timestamp. [CERT] `V/javax/baja/seriestransform/graph/BSeriesSchema.java:32-121`;
+  `primaryKeyField=true`, else the timestamp. [CERT] `V/javax/baja/seriestransform/graph/BSeriesSchema.java:32-121,183`;
   [CERT-doc] `nh class BSeriesSchema`; `niagara-help/devguide-clean/seriesTransforms/nodeSchema.txt:8-24`
 - **Output:** a node resolves to `BSeriesTransformTable` (a `BITable`) whose `SeriesCursor` yields records.
   [CERT] `V/javax/baja/seriestransform/BSeriesTransformTable.java:18`; `V/javax/baja/seriestransform/SeriesCursor.java:8`
@@ -56,7 +56,8 @@ last, so "energy = last − first" needs a custom function. [CERT] `R/extracted/
    through the registry — no palette or agent entry. [CERT] `BTransformFunction.java:142-150`; [CERT-doc]
    `aggregateFunctions.txt:6`
 4. A custom node instead extends `BGraphNode` and implements `doGetSchema()`, `doCheckSchema()` and
-   `doResolve(...)`. [CERT-doc] `niagara-help/devguide-clean/seriesTransforms/extendingGraphNode.txt:13-50`
+   `doResolve(...)`. [CERT-doc] `niagara-help/devguide-clean/seriesTransforms/extendingGraphNode.txt:40-134` (the page
+   names `getSchema()`; the abstract method is `doGetSchema()`) [CERT] `V/javax/baja/seriestransform/graph/BGraphNode.java:158,174`
 
 ## 4 · Pitfalls
 - **Keep `isCumulative()` true for roll-ups:** `BRollupNode` silently removes non-cumulative mappings

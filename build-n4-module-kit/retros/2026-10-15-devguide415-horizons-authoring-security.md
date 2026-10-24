@@ -1,4 +1,4 @@
-<!-- review-status: pending -->
+<!-- review-status: folded -->
 <!-- module: kit -->
 <!-- deltas: 10 -->
 # 2026-10-15 · kit · devguide415-horizons-authoring-security
@@ -34,3 +34,6 @@ Three kinds of finding. (1) Security/signing: six permission groups require a si
 - A rule asserted as "fails to load" needs the layer named; the code shows at least two layers (permission factory, cert chain) with different outcomes.
 - The devguide's prescriptive shape (doc part, types-only include, uberjar) and Tridium's shipped practice (separate doc modules) can both be legitimate; the kit should say which it chose and why, never "NEVER".
 - The highest-value horizon was a behaviour, not an API: whether polling keeps a session alive decides whether a wall HMI logs itself out.
+
+---
+**Status**: FOLDED 2026-10-23 (branch `docs/r8-pointer-lines`) — Δ9 `types/module-wiring.md` § 4.4-4.5; Δ1-Δ8 and Δ10 were already cited on main.

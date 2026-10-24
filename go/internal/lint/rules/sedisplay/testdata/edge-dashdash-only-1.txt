@@ -1,0 +1,14 @@
+-- args --
+--
+-- want --
+exit 3
+-- stderr --
+lint-se-display: not a directory: --
+-- m/A.java --
+class A {
+import javax.swing.JFrame;
+}
+-- n/A.java --
+class A {
+  Object w = new JDialog();
+}

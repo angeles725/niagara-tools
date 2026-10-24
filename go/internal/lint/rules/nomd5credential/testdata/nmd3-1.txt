@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BAuth.java --
+class BAuth {
+  BPassword pwd;
+  byte[] h(String s) throws Exception { return java.security.MessageDigest.getInstance("SHA-256").digest(s.getBytes()); }
+}

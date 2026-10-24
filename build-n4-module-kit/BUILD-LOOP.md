@@ -10,6 +10,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
   permission file, palette) first, and state each deviation with its reason. For course code, apply the
   "what not to copy" fixes (niagara-research corpus B1242 §1242.4) only as named, opt-in changes. The N4 Developer
   course is a primary exemplar source: blocks B1230-B1258, synthesis B1242. `[ev: retro n4-course-as-exemplar-source Δ2]`
+- Copying a reference file whole (diff first) and work on a laptop running Workbench: `METHODOLOGY.md` § Hands-on work.
 - Pick the module type (SKILL.md decision table) → load `types/<type>.md`.
 - **Read the client's version ledger before the first write of a new session on that client:** `odd/VERSION-LEDGER.md` in the client repository (scaffold: `templates/VERSION-LEDGER.md`). Check its `Class` column against the classes the new work is likely to hit — the template's "Root-cause classes" table maps typical new work to classes and is the only copy of that map — and read those rows' prevention deltas first. Verify a candidate against the CLIENT's own history, not just this session's. No ledger yet → create it from the template at this session's close. `[ev: retro panccadia-version-defect-ledger Δ2]`
 
@@ -20,6 +21,7 @@ The contract the launcher runs. Follow it in order; the gates are not optional.
 - If `retro_pending: true`, the previous session left an OWED retro — writing it is the FIRST task unless the operator redirects.
 - If the module has no section, this is a first build — say so, and add its section at close.
 - `toolbelt/sweep-build-state.sh --age --today <YYYY-MM-DD> <retros-dir> INDEX.md` — retro-debt aging; call at orient and again at close.
+- Resuming: list the newest files of the working tree before trusting a session summary (`METHODOLOGY.md` § Hands-on work).
 - **Meta-work exemption:** auditing the kit / tooling / a retro, or a single one-off question, does NOT gate on orient — say so and proceed (mirrors the research-sdd PASO 0 exemption).
 
 ### 0.b Preflight (before the first build)
@@ -274,6 +276,7 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
 ## 6. Deploy (station) — operator
 - **MANDATORY before a live-station deploy — the §5 schema-risk verdict must be SAFE:** a **LOSSY/OUTAGE** verdict means the new jar's slots no longer match the station's saved `.bog` and it will fail to load. Proven LIVE: an OUTAGE-class retype (`BStatusNumeric`↔`BDouble`, `BRelTime`↔`BComplex`) crashed PANCCADIA after a ColdRoomPan reload — `SEVERE [sys] Cannot load station`, a full outage, not a warning. NEVER deploy a LOSSY/OUTAGE change to a station holding saved data without a bog migration. `[ev: corpus B800 §800.8]` `[ev: corpus B795]`
 - Sign (auto), stop station, replace jars in `<niagara_home>/modules/`, start. Place components at their fixed ORDs; link points. Open the URL.
+- Which profile jars a host needs and which Software Manager install/upgrade steps stop the station or reboot the host: `types/platform.md` § 1-2.
 - **Pre-deploy gates for a PRODUCTION station — all MANDATORY, before the first jar is loaded:**
   1. **Boot smoke on the TARGET distribution and version.** The jars boot cleanly on a station of the same vendor distribution (OEM overlay or stock) and the same Niagara release as the production station — a matching test station, or a container/snap image of that release. Build, verify and schema-risk gates run against the build `niagara_home`; they cannot see a vendor/version mismatch (any static-init exception, not only a bad unit id), so a smoke on a different overlay or release does not satisfy this gate. `[ev: retro panccadia-commissioning-lessons Δ10]`
   2. **Full station backup before any `-rt` install.** Take a platform/station backup (a Backup `.dist`: station `.bog` + histories + alarms + module refs + platform config — `types/distribution.md` § 12), not only the module jars that `ng-deploy.sh` copies; write where it is stored and the restore path into the deploy notes. A module-jar backup protects code, not the operator's persisted state. `[ev: retro station-backup-before-deploy Δ1]`

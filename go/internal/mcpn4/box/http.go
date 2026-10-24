@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -58,7 +59,7 @@ func (c *deadlineConn) Write(b []byte) (int, error) {
 }
 
 // do sends one request and reads at most limit bytes of a 2xx body. It returns *response, or an
-// error: *httpStatus, *Error (a refused redirect), *transportFailure or *PyError.
+// error: *httpStatus, *Error (a refused redirect) or *transportFailure.
 func (c *Client) do(method, path string, body []byte, header map[string]string, timeout float64, limit int) (*response, error) {
 	if timeout <= 0 {
 		timeout = c.timeout
@@ -115,10 +116,38 @@ func (c *Client) do(method, path string, body []byte, header map[string]string, 
 		return nil, &httpStatus{code}
 	}
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, int64(limit)))
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) { // a short body is read as it is
+	if short := incomplete(len(raw), limit, resp.Header); short != nil {
+		return nil, short
+	}
+	if errors.Is(err, io.ErrUnexpectedEOF) { // a cut chunked body: http.client's IncompleteRead
+		return nil, &transportFailure{"invalid HTTP answer (IncompleteRead)"}
+	}
+	if err != nil {
 		return nil, failure(err, false)
 	}
 	return &response{body: raw, header: resp.Header}, nil
+}
+
+// incomplete is box._read_body's check: a body of got bytes, read with a limit, shorter than both
+// its Content-Length and the limit was cut before its end. A longer body is the caller's
+// truncation, an absent or non-integer Content-Length proves nothing.
+func incomplete(got, limit int, h http.Header) error {
+	text, ok := header(h, "Content-Length")
+	if !ok {
+		return nil
+	}
+	declared, ok := pyInt(text)
+	if !ok {
+		return nil
+	}
+	bound := big.NewInt(int64(limit))
+	if declared.Cmp(bound) < 0 {
+		bound = declared
+	}
+	if big.NewInt(int64(got)).Cmp(bound) >= 0 {
+		return nil
+	}
+	return &transportFailure{fmt.Sprintf("incomplete read (got %d of %s bytes)", got, declared)}
 }
 
 // redirect is _NoRedirect: a 3xx with a usable Location (or URI) is refused, naming only the
@@ -171,7 +200,8 @@ func failure(err error, connecting bool) error {
 	case !connecting && (errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)):
 		return &transportFailure{"Remote end closed connection without response"}
 	case strings.Contains(err.Error(), "malformed HTTP"):
-		return &PyError{"BadStatusLine"} // http.client.HTTPException: no OSError, not wrapped
+		// http.client's BadStatusLine: no OSError, so urllib leaves it bare (box._invalid_http)
+		return &transportFailure{"invalid HTTP answer (BadStatusLine)"}
 	default:
 		text = err.Error()
 	}

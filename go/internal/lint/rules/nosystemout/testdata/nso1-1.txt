@@ -1,0 +1,10 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/A.java --
+class A {
+  static final Logger LOG = Logger.getLogger("mod");
+  void f() { LOG.fine("hi"); }
+}

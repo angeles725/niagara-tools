@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-subscribe-without-unsubscribe.sh [--strict] <src-root>

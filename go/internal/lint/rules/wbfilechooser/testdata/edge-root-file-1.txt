@@ -1,0 +1,14 @@
+-- args --
+@DIR@/m/A.java
+-- want --
+exit 3
+-- stderr --
+lint-wb-file-chooser: not a directory: @DIR@/m/A.java
+-- m/A.java --
+class A {
+  void f() { BWbFieldEditor.dialog(p, t, BOrd.NULL); }
+}
+-- n/A.java --
+class A {
+  void g() { BWbFieldEditor.dialog(p, t,
+}

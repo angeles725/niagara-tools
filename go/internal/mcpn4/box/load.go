@@ -131,13 +131,7 @@ func (c *Client) loadOnce(ord string, depth, attempts int, delay float64, handle
 			continue
 		}
 		raw, _ := get(evs, "ops")
-		if !truthy(raw) {
-			continue
-		}
-		ops, err := pyIter(raw)
-		if err != nil {
-			return nil, err
-		}
+		ops, _ := raw.([]any) // as split: only a list of ops is walked
 		for _, op := range ops {
 			c.settle(op)
 		}
@@ -219,31 +213,31 @@ func (c *Client) LoadTree(ord string, depth int, opt LoadOptions) (*pyjson.Objec
 	return nodes, nil
 }
 
-// flatten is box._flatten: node under path, then each child (its "n" joined with "/").
-// A malformed tree fails as the Python walk does: TypeError on a non-iterable "s", a child that
-// is no dict or a name that is no string, KeyError on a child without "n".
+// flatten is box._flatten: node under path, then each child (its "n" joined with "/"). "s" must
+// be a list of objects, each with a non-empty string "n"; anything else is a malformed reply.
 func flatten(node *pyjson.Object, path string, out *pyjson.Object) error {
 	out.Set(path, node)
+	where := "slot " + path
+	if path == "" {
+		where = "slot (root)"
+	}
 	raw, ok := node.Get("s")
 	if !ok {
 		return nil
 	}
-	kids, err := pyIter(raw)
-	if err != nil {
-		return err
+	kids, ok := raw.([]any)
+	if !ok {
+		return malformed(where+" has children that are "+jsonKind(raw)+", not a list", Channel, "loadSlots")
 	}
 	for _, kid := range kids {
 		child, ok := kid.(*pyjson.Object)
 		if !ok {
-			return &PyError{"TypeError"}
+			return malformed(where+" has a child that is "+jsonKind(kid)+", not an object", Channel, "loadSlots")
 		}
-		n, ok := child.Get("n")
-		if !ok {
-			return &PyError{"KeyError"}
-		}
+		n, _ := child.Get("n")
 		name, ok := n.(string)
-		if !ok {
-			return &PyError{"TypeError"}
+		if !ok || name == "" {
+			return malformed(where+" has a child without a slot name", Channel, "loadSlots")
 		}
 		if path != "" {
 			name = path + "/" + name

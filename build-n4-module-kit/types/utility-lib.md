@@ -8,10 +8,11 @@ choose by what it wraps. `[ev: code clUtils-rt module.xml; code jtds-rt module.x
 ## 1 · Shape A — pure 3rd-party library bundle (e.g. jtds/JDBC)
 
 Wraps an OSS jar with zero Niagara types. The module is a classpath carrier only.
+The JDBC driver for Niagara's `rdbMySQL`/`rdbOracle` is not bundled this way: it goes in `<niagara_home>/jre/lib/ext` (`types/cloud-connector.md` § 11).
 
 ```xml
-<!-- jtds-rt META-INF/module.xml -->
-<module name='jtds-rt' ... autoload='true' installable='true'>
+<!-- jtds-rt META-INF/module.xml (other <module> attributes elided) -->
+<module name='jtds-rt' autoload='true' installable='true'>
   <dependencies>
     <dependency name='baja' vendor='Tridium' vendorVersion='4.0'/>
     <!-- ONLY baja — no driver-rt, no control-rt -->
@@ -53,8 +54,8 @@ Registers agent/abstract helper types that auto-attach to driver or framework ty
 (agent helpers are framework-wired, not dragged). **Yes lexicon** (L4 requires ≥ 1 `key=value` per type).
 
 ```xml
-<!-- clUtils-rt META-INF/module.xml -->
-<module name="clUtils-rt" ... autoload="true" installable="true">
+<!-- clUtils-rt META-INF/module.xml (other <module> attributes elided) -->
+<module name="clUtils-rt" autoload="true" installable="true">
   <dependencies>
     <dependency name="baja"         vendor="Tridium" vendorVersion="4.15"/>
     <dependency name="driver-rt"    vendor="Tridium" vendorVersion="4.15"/>

@@ -7,27 +7,27 @@
 # See types/security.md §4. Advisory (WARN): a concat with a constant is usually fine.
 # [ev: retro 2026-09-19-security-model]
 #
+# Implementation: go/internal/lint/rules/bqlconcat on the Go lint engine (go/README.md); this wrapper execs
+# `n4lint lint-bql-string-concat <args>`, built on demand by go/go-tool.sh (needs `go` on PATH, exit 3 otherwise). An
+# unreadable sub-directory prints the env line, then the listed files' rows, exit 3 (as awk_lint_each did).
+#
 # Usage:  lint-bql-string-concat.sh <src-root>
+#   Per line: a `bql:` text (in a literal) or a BqlQuery.make( call, and a `+` next to a quote, in the
+#   code only: comments and Javadoc never trigger, a quoted "BqlQuery.make(" is not a call, and a `//`
+#   inside a string (an ORD such as "foxs://host") never hides the rest of the line.
 #   Row:  WARN  lint-bql-string-concat  <file>:<line>  bql concat: <source>
 #   Exit: 0  always (advisory) · 3  usage/env or a sub-directory find cannot enter
 # VCS-free by design.
 # Mutation: BSC2 -- drop the concat-operator test and BSC2 stops warning on a concatenated bql: string
 # Mutation: BSC-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
+# Mutation: BSC4 -- matching the raw line (no comment/literal blanking) WARNs a commented or quoted BqlQuery.make concat
 # Mutation: BSC-unreadable -- ignoring the per-file scan failure reports an unreadable file clean (exit 0)
 set -u
-# shellcheck disable=SC1091  # sibling lib, resolved at runtime via BASH_SOURCE
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/awk-lint.sh"
-awk_lint_parse lint-bql-string-concat raw 'usage: lint-bql-string-concat.sh <src-root>' "$@"
-awk_lint_list -name '*.java'
-
-# One awk per file (was two printf|grep pipelines per source line). Line // comments are stripped first.
-# A bql: string OR a BqlQuery.make, AND a string-concatenation operator next to a quote.
-# shellcheck disable=SC2016  # a literal awk program: $0, $n are awk fields
-awk_lint_each '
-    { code = $0; i = index(code, "//"); if (i) code = substr(code, 1, i - 1) }
-    code ~ /bql:|BqlQuery\.make\(/ && code ~ /"[[:space:]]*\+|\+[[:space:]]*"/ {
-        t = $0; sub(/^[[:space:]]+/, "", t)
-        printf "WARN  lint-bql-string-concat  %s:%d  bql concat: %s\n", ENVIRON["AL_FILE"], FNR, t
-    }'
-
-awk_lint_exit 0
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-bql-string-concat: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-bql-string-concat "$@"

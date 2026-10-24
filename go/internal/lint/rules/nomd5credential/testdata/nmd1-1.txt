@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BChksum.java --
+class BChksum {
+  byte[] h(byte[] d) throws Exception {
+    return java.security.MessageDigest.getInstance("MD5").digest(d);
+  }
+}

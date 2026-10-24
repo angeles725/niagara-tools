@@ -1,0 +1,6 @@
+-- args --
+@DIR@/does-not-exist
+-- want --
+exit 3
+-- stderr --
+lint-wb-file-chooser: not a directory: @DIR@/does-not-exist

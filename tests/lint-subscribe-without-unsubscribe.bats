@@ -74,3 +74,17 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 3 ]
   [[ "$output" == *"lint-subscribe-without-unsubscribe: cannot list every file under $TMPDIR_T/Mod: "* ]]
 }
+
+@test "SWU5: a subscribe in a block comment is clean; an unsubscribe in a comment or string never pairs a leak; a subscribe after a // inside a string is WARNed" {
+  # Mutation: SWU5 -- matching the raw line (no comment/literal blanking) exempts C.java and D.java and WARNs A.java.
+  # [ev: truth audit 2026-10-22 T3]
+  printf 'class A {\n  /* sub.subscribe(c); */\n}\n' > "$TMPDIR_T/Mod/src/com/x/A.java"
+  printf 'class B {\n  String u = "http://h"; void f() { sub.subscribe(c); }\n}\n' > "$TMPDIR_T/Mod/src/com/x/B.java"
+  printf 'class C {\n  void f() { sub.subscribe(c); }\n  /* TODO unsubscribe */\n}\n' > "$TMPDIR_T/Mod/src/com/x/C.java"
+  printf 'class D {\n  void f() { sub.subscribe(c); }\n  String s = "unsubscribe";\n}\n' > "$TMPDIR_T/Mod/src/com/x/D.java"
+  run "$SWU" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-subscribe-without-unsubscribe  $TMPDIR_T/Mod/src/com/x/B.java:2  String u = \"http://h\"; void f() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  $TMPDIR_T/Mod/src/com/x/C.java:2  void f() { sub.subscribe(c); }
+WARN  lint-subscribe-without-unsubscribe  $TMPDIR_T/Mod/src/com/x/D.java:2  void f() { sub.subscribe(c); }" ]
+}
