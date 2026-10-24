@@ -1,0 +1,14 @@
+-- args --
+--tag
+plant
+a.txt
+-- want --
+exit 1
+FAIL  triage-console  a.txt  1x 10:00:00 01-Oct-26 CST -> 10:00:00 01-Oct-26 CST  WARNING escritura falló @ [plant]
+-- stderr --
+-- @kind --
+truth: hand-written, the bash recorded at 79ca5a2c filtered its rows with grep in the caller's locale: under a UTF-8 locale a row holding a non-UTF-8 byte (a Spanish console's Latin-1 text) made grep print "grep: (standard input): binary file matches" instead of the row, exit 0, a fail-open; the port prints the row whatever the locale
+-- @env --
+LC_ALL=C.UTF-8
+-- a.txt --
+WARNING [10:00:00 01-Oct-26 CST][plant] escritura falló
