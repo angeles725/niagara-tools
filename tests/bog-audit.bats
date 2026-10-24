@@ -303,6 +303,15 @@ XML
   [ "$status" -eq 1 ]
 }
 
+@test "BA13: a --source-dir that is not a directory stops the audit (exit 3), never an all-ghost CHECK5 run" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-source-missing-dir.txt): os.walk yielded nothing for a missing
+  # directory and every bog slot became a CHECK5 ghost FAIL. Mutation: BA13 -- dropping the os.Stat check in
+  # scanSources -> exit 1 with CHECK5 FAIL rows.
+  run "$BA" "$T/synthetic.bog" --module ColdRoomPan --source-dir "$T/no-such-dir"
+  [ "$status" -eq 3 ]
+  [ "$output" = "bog-audit: --source-dir is not a directory: $T/no-such-dir" ]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"

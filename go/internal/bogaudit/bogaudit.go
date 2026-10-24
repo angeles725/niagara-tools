@@ -72,7 +72,11 @@ func Main(args []string, s cli.Stdio) int {
 		a.own[m] = true
 	}
 	if o.srcDir != "" {
-		a.src = scanSources(o.srcDir)
+		var err error
+		if a.src, err = scanSources(o.srcDir); err != nil {
+			fmt.Fprintf(s.Err, "bog-audit: %v\n", err)
+			return 3
+		}
 	}
 	if !a.run() {
 		mods := append([]string(nil), o.modules...)

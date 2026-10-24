@@ -28,7 +28,10 @@ func TestScanSources(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s := scanSources(dir)
+	s, err := scanSources(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a := s.slots["BA"]
 	if a == nil || !reflect.DeepEqual(a.keys, []string{"x", "y"}) {
 		t.Fatalf("BA slots = %+v", a)
@@ -47,5 +50,23 @@ func TestScanSources(t *testing.T) {
 	}
 	if s.extends["BA"] != "BB" || !s.writes["x"] || len(s.slots) != 1 {
 		t.Errorf("extends %v writes %v classes %d", s.extends, s.writes, len(s.slots))
+	}
+}
+
+// TestScanSourcesUnreadable pins the truth fix: a directory the walk cannot list stops the audit, where
+// os.walk dropped it and its classes read as undeclared.
+func TestScanSourcesUnreadable(t *testing.T) {
+	dir := t.TempDir()
+	locked := filepath.Join(dir, "locked")
+	if err := os.Mkdir(locked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(locked, 0o755)
+	if _, err := os.ReadDir(locked); err == nil {
+		t.Skip("running as a user that can list a 000 directory")
+	}
+	_, err := scanSources(dir)
+	if want := "cannot read " + locked + ": Permission denied"; err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
 	}
 }

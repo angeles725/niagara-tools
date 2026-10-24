@@ -1,6 +1,7 @@
 package bogaudit
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/htmltext"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 // srcSlot is one @NiagaraProperty: its flags expression and MIN facet (hasMin false: none).
@@ -37,19 +39,22 @@ var (
 )
 
 // scanSources walks dir as os.walk did: each directory's files in name order, then its sub-directories
-// in name order, dot-directories skipped (D9b), symlinked directories not entered, unreadable ones and
-// unreadable files passed over.
-func scanSources(dir string) *sources {
+// in name order, dot-directories skipped (D9b), symlinked directories not entered. A dir that is not a
+// directory, or a directory under it that cannot be listed, is an error: os.walk skipped them silently,
+// and an empty source tree turned every bog slot into a CHECK5 ghost. An unreadable file is passed over.
+func scanSources(dir string) (*sources, error) {
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+		return nil, fmt.Errorf("--source-dir is not a directory: %s", dir)
+	}
 	s := &sources{slots: map[string]*omap[srcSlot]{}, actions: map[string]*omap[string]{},
 		extends: map[string]string{}, writes: map[string]bool{}}
-	s.walk(dir)
-	return s
+	return s, s.walk(dir)
 }
 
-func (s *sources) walk(dir string) {
+func (s *sources) walk(dir string) error {
 	ents, err := os.ReadDir(dir)
 	if err != nil {
-		return
+		return fmt.Errorf("cannot read %s: %s", dir, strerror.Text(err))
 	}
 	var dirs []string
 	for _, e := range ents {
@@ -67,8 +72,11 @@ func (s *sources) walk(dir string) {
 		}
 	}
 	for _, d := range dirs {
-		s.walk(d)
+		if err := s.walk(d); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // file reads one class: its extends clause, its .set("SLOT", ...) writes, and each @NiagaraProperty or
