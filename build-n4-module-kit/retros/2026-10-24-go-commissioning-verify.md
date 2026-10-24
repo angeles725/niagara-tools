@@ -26,9 +26,9 @@ process through `go/internal/bogaudit` (Out and Err into one buffer, as `2>&1` d
 ## Proposed kit deltas (propose-never-apply)
 | Δ | Delta | Target file / § | Token |
 |---|---|---|---|
-| Δ1 | DONE (T1, this branch): the bog-audit exit-3 SKIP row named python3 (bog-audit is Go); it now names what exit 3 means (unreadable or malformed bog, no component of the module) | `go/internal/commissioningverify/station.go` | `[ev: go/internal/commissioningverify/testdata/edge-bog-nocomponent.txt]` |
-| Δ2 | DONE (T2, this branch): the CHECK13/15-20 fold relayed FAIL and PASS only, so the WARN-only CHECK15 sensor-crossed and CHECK19 link-direction never reached the punch-list (client station A: 4 hidden link-direction WARNs); every folded check relays FAIL, WARN and PASS | `go/internal/commissioningverify/station.go` | `[ev: go/internal/commissioningverify/testdata/edge-bog-check19.txt]` |
-| Δ3 | DONE (T3, this branch): config-sanity, status-parity and recovery-path PASSed on a non-zero exit with no row (126, 127, a crash); the link-target-flags fail-closed rule now holds for all four | `go/internal/commissioningverify/source.go` sourceChecks | `[ev: go/internal/commissioningverify/testdata/edge-stub-cs-exit127.txt]` |
+| Δ1 | DONE (T1, this branch): the bog-audit exit-3 SKIP row named python3 (bog-audit is Go); it now names what exit 3 means (unreadable or malformed bog, no component of the module) | `go/internal/commissioningverify/station.go` | `[ev: go/internal/commissioningverify/testdata/truth-edge-bog-nocomponent.txt]` |
+| Δ2 | DONE (T2, this branch): the CHECK13/15-20 fold relayed FAIL and PASS only, so the WARN-only CHECK15 sensor-crossed and CHECK19 link-direction never reached the punch-list (client station A: 4 hidden link-direction WARNs); every folded check relays FAIL, WARN and PASS | `go/internal/commissioningverify/station.go` | `[ev: go/internal/commissioningverify/testdata/truth-edge-bog-check19.txt]` |
+| Δ3 | DONE (T3, this branch): config-sanity, status-parity and recovery-path PASSed on a non-zero exit with no row (126, 127, a crash); the link-target-flags fail-closed rule now holds for all four | `go/internal/commissioningverify/source.go` sourceChecks | `[ev: go/internal/commissioningverify/testdata/truth-edge-stub-cs-exit127.txt]` |
 | Δ4 | DONE (T4, this branch): an unreadable values-owed table was a PASS row beside an awk error; it is exit 3 before any row | `go/internal/commissioningverify/command.go` Main | `[ev: go/internal/commissioningverify/testdata/truth-owed-unreadable.txt]` |
 
 ## Lessons

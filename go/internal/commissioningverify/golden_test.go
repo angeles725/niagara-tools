@@ -63,16 +63,36 @@ func materialize(t *testing.T, dir, repo string, files map[string]string) string
 	return cp
 }
 
+// Case counts of testdata (README.md): recorded from the bash tool, and truth-* cases whose expectation is a
+// declared fix. Exact, so a lost or stray case file fails.
+const (
+	recordedCases = 77
+	truthCases    = 9
+)
+
+// cases lists the testdata case files (absolute: the cases run with their tree as cwd) and checks the counts.
+func cases(t *testing.T, repo string) []string {
+	t.Helper()
+	paths, _ := filepath.Glob(filepath.Join(repo, "go/internal/commissioningverify/testdata/*.txt"))
+	truth := 0
+	for _, p := range paths {
+		if strings.HasPrefix(filepath.Base(p), "truth-") {
+			truth++
+		}
+	}
+	if len(paths)-truth != recordedCases || truth != truthCases {
+		t.Fatalf("found %d recorded and %d truth-* cases, want %d and %d", len(paths)-truth, truth, recordedCases, truthCases)
+	}
+	return paths
+}
+
 // TestGolden replays every testdata case, recorded from the bash commissioning-verify.sh on the same tree and
 // toolbelt, and compares exit code, stdout and stderr byte for byte. The source lints run through the real
 // toolbelt wrappers (go/bin/n4lint is built on demand), so cases run one at a time in their tree as cwd.
 func TestGolden(t *testing.T) {
 	repo, err := filepath.Abs("../../..")
 	must(t, err)
-	paths, _ := filepath.Glob(filepath.Join(repo, "go/internal/commissioningverify/testdata/*.txt"))
-	if len(paths) < 86 {
-		t.Fatalf("found %d golden cases, want at least 86", len(paths))
-	}
+	paths := cases(t, repo)
 	cwd, err := os.Getwd()
 	must(t, err)
 	defer os.Chdir(cwd)
