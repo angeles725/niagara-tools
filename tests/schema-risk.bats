@@ -140,3 +140,16 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [[ "$output" == *"OUTAGE  UNKNOWN  MinimalPan.<unparsed>@$BATS_TEST_TMPDIR/after/p/BMinimalPan.java:"* ]]
   [[ "$output" == *"verdict=OUTAGE"* ]]
 }
+
+@test "SR-type-name the row names the <type> element, not a <dependency> listed before it" {
+  # Mutation: SR-type-name -- taking the first name="..." of module-include.xml prints baja.setpoint
+  for d in before after; do
+    mkdir -p "$BATS_TEST_TMPDIR/$d"
+    cp -r "$FX/remove_slot/$d/." "$BATS_TEST_TMPDIR/$d/"
+    printf '<module>\n  <dependency name="baja" vendor="Tridium"/>\n  <types>\n    <type class="com.angeles.MinimalPan.BMinimalPan" name="MinimalPan"/>\n  </types>\n</module>\n' \
+      > "$BATS_TEST_TMPDIR/$d/module-include.xml"
+  done
+  run "$SR" "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"remove_slot_simple  MinimalPan.setpoint:"* ]]
+}

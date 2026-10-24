@@ -25,6 +25,8 @@
 # kit's usual 2=usage/3=env convention by design (D4a).
 #
 # Rows: `<verdict>  <change_kind>  <Type>.<slot>: <evidence> (<note>)`, then `verdict=<V>` (the worst cell).
+# <Type> is the first non-empty name of a <type> element of the before module-include.xml (`Module` when none;
+# a <dependency> or a commented-out <type> never names it); a module-include.xml that is not well-formed XML is env (4).
 # Several rows of one category list in declaration order: the after snapshot's for add_slot, the before
 # snapshot's for removals, kind swaps and retypes (the bash classifier printed gawk for-in hash order).
 #

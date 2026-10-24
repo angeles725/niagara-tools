@@ -3,12 +3,12 @@ package schemarisk
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // Exit codes of schema-risk: the verdict scale, with usage and env ABOVE it so a bad invocation never reads
@@ -21,8 +21,6 @@ const (
 	ExitEnv    = 4
 )
 
-var typeNameRe = regexp.MustCompile(`name="([^"]*)"`)
-
 // Main implements `schema-risk <before-dir> <after-dir>` (further arguments are ignored, as in bash).
 func Main(args []string, s cli.Stdio) int {
 	if len(args) < 2 {
@@ -30,22 +28,21 @@ func Main(args []string, s cli.Stdio) int {
 		return ExitUsage
 	}
 	before, after := args[0], args[1]
-	var xml string
+	typeName := ""
 	for i, dir := range []string{before, after} {
-		b, err := os.ReadFile(dir + "/module-include.xml")
+		path := dir + "/module-include.xml"
+		b, err := os.ReadFile(path)
 		if err != nil {
-			fmt.Fprintf(s.Err, "error: cannot read %s/module-include.xml\n", dir)
+			fmt.Fprintf(s.Err, "error: cannot read %s\n", path)
+			return ExitEnv
+		}
+		doc, err := xmlsrc.Parse(path, b)
+		if err != nil {
+			fmt.Fprintf(s.Err, "error: %v\n", err)
 			return ExitEnv
 		}
 		if i == 0 {
-			xml = string(b)
-		}
-	}
-	typeName := "Module"
-	for _, ln := range lines(xml) {
-		if m := typeNameRe.FindStringSubmatch(ln); m != nil && m[1] != "" {
-			typeName = m[1]
-			break
+			typeName = firstTypeName(doc)
 		}
 	}
 	var snaps [2][]Slot
@@ -80,6 +77,17 @@ func Main(args []string, s cli.Stdio) int {
 	}
 	fmt.Fprintf(s.Out, "verdict=%s\n", verdict)
 	return worst
+}
+
+// firstTypeName is the first non-empty name of a <type> element (a <dependency> or a comment never names the
+// module's type), or "Module" when there is none.
+func firstTypeName(doc *xmlsrc.Doc) string {
+	for _, i := range doc.Find("type") {
+		if n, _ := doc.Elements()[i].Attr("name"); n != "" {
+			return n
+		}
+	}
+	return "Module"
 }
 
 // lines splits text into awk records: newline-terminated, a last unterminated line kept.

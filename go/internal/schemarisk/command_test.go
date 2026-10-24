@@ -115,6 +115,28 @@ func TestMainEdges(t *testing.T) {
 	}
 }
 
+// TestTypeName: the row prefix is the first non-empty name of a <type> element of the before module-include.xml;
+// a <dependency> name or a commented-out <type> never wins, and malformed XML is env (T3).
+func TestTypeName(t *testing.T) {
+	t.Parallel()
+	removed := func(xml string) (int, string, string) {
+		return run(snapshot(t, xml, "@NiagaraProperty(name=\"sp\", type=\"double\")\n"), snapshot(t, xml, ""))
+	}
+	for _, c := range []struct{ xml, want string }{
+		{"<module>\n  <dependency name=\"baja\" vendor=\"Tridium\"/>\n  <types>\n    <type class=\"p.BPan\" name=\"Pan\"/>\n  </types>\n</module>\n", "Pan"},
+		{"<types>\n  <!-- <type name=\"Old\"/> -->\n  <type name=\"\"/>\n  <type\n    class=\"p.BNew\"\n    name=\"New\"/>\n</types>\n", "New"},
+		{"<module name=\"pan\"><dependency name=\"baja\"/></module>\n", "Module"},
+	} {
+		code, out, errs := removed(c.xml)
+		if want := "LOSSY  remove_slot_simple  " + c.want + ".sp: B754-754.6-r7 (value-dropped)\nverdict=LOSSY\n"; code != 1 || out != want || errs != "" {
+			t.Errorf("%q: exit %d out %q err %q\nwant 1 %q", c.xml, code, out, errs, want)
+		}
+	}
+	if code, out, errs := removed("<types><type name=\"Pan\"></types>\n"); code != 4 || out != "" || !strings.HasPrefix(errs, "error: ") || !strings.Contains(errs, "module-include.xml:1:") {
+		t.Errorf("malformed: exit %d out %q err %q, want 4 and the XML error", code, out, errs)
+	}
+}
+
 // TestUnparsedAnnotation: an annotation whose parentheses never balance in its file, or that has no name, is an
 // UNKNOWN row (OUTAGE) naming its file and line, never skipped, and the slots after an unbalanced one are still read
 // (L3; bash joined it to the end of input, swallowing them, and classified what it read).
