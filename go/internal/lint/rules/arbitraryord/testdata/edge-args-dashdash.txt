@@ -1,0 +1,9 @@
+-- args --
+--
+@DIR@/a
+-- want --
+exit 3
+-- stderr --
+lint-arbitrary-ord: not a directory: --
+-- a/src/A.java --
+class A { void f(String q){ BOrd.make(q); } }

@@ -43,13 +43,13 @@ func (s *scan) hostPaths() {
 		s.hostPath(p)
 	}
 	for dir := s.root; ; {
-		up := dirname(dir)
+		up := lint.Dirname(dir)
 		if up == dir {
 			break
 		}
 		dir = up
 		s.hostPath(dir + "/gradle.properties")
-		if isDir(dir + "/.git") {
+		if lint.IsDir(dir + "/.git") {
 			break
 		}
 	}
@@ -60,7 +60,7 @@ func (s *scan) hostPaths() {
 // BUILD-LOOP.md bring-up step 2). Every other host path, and those keys in a kit fixture or template
 // (METHODOLOGY.md K16), is the FAIL.
 func (s *scan) hostPath(p string) {
-	if !isFile(p) {
+	if !lint.IsFile(p) {
 		return
 	}
 	template := inKitTemplate(p)
@@ -108,7 +108,7 @@ func inKitTemplate(p string) bool {
 // uncommented. The paths key is a host build-location key and may live in the user-level file (R10-D8).
 func (s *scan) jdkPin() {
 	p := s.root + "/gradle.properties"
-	if !isFile(p) {
+	if !lint.IsFile(p) {
 		return
 	}
 	if !grep(s.lines(p), jdkAuto) {
@@ -119,8 +119,8 @@ func (s *scan) jdkPin() {
 // siblingHomes is L13: the first niagara_home= of each <group>/*/gradle.properties (the group being the
 // root's parent) must agree; every sibling that sets one gets a row when two or more differ.
 func (s *scan) siblingHomes() {
-	group := dirname(s.root)
-	if group == s.root || !isDir(group) {
+	group := lint.Dirname(s.root)
+	if group == s.root || !lint.IsDir(group) {
 		return
 	}
 	entries, _ := os.ReadDir(group) // an unreadable group lists nothing, as the bash glob did
@@ -129,7 +129,7 @@ func (s *scan) siblingHomes() {
 	distinct := map[string]bool{}
 	for _, e := range entries {
 		p := group + "/" + e.Name() + "/gradle.properties"
-		if strings.HasPrefix(e.Name(), ".") || !isFile(p) {
+		if strings.HasPrefix(e.Name(), ".") || !lint.IsFile(p) {
 			continue
 		}
 		for _, ln := range s.lines(p) {
@@ -161,14 +161,14 @@ func (s *scan) siblingHomes() {
 func (s *scan) pluginPin() {
 	settings := ""
 	for dir := s.root; ; {
-		if p := dir + "/settings.gradle.kts"; isFile(p) {
+		if p := dir + "/settings.gradle.kts"; lint.IsFile(p) {
 			settings = p
 			break
 		}
-		if isDir(dir + "/.git") {
+		if lint.IsDir(dir + "/.git") {
 			break
 		}
-		up := dirname(dir)
+		up := lint.Dirname(dir)
 		if up == dir {
 			break
 		}
@@ -178,7 +178,7 @@ func (s *scan) pluginPin() {
 		return
 	}
 	s.lineRows(settings, pluginLit, `L14: hardcoded gradlePluginVersion literal (use providers.gradleProperty("niagaraPluginVersion").getOrElse(...) so -PniagaraPluginVersion applies)`)
-	if build := strings.TrimSuffix(settings, "/settings.gradle.kts") + "/build.gradle.kts"; isFile(build) {
+	if build := strings.TrimSuffix(settings, "/settings.gradle.kts") + "/build.gradle.kts"; lint.IsFile(build) {
 		s.signing(build)
 	}
 }

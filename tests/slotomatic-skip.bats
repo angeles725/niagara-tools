@@ -72,3 +72,20 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ "$status" -eq 2 ]
   [[ "$output" == "FAIL slotomatic-skip "*"(gradle log unreadable)" ]]
 }
+
+# SK-srctest: Slot-o-Matic also walks srcTest/, where a plain B*Test.java has no metadata block; srcTest classes
+# are never packaged into the module jar, so their skip is not a stale-jar FAIL (CompPan exit 34 false positive).
+# Named mutation: drop the srcTest guard in add() -> SK-srctest-only returns 1 with a FAIL row.
+@test "SK-srctest-only: a skipped srcTest/ file (either path separator) is not a FAIL -> nothing, 0" {
+  printf 'WARNING: Could not process /x/srcTest/com/a/BLimiterTest.java: Found multiple metadata blocks\nThe following files failed to compile:\n  C:\\x\\srcTest\\com\\a\\BOtherTest.java\n' > "$LOG"
+  run slotomatic_skip_scan "$LOG"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "SK-srctest-mixed: a src/ skip still FAILs beside a srcTest/ one -> only the src/ row, 1" {
+  printf 'WARNING: Could not process /x/srcTest/com/a/BLimiterTest.java: Found multiple metadata blocks\nWARNING: Could not process /x/src/com/a/BHmiStatus.java: Found multiple metadata blocks\n' > "$LOG"
+  run slotomatic_skip_scan "$LOG"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL slotomatic-skip /x/src/com/a/BHmiStatus.java (Found multiple metadata blocks)" ]
+}

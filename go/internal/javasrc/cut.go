@@ -39,3 +39,36 @@ func CutComments(s string) string {
 
 // trimRightSpace is awk's sub(/[[:space:]]+$/, "", s).
 func trimRightSpace(s string) string { return strings.TrimRight(s, " \t\n\v\f\r") }
+
+// LineCommentAt is the toolbelt awk code_part() of lint-arbitrary-ord.sh: the byte index where s's //
+// line comment starts, or -1 when it has none. A // inside a "..." string or a '...' char literal (\
+// escapes honoured) or inside an inline /* ... */ comment does not start one, so s[:i] is the line's code
+// with its inline block comments kept; a /* that does not close on the line means no // comment at all.
+// It keeps no state across lines.
+func LineCommentAt(s string) int {
+	var q byte // the quote of the literal being read, 0 outside one
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if q != 0 {
+			if c == '\\' {
+				i++
+			} else if c == q {
+				q = 0
+			}
+			continue
+		}
+		switch {
+		case c == '"' || c == '\'':
+			q = c
+		case c == '/' && i+1 < len(s) && s[i+1] == '/':
+			return i
+		case c == '/' && i+1 < len(s) && s[i+1] == '*':
+			e := strings.Index(s[i+2:], "*/")
+			if e < 0 {
+				return -1
+			}
+			i += 2 + e + 1 // the loop's i++ steps past the "*/"
+		}
+	}
+	return -1
+}
