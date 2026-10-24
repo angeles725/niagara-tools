@@ -13,6 +13,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/awkorder"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/linescan"
 )
 
 // ID is the lint name printed in every row.
@@ -56,10 +57,7 @@ type guard struct {
 
 // Check FAILs every slot of the file written OFF outside a reset method and never inside one.
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	code := make([]string, len(f.Raw)) // each line cut at its first "//", as the awk's sub(/\/\/.*$/, "")
-	for i, ln := range f.Raw {
-		code[i], _, _ = strings.Cut(ln, "//")
-	}
+	code := linescan.Code(f) // comments blanked and literal contents removed: braces and writes are code only
 	depth, method := 0, ""
 	reset := map[string]bool{}
 	guards := map[string]guard{}

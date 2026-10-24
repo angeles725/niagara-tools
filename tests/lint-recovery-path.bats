@@ -36,6 +36,16 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   [[ "$output" != *"FAIL"* ]]
 }
 
+@test "LRP-comment: a safe-off in a comment or a string is not a write, and a \"{\" in a string keeps the method scope" {
+  # Mutation: LRP-comment -- matching the raw line cut at "//" FAILs a commented-out write and misreads started()
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-comment-literal-1.txt
+  printf '%s\n' 'package com.x;' 'public class C extends BComponent {' '  void execute() {' '    /* setAOut(false); */' \
+    '    String b = "{";' '    setDOut(false);' '  }' '  void started() {' '    setDOut(false);' '  }' '}' > "$ONE/C.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "LRP-usage: no argument -> exit 3 (usage)" {
   run "$LRP"
   [ "$status" -eq 3 ]

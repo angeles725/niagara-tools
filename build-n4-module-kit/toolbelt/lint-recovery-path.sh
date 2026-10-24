@@ -44,8 +44,12 @@
 # Declared difference from the bash lint (port 2026-10-24): a listed file the scan cannot read is
 # `lint-recovery-path: cannot scan <path>: ...` on stderr and exit 3 (gawk printed its fatal and the lint exited
 # by the other rows, 0 when they were clean).
+# Truth fix T1 (2026-10-24): braces and safe-off writes are read in code only (go/internal/javasrc Strip, literal
+# contents removed); the bash awk cut each line at its first "//" (inside a string too) and read block comments
+# and string literals as code.
 #
 # Mutation: LRP-noguard -- removes the guarded-only classification so mode-gated-only safe-offs pass instead of FAIL
+# Mutation: LRP-comment -- matching the raw line cut at "//" FAILs a commented-out write and misreads started()
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

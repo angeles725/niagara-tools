@@ -1,0 +1,27 @@
+declared difference (truth fix T1): the bash awk cut each line at its first "//" (inside a string too) and
+read block comments and literals as code, so a commented-out write FAILed (AOut), a write after "http://"
+was hidden (COut), a "{" in a string shifted the brace depth so started() was read as part of execute()
+(DOut) and a write quoted in a log message FAILed (FOut). Comments are blanked and literal contents removed
+first now.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/C.java:5  LRP: COut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+-- stderr --
+-- C.java --
+package com.x;
+public class C extends BComponent {
+  void execute() {
+    /* setAOut(false); */
+    String u = "http://x"; setCOut(false);
+    String b = "{";
+    setDOut(false);
+  }
+  void started() {
+    setDOut(false);
+  }
+  void lit() {
+    log("setFOut(false)");
+  }
+}

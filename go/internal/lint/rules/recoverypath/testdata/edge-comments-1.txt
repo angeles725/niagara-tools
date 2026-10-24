@@ -1,11 +1,12 @@
+declared difference (truth fix T1, truth-comment-literal-1): AOut is in a block comment and FOut in a string,
+COut follows "http://" in code, the "{" in a string no longer shifts the depth (DOut is reset in started()) and
+the "}" in a block comment no longer ends execute() early (EOut is in other()).
 -- args --
 @DIR@
 -- want --
 exit 1
-FAIL  lint-recovery-path  @DIR@/C.java:8  LRP: DOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/C.java:17  LRP: EOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/C.java:4  LRP: AOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
-FAIL  lint-recovery-path  @DIR@/C.java:20  LRP: FOut has guarded-only safe-off in method "lit" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:6  LRP: COut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/enable
+FAIL  lint-recovery-path  @DIR@/C.java:17  LRP: EOut has guarded-only safe-off in method "other" -- no unconditional reset in started/atSteadyState/enable
 -- stderr --
 -- C.java --
 package com.x;
