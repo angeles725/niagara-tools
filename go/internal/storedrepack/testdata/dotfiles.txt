@@ -1,0 +1,39 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 0
+stored-repack: @DIR@/out.jar  (7 entries, all STORED, signature entries kept: none)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- in.jar.spec --
+--- META-INF/ ---
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- META-INF/module.xml ---
+<module name="x" runtimeProfile="rt"/>
+--- com/ ---
+--- com/x/ ---
+--- com/x/A.class (base64) ---
+yv66vgAAADQ=
+--- rc/ ---
+--- rc/index.html (noeol) ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- .hidden ---
+h
+--- .dir/ ---
+--- .dir/x ---
+x
+--- META-INF/.keep ---
+k
+-- @after out.jar.listing --
+entries 7
+head META-INF/MANIFEST.MF stored size=22 sha256=51b6d211a461039a
+rest .dir/x stored size=2 sha256=73cb3858a687a849
+rest .hidden stored size=2 sha256=91ee5e9f42ba3d34
+rest META-INF/.keep stored size=2 sha256=19732980d68fbd00
+rest META-INF/module.xml stored size=39 sha256=b5de38af5e57bbfe
+rest com/x/A.class stored size=8 sha256=a79425e4a5e19137
+rest rc/index.html stored size=300 sha256=9835fa6bf4e20a9b

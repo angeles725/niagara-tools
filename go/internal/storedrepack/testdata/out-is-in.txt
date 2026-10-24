@@ -1,0 +1,33 @@
+-- args --
+in.jar
+in.jar
+-- want --
+exit 1
+-- stderr --
+stored-repack: refusing to overwrite existing in.jar
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- in.jar.spec --
+--- META-INF/ ---
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- META-INF/module.xml ---
+<module name="x" runtimeProfile="rt"/>
+--- com/ ---
+--- com/x/ ---
+--- com/x/A.class (base64) ---
+yv66vgAAADQ=
+--- rc/ ---
+--- rc/index.html (noeol) ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+-- @after in.jar.listing --
+entries 8
+rest META-INF/ stored size=0 sha256=e3b0c44298fc1c14
+rest META-INF/MANIFEST.MF deflated size=22 sha256=51b6d211a461039a +descriptor
+rest META-INF/module.xml deflated size=39 sha256=b5de38af5e57bbfe +descriptor
+rest com/ stored size=0 sha256=e3b0c44298fc1c14
+rest com/x/ stored size=0 sha256=e3b0c44298fc1c14
+rest com/x/A.class deflated size=8 sha256=a79425e4a5e19137 +descriptor
+rest rc/ stored size=0 sha256=e3b0c44298fc1c14
+rest rc/index.html deflated size=300 sha256=9835fa6bf4e20a9b +descriptor

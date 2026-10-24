@@ -1,0 +1,77 @@
+-- args --
+in.jar
+out.jar
+-- want --
+exit 0
+stored-repack: @DIR@/out.jar  (18 entries, all STORED, signature entries kept: META-INF/A.SF META-INF/A.DSA META-INF/A.EC META-INF/B.SF META-INF/B.RSA META-INF/D.SF META-INF/SERVER1.SF META-INF/SERVER1.RSA)
+-- stderr --
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/stored-repack.sh at 91b9e3d6 (sha256 56ba74c5bc7350132b621248f61fd2cbd7dc177927cb674ec73564999d937d7b)
+tools: GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu); GNU Awk 5.2.1, API 3.2, PMA Avon 8-g1, (GNU MPFR 4.2.1, GNU MP 6.3.0); find (GNU findutils) 4.9.0
+-- in.jar.spec --
+--- META-INF/ ---
+--- META-INF/MANIFEST.MF ---
+Manifest-Version: 1.0
+--- META-INF/module.xml ---
+<module name="x" runtimeProfile="rt"/>
+--- com/ ---
+--- com/x/ ---
+--- com/x/A.class (base64) ---
+yv66vgAAADQ=
+--- rc/ ---
+--- rc/index.html (noeol) ---
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- META-INF/SERVER1.SF ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/SERVER1.RSA (noeol) ---
+RSA
+--- META-INF/maven/x/pom.xml ---
+<project/>
+--- META-INF/B.SF ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/B.RSA (noeol) ---
+RSA
+--- META-INF/C.RSA ---
+orphan block
+--- META-INF/A.DSA ---
+dsa
+--- META-INF/sig.sf ---
+lower
+--- META-INF/sub/X.SF ---
+nested
+--- META-INF/.H.SF ---
+dot
+--- META-INF/A.SF ---
+Signature-Version: 1.0
+Name: com/x/A.class
+SHA-256-Digest: AAAA
+--- META-INF/A.EC ---
+ec
+--- META-INF/D.SF ---
+no block
+--- META-INF/D.rsa ---
+lower block
+-- @after out.jar.listing --
+entries 18
+head META-INF/MANIFEST.MF stored size=22 sha256=51b6d211a461039a
+head META-INF/A.SF stored size=64 sha256=a5b08a1f5005d8df
+head META-INF/A.DSA stored size=4 sha256=e3fbda736e269a8d
+head META-INF/A.EC stored size=3 sha256=45ce91c1170a3d96
+head META-INF/B.SF stored size=64 sha256=a5b08a1f5005d8df
+head META-INF/B.RSA stored size=3 sha256=87a10fd1d9e3a305
+head META-INF/D.SF stored size=9 sha256=dce02019f80d20d3
+head META-INF/SERVER1.SF stored size=64 sha256=a5b08a1f5005d8df
+head META-INF/SERVER1.RSA stored size=3 sha256=87a10fd1d9e3a305
+rest META-INF/.H.SF stored size=4 sha256=5ddbce254c08372e
+rest META-INF/C.RSA stored size=13 sha256=1ff84d93c1a468a8
+rest META-INF/D.rsa stored size=12 sha256=7f5cc97db46e600b
+rest META-INF/maven/x/pom.xml stored size=11 sha256=23c641491ed3afc9
+rest META-INF/module.xml stored size=39 sha256=b5de38af5e57bbfe
+rest META-INF/sig.sf stored size=6 sha256=b908e4daaf9d57fe
+rest META-INF/sub/X.SF stored size=7 sha256=370a8c04b8a65bb4
+rest com/x/A.class stored size=8 sha256=a79425e4a5e19137
+rest rc/index.html stored size=300 sha256=9835fa6bf4e20a9b
