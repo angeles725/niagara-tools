@@ -23,6 +23,7 @@ import (
 const AboutPath = "/obix/about/"
 
 // ReasonTier is safety.REASON_TIER, the start of every tier refusal (the session retro keys on it).
+// It lives here alone: package safety holds the other REASON_* texts.
 const ReasonTier = "version tier refuses writes"
 
 // OptInFlags is tiers.OPT_IN_FLAGS: the start flag that opts a station in, per tier.
