@@ -121,13 +121,27 @@ private_go() {
 @test "HK8: no go on PATH when kit-state must be built -> one warning, all three files removed, exit 0" {
   bash "$C/build-n4-module-kit/toolbelt/kit-state.sh" --write >/dev/null
   private_go
+  # A PATH with no `go` anywhere: every PATH directory that holds a go is replaced by a farm of
+  # symlinks to its other commands (a CI runner has a go in /usr/bin, beside the basic tools).
   NOGO="$BATS_TEST_TMPDIR/nogo"; mkdir -p "$NOGO"
-  ln -s "$(command -v git)" "$NOGO/git"
-  run env PATH="$NOGO:/usr/bin:/bin" git -C "$C" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false \
+  local d f nogo_path="$NOGO" dirs
+  IFS=: read -ra dirs <<<"$PATH"
+  for d in "${dirs[@]}"; do
+    if [ -e "$d/go" ]; then
+      for f in "$d"/*; do
+        case "${f##*/}" in go | gofmt) continue ;; esac
+        [ -e "$NOGO/${f##*/}" ] || ln -s "$f" "$NOGO/${f##*/}"
+      done
+    else
+      nogo_path="$nogo_path:$d"
+    fi
+  done
+  PATH="$nogo_path" command -v go && { echo "go still on the test PATH" >&2; return 1; }
+  run env PATH="$nogo_path" git -C "$C" -c user.name=t -c user.email=t@example.com -c commit.gpgsign=false \
     commit -q --allow-empty -m "chore: empty"
   [ "$status" -eq 0 ]
   [ "$(grep -cF "$WARN" <<<"$output")" -eq 1 ]
-  [[ "$output" == *"$WARN"*"go is not on PATH"*") — generated files removed"* ]]
+  [[ "$output" == *"$WARN"*"go is not on PATH"*") — generated files removed"* ]] || { printf '%s\n' "$output" >&2; return 1; }
   [ ! -e "$C/build-n4-module-kit/BUILD-STATE.md" ]
   [ ! -e "$C/build-n4-module-kit/retros/INDEX.md" ]
   [ ! -e "$C/build-n4-module-kit/toolbelt/INDEX.md" ]
