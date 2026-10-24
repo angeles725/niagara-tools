@@ -207,22 +207,25 @@ Three Niagara worker threads the network owns:
 
 | Worker | Purpose |
 |---|---|
-| `worker` | solicited poll dispatching |
-| `writeWorker` | write requests; uses a `CoalesceQueue(1000)` so rapid setpoint changes collapse |
-| `dispatcher` | unsolicited-frame fan-out |
+| `worker` | `post`/`sendAsync` requests (a `BBasicCoalescingWorker`) |
+| `writeWorker` | `postWrite`/`sendAsyncWrite` requests; a `CoalesceQueue` sized by `maxQueueSize` (default 256), so queued writes with the same coalesce key collapse |
+| `dispatcher` | runs every transmit: `sendSync` dispatches to it and waits; unsolicited frames go from the receiver to registered listeners (`comm/Comm.java:240-251`) |
+
+[ev: code basicDriver-rt vineflower `BBasicNetwork.java:30-66,240-278`, `util/BBasicWorker.java:17-22,48-54`, `util/BBasicCoalescingWorker.java:19-20`]
 
 Retry loop lives in `Comm.transmit(msg, timeout, retryCount)`: sends → waits `responseTimeout`
-on a `CommTransaction` → retries `retryCount+1` times. [ev: corpus B517 §517.2]
+on a `CommTransaction` → tries `retryCount+1` times in all (`comm/Comm.java:146-160`, vineflower). [ev: corpus B517 §517.2]
 
 Send API:
 
 ```java
-network.sendAsync(request, cx);          // reads — never block
-network.sendAsyncWrite(request, cx);     // writes — routes through writeWorker
+network.sendAsync(msg, listener);        // reads — never block; the MessageListener gets the response
+network.sendAsyncWrite(msg, listener);   // writes — routes through writeWorker
 ```
 
-**Gotcha:** `sendSync` exists but blocks the calling thread. Call it only from your own background
-`BWorker`, never from the engine thread or a timer callback. [ev: corpus B517 §517.2]
+**Gotcha:** `sendSync` exists but blocks the calling thread until the dispatcher returns the response
+(`BBasicNetwork.java:257-262,281-294`, vineflower). Call it only from your own background
+`BWorker`, never from the engine thread or a timer callback `[INFER]`. [ev: corpus B517 §517.2]
 
 ---
 
@@ -241,7 +244,7 @@ default `"defaultPolicy"`).
 | `writeOnUp` | **true** | Re-write when device returns UP after comm loss |
 | `writeOnEnabled` | **true** | Write when point re-enabled |
 
-[ev: code BTuningPolicy.java:19,24,29,33,41,47-49; corpus B872 §872.2]
+[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; writeOnStart advice: corpus B1327 row 2]
 
 **Gotcha:** the Tuning scan thread runs at `min(minWriteTime/2, maxWriteTime/2, staleTime/2)`
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
@@ -310,7 +313,7 @@ annotated or nested-class stub is caught too. [ev: retro n4-course-handson-ndriv
 
 **A failed poll is not a failed ping** `[ev: retro devguide415-r3-drivers-integration Δ1]` `[ev: corpus B1348 §1348.1]`. The
 4.15.6.20 guide says "in most drivers" a point poll with no response makes the monitor note a ping fail
-(`Drivers/driver-PingMonitor.txt:37-40`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
+(`Drivers/driver-PingMonitor.txt:13`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
 only records the fault on the point and re-executes it (vineflower driver-rt 4.14.0.162
 `javax/baja/driver/point/BProxyExt.java:463-469`); nothing in driver-rt calls the device's ping from there. Code wins
 for behaviour: in a custom driver, on a transport timeout in the poll path call `device.ping()` (a fresh ping now) or
@@ -334,11 +337,12 @@ for behaviour: in a custom driver, on a transport timeout in the poll path call 
 | `configFail(cause)` | FAULT | **Transient** — cleared on next successful operation | `configOk()` |
 | `readFail(cause)` | FAULT | Transient | `readOk(value)` |
 | `writeFail(cause)` | FAULT | Transient | `writeOk()` |
-| `configFatal(cause)` | FAULT + DISABLED | **Permanent** — cleared ONLY by a full station restart | station restart |
+| `configFatal(cause)` | FAULT | **Permanent** — cleared ONLY by a full station restart | station restart |
 
 **`configFatal` is permanent:** `configOk()` clears `configFault` but returns early before
 `fatalFault` (`BDevice.java:425,431`); no code path resets `fatalFault`; `checkFatalFault()`
-short-circuits component restart (`:577-578`); the `FATAL_FAULT` flag is locked until station stop.
+short-circuits component restart (`BProxyExt.java:577-578`, `BDevice.java:484-485`); the proxy ext's `FATAL_FAULT`
+flag is locked until station stop (`BProxyExt.java:1134`).
 The following do NOT clear a fatal fault: `configOk()`, a config-slot change, a re-ping, an enable
 cycle, or a component restart. A point in `fatalFault` is permanently unoperational — tuning stops
 dispatching to it.
@@ -373,7 +377,7 @@ public BPollFrequency getPollFrequency() {
 | slow | `slow` (ordinal 2) | 30 000 ms |
 | dibs | immediate (LIFO priority stack) | — |
 
-[ev: code BPollFrequency.java:12,18-21; BPollScheduler.java:23-31,145; corpus B872 §872.1]
+[ev: code BPollFrequency.java:25-27,38-47,70; BPollScheduler.java:247,273,299,1222 (docSource); corpus B872 §872.1]
 
 Lifecycle rule: **register in `readSubscribed`, unregister in `readUnsubscribed`**. The scheduler
 pushes the point onto the `dibs` stack immediately on subscribe for a first-poll before the bucket
@@ -392,7 +396,7 @@ corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1
 A separate `BHistoryPollScheduler` (default rates: fast 10 000 / normal 45 000 / slow 120 000 ms)
 drives `BHistoryImport` children that read records from the field device and append them to the
 local history DB. Drop a `BHistoryDeviceExt` on your `BDevice` class to opt in.
-[ev: code BHistoryPollScheduler.java:36-38; corpus B872 §872.3]
+[ev: code BHistoryPollScheduler.java:72,84,96 (docSource); corpus B872 §872.3]
 
 ### 7.2 · `BScheduleDeviceExt` — makeExport / makeImportExt
 
@@ -405,7 +409,7 @@ network load. [ev: code BScheduleDeviceExt.java:34; corpus B872 §872.4]
 
 `BVirtualGateway extends BComponent` exposes a lazy, transient-only `BVirtualComponentSpace`.
 A point inside resolves as the gateway's ORD followed by `|virtual:/A/B/point` — NOT `virtual:/gw/device/point` and NOT
-`slot:` (devguide `virtualComponents.txt:252-254`). Each virtual slot is named `SlotPath.escape(virtualPath)`; a load
+`slot:` (devguide 4.15.6.20 `virtualComponents.txt:68-79`). Each virtual slot is named `SlotPath.escape(virtualPath)`; a load
 can add a slot under a parent that is already subscribed, so register the new point with the poll scheduler too. The
 space forbids links and structure edits, not property writes; it is not persisted and is GC-cached, tuned by
 `niagara.virtual.cache.{maxLifeDefault,minLifeDefault,threshold,thresholdScanRate}` (45 s / 25 s / 1000 / 1000 ms).
@@ -419,7 +423,7 @@ a full proxy tree would be prohibitive. [ev: corpus B28 §28.9-28.12] `[ev: corp
 baud/data/stop/parity/port) and `interMessageDelay`. `SerialComm.performInterMessageDelay()`
 sleeps the deficit since the last received message (min 10 ms) before each transmit — a
 fixed-ms gap, NOT the baud-relative silence prescribed by Modbus RTU spec.
-[ev: code BSerialNetwork.java:51; corpus B517 §517.3]
+[ev: code basicDriver-rt vineflower BSerialNetwork.java:34-38, SerialComm.java:146-160; corpus B517 §517.3]
 
 ---
 
