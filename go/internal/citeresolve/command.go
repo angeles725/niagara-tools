@@ -77,6 +77,10 @@ func Main(args []string, s cli.Stdio) int {
 		r.Clients = filepath.Join(r.Modules, "Cliente")
 	}
 	r.Repo = filepath.Dir(filepath.Clean(r.Kit))
+	r.Home, r.Gradle = home, s.Env("GRADLE_USER_HOME")
+	if r.Gradle == "" && home != "" {
+		r.Gradle = filepath.Join(home, ".gradle")
+	}
 	for _, root := range []struct{ name, dir string }{{"kit", r.Kit}, {"research", r.Research}, {"modules", r.Modules},
 		{"clients", r.Clients}, {"memory", r.Memory}} {
 		if _, err := os.ReadDir(root.dir); err != nil {

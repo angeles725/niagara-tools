@@ -153,7 +153,7 @@ type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
 // niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that
-// order; `KIT/rest` under the kit; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
+// order; `~/rest` under the home root; `KIT/rest` under the kit; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
 // found under none of them (a bare file name, a partial package path, an ellipsis) is searched in the trees.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
@@ -176,6 +176,7 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules,
 		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
 		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean")}
+	target = r.e.homePath(target)
 	if rest, ok := strings.CutPrefix(strings.TrimPrefix(target, "$"), "KIT/"); ok {
 		target, bases = rest, []string{ro.Kit}
 	}
@@ -192,6 +193,15 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 		return Result{Status: MissingFile, Detail: target + " does not exist"}
 	}
 	return r.e.search(p, target, target+" not under the card, kit, repo, research or modules roots, nor a searched tree")
+}
+
+// homePath expands a leading `~/` to the home root, so the path resolves by existence like any absolute
+// path; a kit path (`KIT/…`) or an unknown home leaves it as written.
+func (e *Engine) homePath(target string) string {
+	if rest, ok := strings.CutPrefix(target, "~/"); ok && e.roots.Home != "" {
+		return filepath.Join(e.roots.Home, rest)
+	}
+	return target
 }
 
 // search resolves p by the files named, or ending in, target in the trees (repository, organized/,

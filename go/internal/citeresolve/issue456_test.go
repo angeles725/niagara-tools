@@ -20,3 +20,24 @@ func TestIssue456Shapes(t *testing.T) {
 			[]want{{UnverifiableKind, "web page"}}},
 	})
 }
+
+// TestIssue456Roots pins the root shapes of kit issue #456: a directory of a module copy, a `~/` path,
+// and a javap jar in the Gradle cache.
+func TestIssue456Roots(t *testing.T) {
+	t.Parallel()
+	check(t, []struct {
+		name, text string
+		want       []want
+	}{
+		{"directory in a module copy", "[ev: code gamma-ux imageOverrides/]", []want{{Resolved, "directory"}}},
+		{"directory missing from the module copies", "[ev: code gamma-ux nopeOverrides/]", []want{{MissingFile, "nopeOverrides/ in the copies of gamma-ux"}}},
+		{"home file with a section", "[ev: ~/notes/home-plan.md §3 Provenance markers]", []want{{Resolved, "## 3. Provenance markers"}}},
+		{"home directory", "[ev: ~/notes/ model: frontmatter]", []want{{Resolved, "directory"}}},
+		{"home file missing", "[ev: ~/notes/nope.md]", []want{{MissingFile, "nope.md does not exist"}}},
+		{"a kit path is never home-expanded", "[ev: kit ~/notes/home-plan.md]", []want{{MissingFile, "~/notes/home-plan.md"}}},
+		{"javap jar in the Gradle jars cache", "javap of fixture-plugins-1.0.jar from `~/.gradle/caches`",
+			[]want{{Resolved, "jars-9/0a1b2c/fixture-plugins-1.0.jar"}}},
+		{"javap jar in the Gradle modules cache", "javap of `fixture-plugin-2.0.jar`", []want{{Resolved, "files-2.1/com.example"}}},
+		{"javap jar in no known root", "javap of `nowhere-9.jar`", []want{{MissingFile, "organized/ or the Gradle cache"}}},
+	})
+}

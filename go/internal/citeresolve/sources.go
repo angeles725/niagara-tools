@@ -10,18 +10,43 @@ import (
 type codeResolver struct{ e *Engine }
 
 // Resolve finds File in the copies of module Target (organized/, versioned source, client trees); with no
-// module, as a path pointer.
+// module, as a path pointer. A File ending in `/` names a directory of one of the module's copies.
 func (r codeResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	q := p
 	q.Target = p.File
 	if p.Target == "" {
 		return pathResolver{r.e}.Resolve(q, c)
 	}
+	if dir, ok := strings.CutSuffix(p.File, "/"); ok {
+		return r.e.moduleDir(q, p.Target, dir)
+	}
 	groups, err := r.e.lookup(p.File, r.e.inModule(p.Target, r.e.moduleDirs(p.Target)))
 	if err != nil {
 		return toolError(err)
 	}
 	return r.e.pick(q, groups, p.File, Result{Status: MissingFile, Detail: "no " + p.File + " in the copies of " + p.Target})
+}
+
+// moduleDir resolves a directory of module part module: dir below one of its directories or below one of
+// their vineflower, decompiled or extracted copies. A file index lists no directory, so it is stat'ed.
+func (e *Engine) moduleDir(p citeparse.Pointer, module, dir string) Result {
+	var bases []string
+	for _, d := range e.moduleDirs(module) {
+		bases = append(bases, d)
+		for _, c := range copyOrder {
+			bases = append(bases, filepath.Join(d, c))
+		}
+	}
+	f, err := first(dir, bases...)
+	switch {
+	case err != nil:
+		return toolError(err)
+	case f == "":
+		return Result{Status: MissingFile, Detail: "no " + dir + "/ in the copies of " + module}
+	}
+	res := e.hit(p, f)
+	res.Detail = strings.TrimSpace(res.Detail + " [read " + e.short(f) + "]")
+	return res
 }
 
 // infix resolves `<dir or part>/…/<suffix>`: a file below that directory (or module part's copies)
@@ -132,15 +157,45 @@ func (r vineResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 
 type javapResolver struct{ e *Engine }
 
-// Resolve finds the jar in organized/; what javap printed is not reproduced.
+// Resolve finds the jar in organized/, else in the Gradle cache; what javap printed is not reproduced.
 func (r javapResolver) Resolve(p citeparse.Pointer, _ *Card) Result {
 	jar := filepath.Base(p.Target)
 	f, err := first(jar, r.e.organizedDirs(strings.TrimSuffix(jar, ".jar"))...)
+	if err == nil && f == "" {
+		f, err = r.e.gradleJar(jar)
+	}
 	switch {
 	case err != nil:
 		return toolError(err)
 	case f == "":
-		return Result{Status: MissingFile, Detail: "no " + jar + " under organized/"}
+		return Result{Status: MissingFile, Detail: "no " + jar + " under organized/ or the Gradle cache"}
 	}
 	return Result{Status: Resolved, File: f, Detail: "jar " + f + " [javap output not checked]"}
 }
+
+// gradleCacheJars are the Gradle cache layouts that hold a jar by its file name, relative to the Gradle
+// user home: the plugin jars cache and the dependency cache. Fixed depths, so a lookup never walks the cache.
+var gradleCacheJars = [][]string{
+	{"caches", "jars-*", "*"},
+	{"caches", "modules-2", "files-2.1", "*", "*", "*", "*"},
+}
+
+// gradleJar is the first copy of jar in the Gradle cache ("" when none, or no Gradle home is known).
+func (e *Engine) gradleJar(jar string) (string, error) {
+	if e.roots.Gradle == "" {
+		return "", nil
+	}
+	for _, layout := range gradleCacheJars {
+		hits, err := filepath.Glob(filepath.Join(append(append([]string{e.roots.Gradle}, layout...), globEscape.Replace(jar))...))
+		if err != nil {
+			return "", err
+		}
+		if len(hits) > 0 {
+			return hits[0], nil
+		}
+	}
+	return "", nil
+}
+
+// globEscape quotes the glob metacharacters of a file name.
+var globEscape = strings.NewReplacer(`\`, `\\`, "*", `\*`, "?", `\?`, "[", `\[`)
