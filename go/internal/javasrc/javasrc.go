@@ -155,7 +155,8 @@ func Methods(stripped []string) []Method { return bodies(stripped, false) }
 // Scopes is Methods plus every lambda body opened outside a method (a field initializer such as
 // `Runnable r = () -> {`, its "->" on the line of the "{" or the line before), named "lambda": the
 // bodies a statement can belong to, in source order and never nested. A lambda inside a method belongs to
-// that method's body, as the locals it captures do.
+// that method's body, as the locals it captures do. Unlike Methods, a body still open at the end of the
+// file (unbalanced braces) is a scope that runs to the last line, so a statement in it keeps its scope.
 func Scopes(stripped []string) []Method { return bodies(stripped, true) }
 
 // Enclosing is the scope holding 1-based line, ok false when no scope holds it.
@@ -243,6 +244,10 @@ func bodies(stripped []string, lambdas bool) []Method {
 			methods = append(methods, cur)
 			inBody = false
 		}
+	}
+	if inBody && lambdas { // Scopes: a body still open at the end of the file (unbalanced) runs to it
+		cur.End = len(stripped)
+		methods = append(methods, cur)
 	}
 	return methods
 }

@@ -313,4 +313,8 @@ func TestScopes(t *testing.T) {
 	if !reflect.DeepEqual(f.Scopes(), want) {
 		t.Errorf("File.Scopes() = %v", f.Scopes())
 	}
+	open, _ := Strip([]string{"class U {", "  void a() {", "    try {", "      x();"})
+	if got, ms := Scopes(open), Methods(open); !reflect.DeepEqual(got, []Method{{"a", 2, 4}}) || ms != nil {
+		t.Errorf("unbalanced file: Scopes %v (want a 2-4), Methods %v (want none)", got, ms)
+	}
 }
