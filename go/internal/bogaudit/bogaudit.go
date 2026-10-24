@@ -179,6 +179,14 @@ func (a *audit) ownComp(h string) *comp {
 	return nil
 }
 
+// container is the component holding l (nil when none does).
+func (a *audit) container(l link) *comp {
+	if !l.hasContainer {
+		return nil
+	}
+	return a.g.comp(l.container)
+}
+
 // byPath is the components sorted by path, ties in dict order (Python's stable sorted()).
 func (a *audit) byPath() []*comp {
 	cs := make([]*comp, 0, len(a.g.comps.keys))

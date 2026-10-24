@@ -2,7 +2,11 @@ package bogaudit
 
 // The checks still to land, one commit per group; until then they print nothing.
 
-func (a *audit) stationLogic() {}
+func (a *audit) defrostSiblings() {}
+func (a *audit) roomIndex()       {}
+func (a *audit) tileNumbers()     {}
+func (a *audit) linkDirection()   {}
+func (a *audit) numericToBool()   {}
 
 type sources struct{}
 
