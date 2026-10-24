@@ -50,7 +50,7 @@ func (d *Doc) Text(i int) string {
 	for {
 		tok, err := dec.RawToken()
 		if err != nil { // io.EOF: Parse already proved the span well-formed
-			return sb.String()
+			return unmask(sb.String(), d.masked)
 		}
 		switch t := tok.(type) {
 		case xml.StartElement:

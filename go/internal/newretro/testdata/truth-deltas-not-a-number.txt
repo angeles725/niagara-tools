@@ -1,0 +1,29 @@
+-- args --
+kit
+slugabc
+--deltas
+x
+-- want --
+exit 3
+-- stderr --
+new-retro: --deltas must be an integer from 0 to 99: x
+-- @kind --
+truth: hand-written from the case edge-deltas-negative recorded at 15e792d1: a non-numeric --deltas is refused as usage (the bash printed a [: integer expression expected error and failed in the index generator, exit 1)
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- @expect kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
