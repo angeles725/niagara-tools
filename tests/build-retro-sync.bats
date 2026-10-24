@@ -327,7 +327,9 @@ _fixture_ledger_top() {
   _fixture_top; local k="$TOP/build-n4-module-kit"
   cp "$KIT/toolbelt/gen-build-state.sh" "$k/toolbelt/"
   mkdir -p "$k/ledger.d"
-  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: x\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: 2026-09-04 · demo\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.md"
+  # BUILD-STATE.md is generated from BUILD-STATE.src.md + ledger.d/ (R10-D1); the source keeps the
+  # kit envelope's generated parts empty.
+  printf '<!-- build-state.v1 -->\nmodule: kit\nlast_change: generated               # from ledger.d/; run toolbelt/gen-build-state.sh\nopen_issues:\nretro_required: true\nretro_pending: true\nlast_session: below\n<!-- /build-state.v1 -->\n' > "$k/BUILD-STATE.src.md"
   printf '<!-- ledger: kit -->\n<!-- date: 2026-09-04 -->\nlog: 2026-09-04 · archived line\n' > "$k/ledger.d/0000-archive-pre-2026-10-23.md"
   printf '<!-- ledger: kit -->\n<!-- date: 2026-09-05 -->\nlog: 2026-09-05 · demo change\nopen_issue: OWED demo half\n' > "$k/ledger.d/2026-09-05-demo.md"
   bash "$k/toolbelt/gen-build-state.sh" "$k" >/dev/null

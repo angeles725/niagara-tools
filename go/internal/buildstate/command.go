@@ -11,8 +11,8 @@ import (
 
 // Exit codes of gen-build-state (the gen-retro-index contract).
 const (
-	ExitOK    = gen.ExitOK    // BUILD-STATE.md written, or fresh under --check
-	ExitStale = gen.ExitStale // stale under --check, or a fragment / BUILD-STATE structure violation
+	ExitOK    = gen.ExitOK    // BUILD-STATE.md written, or the inputs are valid under --check
+	ExitStale = gen.ExitStale // a fragment or BUILD-STATE.src.md violation; nothing written
 	ExitEnv   = gen.ExitEnv   // usage or environment error; nothing written
 )
 
@@ -20,65 +20,88 @@ const (
 // toolbelt/gen-build-state.sh wrapper exports it as its own ../ directory.
 const DefaultRootEnv = "GEN_BUILD_STATE_DEFAULT_ROOT"
 
+// SourceName is the committed, hand-kept source of BUILD-STATE.md: every module envelope and every kit
+// field, with the kit envelope's generated parts left empty. OutputName is the generated file; it is
+// not committed (.gitignore), so two PRs that each add a fragment never touch the same line.
+const (
+	SourceName = "BUILD-STATE.src.md"
+	OutputName = "BUILD-STATE.md"
+)
+
 const tool = "gen-build-state"
 
-// Main implements `gen-build-state [--check] [<kit-root>]`: it rewrites the generated parts of the kit
-// envelope of <kit-root>/BUILD-STATE.md from <kit-root>/ledger.d/, or with --check compares them.
-// Any violation means nothing is written.
+// Main implements `gen-build-state [--check] [<kit-root>]`: it writes <kit-root>/BUILD-STATE.md from
+// <kit-root>/BUILD-STATE.src.md and <kit-root>/ledger.d/, or with --check only validates those inputs
+// (the generated file is not committed, so there is nothing to compare). Any violation means nothing
+// is written.
 func Main(args []string, s cli.Stdio) int {
 	check, root, ok := gen.ParseArgs(tool, DefaultRootEnv, args, s)
 	if !ok {
 		return ExitEnv
 	}
-	return generate(root, check, s)
+	content, code := Generate(root, s.Err)
+	if code != ExitOK {
+		return code
+	}
+	if check {
+		fmt.Fprintf(s.Out, "gen-build-state: %s/%s and ledger.d/ are valid\n", root, SourceName)
+		return ExitOK
+	}
+	return Output(tool, root, content).Write(s)
 }
 
-// Check reports whether <root>/BUILD-STATE.md is fresh against ledger.d/, as `--check <root>`
-// decides, without the "is fresh" line; its diagnostics (stale, missing, violations) go to diag.
-// It is the typed API sweep-build-state calls in process.
-func Check(root string, diag io.Writer) bool {
-	return generate(root, true, cli.Stdio{Out: io.Discard, Err: diag}) == ExitOK
+// Output is the generated BUILD-STATE.md of root as a file to write; tool prefixes its messages.
+func Output(tool, root, content string) gen.File {
+	return gen.File{Tool: tool, Path: root + "/" + OutputName, Content: content, Atomic: true}
 }
 
-// generate regenerates <root>/BUILD-STATE.md from <root>/ledger.d/ and writes it, or compares it under check.
-func generate(root string, check bool, s cli.Stdio) int {
+// Generate returns the BUILD-STATE.md that <root>/BUILD-STATE.src.md and <root>/ledger.d/ generate:
+// gen.GeneratedLine, then the source with the kit envelope's generated parts filled in. A violation
+// is reported to diag and returned as ExitStale (ExitEnv for a missing or unreadable input).
+func Generate(root string, diag io.Writer) (string, int) {
+	s := cli.Stdio{Out: io.Discard, Err: diag}
 	dir, ok := gen.SubDir(tool, root, "ledger.d", s)
 	if !ok {
-		return ExitEnv
+		return "", ExitEnv
 	}
-	path := root + "/BUILD-STATE.md"
-	committed, err := os.ReadFile(path)
+	src, err := os.ReadFile(root + "/" + SourceName)
 	if err != nil {
-		fmt.Fprintf(s.Err, "gen-build-state: no BUILD-STATE.md under %s\n", root)
-		return ExitEnv
+		fmt.Fprintf(diag, "gen-build-state: no %s under %s\n", SourceName, root)
+		return "", ExitEnv
 	}
 
 	frags, problems, err := Scan(dir)
 	if err != nil {
-		fmt.Fprintf(s.Err, "gen-build-state: cannot list %s: %v; BUILD-STATE.md not written\n", dir, err)
-		return ExitEnv
+		fmt.Fprintf(diag, "gen-build-state: cannot list %s: %v; nothing generated\n", dir, err)
+		return "", ExitEnv
 	}
 	unreadable := false
 	for _, p := range problems {
-		fmt.Fprintf(s.Err, "gen-build-state: %s: %s\n", p.Name, p.Reason)
+		fmt.Fprintf(diag, "gen-build-state: %s: %s\n", p.Name, p.Reason)
 		unreadable = unreadable || p.IO
 	}
 	switch {
 	case unreadable:
-		fmt.Fprint(s.Err, "gen-build-state: a fragment could not be read; BUILD-STATE.md not written\n")
-		return ExitEnv
+		fmt.Fprint(diag, "gen-build-state: a fragment could not be read; nothing generated\n")
+		return "", ExitEnv
 	case len(problems) > 0:
-		fmt.Fprint(s.Err, "gen-build-state: ledger fragment violation; BUILD-STATE.md not written\n")
-		return ExitStale
+		fmt.Fprint(diag, "gen-build-state: ledger fragment violation; nothing generated\n")
+		return "", ExitStale
 	case len(frags) == 0:
-		fmt.Fprint(s.Err, "gen-build-state: ledger.d/ holds no fragment; BUILD-STATE.md not written\n")
-		return ExitStale
+		fmt.Fprint(diag, "gen-build-state: ledger.d/ holds no fragment; nothing generated\n")
+		return "", ExitStale
 	}
-	content, err := Render(string(committed), frags)
+	content, err := Render(string(src), frags)
 	if err != nil {
-		fmt.Fprintf(s.Err, "gen-build-state: %v; BUILD-STATE.md not written\n", err)
-		return ExitStale
+		fmt.Fprintf(diag, "gen-build-state: %s: %v; nothing generated\n", SourceName, err)
+		return "", ExitStale
 	}
-	// Mutation: GBS-stale -- the shared compare in gen.File; dropping it makes --check vacuously clean
-	return gen.File{Tool: tool, Path: path, Content: content, StaleNote: " vs ledger.d/", Atomic: true}.Run(check, s)
+	// Mutation: GBS-source -- without this check a generated line pasted into the source is dropped silently
+	if empty, _ := Render(string(src), nil); empty != string(src) {
+		fmt.Fprintf(diag, "gen-build-state: %s holds generated content (a last_change value, open_issues items or "+
+			"session-log lines in the kit envelope); move it into a ledger.d/ fragment; nothing generated\n", SourceName)
+		gen.ShowDiff(empty, root+"/"+SourceName, diag)
+		return "", ExitStale
+	}
+	return gen.GeneratedLine + "\n" + content, ExitOK
 }

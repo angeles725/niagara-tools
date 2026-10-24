@@ -1,4 +1,4 @@
-# BUILD-STATE — fixture for tests/gen-build-state.bats
+# BUILD-STATE — fixture source for tests/gen-build-state.bats
 
 <!-- build-state.v1 -->
 module: DemoPan
@@ -15,13 +15,9 @@ last_session: 2020-01-01 · demo
 <!-- build-state.v1 -->
 module: kit                          # the kit
 version: 1.0.0
-last_change: 2026-10-22              # old note
+last_change: generated               # from ledger.d/; run toolbelt/gen-build-state.sh
 open_issues:
-  - OLD A
-  - OLD B
 retro_required: true
 retro_pending: false
 last_session: 2026-10-16 · hand-kept
-2026-10-23 · late line
-2026-09-01 · early line
 <!-- /build-state.v1 -->

@@ -142,32 +142,42 @@ func unindexedRetro(retrodir string, rows map[string]bool) (string, int) {
 	return "", ExitOK
 }
 
-// freshness checks the generated INDEX and the generated kit ledger, when present, in process. A
-// GENERATED INDEX (line 1 = gen.GeneratedLine) is compared with what the retro headers of the kit at
-// <retros-dir>/.. generate now, wherever the file lives, so a caller may pass kit-state output from a
-// temp dir; a hand-written index (test fixtures) skips the check.
+// freshness checks a GENERATED INDEX and a GENERATED BUILD-STATE file (line 1 = gen.GeneratedLine)
+// against what the kit at <retros-dir>/.. generates now, in process. The generated files are not
+// committed, so the callers (CI, .githooks/pre-push) pass fresh `kit-state` output from a temp dir:
+// either file may live anywhere. A hand-written file (test fixtures) skips its check, except that a
+// kit with a ledger.d/ never takes a hand-written BUILD-STATE file.
 func freshness(state, retrodir, index, indexText string, s cli.Stdio) (string, int) {
+	root := abs(retrodir + "/..")
 	// 3. generated INDEX freshness. A generator's diagnostics are sweep output; its result is compared here.
 	// Mutation: GRI-sweep -- skipping the freshness call lets a deltas/module header drift pass the gate
 	if strings.HasPrefix(indexText, gen.GeneratedLine) {
-		want, code := retroindex.Generate(abs(retrodir+"/.."), s.Err)
+		want, code := retroindex.Generate(root, s.Err)
 		if code != ExitOK {
 			return "the retro headers under " + retrodir + " do not generate an INDEX", ExitFail
 		}
 		if strings.TrimRight(indexText, "\n") != strings.TrimRight(want, "\n") {
-			return index + " is stale vs the retro headers; run toolbelt/gen-retro-index.sh", ExitFail
+			return index + " is stale vs the retro headers; regenerate it with toolbelt/kit-state.sh retro-index", ExitFail
 		}
 	}
 
-	// 4. generated kit ledger freshness, checked in-process by buildstate.Check.
+	// 4. generated kit ledger freshness.
 	// Mutation: GBS-sweep -- skipping this call lets a fragment land without its regenerated BUILD-STATE.md
-	if stateroot := abs(filepath.Dir(state)); gen.IsDir(stateroot + "/ledger.d") {
-		if filepath.Base(state) != "BUILD-STATE.md" {
-			return "a ledger.d/ kit needs the state file named BUILD-STATE.md: " + state, ExitFail
+	text, err := os.ReadFile(state)
+	if err != nil {
+		return fmt.Sprintf("cannot read BUILD-STATE file: %s: %v", state, err), ExitEnv
+	}
+	switch generated := strings.HasPrefix(string(text), gen.GeneratedLine); {
+	case generated:
+		want, code := buildstate.Generate(root, s.Err)
+		if code != ExitOK {
+			return "ledger.d/ and " + buildstate.SourceName + " under " + root + " do not generate a BUILD-STATE.md", ExitFail
 		}
-		if !buildstate.Check(stateroot, s.Err) {
-			return "BUILD-STATE.md is stale vs ledger.d/ (or a fragment is malformed); run toolbelt/gen-build-state.sh", ExitFail
+		if string(text) != want {
+			return state + " is stale vs ledger.d/ and " + buildstate.SourceName + "; regenerate it with toolbelt/kit-state.sh build-state", ExitFail
 		}
+	case gen.IsDir(root + "/ledger.d"):
+		return "a ledger.d/ kit takes the GENERATED BUILD-STATE.md (toolbelt/kit-state.sh build-state), not " + state, ExitFail
 	}
 	return "", ExitOK
 }
