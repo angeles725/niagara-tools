@@ -5,7 +5,10 @@
 # Every row names a stable check id:
 #   ord-literal        FAIL  hardcoded station:|local:|slot:/ ORD string, or handle ORD h:<hex>
 #                            anchored at segment start
-#   host-literal       FAIL  http:// non-namespace host OR bare IPv4 literal
+#   host-literal       FAIL  http:// non-namespace host OR bare IPv4 literal. A host in the config of a mode the
+#                            page does not select (`base: "http://127.0.0.1/..."` beside `mode: "json"`) still
+#                            FAILs (issue #459, decided): a one-word mode edit makes it live, plain http to a fixed
+#                            host. Fix the page: a relative base (`/obix/...`), resolved against the station.
 #   bare-catch         WARN  .catch(() => {}) swallowing write errors
 #   null-branch        WARN  ? null : display branch on a process field
 #   browser-floor      WARN  a feature above the Chromium 83 HMI panel floor. CSS (.css files,
