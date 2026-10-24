@@ -1,0 +1,9 @@
+-- args --
+@DIR@/proj
+-- want --
+exit 3
+-- stderr --
+split-package-check: no module (a module-include.xml / build.gradle[.kts] next to src/) under @DIR@/proj
+-- proj/A/build.gradle.kts --
+-- proj/A/readme --
+x

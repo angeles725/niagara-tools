@@ -29,6 +29,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/setnullord"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/silentprotection"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/size"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/splitpackage"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/statusparity"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/structure"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/subscribeleak"
@@ -73,5 +74,6 @@ func All() []lint.Spec {
 		licensegate.Spec(),
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
+		splitpackage.Spec(),
 	}
 }
