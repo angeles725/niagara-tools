@@ -1,0 +1,10 @@
+-- args --
+@DIR@/root
+-- want --
+exit 1
+FAIL  lint-link-target-flags  @DIR@/root/com/x/A.java:3  LTF1: link-in target "sl" (link comment) carries READONLY -- LinkCheck refuses a READONLY target; declare it SUMMARY only and guard writes server-side
+-- stderr --
+-- root/com/x/A.java (noeol) --
+class A {
+// link-in
+@NiagaraProperty(name = "sl", flags = Flags.READONLY)

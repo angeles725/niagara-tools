@@ -1,0 +1,10 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/A.java --
+class A {
+// Commissioning link from the control
+// @NiagaraProperty(name = "oldSlot", type = "double", flags = Flags.SUMMARY | Flags.READONLY)
+}

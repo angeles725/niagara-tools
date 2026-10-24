@@ -110,12 +110,11 @@ func wordAt(s string, i int, w string) bool {
 	if i < 0 || i+len(w) > len(s) || s[i:i+len(w)] != w {
 		return false
 	}
-	return (i == 0 || !identByte(s[i-1])) && (i+len(w) == len(s) || !identByte(s[i+len(w)]))
+	return (i == 0 || !identPart(s[i-1])) && (i+len(w) == len(s) || !identPart(s[i+len(w)]))
 }
 
-func identByte(c byte) bool {
-	return c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'
-}
+// identPart reports a byte that may continue a Java identifier: an identifier start (identByte) or a digit.
+func identPart(c byte) bool { return identByte(c) || isDigit(c) }
 
 // skipBlank is the first offset at or after i that is not a blank or a line break.
 func skipBlank(s string, i int) int {
@@ -126,12 +125,12 @@ func skipBlank(s string, i int) int {
 }
 
 // closeParen is the offset of the ")" matching the "(" at open, len(s) when it never closes.
-func closeParen(s string, open int) int { return match(s, open, '(', ')') }
+func closeParen(s string, open int) int { return matchByte(s, open, '(', ')') }
 
 // closeBrace is the offset of the "}" matching the "{" at open, len(s) when it never closes.
-func closeBrace(s string, open int) int { return match(s, open, '{', '}') }
+func closeBrace(s string, open int) int { return matchByte(s, open, '{', '}') }
 
-func match(s string, open int, l, r byte) int {
+func matchByte(s string, open int, l, r byte) int {
 	depth := 0
 	for i := open; i < len(s); i++ {
 		switch s[i] {

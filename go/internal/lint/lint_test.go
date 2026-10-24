@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"fmt"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
@@ -56,9 +57,9 @@ func (mixedRule) Check(f *javasrc.File) ([]Finding, error) {
 // treeFake is a TreeRule: it records the paths it is given, reports a file-level finding (sub-check
 // "sub") for each file holding MARK and a PASS row for the others, and fails when broken is set.
 type treeFake struct {
-	id     string
-	seen   *[]string
-	broken bool
+	id            string
+	seen          *[]string
+	broken, empty bool
 }
 
 func (r treeFake) ID() string         { return r.id }
@@ -75,7 +76,10 @@ func (r treeFake) CheckTree(files []*javasrc.File) ([]Finding, error) {
 			out = append(out, Finding{Check: "sub", Severity: Pass, Path: f.Path, Msg: "clean"})
 		}
 	}
-	if r.broken {
+	switch {
+	case r.empty:
+		return out, ErrEmptyRoot
+	case r.broken:
 		return out, errors.New("cannot scan " + files[0].Path + ": broken")
 	}
 	return out, nil
@@ -620,5 +624,176 @@ func TestParseExactUsageError(t *testing.T) {
 	s, _, e = stdio()
 	if code := main([]string{"lint-e", "-h"}, s); code != 3 || e.String() != "lint-e: not a directory: -h\n" {
 		t.Errorf("Exact -h: exit %d %q, want 3 (a root, not a flag)", code, e)
+	}
+}
+
+// TestTreeRuleEmptyRoot: a TreeRule whose selected files hold nothing it checks (lint-duplicate-helper: no
+// -rt/-ux/-wb src/ under the root) returns ErrEmptyRoot: the EmptyError row instead of its findings, the
+// rule stops (no later root) and the exit is 3, as for a RootRule.
+func TestTreeRuleEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "MARK\n"})
+	b := tree(t, map[string]string{"B.java": "MARK\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Mode = Each
+	sp.EmptyError = EmptyRow{Msg: "nothing to compare"}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-t", a, b}, s); code != 3 || o.String() != "ERROR  lint-t  "+a+"  nothing to compare\n" || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
+	}
+}
+
+// TestModuleRootLeftOutOfAll: --all runs on source roots, so it leaves out a rule whose roots are module
+// roots (Spec.ModuleRoot), as it leaves out a RootRule; by name the rule runs.
+func TestModuleRootLeftOutOfAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	mod := treeSpec(treeFake{id: "lint-m"})
+	mod.ModuleRoot = true
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), mod)
+	s, o, _ := stdio()
+	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("--all: exit %d out\n%s\nwant the lint-a row only", code, o)
+	}
+	s, o, _ = stdio()
+	if code := main([]string{"lint-m", root}, s); code != 1 || o.String() != "FAIL  sub  "+root+"/A.java: tree saw MARK\n" {
+		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
+	}
+}
+
+func TestEmptyOK(t *testing.T) {
+	sp := javaSpec(fakeRule{"lint-e", "MARK", Fail}, Raw)
+	sp.EmptyOK = true
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-e", empty}, s); code != 0 || o.Len() != 0 || e.Len() != 0 {
+		t.Errorf("empty: exit %d out %q err %q, want 0 and nothing", code, o, e)
+	}
+	full := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-e", full}, s); code != 1 || o.String() != "FAIL  lint-e  "+full+"/A.java:1  saw: MARK\n" {
+		t.Errorf("full: exit %d out %q", code, o)
+	}
+}
+
+// flagRule reports its configured n once per file (Spec.IntFlags).
+type flagRule struct{ n int }
+
+func (flagRule) ID() string { return "lint-f" }
+
+func (flagRule) Severity() Severity { return Warn }
+
+func (r flagRule) Check(*javasrc.File) ([]Finding, error) {
+	return []Finding{{Line: 1, Msg: fmt.Sprintf("n=%d", r.n)}}, nil
+}
+
+// TestCommandIntFlags: Spec.IntFlags are read among the leading flags in any order with --strict (the last
+// one wins), fail with the "needs a non-negative integer" line on a bad value, leave an unknown flag to
+// Parse, stop at "--", and do not exist for a rule list.
+func TestCommandIntFlags(t *testing.T) {
+	sp := javaSpec(flagRule{80}, First)
+	sp.IntFlags = []IntFlag{{Name: "--max", Default: 80}}
+	sp.Configure = func(v map[string]int) Rule { return flagRule{v["--max"]} }
+	main := Command(sp, javaSpec(fakeRule{"lint-a", "MARK", Warn}, First))
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	row := func(n string) string { return "WARN  lint-f  " + root + "/A.java:1  n=" + n + "\n" }
+	bad := func(f string) string {
+		return "lint-f: " + f + " needs a non-negative integer\nusage: lint-f.sh <src-root>\n"
+	}
+	for _, tc := range []struct {
+		name     string
+		args     []string
+		code     int
+		out, err string
+	}{
+		{"default", []string{"lint-f", root}, 0, row("80"), ""},
+		{"given", []string{"lint-f", "--max", "5", root}, 0, row("5"), ""},
+		{"with strict", []string{"lint-f", "--max", "007", "--strict", root}, 1, row("7"), ""},
+		{"last wins", []string{"lint-f", "--max", "5", "--max", "0", root}, 0, row("0"), ""},
+		{"missing value", []string{"lint-f", "--max"}, 3, "", bad("--max")},
+		{"not a count", []string{"lint-f", "--max", "-1", root}, 3, "", bad("--max")},
+		{"empty value", []string{"lint-f", "--max", "", root}, 3, "", bad("--max")},
+		{"unknown flag first", []string{"lint-f", "--bogus", "--max", "x", root}, 3, "",
+			"lint-f: unknown flag: --bogus\nusage: lint-f.sh <src-root>\n"},
+		{"after --", []string{"lint-f", "--", "--max", root}, 3, "", "lint-f: not a directory: --max\n"},
+		{"rule list", []string{"lint-f,lint-a", "--max", "5", root}, 3, "",
+			"n4lint: unknown flag: --max\n" + usage + "\n"},
+	} {
+		s, o, e := stdio()
+		if code := main(tc.args, s); code != tc.code || o.String() != tc.out || e.String() != tc.err {
+			t.Errorf("%s: exit %d out %q err %q, want %d %q %q", tc.name, code, o, e, tc.code, tc.out, tc.err)
+		}
+	}
+	defer func() {
+		if recover() == nil {
+			t.Error("IntFlags without Configure: no panic")
+		}
+	}()
+	noConf := javaSpec(flagRule{1}, First)
+	noConf.IntFlags = sp.IntFlags
+	Command(noConf)
+}
+
+func TestParseValued(t *testing.T) {
+	dir := t.TempDir()
+	const use = "usage: lint-v.sh [--map <file>] <src>"
+	for _, tc := range []struct {
+		name string
+		args []string
+		opt  string
+		err  string
+	}{
+		{"option first", []string{"--map", "m.md", dir}, "m.md", ""},
+		{"option after the root", []string{dir, "--map", "m.md"}, "m.md", ""},
+		{"last value wins", []string{"--map", "a", "--map", "b", dir}, "b", ""},
+		{"no option", []string{dir}, "", ""},
+		{"missing value", []string{dir, "--map"}, "", use + "\n"},
+		{"another flag", []string{"--strict", dir}, "", use + "\n"},
+		{"-h", []string{"-h"}, "", use + "\n"},
+		{"two roots", []string{dir, dir}, "", use + "\n"},
+		{"no root", []string{"--map", "m"}, "", use + "\n"},
+		{"not a directory", []string{"--map", "m", dir + "/nope"}, "", "lint-v: not a directory: " + dir + "/nope\n"},
+	} {
+		a, err := ParseOption(Valued, "lint-v", use, "--map", tc.args)
+		got := ""
+		if err != nil {
+			got = err.Error()
+		}
+		if got != tc.err || (err == nil && (a.Option != tc.opt || len(a.Roots) != 1 || a.Roots[0] != dir)) {
+			t.Errorf("%s: args %+v err %q, want option %q root %q err %q", tc.name, a, got, tc.opt, dir, tc.err)
+		}
+	}
+}
+
+// configFake is a Rule that is also a Configurer: it fails Configure when the option names "bad".
+type configFake struct {
+	fakeRule
+	seen *string
+}
+
+func (r configFake) Configure(a Args) error {
+	*r.seen = a.Option
+	if a.Option == "bad" {
+		return errors.New("lint-c: --map file not found: bad\n")
+	}
+	return nil
+}
+
+// TestConfigure: a rule run alone that implements Configurer gets the parsed Args after the root check
+// and before the walk; its error is printed verbatim on stderr and exits 3 with no row.
+func TestConfigure(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	var seen string
+	sp := Spec{Rule: configFake{fakeRule{"lint-c", "MARK", Fail}, &seen}, Mode: Valued, Option: "--map",
+		Usage: "usage: lint-c.sh [--map <file>] <src>", Select: Selection{Names: []string{"*.java"}}}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "good", root}, s); code != 1 || seen != "good" || o.String() != "FAIL  lint-c  "+root+"/A.java:1  saw: MARK\n" || e.Len() != 0 {
+		t.Errorf("good: exit %d seen %q out %q err %q", code, seen, o, e)
+	}
+	s, o, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root}, s); code != 3 || o.Len() != 0 || e.String() != "lint-c: --map file not found: bad\n" {
+		t.Errorf("bad: exit %d out %q err %q", code, o, e)
+	}
+	s, _, e = stdio()
+	if code := Command(sp)([]string{"lint-c", "--map", "bad", root + "/nope"}, s); code != 3 || e.String() != "lint-c: not a directory: "+root+"/nope\n" {
+		t.Errorf("root first: exit %d err %q, want the root error before Configure", code, e)
 	}
 }

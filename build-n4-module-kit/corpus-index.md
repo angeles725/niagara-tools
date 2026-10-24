@@ -85,7 +85,7 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 
 ## Research-tooling caveats (A18)
 
-Before concluding a topic is undocumented: a tool returning zero results is not proof of absence — run a control query or fall back to `rg`/`mem_context`/the source (S1 [ev: retro rt-authoring-campaign Δ4]). Never mark a claim `[CERT]` from a mangled decompiled body — prefer the vineflower/procyon tree or mark `[INFER]` (S2 [ev: retro rt-authoring-campaign Δ3]).
+Before concluding a topic is undocumented: a tool returning zero results is not proof of absence — run a control query or fall back to `rg`/`mem_context`/the source (S1 [ev: retro research-sdd-rt-authoring-campaign-retro Δ4]). Never mark a claim `[CERT]` from a mangled decompiled body — prefer the vineflower/procyon tree or mark `[INFER]` (S2 [ev: retro research-sdd-rt-authoring-campaign-retro Δ3]).
 | **B758** | Tags/relations authoring + northbound data exposure (tag dictionary, oBIX agent, Fox/BOX, BQL-from-code cursor) | ux / data |
 | **B731** / **B742** | Our own modules' audit + the consolidated deploy-safe refactor backlog | reference |
 

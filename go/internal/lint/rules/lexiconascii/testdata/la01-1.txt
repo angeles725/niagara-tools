@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/Mod-rt/module.lexicon --
+foo=bar
+baz=qux 123

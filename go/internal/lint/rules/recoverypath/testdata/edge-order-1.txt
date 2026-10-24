@@ -1,0 +1,47 @@
+declared difference (row text 2026-10-24): the row names every reset method the rule accepts
+(started/atSteadyState/changed/enable/start); the bash lint printed started/atSteadyState/enable.
+-- args --
+@DIR@
+-- want --
+exit 1
+FAIL  lint-recovery-path  @DIR@/O.java:12  LRP: UOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:4  LRP: ZetaOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:17  LRP: ZOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:8  LRP: QOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:13  LRP: VOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:14  LRP: WOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:6  LRP: MidOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:20  LRP: C3Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:19  LRP: B2Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:9  LRP: ROut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:5  LRP: AlphaOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:10  LRP: SOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:7  LRP: Heat2Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:15  LRP: XOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:18  LRP: A1Out has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:11  LRP: TOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+FAIL  lint-recovery-path  @DIR@/O.java:16  LRP: YOut has guarded-only safe-off in method "execute" -- no unconditional reset in started/atSteadyState/changed/enable/start
+-- stderr --
+-- O.java --
+package com.x;
+public class O extends BComponent {
+  void execute() {
+    setZetaOut(false);
+    setAlphaOut(false);
+    setMidOut(false);
+    setHeat2Out(false);
+    setQOut(false);
+    setROut(false);
+    setSOut(false);
+    setTOut(false);
+    setUOut(false);
+    setVOut(false);
+    setWOut(false);
+    setXOut(false);
+    setYOut(false);
+    setZOut(false);
+    setA1Out(false);
+    setB2Out(false);
+    setC3Out(false);
+  }
+}

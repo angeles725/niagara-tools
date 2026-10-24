@@ -1,8 +1,9 @@
 -- args --
 @DIR@/l13-same/G/M
 -- want --
-exit 1
-FAIL  lint-structure  @DIR@/l13-same/G/M/gradle.properties:1  L10: absolute host path in gradle.properties (tracked or not: pass host paths with -P, as build.sh does)
+exit 0
+WARN  lint-structure  @DIR@/l13-same/G/M/gradle.properties:1  L10: niagara_home is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
+WARN  lint-structure  @DIR@/l13-same/G/M/gradle.properties:2  L10: org.gradle.java.installations.paths is a host build-location key: migrate it to the user-level gradle.properties (BUILD-LOOP.md bring-up step 2)
 -- stderr --
 -- l13-same/.git/HEAD --
 x

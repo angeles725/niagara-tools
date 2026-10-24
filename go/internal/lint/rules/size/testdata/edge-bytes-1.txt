@@ -1,0 +1,43 @@
+-- args --
+--max-class
+0
+--max-method
+1
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/C1.java:2  class C1 has 7 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/C1.java:6  method m() in pure class C1 spans 3 lines (> 1) -- split into named phase methods (types/logic.md § Pure-class extraction)
+WARN  lint-size  @DIR@/C2.java:2  class C2 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/C4.java:2  class C4 has 6 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- C1.java --
+package com.x;
+public class C1 {
+
+  int a;
+  	 
+  void m() {
+    x();
+  }
+}
+-- C2.java (noeol) --
+package com.x;
+public class C2 {
+  int a;
+}
+-- C3.java --
+-- C4.java --
+package com.x;
+public class C4 {
+  String t = """
+    text
+
+    block
+    """;
+  /*
+  open comment
+-- C5.java --
+	
+ 
+

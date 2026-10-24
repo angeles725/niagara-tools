@@ -1,0 +1,8 @@
+-- args --
+--wiring-map
+/nonexistent/__map__.md
+/nonexistent/__ltf__
+-- want --
+exit 3
+-- stderr --
+lint-link-target-flags: not a directory: /nonexistent/__ltf__

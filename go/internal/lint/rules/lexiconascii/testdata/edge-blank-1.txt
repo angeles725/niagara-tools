@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 1
+FAIL  lint-lexicon-ascii  Mod-rt/module.lexicon:4  non-ASCII: 0xc3 0xa9
+-- stderr --
+-- Mod/Mod-rt/module.lexicon --
+
+
+  	
+k=é  

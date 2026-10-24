@@ -18,12 +18,14 @@ const (
 	Exact                // <root>: exactly one argument, no flag is parsed (-h, -- or --strict is the root)
 	Trailing             // <root> [--strict]...: the root as given first; only --strict may follow
 	Leading              // [--strict] <root>...: only a first --strict is a flag (-h, -- or a second --strict is a root); only the first root counts
+	Valued               // [<option> <value>]... <root>: Spec.Option in any position, the last value wins; any other "-" argument, a missing value or a second root is the usage line alone
 )
 
 // Args is a parsed command line.
 type Args struct {
 	Strict bool
 	Roots  []string
+	Option string // the value of Spec.Option (Mode Valued), "" when absent
 }
 
 // UsageError is a Parse error that prints the usage line (a wrong argument count or an unknown flag);
@@ -36,7 +38,31 @@ func (e *UsageError) Error() string { return e.Text }
 // 3: the usage line, "<name>: unknown flag: <flag>" plus the usage line, "<name>: unknown option: <arg>"
 // (Trailing), or "<name>: not a directory: <root>".
 func Parse(mode Mode, name, usage string, args []string) (Args, error) {
+	return ParseOption(mode, name, usage, "", args)
+}
+
+// ParseOption is Parse for a mode that takes a value option (Valued: option is its name, e.g. "--wiring-map").
+func ParseOption(mode Mode, name, usage, option string, args []string) (Args, error) {
 	var a Args
+	if mode == Valued {
+		// the bash `while [ $# -gt 0 ]; case "$1" in <option>) [ $# -ge 2 ] || usage; v=$2; shift 2 ;;
+		// -*) usage ;; *) [ -z "$root" ] || usage; root=$1 ;; esac`
+		var roots []string
+		for i := 0; i < len(args); i++ {
+			switch arg := args[i]; {
+			case arg == option:
+				if i+1 >= len(args) {
+					return Args{}, &UsageError{usage + "\n"}
+				}
+				a.Option, i = args[i+1], i+1
+			case strings.HasPrefix(arg, "-") || len(roots) == 1:
+				return Args{}, &UsageError{usage + "\n"}
+			default:
+				roots = append(roots, arg)
+			}
+		}
+		args, mode = roots, Raw // the root check below
+	}
 	if mode == Trailing && len(args) > 0 {
 		for _, arg := range args[1:] {
 			if arg != "--strict" {

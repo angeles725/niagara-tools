@@ -1,0 +1,26 @@
+-- args --
+--max-class
+0
+@DIR@
+-- want --
+exit 0
+WARN  lint-size  @DIR@/ok/A.java:1  class A has 1 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+-- stderr --
+-- .h/P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
+-- ok/A.java --
+class A {}
+-- x-worktrees/P.java --
+package com.x;
+public class P {
+  int a() {
+    x();
+    y();
+  }
+}
