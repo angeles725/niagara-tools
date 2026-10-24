@@ -1,0 +1,10 @@
+-- args --
+-x
+@DIR@/Mod
+-- want --
+exit 3
+-- stderr --
+lint-session-store-lazy-evict: unknown flag: -x
+usage: lint-session-store-lazy-evict.sh [--strict] <src-root>
+-- Mod/src/com/x/A.java --
+class A {}

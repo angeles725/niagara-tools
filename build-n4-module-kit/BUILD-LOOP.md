@@ -284,6 +284,23 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     silent pass (35 of 40 lints exited 0 on an empty root, 2026-10-22; Go engine switch `lint.Spec.EmptyError`,
     owed item G50). Go tools: `CONTRIBUTING.md` § 2.2 "Fail closed on I/O"; shell `exit` inside `$( )`:
     `CONTRIBUTING.md` § 6. `[ev: retro fail-closed-walks Δ1]` `[ev: retro truth-audit Δ2]`
+  - **A path filter in a gate skips only paths no check applies to.** A gate that picks its checks from the
+    changed or staged paths (a hook, a CI step, a wrapper) states, for each class of path it can see (code, tool,
+    doc, data, generated), which check runs or why none applies. An early exit is proven by a test that changes
+    ONLY a skipped class, with a defect the gate's checks would catch, and asserts the outcome; a skip test that
+    changes a clean file proves nothing. A data class that has a check gets one that fails closed: data paths
+    configured with no check is an error, not a pass (niagara-research PR #46, `GATE_DATA_PATHS` +
+    `GATE_DATA_CHECK`). Kit instance: `.githooks/pre-push:44-50` skips `sweep-build-state.sh` for a
+    `retros/`/`ledger.d/`/`BUILD-STATE.md`-only range, the files sweep checks; CI runs sweep unfiltered, and the
+    hook fix is an owed `open_issue`. Review check: the PR names the data-only test and shows it red on the old
+    filter. `[ev: retro r10-path-keyed-gates-skip-data Δ1]`
+  - **An identity pin between shared copies does not skip where drift happens.** A test that keeps copies in two
+    repositories byte-identical compares with the upstream's committed `origin/main`
+    (`git -C <upstream> show origin/main:<path>`), not a sibling working tree, and skips only when the upstream
+    repository is really absent, naming what it looked for. The niagara-research hook pins skipped in every
+    worktree, and both downstream copies drifted unseen (module-navigator #11, niagara-help #10). Review check:
+    the pin fails in a scratch layout with an old copy, and the message names the sync command.
+    `[ev: retro r10-path-keyed-gates-skip-data Δ2]`
   - **Citation pre-filter.** `toolbelt/kit-cite-resolve.sh [--strict] <card>...` (`go/cmd/kit-cite-resolve`)
     resolves every evidence pointer of the given cards and prints one row per pointer with its status
     (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, TOOL_ERROR) and an

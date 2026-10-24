@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod/src/com/x/A.java
+-- want --
+exit 3
+-- stderr --
+lint-session-store-lazy-evict: not a directory: @DIR@/Mod/src/com/x/A.java
+-- Mod/src/com/x/A.java --
+class A {}

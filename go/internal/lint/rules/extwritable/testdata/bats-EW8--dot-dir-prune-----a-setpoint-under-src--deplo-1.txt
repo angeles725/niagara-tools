@@ -1,0 +1,15 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/.deploy-baseline/com/x/Stale.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="setpoint", type="BStatusNumeric", defaultValue="new BStatusNumeric(0d)", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class Stale extends BComponent {}
+-- src/com/x/Clean.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="differentialUp", type="double", defaultValue="1.5", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class Clean extends BComponent {}

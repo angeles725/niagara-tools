@@ -1,0 +1,5 @@
+-- args --
+-- want --
+exit 3
+-- stderr --
+usage: lint-session-store-lazy-evict.sh [--strict] <src-root>

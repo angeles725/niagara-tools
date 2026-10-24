@@ -18,7 +18,9 @@ bats_require_minimum_version 1.5.0
 #          retros/, retros/INDEX.md; PLUS scripts/** and go/** (except go/bin/).
 #        if a build-relevant path changed in range AND NOT (BUILD-STATE.md + a pending
 #          retro + its INDEX row all in range) AND NOT a `Retro: none (trivial: …)` trailer
-#          in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep for the content half.
+#          in range ⇒ FAIL non-zero. Otherwise 0. Calls sweep for the content half, and also on
+#          every passing exit (trivial trailer included) of a range that changes BUILD-STATE.md,
+#          ledger.d/ or retros/: those files need no retro, but sweep checks exactly them.
 #        Must NOT fire on a module-repo path or a non-build-relevant path (no false fail).
 #
 # These bites are real: flip the guarded condition and the outcome flips. No real push,
@@ -229,11 +231,14 @@ run_hook() { # run_hook  (uses FAKE_CHANGED_FILE / FAKE_LOG_FILE already set)
   [ "$status" -eq 0 ]
 }
 
-@test "H6: an EXCLUDED kit path (retros/ only) does NOT fire the gate (a retro edit isn't build-relevant)" {
-  [ -f "$HOOK" ] || skip "pre-push hook not implemented yet (red-first)"
+# H6 keeps its id (retro r10-path-keyed-gates-skip-data cites it) but no longer pins a skip: a retros/-only
+# range needs no BUILD-STATE line or trailer, yet the content half still runs on it. The clean fixture passes
+# here; H25-H28 below stage the defects that a skipped sweep would let through.
+@test "H6: a retros/-only range with coherent ledger data PASSES (no state/trailer needed; sweep runs)" {
+  _fixture_top
   printf 'build-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'retro: notes\n' > "$BATS_TEST_TMPDIR/log"
-  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  run_hook_at "$TOP"
   [ "$status" -eq 0 ]
 }
 
@@ -357,10 +362,11 @@ _fixture_ledger_top() {
   [ "$status" -eq 0 ]
 }
 
-@test "H16: a ledger.d-only range is not build-relevant (does NOT fire the gate)" {
+@test "H16: a ledger.d-only range with a fresh BUILD-STATE.md PASSES (not build-relevant; sweep runs)" {
+  _fixture_ledger_top
   printf 'build-n4-module-kit/ledger.d/2026-09-05-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'docs: ledger entry\n' > "$BATS_TEST_TMPDIR/log"
-  FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  run_hook_at "$TOP"
   [ "$status" -eq 0 ]
 }
 
@@ -378,6 +384,55 @@ _fixture_ledger_top() {
   printf 'go/bin/n4lint\n' > "$BATS_TEST_TMPDIR/changed"
   printf 'chore: rebuild\n' > "$BATS_TEST_TMPDIR/log"
   FAKE_CHANGED_FILE="$BATS_TEST_TMPDIR/changed" FAKE_LOG_FILE="$BATS_TEST_TMPDIR/log" run_hook
+  [ "$status" -eq 0 ]
+}
+
+# --- data-only ranges (retro r10-path-keyed-gates-skip-data): BUILD-STATE.md, ledger.d/ and retros/ are not
+# build-relevant, so they need no BUILD-STATE line, retro or trailer of their own, but they are exactly what
+# sweep-build-state.sh checks. A range that changes any of them runs the content half, even under a trivial
+# trailer. RED before the fix: the hook exited 0 before sweep on every case below except H28.
+# Mutation: PDS-data -- dropping the data check at the not-build-relevant exit lets H25 and H27 pass.
+@test "H25: a retros/-only range FAILS when a retro marker disagrees with its stale INDEX row" {
+  _fixture_top
+  sed -i 's/review-status: pending/review-status: folded/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  printf 'build-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: fold demo\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"marker disagrees with INDEX row"* ]]
+  [[ "$output" == *"ledger data in range is incoherent"* ]]
+}
+
+# Mutation: PDS-trivial -- dropping the data check at the trivial-trailer exit lets H26 pass.
+@test "H26: the same stale retros/ range FAILS under a 'Retro: none (trivial: …)' trailer (waives bookkeeping, not coherence)" {
+  _fixture_top
+  sed -i 's/review-status: pending/review-status: folded/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  printf 'build-n4-module-kit/types/logic.md\nbuild-n4-module-kit/retros/2026-09-04-demo.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'chore: typo\n\nRetro: none (trivial: wording fix)\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"marker disagrees with INDEX row"* ]]
+}
+
+@test "H27: a ledger.d-only range FAILS when BUILD-STATE.md is stale against ledger.d" {
+  _fixture_ledger_top
+  printf '<!-- ledger: kit -->\n<!-- date: 2026-09-06 -->\nlog: 2026-09-06 · not regenerated\n' > "$TOP/build-n4-module-kit/ledger.d/2026-09-06-late.md"
+  printf 'build-n4-module-kit/ledger.d/2026-09-06-late.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'docs: ledger entry\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"stale vs ledger.d"* ]]
+}
+
+# The data check is keyed on data paths in range, not on the tree: a trivial code-only range over a tree
+# whose ledger data is incoherent still passes (unchanged behaviour; CI's unfiltered sweep reports the tree).
+# Mutation: PDS-keyed -- running sweep on every push turns H28 into a FAIL.
+@test "H28: a trivial code-only range PASSES even over incoherent ledger data (no data path in range)" {
+  _fixture_top
+  sed -i 's/review-status: pending/review-status: folded/' "$TOP/build-n4-module-kit/retros/2026-09-04-demo.md"
+  printf 'build-n4-module-kit/types/logic.md\n' > "$BATS_TEST_TMPDIR/changed"
+  printf 'chore: typo\n\nRetro: none (trivial: wording fix)\n' > "$BATS_TEST_TMPDIR/log"
+  run_hook_at "$TOP"
   [ "$status" -eq 0 ]
 }
 

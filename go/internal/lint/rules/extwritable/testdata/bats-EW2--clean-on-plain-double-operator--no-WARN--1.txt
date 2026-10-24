@@ -1,0 +1,10 @@
+-- args --
+@DIR@/src
+-- want --
+exit 0
+-- stderr --
+-- src/com/x/BRoom.java --
+package com.x;
+@NiagaraType
+@NiagaraProperty(name="differentialUp", type="double", defaultValue="1.5", flags=Flags.SUMMARY|Flags.OPERATOR)
+public class BRoom extends BComponent {}

@@ -92,7 +92,9 @@ func TestEveryRuleFailsAnEmptyRoot(t *testing.T) {
 			msg = sp.EmptyError.Msg
 		}
 		row := "ERROR  " + check + "  " + root + "  " + msg + "\n"
-		all += row
+		if !sp.ModuleRoot { // --all runs on source roots and leaves a module-root rule out
+			all += row
+		}
 		var o, e bytes.Buffer
 		if code := main([]string{sp.ID(), root}, cli.Stdio{Out: &o, Err: &e}); code != 3 || o.String() != row || e.Len() != 0 {
 			t.Errorf("%s: exit %d out %q err %q, want 3 and %q", sp.ID(), code, o.String(), e.String(), row)

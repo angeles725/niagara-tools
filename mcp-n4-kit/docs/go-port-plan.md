@@ -202,11 +202,11 @@ The table is generated: `python3 mcp-n4-kit/tests/go_server.py` prints it, and
 | `test_new_retro.py` | 17 | 0 | 0 | 0 | 0 | 0 | 17 |
 | `test_retro.py` | 25 | 20 | 0 | 1 | 4 | 25 | 0 |
 | `test_safety.py` | 46 | 33 | 0 | 13 | 0 | 46 | 0 |
-| `test_server.py` | 100 | 4 | 14 | 5 | 7 | 30 | 70 |
+| `test_server.py` | 101 | 4 | 14 | 5 | 7 | 30 | 71 |
 | `test_tiers.py` | 25 | 5 | 1 | 1 | 2 | 9 | 16 |
 | `test_tools_destructive.py` | 98 | 4 | 24 | 28 | 2 | 58 | 40 |
 | `test_tools_write.py` | 76 | 2 | 15 | 4 | 7 | 28 | 48 |
-| **Total** | **621** | **166** | **56** | **105** | **22** | **349** | **272** |
+| **Total** | **622** | **166** | **56** | **105** | **22** | **349** | **273** |
 <!-- go-skip-inventory:end -->
 
 ## 6. S2 protocol layer
@@ -319,8 +319,8 @@ and `n4_describe_session`; `cli.NewContext` builds the context from the flags `c
 accepted. `jsonrpc` now follows `Server._call`: a session tool needs a connection, then no auth
 pause, then its handler; an AuthError from a handler re-latches, a BoxError or ValueError shows
 its words, every tool error text is scrubbed (not the unported text the harness keys on), and
-`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`; `box` keeps its
-own copy until the in-flight box branch lands.
+`Serve` closes the station session however it ends. `pyjson.Truthy` is `bool(v)`, the one
+truth test every package uses.
 
 **Proof.** Under `MCP_N4_IMPL=go` the black-box `TestConnect`, `TestDescribeSession` and
 `test_tiers.TestConnectReportsTier` tests run against the binary and FakeStation. Their marked
@@ -331,6 +331,37 @@ factory a test sets). `tiers.TestDifferentialPython` compares the three tier fun
 `tiers.py` on the target CPython. Twins still owed: `TestAWriteDryRunIsRefusedWhilePaused` (S10)
 and `TestTheRetroClassifiesTierRefusals` (S9).
 
-**Known differences.** A credential value that is not UTF-8 makes Python's fingerprint
-`.encode()` raise UnicodeEncodeError, so its connect answers that error text (with a position);
-Go sends the bytes and logs in, or gets the station's 401.
+**Non-UTF-8 credentials (R8-D19).** Python's fingerprint `.encode()` raised UnicodeEncodeError on a
+credential that is not UTF-8, and its text named the bad character's position: the credential's
+length. Both servers now refuse it before any station call with `credentials are not valid UTF-8:
+check env vars <PREFIX>_USER and <PREFIX>_PASSWORD`
+(`test_server.TestConnect.test_a_non_utf8_credential_is_refused_without_its_position`, black-box,
+and its Go twin in `session/connect_test.go`). No S4 difference is left.
+
+## 9. S5 navigate, read_slots, links, dangling
+
+**Packages.** `box/readers.go` ports the readers of `box.py`: `Children`, `StatusValue`,
+`ParseStatus` (`int(_, 16)`'s whitespace, sign, `0x`, underscore and Unicode-digit rules and its
+200-character `%.200R` error cut) and `Node`/`ChildValue` for `nodes[path]` and
+`.get(name, {}).get("v", default)`. `readtools` serves `n4_navigate` (`navigate.go`: `_ord_arg`,
+`_is_component`, `_tree_entries`, `_types_arg`, `_timed_load`), `n4_read_slots` (`readslots.go`:
+`_slot_entry`) and `n4_list_links` / `n4_find_dangling_outputs` (`links.go`: `_abs_path`,
+`_source_path`, `_scan`). A dangling report appends the session observation the retro reads
+(`session.Context.Observations`, `session.Now` = `retro.now()`); S9 consumes it. A node shape
+Python cannot handle fails the same way: a truthy non-string type, status or source ORD is
+`internal error (AttributeError)`, a list or dict where a set or dict key is needed (a filtered
+type, a handle, a link's `sourceSlotName`) is `internal error (TypeError)`, both through
+`pyjson.Exception`; status bits `int()` cannot read are its ValueError text.
+
+**Proof.** Under `MCP_N4_IMPL=go` `test_server.TestNavigate`, `TestReadSlots`, `TestListLinks`,
+`TestDanglingOutputs` and `TestDeepTargets` run black-box against the binary and FakeStation; no
+test skips on these four tools any more. The three marked `TestReadSlots` tests have Go twins in
+`readtools/readslots_test.go`, on `readtoolstest.Station.Trees` (the nodes a load of an ORD
+answers). `readtools.TestDifferentialPython` runs the four tools on the same nodes in
+`tools_read.py` on the target CPython and in Go and requires the same reply text byte for byte,
+for a station-like subtree and for the odd shapes above; `box.TestParseStatusDifferentialPython`
+does the same for `parse_status`. The replay corpus (section 7) is unchanged: these tools only add
+`load_tree` calls it already pins.
+
+**Known differences.** None found. `"out" in children(nodes, path)` is a direct `path/out` lookup
+in Go, the same answer without a scan per component.

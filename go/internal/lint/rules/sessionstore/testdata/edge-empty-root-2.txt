@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-session-store-lazy-evict  @DIR@/Mod  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- Mod/src/com/x/readme.txt --
+not java

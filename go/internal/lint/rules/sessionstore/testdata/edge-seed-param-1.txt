@@ -1,0 +1,14 @@
+declared difference: T5-F1 a candidate is a class-level static Map field (outside every method and static initializer), deduped by name; a field filled only in static {} is a constant table
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/P.java --
+class P {
+  private static void scan(BComponent c, String prefix, int depth, Map<String, String> out)
+  {
+    for (Object v : c.children())
+      out.put(prefix, token(v));
+  }
+}

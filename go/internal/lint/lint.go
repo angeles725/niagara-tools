@@ -85,7 +85,9 @@ type Rule interface {
 // is ordered by check rather than by file. CheckTree gets the files in walk order (each read once and
 // shared with the per-file rules) and sets Path on each finding. A non-nil error fails the scan closed:
 // the runner prints the findings returned with it, then "<lint>: <error>" on stderr (the rule writes
-// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3.
+// the whole text, e.g. "cannot scan <path>: <reason>"), and exits 3. A TreeRule whose selected files hold
+// nothing it checks (lint-duplicate-helper: no -rt/-ux/-wb src/ file) returns ErrEmptyRoot, as a RootRule
+// does: the Spec.EmptyError row instead of its findings, the rule stops and the exit is 3.
 type TreeRule interface {
 	ID() string
 	Severity() Severity
@@ -106,7 +108,7 @@ type RootRule interface {
 	CheckRoot(root string) ([]Finding, error)
 }
 
-// ErrEmptyRoot is what a RootRule returns for a root that holds nothing it checks (see RootRule).
+// ErrEmptyRoot is what a RootRule or a TreeRule returns for a root that holds nothing it checks.
 var ErrEmptyRoot = errors.New("lint: nothing to check under the root")
 
 // Spec registers a rule with the command-line contract of the toolbelt wrapper that runs it alone.
@@ -120,6 +122,10 @@ type Spec struct {
 	Usage     string    // printed verbatim on a usage error when it runs alone
 	UsageExit int       // the exit code of that usage error; 0 means 3
 	Select    Selection // the files under a root the rule reads
+	// ModuleRoot marks a rule whose roots are module roots, not source roots (lint-duplicate-helper reads
+	// every part's src/): n4lint --all, which runs on source roots, leaves it out as it leaves out a
+	// RootRule; it runs by name or in a rule list.
+	ModuleRoot bool
 	// ContinueOnWalkError keeps scanning the files that were listed when the walk could not read a
 	// directory (env line, rows, next root, exit 3), as awk_lint_run does. Its zero value stops the rule
 	// (env line only, no rows, no later root, exit 3), as scan_files_or_exit does. Set it only with a
@@ -130,7 +136,8 @@ type Spec struct {
 	// bash lints made it: the rule prints "ERROR  <check>  <root>  <msg>" on stdout and stops (no later
 	// root, exit 3). It is decided per root after the walk, so a walk error wins and prints no ERROR row.
 	// There is no opt-out: every registered rule reads source files, and none has a meaning on a root
-	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg.
+	// without them. A RootRule decides emptiness itself and returns ErrEmptyRoot; its spec sets Msg. A TreeRule may
+	// return ErrEmptyRoot too, when the files it selects hold nothing it checks.
 	EmptyError EmptyRow
 	// BarePathRow prints a file-level finding (Line 0) as "<path>  <msg>", two spaces and no colon, as
 	// lint-structure printed its file and directory rows; a line finding keeps "<path>:<line>  <msg>".
