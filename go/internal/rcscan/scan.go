@@ -256,7 +256,7 @@ func (s *fileScan) checks() {
 		s.floorRow(s.jsTokens(line))
 		s.fetch()
 		s.interval()
-		if htmlAssign.MatchString(line) && memberConcat.MatchString(line) && !escCall.MatchString(line) && !s.allowed("innerhtml-server") {
+		if htmlAssign.MatchString(line) && memberConcat.MatchString(line) && !escCall.MatchString(line) && !s.allowed("innerhtml-server") && s.innerHTMLRow() {
 			s.emit(s.o.sevW(), "innerhtml-server", "member value concatenated into HTML without esc( -- use textContent or esc()")
 		}
 	}

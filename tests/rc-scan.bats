@@ -385,3 +385,18 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [[ "$output" == *"rc/app.js:4  disabled-gate"* ]]
   if [[ "$output" == *"rc/app.js:2  disabled-gate"* ]]; then return 1; fi
 }
+
+# Issue #459 (a), part 1: innerhtml-server reads the sink's own value — a member elsewhere on a minified line,
+# a .length, a .toFixed( number or a Math.* value is not server text (Umbrella index.html:2995, :3023).
+@test "RC35: innerhtml-server — only a raw member in the sink's own value WARNs; .toFixed(, .length, Math.* and a member beside it do not" {
+  # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (app.js:2)
+  local T="$BATS_TEST_TMPDIR/rc35"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'el.innerHTML = "<b>" + a.message;' \
+    "const h = '<i>' + spec.unit; el.innerHTML = '<p>static</p>';" \
+    "el.innerHTML = '<b>' + val.toFixed(1) + Math.round(x) + rows.length;" > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:1  innerhtml-server"* ]]
+  if [[ "$output" == *"rc/app.js:2  innerhtml-server"* || "$output" == *"rc/app.js:3  innerhtml-server"* ]]; then return 1; fi
+}

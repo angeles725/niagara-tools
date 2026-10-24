@@ -11,6 +11,8 @@ import (
 type jsView struct {
 	toks  []jssrc.Token
 	first []int // the first token index of each 0-based line (len(toks) past the last token)
+	match []int // jssrc.Match(toks)
+	binds []jssrc.Binding
 }
 
 func (s *fileScan) js() *jsView {
@@ -22,6 +24,8 @@ func (s *fileScan) js() *jsView {
 		lines = jssrc.HTMLScripts(lines)
 	}
 	v := &jsView{toks: jssrc.Tokens(lines), first: make([]int, len(lines)+1)}
+	v.match = jssrc.Match(v.toks)
+	v.binds = jssrc.Bindings(v.toks, v.match)
 	k := 0
 	for n := range v.first {
 		for k < len(v.toks) && v.toks[k].Line < n {
