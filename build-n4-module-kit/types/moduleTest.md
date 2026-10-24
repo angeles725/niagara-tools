@@ -476,6 +476,6 @@ the main Gradle section above).
 - **`-ux` modules lack Jasmine:** JS-side palette/component tests for dashboard UX modules must use the
   Jasmine harness documented in `types/dashboard.md §DUX-TEST1` — `moduleTest` covers the Java side only.
 
-`[ev: corpus B1028 SDE7-G1; code BTestNgStation.java, TestHelper.java]`
+`[ev: corpus B1028 SDE7-G1; code BTestNgStation.java; code TestHelper.java]`
 
 <!-- source: TEST-G1..TEST-G8 appended 2026-09-19 from odd/tasks/kit-improvement-candidates-2026-09-19.md; signatures verified against test-wb decompiled [ev: retro moduletest-patterns] -->

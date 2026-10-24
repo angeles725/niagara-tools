@@ -245,7 +245,8 @@ try (SecretChars sc = AccessController.doPrivileged(
 // Never: log.info("password=" + myBPassword.getValue())
 ```
 
-[ev: javap of bin/ext/nre.jar 4.15.6.20 `SecretChars` (AutoCloseable, `close()` = `Arrays.fill(value, 0)`); code docSource BPassword.java:440-450, :486-492]
+`SecretChars` is `AutoCloseable` and its `close()` is `Arrays.fill(value, 0)` (javap on the 4.15.6.20 bin/ext nre jar).
+[ev: code docSource BPassword.java:440-450, :486-492] [deferred: unverifiable — the nre jar lives only in the Windows Niagara 4.15.6.20 home, in no tree the resolver reads]
 
 ### 3.3 Credential header redaction in structured logging [ev: retro honeywell-wb-rt-wb-deltas Δ7]
 
