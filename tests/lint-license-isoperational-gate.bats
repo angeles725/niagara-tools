@@ -139,3 +139,15 @@ licensed_head() {
   [ "$status" -eq 0 ]   # advisory: the WARN row never changes the exit without --strict
   [[ "$output" == *"no isOperational()/isFault()/isFatalFault() gate"* ]]
 }
+
+@test "LIG-literal: text quoted in a string is not code: no gate, no license, no statement cut (truth fix 2026-10-24)" {
+  # Mutation: LIG-literal -- reading literal text as code passes a callback whose only "gate" is log("isOperational()")
+  { licensed_head BLit
+    printf '  public void doE() {\n    log("isOperational()");\n    e();\n  }\n'
+    printf '  public void doB() {\n    if (!ready("a;b") || !isOperational()) return;\n    b();\n  }\n}\n'; } > "$SRC/BLit.java"
+  { printf 'package com.x;\nclass BQuoted {\n  String s = "Feature getLicenseFeature() { return f; }";\n'
+    printf '  public void doA() {\n    a();\n  }\n}\n'; } > "$SRC/BQuoted.java"
+  run "$LIG" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ "$output" = "WARN  lint-license-isoperational-gate  $SRC/BLit.java:7  licensed class: doE() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add \`if (!isOperational()) return;\` (types/security.md §5.1)" ]
+}

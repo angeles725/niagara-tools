@@ -1,0 +1,16 @@
+-- args --
+@DIR@/Mod/
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:6  licensed class: doPoll() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BS.java --
+package com.x;
+public class BS extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doPoll() {
+    poll();
+  }
+}

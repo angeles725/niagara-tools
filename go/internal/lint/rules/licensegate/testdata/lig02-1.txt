@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BFree.java --
+package com.x;
+public class BFree extends BAbstractService {
+  public Feature getLicenseFeature() { return null; }
+  public void changed(Property p, Context cx) {
+    recompute();
+  }
+}
