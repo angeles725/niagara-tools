@@ -33,7 +33,7 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 
 ### 1.3 · WB device-manager presence rule and plugin-extensible SPI [ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]
 
-**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; CCN example B1057]`
+**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; corpus B1057 (CCN example)]`
 
 **Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
 
@@ -244,7 +244,7 @@ default `"defaultPolicy"`).
 | `writeOnUp` | **true** | Re-write when device returns UP after comm loss |
 | `writeOnEnabled` | **true** | Write when point re-enabled |
 
-[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; writeOnStart advice: corpus B1327 row 2]
+[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; corpus B1327 §1327.1 row 2 (writeOnStart advice)]
 
 **Gotcha:** the Tuning scan thread runs at `min(minWriteTime/2, maxWriteTime/2, staleTime/2)`
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
@@ -385,7 +385,7 @@ cadence starts. [ev: corpus B872 §872.1]
 
 One poll thread per network, named `"Poll:<networkName>"`. `pollEnabled` is a property of the network's POLL
 SERVICE (`BAbstractPollService.java:62`, default true) and gates the entire loop. [ev: corpus B872 §872.1;
-corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
+corpus B810 §810.3] (B810 is cited in `logic-authoring.md §Authoring a driver`) `[ev: corpus B1337 §1337.2 C1]` [ev: retro devguide415-r2-drivers-protocols Δ8]
 
 ---
 

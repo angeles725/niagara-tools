@@ -9,7 +9,7 @@ flows THROUGH all three. This file says WHEN each applies, WHICH model runs each
 
 | Tool | Use it to | Produces | Marker of "done" |
 |---|---|---|---|
-| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: research-sdd METHODOLOGY §3/§8/§11]` |
+| **research-sdd** | answer an open technical question against the framework (three sources: corpus + niagara-help + decompiled code) | a numbered `[CERT]`/`[INFER]` block ending in a **Kit implication** | a self-verify table with every claim marked; a named gap if not closed `[ev: ~/investigacion/sdd-investigacion/research-sdd/METHODOLOGY.md §3 Provenance markers, §8 Stopping criterion, §11 Self-verification contract]` |
 | **gentle SDD** | turn a decided change into a durable, reviewable contract | `proposal → spec → design → tasks`, ledgered attempts | spec requirements have scenarios; tasks map to spec; verify passes `[ev: CLAUDE.md SDD workflow]` |
 | **BUILD-LOOP** (this kit) | build / verify / deploy an actual N4 module | a signed Java-8 jar past the verify gate + a per-module `BUILD-STATE` envelope | `verify-module.sh` passes; the HARD close gate (§7) is satisfied `[ev: BUILD-LOOP.md §5/§7]` |
 
@@ -36,7 +36,8 @@ the generic-delegation default row is team practice `[ev: ~/.claude/agents/ mode
 **research-sdd investigation lanes** (the corpus-block authoring that feeds the pipeline) run on **opus** — that
 is a heavier reasoning task than gentle-SDD's `sdd-research` PHASE (sonnet), which only collects external
 evidence. Do not conflate the two: `sdd-research` = a sonnet sub-agent phase; a research-sdd lane = an opus
-authoring session. `[ev: ~/.claude/agents/sdd-research.md model: sonnet; team practice campaign-8]`
+authoring session. `[ev: ~/.claude/agents/sdd-research.md model: sonnet]` (opus for research-sdd lanes is campaign-8 team practice
+with no written record [INFER])
 
 ## 3. Delegation triggers
 
