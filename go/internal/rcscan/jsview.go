@@ -10,12 +10,12 @@ import (
 // on first use; a check that cannot find its shape in it keeps the line-heuristic verdict (fail closed).
 type jsView struct {
 	toks   []jssrc.Token
-	first  []int // the first token index of each 0-based line (len(toks) past the last token)
-	match  []int // jssrc.Match(toks)
-	open   []int // the opener of each closing bracket
-	binds  []jssrc.Binding
-	shapes map[int]*shape // literalMember's resolved bindings, by name token index
-	marked bool           // markWrites ran
+	first  []int                      // the first token index of each 0-based line (len(toks) past the last token)
+	match  []int                      // jssrc.Match(toks)
+	open   []int                      // the opener of each closing bracket
+	binds  map[string][]jssrc.Binding // jssrc.Bindings(toks) by name: a lookup reads one name's list
+	shapes map[int]*shape             // literalMember's resolved bindings, by name token index
+	marked bool                       // markWrites ran
 }
 
 func (s *fileScan) js() *jsView {
@@ -34,7 +34,10 @@ func (s *fileScan) js() *jsView {
 			v.open[c] = i
 		}
 	}
-	v.binds = jssrc.Bindings(v.toks, v.match)
+	v.binds = map[string][]jssrc.Binding{}
+	for _, b := range jssrc.Bindings(v.toks, v.match) {
+		v.binds[b.Name] = append(v.binds[b.Name], b)
+	}
 	v.shapes = map[int]*shape{}
 	k := 0
 	for n := range v.first {

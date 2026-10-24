@@ -56,7 +56,7 @@ func (s *fileScan) literalMember(base string, pos int, path []string) bool {
 // resolve is the shape of name at stream index pos, or nil.
 func (s *fileScan) resolve(name string, pos int) *shape {
 	v := s.js()
-	b := jssrc.Lookup(v.binds, name, pos)
+	b := jssrc.Lookup(v.binds[name], name, pos)
 	if b == nil {
 		return nil
 	}
