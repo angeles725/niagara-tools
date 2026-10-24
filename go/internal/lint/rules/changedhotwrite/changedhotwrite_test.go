@@ -8,7 +8,7 @@ import (
 
 // TestGolden: every tests/lint-changed-hot-write.bats run (CHW-awkfail and CHW-finderr aside: TestUnreadable
 // pins them) and every edge tree, recorded from the bash lint-changed-hot-write.sh.
-func TestGolden(t *testing.T) { golden.Run(t, Spec(), 29) }
+func TestGolden(t *testing.T) { golden.Run(t, Spec(), 30) }
 
 // TestUnreadable: CHW-awkfail and CHW-finderr keep awk_lint_run's contract (ContinueOnWalkError).
 func TestUnreadable(t *testing.T) {

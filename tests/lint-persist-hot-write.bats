@@ -108,6 +108,16 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ -z "$output" ]
 }
 
+@test "PHW10: TRANSIENT on the line after newProperty( still makes the slot transient" {
+  # Mutation: PHW10 -- reading the flags on the declaration line only takes a wrapped Flags.TRANSIENT slot as persisted
+  # Go golden: go/internal/lint/rules/persisthotwrite/testdata/truth-property-flags-1.txt
+  printf '%s\n' 'class Y {' '  public static final Property aHours = newProperty(' '      Flags.TRANSIENT, 0.0, null);' \
+    '  public void changed(Property p, Context cx) {' '    setAHours(1);' '  }' '}' > "$TMPDIR_T/Mod/src/com/x/Y.java"
+  run "$PHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "PHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: PHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"

@@ -1,8 +1,10 @@
+declared difference (truth fix T4, truth-property-flags-1): bHours' Flags.TRANSIENT on the next line makes it
+transient, and cHours (declared beside dHours on line 5) is read with its own flags (0, non-transient).
 -- args --
 @DIR@
 -- want --
 exit 0
-WARN  lint-changed-hot-write  @DIR@/P1.java:7  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'bHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
+WARN  lint-changed-hot-write  @DIR@/P1.java:7  changed(p) has 7 'p ==' branches guarding execute(), no Clock.millis()/schedule rate guard, writes non-transient slot 'cHours' -- debounce the callback (leading-edge Clock.millis() gate) or move the periodic write to a tick
 -- stderr --
 -- P1.java --
 class P1 {

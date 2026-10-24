@@ -20,7 +20,6 @@ var (
 	propHead   = rx(`^.*Property[[:space:]]+`)
 	propDecl   = rx(`Property[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*newProperty\(`)
 	propTail   = rx(`[[:space:]]*=.*`)
-	flagsHead  = rx(`^.*newProperty\(`)
 	zeroCall   = rx(`[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([[:space:]]*\)[[:space:]]*;`)
 	callTail   = rx(`[[:space:]]*\([[:space:]]*\)[[:space:]]*;.*`)
 )
@@ -110,23 +109,30 @@ func Callees(lines []string, from, to int) []string {
 }
 
 // NonTransient are the names of the raw slot-o-matic properties (`Property <name> = newProperty(<flags>,`)
-// whose flags do not mention TRANSIENT, in declaration order: one per line, its flags read after the line's
-// last "newProperty(" up to the first ",".
+// whose flags do not mention TRANSIENT, in declaration order: every declaration of a line, its flags read from
+// its own "newProperty(" to the first "," (on the following lines when the call wraps before one).
 func NonTransient(lines []string) []string {
 	var out []string
-	for _, ln := range lines {
-		m := propDecl.FindString(ln)
-		if m == "" {
-			continue
-		}
-		nm := propTail.ReplaceAllString(m, "")
-		nm = nm[len(propHead.FindString(nm)):]
-		flags, _, _ := strings.Cut(ln[len(flagsHead.FindString(ln)):], ",")
-		if !strings.Contains(flags, "TRANSIENT") && nm != "" {
-			out = append(out, nm)
+	for i, ln := range lines {
+		for _, loc := range propDecl.FindAllStringIndex(ln, -1) {
+			nm := propTail.ReplaceAllString(ln[loc[0]:loc[1]], "")
+			nm = nm[len(propHead.FindString(nm)):]
+			if nm != "" && !strings.Contains(flagsFrom(lines, i, loc[1]), "TRANSIENT") {
+				out = append(out, nm)
+			}
 		}
 	}
 	return out
+}
+
+// flagsFrom is the text from line i, byte at, up to the first ",", joined over at most 5 more lines.
+func flagsFrom(lines []string, i, at int) string {
+	text := lines[i][at:]
+	for j := i + 1; !strings.Contains(text, ",") && j < len(lines) && j <= i+5; j++ {
+		text += " " + lines[j]
+	}
+	flags, _, _ := strings.Cut(text, ",")
+	return flags
 }
 
 // Setter is the setter name of property name: "set" and the name with its first byte upper-cased (C locale).

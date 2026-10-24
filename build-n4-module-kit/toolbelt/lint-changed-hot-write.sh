@@ -39,7 +39,11 @@
 # Truth fix T2 (2026-10-24): changed(), execute() and every callee body come from javasrc.Methods (a zero-arg
 # method's body is the one whose signature holds `name()`); the awk took the first `name()` not followed by ";"
 # as the declaration (`if (execute())`, `pending(tick())`, `this.device() + "..."`) and counted braces from there.
+# Truth fix T4 (2026-10-24): every `Property <name> = newProperty(` of a line is read, its flags from its own
+# "newProperty(" to the first "," (across lines when the call wraps); the awk read one declaration per line and its
+# flags after the line's last "newProperty(", on that line only.
 # VCS-free by design (kit-links L2).
+# Mutation: CHW8 -- reading one declaration per line, flags after the last newProperty(, misses bHours and misreads its flags
 # Mutation: CHW7 -- taking the first execute() not followed by ";" as the declaration reads if (execute()) instead of the body
 # Mutation: CHW6 -- reading comments as code takes /* changed(Property q ...) */ as the callback and misses the real one
 # Mutation: CHW2 -- drop the branch-count threshold (N>=6) so a 1-branch changed() false-WARNs

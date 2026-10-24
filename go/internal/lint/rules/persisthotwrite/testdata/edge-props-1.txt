@@ -1,8 +1,10 @@
+declared difference (truth fix T4, truth-property-flags-1): bHours' Flags.TRANSIENT on the next line makes it
+transient, and cHours (declared beside dHours on line 5) is read with its own flags (0, non-transient).
 -- args --
 @DIR@
 -- want --
 exit 0
-WARN  lint-persist-hot-write  @DIR@/P1.java:15  setBHours(...) writes non-transient slot 'bHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
+WARN  lint-persist-hot-write  @DIR@/P1.java:15  setCHours(...) writes non-transient slot 'cHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
 WARN  lint-persist-hot-write  @DIR@/P1.java:15  setEHours(...) writes non-transient slot 'eHours' reached from changed(), no cadence guard (Clock.millis()/counter) within 5 lines -- integrate in memory, checkpoint on a periodic tick + in stopped(), seed once on start
 -- stderr --
 -- P1.java --

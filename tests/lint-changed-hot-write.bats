@@ -109,6 +109,18 @@ _write_hot() {
   [[ "$output" == "WARN  lint-changed-hot-write  $TMPDIR_T/Mod/src/com/x/W.java:3  changed(p) has 7"* ]]
 }
 
+@test "CHW8: two declarations on one line are read with their own flags" {
+  # Mutation: CHW8 -- reading one declaration per line, flags after the last newProperty(, misses bHours and misreads its flags
+  # Go golden: go/internal/lint/rules/changedhotwrite/testdata/truth-property-flags-1.txt
+  { printf 'class Y {\n  Property bHours = newProperty(Flags.TRANSIENT, 0.0, null); Property cHours = newProperty(0, 1, null);\n'
+    printf '  public void changed(Property p, Context cx) {\n'
+    for c in a b c d e f g; do printf '    if (p == %s) execute();\n' "$c"; done
+    printf '  }\n  void execute() { setCHours(1); }\n}\n'; } > "$TMPDIR_T/Mod/src/com/x/Y.java"
+  run "$CHW" "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"writes non-transient slot 'cHours'"* ]]
+}
+
 @test "CHW-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: CHW-awkfail -- ignoring the awk exit status reports the unreadable file as clean (exit 0).
   mkdir -p "$(dirname "$TMPDIR_T/Mod/src/com/x/U.java")"
