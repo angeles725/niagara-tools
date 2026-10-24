@@ -10,7 +10,7 @@ var (
 	identRe    = regexp.MustCompile(`^[A-Za-z][\w.-]*$`)
 	className  = regexp.MustCompile(`^[A-Z][A-Za-z0-9_$]*$`)
 	versionSeg = regexp.MustCompile(`^[\d.]+$`)
-	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*[a-z]?(?:-\d+)?`)
+	sectionNum = regexp.MustCompile(`^\d+(?:\.\d+)*(?:\.?[a-z])?(?:-\d+)?`)
 	aliasEq    = regexp.MustCompile("`([A-Z]{1,3})=([\\w./-]+)`")
 	aliasDir   = regexp.MustCompile("`([A-Z]{1,3})/` = `([\\w./-]+)`")
 	aliasCited = regexp.MustCompile("`([\\w./-]+)`, cited `([A-Z]{1,3}):`")
@@ -113,6 +113,13 @@ func sourceClause(c, word, rest string, aliases map[string]string) []Pointer {
 		p := pathPointer(Code, rest, aliases, c)
 		p.Target, p.File = "", p.Target
 		return []Pointer{p}
+	case "vineflower":
+		if len(f) == 0 || !looksPath(strings.Trim(f[0], "`")) {
+			return unparsed(c, "no file named")
+		}
+		p := pathPointer(Vineflower, rest, aliases, c)
+		p.Target, p.File = "", p.Target
+		return []Pointer{p}
 	case "devguide", "guide":
 		if len(f) == 0 {
 			return unparsed(c, "no file named")
@@ -151,7 +158,12 @@ func pathPointer(k Kind, text string, aliases map[string]string, raw string) Poi
 		p.Sections = sectionRange(heading(h))
 		return p
 	}
-	if len(extra) >= 2 && lines == nil && (extra[0] == "line" || extra[0] == "lines") {
+	if len(extra) > 0 && lines == nil && strings.HasPrefix(extra[0], ":") {
+		if rs, ok := ParseRanges(extra[0][1:]); ok {
+			p.Lines, extra = rs, extra[1:]
+		}
+	}
+	if len(extra) >= 2 && p.Lines == nil && (extra[0] == "line" || extra[0] == "lines") {
 		if rs, ok := ParseRanges(extra[1]); ok {
 			p.Lines, extra = rs, extra[2:]
 		}
