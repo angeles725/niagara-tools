@@ -352,3 +352,19 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [ "$status" -eq 3 ]
   [[ "$output" == *"rc-scan: cannot scan $BATS_TEST_TMPDIR/art/rc/u.js: Permission denied"* ]]
 }
+
+# Issue #459 (d): vendored libraries under rc/vendor/**/*.js belong to lint-vendor-floor.sh (acorn at the
+# Chromium 83 floor); rc-scan's line heuristics flagged three.js RenderPass.js / SSAOPass.js there.
+@test "RC33: rc/vendor/**/*.js is not scanned (lint-vendor-floor owns it); vendored CSS and the module's own JS are" {
+  # Mutation: RC33 -- scanning rc/vendor/**/*.js again flags the vendored null-branch and ??= rows
+  local T="$BATS_TEST_TMPDIR/rc33"
+  mkdir -p "$T/rc/vendor/three/addons" "$T/rc/js"
+  printf 'this.c = c !== undefined ? null : x;\ny ??= 1;\n' > "$T/rc/vendor/three/addons/RenderPass.js"
+  printf '.a { inset: 0 }\n' > "$T/rc/vendor/three/lib.css"
+  printf 'x = a ? null : b;\n' > "$T/rc/js/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/js/app.js:1  null-branch"* ]]
+  [[ "$output" == *"rc/vendor/three/lib.css:1  browser-floor"* ]]
+  if [[ "$output" == *"RenderPass.js"* ]]; then return 1; fi
+}

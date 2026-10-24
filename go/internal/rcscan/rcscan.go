@@ -23,6 +23,14 @@ const usage = "usage: rc-scan.sh <artifact-dir> [--strict] [--profile hmi|lan|bo
 var sel = lint.Selection{Names: []string{"*.html", "*.js", "*.css"}, Except: []string{"*.min.js"},
 	Prune: []string{"srcTest"}, Paths: []string{"*/rc/*"}, PrunePaths: []string{"*/rc/ext"}}
 
+// vendored reports a vendored browser library, <rc>/vendor/**/*.js: lint-vendor-floor.sh owns it (an
+// acorn parse at the Chromium 83 floor, its verdict recorded in rc/vendor/THIRD-PARTY.md, types/frontend-standard.md
+// § Vendored libraries), and rc-scan's line heuristics only report third-party code the module cannot change
+// (issue #459: three.js RenderPass.js / SSAOPass.js). Vendored CSS and HTML stay scanned: no other lint reads them.
+func vendored(p string) bool {
+	return strings.HasSuffix(p, ".js") && strings.Contains(p, "/rc/vendor/")
+}
+
 // options is a parsed command line.
 type options struct {
 	root           string
@@ -60,6 +68,9 @@ func Main(args []string, s cli.Stdio) int {
 	var rows []lint.Finding
 	var pages []*source
 	for _, p := range files {
+		if vendored(p) {
+			continue
+		}
 		data, err := os.ReadFile(p)
 		if err != nil { // gawk printed its fatal error and the script went on: fail closed instead
 			fmt.Fprintf(s.Err, "rc-scan: cannot scan %s: %s\n", p, strerror.Text(err))

@@ -48,7 +48,8 @@
 #
 # Escape hatch (new checks only): a trailing `rc-scan: allow <check-id>` comment on the flagged line
 # (for orphan-page, on the section/data-page line) suppresses that check there. Record why.
-# Exclusions: rc/ext/**, *.min.js, srcTest/**, dot-directories (D9b), comment-only lines (// /* * <!--).
+# Exclusions: rc/ext/**, *.min.js, rc/vendor/**/*.js (vendored libraries: lint-vendor-floor.sh owns them, issue
+#   #459; vendored CSS/HTML stay scanned), srcTest/**, dot-directories (D9b), comment-only lines (// /* * <!--).
 # W3C namespace URIs (http://www.w3.org/) are NOT flagged as hosts (not network hosts).
 # Handle ORD pattern: h:<hex> matched only when preceded by |, ", ', or ` (segment boundary), so
 #   CSS width:100px (h preceded by 't') is never matched.
@@ -71,6 +72,7 @@
 # Mutation: RC24 -- raise the data-URI budget so the 21000-char URI passes
 # Mutation: RC26 -- skip the orphan-page pass so RC26 loses its rows
 # Mutation: RC28 -- drop the inline-block counter so RC28 loses its row
+# Mutation: RC33 -- scanning rc/vendor/**/*.js again flags the vendored three.js rows (RC33 sees RenderPass.js)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
 # Go: the checks run in go/internal/rcscan (go/cmd/rc-scan), built on demand by go/go-tool.sh; this script is
