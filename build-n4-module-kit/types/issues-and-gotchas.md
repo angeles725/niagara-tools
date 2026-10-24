@@ -526,7 +526,7 @@ Review check: search the diff for `/home/`, `/tmp/`, `C:\Users\`, scratchpad and
 values. METHODOLOGY K8 and K16 state the same rule for kit checks and fixtures.
 
 Evidence: quality round 8, obix-nav kept a stale scratchpad path as its password-file default. — **Kit coverage: this
-entry + `METHODOLOGY.md` § rt (FOLDED); owed advisory Go lint G43 `machine-default-path`**
+entry + `METHODOLOGY.md` § rt (FOLDED); advisory lint `toolbelt/lint-machine-default-path.sh` (G43, Java defaults)**
 
 ## J — Control contracts & requirements signals
 

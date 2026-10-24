@@ -38,8 +38,8 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   a scratchpad, a temporary directory or one station's install path is removed; the value comes from a slot, a
   station-relative ORD, an environment variable, or the site table (§ Domain correctness). Review check: `/home/`,
   `/tmp/`, `C:\Users\`, scratchpad and station-name literals in default values. Gotcha:
-  `types/issues-and-gotchas.md` I3; owed advisory Go lint G43 `machine-default-path`. K8 and K16 apply the same rule
-  to kit checks and fixtures. `[ev: retro modular-line-efficient-quality Δ5]`
+  `types/issues-and-gotchas.md` I3; advisory lint `toolbelt/lint-machine-default-path.sh` (G43; Java
+  defaults only, see its header). K8 and K16 apply the same rule to kit checks and fixtures. `[ev: retro modular-line-efficient-quality Δ5]`
 - **Watchdog note:** the `systemMonitor` cadence is a configurable `BIntervalTriggerMode` (default 15 min), NOT a 2s poll; `BSysMonWorker` is a work-queue thread. Distinguish the native `EngineWatchdog` (engine/process heartbeat) from author-level `BAbstractAlarmMonitor` threshold watchdogs. The watchdog chain — niagarad daemon (PID poll → process exit → auto-restart with crash-loop backoff) → `EngineWatchdog` (hung engine heartbeat) → engine discipline — recovers a DEAD or HUNG station; a merely SLOW station is invisible to the watchdogs — engine-thread discipline (never block, `catch(Throwable)`) is the ONLY protection against slow callbacks. See `types/logic.md` §Watchdogs and timers. `[ev: corpus B737 §A.3, B775]`
 
 ## Domain correctness
