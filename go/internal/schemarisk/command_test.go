@@ -115,8 +115,7 @@ func TestMainEdges(t *testing.T) {
 	}
 }
 
-// TestUnreadableJava pins the bash fail-open kept by the port: awk stopped at an unreadable Java file (fatal on
-// stderr) and the verdict was computed from the slots read before it.
+// TestUnreadableJava: an unreadable *.java is env (4) with no row, never a verdict from a partial read (T2).
 func TestUnreadableJava(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("running as root")
@@ -128,9 +127,8 @@ func TestUnreadableJava(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, out, errs := run(before, after)
-	want := "awk: fatal: cannot open file `" + locked + "' for reading: Permission denied\n"
-	if code != 1 || out != "LOSSY  remove_slot_simple  Pan.sp: B754-754.6-r7 (value-dropped)\nverdict=LOSSY\n" || errs != want {
-		t.Errorf("exit %d out %q err %q\nwant err %q", code, out, errs, want)
+	if want := "error: cannot read " + locked + ": Permission denied\n"; code != 4 || out != "" || errs != want {
+		t.Errorf("exit %d out %q err %q\nwant 4 \"\" %q", code, out, errs, want)
 	}
 }
 

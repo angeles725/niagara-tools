@@ -2,7 +2,6 @@ package schemarisk
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -56,7 +55,12 @@ func Main(args []string, s cli.Stdio) int {
 			fmt.Fprintf(s.Err, "error: cannot list every file under %s: %v\n", dir, err)
 			return ExitEnv
 		}
-		snaps[i] = Parse(javaLines(files, s.Err))
+		lns, err := javaLines(files)
+		if err != nil {
+			fmt.Fprintf(s.Err, "error: %v\n", err)
+			return ExitEnv
+		}
+		snaps[i] = Parse(lns)
 	}
 	worst, verdict := 0, "SAFE"
 	for _, c := range Diff(snaps[0], snaps[1]) {
@@ -70,19 +74,18 @@ func Main(args []string, s cli.Stdio) int {
 	return worst
 }
 
-// javaLines is the lines of files in order. Like the bash awk it stops at a file it cannot read, with awk's
-// fatal line on stderr, and returns the lines read before it (a fail-open kept for parity; recorded bug).
-func javaLines(files []string, errw io.Writer) []string {
+// javaLines is the lines of files in order; a file it cannot read fails the snapshot closed (env), never a
+// verdict from the slots read before it (the bash awk stopped there and classified the partial read).
+func javaLines(files []string) ([]string, error) {
 	var out []string
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		if err != nil {
-			fmt.Fprintf(errw, "awk: fatal: cannot open file `%s' for reading: %s\n", f, strerror.Text(err))
-			break
+			return nil, fmt.Errorf("cannot read %s: %s", f, strerror.Text(err))
 		}
 		out = append(out, lines(string(b))...)
 	}
-	return out
+	return out, nil
 }
 
 // lines splits text into awk records: newline-terminated, a last unterminated line kept.

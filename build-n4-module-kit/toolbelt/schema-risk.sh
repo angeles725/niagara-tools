@@ -18,7 +18,7 @@
 #       emit UNKNOWN -> OUTAGE. No silent skips.
 #   L4  @Range enum-tag changes (add/remove/rename tag on a BFrozenEnum @Range) are NOT auto-detected from snapshots; parse_slots harvests @NiagaraProperty only. Manually diff @Range declarations before deploy.
 #
-# Exit: 0=SAFE  1=LOSSY  2=OUTAGE  3=usage  4=env (unreadable snapshot / missing tool / no Go toolchain or a failed build)
+# Exit: 0=SAFE  1=LOSSY  2=OUTAGE  3=usage  4=env (unreadable snapshot or *.java / missing tool / no Go toolchain or a failed build)
 # Exit-code justification: usage (3) and env (4) sit ABOVE the verdict domain (0-2) so that a
 # bad invocation never masquerades as OUTAGE in a deployment script.  This deviates from the
 # kit's usual 2=usage/3=env convention by design (D4a).
@@ -31,8 +31,8 @@
 # diff-guarded by SR-CSV in schema-risk.bats). go/go-tool.sh `go_tool_bin` builds go/bin/schema-risk when it
 # is missing or older than a Go source, then this script execs it. VCS-free by design (kit-links L2).
 # An empty before snapshot (no slot) adds every after slot: SAFE (the bash classifier read them as removed).
-# Known bash-era quirk kept by the port (retro go-schema-risk): an unreadable *.java stops the harvest (awk's
-# fatal line on stderr) instead of exiting 4.
+# An unreadable *.java is env (exit 4, `error: cannot read <file>: <reason>`, no row): the bash classifier
+# stopped at it and computed a verdict from the slots read before it (retro go-schema-risk Δ2).
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"

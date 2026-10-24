@@ -114,3 +114,17 @@ pair() { run "$SR" "$FX/$1/before" "$FX/$1/after"; }
   [[ "$output" != *"remove_"* ]]
   [[ "$output" == *"verdict=SAFE"* ]]
 }
+
+@test "SR-unreadable-java an unreadable *.java is an env error (exit 4, no verdict), never a partial-read verdict" {
+  # Mutation: SR-unreadable-java -- skipping the unreadable file (the bash awk fatal) computes LOSSY removals from a partial read
+  mkdir -p "$BATS_TEST_TMPDIR/after"
+  cp -r "$FX/add_slot/after/." "$BATS_TEST_TMPDIR/after/"
+  local f="$BATS_TEST_TMPDIR/after/com/angeles/MinimalPan/BMinimalPan.java"
+  chmod 000 "$f"
+  if [ -r "$f" ]; then chmod 644 "$f"; skip "running as root"; fi
+  run "$SR" "$FX/add_slot/before" "$BATS_TEST_TMPDIR/after"
+  chmod 644 "$f"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"error: cannot read $f: "* ]]
+  [[ "$output" != *"verdict="* ]]
+}
