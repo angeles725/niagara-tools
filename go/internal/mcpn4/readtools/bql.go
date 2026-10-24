@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/bql"
-	"github.com/angeles725/niagara-tools/go/internal/mcpn4/jsonrpc"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/pyjson"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/session"
 )
@@ -89,8 +88,12 @@ func (t *Tools) query(base, query string, maxRows, timeout int) ([]string, []*py
 // result file under the state dir when output_file names one.
 func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	base := strArg(args, "base", RootOrd)
-	if _, ok := args.Get("output_file"); ok { // ported with the result files
-		return nil, toolError("n4_bql_query output_file %s", jsonrpc.NotImplemented)
+	path := ""
+	if v, ok := args.Get("output_file"); ok {
+		var err error
+		if path, err = t.outputPath(v.(string), "bql", bqlOutputFile, "ending in .csv or .json "); err != nil {
+			return nil, err
+		}
 	}
 	q := strArg(args, "query", "")
 	columns, rows, truncated, elapsed, err := t.query(base, q, intArg(args, "max_rows", bql.DefaultMaxRows),
@@ -101,7 +104,18 @@ func (t *Tools) BqlQuery(args *pyjson.Object) (*pyjson.Object, error) {
 	t.recordRead("n4_bql_query", args, len(rows))
 	out := obj("base", base, "query", bql.Strip(q), "columns", strs(columns), "row_count", len(rows),
 		"truncated", truncated, "elapsed_ms", elapsed)
-	out.Set("rows", list(rows))
+	if path == "" {
+		out.Set("rows", list(rows))
+		return out, nil
+	}
+	if err := writeRows(path, base, bql.Strip(q), columns, rows); err != nil {
+		var ve *pyjson.ValueError
+		if errors.As(err, &ve) {
+			return nil, err
+		}
+		return nil, writeFailed(path, err)
+	}
+	out.Set("output_file", path)
 	return out, nil
 }
 
