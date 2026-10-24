@@ -266,6 +266,12 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `awk_lint_each` (or Go). `tests/lint-fork-per-line.bats` scans every `toolbelt/lint-*.sh` and fails on a fork
     not in its frozen baseline (`tests/fixtures/lint-fork-per-line/baseline.txt`); a fixed fork deletes its
     baseline row, a new one is never added there. `[ev: retro r8-t22-retro-deltas Δ2]` `[ev: retro line-loop-lint-forks Δ1]`
+    The same class covers a fork per ITEM over a listing captured once: `for jar in …; do printf "$LSOF_OUT" |
+    grep -qxF "n$jar"` grows with items times listing size and hung `preflight.sh` for more than 10 minutes on
+    410 jars (#432). Load the item set and the listing into one awk (set lookup, one pass). The guard above
+    covers only `while read` loops in `lint-*.sh`, so any other script pins this with a bounded-time bats case
+    at a realistic item count (hundreds), as `tests/preflight.bats` PF-jarlock-bulk-timeout does.
+    `[ev: retro r10-fork-per-line-again Δ1]`
   - **Literal-aware and scope-aware Java scanning.** A lint that reads Java text never matches inside a string,
     a char or a text block, and never lets a nested lambda or anonymous class end the enclosing method. Use the
     shared `toolbelt/lib/method-boundary.sh` (`mb_strip` for comments with literals kept, `mb_parse` for method
