@@ -43,6 +43,14 @@ thread. Blocking inside an `ASYNC` action (HTTP call, disk I/O, `Thread.sleep`, 
 **all** timers and other async actions station-wide. Do blocking work on a `BWorker`/off-engine
 thread, never in an `ASYNC` handler (alarm-rt `escalateAlarms` declares flags 2068 and schedule-rt `cleanup` flags 16, both carrying `Flags.ASYNC` = 16). [ev: devguide `execution.txt`; code alarm-rt BAlarmService escalateAlarms 2068; code schedule-rt BControlSchedule cleanup]
 
+**Short, bounded work is fine as a plain `ASYNC` action:** it moves the work off the caller's Fox thread onto the
+engine thread, nothing more. The course's Lab 9 `BEngineThreadExecutor` sleeps 10 s in an `ASYNC` `execute`:
+Workbench stays responsive while the engine thread freezes ("in extreme scenarios … an engine watchdog timeout"),
+and the certification exam accepted an `ASYNC` `export` action that writes one history CSV. Keep a plain `ASYNC`
+handler for short, bounded work; for long or unbounded work override `post()` (below). The owed lint G28
+`async-blocking-action` stays WARN-only and never becomes a FAIL. `[ev: course Lab Instructions.txt:1644-1647,1711-1721]`
+`[ev: retro n4-course-handson-services-history-threading Δ2]`
+
 **Which thread, exactly** (baja and fox-rt 4.14.0.162 vineflower; 4.15 not verified) `[ev: retro n4-course-threading-jobs-doctrine Δ3]` `[ev: corpus B1238 §1238.3-§1238.5]`:
 - A plain action invoked from Workbench runs inline on that session's ONE serial `Fox:Dispatcher:<hash>` thread
   (`fox/session/SessionDispatcher.java:16,46-66`; `ComponentSlotMap.invoke` calls the `do` method on the caller's

@@ -1,0 +1,11 @@
+-- args --
+@DIR@/repo/M
+-- want --
+exit 0
+WARN  lint-uberjar-api-conflict  @DIR@/repo/M/x-rt.gradle.kts  com.fasterxml.jackson.core:jackson-core is both uberjar()d and api()d
+-- stderr --
+-- repo/M/x-rt.gradle.kts --
+dependencies {
+  api("com.fasterxml.jackson.core:jackson-core:2.13.1")
+  uberjar("com.fasterxml.jackson.core:jackson-core:2.13.1")
+}
