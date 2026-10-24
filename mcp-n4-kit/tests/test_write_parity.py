@@ -4,8 +4,8 @@ Each scenario runs twice: on the in-process Python server and on the server unde
 (`go_server.make_server`: the Go binary under MCP_N4_IMPL=go), each with its own recording
 FakeStation and state dir. Every reply line, every BOX request body and the bytes of
 `journal.jsonl` and `audit.jsonl` must be equal once the per-run values are masked: the
-station URL and state dir, confirmation tokens, plan hashes, batch and session ids, expiry, timestamps and a
-read's elapsed time.
+station URL, state dir and station home, confirmation tokens, plan hashes, batch and session ids,
+expiry, timestamps, a read's elapsed time and a config.bog mtime.
 Every dry run of the server under test must also hash its plan as Python does:
 `plan_hash == sha256(safety.canonical(plan))`.
 
@@ -34,13 +34,16 @@ MASKS = [(re.compile(r"[0-9]+\.[0-9a-f]{16}\.[0-9a-f]{64}"), "<token>"),
          (re.compile(r"[0-9a-f]{64}"), "<hash>"),
          (re.compile(r"[0-9a-f]{32}"), "<id>"),
          (re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+00:00"), "<ts>"),
-         (re.compile(r'((?:expires_at|elapsed_ms)\\?": )[0-9]+'), r"\1<n>")]
+         (re.compile(r'((?:expires_at|elapsed_ms)\\?": )[0-9]+'), r"\1<n>"),
+         (re.compile(r'(mtime\\?": )[0-9.e+-]+'), r"\1<n>")]
 
 
 class Side:
     """One server, its FakeStation and state dir, and what the scenario saw."""
 
-    def __init__(self, test, impl, **opts):
+    def __init__(self, test, impl, home=None, **opts):
+        """`home` (bytes) starts the server with a station home holding that config.bog,
+        which the FakeStation's save rewrites."""
         self.fake = FakeStation(password=PASSWORD).start()
         test.addCleanup(self.fake.stop)
         self.fake.record()
@@ -50,6 +53,13 @@ class Side:
         self.opts = dict(allow_writes=True, allow_http=True, state_dir=self.state_dir,
                          env={"MCP_N4_USER": "admin", "MCP_N4_PASSWORD": PASSWORD},
                          stations={"FakeStation": self.fake.url}, write_scopes=[FOLDER])
+        self.home = None
+        if home is not None:
+            self.home = os.path.join(tmp.name, "home")
+            os.mkdir(self.home)
+            self.fake.config_path = os.path.join(self.home, "config.bog")
+            self.write_bog(home)
+            self.opts["station_homes"] = {"FakeStation": self.home}
         self.opts.update(opts)
         self.srv = go_server.make_server(impl, **self.opts)
         test.addCleanup(lambda: go_server.close_server(self.srv))
@@ -90,6 +100,10 @@ class Side:
             self.box.set_slot(h, slot, bson)
         return h
 
+    def write_bog(self, content):
+        with open(self.fake.config_path, "wb") as fh:
+            fh.write(content)
+
     def state(self, name):
         path = os.path.join(self.state_dir, name)
         if not os.path.isfile(path):
@@ -101,6 +115,8 @@ class Side:
         if text is None:
             return None
         text = text.replace(self.fake.url, "<url>").replace(self.state_dir, "<state>")
+        if self.home:
+            text = text.replace(self.home, "<home>")
         for pattern, repl in MASKS:
             text = pattern.sub(repl, text)
         return text
@@ -869,3 +885,61 @@ class TestRollbackParity(ParityTestCase):
                 side.call("n4_rollback", batch_id=bid)  # its rollback is in-doubt now
             side.call("n4_list_batches")
         self.assertSameRun(scenario)
+
+
+def save_and(side, then):
+    """The FakeStation's save, then `then()` (until the next restore)."""
+    orig = side.fake._invoke
+
+    def invoke(arg):
+        out = orig(arg)
+        if arg["a"] == "save":
+            then()
+        return out
+    side.fake._invoke = invoke
+    return orig
+
+
+class TestSaveStationParity(ParityTestCase):
+    """S14: n4_save_station. An unchanged config.bog is polled for the full 30 s on both
+    servers, so the mismatch branch is left to the Go differential."""
+
+    def test_no_home_and_every_token_refusal(self):
+        def scenario(side):
+            side.call("n4_save_station")  # not connected
+            side.connect()
+            token = side.call("n4_save_station").get("confirmation_token")
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)  # spent
+            side.call("n4_save_station", dry_run=False)
+            side.call("n4_save_station", dry_run=False, confirmation_token="1.ab.cd")
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario)
+
+    def test_no_write_scope(self):
+        def scenario(side):
+            side.connect()
+            side.write("n4_save_station")
+        self.assertSameRun(scenario, write_scopes=[])
+
+    def test_changed_missing_and_unreadable_config_bog_and_in_doubt(self):
+        def scenario(side):
+            side.connect()
+            side.write("n4_save_station")  # changed: persisted
+            side.write("n4_save_station")  # the second save changes it again
+            os.remove(side.fake.config_path)
+            side.write("n4_save_station")  # missing before the save
+            side.write_bog(b"bog")
+            orig = save_and(side, lambda: os.remove(side.fake.config_path))
+            side.write("n4_save_station")  # unreadable after the save
+            side.fake._invoke = orig
+            side.write_bog(b"bog")
+            token = side.call("n4_save_station")["confirmation_token"]
+            side.write_bog(b"edited after the dry run")  # read again when it executes
+            side.call("n4_save_station", dry_run=False, confirmation_token=token)
+            for reply in ((500, b"boom"), (200, ERROR_FRAME)):
+                fail_after(side, None, "invokeAction", reply)
+                side.write("n4_save_station")
+                side.fake.hook = None
+            side.call("n4_list_batches")
+        self.assertSameRun(scenario, home=b"bog-before")

@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"strconv"
+	"time"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/box"
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/journal"
@@ -45,6 +46,14 @@ type State struct {
 	WritesExecuted int
 	// NewBatchID is uuid.uuid4().hex.
 	NewBatchID func() string
+	// StationHomes maps a station NAME to the directory holding its config.bog (--station-home,
+	// operator policy): n4_save_station proves persistence there.
+	StationHomes map[string]string
+	// SaveTimeout and SaveInterval (seconds) bound the save's read-back poll, Sleep and Monotonic
+	// are its clock (time.sleep, time.monotonic).
+	SaveTimeout, SaveInterval float64
+	Sleep                     func(seconds float64)
+	Monotonic                 func() float64
 }
 
 // NewState is WriteState(scopes, state_dir, token_ttl, max_writes): the start checks in their
@@ -66,8 +75,16 @@ func NewState(scopes []string, stateDir string, tokenTTL, maxWrites int) (*State
 		return nil, err
 	}
 	return &State{Scope: scope, Tokens: token.New(tokenTTL, nil), Journal: journal.New(stateDir),
-		Audit: journal.NewAuditLog(stateDir), MaxWrites: maxWrites, NewBatchID: uuid4Hex}, nil
+		Audit: journal.NewAuditLog(stateDir), MaxWrites: maxWrites, NewBatchID: uuid4Hex,
+		StationHomes: map[string]string{}, SaveTimeout: 30.0, SaveInterval: 0.5, Sleep: sleep, Monotonic: monotonic}, nil
 }
+
+var start = time.Now()
+
+// monotonic is time.monotonic: seconds on the process's monotonic clock.
+func monotonic() float64 { return time.Since(start).Seconds() }
+
+func sleep(seconds float64) { time.Sleep(time.Duration(seconds * float64(time.Second))) }
 
 // checkStateFiles is check_state_files: a journal or audit file that became loose after start.
 func (s *State) checkStateFiles() error {
