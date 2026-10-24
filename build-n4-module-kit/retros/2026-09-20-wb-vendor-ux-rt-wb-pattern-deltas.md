@@ -43,6 +43,13 @@ Surveyed 8 vendor `-wb` archetypes (Centraline pure-resource palette, andoverAC2
 | Δ24 | PD-24 `BTabbedPane.selection` is TRANSIENT (no @NiagaraProperty) — persist the selected tab by its label TEXT across `doLoadValue`/`doSaveValue` | `types/wb-widgets.md` | `[ev: corpus B1076]` |
 | Δ25 | PD-25 cloud integration entry point: `BICloudConnector` (CompletableFuture API), `BConnectorImpl` (doConnect/registerDevice/doDisconnect/doPing/sendMessage), `nCloudDriver` bridges the cloud service to a standard device/point tree | `types/cloud-connector.md` | `[ev: corpus B1076]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ12:** the row labels the RT↔UX↔WB triangle "PD-12". Reading A (this
+> retro): PD-12 is the triangle. Reading B (corpus B1061): the triangle is §1061.5 ("RT↔UX↔WB triangle: where -ux
+> appears alongside -rt and -wb"); PD-12 in that section is a different rule, the shared velocity-context builder
+> (`makeDefaultVelocityContext()` in -rt shared by -wb and -ux). Winner: B. It was wrong when written: B1061 has one
+> commit (2026-09-20). `types/dashboard.md` cites the triangle as B1061 §1061.5 since citation audit batch 8. The row
+> text and this retro's review-status are left as they were.
+
 ## Lessons
 - The vendor-grade `-wb` bar is concrete: manager-with-table over property sheet, a picker/field-editor for EVERY rt ref slot, pre-populated dialogs from live state, job-bar for long ops, command pruning, topic-fire for live state. That IS the intuitive-UI rule made specific — pairs with the Apillm retro Δ7/Δ8.
 - Strongest RT→WB coupling: `BCcnNetwork.getAgents()` removes the PropertySheet and promotes its DeviceManager (B1057) — fold as a recommendation only after cross-validating vs vendor-specific (B1061-G2).

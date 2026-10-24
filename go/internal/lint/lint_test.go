@@ -3,7 +3,6 @@ package lint
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"fmt"
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 )
@@ -57,9 +57,9 @@ func (mixedRule) Check(f *javasrc.File) ([]Finding, error) {
 // treeFake is a TreeRule: it records the paths it is given, reports a file-level finding (sub-check
 // "sub") for each file holding MARK and a PASS row for the others, and fails when broken is set.
 type treeFake struct {
-	id     string
-	seen   *[]string
-	broken bool
+	id            string
+	seen          *[]string
+	broken, empty bool
 }
 
 func (r treeFake) ID() string         { return r.id }
@@ -76,7 +76,10 @@ func (r treeFake) CheckTree(files []*javasrc.File) ([]Finding, error) {
 			out = append(out, Finding{Check: "sub", Severity: Pass, Path: f.Path, Msg: "clean"})
 		}
 	}
-	if r.broken {
+	switch {
+	case r.empty:
+		return out, ErrEmptyRoot
+	case r.broken:
 		return out, errors.New("cannot scan " + files[0].Path + ": broken")
 	}
 	return out, nil
@@ -624,11 +627,60 @@ func TestParseExactUsageError(t *testing.T) {
 	}
 }
 
+// TestTreeRuleEmptyRoot: a TreeRule whose selected files hold nothing it checks (lint-duplicate-helper: no
+// -rt/-ux/-wb src/ under the root) returns ErrEmptyRoot: the EmptyError row instead of its findings, the
+// rule stops (no later root) and the exit is 3, as for a RootRule.
+func TestTreeRuleEmptyRoot(t *testing.T) {
+	a := tree(t, map[string]string{"A.java": "MARK\n"})
+	b := tree(t, map[string]string{"B.java": "MARK\n"})
+	sp := treeSpec(treeFake{id: "lint-t", empty: true})
+	sp.Mode = Each
+	sp.EmptyError = EmptyRow{Msg: "nothing to compare"}
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-t", a, b}, s); code != 3 || o.String() != "ERROR  lint-t  "+a+"  nothing to compare\n" || e.Len() != 0 {
+		t.Errorf("exit %d out %q err %q, want 3 and one ERROR row", code, o, e)
+	}
+}
+
+// TestModuleRootLeftOutOfAll: --all runs on source roots, so it leaves out a rule whose roots are module
+// roots (Spec.ModuleRoot), as it leaves out a RootRule; by name the rule runs.
+func TestModuleRootLeftOutOfAll(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "MARK\n"})
+	mod := treeSpec(treeFake{id: "lint-m"})
+	mod.ModuleRoot = true
+	main := Command(javaSpec(fakeRule{"lint-a", "MARK", Warn}, One), mod)
+	s, o, _ := stdio()
+	if code := main([]string{"--all", root}, s); code != 0 || o.String() != "WARN  lint-a  "+root+"/A.java:1  saw: MARK\n" {
+		t.Errorf("--all: exit %d out\n%s\nwant the lint-a row only", code, o)
+	}
+	s, o, _ = stdio()
+	if code := main([]string{"lint-m", root}, s); code != 1 || o.String() != "FAIL  sub  "+root+"/A.java: tree saw MARK\n" {
+		t.Errorf("by name: exit %d out\n%s\nwant the lint-m row", code, o)
+	}
+}
+
+func TestEmptyOK(t *testing.T) {
+	sp := javaSpec(fakeRule{"lint-e", "MARK", Fail}, Raw)
+	sp.EmptyOK = true
+	empty := tree(t, map[string]string{"README": "x\n"})
+	s, o, e := stdio()
+	if code := Command(sp)([]string{"lint-e", empty}, s); code != 0 || o.Len() != 0 || e.Len() != 0 {
+		t.Errorf("empty: exit %d out %q err %q, want 0 and nothing", code, o, e)
+	}
+	full := tree(t, map[string]string{"A.java": "MARK\n"})
+	s, o, _ = stdio()
+	if code := Command(sp)([]string{"lint-e", full}, s); code != 1 || o.String() != "FAIL  lint-e  "+full+"/A.java:1  saw: MARK\n" {
+		t.Errorf("full: exit %d out %q", code, o)
+	}
+}
+
 // flagRule reports its configured n once per file (Spec.IntFlags).
 type flagRule struct{ n int }
 
-func (flagRule) ID() string         { return "lint-f" }
+func (flagRule) ID() string { return "lint-f" }
+
 func (flagRule) Severity() Severity { return Warn }
+
 func (r flagRule) Check(*javasrc.File) ([]Finding, error) {
 	return []Finding{{Line: 1, Msg: fmt.Sprintf("n=%d", r.n)}}, nil
 }

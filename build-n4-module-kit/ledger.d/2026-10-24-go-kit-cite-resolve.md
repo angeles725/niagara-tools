@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: kit-cite-resolve Go tool -->
+log: 2026-10-24 · quality round 10 → new Go tool `go/cmd/kit-cite-resolve` (`go/internal/citeparse` grammar, `go/internal/citeresolve` one resolver per pointer kind) behind `toolbelt/kit-cite-resolve.sh`: resolves every `[ev:]`/`[deferred:]` clause and prose citation of kit cards and prints card, line, kind, target, locator, status (RESOLVED, MISSING_FILE, MISSING_SECTION, MISSING_DELTA, LINE_OUT_OF_RANGE, BARE_ID, UNPARSED, TOOL_ERROR) and an excerpt; a pre-filter, never a truth verdict; exit 0 / 1 under --strict / 3 usage, unreadable root or card, tool error. Real run 8001 pointers on 426 cards: RESOLVED 6515, MISSING_FILE 372, MISSING_SECTION 151, LINE_OUT_OF_RANGE 73, BARE_ID 8, UNPARSED 882 (9 false-finding classes fixed and pinned first). Retro retros/2026-10-24-go-kit-cite-resolve.md (1Δ, pending). [ev: retro go-kit-cite-resolve Δ1]

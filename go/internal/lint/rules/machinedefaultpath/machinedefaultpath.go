@@ -19,10 +19,12 @@
 // In a *.js file under an rc/ directory (jssrc tokens, comments dropped), a string or a template literal with
 // no ${...} that is a const/let/var initializer (`const X = "..."`, at any depth: rc code lives in IIFE and
 // AMD wrappers, so a top-level-only rule would read nothing) or an object-literal property default
-// (`{ key: "..." }`). In a *.properties file (props.Read), every value.
+// (`{ key: "..." }`). In a *.properties file (props.Read), every value, except that a gradle.properties
+// key in props.BuildLocationKeys gets no row: lint-structure L10 owns those (R10-D8), in kit fixtures too.
 package machinedefaultpath
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -93,16 +95,26 @@ type perLine struct {
 }
 
 func (r *perLine) add(i int, p, where string) {
-	if p != "" && (len(r.out) == 0 || i != r.last) {
-		r.out, r.last = append(r.out, finding(i, p, where)), i
+	if p != "" {
+		r.push(i, finding(i, p, where))
 	}
 }
 
-// properties is every value of a .properties file.
+func (r *perLine) push(i int, fd lint.Finding) {
+	if len(r.out) == 0 || i != r.last {
+		r.out, r.last = append(r.out, fd), i
+	}
+}
+
+// properties is every value of a .properties file but a gradle.properties build-location key, which is
+// lint-structure L10's (R10-D8: WARN to migrate it to the user-level file; FAIL in a kit fixture, K16).
 func properties(f *javasrc.File) []lint.Finding {
+	gradle := filepath.Base(f.Path) == "gradle.properties"
 	var r perLine
 	for _, e := range props.Read(f.Raw) {
-		r.add(e.Line, path(e.Value), "a .properties value")
+		if !(gradle && props.BuildLocationKey(e.Key)) {
+			r.add(e.Line, path(e.Value), "a .properties value")
+		}
 	}
 	return r.out
 }

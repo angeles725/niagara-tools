@@ -50,6 +50,17 @@ getProperty/getOrDefault/requireNonNullElse/orElse fallback; a local variable or
 | Δ2 | **CLOSED 2026-10-24: G43 follows the deferred spec.** The first cut read Java only with ADVISORY rows; the deferred spec (ledger.d/2026-10-22-modular-line-efficient-quality.md) is the contract, so the rule WARNs (exit 1 under `--strict`), its message starts with the spec's row text, prefixes are case-insensitive, and `rc/**/*.js` (const/let/var initializers at any depth, since rc code lives in IIFE/AMD wrappers, and object-literal property defaults) and every `*.properties` value are read through shared scanners. Kept as declared differences: the `/home/niagara/` exclusion and the superset of prefixes (`/Users/`, any `/mnt/<drive>/`, any drive letter). Station-name literals stay out of scope: they need the site table (G42). | ledger open_issue G43 | `[ev: go/internal/lint/rules/machinedefaultpath/machinedefaultpath.go]` |
 | Δ3 | **G43 is not a report-module member yet.** ER1 (tests/lint-empty-root.bats) picks the wrapper up by its `go_tool_bin` line, so its empty-root ERROR row and exit 3 are already pinned. Wiring it into `report-module.sh` needs a decision first: it reads module roots (gradle.properties sits beside the profiles), while report-module runs members per `<artifact>/src`. | `toolbelt/report-module.sh` | `[ev: tests/lint-machine-default-path.bats]` |
 
+> **Corrected (2026-10-24, quality round 10) — Evidence line 38:** it says the 9 Cliente rows
+> `niagara_user_home=C:\\Users\\equipo\\...` in module `gradle.properties` are "all true" machine-path defects.
+> Reading A (this retro): each is a developer path the module should not carry. Reading B (kit doctrine): the bring-up
+> tells a client module to copy `niagara_home`, `niagara_user_home`, `nodeHome` and
+> `org.gradle.java.installations.paths` into its `gradle.properties` from a sibling (`BUILD-LOOP.md` bring-up step 2;
+> `types/structure.md` point 7), and K16 bans live values of those keys only in kit template fixtures
+> (`METHODOLOGY.md` K16). Winner: B. The rows were real matches of the rule as it then stood, but calling them
+> defects contradicted the doctrine at the time too; G43 now reports those keys in a client `gradle.properties` as
+> INFO rows that never affect the exit code (branch `fix/r10-g43-gradle-build-keys`). The delta rows and this retro's
+> review-status are left as they were.
+
 ## Lessons
 - A lint with no bash ancestor still gets golden cases: written by hand from the doctrine, they pin the wrapper
   contract (usage, empty root, pruned directories, several roots) the table tests do not reach.

@@ -1,7 +1,8 @@
 #!/usr/bin/env bats
 # RED-FIRST pins for lint-recovery-path.sh (Wave 3, LR1).
 # Detects the "stranded-heater" shape: a protection/heat output slot (*Out/*Resistance/*Heat/*Resistencia)
-# is written OFF only inside a mode-gated method with no unconditional reset in started()/atSteadyState()/enable().
+# is written OFF only inside a mode-gated method with no unconditional reset in started()/atSteadyState()/changed()/
+# enable()/start().
 #
 # Real commissioning defect (PANCCADIA 2026-09): resistanceOut was turned off inside execute() guarded
 # by `if (inDefrost) return;` but started() never reset it unconditionally — when the mode cleared,
@@ -34,6 +35,44 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }
   run "$LRP" "$ONE"
   [ "$status" -eq 0 ]
   [[ "$output" != *"FAIL"* ]]
+}
+
+@test "LRP-comment: a safe-off in a comment or a string is not a write, and a \"{\" in a string keeps the method scope" {
+  # Mutation: LRP-comment -- matching the raw line cut at "//" FAILs a commented-out write and misreads started()
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-comment-literal-1.txt
+  printf '%s\n' 'package com.x;' 'public class C extends BComponent {' '  void execute() {' '    /* setAOut(false); */' \
+    '    String b = "{";' '    setDOut(false);' '  }' '  void started() {' '    setDOut(false);' '  }' '}' > "$ONE/C.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "LRP-scope: a nested class's started() reset counts (method names come from the shared method scanner)" {
+  # Mutation: LRP-scope -- naming methods by a 5-line back-scan gives Inner.started() the name of the call above it
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-method-scope-1.txt
+  printf '%s\n' 'package com.x;' 'public class Nested extends BComponent {' '  void execute() {' '    setHeatOut(false);' '  }' \
+    '  static class Inner {' '    void started() {' '      setHeatOut(false);' '    }' '  }' '}' > "$ONE/Nested.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "LRP-word: resetX(false) is not a write of slot X, and a second write on a line counts" {
+  # Mutation: LRP-word -- matching set/get inside an identifier FAILs resetBoilerHeat(false) as slot BoilerHeat
+  # Go golden: go/internal/lint/rules/recoverypath/testdata/truth-slot-names-1.txt
+  printf '%s\n' 'package com.x;' 'public class S extends BComponent {' '  void execute() {' '    resetBoilerHeat(false);' \
+    '    getC().setValue(false); setDOut(false);' '  }' '  void started() {' '    setDOut(false);' '  }' '}' > "$ONE/S.java"
+  run "$LRP" "$ONE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "LRP-text: the row names every method the rule accepts as a reset" {
+  # Mutation: LRP-text -- a row naming fewer reset methods than the rule accepts sends the fix to the wrong method
+  only GuardedOnly.java
+  run "$LRP" "$ONE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  lint-recovery-path  $ONE/GuardedOnly.java:"*"  LRP: ResistanceOut has guarded-only safe-off in method \"execute\" -- no unconditional reset in started/atSteadyState/changed/enable/start" ]]
 }
 
 @test "LRP-usage: no argument -> exit 3 (usage)" {

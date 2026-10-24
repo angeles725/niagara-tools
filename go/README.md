@@ -11,10 +11,9 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/<tool>/` | a thin `main` that calls one package's entry point; no logic |
 | `internal/cli/` | injectable stdio (`cli.Stdio`) and the `cli.Main` signature every command uses |
 | `internal/strerror/` | `Text`: an OS error as C `strerror()` words it in the C locale, and `FindQuote`: a path as GNU find quotes it in that locale (the text find and awk print), shared by `lint` and `jarversion` |
-| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
+| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `MaskLiterals` (the same contents replaced by blanks, line lengths kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`), `Tokens` (Strip output as tokens, a literal or text block one token), `Decls` (the method and constructor bodies of each class body, with class, parameter types and `@Override`), `Statements` and `Shape` (a body's statement count and normalized token sequence) — the lint rules share these — and `File` (one file's lines plus its scan results, computed once) |
 | `internal/jssrc/` | the JavaScript tokenizer only: `Tokens` (comments dropped; strings, template literals with their `${...}` nesting and regex literals as single tokens, each with its line), for a rule that reads `rc/**/*.js` |
 | `internal/props/` | `Read`: a `.properties` file as `java.util.Properties.load` reads it (continuations, `#`/`!` comments, `=`/`:`/space separators, escapes), each entry with the line it starts on |
-| `internal/javasrc/` | the Java scanner only: `Strip`, `Methods`, `Lines`, `BlankLiterals` and `BlankLine` (literal contents blanked, quotes kept), `AnnotationSkip` (an annotation and its argument list read past char by char), `NiagaraProperties` (each `@NiagaraProperty` annotation joined to its balanced `)`, with `ParenDepth`; the lint rules share these) and `File` (one file's lines plus its scan results, computed once) |
 | `internal/lint/` | the lint engine: `Rule` (per file), `TreeRule` (all the files under a root at once), `Finding` + `Row()`, `Parse` (the `awk_lint_parse` modes `One`/`First`/`Each`/`Raw`, plus `Exact`: one argument, no flag parsed, and `Leading`: only a first `--strict` is a flag, as a bash lint's `[ "${1:-}" = "--strict" ] && shift`), `Walk` (the fail-closed walk of `toolbelt/lib/scan-files.sh`; dot and `*-worktrees` sub-directories are never entered), `Run` (exit 0 / 1 on a FAIL row or a WARN/FAIL row under `--strict` / 3 env, which wins over 1; PASS and ADVISORY rows never count) and `Command` (n4lint) |
 | `internal/lint/rules/<rule>/` | one lint rule: its `Check`, its `Spec()` and its table tests |
 | `internal/lint/rules/` | `All()`, the list of registered rules |
@@ -22,6 +21,9 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `internal/lint/rules/linescan/` | shared by the line-matching rules (ports of `awk_lint_each` / `awk_lint_strip_run` lints): `Code` (a file's lines with comments blanked and literal contents removed, the view a code token is matched in) and the row texts `Source` (leading space trimmed) and `Trimmed` (both ends) |
 | `internal/lint/rules/golden/` | test helper: `Run` checks a rule against its `testdata/*.txt` cases recorded from the bash lint, `Unreadable` its `awk_lint_run` failure contract |
 | `cmd/n4lint/` | `n4lint <rule>[,<rule>...] <args>...` or `n4lint --all [--strict] [--] <src-root>...` |
+| `internal/citeparse/` | the kit citation grammar, pure: `Card` returns every evidence pointer of a card (`[ev: …]`/`[deferred: …]` clauses, per-card path aliases, prose citations) as a `Pointer` |
+| `internal/citeresolve/` | one `Resolver` per pointer kind over injected `Roots` and one file cache; `Main` of `kit-cite-resolve` (status per pointer with an excerpt; a pre-filter, never a truth verdict) |
+| `cmd/kit-cite-resolve/` | `kit-cite-resolve [--kit DIR] [--research DIR] [--modules DIR] [--memory DIR] [--version VER] [--format tsv\|json] [--strict] <card.md>...` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
 `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>:<line>  <message>`, or `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>: <message>` for a
@@ -40,7 +42,9 @@ rule's rows stay contiguous.
    Row columns: `Finding.Check` is the sub-check shown in the check column (empty shows the rule ID), so
    one rule can report several named checks. `Line` 0 is a file-level finding printed as `<path>: <msg>`;
    rows with `Line` ≥ 1 are unchanged. `Spec.BarePathRow` prints a `Line` 0 finding as `<path>  <msg>`
-   instead (two spaces, no colon), the row of lint-structure. Severity `Pass` prints `PASS` and never affects the exit code.
+   instead (two spaces, no colon), the row of lint-structure. The runner fills `Finding.Path` only when the
+   rule leaves it empty, so a per-file rule may set it to any subject: with `BarePathRow` a row such as
+   `WARN  lint-status-parity  <Class>  N=…` needs no new field (the lint-status-parity port, branch r10/status-parity-go). Severity `Pass` prints `PASS` and never affects the exit code.
    `Spec.UsageExit` is the exit code of a usage error when the rule runs alone (0 means 3).
    A directory the walk cannot read prints `<lint>: cannot list every file under <root>: find: '<dir>': <reason>`
    (`<dir>` quoted as GNU find does under `LC_ALL=C`: `\'`, `\\`, `\n`-style C escapes, 3-digit octal for
@@ -63,8 +67,8 @@ rule's rows stay contiguous.
    error (no later root, exit 3). `Spec.EmptyError` (`lint.EmptyRow{Check, Msg}`) only shapes that row:
    `<check>` is `Check`, or the rule ID when empty; `<msg>` is `Msg`, or by default
    `no <pattern>[ or <pattern>...] sources found (wrong path or empty source tree)` from `Select.Names`.
-   There is no opt-out: every registered rule reads source files and has no meaning on a root without
-   them; a future rule that legitimately accepts an empty root adds an explicit, commented Spec field.
+   The one opt-out is `Spec.EmptyOK`, for a lint whose own contract makes an empty root clean (reference:
+   `rules/lexiconascii`, LA5: a module with no `*.lexicon` has nothing to check): no ERROR row, exit 0.
    It is decided per root after the walk, so a walk error wins and prints no ERROR row. `Spec.BareUsage` prints only the usage line on an unknown flag
    (`-h` included), for a bash lint whose `-*)` case printed the usage alone; the exit stays `UsageExit`.
    `Spec.IntFlags` (with `Spec.Configure`) takes a bash lint's own numeric options (`--max-class <n>`, its
@@ -78,7 +82,9 @@ rule's rows stay contiguous.
    `CheckTree(files []*javasrc.File)` gets every selected file under the root in walk order, and sets
    `Path` on each finding; a non-nil error prints the findings returned with it, then `<lint>: <error>`
    (the rule writes the whole text) and exits 3. A spec sets exactly one of `Rule` and `Tree`, and its
-   value implements only that interface (`Command` panics otherwise):
+   value implements only that interface (`Command` panics otherwise). A `TreeRule` whose selected files hold
+   nothing it checks (reference: `rules/duplicatehelper`, no `-rt`/`-ux`/`-wb` `src/` file under the root)
+   returns `lint.ErrEmptyRoot`: the `Spec.EmptyError` row, the rule stops and the exit is 3:
 
    ```go
    type rule struct{}
@@ -105,6 +111,8 @@ rule's rows stay contiguous.
    (`Msg` required) and exits 3 like any empty root; it reads files itself and returns a non-nil error, which
    fails closed like a `TreeRule` error, for anything it cannot read. `n4lint --all` (source roots) leaves it
    out; it runs by name or in a rule list.
+   A rule of another kind whose roots are module roots, not source roots (reference: `rules/duplicatehelper`),
+   sets `Spec.ModuleRoot`: `n4lint --all` leaves it out too.
 2. Add the `Spec()` call to `rules.All()`.
 3. Write the tests first and watch them fail: record every bats run of the old script as a golden case
    (point the suite's lint variable at a wrapper that runs the old script and writes args, exit, stdout,
