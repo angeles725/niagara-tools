@@ -129,8 +129,11 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
   buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
   proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
   `poll/BNPollScheduler.java:48-59`).
-- Owed advisory lints G66 `ndriver-static-collection` and G67 `ndriver-tagless-correlation`
-  (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
+- Advisory lints (both also run by `report-module.sh` on the module root): `lint-ndriver-static-collection.sh`
+  (G66) WARNs a static collection field in a network, device or point-device-ext class, module-local subclasses
+  included `[ev: retro r10-dr3-driver-lints Δ2]`; `lint-ndriver-tagless-correlation.sh` (G67) WARNs a module whose
+  `NMessage` subclasses declare no `getTag()` while no comm config's `getMaxOutstandingTransactions()` returns 1
+  `[ev: retro r10-dr3-driver-lints Δ3]`. [ev: retro n4-course-drivers-bql-ords-files Δ3]
   [ev: retro n4-course-handson-ndriver Δ7]
 
 ### 1.8 · Which driver framework `[ev: corpus B877 §877.6]` [ev: retro r10-dr1-driver-doctrine Δ2]
@@ -320,7 +323,8 @@ carry `statusFlags=true` (or the ext's own override); with the facet absent it i
 overridden in the controller reads `{ok}` in Niagara. With it, polled and COV proxies alike take ALARM, FAULT and
 OVERRIDDEN from the flags; the cost is one extra Status_Flags read per poll, or a metadata read when a COV
 notification omits the flags (corpus B1348 §1348.2 rows 4-7). A dashboard health read is only as good as this facet
-(`types/dashboard.md` § Facade contract). Owed Go lint G36 `bacnet-status-flags` (bog check).
+(`types/dashboard.md` § Facade contract). Check a station with `lint-bacnet-status-flags.sh <station-dir>` (G36): one
+WARN per device counting its Present_Value proxies without the facet `[ev: retro r10-dr3-driver-lints Δ4]`.
 
 **Gotcha:** a write to a DOWN, DISABLED or fatally faulted device is **silently dropped** — `Tuning.write()`
 calls `isOperational()` first and returns without queuing if false. The write is NOT retried unless
