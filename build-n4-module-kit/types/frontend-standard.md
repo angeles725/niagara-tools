@@ -12,7 +12,7 @@ Niagara `BWebServlet` as the only backend. Rules that only constrain one audienc
 ## Profiles — tag every rule `[ev: retro dashboard-deployment-profiles Δ1]` `[ev: retro dashboard-deployment-profiles Δ2]`
 
 One servlet dashboard can serve two audiences. Declare the module's `ui_profile` (BUILD-STATE row +
-module docs, see `BUILD-STATE.md` § How to read this file) before writing a rule or a line of CSS.
+module docs, see the "How to read this file" section of `BUILD-STATE.src.md`; `toolbelt/kit-state.sh build-state` prints the ledger) before writing a rule or a line of CSS.
 This section is the single definition of `ui_profile`; `BUILD-STATE.md` and `dashboard.md` reference it.
 `[ev: retro dashboard-deployment-profiles Δ1]`
 

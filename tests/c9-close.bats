@@ -21,6 +21,16 @@ setup() {
   BASE="c0447c2"            # campaign-9 base = the campaign-8 close commit; no-trailer sweep range base
 }
 _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9_CLOSE=1 at close"; }
+# _gen_state — BUILD-STATE.md and retros/INDEX.md are generated, not committed (R10-D1): pin the kit-state
+# output instead of a possibly stale local file. [ev: retro ledger-generated-not-committed]
+_gen_state() {
+  bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" build-state > "$BATS_TEST_TMPDIR/BUILD-STATE.md"
+  bash "$REPO/build-n4-module-kit/toolbelt/kit-state.sh" retro-index > "$BATS_TEST_TMPDIR/INDEX.md"
+  # Non-vacuous: an empty or header-only output would pass a "zero pending rows" pin.
+  [ -s "$BATS_TEST_TMPDIR/BUILD-STATE.md" ]
+  [ -s "$BATS_TEST_TMPDIR/INDEX.md" ]
+  grep -qE '^\| [^|]+\.md \| .*\| *folded *\|' "$BATS_TEST_TMPDIR/INDEX.md"
+}
 
 # ===========================================================================
 # META close invariants (SC5, SC6, SC7, SC10-SC13 close aspects)
@@ -28,15 +38,17 @@ _close() { [ -n "${C9_CLOSE:-}" ] || skip "campaign-9 close gate — run with C9
 
 @test "CLOSE-sweeps (SC-12): sweep-fold-audit --strict exit 0 AND sweep-build-state exit 0" {
   _close
-  run "$KIT/toolbelt/sweep-fold-audit.sh" --strict "$KIT/retros/INDEX.md" "$KIT"
+  _gen_state
+  run "$KIT/toolbelt/sweep-fold-audit.sh" --strict "$BATS_TEST_TMPDIR/INDEX.md" "$KIT"
   [ "$status" -eq 0 ]
-  run bash "$KIT/toolbelt/sweep-build-state.sh" "$KIT/BUILD-STATE.md" "$KIT/retros" "$KIT/retros/INDEX.md"
+  run bash "$KIT/toolbelt/sweep-build-state.sh" "$BATS_TEST_TMPDIR/BUILD-STATE.md" "$KIT/retros" "$BATS_TEST_TMPDIR/INDEX.md"
   [ "$status" -eq 0 ]
 }
 
 @test "CLOSE-index-pending (SC-12): retros/INDEX.md has ZERO '| pending |' rows after the fold PR" {
   _close
-  [ "$(grep -c '| pending |' "$KIT/retros/INDEX.md")" -eq 0 ]
+  _gen_state
+  [ "$(grep -c '| pending |' "$BATS_TEST_TMPDIR/INDEX.md")" -eq 0 ]
 }
 
 @test "CLOSE-version (SC-12): VERSION == 0.20.0" {

@@ -2,10 +2,11 @@
 # gen-retro-index.sh — generates retros/INDEX.md, the retro promotion registry, from each retro's header.
 #
 # INDEX.md used to be hand-edited: every kit PR appended or flipped a row, so parallel sessions
-# conflicted on it and "keep both sides" resolutions flipped rows. The index is now DERIVED: one row
-# per retros/*.md (INDEX.md excluded) built from header comments in the retro itself. To add or flip
-# a row, edit the retro header and regenerate; on a merge conflict in INDEX.md, regenerate.
-# [ev: retro generated-retro-index]
+# conflicted on it and "keep both sides" resolutions flipped rows. The index is DERIVED: one row
+# per retros/*.md (INDEX.md excluded) built from header comments in the retro itself
+# [ev: retro generated-retro-index], and it is NOT committed (.gitignore), so two PRs that each add a
+# retro never conflict on it [ev: retro ledger-generated-not-committed]. To add or flip a row, edit the
+# retro header; readers run toolbelt/kit-state.sh retro-index.
 #
 # Header contract (column-0 comments at the top of every retro):
 #   <!-- review-status: pending|folded -->   within lines 1-5 (first word after the colon)
@@ -18,11 +19,11 @@
 # stable entry point: go/go-tool.sh `go_tool_bin` builds go/bin/gen-retro-index when the binary is
 # missing or older than a Go source, then this script execs it with its ../ as the default kit root.
 # Needs `go` on PATH to build. [ev: retro go-ci-steps]
-# Mutation pins (GRI-stale, GRI-order, GRI-comment, GRI-required) live in the Go source and tests.
+# Mutation pins (GRI-order, GRI-comment, GRI-required) live in the Go source and tests.
 #
 # Usage:  gen-retro-index.sh [--check] [<kit-root>]     (default kit root: this script's ../)
-# Exits:  0 written / index fresh · 1 stale or missing index under --check, or retro-header
-#         violation · 3 usage/env, including no Go toolchain or a failed build (nothing written)
+# Exits:  0 written / headers valid under --check · 1 retro-header violation (nothing written)
+#         · 3 usage/env, including no Go toolchain or a failed build
 # VCS-free by design (kit-links L2).
 set -u
 

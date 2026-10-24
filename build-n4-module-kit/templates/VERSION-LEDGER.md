@@ -5,7 +5,7 @@ Template from the build-n4-module kit (`templates/VERSION-LEDGER.md`). Copy it t
 client, covering every module of that client. `[ev: retro panccadia-version-defect-ledger Δ1]`
 
 **When to write:** at every build or deploy hand-off — the same moment the module's deployed-baseline fields in the
-kit `BUILD-STATE.md` are updated — never reconstructed later from `git log`. A feature doc does not close until its
+kit ledger (`BUILD-STATE.src.md`, read with `toolbelt/kit-state.sh build-state`) are updated — never reconstructed later from `git log`. A feature doc does not close until its
 version rows are here (`BUILD-LOOP.md` §7).
 
 **When to read:** before the first write of any new session on this client (`BUILD-LOOP.md` §0). Compare the

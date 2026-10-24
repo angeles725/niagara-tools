@@ -100,16 +100,6 @@ func TestIsRegularAndIsDir(t *testing.T) {
 	}
 }
 
-// index is a File in the index style (retros/INDEX.md, toolbelt/INDEX.md).
-func index(path string) File {
-	return File{Tool: "gen-x", Path: path, Content: "a\nb\n", TrimNewlines: true}
-}
-
-// ledger is a File in the ledger style (BUILD-STATE.md).
-func ledger(path string) File {
-	return File{Tool: "gen-x", Path: path, Content: "a\nb\n", StaleNote: " vs ledger.d/", Atomic: true}
-}
-
 func write(t *testing.T, path, text string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
@@ -117,158 +107,65 @@ func write(t *testing.T, path, text string) {
 	}
 }
 
-func TestFileCheck(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name      string
-		file      func(string) File
-		committed string // "" leaves the target missing
-		code      int
-		out, errs string // errs is a prefix: the diff follows a stale line
-	}{
-		{"index fresh", index, "a\nb\n", ExitOK, "gen-x: %s is fresh\n", ""},
-		{"index ignores trailing newlines", index, "a\nb\n\n\n", ExitOK, "gen-x: %s is fresh\n", ""},
-		{"index ignores a missing final newline", index, "a\nb", ExitOK, "gen-x: %s is fresh\n", ""},
-		{"index stale", index, "a\nc\n", ExitStale, "", "gen-x: %s is stale; run gen-x.sh and commit the result\n"},
-		{"index missing", index, "", ExitStale, "", "gen-x: %s is missing; run gen-x.sh\n"},
-		{"ledger fresh", ledger, "a\nb\n", ExitOK, "gen-x: %s is fresh\n", ""},
-		{"ledger counts trailing newlines", ledger, "a\nb\n\n", ExitStale, "", "gen-x: %s is stale vs ledger.d/; run gen-x.sh and commit the result\n"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			path := filepath.Join(t.TempDir(), "OUT.md")
-			if tt.committed != "" {
-				write(t, path, tt.committed)
-			}
-			o, e, s := stdio("")
-			code := tt.file(path).Run(true, s)
-			wantOut, wantErr := strings.ReplaceAll(tt.out, "%s", path), strings.ReplaceAll(tt.errs, "%s", path)
-			if code != tt.code || o.String() != wantOut || !strings.HasPrefix(e.String(), wantErr) || (wantErr == "") != (e.String() == "") {
-				t.Errorf("got (%d, %q, %q), want (%d, %q, prefix %q)", code, o.String(), e.String(), tt.code, wantOut, wantErr)
-			}
-			if b, _ := os.ReadFile(path); string(b) != tt.committed {
-				t.Errorf("--check changed the target to %q", b)
-			}
-		})
-	}
-}
-
-func TestFileCheckShowsTheDiff(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), "OUT.md")
-	write(t, path, "a\nc\n")
-	_, e, s := stdio("")
-	index(path).Run(true, s)
-	if !strings.Contains(e.String(), "< b\n---\n> c\n") {
-		t.Errorf("stale --check printed no generated-vs-committed diff: %q", e.String())
-	}
-}
-
-func TestFileCheckNonRegularIndexIsMissing(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), "OUT.md")
-	if err := os.Mkdir(path, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	_, e, s := stdio("")
-	if code := index(path).Run(true, s); code != ExitStale || e.String() != "gen-x: "+path+" is missing; run gen-x.sh\n" {
-		t.Errorf("got (%d, %q)", code, e.String())
-	}
-}
+func file(path string) File { return File{Tool: "gen-x", Path: path, Content: "a\nb\n"} }
 
 func TestFileWrite(t *testing.T) {
 	t.Parallel()
-	for _, file := range []func(string) File{index, ledger} {
-		path := filepath.Join(t.TempDir(), "OUT.md")
-		write(t, path, "old\n")
-		if err := os.Chmod(path, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		o, e, s := stdio("")
-		f := file(path)
-		if code := f.Run(false, s); code != ExitOK || o.String() != "gen-x: wrote "+path+"\n" || e.String() != "" {
-			t.Errorf("atomic=%v: got (%d, %q, %q)", f.Atomic, code, o.String(), e.String())
-		}
-		st, err := os.Stat(path)
-		if b, _ := os.ReadFile(path); err != nil || string(b) != "a\nb\n" || st.Mode().Perm() != 0o600 {
-			t.Errorf("atomic=%v: target is %q with mode %v, want the content and the old mode 0600", f.Atomic, b, st.Mode().Perm())
-		}
-		if matches, _ := filepath.Glob(path + ".tmp.*"); len(matches) != 0 {
-			t.Errorf("atomic=%v: temporary files left behind: %v", f.Atomic, matches)
-		}
+	path := filepath.Join(t.TempDir(), "OUT.md")
+	write(t, path, "old\n")
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	o, e, s := stdio("")
+	if code := file(path).Write(s); code != ExitOK || o.String() != "gen-x: wrote "+path+"\n" || e.String() != "" {
+		t.Errorf("got (%d, %q, %q)", code, o.String(), e.String())
+	}
+	st, err := os.Stat(path)
+	if b, _ := os.ReadFile(path); err != nil || string(b) != "a\nb\n" || st.Mode().Perm() != 0o600 {
+		t.Errorf("target is %q with mode %v, want the content and the old mode 0600", b, st.Mode().Perm())
+	}
+	if matches, _ := filepath.Glob(path + ".tmp.*"); len(matches) != 0 {
+		t.Errorf("temporary files left behind: %v", matches)
 	}
 }
 
 func TestFileWriteFailure(t *testing.T) {
 	t.Parallel()
-	for _, file := range []func(string) File{index, ledger} {
-		path := filepath.Join(t.TempDir(), "no-such-dir", "OUT.md")
-		o, e, s := stdio("")
-		f := file(path)
-		if code := f.Run(false, s); code != ExitEnv || o.String() != "" || !strings.HasPrefix(e.String(), "gen-x: cannot write "+path+": ") {
-			t.Errorf("atomic=%v: got (%d, %q, %q)", f.Atomic, code, o.String(), e.String())
-		}
+	path := filepath.Join(t.TempDir(), "no-such-dir", "OUT.md")
+	o, e, s := stdio("")
+	if code := file(path).Write(s); code != ExitEnv || o.String() != "" || !strings.HasPrefix(e.String(), "gen-x: cannot write "+path+": ") {
+		t.Errorf("got (%d, %q, %q)", code, o.String(), e.String())
 	}
 }
 
-// TestFileSameTrimAsymmetry pins R3-asymmetric-trim (#344): under TrimNewlines the committed
-// file loses ALL trailing newlines but the generated content only ONE. Every generator renders
-// content ending in exactly one "\n" (pinned per generator), so the asymmetry only shows for
-// content ending in "\n\n": such a file is never fresh, not even right after a write.
-func TestFileSameTrimAsymmetry(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		content, committed string
-		same               bool
-	}{
-		{"a\nb\n", "a\nb\n", true},
-		{"a\nb\n", "a\nb", true},
-		{"a\nb\n", "a\nb\n\n\n", true},
-		{"a\nb", "a\nb\n", true},
-		{"a\nb\n\n", "a\nb\n\n", false}, // what a write stores is stale: content keeps one "\n"
-		{"a\nb\n\n", "a\nb\n", false},
-	}
-	for _, tt := range tests {
-		f := File{Content: tt.content, TrimNewlines: true}
-		if got := f.same(tt.committed); got != tt.same {
-			t.Errorf("same(content %q, committed %q) = %v, want %v", tt.content, tt.committed, got, tt.same)
-		}
-		f.TrimNewlines = false // ledger style: byte-exact
-		if got := f.same(tt.committed); got != (tt.content == tt.committed) {
-			t.Errorf("byte-exact same(content %q, committed %q) = %v", tt.content, tt.committed, got)
-		}
-	}
-}
-
-// TestFileWriteReadOnlyTarget pins how a read-only target is written (R4-atomic-mode-umask, #344):
-// the plain write fails (exit 3, target untouched); the atomic write replaces it through a
-// temporary file in the writable directory and keeps the read-only mode.
+// TestFileWriteReadOnlyTarget pins how a read-only target is written (R4-atomic-mode-umask, #344): the
+// write replaces it through a temporary file in the writable directory and keeps the read-only mode.
 func TestFileWriteReadOnlyTarget(t *testing.T) {
 	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("root writes into a mode-444 file")
 	}
-	for _, file := range []func(string) File{index, ledger} {
-		path := filepath.Join(t.TempDir(), "OUT.md")
-		write(t, path, "old\n")
-		if err := os.Chmod(path, 0o444); err != nil {
-			t.Fatal(err)
-		}
-		o, e, s := stdio("")
-		f := file(path)
-		code := f.Run(false, s)
-		b, _ := os.ReadFile(path)
-		st, err := os.Stat(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		switch {
-		case f.Atomic && (code != ExitOK || string(b) != "a\nb\n" || st.Mode().Perm() != 0o444 || e.String() != ""):
-			t.Errorf("atomic: got (%d, %q, %q), target %q mode %v", code, o.String(), e.String(), b, st.Mode().Perm())
-		case !f.Atomic && (code != ExitEnv || string(b) != "old\n" || o.String() != "" ||
-			!strings.HasPrefix(e.String(), "gen-x: cannot write "+path+": ")):
-			t.Errorf("plain: got (%d, %q, %q), target %q", code, o.String(), e.String(), b)
-		}
+	path := filepath.Join(t.TempDir(), "OUT.md")
+	write(t, path, "old\n")
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	o, e, s := stdio("")
+	code := file(path).Write(s)
+	b, _ := os.ReadFile(path)
+	st, err := os.Stat(path)
+	if err != nil || code != ExitOK || string(b) != "a\nb\n" || st.Mode().Perm() != 0o444 || e.String() != "" {
+		t.Errorf("got (%d, %q, %q), target %q", code, o.String(), e.String(), b)
+	}
+}
+
+func TestShowDiff(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "OUT.md")
+	write(t, path, "a\nc\n")
+	var e strings.Builder
+	ShowDiff("a\nb\n", path, &e)
+	if !strings.Contains(e.String(), "< b\n---\n> c\n") {
+		t.Errorf("ShowDiff printed no generated-vs-file diff: %q", e.String())
 	}
 }
