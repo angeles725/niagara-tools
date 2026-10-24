@@ -60,8 +60,9 @@ Applies to all module types. Each item is proven from real builds (DashboardPan/
   defrost types and per-site defaults sit in one named table (a constants class, a `BFacets`/config slot set, or a
   JSON/CSV resource), and control and render code reads that table. Inline site data is copied into every branch
   that needs it and makes the module unusable for a second site. Review check: a literal room count, ORD, IP or site
-  name outside the table is a finding. Facade side: `types/dashboard.md` § Facade contract; owed advisory Go lint G42
-  `inline-site-literal`. `[ev: retro modular-line-efficient-quality Δ2]`
+  name outside the table is a finding. Facade side: `types/dashboard.md` § Facade contract; advisory lint
+  `toolbelt/lint-inline-site-literal.sh` (G42; mark the table with a first-line `// site-table` or pass `--site-table`).
+  `[ev: retro modular-line-efficient-quality Δ2]`
 
 ## Schema / upgrade safety
 - **Templates (`.ntpl`) and template modules:** what breaks when a deployed template or its module is upgraded: `types/logic-authoring.md` § What breaks on a module or template upgrade.
