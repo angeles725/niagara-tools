@@ -3,7 +3,6 @@ package verifymodule
 import (
 	"archive/zip"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/jarversion"
@@ -109,12 +108,9 @@ func (r *run) types() bool {
 	}
 	missing, firstMiss := 0, ""
 	for _, cls := range r.jar.types {
-		// grep -qx "$f": f is a basic regex, so its "." matches any byte.
-		parts := strings.Split(strings.ReplaceAll(cls, ".", "/")+".class", ".")
-		for i := range parts {
-			parts[i] = regexp.QuoteMeta(parts[i])
-		}
-		if r.jar.list.count(regexp.MustCompile("^"+strings.Join(parts, ".")+"$")) == 0 {
+		// The exact entry; the bash's grep -qx read it as a basic regex, its "." matching any byte
+		// (declared difference, truth-types-exact).
+		if !r.jar.has(strings.ReplaceAll(cls, ".", "/") + ".class") {
 			missing++
 			if firstMiss == "" {
 				firstMiss = cls
