@@ -36,6 +36,22 @@ case byte for byte apart from the new `@kind` header (and canonical tree order /
 | Δ3 | **Pin every file the recorded script sources** (`EXTRA` in `record.env`): the checksum of the main script alone let a recording run without `lib/signing-block.sh`. | `BUILD-LOOP.md` § 5 golden recordings | `[ev: go/internal/preflight/testdata/record.env]` |
 | Δ4 | **A golden case's environment is only what it declares** (PATH, HOME, LC_ALL defaulted): commissioning-verify cases ran with the host PATH and HOME; the wrappers' Go binaries are built once before the cases, not under the case PATH. | `BUILD-LOOP.md` § 5 golden recordings | `[ev: go/internal/commissioningverify/golden_test.go]` |
 
+## Review notes (independent review of the preflight migration, applied to all three)
+- Environment: every case now gets `HOME=<case dir>` and `LC_ALL=C` unless it declares them; the old private
+  recordings had both unset. All recorded cases re-recorded byte-identical under the defaults; no migrated port
+  reads HOME or LC_ALL (preflight's `bats-pf2-home` already declares `HOME=/nonexistent`; commissioning-verify adds
+  `LC_ALL=C` to its lints itself), so no extra case was needed.
+- `CHDIR=1`: the bash was always recorded with the case dir as cwd (all three old recorders `cd`ed there); preflight's
+  old Go loop did not chdir. Every truth-* case (preflight 6, new-retro 11, commissioning-verify 11) passes with and
+  without `CHDIR=1`, so none depends on the cwd by accident.
+- The root opt-in is one variable now: `PREFLIGHT_GOLDEN_ALLOW_ROOT_SKIP` and `CV_GOLDEN_ALLOW_ROOT_SKIP` became
+  `GOLDEN_ALLOW_ROOT_SKIP` (`golden.RootOptIn`); `golden.Unreadable` uses the same verdict instead of a silent skip.
+- The deleted recipes stay readable in history: `git show a999bac8^:go/internal/preflight/testdata/record/cases.sh`
+  and `git show ba3db050^:go/internal/newretro/testdata/record/cases.sh` (the dated r10-preflight-go and
+  go-new-retro retros still name them); commissioning-verify's `TestRecord` is at
+  `git show 4d9ca3cd^:go/internal/commissioningverify/record_test.go`.
+- `recordTools` (preflight `golden_test.go`) is pinned to setup.sh's `TOOLS` by `TestRecordToolsMatchSetup`.
+
 ## Follow-ups
 - `go/internal/wiringmap` (unmerged branch) still has a private loop: migrate it once it lands on main.
 - `go/internal/slotcoverage` and `go/internal/verifymodule` already use `golden.RunMain` (no private loop) and now get

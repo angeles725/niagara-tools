@@ -35,7 +35,10 @@ type Runner struct {
 	Main func(env, args []string, s cli.Stdio) int
 }
 
-// defaultEnv is the environment a case gets for each of these variables it does not declare.
+// defaultEnv is the environment a case gets for each of these variables it does not declare (record.sh gives
+// the bash run the same). The private recorders before the Runner left HOME and LC_ALL unset; the preflight,
+// commissioning-verify and new-retro cases re-recorded byte-identical under these defaults, and none of those
+// ports reads HOME or LC_ALL itself (commissioning-verify adds LC_ALL=C to its lints' env on its own).
 var defaultEnv = map[string]string{"PATH": "/usr/bin:/bin", "HOME": "@DIR@", "LC_ALL": "C"}
 
 // Run replays every case of r.Dir as a subtest, in name order, one at a time.

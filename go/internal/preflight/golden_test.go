@@ -3,6 +3,9 @@ package preflight
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
@@ -20,6 +23,22 @@ func TestGolden(t *testing.T) {
 	golden.Runner{Cases: 125, Setup: linkTools, Main: func(env, args []string, s cli.Stdio) int {
 		return Command(Host{Output: System.Output, Env: env})(args, s)
 	}}.Run(t)
+}
+
+// TestRecordToolsMatchSetup pins recordTools to the TOOLS list of testdata/setup.sh: the replay and the recording
+// link the same tools.
+func TestRecordToolsMatchSetup(t *testing.T) {
+	b, err := os.ReadFile("testdata/setup.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`(?m)^TOOLS=\(([^)]*)\)$`).FindSubmatch(b)
+	if m == nil {
+		t.Fatal("testdata/setup.sh has no TOOLS=(...) line")
+	}
+	if got := strings.Fields(string(m[1])); !slices.Equal(got, recordTools) {
+		t.Errorf("setup.sh TOOLS %q, recordTools %q", got, recordTools)
+	}
 }
 
 // linkTools gives the case the <dir>/.tools testdata/setup.sh gives it.
