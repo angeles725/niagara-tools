@@ -85,15 +85,19 @@ point it at the client tree that `orient-guard.sh` accepts, never the user home.
 
 1. **`chmod +x gradlew`** — the scaffold copies the Gradle wrapper but does not set the execute
    bit; `./gradlew` is non-functional without it.
-2. **Align `gradle.properties` + `settings.gradle.kts` to a SIBLING module of the same SDK family:**
-   copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
-   `org.gradle.java.installations.paths` from an existing sibling that deploys to the same
-   station. Do NOT leave the scaffold's commented-out (auto-detect) JDK/node block: a commented
-   block builds in WSL (where `build.sh` overrides the path via `-P`) but fails reproducibility
-   on a Windows `gradlew` build. Also align `gradlePluginVersion` / `settingsPluginVersion` in
-   `settings.gradle.kts` to the sibling's SDK family (each Niagara install ships exactly one
-   plugin version — see `build-verify.md §Build target & plugin version`). For a logic-only
-   module with no `-ux` profile the node/JDK lines may stay commented.
+2. **Set the host build-location keys once per machine, in the user-level `gradle.properties`:**
+   `niagara_home`, `niagara_user_home`, `nodeHome`, and `org.gradle.java.installations.paths` go in
+   `~/.gradle/gradle.properties` in WSL/Linux, `%USERPROFILE%\.gradle\gradle.properties` on Windows (`$GRADLE_USER_HOME/gradle.properties` when `GRADLE_USER_HOME` is set),
+   never in the repository; the repository keeps only the machine-independent
+   `org.gradle.java.installations.auto-detect=false` (lint-structure L12). Gradle reads that file before the build root's `gradle.properties` and a command-line `-P` beats both, so `build.sh -P…` keeps working (`[ev: https://docs.gradle.org/current/userguide/build_environment.html, read 2026-10-24]`).
+   lint-structure L10 WARNs any of the four keys left in a client `gradle.properties`. Also align
+   `gradlePluginVersion` / `settingsPluginVersion` in `settings.gradle.kts` to a sibling of the same
+   SDK family (each Niagara install ships exactly one plugin version — see
+   `build-verify.md §Build target & plugin version`). `[ev: retro r10-user-level-gradle-keys Δ1]`
+   > **Superseded (2026-10-24, R10-D8):** "copy `niagara_home`, `niagara_user_home`, `nodeHome`, and
+   > `org.gradle.java.installations.paths` from an existing sibling … Do NOT leave the scaffold's
+   > commented-out (auto-detect) JDK/node block: a commented block … fails reproducibility on a Windows
+   > `gradlew` build." The user-level file gives the Windows build its paths without committing them.
 3. **Run `toolbelt/preflight.sh` + first build:** `preflight.sh <niagara_home> <gradle-root>`
    validates the environment (§0.b); then `toolbelt/build.sh <group-dir> <MOD>` runs the first
    full clean+slotomatic+jar+verify cycle.
