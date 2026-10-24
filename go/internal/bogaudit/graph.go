@@ -167,7 +167,7 @@ func (b *builder) start(e xmlsrc.Element) {
 		case !e.Empty && !hasH:
 			b.stack = append(b.stack, frame{kind: other, path: parent.path})
 		}
-	case t == "b:Link" && !e.Empty:
+	case isLinkType(t) && !e.Empty:
 		b.cur = link{}
 		if c := b.nearest(); c != nil {
 			b.cur.container, b.cur.hasContainer = c.handle, true
@@ -203,6 +203,12 @@ func (b *builder) start(e xmlsrc.Element) {
 		}
 		b.stack = append(b.stack, frame{kind: other, path: path})
 	}
+}
+
+// isLinkType is a link record: a b:Link or a b:ConversionLink (a link with a converter child, e.g.
+// EnumToStatusBoolean). The python scanner knew only t='b:Link' and lost every conversion link.
+func isLinkType(t string) bool {
+	return strings.HasSuffix(t, ":Link") || strings.HasSuffix(t, ":ConversionLink")
 }
 
 // writableType is a proxy point type the audit treats as a writable (CHECK8, CHECK11).

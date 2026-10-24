@@ -357,6 +357,24 @@ XML
   [[ "$output" != *"commented"* ]] && [[ "$output" != *"CHECK12"* ]]
 }
 
+@test "BA16: a b:ConversionLink is a link (CHECK11 sees an own output fed through a converter)" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-conversion-link.txt): the python scanner knew only t='b:Link',
+  # so every converter link (EnumToStatusBoolean, NumberToStatusNumeric) was invisible to CHECK7/9/11/13-20.
+  # Mutation: BA16 -- matching only "b:Link" in isLinkType -> exit 0, no CHECK11 row.
+  _mkbog ba16 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='EvaporatorUnit_1' h='u1' m='CRP=ColdRoomPan' t='CRP:EvaporatorUnit'><p n="fanOut" v="false"/></p>
+ <p n='ro1' h='r1' m='c=control' t='c:BooleanWritable'>
+  <p n='Link' t='b:ConversionLink'><p n="sourceOrd" t="b:Ord" v="h:u1"/><p n="sourceSlotName" v="fanOut"/><p n="targetSlotName" v="in10"/>
+   <p n="converter" m="conv=converters" t="conv:EnumToStatusBoolean"/></p>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba16.bog" --module ColdRoomPan
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"CHECK11  FAIL  ro1  own-module h:u1.fanOut -> writable with no explicit fallback"* ]]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"
