@@ -73,6 +73,8 @@ func TestSpecCases(t *testing.T) {
 			warn(servlet, 3, "ip", "192.168.1.20")},
 		{"spec 4: a site pattern in rc/app.js", map[string]string{app: "var name = \"Room3\";\nvar other = 'Hall';\n"},
 			[]string{"--site-pattern", "Room[0-9]+"}, warn(app, 1, "site", "Room3")},
+		{"a Java char literal is not a site literal", map[string]string{logic: class("BRoomControl", "  char c = 'R';\n  String s = \"R\";\n")},
+			[]string{"--site-pattern", "^R$"}, warn(logic, 4, "site", "R")},
 		{"without --site-pattern a room name is not decidable", map[string]string{app: "var name = \"Room3\";\n"}, nil, ""},
 		{"spec 5: an ORD in a comment", map[string]string{logic: class("BRoomControl", "  // BOrd.make(\"station:|slot:/Rooms/Room1\")\n  /* \"slot:/Rooms/Room2\" */\n"),
 			app: "// fetch('station:|slot:/Rooms/Room1');\n/* \"192.168.1.20\" */\nvar a = 1;\n"}, nil, ""},
