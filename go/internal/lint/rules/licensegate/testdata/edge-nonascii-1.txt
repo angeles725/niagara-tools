@@ -1,0 +1,14 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BS.java --
+package com.x;
+public class BS extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doÄ() { a(); }
+  public void doCafé() { b(); }
+}

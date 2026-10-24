@@ -1,0 +1,8 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 3
+ERROR  lint-license-isoperational-gate  @DIR@/Mod  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- Mod/src/com/x/README.txt --
+x
