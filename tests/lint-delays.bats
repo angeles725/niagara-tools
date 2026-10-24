@@ -251,6 +251,18 @@ only() { rm -f "$ONE"/*.java; cp "$FX/$1" "$ONE/"; }   # isolate one fixture
   [[ "$output" == *"FAIL  lint-delays     $ONE/BG.java:8  unfloored  cannot verify floor of variable: ms"* ]]
 }
 
+@test "LD27: a brace in a helper's string does not stretch its body over the next method's floor" {
+  # Mutation: LD27 -- counting braces in raw text lets open() borrow later()'s Math.max(y, 1L) and pass
+  # Go golden: go/internal/lint/rules/delays/testdata/truth-helper-body-1.txt
+  printf '%s\n' 'package com.x;' 'public class H extends BComponent {' '  static long open(long x) {' '    String s = "{";' \
+    '    return x;' '  }' '  static long later(long y) {' '    return Math.max(y, 1L);' '  }' '  void go(long p) {' \
+    '    Clock.schedule(this, BRelTime.make(open(p)), a, null);' '    Clock.schedule(this, BRelTime.make(later(p)), a, null);' \
+    '  }' '}' > "$ONE/H.java"
+  run "$LD" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  lint-delays     $ONE/H.java:11  zero-floor  helper open has no visible strictly-positive floor" ]
+}
+
 @test "LD-locked: an unreadable sub-directory is an env error (exit 3), never a clean pass" {
   # Mutation: LD-locked -- a raw find walk skips the locked directory and passes clean.
   printf "class A {}\n" > "$ONE/A.java"

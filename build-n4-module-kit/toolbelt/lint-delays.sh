@@ -15,6 +15,8 @@
 #   Math.max      BRelTime.make(Math.max(x, k)): FAIL zero-floor when k <= 0 or k is not a literal.
 #   helper (D2b)  BRelTime.make([Class.]fn(...)): clean when fn is a `static [final] long fn(` method, in any
 #                 file under the root, whose body holds Math.max(.., N>=1), `>= 1`, `< 1 ? 1` or `return 1;`.
+#                 Bodies are javasrc.Methods over comment-free code (fixed 2026-10-24: raw brace counting let a
+#                 "{" in a string stretch a helper over the next method's floor, and a floor in a comment counted).
 #   variable      BRelTime.make(v): the nearest assignment of v (`v = ...`) in the same method or class-level
 #                 lambda body (go/internal/javasrc Scopes) decides: a Math.max floor, a BRelTime literal or a helper
 #                 call; any other value, or no assignment in the body, FAILs unfloored. It never falls through to
@@ -54,6 +56,7 @@
 # Mutation: LD1 -- removes delay-floor check, allowing Math.max(x,0L) pattern to pass instead of FAIL
 # Mutation: LD25 -- walking 50 lines back past the method start lets second() borrow first()'s Math.max(p, 1L)
 # Mutation: LD26 -- walking 80 lines back past the method start lets first()'s ms == 0 guard second()'s call
+# Mutation: LD27 -- counting braces in raw text lets open() borrow later()'s Math.max(y, 1L) and pass
 # Mutation: LD13 -- drop Minutes from the facet_min unit alternation -> makeMinutes MIN reads as unreadable, FAIL
 # Mutation: LD16 -- stop accumulating continuation lines -> a multi-line Clock.schedule( FAILs unfloored
 #
