@@ -133,3 +133,32 @@ func TestRealKit(t *testing.T) {
 		}
 	}
 }
+
+// TestWriteFailureLeavesNoMixedPair: the pair is written as two files; when the second write fails
+// (an unwritable retros/), the BUILD-STATE.md already written is removed, so no reader sees a fresh
+// ledger beside a stale or missing index.
+func TestWriteFailureLeavesNoMixedPair(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a read-only directory")
+	}
+	root := kit(t)
+	if err := os.WriteFile(root+"/retros/INDEX.md", []byte("stale\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(root+"/retros", 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(root+"/retros", 0o755) })
+	code, _, errs := run(root, "--write")
+	if code != gen.ExitEnv || !strings.Contains(errs, "kit-state: cannot write "+root+"/retros/INDEX.md") {
+		t.Errorf("got (%d, %q)", code, errs)
+	}
+	// Mutation: KS-pair -- keeping the first file written leaves a fresh BUILD-STATE.md beside a stale index
+	if _, err := os.Stat(root + "/BUILD-STATE.md"); err == nil {
+		t.Error("BUILD-STATE.md left behind although retros/INDEX.md could not be written")
+	}
+	if !strings.Contains(errs, "kit-state: removed "+root+"/BUILD-STATE.md") {
+		t.Errorf("the removal is not reported: %q", errs)
+	}
+}

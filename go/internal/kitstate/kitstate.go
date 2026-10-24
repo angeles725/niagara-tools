@@ -8,6 +8,7 @@ package kitstate
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/buildstate"
@@ -43,7 +44,7 @@ var order = []string{"build-state", "retro-index"}
 // Main implements `kit-state build-state|retro-index [<kit-root>]` (print the generated file to stdout)
 // and `kit-state --write [build-state|retro-index] [<kit-root>]` (write it, or both, into the kit and
 // print each path written). Every selected file is generated before any is written, so a violation
-// writes nothing. Exits: 0 ok · 1 a fragment / source / retro-header violation · 3 usage or env.
+// writes nothing, and a failed write removes the whole set (writeAll). Exits: 0 ok · 1 a fragment / source / retro-header violation · 3 usage or env.
 func Main(args []string, s cli.Stdio) int {
 	write, names, root, ok := parse(args)
 	if !ok {
@@ -64,12 +65,28 @@ func Main(args []string, s cli.Stdio) int {
 		}
 		contents[i] = c
 	}
-	for i, n := range names {
-		if !write {
-			fmt.Fprint(s.Out, contents[i])
-			continue
+	if !write {
+		for _, c := range contents {
+			fmt.Fprint(s.Out, c)
 		}
+		return gen.ExitOK
+	}
+	return writeAll(names, contents, root, s)
+}
+
+// writeAll writes each generated file in turn. When one write fails, every file of the set is removed
+// (best effort; the ones written before it, and the failed target, which may hold an older version),
+// so a reader never sees a fresh BUILD-STATE.md beside a stale or missing index. Each removal is reported.
+func writeAll(names, contents []string, root string, s cli.Stdio) int {
+	for i, n := range names {
 		if code := views[n].output(tool, root, contents[i]).Write(s); code != gen.ExitOK {
+			// Mutation: KS-pair -- keeping the files already written leaves a mixed pair
+			for _, m := range names {
+				path := views[m].output(tool, root, "").Path
+				if err := os.Remove(path); err == nil {
+					fmt.Fprintf(s.Err, "kit-state: removed %s (the set could not be written whole)\n", path)
+				}
+			}
 			return code
 		}
 	}
