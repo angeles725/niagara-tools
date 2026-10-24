@@ -1,3 +1,4 @@
+declared difference: every listed .java is read whole; the bash split the list on blanks (xargs), so "src/my dir/BS.java" was never read and its OPERATOR slot spaced was not MISSING
 -- args --
 per-slot
 @DIR@/module-include.xml
@@ -7,6 +8,7 @@ per-slot
 exit 1
 pct=0.0 (per-slot)
 MISSING plain
+MISSING spaced
 STALE fanMode
 -- stderr --
 -- module-include.xml --

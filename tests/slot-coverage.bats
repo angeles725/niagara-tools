@@ -328,3 +328,13 @@ FX_TD="$(cd "$BATS_TEST_DIRNAME" && pwd)/fixtures/slot-coverage/type-display"
   [[ "$output" == *"setpoint"* ]]          # anchor: the real tree was scanned
   [[ "$output" != *"ghostSlot"* ]]
 }
+
+@test "SP-path-space: per-slot reads a source whose path holds a blank (its OPERATOR slot is MISSING)" {
+  # Mutation: SP-path-space -- splitting the file list on blanks again (xargs) drops spacedSlot.
+  local src="$BATS_TEST_TMPDIR/my src"
+  mkdir -p "$src/a b"
+  printf '@NiagaraProperty(name = "spacedSlot", flags = Flags.OPERATOR)\n' > "$src/a b/BS.java"
+  run "$SC" per-slot "$FX_PS/module-include.xml" "$FX_PS/module.lexicon" "$src"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"MISSING spacedSlot"* ]]
+}

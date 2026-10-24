@@ -16,21 +16,13 @@ var (
 	rangeTag = grepLongest(`@Range\("[^"]+"\)`)
 )
 
-// xargsWords is how `printf '%s\n' "$files" | xargs` splits the file list: on blanks and newlines.
-func xargsWords(files []string) []string {
-	return strings.FieldsFunc(strings.Join(files, "\n"), func(r rune) bool { return r == ' ' || r == '\t' || r == '\n' })
-}
-
-// slots runs the awk scan of the per-slot mode over words, one awk over all of them: an annotation open at
-// the end of one file carries into the next, a directory is skipped, and the first word awk cannot open
-// ends the scan (gawk's fatal "cannot open file"). all holds every named annotation, op the OPERATOR ones.
-func slots(words []string) (all, op []string) {
+// slots runs the awk scan of the per-slot mode over files, one awk over all of them: an annotation open at
+// the end of one file carries into the next, and the first file awk cannot open ends the scan (gawk's
+// fatal "cannot open file"). all holds every named annotation, op the OPERATOR ones.
+func slots(files []string) (all, op []string) {
 	scan := javasrc.PropertyScan{}
-	for _, w := range words {
-		if isDir(w) {
-			continue
-		}
-		data, err := os.ReadFile(w)
+	for _, f := range files {
+		data, err := os.ReadFile(f)
 		if err != nil {
 			break
 		}
@@ -52,14 +44,11 @@ func slots(words []string) (all, op []string) {
 	return all, op
 }
 
-// rangeTags are the @Range("tag") values grep -oh finds in words; a word grep cannot read is skipped.
-func rangeTags(words []string) []string {
+// rangeTags are the @Range("tag") values grep -oh finds in files; a file grep cannot read is skipped.
+func rangeTags(files []string) []string {
 	var out []string
-	for _, w := range words {
-		if isDir(w) {
-			continue
-		}
-		for _, m := range grepO(rangeTag, readQuiet(w)) {
+	for _, f := range files {
+		for _, m := range grepO(rangeTag, readQuiet(f)) {
 			out = append(out, strings.TrimSuffix(strings.TrimPrefix(m, `@Range("`), `")`))
 		}
 	}
@@ -94,12 +83,11 @@ func perSlot(xmlPath, lexPath, src string, s cli.Stdio) int {
 		fmt.Fprintf(s.Err, "slot-coverage: cannot list every file under %s: %s\n", src, err)
 		return 3
 	}
-	words := xargsWords(files)
-	allSlots, opSlots := slots(words)
+	allSlots, opSlots := slots(files)
 	lexKeys := subst(sortU(trimKeys(lexiconKeys(grepRead(lexPath, 1, s)))))
 	lexSlots, lexDotted := filterDot(lexKeys, false), filterDot(lexKeys, true)
 	types := typeNames(grepRead(xmlPath, 1, s))
-	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), types...), rangeTags(words)...)))
+	known := sortU(nonEmpty(append(append(append([]string(nil), allSlots...), types...), rangeTags(files)...)))
 	opSorted := sortU(opSlots)
 	var missing, stale []string
 	if lexSlots != "" {
