@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/lint"
-	"github.com/angeles725/niagara-tools/go/internal/strerror"
 )
 
 var (
@@ -58,10 +57,9 @@ func (r *run) phantomDep() bool {
 		r.row("SKIP", "phantom-dep", "no META-INF/module.xml")
 		return true
 	}
-	data, err := os.ReadFile(gkt)
-	if err != nil { // both greps had no 2>/dev/null
-		msg := "grep: " + gkt + ": " + strerror.Text(err) + "\n"
-		fmt.Fprint(r.s.Err, msg+msg)
+	data, ok := r.readFile(gkt)
+	if !ok {
+		return true
 	}
 	var declared []string
 	for _, re := range []*regexp.Regexp{gradleDepRe, gradleProjectRe} {
@@ -144,7 +142,11 @@ func (r *run) crossModuleType() bool {
 	}
 	var types []string
 	for _, f := range r.javaFiles(pd + "/src") {
-		for _, m := range r.text(f).only(typeValueRe) {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		for _, m := range t.only(typeValueRe) {
 			types = append(types, typeAttrRe.FindStringSubmatch(m)[1])
 		}
 	}
@@ -188,7 +190,11 @@ func (r *run) subscriptionLeak() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		if t := r.text(f); t.count(subscriberRe) > 0 && t.count(stoppedRe) == 0 {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		if t.count(subscriberRe) > 0 && t.count(stoppedRe) == 0 {
 			r.row("WARN", "subscription-leak", f+": TypeSubscriber without stopped() — unsubscribeAll() never called, space-map leaks until restart")
 			warned = true
 		}
@@ -211,7 +217,10 @@ func (r *run) slotWall() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t := r.text(f)
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
 		count := t.count(niagaraPropertyRe)
 		if count <= 15 {
 			continue

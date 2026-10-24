@@ -29,6 +29,7 @@ type run struct {
 	failed                     bool
 	npass, nfail, nskip, nwarn int
 	walkErrs                   []string // every "cannot list every file" line already printed
+	unread                     string   // the "cannot read" line of an input no check may give a verdict on
 	texts                      map[string]grepText
 }
 
@@ -118,6 +119,11 @@ func gate(args []string, s cli.Stdio) int {
 			if !c(r) {
 				r.failed = true
 			}
+			if r.unread != "" {
+				fmt.Fprintln(s.Err, r.unread)
+				jf.close()
+				return 3
+			}
 		}
 		jf.close()
 	}
@@ -137,6 +143,14 @@ func gate(args []string, s cli.Stdio) int {
 		return 1
 	}
 	return 0
+}
+
+// cannotRead ends the run after the current check: an input the gate cannot read gets no verdict, exit 3,
+// as an unreadable jar does (the bash read it as empty or grepped it into a verdict). what names the input.
+func (r *run) cannotRead(what, reason string) {
+	if r.unread == "" {
+		r.unread = "verify-module: cannot read " + what + ": " + reason
+	}
 }
 
 // row prints one report row for the current jar and counts it.

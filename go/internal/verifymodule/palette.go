@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/angeles725/niagara-tools/go/internal/jarversion"
 )
 
 // paletteScan is the bash palette_scan awk over the module.palette text: one finding per line, ENTRY (a
@@ -98,12 +100,26 @@ func countOf(rows []string, want ...string) int {
 	return n
 }
 
+// palText is the jar's module.palette; false (and the run ends, exit 3) when the entry cannot be read.
+func (r *run) palText() (string, bool) {
+	pal, err := r.jar.text("module.palette")
+	if err != nil {
+		r.cannotRead("module.palette in "+r.jar.path, jarversion.Reason(err))
+		return "", false
+	}
+	return pal, true
+}
+
 func (r *run) palette() bool {
 	if !r.jar.has("module.palette") {
 		r.row("SKIP", "palette", "no module.palette")
 		return true
 	}
-	scan, ok, folders := paletteScan(r.jar.text("module.palette")), true, []string{}
+	pal, ok := r.palText()
+	if !ok {
+		return true
+	}
+	scan, folders := paletteScan(pal), []string{}
 	for _, f := range scan {
 		if bad, isBad := strings.CutPrefix(f, "BADTYPE "); isBad {
 			r.row("FAIL", "palette-type", "module.palette t=\""+bad+"\" — write t=\"<symbol>:<Type>\" with m=\"<symbol>=<module>\" declared once [ev: retro n4-course-authoring-files-and-libraries Δ3]")
@@ -149,7 +165,11 @@ func (r *run) wbScaffold() bool {
 		return true
 	}
 	classes := r.jar.list.count(classEntryRe)
-	entries := countOf(paletteScan(r.jar.text("module.palette")), "ENTRY", "BADENTRY")
+	pal, ok := r.palText()
+	if !ok {
+		return true
+	}
+	entries := countOf(paletteScan(pal), "ENTRY", "BADENTRY")
 	if classes == 0 && entries == 0 {
 		msg := "empty -wb jar: 0 classes, 0 palette entries — nothing packaged (add src or a palette entry)"
 		if r.strict {

@@ -45,25 +45,29 @@ func (r *run) javaFiles(root string) []string {
 	return files
 }
 
-// text is a source file as the bash greps read it with 2>/dev/null: empty when it cannot be read.
-func (r *run) text(path string) grepText {
+// text is a source file as grep reads it, read once per run; false (and the run ends, exit 3) when it
+// cannot be read. The bash read it with 2>/dev/null, as empty.
+func (r *run) text(path string) (grepText, bool) {
 	if t, ok := r.texts[path]; ok {
-		return t
+		return t, true
 	}
-	data, _ := os.ReadFile(path)
+	data, ok := r.readFile(path)
+	if !ok {
+		return grepText{}, false
+	}
 	t := newGrepText(string(data))
 	r.texts[path] = t
-	return t
+	return t, true
 }
 
-// grepCount is `grep -c <re> path` with its stderr: "" and grep's error line when path cannot be read.
-func (r *run) grepCount(re *regexp.Regexp, path string) string {
+// readFile is path's bytes; false (and the run ends, exit 3) when it cannot be read.
+func (r *run) readFile(path string) ([]byte, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(r.s.Err, "grep: %s: %s\n", path, strerror.Text(err))
-		return ""
+		r.cannotRead(path, strerror.Text(err))
+		return nil, false
 	}
-	return itoa(newGrepText(string(data)).count(re))
+	return data, true
 }
 
 func (r *run) typeCount() bool {
@@ -76,7 +80,11 @@ func (r *run) typeCount() bool {
 		r.row("SKIP", "typecount", "no "+inc)
 		return true
 	}
-	tn, sn := len(r.jar.types), r.grepCount(typeElemRe, inc)
+	data, ok := r.readFile(inc)
+	if !ok {
+		return true
+	}
+	tn, sn := len(r.jar.types), itoa(newGrepText(string(data)).count(typeElemRe))
 	if itoa(tn) == sn {
 		r.row("PASS", "typecount", fmt.Sprintf("jar declares %d types == module-include.xml", tn))
 		return true
@@ -93,7 +101,11 @@ func (r *run) facets() bool {
 		return true
 	}
 	for _, f := range r.javaFiles(pd + "/src") {
-		if h := r.text(f).numbered(rawFacetRe); len(h) > 0 {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		if h := t.numbered(rawFacetRe); len(h) > 0 {
 			r.row("FAIL", "facets", "raw-number MIN/MAX facet (wrap in BDouble.make): "+f+":"+h[0])
 			return false
 		}
@@ -114,7 +126,10 @@ func (r *run) ordLiteral() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		t := r.text(f)
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
 		if strings.Contains(f, "/srcTest/") || (strings.Contains(basename(f, ".java"), "OrdConstants") && t.count(commentRe) > 0) {
 			continue
 		}
@@ -139,7 +154,11 @@ func (r *run) lineWarn(check string, re *regexp.Regexp, pass string) bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		for _, hit := range r.text(f).numbered(re) {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		for _, hit := range t.numbered(re) {
 			r.row("WARN", check, f+":"+hit)
 			warned = true
 		}

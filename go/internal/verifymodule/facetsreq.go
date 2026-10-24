@@ -28,7 +28,11 @@ func (r *run) facetPresence() bool {
 	}
 	warned := false
 	for _, f := range r.javaFiles(pd + "/src") {
-		for _, hit := range facetHits(f, r.text(f).lines) {
+		t, ok := r.text(f)
+		if !ok {
+			return true
+		}
+		for _, hit := range facetHits(f, t.lines) {
 			r.row("WARN", "facets-req", hit)
 			warned = true
 		}

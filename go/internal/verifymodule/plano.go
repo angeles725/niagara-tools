@@ -48,9 +48,9 @@ func plano(args []string, s cli.Stdio) (code int, ok bool) {
 		}
 	} else if data, err := os.ReadFile(in); err == nil {
 		html = string(data)
-	} else { // the two IMG_W/IMG_H greps had no 2>/dev/null
-		msg := "grep: " + in + ": " + strerror.Text(err) + "\n"
-		fmt.Fprint(s.Err, msg+msg)
+	} else { // the bash grepped it into a verdict; it gets none
+		fmt.Fprintf(s.Err, "verify-module: cannot read %s: %s\n", in, strerror.Text(err))
+		return 3, true
 	}
 	p := planoRun{s: s, in: in}
 	return p.check(newGrepText(html))

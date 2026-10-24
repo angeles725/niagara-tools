@@ -53,10 +53,9 @@ func runMain(dir string, args ...string) (int, string, string) {
 
 // TestUnreadableSource pins VM-walk-locked (a chmod 000 cannot be spelled in a golden): a --src
 // sub-directory the walk cannot enter is named once on stderr however many checks walk it, the rows of
-// the files it did list still print, and the verdict is INCOMPLETE, exit 3. An unreadable .java reads as
-// empty, as the bash greps with 2>/dev/null did. Declared difference: the walk line quotes the path in the
-// C locale ('...', the shared lint.Walk wording) where GNU find under C.UTF-8 used curly quotes, and the
-// bash also printed the awk and test errors for the unreadable file.
+// the files it did list still print, and the verdict is INCOMPLETE, exit 3. Declared difference: the walk
+// line quotes the path in the C locale ('...', the shared lint.Walk wording) where GNU find under C.UTF-8
+// used curly quotes.
 func TestUnreadableSource(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("running as root: chmod 000 does not block reads")
@@ -65,14 +64,11 @@ func TestUnreadableSource(t *testing.T) {
 	write(t, dir, map[string]string{
 		"Foo-rt.jar":                   "META-INF/module.xml=<type name=\"A\" class=\"com.x.A\"/>|com/x/A.class=\xca\xfe\xba\xbe\x00\x00\x00\x34",
 		"mod/Foo-rt/src/com/x/A.java":  "String s = \"station:|x\";\n",
-		"mod/Foo-rt/src/com/x/U.java":  "@NiagaraProperty(name = \"t\", flags = OPERATOR)\n",
 		"mod/Foo-rt/src/locked/L.java": "x\n",
 	})
 	locked := filepath.Join(dir, "mod/Foo-rt/src/locked")
-	for _, p := range []string{locked, filepath.Join(dir, "mod/Foo-rt/src/com/x/U.java")} {
-		if err := os.Chmod(p, 0); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
 	code, out, stderr := runMain(dir, "--src", "@DIR@/mod", "@DIR@/Foo-rt.jar")
@@ -145,4 +141,67 @@ func TestStoredByMethod(t *testing.T) {
 	if !strings.Contains(out, "FAIL  stored     @DIR@/bz.jar  1 deflated entries") {
 		t.Errorf("a bzip2 entry must fail --stored:\n%s", out)
 	}
+}
+
+// TestUnreadableInput: an input the gate cannot read gets no verdict. The run stops at the check that
+// read it, names it on stderr as "cannot read <path>: <reason>" and exits 3 with no summary line, as an
+// unreadable jar does. Declared difference: the bash read a .java through grep/awk 2>/dev/null (empty),
+// grepped an unreadable module-include.xml, gradle.kts or --plano file into a verdict, and read an
+// unreadable module.palette entry as an empty palette.
+func TestUnreadableInput(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: chmod 000 does not block reads")
+	}
+	jar := "META-INF/module.xml=<module name=\"Foo\"><types><type name=\"A\" class=\"com.x.A\"/></types></module>|com/x/A.class=\xca\xfe\xba\xbe\x00\x00\x00\x34"
+	for _, tc := range []struct{ name, locked, check string }{
+		{"java", "mod/Foo-rt/src/com/x/U.java", "facets"},
+		{"module-include", "mod/Foo-rt/module-include.xml", "typecount"},
+		{"gradle-kts", "mod/Foo-rt/Foo-rt.gradle.kts", "phantom-dep"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			write(t, dir, map[string]string{
+				"Foo-rt.jar": jar, "mod/Foo-rt/src/com/x/A.java": "class A {}\n",
+				"mod/Foo-rt/src/com/x/U.java": "class U {}\n", "mod/Foo-rt/module-include.xml": "<types/>\n",
+				"mod/Foo-rt/Foo-rt.gradle.kts": "dependencies {}\n",
+			})
+			if err := os.Chmod(filepath.Join(dir, tc.locked), 0); err != nil {
+				t.Fatal(err)
+			}
+			code, out, stderr := runMain(dir, "--src", "@DIR@/mod", "@DIR@/Foo-rt.jar")
+			if want := "verify-module: cannot read @DIR@/" + tc.locked + ": Permission denied\n"; code != 3 || stderr != want ||
+				strings.Contains(out, "  "+tc.check+" ") || strings.Contains(out, "verify-module:") {
+				t.Errorf("exit %d\n%s-- stderr --\n%s", code, out, stderr)
+			}
+		})
+	}
+	t.Run("plano", func(t *testing.T) {
+		dir := t.TempDir()
+		write(t, dir, map[string]string{"p.html": "<script>IMG_W=2;IMG_H=3</script>\n"})
+		if err := os.Chmod(filepath.Join(dir, "p.html"), 0); err != nil {
+			t.Fatal(err)
+		}
+		code, out, stderr := runMain(dir, "--plano", "@DIR@/p.html")
+		if code != 3 || out != "" || stderr != "verify-module: cannot read @DIR@/p.html: Permission denied\n" {
+			t.Errorf("exit %d %q %q", code, out, stderr)
+		}
+	})
+	t.Run("palette-corrupt", func(t *testing.T) {
+		dir := t.TempDir()
+		var buf bytes.Buffer
+		zw := zip.NewWriter(&buf)
+		w, _ := zw.Create("META-INF/module.xml")
+		w.Write([]byte(`<module name="Foo"><types><type name="A" class="com.x.A"/></types></module>`))
+		w, _ = zw.CreateRaw(&zip.FileHeader{Name: "module.palette", Method: zip.Deflate, CRC32: 1, CompressedSize64: 4, UncompressedSize64: 9})
+		w.Write([]byte{0xff, 0xff, 0xff, 0xff}) // not a deflate stream
+		zw.Close()
+		if err := os.WriteFile(filepath.Join(dir, "P-wb.jar"), buf.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		code, out, stderr := runMain(dir, "@DIR@/P-wb.jar")
+		if code != 3 || !strings.HasPrefix(stderr, "verify-module: cannot read module.palette in @DIR@/P-wb.jar: ") ||
+			strings.Contains(out, "  palette ") || strings.Contains(out, "verify-module:") {
+			t.Errorf("exit %d\n%s-- stderr --\n%s", code, out, stderr)
+		}
+	})
 }

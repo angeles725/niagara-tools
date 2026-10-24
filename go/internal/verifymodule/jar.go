@@ -64,15 +64,16 @@ func (j *jarFile) has(name string) bool {
 	return ok
 }
 
-// text is entry name as `$(unzip -p jar name 2>/dev/null || true)` kept it: "" when it cannot be read.
-func (j *jarFile) text(name string) string {
+// text is entry name as `$(unzip -p jar name)` keeps it ("" for an absent entry), or the error that
+// stopped reading it (a damaged or encrypted entry).
+func (j *jarFile) text(name string) (string, error) {
 	f, ok := j.first[name]
 	if !ok {
-		return ""
+		return "", nil
 	}
 	data, err := jarversion.Read(f)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return subst(string(data))
+	return subst(string(data)), nil
 }
