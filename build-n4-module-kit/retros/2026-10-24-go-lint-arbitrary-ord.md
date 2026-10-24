@@ -19,13 +19,20 @@ dropped its private `dirname`/`isFile`/`isDir` for the shared `lint.Dirname`/`Is
 - **T1 code.** The call was matched in the raw text before the `//` comment, so a Javadoc or block-comment line, a
   string and a text block holding `BOrd.make(var)` WARNed. It is matched in `linescan.Code` now.
 
+- **T2 guarded prefix (kit #459 a).** A constant-prefixed ord whose client part is rejected by an earlier
+  `if (<v>.contains(".."))` in the same scope (through the assignments it is derived from) no longer WARNs.
+- **T3 alarm source (kit #459 b).** An ord whose every origin is `BAlarmRecord.getSource()`, followed through
+  locals, private-method arguments and private-method returns, no longer WARNs.
+
 ## Evidence
 - Byte identity before the fix (stdout, stderr, exit, `cmp`): all of Cliente (20 rows) and the decompiled corpus
   (2706 files, 52 rows) `[ev: go/internal/lint/rules/arbitraryord/testdata]`
 - Timing: Cliente 1.05 s → 0.06 s; decompiled 9.53 s → 0.25 s `[ev: retro go-lint-arbitrary-ord]`
 - T1: Cliente 20 → 18 (chihuahua `ChiLinkHelper.java:643` and `BChiServlet.java:662`, both Javadoc lines); decompiled
   52 → 52; golden edge-code 5 rows gone `[ev: tests/lint-arbitrary-ord.bats]`
-- The 18 remaining Cliente rows: 12 chihuahua (MX60, live), 1 UmbrellaDashboard (live), 3 panccadia-leon DashboardPan
+- T2: Cliente 18 → 15 (PANCCADIA BDashboardServlet.java:279 and the same shape in Leon-Guanjuato :247 and
+  Umbrella :261); T3: 15 → 14 (PANCCADIA :804); decompiled 52 → 52 both times `[ev: tests/lint-arbitrary-ord.bats]`
+- The 18 Cliente rows after T1 (14 after T2/T3: chihuahua 12, PANCCADIA 1 (:737), Leon-Guanjuato 1 (:486), Umbrella 0): 12 chihuahua (MX60, live), 1 UmbrellaDashboard (live), 3 panccadia-leon DashboardPan
   (live source), 2 Leon-Guanjuato DashboardPan (the stale local checkout); `*-worktrees` pruned, `_salvage` has none
   `[ev: retro go-lint-arbitrary-ord]`
 
