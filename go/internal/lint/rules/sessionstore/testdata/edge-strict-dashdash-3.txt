@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod/
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/E.java:4  static session/token map 'SESSIONS' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/E.java --
+class E {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void login(String id) {
+    SESSIONS.put(id, new Entry());
+  }
+}

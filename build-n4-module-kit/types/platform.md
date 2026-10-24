@@ -25,7 +25,7 @@ Guides: `G/` = `niagara-help/versions/4.15.6.20/guides-clean/Platform/` (under n
 | Uninstall a module others depend on | Cannot Uninstall Module, unless the dependents are flagged too | `G/RemovingModulesFromARemotePlatform-2C318A1E.txt:7,20-22` |
 | Status "Requires Commissioning" | install only after the Commissioning Wizard | `G/aSoftwareManager.txt:15` |
 | A module with a signature error | the install fails; a warning opens a dialog | `…InstallingModulesInARemotePlatform-2C3324A0.txt:20` |
-| Station Copier: a needed module needs a core or QNX upgrade | the station install stops at station selection | `G/aStationCopier_35_changes.txt:8` |
+| Station Copier: a needed module needs a core or QNX upgrade | the station install stops at station selection | `G/aStationCopier_35_changes.txt:9` |
 
 So: put controlled equipment in manual before any upgrade (the guide's own precondition, `…InstallingModulesInARemotePlatform-2C3324A0.txt:9`),
 keep `<dependency>` lists to what the code uses (each one is pulled in and pins uninstall), and copy stations with

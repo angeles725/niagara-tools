@@ -1,0 +1,11 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/G.java --
+class G {
+  void login(String id) {
+    doStuff(id);
+  }
+}
