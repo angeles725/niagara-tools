@@ -1,0 +1,30 @@
+-- args --
+@DIR@/m
+-- want --
+exit 0
+WARN  lint-machine-default-path  @DIR@/m/src/A.java:2  machine-specific default "/home/me" in a field initializer -- take it from a slot, a station-relative ORD, an environment variable or the site table (METHODOLOGY.md § rt)
+-- stderr --
+-- m/src/A.java --
+class A {
+  String d = "/home/me";
+}
+-- m/srcTest/T.java --
+class T {
+  static final String SCRATCH = "/tmp/scratchpad/pw";
+}
+-- m/srcTest/rc/t.js --
+const D = "/tmp/x";
+-- m/build/tmp/x/gradle.properties --
+a=/home/build
+-- m/build/resources/rc/a.js --
+const D = "/home/build";
+-- m/src/rc/node_modules/lib/rc/x.js --
+var D = "/home/dep";
+-- m/x-worktrees/w/src/A.java --
+class A {
+  String d = "/home/wt";
+}
+-- m/.git/A.java --
+class A {
+  String d = "/home/dot";
+}

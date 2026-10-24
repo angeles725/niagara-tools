@@ -1,0 +1,19 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/E.java:4  static session/token map 'S' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/F.java:3  static session/token map 'T' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/E.java (noeol) --
+class E {
+  private static Map<String, E> S = new HashMap<String, E>();
+  void a(String k) {
+    S.put(k, null);
+  }
+}
+-- Mod/src/com/x/F.java (noeol) --
+class F {
+  static Map<String, F> T = null;
+  void b(String k) { T.put(k, null); }
+}

@@ -1,0 +1,31 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-session-store-lazy-evict  @DIR@/Mod/src/com/x/DashboardConfigSession.java:9  static session/token map 'SESSIONS' inserted here with no sweep in the SAME method (no scheduled purge found either) -- add a scheduled/size-bounded eviction, or bind auth to user+issue-time rather than the bare container id
+-- stderr --
+-- Mod/src/com/x/DashboardConfigSession.java --
+final class DashboardConfigSession
+{
+  private static final ConcurrentHashMap<String, Entry> SESSIONS =
+      new ConcurrentHashMap<String, Entry>();
+
+  static Entry create(String jsessionId, String username)
+  {
+    Entry entry = new Entry(username);
+    SESSIONS.put(jsessionId, entry);
+    return entry;
+  }
+
+  static void remove(String jsessionId)
+  {
+    Entry removed = SESSIONS.remove(jsessionId);
+  }
+
+  static Entry query(String jsessionId)
+  {
+    Entry entry = SESSIONS.get(jsessionId);
+    if (entry != null) SESSIONS.remove(jsessionId);  // lazy evict
+    return entry;
+  }
+}

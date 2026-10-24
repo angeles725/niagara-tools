@@ -1,0 +1,13 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/F.java --
+class F {
+  private static final Map<String, Entry> SESSIONS = new ConcurrentHashMap<String, Entry>();
+  void login(String id) {
+    for (String k : SESSIONS.keySet()) if (expired(k)) SESSIONS.remove(k);
+    SESSIONS.put(id, new Entry());
+  }
+}

@@ -1,0 +1,43 @@
+-- args --
+@DIR@/b
+@DIR@/a
+-- want --
+exit 0
+WARN  lint-status-parity  B  N=2 per-instance config slots but 1 status slots
+-- stderr --
+-- a/A.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
+-- b/B.java --
+class A {
+  @NiagaraProperty(
+    name = "a1Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "a2Duration",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+  @NiagaraProperty(
+    name = "aActive",
+    type = "int",
+    defaultValue = "BInteger.make(1)"
+  )
+}
