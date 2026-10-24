@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: kit-cite-resolve false positives — jar entries, section ranges and lists, code-span tags, spaced paths -->
+log: 2026-10-24 · quality round 10 → `kit-cite-resolve` (parser `go/internal/citeparse`) reads `code x.jar!entry` as a `jar` pointer (jar resolved, entry unchecked), `§ 11.1-11.3` as both ends (no longer `§11.11`), every number of `§ 3, § 5.2` and `§§ 3, 5`, an unclosed `[ev:` in a closed code span as literal code (no longer swallowing the next line's tag), and backticked paths with spaces (resolved under the course tree too; a lowercase label before a path stays prose). Candidates card strict findings 4 → 0; kit-wide LIVE 34 → 26, HISTORY 169 → 167, no new failing row. Retro retros/2026-10-24-r10-kcr-false-positives.md (pending).

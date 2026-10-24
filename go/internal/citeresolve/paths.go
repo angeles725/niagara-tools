@@ -19,7 +19,8 @@ func (e *Engine) registerFiles() {
 	e.by[citeparse.Help] = helpResolver{e}
 	e.by[citeparse.Mem] = memResolver{e}
 	e.by[citeparse.Vineflower] = vineResolver{e}
-	e.by[citeparse.Javap] = javapResolver{e}
+	e.by[citeparse.Javap] = jarResolver{e}
+	e.by[citeparse.Jar] = jarResolver{e}
 	e.registerKinds()
 }
 
@@ -152,9 +153,10 @@ func unwrapLeadingCode(s string) string {
 type pathResolver struct{ e *Engine }
 
 // Resolve looks for the path under the card's directory, the kit, the repository, the research tree,
-// niagara-help, organized/, the module trees, then the guide and devguide trees (versioned first), in that
-// order; `~/rest` under the home root; `KIT/rest` under the kit; `…/rest` under an earlier hit of the card; `dir/…/rest` below dir. A path
-// found under none of them (a bare file name, a partial package path, an ellipsis) is searched in the trees.
+// niagara-help, organized/, the module trees, the course tree, then the guide and devguide trees (versioned
+// first), in that order; `~/rest` under the home root; `KIT/rest` under the kit; `…/rest` under an earlier
+// hit of the card, else in the trees and the course tree; `dir/…/rest` below dir. A path found under none
+// of them (a bare file name, a partial package path) is searched in the trees.
 func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 	if rest, ok := strings.CutPrefix(p.Target, "…/"); ok {
 		for i := len(c.files) - 1; i >= 0; i-- {
@@ -166,14 +168,14 @@ func (r pathResolver) Resolve(p citeparse.Pointer, c *Card) Result {
 				}
 			}
 		}
-		return r.e.search(p, rest, "ellipsis prefix: no earlier hit on this card holds "+rest+", nor a searched tree")
+		return r.e.search(p, rest, "ellipsis prefix: no earlier hit on this card holds "+rest+", nor a searched tree", r.e.course())
 	}
 	if strings.Contains(p.Target, "/…/") {
 		return r.e.infix(p, c)
 	}
 	ro := r.e.roots
 	ver := filepath.Join(r.e.help(), "versions", ro.Version)
-	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules,
+	target, bases := p.Target, []string{c.Dir, ro.Kit, ro.Repo, ro.Research, r.e.help(), r.e.organized(), ro.Modules, r.e.course(),
 		filepath.Join(ver, "guides-clean"), filepath.Join(ver, "devguide-clean"),
 		filepath.Join(r.e.help(), "guides-clean"), filepath.Join(r.e.help(), "devguide-clean")}
 	target = r.e.homePath(target)
@@ -205,9 +207,9 @@ func (e *Engine) homePath(target string) string {
 }
 
 // search resolves p by the files named, or ending in, target in the trees (repository, organized/,
-// versioned source, clients).
-func (e *Engine) search(p citeparse.Pointer, target, missing string) Result {
-	groups, err := e.lookup(target, nil)
+// versioned source, clients) and below each extra directory.
+func (e *Engine) search(p citeparse.Pointer, target, missing string, extra ...string) Result {
+	groups, err := e.lookup(target, nil, extra...)
 	if err != nil {
 		return toolError(err)
 	}
