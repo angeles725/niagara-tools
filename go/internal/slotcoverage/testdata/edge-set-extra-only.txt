@@ -1,0 +1,10 @@
+-- args --
+set-coverage
+X,Y
+
+-- want --
+exit 0
+pct=N/A
+missing=
+extra=X,Y
+-- stderr --

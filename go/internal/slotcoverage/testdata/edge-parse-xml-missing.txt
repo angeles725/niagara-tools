@@ -1,0 +1,16 @@
+-- args --
+@DIR@/nope.xml
+@DIR@/module.lexicon
+-- want --
+exit 3
+-- stderr --
+slot-coverage: not found: @DIR@/nope.xml
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="CompressorPanel" class="com.x.BCompressorPanel"/>
+</types>
+-- module.lexicon --
+# facade lexicon: CompressorPanel has NO keys (renders raw camelCase in Workbench)
+RoomPanel.displayName=Cuarto
+RoomPanel.temperatureSetpoint=Setpoint de temperatura

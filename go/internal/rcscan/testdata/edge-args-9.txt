@@ -1,0 +1,10 @@
+-- args --
+@DIR@
+--profile
+HMI
+-- want --
+exit 3
+-- stderr --
+rc-scan: unknown profile: HMI
+-- README --
+nothing

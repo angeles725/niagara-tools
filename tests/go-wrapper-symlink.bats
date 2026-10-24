@@ -17,7 +17,12 @@ setup() {
   KIT="$ROOT/build-n4-module-kit"
   COPY="$BATS_TEST_TMPDIR/toolbelt-copy"
   # The same copy report-module's tests run: every entry symlinked, one unrelated (bash, non-Go) member stubbed.
-  stub_toolbelt "$COPY" rc-scan.sh 'exit 0'
+  # The stubbed member is a dummy the test creates, never a real script: a real bash member gets ported to Go
+  # (rc-scan.sh did), and its stub then reads as a Go wrapper that lost its symlink (GWS2). stub_toolbelt
+  # replaces an existing entry, so the dummy is created first.
+  mkdir -p "$COPY"
+  : > "$COPY/zz-plain-bash-member.sh"
+  stub_toolbelt "$COPY" zz-plain-bash-member.sh 'exit 0'
 }
 
 # go_wrappers: every toolbelt script that sources go/go-tool.sh, one basename per line.
@@ -30,6 +35,16 @@ go_wrappers() { grep -l 'go-tool\.sh"' "$KIT"/toolbelt/*.sh | xargs -n1 basename
   run "$COPY/check-facets-card.sh" "$KIT/types/logic-authoring.md" "$ROOT/tests/fixtures/facets-card/BFacets-4.15.6.20.keys"
   [ "$status" -eq 0 ]
   [[ "$output" == *"34 keys match"* ]]
+}
+
+@test "GWS1-sc: slot-coverage.sh run through the symlinked toolbelt copy (report-module's path) prints its verdict" {
+  # Mutation: GWS1-sc -- restoring the unresolved here= in slot-coverage.sh exits 3 "go-tool.sh missing"
+  local fx="$ROOT/tests/fixtures/slot-coverage/facade"
+  [ -L "$COPY/slot-coverage.sh" ]
+  cd "$BATS_TEST_TMPDIR"
+  run "$COPY/slot-coverage.sh" "$fx/module-include.xml" "$fx/module.lexicon"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL facade type without lexicon: CompressorPanel"* ]]
 }
 
 @test "GWS2: every Go wrapper invoked through the symlinked copy reaches its Go module" {

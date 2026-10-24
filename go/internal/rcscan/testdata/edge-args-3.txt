@@ -1,0 +1,10 @@
+-- args --
+@DIR@
+--profile
+kiosk
+-- want --
+exit 3
+-- stderr --
+rc-scan: unknown profile: kiosk
+-- README --
+nothing

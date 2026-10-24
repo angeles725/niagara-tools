@@ -1,0 +1,16 @@
+-- args --
+@DIR@/module-include.xml
+@DIR@/module.lexicon
+-- want --
+exit 0
+pct=50.0 (type-set)
+missing=StagingCore
+extra=
+-- stderr --
+-- module-include.xml --
+<types>
+  <type name="RoomPanel" class="com.x.BRoomPanel"/>
+  <type name="StagingCore" class="com.x.BStagingCore"/>
+</types>
+-- module.lexicon --
+RoomPanel.displayName=Cuarto

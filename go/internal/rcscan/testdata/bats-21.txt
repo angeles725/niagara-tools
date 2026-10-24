@@ -1,0 +1,14 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/main.js:2  setinterval-async: setInterval(poll) where poll is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+WARN  rc-scan  rc/main.js:3  setinterval-async: setInterval over an async function -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+WARN  rc-scan  rc/main.js:5  setinterval-async: setInterval(refresh) where refresh is async -- self-schedule with setTimeout after the poll settles (+ inFlight guard)
+-- stderr --
+-- rc/main.js --
+async function poll() { await fetchT("/api/data", {}, 8000); }
+setInterval(poll, 5000);
+setInterval(async function () { await poll(); }, 5000);
+const refresh = async () => { await poll(); };
+setInterval(refresh, 10000);

@@ -1,0 +1,27 @@
+-- args --
+@DIR@
+-- want --
+exit 0
+WARN  rc-scan  rc/a.js:1  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:2  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:3  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:4  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:12  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+WARN  rc-scan  rc/a.js:15  innerhtml-server: member value concatenated into HTML without esc( -- use textContent or esc()
+-- stderr --
+-- rc/a.js --
+el.innerHTML = "<b>" + a.message + "</b>";
+el.innerHTML += `<i>${ a.b }</i>`;
+el.outerHTML = x + y.z;
+el.insertAdjacentHTML("beforeend", "<p>" + r.text);
+el.innerHTML = "<b>" + esc(a.message) + "</b>";
+el.innerHTML = "<b>" + escapeHtml(a.m) + a.n;
+el.textContent = a.message;
+if (el.innerHTML == a.b) {}
+el.innerHTML = "<b>static</b>";
+el.innerHTML = "<b>" + name + "</b>";
+el.innerHTML = "<b>" + a.message; // rc-scan: allow innerhtml-server
+el.innerHTML="x"+a.$b;
+el.innerHTML="x"+1.5;
+el.innerHTML = `${a}`;
+el.innerHTML = `${a.b.c}`;

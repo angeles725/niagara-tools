@@ -78,7 +78,7 @@ func goPlan(c *pyjson.Object) *pyjson.Object {
 	}
 	out := obj("plan", hashed, "plan_hash", hash, "targets", targets)
 	st.nodes = get(c, "after").(*pyjson.Object)
-	requested, accepted, observed, verdict, err := impl.Readback(st, args, p, []any{"reply"})
+	requested, accepted, observed, verdict, err := impl.Readback(st, args, p, []any{"reply"}, p.Inverse)
 	if err != nil {
 		out.Set("readback_error", describe(err))
 	} else {

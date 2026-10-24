@@ -20,14 +20,32 @@
 # refuse; only exit 3 naming an absent research/modules/clients/memory root skips, with a named stderr line. It is
 # local-only: GitHub runners hold none of those roots, so ci.yml cannot run it.
 #
+# Client-identifier guard, before every other check: niagara-go `client-guard` (the first step below).
+#
 # stdin (git pre-push contract): "<local ref> <local sha> <remote ref> <remote sha>" per ref.
 set -u
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 sweep="$toplevel/build-n4-module-kit/toolbelt/sweep-build-state.sh"
 
+# Client-identifier guard, before every other check: niagara-go's client-guard refuses a push whose added
+# lines or commit messages match the private client denylist (it reads every ref line, so it gets all of
+# stdin). The denylist lives outside every repo. Without client-guard on PATH the push goes on only when
+# this machine has no denylist either.
+pushed=$(cat)
+client_denylist=${NIAGARA_CLIENT_DENYLIST:-$HOME/.config/niagara-private/client-denylist.txt}
+if command -v client-guard >/dev/null 2>&1; then
+  printf '%s\n' "$pushed" | client-guard "$@" || exit 1
+elif [ -e "$client_denylist" ]; then
+  echo "pre-push: client-guard is not on PATH but a client denylist exists; refusing to push unchecked." >&2
+  echo "          install it from a niagara-go checkout: GOBIN=\$HOME/.local/bin go install ./cmd/client-guard" >&2
+  exit 1
+else
+  echo "pre-push: client-guard not installed and no client denylist; client-identifier check skipped" >&2
+fi
+
 # range from the first ref line; fields 1/3 (refs) are unused
-read -r _ lsha _ rsha || exit 0
+read -r _ lsha _ rsha <<<"$pushed" || exit 0
 [ -n "${lsha:-}" ] || exit 0
 [[ "$lsha" =~ ^0+$ ]] && exit 0   # deleting a remote branch: nothing is pushed, nothing to gate
 refuse() { echo "pre-push: $1; refusing to push unchecked" >&2; exit 1; }

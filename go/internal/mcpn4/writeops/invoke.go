@@ -134,7 +134,7 @@ func invokeOp(arg *pyjson.Object) *pyjson.Object {
 	return o
 }
 
-func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies []any) (any, any, any, string, error) {
+func invokeReadback(c plan.Client, args *pyjson.Object, p *plan.Planned, replies, _ []any) (any, any, any, string, error) {
 	action := str(args, "action")
 	if action != "set" {
 		requested := pyjson.NewObject()

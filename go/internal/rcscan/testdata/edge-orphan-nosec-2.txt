@@ -1,0 +1,10 @@
+-- args --
+@DIR@
+--strict
+-- want --
+exit 0
+-- stderr --
+-- rc/a.js --
+const s = '<section id="page-x"></section>';
+-- rc/index.html --
+<a data-page="ghost">x</a>

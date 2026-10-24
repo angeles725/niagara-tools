@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	"github.com/angeles725/niagara-tools/go/internal/mcpn4/safety"
+	"github.com/angeles725/niagara-tools/go/internal/mcpn4/tiers"
 )
 
-// refusal is one _REFUSALS row: a class key, the reason substrings (the shared safety
+// refusal is one _REFUSALS row: a class key, the reason substrings (the shared safety and tiers
 // constants, so a reworded refusal cannot silently stop being classified) and its advice.
 type refusal struct {
 	key                      string
@@ -42,7 +43,7 @@ var refusals = []refusal{
 		"Decide whether the refused action is worth supporting or documenting as unsupported", "mcp_n4/tools_write.py · allowed actions", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonValueType},
 		"Decide whether the refused value type is worth supporting or documenting", "mcp_n4/tools_write.py · VALUE_TYPES", "MEDIUM"},
-	{"tier", []string{safety.ReasonTier},
+	{"tier", []string{tiers.ReasonTier},
 		"Record the PoC/probe outcome for this build and decide on --allow-tier-b/--allow-tier-c", "METHODOLOGY.md · section 5", "MEDIUM"},
 	{"unsupported", []string{safety.ReasonTypeSpec},
 		"Document the module:Type spec expected for component creation", "README.md · write tools", "LOW"},
