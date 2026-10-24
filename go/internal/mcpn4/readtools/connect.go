@@ -59,6 +59,7 @@ func Register(s *jsonrpc.Server, t *Tools) {
 	s.Handlers["n4_connect"] = t.Connect
 	s.Handlers["n4_describe_session"] = t.DescribeSession
 	s.Handlers["n4_navigate"] = t.Navigate
+	s.Handlers["n4_read_slots"] = t.ReadSlots
 }
 
 func toolError(format string, a ...any) error {

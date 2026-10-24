@@ -38,8 +38,8 @@ func Children(nodes *pyjson.Object, path string) *pyjson.Object {
 	return out
 }
 
-// childValue is children(...).get(name, {}).get("v", def).
-func childValue(kids *pyjson.Object, name string, def any) any {
+// ChildValue is kids.get(name, {}).get("v", def) on a Children result.
+func ChildValue(kids *pyjson.Object, name string, def any) any {
 	if n := Node(kids, name); n != nil {
 		if v, ok := n.Get("v"); ok {
 			return v
@@ -58,7 +58,7 @@ func StatusValue(nodes *pyjson.Object, path string) (value, status any, err erro
 		return nil, nil, &pyjson.ValueError{Msg: path + " is not a StatusBoolean/StatusNumeric"}
 	}
 	kids := Children(nodes, path)
-	return childValue(kids, "value", def), childValue(kids, "status", "0"), nil
+	return ChildValue(kids, "value", def), ChildValue(kids, "status", "0"), nil
 }
 
 // ParseStatus is box.parse_status without the bits and facets no caller reads: ok is bits == 0
