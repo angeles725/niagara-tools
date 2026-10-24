@@ -127,6 +127,20 @@ _delta_fixture() {
   [ "$status" -eq 3 ]
 }
 
+@test "F16: a citation that lives only in a stale local BUILD-STATE.md (beside its source) is NOT credited" {
+  # BUILD-STATE.md is generated from BUILD-STATE.src.md + ledger.d/ and not committed (R10-D1): a local copy
+  # can be stale, so a citation it still carries after its fragment lost it would pass here and fail in CI
+  # on a clean clone. Mutation: F16 -- scanning the generated BUILD-STATE.md credits the retro.
+  D="$BATS_TEST_TMPDIR/kit"
+  mkdir -p "$D/retros" "$D/ledger.d"
+  printf '| Retro file | Module | Date | review-status | deltas |\n|---|---|---|---|---|\n| 2026-10-22-stale-only.md | kit | 2026-10-22 | folded | 0 |\n' > "$D/retros/INDEX.md"
+  printf '# source, no citation\n' > "$D/BUILD-STATE.src.md"
+  printf 'old log line [ev: retro stale-only]\n' > "$D/BUILD-STATE.md"
+  run "$SCRIPT" --strict "$D/retros/INDEX.md" "$D"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"1 folded, 0 cited, 1 uncited"* ]]
+}
+
 @test "F11: a citation that lives only in a ledger.d/ fragment credits the retro (stem and Δ)" {
   # BUILD-STATE.md's kit block is generated from build-n4-module-kit/ledger.d/*.md, so a fragment is
   # corpus like any other kit *.md. Mutation: F11 -- excluding */ledger.d/* from the corpus WARNs here.

@@ -143,13 +143,16 @@ func TestCorpusWalk(t *testing.T) {
 	write("INDEX.md", "[ev: retro in-index]")
 	write("notes.txt", "[ev: retro in-txt]")
 	write("dir.md/inner.md", "[ev: retro in-dir-md]")
+	write("BUILD-STATE.md", "[ev: retro in-hand-state]")          // no source beside it: corpus
+	write("kit/BUILD-STATE.src.md", "[ev: retro in-state-src]")   // the committed source: corpus
+	write("kit/BUILD-STATE.md", "[ev: retro in-generated-state]") // generated (source beside it): not
 	if err := os.Symlink(filepath.Join(root, "notes.txt"), filepath.Join(root, "link.md")); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(filepath.Join(root, "deep"), filepath.Join(root, "linkdir")); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"in-core", "in-deep", "in-dir-md", "in-ledger", "in-txt"}
+	want := []string{"in-core", "in-deep", "in-dir-md", "in-hand-state", "in-ledger", "in-state-src", "in-txt"}
 	for _, r := range []string{root, root + "/"} {
 		if got := harvestCorpus(r, false).sortedTokens(); !reflect.DeepEqual(got, want) {
 			t.Errorf("harvestCorpus(%q) = %q, want %q", r, got, want)
