@@ -41,8 +41,8 @@
 # [ev: retro live-commissioning-verification-gaps Δ6]
 # Dot-directories excluded (D9b). VCS-free by design.
 #
-# Implementation: go/internal/wiringmap (golden runs recorded from the bash body at 15e792d1 by
-# go/internal/wiringmap/testdata/record/record.sh). go/go-tool.sh `go_tool_bin` builds go/bin/generate-wiring-map
+# Implementation: go/internal/wiringmap (golden runs recorded from the bash body at 15e792d1 by the shared
+# go/internal/lint/rules/golden/record/record.sh, pinned by go/internal/wiringmap/testdata/record.env). go/go-tool.sh `go_tool_bin` builds go/bin/generate-wiring-map
 # when it is missing or older than a Go source, then this script execs it; no Go toolchain or a failed build is exit 3.
 
 set -u
