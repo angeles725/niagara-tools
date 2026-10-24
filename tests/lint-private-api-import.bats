@@ -41,7 +41,8 @@ MSG='is private API (devguide apiInfo: no compatibility guaranteed)'
   [ "$output" = "usage: lint-private-api-import.sh [--strict] [--allow <glob>]... [--no-default-allow] <module-root>" ]
   run "$L" --default-allow off "$DRV"
   [ "$status" -eq 3 ]
-  ! grep -q 'default-allow off' "$L"
+  run grep -q 'default-allow off' "$L"
+  [ "$status" -ne 0 ]
 }
 
 @test "PAI2: an import in a comment or a string is not one; com.tridiumx is another prefix" {
