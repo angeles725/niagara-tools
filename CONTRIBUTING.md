@@ -263,6 +263,14 @@ Retro citation tags name the retro by its stem, the filename without the `YYYY-M
 exactly (header lines 13-15 and 22; `go/internal/foldaudit` `stem`), so the dated form is silently not counted.
 `[ev: retro truth-audit Δ4]`
 
+Before any of that, the hook runs the **client-identifier guard**: niagara-go's `client-guard` gets the
+hook arguments and the whole pre-push stdin and refuses a push whose added lines or commit messages match the
+private client denylist (`$NIAGARA_CLIENT_DENYLIST`, default `~/.config/niagara-private/client-denylist.txt`;
+the list never enters a repo, and the report names only `file:line: rule #N`). Without `client-guard` on PATH
+the hook refuses when a denylist exists, and warns and goes on when none does. Install it from a niagara-go
+checkout: `GOBIN=$HOME/.local/bin go install ./cmd/client-guard`. Hook tests set `NIAGARA_CLIENT_DENYLIST` to
+an absent path so they never depend on what the host has installed.
+
 The gate ships **inert** — nothing runs until you enable it:
 
 ```sh
