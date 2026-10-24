@@ -1,0 +1,5 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: lint-servlet input-400 bounded to the enclosing try of the same scope -->
+log: 2026-10-24 · quality round 10 → lint-servlet input-400 no longer accepts a `try {` 5 lines back across a method boundary or after it closed: a parse is guarded only by a try block of the same method or class-level lambda body (javasrc.Scopes) that encloses it (truth-try-scope-1, bats LSV2e). javasrc fixes landed first: Methods ends a body where its own brace closes (`void f() { try {` no longer ends f on its first line; declared difference from mb_parse) and Scopes keeps a body still open at the end of an unbalanced file. Cliente 15 → 15 rows, decompiled 24 → 24, no new row; two servlet goldens declared. Retro retros/2026-10-24-go-lint-servlet-try-scope.md (2Δ, pending). [ev: retro go-lint-servlet-try-scope Δ1]
+open_issue: lint-servlet catch-no-400 still reads up to 4 lines after a try's end with no structural link to its try (retro go-lint-servlet-try-scope Δ1).
