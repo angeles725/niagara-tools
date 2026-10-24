@@ -1,0 +1,21 @@
+-- args --
+--strict
+@DIR@/17/perrow
+-- want --
+exit 1
+STALE  lint-write-path  @DIR@/17/perrow/docs/write-path-matrix.md:5  slot hoaMode: no source slot with that name
+STALE  lint-write-path  @DIR@/17/perrow/docs/write-path-matrix.md:6  slot hoaMode: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- 17/perrow/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+| `hoaMode` | dashboard write | mid | wY |
+| `hoaMode` | engine link | mid | wZ |
+-- 17/perrow/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

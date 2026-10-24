@@ -1,0 +1,8 @@
+-- args --
+@DIR@/empty
+-- want --
+exit 3
+ERROR  lint-arbitrary-ord  @DIR@/empty  no files to scan (K20: wrong path or empty scaffold)
+-- stderr --
+-- empty/README --
+x

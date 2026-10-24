@@ -1,0 +1,18 @@
+-- args --
+--strict
+@DIR@/33/drifttrue
+-- want --
+exit 1
+FAIL  lint-write-path  drifttrue  slot setpoint: no matrix row
+-- stderr --
+-- .git/HEAD --
+x
+-- 33/drifttrue/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `hoaMode` [concept] | Engine link | n/a | — |
+-- 33/drifttrue/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

@@ -1,0 +1,18 @@
+-- args --
+@DIR@/21/uncov
+-- want --
+exit 1
+FAIL  lint-write-path  uncov  slot hoaMode: no matrix row
+STALE  lint-write-path  @DIR@/21/uncov/docs/write-path-matrix.md:4  slot setpoint: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- 21/uncov/docs/write-path-matrix.md --
+# M
+| Slot | Writer | Timing | Test |
+|--|--|--|--|
+| `setpoint` | D | mid | w1 |
+-- 21/uncov/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="hoaMode", flags=Flags.SUMMARY | Flags.OPERATOR)
+public class BThing extends BComponent {}

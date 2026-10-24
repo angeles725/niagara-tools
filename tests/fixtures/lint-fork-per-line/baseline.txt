@@ -3,4 +3,3 @@
 # (a new fork) or FEWER (a fixed fork: delete or lower its row). Never add a row for new code; port the loop to
 # awk_lint_each (toolbelt/lib/awk-lint.sh) or to Go instead. Each row is an owed item in
 # build-n4-module-kit/ledger.d/2026-10-22-r8-t22-retro-deltas.md.
-lint-write-path.sh _mline 1

@@ -1,0 +1,23 @@
+-- args --
+@DIR@/crlf
+-- want --
+exit 0
+WARN  lint-write-path  @DIR@/crlf/src/com/x/BThing.java:6  write handler doPost: no audit call (record user, ord, old, new, source before answering success)
+STALE  lint-write-path  @DIR@/crlf/docs/write-path-matrix.md:3  slot ghost: no source slot with that name
+-- stderr --
+-- .git/HEAD --
+x
+-- crlf/docs/write-path-matrix.md --
+# M
+| `setpoint` | a |
+| `ghost` | b |
+| hoaMode | c |
+-- crlf/src/com/x/BThing.java --
+package com.x;
+@NiagaraProperty(name="setpoint", flags=Flags.OPERATOR)
+@NiagaraProperty(name="hoaMode",
+  flags=Flags.OPERATOR)
+class B {
+  public void doPost(WebOp op) {
+  }
+}
