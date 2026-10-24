@@ -13,7 +13,8 @@
 # Context leak shapes the kit already lints. Fix: leading-edge time debounce on the callback
 # path (Clock.millis() gate), or move periodic writes to a tick and keep changed() input-only.
 # See types/issues-and-gotchas.md §I1. [ev: retro live-diagnosis-hardening-deltas Δ1]
-# [ev: corpus B1158; BCompressorControl.java:1850-1871,2019-2021]
+# Real shape: CompPan v2.1.0 BCompressorControl changed() lines 1850-1871, hours writes 2019-2021 (in no
+# client checkout now; B1158 quotes them). [ev: corpus B1158 §1158.2]
 #
 # Usage:  lint-changed-hot-write.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot-dirs pruned) for a `changed(Property <name>, ...)`

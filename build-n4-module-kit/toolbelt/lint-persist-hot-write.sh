@@ -12,7 +12,8 @@
 # Rule: integrate in memory; checkpoint the non-transient slot on a periodic tick + in
 # stopped(); seed the value once on start (seedHours()-style guard). See
 # types/issues-and-gotchas.md §I2. [ev: retro live-diagnosis-hardening-deltas Δ3]
-# [ev: corpus B1159; BCompressorControl.java:326,1403,2019]
+# Real shape: CompPan v2.1.0 BCompressorControl lines 326, 1403, 2019 (in no client checkout now; B1159
+# quotes them). [ev: corpus B1159 §1159.1]
 #
 # Usage:  lint-persist-hot-write.sh [--strict] <src-root>
 #   Scans *.java under <src-root> (dot-dirs pruned). Only the raw slot-o-matic declaration
