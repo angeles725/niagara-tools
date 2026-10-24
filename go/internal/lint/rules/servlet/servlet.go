@@ -69,8 +69,8 @@ const (
 // prefixed by " ", from start to the line where the depth counted over them returns to 0, or to the end
 // of the file. needOpen ignores a "}" before the first "{" counted (the catch scan) instead of
 // only a "}" at depth 0 (the handler and try scans). end is the closing line, or start when the block
-// never closes (the awk's try_end kept its initial value).
-func block(lines []string, start int, needOpen bool) (text string, end int) {
+// never closes (the awk's try_end kept its initial value); closed tells the two apart.
+func block(lines []string, start int, needOpen bool) (text string, end int, closed bool) {
 	var b strings.Builder
 	depth, opened := 0, false
 	for j := start; j < len(lines); j++ {
@@ -84,12 +84,31 @@ func block(lines []string, start int, needOpen bool) (text string, end int) {
 			case ch == '}' && depth > 0 && (opened || !needOpen):
 				depth--
 				if depth == 0 {
-					return b.String(), j
+					return b.String(), j, true
 				}
 			}
 		}
 	}
-	return b.String(), start
+	return b.String(), start, false
+}
+
+// inTry reports whether line i (0-based) lies inside a "try {" block opened on it or above it within the
+// same method or class-level lambda body (javasrc.Scopes): a try of another method, or one that closed
+// before line i, guards nothing; one that never closes (an unbalanced file) still counts. A line in no
+// body has no try.
+func inTry(lines []string, scopes []javasrc.Method, i int) bool {
+	m, ok := javasrc.Enclosing(scopes, i+1)
+	if !ok {
+		return false
+	}
+	for k := i; k >= m.Start-1; k-- {
+		if tryOpen.MatchString(lines[k]) {
+			if _, end, closed := block(lines, k, false); end >= i || !closed {
+				return true // it encloses line i, or stays open to the end of the file
+			}
+		}
+	}
+	return false
 }
 
 func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
@@ -126,7 +145,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if !handler.MatchString(ln) {
 			continue
 		}
-		body, _ := block(lines, i, false)
+		body, _, _ := block(lines, i, false)
 		if write.MatchString(body) && !auth.MatchString(body) {
 			add(lint.Fail, "auth", i+1, msgAuth)
 		}
@@ -145,7 +164,7 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if !tryOpen.MatchString(ln) {
 			continue
 		}
-		body, end := block(lines, i, false)
+		body, end, _ := block(lines, i, false)
 		if !anyParse.MatchString(body) {
 			continue
 		}
@@ -161,23 +180,14 @@ func (rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 		if catch < 0 {
 			continue
 		}
-		if cbody, _ := block(lines, catch, true); !badRequest.MatchString(cbody) {
+		if cbody, _, _ := block(lines, catch, true); !badRequest.MatchString(cbody) {
 			add(lint.Unset, "catch-no-400", catch+1, msgCatch)
 		}
 	}
 
+	scopes := f.Scopes()
 	for i, ln := range lines {
-		if !parse.MatchString(ln) {
-			continue
-		}
-		inTry := false
-		for k := max(i-5, 0); k <= i; k++ {
-			if tryOpen.MatchString(lines[k]) {
-				inTry = true
-				break
-			}
-		}
-		if !inTry {
+		if parse.MatchString(ln) && !inTry(lines, scopes, i) {
 			add(lint.Fail, "input-400", i+1, msgInput)
 		}
 	}

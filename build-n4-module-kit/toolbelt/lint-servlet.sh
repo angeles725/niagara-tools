@@ -8,8 +8,10 @@
 #   auth          FAIL  a doGet/doPost/service handler body contains a write (.setDouble/.setFloat/
 #                       .setInt/.setLong/.setRelTime/.setString( or a set( not preceded by an identifier character) with no
 #                       getRemoteUser()/.getUser() gate in the same method body.
-#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( on a line with no 'try {' on it or
-#                       on the 5 lines above it.
+#   input-400     FAIL  Double.parseDouble( or Integer.parseInt( on a line no 'try {' block encloses: the try
+#                       must open on that line or above it in the same method or class-level lambda body
+#                       (go/internal/javasrc Scopes) and still be open there (fixed 2026-10-24: the 5-line
+#                       look-back took a try of another handler, or one already closed, as the guard).
 #   unbounded-set WARN  .setDouble/.setFloat/.setInt/.setLong/.setRelTime( in a handler body with no
 #                       getMin()/getMax()/getFacets()/MIN/MAX/clamp in the same body.
 #   catch-no-400  WARN  a 'try {' block that holds Double.parseDouble(/Integer.parseInt(/Long.parseLong(/
@@ -60,6 +62,7 @@
 # Mutation: LSV4b -- reading the X-Requested-With flag from raw lines reports a guard documented only in a Javadoc
 # Mutation: LSV2c -- matching the parse calls on raw lines FAILs input-400 on a commented-out Double.parseDouble(
 # Mutation: LSV2d -- starting the catch search after the try's closing line passes "} catch (E e) { v = 0; }"
+# Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
 # Mutation: LSV7 -- removes api-response-headers check, so a doGet with getWriter() but no X-Content-Type-Options emits no INFO row
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

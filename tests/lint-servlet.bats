@@ -73,6 +73,17 @@ only() { rm -rf "$ONE"; mkdir -p "$ONE"; cp "$FX/$1" "$ONE/"; }
   [[ "$output" == *"WARN"* ]] && [[ "$output" == *"csrf-xrw-only"* ]]
 }
 
+@test "LSV2e: a try in another handler, or one closed before the parse, does not guard it (input-400)" {
+  # Mutation: LSV2e -- a 5-line look-back for "try {" lets doGet's try guard doPost's Integer.parseInt(
+  # Go golden: go/internal/lint/rules/servlet/testdata/truth-try-scope-1.txt
+  printf '%s\n' 'package com.x;' 'public class BSrv extends BWebServlet {' '  public void doGet(WebOp op) {' \
+    '    try { a(); } catch (Exception e) { op.getResponse().sendError(400); }' '  }' '  public void doPost(WebOp op) {' \
+    '    int b = Integer.parseInt(op.get("b"));' '  }' '}' > "$ONE/BSrv.java"
+  run "$LS" "$ONE"
+  [ "$status" -eq 1 ]
+  [ "$output" = "FAIL  input-400  BSrv.java:7  parseDouble/parseInt without enclosing try/catch -> may not return 400 on bad input" ]
+}
+
 @test "LSV-usage: no <src> argument -> exit 3" {
   run "$LS"
   [ "$status" -eq 3 ]
