@@ -70,7 +70,7 @@
 # toolbelt copy runs its stubs); the member table is go/internal/reportmodule/members.go, which gen-lint-index.sh
 # reads for the INDEX.md Auto column. This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
 # go/bin/report-module when it is missing or older than a Go source, then this script execs it. Needs `go` on PATH
-# to build (exit 3 otherwise).
+# to build (exit 3 otherwise). [ev: retro r10-report-module-go]
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
