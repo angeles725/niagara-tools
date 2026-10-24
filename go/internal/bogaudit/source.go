@@ -29,9 +29,11 @@ type sources struct {
 }
 
 var (
-	setCall      = regexp.MustCompile(`\.set\(\s*"([^"]+)"\s*,`)
-	nameArg      = regexp.MustCompile(`name\s*=\s*"([^"]+)"`)
-	flagsArg     = regexp.MustCompile(`flags\s*=\s*(Flags\.[A-Za-z_|]+|[A-Za-z_][A-Za-z0-9_.|]*)`)
+	setCall = regexp.MustCompile(`\.set\(\s*"([^"]+)"\s*,`)
+	nameArg = regexp.MustCompile(`name\s*=\s*"([^"]+)"`)
+	// flagsArg is a flags= expression: names joined by "|", spaces around each "|" allowed (Flags.SUMMARY |
+	// Flags.TRANSIENT); the python pattern stopped at the first space and lost every flag after it.
+	flagsArg     = regexp.MustCompile(`flags\s*=\s*([A-Za-z_][A-Za-z0-9_.]*(?:\s*\|\s*[A-Za-z_][A-Za-z0-9_.]*)*)`)
 	minDouble    = regexp.MustCompile(`BFacets\.MIN[^,)]*,\s*BDouble\.make\(\s*(-?[0-9.]+)[dDfFlL]?\s*\)`)
 	minSeconds   = regexp.MustCompile(`BFacets\.MIN[^,)]*,\s*BRelTime\.makeSeconds\(\s*([0-9]+)[lL]?\s*\)`)
 	actionFlag   = regexp.MustCompile(`flags\s*=\s*Flags\.(\w+)`)

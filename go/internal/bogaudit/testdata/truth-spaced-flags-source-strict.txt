@@ -19,6 +19,7 @@ CHECK3  WARN  ColdRoom_1/delay  value 1000 below source MIN 30000.0
 CHECK3  WARN  ColdRoom_1/tiny  value  -1e-3  below source MIN 1e-05
 CHECK3  WARN  ColdRoom_1/big  value -inf below source MIN 1.2345678901234567e+19
 CHECK4  WARN  ColdRoom_1/live  TRANSIENT slot has persisted value in bog
+CHECK4  WARN  ColdRoom_1/live2  TRANSIENT slot has persisted value in bog
 CHECK5  FAIL  ColdRoom_1/ghost  slot in bog not in source BColdRoom (ghost/orphan)
 CHECK5  FAIL  ColdRoom_1/frozenGhost  slot in bog not in source BColdRoom (ghost/orphan)
 CHECK5  FAIL  ColdRoom_1/hexy  slot in bog not in source BColdRoom (ghost/orphan)

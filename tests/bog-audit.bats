@@ -312,6 +312,29 @@ XML
   [ "$output" = "bog-audit: --source-dir is not a directory: $T/no-such-dir" ]
 }
 
+@test "BA14: CHECK4 reads a combined flags expression — Flags.SUMMARY | Flags.TRANSIENT (spaced or not) is TRANSIENT" {
+  # Truth fix (go/internal/bogaudit/testdata/truth-spaced-flags-source.txt): the python flags pattern stopped at the
+  # first space or dot after the first name, so a TRANSIENT after "|" was never seen. Mutation: BA14 -- the old
+  # flagsArg pattern -> no CHECK4 row for live2/live4.
+  local S="$T/ba14/src"; mkdir -p "$S"
+  cat > "$S/BColdRoom.java" <<'JAVA'
+@NiagaraProperty(name="live2", type="boolean", defaultValue="false", flags = Flags.SUMMARY | Flags.TRANSIENT)
+@NiagaraProperty(name="live4", type="boolean", defaultValue="false", flags=Flags.SUMMARY|Flags.TRANSIENT)
+public class BColdRoom extends BComponent {}
+JAVA
+  _mkbog ba14 <<'XML'
+<?xml version='1.0'?><bajaObjectGraph version='4.0'>
+ <p n='ColdRoom_1' h='c1' m='CRP=ColdRoomPan' t='CRP:ColdRoom'>
+  <p n="live2" t="b:boolean" v="true"/>
+  <p n="live4" t="b:boolean" v="true"/>
+ </p>
+</bajaObjectGraph>
+XML
+  run "$BA" "$T/ba14.bog" --module ColdRoomPan --source-dir "$S"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^CHECK4  WARN  ColdRoom_1/live[24]  TRANSIENT slot has persisted value in bog$' <<< "$output")" -eq 2 ]
+}
+
 @test "CHECK12-pin: CHECK12 (dashboard-write-link WARN) is present in bog-audit.sh (R19.5 idempotent guard — PR10 merged)" {
   # Task 19.4: since PR10 is already merged, assert CHECK12 is in bog-audit.sh; do NOT re-add it.
   grep -qF 'CHECK12' "$KIT/toolbelt/bog-audit.sh"
