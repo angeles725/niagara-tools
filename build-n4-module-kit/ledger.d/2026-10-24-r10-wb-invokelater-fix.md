@@ -1,0 +1,4 @@
+<!-- ledger: kit -->
+<!-- date: 2026-10-24 -->
+<!-- last-change-note: quality round 10: wb-widgets DWB1 rule 4 names the real way back to the UI thread -->
+log: 2026-10-24 · quality round 10 → `types/wb-widgets.md` DWB1 rule 4 said to "marshal the UI update back with `WbViewEventWorker.invokeLater()`" (written by citation audit batch 6, 4ee1b853), but `WbViewEventWorker.invokeLater` only enqueues on a background worker thread (workbench-wb vineflower `WbViewEventWorker.java:31-37`; Tridium uses it to move view work OFF the UI thread, `BAbstractManager.java:448`); the way back is `BWidget.invokeLater` (bajaui-wb vineflower `BWidget.java:871-873` → `UiEnv.get().invokeLater`). Rule rewritten with a dated correction note; found while fixing chihuahua `BBatchLinkEditor` (client branch fix/r10-batch-link-editor-ui-thread).

@@ -4,6 +4,7 @@
 package readtoolstest
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -31,7 +32,13 @@ type Station struct {
 	// Trees maps an ORD to the nodes a load of it answers (any depth); an ORD missing here
 	// answers the root with its stationName.
 	Trees map[string]*pyjson.Object
-	next  int
+	// OrdRoutes answer GET /ord/ (test_bql's FakeOpener): the first route whose Needle the ORD
+	// holds answers Body, or the error of HTTP status Code. OrdCap, when set, is the byte cap
+	// in place of the caller's; OrdRequests is every ORD read, in order.
+	OrdRoutes   []OrdRoute
+	OrdCap      int
+	OrdRequests []OrdRequest
+	next        int
 }
 
 // NewStation is a tier A station named FakeStation.
@@ -94,6 +101,47 @@ func (c *client) LoadTree(ord string, depth int, opt box.LoadOptions) (*pyjson.O
 	nodes.Set("", root)
 	nodes.Set("stationName", name)
 	return nodes, nil
+}
+
+// OrdRoute is one answer of GET /ord/.
+type OrdRoute struct {
+	Needle, Body string
+	Code         int
+}
+
+// OrdRequest is one GET /ord/ that reached the station.
+type OrdRequest struct {
+	Ord     string
+	Timeout float64
+}
+
+// GetOrd answers from the station's OrdRoutes like box.Client.GetOrd: a 401/403 is an
+// AuthError (latched through the hook), a 400 names the query, a body longer than the cap is
+// cut and reported truncated.
+func (c *client) GetOrd(ord string, timeout float64, maxBytes int) (string, bool, error) {
+	c.st.OrdRequests = append(c.st.OrdRequests, OrdRequest{ord, timeout})
+	for _, r := range c.st.OrdRoutes {
+		if !strings.Contains(ord, r.Needle) {
+			continue
+		}
+		switch {
+		case r.Code == 401 || r.Code == 403:
+			return "", false, c.authError("ord", "get")
+		case r.Code == 400:
+			return "", false, &box.Error{Kind: box.KindBox, Msg: "HTTP 400 from station: the ORD or BQL query was " +
+				"rejected (check the type spec, column names and where clause)", Channel: "ord", Key: "get"}
+		case r.Code != 0:
+			return "", false, &box.Error{Kind: box.KindBox, Msg: fmt.Sprintf("HTTP %d from station", r.Code), Channel: "ord", Key: "get"}
+		}
+		if c.st.OrdCap > 0 {
+			maxBytes = c.st.OrdCap
+		}
+		if len(r.Body) > maxBytes {
+			return r.Body[:maxBytes], true, nil
+		}
+		return r.Body, false, nil
+	}
+	return "", false, &box.Error{Kind: box.KindBox, Msg: "unexpected ORD " + ord, Channel: "ord", Key: "get"}
 }
 
 func (c *client) BaseURL() string { return strings.TrimRight(c.cfg.BaseURL, "/") }

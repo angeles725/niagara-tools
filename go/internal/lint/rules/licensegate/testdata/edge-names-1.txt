@@ -1,0 +1,28 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:10  licensed class: doPut() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:11  licensed class: doDelete() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:12  licensed class: doPatch() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:17  licensed class: doGetAll() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BS.java --
+package com.x;
+public class BS extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doGet(A a) { a(); }
+  public void doHead(A a) { a(); }
+  public void doOptions(A a) { a(); }
+  public void doTrace(A a) { a(); }
+  public void doPut(A a) { a(); }
+  public void doDelete(A a) { a(); }
+  public void doPatch(A a) { a(); }
+  public void dosomething() { a(); }
+  public void do_x() { a(); }
+  public void changedX() { a(); }
+  public void onChanged() { a(); }
+  public void doGetAll() { a(); }
+}

@@ -16,7 +16,7 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 | Point folder | `BPointDeviceExt` | `getProxyExtType()` |
 | Proxy ext | `BProxyExt` | `getMode()`, `readSubscribed(cx)`, `readUnsubscribed(cx)`, `write(cx)` |
 
-`BProxyExt` is a point extension (`implements BAbstractProxyExt`) — it sits as a child of a
+`BProxyExt` is a point extension (`extends BAbstractProxyExt`) — it sits as a child of a
 `BControlPoint`, not as a standalone component. [ev: code BProxyExt.java:120; corpus B810 §810.1]
 
 ### 1.2 · Which network base?
@@ -33,15 +33,15 @@ to configure. This doc is the author-side reference; protocol-specific wire form
 
 ### 1.3 · WB device-manager presence rule and plugin-extensible SPI [ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]
 
-**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1057]`
+**Every `BBasicNetwork` driver ships a `-wb` device manager (WB-presence rule, PD-01):** a driver that adds a `BBasicNetwork` subclass MUST register a WB view via `@AgentOn` on the network or device type — at minimum a `BAbstractManager` or `BWbComponentView`. Relying on the default property-sheet view forces operators into raw slot editing. See `types/wb-widgets.md §Vendor-grade -wb UX patterns`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ1]` `[ev: corpus B1061 PD-01; CCN example B1057]`
 
 **Driver modules with NO Hx/UX intent MUST state that explicitly (PD-13):** when a driver module deliberately ships no `-ux` profile and relies entirely on the base Niagara hx-wb for its browser view, add a comment in the module's `SKILL.md` / README: `# UX: none — relies on base hx-wb`. This prevents a future developer from adding a redundant `-ux` scaffold when the driver's intent is station-side only. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ13]` `[ev: corpus B1061]`
 
 ### 1.4 · Plugin-extensible manager SPI — multi-device-family alternative [ev: retro honeywell-wb-rt-wb-deltas Δ1]
 
-When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()`.
+When multiple device families share one `BAbstractManager` container (wb side), avoid subclassing the manager once per family. Instead, implement a **plugin SPI** (`BIHonDeviceModel` or equivalent `BIHonBacnetDeviceModel`) per family module; the shared framework discovers all registered implementations via Honeywell's own helper `NiagaraRegistryUtil.instance().getImplementersOfTypeSpec(String)`.
 
-- Each SPI implementer declares `getSupportedModelSpecs()`, `createColumns()`, and `createCommands()`.
+- Each SPI implementer declares `getSupportedModels()`, `getSupportedColumns()`, `getSupportedDiscoveryColumns()`, `getSupportedCommands(BWidget)`, and `getDeviceType()`.
 - Register via a plain `<type>` in `module.xml` — no `@AgentOn`.
 - Prefer this over a Manager subclass when the manager framework already exists and you are contributing a new device-family module on top of it.
 
@@ -57,7 +57,7 @@ are under niagara-research `organized/`; `W=webEditors/webEditors-ux/extracted/r
 
 - **AMD ids:** `nmodule/webEditors/rc/wb/mgr/Manager`, `.../mgr/model/MgrModel`, `.../mgr/model/MgrColumn`,
   `nmodule/driver/rc/wb/mgr/DeviceMgr`, `DeviceMgrModel`, `PointMgr`, `PointMgrModel`. [CERT-doc]
-  `niagara-help/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
+  `niagara-help/versions/4.15.6.20/devguide-clean/jsdoc/driver-ux/module-nmodule_driver_rc_wb_mgr_DeviceMgrModel.txt:34`
 - **Extend `DeviceMgr`/`PointMgr` and `DeviceMgrModel`/`PointMgrModel`, never `Manager`/`MgrModel`** — Tridium
   marks the base framework incubating. [CERT] `W/Manager.js:72-75`, `W/model/MgrModel.js:44-48`
 - **View contract:** constructor `{moduleName, keyName}` (lexicon + saved state); `makeModel(value)` returns
@@ -94,7 +94,7 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
 - **Manager columns and discovery** (verified live on the course driver): a device column comes from a property facet
   `SfUtil.incl(SfUtil.MGR_EDIT)` (or `MGR_EDIT_READONLY`) (`ndriver-rt/…/util/SfUtil.java:15,28`, vineflower); a point
   manager is `@NiagaraType(agent = @AgentOn(types = {"<mod>:<X>PointDeviceExt", "<mod>:<X>PointFolder"}))` extending
-  `BNPointManager` with `NPointModel`/`NPointController` (`ndriver-wb/…/ui/point/BNPointManager.java:24-41`); a
+  `BNPointManager` with `NPointModel`/`NPointController` (`ndriver-wb/…/ui/point/BNPointManager.java:36-41,70,98`, docSource); a
   proxy-ext column is `new MgrColumn.PropPath(new Property[] {BControlPoint.proxyExt, B<X>ProxyExt.<slot>}, MgrColumn.EDITABLE)`
   (`workbench-wb/…/mgr/MgrColumn.java:730`); `getNewTypes()` restricts the New menu. `doSubmitDiscoveryJob(prefs, cx)`
   submits with `job.submit(cx)` — the wizard's `job.submit(null)` runs the job with no user (`lint-driver-scaffold.sh`
@@ -104,7 +104,7 @@ to be, per the course `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]`.
 
 ### 1.7 · NDriver — layers, threads and request/response correlation `[ev: corpus B1239 §1239.12-§1239.13]`
 
-Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless named.
+Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
 
 - **Layers** (course Lab 11 `[CERT]`): the network owns the comm stack (a `BCommConfig` subclass such as
   `BTcpCommConfig`, driving `NComm`); one `NMessage` subclass per message type; one `LinkMessage` subclass frames
@@ -125,7 +125,7 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless na
   1 s, no retry. Set both per message (`setResponseTimeOut`, `setRetryCount`) from the device's real latency.
 - **Defect checklist** — the course reference driver ships each one (B1239 §1239.12): keep subscription bookkeeping
   per instance (the reference holds `private static final Set<String> subscribedPoints`,
-  `BTrafficLightDriverDevice.java:414`, shared by every device); bounds-check `LinkMessage.receive` against the
+  course `…/Lab11 NDriver/4 Reading and Writing Points/BTrafficLightDriverDevice.java:317`, shared by every device); bounds-check `LinkMessage.receive` against the
   buffer; check a response's error flag before parsing its payload; log frames at FINE, not INFO; guard every
   proxy-ext cast with `instanceof` (`BNPollScheduler.doPoll` catches it and only calls `printStackTrace()`,
   `poll/BNPollScheduler.java:48-59`).
@@ -138,7 +138,8 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (vineflower, docSource) unless na
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
 I/O on another thread and report each result with `readOk(value)` / `readFail(cause)` `[CERT]`
 `organized/docSource/docSource-doc/extracted/driver-rt/javax/baja/driver/point/BProxyExt.java:851-869`.
-`getPollScheduler()` stands for your network's own accessor; `BPollScheduler.subscribe(p)` / `unsubscribe(p)` are
+`getPollScheduler()` and `postWrite(...)` stand for your network's own accessors (`getNetwork()` returns `BDeviceNetwork`,
+which has neither; cast to your network type, e.g. a `BBasicNetwork`); `BPollScheduler.subscribe(p)` / `unsubscribe(p)` are
 `util/BPollScheduler.java:1130,1154`. [ev: retro devguide415-nav-subscriptions-tags-ords Δ1] `[ev: corpus B1306 §1306.2 C1]`
 
 ```java
@@ -165,12 +166,12 @@ public boolean write(Context cx) throws Exception {
 ```
 
 Callback pair: `readOk(value)` / `readFail(cause)` and `writeOk()` / `writeFail(cause)` — call
-these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:859,883,895;
+these from your comm thread to update the point's `out` slot. [ev: code BProxyExt.java:895,923,937,970;
 corpus B810 §810.3]
 
 **`write()` returns whether a write is pending.** `true` = enqueued, the driver later calls `writeOk()` or
 `writeFail()`; `false` = cancelled at once, and `Tuning` clears the pending flag (`driver-rt/…/point/BProxyExt.java:872-883`,
-`Tuning.java:346-351`, vineflower). An async driver that returns `false` reports "not pending" for a write it
+`Tuning.java:346-351`, docSource). An async driver that returns `false` reports "not pending" for a write it
 still sends. NDriver threading: § 1.7. [ev: retro n4-course-drivers-bql-ords-files Δ3]
 
 **Enum proxy points show state names only with a frozen-enum range.** Set the point's `range` facet through
@@ -189,9 +190,9 @@ OVERRIDDEN from the flags; the cost is one extra Status_Flags read per poll, or 
 notification omits the flags (corpus B1348 §1348.2 rows 4-7). A dashboard health read is only as good as this facet
 (`types/dashboard.md` § Facade contract). Owed Go lint G36 `bacnet-status-flags` (bog check).
 
-**Gotcha:** a write to a DOWN/FAULT/DISABLED device is **silently dropped** — `Tuning.write()`
+**Gotcha:** a write to a DOWN, DISABLED or fatally faulted device is **silently dropped** — `Tuning.write()`
 calls `isOperational()` first and returns without queuing if false. The write is NOT retried unless
-`BTuningPolicy.writeOnUp=true` (default true). [ev: code Tuning.java:332-333; corpus B810 §810.4]
+`BTuningPolicy.writeOnUp=true` (default true). [ev: code Tuning.java:332-333, :549-552, :629; corpus B810 §810.4]
 
 ---
 
@@ -206,22 +207,25 @@ Three Niagara worker threads the network owns:
 
 | Worker | Purpose |
 |---|---|
-| `worker` | solicited poll dispatching |
-| `writeWorker` | write requests; uses a `CoalesceQueue(1000)` so rapid setpoint changes collapse |
-| `dispatcher` | unsolicited-frame fan-out |
+| `worker` | `post`/`sendAsync` requests (a `BBasicCoalescingWorker`) |
+| `writeWorker` | `postWrite`/`sendAsyncWrite` requests; a `CoalesceQueue` sized by `maxQueueSize` (default 256), so queued writes with the same coalesce key collapse |
+| `dispatcher` | runs every transmit: `sendSync` dispatches to it and waits; unsolicited frames go from the receiver to registered listeners (`comm/Comm.java:240-251`) |
+
+[ev: code basicDriver-rt vineflower `BBasicNetwork.java:30-66,240-278`, `util/BBasicWorker.java:17-22,48-54`, `util/BBasicCoalescingWorker.java:19-20`]
 
 Retry loop lives in `Comm.transmit(msg, timeout, retryCount)`: sends → waits `responseTimeout`
-on a `CommTransaction` → retries `retryCount+1` times. [ev: corpus B517 §517.2]
+on a `CommTransaction` → tries `retryCount+1` times in all (`comm/Comm.java:146-160`, vineflower). [ev: corpus B517 §517.2]
 
 Send API:
 
 ```java
-network.sendAsync(request, cx);          // reads — never block
-network.sendAsyncWrite(request, cx);     // writes — routes through writeWorker
+network.sendAsync(msg, listener);        // reads — never block; the MessageListener gets the response
+network.sendAsyncWrite(msg, listener);   // writes — routes through writeWorker
 ```
 
-**Gotcha:** `sendSync` exists but blocks the calling thread. Call it only from your own background
-`BWorker`, never from the engine thread or a timer callback. [ev: corpus B517 §517.2]
+**Gotcha:** `sendSync` exists but blocks the calling thread until the dispatcher returns the response
+(`BBasicNetwork.java:257-262,281-294`, vineflower). Call it only from your own background
+`BWorker`, never from the engine thread or a timer callback `[INFER]`. [ev: corpus B517 §517.2]
 
 ---
 
@@ -240,7 +244,7 @@ default `"defaultPolicy"`).
 | `writeOnUp` | **true** | Re-write when device returns UP after comm loss |
 | `writeOnEnabled` | **true** | Write when point re-enabled |
 
-[ev: code BTuningPolicy.java:19,24,29,33,41,47-49; corpus B872 §872.2]
+[ev: code BTuningPolicy.java:112,146,177,206,235,268 (docSource); corpus B872 §872.2; writeOnStart advice: corpus B1327 row 2]
 
 **Gotcha:** the Tuning scan thread runs at `min(minWriteTime/2, maxWriteTime/2, staleTime/2)`
 clamped to `[200 ms, 20 000 ms]`. With all-zero defaults the scan fires every 20 s — this is
@@ -309,7 +313,7 @@ annotated or nested-class stub is caught too. [ev: retro n4-course-handson-ndriv
 
 **A failed poll is not a failed ping** `[ev: retro devguide415-r3-drivers-integration Δ1]` `[ev: corpus B1348 §1348.1]`. The
 4.15.6.20 guide says "in most drivers" a point poll with no response makes the monitor note a ping fail
-(`Drivers/driver-PingMonitor.txt:37-40`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
+(`Drivers/driver-PingMonitor.txt:13`); that is driver policy, not framework behaviour. `BProxyExt.readFail(cause)`
 only records the fault on the point and re-executes it (vineflower driver-rt 4.14.0.162
 `javax/baja/driver/point/BProxyExt.java:463-469`); nothing in driver-rt calls the device's ping from there. Code wins
 for behaviour: in a custom driver, on a transport timeout in the poll path call `device.ping()` (a fresh ping now) or
@@ -333,11 +337,12 @@ for behaviour: in a custom driver, on a transport timeout in the poll path call 
 | `configFail(cause)` | FAULT | **Transient** — cleared on next successful operation | `configOk()` |
 | `readFail(cause)` | FAULT | Transient | `readOk(value)` |
 | `writeFail(cause)` | FAULT | Transient | `writeOk()` |
-| `configFatal(cause)` | FAULT + DISABLED | **Permanent** — cleared ONLY by a full station restart | station restart |
+| `configFatal(cause)` | FAULT | **Permanent** — cleared ONLY by a full station restart | station restart |
 
 **`configFatal` is permanent:** `configOk()` clears `configFault` but returns early before
 `fatalFault` (`BDevice.java:425,431`); no code path resets `fatalFault`; `checkFatalFault()`
-short-circuits component restart (`:577-578`); the `FATAL_FAULT` flag is locked until station stop.
+short-circuits component restart (`BProxyExt.java:577-578`, `BDevice.java:484-485`); the proxy ext's `FATAL_FAULT`
+flag is locked until station stop (`BProxyExt.java:1134`).
 The following do NOT clear a fatal fault: `configOk()`, a config-slot change, a re-ping, an enable
 cycle, or a component restart. A point in `fatalFault` is permanently unoperational — tuning stops
 dispatching to it.
@@ -372,7 +377,7 @@ public BPollFrequency getPollFrequency() {
 | slow | `slow` (ordinal 2) | 30 000 ms |
 | dibs | immediate (LIFO priority stack) | — |
 
-[ev: code BPollFrequency.java:12,18-21; BPollScheduler.java:23-31,145; corpus B872 §872.1]
+[ev: code BPollFrequency.java:25-27,38-47,70; BPollScheduler.java:247,273,299,1222 (docSource); corpus B872 §872.1]
 
 Lifecycle rule: **register in `readSubscribed`, unregister in `readUnsubscribed`**. The scheduler
 pushes the point onto the `dibs` stack immediately on subscribe for a first-poll before the bucket
@@ -391,7 +396,7 @@ corpus B810 in `logic-authoring.md §Authoring a driver`] `[ev: corpus B1337 §1
 A separate `BHistoryPollScheduler` (default rates: fast 10 000 / normal 45 000 / slow 120 000 ms)
 drives `BHistoryImport` children that read records from the field device and append them to the
 local history DB. Drop a `BHistoryDeviceExt` on your `BDevice` class to opt in.
-[ev: code BHistoryPollScheduler.java:36-38; corpus B872 §872.3]
+[ev: code BHistoryPollScheduler.java:72,84,96 (docSource); corpus B872 §872.3]
 
 ### 7.2 · `BScheduleDeviceExt` — makeExport / makeImportExt
 
@@ -404,7 +409,7 @@ network load. [ev: code BScheduleDeviceExt.java:34; corpus B872 §872.4]
 
 `BVirtualGateway extends BComponent` exposes a lazy, transient-only `BVirtualComponentSpace`.
 A point inside resolves as the gateway's ORD followed by `|virtual:/A/B/point` — NOT `virtual:/gw/device/point` and NOT
-`slot:` (devguide `virtualComponents.txt:252-254`). Each virtual slot is named `SlotPath.escape(virtualPath)`; a load
+`slot:` (devguide 4.15.6.20 `virtualComponents.txt:68-79`). Each virtual slot is named `SlotPath.escape(virtualPath)`; a load
 can add a slot under a parent that is already subscribed, so register the new point with the poll scheduler too. The
 space forbids links and structure edits, not property writes; it is not persisted and is GC-cached, tuned by
 `niagara.virtual.cache.{maxLifeDefault,minLifeDefault,threshold,thresholdScanRate}` (45 s / 25 s / 1000 / 1000 ms).
@@ -418,7 +423,7 @@ a full proxy tree would be prohibitive. [ev: corpus B28 §28.9-28.12] `[ev: corp
 baud/data/stop/parity/port) and `interMessageDelay`. `SerialComm.performInterMessageDelay()`
 sleeps the deficit since the last received message (min 10 ms) before each transmit — a
 fixed-ms gap, NOT the baud-relative silence prescribed by Modbus RTU spec.
-[ev: code BSerialNetwork.java:51; corpus B517 §517.3]
+[ev: code basicDriver-rt vineflower BSerialNetwork.java:34-38, SerialComm.java:146-160; corpus B517 §517.3]
 
 ---
 
@@ -439,7 +444,7 @@ Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium s
 - **Recipe — receive:** build the record with the ext as source, `new BAlarmRecord(ext, ext.getAlarmClass(),
   alarmData, BUuid.make())`, put the field point in the `sourceName` facet, `ext.routeAlarm(record)`, then
   `setLastReceivedTime`. `doRouteAlarm` hands it to `BAlarmService.routeAlarm(record)`. [CERT]
-  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:1330-1335`;
+  `organized/bacnet/bacnet-rt/vineflower/com/tridium/bacnet/stack/server/BEventHandler.java:893-895,1330-1335`;
   `D/bacnet-rt/javax/baja/bacnet/alarm/BBacnetAlarmDeviceExt.java:121-163`
 - **Recipe — ack:** the alarm service routes an ack to a `BIRemoteAlarmSource` source (`doRouteToSource` →
   `ackAlarm` → your `doAckAlarm`). [CERT] `D/alarm-rt/javax/baja/alarm/BAlarmService.java:1003-1006,1108-1114`.
@@ -465,13 +470,14 @@ Paths below: `D=organized/docSource/docSource-doc/extracted` (original Tridium s
 public class BEibnetIpNetwork extends BLoadableNetwork implements EibnetConst, BIService
 ```
 
-KNX addressing is by **group address**, not by object/property (unlike BACnet). Points are
-organized under `BGroupAddressFolder` children. The network owns two stack layers as
+KNX addressing is by **group address**, not by object/property (unlike BACnet). Each proxy ext holds
+its group addresses in a `groupAddresses` slot, a `BGroupAddressFolder` (a `BVector`, `point/BKnxProxyExt.java:54`). The network owns two stack layers as
 `@NiagaraProperty` children: `linkLayer` (`BEibnetIpLinkLayer`) for UDP multicast/unicast
 EIBnet/IP discovery, and `tunnelLayer` (`BEibnetIpTunnelLayer`) for the tunneled connection.
 Per-datatype proxy families: `BKnxBooleanProxyExt`, `BKnxEnumProxyExt`, `BKnxStringProxyExt` —
-pick by KNX DPT, not by a single generic proxy ext. ETS project import available via
-`BKnxDiscoverDevicesJob`. [ev: code BEibnetIpNetwork.java:63-77; corpus DR-01]
+pick by KNX DPT, not by a single generic proxy ext. Point discovery reads an ETS export (`.esf` session file)
+chosen in the point manager's Discover (eibnetIp-wb `ui/BKnxPointManager.java:367-379`); `BKnxDiscoverDevicesJob`
+is a KNXnet/IP device search. [ev: code eibnetIp-rt vineflower BEibnetIpNetwork.java:28-35; corpus B1357]
 
 ### 8.2 · Z-Wave (`zwave` driver)
 
@@ -480,32 +486,35 @@ public class BZWaveNetwork extends BBasicNetwork implements ZWaveMessageConst
 ```
 
 Z-Wave device discovery ("inclusion") is not a one-shot job — it is a persistent lifecycle.
-The network holds a `BInclusionMonitor extends BComponent` that tracks completion flags
+Each `BZWaveDevice` adds a `BInclusionMonitor extends BComponent` as a hidden, transient `inclusionMonitor`
+slot (flags 71, `BZWaveDevice.java:1783-1786`), so it is not persisted; it tracks completion flags
 (`commandClassParsingComplete`, `wakeUpDataRetrievalComplete`, `associationsRetrevalComplete`,
-etc.) as `@NiagaraProperty` booleans across station restarts. A node is usable only when all
-flags are true. [ev: code BInclusionMonitor.java:26-52; BZWaveNetwork.java:101; corpus DR-02]
+etc.) as readonly properties. Inclusion succeeds only when all complete and every command class is processed
+(`getIsInclusionSucessful`, `BInclusionMonitor.java:477-479`). [ev: code BInclusionMonitor.java:26-52; corpus B1384]
 
-Command-class capability tree: each `BZWaveDevice` carries a `BCmdClassObject` subtree;
-`BZWaveCommandClass` is a frozen enum of class IDs. Firmware upgrade: `.hex` image +
-device template files are bundled inside the jar under `rc/` and served at runtime via
-`module://` ORDs. [ev: code BZWaveNetwork.java imports; corpus DR-02]
+Command classes: the network maps each class id to a registered `BCmdClassObject` subtype
+(`getCommandClassInstance`, `BZWaveNetwork.java:2292-2299`), whose `addCmdClass` adds the matching proxy points
+under the device (`BZWaveDevice.java:1081-1084`); `BZWaveCommandClass` is a frozen enum of class IDs. Firmware
+upgrade is for the Z-Wave option card: the `.hex` image ships in the jar and is copied to `/tmp` before upload
+(`comm/serial/fw/BZWaveFirmwareUpgrade.java:41-54`); device templates (`.info`) are read from the station's
+`^zwaveDevTemplates/` first, then from the jar (`BZWaveDevice.java:588-600`). [ev: corpus B1102] [ev: corpus B1384]
 
 ---
 
 ### `getDeviceManagerSubscribeDepth()` — deep slot-tree discovery `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ20]`
 
-**Override `getDeviceManagerSubscribeDepth()` in a `BNNetwork` subclass to return >1 for deep slot trees (PD-20):** the default implementation is hardcoded to return `1`, which subscribes only the immediate children of the device manager. When a device exposes a multi-level slot hierarchy (e.g. zone → device → point), override this method to return the correct depth (e.g. `3`). Without the override, discover and poll only reach the first level and the deeper points are never subscribed.
+**Override `getDeviceManagerSubscribeDepth()` in a `BNNetwork` subclass to return >1 for deep slot trees (PD-20):** the default implementation is hardcoded to return `1` (`BNNetwork.java:174-183`, docSource). It is the subscribe depth of the auto device manager (`NDeviceModel.getSubscribeDepth()`, ndriver-wb `device/NDeviceModel.java:84-87`, docSource; also sent to the ux manager as `sd`). When the manager's columns must show values deeper in the device tree, return that depth (e.g. `3`). It does not drive discovery or polling: proxy points subscribe through their own exts `[INFER]`.
 
 ```java
 @Override
 public int getDeviceManagerSubscribeDepth() {
-    return 3;  // depth: network → device → proxy ext → point
+    return 3;  // levels below the network the device manager subscribes
 }
 ```
 
 `[ev: corpus B1072]`
 
-**`NMgrControllerUtil.network.getAgents().filter()` is the NATIVE device-manager-agent extension point (PD-14):** the static utility `NMgrControllerUtil.getAgents(network)` returns the list of registered `BINDeviceMgrAgent` implementations that apply to the current network. Filter this list in `getAgents()` to include only the agents that are relevant to the current device type. This is NOT CCN-specific — any `BNNetwork` subclass may override `getAgents()` and use this filter. Registering a `BINDeviceMgrAgent` via a plain `<type>` in `module.xml` is sufficient; no `@AgentOn` is required. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ14]` `[ev: corpus B1066]`
+**`NMgrControllerUtil.makeCommands()` turns the network's agents into device-manager commands — the NATIVE device-manager-agent extension point (PD-14):** it filters `network.getAgents()` with `AgentFilter.is(BINDeviceMgrAgent.TYPE)` and wraps each agent in an `NDeviceMgrAgentCommand`; the point-manager variant filters the device and point-ext agents for `BINPointMgrAgent` (ndriver-wb `ui/NMgrControllerUtil.java:92-98,121-141`, docSource). This is NOT CCN-specific — any `BNNetwork` subclass may override `getAgents()` to add or drop agents, or register a `BINDeviceMgrAgent` on the network type through the standard agent registry `[INFER]`. `[ev: retro wb-vendor-ux-rt-wb-pattern-deltas Δ14]` `[ev: corpus B1066]`
 
 ---
 
@@ -517,16 +526,16 @@ Reference archetypes from obixDriver, lonworks, honBACnetUtilities, niagaraDrive
 
 **Driver vs. servlet decision:** use the Network/Device/ProxyExt driver pattern for bidirectional telemetry where the external system initiates reads/writes and the driver provides subscription + polling. Use a `BWebServlet` / SPA when you need a browser-facing UI on top of data that already lives in the station.
 
-**Local-export-discover idiom** (pushing local N4 data outward, e.g. oBIX export): resolve the `slot:/` ORD to the station component space, then filter children by `BIWritablePoint` to discover exportable points. Iterate the filtered set to build the export payload; no separate Network subclass is needed for a pure-export path.
+**Local-export-discover idiom** (pushing local N4 data outward, e.g. oBIX export): resolve the `slot:/` ORD to the station component space, then filter children by `BIWritablePoint` to discover exportable points. Iterate the filtered set to build the export payload; no separate Network subclass is needed for a pure-export path `[INFER]`.
 
 ```java
-// Resolve local station space and collect all writable points for export
+// Resolve the local station root and collect its writable points for export
 BOrd root = BOrd.make("slot:/");
-BComponent space = (BComponent) root.get(cx);
-for (BObject child : space.getChildObjects()) {
+BComponent space = (BComponent) root.get(base, cx);   // base: any mounted component
+for (BComponent child : space.getChildComponents()) {
     if (child instanceof BIWritablePoint) {
-        BIWritablePoint wp = (BIWritablePoint) child;
-        // push wp.getOut() to the external system
+        BControlPoint wp = (BControlPoint) child;
+        // push wp.getOutStatusValue() to the external system
     }
 }
 ```
@@ -539,11 +548,11 @@ LonWorks commissioning requires three **distinct** manager patterns — do NOT c
 
 | Phase | Pattern |
 |-------|---------|
-| **XIF/LNML typing** | Load the `.xif` / `.lnml` descriptor; type each network variable (NV) from the device template, not from a live poll. A manager that shows raw poll values before typing is misleading. |
-| **Changeable-NV discovery** | Some NV slots are dynamically changeable; a separate Discover manager enumerates them from the device and lets the user bind them. |
-| **Service-pin commissioning** | Physical button press on the device triggers a service-pin message; the manager listens for this event to associate the node address — not a scripted API call. |
+| **XIF/LNML typing** | The `.xif` / `.lnml` interface file types each network variable (NV): `BLocalNvManager` keeps the LNML ORD and the parsed type as slot facets (`LnmlOrd`, `XType`), and a device's NV table is learned when the device is added (`learnNv()`), not by a separate scan. A manager that shows raw values before typing misleads `[INFER]`. |
+| **Changeable-NV type editing** | NVs whose SNVT type is declared changeable get their own panel, `BChangeableNvManager` (a `BWbComponentView`, not a table manager), which changes the NV type and offers to delete the links and proxy points the change breaks. NV bindings live in `BLonLinkManager`. |
+| **Service-pin commissioning** | Pressing the device's service pin raises `BLonNetmgmt.servicePinReceived`; the device manager matches the Neuron ID to a table row and selects it, and `doCommission()` then maps that Neuron ID to a subnet/node. |
 
-NV-binding UX is a separate workflow from point-list monitoring. Merging them into one manager produces a table that is either incomplete (pre-typing) or misleading (post-typing polluted by unbound NVs). [ev: corpus B1095]
+NV-binding UX is a separate workflow from point-list monitoring. Merging them into one manager produces a table that is either incomplete (pre-typing) or misleading (post-typing polluted by unbound NVs) `[INFER]`. [ev: corpus B1095]
 
 ### 9.3 · OEM-on-stock-driver patterns (honBACnetUtilities) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ3]
 
@@ -551,28 +560,28 @@ When building an OEM module on top of a stock Tridium driver (e.g. the stock BAC
 
 | Pattern | Mechanism |
 |---------|-----------|
-| **Type-float slot** | Add a `@NiagaraProperty BTypeSpec deviceModel` slot to the device subclass; the WB manager reads this slot to determine which OEM device-model plugin to activate — enables polymorphic behaviour without a Manager subclass per device family. |
-| **Two-anchor manager mount** | The shared manager container registers two `@AgentOn` anchors: one on the stock base type (e.g. `bacnet:BacnetDevice`) and one on the OEM type; only the OEM anchor activates OEM columns/commands. |
-| **Dual FE registration** | The OEM module registers its own `BWbFieldEditor` on the OEM slot type; the stock FE remains registered on the stock slot type. Both coexist without conflict — Workbench dispatches by the exact type match. |
-| **ORD-carrier navigation** | ORDs that carry a type annotation (`ord|view:module:MyView`) let the WB tree navigate directly to the OEM view for devices that match the OEM type spec, without touching the stock driver's navigation. |
+| **Type-float slot** | The OEM device manager (`BHonBacnetDeviceManager extends BBacnetDeviceManager`) floats the OEM device type to index [0] in `getNewTypes()`, `doAdd()` and `doNew()`, so it is the default choice — no Manager subclass per device family. |
+| **Two-anchor manager mount** | One manager is `@AgentOn` two tree locations (`BHonBacnetAlarmManager` on `HonBacnetAlarmDeviceExt` and `HonBacnetNotificationClassFolder`) and dispatches on `instanceof` in `doLoadValue()`. |
+| **Dual FE registration** | A thin subclass of the stock FE is `@AgentOn` the stock type (`BHonBacnetBitStringEditor extends BBacnetBitStringFE`, WB render path only) next to a fresh `BWbFieldEditor` `@AgentOn` the OEM wrapper type (`BHonBacnetBitStringFE`); each FE is registered on its own type, so they coexist. |
+| **ORD-carrier navigation** | rt point types carry an ORD (`getAlarmViewHyperlink()`); a WB dialog reads it per point and `BHonWbService.hyperlink(ord)` syncs the space on a background thread, then hyperlinks. |
 
 See also `types/wb-widgets.md §Plugin-extensible device-type manager via SPI` for the complementary WB-side pattern. [ev: corpus B1096]
 
 ### 9.4 · Command-driven manager SPI — BStationMgrCommand registry discovery [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ4]
 
-`BStationMgrCommand` is a registry-discovered command SPI for adding toolbar commands to a station-navigation manager (e.g. the Drivers Manager). Key points:
+`BStationMgrCommand` is a registry-discovered command SPI for adding toolbar commands to the Niagara-driver station manager (`BStationManager`, `@AgentOn niagaraDriver:NiagaraNetwork`). Key points:
 
-- Implementers register via a plain `<type>` in `module.xml`; the framework discovers all registered `BStationMgrCommand` implementations via `NiagaraRegistryUtil.getImplementersOfTypeSpec()` — no static registration call required.
-- **Session-keyed learn state:** each learn session holds its progress in a per-session map keyed by `Context.getSessionId()`. On manager close/reopen the session key is different; old state is GC'd automatically. Do NOT use a static map for session learn state — it causes cross-session contamination.
-- **Offline `.bog` guard:** before executing any command that modifies the station model, check `Sys.isOnline()` / `BStation.isRunning()`. Commands that run against an offline `.bog` snapshot must be read-only; write-mode operations must be gated with a "Station must be running" error.
-- **`CredentialsColumn` lease + `newCopy`:** when a manager column carries credentials, call `column.getCredentials().lease()` to get a snapshot and `snapshot.newCopy()` to produce a safe copy for the background thread — never hold a reference to the live `BCredentials` object across a thread boundary.
-- **Shorthand `HistoryId`:** use `BHistoryId.make(stationName, historyName)` rather than constructing the ORD string manually; the shorthand handles the namespace separator rules correctly across Fox links.
+- Implementers register via a plain `<type>` in `module.xml`; `makeCommands()` discovers them via `Sys.getRegistry().getConcreteTypes(BStationMgrCommand.TYPE.getTypeInfo())` and keeps those whose `isCommandActive(mgr)` is true (niagaraDriver-wb vineflower `BStationManager.java:302-311`) — no static registration call required.
+- **Session-keyed learn state:** `BNiagaraFileManager`'s `State` saves the Fox session id it learned under and drops the cached learn roots when the id changes on restore (`file/BNiagaraFileManager.java:238-266`), so a reconnect never shows a stale learn table. Do NOT keep session learn state in a static map.
+- **Offline `.bog` guard:** `BStationMgrTable.reload()` checks `getSpace().getType().is(BBogSpace.TYPE)` and never subscribes `FoxService.serverConnections` against an offline `.bog` (`BStationMgrTable.java:43-48`); gate live-only work the same way.
+- **`CredentialsColumn` lease + `newCopy`:** the column's `load()` leases the `BClientCredentials` and returns `val.newCopy()` with the `BPassword` copied in; `save()` copies the same way (`BStationManager.java:330-370`). Never hand the live `BCredentials` to the edit row.
+- **Shorthand `HistoryId`:** match an existing import with `id.equals(impId) || impId.equals(id.toShorthand(stationName))` (`history/NiagaraImportLearn.java:85-86`); `BHistoryId.make(deviceName, historyName)` builds an id (history-rt `BHistoryId.java:54`).
 
 [ev: corpus B1097]
 
 ### 9.5 · Field-bus protocol driver archetype — dual-addressing discovery wizard (M-Bus) [ev: retro wb-vendor-ux-wave3-vendor-drivers-deltas Δ7]
 
-M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard** — a two-phase discovery manager that handles both address spaces:
+M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard**: `BMbusDeviceManager.doDiscover()` offers five discovery modes (database scan, single device, primary-address range, full secondary scan, secondary-address scan) across both address spaces (B1100); the scan shapes below are protocol background `[INFER]`:
 
 | Phase | Address type | Range | Manager pattern |
 |-------|-------------|-------|----------------|
@@ -580,8 +589,8 @@ M-Bus and similar field-bus drivers require a **dual-addressing discovery wizard
 | **Secondary scan** | Secondary address (8 bytes: manufacturer + ident + medium + version) | 2³² filtered bitmask walk | Wildcarded broadcast; narrows on each confirmed response |
 
 Additional patterns for field-bus protocol drivers:
-- **Multi-baud scan:** the wizard must iterate across supported baud rates (300/600/1200/2400/4800/9600) if the device baud rate is unknown at commissioning; cache the confirmed baud on the device component.
-- **Manufacturer-specific data model:** `DataRecord` (DIF + VIF + data) is decoded differently per manufacturer extension code; keep the decoder table in a separate `ManufacturerDecoder` registry, not inlined in the proxy ext — this allows new manufacturer codes to be added without touching the polling path.
+- **Multi-baud scan:** the wizard must iterate across supported baud rates (300 to 38400, mbus-rt `BMbusBaudRate.java:47-54`) if the device baud rate is unknown at commissioning; cache the confirmed baud on the device component.
+- **Manufacturer-specific data model:** `DataRecord` (DIF + VIF + data) is decoded differently per manufacturer extension code; the driver keeps manufacturer-specific layouts as station data: a `ManuSpecDataNetworkExt` holds `ManuSpecDef` components whose elements give `offset`/`length`/`byteMask`/`bitMask`/`orFlag`, edited by `BManuSpecDefManager`/`BManuSpecDefElementManager` and referenced via `manuSpecDefElementOrd`, so a new manufacturer needs no code change.
 - **Hardcoded-facet lint candidate:** when a history import assigns `facet precision=4` independently of the proxy point's `-exponent` facet, the two can diverge silently. Flag this mismatch in import-learn flows (see `types/issues-and-gotchas.md §H1` for the proposed lint). [ev: corpus B1100]
 
 [ev: corpus B1100]
@@ -592,22 +601,22 @@ This section is about the classic OPC DA (COM) manager. For OPC UA client/server
 
 OPC and similar protocol-adapter drivers expose three recurring WB patterns that differ from standard BACnet/Modbus drivers:
 
-**Action-slot bridge:** OPC items are exposed as Niagara action slots rather than as proxy points; invoking the action calls the underlying COM/native OPC operation. Keep the COM/native error handling inside the driver layer — never let `COMException` or `NativeException` propagate to the WB view. Decode the HRESULT/native error code into a Niagara `BFacets` display string before reporting to the manager.
+**Action-slot bridge:** OPC items are proxy points (`OpcPointModel.newInstance()` auto-attaches a `BOpcProxyExt`); the WB→rt→COM bridge is action-slot invocation (`submitDeviceDiscoveryJob`, `discover()`, `invoke(BOpcDaClient.setSecurity)`). Keep the COM/native error handling inside the driver layer: the JNI bridge throws `HresultException` (an `OpcException`) whose `toString()` decodes the HRESULT with `OpcEnv.getDescription` (opc-rt vineflower `jni/HresultException.java:6-24`), and the point device ext turns a failure into `writeFail(msg)` on the points (`client/point/BOpcPointDeviceExt.java:668-681`).
 
 ```java
-// Inside the driver comm layer — structured COM error decode
+// Inside the driver comm layer: a failed COM call through the JNI bridge
 try {
-    opcServer.write(itemId, value);
-} catch (COMException e) {
-    String decoded = OpcErrorDecoder.decode(e.getHResult()); // map HRESULT → human string
-    throw new DriverException("OPC write failed: " + decoded); // stripped of COM type
+    syncIo = peer.getSyncIo();
+} catch (Exception e) {                                   // HresultException: "[hex - description] msg"
+    for (BOpcProxyExt ext : points) ext.writeFail(e.getMessage());
+    return;
 }
-// WB view receives only DriverException — no COM imports needed in -wb
+// The WB view never sees the exception; it reads the point's fault cause
 ```
 
-**Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. Implement `isLeaf(node)` and `getChildren(node)` on demand (on node expand only); cache expanded nodes in a `WeakHashMap` keyed by node path.
+**Lazy hierarchical browse:** OPC address spaces can contain millions of nodes; do NOT eagerly expand the full tree on manager open. `OpcPointLearn.getChildren()` checks a lazy flag (`getKidCheck()`) and only then calls `r.discover()` (COM `IOPCBrowse.Browse()`) under a 10 s lease; the manager clears the learn table on focus because COM browse sessions expire.
 
-**Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. Model this as a distinct `SECURITY_FAULT` status separate from `COMM_FAULT` — display a locked-padlock column in the manager and gate write actions on `isSecurityReady()`. The WB manager must never expose a write path when the security state is not fully resolved. [ev: corpus B1103]
+**Security-gated state:** OPC security (DCOM, certificate-based OPC-UA) may leave the connection in a partially authenticated state. `BOpcPointManager.isFocusTraversable()` reads `BOpcDaClient.getServerSecured`; if it is set, it clears it and marks `IsUserLoggedIn`, and saved learn state is never restored while `IsUserLoggedIn` is set. There is no `SECURITY_FAULT` status in `BStatus`; security edits go through `BOpcDASecurityView`. [ev: corpus B1103]
 
 ## 10 · OPC UA and the data-egress choice `[ev: retro t9c-reference-gaps Δ7]`
 
@@ -619,7 +628,7 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
 
 - **Two stacks.** OPC DA = module `opc` (COM/DCOM, Windows only, licence `tridium:opc`; § 9.6). OPC UA =
   `opcUaCore` + `opcUaClient` + `opcUaServer` (`opc.tcp`, JACE and Windows). [CERT]
-  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `[ev: corpus B1222]`
+  `opc/opc-rt/vineflower/com/tridium/opc/client/BOpcNetwork.java:323-324`; `docs/opc-n4-guide.md` §7; `[ev: corpus B1222]`
 - **Client** is an ndriver stack: `BOpcUaNetwork extends BNNetwork` (licence `tridium:opcUaClient`),
   `BOpcUaDevice`, `BOpcUaClientPointDeviceExt`, `BOpcUaClientProxyExt`. Reads are subscriptions only
   (`publishInterval`), no poll. [CERT] `C/BOpcUaNetwork.java:42,70-71`; `docs/opc-n4-guide.md` §3, §7
@@ -627,7 +636,7 @@ niagara-research `organized/`; `C=opcUaClient/opcUaClient-rt/vineflower/com/trid
   `tridium:opcUaServer`) → `BOpcUaNamespace extends BNDevice` → server proxy exts. It exposes ONLY the points
   you add; each is Export (links the source `out`, read-only node) or Import (links into an `inN`, offered
   only for writable sources). [CERT] `S/BOpcUaServer.java:175,344-345`; `S/BOpcUaNamespace.java:121`;
-  `S/point/BOpcUaServerProxyExt.java:148-152`
+  `S/point/BOpcUaServerProxyExt.java:148-152`; `S/point/BOpcUaServerLearnPointEntry.java:121-128`
 - **Namespace-index drift is handled for discovered points:** on subscribe the client rewrites `ns=` from
   the stored `nameSpaceUri`; a hand-made point with an empty `nameSpaceUri` is not remapped. [CERT]
   `C/point/PointSubscribeCmd.java:34-40`
@@ -663,7 +672,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   § Authoring a driver) and list the levels left to remote writers in the module README.
 - **Remote writes run as the station user `BACnet`,** which has no permissions until granted: give it Operator
   write on the category that holds the exported points and a non-blank password
-  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:15-45`).
+  (`Bacnet/ConfiguringExportedObjectsForWriteB-5410ADDB.txt:7-29`).
 - **Exported enums need ordinals 1..n with no gaps.** An `EnumPoint`/`EnumWritable` whose range starts at 0 or
   has gaps "does not export to BACnet", with no error (`Bacnet/TypesOfObjectsToExportBACnet-540D731F.txt:17`).
   Import-side non-contiguous ranges: `types/logic-authoring.md` § Non-contiguous-ordinal gotcha. Gotcha H5.
@@ -671,7 +680,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
   relinquishes the old level (vineflower bacnet-rt 4.14.0.162 `javax/baja/bacnet/point/BBacnetProxyExt.java:528-547`;
   corpus B544 §544.5), so a device program writing at priority 1-7 beats our `in8` in the device's own array.
   A Px virtual-point write goes out at priority 16 unless the ORD carries `;priority=N`
-  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`). `[ev: corpus B1327 rows 4-7]`
+  (`Bacnet/ConfiguringVirtualPointsInPxViewsBA-5398ED55.txt:29`, `Bacnet/VirtualComponentsBACnet-53942D00.txt:59-60`). `[ev: corpus B1327 rows 4-7]`
 - Owed Go lints G85 `bacnet-export-inN-contention` and G86 `bacnet-export-enum-range` (ledger).
 
 ### 11.2 · MS/TP and COV `[ev: retro devguide415-r2-drivers-protocols Δ6]`
@@ -689,7 +698,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 ### 11.3 · Modbus data `[ev: retro devguide415-r2-drivers-protocols Δ6]`
 
 - Integer is unsigned 16-bit; Long/Float take two registers; Double and Long 64-bit take four (new in 4.15)
-  (`Modbus/ModbusData-5FD097AE.txt:18,28,34,37`).
+  (`Modbus/ModbusData-5FD097AE.txt:18,23,28,34,37`).
 - Byte order for 32/64-bit values is set on the network or the device, default `Order3210` (big-endian)
   (`Modbus/modbusAsync-ModbusAsyncNetwork.txt:25-28`). Modbus carries no type metadata, so a wrong order still
   reads `{ok}` with a zero or absurd value `[INFER]` — check one known value at commissioning. Gotcha H4.
@@ -698,7 +707,7 @@ Modbus drivers. Guide paths are `niagara-help/versions/4.15.6.20/guides-clean/`.
 - Wire addresses are zero-based: holding register 108 in a vendor sheet is address 107
   (`Modbus/ModbusRegisters-5E427D5B.txt:33`).
 - Modbus has no priority array: the 16 N4 levels resolve to one value before the wire (corpus B544 §544.5).
-  `[ev: corpus B1327 rows 8-10]`
+  `[ev: corpus B1327 row 10]`
 
 ### 11.4 · Weak peers — capability overrides and queue depth `[ev: retro devguide415-r2-drivers-protocols Δ10]`
 

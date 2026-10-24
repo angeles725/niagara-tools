@@ -1,0 +1,23 @@
+-- args --
+--strict
+@DIR@/A
+@DIR@/B
+-- want --
+exit 1
+WARN  lint-duplicate-helper  @DIR@/B/B-wb/src/b/BY.java:3  same shape as @DIR@/B/B-rt/src/b/BX.java:3 (scale(int): same name and parameter types)
+-- stderr --
+-- A/A-rt/src/a/BX.java --
+package a;
+class BX {
+  static int scale(int v) { return v; }
+}
+-- B/B-rt/src/b/BX.java --
+package b;
+class BX {
+  static int scale(int v) { return v; }
+}
+-- B/B-wb/src/b/BY.java --
+package b;
+class BY {
+  static int scale(int v) { return v * 2; }
+}

@@ -29,6 +29,16 @@ health badge. Also fixed a lexicon mojibake (accents). All rebuilt green and ver
 | Δ3 | **module.lexicon must be ASCII (no accents)** — Niagara reads the lexicon as Latin-1, so UTF-8 accents render as mojibake (`Presión`→`PresiÃ³n`); use plain ASCII (`Presion`) or `\uXXXX` escapes | `types/structure.md` § lexicon + `lint-structure.sh` (add a non-ASCII-in-lexicon check) | `[ev: corpus B1015 §1015.5]` |
 | Δ4 | add a `lint-lexicon-ascii` check (or extend lint-structure L4) that FAILs on any non-ASCII byte in a `.lexicon` file, since it silently mojibakes on-station | `toolbelt/lint-structure.sh` | `[ev: corpus B1017]` |
 
+> **Corrected (2026-10-24, quality round 10) — Δ3 and Evidence line 21:** both cite
+> "`[ev: corpus B1015 §1015.5]`" for "Niagara reads the lexicon as Latin-1". Reading A (this retro): B1015 §1015.5
+> states the encoding rule. Reading B (the block): §1015.5 lists three decisions (filter voltage, the plano false
+> positive, the L10 host path) and B1015 never mentions the lexicon encoding; the rule is in corpus B1305 §1305.1
+> row 2 (`Properties.load` → Latin-1 + `\uXXXX`), and the code loads every lexicon with
+> `Properties.load(InputStream)`, which reads ISO-8859-1 (docSource `javax/baja/util/Lexicon.java:607`, `:625`,
+> `:677`). Winner: B for the pointer; the rule itself is right. It was a wrong pointer when written: B1015 has one
+> commit (2026-09-17) and B1305 did not exist yet (2026-10-15), so the rule was observed live (the mojibake) but
+> cited to a block that does not say it. The row text and this retro's review-status are left as they were.
+
 ## Lessons
 - Operating state and point health are two different data with two different sources — model each explicitly; never fake operating state from a sensor's BStatus.
 - A facade `BStatusNumeric` PROPERTY carries the linked point's BStatus for free (fault/override/stale) — the reader's `st` tag is all you need to reflect health; don't drop it in the SPA live path.

@@ -1,0 +1,15 @@
+-- args --
+--strict
+@DIR@
+-- want --
+exit 3
+-- stderr --
+lint-recovery-path: not a directory: --strict
+-- a/G.java --
+package com.x;
+public class G extends BComponent {
+  void execute() {
+    if (inDefrost) return;
+    setHeatOut(false);
+  }
+}

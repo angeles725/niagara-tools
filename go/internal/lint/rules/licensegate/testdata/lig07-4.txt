@@ -1,0 +1,17 @@
+-- args --
+@DIR@/nope
+-- want --
+exit 3
+-- stderr --
+lint-license-isoperational-gate: not a directory: @DIR@/nope
+-- Mod/src/com/x/BSvc.java --
+package com.x;
+public class BSvc extends BAbstractService {
+  @Override
+  public final Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("vendor", "feature");
+  }
+  public void doPoll() {
+    poll();
+  }
+}

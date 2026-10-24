@@ -154,8 +154,10 @@ func TestProperties(t *testing.T) {
 	const pf = "m/gradle.properties"
 	for _, tc := range []struct{ name, src, want string }{
 		// As the real gradle.properties write it: a properties backslash is doubled.
-		{"windows user home", "niagara_home=C:\\\\Niagara\\\\Niagara-4.14\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n",
-			rowAt(pf, 2, `C:\Users\equipo\Niagara4.14\X`, value)},
+		// R10-D8: the four host build-location keys are lint-structure L10's; G43 prints no row for them.
+		{"windows user home", "niagara_home=C:\\\\Niagara\\\\Niagara-4.14\nniagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n", ""},
+		{"other build-location keys", "niagara_home=/home/me/N4\nnodeHome=C:\\\\Users\\\\me\\\\node\norg.gradle.java.installations.paths=/home/me/jdk8\n", ""},
+		{"another key in gradle.properties", "some_other=C:\\\\Users\\\\equipo\\\\x\n", rowAt(pf, 1, `C:\Users\equipo\x`, value)},
 		{"colon separator and continuation", "# out=/home/x\nout : /home/\\\n    me/out\nnext=1\n", rowAt(pf, 2, "/home/me/out", value)},
 		{"relative and install root", "a=build/out\nb=/opt/Niagara\n", ""},
 		{"single backslash loads as C:Users", "u=C:\\Users\\me\n", ""},
@@ -163,5 +165,28 @@ func TestProperties(t *testing.T) {
 		if got := rowsIn(t, pf, tc.src); got != tc.want {
 			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
 		}
+	}
+}
+
+// TestBuildKeysOwnedByL10 (R10-D8): the four keys print no row in any gradle.properties, a kit fixture's
+// too (lint-structure L10 FAILs those, K16), and exit 0 under --strict; another .properties file still WARNs.
+func TestBuildKeysOwnedByL10(t *testing.T) {
+	const line = "niagara_user_home=C:\\\\Users\\\\equipo\\\\Niagara4.14\\\\X\n"
+	const p = `C:\Users\equipo\Niagara4.14\X`
+	for _, tc := range []struct{ name, rel, want string }{
+		{"other properties file", "m/local.properties", rowAt("m/local.properties", 1, p, value)},
+		{"kit template fixture", "kit/build-n4-module-kit/fixtures/MinimalPan/gradle.properties", ""},
+	} {
+		if got := rowsIn(t, tc.rel, line); got != tc.want {
+			t.Errorf("%s: got\n%s\nwant\n%s", tc.name, got, tc.want)
+		}
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "gradle.properties"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	if code := lint.Command(Spec())([]string{ID, "--strict", dir}, cli.Stdio{Out: &o, Err: &e}); code != 0 || o.String() != "" {
+		t.Errorf("--strict: exit %d out %q, want 0 and no row", code, o.String())
 	}
 }
