@@ -24,8 +24,8 @@ func (rule) Severity() lint.Severity { return lint.Fail }
 
 func (r rule) CheckRoot(root string) ([]lint.Finding, error) { return r.CheckRootOptions(root, nil) }
 
-// CheckRootOptions prints the bash lint's rows in its order: FAIL per profile, then STALE/DRIFT per
-// matrix line. Its env errors are stdout rows (lint.RowError).
+// CheckRootOptions prints the bash lint's rows in its order: FAIL per profile, the audit-call WARN rows
+// per profile, then STALE/DRIFT per matrix line. Its env errors are stdout rows (lint.RowError).
 func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Finding, error) {
 	s := &scan{root: root, files: map[string][]string{}}
 	m, err := s.matrix(values["--matrix"])
@@ -46,11 +46,13 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 	}
 	rows := m.slots()
 	var out []lint.Finding
+	lists := make([][]string, len(srcs))
 	for i, src := range srcs {
 		files, err := s.list(src, "")
 		if err != nil {
 			return out, err
 		}
+		lists[i] = files
 		slots, err := s.operatorSlots(files)
 		if err != nil {
 			return out, err
@@ -59,6 +61,12 @@ func (rule) CheckRootOptions(root string, values map[string]string) ([]lint.Find
 			if !rows[slot] {
 				out = append(out, lint.Finding{Path: profiles[i], Msg: "slot " + slot + ": no matrix row"})
 			}
+		}
+	}
+	for _, files := range lists {
+		rows, err := s.audit(files)
+		if out = append(out, rows...); err != nil {
+			return out, err
 		}
 	}
 	return append(out, m.stale(covered)...), nil
