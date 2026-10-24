@@ -3,7 +3,7 @@
 -- want --
 exit 3
 -- stderr --
-lint-agent-on-shape: cannot scan @DIR@/M/Mod-rt/module-include.xml: lint-agent-on-shape: @DIR@/M/Mod-rt/module-include.xml:3:1: element <unclosed> opened at 2:1 is never closed
+lint-agent-on-shape: @DIR@/M/Mod-rt/module-include.xml:3:1: element <unclosed> opened at 2:1 is never closed
 -- M/Mod-rt/module-include.xml --
 <agent><on type="Bad4"/>
 <unclosed>

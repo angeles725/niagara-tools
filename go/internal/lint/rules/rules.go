@@ -5,6 +5,7 @@ package rules
 import (
 	"github.com/angeles725/niagara-tools/go/internal/lint"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/agentonshape"
+	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bformatcall"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/bqlconcat"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/clockzerofloor"
 	"github.com/angeles725/niagara-tools/go/internal/lint/rules/configsanity"
@@ -76,6 +77,7 @@ func All() []lint.Spec {
 		lexiconascii.Spec(),
 		duplicatehelper.Spec(),
 		agentonshape.Spec(),
+		bformatcall.Spec(),
 		splitpackage.Spec(),
 	}
 }

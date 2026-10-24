@@ -1,0 +1,9 @@
+-- args --
+--strict
+@DIR@/root
+-- want --
+exit 1
+WARN  lint-bformat-call  @DIR@/root/m.lexicon:1  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+-- stderr --
+-- root/m.lexicon --
+x=%user%

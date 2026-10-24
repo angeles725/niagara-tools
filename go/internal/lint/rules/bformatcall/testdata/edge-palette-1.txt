@@ -1,0 +1,11 @@
+-- args --
+@DIR@/root
+-- want --
+exit 0
+WARN  lint-bformat-call  @DIR@/root/p/x.palette:2  BFC2 %user% is a reflective call that fails -- write %user()% (types/logic.md BFormat)
+WARN  lint-bformat-call  @DIR@/root/p/x.palette:2  BFC1 time() takes no argument -- %time(<fmt>)% goes to reflection and prints %err:...%; chain instead: %time().toDateString% (types/logic.md BFormat)
+-- stderr --
+-- root/p/x.palette --
+<palette>
+<p v="%user%"/><p v="%time(z)%"/>
+</palette>
