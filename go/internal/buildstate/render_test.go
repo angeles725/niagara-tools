@@ -61,7 +61,7 @@ func TestLastChange(t *testing.T) {
 		{"a date tie goes to the later name", []Fragment{archive, same}, "last_change: 2026-10-22              # same day, later name"},
 		{"no note, no comment", []Fragment{archive, bare}, "last_change: 2026-10-25"},
 		{"no fragment: the BUILD-STATE.src.md placeholder", nil,
-			"last_change: generated               # from ledger.d/; run toolbelt/gen-build-state.sh"},
+			"last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state"},
 	}
 	for _, c := range cases {
 		if got := LastChange(c.frags); got != c.want {

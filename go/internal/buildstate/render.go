@@ -17,7 +17,7 @@ const (
 )
 
 // sourceLastChange is the kit `last_change:` line with no fragment: the form BUILD-STATE.src.md keeps.
-var sourceLastChange = fmt.Sprintf("%-37s# %s", "last_change: generated", "from ledger.d/; run toolbelt/gen-build-state.sh")
+var sourceLastChange = fmt.Sprintf("%-37s# %s", "last_change: generated", "from ledger.d/; run toolbelt/kit-state.sh build-state")
 
 // LastChange renders the kit `last_change:` line from the newest fragment: the latest date header,
 // a tie going to the later filename. The note, when present, is the `# comment` at column 38, the

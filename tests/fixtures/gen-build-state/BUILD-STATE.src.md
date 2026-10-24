@@ -15,7 +15,7 @@ last_session: 2020-01-01 · demo
 <!-- build-state.v1 -->
 module: kit                          # the kit
 version: 1.0.0
-last_change: generated               # from ledger.d/; run toolbelt/gen-build-state.sh
+last_change: generated               # from ledger.d/; run toolbelt/kit-state.sh build-state
 open_issues:
 retro_required: true
 retro_pending: false
