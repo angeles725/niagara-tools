@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # install-hooks.sh — opt-in activation of the kit's git hooks.
 # Points git at the kit's hooks: `git config --local core.hooksPath .githooks`, which activates every
-# hook there: the retro-enforcement pre-push gate, and post-merge / post-checkout / post-rewrite, which
-# regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md — not committed, R10-D1) with
-# toolbelt/kit-state.sh after every pull, checkout and rebase/amend. The install runs post-merge once
+# hook there: the retro-enforcement pre-push gate, and post-merge / post-checkout / post-rewrite /
+# post-commit, which regenerate the kit's generated state (BUILD-STATE.md, retros/INDEX.md,
+# toolbelt/INDEX.md — not committed, R10-D1) with toolbelt/kit-state.sh after every pull, checkout,
+# rebase/amend and commit. The install runs post-merge once
 # so the state is materialized right away. The hooks ship INERT; this is what makes them live in a
 # clone. Per-clone and reversible. [ev: retro ledger-generated-not-committed]
 #
@@ -52,7 +53,7 @@ fi
 
 git config --local core.hooksPath "$HOOKS_DIR"
 printf 'install-hooks: activated — core.hooksPath = %s; live: the retro-enforcement pre-push gate and the\n' "$HOOKS_DIR"
-printf '              kit-state regenerate hooks (post-merge, post-checkout, post-rewrite).\n'
+printf '              kit-state regenerate hooks (post-merge, post-checkout, post-rewrite, post-commit).\n'
 # materialize the generated kit state now (the hook never fails; it warns and removes stale files)
 top="$(git rev-parse --show-toplevel)"
 if [ -x "$top/$HOOKS_DIR/post-merge" ]; then (cd "$top" && "./$HOOKS_DIR/post-merge"); fi

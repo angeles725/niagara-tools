@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
-# kit-state-hooks.bats — .githooks/post-merge, post-checkout and post-rewrite keep the generated kit
+# kit-state-hooks.bats — .githooks/post-merge, post-checkout, post-rewrite and post-commit keep the generated kit
 # state (BUILD-STATE.md, retros/INDEX.md, toolbelt/INDEX.md; not committed since R10-D1) fresh in every clone that runs
-# scripts/install-hooks.sh: after a pull, a checkout or a rebase/amend, `kit-state --write` runs. They
+# scripts/install-hooks.sh: after a pull, a checkout, a rebase/amend or a commit, `kit-state --write` runs. They
 # never block git: exit 0 always; when generation fails they print ONE named warning line and delete
 # both generated files, so no reader is left with stale data. [ev: retro ledger-generated-not-committed]
 #
@@ -83,6 +83,15 @@ log: 2099-01-01 · $2 landed}" > "$1/build-n4-module-kit/ledger.d/2099-01-01-$2.
   g "$C" add -A
   g "$C" commit -q --amend --no-edit
   grep -qF '2099-01-01 · amended-change landed' "$C/build-n4-module-kit/BUILD-STATE.md"
+}
+
+@test "HK6: a plain commit that adds a fragment regenerates (post-commit)" {
+  # Mutation: HK6 -- without .githooks/post-commit a committed fragment leaves BUILD-STATE.md stale.
+  bash "$C/build-n4-module-kit/toolbelt/kit-state.sh" --write >/dev/null
+  frag "$C" committed-change
+  g "$C" add -A
+  g "$C" commit -qm "feat: committed change"
+  grep -qF '2099-01-01 · committed-change landed' "$C/build-n4-module-kit/BUILD-STATE.md"
 }
 
 @test "HK5: a checkout without toolbelt/kit-state.sh (before R10-D1) is a silent no-op, exit 0" {
