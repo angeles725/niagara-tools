@@ -140,6 +140,7 @@ change the shared code instead.
 R8-D12: an XML or `.bog` lint is ported only onto `internal/xmlsrc`, never onto its own regexes or a second
 tokenizer. Each file is read once (UTF-8, ISO-8859-1 or US-ASCII; a zipped `.bog` unzipped in memory) and is either
 a well-formed `Doc` or an `*Error` printed as `path:line:col: message`; a malformed file is a finding, never an empty
-result. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
+result. A rule that returns that `*Error` from `Check` has it printed once, `<lint>: path:line:col: message` (exit 3),
+not behind the engine's `cannot scan <path>: <rule>:` prefix. Writing XML and XPath are out of scope. `TestParityExpatSuite` (`XMLSRC_EXPAT_SUITE` = niagara-go's
 `internal/pyxml/testdata/xmlerrors.json`) checks the well-formedness verdict against expat; `TestSweepRealFiles`
 (`XMLSRC_SWEEP_ROOTS`) opens real client and module files. The first consumer is `lint-agent-on-shape.sh` (`rules/agentonshape`: every `<on>` element of each module-include.xml, a malformed file a positioned `path:line:col` error, exit 3); `split-package-check.sh` only looks for its build markers by name and reads no XML.

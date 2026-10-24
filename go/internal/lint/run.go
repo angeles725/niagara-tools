@@ -13,6 +13,7 @@ import (
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
 	"github.com/angeles725/niagara-tools/go/internal/strerror"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // Run scans every root in order: it lists the files any spec selects (pruning only the directories
@@ -86,7 +87,12 @@ func Run(specs []Spec, name string, a Args, s cli.Stdio) int {
 				}
 				r.findings(i, sp, shown, fds)
 				if err != nil {
-					r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					var xe *xmlsrc.Error
+					if errors.As(err, &xe) { // it names its own path:line:col: print it once
+						r.envError(i, xe.Error())
+					} else {
+						r.envError(i, fmt.Sprintf("cannot scan %s: %s: %s", p, sp.ID(), err))
+					}
 				}
 			}
 		}

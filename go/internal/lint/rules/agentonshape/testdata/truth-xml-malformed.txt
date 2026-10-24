@@ -4,7 +4,7 @@
 exit 3
 FAIL  lint-agent-on-shape  @DIR@/M/A-rt/module-include.xml:1  malformed agent-on target (need module:Type): Bad
 -- stderr --
-lint-agent-on-shape: cannot scan @DIR@/M/B-rt/module-include.xml: lint-agent-on-shape: @DIR@/M/B-rt/module-include.xml:3:1: element <unclosed> opened at 2:1 is never closed
+lint-agent-on-shape: @DIR@/M/B-rt/module-include.xml:3:1: element <unclosed> opened at 2:1 is never closed
 -- M/A-rt/module-include.xml --
 <agent><on type="Bad"/></agent>
 -- M/B-rt/module-include.xml --

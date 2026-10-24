@@ -13,7 +13,7 @@
 # Read as XML (go/internal/xmlsrc, R8-D12; truth fix 2026-10-24 over the line-based awk): every <on> element's
 # type attribute, entity-decoded, single or double quoted, at the element's own line; an <on> inside a comment or
 # CDATA is not one; an empty type="" is malformed too; a malformed module-include.xml is
-# `cannot scan <file>: lint-agent-on-shape: <file>:<line>:<col>: <reason>` on stderr (exit 3; the other files are
+# `lint-agent-on-shape: <file>:<line>:<col>: <reason>` on stderr (exit 3; the other files are
 # still scanned). The awk took only the last <on per line and read a malformed file as text. Real trees unchanged.
 # Empty root: a root with no module-include.xml is an env error (exit 3) with
 # `ERROR  lint-agent-on-shape  <root>  no files to scan (K20: wrong path or empty scaffold)` on stdout.

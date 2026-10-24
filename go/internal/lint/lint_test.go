@@ -12,6 +12,7 @@ import (
 
 	"github.com/angeles725/niagara-tools/go/internal/cli"
 	"github.com/angeles725/niagara-tools/go/internal/javasrc"
+	"github.com/angeles725/niagara-tools/go/internal/xmlsrc"
 )
 
 // fakeRule reports every raw line that contains its marker.
@@ -689,5 +690,23 @@ func TestEmptyOK(t *testing.T) {
 	s, o, _ = stdio()
 	if code := Command(sp)([]string{"lint-e", full}, s); code != 1 || o.String() != "FAIL  lint-e  "+full+"/A.java:1  saw: MARK\n" {
 		t.Errorf("full: exit %d out %q", code, o)
+	}
+}
+
+// xmlFake is a Rule whose Check fails with a positioned XML error, as an internal/xmlsrc consumer does.
+type xmlFake struct{ fakeRule }
+
+func (xmlFake) Check(f *javasrc.File) ([]Finding, error) {
+	return nil, &xmlsrc.Error{Path: f.Path, Line: 3, Col: 1, Msg: "element <a> opened at 2:1 is never closed"}
+}
+
+// TestXMLErrorOnce: an *xmlsrc.Error from a rule names its file itself, so the runner prints it once
+// ("<lint>: <path>:<line>:<col>: <msg>"), not behind "cannot scan <path>: <rule>:"; exit 3.
+func TestXMLErrorOnce(t *testing.T) {
+	root := tree(t, map[string]string{"A.java": "x\n"})
+	s, o, e := stdio()
+	if code := Command(javaSpec(xmlFake{fakeRule{"lint-x", "MARK", Fail}}, One))([]string{"lint-x", root}, s); code != 3 || o.Len() != 0 ||
+		e.String() != "lint-x: "+root+"/A.java:3:1: element <a> opened at 2:1 is never closed\n" {
+		t.Errorf("exit %d out %q err %q", code, o, e)
 	}
 }
