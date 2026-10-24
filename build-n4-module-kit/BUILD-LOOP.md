@@ -293,19 +293,28 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     A backward walk (the binding or guard "N lines up") stops at the enclosing method or class-level lambda body
     (`javasrc.Scopes`, `Enclosing`), never at a line budget alone: lint-delays took an earlier method's floor and
     lint-servlet an earlier method's `try {`. A change to the shared scanner re-runs every rule's goldens and
-    declares each changed row (#405 wrapped signatures: lint-size, lint-ws-placement).
-    `[ev: retro go-lint-delays-method-scope Δ1]` `[ev: retro go-lint-delays-method-scope Δ3]`
+    declares each changed row (#405 wrapped signatures: lint-size, lint-ws-placement). `javasrc.Methods` now reads two
+    shapes (wrapped signatures, body depth) unlike `mb_parse`; a bash lint on `mb_parse` keeps the old reading until ported.
+    `[ev: retro go-lint-delays-method-scope Δ1]` `[ev: retro go-lint-delays-method-scope Δ3]` `[ev: retro go-lint-servlet-try-scope Δ2]`
   - **Fix a lint false positive by modeling the framework, never by suppressing it.** Encode the framework behavior
     that makes the code correct, with a RED truth fixture (Baja's equal-value skip in `hotwrite.Hot`, #445); an
     allow-list or a suppression is a finding. `[ev: retro r10-close-process-meta-lessons Δ4]`
   - **A truth case is RED on the old code for the reason it names** (METHODOLOGY.md § Kit maintenance, observed
     flips): a case that only exercises the bug can pass before the fix (a brace in a literal where the body already
     acts; a short zip payload stored, not deflated, so the old byte read found it). Pick the input that flips the
-    outcome and assert the test's own precondition. `[ev: retro go-lint-license-gate Δ1]` `[ev: retro go-lint-bformat-call Δ1]`
+    outcome and assert the test's own precondition. A mutation spot check likewise uses a case that reaches the
+    guarded code. `[ev: retro go-lint-license-gate Δ1]` `[ev: retro go-lint-bformat-call Δ1]` `[ev: retro go-lint-wb-threading Δ3]`
   - **Golden cases come from the recorder or `golden.Run`'s replay, never a second tree builder:** a rebuilt tree
     lost a final newline and moved an error position (3:1 vs 2:11). A shape the format cannot hold (an empty
-    directory replays as a missing root) gets a direct Go test (`rules/licensegate` `TestEmptyDir`).
-    `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
+    directory replays as a missing root) gets a direct Go test (`rules/licensegate` `TestEmptyDir`). The recorder
+    copies every root argument (file roots too) so no machine path enters a golden: `grep -l /tmp/ testdata/*.txt` is
+    empty before a golden commit. `[ev: retro go-lint-agent-on-shape Δ2]` `[ev: retro go-lint-license-gate Δ2]`
+    `[ev: retro go-lint-link-target-flags Δ2]`
+  - **Reuse the engine before adding to it:** a per-file rule may set `Finding.Path` to any subject (the runner fills
+    only an empty one); a rule that needs literal text and code positions together reads `javasrc.MaskLiterals` (same
+    line lengths) instead of mapping `BlankLiterals` columns back. An engine option a port does need (`Spec.IntFlags`)
+    lands as its own green commit, then the port with its goldens. `[ev: retro go-lint-status-parity Δ2]`
+    `[ev: retro go-lint-ws-placement Δ3]` `[ev: retro go-lint-size Δ3]`
   - **An XML or `.bog` lint reads through `internal/xmlsrc`** (`go/README.md` § XML rules): a station `config.bog`
     is zipped, so a text read sees compressed bytes and passes clean; a malformed file is one positioned error,
     printed once. `[ev: retro go-lint-bformat-call Δ2]` `[ev: retro go-lint-agent-on-shape Δ1]`
@@ -320,7 +329,8 @@ Do not count the compile-only `moduleTestJar` pass as test execution.  `[ev: cor
     `[deferred: retro go-lint-inert-coordination Δ1]` `[deferred: retro go-lint-inert-coordination Δ2]`
     `[deferred: retro go-lint-inert-coordination Δ3]` `[deferred: retro go-lint-inline-site-literal Δ3]`
     `[deferred: retro go-lint-js-pair Δ1]` `[deferred: retro go-lint-js-pair Δ2]` `[deferred: retro go-lint-js-pair Δ3]`
-    `[deferred: retro go-lint-lexicon-ascii Δ2]`
+    `[deferred: retro go-lint-lexicon-ascii Δ2]`. Moving the Python `str` helpers (`internal/htmltext/unicode.go`) to
+    their own package waits for a second consumer (one today): `[deferred: retro go-lint-manual-labels Δ4]`
   - **Fail-closed input listing.** A toolbelt script never feeds a loop from a raw `find`; it lists its files once
     with `scan_files_or_exit` (or `awk_lint_list` / `awk_lint_run` / `awk_lint_strip_run`), because `find` read
     through `< <(...)` or a pipe hides its exit status and an unreadable sub-directory becomes a clean pass. Review
