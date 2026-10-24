@@ -108,3 +108,13 @@ teardown() { rm -rf "$TMPDIR_T"; }
   [ -L "$TMPDIR_T/link.jar" ]
   [ ! -e "$TMPDIR_T/nowhere" ]
 }
+
+# The bash resolved OUT_ABS with $(cd "$(dirname "$OUT")" && pwd): a missing directory made it "/out.jar", and
+# zip tried to create that file in / (exit 15, or a stray /out.jar when / is writable).
+@test "S8: an output in a directory that does not exist is exit 1 'cannot write', nothing written" {
+  cd "$TMPDIR_T"
+  run "$R" in.jar nodir/out.jar
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: cannot write nodir/out.jar: No such file or directory" ]
+  [ ! -e nodir ]
+}
