@@ -138,3 +138,14 @@ jfile() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "SPC-block: a package line inside a /* */ comment is not the file's package (truth fix 2026-10-24)" {
+  # Mutation: SPC-block -- reading a package line inside a /* */ comment takes a moved-from note over the real declaration
+  module A/A-rt; module B/B-rt
+  mkdir -p "$P/A/A-rt/src/com/x"
+  printf '/*\n * Moved from:\npackage com.old;\n */\npackage com.real;\nclass U {}\n' > "$P/A/A-rt/src/com/x/U.java"
+  jfile B/B-rt/src/com/x/U.java com.old
+  run "$SPC" --strict "$P"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

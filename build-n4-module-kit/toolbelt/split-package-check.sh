@@ -37,11 +37,14 @@
 # the aggregation runs in process, so there is no external sort whose failure SPC-aggfail pinned.
 # Truth fix 2026-10-24: `*-worktrees` directories are pruned from the module search (a sibling checkout's copies of
 # every package were reported as splits; the root itself may be a worktree). Cliente 8 -> 4 rows.
+# Truth fix 2026-10-24: the package declaration is read on code (comments blanked by the shared scanner): a
+# `package` line inside a /* */ comment no longer wins over the real declaration. Real trees unchanged.
 # VCS-free by design (kit-links L2).
 # Mutation: SPC2 -- counting files instead of distinct modules WARNs a package spread over two files of ONE module
 # Mutation: SPC4 -- scanning srcTest/ as well WARNs a test fixture that mirrors a runtime package
 # Mutation: SPC-finderr -- ignoring the per-module listing status skips the unreadable directory and reports clean
 # Mutation: SPC-findtree -- ignoring the module-search status skips a module under an unreadable directory
+# Mutation: SPC-block -- reading a package line inside a /* */ comment takes a moved-from note over the real declaration
 # Mutation: SPC-worktrees -- searching *-worktrees directories reports every package of a sibling checkout as a split
 set -u
 # Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.

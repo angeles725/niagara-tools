@@ -156,8 +156,9 @@ func findModules(root string) ([]string, error) {
 	return mods, first
 }
 
-// packageOf is the awk program: the first line that, cut at its first "//", declares `package <name>;`;
-// "(default)" when none does.
+// packageOf is the awk program: the first line that declares `package <name>;`, "(default)" when none does. It
+// reads javasrc.Strip's code (truth fix 2026-10-24: the awk only cut each line at its first "//", so a
+// `package` line inside a /* */ comment, e.g. a "moved from" note, was taken over the real declaration).
 func packageOf(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -168,10 +169,8 @@ func packageOf(path string) (string, error) {
 		return "", err
 	}
 	lines, _ := javasrc.Lines(strings.NewReader(string(data)))
-	for _, ln := range lines {
-		if k := strings.Index(ln, "//"); k >= 0 {
-			ln = ln[:k]
-		}
+	code, _ := javasrc.Strip(lines)
+	for _, ln := range code {
 		if m := pkgDecl.FindStringSubmatch(ln); m != nil {
 			return m[1], nil
 		}

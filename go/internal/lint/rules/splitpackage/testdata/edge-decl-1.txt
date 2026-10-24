@@ -3,7 +3,6 @@
 -- want --
 exit 0
 WARN  split-package-check  (default)  declared in 2 modules: A/A-rt (A/A-rt/src/a/E.java), B/B-rt (B/B-rt/src/b/E.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
-WARN  split-package-check  com.inblock  declared in 2 modules: A/A-rt (A/A-rt/src/a/N.java), B/B-rt (B/B-rt/src/b/N.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
 WARN  split-package-check  com.late  declared in 2 modules: A/A-rt (A/A-rt/src/a/T.java), B/B-rt (B/B-rt/src/b/T.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
 WARN  split-package-check  com.url  declared in 2 modules: A/A-rt (A/A-rt/src/a/U.java), B/B-rt (B/B-rt/src/b/U.java) -- first-dependency-wins shadows one copy; one package belongs to one module (types/issues-and-gotchas.md §D4c)
 -- stderr --
