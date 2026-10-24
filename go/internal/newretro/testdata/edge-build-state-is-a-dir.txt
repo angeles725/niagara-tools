@@ -1,0 +1,18 @@
+-- args --
+kit
+slugabc
+-- want --
+exit 3
+-- stderr --
+new-retro: BUILD-STATE.src.md not found: @DIR@/kit/BUILD-STATE.src.md
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
+-- kit/BUILD-STATE.src.md/ --
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|

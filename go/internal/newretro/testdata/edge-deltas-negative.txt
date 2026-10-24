@@ -1,0 +1,31 @@
+-- args --
+kit
+slugabc
+--deltas
+-1
+-- want --
+exit 1
+-- stderr --
+gen-retro-index: 2026-01-02-slugabc.md: needs exactly one <!-- deltas: <N> --> header (N an integer) in lines 1-10
+gen-retro-index: retro-header violation; index not generated
+new-retro: gen-retro-index.sh failed; retro removed, INDEX.md and BUILD-STATE.src.md unchanged
+-- @kind --
+recorded from build-n4-module-kit/toolbelt/new-retro.sh at 15e792d1
+-- @env --
+KIT=@DIR@/kit
+-- @expect kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- @expect kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
+-- kit/BUILD-STATE.src.md --
+<!-- build-state.v1 -->
+## kit
+retro_required: true
+retro_pending: false
+-- kit/retros/INDEX.md --
+| Retro file | Module | Date | review-status | deltas |
+|---|---|---|---|---|
