@@ -418,3 +418,25 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [[ "$output" == *"rc/app.js:4  innerhtml-server"* ]]
   if [[ "$output" == *"rc/app.js:2  innerhtml-server"* ]]; then return 1; fi
 }
+
+# Walk contract (lib/scan-files.sh, kept by the Go port's lint.Walk): a sibling *-worktrees checkout is pruned,
+# a symlinked artifact root is followed (find -H) and a dot-named root is walked (find -mindepth 1).
+@test "RS-walk: a *-worktrees copy gives no row; a symlinked and a dot-named root are scanned" {
+  # Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal
+  local T="$BATS_TEST_TMPDIR/rswalk"
+  mkdir -p "$T/art/rc" "$T/art/x-worktrees/m/rc" "$T/.dotroot/rc"
+  printf 'var o = "station:|x";\n' > "$T/art/rc/b.js"
+  printf 'var o = "station:|x";\n' > "$T/art/x-worktrees/m/rc/a.js"
+  cp "$T/art/rc/b.js" "$T/.dotroot/rc/b.js"
+  ln -s "$T/art" "$T/link"
+  run "$RS" "$T/art"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"rc/b.js:1  ord-literal"* ]]
+  if [[ "$output" == *"x-worktrees"* ]]; then return 1; fi
+  run "$RS" "$T/link"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL  rc-scan  rc/b.js:1  ord-literal"* ]]
+  run "$RS" "$T/.dotroot"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"rc/b.js:1  ord-literal"* ]]
+}

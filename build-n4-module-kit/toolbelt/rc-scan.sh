@@ -60,7 +60,9 @@
 # Escape hatch (new checks only): a trailing `rc-scan: allow <check-id>` comment on the flagged line
 # (for orphan-page, on the section/data-page line) suppresses that check there. Record why.
 # Exclusions: rc/ext/**, *.min.js, rc/vendor/**/*.js (vendored libraries: lint-vendor-floor.sh owns them, issue
-#   #459; vendored CSS/HTML stay scanned), srcTest/**, dot-directories (D9b), comment-only lines (// /* * <!--).
+#   #459; vendored CSS/HTML stay scanned), srcTest/**, dot-directories (D9b), *-worktrees sibling checkouts,
+#   comment-only lines (// /* * <!--). The walk is lib/scan-files.sh's (lint.Walk in Go): a symlinked
+#   <artifact-dir> is followed (find -H) and the root itself is never pruned, even when dot-named (RS-walk).
 # W3C namespace URIs (http://www.w3.org/) are NOT flagged as hosts (not network hosts).
 # Handle ORD pattern: h:<hex> matched only when preceded by |, ", ', or ` (segment boundary), so
 #   CSS width:100px (h preceded by 't') is never matched.
@@ -87,6 +89,7 @@
 # Mutation: RC34 -- ignoring a stated non-gate title reason WARNs the wiring-disabled control (RC34 sees app.js:2)
 # Mutation: RC35 -- matching the member anywhere on the line again WARNs the spec.unit line (RC35 sees app.js:2)
 # Mutation: RC36 -- dropping literal provenance WARNs the units.map(u => u.name) line (RC36 sees app.js:2)
+# Mutation: RS-walk -- dropping the *-worktrees prune reports the x-worktrees copy's ORD literal (RS-walk)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
 # Go: the checks run in go/internal/rcscan (go/cmd/rc-scan), built on demand by go/go-tool.sh; this script is
