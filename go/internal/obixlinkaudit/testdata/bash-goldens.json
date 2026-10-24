@@ -1,0 +1,479 @@
+[
+ {
+  "name": "ola1",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISMATCH  obix-link-audit  comp1State  declared comp1Running in Rack, linked from relayOut1 (slot:/Plant/IO)\nMATCH  obix-link-audit  comp2State  linked from declared comp2Running\nMATCH  obix-link-audit  comp3State  linked from declared comp3Running in Rack\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 2 MATCH · 1 MISMATCH · 1 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "ola2",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade-all-match.xml"
+  ],
+  "exit": 0,
+  "stdout": "MATCH  obix-link-audit  comp1State  linked from declared comp1Running in Rack\nMATCH  obix-link-audit  comp2State  linked from declared comp2Running\nMATCH  obix-link-audit  comp3State  linked from declared comp3Running in Rack\nMATCH  obix-link-audit  inDrip  linked from declared dripActive\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 4 MATCH · 0 MISMATCH · 0 MISSING · 1 SKIP  ->  CLEAN\n",
+  "stderr": ""
+ },
+ {
+  "name": "ola3",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "control.xml",
+   "--table",
+   "1"
+  ],
+  "exit": 1,
+  "stdout": "MATCH  obix-link-audit  suctionSetpoint  linked from declared setpoint\nMISSING  obix-link-audit  suctionDiffUp  declared diffUp, no link into suctionDiffUp\nSKIP  obix-link-audit  diffDown  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 1 MATCH · 0 MISMATCH · 1 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "t2control",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "control.xml",
+   "--table",
+   "2"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  comp1State  declared comp1Running in Rack, no link into comp1State\nMISSING  obix-link-audit  comp2State  declared comp2Running, no link into comp2State\nMISSING  obix-link-audit  comp3State  declared comp3Running in Rack, no link into comp3State\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 0 MATCH · 0 MISMATCH · 4 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "t1facade",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--table",
+   "1"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  suctionSetpoint  declared setpoint, no link into suctionSetpoint\nMISSING  obix-link-audit  suctionDiffUp  declared diffUp, no link into suctionDiffUp\nSKIP  obix-link-audit  diffDown  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 0 MATCH · 0 MISMATCH · 2 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "noargs",
+  "args": [],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "missingmap",
+  "args": [
+   "--map",
+   "absent.md",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: map not found: absent.md\n"
+ },
+ {
+  "name": "mapdir",
+  "args": [
+   "--map",
+   ".",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: map not found: .\n"
+ },
+ {
+  "name": "both",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--obix",
+   "https://station.example/obix",
+   "--component",
+   "/Plant/Facade"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "xmlcomp",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--component",
+   "/Plant/Facade"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "table3",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--table",
+   "3"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "tableempty",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--table",
+   ""
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "table02",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--table",
+   "02"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "maponly",
+  "args": [
+   "--map",
+   "wiring-map.md"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "obixnocomp",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--obix",
+   "https://station.example/obix"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "compnoobix",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--component",
+   "/P"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "xmlmissing",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "absent.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: xml not found: absent.xml\n"
+ },
+ {
+  "name": "xmldir",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "."
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: xml not found: .\n"
+ },
+ {
+  "name": "unknown",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--bogus"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "mapnoval",
+  "args": [
+   "--map"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "xmlnoval",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "emptymap",
+  "args": [
+   "--map",
+   "",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "usage: obix-link-audit.sh --map <wiring-map.md> (--xml <component.xml> | --obix <base-url> --component <path>) [--table 1|2] [--insecure]\n"
+ },
+ {
+  "name": "repeat",
+  "args": [
+   "--map",
+   "absent.md",
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "control.xml",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISMATCH  obix-link-audit  comp1State  declared comp1Running in Rack, linked from relayOut1 (slot:/Plant/IO)\nMATCH  obix-link-audit  comp2State  linked from declared comp2Running\nMATCH  obix-link-audit  comp3State  linked from declared comp3Running in Rack\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 2 MATCH · 1 MISMATCH · 1 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "insecurexml",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "facade.xml",
+   "--insecure"
+  ],
+  "exit": 1,
+  "stdout": "MISMATCH  obix-link-audit  comp1State  declared comp1Running in Rack, linked from relayOut1 (slot:/Plant/IO)\nMATCH  obix-link-audit  comp2State  linked from declared comp2Running\nMATCH  obix-link-audit  comp3State  linked from declared comp3Running in Rack\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 2 MATCH · 1 MISMATCH · 1 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "ola7",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "no-links.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  comp1State  declared comp1Running in Rack, no link into comp1State\nMISSING  obix-link-audit  comp2State  declared comp2Running, no link into comp2State\nMISSING  obix-link-audit  comp3State  declared comp3Running in Rack, no link into comp3State\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 0 MATCH · 0 MISMATCH · 4 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "olacomp",
+  "args": [
+   "--map",
+   "instance-map.md",
+   "--xml",
+   "instance.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISMATCH  obix-link-audit  comp1State  declared comp1Running in Rack2, linked from comp1Running (slot:/Plant/Rack1)\nMATCH  obix-link-audit  comp2State  linked from declared comp2Running in Plant/Rack2\nobix-link-audit: 1 MATCH · 1 MISMATCH · 0 MISSING · 0 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "olacomp12",
+  "args": [
+   "--map",
+   "instance-map.md",
+   "--xml",
+   "instance-rack12.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISMATCH  obix-link-audit  comp1State  declared comp1Running in Rack2, linked from comp1Running (slot:/Plant/Rack1)\nMISMATCH  obix-link-audit  comp2State  declared comp2Running in Plant/Rack2, linked from comp2Running (slot:/Plant/Rack12)\nobix-link-audit: 0 MATCH · 2 MISMATCH · 0 MISSING · 0 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "notable",
+  "args": [
+   "--map",
+   "table2-only.md",
+   "--xml",
+   "control.xml",
+   "--table",
+   "1"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: no Table 1 rows in table2-only.md\n"
+ },
+ {
+  "name": "notables",
+  "args": [
+   "--map",
+   "no-tables.md",
+   "--xml",
+   "facade.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: no Table 2 rows in no-tables.md\n"
+ },
+ {
+  "name": "notablesbadxml",
+  "args": [
+   "--map",
+   "no-tables.md",
+   "--xml",
+   "truncated.xml"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: no Table 2 rows in no-tables.md\n"
+ },
+ {
+  "name": "truncated",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "truncated.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  comp1State  declared comp1Running in Rack, no link into comp1State\nMISSING  obix-link-audit  comp2State  declared comp2Running, no link into comp2State\nMISSING  obix-link-audit  comp3State  declared comp3Running in Rack, no link into comp3State\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 0 MATCH · 0 MISMATCH · 4 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "badclose",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "bad-close.xml"
+  ],
+  "exit": 1,
+  "stdout": "MATCH  obix-link-audit  comp1State  linked from declared comp1Running in Rack\nMISSING  obix-link-audit  comp2State  declared comp2Running, no link into comp2State\nMISSING  obix-link-audit  comp3State  declared comp3Running in Rack, no link into comp3State\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 1 MATCH · 0 MISMATCH · 3 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "edge",
+  "args": [
+   "--map",
+   "edge-map.md",
+   "--xml",
+   "edge.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  a  declared b, no link into a\nMATCH  obix-link-audit  s1  linked from declared src1 in Plant/A/B\nMISMATCH  obix-link-audit  s2  declared src2 in Plant//C, linked from src2 (slot:/Plant/C), other (slot:/Plant/C)\nMATCH  obix-link-audit  s3  linked from declared src3\nMISSING  obix-link-audit  s4  declared src4 in Deep/Comp, no link into s4\nSKIP  obix-link-audit  s5  source not declared in the wiring map (fill it before commissioning)\nSKIP  obix-link-audit  s6  source not declared in the wiring map (fill it before commissioning)\nMATCH  obix-link-audit  s7  linked from declared src7 in X\nMATCH  obix-link-audit  s8  linked from declared src8 in Y/Z\nMISSING  obix-link-audit  s9  declared b in a, no link into s9\nobix-link-audit: 4 MATCH · 1 MISMATCH · 3 MISSING · 2 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "edge1",
+  "args": [
+   "--map",
+   "edge-map.md",
+   "--xml",
+   "edge.xml",
+   "--table",
+   "1"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: no Table 1 rows in edge-map.md\n"
+ },
+ {
+  "name": "entities",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--xml",
+   "entities.xml"
+  ],
+  "exit": 1,
+  "stdout": "MISSING  obix-link-audit  comp1State  declared comp1Running in Rack, no link into comp1State\nMISSING  obix-link-audit  comp2State  declared comp2Running, no link into comp2State\nMISSING  obix-link-audit  comp3State  declared comp3Running in Rack, no link into comp3State\nMISSING  obix-link-audit  inDrip  declared dripActive, no link into inDrip\nSKIP  obix-link-audit  freezeActive  source not declared in the wiring map (fill it before commissioning)\nobix-link-audit: 0 MATCH · 0 MISMATCH · 4 MISSING · 1 SKIP  ->  ISSUES\n",
+  "stderr": ""
+ },
+ {
+  "name": "crlf",
+  "args": [
+   "--map",
+   "crlf-map.md",
+   "--xml",
+   "facade-all-match.xml"
+  ],
+  "exit": 0,
+  "stdout": "MATCH  obix-link-audit  comp2State  linked from declared comp2Running\nobix-link-audit: 1 MATCH · 0 MISMATCH · 0 MISSING · 0 SKIP  ->  CLEAN\n",
+  "stderr": ""
+ },
+ {
+  "name": "nocreds",
+  "args": [
+   "--map",
+   "wiring-map.md",
+   "--obix",
+   "https://station.example/obix",
+   "--component",
+   "/Plant/Facade"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: live mode needs OBIX_USER and OBIX_PASS (a read-only oBIX user)\n"
+ },
+ {
+  "name": "nocredsmissingmap",
+  "args": [
+   "--map",
+   "absent.md",
+   "--obix",
+   "https://station.example/obix",
+   "--component",
+   "/Plant/Facade"
+  ],
+  "exit": 3,
+  "stdout": "",
+  "stderr": "obix-link-audit: map not found: absent.md\n"
+ }
+]

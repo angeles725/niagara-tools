@@ -1,6 +1,8 @@
 package obixlinkaudit
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,10 +32,12 @@ func newStation(t *testing.T, tls bool, status int, body string) *station {
 		w.WriteHeader(status)
 		_, _ = w.Write([]byte(body))
 	})
+	s.Server = httptest.NewUnstartedServer(h)
+	s.Config.ErrorLog = log.New(io.Discard, "", 0) // the refused self-signed handshake is expected
 	if tls {
-		s.Server = httptest.NewTLSServer(h)
+		s.StartTLS()
 	} else {
-		s.Server = httptest.NewServer(h)
+		s.Start()
 	}
 	t.Cleanup(s.Close)
 	return s
