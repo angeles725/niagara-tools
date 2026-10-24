@@ -1,0 +1,17 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BT.java:3  licensed class: doA() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BS.java --
+class BS {
+  // public Feature getLicenseFeature() { return f; }
+  /* Feature getLicenseFeature() { return f; } */
+  public void doA() { a(); }
+}
+-- Mod/src/com/x/BT.java --
+class BT {
+  String s = "Feature getLicenseFeature() { return f; }";
+  public void doA() { a(); }
+}

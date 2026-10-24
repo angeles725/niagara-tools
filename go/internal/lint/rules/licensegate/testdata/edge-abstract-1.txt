@@ -1,0 +1,15 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+-- stderr --
+-- Mod/src/com/x/BS.java --
+abstract class BS {
+  public abstract Feature getLicenseFeature();
+  public void doA() { a(); }
+}
+-- Mod/src/com/x/BT.java --
+class BT {
+  public Feature getLicenseFeature() {}
+  public void doA() { a(); }
+}

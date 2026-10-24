@@ -1,0 +1,31 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:7  licensed class: doA() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:10  licensed class: doB() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:11  licensed class: doC() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:12  licensed class: doD() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:14  licensed class: doE() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BS.java:16  licensed class: doF() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BS.java --
+package com.x;
+public class BS extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doA()
+  {
+    a();
+  }
+  public void doB() throws Exception { String s = "}"; b(); }
+  public void doC() { char c = '{'; c(); }
+  public void doD() { Runnable r = new Runnable() { public void run() { d(); } }; }
+  class Inner {
+    public void doE() { e(); }
+  }
+  public void doF() { int x = 1; // }
+    f();
+  }
+}

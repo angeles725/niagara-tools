@@ -1,0 +1,41 @@
+-- args --
+@DIR@/Mod
+-- want --
+exit 0
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BA.java:6  licensed class: doPoll() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/BZ.java:6  licensed class: doPoll() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/Bm.java:6  licensed class: doPoll() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+WARN  lint-license-isoperational-gate  @DIR@/Mod/src/com/x/sub/BB.java:6  licensed class: changed() acts with no isOperational()/isFault()/isFatalFault() gate -- the license fault does not stop callbacks; add `if (!isOperational()) return;` (types/security.md §5.1)
+-- stderr --
+-- Mod/src/com/x/BA.java --
+package com.x;
+public class BA extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doPoll() { poll(); }
+}
+-- Mod/src/com/x/BZ.java --
+package com.x;
+public class BZ extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doPoll() { poll(); }
+}
+-- Mod/src/com/x/Bm.java --
+package com.x;
+public class Bm extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void doPoll() { poll(); }
+}
+-- Mod/src/com/x/sub/BB.java --
+package com.x;
+public class BB extends BAbstractService {
+  public Feature getLicenseFeature() {
+    return Sys.getLicenseManager().getFeature("v", "f");
+  }
+  public void changed(Property p, Context c) { x(); }
+}
