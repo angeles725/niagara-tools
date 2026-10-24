@@ -1,3 +1,5 @@
+declared difference (truth fix T1, truth-marker-literal-1): R4's markers are quoted in string literals, so
+they open no region and its 8 lines count (the bash lint counted 4).
 -- args --
 --max-class
 0
@@ -13,7 +15,7 @@ WARN  lint-size  @DIR@/R3.java:7  nested-region: BEGIN BAJA AUTO GENERATED CODE 
 WARN  lint-size  @DIR@/R3.java:9  nested-region: BEGIN BAJA AUTO GENERATED CODE inside the region opened at line 7 -- that region is counted as hand-written
 WARN  lint-size  @DIR@/R3.java:9  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
 WARN  lint-size  @DIR@/R3.java:2  class R3 has 6 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
-WARN  lint-size  @DIR@/R4.java:2  class R4 has 4 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
+WARN  lint-size  @DIR@/R4.java:2  class R4 has 8 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/R5.java:2  class R5 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)
 WARN  lint-size  @DIR@/R6.java:3  unclosed-region: BEGIN BAJA AUTO GENERATED CODE with no END marker -- its lines are counted as hand-written
 WARN  lint-size  @DIR@/R6.java:2  class R6 has 3 hand-written lines (> 0, slotomatic regions excluded) -- split by concern into pure classes / child components (types/logic.md § Composition)

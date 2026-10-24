@@ -59,8 +59,8 @@ var (
 
 // Check prints the region rows, then the class row, then the method rows of a pure class.
 func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
-	gen, out := regions(f.Raw)
 	code := f.Stripped()
+	gen, out := regions(f.Raw, code)
 	hand, name, line, baja := 0, "", 0, false
 	for i, c := range code {
 		baja = baja || strings.Contains(c, "@NiagaraType") || extendsBaja.MatchString(c)
@@ -91,16 +91,18 @@ func (r rule) Check(f *javasrc.File) ([]lint.Finding, error) {
 	return out, nil
 }
 
-// regions marks the lines inside a closed slotomatic region (markers matched on the raw lines) and
-// returns the nested-region, stray-end and unclosed-region rows; an unclosed or nested region's lines
-// stay hand-written (fail closed).
-func regions(raw []string) ([]bool, []lint.Finding) {
+// regions marks the lines inside a closed slotomatic region and returns the nested-region, stray-end and
+// unclosed-region rows; an unclosed or nested region's lines stay hand-written (fail closed). A marker
+// is one in a comment: on the raw line and gone from its Strip line (code), so a string literal quoting
+// it is not one.
+func regions(raw, code []string) ([]bool, []lint.Finding) {
 	gen := make([]bool, len(raw))
 	var out []lint.Finding
 	open, at := false, 0 // at: 0-based line of the open BEGIN
-	for i, ln := range raw {
-		switch isEnd := strings.Contains(ln, endMark); {
-		case strings.Contains(ln, beginMark):
+	marker := func(i int, m string) bool { return strings.Contains(raw[i], m) && !strings.Contains(code[i], m) }
+	for i := range raw {
+		switch isEnd := marker(i, endMark); {
+		case marker(i, beginMark):
 			if open {
 				clear(gen[at:i])
 				out = append(out, lint.Finding{Line: i + 1, Msg: fmt.Sprintf("nested-region: %s inside the region opened"+

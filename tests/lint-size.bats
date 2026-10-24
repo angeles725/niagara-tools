@@ -99,6 +99,16 @@ END_M='//endregion /*+ ------------ END BAJA AUTO GENERATED CODE -------------- 
   [ "$status" -eq 3 ]
 }
 
+@test "LSZ10: a marker quoted in a string literal opens no region (its lines stay hand-written)" {
+  # Mutation: LSZ10 -- matching the markers on the raw line lets a string literal hide the lines after it
+  # Go golden: go/internal/lint/rules/size/testdata/truth-marker-literal-1.txt
+  { printf 'package com.x;\npublic class Lit {\n  String s = "BEGIN BAJA AUTO GENERATED CODE";\n'
+    lines 3 'int h'; printf '  String e = "END BAJA AUTO GENERATED CODE";\n}\n'; } > "$SRC/Lit.java"
+  run "$LSZ" --max-class 6 "$TMPDIR_T/Mod"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Lit.java:2  class Lit has 8 hand-written lines (> 6"* ]]
+}
+
 @test "LSZ-awkfail: an unreadable source file is an env error (exit 3, named on stderr), never a clean pass" {
   # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
   printf 'x\n' > "$SRC/U.java"

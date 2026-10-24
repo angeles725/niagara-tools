@@ -13,7 +13,9 @@
 #   - Hand-written lines = non-blank lines after comments are blanked (go/internal/javasrc Strip), outside
 #     every slotomatic region. A region opens on a line containing `BEGIN BAJA AUTO GENERATED CODE` and closes on
 #     the next line containing `END BAJA AUTO GENERATED CODE` (the marker text slot-o-matic emits; matched on the
-#     RAW line because the marker sits inside a comment). [ev: corpus B711] [ev: code docDeveloper slot-o-matic.html:421,459]
+#     RAW line because the marker sits inside a comment; a marker quoted in a string literal, which is still on the
+#     comment-blanked line, is not one — truth fix T1 2026-10-24, the bash lint opened a region there).
+#     [ev: corpus B711] [ev: code docDeveloper slot-o-matic.html:421,459]
 #   - A region that opens and never closes cannot be classified: WARN `unclosed-region`, and its lines count as
 #     hand-written (fail closed: never shrink the count on an unparsed shape). A BEGIN inside an open region is a
 #     WARN `nested-region` (the earlier region counts as hand-written); an END with no open region is a WARN
@@ -41,6 +43,7 @@
 # Mutation: LSZ4 -- applying the method rule to a Baja (BComponent) class WARNs its long callback
 # Mutation: LSZ5 -- dropping the unclosed-region row lets an unterminated BEGIN marker pass silently
 # Mutation: LSZ8 -- ignoring a nested BEGIN lets a stray END close an unterminated region and hide its lines
+# Mutation: LSZ10 -- matching the markers on the raw line lets a string literal hide the lines after it
 # Mutation: LSZ-awkfail -- ignoring the awk exit status reports an unreadable source file as clean
 # Mutation: LSZ-finderr -- ignoring the find exit status skips an unreadable sub-directory and reports clean
 set -u
