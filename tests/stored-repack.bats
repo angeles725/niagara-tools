@@ -97,3 +97,14 @@ teardown() { rm -rf "$TMPDIR_T"; }
   cmp "$TMPDIR_T/in.jar" "$TMPDIR_T/in.copy"
   [ "$(find "$TMPDIR_T" -maxdepth 1 -name '.*tmp-*' | wc -l)" -eq 0 ]
 }
+
+# The bash checked the output with [ -e ], which follows a symlink: a dangling link passed, zip replaced it
+# with a regular file and created its target, exit 0. The Go port refuses it like any existing output.
+@test "S7: an output path holding a dangling symlink is refused (exit 1); the link and its missing target stay" {
+  ln -s "$TMPDIR_T/nowhere" "$TMPDIR_T/link.jar"
+  run "$R" "$TMPDIR_T/in.jar" "$TMPDIR_T/link.jar"
+  [ "$status" -eq 1 ]
+  [ "$output" = "stored-repack: refusing to overwrite existing $TMPDIR_T/link.jar" ]
+  [ -L "$TMPDIR_T/link.jar" ]
+  [ ! -e "$TMPDIR_T/nowhere" ]
+}

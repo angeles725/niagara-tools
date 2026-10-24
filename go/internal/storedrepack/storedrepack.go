@@ -54,7 +54,8 @@ func Main(args []string, s cli.Stdio) int {
 	if st, err := os.Stat(in); err != nil || !st.Mode().IsRegular() {
 		return fail("input jar not found: %s", in)
 	}
-	if _, err := os.Stat(out); err == nil {
+	// Lstat, not bash's [ -e ]: a dangling symlink is an existing output too (zip wrote through it).
+	if _, err := os.Lstat(out); err == nil {
 		return fail("refusing to overwrite existing %s", out)
 	}
 	abs, err := filepath.Abs(out)

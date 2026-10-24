@@ -259,3 +259,28 @@ func TestUsageIsTheScriptHeader(t *testing.T) {
 		t.Errorf("usage\n%s\nwant (the script header)\n%s", usage, want.String())
 	}
 }
+
+// TestRefuseDanglingSymlink pins that an output path holding a dangling symlink is an existing output, refused
+// before the input is read (the bash's order: the overwrite check comes before unzip), and that the link and
+// its missing target stay as they were.
+func TestRefuseDanglingSymlink(t *testing.T) {
+	dir := t.TempDir()
+	in, out := filepath.Join(dir, "in.jar"), filepath.Join(dir, "link.jar")
+	if err := os.WriteFile(in, []byte("not a zip"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("nowhere", out); err != nil {
+		t.Fatal(err)
+	}
+	var o, e bytes.Buffer
+	code := Main([]string{in, out}, cli.Stdio{Out: &o, Err: &e})
+	if want := "stored-repack: refusing to overwrite existing " + out + "\n"; code != 1 || e.String() != want {
+		t.Errorf("exit %d stderr %q, want exit 1 stderr %q", code, e.String(), want)
+	}
+	if target, err := os.Readlink(out); err != nil || target != "nowhere" {
+		t.Errorf("link.jar after the run: %q, %v", target, err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "nowhere")); err == nil {
+		t.Error("the run created the symlink's target")
+	}
+}
