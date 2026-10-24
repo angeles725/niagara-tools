@@ -16,7 +16,7 @@
 #
 # Usage:  lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]
 #   <ui-dir> is an rc/ tree, a -ux/-rt profile src dir or a lexicon dir (several allowed).
-# Exits:  0 clean or WARN-only · 1 any WARN under --strict · 3 usage/env (no python3, bad manual or ui-dir)
+# Exits:  0 clean or WARN-only · 1 any WARN under --strict · 3 usage/env (bad manual or ui-dir, unreadable file)
 #
 # Row format:
 #   WARN  lint-manual-labels  <manual>:<line>  label "<label>" not found in the UI source
@@ -27,90 +27,23 @@
 # Mutation: ML2 -- dropping the not-found check stops the WARN on a renamed label the manual still quotes
 # Mutation: ML4 -- dropping the \uNNNN decode makes an accented lexicon label look missing
 # Mutation: ML8 -- dropping the word-boundary test lets "Guard" match the unit "Guardar"
+#
+# Implementation: rule package go/internal/lint/rules/manuallabels on the shared engine go/internal/lint
+# (walker, Mode FileFirst parser, Joined TreeRule, row formatter; go/README.md) and go/internal/htmltext
+# (Python's errors="replace" read, html.unescape, markup dropping, NFKD/casefold/\s/\w facts generated from
+# Python 3.15's unicodedata). This wrapper is the stable entry point: go/go-tool.sh `go_tool_bin` builds
+# go/bin/n4lint when it is missing or older than a Go source, then this script execs
+# `n4lint lint-manual-labels <args>`. Needs `go` on PATH to build (exit 3 otherwise); python3 is no longer used.
+# Declared differences from the python3 lint (port 2026-10-24): *-worktrees directories are pruned like dot
+# directories; a symlink below a ui-dir is neither followed nor read; a directory or file that cannot be read
+# is an env error naming it (exit 3) where python skipped the directory or crashed on the file; tag names of
+# an HTML manual's script/style elements match in ASCII case only.
 set -u
-
-usage() {
-  printf 'usage: lint-manual-labels.sh [--strict] <manual.html|manual.md> <ui-dir> [<ui-dir>...]\n' >&2
-  exit 3
-}
-
-STRICT=0
-case "${1:-}" in --strict) STRICT=1; shift ;; esac
-[ $# -ge 2 ] || usage
-MANUAL="$1"; shift
-[ -f "$MANUAL" ] || { printf 'lint-manual-labels: manual not found: %s\n' "$MANUAL" >&2; exit 3; }
-for d in "$@"; do
-  [ -d "$d" ] || { printf 'lint-manual-labels: not a directory: %s\n' "$d" >&2; exit 3; }
-done
-command -v python3 >/dev/null 2>&1 || { printf 'lint-manual-labels: missing tool: python3\n' >&2; exit 3; }
-
-MANUAL="$MANUAL" python3 - "$@" <<'PYEOF'
-import html, os, re, sys, unicodedata
-
-manual = os.environ["MANUAL"]
-dirs = sys.argv[1:]
-EXTS = (".html", ".htm", ".js", ".mjs", ".cjs", ".json", ".lexicon", ".properties", ".java", ".xml")
-UESC = re.compile(r"\\u([0-9a-fA-F]{4})")
-
-UNITS = (
-    re.compile(r">([^<>]+)<"),                                   # HTML text node
-    re.compile(r'"((?:[^"\\\n]|\\.)*)"|\'((?:[^\'\\\n]|\\.)*)\'|`([^`]*)`'),  # string literal
-    re.compile(r"(?m)^\s*[^#!=\s][^=\n]*=(.*)$"),                  # lexicon / properties value
-)
-
-def norm(s):
-    s = "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
-    return re.sub(r"\s+", " ", s).strip().rstrip(":").strip().casefold()
-
-def found(label, units):
-    if label in units:
-        return True
-    n = len(label)
-    return any(u.startswith(label) and not u[n].isalnum() for u in units if len(u) > n)
-
-def decode(s):
-    return html.unescape(UESC.sub(lambda m: chr(int(m.group(1), 16)), s))
-
-hay = set()
-for root in dirs:
-    for cur, subdirs, files in os.walk(root):
-        subdirs[:] = sorted(d for d in subdirs if not d.startswith(".") and d != "node_modules")
-        for f in sorted(files):
-            if f.lower().endswith(EXTS):
-                with open(os.path.join(cur, f), encoding="utf-8", errors="replace") as fh:
-                    body = decode(fh.read())
-                for rx in UNITS:
-                    for m in rx.finditer(body):
-                        hay.update(norm(g) for g in m.groups() if g)
-
-with open(manual, encoding="utf-8", errors="replace") as fh:
-    text = fh.read()
-keep_lines = lambda m: "\n" * m.group(0).count("\n")
-if manual.lower().endswith((".html", ".htm")):
-    text = re.sub(r"(?is)<(script|style)\b.*?</\1\s*>", keep_lines, text)
-    text = re.sub(r"(?s)<!--.*?-->", keep_lines, text)
-    text = re.sub(r"(?s)<[^>]*>", keep_lines, text)
-    text = html.unescape(text)
-
-LABEL = re.compile(r'"([^"\n]{2,60})"|“([^”\n]{2,60})”|«([^»\n]{2,60})»')
-checked = missing = 0
-for lineno, line in enumerate(text.split("\n"), 1):
-    for m in LABEL.finditer(line):
-        label = next(g for g in m.groups() if g is not None).strip()
-        if not re.search(r"[^\W\d_]", label) or "://" in label:
-            continue
-        checked += 1
-        if not found(norm(label), hay):
-            missing += 1
-            print('WARN  lint-manual-labels  %s:%d  label "%s" not found in the UI source' % (manual, lineno, label))
-print("SUMMARY  lint-manual-labels  checked=%d missing=%d" % (checked, missing))
-# Exit 10 is a private sentinel for "rows printed, some label missing": it lets the shell
-# wrapper tell a WARN result (0, or 1 under --strict) from a crashed helper (any other code -> 3).
-sys.exit(10 if missing else 0)
-PYEOF
-rc=$?
-case "$rc" in
-  0) exit 0 ;;
-  10) [ "$STRICT" -eq 1 ] && exit 1; exit 0 ;;
-  *) printf 'lint-manual-labels: python3 helper failed (exit %d)\n' "$rc" >&2; exit 3 ;;
-esac
+# Resolve symlinks: a stubbed toolbelt (tests/helpers/stub-toolbelt.bash) links this script from another dir.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+GO_DIR="$(cd "$here/../.." && pwd)/go"
+[ -f "$GO_DIR/go-tool.sh" ] || { printf 'lint-manual-labels: no Go module at %s (go-tool.sh missing)\n' "$GO_DIR" >&2; exit 3; }
+# shellcheck disable=SC1091  # go/ helper, resolved at runtime via GO_DIR
+. "$GO_DIR/go-tool.sh"
+BIN="$(go_tool_bin "$GO_DIR" n4lint)" || exit 3
+exec "$BIN" lint-manual-labels "$@"
