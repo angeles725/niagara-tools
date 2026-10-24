@@ -25,7 +25,9 @@
 #                            counts at a word or camelCase start (auth, Auth, authToken,
 #                            isAuthenticated, AUTH_URL, authorize) and after the gate prefixes
 #                            o / re / un (OAuth, oauth2, reauth, unauthorized) — never inside
-#                            author/authority.
+#                            author/authority. A line whose every `.disabled = <not false>` element also gets a
+#                            `.title` holding a string literal that names no gate on the same line states a
+#                            non-gate reason (wiring, interlock, phase) and is no row (issue #459).
 #                            [ev: retro dashboard-frontend-reliability-rules Δ7]
 #                            [ev: retro panccadia-persistent-config-hoa Δ4]
 #   fetch-no-signal    WARN  `fetch(` whose argument list carries no `signal` (nor do the 3 lines
@@ -73,6 +75,7 @@
 # Mutation: RC26 -- skip the orphan-page pass so RC26 loses its rows
 # Mutation: RC28 -- drop the inline-block counter so RC28 loses its row
 # Mutation: RC33 -- scanning rc/vendor/**/*.js again flags the vendored three.js rows (RC33 sees RenderPass.js)
+# Mutation: RC34 -- ignoring a stated non-gate title reason WARNs the wiring-disabled control (RC34 sees app.js:2)
 # Mutation: RS-unreadable -- skipping a file the scan cannot read (the awk's fatal-and-continue) passes clean
 #
 # Go: the checks run in go/internal/rcscan (go/cmd/rc-scan), built on demand by go/go-tool.sh; this script is

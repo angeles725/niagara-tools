@@ -147,6 +147,8 @@ type fileScan struct {
 	fPend, fSig       bool // a fetch( whose argument list is being read, and whether it carries a signal
 	fNR, fDepth, fLns int  // its line, paren depth and lines read
 	prev              [3]string
+
+	view *jsView // the file's JavaScript tokens, built on first use
 }
 
 // scanFile runs the per-file checks over src and returns its rows in report order.
@@ -258,7 +260,7 @@ func (s *fileScan) checks() {
 			s.emit(s.o.sevW(), "innerhtml-server", "member value concatenated into HTML without esc( -- use textContent or esc()")
 		}
 	}
-	if s.gated && !s.ctxCSS && !s.allowed("disabled-gate") && disables(line) {
+	if s.gated && !s.ctxCSS && !s.allowed("disabled-gate") && disables(line) && !s.statedReason() {
 		s.emit(s.o.sevW(), "disabled-gate", gateMsg)
 	}
 	s.prev = [3]string{line, s.prev[0], s.prev[1]}

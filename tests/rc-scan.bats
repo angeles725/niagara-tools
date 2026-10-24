@@ -368,3 +368,20 @@ _inline_tree() {   # $1 = dir, $2 = body lines inside one inline <script>
   [[ "$output" == *"rc/vendor/three/lib.css:1  browser-floor"* ]]
   if [[ "$output" == *"RenderPass.js"* ]]; then return 1; fi
 }
+
+# Issue #459 (b): a control disabled with a stated non-gate reason on the same element and line (PANCCADIA
+# index.html:1482 `b.disabled = true; b.title = "Sin salida cableada";`) is meant to be inert, not gated.
+@test "RC34: disabled-gate — a literal non-gate title on the disabled element is a stated reason; a gate title or none still WARNs" {
+  # Mutation: RC34 -- ignoring the stated title reason WARNs the wiring-disabled control again
+  local T="$BATS_TEST_TMPDIR/rc34"
+  mkdir -p "$T/rc"
+  printf '%s\n' 'if (!session.loggedIn) showLogin();' \
+    'if (unwired) { b.disabled = true; b.title = "Sin salida cableada"; }' \
+    'saveBtn.disabled = true;' \
+    'b.disabled = true; b.title = "Inicia sesion (login) para escribir";' > "$T/rc/app.js"
+  run "$RS" "$T"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"rc/app.js:3  disabled-gate"* ]]
+  [[ "$output" == *"rc/app.js:4  disabled-gate"* ]]
+  if [[ "$output" == *"rc/app.js:2  disabled-gate"* ]]; then return 1; fi
+}
