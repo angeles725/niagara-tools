@@ -57,6 +57,7 @@ actionable punch-list) · `-wb` build → **B751** (the wb ladder) · `-ux` buil
 | **B961** | SDK dev-examples SYNTHESIS — what the four SDK examples collectively teach + the deltas for our module work; read after B960 | reference |
 | **B955** | envCtrlDriver SDK example (rt) — a complete minimal N4 field driver, first-party source; the rt SPI contract in a real build | rt / exemplar |
 | **B956** | envCtrlDriver SDK example (wb) — the Workbench device/point manager UI for the SDK driver exemplar | wb / exemplar |
+| **B877** | NDriver chassis vs DDF: the two generic driver bases, their comm-layer contracts and the transport matrix — read before choosing a driver framework (`types/driver-authoring.md` § 1.8) | driver |
 | **B957** | typeExtensionDemo SDK example (ux) — a browser type-extension with JS build + Jasmine tests; the ux SPI patterns in a real build | ux / exemplar |
 | **B1015** | Building `UmbrellaDashboard` — a dashboard-type N4 module (facade + servlet + 3D SPA), rt+ux built green @4.14; the DashboardPan exemplar in a second module | reference / dashboard |
 

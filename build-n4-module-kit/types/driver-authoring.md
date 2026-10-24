@@ -133,6 +133,138 @@ Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named.
   (`ledger.d/2026-10-23-r8-u5-c59-c62.md`). [ev: retro n4-course-drivers-bql-ords-files Δ3]
   [ev: retro n4-course-handson-ndriver Δ7]
 
+### 1.8 · Which driver framework `[ev: corpus B877 §877.6]`
+
+Three generic chassis share the `javax.baja.driver` root; pick one before the first class.
+
+| Framework | Network base | Transport plug-in | You write | Pick it when |
+|---|---|---|---|---|
+| NDriver (`ndriver`) | `BNNetwork extends BDeviceNetwork` | a `BCommConfig` subclass: `makeLinkLayer(NComm)` → shipped TCP, UDP, serial and HTTP link layers | messages, a link message, a message factory, the comm config subclass (§ 1.9-§ 1.10) | **a new driver.** The New Driver Wizard scaffolds it, and the course says the older frameworks are deprecated or will be `[CERT-a]` `[ev: corpus B1419 §1419.4 row f]` |
+| basicDriver (`basicDriver`) | `BBasicNetwork extends BLoadableNetwork` | `makeComm()` → a `Comm` subclass; serial through `BSerialNetwork`; no TCP transport (§ 1.2) | the `Comm` subclass, messages, the receiver | maintaining or extending a driver already on it (§ 3) |
+| DDF (`devDriver` + `devIpDriver` / `devSerialDriver` / `devHttpDriver`) | `BDdfNetwork extends BLoadableNetwork` | a `communicator` slot holding a `BIDdfCommunicator`; TCP, UDP, serial and HTTP networks ship (`BDdfUdpNetwork`, …) | the DDF request/response and discovery classes | maintaining or extending a driver already on it |
+| raw `javax.baja.driver` | `BDeviceNetwork` | none: you own sockets and threads | everything, including the worker threads | only to wrap an existing protocol stack that brings its own threads `[INFER]` |
+
+Chassis and transport columns: `[ev: corpus B877 §877.1]` `[ev: corpus B877 §877.5]`. There is no
+`BIpNetwork` class in the corpus: an NDriver IP driver uses `BTcpCommConfig` / `BUdpCommConfig`, a DDF one
+`BDdfTcpNetwork` / `BDdfUdpNetwork` (`organized/devIpDriver/devIpDriver-rt/vineflower/com/tridium/ddfIp/udp/BDdfUdpNetwork.java`).
+
+### 1.9 · NDriver comm config — TCP, UDP, serial
+
+Paths are `ndriver-rt/com/tridium/ndriver/…` (docSource) unless named; wizard templates are
+`organized/devkit/devkit-wb/extracted/gradle/ndriver/`.
+
+- **Hang the config on the network** as a property (`tcpConfig`, `udpConfig`, `serialConfig`) and reach the
+  stack with `(NComm) getUdpConfig().comm()`; call `statusUpdate()` on it when the network's `status` changes
+  (wizard `BNfooNetwork.java.vm:60-79,169-180,222-240`). `comm()` starts the stack on first use
+  (`datatypes/BCommConfig.java:250-260`).
+- **Subclass the config; never ship a bare `BUdpCommConfig`.** The wizard's UDP option declares a plain
+  `BUdpCommConfig` (`BNfooNetwork.java.vm:67-72`), which keeps the base message factory: it builds a plain
+  `NMessage` (`datatypes/BCommConfig.java:413-425`) whose `fromInputStream` throws "not implemented"
+  (`comm/NMessage.java:49-54`), so every received datagram fails. Override `makeMessageFactory()` (your
+  `IMessageFactory`) and `makeLinkMessageFactory()` (your `LinkMessage` subclass and its maximum length), as the
+  wizard's TCP template does (`BNfooTcpCommConfig.java.vm:25,44-57`).
+- **The config's `address` is the LOCAL side; the peer travels on each message.** `BTcpCommConfig.address`
+  (default `local:0`) is the listen address used only with `serverEnabled` (§ 1.6); `BUdpCommConfig.address`
+  (default `local:-1`) is the bind address: `local` binds every interface, a port ≤ 0 an ephemeral port
+  (`comm/udp/UdpLinkLayer.java:59-77,126-139`, `datatypes/BTcpCommConfig.java:28-36`). Both link layers send to
+  `(BIpAddress) msg.address`, which `LinkMessage.setMessage` copies from `NMessage.getAddress()`
+  (`comm/udp/UdpLinkLayer.java:164-172`, `comm/tcp/TcpLinkLayer.java:206-209`, `comm/LinkMessage.java:62-66`).
+  So keep the device's host and port on the DEVICE and set it on every request. A TCP connect is bounded at
+  1000 ms (`comm/tcp/TcpLinkLayer.java:432`).
+- **UDP: one datagram is one frame.** The UDP receiver sets the frame length and the source address from the
+  packet and never calls `LinkMessage.receive` (`comm/udp/UdpLinkLayer.java:193-208`); the TCP and serial
+  receivers do call it, so a stream protocol frames there (`comm/tcp/TcpLinkLayer.java:355`,
+  `comm/serial/SerialLinkLayer.java:322`). The receive buffer is the link message's array, 1500 bytes with the
+  default factory (`datatypes/BCommConfig.java:474-477`); size it to the protocol's largest datagram, since a longer
+  one is cut to the buffer `[INFER]` (Java `DatagramPacket`).
+- **UDP: check the sender.** A response is matched by tag alone (`comm/NComm.java:355`), so any host that
+  sends a matching tag completes the transaction; in `validateResponse` check
+  `getAddress().sameDevice(resp.getAddress())` (it compares the host, not the port,
+  `ndriver/datatypes/BIpAddress.java:196-204`) and return `FAILED_RESPONSE` on a mismatch (`comm/NMessage.java:94-103`).
+- **DNS per send.** `BIpAddress.getInetAddress()` calls `InetAddress.getByName` on every call and returns `null`
+  on failure (`ndriver/datatypes/BIpAddress.java:178-188`); prefer IP literals for devices, and see § 5 for a cached
+  resolve.
+
+### 1.10 · NDriver message framing — the skeleton
+
+One request class and one response class per message type, one `LinkMessage` subclass for the wire frame, one
+factory. Shape (write the codec yourself; course Lab 11 is example code only and ships the defects of § 1.7):
+
+```java
+// Request: encode, tag, timeout. Keep the byte layout in a Baja-free codec class (§ 12).
+public class XReadReq extends NMessage {
+    public XReadReq(BIpAddress to, int seq, int reg) { super(to); this.seq = seq; this.reg = reg;
+        setResponseTimeOut(2000); setRetryCount(1); }               // real device latency, § 1.7
+    @Override public boolean toOutputStream(OutputStream out) throws Exception {
+        out.write(XCodec.encodeRead(seq, reg)); return false; }     // false = no more fragments
+    @Override public Object getTag() { return seq; }                 // same key on the response
+    @Override public int validateResponse(NMessage resp) {
+        if (!getAddress().sameDevice(resp.getAddress())) return FAILED_RESPONSE;   // UDP: § 1.9
+        return ((XResp) resp).isError() ? FAILED_RESPONSE : SUCCESS_RESPONSE; }
+    private final int seq, reg;
+}
+// Response: isResponse() true, decode, the same tag.
+public class XResp extends NMessage {
+    @Override public boolean isResponse() { return true; }
+    @Override public void fromInputStream(InputStream in) throws Exception { frame = XCodec.decode(in); }
+    @Override public Object getTag() { return frame.seq; }
+    public boolean isError() { return frame.error; }
+    XCodec.Frame frame;
+}
+// Factory: pick the class from the frame; return null for a frame you do not handle (NComm drops it).
+public NMessage makeMessage(LinkMessage lm) throws Exception {
+    NMessage m = new XResp(); m.setAddress((BAddress) lm.address);
+    m.fromInputStream(lm.getInputStream()); return m; }
+```
+
+- **Stream transports frame in `LinkMessage.receive(InputStream)`**: return true only for a complete frame,
+  bounds-check every write into `buffer` against its length, and resynchronise on a start byte; `setMessage`
+  writes start byte, payload and end byte to `getOutputStream()` (`comm/LinkMessage.java:36-66,140`).
+  `initReceive(msgToSend)` lets a streaming link layer constrain the next receive with the request just sent
+  (`comm/LinkMessage.java:105-118`). UDP skips `receive` (§ 1.9).
+- **Correlation:** a request with an id overrides `getTag()` on both classes; without one, return 1 from
+  `getMaxOutstandingTransactions()` (§ 1.7). `NComm.sendRequest(msg)` blocks for the matched response and
+  returns `msg.modifyResponse(resp)`; `sendMessage(msg)` sends with no response (`comm/NComm.java:150,226-240`).
+  A response with no open transaction is logged SEVERE and dropped (`comm/NComm.java:355-360`).
+- **Unsolicited frames** (`isResponse()` false) go to the config's default listener, set in the network's
+  `started()` with `setDefaultListener(...)` (`datatypes/BCommConfig.java:377-384`; wizard
+  `BNfooNetwork.java.vm:102-120`). The factory, the listener and the codec run on the comm receive thread, never
+  the engine thread.
+- Course reference for the shape only: `sources/n4-dev-course/course/Labs/Lab11 NDriver/1 Creating Common Classes/TrafficLightDriverLinkMessage.java:30-61`
+  (its `receive` has no bounds check) `[ev: corpus B1239 §1239.6]`.
+
+### 1.11 · NDriver discovery — the job body
+
+You do not write a `BJob`. `BNDiscoveryJob.doRun` starts a `JobThread` that calls your
+`BINDiscoveryHost.getDiscoveryObjects(prefs)`, adds what it returns, and repeats while `prefs.isMultiStep()` is
+true, the call returned non-null and the job is running; `end()` then sets failed (an exception), canceled, or
+success (`discover/BNDiscoveryJob.java:150-157,186-210,256-271`). Cancel sets `canceling` and interrupts the
+thread (`discover/BNDiscoveryJob.java:163-173`). The network implements `BINDiscoveryHost` for devices, the
+point device ext for points (`point/BNPointDeviceExt.java:54,177-186`).
+
+Your `getDiscoveryObjects(prefs)`:
+1. Return `null` at once when `!prefs.getJob().isAlive()` (not running: canceled or done,
+   `baja/javax/baja/job/BJob.java:450-453`), and check it again between requests in a long scan.
+2. Send with the blocking `sendRequest` (this is the job thread, not the engine thread).
+3. Report progress: the job never calls `progress()` itself, so call `prefs.getJob().progress(pct)` per step
+   (it also heartbeats), or `heartbeat()` when the total is unknown (`baja/javax/baja/job/BJob.java:30-38,510-521`).
+   Log per item with `prefs.getJob().log()`.
+4. On a bad reply call `prefs.getJob().discoverFail(reason)` and return `null`: `discoverFail` only logs a
+   message (`discover/BNDiscoveryJob.java:282-288`), so the job still ends in success unless you throw.
+5. Return one discovery leaf per object. A `BNDiscoveryLeaf` subclass maps it to a component:
+   `getValidDatabaseTypes()` (first entry = best type), `getDiscoveryName()`, `updateTarget(target)` copies the
+   discovered address and settings, `isExisting(component)` greys rows already in the station
+   (`discover/BNDiscoveryLeaf.java:53-95`). The Workbench manager calls them
+   (`organized/ndriver/ndriver-wb/vineflower/com/tridium/ndriver/ui/NMgrLearn.java:91,121-122,145`); the browser
+   manager's `getProposedValuesFromDiscovery` asks the station for the same name and types over RPC
+   (`organized/ndriver/ndriver-ux/extracted/rc/Automanager.js:370,439-449`).
+6. Multi-step scans (an address range, a paged browse) return `true` from `isMultiStep()` in their preferences
+   and return `null` when finished (`discover/BNDiscoveryPreferences.java:104-108`).
+
+The framework's own `BNPointDeviceExt.doSubmitDiscoveryJob` submits with `job.submit(null)`
+(`point/BNPointDeviceExt.java:185`); override it with the `Context` form as in § 1.6 so the job runs as the user.
+Course device and point discovery: `[ev: corpus B1239 §1239.11]`.
+
 ## 2 · `BProxyExt` point SPI
 
 Three overrides — the framework calls them, never call them yourself. Neither read callback may block: do the
