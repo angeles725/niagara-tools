@@ -36,6 +36,8 @@ rebuilds `bin/<tool>` when a Go source is newer, then execs it. CI runs gofmt, v
 | `cmd/rc-scan/` | `rc-scan <artifact-dir> [--strict] [--profile hmi\|lan\|both\|unknown] [--legacy]` |
 | `internal/obixlinkaudit/` | `Main` of `obix-link-audit` (`toolbelt/obix-link-audit.sh`): `DeclaredRows` (the selected wiring-map table), `Links` (each `display="Indirect\|Direct: <src> -> <tgt>"` of an `internal/xmlsrc` document; a malformed response is exit 3), `Report` (MATCH/MISMATCH/MISSING/SKIP rows) and the live mode's one read-only `net/http` GET (credentials from `OBIX_USER`/`OBIX_PASS` only) |
 | `cmd/obix-link-audit/` | `obix-link-audit --map <wiring-map.md> (--xml <component.xml> \| --obix <base-url> --component <path>) [--table 1\|2] [--insecure]` |
+| `internal/wiringmap/` | `Main` of `generate-wiring-map` (`toolbelt/generate-wiring-map.sh`): `Slots` (the OPERATOR and SUMMARY/READONLY `@NiagaraProperty` slots of one source, read through `javasrc.NiagaraProperties`), the bare-key lexicon display names and the three-section render whose tables `internal/obixlinkaudit` reads back; `testdata/*.txt` are golden runs recorded from the bash script by `testdata/record/record.sh` (an `@expect <file>` section is a file the run leaves) |
+| `cmd/generate-wiring-map/` | `generate-wiring-map <facade-src-dir> [--lexicon <module.lexicon>] [--output <file>]` |
 
 The engine walks each root once and reads and scans each file once for every selected rule. Every row is
 `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>:<line>  <message>`, or `<WARN|FAIL|PASS|ADVISORY>  <check>  <path>: <message>` for a
