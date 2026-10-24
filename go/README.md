@@ -83,7 +83,9 @@ rule's rows stay contiguous.
    registered rule: a later run in the same process, or a rule list, would see the values); a non-nil error
    is printed verbatim on stderr and exits 3 (reference: `rules/linktargetflags`). Repeatable
    value options go in `Spec.Options` (every value, in order, in `Args.Values[<option>]`) and `--strict` is a
-   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`).
+   flag only with `Spec.ValuedStrict` (reference: `rules/inlinesiteliteral`). Boolean flags go in `Spec.Flags`
+   (e.g. `--no-default-allow`): anywhere, no value, `Args.Flags[<flag>]` true when given; `<flag>=<v>` is an
+   unknown option (reference: `rules/privateapiimport`).
    `Mode` `Anywhere` takes `--strict` before or after the root; another `-` argument prints
    `<lint>: unknown option: <arg>` and a second root `<lint>: unexpected argument: <arg>` (exit 3, no usage
    line), and no root the usage line (reference: `rules/wbthreading`). `Spec.CheckFirst` prints a finding as
